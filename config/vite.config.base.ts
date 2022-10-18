@@ -3,9 +3,18 @@ import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import vueJsx from '@vitejs/plugin-vue-jsx';
 import svgLoader from 'vite-svg-loader';
+import qiankun from 'vite-plugin-qiankun';
 
+const useDevMode = true;
 export default defineConfig({
-  plugins: [vue(), vueJsx(), svgLoader({ svgoConfig: {} })],
+  plugins: [
+    vue(),
+    vueJsx(),
+    svgLoader({ svgoConfig: {} }),
+    qiankun('greptime_dashboard', {
+      useDevMode,
+    }),
+  ],
   resolve: {
     alias: [
       {
