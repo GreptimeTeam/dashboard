@@ -1,9 +1,6 @@
 <template>
   <a-grid :cols="24" :row-gap="16" class="panel">
-    <a-grid-item
-      class="panel-col"
-      :span="{ xs: 12, sm: 12, md: 12, lg: 12, xl: 12, xxl: 6 }"
-    >
+    <a-grid-item class="panel-col" :span="{ xs: 12, sm: 12, md: 12, lg: 12, xl: 12, xxl: 6 }">
       <a-space>
         <a-avatar :size="54" class="col-avatar">
           <img
@@ -25,10 +22,7 @@
         </a-statistic>
       </a-space>
     </a-grid-item>
-    <a-grid-item
-      class="panel-col"
-      :span="{ xs: 12, sm: 12, md: 12, lg: 12, xl: 12, xxl: 6 }"
-    >
+    <a-grid-item class="panel-col" :span="{ xs: 12, sm: 12, md: 12, lg: 12, xl: 12, xxl: 6 }">
       <a-space>
         <a-avatar :size="54" class="col-avatar">
           <img
@@ -36,23 +30,14 @@
             src="//p3-armor.byteimg.com/tos-cn-i-49unhts6dw/fdc66b07224cdf18843c6076c2587eb5.svg~tplv-49unhts6dw-image.image"
           />
         </a-avatar>
-        <a-statistic
-          :title="$t('workplace.putIn')"
-          :value="368"
-          :value-from="0"
-          animation
-          show-group-separator
-        >
+        <a-statistic :title="$t('workplace.putIn')" :value="368" :value-from="0" animation show-group-separator>
           <template #suffix>
             <span class="unit">{{ $t('workplace.pecs') }}</span>
           </template>
         </a-statistic>
       </a-space>
     </a-grid-item>
-    <a-grid-item
-      class="panel-col"
-      :span="{ xs: 12, sm: 12, md: 12, lg: 12, xl: 12, xxl: 6 }"
-    >
+    <a-grid-item class="panel-col" :span="{ xs: 12, sm: 12, md: 12, lg: 12, xl: 12, xxl: 6 }">
       <a-space>
         <a-avatar :size="54" class="col-avatar">
           <img
@@ -60,13 +45,7 @@
             src="//p3-armor.byteimg.com/tos-cn-i-49unhts6dw/77d74c9a245adeae1ec7fb5d4539738d.svg~tplv-49unhts6dw-image.image"
           />
         </a-avatar>
-        <a-statistic
-          :title="$t('workplace.newDay')"
-          :value="8874"
-          :value-from="0"
-          animation
-          show-group-separator
-        >
+        <a-statistic :title="$t('workplace.newDay')" :value="8874" :value-from="0" animation show-group-separator>
           <template #suffix>
             <span class="unit">{{ $t('workplace.pecs') }}</span>
           </template>
@@ -85,13 +64,7 @@
             src="//p3-armor.byteimg.com/tos-cn-i-49unhts6dw/c8b36e26d2b9bb5dbf9b74dd6d7345af.svg~tplv-49unhts6dw-image.image"
           />
         </a-avatar>
-        <a-statistic
-          :title="$t('workplace.newFromYesterday')"
-          :value="2.8"
-          :precision="1"
-          :value-from="0"
-          animation
-        >
+        <a-statistic :title="$t('workplace.newFromYesterday')" :value="2.8" :precision="1" :value-from="0" animation>
           <template #suffix> % <icon-caret-up class="up-icon" /> </template>
         </a-statistic>
       </a-space>

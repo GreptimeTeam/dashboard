@@ -10,4 +10,4 @@ export default {
   'messageBox.userCenter': '用户中心',
   'messageBox.userSettings': '用户设置',
   'messageBox.logout': '登出登录',
-};
+}

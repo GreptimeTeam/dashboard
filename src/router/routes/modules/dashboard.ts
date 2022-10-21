@@ -1,5 +1,5 @@
-import { DEFAULT_LAYOUT } from '../base';
-import { AppRouteRecordRaw } from '../types';
+import { DEFAULT_LAYOUT } from '../base'
+import { AppRouteRecordRaw } from '../types'
 
 const DASHBOARD: AppRouteRecordRaw = {
   path: '/dashboard',
@@ -7,7 +7,7 @@ const DASHBOARD: AppRouteRecordRaw = {
   component: DEFAULT_LAYOUT,
   meta: {
     locale: 'menu.dashboard',
-    requiresAuth: true,
+    requiresAuth: false,
     icon: 'icon-dashboard',
     order: 0,
   },
@@ -18,11 +18,21 @@ const DASHBOARD: AppRouteRecordRaw = {
       component: () => import('@/views/dashboard/workplace/index.vue'),
       meta: {
         locale: 'menu.dashboard.workplace',
-        requiresAuth: true,
+        requiresAuth: false,
         roles: ['*'],
       },
     },
+    // {
+    //   path: 'editor',
+    //   name: 'editor',
+    //   component: () => import('@/views/dashboard/workplace/index.vue'),
+    //   meta: {
+    //     locale: 'menu.dashboard.workplace',
+    //     requiresAuth: false,
+    //     roles: ['*'],
+    //   },
+    // }
   ],
-};
+}
 
-export default DASHBOARD;
+export default DASHBOARD

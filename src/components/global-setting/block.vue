@@ -14,15 +14,15 @@
 </template>
 
 <script lang="ts" setup>
-  import { PropType } from 'vue';
-  import { useAppStore } from '@/store';
-  import FormWrapper from './form-wrapper.vue';
+  import { PropType } from 'vue'
+  import { useAppStore } from '@/store'
+  import FormWrapper from './form-wrapper.vue'
 
   interface OptionsProps {
-    name: string;
-    key: string;
-    type?: string;
-    defaultVal?: boolean | string | number;
+    name: string
+    key: string
+    type?: string
+    defaultVal?: boolean | string | number
   }
   defineProps({
     title: {
@@ -32,26 +32,20 @@
     options: {
       type: Array as PropType<OptionsProps[]>,
       default() {
-        return [];
+        return []
       },
     },
-  });
-  const appStore = useAppStore();
-  const handleChange = async ({
-    key,
-    value,
-  }: {
-    key: string;
-    value: unknown;
-  }) => {
+  })
+  const appStore = useAppStore()
+  const handleChange = async ({ key, value }: { key: string; value: unknown }) => {
     if (key === 'colorWeak') {
-      document.body.style.filter = value ? 'invert(80%)' : 'none';
+      document.body.style.filter = value ? 'invert(80%)' : 'none'
     }
     if (key === 'menuFromServer' && value) {
-      await appStore.fetchServerMenuConfig();
+      await appStore.fetchServerMenuConfig()
     }
-    appStore.updateSettings({ [key]: value });
-  };
+    appStore.updateSettings({ [key]: value })
+  }
 </script>
 
 <style scoped lang="less">

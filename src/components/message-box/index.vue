@@ -8,11 +8,7 @@
         <a-result v-if="!renderList.length" status="404">
           <template #subtitle> {{ $t('messageBox.noContent') }} </template>
         </a-result>
-        <List
-          :render-list="renderList"
-          :unread-count="unreadCount"
-          @item-click="handleItemClick"
-        />
+        <List :render-list="renderList" :unread-count="unreadCount" @item-click="handleItemClick" />
       </a-tab-pane>
       <template #extra>
         <a-button type="text" @click="emptyList">
@@ -24,33 +20,28 @@
 </template>
 
 <script lang="ts" setup>
-  import { ref, reactive, toRefs, computed } from 'vue';
-  import { useI18n } from 'vue-i18n';
-  import {
-    queryMessageList,
-    setMessageStatus,
-    MessageRecord,
-    MessageListType,
-  } from '@/api/message';
-  import useLoading from '@/hooks/loading';
-  import List from './list.vue';
+  import { ref, reactive, toRefs, computed } from 'vue'
+  import { useI18n } from 'vue-i18n'
+  import { queryMessageList, setMessageStatus, MessageRecord, MessageListType } from '@/api/message'
+  import useLoading from '@/hooks/loading'
+  import List from './list.vue'
 
   interface TabItem {
-    key: string;
-    title: string;
-    avatar?: string;
+    key: string
+    title: string
+    avatar?: string
   }
-  const { loading, setLoading } = useLoading(true);
-  const messageType = ref('message');
-  const { t } = useI18n();
+  const { loading, setLoading } = useLoading(true)
+  const messageType = ref('message')
+  const { t } = useI18n()
   const messageData = reactive<{
-    renderList: MessageRecord[];
-    messageList: MessageRecord[];
+    renderList: MessageRecord[]
+    messageList: MessageRecord[]
   }>({
     renderList: [],
     messageList: [],
-  });
-  toRefs(messageData);
+  })
+  toRefs(messageData)
   const tabList: TabItem[] = [
     {
       key: 'message',
@@ -64,48 +55,44 @@
       key: 'todo',
       title: t('messageBox.tab.title.todo'),
     },
-  ];
+  ]
   async function fetchSourceData() {
-    setLoading(true);
+    setLoading(true)
     try {
-      const { data } = await queryMessageList();
-      messageData.messageList = data;
+      const { data } = await queryMessageList()
+      messageData.messageList = data
     } catch (err) {
       // you can report use errorHandler or other
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
   async function readMessage(data: MessageListType) {
-    const ids = data.map((item) => item.id);
-    await setMessageStatus({ ids });
-    fetchSourceData();
+    const ids = data.map((item) => item.id)
+    await setMessageStatus({ ids })
+    fetchSourceData()
   }
   const renderList = computed(() => {
-    return messageData.messageList.filter(
-      (item) => messageType.value === item.type
-    );
-  });
+    return messageData.messageList.filter((item) => messageType.value === item.type)
+  })
   const unreadCount = computed(() => {
-    return renderList.value.filter((item) => !item.status).length;
-  });
+    return renderList.value.filter((item) => !item.status).length
+  })
   const getUnreadList = (type: string) => {
-    const list = messageData.messageList.filter(
-      (item) => item.type === type && !item.status
-    );
-    return list;
-  };
+    const list = messageData.messageList.filter((item) => item.type === type && !item.status)
+    return list
+  }
   const formatUnreadLength = (type: string) => {
-    const list = getUnreadList(type);
-    return list.length ? `(${list.length})` : ``;
-  };
+    const list = getUnreadList(type)
+    return list.length ? `(${list.length})` : ``
+  }
   const handleItemClick = (items: MessageListType) => {
-    if (renderList.value.length) readMessage([...items]);
-  };
+    if (renderList.value.length) readMessage([...items])
+  }
   const emptyList = () => {
-    messageData.messageList = [];
-  };
-  fetchSourceData();
+    messageData.messageList = []
+  }
+  fetchSourceData()
 </script>
 
 <style scoped lang="less">

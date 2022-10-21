@@ -16,21 +16,18 @@
   },
   "lint-staged": {
     "*.{js,ts,jsx,tsx}": [
-      "prettier --write",
-      "eslint --fix"
+      "prettier --write"
     ],
     "*.vue": [
-      "stylelint --fix",
-      "prettier --write",
-      "eslint --fix"
+      "prettier --write"
     ],
     "*.{less,css}": [
-      "stylelint --fix",
       "prettier --write"
     ]
   },
   "dependencies": {
     "@arco-design/web-vue": "^2.37.4",
+    "@babel/core": "^7.0.0-0",
     "@vueuse/core": "^9.3.0",
     "arco-design-pro-vue": "^2.5.13",
     "axios": "^0.24.0",
@@ -38,6 +35,7 @@
     "echarts": "^5.4.0",
     "lodash": "^4.17.21",
     "mitt": "^3.0.0",
+    "monaco-editor": "^0.34.1",
     "nprogress": "^0.2.0",
     "pinia": "^2.0.23",
     "query-string": "^7.1.1",
@@ -85,6 +83,7 @@
     "vite-plugin-compression": "^0.5.1",
     "vite-plugin-eslint": "^1.8.1",
     "vite-plugin-imagemin": "^0.6.1",
+    "vite-plugin-monaco-editor": "^1.1.0",
     "vite-plugin-qiankun": "^1.0.15",
     "vite-plugin-style-import": "1.4.1",
     "vite-svg-loader": "^3.6.0",

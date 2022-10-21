@@ -10,16 +10,16 @@
 </template>
 
 <script lang="ts" setup>
-  import { PropType } from 'vue';
+  import { PropType } from 'vue'
 
   defineProps({
     items: {
       type: Array as PropType<string[]>,
       default() {
-        return [];
+        return []
       },
     },
-  });
+  })
 </script>
 
 <style scoped lang="less">

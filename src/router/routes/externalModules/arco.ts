@@ -7,4 +7,4 @@ export default {
     requiresAuth: true,
     order: 8,
   },
-};
+}

@@ -1,9 +1,5 @@
 module.exports = {
-  extends: [
-    'stylelint-config-standard',
-    'stylelint-config-rational-order',
-    'stylelint-config-prettier',
-  ],
+  extends: ['stylelint-config-standard', 'stylelint-config-rational-order', 'stylelint-config-prettier'],
   defaultSeverity: 'warning',
   plugins: ['stylelint-order'],
   rules: {
@@ -26,4 +22,4 @@ module.exports = {
       },
     ],
   },
-};
+}

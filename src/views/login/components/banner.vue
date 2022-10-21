@@ -15,11 +15,11 @@
 </template>
 
 <script lang="ts" setup>
-  import { computed } from 'vue';
-  import { useI18n } from 'vue-i18n';
-  import bannerImage from '@/assets/images/login-banner.png';
+  import { computed } from 'vue'
+  import { useI18n } from 'vue-i18n'
+  import bannerImage from '@/assets/images/login-banner.png'
 
-  const { t } = useI18n();
+  const { t } = useI18n()
   const carouselItem = computed(() => [
     {
       slogan: t('login.banner.slogan1'),
@@ -36,7 +36,7 @@
       subSlogan: t('login.banner.subSlogan3'),
       image: bannerImage,
     },
-  ]);
+  ])
 </script>
 
 <style lang="less" scoped>

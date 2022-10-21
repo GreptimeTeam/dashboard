@@ -38,10 +38,7 @@
                 }"
                 >{{ item.content }}</a-typography-paragraph
               >
-              <a-typography-text
-                v-if="item.type === 'message'"
-                class="time-text"
-              >
+              <a-typography-text v-if="item.type === 'message'" class="time-text">
                 {{ item.time }}
               </a-typography-text>
             </div>
@@ -50,11 +47,7 @@
       </div>
     </a-list-item>
     <template #footer>
-      <a-space
-        fill
-        :size="0"
-        :class="{ 'add-border-top': renderList.length < showMax }"
-      >
+      <a-space fill :size="0" :class="{ 'add-border-top': renderList.length < showMax }">
         <div class="footer-wrap">
           <a-link @click="allRead">{{ $t('messageBox.allRead') }}</a-link>
         </div>
@@ -71,8 +64,8 @@
 </template>
 
 <script lang="ts" setup>
-  import { PropType } from 'vue';
-  import { MessageRecord, MessageListType } from '@/api/message';
+  import { PropType } from 'vue'
+  import { MessageRecord, MessageListType } from '@/api/message'
 
   const props = defineProps({
     renderList: {
@@ -83,18 +76,18 @@
       type: Number,
       default: 0,
     },
-  });
-  const emit = defineEmits(['itemClick']);
+  })
+  const emit = defineEmits(['itemClick'])
   const allRead = () => {
-    emit('itemClick', [...props.renderList]);
-  };
+    emit('itemClick', [...props.renderList])
+  }
 
   const onItemClick = (item: MessageRecord) => {
     if (!item.status) {
-      emit('itemClick', [item]);
+      emit('itemClick', [item])
     }
-  };
-  const showMax = 3;
+  }
+  const showMax = 3
 </script>
 
 <style scoped lang="less">

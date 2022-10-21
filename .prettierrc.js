@@ -1,9 +1,9 @@
 module.exports = {
   tabWidth: 2,
-  semi: true,
-  printWidth: 80,
+  semi: false,
+  printWidth: 120,
   singleQuote: true,
   quoteProps: 'consistent',
   htmlWhitespaceSensitivity: 'strict',
   vueIndentScriptAndStyle: true,
-};
+}

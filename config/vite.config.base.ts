@@ -1,11 +1,12 @@
-import { resolve } from 'path';
-import { defineConfig } from 'vite';
-import vue from '@vitejs/plugin-vue';
-import vueJsx from '@vitejs/plugin-vue-jsx';
-import svgLoader from 'vite-svg-loader';
-import qiankun from 'vite-plugin-qiankun';
+import { resolve } from 'path'
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import vueJsx from '@vitejs/plugin-vue-jsx'
+import svgLoader from 'vite-svg-loader'
+import qiankun from 'vite-plugin-qiankun'
+import monacoEditorPlugin from 'vite-plugin-monaco-editor'
 
-const useDevMode = true;
+const useDevMode = true
 export default defineConfig({
   plugins: [
     vue(),
@@ -14,6 +15,7 @@ export default defineConfig({
     qiankun('greptime_dashboard', {
       useDevMode,
     }),
+    // monacoEditorPlugin()
   ],
   resolve: {
     alias: [
@@ -43,12 +45,10 @@ export default defineConfig({
     preprocessorOptions: {
       less: {
         modifyVars: {
-          hack: `true; @import (reference) "${resolve(
-            'src/assets/style/breakpoint.less'
-          )}";`,
+          hack: `true; @import (reference) "${resolve('src/assets/style/breakpoint.less')}";`,
         },
         javascriptEnabled: true,
       },
     },
   },
-});
+})

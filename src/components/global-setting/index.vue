@@ -23,19 +23,19 @@
 </template>
 
 <script lang="ts" setup>
-  import { computed } from 'vue';
-  import { Message } from '@arco-design/web-vue';
-  import { useI18n } from 'vue-i18n';
-  import { useClipboard } from '@vueuse/core';
-  import { useAppStore } from '@/store';
-  import Block from './block.vue';
+  import { computed } from 'vue'
+  import { Message } from '@arco-design/web-vue'
+  import { useI18n } from 'vue-i18n'
+  import { useClipboard } from '@vueuse/core'
+  import { useAppStore } from '@/store'
+  import Block from './block.vue'
 
-  const emit = defineEmits(['cancel']);
+  const emit = defineEmits(['cancel'])
 
-  const appStore = useAppStore();
-  const { t } = useI18n();
-  const { copy } = useClipboard();
-  const visible = computed(() => appStore.globalSettings);
+  const appStore = useAppStore()
+  const { t } = useI18n()
+  const { copy } = useClipboard()
+  const visible = computed(() => appStore.globalSettings)
   const contentOpts = computed(() => [
     { name: 'settings.navbar', key: 'navbar', defaultVal: appStore.navbar },
     {
@@ -56,27 +56,27 @@
       defaultVal: appStore.menuWidth,
       type: 'number',
     },
-  ]);
+  ])
   const othersOpts = computed(() => [
     {
       name: 'settings.colorWeak',
       key: 'colorWeak',
       defaultVal: appStore.colorWeak,
     },
-  ]);
+  ])
 
   const cancel = () => {
-    appStore.updateSettings({ globalSettings: false });
-    emit('cancel');
-  };
+    appStore.updateSettings({ globalSettings: false })
+    emit('cancel')
+  }
   const copySettings = async () => {
-    const text = JSON.stringify(appStore.$state, null, 2);
-    await copy(text);
-    Message.success(t('settings.copySettings.message'));
-  };
+    const text = JSON.stringify(appStore.$state, null, 2)
+    await copy(text)
+    Message.success(t('settings.copySettings.message'))
+  }
   const setVisible = () => {
-    appStore.updateSettings({ globalSettings: true });
-  };
+    appStore.updateSettings({ globalSettings: true })
+  }
 </script>
 
 <style scoped lang="less">

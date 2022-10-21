@@ -10,15 +10,15 @@
 </template>
 
 <script lang="ts" setup>
-  import { computed } from 'vue';
-  import { useUserStore } from '@/store';
+  import { computed } from 'vue'
+  import { useUserStore } from '@/store'
 
-  const userStore = useUserStore();
+  const userStore = useUserStore()
   const userInfo = computed(() => {
     return {
       name: userStore.name,
-    };
-  });
+    }
+  })
 </script>
 
 <style scoped lang="less">

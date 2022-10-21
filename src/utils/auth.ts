@@ -1,19 +1,19 @@
-const TOKEN_KEY = 'token';
+const TOKEN_KEY = 'token'
 
-const isLogin = () => {
-  return !!localStorage.getItem(TOKEN_KEY);
-};
+// const isLogin = () => {
+//   return !!localStorage.getItem(TOKEN_KEY);
+// };
 
 const getToken = () => {
-  return localStorage.getItem(TOKEN_KEY);
-};
+  return localStorage.getItem(TOKEN_KEY)
+}
 
 const setToken = (token: string) => {
-  localStorage.setItem(TOKEN_KEY, token);
-};
+  localStorage.setItem(TOKEN_KEY, token)
+}
 
 const clearToken = () => {
-  localStorage.removeItem(TOKEN_KEY);
-};
+  localStorage.removeItem(TOKEN_KEY)
+}
 
-export { isLogin, getToken, setToken, clearToken };
+export { getToken, setToken, clearToken }

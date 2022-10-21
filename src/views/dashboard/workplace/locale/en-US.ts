@@ -1,6 +1,6 @@
 export default {
   'menu.dashboard.workplace': 'Workplace',
-  'workplace.welcome': 'Welcome!',
+  'workplace.welcome': 'Welcome to Greptime!',
   'workplace.balance': 'Balance (CNY)',
   'workplace.order.pending': 'Pending',
   'workplace.order.pendingRenewal': 'Renewal Order',
@@ -35,4 +35,4 @@ export default {
   'workplace.popularContent.video': 'video',
   'workplace.categoriesPercent': 'Categories Percent',
   'workplace.pecs': 'pecs',
-};
+}
