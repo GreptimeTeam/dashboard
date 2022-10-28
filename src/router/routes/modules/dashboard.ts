@@ -22,16 +22,16 @@ const DASHBOARD: AppRouteRecordRaw = {
         roles: ['*'],
       },
     },
-    // {
-    //   path: 'editor',
-    //   name: 'editor',
-    //   component: () => import('@/views/dashboard/workplace/index.vue'),
-    //   meta: {
-    //     locale: 'menu.dashboard.workplace',
-    //     requiresAuth: false,
-    //     roles: ['*'],
-    //   },
-    // }
+    {
+      path: 'data-explorer',
+      name: 'data-explorer',
+      component: () => import('@/views/dashboard/data-explorer/index.vue'),
+      meta: {
+        locale: 'menu.dashboard.dataExplorer',
+        requiresAuth: false,
+        roles: ['*'],
+      },
+    },
   ],
 }
 

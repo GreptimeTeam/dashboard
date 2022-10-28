@@ -10,6 +10,10 @@ export function queryContentData() {
   return axios.get<ContentDataRecord[]>('/api/content-data')
 }
 
+export function queryChartData() {
+  return axios.get<any>('/api/v1/sql?sql=SELECT * FROM monitor')
+}
+
 export interface PopularRecord {
   key: number
   clickNumber: string

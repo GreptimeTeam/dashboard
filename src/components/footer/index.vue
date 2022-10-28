@@ -1,5 +1,5 @@
 <template>
-  <a-layout-footer class="footer">Arco Pro</a-layout-footer>
+  <a-layout-footer class="footer">©Copyright 2022 Greptime Inc. All Rights Reserved</a-layout-footer>
 </template>
 
 <script lang="ts" setup></script>

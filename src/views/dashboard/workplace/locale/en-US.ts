@@ -1,5 +1,6 @@
 export default {
   'menu.dashboard.workplace': 'Workplace',
+  'menu.dashboard.dataExplorer': 'Data Explorer',
   'workplace.welcome': 'Welcome to Greptime!',
   'workplace.balance': 'Balance (CNY)',
   'workplace.order.pending': 'Pending',

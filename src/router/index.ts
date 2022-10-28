@@ -15,6 +15,11 @@ const router = createRouter({
       path: '/',
       redirect: 'dashboard/workplace',
     },
+    // {
+    //   path: '/monitor',
+    //   name: 'monitor',
+    //   component: () => import('@/views/dashboard/monitor/index.vue'),
+    // },
     {
       path: '/login',
       name: 'login',

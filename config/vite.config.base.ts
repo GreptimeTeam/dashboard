@@ -4,10 +4,26 @@ import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
 import svgLoader from 'vite-svg-loader'
 import qiankun from 'vite-plugin-qiankun'
-import monacoEditorPlugin from 'vite-plugin-monaco-editor'
+import Components from 'unplugin-vue-components/vite'
+import AutoImport from 'unplugin-auto-import/vite'
 
 const useDevMode = true
 export default defineConfig({
+  server: {
+    cors: true,
+    open: true,
+    fs: {
+      strict: true,
+    },
+    port: 5177,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
+  },
   plugins: [
     vue(),
     vueJsx(),
@@ -15,7 +31,14 @@ export default defineConfig({
     qiankun('greptime_dashboard', {
       useDevMode,
     }),
-    // monacoEditorPlugin()
+    AutoImport({
+      dts: true,
+      imports: ['vue', 'pinia', 'vue-router'],
+    }),
+    Components({
+      dts: true,
+      extensions: ['vue', 'arco-design'],
+    }),
   ],
   resolve: {
     alias: [
