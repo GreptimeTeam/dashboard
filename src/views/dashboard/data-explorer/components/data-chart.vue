@@ -8,18 +8,24 @@
       }"
     >
       <a-space direction="vertical" size="large">
-        <a-select defaultValue="Beijing" :style="{ width: '320px' }" placeholder="Please select ..." disabled>
-          <a-option>Beijing</a-option>
-          <a-option>Shanghai</a-option>
-          <a-option>Guangzhou</a-option>
-          <a-option disabled>Disabled</a-option>
-        </a-select>
         <a-select v-model="chartType" :style="{ width: '320px' }" placeholder="Please select ...">
-          <a-option v-for="item of typeData" :key="item.key" :value="item.value" :label="item.value"> </a-option>
+          <a-option v-for="item of chartTypeOptions" :key="item.key" :value="item.value" :label="item.value">
+          </a-option>
+        </a-select>
+        <a-select
+          @change="yChanged()"
+          v-model="ySelectedTypes"
+          :style="{ width: '320px' }"
+          :loading="loading"
+          placeholder="Please select ..."
+          multiple
+          :filter-option="false"
+        >
+          <a-option v-for="item of yOptions" :key="item.value" :value="item.value">{{ item.value }}</a-option>
         </a-select>
         <a-button type="primary" @click="drawChart()"> Draw </a-button>
       </a-space>
-      <Chart height="310px" :option="chartOption" />
+      <Chart height="400px" :option="chartOption" />
     </a-card>
   </a-spin>
 </template>
@@ -28,26 +34,14 @@
   import { ref } from 'vue'
   import { graphic } from 'echarts'
   import useLoading from '@/hooks/loading'
-  import { queryContentData, ContentDataRecord } from '@/api/dashboard'
-  import useChartOption from '@/hooks/chart-option'
-  import { ToolTipFormatterParams } from '@/types/echarts'
-  import { AnyObject } from '@/types/global'
+  import { queryChartData } from '@/api/dashboard'
   import { computed } from 'vue'
+  import DefaultLayout from '@/layout/default-layout.vue'
+  import { computedInject } from '@vueuse/core'
 
-  function graphicFactory(side: AnyObject) {
-    return {
-      type: 'text',
-      bottom: '8',
-      ...side,
-      style: {
-        text: '',
-        textAlign: 'center',
-        fill: '#4E5969',
-        fontSize: 12,
-      },
-    }
-  }
-  const typeData: any = [
+  const { loading, setLoading } = useLoading(true)
+  // todo: move outside
+  const chartTypeOptions: any = [
     {
       key: 1,
       value: 'scatter',
@@ -56,153 +50,93 @@
       key: 2,
       value: 'line',
     },
+    {
+      key: 3,
+      value: 'bar',
+    },
   ]
-  const chartType = ref('scatter')
+  const chartType = ref('line')
 
-  const { loading, setLoading } = useLoading(true)
-  const xAxis = ref<string[]>([])
-  const chartsData = ref<number[]>([])
-  const graphicElements = ref([graphicFactory({ left: '2.6%' }), graphicFactory({ right: 0 })])
-  const options = ref({})
-  const { chartOption } = computed(() =>
-    useChartOption(() => {
-      return options.value
+  const yOptions = ref<any>([])
+  const ySelectedTypes = ref<any>([])
+
+  const dimensions = ref<any>([])
+  const source = ref<any>([])
+  const series = computed(() => {
+    const tempTypes: any = []
+    ySelectedTypes.value.forEach((item: any) => {
+      const oneSeries = {
+        type: chartType.value,
+        encode: {
+          x: 'ts',
+          y: item,
+        },
+      }
+      tempTypes.push(oneSeries)
     })
-  ).value
+    return tempTypes
+  })
+  const option = ref({})
+  // const myOption = ref({})
+  const chartOption = computed(() => {
+    return option.value
+  })
+  const yChanged = () => {
+    console.log('yselect', ySelectedTypes.value)
+  }
 
   const drawChart = () => {
-    options.value = {
-      grid: {
-        left: '2.6%',
-        right: '0',
-        top: '10',
-        bottom: '30',
+    option.value = {
+      legend: {},
+      tooltip: {},
+      dataset: {
+        dimensions: dimensions.value,
+        source: source.value,
       },
-      xAxis: {
-        type: 'category',
-        offset: 2,
-        data: xAxis.value,
-        boundaryGap: false,
-        axisLabel: {
-          color: '#4E5969',
-          formatter(value: number, idx: number) {
-            if (idx === 0) return ''
-            if (idx === xAxis.value.length - 1) return ''
-            return `${value}`
-          },
-        },
-        axisLine: {
-          show: false,
-        },
-        axisTick: {
-          show: false,
-        },
-        splitLine: {
-          show: true,
-          interval: (idx: number) => {
-            if (idx === 0) return false
-            if (idx === xAxis.value.length - 1) return false
-            return true
-          },
-          lineStyle: {
-            color: '#E5E8EF',
-          },
-        },
-        axisPointer: {
-          show: true,
-          lineStyle: {
-            color: '#23ADFF',
-            width: 2,
-          },
-        },
-      },
-      yAxis: {
-        type: 'value',
-        axisLine: {
-          show: false,
-        },
-        axisLabel: {
-          formatter(value: any, idx: number) {
-            if (idx === 0) return value
-            return `${value}k`
-          },
-        },
-        splitLine: {
-          show: true,
-          lineStyle: {
-            type: 'dashed',
-            color: '#E5E8EF',
-          },
-        },
-      },
-      graphic: {
-        elements: graphicElements.value,
-      },
-      series: [
-        {
-          data: chartsData.value,
-          type: chartType.value,
-          smooth: true,
-          // symbol: 'circle',
-          symbolSize: 12,
-          emphasis: {
-            focus: 'series',
-            itemStyle: {
-              borderWidth: 2,
-            },
-          },
-          lineStyle: {
-            width: 3,
-            color: new graphic.LinearGradient(0, 0, 1, 0, [
-              {
-                offset: 0,
-                color: 'rgba(30, 231, 255, 1)',
-              },
-              {
-                offset: 0.5,
-                color: 'rgba(36, 154, 255, 1)',
-              },
-              {
-                offset: 1,
-                color: 'rgba(111, 66, 251, 1)',
-              },
-            ]),
-          },
-          showSymbol: false,
-          areaStyle: {
-            opacity: 0.8,
-            color: new graphic.LinearGradient(0, 0, 0, 1, [
-              {
-                offset: 0,
-                color: 'rgba(17, 126, 255, 0.16)',
-              },
-              {
-                offset: 1,
-                color: 'rgba(17, 128, 255, 0)',
-              },
-            ]),
-          },
-        },
-      ],
+      xAxis: { type: 'time' },
+      yAxis: {},
+      series: series.value,
     }
   }
 
   const fetchData = async () => {
     setLoading(true)
     try {
-      const { data: chartData } = await queryContentData()
-      chartData.forEach((el: ContentDataRecord, idx: number) => {
-        xAxis.value.push(el.x)
-        chartsData.value.push(el.y)
-        if (idx === 0) {
-          graphicElements.value[0].style.text = el.x
+      const data = queryChartData()
+      const { output } = data
+      const { records } = output
+      records.schema.column_schemas.forEach((element) => {
+        const tempElement = {}
+
+        ;(tempElement as any).name = element.name
+        switch (element.data_type) {
+          case 'Timestamp':
+            ;(tempElement as any).type = 'time'
+            break
+          case 'String':
+            ;(tempElement as any).type = 'ordinal'
+            break
+          case 'Float64':
+            ;(tempElement as any).type = 'float'
+            break
+          case 'Int':
+            ;(tempElement as any).type = 'int'
+            break
+          default:
+            ;(tempElement as any).type = 'ordinal'
         }
-        if (idx === chartData.length - 1) {
-          graphicElements.value[1].style.text = el.x
+        dimensions.value.push(tempElement)
+        if (element.data_type === 'Int' || element.data_type === 'Float64') {
+          const item = {
+            value: element.name,
+          }
+          yOptions.value.push(item)
         }
       })
+      source.value = records.rows
+      console.log(source.value)
     } catch (err) {
-      // you can report use errorHandler or other
+      // some error
     } finally {
       setLoading(false)
     }
