@@ -1,7 +1,7 @@
 <template>
   <a-button type="primary" @click="insert()">Insert</a-button>
   <a-button type="primary" @click="run()">Run</a-button>
-  <Codemirror
+  <CodeMirror
     v-model="code"
     :placeholder="placeholder"
     :style="style"
@@ -18,7 +18,7 @@
 </template>
 
 <script lang="ts" setup>
-  import { Codemirror } from 'vue-codemirror'
+  import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
   import { EditorView } from '@codemirror/view'
   import { ref } from 'vue'
@@ -98,7 +98,7 @@
   }
 
   const insert = () => {
-    code.value += '\nselect add'
+    code.value += '\nselect * from monitor'
   }
 
   async function run() {

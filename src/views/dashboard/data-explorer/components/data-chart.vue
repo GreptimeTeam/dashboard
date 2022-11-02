@@ -25,7 +25,7 @@
         </a-select>
         <a-button type="primary" @click="drawChart()"> Draw </a-button>
       </a-space>
-      <Chart height="400px" :option="chartOption" />
+      <Chart height="400px" width="800px" :option="option" :update-options="updateOptions" />
     </a-card>
   </a-spin>
 </template>
@@ -40,7 +40,7 @@
   import { computedInject } from '@vueuse/core'
 
   const { loading, setLoading } = useLoading(true)
-  // todo: move outside
+  // todo: move to config
   const chartTypeOptions: any = [
     {
       key: 1,
@@ -62,32 +62,38 @@
 
   const dimensions = ref<any>([])
   const source = ref<any>([])
-  const series = computed(() => {
-    const tempTypes: any = []
+
+  const seriesAndLegendNames = computed(() => {
+    console.log('series is being computed')
+    const tempSeries: any = []
+    const tempLegendNames: any = []
     ySelectedTypes.value.forEach((item: any) => {
       const oneSeries = {
+        name: item,
         type: chartType.value,
         encode: {
           x: 'ts',
           y: item,
         },
       }
-      tempTypes.push(oneSeries)
+      tempSeries.push(oneSeries)
+      tempLegendNames.push(item)
     })
-    return tempTypes
+    return [tempSeries, tempLegendNames]
   })
+
   const option = ref({})
-  // const myOption = ref({})
-  const chartOption = computed(() => {
-    return option.value
-  })
-  const yChanged = () => {
-    console.log('yselect', ySelectedTypes.value)
-  }
+  const updateOptions = { notMerge: true }
 
   const drawChart = () => {
+    // todo: makeOption()
     option.value = {
-      legend: {},
+      legend: {
+        data: seriesAndLegendNames.value[1],
+        orient: 'vertical',
+        right: 10,
+        top: 'center',
+      },
       tooltip: {},
       dataset: {
         dimensions: dimensions.value,
@@ -95,7 +101,7 @@
       },
       xAxis: { type: 'time' },
       yAxis: {},
-      series: series.value,
+      series: seriesAndLegendNames.value[0],
     }
   }
 
@@ -103,8 +109,10 @@
     setLoading(true)
     try {
       const data = queryChartData()
-      const { output } = data
-      const { records } = output
+      console.log(data.output.records)
+      const {
+        output: { records },
+      } = data
       records.schema.column_schemas.forEach((element) => {
         const tempElement = {}
 
