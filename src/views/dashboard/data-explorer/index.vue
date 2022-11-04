@@ -2,27 +2,17 @@
   <div class="container">
     <div class="left-side">
       <a-card>
-        <CodeMirror />
+        <Editor />
       </a-card>
-      <a-tabs>
-        <a-tab-pane key="1">
-          <template #title> <icon-calendar /> Grid </template>
-          <DataGrid />
-        </a-tab-pane>
-        <a-tab-pane key="2">
-          <template #title> <icon-clock-circle /> Chart </template>
-          <DataChart />
-        </a-tab-pane>
-      </a-tabs>
+      <DataView />
     </div>
     <div class="right-side"> </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-  import CodeMirror from './components/code-mirror.vue'
-  import DataGrid from './components/data-grid.vue'
-  import DataChart from './components/data-chart.vue'
+  import Editor from './components/editor.vue'
+  import DataView from './components/data-view/data-view-index.vue'
 </script>
 
 <script lang="ts">

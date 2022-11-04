@@ -23,7 +23,7 @@
   import { EditorView } from '@codemirror/view'
   import { ref } from 'vue'
   import { sql } from '@codemirror/lang-sql'
-  import { postSqlSentence } from '@/api/monitor'
+  import { getSqlResult, postSqlSentence } from '@/api/editor'
 
   // <script setup> 范围里的值也能被直接作为自定义组件的标签名使用
   export interface Props {
@@ -44,8 +44,9 @@
     placeholder: 'Code goes here...',
   })
   const code = ref<string>(``)
-  // extensions: Passed to CodeMirror EditorState.create({ extensions })
+  const sqlResult = ref()
 
+  // extensions: Passed to CodeMirror EditorState.create({ extensions })
   const style = {
     height: '400px',
     // '.cm-gutters': {
@@ -90,6 +91,7 @@
     { dark: true }
   )
   const extensions = [sql(), oneDark]
+
   const useEditedCode = () => {
     console.log('@@@blur@@@code:', code.value)
   }
@@ -104,10 +106,13 @@
   async function run() {
     console.log(code.value.split('\n'))
     try {
-      const { data } = await postSqlSentence()
-      console.log(data)
+      const data = await getSqlResult()
+      sqlResult.value = data
     } catch (err) {
       console.log(err)
     }
   }
+  defineExpose({
+    sqlResult,
+  })
 </script>
