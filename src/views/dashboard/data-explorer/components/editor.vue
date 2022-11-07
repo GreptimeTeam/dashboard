@@ -1,6 +1,6 @@
 <template>
   <a-button type="primary" @click="insert()">Insert</a-button>
-  <a-button type="primary" @click="run()">Run</a-button>
+  <a-button type="primary" @click="runSqlCommand()">Run</a-button>
   <CodeMirror
     v-model="code"
     :placeholder="placeholder"
@@ -23,7 +23,7 @@
   import { EditorView } from '@codemirror/view'
   import { ref } from 'vue'
   import { sql } from '@codemirror/lang-sql'
-  import { getSqlResult, postSqlSentence } from '@/api/editor'
+  import useSqlResult from '@/hooks/data-view'
 
   // <script setup> 范围里的值也能被直接作为自定义组件的标签名使用
   export interface Props {
@@ -44,7 +44,7 @@
     placeholder: 'Code goes here...',
   })
   const code = ref<string>(``)
-  const sqlResult = ref()
+  const { initSqlResult } = useSqlResult()
 
   // extensions: Passed to CodeMirror EditorState.create({ extensions })
   const style = {
@@ -103,16 +103,7 @@
     code.value += '\nselect * from monitor'
   }
 
-  async function run() {
-    console.log(code.value.split('\n'))
-    try {
-      const data = await getSqlResult()
-      sqlResult.value = data
-    } catch (err) {
-      console.log(err)
-    }
+  async function runSqlCommand() {
+    initSqlResult()
   }
-  defineExpose({
-    sqlResult,
-  })
 </script>

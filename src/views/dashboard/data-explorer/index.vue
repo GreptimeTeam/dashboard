@@ -2,9 +2,14 @@
   <div class="container">
     <div class="left-side">
       <a-card>
-        <Editor />
+        <a-layout style="height: 500px">
+          <a-layout-sider style="width: 200px"><TableList /></a-layout-sider>
+          <a-layout-content><Editor /></a-layout-content>
+          <a-layout-sider style="width: 300px"><Favorite /></a-layout-sider>
+        </a-layout>
       </a-card>
       <DataView />
+      <Log />
     </div>
     <div class="right-side"> </div>
   </div>
@@ -12,7 +17,10 @@
 
 <script lang="ts" setup>
   import Editor from './components/editor.vue'
+  import TableList from './components/table-list.vue'
+  import Favorite from './components/favorite.vue'
   import DataView from './components/data-view/data-view-index.vue'
+  import Log from './components/log.vue'
 </script>
 
 <script lang="ts">

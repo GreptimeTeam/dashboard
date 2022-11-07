@@ -30,10 +30,9 @@
 
 <script lang="ts" setup>
   import { ref } from 'vue'
-
   import useSqlResult from '@/hooks/data-view'
 
-  const sqlResult = useSqlResult()
+  const { yOptions } = useSqlResult()
   // const { loading, setLoading } = useLoading(true)
   // todo: move to config
   const chartTypeOptions: any = [
@@ -52,13 +51,12 @@
   ]
   const chartType = ref('line')
   const option = ref({})
-  const { yOptions } = sqlResult
-  const ySelectedTypes = ref<any>([])
 
+  const ySelectedTypes = ref<any>([])
   const updateOptions = { notMerge: true }
 
   const drawChart = () => {
-    option.value = sqlResult.makeOption(ySelectedTypes.value)
+    option.value = useSqlResult().makeOption([chartType.value, ySelectedTypes.value])
   }
 </script>
 

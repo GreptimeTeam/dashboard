@@ -1,13 +1,14 @@
 import { getSqlResult } from '@/api/editor'
+import { ref, computed } from 'vue'
 
-import { computed } from 'vue'
+const chartType = ref('line')
+const yOptions = ref<any>([])
+const source = ref<any>([])
+const dimensions = ref<any>([])
 
 export default function useSqlResult() {
-  const chartType = ref('line')
-  const yOptions = ref<any>([])
   const ySelectedTypes = ref<any>([])
-  const dimensions = ref<any>([])
-  const source = ref<any>([])
+
   const seriesAndLegendNames = computed(() => {
     const tempSeries: any = []
     const tempLegendNames: any = []
@@ -27,7 +28,8 @@ export default function useSqlResult() {
   })
 
   const makeOption = (item: any) => {
-    ySelectedTypes.value = item
+    ;[chartType.value, ySelectedTypes.value] = item
+
     return {
       legend: {
         data: seriesAndLegendNames.value[1],
@@ -46,52 +48,49 @@ export default function useSqlResult() {
     }
   }
 
-  const fetchSqlResult = async () => {
-    try {
-      const data = await getSqlResult()
-      const {
-        output: { records },
-      } = data
-      records.schema.column_schemas.forEach((element) => {
-        const tempElement = {}
+  const initSqlResult = async () => {
+    const data = await getSqlResult()
+    const {
+      output: { records },
+    } = data
+    const tempYOptions: any = []
+    records.schema.column_schemas.forEach((element) => {
+      const tempElement = {}
 
-        ;(tempElement as any).name = element.name
-        switch (element.data_type) {
-          case 'Timestamp':
-            ;(tempElement as any).type = 'time'
-            break
-          case 'String':
-            ;(tempElement as any).type = 'ordinal'
-            break
-          case 'Float64':
-            ;(tempElement as any).type = 'float'
-            break
-          case 'Int':
-            ;(tempElement as any).type = 'int'
-            break
-          default:
-            ;(tempElement as any).type = 'ordinal'
+      ;(tempElement as any).name = element.name
+      switch (element.data_type) {
+        case 'Timestamp':
+          ;(tempElement as any).type = 'time'
+          break
+        case 'String':
+          ;(tempElement as any).type = 'ordinal'
+          break
+        case 'Float64':
+          ;(tempElement as any).type = 'float'
+          break
+        case 'Int':
+          ;(tempElement as any).type = 'int'
+          break
+        default:
+          ;(tempElement as any).type = 'ordinal'
+      }
+      dimensions.value.push(tempElement)
+      if (element.data_type === 'Int' || element.data_type === 'Float64') {
+        const item = {
+          value: element.name,
         }
-        dimensions.value.push(tempElement)
-        if (element.data_type === 'Int' || element.data_type === 'Float64') {
-          const item = {
-            value: element.name,
-          }
-          yOptions.value.push(item)
-        }
-      })
-      source.value = records.rows
-    } catch (err) {
-      // some error
-    } finally {
-      // setLoading(false)
-    }
+        tempYOptions.push(item)
+      }
+    })
+
+    source.value = records.rows
+    yOptions.value = tempYOptions
   }
 
-  fetchSqlResult()
-
   return {
+    initSqlResult,
     makeOption,
     yOptions,
+    source,
   }
 }
