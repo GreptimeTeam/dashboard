@@ -1,5 +1,4 @@
 <template>
-  <a-button type="primary" @click="insert()">Insert</a-button>
   <a-button type="primary" @click="runSqlCommand()">Run</a-button>
   <CodeMirror
     v-model="code"
@@ -10,10 +9,7 @@
     :indent-with-tab="indentWithTab"
     :tabSize="tabSize"
     :extensions="extensions"
-    @ready="log('ready', $event)"
-    @change="log('change', $event)"
-    @focus="log('focus', $event)"
-    @blur="useEditedCode"
+    @change="codeChange"
   />
 </template>
 
@@ -21,9 +17,9 @@
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
   import { EditorView } from '@codemirror/view'
-  import { ref } from 'vue'
   import { sql } from '@codemirror/lang-sql'
-  import useSqlResult from '@/hooks/data-view'
+  import useDataExplorer from '@/hooks/data-explorer'
+  import { useDataBaseStore } from '@/store'
 
   // <script setup> 范围里的值也能被直接作为自定义组件的标签名使用
   export interface Props {
@@ -43,8 +39,12 @@
     tabSize: 2,
     placeholder: 'Code goes here...',
   })
-  const code = ref<string>(``)
-  const { initSqlResult } = useSqlResult()
+
+  const dataExplorer = useDataExplorer()
+  const dataBaseStore = useDataBaseStore()
+  const { initSqlResult, code, codeChange } = dataExplorer
+
+  const refreshTableData = dataBaseStore.refreshDataBaseTables
 
   // extensions: Passed to CodeMirror EditorState.create({ extensions })
   const style = {
@@ -92,18 +92,8 @@
   )
   const extensions = [sql(), oneDark]
 
-  const useEditedCode = () => {
-    console.log('@@@blur@@@code:', code.value)
-  }
-  const log = (name: any, info: any) => {
-    console.log(name, info)
-  }
-
-  const insert = () => {
-    code.value += '\nselect * from monitor'
-  }
-
   async function runSqlCommand() {
     initSqlResult()
+    refreshTableData()
   }
 </script>

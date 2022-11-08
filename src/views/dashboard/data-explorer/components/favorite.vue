@@ -12,6 +12,13 @@
       </template>
     </a-list-item>
   </a-list>
+  <a-button @click="insertCode('favorite add')">add</a-button>
 </template>
 
-<script lang="ts" setup></script>
+<script lang="ts" setup>
+  import useDataExplorer from '@/hooks/data-explorer'
+
+  const dataExplorer = useDataExplorer()
+
+  const { insertCode } = dataExplorer
+</script>

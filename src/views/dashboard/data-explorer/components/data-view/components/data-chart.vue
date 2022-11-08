@@ -30,7 +30,7 @@
 
 <script lang="ts" setup>
   import { ref } from 'vue'
-  import useSqlResult from '@/hooks/data-view'
+  import useSqlResult from '@/hooks/data-explorer'
 
   const { yOptions } = useSqlResult()
   // const { loading, setLoading } = useLoading(true)

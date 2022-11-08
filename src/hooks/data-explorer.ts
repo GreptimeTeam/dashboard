@@ -6,7 +6,14 @@ const yOptions = ref<any>([])
 const source = ref<any>([])
 const dimensions = ref<any>([])
 
-export default function useSqlResult() {
+const code = ref('test')
+// todo: compare sqlResult's code and current code
+// const result = {
+// table_data
+// md5(code)
+// }
+
+export default function useDataExplorer() {
   const ySelectedTypes = ref<any>([])
 
   const seriesAndLegendNames = computed(() => {
@@ -87,10 +94,23 @@ export default function useSqlResult() {
     yOptions.value = tempYOptions
   }
 
+  const insertCode = (value: any) => {
+    code.value = `${code.value}\n${value}`
+  }
+
+  // todo: save code temp to local storage
+  const codeChange = () => {
+    console.log('changeA', code.value)
+    // localStorage.setItem('code', code.value)
+  }
+
   return {
     initSqlResult,
     makeOption,
+    codeChange,
+    insertCode,
     yOptions,
     source,
+    code,
   }
 }
