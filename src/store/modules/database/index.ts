@@ -8,25 +8,41 @@ const useDataBaseStore = defineStore('dataBase', {
   // 返回对象字面量
   state: () => ({
     columns: <any>[],
-    tableList: <any>[],
+    tableData: <any>[],
     count: 0,
     treeData: <any>[],
+    childrenList: <any>[],
+    favoriteData: <any>[],
   }),
   // getters: computed
   getters: {
-    tableResult(state: tableState): tableState {
-      return state
-    },
-    makeTableList() {
+    tableList(state) {
       const tempArray: any = []
-      this.tableList.forEach((item: any) => {
+      state.tableData.forEach((item: any) => {
         const node = {
           title: item[1],
           key: item[1],
+          isLeaf: false,
         }
         tempArray.push(node)
       })
+
       return tempArray
+    },
+    favoriteList(state) {
+      const tempArray: any = []
+      state.favoriteData.forEach((item: any) => {
+        const one = {
+          title: item[1],
+          key: item[1],
+        }
+        tempArray.push(one)
+      })
+      return tempArray
+    },
+    // todo: maybe make leaf children
+    makeTableChildren() {
+      return [{ title: `leaf`, key: `-1`, isLeaf: true }]
     },
   },
   // actions: methods
@@ -34,14 +50,24 @@ const useDataBaseStore = defineStore('dataBase', {
     async fetchDataBaseTables() {
       try {
         const res = await getTables()
-        this.tableList = res.dataset
+        this.tableData = res.dataset
       } catch (error) {
         // some error
       }
     },
-    async fetchOneColumn(id: any) {
+    async fetchFavoriteData() {
       try {
-        const res = await getOneColumn(id)
+        const res = await getTables()
+        this.favoriteData = res.dataset
+      } catch (error) {
+        // some error
+      }
+    },
+    // todo: maybe fetch just one
+    async fetchOneColumn(node: any) {
+      try {
+        const res = await getOneColumn(node)
+        this.childrenList = res.dataset
       } catch (error) {
         // some error
       }
@@ -49,7 +75,7 @@ const useDataBaseStore = defineStore('dataBase', {
     async refreshDataBaseTables() {
       try {
         const res = await getTables2()
-        this.tableList = res.dataset
+        this.tableData = res.dataset
       } catch (error) {
         // some error
       }

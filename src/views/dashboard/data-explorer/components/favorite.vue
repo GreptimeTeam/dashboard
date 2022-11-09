@@ -1,24 +1,31 @@
 <template>
-  <a-list>
+  <a-list :data="favoriteList">
     <template #header> Favorite </template>
-    <a-list-item v-for="idx in 3" :key="idx">
-      <a-tooltip content="This is tooltip content">
-        <a-list-item-meta description="Select * from list"> </a-list-item-meta>
-      </a-tooltip>
-
-      <template #actions>
-        <icon-edit />
-        <icon-delete />
-      </template>
-    </a-list-item>
+    <template #item="{ item }">
+      <a-list-item>
+        <a-tooltip content="This is tooltip content">
+          <a-list-item-meta :description="item.title"> </a-list-item-meta>
+        </a-tooltip>
+        <template #actions>
+          <icon-edit @click="insertCode(item.title)" />
+          <icon-delete />
+        </template>
+      </a-list-item>
+    </template>
   </a-list>
-  <a-button @click="insertCode('favorite add')">add</a-button>
 </template>
 
 <script lang="ts" setup>
+  import { storeToRefs } from 'pinia'
   import useDataExplorer from '@/hooks/data-explorer'
+  import { useDataBaseStore } from '@/store'
 
+  const dataBaseStore = useDataBaseStore()
   const dataExplorer = useDataExplorer()
 
   const { insertCode } = dataExplorer
+
+  const { favoriteList } = storeToRefs(dataBaseStore)
+
+  dataBaseStore.fetchFavoriteData()
 </script>
