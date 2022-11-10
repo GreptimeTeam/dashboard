@@ -13,13 +13,8 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: 'dashboard/workplace',
+      redirect: 'dashboard/data-explorer',
     },
-    // {
-    //   path: '/monitor',
-    //   name: 'monitor',
-    //   component: () => import('@/views/dashboard/monitor/index.vue'),
-    // },
     {
       path: '/login',
       name: 'login',

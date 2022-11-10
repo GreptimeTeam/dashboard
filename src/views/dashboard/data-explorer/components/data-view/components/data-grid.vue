@@ -1,14 +1,6 @@
 <template>
   <a-spin style="width: 100%">
-    <a-card
-      class="general-card"
-      :header-style="{ paddingBottom: 0 }"
-      :body-style="{
-        paddingTop: '20px',
-      }"
-    >
-      <a-table :columns="columns" :data="data" />
-    </a-card>
+    <a-table :columns="columns" :data="data" />
   </a-spin>
 </template>
 

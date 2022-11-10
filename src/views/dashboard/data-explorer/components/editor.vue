@@ -48,7 +48,7 @@
 
   // extensions: Passed to CodeMirror EditorState.create({ extensions })
   const style = {
-    height: '400px',
+    height: '350px',
     // '.cm-gutters': {
     //   color: #254f9a,
     // },
@@ -92,7 +92,7 @@
   )
   const extensions = [sql(), oneDark]
 
-  async function runSqlCommand() {
+  const runSqlCommand = () => {
     initSqlResult()
     refreshTableData()
   }

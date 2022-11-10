@@ -2,25 +2,49 @@
   <div class="container">
     <div class="left-side">
       <a-card>
-        <a-layout style="height: 500px">
-          <a-layout-sider style="width: 200px"><TableList /></a-layout-sider>
-          <a-layout-content><Editor /></a-layout-content>
-          <a-layout-sider style="width: 300px"><Favorite /></a-layout-sider>
+        <a-layout style="height: 390px">
+          <a-layout-sider :width="200" :collapsed="collapsed" :collapsed-width="40">
+            <a-row :wrap="false" style="height: 40px; line-height: 40px; font-size: large">
+              <a-col :span="collapsed ? 0 : 18"> <div>Table</div></a-col>
+              <a-col :span="6">
+                <a-button shape="round" @click="onTableSiderCollapse">
+                  <icon-caret-left v-if="collapsed" />
+                  <icon-caret-right v-else /> </a-button
+              ></a-col>
+            </a-row>
+            <TableList v-show="!collapsed" />
+          </a-layout-sider>
+          <a-layout-content style="margin-left: 24px">
+            <a-row :gutter="24">
+              <a-col :flex="8">
+                <Editor />
+              </a-col>
+              <a-col flex="auto">
+                <Favorite />
+              </a-col>
+            </a-row>
+          </a-layout-content>
         </a-layout>
+        <DataView />
+        <Log />
       </a-card>
-      <DataView />
-      <Log />
     </div>
     <div class="right-side"> </div>
   </div>
 </template>
 
 <script lang="ts" setup>
+  import { ref } from 'vue'
   import Editor from './components/editor.vue'
   import TableList from './components/table-list.vue'
   import Favorite from './components/favorite.vue'
   import DataView from './components/data-view/data-view-index.vue'
   import Log from './components/log.vue'
+
+  const collapsed = ref(false)
+  const onTableSiderCollapse = () => {
+    collapsed.value = !collapsed.value
+  }
 </script>
 
 <script lang="ts">
@@ -32,7 +56,7 @@
 <style lang="less" scoped>
   .container {
     background-color: var(--color-fill-2);
-    padding: 16px 20px;
+    padding: 0 20px;
     padding-bottom: 0;
     display: flex;
   }

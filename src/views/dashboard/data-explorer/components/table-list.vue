@@ -1,5 +1,4 @@
 <template>
-  <span>Table</span>
   <a-tree :data="tableList" :load-more="loadMore">
     <template #extra="nodeData">
       <IconPlus
@@ -21,13 +20,8 @@
   const { tableList } = storeToRefs(dataBaseStore)
   const { insertCode } = dataExplorer
 
-  // todo: delete promise
   const initTableDataSet = () => {
-    return new Promise<void>(() => {
-      setTimeout(() => {
-        dataBaseStore.fetchDataBaseTables()
-      }, 1000)
-    })
+    dataBaseStore.fetchDataBaseTables()
   }
 
   // todo: maybe load more
