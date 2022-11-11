@@ -12,9 +12,8 @@
     :indent-with-tab="indentWithTab"
     :tabSize="tabSize"
     :extensions="extensions"
-    @change="codeChange"
     @ready="handleReady"
-    @mouseup="codeMouseup"
+    @update="codeUpdate"
   />
 </template>
 
@@ -48,20 +47,22 @@
 
   const lineStart = ref()
   const lineEnd = ref()
+  const view = shallowRef()
 
   const dataExplorer = useDataExplorer()
   const dataBaseStore = useDataBaseStore()
-  const { initSqlResult, code, codeChange } = dataExplorer
+  const { initSqlResult, code } = dataExplorer
 
-  const view = shallowRef()
   const handleReady = (payload: any) => {
     view.value = payload.view
   }
-  const codeMouseup = () => {
-    const { state } = view.value
-    const { ranges } = state.selection
-    lineStart.value = state.doc.lineAt(ranges[0].from).number
-    lineEnd.value = state.doc.lineAt(ranges[0].to).number
+  const codeUpdate = () => {
+    if (view.value) {
+      const { state } = view.value
+      const { ranges } = state.selection
+      lineStart.value = state.doc.lineAt(ranges[0].from).number
+      lineEnd.value = state.doc.lineAt(ranges[0].to).number
+    }
   }
 
   const refreshTableData = dataBaseStore.refreshDataBaseTables
