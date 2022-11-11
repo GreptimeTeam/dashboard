@@ -1,7 +1,5 @@
-import { getOneColumn, getTables, getTables2 } from '@/api/editor'
+import { getFavoriteList, getOneColumn, getTables, getTables2 } from '@/api/editor'
 import { defineStore } from 'pinia'
-import { tableState } from './types'
-import { treeState } from './types'
 
 const useDataBaseStore = defineStore('dataBase', {
   // state： data
@@ -57,7 +55,7 @@ const useDataBaseStore = defineStore('dataBase', {
     },
     async fetchFavoriteData() {
       try {
-        const res = await getTables()
+        const res = await getFavoriteList()
         this.favoriteData = res.dataset
       } catch (error) {
         // some error

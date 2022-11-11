@@ -1,5 +1,8 @@
 <template>
-  <a-button type="primary" @click="runSqlCommand()">Run</a-button>
+  <a-button type="primary" @click="runSqlCommand()" style="margin: 0 20px 5px 0">Run All</a-button>
+  <a-button type="outline" v-if="lineStart === lineEnd"> Run Line {{ lineStart }}</a-button>
+  <a-button type="outline" v-else> Run Lines {{ lineStart }} - {{ lineEnd }}</a-button>
+
   <CodeMirror
     v-model="code"
     :placeholder="placeholder"
@@ -10,10 +13,13 @@
     :tabSize="tabSize"
     :extensions="extensions"
     @change="codeChange"
+    @ready="handleReady"
+    @mouseup="codeMouseup"
   />
 </template>
 
 <script lang="ts" setup>
+  import { shallowRef, ref } from 'vue'
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
   import { EditorView } from '@codemirror/view'
@@ -40,9 +46,23 @@
     placeholder: 'Code goes here...',
   })
 
+  const lineStart = ref()
+  const lineEnd = ref()
+
   const dataExplorer = useDataExplorer()
   const dataBaseStore = useDataBaseStore()
   const { initSqlResult, code, codeChange } = dataExplorer
+
+  const view = shallowRef()
+  const handleReady = (payload: any) => {
+    view.value = payload.view
+  }
+  const codeMouseup = () => {
+    const { state } = view.value
+    const { ranges } = state.selection
+    lineStart.value = state.doc.lineAt(ranges[0].from).number
+    lineEnd.value = state.doc.lineAt(ranges[0].to).number
+  }
 
   const refreshTableData = dataBaseStore.refreshDataBaseTables
 

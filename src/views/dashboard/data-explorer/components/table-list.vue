@@ -1,10 +1,9 @@
 <template>
   <a-tree :data="tableList" :load-more="loadMore">
     <template #extra="nodeData">
-      <IconPlus
-        style="position: absolute; right: 8px; font-size: 12px; top: 10px; color: #3370ff"
-        @click="insertCode(nodeData.title)"
-      />
+      <a-tooltip content="Insert Name Into Editor" mini background-color="#722ED1">
+        <icon-copy style="position: absolute; right: 8px; font-size: 20px" @click="insertNameToCode(nodeData.title)" />
+      </a-tooltip>
     </template>
   </a-tree>
 </template>
@@ -18,7 +17,7 @@
   const dataExplorer = useDataExplorer()
 
   const { tableList } = storeToRefs(dataBaseStore)
-  const { insertCode } = dataExplorer
+  const { insertNameToCode } = dataExplorer
 
   const initTableDataSet = () => {
     dataBaseStore.fetchDataBaseTables()

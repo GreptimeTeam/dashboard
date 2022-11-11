@@ -7,8 +7,10 @@
           <a-list-item-meta :description="item.title"> </a-list-item-meta>
         </a-tooltip>
         <template #actions>
-          <icon-edit @click="insertCode(item.title)" />
-          <icon-delete />
+          <a-tooltip content="Insert Code Into Editor" mini background-color="#722ED1">
+            <icon-copy style="font-size: 20px" @click="insertCode(item.title)" />
+          </a-tooltip>
+          <icon-delete style="font-size: 20px" />
         </template>
       </a-list-item>
     </template>

@@ -98,6 +98,10 @@ export default function useDataExplorer() {
     code.value = `${code.value}\n${value}`
   }
 
+  const insertNameToCode = (value: any) => {
+    code.value += value
+  }
+
   // todo: save code temp to local storage
   const codeChange = () => {
     console.log('changeA', code.value)
@@ -109,6 +113,7 @@ export default function useDataExplorer() {
     makeOption,
     codeChange,
     insertCode,
+    insertNameToCode,
     yOptions,
     source,
     code,
