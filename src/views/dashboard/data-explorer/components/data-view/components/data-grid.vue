@@ -1,63 +1,39 @@
 <template>
   <a-spin style="width: 100%">
-    <a-table :columns="columns" :data="data" />
+    <a-table :columns="gridColumn" :data="gridData" />
   </a-spin>
 </template>
 
 <script lang="ts" setup>
-  const columns = [
-    {
-      title: 'Name',
-      dataIndex: 'name',
-    },
-    {
-      title: 'Salary',
-      dataIndex: 'salary',
-    },
-    {
-      title: 'Address',
-      dataIndex: 'address',
-    },
-    {
-      title: 'Email',
-      dataIndex: 'email',
-    },
-  ]
-  const data = [
-    {
-      key: '1',
-      name: 'Jane Doe',
-      salary: 23000,
-      address: '32 Park Road, London',
-      email: 'jane.doe@example.com',
-    },
-    {
-      key: '2',
-      name: 'Alisa Ross',
-      salary: 25000,
-      address: '35 Park Road, London',
-      email: 'alisa.ross@example.com',
-    },
-    {
-      key: '3',
-      name: 'Kevin Sandra',
-      salary: 22000,
-      address: '31 Park Road, London',
-      email: 'kevin.sandra@example.com',
-    },
-    {
-      key: '4',
-      name: 'Ed Hellen',
-      salary: 17000,
-      address: '42 Park Road, London',
-      email: 'ed.hellen@example.com',
-    },
-    {
-      key: '5',
-      name: 'William Smith',
-      salary: 27000,
-      address: '62 Park Road, London',
-      email: 'william.smith@example.com',
-    },
-  ]
+  import { computed } from 'vue'
+  import useSqlResult from '@/hooks/data-explorer'
+
+  const { source, columns } = useSqlResult()
+
+  const gridColumn = computed(() => {
+    const tempArray: any = []
+    columns.value.forEach((item: any) => {
+      const oneColumn = {
+        title: item.name,
+        dataIndex: item.name,
+      }
+      tempArray.push(oneColumn)
+    })
+    return tempArray
+  })
+
+  // todo: responsive data
+  const gridData = computed(() => {
+    const temp: any = []
+    source.value.forEach((item: any) => {
+      const one = {
+        host: item[0],
+        ts: item[1],
+        cpu: item[2],
+        memory: item[3],
+      }
+      temp.push(one)
+    })
+    return temp
+  })
 </script>

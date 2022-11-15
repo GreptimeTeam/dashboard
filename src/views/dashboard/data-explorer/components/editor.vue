@@ -1,7 +1,10 @@
 <template>
-  <a-button type="primary" @click="runSqlCommand()" style="margin: 0 20px 5px 0">Run All</a-button>
-  <a-button type="outline" v-if="lineStart === lineEnd"> Run Line {{ lineStart }}</a-button>
-  <a-button type="outline" v-else> Run Lines {{ lineStart }} - {{ lineEnd }}</a-button>
+  <a-button style="margin: 0 20px 5px 0" type="primary" @click="runSqlCommand()">Run All</a-button>
+  <a @click="runPartSqlCommand()">
+    <a-button v-if="lineStart === lineEnd" type="outline"> Run Line {{ lineStart }} </a-button>
+    <a-button v-else type="outline"> Run Lines {{ lineStart }} - {{ lineEnd }}</a-button>
+  </a>
+  <a-button @click="clearCodeResult()"> clear result </a-button>
 
   <CodeMirror
     v-model="code"
@@ -19,12 +22,14 @@
 
 <script lang="ts" setup>
   import { shallowRef, ref } from 'vue'
+  import { storeToRefs } from 'pinia'
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
   import { EditorView } from '@codemirror/view'
   import { sql } from '@codemirror/lang-sql'
   import useDataExplorer from '@/hooks/data-explorer'
   import { useDataBaseStore } from '@/store'
+  import { useCodeRunStore } from '@/store'
 
   // <script setup> 范围里的值也能被直接作为自定义组件的标签名使用
   export interface Props {
@@ -47,11 +52,16 @@
 
   const lineStart = ref()
   const lineEnd = ref()
+  const selectedCode = ref()
   const view = shallowRef()
 
   const dataExplorer = useDataExplorer()
   const dataBaseStore = useDataBaseStore()
   const { initSqlResult, code } = dataExplorer
+  const codeRunStore = useCodeRunStore()
+  // attention: must use storetorefs
+  const { fetchSqlResult } = codeRunStore
+  const { usedCode } = storeToRefs(codeRunStore)
 
   const handleReady = (payload: any) => {
     view.value = payload.view
@@ -62,6 +72,7 @@
       const { ranges } = state.selection
       lineStart.value = state.doc.lineAt(ranges[0].from).number
       lineEnd.value = state.doc.lineAt(ranges[0].to).number
+      selectedCode.value = state.doc.text.slice(lineStart.value - 1, lineEnd.value)
     }
   }
 
@@ -116,5 +127,14 @@
   const runSqlCommand = () => {
     initSqlResult()
     refreshTableData()
+  }
+
+  const runPartSqlCommand = () => {
+    fetchSqlResult(selectedCode.value)
+  }
+
+  const clearCodeResult = () => {
+    console.log(usedCode.value)
+    codeRunStore.$reset()
   }
 </script>

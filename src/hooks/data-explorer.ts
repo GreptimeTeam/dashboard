@@ -4,6 +4,7 @@ import { ref, computed } from 'vue'
 const chartType = ref('line')
 const yOptions = ref<any>([])
 const source = ref<any>([])
+const columns = ref<any>([])
 const dimensions = ref<any>([])
 
 const code = ref('test')
@@ -92,6 +93,7 @@ export default function useDataExplorer() {
 
     source.value = records.rows
     yOptions.value = tempYOptions
+    columns.value = records.schema.column_schemas
   }
 
   const insertCode = (value: any) => {
@@ -117,5 +119,6 @@ export default function useDataExplorer() {
     yOptions,
     source,
     code,
+    columns,
   }
 }
