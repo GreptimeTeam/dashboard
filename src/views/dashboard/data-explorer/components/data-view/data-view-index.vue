@@ -1,5 +1,13 @@
 <template>
-  <a-tabs type="line" :editable="true" @delete="deleteTab" auto-switch>
+  <a-tabs
+    type="line"
+    :editable="true"
+    @delete="deleteTab"
+    :auto-switch="true"
+    lazy-load
+    :active-key="activeTabKey"
+    @tab-click="tabClick"
+  >
     <a-tab-pane
       v-for="(item, index) of resultTabIndex"
       :key="item"
@@ -31,5 +39,8 @@
   }
 
   const codeRunStore = useCodeRunStore()
-  const { resultTabIndex } = storeToRefs(codeRunStore)
+  const { resultTabIndex, activeTabKey } = storeToRefs(codeRunStore)
+  const tabClick = (key: any) => {
+    activeTabKey.value = key
+  }
 </script>

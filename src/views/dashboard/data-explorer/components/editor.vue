@@ -124,8 +124,9 @@
   )
   const extensions = [sql(), oneDark]
 
+  // todo: what kind of data structure does code need? array or string with \n?
   const runSqlCommand = () => {
-    initSqlResult()
+    fetchSqlResult(code.value)
     refreshTableData()
   }
 
@@ -135,6 +136,7 @@
 
   const clearCodeResult = () => {
     console.log(usedCode.value)
+    // todo: original state is just one tab?
     codeRunStore.$reset()
   }
 </script>

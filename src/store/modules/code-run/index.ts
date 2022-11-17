@@ -8,6 +8,7 @@ const useCodeRunStore = defineStore('codeRun', {
     usedCode: <any>[],
     runResult: <any>[],
     resultTabIndex: <any>[],
+    activeTabKey: 0,
   }),
   // getters: computed
   getters: {
@@ -23,6 +24,7 @@ const useCodeRunStore = defineStore('codeRun', {
         this.usedCode.push(code)
         this.runResult.push(res)
         this.resultTabIndex.push(this.resultTabIndex.length)
+        this.activeTabKey = this.resultTabIndex.length - 1
         // todo: log info into logs.
       } catch (error) {
         // todo: log error into logs.
