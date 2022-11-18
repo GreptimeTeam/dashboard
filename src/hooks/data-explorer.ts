@@ -1,5 +1,10 @@
 import { getSqlResult } from '@/api/editor'
 import { ref, computed } from 'vue'
+import { useCodeRunStore } from '@/store'
+import { storeToRefs } from 'pinia'
+
+const codeRunStore = useCodeRunStore()
+const { runResult, activeTabKey } = storeToRefs(codeRunStore)
 
 const chartType = ref('line')
 const yOptions = ref<any>([])
@@ -56,13 +61,18 @@ export default function useDataExplorer() {
     }
   }
 
-  const initSqlResult = async () => {
-    const data = await getSqlResult()
+  const initSqlResult = () => {
+    // const data = await getSqlResult()
+    console.log('initresult')
+
+    const data = runResult.value[activeTabKey.value]
+
     const {
       output: { records },
     } = data
+    console.log(records)
     const tempYOptions: any = []
-    records.schema.column_schemas.forEach((element) => {
+    records.schema.column_schemas.forEach((element: any) => {
       const tempElement = {}
 
       ;(tempElement as any).name = element.name
@@ -90,7 +100,6 @@ export default function useDataExplorer() {
         tempYOptions.push(item)
       }
     })
-
     source.value = records.rows
     yOptions.value = tempYOptions
     columns.value = records.schema.column_schemas

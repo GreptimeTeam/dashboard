@@ -49,6 +49,44 @@ export function getSqlResult() {
   }
 }
 
+export function getSqlResult2() {
+  //   return axios.post<SqlSentence>('/api/monitor/sql')
+  return {
+    output: {
+      records: {
+        rows: [
+          ['host1', 1660897955, 66.6, 1024.0],
+          ['host2', 1660897956, 77.7, 2048.0],
+          ['host1', 1660897957, 63.6, 1024.0],
+          ['host1', 1660897958, 66.6, 1024.0],
+          ['host1', 1660897959, 90.6, 2000.0],
+        ],
+        schema: {
+          column_schemas: [
+            {
+              data_type: 'String',
+              name: 'host',
+            },
+            {
+              data_type: 'Timestamp',
+              name: 'ts',
+            },
+            {
+              data_type: 'Float64',
+              name: 'cpu',
+            },
+            {
+              data_type: 'Float64',
+              name: 'memory',
+            },
+          ],
+        },
+      },
+    },
+    success: true,
+  }
+}
+
 export function getTables() {
   return {
     query: 'tables();',

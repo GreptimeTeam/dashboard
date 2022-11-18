@@ -32,9 +32,9 @@
 
 <script lang="ts" setup>
   import { ref } from 'vue'
-  import useSqlResult from '@/hooks/data-explorer'
+  import useDataExplorer from '@/hooks/data-explorer'
 
-  const { yOptions } = useSqlResult()
+  const { yOptions } = useDataExplorer()
   // const { loading, setLoading } = useLoading(true)
   // todo: move to config
   const chartTypeOptions: any = [
@@ -60,7 +60,7 @@
   const updateOptions = { notMerge: true }
 
   const drawChart = () => {
-    option.value = useSqlResult().makeOption([chartForm.value.chartType, chartForm.value.ySelectedTypes])
+    option.value = useDataExplorer().makeOption([chartForm.value.chartType, chartForm.value.ySelectedTypes])
   }
 </script>
 

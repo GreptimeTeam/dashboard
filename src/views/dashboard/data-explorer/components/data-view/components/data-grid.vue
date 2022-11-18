@@ -6,10 +6,10 @@
 
 <script lang="ts" setup>
   import { computed } from 'vue'
-  import useSqlResult from '@/hooks/data-explorer'
+  import useDataExplorer from '@/hooks/data-explorer'
 
-  const { source, columns } = useSqlResult()
-
+  const { source, columns, initSqlResult } = useDataExplorer()
+  initSqlResult()
   const gridColumn = computed(() => {
     const tempArray: any = []
     columns.value.forEach((item: any) => {
