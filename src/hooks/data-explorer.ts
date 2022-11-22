@@ -62,15 +62,11 @@ export default function useDataExplorer() {
   }
 
   const initSqlResult = () => {
-    // const data = await getSqlResult()
-    console.log('initresult')
-
     const data = runResult.value[activeTabKey.value]
 
     const {
       output: { records },
     } = data
-    console.log(records)
     const tempYOptions: any = []
     records.schema.column_schemas.forEach((element: any) => {
       const tempElement = {}

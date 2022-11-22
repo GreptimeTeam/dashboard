@@ -57,7 +57,7 @@
 
   const dataExplorer = useDataExplorer()
   const dataBaseStore = useDataBaseStore()
-  const { initSqlResult, code } = dataExplorer
+  const { code } = dataExplorer
   const codeRunStore = useCodeRunStore()
   // attention: must use storetorefs
   const { fetchSqlResult, fetchSqlResult2 } = codeRunStore
