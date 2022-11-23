@@ -20,7 +20,9 @@
               multiple
               :filter-option="false"
             >
-              <a-option v-for="item of yOptions" :key="item.value" :value="item.value">{{ item.value }}</a-option>
+              <a-option v-for="item of yOptions[activeTabKey]" :key="item.value" :value="item.value">{{
+                item.value
+              }}</a-option>
             </a-select>
           </a-form-item>
         </a-form>
@@ -33,6 +35,11 @@
 <script lang="ts" setup>
   import { ref } from 'vue'
   import useDataExplorer from '@/hooks/data-explorer'
+  import { useCodeRunStore } from '@/store'
+  import { storeToRefs } from 'pinia'
+
+  const codeRunStore = useCodeRunStore()
+  const { activeTabKey } = storeToRefs(codeRunStore)
 
   const { yOptions } = useDataExplorer()
   // const { loading, setLoading } = useLoading(true)

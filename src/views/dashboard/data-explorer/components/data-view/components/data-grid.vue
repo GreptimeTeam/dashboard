@@ -7,12 +7,18 @@
 <script lang="ts" setup>
   import { computed } from 'vue'
   import useDataExplorer from '@/hooks/data-explorer'
+  import { useCodeRunStore } from '@/store'
+  import { storeToRefs } from 'pinia'
 
-  const { source, columns, initSqlResult } = useDataExplorer()
+  const codeRunStore = useCodeRunStore()
+  const { activeTabKey } = storeToRefs(codeRunStore)
+
+  const { initSqlResult, source, columns } = useDataExplorer()
+
   initSqlResult()
   const gridColumn = computed(() => {
     const tempArray: any = []
-    columns.value.forEach((item: any) => {
+    columns.value[activeTabKey.value].forEach((item: any) => {
       const oneColumn = {
         title: item.name,
         dataIndex: item.name,
@@ -22,17 +28,15 @@
     return tempArray
   })
 
-  // todo: responsive data
   const gridData = computed(() => {
     const temp: any = []
-    source.value.forEach((item: any) => {
-      const one = {
-        host: item[0],
-        ts: item[1],
-        cpu: item[2],
-        memory: item[3],
-      }
-      temp.push(one)
+    source.value[activeTabKey.value].forEach((item: any) => {
+      const oneRow: any = {}
+      item.forEach((value: any, index: any) => {
+        console.log(gridColumn.value[index])
+        oneRow[gridColumn.value[index].title] = value
+      })
+      temp.push(oneRow)
     })
     return temp
   })

@@ -11,6 +11,7 @@ const yOptions = ref<any>([])
 const source = ref<any>([])
 const columns = ref<any>([])
 const dimensions = ref<any>([])
+const ySelectedTypes = ref<any>([])
 
 const code = ref('test')
 // todo: compare sqlResult's code and current code
@@ -20,8 +21,7 @@ const code = ref('test')
 // }
 
 export default function useDataExplorer() {
-  const ySelectedTypes = ref<any>([])
-
+  // todo : need array?
   const seriesAndLegendNames = computed(() => {
     const tempSeries: any = []
     const tempLegendNames: any = []
@@ -52,14 +52,16 @@ export default function useDataExplorer() {
       },
       tooltip: {},
       dataset: {
-        dimensions: dimensions.value,
-        source: source.value,
+        dimensions: dimensions.value[activeTabKey.value],
+        source: source.value[activeTabKey.value],
       },
       xAxis: { type: 'time' },
       yAxis: {},
       series: seriesAndLegendNames.value[0],
     }
   }
+
+  // todo: change to computed instead of using array?
 
   const initSqlResult = () => {
     const data = runResult.value[activeTabKey.value]
@@ -68,6 +70,7 @@ export default function useDataExplorer() {
       output: { records },
     } = data
     const tempYOptions: any = []
+    const tempDimensions: any = []
     records.schema.column_schemas.forEach((element: any) => {
       const tempElement = {}
 
@@ -88,7 +91,7 @@ export default function useDataExplorer() {
         default:
           ;(tempElement as any).type = 'ordinal'
       }
-      dimensions.value.push(tempElement)
+      tempDimensions.push(tempElement)
       if (element.data_type === 'Int' || element.data_type === 'Float64') {
         const item = {
           value: element.name,
@@ -96,9 +99,10 @@ export default function useDataExplorer() {
         tempYOptions.push(item)
       }
     })
-    source.value = records.rows
-    yOptions.value = tempYOptions
-    columns.value = records.schema.column_schemas
+    dimensions.value.push(tempDimensions)
+    source.value.push(records.rows)
+    yOptions.value.push(tempYOptions)
+    columns.value.push(records.schema.column_schemas)
   }
 
   const insertCode = (value: any) => {
