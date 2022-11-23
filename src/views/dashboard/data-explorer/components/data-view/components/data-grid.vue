@@ -33,7 +33,6 @@
     source.value[activeTabKey.value].forEach((item: any) => {
       const oneRow: any = {}
       item.forEach((value: any, index: any) => {
-        console.log(gridColumn.value[index])
         oneRow[gridColumn.value[index].title] = value
       })
       temp.push(oneRow)

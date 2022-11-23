@@ -1,4 +1,5 @@
 import { getFavoriteList, getOneColumn, getSqlResult, getSqlResult2, getTables, getTables2 } from '@/api/editor'
+import { Message } from '@arco-design/web-vue'
 import { defineStore } from 'pinia'
 
 const useCodeRunStore = defineStore('codeRun', {
@@ -17,30 +18,23 @@ const useCodeRunStore = defineStore('codeRun', {
   // actions: methods
 
   actions: {
-    async fetchSqlResult(code: any) {
+    async fetchSqlResult(runCode: any) {
       try {
-        const res = await getSqlResult()
-        // todo: if return success
-        this.usedCode.push(code)
+        const res = await getSqlResult(runCode)
+        Message.success({
+          content: 'success',
+        })
+        console.log(res)
+        // todo: add support for insert
+        this.usedCode.push(runCode)
         this.runResult.push(res)
         this.resultTabIndex.push(this.resultTabIndex.length)
         this.activeTabKey = this.resultTabIndex.length - 1
+
         // todo: log info into logs.
       } catch (error) {
         // todo: log error into logs.
-      }
-    },
-    async fetchSqlResult2(code: any) {
-      try {
-        const res = await getSqlResult2()
-        // todo: if return success
-        this.usedCode.push(code)
-        this.runResult.push(res)
-        this.resultTabIndex.push(this.resultTabIndex.length)
-        this.activeTabKey = this.resultTabIndex.length - 1
-        // todo: log info into logs.
-      } catch (error) {
-        // todo: log error into logs.
+        console.log(error)
       }
     },
   },

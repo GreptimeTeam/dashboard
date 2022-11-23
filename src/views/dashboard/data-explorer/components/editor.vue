@@ -60,7 +60,7 @@
   const { code } = dataExplorer
   const codeRunStore = useCodeRunStore()
   // attention: must use storetorefs
-  const { fetchSqlResult, fetchSqlResult2 } = codeRunStore
+  const { fetchSqlResult } = codeRunStore
   const { usedCode } = storeToRefs(codeRunStore)
 
   const handleReady = (payload: any) => {
@@ -131,7 +131,7 @@
   }
 
   const runPartSqlCommand = () => {
-    fetchSqlResult2(selectedCode.value)
+    fetchSqlResult(selectedCode.value)
   }
 
   const clearCodeResult = () => {

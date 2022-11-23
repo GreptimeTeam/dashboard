@@ -1,4 +1,3 @@
-import { getSqlResult } from '@/api/editor'
 import { ref, computed } from 'vue'
 import { useCodeRunStore } from '@/store'
 import { storeToRefs } from 'pinia'
@@ -13,7 +12,8 @@ const columns = ref<any>([])
 const dimensions = ref<any>([])
 const ySelectedTypes = ref<any>([])
 
-const code = ref('test')
+// todo: change init code
+const code = ref('select * from monitor')
 // todo: compare sqlResult's code and current code
 // const result = {
 // table_data
@@ -65,10 +65,9 @@ export default function useDataExplorer() {
 
   const initSqlResult = () => {
     const data = runResult.value[activeTabKey.value]
-
-    const {
-      output: { records },
-    } = data
+    const { output } = data
+    // todo: support multiple records in the future
+    const { records } = output[0]
     const tempYOptions: any = []
     const tempDimensions: any = []
     records.schema.column_schemas.forEach((element: any) => {
@@ -115,7 +114,6 @@ export default function useDataExplorer() {
 
   // todo: save code temp to local storage
   const codeChange = () => {
-    console.log('changeA', code.value)
     // localStorage.setItem('code', code.value)
   }
 
