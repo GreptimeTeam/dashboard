@@ -6,52 +6,13 @@ export function getSqlResult(code: any) {
 }
 
 export function getTables() {
-  return {
-    query: 'tables();',
-    columns: [
-      {
-        name: 'id',
-        type: 'INT',
-      },
-      {
-        name: 'name',
-        type: 'STRING',
-      },
-      {
-        name: 'designatedTimestamp',
-        type: 'STRING',
-      },
-      {
-        name: 'partitionBy',
-        type: 'STRING',
-      },
-      {
-        name: 'maxUncommittedRows',
-        type: 'INT',
-      },
-      {
-        name: 'commitLag',
-        type: 'LONG',
-      },
-      {
-        name: 'walEnabled',
-        type: 'BOOLEAN',
-      },
-    ],
-    dataset: [
-      [2, 'weather', 'timestamp', 'NONE', 500000, '300000000', false],
-      [121, 'pos', 'time', 'DAY', 500000, '300000000', false],
-      [4, 'gas_prices', 'timestamp', 'NONE', 500000, '300000000', false],
-      [5, 'trips', 'pickup_datetime', 'MONTH', 500000, '300000000', false],
-      [10, 'trades', 'timestamp', 'DAY', 500000, '2000000', false],
-    ],
-    count: 5,
-    timings: {
-      compiler: 281451,
-      execute: 560876,
-      count: 0,
-    },
-  }
+  const code = 'show tables'
+  return axios.post(`/api/v1/sql?sql= ${code}`)
+}
+
+export function fetchOneTable(tableName: any) {
+  const code = `desc table ${tableName}`
+  return axios.post(`/api/v1/sql?sql= ${code}`)
 }
 
 export function getFavoriteList() {
