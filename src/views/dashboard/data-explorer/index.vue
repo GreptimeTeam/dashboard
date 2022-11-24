@@ -21,11 +21,8 @@
           </a-layout-sider>
           <a-layout-content style="margin-left: 24px">
             <a-row :gutter="24">
-              <a-col :flex="8">
+              <a-col>
                 <Editor />
-              </a-col>
-              <a-col flex="auto">
-                <Favorite />
               </a-col>
             </a-row>
           </a-layout-content>
@@ -34,7 +31,6 @@
         <Log />
       </a-card>
     </div>
-    <div class="right-side"> </div>
   </div>
 </template>
 
@@ -65,7 +61,7 @@
 <style lang="less" scoped>
   .container {
     background-color: var(--color-fill-2);
-    padding: 0 20px;
+    padding: 20px 200px;
     padding-bottom: 0;
     display: flex;
   }

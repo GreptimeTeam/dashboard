@@ -12,9 +12,7 @@ const useCodeRunStore = defineStore('codeRun', {
     activeTabData: <any>{},
   }),
   // getters: computed
-  getters: {
-    gridData(state) {},
-  },
+  getters: {},
   // actions: methods
 
   actions: {
