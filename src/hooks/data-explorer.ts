@@ -1,13 +1,19 @@
-import { getSqlResult } from '@/api/editor'
 import { ref, computed } from 'vue'
+import { useCodeRunStore } from '@/store'
+import { storeToRefs } from 'pinia'
+
+const codeRunStore = useCodeRunStore()
+const { runResult, activeTabKey } = storeToRefs(codeRunStore)
 
 const chartType = ref('line')
 const yOptions = ref<any>([])
 const source = ref<any>([])
 const columns = ref<any>([])
 const dimensions = ref<any>([])
+const ySelectedTypes = ref<any>([])
 
-const code = ref('test')
+// todo: change init code
+const code = ref('select * from monitor')
 // todo: compare sqlResult's code and current code
 // const result = {
 // table_data
@@ -15,8 +21,7 @@ const code = ref('test')
 // }
 
 export default function useDataExplorer() {
-  const ySelectedTypes = ref<any>([])
-
+  // todo : need array?
   const seriesAndLegendNames = computed(() => {
     const tempSeries: any = []
     const tempLegendNames: any = []
@@ -47,8 +52,8 @@ export default function useDataExplorer() {
       },
       tooltip: {},
       dataset: {
-        dimensions: dimensions.value,
-        source: source.value,
+        dimensions: dimensions.value[activeTabKey.value],
+        source: source.value[activeTabKey.value],
       },
       xAxis: { type: 'time' },
       yAxis: {},
@@ -56,13 +61,16 @@ export default function useDataExplorer() {
     }
   }
 
-  const initSqlResult = async () => {
-    const data = await getSqlResult()
-    const {
-      output: { records },
-    } = data
+  // todo: change to computed instead of using array?
+
+  const initSqlResult = () => {
+    const data = runResult.value[activeTabKey.value]
+    const { output } = data
+    // todo: support multiple records in the future
+    const { records } = output[0]
     const tempYOptions: any = []
-    records.schema.column_schemas.forEach((element) => {
+    const tempDimensions: any = []
+    records.schema.column_schemas.forEach((element: any) => {
       const tempElement = {}
 
       ;(tempElement as any).name = element.name
@@ -82,7 +90,7 @@ export default function useDataExplorer() {
         default:
           ;(tempElement as any).type = 'ordinal'
       }
-      dimensions.value.push(tempElement)
+      tempDimensions.push(tempElement)
       if (element.data_type === 'Int' || element.data_type === 'Float64') {
         const item = {
           value: element.name,
@@ -90,10 +98,10 @@ export default function useDataExplorer() {
         tempYOptions.push(item)
       }
     })
-
-    source.value = records.rows
-    yOptions.value = tempYOptions
-    columns.value = records.schema.column_schemas
+    dimensions.value.push(tempDimensions)
+    source.value.push(records.rows)
+    yOptions.value.push(tempYOptions)
+    columns.value.push(records.schema.column_schemas)
   }
 
   const insertCode = (value: any) => {
@@ -106,7 +114,6 @@ export default function useDataExplorer() {
 
   // todo: save code temp to local storage
   const codeChange = () => {
-    console.log('changeA', code.value)
     // localStorage.setItem('code', code.value)
   }
 

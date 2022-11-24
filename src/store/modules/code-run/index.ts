@@ -1,6 +1,6 @@
-import { getFavoriteList, getOneColumn, getSqlResult, getTables, getTables2 } from '@/api/editor'
+import { getFavoriteList, getOneColumn, getSqlResult, getSqlResult2, getTables, getTables2 } from '@/api/editor'
+import { Message } from '@arco-design/web-vue'
 import { defineStore } from 'pinia'
-import useDataExplorer from '@/hooks/data-explorer'
 
 const useCodeRunStore = defineStore('codeRun', {
   // state： data
@@ -8,26 +8,32 @@ const useCodeRunStore = defineStore('codeRun', {
     usedCode: <any>[],
     runResult: <any>[],
     resultTabIndex: <any>[],
-    activeTabKey: 0,
+    activeTabKey: <number>0,
+    activeTabData: <any>{},
   }),
   // getters: computed
   getters: {
-    dataSource(state) {},
+    gridData(state) {},
   },
   // actions: methods
 
   actions: {
-    async fetchSqlResult(code: any) {
+    async fetchSqlResult(runCode: any) {
       try {
-        const res = await getSqlResult()
-        // todo: if return success
-        this.usedCode.push(code)
-        this.runResult.push(res)
-        this.resultTabIndex.push(this.resultTabIndex.length)
-        this.activeTabKey = this.resultTabIndex.length - 1
+        const res = await getSqlResult(runCode)
+        Message.success({
+          content: 'success',
+        })
+        if (runCode.toLocaleLowerCase().substring(0, 6) === 'select') {
+          this.usedCode.push(runCode)
+          this.runResult.push(res)
+          this.resultTabIndex.push(this.resultTabIndex.length)
+          this.activeTabKey = this.resultTabIndex.length - 1
+        }
         // todo: log info into logs.
       } catch (error) {
         // todo: log error into logs.
+        console.log(error)
       }
     },
   },
