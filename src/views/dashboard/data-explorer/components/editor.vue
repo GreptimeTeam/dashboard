@@ -72,7 +72,7 @@
       const { ranges } = state.selection
       lineStart.value = state.doc.lineAt(ranges[0].from).number
       lineEnd.value = state.doc.lineAt(ranges[0].to).number
-      selectedCode.value = state.doc.text.slice(lineStart.value - 1, lineEnd.value)
+      selectedCode.value = state.doc.text.slice(lineStart.value - 1, lineEnd.value).join('\n')
     }
   }
 
@@ -124,14 +124,14 @@
   )
   const extensions = [sql(), oneDark]
 
-  // todo: what kind of data structure does code need? array or string with \n?
   const runSqlCommand = () => {
-    fetchSqlResult(code.value)
+    // todo: add better format tool for code
+    fetchSqlResult(code.value.trim())
     refreshTableData()
   }
 
   const runPartSqlCommand = () => {
-    fetchSqlResult(selectedCode.value)
+    fetchSqlResult(selectedCode.value.trim())
   }
 
   const clearCodeResult = () => {

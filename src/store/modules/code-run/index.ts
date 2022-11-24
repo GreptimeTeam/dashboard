@@ -24,13 +24,12 @@ const useCodeRunStore = defineStore('codeRun', {
         Message.success({
           content: 'success',
         })
-        console.log(res)
-        // todo: add support for insert
-        this.usedCode.push(runCode)
-        this.runResult.push(res)
-        this.resultTabIndex.push(this.resultTabIndex.length)
-        this.activeTabKey = this.resultTabIndex.length - 1
-
+        if (runCode.toLocaleLowerCase().substring(0, 6) === 'select') {
+          this.usedCode.push(runCode)
+          this.runResult.push(res)
+          this.resultTabIndex.push(this.resultTabIndex.length)
+          this.activeTabKey = this.resultTabIndex.length - 1
+        }
         // todo: log info into logs.
       } catch (error) {
         // todo: log error into logs.
