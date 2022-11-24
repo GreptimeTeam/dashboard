@@ -1,4 +1,4 @@
-import { getFavoriteList, getOneColumn, getSqlResult, getSqlResult2, getTables, getTables2 } from '@/api/editor'
+import { getSqlResult } from '@/api/editor'
 import { Message } from '@arco-design/web-vue'
 import { defineStore } from 'pinia'
 
@@ -12,9 +12,7 @@ const useCodeRunStore = defineStore('codeRun', {
     activeTabData: <any>{},
   }),
   // getters: computed
-  getters: {
-    gridData(state) {},
-  },
+  getters: {},
   // actions: methods
 
   actions: {

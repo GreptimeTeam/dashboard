@@ -72,11 +72,11 @@
       const { ranges } = state.selection
       lineStart.value = state.doc.lineAt(ranges[0].from).number
       lineEnd.value = state.doc.lineAt(ranges[0].to).number
-      selectedCode.value = state.doc.text.slice(lineStart.value - 1, lineEnd.value).join('\n')
+      selectedCode.value = state.doc.text.slice(lineStart.value - 1, lineEnd.value).join(' ')
     }
   }
 
-  const refreshTableData = dataBaseStore.refreshDataBaseTables
+  const refreshTableData = dataBaseStore.fetchDataBaseTables
 
   // extensions: Passed to CodeMirror EditorState.create({ extensions })
   const style = {
@@ -124,14 +124,18 @@
   )
   const extensions = [sql(), oneDark]
 
+  // todo: combine next 2 functions
   const runSqlCommand = () => {
     // todo: add better format tool for code
-    fetchSqlResult(code.value.trim())
+    fetchSqlResult(code.value.trim().replace('\n', ' '))
+    // todo: when to refresh tables data?
+    // todo: refresh not changing view
     refreshTableData()
   }
 
   const runPartSqlCommand = () => {
     fetchSqlResult(selectedCode.value.trim())
+    refreshTableData()
   }
 
   const clearCodeResult = () => {

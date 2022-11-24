@@ -1,4 +1,4 @@
-import { getFavoriteList, getOneColumn, getTables, getTables2 } from '@/api/editor'
+import { fetchOneTable, getFavoriteList, getTables } from '@/api/editor'
 import { defineStore } from 'pinia'
 
 const useDataBaseStore = defineStore('dataBase', {
@@ -6,20 +6,21 @@ const useDataBaseStore = defineStore('dataBase', {
   // 返回对象字面量
   state: () => ({
     columns: <any>[],
-    tableData: <any>[],
+    tableData: <any>{},
     count: 0,
     treeData: <any>[],
     childrenList: <any>[],
     favoriteData: <any>[],
+    ifTableLoading: <boolean>true,
   }),
   // getters: computed
   getters: {
     tableList(state) {
       const tempArray: any = []
-      state.tableData.forEach((item: any) => {
+      state.tableData.output[0].records.rows.forEach((item: any) => {
         const node = {
-          title: item[1],
-          key: item[1],
+          title: item.join(),
+          key: item.join(),
           isLeaf: false,
         }
         tempArray.push(node)
@@ -47,8 +48,10 @@ const useDataBaseStore = defineStore('dataBase', {
   actions: {
     async fetchDataBaseTables() {
       try {
+        this.ifTableLoading = true
         const res = await getTables()
-        this.tableData = res.dataset
+        this.ifTableLoading = false
+        this.tableData = res
       } catch (error) {
         // some error
       }
@@ -62,18 +65,10 @@ const useDataBaseStore = defineStore('dataBase', {
       }
     },
     // todo: maybe fetch just one
-    async fetchOneColumn(node: any) {
+    async fetchOneTable(node: any) {
       try {
-        const res = await getOneColumn(node)
-        this.childrenList = res.dataset
-      } catch (error) {
-        // some error
-      }
-    },
-    async refreshDataBaseTables() {
-      try {
-        const res = await getTables2()
-        this.tableData = res.dataset
+        const res = await fetchOneTable(node)
+        this.childrenList = res
       } catch (error) {
         // some error
       }
