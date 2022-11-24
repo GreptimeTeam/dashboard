@@ -5,7 +5,12 @@
         <a-layout style="height: 390px">
           <a-layout-sider :width="200" :collapsed="collapsed" :collapsed-width="40">
             <a-row :wrap="false" style="height: 40px; line-height: 40px; font-size: large">
-              <a-col :span="collapsed ? 0 : 18"> <div style="margin-left: 20px">Table</div></a-col>
+              <a-col :span="collapsed ? 0 : 18">
+                <div style="margin-left: 20px"
+                  >Tables
+
+                  <icon-sync style="font-size: 20px; cursor: pointer" @click="refreshTableData()" /></div
+              ></a-col>
               <a-col :span="6">
                 <a-button shape="round" @click="onTableSiderCollapse">
                   <icon-caret-left v-if="collapsed" />
@@ -35,6 +40,7 @@
 
 <script lang="ts" setup>
   import { ref } from 'vue'
+  import { useDataBaseStore } from '@/store'
   import Editor from './components/editor.vue'
   import TableList from './components/table-list.vue'
   import Favorite from './components/favorite.vue'
@@ -45,6 +51,9 @@
   const onTableSiderCollapse = () => {
     collapsed.value = !collapsed.value
   }
+  const dataBaseStore = useDataBaseStore()
+
+  const refreshTableData = dataBaseStore.fetchDataBaseTables
 </script>
 
 <script lang="ts">

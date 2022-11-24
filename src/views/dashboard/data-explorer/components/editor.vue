@@ -76,7 +76,7 @@
     }
   }
 
-  const refreshTableData = dataBaseStore.refreshDataBaseTables
+  const refreshTableData = dataBaseStore.fetchDataBaseTables
 
   // extensions: Passed to CodeMirror EditorState.create({ extensions })
   const style = {
@@ -124,14 +124,17 @@
   )
   const extensions = [sql(), oneDark]
 
+  // todo: combine next 2 functions
   const runSqlCommand = () => {
     // todo: add better format tool for code
     fetchSqlResult(code.value.trim())
+    // todo: when to refresh tables data?
     refreshTableData()
   }
 
   const runPartSqlCommand = () => {
     fetchSqlResult(selectedCode.value.trim())
+    refreshTableData()
   }
 
   const clearCodeResult = () => {
