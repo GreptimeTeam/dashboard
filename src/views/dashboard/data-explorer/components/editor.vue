@@ -129,6 +129,7 @@
     // todo: add better format tool for code
     fetchSqlResult(code.value.trim().replace('\n', ' '))
     // todo: when to refresh tables data?
+    // todo: refresh not changing view
     refreshTableData()
   }
 

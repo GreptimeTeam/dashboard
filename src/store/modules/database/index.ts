@@ -1,4 +1,4 @@
-import { fetchOneTable, getFavoriteList, getOneColumn, getTables, getTables2 } from '@/api/editor'
+import { fetchOneTable, getFavoriteList, getTables } from '@/api/editor'
 import { defineStore } from 'pinia'
 
 const useDataBaseStore = defineStore('dataBase', {
@@ -48,6 +48,7 @@ const useDataBaseStore = defineStore('dataBase', {
   actions: {
     async fetchDataBaseTables() {
       try {
+        this.ifTableLoading = true
         const res = await getTables()
         this.ifTableLoading = false
         this.tableData = res
@@ -68,14 +69,6 @@ const useDataBaseStore = defineStore('dataBase', {
       try {
         const res = await fetchOneTable(node)
         this.childrenList = res
-      } catch (error) {
-        // some error
-      }
-    },
-    async refreshDataBaseTables() {
-      try {
-        const res = await getTables2()
-        this.tableData = res.dataset
       } catch (error) {
         // some error
       }

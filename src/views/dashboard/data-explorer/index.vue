@@ -12,7 +12,7 @@
                   <icon-sync style="font-size: 20px; cursor: pointer" @click="refreshTableData()" /></div
               ></a-col>
               <a-col :span="6">
-                <a-button shape="round" @click="onTableSiderCollapse">
+                <a-button shape="round" @click="onTableSideCollapse">
                   <icon-caret-left v-if="collapsed" />
                   <icon-caret-right v-else /> </a-button
               ></a-col>
@@ -39,12 +39,11 @@
   import { useDataBaseStore } from '@/store'
   import Editor from './components/editor.vue'
   import TableList from './components/table-list.vue'
-  import Favorite from './components/favorite.vue'
   import DataView from './components/data-view/data-view-index.vue'
   import Log from './components/log.vue'
 
   const collapsed = ref(false)
-  const onTableSiderCollapse = () => {
+  const onTableSideCollapse = () => {
     collapsed.value = !collapsed.value
   }
   const dataBaseStore = useDataBaseStore()
