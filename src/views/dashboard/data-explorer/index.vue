@@ -3,7 +3,7 @@
     <div class="left-side">
       <a-card>
         <a-layout style="height: 390px">
-          <a-layout-sider :width="200" :collapsed="collapsed" :collapsed-width="40">
+          <a-layout-sider :width="300" :collapsed="collapsed" :collapsed-width="40">
             <a-row :wrap="false" style="height: 40px; line-height: 40px; font-size: large">
               <a-col :span="collapsed ? 0 : 18">
                 <div style="margin-left: 20px"

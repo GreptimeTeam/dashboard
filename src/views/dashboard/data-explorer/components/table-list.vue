@@ -1,6 +1,9 @@
 <template>
-  <a-tree v-if="!ifTableLoading" :data="tableList" :load-more="loadMore">
+  <a-tree v-if="!ifTableLoading" :key="tableKey" :data="tableList" :load-more="loadMore">
     <template #extra="nodeData">
+      <span style="color: purple">
+        {{ nodeData.type }}
+      </span>
       <a-tooltip content="Insert Name Into Editor" mini background-color="#722ED1">
         <icon-copy style="position: absolute; right: 8px; font-size: 20px" @click="insertNameToCode(nodeData.title)" />
       </a-tooltip>
@@ -22,17 +25,34 @@
     dataBaseStore.fetchDataBaseTables()
   }
   const { fetchOneTable } = dataBaseStore
-  const { tableList, ifTableLoading } = storeToRefs(dataBaseStore)
-  // todo: maybe load more
+  const { tableList, ifTableLoading, tableKey } = storeToRefs(dataBaseStore)
   const loadMore = (nodeData: any) => {
-    // return new Promise<void>((resolve) => {
-    //   setTimeout(() => {
-    //     nodeData.children = [{ title: `leaf`, key: `-1`, isLeaf: true }]
-    //     resolve()
-    //   }, 1000)
-    // })
-    console.log(nodeData)
-    fetchOneTable(nodeData.title)
+    return new Promise<void>((resolve, reject) => {
+      fetchOneTable(nodeData.title)
+        .then((result: any) => {
+          const { output } = result
+          const {
+            records: { rows },
+          } = output[0]
+          const rowArray: any = []
+          rows.forEach((row: any) => {
+            rowArray.push({
+              title: row[0],
+              key: row[0],
+              isLeaf: true,
+              type: row[1],
+            })
+          })
+          // todo: change computed data might not be the best option.
+          nodeData.children = rowArray
+          resolve()
+          // todo: change key to update component might not be the best option.
+          tableKey.value += 1
+        })
+        .catch(() => {
+          reject()
+        })
+    })
   }
   initTableDataSet()
 </script>

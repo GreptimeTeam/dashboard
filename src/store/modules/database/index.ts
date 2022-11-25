@@ -3,15 +3,11 @@ import { defineStore } from 'pinia'
 
 const useDataBaseStore = defineStore('dataBase', {
   // state： data
-  // 返回对象字面量
   state: () => ({
-    columns: <any>[],
     tableData: <any>{},
-    count: 0,
-    treeData: <any>[],
-    childrenList: <any>[],
     favoriteData: <any>[],
     ifTableLoading: <boolean>true,
+    tableKey: 0,
   }),
   // getters: computed
   getters: {
@@ -25,7 +21,6 @@ const useDataBaseStore = defineStore('dataBase', {
         }
         tempArray.push(node)
       })
-
       return tempArray
     },
     favoriteList(state) {
@@ -38,10 +33,6 @@ const useDataBaseStore = defineStore('dataBase', {
         tempArray.push(one)
       })
       return tempArray
-    },
-    // todo: maybe make leaf children
-    makeTableChildren() {
-      return [{ title: `leaf`, key: `-1`, isLeaf: true }]
     },
   },
   // actions: methods
@@ -64,12 +55,12 @@ const useDataBaseStore = defineStore('dataBase', {
         // some error
       }
     },
-    // todo: maybe fetch just one
     async fetchOneTable(node: any) {
       try {
         const res = await fetchOneTable(node)
-        this.childrenList = res
+        return res
       } catch (error) {
+        return false
         // some error
       }
     },
