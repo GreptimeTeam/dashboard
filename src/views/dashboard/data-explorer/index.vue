@@ -3,28 +3,16 @@
     <div class="left-side">
       <a-card>
         <a-layout style="height: 390px">
-          <a-layout-sider :width="300" :collapsed="collapsed" :collapsed-width="40">
-            <a-row :wrap="false" style="height: 40px; line-height: 40px; font-size: large">
-              <a-col :span="collapsed ? 0 : 18">
-                <div style="margin-left: 20px"
-                  >Tables
-
-                  <icon-sync style="font-size: 20px; cursor: pointer" @click="refreshTableData()" /></div
-              ></a-col>
-              <a-col :span="6">
-                <a-button shape="round" @click="onTableSideCollapse">
-                  <icon-caret-left v-if="collapsed" />
-                  <icon-caret-right v-else /> </a-button
-              ></a-col>
-            </a-row>
-            <TableList v-show="!collapsed" />
+          <a-layout-sider :width="300" :resize-directions="['right']">
+            <a-card title="TABLES" style="height: inherit">
+              <template #extra>
+                <icon-sync style="font-size: 20px; cursor: pointer" @click="refreshTableData()" />
+              </template>
+              <TableList />
+            </a-card>
           </a-layout-sider>
           <a-layout-content style="margin-left: 24px">
-            <a-row :gutter="24">
-              <a-col>
-                <Editor />
-              </a-col>
-            </a-row>
+            <Editor />
           </a-layout-content>
         </a-layout>
         <DataView />
@@ -35,19 +23,13 @@
 </template>
 
 <script lang="ts" setup>
-  import { ref } from 'vue'
   import { useDataBaseStore } from '@/store'
   import Editor from './components/editor.vue'
   import TableList from './components/table-list.vue'
   import DataView from './components/data-view/data-view-index.vue'
   import Log from './components/log.vue'
 
-  const collapsed = ref(false)
-  const onTableSideCollapse = () => {
-    collapsed.value = !collapsed.value
-  }
   const dataBaseStore = useDataBaseStore()
-
   const refreshTableData = dataBaseStore.fetchDataBaseTables
 </script>
 

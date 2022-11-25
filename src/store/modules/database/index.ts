@@ -61,7 +61,6 @@ const useDataBaseStore = defineStore('dataBase', {
         return res
       } catch (error) {
         return false
-        // some error
       }
     },
   },

@@ -1,11 +1,12 @@
 <template>
-  <a-button style="margin: 0 20px 5px 0" type="primary" @click="runSqlCommand()">Run All</a-button>
-  <a @click="runPartSqlCommand()">
-    <a-button v-if="lineStart === lineEnd" type="outline"> Run Line {{ lineStart }} </a-button>
-    <a-button v-else type="outline"> Run Lines {{ lineStart }} - {{ lineEnd }}</a-button>
-  </a>
-  <a-button @click="clearCodeResult()"> clear result </a-button>
-
+  <a-space style="margin-bottom: 7px">
+    <a-button type="primary" @click="runSqlCommand()">Run All</a-button>
+    <a @click="runPartSqlCommand()">
+      <a-button v-if="lineStart === lineEnd" type="outline"> Run Line {{ lineStart }} </a-button>
+      <a-button v-else type="outline"> Run Lines {{ lineStart }} - {{ lineEnd }}</a-button>
+    </a>
+    <a-button @click="clearCodeResult()"> Clear Result </a-button>
+  </a-space>
   <CodeMirror
     v-model="code"
     :placeholder="placeholder"
@@ -31,7 +32,6 @@
   import { useDataBaseStore } from '@/store'
   import { useCodeRunStore } from '@/store'
 
-  // <script setup> 范围里的值也能被直接作为自定义组件的标签名使用
   export interface Props {
     spellcheck?: boolean
     autofocus?: boolean
@@ -39,15 +39,11 @@
     tabSize?: number
     placeholder?: string
   }
-  // data
-  // 响应式状态需要明确使用响应式 API 来创建
-  // 和 setup() 函数的返回值一样，ref 在模板中使用的时候会自动解包
   const props = withDefaults(defineProps<Props>(), {
     spellcheck: true,
     autofocus: true,
     indentWithTab: true,
     tabSize: 2,
-    placeholder: 'Code goes here...',
   })
 
   const lineStart = ref()
@@ -139,7 +135,6 @@
   }
 
   const clearCodeResult = () => {
-    console.log(usedCode.value)
     // todo: original state is just one tab?
     codeRunStore.$reset()
   }
