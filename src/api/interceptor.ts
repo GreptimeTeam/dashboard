@@ -61,7 +61,7 @@ axios.interceptors.response.use(
           },
         })
       }
-      return Promise.reject(new Error(res.error || 'Error'))
+      return Promise.reject(res || 'Error')
     }
     return res
   },

@@ -1,9 +1,12 @@
 <template>
   <a-list>
     <template #header> Logs </template>
-    <a-list-item v-for="idx in 3" :key="idx">
+    <a-list-item v-for="item of logListData" :key="item">
       <a-tooltip content="This is tooltip content">
-        <a-list-item-meta description="Select * from list"> </a-list-item-meta>
+        <a-space>
+          <span> select rows: {{ item.rowCount }} </span>
+          <span> execute time: {{ item.executeTime }} ms </span>
+        </a-space>
       </a-tooltip>
 
       <template #actions>
@@ -14,4 +17,10 @@
   </a-list>
 </template>
 
-<script lang="ts" setup></script>
+<script lang="ts" setup>
+  import { storeToRefs } from 'pinia'
+  import { useCodeRunStore } from '@/store'
+
+  const codeRunStore = useCodeRunStore()
+  const { logListData } = storeToRefs(codeRunStore)
+</script>

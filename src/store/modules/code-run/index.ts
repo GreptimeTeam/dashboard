@@ -3,17 +3,29 @@ import { Message } from '@arco-design/web-vue'
 import { defineStore } from 'pinia'
 
 const useCodeRunStore = defineStore('codeRun', {
-  // state： data
   state: () => ({
     usedCode: <any>[],
     runResult: <any>[],
     resultTabIndex: <any>[],
     activeTabKey: <number>0,
     activeTabData: <any>{},
+    oneLog: <any>{},
+    logArray: <any>[],
   }),
-  // getters: computed
-  getters: {},
-  // actions: methods
+
+  getters: {
+    logListData(state) {
+      if (Object.keys(state.oneLog).length !== 0) {
+        const log = state.oneLog
+        const logInfo = {
+          rowCount: log.output[0].records.rows.length,
+          executeTime: log.execution_time_ms,
+        }
+        state.logArray.push(logInfo)
+      }
+      return state.logArray
+    },
+  },
 
   actions: {
     async fetchSqlResult(runCode: any) {
@@ -28,10 +40,10 @@ const useCodeRunStore = defineStore('codeRun', {
           this.resultTabIndex.push(this.resultTabIndex.length)
           this.activeTabKey = this.resultTabIndex.length - 1
         }
-        // todo: log info into logs.
+        // todo: can we combine next two logs into one line code?
+        this.oneLog = res
       } catch (error) {
-        // todo: log error into logs.
-        console.log(error)
+        this.oneLog = error
       }
     },
   },
