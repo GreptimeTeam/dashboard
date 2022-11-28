@@ -124,14 +124,11 @@
   const runSqlCommand = () => {
     // todo: add better format tool for code
     fetchSqlResult(code.value.trim().replace('\n', ' '))
-    // todo: when to refresh tables data?
-    // todo: refresh not changing view
-    refreshTableData()
+    // todo: refresh tables data and when
   }
 
   const runPartSqlCommand = () => {
     fetchSqlResult(selectedCode.value.trim())
-    refreshTableData()
   }
 
   const clearCodeResult = () => {

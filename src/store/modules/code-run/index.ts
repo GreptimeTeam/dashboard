@@ -16,10 +16,19 @@ const useCodeRunStore = defineStore('codeRun', {
   getters: {
     logListData(state) {
       if (Object.keys(state.oneLog).length !== 0) {
-        const log = state.oneLog
-        const logInfo = {
-          rowCount: log.output[0].records.rows.length,
+        const { log, code } = state.oneLog
+        const logInfo: any = {
+          runCode: code,
           executeTime: log.execution_time_ms,
+        }
+        if (!log.error) {
+          if (!log.output[0].affectedrows) {
+            logInfo.resultRows = log.output[0].records.rows.length
+          } else {
+            logInfo.affectedRows = log.output[0].affectedrows
+          }
+        } else {
+          logInfo.error = log.error
         }
         state.logArray.push(logInfo)
       }
@@ -41,9 +50,14 @@ const useCodeRunStore = defineStore('codeRun', {
           this.activeTabKey = this.resultTabIndex.length - 1
         }
         // todo: can we combine next two logs into one line code?
-        this.oneLog = res
+        this.oneLog = {
+          log: res,
+          code: runCode,
+        }
       } catch (error) {
-        this.oneLog = error
+        this.oneLog = {
+          log: error,
+        }
       }
     },
   },
