@@ -22,6 +22,7 @@
       const oneColumn = {
         title: item.name,
         dataIndex: item.name,
+        align: 'right',
       }
       tempArray.push(oneColumn)
     })
