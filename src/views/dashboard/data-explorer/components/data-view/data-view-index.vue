@@ -1,13 +1,5 @@
 <template>
-  <a-tabs
-    type="card-gutter"
-    :editable="true"
-    @delete="deleteTab"
-    :auto-switch="true"
-    lazy-load
-    :active-key="activeTabKey"
-    @tab-click="tabClick"
-  >
+  <a-tabs type="card-gutter" lazy-load :active-key="activeTabKey" @tab-click="tabClick">
     <a-tab-pane
       v-for="(item, index) of resultTabIndex"
       :key="item"
@@ -34,6 +26,7 @@
   import DataGrid from './components/data-grid.vue'
   import DataChart from './components/data-chart.vue'
 
+  // todo: support delete tab
   const deleteTab = (key: number) => {
     console.log('tabname', key)
   }
