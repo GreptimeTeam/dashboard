@@ -1,6 +1,6 @@
 <template>
   <a-tabs
-    type="line"
+    type="card-gutter"
     :editable="true"
     @delete="deleteTab"
     :auto-switch="true"
@@ -14,7 +14,7 @@
       :title="'Result ' + (index + 1)"
       :closable="index !== 2"
     >
-      <a-tabs default-active-key="1">
+      <a-tabs default-active-key="1" type="text">
         <a-tab-pane key="1">
           <template #title> <icon-menu /> Table </template>
           <DataGrid />
