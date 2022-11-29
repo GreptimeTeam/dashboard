@@ -33,7 +33,11 @@ export default defineConfig({
     }),
     AutoImport({
       dts: true,
+      eslintrc: {
+        enabled: true,
+      },
       imports: ['vue', 'pinia', 'vue-router'],
+      dirs: ['src/store'],
     }),
     Components({
       dts: true,
