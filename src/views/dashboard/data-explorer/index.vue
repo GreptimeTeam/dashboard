@@ -47,6 +47,7 @@
     padding: 20px 200px;
     padding-bottom: 0;
     display: flex;
+    flex: 1;
   }
 
   .left-side {
