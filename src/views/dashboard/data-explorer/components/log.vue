@@ -1,28 +1,21 @@
-<template>
-  <a-list :hoverable="true">
-    <template #header> Logs </template>
-    <a-list-item v-for="item of logListData" :key="item">
-      <a-tooltip :content="item.error ? item.error : item.runCode">
-        <div v-if="item.error" class="log-error">
-          {{ `Error: ${item.error}` }}
-        </div>
-        <a-space v-else size="large">
-          <template #split>
-            <a-divider direction="vertical" />
-          </template>
-          <div>
-            {{ item.resultRows ? `Result: ${item.resultRows} row(s)` : `Affected ${item.affectedRows} row(s)` }}
-          </div>
-          <div> Execute time: {{ item.executeTime }} ms </div>
-          <div>
+<template lang="pug">
+a-list(:hoverable="true" size="small")
+  template(#header)
+    | Logs
+  a-list-item(v-for="item of logListData" :key="item")
+    a-tooltip(:content="item.error ? item.error : item.runCode")
+      .log-error(v-if="item.error")
+        | {{ `Error: ${item.error}` }}
+      a-space(v-else size="large")
+        template(#split)
+          a-divider(direction="vertical")
+        div {{ item.resultRows ? `Result: ${item.resultRows} row(s)` : `Affected ${item.affectedRows} row(s)` }}
+        div Execute time: {{ item.executeTime }} ms
+        div
+          .
             Code:
             {{ item.runCode }}
-          </div>
-        </a-space>
-      </a-tooltip>
-      <template #actions> </template>
-    </a-list-item>
-  </a-list>
+    template(#actions)
 </template>
 
 <script lang="ts" setup>

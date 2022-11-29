@@ -1,24 +1,15 @@
-<template>
-  <a-space style="margin-bottom: 7px">
-    <a-button type="primary" @click="runSqlCommand()">Run All</a-button>
-    <a @click="runPartSqlCommand()">
-      <a-button v-if="lineStart === lineEnd" type="outline"> Run Line {{ lineStart }} </a-button>
-      <a-button v-else type="outline"> Run Lines {{ lineStart }} - {{ lineEnd }}</a-button>
-    </a>
-    <a-button @click="clearCodeResult()"> Clear Result </a-button>
-  </a-space>
-  <CodeMirror
-    v-model="code"
-    :placeholder="placeholder"
-    :style="style"
-    :spellcheck="spellcheck"
-    :autofocus="autofocus"
-    :indent-with-tab="indentWithTab"
-    :tabSize="tabSize"
-    :extensions="extensions"
-    @ready="handleReady"
-    @update="codeUpdate"
-  />
+<template lang="pug">
+a-space(style="margin-bottom: 7px")
+  a-button(type="primary" @click="runSqlCommand()")
+    | Run All
+  a(@click="runPartSqlCommand()")
+    a-button(v-if="lineStart === lineEnd" type="outline")
+      | Run Line {{ lineStart }}
+    a-button(v-else type="outline")
+      | Run Lines {{ lineStart }} - {{ lineEnd }}
+  a-button(@click="clearCodeResult()")
+    | Clear Result
+CodeMirror(v-model="code" :placeholder="placeholder" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
 
 <script lang="ts" setup>
