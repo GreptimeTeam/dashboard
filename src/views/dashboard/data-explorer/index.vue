@@ -2,21 +2,23 @@
   <div class="container">
     <div class="left-side">
       <a-card>
-        <a-layout style="height: 390px">
-          <a-layout-sider :width="300" :resize-directions="['right']">
-            <a-card title="TABLES" style="height: inherit">
-              <template #extra>
-                <icon-sync style="font-size: 20px; cursor: pointer" @click="refreshTableData()" />
-              </template>
-              <TableList />
-            </a-card>
-          </a-layout-sider>
-          <a-layout-content style="margin-left: 24px">
-            <Editor />
-          </a-layout-content>
-        </a-layout>
-        <DataView />
-        <Log />
+        <a-space direction="vertical" fill>
+          <a-layout style="height: 390px">
+            <a-layout-sider :width="300" :resize-directions="['right']">
+              <a-card title="TABLES" style="height: inherit">
+                <template #extra>
+                  <icon-sync style="font-size: 20px; cursor: pointer" @click="refreshTableData()" />
+                </template>
+                <TableList />
+              </a-card>
+            </a-layout-sider>
+            <a-layout-content style="margin-left: 24px">
+              <Editor />
+            </a-layout-content>
+          </a-layout>
+          <DataView />
+          <Log />
+        </a-space>
       </a-card>
     </div>
   </div>
