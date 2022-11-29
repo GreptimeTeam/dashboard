@@ -31,7 +31,6 @@
 <style lang="less" scoped>
   .container {
     background-color: var(--color-fill-2);
-    padding: 20px 200px;
     padding-bottom: 0;
     display: flex;
     flex: 1;
