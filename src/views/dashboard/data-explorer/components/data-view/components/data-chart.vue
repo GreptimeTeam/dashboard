@@ -2,11 +2,11 @@
   <a-spin style="width: 100%">
     <a-row style="margin-bottom: 16px">
       <a-col flex="auto">
-        <Chart height="250px" width="800px" :option="option" :update-options="updateOptions" />
+        <Chart height="400px" :option="option" :update-options="updateOptions" />
       </a-col>
       <a-col flex="100px">
         <a-form :model="chartForm" layout="vertical">
-          <a-form-item label="chart Type">
+          <a-form-item label="Chart Type">
             <a-select v-model="chartForm.chartType" :style="{ width: '320px' }" placeholder="Please select ...">
               <a-option v-for="item of chartTypeOptions" :key="item.key" :value="item.value" :label="item.value">
               </a-option>

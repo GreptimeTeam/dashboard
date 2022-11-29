@@ -16,11 +16,11 @@
     >
       <a-tabs default-active-key="1">
         <a-tab-pane key="1">
-          <template #title> <icon-calendar /> Grid </template>
+          <template #title> <icon-menu /> Table </template>
           <DataGrid />
         </a-tab-pane>
         <a-tab-pane key="2">
-          <template #title> <icon-clock-circle /> Chart </template>
+          <template #title> <icon-bar-chart /> Chart </template>
           <DataChart />
         </a-tab-pane>
       </a-tabs>

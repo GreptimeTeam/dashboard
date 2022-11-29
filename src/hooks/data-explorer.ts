@@ -47,16 +47,28 @@ export default function useDataExplorer() {
       legend: {
         data: seriesAndLegendNames.value[1],
         orient: 'vertical',
-        right: 10,
-        top: 'center',
       },
       tooltip: {},
       dataset: {
         dimensions: dimensions.value[activeTabKey.value],
         source: source.value[activeTabKey.value],
       },
-      xAxis: { type: 'time' },
-      yAxis: {},
+      xAxis: {
+        type: 'time',
+        name: 'Time',
+        axisLine: {
+          lineStyle: {
+            type: 'solid',
+          },
+        },
+      },
+      yAxis: {
+        axisLine: {
+          lineStyle: {
+            type: 'solid',
+          },
+        },
+      },
       series: seriesAndLegendNames.value[0],
     }
   }
