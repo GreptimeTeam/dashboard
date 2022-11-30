@@ -1,4 +1,4 @@
-FROM node:19-buster as builder
+FROM node:18-buster as builder
 
 WORKDIR /greptimedb-dashboard
 
