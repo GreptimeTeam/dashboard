@@ -20,7 +20,8 @@ Dashboard is a data-visualization platform for greptimeDB developed with Vue3, V
 5. Check logs for your recent actions.
 
 ## Contributing
-Please refer to [contribution guidelines](https://github.com/GreptimeTeam/greptimedb/blob/75dcf2467b022d4378f904efe5aae5027298986e/CONTRIBUTING.md) for more information.
+- Please refer to [contribution guidelines](https://github.com/GreptimeTeam/greptimedb/blob/75dcf2467b022d4378f904efe5aae5027298986e/CONTRIBUTING.md) for more information.
+- This is the very first edition of dashboard. In the future we hope to add more and more features for users, and we welcome everyone to make contributions in any way you see fit.
 
 ## License
 
