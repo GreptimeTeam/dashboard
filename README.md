@@ -10,7 +10,7 @@ Dashboard is a data-visualization platform for greptimeDB developed with Vue3, V
 - Run `./greptime frontend start`
 - Clone our project
 - Run `npm install` for dependencies
-- Run `npm run serve` and visit the URL in output
+- Run `npm run dev` and visit the URL in output
 
 ## How to Use
 1. Check your local TABLES on the left side.
