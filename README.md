@@ -23,4 +23,6 @@ Dashboard is a data-visualization platform for [GreptimeDB](https://github.com/g
 
 ## License
 
-This project is open sourced under Apache-2.0 license.
+This project is open source under [Apache 2.0 license][1]
+
+[1]: <LICENSE>
