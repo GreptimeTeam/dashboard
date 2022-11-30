@@ -3,12 +3,9 @@ const columns = ref<any>([])
 // todo: change init code
 const code = ref('select * from monitor')
 // todo: compare sqlResult's code and current code
-// const result = {
-// table_data
-// md5(code)
-// }
 
-const getSeriesAndLegendNames = ({ chartType, ySelectedTypes = [] }: any) => {
+const getSeriesAndLegendNames = ([chartType, ySelectedTypes = []]: any) => {
+  console.log(`chartType, ySelectedTypes:`, chartType, ySelectedTypes)
   const series: any = []
   const legendNames: any = []
   ySelectedTypes.forEach((item: any) => {
@@ -96,6 +93,14 @@ export default function useDataExplorer() {
     })
   })
 
+  const yOptions = computed(() => {
+    return currentResult.schema.column_schemas
+      .filter((item: any) => item.data_type === 'Int' || item.data_type === 'Float64')
+      .map((item: any) => ({
+        value: item.name,
+      }))
+  })
+
   return {
     makeOption,
     codeChange,
@@ -106,5 +111,6 @@ export default function useDataExplorer() {
     currentResult,
     gridColumn,
     gridData,
+    yOptions,
   }
 }
