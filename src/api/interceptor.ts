@@ -56,7 +56,7 @@ axios.interceptors.response.use(
           async onOk() {
             const userStore = useUserStore()
 
-            await userStore.logout()
+            // await userStore.logout()
             window.location.reload()
           },
         })
