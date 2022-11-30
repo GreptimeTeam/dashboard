@@ -2,7 +2,6 @@
 
 Dashboard is a data-visualization platform for [GreptimeDB](https://github.com/greptimeteam/greptimedb) developed with Vue3, Vite, TypeScript and Arco Design.
 
-
 ## Quick Start
 
 - [Install GreptimeDB](https://docs.greptime.com/installation/overview)
@@ -12,13 +11,15 @@ Dashboard is a data-visualization platform for [GreptimeDB](https://github.com/g
 - Run `npm run dev` and visit the URL in output
 
 ## How to Use
-- Make sure greptimeDB is up and running
+
+- Make sure GreptimeDB is up and running
 - Follow [getting started](https://docs.greptime.com/getting-started/overview) to create your table and insert some data
 - Run a `SELECT` query and check the result as table or chart
 
 ## Contributing
+
 - Please refer to [contribution guidelines](https://github.com/GreptimeTeam/greptimedb/blob/75dcf2467b022d4378f904efe5aae5027298986e/CONTRIBUTING.md) for more information.
-- This is the very first edition of dashboard. In the future we hope to add more and more features for users, and we welcome everyone to make contributions in any way you see fit.
+- This is the very first edition of our Dashboard. In the future we hope to add more and more features for users, and we welcome everyone to make contributions in any way you see fit.
 
 ## License
 
