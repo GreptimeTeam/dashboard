@@ -14,8 +14,6 @@ a-list(:data="favoriteList")
 
 <script lang="ts" setup>
   import { storeToRefs } from 'pinia'
-  import useDataExplorer from '@/hooks/data-explorer'
-  import { useDataBaseStore } from '@/store'
 
   const dataBaseStore = useDataBaseStore()
   const dataExplorer = useDataExplorer()

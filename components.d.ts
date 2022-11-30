@@ -7,6 +7,7 @@ export {}
 
 declare module '@vue/runtime-core' {
   export interface GlobalComponents {
+    '(fix': chart)
     '(refactor': change html to pug)
     AAffix: typeof import('@arco-design/web-vue')['Affix']
     AAlert: typeof import('@arco-design/web-vue')['Alert']
@@ -38,13 +39,13 @@ declare module '@vue/runtime-core' {
     AMenu: typeof import('@arco-design/web-vue')['Menu']
     AMenuItem: typeof import('@arco-design/web-vue')['MenuItem']
     Announcement: typeof import('./src/views/dashboard/workplace/components/announcement.vue')['default']
-    AOption: typeof import('@arco-design/web-vue')['Option']
     APopover: typeof import('@arco-design/web-vue')['Popover']
     AResult: typeof import('@arco-design/web-vue')['Result']
     ARow: typeof import('@arco-design/web-vue')['Row']
     ASelect: typeof import('@arco-design/web-vue')['Select']
     ASpace: typeof import('@arco-design/web-vue')['Space']
     ASpin: typeof import('@arco-design/web-vue')['Spin']
+    ASplit: typeof import('@arco-design/web-vue')['Split']
     ASubMenu: typeof import('@arco-design/web-vue')['SubMenu']
     ASwitch: typeof import('@arco-design/web-vue')['Switch']
     ATable: typeof import('@arco-design/web-vue')['Table']
@@ -56,7 +57,6 @@ declare module '@vue/runtime-core' {
     ATypographyParagraph: typeof import('@arco-design/web-vue')['TypographyParagraph']
     ATypographyText: typeof import('@arco-design/web-vue')['TypographyText']
     ATypographyTitle: typeof import('@arco-design/web-vue')['TypographyTitle']
-    AUpload: typeof import('@arco-design/web-vue')['Upload']
     Banner: typeof import('./src/views/login/components/banner.vue')['default']
     Block: typeof import('./src/components/global-setting/block.vue')['default']
     Breadcrumb: typeof import('./src/components/breadcrumb/index.vue')['default']
@@ -80,7 +80,6 @@ declare module '@vue/runtime-core' {
     Login: typeof import('./src/views/login/index.vue')['default']
     Menu: typeof import('./src/components/menu/index.vue')['default']
     MessageBox: typeof import('./src/components/message-box/index.vue')['default']
-    Monaco: typeof import('./src/components/monaco/index.vue')['default']
     Navbar: typeof import('./src/components/navbar/index.vue')['default']
     NotFound: typeof import('./src/views/not-found/index.vue')['default']
     PopularContent: typeof import('./src/views/dashboard/workplace/components/popular-content.vue')['default']

@@ -13,15 +13,11 @@ CodeMirror(v-model="code" :placeholder="placeholder" :style="style" :spellcheck=
 </template>
 
 <script lang="ts" setup>
-  import { shallowRef, ref } from 'vue'
-  import { storeToRefs } from 'pinia'
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
   import { EditorView } from '@codemirror/view'
   import { sql } from '@codemirror/lang-sql'
   import useDataExplorer from '@/hooks/data-explorer'
-  import { useDataBaseStore } from '@/store'
-  import { useCodeRunStore } from '@/store'
 
   export interface Props {
     spellcheck?: boolean
@@ -44,11 +40,10 @@ CodeMirror(v-model="code" :placeholder="placeholder" :style="style" :spellcheck=
 
   const dataExplorer = useDataExplorer()
   const dataBaseStore = useDataBaseStore()
-  const { code } = dataExplorer
   const codeRunStore = useCodeRunStore()
+  const { code } = dataExplorer
   // attention: must use storetorefs
   const { fetchSqlResult } = codeRunStore
-  const { usedCode } = storeToRefs(codeRunStore)
 
   const handleReady = (payload: any) => {
     view.value = payload.view

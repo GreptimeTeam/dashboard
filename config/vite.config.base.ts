@@ -37,7 +37,7 @@ export default defineConfig({
         enabled: true,
       },
       imports: ['vue', 'pinia', 'vue-router'],
-      dirs: ['src/store'],
+      dirs: ['src/store', 'src/hooks'],
     }),
     Components({
       dts: true,

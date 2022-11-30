@@ -6,7 +6,7 @@
         template(#first)
           a-card(title="TABLES")
             template(#extra)
-              icon-sync(style="font-size: 20px; cursor: pointer" @click="refreshTableData()")
+              icon-sync(style="font-size: 20px; cursor: pointer" @click="refreshTableData")
             TableList
         template(#second)
           Editor 
@@ -14,18 +14,8 @@
       Log 
 </template>
 
-<script lang="ts" setup>
-  import { useDataBaseStore } from '@/store'
-  import { useCodeRunStore } from '@/store'
-
-  const dataBaseStore = useDataBaseStore()
-  const refreshTableData = dataBaseStore.fetchDataBaseTables
-</script>
-
-<script lang="ts">
-  export default {
-    name: 'DataExplorer', // If you want the include property of keep-alive to take effect, you must name the component
-  }
+<script lang="ts" name="DataExplorer" setup>
+  const { fetchDataBaseTables: refreshTableData } = useDataBaseStore()
 </script>
 
 <style lang="less" scoped>
