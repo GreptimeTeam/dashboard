@@ -55,6 +55,7 @@
     "@prettier/plugin-pug": "^2.3.0",
     "@types/lodash": "^4.14.186",
     "@types/mockjs": "^1.0.7",
+    "@types/node": "^18.11.10",
     "@types/nprogress": "^0.2.0",
     "@types/sortablejs": "^1.15.0",
     "@typescript-eslint/eslint-plugin": "^5.40.0",

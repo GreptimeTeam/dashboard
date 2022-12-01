@@ -16,6 +16,7 @@ specifiers:
   '@prettier/plugin-pug': ^2.3.0
   '@types/lodash': ^4.14.186
   '@types/mockjs': ^1.0.7
+  '@types/node': ^18.11.10
   '@types/nprogress': ^0.2.0
   '@types/sortablejs': ^1.15.0
   '@typescript-eslint/eslint-plugin': ^5.40.0
@@ -104,6 +105,7 @@ devDependencies:
   '@prettier/plugin-pug': 2.3.0_prettier@2.7.1
   '@types/lodash': 4.14.186
   '@types/mockjs': 1.0.7
+  '@types/node': 18.11.10
   '@types/nprogress': 0.2.0
   '@types/sortablejs': 1.15.0
   '@typescript-eslint/eslint-plugin': 5.40.1_ukgdydjtebaxmxfqp5v5ulh64y
@@ -997,7 +999,7 @@ packages:
     resolution: {integrity: sha512-ZUxbzKl0IfJILTS6t7ip5fQQM/J3TJYubDm3nMbgubNNYS62eXeUpoLUC8/7fJNiFYHTrGPQn7hspDUzIHX3UA==}
     dependencies:
       '@types/minimatch': 5.1.2
-      '@types/node': 18.11.0
+      '@types/node': 18.11.10
     dev: true
 
   /@types/imagemin-gifsicle/7.0.1:
@@ -1040,7 +1042,7 @@ packages:
   /@types/imagemin/7.0.1:
     resolution: {integrity: sha512-xEn5+M3lDBtI3JxLy6eU3ksoVurygnlG7OYhTqJfGGP4PcvYnfn+IABCmMve7ziM/SneHDm5xgJFKC8hCYPicw==}
     dependencies:
-      '@types/node': 18.11.0
+      '@types/node': 18.11.10
     dev: true
 
   /@types/json-schema/7.0.11:
@@ -1054,7 +1056,7 @@ packages:
   /@types/keyv/3.1.4:
     resolution: {integrity: sha512-BQ5aZNSCpj7D6K2ksrRCTmKRLEpnPvWDiLPfoGyhZ++8YtiK9d/3DBKPJgry359X/P1PfruyYwvnvwFjuEiEIg==}
     dependencies:
-      '@types/node': 18.11.0
+      '@types/node': 18.11.10
     dev: true
 
   /@types/lodash/4.14.186:
@@ -1077,8 +1079,8 @@ packages:
     resolution: {integrity: sha512-Y6S38pFr04yb13qqHf8uk1nHE3lXgQ30WZbv1mLliV9pt0NjvqdWttLcrOYLnXbOafknVYRHZGoMSpR9UwfYow==}
     dev: true
 
-  /@types/node/18.11.0:
-    resolution: {integrity: sha512-IOXCvVRToe7e0ny7HpT/X9Rb2RYtElG1a+VshjwT00HxrM2dWBApHQoqsI6WiY7Q03vdf2bCrIGzVrkF/5t10w==}
+  /@types/node/18.11.10:
+    resolution: {integrity: sha512-juG3RWMBOqcOuXC643OAdSA525V44cVgGV6dUDuiFtss+8Fk5x1hI93Rsld43VeJVIeqlP9I7Fn9/qaVqoEAuQ==}
     dev: true
 
   /@types/normalize-package-data/2.4.1:
@@ -1096,7 +1098,7 @@ packages:
   /@types/responselike/1.0.0:
     resolution: {integrity: sha512-85Y2BjiufFzaMIlvJDvTTB8Fxl2xfLo4HgmHzVBz08w4wDePCTjYw66PdrolO0kzli3yam/YCgRufyo1DdQVTA==}
     dependencies:
-      '@types/node': 18.11.0
+      '@types/node': 18.11.10
     dev: true
 
   /@types/semver/7.3.12:
@@ -1110,7 +1112,7 @@ packages:
   /@types/svgo/2.6.4:
     resolution: {integrity: sha512-l4cmyPEckf8moNYHdJ+4wkHvFxjyW6ulm9l4YGaOxeyBWPhBOT0gvni1InpFPdzx1dKf/2s62qGITwxNWnPQng==}
     dependencies:
-      '@types/node': 18.11.0
+      '@types/node': 18.11.10
     dev: true
 
   /@types/unist/2.0.6:
@@ -1127,7 +1129,7 @@ packages:
   /@types/vfile/3.0.2:
     resolution: {integrity: sha512-b3nLFGaGkJ9rzOcuXRfHkZMdjsawuDD0ENL9fzTophtBg8FJHSGbH7daXkEpcwy3v7Xol3pAvsmlYyFhR4pqJw==}
     dependencies:
-      '@types/node': 18.11.0
+      '@types/node': 18.11.10
       '@types/unist': 2.0.6
       '@types/vfile-message': 2.0.0
     dev: true
