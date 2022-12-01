@@ -2,7 +2,9 @@ import { defineStore } from 'pinia'
 import { UserState } from './types'
 
 const useUserStore = defineStore('user', {
-  state: () => ({}),
+  state: () => ({
+    role: '',
+  }),
 
   getters: {
     userInfo() {

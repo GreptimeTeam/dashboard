@@ -128,6 +128,7 @@
   import useLocale from '@/hooks/locale'
 
   const appStore = useAppStore()
+  const userStore = useUserStore()
   const { changeLocale } = useLocale()
   const { isFullscreen, toggle: toggleFullScreen } = useFullscreen()
   const locales = [...LOCALE_OPTIONS]
@@ -176,10 +177,7 @@
     })
     triggerBtn.value.dispatchEvent(event)
   }
-  const switchRoles = async () => {
-    const res = await userStore.switchRoles()
-    Message.success(res as string)
-  }
+  const switchRoles = async () => {}
   const toggleDrawerMenu = inject('toggleDrawerMenu') as () => void
 </script>
 
