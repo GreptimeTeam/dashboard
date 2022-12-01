@@ -41,7 +41,7 @@ CodeMirror(v-model="code" :placeholder="placeholder" :style="style" :spellcheck=
   const dataExplorer = useDataExplorer()
   const dataBaseStore = useDataBaseStore()
   const codeRunStore = useCodeRunStore()
-  const { code } = dataExplorer
+  const { code, cursorAt } = dataExplorer
   // attention: must use storetorefs
   const { fetchSqlResult } = codeRunStore
 
@@ -55,6 +55,7 @@ CodeMirror(v-model="code" :placeholder="placeholder" :style="style" :spellcheck=
       lineStart.value = state.doc.lineAt(ranges[0].from).number
       lineEnd.value = state.doc.lineAt(ranges[0].to).number
       selectedCode.value = state.doc.text.slice(lineStart.value - 1, lineEnd.value).join(' ')
+      cursorAt.value = [ranges[0].from, ranges[0].to]
     }
   }
 
@@ -103,7 +104,7 @@ CodeMirror(v-model="code" :placeholder="placeholder" :style="style" :spellcheck=
   // todo: combine next 2 functions
   const runSqlCommand = () => {
     // todo: add better format tool for code
-    fetchSqlResult(code.value.trim().replace('\n', ' '))
+    fetchSqlResult(code.value.trim().replace(/\n/gi, ' '))
     // todo: refresh tables data and when
   }
 
