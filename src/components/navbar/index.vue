@@ -54,15 +54,6 @@
         </a-tooltip>
       </li>
       <li>
-        <a-tooltip :content="$t('settings.navbar.alerts')">
-          <div class="message-box-trigger">
-            <a-badge :count="9" dot>
-              <a-button class="nav-btn" type="outline" :shape="'circle'" @click="setPopoverVisible">
-                <icon-notification />
-              </a-button>
-            </a-badge>
-          </div>
-        </a-tooltip>
         <a-popover
           trigger="click"
           :arrow-style="{ display: 'none' }"
@@ -70,9 +61,6 @@
           content-class="message-popover"
         >
           <div ref="refBtn" class="ref-btn"></div>
-          <template #content>
-            <message-box />
-          </template>
         </a-popover>
       </li>
       <li>
@@ -138,7 +126,6 @@
   import { useAppStore } from '@/store'
   import { LOCALE_OPTIONS } from '@/locale'
   import useLocale from '@/hooks/locale'
-  import MessageBox from '../message-box/index.vue'
 
   const appStore = useAppStore()
   const { changeLocale } = useLocale()

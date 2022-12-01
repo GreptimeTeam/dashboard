@@ -1,6 +1,5 @@
 /**
  * Introduces component library styles on demand.
- * 按需引入组件库样式
  * https://github.com/anncwb/vite-plugin-style-import
  */
 
@@ -14,7 +13,6 @@ export default function configStyleImportPlugin() {
         esModule: true,
         resolveStyle: (name) => {
           // The use of this part of the component must depend on the parent, so it can be ignored directly.
-          // 这部分组件的使用必须依赖父级，所以直接忽略即可。
           const ignoreList = [
             'config-provider',
             'anchor-link',
@@ -47,7 +45,6 @@ export default function configStyleImportPlugin() {
             'icon',
           ]
           // List of components that need to map imported styles
-          // 需要映射引入样式的组件列表
           const replaceList = {
             'typography-text': 'typography',
             'typography-title': 'typography',
