@@ -2,27 +2,37 @@
   <div class="container">
     <div class="left-side">
       <a-card>
-        <CodeMirror />
+        <a-space direction="vertical" fill>
+          <a-layout style="height: 390px">
+            <a-layout-sider :width="300" :resize-directions="['right']">
+              <a-card title="TABLES" style="height: inherit">
+                <template #extra>
+                  <icon-sync style="font-size: 20px; cursor: pointer" @click="refreshTableData()" />
+                </template>
+                <TableList />
+              </a-card>
+            </a-layout-sider>
+            <a-layout-content style="margin-left: 24px">
+              <Editor />
+            </a-layout-content>
+          </a-layout>
+          <DataView />
+          <Log />
+        </a-space>
       </a-card>
-      <a-tabs>
-        <a-tab-pane key="1">
-          <template #title> <icon-calendar /> Grid </template>
-          <DataGrid />
-        </a-tab-pane>
-        <a-tab-pane key="2">
-          <template #title> <icon-clock-circle /> Chart </template>
-          <DataChart />
-        </a-tab-pane>
-      </a-tabs>
     </div>
-    <div class="right-side"> </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-  import CodeMirror from './components/code-mirror.vue'
-  import DataGrid from './components/data-grid.vue'
-  import DataChart from './components/data-chart.vue'
+  import { useDataBaseStore } from '@/store'
+  import Editor from './components/editor.vue'
+  import TableList from './components/table-list.vue'
+  import DataView from './components/data-view/data-view-index.vue'
+  import Log from './components/log.vue'
+
+  const dataBaseStore = useDataBaseStore()
+  const refreshTableData = dataBaseStore.fetchDataBaseTables
 </script>
 
 <script lang="ts">
@@ -34,7 +44,7 @@
 <style lang="less" scoped>
   .container {
     background-color: var(--color-fill-2);
-    padding: 16px 20px;
+    padding: 20px 200px;
     padding-bottom: 0;
     display: flex;
   }

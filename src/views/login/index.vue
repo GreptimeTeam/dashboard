@@ -22,7 +22,6 @@
 <script lang="ts" setup>
   import Footer from '@/components/footer/index.vue'
   import LoginBanner from './components/banner.vue'
-  import LoginForm from './components/login-form.vue'
 </script>
 
 <style lang="less" scoped>

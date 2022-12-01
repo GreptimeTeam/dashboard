@@ -1,8 +1,8 @@
 {
-  "theme": "light",
+  "theme": "dark",
   "colorWeak": false,
   "navbar": false,
-  "menu": true,
+  "menu": false,
   "hideMenu": false,
   "menuCollapse": false,
   "footer": true,

@@ -1,7 +1,7 @@
 import { App } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { BarChart, LineChart, PieChart, RadarChart } from 'echarts/charts'
+import { BarChart, LineChart, ScatterChart } from 'echarts/charts'
 import {
   GridComponent,
   TooltipComponent,
@@ -11,6 +11,7 @@ import {
 } from 'echarts/components'
 import Chart from './chart/index.vue'
 import Breadcrumb from './breadcrumb/index.vue'
+import 'echarts/lib/component/dataset'
 
 // Manually introduce ECharts modules to reduce packing size
 
@@ -18,8 +19,7 @@ use([
   CanvasRenderer,
   BarChart,
   LineChart,
-  PieChart,
-  RadarChart,
+  ScatterChart,
   GridComponent,
   TooltipComponent,
   LegendComponent,
