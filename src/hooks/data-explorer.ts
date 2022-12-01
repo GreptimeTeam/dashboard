@@ -1,11 +1,11 @@
 const columns = ref<any>([])
 
 // todo: change init code
-const code = ref('select * from monitor')
+const code = ref('select * from scripts')
+const cursorAt = ref<Array<number>>([])
 // todo: compare sqlResult's code and current code
 
 const getSeriesAndLegendNames = ([chartType, ySelectedTypes = []]: any) => {
-  console.log(`chartType, ySelectedTypes:`, chartType, ySelectedTypes)
   const series: any = []
   const legendNames: any = []
   ySelectedTypes.forEach((item: any) => {
@@ -24,7 +24,7 @@ const getSeriesAndLegendNames = ([chartType, ySelectedTypes = []]: any) => {
 }
 
 export default function useDataExplorer() {
-  const { currentResult, activeTabKey } = useCodeRunStore()
+  const { currentResult } = useCodeRunStore()
 
   const makeOption = (item: any) => {
     const { series, legendNames } = getSeriesAndLegendNames(item)
@@ -64,8 +64,8 @@ export default function useDataExplorer() {
     code.value = `${code.value}\n${value}`
   }
 
-  const insertNameToCode = (value: any) => {
-    code.value += value
+  const insertNameToCode = (name: any) => {
+    code.value = code.value.substring(0, cursorAt.value[0]) + name + code.value.substring(cursorAt.value[1])
   }
 
   // todo: save code temp to local storage
@@ -107,6 +107,7 @@ export default function useDataExplorer() {
     insertCode,
     insertNameToCode,
     code,
+    cursorAt,
     columns,
     currentResult,
     gridColumn,
