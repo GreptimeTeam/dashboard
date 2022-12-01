@@ -9,7 +9,7 @@ a-list(:hoverable="true" size="small")
       a-space(v-else size="large")
         template(#split)
           a-divider(direction="vertical")
-        div {{ item.resultRows ? `Result: ${item.resultRows} row(s)` : `Affected ${item.affectedRows} row(s)` }}
+        div {{ item.resultRows ? `Result: ${item.resultRows} row(s)` : `Affected ${item.affectedRows || 0} row(s)` }}
         div Execute time: {{ item.executeTime }} ms
         div
           .
