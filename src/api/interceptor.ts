@@ -48,19 +48,6 @@ axios.interceptors.response.use(
       })
       // todo: delete logout related code?
       // 50008: Illegal token; 50012: Other clients logged in; 50014: Token expired;
-      if ([50008, 50012, 50014].includes(res.code) && response.config.url !== '/api/user/info') {
-        Modal.error({
-          title: 'Confirm logout',
-          content: 'You have been logged out, you can cancel to stay on this page, or log in again',
-          okText: 'Re-Login',
-          async onOk() {
-            const userStore = useUserStore()
-
-            // await userStore.logout()
-            window.location.reload()
-          },
-        })
-      }
       return Promise.reject(res || 'Error')
     }
     return res

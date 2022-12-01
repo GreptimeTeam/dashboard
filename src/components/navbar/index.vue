@@ -135,18 +135,17 @@
   import { computed, ref, inject } from 'vue'
   import { Message } from '@arco-design/web-vue'
   import { useDark, useToggle, useFullscreen } from '@vueuse/core'
-  import { useAppStore, useUserStore } from '@/store'
+  import { useAppStore } from '@/store'
   import { LOCALE_OPTIONS } from '@/locale'
   import useLocale from '@/hooks/locale'
   import MessageBox from '../message-box/index.vue'
 
   const appStore = useAppStore()
-  const userStore = useUserStore()
   const { changeLocale } = useLocale()
   const { isFullscreen, toggle: toggleFullScreen } = useFullscreen()
   const locales = [...LOCALE_OPTIONS]
   const avatar = computed(() => {
-    return userStore.avatar
+    return ''
   })
   const theme = computed(() => {
     return appStore.theme
