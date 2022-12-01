@@ -23,6 +23,7 @@
     background-color: var(--color-fill-2);
     padding: 20px;
     display: flex;
+    width: 100%;
     flex: 1;
     flex-direction: column;
   }
