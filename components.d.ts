@@ -7,8 +7,6 @@ export {}
 
 declare module '@vue/runtime-core' {
   export interface GlobalComponents {
-    '(fix': chart)
-    '(refactor': change html to pug)
     AAffix: typeof import('@arco-design/web-vue')['Affix']
     AAlert: typeof import('@arco-design/web-vue')['Alert']
     AAvatar: typeof import('@arco-design/web-vue')['Avatar']
