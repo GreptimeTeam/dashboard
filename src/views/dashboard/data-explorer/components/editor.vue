@@ -1,36 +1,23 @@
-<template>
-  <a-space style="margin-bottom: 7px">
-    <a-button type="primary" @click="runSqlCommand()">Run All</a-button>
-    <a @click="runPartSqlCommand()">
-      <a-button v-if="lineStart === lineEnd" type="outline"> Run Line {{ lineStart }} </a-button>
-      <a-button v-else type="outline"> Run Lines {{ lineStart }} - {{ lineEnd }}</a-button>
-    </a>
-    <a-button @click="clearCodeResult()"> Clear Result </a-button>
-  </a-space>
-  <CodeMirror
-    v-model="code"
-    :placeholder="placeholder"
-    :style="style"
-    :spellcheck="spellcheck"
-    :autofocus="autofocus"
-    :indent-with-tab="indentWithTab"
-    :tabSize="tabSize"
-    :extensions="extensions"
-    @ready="handleReady"
-    @update="codeUpdate"
-  />
+<template lang="pug">
+a-space(style="margin-bottom: 7px")
+  a-button(type="primary" @click="runSqlCommand()")
+    | Run All
+  a(@click="runPartSqlCommand()")
+    a-button(v-if="lineStart === lineEnd" type="outline")
+      | Run Line {{ lineStart }}
+    a-button(v-else type="outline")
+      | Run Lines {{ lineStart }} - {{ lineEnd }}
+  a-button(@click="clearCodeResult()")
+    | Clear Result
+CodeMirror(v-model="code" :placeholder="placeholder" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
 
 <script lang="ts" setup>
-  import { shallowRef, ref } from 'vue'
-  import { storeToRefs } from 'pinia'
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
   import { EditorView } from '@codemirror/view'
   import { sql } from '@codemirror/lang-sql'
   import useDataExplorer from '@/hooks/data-explorer'
-  import { useDataBaseStore } from '@/store'
-  import { useCodeRunStore } from '@/store'
 
   export interface Props {
     spellcheck?: boolean
@@ -53,11 +40,10 @@
 
   const dataExplorer = useDataExplorer()
   const dataBaseStore = useDataBaseStore()
-  const { code } = dataExplorer
   const codeRunStore = useCodeRunStore()
+  const { code } = dataExplorer
   // attention: must use storetorefs
   const { fetchSqlResult } = codeRunStore
-  const { usedCode } = storeToRefs(codeRunStore)
 
   const handleReady = (payload: any) => {
     view.value = payload.view
@@ -84,7 +70,6 @@
   // define our theme if needed in the future
   const myTheme = EditorView.theme(
     {
-      // 输入的字体颜色
       '&': {
         color: '#0052D9',
         backgroundColor: '#FFFFFF',
@@ -92,24 +77,19 @@
       '.cm-content': {
         caretColor: '#0052D9',
       },
-      // 激活背景色
       '.cm-activeLine': {
         backgroundColor: '#FAFAFA',
       },
-      // 激活序列的背景色
       '.cm-activeLineGutter': {
         backgroundColor: '#FAFAFA',
       },
-      // 光标的颜色
       '&.cm-focused .cm-cursor': {
         borderLeftColor: '#0052D9',
       },
-      // 选中的状态
       '&.cm-focused .cm-selectionBackground, ::selection': {
         backgroundColor: '#0052D9',
         color: '#FFFFFF',
       },
-      // 左侧侧边栏的颜色
       '.cm-gutters': {
         backgroundColor: '#FFFFFF',
         color: '#ddd',

@@ -53,7 +53,6 @@ const useAppStore = defineStore('tabBar', {
     freshTabList(tags: TagProps[]) {
       this.tagList = tags
       this.cacheTabList.clear()
-      // 要先判断ignoreCache
       this.tagList
         .filter((el) => !el.ignoreCache)
         .map((el) => el.name)

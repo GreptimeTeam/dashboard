@@ -81,12 +81,7 @@
   const setCollapsed = (val: boolean) => {
     appStore.updateSettings({ menuCollapse: val })
   }
-  watch(
-    () => userStore.role,
-    (roleValue) => {
-      if (roleValue && !permission.accessRouter(route)) router.push({ name: 'notFound' })
-    }
-  )
+
   const drawerVisible = ref(false)
   const drawerCancel = () => {
     drawerVisible.value = false

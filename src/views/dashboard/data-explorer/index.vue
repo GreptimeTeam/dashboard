@@ -1,52 +1,30 @@
-<template>
-  <div class="container">
-    <div class="left-side">
-      <a-card>
-        <a-space direction="vertical" fill>
-          <a-layout style="height: 390px">
-            <a-layout-sider :width="300" :resize-directions="['right']">
-              <a-card title="TABLES" style="height: inherit">
-                <template #extra>
-                  <icon-sync style="font-size: 20px; cursor: pointer" @click="refreshTableData()" />
-                </template>
-                <TableList />
-              </a-card>
-            </a-layout-sider>
-            <a-layout-content style="margin-left: 24px">
-              <Editor />
-            </a-layout-content>
-          </a-layout>
-          <DataView />
-          <Log />
-        </a-space>
-      </a-card>
-    </div>
-  </div>
+<template lang="pug">
+.container
+  a-card
+    a-space(direction="vertical" fill)
+      a-split(:style="{height: '375px'}" default-size="200px" min="200px")
+        template(#first)
+          a-card(title="TABLES")
+            template(#extra)
+              icon-sync(style="font-size: 20px; cursor: pointer" @click="refreshTableData")
+            TableList
+        template(#second)
+          Editor 
+      DataView
+      Log 
 </template>
 
-<script lang="ts" setup>
-  import { useDataBaseStore } from '@/store'
-  import Editor from './components/editor.vue'
-  import TableList from './components/table-list.vue'
-  import DataView from './components/data-view/data-view-index.vue'
-  import Log from './components/log.vue'
-
-  const dataBaseStore = useDataBaseStore()
-  const refreshTableData = dataBaseStore.fetchDataBaseTables
-</script>
-
-<script lang="ts">
-  export default {
-    name: 'DataExplorer', // If you want the include property of keep-alive to take effect, you must name the component
-  }
+<script lang="ts" name="DataExplorer" setup>
+  const { fetchDataBaseTables: refreshTableData } = useDataBaseStore()
 </script>
 
 <style lang="less" scoped>
   .container {
     background-color: var(--color-fill-2);
-    padding: 20px 200px;
-    padding-bottom: 0;
+    padding: 20px;
     display: flex;
+    flex: 1;
+    flex-direction: column;
   }
 
   .left-side {

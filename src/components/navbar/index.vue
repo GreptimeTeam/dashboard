@@ -54,15 +54,6 @@
         </a-tooltip>
       </li>
       <li>
-        <a-tooltip :content="$t('settings.navbar.alerts')">
-          <div class="message-box-trigger">
-            <a-badge :count="9" dot>
-              <a-button class="nav-btn" type="outline" :shape="'circle'" @click="setPopoverVisible">
-                <icon-notification />
-              </a-button>
-            </a-badge>
-          </div>
-        </a-tooltip>
         <a-popover
           trigger="click"
           :arrow-style="{ display: 'none' }"
@@ -70,9 +61,6 @@
           content-class="message-popover"
         >
           <div ref="refBtn" class="ref-btn"></div>
-          <template #content>
-            <message-box />
-          </template>
         </a-popover>
       </li>
       <li>
@@ -135,10 +123,9 @@
   import { computed, ref, inject } from 'vue'
   import { Message } from '@arco-design/web-vue'
   import { useDark, useToggle, useFullscreen } from '@vueuse/core'
-  import { useAppStore, useUserStore } from '@/store'
+  import { useAppStore } from '@/store'
   import { LOCALE_OPTIONS } from '@/locale'
   import useLocale from '@/hooks/locale'
-  import MessageBox from '../message-box/index.vue'
 
   const appStore = useAppStore()
   const userStore = useUserStore()
@@ -146,7 +133,7 @@
   const { isFullscreen, toggle: toggleFullScreen } = useFullscreen()
   const locales = [...LOCALE_OPTIONS]
   const avatar = computed(() => {
-    return userStore.avatar
+    return ''
   })
   const theme = computed(() => {
     return appStore.theme
@@ -190,10 +177,7 @@
     })
     triggerBtn.value.dispatchEvent(event)
   }
-  const switchRoles = async () => {
-    const res = await userStore.switchRoles()
-    Message.success(res as string)
-  }
+  const switchRoles = async () => {}
   const toggleDrawerMenu = inject('toggleDrawerMenu') as () => void
 </script>
 
