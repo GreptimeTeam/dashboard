@@ -6,7 +6,7 @@ Dashboard is a data-visualization platform for [GreptimeDB](https://github.com/g
 
 - [Install GreptimeDB](https://docs.greptime.com/installation/overview)
 - Run `./greptime standalone start`
-- Clone this project
+- Clone this project `git clone https://github.com/GreptimeTeam/dashboard.git`
 - Run `npm install` for dependencies
 - Run `npm run dev` and visit the URL in output
 
