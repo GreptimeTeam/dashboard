@@ -69,9 +69,6 @@ export default function useDataExplorer() {
   }
 
   // todo: save code temp to local storage
-  const codeChange = () => {
-    // localStorage.setItem('code', code.value)
-  }
 
   const gridColumn = computed(() => {
     return currentResult.schema.column_schemas.map((column: any) => {
@@ -103,7 +100,6 @@ export default function useDataExplorer() {
 
   return {
     makeOption,
-    codeChange,
     insertCode,
     insertNameToCode,
     code,

@@ -1,15 +1,15 @@
 <template lang="pug">
 a-space(style="margin-bottom: 7px")
   a-button(type="primary" @click="runSqlCommand()")
-    | Run All
+    | {{$t('dataExplorer.runAll')}}
   a(@click="runPartSqlCommand()")
     a-button(v-if="lineStart === lineEnd" type="outline")
-      | Run Line {{ lineStart }}
+      | {{$t('dataExplorer.runLine')}} {{ lineStart }}
     a-button(v-else type="outline")
-      | Run Lines {{ lineStart }} - {{ lineEnd }}
+      | {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
   a-button(@click="clearCodeResult()")
-    | Clear Result
-CodeMirror(v-model="code" :placeholder="placeholder" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
+    | {{$t('dataExplorer.clearResult')}}
+CodeMirror(v-model="code" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
 
 <script lang="ts" setup>
@@ -24,7 +24,6 @@ CodeMirror(v-model="code" :placeholder="placeholder" :style="style" :spellcheck=
     autofocus?: boolean
     indentWithTab?: boolean
     tabSize?: number
-    placeholder?: string
   }
   const props = withDefaults(defineProps<Props>(), {
     spellcheck: true,
