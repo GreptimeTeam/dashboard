@@ -21,6 +21,4 @@ a-list(:data="favoriteList")
   const { insertCode } = dataExplorer
 
   const { favoriteList } = storeToRefs(dataBaseStore)
-
-  dataBaseStore.fetchFavoriteData()
 </script>
