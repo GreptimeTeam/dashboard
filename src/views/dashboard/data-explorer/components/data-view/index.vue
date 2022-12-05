@@ -15,7 +15,7 @@ template(v-if="!!results.length")
 </template>
 
 <script lang="ts" setup>
-  const { setactiveTabIndex, removeResult } = useCodeRunStore()
+  const { setActiveTabIndex, removeResult } = useCodeRunStore()
   const { results, activeTabIndex } = storeToRefs(useCodeRunStore())
 
   const deleteTab = (key: number) => {
@@ -23,6 +23,6 @@ template(v-if="!!results.length")
   }
 
   const tabClick = (key: any) => {
-    setactiveTabIndex(key)
+    setActiveTabIndex(key)
   }
 </script>

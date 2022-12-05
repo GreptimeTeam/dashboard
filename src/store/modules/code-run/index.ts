@@ -82,7 +82,7 @@ const useCodeRunStore = defineStore('codeRun', {
       }
     },
 
-    setactiveTabIndex(index: number) {
+    setActiveTabIndex(index: number) {
       this.activeTabIndex = index
     },
 
