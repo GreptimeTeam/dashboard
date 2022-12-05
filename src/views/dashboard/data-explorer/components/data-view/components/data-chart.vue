@@ -2,13 +2,13 @@
 a-spin(style="width: 100%")
   a-row
     a-form.form(:model="chartForm" layout="inline")
-      a-form-item(label="Chart Type")
-        a-select(v-model="chartForm.chartType" :style="{ width: '320px' }" placeholder="Please select ...")
+      a-form-item(:label="$t('dataExplorer.chartType')")
+        a-select(v-model="chartForm.chartType" :style="{ width: '320px' }")
           a-option(v-for="item of chartTypeOptions" :key="item.key" :value="item.value" :label="item.value")
-      a-form-item(label="Y Types")
-        a-select(v-model="chartForm.ySelectedTypes" :style="{ width: '320px' }" placeholder="Select" multiple :filter-option="false")
+      a-form-item(:label="$t('dataExplorer.yType')")
+        a-select(v-model="chartForm.ySelectedTypes" :style="{ width: '320px' }" :placeholder="$t('dataExplorer.select')" multiple :filter-option="false")
           a-option(v-for="item of yOptions" :key="item.value" :value="item.value") {{ item.value }}
-      a-button(type="primary" @click="drawChart") Draw
+      a-button(type="primary" @click="drawChart") {{$t('dataExplorer.draw')}}
   a-row
     Chart(height="400px" :option="option" :update-options="updateOptions")
 </template>
