@@ -19,9 +19,9 @@ const getDimensions = (elements: any) =>
 
 const useCodeRunStore = defineStore('codeRun', {
   state: () => ({
-    resultIndex: <number>-1,
+    titleIndex: <number>-1,
     results: <any>[],
-    activeTabKey: <number>0,
+    activeTabIndex: <number>0,
     oneLog: <any>{},
     logArray: <any>[],
   }),
@@ -48,7 +48,7 @@ const useCodeRunStore = defineStore('codeRun', {
       return state.logArray
     },
     currentResult(state) {
-      return state.results[state.activeTabKey] || {}
+      return state.results[state.activeTabIndex] || {}
     },
   },
 
@@ -60,15 +60,15 @@ const useCodeRunStore = defineStore('codeRun', {
           content: 'success',
         })
         if (runCode.toLocaleLowerCase().substring(0, 6) === 'select') {
-          this.resultIndex += 1
+          this.titleIndex += 1
           this.results.push({
             // TODO: multiple results
             ...res.output[0].records,
             dimensions: getDimensions(res.output[0].records.schema.column_schemas),
-            index: this.resultIndex,
+            index: this.titleIndex,
             code: runCode,
           })
-          this.activeTabKey = this.results.length - 1
+          this.activeTabIndex = this.results.length - 1
         }
         // todo: can we combine next two logs into one line code?
         this.oneLog = {
@@ -82,8 +82,8 @@ const useCodeRunStore = defineStore('codeRun', {
       }
     },
 
-    setActiveTabKey(index: number) {
-      this.activeTabKey = index
+    setActiveTabIndex(index: number) {
+      this.activeTabIndex = index
     },
 
     removeResult(index: number) {
@@ -91,18 +91,16 @@ const useCodeRunStore = defineStore('codeRun', {
         this.clearResult()
         return
       }
-      const indexToRemove = this.results.findIndex((item: any) => item.index === index)
-      this.results.splice(indexToRemove, 1)
-      if (index === this.activeTabKey) {
-        this.activeTabKey = this.results[indexToRemove].index
-      }
+
+      this.results.splice(index, 1)
+      this.activeTabIndex = Math.min(index, this.results.length - 1)
     },
 
     // TODO: use reset function
     clearResult() {
       this.results = []
-      this.resultIndex = -1
-      this.activeTabKey = 0
+      this.titleIndex = -1
+      this.activeTabIndex = 0
     },
   },
 })

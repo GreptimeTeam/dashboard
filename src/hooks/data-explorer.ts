@@ -24,7 +24,7 @@ const getSeriesAndLegendNames = ([chartType, ySelectedTypes = []]: any) => {
 }
 
 export default function useDataExplorer() {
-  const { currentResult } = useCodeRunStore()
+  const { currentResult } = storeToRefs(useCodeRunStore())
 
   const makeOption = (item: any) => {
     const { series, legendNames } = getSeriesAndLegendNames(item)
@@ -35,8 +35,8 @@ export default function useDataExplorer() {
       },
       tooltip: {},
       dataset: {
-        dimensions: currentResult.dimensions,
-        source: currentResult.rows,
+        dimensions: currentResult.value.dimensions,
+        source: currentResult.value.rows,
       },
       xAxis: {
         type: 'time',
@@ -71,7 +71,7 @@ export default function useDataExplorer() {
   // todo: save code temp to local storage
 
   const gridColumn = computed(() => {
-    return currentResult.schema.column_schemas.map((column: any) => {
+    return currentResult.value.schema.column_schemas.map((column: any) => {
       return {
         title: column.name,
         dataIndex: column.name,
@@ -81,17 +81,17 @@ export default function useDataExplorer() {
   })
 
   const gridData = computed(() => {
-    return currentResult.rows.map((row: any) => {
+    return currentResult.value.rows.map((row: any) => {
       const tempRow: any = {}
       row.forEach((item: any, index: number) => {
-        tempRow[currentResult.schema.column_schemas[index].name] = item
+        tempRow[currentResult.value.schema.column_schemas[index].name] = item
       })
       return tempRow
     })
   })
 
   const yOptions = computed(() => {
-    return currentResult.schema.column_schemas
+    return currentResult.value.schema.column_schemas
       .filter((item: any) => item.data_type === 'Int' || item.data_type === 'Float64')
       .map((item: any) => ({
         value: item.name,
