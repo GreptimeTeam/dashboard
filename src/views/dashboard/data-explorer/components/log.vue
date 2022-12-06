@@ -11,6 +11,8 @@ a-list(:hoverable="true" size="small")
           a-divider(direction="vertical")
         div {{ item.affectedrows ? `${$t('dataExplorer.affected')} ${item.affectedrows || 0} ${$t('dataExplorer.rows')}` : `${$t('dataExplorer.result')}: ${item.records.rows.length} ${$t('dataExplorer.rows')}`}}
         div {{ `${$t('dataExplorer.executeTime')}: ${item.execution_time_ms } ${$t('dataExplorer.ms') }`}}
+        div {{ `${$t('dataExplorer.network')}: ${item.networkTime - item.execution_time_ms } ${$t('dataExplorer.ms') }`}}
+        div {{ `${$t('dataExplorer.total')}: ${item.networkTime } ${$t('dataExplorer.ms') }`}}
         div {{ `${$t('dataExplorer.code')}: ${item.sql} `}}
     template(#actions)
 </template>

@@ -16,7 +16,9 @@ export default {
   'dataExplorer.error': 'Error',
   'dataExplorer.rows': 'row(s)',
   'dataExplorer.affected': 'Affected',
-  'dataExplorer.executeTime': 'Execute Time',
+  'dataExplorer.executeTime': 'Execute',
+  'dataExplorer.network': 'Network',
+  'dataExplorer.total': 'Total',
   'dataExplorer.ms': 'ms',
   'dataExplorer.code': 'Code',
 }

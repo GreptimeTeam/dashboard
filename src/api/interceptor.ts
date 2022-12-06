@@ -29,7 +29,10 @@ axios.interceptors.request.use(
       }
       config.headers.Authorization = `Bearer ${token}`
     }
-    return config
+    return {
+      ...config,
+      traceTimeStart: new Date().valueOf(),
+    }
   },
   (error) => {
     // do something
@@ -50,7 +53,10 @@ axios.interceptors.response.use(
       // 50008: Illegal token; 50012: Other clients logged in; 50014: Token expired;
       return Promise.reject(res || 'Error')
     }
-    return res
+    return {
+      ...res,
+      networkTime: new Date().valueOf() - response.config.traceTimeStart,
+    }
   },
   (error) => {
     Message.error({
