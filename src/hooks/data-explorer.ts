@@ -1,7 +1,7 @@
 const columns = ref<any>([])
 
 // todo: change init code
-const code = ref('select * from scripts')
+const code = ref('select * from system_metrics')
 const cursorAt = ref<Array<number>>([])
 // todo: compare sqlResult's code and current code
 const { currentResult } = storeToRefs(useCodeRunStore())
@@ -13,7 +13,7 @@ const getSeriesAndLegendNames = ([chartType, ySelectedTypes = []]: any) => {
     const oneSeries = {
       name: item,
       type: chartType,
-      smooth: true,
+      smooth: false,
       encode: {
         x: currentResult.value.dimensionsAndXName[1],
         y: item,
