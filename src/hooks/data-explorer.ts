@@ -4,6 +4,7 @@ const columns = ref<any>([])
 const code = ref('select * from scripts')
 const cursorAt = ref<Array<number>>([])
 // todo: compare sqlResult's code and current code
+const { currentResult } = storeToRefs(useCodeRunStore())
 
 const getSeriesAndLegendNames = ([chartType, ySelectedTypes = []]: any) => {
   const series: any = []
@@ -12,10 +13,15 @@ const getSeriesAndLegendNames = ([chartType, ySelectedTypes = []]: any) => {
     const oneSeries = {
       name: item,
       type: chartType,
+      smooth: true,
       encode: {
-        x: 'ts',
+        x: currentResult.value.dimensionsAndXName[1],
         y: item,
       },
+    }
+    if (chartType === 'line(smooth)') {
+      oneSeries.type = 'line'
+      oneSeries.smooth = true
     }
     series.push(oneSeries)
     legendNames.push(item)
@@ -24,10 +30,10 @@ const getSeriesAndLegendNames = ([chartType, ySelectedTypes = []]: any) => {
 }
 
 export default function useDataExplorer() {
-  const { currentResult } = storeToRefs(useCodeRunStore())
-
   const makeOption = (item: any) => {
     const { series, legendNames } = getSeriesAndLegendNames(item)
+    console.log(currentResult.value.dimensionsAndXName)
+
     return {
       legend: {
         data: legendNames,
@@ -35,7 +41,7 @@ export default function useDataExplorer() {
       },
       tooltip: {},
       dataset: {
-        dimensions: currentResult.value.dimensions,
+        dimensions: currentResult.value.dimensionsAndXName[0],
         source: currentResult.value.rows,
       },
       xAxis: {
@@ -91,6 +97,7 @@ export default function useDataExplorer() {
   })
 
   const yOptions = computed(() => {
+    console.log(currentResult.value.schema.column_schemas)
     return currentResult.value.schema.column_schemas
       .filter((item: any) => item.data_type === 'Int' || item.data_type === 'Float64')
       .map((item: any) => ({

@@ -18,6 +18,7 @@ a-spin(style="width: 100%")
 
   const option = ref({})
   const { makeOption, yOptions } = useDataExplorer()
+  console.log(yOptions.value)
   // const { loading, setLoading } = useLoading(true)
   const chartForm = reactive({
     chartType: 'line',
