@@ -77,7 +77,6 @@ const useCodeRunStore = defineStore('codeRun', {
         })
       }
     },
-    // todo: can we combine next two logs into one line code?
 
     setActiveTabKey(key: number) {
       this.activeTabKey = key
