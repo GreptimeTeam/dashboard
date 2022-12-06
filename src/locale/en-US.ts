@@ -1,3 +1,5 @@
+import localeDataExplorer from '@/views/dashboard/data-explorer/locale/en-US'
+
 export default {
   'menu.dashboard': 'Dashboard',
   'menu.server.dashboard': 'Dashboard-Server',
@@ -10,8 +12,8 @@ export default {
   'menu.profile': 'Profile',
   'menu.visualization': 'Data Visualization',
   'menu.user': 'User Center',
-  'menu.arcoWebsite': 'Arco Design',
   'menu.faq': 'FAQ',
   'navbar.docs': 'Docs',
   'navbar.action.locale': 'Switch to English',
+  ...localeDataExplorer,
 }

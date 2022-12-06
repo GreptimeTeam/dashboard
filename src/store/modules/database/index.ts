@@ -47,7 +47,6 @@ const useDataBaseStore = defineStore('dataBase', {
         // some error
       }
     },
-    fetchFavoriteData() {},
     async fetchOneTable(node: any) {
       try {
         const res = await fetchOneTable(node)

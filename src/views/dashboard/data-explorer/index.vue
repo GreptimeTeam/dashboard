@@ -2,9 +2,9 @@
 .container
   a-card
     a-space(direction="vertical" fill)
-      a-split(:style="{height: '375px'}" default-size="200px" min="200px")
+      a-split(:style="{height: '375px'}" default-size="270px" min="200px")
         template(#first)
-          a-card(title="TABLES")
+          a-card(:title="$t('dataExplorer.tableTree')")
             template(#extra)
               icon-sync(style="font-size: 20px; cursor: pointer" @click="refreshTableData")
             TableList

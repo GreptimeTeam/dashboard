@@ -1,16 +1,17 @@
 <template lang="pug">
 template(v-if="!!results.length")
   a-tabs(type="card-gutter" lazy-load :active-key="activeTabIndex" @tab-click="tabClick" @delete="deleteTab" editable)
-    a-tab-pane(v-for="(item, index) of results" :key="index" :title="`Result ${item.index + 1}`" closable)
+    a-tab-pane(v-for="(item, index) of results" :key="index" 
+    :title="`${$t('dataExplorer.result')} ${item.index + 1}`" closable) 
       a-card
         template(#title)
           icon-menu
-          | Table
+          | {{$t('dataExplorer.table')}}
         DataGrid
       a-card
         template(#title)
           icon-bar-chart
-          | Chart
+          | {{$t('dataExplorer.chart')}}
         DataChart
 </template>
 

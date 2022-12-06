@@ -3,7 +3,7 @@ a-tree(v-if="!ifTableLoading" :key="tableKey" :data="tableList" :load-more="load
   template(#extra="nodeData")
     span(style="color: #8322ff")
       | {{ nodeData.type }}
-    a-tooltip(content="Insert Name Into Editor" mini)
+    a-tooltip(:content="$t('dataExplorer.insertName')" mini)
       icon-copy(style="position: absolute; right: 0; font-size: 15px" @click="insertNameToCode(nodeData.title)")
 </template>
 
