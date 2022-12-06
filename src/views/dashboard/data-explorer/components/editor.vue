@@ -1,5 +1,5 @@
 <template lang="pug">
-a-space(style="margin-bottom: 7px")
+a-space(style="margin-bottom: 6px")
   a-button(type="primary" @click="runSqlCommand()")
     | {{$t('dataExplorer.runAll')}}
   a(@click="runPartSqlCommand()")
@@ -7,8 +7,6 @@ a-space(style="margin-bottom: 7px")
       | {{$t('dataExplorer.runLine')}} {{ lineStart }}
     a-button(v-else type="outline")
       | {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
-  a-button(@click="clearCodeResult()")
-    | {{$t('dataExplorer.clearResult')}}
 CodeMirror(v-model="code" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
 
@@ -62,7 +60,7 @@ CodeMirror(v-model="code" :style="style" :spellcheck="spellcheck" :autofocus="au
 
   // extensions: Passed to CodeMirror EditorState.create({ extensions })
   const style = {
-    height: '350px',
+    height: '337px',
     // '.cm-gutters': {
     //   color: #254f9a,
     // },
@@ -109,10 +107,5 @@ CodeMirror(v-model="code" :style="style" :spellcheck="spellcheck" :autofocus="au
 
   const runPartSqlCommand = () => {
     fetchSqlResult(selectedCode.value.trim())
-  }
-
-  const clearCodeResult = () => {
-    // todo: original state is just one tab?
-    codeRunStore.$reset()
   }
 </script>
