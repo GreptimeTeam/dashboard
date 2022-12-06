@@ -1,5 +1,3 @@
-import { getSqlResult } from '@/api/editor'
-import { Message } from '@arco-design/web-vue'
 import { defineStore } from 'pinia'
 
 const useLogStore = defineStore('log', {
