@@ -17,16 +17,88 @@ a-spin(style="width: 100%")
   import { chartTypeOptions, updateOptions } from '../config'
 
   const option = ref({})
-  const { makeOption, yOptions } = useDataExplorer()
-  console.log(yOptions.value)
-  // const { loading, setLoading } = useLoading(true)
+  const { currentResult } = storeToRefs(useCodeRunStore())
+
+  const getSeriesAndLegendNames = ([chartType, ySelectedTypes = []]: any) => {
+    const series: any = []
+    const legendNames: any = []
+    ySelectedTypes.forEach((item: any) => {
+      const oneSeries = {
+        name: item,
+        type: chartType,
+        smooth: false,
+        encode: {
+          x: currentResult.value.dimensionsAndXName[1],
+          y: item,
+        },
+      }
+      if (chartType === 'line(smooth)') {
+        oneSeries.type = 'line'
+        oneSeries.smooth = true
+      }
+      series.push(oneSeries)
+      legendNames.push(item)
+    })
+    return { series, legendNames }
+  }
+
+  const makeOption = (item: any) => {
+    const { series, legendNames } = getSeriesAndLegendNames(item)
+    return {
+      legend: {
+        data: legendNames,
+        orient: 'vertical',
+      },
+      tooltip: {},
+      dataset: {
+        dimensions: currentResult.value.dimensionsAndXName[0],
+        source: currentResult.value.rows,
+      },
+      xAxis: {
+        type: 'time',
+        name: 'Time',
+        axisLine: {
+          lineStyle: {
+            type: 'solid',
+          },
+        },
+      },
+      yAxis: {
+        axisLine: {
+          lineStyle: {
+            type: 'solid',
+          },
+        },
+      },
+      series,
+    }
+  }
+
+  const yOptions = computed(() => {
+    return currentResult.value.schema.column_schemas
+      .filter((item: any) => item.data_type === 'Int' || item.data_type === 'Float64')
+      .map((item: any) => ({
+        value: item.name,
+      }))
+  })
+
   const chartForm = reactive({
     chartType: 'line',
     ySelectedTypes: [],
   })
+
   const drawChart = () => {
-    option.value = useDataExplorer().makeOption([chartForm.chartType, chartForm.ySelectedTypes])
+    option.value = makeOption([chartForm.chartType, chartForm.ySelectedTypes])
+    console.log(`option.value:`, option.value)
   }
+
+  watch([currentResult], () => {
+    drawChart()
+  })
+
+  defineExpose({
+    drawChart,
+  })
 </script>
 
 <style scoped lang="stylus">
