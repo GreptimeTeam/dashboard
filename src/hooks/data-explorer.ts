@@ -32,7 +32,6 @@ const getSeriesAndLegendNames = ([chartType, ySelectedTypes = []]: any) => {
 export default function useDataExplorer() {
   const makeOption = (item: any) => {
     const { series, legendNames } = getSeriesAndLegendNames(item)
-    console.log(currentResult.value.dimensionsAndXName)
 
     return {
       legend: {
@@ -97,7 +96,6 @@ export default function useDataExplorer() {
   })
 
   const yOptions = computed(() => {
-    console.log(currentResult.value.schema.column_schemas)
     return currentResult.value.schema.column_schemas
       .filter((item: any) => item.data_type === 'Int' || item.data_type === 'Float64')
       .map((item: any) => ({
