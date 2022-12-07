@@ -16,8 +16,20 @@ a-spin(style="width: 100%")
 <script lang="ts" setup>
   import { chartTypeOptions, updateOptions } from '../config'
 
-  const option = ref({})
   const { currentResult } = storeToRefs(useCodeRunStore())
+  const option = ref({})
+  const chartForm = reactive({
+    chartType: 'line',
+    ySelectedTypes: [],
+  })
+
+  const yOptions = computed(() => {
+    return currentResult.value.schema.column_schemas
+      .filter((item: any) => item.data_type === 'Int' || item.data_type === 'Float64')
+      .map((item: any) => ({
+        value: item.name,
+      }))
+  })
 
   const getSeriesAndLegendNames = ([chartType, ySelectedTypes = []]: any) => {
     const series: any = []
@@ -74,30 +86,12 @@ a-spin(style="width: 100%")
     }
   }
 
-  const yOptions = computed(() => {
-    return currentResult.value.schema.column_schemas
-      .filter((item: any) => item.data_type === 'Int' || item.data_type === 'Float64')
-      .map((item: any) => ({
-        value: item.name,
-      }))
-  })
-
-  const chartForm = reactive({
-    chartType: 'line',
-    ySelectedTypes: [],
-  })
-
   const drawChart = () => {
     option.value = makeOption([chartForm.chartType, chartForm.ySelectedTypes])
-    console.log(`option.value:`, option.value)
   }
 
   watch([currentResult], () => {
     drawChart()
-  })
-
-  defineExpose({
-    drawChart,
   })
 </script>
 
