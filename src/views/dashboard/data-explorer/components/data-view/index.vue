@@ -1,10 +1,10 @@
 <template lang="pug">
 template(v-if="!!results.length")
-  a-tabs(type="card-gutter" lazy-load :active-key="activeTabIndex" @tab-click="tabClick" @delete="deleteTab" editable)
+  a-tabs(type="card-gutter" lazy-load :active-key="activeTabKey" @tab-click="tabClick" @delete="deleteTab" editable)
     template(#extra)
       a-button(@click="clearCodeResult()" status="danger") {{$t('dataExplorer.clear')}}
-    a-tab-pane(v-for="(item, index) of results" :key="index" 
-    :title="`${$t('dataExplorer.result')} ${item.index + 1}`" closable) 
+    a-tab-pane(v-for="(item, index) of results" :key="item.key" 
+    :title="`${$t('dataExplorer.result')} ${item.key + 1}`" closable) 
       a-card
         template(#title)
           icon-menu
@@ -18,15 +18,15 @@ template(v-if="!!results.length")
 </template>
 
 <script lang="ts" setup>
-  const { setActiveTabIndex, removeResult } = useCodeRunStore()
-  const { results, activeTabIndex } = storeToRefs(useCodeRunStore())
+  const { setActiveTabKey, removeResult } = useCodeRunStore()
+  const { results, activeTabKey } = storeToRefs(useCodeRunStore())
 
   const deleteTab = (key: number) => {
     removeResult(key)
   }
 
   const tabClick = (key: any) => {
-    setActiveTabIndex(key)
+    setActiveTabKey(key)
   }
 
   const clearCodeResult = () => {

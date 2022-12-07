@@ -32,7 +32,7 @@ const useCodeRunStore = defineStore('codeRun', {
   state: () => ({
     titleIndex: <number>-1,
     results: <any>[],
-    activeTabIndex: <number>0,
+    activeTabKey: <number>0,
     oneLog: <any>{},
     logArray: <any>[],
   }),
@@ -59,7 +59,7 @@ const useCodeRunStore = defineStore('codeRun', {
       return state.logArray
     },
     currentResult(state) {
-      return state.results[state.activeTabIndex] || {}
+      return state.results.find((item: any) => item.key === state.activeTabKey) || {}
     },
   },
 
@@ -76,10 +76,10 @@ const useCodeRunStore = defineStore('codeRun', {
             // TODO: multiple results
             ...res.output[0].records,
             dimensionsAndXName: getDimensionsAndXName(res.output[0].records.schema.column_schemas),
-            index: this.titleIndex,
+            key: this.titleIndex,
             code: runCode,
           })
-          this.activeTabIndex = this.results.length - 1
+          this.activeTabKey = this.titleIndex
         }
         // todo: can we combine next two logs into one line code?
         this.oneLog = {
@@ -93,18 +93,21 @@ const useCodeRunStore = defineStore('codeRun', {
       }
     },
 
-    setActiveTabIndex(index: number) {
-      this.activeTabIndex = index
+    setActiveTabKey(key: number) {
+      this.activeTabKey = key
     },
 
-    removeResult(index: number) {
+    removeResult(key: number) {
       if (this.results.length === 1) {
         this.$reset()
         return
       }
-
-      this.results.splice(index, 1)
-      this.activeTabIndex = Math.min(index, this.results.length - 1)
+      let deletedTabIndex = this.results.findIndex((item: any) => item.key === key)
+      if (deletedTabIndex + 1 === this.results.length) {
+        deletedTabIndex -= 1
+      }
+      this.results = this.results.filter((item: any) => item.key !== key)
+      this.activeTabKey = this.results[deletedTabIndex].key
     },
   },
 })
