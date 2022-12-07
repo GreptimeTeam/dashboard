@@ -6,7 +6,7 @@ export default {
   'dataExplorer.runAll': 'Run All',
   'dataExplorer.runLine': 'Run Line',
   'dataExplorer.runLines': 'Run Lines',
-  'dataExplorer.clearResult': 'Clear Result',
+  'dataExplorer.clear': 'Clear',
   'dataExplorer.result': 'Result',
   'dataExplorer.chart': 'Chart',
   'dataExplorer.chartType': 'Chart',
