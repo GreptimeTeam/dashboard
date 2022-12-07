@@ -99,19 +99,12 @@ const useCodeRunStore = defineStore('codeRun', {
 
     removeResult(index: number) {
       if (this.results.length === 1) {
-        this.clearResult()
+        this.$reset()
         return
       }
 
       this.results.splice(index, 1)
       this.activeTabIndex = Math.min(index, this.results.length - 1)
-    },
-
-    // TODO: use reset function
-    clearResult() {
-      this.results = []
-      this.titleIndex = -1
-      this.activeTabIndex = 0
     },
   },
 })
