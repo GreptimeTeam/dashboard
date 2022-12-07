@@ -1,0 +1,23 @@
+name: Sync pnpm-lock
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "package-lock.json"
+
+jobs:
+  pnpm_install:
+    if: github.event.pull_request.user.login == "dependabot"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: ${{github.event.pull_request.base.ref }}
+    - uses: pnpm/action-setup@v2
+      with:
+        version: 7
+    - run: pnpm install
+    - uses: EndBug/add-and-commit@v9
+      with:
+        add: "pnpm-lock.yaml"
