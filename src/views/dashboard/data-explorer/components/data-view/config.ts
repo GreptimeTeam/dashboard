@@ -9,6 +9,10 @@ export const chartTypeOptions: any = [
   },
   {
     key: 3,
+    value: 'line(smooth)',
+  },
+  {
+    key: 4,
     value: 'bar',
   },
 ]

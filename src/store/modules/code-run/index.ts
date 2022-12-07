@@ -9,13 +9,24 @@ const TYPE_MAP: any = {
   Int: 'int',
 }
 
-const getDimensions = (elements: any) =>
-  elements.map((element: any) => {
-    return {
+const getDimensionsAndXName = (elements: any) => {
+  const tempDimensions: any = []
+  let xAxisName = ''
+  let findTimeFlag = false
+  elements.forEach((element: any) => {
+    if (!findTimeFlag && element.data_type === 'Timestamp') {
+      findTimeFlag = true
+      xAxisName = element.name
+    }
+    const oneDimension = {
       name: element.name,
       type: TYPE_MAP[element.data_type] || 'ordinal',
     }
+
+    tempDimensions.push(oneDimension)
   })
+  return [tempDimensions, xAxisName]
+}
 
 const useCodeRunStore = defineStore('codeRun', {
   state: () => ({
@@ -64,7 +75,7 @@ const useCodeRunStore = defineStore('codeRun', {
           this.results.push({
             // TODO: multiple results
             ...res.output[0].records,
-            dimensions: getDimensions(res.output[0].records.schema.column_schemas),
+            dimensionsAndXName: getDimensionsAndXName(res.output[0].records.schema.column_schemas),
             index: this.titleIndex,
             code: runCode,
           })
