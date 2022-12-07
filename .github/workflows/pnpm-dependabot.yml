@@ -8,12 +8,12 @@ on:
 
 jobs:
   pnpm_install:
-    if: github.event.pull_request.user.login == 'apps/dependabot'
+    if: ${{ startsWith(github.ref_name, 'dependabot/') }}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
-        ref: ${{github.event.pull_request.base.ref }}
+        ref: ${{ github.ref_name }}
     - uses: pnpm/action-setup@v2
       with:
         version: 7
