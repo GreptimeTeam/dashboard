@@ -89,10 +89,6 @@ a-spin(style="width: 100%")
   const drawChart = () => {
     option.value = makeOption([chartForm.chartType, chartForm.ySelectedTypes])
   }
-
-  watch([currentResult], () => {
-    drawChart()
-  })
 </script>
 
 <style scoped lang="stylus">
