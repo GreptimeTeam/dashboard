@@ -14,7 +14,7 @@ a-spin(style="width: 100%")
 </template>
 
 <script lang="ts" setup>
-  import { chartTypeOptions, updateOptions } from '../config'
+  import { chartTypeOptions, updateOptions, numberTypes } from '../config'
 
   const { currentResult } = storeToRefs(useCodeRunStore())
   const option = ref({})
@@ -23,9 +23,10 @@ a-spin(style="width: 100%")
     ySelectedTypes: [],
   })
 
+  // TODO: Add support for more data types not just numbers.
   const yOptions = computed(() => {
     return currentResult.value.schema.column_schemas
-      .filter((item: any) => item.data_type === 'Int' || item.data_type === 'Float64')
+      .filter((item: any) => numberTypes.find((type: string) => type === item.data_type))
       .map((item: any) => ({
         value: item.name,
       }))
