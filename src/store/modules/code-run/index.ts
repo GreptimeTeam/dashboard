@@ -1,26 +1,29 @@
 import { getSqlResult } from '@/api/editor'
 import { Message } from '@arco-design/web-vue'
 import { defineStore } from 'pinia'
+import { dateTypes } from '@/views/dashboard/data-explorer/components/data-view/config'
 
-const TYPE_MAP: any = {
-  Timestamp: 'time',
-  String: 'ordinal',
-  Float64: 'float',
-  Int: 'int',
-}
+// TODO: Add all the types we decide instead of ECharts if needed in the future.
+// const TYPE_MAP: any = {
+//   Timestamp: 'time',
+//   String: 'ordinal',
+//   Float64: 'float',
+//   Int: 'int',
+// }
 
 const getDimensionsAndXName = (elements: any) => {
   const tempDimensions: any = []
   let xAxisName = ''
   let findTimeFlag = false
   elements.forEach((element: any) => {
-    if (!findTimeFlag && element.data_type === 'Timestamp') {
+    if (!findTimeFlag && dateTypes.find((type: string) => type === element.data_type)) {
       findTimeFlag = true
       xAxisName = element.name
     }
     const oneDimension = {
       name: element.name,
-      type: TYPE_MAP[element.data_type] || 'ordinal',
+      // Note: let ECharts decide type for now.
+      // type: TYPE_MAP[element.data_type] || 'ordinal',
     }
 
     tempDimensions.push(oneDimension)
