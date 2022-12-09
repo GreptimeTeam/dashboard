@@ -1,7 +1,7 @@
 <template lang="pug">
 .navbar
   .left-side
-    img(alt='logo', src='src/assets/images/logo-text.png', class="logo-text-img")
+    img(alt='logo', src='/src/assets/images/logo-text.webp', class="logo-text-img")
   ul.right-side
     li(v-for="{link, icon} in socialLinks")
       a-tooltip(content='GitHub')
