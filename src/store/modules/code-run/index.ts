@@ -1,6 +1,7 @@
 import { getSqlResult } from '@/api/editor'
 import { Message } from '@arco-design/web-vue'
 import { defineStore } from 'pinia'
+import { dateTypes } from '@/views/dashboard/data-explorer/components/data-view/config'
 
 // TODO: Add all the types we decide instead of ECharts if needed in the future.
 // const TYPE_MAP: any = {
@@ -15,7 +16,7 @@ const getDimensionsAndXName = (elements: any) => {
   let xAxisName = ''
   let findTimeFlag = false
   elements.forEach((element: any) => {
-    if (!findTimeFlag && element.data_type === 'Timestamp') {
+    if (!findTimeFlag && dateTypes.find((type: string) => type === element.data_type)) {
       findTimeFlag = true
       xAxisName = element.name
     }

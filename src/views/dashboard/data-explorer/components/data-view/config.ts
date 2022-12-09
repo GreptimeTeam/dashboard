@@ -30,3 +30,5 @@ export const numberTypes = [
   'Float32',
   'Float64',
 ]
+
+export const dateTypes = ['Date', 'DateTime', 'Timestamp']
