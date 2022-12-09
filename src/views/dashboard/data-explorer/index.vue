@@ -1,26 +1,36 @@
 <template lang="pug">
-.container
-  a-card
-    a-space(direction="vertical" fill)
-      a-split(:style="{height: '375px'}" default-size="270px" min="200px")
-        template(#first)
-          a-card(:title="$t('dataExplorer.tableTree')")
-            template(#extra)
-              icon-sync(style="font-size: 20px; cursor: pointer" @click="refreshTableData")
-            TableList
-        template(#second)
-          Editor 
-      DataView
-      Log 
+a-layout
+  .layout-navbar(v-if="navbar")
+    NavBar
+  .container
+    a-card
+      a-space(direction="vertical" fill)
+        a-split(:style="{height: '375px'}" default-size="270px" min="200px")
+          template(#first)
+            a-card(:title="$t('dataExplorer.tableTree')")
+              template(#extra)
+                icon-sync(style="font-size: 20px; cursor: pointer" @click="refreshTableData")
+              TableList
+          template(#second) 
+            Editor 
+        DataView
+        Log 
 </template>
 
 <script lang="ts" name="DataExplorer" setup>
+  import NavBar from '@/components/navbar/index.vue'
+
+  const appStore = useAppStore()
+  const navbar = computed(() => appStore.navbar)
   const { fetchDataBaseTables: refreshTableData } = useDataBaseStore()
 </script>
 
 <style lang="less" scoped>
+  .layout-navbar {
+    height: 52px;
+  }
+
   .container {
-    background-color: var(--color-fill-2);
     padding: 20px;
     display: flex;
     width: 100%;
@@ -43,13 +53,16 @@
     border-radius: 4px;
     overflow: auto;
   }
+
   :deep(.panel-border) {
     margin-bottom: 0;
     border-bottom: 1px solid rgb(var(--gray-2));
   }
+
   .moduler-wrap {
     border-radius: 4px;
     background-color: var(--color-bg-2);
+
     :deep(.text) {
       font-size: 12px;
       text-align: center;
@@ -66,11 +79,13 @@
           margin-bottom: 0;
         }
       }
+
       &:hover {
         .icon {
           color: rgb(var(--arcoblue-6));
           background-color: #e8f3ff;
         }
+
         .text {
           color: rgb(var(--arcoblue-6));
         }
@@ -98,6 +113,7 @@
     .container {
       display: block;
     }
+
     .right-side {
       // display: none;
       width: 100%;

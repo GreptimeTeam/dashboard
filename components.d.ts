@@ -49,6 +49,7 @@ declare module '@vue/runtime-core' {
     Redirect: typeof import('./src/views/redirect/index.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SocialLink: typeof import('./src/components/social-link/index.vue')['default']
     TabBar: typeof import('./src/components/tab-bar/index.vue')['default']
     TabItem: typeof import('./src/components/tab-bar/tab-item.vue')['default']
     TableList: typeof import('./src/views/dashboard/data-explorer/components/table-list.vue')['default']
