@@ -4,7 +4,9 @@ a-tree(v-if="!ifTableLoading" :key="tableKey" :data="tableList" :load-more="load
     span(style="color: #8322ff")
       | {{ nodeData.type }}
     a-tooltip(:content="$t('dataExplorer.insertName')" mini)
-      icon-copy(style="position: absolute; right: 0; font-size: 15px" @click="insertNameToCode(nodeData.title)")
+      img.copy-icon(src="/src/assets/images/copy-icon.png" height="16" @click="insertNameToCode(nodeData.title)")
+  template(#icon="nodeData")
+    IconStar(v-if="nodeData.isLeaf")
 </template>
 
 <script lang="ts" setup>
@@ -52,3 +54,17 @@ a-tree(v-if="!ifTableLoading" :key="tableKey" :data="tableList" :load-more="load
   }
   initTableDataSet()
 </script>
+<style lang="less" scoped>
+  :deep(.arco-tree-node) {
+    height: 32px;
+    font-size: 12px;
+    font-family: PingFangSC-Regular, PingFang SC;
+    font-weight: 400;
+    color: #53565a;
+    line-height: 12px;
+  }
+  .copy-icon {
+    position: absolute;
+    right: 0;
+  }
+</style>
