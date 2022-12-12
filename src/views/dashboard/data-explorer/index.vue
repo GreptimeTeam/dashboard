@@ -3,18 +3,20 @@ a-layout
   .layout-navbar(v-if="navbar")
     NavBar
   .container
-    a-card
-      a-space(direction="vertical" fill)
-        a-split(:style="{height: '375px'}" default-size="270px" min="200px")
-          template(#first)
-            a-card(:title="$t('dataExplorer.tableTree')")
-              template(#extra)
-                icon-sync(style="font-size: 20px; cursor: pointer" @click="refreshTableData")
-              TableList
-          template(#second) 
-            Editor 
-        DataView
-        Log 
+    a-space(direction="vertical" fill :size="15")
+      a-split(:style="{height: '296px'}" default-size="260px" min="200px")
+        template(#first)
+          a-card.tree-card
+            template(#title)
+              img.tree-icon(src="/src/assets/images/tree-icon.svg" height="14")
+              span.tree-title {{$t('dataExplorer.tableTree')}}
+            template(#extra)
+              img.tree-refresh(src="/src/assets/images/tree-refresh.svg" height="16" style="cursor: pointer" @click="refreshTableData" fit="fill")
+            TableList
+        template(#second) 
+          Editor 
+      DataView
+      Log 
 </template>
 
 <script lang="ts" name="DataExplorer" setup>
@@ -31,13 +33,43 @@ a-layout
   }
 
   .container {
-    padding: 20px;
+    padding: 20px 30px 30px 30px;
     display: flex;
     width: 100%;
     flex: 1;
     flex-direction: column;
   }
-
+  .tree-card {
+    border-radius: 6px;
+    background: #ffffff;
+    padding-right: 8px;
+    padding-left: 15px;
+    :deep(.arco-card-header) {
+      border-bottom: 0;
+      padding: 0;
+      height: 40px;
+    }
+    :deep(.arco-card-body) {
+      padding: 0;
+    }
+  }
+  .tree-refresh {
+    display: table-cell;
+    vertical-align: middle;
+    text-align: center;
+    height: 16px;
+  }
+  .tree-icon {
+    margin-right: 2px;
+    height: 14px;
+    vertical-align: middle;
+  }
+  .tree-title {
+    font-family: Roboto-Regular, Roboto;
+    font-weight: 400;
+    color: #170c2c;
+    line-height: 12px;
+  }
   .left-side {
     flex: 1;
     overflow: auto;
