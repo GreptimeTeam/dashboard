@@ -7,7 +7,7 @@
   "license": "Apache-2.0",
   "scripts": {
     "dev": "vite --config ./config/vite.config.dev.ts",
-    "build": "vue-tsc --noEmit && vite build --config ./config/vite.config.prod.ts",
+    "build": "vite build --config ./config/vite.config.prod.ts && vue-tsc --noEmit",
     "report": "cross-env REPORT=true npm run build",
     "preview": "npm run build && vite preview --host",
     "type:check": "vue-tsc --noEmit --skipLibCheck",
@@ -35,6 +35,7 @@
     "arco-design-pro-vue": "^2.5.13",
     "axios": "^1.2.1",
     "codemirror": "6.x",
+    "consola": "^2.15.3",
     "dayjs": "^1.11.5",
     "echarts": "^5.4.0",
     "lodash": "^4.17.21",
