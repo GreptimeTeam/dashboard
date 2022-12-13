@@ -2018,6 +2018,10 @@ console-stream@^0.1.1:
   version "0.1.1"
   resolved "https://registry.npmmirror.com/console-stream/-/console-stream-0.1.1.tgz"
 
+console@^0.7.2:
+  version "0.7.2"
+  resolved "https://registry.yarnpkg.com/console/-/console-0.7.2.tgz#f9a4331249291591b7bf9bffa8e205356f20a9f0"
+
 constant-case@^3.0.4:
   version "3.0.4"
   resolved "https://registry.npmmirror.com/constant-case/-/constant-case-3.0.4.tgz"
@@ -7351,16 +7355,17 @@ vite-plugin-imagemin@^0.6.1:
     jpegtran-bin "^6.0.1"
     pathe "^0.2.0"
 
-vite-plugin-style-import@1.4.1:
-  version "1.4.1"
-  resolved "https://registry.npmmirror.com/vite-plugin-style-import/-/vite-plugin-style-import-1.4.1.tgz"
+vite-plugin-style-import@2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/vite-plugin-style-import/-/vite-plugin-style-import-2.0.0.tgz#edafd9fbb09e8bb5ae67dee8f601afbe386a9969"
   dependencies:
     "@rollup/pluginutils" "^4.1.2"
     change-case "^4.1.2"
-    debug "^4.3.3"
+    console "^0.7.2"
     es-module-lexer "^0.9.3"
     fs-extra "^10.0.0"
     magic-string "^0.25.7"
+    pathe "^0.2.0"
 
 vite-svg-loader@^3.6.0:
   version "3.6.0"
