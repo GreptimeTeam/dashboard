@@ -33,7 +33,7 @@
     "@codemirror/view": "^6.4.0",
     "@vueuse/core": "^9.6.0",
     "arco-design-pro-vue": "^2.5.13",
-    "axios": "^0.24.0",
+    "axios": "^1.2.1",
     "codemirror": "6.x",
     "dayjs": "^1.11.5",
     "echarts": "^5.4.0",
