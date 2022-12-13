@@ -29,6 +29,7 @@ specifiers:
   arco-design-pro-vue: ^2.5.13
   axios: ^1.2.1
   codemirror: 6.x
+  consola: ^2.15.3
   cross-env: ^7.0.3
   dayjs: ^1.11.5
   echarts: ^5.4.0
@@ -85,6 +86,7 @@ dependencies:
   arco-design-pro-vue: 2.5.13
   axios: 1.2.1
   codemirror: 6.0.1
+  consola: 2.15.3
   dayjs: 1.11.5
   echarts: 5.4.0
   lodash: 4.17.21
@@ -2493,6 +2495,10 @@ packages:
   /confusing-browser-globals/1.0.11:
     resolution: {integrity: sha512-JsPKdmh8ZkmnHxDk55FZ1TqVLvEQTvoByJZRN9jzI0UjxK/QgAmsphz7PGtqgPieQZ/CQcHWXCR7ATDNhGe+YA==}
     dev: true
+
+  /consola/2.15.3:
+    resolution: {integrity: sha512-9vAdYbHj6x2fLKC4+oPH0kFzY/orMZyG2Aj+kNylHxKGJ/Ed4dpNyAQYwJOdqO4zdM7XpVHmyejQDcQHrnuXbw==}
+    dev: false
 
   /console-stream/0.1.1:
     resolution: {integrity: sha512-QC/8l9e6ofi6nqZ5PawlDgzmMw3OxIXtvolBzap/F4UDBJlDaZRSNbL/lb41C29FcbSJncBFlJFj2WJoNyZRfQ==}
