@@ -27,7 +27,7 @@ specifiers:
   '@vue/babel-plugin-jsx': ^1.1.1
   '@vueuse/core': ^9.6.0
   arco-design-pro-vue: ^2.5.13
-  axios: ^1.2.1
+  axios: ^0.27.2
   codemirror: 6.x
   consola: ^2.15.3
   cross-env: ^7.0.3
@@ -84,7 +84,7 @@ dependencies:
   '@codemirror/view': 6.4.0
   '@vueuse/core': 9.6.0_vue@3.2.41
   arco-design-pro-vue: 2.5.13
-  axios: 1.2.1
+  axios: 0.27.2
   codemirror: 6.0.1
   consola: 2.15.3
   dayjs: 1.11.5
@@ -1901,12 +1901,11 @@ packages:
       postcss-value-parser: 4.2.0
     dev: true
 
-  /axios/1.2.1:
-    resolution: {integrity: sha512-I88cFiGu9ryt/tfVEi4kX2SITsvDddTajXTOFmt2uK1ZVA8LytjtdeyefdQWEf5PU8w+4SSJDoYnggflB5tW4A==}
+  /axios/0.27.2:
+    resolution: {integrity: sha512-t+yRIyySRTp/wua5xEr+z1q60QmLq8ABsS5O9Me1AsE5dfKqgnCFzwiCZZ/cGNd1lq4/7akDWMxdhVlucjmnOQ==}
     dependencies:
       follow-redirects: 1.15.2
       form-data: 4.0.0
-      proxy-from-env: 1.1.0
     transitivePeerDependencies:
       - debug
     dev: false
@@ -6988,10 +6987,6 @@ packages:
   /proto-list/1.2.4:
     resolution: {integrity: sha512-vtK/94akxsTMhe0/cbfpR+syPuszcuwhqVjJq26CuNDgFGj682oRBXOP5MJpv2r7JtE8MsiepGIqvvOTBwn2vA==}
     dev: true
-
-  /proxy-from-env/1.1.0:
-    resolution: {integrity: sha512-D+zkORCbA9f1tdWRK0RaCR3GPv50cMxcrz4X8k5LTSUD1Dkw47mKJEZQNunItRTkWwgtaUSo1RVFRIG9ZXiFYg==}
-    dev: false
 
   /prr/1.0.1:
     resolution: {integrity: sha512-yPw4Sng1gWghHQWj0B3ZggWUm4qVbPwPFcRG8KyxiU7J2OHFSoEHKS+EZ3fv5l1t9CyCiop6l/ZYeWbrgoQejw==}
