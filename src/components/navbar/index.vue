@@ -5,8 +5,6 @@
   ul.right-side
     li
       a-link(href="https://docs.greptime.com/") Docs
-    li
-      a-divider(direction="vertical")
     li(v-for="{link, icon} in socialLinks")
       a-tooltip(content='GitHub')
         SocialLink.social-links(
@@ -54,16 +52,15 @@
     li {
       display: flex;
       align-items: center;
-    }
-    .arco-divider-vertical {
-      margin: 0;
-      width: 1px;
-      height: 32px;
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      padding-right: 30px;
+      margin-right: 30px;
     }
     .arco-link {
       color: #ffffff;
+      transition: color 0.25s;
+    }
+    :deep(.arco-link:hover) {
+      background: transparent;
+      color: var(--brand-color);
     }
 
     .social-links {
