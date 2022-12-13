@@ -4,11 +4,11 @@ a-layout
     NavBar
   .container
     a-space(direction="vertical" fill :size="15")
-      a-split(:style="{height: '296px'}" default-size="260px" min="200px")
+      a-split.tree-split(default-size="260px" min="200px")
         template(#first)
           a-card.tree-card
             template(#title)
-              img.tree-icon(src="/src/assets/images/tree-icon.svg" height="14")
+              img.tree-icon(src="/src/assets/images/tree-icon.svg")
               span.tree-title {{$t('dataExplorer.tableTree')}}
             template(#extra)
               img.tree-refresh(src="/src/assets/images/tree-refresh.svg" height="16" style="cursor: pointer" @click="refreshTableData" fit="fill")
@@ -39,6 +39,9 @@ a-layout
     flex: 1;
     flex-direction: column;
   }
+  .tree-split {
+    height: 296px;
+  }
   .tree-card {
     border-radius: 6px;
     background: #ffffff;
@@ -47,7 +50,13 @@ a-layout
     :deep(.arco-card-header) {
       border-bottom: 0;
       padding: 0;
-      height: 40px;
+      height: 42px;
+      line-height: 42px;
+    }
+    :deep(.arco-card-header-title) {
+      font-size: 14px;
+      display: flex;
+      align-items: center;
     }
     :deep(.arco-card-body) {
       padding: 0;
