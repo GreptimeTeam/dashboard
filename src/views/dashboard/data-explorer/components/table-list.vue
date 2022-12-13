@@ -1,19 +1,22 @@
 <template lang="pug">
 a-tree(v-if="!ifTableLoading" :key="tableKey" :data="tableList" :load-more="loadMore" size="small")
+  template(#title)
   template(#extra="nodeData")
+    img(src="/src/assets/images/value-icon.png" v-if="nodeData.iconType === 'VALUE'" height="12")
+    img(src="/src/assets/images/key-icon.png" v-if="nodeData.iconType === 'PRIMARY KEY'" height="12")
+    img(src="/src/assets/images/time-icon.png" v-if="nodeData.iconType === 'TIME INDEX'" height="12")
+    span.tree-title
+      | {{ nodeData.title }}
     span.data-type
-      | {{ nodeData.type }}
+      | {{ nodeData.dataType }}
     a-tooltip(:content="$t('dataExplorer.insertName')" mini)
       img.copy-icon(src="/src/assets/images/copy-icon.png" height="16" @click="insertNameToCode(nodeData.title)")
-  template(#icon="nodeData")
-    a-image(src="/src/assets/images/value-icon.png" v-if="nodeData.isLeaf" height="12" fit="contain")
 </template>
 
 <script lang="ts" setup>
   import { storeToRefs } from 'pinia'
   import { useDataBaseStore } from '@/store'
   import useDataExplorer from '@/hooks/data-explorer'
-  import { dateTypes } from '@/views/dashboard/data-explorer/components/data-view/config'
 
   const dataBaseStore = useDataBaseStore()
   const dataExplorer = useDataExplorer()
@@ -39,7 +42,8 @@ a-tree(v-if="!ifTableLoading" :key="tableKey" :data="tableList" :load-more="load
               title: row[0],
               key: row[0],
               isLeaf: true,
-              type: row[1],
+              dataType: row[1],
+              iconType: row[4],
             })
           })
           // todo: change computed data might not be the best option.
@@ -62,6 +66,15 @@ a-tree(v-if="!ifTableLoading" :key="tableKey" :data="tableList" :load-more="load
     font-family: PingFangSC-Regular, PingFang SC;
     font-weight: 400;
     color: var(--brand-color);
+    line-height: 32px;
+    padding-left: 2px;
+  }
+  .tree-title {
+    height: 32px;
+    font-size: 12px;
+    font-family: PingFangSC-Regular, PingFang SC;
+    font-weight: 400;
+    color: #53565a;
     line-height: 32px;
     padding-left: 2px;
   }
