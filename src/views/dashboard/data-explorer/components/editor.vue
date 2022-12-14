@@ -40,7 +40,7 @@ CodeMirror(v-model="code" :style="style" :spellcheck="spellcheck" :autofocus="au
   const codeRunStore = useCodeRunStore()
   const { code, cursorAt } = dataExplorer
   // attention: must use storetorefs
-  const { fetchSqlResult } = codeRunStore
+  const { fetchSQLResult } = codeRunStore
 
   const handleReady = (payload: any) => {
     view.value = payload.view
@@ -101,11 +101,11 @@ CodeMirror(v-model="code" :style="style" :spellcheck="spellcheck" :autofocus="au
   // todo: combine next 2 functions
   const runSqlCommand = () => {
     // todo: add better format tool for code
-    fetchSqlResult(code.value.trim().replace(/\n/gi, ' '))
+    fetchSQLResult(code.value.trim().replace(/\n/gi, ' '))
     // todo: refresh tables data and when
   }
 
   const runPartSqlCommand = () => {
-    fetchSqlResult(selectedCode.value.trim())
+    fetchSQLResult(selectedCode.value.trim())
   }
 </script>

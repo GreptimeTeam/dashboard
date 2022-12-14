@@ -76,6 +76,7 @@
     "useDataBaseStore": true,
     "useDataExplorer": true,
     "useLink": true,
+    "useLogStore": true,
     "useRoute": true,
     "useRouter": true,
     "useSlots": true,
