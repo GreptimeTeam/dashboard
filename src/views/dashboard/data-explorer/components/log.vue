@@ -1,7 +1,8 @@
 <template lang="pug">
 a-list(:hoverable="true" size="small")
   template(#header)
-    | {{$t('dataExplorer.logs')}}
+    span {{$t('dataExplorer.logs')}}
+    a-button.clear(type="primary" size="mini" @click="clearLogs") clear
   a-list-item(v-for="item of logs" :key="item")
     a-tooltip(:content="item.error ? item.error : item.sql")
       .log-error(v-if="item.error")
@@ -21,6 +22,7 @@ a-list(:hoverable="true" size="small")
   import { storeToRefs } from 'pinia'
 
   const { logs } = storeToRefs(useLogStore())
+  const { clearLogs } = useLogStore()
 </script>
 
 <style scoped>
@@ -35,5 +37,8 @@ a-list(:hoverable="true" size="small")
     text-overflow: ellipsis;
     white-space: nowrap;
     overflow: hidden;
+  }
+  .clear {
+    float: right;
   }
 </style>

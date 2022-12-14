@@ -12,7 +12,7 @@ const useLogStore = defineStore('log', {
       this.logs.push(log)
     },
     clearLogs() {
-      this.logs = []
+      this.$reset()
     },
   },
 })
