@@ -3,10 +3,10 @@
  * https://github.com/anncwb/vite-plugin-style-import
  */
 
-import styleImport from 'vite-plugin-style-import'
+import { createStyleImportPlugin } from 'vite-plugin-style-import'
 
 export default function configStyleImportPlugin() {
-  const styleImportPlugin = styleImport({
+  const styleImportPlugin = createStyleImportPlugin({
     libs: [
       {
         libraryName: '@arco-design/web-vue',
