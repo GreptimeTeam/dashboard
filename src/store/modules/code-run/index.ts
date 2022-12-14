@@ -94,6 +94,10 @@ const useCodeRunStore = defineStore('codeRun', {
       this.results = this.results.filter((item: any) => item.key !== key)
       this.activeTabKey = this.results[deletedTabIndex].key
     },
+
+    clearResult() {
+      this.$reset()
+    },
   },
 })
 export default useCodeRunStore
