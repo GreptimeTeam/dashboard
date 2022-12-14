@@ -36,63 +36,45 @@ const useCodeRunStore = defineStore('codeRun', {
     titleIndex: <number>-1,
     results: <any>[],
     activeTabKey: <number>0,
-    oneLog: <any>{},
-    logArray: <any>[],
   }),
 
   getters: {
-    logListData(state) {
-      if (Object.keys(state.oneLog).length !== 0) {
-        const { log, code } = state.oneLog
-        const logInfo: any = {
-          runCode: code,
-          executeTime: log.execution_time_ms,
-        }
-        if (!log.error) {
-          if (!log.output[0].affectedrows) {
-            logInfo.resultRows = log.output[0].records.rows.length
-          } else {
-            logInfo.affectedRows = log.output[0].affectedrows
-          }
-        } else {
-          logInfo.error = log.error
-        }
-        state.logArray.push(logInfo)
-      }
-      return state.logArray
-    },
     currentResult(state) {
       return state.results.find((item: any) => item.key === state.activeTabKey) || {}
     },
   },
 
   actions: {
-    async fetchSqlResult(runCode: any) {
+    async fetchSQLResult(sql: any) {
+      const { pushLog } = useLogStore()
       try {
-        const res: any = await getSqlResult(runCode)
+        const res: any = await getSqlResult(sql)
+
         Message.success({
           content: 'success',
         })
-        if (runCode.toLocaleLowerCase().substring(0, 6) === 'select') {
+        if (sql.toLocaleLowerCase().substring(0, 6) === 'select') {
           this.titleIndex += 1
           this.results.push({
             // TODO: multiple results
             ...res.output[0].records,
             dimensionsAndXName: getDimensionsAndXName(res.output[0].records.schema.column_schemas),
             key: this.titleIndex,
-            code: runCode,
+            sql,
           })
           this.activeTabKey = this.titleIndex
         }
-        // todo: can we combine next two logs into one line code?
-        this.oneLog = {
-          log: res,
-          code: runCode,
-        }
-      } catch (error) {
-        this.oneLog = {
-          log: error,
-        }
+
+        pushLog({
+          sql,
+          ...res,
+          ...res.output[0],
+        })
+      } catch (error: any) {
+        pushLog({
+          sql,
+          ...error,
+        })
       }
     },
 
@@ -111,6 +93,10 @@ const useCodeRunStore = defineStore('codeRun', {
       }
       this.results = this.results.filter((item: any) => item.key !== key)
       this.activeTabKey = this.results[deletedTabIndex].key
+    },
+
+    clearResult() {
+      this.$reset()
     },
   },
 })

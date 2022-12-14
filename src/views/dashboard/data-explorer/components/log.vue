@@ -1,26 +1,28 @@
 <template lang="pug">
 a-list(:hoverable="true" size="small")
   template(#header)
-    | {{$t('dataExplorer.logs')}}
-  a-list-item(v-for="item of logListData" :key="item")
-    a-tooltip(:content="item.error ? item.error : item.runCode")
+    span {{$t('dataExplorer.logs')}}
+    a-button.clear(type="primary" size="mini" @click="clearLogs") clear
+  a-list-item(v-for="item of logs" :key="item")
+    a-tooltip(:content="item.error ? item.error : item.sql")
       .log-error(v-if="item.error")
         | {{ `${$t('dataExplorer.error')}: ${item.error}` }}
       a-space(v-else size="large")
         template(#split)
           a-divider(direction="vertical")
-        div {{ item.resultRows ? `${$t('dataExplorer.result')}: ${item.resultRows} ${$t('dataExplorer.rows')}` : `${$t('dataExplorer.affected')} ${item.affectedRows || 0} ${$t('dataExplorer.rows')}` }}
-        div {{ `${$t('dataExplorer.executeTime')}: ${item.executeTime } ${$t('dataExplorer.ms') }`}}
-        div {{ `${$t('dataExplorer.code')}: ${item.runCode} `}}
+        div {{ item.affectedrows ? `${$t('dataExplorer.affected')} ${item.affectedrows || 0} ${$t('dataExplorer.rows')}` : `${$t('dataExplorer.result')}: ${item.records.rows.length} ${$t('dataExplorer.rows')}`}}
+        div {{ `${$t('dataExplorer.executeTime')}: ${item.execution_time_ms } ${$t('dataExplorer.ms') }`}}
+        div {{ `${$t('dataExplorer.network')}: ${item.networkTime - item.execution_time_ms } ${$t('dataExplorer.ms') }`}}
+        div {{ `${$t('dataExplorer.total')}: ${item.networkTime } ${$t('dataExplorer.ms') }`}}
+        div {{ `${$t('dataExplorer.code')}: ${item.sql} `}}
     template(#actions)
 </template>
 
 <script lang="ts" setup>
   import { storeToRefs } from 'pinia'
-  import { useCodeRunStore } from '@/store'
 
-  const codeRunStore = useCodeRunStore()
-  const { logListData } = storeToRefs(codeRunStore)
+  const { logs } = storeToRefs(useLogStore())
+  const { clearLogs } = useLogStore()
 </script>
 
 <style scoped>
@@ -35,5 +37,8 @@ a-list(:hoverable="true" size="small")
     text-overflow: ellipsis;
     white-space: nowrap;
     overflow: hidden;
+  }
+  .clear {
+    float: right;
   }
 </style>
