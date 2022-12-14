@@ -2,9 +2,7 @@
 a-tree(v-if="!ifTableLoading" :key="tableKey" :data="tableList" :load-more="loadMore" size="small")
   template(#title)
   template(#extra="nodeData")
-    img(src="/src/assets/images/value-icon.png" v-if="nodeData.iconType === 'VALUE'" height="12")
-    img(src="/src/assets/images/key-icon.png" v-if="nodeData.iconType === 'PRIMARY KEY'" height="12")
-    img(src="/src/assets/images/time-icon.png" v-if="nodeData.iconType === 'TIME INDEX'" height="12")
+    img(:src="ICON_MAP[nodeData.iconType]" height="12")
     span.tree-title
       | {{ nodeData.title }}
     span.data-type
@@ -56,6 +54,12 @@ a-tree(v-if="!ifTableLoading" :key="tableKey" :data="tableList" :load-more="load
           reject()
         })
     })
+  }
+
+  const ICON_MAP = {
+    'VALUE': '/src/assets/images/value-icon.png',
+    'PRIMARY KEY': '/src/assets/images/key-icon.png',
+    'TIME INDEX': '/src/assets/images/time-icon.png',
   }
   initTableDataSet()
 </script>
