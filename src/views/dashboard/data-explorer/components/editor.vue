@@ -1,13 +1,14 @@
 <template lang="pug">
-a-space(style="margin-bottom: 6px")
-  a-button(type="primary" @click="runSqlCommand()")
-    | {{$t('dataExplorer.runAll')}}
-  a(@click="runPartSqlCommand()")
-    a-button(v-if="lineStart === lineEnd" type="outline")
-      | {{$t('dataExplorer.runLine')}} {{ lineStart }}
-    a-button(v-else type="outline")
-      | {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
-CodeMirror(v-model="code" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
+a-card.editor-card
+  a-space.button-space
+    a-button(@click="runSqlCommand()" type="primary")
+      | {{$t('dataExplorer.runAll')}}
+    a(@click="runPartSqlCommand()")
+      a-button(v-if="lineStart === lineEnd")
+        | {{$t('dataExplorer.runLine')}} {{ lineStart }}
+      a-button(v-else)
+        | {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
+  CodeMirror(v-model="code" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
 
 <script lang="ts" setup>
@@ -60,7 +61,7 @@ CodeMirror(v-model="code" :style="style" :spellcheck="spellcheck" :autofocus="au
 
   // extensions: Passed to CodeMirror EditorState.create({ extensions })
   const style = {
-    height: '337px',
+    height: '244px',
     // '.cm-gutters': {
     //   color: #254f9a,
     // },
@@ -109,3 +110,13 @@ CodeMirror(v-model="code" :style="style" :spellcheck="spellcheck" :autofocus="au
     fetchSQLResult(selectedCode.value.trim())
   }
 </script>
+<style lang="less" scoped>
+  .editor-card {
+    margin-left: 14px;
+    padding: 10px 15px;
+    height: 296px;
+  }
+  .button-space {
+    padding-bottom: 8px;
+  }
+</style>

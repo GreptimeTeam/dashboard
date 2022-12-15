@@ -55,7 +55,7 @@
       margin-right: 30px;
     }
     .arco-link {
-      color: #ffffff;
+      color: var(--card-bg-color);
       transition: color 0.25s;
     }
     :deep(.arco-link:hover) {

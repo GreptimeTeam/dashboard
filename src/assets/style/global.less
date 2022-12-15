@@ -10,6 +10,8 @@
   --card-bg-color: #ffffff;
   --main-font-color: #170c2c;
   --grey-font-color: #53565a;
+  --hover-bg-color: #a376ff;
+  --button-font-color: #fcfdff;
 }
 html,
 body {
@@ -21,6 +23,38 @@ body {
   background-color: var(--main-bg-color);
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
+}
+
+.arco-card {
+  border-radius: 6px;
+  background: var(--card-bg-color);
+  .arco-card-body {
+    padding: 0;
+  }
+}
+
+.arco-btn {
+  padding: 0 8px;
+  height: 24px;
+  font-size: 12px;
+  font-family: PingFangSC-Regular, PingFang SC;
+  font-weight: 400;
+  border-radius: 2px;
+}
+.arco-btn-primary[type='button'] {
+  background-color: var(--brand-color);
+  color: var(--button-font-color);
+}
+.arco-btn-primary[type='button']:hover {
+  background-color: var(--hover-bg-color);
+}
+.arco-btn-secondary[type='button'] {
+  background-color: rgba(131, 34, 255, 0.06);
+  color: var(--brand-color);
+}
+.arco-btn-secondary[type='button']:hover {
+  background-color: rgba(163, 118, 255, 0.2);
+  color: var(--brand-color);
 }
 
 .echarts-tooltip-diy {
