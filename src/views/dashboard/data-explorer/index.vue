@@ -12,7 +12,7 @@ a-layout
               span.tree-title {{$t('dataExplorer.tableTree')}}
             template(#extra)
               img.tree-refresh(src="/src/assets/images/tree-refresh.svg" height="16" style="cursor: pointer" @click="refreshTableData" fit="fill")
-            TableList
+            TableList     
         template(#second) 
           Editor 
       DataView
@@ -42,26 +42,6 @@ a-layout
   .tree-split {
     height: 296px;
   }
-  .tree-card {
-    border-radius: 6px;
-    background: #ffffff;
-    padding-right: 8px;
-    padding-left: 15px;
-    :deep(.arco-card-header) {
-      border-bottom: 0;
-      padding: 0;
-      height: 42px;
-      line-height: 42px;
-    }
-    :deep(.arco-card-header-title) {
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-    }
-    :deep(.arco-card-body) {
-      padding: 0;
-    }
-  }
   .tree-refresh {
     display: table-cell;
     vertical-align: middle;
@@ -76,7 +56,7 @@ a-layout
   .tree-title {
     font-family: Roboto-Regular, Roboto;
     font-weight: 400;
-    color: #170c2c;
+    color: var(--main-font-color);
     line-height: 12px;
   }
   .left-side {
@@ -88,28 +68,7 @@ a-layout
     width: 280px;
     margin-left: 16px;
   }
-
-  .panel {
-    background-color: var(--color-bg-2);
-    border-radius: 4px;
-    overflow: auto;
-  }
-
-  :deep(.panel-border) {
-    margin-bottom: 0;
-    border-bottom: 1px solid rgb(var(--gray-2));
-  }
-
   .moduler-wrap {
-    border-radius: 4px;
-    background-color: var(--color-bg-2);
-
-    :deep(.text) {
-      font-size: 12px;
-      text-align: center;
-      color: rgb(var(--gray-8));
-    }
-
     :deep(.wrapper) {
       margin-bottom: 8px;
       text-align: center;
@@ -131,19 +90,6 @@ a-layout
           color: rgb(var(--arcoblue-6));
         }
       }
-    }
-
-    :deep(.icon) {
-      display: inline-block;
-      width: 32px;
-      height: 32px;
-      margin-bottom: 4px;
-      color: rgb(var(--dark-gray-1));
-      line-height: 32px;
-      font-size: 16px;
-      text-align: center;
-      background-color: rgb(var(--gray-1));
-      border-radius: 4px;
     }
   }
 </style>

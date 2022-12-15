@@ -38,7 +38,7 @@
   .left-side {
     display: flex;
     align-items: center;
-    padding-left: 15px;
+    padding-left: 20px;
 
     .logo-text-img {
       height: 100%;

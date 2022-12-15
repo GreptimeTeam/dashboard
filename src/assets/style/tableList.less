@@ -1,0 +1,67 @@
+.tree-card {
+  border-radius: 6px;
+  background: var(--card-bg-color);
+  padding-left: 15px;
+  height: 296px;
+  & > .arco-card-header {
+    border-bottom: 0;
+    padding: 0;
+    height: 42px;
+    line-height: 42px;
+    padding-right: 15px;
+  }
+  & > .arco-card-body {
+    padding: 0;
+  }
+  .arco-card-header-title {
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+  }
+}
+.tree-scrollbar {
+  height: 252px;
+  overflow: auto;
+  padding-right: 15px;
+}
+.table-tree {
+  & > .arco-tree-node {
+    height: 32px;
+    line-height: 32px;
+    padding: 0;
+    cursor: auto;
+  }
+  .arco-tree-node-switcher {
+    margin-right: 5px;
+    width: 12px;
+    font-size: 15px;
+  }
+  .arco-tree-node-is-leaf {
+    .arco-tree-node-indent-block {
+      margin-right: 0;
+    }
+    .arco-tree-node-switcher {
+      width: 0;
+    }
+  }
+  .arco-tree-node-title {
+    margin-left: 0;
+    font-size: 12px;
+    font-family: PingFangSC-Regular, PingFang SC;
+    font-weight: 400;
+    color: var(--grey-font-color);
+    line-height: 32px;
+    height: 32px;
+    padding: 0;
+  }
+  .arco-tree-node-title-text {
+    line-height: 32px;
+    height: 32px;
+  }
+  .arco-tree-node-custom-icon {
+    margin-right: 4px;
+  }
+  .arco-tree-node-switcher:hover {
+    background-color: inherit;
+  }
+}

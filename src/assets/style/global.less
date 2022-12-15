@@ -1,3 +1,5 @@
+@import './tableList.less';
+
 * {
   box-sizing: border-box;
 }
@@ -5,6 +7,9 @@
   --main-bg-color: #f9f8fd;
   --navbar-bg-color: linear-gradient(270deg, #1d0e38 0%, #2a115a 100%);
   --brand-color: #8322ff;
+  --card-bg-color: #ffffff;
+  --main-font-color: #170c2c;
+  --grey-font-color: #53565a;
 }
 html,
 body {
@@ -59,19 +64,6 @@ body {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-  }
-}
-
-.general-card {
-  border-radius: 4px;
-  border: none;
-  & > .arco-card-header {
-    height: auto;
-    padding: 20px;
-    border: none;
-  }
-  & > .arco-card-body {
-    padding: 0 20px 20px 20px;
   }
 }
 
