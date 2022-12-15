@@ -1,6 +1,6 @@
 <template lang="pug">
 template(v-if="!!results.length")
-  a-tabs(type="card-gutter" lazy-load :active-key="activeTabKey" @tab-click="tabClick" @delete="deleteTab" editable)
+  a-tabs(type="rounded" lazy-load :active-key="activeTabKey" @tab-click="tabClick" @delete="deleteTab" editable)
     template(#extra)
       a-button(@click="clearCodeResult()" status="danger") {{$t('dataExplorer.clear')}}
     a-tab-pane(v-for="(item, index) of results" :key="item.key" 
