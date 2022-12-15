@@ -62,41 +62,8 @@ a-card.editor-card
   // extensions: Passed to CodeMirror EditorState.create({ extensions })
   const style = {
     height: '244px',
-    // '.cm-gutters': {
-    //   color: #254f9a,
-    // },
   }
-  // define our theme if needed in the future
-  const myTheme = EditorView.theme(
-    {
-      '&': {
-        color: '#0052D9',
-        backgroundColor: '#FFFFFF',
-      },
-      '.cm-content': {
-        caretColor: '#0052D9',
-      },
-      '.cm-activeLine': {
-        backgroundColor: '#FAFAFA',
-      },
-      '.cm-activeLineGutter': {
-        backgroundColor: '#FAFAFA',
-      },
-      '&.cm-focused .cm-cursor': {
-        borderLeftColor: '#0052D9',
-      },
-      '&.cm-focused .cm-selectionBackground, ::selection': {
-        backgroundColor: '#0052D9',
-        color: '#FFFFFF',
-      },
-      '.cm-gutters': {
-        backgroundColor: '#FFFFFF',
-        color: '#ddd',
-        border: 'none',
-      },
-    },
-    { dark: true }
-  )
+
   const extensions = [sql(), oneDark]
 
   // todo: combine next 2 functions
