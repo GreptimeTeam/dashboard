@@ -1,22 +1,21 @@
 <template lang="pug">
-a-layout
+.layout-container
   .layout-navbar(v-if="navbar")
-    NavBar
-  .container
-    a-space(direction="vertical" fill :size="15")
-      a-split.tree-split(default-size="260px" min="200px")
-        template(#first)
-          a-card.tree-card
-            template(#title)
-              img.tree-icon(src="/src/assets/images/tree-icon.svg")
-              span.tree-title {{$t('dataExplorer.tableTree')}}
-            template(#extra)
-              img.tree-refresh(src="/src/assets/images/tree-refresh.svg" height="16" style="cursor: pointer" @click="refreshTableData" fit="fill")
-            TableList     
-        template(#second) 
-          Editor 
-      DataView
-      Log 
+      NavBar
+  a-space.layout-content(direction="vertical" fill :size="15")
+    a-split.tree-split(default-size="260px" min="200px")
+      template(#first)
+        a-card.tree-card
+          template(#title)
+            img.tree-icon(src="/src/assets/images/tree-icon.svg")
+            span.tree-title {{$t('dataExplorer.tableTree')}}
+          template(#extra)
+            img.tree-refresh(src="/src/assets/images/tree-refresh.svg" height="16" style="cursor: pointer" @click="refreshTableData" fit="fill")
+          TableList     
+      template(#second) 
+        Editor 
+    DataView
+    Log 
 </template>
 
 <script lang="ts" name="DataExplorer" setup>
@@ -28,16 +27,17 @@ a-layout
 </script>
 
 <style lang="less" scoped>
-  .layout-navbar {
-    height: 52px;
-  }
-
-  .container {
-    padding: 20px 30px 30px 30px;
+  .layout-container {
     display: flex;
     width: 100%;
     flex: 1;
     flex-direction: column;
+  }
+  .layout-navbar {
+    height: 52px;
+  }
+  .layout-content {
+    padding: 20px 30px 30px 30px;
   }
   .tree-split {
     height: 296px;
