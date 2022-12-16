@@ -9,7 +9,7 @@ a-scrollbar.tree-scrollbar
       span.data-type
         | {{ nodeData.dataType }}
       a-tooltip(:content="$t('dataExplorer.insertName')" mini)
-        svg.icon.copy-icon(name="copy" @click="insertNameToCode(nodeData.title)")
+        svg.icon.copy-icon.pointer(name="copy" @click="insertNameToCode(nodeData.title)")
           use(href="#copy")
 </template>
 
@@ -92,6 +92,5 @@ a-scrollbar.tree-scrollbar
   .copy-icon {
     position: absolute;
     right: 0;
-    cursor: pointer;
   }
 </style>

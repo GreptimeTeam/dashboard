@@ -11,7 +11,7 @@
               use(href="#tree")
             span {{$t('dataExplorer.tableTree')}}
           template(#extra)
-            svg.icon
+            svg.icon.pointer(@click="refreshTableData")
               use(href="#refresh")
           TableList     
       template(#second) 
