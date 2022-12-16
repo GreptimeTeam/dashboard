@@ -2,15 +2,17 @@
 .layout-container
   .layout-navbar(v-if="navbar")
       NavBar
-  a-space.layout-content(direction="vertical" fill :size="15")
+  a-space.layout-content(direction="vertical" fill :size="14")
     a-split.tree-split(default-size="260px" min="200px")
       template(#first)
         a-card.tree-card
           template(#title)
-            img.tree-icon(src="/src/assets/images/tree-icon.svg")
-            span.tree-title {{$t('dataExplorer.tableTree')}}
+            svg.card-icon
+              use(href="#tree")
+            span {{$t('dataExplorer.tableTree')}}
           template(#extra)
-            img.tree-refresh(src="/src/assets/images/tree-refresh.svg" height="16" style="cursor: pointer" @click="refreshTableData" fit="fill")
+            svg.icon
+              use(href="#refresh")
           TableList     
       template(#second) 
         Editor 
@@ -41,23 +43,6 @@
   }
   .tree-split {
     height: 296px;
-  }
-  .tree-refresh {
-    display: table-cell;
-    vertical-align: middle;
-    text-align: center;
-    height: 16px;
-  }
-  .tree-icon {
-    margin-right: 2px;
-    height: 14px;
-    vertical-align: middle;
-  }
-  .tree-title {
-    font-family: Roboto-Regular, Roboto;
-    font-weight: 400;
-    color: var(--main-font-color);
-    line-height: 12px;
   }
   .left-side {
     flex: 1;

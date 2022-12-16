@@ -24,6 +24,12 @@ body {
   background-color: var(--main-bg-color);
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
+  font-family: -apple-system, BlinkMacSystemFont, Helvetica Neue, PingFang SC, Microsoft YaHei, Source Han Sans SC,
+    Noto Sans CJK SC, WenQuanYi Micro Hei, sans-serif !important;
+}
+
+.arco-table-container {
+  border: 0 !important;
 }
 
 .arco-card {
@@ -32,6 +38,29 @@ body {
   .arco-card-body {
     padding: 0;
   }
+  .arco-card-header {
+    height: 58px;
+    padding: 10px 15px;
+    border-bottom: 0;
+  }
+  .arco-card-header-title {
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+  }
+  .arco-card-header-extra {
+    display: flex;
+  }
+}
+
+.icon {
+  width: 14px;
+  height: 14px;
+}
+.card-icon {
+  width: 12px;
+  height: 12px;
+  margin-right: 3px;
 }
 
 .arco-btn {
@@ -57,9 +86,9 @@ body {
   background-color: rgba(163, 118, 255, 0.3);
   color: var(--brand-color);
 }
+
 .ͼo {
   background: var(--main-font-color);
-
   .cm-gutters {
     background-color: transparent;
     color: #fdfcff;
