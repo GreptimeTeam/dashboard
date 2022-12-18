@@ -1,5 +1,6 @@
 @import './tableList.less';
 @import './dataView.less';
+@import './editor.less';
 
 * {
   box-sizing: border-box;
@@ -8,11 +9,13 @@
   --main-bg-color: #f9f8fd;
   --navbar-bg-color: linear-gradient(270deg, #1d0e38 0%, #2a115a 100%);
   --brand-color: #8322ff;
+  --bg-brand-color: rgba(131, 34, 255, 0.06);
   --card-bg-color: #ffffff;
   --main-font-color: #170c2c;
   --grey-font-color: #53565a;
   --hover-bg-color: #a376ff;
   --button-font-color: #fcfdff;
+  --th-bg-color: #f8f9fb;
 }
 html,
 body {
@@ -83,30 +86,18 @@ body {
   background-color: var(--hover-bg-color);
 }
 .arco-btn-secondary[type='button'] {
-  background-color: rgba(131, 34, 255, 0.06);
-  color: var(--brand-color);
+  background-color: var(--bg-brand-color) !important;
+  color: var(--brand-color) !important;
 }
 .arco-btn-secondary[type='button']:hover {
-  background-color: rgba(163, 118, 255, 0.3);
-  color: var(--brand-color);
+  border: 1px solid var(--brand-color);
+}
+.arco-btn-secondary.arco-btn-status-danger {
+  color: rgb(var(--danger-6));
+  background-color: var(--color-danger-light-1);
+  border-color: transparent;
 }
 
-.ͼo {
-  background: var(--main-font-color);
-  .cm-gutters {
-    background-color: transparent;
-    color: #fdfcff;
-    opacity: 61%;
-    border-right: 1px solid var(--hover-bg-color);
-  }
-}
-.ͼ1.cm-editor {
-  border-radius: 6px;
-  padding: 8px 0;
-}
-.ͼ1.cm-editor.cm-focused {
-  outline: 0;
-}
 .echarts-tooltip-diy {
   background: linear-gradient(304.17deg, rgba(253, 254, 255, 0.6) -6.04%, rgba(244, 247, 252, 0.6) 85.2%) !important;
   border: none !important;
@@ -153,20 +144,6 @@ body {
 
 .split-line {
   border-color: rgb(var(--gray-2));
-}
-
-.arco-table-cell {
-  .circle {
-    display: inline-block;
-    margin-right: 4px;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: rgb(var(--blue-6));
-    &.pass {
-      background-color: rgb(var(--green-6));
-    }
-  }
 }
 
 #app {

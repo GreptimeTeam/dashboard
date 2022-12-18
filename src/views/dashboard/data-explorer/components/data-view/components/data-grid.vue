@@ -1,17 +1,20 @@
 <template lang="pug">
 a-spin(style="width: 100%")
-  a-table(:columns="gridColumn" :data="gridData")
+  a-table(:columns="gridColumn" :data="gridData" :pagination="pagination")
 </template>
 
 <script lang="ts" setup>
   const { currentResult } = storeToRefs(useCodeRunStore())
+  const pagination = {
+    'total': currentResult.value.rows.length,
+    'show-page-size': true,
+  }
 
   const gridColumn = computed(() => {
     return currentResult.value.schema.column_schemas.map((column: any) => {
       return {
         title: column.name,
         dataIndex: column.name,
-        align: 'right',
       }
     })
   })
