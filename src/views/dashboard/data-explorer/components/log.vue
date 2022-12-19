@@ -11,8 +11,8 @@ a-list(:hoverable="true" size="small")
         template(#split)
           a-divider(direction="vertical")
         div {{ `${$t('dataExplorer.executed')} ${item.result.length} ${$t('dataExplorer.statements')}` }}
-        div {{`${$t('dataExplorer.result')}: `}}
-          span(v-for="(item, index) of item.result" :key="index") {{ item.records ? `${$t('dataExplorer.select')} ${item.records} ${$t('dataExplorer.rows')}` : `${$t('dataExplorer.affected')} ${item.affectedRows} ${$t('dataExplorer.rows')} `}}
+        div {{`${$t('dataExplorer.results')}: `}}
+          span(v-for="(oneResult, index) of item.result" :key="index") {{ oneResult.records >= 0 ? `${$t('dataExplorer.select')} ${oneResult.records} ${$t('dataExplorer.rows')}` : `${$t('dataExplorer.affected')} ${oneResult.affectedRows} ${$t('dataExplorer.rows')} `}}
         div {{ `${$t('dataExplorer.executeTime')}: ${item.execution_time_ms } ${$t('dataExplorer.ms') }`}}
         div {{ `${$t('dataExplorer.network')}: ${item.networkTime - item.execution_time_ms } ${$t('dataExplorer.ms') }`}}
         div {{ `${$t('dataExplorer.total')}: ${item.networkTime } ${$t('dataExplorer.ms') }`}}

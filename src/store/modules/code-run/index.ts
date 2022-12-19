@@ -52,13 +52,15 @@ const useCodeRunStore = defineStore('codeRun', {
             resultInLog.push({
               records: oneRes.records.rows.length,
             })
-            this.titleIndex += 1
-            this.results.push({
-              records: oneRes.records,
-              dimensionsAndXName: getDimensionsAndXName(oneRes.records.schema.column_schemas),
-              key: this.titleIndex,
-            })
-            this.activeTabKey = this.titleIndex
+            if (oneRes.records.rows.length > 0) {
+              this.titleIndex += 1
+              this.results.push({
+                records: oneRes.records,
+                dimensionsAndXName: getDimensionsAndXName(oneRes.records.schema.column_schemas),
+                key: this.titleIndex,
+              })
+              this.activeTabKey = this.titleIndex
+            }
           } else {
             resultInLog.push({
               affectedRows: oneRes.affectedrows,
