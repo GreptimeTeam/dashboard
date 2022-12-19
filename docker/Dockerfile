@@ -1,10 +1,12 @@
 FROM node:18-buster as builder
+## install pnpm
+RUN curl -fsSL https://get.pnpm.io/install.sh | sh -
 
 WORKDIR /greptimedb-dashboard
 
 COPY . .
-RUN npm install
-RUN npm run build
+RUN pnpm install
+RUN pnpm build
 
 FROM nginx:1.23 as base
 
