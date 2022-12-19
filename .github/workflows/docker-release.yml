@@ -61,7 +61,8 @@ jobs:
           context: .
           file: ./docker/Dockerfile
           push: true
-          platforms: linux/amd64,linux/arm64
+          #platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           tags: |
             greptime/greptimedb-dashboard:latest
             greptime/greptimedb-dashboard:${{ env.IMAGE_TAG }}
