@@ -4,12 +4,6 @@ import { defineStore } from 'pinia'
 import { dateTypes } from '@/views/dashboard/data-explorer/components/data-view/config'
 
 // TODO: Add all the types we decide instead of ECharts if needed in the future.
-// const TYPE_MAP: any = {
-//   Timestamp: 'time',
-//   String: 'ordinal',
-//   Float64: 'float',
-//   Int: 'int',
-// }
 
 const getDimensionsAndXName = (elements: any) => {
   const tempDimensions: any = []
@@ -23,7 +17,6 @@ const getDimensionsAndXName = (elements: any) => {
     const oneDimension = {
       name: element.name,
       // Note: let ECharts decide type for now.
-      // type: TYPE_MAP[element.data_type] || 'ordinal',
     }
 
     tempDimensions.push(oneDimension)
@@ -40,7 +33,7 @@ const useCodeRunStore = defineStore('codeRun', {
 
   getters: {
     currentResult(state) {
-      return state.results.find((item: any) => item.key === state.activeTabKey).records || {}
+      return state.results.find((item: any) => item.key === state.activeTabKey) || {}
     },
   },
 
