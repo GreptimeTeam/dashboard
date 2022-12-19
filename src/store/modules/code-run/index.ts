@@ -40,7 +40,7 @@ const useCodeRunStore = defineStore('codeRun', {
 
   getters: {
     currentResult(state) {
-      return state.results.find((item: any) => item.key === state.activeTabKey) || {}
+      return state.results.find((item: any) => item.key === state.activeTabKey).records || {}
     },
   },
 
@@ -53,22 +53,30 @@ const useCodeRunStore = defineStore('codeRun', {
         Message.success({
           content: 'success',
         })
-        if (sql.toLocaleLowerCase().substring(0, 6) === 'select') {
-          this.titleIndex += 1
-          this.results.push({
-            // TODO: multiple results
-            ...res.output[0].records,
-            dimensionsAndXName: getDimensionsAndXName(res.output[0].records.schema.column_schemas),
-            key: this.titleIndex,
-            sql,
-          })
-          this.activeTabKey = this.titleIndex
-        }
+        const resultInLog: any = []
+        res.output.forEach((oneRes: any) => {
+          if ('records' in oneRes) {
+            resultInLog.push({
+              records: oneRes.records.rows.length,
+            })
+            this.titleIndex += 1
+            this.results.push({
+              records: oneRes.records,
+              dimensionsAndXName: getDimensionsAndXName(oneRes.records.schema.column_schemas),
+              key: this.titleIndex,
+            })
+            this.activeTabKey = this.titleIndex
+          } else {
+            resultInLog.push({
+              affectedRows: oneRes.affectedrows,
+            })
+          }
+        })
 
         pushLog({
           sql,
           ...res,
-          ...res.output[0],
+          result: resultInLog,
         })
       } catch (error: any) {
         pushLog({
