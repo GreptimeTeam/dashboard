@@ -25,7 +25,7 @@ a-spin(style="width: 100%")
 
   // TODO: Add support for more data types not just numbers.
   const yOptions = computed(() => {
-    return currentResult.value.schema.column_schemas
+    return currentResult.value.records.schema.column_schemas
       .filter((item: any) => numberTypes.find((type: string) => type === item.data_type))
       .map((item: any) => ({
         value: item.name,
@@ -65,7 +65,7 @@ a-spin(style="width: 100%")
       tooltip: {},
       dataset: {
         dimensions: currentResult.value.dimensionsAndXName[0],
-        source: currentResult.value.rows,
+        source: currentResult.value.records.rows,
       },
       xAxis: {
         type: 'time',

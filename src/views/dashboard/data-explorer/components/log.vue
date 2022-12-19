@@ -14,7 +14,9 @@ a-card
         a-space(v-else size="large")
           template(#split)
             a-divider(direction="vertical")
-          div {{ item.affectedrows ? `${$t('dataExplorer.affected')} ${item.affectedrows || 0} ${$t('dataExplorer.rows')}` : `${$t('dataExplorer.result')}: ${item.records.rows.length} ${$t('dataExplorer.rows')}`}}
+          div {{ `${$t('dataExplorer.executed')} ${item.result.length} ${$t('dataExplorer.statements')}` }}
+          div {{`${$t('dataExplorer.results')}: `}}
+            span(v-for="(oneResult, index) of item.result" :key="index") {{ oneResult.records >= 0 ? `${$t('dataExplorer.select')} ${oneResult.records} ${$t('dataExplorer.rows')}` : `${$t('dataExplorer.affected')} ${oneResult.affectedRows} ${$t('dataExplorer.rows')} `}}
           div {{ `${$t('dataExplorer.executeTime')}: ${item.execution_time_ms } ${$t('dataExplorer.ms') }`}}
           div {{ `${$t('dataExplorer.network')}: ${item.networkTime - item.execution_time_ms } ${$t('dataExplorer.ms') }`}}
           div {{ `${$t('dataExplorer.total')}: ${item.networkTime } ${$t('dataExplorer.ms') }`}}

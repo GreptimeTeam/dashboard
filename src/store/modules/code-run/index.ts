@@ -4,12 +4,6 @@ import { defineStore } from 'pinia'
 import { dateTypes } from '@/views/dashboard/data-explorer/components/data-view/config'
 
 // TODO: Add all the types we decide instead of ECharts if needed in the future.
-// const TYPE_MAP: any = {
-//   Timestamp: 'time',
-//   String: 'ordinal',
-//   Float64: 'float',
-//   Int: 'int',
-// }
 
 const getDimensionsAndXName = (elements: any) => {
   const tempDimensions: any = []
@@ -23,7 +17,6 @@ const getDimensionsAndXName = (elements: any) => {
     const oneDimension = {
       name: element.name,
       // Note: let ECharts decide type for now.
-      // type: TYPE_MAP[element.data_type] || 'ordinal',
     }
 
     tempDimensions.push(oneDimension)
@@ -53,22 +46,32 @@ const useCodeRunStore = defineStore('codeRun', {
         Message.success({
           content: 'success',
         })
-        if (sql.toLocaleLowerCase().substring(0, 6) === 'select') {
-          this.titleIndex += 1
-          this.results.push({
-            // TODO: multiple results
-            ...res.output[0].records,
-            dimensionsAndXName: getDimensionsAndXName(res.output[0].records.schema.column_schemas),
-            key: this.titleIndex,
-            sql,
-          })
-          this.activeTabKey = this.titleIndex
-        }
+        const resultInLog: any = []
+        res.output.forEach((oneRes: any) => {
+          if ('records' in oneRes) {
+            resultInLog.push({
+              records: oneRes.records.rows.length,
+            })
+            if (oneRes.records.rows.length > 0) {
+              this.titleIndex += 1
+              this.results.push({
+                records: oneRes.records,
+                dimensionsAndXName: getDimensionsAndXName(oneRes.records.schema.column_schemas),
+                key: this.titleIndex,
+              })
+              this.activeTabKey = this.titleIndex
+            }
+          } else {
+            resultInLog.push({
+              affectedRows: oneRes.affectedrows,
+            })
+          }
+        })
 
         pushLog({
           sql,
           ...res,
-          ...res.output[0],
+          result: resultInLog,
         })
       } catch (error: any) {
         pushLog({
