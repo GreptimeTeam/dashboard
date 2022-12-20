@@ -40,7 +40,7 @@ specifiers:
   eslint-plugin-import: ^2.26.0
   eslint-plugin-prettier: ^4.2.1
   eslint-plugin-vue: ^9.8.0
-  husky: ^8.0.1
+  husky: ^8.0.2
   less: ^4.1.3
   lint-staged: ^13.0.3
   lodash: ^4.17.21
@@ -131,7 +131,7 @@ devDependencies:
   eslint-plugin-import: 2.26.0_e2jxm2imltrnatv32xyyv3x5je
   eslint-plugin-prettier: 4.2.1_sbc7b7g2fsh6irrgw57vvjzmvq
   eslint-plugin-vue: 9.8.0_eslint@8.29.0
-  husky: 8.0.1
+  husky: 8.0.2
   less: 4.1.3
   lint-staged: 13.0.3
   mockjs: 1.1.0
@@ -4254,8 +4254,8 @@ packages:
     engines: {node: '>=12.20.0'}
     dev: true
 
-  /husky/8.0.1:
-    resolution: {integrity: sha512-xs7/chUH/CKdOCs7Zy0Aev9e/dKOMZf3K1Az1nar3tzlv0jfqnYtu235bstsWTmXOR0EfINrPa97yy4Lz6RiKw==}
+  /husky/8.0.2:
+    resolution: {integrity: sha512-Tkv80jtvbnkK3mYWxPZePGFpQ/tT3HNSs/sasF9P2YfkMezDl3ON37YN6jUUI4eTg5LcyVynlb6r4eyvOmspvg==}
     engines: {node: '>=14'}
     hasBin: true
     dev: true
