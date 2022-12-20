@@ -65,32 +65,3 @@ a-scrollbar.tree-scrollbar
   }
   initTableDataSet()
 </script>
-<style lang="less" scoped>
-  .data-type {
-    height: 32px;
-    font-size: 12px;
-    font-family: PingFangSC-Regular, PingFang SC;
-    font-weight: 400;
-    color: var(--brand-color);
-    line-height: 32px;
-    padding-left: 2px;
-  }
-  .tree-title {
-    height: 32px;
-    font-size: 12px;
-    font-family: PingFangSC-Regular, PingFang SC;
-    font-weight: 400;
-    color: var(--main-font-color);
-    line-height: 32px;
-    padding-left: 2px;
-  }
-  // :deep(.arco-tree-node-selected) {
-  //   background-color: #8322ff;
-  //   opacity: 0.05;
-  // }
-
-  .copy-icon {
-    position: absolute;
-    right: 0;
-  }
-</style>
