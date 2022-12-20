@@ -31,7 +31,7 @@ specifiers:
   codemirror: 6.x
   consola: ^2.15.3
   cross-env: ^7.0.3
-  dayjs: ^1.11.5
+  dayjs: ^1.11.7
   echarts: ^5.4.0
   eslint: ^8.29.0
   eslint-config-airbnb-base: ^15.0.0
@@ -90,7 +90,7 @@ dependencies:
   axios: 0.27.2
   codemirror: 6.0.1
   consola: 2.15.3
-  dayjs: 1.11.5
+  dayjs: 1.11.7
   echarts: 5.4.0
   lodash: 4.17.21
   mitt: 3.0.0
@@ -191,7 +191,7 @@ packages:
       b-tween: 0.3.3
       b-validate: 1.4.3
       compute-scroll-into-view: 1.0.17
-      dayjs: 1.11.5
+      dayjs: 1.11.7
       number-precision: 1.6.0
       resize-observer-polyfill: 1.5.1
       scroll-into-view-if-needed: 2.2.29
@@ -2469,8 +2469,8 @@ packages:
     engines: {node: '>=8'}
     dev: true
 
-  /dayjs/1.11.5:
-    resolution: {integrity: sha512-CAdX5Q3YW3Gclyo5Vpqkgpj8fSdLQcRuzfX6mC6Phy0nfJ0eGYOeS7m4mt2plDWLAtA4TqTakvbboHvUxfe4iA==}
+  /dayjs/1.11.7:
+    resolution: {integrity: sha512-+Yw9U6YO5TQohxLcIkrXBeY73WP3ejHWVvx8XCk3gxvQDCTEmS48ZrSZCKciI7Bhl/uCMyxYtE9UqRILmFphkQ==}
     dev: false
 
   /de-indent/1.0.2:
