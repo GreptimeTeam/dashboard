@@ -10,7 +10,7 @@ a-list(:hoverable="true" size="small")
         template(#split)
           a-divider(direction="vertical")
         div {{ $tc('dataExplorer.executed', item.result.length, {length:item.result.length })}}
-        div {{ $t('dataExplorer.results'): }}
+        div {{ $t('dataExplorer.results') }} :
           span(v-for="(oneResult, index) of item.result" :key="index") {{ oneResult.records >= 0 ? $tc('dataExplorer.select', oneResult.records, {records: oneResult.records}) : $tc('dataExplorer.affected', oneResult.affectedRows, {record: oneResult.affectedRows}) }}
         div {{ $t('dataExplorer.executeTime', {time: item.execution_time_ms})}}
         div {{ $t('dataExplorer.network', {time: item.networkTime - item.execution_time_ms})}}
