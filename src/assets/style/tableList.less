@@ -1,0 +1,56 @@
+.tree-card {
+  padding-left: 15px;
+  height: 296px;
+  & > .arco-card-header {
+    padding: 0 !important;
+    height: 42px !important;
+    line-height: 42px !important;
+    padding-right: 15px !important;
+  }
+}
+.tree-scrollbar {
+  height: 252px;
+  overflow: auto;
+  padding-right: 15px;
+}
+.table-tree {
+  & > .arco-tree-node {
+    height: 32px;
+    line-height: 32px;
+    padding: 0;
+    cursor: auto;
+  }
+  .arco-tree-node-switcher {
+    margin-right: 5px;
+    width: 12px;
+    font-size: 15px;
+  }
+  .arco-tree-node-is-leaf {
+    .arco-tree-node-indent-block {
+      margin-right: 0;
+    }
+    .arco-tree-node-switcher {
+      width: 0;
+    }
+  }
+  .arco-tree-node-title {
+    margin-left: 0;
+    font-size: 12px;
+    font-family: PingFangSC-Regular, PingFang SC;
+    font-weight: 400;
+    color: var(--grey-font-color);
+    line-height: 32px;
+    height: 32px;
+    padding: 0;
+  }
+  .arco-tree-node-title-text {
+    line-height: 32px;
+    height: 32px;
+  }
+  .arco-tree-node-custom-icon {
+    margin-right: 4px;
+  }
+  .arco-tree-node-switcher:hover {
+    background-color: inherit;
+  }
+}

@@ -5,12 +5,12 @@ a-spin(style="width: 100%")
       a-form-item(:label="$t('dataExplorer.chartType')")
         a-select(v-model="chartForm.chartType" :style="{ width: '320px' }")
           a-option(v-for="item of chartTypeOptions" :key="item.key" :value="item.value" :label="item.value")
-      a-form-item(:label="$t('dataExplorer.yType')")
+      a-form-item.select-y(:label="$t('dataExplorer.yType')")
         a-select(v-model="chartForm.ySelectedTypes" :style="{ width: '320px' }" :placeholder="$t('dataExplorer.select')" multiple :filter-option="false")
           a-option(v-for="item of yOptions" :key="item.value" :value="item.value") {{ item.value }}
-      a-button(type="primary" @click="drawChart") {{$t('dataExplorer.draw')}}
+      a-button.draw-button(type="primary" @click="drawChart") {{$t('dataExplorer.draw')}}
   a-row
-    Chart(height="400px" :option="option" :update-options="updateOptions")
+    Chart.chart-area(height="400px" :option="option" :update-options="updateOptions" )
 </template>
 
 <script lang="ts" setup>
@@ -25,7 +25,7 @@ a-spin(style="width: 100%")
 
   // TODO: Add support for more data types not just numbers.
   const yOptions = computed(() => {
-    return currentResult.value.schema.column_schemas
+    return currentResult.value.records.schema.column_schemas
       .filter((item: any) => numberTypes.find((type: string) => type === item.data_type))
       .map((item: any) => ({
         value: item.name,
@@ -60,12 +60,13 @@ a-spin(style="width: 100%")
     return {
       legend: {
         data: legendNames,
-        orient: 'vertical',
       },
-      tooltip: {},
+      tooltip: {
+        trigger: 'axis',
+      },
       dataset: {
         dimensions: currentResult.value.dimensionsAndXName[0],
-        source: currentResult.value.rows,
+        source: currentResult.value.records.rows,
       },
       xAxis: {
         type: 'time',
@@ -91,8 +92,3 @@ a-spin(style="width: 100%")
     option.value = makeOption([chartForm.chartType, chartForm.ySelectedTypes])
   }
 </script>
-
-<style scoped lang="stylus">
-  .form
-    margin-left 20px
-</style>

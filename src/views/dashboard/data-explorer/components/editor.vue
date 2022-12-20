@@ -1,13 +1,14 @@
 <template lang="pug">
-a-space(style="margin-bottom: 6px")
-  a-button(type="primary" @click="runSqlCommand()")
-    | {{$t('dataExplorer.runAll')}}
-  a(@click="runPartSqlCommand()")
-    a-button(v-if="lineStart === lineEnd" type="outline")
-      | {{$t('dataExplorer.runLine')}} {{ lineStart }}
-    a-button(v-else type="outline")
-      | {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
-CodeMirror(v-model="code" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
+a-card.editor-card
+  a-space.button-space
+    a-button(@click="runSqlCommand()" type="primary")
+      | {{$t('dataExplorer.runAll')}}
+    a(@click="runPartSqlCommand()")
+      a-button(v-if="lineStart === lineEnd")
+        | {{$t('dataExplorer.runLine')}} {{ lineStart }}
+      a-button(v-else)
+        | {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
+  CodeMirror(v-model="code" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
 
 <script lang="ts" setup>
@@ -60,42 +61,9 @@ CodeMirror(v-model="code" :style="style" :spellcheck="spellcheck" :autofocus="au
 
   // extensions: Passed to CodeMirror EditorState.create({ extensions })
   const style = {
-    height: '337px',
-    // '.cm-gutters': {
-    //   color: #254f9a,
-    // },
+    height: '244px',
   }
-  // define our theme if needed in the future
-  const myTheme = EditorView.theme(
-    {
-      '&': {
-        color: '#0052D9',
-        backgroundColor: '#FFFFFF',
-      },
-      '.cm-content': {
-        caretColor: '#0052D9',
-      },
-      '.cm-activeLine': {
-        backgroundColor: '#FAFAFA',
-      },
-      '.cm-activeLineGutter': {
-        backgroundColor: '#FAFAFA',
-      },
-      '&.cm-focused .cm-cursor': {
-        borderLeftColor: '#0052D9',
-      },
-      '&.cm-focused .cm-selectionBackground, ::selection': {
-        backgroundColor: '#0052D9',
-        color: '#FFFFFF',
-      },
-      '.cm-gutters': {
-        backgroundColor: '#FFFFFF',
-        color: '#ddd',
-        border: 'none',
-      },
-    },
-    { dark: true }
-  )
+
   const extensions = [sql(), oneDark]
 
   // todo: combine next 2 functions
@@ -109,3 +77,13 @@ CodeMirror(v-model="code" :style="style" :spellcheck="spellcheck" :autofocus="au
     fetchSQLResult(selectedCode.value.trim())
   }
 </script>
+<style lang="less" scoped>
+  .editor-card {
+    margin-left: 14px;
+    padding: 10px 15px;
+    height: 296px;
+  }
+  .button-space {
+    padding-bottom: 8px;
+  }
+</style>

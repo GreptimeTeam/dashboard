@@ -1,10 +1,16 @@
 <template lang="pug">
-a-tree(v-if="!ifTableLoading" :key="tableKey" :data="tableList" :load-more="loadMore" size="large")
-  template(#extra="nodeData")
-    span(style="color: #8322ff")
-      | {{ nodeData.type }}
-    a-tooltip(:content="$t('dataExplorer.insertName')" mini)
-      icon-copy(style="position: absolute; right: 0; font-size: 15px" @click="insertNameToCode(nodeData.title)")
+a-scrollbar.tree-scrollbar
+  a-tree.table-tree(v-if="!ifTableLoading" :key="tableKey" :data="tableList" :load-more="loadMore" size="small")
+    template(#title)
+    template(#extra="nodeData")
+      img(:src="ICON_MAP[nodeData.iconType]" height="12")
+      span.tree-title
+        | {{ nodeData.title }}
+      span.data-type
+        | {{ nodeData.dataType }}
+      a-tooltip(:content="$t('dataExplorer.insertName')" mini)
+        svg.icon.copy-icon.pointer(name="copy" @click="insertNameToCode(nodeData.title)")
+          use(href="#copy")
 </template>
 
 <script lang="ts" setup>
@@ -36,7 +42,8 @@ a-tree(v-if="!ifTableLoading" :key="tableKey" :data="tableList" :load-more="load
               title: row[0],
               key: row[0],
               isLeaf: true,
-              type: row[1],
+              dataType: row[1],
+              iconType: row[4],
             })
           })
           // todo: change computed data might not be the best option.
@@ -50,5 +57,40 @@ a-tree(v-if="!ifTableLoading" :key="tableKey" :data="tableList" :load-more="load
         })
     })
   }
+
+  const ICON_MAP = {
+    'VALUE': '/src/assets/images/value-icon.png',
+    'PRIMARY KEY': '/src/assets/images/key-icon.png',
+    'TIME INDEX': '/src/assets/images/time-icon.png',
+  }
   initTableDataSet()
 </script>
+<style lang="less" scoped>
+  .data-type {
+    height: 32px;
+    font-size: 12px;
+    font-family: PingFangSC-Regular, PingFang SC;
+    font-weight: 400;
+    color: var(--brand-color);
+    line-height: 32px;
+    padding-left: 2px;
+  }
+  .tree-title {
+    height: 32px;
+    font-size: 12px;
+    font-family: PingFangSC-Regular, PingFang SC;
+    font-weight: 400;
+    color: var(--main-font-color);
+    line-height: 32px;
+    padding-left: 2px;
+  }
+  // :deep(.arco-tree-node-selected) {
+  //   background-color: #8322ff;
+  //   opacity: 0.05;
+  // }
+
+  .copy-icon {
+    position: absolute;
+    right: 0;
+  }
+</style>

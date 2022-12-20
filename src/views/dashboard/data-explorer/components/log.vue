@@ -1,21 +1,27 @@
 <template lang="pug">
-a-list(:hoverable="true" size="small")
-  template(#header)
+a-card
+  template(#title)
+    svg.card-icon
+      use(href="#table")
     span {{$t('dataExplorer.logs')}}
-    a-button.clear(type="primary" size="mini" @click="clearLogs") clear
-  a-list-item(v-for="item of logs" :key="item")
-    a-tooltip(:content="item.error ? item.error : item.sql")
-      .log-error(v-if="item.error")
-        | {{ `${$t('dataExplorer.error')}: ${item.error}` }}
-      a-space(v-else size="large")
-        template(#split)
-          a-divider(direction="vertical")
-        div {{ item.affectedrows ? `${$t('dataExplorer.affected')} ${item.affectedrows || 0} ${$t('dataExplorer.rows')}` : `${$t('dataExplorer.result')}: ${item.records.rows.length} ${$t('dataExplorer.rows')}`}}
-        div {{ `${$t('dataExplorer.executeTime')}: ${item.execution_time_ms } ${$t('dataExplorer.ms') }`}}
-        div {{ `${$t('dataExplorer.network')}: ${item.networkTime - item.execution_time_ms } ${$t('dataExplorer.ms') }`}}
-        div {{ `${$t('dataExplorer.total')}: ${item.networkTime } ${$t('dataExplorer.ms') }`}}
-        div {{ `${$t('dataExplorer.code')}: ${item.sql} `}}
-    template(#actions)
+  template(#extra)
+    a-button(type="primary" @click="clearLogs") {{$t('dataExplorer.clear')}}
+  a-list(:hoverable="true" size="small")
+    a-list-item(v-for="item of logs" :key="item")
+      a-tooltip(:content="item.error ? item.error : item.sql")
+        .log-error(v-if="item.error")
+          | {{ `${$t('dataExplorer.error')}: ${item.error}` }}
+        a-space(v-else size="large")
+          template(#split)
+            a-divider(direction="vertical")
+          div {{ `${$t('dataExplorer.executed')} ${item.result.length} ${$t('dataExplorer.statements')}` }}
+          div {{`${$t('dataExplorer.results')}: `}}
+            span(v-for="(oneResult, index) of item.result" :key="index") {{ oneResult.records >= 0 ? `${$t('dataExplorer.select')} ${oneResult.records} ${$t('dataExplorer.rows')}` : `${$t('dataExplorer.affected')} ${oneResult.affectedRows} ${$t('dataExplorer.rows')} `}}
+          div {{ `${$t('dataExplorer.executeTime')}: ${item.execution_time_ms } ${$t('dataExplorer.ms') }`}}
+          div {{ `${$t('dataExplorer.network')}: ${item.networkTime - item.execution_time_ms } ${$t('dataExplorer.ms') }`}}
+          div {{ `${$t('dataExplorer.total')}: ${item.networkTime } ${$t('dataExplorer.ms') }`}}
+          div {{ `${$t('dataExplorer.code')}: ${item.sql} `}}
+      template(#actions)
 </template>
 
 <script lang="ts" setup>
@@ -37,8 +43,5 @@ a-list(:hoverable="true" size="small")
     text-overflow: ellipsis;
     white-space: nowrap;
     overflow: hidden;
-  }
-  .clear {
-    float: right;
   }
 </style>

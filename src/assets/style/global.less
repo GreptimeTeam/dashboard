@@ -1,7 +1,24 @@
+@import './tableList.less';
+@import './dataView.less';
+@import './editor.less';
+
 * {
   box-sizing: border-box;
 }
-
+:root {
+  --main-bg-color: #f9f8fd;
+  --navbar-bg-color: linear-gradient(270deg, #1d0e38 0%, #2a115a 100%);
+  --brand-color: #8322ff;
+  --bg-brand-color: rgba(131, 34, 255, 0.05);
+  --card-bg-color: #ffffff;
+  --main-font-color: #170c2c;
+  --small-font-color: rgba(23, 12, 44, 0.8);
+  --option-font-color: #1d2129;
+  --grey-font-color: #53565a;
+  --hover-bg-color: #a376ff;
+  --button-font-color: #fcfdff;
+  --th-bg-color: #f8f9fb;
+}
 html,
 body {
   width: 100%;
@@ -9,9 +26,97 @@ body {
   margin: 0;
   padding: 0;
   font-size: 14px;
-  background-color: var(--color-bg-1);
+  background-color: var(--main-bg-color);
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
+  font-family: -apple-system, BlinkMacSystemFont, Helvetica Neue, PingFang SC, Microsoft YaHei, Source Han Sans SC,
+    Noto Sans CJK SC, WenQuanYi Micro Hei, sans-serif !important;
+}
+
+.pointer {
+  cursor: pointer;
+}
+
+.arco-table-container {
+  border: 0 !important;
+}
+
+.arco-card {
+  border-radius: 6px;
+  background: var(--card-bg-color);
+  .arco-card-body {
+    padding: 0;
+  }
+  .arco-card-header {
+    height: 58px;
+    padding: 10px 15px;
+    border-bottom: 0;
+  }
+  .arco-card-header-title {
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+  }
+  .arco-card-header-extra {
+    display: flex;
+  }
+}
+
+.icon {
+  width: 14px;
+  height: 14px;
+}
+.card-icon {
+  width: 12px;
+  height: 12px;
+  margin-right: 3px;
+}
+.arco-checkbox-checked .arco-checkbox-icon {
+  background-color: var(--brand-color);
+}
+
+.arco-select-dropdown {
+  .arco-select-option {
+    padding: 0 8px;
+    color: var(--option-font-color);
+    font-size: 11px;
+    line-height: 32px;
+    text-align: left;
+  }
+  .arco-select-option-active {
+    background-color: var(--bg-brand-color);
+  }
+  .arco-select-option:not(.arco-select-dropdown .arco-select-option-disabled):hover {
+    background-color: var(--bg-brand-color);
+  }
+}
+
+.arco-btn {
+  padding: 0 8px;
+  height: 24px;
+  font-size: 12px;
+  font-family: PingFangSC-Regular, PingFang SC;
+  font-weight: 400;
+  border-radius: 2px;
+}
+.arco-btn-primary[type='button'] {
+  background-color: var(--brand-color);
+  color: var(--button-font-color);
+}
+.arco-btn-primary[type='button']:hover {
+  background-color: var(--hover-bg-color);
+}
+.arco-btn-secondary[type='button'] {
+  background-color: var(--bg-brand-color) !important;
+  color: var(--brand-color) !important;
+}
+.arco-btn-secondary[type='button']:hover {
+  border: 1px solid var(--brand-color);
+}
+.arco-btn-secondary.arco-btn-status-danger {
+  color: rgb(var(--danger-6));
+  background-color: var(--color-danger-light-1);
+  border-color: transparent;
 }
 
 .echarts-tooltip-diy {
@@ -61,38 +166,61 @@ body {
   }
 }
 
-.general-card {
-  border: none;
-  border-radius: 4px;
-
-  & > .arco-card-header {
-    height: auto;
-    padding: 20px;
-    border: none;
-  }
-
-  & > .arco-card-body {
-    padding: 0 20px 20px;
+.form {
+  margin-left: 15px;
+  align-items: center;
+}
+.select-y {
+  margin-right: 8px !important;
+}
+.draw-button {
+  width: 61px;
+  height: 32px;
+  border-radius: 2px;
+}
+.arco-form-layout-inline .arco-form-item {
+  margin-bottom: 0;
+  margin-right: 24px;
+}
+.arco-form-item-label-col > .arco-form-item-label {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--main-font-color);
+  opacity: 0.6;
+}
+.arco-form-item-content {
+  height: 32px;
+}
+.arco-select-view-single {
+  width: 180px !important;
+  background: var(--th-bg-color);
+  border-radius: 2px;
+  padding-right: 8px;
+  padding-left: 8px;
+  .arco-select-view-value {
+    font-size: 11px !important;
   }
 }
-
-.split-line {
-  border-color: rgb(var(--gray-2));
+.arco-select-view-single:hover {
+  background-color: var(--th-bg-color);
+}
+.arco-select-view-multiple {
+  background: var(--th-bg-color);
+  border-radius: 2px;
+  padding-right: 8px;
+  padding-left: 8px;
+  width: 260px !important;
+}
+.arco-select-view-size-medium {
+  font-size: 11px !important;
+  color: var(--small-font-color) !important;
+}
+.arco-select-view-multiple:hover {
+  background-color: var(--th-bg-color);
 }
 
-.arco-table-cell {
-  .circle {
-    display: inline-block;
-    width: 6px;
-    height: 6px;
-    margin-right: 4px;
-    background-color: rgb(var(--blue-6));
-    border-radius: 50%;
-
-    &.pass {
-      background-color: rgb(var(--green-6));
-    }
-  }
+.chart-area {
+  margin-top: 10px;
 }
 
 #app {
