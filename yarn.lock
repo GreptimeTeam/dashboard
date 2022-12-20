@@ -359,9 +359,9 @@
     resolve-global "1.0.0"
     yargs "^17.0.0"
 
-"@commitlint/config-conventional@^17.1.0":
-  version "17.1.0"
-  resolved "https://registry.npmmirror.com/@commitlint/config-conventional/-/config-conventional-17.1.0.tgz"
+"@commitlint/config-conventional@^17.3.0":
+  version "17.3.0"
+  resolved "https://registry.yarnpkg.com/@commitlint/config-conventional/-/config-conventional-17.3.0.tgz#77bcfabfed932bc80e97f31f2201ba05f504e145"
   dependencies:
     conventional-changelog-conventionalcommits "^5.0.0"
 
