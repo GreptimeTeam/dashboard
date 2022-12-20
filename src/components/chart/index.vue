@@ -1,11 +1,11 @@
 <template>
-  <VCharts v-if="renderChart" :option="options" :autoresize="autoResize" :style="{ width, height }" />
+  <VCharts v-if="renderChart" :option="options" :autoresize="autoResize" :style="{ width, height }" :theme="myTheme" />
 </template>
 
 <script lang="ts" setup>
   import { ref, nextTick } from 'vue'
   import VCharts from 'vue-echarts'
-  // import { useAppStore } from '@/store';
+  import chartTheme from './chartTheme.json'
 
   defineProps({
     options: {
@@ -27,12 +27,8 @@
       default: '100%',
     },
   })
-  // const appStore = useAppStore();
-  // const theme = computed(() => {
-  //   if (appStore.theme === 'dark') return 'dark';
-  //   return '';
-  // });
   const renderChart = ref(false)
+  const myTheme = chartTheme
   // wait container expand
   nextTick(() => {
     renderChart.value = true
