@@ -61,7 +61,9 @@ a-spin(style="width: 100%")
       legend: {
         data: legendNames,
       },
-      tooltip: {},
+      tooltip: {
+        trigger: 'axis',
+      },
       dataset: {
         dimensions: currentResult.value.dimensionsAndXName[0],
         source: currentResult.value.records.rows,

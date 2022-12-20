@@ -285,6 +285,7 @@
   },
   "tooltip": {
     "axisPointer": {
+      "type": "cross",
       "lineStyle": {
         "color": "rgba(23,12,44,0.3)",
         "width": 1
@@ -293,6 +294,12 @@
         "color": "rgba(23,12,44,0.3)",
         "width": 1
       }
+    }
+  },
+  "axisPointer": {
+    "link": { "xAxisIndex": "all" },
+    "label": {
+      "backgroundColor": "#777"
     }
   },
   "timeline": {
