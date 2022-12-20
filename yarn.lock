@@ -3358,9 +3358,9 @@ human-signals@^3.0.1:
   version "3.0.1"
   resolved "https://registry.npmmirror.com/human-signals/-/human-signals-3.0.1.tgz"
 
-husky@^8.0.1:
-  version "8.0.1"
-  resolved "https://registry.npmmirror.com/husky/-/husky-8.0.1.tgz"
+husky@^8.0.2:
+  version "8.0.2"
+  resolved "https://registry.yarnpkg.com/husky/-/husky-8.0.2.tgz#5816a60db02650f1f22c8b69b928fd6bcd77a236"
 
 iconv-lite@^0.6.3:
   version "0.6.3"
