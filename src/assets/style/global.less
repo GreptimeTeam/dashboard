@@ -2,6 +2,7 @@
 @import './dataView.less';
 @import './editor.less';
 @import './log.less';
+@import './button.less';
 
 * {
   box-sizing: border-box;
@@ -12,14 +13,15 @@
   --brand-color: #8322ff;
   --bg-brand-color: rgba(131, 34, 255, 0.05);
   --card-bg-color: #ffffff;
-  --main-font-color: #170c2c;
+  --main-font-color: rgba(23, 12, 44, 1);
   --small-font-color: rgba(23, 12, 44, 0.8);
   --option-font-color: #1d2129;
   --grey-font-color: #53565a;
   --hover-bg-color: #a376ff;
   --button-font-color: #fcfdff;
   --th-bg-color: #f8f9fb;
-  --error-bg-color: rgba(239, 60, 104, 0.1);
+  --danger-bg-color: rgba(239, 60, 104, 0.1);
+  --danger-font-color: rgba(239, 60, 104, 1);
 }
 html,
 body {
@@ -31,8 +33,7 @@ body {
   background-color: var(--main-bg-color);
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
-  font-family: -apple-system, BlinkMacSystemFont, Helvetica Neue, PingFang SC, Microsoft YaHei, Source Han Sans SC,
-    Noto Sans CJK SC, WenQuanYi Micro Hei, sans-serif !important;
+  font-family: Roboto;
 }
 
 .pointer {
@@ -58,6 +59,8 @@ body {
     font-size: 14px;
     display: flex;
     align-items: center;
+    color: var(--main-font-color);
+    font-weight: 600;
   }
   .arco-card-header-extra {
     display: flex;
@@ -91,34 +94,6 @@ body {
   .arco-select-option:not(.arco-select-dropdown .arco-select-option-disabled):hover {
     background-color: var(--bg-brand-color);
   }
-}
-
-.arco-btn {
-  padding: 0 8px;
-  height: 24px;
-  font-size: 12px;
-  font-family: PingFangSC-Regular, PingFang SC;
-  font-weight: 400;
-  border-radius: 2px;
-}
-.arco-btn-primary[type='button'] {
-  background-color: var(--brand-color);
-  color: var(--button-font-color);
-}
-.arco-btn-primary[type='button']:hover {
-  background-color: var(--hover-bg-color);
-}
-.arco-btn-secondary[type='button'] {
-  background-color: var(--bg-brand-color) !important;
-  color: var(--brand-color) !important;
-}
-.arco-btn-secondary[type='button']:hover {
-  border: 1px solid var(--brand-color);
-}
-.arco-btn-secondary.arco-btn-status-danger {
-  color: rgb(var(--danger-6));
-  background-color: var(--color-danger-light-1);
-  border-color: transparent;
 }
 
 .form {
@@ -173,4 +148,11 @@ body {
 #app {
   display: flex;
   height: 100vh;
+}
+
+@font-face {
+  font-family: 'Roboto';
+  src: local('Roboto'), url(../fonts/Roboto-Regular.ttf);
+  font-weight: normal;
+  font-style: normal;
 }

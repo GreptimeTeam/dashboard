@@ -1,0 +1,31 @@
+.arco-btn {
+  padding: 0 8px;
+  height: 24px;
+  font-size: 12px;
+  font-weight: 400;
+  border-radius: 2px;
+}
+.arco-btn-primary[type='button'] {
+  background-color: var(--brand-color);
+  color: var(--button-font-color);
+}
+.arco-btn-primary[type='button']:hover {
+  background-color: var(--hover-bg-color);
+}
+.arco-btn-secondary[type='button'] {
+  background-color: var(--bg-brand-color);
+  color: var(--brand-color);
+}
+.arco-btn-secondary[type='button']:hover {
+  border: 1px solid var(--brand-color);
+  background-color: var(--bg-brand-color);
+  color: var(--brand-color);
+}
+.arco-btn-secondary.arco-btn-status-danger {
+  height: 32px;
+  background: var(--danger-bg-color) !important;
+  color: var(--danger-font-color) !important;
+}
+.arco-btn-secondary.arco-btn-status-danger:hover {
+  border: 1px solid var(--danger-font-color);
+}

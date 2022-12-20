@@ -5,7 +5,7 @@ a-card
       use(href="#table")
     span {{$t('dataExplorer.logs')}}
   template(#extra)  
-    a-button(type="primary" size="mini" @click="clearLogs") {{$t('dataExplorer.clear')}}
+    a-button(type="secondary" status="danger" @click="clearLogs") {{$t('dataExplorer.clear')}}
   a-list(:hoverable="true" size="small" :bordered="false" :split="false")
     a-list-item(v-for="item of logs" :key="item")
       a-tooltip(:content="item.error ? item.error : item.sql")
