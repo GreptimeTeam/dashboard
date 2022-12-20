@@ -9,9 +9,11 @@
   --main-bg-color: #f9f8fd;
   --navbar-bg-color: linear-gradient(270deg, #1d0e38 0%, #2a115a 100%);
   --brand-color: #8322ff;
-  --bg-brand-color: rgba(131, 34, 255, 0.06);
+  --bg-brand-color: rgba(131, 34, 255, 0.05);
   --card-bg-color: #ffffff;
   --main-font-color: #170c2c;
+  --small-font-color: rgba(23, 12, 44, 0.8);
+  --option-font-color: #1d2129;
   --grey-font-color: #53565a;
   --hover-bg-color: #a376ff;
   --button-font-color: #fcfdff;
@@ -68,6 +70,25 @@ body {
   width: 12px;
   height: 12px;
   margin-right: 3px;
+}
+.arco-checkbox-checked .arco-checkbox-icon {
+  background-color: var(--brand-color);
+}
+
+.arco-select-dropdown {
+  .arco-select-option {
+    padding: 0 8px;
+    color: var(--option-font-color);
+    font-size: 11px;
+    line-height: 32px;
+    text-align: left;
+  }
+  .arco-select-option-active {
+    background-color: var(--bg-brand-color);
+  }
+  .arco-select-option:not(.arco-select-dropdown .arco-select-option-disabled):hover {
+    background-color: var(--bg-brand-color);
+  }
 }
 
 .arco-btn {
@@ -142,8 +163,57 @@ body {
   }
 }
 
-.split-line {
-  border-color: rgb(var(--gray-2));
+.form {
+  margin-left: 15px;
+  align-items: center;
+}
+.select-y {
+  margin-right: 8px !important;
+}
+.draw-button {
+  width: 61px;
+  height: 32px;
+  border-radius: 2px;
+}
+.arco-form-layout-inline .arco-form-item {
+  margin-bottom: 0;
+  margin-right: 24px;
+}
+.arco-form-item-label-col > .arco-form-item-label {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--main-font-color);
+  opacity: 0.6;
+}
+.arco-form-item-content {
+  height: 32px;
+}
+.arco-select-view-single {
+  width: 180px !important;
+  background: var(--th-bg-color);
+  border-radius: 2px;
+  padding-right: 8px;
+  padding-left: 8px;
+  .arco-select-view-value {
+    font-size: 11px !important;
+  }
+}
+.arco-select-view-single:hover {
+  background-color: var(--th-bg-color);
+}
+.arco-select-view-multiple {
+  background: var(--th-bg-color);
+  border-radius: 2px;
+  padding-right: 8px;
+  padding-left: 8px;
+  width: 260px !important;
+}
+.arco-select-view-size-medium {
+  font-size: 11px !important;
+  color: var(--small-font-color) !important;
+}
+.arco-select-view-multiple:hover {
+  background-color: var(--th-bg-color);
 }
 
 #app {

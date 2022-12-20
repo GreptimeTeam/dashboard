@@ -10,7 +10,7 @@ export default {
   'dataExplorer.result': 'Result',
   'dataExplorer.results': 'Results',
   'dataExplorer.chart': 'Chart',
-  'dataExplorer.chartType': 'Chart',
+  'dataExplorer.chartType': 'Chart Type',
   'dataExplorer.yType': 'Y Types',
   'dataExplorer.select': 'Select',
   'dataExplorer.draw': 'Draw',
