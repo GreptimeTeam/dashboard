@@ -23,6 +23,11 @@ jobs:
     - uses: pnpm/action-setup@v2
       with:
         version: 7
+    - run: pnpm i --lockfile-only
+    - uses: stefanzweifel/git-auto-commit-action@v4
+      with:
+        commit_message: 'build: update pnpm lockfile'
+        commit_options: '--no-verify'
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v3
       with:
