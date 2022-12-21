@@ -13,6 +13,7 @@ export default {
   'dataExplorer.chartType': 'Chart Type',
   'dataExplorer.yType': 'Y Types',
   'dataExplorer.select': 'Select {records} row | Select {records} rows',
+  'dataExplorer.selectY': 'Please select...',
   'dataExplorer.draw': 'Draw',
   'dataExplorer.error': 'Error',
   'dataExplorer.affected': 'Affected {record} row | Affected {record} rows',

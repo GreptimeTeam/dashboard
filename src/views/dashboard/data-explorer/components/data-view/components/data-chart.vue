@@ -6,7 +6,7 @@ a-spin(style="width: 100%")
         a-select(v-model="chartForm.chartType" :style="{ width: '320px' }")
           a-option(v-for="item of chartTypeOptions" :key="item.key" :value="item.value" :label="item.value")
       a-form-item.select-y(:label="$t('dataExplorer.yType')")
-        a-select(v-model="chartForm.ySelectedTypes" :style="{ width: '320px' }" :placeholder="$t('dataExplorer.select')" multiple :filter-option="false")
+        a-select(v-model="chartForm.ySelectedTypes" :style="{ width: '320px' }" :placeholder="$t('dataExplorer.selectY')" multiple :filter-option="false")
           a-option(v-for="item of yOptions" :key="item.value" :value="item.value") {{ item.value }}
       a-button.draw-button(type="primary" @click="drawChart") {{$t('dataExplorer.draw')}}
   a-row
