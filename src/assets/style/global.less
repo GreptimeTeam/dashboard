@@ -7,12 +7,13 @@
 * {
   box-sizing: border-box;
 }
+
 :root {
   --main-bg-color: #f9f8fd;
   --navbar-bg-color: linear-gradient(270deg, #1d0e38 0%, #2a115a 100%);
   --brand-color: #8322ff;
   --bg-brand-color: rgba(131, 34, 255, 0.05);
-  --card-bg-color: #ffffff;
+  --card-bg-color: rgba(255, 255, 255, 1);
   --main-font-color: rgba(23, 12, 44, 1);
   --small-font-color: rgba(23, 12, 44, 0.8);
   --option-font-color: #1d2129;
@@ -23,6 +24,7 @@
   --danger-bg-color: rgba(239, 60, 104, 0.1);
   --danger-font-color: rgba(239, 60, 104, 1);
 }
+
 html,
 body {
   width: 100%;
@@ -30,10 +32,20 @@ body {
   margin: 0;
   padding: 0;
   font-size: 14px;
+  font-family: Roboto !important;
   background-color: var(--main-bg-color);
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
-  font-family: Roboto !important;
+}
+
+.navbar-svg:hover {
+  opacity: 0.4;
+}
+
+.arco-dropdown {
+  padding: 0;
+  border-radius: 2px;
+  box-shadow: 0 4px 10px 0 rgba(0, 0, 0, 0.15);
 }
 
 .pointer {
@@ -45,23 +57,27 @@ body {
 }
 
 .arco-card {
-  border-radius: 6px;
   background: var(--card-bg-color);
+  border-radius: 6px;
+
   .arco-card-body {
     padding: 0;
   }
+
   .arco-card-header {
     height: 58px;
     padding: 10px 15px;
     border-bottom: 0;
   }
+
   .arco-card-header-title {
-    font-size: 14px;
     display: flex;
     align-items: center;
     color: var(--main-font-color);
     font-weight: 600;
+    font-size: 14px;
   }
+
   .arco-card-header-extra {
     display: flex;
   }
@@ -71,11 +87,13 @@ body {
   width: 14px;
   height: 14px;
 }
+
 .card-icon {
   width: 12px;
   height: 12px;
   margin-right: 3px;
 }
+
 .arco-checkbox-checked .arco-checkbox-icon {
   background-color: var(--brand-color);
 }
@@ -88,55 +106,66 @@ body {
     line-height: 32px;
     text-align: left;
   }
+
   .arco-select-option-active {
     background-color: var(--bg-brand-color);
   }
+
   .arco-select-option:not(.arco-select-dropdown .arco-select-option-disabled):hover {
     background-color: var(--bg-brand-color);
   }
 }
 
 .form {
-  margin-left: 15px;
   align-items: center;
+  margin-left: 15px;
 }
+
 .arco-form-layout-inline .arco-form-item {
-  margin-bottom: 0;
   margin-right: 24px;
+  margin-bottom: 0;
 }
+
 .arco-form-item-label-col > .arco-form-item-label {
-  font-size: 12px;
-  font-weight: 400;
   color: var(--main-font-color);
+  font-weight: 400;
+  font-size: 12px;
   opacity: 0.6;
 }
+
 .arco-form-item-content {
   height: 32px;
 }
+
 .arco-select-view-single {
   width: 180px !important;
-  background: var(--th-bg-color);
-  border-radius: 2px;
   padding-right: 8px;
   padding-left: 8px;
+  background: var(--th-bg-color);
+  border-radius: 2px;
+
   .arco-select-view-value {
     font-size: 11px !important;
   }
 }
+
 .arco-select-view-single:hover {
   background-color: var(--th-bg-color);
 }
+
 .arco-select-view-multiple {
-  background: var(--th-bg-color);
-  border-radius: 2px;
+  width: 260px !important;
   padding-right: 8px;
   padding-left: 8px;
-  width: 260px !important;
+  background: var(--th-bg-color);
+  border-radius: 2px;
 }
+
 .arco-select-view-size-medium {
-  font-size: 11px !important;
   color: var(--small-font-color) !important;
+  font-size: 11px !important;
 }
+
 .arco-select-view-multiple:hover {
   background-color: var(--th-bg-color);
 }
@@ -151,8 +180,8 @@ body {
 }
 
 @font-face {
-  font-family: 'Roboto';
-  src: local('Roboto'), url(../fonts/Roboto-Regular.ttf);
   font-weight: normal;
+  font-family: Roboto;
   font-style: normal;
+  src: local('Roboto'), url('../fonts/Roboto-Regular.ttf');
 }

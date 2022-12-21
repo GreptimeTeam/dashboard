@@ -1,23 +1,22 @@
 <template lang="pug">
-template(v-if="!!results.length")
-  a-tabs(type="rounded" lazy-load :active-key="activeTabKey" @tab-click="tabClick" @delete="deleteTab" editable)
-    template(#extra)
-      a-button(@click="clearCodeResult()" status="danger") {{$t('dataExplorer.clear')}}
-    a-tab-pane(v-for="(item, index) of results" :key="item.key" 
-    :title="`${$t('dataExplorer.result')} ${item.key + 1}`" closable) 
-      a-space(direction="vertical" fill :size="14")
-        a-card
-          template(#title)
-            svg.card-icon
-              use(href="#table")
-            | {{$t('dataExplorer.table')}}
-          DataGrid
-        a-card
-          template(#title)
-            svg.card-icon
-                use(href="#chart")
-            | {{$t('dataExplorer.chart')}}
-          DataChart
+a-tabs(type="rounded" lazy-load :active-key="activeTabKey" @tab-click="tabClick" @delete="deleteTab" editable)
+  template(#extra)
+    a-button(@click="clearCodeResult()" status="danger") {{$t('dataExplorer.clear')}}
+  a-tab-pane(v-for="(item, index) of results" :key="item.key" 
+  :title="`${$t('dataExplorer.result')} ${item.key + 1}`" closable) 
+    a-space(direction="vertical" fill :size="14")
+      a-card
+        template(#title)
+          svg.card-icon
+            use(href="#table")
+          | {{$t('dataExplorer.table')}}
+        DataGrid
+      a-card
+        template(#title)
+          svg.card-icon
+              use(href="#chart")
+          | {{$t('dataExplorer.chart')}}
+        DataChart
 </template>
 
 <script lang="ts" setup>

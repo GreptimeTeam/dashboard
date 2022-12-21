@@ -49,7 +49,7 @@ a-scrollbar.tree-scrollbar
           // todo: change computed data might not be the best option.
           nodeData.children = rowArray
           resolve()
-          // todo: change key to update component might not be the best option.
+          // TODO: change key to update component might not be the best option.
           tableKey.value += 1
         })
         .catch(() => {
