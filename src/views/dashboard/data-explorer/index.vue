@@ -16,7 +16,7 @@
           TableList     
       template(#second) 
         Editor 
-    DataView
+    DataView(v-if="!!results.length")
     Log 
 </template>
 
@@ -26,6 +26,7 @@
   const appStore = useAppStore()
   const navbar = computed(() => appStore.navbar)
   const { fetchDataBaseTables: refreshTableData } = useDataBaseStore()
+  const { results } = storeToRefs(useCodeRunStore())
 </script>
 
 <style lang="less" scoped>
@@ -52,30 +53,6 @@
   .right-side {
     width: 280px;
     margin-left: 16px;
-  }
-  .moduler-wrap {
-    :deep(.wrapper) {
-      margin-bottom: 8px;
-      text-align: center;
-      cursor: pointer;
-
-      &:last-child {
-        .text {
-          margin-bottom: 0;
-        }
-      }
-
-      &:hover {
-        .icon {
-          color: rgb(var(--arcoblue-6));
-          background-color: #e8f3ff;
-        }
-
-        .text {
-          color: rgb(var(--arcoblue-6));
-        }
-      }
-    }
   }
 </style>
 

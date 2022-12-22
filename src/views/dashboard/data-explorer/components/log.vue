@@ -5,12 +5,12 @@ a-card
       use(href="#table")
     span {{$t('dataExplorer.logs')}}
   template(#extra)  
-    a-button(type="primary" size="mini" @click="clearLogs") {{$t('dataExplorer.clear')}}
-  a-list(:hoverable="true" size="small")
+    a-button(v-if="logs.length" type="secondary" status="danger" @click="clearLogs") {{$t('dataExplorer.clear')}}
+  a-list(v-if="logs.length" :hoverable="true" size="small" :bordered="false" :split="false")
     a-list-item(v-for="item of logs" :key="item")
       a-tooltip(:content="item.error ? item.error : item.sql")
         .log-error(v-if="item.error") {{$t('dataExplorer.error')}}: {{item.error}}
-        a-space(v-else size="large")
+        a-space.log-space(v-else size="large")
           template(#split)
             a-divider(direction="vertical")
           div {{ $tc('dataExplorer.executed', item.result.length, { length:item.result.length })}}
@@ -20,7 +20,6 @@ a-card
           div {{ $t('dataExplorer.network', {time: item.networkTime - item.execution_time_ms})}}
           div {{ $t('dataExplorer.total', {time: item.networkTime}) }}
           div {{ $t('dataExplorer.code', {sql: item.sql}) }}
-    template(#actions)
 </template>
 
 <script lang="ts" setup>
@@ -29,18 +28,3 @@ a-card
   const { logs } = storeToRefs(useLogStore())
   const { clearLogs } = useLogStore()
 </script>
-
-<style scoped>
-  .log-error {
-    background-color: var(--color-danger-light-1);
-    padding: 0 2px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    overflow: hidden;
-  }
-  :deep(.arco-list-item-main) {
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    overflow: hidden;
-  }
-</style>

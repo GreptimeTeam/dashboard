@@ -32,7 +32,7 @@ const useCodeRunStore = defineStore('codeRun', {
   }),
 
   getters: {
-    currentResult(state) {
+    currentResult(state: any) {
       return state.results.find((item: any) => item.key === state.activeTabKey) || {}
     },
   },

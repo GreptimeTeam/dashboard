@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24px" height="24px" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>切片</title>
+    <defs>
+        <rect id="path-1" x="0" y="0" width="24" height="24"></rect>
+    </defs>
+    <g id="页面-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="颜色/icon/状态色板" transform="translate(-250.000000, -617.000000)">
+            <g id="The-menu备份" transform="translate(250.000000, 617.000000)">
+                <mask id="mask-2" fill="white">
+                    <use xlink:href="#path-1"></use>
+                </mask>
+                <g id="矩形"></g>
+                <rect id="矩形" fill="#FFFFFF" mask="url(#mask-2)" x="3" y="5" width="18" height="2" rx="1"></rect>
+                <rect id="矩形备份-49" fill="#FFFFFF" mask="url(#mask-2)" x="3" y="11" width="12" height="2" rx="1"></rect>
+                <rect id="矩形备份-50" fill="#FFFFFF" mask="url(#mask-2)" x="3" y="17" width="18" height="2" rx="1"></rect>
+            </g>
+        </g>
+    </g>
+</svg>

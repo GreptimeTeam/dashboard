@@ -29,5 +29,7 @@ module.exports = {
         ignorePseudoClasses: ['deep'],
       },
     ],
+    'color-function-notation': 'legacy',
+    'alpha-value-notation': 'number',
   },
 }

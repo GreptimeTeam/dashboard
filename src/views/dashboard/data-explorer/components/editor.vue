@@ -40,7 +40,6 @@ a-card.editor-card
   const dataBaseStore = useDataBaseStore()
   const codeRunStore = useCodeRunStore()
   const { code, cursorAt } = dataExplorer
-  // attention: must use storetorefs
   const { fetchSQLResult } = codeRunStore
 
   const handleReady = (payload: any) => {
@@ -77,13 +76,3 @@ a-card.editor-card
     fetchSQLResult(selectedCode.value.trim())
   }
 </script>
-<style lang="less" scoped>
-  .editor-card {
-    margin-left: 14px;
-    padding: 10px 15px;
-    height: 296px;
-  }
-  .button-space {
-    padding-bottom: 8px;
-  }
-</style>

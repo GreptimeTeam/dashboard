@@ -1,36 +1,112 @@
 @import './tableList.less';
 @import './dataView.less';
 @import './editor.less';
+@import './log.less';
+@import './button.less';
 
 * {
   box-sizing: border-box;
 }
+
 :root {
   --main-bg-color: #f9f8fd;
   --navbar-bg-color: linear-gradient(270deg, #1d0e38 0%, #2a115a 100%);
   --brand-color: #8322ff;
   --bg-brand-color: rgba(131, 34, 255, 0.05);
-  --card-bg-color: #ffffff;
-  --main-font-color: #170c2c;
+  --card-bg-color: rgba(255, 255, 255, 1);
+  --tooltip-font-color: rgba(255, 255, 255, 0.8);
+  --main-font-color: rgba(23, 12, 44, 1);
   --small-font-color: rgba(23, 12, 44, 0.8);
+  --grey-bg-color: rgba(23, 12, 44, 0.06);
   --option-font-color: #1d2129;
   --grey-font-color: #53565a;
   --hover-bg-color: #a376ff;
   --button-font-color: #fcfdff;
   --th-bg-color: #f8f9fb;
+  --success-color: rgba(36, 201, 128, 1);
+  --success-bg-color: rgba(233, 249, 242, 1);
+  --warning-color: rgba(232, 176, 14, 1);
+  --warning-bg-color: #fcf7e6;
+  --danger-color: rgba(239, 60, 104, 1);
+  --danger-bg-color: #fdebef;
+  --editor-active-line-color: rgba(252, 253, 255, 0.14);
 }
+
 html,
 body {
   width: 100%;
+  min-width: 780px;
   height: 100%;
   margin: 0;
   padding: 0;
-  font-size: 14px;
+  font-weight: 300;
+  font-size: 12px;
+  font-family: Roboto, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'noto sans', sans-serif !important;
   background-color: var(--main-bg-color);
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
-  font-family: -apple-system, BlinkMacSystemFont, Helvetica Neue, PingFang SC, Microsoft YaHei, Source Han Sans SC,
-    Noto Sans CJK SC, WenQuanYi Micro Hei, sans-serif !important;
+}
+
+.arco-message {
+  padding: 10px 15px;
+  border: 1px solid;
+  border-radius: 4px;
+
+  .arco-message-content {
+    color: var(--main-font-color);
+    font-size: 14px;
+  }
+}
+
+.arco-message-success {
+  background-color: var(--success-bg-color);
+  border-color: var(--success-color);
+}
+
+.arco-message-error {
+  background-color: var(--danger-bg-color);
+  border-color: var(--danger-color);
+}
+
+.arco-tooltip-content {
+  padding: 8px;
+  color: var(--tooltip-font-color);
+  font-size: 12px;
+  background-color: var(--main-font-color);
+}
+
+.navbar-svg:hover {
+  opacity: 0.4;
+}
+
+.arco-dropdown {
+  padding: 0;
+  border-radius: 2px;
+  box-shadow: 0 4px 10px 0 rgba(0, 0, 0, 0.15);
+
+  .arco-dropdown-option {
+    padding: 0;
+  }
+
+  .arco-dropdown-option:not(.arco-dropdown-option-disabled):hover {
+    background-color: transparent;
+  }
+
+  .arco-dropdown-option-content {
+    height: 32px;
+    line-height: 32px;
+  }
+
+  .arco-link {
+    padding: 2px 15px;
+    color: var(--small-font-color);
+    font-size: 12px;
+  }
+
+  .arco-link:hover {
+    color: var(--small-font-color);
+    background-color: var(--bg-brand-color);
+  }
 }
 
 .pointer {
@@ -42,21 +118,27 @@ body {
 }
 
 .arco-card {
-  border-radius: 6px;
   background: var(--card-bg-color);
+  border-radius: 6px;
+
   .arco-card-body {
     padding: 0;
   }
+
   .arco-card-header {
     height: 58px;
     padding: 10px 15px;
     border-bottom: 0;
   }
+
   .arco-card-header-title {
-    font-size: 14px;
     display: flex;
     align-items: center;
+    color: var(--main-font-color);
+    font-weight: 500;
+    font-size: 14px;
   }
+
   .arco-card-header-extra {
     display: flex;
   }
@@ -66,13 +148,15 @@ body {
   width: 14px;
   height: 14px;
 }
+
 .card-icon {
   width: 12px;
   height: 12px;
   margin-right: 3px;
 }
-.arco-checkbox-checked .arco-checkbox-icon {
-  background-color: var(--brand-color);
+
+.arco-icon-hover:hover::before {
+  background-color: transparent;
 }
 
 .arco-select-dropdown {
@@ -82,148 +166,132 @@ body {
     font-size: 11px;
     line-height: 32px;
     text-align: left;
+
+    .arco-checkbox-icon {
+      width: 12px;
+      height: 12px;
+      border: 1px solid var(--brand-color);
+      border-radius: 2px;
+    }
+
+    .arco-checkbox-checked .arco-checkbox-icon {
+      background-color: var(--brand-color);
+    }
+
+    .arco-checkbox {
+      padding-left: 0;
+      font-size: 11px;
+
+      .arco-icon-hover {
+        width: 12px;
+        height: 12px;
+      }
+    }
   }
+
   .arco-select-option-active {
     background-color: var(--bg-brand-color);
   }
+
   .arco-select-option:not(.arco-select-dropdown .arco-select-option-disabled):hover {
     background-color: var(--bg-brand-color);
   }
 }
 
-.arco-btn {
-  padding: 0 8px;
-  height: 24px;
-  font-size: 12px;
-  font-family: PingFangSC-Regular, PingFang SC;
-  font-weight: 400;
-  border-radius: 2px;
-}
-.arco-btn-primary[type='button'] {
-  background-color: var(--brand-color);
-  color: var(--button-font-color);
-}
-.arco-btn-primary[type='button']:hover {
-  background-color: var(--hover-bg-color);
-}
-.arco-btn-secondary[type='button'] {
-  background-color: var(--bg-brand-color) !important;
-  color: var(--brand-color) !important;
-}
-.arco-btn-secondary[type='button']:hover {
-  border: 1px solid var(--brand-color);
-}
-.arco-btn-secondary.arco-btn-status-danger {
-  color: rgb(var(--danger-6));
-  background-color: var(--color-danger-light-1);
-  border-color: transparent;
-}
-
-.echarts-tooltip-diy {
-  background: linear-gradient(304.17deg, rgb(253 254 255 / 60%) -6.04%, rgb(244 247 252 / 60%) 85.2%) !important;
-  border: none !important;
-  border-radius: 6px !important;
-  backdrop-filter: blur(10px) !important;
-
-  .content-panel {
-    display: flex;
-    justify-content: space-between;
-    width: 164px;
-    height: 32px;
-    margin-bottom: 4px;
-    padding: 0 9px;
-    line-height: 32px;
-    background: rgb(255 255 255 / 80%);
-    border-radius: 4px;
-    box-shadow: 6px 0 20px rgb(34 87 188 / 10%);
-  }
-
-  .tooltip-title {
-    margin: 0 0 10px;
-  }
-
-  p {
-    margin: 0;
-  }
-
-  .tooltip-title,
-  .tooltip-value {
-    display: flex;
-    align-items: center;
-    color: #1d2129;
-    font-weight: bold;
-    font-size: 13px;
-    line-height: 15px;
-    text-align: right;
-  }
-
-  .tooltip-item-icon {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    margin-right: 8px;
-    border-radius: 50%;
-  }
-}
-
 .form {
-  margin-left: 15px;
   align-items: center;
+  margin-left: 15px;
 }
-.select-y {
-  margin-right: 8px !important;
-}
-.draw-button {
-  width: 61px;
-  height: 32px;
-  border-radius: 2px;
-}
+
 .arco-form-layout-inline .arco-form-item {
-  margin-bottom: 0;
   margin-right: 24px;
+  margin-bottom: 0;
 }
+
 .arco-form-item-label-col > .arco-form-item-label {
-  font-size: 12px;
-  font-weight: 400;
   color: var(--main-font-color);
+  font-size: 12px;
   opacity: 0.6;
 }
+
 .arco-form-item-content {
   height: 32px;
 }
+
 .arco-select-view-single {
   width: 180px !important;
-  background: var(--th-bg-color);
-  border-radius: 2px;
   padding-right: 8px;
   padding-left: 8px;
+  background: var(--th-bg-color) !important;
+  border-radius: 2px;
+
   .arco-select-view-value {
     font-size: 11px !important;
   }
 }
+
+.arco-select-view-focus {
+  border-color: var(--hover-bg-color) !important;
+}
+
 .arco-select-view-single:hover {
   background-color: var(--th-bg-color);
 }
+
 .arco-select-view-multiple {
-  background: var(--th-bg-color);
-  border-radius: 2px;
+  width: 260px !important;
   padding-right: 8px;
   padding-left: 8px;
-  width: 260px !important;
+  background: var(--th-bg-color);
+  border-radius: 2px;
+
+  .arco-select-view-inner .arco-select-view-tag {
+    background: var(--grey-bg-color);
+    border-color: transparent;
+    border-radius: 2px;
+  }
 }
+
 .arco-select-view-size-medium {
-  font-size: 11px !important;
   color: var(--small-font-color) !important;
+  font-size: 11px !important;
 }
+
 .arco-select-view-multiple:hover {
   background-color: var(--th-bg-color);
 }
 
-.chart-area {
-  margin-top: 10px;
+.arco-tag {
+  font-weight: 300;
+  font-size: 11px !important;
+}
+
+:focus {
+  outline: none;
 }
 
 #app {
   display: flex;
   height: 100vh;
+}
+
+@font-face {
+  font-weight: 300;
+  font-family: Roboto;
+  font-style: normal;
+  src: local('Roboto'), url('../fonts/Roboto-Light.ttf');
+}
+
+@font-face {
+  font-weight: 400;
+  font-family: Roboto;
+  font-style: normal;
+  src: local('Roboto'), url('../fonts/Roboto-Light.ttf');
+}
+
+@font-face {
+  font-weight: 500;
+  font-family: Roboto;
+  font-style: normal;
+  src: local('Roboto'), url('../fonts/Roboto-Medium.ttf');
 }

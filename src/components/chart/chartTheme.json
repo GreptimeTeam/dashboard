@@ -18,8 +18,7 @@
       "width": "2"
     },
     "symbolSize": "6",
-    "symbol": "emptyCircle",
-    "smooth": true
+    "symbol": "emptyCircle"
   },
   "radar": {
     "itemStyle": {

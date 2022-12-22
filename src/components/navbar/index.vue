@@ -4,14 +4,13 @@
     img(alt='logo', src='/src/assets/images/logo-text.webp', class="logo-text-img")
   ul.right-side
     li
-      a-link(href="https://docs.greptime.com/") Docs
-    li(v-for="{link, icon} in socialLinks")
-      a-tooltip(content='GitHub')
-        SocialLink.social-links(
-          :key="link"
-          :icon="icon"
-          :link="link")
-        
+      a-link(href="https://docs.greptime.com/" target="_blank") Docs
+    li
+      a-dropdown(trigger="hover" :popup-max-height="false")
+        img.pointer.navbar-svg(src="/src/assets/images/dropdown.svg" height="24")
+        template(#content)
+          a-doption(v-for="{label, link} in dropDownLinks")
+            a-link(:href="link" target="_blank" ) {{ label }}
 </template>
 
 <script lang="ts" setup>
@@ -23,6 +22,17 @@
     {
       icon: 'github',
       link: 'https://github.com/GreptimeTeam/dashboard',
+    },
+  ]
+
+  const dropDownLinks = [
+    {
+      link: 'https://github.com/GreptimeTeam/dashboard',
+      label: 'GitHub | dashboard',
+    },
+    {
+      link: 'https://github.com/GreptimeTeam/greptimedb',
+      label: 'GitHub | greptimedb',
     },
   ]
 </script>
