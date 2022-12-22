@@ -1,54 +1,63 @@
 .tree-card {
-  padding-left: 15px;
   height: 296px;
+  padding-left: 15px;
+
   & > .arco-card-header {
-    padding: 0 !important;
     height: 42px !important;
-    line-height: 42px !important;
+    padding: 0 !important;
     padding-right: 15px !important;
+    line-height: 42px !important;
   }
 }
+
 .tree-scrollbar {
   height: 252px;
-  overflow: auto;
   padding-right: 15px;
+  overflow: auto;
 }
+
 .table-tree {
   & > .arco-tree-node {
     height: 32px;
-    line-height: 32px;
     padding: 0;
+    line-height: 32px;
     cursor: auto;
   }
+
   .arco-tree-node-switcher {
-    margin-right: 5px;
     width: 12px;
+    margin-right: 5px;
     font-size: 15px;
   }
+
   .arco-tree-node-is-leaf {
     .arco-tree-node-indent-block {
       margin-right: 0;
     }
+
     .arco-tree-node-switcher {
       width: 0;
     }
   }
+
   .arco-tree-node-title {
+    height: 32px;
     margin-left: 0;
-    font-size: 12px;
-    font-weight: 400;
-    color: var(--grey-font-color);
-    line-height: 32px;
-    height: 32px;
     padding: 0;
-  }
-  .arco-tree-node-title-text {
+    color: var(--grey-font-color);
+    font-size: 12px;
     line-height: 32px;
-    height: 32px;
   }
+
+  .arco-tree-node-title-text {
+    height: 32px;
+    line-height: 32px;
+  }
+
   .arco-tree-node-custom-icon {
     margin-right: 4px;
   }
+
   .arco-tree-node-switcher:hover {
     background-color: inherit;
   }
@@ -56,20 +65,20 @@
 
 .data-type {
   height: 32px;
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--brand-color);
-  line-height: 32px;
   padding-left: 2px;
+  color: var(--brand-color);
+  font-size: 12px;
+  line-height: 32px;
 }
+
 .tree-title {
   height: 32px;
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--main-font-color);
-  line-height: 32px;
   padding-left: 2px;
+  color: var(--main-font-color);
+  font-size: 12px;
+  line-height: 32px;
 }
+
 .copy-icon {
   position: absolute;
   right: 0;
