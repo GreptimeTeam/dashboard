@@ -22,8 +22,12 @@
   --hover-bg-color: #a376ff;
   --button-font-color: #fcfdff;
   --th-bg-color: #f8f9fb;
-  --danger-bg-color: rgba(239, 60, 104, 0.1);
-  --danger-font-color: rgba(239, 60, 104, 1);
+  --success-color: rgba(36, 201, 128, 1);
+  --success-bg-color: rgba(233, 249, 242, 1);
+  --warning-color: rgba(232, 176, 14, 1);
+  --warning-bg-color: #fcf7e6;
+  --danger-color: rgba(239, 60, 104, 1);
+  --danger-bg-color: #fdebef;
 }
 
 html,
@@ -34,10 +38,31 @@ body {
   padding: 0;
   font-weight: 300;
   font-size: 12px;
-  font-family: Roboto, sans-serif !important;
+  font-family: Roboto, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'noto sans', sans-serif !important;
   background-color: var(--main-bg-color);
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
+}
+
+.arco-message {
+  padding: 10px 15px;
+  border: 1px solid;
+  border-radius: 4px;
+
+  .arco-message-content {
+    color: var(--main-font-color);
+    font-size: 14px;
+  }
+}
+
+.arco-message-success {
+  background-color: var(--success-bg-color);
+  border-color: var(--success-color);
+}
+
+.arco-message-error {
+  background-color: var(--danger-bg-color);
+  border-color: var(--danger-color);
 }
 
 .navbar-svg:hover {
@@ -209,10 +234,11 @@ body {
   padding-left: 8px;
   background: var(--th-bg-color);
   border-radius: 2px;
+
   .arco-select-view-inner .arco-select-view-tag {
-    border-radius: 2px;
     background: var(--grey-bg-color);
     border-color: transparent;
+    border-radius: 2px;
   }
 }
 
