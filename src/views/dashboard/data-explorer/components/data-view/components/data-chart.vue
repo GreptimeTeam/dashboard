@@ -44,10 +44,12 @@ a-spin(style="width: 100%")
           x: currentResult.value.dimensionsAndXName[1],
           y: item,
         },
+        symbolSize: 6,
       }
       if (chartType === 'line(smooth)') {
         oneSeries.type = 'line'
         oneSeries.smooth = true
+        oneSeries.symbolSize = 0
       }
       series.push(oneSeries)
       legendNames.push(item)
