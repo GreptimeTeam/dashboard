@@ -12,22 +12,22 @@
   },
   "line": {
     "itemStyle": {
-      "borderWidth": "2"
+      "borderWidth": "1"
     },
     "lineStyle": {
       "width": "2"
     },
-    "symbolSize": "6",
+    "symbolSize": "4",
     "symbol": "emptyCircle"
   },
   "radar": {
     "itemStyle": {
-      "borderWidth": "2"
+      "borderWidth": "1"
     },
     "lineStyle": {
       "width": "2"
     },
-    "symbolSize": "6",
+    "symbolSize": "4",
     "symbol": "emptyCircle",
     "smooth": true
   },
@@ -97,7 +97,7 @@
       "width": 1,
       "color": "#aaaaaa"
     },
-    "symbolSize": "6",
+    "symbolSize": "4",
     "symbol": "emptyCircle",
     "smooth": true,
     "color": ["#a376ff", "#7c90ff", "#f06185", "#ebbe3d", "#4ed298", "#79eeee", "#d0d2d3"],

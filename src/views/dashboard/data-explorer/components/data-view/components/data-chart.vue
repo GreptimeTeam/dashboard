@@ -44,7 +44,7 @@ a-spin(style="width: 100%")
           x: currentResult.value.dimensionsAndXName[1],
           y: item,
         },
-        symbolSize: 6,
+        symbolSize: 4,
       }
       if (chartType === 'line(smooth)') {
         oneSeries.type = 'line'

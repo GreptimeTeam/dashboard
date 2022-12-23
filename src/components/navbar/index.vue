@@ -7,7 +7,7 @@
       a-link(href="https://docs.greptime.com/" target="_blank") Docs
     li
       a-dropdown(trigger="hover" :popup-max-height="false")
-        img.pointer.navbar-svg(src="/src/assets/images/dropdown.svg" height="24")
+        img.pointer(src="/src/assets/images/dropdown.svg" height="24")
         template(#content)
           a-doption(v-for="{label, link} in dropDownLinks")
             a-link(:href="link" target="_blank" ) {{ label }}
@@ -78,5 +78,9 @@
       flex-wrap: wrap;
       justify-content: center;
     }
+  }
+
+  .arco-dropdown-open {
+    opacity: 0.4;
   }
 </style>
