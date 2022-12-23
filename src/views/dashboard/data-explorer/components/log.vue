@@ -1,5 +1,5 @@
 <template lang="pug">
-a-card
+a-card(:bordered="false")
   template(#title)
     img.card-icon(src="/src/assets/images/log-icon.png")
     span {{$t('dataExplorer.logs')}}

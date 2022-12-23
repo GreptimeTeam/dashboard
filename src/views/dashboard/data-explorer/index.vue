@@ -5,7 +5,7 @@
   a-space.layout-content(direction="vertical" fill :size="14")
     a-split.tree-split(default-size="260px" min="200px")
       template(#first)
-        a-card.tree-card
+        a-card(:bordered="false").tree-card
           template(#title)
             svg.card-icon
               use(href="#tree")

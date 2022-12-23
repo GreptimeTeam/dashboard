@@ -1,5 +1,5 @@
 <template lang="pug">
-a-card.editor-card
+a-card(:bordered="false").editor-card
   a-space.button-space
     a-button(@click="runSqlCommand()" type="primary")
       | {{$t('dataExplorer.runAll')}}
