@@ -14,7 +14,7 @@ specifiers:
   '@commitlint/cli': ^17.1.2
   '@commitlint/config-conventional': ^17.3.0
   '@prettier/plugin-pug': ^2.3.0
-  '@types/lodash': ^4.14.186
+  '@types/lodash': ^4.14.191
   '@types/mockjs': ^1.0.7
   '@types/node': ^18.11.10
   '@types/nprogress': ^0.2.0
@@ -112,7 +112,7 @@ devDependencies:
   '@commitlint/cli': 17.1.2
   '@commitlint/config-conventional': 17.3.0
   '@prettier/plugin-pug': 2.3.0_prettier@2.7.1
-  '@types/lodash': 4.14.186
+  '@types/lodash': 4.14.191
   '@types/mockjs': 1.0.7
   '@types/node': 18.11.10
   '@types/nprogress': 0.2.0
@@ -1093,8 +1093,8 @@ packages:
       '@types/node': 18.11.10
     dev: true
 
-  /@types/lodash/4.14.186:
-    resolution: {integrity: sha512-eHcVlLXP0c2FlMPm56ITode2AgLMSa6aJ05JTTbYbI+7EMkCEE5qk2E41d5g2lCVTqRe0GnnRFurmlCsDODrPw==}
+  /@types/lodash/4.14.191:
+    resolution: {integrity: sha512-BdZ5BCCvho3EIXw6wUCXHe7rS53AIDPLE+JzwgT+OsJk53oBfbSmZZ7CX4VaRoN78N+TJpFi9QPlfIVNmJYWxQ==}
     dev: true
 
   /@types/minimatch/5.1.2:
