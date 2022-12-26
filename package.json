@@ -67,7 +67,7 @@
     "@typescript-eslint/eslint-plugin": "^5.40.0",
     "@typescript-eslint/parser": "^5.46.1",
     "@vitejs/plugin-vue": "^3.1.2",
-    "@vitejs/plugin-vue-jsx": "^2.0.1",
+    "@vitejs/plugin-vue-jsx": "^2.1.1",
     "@volar/vue-language-plugin-pug": "^1.0.10",
     "@vue/babel-plugin-jsx": "^1.1.1",
     "cross-env": "^7.0.3",
