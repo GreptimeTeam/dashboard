@@ -5,7 +5,8 @@
   ul.right-side
     li
       a-dropdown(trigger="hover" position="br" :popup-max-height="false")
-        img.pointer(src="/src/assets/images/dropdown.svg" height="24")
+        svg.icon-24.pointer
+          use(href="#dropdown")
         template(#content)
           a-doption(v-for="{label, link} in dropDownLinks")
             a-link(:href="link" target="_blank" ) {{ label }}
