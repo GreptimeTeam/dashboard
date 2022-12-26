@@ -767,9 +767,9 @@
   version "0.0.29"
   resolved "https://registry.npmmirror.com/@types/json5/-/json5-0.0.29.tgz"
 
-"@types/lodash@^4.14.186":
-  version "4.14.186"
-  resolved "https://registry.npmmirror.com/@types/lodash/-/lodash-4.14.186.tgz"
+"@types/lodash@^4.14.191":
+  version "4.14.191"
+  resolved "https://registry.yarnpkg.com/@types/lodash/-/lodash-4.14.191.tgz#09511e7f7cba275acd8b419ddac8da9a6a79e2fa"
 
 "@types/minimatch@*":
   version "5.1.2"
