@@ -10,6 +10,10 @@
       "color": "#7c90ff"
     }
   },
+  "grid": {
+    "x": 100,
+    "x2": 100
+  },
   "line": {
     "itemStyle": {
       "borderWidth": "1"
@@ -165,7 +169,7 @@
     "splitLine": {
       "show": true,
       "lineStyle": {
-        "color": ["rgba(23,12,44,0.1)"]
+        "color": ["rgba(23,12,44,0.05)"]
       }
     },
     "splitArea": {
@@ -195,7 +199,7 @@
     "splitLine": {
       "show": true,
       "lineStyle": {
-        "color": ["rgba(23,12,44,0.1)"]
+        "color": ["rgba(23,12,44,0.05)"]
       }
     },
     "splitArea": {
@@ -225,7 +229,7 @@
     "splitLine": {
       "show": true,
       "lineStyle": {
-        "color": ["rgba(23,12,44,0.1)"]
+        "color": ["rgba(23,12,44,0.05)"]
       }
     },
     "splitArea": {
@@ -255,7 +259,7 @@
     "splitLine": {
       "show": true,
       "lineStyle": {
-        "color": ["rgba(23,12,44,0.1)"]
+        "color": ["rgba(23,12,44,0.05)"]
       }
     },
     "splitArea": {
