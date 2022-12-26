@@ -4,7 +4,7 @@ a-card(:bordered="false")
     img.card-icon(src="/src/assets/images/log-icon.png")
     span {{$t('dataExplorer.logs')}}
   template(#extra)  
-    a-button(v-if="logs.length" type="secondary" status="danger" @click="clearLogs") {{$t('dataExplorer.clear')}}
+    a-button.clear-logs-button(v-if="logs.length" type="secondary" status="danger" @click="clearLogs") {{$t('dataExplorer.clear')}}
   a-list(v-if="logs.length" :hoverable="true" size="small" :bordered="false" :split="false")
     a-list-item(v-for="item of logs" :key="item")
       a-tooltip(:content="item.error ? item.error : item.sql")
