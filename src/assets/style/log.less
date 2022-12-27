@@ -1,33 +1,43 @@
 .log-error {
-  background-color: var(--danger-bg-color);
-  padding: 3px 5px 3px 5px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  padding: 3px 5px;
   overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  background-color: var(--danger-bg-color);
   border-radius: 4px;
 }
+
+.clear-logs-button {
+  height: 28px !important;
+}
+
 .log-space {
   padding-left: 5px;
 }
+
 .arco-list {
+  margin-bottom: 30px;
   color: var(--small-font-color);
   font-size: 12px;
   border: 0;
-  margin-bottom: 30px;
 }
+
 .arco-list-item-main {
-  text-overflow: ellipsis;
-  white-space: nowrap;
   overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
+
 .arco-list-item {
+  align-items: center;
   height: 38px;
   padding: 0 15px 0 10px !important;
-  align-items: center;
 }
+
 .arco-list-item:nth-child(even) {
   background-color: inherit !important;
 }
+
 .arco-list-item:nth-child(odd) {
   background-color: var(--th-bg-color);
 }

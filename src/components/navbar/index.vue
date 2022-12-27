@@ -1,23 +1,18 @@
 <template lang="pug">
 .navbar
   .left-side
-    img(alt='logo', src='/src/assets/images/logo-text.webp', class="logo-text-img")
+    img.logo-text-img(alt='logo' src='/src/assets/images/logo-text.webp')
   ul.right-side
     li
-      a-link(href="https://docs.greptime.com/" target="_blank") Docs
-    li
-      a-dropdown(trigger="hover" :popup-max-height="false")
-        img.pointer.navbar-svg(src="/src/assets/images/dropdown.svg" height="24")
+      a-dropdown(trigger="hover" position="br" :popup-max-height="false")
+        svg.icon-24.pointer
+          use(href="#dropdown")
         template(#content)
           a-doption(v-for="{label, link} in dropDownLinks")
             a-link(:href="link" target="_blank" ) {{ label }}
 </template>
 
 <script lang="ts" setup>
-  import { useAppStore } from '@/store'
-
-  const appStore = useAppStore()
-
   const socialLinks = [
     {
       icon: 'github',
@@ -27,12 +22,20 @@
 
   const dropDownLinks = [
     {
+      link: 'https://greptime.com/',
+      label: 'Home',
+    },
+    {
+      link: 'https://docs.greptime.com/',
+      label: 'Docs',
+    },
+    {
       link: 'https://github.com/GreptimeTeam/dashboard',
-      label: 'GitHub | dashboard',
+      label: 'GitHub | Dashboard',
     },
     {
       link: 'https://github.com/GreptimeTeam/greptimedb',
-      label: 'GitHub | greptimedb',
+      label: 'GitHub | GreptimeDB',
     },
   ]
 </script>
@@ -78,5 +81,9 @@
       flex-wrap: wrap;
       justify-content: center;
     }
+  }
+
+  .arco-dropdown-open {
+    opacity: 0.4;
   }
 </style>

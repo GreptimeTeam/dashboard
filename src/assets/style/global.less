@@ -12,15 +12,17 @@
   --main-bg-color: #f9f8fd;
   --navbar-bg-color: linear-gradient(270deg, #1d0e38 0%, #2a115a 100%);
   --brand-color: #8322ff;
+  --hover-bg-color: #a376ff;
   --bg-brand-color: rgba(131, 34, 255, 0.05);
   --card-bg-color: rgba(255, 255, 255, 1);
   --tooltip-font-color: rgba(255, 255, 255, 0.8);
   --main-font-color: rgba(23, 12, 44, 1);
   --small-font-color: rgba(23, 12, 44, 0.8);
+  --font-color-40: rgba(23, 12, 44, 0.4);
   --grey-bg-color: rgba(23, 12, 44, 0.06);
+  --font-color-7: rgba(23, 12, 44, 0.07);
   --option-font-color: #1d2129;
   --grey-font-color: #53565a;
-  --hover-bg-color: #a376ff;
   --button-font-color: #fcfdff;
   --th-bg-color: #f8f9fb;
   --success-color: rgba(36, 201, 128, 1);
@@ -30,6 +32,7 @@
   --danger-color: rgba(239, 60, 104, 1);
   --danger-bg-color: #fdebef;
   --editor-active-line-color: rgba(252, 253, 255, 0.14);
+  --box-shadow-color: rgba(0, 0, 0, 0.15);
 }
 
 html,
@@ -39,7 +42,7 @@ body {
   height: 100%;
   margin: 0;
   padding: 0;
-  font-weight: 300;
+  font-weight: 400;
   font-size: 12px;
   font-family: Roboto, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'noto sans', sans-serif !important;
   background-color: var(--main-bg-color);
@@ -75,14 +78,11 @@ body {
   background-color: var(--main-font-color);
 }
 
-.navbar-svg:hover {
-  opacity: 0.4;
-}
-
 .arco-dropdown {
   padding: 0;
+  border: 0;
   border-radius: 2px;
-  box-shadow: 0 4px 10px 0 rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 10px 0 var(--box-shadow-color);
 
   .arco-dropdown-option {
     padding: 0;
@@ -93,12 +93,16 @@ body {
   }
 
   .arco-dropdown-option-content {
+    width: 100%;
     height: 32px;
     line-height: 32px;
   }
 
   .arco-link {
-    padding: 2px 15px;
+    justify-content: flex-start;
+    width: 100%;
+    height: 100%;
+    padding: 0 15px;
     color: var(--small-font-color);
     font-size: 12px;
   }
@@ -149,6 +153,11 @@ body {
   height: 14px;
 }
 
+.icon-24 {
+  width: 24px;
+  height: 24px;
+}
+
 .card-icon {
   width: 12px;
   height: 12px;
@@ -160,6 +169,10 @@ body {
 }
 
 .arco-select-dropdown {
+  border: 0;
+  border-radius: 2px;
+  box-shadow: 0 4px 10px 0 var(--box-shadow-color);
+
   .arco-select-option {
     padding: 0 8px;
     color: var(--option-font-color);
@@ -198,74 +211,6 @@ body {
   }
 }
 
-.form {
-  align-items: center;
-  margin-left: 15px;
-}
-
-.arco-form-layout-inline .arco-form-item {
-  margin-right: 24px;
-  margin-bottom: 0;
-}
-
-.arco-form-item-label-col > .arco-form-item-label {
-  color: var(--main-font-color);
-  font-size: 12px;
-  opacity: 0.6;
-}
-
-.arco-form-item-content {
-  height: 32px;
-}
-
-.arco-select-view-single {
-  width: 180px !important;
-  padding-right: 8px;
-  padding-left: 8px;
-  background: var(--th-bg-color) !important;
-  border-radius: 2px;
-
-  .arco-select-view-value {
-    font-size: 11px !important;
-  }
-}
-
-.arco-select-view-focus {
-  border-color: var(--hover-bg-color) !important;
-}
-
-.arco-select-view-single:hover {
-  background-color: var(--th-bg-color);
-}
-
-.arco-select-view-multiple {
-  width: 260px !important;
-  padding-right: 8px;
-  padding-left: 8px;
-  background: var(--th-bg-color);
-  border-radius: 2px;
-
-  .arco-select-view-inner .arco-select-view-tag {
-    background: var(--grey-bg-color);
-    border-color: transparent;
-    border-radius: 2px;
-  }
-}
-
-.arco-select-view-size-medium {
-  color: var(--small-font-color) !important;
-  font-size: 11px !important;
-}
-
-.arco-select-view-multiple:hover {
-  background-color: var(--th-bg-color);
-}
-
-.arco-tag {
-  font-weight: 300;
-  font-size: 11px !important;
-}
-
 :focus {
   outline: none;
 }
@@ -279,19 +224,19 @@ body {
   font-weight: 300;
   font-family: Roboto;
   font-style: normal;
-  src: local('Roboto'), url('../fonts/Roboto-Light.ttf');
+  src: local('Roboto'), url('../fonts/Roboto-Light.woff2');
 }
 
 @font-face {
   font-weight: 400;
   font-family: Roboto;
   font-style: normal;
-  src: local('Roboto'), url('../fonts/Roboto-Light.ttf');
+  src: local('Roboto'), url('../fonts/Roboto-Light.woff2');
 }
 
 @font-face {
   font-weight: 500;
   font-family: Roboto;
   font-style: normal;
-  src: local('Roboto'), url('../fonts/Roboto-Medium.ttf');
+  src: local('Roboto'), url('../fonts/Roboto-Medium.woff2');
 }

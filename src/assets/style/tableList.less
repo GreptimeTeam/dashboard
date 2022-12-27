@@ -1,27 +1,28 @@
 .tree-card {
   height: 296px;
-  padding-left: 15px;
 
   & > .arco-card-header {
     height: 42px !important;
-    padding: 0 !important;
-    padding-right: 15px !important;
     line-height: 42px !important;
   }
 }
 
 .tree-scrollbar {
   height: 252px;
-  padding-right: 15px;
   overflow: auto;
 }
 
 .table-tree {
   & > .arco-tree-node {
     height: 32px;
-    padding: 0;
+    padding-right: 15px;
+    padding-left: 15px;
     line-height: 32px;
     cursor: auto;
+  }
+
+  & > .arco-tree-node:hover {
+    background-color: var(--bg-brand-color);
   }
 
   .arco-tree-node-switcher {
@@ -57,10 +58,6 @@
   .arco-tree-node-custom-icon {
     margin-right: 4px;
   }
-
-  .arco-tree-node-switcher:hover {
-    background-color: inherit;
-  }
 }
 
 .data-type {
@@ -81,5 +78,5 @@
 
 .copy-icon {
   position: absolute;
-  right: 0;
+  right: 15px;
 }
