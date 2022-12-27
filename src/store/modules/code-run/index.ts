@@ -1,4 +1,4 @@
-import { getSqlResult } from '@/api/editor'
+import { getSqlResult, postScripts } from '@/api/editor'
 import { Message } from '@arco-design/web-vue'
 import { defineStore } from 'pinia'
 import { dateTypes } from '@/views/dashboard/data-explorer/components/data-view/config'
@@ -81,6 +81,28 @@ const useCodeRunStore = defineStore('codeRun', {
       }
     },
 
+    async fetchPythonResult(name: string, code: any) {
+      const { pushLog } = useLogStore()
+      try {
+        const res: any = await postScripts(name, code)
+
+        Message.success({
+          content: 'success',
+        })
+        const resultInLog: any = []
+
+        pushLog({
+          code,
+          ...res,
+          result: resultInLog,
+        })
+      } catch (error: any) {
+        pushLog({
+          code,
+          ...error,
+        })
+      }
+    },
     setActiveTabKey(key: number) {
       this.activeTabKey = key
     },
