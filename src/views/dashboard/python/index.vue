@@ -12,31 +12,31 @@ a-space.layout-content(direction="vertical" fill :size="14")
             use(href="#refresh")
         TableList     
     template(#second) 
-      Editor 
+      PyEditor
   DataView(v-if="!!results.length")
   Log 
 </template>
 
-<script lang="ts" name="DataExplorer" setup>
+<script lang="ts" name="PythonScripts" setup>
   const { fetchDataBaseTables: refreshTableData } = useDataBaseStore()
   const { results } = storeToRefs(useCodeRunStore())
 </script>
 
 <style lang="less" scoped>
+  .layout-container {
+    display: flex;
+    width: 100%;
+    flex: 1;
+    flex-direction: column;
+  }
+  .layout-navbar {
+    height: 52px;
+  }
   .layout-content {
     padding: 20px 30px 30px 30px;
   }
   .tree-split {
     height: 296px;
-  }
-  .left-side {
-    flex: 1;
-    overflow: auto;
-  }
-
-  .right-side {
-    width: 280px;
-    margin-left: 16px;
   }
 </style>
 

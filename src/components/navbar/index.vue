@@ -2,6 +2,12 @@
 .navbar
   .left-side
     img.logo-text-img(alt='logo' src='/src/assets/images/logo-text.webp')
+  .menu
+    a-menu(mode="horizontal" v-model="menuSelectedKey" :default-selected-keys="defaultMenuKey" @menu-item-click="menuClick")
+      a-menu-item(key="sql")
+        |SQL 
+      a-menu-item(key="python")
+        |Python
   ul.right-side
     li
       a-dropdown(trigger="hover" position="br" :popup-max-height="false")
@@ -13,12 +19,10 @@
 </template>
 
 <script lang="ts" setup>
-  const socialLinks = [
-    {
-      icon: 'github',
-      link: 'https://github.com/GreptimeTeam/dashboard',
-    },
-  ]
+  import router from '@/router'
+
+  const menuSelectedKey = router.currentRoute.value.name
+  const defaultMenuKey = [router.currentRoute.value.name]
 
   const dropDownLinks = [
     {
@@ -38,6 +42,10 @@
       label: 'GitHub | GreptimeDB',
     },
   ]
+
+  const menuClick = (key: string) => {
+    router.push({ name: key })
+  }
 </script>
 
 <style scoped lang="less">
@@ -56,6 +64,10 @@
     .logo-text-img {
       height: 100%;
     }
+  }
+
+  .menu {
+    width: 300px;
   }
 
   .right-side {

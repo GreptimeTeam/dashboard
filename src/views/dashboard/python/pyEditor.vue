@@ -1,22 +1,21 @@
 <template lang="pug">
 a-card(:bordered="false").editor-card
-  a-space.button-space
-    a-button(@click="runSqlCommand()" type="primary")
-      | {{$t('dataExplorer.runAll')}}
-    a(@click="runPartSqlCommand()")
-      a-button(v-if="lineStart === lineEnd")
-        | {{$t('dataExplorer.runLine')}} {{ lineStart }}
-      a-button(v-else)
-        | {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
-  CodeMirror(v-model="sqlCode" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
+  a-form.form(:model="scriptForm" layout="inline")
+    a-form-item(label="scriptName" )
+      a-input(v-model:model-value="scriptForm.scriptName" placeholder="Please Input...") 
+    a-space
+      a-button(@click="saveScript()") Save Script
+      a-button(@click="saveScriptAndRun()") Save and Run
+  CodeMirror(v-model="pythonCode" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
 
 <script lang="ts" setup>
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
   import { EditorView } from '@codemirror/view'
-  import { sql } from '@codemirror/lang-sql'
-  import useDataExplorer from '@/hooks/data-explorer'
+  import { python } from '@codemirror/lang-python'
+  import usePythonCode from '@/hooks/python-code'
+  import { useCodeRunStore } from '@/store'
 
   export interface Props {
     spellcheck?: boolean
@@ -36,11 +35,14 @@ a-card(:bordered="false").editor-card
   const selectedCode = ref()
   const view = shallowRef()
 
-  const dataExplorer = useDataExplorer()
+  const scriptForm = ref({
+    scriptName: '',
+  })
+
   const dataBaseStore = useDataBaseStore()
   const codeRunStore = useCodeRunStore()
-  const { sqlCode, cursorAt } = dataExplorer
-  const { fetchSQLResult } = codeRunStore
+  const { pythonCode, cursorAt } = usePythonCode()
+  const { insertScript } = codeRunStore
 
   const handleReady = (payload: any) => {
     view.value = payload.view
@@ -58,20 +60,17 @@ a-card(:bordered="false").editor-card
 
   const refreshTableData = dataBaseStore.fetchDataBaseTables
 
+  // extensions: Passed to CodeMirror EditorState.create({ extensions })
   const style = {
     height: '244px',
   }
 
-  const extensions = [sql(), oneDark]
+  const extensions = [python(), oneDark]
 
-  // todo: combine next 2 functions
-  const runSqlCommand = () => {
-    // todo: add better format tool for code
-    fetchSQLResult(sqlCode.value.trim().replace(/\n/gi, ' '))
-    // todo: refresh tables data and when
+  const saveScript = () => {
+    insertScript(scriptForm.value.scriptName, pythonCode.value.trim())
   }
-
-  const runPartSqlCommand = () => {
-    fetchSQLResult(selectedCode.value.trim())
+  const saveScriptAndRun = () => {
+    insertScript(scriptForm.value.scriptName, pythonCode.value.trim())
   }
 </script>

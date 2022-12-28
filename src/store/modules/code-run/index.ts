@@ -81,7 +81,7 @@ const useCodeRunStore = defineStore('codeRun', {
       }
     },
 
-    async fetchPythonResult(name: string, code: any) {
+    async insertScript(name: string, code: any) {
       const { pushLog } = useLogStore()
       try {
         const res: any = await postScripts(name, code)

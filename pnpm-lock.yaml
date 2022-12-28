@@ -8,6 +8,7 @@ overrides:
 specifiers:
   '@arco-design/web-vue': ^2.37.4
   '@babel/core': ^7.20.5
+  '@codemirror/lang-python': ^6.1.0
   '@codemirror/lang-sql': ^6.3.1
   '@codemirror/theme-one-dark': ^6.1.0
   '@codemirror/view': ^6.4.0
@@ -82,6 +83,7 @@ specifiers:
 dependencies:
   '@arco-design/web-vue': 2.37.4_vue@3.2.45
   '@babel/core': 7.20.5
+  '@codemirror/lang-python': 6.1.0_@codemirror+view@6.4.0
   '@codemirror/lang-sql': 6.3.1_@codemirror+view@6.4.0
   '@codemirror/theme-one-dark': 6.1.0
   '@codemirror/view': 6.4.0
@@ -571,6 +573,17 @@ packages:
       '@lezer/common': 1.0.1
     dev: false
 
+  /@codemirror/autocomplete/6.4.0_@codemirror+view@6.4.0:
+    resolution: {integrity: sha512-HLF2PnZAm1s4kGs30EiqKMgD7XsYaQ0XJnMR0rofEWQ5t5D60SfqpDIkIh1ze5tiEbyUWm8+VJ6W1/erVvBMIA==}
+    peerDependencies:
+      '@codemirror/view': ^6.0.0
+    dependencies:
+      '@codemirror/language': 6.2.1
+      '@codemirror/state': 6.1.2
+      '@codemirror/view': 6.4.0
+      '@lezer/common': 1.0.1
+    dev: false
+
   /@codemirror/commands/6.1.2:
     resolution: {integrity: sha512-sO3jdX1s0pam6lIdeSJLMN3DQ6mPEbM4yLvyKkdqtmd/UDwhXA5+AwFJ89rRXm6vTeOXBsE5cAmlos/t7MJdgg==}
     dependencies:
@@ -578,6 +591,16 @@ packages:
       '@codemirror/state': 6.1.2
       '@codemirror/view': 6.4.0
       '@lezer/common': 1.0.1
+    dev: false
+
+  /@codemirror/lang-python/6.1.0_@codemirror+view@6.4.0:
+    resolution: {integrity: sha512-a/JhyPYn5qz5T8WtAfZCuAZcfClgNVb7UZzdLr76bWUeG7Usd3Un5o8UQOkZ/5Xw+EM5YGHHG+T6ickMYkDcRQ==}
+    dependencies:
+      '@codemirror/autocomplete': 6.4.0_@codemirror+view@6.4.0
+      '@codemirror/language': 6.2.1
+      '@lezer/python': 1.1.1
+    transitivePeerDependencies:
+      - '@codemirror/view'
     dev: false
 
   /@codemirror/lang-sql/6.3.1_@codemirror+view@6.4.0:
@@ -974,6 +997,13 @@ packages:
     resolution: {integrity: sha512-qpB7rBzH8f6Mzjv2AVZRahcm+2Cf7nbIH++uXbvVOL1yIRvVWQ3HAM/saeBLCyz/togB7LGo76qdJYL1uKQlqA==}
     dependencies:
       '@lezer/common': 1.0.1
+    dev: false
+
+  /@lezer/python/1.1.1:
+    resolution: {integrity: sha512-ArUGh9kvdaOVu6IkSaYUS9WFQeMAFVWKRuZo6vexnxoeCLnxf0Y9DCFEAMMa7W9SQBGYE55OarSpPqSkdOXSCA==}
+    dependencies:
+      '@lezer/highlight': 1.1.2
+      '@lezer/lr': 1.2.3
     dev: false
 
   /@nodelib/fs.scandir/2.1.5:
