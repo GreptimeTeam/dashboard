@@ -27,9 +27,6 @@ a-tabs(position="left" lazy-load default-active-key="2")
 
 <script lang="ts" name="ListTabs" setup>
   import ScriptsList from './scripts-list.vue'
-
-  const { fetchScripts } = useDataBaseStore()
-  onMounted(() => fetchScripts())
 </script>
 
 <style lang="less" scoped>

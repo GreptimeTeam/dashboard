@@ -67,7 +67,7 @@
   }
 
   .menu {
-    width: 300px;
+    width: 220px;
   }
 
   .right-side {

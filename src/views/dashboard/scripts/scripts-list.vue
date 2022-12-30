@@ -1,15 +1,6 @@
 <template lang="pug">
 a-scrollbar.tree-scrollbar
-  a-tree.table-tree(:data="tableList" size="small")
-    template(#title)
-    template(#extra="nodeData")
-      span.tree-title
-        | {{ nodeData.title }}
-      span.data-type
-        | {{ nodeData.dataType }}
-      a-tooltip(:content="$t('dataExplorer.insertName')" mini)
-        svg.icon.copy-icon.pointer(name="copy" @click="insertNameToCode(nodeData.title)")
-          use(href="#copy")
+  a-tree.script-tree(:data="scriptsList" size="small" @select="onSelect" blockNode v-model:selected-keys="scriptSelectedKeys")
 </template>
 
 <script lang="ts" name="ScriptsList" setup>
@@ -21,12 +12,16 @@ a-scrollbar.tree-scrollbar
   const dataExplorer = useDataExplorer()
 
   const { insertNameToCode } = dataExplorer
+  const { fetchScriptsTable } = dataBaseStore
+  const { scriptsList } = storeToRefs(dataBaseStore)
 
+  const scriptSelectedKeys = ref([])
   const initTableDataSet = () => {
     dataBaseStore.fetchDataBaseTables()
   }
-  const { fetchOneTable } = dataBaseStore
-  const { tableList, ifTableLoading, tableKey } = storeToRefs(dataBaseStore)
 
-  initTableDataSet()
+  const onSelect = (newSelectedKeys: [], event: any) => {
+    console.log('select: ', newSelectedKeys, event)
+  }
+  fetchScriptsTable()
 </script>
