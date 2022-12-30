@@ -1,25 +1,19 @@
 <template lang="pug">
 a-space.layout-content(direction="vertical" fill :size="14")
-  a-split.tree-split(default-size="260px" min="200px")
+  a-split.scripts-split(default-size="260px" min="200px")
     template(#first)
-      a-card(:bordered="false").tree-card
-        template(#title)
-          svg.card-icon
-            use(href="#tree")
-          span {{$t('dataExplorer.tableTree')}}
-        template(#extra)
-          svg.icon.pointer(@click="refreshTableData")
-            use(href="#refresh")
-        TableList     
+      ListTabs
     template(#second) 
       PyEditor
-  DataView(v-if="!!results.length")
+  DataView(v-if="!!scriptsResults.length")
   Log 
 </template>
 
-<script lang="ts" name="PythonScripts" setup>
+<script lang="ts" name="Scripts" setup>
+  import ListTabs from './list-tabs.vue'
+
   const { fetchDataBaseTables: refreshTableData } = useDataBaseStore()
-  const { results } = storeToRefs(useCodeRunStore())
+  const { scriptsResults } = storeToRefs(useCodeRunStore())
 </script>
 
 <style lang="less" scoped>
@@ -34,9 +28,6 @@ a-space.layout-content(direction="vertical" fill :size="14")
   }
   .layout-content {
     padding: 20px 30px 30px 30px;
-  }
-  .tree-split {
-    height: 296px;
   }
 </style>
 

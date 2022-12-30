@@ -6,8 +6,8 @@
     a-menu(mode="horizontal" v-model="menuSelectedKey" :default-selected-keys="defaultMenuKey" @menu-item-click="menuClick")
       a-menu-item(key="sql")
         |SQL 
-      a-menu-item(key="python")
-        |Python
+      a-menu-item(key="scripts")
+        |Scripts
   ul.right-side
     li
       a-dropdown(trigger="hover" position="br" :popup-max-height="false")

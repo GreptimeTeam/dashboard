@@ -21,9 +21,12 @@ a-card(:bordered="false")
           div {{ $t('dataExplorer.code', {sql: item.sql}) }}
 </template>
 
-<script lang="ts" setup>
+<script lang="ts" name="Log" setup>
+  import router from '@/router'
   import { storeToRefs } from 'pinia'
 
-  const { logs } = storeToRefs(useLogStore())
-  const { clearLogs } = useLogStore()
+  const { logs: sqlLogs, scriptLogs } = storeToRefs(useLogStore())
+  const { name } = router.currentRoute.value
+  const logs = reactive(name === 'sql' ? sqlLogs.value : scriptLogs.value)
+  const { clearLogs, clearScriptLogs } = useLogStore()
 </script>

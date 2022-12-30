@@ -2,7 +2,7 @@ import localeDataExplorer from '@/views/dashboard/data-explorer/locale/en-US'
 
 export default {
   'menu.dashboard': 'Dashboard',
-  'menu.dashboard.python': 'python',
+  'menu.dashboard.scripts': 'Scripts',
   'menu.server.dashboard': 'Dashboard-Server',
   'menu.server.workplace': 'Workplace-Server',
   'menu.server.monitor': 'Monitor-Server',

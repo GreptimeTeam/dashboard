@@ -9,7 +9,7 @@ a-card(:bordered="false").editor-card
   CodeMirror(v-model="pythonCode" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
 
-<script lang="ts" setup>
+<script lang="ts" name="PyEditor" setup>
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
   import { EditorView } from '@codemirror/view'

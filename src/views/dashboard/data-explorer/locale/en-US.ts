@@ -1,5 +1,6 @@
 export default {
   'dataExplorer.tableTree': 'TABLES',
+  'dataExplorer.scripts': 'SCRIPTS',
   'dataExplorer.insertName': 'Insert name into editor',
   'dataExplorer.logs': 'Logs',
   'dataExplorer.table': 'Table',

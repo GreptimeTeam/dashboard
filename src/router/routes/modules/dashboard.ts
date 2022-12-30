@@ -26,11 +26,11 @@ const DASHBOARD: AppRouteRecordRaw = {
       },
     },
     {
-      path: 'python',
-      name: 'python',
-      component: () => import('@/views/dashboard/python/index.vue'),
+      path: 'scripts',
+      name: 'scripts',
+      component: () => import('@/views/dashboard/scripts/index.vue'),
       meta: {
-        locale: 'menu.dashboard.python',
+        locale: 'menu.dashboard.scripts',
         requiresAuth: false,
         roles: ['*'],
       },

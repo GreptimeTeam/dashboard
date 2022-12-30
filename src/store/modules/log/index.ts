@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 const useLogStore = defineStore('log', {
   state: () => ({
     logs: <any>[],
+    scriptLogs: <any>[],
   }),
 
   getters: {},
@@ -12,7 +13,13 @@ const useLogStore = defineStore('log', {
       this.logs.push(log)
     },
     clearLogs() {
-      this.$reset()
+      this.logs = []
+    },
+    pushScriptLog(log: any) {
+      this.scriptLogs.push(log)
+    },
+    clearScriptLogs() {
+      this.scriptLogs = []
     },
   },
 })
