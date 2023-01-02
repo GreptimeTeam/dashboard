@@ -27,9 +27,9 @@
   dependencies:
     color "^3.1.3"
 
-"@arco-design/web-vue@^2.37.4":
-  version "2.37.4"
-  resolved "https://registry.npmmirror.com/@arco-design/web-vue/-/web-vue-2.37.4.tgz"
+"@arco-design/web-vue@^2.41.0":
+  version "2.41.0"
+  resolved "https://registry.yarnpkg.com/@arco-design/web-vue/-/web-vue-2.41.0.tgz#6ccaf6a76a115019b58b6a2042ee0727cf12ce3e"
   dependencies:
     "@arco-design/color" "^0.4.0"
     b-tween "^0.3.3"
@@ -4202,12 +4202,6 @@ minimatch@^3.0.5, minimatch@^3.1.1, minimatch@^3.1.2:
   resolved "https://registry.npmmirror.com/minimatch/-/minimatch-3.1.2.tgz"
   dependencies:
     brace-expansion "^1.1.7"
-
-minimatch@^5.1.0, minimatch@^5.1.1:
-  version "5.1.2"
-  resolved "https://registry.yarnpkg.com/minimatch/-/minimatch-5.1.2.tgz#0939d7d6f0898acbd1508abe534d1929368a8fff"
-  dependencies:
-    brace-expansion "^2.0.1"
 
 minimatch@^5.1.1:
   version "5.1.2"
