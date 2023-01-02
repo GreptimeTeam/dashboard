@@ -983,12 +983,11 @@
     "@vue/reactivity" "^3.2.45"
     muggle-string "^0.1.0"
 
-"@volar/language-core@1.0.17":
-  version "1.0.17"
-  resolved "https://registry.yarnpkg.com/@volar/language-core/-/language-core-1.0.17.tgz#3cf45b039a825e9e03a385e8485e1136ed6e1dd3"
+"@volar/language-core@1.0.19":
+  version "1.0.19"
+  resolved "https://registry.yarnpkg.com/@volar/language-core/-/language-core-1.0.19.tgz#787de46fd7de64c50c8500d799905e9da8d1ce36"
   dependencies:
-    "@volar/source-map" "1.0.17"
-    "@vue/reactivity" "^3.2.45"
+    "@volar/source-map" "1.0.19"
     muggle-string "^0.1.0"
 
 "@volar/language-service@1.0.13":
@@ -1034,9 +1033,9 @@
   dependencies:
     muggle-string "^0.1.0"
 
-"@volar/source-map@1.0.17":
-  version "1.0.17"
-  resolved "https://registry.yarnpkg.com/@volar/source-map/-/source-map-1.0.17.tgz#5d38d218270a1942e4373bfb4f97e2ce100f5aca"
+"@volar/source-map@1.0.19":
+  version "1.0.19"
+  resolved "https://registry.yarnpkg.com/@volar/source-map/-/source-map-1.0.19.tgz#6939a2e47ff99166af653ab92fb8dfafba170279"
   dependencies:
     muggle-string "^0.1.0"
 
@@ -1053,18 +1052,18 @@
   dependencies:
     semver "^7.3.8"
 
-"@volar/typescript@1.0.17":
-  version "1.0.17"
-  resolved "https://registry.yarnpkg.com/@volar/typescript/-/typescript-1.0.17.tgz#d9ce779c6d48ee94da88218066f0ca84d0fb4192"
+"@volar/typescript@1.0.19":
+  version "1.0.19"
+  resolved "https://registry.yarnpkg.com/@volar/typescript/-/typescript-1.0.19.tgz#e2dd5b9868c6233df5dafcf514d76f095c6c0233"
   dependencies:
-    "@volar/language-core" "1.0.17"
+    "@volar/language-core" "1.0.19"
 
-"@volar/vue-language-core@1.0.17":
-  version "1.0.17"
-  resolved "https://registry.yarnpkg.com/@volar/vue-language-core/-/vue-language-core-1.0.17.tgz#ed3d47c08e3a0b600689d27cb7d87739c465ac05"
+"@volar/vue-language-core@1.0.19":
+  version "1.0.19"
+  resolved "https://registry.yarnpkg.com/@volar/vue-language-core/-/vue-language-core-1.0.19.tgz#351f3cf08c1039259d422eabaa49d22fcc5bbaa3"
   dependencies:
-    "@volar/language-core" "1.0.17"
-    "@volar/source-map" "1.0.17"
+    "@volar/language-core" "1.0.19"
+    "@volar/source-map" "1.0.19"
     "@vue/compiler-dom" "^3.2.45"
     "@vue/compiler-sfc" "^3.2.45"
     "@vue/reactivity" "^3.2.45"
@@ -1079,12 +1078,12 @@
     "@volar/pug-language-service" "1.0.13"
     "@volar/source-map" "1.0.13"
 
-"@volar/vue-typescript@1.0.17":
-  version "1.0.17"
-  resolved "https://registry.yarnpkg.com/@volar/vue-typescript/-/vue-typescript-1.0.17.tgz#d67947ea8c30bd6a842502064647e2a53fad520c"
+"@volar/vue-typescript@1.0.19":
+  version "1.0.19"
+  resolved "https://registry.yarnpkg.com/@volar/vue-typescript/-/vue-typescript-1.0.19.tgz#bd1dc58bf9aecb760a9052fbc34f9e6e6ad6a406"
   dependencies:
-    "@volar/typescript" "1.0.17"
-    "@volar/vue-language-core" "1.0.17"
+    "@volar/typescript" "1.0.19"
+    "@volar/vue-language-core" "1.0.19"
 
 "@vscode/l10n@^0.0.10":
   version "0.0.10"
@@ -4203,12 +4202,6 @@ minimatch@^3.0.5, minimatch@^3.1.1, minimatch@^3.1.2:
   dependencies:
     brace-expansion "^1.1.7"
 
-minimatch@^5.1.0, minimatch@^5.1.1:
-  version "5.1.2"
-  resolved "https://registry.yarnpkg.com/minimatch/-/minimatch-5.1.2.tgz#0939d7d6f0898acbd1508abe534d1929368a8fff"
-  dependencies:
-    brace-expansion "^2.0.1"
-
 minimatch@^5.1.1:
   version "5.1.2"
   resolved "https://registry.yarnpkg.com/minimatch/-/minimatch-5.1.2.tgz#0939d7d6f0898acbd1508abe534d1929368a8fff"
@@ -6211,12 +6204,12 @@ vue-template-compiler@^2.7.14:
     de-indent "^1.0.2"
     he "^1.2.0"
 
-vue-tsc@^1.0.17:
-  version "1.0.17"
-  resolved "https://registry.yarnpkg.com/vue-tsc/-/vue-tsc-1.0.17.tgz#006e2806edfe6c01c60947ea7be4b7ae0c16a867"
+vue-tsc@^1.0.19:
+  version "1.0.19"
+  resolved "https://registry.yarnpkg.com/vue-tsc/-/vue-tsc-1.0.19.tgz#dffbcb8abb6675626719bba438caf954d7615e58"
   dependencies:
-    "@volar/vue-language-core" "1.0.17"
-    "@volar/vue-typescript" "1.0.17"
+    "@volar/vue-language-core" "1.0.19"
+    "@volar/vue-typescript" "1.0.19"
 
 vue@^3.2.45:
   version "3.2.45"
