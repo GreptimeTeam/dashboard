@@ -1,5 +1,8 @@
 const pythonCode = ref('')
 const cursorAt = ref<Array<number>>([])
+const scriptName = ref('')
+const ifNewScript = ref(<boolean>true)
+
 // TODO: compare sqlResult's code and current code
 const { currentResult } = storeToRefs(useCodeRunStore())
 
@@ -13,8 +16,10 @@ export default function useDataExplorer() {
       pythonCode.value.substring(0, cursorAt.value[0]) + name + pythonCode.value.substring(cursorAt.value[1])
   }
 
-  const overwriteCode = (code: any) => {
-    pythonCode.value = code
+  const overwriteCode = (script: any) => {
+    scriptName.value = script.key
+    ifNewScript.value = false
+    pythonCode.value = script.code
   }
   // TODO: save code temp to local storage
 
@@ -24,5 +29,7 @@ export default function useDataExplorer() {
     overwriteCode,
     pythonCode,
     cursorAt,
+    scriptName,
+    ifNewScript,
   }
 }

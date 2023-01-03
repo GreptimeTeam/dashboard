@@ -29,6 +29,7 @@ const useCodeRunStore = defineStore('codeRun', {
     titleIndex: <number>-1,
     results: <any>[],
     activeTabKey: <number>0,
+    scriptResults: <any>[],
   }),
 
   getters: {
@@ -103,6 +104,7 @@ const useCodeRunStore = defineStore('codeRun', {
         })
       }
     },
+
     setActiveTabKey(key: number) {
       this.activeTabKey = key
     },
