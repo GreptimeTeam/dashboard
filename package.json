@@ -27,7 +27,7 @@
     ]
   },
   "dependencies": {
-    "@arco-design/web-vue": "^2.37.4",
+    "@arco-design/web-vue": "^2.41.0",
     "@babel/core": "^7.20.5",
     "@codemirror/lang-sql": "^6.3.1",
     "@codemirror/theme-one-dark": "^6.1.0",
