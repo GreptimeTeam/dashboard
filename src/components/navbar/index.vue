@@ -98,4 +98,16 @@
   .arco-dropdown-open {
     opacity: 0.4;
   }
+
+  .arco-menu-light {
+    background-color: transparent;
+    .arco-menu-item {
+      background-color: transparent;
+      color: var(--card-bg-color);
+      user-select: none;
+      &.arco-menu-selected:hover {
+        background-color: transparent;
+      }
+    }
+  }
 </style>
