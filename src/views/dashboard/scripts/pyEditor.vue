@@ -4,7 +4,7 @@ a-card(:bordered="false").editor-card
     a-form-item(label="scriptName" )
       a-input(v-model:model-value="scriptForm.scriptName" placeholder="Please Input..." v-bind:disabled="!ifNewScript") 
     a-space
-      a-button(@click="saveScript()") Save Script
+      a-button(@click="saveCurrentScript()") Save Script
       a-button(@click="saveScriptAndRun()") Save and Run
   CodeMirror(v-model="pythonCode" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
@@ -32,7 +32,7 @@ a-card(:bordered="false").editor-card
 
   const dataBaseStore = useDataBaseStore()
   const { pythonCode, cursorAt, ifNewScript, scriptName } = usePythonCode()
-  const { insertScript } = useCodeRunStore()
+  const { saveScript, runScript } = useCodeRunStore()
   const { fetchScriptsTable } = dataBaseStore
 
   const lineStart = ref()
@@ -67,12 +67,13 @@ a-card(:bordered="false").editor-card
 
   const extensions = [python(), oneDark]
 
-  const saveScript = async () => {
-    await insertScript(scriptForm.value.scriptName, pythonCode.value.trim())
+  const saveCurrentScript = async () => {
+    await saveScript(scriptForm.value.scriptName, pythonCode.value.trim())
     fetchScriptsTable()
   }
   const saveScriptAndRun = async () => {
-    await insertScript(scriptForm.value.scriptName, pythonCode.value.trim())
+    await saveScript(scriptForm.value.scriptName, pythonCode.value.trim())
+    runScript(scriptForm.value.scriptName)
     fetchScriptsTable()
   }
 </script>
