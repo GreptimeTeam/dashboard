@@ -13,7 +13,7 @@ a-scrollbar.tree-scrollbar
   const dataExplorer = useDataExplorer()
 
   const { insertNameToCode } = dataExplorer
-  const { pythonCode } = usePythonCode()
+  const { pythonCode, overwriteCode } = usePythonCode()
   const { fetchScriptsTable } = dataBaseStore
   const { scriptsList } = storeToRefs(dataBaseStore)
 
@@ -24,7 +24,7 @@ a-scrollbar.tree-scrollbar
 
   const onSelect = (newSelectedKeys: string[]) => {
     const selectedCode = scriptsList.value.find((item: any) => item.key === newSelectedKeys[0]).code
-    pythonCode.value = selectedCode
+    overwriteCode(selectedCode)
   }
   fetchScriptsTable()
 </script>

@@ -8,20 +8,14 @@ a-layout.layout-container
 </template>
 
 <script lang="ts" setup>
-  import { ref, computed, watch, provide } from 'vue'
-  import { useRouter, useRoute } from 'vue-router'
-  import { useAppStore, useUserStore } from '@/store'
+  import { computed } from 'vue'
+  import { useAppStore } from '@/store'
   import NavBar from '@/components/navbar/index.vue'
   import Footer from '@/components/footer/index.vue'
-  import usePermission from '@/hooks/permission'
   import useResponsive from '@/hooks/responsive'
   import PageLayout from './page-layout.vue'
 
   const appStore = useAppStore()
-  const userStore = useUserStore()
-  const router = useRouter()
-  const route = useRoute()
-  const permission = usePermission()
   useResponsive(true)
   const navbarHeight = `52px`
   const navbar = computed(() => appStore.navbar)

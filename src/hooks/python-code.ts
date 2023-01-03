@@ -4,8 +4,6 @@ const cursorAt = ref<Array<number>>([])
 const { currentResult } = storeToRefs(useCodeRunStore())
 
 export default function useDataExplorer() {
-  // TODO: change to computed instead of using array?
-
   const insertCode = (value: any) => {
     pythonCode.value = `${pythonCode.value}\n${value}`
   }
@@ -15,11 +13,15 @@ export default function useDataExplorer() {
       pythonCode.value.substring(0, cursorAt.value[0]) + name + pythonCode.value.substring(cursorAt.value[1])
   }
 
+  const overwriteCode = (code: any) => {
+    pythonCode.value = code
+  }
   // TODO: save code temp to local storage
 
   return {
     insertCode,
     insertNameToCode,
+    overwriteCode,
     pythonCode,
     cursorAt,
   }
