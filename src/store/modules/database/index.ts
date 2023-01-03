@@ -57,6 +57,7 @@ const useDataBaseStore = defineStore('dataBase', {
         const node = {
           title: item[0],
           key: item[0],
+          code: item[1],
           isLeaf: true,
         }
         tempArray.push(node)

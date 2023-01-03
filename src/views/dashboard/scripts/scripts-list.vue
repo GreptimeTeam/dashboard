@@ -7,11 +7,13 @@ a-scrollbar.tree-scrollbar
   import { storeToRefs } from 'pinia'
   import { useDataBaseStore } from '@/store'
   import useDataExplorer from '@/hooks/data-explorer'
+  import usePythonCode from '@/hooks/python-code'
 
   const dataBaseStore = useDataBaseStore()
   const dataExplorer = useDataExplorer()
 
   const { insertNameToCode } = dataExplorer
+  const { pythonCode } = usePythonCode()
   const { fetchScriptsTable } = dataBaseStore
   const { scriptsList } = storeToRefs(dataBaseStore)
 
@@ -20,8 +22,9 @@ a-scrollbar.tree-scrollbar
     dataBaseStore.fetchDataBaseTables()
   }
 
-  const onSelect = (newSelectedKeys: [], event: any) => {
-    console.log('select: ', newSelectedKeys, event)
+  const onSelect = (newSelectedKeys: string[]) => {
+    const selectedCode = scriptsList.value.find((item: any) => item.key === newSelectedKeys[0]).code
+    pythonCode.value = selectedCode
   }
   fetchScriptsTable()
 </script>
