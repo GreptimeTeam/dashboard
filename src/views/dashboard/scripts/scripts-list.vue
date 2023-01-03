@@ -10,11 +10,9 @@ a-scrollbar.tree-scrollbar
 
   const dataBaseStore = useDataBaseStore()
 
-  const { pythonCode, overwriteCode } = usePythonCode()
+  const { pythonCode, scriptSelectedKeys, overwriteCode } = usePythonCode()
   const { fetchScriptsTable } = dataBaseStore
   const { scriptsList } = storeToRefs(dataBaseStore)
-
-  const scriptSelectedKeys = ref([])
 
   const onSelect = (newSelectedKeys: string[]) => {
     const selectedScript = scriptsList.value.find((item: any) => item.key === newSelectedKeys[0])

@@ -2,6 +2,7 @@ const pythonCode = ref('')
 const cursorAt = ref<Array<number>>([])
 const scriptName = ref('')
 const ifNewScript = ref(<boolean>true)
+const scriptSelectedKeys = ref([])
 
 // TODO: compare sqlResult's code and current code
 const { currentResult } = storeToRefs(useCodeRunStore())
@@ -21,15 +22,24 @@ export default function useDataExplorer() {
     ifNewScript.value = false
     pythonCode.value = script.code
   }
+
+  const createNewScript = () => {
+    scriptName.value = ''
+    ifNewScript.value = true
+    pythonCode.value = ''
+    scriptSelectedKeys.value = []
+  }
   // TODO: save code temp to local storage
 
   return {
     insertCode,
     insertNameToCode,
     overwriteCode,
+    createNewScript,
     pythonCode,
     cursorAt,
     scriptName,
     ifNewScript,
+    scriptSelectedKeys,
   }
 }

@@ -22,11 +22,17 @@ a-tabs(position="left" lazy-load default-active-key="2")
         svg.card-icon
           use(href="#code")
         span {{$t('dataExplorer.scripts')}}
+      template(#extra)
+        a-button(@click="createNewScript()") Create
       ScriptsList
 </template>
 
 <script lang="ts" name="ListTabs" setup>
+  import usePythonCode from '@/hooks/python-code'
   import ScriptsList from './scripts-list.vue'
+
+  const { fetchDataBaseTables: refreshTableData } = useDataBaseStore()
+  const { createNewScript } = usePythonCode()
 </script>
 
 <style lang="less" scoped>
