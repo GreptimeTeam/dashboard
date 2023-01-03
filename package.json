@@ -38,7 +38,7 @@
     "codemirror": "6.x",
     "consola": "^2.15.3",
     "dayjs": "^1.11.7",
-    "echarts": "^5.4.0",
+    "echarts": "^5.4.1",
     "lodash": "^4.17.21",
     "mitt": "^3.0.0",
     "nprogress": "^0.2.0",
