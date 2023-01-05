@@ -135,23 +135,23 @@ const useCodeRunStore = defineStore('codeRun', {
       this.activeTabKey[this.codeType] = key
     },
 
-    // TODO: change remove result
     removeResult(key: number) {
-      if (this.results.length === 1) {
-        this.$reset()
+      if (this.results[this.codeType].length === 1) {
+        this.clearResults()
         return
       }
-      let deletedTabIndex = this.results.findIndex((item: any) => item.key === key)
-      if (deletedTabIndex + 1 === this.results.length) {
+      let deletedTabIndex = this.results[this.codeType].findIndex((item: any) => item.key === key)
+      if (deletedTabIndex + 1 === this.results[this.codeType].length) {
         deletedTabIndex -= 1
       }
-      this.results = this.results.filter((item: any) => item.key !== key)
-      this.activeTabKey = this.results[deletedTabIndex].key
+      this.results[this.codeType] = this.results[this.codeType].filter((item: any) => item.key !== key)
+      this.activeTabKey[this.codeType] = this.results[this.codeType][deletedTabIndex].key
     },
 
-    // TODO: change clear result
-    clearResult() {
-      this.$reset()
+    clearResults() {
+      this.results[this.codeType] = []
+      this.titleIndex[this.codeType] = -1
+      this.activeTabKey[this.codeType] = 0
     },
   },
 })

@@ -1,7 +1,7 @@
 <template lang="pug">
 a-tabs(type="rounded" lazy-load :active-key="activeTabKey[pageType]" @tab-click="tabClick" @delete="deleteTab" editable)
   template(#extra)
-    a-button(@click="clearCodeResult()" status="danger") {{$t('dataExplorer.clear')}}
+    a-button(@click="clearResults()" status="danger") {{$t('dataExplorer.clear')}}
   a-tab-pane(v-for="(item, index) of results[pageType]" :key="item.key" 
   :title="`${$t('dataExplorer.result')} ${item.key + 1}`" closable) 
     a-space(direction="vertical" fill :size="14")
@@ -23,7 +23,7 @@ a-tabs(type="rounded" lazy-load :active-key="activeTabKey[pageType]" @tab-click=
   import router from '@/router'
   import { useCodeRunStore } from '@/store'
 
-  const { setActiveTabKey, removeResult } = useCodeRunStore()
+  const { setActiveTabKey, removeResult, clearResults } = useCodeRunStore()
   const { results, activeTabKey, codeType } = storeToRefs(useCodeRunStore())
 
   const { name } = router.currentRoute.value
@@ -38,9 +38,5 @@ a-tabs(type="rounded" lazy-load :active-key="activeTabKey[pageType]" @tab-click=
 
   const tabClick = (key: any) => {
     setActiveTabKey(key)
-  }
-
-  const clearCodeResult = () => {
-    useCodeRunStore().$reset()
   }
 </script>
