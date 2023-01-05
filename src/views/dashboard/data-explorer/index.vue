@@ -13,7 +13,7 @@ a-space.layout-content(direction="vertical" fill :size="14")
         TableList     
     template(#second) 
       Editor 
-  DataView(v-if="!!results.length")
+  DataView(v-if="!!results.sql.length")
   Log 
 </template>
 

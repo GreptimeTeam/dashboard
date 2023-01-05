@@ -23,10 +23,10 @@ a-card(:bordered="false")
 
 <script lang="ts" name="Log" setup>
   import router from '@/router'
+  import { useLogStore } from '@/store'
   import { storeToRefs } from 'pinia'
 
-  const { logs: sqlLogs, scriptLogs } = storeToRefs(useLogStore())
+  const { logs, scriptLogs } = storeToRefs(useLogStore())
   const { name } = router.currentRoute.value
-  const logs = reactive(name === 'sql' ? sqlLogs.value : scriptLogs.value)
   const { clearLogs, clearScriptLogs } = useLogStore()
 </script>

@@ -26,20 +26,29 @@ const getDimensionsAndXName = (elements: any) => {
 
 const useCodeRunStore = defineStore('codeRun', {
   state: () => ({
-    titleIndex: <number>-1,
-    results: <any>[],
-    activeTabKey: <number>0,
-    scriptResults: <any>[],
+    codeType: <string>'sql',
+    titleIndex: {
+      sql: <number>-1,
+      python: <number>-1,
+    },
+    results: {
+      sql: [],
+      python: [],
+    },
+    activeTabKey: {
+      sql: <number>0,
+      python: <number>0,
+    },
   }),
 
   getters: {
     currentResult(state: any) {
-      return state.results.find((item: any) => item.key === state.activeTabKey) || {}
+      return state.results[state.codeType].find((item: any) => item.key === state.activeTabKey[state.codeType]) || {}
     },
   },
 
   actions: {
-    async fetchSQLResult(sql: any) {
+    async fetchSQLResult(sql: string) {
       const { pushLog } = useLogStore()
       try {
         const res: any = await getSqlResult(sql)
@@ -54,13 +63,14 @@ const useCodeRunStore = defineStore('codeRun', {
               records: oneRes.records.rows.length,
             })
             if (oneRes.records.rows.length > 0) {
-              this.titleIndex += 1
-              this.results.push({
+              this.titleIndex.sql += 1
+              this.results.sql.push({
                 records: oneRes.records,
                 dimensionsAndXName: getDimensionsAndXName(oneRes.records.schema.column_schemas),
-                key: this.titleIndex,
+                key: this.titleIndex.sql,
               })
-              this.activeTabKey = this.titleIndex
+              console.log(this.results)
+              this.activeTabKey.sql = this.titleIndex.sql
             }
           } else {
             resultInLog.push({
@@ -83,7 +93,6 @@ const useCodeRunStore = defineStore('codeRun', {
     },
 
     async saveScript(name: string, code: any) {
-      const { pushLog } = useLogStore()
       try {
         const res: any = await postScripts(name, code)
 
@@ -91,17 +100,8 @@ const useCodeRunStore = defineStore('codeRun', {
           content: 'save success',
         })
         const resultInLog: any = []
-
-        pushLog({
-          code,
-          ...res,
-          result: resultInLog,
-        })
       } catch (error: any) {
-        pushLog({
-          code,
-          ...error,
-        })
+        // error
       }
     },
 
@@ -111,16 +111,31 @@ const useCodeRunStore = defineStore('codeRun', {
         Message.success({
           content: 'run success',
         })
-        console.log(res)
+        const resultInLog: any = []
+        res.output.forEach((oneRes: any) => {
+          resultInLog.push({
+            records: oneRes.records.rows.length,
+          })
+          if (oneRes.records.rows.length > 0) {
+            this.titleIndex.python += 1
+            this.results.python.push({
+              records: oneRes.records,
+              dimensionsAndXName: getDimensionsAndXName(oneRes.records.schema.column_schemas),
+              key: this.titleIndex.python,
+            })
+            this.activeTabKey.python = this.titleIndex.python
+          }
+        })
       } catch (error: any) {
         // error
       }
     },
 
     setActiveTabKey(key: number) {
-      this.activeTabKey = key
+      this.activeTabKey[this.codeType] = key
     },
 
+    // TODO: change remove result
     removeResult(key: number) {
       if (this.results.length === 1) {
         this.$reset()
@@ -134,6 +149,7 @@ const useCodeRunStore = defineStore('codeRun', {
       this.activeTabKey = this.results[deletedTabIndex].key
     },
 
+    // TODO: change clear result
     clearResult() {
       this.$reset()
     },

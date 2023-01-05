@@ -31,7 +31,7 @@ a-card(:bordered="false").editor-card
   })
 
   const dataBaseStore = useDataBaseStore()
-  const { pythonCode, cursorAt, ifNewScript, scriptName } = usePythonCode()
+  const { pythonCode, cursorAt, ifNewScript, scriptName, selectAfterSave } = usePythonCode()
   const { saveScript, runScript } = useCodeRunStore()
   const { fetchScriptsTable } = dataBaseStore
 
@@ -66,14 +66,15 @@ a-card(:bordered="false").editor-card
   }
 
   const extensions = [python(), oneDark]
-
   const saveCurrentScript = async () => {
     await saveScript(scriptForm.value.scriptName, pythonCode.value.trim())
-    fetchScriptsTable()
+    await fetchScriptsTable()
+    selectAfterSave(scriptForm.value.scriptName)
   }
   const saveScriptAndRun = async () => {
     await saveScript(scriptForm.value.scriptName, pythonCode.value.trim())
     runScript(scriptForm.value.scriptName)
-    fetchScriptsTable()
+    await fetchScriptsTable()
+    selectAfterSave(scriptForm.value.scriptName)
   }
 </script>

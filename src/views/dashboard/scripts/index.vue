@@ -5,7 +5,7 @@ a-space.layout-content(direction="vertical" fill :size="14")
       ListTabs
     template(#second) 
       PyEditor
-  DataView(v-if="!!scriptResults.length")
+  DataView(v-if="!!results.python.length")
   Log 
 </template>
 
@@ -13,7 +13,7 @@ a-space.layout-content(direction="vertical" fill :size="14")
   import ListTabs from './list-tabs.vue'
 
   const { fetchDataBaseTables: refreshTableData } = useDataBaseStore()
-  const { scriptResults } = storeToRefs(useCodeRunStore())
+  const { results } = storeToRefs(useCodeRunStore())
 </script>
 
 <style lang="less" scoped>
