@@ -5,8 +5,6 @@ name: deploy
 on:
   push:
     branches: [ "main", "dev" ]
-  pull_request:
-    branches: [ "main", "dev" ]
 
 jobs:
   build:
@@ -17,8 +15,6 @@ jobs:
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
     steps:
       - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.head_ref }}
       - name: Setup Node
         uses: actions/setup-node@v1
         with:
@@ -50,4 +46,3 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
-
