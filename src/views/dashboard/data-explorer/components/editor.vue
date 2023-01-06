@@ -14,7 +14,6 @@ a-card(:bordered="false").editor-card
 <script lang="ts" setup>
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
-  import { EditorView } from '@codemirror/view'
   import { sql } from '@codemirror/lang-sql'
   import useDataExplorer from '@/hooks/data-explorer'
 
@@ -45,20 +44,27 @@ a-card(:bordered="false").editor-card
   const handleReady = (payload: any) => {
     view.value = payload.view
   }
+
+  // TODO: Try something better. CodeUpdate is constantly changing and the cost is too much.
   const codeUpdate = () => {
     if (view.value) {
       const { state } = view.value
       const { ranges } = state.selection
+      cursorAt.value = [ranges[0].from, ranges[0].to]
       lineStart.value = state.doc.lineAt(ranges[0].from).number
       lineEnd.value = state.doc.lineAt(ranges[0].to).number
-      selectedCode.value = state.doc.text.slice(lineStart.value - 1, lineEnd.value).join(' ')
-      cursorAt.value = [ranges[0].from, ranges[0].to]
+      if (state.doc.text) {
+        selectedCode.value = state.doc.text.slice(lineStart.value - 1, lineEnd.value).join(' ')
+      } else {
+        let tempCode: Array<string> = []
+        state.doc.children.forEach((leaf: { text: [] }) => {
+          tempCode = tempCode.concat(leaf.text)
+        })
+        selectedCode.value = tempCode.slice(lineStart.value - 1, lineEnd.value).join(' ')
+      }
     }
   }
 
-  const refreshTableData = dataBaseStore.fetchDataBaseTables
-
-  // extensions: Passed to CodeMirror EditorState.create({ extensions })
   const style = {
     height: '244px',
   }
