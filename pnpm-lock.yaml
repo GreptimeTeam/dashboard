@@ -10,7 +10,6 @@ specifiers:
   '@babel/core': ^7.20.5
   '@codemirror/lang-sql': ^6.3.1
   '@codemirror/theme-one-dark': ^6.1.0
-  '@codemirror/view': ^6.4.0
   '@commitlint/cli': ^17.1.2
   '@commitlint/config-conventional': ^17.3.0
   '@prettier/plugin-pug': ^2.3.0
@@ -82,9 +81,8 @@ specifiers:
 dependencies:
   '@arco-design/web-vue': 2.37.4_vue@3.2.45
   '@babel/core': 7.20.5
-  '@codemirror/lang-sql': 6.3.1_@codemirror+view@6.4.0
+  '@codemirror/lang-sql': 6.3.1
   '@codemirror/theme-one-dark': 6.1.0
-  '@codemirror/view': 6.4.0
   '@vueuse/core': 9.6.0_vue@3.2.45
   arco-design-pro-vue: 2.5.13
   axios: 0.27.2
@@ -560,10 +558,8 @@ packages:
       '@babel/helper-validator-identifier': 7.19.1
       to-fast-properties: 2.0.0
 
-  /@codemirror/autocomplete/6.3.0_@codemirror+view@6.4.0:
+  /@codemirror/autocomplete/6.3.0:
     resolution: {integrity: sha512-4jEvh3AjJZTDKazd10J6ZsCIqaYxDMCeua5ouQxY8hlFIml+nr7le0SgBhT3SIytFBmdzPK3AUhXGuW3T79nVg==}
-    peerDependencies:
-      '@codemirror/view': ^6.0.0
     dependencies:
       '@codemirror/language': 6.2.1
       '@codemirror/state': 6.1.2
@@ -580,16 +576,14 @@ packages:
       '@lezer/common': 1.0.1
     dev: false
 
-  /@codemirror/lang-sql/6.3.1_@codemirror+view@6.4.0:
+  /@codemirror/lang-sql/6.3.1:
     resolution: {integrity: sha512-/3MxUNWnjY6Rw9ywHkQl2EKaS8XvFYyQzK/Zer4ikgWfqC+RuatIlg2m4sI1graOFhWPbQk2U3C83q+0jEmdag==}
     dependencies:
-      '@codemirror/autocomplete': 6.3.0_@codemirror+view@6.4.0
+      '@codemirror/autocomplete': 6.3.0
       '@codemirror/language': 6.2.1
       '@codemirror/state': 6.1.2
       '@lezer/highlight': 1.1.2
       '@lezer/lr': 1.2.3
-    transitivePeerDependencies:
-      - '@codemirror/view'
     dev: false
 
   /@codemirror/language/6.2.1:
@@ -2245,7 +2239,7 @@ packages:
   /codemirror/6.0.1:
     resolution: {integrity: sha512-J8j+nZ+CdWmIeFIGXEFbFPtpiYacFMDR8GlHK3IyHQJMCaVRfGx9NT+Hxivv1ckLWPvNdZqndbr/7lVhrf/Svg==}
     dependencies:
-      '@codemirror/autocomplete': 6.3.0_@codemirror+view@6.4.0
+      '@codemirror/autocomplete': 6.3.0
       '@codemirror/commands': 6.1.2
       '@codemirror/language': 6.2.1
       '@codemirror/lint': 6.0.0
@@ -5249,13 +5243,6 @@ packages:
     resolution: {integrity: sha512-J7p63hRiAjw1NDEww1W7i37+ByIrOWO5XQQAzZ3VOcL0PNybwpfmV/N05zFAzwQ9USyEcX6t3UO+K5aqBQOIHw==}
     dependencies:
       brace-expansion: 1.1.11
-
-  /minimatch/5.1.0:
-    resolution: {integrity: sha512-9TPBGGak4nHfGZsPBohm9AWg6NoT7QTCehS3BIJABslyZbzxfV78QM2Y6+i741OPZIafFAaiiEMh5OyIrJPgtg==}
-    engines: {node: '>=10'}
-    dependencies:
-      brace-expansion: 2.0.1
-    dev: true
 
   /minimatch/5.1.2:
     resolution: {integrity: sha512-bNH9mmM9qsJ2X4r2Nat1B//1dJVcn3+iBLa3IgqJ7EbGaDNepL9QSHOxN4ng33s52VMMhhIfgCYDk3C4ZmlDAg==}
