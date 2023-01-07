@@ -27,3 +27,29 @@ docker run \
   --network host
   greptimedb-dashboard:latest
 ```
+
+Open you browser and visit `http://localhost:8080/dashboard`
+
+# Using `docker-compose`
+
+[docker-compose](https://docs.docker.com/compose/) is a light-weighted container
+orchestration solution. We provide a sample compose file to build and run
+dashboard with greptimedb ready.
+
+## Build
+
+Run `docker compose build` from root of the repo:
+
+```
+docker compose -f docker/docker-compose.yml build
+```
+
+## Run
+
+Run `docker compose up` from root of the repo:
+
+```
+docker compose -f docker/docker-compose.yml up
+```
+
+Open you browser and visit `http://localhost:8080/dashboard`
