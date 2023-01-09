@@ -24,7 +24,7 @@ docker run \
   -e GREPTIMEDB_HTTP_HOST=127.0.0.1 \
   -e GREPTIMEDB_HTTP_PORT=4000 \
   -e NGINX_PORT=8080 \
-  --network host
+  --network host \
   greptimedb-dashboard:latest
 ```
 

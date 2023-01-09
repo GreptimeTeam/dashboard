@@ -22,13 +22,13 @@ Pre-built docker images are available on docker hub, you can pull latest image
 and run via:
 
 ```
-docker pull greptime:greptimedb-dashboard
+docker pull greptime/greptimedb-dashboard
 docker run \
   -e GREPTIMEDB_HTTP_HOST=127.0.0.1 \
   -e GREPTIMEDB_HTTP_PORT=4000 \
   -e NGINX_PORT=8080 \
-  --network host
-  greptimedb-dashboard:latest
+  --network host \
+  greptime/greptimedb-dashboard:latest
 
 ## open your browser at http://localhost:8080/dashboard
 ```
