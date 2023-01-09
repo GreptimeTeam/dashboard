@@ -50,7 +50,7 @@
     "stylelint-stylus": "^0.17.0",
     "vue": "^3.2.45",
     "vue-codemirror": "^6.1.1",
-    "vue-echarts": "^6.2.4",
+    "vue-echarts": "^6.5.0",
     "vue-i18n": "^9.2.2",
     "vue-router": "^4.0.14"
   },
