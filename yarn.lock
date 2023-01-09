@@ -379,7 +379,7 @@
     "@codemirror/view" "^6.0.0"
     "@lezer/highlight" "^1.0.0"
 
-"@codemirror/view@6.x", "@codemirror/view@^6.0.0", "@codemirror/view@^6.4.0", "@codemirror/view@^6.5.0":
+"@codemirror/view@6.x", "@codemirror/view@^6.0.0", "@codemirror/view@^6.5.0":
   version "6.5.1"
   resolved "https://registry.npmmirror.com/@codemirror/view/-/view-6.5.1.tgz"
   dependencies:
@@ -5588,9 +5588,9 @@ stylelint-config-recommended@>=6.0.0, stylelint-config-recommended@^9.0.0:
   version "9.0.0"
   resolved "https://registry.npmmirror.com/stylelint-config-recommended/-/stylelint-config-recommended-9.0.0.tgz"
 
-stylelint-config-standard@^28.0.0:
-  version "28.0.0"
-  resolved "https://registry.npmmirror.com/stylelint-config-standard/-/stylelint-config-standard-28.0.0.tgz"
+stylelint-config-standard@^29.0.0:
+  version "29.0.0"
+  resolved "https://registry.yarnpkg.com/stylelint-config-standard/-/stylelint-config-standard-29.0.0.tgz#4cc0e0f05512a39bb8b8e97853247d3a95d66fa2"
   dependencies:
     stylelint-config-recommended "^9.0.0"
 
