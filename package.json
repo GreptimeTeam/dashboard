@@ -27,7 +27,7 @@
     ]
   },
   "dependencies": {
-    "@arco-design/web-vue": "^2.37.4",
+    "@arco-design/web-vue": "^2.41.0",
     "@babel/core": "^7.20.5",
     "@codemirror/lang-python": "^6.1.0",
     "@codemirror/lang-sql": "^6.3.1",
@@ -38,7 +38,7 @@
     "codemirror": "6.x",
     "consola": "^2.15.3",
     "dayjs": "^1.11.7",
-    "echarts": "^5.4.0",
+    "echarts": "^5.4.1",
     "lodash": "^4.17.21",
     "mitt": "^3.0.0",
     "nprogress": "^0.2.0",
@@ -56,7 +56,7 @@
     "vue-router": "^4.0.14"
   },
   "devDependencies": {
-    "@commitlint/cli": "^17.1.2",
+    "@commitlint/cli": "^17.3.0",
     "@commitlint/config-conventional": "^17.3.0",
     "@prettier/plugin-pug": "^2.3.0",
     "@types/lodash": "^4.14.191",
@@ -65,7 +65,7 @@
     "@types/nprogress": "^0.2.0",
     "@types/sortablejs": "^1.15.0",
     "@typescript-eslint/eslint-plugin": "^5.40.0",
-    "@typescript-eslint/parser": "^5.46.1",
+    "@typescript-eslint/parser": "^5.47.1",
     "@vitejs/plugin-vue": "^3.1.2",
     "@vitejs/plugin-vue-jsx": "^2.1.1",
     "@volar/vue-language-plugin-pug": "^1.0.10",
@@ -100,7 +100,7 @@
     "vite-plugin-imagemin": "^0.6.1",
     "vite-plugin-style-import": "2.0.0",
     "vite-svg-loader": "^3.6.0",
-    "vue-tsc": "^1.0.17"
+    "vue-tsc": "^1.0.19"
   },
   "engines": {
     "node": ">=14.0.0"
