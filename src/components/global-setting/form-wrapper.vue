@@ -6,6 +6,13 @@
     :default-value="(defaultValue as number)"
     @change="handleChange"
   />
+  <a-input v-else-if="type === 'input'" size="small" :default-value="(defaultValue as string)" @change="handleChange" />
+  <a-input-password
+    v-else-if="type === 'password'"
+    size="small"
+    :default-value="(defaultValue as string)"
+    @change="handleChange"
+  />
   <a-switch v-else :default-checked="(defaultValue as boolean)" size="small" @change="handleChange" />
 </template>
 

@@ -12,6 +12,9 @@
   "device": "desktop",
   "tabBar": false,
   "menuFromServer": false,
+  "database": "public",
+  "username": "",
+  "password": "",
   "serverMenu": [],
   "codeType": "sql"
 }
