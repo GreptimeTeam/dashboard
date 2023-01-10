@@ -1,4 +1,5 @@
-import localeDataExplorer from '@/views/dashboard/data-explorer/locale/en-US'
+import localeDataExplorer from '@/views/dashboard/data-explorer/locale/zh-CN'
+import localSetting from '@/components/global-setting/local/zh-CN'
 
 export default {
   'menu.dashboard': '仪表盘',
@@ -16,4 +17,5 @@ export default {
   'navbar.docs': '文档中心',
   'navbar.action.locale': '切换为中文',
   ...localeDataExplorer,
+  ...localSetting,
 }
