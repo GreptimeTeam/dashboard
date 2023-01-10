@@ -13,6 +13,7 @@ specifiers:
   '@commitlint/cli': ^17.3.0
   '@commitlint/config-conventional': ^17.3.0
   '@prettier/plugin-pug': ^2.3.0
+  '@types/cross-storage': ^0.8.30
   '@types/lodash': ^4.14.191
   '@types/mockjs': ^1.0.7
   '@types/node': ^18.11.10
@@ -30,6 +31,7 @@ specifiers:
   codemirror: 6.x
   consola: ^2.15.3
   cross-env: ^7.0.3
+  cross-storage: ^1.0.0
   dayjs: ^1.11.7
   echarts: ^5.4.1
   eslint: ^8.29.0
@@ -88,6 +90,7 @@ dependencies:
   axios: 0.27.2
   codemirror: 6.0.1
   consola: 2.15.3
+  cross-storage: 1.0.0
   dayjs: 1.11.7
   echarts: 5.4.1
   lodash: 4.17.21
@@ -110,6 +113,7 @@ devDependencies:
   '@commitlint/cli': 17.3.0
   '@commitlint/config-conventional': 17.3.0
   '@prettier/plugin-pug': 2.3.0_prettier@2.7.1
+  '@types/cross-storage': 0.8.30
   '@types/lodash': 4.14.191
   '@types/mockjs': 1.0.7
   '@types/node': 18.11.10
@@ -1063,6 +1067,10 @@ packages:
 
   /@tsconfig/node16/1.0.3:
     resolution: {integrity: sha512-yOlFc+7UtL/89t2ZhjPvvB/DeAr3r+Dq58IgzsFkOAvVC6NMJXmCGjbptdXdR9qsX7pKcTL+s87FtYREi2dEEQ==}
+    dev: true
+
+  /@types/cross-storage/0.8.30:
+    resolution: {integrity: sha512-bnW3xTNYIkblokN9iPlf26PhlHhrDxusp96NiM3O/WswjO7yrV1orjbK9Ips90Zl4gx1cU4HtJdpLkpbYBkCtA==}
     dev: true
 
   /@types/eslint/8.4.6:
@@ -2467,6 +2475,10 @@ packages:
       shebang-command: 2.0.0
       which: 2.0.2
     dev: true
+
+  /cross-storage/1.0.0:
+    resolution: {integrity: sha512-PkAi+2MD6T17klbIjRSGs5ku4AM97/1CYrWEJtClrw8UYLXq709+o92FfW+Q2uDPlv4PMMsa59dJNRIwjWReuw==}
+    dev: false
 
   /css-functions-list/3.1.0:
     resolution: {integrity: sha512-/9lCvYZaUbBGvYUgYGFJ4dcYiyqdhSjG7IPVluoV8A1ILjkF7ilmhp1OGUz8n+nmBcu0RNrQAzgD8B6FJbrt2w==}
