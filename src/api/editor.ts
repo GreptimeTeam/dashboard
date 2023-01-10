@@ -2,7 +2,7 @@ import axios from 'axios'
 
 function makeURL(code: string) {
   const appStore = useAppStore()
-  return `/api/v1/sql?sql=${code}&database=${appStore.database}`
+  return `/v1/sql?sql=${code}&database=${appStore.database}`
 }
 
 export function getSqlResult(code: any) {

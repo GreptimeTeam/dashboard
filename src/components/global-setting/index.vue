@@ -11,9 +11,9 @@
     unmount-on-close
     :visible="visible"
     :ok-text="$t('settings.save')"
+    mask-closable
     @ok="cancel"
-    hideCancel
-    maskClosable
+    @cancel="cancel"
   >
     <template #title> {{ $t('settings.title') }} </template>
     <Block :options="authOpts" :title="$t('settings.auth')" />
@@ -27,6 +27,7 @@
   import { useI18n } from 'vue-i18n'
   import { useClipboard } from '@vueuse/core'
   import { useAppStore } from '@/store'
+  import axios from 'axios'
   import Block from './block.vue'
 
   const emit = defineEmits(['cancel'])
@@ -36,15 +37,21 @@
   const { copy } = useClipboard()
   const visible = computed(() => appStore.globalSettings)
   const authOpts = computed(() => [
-    { name: 'settings.username', key: 'username', defaultVal: appStore.username, type: 'input' },
+    { name: 'settings.username', key: 'principal', defaultVal: appStore.principal, type: 'input' },
     {
       name: 'settings.password',
-      key: 'password',
-      defaultVal: appStore.password,
+      key: 'credential',
+      defaultVal: appStore.credential,
       type: 'password',
     },
   ])
   const databaseOpts = computed(() => [
+    {
+      name: 'settings.databaseURL',
+      key: 'databaseURL',
+      defaultVal: appStore.databaseURL,
+      type: 'input',
+    },
     {
       name: 'settings.database',
       key: 'database',
@@ -55,6 +62,7 @@
 
   const cancel = () => {
     appStore.updateSettings({ globalSettings: false })
+    axios.defaults.baseURL = appStore.databaseURL
     emit('cancel')
   }
   const copySettings = async () => {
@@ -65,6 +73,10 @@
   const setVisible = () => {
     appStore.updateSettings({ globalSettings: true })
   }
+
+  onMounted(() => {
+    axios.defaults.baseURL = appStore.databaseURL
+  })
 </script>
 
 <style scoped lang="less">
