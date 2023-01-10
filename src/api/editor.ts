@@ -1,7 +1,20 @@
 import axios from 'axios'
 
-export function getSqlResult(code: any) {
-  return axios.post(`/api/v1/sql?sql=${code}`)
+function makeSqlURL(code: string) {
+  const appStore = useAppStore()
+  return `/api/v1/sql?sql=${code}&database=${appStore.database}`
+}
+
+export function getSqlResult(code: string) {
+  return axios.post(makeSqlURL(code))
+}
+
+export function getTables() {
+  return axios.post(makeSqlURL('show tables'))
+}
+
+export function fetchOneTable(tableName: any) {
+  return axios.post(makeSqlURL(`desc table ${tableName}`))
 }
 
 export function postScripts(name: string, code: any) {
@@ -10,14 +23,4 @@ export function postScripts(name: string, code: any) {
 
 export function postRunScriptName(name: string) {
   return axios.post(`/api/v1/run-script?name=${name}`)
-}
-
-export function getTables() {
-  const code = 'show tables'
-  return axios.post(`/api/v1/sql?sql=${code}`)
-}
-
-export function fetchOneTable(tableName: any) {
-  const code = `desc table ${tableName}`
-  return axios.post(`/api/v1/sql?sql=${code}`)
 }
