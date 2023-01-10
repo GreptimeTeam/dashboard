@@ -1,14 +1,17 @@
 import axios from 'axios'
 import type { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { Message, Modal } from '@arco-design/web-vue'
-import { useUserStore } from '@/store'
-import { getToken } from '@/utils/auth'
+import { useStorage } from '@vueuse/core'
 
 export interface HttpResponse<T = unknown> {
   error?: string
   code: number
   output?: Array<T>
   execution_time_ms?: number
+}
+export interface Auth {
+  username: string
+  password: string
 }
 
 // todo: can we use env and proxy at the same time?
@@ -18,17 +21,14 @@ if (import.meta.env.VITE_API_BASE_URL) {
 
 axios.interceptors.request.use(
   (config: AxiosRequestConfig) => {
-    // let each request carry token
-    // this example using the JWT token
-    // Authorization is a custom headers key
-    // please modify it according to the actual situation
-    const token = getToken()
-    if (token) {
-      if (!config.headers) {
-        config.headers = {}
-      }
-      config.headers.Authorization = `Bearer ${token}`
+    const appStore = useAppStore()
+    const basicAuth = `Basic ${btoa(`${appStore.username}:${appStore.password}`)}`
+
+    if (!config.headers) {
+      config.headers = {}
     }
+    config.headers.authorization = basicAuth
+
     return {
       ...config,
       traceTimeStart: new Date().valueOf(),

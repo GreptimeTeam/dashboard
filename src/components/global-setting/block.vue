@@ -65,4 +65,8 @@
     justify-content: space-between;
     height: 32px;
   }
+
+  span {
+    margin-right: 10px;
+  }
 </style>
