@@ -22,5 +22,7 @@ export default {
   'dataExplorer.executed': 'Executed {length} statement | Executed {length} statements',
   'dataExplorer.network': 'Network: {time} ms',
   'dataExplorer.total': 'Total: {time} ms',
-  'dataExplorer.code': 'Code: {sql}',
+  'dataExplorer.code': 'Code: {code}',
+  'dataExplorer.saveName': 'Saved script name: {name}',
+  'dataExplorer.runScript': 'Run script name: {name}',
 }

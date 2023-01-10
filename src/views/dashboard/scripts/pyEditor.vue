@@ -12,7 +12,6 @@ a-card(:bordered="false").editor-card
 <script lang="ts" name="PyEditor" setup>
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
-  import { EditorView } from '@codemirror/view'
   import { python } from '@codemirror/lang-python'
   import usePythonCode from '@/hooks/python-code'
   import { useCodeRunStore } from '@/store'
@@ -51,10 +50,18 @@ a-card(:bordered="false").editor-card
     if (view.value) {
       const { state } = view.value
       const { ranges } = state.selection
+      cursorAt.value = [ranges[0].from, ranges[0].to]
       lineStart.value = state.doc.lineAt(ranges[0].from).number
       lineEnd.value = state.doc.lineAt(ranges[0].to).number
-      selectedCode.value = state.doc.text.slice(lineStart.value - 1, lineEnd.value).join(' ')
-      cursorAt.value = [ranges[0].from, ranges[0].to]
+      if (state.doc.text) {
+        selectedCode.value = state.doc.text.slice(lineStart.value - 1, lineEnd.value).join(' ')
+      } else {
+        let tempCode: Array<string> = []
+        state.doc.children.forEach((leaf: { text: [] }) => {
+          tempCode = tempCode.concat(leaf.text)
+        })
+        selectedCode.value = tempCode.slice(lineStart.value - 1, lineEnd.value).join(' ')
+      }
     }
   }
 

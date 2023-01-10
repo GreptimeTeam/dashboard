@@ -5,8 +5,6 @@ const scriptName = ref('')
 const ifNewScript = ref(<boolean>true)
 const scriptSelectedKeys = ref<Array<string>>([])
 
-const { currentResult } = storeToRefs(useCodeRunStore())
-
 export default function useDataExplorer() {
   const insertCode = (value: any) => {
     pythonCode.value = `${pythonCode.value}\n${value}`

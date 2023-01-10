@@ -2,7 +2,6 @@ import { fetchOneTable, getSqlResult, getTables } from '@/api/editor'
 import { defineStore } from 'pinia'
 
 const useDataBaseStore = defineStore('dataBase', {
-  // state： data
   state: () => ({
     tableData: <any>{
       output: [

@@ -10,10 +10,17 @@ a-space.layout-content(direction="vertical" fill :size="14")
 </template>
 
 <script lang="ts" name="Scripts" setup>
+  import router from '@/router'
   import ListTabs from './list-tabs.vue'
 
+  const { codeType } = storeToRefs(useAppStore())
   const { fetchDataBaseTables: refreshTableData } = useDataBaseStore()
   const { results } = storeToRefs(useCodeRunStore())
+
+  const { name } = router.currentRoute.value
+
+  // TODO: add more code type in the future if needed
+  codeType.value = name === 'sql' ? 'sql' : 'python'
 </script>
 
 <style lang="less" scoped>

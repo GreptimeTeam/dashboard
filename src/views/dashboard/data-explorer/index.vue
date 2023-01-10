@@ -18,8 +18,15 @@ a-space.layout-content(direction="vertical" fill :size="14")
 </template>
 
 <script lang="ts" name="DataExplorer" setup>
+  import router from '@/router'
+
   const { fetchDataBaseTables: refreshTableData } = useDataBaseStore()
   const { results } = storeToRefs(useCodeRunStore())
+  const { codeType } = storeToRefs(useAppStore())
+
+  const { name } = router.currentRoute.value
+  // TODO: add more code type in the future if needed
+  codeType.value = name === 'sql' ? 'sql' : 'python'
 </script>
 
 <style lang="less" scoped>

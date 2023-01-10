@@ -2,6 +2,9 @@ import { getSqlResult, postRunScriptName, postScripts } from '@/api/editor'
 import { Message } from '@arco-design/web-vue'
 import { defineStore } from 'pinia'
 import { dateTypes } from '@/views/dashboard/data-explorer/components/data-view/config'
+import { resultsType } from './types'
+import useLogStore from '../log'
+import useAppStore from '../app'
 
 // TODO: Add all the types we decide instead of ECharts if needed in the future.
 
@@ -26,7 +29,6 @@ const getDimensionsAndXName = (elements: any) => {
 
 const useCodeRunStore = defineStore('codeRun', {
   state: () => ({
-    codeType: <string>'sql',
     titleIndex: {
       sql: <number>-1,
       python: <number>-1,
@@ -34,11 +36,12 @@ const useCodeRunStore = defineStore('codeRun', {
     results: {
       sql: [],
       python: [],
-    },
+    } as resultsType,
     activeTabKey: {
       sql: <number>0,
       python: <number>0,
     },
+    codeType: storeToRefs(useAppStore()).codeType,
   }),
 
   getters: {
@@ -49,7 +52,6 @@ const useCodeRunStore = defineStore('codeRun', {
 
   actions: {
     async fetchSQLResult(sql: string) {
-      const { pushLog } = useLogStore()
       try {
         const res: any = await getSqlResult(sql)
 
@@ -69,7 +71,6 @@ const useCodeRunStore = defineStore('codeRun', {
                 dimensionsAndXName: getDimensionsAndXName(oneRes.records.schema.column_schemas),
                 key: this.titleIndex.sql,
               })
-              console.log(this.results)
               this.activeTabKey.sql = this.titleIndex.sql
             }
           } else {
@@ -79,29 +80,34 @@ const useCodeRunStore = defineStore('codeRun', {
           }
         })
 
-        pushLog({
-          sql,
+        useLogStore().pushLog({
+          runCode: sql,
           ...res,
           result: resultInLog,
         })
       } catch (error: any) {
-        pushLog({
-          sql,
+        useLogStore().pushLog({
+          runCode: sql,
           ...error,
         })
       }
     },
 
-    async saveScript(name: string, code: any) {
+    async saveScript(name: string, code: string) {
       try {
         const res: any = await postScripts(name, code)
 
         Message.success({
           content: 'save success',
         })
-        const resultInLog: any = []
+        useLogStore().pushLog({
+          name,
+          ...res,
+        })
       } catch (error: any) {
-        // error
+        useLogStore().pushLog({
+          ...error,
+        })
       }
     },
 
@@ -126,8 +132,16 @@ const useCodeRunStore = defineStore('codeRun', {
             this.activeTabKey.python = this.titleIndex.python
           }
         })
+        useLogStore().pushLog({
+          name,
+          ...res,
+          result: resultInLog,
+        })
       } catch (error: any) {
-        // error
+        useLogStore().pushLog({
+          name,
+          ...error,
+        })
       }
     },
 
