@@ -11,7 +11,6 @@ const DASHBOARD: AppRouteRecordRaw = {
     locale: 'menu.dashboard',
     requiresAuth: false,
     icon: 'icon-dashboard',
-    roles: ['*'],
     order: 0,
   },
   children: [
@@ -22,7 +21,6 @@ const DASHBOARD: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.dashboard',
         requiresAuth: false,
-        roles: ['*'],
       },
     },
     {
@@ -32,7 +30,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.dashboard.scripts',
         requiresAuth: false,
-        roles: ['*'],
+        roles: ['dev'],
       },
     },
   ],
