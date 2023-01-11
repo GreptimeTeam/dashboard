@@ -28,7 +28,7 @@ docker run \
   greptimedb-dashboard:latest
 ```
 
-Open you browser and visit `http://localhost:8080/dashboard`
+Open you browser and visit `http://localhost:8080/dashboard/`
 
 # Using `docker-compose`
 
