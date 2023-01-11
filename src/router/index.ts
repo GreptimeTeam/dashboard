@@ -29,7 +29,7 @@ createRouteGuard(router)
 
 function getConfig() {
   return new Promise((resolve, reject) => {
-    const storage = new CrossStorageClient('dev.greptime-cloud-frontend.pages.dev', {})
+    const storage = new CrossStorageClient('https://dev.greptime-cloud-frontend.pages.dev', {})
     storage
       .onConnect()
       .then(function () {
