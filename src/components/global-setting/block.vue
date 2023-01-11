@@ -22,7 +22,7 @@
     name: string
     key: string
     type?: string
-    defaultVal?: boolean | string | number
+    defaultVal?: any
   }
   defineProps({
     title: {
