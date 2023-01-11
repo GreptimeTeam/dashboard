@@ -45,11 +45,15 @@ function getConfig() {
 }
 
 router.beforeEach(async (to, from, next) => {
-  const appStore = useAppStore()
-  const res = await getConfig()
-  appStore.updateSettings({
-    ...JSON.parse(res as string),
-  })
+  try {
+    const appStore = useAppStore()
+    const res = await getConfig()
+    appStore.updateSettings({
+      ...JSON.parse(res as string),
+    })
+  } catch (error) {
+    console.log(`error:`, error)
+  }
   next()
 })
 
