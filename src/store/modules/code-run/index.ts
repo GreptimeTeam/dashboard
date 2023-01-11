@@ -108,6 +108,7 @@ const useCodeRunStore = defineStore('codeRun', {
         useLogStore().pushLog({
           ...error,
         })
+        throw error
       }
     },
 

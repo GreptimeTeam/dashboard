@@ -2,10 +2,11 @@
 a-card(:bordered="false").editor-card
   a-form.form(:model="scriptForm" layout="inline")
     a-form-item(label="scriptName" )
-      a-input(v-model:model-value="scriptForm.scriptName" placeholder="Please Input..." v-bind:disabled="!ifNewScript") 
+      a-input(v-model:model-value="scriptForm.scriptName" placeholder="Please Input..." v-bind:disabled="!isNewScript") 
     a-space
-      a-button(@click="saveCurrentScript()") Save Script
-      a-button(@click="saveScriptAndRun()") Save and Run
+      a-button(v-if="isChanged" @click="saveCurrentScript()") Save Script
+      a-button(v-if="isChanged" @click="saveScriptAndRun()") Save and Run
+      a-button(v-if="ifCanRun" @click="run()") Run Script
   CodeMirror(v-model="pythonCode" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
 
@@ -30,7 +31,7 @@ a-card(:bordered="false").editor-card
   })
 
   const dataBaseStore = useDataBaseStore()
-  const { pythonCode, cursorAt, ifNewScript, scriptName, selectAfterSave } = usePythonCode()
+  const { pythonCode, cursorAt, lastSavedCode, isNewScript, scriptName, isChanged, selectAfterSave } = usePythonCode()
   const { saveScript, runScript } = useCodeRunStore()
   const { fetchScriptsTable } = dataBaseStore
 
@@ -43,6 +44,12 @@ a-card(:bordered="false").editor-card
     scriptName,
   })
 
+  const ifCanRun = computed(() => {
+    if (!isChanged.value && pythonCode.value !== '' && scriptForm.value.scriptName) {
+      return true
+    }
+    return false
+  })
   const handleReady = (payload: any) => {
     view.value = payload.view
   }
@@ -74,14 +81,23 @@ a-card(:bordered="false").editor-card
 
   const extensions = [python(), oneDark]
   const saveCurrentScript = async () => {
-    await saveScript(scriptForm.value.scriptName, pythonCode.value.trim())
-    await fetchScriptsTable()
-    selectAfterSave(scriptForm.value.scriptName)
+    try {
+      await saveScript(scriptForm.value.scriptName, pythonCode.value.trim())
+      await fetchScriptsTable()
+      selectAfterSave(scriptForm.value.scriptName)
+    } catch (error: any) {
+      // error
+    }
   }
   const saveScriptAndRun = async () => {
     await saveScript(scriptForm.value.scriptName, pythonCode.value.trim())
+    lastSavedCode.value = pythonCode.value
     runScript(scriptForm.value.scriptName)
     await fetchScriptsTable()
     selectAfterSave(scriptForm.value.scriptName)
+  }
+
+  const run = () => {
+    runScript(scriptForm.value.scriptName)
   }
 </script>
