@@ -1,49 +1,40 @@
 <template lang="pug">
 a-space.layout-content(direction="vertical" fill :size="14")
-  a-split.tree-split(default-size="260px" min="200px")
+  a-split.scripts-split(default-size="284px" min="200px")
     template(#first)
-      a-card(:bordered="false").tree-card
-        template(#title)
-          svg.card-icon
-            use(href="#tree")
-          span {{$t('dataExplorer.tableTree')}}
-        template(#extra)
-          svg.icon.pointer(@click="refreshTableData")
-            use(href="#refresh")
-        TableList     
+      ListTabs
     template(#second) 
-      Editor 
-  DataView(v-if="!!results.sql.length")
+      PyEditor
+  DataView(v-if="!!results.python.length")
   Log 
 </template>
 
-<script lang="ts" name="DataExplorer" setup>
+<script lang="ts" name="Scripts" setup>
   import router from '@/router'
+  import ListTabs from './list-tabs.vue'
 
+  const { codeType } = storeToRefs(useAppStore())
   const { fetchDataBaseTables: refreshTableData } = useDataBaseStore()
   const { results } = storeToRefs(useCodeRunStore())
-  const { codeType } = storeToRefs(useAppStore())
 
   const { name } = router.currentRoute.value
+
   // TODO: add more code type in the future if needed
   codeType.value = name === 'sql' ? 'sql' : 'python'
 </script>
 
 <style lang="less" scoped>
+  .layout-container {
+    display: flex;
+    width: 100%;
+    flex: 1;
+    flex-direction: column;
+  }
+  .layout-navbar {
+    height: 52px;
+  }
   .layout-content {
     padding: 20px 30px 30px 30px;
-  }
-  .tree-split {
-    height: 296px;
-  }
-  .left-side {
-    flex: 1;
-    overflow: auto;
-  }
-
-  .right-side {
-    width: 280px;
-    margin-left: 16px;
   }
 </style>
 

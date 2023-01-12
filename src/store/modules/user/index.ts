@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 
 const useUserStore = defineStore('user', {
   state: () => ({
-    role: '',
+    role: 'dev',
   }),
 
   getters: {
@@ -12,6 +12,9 @@ const useUserStore = defineStore('user', {
   },
 
   actions: {
+    setRole(role: string) {
+      this.role = role
+    },
     // switchRoles() {},
     // // Set user's information
     // setInfo() {},

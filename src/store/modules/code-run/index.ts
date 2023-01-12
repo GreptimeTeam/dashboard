@@ -1,7 +1,10 @@
-import { getSqlResult } from '@/api/editor'
+import { getSqlResult, postRunScriptName, postScripts } from '@/api/editor'
 import { Message } from '@arco-design/web-vue'
 import { defineStore } from 'pinia'
 import { dateTypes } from '@/views/dashboard/data-explorer/components/data-view/config'
+import { resultsType } from './types'
+import useLogStore from '../log'
+import useAppStore from '../app'
 
 // TODO: Add all the types we decide instead of ECharts if needed in the future.
 
@@ -26,20 +29,29 @@ const getDimensionsAndXName = (elements: any) => {
 
 const useCodeRunStore = defineStore('codeRun', {
   state: () => ({
-    titleIndex: <number>-1,
-    results: <any>[],
-    activeTabKey: <number>0,
+    titleIndex: {
+      sql: <number>-1,
+      python: <number>-1,
+    },
+    results: {
+      sql: [],
+      python: [],
+    } as resultsType,
+    activeTabKey: {
+      sql: <number>0,
+      python: <number>0,
+    },
+    codeType: storeToRefs(useAppStore()).codeType,
   }),
 
   getters: {
     currentResult(state: any) {
-      return state.results.find((item: any) => item.key === state.activeTabKey) || {}
+      return state.results[state.codeType].find((item: any) => item.key === state.activeTabKey[state.codeType]) || {}
     },
   },
 
   actions: {
-    async fetchSQLResult(sql: any) {
-      const { pushLog } = useLogStore()
+    async fetchSQLResult(sql: string) {
       try {
         const res: any = await getSqlResult(sql)
 
@@ -53,13 +65,13 @@ const useCodeRunStore = defineStore('codeRun', {
               records: oneRes.records.rows.length,
             })
             if (oneRes.records.rows.length > 0) {
-              this.titleIndex += 1
-              this.results.push({
+              this.titleIndex.sql += 1
+              this.results.sql.push({
                 records: oneRes.records,
                 dimensionsAndXName: getDimensionsAndXName(oneRes.records.schema.column_schemas),
-                key: this.titleIndex,
+                key: this.titleIndex.sql,
               })
-              this.activeTabKey = this.titleIndex
+              this.activeTabKey.sql = this.titleIndex.sql
             }
           } else {
             resultInLog.push({
@@ -68,38 +80,93 @@ const useCodeRunStore = defineStore('codeRun', {
           }
         })
 
-        pushLog({
-          sql,
+        useLogStore().pushLog({
+          runCode: sql,
           ...res,
           result: resultInLog,
         })
       } catch (error: any) {
-        pushLog({
-          sql,
+        useLogStore().pushLog({
+          runCode: sql,
+          ...error,
+        })
+      }
+    },
+
+    async saveScript(name: string, code: string) {
+      try {
+        const res: any = await postScripts(name, code)
+
+        Message.success({
+          content: 'save success',
+        })
+        useLogStore().pushLog({
+          name,
+          ...res,
+        })
+      } catch (error: any) {
+        useLogStore().pushLog({
+          ...error,
+        })
+        throw error
+      }
+    },
+
+    async runScript(name: string) {
+      try {
+        const res: any = await postRunScriptName(name)
+        Message.success({
+          content: 'run success',
+        })
+        const resultInLog: any = []
+        res.output.forEach((oneRes: any) => {
+          resultInLog.push({
+            records: oneRes.records.rows.length,
+          })
+          if (oneRes.records.rows.length > 0) {
+            this.titleIndex.python += 1
+            this.results.python.push({
+              records: oneRes.records,
+              dimensionsAndXName: getDimensionsAndXName(oneRes.records.schema.column_schemas),
+              key: this.titleIndex.python,
+            })
+            this.activeTabKey.python = this.titleIndex.python
+          }
+        })
+        useLogStore().pushLog({
+          name,
+          ...res,
+          result: resultInLog,
+        })
+      } catch (error: any) {
+        useLogStore().pushLog({
+          name,
           ...error,
         })
       }
     },
 
     setActiveTabKey(key: number) {
-      this.activeTabKey = key
+      this.activeTabKey[this.codeType] = key
     },
 
     removeResult(key: number) {
-      if (this.results.length === 1) {
-        this.$reset()
+      if (this.results[this.codeType].length === 1) {
+        this.clearResults()
         return
       }
-      let deletedTabIndex = this.results.findIndex((item: any) => item.key === key)
-      if (deletedTabIndex + 1 === this.results.length) {
+      let deletedTabIndex = this.results[this.codeType].findIndex((item: any) => item.key === key)
+      if (deletedTabIndex + 1 === this.results[this.codeType].length) {
         deletedTabIndex -= 1
       }
-      this.results = this.results.filter((item: any) => item.key !== key)
-      this.activeTabKey = this.results[deletedTabIndex].key
+      this.results[this.codeType] = this.results[this.codeType].filter((item: any) => item.key !== key)
+      this.activeTabKey[this.codeType] = this.results[this.codeType][deletedTabIndex].key
     },
 
-    clearResult() {
-      this.$reset()
+    clearResults() {
+      this.results[this.codeType] = []
+      this.titleIndex[this.codeType] = -1
+      this.activeTabKey[this.codeType] = 0
     },
   },
 })

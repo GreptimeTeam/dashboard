@@ -11,7 +11,6 @@ import configImageminPlugin from './plugin/imagemin'
 export default mergeConfig(
   {
     mode: 'production',
-    base: '/dashboard/',
     plugins: [
       configCompressPlugin('gzip'),
       configVisualizerPlugin(),

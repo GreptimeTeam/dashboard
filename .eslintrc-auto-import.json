@@ -47,6 +47,7 @@
     "onUpdated": true,
     "permission": true,
     "provide": true,
+    "pythonCode": true,
     "reactive": true,
     "readonly": true,
     "ref": true,

@@ -1,13 +1,29 @@
-import { fetchOneTable, getTables } from '@/api/editor'
+import { fetchOneTable, getSqlResult, getTables } from '@/api/editor'
 import { defineStore } from 'pinia'
 
 const useDataBaseStore = defineStore('dataBase', {
-  // state： data
   state: () => ({
-    tableData: <any>{},
+    tableData: <any>{
+      output: [
+        {
+          records: {
+            rows: [],
+          },
+        },
+      ],
+    },
     favoriteData: <any>[],
     ifTableLoading: <boolean>true,
     tableKey: 0,
+    scriptsData: <any>{
+      output: [
+        {
+          records: {
+            rows: [],
+          },
+        },
+      ],
+    },
   }),
   // getters: computed
   getters: {
@@ -34,7 +50,21 @@ const useDataBaseStore = defineStore('dataBase', {
       })
       return tempArray
     },
+    scriptsList(state) {
+      const tempArray: any = []
+      state.scriptsData.output[0].records.rows.forEach((item: Array<any>) => {
+        const node = {
+          title: item[0],
+          key: item[0],
+          code: item[1],
+          isLeaf: true,
+        }
+        tempArray.push(node)
+      })
+      return tempArray
+    },
   },
+
   // actions: methods
   actions: {
     async fetchDataBaseTables() {
@@ -53,6 +83,15 @@ const useDataBaseStore = defineStore('dataBase', {
         return res
       } catch (error) {
         return false
+      }
+    },
+    async fetchScriptsTable() {
+      const sql = 'select * from scripts'
+      try {
+        const res = await getSqlResult(sql)
+        this.scriptsData = res
+      } catch (error) {
+        // some error
       }
     },
   },

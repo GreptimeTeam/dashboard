@@ -8,6 +8,7 @@
   import { computed } from 'vue'
   import enUS from '@arco-design/web-vue/es/locale/lang/en-us'
   import useLocale from '@/hooks/locale'
+  import { useUserStore } from '@/store'
 
   const { currentLocale } = useLocale()
   const locale = computed(() => {
@@ -18,4 +19,7 @@
         return enUS
     }
   })
+
+  const { setRole } = useUserStore()
+  setRole(import.meta.env.MODE === 'cloud' ? 'cloud' : 'dev')
 </script>

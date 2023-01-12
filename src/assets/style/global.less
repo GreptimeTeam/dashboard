@@ -211,6 +211,39 @@ body {
   }
 }
 
+.arco-menu-horizontal {
+  height: 100%;
+
+  .arco-menu-inner {
+    padding: 0;
+  }
+
+  .arco-menu-selected-label {
+    bottom: -9px;
+  }
+}
+
+.arco-input-wrapper {
+  background: var(--th-bg-color);
+
+  .arco-input[disabled] {
+    -webkit-text-fill-color: var(--font-color-40);
+  }
+}
+
+.arco-input-wrapper:hover {
+  background: var(--th-bg-color);
+}
+
+.arco-input-wrapper.arco-input-disabled {
+  background: var(--th-bg-color);
+}
+
+.arco-input-wrapper:focus-within,
+.arco-input-wrapper.arco-input-focus {
+  border-color: var(--hover-bg-color);
+}
+
 :focus {
   outline: none;
 }
