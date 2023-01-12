@@ -47,8 +47,10 @@ jobs:
         shell: bash
         if: github.event_name != 'schedule'
         run: |
-          VERSION=${{ github.ref_name }}
-          echo "IMAGE_TAG=${VERSION:1}" >> $GITHUB_ENV
+          commitShortSHA=`echo ${{ github.sha }} | cut -c1-8`
+          IMAGE_TAG=$commitShortSHA
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
 

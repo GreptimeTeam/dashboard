@@ -1,0 +1,63 @@
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: 'the dashboard commit sha'
+        required: true
+
+name: Build docker image manually
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  docker:
+    name: Build docker image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.commit }}
+
+      - name: Configure image tag
+        shell: bash
+        run: |
+          commitShortSHA=`echo ${{ github.sha }} | cut -c1-8`
+          IMAGE_TAG=$commitShortSHA
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Send GitHub Action trigger data to Slack workflow
+        id: slack_start
+        uses: slackapi/slack-github-action@v1.23.0
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        with:
+          payload: |
+            {"text": "Building new custom **dashboard** image. git-ref: `${{ github.event.inputs.commit }}`"}
+
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          push: true
+          #platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
+          tags: |
+            ${{ env.REGISTRY }}/greptimeteam/dashboard:${{ env.IMAGE_TAG }}
+
+      - name: Send GitHub Action trigger data to Slack workflow
+        id: slack_finish
+        uses: slackapi/slack-github-action@v1.23.0
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        with:
+          payload: |
+            {"text": "New custom **dashboard** image is ready. Tag: `${{ env.IMAGE_TAG }}`"}
