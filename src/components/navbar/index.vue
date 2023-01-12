@@ -2,12 +2,12 @@
 .navbar
   .left-side
     img.logo-text-img(alt='logo' src='/src/assets/images/logo-text.webp')
-  .menu(v-permission="['dev']")
-    a-menu(mode="horizontal" v-model="menuSelectedKey" :default-selected-keys="defaultMenuKey" @menu-item-click="menuClick")
-      a-menu-item(key="sql")
-        |SQL 
-      a-menu-item(key="scripts")
-        |Scripts
+    .menu(v-permission="['dev']")
+      a-menu(mode="horizontal" v-model="menuSelectedKey" :default-selected-keys="defaultMenuKey" @menu-item-click="menuClick")
+        a-menu-item(key="sql")
+          |SQL 
+        a-menu-item(key="scripts")
+          |Scripts
   ul.right-side
     li
       a-dropdown(trigger="hover" position="br" :popup-max-height="false")
@@ -58,7 +58,6 @@
 
   .left-side {
     display: flex;
-    align-items: center;
     padding-left: 20px;
 
     .logo-text-img {
@@ -67,7 +66,7 @@
   }
 
   .menu {
-    width: 220px;
+    width: 230px;
   }
 
   .right-side {
@@ -108,6 +107,9 @@
       &.arco-menu-selected:hover {
         background-color: transparent;
       }
+    }
+    :deep(.arco-menu-selected-label) {
+      background-color: var(--card-bg-color);
     }
   }
 </style>

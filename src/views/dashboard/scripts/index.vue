@@ -1,6 +1,6 @@
 <template lang="pug">
 a-space.layout-content(direction="vertical" fill :size="14")
-  a-split.scripts-split(default-size="260px" min="200px")
+  a-split.scripts-split(default-size="284px" min="200px")
     template(#first)
       ListTabs
     template(#second) 

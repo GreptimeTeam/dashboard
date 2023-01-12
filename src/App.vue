@@ -21,5 +21,5 @@
   })
 
   const { setRole } = useUserStore()
-  setRole(import.meta.env.DEV ? 'dev' : 'prod')
+  setRole(import.meta.env.MODE === 'cloud' ? 'cloud' : 'dev')
 </script>
