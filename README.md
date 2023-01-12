@@ -22,7 +22,6 @@ Pre-built docker images are available on docker hub, you can pull latest image
 and run via:
 
 ```
-docker pull greptime/greptimedb-dashboard
 docker run \
   -e GREPTIMEDB_HTTP_HOST=127.0.0.1 \
   -e GREPTIMEDB_HTTP_PORT=4000 \
@@ -30,7 +29,7 @@ docker run \
   --network host \
   greptime/greptimedb-dashboard:latest
 
-## open your browser at http://localhost:8080/dashboard
+## open your browser at http://localhost:8080/dashboard/
 ```
 
 To build image by yourself, or use `docker-compose` to setup both greptimedb and

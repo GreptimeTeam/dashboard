@@ -22,7 +22,7 @@
     name: string
     key: string
     type?: string
-    defaultVal?: boolean | string | number
+    defaultVal?: any
   }
   defineProps({
     title: {
@@ -64,5 +64,9 @@
     align-items: center;
     justify-content: space-between;
     height: 32px;
+  }
+
+  span {
+    margin-right: 10px;
   }
 </style>

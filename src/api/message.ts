@@ -14,7 +14,7 @@ export interface MessageRecord {
 export type MessageListType = MessageRecord[]
 
 export function queryMessageList() {
-  return axios.post<MessageListType>('/api/message/list')
+  return axios.post<MessageListType>('/message/list')
 }
 
 interface MessageStatus {
@@ -22,7 +22,7 @@ interface MessageStatus {
 }
 
 export function setMessageStatus(data: MessageStatus) {
-  return axios.post<MessageListType>('/api/message/read', data)
+  return axios.post<MessageListType>('/message/read', data)
 }
 
 export interface ChatRecord {
@@ -34,5 +34,5 @@ export interface ChatRecord {
 }
 
 export function queryChatList() {
-  return axios.post<ChatRecord[]>('/api/chat/list')
+  return axios.post<ChatRecord[]>('/chat/list')
 }

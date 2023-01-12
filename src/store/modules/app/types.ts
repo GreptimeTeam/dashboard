@@ -15,5 +15,6 @@ export interface AppState {
   tabBar: boolean
   menuFromServer: boolean
   serverMenu: RouteRecordNormalized[]
+  databaseURL: string
   [key: string]: unknown
 }

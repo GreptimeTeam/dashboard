@@ -12,5 +12,9 @@
   "device": "desktop",
   "tabBar": false,
   "menuFromServer": false,
+  "databaseURL": "",
+  "database": "public",
+  "principal": "",
+  "credential": "",
   "serverMenu": []
 }

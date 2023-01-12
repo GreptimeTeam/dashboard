@@ -10,15 +10,14 @@
     :width="300"
     unmount-on-close
     :visible="visible"
-    :cancel-text="$t('settings.close')"
-    :ok-text="$t('settings.copySettings')"
-    @ok="copySettings"
+    :ok-text="$t('settings.save')"
+    mask-closable
+    @ok="cancel"
     @cancel="cancel"
   >
     <template #title> {{ $t('settings.title') }} </template>
-    <Block :options="contentOpts" :title="$t('settings.content')" />
-    <Block :options="othersOpts" :title="$t('settings.otherSettings')" />
-    <a-alert>{{ $t('settings.alertContent') }}</a-alert>
+    <Block :options="authOpts" :title="$t('settings.auth')" />
+    <Block :options="databaseOpts" :title="$t('settings.database')" />
   </a-drawer>
 </template>
 
@@ -28,6 +27,7 @@
   import { useI18n } from 'vue-i18n'
   import { useClipboard } from '@vueuse/core'
   import { useAppStore } from '@/store'
+  import axios from 'axios'
   import Block from './block.vue'
 
   const emit = defineEmits(['cancel'])
@@ -36,37 +36,33 @@
   const { t } = useI18n()
   const { copy } = useClipboard()
   const visible = computed(() => appStore.globalSettings)
-  const contentOpts = computed(() => [
-    { name: 'settings.navbar', key: 'navbar', defaultVal: appStore.navbar },
+  const authOpts = computed(() => [
+    { name: 'settings.username', key: 'principal', defaultVal: appStore.principal, type: 'input' },
     {
-      name: 'settings.menu',
-      key: 'menu',
-      defaultVal: appStore.menu,
-    },
-    { name: 'settings.footer', key: 'footer', defaultVal: appStore.footer },
-    { name: 'settings.tabBar', key: 'tabBar', defaultVal: appStore.tabBar },
-    {
-      name: 'settings.menuFromServer',
-      key: 'menuFromServer',
-      defaultVal: appStore.menuFromServer,
-    },
-    {
-      name: 'settings.menuWidth',
-      key: 'menuWidth',
-      defaultVal: appStore.menuWidth,
-      type: 'number',
+      name: 'settings.password',
+      key: 'credential',
+      defaultVal: appStore.credential,
+      type: 'password',
     },
   ])
-  const othersOpts = computed(() => [
+  const databaseOpts = computed(() => [
     {
-      name: 'settings.colorWeak',
-      key: 'colorWeak',
-      defaultVal: appStore.colorWeak,
+      name: 'settings.databaseURL',
+      key: 'databaseURL',
+      defaultVal: appStore.databaseURL,
+      type: 'input',
+    },
+    {
+      name: 'settings.database',
+      key: 'database',
+      defaultVal: appStore.database,
+      type: 'input',
     },
   ])
 
   const cancel = () => {
     appStore.updateSettings({ globalSettings: false })
+    axios.defaults.baseURL = appStore.databaseURL
     emit('cancel')
   }
   const copySettings = async () => {
@@ -77,6 +73,10 @@
   const setVisible = () => {
     appStore.updateSettings({ globalSettings: true })
   }
+
+  onMounted(() => {
+    axios.defaults.baseURL = appStore.databaseURL
+  })
 </script>
 
 <style scoped lang="less">
