@@ -6198,9 +6198,9 @@ vue-demi@*, vue-demi@^0.13.2:
   version "0.13.11"
   resolved "https://registry.npmmirror.com/vue-demi/-/vue-demi-0.13.11.tgz"
 
-vue-echarts@^6.2.4:
-  version "6.2.4"
-  resolved "https://registry.npmjs.org/vue-echarts/-/vue-echarts-6.2.4.tgz"
+vue-echarts@^6.5.0:
+  version "6.5.0"
+  resolved "https://registry.yarnpkg.com/vue-echarts/-/vue-echarts-6.5.0.tgz#09b8719db626c93cc56ae29dda6461a26e528122"
   dependencies:
     resize-detector "^0.3.0"
     vue-demi "^0.13.2"
