@@ -55,8 +55,6 @@ export default function useDataExplorer() {
     lastSavedCode.value = pythonCode.value
   }
 
-  // TODO: save code temp to local storage
-
   return {
     insertCode,
     insertNameToCode,

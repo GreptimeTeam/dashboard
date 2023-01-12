@@ -1,7 +1,7 @@
 <template lang="pug">
 a-card(:bordered="false").editor-card
-  a-form.form(:model="scriptForm" layout="inline")
-    a-form-item(label="scriptName" )
+  a-form.button-space(:model="scriptForm" layout="inline")
+    a-form-item(label="Script Name" )
       a-input(v-model:model-value="scriptForm.scriptName" placeholder="Please Input..." v-bind:disabled="!isNewScript") 
     a-space
       a-button(v-if="isChanged" @click="saveCurrentScript()") Save Script
