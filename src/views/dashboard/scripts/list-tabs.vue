@@ -23,7 +23,7 @@ a-tabs(position="left" lazy-load default-active-key="2")
           use(href="#code")
         span {{$t('dataExplorer.scripts')}}
       template(#extra)
-        a-button(@click="createNewScript()") Create
+        a-button(@click="createNewScript()") {{$t('dataExplorer.create')}}
       ScriptsList
 </template>
 

@@ -1,12 +1,12 @@
 <template lang="pug">
 a-card(:bordered="false").editor-card
   a-form.button-space(:model="scriptForm" layout="inline")
-    a-form-item(label="Script Name" )
-      a-input(v-model:model-value="scriptForm.scriptName" placeholder="Please Input..." v-bind:disabled="!isNewScript") 
+    a-form-item(:label="$t('dataExplorer.scriptName')" )
+      a-input(v-model:model-value="scriptForm.scriptName" :placeholder="$t('dataExplorer.input')" v-bind:disabled="!isNewScript") 
     a-space
-      a-button(v-if="isChanged" @click="saveCurrentScript()") Save Script
-      a-button(v-if="isChanged" @click="saveScriptAndRun()") Save and Run
-      a-button(v-if="ifCanRun" @click="run()") Run Script
+      a-button(v-if="isChanged" @click="saveCurrentScript()") {{$t('dataExplorer.saveScript')}}
+      a-button(v-if="isChanged" @click="saveScriptAndRun()") {{$t('dataExplorer.saveAndRun')}}
+      a-button(v-if="ifCanRun" @click="run()") {{$t('dataExplorer.runScriptAction')}}
   CodeMirror(v-model="pythonCode" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
 

@@ -25,4 +25,10 @@ export default {
   'dataExplorer.code': 'Code: {code}',
   'dataExplorer.saveName': 'Saved script name: {name}',
   'dataExplorer.runScript': 'Run script name: {name}',
+  'dataExplorer.scriptName': 'Script Name',
+  'dataExplorer.create': 'Create',
+  'dataExplorer.saveScript': 'Save Script',
+  'dataExplorer.saveAndRun': 'Save and Run',
+  'dataExplorer.runScriptAction': 'Run Script',
+  'dataExplorer.input': 'Please input...',
 }
