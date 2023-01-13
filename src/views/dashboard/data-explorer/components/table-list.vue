@@ -3,7 +3,7 @@ a-scrollbar.tree-scrollbar
   a-tree.table-tree(v-if="!ifTableLoading" :key="tableKey" :data="tableList" :load-more="loadMore" size="small")
     template(#title)
     template(#extra="nodeData")
-      img(:src="ICON_MAP[nodeData.iconType]" height="12")
+      img(:src="getIconUrl(nodeData.iconType)" alt="" height="12")
       span.tree-title
         | {{ nodeData.title }}
       span.data-type
@@ -57,11 +57,15 @@ a-scrollbar.tree-scrollbar
         })
     })
   }
-
-  const ICON_MAP = {
-    'VALUE': '/src/assets/images/value-icon.png',
-    'PRIMARY KEY': '/src/assets/images/key-icon.png',
-    'TIME INDEX': '/src/assets/images/time-icon.png',
+  const ICON_MAP: { [key: string]: string } = {
+    'VALUE': 'value-icon.png',
+    'PRIMARY KEY': 'key-icon.png',
+    'TIME INDEX': 'time-icon.png',
   }
+  // TODO: Better use iconPark.
+  const getIconUrl = (type: any) => {
+    return new URL(`../../../../assets/images/${ICON_MAP[type]}`, import.meta.url).href
+  }
+
   initTableDataSet()
 </script>
