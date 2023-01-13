@@ -5,7 +5,7 @@ on:
         description: 'the dashboard commit sha'
         required: true
 
-name: Build docker image manually
+name: Build Cloud Dashboard
 
 env:
   REGISTRY: ghcr.io
