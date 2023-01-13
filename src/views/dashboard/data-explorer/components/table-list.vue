@@ -3,7 +3,7 @@ a-scrollbar.tree-scrollbar
   a-tree.table-tree(v-if="!ifTableLoading" :key="tableKey" :data="tableList" :load-more="loadMore" size="small")
     template(#title)
     template(#extra="nodeData")
-      img(:src="getIconUrl(nodeData.iconType)" alt="" height="12")
+      img(:src="getIconUrl(nodeData.iconType)" alt="" height="14")
       span.tree-title
         | {{ nodeData.title }}
       span.data-type
