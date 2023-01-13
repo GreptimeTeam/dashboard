@@ -18,7 +18,7 @@ export default function useDataExplorer() {
     pythonCode.value = `${pythonCode.value}\n${value}`
   }
 
-  const insertNameToCode = (name: any) => {
+  const insertNameToPyCode = (name: any) => {
     pythonCode.value =
       pythonCode.value.substring(0, cursorAt.value[0]) + name + pythonCode.value.substring(cursorAt.value[1])
   }
@@ -57,7 +57,7 @@ export default function useDataExplorer() {
 
   return {
     insertCode,
-    insertNameToCode,
+    insertNameToPyCode,
     overwriteCode,
     createNewScript,
     selectAfterSave,

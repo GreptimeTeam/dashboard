@@ -9,7 +9,7 @@ a-scrollbar.tree-scrollbar
       span.data-type
         | {{ nodeData.dataType }}
       a-tooltip(:content="$t('dataExplorer.insertName')" mini)
-        svg.icon.copy-icon.pointer(name="copy" @click="insertNameToCode(nodeData.title)")
+        svg.icon.copy-icon.pointer(name="copy" @click="insertName(nodeData.title)")
           use(href="#copy")
 </template>
 
@@ -17,17 +17,21 @@ a-scrollbar.tree-scrollbar
   import { storeToRefs } from 'pinia'
   import { useDataBaseStore } from '@/store'
   import useDataExplorer from '@/hooks/data-explorer'
+  import usePythonCode from '@/hooks/python-code'
 
   const dataBaseStore = useDataBaseStore()
   const dataExplorer = useDataExplorer()
 
   const { insertNameToCode } = dataExplorer
+  const { codeType } = storeToRefs(useAppStore())
+  const { insertNameToPyCode } = usePythonCode()
 
   const initTableDataSet = () => {
     dataBaseStore.fetchDataBaseTables()
   }
   const { fetchOneTable } = dataBaseStore
   const { tableList, ifTableLoading, tableKey } = storeToRefs(dataBaseStore)
+
   const loadMore = (nodeData: any) => {
     return new Promise<void>((resolve, reject) => {
       fetchOneTable(nodeData.title)
@@ -57,6 +61,11 @@ a-scrollbar.tree-scrollbar
         })
     })
   }
+
+  const insertName = (name: string) => {
+    return codeType.value === 'sql' ? insertNameToCode(name) : insertNameToPyCode(name)
+  }
+
   const ICON_MAP: { [key: string]: string } = {
     'VALUE': 'value-icon.png',
     'PRIMARY KEY': 'key-icon.png',
