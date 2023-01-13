@@ -29,7 +29,7 @@ jobs:
           node-version: 18.x
           cache: 'pnpm'
       - run: pnpm install
-      - run: npm run build:docker-cloud
+      - run: pnpm run build:docker-cloud
 
       - name: Configure image tag
         shell: bash
