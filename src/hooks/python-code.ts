@@ -36,6 +36,7 @@ export default function useDataExplorer() {
     isNewScript.value = true
     pythonCode.value = ''
     scriptSelectedKeys.value = []
+    lastSelectedKey.value = []
     lastSavedCode.value = ''
     creating.value = false
   }
