@@ -31,4 +31,5 @@ export default {
   'dataExplorer.saveAndRun': 'Save and Run',
   'dataExplorer.runScriptAction': 'Run Script',
   'dataExplorer.input': 'Please input...',
+  'dataExplorer.question': 'Your changes will be lost. Are you sure you want to continue?',
 }
