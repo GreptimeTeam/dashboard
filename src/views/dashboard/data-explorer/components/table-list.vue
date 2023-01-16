@@ -3,13 +3,13 @@ a-scrollbar.tree-scrollbar
   a-tree.table-tree(v-if="!ifTableLoading" :key="tableKey" :data="tableList" :load-more="loadMore" size="small")
     template(#title)
     template(#extra="nodeData")
-      img(:src="ICON_MAP[nodeData.iconType]" height="12")
+      img(:src="getIconUrl(nodeData.iconType)" alt="" height="14")
       span.tree-title
         | {{ nodeData.title }}
       span.data-type
         | {{ nodeData.dataType }}
       a-tooltip(:content="$t('dataExplorer.insertName')" mini)
-        svg.icon.copy-icon.pointer(name="copy" @click="insertNameToCode(nodeData.title)")
+        svg.icon.copy-icon.pointer(name="copy" @click="insertName(nodeData.title)")
           use(href="#copy")
 </template>
 
@@ -17,17 +17,21 @@ a-scrollbar.tree-scrollbar
   import { storeToRefs } from 'pinia'
   import { useDataBaseStore } from '@/store'
   import useDataExplorer from '@/hooks/data-explorer'
+  import usePythonCode from '@/hooks/python-code'
 
   const dataBaseStore = useDataBaseStore()
   const dataExplorer = useDataExplorer()
 
   const { insertNameToCode } = dataExplorer
+  const { codeType } = storeToRefs(useAppStore())
+  const { insertNameToPyCode } = usePythonCode()
 
   const initTableDataSet = () => {
     dataBaseStore.fetchDataBaseTables()
   }
   const { fetchOneTable } = dataBaseStore
   const { tableList, ifTableLoading, tableKey } = storeToRefs(dataBaseStore)
+
   const loadMore = (nodeData: any) => {
     return new Promise<void>((resolve, reject) => {
       fetchOneTable(nodeData.title)
@@ -58,10 +62,19 @@ a-scrollbar.tree-scrollbar
     })
   }
 
-  const ICON_MAP = {
-    'VALUE': '/src/assets/images/value-icon.png',
-    'PRIMARY KEY': '/src/assets/images/key-icon.png',
-    'TIME INDEX': '/src/assets/images/time-icon.png',
+  const insertName = (name: string) => {
+    return codeType.value === 'sql' ? insertNameToCode(name) : insertNameToPyCode(name)
   }
+
+  const ICON_MAP: { [key: string]: string } = {
+    'VALUE': 'value-icon.png',
+    'PRIMARY KEY': 'key-icon.png',
+    'TIME INDEX': 'time-icon.png',
+  }
+  // TODO: Better use iconPark.
+  const getIconUrl = (type: any) => {
+    return new URL(`../../../../assets/images/${ICON_MAP[type]}`, import.meta.url).href
+  }
+
   initTableDataSet()
 </script>

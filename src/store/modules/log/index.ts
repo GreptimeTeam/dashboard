@@ -1,18 +1,24 @@
 import { defineStore } from 'pinia'
+import useAppStore from '../app'
+import { logsType, logType } from './types'
 
 const useLogStore = defineStore('log', {
   state: () => ({
-    logs: <any>[],
+    codeType: storeToRefs(useAppStore()).codeType,
+    logs: {
+      sql: [],
+      python: [],
+    } as logsType,
   }),
 
   getters: {},
 
   actions: {
-    pushLog(log: any) {
-      this.logs.push(log)
+    pushLog(log: logType) {
+      this.logs[this.codeType] = this.logs[this.codeType].concat([log])
     },
     clearLogs() {
-      this.$reset()
+      this.logs[this.codeType] = []
     },
   },
 })
