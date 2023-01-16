@@ -2038,6 +2038,10 @@ decode-uri-component@^0.2.0:
   version "0.2.2"
   resolved "https://registry.yarnpkg.com/decode-uri-component/-/decode-uri-component-0.2.2.tgz#e69dbe25d37941171dd540e024c444cd5188e1e9"
 
+decode-uri-component@^0.4.1:
+  version "0.4.1"
+  resolved "https://registry.yarnpkg.com/decode-uri-component/-/decode-uri-component-0.4.1.tgz#2ac4859663c704be22bf7db760a1494a49ab2cc5"
+
 decompress-response@^3.2.0, decompress-response@^3.3.0:
   version "3.3.0"
   resolved "https://registry.npmmirror.com/decompress-response/-/decompress-response-3.3.0.tgz"
@@ -2951,9 +2955,9 @@ fill-range@^7.0.1:
   dependencies:
     to-regex-range "^5.0.1"
 
-filter-obj@^1.1.0:
-  version "1.1.0"
-  resolved "https://registry.npmmirror.com/filter-obj/-/filter-obj-1.1.0.tgz"
+filter-obj@^5.1.0:
+  version "5.1.0"
+  resolved "https://registry.yarnpkg.com/filter-obj/-/filter-obj-5.1.0.tgz#5bd89676000a713d7db2e197f660274428e524ed"
 
 find-up@^1.0.0:
   version "1.1.2"
@@ -4939,14 +4943,13 @@ query-string@^5.0.1:
     object-assign "^4.1.0"
     strict-uri-encode "^1.0.0"
 
-query-string@^7.1.1:
-  version "7.1.1"
-  resolved "https://registry.npmmirror.com/query-string/-/query-string-7.1.1.tgz"
+query-string@^8.1.0:
+  version "8.1.0"
+  resolved "https://registry.yarnpkg.com/query-string/-/query-string-8.1.0.tgz#e7f95367737219544cd360a11a4f4ca03836e115"
   dependencies:
-    decode-uri-component "^0.2.0"
-    filter-obj "^1.1.0"
-    split-on-first "^1.0.0"
-    strict-uri-encode "^2.0.0"
+    decode-uri-component "^0.4.1"
+    filter-obj "^5.1.0"
+    split-on-first "^3.0.0"
 
 queue-microtask@^1.2.2:
   version "1.2.3"
@@ -5374,9 +5377,9 @@ spdx-license-ids@^3.0.0:
   version "3.0.12"
   resolved "https://registry.npmmirror.com/spdx-license-ids/-/spdx-license-ids-3.0.12.tgz"
 
-split-on-first@^1.0.0:
-  version "1.1.0"
-  resolved "https://registry.npmmirror.com/split-on-first/-/split-on-first-1.1.0.tgz"
+split-on-first@^3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/split-on-first/-/split-on-first-3.0.0.tgz#f04959c9ea8101b9b0bbf35a61b9ebea784a23e7"
 
 split2@^3.0.0:
   version "3.2.2"
@@ -5399,10 +5402,6 @@ stable@^0.1.8:
 strict-uri-encode@^1.0.0:
   version "1.1.0"
   resolved "https://registry.npmmirror.com/strict-uri-encode/-/strict-uri-encode-1.1.0.tgz"
-
-strict-uri-encode@^2.0.0:
-  version "2.0.0"
-  resolved "https://registry.npmmirror.com/strict-uri-encode/-/strict-uri-encode-2.0.0.tgz"
 
 string-argv@^0.3.1:
   version "0.3.1"
