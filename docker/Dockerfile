@@ -6,7 +6,7 @@ WORKDIR /greptimedb-dashboard
 
 COPY . .
 RUN pnpm install
-RUN pnpm build
+RUN pnpm build:docker
 
 FROM nginx:1.23 as base
 
