@@ -8,7 +8,7 @@ a-card(:bordered="false").editor-card
         | {{$t('dataExplorer.runLine')}} {{ lineStart }}
       a-button(v-else)
         | {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
-  CodeMirror(v-model="code" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
+  CodeMirror(v-model="sqlCode" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
 
 <script lang="ts" setup>
@@ -38,7 +38,7 @@ a-card(:bordered="false").editor-card
   const dataExplorer = useDataExplorer()
   const dataBaseStore = useDataBaseStore()
   const codeRunStore = useCodeRunStore()
-  const { code, cursorAt } = dataExplorer
+  const { sqlCode, cursorAt } = dataExplorer
   const { fetchSQLResult } = codeRunStore
 
   const handleReady = (payload: any) => {
@@ -74,7 +74,7 @@ a-card(:bordered="false").editor-card
   // todo: combine next 2 functions
   const runSqlCommand = () => {
     // todo: add better format tool for code
-    fetchSQLResult(code.value.trim().replace(/\n/gi, ' '))
+    fetchSQLResult(sqlCode.value.trim().replace(/\n/gi, ' '))
     // todo: refresh tables data and when
   }
 

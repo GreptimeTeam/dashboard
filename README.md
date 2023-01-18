@@ -9,6 +9,7 @@ Dashboard is a data-visualization platform for [GreptimeDB](https://github.com/g
 - Clone this project `git clone https://github.com/GreptimeTeam/dashboard.git`
 - Run `npm install` for dependencies
 - Run `npm run dev` and visit the URL in output
+- Also: Run `npm run dev:cloud` to see the cloud version
 
 ## How to Use
 
@@ -45,4 +46,4 @@ dashboard, see [instructions here](docker/README.md).
 
 This project is open source under [Apache 2.0 license][1]
 
-[1]: <LICENSE>
+[1]: LICENSE

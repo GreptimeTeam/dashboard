@@ -16,4 +16,5 @@ export interface AppState {
   menuFromServer: boolean
   serverMenu: RouteRecordNormalized[]
   [key: string]: unknown
+  codeType: string
 }
