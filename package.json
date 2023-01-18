@@ -48,7 +48,7 @@
     "mitt": "^3.0.0",
     "nprogress": "^0.2.0",
     "pinia": "^2.0.28",
-    "query-string": "^7.1.1",
+    "query-string": "^8.1.0",
     "sortablejs": "^1.15.0",
     "stylelint-config-rational-order-fix": "^0.1.9",
     "stylelint-config-recommended-less": "^1.0.4",
