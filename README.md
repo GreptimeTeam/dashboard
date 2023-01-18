@@ -24,11 +24,10 @@ and run via:
 
 ```
 docker pull greptime/greptimedb-dashboard
-docker run --rm \
+docker run --rm --name greptimedb-dashboard \
   -e GREPTIMEDB_HTTP_HOST=127.0.0.1 \
   -e GREPTIMEDB_HTTP_PORT=4000 \
   -e NGINX_PORT=8080 \
-  --name greptimedb-dashboard \
   -p 8080:8080 \
   greptime/greptimedb-dashboard:latest
 
