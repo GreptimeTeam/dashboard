@@ -5,12 +5,13 @@
   "menu": false,
   "hideMenu": false,
   "menuCollapse": false,
-  "footer": true,
+  "footer": false,
   "themeColor": "#165DFF",
   "menuWidth": 220,
   "globalSettings": false,
   "device": "desktop",
   "tabBar": false,
   "menuFromServer": false,
-  "serverMenu": []
+  "serverMenu": [],
+  "codeType": "sql"
 }
