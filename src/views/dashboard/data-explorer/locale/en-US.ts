@@ -1,5 +1,6 @@
 export default {
   'dataExplorer.tableTree': 'TABLES',
+  'dataExplorer.scripts': 'scripts',
   'dataExplorer.insertName': 'Insert name into editor',
   'dataExplorer.logs': 'Logs',
   'dataExplorer.table': 'Table',
@@ -21,5 +22,13 @@ export default {
   'dataExplorer.executed': 'Executed {length} statement | Executed {length} statements',
   'dataExplorer.network': 'Network: {time} ms',
   'dataExplorer.total': 'Total: {time} ms',
-  'dataExplorer.code': 'Code: {sql}',
+  'dataExplorer.code': 'Code: {code}',
+  'dataExplorer.saveName': 'Saved script name: {name}',
+  'dataExplorer.runScript': 'Run script name: {name}',
+  'dataExplorer.scriptName': 'Script Name',
+  'dataExplorer.create': 'Create',
+  'dataExplorer.saveScript': 'Save Script',
+  'dataExplorer.saveAndRun': 'Save and Run',
+  'dataExplorer.runScriptAction': 'Run Script',
+  'dataExplorer.input': 'Please input...',
 }
