@@ -1,6 +1,6 @@
 <template lang="pug">
-a-spin(style="width: 100%")
-  a-table(:columns="gridColumn" :data="gridData" :pagination="pagination")
+a-spin(style='width: 100%')
+  a-table(:columns='gridColumn', :data='gridData', :pagination='pagination')
 </template>
 
 <script lang="ts" setup>
@@ -14,7 +14,7 @@ a-spin(style="width: 100%")
     return currentResult.value.records.schema.column_schemas.map((column: any) => {
       return {
         title: column.name,
-        dataIndex: column.name,
+        dataIndex: column.name.replace(/./gi, '-'),
       }
     })
   })
@@ -23,7 +23,8 @@ a-spin(style="width: 100%")
     return currentResult.value.records.rows.map((row: any) => {
       const tempRow: any = {}
       row.forEach((item: any, index: number) => {
-        tempRow[currentResult.value.records.schema.column_schemas[index].name] = item
+        const columnName = currentResult.value.records.schema.column_schemas[index].name.replace(/./gi, '-')
+        tempRow[columnName] = item
       })
       return tempRow
     })
