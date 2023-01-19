@@ -923,8 +923,8 @@
   "resolved" "https://registry.npmjs.org/@typescript-eslint/scope-manager/-/scope-manager-5.47.1.tgz"
   "version" "5.47.1"
   dependencies:
-    "@typescript-eslint/types" "5.47.1"
-    "@typescript-eslint/visitor-keys" "5.47.1"
+    "@typescript-eslint/types" "5.48.1"
+    "@typescript-eslint/visitor-keys" "5.48.1"
 
 "@typescript-eslint/type-utils@5.40.0":
   "integrity" "sha512-nfuSdKEZY2TpnPz5covjJqav+g5qeBqwSHKBvz7Vm1SAfy93SwKk/JeSTymruDGItTwNijSsno5LhOHRS1pcfw=="
