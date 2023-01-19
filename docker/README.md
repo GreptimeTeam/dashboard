@@ -20,11 +20,11 @@ Envinronment variables are required for running this image:
 This is an example using host network, when your greptimedb is running locally.
 
 ```
-docker run \
+docker run --rm --name greptimedb-dashboard \
   -e GREPTIMEDB_HTTP_HOST=127.0.0.1 \
   -e GREPTIMEDB_HTTP_PORT=4000 \
   -e NGINX_PORT=8080 \
-  --network host \
+  -p 8080:8080 \
   greptime/greptimedb-dashboard:latest
 ```
 

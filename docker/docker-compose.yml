@@ -1,6 +1,7 @@
 version: "3.9"
 services:
   dashboard:
+    platform: linux/amd64
     build:
       context: ..
       dockerfile: docker/Dockerfile
