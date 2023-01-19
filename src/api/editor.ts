@@ -1,10 +1,10 @@
 import axios from 'axios'
 
-export function getSqlResult(code: any) {
-  return axios.post(`/api/v1/sql?sql=${code}`)
+export function getSqlResult(code: string) {
+  return axios.post(`/api/v1/sql?sql=${encodeURIComponent(code)}`)
 }
 
-export function postScripts(name: string, code: any) {
+export function postScripts(name: string, code: string) {
   return axios.post(`/api/v1/scripts?name=${name}`, code)
 }
 
@@ -17,7 +17,7 @@ export function getTables() {
   return axios.post(`/api/v1/sql?sql=${code}`)
 }
 
-export function fetchOneTable(tableName: any) {
+export function fetchOneTable(tableName: string) {
   const code = `desc table ${tableName}`
   return axios.post(`/api/v1/sql?sql=${code}`)
 }

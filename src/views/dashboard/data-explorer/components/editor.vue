@@ -1,14 +1,24 @@
 <template lang="pug">
-a-card(:bordered="false").editor-card
+a-card.editor-card(:bordered='false')
   a-space.button-space
-    a-button(@click="runSqlCommand()" type="primary")
-      | {{$t('dataExplorer.runAll')}}
-    a(@click="runPartSqlCommand()")
-      a-button(v-if="lineStart === lineEnd")
-        | {{$t('dataExplorer.runLine')}} {{ lineStart }}
+    a-button(@click='runSqlCommand()', type='primary')
+      | {{ $t('dataExplorer.runAll') }}
+    a(@click='runPartSqlCommand()')
+      a-button(v-if='lineStart === lineEnd')
+        | {{ $t('dataExplorer.runLine') }} {{ lineStart }}
       a-button(v-else)
-        | {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
-  CodeMirror(v-model="sqlCode" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
+        | {{ $t('dataExplorer.runLines') }} {{ lineStart }} - {{ lineEnd }}
+  CodeMirror(
+    v-model='sqlCode',
+    :style='style',
+    :spellcheck='spellcheck',
+    :autofocus='autofocus',
+    :indent-with-tab='indentWithTab',
+    :tabSize='tabSize',
+    :extensions='extensions',
+    @ready='handleReady',
+    @update='codeUpdate'
+  )
 </template>
 
 <script lang="ts" setup>
@@ -73,7 +83,7 @@ a-card(:bordered="false").editor-card
 
   // todo: combine next 2 functions
   const runSqlCommand = () => {
-    // todo: add better format tool for code
+    // TODO: add better format tool for code
     fetchSQLResult(sqlCode.value.trim().replace(/\n/gi, ' '))
     // todo: refresh tables data and when
   }
