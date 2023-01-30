@@ -2,7 +2,7 @@
 
 ## Build
 
-This image uses official node image as build image and offical nginx as base
+This image uses official node image as build image and official nginx as base
 image. To build your own docker image, run `docker build` from root of the repo:
 
 ```
@@ -11,7 +11,7 @@ docker build -f docker/Dockerfile -t greptime/greptimedb-dashboard .
 
 ## Run
 
-Envinronment variables are required for running this image:
+Environment variables are required for running this image:
 
 - `GREPTIMEDB_HTTP_HOST` specify greptimedb host
 - `GREPTIMEDB_HTTP_PORT` specify greptimedb http service port

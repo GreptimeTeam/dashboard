@@ -23,7 +23,7 @@ Pre-built docker images are available on docker hub, you can pull latest image
 and run via:
 
 ```
-docker pull greptime/greptimedb-dashboard
+docker pull --platform=linux/amd64 greptime/greptimedb-dashboard
 docker run --rm --name greptimedb-dashboard \
   -e GREPTIMEDB_HTTP_HOST=127.0.0.1 \
   -e GREPTIMEDB_HTTP_PORT=4000 \
