@@ -41,7 +41,7 @@ dashboard, see [instructions here](docker/README.md).
 
 <p align="center">
   <picture>
-    <img alt="Dashboard Screenshot" src="src/assets/images/screenshot.png" width="400px">
+    <img alt="Dashboard Screenshot" src="screenshot.png">
   </picture>
 </p>
 
