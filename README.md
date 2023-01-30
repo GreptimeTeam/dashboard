@@ -37,6 +37,10 @@ docker run --rm --name greptimedb-dashboard \
 To build image by yourself, or use `docker-compose` to setup both greptimedb and
 dashboard, see [instructions here](docker/README.md).
 
+## Screenshot
+
+![Dashboard Screenshot](screenshot.png 'Dashboard Screenshot')
+
 ## Contributing
 
 - Please refer to [contribution guidelines](https://github.com/GreptimeTeam/greptimedb/blob/75dcf2467b022d4378f904efe5aae5027298986e/CONTRIBUTING.md) for more information.
