@@ -39,11 +39,7 @@ dashboard, see [instructions here](docker/README.md).
 
 ## Screenshot
 
-<p align="center">
-  <picture>
-    <img alt="Dashboard Screenshot" src="screenshot.png">
-  </picture>
-</p>
+![Dashboard Screenshot](screenshot.png 'Dashboard Screenshot')
 
 ## Contributing
 
