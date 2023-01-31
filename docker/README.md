@@ -1,23 +1,59 @@
 # GreptimeDB Dashboard Docker Image
 
-## Build
+## Using `docker-compose` (Recommended)
 
-This image uses official node image as build image and offical nginx as base
-image. To build your own docker image, run `docker build` from root of the repo:
+[Docker-compose](https://docs.docker.com/compose/) is a light-weighted container
+orchestration solution. We provide a sample compose file to pull images from docker hub, and run both dashboard and greptimedb.
+
+### 1. Run
+
+Run `docker compose up` from root of the repo:
+
+```
+docker compose -f docker/docker-compose.yml up
+```
+
+Open you browser and visit `http://localhost:8080/dashboard/`
+
+### 2. Clean
+
+Run `docker compose down` from root of the repo to remove the stopped containers:
+
+```
+docker compose -f docker/docker-compose.yml down
+```
+
+## Build and Run (locally)
+
+We do not recommend this at the moment because you might encounter network problems. The image uses official node image as build image and official nginx as base
+image.
+
+To build your own local docker image, run `docker build` from root of the repo:
 
 ```
 docker build -f docker/Dockerfile -t greptime/greptimedb-dashboard .
 ```
 
-## Run
+Environment variables are required for running this image:
 
-Envinronment variables are required for running this image:
+- `GREPTIMEDB_HTTP_HOST` specifies greptimedb host
+- `GREPTIMEDB_HTTP_PORT` specifies greptimedb http service port
+- `NGINX_PORT` specifies which port the dashboard nginx listens to
 
-- `GREPTIMEDB_HTTP_HOST` specify greptimedb host
-- `GREPTIMEDB_HTTP_PORT` specify greptimedb http service port
-- `NGINX_PORT` specify which port the dashboard nginx listen to
+Below is an example using host network (on Linux), so make sure your greptimedb is running on your host machine.
 
-This is an example using host network, when your greptimedb is running locally.
+```
+docker run --rm --name greptimedb-dashboard \
+  -e GREPTIMEDB_HTTP_HOST=127.0.0.1 \
+  -e GREPTIMEDB_HTTP_PORT=4000 \
+  -e NGINX_PORT=8080 \
+  --network=host \
+  greptime/greptimedb-dashboard:latest
+```
+
+Open you browser and visit `http://localhost:8080/dashboard/`
+
+**Note**: If you are running on M1 chip Mac, you can try the following command to visit dashboard on your browser (but you will not be able to access greptimedb):
 
 ```
 docker run --rm --name greptimedb-dashboard \
@@ -27,39 +63,3 @@ docker run --rm --name greptimedb-dashboard \
   -p 8080:8080 \
   greptime/greptimedb-dashboard:latest
 ```
-
-Open you browser and visit `http://localhost:8080/dashboard`
-
-# Using `docker-compose`
-
-[docker-compose](https://docs.docker.com/compose/) is a light-weighted container
-orchestration solution. We provide a sample compose file to build and run
-dashboard with greptimedb ready.
-
-## Build
-
-Run `docker compose build` from root of the repo:
-
-```
-docker compose -f docker/docker-compose.yml build
-```
-
-## Run
-
-Run `docker compose up` from root of the repo:
-
-```
-docker compose -f docker/docker-compose.yml up
-```
-
-Open you browser and visit `http://localhost:8080/dashboard`
-
-## Clean
-
-Run `docker compose down` from root of the repo:
-
-```
-docker compose -f docker/docker-compose.yml down
-```
-
-Remove the stopped containers
