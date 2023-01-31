@@ -3,7 +3,7 @@
 ## Using `docker-compose` (Recommended)
 
 [Docker-compose](https://docs.docker.com/compose/) is a light-weighted container
-orchestration solution. We provide a sample compose file to pull images from docker hub, and run both dashboard and greptimedb within one docker container.
+orchestration solution. We provide a sample compose file to pull images from docker hub, and run both dashboard and greptimedb.
 
 ### 1. Run
 
@@ -17,7 +17,7 @@ Open you browser and visit `http://localhost:8080/dashboard/`
 
 ### 2. Clean
 
-Run `docker compose down` from root of the repo to remove the stopped container:
+Run `docker compose down` from root of the repo to remove the stopped containers:
 
 ```
 docker compose -f docker/docker-compose.yml down
