@@ -2,10 +2,7 @@ version: '3.9'
 services:
   dashboard:
     platform: linux/amd64
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
-    image: greptime/greptimedb-dashboard:latest
+    image: 'greptime/greptimedb-dashboard:latest'
     ports:
       - '8080:8080'
     environment:

@@ -17,9 +17,9 @@ Dashboard is a data-visualization platform for [GreptimeDB](https://github.com/g
 - Follow [getting started](https://docs.greptime.com/getting-started/overview) to create your table and insert some data
 - Run a `SELECT` query and check the result as table or chart
 
-### Docker
+## Docker
 
-If you are M1 chip users, we recommend using `docker-compose` to setup both greptimedb and
+If you are M1 chip Mac users, we recommend using `docker-compose` to setup both greptimedb and
 dashboard in one docker container, see [instructions here](docker/README.md).
 
 For other users, pre-built docker images are also available on docker hub. Make sure greptimedb is running on your host machine, then pull latest image

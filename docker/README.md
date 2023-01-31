@@ -1,19 +1,11 @@
 # GreptimeDB Dashboard Docker Image
 
-## Using `docker-compose` (Recommend)
+## Using `docker-compose` (Recommended)
 
 [Docker-compose](https://docs.docker.com/compose/) is a light-weighted container
-orchestration solution. We provide a sample compose file to build and run both dashboard (from local repo) and greptimedb (from docker hub) within one docker container.
+orchestration solution. We provide a sample compose file to build and run both dashboard and greptimedb within one docker container.
 
-### Build
-
-Run `docker compose build` from root of the repo:
-
-```
-docker compose -f docker/docker-compose.yml build
-```
-
-### Run
+### 1. Run
 
 Run `docker compose up` from root of the repo:
 
@@ -23,7 +15,7 @@ docker compose -f docker/docker-compose.yml up
 
 Open you browser and visit `http://localhost:8080/dashboard`
 
-### Clean
+### 2. Clean
 
 Run `docker compose down` from root of the repo to remove the stopped container:
 
@@ -34,7 +26,7 @@ docker compose -f docker/docker-compose.yml down
 ## Build and Run
 
 This image uses official node image as build image and official nginx as base
-image. To build your own docker image, run `docker build` from root of the repo:
+image. To build your own local docker image, run `docker build` from root of the repo:
 
 ```
 docker build -f docker/Dockerfile -t greptime/greptimedb-dashboard .
