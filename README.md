@@ -20,7 +20,27 @@ Dashboard is a data-visualization platform for [GreptimeDB](https://github.com/g
 ## Docker
 
 We recommend using `docker-compose` to setup both greptimedb and
-dashboard in one docker container, see [instructions here](docker/README.md).
+dashboard in one docker container.
+
+Download docker-compose.yml by command line:
+
+```
+curl -O https://raw.githubusercontent.com/greptimeteam/dashboard/main/docker/docker-compose.yml
+```
+
+After downloading, start up by line:
+
+```
+docker compose up
+```
+
+Open you browser and visit `http://localhost:8080/dashboard/`
+
+You can also remove the stopped container by line:
+
+```
+docker compose down
+```
 
 ## Screenshot
 
