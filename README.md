@@ -19,7 +19,10 @@ Dashboard is a data-visualization platform for [GreptimeDB](https://github.com/g
 
 ### Docker
 
-Pre-built docker images are available on docker hub, you can pull latest image
+If you are M1 chip users, we recommend using `docker-compose` to setup both greptimedb and
+dashboard in one docker container, see [instructions here](docker/README.md).
+
+For other users, pre-built docker images are also available on docker hub. Make sure greptimedb is running on your host machine, then pull latest image
 and run via:
 
 ```
@@ -28,14 +31,11 @@ docker run --rm --name greptimedb-dashboard \
   -e GREPTIMEDB_HTTP_HOST=127.0.0.1 \
   -e GREPTIMEDB_HTTP_PORT=4000 \
   -e NGINX_PORT=8080 \
-  -p 8080:8080 \
+  --network host \
   greptime/greptimedb-dashboard:latest
 
-## open your browser at http://localhost:8080/dashboard
+## open your browser at http://localhost:8080/dashboard/
 ```
-
-To build image by yourself, or use `docker-compose` to setup both greptimedb and
-dashboard, see [instructions here](docker/README.md).
 
 ## Screenshot
 
