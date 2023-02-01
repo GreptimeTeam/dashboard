@@ -13,14 +13,14 @@ export function getTables() {
   return axios.post(makeSqlURL('show tables'))
 }
 
-export function fetchOneTable(tableName: any) {
+export function fetchOneTable(tableName: string) {
   return axios.post(makeSqlURL(`desc table ${tableName}`))
 }
 
-export function postScripts(name: string, code: any) {
-  return axios.post(`/api/v1/scripts?name=${name}`, code)
+export function postScripts(name: string, code: string) {
+  return axios.post(`/v1/scripts?name=${name}`, code)
 }
 
 export function postRunScriptName(name: string) {
-  return axios.post(`/api/v1/run-script?name=${name}`)
+  return axios.post(`/v1/run-script?name=${name}`)
 }
