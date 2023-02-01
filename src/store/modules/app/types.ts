@@ -16,6 +16,8 @@ export interface AppState {
   menuFromServer: boolean
   serverMenu: RouteRecordNormalized[]
   databaseURL: string
-  [key: string]: unknown
   codeType: string
+  isCloud: boolean
+  settingsBtn: boolean
+  [key: string]: unknown
 }

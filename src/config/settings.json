@@ -17,5 +17,7 @@
   "principal": "",
   "credential": "",
   "serverMenu": [],
-  "codeType": "sql"
+  "codeType": "sql",
+  "isCloud": false,
+  "settingsBtn": true
 }

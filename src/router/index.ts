@@ -32,13 +32,13 @@ function getConfig() {
     const storage = new CrossStorageClient('https://dev.greptime-cloud-frontend.pages.dev', {})
     storage
       .onConnect()
-      .then(function () {
+      .then(() => {
         return storage.get(document.location.host)
       })
-      .then(function (res) {
+      .then((res) => {
         return resolve(res)
       })
-      .catch(function (err) {
+      .catch((err) => {
         return reject()
       })
   })
@@ -47,12 +47,14 @@ function getConfig() {
 router.beforeEach(async (to, from, next) => {
   try {
     const appStore = useAppStore()
-    const res = await getConfig()
-    appStore.updateSettings({
-      ...JSON.parse(res as string),
-    })
+    if (appStore.isCloud) {
+      const res = await getConfig()
+      appStore.updateSettings({
+        ...JSON.parse(res as string),
+      })
+    }
   } catch (error) {
-    console.log(`error:`, error)
+    // console.log(`error:`, error)
   }
   next()
 })
