@@ -18,6 +18,6 @@
   "credential": "",
   "serverMenu": [],
   "codeType": "sql",
-  "isCloud": false,
+  "isCloud": true,
   "settingsBtn": true
 }
