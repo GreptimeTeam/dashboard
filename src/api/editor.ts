@@ -24,3 +24,7 @@ export function postScripts(name: string, code: string) {
 export function postRunScriptName(name: string) {
   return axios.post(`/v1/run-script?name=${name}`)
 }
+
+export function getDatabases() {
+  return axios.post(makeSqlURL('show databases'))
+}

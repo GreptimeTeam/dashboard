@@ -13,6 +13,14 @@
     :default-value="(defaultValue as string)"
     @change="handleChange"
   />
+  <a-select
+    v-else-if="type === 'select'"
+    :select-ops="selectOps"
+    :default-value="(defaultValue as string)"
+    @change="handleChange"
+  >
+    <a-option v-for="item of selectOps" :key="item" :value="item" :label="item"></a-option>
+  </a-select>
   <a-switch v-else :default-checked="(defaultValue as boolean)" size="small" @change="handleChange" />
 </template>
 
@@ -29,6 +37,10 @@
     defaultValue: {
       type: [String, Boolean, Number],
       default: '',
+    },
+    selectOps: {
+      type: Array<any>,
+      default: [],
     },
   })
   const emit = defineEmits(['inputChange'])

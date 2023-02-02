@@ -7,6 +7,7 @@
         :type="option.type || 'switch'"
         :name="option.key"
         :default-value="option.defaultVal"
+        :select-ops="option.selectOps"
         @input-change="handleChange"
       />
     </div>
@@ -23,6 +24,7 @@
     key: string
     type?: string
     defaultVal?: any
+    selectOps?: Array<any>
   }
   defineProps({
     title: {

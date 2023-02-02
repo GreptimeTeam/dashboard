@@ -24,7 +24,14 @@
 
   const { setRole } = useUserStore()
   const { isCloud } = storeToRefs(useAppStore())
-  // TODO: combine next two into one function. maybe use if-else?
-  isCloud.value = import.meta.env.MODE === 'cloud'
-  setRole(import.meta.env.MODE === 'cloud' ? 'cloud' : 'dev')
+  const { fetchDatabases } = useAppStore()
+  // TODO: is there a better way to do this?
+  if (import.meta.env.MODE === 'cloud') {
+    isCloud.value = true
+    setRole('cloud')
+  } else {
+    isCloud.value = false
+    setRole('dev')
+    fetchDatabases()
+  }
 </script>

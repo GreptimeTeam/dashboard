@@ -33,6 +33,7 @@
   const emit = defineEmits(['cancel'])
 
   const appStore = useAppStore()
+
   const { t } = useI18n()
   const { copy } = useClipboard()
   const visible = computed(() => appStore.globalSettings)
@@ -56,7 +57,8 @@
       name: 'settings.database',
       key: 'database',
       defaultVal: appStore.database,
-      type: 'input',
+      selectOps: appStore.databaseList,
+      type: 'select',
     },
   ])
 
