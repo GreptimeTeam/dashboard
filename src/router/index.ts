@@ -46,6 +46,7 @@ function getConfig() {
 
 router.beforeEach(async (to, from, next) => {
   try {
+    // TODO: Is it necessary to decide this every time we go to a new route?
     const appStore = useAppStore()
     if (appStore.isCloud) {
       const res = await getConfig()
