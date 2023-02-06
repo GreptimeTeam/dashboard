@@ -58,6 +58,15 @@
   background-color: var(--bg-brand-color) !important;
 }
 
+.chart-form {
+  align-items: center;
+  margin-left: 15px;
+
+  .arco-select-view-single {
+    width: 180px !important;
+  }
+}
+
 .arco-table-pagination {
   margin: 20px 15px 17px 0;
 
@@ -84,12 +93,20 @@
     margin-right: 4px;
   }
 
+  .arco-select-view-single:hover {
+    background-color: var(--th-bg-color);
+  }
+
   .arco-pagination-options {
     .arco-select-view-single {
       width: 86px !important;
       height: 20px;
       padding-right: 8px;
       padding-left: 8px;
+    }
+
+    .arco-select-view-value {
+      padding-right: 2px;
     }
 
     .arco-select-view-single.arco-select-view-size-medium .arco-select-view-value {
@@ -99,10 +116,6 @@
       font-size: 12px;
       line-height: 12px;
       opacity: 0.4;
-    }
-
-    .arco-select-view-value {
-      padding-right: 2px;
     }
 
     .arco-select-view-suffix {
@@ -135,11 +148,6 @@
   margin-top: 10px;
 }
 
-.form {
-  align-items: center;
-  margin-left: 15px;
-}
-
 .arco-form-layout-inline .arco-form-item {
   margin-right: 24px;
   margin-bottom: 0;
@@ -153,49 +161,6 @@
 
 .arco-form-item-content {
   height: 32px;
-}
-
-.arco-select-view-single {
-  width: 180px !important;
-  padding-right: 8px;
-  padding-left: 8px;
-  background: var(--th-bg-color) !important;
-  border-radius: 2px;
-
-  .arco-select-view-value {
-    font-size: 13px !important;
-  }
-}
-
-.arco-select-view-focus {
-  border-color: var(--hover-bg-color) !important;
-}
-
-.arco-select-view-single:hover {
-  background-color: var(--th-bg-color);
-}
-
-.arco-select-view-multiple {
-  width: 260px !important;
-  padding-right: 8px;
-  padding-left: 8px;
-  background: var(--th-bg-color);
-  border-radius: 2px;
-
-  .arco-select-view-inner .arco-select-view-tag {
-    background: var(--grey-bg-color);
-    border-color: transparent;
-    border-radius: 2px;
-  }
-}
-
-.arco-select-view-size-medium {
-  color: var(--small-font-color) !important;
-  font-size: 11px !important;
-}
-
-.arco-select-view-multiple:hover {
-  background-color: var(--th-bg-color);
 }
 
 .arco-tag {
