@@ -1,6 +1,6 @@
 <template>
   <a-modal
-    v-model:visible="guideVisible"
+    v-model:visible="guideModal"
     :mask-closable="false"
     okText="Ok"
     :hide-cancel="true"
@@ -24,7 +24,6 @@
   const { database, databaseList, codeType, isCloud, guideModal } = storeToRefs(useAppStore())
   const { fetchDataBaseTables, fetchScriptsTable } = useDataBaseStore()
 
-  const guideVisible = ref(true)
   const guideForm = ref({
     database,
   })
