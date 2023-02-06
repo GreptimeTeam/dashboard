@@ -17,6 +17,7 @@
     v-else-if="type === 'select'"
     :select-ops="selectOps"
     :default-value="(defaultValue as string)"
+    :disabled="disabled"
     @change="handleChange"
   >
     <a-option v-for="item of selectOps" :key="item" :value="item" :label="item"></a-option>
@@ -41,6 +42,10 @@
     selectOps: {
       type: Array<any>,
       default: [],
+    },
+    disabled: {
+      type: Boolean,
+      default: false,
     },
   })
   const emit = defineEmits(['inputChange'])

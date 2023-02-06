@@ -15,22 +15,16 @@ a-scrollbar.tree-scrollbar
 
 <script lang="ts" setup>
   import { storeToRefs } from 'pinia'
-  import { useDataBaseStore } from '@/store'
+  import { useDataBaseStore, useAppStore } from '@/store'
   import useDataExplorer from '@/hooks/data-explorer'
   import usePythonCode from '@/hooks/python-code'
 
-  const dataBaseStore = useDataBaseStore()
-  const dataExplorer = useDataExplorer()
-
-  const { insertNameToCode } = dataExplorer
-  const { codeType } = storeToRefs(useAppStore())
+  const { insertNameToCode } = useDataExplorer()
+  const { codeType, guideModal } = storeToRefs(useAppStore())
   const { insertNameToPyCode } = usePythonCode()
 
-  const initTableDataSet = () => {
-    dataBaseStore.fetchDataBaseTables()
-  }
-  const { fetchOneTable } = dataBaseStore
-  const { tableList, ifTableLoading, tableKey } = storeToRefs(dataBaseStore)
+  const { fetchOneTable, fetchDataBaseTables } = useDataBaseStore()
+  const { tableList, ifTableLoading, tableKey } = storeToRefs(useDataBaseStore())
 
   const loadMore = (nodeData: any) => {
     return new Promise<void>((resolve, reject) => {
@@ -76,5 +70,7 @@ a-scrollbar.tree-scrollbar
     return new URL(`../../../../assets/images/${ICON_MAP[type]}`, import.meta.url).href
   }
 
-  initTableDataSet()
+  if (!guideModal.value) {
+    fetchDataBaseTables()
+  }
 </script>

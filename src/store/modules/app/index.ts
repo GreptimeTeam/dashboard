@@ -70,13 +70,19 @@ const useAppStore = defineStore('app', {
     clearServerMenu() {
       this.serverMenu = []
     },
-    async fetchDatabases() {
+    async fetchDatabases(env?: string) {
       try {
         const res: any = await getDatabases()
         this.databaseList = [...res.output[0].records.rows[0]]
+        if (env) {
+          this.setDefaultDatabase()
+        }
       } catch (error) {
         // some error
       }
+    },
+    setDefaultDatabase() {
+      this.database = this.databaseList ? this.databaseList[0] : this.database
     },
   },
 })

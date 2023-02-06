@@ -13,12 +13,13 @@
   "tabBar": false,
   "menuFromServer": false,
   "databaseURL": "",
-  "database": "public",
-  "databaseList": ["public"],
+  "database": "",
+  "databaseList": [],
   "principal": "",
   "credential": "",
   "serverMenu": [],
   "codeType": "sql",
   "isCloud": false,
-  "settingsBtn": true
+  "settingsBtn": true,
+  "guideModal": true
 }

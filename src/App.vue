@@ -1,6 +1,7 @@
 <template>
   <a-config-provider :locale="locale">
     <router-view />
+    <guide-modal />
     <global-setting />
   </a-config-provider>
 </template>
@@ -9,8 +10,9 @@
   import { computed } from 'vue'
   import enUS from '@arco-design/web-vue/es/locale/lang/en-us'
   import GlobalSetting from '@/components/global-setting/index.vue'
+  import GuideModal from '@/components/guide-modal/index.vue'
   import useLocale from '@/hooks/locale'
-  import { useUserStore } from '@/store'
+  import { useUserStore, useAppStore } from '@/store'
 
   const { currentLocale } = useLocale()
   const locale = computed(() => {
@@ -23,8 +25,8 @@
   })
 
   const { setRole } = useUserStore()
-  const { isCloud } = storeToRefs(useAppStore())
-  const { fetchDatabases } = useAppStore()
+  const { isCloud, guideModal } = storeToRefs(useAppStore())
+  const { fetchDatabases, setDefaultDatabase } = useAppStore()
   // TODO: is there a better way to do this?
   if (import.meta.env.MODE === 'cloud') {
     isCloud.value = true
@@ -32,6 +34,6 @@
   } else {
     isCloud.value = false
     setRole('dev')
-    fetchDatabases()
+    fetchDatabases('dev')
   }
 </script>

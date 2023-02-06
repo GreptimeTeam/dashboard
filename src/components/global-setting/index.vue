@@ -26,13 +26,14 @@
   import { Message } from '@arco-design/web-vue'
   import { useI18n } from 'vue-i18n'
   import { useClipboard } from '@vueuse/core'
-  import { useAppStore } from '@/store'
+  import { useAppStore, useDataBaseStore } from '@/store'
   import axios from 'axios'
   import Block from './block.vue'
 
   const emit = defineEmits(['cancel'])
 
   const appStore = useAppStore()
+  const dataBaseStore = useDataBaseStore()
 
   const { t } = useI18n()
   const { copy } = useClipboard()
@@ -59,12 +60,19 @@
       defaultVal: appStore.database,
       selectOps: appStore.databaseList,
       type: 'select',
+      disabled: appStore.isCloud,
     },
   ])
 
   const cancel = () => {
     appStore.updateSettings({ globalSettings: false })
     axios.defaults.baseURL = appStore.databaseURL
+    if (appStore.codeType === 'sql') {
+      dataBaseStore.fetchDataBaseTables()
+    } else {
+      dataBaseStore.fetchScriptsTable()
+    }
+
     emit('cancel')
   }
   const copySettings = async () => {

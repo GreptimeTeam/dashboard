@@ -8,6 +8,7 @@
         :name="option.key"
         :default-value="option.defaultVal"
         :select-ops="option.selectOps"
+        :disabled="option.disabled"
         @input-change="handleChange"
       />
     </div>
@@ -25,6 +26,7 @@
     type?: string
     defaultVal?: any
     selectOps?: Array<any>
+    disabled?: boolean
   }
   defineProps({
     title: {

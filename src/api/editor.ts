@@ -26,5 +26,5 @@ export function postRunScriptName(name: string) {
 }
 
 export function getDatabases() {
-  return axios.post(makeSqlURL('show databases'))
+  return axios.post(`/v1/sql?sql=show databases`)
 }
