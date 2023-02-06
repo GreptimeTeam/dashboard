@@ -28,12 +28,10 @@
   const { isCloud, guideModal } = storeToRefs(useAppStore())
   const { fetchDatabases, setDefaultDatabase } = useAppStore()
   // TODO: is there a better way to do this?
-  if (import.meta.env.MODE === 'cloud') {
+  if (import.meta.env.MODE === 'development') {
+    fetchDatabases('dev')
+  } else {
     isCloud.value = true
     setRole('cloud')
-  } else {
-    isCloud.value = false
-    setRole('dev')
-    fetchDatabases('dev')
   }
 </script>
