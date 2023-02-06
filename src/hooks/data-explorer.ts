@@ -1,4 +1,4 @@
-const sqlCode = ref('Select * From numbers')
+const sqlCode = ref('SELECT * FROM numbers')
 const cursorAt = ref<Array<number>>([])
 const { currentResult } = storeToRefs(useCodeRunStore())
 
