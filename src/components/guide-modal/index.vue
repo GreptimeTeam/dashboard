@@ -2,7 +2,7 @@
   <a-modal
     v-model:visible="guideModal"
     :mask-closable="false"
-    okText="Ok"
+    ok-text="Ok"
     :hide-cancel="true"
     :closable="false"
     @ok="handleOk"
