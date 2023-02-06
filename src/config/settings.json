@@ -12,6 +12,14 @@
   "device": "desktop",
   "tabBar": false,
   "menuFromServer": false,
+  "databaseURL": "",
+  "database": "",
+  "databaseList": [],
+  "principal": "",
+  "credential": "",
   "serverMenu": [],
-  "codeType": "sql"
+  "codeType": "sql",
+  "isCloud": false,
+  "settingsBtn": false,
+  "guideModal": false
 }

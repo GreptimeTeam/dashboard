@@ -1,23 +1,30 @@
 import axios from 'axios'
 
-export function getSqlResult(code: any) {
-  return axios.post(`/api/v1/sql?sql=${code}`)
+function makeSqlURL(code: string) {
+  const appStore = useAppStore()
+  return `/v1/sql?sql=${code}&db=${appStore.database}`
 }
 
-export function postScripts(name: string, code: any) {
-  return axios.post(`/api/v1/scripts?name=${name}`, code)
-}
-
-export function postRunScriptName(name: string) {
-  return axios.post(`/api/v1/run-script?name=${name}`)
+export function getSqlResult(code: string) {
+  return axios.post(makeSqlURL(code))
 }
 
 export function getTables() {
-  const code = 'show tables'
-  return axios.post(`/api/v1/sql?sql=${code}`)
+  return axios.post(makeSqlURL('show tables'))
 }
 
-export function fetchOneTable(tableName: any) {
-  const code = `desc table ${tableName}`
-  return axios.post(`/api/v1/sql?sql=${code}`)
+export function fetchOneTable(tableName: string) {
+  return axios.post(makeSqlURL(`desc table ${tableName}`))
+}
+
+export function postScripts(name: string, code: string) {
+  return axios.post(`/v1/scripts?name=${name}`, code)
+}
+
+export function postRunScriptName(name: string) {
+  return axios.post(`/v1/run-script?name=${name}`)
+}
+
+export function getDatabases() {
+  return axios.post(`/v1/sql?sql=show databases`)
 }

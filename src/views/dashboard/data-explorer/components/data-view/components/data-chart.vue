@@ -1,7 +1,7 @@
 <template lang="pug">
 a-spin(style="width: 100%")
   a-row
-    a-form.form(:model="chartForm" layout="inline")
+    a-form.chart-form(:model="chartForm" layout="inline")
       a-form-item(:label="$t('dataExplorer.chartType')")
         a-select(v-model="chartForm.chartType")
           a-option(v-for="item of chartTypeOptions" :key="item.key" :value="item.value" :label="item.value")

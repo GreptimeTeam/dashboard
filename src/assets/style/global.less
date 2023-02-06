@@ -1,8 +1,9 @@
-@import './tableList.less';
-@import './dataView.less';
-@import './editor.less';
-@import './log.less';
-@import './button.less';
+@import url('./select.less');
+@import url('./button.less');
+@import url('./tableList.less');
+@import url('./dataView.less');
+@import url('./editor.less');
+@import url('./log.less');
 
 * {
   box-sizing: border-box;
@@ -244,18 +245,23 @@ body {
   border-color: var(--hover-bg-color);
 }
 
-.arco-modal-body {
-  padding: 12px 20px;
-}
+.arco-modal {
+  width: 400px;
 
-.arco-modal-header {
-  border-bottom: 0;
-}
+  .arco-modal-header {
+    border-bottom: 0;
+  }
 
-.arco-modal-footer {
-  border-top: 0;
-  .arco-btn {
-    width: 55px;
+  .arco-modal-body {
+    padding: 12px 20px;
+  }
+
+  .arco-modal-footer {
+    border-top: 0;
+
+    .arco-btn {
+      width: 55px;
+    }
   }
 }
 

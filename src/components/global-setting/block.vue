@@ -7,6 +7,8 @@
         :type="option.type || 'switch'"
         :name="option.key"
         :default-value="option.defaultVal"
+        :select-ops="option.selectOps"
+        :disabled="option.disabled"
         @input-change="handleChange"
       />
     </div>
@@ -22,7 +24,9 @@
     name: string
     key: string
     type?: string
-    defaultVal?: boolean | string | number
+    defaultVal?: any
+    selectOps?: Array<any>
+    disabled?: boolean
   }
   defineProps({
     title: {
@@ -64,5 +68,9 @@
     align-items: center;
     justify-content: space-between;
     height: 32px;
+  }
+
+  span {
+    margin-right: 10px;
   }
 </style>

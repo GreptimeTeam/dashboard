@@ -9,6 +9,11 @@
         a-menu-item(key="scripts")
           |Scripts
   ul.right-side
+    li(v-if="settingsBtn")
+      a-tooltip(:content="$t('settings.title')")
+        a-button.nav-btn(type="text" @click='setVisible')
+          template(#icon)
+            icon-settings
     li
       a-dropdown(trigger="hover" position="br" :popup-max-height="false")
         svg.icon-24.pointer
@@ -21,6 +26,8 @@
 <script lang="ts" setup>
   import router from '@/router'
 
+  const appStore = useAppStore()
+  const { settingsBtn } = appStore
   const menuSelectedKey = router.currentRoute.value.name
   const defaultMenuKey = [router.currentRoute.value.name]
 
@@ -42,6 +49,10 @@
       label: 'GitHub | GreptimeDB',
     },
   ]
+
+  const setVisible = () => {
+    appStore.updateSettings({ globalSettings: true })
+  }
 
   const menuClick = (key: string) => {
     router.push({ name: key })
@@ -77,6 +88,17 @@
       display: flex;
       align-items: center;
       margin-right: 30px;
+    }
+    .nav-btn {
+      color: #fff;
+      width: 48px;
+      height: 48px;
+      font-size: 24px;
+      transition: color 0.25s;
+      &:hover {
+        background-color: transparent;
+        color: #ffffff88;
+      }
     }
     .arco-link {
       color: var(--card-bg-color);
