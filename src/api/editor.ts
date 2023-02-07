@@ -1,30 +1,47 @@
-import axios from 'axios'
+import axios, { AxiosRequestConfig } from 'axios'
 
-function makeSqlURL(code: string) {
+const sqlUrl = `/v1/sql`
+const scriptUrl = `/v1/scripts`
+const runScriptUrl = `/v1/run-script`
+
+function makeSqlParams(sql: string) {
   const appStore = useAppStore()
-  return `/v1/sql?sql=${code}&db=${appStore.database}`
+  return {
+    params: {
+      sql,
+      db: appStore.database,
+    },
+  } as AxiosRequestConfig
+}
+
+function makeScriptParams(name: string) {
+  return {
+    params: {
+      name,
+    },
+  } as AxiosRequestConfig
 }
 
 export function getSqlResult(code: string) {
-  return axios.post(makeSqlURL(code))
+  return axios.post(sqlUrl, {}, makeSqlParams(code))
 }
 
 export function getTables() {
-  return axios.post(makeSqlURL('show tables'))
+  return axios.post(sqlUrl, {}, makeSqlParams('show tables'))
 }
 
 export function fetchOneTable(tableName: string) {
-  return axios.post(makeSqlURL(`desc table ${tableName}`))
+  return axios.post(sqlUrl, {}, makeSqlParams(`desc table ${tableName}`))
 }
 
 export function postScripts(name: string, code: string) {
-  return axios.post(`/v1/scripts?name=${name}`, code)
+  return axios.post(scriptUrl, code, makeScriptParams(name))
 }
 
 export function postRunScriptName(name: string) {
-  return axios.post(`/v1/run-script?name=${name}`)
+  return axios.post(runScriptUrl, {}, makeScriptParams(name))
 }
 
 export function getDatabases() {
-  return axios.post(`/v1/sql?sql=show databases`)
+  return axios.post(`${sqlUrl}?sql=show databases`)
 }
