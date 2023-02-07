@@ -5,7 +5,7 @@ export const DEFAULT_LAYOUT = () => import('@/layout/default-layout.vue')
 const DASHBOARD: AppRouteRecordRaw = {
   path: '/dashboard',
   name: 'dashboard',
-  redirect: 'dashboard/sql',
+  redirect: 'dashboard/query',
   component: DEFAULT_LAYOUT,
   meta: {
     locale: 'menu.dashboard',
@@ -15,9 +15,9 @@ const DASHBOARD: AppRouteRecordRaw = {
   },
   children: [
     {
-      path: 'sql',
-      name: 'sql',
-      component: () => import('@/views/dashboard/data-explorer/index.vue'),
+      path: 'query',
+      name: 'query',
+      component: () => import('@/views/dashboard/query/index.vue'),
       meta: {
         locale: 'menu.dashboard',
         requiresAuth: false,

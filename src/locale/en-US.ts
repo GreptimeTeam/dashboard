@@ -1,4 +1,4 @@
-import localeDataExplorer from '@/views/dashboard/data-explorer/locale/en-US'
+import localeDataExplorer from '@/views/dashboard/locale/en-US'
 import localSetting from '@/components/global-setting/local/en-US'
 
 export default {

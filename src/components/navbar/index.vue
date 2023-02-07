@@ -4,8 +4,8 @@
     img.logo-text-img(alt='logo' src='/src/assets/images/logo-text.webp')
     .menu(v-permission="['dev']")
       a-menu(mode="horizontal" v-model="menuSelectedKey" :default-selected-keys="defaultMenuKey" @menu-item-click="menuClick")
-        a-menu-item(key="sql")
-          |SQL 
+        a-menu-item(key="query")
+          |Query 
         a-menu-item(key="scripts")
           |Scripts
   ul.right-side

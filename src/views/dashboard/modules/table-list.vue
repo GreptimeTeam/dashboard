@@ -67,7 +67,7 @@ a-scrollbar.tree-scrollbar
   }
   // TODO: Better use iconPark.
   const getIconUrl = (type: any) => {
-    return new URL(`../../../../assets/images/${ICON_MAP[type]}`, import.meta.url).href
+    return new URL(`../../../assets/images/${ICON_MAP[type]}`, import.meta.url).href
   }
 
   if (!guideModal.value) {
