@@ -26,10 +26,10 @@
 
   const { setRole } = useUserStore()
   const { isCloud, guideModal } = storeToRefs(useAppStore())
-  const { fetchDatabases, setDefaultDatabase } = useAppStore()
+  const { fetchDatabases } = useAppStore()
   // TODO: is there a better way to do this?
   if (import.meta.env.MODE === 'development' || import.meta.env.MODE === 'production') {
-    fetchDatabases('dev')
+    fetchDatabases('notCloud')
   } else {
     isCloud.value = true
     setRole('cloud')
