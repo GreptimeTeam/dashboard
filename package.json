@@ -64,7 +64,7 @@
     "vue-router": "^4.0.14"
   },
   "devDependencies": {
-    "@commitlint/cli": "^17.3.0",
+    "@commitlint/cli": "^17.4.2",
     "@commitlint/config-conventional": "^17.3.0",
     "@prettier/plugin-pug": "^2.3.0",
     "@types/cross-storage": "^0.8.30",
@@ -83,8 +83,8 @@
     "eslint": "^8.31.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-prettier": "^8.5.0",
-    "eslint-plugin-import": "^2.27.4",
     "eslint-import-resolver-typescript": "^3.5.3",
+    "eslint-plugin-import": "^2.27.4",
     "eslint-plugin-prettier": "^4.2.1",
     "eslint-plugin-vue": "^9.8.0",
     "husky": "^8.0.3",
