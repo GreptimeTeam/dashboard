@@ -70,11 +70,11 @@ const useAppStore = defineStore('app', {
     clearServerMenu() {
       this.serverMenu = []
     },
-    async fetchDatabases(env?: string) {
+    async fetchDatabases(notCloud?: string) {
       try {
         const res: any = await getDatabases()
         this.databaseList = [...res.output[0].records.rows[0]]
-        if (env) {
+        if (notCloud) {
           this.setDefaultDatabase()
         }
       } catch (error) {
