@@ -15,6 +15,12 @@ export interface AppState {
   tabBar: boolean
   menuFromServer: boolean
   serverMenu: RouteRecordNormalized[]
-  [key: string]: unknown
+  database: string
+  databaseURL: string
+  databaseList: Array<string>
   codeType: string
+  isCloud: boolean
+  settingsBtn: boolean
+  guideModal: boolean
+  [key: string]: unknown
 }

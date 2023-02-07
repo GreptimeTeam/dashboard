@@ -1,8 +1,6 @@
 import axios from 'axios'
 import type { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { Message, Modal } from '@arco-design/web-vue'
-import { useUserStore } from '@/store'
-import { getToken } from '@/utils/auth'
 
 export interface HttpResponse<T = unknown> {
   error?: string
@@ -10,25 +8,23 @@ export interface HttpResponse<T = unknown> {
   output?: Array<T>
   execution_time_ms?: number
 }
+export interface Auth {
+  principal: string
+  credential: string
+}
 
 // todo: can we use env and proxy at the same time?
-if (import.meta.env.VITE_API_BASE_URL) {
-  axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL
-}
 
 axios.interceptors.request.use(
   (config: AxiosRequestConfig) => {
-    // let each request carry token
-    // this example using the JWT token
-    // Authorization is a custom headers key
-    // please modify it according to the actual situation
-    const token = getToken()
-    if (token) {
-      if (!config.headers) {
-        config.headers = {}
-      }
-      config.headers.Authorization = `Bearer ${token}`
+    const appStore = useAppStore()
+    const basicAuth = `Basic ${btoa(`${appStore.principal}:${appStore.credential}`)}`
+
+    if (!config.headers) {
+      config.headers = {}
     }
+    config.headers.authorization = basicAuth
+
     return {
       ...config,
       traceTimeStart: new Date().valueOf(),
@@ -43,6 +39,7 @@ axios.interceptors.request.use(
 axios.interceptors.response.use(
   (response: AxiosResponse<HttpResponse>) => {
     const res = response.data
+
     // if the custom code is not 0, it is judged as an error.
     if (res.code !== 0) {
       Message.error({
@@ -59,6 +56,10 @@ axios.interceptors.response.use(
     }
   },
   (error) => {
+    if (error.response.status === 401) {
+      const appStore = useAppStore()
+      appStore.updateSettings({ globalSettings: true })
+    }
     Message.error({
       content: error.msg || 'Request Error',
       duration: 5 * 1000,

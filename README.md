@@ -2,40 +2,32 @@
 
 Dashboard is a data-visualization platform for [GreptimeDB](https://github.com/greptimeteam/greptimedb) developed with Vue3, Vite, TypeScript and Arco Design.
 
-## Quick Start
+## Quick Start with Docker
+
+We recommend using `docker-compose` to setup both greptimedb and
+dashboard.
+
+```
+curl -O https://raw.githubusercontent.com/greptimeteam/dashboard/main/docker/docker-compose.yml
+docker compose up
+```
+
+Open you browser and visit `http://localhost:8080/dashboard/`
+
+- Follow [getting started](https://docs.greptime.com/getting-started/overview) to create your table and insert some data
+- Run a `SELECT` query and check the result as table or chart
+
+## Development Setup
 
 - [Install GreptimeDB](https://docs.greptime.com/installation/overview)
 - Run `./greptime standalone start`
 - Clone this project `git clone https://github.com/GreptimeTeam/dashboard.git`
 - Run `npm install` for dependencies
 - Run `npm run dev` and visit the URL in output
-- Also: Run `npm run dev:cloud` to see the cloud version
 
-## How to Use
+## Screenshot
 
-- Make sure GreptimeDB is up and running
-- Follow [getting started](https://docs.greptime.com/getting-started/overview) to create your table and insert some data
-- Run a `SELECT` query and check the result as table or chart
-
-### Docker
-
-Pre-built docker images are available on docker hub, you can pull latest image
-and run via:
-
-```
-docker pull greptime/greptimedb-dashboard
-docker run --rm --name greptimedb-dashboard \
-  -e GREPTIMEDB_HTTP_HOST=127.0.0.1 \
-  -e GREPTIMEDB_HTTP_PORT=4000 \
-  -e NGINX_PORT=8080 \
-  -p 8080:8080 \
-  greptime/greptimedb-dashboard:latest
-
-## open your browser at http://localhost:8080/dashboard
-```
-
-To build image by yourself, or use `docker-compose` to setup both greptimedb and
-dashboard, see [instructions here](docker/README.md).
+![Dashboard Screenshot](screenshot.png 'Dashboard Screenshot')
 
 ## Contributing
 

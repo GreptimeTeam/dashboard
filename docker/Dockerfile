@@ -4,9 +4,11 @@ RUN npm install -g pnpm
 
 WORKDIR /greptimedb-dashboard
 
+ARG command=docker
+
 COPY . .
 RUN pnpm install
-RUN pnpm build:docker
+RUN pnpm build:$command
 
 FROM --platform=linux/amd64 nginx:1.23 as base
 

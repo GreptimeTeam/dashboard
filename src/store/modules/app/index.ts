@@ -3,6 +3,7 @@ import { Notification } from '@arco-design/web-vue'
 import type { NotificationReturn } from '@arco-design/web-vue/es/notification/interface'
 import type { RouteRecordNormalized } from 'vue-router'
 import defaultSettings from '@/config/settings.json'
+import { getDatabases } from '@/api/editor'
 import { AppState } from './types'
 
 const useAppStore = defineStore('app', {
@@ -68,6 +69,20 @@ const useAppStore = defineStore('app', {
     },
     clearServerMenu() {
       this.serverMenu = []
+    },
+    async fetchDatabases(env?: string) {
+      try {
+        const res: any = await getDatabases()
+        this.databaseList = [...res.output[0].records.rows[0]]
+        if (env) {
+          this.setDefaultDatabase()
+        }
+      } catch (error) {
+        // some error
+      }
+    },
+    setDefaultDatabase() {
+      this.database = this.databaseList ? this.databaseList[0] : this.database
     },
   },
 })
