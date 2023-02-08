@@ -3,10 +3,12 @@ services:
   dashboard:
     platform: linux/amd64
     image: 'greptime/greptimedb-dashboard:latest'
+    pull_policy: always
     ports:
       - '8080:8080'
     environment:
       - GREPTIMEDB_HTTP_HOST=db
   db:
     image: 'greptime/greptimedb:latest'
+    pull_policy: always
     command: 'standalone start --http-addr=0.0.0.0:4000'
