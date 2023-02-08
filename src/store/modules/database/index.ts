@@ -1,8 +1,9 @@
-import { fetchOneTable, getSqlResult, getTables } from '@/api/editor'
+import { fetchOneTable, getScriptsList, getTables } from '@/api/editor'
 import { defineStore } from 'pinia'
 
 const useDataBaseStore = defineStore('dataBase', {
   state: () => ({
+    database: storeToRefs(useAppStore()).database,
     tableData: <any>{
       output: [
         {
@@ -86,9 +87,8 @@ const useDataBaseStore = defineStore('dataBase', {
       }
     },
     async fetchScriptsTable() {
-      const sql = 'select * from scripts'
       try {
-        const res = await getSqlResult(sql)
+        const res = await getScriptsList(this.database)
         this.scriptsData = res
       } catch (error) {
         // some error
