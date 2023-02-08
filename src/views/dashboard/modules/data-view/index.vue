@@ -20,8 +20,7 @@ a-tabs(type="rounded" lazy-load :active-key="activeTabKey[codeType]" @tab-click=
 </template>
 
 <script lang="ts" name="DataView" setup>
-  import router from '@/router'
-  import { useCodeRunStore } from '@/store'
+  import { useCodeRunStore, useAppStore } from '@/store'
 
   const { codeType } = storeToRefs(useAppStore())
 

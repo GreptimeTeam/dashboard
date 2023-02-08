@@ -1,7 +1,7 @@
 import { getSqlResult, postRunScriptName, postScripts } from '@/api/editor'
 import { Message } from '@arco-design/web-vue'
 import { defineStore } from 'pinia'
-import { dateTypes } from '@/views/dashboard/data-explorer/components/data-view/config'
+import { dateTypes } from '@/views/dashboard/modules/data-view/config'
 import { resultsType } from './types'
 import useLogStore from '../log'
 import useAppStore from '../app'
