@@ -55,9 +55,9 @@ const useDataBaseStore = defineStore('dataBase', {
       const tempArray: any = []
       state.scriptsData.output[0].records.rows.forEach((item: Array<any>) => {
         const node = {
-          title: item[0],
-          key: item[0],
-          code: item[1],
+          title: item[1],
+          key: item[1],
+          code: item[2],
           isLeaf: true,
         }
         tempArray.push(node)
