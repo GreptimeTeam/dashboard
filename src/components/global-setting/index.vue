@@ -12,8 +12,8 @@
     :visible="visible"
     :ok-text="$t('settings.save')"
     mask-closable
-    @ok="cancel"
-    @cancel="cancel"
+    @ok="settingsOK"
+    @cancel="settingsCancel"
   >
     <template #title> {{ $t('settings.title') }} </template>
     <Block :options="authOpts" :title="$t('settings.auth')" />
@@ -64,7 +64,12 @@
     },
   ])
 
-  const cancel = () => {
+  const settingsCancel = () => {
+    appStore.updateSettings({ globalSettings: false })
+    emit('cancel')
+  }
+
+  const settingsOK = () => {
     appStore.updateSettings({ globalSettings: false })
     axios.defaults.baseURL = appStore.databaseURL
     if (appStore.codeType === 'sql') {
@@ -72,8 +77,6 @@
     } else {
       dataBaseStore.fetchScriptsTable()
     }
-
-    emit('cancel')
   }
   const copySettings = async () => {
     const text = JSON.stringify(appStore.$state, null, 2)
