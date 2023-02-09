@@ -3,7 +3,7 @@ import { queryTypes } from './types'
 const sqlCode = 'SELECT * FROM numbers'
 const promCode = ''
 const cursorAt = ref<Array<number>>([])
-const queryType = ref('sql')
+const queryType = ref('promQL')
 const queryOptions = [
   {
     value: 'sql',
@@ -11,7 +11,7 @@ const queryOptions = [
   },
   {
     value: 'promQL',
-    label: 'promQL',
+    label: 'PromQL',
   },
 ]
 

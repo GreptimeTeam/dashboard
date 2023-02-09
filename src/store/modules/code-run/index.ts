@@ -2,10 +2,12 @@ import editorAPI from '@/api/editor'
 import { Message } from '@arco-design/web-vue'
 import { defineStore } from 'pinia'
 import { dateTypes } from '@/views/dashboard/modules/data-view/config'
+import useDataExplorer from '@/hooks/data-explorer'
 import { resultsType } from './types'
 import useLogStore from '../log'
 import useAppStore from '../app'
 
+const { queryType } = useDataExplorer()
 // TODO: Add all the types we decide instead of ECharts if needed in the future.
 
 const getDimensionsAndXName = (elements: any) => {
@@ -51,9 +53,9 @@ const useCodeRunStore = defineStore('codeRun', {
   },
 
   actions: {
-    async fetchSQLResult(sql: string) {
+    async getQueryResult(code: string) {
       try {
-        const res: any = await editorAPI.getSqlResult(sql)
+        const res: any = queryType.value === 'sql' ? await editorAPI.getSqlResult(code) : await editorAPI.runProm(code)
 
         Message.success({
           content: 'success',
@@ -81,13 +83,13 @@ const useCodeRunStore = defineStore('codeRun', {
         })
 
         useLogStore().pushLog({
-          runCode: sql,
+          runCode: code,
           ...res,
           result: resultInLog,
         })
       } catch (error: any) {
         useLogStore().pushLog({
-          runCode: sql,
+          runCode: code,
           ...error,
         })
       }

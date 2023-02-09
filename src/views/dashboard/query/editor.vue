@@ -2,9 +2,9 @@
 a-card.editor-card(:bordered="false")
   a-space.button-space
     a-space
-      a-button(@click="runSqlCommand()" type="primary")
+      a-button(@click="runQuery()" type="primary")
         | {{ $t('dataExplorer.runAll') }}
-      a(@click="runPartSqlCommand()")
+      a(@click="runPartQuery()")
         a-button(v-if="lineStart === lineEnd")
           | {{ $t('dataExplorer.runLine') }} {{ lineStart }}
         a-button(v-else)
@@ -40,7 +40,7 @@ a-card.editor-card(:bordered="false")
   const view = shallowRef()
 
   const { queryCode, queryType, cursorAt, queryOptions } = useDataExplorer()
-  const { fetchSQLResult } = useCodeRunStore()
+  const { getQueryResult } = useCodeRunStore()
 
   const handleReady = (payload: any) => {
     view.value = payload.view
@@ -79,13 +79,13 @@ a-card.editor-card(:bordered="false")
   })
 
   // todo: combine next 2 functions
-  const runSqlCommand = () => {
+  const runQuery = () => {
     // todo: add better format tool for code
-    fetchSQLResult(queryCode.value[queryType.value].trim().replace(/\n/gi, ' '))
+    getQueryResult(queryCode.value[queryType.value].trim().replace(/\n/gi, ' '))
     // todo: refresh tables data and when
   }
 
-  const runPartSqlCommand = () => {
-    fetchSQLResult(selectedCode.value.trim())
+  const runPartQuery = () => {
+    getQueryResult(selectedCode.value.trim())
   }
 </script>
