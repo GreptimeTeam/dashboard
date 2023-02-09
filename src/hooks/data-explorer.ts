@@ -1,20 +1,38 @@
-const sqlCode = ref('SELECT * FROM numbers')
+import { queryTypes } from './types'
+
+const sqlCode = 'SELECT * FROM numbers'
+const promCode = ''
 const cursorAt = ref<Array<number>>([])
-const { currentResult } = storeToRefs(useCodeRunStore())
+const queryType = ref('sql')
+const queryOptions = [
+  {
+    value: 'sql',
+    label: 'SQL',
+  },
+  {
+    value: 'promQL',
+    label: 'promQL',
+  },
+]
+
+const queryCode = ref({
+  sql: sqlCode,
+  promQL: promCode,
+} as queryTypes)
 
 export default function useDataExplorer() {
-  const insertCode = (value: any) => {
-    sqlCode.value = `${sqlCode.value}\n${value}`
-  }
-
   const insertNameToCode = (name: any) => {
-    sqlCode.value = sqlCode.value.substring(0, cursorAt.value[0]) + name + sqlCode.value.substring(cursorAt.value[1])
+    queryCode.value[queryType.value] =
+      queryCode.value[queryType.value].substring(0, cursorAt.value[0]) +
+      name +
+      queryCode.value[queryType.value].substring(cursorAt.value[1])
   }
 
   return {
-    insertCode,
     insertNameToCode,
-    sqlCode,
+    queryCode,
     cursorAt,
+    queryOptions,
+    queryType,
   }
 }
