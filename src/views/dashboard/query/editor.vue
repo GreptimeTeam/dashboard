@@ -13,13 +13,16 @@ a-card(:bordered="false").editor-card
           icon-play-arrow(v-else)
         div(v-if="lineStart === lineEnd") {{$t('dataExplorer.runLine')}} {{ lineStart }}
         div(v-else) {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
-  CodeMirror(v-model="sqlCode" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
+    a-select(v-model="queryType")
+      a-option(v-for="item of queryOptions" :key="item.value" :value="item.value" :label="item.label")
+  CodeMirror(v-model="queryCode[queryType]" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
 
 <script lang="ts" setup>
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
   import { sql } from '@codemirror/lang-sql'
+  import { PromQLExtension } from '@prometheus-io/codemirror-promql'
   import useDataExplorer from '@/hooks/data-explorer'
   import { useCodeRunStore } from '@/store'
 
@@ -43,7 +46,7 @@ a-card(:bordered="false").editor-card
 
   const { runCode } = useCodeRunStore()
   const { primaryCodeRunning, secondaryCodeRunning } = storeToRefs(useCodeRunStore())
-  const { sqlCode, cursorAt } = useDataExplorer()
+  const { queryCode, queryType, cursorAt, queryOptions } = useDataExplorer()
 
   const handleReady = (payload: any) => {
     view.value = payload.view
@@ -72,13 +75,19 @@ a-card(:bordered="false").editor-card
   const style = {
     height: '250px',
   }
+  const promQL = new PromQLExtension()
 
-  const extensions = [sql(), oneDark]
+  const extensions = computed(() => {
+    if (queryType.value === 'sql') {
+      return [sql(), oneDark]
+    }
+    return [promQL.asExtension(), oneDark]
+  })
 
   const runSqlCommand = () => {
     primaryCodeRunning.value = true
     // TODO: add better format tool for code
-    runCode(sqlCode.value.trim().replace(/\n/gi, ' '))
+    runCode(queryCode.value[queryType.value].trim().replace(/\n/gi, ' '))
     // TODO: refresh tables data and when
   }
 
