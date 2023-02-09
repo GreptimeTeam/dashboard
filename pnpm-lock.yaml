@@ -14,6 +14,7 @@ specifiers:
   '@commitlint/cli': ^17.4.2
   '@commitlint/config-conventional': ^17.3.0
   '@prettier/plugin-pug': ^2.3.0
+  '@prometheus-io/codemirror-promql': ^0.42.0
   '@types/cross-storage': ^0.8.30
   '@types/lodash': ^4.14.191
   '@types/mockjs': ^1.0.7
@@ -89,6 +90,7 @@ dependencies:
   '@codemirror/lang-python': 6.1.0
   '@codemirror/lang-sql': 6.3.1
   '@codemirror/theme-one-dark': 6.1.0
+  '@prometheus-io/codemirror-promql': 0.42.0
   '@vueuse/core': 9.6.0_vue@3.2.45
   arco-design-pro-vue: 2.6.1
   axios: 0.27.2
@@ -1048,6 +1050,31 @@ packages:
       prettier: 2.7.1
       pug-lexer: 5.0.1
     dev: true
+
+  /@prometheus-io/codemirror-promql/0.42.0:
+    resolution: {integrity: sha512-YrvHeyxrYUOGiogWOBDSQDzt63OG0mBxEyDajNFCV0APnU9h/syq1EpZ3HtFGa+hnpVuPAoqWH49QXknbdy2iQ==}
+    engines: {node: '>=12.0.0'}
+    peerDependencies:
+      '@codemirror/autocomplete': ^6.4.0
+      '@codemirror/language': ^6.3.0
+      '@codemirror/lint': ^6.0.0
+      '@codemirror/state': ^6.1.1
+      '@codemirror/view': ^6.4.0
+      '@lezer/common': ^1.0.1
+    dependencies:
+      '@prometheus-io/lezer-promql': 0.42.0
+      lru-cache: 6.0.0
+    transitivePeerDependencies:
+      - '@lezer/highlight'
+      - '@lezer/lr'
+    dev: false
+
+  /@prometheus-io/lezer-promql/0.42.0:
+    resolution: {integrity: sha512-07z8G75497YV3w6SOkjK2XqXiWbP9NBQPkuoMpRmUB8GVtzuJ/3dNGHaM9rc9QPo32cKTLX34SDw++oLYwcLvA==}
+    peerDependencies:
+      '@lezer/highlight': ^1.1.2
+      '@lezer/lr': ^1.2.3
+    dev: false
 
   /@rollup/pluginutils/4.2.1:
     resolution: {integrity: sha512-iKnFXr7NkdZAIHiIWE+BX5ULi/ucVFYWD6TbAV+rZctiRTY2PL6tsIKhoIOaoskiWAkgu+VsbXgUVDNLHf+InQ==}

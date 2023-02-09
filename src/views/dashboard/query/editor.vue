@@ -1,20 +1,24 @@
 <template lang="pug">
-a-card(:bordered="false").editor-card
+a-card.editor-card(:bordered="false")
   a-space.button-space
-    a-button(@click="runSqlCommand()" type="primary")
-      | {{$t('dataExplorer.runAll')}}
-    a(@click="runPartSqlCommand()")
-      a-button(v-if="lineStart === lineEnd")
-        | {{$t('dataExplorer.runLine')}} {{ lineStart }}
-      a-button(v-else)
-        | {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
-  CodeMirror(v-model="sqlCode" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
+    a-space
+      a-button(@click="runSqlCommand()" type="primary")
+        | {{ $t('dataExplorer.runAll') }}
+      a(@click="runPartSqlCommand()")
+        a-button(v-if="lineStart === lineEnd")
+          | {{ $t('dataExplorer.runLine') }} {{ lineStart }}
+        a-button(v-else)
+          | {{ $t('dataExplorer.runLines') }} {{ lineStart }} - {{ lineEnd }}
+    a-select(v-model="queryType")
+      a-option(v-for="item of queryOptions" :key="item.value" :value="item.value" :label="item.label")
+  CodeMirror(v-model="queryCode[queryType]" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
 
 <script lang="ts" setup>
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
   import { sql } from '@codemirror/lang-sql'
+  import { PromQLExtension } from '@prometheus-io/codemirror-promql'
   import useDataExplorer from '@/hooks/data-explorer'
 
   export interface Props {
@@ -35,11 +39,8 @@ a-card(:bordered="false").editor-card
   const selectedCode = ref()
   const view = shallowRef()
 
-  const dataExplorer = useDataExplorer()
-  const dataBaseStore = useDataBaseStore()
-  const codeRunStore = useCodeRunStore()
-  const { sqlCode, cursorAt } = dataExplorer
-  const { fetchSQLResult } = codeRunStore
+  const { queryCode, queryType, cursorAt, queryOptions } = useDataExplorer()
+  const { fetchSQLResult } = useCodeRunStore()
 
   const handleReady = (payload: any) => {
     view.value = payload.view
@@ -68,13 +69,19 @@ a-card(:bordered="false").editor-card
   const style = {
     height: '244px',
   }
+  const promQL = new PromQLExtension()
 
-  const extensions = [sql(), oneDark]
+  const extensions = computed(() => {
+    if (queryType.value === 'sql') {
+      return [sql(), oneDark]
+    }
+    return [promQL.asExtension(), oneDark]
+  })
 
   // todo: combine next 2 functions
   const runSqlCommand = () => {
     // todo: add better format tool for code
-    fetchSQLResult(sqlCode.value.trim().replace(/\n/gi, ' '))
+    fetchSQLResult(queryCode.value[queryType.value].trim().replace(/\n/gi, ' '))
     // todo: refresh tables data and when
   }
 

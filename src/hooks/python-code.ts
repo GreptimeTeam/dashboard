@@ -14,10 +14,6 @@ const creating = ref(false)
 const isChanged = computed(() => Md5.hashStr(pythonCode.value) !== Md5.hashStr(lastSavedCode.value))
 
 export default function useDataExplorer() {
-  const insertCode = (value: any) => {
-    pythonCode.value = `${pythonCode.value}\n${value}`
-  }
-
   const insertNameToPyCode = (name: any) => {
     pythonCode.value =
       pythonCode.value.substring(0, cursorAt.value[0]) + name + pythonCode.value.substring(cursorAt.value[1])
@@ -57,7 +53,6 @@ export default function useDataExplorer() {
   }
 
   return {
-    insertCode,
     insertNameToPyCode,
     overwriteCode,
     createNewScript,
