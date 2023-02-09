@@ -4,7 +4,7 @@ name: deploy
 
 on:
   push:
-    branches: ['main', 'dev']
+    branches: ['**']
   workflow_dispatch:
 
 jobs:
