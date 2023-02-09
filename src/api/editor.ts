@@ -1,47 +1,72 @@
-import axios, { AxiosRequestConfig } from 'axios'
+import axios, { AxiosRequestConfig, AxiosRequestHeaders } from 'axios'
+import qs from 'qs'
 
 const sqlUrl = `/v1/sql`
 const scriptUrl = `/v1/scripts`
 const runScriptUrl = `/v1/run-script`
+const textHeaders = {
+  'Content-Type': 'text/plain',
+} as AxiosRequestHeaders
 
-function makeSqlParams(sql: string) {
+const makeSqlData = (sql: string) => {
+  const appStore = useAppStore()
+  return qs.stringify({
+    sql,
+    db: appStore.database,
+  })
+}
+
+const makeSqlDataWithoutDB = (sql: string) => {
+  return qs.stringify({
+    sql,
+  })
+}
+
+const makeScriptConfig = (name: string) => {
   const appStore = useAppStore()
   return {
     params: {
-      sql,
-      db: appStore.database,
-    },
-  } as AxiosRequestConfig
-}
-
-function makeScriptParams(name: string) {
-  return {
-    params: {
       name,
+      schema: appStore.database,
     },
+    headers: textHeaders,
   } as AxiosRequestConfig
 }
 
-export function getSqlResult(code: string) {
-  return axios.post(sqlUrl, {}, makeSqlParams(code))
+const getSqlResult = (code: string) => {
+  return axios.post(sqlUrl, makeSqlData(code))
 }
 
-export function getTables() {
-  return axios.post(sqlUrl, {}, makeSqlParams('show tables'))
+const getScriptsTable = (db: string) => {
+  return axios.post(sqlUrl, makeSqlDataWithoutDB(`select * from scripts where schema = '${db}'`))
 }
 
-export function fetchOneTable(tableName: string) {
-  return axios.post(sqlUrl, {}, makeSqlParams(`desc table ${tableName}`))
+const getTables = () => {
+  return axios.post(sqlUrl, makeSqlData(`show tables`))
 }
 
-export function postScripts(name: string, code: string) {
-  return axios.post(scriptUrl, code, makeScriptParams(name))
+const getTableByName = (tableName: string) => {
+  return axios.post(sqlUrl, makeSqlData(`desc table ${tableName}`))
 }
 
-export function postRunScriptName(name: string) {
-  return axios.post(runScriptUrl, {}, makeScriptParams(name))
+const saveScript = (name: string, code: string) => {
+  return axios.post(scriptUrl, code, makeScriptConfig(name))
 }
 
-export function getDatabases() {
-  return axios.post(`${sqlUrl}?sql=show databases`)
+const runScript = (name: string) => {
+  return axios.post(runScriptUrl, {}, makeScriptConfig(name))
+}
+
+const getDatabases = () => {
+  return axios.post(sqlUrl, makeSqlDataWithoutDB(`show databases`))
+}
+
+export default {
+  getTables,
+  getTableByName,
+  getSqlResult,
+  getDatabases,
+  getScriptsTable,
+  runScript,
+  saveScript,
 }
