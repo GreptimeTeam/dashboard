@@ -1,9 +1,12 @@
-import axios, { AxiosRequestConfig } from 'axios'
+import axios, { AxiosRequestConfig, AxiosRequestHeaders } from 'axios'
 import qs from 'qs'
 
 const sqlUrl = `/v1/sql`
 const scriptUrl = `/v1/scripts`
 const runScriptUrl = `/v1/run-script`
+const textHeaders = {
+  'Content-Type': 'text/plain',
+} as AxiosRequestHeaders
 
 function makeSqlData(sql: string) {
   const appStore = useAppStore()
@@ -14,19 +17,19 @@ function makeSqlData(sql: string) {
 }
 
 function makeSqlDataNoDB(sql: string) {
-  const appStore = useAppStore()
   return qs.stringify({
     sql,
   })
 }
 
-function makeScriptParams(name: string) {
+function makeScriptConfig(name: string) {
   const appStore = useAppStore()
   return {
     params: {
       name,
       schema: appStore.database,
     },
+    headers: textHeaders,
   } as AxiosRequestConfig
 }
 
@@ -47,11 +50,11 @@ export function fetchOneTable(tableName: string) {
 }
 
 export function postScripts(name: string, code: string) {
-  return axios.post(scriptUrl, code, makeScriptParams(name))
+  return axios.post(scriptUrl, code, makeScriptConfig(name))
 }
 
 export function postRunScriptName(name: string) {
-  return axios.post(runScriptUrl, {}, makeScriptParams(name))
+  return axios.post(runScriptUrl, {}, makeScriptConfig(name))
 }
 
 export function getDatabases() {

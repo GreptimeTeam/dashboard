@@ -23,8 +23,6 @@ axios.interceptors.request.use(
     if (!config.headers) {
       config.headers = {}
     }
-    // TODO: Not sure if this overwrite is the best way.
-    config.headers['Content-Type'] = 'application/x-www-form-urlencoded'
     config.headers.authorization = basicAuth
 
     return {
