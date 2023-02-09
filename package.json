@@ -19,7 +19,7 @@
     "type:check": "vue-tsc --noEmit --skipLibCheck",
     "lint-staged": "npx lint-staged",
     "prepare": "husky install",
-    "update:lock": "npm i --package-lock-only;yarn install --mode update-lockfile;pnpm i --lockfile-only"
+    "update:lock": "npm i --package-lock-only;pnpm i --lockfile-only"
   },
   "lint-staged": {
     "*.{js,ts,jsx,tsx}": [
