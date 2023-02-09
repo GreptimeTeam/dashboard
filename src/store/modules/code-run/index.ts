@@ -2,6 +2,7 @@ import editorAPI from '@/api/editor'
 import { Message } from '@arco-design/web-vue'
 import { defineStore } from 'pinia'
 import { dateTypes } from '@/views/dashboard/modules/data-view/config'
+import useDataExplorer from '@/hooks/data-explorer'
 import { AnyObject, NumberObject } from '@/types/global'
 import { ResultsType, ResultType } from './types'
 import useLogStore from '../log'
@@ -39,6 +40,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
   })
 
   // TODO: Add all the types we decide instead of ECharts if needed in the future.
+
   const getDimensionsAndXName = (elements: any) => {
     const tempDimensions: any = []
     let xAxisName = ''
@@ -61,11 +63,13 @@ const useCodeRunStore = defineStore('codeRun', () => {
   const API_MAP: AnyObject = {
     sql: editorAPI.getSqlResult,
     python: editorAPI.runScript,
+    prom: editorAPI.runProm,
   }
 
   const runCode = async (codeInfo: string) => {
     try {
       let res: any = {}
+      // TODO: refactor on codeType and queryType. This does not work.
       res = await API_MAP[codeType.value](codeInfo)
       Message.success({
         content: 'run success',
