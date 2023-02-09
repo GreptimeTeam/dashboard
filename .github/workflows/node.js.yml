@@ -4,13 +4,13 @@ name: Node.js CI
 
 on:
   push:
-    branches: [ "main", "dev" ]
+    branches: ['main', 'dev']
   pull_request:
-    branches: [ "main", "dev" ]
+    branches: ['main', 'dev']
+  workflow_dispatch:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     strategy:
@@ -19,22 +19,22 @@ jobs:
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     steps:
-    - uses: actions/checkout@v3
-      with:
-        ref: ${{ github.head_ref }}
-        token: ${{ secrets.PNPM_ACTION_PAT }}
-    - uses: pnpm/action-setup@v2
-      with:
-        version: 7
-    - run: pnpm i --lockfile-only
-    - uses: stefanzweifel/git-auto-commit-action@v4
-      with:
-        commit_message: 'build: update pnpm lockfile'
-        commit_options: '--no-verify'
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v3
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'pnpm'
-    - run: pnpm install
-    - run: pnpm build
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.PNPM_ACTION_PAT }}
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 7
+      - run: pnpm i --lockfile-only
+      - uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: 'build: update pnpm lockfile'
+          commit_options: '--no-verify'
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+      - run: pnpm install
+      - run: pnpm build
