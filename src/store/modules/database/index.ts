@@ -1,4 +1,4 @@
-import { fetchOneTable, getScriptsList, getTables } from '@/api/editor'
+import editorAPI from '@/api/editor'
 import { defineStore } from 'pinia'
 
 const useDataBaseStore = defineStore('dataBase', {
@@ -71,7 +71,7 @@ const useDataBaseStore = defineStore('dataBase', {
     async fetchDataBaseTables() {
       try {
         this.ifTableLoading = true
-        const res = await getTables()
+        const res = await editorAPI.getTables()
         this.ifTableLoading = false
         this.tableData = res
       } catch (error) {
@@ -80,7 +80,7 @@ const useDataBaseStore = defineStore('dataBase', {
     },
     async fetchOneTable(node: any) {
       try {
-        const res = await fetchOneTable(node)
+        const res = await editorAPI.getTableByName(node)
         return res
       } catch (error) {
         return false
@@ -88,7 +88,7 @@ const useDataBaseStore = defineStore('dataBase', {
     },
     async fetchScriptsTable() {
       try {
-        const res = await getScriptsList(this.database)
+        const res = await editorAPI.getScriptsTable(this.database)
         this.scriptsData = res
       } catch (error) {
         // some error

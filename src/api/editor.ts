@@ -8,7 +8,7 @@ const textHeaders = {
   'Content-Type': 'text/plain',
 } as AxiosRequestHeaders
 
-function makeSqlData(sql: string) {
+const makeSqlData = (sql: string) => {
   const appStore = useAppStore()
   return qs.stringify({
     sql,
@@ -16,13 +16,13 @@ function makeSqlData(sql: string) {
   })
 }
 
-function makeSqlDataNoDB(sql: string) {
+const makeSqlDataWithoutDB = (sql: string) => {
   return qs.stringify({
     sql,
   })
 }
 
-function makeScriptConfig(name: string) {
+const makeScriptConfig = (name: string) => {
   const appStore = useAppStore()
   return {
     params: {
@@ -33,30 +33,40 @@ function makeScriptConfig(name: string) {
   } as AxiosRequestConfig
 }
 
-export function getSqlResult(code: string) {
+const getSqlResult = (code: string) => {
   return axios.post(sqlUrl, makeSqlData(code))
 }
 
-export function getScriptsList(db: string) {
-  return axios.post(sqlUrl, makeSqlDataNoDB(`select * from scripts where schema = '${db}'`))
+const getScriptsTable = (db: string) => {
+  return axios.post(sqlUrl, makeSqlDataWithoutDB(`select * from scripts where schema = '${db}'`))
 }
 
-export function getTables() {
+const getTables = () => {
   return axios.post(sqlUrl, makeSqlData(`show tables`))
 }
 
-export function fetchOneTable(tableName: string) {
+const getTableByName = (tableName: string) => {
   return axios.post(sqlUrl, makeSqlData(`desc table ${tableName}`))
 }
 
-export function postScripts(name: string, code: string) {
+const saveScript = (name: string, code: string) => {
   return axios.post(scriptUrl, code, makeScriptConfig(name))
 }
 
-export function postRunScriptName(name: string) {
+const runScript = (name: string) => {
   return axios.post(runScriptUrl, {}, makeScriptConfig(name))
 }
 
-export function getDatabases() {
-  return axios.post(sqlUrl, makeSqlDataNoDB(`show databases`))
+const getDatabases = () => {
+  return axios.post(sqlUrl, makeSqlDataWithoutDB(`show databases`))
+}
+
+export default {
+  getTables,
+  getTableByName,
+  getSqlResult,
+  getDatabases,
+  getScriptsTable,
+  runScript,
+  saveScript,
 }

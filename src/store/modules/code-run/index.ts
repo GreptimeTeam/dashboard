@@ -1,4 +1,4 @@
-import { getSqlResult, postRunScriptName, postScripts } from '@/api/editor'
+import editorAPI from '@/api/editor'
 import { Message } from '@arco-design/web-vue'
 import { defineStore } from 'pinia'
 import { dateTypes } from '@/views/dashboard/modules/data-view/config'
@@ -53,7 +53,7 @@ const useCodeRunStore = defineStore('codeRun', {
   actions: {
     async fetchSQLResult(sql: string) {
       try {
-        const res: any = await getSqlResult(sql)
+        const res: any = await editorAPI.getSqlResult(sql)
 
         Message.success({
           content: 'success',
@@ -95,7 +95,7 @@ const useCodeRunStore = defineStore('codeRun', {
 
     async saveScript(name: string, code: string) {
       try {
-        const res: any = await postScripts(name, code)
+        const res: any = await editorAPI.saveScript(name, code)
 
         Message.success({
           content: 'save success',
@@ -114,7 +114,7 @@ const useCodeRunStore = defineStore('codeRun', {
 
     async runScript(name: string) {
       try {
-        const res: any = await postRunScriptName(name)
+        const res: any = await editorAPI.runScript(name)
         Message.success({
           content: 'run success',
         })
