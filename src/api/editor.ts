@@ -74,7 +74,7 @@ const runScript = (name: string) => {
   return axios.post(runScriptUrl, {}, makeScriptConfig(name))
 }
 
-const runProm = (code: string) => {
+const runPromQL = (code: string) => {
   return axios.post(promURL, {}, makePromParams(code))
 }
 
@@ -86,5 +86,5 @@ export default {
   getScriptsTable,
   runScript,
   saveScript,
-  runProm,
+  runPromQL,
 }
