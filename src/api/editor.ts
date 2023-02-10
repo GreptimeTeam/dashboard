@@ -4,7 +4,7 @@ import qs from 'qs'
 const sqlUrl = `/v1/sql`
 const scriptUrl = `/v1/scripts`
 const runScriptUrl = `/v1/run-script`
-const promUrl = `/v1/promql`
+const promURL = `/v1/promql`
 const textHeaders = {
   'Content-Type': 'text/plain',
 } as AxiosRequestHeaders
@@ -40,7 +40,7 @@ const makePromParams = (code: string) => {
     params: {
       query: code,
     },
-  }
+  } as AxiosRequestConfig
 }
 
 const getDatabases = () => {
@@ -73,7 +73,7 @@ const runScript = (name: string) => {
 }
 
 const runProm = (code: string) => {
-  return axios.post(promUrl, makePromParams(code))
+  return axios.post(promURL, {}, makePromParams(code))
 }
 
 export default {
