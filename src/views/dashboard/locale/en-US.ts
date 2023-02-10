@@ -32,4 +32,7 @@ export default {
   'dataExplorer.runScriptAction': 'Run Script',
   'dataExplorer.input': 'Please input...',
   'dataExplorer.question': 'Your changes will be lost. Are you sure you want to continue?',
+  'dataExplorer.start': 'start',
+  'dataExplorer.end': 'end',
+  'dataExplorer.step': 'step',
 }
