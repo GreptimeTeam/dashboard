@@ -1,6 +1,6 @@
 <template lang="pug">
 a-card(:bordered="false").editor-card
-  a-form.button-space(:model="scriptForm" layout="inline")
+  a-form.script-form(:model="scriptForm" layout="inline")
     a-form-item(:label="$t('dataExplorer.scriptName')" )
       a-input(v-model:model-value="scriptForm.scriptName" :placeholder="$t('dataExplorer.input')" v-bind:disabled="!isNewScript") 
     a-space

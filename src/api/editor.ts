@@ -36,9 +36,11 @@ const makeScriptConfig = (name: string) => {
 }
 
 const makePromParams = (code: string) => {
+  const { promForm } = useDataExplorer()
   return {
     params: {
       query: code,
+      ...promForm.value,
     },
   } as AxiosRequestConfig
 }
