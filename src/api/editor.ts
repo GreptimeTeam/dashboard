@@ -9,17 +9,18 @@ const textHeaders = {
 } as AxiosRequestHeaders
 
 const makeSqlData = (sql: string) => {
-  const appStore = useAppStore()
   return qs.stringify({
     sql,
-    db: appStore.database,
   })
 }
 
-const makeSqlDataWithoutDB = (sql: string) => {
-  return qs.stringify({
-    sql,
-  })
+const addDatabaseParams = () => {
+  const appStore = useAppStore()
+  return {
+    params: {
+      db: appStore.database,
+    },
+  } as AxiosRequestConfig
 }
 
 const makeScriptConfig = (name: string) => {
@@ -33,20 +34,24 @@ const makeScriptConfig = (name: string) => {
   } as AxiosRequestConfig
 }
 
-const getSqlResult = (code: string) => {
-  return axios.post(sqlUrl, makeSqlData(code))
-}
-
-const getScriptsTable = (db: string) => {
-  return axios.post(sqlUrl, makeSqlDataWithoutDB(`select * from scripts where schema = '${db}'`))
+const getDatabases = () => {
+  return axios.post(sqlUrl, makeSqlData(`show databases`))
 }
 
 const getTables = () => {
-  return axios.post(sqlUrl, makeSqlData(`show tables`))
+  return axios.post(sqlUrl, makeSqlData(`show tables`), addDatabaseParams())
 }
 
 const getTableByName = (tableName: string) => {
-  return axios.post(sqlUrl, makeSqlData(`desc table ${tableName}`))
+  return axios.post(sqlUrl, makeSqlData(`desc table ${tableName}`), addDatabaseParams())
+}
+
+const getSqlResult = (code: string) => {
+  return axios.post(sqlUrl, makeSqlData(code), addDatabaseParams())
+}
+
+const getScriptsTable = (db: string) => {
+  return axios.post(sqlUrl, makeSqlData(`select * from scripts where schema = '${db}'`))
 }
 
 const saveScript = (name: string, code: string) => {
@@ -55,10 +60,6 @@ const saveScript = (name: string, code: string) => {
 
 const runScript = (name: string) => {
   return axios.post(runScriptUrl, {}, makeScriptConfig(name))
-}
-
-const getDatabases = () => {
-  return axios.post(sqlUrl, makeSqlDataWithoutDB(`show databases`))
 }
 
 export default {
