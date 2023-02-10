@@ -4,6 +4,9 @@ const sqlCode = 'SELECT * FROM numbers'
 const promCode = ''
 const cursorAt = ref<Array<number>>([])
 const queryType = ref('promQL')
+const start = ''
+const end = ''
+const step = ''
 const queryOptions = [
   {
     value: 'sql',
@@ -20,6 +23,12 @@ const queryCode = ref({
   promQL: promCode,
 } as queryTypes)
 
+const promForm = ref({
+  start,
+  end,
+  step,
+})
+
 export default function useDataExplorer() {
   const insertNameToCode = (name: any) => {
     queryCode.value[queryType.value] =
@@ -34,5 +43,6 @@ export default function useDataExplorer() {
     cursorAt,
     queryOptions,
     queryType,
+    promForm,
   }
 }

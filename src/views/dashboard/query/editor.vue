@@ -15,6 +15,13 @@ a-card(:bordered="false").editor-card
         div(v-else) {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
     a-select(v-model="queryType")
       a-option(v-for="item of queryOptions" :key="item.value" :value="item.value" :label="item.label")
+  a-form.prom-form(:model="promForm" layout="inline" v-show="queryType !== 'sql'")
+    a-form-item(:label="$t('dataExplorer.start')")
+      a-input(v-model:model-value="promForm.start" :allow-clear="true")
+    a-form-item(:label="$t('dataExplorer.end')")
+      a-input(v-model:model-value="promForm.end" :allow-clear="true")
+    a-form-item(:label="$t('dataExplorer.step')")
+      a-input(v-model:model-value="promForm.step" :allow-clear="true")
   CodeMirror(v-model="queryCode[queryType]" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
 
@@ -46,7 +53,7 @@ a-card(:bordered="false").editor-card
 
   const { runCode } = useCodeRunStore()
   const { primaryCodeRunning, secondaryCodeRunning } = storeToRefs(useCodeRunStore())
-  const { queryCode, queryType, cursorAt, queryOptions } = useDataExplorer()
+  const { queryCode, queryType, cursorAt, queryOptions, promForm } = useDataExplorer()
 
   const handleReady = (payload: any) => {
     view.value = payload.view
