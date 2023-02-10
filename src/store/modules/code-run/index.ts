@@ -55,7 +55,8 @@ const useCodeRunStore = defineStore('codeRun', {
   actions: {
     async getQueryResult(code: string) {
       try {
-        const res: any = queryType.value === 'sql' ? await editorAPI.getSqlResult(code) : await editorAPI.runProm(code)
+        const res: any =
+          queryType.value === 'sql' ? await editorAPI.getSqlResult(code) : await editorAPI.runPromQL(code)
 
         Message.success({
           content: 'success',
