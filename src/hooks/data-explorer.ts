@@ -1,4 +1,4 @@
-import { queryTypes } from './types'
+import { stringType } from './types'
 
 const sqlCode = 'SELECT * FROM numbers'
 const promCode = ''
@@ -21,7 +21,7 @@ const queryOptions = [
 const queryCode = ref({
   sql: sqlCode,
   promQL: promCode,
-} as queryTypes)
+} as stringType)
 
 const promForm = ref({
   start,

@@ -63,6 +63,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
   const API_MAP: AnyObject = {
     sql: editorAPI.getSqlResult,
     python: editorAPI.runScript,
+    promQL: editorAPI.runPromQL,
   }
 
   const runCode = async (codeInfo: string) => {
