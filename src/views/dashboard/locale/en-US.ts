@@ -35,4 +35,7 @@ export default {
   'dataExplorer.copyToClipboard': 'Copy Code to Clipboard',
   'dataExplorer.format': 'Format Code',
   'dataExplorer.copied': 'Copied',
+  'dataExplorer.start': 'start',
+  'dataExplorer.end': 'end',
+  'dataExplorer.step': 'step',
 }
