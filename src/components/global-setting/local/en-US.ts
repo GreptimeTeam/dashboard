@@ -1,5 +1,5 @@
 export default {
-  'settings.title': 'Setting',
+  'settings.title': 'Settings',
   'settings.auth': 'Auth',
   'settings.username': 'Username',
   'settings.password': 'Password',
