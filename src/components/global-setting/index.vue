@@ -1,24 +1,12 @@
-<template>
-  <div v-if="!appStore.navbar" class="fixed-settings" @click="setVisible">
-    <a-button type="primary">
-      <template #icon>
-        <icon-settings />
-      </template>
-    </a-button>
-  </div>
-  <a-drawer
-    :width="300"
-    unmount-on-close
-    :visible="visible"
-    :ok-text="$t('settings.save')"
-    mask-closable
-    @ok="cancel"
-    @cancel="cancel"
-  >
-    <template #title> {{ $t('settings.title') }} </template>
-    <Block :options="authOpts" :title="$t('settings.auth')" />
-    <Block :options="databaseOpts" :title="$t('settings.database')" />
-  </a-drawer>
+<template lang="pug">
+.fixed-settings(v-if="!appStore.navbar" @click="setVisible")
+  a-button(type="primary")
+    template(#icon)
+      icon-settings
+a-drawer(:width="300" unmount-on-close :visible="visible" mask-closable @cancel="cancel" :footer="false")
+  template(#title)
+    | {{ $t('settings.title') }}
+  SettingsForm.settings-form
 </template>
 
 <script lang="ts" setup>
@@ -28,7 +16,7 @@
   import { useClipboard } from '@vueuse/core'
   import { useAppStore, useDataBaseStore } from '@/store'
   import axios from 'axios'
-  import Block from './block.vue'
+  import SettingsForm from './settings-form.vue'
 
   const emit = defineEmits(['cancel'])
 
@@ -38,31 +26,6 @@
   const { t } = useI18n()
   const { copy } = useClipboard()
   const visible = computed(() => appStore.globalSettings)
-  const authOpts = computed(() => [
-    { name: 'settings.username', key: 'principal', defaultVal: appStore.principal, type: 'input' },
-    {
-      name: 'settings.password',
-      key: 'credential',
-      defaultVal: appStore.credential,
-      type: 'password',
-    },
-  ])
-  const databaseOpts = computed(() => [
-    {
-      name: 'settings.databaseURL',
-      key: 'databaseURL',
-      defaultVal: appStore.databaseURL,
-      type: 'input',
-    },
-    {
-      name: 'settings.database',
-      key: 'database',
-      defaultVal: appStore.database,
-      selectOps: appStore.databaseList,
-      type: 'select',
-      disabled: appStore.isCloud,
-    },
-  ])
 
   const cancel = () => {
     appStore.updateSettings({ globalSettings: false })

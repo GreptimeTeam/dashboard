@@ -22,5 +22,7 @@ export interface AppState {
   isCloud: boolean
   settingsBtn: boolean
   guideModal: boolean
+  principal: string
+  credential: string
   [key: string]: unknown
 }
