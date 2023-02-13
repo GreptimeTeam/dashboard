@@ -19,6 +19,9 @@ axios.interceptors.request.use(
   (config: AxiosRequestConfig) => {
     const appStore = useAppStore()
     const basicAuth = `Basic ${btoa(`${appStore.principal}:${appStore.credential}`)}`
+    if (!appStore.principal || !appStore.credential) {
+      return false
+    }
 
     if (!config.headers) {
       config.headers = {}
