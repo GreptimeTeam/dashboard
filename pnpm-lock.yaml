@@ -28,7 +28,7 @@ specifiers:
   '@volar/vue-language-plugin-pug': ^1.0.24
   '@vue/babel-plugin-jsx': ^1.1.1
   '@vueuse/core': ^9.6.0
-  arco-design-pro-vue: ^2.5.13
+  arco-design-pro-vue: ^2.6.1
   axios: ^0.27.2
   codemirror: 6.x
   consola: ^2.15.3
@@ -90,7 +90,7 @@ dependencies:
   '@codemirror/lang-sql': 6.3.1
   '@codemirror/theme-one-dark': 6.1.0
   '@vueuse/core': 9.6.0_vue@3.2.45
-  arco-design-pro-vue: 2.5.13
+  arco-design-pro-vue: 2.6.1
   axios: 0.27.2
   codemirror: 6.0.1
   consola: 2.15.3
@@ -1732,8 +1732,8 @@ packages:
       picomatch: 2.3.1
     dev: true
 
-  /arco-design-pro-vue/2.5.13:
-    resolution: {integrity: sha512-7zTxMntIbYz24uvCjfY21ibJjN2dKEUPYSh2yTsagAFFyToBjSPrHRXls5DR6R484Y1m3MrZWGRDVPMJXapiuQ==}
+  /arco-design-pro-vue/2.6.1:
+    resolution: {integrity: sha512-B+T2TGJCPe5p95kzofRL3ma/BAx1Eumho7fzDFN5VwNpoej6DQLMiNuvIUBPnjLVM3KwPGvCUVyOIxkn7JGLAQ==}
     dependencies:
       fs-extra: 10.1.0
       minimist: 1.2.7
