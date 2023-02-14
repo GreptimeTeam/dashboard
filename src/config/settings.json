@@ -20,6 +20,5 @@
   "serverMenu": [],
   "codeType": "sql",
   "isCloud": false,
-  "settingsBtn": false,
-  "guideModal": false
+  "guideModal": true
 }

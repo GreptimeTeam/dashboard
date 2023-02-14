@@ -17,6 +17,8 @@ export default {
   'menu.faq': 'FAQ',
   'navbar.docs': 'Docs',
   'navbar.action.locale': 'Switch to English',
+  'guide.welcome': 'Welcome!',
+  'guide.confirm': 'Confirm',
   ...localeDataExplorer,
   ...localSetting,
 }

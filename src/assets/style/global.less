@@ -4,6 +4,7 @@
 @import url('./dataView.less');
 @import url('./editor.less');
 @import url('./log.less');
+@import url('./form.less');
 
 * {
   box-sizing: border-box;
@@ -22,6 +23,8 @@
   --font-color-40: rgba(23, 12, 44, 0.4);
   --grey-bg-color: rgba(23, 12, 44, 0.06);
   --font-color-7: rgba(23, 12, 44, 0.07);
+  --border-color: rgba(23, 12, 44, 0.25);
+  --drawer-shadow-color: rgba(23, 12, 44, 0.15);
   --option-font-color: #1d2129;
   --grey-font-color: #53565a;
   --button-font-color: #fcfdff;
@@ -118,6 +121,10 @@ body {
   cursor: pointer;
 }
 
+.pointer:hover {
+  opacity: 0.6;
+}
+
 .arco-table-container {
   border: 0 !important;
 }
@@ -154,9 +161,9 @@ body {
   height: 14px;
 }
 
-.icon-24 {
-  width: 24px;
-  height: 24px;
+.icon-20 {
+  width: 20px;
+  height: 20px;
 }
 
 .card-icon {
@@ -171,7 +178,7 @@ body {
 
 .arco-select-dropdown {
   border: 0;
-  border-radius: 2px;
+  border-radius: 6px;
   box-shadow: 0 4px 10px 0 var(--box-shadow-color);
 
   .arco-select-option {
@@ -226,6 +233,7 @@ body {
 
 .arco-input-wrapper {
   background: var(--th-bg-color);
+  border-radius: 6px;
 
   .arco-input[disabled] {
     -webkit-text-fill-color: var(--font-color-40);
@@ -242,11 +250,13 @@ body {
 
 .arco-input-wrapper:focus-within,
 .arco-input-wrapper.arco-input-focus {
+  background: transparent;
   border-color: var(--hover-bg-color);
 }
 
 .arco-modal {
-  width: 400px;
+  width: 384px;
+  background-color: var(--card-bg-color);
 
   .arco-modal-header {
     border-bottom: 0;

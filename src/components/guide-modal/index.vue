@@ -1,25 +1,18 @@
-<template>
-  <a-modal
-    v-model:visible="guideModal"
-    :mask-closable="false"
-    ok-text="Ok"
-    :hide-cancel="true"
-    :closable="false"
-    @ok="handleOk"
-  >
-    <template #title> Welcome! </template>
-    <a-form :model="guideForm">
-      <a-form-item field="database" label="Database">
-        <a-select v-model="guideForm.database" :disabled="isCloud">
-          <a-option v-for="item of databaseList" :key="item" :value="item" :label="item"></a-option>
-        </a-select>
-      </a-form-item>
-    </a-form>
-  </a-modal>
+<template lang="pug">
+a-modal.guide-modal(v-model:visible="guideModal" :mask-closable="false" :ok-text="$t('guide.confirm')" :hide-cancel="true" :closable="false" @ok="handleOk")
+  template(#title)
+    .
+      {{ $t('guide.welcome')
+      }}
+    svg.guide-banner
+      use(href="#banner")
+  SettingsForm
+  template(#footer)
 </template>
 
 <script lang="ts" setup>
   import { useAppStore } from '@/store'
+  import SettingsForm from '../global-setting/settings-form.vue'
 
   const { database, databaseList, codeType, isCloud, guideModal } = storeToRefs(useAppStore())
   const { fetchDataBaseTables, fetchScriptsTable } = useDataBaseStore()

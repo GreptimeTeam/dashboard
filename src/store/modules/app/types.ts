@@ -20,7 +20,8 @@ export interface AppState {
   databaseList: Array<string>
   codeType: string
   isCloud: boolean
-  settingsBtn: boolean
   guideModal: boolean
+  principal: string
+  credential: string
   [key: string]: unknown
 }
