@@ -1,5 +1,5 @@
-import { CrossStorageClient } from 'cross-storage'
 import { createRouter, createWebHistory } from 'vue-router'
+import { useStorage } from '@vueuse/core'
 import NProgress from 'nprogress' // progress bar
 import 'nprogress/nprogress.css'
 
@@ -27,32 +27,12 @@ const router = createRouter({
 
 createRouteGuard(router)
 
-function getConfig() {
-  return new Promise((resolve, reject) => {
-    const storage = new CrossStorageClient(import.meta.env.VITE_CLOUD_URL, {})
-    storage
-      .onConnect()
-      .then(() => {
-        return storage.get(document.location.host)
-      })
-      .then((res) => {
-        return resolve(res)
-      })
-      .catch((err) => {
-        return reject()
-      })
-  })
-}
-
 router.beforeEach(async (to, from, next) => {
   try {
     // TODO: Is it necessary to decide this every time we go to a new route?
     const appStore = useAppStore()
     if (appStore.isCloud) {
-      const res = await getConfig()
-      appStore.updateSettings({
-        ...JSON.parse(res as string),
-      })
+      appStore.updateSettings(useStorage('config', {}).value)
     }
   } catch (error) {
     console.log(`error:`, error)
