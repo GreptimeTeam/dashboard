@@ -3,8 +3,10 @@
   a-button(type="primary")
     template(#icon)
       icon-settings
-a-drawer(:width="262" unmount-on-close :visible="visible" mask-closable @cancel="cancel" :footer="false" :mask="false")
+a-drawer(:width="262" unmount-on-close :visible="globalSettings" :mask-closable="true" @cancel="cancel" :footer="false" )
   template(#title)
+    svg.drawer-icon 
+      use(href="#setting2")
     | {{ $t('settings.title') }}
   SettingsForm.settings-form
 </template>
@@ -25,7 +27,7 @@ a-drawer(:width="262" unmount-on-close :visible="visible" mask-closable @cancel=
 
   const { t } = useI18n()
   const { copy } = useClipboard()
-  const visible = computed(() => appStore.globalSettings)
+  const { globalSettings } = storeToRefs(appStore)
 
   const cancel = () => {
     appStore.updateSettings({ globalSettings: false })

@@ -12,12 +12,12 @@
     li(v-if="settingsBtn")
       a-tooltip(:content="$t('settings.title')")
         div.pointer
-          svg.icon-24(@click="setVisible")
+          svg.icon-20(@click="setVisible")
             use(href="#setting")
     li
       a-dropdown(trigger="hover" position="br" :popup-max-height="false")
         div.pointer
-          svg.icon-24
+          svg.icon-20
             use(href="#dropdown")
         template(#content)
           a-doption(v-for="{ label, link } in dropDownLinks")
