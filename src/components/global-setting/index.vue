@@ -3,7 +3,7 @@
   a-button(type="primary")
     template(#icon)
       icon-settings
-a-drawer(:width="300" unmount-on-close :visible="visible" mask-closable @cancel="cancel" :footer="false")
+a-drawer(:width="262" unmount-on-close :visible="visible" mask-closable @cancel="cancel" :footer="false" :mask="false")
   template(#title)
     | {{ $t('settings.title') }}
   SettingsForm.settings-form

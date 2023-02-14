@@ -1,26 +1,28 @@
 <template lang="pug">
 .navbar
   .left-side
-    img.logo-text-img(alt='logo' src='/src/assets/images/logo-text.webp')
+    img.logo-text-img(alt="logo" src="/src/assets/images/logo-text.webp")
     .menu(v-permission="['dev']")
       a-menu(mode="horizontal" v-model="menuSelectedKey" :default-selected-keys="defaultMenuKey" @menu-item-click="menuClick")
         a-menu-item(key="query")
-          |Query 
+          | Query
         a-menu-item(key="scripts")
-          |Scripts
+          | Scripts
   ul.right-side
     li(v-if="settingsBtn")
       a-tooltip(:content="$t('settings.title')")
-        a-button.nav-btn(type="text" @click='setVisible')
-          template(#icon)
-            icon-settings
+        div.pointer
+          svg.icon-24(@click="setVisible")
+            use(href="#setting")
     li
       a-dropdown(trigger="hover" position="br" :popup-max-height="false")
-        svg.icon-24.pointer
-          use(href="#dropdown")
+        div.pointer
+          svg.icon-24
+            use(href="#dropdown")
         template(#content)
-          a-doption(v-for="{label, link} in dropDownLinks")
-            a-link(:href="link" target="_blank" ) {{ label }}
+          a-doption(v-for="{ label, link } in dropDownLinks")
+            a-link(:href="link" target="_blank")
+              | {{ label }}
 </template>
 
 <script lang="ts" setup>
@@ -83,23 +85,14 @@
   .right-side {
     display: flex;
     list-style: none;
+    margin-right: 30px;
 
     li {
       display: flex;
       align-items: center;
-      margin-right: 30px;
+      margin-left: 24px;
     }
-    .nav-btn {
-      color: #fff;
-      width: 48px;
-      height: 48px;
-      font-size: 24px;
-      transition: color 0.25s;
-      &:hover {
-        background-color: transparent;
-        color: #ffffff88;
-      }
-    }
+
     .arco-link {
       color: var(--card-bg-color);
       transition: color 0.25s;
@@ -117,7 +110,7 @@
   }
 
   .arco-dropdown-open {
-    opacity: 0.4;
+    opacity: 0.6;
   }
 
   .arco-menu-light {

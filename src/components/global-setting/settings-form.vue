@@ -1,5 +1,5 @@
 <template lang="pug">
-a-form(:model="settingsForm")
+a-form(:model="settingsForm" layout="vertical")
   a-form-item(:label="$t('settings.username')")
     a-input(v-model="settingsForm.principal")
   a-form-item(:label="$t('settings.password')")

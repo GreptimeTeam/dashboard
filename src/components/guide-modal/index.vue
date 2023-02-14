@@ -1,8 +1,13 @@
 <template lang="pug">
-a-modal(v-model:visible="guideModal" :mask-closable="false" ok-text="Ok" :hide-cancel="true" :closable="false" @ok="handleOk")
+a-modal.guide-modal(v-model:visible="guideModal" :mask-closable="false" :ok-text="$t('guide.confirm')" :hide-cancel="true" :closable="false" @ok="handleOk")
   template(#title)
-    | Welcome!
+    .
+      {{ $t('guide.welcome')
+      }}
+    svg.guide-banner
+      use(href="#banner")
   SettingsForm
+  template(#footer)
 </template>
 
 <script lang="ts" setup>
