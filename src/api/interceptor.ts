@@ -2,6 +2,7 @@ import axios from 'axios'
 import type { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { Message, Modal } from '@arco-design/web-vue'
 
+const { CancelToken } = axios
 export interface HttpResponse<T = unknown> {
   error?: string
   code: number
@@ -20,7 +21,10 @@ axios.interceptors.request.use(
     const appStore = useAppStore()
     const basicAuth = `Basic ${btoa(`${appStore.principal}:${appStore.credential}`)}`
     if (!appStore.principal || !appStore.credential) {
-      return false
+      return {
+        ...config,
+        cancelToken: new CancelToken((cancel) => cancel('has no principal or credential')),
+      }
     }
 
     if (!config.headers) {

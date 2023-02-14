@@ -32,7 +32,7 @@ router.beforeEach(async (to, from, next) => {
     // TODO: Is it necessary to decide this every time we go to a new route?
     const appStore = useAppStore()
     if (appStore.isCloud) {
-      appStore.updateSettings(useStorage('config', {}))
+      appStore.updateSettings(useStorage('config', {}).value)
     }
   } catch (error) {
     console.log(`error:`, error)

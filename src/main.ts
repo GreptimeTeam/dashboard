@@ -24,5 +24,5 @@ app.use(i18n)
 app.use(globalComponents)
 app.use(directive)
 
-CrossStorageHub.init([{ origin: /greptime-cloud-frontend/, allow: ['get', 'set'] }])
+CrossStorageHub.init([{ origin: new RegExp(import.meta.env.VITE_CLOUD_URL), allow: ['get', 'set'] }])
 app.mount('#app')
