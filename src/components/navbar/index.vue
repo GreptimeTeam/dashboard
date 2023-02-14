@@ -9,7 +9,7 @@
         a-menu-item(key="scripts")
           | Scripts
   ul.right-side
-    li(v-if="settingsBtn")
+    li
       a-tooltip(:content="$t('settings.title')")
         div.pointer
           svg.icon-20(@click="setVisible")
@@ -29,7 +29,6 @@
   import router from '@/router'
 
   const appStore = useAppStore()
-  const { settingsBtn } = appStore
   const menuSelectedKey = router.currentRoute.value.name
   const defaultMenuKey = [router.currentRoute.value.name]
 

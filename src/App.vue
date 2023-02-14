@@ -25,7 +25,7 @@
   })
 
   const { setRole } = useUserStore()
-  const { isCloud, guideModal, settingsBtn, databaseURL } = storeToRefs(useAppStore())
+  const { isCloud, databaseURL } = storeToRefs(useAppStore())
   const { fetchDatabases } = useAppStore()
   databaseURL.value = window.location.origin
   // TODO: is there a better way to do this?
@@ -33,8 +33,6 @@
     fetchDatabases('notCloud')
   } else {
     isCloud.value = true
-    guideModal.value = true
-    settingsBtn.value = true
     setRole('cloud')
   }
 </script>
