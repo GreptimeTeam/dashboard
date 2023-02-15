@@ -31,7 +31,7 @@ a-drawer(:width="262" unmount-on-close :visible="globalSettings" :mask-closable=
 
   const cancel = () => {
     appStore.updateSettings({ globalSettings: false })
-    axios.defaults.baseURL = appStore.databaseURL
+    axios.defaults.baseURL = appStore.host
     if (appStore.codeType === 'sql') {
       dataBaseStore.fetchDataBaseTables()
     } else {
@@ -50,7 +50,7 @@ a-drawer(:width="262" unmount-on-close :visible="globalSettings" :mask-closable=
   }
 
   onMounted(() => {
-    axios.defaults.baseURL = appStore.databaseURL
+    axios.defaults.baseURL = appStore.host
   })
 </script>
 

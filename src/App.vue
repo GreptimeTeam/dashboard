@@ -25,9 +25,9 @@
   })
 
   const { setRole } = useUserStore()
-  const { isCloud, databaseURL } = storeToRefs(useAppStore())
+  const { isCloud, host } = storeToRefs(useAppStore())
   const { fetchDatabases } = useAppStore()
-  databaseURL.value = window.location.origin
+  host.value = window.location.origin
   // TODO: is there a better way to do this?
   if (import.meta.env.MODE === 'development' || import.meta.env.MODE === 'production') {
     fetchDatabases('notCloud')
