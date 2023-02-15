@@ -12,7 +12,7 @@
   "device": "desktop",
   "tabBar": false,
   "menuFromServer": false,
-  "databaseURL": "",
+  "host": "",
   "database": "",
   "databaseList": [],
   "principal": "",

@@ -5,5 +5,5 @@ export default {
   'settings.password': 'Password',
   'settings.database': 'Database',
   'settings.save': 'Save',
-  'settings.databaseURL': 'URL',
+  'settings.host': 'Host',
 }
