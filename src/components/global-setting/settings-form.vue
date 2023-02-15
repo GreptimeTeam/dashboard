@@ -9,7 +9,7 @@ a-form(:model="settingsForm" layout="vertical")
   a-form-item(:label="$t('settings.username')")
     a-input(v-model="settingsForm.principal")
   a-form-item(:label="$t('settings.password')")
-    a-input(v-model="settingsForm.credential")
+    a-input-password(v-model="settingsForm.credential")
 </template>
 
 <script lang="ts" setup name="SettingsForm">
