@@ -1,12 +1,16 @@
+import { number } from 'echarts'
 import { stringType } from './types'
 
 const sqlCode = 'SELECT * FROM numbers'
 const promCode = ''
 const cursorAt = ref<Array<number>>([])
 const queryType = ref('promQL')
-const start = ''
-const end = ''
-const step = ''
+const start = 0
+const end = 0
+const step = ref<number>()
+const isRelative = 1
+const time = 5
+const range = ref()
 const queryOptions = [
   {
     value: 'sql',
@@ -27,6 +31,9 @@ const promForm = ref({
   start,
   end,
   step,
+  isRelative,
+  time,
+  range,
 })
 
 export default function useDataExplorer() {
