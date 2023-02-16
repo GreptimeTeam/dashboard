@@ -28,7 +28,7 @@ const makeScriptConfig = (name: string) => {
   return {
     params: {
       name,
-      schema: appStore.database,
+      db: appStore.database,
     },
     headers: textHeaders,
   } as AxiosRequestConfig
@@ -51,7 +51,8 @@ const getSqlResult = (code: string) => {
 }
 
 const getScriptsTable = (db: string) => {
-  return axios.post(sqlUrl, makeSqlData(`select * from scripts where schema = '${db}'`))
+  // TODO: update to system schema when upstream ready
+  return axios.post(sqlUrl, makeSqlData(`select * from public.scripts where schema = '${db}'`))
 }
 
 const saveScript = (name: string, code: string) => {
