@@ -37,10 +37,19 @@ const makeScriptConfig = (name: string) => {
 
 const makePromParams = (code: string) => {
   const { promForm } = useDataExplorer()
+  if (promForm.value.isRelative) {
+    // TODO: move this into a function?
+    promForm.value.end = new Date().getTime()
+    promForm.value.start = promForm.value.end - 1000 * 60 * promForm.value.time
+  } else {
+    ;[promForm.value.start, promForm.value.end] = promForm.value.range
+  }
   return {
     params: {
       query: code,
-      ...promForm.value,
+      start: promForm.value.start,
+      end: promForm.value.end,
+      step: `${promForm.value.step}s`,
     },
   } as AxiosRequestConfig
 }

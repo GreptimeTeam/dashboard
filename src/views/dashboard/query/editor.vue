@@ -10,14 +10,24 @@ a-card.editor-card(:bordered="false")
         a-button(v-else)
           | {{ $t('dataExplorer.runLines') }} {{ lineStart }} - {{ lineEnd }}
     a-select(v-model="queryType")
-      a-option(v-for="item of queryOptions" :key="item.value" :value="item.value" :label="item.label")
+      a-option(v-for="query of queryOptions" :="query")
   a-form.prom-form(:model="promForm" layout="inline" v-show="queryType !== 'sql'")
-    a-form-item(:label="$t('dataExplorer.start')")
-      a-input(v-model:model-value="promForm.start" :allow-clear="true")
-    a-form-item(:label="$t('dataExplorer.end')")
-      a-input(v-model:model-value="promForm.end" :allow-clear="true")
+    a-form-item
+      a-input-group
+        a-select(v-if="promForm.isRelative === 1" v-model="promForm.time")
+          a-option(v-for="time of timeOptions" :="time")
+          template(#prefix)
+            icon-calendar-clock
+        a-range-picker(v-else v-model="promForm.range" format="YYYY-MM-DD HH:mm:ss" mode="date" :show-time="true" value-format="x")
+          template(#prefix)
+              icon-calendar-clock
+        a-select(v-model="promForm.isRelative")
+          a-option(label="Relative" :value="1")
+          a-option(label="Absolute" :value="0")
     a-form-item(:label="$t('dataExplorer.step')")
-      a-input(v-model:model-value="promForm.step" :allow-clear="true")
+      a-input(v-model="promForm.step" :allow-clear="true")
+      . 
+        {{ `s` }}
   CodeMirror(v-model="queryCode[queryType]" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
 
@@ -96,4 +106,17 @@ a-card.editor-card(:bordered="false")
   const runPartQuery = () => {
     getQueryResult(selectedCode.value.trim())
   }
+
+  // TODO: i18n config
+  const timeOptions = [5, 10, 15].map((value) => ({
+    value,
+    label: `Last ${value} minutes`,
+    key: value,
+  }))
+
+  const timeTypes = ['relative', 'absolute'].map((value) => ({
+    value,
+    label: value,
+    key: value,
+  }))
 </script>
