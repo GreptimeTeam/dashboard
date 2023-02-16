@@ -58,7 +58,49 @@
 .prom-form {
   padding-bottom: 8px;
 
-  .arco-form-item-content-wrapper {
-    width: 200px;
+  .arco-select-view-single {
+    width: 100%;
+  }
+
+  .arco-input-group > *:last-child,
+  .arco-input-group > *:last-child .arco-input-outer > *:last-child {
+    width: 100px;
+  }
+
+  .arco-input-wrapper {
+    width: 100px;
+  }
+
+  .arco-form-item-label-col {
+    padding-right: 0;
+  }
+
+  .arco-picker {
+    padding: 4px 8px;
+    background-color: var(--th-bg-color);
+    border-radius: 6px;
+  }
+
+  .arco-picker:hover {
+    background-color: var(--th-bg-color);
+  }
+
+  .arco-picker-focused .arco-picker-input-active input,
+  .arco-picker-focused:hover .arco-picker-input-active input {
+    background: transparent;
+  }
+
+  .arco-picker-focused,
+  .arco-picker-focused:hover {
+    border-color: var(--hover-bg-color);
+  }
+
+  .arco-picker-suffix {
+    display: none;
+  }
+
+  .arco-switch {
+    width: 80px;
+    min-width: 80px;
   }
 }
