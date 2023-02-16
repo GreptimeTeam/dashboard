@@ -10,8 +10,8 @@ export interface HttpResponse<T = unknown> {
   execution_time_ms?: number
 }
 export interface Auth {
-  principal: string
-  credential: string
+  username: string
+  password: string
 }
 
 // todo: can we use env and proxy at the same time?
@@ -19,7 +19,7 @@ export interface Auth {
 axios.interceptors.request.use(
   (config: AxiosRequestConfig) => {
     const appStore = useAppStore()
-    const basicAuth = `Basic ${btoa(`${appStore.principal}:${appStore.credential}`)}`
+    const basicAuth = `Basic ${btoa(`${appStore.username}:${appStore.password}`)}`
 
     if (!config.headers) {
       config.headers = {}
