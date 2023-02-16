@@ -1,7 +1,7 @@
 .arco-select-view-single {
   padding-right: 8px;
   padding-left: 8px;
-  background: var(--th-bg-color) !important;
+  background: var(--th-bg-color);
   border-radius: 6px;
 
   .arco-select-view-value {
@@ -11,6 +11,15 @@
 
 .arco-select-view-focus {
   border-color: var(--hover-bg-color) !important;
+}
+
+.arco-select-view-single:hover {
+  background-color: var(--th-bg-color);
+}
+
+.arco-select-view-single:focus-within,
+.arco-select-view-single.arco-select-view-focus {
+  background-color: transparent;
 }
 
 .arco-select-view-multiple {
