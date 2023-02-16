@@ -51,6 +51,7 @@ const getSqlResult = (code: string) => {
 }
 
 const getScriptsTable = (db: string) => {
+  // TODO: update to system schema when upstream ready
   return axios.post(sqlUrl, makeSqlData(`select * from public.scripts where schema = '${db}'`))
 }
 
