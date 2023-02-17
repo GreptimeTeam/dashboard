@@ -1,13 +1,13 @@
 <template lang="pug">
 .navbar
-  .left-side
+  .logo-space
     img.logo-text-img(alt="logo" src="/src/assets/images/logo-text.webp")
-    .menu(v-permission="['dev']")
-      a-menu(mode="horizontal" v-model="menuSelectedKey" :default-selected-keys="defaultMenuKey" @menu-item-click="menuClick")
-        a-menu-item(key="query")
-          | Query
-        a-menu-item(key="scripts")
-          | Scripts
+  .menu(v-permission="['dev']")
+    a-menu(mode="horizontal" v-model="menuSelectedKey" :default-selected-keys="defaultMenuKey" @menu-item-click="menuClick")
+      a-menu-item(key="query")
+        | Query
+      a-menu-item(key="scripts")
+        | Scripts
   ul.right-side
     li
       a-tooltip(:content="$t('settings.title')")
@@ -68,8 +68,7 @@
     background: var(--navbar-bg-color);
   }
 
-  .left-side {
-    display: flex;
+  .logo-space {
     padding-left: 20px;
 
     .logo-text-img {
@@ -78,7 +77,33 @@
   }
 
   .menu {
-    width: 230px;
+    width: 100%;
+    margin-left: 60px;
+    .arco-menu-horizontal {
+      background-color: transparent;
+      .arco-menu-item {
+        padding: 6px 12px;
+        line-height: 18px;
+        background-color: transparent;
+        color: var(--white-font-color);
+        user-select: none;
+        opacity: 0.6;
+      }
+      .arco-menu-item:last-child {
+        margin-left: 16px;
+      }
+      .arco-menu-item:not(:last-child) {
+        margin-left: 0;
+      }
+      :deep(.arco-menu-selected-label) {
+        display: none;
+      }
+      .arco-menu-item.arco-menu-selected {
+        background: rgb(255 255 255 / 15%);
+        border-radius: 4px;
+        opacity: 1;
+      }
+    }
   }
 
   .right-side {
@@ -110,20 +135,5 @@
 
   .arco-dropdown-open {
     opacity: 0.6;
-  }
-
-  .arco-menu-light {
-    background-color: transparent;
-    .arco-menu-item {
-      background-color: transparent;
-      color: var(--card-bg-color);
-      user-select: none;
-      &.arco-menu-selected:hover {
-        background-color: transparent;
-      }
-    }
-    :deep(.arco-menu-selected-label) {
-      background-color: var(--card-bg-color);
-    }
   }
 </style>
