@@ -1,23 +1,25 @@
 <template lang="pug">
-a-space.layout-content(direction="vertical" fill :size="14")
-  a-split.tree-split(default-size="260px" min="200px")
-    template(#first)
-      a-card(:bordered="false").tree-card
-        template(#title)
-          svg.card-icon
-            use(href="#tree")
-          span {{$t('dataExplorer.tableTree')}}
-        template(#extra)
-          svg.icon.pointer(@click="refreshTableData")
-            use(href="#refresh")
-        TableList     
-    template(#second) 
+a-layout.layout
+  a-layout-sider
+    a-card(:bordered="false").tree-card
+      template(#title)
+        svg.card-icon
+          use(href="#tree")
+        span {{$t('dataExplorer.tableTree')}}
+      template(#extra)
+        svg.icon.pointer(@click="refreshTableData")
+          use(href="#refresh")
+      TableList
+  a-layout-content
+    a-space(direction="vertical" fill :size="14")
       Editor 
-  DataView(v-if="!!results.sql.length")
-  Log 
+      DataView(v-if="!!results.sql.length")
+      Log 
 </template>
 
 <script lang="ts" name="DataExplorer" setup>
+  import TableList from '../modules/table-list.vue'
+
   const { fetchDataBaseTables: refreshTableData } = useDataBaseStore()
   const { results } = storeToRefs(useCodeRunStore())
   const { codeType } = storeToRefs(useAppStore())
@@ -27,12 +29,6 @@ a-space.layout-content(direction="vertical" fill :size="14")
 </script>
 
 <style lang="less" scoped>
-  .layout-content {
-    padding: 20px 30px 30px 30px;
-  }
-  .tree-split {
-    height: 296px;
-  }
   .left-side {
     flex: 1;
     overflow: auto;
