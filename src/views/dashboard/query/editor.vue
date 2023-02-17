@@ -1,6 +1,6 @@
 <template lang="pug">
 a-card(:bordered="false").editor-card
-  a-space.button-space
+  a-space(size="medium").button-space
     a-button(@click="runSqlCommand()" type="primary")
       | {{$t('dataExplorer.runAll')}}
     a(@click="runPartSqlCommand()")

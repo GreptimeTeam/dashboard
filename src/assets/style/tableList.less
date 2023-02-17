@@ -1,5 +1,5 @@
 .tree-card {
-  height: 296px;
+  height: 100%;
 
   & > .arco-card-header {
     height: 42px !important;
@@ -8,7 +8,7 @@
 }
 
 .tree-scrollbar {
-  height: 252px;
+  height: 100%;
   overflow: auto;
 }
 
@@ -81,30 +81,50 @@
   right: 15px;
 }
 
-.scripts-split {
-  height: 296px;
-  margin-left: -20px;
+.sider-tabs {
+  height: 100%;
+  padding-top: 16px;
+  background-color: var(--card-bg-color);
+  border-radius: 10px;
 
-  .arco-tabs-nav-vertical.arco-tabs-nav-type-line .arco-tabs-tab {
-    padding: 0 5px;
+  .arco-tabs-nav {
+    height: 32px;
+    padding: 0 16px;
   }
 
-  .arco-tabs-nav-type-line .arco-tabs-tab-title {
-    display: flex;
-    padding: 1px 0;
+  .arco-tabs-nav-tab-list {
+    width: 100%;
   }
 
-  .arco-tabs-nav-type-line .arco-tabs-tab-title::before {
-    right: 0;
-    left: 0;
+  .arco-tabs-nav-tab {
+    justify-content: center;
   }
 
-  .arco-tabs-left.arco-tabs-vertical .arco-tabs-content {
-    padding-left: 5px;
+  .arco-tabs-tab {
+    justify-content: center;
+    width: 50%;
+    margin: 0;
+    background-color: var(--grey-bg-color);
+    border-radius: 6px;
   }
 
-  .arco-tabs-nav-vertical .arco-tabs-tab:last-of-type {
-    margin-top: 5px;
+  .arco-tabs-tab:hover {
+    background-color: var(--hover-grey-bg-color);
+  }
+
+  .arco-tabs-tab-active {
+    color: var(--white-font-color);
+    background-color: var(--brand-color);
+  }
+
+  .arco-tabs-tab-active:hover {
+    background-color: var(--brand-color);
+  }
+}
+
+.one-tab {
+  .arco-tabs-tab {
+    width: 100% !important;
   }
 }
 

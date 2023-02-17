@@ -1,9 +1,7 @@
 <template lang="pug">
-a-tabs(position="left" lazy-load default-active-key="2")
-  a-tab-pane(key="1")
-    template(#title)
-      svg.icon 
-        use(href="#tree")
+a-tabs.sider-tabs(v-model:active-key="tabActiveKey"
+  lazy-load default-active-key="2" type="rounded" :class="codeType === 'sql' ? 'one-tab' : ''")
+  a-tab-pane(key="1" :title="$t('dataExplorer.tableTree')")
     a-card(:bordered="false").tree-card
       template(#title)
         svg.card-icon
@@ -13,17 +11,13 @@ a-tabs(position="left" lazy-load default-active-key="2")
         svg.icon.pointer(@click="refreshTableData")
           use(href="#refresh")
       TableList    
-  a-tab-pane(key="2") 
-    template(#title)
-      svg.icon 
-        use(href="#code")
+  a-tab-pane(key="2" :title="$t('dataExplorer.scripts')")
     a-card(:bordered="false").tree-card
       template(#title)
         svg.card-icon
           use(href="#code")
         span {{$t('dataExplorer.scripts')}}
       template(#extra)
-        a-button(@click="createNewScript()") {{$t('dataExplorer.create')}}
       ScriptsList
 </template>
 
@@ -32,7 +26,12 @@ a-tabs(position="left" lazy-load default-active-key="2")
   import ScriptsList from './scripts-list.vue'
 
   const { fetchDataBaseTables: refreshTableData } = useDataBaseStore()
-  const { createNewScript } = usePythonCode()
+  const { codeType } = storeToRefs(useAppStore())
+
+  const tabActiveKey = ref()
+  if (codeType.value === 'sql') {
+    tabActiveKey.value = '1'
+  }
 </script>
 
 <style lang="less" scoped>
