@@ -1,12 +1,12 @@
 <template lang="pug">
-a-space.layout-content(direction="vertical" fill :size="14")
-  a-split.scripts-split(default-size="284px" min="200px")
-    template(#first)
-      ListTabs
-    template(#second) 
+a-layout.layout
+  a-layout-sider
+    ListTabs
+  a-layout-content
+    a-space(direction="vertical" fill :size="14")
       PyEditor
-  DataView(v-if="!!results.python.length")
-  Log 
+      DataView(v-if="!!results.python.length")
+      Log 
 </template>
 
 <script lang="ts" name="Scripts" setup>

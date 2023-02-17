@@ -1,15 +1,7 @@
 <template lang="pug">
 a-layout.layout
   a-layout-sider
-    a-card(:bordered="false").tree-card
-      template(#title)
-        svg.card-icon
-          use(href="#tree")
-        span {{$t('dataExplorer.tableTree')}}
-      template(#extra)
-        svg.icon.pointer(@click="refreshTableData")
-          use(href="#refresh")
-      TableList
+    ListTabs
   a-layout-content
     a-space(direction="vertical" fill :size="14")
       Editor 

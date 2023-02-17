@@ -1,5 +1,5 @@
 <template lang="pug">
-a-tabs(type="rounded" lazy-load :active-key="activeTabKey[codeType]" @tab-click="tabClick" @delete="deleteTab" editable)
+a-tabs.result-tabs(type="rounded" lazy-load :active-key="activeTabKey[codeType]" @tab-click="tabClick" @delete="deleteTab" editable)
   template(#extra)
     a-button(@click="clearResults()" status="danger") {{$t('dataExplorer.clear')}}
   a-tab-pane(v-for="(item, index) of results[codeType]" :key="item.key" 
