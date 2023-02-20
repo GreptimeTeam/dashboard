@@ -1,23 +1,11 @@
 <template lang="pug">
-a-tabs.sider-tabs(v-model:active-key="tabActiveKey"
-  lazy-load default-active-key="2" type="rounded" :class="codeType === 'sql' ? 'one-tab' : ''")
+a-tabs.sider-tabs(v-model:active-key="tabActiveKey" default-active-key="2"
+  lazy-load type="rounded" :class="codeType === 'sql' ? 'one-tab' : ''")
   a-tab-pane(key="1" title="Tables")
     a-card(:bordered="false").tree-card
-      template(#title)
-        svg.card-icon
-          use(href="#tree")
-        span {{$t('dataExplorer.tableTree')}}
-      template(#extra)
-        svg.icon.pointer(@click="refreshTableData")
-          use(href="#refresh")
       TableList    
   a-tab-pane(key="2" title="Scripts")
     a-card(:bordered="false").tree-card
-      template(#title)
-        svg.card-icon
-          use(href="#code")
-        span {{$t('dataExplorer.scripts')}}
-      template(#extra)
       ScriptsList
 </template>
 
@@ -30,7 +18,7 @@ a-tabs.sider-tabs(v-model:active-key="tabActiveKey"
 
   const { codeType } = storeToRefs(useAppStore())
 
-  const tabActiveKey = ref('2')
+  const tabActiveKey = ref()
   if (codeType.value === 'sql') {
     tabActiveKey.value = '1'
   }

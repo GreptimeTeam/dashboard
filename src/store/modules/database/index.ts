@@ -1,5 +1,4 @@
 import editorAPI from '@/api/editor'
-import { dataType } from './types'
 
 const useDataBaseStore = defineStore('database', () => {
   const { database } = storeToRefs(useAppStore())
@@ -14,7 +13,6 @@ const useDataBaseStore = defineStore('database', () => {
       const node = {
         title: item.join(),
         key,
-        isLeaf: false,
       }
       tempArray.push(node)
       key += 1

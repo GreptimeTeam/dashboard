@@ -1,10 +1,15 @@
 <template lang="pug">
 a-scrollbar.tree-scrollbar
-  a-tree.script-tree(:data="scriptsList" size="small" @select="onSelect" blockNode v-model:selected-keys="scriptSelectedKeys")
+  a-space.search-space
+    a-input(v-model="tableSearchKey")
+      template(#prefix)
+        svg.icon
+          use(href="#search")
+  a-tree.script-tree(ref="scriptsRef" :data="scriptsList" size="small" @select="onSelect" blockNode v-model:selected-keys="scriptSelectedKeys")
 a-modal(v-model:visible='modelVisible', @ok='handleOk', @cancel='handleCancel')
     template(#title='')
-    div
-      | {{$t('dataExplorer.question')}}
+    .
+      {{$t('dataExplorer.question')}}
 </template>
 
 <script lang="ts" name="ScriptsList" setup>
@@ -13,6 +18,7 @@ a-modal(v-model:visible='modelVisible', @ok='handleOk', @cancel='handleCancel')
   import usePythonCode from '@/hooks/python-code'
 
   const selectedNode = ref()
+  const scriptsRef = ref()
 
   const {
     pythonCode,
@@ -28,6 +34,7 @@ a-modal(v-model:visible='modelVisible', @ok='handleOk', @cancel='handleCancel')
   const { getScriptsTable } = useDataBaseStore()
   const { scriptsList } = storeToRefs(useDataBaseStore())
   const { guideModal } = storeToRefs(useAppStore())
+
   const onSelect = (key: string[], selectedData: { node: object }) => {
     selectedNode.value = selectedData.node
 
@@ -49,6 +56,10 @@ a-modal(v-model:visible='modelVisible', @ok='handleOk', @cancel='handleCancel')
 
   const handleCancel = () => {
     scriptSelectedKeys.value = lastSelectedKey.value
+  }
+
+  const refreshScripts = () => {
+    getScriptsTable()
   }
 
   if (!guideModal.value) {

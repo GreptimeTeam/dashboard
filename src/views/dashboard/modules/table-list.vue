@@ -1,6 +1,13 @@
 <template lang="pug">
 a-scrollbar.tree-scrollbar
-  a-tree.table-tree(:data="tableList" :load-more="loadMore" size="small")
+  a-space.search-space
+    a-input(v-model="tableSearchKey")
+      template(#prefix)
+        svg.icon
+          use(href="#search")
+    svg.icon.pointer(@click="refreshTables")
+      use(href="#refresh")
+  a-tree.table-tree(ref="treeRef" :data="tableList" :load-more="loadMore" size="small")
     template(#title)
     template(#extra="nodeData")
       img(:src="getIconUrl(nodeData.iconType)" alt="" height="14")
@@ -25,6 +32,14 @@ a-scrollbar.tree-scrollbar
 
   const { getTableByName, getTables, addChildren } = useDataBaseStore()
   const { tableList } = storeToRefs(useDataBaseStore())
+
+  const treeRef = ref()
+  const tableSearchKey = ref('')
+
+  const refreshTables = () => {
+    getTables()
+    treeRef.value.expandAll(false)
+  }
 
   const loadMore = (nodeData: any) => {
     return new Promise<void>((resolve, reject) => {
@@ -67,9 +82,5 @@ a-scrollbar.tree-scrollbar
   // TODO: Better use iconPark.
   const getIconUrl = (type: any) => {
     return new URL(`../../../assets/images/${ICON_MAP[type]}`, import.meta.url).href
-  }
-
-  if (!guideModal.value) {
-    getTables()
   }
 </script>

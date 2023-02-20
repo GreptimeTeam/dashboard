@@ -25,6 +25,7 @@ a-modal.guide-modal(v-model:visible="guideModal" :mask-closable="false" :ok-text
     if (codeType.value === 'sql') {
       getTables()
     } else {
+      getTables()
       getScriptsTable()
     }
     guideModal.value = false
