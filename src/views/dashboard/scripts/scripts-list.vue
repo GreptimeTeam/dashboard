@@ -25,7 +25,7 @@ a-modal(v-model:visible='modelVisible', @ok='handleOk', @cancel='handleCancel')
     overwriteCode,
     createNewScript,
   } = usePythonCode()
-  const { fetchScriptsTable } = useDataBaseStore()
+  const { getScriptsTable } = useDataBaseStore()
   const { scriptsList } = storeToRefs(useDataBaseStore())
   const { guideModal } = storeToRefs(useAppStore())
   const onSelect = (key: string[], selectedData: { node: object }) => {
@@ -52,6 +52,6 @@ a-modal(v-model:visible='modelVisible', @ok='handleOk', @cancel='handleCancel')
   }
 
   if (!guideModal.value) {
-    fetchScriptsTable()
+    getScriptsTable()
   }
 </script>

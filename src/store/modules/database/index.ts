@@ -1,59 +1,36 @@
 import editorAPI from '@/api/editor'
-import { defineStore } from 'pinia'
+import { dataType } from './types'
 
-const useDataBaseStore = defineStore('dataBase', {
-  state: () => ({
-    database: storeToRefs(useAppStore()).database,
-    tableData: <any>{
-      output: [
-        {
-          records: {
-            rows: [],
-          },
-        },
-      ],
-    },
-    favoriteData: <any>[],
-    ifTableLoading: <boolean>true,
-    tableKey: 0,
-    scriptsData: <any>{
-      output: [
-        {
-          records: {
-            rows: [],
-          },
-        },
-      ],
-    },
-  }),
-  // getters: computed
-  getters: {
-    tableList(state) {
-      const tempArray: any = []
-      state.tableData.output[0].records.rows.forEach((item: any) => {
-        const node = {
-          title: item.join(),
-          key: item.join(),
-          isLeaf: false,
-        }
-        tempArray.push(node)
-      })
-      return tempArray
-    },
-    favoriteList(state) {
-      const tempArray: any = []
-      state.favoriteData.forEach((item: any) => {
-        const one = {
-          title: item[1],
-          key: item[1],
-        }
-        tempArray.push(one)
-      })
-      return tempArray
-    },
-    scriptsList(state) {
-      const tempArray: any = []
-      state.scriptsData.output[0].records.rows.forEach((item: Array<any>) => {
+const useDataBaseStore = defineStore('database', () => {
+  const { database } = storeToRefs(useAppStore())
+  const tableData = ref()
+  const tableList = ref()
+  const scriptsData = ref()
+
+  const getTablesTree = () => {
+    const tempArray: any = []
+    let key = 0
+    tableData.value.output[0].records.rows.forEach((item: any) => {
+      const node = {
+        title: item.join(),
+        key,
+        isLeaf: false,
+      }
+      tempArray.push(node)
+      key += 1
+    })
+
+    return tempArray
+  }
+
+  const addChildren = (key: number, children: any) => {
+    tableList.value[key].children = children
+  }
+
+  const scriptsList = computed(() => {
+    const tempArray: any = []
+    if (scriptsData.value) {
+      scriptsData.value.output[0].records.rows.forEach((item: Array<any>) => {
         const node = {
           title: item[1],
           key: item[1],
@@ -62,38 +39,40 @@ const useDataBaseStore = defineStore('dataBase', {
         }
         tempArray.push(node)
       })
-      return tempArray
-    },
-  },
+    }
 
-  // actions: methods
-  actions: {
-    async fetchDataBaseTables() {
-      try {
-        this.ifTableLoading = true
-        const res = await editorAPI.getTables()
-        this.ifTableLoading = false
-        this.tableData = res
-      } catch (error) {
-        // some error
-      }
-    },
-    async fetchOneTable(node: any) {
-      try {
-        const res = await editorAPI.getTableByName(node)
-        return res
-      } catch (error) {
-        return false
-      }
-    },
-    async fetchScriptsTable() {
-      try {
-        const res = await editorAPI.getScriptsTable(this.database)
-        this.scriptsData = res
-      } catch (error) {
-        // some error
-      }
-    },
-  },
+    return tempArray
+  })
+
+  async function getTables() {
+    try {
+      const res = await editorAPI.getTables()
+      tableData.value = res
+      tableList.value = getTablesTree()
+    } catch (error) {
+      // some error
+    }
+  }
+
+  async function getTableByName(node: any) {
+    try {
+      const res = await editorAPI.getTableByName(node)
+      return res
+    } catch (error) {
+      return false
+    }
+  }
+
+  async function getScriptsTable() {
+    try {
+      const res = await editorAPI.getScriptsTable(database.value)
+      scriptsData.value = res
+    } catch (error) {
+      // some error
+    }
+  }
+
+  return { tableList, scriptsList, getTables, addChildren, getTableByName, getScriptsTable }
 })
+
 export default useDataBaseStore

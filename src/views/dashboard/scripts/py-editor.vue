@@ -36,7 +36,7 @@ a-card(:bordered="false").editor-card
   const { pythonCode, cursorAt, lastSavedCode, isNewScript, scriptName, isChanged, selectAfterSave, createNewScript } =
     usePythonCode()
   const { saveScript, runScript } = useCodeRunStore()
-  const { fetchScriptsTable } = dataBaseStore
+  const { getScriptsTable } = dataBaseStore
 
   const lineStart = ref()
   const lineEnd = ref()
@@ -75,7 +75,7 @@ a-card(:bordered="false").editor-card
     }
   }
 
-  const refreshTableData = dataBaseStore.fetchDataBaseTables
+  const refreshTableData = dataBaseStore.getTables
 
   // extensions: Passed to CodeMirror EditorState.create({ extensions })
   const style = {
@@ -86,7 +86,7 @@ a-card(:bordered="false").editor-card
   const saveCurrentScript = async () => {
     try {
       await saveScript(scriptForm.value.scriptName, pythonCode.value.trim())
-      await fetchScriptsTable()
+      await getScriptsTable()
       selectAfterSave(scriptForm.value.scriptName)
     } catch (error: any) {
       // error
@@ -96,7 +96,7 @@ a-card(:bordered="false").editor-card
     await saveScript(scriptForm.value.scriptName, pythonCode.value.trim())
     lastSavedCode.value = pythonCode.value
     runScript(scriptForm.value.scriptName)
-    await fetchScriptsTable()
+    await getScriptsTable()
     selectAfterSave(scriptForm.value.scriptName)
   }
 

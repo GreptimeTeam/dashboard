@@ -1,6 +1,6 @@
 <template lang="pug">
 a-scrollbar.tree-scrollbar
-  a-tree.table-tree(v-if="!ifTableLoading" :key="tableKey" :data="tableList" :load-more="loadMore" size="small")
+  a-tree.table-tree(:data="tableList" :load-more="loadMore" size="small")
     template(#title)
     template(#extra="nodeData")
       img(:src="getIconUrl(nodeData.iconType)" alt="" height="14")
@@ -23,12 +23,12 @@ a-scrollbar.tree-scrollbar
   const { codeType, guideModal } = storeToRefs(useAppStore())
   const { insertNameToPyCode } = usePythonCode()
 
-  const { fetchOneTable, fetchDataBaseTables } = useDataBaseStore()
-  const { tableList, ifTableLoading, tableKey } = storeToRefs(useDataBaseStore())
+  const { getTableByName, getTables, addChildren } = useDataBaseStore()
+  const { tableList } = storeToRefs(useDataBaseStore())
 
   const loadMore = (nodeData: any) => {
     return new Promise<void>((resolve, reject) => {
-      fetchOneTable(nodeData.title)
+      getTableByName(nodeData.title)
         .then((result: any) => {
           const { output } = result
           const {
@@ -36,6 +36,7 @@ a-scrollbar.tree-scrollbar
           } = output[0]
           const rowArray: any = []
           rows.forEach((row: any) => {
+            // TODO: make code more readable
             rowArray.push({
               title: row[0],
               key: row[0],
@@ -44,11 +45,9 @@ a-scrollbar.tree-scrollbar
               iconType: row[4],
             })
           })
-          // todo: change computed data might not be the best option.
-          nodeData.children = rowArray
+          // nodeData.children = rowArray
+          addChildren(nodeData.key, rowArray)
           resolve()
-          // TODO: change key to update component might not be the best option.
-          tableKey.value += 1
         })
         .catch(() => {
           reject()
@@ -71,6 +70,6 @@ a-scrollbar.tree-scrollbar
   }
 
   if (!guideModal.value) {
-    fetchDataBaseTables()
+    getTables()
   }
 </script>

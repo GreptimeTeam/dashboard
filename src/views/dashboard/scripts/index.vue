@@ -13,7 +13,7 @@ a-layout.layout
   import ListTabs from './list-tabs.vue'
 
   const { codeType } = storeToRefs(useAppStore())
-  const { fetchDataBaseTables: refreshTableData } = useDataBaseStore()
+  const { getTables: refreshTableData } = useDataBaseStore()
   const { results } = storeToRefs(useCodeRunStore())
 
   // TODO: add more code type in the future if needed

@@ -33,9 +33,9 @@ a-drawer(:width="262" unmount-on-close :visible="globalSettings" :mask-closable=
     appStore.updateSettings({ globalSettings: false })
     axios.defaults.baseURL = appStore.host
     if (appStore.codeType === 'sql') {
-      dataBaseStore.fetchDataBaseTables()
+      dataBaseStore.getTables()
     } else {
-      dataBaseStore.fetchScriptsTable()
+      dataBaseStore.getScriptsTable()
     }
 
     emit('cancel')
