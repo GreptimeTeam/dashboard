@@ -1,14 +1,14 @@
 <template lang="pug">
+a-space.search-space
+  a-input(v-model="scriptsSearchKey" :allow-clear="true")
+    template(#prefix)
+      svg.icon
+        use(href="#search")
+  a-tooltip(:content="$t('dataExplorer.create')" mini)
+    .icon-space.pointer(@click="createNewScript()")
+      svg.icon
+        use(href="#create")
 a-scrollbar.tree-scrollbar
-  a-space.search-space
-    a-input(v-model="scriptsSearchKey" :allow-clear="true")
-      template(#prefix)
-        svg.icon
-          use(href="#search")
-    a-tooltip(:content="$t('dataExplorer.create')" mini)
-      .icon-space.pointer(@click="createNewScript()")
-        svg.icon
-          use(href="#create")
   a-tree.script-tree(ref="scriptsRef" :data="scriptsListData" size="small" @select="onSelect" blockNode v-model:selected-keys="scriptSelectedKeys")
 a-modal(v-model:visible='modelVisible', @ok='handleOk', @cancel='handleCancel')
     template(#title='')

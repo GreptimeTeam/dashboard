@@ -1,14 +1,14 @@
 <template lang="pug">
-a-scrollbar.tree-scrollbar
-  a-space.search-space
-    a-input(v-model="tablesSearchKey" :allow-clear="true")
-      template(#prefix)
-        svg.icon
-          use(href="#search")
-    .icon-space.pointer(@click="refreshTables")
+a-space.search-space
+  a-input(v-model="tablesSearchKey" :allow-clear="true")
+    template(#prefix)
       svg.icon
-        use(href="#refresh")
-  a-tree.table-tree(ref="treeRef" :data="tablesTreeData" :load-more="loadMore" size="small")
+        use(href="#search")
+  .icon-space.pointer(@click="refreshTables")
+    svg.icon
+      use(href="#refresh")
+a-scrollbar.tree-scrollbar
+  a-tree.table-tree(ref="treeRef" :data="tablesTreeData" :load-more="loadMore" size="small" :animation="false" )
     template(#title)
     template(#switcher-icon)
       IconDown
