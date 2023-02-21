@@ -15,7 +15,7 @@ a-modal.guide-modal(v-model:visible="guideModal" :mask-closable="false" :ok-text
   import SettingsForm from '../global-setting/settings-form.vue'
 
   const { database, databaseList, codeType, isCloud, guideModal } = storeToRefs(useAppStore())
-  const { fetchDataBaseTables, fetchScriptsTable } = useDataBaseStore()
+  const { getTables, getScriptsTable } = useDataBaseStore()
 
   const guideForm = ref({
     database,
@@ -23,9 +23,10 @@ a-modal.guide-modal(v-model:visible="guideModal" :mask-closable="false" :ok-text
 
   const handleOk = () => {
     if (codeType.value === 'sql') {
-      fetchDataBaseTables()
+      getTables()
     } else {
-      fetchScriptsTable()
+      getTables()
+      getScriptsTable()
     }
     guideModal.value = false
   }

@@ -8,7 +8,6 @@ a-card(:bordered="false").editor-card
         a-button(v-if="isChanged" @click="saveCurrentScript()") {{$t('dataExplorer.saveScript')}}
         a-button(v-if="isChanged" @click="saveScriptAndRun()") {{$t('dataExplorer.saveAndRun')}}
         a-button(v-if="ifCanRun" @click="run()") {{$t('dataExplorer.runScriptAction')}}
-    a-button(@click="createNewScript()") {{$t('dataExplorer.create')}}
   CodeMirror(v-model="pythonCode" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
 
@@ -36,7 +35,7 @@ a-card(:bordered="false").editor-card
   const { pythonCode, cursorAt, lastSavedCode, isNewScript, scriptName, isChanged, selectAfterSave, createNewScript } =
     usePythonCode()
   const { saveScript, runScript } = useCodeRunStore()
-  const { fetchScriptsTable } = dataBaseStore
+  const { getScriptsTable } = dataBaseStore
 
   const lineStart = ref()
   const lineEnd = ref()
@@ -75,7 +74,7 @@ a-card(:bordered="false").editor-card
     }
   }
 
-  const refreshTableData = dataBaseStore.fetchDataBaseTables
+  const refreshTableData = dataBaseStore.getTables
 
   // extensions: Passed to CodeMirror EditorState.create({ extensions })
   const style = {
@@ -86,7 +85,7 @@ a-card(:bordered="false").editor-card
   const saveCurrentScript = async () => {
     try {
       await saveScript(scriptForm.value.scriptName, pythonCode.value.trim())
-      await fetchScriptsTable()
+      await getScriptsTable()
       selectAfterSave(scriptForm.value.scriptName)
     } catch (error: any) {
       // error
@@ -96,7 +95,7 @@ a-card(:bordered="false").editor-card
     await saveScript(scriptForm.value.scriptName, pythonCode.value.trim())
     lastSavedCode.value = pythonCode.value
     runScript(scriptForm.value.scriptName)
-    await fetchScriptsTable()
+    await getScriptsTable()
     selectAfterSave(scriptForm.value.scriptName)
   }
 

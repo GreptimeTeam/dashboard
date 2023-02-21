@@ -26,7 +26,7 @@ export default {
   'dataExplorer.saveName': 'Saved script name: {name}',
   'dataExplorer.runScript': 'Run script name: {name}',
   'dataExplorer.scriptName': 'Script Name',
-  'dataExplorer.create': 'Create',
+  'dataExplorer.create': 'Create New Script',
   'dataExplorer.saveScript': 'Save Script',
   'dataExplorer.saveAndRun': 'Save and Run',
   'dataExplorer.runScriptAction': 'Run Script',

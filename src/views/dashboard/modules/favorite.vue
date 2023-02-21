@@ -19,6 +19,4 @@ a-list(:data="favoriteList")
   const dataExplorer = useDataExplorer()
 
   const { insertCode } = dataExplorer
-
-  const { favoriteList } = storeToRefs(dataBaseStore)
 </script>

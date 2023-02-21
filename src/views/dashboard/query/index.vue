@@ -10,9 +10,9 @@ a-layout.layout
 </template>
 
 <script lang="ts" name="DataExplorer" setup>
-  import TableList from '../modules/table-list.vue'
+  import ListTabs from '../scripts/list-tabs.vue'
 
-  const { fetchDataBaseTables: refreshTableData } = useDataBaseStore()
+  const { getTables: refreshTableData } = useDataBaseStore()
   const { results } = storeToRefs(useCodeRunStore())
   const { codeType } = storeToRefs(useAppStore())
 
