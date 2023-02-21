@@ -67,7 +67,7 @@
   "devDependencies": {
     "@commitlint/cli": "^17.4.2",
     "@commitlint/config-conventional": "^17.3.0",
-    "@prettier/plugin-pug": "^2.3.0",
+    "@prettier/plugin-pug": "^2.4.1",
     "@types/cross-storage": "^0.8.30",
     "@types/lodash": "^4.14.191",
     "@types/mockjs": "^1.0.7",

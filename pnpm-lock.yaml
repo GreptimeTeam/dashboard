@@ -13,7 +13,7 @@ specifiers:
   '@codemirror/theme-one-dark': ^6.1.1
   '@commitlint/cli': ^17.4.2
   '@commitlint/config-conventional': ^17.3.0
-  '@prettier/plugin-pug': ^2.3.0
+  '@prettier/plugin-pug': ^2.4.1
   '@types/cross-storage': ^0.8.30
   '@types/lodash': ^4.14.191
   '@types/mockjs': ^1.0.7
@@ -118,7 +118,7 @@ dependencies:
 devDependencies:
   '@commitlint/cli': 17.4.2
   '@commitlint/config-conventional': 17.3.0
-  '@prettier/plugin-pug': 2.3.0_prettier@2.7.1
+  '@prettier/plugin-pug': 2.4.1_prettier@2.7.1
   '@types/cross-storage': 0.8.30
   '@types/lodash': 4.14.191
   '@types/mockjs': 1.0.7
@@ -1156,8 +1156,8 @@ packages:
       tslib: 2.4.0
     dev: true
 
-  /@prettier/plugin-pug/2.3.0_prettier@2.7.1:
-    resolution: {integrity: sha512-aU2JwLtClbTrVi1yZdYvS7A/gh1xcUyxgoo87XbQnRXiIW0wis1QDeuHPiS8MDqKRjKpQd9R7i3UdQ0owzBpjQ==}
+  /@prettier/plugin-pug/2.4.1_prettier@2.7.1:
+    resolution: {integrity: sha512-TZqlSg1WunJs7n4sLf7JKoVxTTQP/oFFHXXvlgVrvf7M47rx7VmIOMFEBGHHhpCkEk5Ub8WnOsUOwb1IQanygQ==}
     engines: {node: ^14.17.0 || ^16.13.0 || >=18.0.0, npm: '>=6.14.13'}
     peerDependencies:
       prettier: ^2.3.0
