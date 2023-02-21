@@ -14,9 +14,9 @@ a-scrollbar.tree-scrollbar
       IconDown
     template(#extra="nodeData")
       img(:src="getIconUrl(nodeData.iconType)" alt="" height="14")
-      span.tree-title
+      .tree-title
         | {{ nodeData.title }}
-      span.data-type
+      .data-type
         | {{ nodeData.dataType }}
       a-tooltip(:content="$t('dataExplorer.insertName')" mini)
         svg.icon.copy-icon.pointer(name="copy" @click="insertName(nodeData.title)")
@@ -65,7 +65,6 @@ a-scrollbar.tree-scrollbar
               iconType: row[4],
             })
           })
-          // nodeData.children = rowArray
           addChildren(nodeData.key, rowArray)
           resolve()
         })
