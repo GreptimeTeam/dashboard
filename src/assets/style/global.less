@@ -12,11 +12,12 @@
 }
 
 :root {
-  --main-bg-color: #f9f8fd;
+  --main-bg-color: rgba(244, 246, 254, 1);
+  --th-bg-color: rgba(248, 249, 253, 1);
   --navbar-bg-color: linear-gradient(270deg, #1d0e38 0%, #2a115a 100%);
   --brand-color: rgba(131, 34, 255, 1);
-  --hover-bg-color: #a376ff;
-  --bg-brand-color: rgba(131, 34, 255, 0.05);
+  --hover-brand-color: rgba(163, 118, 255, 1);
+  --light-brand-color: rgba(163, 118, 255, 0.1);
   --card-bg-color: rgba(255, 255, 255, 1);
   --tooltip-font-color: rgba(255, 255, 255, 0.8);
   --option-font-color: #1d2129;
@@ -28,10 +29,9 @@
   --font-color-40: rgba(23, 12, 44, 0.4);
   --border-color: rgba(23, 12, 44, 0.25);
   --drawer-shadow-color: rgba(23, 12, 44, 0.15);
-  --hover-grey-bg-color: rgba(23, 12, 44, 0.1);
-  --grey-bg-color: rgba(23, 12, 44, 0.05);
+  --hover-grey-bg-color: rgba(172, 156, 201, 0.1);
+  --grey-bg-color: rgba(23, 12, 44, 0.04);
   --font-color-7: rgba(23, 12, 44, 0.07);
-  --th-bg-color: #f8f9fb;
   --success-color: rgba(36, 201, 128, 1);
   --success-bg-color: rgba(233, 249, 242, 1);
   --warning-color: rgba(232, 176, 14, 1);
@@ -116,7 +116,7 @@ body {
 
   .arco-link:hover {
     color: var(--small-font-color);
-    background-color: var(--bg-brand-color);
+    background-color: var(--light-brand-color);
   }
 }
 
@@ -214,11 +214,11 @@ body {
   }
 
   .arco-select-option-active {
-    background-color: var(--bg-brand-color);
+    background-color: var(--light-brand-color);
   }
 
   .arco-select-option:not(.arco-select-dropdown .arco-select-option-disabled):hover {
-    background-color: var(--bg-brand-color);
+    background-color: var(--light-brand-color);
   }
 }
 
@@ -235,7 +235,7 @@ body {
 }
 
 .arco-input-wrapper {
-  background: var(--th-bg-color);
+  background: var(--grey-bg-color);
   border-radius: 6px;
 
   .arco-input[disabled] {
@@ -244,17 +244,17 @@ body {
 }
 
 .arco-input-wrapper:hover {
-  background: var(--th-bg-color);
+  background: var(--grey-bg-color);
 }
 
 .arco-input-wrapper.arco-input-disabled {
-  background: var(--th-bg-color);
+  background: var(--grey-bg-color);
 }
 
 .arco-input-wrapper:focus-within,
 .arco-input-wrapper.arco-input-focus {
   background: transparent;
-  border-color: var(--hover-bg-color);
+  border-color: var(--hover-brand-color);
 }
 
 .arco-modal {

@@ -15,14 +15,14 @@
 .table-tree {
   & > .arco-tree-node {
     height: 32px;
-    padding-right: 15px;
-    padding-left: 15px;
+    padding-right: 16px;
+    padding-left: 16px;
     line-height: 32px;
     cursor: auto;
   }
 
   & > .arco-tree-node:hover {
-    background-color: var(--bg-brand-color);
+    background-color: var(--light-brand-color);
   }
 
   .arco-tree-node-switcher {
@@ -42,12 +42,8 @@
   }
 
   .arco-tree-node-title {
-    height: 32px;
     margin-left: 0;
     padding: 0;
-    color: var(--grey-font-color);
-    font-size: 12px;
-    line-height: 32px;
   }
 
   .arco-tree-node-title-text {
@@ -94,6 +90,8 @@
 
   .arco-tabs-nav-tab-list {
     width: 100%;
+    background-color: var(--grey-bg-color);
+    border-radius: 6px;
   }
 
   .arco-tabs-nav-tab {
@@ -104,12 +102,12 @@
     justify-content: center;
     width: 50%;
     margin: 0;
-    background-color: var(--grey-bg-color);
+    background-color: transparent;
     border-radius: 6px;
   }
 
   .arco-tabs-tab:hover {
-    background-color: var(--hover-grey-bg-color);
+    background-color: var(--font-color-7);
   }
 
   .arco-tabs-tab-active {
@@ -135,20 +133,19 @@
 
   .arco-tree-node-title {
     margin-left: 0;
-    padding-left: 15px;
+    padding: 5px 16px;
     white-space: pre;
   }
 
   .arco-tree-node-title:hover {
-    background-color: #c5dadf1f;
+    background-color: var(--th-bg-color);
     border-radius: 0;
   }
 
   .arco-tree-node-selected .arco-tree-node-title,
   .arco-tree-node-selected .arco-tree-node-title:hover {
     color: var(--brand-color);
-    background: var(--bg-brand-color);
-    border: 1px solid var(--bg-brand-color);
+    background: var(--light-brand-color);
   }
 
   .arco-tree-node-switcher {
@@ -157,11 +154,27 @@
 }
 
 .search-space {
-  padding: 4px 16px 18px 16px;
   display: flex;
   justify-content: space-between;
+  padding: 2px 16px 18px;
 
   .arco-input-wrapper {
     width: 228px;
+    height: 100%;
+    padding-left: 8px;
+  }
+
+  .arco-space-item {
+    height: 28px;
+  }
+
+  .icon-space {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
   }
 }

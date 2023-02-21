@@ -5,10 +5,13 @@ a-scrollbar.tree-scrollbar
       template(#prefix)
         svg.icon
           use(href="#search")
-    svg.icon.pointer(@click="refreshTables")
-      use(href="#refresh")
+    .icon-space
+      svg.icon.pointer(@click="refreshTables")
+        use(href="#refresh")
   a-tree.table-tree(ref="treeRef" :data="tableList" :load-more="loadMore" size="small")
     template(#title)
+    template(#switcher-icon)
+      IconDown
     template(#extra="nodeData")
       img(:src="getIconUrl(nodeData.iconType)" alt="" height="14")
       span.tree-title

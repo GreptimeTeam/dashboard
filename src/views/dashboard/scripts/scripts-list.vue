@@ -5,6 +5,9 @@ a-scrollbar.tree-scrollbar
       template(#prefix)
         svg.icon
           use(href="#search")
+    .icon-space
+      svg.icon.pointer(@click="")
+        use(href="#refresh")
   a-tree.script-tree(ref="scriptsRef" :data="scriptsList" size="small" @select="onSelect" blockNode v-model:selected-keys="scriptSelectedKeys")
 a-modal(v-model:visible='modelVisible', @ok='handleOk', @cancel='handleCancel')
     template(#title='')
@@ -19,6 +22,7 @@ a-modal(v-model:visible='modelVisible', @ok='handleOk', @cancel='handleCancel')
 
   const selectedNode = ref()
   const scriptsRef = ref()
+  const tableSearchKey = ref('')
 
   const {
     pythonCode,
