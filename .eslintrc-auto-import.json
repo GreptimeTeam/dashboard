@@ -60,6 +60,7 @@
     "shallowReactive": true,
     "shallowReadonly": true,
     "shallowRef": true,
+    "siderTabs": true,
     "store": true,
     "storeToRefs": true,
     "themes": true,

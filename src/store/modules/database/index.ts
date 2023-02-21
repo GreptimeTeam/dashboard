@@ -2,14 +2,14 @@ import editorAPI from '@/api/editor'
 
 const useDataBaseStore = defineStore('database', () => {
   const { database } = storeToRefs(useAppStore())
-  const tableData = ref()
-  const tableList = ref()
+  const tablesData = ref()
+  const originTablesTree = ref()
   const scriptsData = ref()
 
-  const getTablesTree = () => {
+  const getOriginTablesTree = () => {
     const tempArray: any = []
     let key = 0
-    tableData.value.output[0].records.rows.forEach((item: any) => {
+    tablesData.value.output[0].records.rows.forEach((item: any) => {
       const node = {
         title: item.join(),
         key,
@@ -22,10 +22,10 @@ const useDataBaseStore = defineStore('database', () => {
   }
 
   const addChildren = (key: number, children: any) => {
-    tableList.value[key].children = children
+    originTablesTree.value[key].children = children
   }
 
-  const scriptsList = computed(() => {
+  const originScriptsList = computed(() => {
     const tempArray: any = []
     if (scriptsData.value) {
       scriptsData.value.output[0].records.rows.forEach((item: Array<any>) => {
@@ -45,8 +45,8 @@ const useDataBaseStore = defineStore('database', () => {
   async function getTables() {
     try {
       const res = await editorAPI.getTables()
-      tableData.value = res
-      tableList.value = getTablesTree()
+      tablesData.value = res
+      originTablesTree.value = getOriginTablesTree()
     } catch (error) {
       // some error
     }
@@ -70,7 +70,7 @@ const useDataBaseStore = defineStore('database', () => {
     }
   }
 
-  return { tableList, scriptsList, getTables, addChildren, getTableByName, getScriptsTable }
+  return { originTablesTree, originScriptsList, getTables, addChildren, getTableByName, getScriptsTable }
 })
 
 export default useDataBaseStore

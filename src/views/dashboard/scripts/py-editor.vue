@@ -8,7 +8,6 @@ a-card(:bordered="false").editor-card
         a-button(v-if="isChanged" @click="saveCurrentScript()") {{$t('dataExplorer.saveScript')}}
         a-button(v-if="isChanged" @click="saveScriptAndRun()") {{$t('dataExplorer.saveAndRun')}}
         a-button(v-if="ifCanRun" @click="run()") {{$t('dataExplorer.runScriptAction')}}
-    a-button(@click="createNewScript()") {{$t('dataExplorer.create')}}
   CodeMirror(v-model="pythonCode" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
 

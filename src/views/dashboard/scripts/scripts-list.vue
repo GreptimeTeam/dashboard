@@ -1,14 +1,15 @@
 <template lang="pug">
 a-scrollbar.tree-scrollbar
   a-space.search-space
-    a-input(v-model="tableSearchKey")
+    a-input(v-model="scriptsSearchKey" :allow-clear="true")
       template(#prefix)
         svg.icon
           use(href="#search")
-    .icon-space
-      svg.icon.pointer(@click="")
-        use(href="#refresh")
-  a-tree.script-tree(ref="scriptsRef" :data="scriptsList" size="small" @select="onSelect" blockNode v-model:selected-keys="scriptSelectedKeys")
+    a-tooltip(:content="$t('dataExplorer.create')" mini)
+      .icon-space.pointer(@click="createNewScript()")
+        svg.icon
+          use(href="#create")
+  a-tree.script-tree(ref="scriptsRef" :data="scriptsListData" size="small" @select="onSelect" blockNode v-model:selected-keys="scriptSelectedKeys")
 a-modal(v-model:visible='modelVisible', @ok='handleOk', @cancel='handleCancel')
     template(#title='')
     .
@@ -19,6 +20,7 @@ a-modal(v-model:visible='modelVisible', @ok='handleOk', @cancel='handleCancel')
   import { storeToRefs } from 'pinia'
   import { useDataBaseStore } from '@/store'
   import usePythonCode from '@/hooks/python-code'
+  import useSiderTabs from '@/hooks/sider-tabs'
 
   const selectedNode = ref()
   const scriptsRef = ref()
@@ -35,8 +37,8 @@ a-modal(v-model:visible='modelVisible', @ok='handleOk', @cancel='handleCancel')
     overwriteCode,
     createNewScript,
   } = usePythonCode()
+  const { scriptsSearchKey, scriptsListData } = useSiderTabs()
   const { getScriptsTable } = useDataBaseStore()
-  const { scriptsList } = storeToRefs(useDataBaseStore())
   const { guideModal } = storeToRefs(useAppStore())
 
   const onSelect = (key: string[], selectedData: { node: object }) => {

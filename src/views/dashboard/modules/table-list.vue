@@ -1,14 +1,14 @@
 <template lang="pug">
 a-scrollbar.tree-scrollbar
   a-space.search-space
-    a-input(v-model="tableSearchKey")
+    a-input(v-model="tablesSearchKey" :allow-clear="true")
       template(#prefix)
         svg.icon
           use(href="#search")
-    .icon-space
-      svg.icon.pointer(@click="refreshTables")
+    .icon-space.pointer(@click="refreshTables")
+      svg.icon
         use(href="#refresh")
-  a-tree.table-tree(ref="treeRef" :data="tableList" :load-more="loadMore" size="small")
+  a-tree.table-tree(ref="treeRef" :data="tablesTreeData" :load-more="loadMore" size="small")
     template(#title)
     template(#switcher-icon)
       IconDown
@@ -28,18 +28,20 @@ a-scrollbar.tree-scrollbar
   import { useDataBaseStore, useAppStore } from '@/store'
   import useDataExplorer from '@/hooks/data-explorer'
   import usePythonCode from '@/hooks/python-code'
+  import useSiderTabs from '@/hooks/sider-tabs'
 
   const { insertNameToCode } = useDataExplorer()
   const { codeType, guideModal } = storeToRefs(useAppStore())
   const { insertNameToPyCode } = usePythonCode()
+  const { tablesSearchKey, tablesTreeData } = useSiderTabs()
 
   const { getTableByName, getTables, addChildren } = useDataBaseStore()
-  const { tableList } = storeToRefs(useDataBaseStore())
+  const { originTablesTree } = storeToRefs(useDataBaseStore())
 
   const treeRef = ref()
-  const tableSearchKey = ref('')
 
   const refreshTables = () => {
+    tablesSearchKey.value = ''
     getTables()
     treeRef.value.expandAll(false)
   }
