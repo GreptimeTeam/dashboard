@@ -37,7 +37,7 @@
     "@babel/core": "^7.20.5",
     "@codemirror/lang-python": "^6.1.0",
     "@codemirror/lang-sql": "^6.3.1",
-    "@codemirror/theme-one-dark": "^6.1.1",
+    "@codemirror/theme-one-dark": "^6.1.0",
     "@vueuse/core": "^9.6.0",
     "arco-design-pro-vue": "^2.6.1",
     "axios": "^0.27.2",
