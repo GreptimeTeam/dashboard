@@ -1,5 +1,5 @@
 <template lang="pug">
-a-tabs.result-tabs(type="rounded" lazy-load :active-key="activeTabKey[codeType]" @tab-click="tabClick" @delete="deleteTab" editable)
+a-tabs.result-tabs(type="rounded" lazy-load :active-key="activeTabKey[codeType]" @tab-click="tabClick" @delete="deleteTab" editable :animation="true")
   template(#extra)
     a-button(@click="clearResults()" status="danger") {{$t('dataExplorer.clear')}}
   a-tab-pane(v-for="(item, index) of results[codeType]" :key="item.key" 
@@ -7,15 +7,16 @@ a-tabs.result-tabs(type="rounded" lazy-load :active-key="activeTabKey[codeType]"
     a-space(direction="vertical" fill :size="14")
       a-card(:bordered="false")
         template(#title)
-          svg.card-icon
-            use(href="#table")
-          | {{$t('dataExplorer.table')}}
+          a-space(size="mini")
+            img(src="/src/assets/images/table.png" height="20")
+            | {{$t('dataExplorer.table')}}
         DataGrid
       a-card(:bordered="false")
         template(#title)
-          svg.card-icon
-            use(href="#chart")
-          | {{$t('dataExplorer.chart')}}
+          a-space(size="mini")
+            svg.card-icon
+              use(href="#chart")
+            | {{$t('dataExplorer.chart')}}
         DataChart
 </template>
 

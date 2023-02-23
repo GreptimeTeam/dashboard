@@ -1,7 +1,6 @@
 <template lang="pug">
 a-card(:bordered="false")
   template(#title)
-    img.card-icon(src="/src/assets/images/log-icon.png")
     span {{$t('dataExplorer.logs')}}
   template(#extra)  
     a-button.clear-logs-button(v-if="logs[codeType].length" type="secondary" status="danger" @click="clearLogs") {{$t('dataExplorer.clear')}}

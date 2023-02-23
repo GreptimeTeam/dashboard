@@ -8,7 +8,7 @@ a-spin(style="width: 100%")
       a-form-item.select-y(:label="$t('dataExplorer.yType')")
         a-select(v-model="chartForm.ySelectedTypes" :placeholder="$t('dataExplorer.selectY')" multiple :allow-search="false")
           a-option(v-for="item of yOptions" :key="item.value" :value="item.value") {{ item.value }}
-      a-button.draw-button(type="primary" @click="drawChart") {{$t('dataExplorer.draw')}}
+      a-button(type="primary" @click="drawChart") {{$t('dataExplorer.draw')}}
   a-row
     Chart.chart-area(height="400px" :option="option" :update-options="updateOptions" )
 </template>

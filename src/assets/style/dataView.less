@@ -9,15 +9,20 @@
   }
 
   .arco-tabs-nav-type-rounded {
+    .arco-tabs-tab-close-btn {
+      margin-left: 5px;
+      font-size: 14px;
+    }
+
     .arco-tabs-tab {
       height: 38px;
-      margin: 0 8px 0 0;
-      padding: 0 15px;
+      margin: 0;
+      padding: 0 16px;
       color: var(--font-color-40);
       font-weight: 500;
       font-size: 18px;
       background-color: transparent;
-      border-radius: 10px 0 0;
+      border-radius: 10px 10px 0 0;
     }
 
     .arco-tabs-tab-active {
@@ -25,20 +30,39 @@
       background-color: var(--card-bg-color);
     }
 
-    .arco-tabs-tab-active:hover {
-      color: var(--brand-color);
-      background-color: var(--card-bg-color);
+    .arco-tabs-tab::before {
+      position: absolute;
+      right: -30.5px;
+      bottom: 12.5px;
+      z-index: 2;
+      display: inline-block;
+      width: 30px;
+      height: 26px;
+      background: transparent;
+      border-bottom-left-radius: 12px 12px;
+      content: '';
     }
 
     .arco-tabs-tab:hover {
       background-color: var(--hover-bg-color);
     }
+    .arco-tabs-tab-active:hover {
+      color: var(--brand-color);
+      background-color: var(--card-bg-color);
+    }
   }
 
   .arco-tabs-content {
     padding-top: 0;
-    background: var(--card-bg-color);
-    border-radius: 10px;
+
+    .arco-tabs-content-item {
+      background-color: var(--card-bg-color);
+      border-radius: 10px;
+    }
+
+    .arco-tabs-content-item:first-of-type {
+      border-top-left-radius: 0;
+    }
   }
 }
 
@@ -159,12 +183,6 @@
 
 .select-y {
   margin-right: 8px !important;
-}
-
-.draw-button {
-  width: 61px;
-  height: 32px !important;
-  border-radius: 2px !important;
 }
 
 .chart-area {
