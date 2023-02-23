@@ -71,30 +71,37 @@
 }
 
 .arco-table {
-  border: 1px solid var(--border-color);
-  border-radius: 6px 6px 8px 8px;
+  border: 0;
 
   .arco-table-tr {
     height: 38px;
+    border-bottom: 0;
     box-shadow: 0 1px 1px 0 rgba(23, 12, 44, 0.1);
+  }
+
+  .arco-table-tr:last-of-type {
+    .arco-table-td {
+      border-radius: 0 0 8px 8px;
+    }
   }
 
   .arco-table-cell {
     padding: 11px 15px;
   }
 
-  .arco-table-th {
+  .arco-table-tr .arco-table-th {
     color: var(--main-font-color);
     font-weight: 500;
     font-size: 14px;
     background: var(--th-bg-color);
-    border-bottom: 1px solid var(--font-color-7);
+    border-bottom: 1px transparent;
     border-radius: 6px 6px 0 0;
   }
 
   .arco-table-td {
     font-size: 14px;
-    border-bottom: 1px solid var(--font-color-7);
+    border-top: 1px solid var(--border-color);
+    border-bottom: 0;
   }
 
   .arco-table-td-content {
