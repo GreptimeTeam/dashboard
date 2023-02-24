@@ -4,7 +4,7 @@ a-tabs.result-tabs(type="rounded" lazy-load :active-key="activeTabKey[codeType]"
     a-button(@click="clearResults()" status="danger") {{$t('dataExplorer.clear')}}
   a-tab-pane(v-for="(item, index) of results[codeType]" :key="item.key" 
   :title="`${$t('dataExplorer.result')} ${item.key + 1}`" closable) 
-    a-space(direction="vertical" fill size="large")
+    a-space(direction="vertical" fill size="small")
       a-card(:bordered="false")
         template(#title)
           a-space(size="mini")

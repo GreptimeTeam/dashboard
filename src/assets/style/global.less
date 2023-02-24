@@ -22,16 +22,13 @@
   --brand-color: rgba(131, 34, 255, 1);
   --hover-brand-color: rgba(163, 118, 255, 1);
   --light-brand-color: rgba(163, 118, 255, 0.1);
-  --option-font-color: #1d2129;
-  --grey-font-color: #53565a;
   --main-font-color: rgba(23, 12, 44, 1);
   --small-font-color: rgba(23, 12, 44, 0.8);
   --hover-font-color: rgba(23, 12, 44, 0.6);
   --font-color-40: rgba(23, 12, 44, 0.4);
   --border-color: rgba(23, 12, 44, 0.2);
-  --hover-grey-bg-color: rgba(172, 156, 201, 0.1);
+  --light-border-color: rgba(23, 12, 44, 0.07);
   --grey-bg-color: rgba(23, 12, 44, 0.04);
-  --font-color-7: rgba(23, 12, 44, 0.07);
   --success-color: rgba(36, 201, 128, 1);
   --success-bg-color: rgba(233, 249, 242, 1);
   --warning-color: rgba(232, 176, 14, 1);
@@ -129,11 +126,6 @@ body {
   opacity: 0.6;
 }
 
-.arco-table-container {
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-}
-
 .arco-card {
   background: var(--card-bg-color);
   border-radius: 10px;
@@ -182,16 +174,18 @@ body {
 }
 
 .arco-select-dropdown {
+  padding: 0;
   border: 0;
   border-radius: 6px;
-  box-shadow: 0 4px 10px 0 var(--box-shadow-color);
+  box-shadow: 0 2px 10px 0 var(--box-shadow-color);
 
   .arco-select-option {
     padding: 0 8px;
-    color: var(--option-font-color);
+    color: var(--small-font-color);
     font-size: 13px;
     line-height: 32px;
     text-align: left;
+    border-radius: 6px;
 
     .arco-checkbox-icon {
       width: 12px;
@@ -241,7 +235,7 @@ body {
   border-radius: 6px;
 
   .arco-input[disabled] {
-    -webkit-text-fill-color: var(--font-color-40);
+    -webkit-text-fill-color: var(--hover-font-color);
   }
 }
 

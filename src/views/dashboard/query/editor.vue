@@ -66,7 +66,7 @@ a-card(:bordered="false").editor-card
   }
 
   const style = {
-    height: '244px',
+    height: '256px',
   }
 
   const extensions = [sql(), oneDark]

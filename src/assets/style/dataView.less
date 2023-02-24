@@ -16,11 +16,10 @@
     }
 
     .arco-tabs-tab {
-      height: 44px;
+      height: 40px;
       margin: 0;
       padding: 0 16px;
-      color: var(--font-color-40);
-      font-weight: 500;
+      color: var(--hover-font-color);
       font-size: 18px;
       background-color: transparent;
       border: 0;
@@ -29,6 +28,7 @@
 
     .arco-tabs-tab-active {
       color: var(--brand-color);
+      font-weight: 500;
       background-color: var(--card-bg-color);
     }
 
@@ -70,14 +70,13 @@
   }
 }
 
+.arco-table-border .arco-table-container {
+  border: 1px solid var(--light-border-color) !important;
+  border-radius: 8px;
+}
+
 .arco-table {
   border: 0;
-
-  .arco-table-tr {
-    height: 38px;
-    border-bottom: 0;
-    box-shadow: 0 1px 1px 0 rgba(23, 12, 44, 0.1);
-  }
 
   .arco-table-tr:last-of-type {
     .arco-table-td {
@@ -86,7 +85,7 @@
   }
 
   .arco-table-cell {
-    padding: 11px 15px;
+    padding: 8px 15px;
   }
 
   .arco-table-tr .arco-table-th {
@@ -94,13 +93,13 @@
     font-weight: 500;
     font-size: 14px;
     background: var(--th-bg-color);
-    border-bottom: 1px transparent;
+    border-bottom: 1px solid transparent;
     border-radius: 6px 6px 0 0;
   }
 
   .arco-table-td {
     font-size: 14px;
-    border-top: 1px solid var(--border-color);
+    border-top: 1px solid var(--light-border-color);
     border-bottom: 0;
   }
 
@@ -125,39 +124,41 @@
 }
 
 .arco-table-pagination {
-  margin: 20px 15px 17px 0;
+  margin: 8px 0;
 
   .arco-pagination-item {
-    min-width: 20px;
-    height: 20px;
+    min-width: 22px;
+    height: 22px;
     padding: 0;
-    font-size: 12px;
-    line-height: 20px;
-    opacity: 0.4;
+    color: var(--font-color-40);
+    font-weight: 500;
+    font-size: 13px;
+    line-height: 22px;
+    border-radius: 4px;
+  }
+
+  .arco-pagination-item:hover {
+    background-color: var(--th-bg-color);
   }
 
   .arco-pagination-item-active,
   .arco-pagination-item-active:hover {
-    margin-right: 4px !important;
-    color: var(--main-font-color);
-    line-height: 20px;
+    color: var(--brand-color);
     background: var(--light-brand-color);
-    border-radius: 2px;
-    opacity: 1;
   }
 
   .arco-pagination-item:not(:last-child) {
-    margin-right: 4px;
+    margin-right: 6px;
   }
 
-  .arco-select-view-single:hover {
-    background-color: var(--grey-bg-color);
+  .arco-pagination-item-previous:not(.arco-pagination-item-disabled):hover,
+  .arco-pagination-item-next:not(.arco-pagination-item-disabled):hover {
+    color: var(--brand-color);
   }
 
   .arco-pagination-options {
     .arco-select-view-single {
       width: 86px !important;
-      height: 20px;
       padding-right: 8px;
       padding-left: 8px;
     }
@@ -168,11 +169,9 @@
 
     .arco-select-view-single.arco-select-view-size-medium .arco-select-view-value {
       min-height: 12px;
-      padding-top: 0;
-      padding-bottom: 0;
-      font-size: 12px;
-      line-height: 12px;
-      opacity: 0.4;
+      padding: 0;
+      font-size: 13px;
+      line-height: 22px;
     }
 
     .arco-select-view-suffix {
