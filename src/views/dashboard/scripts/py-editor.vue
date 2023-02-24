@@ -78,7 +78,7 @@ a-card(:bordered="false").editor-card
 
   // extensions: Passed to CodeMirror EditorState.create({ extensions })
   const style = {
-    height: '244px',
+    height: '256px',
   }
 
   const extensions = [python(), oneDark]

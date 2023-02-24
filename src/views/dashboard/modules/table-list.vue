@@ -1,26 +1,28 @@
 <template lang="pug">
-a-space.search-space
-  a-input(v-model="tablesSearchKey" :allow-clear="true")
-    template(#prefix)
+a-space(direction="vertical" size="medium" fill)
+  a-space.search-space
+    a-input(v-model="tablesSearchKey" :allow-clear="true")
+      template(#prefix)
+        svg.icon
+          use(href="#search")
+    .icon-space.pointer(@click="refreshTables")
       svg.icon
-        use(href="#search")
-  .icon-space.pointer(@click="refreshTables")
-    svg.icon
-      use(href="#refresh")
-a-scrollbar.tree-scrollbar
-  a-tree.table-tree(ref="treeRef" :data="tablesTreeData" :load-more="loadMore" size="small" :animation="false" )
-    template(#title)
-    template(#switcher-icon)
-      IconDown
-    template(#extra="nodeData")
-      img(:src="getIconUrl(nodeData.iconType)" alt="" height="14")
-      .tree-title
-        | {{ nodeData.title }}
-      .data-type
-        | {{ nodeData.dataType }}
-      a-tooltip(:content="$t('dataExplorer.insertName')" mini)
-        svg.icon.copy-icon.pointer(name="copy" @click="insertName(nodeData.title)")
-          use(href="#copy")
+        use(href="#refresh")
+  a-scrollbar.tree-scrollbar
+    a-tree.table-tree(ref="treeRef" :data="tablesTreeData" :load-more="loadMore" size="small" :animation="false" )
+      template(#title)
+      template(#switcher-icon)
+        IconDown
+      template(#extra="nodeData")
+        .tree-data
+          img(:src="getIconUrl(nodeData.iconType)" alt="" height="14")
+          span.tree-title
+            | {{ nodeData.title }}
+          span.data-type
+            | {{ nodeData.dataType }}
+          a-tooltip(:content="$t('dataExplorer.insertName')" mini)
+            svg.icon.copy-icon.pointer(name="copy" @click="insertName(nodeData.title)")
+              use(href="#copy")
 </template>
 
 <script lang="ts" setup>

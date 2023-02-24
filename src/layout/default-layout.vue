@@ -2,7 +2,7 @@
 a-layout.layout-container
   .layout-navbar(v-if='navbar')
     NavBar
-  a-layout-content(:style='paddingStyle')
+  a-layout-content.layout-content(:style='paddingStyle')
     PageLayout
   Footer(v-if="footer")
 </template>

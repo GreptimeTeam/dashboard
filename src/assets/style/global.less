@@ -14,30 +14,28 @@
 :root {
   --main-bg-color: rgba(244, 246, 254, 1);
   --th-bg-color: rgba(248, 249, 253, 1);
+  --card-bg-color: rgba(255, 255, 255, 1);
+  --hover-bg-color: rgba(255, 255, 255, 0.6);
+  --white-font-color: rgba(252, 253, 255, 1);
+  --tooltip-font-color: rgba(255, 255, 255, 0.8);
   --navbar-bg-color: linear-gradient(270deg, #1d0e38 0%, #2a115a 100%);
   --brand-color: rgba(131, 34, 255, 1);
   --hover-brand-color: rgba(163, 118, 255, 1);
   --light-brand-color: rgba(163, 118, 255, 0.1);
-  --card-bg-color: rgba(255, 255, 255, 1);
-  --tooltip-font-color: rgba(255, 255, 255, 0.8);
-  --option-font-color: #1d2129;
-  --grey-font-color: #53565a;
-  --white-font-color: rgba(252, 253, 255, 1);
   --main-font-color: rgba(23, 12, 44, 1);
   --small-font-color: rgba(23, 12, 44, 0.8);
   --hover-font-color: rgba(23, 12, 44, 0.6);
   --font-color-40: rgba(23, 12, 44, 0.4);
-  --border-color: rgba(23, 12, 44, 0.25);
-  --drawer-shadow-color: rgba(23, 12, 44, 0.15);
-  --hover-grey-bg-color: rgba(172, 156, 201, 0.1);
+  --border-color: rgba(23, 12, 44, 0.2);
+  --light-border-color: rgba(23, 12, 44, 0.07);
   --grey-bg-color: rgba(23, 12, 44, 0.04);
-  --font-color-7: rgba(23, 12, 44, 0.07);
   --success-color: rgba(36, 201, 128, 1);
   --success-bg-color: rgba(233, 249, 242, 1);
   --warning-color: rgba(232, 176, 14, 1);
   --warning-bg-color: #fcf7e6;
   --danger-color: rgba(239, 60, 104, 1);
-  --danger-bg-color: #fdebef;
+  --danger-bg-color: rgba(239, 60, 104, 0.1);
+  --danger-bg-hover-color: rgba(239, 60, 104, 0.2);
   --editor-active-line-color: rgba(252, 253, 255, 0.14);
   --box-shadow-color: rgba(0, 0, 0, 0.15);
 }
@@ -128,10 +126,6 @@ body {
   opacity: 0.6;
 }
 
-.arco-table-container {
-  border: 0 !important;
-}
-
 .arco-card {
   background: var(--card-bg-color);
   border-radius: 10px;
@@ -152,6 +146,7 @@ body {
     color: var(--main-font-color);
     font-weight: 500;
     font-size: 16px;
+    line-height: 20px;
   }
 
   .arco-card-header-extra {
@@ -170,9 +165,8 @@ body {
 }
 
 .card-icon {
-  width: 15px;
-  height: 15px;
-  margin-right: 6px;
+  width: 18px;
+  height: 18px;
 }
 
 .arco-icon-hover:hover::before {
@@ -180,16 +174,18 @@ body {
 }
 
 .arco-select-dropdown {
+  padding: 0;
   border: 0;
   border-radius: 6px;
-  box-shadow: 0 4px 10px 0 var(--box-shadow-color);
+  box-shadow: 0 2px 10px 0 var(--box-shadow-color);
 
   .arco-select-option {
     padding: 0 8px;
-    color: var(--option-font-color);
+    color: var(--small-font-color);
     font-size: 13px;
     line-height: 32px;
     text-align: left;
+    border-radius: 6px;
 
     .arco-checkbox-icon {
       width: 12px;
@@ -239,7 +235,7 @@ body {
   border-radius: 6px;
 
   .arco-input[disabled] {
-    -webkit-text-fill-color: var(--font-color-40);
+    -webkit-text-fill-color: var(--hover-font-color);
   }
 }
 
