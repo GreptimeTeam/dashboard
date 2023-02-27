@@ -45,7 +45,7 @@ axios.interceptors.response.use(
     if (res.code !== 0) {
       Message.error({
         content: res.error || 'Error',
-        duration: 1 * 1000,
+        duration: 2 * 1000,
       })
       // todo: delete logout related code?
       // 50008: Illegal token; 50012: Other clients logged in; 50014: Token expired;
@@ -63,7 +63,7 @@ axios.interceptors.response.use(
     }
     Message.error({
       content: error.msg || 'Request Error',
-      duration: 5 * 1000,
+      duration: 2 * 1000,
     })
     return Promise.reject(error)
   }

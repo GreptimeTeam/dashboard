@@ -57,6 +57,7 @@ const useCodeRunStore = defineStore('codeRun', {
 
         Message.success({
           content: 'success',
+          duration: 2 * 1000,
         })
         const resultInLog: any = []
         res.output.forEach((oneRes: any) => {
@@ -99,6 +100,7 @@ const useCodeRunStore = defineStore('codeRun', {
 
         Message.success({
           content: 'save success',
+          duration: 2 * 1000,
         })
         useLogStore().pushLog({
           name,
@@ -117,6 +119,7 @@ const useCodeRunStore = defineStore('codeRun', {
         const res: any = await editorAPI.runScript(name)
         Message.success({
           content: 'run success',
+          duration: 2 * 1000,
         })
         const resultInLog: any = []
         res.output.forEach((oneRes: any) => {
