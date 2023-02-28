@@ -14,7 +14,7 @@ a-spin(style='width: 100%')
     return currentResult.value.records.schema.column_schemas.map((column: any) => {
       return {
         title: column.name,
-        dataIndex: column.name.replace(/./gi, '-'),
+        dataIndex: column.name.replace(/\./gi, '-'),
       }
     })
   })
@@ -23,7 +23,7 @@ a-spin(style='width: 100%')
     return currentResult.value.records.rows.map((row: any) => {
       const tempRow: any = {}
       row.forEach((item: any, index: number) => {
-        const columnName = currentResult.value.records.schema.column_schemas[index].name.replace(/./gi, '-')
+        const columnName = currentResult.value.records.schema.column_schemas[index].name.replace(/\./gi, '-')
         tempRow[columnName] = item
       })
       return tempRow

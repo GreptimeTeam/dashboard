@@ -8,7 +8,7 @@ a-tabs.result-tabs.logs-tab(type="rounded")
         a-list-item(v-for="item of logs[codeType]" :key="item")
           a-tooltip(v-if="item.error" :content="item.error")
             .log-error {{$t('dataExplorer.error')}}: {{item.error}}
-          a-space.log-space(v-else-if="item.execution_time_ms" size="large")
+          a-space.log-space(v-else-if="item.execution_time_ms" size="mini" fill)
             template(#split)
               a-divider(direction="vertical")
             div(v-if="codeType==='python'") {{ $t('dataExplorer.runScript', {name: item.name}) }}
@@ -20,7 +20,7 @@ a-tabs.result-tabs.logs-tab(type="rounded")
             div {{ $t('dataExplorer.total', {time: item.networkTime}) }}
             a-tooltip(:content="item.runCode" v-if="codeType==='sql'")
               div {{ $t('dataExplorer.code', {code: item.runCode}) }}
-          a-space.log-space(v-else size="large")
+          a-space.log-space(v-else size="large" fill)
             template(#split)
               a-divider(direction="vertical")
             div {{ $t('dataExplorer.saveName', {name: item.name}) }}

@@ -1,5 +1,6 @@
 .log-error {
-  padding: 3px 5px;
+  height: 100%;
+  padding: 0 16px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -8,26 +9,41 @@
 }
 
 .log-space {
-  padding-left: 5px;
+  padding-left: 16px;
+
+  .arco-space-item:last-of-type {
+    overflow: hidden;
+
+    > div {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
 }
 
 .arco-list {
   color: var(--small-font-color);
   font-size: 12px;
-  border: 0;
+  border-radius: 8px;
 }
 
 .arco-list-item-main {
+  height: 100%;
   overflow: hidden;
   font-size: 14px;
   white-space: nowrap;
   text-overflow: ellipsis;
+
+  .arco-list-item-content {
+    height: 100%;
+    line-height: 38px;
+  }
 }
 
 .arco-list-item {
   align-items: center;
   height: 38px;
-  padding: 0 15px 0 10px !important;
+  padding: 0 !important;
 }
 
 .arco-list-item:nth-child(even) {

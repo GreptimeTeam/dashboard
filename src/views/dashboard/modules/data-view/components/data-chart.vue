@@ -1,16 +1,15 @@
 <template lang="pug">
 a-spin(style="width: 100%")
   a-row
-    a-form.chart-form(:model="chartForm" layout="inline")
+    a-form.chart-form(:model="chartForm" layout="inline" :onChange="drawChart()")
       a-form-item(:label="$t('dataExplorer.chartType')")
         a-select(v-model="chartForm.chartType")
           a-option(v-for="item of chartTypeOptions" :key="item.key" :value="item.value" :label="item.value")
       a-form-item.select-y(:label="$t('dataExplorer.yType')")
         a-select(v-model="chartForm.ySelectedTypes" :placeholder="$t('dataExplorer.selectY')" multiple :allow-search="false")
           a-option(v-for="item of yOptions" :key="item.value" :value="item.value") {{ item.value }}
-      a-button(type="primary" @click="drawChart") {{$t('dataExplorer.draw')}}
   a-row
-    Chart.chart-area(height="400px" :option="option" :update-options="updateOptions" )
+    Chart.chart-area(height="330px" :option="option" :update-options="updateOptions" )
 </template>
 
 <script lang="ts" setup>
