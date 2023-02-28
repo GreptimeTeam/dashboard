@@ -10,7 +10,7 @@ a-spin(style="width: 100%")
           a-option(v-for="item of yOptions" :key="item.value" :value="item.value") {{ item.value }}
       a-button(type="primary" @click="drawChart") {{$t('dataExplorer.draw')}}
   a-row
-    Chart.chart-area(height="400px" :option="option" :update-options="updateOptions" )
+    Chart.chart-area(height="330px" :option="option" :update-options="updateOptions" )
 </template>
 
 <script lang="ts" setup>
