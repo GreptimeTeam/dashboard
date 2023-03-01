@@ -79,7 +79,15 @@
   border: 0;
 
   .arco-table-tr:last-of-type {
-    .arco-table-td {
+    .arco-table-td:first-of-type {
+      border-radius: 0 0 0 8px;
+    }
+
+    .arco-table-td:last-of-type {
+      border-radius: 0 0 8px;
+    }
+
+    .arco-table-td:only-of-type {
       border-radius: 0 0 8px 8px;
     }
   }
