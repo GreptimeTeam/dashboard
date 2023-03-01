@@ -51,28 +51,35 @@ const useCodeRunStore = defineStore('codeRun', {
   },
 
   actions: {
-    async fetchSQLResult(sql: string) {
+    async runCode(codeInfo: string) {
       try {
-        const res: any = await editorAPI.getSqlResult(sql)
+        let res: any = {}
+        if (this.codeType === 'sql') {
+          res = await editorAPI.getSqlResult(codeInfo)
+        } else {
+          res = await editorAPI.runScript(codeInfo)
+        }
 
         Message.success({
-          content: 'success',
+          content: 'run success',
           duration: 2 * 1000,
         })
         const resultInLog: any = []
         res.output.forEach((oneRes: any) => {
           if ('records' in oneRes) {
+            const rowLength = oneRes.records.rows.length
             resultInLog.push({
-              records: oneRes.records.rows.length,
+              records: rowLength,
             })
-            if (oneRes.records.rows.length > 0) {
-              this.titleIndex.sql += 1
-              this.results.sql.push({
+            if (rowLength >= 0) {
+              this.titleIndex[this.codeType] += 1
+              const oneResult = {
                 records: oneRes.records,
-                dimensionsAndXName: getDimensionsAndXName(oneRes.records.schema.column_schemas),
-                key: this.titleIndex.sql,
-              })
-              this.activeTabKey.sql = this.titleIndex.sql
+                dimensionsAndXName: rowLength === 0 ? [] : getDimensionsAndXName(oneRes.records.schema.column_schemas),
+                key: this.titleIndex[this.codeType],
+              }
+              this.results[this.codeType].push(oneResult)
+              this.activeTabKey[this.codeType] = this.titleIndex[this.codeType]
             }
           } else {
             resultInLog.push({
@@ -80,17 +87,20 @@ const useCodeRunStore = defineStore('codeRun', {
             })
           }
         })
-
-        useLogStore().pushLog({
-          runCode: sql,
+        const oneLog = {
+          type: this.codeType,
           ...res,
+          codeInfo,
           result: resultInLog,
-        })
+        }
+        useLogStore().pushLog(oneLog)
       } catch (error: any) {
-        useLogStore().pushLog({
-          runCode: sql,
+        const oneLog = {
+          type: this.codeType,
+          codeInfo,
           ...error,
-        })
+        }
+        useLogStore().pushLog(oneLog)
       }
     },
 
@@ -111,41 +121,6 @@ const useCodeRunStore = defineStore('codeRun', {
           ...error,
         })
         throw error
-      }
-    },
-
-    async runScript(name: string) {
-      try {
-        const res: any = await editorAPI.runScript(name)
-        Message.success({
-          content: 'run success',
-          duration: 2 * 1000,
-        })
-        const resultInLog: any = []
-        res.output.forEach((oneRes: any) => {
-          resultInLog.push({
-            records: oneRes.records.rows.length,
-          })
-          if (oneRes.records.rows.length > 0) {
-            this.titleIndex.python += 1
-            this.results.python.push({
-              records: oneRes.records,
-              dimensionsAndXName: getDimensionsAndXName(oneRes.records.schema.column_schemas),
-              key: this.titleIndex.python,
-            })
-            this.activeTabKey.python = this.titleIndex.python
-          }
-        })
-        useLogStore().pushLog({
-          name,
-          ...res,
-          result: resultInLog,
-        })
-      } catch (error: any) {
-        useLogStore().pushLog({
-          name,
-          ...error,
-        })
       }
     },
 

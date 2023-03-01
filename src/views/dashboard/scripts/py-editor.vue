@@ -34,7 +34,7 @@ a-card(:bordered="false").editor-card
   const dataBaseStore = useDataBaseStore()
   const { pythonCode, cursorAt, lastSavedCode, isNewScript, scriptName, isChanged, selectAfterSave, createNewScript } =
     usePythonCode()
-  const { saveScript, runScript } = useCodeRunStore()
+  const { saveScript, runCode } = useCodeRunStore()
   const { getScriptsTable } = dataBaseStore
 
   const lineStart = ref()
@@ -94,12 +94,12 @@ a-card(:bordered="false").editor-card
   const saveScriptAndRun = async () => {
     await saveScript(scriptForm.value.scriptName, pythonCode.value.trim())
     lastSavedCode.value = pythonCode.value
-    runScript(scriptForm.value.scriptName)
+    runCode(scriptForm.value.scriptName)
     await getScriptsTable()
     selectAfterSave(scriptForm.value.scriptName)
   }
 
   const run = () => {
-    runScript(scriptForm.value.scriptName)
+    runCode(scriptForm.value.scriptName)
   }
 </script>
