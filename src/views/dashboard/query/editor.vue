@@ -16,6 +16,7 @@ a-card(:bordered="false").editor-card
   import { oneDark } from '@codemirror/theme-one-dark'
   import { sql } from '@codemirror/lang-sql'
   import useDataExplorer from '@/hooks/data-explorer'
+  import { useCodeRunStore } from '@/store'
 
   export interface Props {
     spellcheck?: boolean
@@ -35,11 +36,8 @@ a-card(:bordered="false").editor-card
   const selectedCode = ref()
   const view = shallowRef()
 
-  const dataExplorer = useDataExplorer()
-  const dataBaseStore = useDataBaseStore()
-  const codeRunStore = useCodeRunStore()
-  const { sqlCode, cursorAt } = dataExplorer
-  const { fetchSQLResult } = codeRunStore
+  const { fetchSQLResult, runCode } = useCodeRunStore()
+  const { sqlCode, cursorAt } = useDataExplorer()
 
   const handleReady = (payload: any) => {
     view.value = payload.view
@@ -74,11 +72,11 @@ a-card(:bordered="false").editor-card
   // todo: combine next 2 functions
   const runSqlCommand = () => {
     // todo: add better format tool for code
-    fetchSQLResult(sqlCode.value.trim().replace(/\n/gi, ' '))
+    runCode(sqlCode.value.trim().replace(/\n/gi, ' '))
     // todo: refresh tables data and when
   }
 
   const runPartSqlCommand = () => {
-    fetchSQLResult(selectedCode.value.trim())
+    runCode(selectedCode.value.trim())
   }
 </script>

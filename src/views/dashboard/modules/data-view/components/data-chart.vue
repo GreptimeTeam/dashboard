@@ -1,15 +1,21 @@
 <template lang="pug">
-a-spin(style="width: 100%")
-  a-row
-    a-form.chart-form(:model="chartForm" layout="inline" :onChange="drawChart()")
-      a-form-item(:label="$t('dataExplorer.chartType')")
-        a-select(v-model="chartForm.chartType")
-          a-option(v-for="item of chartTypeOptions" :key="item.key" :value="item.value" :label="item.value")
-      a-form-item.select-y(:label="$t('dataExplorer.yType')")
-        a-select(v-model="chartForm.ySelectedTypes" :placeholder="$t('dataExplorer.selectY')" multiple :allow-search="false")
-          a-option(v-for="item of yOptions" :key="item.value" :value="item.value") {{ item.value }}
-  a-row
-    Chart.chart-area(height="330px" :option="option" :update-options="updateOptions" )
+a-card(:bordered="false" v-if="schema")
+  template(#title)
+    a-space(size="mini")
+      svg.card-icon
+        use(href="#chart")
+      | {{$t('dataExplorer.chart')}}
+  a-spin(style="width: 100%")
+    a-row
+      a-form.chart-form(:model="chartForm" layout="inline" :onChange="drawChart()")
+        a-form-item(:label="$t('dataExplorer.chartType')")
+          a-select(v-model="chartForm.chartType")
+            a-option(v-for="item of chartTypeOptions" :key="item.key" :value="item.value" :label="item.value")
+        a-form-item.select-y(:label="$t('dataExplorer.yType')")
+          a-select(v-model="chartForm.ySelectedTypes" :placeholder="$t('dataExplorer.selectY')" multiple :allow-search="false")
+            a-option(v-for="item of yOptions" :key="item.value" :value="item.value") {{ item.value }}
+    a-row
+      Chart.chart-area(height="330px" :option="option" :update-options="updateOptions" )
 </template>
 
 <script lang="ts" setup>
@@ -21,10 +27,12 @@ a-spin(style="width: 100%")
     chartType: 'line',
     ySelectedTypes: [],
   })
+  const { schema } = currentResult.value.records
 
   // TODO: Add support for more data types not just numbers.
   const yOptions = computed(() => {
-    return currentResult.value.records.schema.column_schemas
+    if (!schema) return []
+    return schema.column_schemas
       .filter((item: any) => numberTypes.find((type: string) => type === item.data_type))
       .map((item: any) => ({
         value: item.name,
