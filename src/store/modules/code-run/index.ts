@@ -113,11 +113,13 @@ const useCodeRunStore = defineStore('codeRun', {
           duration: 2 * 1000,
         })
         useLogStore().pushLog({
-          name,
+          type: this.codeType,
+          codeInfo: name,
           ...res,
         })
       } catch (error: any) {
         useLogStore().pushLog({
+          type: this.codeType,
           ...error,
         })
         throw error
