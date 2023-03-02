@@ -20,7 +20,39 @@
   .tree-data {
     display: flex;
     align-items: center;
-    width: calc(100% - 42px);
+    width: calc(100% - 55px);
+  }
+
+  .data-title {
+    flex: 1 1 auto;
+    padding-left: 3px;
+    overflow: hidden;
+    color: var(--main-font-color);
+    font-size: 14px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .right {
+    max-width: 75px;
+  }
+
+  .data-type {
+    padding-left: 3px;
+    overflow: hidden;
+    color: var(--brand-color);
+    font-size: 12px;
+    text-overflow: ellipsis;
+  }
+
+  .copy-icon {
+    position: absolute;
+    right: 20px;
+  }
+
+  .left-space {
+    display: flex;
+    align-items: center;
   }
 
   & > .arco-tree-node {
@@ -58,25 +90,6 @@
   .arco-tree-node-custom-icon {
     margin-right: 4px;
   }
-}
-
-.data-type {
-  padding-left: 3px;
-  overflow: hidden;
-  color: var(--brand-color);
-  font-size: 12px;
-  text-overflow: ellipsis;
-}
-
-.tree-title {
-  padding-left: 3px;
-  color: var(--main-font-color);
-  font-size: 14px;
-}
-
-.copy-icon {
-  position: absolute;
-  right: 20px;
 }
 
 .sider-tabs {
