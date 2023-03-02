@@ -17,7 +17,6 @@ const useDataBaseStore = defineStore('database', () => {
       tempArray.push(node)
       key += 1
     })
-
     return tempArray
   }
 

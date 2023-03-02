@@ -5,25 +5,25 @@ const scriptsSearchKey = ref('')
 const { originTablesTree, originScriptsList } = storeToRefs(useDataBaseStore())
 
 export default function useSiderTabs() {
+  // TODO: try a better function
   const searchTree = (keyword: string) => {
-    const loop = (data: any) => {
-      const result: any = []
-      data.forEach((item: any) => {
-        if (item.title.toLowerCase().indexOf(keyword.toLowerCase()) > -1) {
-          result.push({ ...item })
-        } else if (item.children) {
-          const filterData = loop(item.children)
-          if (filterData.length) {
-            result.push({
-              ...item,
-              children: filterData,
-            })
+    const result: any = []
+    originTablesTree.value.forEach((item: any) => {
+      if (item.title.toLowerCase().indexOf(keyword.toLowerCase()) > -1) {
+        result.push({ ...item })
+      } else if (item.children) {
+        const children: any = []
+        item.children.forEach((child: any) => {
+          if (child.title.toLowerCase().indexOf(keyword.toLowerCase()) > -1) {
+            children.push({ ...child })
           }
+        })
+        if (children.length) {
+          result.push({ ...item, children })
         }
-      })
-      return result
-    }
-    return loop(originTablesTree.value)
+      }
+    })
+    return result
   }
 
   const searchList = (keyword: string) => {

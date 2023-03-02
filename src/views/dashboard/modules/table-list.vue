@@ -36,7 +36,6 @@ a-space(direction="vertical" size="medium" fill)
   const { tablesSearchKey, tablesTreeData } = useSiderTabs()
 
   const { getTableByName, getTables, addChildren } = useDataBaseStore()
-  const { originTablesTree } = storeToRefs(useDataBaseStore())
 
   const treeRef = ref()
 
@@ -59,7 +58,7 @@ a-space(direction="vertical" size="medium" fill)
             // TODO: make code more readable
             rowArray.push({
               title: row[0],
-              key: row[0],
+              key: `${nodeData.title}.${row[0]}`,
               isLeaf: true,
               dataType: row[1],
               iconType: row[4],
