@@ -14,15 +14,13 @@ a-space(direction="vertical" size="medium" fill)
       template(#switcher-icon)
         IconDown
       template(#extra="nodeData")
+        img(:src="getIconUrl(nodeData.iconType)" alt="" height="14")
         .tree-data
-          img(:src="getIconUrl(nodeData.iconType)" alt="" height="14")
-          span.tree-title
-            | {{ nodeData.title }}
-          span.data-type
-            | {{ nodeData.dataType }}
-          a-tooltip(:content="$t('dataExplorer.insertName')" mini)
-            svg.icon.copy-icon.pointer(name="copy" @click="insertName(nodeData.title)")
-              use(href="#copy")
+          a-typography-text.data-title(:ellipsis='{rows: 1,showTooltip: true,}') {{ nodeData.title }} 
+          .data-type {{ nodeData.dataType }} 
+        a-tooltip(:content="$t('dataExplorer.insertName')" mini)
+          svg.icon.copy-icon.pointer(name="copy" @click="insertName(nodeData.title)")
+            use(href="#copy")
 </template>
 
 <script lang="ts" setup>

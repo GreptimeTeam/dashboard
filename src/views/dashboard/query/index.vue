@@ -3,7 +3,7 @@ a-layout.layout
   a-layout-sider
     ListTabs
   a-layout-content
-    a-space(direction="vertical" fill size="large")
+    a-space.content-space(direction="vertical" fill size="large")
       Editor 
       DataView(v-if="!!results.sql.length")
       Log 

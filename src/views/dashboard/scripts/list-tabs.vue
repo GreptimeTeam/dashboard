@@ -4,7 +4,7 @@ a-tabs.sider-tabs(v-model:active-key="tabActiveKey" default-active-key="2"
   a-tab-pane(key="1" title="Tables")
     a-card(:bordered="false").tree-card
       TableList    
-  a-tab-pane(key="2" title="Scripts")
+  a-tab-pane(key="2" title="scripts")
     a-card(:bordered="false").tree-card
       ScriptsList
 </template>
