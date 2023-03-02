@@ -3,7 +3,7 @@ a-layout.layout
   a-layout-sider
     ListTabs
   a-layout-content
-    a-space(direction="vertical" fill :size="14")
+    a-space.content-space(direction="vertical" fill :size="14")
       PyEditor
       DataView(v-if="!!results.python.length")
       Log 
