@@ -10,7 +10,7 @@
     "dev:cloud": "vite --mode cloud --config ./config/vite.config.dev.ts ",
     "build": "vite build --config ./config/vite.config.prod.ts && vue-tsc --noEmit",
     "build:cloud": "vite build --config ./config/vite.config.prod.ts --mode cloud && vue-tsc --noEmit",
-    "build:staging": "vite build --config ./config/vite.config.prod.ts --mode staging --base /dashboard/ && vue-tsc --noEmit",
+    "build:staging": "vite build --config ./config/vite.config.prod.ts --mode staging && vue-tsc --noEmit",
     "report": "cross-env REPORT=true npm run build",
     "preview": "npm run build && vite preview --host --config ./config/vite.config.base.ts",
     "preview:cloud": "npm run build:cloud && vite preview --host --config ./config/vite.config.base.ts",
