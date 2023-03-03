@@ -4,7 +4,8 @@ export interface tableState {
   count: number
 }
 
-export interface treeState {
-  title: any
-  key: any
+export interface TreeData {
+  key: string | number
+  title: string
+  children?: TreeData
 }
