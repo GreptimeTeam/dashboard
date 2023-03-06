@@ -54,7 +54,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
           payload: |
-            {"text": "Building new custom **dashboard** image. git-ref: `${{ github.event.inputs.commit }}`"}
+            {"text": "Building new custom **dashboard** image for ${{ github.event.inputs.env-type }}. git-ref: `${{ github.event.inputs.commit }}`"}
 
       - name: Build and push
         uses: docker/build-push-action@v3
@@ -75,4 +75,4 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
           payload: |
-            {"text": "New custom **dashboard** image is ready. Tag: `${{ env.IMAGE_TAG }}`"}
+            {"text": "New custom **dashboard** image for ${{ github.event.inputs.env-type }} is ready. Tag: `${{ env.IMAGE_TAG }}`"}
