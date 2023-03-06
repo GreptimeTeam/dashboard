@@ -3,9 +3,9 @@ import { AppRouteRecordRaw } from '../types'
 export const DEFAULT_LAYOUT = () => import('@/layout/default-layout.vue')
 
 const DASHBOARD: AppRouteRecordRaw = {
-  path: '/dashboard',
+  path: '/',
   name: 'dashboard',
-  redirect: 'dashboard/query',
+  redirect: '/query',
   component: DEFAULT_LAYOUT,
   meta: {
     locale: 'menu.dashboard',
