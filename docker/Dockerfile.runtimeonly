@@ -4,6 +4,6 @@ ENV GREPTIMEDB_HTTP_HOST=127.0.0.1
 ENV GREPTIMEDB_HTTP_PORT=4000
 ENV NGINX_PORT=8080
 
-RUN mkdir -p /usr/share/nginx/html/dashboard
-COPY dist/ /usr/share/nginx/html/dashboard
+RUN mkdir -p /usr/share/nginx/html
+COPY dist/ /usr/share/nginx/html
 ADD docker/greptimedb.conf /etc/nginx/templates/default.conf.template
