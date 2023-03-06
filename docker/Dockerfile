@@ -4,11 +4,11 @@ RUN npm install -g pnpm
 
 WORKDIR /greptimedb-dashboard
 
-ARG command
+ARG command=build
 
 COPY . .
 RUN pnpm install
-RUN pnpm build$command
+RUN pnpm $command
 
 FROM --platform=linux/amd64 nginx:1.23 as base
 
