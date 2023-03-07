@@ -4,6 +4,13 @@ on:
       commit:
         description: 'the dashboard commit sha'
         required: true
+      env-type:
+        type: choice
+        description: image env type
+        options:
+          - cloud
+          - staging
+        required: true
 
 name: Build docker image manually
 
@@ -47,14 +54,14 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
           payload: |
-            {"text": "Building new custom **dashboard** image. git-ref: `${{ github.event.inputs.commit }}`"}
+            {"text": "Building new custom **dashboard** image for ${{ github.event.inputs.env-type }}. git-ref: `${{ github.event.inputs.commit }}`"}
 
       - name: Build and push
         uses: docker/build-push-action@v3
         with:
           context: .
           file: ./docker/Dockerfile
-          build-args: command=docker-cloud
+          build-args: command=${{ github.event.inputs.env-type }}
           push: true
           #platforms: linux/amd64,linux/arm64
           platforms: linux/amd64
@@ -68,4 +75,4 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
           payload: |
-            {"text": "New custom **dashboard** image is ready. Tag: `${{ env.IMAGE_TAG }}`"}
+            {"text": "New custom **dashboard** image for ${{ github.event.inputs.env-type }} is ready. Tag: `${{ env.IMAGE_TAG }}`"}
