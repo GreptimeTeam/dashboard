@@ -11,7 +11,15 @@ NProgress.configure({ showSpinner: false }) // NProgress Configuration
 
 const router = createRouter({
   history: createWebHistory(),
-  routes: [...appRoutes, REDIRECT_MAIN, NOT_FOUND_ROUTE],
+  routes: [
+    {
+      path: '/',
+      redirect: 'dashboard/query',
+    },
+    ...appRoutes,
+    REDIRECT_MAIN,
+    NOT_FOUND_ROUTE,
+  ],
   scrollBehavior() {
     return { top: 0 }
   },
