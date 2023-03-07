@@ -61,7 +61,7 @@ jobs:
         with:
           context: .
           file: ./docker/Dockerfile
-          build-args: command=build:${{ github.event.inputs.env-type }}
+          build-args: command=${{ github.event.inputs.env-type }}
           push: true
           #platforms: linux/amd64,linux/arm64
           platforms: linux/amd64
