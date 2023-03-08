@@ -24,5 +24,7 @@ app.use(i18n)
 app.use(globalComponents)
 app.use(directive)
 
+console.log(import.meta.env)
+
 CrossStorageHub.init([{ origin: new RegExp(import.meta.env.VITE_CLOUD_URL), allow: ['get', 'set'] }])
 app.mount('#app')
