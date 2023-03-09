@@ -283,10 +283,17 @@ body {
   }
 
   .arco-modal-footer {
+    padding: 20px 20px 30px;
     border-top: 0;
 
     .arco-btn {
-      width: 55px;
+      width: 100%;
+      height: 44px;
+    }
+
+    > .arco-btn:not(:nth-child(1)) {
+      margin-top: 10px;
+      margin-left: 0;
     }
   }
 }

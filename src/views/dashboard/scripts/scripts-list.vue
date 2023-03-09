@@ -11,7 +11,7 @@ a-space(direction="vertical" size="medium")
           use(href="#create")
   a-scrollbar.tree-scrollbar
     a-tree.script-tree(ref="scriptsRef" :data="scriptsListData" size="small" @select="onSelect" blockNode v-model:selected-keys="scriptSelectedKeys")
-a-modal(v-model:visible='modelVisible', @ok='handleOk', @cancel='handleCancel')
+a-modal.script-modal(v-model:visible='modelVisible', @ok='handleOk', @cancel='handleCancel' :closable="false")
     template(#title='')
     .
       {{$t('dataExplorer.question')}}
