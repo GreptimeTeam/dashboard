@@ -1,6 +1,10 @@
 .tree-card {
   height: 100%;
 
+  .arco-card {
+    width: 100%;
+  }
+
   & > .arco-card-header {
     height: 42px !important;
     line-height: 42px !important;
@@ -8,6 +12,10 @@
 
   .arco-scrollbar {
     height: calc(100vh - 220px);
+  }
+
+  .arco-tree {
+    margin: 0 16px;
   }
 }
 
@@ -20,7 +28,7 @@
   .tree-data {
     display: flex;
     align-items: center;
-    width: calc(100% - 55px);
+    width: calc(100% - 52px);
   }
 
   .data-title {
@@ -44,7 +52,7 @@
 
   .copy-icon {
     position: absolute;
-    right: 20px;
+    right: 8px;
   }
 
   .left-space {
@@ -53,8 +61,9 @@
   }
 
   & > .arco-tree-node {
-    padding: 0 16px;
+    padding: 0 8px;
     line-height: 36px;
+    border-radius: 6px;
     cursor: auto;
   }
 
@@ -141,7 +150,6 @@
 
 .script-tree {
   .arco-tree-node {
-    margin: 0 16px;
     padding-left: 0;
     border-radius: 6px;
   }
@@ -175,7 +183,7 @@
   padding: 2px 16px;
 
   .arco-input-wrapper {
-    width: 228px;
+    width: 248px;
     height: 100%;
     padding-left: 8px;
   }
