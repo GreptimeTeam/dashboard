@@ -1,13 +1,13 @@
 <template lang="pug">
 a-card(:bordered="false").editor-card
-  a-space.form-space
+  a-space(size="medium").form-space
     a-form(:model="scriptForm" layout="inline")
       a-form-item(:label="$t('dataExplorer.scriptName')" )
         a-input(v-model:model-value="scriptForm.scriptName" :placeholder="$t('dataExplorer.input')" v-bind:disabled="!isNewScript") 
-      a-space
-        a-button(v-if="isChanged" @click="saveCurrentScript()") {{$t('dataExplorer.saveScript')}}
-        a-button(v-if="isChanged" @click="saveScriptAndRun()") {{$t('dataExplorer.saveAndRun')}}
-        a-button(v-if="ifCanRun" @click="run()") {{$t('dataExplorer.runScriptAction')}}
+    a-space
+      a-button(v-if="isChanged" @click="saveCurrentScript()") {{$t('dataExplorer.saveScript')}}
+      a-button(v-if="isChanged" @click="saveScriptAndRun()") {{$t('dataExplorer.saveAndRun')}}
+      a-button(v-if="ifCanRun" @click="run()") {{$t('dataExplorer.runScriptAction')}}
   CodeMirror(v-model="pythonCode" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
 
@@ -34,7 +34,7 @@ a-card(:bordered="false").editor-card
   const dataBaseStore = useDataBaseStore()
   const { pythonCode, cursorAt, lastSavedCode, isNewScript, scriptName, isChanged, selectAfterSave, createNewScript } =
     usePythonCode()
-  const { saveScript, runScript } = useCodeRunStore()
+  const { saveScript, runCode } = useCodeRunStore()
   const { getScriptsTable } = dataBaseStore
 
   const lineStart = ref()
@@ -94,12 +94,12 @@ a-card(:bordered="false").editor-card
   const saveScriptAndRun = async () => {
     await saveScript(scriptForm.value.scriptName, pythonCode.value.trim())
     lastSavedCode.value = pythonCode.value
-    runScript(scriptForm.value.scriptName)
+    runCode(scriptForm.value.scriptName)
     await getScriptsTable()
     selectAfterSave(scriptForm.value.scriptName)
   }
 
   const run = () => {
-    runScript(scriptForm.value.scriptName)
+    runCode(scriptForm.value.scriptName)
   }
 </script>

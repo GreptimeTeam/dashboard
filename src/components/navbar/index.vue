@@ -102,6 +102,7 @@
         background: rgb(255 255 255 / 15%);
         border-radius: 4px;
         opacity: 1;
+        font-weight: 600;
       }
     }
   }

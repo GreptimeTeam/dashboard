@@ -23,6 +23,7 @@
   --hover-brand-color: rgba(163, 118, 255, 1);
   --light-brand-color: rgba(163, 118, 255, 0.1);
   --main-font-color: rgba(23, 12, 44, 1);
+  --tooltip-bg-color: rgba(23, 12, 44, 0.9);
   --small-font-color: rgba(23, 12, 44, 0.8);
   --hover-font-color: rgba(23, 12, 44, 0.6);
   --font-color-40: rgba(23, 12, 44, 0.4);
@@ -34,7 +35,7 @@
   --warning-color: rgba(232, 176, 14, 1);
   --warning-bg-color: #fcf7e6;
   --danger-color: rgba(239, 60, 104, 1);
-  --danger-bg-color: rgba(239, 60, 104, 0.1);
+  --danger-bg-color: #fdebef;
   --danger-bg-hover-color: rgba(239, 60, 104, 0.2);
   --editor-active-line-color: rgba(252, 253, 255, 0.14);
   --box-shadow-color: rgba(0, 0, 0, 0.15);
@@ -49,16 +50,26 @@ body {
   padding: 0;
   font-weight: 400;
   font-size: 12px;
-  font-family: Roboto, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'noto sans', sans-serif !important;
+  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'noto sans', sans-serif !important;
   background-color: var(--main-bg-color);
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
 }
 
+.arco-overlay-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.arco-message-list {
+  max-width: 780px;
+}
+
 .arco-message {
   padding: 10px 15px;
   border: 1px solid;
-  border-radius: 4px;
+  border-radius: 6px;
 
   .arco-message-content {
     color: var(--main-font-color);
@@ -77,10 +88,16 @@ body {
 }
 
 .arco-tooltip-content {
+  margin-bottom: -5px;
   padding: 8px;
   color: var(--tooltip-font-color);
   font-size: 12px;
-  background-color: var(--main-font-color);
+  background-color: var(--tooltip-bg-color);
+  border-radius: 6px;
+}
+
+.arco-trigger-arrow {
+  display: none;
 }
 
 .arco-dropdown {
@@ -144,7 +161,7 @@ body {
     display: flex;
     align-items: center;
     color: var(--main-font-color);
-    font-weight: 500;
+    font-weight: 600;
     font-size: 16px;
     line-height: 20px;
   }
@@ -256,20 +273,30 @@ body {
 .arco-modal {
   width: 384px;
   background-color: var(--card-bg-color);
+  border-radius: 10px;
+
+  .arco-modal-body {
+    padding: 10px 20px;
+    line-height: 28px;
+    text-align: center;
+  }
 
   .arco-modal-header {
     border-bottom: 0;
   }
 
-  .arco-modal-body {
-    padding: 12px 20px;
-  }
-
   .arco-modal-footer {
+    padding: 20px;
     border-top: 0;
 
     .arco-btn {
-      width: 55px;
+      width: 100%;
+      height: 44px;
+    }
+
+    > .arco-btn:not(:nth-child(1)) {
+      margin-top: 10px;
+      margin-left: 0;
     }
   }
 }
@@ -284,22 +311,22 @@ body {
 }
 
 @font-face {
-  font-weight: 300;
-  font-family: Roboto;
-  font-style: normal;
-  src: local('Roboto'), url('../fonts/Roboto-Light.woff2');
-}
-
-@font-face {
   font-weight: 400;
-  font-family: Roboto;
+  font-family: 'Open Sans';
   font-style: normal;
-  src: local('Roboto'), url('../fonts/Roboto-Light.woff2');
+  src: local('Open Sans'), url('../fonts/OpenSans-Regular.ttf');
 }
 
 @font-face {
-  font-weight: 500;
-  font-family: Roboto;
+  font-weight: 600;
+  font-family: 'Open Sans';
   font-style: normal;
-  src: local('Roboto'), url('../fonts/Roboto-Medium.woff2');
+  src: local('Open Sans'), url('../fonts/OpenSans-SemiBold.ttf');
+}
+
+@font-face {
+  font-weight: 800;
+  font-family: 'Open Sans';
+  font-style: normal;
+  src: local('Open Sans'), url('../fonts/OpenSans-ExtraBold.ttf');
 }

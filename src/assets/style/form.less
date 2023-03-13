@@ -1,29 +1,27 @@
 .guide-modal {
-  .arco-modal-header {
-    height: 74px;
-    padding-right: 0;
-  }
+  .arco-modal {
+    .arco-modal-header {
+      height: 74px;
+      padding-right: 0;
+    }
 
-  .arco-modal-header .arco-modal-title {
-    justify-content: space-between;
+    .arco-modal-header .arco-modal-title {
+      justify-content: space-between;
+      font-weight: 800;
+    }
+
+    .arco-modal-body {
+      padding: 0 20px;
+    }
+
+    .arco-modal-footer {
+      padding: 20px 20px 30px;
+    }
   }
 
   .guide-banner {
     width: 164px;
     height: 74px;
-  }
-
-  .arco-modal .arco-modal-body {
-    padding: 0 20px;
-  }
-
-  .arco-modal-footer {
-    padding: 20px 30px 20px 20px;
-  }
-
-  .arco-modal .arco-modal-footer .arco-btn {
-    width: 100%;
-    height: 44px;
   }
 
   .arco-form-item {
@@ -62,16 +60,40 @@
   }
 }
 
+.change-modal {
+  .arco-modal {
+    .arco-modal-header {
+      height: 30px;
+    }
+
+    .arco-modal-body {
+      line-height: 28px;
+    }
+  }
+}
+
 .arco-drawer {
   height: calc(100% - 52px);
   margin-top: 52px;
   border-radius: 10px 0 0 10px;
   box-shadow: 0 4px 10px 0 var(--border-color);
-}
 
-.arco-drawer-title {
-  display: flex;
-  align-items: center;
+  .arco-drawer-header {
+    height: 58px;
+    padding: 0 20px;
+    border-bottom: 0;
+
+    .arco-drawer-title {
+      display: flex;
+      align-items: center;
+      font-weight: 600;
+      font-size: 18px;
+    }
+  }
+
+  .arco-drawer-body {
+    padding: 8px 20px;
+  }
 }
 
 .drawer-icon {
