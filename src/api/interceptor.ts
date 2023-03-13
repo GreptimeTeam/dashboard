@@ -28,7 +28,7 @@ axios.interceptors.request.use(
 
     return {
       ...config,
-      traceTimeStart: new Date().valueOf(),
+      traceTimeStart: new Date(),
     }
   },
   (error) => {
@@ -47,13 +47,18 @@ axios.interceptors.response.use(
         content: res.error || 'Error',
         duration: 2 * 1000,
       })
+      const error = {
+        error: res.error,
+        startTime: new Date(response.config.traceTimeStart).toLocaleTimeString(),
+      }
       // todo: delete logout related code?
       // 50008: Illegal token; 50012: Other clients logged in; 50014: Token expired;
-      return Promise.reject(res || 'Error')
+      return Promise.reject(error || 'Error')
     }
     return {
       ...res,
       networkTime: new Date().valueOf() - response.config.traceTimeStart,
+      startTime: new Date(response.config.traceTimeStart).toLocaleTimeString(),
     }
   },
   (error) => {

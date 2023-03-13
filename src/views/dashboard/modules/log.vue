@@ -7,10 +7,14 @@ a-tabs.result-tabs.logs-tab(type="rounded")
       a-list(v-if="logs[codeType].length" :hoverable="true" size="small" :bordered="false" :split="false")
         a-list-item(v-for="item of logs[codeType]" :key="item")
           a-tooltip(v-if="item.error" :content="item.error")
-            .log-error {{$t('dataExplorer.error')}}: {{item.error}}
+            .log-error 
+              | {{ item.startTime }} 
+              a-divider(direction="vertical")
+              | {{$t('dataExplorer.error')}}: {{item.error}}
           a-space.log-space(v-else-if="item.execution_time_ms" size="mini" fill)
             template(#split)
               a-divider(direction="vertical")
+            div {{ item.startTime }}
             div(v-if="codeType==='python'") {{ $t('dataExplorer.runScript', {name: item.codeInfo}) }}
             div {{ $tc('dataExplorer.executed', item.result.length, { length: item.result.length })}}
             div {{ $t('dataExplorer.results') }}: 
