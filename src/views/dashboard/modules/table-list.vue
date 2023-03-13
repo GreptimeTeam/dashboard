@@ -14,7 +14,7 @@ a-space(direction="vertical" size="medium" fill)
       template(#switcher-icon)
         IconDown
       template(#extra="nodeData")
-        img(:src="getIconUrl(nodeData.iconType)" alt="" height="14")
+        img(:src="getIconUrl(nodeData.iconType)" alt="" height="16")
         .tree-data
           a-typography-text.data-title(:ellipsis='{rows: 1,showTooltip: true,}') {{ nodeData.title }} 
           .data-type {{ nodeData.dataType }} 
