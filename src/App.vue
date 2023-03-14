@@ -9,8 +9,6 @@
 <script lang="ts" setup>
   import { computed } from 'vue'
   import enUS from '@arco-design/web-vue/es/locale/lang/en-us'
-  import GlobalSetting from '@/components/global-setting/index.vue'
-  import GuideModal from '@/components/guide-modal/index.vue'
   import useLocale from '@/hooks/locale'
   import { useUserStore, useAppStore } from '@/store'
 

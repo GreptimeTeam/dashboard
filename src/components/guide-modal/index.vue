@@ -10,7 +10,7 @@ a-modal.guide-modal(v-model:visible="guideModal" :mask-closable="false" :ok-text
   template(#footer)
 </template>
 
-<script lang="ts" setup>
+<script lang="ts" setup name="GuideModal">
   import { useAppStore } from '@/store'
   import SettingsForm from '../global-setting/settings-form.vue'
 
@@ -31,5 +31,3 @@ a-modal.guide-modal(v-model:visible="guideModal" :mask-closable="false" :ok-text
     guideModal.value = false
   }
 </script>
-
-<style scoped lang="less"></style>

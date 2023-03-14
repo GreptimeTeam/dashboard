@@ -31,7 +31,7 @@ a-space(direction="vertical" size="medium" fill)
   import useSiderTabs from '@/hooks/sider-tabs'
 
   const { insertNameToCode } = useDataExplorer()
-  const { codeType, guideModal } = storeToRefs(useAppStore())
+  const { codeType } = storeToRefs(useAppStore())
   const { insertNameToPyCode } = usePythonCode()
   const { tablesSearchKey, tablesTreeData } = useSiderTabs()
 
