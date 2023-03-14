@@ -126,8 +126,8 @@ devDependencies:
   '@types/nprogress': 0.2.0
   '@types/qs': 6.9.7
   '@types/sortablejs': 1.15.0
-  '@typescript-eslint/eslint-plugin': 5.49.0_iljmjqxcygjq3saipl7gerxpvi
-  '@typescript-eslint/parser': 5.48.2_yygwinqv3a2io74xmwofqb7uka
+  '@typescript-eslint/eslint-plugin': 5.54.1_q63xsq3ijuzlilvwo6lhljd6bu
+  '@typescript-eslint/parser': 5.53.0_yygwinqv3a2io74xmwofqb7uka
   '@vitejs/plugin-vue': 3.1.2_vite@3.1.8+vue@3.2.47
   '@vitejs/plugin-vue-jsx': 2.1.1_vite@3.1.8+vue@3.2.47
   '@volar/vue-language-plugin-pug': 1.0.24
