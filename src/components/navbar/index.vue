@@ -25,7 +25,7 @@
               | {{ label }}
 </template>
 
-<script lang="ts" setup>
+<script lang="ts" setup name="NavBar">
   import router from '@/router'
 
   const appStore = useAppStore()

@@ -15,16 +15,17 @@ a-layout.layout-container
   import useResponsive from '@/hooks/responsive'
   import PageLayout from './page-layout.vue'
 
-  const appStore = useAppStore()
   useResponsive(true)
   const navbarHeight = `52px`
-  const navbar = computed(() => appStore.navbar)
-  const footer = computed(() => appStore.footer)
+
+  const { navbar, footer, guideModal } = storeToRefs(useAppStore())
 
   const paddingStyle = computed(() => {
     const paddingTop = navbar.value ? { paddingTop: navbarHeight } : {}
     return { ...paddingTop }
   })
+
+  guideModal.value = true
 </script>
 
 <style scoped lang="less">
