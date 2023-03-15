@@ -20,5 +20,5 @@
   "serverMenu": [],
   "codeType": "sql",
   "isCloud": false,
-  "guideModal": true
+  "guideModal": false
 }
