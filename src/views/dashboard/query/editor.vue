@@ -1,13 +1,18 @@
 <template lang="pug">
 a-card(:bordered="false").editor-card
   a-space(size="medium").button-space
-    a-button(:loading="primaryCodeRunning" @click="runSqlCommand()" type="primary")
+    a-button(@click="runSqlCommand()" type="primary")
+      .mr-4
+        icon-loading(spin v-if="primaryCodeRunning")
+        icon-play-arrow(v-else)
       | {{$t('dataExplorer.runAll')}}
     a(@click="runPartSqlCommand()")
-      a-button(:loading="secondaryCodeRunning" v-if="lineStart === lineEnd")
-        | {{$t('dataExplorer.runLine')}} {{ lineStart }}
-      a-button(:loading="secondaryCodeRunning" v-else)
-        | {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
+      a-button(:loading="secondaryCodeRunning")
+        .mr-4
+          icon-loading(spin v-if="secondaryCodeRunning")
+          icon-play-arrow(v-else)
+        div(v-if="lineStart === lineEnd") {{$t('dataExplorer.runLine')}} {{ lineStart }}
+        div(v-else) {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
   CodeMirror(v-model="sqlCode" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
 

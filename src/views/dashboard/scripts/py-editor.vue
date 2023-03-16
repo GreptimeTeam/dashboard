@@ -7,7 +7,11 @@ a-card(:bordered="false").editor-card
     a-space
       a-button(v-if="isChanged" @click="saveCurrentScript()") {{$t('dataExplorer.saveScript')}}
       a-button(v-if="isChanged" @click="saveScriptAndRun()") {{$t('dataExplorer.saveAndRun')}}
-      a-button(:loading="secondaryCodeRunning" v-if="ifCanRun" @click="run()" ) {{$t('dataExplorer.runScriptAction')}}
+      a-button(v-if="ifCanRun" @click="run()") 
+        .mr-4
+          icon-loading(spin v-if="secondaryCodeRunning")
+          icon-play-arrow(v-else)
+        | {{$t('dataExplorer.runScriptAction')}}
   CodeMirror(v-model="pythonCode" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
 
