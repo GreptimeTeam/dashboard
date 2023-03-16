@@ -1,12 +1,12 @@
 <template lang="pug">
 a-card(:bordered="false").editor-card
   a-space(size="medium").button-space
-    a-button(@click="runSqlCommand()" type="primary")
+    a-button(:loading="primaryCodeRunning" @click="runSqlCommand()" type="primary")
       | {{$t('dataExplorer.runAll')}}
     a(@click="runPartSqlCommand()")
-      a-button(v-if="lineStart === lineEnd")
+      a-button(:loading="secondaryCodeRunning" v-if="lineStart === lineEnd")
         | {{$t('dataExplorer.runLine')}} {{ lineStart }}
-      a-button(v-else)
+      a-button(:loading="secondaryCodeRunning" v-else)
         | {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
   CodeMirror(v-model="sqlCode" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
@@ -36,7 +36,8 @@ a-card(:bordered="false").editor-card
   const selectedCode = ref()
   const view = shallowRef()
 
-  const { fetchSQLResult, runCode } = useCodeRunStore()
+  const { runCode } = useCodeRunStore()
+  const { primaryCodeRunning, secondaryCodeRunning } = storeToRefs(useCodeRunStore())
   const { sqlCode, cursorAt } = useDataExplorer()
 
   const handleReady = (payload: any) => {
@@ -71,12 +72,14 @@ a-card(:bordered="false").editor-card
 
   // todo: combine next 2 functions
   const runSqlCommand = () => {
+    primaryCodeRunning.value = true
     // todo: add better format tool for code
     runCode(sqlCode.value.trim().replace(/\n/gi, ' '))
     // todo: refresh tables data and when
   }
 
   const runPartSqlCommand = () => {
+    secondaryCodeRunning.value = true
     runCode(selectedCode.value.trim())
   }
 </script>
