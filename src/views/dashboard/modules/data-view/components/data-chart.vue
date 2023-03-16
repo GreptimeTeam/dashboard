@@ -9,10 +9,10 @@ a-card(:bordered="false" v-if="schema")
     a-row
       a-form.chart-form(:model="chartForm" layout="inline" :onChange="drawChart()")
         a-form-item(:label="$t('dataExplorer.chartType')")
-          a-select(v-model="chartForm.chartType")
+          a-select(v-model="chartForm.chartType" :trigger-props="triggerProps")
             a-option(v-for="item of chartTypeOptions" :key="item.key" :value="item.value" :label="item.value")
         a-form-item.select-y(:label="$t('dataExplorer.yType')")
-          a-select(v-model="chartForm.ySelectedTypes" :placeholder="$t('dataExplorer.selectY')" multiple :allow-search="false")
+          a-select(v-model="chartForm.ySelectedTypes" :placeholder="$t('dataExplorer.selectY')" multiple :allow-search="false" :trigger-props="triggerProps")
             a-option(v-for="item of yOptions" :key="item.value" :value="item.value") {{ item.value }}
     a-row
       Chart.chart-area(height="330px" :option="option" :update-options="updateOptions" )
@@ -20,6 +20,11 @@ a-card(:bordered="false" v-if="schema")
 
 <script lang="ts" setup>
   import { chartTypeOptions, updateOptions, numberTypes } from '../config'
+
+  // TODO: To add this props in every select should not be the best option.
+  const triggerProps = {
+    'update-at-scroll': true,
+  }
 
   const { currentResult } = storeToRefs(useCodeRunStore())
   const option = ref({})
