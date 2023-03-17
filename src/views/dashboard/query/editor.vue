@@ -7,7 +7,7 @@ a-card(:bordered="false").editor-card
         icon-play-arrow(v-else)
       | {{$t('dataExplorer.runAll')}}
     a(@click="runPartSqlCommand()")
-      a-button(:loading="secondaryCodeRunning")
+      a-button
         .mr-4
           icon-loading(spin v-if="secondaryCodeRunning")
           icon-play-arrow(v-else)
@@ -75,12 +75,11 @@ a-card(:bordered="false").editor-card
 
   const extensions = [sql(), oneDark]
 
-  // todo: combine next 2 functions
   const runSqlCommand = () => {
     primaryCodeRunning.value = true
-    // todo: add better format tool for code
+    // TODO: add better format tool for code
     runCode(sqlCode.value.trim().replace(/\n/gi, ' '))
-    // todo: refresh tables data and when
+    // TODO: refresh tables data and when
   }
 
   const runPartSqlCommand = () => {

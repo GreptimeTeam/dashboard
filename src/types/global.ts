@@ -1,5 +1,13 @@
 export interface AnyObject {
-  [key: string]: unknown
+  [key: string]: any
+}
+
+export interface StringObject {
+  [key: string]: string
+}
+
+export interface NumberObject {
+  [key: string]: number
 }
 
 export interface Options {

@@ -2,20 +2,21 @@ import editorAPI from '@/api/editor'
 import { Message } from '@arco-design/web-vue'
 import { defineStore } from 'pinia'
 import { dateTypes } from '@/views/dashboard/modules/data-view/config'
-import { keyType, resultsType, resultType } from './types'
+import { AnyObject, NumberObject } from '@/types/global'
+import { ResultsType, ResultType } from './types'
 import useLogStore from '../log'
 import useAppStore from '../app'
 
 const useCodeRunStore = defineStore('codeRun', () => {
-  const titleIndex = ref<keyType>({
+  const titleIndex = ref<NumberObject>({
     sql: -1,
     python: -1,
   })
-  const results = ref<resultsType>({
-    sql: [] as Array<resultType>,
-    python: [] as Array<resultType>,
+  const results = ref<ResultsType>({
+    sql: [] as Array<ResultType>,
+    python: [] as Array<ResultType>,
   })
-  const activeTabKey = ref<keyType>({
+  const activeTabKey = ref<NumberObject>({
     sql: 0,
     python: 0,
   })
@@ -24,18 +25,17 @@ const useCodeRunStore = defineStore('codeRun', () => {
   const { codeType } = storeToRefs(useAppStore())
 
   const currentResult = computed(() => {
-    // TODO: What's the best way to set types in computed?
-     const defaultValue = { 
-        records: {
-          rows: [],
-          schema: { column_schemas: [] },
-        },
-        dimensionsAndXName: [],
-      }
-      
-      const result = results.value[codeType.value].find((item: resultType) => item.key === activeTabKey.value[codeType.value])
-    
-      return result || defaultValue
+    const defaultValue = {
+      records: {
+        rows: [],
+        schema: { column_schemas: [] },
+      },
+      dimensionsAndXName: [],
+    }
+    const result = results.value[codeType.value].find(
+      (item: ResultType) => item.key === activeTabKey.value[codeType.value]
+    )
+    return result || defaultValue
   })
 
   // TODO: Add all the types we decide instead of ECharts if needed in the future.
@@ -58,14 +58,15 @@ const useCodeRunStore = defineStore('codeRun', () => {
     return [tempDimensions, xAxisName]
   }
 
+  const API_MAP: AnyObject = {
+    sql: editorAPI.getSqlResult,
+    python: editorAPI.runScript,
+  }
+
   const runCode = async (codeInfo: string) => {
     try {
       let res: any = {}
-      if (codeType.value === 'sql') {
-        res = await editorAPI.getSqlResult(codeInfo)
-      } else {
-        res = await editorAPI.runScript(codeInfo)
-      }
+      res = await API_MAP[codeType.value](codeInfo)
       Message.success({
         content: 'run success',
         duration: 2 * 1000,
@@ -150,11 +151,11 @@ const useCodeRunStore = defineStore('codeRun', () => {
       clearResults()
       return
     }
-    let deletedTabIndex = results.value[codeType.value].findIndex((item: resultType) => item.key === key)
+    let deletedTabIndex = results.value[codeType.value].findIndex((item: ResultType) => item.key === key)
     if (deletedTabIndex + 1 === results.value[codeType.value].length) {
       deletedTabIndex -= 1
     }
-    results.value[codeType.value] = results.value[codeType.value].filter((item: resultType) => item.key !== key)
+    results.value[codeType.value] = results.value[codeType.value].filter((item: ResultType) => item.key !== key)
 
     activeTabKey.value[codeType.value] = results.value[codeType.value][deletedTabIndex].key
   }

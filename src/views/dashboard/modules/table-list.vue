@@ -73,8 +73,13 @@ a-space(direction="vertical" size="medium" fill)
     })
   }
 
+  const INSERT_MAP: { [key: string]: any } = {
+    sql: insertNameToCode,
+    python: insertNameToPyCode,
+  }
+
   const insertName = (name: string) => {
-    return codeType.value === 'sql' ? insertNameToCode(name) : insertNameToPyCode(name)
+    return INSERT_MAP[codeType.value](name)
   }
 
   const ICON_MAP: { [key: string]: string } = {
