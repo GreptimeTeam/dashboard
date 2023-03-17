@@ -22,12 +22,8 @@ a-modal.guide-modal(v-model:visible="guideModal" :mask-closable="false" :ok-text
   })
 
   const handleOk = () => {
-    if (codeType.value === 'sql') {
-      getTables()
-    } else {
-      getTables()
-      getScriptsTable()
-    }
+    getTables()
+    if (codeType.value === 'python') getScriptsTable()
     guideModal.value = false
   }
 </script>

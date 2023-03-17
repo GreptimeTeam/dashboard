@@ -1,10 +1,14 @@
-export interface resultType {
-  result?: string
-  sql?: string
-  error?: string
-  name?: string
+export interface ResultType {
+  records: RecordsType
+  dimensionsAndXName: any[]
+  key: number
 }
 
-export interface resultsType {
-  [key: string]: any[]
+export interface RecordsType {
+  rows: any[]
+  schema: { column_schemas: any[] }
+}
+
+export interface ResultsType {
+  [key: string]: ResultType[]
 }

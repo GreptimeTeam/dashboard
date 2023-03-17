@@ -1,5 +1,5 @@
 <template lang="pug">
-.fixed-settings(v-if="!appStore.navbar" @click="setVisible")
+.fixed-settings(v-if="!navbar" @click="setVisible")
   a-button(type="primary")
     template(#icon)
       icon-settings
@@ -22,35 +22,33 @@ a-drawer(:width="262" unmount-on-close :visible="globalSettings" :mask-closable=
 
   const emit = defineEmits(['cancel'])
 
-  const appStore = useAppStore()
-  const dataBaseStore = useDataBaseStore()
+  const { host, navbar, updateSettings } = useAppStore()
+  const { getTables, getScriptsTable } = useDataBaseStore()
 
   const { t } = useI18n()
-  const { copy } = useClipboard()
-  const { globalSettings } = storeToRefs(appStore)
+
+  const { globalSettings, codeType } = storeToRefs(useAppStore())
+
+  // TODO: import AnyObject from global.ts
+  const TABLES_MAP: { [key: string]: any } = {
+    sql: getTables,
+    python: getScriptsTable,
+  }
 
   const cancel = () => {
-    appStore.updateSettings({ globalSettings: false })
-    axios.defaults.baseURL = appStore.host
-    if (appStore.codeType === 'sql') {
-      dataBaseStore.getTables()
-    } else {
-      dataBaseStore.getScriptsTable()
-    }
+    updateSettings({ globalSettings: false })
+    axios.defaults.baseURL = host
+    TABLES_MAP[codeType.value]()
 
     emit('cancel')
   }
-  const copySettings = async () => {
-    const text = JSON.stringify(appStore.$state, null, 2)
-    await copy(text)
-    Message.success(t('settings.copySettings.message'))
-  }
+
   const setVisible = () => {
-    appStore.updateSettings({ globalSettings: true })
+    updateSettings({ globalSettings: true })
   }
 
   onMounted(() => {
-    axios.defaults.baseURL = appStore.host
+    axios.defaults.baseURL = host
   })
 </script>
 

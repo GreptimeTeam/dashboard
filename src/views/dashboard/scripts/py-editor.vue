@@ -7,7 +7,11 @@ a-card(:bordered="false").editor-card
     a-space
       a-button(v-if="isChanged" @click="saveCurrentScript()") {{$t('dataExplorer.saveScript')}}
       a-button(v-if="isChanged" @click="saveScriptAndRun()") {{$t('dataExplorer.saveAndRun')}}
-      a-button(v-if="ifCanRun" @click="run()") {{$t('dataExplorer.runScriptAction')}}
+      a-button(v-if="ifCanRun" @click="run()") 
+        .mr-4
+          icon-loading(spin v-if="secondaryCodeRunning")
+          icon-play-arrow(v-else)
+        | {{$t('dataExplorer.runScriptAction')}}
   CodeMirror(v-model="pythonCode" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
 
@@ -35,6 +39,7 @@ a-card(:bordered="false").editor-card
   const { pythonCode, cursorAt, lastSavedCode, isNewScript, scriptName, isChanged, selectAfterSave, createNewScript } =
     usePythonCode()
   const { saveScript, runCode } = useCodeRunStore()
+  const { secondaryCodeRunning } = storeToRefs(useCodeRunStore())
   const { getScriptsTable } = dataBaseStore
 
   const lineStart = ref()
@@ -94,12 +99,14 @@ a-card(:bordered="false").editor-card
   const saveScriptAndRun = async () => {
     await saveScript(scriptForm.value.scriptName, pythonCode.value.trim())
     lastSavedCode.value = pythonCode.value
+    secondaryCodeRunning.value = true
     runCode(scriptForm.value.scriptName)
     await getScriptsTable()
     selectAfterSave(scriptForm.value.scriptName)
   }
 
   const run = () => {
+    secondaryCodeRunning.value = true
     runCode(scriptForm.value.scriptName)
   }
 </script>
