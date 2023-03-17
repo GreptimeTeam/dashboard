@@ -1,9 +1,8 @@
 <template lang="pug">
 a-card(:bordered="false").editor-card
-  a-space(size="medium").form-space
-    a-form(:model="scriptForm" layout="inline")
-      a-form-item(:label="$t('dataExplorer.scriptName')" )
-        a-input(v-model:model-value="scriptForm.scriptName" :placeholder="$t('dataExplorer.input')" v-bind:disabled="!isNewScript") 
+  a-form.script-form(:model="scriptForm" layout="inline")
+    a-form-item(:label="$t('dataExplorer.scriptName')" )
+      a-input(v-model:model-value="scriptForm.scriptName" :placeholder="$t('dataExplorer.input')" v-bind:disabled="!isNewScript") 
     a-space
       a-button(v-if="isChanged" @click="saveCurrentScript()") {{$t('dataExplorer.saveScript')}}
       a-button(v-if="isChanged" @click="saveScriptAndRun()") {{$t('dataExplorer.saveAndRun')}}
