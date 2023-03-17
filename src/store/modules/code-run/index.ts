@@ -25,15 +25,17 @@ const useCodeRunStore = defineStore('codeRun', () => {
 
   const currentResult = computed(() => {
     // TODO: What's the best way to set types in computed?
-    return (
-      results.value[codeType.value].find((item: resultType) => item.key === activeTabKey.value[codeType.value]) || {
+     const defaultValue = { 
         records: {
           rows: [],
           schema: { column_schemas: [] },
         },
         dimensionsAndXName: [],
       }
-    )
+      
+      const result = results.value[codeType.value].find((item: resultType) => item.key === activeTabKey.value[codeType.value])
+    
+      return result || defaultValue
   })
 
   // TODO: Add all the types we decide instead of ECharts if needed in the future.
