@@ -70,7 +70,7 @@
     "@types/cross-storage": "^0.8.30",
     "@types/lodash": "^4.14.191",
     "@types/mockjs": "^1.0.7",
-    "@types/node": "^18.11.18",
+    "@types/node": "^18.15.3",
     "@types/nprogress": "^0.2.0",
     "@types/qs": "^6.9.7",
     "@types/sortablejs": "^1.15.0",
