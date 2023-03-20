@@ -11,7 +11,7 @@ a-tabs.result-tabs.logs-tab(type="rounded")
               | {{ item.startTime }} 
               a-divider(direction="vertical")
               | {{$t('dataExplorer.error')}}: {{item.error}}
-          a-space.log-space(v-else-if="item.execution_time_ms" size="mini" fill)
+          a-space.log-space(v-else-if="item.execution_time_ms!==undefined" size="mini" fill)
             template(#split)
               a-divider(direction="vertical")
             div {{ item.startTime }}
