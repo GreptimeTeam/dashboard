@@ -10,21 +10,21 @@ a-tabs.result-tabs(type="rounded" lazy-load :active-key="activeTabKey[codeType]"
           a-space(size="mini")
             img(src="/src/assets/images/table.png" height="20")
             | {{$t('dataExplorer.table')}}
-        DataGrid
+        DataGrid(:data="currentResult")
       a-card(:bordered="false")
         template(#title)
           a-space(size="mini")
             svg.card-icon
               use(href="#chart")
             | {{$t('dataExplorer.chart')}}
-        DataChart
+        DataChart(:data="currentResult")
 </template>
 
 <script lang="ts" name="DataView" setup>
   import { useCodeRunStore, useAppStore } from '@/store'
 
   const { codeType } = storeToRefs(useAppStore())
-
+  const { currentResult } = useCodeRunStore()
   const { setActiveTabKey, removeResult, clearResults } = useCodeRunStore()
   const { results, activeTabKey } = storeToRefs(useCodeRunStore())
 

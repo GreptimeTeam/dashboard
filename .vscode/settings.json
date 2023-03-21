@@ -1,3 +1,13 @@
 {
-  "cSpell.words": ["affectedrows", "autoresize", "axios", "echarts", "Greptime", "hoverable", "pinia", "sider"]
+  "cSpell.words": [
+    "affectedrows",
+    "autoresize",
+    "axios",
+    "echarts",
+    "grecaptcha",
+    "Greptime",
+    "hoverable",
+    "pinia",
+    "sider"
+  ]
 }

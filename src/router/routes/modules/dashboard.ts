@@ -33,6 +33,16 @@ const DASHBOARD: AppRouteRecordRaw = {
         roles: ['dev'],
       },
     },
+    {
+      path: 'notebook',
+      name: 'notebook',
+      component: () => import('@/views/dashboard/notebook/index.vue'),
+      meta: {
+        locale: 'menu.dashboard.scripts',
+        requiresAuth: false,
+        roles: ['dev'],
+      },
+    },
   ],
 }
 

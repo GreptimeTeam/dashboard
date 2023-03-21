@@ -1,65 +1,67 @@
-.log-error {
-  height: 100%;
-  padding: 0 16px;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  background-color: var(--danger-bg-color);
-  border-radius: 4px;
-}
-
-.log-space {
-  padding-left: 16px;
-
-  .arco-space-item:last-of-type {
+.log {
+  .log-error {
+    height: 100%;
+    padding: 0 16px;
     overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    background-color: var(--danger-bg-color);
+    border-radius: 4px;
+  }
 
-    > div {
+  .log-space {
+    padding-left: 16px;
+
+    .arco-space-item:last-of-type {
       overflow: hidden;
-      text-overflow: ellipsis;
+
+      > div {
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
     }
   }
-}
 
-.arco-list {
-  color: var(--small-font-color);
-  font-size: 12px;
-  border-radius: 8px;
-}
+  .arco-list {
+    color: var(--small-font-color);
+    font-size: 12px;
+    border-radius: 8px;
+  }
 
-.arco-list-item-main {
-  height: 100%;
-  overflow: hidden;
-  font-size: 14px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-
-  .arco-list-item-content {
+  .arco-list-item-main {
     height: 100%;
-    line-height: 38px;
-  }
-}
+    overflow: hidden;
+    font-size: 14px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 
-.arco-list-item {
-  align-items: center;
-  height: 38px;
-  padding: 0 !important;
-}
-
-.arco-list-item:nth-child(even) {
-  background-color: inherit !important;
-}
-
-.arco-list-item:nth-child(odd) {
-  background-color: var(--grey-bg-color);
-}
-
-.logs-tab {
-  .arco-tabs-tab-active {
-    cursor: default;
+    .arco-list-item-content {
+      height: 100%;
+      line-height: 38px;
+    }
   }
 
-  .arco-tabs-nav-type-rounded .arco-tabs-tab {
-    padding: 0 24px;
+  .arco-list-item {
+    align-items: center;
+    height: 38px;
+    padding: 0 !important;
+  }
+
+  .arco-list-item:nth-child(even) {
+    background-color: inherit !important;
+  }
+
+  .arco-list-item:nth-child(odd) {
+    background-color: var(--grey-bg-color);
+  }
+
+  .logs-tab {
+    .arco-tabs-tab-active {
+      cursor: default;
+    }
+
+    .arco-tabs-nav-type-rounded .arco-tabs-tab {
+      padding: 0 24px;
+    }
   }
 }

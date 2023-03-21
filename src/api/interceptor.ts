@@ -20,9 +20,12 @@ axios.interceptors.request.use(
   (config: AxiosRequestConfig) => {
     const appStore = useAppStore()
     const basicAuth = `Basic ${btoa(`${appStore.username}:${appStore.password}`)}`
-
     if (!config.headers) {
       config.headers = {}
+    }
+    if (appStore.database) {
+      if (!config.params) config.params = {}
+      config.params.db = appStore.database
     }
     config.headers.authorization = basicAuth
 
@@ -42,7 +45,7 @@ axios.interceptors.response.use(
     const res = response.data
 
     // if the custom code is not 0, it is judged as an error.
-    if (res.code !== 0) {
+    if (res.code && res.code !== 0) {
       Message.error({
         content: res.error || 'Error',
         duration: 2 * 1000,
@@ -57,6 +60,7 @@ axios.interceptors.response.use(
     }
   },
   (error) => {
+    console.log(`error:`, error)
     if (error.response.status === 401) {
       const appStore = useAppStore()
       appStore.updateSettings({ globalSettings: true })

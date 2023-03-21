@@ -4,14 +4,20 @@ a-spin(style='width: 100%')
 </template>
 
 <script lang="ts" setup>
-  const { currentResult } = storeToRefs(useCodeRunStore())
+  const props = defineProps({
+    data: {
+      type: Object,
+      default: () => ({}),
+    },
+  })
+
   const pagination = {
-    'total': currentResult.value.records.rows.length,
+    'total': props.data.records.rows.length,
     'show-page-size': true,
   }
 
   const gridColumn = computed(() => {
-    return currentResult.value.records.schema.column_schemas.map((column: any) => {
+    return props.data.records.schema.column_schemas.map((column: any) => {
       return {
         title: column.name,
         dataIndex: column.name.replace(/\./gi, '-'),
@@ -20,10 +26,10 @@ a-spin(style='width: 100%')
   })
 
   const gridData = computed(() => {
-    return currentResult.value.records.rows.map((row: any) => {
+    return props.data.records.rows.map((row: any) => {
       const tempRow: any = {}
       row.forEach((item: any, index: number) => {
-        const columnName = currentResult.value.records.schema.column_schemas[index].name.replace(/\./gi, '-')
+        const columnName = props.data.records.schema.column_schemas[index].name.replace(/\./gi, '-')
         tempRow[columnName] = item
       })
       return tempRow

@@ -15,7 +15,13 @@ a-spin(style="width: 100%")
 <script lang="ts" setup>
   import { chartTypeOptions, updateOptions, numberTypes } from '../config'
 
-  const { currentResult } = storeToRefs(useCodeRunStore())
+  const props = defineProps({
+    data: {
+      type: Object,
+      default: () => ({}),
+    },
+  })
+
   const option = ref({})
   const chartForm = reactive({
     chartType: 'line',
@@ -24,7 +30,7 @@ a-spin(style="width: 100%")
 
   // TODO: Add support for more data types not just numbers.
   const yOptions = computed(() => {
-    return currentResult.value.records.schema.column_schemas
+    return props.data.records.schema.column_schemas
       .filter((item: any) => numberTypes.find((type: string) => type === item.data_type))
       .map((item: any) => ({
         value: item.name,
@@ -40,7 +46,7 @@ a-spin(style="width: 100%")
         type: chartType,
         smooth: false,
         encode: {
-          x: currentResult.value.dimensionsAndXName[1],
+          x: props.data.dimensionsAndXName[1],
           y: item,
         },
         symbolSize: 4,
@@ -66,8 +72,8 @@ a-spin(style="width: 100%")
         trigger: 'axis',
       },
       dataset: {
-        dimensions: currentResult.value.dimensionsAndXName[0],
-        source: currentResult.value.records.rows,
+        dimensions: props.data.dimensionsAndXName[0],
+        source: props.data.records.rows,
       },
       xAxis: {
         type: 'time',

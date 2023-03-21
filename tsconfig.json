@@ -17,6 +17,6 @@
     "skipLibCheck": true,
     "noUnusedLocals": false
   },
-  "include": ["src/**/*", "src/**/*.vue", "*.ts"],
+  "include": ["src/**/*", "src/**/*.vue", "*.ts", "config/utils/markdown-it-custom-code.ts"],
   "exclude": ["node_modules"]
 }

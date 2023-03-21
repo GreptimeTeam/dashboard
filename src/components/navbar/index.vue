@@ -8,7 +8,11 @@
         | Query
       a-menu-item(key="scripts")
         | Scripts
+      a-menu-item(key="notebook")
+        | Notebook
   ul.right-side
+    li
+      a-button(type="primary" @click="getNewDatabase") Get New Database
     li
       a-tooltip(:content="$t('settings.title')")
         div.pointer
@@ -27,6 +31,7 @@
 
 <script lang="ts" setup>
   import router from '@/router'
+  import { postPlayground } from '@/api/playground'
 
   const appStore = useAppStore()
   const menuSelectedKey = router.currentRoute.value.name
@@ -57,6 +62,23 @@
 
   const menuClick = (key: string) => {
     router.push({ name: key })
+  }
+
+  const getNewDatabase = async () => {
+    window.grecaptcha.ready(() => {
+      window.grecaptcha
+        .execute('6LcsBPgkAAAAAKiPrwh3pFCKpv9hc62eRhL5bj5A', { action: 'submit' })
+        .then(async (token: string) => {
+          try {
+            const data = await postPlayground(token)
+            window.open(
+              `https://${data.domain['aws/test-ap-southeast-1']}/dashboard/notebook?username=${data.username}&password=${data.password}&database=${data.dbId}`
+            )
+          } catch (error) {
+            console.log(`error:`, error)
+          }
+        })
+    })
   }
 </script>
 

@@ -1,9 +1,11 @@
 <template>
-  <a-config-provider :locale="locale">
-    <router-view />
-    <guide-modal />
-    <global-setting />
-  </a-config-provider>
+  <Suspense>
+    <a-config-provider :locale="locale">
+      <router-view />
+      <guide-modal />
+      <global-setting />
+    </a-config-provider>
+  </Suspense>
 </template>
 
 <script lang="ts" setup>

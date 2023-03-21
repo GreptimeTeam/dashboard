@@ -22,12 +22,14 @@ a-card(:bordered="false").editor-card
     autofocus?: boolean
     indentWithTab?: boolean
     tabSize?: number
+    sqlCode?: string
   }
   const props = withDefaults(defineProps<Props>(), {
     spellcheck: true,
     autofocus: true,
     indentWithTab: true,
     tabSize: 2,
+    sqlCode: '',
   })
 
   const lineStart = ref()
@@ -45,6 +47,11 @@ a-card(:bordered="false").editor-card
     view.value = payload.view
   }
 
+  onMounted(() => {
+    if (props.sqlCode) {
+      sqlCode.value = props.sqlCode
+    }
+  })
   // TODO: Try something better. CodeUpdate is constantly changing and the cost is too much.
   const codeUpdate = () => {
     if (view.value) {

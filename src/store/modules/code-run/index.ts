@@ -60,6 +60,7 @@ const useCodeRunStore = defineStore('codeRun', {
           duration: 2 * 1000,
         })
         const resultInLog: any = []
+        const resultRecords: any = []
         res.output.forEach((oneRes: any) => {
           if ('records' in oneRes) {
             resultInLog.push({
@@ -67,7 +68,7 @@ const useCodeRunStore = defineStore('codeRun', {
             })
             if (oneRes.records.rows.length > 0) {
               this.titleIndex.sql += 1
-              this.results.sql.push({
+              resultRecords.push({
                 records: oneRes.records,
                 dimensionsAndXName: getDimensionsAndXName(oneRes.records.schema.column_schemas),
                 key: this.titleIndex.sql,
@@ -81,16 +82,28 @@ const useCodeRunStore = defineStore('codeRun', {
           }
         })
 
-        useLogStore().pushLog({
+        const logs = {
           runCode: sql,
           ...res,
           result: resultInLog,
-        })
+        }
+        useLogStore().pushLog(logs)
+        this.results.sql = this.results.sql.concat(resultRecords)
+
+        return {
+          logs,
+          record: resultRecords.slice(-1)[0],
+        }
       } catch (error: any) {
-        useLogStore().pushLog({
+        const logs = {
           runCode: sql,
           ...error,
-        })
+        }
+        useLogStore().pushLog(logs)
+
+        return {
+          logs,
+        }
       }
     },
 

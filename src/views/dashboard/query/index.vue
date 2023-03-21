@@ -6,7 +6,7 @@ a-layout.layout
     a-space(direction="vertical" fill size="large")
       Editor 
       DataView(v-if="!!results.sql.length")
-      Log 
+      Logs
 </template>
 
 <script lang="ts" name="DataExplorer" setup>

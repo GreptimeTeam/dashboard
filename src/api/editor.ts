@@ -14,21 +14,11 @@ const makeSqlData = (sql: string) => {
   })
 }
 
-const addDatabaseParams = () => {
-  const appStore = useAppStore()
-  return {
-    params: {
-      db: appStore.database,
-    },
-  } as AxiosRequestConfig
-}
-
 const makeScriptConfig = (name: string) => {
   const appStore = useAppStore()
   return {
     params: {
       name,
-      db: appStore.database,
     },
     headers: textHeaders,
   } as AxiosRequestConfig
@@ -39,15 +29,15 @@ const getDatabases = () => {
 }
 
 const getTables = () => {
-  return axios.post(sqlUrl, makeSqlData(`show tables`), addDatabaseParams())
+  return axios.post(sqlUrl, makeSqlData(`show tables`))
 }
 
 const getTableByName = (tableName: string) => {
-  return axios.post(sqlUrl, makeSqlData(`desc table ${tableName}`), addDatabaseParams())
+  return axios.post(sqlUrl, makeSqlData(`desc table ${tableName}`))
 }
 
 const getSqlResult = (code: string) => {
-  return axios.post(sqlUrl, makeSqlData(code), addDatabaseParams())
+  return axios.post(sqlUrl, makeSqlData(code))
 }
 
 const getScriptsTable = (db: string) => {
