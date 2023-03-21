@@ -22,8 +22,14 @@ a-tabs.result-tabs.logs-tab(type="rounded")
             div {{ $t('dataExplorer.executeTime', {time: item.execution_time_ms})}}
             div {{ $t('dataExplorer.network', {time: item.networkTime - item.execution_time_ms})}}
             div {{ $t('dataExplorer.total', {time: item.networkTime}) }}
-            a-tooltip(:content="item.codeInfo" v-if="codeType==='sql'")
-              div {{ $t('dataExplorer.code', {code: item.codeInfo}) }}
+            div(v-if="codeType==='sql'") 
+              a-tooltip(:content="copied? $t('dataExplorer.copied') : $t('dataExplorer.copyToClipboard')" mini)
+                svg.icon.pointer.vertical-center(name="copy" @click="copyToClipboard(item.codeInfo)")
+                  use(href="#copy")
+              span.code-space
+                span {{ $t('dataExplorer.code') }}
+                a-tooltip(:content="item.codeInfo")
+                  span {{ item.codeInfo }}
           a-space.log-space(v-else size="large" fill)
             template(#split)
               a-divider(direction="vertical")
@@ -32,10 +38,17 @@ a-tabs.result-tabs.logs-tab(type="rounded")
 
 <script lang="ts" name="Log" setup>
   import { useLogStore } from '@/store'
+  import { useClipboard } from '@vueuse/core'
   import { storeToRefs } from 'pinia'
+  import { format } from 'sql-formatter'
 
   const { logs } = storeToRefs(useLogStore())
   const { codeType } = storeToRefs(useAppStore())
 
   const { clearLogs } = useLogStore()
+  const { copy, copied } = useClipboard()
+
+  const copyToClipboard = (code: string) => {
+    copy(format(code, { language: 'mysql', keywordCase: 'upper' }))
+  }
 </script>
