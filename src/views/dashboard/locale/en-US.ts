@@ -32,4 +32,6 @@ export default {
   'dataExplorer.runScriptAction': 'Run Script',
   'dataExplorer.input': 'Please input...',
   'dataExplorer.question': 'Your changes will be lost. Are you sure you want to continue?',
+  'dataExplorer.copyToClipboard': 'Copy Code to Clipboard',
+  'dataExplorer.format': 'Format Code',
 }

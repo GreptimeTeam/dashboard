@@ -13,6 +13,10 @@ a-card(:bordered="false").editor-card
           icon-play-arrow(v-else)
         div(v-if="lineStart === lineEnd") {{$t('dataExplorer.runLine')}} {{ lineStart }}
         div(v-else) {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
+    a-tooltip(:content="$t('dataExplorer.format')" mini)
+      svg.icon-20.pointer(name="format" @click="formatCode()")
+        use(href="#code")
+
   CodeMirror(v-model="sqlCode" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
 
@@ -22,6 +26,7 @@ a-card(:bordered="false").editor-card
   import { sql } from '@codemirror/lang-sql'
   import useDataExplorer from '@/hooks/data-explorer'
   import { useCodeRunStore } from '@/store'
+  import { format } from 'sql-formatter'
 
   export interface Props {
     spellcheck?: boolean
@@ -85,5 +90,9 @@ a-card(:bordered="false").editor-card
   const runPartSqlCommand = () => {
     secondaryCodeRunning.value = true
     runCode(selectedCode.value.trim())
+  }
+
+  const formatCode = () => {
+    sqlCode.value = format(sqlCode.value, { language: 'mysql', keywordCase: 'upper' })
   }
 </script>

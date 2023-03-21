@@ -52,6 +52,7 @@
     "qs": "^6.11.0",
     "query-string": "^8.1.0",
     "sortablejs": "^1.15.0",
+    "sql-formatter": "^12.1.3",
     "stylelint-config-rational-order-fix": "^0.1.9",
     "stylelint-config-recommended-less": "^1.0.4",
     "stylelint-config-recommended-vue": "^1.4.0",
