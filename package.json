@@ -35,6 +35,7 @@
   "dependencies": {
     "@arco-design/web-vue": "^2.41.0",
     "@babel/core": "^7.20.5",
+    "@babel/types": "^7.21.3",
     "@codemirror/lang-python": "^6.1.0",
     "@codemirror/lang-sql": "^6.3.1",
     "@codemirror/theme-one-dark": "^6.1.0",
