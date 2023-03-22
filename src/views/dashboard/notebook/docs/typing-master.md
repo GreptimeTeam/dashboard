@@ -48,10 +48,16 @@ v.addListener(function (e, down) {
 const saveKeypressEvent = async (metaKey) => {
   try {
     const response = await axios.post(
-      '{{host}}/v1/sql?db=public',
+      '{{host}}/v1/sql?db={{database}}',
       qs.stringify({
         sql: `INSERT INTO keymaster(key, ts) VALUES('${metaKey}', ${new Date().valueOf()})`,
-      })
+      }),
+       {
+          auth: {
+            username: '{{username}}',
+            password: '{{password}}',
+          },
+        }
     )
   } catch (error) {
     console.log(error)
@@ -74,10 +80,16 @@ const qs = require('qs')
 const getSQLResult = async (select, where) => {
   try {
     const res = await axios.post(
-      '{{host}}/v1/sql?db=public',
+      '{{host}}/v1/sql?db={{database}}',
       qs.stringify({
         sql: `select ${select.join()} as times from keymaster` + (where ? ` WHERE ${where}` : ''),
-      })
+      }),     
+      {
+        auth: {
+          username: '{{username}}',
+          password: '{{password}}',
+        },
+      }
     )
     return res.data.output[0].records
   } catch (error) {}
@@ -86,10 +98,16 @@ const getSQLResult = async (select, where) => {
 const setAPM = async (apm) => {
   try {
     const res = await axios.post(
-      '{{host}}/v1/sql?db=public',
+      '{{host}}/v1/sql?db={{database}}',
       qs.stringify({
         sql: `INSERT INTO apm(data, ts) VALUES(${apm}, ${new Date().valueOf()})`,
-      })
+      }),
+      {
+        auth: {
+          username: '{{username}}',
+          password: '{{password}}',
+        },
+      }
     )
     return res.data
   } catch (error) {}
@@ -97,21 +115,21 @@ const setAPM = async (apm) => {
 
 const getLetterCounts = async () => {
   const res = await getSQLResult(['key', 'COUNT(*)'], `LENGTH(key) < 2 Group by key order by times DESC limit 10`)
-  return res.rows
+  return res?.rows
 }
 const getGroupKeyCounts = async () => {
   const res = await getSQLResult(['key', 'COUNT(*)'], `key like '%+%' Group by key order by times DESC limit 10`)
-  return res.rows
+  return res?.rows
 }
 
 const getTotalKeyCounts = async () => {
   const res = await getSQLResult(['COUNT(*)'])
-  return res.rows[0][0]
+  return res?.rows[0][0]
 }
 
 const getLastMinuteKeyCounts = async () => {
   const res = await getSQLResult(['COUNT(*)'], `ts > ${new Date().valueOf() - 60000}`)
-  return res.rows[0][0]
+  return res?.rows[0][0]
 }
 
 ;(async () => {
@@ -122,13 +140,11 @@ const getLastMinuteKeyCounts = async () => {
 
   console.log(`T: ${totalKeyCount}/APM: ${lastMinuteKeyCounts}`)
   console.log('---')
-  // console.log(`|image=${image}`)
-  // console.log('---')
-  letterCounts.forEach((row) => {
+  letterCounts?.forEach((row) => {
     console.log(`${row[0]}: ${row[1]}|color=#fff`)
   })
   console.log('---')
-  groupKeyCounts.forEach((row) => {
+  groupKeyCounts?.forEach((row) => {
     console.log(`${row[0]}: ${row[1]}|color=#fff`)
   })
 
@@ -139,6 +155,18 @@ const getLastMinuteKeyCounts = async () => {
 配合`xbar`使用，可以在状态栏看到当前用户的输入统计
 
 ![](./Xnip2023-03-22_00-14-17.jpg)
+
+另一个选择可以使用watch工具循环运行这个脚本，mac用户可以先安装`watch`，同时下载上面的脚本保存为`repeate.js`
+
+```shell
+brew install watch
+```
+
+然后让脚本每5秒钟运行
+
+```shell
+watch -n 5 node repeat.js
+```
 
 从按键频率不难看出，我是一个`vim`党，习惯使用快捷键关闭窗口，不保存难受星人，一次复制多次粘贴选手，反撤销比撤销次数还多的纠结少年。
 
@@ -163,7 +191,7 @@ LIMIT
 如果使用了前面的定时脚本，那么下面这段SQL应该可以绘制出最近一个小时你的APM
 
 ```sql
-SELECT * FROM apm2 ORDER BY ts DESC LIMIT 3600
+SELECT * FROM apm ORDER BY ts DESC LIMIT 3600
 ```
 
 这是我的结果：
