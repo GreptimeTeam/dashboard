@@ -3,6 +3,7 @@ import { Message } from '@arco-design/web-vue'
 import { defineStore } from 'pinia'
 import { dateTypes } from '@/views/dashboard/modules/data-view/config'
 import { AnyObject, NumberObject } from '@/types/global'
+import useDataExplorer from '@/hooks/data-explorer'
 import { ResultsType, ResultType } from './types'
 import useLogStore from '../log'
 import useAppStore from '../app'
@@ -23,6 +24,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
   const primaryCodeRunning = ref(false)
   const secondaryCodeRunning = ref(false)
   const { codeType } = storeToRefs(useAppStore())
+  const { queryType } = useDataExplorer()
 
   const currentResult = computed(() => {
     const defaultValue = {
