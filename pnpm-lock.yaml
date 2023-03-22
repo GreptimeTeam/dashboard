@@ -17,6 +17,7 @@ specifiers:
   '@prettier/plugin-pug': ^2.4.1
   '@types/cross-storage': ^0.8.30
   '@types/lodash': ^4.14.191
+  '@types/markdown-it': ^12.2.3
   '@types/mockjs': ^1.0.7
   '@types/node': ^18.11.18
   '@types/nprogress': ^0.2.0
@@ -125,6 +126,7 @@ devDependencies:
   '@prettier/plugin-pug': 2.4.1_prettier@2.7.1
   '@types/cross-storage': 0.8.30
   '@types/lodash': 4.14.191
+  '@types/markdown-it': 12.2.3
   '@types/mockjs': 1.0.7
   '@types/node': 18.11.18
   '@types/nprogress': 0.2.0
@@ -1251,8 +1253,23 @@ packages:
     resolution: {integrity: sha512-dRLjCWHYg4oaA77cxO64oO+7JwCwnIzkZPdrrC71jQmQtlhM556pwKo5bUzqvZndkVbeFLIIi+9TC40JNF5hNQ==}
     dev: true
 
+  /@types/linkify-it/3.0.2:
+    resolution: {integrity: sha512-HZQYqbiFVWufzCwexrvh694SOim8z2d+xJl5UNamcvQFejLY/2YUtzXHYi3cHdI7PMlS8ejH2slRAOJQ32aNbA==}
+    dev: true
+
   /@types/lodash/4.14.191:
     resolution: {integrity: sha512-BdZ5BCCvho3EIXw6wUCXHe7rS53AIDPLE+JzwgT+OsJk53oBfbSmZZ7CX4VaRoN78N+TJpFi9QPlfIVNmJYWxQ==}
+    dev: true
+
+  /@types/markdown-it/12.2.3:
+    resolution: {integrity: sha512-GKMHFfv3458yYy+v/N8gjufHO6MSZKCOXpZc5GXIWWy8uldwfmPn98vp81gZ5f9SVw8YYBctgfJ22a2d7AOMeQ==}
+    dependencies:
+      '@types/linkify-it': 3.0.2
+      '@types/mdurl': 1.0.2
+    dev: true
+
+  /@types/mdurl/1.0.2:
+    resolution: {integrity: sha512-eC4U9MlIcu2q0KQmXszyn5Akca/0jrQmwDRgpAMJai7qBWq4amIQhZyNau4VYGtCeALvW1/NtjzJJ567aZxfKA==}
     dev: true
 
   /@types/minimist/1.2.2:

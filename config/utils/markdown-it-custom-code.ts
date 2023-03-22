@@ -2,7 +2,7 @@ import type MarkdownIt from 'markdown-it'
 
 export default function customCode(md: MarkdownIt) {
   const fence = md.renderer.rules.fence!
-  md.renderer.rules.fence = (...args: any[]) => {
+  md.renderer.rules.fence = (...args) => {
     const rawCode = fence(...args)
 
     const res = rawCode.replace(

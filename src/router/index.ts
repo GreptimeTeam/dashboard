@@ -31,7 +31,7 @@ router.beforeEach(async (to, from, next) => {
   try {
     // TODO: Is it necessary to decide this every time we go to a new route?
     const appStore = useAppStore()
-    if (to.query.username && to.query.password && to.query.database) {
+    if (to.query.username && to.query.password) {
       appStore.updateSettings(to.query)
       to.query = {}
     }

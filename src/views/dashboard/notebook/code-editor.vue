@@ -30,15 +30,16 @@
   const { fetchSQLResult } = useCodeRunStore()
   const slots = useSlots()
   const appStore = useAppStore()
-  function codeFormat(code: string) {
+  function codeFormat(code: any) {
+    if (!code) return ''
+    code = code?.[0]?.children[0]?.children
     const keys = Object.keys(appStore)
     keys.forEach((key) => {
-      console.log(`code, key:`, code, key)
       code = code.replace(new RegExp(`{{${key}}}`, 'g'), appStore[key])
     })
     return code
   }
-  const defaultCode = codeFormat(slots.default()[0].children[0].children)
+  const defaultCode = codeFormat(slots?.default?.())
   const code = ref(defaultCode)
   const result = ref(null)
   const logs = ref(null)

@@ -12,7 +12,8 @@
         | Notebook
   ul.right-side
     li
-      a-button(type="primary" @click="getNewDatabase") Get New Database
+      a-button(type="primary" @click="createPlayground") Open New playground
+      a-button(type="primary" @click="showPlayground") show Playground Info
     li
       a-tooltip(:content="$t('settings.title')")
         div.pointer
@@ -31,7 +32,7 @@
 
 <script lang="ts" setup>
   import router from '@/router'
-  import { postPlayground } from '@/api/playground'
+  import { postPlayground, getPlayground } from '@/api/playground'
 
   const appStore = useAppStore()
   const menuSelectedKey = router.currentRoute.value.name
@@ -64,21 +65,25 @@
     router.push({ name: key })
   }
 
-  const getNewDatabase = async () => {
+  const createPlayground = async () => {
     window.grecaptcha.ready(() => {
       window.grecaptcha
         .execute('6LcsBPgkAAAAAKiPrwh3pFCKpv9hc62eRhL5bj5A', { action: 'submit' })
         .then(async (token: string) => {
           try {
-            const data = await postPlayground(token)
+            const data = (await postPlayground(token)) as any
             window.open(
-              `https://${data.domain['aws/test-ap-southeast-1']}/dashboard/notebook?username=${data.username}&password=${data.password}&database=${data.dbId}`
+              `https://${data.domain['aws/test-ap-southeast-1']}/dashboard/notebook?username=${data.username}&password=${data.password}&database=${data.teamId}-${data.serviceName}&dbId=${data.dbId}`
             )
           } catch (error) {
             console.log(`error:`, error)
           }
         })
     })
+  }
+
+  const showPlayground = async () => {
+    const data = await getPlayground(appStore.dbId)
   }
 </script>
 
@@ -96,6 +101,10 @@
     .logo-text-img {
       height: 100%;
     }
+  }
+
+  .arco-btn {
+    margin-right: 10px;
   }
 
   .menu {

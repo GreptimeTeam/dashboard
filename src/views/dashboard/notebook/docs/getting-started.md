@@ -50,15 +50,7 @@ about Kubernetes deployment, check our [docs](https://docs.greptime.com/).
 
 ### Connect
 
-1. Connect to GreptimeDB via standard [MySQL
-   client](https://dev.mysql.com/downloads/mysql/):
-
-   ```
-   # The standalone instance listen on port 4002 by default.
-   mysql -h 127.0.0.1 -P 4002
-   ```
-
-2. Create table:
+1. Create table:
 
    ```SQL
    CREATE TABLE monitor (
@@ -70,7 +62,7 @@ about Kubernetes deployment, check our [docs](https://docs.greptime.com/).
      PRIMARY KEY(host)) ENGINE=mito WITH(regions=1);
    ```
 
-3. Insert some data:
+2. Insert some data:
 
    ```SQL
    INSERT INTO monitor(host, cpu, memory, ts) VALUES ('host1', 66.6, 1024, 1660897955000);
@@ -78,7 +70,7 @@ about Kubernetes deployment, check our [docs](https://docs.greptime.com/).
    INSERT INTO monitor(host, cpu, memory, ts) VALUES ('host3', 88.8, 4096, 1660897957000);
    ```
 
-4. Query the data:
+3. Query the data:
 
    ```SQL
    SELECT * FROM monitor;
