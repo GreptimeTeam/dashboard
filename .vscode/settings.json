@@ -1,3 +1,14 @@
 {
-  "cSpell.words": ["affectedrows", "autoresize", "axios", "echarts", "Greptime", "hoverable", "pinia", "sider", "VITE"]
+  "cSpell.words": [
+    "affectedrows",
+    "autoresize",
+    "axios",
+    "echarts",
+    "Greptime",
+    "hoverable",
+    "pinia",
+    "sider",
+    "VITE",
+    "promql"
+  ]
 }

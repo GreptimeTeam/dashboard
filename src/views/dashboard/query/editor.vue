@@ -1,12 +1,12 @@
 <template lang="pug">
 a-card(:bordered="false").editor-card
   a-space(size="medium").button-space
-    a-button(@click="runSqlCommand()" type="primary")
+    a-button(@click="runQuery()" type="primary")
       .mr-4
         icon-loading(spin v-if="primaryCodeRunning")
         icon-play-arrow(v-else)
       | {{$t('dataExplorer.runAll')}}
-    a(@click="runPartSqlCommand()")
+    a(@click="runPartQuery()")
       a-button
         .mr-4
           icon-loading(spin v-if="secondaryCodeRunning")
@@ -84,14 +84,14 @@ a-card(:bordered="false").editor-card
     return [promQL.asExtension(), oneDark]
   })
 
-  const runSqlCommand = () => {
+  const runQuery = () => {
     primaryCodeRunning.value = true
     // TODO: add better format tool for code
     runCode(queryCode.value[queryType.value].trim().replace(/\n/gi, ' '))
     // TODO: refresh tables data and when
   }
 
-  const runPartSqlCommand = () => {
+  const runPartQuery = () => {
     secondaryCodeRunning.value = true
     runCode(selectedCode.value.trim())
   }
