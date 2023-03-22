@@ -83,7 +83,14 @@
   }
 
   const showPlayground = async () => {
-    const data = await getPlayground(appStore.dbId)
+    window.grecaptcha.ready(() => {
+      window.grecaptcha
+        .execute('6LcsBPgkAAAAAKiPrwh3pFCKpv9hc62eRhL5bj5A', { action: 'submit' })
+        .then(async (token: string) => {
+          const data = await getPlayground(token, appStore.dbId)
+          alert(JSON.stringify(data, null, 2))
+        })
+    })
   }
 </script>
 

@@ -2,10 +2,11 @@ import { importDeclaration } from '@babel/types'
 import axios, { AxiosRequestConfig } from 'axios'
 import qs from 'qs'
 
-export const getPlayground = (dbId: string) => {
+export const getPlayground = (token: string, dbId: string) => {
   const url = 'https://api-preview.greptime.cloud/playground/db'
   return axios.get(url, {
     params: {
+      token,
       db_id: dbId,
     },
   } as AxiosRequestConfig)

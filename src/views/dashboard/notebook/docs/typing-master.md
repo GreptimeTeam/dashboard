@@ -48,7 +48,7 @@ v.addListener(function (e, down) {
 const saveKeypressEvent = async (metaKey) => {
   try {
     const response = await axios.post(
-      '{{host}}/sql?db=public',
+      '{{host}}/v1/sql?db=public',
       qs.stringify({
         sql: `INSERT INTO keymaster(key, ts) VALUES('${metaKey}', ${new Date().valueOf()})`,
       })
@@ -74,7 +74,7 @@ const qs = require('qs')
 const getSQLResult = async (select, where) => {
   try {
     const res = await axios.post(
-      '{{host}}/sql?db=public',
+      '{{host}}/v1/sql?db=public',
       qs.stringify({
         sql: `select ${select.join()} as times from keymaster` + (where ? ` WHERE ${where}` : ''),
       })
@@ -86,7 +86,7 @@ const getSQLResult = async (select, where) => {
 const setAPM = async (apm) => {
   try {
     const res = await axios.post(
-      '{{host}}/sql?db=public',
+      '{{host}}/v1/sql?db=public',
       qs.stringify({
         sql: `INSERT INTO apm(data, ts) VALUES(${apm}, ${new Date().valueOf()})`,
       })
