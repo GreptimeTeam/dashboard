@@ -33,6 +33,15 @@ const DASHBOARD: AppRouteRecordRaw = {
         roles: ['dev'],
       },
     },
+    {
+      path: 'playground',
+      name: 'playground',
+      component: () => import('@/views/dashboard/playground/index.vue'),
+      meta: {
+        locale: 'menu.dashboard.playground',
+        requiresAuth: false,
+      },
+    },
   ],
 }
 
