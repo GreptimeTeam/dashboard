@@ -36,7 +36,7 @@ const makeScriptConfig = (name: string) => {
 }
 
 const makePromParams = (code: string) => {
-  const { promForm } = useDataExplorer()
+  const { promForm } = useQueryCode()
   if (promForm.value.isRelative) {
     // TODO: move this into a function?
     promForm.value.end = new Date().getTime()

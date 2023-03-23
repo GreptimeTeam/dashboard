@@ -40,7 +40,6 @@ a-card(:bordered="false").editor-card
   import { oneDark } from '@codemirror/theme-one-dark'
   import { sql } from '@codemirror/lang-sql'
   import { PromQLExtension } from '@prometheus-io/codemirror-promql'
-  import useDataExplorer from '@/hooks/data-explorer'
   import { useCodeRunStore } from '@/store'
 
   export interface Props {
@@ -63,7 +62,7 @@ a-card(:bordered="false").editor-card
 
   const { runCode } = useCodeRunStore()
   const { primaryCodeRunning, secondaryCodeRunning } = storeToRefs(useCodeRunStore())
-  const { queryCode, queryType, cursorAt, queryOptions, promForm } = useDataExplorer()
+  const { queryCode, queryType, cursorAt, queryOptions, promForm } = useQueryCode()
 
   const handleReady = (payload: any) => {
     view.value = payload.view

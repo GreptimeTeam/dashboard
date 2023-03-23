@@ -3,28 +3,26 @@ import { Message } from '@arco-design/web-vue'
 import { defineStore } from 'pinia'
 import { dateTypes } from '@/views/dashboard/modules/data-view/config'
 import { AnyObject, NumberObject } from '@/types/global'
-import useDataExplorer from '@/hooks/data-explorer'
 import { ResultsType, ResultType } from './types'
 import useLogStore from '../log'
 import useAppStore from '../app'
 
 const useCodeRunStore = defineStore('codeRun', () => {
   const titleIndex = ref<NumberObject>({
-    sql: -1,
-    python: -1,
+    query: -1,
+    scripts: -1,
   })
   const results = ref<ResultsType>({
-    sql: [] as Array<ResultType>,
-    python: [] as Array<ResultType>,
+    query: [] as Array<ResultType>,
+    scripts: [] as Array<ResultType>,
   })
   const activeTabKey = ref<NumberObject>({
-    sql: 0,
-    python: 0,
+    query: 0,
+    scripts: 0,
   })
   const primaryCodeRunning = ref(false)
   const secondaryCodeRunning = ref(false)
-  const { codeType } = storeToRefs(useAppStore())
-  const { queryType } = useDataExplorer()
+  const { routeName, codeType } = storeToRefs(useAppStore())
 
   const currentResult = computed(() => {
     const defaultValue = {
@@ -34,8 +32,9 @@ const useCodeRunStore = defineStore('codeRun', () => {
       },
       dimensionsAndXName: [],
     }
-    const result = results.value[codeType.value].find(
-      (item: ResultType) => item.key === activeTabKey.value[codeType.value]
+
+    const result = results.value[routeName.value].find(
+      (item: ResultType) => item.key === activeTabKey.value[routeName.value]
     )
     return result || defaultValue
   })
@@ -82,14 +81,14 @@ const useCodeRunStore = defineStore('codeRun', () => {
             records: rowLength,
           })
           if (rowLength >= 0) {
-            titleIndex.value[codeType.value] += 1
+            titleIndex.value[routeName.value] += 1
             const oneResult = {
               records: oneRes.records,
               dimensionsAndXName: rowLength === 0 ? [] : getDimensionsAndXName(oneRes.records.schema.column_schemas),
-              key: titleIndex.value[codeType.value],
+              key: titleIndex.value[routeName.value],
             }
-            results.value[codeType.value].push(oneResult)
-            activeTabKey.value[codeType.value] = titleIndex.value[codeType.value]
+            results.value[routeName.value].push(oneResult)
+            activeTabKey.value[routeName.value] = titleIndex.value[routeName.value]
           }
         } else {
           resultInLog.push({
@@ -140,27 +139,27 @@ const useCodeRunStore = defineStore('codeRun', () => {
   }
 
   const setActiveTabKey = (key: number) => {
-    activeTabKey.value[codeType.value] = key
+    activeTabKey.value[routeName.value] = key
   }
 
   const clearResults = () => {
-    results.value[codeType.value] = []
-    titleIndex.value[codeType.value] = -1
-    activeTabKey.value[codeType.value] = 0
+    results.value[routeName.value] = []
+    titleIndex.value[routeName.value] = -1
+    activeTabKey.value[routeName.value] = 0
   }
 
   const removeResult = (key: number) => {
-    if (results.value[codeType.value].length === 1) {
+    if (results.value[routeName.value].length === 1) {
       clearResults()
       return
     }
-    let deletedTabIndex = results.value[codeType.value].findIndex((item: ResultType) => item.key === key)
-    if (deletedTabIndex + 1 === results.value[codeType.value].length) {
+    let deletedTabIndex = results.value[routeName.value].findIndex((item: ResultType) => item.key === key)
+    if (deletedTabIndex + 1 === results.value[routeName.value].length) {
       deletedTabIndex -= 1
     }
-    results.value[codeType.value] = results.value[codeType.value].filter((item: ResultType) => item.key !== key)
+    results.value[routeName.value] = results.value[routeName.value].filter((item: ResultType) => item.key !== key)
 
-    activeTabKey.value[codeType.value] = results.value[codeType.value][deletedTabIndex].key
+    activeTabKey.value[routeName.value] = results.value[routeName.value][deletedTabIndex].key
   }
 
   return {

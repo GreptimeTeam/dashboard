@@ -12,11 +12,4 @@ a-list(:data="favoriteList")
         icon-delete(style="font-size: 20px")
 </template>
 
-<script lang="ts" setup>
-  import { storeToRefs } from 'pinia'
-
-  const dataBaseStore = useDataBaseStore()
-  const dataExplorer = useDataExplorer()
-
-  const { insertCode } = dataExplorer
-</script>
+<script lang="ts" setup></script>
