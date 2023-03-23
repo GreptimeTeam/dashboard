@@ -1,3 +1,6 @@
+---
+title: Quick Start
+---
 # Quick Start
 
 ### Build

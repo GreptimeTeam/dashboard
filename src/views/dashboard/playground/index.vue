@@ -4,7 +4,7 @@
     a-layout-sider 
       a-tree.script-tree(
         :data="fileList" 
-        :default-selected-keys="['getting-started']"
+        :default-selected-keys="[currentFile]"
         @select="onSelect"
         blockNode)
     a-layout-content
@@ -14,29 +14,30 @@
 
 <script lang="ts" setup name="Notebook">
   import CodeEditor from './code-editor.vue'
-
+  import type {} from 'vite-plugin-markdown'
   // data
-  const MarkdownContent = shallowRef()
-  const currentFile = ref('getting-started')
-  const fileList = [
-    {
-      title: 'Getting Started',
-      key: 'getting-started',
-    },
-    {
-      title: 'Typing Master',
-      key: 'typing-master',
-    },
-  ]
+  const currentFile = ref('')
+  const files = import.meta.glob('./docs/*.md', { eager: true })
+
+  const fileList = Object.entries(files).map(([key, file]) => {
+    const { attributes } = file as any
+    return {
+      title: attributes.title,
+      key,
+    }
+  })
+  currentFile.value = fileList[0].key
+
+  const MarkdownContent = computed(() => {
+    const { VueComponentWith } = files[currentFile.value] as any
+    return VueComponentWith({ CodeEditor })
+  })
+
   // methods
   const onSelect = (e: string[]) => {
     ;[currentFile.value] = e
   }
   // lifecycle
-  watchEffect(async () => {
-    const { VueComponentWith } = await import(`./docs/${currentFile.value}.md`)
-    MarkdownContent.value = VueComponentWith({ CodeEditor })
-  })
 </script>
 
 <style lang="stylus" rel="stylesheet/stylus" scoped>

@@ -1,3 +1,6 @@
+---
+title: Typing Master
+---
 # Typing Master
 
 这是一个实际应用的案例
