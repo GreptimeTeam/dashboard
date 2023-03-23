@@ -1,11 +1,11 @@
 <template lang="pug">
 a-tabs.result-tabs.logs-tab(type="rounded")
   template(#extra)  
-    a-button.clear-logs-button(v-if="logs[codeType].length" type="secondary" status="danger" @click="clearLogs") {{$t('dataExplorer.clear')}}  
+    a-button.clear-logs-button(v-if="logs[routeName].length" type="secondary" status="danger" @click="clearLogs") {{$t('dataExplorer.clear')}}  
   a-tab-pane(title="Logs")
     a-card(:bordered="false")
-      a-list(v-if="logs[codeType].length" :hoverable="true" size="small" :bordered="false" :split="false")
-        a-list-item(v-for="item of logs[codeType]" :key="item")
+      a-list(v-if="logs[routeName].length" :hoverable="true" size="small" :bordered="false" :split="false")
+        a-list-item(v-for="item of logs[routeName]" :key="item")
           a-tooltip(v-if="item.error" :content="item.error")
             .log-error 
               | {{ item.startTime }} 
@@ -43,7 +43,7 @@ a-tabs.result-tabs.logs-tab(type="rounded")
   import { format } from 'sql-formatter'
 
   const { logs } = storeToRefs(useLogStore())
-  const { codeType } = storeToRefs(useAppStore())
+  const { codeType, routeName } = storeToRefs(useAppStore())
 
   const { clearLogs } = useLogStore()
   const { copy, copied } = useClipboard()

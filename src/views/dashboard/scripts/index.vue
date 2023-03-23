@@ -5,15 +5,14 @@ a-layout.layout
   a-layout-content
     a-space.content-space(direction="vertical" fill :size="14")
       PyEditor
-      DataView(v-if="!!results.python.length")
+      DataView(v-if="!!results[routeName].length")
       Log 
 </template>
 
 <script lang="ts" name="Scripts" setup>
   import ListTabs from './list-tabs.vue'
 
-  const { codeType } = storeToRefs(useAppStore())
-  const { getTables: refreshTableData } = useDataBaseStore()
+  const { codeType, routeName } = storeToRefs(useAppStore())
   const { results } = storeToRefs(useCodeRunStore())
 
   // TODO: add more code type in the future if needed

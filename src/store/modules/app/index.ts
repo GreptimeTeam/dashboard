@@ -19,6 +19,10 @@ const useAppStore = defineStore('app', {
     appAsyncMenus(state: AppState): RouteRecordNormalized[] {
       return state.serverMenu as unknown as RouteRecordNormalized[]
     },
+    routeName() {
+      const route = useRoute()
+      return route.name as string
+    },
   },
 
   actions: {

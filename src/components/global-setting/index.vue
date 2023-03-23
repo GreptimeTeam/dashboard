@@ -12,10 +12,7 @@ a-drawer(:width="262" unmount-on-close :visible="globalSettings" :mask-closable=
 </template>
 
 <script lang="ts" setup>
-  import { computed } from 'vue'
-  import { Message } from '@arco-design/web-vue'
   import { useI18n } from 'vue-i18n'
-  import { useClipboard } from '@vueuse/core'
   import { useAppStore, useDataBaseStore } from '@/store'
   import axios from 'axios'
   import SettingsForm from './settings-form.vue'
@@ -27,18 +24,18 @@ a-drawer(:width="262" unmount-on-close :visible="globalSettings" :mask-closable=
 
   const { t } = useI18n()
 
-  const { globalSettings, codeType } = storeToRefs(useAppStore())
+  const { globalSettings, routeName } = storeToRefs(useAppStore())
 
   // TODO: import AnyObject from global.ts
   const TABLES_MAP: { [key: string]: any } = {
-    sql: getTables,
-    python: getScriptsTable,
+    query: getTables,
+    scripts: getScriptsTable,
   }
 
   const cancel = () => {
     updateSettings({ globalSettings: false })
     axios.defaults.baseURL = host
-    TABLES_MAP[codeType.value]()
+    TABLES_MAP[routeName.value]()
 
     emit('cancel')
   }

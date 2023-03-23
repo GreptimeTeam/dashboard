@@ -1,10 +1,9 @@
-import { number } from 'echarts'
 import { stringType } from './types'
 
+const queryType = ref('sql')
 const sqlCode = 'SELECT * FROM numbers'
-const promCode = ''
+const promQLCode = ''
 const cursorAt = ref<Array<number>>([])
-const queryType = ref('promQL')
 const start = 0
 const end = 0
 const step = ref<number>()
@@ -24,7 +23,7 @@ const queryOptions = [
 
 const queryCode = ref({
   sql: sqlCode,
-  promQL: promCode,
+  promQL: promQLCode,
 } as stringType)
 
 const promForm = ref({
@@ -36,8 +35,8 @@ const promForm = ref({
   range,
 })
 
-export default function useDataExplorer() {
-  const insertNameToCode = (name: any) => {
+export default function useQueryCode() {
+  const insertNameToQueryCode = (name: any) => {
     queryCode.value[queryType.value] =
       queryCode.value[queryType.value].substring(0, cursorAt.value[0]) +
       name +
@@ -45,11 +44,11 @@ export default function useDataExplorer() {
   }
 
   return {
-    insertNameToCode,
+    insertNameToQueryCode,
     queryCode,
     cursorAt,
     queryOptions,
-    queryType,
     promForm,
+    queryType,
   }
 }
