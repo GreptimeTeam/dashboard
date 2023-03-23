@@ -68,6 +68,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
   const runCode = async (codeInfo: string) => {
     try {
       let res: any = {}
+      let oneResult = {}
       res = await API_MAP[codeType.value](codeInfo)
       Message.success({
         content: 'run success',
@@ -82,7 +83,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
           })
           if (rowLength >= 0) {
             titleIndex.value[routeName.value] += 1
-            const oneResult = {
+            oneResult = {
               records: oneRes.records,
               dimensionsAndXName: rowLength === 0 ? [] : getDimensionsAndXName(oneRes.records.schema.column_schemas),
               key: titleIndex.value[routeName.value],
@@ -103,6 +104,11 @@ const useCodeRunStore = defineStore('codeRun', () => {
         result: resultInLog,
       }
       useLogStore().pushLog(oneLog)
+
+      return {
+        log: oneLog,
+        record: oneResult,
+      }
     } catch (error: any) {
       const oneLog = {
         type: codeType.value,
@@ -110,6 +116,9 @@ const useCodeRunStore = defineStore('codeRun', () => {
         ...error,
       }
       useLogStore().pushLog(oneLog)
+      return {
+        log: oneLog,
+      }
     }
 
     primaryCodeRunning.value = false

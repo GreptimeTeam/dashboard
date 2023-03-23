@@ -11,9 +11,9 @@
         DataGrid(:data="result")
       a-tab-pane(key='2', title='Chart')
         DataChart(:data="result")
-  .logs(v-if="logs")
+  .logs(v-if="log")
     a-list(:hoverable="true" size="small" :bordered="false" :split="false")
-      Log(:log="logs" codeType="sql")
+      Log(:log="log" codeType="sql")
 </template>
 
 <script lang="ts" setup name="CodeEditor">
@@ -27,7 +27,7 @@
       default: false,
     },
   })
-  const { fetchSQLResult } = useCodeRunStore()
+  const { runCode } = useCodeRunStore()
   const slots = useSlots()
   const appStore = useAppStore()
   function codeFormat(code: any) {
@@ -41,19 +41,19 @@
   }
   const defaultCode = codeFormat(slots?.default?.())
   const code = ref(defaultCode)
-  const result = ref(null)
-  const logs = ref(null)
+  const result = ref()
+  const log = ref()
   // methods
   const reset = () => {
     code.value = defaultCode
   }
   const runSqlCommand = async () => {
     // todo: add better format tool for code
-    const res = await fetchSQLResult(code.value.trim().replace(/\n/gi, ' '))
+    const res = await runCode(code.value.trim().replace(/\n/gi, ' '))
     if (res.record) {
       result.value = res.record
     } else {
-      logs.value = res.logs
+      log.value = res.log
     }
     // todo: refresh tables data and when
   }

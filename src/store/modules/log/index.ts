@@ -8,6 +8,7 @@ const useLogStore = defineStore('log', {
     logs: {
       query: [],
       scripts: [],
+      playground: [],
     } as logsType,
   }),
 

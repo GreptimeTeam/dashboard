@@ -6,7 +6,7 @@ a-layout.layout
     a-space.content-space(direction="vertical" fill :size="14")
       PyEditor
       DataView(v-if="!!results[routeName].length")
-      Log 
+      Logs
 </template>
 
 <script lang="ts" name="Scripts" setup>

@@ -6,7 +6,7 @@ a-layout.layout
     a-space.content-space(direction="vertical" fill size="large")
       Editor 
       DataView(v-if="!!results[routeName].length")
-      Log 
+      Logs
 </template>
 
 <script lang="ts" name="Query" setup>
