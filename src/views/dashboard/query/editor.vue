@@ -1,37 +1,38 @@
 <template lang="pug">
 a-card(:bordered="false").editor-card
-  a-space(size="medium").button-space
-    a-button(@click="runQuery()" type="primary")
-      .mr-4
-        icon-loading(spin v-if="primaryCodeRunning")
-        icon-play-arrow(v-else)
-      | {{$t('dataExplorer.runAll')}}
-    a(@click="runPartQuery()")
-      a-button
+  a-space.space-between
+    a-space(size="medium")
+      a-button(@click="runQuery()" type="primary")
         .mr-4
-          icon-loading(spin v-if="secondaryCodeRunning")
+          icon-loading(spin v-if="primaryCodeRunning")
           icon-play-arrow(v-else)
-        div(v-if="lineStart === lineEnd") {{$t('dataExplorer.runLine')}} {{ lineStart }}
-        div(v-else) {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
+        | {{$t('dataExplorer.runAll')}}
+      a(@click="runPartQuery()")
+        a-button
+          .mr-4
+            icon-loading(spin v-if="secondaryCodeRunning")
+            icon-play-arrow(v-else)
+          div(v-if="lineStart === lineEnd") {{$t('dataExplorer.runLine')}} {{ lineStart }}
+          div(v-else) {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
     a-select(v-model="queryType" @change="selectCodeType")
       a-option(v-for="query of queryOptions" :="query")
-  a-form.prom-form(:model="promForm" layout="inline" v-show="queryType !== 'sql'")
-    a-form-item
-      a-input-group
-        a-select(v-if="promForm.isRelative === 1" v-model="promForm.time")
-          a-option(v-for="time of timeOptions" :="time")
-          template(#prefix)
-            icon-calendar-clock
-        a-range-picker(v-else v-model="promForm.range" format="YYYY-MM-DD HH:mm:ss" mode="date" :show-time="true" value-format="x")
-          template(#prefix)
+  a-form.space-between.prom-form(:model="promForm" layout="inline" v-show="queryType !== 'sql'")
+    a-space
+      a-form-item(:hide-label="true")
+        a-input-group
+          a-select(v-if="promForm.isRelative === 1" v-model="promForm.time")
+            a-option(v-for="time of timeOptions" :="time")
+            template(#prefix)
               icon-calendar-clock
-        a-select(v-model="promForm.isRelative")
-          a-option(label="Relative" :value="1")
-          a-option(label="Absolute" :value="0")
-    a-form-item(:label="$t('dataExplorer.step')")
-      a-input(v-model="promForm.step" :allow-clear="true")
-      . 
-        {{ `s` }}
+          a-range-picker(v-else v-model="promForm.range" format="YYYY-MM-DD HH:mm:ss" mode="date" :show-time="true" value-format="x")
+            template(#prefix)
+              icon-calendar-clock
+      a-form-item(:label="$t('dataExplorer.step')")
+        a-input(v-model="promForm.step" :allow-clear="true")
+        . 
+          {{ `s` }}
+    a-form-item.mr-0(:label="promForm.isRelative === 1 ? 'Relative' : 'Absolute'")
+      a-switch(v-model="promForm.isRelative" :checked-value="1" :unchecked-value="2" type='line')
   CodeMirror(v-model="queryCode[queryType]" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
 
