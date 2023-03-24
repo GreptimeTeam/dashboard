@@ -13,7 +13,7 @@ a-card(:bordered="false").editor-card
           icon-play-arrow(v-else)
         div(v-if="lineStart === lineEnd") {{$t('dataExplorer.runLine')}} {{ lineStart }}
         div(v-else) {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
-    a-select(v-model="queryType")
+    a-select(v-model="queryType" @change="selectCodeType")
       a-option(v-for="query of queryOptions" :="query")
   a-form.prom-form(:model="promForm" layout="inline" v-show="queryType !== 'sql'")
     a-form-item
@@ -62,7 +62,7 @@ a-card(:bordered="false").editor-card
 
   const { runCode } = useCodeRunStore()
   const { primaryCodeRunning, secondaryCodeRunning } = storeToRefs(useCodeRunStore())
-  const { queryCode, queryType, cursorAt, queryOptions, promForm } = useQueryCode()
+  const { queryCode, queryType, cursorAt, queryOptions, promForm, selectCodeType } = useQueryCode()
 
   const handleReady = (payload: any) => {
     view.value = payload.view
