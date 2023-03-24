@@ -20,8 +20,7 @@ const useAppStore = defineStore('app', {
       return state.serverMenu as unknown as RouteRecordNormalized[]
     },
     routeName() {
-      const route = useRoute()
-      return route.name as string
+      return useRoute().name as string
     },
   },
 
