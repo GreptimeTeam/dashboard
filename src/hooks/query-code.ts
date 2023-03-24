@@ -36,6 +36,8 @@ const promForm = ref({
 })
 
 export default function useQueryCode() {
+  const { codeType } = storeToRefs(useAppStore())
+
   const insertNameToQueryCode = (name: any) => {
     queryCode.value[queryType.value] =
       queryCode.value[queryType.value].substring(0, cursorAt.value[0]) +
@@ -43,8 +45,13 @@ export default function useQueryCode() {
       queryCode.value[queryType.value].substring(cursorAt.value[1])
   }
 
+  const selectCodeType = () => {
+    codeType.value = queryType.value
+  }
+
   return {
     insertNameToQueryCode,
+    selectCodeType,
     queryCode,
     cursorAt,
     queryOptions,
