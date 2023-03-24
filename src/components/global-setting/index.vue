@@ -21,6 +21,7 @@ a-drawer(:width="262" unmount-on-close :visible="globalSettings" :mask-closable=
 
   const { host, navbar, updateSettings } = useAppStore()
   const { getTables, getScriptsTable } = useDataBaseStore()
+  const route = useRoute()
 
   const { t } = useI18n()
 
@@ -30,12 +31,13 @@ a-drawer(:width="262" unmount-on-close :visible="globalSettings" :mask-closable=
   const TABLES_MAP: { [key: string]: any } = {
     query: getTables,
     scripts: getScriptsTable,
+    playground: () => {},
   }
 
   const cancel = () => {
     updateSettings({ globalSettings: false })
     axios.defaults.baseURL = host
-    TABLES_MAP[routeName.value]()
+    TABLES_MAP[route.name as string]()
 
     emit('cancel')
   }

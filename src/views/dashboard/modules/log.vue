@@ -5,7 +5,7 @@ a-list-item.log
       | {{ log.startTime }} 
       a-divider(direction="vertical")
       | {{$t('dataExplorer.error')}}: {{log.error}}
-  a-space.log-space(v-else-if="'execution_time_ms' in item" size="mini" fill)
+  a-space.log-space(v-else-if="'execution_time_ms' in log" size="mini" fill)
     template(#split)
       a-divider(direction="vertical")
     div {{ log.startTime }}

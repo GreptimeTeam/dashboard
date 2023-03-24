@@ -1,7 +1,8 @@
+import { useCodeRunStore } from '@/store'
 import { stringType } from './types'
 
 const queryType = ref('sql')
-const sqlCode = 'SELECT * FROM numbers'
+const sqlCode = 'SELECT * FROM apm2 Limit 100'
 const promQLCode = ''
 const cursorAt = ref<Array<number>>([])
 const start = 0
@@ -49,6 +50,16 @@ export default function useQueryCode() {
     codeType.value = queryType.value
   }
 
+  const run = async (codeInfo: string, type = queryType.value) => {
+    const { runCode } = useCodeRunStore()
+    const { pushLog } = useLog()
+    const res = await runCode(codeInfo, type)
+
+    pushLog(res.log, type)
+
+    return res
+  }
+
   return {
     insertNameToQueryCode,
     selectCodeType,
@@ -57,5 +68,6 @@ export default function useQueryCode() {
     queryOptions,
     promForm,
     queryType,
+    run,
   }
 }

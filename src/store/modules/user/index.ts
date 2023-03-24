@@ -1,28 +1,17 @@
 import { defineStore } from 'pinia'
+import type { Ref } from 'vue'
 
-const useUserStore = defineStore('user', {
-  state: () => ({
-    role: 'dev',
-  }),
+const useUserStore = defineStore('user', () => {
+  const role: Ref<string> = ref('dev')
 
-  getters: {
-    userInfo() {
-      return {}
-    },
-  },
+  function setRole(r: string) {
+    role.value = r
+  }
 
-  actions: {
-    setRole(role: string) {
-      this.role = role
-    },
-    // switchRoles() {},
-    // // Set user's information
-    // setInfo() {},
-    // // Reset user's information
-    // resetInfo() {},
-    // // Get user's information
-    // async info() {},
-  },
+  return {
+    role,
+    setRole,
+  }
 })
 
 export default useUserStore

@@ -1,5 +1,5 @@
 <template lang="pug">
-a-card(:bordered="false" v-if="schema")
+a-card(:bordered="false")
   template(#title)
     a-space(size="mini")
       svg.card-icon
@@ -19,25 +19,30 @@ a-card(:bordered="false" v-if="schema")
 </template>
 
 <script lang="ts" setup>
+  import { ref, reactive, computed } from 'vue'
   import { chartTypeOptions, updateOptions, numberTypes } from '../config'
 
+  const props = defineProps({
+    data: {
+      type: Object,
+      default: () => ({}),
+    },
+  })
   // TODO: To add this props in every select should not be the best option.
   const triggerProps = {
     'update-at-scroll': true,
   }
 
-  const { currentResult } = storeToRefs(useCodeRunStore())
   const option = ref({})
   const chartForm = reactive({
     chartType: 'line',
     ySelectedTypes: [],
   })
-  const { schema } = currentResult.value.records
 
   // TODO: Add support for more data types not just numbers.
   const yOptions = computed(() => {
-    if (!schema) return []
-    return schema.column_schemas
+    if (!props.data.records.schema) return []
+    return props.data.records.schema.column_schemas
       .filter((item: any) => numberTypes.find((type: string) => type === item.data_type))
       .map((item: any) => ({
         value: item.name,
@@ -53,7 +58,7 @@ a-card(:bordered="false" v-if="schema")
         type: chartType,
         smooth: false,
         encode: {
-          x: currentResult.value.dimensionsAndXName[1],
+          x: props.data.dimensionsAndXName[1],
           y: item,
         },
         symbolSize: 4,
@@ -79,8 +84,8 @@ a-card(:bordered="false" v-if="schema")
         trigger: 'axis',
       },
       dataset: {
-        dimensions: currentResult.value.dimensionsAndXName[0],
-        source: currentResult.value.records.rows,
+        dimensions: props.data.dimensionsAndXName[0],
+        source: props.data.records.rows,
       },
       xAxis: {
         type: 'time',

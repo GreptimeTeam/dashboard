@@ -41,6 +41,7 @@ a-card(:bordered="false").editor-card
   import { sql } from '@codemirror/lang-sql'
   import { PromQLExtension } from '@prometheus-io/codemirror-promql'
   import { useCodeRunStore } from '@/store'
+  import useQueryCode from '@/hooks/query-code'
 
   export interface Props {
     spellcheck?: boolean
@@ -61,6 +62,8 @@ a-card(:bordered="false").editor-card
   const view = shallowRef()
 
   const { runCode } = useCodeRunStore()
+  const { run: runSQL } = useQueryCode()
+
   const { primaryCodeRunning, secondaryCodeRunning } = storeToRefs(useCodeRunStore())
   const { queryCode, queryType, cursorAt, queryOptions, promForm, selectCodeType } = useQueryCode()
 
@@ -100,10 +103,11 @@ a-card(:bordered="false").editor-card
     return [promQL.asExtension(), oneDark]
   })
 
-  const runQuery = () => {
+  const runQuery = async () => {
     primaryCodeRunning.value = true
     // TODO: add better format tool for code
-    runCode(queryCode.value[queryType.value].trim().replace(/\n/gi, ' '))
+    await runSQL(queryCode.value.sql.trim().replace(/\n/gi, ' '))
+    primaryCodeRunning.value = false
     // TODO: refresh tables data and when
   }
 

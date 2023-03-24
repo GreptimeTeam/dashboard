@@ -20,6 +20,7 @@
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
   import { sql } from '@codemirror/lang-sql'
+  import Log from '@/views/dashboard/modules/log.vue'
   // data
   const props = defineProps({
     disabled: {
@@ -27,7 +28,7 @@
       default: false,
     },
   })
-  const { runCode } = useCodeRunStore()
+  const { run } = useQueryCode()
   const slots = useSlots()
   const appStore = useAppStore()
   function codeFormat(code: any) {
@@ -49,7 +50,7 @@
   }
   const runSqlCommand = async () => {
     // todo: add better format tool for code
-    const res = await runCode(code.value.trim().replace(/\n/gi, ' '))
+    const res = await run(code.value.trim().replace(/\n/gi, ' '))
     if (res.record) {
       result.value = res.record
     } else {

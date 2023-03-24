@@ -3,8 +3,7 @@ import { useUserStore } from '@/store'
 
 function checkPermission(el: HTMLElement, binding: DirectiveBinding) {
   const { value } = binding
-  const userStore = useUserStore()
-  const { role } = userStore
+  const { role } = storeToRefs(useUserStore())
 
   if (Array.isArray(value)) {
     if (value.length > 0) {

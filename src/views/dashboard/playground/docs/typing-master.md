@@ -34,7 +34,7 @@ const axios = require('axios')
 const qs = require('qs')
 const { GlobalKeyboardListener } = require('node-global-key-listener')
 const v = new GlobalKeyboardListener()
-// Log every key that's pressed.
+
 v.addListener(function (e, down) {
   if (e.state === 'DOWN') {
     let metaKey = Object.entries(down)

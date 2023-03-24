@@ -1,5 +1,8 @@
 import { Md5 } from 'ts-md5'
 
+const { saveScript } = useCodeRunStore()
+const { pushLog } = useLog()
+
 const pythonCode = ref('')
 const lastSavedCode = ref('')
 
@@ -52,6 +55,10 @@ export default function usePythonCode() {
     lastSavedCode.value = pythonCode.value
   }
 
+  const save = async (name: string, code: string) => {
+    const res = await saveScript(name, code)
+    await pushLog(res)
+  }
   return {
     insertNameToPyCode,
     overwriteCode,
@@ -67,5 +74,6 @@ export default function usePythonCode() {
     isChanged,
     modelVisible,
     creating,
+    save,
   }
 }

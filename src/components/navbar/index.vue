@@ -8,8 +8,6 @@
         | Query
       a-menu-item(key="scripts")
         | Scripts
-      a-menu-item(key="playground")
-        | Playground
   ul.right-side
     li
       a-tooltip(:content="$t('settings.title')")

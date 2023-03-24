@@ -1,26 +1,24 @@
 import { defineStore } from 'pinia'
-import useAppStore from '../app'
-import { logsType, logType } from './types'
+import type { Ref } from 'vue'
+import { Log } from './types'
 
-const useLogStore = defineStore('log', {
-  state: () => ({
-    routeName: storeToRefs(useAppStore()).routeName,
-    logs: {
-      query: [],
-      scripts: [],
-      playground: [],
-    } as logsType,
-  }),
+const useLogStore = defineStore('log', () => {
+  const logs: Ref<Log[]> = ref([])
 
-  getters: {},
+  function push(log: Log, type: string) {
+    logs.value.push({
+      ...log,
+      type,
+    })
+  }
+  function clear(type: string) {
+    logs.value = logs.value.filter((log) => log.type !== type)
+  }
 
-  actions: {
-    pushLog(log: logType) {
-      this.logs[this.routeName] = this.logs[this.routeName].concat([log])
-    },
-    clearLogs() {
-      this.logs[this.routeName] = []
-    },
-  },
+  return {
+    logs,
+    push,
+    clear,
+  }
 })
 export default useLogStore
