@@ -116,4 +116,29 @@
       margin-bottom: 0;
     }
   }
+
+  .time-switch {
+    .arco-form-item-label-col {
+      padding-right: 12px;
+    }
+
+    .arco-switch-handle {
+      top: 3px;
+      width: 14px;
+      height: 14px;
+    }
+
+    .arco-switch {
+      height: 20px;
+      background-color: var(--switch-unchecked-color);
+    }
+
+    .arco-switch-checked {
+      background-color: var(--brand-color);
+
+      .arco-switch-handle {
+        left: calc(100% - 14px - 4px);
+      }
+    }
+  }
 }
