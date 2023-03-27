@@ -38,4 +38,6 @@ export default {
   'dataExplorer.start': 'start',
   'dataExplorer.end': 'end',
   'dataExplorer.step': 'step',
+  'dataExplorer.relative': 'Relative Time',
+  'dataExplorer.absolute': 'Absolute Time',
 }
