@@ -2,7 +2,7 @@
 a-card(:bordered="false" v-if="schema")
   template(#title)
     a-space(size="mini")
-      svg.card-icon
+      svg.icon-18
         use(href="#chart")
       | {{$t('dataExplorer.chart')}}
   a-spin(style="width: 100%")
