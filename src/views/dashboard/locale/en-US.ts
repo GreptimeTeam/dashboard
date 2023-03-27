@@ -40,4 +40,5 @@ export default {
   'dataExplorer.step': 'step',
   'dataExplorer.relative': 'Relative Time',
   'dataExplorer.absolute': 'Absolute Time',
+  'dataExplorer.second': 'SEC',
 }

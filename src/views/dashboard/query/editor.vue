@@ -14,10 +14,11 @@ a-card(:bordered="false").editor-card
             icon-play-arrow(v-else)
           div(v-if="lineStart === lineEnd") {{$t('dataExplorer.runLine')}} {{ lineStart }}
           div(v-else) {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
-    a-select(v-model="queryType" @change="selectCodeType")
-      a-option(v-for="query of queryOptions" :="query")
+    .query-select
+      a-select(v-model="queryType" @change="selectCodeType")
+        a-option(v-for="query of queryOptions" :="query")
   a-form.space-between.prom-form(:model="promForm" layout="inline" v-show="queryType !== 'sql'")
-    a-space
+    a-space(size="medium")
       a-form-item(:hide-label="true")
         a-select(v-if="promForm.isRelative === 1" v-model="promForm.time" :trigger-props="{'update-at-scroll': true}")
           a-option(v-for="time of timeOptions" :="time")
@@ -26,10 +27,10 @@ a-card(:bordered="false").editor-card
         a-range-picker(v-else v-model="promForm.range" format="YYYY-MM-DD HH:mm:ss" mode="date" :show-time="true" value-format="x")
           template(#prefix)
             icon-calendar-clock
-      a-form-item(:label="$t('dataExplorer.step')")
-        a-input(v-model="promForm.step" :allow-clear="true")
-        . 
-          {{ `s` }}
+      a-form-item(:hide-label="true")
+        a-input-number(v-model="promForm.step" :style="{width:'180px'}" :allow-clear="true" :placeholder="$t('dataExplorer.step')" hide-button)
+          template(#suffix)
+            | {{$t('dataExplorer.second')}}
     a-form-item.time-switch(:label="promForm.isRelative === 1 ? $t('dataExplorer.relative') : $t('dataExplorer.absolute')")
       a-switch(v-model="promForm.isRelative" :checked-value="1" :unchecked-value="2")
   CodeMirror(v-model="queryCode[queryType]" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
