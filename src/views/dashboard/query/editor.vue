@@ -32,7 +32,7 @@ a-card(:bordered="false").editor-card
           template(#suffix)
             | {{$t('dataExplorer.second')}}
     a-form-item.time-switch(:label="promForm.isRelative === 1 ? $t('dataExplorer.relative') : $t('dataExplorer.absolute')")
-      a-switch(v-model="promForm.isRelative" :checked-value="1" :unchecked-value="2")
+      a-switch(v-model="promForm.isRelative" :checked-value="1" :unchecked-value="0")
   CodeMirror(v-model="queryCode[queryType]" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
 
@@ -114,15 +114,10 @@ a-card(:bordered="false").editor-card
   }
 
   // TODO: i18n config
-  const timeOptions = [5, 10, 15].map((value) => ({
-    value,
-    label: `Last ${value} minutes`,
-    key: value,
-  }))
-
-  const timeTypes = ['relative', 'absolute'].map((value) => ({
-    value,
-    label: value,
-    key: value,
-  }))
+  const timeOptions = [5, 10, 15, 30, 60]
+    .map((value) => ({
+      value,
+      label: `Last ${value} minutes`,
+    }))
+    .concat([{ value: 0, label: 'Custom' }])
 </script>

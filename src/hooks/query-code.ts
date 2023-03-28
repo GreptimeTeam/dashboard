@@ -49,6 +49,13 @@ export default function useQueryCode() {
     codeType.value = queryType.value
   }
 
+  watchEffect(() => {
+    if (promForm.value.time === 0) {
+      promForm.value.isRelative = 0
+      promForm.value.time = 5
+    }
+  })
+
   return {
     insertNameToQueryCode,
     selectCodeType,
