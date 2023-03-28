@@ -30,7 +30,16 @@ a-card(:bordered="false").editor-card
       a-form-item(:hide-label="true")
         a-input-number(v-model="promForm.step" :style="{width:'180px'}" :allow-clear="true" :placeholder="$t('dataExplorer.step')" hide-button)
           template(#suffix)
-            | {{$t('dataExplorer.second')}}
+            a-popover(trigger="click")
+              icon-question-circle
+              template(#content)
+                a-list(:split="false" :bordered="false" size="small")
+                  template(#header)
+                    | Supported Durations
+                  a-list-item(v-for="item of durations" :key="item")
+                    span.code {{ item.key }}
+                    | {{ item.value }}
+                span e.g. 1h, 5d1m, 5m, 10s
     a-form-item.time-switch(:label="promForm.isRelative === 1 ? $t('dataExplorer.relative') : $t('dataExplorer.absolute')")
       a-switch(v-model="promForm.isRelative" :checked-value="1" :unchecked-value="0")
   CodeMirror(v-model="queryCode[queryType]" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
@@ -42,6 +51,7 @@ a-card(:bordered="false").editor-card
   import { sql } from '@codemirror/lang-sql'
   import { PromQLExtension } from '@prometheus-io/codemirror-promql'
   import { useCodeRunStore } from '@/store'
+  import { durations } from '../modules/data-view/config'
 
   export interface Props {
     spellcheck?: boolean
