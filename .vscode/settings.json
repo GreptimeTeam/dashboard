@@ -7,8 +7,9 @@
     "Greptime",
     "hoverable",
     "pinia",
+    "promql",
     "sider",
-    "VITE",
-    "promql"
+    "timepicker",
+    "VITE"
   ]
 }

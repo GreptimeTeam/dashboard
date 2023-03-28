@@ -24,7 +24,7 @@ a-card(:bordered="false").editor-card
           a-option(v-for="time of timeOptions" :="time")
           template(#prefix)
             icon-calendar-clock
-        a-range-picker(v-else v-model="promForm.range" :show-time="true" :allow-clear="true" format="YYYY-MM-DD HH:mm:ss" value-format="x")
+        a-range-picker(v-else v-model="promForm.range" :show-time="true" :allow-clear="true" :trigger-props="{'update-at-scroll': true}" :placeholder="[$t('dataExplorer.startTime'), $t('dataExplorer.endTime')]" format="YYYY-MM-DD HH:mm:ss" value-format="x")
           template(#prefix)
             icon-calendar-clock
       a-form-item(:hide-label="true")

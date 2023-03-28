@@ -41,4 +41,8 @@ export default {
   'dataExplorer.relative': 'Relative Time',
   'dataExplorer.absolute': 'Absolute Time',
   'dataExplorer.second': 'SEC',
+  'dataExplorer.runSuccess': 'Run Successfully',
+  'dataExplorer.saveSuccess': 'Saved Successfully',
+  'dataExplorer.startTime': 'Start Time',
+  'dataExplorer.endTime': 'End Time',
 }

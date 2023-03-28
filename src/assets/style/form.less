@@ -123,17 +123,35 @@
     border-left: 1px solid var(--light-border-color);
   }
 
+  .arco-input-wrapper .arco-input-clear-btn {
+    padding-right: 4px;
+  }
+
   .arco-select-view-single {
     width: 180px !important;
+  }
+
+  .arco-picker {
+    background: var(--grey-bg-color);
   }
 
   .arco-picker input {
     width: 150px;
   }
 
+  .arco-picker-focused {
+    background-color: inherit;
+    border-color: var(--hover-brand-color);
+
+    .arco-picker-input-active input {
+      background: inherit;
+    }
+  }
+
   .arco-picker-has-prefix {
     padding-right: 8px;
     padding-left: 8px;
+    border-radius: 6px;
   }
 
   .arco-picker-suffix {
@@ -167,5 +185,35 @@
         left: calc(100% - 14px - 4px);
       }
     }
+  }
+}
+
+.arco-picker-range-container {
+  border-radius: 8px;
+
+  .arco-timepicker-cell-selected .arco-timepicker-cell-inner {
+    background: var(--grey-bg-color);
+  }
+
+  .arco-picker-cell-in-range .arco-picker-date {
+    background-color: var(--light-brand-color);
+  }
+
+  .arco-picker-cell-range-start .arco-picker-date-value,
+  .arco-picker-cell-range-end .arco-picker-date-value {
+    background-color: var(--brand-color);
+  }
+
+  .arco-picker-cell-today::after {
+    background-color: var(--brand-color);
+  }
+
+  .arco-panel-date-with-view-tabs .arco-panel-date-timepicker .arco-timepicker-cell-inner {
+    border-radius: 4px;
+  }
+
+  .arco-timepicker-cell:not(.arco-timepicker-cell-selected):not(.arco-timepicker-cell-disabled):hover
+    .arco-timepicker-cell-inner {
+    background-color: var(--grey-bg-color);
   }
 }

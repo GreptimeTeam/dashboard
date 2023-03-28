@@ -1,4 +1,5 @@
 import editorAPI from '@/api/editor'
+import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import { defineStore } from 'pinia'
 import { dateTypes } from '@/views/dashboard/modules/data-view/config'
@@ -23,6 +24,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
   const primaryCodeRunning = ref(false)
   const secondaryCodeRunning = ref(false)
   const { routeName, codeType } = storeToRefs(useAppStore())
+  const i18 = useI18n()
 
   const currentResult = computed(() => {
     const defaultValue = {
@@ -70,7 +72,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
       let res: any = {}
       res = await API_MAP[codeType.value](codeInfo)
       Message.success({
-        content: 'run success',
+        content: i18.t('dataExplorer.runSuccess'),
         duration: 2 * 1000,
       })
       const resultInLog: any = []
@@ -121,7 +123,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
       const res: any = await editorAPI.saveScript(name, code)
 
       Message.success({
-        content: 'save success',
+        content: i18.t('dataExplorer.saveSuccess'),
         duration: 2 * 1000,
       })
       useLogStore().pushLog({
