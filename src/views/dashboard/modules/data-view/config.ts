@@ -52,12 +52,12 @@ export const dataTypesMap = {
 
 export const durations = [
   { key: 'ms', value: 'milliseconds' },
-  { key: 's ', value: 'seconds' },
-  { key: 'm ', value: 'minutes' },
-  { key: 'h ', value: 'hours' },
-  { key: 'd ', value: 'days - assuming a day has always 24h' },
-  { key: 'w ', value: 'weeks - assuming a week has always 7d' },
-  { key: 'y ', value: 'years - assuming a year has always 365d' },
+  { key: 's', value: 'seconds' },
+  { key: 'm', value: 'minutes' },
+  { key: 'h', value: 'hours' },
+  { key: 'd', value: 'days - assuming a day has always 24h' },
+  { key: 'w', value: 'weeks - assuming a week has always 7d' },
+  { key: 'y', value: 'years - assuming a year has always 365d' },
 ]
 
 export const durationExamples = ['1h', '5d1m', '5m', '10s']

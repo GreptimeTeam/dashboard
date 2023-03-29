@@ -1,6 +1,6 @@
 import { stringType } from './types'
 
-const queryType = ref('promql')
+const queryType = ref('sql')
 const sqlCode = 'SELECT * FROM numbers'
 const promQLCode = ''
 const cursorAt = ref<Array<number>>([])
@@ -16,7 +16,7 @@ const queryOptions = [
     label: 'SQL',
   },
   {
-    value: 'promql',
+    value: 'promQL',
     label: 'PromQL',
   },
 ]

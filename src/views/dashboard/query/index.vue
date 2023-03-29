@@ -14,7 +14,7 @@ a-layout.layout
 
   const { results } = storeToRefs(useCodeRunStore())
   const { codeType, routeName } = storeToRefs(useAppStore())
+  const { queryType } = useQueryCode()
 
-  // TODO: add more code type in the future if needed
-  codeType.value = 'sql'
+  codeType.value = queryType.value
 </script>
