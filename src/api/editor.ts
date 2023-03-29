@@ -49,7 +49,7 @@ const makePromParams = (code: string) => {
       query: code,
       start: promForm.value.start,
       end: promForm.value.end,
-      step: `${promForm.value.step}s`,
+      step: `${promForm.value.step}`,
     },
   } as AxiosRequestConfig
 }

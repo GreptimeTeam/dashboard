@@ -59,3 +59,5 @@ export const durations = [
   { key: 'w ', value: 'weeks - assuming a week has always 7d' },
   { key: 'y ', value: 'years - assuming a year has always 365d' },
 ]
+
+export const durationExamples = ['1h', '5d1m', '5m', '10s']

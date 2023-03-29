@@ -45,4 +45,6 @@ export default {
   'dataExplorer.saveSuccess': 'Saved Successfully',
   'dataExplorer.startTime': 'Start Time',
   'dataExplorer.endTime': 'End Time',
+  'dataExplorer.supportedDurations': 'Supported Durations',
+  'dataExplorer.examples': 'Examples: ',
 }
