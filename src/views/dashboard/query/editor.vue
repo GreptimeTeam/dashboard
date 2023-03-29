@@ -23,10 +23,12 @@ a-card(:bordered="false").editor-card
         a-select(v-if="promForm.isRelative === 1" v-model="promForm.time" :trigger-props="{'update-at-scroll': true}")
           a-option(v-for="time of timeOptions" :="time")
           template(#prefix)
-            icon-calendar-clock
+            svg.icon-18
+              use(href="#calendar")
         a-range-picker(v-else v-model="promForm.range" :show-time="true" :allow-clear="true" :trigger-props="{'update-at-scroll': true}" :placeholder="[$t('dataExplorer.startTime'), $t('dataExplorer.endTime')]" format="YYYY-MM-DD HH:mm:ss" value-format="x")
           template(#prefix)
-            icon-calendar-clock
+            svg.icon-18
+              use(href="#calendar")
       a-form-item(:hide-label="true")
         a-input(v-model="promForm.step" :style="{width:'180px'}" :allow-clear="true" :placeholder="$t('dataExplorer.step')" hide-button)
           template(#suffix)
