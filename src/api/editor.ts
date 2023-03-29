@@ -49,7 +49,7 @@ const makePromParams = (code: string) => {
       query: code,
       start: promForm.value.start,
       end: promForm.value.end,
-      step: `${promForm.value.step}`,
+      step: promForm.value.step,
     },
   } as AxiosRequestConfig
 }
@@ -66,7 +66,7 @@ const getTableByName = (tableName: string) => {
   return axios.post(sqlUrl, makeSqlData(`desc table ${tableName}`), addDatabaseParams())
 }
 
-const getSqlResult = (code: string) => {
+const runSQL = (code: string) => {
   return axios.post(sqlUrl, makeSqlData(code), addDatabaseParams())
 }
 
@@ -90,7 +90,7 @@ const runPromQL = (code: string) => {
 export default {
   getTables,
   getTableByName,
-  getSqlResult,
+  runSQL,
   getDatabases,
   getScriptsTable,
   runScript,

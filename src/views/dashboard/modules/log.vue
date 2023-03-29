@@ -22,7 +22,7 @@ a-tabs.result-tabs.logs-tab(type="rounded")
             div {{ $t('dataExplorer.executeTime', {time: item.execution_time_ms})}}
             div {{ $t('dataExplorer.network', {time: item.networkTime - item.execution_time_ms})}}
             div {{ $t('dataExplorer.total', {time: item.networkTime}) }}
-            div(v-if="codeType==='sql'") 
+            div(v-if="routeName==='query'") 
               a-tooltip(:content="copied? $t('dataExplorer.copied') : $t('dataExplorer.copyToClipboard')" mini)
                 svg.icon.pointer.vertical-center(name="copy" @click="copyToClipboard(item.codeInfo)")
                   use(href="#copy")
@@ -49,6 +49,7 @@ a-tabs.result-tabs.logs-tab(type="rounded")
   const { copy, copied } = useClipboard()
 
   const copyToClipboard = (code: string) => {
-    copy(format(code, { language: 'mysql', keywordCase: 'upper' }))
+    if (codeType.value === 'sql') copy(format(code, { language: 'mysql', keywordCase: 'upper' }))
+    else copy(code)
   }
 </script>
