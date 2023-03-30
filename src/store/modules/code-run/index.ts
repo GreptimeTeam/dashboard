@@ -24,6 +24,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
   const primaryCodeRunning = ref(false)
   const secondaryCodeRunning = ref(false)
   const { codeType } = storeToRefs(useAppStore())
+  const { promForm } = useQueryCode()
   const i18 = useI18n()
   const route = useRoute()
 
@@ -103,6 +104,14 @@ const useCodeRunStore = defineStore('codeRun', () => {
         ...res,
         codeInfo,
         result: resultInLog,
+      }
+      if (codeType.value === 'promQL') {
+        oneLog.promInfo = {
+          Start: new Date(promForm.value.start).toLocaleString(),
+          End: new Date(promForm.value.end).toLocaleString(),
+          Step: promForm.value.step,
+          Query: codeInfo,
+        }
       }
       useLogStore().pushLog(oneLog, routeName)
     } catch (error: any) {

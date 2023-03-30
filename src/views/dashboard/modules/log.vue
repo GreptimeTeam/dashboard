@@ -22,14 +22,20 @@ a-tabs.result-tabs.logs-tab(type="rounded")
             div {{ $t('dataExplorer.executeTime', {time: item.execution_time_ms})}}
             div {{ $t('dataExplorer.network', {time: item.networkTime - item.execution_time_ms})}}
             div {{ $t('dataExplorer.total', {time: item.networkTime}) }}
-            div(v-if="routeName==='query'") 
+            div(v-if="codeType!=='python'") 
               a-tooltip(:content="copied? $t('dataExplorer.copied') : $t('dataExplorer.copyToClipboard')" mini)
                 svg.icon.pointer.vertical-center(name="copy" @click="copyToClipboard(item.codeInfo)")
                   use(href="#copy")
-              span.code-space
-                span {{ $t('dataExplorer.code') }}
-                a-tooltip(:content="item.codeInfo")
+              a-popover
+                span.code-space
+                  span {{ $t('dataExplorer.query') }}
                   span {{ item.codeInfo }}
+                template(#content)
+                  a-list(:split="false" :bordered="false" size="small")
+                    a-list-item(v-if="item.type==='promQL'" v-for="(value, name) in item.promInfo")
+                      span.width-40 {{ name }}
+                      a-typography-text.ml-4(code) {{ value }}
+                    a-list-item(v-else) {{ item.codeInfo }}
           a-space.log-space(v-else size="large" fill)
             template(#split)
               a-divider(direction="vertical")

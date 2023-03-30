@@ -32,7 +32,7 @@ a-card(:bordered="false").editor-card
       a-form-item(:hide-label="true")
         a-input(v-model="promForm.step" :style="{width:'180px'}" :allow-clear="true" :placeholder="$t('dataExplorer.step')" hide-button)
           template(#suffix)
-            a-popover(trigger="click")
+            a-popover
               svg.icon
                 use(href="#question")
               template(#content)
