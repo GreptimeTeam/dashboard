@@ -31,17 +31,18 @@ router.beforeEach(async (to, from, next) => {
   try {
     // TODO: Is it necessary to decide this every time we go to a new route?
     const appStore = useAppStore()
-    if (to.query.username && to.query.password) {
-      appStore.updateSettings(to.query)
-      to.query = {}
+    if (to.query.info) {
+      const config = JSON.parse(atob(to.query.info as string))
+      useStorage('config', config)
+      appStore.updateSettings(config)
+      return next()
+      return next({ path: to.path, query: {} })
     }
-    if (appStore.isCloud) {
-      appStore.updateSettings(useStorage('config', {}).value)
-    }
+    appStore.updateSettings(useStorage('config', {}).value)
   } catch (error) {
     console.log(`error:`, error)
   }
-  next()
+  return next()
 })
 
 export default router

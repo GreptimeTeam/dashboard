@@ -5,16 +5,22 @@ a-layout.layout
   a-layout-content
     a-space.content-space(direction="vertical" fill size="large")
       Editor 
-      DataView(v-if="!!results[routeName].length")
-      Logs
+      DataView(v-if="!!results?.length" :results="results")
+      Logs(:logs="queryLogs")
 </template>
 
 <script lang="ts" name="Query" setup>
+  import { useQueryCode } from '@/hooks'
   import ListTabs from '../scripts/list-tabs.vue'
 
-  const { results } = storeToRefs(useCodeRunStore())
-  const { codeType, routeName } = storeToRefs(useAppStore())
+  const { getResultsByType } = useQueryCode()
+  const { logs } = storeToRefs(useLogStore())
 
+  const queryLogs = computed(() => logs.value.filter((log) => ['sql', 'promQL'].includes(log.type)))
+  const results = computed(() => getResultsByType(['sql', 'promQL']))
+
+  onMounted(() => {
+    console.log(666)
+  })
   // TODO: add more code type in the future if needed
-  codeType.value = 'sql'
 </script>

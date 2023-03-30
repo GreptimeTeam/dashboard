@@ -13,9 +13,11 @@
 </template>
 
 <script lang="ts" setup name="Notebook">
+  import { getPlaygroundInfo } from '@/api/playground'
   import CodeEditor from './code-editor.vue'
-  import type {} from 'vite-plugin-markdown'
+
   // data
+  const appStore = useAppStore()
   const currentFile = ref('')
   const files = import.meta.glob('./docs/*.md', { eager: true })
 
@@ -38,6 +40,18 @@
     ;[currentFile.value] = e
   }
   // lifecycle
+  onMounted(() => {
+    window.grecaptcha.ready(() => {
+      window.grecaptcha
+        .execute(import.meta.env.VITE_RECAPTCHA_SITE_KEY, { action: 'submit' })
+
+        .then(async (token: string) => {
+          console.log(`appStore:`, appStore)
+          const data = await getPlaygroundInfo(token, appStore.dbId)
+          alert(JSON.stringify(data, null, 2))
+        })
+    })
+  })
 </script>
 
 <style lang="stylus" rel="stylesheet/stylus" scoped>

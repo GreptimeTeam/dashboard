@@ -61,8 +61,7 @@ a-card(:bordered="false").editor-card
   const selectedCode = ref()
   const view = shallowRef()
 
-  const { runCode } = useCodeRunStore()
-  const { run: runSQL } = useQueryCode()
+  const { run: runCode } = useQueryCode()
 
   const { primaryCodeRunning, secondaryCodeRunning } = storeToRefs(useCodeRunStore())
   const { queryCode, queryType, cursorAt, queryOptions, promForm, selectCodeType } = useQueryCode()
@@ -106,7 +105,7 @@ a-card(:bordered="false").editor-card
   const runQuery = async () => {
     primaryCodeRunning.value = true
     // TODO: add better format tool for code
-    await runSQL(queryCode.value.sql.trim().replace(/\n/gi, ' '))
+    await runCode(queryCode.value.sql.trim().replace(/\n/gi, ' '))
     primaryCodeRunning.value = false
     // TODO: refresh tables data and when
   }

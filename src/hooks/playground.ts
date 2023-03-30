@@ -1,3 +1,4 @@
+import { getPlaygroundInfo } from '@/api/playground'
 import { Log } from '@/store/modules/log/types'
 
 export default function useLog() {
@@ -7,8 +8,8 @@ export default function useLog() {
   const pushLog = (log: Log, type: string) => {
     push(log, type || (route.name as string))
   }
-  const clearLogs = (type = route.name as string | string[]) => {
-    clear(type)
+  const clearLogs = () => {
+    clear(route.name as string)
   }
 
   return {

@@ -11,8 +11,13 @@ const useLogStore = defineStore('log', () => {
       type,
     })
   }
-  function clear(type: string) {
-    logs.value = logs.value.filter((log) => log.type !== type)
+  function clear(type: string | string[]) {
+    const types = Array.isArray(type) ? type : [type]
+    if (!type) {
+      logs.value = []
+    }
+    logs.value = logs.value.filter((log) => !types.includes(log.type))
+    console.log(`types, logs.value:`, types, logs.value)
   }
 
   return {

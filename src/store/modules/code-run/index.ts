@@ -1,11 +1,10 @@
+import { ref, computed } from 'vue'
+import { storeToRefs, defineStore } from 'pinia'
 import editorAPI from '@/api/editor'
 import { Message } from '@arco-design/web-vue'
-import { defineStore } from 'pinia'
 import { dateTypes } from '@/views/dashboard/modules/data-view/config'
 import { AnyObject, NumberObject } from '@/types/global'
-import { ResultsType, ResultType } from './types'
-import useLogStore from '../log'
-import useAppStore from '../app'
+import { ResultType } from './types'
 
 const useCodeRunStore = defineStore('codeRun', () => {
   const titleIndex = ref<NumberObject>({
@@ -13,11 +12,8 @@ const useCodeRunStore = defineStore('codeRun', () => {
     scripts: -1,
     playground: 0,
   })
-  const results = ref<ResultsType>({
-    query: [] as Array<ResultType>,
-    scripts: [] as Array<ResultType>,
-    playground: [] as Array<ResultType>,
-  })
+  const results = ref<ResultType[]>([])
+
   const activeTabKey = ref<NumberObject>({
     query: 0,
     scripts: 0,
@@ -26,20 +22,6 @@ const useCodeRunStore = defineStore('codeRun', () => {
   const primaryCodeRunning = ref(false)
   const secondaryCodeRunning = ref(false)
   const route = { name: 'playground' }
-  const { routeName, codeType } = storeToRefs(useAppStore())
-
-  const currentResult = computed(() => {
-    const defaultValue = {
-      records: {
-        rows: [],
-        schema: { column_schemas: [] },
-      },
-      dimensionsAndXName: [],
-    }
-
-    const result = results.value[route.name].find((item: ResultType) => item.key === activeTabKey.value[route.name])
-    return result || defaultValue
-  })
 
   // TODO: Add all the types we decide instead of ECharts if needed in the future.
   const getDimensionsAndXName = (elements: any) => {
@@ -90,8 +72,9 @@ const useCodeRunStore = defineStore('codeRun', () => {
               records: oneRes.records,
               dimensionsAndXName: rowLength === 0 ? [] : getDimensionsAndXName(oneRes.records.schema.column_schemas),
               key: titleIndex.value[route.name],
+              type,
             }
-            results.value[route.name].push(oneResult)
+            results.value.push(oneResult)
             activeTabKey.value[route.name] = titleIndex.value[route.name]
           }
         } else {
@@ -131,17 +114,16 @@ const useCodeRunStore = defineStore('codeRun', () => {
         content: 'save success',
         duration: 2 * 1000,
       })
-      useLogStore().pushLog({
+      return {
         type,
         codeInfo: name,
         ...res,
-      })
+      }
     } catch (error: any) {
-      useLogStore().pushLog({
+      return {
         type,
         ...error,
-      })
-      throw error
+      }
     }
   }
 
@@ -149,8 +131,8 @@ const useCodeRunStore = defineStore('codeRun', () => {
     activeTabKey.value[route.name] = key
   }
 
-  const clearResults = () => {
-    results.value[route.name] = []
+  const clearResults = (type = '') => {
+    results.value = results.value.filter((result) => result.type !== type)
     titleIndex.value[route.name] = -1
     activeTabKey.value[route.name] = 0
   }
@@ -175,7 +157,6 @@ const useCodeRunStore = defineStore('codeRun', () => {
     titleIndex,
     results,
     activeTabKey,
-    currentResult,
     runCode,
     saveScript,
     setActiveTabKey,
