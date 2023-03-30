@@ -1,7 +1,7 @@
 <template lang="pug">
 a-tabs.result-tabs.logs-tab(type="rounded")
   template(#extra)  
-    a-button.clear-logs-button(v-if="logs[routeName].length" type="secondary" status="danger" @click="clearLogs") {{$t('dataExplorer.clear')}}  
+    a-button.clear-logs-button(v-if="logs[routeName].length" type="secondary" status="danger" @click="clearLogs(routeName)") {{$t('dataExplorer.clear')}}  
   a-tab-pane(title="Logs")
     a-card(:bordered="false")
       a-list(v-if="logs[routeName].length" :hoverable="true" size="small" :bordered="false" :split="false")
@@ -42,12 +42,13 @@ a-tabs.result-tabs.logs-tab(type="rounded")
   import { storeToRefs } from 'pinia'
   import { format } from 'sql-formatter'
 
+  const route = useRoute()
   const { logs } = storeToRefs(useLogStore())
-  const { codeType, routeName } = storeToRefs(useAppStore())
-
+  const { codeType } = storeToRefs(useAppStore())
   const { clearLogs } = useLogStore()
   const { copy, copied } = useClipboard()
 
+  const routeName = route.name
   const copyToClipboard = (code: string) => {
     if (codeType.value === 'sql') copy(format(code, { language: 'mysql', keywordCase: 'upper' }))
     else copy(code)

@@ -23,8 +23,9 @@ const useCodeRunStore = defineStore('codeRun', () => {
   })
   const primaryCodeRunning = ref(false)
   const secondaryCodeRunning = ref(false)
-  const { routeName, codeType } = storeToRefs(useAppStore())
+  const { codeType } = storeToRefs(useAppStore())
   const i18 = useI18n()
+  const route = useRoute()
 
   const currentResult = computed(() => {
     const defaultValue = {
@@ -35,9 +36,8 @@ const useCodeRunStore = defineStore('codeRun', () => {
       dimensionsAndXName: [],
     }
 
-    const result = results.value[routeName.value].find(
-      (item: ResultType) => item.key === activeTabKey.value[routeName.value]
-    )
+    const routeName = route.name as string
+    const result = results.value[routeName].find((item: ResultType) => item.key === activeTabKey.value[routeName])
     return result || defaultValue
   })
 
@@ -67,7 +67,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
     promQL: editorAPI.runPromQL,
   }
 
-  const runCode = async (codeInfo: string) => {
+  const runCode = async (codeInfo: string, routeName: string) => {
     try {
       let res: any = {}
       res = await API_MAP[codeType.value](codeInfo)
@@ -83,14 +83,14 @@ const useCodeRunStore = defineStore('codeRun', () => {
             records: rowLength,
           })
           if (rowLength >= 0) {
-            titleIndex.value[routeName.value] += 1
+            titleIndex.value[routeName] += 1
             const oneResult = {
               records: oneRes.records,
               dimensionsAndXName: rowLength === 0 ? [] : getDimensionsAndXName(oneRes.records.schema.column_schemas),
-              key: titleIndex.value[routeName.value],
+              key: titleIndex.value[routeName],
             }
-            results.value[routeName.value].push(oneResult)
-            activeTabKey.value[routeName.value] = titleIndex.value[routeName.value]
+            results.value[routeName].push(oneResult)
+            activeTabKey.value[routeName] = titleIndex.value[routeName]
           }
         } else {
           resultInLog.push({
@@ -104,21 +104,21 @@ const useCodeRunStore = defineStore('codeRun', () => {
         codeInfo,
         result: resultInLog,
       }
-      useLogStore().pushLog(oneLog)
+      useLogStore().pushLog(oneLog, routeName)
     } catch (error: any) {
       const oneLog = {
         type: codeType.value,
         codeInfo,
         ...error,
       }
-      useLogStore().pushLog(oneLog)
+      useLogStore().pushLog(oneLog, routeName)
     }
 
     primaryCodeRunning.value = false
     secondaryCodeRunning.value = false
   }
 
-  const saveScript = async (name: string, code: string) => {
+  const saveScript = async (name: string, code: string, routeName: string) => {
     try {
       const res: any = await editorAPI.saveScript(name, code)
 
@@ -126,42 +126,51 @@ const useCodeRunStore = defineStore('codeRun', () => {
         content: i18.t('dataExplorer.saveSuccess'),
         duration: 2 * 1000,
       })
-      useLogStore().pushLog({
-        type: codeType.value,
-        codeInfo: name,
-        ...res,
-      })
+      useLogStore().pushLog(
+        {
+          type: codeType.value,
+          codeInfo: name,
+          ...res,
+        },
+        routeName
+      )
     } catch (error: any) {
-      useLogStore().pushLog({
-        type: codeType.value,
-        ...error,
-      })
+      useLogStore().pushLog(
+        {
+          type: codeType.value,
+          ...error,
+        },
+        routeName
+      )
       throw error
     }
   }
 
   const setActiveTabKey = (key: number) => {
-    activeTabKey.value[routeName.value] = key
+    const routeName = route.name as string
+    activeTabKey.value[routeName] = key
   }
 
   const clearResults = () => {
-    results.value[routeName.value] = []
-    titleIndex.value[routeName.value] = -1
-    activeTabKey.value[routeName.value] = 0
+    const routeName = route.name as string
+    results.value[routeName] = []
+    titleIndex.value[routeName] = -1
+    activeTabKey.value[routeName] = 0
   }
 
   const removeResult = (key: number) => {
-    if (results.value[routeName.value].length === 1) {
+    const routeName = route.name as string
+    if (results.value[routeName].length === 1) {
       clearResults()
       return
     }
-    let deletedTabIndex = results.value[routeName.value].findIndex((item: ResultType) => item.key === key)
-    if (deletedTabIndex + 1 === results.value[routeName.value].length) {
+    let deletedTabIndex = results.value[routeName].findIndex((item: ResultType) => item.key === key)
+    if (deletedTabIndex + 1 === results.value[routeName].length) {
       deletedTabIndex -= 1
     }
-    results.value[routeName.value] = results.value[routeName.value].filter((item: ResultType) => item.key !== key)
+    results.value[routeName] = results.value[routeName].filter((item: ResultType) => item.key !== key)
 
-    activeTabKey.value[routeName.value] = results.value[routeName.value][deletedTabIndex].key
+    activeTabKey.value[routeName] = results.value[routeName][deletedTabIndex].key
   }
 
   return {

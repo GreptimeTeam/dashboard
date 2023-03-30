@@ -50,7 +50,7 @@ a-card(:bordered="false").editor-card
   CodeMirror(v-model="queryCode[queryType]" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
 
-<script lang="ts" setup>
+<script lang="ts" setup name="Editor">
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
   import { sql } from '@codemirror/lang-sql'
@@ -71,14 +71,15 @@ a-card(:bordered="false").editor-card
     tabSize: 2,
   })
 
+  const route = useRoute()
+  const { runCode } = useCodeRunStore()
+  const { primaryCodeRunning, secondaryCodeRunning } = storeToRefs(useCodeRunStore())
+  const { queryCode, queryType, cursorAt, queryOptions, promForm, selectCodeType } = useQueryCode()
+
   const lineStart = ref()
   const lineEnd = ref()
   const selectedCode = ref()
   const view = shallowRef()
-
-  const { runCode } = useCodeRunStore()
-  const { primaryCodeRunning, secondaryCodeRunning } = storeToRefs(useCodeRunStore())
-  const { queryCode, queryType, cursorAt, queryOptions, promForm, selectCodeType } = useQueryCode()
 
   const handleReady = (payload: any) => {
     view.value = payload.view
@@ -117,15 +118,17 @@ a-card(:bordered="false").editor-card
   })
 
   const runQuery = () => {
+    const routeName = route.name as string
     primaryCodeRunning.value = true
     // TODO: add better format tool for code
-    runCode(queryCode.value[queryType.value].trim().replace(/\n/gi, ' '))
+    runCode(queryCode.value[queryType.value].trim().replace(/\n/gi, ' '), routeName)
     // TODO: refresh tables data and when
   }
 
   const runPartQuery = () => {
+    const routeName = route.name as string
     secondaryCodeRunning.value = true
-    runCode(selectedCode.value.trim())
+    runCode(selectedCode.value.trim(), routeName)
   }
 
   // TODO: i18n config

@@ -11,8 +11,7 @@ a-tabs.result-tabs(type="rounded" lazy-load :active-key="activeTabKey[routeName]
 <script lang="ts" name="DataView" setup>
   import { useCodeRunStore, useAppStore } from '@/store'
 
-  const { routeName } = storeToRefs(useAppStore())
-
+  const route = useRoute()
   const { setActiveTabKey, removeResult, clearResults } = useCodeRunStore()
   const { results, activeTabKey } = storeToRefs(useCodeRunStore())
 
@@ -23,4 +22,6 @@ a-tabs.result-tabs(type="rounded" lazy-load :active-key="activeTabKey[routeName]
   const tabClick = (key: any) => {
     setActiveTabKey(key)
   }
+
+  const routeName = route.name as string
 </script>

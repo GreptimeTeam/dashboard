@@ -35,6 +35,7 @@ a-card(:bordered="false").editor-card
     tabSize: 2,
   })
 
+  const route = useRoute()
   const dataBaseStore = useDataBaseStore()
   const { pythonCode, cursorAt, lastSavedCode, isNewScript, scriptName, isChanged, selectAfterSave, createNewScript } =
     usePythonCode()
@@ -88,8 +89,10 @@ a-card(:bordered="false").editor-card
 
   const extensions = [python(), oneDark]
   const saveCurrentScript = async () => {
+    const routeName = route.name as string
+
     try {
-      await saveScript(scriptForm.value.scriptName, pythonCode.value.trim())
+      await saveScript(scriptForm.value.scriptName, pythonCode.value.trim(), routeName)
       await getScriptsTable()
       selectAfterSave(scriptForm.value.scriptName)
     } catch (error: any) {
@@ -97,16 +100,20 @@ a-card(:bordered="false").editor-card
     }
   }
   const saveScriptAndRun = async () => {
-    await saveScript(scriptForm.value.scriptName, pythonCode.value.trim())
+    const routeName = route.name as string
+
+    await saveScript(scriptForm.value.scriptName, pythonCode.value.trim(), routeName)
     lastSavedCode.value = pythonCode.value
     secondaryCodeRunning.value = true
-    runCode(scriptForm.value.scriptName)
+    runCode(scriptForm.value.scriptName, routeName)
     await getScriptsTable()
     selectAfterSave(scriptForm.value.scriptName)
   }
 
   const run = () => {
+    const routeName = route.name as string
+
     secondaryCodeRunning.value = true
-    runCode(scriptForm.value.scriptName)
+    runCode(scriptForm.value.scriptName, routeName)
   }
 </script>

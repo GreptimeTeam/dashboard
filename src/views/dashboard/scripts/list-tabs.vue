@@ -13,10 +13,11 @@ a-tabs.sider-tabs(v-model:active-key="tabActiveKey" :class="routeName === 'query
   import tableList from '../modules/table-list.vue'
   import ScriptsList from './scripts-list.vue'
 
-  const { routeName } = storeToRefs(useAppStore())
-
   const tabActiveKey = ref()
-  if (routeName.value === 'query') {
+  const route = useRoute()
+
+  const routeName = route.name as string
+  if (routeName === 'query') {
     tabActiveKey.value = '1'
   }
 </script>

@@ -31,8 +31,8 @@ a-space(direction="vertical" size="medium" fill)
   import usePythonCode from '@/hooks/python-code'
   import useSiderTabs from '@/hooks/sider-tabs'
 
+  const route = useRoute()
   const { insertNameToQueryCode } = useQueryCode()
-  const { routeName } = storeToRefs(useAppStore())
   const { insertNameToPyCode } = usePythonCode()
   const { tablesSearchKey, tablesTreeData } = useSiderTabs()
 
@@ -80,7 +80,8 @@ a-space(direction="vertical" size="medium" fill)
   }
 
   const insertName = (name: string) => {
-    return INSERT_MAP[routeName.value](name)
+    const routeName = route.name as string
+    return INSERT_MAP[routeName](name)
   }
 
   const ICON_MAP: { [key: string]: string } = {

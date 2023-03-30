@@ -5,7 +5,7 @@ a-layout.layout
   a-layout-content
     a-space.content-space(direction="vertical" fill size="large")
       Editor 
-      DataView(v-if="!!results[routeName].length")
+      DataView(v-if="!!results['query'].length")
       Log 
 </template>
 
@@ -13,7 +13,7 @@ a-layout.layout
   import ListTabs from '../scripts/list-tabs.vue'
 
   const { results } = storeToRefs(useCodeRunStore())
-  const { codeType, routeName } = storeToRefs(useAppStore())
+  const { codeType } = storeToRefs(useAppStore())
   const { queryType } = useQueryCode()
 
   codeType.value = queryType.value
