@@ -14,10 +14,10 @@ a-card(:bordered="false").editor-card
             icon-play-arrow(v-else)
           div(v-if="lineStart === lineEnd") {{$t('dataExplorer.runLine')}} {{ lineStart }}
           div(v-else) {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
-    .query-select
+    .query-select(v-if="!isCloud")
       a-select(v-model="queryType" @change="selectCodeType")
         a-option(v-for="query of queryOptions" :="query")
-  a-form.space-between.prom-form(:model="promForm" layout="inline" v-show="queryType !== 'sql'")
+  a-form.space-between.prom-form(:model="promForm" layout="inline" v-show="queryType === 'promQL'")
     a-space(size="medium")
       a-form-item(:hide-label="true")
         a-select(v-if="promForm.isRelative === 1" v-model="promForm.time" :trigger-props="{'update-at-scroll': true}")
@@ -73,6 +73,7 @@ a-card(:bordered="false").editor-card
 
   const route = useRoute()
   const { runCode } = useCodeRunStore()
+  const { isCloud } = storeToRefs(useAppStore())
   const { primaryCodeRunning, secondaryCodeRunning } = storeToRefs(useCodeRunStore())
   const { queryCode, queryType, cursorAt, queryOptions, promForm, selectCodeType } = useQueryCode()
 
