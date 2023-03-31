@@ -109,5 +109,6 @@ a-card(:bordered="false")
 
   const drawChart = () => {
     option.value = makeOption([chartForm.chartType, chartForm.ySelectedTypes])
+    console.log(`options.value:`, option.value)
   }
 </script>

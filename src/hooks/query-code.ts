@@ -39,6 +39,7 @@ const promForm = ref({
 export default function useQueryCode() {
   const { codeType } = storeToRefs(useAppStore())
   const { results } = useCodeRunStore()
+  const route = useRoute()
 
   const insertNameToQueryCode = (name: any) => {
     queryCode.value[queryType.value] =
@@ -51,12 +52,13 @@ export default function useQueryCode() {
     codeType.value = queryType.value
   }
 
-  const run = async (codeInfo: string, type = queryType.value) => {
+  const run = async (code, type = queryType.value, withoutSave = false) => {
     const { runCode } = useCodeRunStore()
     const { pushLog } = useLog()
-    const res = await runCode(codeInfo, type)
-
-    pushLog(res.log, type)
+    const res = await runCode(code, type, withoutSave)
+    if (!withoutSave) {
+      pushLog(res.log, type)
+    }
     return res
   }
 

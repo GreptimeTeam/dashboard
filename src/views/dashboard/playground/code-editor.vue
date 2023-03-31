@@ -12,6 +12,7 @@
       a-tab-pane(key='2', title='Chart')
         DataChart(:data="result")
   .logs(v-if="log")
+    a-list(:hoverable="true" size="small" :bordered="false" :split="false")
       Log(:log="log" codeType="sql")
 </template>
 
@@ -19,7 +20,6 @@
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
   import { sql } from '@codemirror/lang-sql'
-  a-list(:hoverable="false" size="small" :bordered="false" :split="false")
   import Log from '@/views/dashboard/modules/log.vue'
   // data
   const props = defineProps({
@@ -48,16 +48,19 @@
   // methods
   const reset = () => {
     code.value = defaultCode
+    result.value = null
+    log.value = null
   }
   const runSqlCommand = async () => {
-    const res = await run(code.value.trim().replace(/\n/gi, ' '))
+    isLoading.value = true
+    const res = await run(code.value.trim().replace(/\n/gi, ' '), 'sql', true)
     if (res.record) {
-      result.value = res.record
+      result.value = res?.record
     } else {
       log.value = res.log
     }
-    // todo: refresh tables data and when
     isLoading.value = false
+    // todo: refresh tables data and when
   }
   // lifecycle
   const extensions = [sql(), oneDark]
@@ -86,6 +89,9 @@
     }
     .logs {
       margin-top 20px
+    }
+    :deep(.arco-btn) {
+      min-width 80px
     }
   }
 </style>

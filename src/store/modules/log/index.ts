@@ -17,7 +17,6 @@ const useLogStore = defineStore('log', () => {
       logs.value = []
     }
     logs.value = logs.value.filter((log) => !types.includes(log.type))
-    console.log(`types, logs.value:`, types, logs.value)
   }
 
   return {

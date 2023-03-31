@@ -2,7 +2,7 @@
 a-tabs.result-tabs(type="rounded" lazy-load :active-key="activeTabKey" @tab-click="tabClick" @delete="deleteTab" editable :animation="true")
   template(#extra)
     a-button(@click="clearResults()" status="danger") {{$t('dataExplorer.clear')}}
-  a-tab-pane(v-for="(result, index) of results" :key="result.key" :title="`${$t('dataExplorer.result')} ${result.key + 1}`" closable) 
+  a-tab-pane(v-for="(result, index) of results" :key="result.key" :title="`${$t('dataExplorer.result')} ${result.key}`" closable) 
     a-space(direction="vertical" fill size="small")
       DataGrid(:data="result")
       DataChart(:data="result")
@@ -20,7 +20,7 @@ a-tabs.result-tabs(type="rounded" lazy-load :active-key="activeTabKey" @tab-clic
 
   const { routeName } = storeToRefs(useAppStore())
   const { setActiveTabKey, removeResult, clearResults } = useCodeRunStore()
-  const activeTabKey = ref(props.results[0].key)
+  const activeTabKey = ref(props.results[0]?.key)
 
   const deleteTab = (key: number) => {
     removeResult(key)

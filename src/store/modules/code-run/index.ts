@@ -49,12 +49,13 @@ const useCodeRunStore = defineStore('codeRun', () => {
     promQL: editorAPI.runPromQL,
   }
 
-  const runCode = async (codeInfo: string, type: string) => {
+  const runCode = async (codeInfo: string, type: string, withoutSave = false) => {
     try {
       let res: any = {}
       let oneResult = null
       res = await API_MAP[type](codeInfo)
 
+      console.log(`codeInfo:`, codeInfo, res)
       Message.success({
         content: 'run success',
         duration: 2 * 1000,
@@ -74,7 +75,10 @@ const useCodeRunStore = defineStore('codeRun', () => {
               key: titleIndex.value[route.name],
               type,
             }
-            results.value.push(oneResult)
+            if (!withoutSave) {
+              results.value.push(oneResult)
+            }
+
             activeTabKey.value[route.name] = titleIndex.value[route.name]
           }
         } else {

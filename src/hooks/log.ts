@@ -5,9 +5,9 @@ export default function useLog() {
   const { push, clear } = useLogStore()
 
   const pushLog = (log: Log, type: string) => {
-    push(log, type || (route.name as string))
+    push(log, type || (route?.name as string))
   }
-  const clearLogs = (type = route.name as string | string[]) => {
+  const clearLogs = (type = route?.name as string | string[]) => {
     clear(type)
   }
 

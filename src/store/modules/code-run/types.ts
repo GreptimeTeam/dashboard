@@ -8,4 +8,5 @@ export interface ResultType {
   dimensionsAndXName: any[]
   key: number
   type: string
+  modules: string
 }
