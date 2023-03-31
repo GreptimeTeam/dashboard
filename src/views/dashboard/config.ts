@@ -61,3 +61,5 @@ export const durations = [
 ]
 
 export const durationExamples = ['1h', '5d1m', '5m', '10s']
+
+export const timeOptionsArray = [5, 10, 15, 30, 60]

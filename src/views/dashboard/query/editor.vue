@@ -56,7 +56,7 @@ a-card(:bordered="false").editor-card
   import { sql } from '@codemirror/lang-sql'
   import { PromQLExtension } from '@prometheus-io/codemirror-promql'
   import { useCodeRunStore } from '@/store'
-  import { durations, durationExamples } from '../modules/data-view/config'
+  import { durations, durationExamples, timeOptionsArray } from '../config'
 
   export interface Props {
     spellcheck?: boolean
@@ -132,7 +132,7 @@ a-card(:bordered="false").editor-card
   }
 
   // TODO: i18n config
-  const timeOptions = [5, 10, 15, 30, 60]
+  const timeOptions = timeOptionsArray
     .map((value) => ({
       value,
       label: `Last ${value} minutes`,

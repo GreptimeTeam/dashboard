@@ -2,7 +2,7 @@ import editorAPI from '@/api/editor'
 import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import { defineStore } from 'pinia'
-import { dateTypes } from '@/views/dashboard/modules/data-view/config'
+import { dateTypes } from '@/views/dashboard/config'
 import { AnyObject, NumberObject } from '@/types/global'
 import { ResultsType, ResultType } from './types'
 import useLogStore from '../log'
@@ -107,8 +107,8 @@ const useCodeRunStore = defineStore('codeRun', () => {
       }
       if (codeType.value === 'promQL') {
         oneLog.promInfo = {
-          Start: new Date(promForm.value.start).toLocaleString(),
-          End: new Date(promForm.value.end).toLocaleString(),
+          Start: new Date(parseInt(promForm.value.start, 10)).toLocaleString(),
+          End: new Date(parseInt(promForm.value.end, 10)).toLocaleString(),
           Step: promForm.value.step,
           Query: codeInfo,
         }

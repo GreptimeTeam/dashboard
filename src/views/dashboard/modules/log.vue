@@ -33,7 +33,7 @@ a-tabs.result-tabs.logs-tab(type="rounded")
                 template(#content)
                   a-list(:split="false" :bordered="false" size="small")
                     a-list-item(v-if="item.type==='promQL'" v-for="(value, name) in item.promInfo")
-                      span.width-40 {{ name }}
+                      span.width-35 {{ name }}
                       a-typography-text.ml-4(code) {{ value }}
                     a-list-item(v-else) {{ item.codeInfo }}
           a-space.log-space(v-else size="large" fill)

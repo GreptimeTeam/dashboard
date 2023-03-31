@@ -19,7 +19,7 @@ a-card(:bordered="false" v-if="schema")
 </template>
 
 <script lang="ts" setup>
-  import { chartTypeOptions, updateOptions, numberTypes } from '../config'
+  import { chartTypeOptions, updateOptions, numberTypes } from '../../../config'
 
   // TODO: To add this props in every select should not be the best option.
   const triggerProps = {
