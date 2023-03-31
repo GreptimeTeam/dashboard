@@ -121,7 +121,9 @@ const useCodeRunStore = defineStore('codeRun', () => {
         codeInfo,
         ...error,
       }
-      useLogStore().pushLog(oneLog, routeName)
+      if ('error' in error) {
+        useLogStore().pushLog(oneLog, routeName)
+      }
     }
 
     primaryCodeRunning.value = false
@@ -145,13 +147,15 @@ const useCodeRunStore = defineStore('codeRun', () => {
         routeName
       )
     } catch (error: any) {
-      useLogStore().pushLog(
-        {
-          type: codeType.value,
-          ...error,
-        },
-        routeName
-      )
+      if ('error' in error) {
+        useLogStore().pushLog(
+          {
+            type: codeType.value,
+            ...error,
+          },
+          routeName
+        )
+      }
       throw error
     }
   }

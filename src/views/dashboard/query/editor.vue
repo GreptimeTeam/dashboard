@@ -47,7 +47,7 @@ a-card(:bordered="false").editor-card
                     a-typography-text(code v-for="item of durationExamples" :key="item") {{ item }}
     a-form-item.time-switch(:label="promForm.isRelative === 1 ? $t('dataExplorer.relative') : $t('dataExplorer.absolute')")
       a-switch(v-model="promForm.isRelative" :checked-value="1" :unchecked-value="0")
-  CodeMirror(v-model="queryCode[queryType]" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
+  CodeMirror(v-model="queryCode[queryType]" :extensions="extensions[queryType]" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" @ready="handleReady" @update="codeUpdate")
 </template>
 
 <script lang="ts" setup name="Editor">
@@ -85,6 +85,17 @@ a-card(:bordered="false").editor-card
     view.value = payload.view
   }
 
+  const style = {
+    height: '250px',
+  }
+
+  const promQL = new PromQLExtension()
+
+  const extensions = {
+    sql: [sql(), oneDark],
+    promQL: [promQL.asExtension(), oneDark],
+  }
+
   // TODO: Try something better. CodeUpdate is constantly changing and the cost is too much.
   const codeUpdate = () => {
     if (view.value) {
@@ -104,18 +115,6 @@ a-card(:bordered="false").editor-card
       }
     }
   }
-
-  const style = {
-    height: '250px',
-  }
-  const promQL = new PromQLExtension()
-
-  const extensions = computed(() => {
-    if (queryType.value === 'sql') {
-      return [sql(), oneDark]
-    }
-    return [promQL.asExtension(), oneDark]
-  })
 
   const runQuery = () => {
     const routeName = route.name as string
