@@ -32,7 +32,7 @@ const promForm = ref({
   step: null,
   isRelative: 1,
   time: 5,
-  range: null,
+  range: [],
 })
 
 export default function useQueryCode() {

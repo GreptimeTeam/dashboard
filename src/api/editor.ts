@@ -1,4 +1,5 @@
 import axios, { AxiosRequestConfig, AxiosRequestHeaders } from 'axios'
+import dayjs from 'dayjs'
 import qs from 'qs'
 
 const sqlUrl = `/v1/sql`
@@ -39,8 +40,9 @@ const makePromParams = (code: string) => {
   const { promForm } = useQueryCode()
   if (promForm.value.isRelative) {
     // TODO: move this into a function?
-    promForm.value.end = new Date().getTime()
-    promForm.value.start = promForm.value.end - 1000 * 60 * promForm.value.time
+    const now = dayjs()
+    promForm.value.end = now.format('x')
+    promForm.value.start = now.subtract(promForm.value.time, 'minute').format('x').toString()
   } else {
     ;[promForm.value.start, promForm.value.end] = promForm.value.range
   }

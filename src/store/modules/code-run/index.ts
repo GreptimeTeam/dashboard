@@ -1,5 +1,6 @@
 import editorAPI from '@/api/editor'
 import { useI18n } from 'vue-i18n'
+import dayjs from 'dayjs'
 import { Message } from '@arco-design/web-vue'
 import { defineStore } from 'pinia'
 import { dateTypes } from '@/views/dashboard/config'
@@ -107,8 +108,8 @@ const useCodeRunStore = defineStore('codeRun', () => {
       }
       if (codeType.value === 'promQL') {
         oneLog.promInfo = {
-          Start: new Date(parseInt(promForm.value.start, 10)).toLocaleString(),
-          End: new Date(parseInt(promForm.value.end, 10)).toLocaleString(),
+          Start: dayjs(promForm.value.start, 'x').format('YYYY-MM-DD HH:mm:ss'),
+          End: dayjs(promForm.value.end, 'x').format('YYYY-MM-DD HH:mm:ss'),
           Step: promForm.value.step,
           Query: codeInfo,
         }
