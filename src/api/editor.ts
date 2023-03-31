@@ -38,6 +38,7 @@ const makeScriptConfig = (name: string) => {
 
 const makePromParams = (code: string) => {
   const { promForm } = useQueryCode()
+  const appStore = useAppStore()
   if (promForm.value.isRelative) {
     // TODO: move this into a function?
     const now = dayjs()
@@ -52,6 +53,7 @@ const makePromParams = (code: string) => {
       start: promForm.value.start,
       end: promForm.value.end,
       step: promForm.value.step,
+      db: appStore.database,
     },
   } as AxiosRequestConfig
 }
