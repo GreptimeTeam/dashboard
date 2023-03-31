@@ -1,4 +1,3 @@
-import { getPlaygroundInfo } from '@/api/playground'
 import { Log } from '@/store/modules/log/types'
 
 export default function useLog() {

@@ -2,12 +2,14 @@
 .navbar
   .logo-space
     img.logo-text-img(alt="logo" src="/src/assets/images/logo-text.webp")
-  .menu(v-permission="['dev']")
+  .menu
     a-menu(mode="horizontal" v-model="routeName" :default-selected-keys="defaultMenuKey" @menu-item-click="menuClick")
       a-menu-item(key="query")
         | Query
-      a-menu-item(key="scripts")
+      a-menu-item(key="scripts" v-permission="['dev']")
         | Scripts
+      a-menu-item(key="playground")
+        | Playground
   ul.right-side
     li
       a-tooltip(:content="$t('settings.title')")

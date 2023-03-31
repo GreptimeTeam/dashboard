@@ -17,6 +17,7 @@
   "databaseList": [],
   "username": "",
   "password": "",
+  "dbId": "",
   "serverMenu": [],
   "codeType": "sql",
   "isCloud": false,

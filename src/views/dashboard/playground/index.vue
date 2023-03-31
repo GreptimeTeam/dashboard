@@ -44,9 +44,7 @@
     window.grecaptcha.ready(() => {
       window.grecaptcha
         .execute(import.meta.env.VITE_RECAPTCHA_SITE_KEY, { action: 'submit' })
-
         .then(async (token: string) => {
-          console.log(`appStore:`, appStore)
           const data = await getPlaygroundInfo(token, appStore.dbId)
           alert(JSON.stringify(data, null, 2))
         })

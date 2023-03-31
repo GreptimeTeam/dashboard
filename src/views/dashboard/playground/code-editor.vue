@@ -2,7 +2,7 @@
 .code-editor
   .code
     .operations(v-if="!disabled")
-      a-button(@click="runSqlCommand") run
+      a-button(@click="runSqlCommand" :loading="isLoading") run
       a-button(@click="reset") reset
     CodeMirror(v-model="code" :extensions="extensions" :disabled="disabled")
   .results(v-if="result")
@@ -12,7 +12,6 @@
       a-tab-pane(key='2', title='Chart')
         DataChart(:data="result")
   .logs(v-if="log")
-    a-list(:hoverable="true" size="small" :bordered="false" :split="false")
       Log(:log="log" codeType="sql")
 </template>
 
@@ -20,6 +19,7 @@
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
   import { sql } from '@codemirror/lang-sql'
+  a-list(:hoverable="false" size="small" :bordered="false" :split="false")
   import Log from '@/views/dashboard/modules/log.vue'
   // data
   const props = defineProps({
@@ -28,6 +28,7 @@
       default: false,
     },
   })
+  const isLoading = ref(false)
   const { run } = useQueryCode()
   const slots = useSlots()
   const appStore = useAppStore()
@@ -49,7 +50,6 @@
     code.value = defaultCode
   }
   const runSqlCommand = async () => {
-    // todo: add better format tool for code
     const res = await run(code.value.trim().replace(/\n/gi, ' '))
     if (res.record) {
       result.value = res.record
@@ -57,6 +57,7 @@
       log.value = res.log
     }
     // todo: refresh tables data and when
+    isLoading.value = false
   }
   // lifecycle
   const extensions = [sql(), oneDark]

@@ -19,8 +19,5 @@ a-layout.layout
   const queryLogs = computed(() => logs.value.filter((log) => ['sql', 'promQL'].includes(log.type)))
   const results = computed(() => getResultsByType(['sql', 'promQL']))
 
-  onMounted(() => {
-    console.log(666)
-  })
   // TODO: add more code type in the future if needed
 </script>
