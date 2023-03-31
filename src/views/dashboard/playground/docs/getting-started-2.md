@@ -118,7 +118,7 @@ Enough with the basics, try to write your own query and do some exploration.
 ​
 
 ```sql
-;; Type your SQL here
+-- Type your SQL here
 ​
 ```
 

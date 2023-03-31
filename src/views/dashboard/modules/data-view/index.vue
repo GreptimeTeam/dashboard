@@ -1,7 +1,7 @@
 <template lang="pug">
 a-tabs.result-tabs(type="rounded" lazy-load :active-key="activeTabKey" @tab-click="tabClick" @delete="deleteTab" editable :animation="true")
   template(#extra)
-    a-button(@click="clearResults()" status="danger") {{$t('dataExplorer.clear')}}
+    a-button(@click="clearResults" status="danger") {{$t('dataExplorer.clear')}}
   a-tab-pane(v-for="(result, index) of results" :key="result.key" :title="`${$t('dataExplorer.result')} ${result.key}`" closable) 
     a-space(direction="vertical" fill size="small")
       DataGrid(:data="result")
@@ -29,4 +29,13 @@ a-tabs.result-tabs(type="rounded" lazy-load :active-key="activeTabKey" @tab-clic
   const tabClick = (key: any) => {
     activeTabKey.value = key
   }
+
+  watch(
+    () => ({ ...props }),
+    (value, old) => {
+      if (value.results.length > old.results.length) {
+        activeTabKey.value = props.results.slice(-1)[0].key
+      }
+    }
+  )
 </script>

@@ -7,18 +7,9 @@ import { AnyObject, NumberObject } from '@/types/global'
 import { ResultType } from './types'
 
 const useCodeRunStore = defineStore('codeRun', () => {
-  const titleIndex = ref<NumberObject>({
-    query: -1,
-    scripts: -1,
-    playground: 0,
-  })
   const results = ref<ResultType[]>([])
+  const resultsId = ref(0)
 
-  const activeTabKey = ref<NumberObject>({
-    query: 0,
-    scripts: 0,
-    playground: 0,
-  })
   const primaryCodeRunning = ref(false)
   const secondaryCodeRunning = ref(false)
   const route = { name: 'playground' }
@@ -55,7 +46,6 @@ const useCodeRunStore = defineStore('codeRun', () => {
       let oneResult = null
       res = await API_MAP[type](codeInfo)
 
-      console.log(`codeInfo:`, codeInfo, res)
       Message.success({
         content: 'run success',
         duration: 2 * 1000,
@@ -68,18 +58,16 @@ const useCodeRunStore = defineStore('codeRun', () => {
             records: rowLength,
           })
           if (rowLength >= 0) {
-            titleIndex.value[route.name] += 1
+            resultsId.value += 1
             oneResult = {
               records: oneRes.records,
               dimensionsAndXName: rowLength === 0 ? [] : getDimensionsAndXName(oneRes.records.schema.column_schemas),
-              key: titleIndex.value[route.name],
+              key: resultsId.value,
               type,
             }
             if (!withoutSave) {
               results.value.push(oneResult)
             }
-
-            activeTabKey.value[route.name] = titleIndex.value[route.name]
           }
         } else {
           resultInLog.push({
@@ -131,39 +119,20 @@ const useCodeRunStore = defineStore('codeRun', () => {
     }
   }
 
-  const setActiveTabKey = (key: number) => {
-    activeTabKey.value[route.name] = key
-  }
-
   const clearResults = (type = '') => {
     results.value = results.value.filter((result) => result.type !== type)
-    titleIndex.value[route.name] = -1
-    activeTabKey.value[route.name] = 0
   }
 
   const removeResult = (key: number) => {
-    if (results.value[route.name].length === 1) {
-      clearResults()
-      return
-    }
-    let deletedTabIndex = results.value[route.name].findIndex((item: ResultType) => item.key === key)
-    if (deletedTabIndex + 1 === results.value[route.name].length) {
-      deletedTabIndex -= 1
-    }
-    results.value[route.name] = results.value[route.name].filter((item: ResultType) => item.key !== key)
-
-    activeTabKey.value[route.name] = results.value[route.name][deletedTabIndex].key
+    results.value = results.value.filter((item: ResultType) => item.key !== key)
   }
 
   return {
     primaryCodeRunning,
     secondaryCodeRunning,
-    titleIndex,
     results,
-    activeTabKey,
     runCode,
     saveScript,
-    setActiveTabKey,
     removeResult,
     clearResults,
   }

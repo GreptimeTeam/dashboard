@@ -28,6 +28,7 @@ a-card(:bordered="false")
       default: () => ({}),
     },
   })
+
   // TODO: To add this props in every select should not be the best option.
   const triggerProps = {
     'update-at-scroll': true,

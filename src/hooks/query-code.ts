@@ -38,7 +38,7 @@ const promForm = ref({
 
 export default function useQueryCode() {
   const { codeType } = storeToRefs(useAppStore())
-  const { results } = useCodeRunStore()
+  const { results } = storeToRefs(useCodeRunStore())
   const route = useRoute()
 
   const insertNameToQueryCode = (name: any) => {
@@ -63,7 +63,7 @@ export default function useQueryCode() {
   }
 
   const getResultsByType = (types: string[]) => {
-    return results.filter((item) => types.includes(item.type))
+    return results.value.filter((item) => types.includes(item.type))
   }
 
   return {
