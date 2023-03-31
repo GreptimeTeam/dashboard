@@ -1,9 +1,11 @@
 import axios, { AxiosRequestConfig, AxiosRequestHeaders } from 'axios'
+import dayjs from 'dayjs'
 import qs from 'qs'
 
 const sqlUrl = `/v1/sql`
 const scriptUrl = `/v1/scripts`
 const runScriptUrl = `/v1/run-script`
+const promURL = `/v1/promql`
 const textHeaders = {
   'Content-Type': 'text/plain',
 } as AxiosRequestHeaders
@@ -34,6 +36,26 @@ const makeScriptConfig = (name: string) => {
   } as AxiosRequestConfig
 }
 
+const makePromParams = (code: string) => {
+  const { promForm } = useQueryCode()
+  if (promForm.value.isRelative) {
+    // TODO: move this into a function?
+    const now = dayjs()
+    promForm.value.end = now.format('x')
+    promForm.value.start = now.subtract(promForm.value.time, 'minute').format('x').toString()
+  } else {
+    ;[promForm.value.start, promForm.value.end] = promForm.value.range
+  }
+  return {
+    params: {
+      query: code,
+      start: promForm.value.start,
+      end: promForm.value.end,
+      step: promForm.value.step,
+    },
+  } as AxiosRequestConfig
+}
+
 const getDatabases = () => {
   return axios.post(sqlUrl, makeSqlData(`show databases`))
 }
@@ -46,7 +68,7 @@ const getTableByName = (tableName: string) => {
   return axios.post(sqlUrl, makeSqlData(`desc table ${tableName}`), addDatabaseParams())
 }
 
-const getSqlResult = (code: string) => {
+const runSQL = (code: string) => {
   return axios.post(sqlUrl, makeSqlData(code), addDatabaseParams())
 }
 
@@ -63,12 +85,17 @@ const runScript = (name: string) => {
   return axios.post(runScriptUrl, {}, makeScriptConfig(name))
 }
 
+const runPromQL = (code: string) => {
+  return axios.post(promURL, {}, makePromParams(code))
+}
+
 export default {
   getTables,
   getTableByName,
-  getSqlResult,
+  runSQL,
   getDatabases,
   getScriptsTable,
   runScript,
   saveScript,
+  runPromQL,
 }

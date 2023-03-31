@@ -27,12 +27,12 @@ a-space(direction="vertical" size="medium" fill)
 <script lang="ts" setup>
   import { storeToRefs } from 'pinia'
   import { useDataBaseStore, useAppStore } from '@/store'
-  import useDataExplorer from '@/hooks/data-explorer'
+  import useQueryCode from '@/hooks/query-code'
   import usePythonCode from '@/hooks/python-code'
   import useSiderTabs from '@/hooks/sider-tabs'
 
-  const { insertNameToCode } = useDataExplorer()
-  const { codeType } = storeToRefs(useAppStore())
+  const route = useRoute()
+  const { insertNameToQueryCode } = useQueryCode()
   const { insertNameToPyCode } = usePythonCode()
   const { tablesSearchKey, tablesTreeData } = useSiderTabs()
 
@@ -75,12 +75,13 @@ a-space(direction="vertical" size="medium" fill)
   }
 
   const INSERT_MAP: { [key: string]: any } = {
-    sql: insertNameToCode,
-    python: insertNameToPyCode,
+    query: insertNameToQueryCode,
+    scripts: insertNameToPyCode,
   }
 
   const insertName = (name: string) => {
-    return INSERT_MAP[codeType.value](name)
+    const routeName = route.name as string
+    return INSERT_MAP[routeName](name)
   }
 
   const ICON_MAP: { [key: string]: string } = {

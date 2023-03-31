@@ -3,6 +3,7 @@ import localSetting from '@/components/global-setting/local/en-US'
 
 export default {
   'menu.dashboard': 'Dashboard',
+  'menu.dashboard.query': 'Query',
   'menu.dashboard.scripts': 'Scripts',
   'menu.server.dashboard': 'Dashboard-Server',
   'menu.server.workplace': 'Workplace-Server',

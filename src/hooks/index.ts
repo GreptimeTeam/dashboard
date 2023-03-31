@@ -1,4 +1,4 @@
-import useDataExplorer from './data-explorer'
+import useQueryCode from './query-code'
 import useChartOption from './chart-option'
 
-export { useDataExplorer, useChartOption }
+export { useQueryCode, useChartOption }

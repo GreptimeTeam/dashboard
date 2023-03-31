@@ -1,7 +1,9 @@
 import editorAPI from '@/api/editor'
+import { useI18n } from 'vue-i18n'
+import dayjs from 'dayjs'
 import { Message } from '@arco-design/web-vue'
 import { defineStore } from 'pinia'
-import { dateTypes } from '@/views/dashboard/modules/data-view/config'
+import { dateTypes } from '@/views/dashboard/config'
 import { AnyObject, NumberObject } from '@/types/global'
 import { ResultsType, ResultType } from './types'
 import useLogStore from '../log'
@@ -9,20 +11,23 @@ import useAppStore from '../app'
 
 const useCodeRunStore = defineStore('codeRun', () => {
   const titleIndex = ref<NumberObject>({
-    sql: -1,
-    python: -1,
+    query: -1,
+    scripts: -1,
   })
   const results = ref<ResultsType>({
-    sql: [] as Array<ResultType>,
-    python: [] as Array<ResultType>,
+    query: [] as Array<ResultType>,
+    scripts: [] as Array<ResultType>,
   })
   const activeTabKey = ref<NumberObject>({
-    sql: 0,
-    python: 0,
+    query: 0,
+    scripts: 0,
   })
   const primaryCodeRunning = ref(false)
   const secondaryCodeRunning = ref(false)
   const { codeType } = storeToRefs(useAppStore())
+  const { promForm } = useQueryCode()
+  const i18 = useI18n()
+  const route = useRoute()
 
   const currentResult = computed(() => {
     const defaultValue = {
@@ -32,9 +37,9 @@ const useCodeRunStore = defineStore('codeRun', () => {
       },
       dimensionsAndXName: [],
     }
-    const result = results.value[codeType.value].find(
-      (item: ResultType) => item.key === activeTabKey.value[codeType.value]
-    )
+
+    const routeName = route.name as string
+    const result = results.value[routeName].find((item: ResultType) => item.key === activeTabKey.value[routeName])
     return result || defaultValue
   })
 
@@ -59,16 +64,17 @@ const useCodeRunStore = defineStore('codeRun', () => {
   }
 
   const API_MAP: AnyObject = {
-    sql: editorAPI.getSqlResult,
+    sql: editorAPI.runSQL,
     python: editorAPI.runScript,
+    promQL: editorAPI.runPromQL,
   }
 
-  const runCode = async (codeInfo: string) => {
+  const runCode = async (codeInfo: string, routeName: string) => {
     try {
       let res: any = {}
       res = await API_MAP[codeType.value](codeInfo)
       Message.success({
-        content: 'run success',
+        content: i18.t('dataExplorer.runSuccess'),
         duration: 2 * 1000,
       })
       const resultInLog: any = []
@@ -79,14 +85,14 @@ const useCodeRunStore = defineStore('codeRun', () => {
             records: rowLength,
           })
           if (rowLength >= 0) {
-            titleIndex.value[codeType.value] += 1
+            titleIndex.value[routeName] += 1
             const oneResult = {
               records: oneRes.records,
               dimensionsAndXName: rowLength === 0 ? [] : getDimensionsAndXName(oneRes.records.schema.column_schemas),
-              key: titleIndex.value[codeType.value],
+              key: titleIndex.value[routeName],
             }
-            results.value[codeType.value].push(oneResult)
-            activeTabKey.value[codeType.value] = titleIndex.value[codeType.value]
+            results.value[routeName].push(oneResult)
+            activeTabKey.value[routeName] = titleIndex.value[routeName]
           }
         } else {
           resultInLog.push({
@@ -100,64 +106,81 @@ const useCodeRunStore = defineStore('codeRun', () => {
         codeInfo,
         result: resultInLog,
       }
-      useLogStore().pushLog(oneLog)
+      if (codeType.value === 'promQL') {
+        oneLog.promInfo = {
+          Start: dayjs(promForm.value.start, 'x').format('YYYY-MM-DD HH:mm:ss'),
+          End: dayjs(promForm.value.end, 'x').format('YYYY-MM-DD HH:mm:ss'),
+          Step: promForm.value.step,
+          Query: codeInfo,
+        }
+      }
+      useLogStore().pushLog(oneLog, routeName)
     } catch (error: any) {
       const oneLog = {
         type: codeType.value,
         codeInfo,
         ...error,
       }
-      useLogStore().pushLog(oneLog)
+      useLogStore().pushLog(oneLog, routeName)
     }
 
     primaryCodeRunning.value = false
     secondaryCodeRunning.value = false
   }
 
-  const saveScript = async (name: string, code: string) => {
+  const saveScript = async (name: string, code: string, routeName: string) => {
     try {
       const res: any = await editorAPI.saveScript(name, code)
 
       Message.success({
-        content: 'save success',
+        content: i18.t('dataExplorer.saveSuccess'),
         duration: 2 * 1000,
       })
-      useLogStore().pushLog({
-        type: codeType.value,
-        codeInfo: name,
-        ...res,
-      })
+      useLogStore().pushLog(
+        {
+          type: codeType.value,
+          codeInfo: name,
+          ...res,
+        },
+        routeName
+      )
     } catch (error: any) {
-      useLogStore().pushLog({
-        type: codeType.value,
-        ...error,
-      })
+      useLogStore().pushLog(
+        {
+          type: codeType.value,
+          ...error,
+        },
+        routeName
+      )
       throw error
     }
   }
 
   const setActiveTabKey = (key: number) => {
-    activeTabKey.value[codeType.value] = key
+    const routeName = route.name as string
+    activeTabKey.value[routeName] = key
   }
 
   const clearResults = () => {
-    results.value[codeType.value] = []
-    titleIndex.value[codeType.value] = -1
-    activeTabKey.value[codeType.value] = 0
+    const routeName = route.name as string
+    results.value[routeName] = []
+    titleIndex.value[routeName] = -1
+    activeTabKey.value[routeName] = 0
   }
 
   const removeResult = (key: number) => {
-    if (results.value[codeType.value].length === 1) {
+    const routeName = route.name as string
+    if (results.value[routeName].length === 1) {
       clearResults()
       return
     }
-    let deletedTabIndex = results.value[codeType.value].findIndex((item: ResultType) => item.key === key)
-    if (deletedTabIndex + 1 === results.value[codeType.value].length) {
+    let deletedTabIndex = results.value[routeName].findIndex((item: ResultType) => item.key === key)
+    if (deletedTabIndex + 1 === results.value[routeName].length) {
       deletedTabIndex -= 1
     }
-    results.value[codeType.value] = results.value[codeType.value].filter((item: ResultType) => item.key !== key)
+    results.value[routeName] = results.value[routeName].filter((item: ResultType) => item.key !== key)
 
-    activeTabKey.value[codeType.value] = results.value[codeType.value][deletedTabIndex].key
+    activeTabKey.value[routeName] = results.value[routeName][deletedTabIndex].key
   }
 
   return {

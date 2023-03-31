@@ -4,21 +4,20 @@ import { logsType, logType } from './types'
 
 const useLogStore = defineStore('log', {
   state: () => ({
-    codeType: storeToRefs(useAppStore()).codeType,
     logs: {
-      sql: [],
-      python: [],
+      query: [],
+      scripts: [],
     } as logsType,
   }),
 
   getters: {},
 
   actions: {
-    pushLog(log: logType) {
-      this.logs[this.codeType] = this.logs[this.codeType].concat([log])
+    pushLog(log: logType, routeName: string) {
+      this.logs[routeName] = this.logs[routeName].concat([log])
     },
-    clearLogs() {
-      this.logs[this.codeType] = []
+    clearLogs(routeName: string) {
+      this.logs[routeName] = []
     },
   },
 })

@@ -1,6 +1,5 @@
 <template lang="pug">
-a-tabs.sider-tabs(v-model:active-key="tabActiveKey" default-active-key="2"
-  lazy-load type="rounded" :class="codeType === 'sql' ? 'one-tab' : ''")
+a-tabs.sider-tabs(v-model:active-key="tabActiveKey" :class="routeName === 'query' ? 'one-tab' : ''" default-active-key="2" type="rounded")
   a-tab-pane(key="1" title="Tables")
     a-card(:bordered="false").tree-card
       TableList    
@@ -14,12 +13,11 @@ a-tabs.sider-tabs(v-model:active-key="tabActiveKey" default-active-key="2"
   import tableList from '../modules/table-list.vue'
   import ScriptsList from './scripts-list.vue'
 
-  const { getTables: refreshTableData } = useDataBaseStore()
-
-  const { codeType } = storeToRefs(useAppStore())
-
   const tabActiveKey = ref()
-  if (codeType.value === 'sql') {
+  const route = useRoute()
+
+  const routeName = route.name as string
+  if (routeName === 'query') {
     tabActiveKey.value = '1'
   }
 </script>
