@@ -8,5 +8,9 @@ export interface ResultType {
   dimensionsAndXName: any[]
   key: number
   type: string
-  modules: string
+}
+
+export interface CodeRunType {
+  log: any
+  record?: any
 }

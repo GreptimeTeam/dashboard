@@ -55,7 +55,7 @@
     isLoading.value = true
     const res = await run(code.value.trim().replace(/\n/gi, ' '), 'sql', true)
     if (res.record) {
-      result.value = res?.record
+      result.value = res.record
     } else {
       log.value = res.log
     }

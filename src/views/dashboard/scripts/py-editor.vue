@@ -37,10 +37,10 @@ a-card(:bordered="false").editor-card
 
   const route = useRoute()
   const dataBaseStore = useDataBaseStore()
+  const secondaryCodeRunning = ref(false)
   const { pythonCode, cursorAt, lastSavedCode, isNewScript, scriptName, isChanged, selectAfterSave, createNewScript } =
     usePythonCode()
   const { saveScript, runCode } = useCodeRunStore()
-  const { secondaryCodeRunning } = storeToRefs(useCodeRunStore())
   const { getScriptsTable } = dataBaseStore
 
   const lineStart = ref()

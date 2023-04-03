@@ -11,12 +11,10 @@ a-tabs.result-tabs(type="rounded" lazy-load :active-key="activeTabKey" @tab-clic
 <script lang="ts" name="DataView" setup>
   import { useCodeRunStore, useAppStore } from '@/store'
   import { ResultType } from '@/store/modules/code-run/types'
-  const props = defineProps({
-    results: {
-      type: ResultType[],
-      default: () => [],
-    },
-  })
+
+  const props = defineProps<{
+    results: ResultType[]
+  }>()
 
   const { removeResult, clearResults } = useCodeRunStore()
   const activeTabKey = ref(props.results[0]?.key)

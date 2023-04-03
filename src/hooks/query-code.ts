@@ -1,3 +1,4 @@
+import { CodeRunType } from '@/store/modules/code-run/types'
 import { Message } from '@arco-design/web-vue'
 import { useI18n } from 'vue-i18n'
 import { useCodeRunStore } from '@/store'
@@ -50,7 +51,7 @@ export default function useQueryCode() {
     codeType.value = queryType.value
   }
 
-  const run = async (code, type = queryType.value, withoutSave = false) => {
+  const run = async (code: any, type = queryType.value, withoutSave = false): Promise<CodeRunType> => {
     const { runCode } = useCodeRunStore()
     const { pushLog } = useLog()
     const res = await runCode(code, type, withoutSave)
