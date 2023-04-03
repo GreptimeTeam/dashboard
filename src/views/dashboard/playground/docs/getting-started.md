@@ -1,82 +1,128 @@
 ---
 title: Quick Start
 ---
-# Quick Start
+# Getting Started
 
-### Build
+## Preface
 
-#### Build from Source
+basics of GreptimeDB. Instead of static doc reading, Greptime Play offers an
+interactive experience: **all code blocks in this guide are editable and
+executable**.
+​
+By hitting `Run` button, code will be executed in a temporary, private instance
+from [GreptimeCloud](https://greptime.com/product/cloud). **You can also edit
+the code to explore your own ideas**. Note that the session is valid in **1
+hour**, you will be asked to create a new one when it's expired and recycled. So
+never store important data in Greptime Play sessions.
+​
+## Create a Time-Series Table
 
-To compile GreptimeDB from source, you'll need:
+Let's start by creating the `system_metrics` table. Note that we defined `host`
+and `idc` as primary key, and `ts` and time index, both are important concepts
+in GreptimeDB. Hit `Run` to create the table:
+​
 
-- C/C++ Toolchain: provides basic tools for compiling and linking. This is
-  available as `build-essential` on ubuntu and similar name on other platforms.
-- Rust: the easiest way to install Rust is to use
-  [`rustup`](https://rustup.rs/), which will check our `rust-toolchain` file and
-  install correct Rust version for you.
-- Protobuf: `protoc` is required for compiling `.proto` files. `protobuf` is
-  available from major package manager on macos and linux distributions. You can
-  find an installation instructions [here](https://grpc.io/docs/protoc-installation/).
-  **Note that `protoc` version needs to be >= 3.15** because we have used the `optional`
-  keyword. You can check it with `protoc --version`.
-- python3-dev or python3-devel(Optional feature, only needed if you want to run scripts
-  in CPython, and also need to enable `pyo3_backend` feature when compiling(by `cargo run -F pyo3_backend` or add `pyo3_backend` to src/script/Cargo.toml 's `features.default` like `default = ["python", "pyo3_backend]`)): this install a Python shared library required for running Python
-  scripting engine(In CPython Mode). This is available as `python3-dev` on
-  ubuntu, you can install it with `sudo apt install python3-dev`, or
-  `python3-devel` on RPM based distributions (e.g. Fedora, Red Hat, SuSE). Mac's
-  `Python3` package should have this shared library by default. More detail for compiling with PyO3 can be found in [PyO3](https://pyo3.rs/v0.18.1/building_and_distribution#configuring-the-python-version)'s documentation.
-
-#### Build with Docker
-
-A docker image with necessary dependencies is provided:
-
-```
-docker build --network host -f docker/Dockerfile -t greptimedb .
-```
-
-### Run
-
-Start GreptimeDB from source code, in standalone mode:
-
-```
-cargo run -- standalone start
+```sql
+CREATE TABLE IF NOT EXISTS system_metrics (
+    host STRING,
+    idc STRING,
+    cpu_util DOUBLE,
+    memory_util DOUBLE,
+    disk_util DOUBLE,
+    ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(host, idc),
+    TIME INDEX(ts)
+);
 ```
 
-Or if you built from docker:
-
+Once you see the green marker, run `desc table` to check detail of the table.
+​
+```sql
+DESC TABLE system_metrics;
 ```
-docker run -p 4002:4002 -v "$(pwd):/tmp/greptimedb" greptime/greptimedb standalone start
+
+## Add Some Data
+
+​
+Using the `INSERT` statement is an easy way to add data to your table. Through
+the statement below, we have inserted three rows into the `system_metrics`
+table.
+​
+
+``` sql
+INSERT INTO system_metrics
+VALUES
+    ("host1", "idc_a", 11.8, 10.3, 10.3, 1667446791450),
+    ("host2", "idc_a", 80.1, 70.3, 90.0, 1667446792460),
+    ("host1", "idc_b", 50.0, 66.7, 40.6, 1667446793470);
 ```
 
-For more startup options, greptimedb's **distributed mode** and information
-about Kubernetes deployment, check our [docs](https://docs.greptime.com/).
+​
+Modify the value and timestamp, we can ingest more entries.
+​
 
-### Connect
+``` sql
+INSERT INTO system_metrics
+VALUES
+    ("host1", "idc_a", 30.2, 50.1, 11.0, 1667446794480),
+    ("host2", "idc_a", 60.8, 74.9, 96.2, 1667446795490),
+    ("host1", "idc_b", 30.0, 65.7, 40.2, 1667446796500);
+```
 
-1. Create table:
+​
 
-   ```SQL
-   CREATE TABLE monitor (
-     host STRING,
-     ts TIMESTAMP,
-     cpu DOUBLE DEFAULT 0,
-     memory DOUBLE,
-     TIME INDEX (ts),
-     PRIMARY KEY(host)) ENGINE=mito WITH(regions=1);
-   ```
+## Query Data with SQL
 
-2. Insert some data:
+​
+GreptimeDB supports full SQL for you to query data from a database.
+​
 
-   ```SQL
-   INSERT INTO monitor(host, cpu, memory, ts) VALUES ('host1', 66.6, 1024, 1660897955000);
-   INSERT INTO monitor(host, cpu, memory, ts) VALUES ('host2', 77.7, 2048, 1660897956000);
-   INSERT INTO monitor(host, cpu, memory, ts) VALUES ('host3', 88.8, 4096, 1660897957000);
-   ```
+``` sql
+SELECT * FROM system_metrics;
+```
 
-3. Query the data:
+​
+Here are some query examples for the `system_metrics` so you can get familiar
+with using SQL alongside GreptimeDB functions.
+​
+Use `count()` function to get the number of all rows in the table:
+​
 
-   ```SQL
-   SELECT * FROM monitor;
-   ```
+``` sql
+SELECT count(*) FROM system_metrics;
+```
 
-You can always cleanup test database by removing `/tmp/greptimedb`.
+​
+Use `avg()` function returns the average value of a certain field:
+​
+
+``` sql
+SELECT avg(cpu_util) FROM system_metrics;
+```
+
+​
+You can use the `GROUP BY` clause to group rows that have the same values into
+summary rows. The average memory usage grouped by `idc`:
+​
+
+```sql
+SELECT idc, avg(memory_util) FROM system_metrics GROUP BY idc;
+```
+
+​
+
+## Explore by Yourself
+
+​
+Enough with the basics, try to write your own query and do some exploration.
+​
+
+```sql
+-- Type your SQL here
+​
+```
+
+​
+Full more advanced features like scripting, various protocol support,
+[Download](https://greptime.com/downloads/) GreptimeDB on your machine and
+follow our [docs](https://docs.greptime.com).
