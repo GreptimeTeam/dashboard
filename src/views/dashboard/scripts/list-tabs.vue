@@ -20,8 +20,6 @@ a-tabs.sider-tabs(v-model:active-key="tabActiveKey" :class="routeName === 'query
   if (routeName === 'query') {
     tabActiveKey.value = '1'
   }
-
-  onMounted(() => {})
 </script>
 
 <style lang="less" scoped>

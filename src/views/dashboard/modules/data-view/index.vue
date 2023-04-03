@@ -9,8 +9,8 @@ a-tabs.result-tabs(type="rounded" lazy-load :active-key="activeTabKey" @tab-clic
 </template>
 
 <script lang="ts" name="DataView" setup>
-  import { useCodeRunStore, useAppStore } from '@/store'
-  import { ResultType } from '@/store/modules/code-run/types'
+  import { useCodeRunStore } from '@/store'
+  import type { ResultType } from '@/store/modules/code-run/types'
 
   const props = defineProps<{
     results: ResultType[]

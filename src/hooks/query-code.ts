@@ -1,6 +1,6 @@
 import { CodeRunType } from '@/store/modules/code-run/types'
 import { Message } from '@arco-design/web-vue'
-import { useI18n } from 'vue-i18n'
+import i18n from '@/locale'
 import { useCodeRunStore } from '@/store'
 import { stringType } from './types'
 
@@ -38,7 +38,6 @@ export default function useQueryCode() {
   const { codeType } = storeToRefs(useAppStore())
   const { results } = storeToRefs(useCodeRunStore())
   const route = useRoute()
-  const i18 = useI18n()
 
   const insertNameToQueryCode = (name: any) => {
     queryCode.value[queryType.value] =
@@ -56,7 +55,7 @@ export default function useQueryCode() {
     const { pushLog } = useLog()
     const res = await runCode(code, type, withoutSave)
     Message.success({
-      content: i18.t('dataExplorer.runSuccess'),
+      content: i18n.global.t('dataExplorer.runSuccess'),
       duration: 2 * 1000,
     })
     if (!withoutSave) {
