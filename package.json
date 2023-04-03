@@ -66,6 +66,7 @@
     "vue-router": "^4.0.14"
   },
   "devDependencies": {
+    "@babel/types": "^7.21.4",
     "@commitlint/cli": "^17.4.2",
     "@commitlint/config-conventional": "^17.3.0",
     "@prettier/plugin-pug": "^2.4.1",
