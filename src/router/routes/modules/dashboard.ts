@@ -40,7 +40,6 @@ const DASHBOARD: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.dashboard.playground',
         requiresAuth: false,
-        roles: ['dev'],
       },
     },
   ],
