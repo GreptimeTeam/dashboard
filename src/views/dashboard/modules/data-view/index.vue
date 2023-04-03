@@ -18,8 +18,7 @@ a-tabs.result-tabs(type="rounded" lazy-load :active-key="activeTabKey" @tab-clic
     },
   })
 
-  const { routeName } = storeToRefs(useAppStore())
-  const { setActiveTabKey, removeResult, clearResults } = useCodeRunStore()
+  const { removeResult, clearResults } = useCodeRunStore()
   const activeTabKey = ref(props.results[0]?.key)
 
   const deleteTab = (key: number) => {

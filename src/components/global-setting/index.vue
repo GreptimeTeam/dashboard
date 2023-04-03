@@ -21,11 +21,11 @@ a-drawer(:width="262" unmount-on-close :visible="globalSettings" :mask-closable=
 
   const { host, navbar, updateSettings } = useAppStore()
   const { getTables, getScriptsTable } = useDataBaseStore()
-  const route = useRoute()
 
   const { t } = useI18n()
+  const route = useRoute()
 
-  const { globalSettings, routeName } = storeToRefs(useAppStore())
+  const { globalSettings } = storeToRefs(useAppStore())
 
   // TODO: import AnyObject from global.ts
   const TABLES_MAP: { [key: string]: any } = {
@@ -37,7 +37,9 @@ a-drawer(:width="262" unmount-on-close :visible="globalSettings" :mask-closable=
   const cancel = () => {
     updateSettings({ globalSettings: false })
     axios.defaults.baseURL = host
-    TABLES_MAP[route.name as string]()
+    if (route.name) {
+      TABLES_MAP[route.name as string]()
+    }
 
     emit('cancel')
   }

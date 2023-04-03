@@ -2,7 +2,7 @@
 a-card(:bordered="false")
   template(#title)
     a-space(size="mini")
-      svg.card-icon
+      svg.icon-18
         use(href="#chart")
       | {{$t('dataExplorer.chart')}}
   a-spin(style="width: 100%")
@@ -19,8 +19,7 @@ a-card(:bordered="false")
 </template>
 
 <script lang="ts" setup>
-  import { ref, reactive, computed } from 'vue'
-  import { chartTypeOptions, updateOptions, numberTypes } from '../config'
+  import { chartTypeOptions, updateOptions, numberTypes } from '../../../config'
 
   const props = defineProps({
     data: {
@@ -110,6 +109,5 @@ a-card(:bordered="false")
 
   const drawChart = () => {
     option.value = makeOption([chartForm.chartType, chartForm.ySelectedTypes])
-    console.log(`options.value:`, option.value)
   }
 </script>

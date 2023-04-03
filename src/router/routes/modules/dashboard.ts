@@ -19,7 +19,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       name: 'query',
       component: () => import('@/views/dashboard/query/index.vue'),
       meta: {
-        locale: 'menu.dashboard',
+        locale: 'menu.dashboard.query',
         requiresAuth: false,
       },
     },

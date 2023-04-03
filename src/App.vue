@@ -27,6 +27,7 @@
   const { fetchDatabases } = useAppStore()
   host.value = window.location.origin
   // TODO: is there a better way to do this?
+  console.log(`import.meta.env.MODE:`, import.meta.env.MODE)
   if (import.meta.env.MODE === 'development' || import.meta.env.MODE === 'production') {
     fetchDatabases('notCloud')
   } else {

@@ -3,7 +3,7 @@
   .logo-space
     img.logo-text-img(alt="logo" src="/src/assets/images/logo-text.webp")
   .menu
-    a-menu(mode="horizontal" v-model="routeName" :default-selected-keys="defaultMenuKey" @menu-item-click="menuClick")
+    a-menu(:selected-keys="menuSelectedKey" @menu-item-click="menuClick" mode="horizontal")
       a-menu-item(key="query")
         | Query
       a-menu-item(key="scripts" v-permission="['dev']")
@@ -30,10 +30,10 @@
 <script lang="ts" setup name="NavBar">
   import router from '@/router'
   import { useAppStore } from '@/store'
+  import { listenerRouteChange } from '@/utils/route-listener'
 
-  const { routeName } = storeToRefs(useAppStore())
   const { updateSettings } = useAppStore()
-  const defaultMenuKey = [routeName.value]
+  const menuSelectedKey = ref<string[]>([])
 
   const dropDownLinks = [
     {
@@ -61,6 +61,10 @@
   const menuClick = (key: string) => {
     router.push({ name: key })
   }
+
+  listenerRouteChange((newRoute) => {
+    menuSelectedKey.value = [newRoute.name as string]
+  }, true)
 </script>
 
 <style scoped lang="less">

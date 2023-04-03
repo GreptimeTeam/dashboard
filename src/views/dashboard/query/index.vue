@@ -10,7 +10,6 @@ a-layout.layout
 </template>
 
 <script lang="ts" name="Query" setup>
-  import { useQueryCode } from '@/hooks'
   import ListTabs from '../scripts/list-tabs.vue'
 
   const { getResultsByType } = useQueryCode()

@@ -14,12 +14,13 @@ a-space(direction="vertical" size="medium" fill)
       template(#switcher-icon)
         IconDown
       template(#extra="nodeData")
-        img(:src="getIconUrl(nodeData.iconType)" alt="" height="16")
+        svg.icon-16(v-show="nodeData.iconType")
+          use(:href="ICON_MAP[nodeData.iconType]")
         .tree-data
           a-typography-text.data-title(:ellipsis='{rows: 1,showTooltip: true,}') {{ nodeData.title }} 
           .data-type {{ nodeData.dataType }} 
         a-tooltip(:content="$t('dataExplorer.insertName')" mini)
-          svg.icon.copy-icon.pointer(name="copy" @click="insertName(nodeData.title)")
+          svg.icon-15.copy-icon.pointer(name="copy" @click="insertName(nodeData.title)")
             use(href="#copy")
 </template>
 
@@ -30,8 +31,8 @@ a-space(direction="vertical" size="medium" fill)
   import usePythonCode from '@/hooks/python-code'
   import useSiderTabs from '@/hooks/sider-tabs'
 
+  const route = useRoute()
   const { insertNameToQueryCode } = useQueryCode()
-  const { routeName } = storeToRefs(useAppStore())
   const { insertNameToPyCode } = usePythonCode()
   const { tablesSearchKey, tablesTreeData } = useSiderTabs()
 
@@ -79,16 +80,13 @@ a-space(direction="vertical" size="medium" fill)
   }
 
   const insertName = (name: string) => {
-    return INSERT_MAP[routeName.value](name)
+    const routeName = route.name as string
+    return INSERT_MAP[routeName](name)
   }
 
   const ICON_MAP: { [key: string]: string } = {
-    'VALUE': 'value-icon.png',
-    'PRIMARY KEY': 'key-icon.png',
-    'TIME INDEX': 'time-icon.png',
-  }
-  // TODO: Better use iconPark.
-  const getIconUrl = (type: any) => {
-    return new URL(`../../../assets/images/${ICON_MAP[type]}`, import.meta.url).href
+    'VALUE': '#value',
+    'PRIMARY KEY': '#primary-key',
+    'TIME INDEX': '#time-index',
   }
 </script>

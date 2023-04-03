@@ -1,4 +1,6 @@
 import { Md5 } from 'ts-md5'
+import { Message } from '@arco-design/web-vue'
+import { useI18n } from 'vue-i18n'
 
 const { saveScript } = useCodeRunStore()
 const { pushLog } = useLog()
@@ -17,6 +19,7 @@ const creating = ref(false)
 const isChanged = computed(() => Md5.hashStr(pythonCode.value) !== Md5.hashStr(lastSavedCode.value))
 
 export default function usePythonCode() {
+  const i18 = useI18n()
   const insertNameToPyCode = (name: any) => {
     pythonCode.value =
       pythonCode.value.substring(0, cursorAt.value[0]) + name + pythonCode.value.substring(cursorAt.value[1])
@@ -57,7 +60,11 @@ export default function usePythonCode() {
 
   const save = async (name: string, code: string) => {
     const res = await saveScript(name, code)
-    await pushLog(res)
+    Message.success({
+      content: i18.t('dataExplorer.saveSuccess'),
+      duration: 2 * 1000,
+    })
+    await pushLog(res, 'python')
   }
   return {
     insertNameToPyCode,

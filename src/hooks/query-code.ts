@@ -1,16 +1,13 @@
+import { Message } from '@arco-design/web-vue'
+import { useI18n } from 'vue-i18n'
 import { useCodeRunStore } from '@/store'
 import { stringType } from './types'
 
 const queryType = ref('sql')
-const sqlCode = 'SELECT * FROM system_metrics'
+const sqlCode = 'SELECT * FROM numbers'
 const promQLCode = ''
 const cursorAt = ref<Array<number>>([])
-const start = 0
-const end = 0
-const step = ref<number>()
-const isRelative = 1
-const time = 5
-const range = ref()
+
 const queryOptions = [
   {
     value: 'sql',
@@ -28,18 +25,19 @@ const queryCode = ref({
 } as stringType)
 
 const promForm = ref({
-  start,
-  end,
-  step,
-  isRelative,
-  time,
-  range,
+  start: '0',
+  end: '0',
+  step: null,
+  isRelative: 1,
+  time: 5,
+  range: [],
 })
 
 export default function useQueryCode() {
   const { codeType } = storeToRefs(useAppStore())
   const { results } = storeToRefs(useCodeRunStore())
   const route = useRoute()
+  const i18 = useI18n()
 
   const insertNameToQueryCode = (name: any) => {
     queryCode.value[queryType.value] =
@@ -56,6 +54,10 @@ export default function useQueryCode() {
     const { runCode } = useCodeRunStore()
     const { pushLog } = useLog()
     const res = await runCode(code, type, withoutSave)
+    Message.success({
+      content: i18.t('dataExplorer.runSuccess'),
+      duration: 2 * 1000,
+    })
     if (!withoutSave) {
       pushLog(res.log, type)
     }
@@ -65,6 +67,12 @@ export default function useQueryCode() {
   const getResultsByType = (types: string[]) => {
     return results.value.filter((item) => types.includes(item.type))
   }
+  watchEffect(() => {
+    if (promForm.value.time === 0) {
+      promForm.value.isRelative = 0
+      promForm.value.time = 5
+    }
+  })
 
   return {
     insertNameToQueryCode,

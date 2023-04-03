@@ -2,7 +2,8 @@
 a-card(:bordered="false")
   template(#title)
     a-space(size="mini")
-      img(src="/src/assets/images/table.png" height="20")
+      svg.icon-20
+        use(href="#table")
       | {{$t('dataExplorer.table')}}
   a-spin(style='width: 100%')
     a-table(:columns='gridColumn', :data='gridData', :pagination='pagination')

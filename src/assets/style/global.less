@@ -7,6 +7,7 @@
 @import url('./form.less');
 @import url('./layout.less');
 @import url('./docs.less');
+@import url('./list.less');
 
 * {
   box-sizing: border-box;
@@ -39,6 +40,7 @@
   --danger-color: rgba(239, 60, 104, 1);
   --danger-bg-color: #fdebef;
   --danger-bg-hover-color: rgba(239, 60, 104, 0.2);
+  --switch-unchecked-color: rgba(36, 201, 128, 1);
   --editor-active-line-color: rgba(252, 253, 255, 0.14);
   --box-shadow-color: rgba(0, 0, 0, 0.15);
 }
@@ -187,14 +189,28 @@ body {
   height: 14px;
 }
 
+.icon-15 {
+  width: 15px;
+  height: 15px;
+}
+
+.icon-16 {
+  width: 16px;
+  height: 16px;
+}
+
+.icon-18 {
+  width: 18px;
+  height: 18px;
+}
+
 .icon-20 {
   width: 20px;
   height: 20px;
 }
 
-.card-icon {
-  width: 18px;
-  height: 18px;
+.arco-icon-hover::before {
+  width: 0;
 }
 
 .arco-icon-hover:hover::before {
@@ -317,6 +333,19 @@ body {
   top: 50%;
   margin: 0;
   transform: translateY(-50%);
+}
+
+.arco-popover-content {
+  margin-top: 0;
+}
+
+.arco-popover-popup-content {
+  padding: 6px 16px;
+}
+
+.width-35 {
+  display: inline-flex;
+  width: 35px;
 }
 
 :focus {

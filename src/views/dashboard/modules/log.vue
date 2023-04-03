@@ -1,10 +1,10 @@
 <template lang="pug">
-a-list-item.log
+a-list-log.log
   a-tooltip(v-if="log.error" :content="log.error")
-    a-space.log-error(size="mini" fill)
+    a-space.log-error 
       template(#split)
         a-divider(direction="vertical")
-      icon-close-circle(:style="{color:'var(--danger-color)'}")
+      icon-close-circle(:style="{color:'var(--danger-color)'}")     
       div {{ log.startTime }} 
       div {{$t('dataExplorer.error')}}: {{log.error}}
   a-space.log-space(v-else-if="'execution_time_ms' in log" size="mini" fill)
@@ -12,21 +12,27 @@ a-list-item.log
       a-divider(direction="vertical")
     icon-check-circle(:style="{color:'var(--success-color)'}")
     div {{ log.startTime }}
-    div(v-if="log.type ==='python'") {{ $t('dataExplorer.runScript', {name: log.codeInfo}) }}
+    div(v-if="codeType==='python'") {{ $t('dataExplorer.runScript', {name: log.codeInfo}) }}
     div {{ $tc('dataExplorer.executed', log.result.length, { length: log.result.length })}}
     div {{ $t('dataExplorer.results') }}: 
       span(v-for="(oneResult, index) of log.result" :key="index") {{ oneResult.records >= 0 ? $tc('dataExplorer.select', oneResult.records, {records: oneResult.records}) : $tc('dataExplorer.affected', oneResult.affectedRows, {record: oneResult.affectedRows}) }}; 
     div {{ $t('dataExplorer.executeTime', {time: log.execution_time_ms})}}
     div {{ $t('dataExplorer.network', {time: log.networkTime - log.execution_time_ms})}}
     div {{ $t('dataExplorer.total', {time: log.networkTime}) }}
-    div(v-if="log.type==='sql'") 
+    div(v-if="codeType!=='python'") 
       a-tooltip(:content="copied? $t('dataExplorer.copied') : $t('dataExplorer.copyToClipboard')" mini)
         svg.icon.pointer.vertical-center(name="copy" @click="copyToClipboard(log.codeInfo)")
           use(href="#copy")
-      span.code-space
-        span {{ $t('dataExplorer.code') }}
-        a-tooltip(:content="log.codeInfo")
+      a-popover
+        span.code-space
+          span {{ $t('dataExplorer.query') }}
           span {{ log.codeInfo }}
+        template(#content)
+          a-list(:split="false" :bordered="false" size="small")
+            a-list-log(v-if="log.type==='promQL'" v-for="(value, name) in item.promInfo")
+              span.width-35 {{ name }}
+              a-typography-text.ml-4(code) {{ value }}
+            a-list-log(v-else) {{ log.codeInfo }}
   a-space.log-space(v-else size="large" fill)
     template(#split)
       a-divider(direction="vertical")
@@ -37,6 +43,8 @@ a-list-item.log
   import { useClipboard } from '@vueuse/core'
   import { format } from 'sql-formatter'
 
+  const route = useRoute()
+  const { codeType } = storeToRefs(useAppStore())
   const { copy, copied } = useClipboard()
   const props = defineProps({
     log: {
@@ -46,6 +54,7 @@ a-list-item.log
   })
 
   const copyToClipboard = (code: string) => {
-    copy(format(code, { language: 'mysql', keywordCase: 'upper' }))
+    if (codeType.value === 'sql') copy(format(code, { language: 'mysql', keywordCase: 'upper' }))
+    else copy(code)
   }
 </script>
