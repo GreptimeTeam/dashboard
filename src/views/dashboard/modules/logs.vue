@@ -4,7 +4,7 @@ a-tabs.result-tabs.logs-tab(type="rounded")
     a-button.clear-logs-button(v-if="logs.length" type="secondary" status="danger" @click="clear") {{$t('dataExplorer.clear')}}  
   a-tab-pane(title="Logs")
     a-card(:bordered="false")
-      a-list(v-if="logs.length" :hoverable="true" size="small" :bordered="false" :split="false")
+      a-list.log-list(v-if="logs.length" :hoverable="true" size="small" :bordered="false" :split="false")
         Log(v-for="log of logs" :key="log" :log="log")
 </template>
 

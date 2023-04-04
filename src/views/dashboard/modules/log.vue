@@ -1,5 +1,5 @@
 <template lang="pug">
-a-list-item
+a-list-item.smaller-divider
   a-tooltip(v-if="log.error" :content="log.error")
     a-space.log-error.last-overflow(size="mini" fill)
       template(#split)

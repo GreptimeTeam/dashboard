@@ -12,7 +12,7 @@
       a-tab-pane(key='2', title='Chart')
         DataChart(:data="result")
   .logs(v-if="log")
-    a-list(:hoverable="true" size="small" :bordered="false" :split="false")
+    a-list.log-list(:hoverable="true" size="small" :bordered="false" :split="false")
       Log(:log="log" codeType="sql")
 </template>
 
