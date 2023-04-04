@@ -1,5 +1,5 @@
 <template lang="pug">
-a-list-log.log
+a-list-item.log
   a-tooltip(v-if="log.error" :content="log.error")
     a-space.log-error 
       template(#split)
