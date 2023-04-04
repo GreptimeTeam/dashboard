@@ -42,8 +42,8 @@ const makePromParams = (code: string) => {
   if (promForm.value.isRelative) {
     // TODO: move this into a function?
     const now = dayjs()
-    promForm.value.end = now.format('x')
-    promForm.value.start = now.subtract(promForm.value.time, 'minute').format('x').toString()
+    promForm.value.end = now.unix().toString()
+    promForm.value.start = now.subtract(promForm.value.time, 'minute').unix().toString()
   } else {
     ;[promForm.value.start, promForm.value.end] = promForm.value.range
   }
