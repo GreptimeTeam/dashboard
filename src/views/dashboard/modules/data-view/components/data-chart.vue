@@ -1,6 +1,6 @@
 <template lang="pug">
 a-card(:bordered="false")
-  template(#title)
+  template(#title v-if="hasHeader")
     a-space(size="mini")
       svg.icon-18
         use(href="#chart")
@@ -25,6 +25,10 @@ a-card(:bordered="false")
     data: {
       type: Object,
       default: () => ({}),
+    },
+    hasHeader: {
+      type: Boolean,
+      default: true,
     },
   })
 

@@ -1,51 +1,51 @@
 .markdown-container {
   h1 {
     margin: 20px 0;
-    font-size: 36px;
-    line-height: 47px;
-    font-family: Roboto-Bold, Roboto;
-    font-weight: bold;
     color: var(--color-light-title-text);
+    font-weight: bold;
+    font-size: 36px;
+    font-family: Roboto-Bold, Roboto;
+    line-height: 47px;
   }
 
   h2 {
     margin: 60px 0 20px;
     padding-top: 30px;
-    font-size: 28px;
-    line-height: 37px;
-    font-family: Roboto-Bold, Roboto;
-    font-weight: bold;
     color: var(--color-light-title-text);
+    font-weight: bold;
+    font-size: 28px;
+    font-family: Roboto-Bold, Roboto;
+    line-height: 37px;
   }
 
   h3 {
     margin: 40px 0 20px;
-    font-size: 22px;
-    line-height: 32px;
-    font-family: Roboto-Bold, Roboto;
-    font-weight: bold;
     color: var(--color-light-title-text);
+    font-weight: bold;
+    font-size: 22px;
+    font-family: Roboto-Bold, Roboto;
+    line-height: 32px;
   }
 
   h4 {
     margin: 30px 0 20px;
+    color: var(--color-light-title-text);
+    font-weight: bold;
     font-size: 20px;
     line-height: 28px;
-    font-weight: bold;
-    color: var(--color-light-title-text);
     opacity: 0.85;
   }
 
   p {
     margin: 20px 0;
-    font-size: 16px;
     color: var(--color-p-text);
+    font-size: 16px;
     line-height: 24px;
   }
 
   :not(pre) code {
-    background: var(--color-code-bg);
     color: var(--color-code);
+    background: var(--color-code-bg);
   }
 
   a {
@@ -64,27 +64,27 @@
 
   li {
     margin: 12px 0;
-    font-size: 16px;
     color: var(--color-p-text);
+    font-size: 16px;
     line-height: 24px;
   }
 
   pre {
     margin: 30px 0;
     padding: 20px;
+    overflow: auto;
+    color: var(--brand-color);
     font-size: 16px;
     line-height: 30px;
     background-color: var(--light-brand-color);
     border-radius: 4px;
-    color: var(--brand-color);
-    overflow: auto;
   }
 
   code {
+    padding: 0 4px;
     font-size: 16px;
     line-height: 30px;
     border-radius: 4px;
-    padding: 0 4px;
   }
 
   img {
@@ -93,8 +93,8 @@
 
   div[class*='language-'] {
     background-color: var(--color-bg-code-table);
-    opacity: 0.9;
     border-radius: 4px;
+    opacity: 0.9;
 
     pre {
       background-color: inherit;
@@ -108,42 +108,27 @@
       opacity: inherit;
     }
   }
-
-  thead tr th {
-    padding: 20px 15px;
-    font-size: 16px;
-    line-height: 24px;
-    background-color: var(--color-bg-table);
-    color: var(--color-title-text);
-    border-color: var(--color-border-line);
-  }
-
-  tbody {
-    tr {
-      background-color: var(--color-bg-table-line);
-      color: var(--color-dark-text);
-    }
-
-    tr:nth-child(2n) {
-      background-color: var(--color-bg-table);
-    }
-  }
-
-  table {
-    border-color: var(--color-border-line);
-
-    code {
-      background: var(--color-code-bg-table);
-      color: var(--color-drak-text);
-      border-radius: 2px;
-    }
-
-    td {
-      border-color: var(--color-border-line);
-    }
-  }
 }
 
 .vp-doc [class*='language-'] code &.wrap {
   white-space: break-spaces;
+}
+
+.playground-tabs {
+  .arco-tabs-tab-active,
+  .arco-tabs-tab-active:hover {
+    color: var(--brand-color);
+  }
+
+  .arco-tabs-nav-ink {
+    background-color: var(--brand-color);
+  }
+
+  .arco-tabs-nav {
+    margin-top: 12px;
+  }
+
+  .arco-pagination-list {
+    margin: 0;
+  }
 }
