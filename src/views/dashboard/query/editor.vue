@@ -47,7 +47,7 @@ a-card(:bordered="false").editor-card
                     a-typography-text(code v-for="item of durationExamples" :key="item") {{ item }}
     a-form-item.time-switch(:label="promForm.isRelative === 1 ? $t('dataExplorer.relative') : $t('dataExplorer.absolute')")
       a-switch(v-model="promForm.isRelative" :checked-value="1" :unchecked-value="0")
-  CodeMirror(v-model="queryCode[queryType]" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
+  CodeMirror(v-model="queryCode" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
 </template>
 
 <script lang="ts" setup name="Editor">
@@ -123,14 +123,14 @@ a-card(:bordered="false").editor-card
   const runQuery = async () => {
     primaryCodeRunning.value = true
     // TODO: add better format tool for code
-    await runCode(queryCode.value.sql.trim().replace(/\n/gi, ' '))
+    await runCode(queryCode.value.trim().replace(/\n/gi, ' '), queryType.value)
     primaryCodeRunning.value = false
     // TODO: refresh tables data and when
   }
 
   const runPartQuery = async () => {
     secondaryCodeRunning.value = true
-    await runCode(selectedCode.value.trim())
+    await runCode(selectedCode.value.trim(), queryType.value)
     secondaryCodeRunning.value = false
   }
 

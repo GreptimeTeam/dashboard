@@ -20,7 +20,7 @@ const queryOptions = [
   },
 ]
 
-const queryCode = ref({
+const codes = ref({
   sql: sqlCode,
   promQL: promQLCode,
 } as stringType)
@@ -40,10 +40,10 @@ export default function useQueryCode() {
   const route = useRoute()
 
   const insertNameToQueryCode = (name: any) => {
-    queryCode.value[queryType.value] =
-      queryCode.value[queryType.value].substring(0, cursorAt.value[0]) +
+    codes.value[queryType.value] =
+      codes.value[queryType.value].substring(0, cursorAt.value[0]) +
       name +
-      queryCode.value[queryType.value].substring(cursorAt.value[1])
+      codes.value[queryType.value].substring(cursorAt.value[1])
   }
 
   const selectCodeType = () => {
@@ -67,6 +67,16 @@ export default function useQueryCode() {
   const getResultsByType = (types: string[]) => {
     return results.value.filter((item) => types.includes(item.type))
   }
+
+  const queryCode = computed({
+    get: () => {
+      return codes.value[codeType.value] || ''
+    },
+    set: (val) => {
+      codes.value[codeType.value] = val
+    },
+  })
+
   watchEffect(() => {
     if (promForm.value.time === 0) {
       promForm.value.isRelative = 0
@@ -78,11 +88,11 @@ export default function useQueryCode() {
     insertNameToQueryCode,
     selectCodeType,
     getResultsByType,
+    run,
     queryCode,
     cursorAt,
     queryOptions,
     promForm,
     queryType,
-    run,
   }
 }
