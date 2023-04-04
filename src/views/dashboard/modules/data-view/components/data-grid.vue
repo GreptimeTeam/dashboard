@@ -78,12 +78,16 @@ a-card(:bordered='false')
 
   const formatSuffix = '--FORMATTED'
 
-  const handleFormatTimeColumn = (title: string) => {
-    timeColumnFormatMap.value[title] = !timeColumnFormatMap.value[title]
+  const formatTimestamp = (timestamp: number) => {
+    return new Date(timestamp).toLocaleString()
+  }
+
+  const handleFormatTimeColumn = (columnName: string) => {
+    timeColumnFormatMap.value[columnName] = !timeColumnFormatMap.value[columnName]
     // Calculate formatted time data on first access
-    if (!gridData.value[0]?.[`${title}${formatSuffix}`]) {
+    if (!gridData.value[0]?.[`${columnName}${formatSuffix}`]) {
       gridData.value.forEach((row: any) => {
-        row[`${title}${formatSuffix}`] = new Date(row[title]).toLocaleString()
+        row[`${columnName}${formatSuffix}`] = formatTimestamp(row[columnName])
       })
     }
   }
