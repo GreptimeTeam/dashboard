@@ -8,12 +8,17 @@ a-card(:bordered='false')
   a-spin(style='width: 100%')
     a-table(:data='gridData', style='margin-top: 30px')
       template(#columns)
-        template(v-for='schema in gridColumns', :key='schema.name')
+        template(v-for='schema in gridColumns', :key='schema.title', width=300)
           template(v-if='timeColumnNames.includes(schema.title)')
             a-table-column(
-              :title='generateTimeColumnHeader(schema.title)',
               :data-index='timeColumnFormatMap[schema.title] ? `${schema.title}${formatSuffix}` : schema.title'
             )
+              template(#title)
+                a-tooltip(:content='`format time`', placement='top')
+                  a-space(size='mini')
+                    svg.icon-15(@click='() => handleFormatTimeColumn(schema.title)')
+                      use(href='#history')
+                    | {{ schema.title }}
           template(v-else)
             a-table-column(:title='schema.title', :data-index='schema.title')
 </template>
@@ -48,23 +53,19 @@ a-card(:bordered='false')
       .map((column) => column.name)
   })
 
-  const formatSuffix = '--FORMATTED'
-
-  const gridData = computed(() => {
-    return currentResult.value.records.rows.map((row: any) => {
-      const tempRow: any = {}
-      row.forEach((item: any, index: number) => {
-        const columnName = currentResult.value.records.schema.column_schemas[index].name.replace(/\./gi, '-')
-        tempRow[columnName] = item
+  // use ref to make it mutable
+  const gridData = ref(
+    (() => {
+      return currentResult.value.records.rows.map((row: any) => {
+        const tempRow: any = {}
+        row.forEach((item: any, index: number) => {
+          const columnName = currentResult.value.records.schema.column_schemas[index].name.replace(/\./gi, '-')
+          tempRow[columnName] = item
+        })
+        return tempRow
       })
-
-      // pre-calculated formatted time column data
-      timeColumnNames.value.forEach((columnName) => {
-        tempRow[`${columnName}${formatSuffix}`] = new Date(tempRow[columnName]).toLocaleString()
-      })
-      return tempRow
-    })
-  })
+    })()
+  )
 
   /**
    * use extra state to store the formatted time column data
@@ -77,40 +78,15 @@ a-card(:bordered='false')
     )
   )
 
-  // return any because a-table-column's title prop was defined to be a string, although it also accepts a component
-  const generateTimeColumnHeader = computed(() => (title: string): any => {
-    return h('span', null, [
-      h(
-        Tooltip,
-        {
-          content: 'Format time',
-          placement: 'top',
-        },
-        {
-          default: () =>
-            h(IconHistory, {
-              style: {
-                marginRight: '5px',
-                cursor: 'pointer',
-              },
-              onClick: () => {
-                timeColumnFormatMap.value[title] = !timeColumnFormatMap.value[title]
-              },
-            }),
-        }
-      ),
-      h('span', null, title),
-    ])
-  })
+  const formatSuffix = '--FORMATTED'
 
-  // /**
-  //  *
-  //  */
-  // const handleformatTimeColumn = (comulnName: string) => {
-  //   const { schema } = currentResult.value.records
-  //   if (!schema) return []
-  //   const columnSchema = schema.column_schemas.find((column: any) => column.name === comulnName)
-  //   if (!columnSchema) return []
-  //   return columnSchema.data_type === 'timestamp' ? 'YYYY-MM-DD HH:mm:ss' : 'YYYY-MM-DD'
-  // }
+  const handleFormatTimeColumn = (title: string) => {
+    timeColumnFormatMap.value[title] = !timeColumnFormatMap.value[title]
+    // calculate formatted time data at first access
+    if (!gridData.value[0]?.[`${title}${formatSuffix}`]) {
+      gridData.value.forEach((row: any) => {
+        row[`${title}${formatSuffix}`] = new Date(row[title]).toLocaleString()
+      })
+    }
+  }
 </script>
