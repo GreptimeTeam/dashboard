@@ -1,13 +1,13 @@
 <template lang="pug">
-a-list-item.log
+a-list-item
   a-tooltip(v-if="log.error" :content="log.error")
-    a-space.log-error 
+    a-space.log-error.last-overflow(size="mini" fill)
       template(#split)
         a-divider(direction="vertical")
       icon-close-circle(:style="{color:'var(--danger-color)'}")     
       div {{ log.startTime }} 
       div {{$t('dataExplorer.error')}}: {{log.error}}
-  a-space.log-space(v-else-if="'execution_time_ms' in log" size="mini" fill)
+  a-space.log-space.last-overflow(v-else-if="'execution_time_ms' in log" size="mini" fill)
     template(#split)
       a-divider(direction="vertical")
     icon-check-circle(:style="{color:'var(--success-color)'}")
@@ -29,10 +29,10 @@ a-list-item.log
           span {{ log.codeInfo }}
         template(#content)
           a-list(:split="false" :bordered="false" size="small")
-            a-list-log(v-if="log.type==='promQL'" v-for="(value, name) in item.promInfo")
+            a-list-item(v-if="log.type==='promQL'" v-for="(value, name) in log.promInfo")
               span.width-35 {{ name }}
               a-typography-text.ml-4(code) {{ value }}
-            a-list-log(v-else) {{ log.codeInfo }}
+            a-list-item(v-else) {{ log.codeInfo }}
   a-space.log-space(v-else size="large" fill)
     template(#split)
       a-divider(direction="vertical")
