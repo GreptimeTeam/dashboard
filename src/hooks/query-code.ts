@@ -8,7 +8,6 @@ const queryType = ref('sql')
 const sqlCode = 'SELECT * FROM numbers'
 const promQLCode = ''
 const cursorAt = ref<Array<number>>([])
-
 const queryOptions = [
   {
     value: 'sql',
@@ -28,7 +27,7 @@ const codes = ref({
 const promForm = ref({
   start: '0',
   end: '0',
-  step: null,
+  step: '',
   isRelative: 1,
   time: 5,
   range: [],

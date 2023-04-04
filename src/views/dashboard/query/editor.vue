@@ -14,10 +14,10 @@ a-card(:bordered="false").editor-card
             icon-play-arrow(v-else)
           div(v-if="lineStart === lineEnd") {{$t('dataExplorer.runLine')}} {{ lineStart }}
           div(v-else) {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
-    .query-select
+    .query-select(v-if="!isCloud")
       a-select(v-model="queryType" @change="selectCodeType")
         a-option(v-for="query of queryOptions" :="query")
-  a-form.space-between.prom-form(:model="promForm" layout="inline" v-show="queryType !== 'sql'")
+  a-form.space-between.prom-form(:model="promForm" layout="inline" v-show="queryType === 'promQL'")
     a-space(size="medium")
       a-form-item(:hide-label="true")
         a-select(v-if="promForm.isRelative === 1" v-model="promForm.time" :trigger-props="{'update-at-scroll': true}")
@@ -25,7 +25,7 @@ a-card(:bordered="false").editor-card
           template(#prefix)
             svg.icon-20
               use(href="#calendar")
-        a-range-picker(v-else v-model="promForm.range" :show-time="true" :allow-clear="true" :trigger-props="{'update-at-scroll': true}" :placeholder="[$t('dataExplorer.startTime'), $t('dataExplorer.endTime')]" format="YYYY-MM-DD HH:mm:ss" value-format="x")
+        a-range-picker(v-else v-model="promForm.range" :show-time="true" :allow-clear="true" :trigger-props="{'update-at-scroll': true}" :placeholder="[$t('dataExplorer.startTime'), $t('dataExplorer.endTime')]" format="YYYY-MM-DD HH:mm:ss" value-format="X")
           template(#prefix)
             svg.icon-20
               use(href="#calendar")
@@ -47,7 +47,7 @@ a-card(:bordered="false").editor-card
                     a-typography-text(code v-for="item of durationExamples" :key="item") {{ item }}
     a-form-item.time-switch(:label="promForm.isRelative === 1 ? $t('dataExplorer.relative') : $t('dataExplorer.absolute')")
       a-switch(v-model="promForm.isRelative" :checked-value="1" :unchecked-value="0")
-  CodeMirror(v-model="queryCode" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions" @ready="handleReady" @update="codeUpdate")
+  CodeMirror(v-model="queryCode" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions[queryType]" @ready="handleReady" @update="codeUpdate")
 </template>
 
 <script lang="ts" setup name="Editor">
@@ -75,6 +75,8 @@ a-card(:bordered="false").editor-card
 
   const primaryCodeRunning = ref(false)
   const secondaryCodeRunning = ref(false)
+
+  const { isCloud } = storeToRefs(useAppStore())
   const { queryCode, queryType, cursorAt, queryOptions, promForm, selectCodeType } = useQueryCode()
 
   const lineStart = ref()
@@ -86,6 +88,17 @@ a-card(:bordered="false").editor-card
 
   const handleReady = (payload: any) => {
     view.value = payload.view
+  }
+
+  const style = {
+    height: '250px',
+  }
+
+  const promQL = new PromQLExtension()
+
+  const extensions = {
+    sql: [sql(), oneDark],
+    promQL: [promQL.asExtension(), oneDark],
   }
 
   // TODO: Try something better. CodeUpdate is constantly changing and the cost is too much.
@@ -107,18 +120,6 @@ a-card(:bordered="false").editor-card
       }
     }
   }
-
-  const style = {
-    height: '250px',
-  }
-  const promQL = new PromQLExtension()
-
-  const extensions = computed(() => {
-    if (queryType.value === 'sql') {
-      return [sql(), oneDark]
-    }
-    return [promQL.asExtension(), oneDark]
-  })
 
   const runQuery = async () => {
     primaryCodeRunning.value = true

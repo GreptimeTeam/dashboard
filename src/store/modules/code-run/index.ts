@@ -77,8 +77,8 @@ const useCodeRunStore = defineStore('codeRun', () => {
       }
       if (type === 'promQL') {
         oneLog.promInfo = {
-          Start: dayjs(promForm.value.start, 'x').format('YYYY-MM-DD HH:mm:ss'),
-          End: dayjs(promForm.value.end, 'x').format('YYYY-MM-DD HH:mm:ss'),
+          Start: dayjs.unix(+promForm.value.start).format('YYYY-MM-DD HH:mm:ss'),
+          End: dayjs.unix(+promForm.value.end).format('YYYY-MM-DD HH:mm:ss'),
           Step: promForm.value.step,
           Query: codeInfo,
         }
