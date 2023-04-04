@@ -26,8 +26,6 @@ a-card(:bordered='false')
 <script lang="ts" setup>
   import { useCodeRunStore } from '@/store'
   import { dateTypes } from '@/views/dashboard/config'
-  import { Tooltip } from '@arco-design/web-vue'
-  import { IconHistory } from '@arco-design/web-vue/es/icon'
 
   const { currentResult } = storeToRefs(useCodeRunStore())
 
@@ -47,12 +45,6 @@ a-card(:bordered='false')
     })
   })
 
-  const timeColumnNames = computed(() => {
-    return currentResult.value.records.schema.column_schemas
-      .filter((column) => dateTypes.includes(column.data_type))
-      .map((column) => column.name)
-  })
-
   // use ref to make it mutable
   const gridData = ref(
     (() => {
@@ -67,8 +59,14 @@ a-card(:bordered='false')
     })()
   )
 
+  const timeColumnNames = computed(() => {
+    return currentResult.value.records.schema.column_schemas
+      .filter((column) => dateTypes.includes(column.data_type))
+      .map((column) => column.name)
+  })
+
   /**
-   * use extra state to store the formatted time column data
+   * use extra state to store which time column is formatted
    */
   const timeColumnFormatMap = ref(
     Object.fromEntries(
@@ -82,7 +80,7 @@ a-card(:bordered='false')
 
   const handleFormatTimeColumn = (title: string) => {
     timeColumnFormatMap.value[title] = !timeColumnFormatMap.value[title]
-    // calculate formatted time data at first access
+    // Calculate formatted time data on first access
     if (!gridData.value[0]?.[`${title}${formatSuffix}`]) {
       gridData.value.forEach((row: any) => {
         row[`${title}${formatSuffix}`] = new Date(row[title]).toLocaleString()
