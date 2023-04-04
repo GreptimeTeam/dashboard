@@ -12,7 +12,7 @@ a-card(:bordered='false')
           template(v-if='timeColumnNames.includes(schema.title)')
             a-table-column(
               :title='generateTimeColumnHeader(schema.title)',
-              :data-index='timeColumnFormatMap[schema.title] ? `${schema.title}__FORMATTED` : schema.title'
+              :data-index='timeColumnFormatMap[schema.title] ? `${schema.title}${formatSuffix}` : schema.title'
             )
           template(v-else)
             a-table-column(:title='schema.title', :data-index='schema.title')
@@ -48,6 +48,8 @@ a-card(:bordered='false')
       .map((column) => column.name)
   })
 
+  const formatSuffix = '--FORMATTED'
+
   const gridData = computed(() => {
     return currentResult.value.records.rows.map((row: any) => {
       const tempRow: any = {}
@@ -58,7 +60,7 @@ a-card(:bordered='false')
 
       // pre-calculated formatted time column data
       timeColumnNames.value.forEach((columnName) => {
-        tempRow[`${columnName}__FORMATTED`] = new Date(tempRow[columnName]).toLocaleString()
+        tempRow[`${columnName}${formatSuffix}`] = new Date(tempRow[columnName]).toLocaleString()
       })
       return tempRow
     })
@@ -78,7 +80,6 @@ a-card(:bordered='false')
   // return any because a-table-column's title prop was defined to be a string, although it also accepts a component
   const generateTimeColumnHeader = computed(() => (title: string): any => {
     return h('span', null, [
-      h('span', null, title),
       h(
         Tooltip,
         {
@@ -89,7 +90,7 @@ a-card(:bordered='false')
           default: () =>
             h(IconHistory, {
               style: {
-                marginLeft: '5px',
+                marginRight: '5px',
                 cursor: 'pointer',
               },
               onClick: () => {
@@ -98,6 +99,7 @@ a-card(:bordered='false')
             }),
         }
       ),
+      h('span', null, title),
     ])
   })
 
