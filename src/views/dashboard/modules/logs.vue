@@ -5,7 +5,7 @@ a-tabs.result-tabs.logs-tab(type="rounded")
   a-tab-pane(title="Logs")
     a-card(:bordered="false")
       a-list(v-if="logs.length" :hoverable="true" size="small" :bordered="false" :split="false")
-        Log(v-for="log of logs" :key="item" :log="log")
+        Log(v-for="log of logs" :key="log" :log="log")
 </template>
 
 <script lang="ts" name="Log" setup>
