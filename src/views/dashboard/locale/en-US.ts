@@ -47,4 +47,6 @@ export default {
   'dataExplorer.endTime': 'End Time',
   'dataExplorer.supportedDurations': 'Supported Durations',
   'dataExplorer.examples': 'Examples: ',
+  'playground.run': 'Run',
+  'playground.reset': 'Reset',
 }

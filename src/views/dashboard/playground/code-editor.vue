@@ -2,8 +2,8 @@
 .code-editor
   .code
     .operations(v-if="!disabled")
-      a-button(@click="runSqlCommand" :loading="isLoading") run
-      a-button(@click="reset") reset
+      a-button(@click="runSqlCommand" :loading="isLoading") {{ $t('playground.run') }}
+      a-button(@click="reset") {{ $t('playground.reset') }}
     CodeMirror(v-model="code" :extensions="extensions" :disabled="disabled")
   .results(v-if="result")
     a-tabs(default-active-key='1')
