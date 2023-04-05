@@ -47,4 +47,5 @@ export default {
   'dataExplorer.endTime': 'End Time',
   'dataExplorer.supportedDurations': 'Supported Durations',
   'dataExplorer.examples': 'Examples: ',
+  'dataExplorer.formatTimestamp': 'Format Timestamp',
 }

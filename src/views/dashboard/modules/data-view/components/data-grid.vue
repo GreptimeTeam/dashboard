@@ -14,7 +14,7 @@ a-card(:bordered='false')
               :data-index='timeColumnFormatMap[schema.title] ? `${schema.title}${formatSuffix}` : schema.title'
             )
               template(#title)
-                a-tooltip(:content='`format time`', placement='top')
+                a-tooltip(:content='$t("dataExplorer.formatTimestamp")', placement='top')
                   a-space(size='mini')
                     svg.icon-15(@click='() => handleFormatTimeColumn(schema.title)')
                       use(href='#history')
