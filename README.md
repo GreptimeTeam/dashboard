@@ -6,13 +6,13 @@ Dashboard is a data-visualization platform for [GreptimeDB](https://github.com/g
 
 You are welcome to try out our dashboard directly with GreptimeDB's binary or with Docker.
 
-### 1. With GreptimeDB's binary
+### With GreptimeDB's binary
 
-- Download GreptimeDB's pre-built binary [here](https://docs.greptime.com/installation/download-pre-built).
+- Download GreptimeDB's pre-built binary [here](https://greptime.com/download).
 - Start GreptimeDB normally.
 - Visit `http://localhost:4000/dashboard`
 
-### 2. With Docker
+### With Docker
 
 We recommend using `docker-compose` to setup both greptimedb and
 dashboard.
