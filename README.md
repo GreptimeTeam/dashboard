@@ -2,7 +2,17 @@
 
 Dashboard is a data-visualization platform for [GreptimeDB](https://github.com/greptimeteam/greptimedb) developed with Vue3, Vite, TypeScript and Arco Design.
 
-## Quick Start with Docker
+## Quick Start
+
+You are welcome to try out our dashboard directly with GreptimeDB's binary or with Docker.
+
+### With GreptimeDB's binary
+
+- Download GreptimeDB's pre-built binary [here](https://greptime.com/download).
+- Start GreptimeDB normally.
+- Visit `http://localhost:4000/dashboard`
+
+### With Docker
 
 We recommend using `docker-compose` to setup both greptimedb and
 dashboard.
