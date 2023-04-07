@@ -48,4 +48,5 @@ export default {
   'dataExplorer.supportedDurations': 'Supported Durations',
   'dataExplorer.examples': 'Examples: ',
   'dataExplorer.formatTimestamp': 'Format Timestamp',
+  'dataExplorer.showTimestamp': 'Show Timestamp',
 }
