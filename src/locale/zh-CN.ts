@@ -1,8 +1,10 @@
-import localeDataExplorer from '@/views/dashboard/locale/zh-CN'
-import localSetting from '@/components/global-setting/local/zh-CN'
+import localeDashboard from '@/views/dashboard/locale/zh-CN'
+import localeSetting from '@/components/global-setting/locale/zh-CN'
 
 export default {
   'menu.dashboard': '仪表盘',
+  'menu.dashboard.query': '查询',
+  'menu.dashboard.scripts': '脚本',
   'menu.server.dashboard': '仪表盘-服务端',
   'menu.server.workplace': '工作台-服务端',
   'menu.server.monitor': '实时监控-服务端',
@@ -16,6 +18,8 @@ export default {
   'menu.faq': '常见问题',
   'navbar.docs': '文档中心',
   'navbar.action.locale': '切换为中文',
-  ...localeDataExplorer,
-  ...localSetting,
+  'guide.welcome': '欢迎！',
+  'guide.confirm': '确认',
+  ...localeDashboard,
+  ...localeSetting,
 }

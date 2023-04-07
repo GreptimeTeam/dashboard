@@ -1,5 +1,5 @@
-import localeDataExplorer from '@/views/dashboard/locale/en-US'
-import localSetting from '@/components/global-setting/local/en-US'
+import localeDashboard from '@/views/dashboard/locale/en-US'
+import localeSetting from '@/components/global-setting/locale/en-US'
 
 export default {
   'menu.dashboard': 'Dashboard',
@@ -20,6 +20,6 @@ export default {
   'navbar.action.locale': 'Switch to English',
   'guide.welcome': 'Welcome!',
   'guide.confirm': 'Confirm',
-  ...localeDataExplorer,
-  ...localSetting,
+  ...localeDashboard,
+  ...localeSetting,
 }

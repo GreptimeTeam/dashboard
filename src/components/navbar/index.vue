@@ -10,6 +10,8 @@
         | Scripts
   ul.right-side
     li
+      a-radio-group(v-model="currentLocale" :options="LOCALE_OPTIONS" @change="changeLocale" type="button")
+    li
       a-tooltip(:content="$t('settings.title')")
         div.pointer
           svg.icon-20(@click="setVisible")
@@ -29,8 +31,11 @@
   import router from '@/router'
   import { useAppStore } from '@/store'
   import { listenerRouteChange } from '@/utils/route-listener'
+  import { LOCALE_OPTIONS } from '@/locale'
+  import useLocale from '@/hooks/locale'
 
   const { updateSettings } = useAppStore()
+  const { currentLocale, changeLocale } = useLocale()
   const menuSelectedKey = ref<string[]>([])
 
   const dropDownLinks = [
