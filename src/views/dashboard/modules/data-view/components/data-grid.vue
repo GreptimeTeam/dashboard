@@ -11,7 +11,8 @@ a-card(:bordered='false')
         template(v-for='schema in gridColumns', :key='schema.title')
           template(v-if='timeColumnNames.includes(schema.title)')
             a-table-column(
-              :data-index='timeColumnFormatMap[schema.title] ? `${schema.title}${formatSuffix}` : schema.title'
+              :data-index='timeColumnFormatMap[schema.title] ? `${schema.title}${formatSuffix}` : schema.title',
+              :width='timeColumnWidth'
             )
               template(#title)
                 a-tooltip(
@@ -68,7 +69,7 @@ a-card(:bordered='false')
   })
 
   /**
-   * use extra state to store which time column is formatted
+   * use an extra state to store which time column is formatted
    */
   const timeColumnFormatMap = ref(
     Object.fromEntries(
@@ -93,4 +94,7 @@ a-card(:bordered='false')
       })
     }
   }
+
+  /** Use a fixed width for the time column to prevent the width from changing automatically after formatting  */
+  const timeColumnWidth = 180
 </script>
