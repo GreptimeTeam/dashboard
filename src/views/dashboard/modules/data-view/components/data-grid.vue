@@ -8,22 +8,25 @@ a-card(:bordered='false')
   a-spin(style='width: 100%')
     a-table(:data='gridData', style='margin-top: 30px')
       template(#columns)
-        template(v-for='schema in gridColumns', :key='schema.title')
-          template(v-if='timeColumnNames.includes(schema.title)')
+        template(v-for='column in gridColumns', :key='column.title')
+          template(v-if='timeColumnNames.includes(column.title)')
             a-table-column(
-              :data-index='timeColumnFormatMap[schema.title] ? `${schema.title}${formatSuffix}` : schema.title',
+              :data-index='timeColumnFormatMap[column.dataIndex] ? `${column.dataIndex}${formatSuffix}` : column.dataIndex',
               :width='timeColumnWidth'
             )
               template(#title)
                 a-tooltip(
-                  :content='timeColumnFormatMap[schema.title] ? $t("dataExplorer.showTimestamp") : $t("dataExplorer.formatTimestamp")',
+                  :content='timeColumnFormatMap[column.dataIndex] ? $t("dataExplorer.showTimestamp") : $t("dataExplorer.formatTimestamp")',
                   placement='top'
                 )
                   a-space(size='mini')
-                    icon-history(@click='() => handleFormatTimeColumn(schema.title)', :style='{ cursor: "pointer" }')
-                    | {{ schema.title }}
+                    icon-history(
+                      @click='() => handleFormatTimeColumn(column.dataIndex)',
+                      :style='{ cursor: "pointer" }'
+                    )
+                    | {{ column.title }}
           template(v-else)
-            a-table-column(:title='schema.title', :data-index='schema.title')
+            a-table-column(:title='column.title', :data-index='column.dataIndex')
 </template>
 
 <script lang="ts" setup>
@@ -37,13 +40,19 @@ a-card(:bordered='false')
     'show-page-size': true,
   }
 
+  // replace '.' with '-' to make it a valid data-index
+  // useful when '.' is used in column name, such as `SELECT 1.1`, `SELECT 1 AS a.b`
+  function columnNameToDataIndex(columnName: string) {
+    return columnName.replace(/\./gi, '-')
+  }
+
   const gridColumns = computed(() => {
     const { schema } = currentResult.value.records
     if (!schema) return []
     return schema.column_schemas.map((column: any) => {
       return {
         title: column.name,
-        dataIndex: column.name.replace(/\./gi, '-'),
+        dataIndex: columnNameToDataIndex(column.name),
       }
     })
   })
@@ -54,8 +63,8 @@ a-card(:bordered='false')
       return currentResult.value.records.rows.map((row: any) => {
         const tempRow: any = {}
         row.forEach((item: any, index: number) => {
-          const columnName = currentResult.value.records.schema.column_schemas[index].name.replace(/\./gi, '-')
-          tempRow[columnName] = item
+          const columnDataIndex = columnNameToDataIndex(currentResult.value.records.schema.column_schemas[index].name)
+          tempRow[columnDataIndex] = item
         })
         return tempRow
       })
@@ -70,27 +79,28 @@ a-card(:bordered='false')
 
   /**
    * use an extra state to store which time column is formatted
+   * key is data-index instead of column name
    */
   const timeColumnFormatMap = ref(
     Object.fromEntries(
       timeColumnNames.value.map((columnName) => {
-        return [columnName, false]
+        return [columnNameToDataIndex(columnName), false]
       })
     )
   )
 
   const formatSuffix = '--FORMATTED'
 
-  const formatTimestamp = (timestamp: number) => {
+  function formatTimestamp(timestamp: number) {
     return new Date(timestamp).toLocaleString()
   }
 
-  const handleFormatTimeColumn = (columnName: string) => {
-    timeColumnFormatMap.value[columnName] = !timeColumnFormatMap.value[columnName]
+  const handleFormatTimeColumn = (dataIndex: string) => {
+    timeColumnFormatMap.value[dataIndex] = !timeColumnFormatMap.value[dataIndex]
     // Calculate formatted time data on first access
-    if (!gridData.value[0]?.[`${columnName}${formatSuffix}`]) {
+    if (gridData.value.length && !gridData.value[0][`${dataIndex}${formatSuffix}`]) {
       gridData.value.forEach((row: any) => {
-        row[`${columnName}${formatSuffix}`] = formatTimestamp(row[columnName])
+        row[`${dataIndex}${formatSuffix}`] = formatTimestamp(row[dataIndex])
       })
     }
   }
