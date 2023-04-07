@@ -8,7 +8,7 @@ a-card(:bordered='false')
   a-spin(style='width: 100%')
     a-table(:data='gridData', style='margin-top: 30px')
       template(#columns)
-        template(v-for='schema in gridColumns', :key='schema.title', width=300)
+        template(v-for='schema in gridColumns', :key='schema.title')
           template(v-if='timeColumnNames.includes(schema.title)')
             a-table-column(
               :data-index='timeColumnFormatMap[schema.title] ? `${schema.title}${formatSuffix}` : schema.title'
@@ -16,8 +16,7 @@ a-card(:bordered='false')
               template(#title)
                 a-tooltip(:content='$t("dataExplorer.formatTimestamp")', placement='top')
                   a-space(size='mini')
-                    svg.icon-15(@click='() => handleFormatTimeColumn(schema.title)')
-                      use(href='#history')
+                    icon-history(@click='() => handleFormatTimeColumn(schema.title)', :style='{ cursor: "pointer" }')
                     | {{ schema.title }}
           template(v-else)
             a-table-column(:title='schema.title', :data-index='schema.title')
