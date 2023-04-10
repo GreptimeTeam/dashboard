@@ -42,18 +42,16 @@ a-card(:bordered="false" v-if="hasChart")
     chartType: 'line',
     ySelectedTypes: [''],
   })
-  const { schema: schemaInRecords } = currentResult.value.records
-  const { dimensionsAndXName } = currentResult.value
-  const hasTimestamp = dimensionsAndXName[1] !== ''
+  const hasTimestamp = props.data.dimensionsAndXName[1] !== ''
 
   const hasChart = computed(() => {
-    return schemaInRecords && hasTimestamp
+    return props.data.records.schema.schemaInRecords && hasTimestamp
   })
 
   // TODO: Add support for more data types not just numbers.
   const yOptions = computed(() => {
     if (!hasChart.value) return []
-    return schemaInRecords.column_schemas
+    return props.data.records.schema.schemaInRecords.column_schemas
       .filter((item: any) => numberTypes.find((type: string) => type === item.data_type))
       .map((item: any) => ({
         value: item.name,
@@ -69,7 +67,7 @@ a-card(:bordered="false" v-if="hasChart")
         type: chartType,
         smooth: false,
         encode: {
-          x: dimensionsAndXName[1],
+          x: props.data.dimensionsAndXName[1],
           y: item,
         },
         symbolSize: 4,
@@ -95,8 +93,8 @@ a-card(:bordered="false" v-if="hasChart")
         trigger: 'axis',
       },
       dataset: {
-        dimensions: dimensionsAndXName[0],
-        source: currentResult.value.records.rows,
+        dimensions: props.data.dimensionsAndXName[0],
+        source: props.data.records.rows,
       },
       xAxis: {
         type: 'time',
