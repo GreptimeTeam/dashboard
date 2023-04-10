@@ -1,5 +1,5 @@
 <template lang="pug">
-a-card(:bordered="false" v-if="schema")
+a-card(:bordered="false" v-if="schemaInRecords && hasTimestamp")
   template(#title)
     a-space(size="mini")
       svg.icon-18
@@ -32,12 +32,14 @@ a-card(:bordered="false" v-if="schema")
     chartType: 'line',
     ySelectedTypes: [],
   })
-  const { schema } = currentResult.value.records
+  const { schema: schemaInRecords } = currentResult.value.records
+  const { dimensionsAndXName } = currentResult.value
+  const hasTimestamp = dimensionsAndXName[1] !== ''
 
   // TODO: Add support for more data types not just numbers.
   const yOptions = computed(() => {
-    if (!schema) return []
-    return schema.column_schemas
+    if (!schemaInRecords) return []
+    return schemaInRecords.column_schemas
       .filter((item: any) => numberTypes.find((type: string) => type === item.data_type))
       .map((item: any) => ({
         value: item.name,
@@ -53,7 +55,7 @@ a-card(:bordered="false" v-if="schema")
         type: chartType,
         smooth: false,
         encode: {
-          x: currentResult.value.dimensionsAndXName[1],
+          x: dimensionsAndXName[1],
           y: item,
         },
         symbolSize: 4,
@@ -79,7 +81,7 @@ a-card(:bordered="false" v-if="schema")
         trigger: 'axis',
       },
       dataset: {
-        dimensions: currentResult.value.dimensionsAndXName[0],
+        dimensions: dimensionsAndXName[0],
         source: currentResult.value.records.rows,
       },
       xAxis: {
