@@ -17,6 +17,7 @@
   import CodeEditor from './code-editor.vue'
 
   // data
+  const { isCloud } = storeToRefs(useAppStore())
   const appStore = useAppStore()
   const currentFile = ref('')
   const files = import.meta.glob('./docs/*.md', { eager: true })
@@ -41,14 +42,16 @@
   }
   // lifecycle
   onMounted(() => {
-    window.grecaptcha.ready(() => {
-      window.grecaptcha
-        .execute(import.meta.env.VITE_RECAPTCHA_SITE_KEY, { action: 'submit' })
-        .then(async (token: string) => {
-          const data = await getPlaygroundInfo(token, appStore.dbId)
-          alert(JSON.stringify(data, null, 2))
-        })
-    })
+    if (isCloud.value) {
+      window.grecaptcha.ready(() => {
+        window.grecaptcha
+          .execute(import.meta.env.VITE_RECAPTCHA_SITE_KEY, { action: 'submit' })
+          .then(async (token: string) => {
+            const data = await getPlaygroundInfo(token, appStore.dbId)
+            alert(JSON.stringify(data, null, 2))
+          })
+      })
+    }
   })
 </script>
 

@@ -53,10 +53,12 @@ export default function useQueryCode() {
     const { runCode } = useCodeRunStore()
     const { pushLog } = useLog()
     const res = await runCode(code, type, withoutSave)
-    Message.success({
-      content: i18n.global.t('dataExplorer.runSuccess'),
-      duration: 2 * 1000,
-    })
+    if (res.record) {
+      Message.success({
+        content: i18n.global.t('dataExplorer.runSuccess'),
+        duration: 2 * 1000,
+      })
+    }
     if (!withoutSave) {
       pushLog(res.log, type)
     }
