@@ -9,6 +9,7 @@
 <script lang="ts" setup>
   import { computed } from 'vue'
   import enUS from '@arco-design/web-vue/es/locale/lang/en-us'
+  import zhCN from '@arco-design/web-vue/es/locale/lang/zh-cn'
   import useLocale from '@/hooks/locale'
   import { useUserStore, useAppStore } from '@/store'
 
@@ -17,6 +18,8 @@
     switch (currentLocale.value) {
       case 'en-US':
         return enUS
+      case 'zh-CN':
+        return zhCN
       default:
         return enUS
     }

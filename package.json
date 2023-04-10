@@ -59,6 +59,7 @@
     "mitt": "^3.0.0",
     "nprogress": "^0.2.0",
     "pinia": "^2.0.29",
+    "postcss-html": "^1.0.0",
     "qs": "^6.11.0",
     "query-string": "^8.1.0",
     "sortablejs": "^1.15.0",
@@ -72,7 +73,8 @@
     "vue-codemirror": "^6.1.1",
     "vue-echarts": "^6.5.0",
     "vue-i18n": "^9.2.2",
-    "vue-router": "^4.0.14"
+    "vue-router": "^4.0.14",
+    "zh-cn": "link:@arco-design/web-vue/es/locale/lang/zh-cn"
   },
   "devDependencies": {
     "@commitlint/cli": "^17.4.2",
@@ -91,6 +93,7 @@
     "@vitejs/plugin-vue-jsx": "^2.1.1",
     "@volar/vue-language-plugin-pug": "^1.0.24",
     "@vue/babel-plugin-jsx": "^1.1.1",
+    "@vue/runtime-core": "^3.2.47",
     "cross-env": "^7.0.3",
     "eslint": "^8.31.0",
     "eslint-config-airbnb-base": "^15.0.0",
