@@ -19,8 +19,12 @@ a-tabs.result-tabs(type="rounded" lazy-load :active-key="activeTabKey" @tab-clic
   const { removeResult, clearResults } = useCodeRunStore()
   const activeTabKey = ref(props.results[0]?.key)
 
-  const deleteTab = (key: number) => {
-    removeResult(key)
+  const deleteTab = async (key: number) => {
+    const index = props.results.findIndex((result) => result.key === key)
+    await removeResult(key)
+    if (activeTabKey.value === key) {
+      activeTabKey.value = props.results[index]?.key || props.results[0].key
+    }
   }
 
   const tabClick = (key: any) => {
