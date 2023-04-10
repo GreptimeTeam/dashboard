@@ -40,7 +40,7 @@ a-card(:bordered="false").editor-card
   const secondaryCodeRunning = ref(false)
   const { pythonCode, cursorAt, lastSavedCode, isNewScript, scriptName, isChanged, selectAfterSave, createNewScript } =
     usePythonCode()
-  const { saveScript } = useCodeRunStore()
+  const { save: saveScript } = usePythonCode()
   const { run: runCode } = useQueryCode()
   const { getScriptsTable } = dataBaseStore
 
