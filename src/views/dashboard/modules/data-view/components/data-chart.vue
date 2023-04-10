@@ -1,5 +1,5 @@
 <template lang="pug">
-a-card(:bordered="false" v-if="schemaInRecords && hasTimestamp")
+a-card(:bordered="false" v-if="hasChart")
   template(#title)
     a-space(size="mini")
       svg.icon-18
@@ -7,7 +7,7 @@ a-card(:bordered="false" v-if="schemaInRecords && hasTimestamp")
       | {{$t('dataExplorer.chart')}}
   a-spin(style="width: 100%")
     a-row
-      a-form.chart-form(:model="chartForm" layout="inline" :onChange="drawChart()")
+      a-form.chart-form(:model="chartForm" :onChange="drawChart()" layout="inline")
         a-form-item(:label="$t('dataExplorer.chartType')")
           a-select(v-model="chartForm.chartType" :trigger-props="triggerProps")
             a-option(v-for="item of chartTypeOptions" :key="item.key" :value="item.value" :label="item.value")
@@ -30,15 +30,19 @@ a-card(:bordered="false" v-if="schemaInRecords && hasTimestamp")
   const option = ref({})
   const chartForm = reactive({
     chartType: 'line',
-    ySelectedTypes: [],
+    ySelectedTypes: [''],
   })
   const { schema: schemaInRecords } = currentResult.value.records
   const { dimensionsAndXName } = currentResult.value
   const hasTimestamp = dimensionsAndXName[1] !== ''
 
+  const hasChart = computed(() => {
+    return schemaInRecords && hasTimestamp
+  })
+
   // TODO: Add support for more data types not just numbers.
   const yOptions = computed(() => {
-    if (!schemaInRecords) return []
+    if (!hasChart.value) return []
     return schemaInRecords.column_schemas
       .filter((item: any) => numberTypes.find((type: string) => type === item.data_type))
       .map((item: any) => ({
@@ -46,10 +50,10 @@ a-card(:bordered="false" v-if="schemaInRecords && hasTimestamp")
       }))
   })
 
-  const getSeriesAndLegendNames = ([chartType, ySelectedTypes = []]: any) => {
+  const getSeriesAndLegendNames = ([chartType, ySelectedTypes]: any) => {
     const series: any = []
     const legendNames: any = []
-    ySelectedTypes.forEach((item: any) => {
+    ySelectedTypes.forEach((item: string) => {
       const oneSeries = {
         name: item,
         type: chartType,
@@ -103,6 +107,11 @@ a-card(:bordered="false" v-if="schemaInRecords && hasTimestamp")
       series,
     }
   }
+
+  // TODO: Might need to change this
+  onMounted(() => {
+    if (hasChart.value) chartForm.ySelectedTypes = [yOptions.value[0].value]
+  })
 
   const drawChart = () => {
     option.value = makeOption([chartForm.chartType, chartForm.ySelectedTypes])
