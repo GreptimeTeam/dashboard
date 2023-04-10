@@ -115,8 +115,9 @@ const useCodeRunStore = defineStore('codeRun', () => {
     }
   }
 
-  const clearResults = (type = '') => {
-    results.value = results.value.filter((result) => result.type !== type)
+  const clear = (type: string | string[]) => {
+    const types = Array.isArray(type) ? type : [type]
+    results.value = results.value.filter((result) => !types.includes(result.type))
   }
 
   const removeResult = (key: number) => {
@@ -128,7 +129,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
     runCode,
     saveScript,
     removeResult,
-    clearResults,
+    clear,
   }
 })
 export default useCodeRunStore

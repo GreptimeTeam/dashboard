@@ -9,21 +9,21 @@ a-tabs.result-tabs.logs-tab(type="rounded")
 </template>
 
 <script lang="ts" name="Log" setup>
+  import type { Log } from '@/store/modules/log/types'
   import { useClipboard } from '@vueuse/core'
   import { storeToRefs } from 'pinia'
 
-  const props = defineProps({
-    logs: {
-      type: Array,
-      default: () => [],
-    },
-  })
+  const props = defineProps<{
+    logs: Log[]
+    types: string[]
+  }>()
+
   const route = useRoute()
   const { clearLogs } = useLog()
   const { codeType } = storeToRefs(useAppStore())
   const { copy, copied } = useClipboard()
 
   const clear = () => {
-    clearLogs(['sql', 'promQL'])
+    clearLogs(props.types)
   }
 </script>
