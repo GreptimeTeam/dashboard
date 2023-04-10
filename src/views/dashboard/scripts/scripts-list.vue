@@ -67,7 +67,7 @@ a-modal.change-modal(v-model:visible='modelVisible' @ok='handleOk' @cancel='hand
     scriptSelectedKeys.value = lastSelectedKey.value
   }
 
-  if (!guideModal.value) {
+  onMounted(() => {
     getScriptsTable()
-  }
+  })
 </script>
