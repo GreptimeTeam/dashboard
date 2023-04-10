@@ -85,7 +85,7 @@ a-space(direction="vertical" size="medium" fill)
   }
 
   const ICON_MAP: { [key: string]: string } = {
-    'VALUE': '#value',
+    'FIELD': '#value',
     'PRIMARY KEY': '#primary-key',
     'TIME INDEX': '#time-index',
   }
