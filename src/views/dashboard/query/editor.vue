@@ -2,18 +2,17 @@
 a-card(:bordered="false").editor-card
   a-space.space-between
     a-space(size="medium")
-      a-button(@click="runQuery()" type="primary")
+      a-button(@click="runQuery()" :disabled="isButtonDisabled" type="primary")
         .mr-4
           icon-loading(spin v-if="primaryCodeRunning")
           icon-play-arrow(v-else)
         | {{$t('dataExplorer.runAll')}}
-      a(@click="runPartQuery()")
-        a-button
-          .mr-4
-            icon-loading(spin v-if="secondaryCodeRunning")
-            icon-play-arrow(v-else)
-          div(v-if="lineStart === lineEnd") {{$t('dataExplorer.runLine')}} {{ lineStart }}
-          div(v-else) {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
+      a-button(:disabled="isButtonDisabled" @click="runPartQuery()")
+        .mr-4
+          icon-loading(spin v-if="secondaryCodeRunning")
+          icon-play-arrow(v-else)
+        div(v-if="lineStart === lineEnd") {{$t('dataExplorer.runLine')}} {{ lineStart }}
+        div(v-else) {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
     .query-select(v-if="!isCloud")
       a-select(v-model="queryType" @change="selectCodeType")
         a-option(v-for="query of queryOptions" :="query")
@@ -75,7 +74,7 @@ a-card(:bordered="false").editor-card
   const { runCode } = useCodeRunStore()
   const { isCloud } = storeToRefs(useAppStore())
   const { primaryCodeRunning, secondaryCodeRunning } = storeToRefs(useCodeRunStore())
-  const { queryCode, queryType, cursorAt, queryOptions, promForm, selectCodeType } = useQueryCode()
+  const { queryCode, queryType, cursorAt, queryOptions, promForm, isButtonDisabled, selectCodeType } = useQueryCode()
 
   const lineStart = ref()
   const lineEnd = ref()
