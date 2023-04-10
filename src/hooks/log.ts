@@ -1,7 +1,8 @@
 import { Log } from '@/store/modules/log/types'
 
+const route = useRoute()
+
 export default function useLog() {
-  const route = useRoute()
   const { push, clear } = useLogStore()
 
   const pushLog = (log: Log, type: string) => {
