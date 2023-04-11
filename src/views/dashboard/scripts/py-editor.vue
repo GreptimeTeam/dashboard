@@ -109,6 +109,7 @@ a-card(:bordered="false").editor-card
     secondaryCodeRunning.value = true
     await runCode(scriptForm.value.scriptName, codeType)
     await getScriptsTable()
+    secondaryCodeRunning.value = false
     selectAfterSave(scriptForm.value.scriptName)
   }
 
