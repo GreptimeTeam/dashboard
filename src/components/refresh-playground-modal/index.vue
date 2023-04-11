@@ -31,15 +31,16 @@ a-modal.guide-modal(v-model:visible="isShow" :mask-closable="false" :ok-text="$t
       const token = await window.grecaptcha.execute(VITE_RECAPTCHA_SITE_KEY, { action: 'submit' })
       const data = (await createPlayground(token)) as any
 
-      const config = {
-        username: data.username,
-        password: data.password,
-        database: `${data.teamId}-${data.serviceName}`,
-        dbId: data.dbId,
-      }
+      const params = btoa(
+        JSON.stringify({
+          username: data.username,
+          password: data.password,
+          database: `${data.teamId}-${data.serviceName}`,
+          dbId: data.dbId,
+        })
+      )
 
-      useStorage('config', config)
-      appStore.updateSettings(config)
+      window.location.href = `https://${Object.values(data.domain)[0]}/dashboard/playground?info=${params}`
     })
   }
 
