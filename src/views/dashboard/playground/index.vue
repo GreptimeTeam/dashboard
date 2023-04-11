@@ -17,6 +17,7 @@
   import CodeEditor from './code-editor.vue'
 
   // data
+  const { VITE_RECAPTCHA_SITE_KEY } = import.meta.env
   const { isCloud } = storeToRefs(useAppStore())
   const appStore = useAppStore()
   const currentFile = ref('')
@@ -43,13 +44,9 @@
   // lifecycle
   onMounted(() => {
     if (isCloud.value) {
-      window.grecaptcha.ready(() => {
-        window.grecaptcha
-          .execute(import.meta.env.VITE_RECAPTCHA_SITE_KEY, { action: 'submit' })
-          .then(async (token: string) => {
-            const data = await getPlaygroundInfo(token, appStore.dbId)
-            alert(JSON.stringify(data, null, 2))
-          })
+      window.grecaptcha.ready(async () => {
+        const token = await window.grecaptcha.execute(VITE_RECAPTCHA_SITE_KEY, { action: 'submit' })
+        const data = await getPlaygroundInfo(token, appStore.dbId)
       })
     }
   })
