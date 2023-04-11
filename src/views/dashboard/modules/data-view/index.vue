@@ -40,4 +40,13 @@ a-tabs.result-tabs(type="rounded" lazy-load :active-key="activeTabKey" @tab-clic
     startKey.value = props.results[0].key
     clear(props.types)
   }
+
+  watch(
+    () => ({ ...props }),
+    (value, old) => {
+      if (value.results.length > old.results.length) {
+        activeTabKey.value = props.results.slice(-1)[0].key
+      }
+    }
+  )
 </script>
