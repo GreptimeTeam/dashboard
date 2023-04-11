@@ -97,14 +97,11 @@ Use `count()` function to get the number of all rows in the table:
 SELECT count(*) FROM system_metrics;
 ```
 
-
 Use `avg()` function returns the average value of a certain field:
-
 
 ``` sql
 SELECT avg(cpu_util) FROM system_metrics;
 ```
-
 
 You can use the `GROUP BY` clause to group rows that have the same values into
 summary rows. The average memory usage grouped by `idc`:
@@ -114,7 +111,13 @@ summary rows. The average memory usage grouped by `idc`:
 SELECT idc, avg(memory_util) FROM system_metrics GROUP BY idc;
 ```
 
+There are more aggregate function available, change `avg` to any of these below
+and try out:
 
+- `max`
+- `min`
+- `sum`
+- `mean`
 
 ## Explore by Yourself
 
@@ -123,7 +126,6 @@ Enough with the basics, try to write your own query and do some exploration.
 
 
 ```sql
--- Type your SQL here
 
 ```
 
