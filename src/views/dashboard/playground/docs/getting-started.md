@@ -78,7 +78,7 @@ GreptimeDB supports full SQL for you to query data from a database.
 ​
 
 ``` sql
-SELECT * FROM system_metrics;
+SELECT * FROM system_metrics ORDER BY ts DESC;
 ```
 
 ​
@@ -123,6 +123,6 @@ Enough with the basics, try to write your own query and do some exploration.
 ```
 
 ​
-Full more advanced features like scripting, various protocol support,
-[Download](https://greptime.com/downloads/) GreptimeDB on your machine and
+For more advanced features like scripting and protocol support,
+[Download](https://greptime.com/download/) GreptimeDB on your machine and
 follow our [docs](https://docs.greptime.com).
