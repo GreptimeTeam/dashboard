@@ -4,7 +4,7 @@ title: Quick Start
 # Getting Started
 
 ## Preface
-
+Greetings from Greptime Play! This guide will get you familiar with the very
 basics of GreptimeDB. Instead of static doc reading, Greptime Play offers an
 interactive experience: **all code blocks in this guide are editable and
 executable**.
