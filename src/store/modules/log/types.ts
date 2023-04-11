@@ -3,5 +3,5 @@ export interface Log {
   sql?: string
   error?: string
   name?: string
-  type: string
+  type?: string
 }

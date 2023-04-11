@@ -94,7 +94,7 @@ a-card(:bordered="false").editor-card
     const routeName = route.name as string
 
     try {
-      await saveScript(scriptForm.value.scriptName, pythonCode.value.trim(), routeName)
+      await saveScript(scriptForm.value.scriptName, pythonCode.value.trim())
       await getScriptsTable()
       selectAfterSave(scriptForm.value.scriptName)
     } catch (error: any) {
@@ -103,14 +103,17 @@ a-card(:bordered="false").editor-card
   }
   const saveScriptAndRun = async () => {
     const routeName = route.name as string
-
-    await saveScript(scriptForm.value.scriptName, pythonCode.value.trim(), routeName)
-    lastSavedCode.value = pythonCode.value
-    secondaryCodeRunning.value = true
-    await runCode(scriptForm.value.scriptName, codeType)
-    await getScriptsTable()
+    try {
+      secondaryCodeRunning.value = true
+      await saveScript(scriptForm.value.scriptName, pythonCode.value.trim())
+      lastSavedCode.value = pythonCode.value
+      await runCode(scriptForm.value.scriptName, codeType)
+      await getScriptsTable()
+      selectAfterSave(scriptForm.value.scriptName)
+    } catch (error) {
+      console.log(`error:`, error)
+    }
     secondaryCodeRunning.value = false
-    selectAfterSave(scriptForm.value.scriptName)
   }
 
   const run = async () => {

@@ -107,11 +107,8 @@ const useCodeRunStore = defineStore('codeRun', () => {
         codeInfo: name,
         ...res,
       }
-    } catch (error: any) {
-      return {
-        type,
-        ...error,
-      }
+    } catch (err: any) {
+      throw new Error(JSON.stringify(err))
     }
   }
 

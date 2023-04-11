@@ -1,3 +1,4 @@
+import { Log } from '@/store/modules/log/types'
 import { Md5 } from 'ts-md5'
 import { Message } from '@arco-design/web-vue'
 import i18n from '@/locale'
@@ -58,12 +59,16 @@ export default function usePythonCode() {
   }
 
   const save = async (name: string, code: string) => {
-    const res = await saveScript(name, code)
-    Message.success({
-      content: i18n.global.t('dataExplorer.saveSuccess'),
-      duration: 2 * 1000,
-    })
-    await pushLog(res, 'python')
+    try {
+      const res = await saveScript(name, code)
+      Message.success({
+        content: i18n.global.t('dataExplorer.saveSuccess'),
+        duration: 2 * 1000,
+      })
+      await pushLog(res, 'python')
+    } catch (err: any) {
+      throw await pushLog(JSON.parse(err.message) as Log, 'python')
+    }
   }
   return {
     insertNameToPyCode,
