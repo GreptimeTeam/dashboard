@@ -35,7 +35,6 @@ router.beforeEach(async (to, from, next) => {
       const config = JSON.parse(atob(to.query.info as string))
       useStorage('config', config)
       appStore.updateSettings(config)
-      return next()
       return next({ path: to.path, query: {} })
     }
     appStore.updateSettings(useStorage('config', {}).value)

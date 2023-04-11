@@ -10,6 +10,7 @@
     a-layout-content
       .markdown-container
         MarkdownContent(v-if="MarkdownContent")
+RefreshPlaygroundModal(ref="refreshPlaygroundModal")
 </template>
 
 <script lang="ts" setup name="Notebook">
@@ -20,6 +21,7 @@
   const { VITE_RECAPTCHA_SITE_KEY } = import.meta.env
   const { isCloud } = storeToRefs(useAppStore())
   const appStore = useAppStore()
+  const refreshPlaygroundModal = ref()
   const currentFile = ref('')
   const files = import.meta.glob('./docs/*.md', { eager: true })
 
@@ -45,8 +47,12 @@
   onMounted(() => {
     if (isCloud.value) {
       window.grecaptcha.ready(async () => {
-        const token = await window.grecaptcha.execute(VITE_RECAPTCHA_SITE_KEY, { action: 'submit' })
-        const data = await getPlaygroundInfo(token, appStore.dbId)
+        try {
+          const token = await window.grecaptcha.execute(VITE_RECAPTCHA_SITE_KEY, { action: 'submit' })
+          const data = await getPlaygroundInfo(token, appStore.dbId)
+        } catch (error) {
+          refreshPlaygroundModal.value.toggleModal()
+        }
       })
     }
   })
