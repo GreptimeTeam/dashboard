@@ -29,7 +29,7 @@ a-card(:bordered="false" v-if="hasChart")
   const { currentResult } = storeToRefs(useCodeRunStore())
   const option = ref({})
   const chartForm = reactive({
-    chartType: 'line',
+    chartType: 'line(smooth)',
     ySelectedTypes: [''],
   })
   const { schema: schemaInRecords } = currentResult.value.records
