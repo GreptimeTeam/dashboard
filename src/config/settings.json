@@ -13,7 +13,7 @@
   "tabBar": false,
   "menuFromServer": false,
   "host": "",
-  "database": "",
+  "database": "public",
   "databaseList": [],
   "username": "",
   "password": "",

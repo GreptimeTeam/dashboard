@@ -1,16 +1,15 @@
 <template lang="pug">
-.playground
-  a-layout.layout 
-    a-layout-sider 
-      a-tree.script-tree(
-        :data="fileList" 
-        :default-selected-keys="[currentFile]"
-        @select="onSelect"
-        blockNode)
-    a-layout-content
-      .markdown-container
-        MarkdownContent(v-if="MarkdownContent")
-RefreshPlaygroundModal(ref="refreshPlaygroundModal")
+a-layout.layout 
+  a-layout-sider 
+    a-tree.script-tree(
+      :data="fileList" 
+      :default-selected-keys="[currentFile]"
+      @select="onSelect"
+      blockNode)
+  a-layout-content
+    .markdown-container
+      MarkdownContent(v-if="MarkdownContent")
+    RefreshPlaygroundModal(ref="refreshPlaygroundModal")
 </template>
 
 <script lang="ts" setup name="Playground">
@@ -60,12 +59,9 @@ RefreshPlaygroundModal(ref="refreshPlaygroundModal")
 </script>
 
 <style lang="stylus" rel="stylesheet/stylus" scoped>
-  .playground
-    max-height 100%
-    overflow-y scroll
-    .arco-layout-sider
-      background-color #fff
-      border-radius 10px
+  .arco-layout-sider
+    background-color #fff
+    border-radius 10px
   .markdown-container
     background-color #fff
     border-radius 10px

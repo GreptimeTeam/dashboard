@@ -1,12 +1,10 @@
 <template>
   <router-view v-slot="{ Component, route }">
     <transition name="fade" mode="out-in" appear>
-      <div :key="route.name">
-        <component :is="Component" v-if="route.meta.ignoreCache" :key="route.fullPath" />
-        <keep-alive v-else>
-          <component :is="Component" :key="route.fullPath" />
-        </keep-alive>
-      </div>
+      <component :is="Component" v-if="route.meta.ignoreCache" :key="route.fullPath" />
+      <keep-alive v-else>
+        <component :is="Component" :key="route.fullPath" />
+      </keep-alive>
     </transition>
   </router-view>
 </template>

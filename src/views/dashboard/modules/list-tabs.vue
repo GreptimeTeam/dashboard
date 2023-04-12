@@ -1,25 +1,33 @@
 <template lang="pug">
-a-tabs.sider-tabs(v-model:active-key="tabActiveKey" :class="routeName === 'query' ? 'one-tab' : ''" default-active-key="2" type="rounded")
-  a-tab-pane(key="1" title="Tables")
+a-tabs.sider-tabs(v-model:active-key="tabActiveKey" :class="{'one-tab': tabs.length === 1}" type="rounded")
+  a-tab-pane(v-for="(item, index) in tabs" :key="index" :title="item.title")
     a-card(:bordered="false").tree-card
-      TableList    
-  a-tab-pane(key="2" title="scripts")
-    a-card(:bordered="false").tree-card
-      ScriptsList
+      component(:is="item.component")
 </template>
 
 <script lang="ts" name="ListTabs" setup>
-  import usePythonCode from '@/hooks/python-code'
-  import tableList from '../modules/table-list.vue'
+  import TableList from './table-list.vue'
   import ScriptsList from './scripts-list.vue'
 
-  const tabActiveKey = ref()
-  const route = useRoute()
+  const props = defineProps<{
+    has: string[]
+  }>()
 
-  const routeName = route.name as string
-  if (routeName === 'query') {
-    tabActiveKey.value = '1'
-  }
+  const tabActiveKey = ref(props.has.length - 1)
+  const tabsConfig = [
+    {
+      title: 'Tables',
+      component: TableList,
+    },
+    {
+      title: 'Scripts',
+      component: ScriptsList,
+    },
+  ]
+
+  const tabs = computed(() => {
+    return tabsConfig.filter((tab) => props.has.includes(tab.title))
+  })
 </script>
 
 <style lang="less" scoped>
