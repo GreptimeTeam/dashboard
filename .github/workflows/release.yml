@@ -1,0 +1,93 @@
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+name: Release
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v3
+
+      - name: Clean up
+        shell: bash
+        run: rm -rf release && mkdir -p release
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 7
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Run build
+        run: npm run build:docker
+
+      - name: Calculate checksum and rename binary
+        shell: bash
+        run: |
+          tar -czvf release/build.tar.gz ./dist
+          cd release && shasum -a 256 build.tar.gz > sha256.txt && cd ../
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build.tar.gz
+          path: release/build.tar.gz
+
+      - name: Upload checksum of artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: sha256.txt
+          path: release/sha256.txt
+
+  release:
+    name: Release artifacts
+    # Release artifacts only when all the artifacts are built successfully.
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v3
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: 'Release ${{ github.ref_name }}'
+          files: |
+            **/build.tar.gz
+            **/sha256.txt
+
+  sync:
+    name: Create PR to update VERSION
+    needs: [build, release]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3.1.0
+        with:
+          repository: 'GreptimeTeam/greptimedb'
+      - id: update-version
+        run: |
+          cd src/servers/dashboard/
+          echo ${{ github.ref_name }} > VERSION
+      - uses: peter-evans/create-pull-request@v4
+        with:
+          token: ${{ secrets.PR_ACTION }}
+          commit-message: 'feat: update dashboard to ${{ github.ref_name }}'
+          committer: GitHub Action <noreply@github.com>
+          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+          signoff: false
+          branch: dashboard/${{ github.ref_name }}
+          delete-branch: true
+          title: 'feat: update dashboard to ${{ github.ref_name }}'
+          body: |
+            Update dashboard to ${{ github.ref_name }}
