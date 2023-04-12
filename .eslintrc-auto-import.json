@@ -46,7 +46,6 @@
     "onUnmounted": true,
     "onUpdated": true,
     "permission": true,
-    "playground": true,
     "provide": true,
     "pythonCode": true,
     "queryCode": true,

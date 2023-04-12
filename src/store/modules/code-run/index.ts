@@ -7,10 +7,10 @@ import { AnyObject } from '@/types/global'
 import { ResultType } from './types'
 
 const useCodeRunStore = defineStore('codeRun', () => {
+  const { promForm } = useQueryCode()
+
   const results = ref<ResultType[]>([])
   const resultsId = ref(0)
-
-  const { promForm } = useQueryCode()
 
   // TODO: Add all the types we decide instead of ECharts if needed in the future.
   const getDimensionsAndXName = (elements: any) => {

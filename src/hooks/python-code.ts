@@ -4,7 +4,6 @@ import { Message } from '@arco-design/web-vue'
 import i18n from '@/locale'
 
 const { saveScript } = useCodeRunStore()
-const { pushLog } = useLog()
 
 const pythonCode = ref('')
 const lastSavedCode = ref('')
@@ -20,6 +19,7 @@ const creating = ref(false)
 const isChanged = computed(() => Md5.hashStr(pythonCode.value) !== Md5.hashStr(lastSavedCode.value))
 
 export default function usePythonCode() {
+  const { pushLog } = useLog()
   const insertNameToPyCode = (name: any) => {
     pythonCode.value =
       pythonCode.value.substring(0, cursorAt.value[0]) + name + pythonCode.value.substring(cursorAt.value[1])
