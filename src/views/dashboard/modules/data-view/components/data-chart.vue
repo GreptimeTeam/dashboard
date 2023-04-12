@@ -29,25 +29,25 @@ a-card(:bordered="false" v-if="hasChart")
   const { currentResult } = storeToRefs(useCodeRunStore())
   const option = ref({})
   const chartForm = reactive({
-    chartType: 'line',
+    chartType: 'line(smooth)',
     ySelectedTypes: [''],
   })
   const { schema: schemaInRecords } = currentResult.value.records
   const { dimensionsAndXName } = currentResult.value
   const hasTimestamp = dimensionsAndXName[1] !== ''
 
-  const hasChart = computed(() => {
-    return schemaInRecords && hasTimestamp
-  })
-
   // TODO: Add support for more data types not just numbers.
   const yOptions = computed(() => {
-    if (!hasChart.value) return []
+    if (!schemaInRecords || !hasTimestamp) return []
     return schemaInRecords.column_schemas
       .filter((item: any) => numberTypes.find((type: string) => type === item.data_type))
       .map((item: any) => ({
         value: item.name,
       }))
+  })
+
+  const hasChart = computed(() => {
+    return yOptions.value.length > 0
   })
 
   const getSeriesAndLegendNames = ([chartType, ySelectedTypes]: any) => {
