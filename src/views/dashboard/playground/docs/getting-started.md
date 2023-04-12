@@ -13,13 +13,13 @@ By hitting `Run` button, code will be executed in a temporary, private instance
 from [GreptimeCloud](https://greptime.com/product/cloud). **You can also edit
 the code to explore your own ideas**. Note that the session is valid in **1
 hour**, you will be asked to create a new one when it's expired and recycled. So
-never store important data in Greptime Play sessions.
+please never store important data in Greptime Play sessions.
 
 ## Create a Time-Series Table
 
-Let's start by creating the `system_metrics` table. Note that we defined `host`
-and `idc` as primary key, and `ts` and time index, both are important concepts
-in GreptimeDB. Hit `Run` to create the table:
+Let's start by creating the `system_metrics` table. Note that we pre-defined `host`
+and `idc` as the primary keys; `ts` and time index, both are important to know
+in GreptimeDB. Click `Run` to create the table:
 
 
 ```sql
@@ -35,13 +35,13 @@ CREATE TABLE IF NOT EXISTS system_metrics (
 );
 ```
 
-Once you see the green marker, run `DESC TABLE` to check detail of the table.
+Once the green marker appears, run `DESC TABLE` to view the details of the table.
 
-In GreptimeDB, there are three kinds of column in term of semantic type:
+In GreptimeDB, there are three types of columns:
 
-- `PRIMARY KEY`: Key columns used for sorting and partition
-- `FIELD`: Value columns that hold values
-- `TIME INDEX`: The time column
+- `PRIMARY KEY`: key columns that are used for sorting and partitioning
+- `FIELD`: columns which store values
+- `TIME INDEX`: columns of data type TIME
 
 ```sql
 DESC TABLE system_metrics;
@@ -49,8 +49,8 @@ DESC TABLE system_metrics;
 
 ## Add Some Data
 
-Using the `INSERT` statement is an easy way to add data to your table. Through
-the statement below, we have inserted three rows into the `system_metrics`
+Using the `INSERT` statement to easily add data to the table. 
+Below example inserts three rows into the `system_metrics` 
 table.
 
 
@@ -63,7 +63,7 @@ VALUES
 ```
 
 
-Modify the value and timestamp, we can ingest more entries.
+Ingest more entries by modifying the values and timestamps.
 
 
 ``` sql
@@ -79,7 +79,7 @@ VALUES
 ## Query Data with SQL
 
 
-GreptimeDB supports full SQL for you to query data from a database.
+GreptimeDB fully supports SQL.
 
 
 ``` sql
@@ -88,7 +88,7 @@ SELECT * FROM system_metrics ORDER BY ts DESC;
 
 
 Here are some query examples for the `system_metrics` so you can get familiar
-with using SQL alongside GreptimeDB functions.
+with using SQL alongside GreptimeDB's functions.
 
 Use `count()` function to get the number of all rows in the table:
 
@@ -103,7 +103,7 @@ Use `avg()` function returns the average value of a certain field:
 SELECT avg(cpu_util) FROM system_metrics;
 ```
 
-You can use the `GROUP BY` clause to group rows that have the same values into
+Use the `GROUP BY` clause to group rows that have the same values into
 summary rows. The average memory usage grouped by `idc`:
 
 
@@ -122,7 +122,7 @@ and try out:
 ## Explore by Yourself
 
 
-Enough with the basics, try to write your own query and do some exploration.
+Please start exploring by writing some queries!
 
 
 ```sql
@@ -131,5 +131,5 @@ Enough with the basics, try to write your own query and do some exploration.
 
 
 For more advanced features like scripting and protocol support,
-[Download](https://greptime.com/download/) GreptimeDB on your machine and
-follow our [docs](https://docs.greptime.com).
+[Download](https://greptime.com/download/) and run GreptimeDB locally by
+following [docs](https://docs.greptime.com).
