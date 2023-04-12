@@ -1,19 +1,21 @@
 import { Log } from '@/store/modules/log/types'
+import { setup } from 'mockjs'
 
-const route = useRoute()
+export default {
+  setup() {
+    const route = useRoute()
+    const { push, clear } = useLogStore()
 
-export default function useLog() {
-  const { push, clear } = useLogStore()
+    const pushLog = (log: Log, type: string) => {
+      push(log, type || (route?.name as string))
+    }
+    const clearLogs = (type = route?.name as string | string[]) => {
+      clear(type)
+    }
 
-  const pushLog = (log: Log, type: string) => {
-    push(log, type || (route?.name as string))
-  }
-  const clearLogs = (type = route?.name as string | string[]) => {
-    clear(type)
-  }
-
-  return {
-    pushLog,
-    clearLogs,
-  }
+    return {
+      pushLog,
+      clearLogs,
+    }
+  },
 }

@@ -1,5 +1,5 @@
 <template lang="pug">
-.notebook
+.playground
   a-layout.layout 
     a-layout-sider 
       a-tree.script-tree(
@@ -13,7 +13,7 @@
 RefreshPlaygroundModal(ref="refreshPlaygroundModal")
 </template>
 
-<script lang="ts" setup name="Notebook">
+<script lang="ts" setup name="Playground">
   import { getPlaygroundInfo } from '@/api/playground'
   import CodeEditor from './code-editor.vue'
 
@@ -25,14 +25,15 @@ RefreshPlaygroundModal(ref="refreshPlaygroundModal")
   const currentFile = ref('')
   const files = import.meta.glob('./docs/*.md', { eager: true })
 
-  const fileList = Object.entries(files).map(([key, file]) => {
-    const { attributes } = file as any
-    return {
-      title: attributes.title,
-      key,
-    }
-  })
-  currentFile.value = fileList[0].key
+  const fileList =
+    Object.entries(files).map(([key, file]) => {
+      const { attributes } = file as any
+      return {
+        title: attributes.title,
+        key,
+      }
+    }) || []
+  currentFile.value = fileList[0]?.key
 
   const MarkdownContent = computed(() => {
     const { VueComponentWith } = files[currentFile.value] as any
@@ -59,7 +60,7 @@ RefreshPlaygroundModal(ref="refreshPlaygroundModal")
 </script>
 
 <style lang="stylus" rel="stylesheet/stylus" scoped>
-  .notebook
+  .playground
     max-height 100%
     overflow-y scroll
     .arco-layout-sider
