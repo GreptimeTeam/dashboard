@@ -12,7 +12,7 @@ executable**.
 By hitting the `Run` button, the code will be executed and run in a temporary, private instance generated
 from [GreptimeCloud](https://greptime.com/product/cloud). **You can also explore and experiment with different ideas by editing the codes.
 the code to explore your own ideas**. Note that the session is valid in **1
-hour**, you will be asked to create a new one when it's expired and recycled. So
+and you will need to create a new one when the time is up. So
 please never store important data in Greptime Play sessions.
 
 ## Create a Time-Series Table
