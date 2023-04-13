@@ -28,7 +28,7 @@ a-tabs.result-tabs(type="rounded" lazy-load :active-key="activeTabKey" @tab-clic
     }
     await removeResult(key)
     if (activeTabKey.value === key) {
-      activeTabKey.value = props.results[index]?.key || props.results[0].key
+      activeTabKey.value = props.results[index]?.key || props.results.slice(-1)[0].key
     }
   }
 
