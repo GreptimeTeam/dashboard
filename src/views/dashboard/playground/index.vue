@@ -47,7 +47,7 @@ a-layout.layout
   // lifecycle
   onMounted(async () => {
     await importFiles('https://www.google.com/recaptcha/api.js?render=6LcsBPgkAAAAAKiPrwh3pFCKpv9hc62eRhL5bj5A')
-    if (isCloud.value) {
+    if (appStore.lifetime === 'temporary' && isCloud.value) {
       window.grecaptcha.ready(async () => {
         try {
           const token = await window.grecaptcha.execute(VITE_RECAPTCHA_SITE_KEY, { action: 'submit' })
