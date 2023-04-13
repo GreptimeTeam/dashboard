@@ -11,7 +11,7 @@ executable**.
 
 By hitting the `Run` button, the code will be executed and run in a temporary, private instance generated
 from [GreptimeCloud](https://greptime.com/product/cloud). **You can also explore and experiment with different ideas by editing the codes.
-the code to explore your own ideas**. Note that the session is valid in **1
+Note that the instance is valid within **1 hour** once initiated, 
 and you will need to create a new one when the time is up. So
 please never store important data in Greptime Play sessions.
 
