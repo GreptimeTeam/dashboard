@@ -14,16 +14,16 @@ export const openWindow = (url: string, opts?: { target?: TargetContext; [key: s
   )
 }
 
-export const importFiles = (file) => {
+export const importFiles = (file: any) => {
   return new Promise((resolve, reject) => {
     const script = document.createElement('script')
     script.src = file
     script.type = 'text/javascript'
     script.defer = true
-    document.getElementsByTagName('head').item(0).appendChild(script)
+    document.getElementsByTagName('head').item(0)?.appendChild(script)
 
     script.onload = () => {
-      resolve()
+      resolve(script)
     }
     script.onerror = () => {
       reject()
