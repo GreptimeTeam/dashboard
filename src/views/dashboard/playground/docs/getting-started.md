@@ -8,14 +8,12 @@ Greetings from Greptime Play! Apart from just following a word-document guide, t
 
 ::: tip Cool feature alert:
 all code blocks in this guide are editable and executable! 
- 
-basics of GreptimeDB. Instead of static doc reading, Greptime Play offers an interactive experience: **all code blocks in this guide are editable and executable**.
 :::
 
 By hitting the `Run` button, the code will be executed and run in a temporary, private instance generated
 from [GreptimeCloud](https://greptime.com/product/cloud). **You can also explore and experiment with different ideas by editing the codes.**
 :::danger Note that:
-the instance is valid within **1 hour** once initiated, and you will need to create a new one when the time is up. Soplease never store important data in Greptime Play sessions.
+The instance is valid within **1 hour** once initiated, and you will need to create a new one when the time is up. So please never store important data in Greptime Play sessions.
 :::
 
 ## Create a Time-Series Table
