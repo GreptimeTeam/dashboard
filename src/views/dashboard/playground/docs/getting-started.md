@@ -87,7 +87,7 @@ SELECT * FROM system_metrics ORDER BY ts DESC;
 ```
 
 
-Here are some query examples for the `system_metrics` so you can get familiar
+We list some SQL examples below of the `system_metrics` table, for you to get familiar
 with using SQL alongside GreptimeDB's functions.
 
 Use `count()` function to get the number of all rows in the table:
