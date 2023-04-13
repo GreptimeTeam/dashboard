@@ -4,16 +4,19 @@ title: Quick Start
 # Getting Started
 
 ## Preface
-Greetings from Greptime Play! Apart from just following a word-document guide, this interactive playground will quickly familiarize you with GreptimeDB and help you to get the most out of it. Cool feature alert: all code blocks in this guide are editable and executable! 
-basics of GreptimeDB. Instead of static doc reading, Greptime Play offers an
-interactive experience: **all code blocks in this guide are editable and
-executable**.
+Greetings from Greptime Play! Apart from just following a word-document guide, this interactive playground will quickly familiarize you with GreptimeDB and help you to get the most out of it. 
+
+::: tip Cool feature alert:
+all code blocks in this guide are editable and executable! 
+ 
+basics of GreptimeDB. Instead of static doc reading, Greptime Play offers an interactive experience: **all code blocks in this guide are editable and executable**.
+:::
 
 By hitting the `Run` button, the code will be executed and run in a temporary, private instance generated
-from [GreptimeCloud](https://greptime.com/product/cloud). **You can also explore and experiment with different ideas by editing the codes.
-Note that the instance is valid within **1 hour** once initiated, 
-and you will need to create a new one when the time is up. So
-please never store important data in Greptime Play sessions.
+from [GreptimeCloud](https://greptime.com/product/cloud). **You can also explore and experiment with different ideas by editing the codes.**
+:::danger Note that:
+the instance is valid within **1 hour** once initiated, and you will need to create a new one when the time is up. Soplease never store important data in Greptime Play sessions.
+:::
 
 ## Create a Time-Series Table
 
@@ -49,10 +52,7 @@ DESC TABLE system_metrics;
 
 ## Add Some Data
 
-Using the `INSERT` statement to easily add data to the table. 
-Below example inserts three rows into the `system_metrics` 
-table.
-
+Using the `INSERT` statement to easily add data to the table. Below example inserts three rows into the `system_metrics` table.
 
 ``` sql
 INSERT INTO system_metrics
@@ -114,10 +114,7 @@ SELECT idc, avg(memory_util) FROM system_metrics GROUP BY idc;
 There are more aggregate function available, change `avg` to any of these below
 and try out:
 
-- `max`
-- `min`
-- `sum`
-- `mean`
+`max` / `min` / `sum` / `mean`
 
 ## Try it Out
 

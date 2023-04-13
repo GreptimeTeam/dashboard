@@ -59,6 +59,7 @@ specifiers:
   lint-staged: ^13.2.0
   lodash: ^4.17.21
   markdown-it: ^13.0.1
+  markdown-it-container: ^3.0.0
   mitt: ^3.0.0
   mockjs: ^1.1.0
   nprogress: ^0.2.0
@@ -122,6 +123,7 @@ dependencies:
   dayjs: 1.11.7
   echarts: 5.4.1
   lodash: 4.17.21
+  markdown-it-container: 3.0.0
   mitt: 3.0.0
   nprogress: 0.2.0
   pinia: 2.0.29_7h6e7cvei2rsgyre2mq4fyhehq
@@ -4502,6 +4504,10 @@ packages:
   /map-obj/4.3.0:
     resolution: {integrity: sha512-hdN1wVrZbb29eBGiGjJbeP8JbKjq1urkHJ/LIP/NY48MZ1QVXUsQBV1G1zvYFHn1XE06cwjBsOI2K3Ulnj1YXQ==}
     engines: {node: '>=8'}
+
+  /markdown-it-container/3.0.0:
+    resolution: {integrity: sha512-y6oKTq4BB9OQuY/KLfk/O3ysFhB3IMYoIWhGJEidXt1NQFocFK2sA2t0NYZAMyMShAGL6x5OPIbrmXPIqaN9rw==}
+    dev: false
 
   /markdown-it/12.3.2:
     resolution: {integrity: sha512-TchMembfxfNVpHkbtriWltGWc+m3xszaRD0CZup7GFFhzIgQqxIfn3eGj1yZpfuflzPvfkt611B2Q/Bsk1YnGg==}

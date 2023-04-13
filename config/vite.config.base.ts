@@ -8,6 +8,7 @@ import AutoImport from 'unplugin-auto-import/vite'
 import MarkdownIt from 'markdown-it'
 import mdPlugin, { Mode } from 'vite-plugin-markdown'
 import customCode from './utils/markdown-it-custom-code'
+import containerPlugin from './utils/containers'
 
 const useDevMode = true
 export default defineConfig({
@@ -57,7 +58,9 @@ export default defineConfig({
         html: true,
         xhtmlOut: true,
         linkify: false,
-      }).use(customCode),
+      })
+        .use(customCode)
+        .use(containerPlugin),
     }),
   ],
   resolve: {
