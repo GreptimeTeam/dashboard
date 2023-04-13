@@ -119,7 +119,7 @@ and try out:
 - `sum`
 - `mean`
 
-## Explore by Yourself
+## Try it Out
 
 
 Please start exploring by writing some queries in the panel below!
