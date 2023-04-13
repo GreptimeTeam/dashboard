@@ -130,6 +130,6 @@ Please start exploring by writing some queries!
 ```
 
 
-For more advanced features like scripting and protocol support,
+For other advanced features like scripting and protocol supports,
 [Download](https://greptime.com/download/) and run GreptimeDB locally by
 following [docs](https://docs.greptime.com).
