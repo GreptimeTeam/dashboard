@@ -122,7 +122,7 @@ and try out:
 ## Explore by Yourself
 
 
-Please start exploring by writing some queries!
+Please start exploring by writing some queries in the panel below!
 
 
 ```sql
