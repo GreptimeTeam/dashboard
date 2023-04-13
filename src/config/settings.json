@@ -13,12 +13,14 @@
   "tabBar": false,
   "menuFromServer": false,
   "host": "",
-  "database": "",
+  "database": "public",
   "databaseList": [],
   "username": "",
   "password": "",
+  "dbId": "",
   "serverMenu": [],
   "codeType": "sql",
   "isCloud": false,
-  "guideModal": false
+  "guideModal": false,
+  "lifetime": "long"
 }

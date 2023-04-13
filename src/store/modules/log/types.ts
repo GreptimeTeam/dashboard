@@ -1,10 +1,7 @@
-export interface logType {
+export interface Log {
   result?: string
   sql?: string
   error?: string
   name?: string
-}
-
-export interface logsType {
-  [key: string]: logType[]
+  type: string
 }

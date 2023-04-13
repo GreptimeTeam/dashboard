@@ -21,33 +21,43 @@ a-card(:bordered="false" v-if="hasChart")
 <script lang="ts" setup>
   import { chartTypeOptions, updateOptions, numberTypes } from '../../../config'
 
+  const props = defineProps({
+    data: {
+      type: Object,
+      default: () => ({}),
+    },
+    hasHeader: {
+      type: Boolean,
+      default: true,
+    },
+  })
+
   // TODO: To add this props in every select should not be the best option.
   const triggerProps = {
     'update-at-scroll': true,
   }
 
-  const { currentResult } = storeToRefs(useCodeRunStore())
   const option = ref({})
   const chartForm = reactive({
     chartType: 'line(smooth)',
     ySelectedTypes: [''],
   })
-  const { schema: schemaInRecords } = currentResult.value.records
-  const { dimensionsAndXName } = currentResult.value
-  const hasTimestamp = dimensionsAndXName[1] !== ''
+  const hasTimestamp = computed(() => props.data.dimensionsAndXName[1] !== '')
+  const schemaInRecords = computed(() => props.data.records.schema)
+
+
+  const hasChart = computed(() => {
+    return schemaInRecords.value && hasTimestamp.value
+  })
 
   // TODO: Add support for more data types not just numbers.
   const yOptions = computed(() => {
-    if (!schemaInRecords || !hasTimestamp) return []
-    return schemaInRecords.column_schemas
+    if (!hasChart.value) return []
+    return schemaInRecords.value.column_schemas
       .filter((item: any) => numberTypes.find((type: string) => type === item.data_type))
       .map((item: any) => ({
         value: item.name,
       }))
-  })
-
-  const hasChart = computed(() => {
-    return yOptions.value.length > 0
   })
 
   const getSeriesAndLegendNames = ([chartType, ySelectedTypes]: any) => {
@@ -59,7 +69,7 @@ a-card(:bordered="false" v-if="hasChart")
         type: chartType,
         smooth: false,
         encode: {
-          x: dimensionsAndXName[1],
+          x: props.data.dimensionsAndXName[1],
           y: item,
         },
         symbolSize: 4,
@@ -85,8 +95,8 @@ a-card(:bordered="false" v-if="hasChart")
         trigger: 'axis',
       },
       dataset: {
-        dimensions: dimensionsAndXName[0],
-        source: currentResult.value.records.rows,
+        dimensions: props.data.dimensionsAndXName[0],
+        source: props.data.records.rows,
       },
       xAxis: {
         type: 'time',

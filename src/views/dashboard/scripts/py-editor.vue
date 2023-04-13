@@ -37,12 +37,14 @@ a-card(:bordered="false").editor-card
 
   const route = useRoute()
   const dataBaseStore = useDataBaseStore()
+  const secondaryCodeRunning = ref(false)
   const { pythonCode, cursorAt, lastSavedCode, isNewScript, scriptName, isChanged, selectAfterSave, createNewScript } =
     usePythonCode()
-  const { saveScript, runCode } = useCodeRunStore()
-  const { secondaryCodeRunning } = storeToRefs(useCodeRunStore())
+  const { save: saveScript } = usePythonCode()
+  const { run: runCode } = useQueryCode()
   const { getScriptsTable } = dataBaseStore
 
+  const codeType = 'python'
   const lineStart = ref()
   const lineEnd = ref()
   const selectedCode = ref()
@@ -92,7 +94,7 @@ a-card(:bordered="false").editor-card
     const routeName = route.name as string
 
     try {
-      await saveScript(scriptForm.value.scriptName, pythonCode.value.trim(), routeName)
+      await saveScript(scriptForm.value.scriptName, pythonCode.value.trim())
       await getScriptsTable()
       selectAfterSave(scriptForm.value.scriptName)
     } catch (error: any) {
@@ -101,19 +103,24 @@ a-card(:bordered="false").editor-card
   }
   const saveScriptAndRun = async () => {
     const routeName = route.name as string
-
-    await saveScript(scriptForm.value.scriptName, pythonCode.value.trim(), routeName)
-    lastSavedCode.value = pythonCode.value
-    secondaryCodeRunning.value = true
-    runCode(scriptForm.value.scriptName, routeName)
-    await getScriptsTable()
-    selectAfterSave(scriptForm.value.scriptName)
+    try {
+      secondaryCodeRunning.value = true
+      await saveScript(scriptForm.value.scriptName, pythonCode.value.trim())
+      lastSavedCode.value = pythonCode.value
+      await runCode(scriptForm.value.scriptName, codeType)
+      await getScriptsTable()
+      selectAfterSave(scriptForm.value.scriptName)
+    } catch (error) {
+      console.log(`error:`, error)
+    }
+    secondaryCodeRunning.value = false
   }
 
-  const run = () => {
+  const run = async () => {
     const routeName = route.name as string
 
     secondaryCodeRunning.value = true
-    runCode(scriptForm.value.scriptName, routeName)
+    await runCode(scriptForm.value.scriptName, codeType)
+    secondaryCodeRunning.value = false
   }
 </script>
