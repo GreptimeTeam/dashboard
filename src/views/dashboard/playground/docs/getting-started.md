@@ -9,7 +9,7 @@ basics of GreptimeDB. Instead of static doc reading, Greptime Play offers an
 interactive experience: **all code blocks in this guide are editable and
 executable**.
 
-By hitting `Run` button, code will be executed in a temporary, private instance
+By hitting the `Run` button, the code will be executed and run in a temporary, private instance generated
 from [GreptimeCloud](https://greptime.com/product/cloud). **You can also edit
 the code to explore your own ideas**. Note that the session is valid in **1
 hour**, you will be asked to create a new one when it's expired and recycled. So
