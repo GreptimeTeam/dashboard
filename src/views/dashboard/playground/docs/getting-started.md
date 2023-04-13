@@ -104,7 +104,7 @@ SELECT avg(cpu_util) FROM system_metrics;
 ```
 
 Use the `GROUP BY` clause to group rows that have the same values into
-summary rows. The average memory usage grouped by `idc`:
+summary rows. The code below groups average memory usage by `idc`:
 
 
 ```sql
