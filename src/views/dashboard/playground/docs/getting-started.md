@@ -40,7 +40,7 @@ Once the green marker appears, run `DESC TABLE` to view the details of the table
 In GreptimeDB, there are three types of columns:
 
 - `PRIMARY KEY`: key columns that are used for sorting and partitioning
-- `FIELD`: columns which store values
+- `FIELD`: columns which store table values
 - `TIME INDEX`: columns of data type TIME
 
 ```sql
