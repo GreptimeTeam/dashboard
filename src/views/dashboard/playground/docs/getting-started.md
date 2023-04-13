@@ -17,7 +17,7 @@ please never store important data in Greptime Play sessions.
 
 ## Create a Time-Series Table
 
-Let's start by creating the `system_metrics` table. Note that we pre-defined `host`
+Let's start the journey by creating a simple `system_metrics` table first. Note that we pre-defined `host`
 and `idc` as the primary keys; `ts` and time index, both are important to know
 in GreptimeDB. Click `Run` to create the table:
 
