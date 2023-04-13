@@ -14,6 +14,7 @@ a-layout.layout
 
 <script lang="ts" setup name="Playground">
   import { getPlaygroundInfo } from '@/api/playground'
+  import { importFiles } from '@/utils'
   import CodeEditor from './code-editor.vue'
 
   // data
@@ -44,7 +45,8 @@ a-layout.layout
     ;[currentFile.value] = e
   }
   // lifecycle
-  onMounted(() => {
+  onMounted(async () => {
+    await importFiles('https://www.google.com/recaptcha/api.js?render=6LcsBPgkAAAAAKiPrwh3pFCKpv9hc62eRhL5bj5A')
     if (isCloud.value) {
       window.grecaptcha.ready(async () => {
         try {
