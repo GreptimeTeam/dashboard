@@ -39,11 +39,12 @@ a-card(:bordered="false" v-if="hasChart")
 
   const option = ref({})
   const chartForm = reactive({
-    chartType: 'line',
+    chartType: 'line(smooth)',
     ySelectedTypes: [''],
   })
   const hasTimestamp = computed(() => props.data.dimensionsAndXName[1] !== '')
   const schemaInRecords = computed(() => props.data.records.schema)
+
 
   const hasChart = computed(() => {
     return schemaInRecords.value && hasTimestamp.value
