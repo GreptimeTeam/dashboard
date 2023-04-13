@@ -97,7 +97,7 @@ Use `count()` function to get the number of all rows in the table:
 SELECT count(*) FROM system_metrics;
 ```
 
-Use `avg()` function returns the average value of a certain field:
+The `avg()` function returns the average value of a certain field:
 
 ``` sql
 SELECT avg(cpu_util) FROM system_metrics;
