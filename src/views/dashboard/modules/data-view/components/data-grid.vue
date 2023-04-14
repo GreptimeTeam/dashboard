@@ -1,6 +1,6 @@
 <template lang="pug">
 a-card(:bordered='false')
-  template(#title v-if="hasHeader")
+  template(#title, v-if='hasHeader')
     a-space(size='mini')
       svg.icon-20
         use(href='#table')
@@ -30,7 +30,6 @@ a-card(:bordered='false')
 </template>
 
 <script lang="ts" setup>
-  import { useCodeRunStore } from '@/store'
   import { dateTypes } from '@/views/dashboard/config'
 
   const props = defineProps({
@@ -66,20 +65,24 @@ a-card(:bordered='false')
     })
   })
 
-  const gridData = computed(() => {
-    return props.data.records.rows.map((row: any) => {
-      const tempRow: any = {}
-      row.forEach((item: any, index: number) => {
-        const columnName = columnNameToDataIndex(props.data.records.schema.column_schemas[index].name))
-        tempRow[columnName] = item
+  // use ref to make it mutable
+  const gridData = ref(
+    (() => {
+      return props.data.records.rows.map((row: any) => {
+        const tempRow: any = {}
+        row.forEach((item: any, index: number) => {
+          const columnName = columnNameToDataIndex(props.data.records.schema.column_schemas[index].name)
+          tempRow[columnName] = item
+        })
+        return tempRow
       })
     })()
   )
 
   const timeColumnNames = computed(() => {
-    return currentResult.value.records.schema.column_schemas
-      .filter((column) => dateTypes.includes(column.data_type))
-      .map((column) => column.name)
+    return props.data.records.schema.column_schemas
+      .filter((column: any) => dateTypes.includes(column.data_type))
+      .map((column: any) => column.name)
   })
 
   /**
@@ -88,7 +91,7 @@ a-card(:bordered='false')
    */
   const timeColumnFormatMap = ref(
     Object.fromEntries(
-      timeColumnNames.value.map((columnName) => {
+      timeColumnNames.value.map((columnName: string) => {
         return [columnNameToDataIndex(columnName), false]
       })
     )
