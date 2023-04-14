@@ -7,6 +7,8 @@ import { stringType } from './types'
 const queryType = ref('sql')
 const sqlCode = ''
 const promQLCode = ''
+const primaryCodeRunning = ref(false)
+const secondaryCodeRunning = ref(false)
 const cursorAt = ref<Array<number>>([])
 const queryOptions = [
   {
@@ -85,6 +87,7 @@ export default function useQueryCode() {
         return true
       }
     }
+    if (primaryCodeRunning.value || secondaryCodeRunning.value) return true
     return false
   })
 
@@ -106,5 +109,7 @@ export default function useQueryCode() {
     promForm,
     queryType,
     isButtonDisabled,
+    primaryCodeRunning,
+    secondaryCodeRunning,
   }
 }
