@@ -19,11 +19,12 @@ a-card(:bordered='false')
                   :content='timeColumnFormatMap[column.dataIndex] ? $t("dataExplorer.showTimestamp") : $t("dataExplorer.formatTimestamp")',
                   placement='top'
                 )
-                  a-space(size='mini')
-                    icon-history(
-                      @click='() => handleFormatTimeColumn(column.dataIndex)',
-                      :style='{ cursor: "pointer" }'
-                    )
+                  a-space(
+                    size='mini',
+                    @click='() => handleFormatTimeColumn(column.dataIndex)',
+                    :style='{ cursor: "pointer" }'
+                  )
+                    icon-history
                     | {{ column.title }}
           template(v-else)
             a-table-column(:title='column.title', :data-index='column.dataIndex')
@@ -54,7 +55,7 @@ a-card(:bordered='false')
     return columnName.replace(/\./gi, '-')
   }
 
-  const gridColumn = computed(() => {
+  const gridColumns = computed(() => {
     const { schema } = props.data.records
     if (!schema) return []
     return schema.column_schemas.map((column: any) => {
