@@ -72,11 +72,18 @@ a-card(:bordered="false").editor-card
 
   const route = useRoute()
 
-  const primaryCodeRunning = ref(false)
-  const secondaryCodeRunning = ref(false)
-
   const { isCloud } = storeToRefs(useAppStore())
-  const { queryCode, queryType, cursorAt, queryOptions, promForm, isButtonDisabled, selectCodeType } = useQueryCode()
+  const {
+    queryCode,
+    queryType,
+    cursorAt,
+    queryOptions,
+    promForm,
+    isButtonDisabled,
+    primaryCodeRunning,
+    secondaryCodeRunning,
+    selectCodeType,
+  } = useQueryCode()
 
   const lineStart = ref()
   const lineEnd = ref()
