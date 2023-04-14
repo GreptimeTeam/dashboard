@@ -1,15 +1,12 @@
 <template lang="pug">
 a-layout.layout 
-  a-layout-sider 
-    a-tree.script-tree(
-      :data="fileList" 
-      :default-selected-keys="[currentFile]"
-      @select="onSelect"
-      blockNode)
+  |
+  a-layout-sider
+    a-tree.script-tree(:data='fileList', :default-selected-keys='[currentFile]', @select='onSelect', blockNode)
   a-layout-content
     .markdown-container
-      MarkdownContent(v-if="MarkdownContent")
-    RefreshPlaygroundModal(ref="refreshPlaygroundModal")
+      MarkdownContent(v-if='MarkdownContent')
+    RefreshPlaygroundModal(ref='refreshPlaygroundModal')
 </template>
 
 <script lang="ts" setup name="Playground">
@@ -46,7 +43,7 @@ a-layout.layout
   }
   // lifecycle
   onMounted(async () => {
-    await importFiles('https://www.google.com/recaptcha/api.js?render=6LcsBPgkAAAAAKiPrwh3pFCKpv9hc62eRhL5bj5A')
+    await importFiles(`https://www.google.com/recaptcha/api.js?render=${import.meta.env.VITE_RECAPTCHA_SITE_KEY}`)
     if (appStore.lifetime === 'temporary' && isCloud.value) {
       window.grecaptcha.ready(async () => {
         try {
