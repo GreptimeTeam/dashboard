@@ -1,5 +1,4 @@
 import { App, createApp } from 'vue'
-import { CrossStorageHub } from 'cross-storage'
 import ArcoVue from '@arco-design/web-vue'
 import ArcoVueIcon from '@arco-design/web-vue/es/icon'
 import globalComponents from '@/components'
@@ -24,5 +23,4 @@ app.use(i18n)
 app.use(globalComponents)
 app.use(directive)
 
-CrossStorageHub.init([{ origin: new RegExp(import.meta.env.VITE_CLOUD_URL), allow: ['get', 'set'] }])
 app.mount('#app')
