@@ -1,0 +1,409 @@
+/**
+ * Headings
+ * -------------------------------------------------------------------------- */
+
+.markdown-container h1,
+.markdown-container h2,
+.markdown-container h3,
+.markdown-container h4,
+.markdown-container h5,
+.markdown-container h6 {
+  position: relative;
+  font-weight: 600;
+  outline: none;
+}
+
+.markdown-container h1 {
+  letter-spacing: -0.02em;
+  line-height: 40px;
+  font-size: 28px;
+}
+
+.markdown-container h2 {
+  margin: 48px 0 16px;
+  border-top: 1px solid var(--vp-c-divider-light);
+  padding-top: 24px;
+  letter-spacing: -0.02em;
+  line-height: 32px;
+  font-size: 24px;
+}
+
+.markdown-container h3 {
+  margin: 32px 0 0;
+  letter-spacing: -0.01em;
+  line-height: 28px;
+  font-size: 20px;
+}
+
+.markdown-container .header-anchor {
+  float: left;
+  margin-left: -0.87em;
+  padding-right: 0.23em;
+  font-weight: 500;
+  opacity: 0;
+  transition: color 0.25s, opacity 0.25s;
+}
+
+.markdown-container h1:hover .header-anchor,
+.markdown-container h1 .header-anchor:focus,
+.markdown-container h2:hover .header-anchor,
+.markdown-container h2 .header-anchor:focus,
+.markdown-container h3:hover .header-anchor,
+.markdown-container h3 .header-anchor:focus,
+.markdown-container h4:hover .header-anchor,
+.markdown-container h4 .header-anchor:focus,
+.markdown-container h5:hover .header-anchor,
+.markdown-container h5 .header-anchor:focus,
+.markdown-container h6:hover .header-anchor,
+.markdown-container h6 .header-anchor:focus {
+  opacity: 1;
+}
+
+@media (min-width: 768px) {
+  .markdown-container h1 {
+    letter-spacing: -0.02em;
+    line-height: 40px;
+    font-size: 32px;
+  }
+}
+
+/**
+ * Paragraph and inline elements
+ * -------------------------------------------------------------------------- */
+
+.markdown-container p,
+.markdown-container summary {
+  margin: 16px 0;
+}
+
+.markdown-container p {
+  line-height: 28px;
+}
+
+.markdown-container blockquote {
+  margin: 16px 0;
+  border-left: 2px solid var(--vp-c-divider);
+  padding-left: 16px;
+  transition: border-color 0.5s;
+}
+
+.markdown-container blockquote > p {
+  margin: 0;
+  font-size: 16px;
+  color: var(--vp-c-text-2);
+  transition: color 0.5s;
+}
+
+.markdown-container a {
+  font-weight: 500;
+  color: var(--brand-color);
+  text-decoration-style: dotted;
+  transition: color 0.25s;
+}
+
+.markdown-container a:hover {
+  color: var(--hover-brand-color);
+}
+
+.markdown-container strong {
+  font-weight: 600;
+}
+
+/**
+ * Lists
+ * -------------------------------------------------------------------------- */
+
+.markdown-container ul,
+.markdown-container ol {
+  padding-left: 1.25rem;
+  margin: 16px 0;
+}
+
+.markdown-container ul {
+  list-style: disc;
+}
+
+.markdown-container ol {
+  list-style: decimal;
+}
+
+.markdown-container li + li {
+  margin-top: 8px;
+}
+
+.markdown-container li > ol,
+.markdown-container li > ul {
+  margin: 8px 0 0;
+}
+
+/**
+ * Decorational elements
+ * -------------------------------------------------------------------------- */
+
+.markdown-container hr {
+  margin: 16px 0;
+  border: none;
+  border-top: 1px solid var(--vp-c-divider-light);
+}
+
+/**
+ * Custom Block
+ * -------------------------------------------------------------------------- */
+
+.markdown-container .custom-block {
+  margin: 16px 0;
+}
+
+.markdown-container .custom-block p {
+  margin: 8px 0;
+  line-height: 24px;
+}
+
+.markdown-container .custom-block p:first-child {
+  margin: 0;
+}
+
+.markdown-container .custom-block a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  transition: opacity 0.25s;
+}
+
+.markdown-container .custom-block a:hover {
+  opacity: 0.6;
+}
+
+.markdown-container .custom-block code {
+  font-size: var(--vp-custom-block-code-font-size);
+  font-weight: 700;
+  color: inherit;
+}
+
+.markdown-container .custom-block div[class*='language-'] {
+  margin: 8px 0;
+}
+
+.markdown-container .custom-block div[class*='language-'] code {
+  font-weight: 400;
+  background-color: transparent;
+}
+
+/**
+ * Code
+ * -------------------------------------------------------------------------- */
+
+/* inline code */
+.markdown-container :not(pre, h1, h2, h3, h4, h5, h6) > code {
+  font-size: var(--vp-code-font-size);
+}
+
+.markdown-container :not(pre) > code {
+  border-radius: 4px;
+  padding: 3px 6px;
+  color: var(--hover-brand-color);
+  background-color: var(--vp-c-bg-mute);
+  transition: color 0.5s, background-color 0.5s;
+}
+
+.markdown-container h1 > code,
+.markdown-container h2 > code,
+.markdown-container h3 > code {
+  font-size: 0.9em;
+}
+
+.markdown-container a > code {
+  color: var(--brand-color);
+  transition: color 0.25s;
+}
+
+.markdown-container a:hover > code {
+  color: var(--hover-brand-color);
+}
+
+.markdown-container div[class*='language-'] {
+  position: relative;
+  margin: 16px -24px;
+  background-color: var(--vp-code-block-bg);
+  overflow-x: auto;
+  transition: background-color 0.5s;
+}
+
+@media (min-width: 640px) {
+  .markdown-container div[class*='language-'] {
+    border-radius: 8px;
+    margin: 16px 0;
+  }
+}
+
+@media (max-width: 639px) {
+  .markdown-container li div[class*='language-'] {
+    border-radius: 8px 0 0 8px;
+  }
+}
+
+.markdown-container div[class*='language-'] + div[class*='language-'],
+.markdown-container div[class$='-api'] + div[class*='language-'],
+.markdown-container div[class*='language-'] + div[class$='-api'] > div[class*='language-'] {
+  margin-top: -8px;
+}
+
+.markdown-container [class*='language-'] pre,
+.markdown-container [class*='language-'] code {
+  text-align: left;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  word-wrap: normal;
+  -moz-tab-size: 4;
+  -o-tab-size: 4;
+  tab-size: 4;
+  -webkit-hyphens: none;
+  -moz-hyphens: none;
+  -ms-hyphens: none;
+  hyphens: none;
+}
+
+.markdown-container [class*='language-'] pre {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  padding: 16px 0;
+  background: transparent;
+  overflow-x: auto;
+}
+
+.markdown-container [class*='language-'] code {
+  display: block;
+  padding: 0 24px;
+  width: fit-content;
+  min-width: 100%;
+  line-height: var(--vp-code-line-height);
+  font-size: var(--vp-code-font-size);
+  color: var(--vp-code-block-color);
+  transition: color 0.5s;
+}
+
+.markdown-container [class*='language-'] code .highlighted {
+  background-color: var(--vp-code-line-highlight-color);
+  transition: background-color 0.5s;
+  margin: 0 -24px;
+  padding: 0 24px;
+  width: calc(100% + 2 * 24px);
+  display: inline-block;
+}
+
+.markdown-container div[class*='language-'].line-numbers-mode {
+  padding-left: 32px;
+}
+
+.markdown-container .line-numbers-wrapper {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 3;
+  border-right: 1px solid var(--vp-c-divider-dark-2);
+  padding-top: 16px;
+  width: 32px;
+  text-align: center;
+  font-family: var(--vp-font-family-mono);
+  line-height: var(--vp-code-line-height);
+  font-size: var(--vp-code-font-size);
+  color: var(--vp-code-line-number-color);
+  transition: border-color 0.5s, color 0.5s;
+}
+
+.markdown-container [class*='language-'] > button.copy {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  display: block;
+  justify-content: center;
+  align-items: center;
+  border-radius: 4px;
+  width: 40px;
+  height: 40px;
+  background-color: var(--vp-code-block-bg);
+  opacity: 0;
+  cursor: pointer;
+  background-image: var(--vp-icon-copy);
+  background-position: 50%;
+  background-size: 20px;
+  background-repeat: no-repeat;
+  transition: opacity 0.4s;
+}
+
+.markdown-container [class*='language-']:hover > button.copy,
+.markdown-container [class*='language-'] > button.copy:focus {
+  opacity: 1;
+}
+
+.markdown-container [class*='language-'] > button.copy:hover {
+  background-color: var(--vp-code-copy-code-hover-bg);
+}
+
+.markdown-container [class*='language-'] > button.copy.copied,
+.markdown-container [class*='language-'] > button.copy:hover.copied {
+  border-radius: 0 4px 4px 0;
+  background-color: var(--vp-code-copy-code-hover-bg);
+  background-image: var(--vp-icon-copied);
+}
+
+.markdown-container [class*='language-'] > button.copy.copied::before,
+.markdown-container [class*='language-'] > button.copy:hover.copied::before {
+  position: relative;
+  left: -65px;
+  display: block;
+  border-radius: 4px 0 0 4px;
+  padding-top: 8px;
+  width: 64px;
+  height: 40px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--vp-code-copy-code-active-text);
+  background-color: var(--vp-code-copy-code-hover-bg);
+  white-space: nowrap;
+  content: 'Copied';
+}
+
+.markdown-container [class*='language-'] > span.lang {
+  position: absolute;
+  top: 6px;
+  right: 12px;
+  z-index: 2;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--vp-c-text-dark-3);
+  transition: color 0.4s, opacity 0.4s;
+}
+
+.markdown-container [class*='language-']:hover > button.copy + span.lang,
+.markdown-container [class*='language-'] > button.copy:focus + span.lang {
+  opacity: 0;
+}
+
+/**
+ * Component: Team
+ * -------------------------------------------------------------------------- */
+
+.markdown-container .VPTeamMembers {
+  margin-top: 24px;
+}
+
+.markdown-container .VPTeamMembers.small.count-1 .container {
+  margin: 0 !important;
+  max-width: calc((100% - 24px) / 2) !important;
+}
+
+.markdown-container .VPTeamMembers.small.count-2 .container,
+.markdown-container .VPTeamMembers.small.count-3 .container {
+  max-width: 100% !important;
+}
+
+.markdown-container .VPTeamMembers.medium.count-1 .container {
+  margin: 0 !important;
+  max-width: calc((100% - 24px) / 2) !important;
+}

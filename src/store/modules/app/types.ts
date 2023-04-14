@@ -23,5 +23,7 @@ export interface AppState {
   guideModal: boolean
   username: string
   password: string
+  dbId: string
+  lifetime: string
   [key: string]: unknown
 }

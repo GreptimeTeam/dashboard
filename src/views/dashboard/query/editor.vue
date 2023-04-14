@@ -2,18 +2,17 @@
 a-card(:bordered="false").editor-card
   a-space.space-between
     a-space(size="medium")
-      a-button(@click="runQuery()" type="primary")
+      a-button(@click="runQuery()" :disabled="isButtonDisabled" type="primary")
         .mr-4
           icon-loading(spin v-if="primaryCodeRunning")
           icon-play-arrow(v-else)
         | {{$t('dataExplorer.runAll')}}
-      a(@click="runPartQuery()")
-        a-button
-          .mr-4
-            icon-loading(spin v-if="secondaryCodeRunning")
-            icon-play-arrow(v-else)
-          div(v-if="lineStart === lineEnd") {{$t('dataExplorer.runLine')}} {{ lineStart }}
-          div(v-else) {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
+      a-button(:disabled="isButtonDisabled" @click="runPartQuery()")
+        .mr-4
+          icon-loading(spin v-if="secondaryCodeRunning")
+          icon-play-arrow(v-else)
+        div(v-if="lineStart === lineEnd") {{$t('dataExplorer.runLine')}} {{ lineStart }}
+        div(v-else) {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
     .query-select(v-if="!isCloud")
       a-select(v-model="queryType" @change="selectCodeType")
         a-option(v-for="query of queryOptions" :="query")
@@ -25,7 +24,7 @@ a-card(:bordered="false").editor-card
           template(#prefix)
             svg.icon-20
               use(href="#calendar")
-        a-range-picker(v-else v-model="promForm.range" :show-time="true" :allow-clear="true" :trigger-props="{'update-at-scroll': true}" :placeholder="[$t('dataExplorer.startTime'), $t('dataExplorer.endTime')]" format="YYYY-MM-DD HH:mm:ss" value-format="x")
+        a-range-picker(v-else v-model="promForm.range" :show-time="true" :allow-clear="true" :trigger-props="{'update-at-scroll': true}" :placeholder="[$t('dataExplorer.startTime'), $t('dataExplorer.endTime')]" format="YYYY-MM-DD HH:mm:ss" value-format="X")
           template(#prefix)
             svg.icon-20
               use(href="#calendar")
@@ -47,7 +46,7 @@ a-card(:bordered="false").editor-card
                     a-typography-text(code v-for="item of durationExamples" :key="item") {{ item }}
     a-form-item.time-switch(:label="promForm.isRelative === 1 ? $t('dataExplorer.relative') : $t('dataExplorer.absolute')")
       a-switch(v-model="promForm.isRelative" :checked-value="1" :unchecked-value="0")
-  CodeMirror(v-model="queryCode[queryType]" :extensions="extensions[queryType]" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" @ready="handleReady" @update="codeUpdate")
+  CodeMirror(v-model="queryCode" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions[queryType]" @ready="handleReady" @update="codeUpdate")
 </template>
 
 <script lang="ts" setup name="Editor">
@@ -72,15 +71,26 @@ a-card(:bordered="false").editor-card
   })
 
   const route = useRoute()
-  const { runCode } = useCodeRunStore()
+
   const { isCloud } = storeToRefs(useAppStore())
-  const { primaryCodeRunning, secondaryCodeRunning } = storeToRefs(useCodeRunStore())
-  const { queryCode, queryType, cursorAt, queryOptions, promForm, selectCodeType } = useQueryCode()
+  const {
+    queryCode,
+    queryType,
+    cursorAt,
+    queryOptions,
+    promForm,
+    isButtonDisabled,
+    primaryCodeRunning,
+    secondaryCodeRunning,
+    selectCodeType,
+  } = useQueryCode()
 
   const lineStart = ref()
   const lineEnd = ref()
   const selectedCode = ref()
   const view = shallowRef()
+
+  const { run: runCode } = useQueryCode()
 
   const handleReady = (payload: any) => {
     view.value = payload.view
@@ -117,18 +127,18 @@ a-card(:bordered="false").editor-card
     }
   }
 
-  const runQuery = () => {
-    const routeName = route.name as string
+  const runQuery = async () => {
     primaryCodeRunning.value = true
     // TODO: add better format tool for code
-    runCode(queryCode.value[queryType.value].trim().replace(/\n/gi, ' '), routeName)
+    await runCode(queryCode.value.trim().replace(/\n/gi, ' '), queryType.value)
+    primaryCodeRunning.value = false
     // TODO: refresh tables data and when
   }
 
-  const runPartQuery = () => {
-    const routeName = route.name as string
+  const runPartQuery = async () => {
     secondaryCodeRunning.value = true
-    runCode(selectedCode.value.trim(), routeName)
+    await runCode(selectedCode.value.trim(), queryType.value)
+    secondaryCodeRunning.value = false
   }
 
   // TODO: i18n config

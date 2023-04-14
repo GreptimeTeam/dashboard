@@ -20,6 +20,9 @@ export default {
   'navbar.action.locale': 'Switch to English',
   'guide.welcome': 'Welcome!',
   'guide.confirm': 'Confirm',
+  'playground.create': 'OK',
+  'playground.refeshTitle': 'Warning',
+  'playground.refeshNote': 'The Playground has been reclaimed due to timeout. Click OK to re-create the playground',
   ...localeDataExplorer,
   ...localSetting,
 }

@@ -49,4 +49,6 @@ export default {
   'dataExplorer.examples': 'Examples: ',
   'dataExplorer.formatTimestamp': 'Format Timestamp',
   'dataExplorer.showTimestamp': 'Show Timestamp',
+  'playground.run': 'Run',
+  'playground.reset': 'Reset',
 }

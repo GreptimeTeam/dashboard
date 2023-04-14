@@ -42,7 +42,7 @@ axios.interceptors.response.use(
     const res = response.data
 
     // if the custom code is not 0, it is judged as an error.
-    if (res.code !== 0) {
+    if (res.code && res.code !== 0) {
       Message.error({
         content: res.error || 'Error',
         duration: 2 * 1000,

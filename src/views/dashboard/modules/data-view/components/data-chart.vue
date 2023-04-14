@@ -1,5 +1,5 @@
 <template lang="pug">
-a-card(:bordered="false" v-if="schema")
+a-card(:bordered="false" v-if="hasChart")
   template(#title)
     a-space(size="mini")
       svg.icon-18
@@ -7,7 +7,7 @@ a-card(:bordered="false" v-if="schema")
       | {{$t('dataExplorer.chart')}}
   a-spin(style="width: 100%")
     a-row
-      a-form.chart-form(:model="chartForm" layout="inline" :onChange="drawChart()")
+      a-form.chart-form(:model="chartForm" :onChange="drawChart()" layout="inline")
         a-form-item(:label="$t('dataExplorer.chartType')")
           a-select(v-model="chartForm.chartType" :trigger-props="triggerProps")
             a-option(v-for="item of chartTypeOptions" :key="item.key" :value="item.value" :label="item.value")
@@ -21,39 +21,55 @@ a-card(:bordered="false" v-if="schema")
 <script lang="ts" setup>
   import { chartTypeOptions, updateOptions, numberTypes } from '../../../config'
 
+  const props = defineProps({
+    data: {
+      type: Object,
+      default: () => ({}),
+    },
+    hasHeader: {
+      type: Boolean,
+      default: true,
+    },
+  })
+
   // TODO: To add this props in every select should not be the best option.
   const triggerProps = {
     'update-at-scroll': true,
   }
 
-  const { currentResult } = storeToRefs(useCodeRunStore())
   const option = ref({})
   const chartForm = reactive({
-    chartType: 'line',
-    ySelectedTypes: [],
+    chartType: 'line(smooth)',
+    ySelectedTypes: [''],
   })
-  const { schema } = currentResult.value.records
+  const hasTimestamp = computed(() => props.data.dimensionsAndXName[1] !== '')
+  const schemaInRecords = computed(() => props.data.records.schema)
+
+
+  const hasChart = computed(() => {
+    return schemaInRecords.value && hasTimestamp.value
+  })
 
   // TODO: Add support for more data types not just numbers.
   const yOptions = computed(() => {
-    if (!schema) return []
-    return schema.column_schemas
+    if (!hasChart.value) return []
+    return schemaInRecords.value.column_schemas
       .filter((item: any) => numberTypes.find((type: string) => type === item.data_type))
       .map((item: any) => ({
         value: item.name,
       }))
   })
 
-  const getSeriesAndLegendNames = ([chartType, ySelectedTypes = []]: any) => {
+  const getSeriesAndLegendNames = ([chartType, ySelectedTypes]: any) => {
     const series: any = []
     const legendNames: any = []
-    ySelectedTypes.forEach((item: any) => {
+    ySelectedTypes.forEach((item: string) => {
       const oneSeries = {
         name: item,
         type: chartType,
         smooth: false,
         encode: {
-          x: currentResult.value.dimensionsAndXName[1],
+          x: props.data.dimensionsAndXName[1],
           y: item,
         },
         symbolSize: 4,
@@ -79,8 +95,8 @@ a-card(:bordered="false" v-if="schema")
         trigger: 'axis',
       },
       dataset: {
-        dimensions: currentResult.value.dimensionsAndXName[0],
-        source: currentResult.value.records.rows,
+        dimensions: props.data.dimensionsAndXName[0],
+        source: props.data.records.rows,
       },
       xAxis: {
         type: 'time',
@@ -101,6 +117,11 @@ a-card(:bordered="false" v-if="schema")
       series,
     }
   }
+
+  // TODO: Might need to change this
+  onMounted(() => {
+    if (hasChart.value) chartForm.ySelectedTypes = [yOptions.value[0].value]
+  })
 
   const drawChart = () => {
     option.value = makeOption([chartForm.chartType, chartForm.ySelectedTypes])

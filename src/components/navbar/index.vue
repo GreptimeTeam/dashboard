@@ -2,12 +2,14 @@
 .navbar
   .logo-space
     img.logo-text-img(alt="logo" src="/src/assets/images/logo-text.webp")
-  .menu(v-permission="['dev']")
+  .menu
     a-menu(:selected-keys="menuSelectedKey" @menu-item-click="menuClick" mode="horizontal")
       a-menu-item(key="query")
         | Query
-      a-menu-item(key="scripts")
+      a-menu-item(key="scripts" v-permission="['dev']")
         | Scripts
+      a-menu-item(key="playground")
+        | Playground
   ul.right-side
     li
       a-tooltip(:content="$t('settings.title')")
@@ -93,11 +95,6 @@
         color: var(--white-font-color);
         user-select: none;
         opacity: 0.6;
-      }
-      .arco-menu-item:last-child {
-        margin-left: 16px;
-      }
-      .arco-menu-item:not(:last-child) {
         margin-left: 0;
       }
       :deep(.arco-menu-selected-label) {

@@ -1,3 +1,4 @@
+@import url('./vars.less');
 @import url('./select.less');
 @import url('./button.less');
 @import url('./tableList.less');
@@ -6,7 +7,10 @@
 @import url('./log.less');
 @import url('./form.less');
 @import url('./layout.less');
+@import url('./vp-doc.less');
 @import url('./list.less');
+@import url('./docs.less');
+@import url('./custom-block.less');
 
 * {
   box-sizing: border-box;
@@ -51,6 +55,7 @@ body {
   height: 100%;
   margin: 0;
   padding: 0;
+  overflow-x: hidden;
   font-weight: 400;
   font-size: 12px;
   font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'noto sans', sans-serif !important;
@@ -340,6 +345,7 @@ body {
 
 .arco-popover-popup-content {
   padding: 6px 16px;
+  border-radius: 6px;
 }
 
 .width-35 {

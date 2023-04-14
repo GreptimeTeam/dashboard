@@ -1,6 +1,6 @@
 <template lang="pug">
 a-card(:bordered='false')
-  template(#title)
+  template(#title v-if="hasHeader")
     a-space(size='mini')
       svg.icon-20
         use(href='#table')
@@ -33,10 +33,19 @@ a-card(:bordered='false')
   import { useCodeRunStore } from '@/store'
   import { dateTypes } from '@/views/dashboard/config'
 
-  const { currentResult } = storeToRefs(useCodeRunStore())
+  const props = defineProps({
+    data: {
+      type: Object,
+      default: () => ({}),
+    },
+    hasHeader: {
+      type: Boolean,
+      default: true,
+    },
+  })
 
   const pagination = {
-    'total': currentResult.value.records.rows.length,
+    'total': props.data?.records.rows.length,
     'show-page-size': true,
   }
 
@@ -46,8 +55,8 @@ a-card(:bordered='false')
     return columnName.replace(/\./gi, '-')
   }
 
-  const gridColumns = computed(() => {
-    const { schema } = currentResult.value.records
+  const gridColumn = computed(() => {
+    const { schema } = props.data.records
     if (!schema) return []
     return schema.column_schemas.map((column: any) => {
       return {
@@ -57,16 +66,12 @@ a-card(:bordered='false')
     })
   })
 
-  // use ref to make it mutable
-  const gridData = ref(
-    (() => {
-      return currentResult.value.records.rows.map((row: any) => {
-        const tempRow: any = {}
-        row.forEach((item: any, index: number) => {
-          const columnDataIndex = columnNameToDataIndex(currentResult.value.records.schema.column_schemas[index].name)
-          tempRow[columnDataIndex] = item
-        })
-        return tempRow
+  const gridData = computed(() => {
+    return props.data.records.rows.map((row: any) => {
+      const tempRow: any = {}
+      row.forEach((item: any, index: number) => {
+        const columnName = columnNameToDataIndex(props.data.records.schema.column_schemas[index].name))
+        tempRow[columnName] = item
       })
     })()
   )
