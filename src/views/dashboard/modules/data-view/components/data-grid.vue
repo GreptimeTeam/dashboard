@@ -6,7 +6,7 @@ a-card(:bordered='false')
         use(href='#table')
       | {{ $t('dataExplorer.table') }}
   a-spin(style='width: 100%')
-    a-table(:data='gridData', style='margin-top: 30px')
+    a-table(:data='gridData', style='margin-top: 30px', :pagination='pagination')
       template(#columns)
         template(v-for='column in gridColumns', :key='column.title')
           template(v-if='timeColumnNames.includes(column.title)')
