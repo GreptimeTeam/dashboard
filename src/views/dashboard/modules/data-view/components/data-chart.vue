@@ -45,7 +45,6 @@ a-card(:bordered="false" v-if="hasChart")
   const hasTimestamp = computed(() => props.data.dimensionsAndXName[1] !== '')
   const schemaInRecords = computed(() => props.data.records.schema)
 
-
   const hasChart = computed(() => {
     return schemaInRecords.value && hasTimestamp.value
   })

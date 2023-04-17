@@ -111,7 +111,7 @@ a-card(:bordered="false").editor-card
       await getScriptsTable()
       selectAfterSave(scriptForm.value.scriptName)
     } catch (error) {
-      console.log(`error:`, error)
+      // error
     }
     secondaryCodeRunning.value = false
   }
