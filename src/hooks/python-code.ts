@@ -65,9 +65,9 @@ export default function usePythonCode() {
         content: i18n.global.t('dataExplorer.saveSuccess'),
         duration: 2 * 1000,
       })
-      await pushLog(res, 'python')
+      pushLog(res, 'python')
     } catch (err: any) {
-      throw await pushLog(JSON.parse(err.message) as Log, 'python')
+      throw pushLog(JSON.parse(err.message) as Log, 'python')
     }
   }
   return {
