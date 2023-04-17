@@ -39,7 +39,7 @@ router.beforeEach(async (to, from, next) => {
     }
     appStore.updateSettings(useStorage('config', {}).value)
   } catch (error) {
-    console.log(`error:`, error)
+    // error
   }
   return next()
 })

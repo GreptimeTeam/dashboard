@@ -1,5 +1,5 @@
 <template>
-  <router-view v-slot="{ Component, route }">
+  <router-view v-slot="{ Component }">
     <transition name="fade" mode="out-in" appear>
       <component :is="Component" v-if="route.meta.ignoreCache" :key="route.fullPath" />
       <keep-alive v-else>
