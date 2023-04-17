@@ -93,9 +93,12 @@ const useCodeRunStore = defineStore('codeRun', () => {
         codeInfo,
         ...error,
       }
-      return {
-        log: oneLog,
+      if ('error' in error) {
+        return {
+          log: oneLog,
+        }
       }
+      return { error: 'error' }
     }
   }
 
@@ -107,8 +110,12 @@ const useCodeRunStore = defineStore('codeRun', () => {
         codeInfo: name,
         ...res,
       }
-    } catch (err: any) {
-      throw new Error(JSON.stringify(err))
+    } catch (error: any) {
+      if ('error' in error) {
+        throw new Error(JSON.stringify(error))
+      } else {
+        throw new Error('error')
+      }
     }
   }
 
