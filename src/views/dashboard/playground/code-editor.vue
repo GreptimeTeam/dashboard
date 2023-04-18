@@ -29,7 +29,7 @@
     },
   })
   const isLoading = ref(false)
-  const { run } = useQueryCode()
+  const { runQuery } = useQueryCode()
   const slots = useSlots()
   const appStore = useAppStore()
   function codeFormat(code: any) {
@@ -53,7 +53,7 @@
   }
   const runSqlCommand = async () => {
     isLoading.value = true
-    const res = await run(code.value.trim().replace(/\n/gi, ' '), 'sql', true)
+    const res = await runQuery(code.value.trim().replace(/\n/gi, ' '), 'sql', true)
     if (res.record) {
       result.value = res.record
     } else {

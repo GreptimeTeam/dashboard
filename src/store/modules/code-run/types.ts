@@ -10,7 +10,7 @@ export interface ResultType {
   type: string
 }
 
-export interface CodeRunType {
-  log: any
+export interface CodeRunResponseType {
+  log?: any
   record?: any
 }

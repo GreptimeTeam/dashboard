@@ -67,7 +67,7 @@ axios.interceptors.response.use(
       appStore.updateSettings({ globalSettings: true })
     }
     Message.error({
-      content: error.msg || 'Request Error',
+      content: error.message || 'Request Error',
       duration: 2 * 1000,
     })
     return Promise.reject(error)
