@@ -6,7 +6,7 @@ a-card(:bordered='false')
         use(href='#table')
       | {{ $t('dataExplorer.table') }}
   a-spin(style='width: 100%')
-    a-table(:data='gridData', style='margin-top: 30px', :pagination='pagination')
+    a-table(:data='gridData', :pagination='pagination')
       template(#columns)
         template(v-for='column in gridColumns', :key='column.title')
           template(v-if='timeColumnNames.includes(column.title)')
@@ -24,7 +24,8 @@ a-card(:bordered='false')
                     @click='() => handleFormatTimeColumn(column.dataIndex)',
                     :style='{ cursor: "pointer" }'
                   )
-                    icon-history
+                    svg.icon-20
+                      use(href='#time-index')
                     | {{ column.title }}
           template(v-else)
             a-table-column(:title='column.title', :data-index='column.dataIndex')
