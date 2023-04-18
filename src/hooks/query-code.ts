@@ -50,16 +50,11 @@ export default function useQueryCode() {
     codeType.value = queryType.value
   }
 
-  const run = async (code: any, type = queryType.value, withoutSave = false): Promise<CodeRunResponseType> => {
+  const runQuery = async (code: any, type = queryType.value, withoutSave = false): Promise<CodeRunResponseType> => {
     const { pushLog } = useLog()
     const { runCode } = useCodeRunStore()
     const res = await runCode(code, type, withoutSave)
-    if (res.record) {
-      Message.success({
-        content: i18n.global.t('dataExplorer.runSuccess'),
-        duration: 2 * 1000,
-      })
-    }
+
     if (!withoutSave && res.log) {
       pushLog(res.log, type)
     }
@@ -102,7 +97,7 @@ export default function useQueryCode() {
     insertNameToQueryCode,
     selectCodeType,
     getResultsByType,
-    run,
+    runQuery,
     queryCode,
     cursorAt,
     queryOptions,
