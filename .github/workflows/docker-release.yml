@@ -71,4 +71,4 @@ jobs:
             greptime/greptimedb-dashboard:latest
             greptime/greptimedb-dashboard:${{ env.IMAGE_TAG }}
             registry.cn-hangzhou.aliyuncs.com/greptime/greptimedb-dashboard:latest
-            registry.cn-hangzhou.aliyuncs.com/greptime/greptimedb-dashboard:${{ env.VERSION }}
+            registry.cn-hangzhou.aliyuncs.com/greptime/greptimedb-dashboard:${{ env.IMAGE_TAG }}
