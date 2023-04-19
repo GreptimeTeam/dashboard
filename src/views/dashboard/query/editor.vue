@@ -2,7 +2,7 @@
 a-card.editor-card(:bordered="false")
   a-space.space-between
     a-space(size="medium")
-      a-button(@click="runQueryAll()" :disabled="isButtonDisabled" type="primary")
+      a-button(type="primary" :disabled="isButtonDisabled" @click="runQueryAll()")
         .mr-4
           icon-loading(v-if="primaryCodeRunning" spin)
           icon-play-arrow(v-else)
@@ -86,6 +86,7 @@ a-card.editor-card(:bordered="false")
   import { PromQLExtension } from '@prometheus-io/codemirror-promql'
   import { useCodeRunStore } from '@/store'
   import { keymap } from '@codemirror/view'
+  import type { KeyBinding } from '@codemirror/view'
   import { durations, durationExamples, timeOptionsArray } from '../config'
 
   export interface Props {
@@ -179,7 +180,7 @@ a-card.editor-card(:bordered="false")
     {
       key: 'alt-Enter',
       run: () => {
-        runQuery()
+        runQueryAll()
       },
     },
     {
@@ -190,7 +191,7 @@ a-card.editor-card(:bordered="false")
     },
   ]
   const extensions = {
-    sql: [sql(), oneDark, keymap.of(defaultKeymap)],
+    sql: [sql(), oneDark, keymap.of(defaultKeymap as any)],
     promQL: [promQL.asExtension(), oneDark],
   }
 </script>
