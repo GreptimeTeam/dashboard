@@ -1,6 +1,9 @@
 <template lang="pug">
 a-layout.layout 
   |
+  |
+  |
+  |
   a-layout-sider
     a-tree.script-tree(:data='fileList', :default-selected-keys='[currentFile]', @select='onSelect', blockNode)
   a-layout-content

@@ -1,8 +1,8 @@
 <template lang="pug">
-a-tabs.sider-tabs(v-model:active-key="tabActiveKey" :class="{'one-tab': tabs.length === 1}" type="rounded")
-  a-tab-pane(v-for="(item, index) in tabs" :key="index" :title="item.title")
-    a-card(:bordered="false").tree-card
-      component(:is="item.component")
+a-tabs.sider-tabs(v-model:active-key='tabActiveKey', :class='{ "one-tab": tabs.length === 1 }', type='rounded')
+  a-tab-pane(v-for='(item, index) in tabs', :key='index', :title='item.title')
+    a-card.tree-card(:bordered='false')
+      component(:is='item.component')
 </template>
 
 <script lang="ts" name="ListTabs" setup>

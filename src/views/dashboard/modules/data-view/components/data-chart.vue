@@ -1,21 +1,27 @@
 <template lang="pug">
-a-card(:bordered="false" v-if="hasChart")
+a-card(:bordered='false', v-if='hasChart')
   template(#title)
-    a-space(size="mini")
+    a-space(size='mini')
       svg.icon-18
-        use(href="#chart")
-      | {{$t('dataExplorer.chart')}}
-  a-spin(style="width: 100%")
+        use(href='#chart')
+      | {{ $t('dataExplorer.chart') }}
+  a-spin(style='width: 100%')
     a-row
-      a-form.chart-form(:model="chartForm" :onChange="drawChart()" layout="inline")
-        a-form-item(:label="$t('dataExplorer.chartType')")
-          a-select(v-model="chartForm.chartType" :trigger-props="triggerProps")
-            a-option(v-for="item of chartTypeOptions" :key="item.key" :value="item.value" :label="item.value")
-        a-form-item.select-y(:label="$t('dataExplorer.yType')")
-          a-select(v-model="chartForm.ySelectedTypes" :placeholder="$t('dataExplorer.selectY')" multiple :allow-search="false" :trigger-props="triggerProps")
-            a-option(v-for="item of yOptions" :key="item.value" :value="item.value") {{ item.value }}
+      a-form.chart-form(:model='chartForm', :onChange='drawChart()', layout='inline')
+        a-form-item(:label='$t("dataExplorer.chartType")')
+          a-select(v-model='chartForm.chartType', :trigger-props='triggerProps')
+            a-option(v-for='item of chartTypeOptions', :key='item.key', :value='item.value', :label='item.value')
+        a-form-item.select-y(:label='$t("dataExplorer.yType")')
+          a-select(
+            v-model='chartForm.ySelectedTypes',
+            :placeholder='$t("dataExplorer.selectY")',
+            multiple,
+            :allow-search='false',
+            :trigger-props='triggerProps'
+          )
+            a-option(v-for='item of yOptions', :key='item.value', :value='item.value') {{ item.value }}
     a-row
-      Chart.chart-area(height="330px" :option="option" :update-options="updateOptions" )
+      Chart.chart-area(height='330px', :option='option', :update-options='updateOptions')
 </template>
 
 <script lang="ts" setup>

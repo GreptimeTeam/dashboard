@@ -1,10 +1,10 @@
 <template lang="pug">
-a-card(:bordered="false")
-  template(#title v-if="hasHeader")
-    a-space(size="mini")
+a-card(:bordered='false')
+  template(#title, v-if='hasHeader')
+    a-space(size='mini')
       svg.icon-20
-        use(href="#table")
-      | {{$t('dataExplorer.table')}}
+        use(href='#table')
+      | {{ $t('dataExplorer.table') }}
   a-spin(style='width: 100%')
     a-table(:columns='gridColumn', :data='gridData', :pagination='pagination')
 </template>
