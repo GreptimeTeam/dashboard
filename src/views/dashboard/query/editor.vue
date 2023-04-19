@@ -2,7 +2,7 @@
 a-card.editor-card(:bordered="false")
   a-space.space-between
     a-space(size="medium")
-      a-button(type="primary" :disabled="isButtonDisabled" @click="runQuery()")
+      a-button(@click="runQueryAll()" :disabled="isButtonDisabled" type="primary")
         .mr-4
           icon-loading(v-if="primaryCodeRunning" spin)
           icon-play-arrow(v-else)
@@ -121,7 +121,7 @@ a-card.editor-card(:bordered="false")
   const selectedCode = ref()
   const view = shallowRef()
 
-  const { run: runCode } = useQueryCode()
+  const { runQuery } = useQueryCode()
 
   const handleReady = (payload: any) => {
     view.value = payload.view
@@ -153,17 +153,17 @@ a-card.editor-card(:bordered="false")
     }
   }
 
-  const runQuery = async () => {
+  const runQueryAll = async () => {
     primaryCodeRunning.value = true
     // TODO: add better format tool for code
-    await runCode(queryCode.value.trim().replace(/\n/gi, ' '), queryType.value)
+    await runQuery(queryCode.value.trim().replace(/\n/gi, ' '), queryType.value)
     primaryCodeRunning.value = false
     // TODO: refresh tables data and when
   }
 
   const runPartQuery = async () => {
     secondaryCodeRunning.value = true
-    await runCode(selectedCode.value.trim(), queryType.value)
+    await runQuery(selectedCode.value.trim(), queryType.value)
     secondaryCodeRunning.value = false
   }
 

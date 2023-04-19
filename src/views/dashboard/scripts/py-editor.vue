@@ -55,7 +55,7 @@ a-card.editor-card(:bordered="false")
   const { pythonCode, cursorAt, lastSavedCode, isNewScript, scriptName, isChanged, selectAfterSave, createNewScript } =
     usePythonCode()
   const { save: saveScript } = usePythonCode()
-  const { run: runCode } = useQueryCode()
+  const { runQuery } = useQueryCode()
   const { getScriptsTable } = dataBaseStore
 
   const codeType = 'python'
@@ -121,7 +121,7 @@ a-card.editor-card(:bordered="false")
       secondaryCodeRunning.value = true
       await saveScript(scriptForm.value.scriptName, pythonCode.value.trim())
       lastSavedCode.value = pythonCode.value
-      await runCode(scriptForm.value.scriptName, codeType)
+      await runQuery(scriptForm.value.scriptName, codeType)
       await getScriptsTable()
       selectAfterSave(scriptForm.value.scriptName)
     } catch (error) {
@@ -134,7 +134,7 @@ a-card.editor-card(:bordered="false")
     const routeName = route.name as string
 
     secondaryCodeRunning.value = true
-    await runCode(scriptForm.value.scriptName, codeType)
+    await runQuery(scriptForm.value.scriptName, codeType)
     secondaryCodeRunning.value = false
   }
 </script>

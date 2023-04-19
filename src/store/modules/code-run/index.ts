@@ -1,5 +1,7 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
+import Message from '@arco-design/web-vue/es/message'
+import i18n from '@/locale'
 import editorAPI from '@/api/editor'
 import dayjs from 'dayjs'
 import { dateTypes } from '@/views/dashboard/config'
@@ -43,7 +45,10 @@ const useCodeRunStore = defineStore('codeRun', () => {
       let res: any = {}
       let oneResult = null
       res = await API_MAP[type](codeInfo)
-
+      Message.success({
+        content: i18n.global.t('dataExplorer.runSuccess'),
+        duration: 2 * 1000,
+      })
       const resultInLog: any = []
       res.output.forEach((oneRes: any) => {
         if ('records' in oneRes) {
