@@ -1,15 +1,16 @@
 <template lang="pug">
-a-layout.layout 
-  |
-  |
-  |
-  |
+a-layout.layout
   a-layout-sider
-    a-tree.script-tree(:data='fileList', :default-selected-keys='[currentFile]', @select='onSelect', blockNode)
+    a-tree.script-tree(
+      blockNode
+      :data="fileList"
+      :default-selected-keys="[currentFile]"
+      @select="onSelect"
+    )
   a-layout-content
     .markdown-container
-      MarkdownContent(v-if='MarkdownContent')
-    RefreshPlaygroundModal(ref='refreshPlaygroundModal')
+      MarkdownContent(v-if="MarkdownContent")
+    RefreshPlaygroundModal(ref="refreshPlaygroundModal")
 </template>
 
 <script lang="ts" setup name="Playground">

@@ -1,27 +1,33 @@
 <template lang="pug">
-a-space(direction='vertical', size='medium', fill)
+a-space(direction="vertical" size="medium" fill)
   a-space.search-space
-    a-input(v-model='tablesSearchKey', :allow-clear='true')
+    a-input(v-model="tablesSearchKey" :allow-clear="true")
       template(#prefix)
         svg.icon
-          use(href='#search')
-    .icon-space.pointer(@click='refreshTables')
+          use(href="#search")
+    .icon-space.pointer(@click="refreshTables")
       svg.icon
-        use(href='#refresh')
+        use(href="#refresh")
   a-scrollbar.tree-scrollbar
-    a-tree.table-tree(ref='treeRef', :data='tablesTreeData', :load-more='loadMore', size='small', :animation='false')
+    a-tree.table-tree(
+      ref="treeRef"
+      size="small"
+      :data="tablesTreeData"
+      :load-more="loadMore"
+      :animation="false"
+    )
       template(#title)
       template(#switcher-icon)
         IconDown
-      template(#extra='nodeData')
-        svg.icon-16(v-show='nodeData.iconType')
-          use(:href='ICON_MAP[nodeData.iconType]')
+      template(#extra="nodeData")
+        svg.icon-16(v-show="nodeData.iconType")
+          use(:href="ICON_MAP[nodeData.iconType]")
         .tree-data
-          a-typography-text.data-title(:ellipsis='{ rows: 1, showTooltip: true }') {{ nodeData.title }}
+          a-typography-text.data-title(:ellipsis="{ rows: 1, showTooltip: true }") {{ nodeData.title }}
           .data-type {{ nodeData.dataType }}
-        a-tooltip(:content='$t("dataExplorer.insertName")', mini)
-          svg.icon-15.copy-icon.pointer(name='copy', @click='insertName(nodeData.title)')
-            use(href='#copy')
+        a-tooltip(mini :content="$t('dataExplorer.insertName')")
+          svg.icon-15.copy-icon.pointer(name="copy" @click="insertName(nodeData.title)")
+            use(href="#copy")
 </template>
 
 <script lang="ts" setup>

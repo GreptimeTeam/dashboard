@@ -1,26 +1,24 @@
 <template lang="pug">
 a-tabs.result-tabs(
-  type='rounded',
-  lazy-load,
-  :active-key='activeTabKey',
-  @tab-click='tabClick',
-  @delete='deleteTab',
-  editable,
-  :animation='true'
+  type="rounded"
+  lazy-load
+  editable
+  :active-key="activeTabKey"
+  :animation="true"
+  @tab-click="tabClick"
+  @delete="deleteTab"
 )
   template(#extra)
-    a-button(@click='clearResults', status='danger') {{ $t('dataExplorer.clear') }}
+    a-button(status="danger" @click="clearResults") {{ $t('dataExplorer.clear') }}
   a-tab-pane(
-    v-for='(result, index) of results',
-    :key='result.key',
-    :title='`${$t("dataExplorer.result")} ${result.key - startKey + 1}`',
+    v-for="(result, index) of results"
+    :key="result.key"
     closable
-  ) 
-    |
-    |
-    a-space(direction='vertical', fill, size='small')
-      DataGrid(:data='result')
-      DataChart(:data='result')
+    :title="`${$t('dataExplorer.result')} ${result.key - startKey + 1}`"
+  )
+    a-space(direction="vertical" size="small" fill)
+      DataGrid(:data="result")
+      DataChart(:data="result")
 </template>
 
 <script lang="ts" name="DataView" setup>

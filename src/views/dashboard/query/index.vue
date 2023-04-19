@@ -1,12 +1,12 @@
 <template lang="pug">
 a-layout.layout
   a-layout-sider
-    ListTabs(:has='["Tables"]')
+    ListTabs(:has="['Tables']")
   a-layout-content
-    a-space.content-space(direction='vertical', fill, size='large')
+    a-space.content-space(direction="vertical" fill size="large")
       Editor 
-      DataView(v-if='!!results?.length', :results='results', :types='types')
-      Logs(:logs='queryLogs', :types='types')
+      DataView(v-if="!!results?.length" :results="results" :types="types")
+      Logs(:logs="queryLogs" :types="types")
 </template>
 
 <script lang="ts" name="Query" setup>

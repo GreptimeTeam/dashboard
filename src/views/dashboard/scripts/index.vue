@@ -1,12 +1,12 @@
 <template lang="pug">
 a-layout.layout
   a-layout-sider
-    ListTabs(:has='["Tables", "Scripts"]')
+    ListTabs(:has="['Tables', 'Scripts']")
   a-layout-content
-    a-space.content-space(direction='vertical', fill, :size='14')
+    a-space.content-space(direction="vertical" fill :size="14")
       PyEditor
-      DataView(v-if='!!results?.length', :results='results', :types='types')
-      Logs(:logs='queryLogs', :types='types')
+      DataView(v-if="!!results?.length" :results="results" :types="types")
+      Logs(:logs="queryLogs" :types="types")
 </template>
 
 <script lang="ts" name="Scripts" setup>
