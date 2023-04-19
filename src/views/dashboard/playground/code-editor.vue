@@ -2,18 +2,23 @@
 .code-editor
   .code
     .operations(v-if="!disabled")
-      a-button(@click="runSqlCommand" :loading="isLoading") {{ $t('playground.run') }}
+      a-button(:loading="isLoading" @click="runSqlCommand") {{ $t('playground.run') }}
       a-button(@click="reset") {{ $t('playground.reset') }}
     CodeMirror(v-model="code" :extensions="extensions" :disabled="disabled")
   .results(v-if="result")
-    a-tabs.playground-tabs(default-active-key='1')
-      a-tab-pane(key='1', title='Table')
+    a-tabs.playground-tabs(default-active-key="1")
+      a-tab-pane(key="1" title="Table")
         DataGrid(:data="result" :hasHeader="false")
-      a-tab-pane(key='2', title='Chart')
+      a-tab-pane(key="2" title="Chart")
         DataChart(:data="result" :hasHeader="false")
   .logs(v-if="log")
-    a-list.log-list(:hoverable="true" size="small" :bordered="false" :split="false")
-      Log(:log="log" codeType="sql")
+    a-list.log-list(
+      size="small"
+      :hoverable="true"
+      :bordered="false"
+      :split="false"
+    )
+      Log(codeType="sql" :log="log")
 </template>
 
 <script lang="ts" setup name="CodeEditor">

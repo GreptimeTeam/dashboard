@@ -1,41 +1,59 @@
 <template lang="pug">
-a-card(:bordered="false").editor-card
+a-card.editor-card(:bordered="false")
   a-space.space-between
     a-space(size="medium")
-      a-button(@click="runQueryAll()" :disabled="isButtonDisabled" type="primary")
+      a-button(type="primary" :disabled="isButtonDisabled" @click="runQueryAll()")
         .mr-4
-          icon-loading(spin v-if="primaryCodeRunning")
+          icon-loading(v-if="primaryCodeRunning" spin)
           icon-play-arrow(v-else)
-        | {{$t('dataExplorer.runAll')}}
+        | {{ $t('dataExplorer.runAll') }}
       a-button(:disabled="isButtonDisabled" @click="runPartQuery()")
         .mr-4
-          icon-loading(spin v-if="secondaryCodeRunning")
+          icon-loading(v-if="secondaryCodeRunning" spin)
           icon-play-arrow(v-else)
-        div(v-if="lineStart === lineEnd") {{$t('dataExplorer.runLine')}} {{ lineStart }}
-        div(v-else) {{$t('dataExplorer.runLines')}} {{ lineStart }} - {{ lineEnd }}
+        div(v-if="lineStart === lineEnd") {{ $t('dataExplorer.runLine') }} {{ lineStart }}
+        div(v-else) {{ $t('dataExplorer.runLines') }} {{ lineStart }} - {{ lineEnd }}
     .query-select(v-if="!isCloud")
       a-select(v-model="queryType" @change="selectCodeType")
         a-option(v-for="query of queryOptions" :="query")
-  a-form.space-between.prom-form(:model="promForm" layout="inline" v-show="queryType === 'promQL'")
+  a-form.space-between.prom-form(layout="inline" v-show="queryType === 'promQL'" :model="promForm")
     a-space(size="medium")
       a-form-item(:hide-label="true")
-        a-select(v-if="promForm.isRelative === 1" v-model="promForm.time" :trigger-props="{'update-at-scroll': true}")
+        a-select(
+          v-if="promForm.isRelative === 1"
+          v-model="promForm.time"
+          :trigger-props="{ 'update-at-scroll': true }"
+        )
           a-option(v-for="time of timeOptions" :="time")
           template(#prefix)
             svg.icon-20
               use(href="#calendar")
-        a-range-picker(v-else v-model="promForm.range" :show-time="true" :allow-clear="true" :trigger-props="{'update-at-scroll': true}" :placeholder="[$t('dataExplorer.startTime'), $t('dataExplorer.endTime')]" format="YYYY-MM-DD HH:mm:ss" value-format="X")
+        a-range-picker(
+          v-else
+          v-model="promForm.range"
+          format="YYYY-MM-DD HH:mm:ss"
+          value-format="X"
+          :show-time="true"
+          :allow-clear="true"
+          :trigger-props="{ 'update-at-scroll': true }"
+          :placeholder="[$t('dataExplorer.startTime'), $t('dataExplorer.endTime')]"
+        )
           template(#prefix)
             svg.icon-20
               use(href="#calendar")
       a-form-item(:hide-label="true")
-        a-input(v-model="promForm.step" :style="{width:'180px'}" :placeholder="$t('dataExplorer.step')" hide-button)
+        a-input(
+          v-model="promForm.step"
+          hide-button
+          :style="{ width: '180px' }"
+          :placeholder="$t('dataExplorer.step')"
+        )
           template(#suffix)
             a-popover(trigger="hover")
               svg.icon
                 use(href="#question")
               template(#content)
-                a-list(:split="false" :bordered="false" size="small")
+                a-list(size="small" :split="false" :bordered="false")
                   template(#header)
                     | {{ $t('dataExplorer.supportedDurations') }}
                   a-list-item(v-for="item of durations" :key="item")
@@ -43,10 +61,22 @@ a-card(:bordered="false").editor-card
                     span.ml-4 {{ item.value }}
                   a-list-item
                     span.ml-2 {{ $t('dataExplorer.examples') }}
-                    a-typography-text(code v-for="item of durationExamples" :key="item") {{ item }}
-    a-form-item.time-switch(:label="promForm.isRelative === 1 ? $t('dataExplorer.relative') : $t('dataExplorer.absolute')")
+                    a-typography-text(v-for="item of durationExamples" :key="item" code) {{ item }}
+    a-form-item.time-switch(
+      :label="promForm.isRelative === 1 ? $t('dataExplorer.relative') : $t('dataExplorer.absolute')"
+    )
       a-switch(v-model="promForm.isRelative" :checked-value="1" :unchecked-value="0")
-  CodeMirror(v-model="queryCode" :style="style" :spellcheck="spellcheck" :autofocus="autofocus" :indent-with-tab="indentWithTab" :tabSize="tabSize" :extensions="extensions[queryType]" @ready="handleReady" @update="codeUpdate")
+  CodeMirror(
+    v-model="queryCode"
+    :style="style"
+    :spellcheck="spellcheck"
+    :autofocus="autofocus"
+    :indent-with-tab="indentWithTab"
+    :tabSize="tabSize"
+    :extensions="extensions[queryType]"
+    @ready="handleReady"
+    @update="codeUpdate"
+  )
 </template>
 
 <script lang="ts" setup name="Editor">
@@ -55,6 +85,8 @@ a-card(:bordered="false").editor-card
   import { sql } from '@codemirror/lang-sql'
   import { PromQLExtension } from '@prometheus-io/codemirror-promql'
   import { useCodeRunStore } from '@/store'
+  import { keymap } from '@codemirror/view'
+  import type { KeyBinding } from '@codemirror/view'
   import { durations, durationExamples, timeOptionsArray } from '../config'
 
   export interface Props {
@@ -102,11 +134,6 @@ a-card(:bordered="false").editor-card
 
   const promQL = new PromQLExtension()
 
-  const extensions = {
-    sql: [sql(), oneDark],
-    promQL: [promQL.asExtension(), oneDark],
-  }
-
   // TODO: Try something better. CodeUpdate is constantly changing and the cost is too much.
   const codeUpdate = () => {
     if (view.value) {
@@ -148,4 +175,23 @@ a-card(:bordered="false").editor-card
       label: `Last ${value} minutes`,
     }))
     .concat([{ value: 0, label: 'Custom' }])
+
+  const defaultKeymap = [
+    {
+      key: 'alt-Enter',
+      run: () => {
+        runQueryAll()
+      },
+    },
+    {
+      key: 'ctrl-Enter',
+      run: () => {
+        runPartQuery()
+      },
+    },
+  ]
+  const extensions = {
+    sql: [sql(), oneDark, keymap.of(defaultKeymap as any)],
+    promQL: [promQL.asExtension(), oneDark],
+  }
 </script>

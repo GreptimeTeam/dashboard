@@ -1,7 +1,7 @@
 <template lang="pug">
-a-tabs.sider-tabs(v-model:active-key="tabActiveKey" :class="{'one-tab': tabs.length === 1}" type="rounded")
+a-tabs.sider-tabs(v-model:active-key="tabActiveKey" type="rounded" :class="{ 'one-tab': tabs.length === 1 }")
   a-tab-pane(v-for="(item, index) in tabs" :key="index" :title="item.title")
-    a-card(:bordered="false").tree-card
+    a-card.tree-card(:bordered="false")
       component(:is="item.component")
 </template>
 
