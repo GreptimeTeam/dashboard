@@ -57,6 +57,8 @@ a-card(:bordered="false")
   }
 
   const timeColumnNames = computed(() => {
+    const { schema } = props.data.records
+    if (!schema) return []
     return props.data.records.schema.column_schemas
       .filter((column: any) => dateTypes.includes(column.data_type))
       .map((column: any) => column.name)
