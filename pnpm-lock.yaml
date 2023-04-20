@@ -27,7 +27,7 @@ specifiers:
   '@prometheus-io/codemirror-promql': ^0.42.0
   '@types/lodash': ^4.14.191
   '@types/mockjs': ^1.0.7
-  '@types/node': ^18.11.18
+  '@types/node': ^18.15.3
   '@types/nprogress': ^0.2.0
   '@types/qs': ^6.9.7
   '@types/sortablejs': ^1.15.0
@@ -146,7 +146,7 @@ devDependencies:
   '@prettier/plugin-pug': 2.4.1_prettier@2.7.1
   '@types/lodash': 4.14.191
   '@types/mockjs': 1.0.7
-  '@types/node': 18.11.18
+  '@types/node': 18.15.3
   '@types/nprogress': 0.2.0
   '@types/qs': 6.9.7
   '@types/sortablejs': 1.15.0
@@ -922,15 +922,15 @@ packages:
       '@commitlint/execute-rule': 17.4.0
       '@commitlint/resolve-extends': 17.4.0
       '@commitlint/types': 17.4.0
-      '@types/node': 18.11.18
+      '@types/node': 18.15.3
       chalk: 4.1.2
       cosmiconfig: 8.0.0
-      cosmiconfig-typescript-loader: 4.1.1_6sfouzbgts5tru63mrjox7x6qq
+      cosmiconfig-typescript-loader: 4.1.1_wx2g26bhuhbjmoldfjtborlwhm
       lodash.isplainobject: 4.0.6
       lodash.merge: 4.6.2
       lodash.uniq: 4.5.0
       resolve-from: 5.0.0
-      ts-node: 10.9.1_vqcafhj4xvr2nzknlrdklk55zm
+      ts-node: 10.9.1_x7wmykdye3n75c4332b67wrzwm
       typescript: 4.8.4
     transitivePeerDependencies:
       - '@swc/core'
@@ -1389,8 +1389,8 @@ packages:
     resolution: {integrity: sha512-OCxXz6hEaJOVpRwuJMiVY5a6LtJcih+br9gwB/Q8ooOBikvk5FpBQ31OlNimXo3EqKha1Z7PFBni+q9m+8NCWg==}
     dev: true
 
-  /@types/node/18.11.18:
-    resolution: {integrity: sha512-DHQpWGjyQKSHj3ebjFI/wRKcqQcdR+MoFBygntYOZytCqNfkd2ZC4ARDJ2DQqhjH5p85Nnd3jhUJIXrszFX/JA==}
+  /@types/node/18.15.3:
+    resolution: {integrity: sha512-p6ua9zBxz5otCmbpb5D3U4B5Nanw6Pk3PPyX05xnxbB/fRv71N7CPmORg7uAD5P70T0xmx1pzAx/FUfa5X+3cw==}
     dev: true
 
   /@types/normalize-package-data/2.4.1:
@@ -2485,7 +2485,7 @@ packages:
     resolution: {integrity: sha512-ZQBvi1DcpJ4GDqanjucZ2Hj3wEO5pZDS89BWbkcrvdxksJorwUDDZamX9ldFkp9aw2lmBDLgkObEA4DWNJ9FYQ==}
     dev: true
 
-  /cosmiconfig-typescript-loader/4.1.1_6sfouzbgts5tru63mrjox7x6qq:
+  /cosmiconfig-typescript-loader/4.1.1_wx2g26bhuhbjmoldfjtborlwhm:
     resolution: {integrity: sha512-9DHpa379Gp0o0Zefii35fcmuuin6q92FnLDffzdZ0l9tVd3nEobG3O+MZ06+kuBvFTSVScvNb/oHA13Nd4iipg==}
     engines: {node: '>=12', npm: '>=6'}
     peerDependencies:
@@ -2494,9 +2494,9 @@ packages:
       ts-node: '>=10'
       typescript: '>=3'
     dependencies:
-      '@types/node': 18.11.18
+      '@types/node': 18.15.3
       cosmiconfig: 8.0.0
-      ts-node: 10.9.1_vqcafhj4xvr2nzknlrdklk55zm
+      ts-node: 10.9.1_x7wmykdye3n75c4332b67wrzwm
       typescript: 4.8.4
     dev: true
 
@@ -6133,7 +6133,7 @@ packages:
     engines: {node: '>=12'}
     dev: false
 
-  /ts-node/10.9.1_vqcafhj4xvr2nzknlrdklk55zm:
+  /ts-node/10.9.1_x7wmykdye3n75c4332b67wrzwm:
     resolution: {integrity: sha512-NtVysVPkxxrwFGUUxGYhfux8k78pQB3JqYBXlLRZgdGUqTO5wU/UyHop5p70iEbGhB7q5KmiZiU0Y3KlJrScEw==}
     hasBin: true
     peerDependencies:
@@ -6152,7 +6152,7 @@ packages:
       '@tsconfig/node12': 1.0.11
       '@tsconfig/node14': 1.0.3
       '@tsconfig/node16': 1.0.3
-      '@types/node': 18.11.18
+      '@types/node': 18.15.3
       acorn: 8.8.2
       acorn-walk: 8.2.0
       arg: 4.1.3
