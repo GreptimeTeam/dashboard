@@ -13,9 +13,11 @@ const lastSelectedKey = ref<Array<string>>([])
 
 const cursorAt = ref<Array<number>>([])
 const scriptName = ref('')
-const isNewScript = ref(<boolean>true)
+const isNewScript = ref(true)
 const modelVisible = ref(false)
 const creating = ref(false)
+const scriptSaving = ref(false)
+const scriptRunning = ref(false)
 const isChanged = computed(() => Md5.hashStr(pythonCode.value) !== Md5.hashStr(lastSavedCode.value))
 
 export default function usePythonCode() {
@@ -70,6 +72,18 @@ export default function usePythonCode() {
       throw pushLog(JSON.parse(err.message) as Log, 'python')
     }
   }
+
+  const isButtonDisabled = computed(() => {
+    if (
+      scriptRunning.value === true ||
+      scriptSaving.value === true ||
+      scriptName.value.trim().length === 0 ||
+      pythonCode.value.trim().length === 0
+    )
+      return true
+    return false
+  })
+
   return {
     insertNameToPyCode,
     overwriteCode,
@@ -85,6 +99,9 @@ export default function usePythonCode() {
     isChanged,
     modelVisible,
     creating,
+    isButtonDisabled,
+    scriptSaving,
+    scriptRunning,
     save,
   }
 }
