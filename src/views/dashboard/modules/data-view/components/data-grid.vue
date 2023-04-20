@@ -75,10 +75,7 @@ a-card(:bordered="false")
         }
       })
       .sort((a: any, b: any) => {
-        if (timeColumnNames.value.includes(a.title)) {
-          return -1
-        }
-        return 0
+        return timeColumnNames.value.includes(b.title) - timeColumnNames.value.includes(a.title)
       })
   })
 
