@@ -5,16 +5,30 @@ a-space(direction="vertical" size="medium")
       template(#prefix)
         svg.icon
           use(href="#search")
-    a-tooltip(:content="$t('dataExplorer.create')" mini)
+    a-tooltip(mini :content="$t('dataExplorer.create')")
       .icon-space.pointer(@click="createNewScript()")
         svg.icon
           use(href="#create")
   a-scrollbar.tree-scrollbar
-    a-tree.script-tree(ref="scriptsRef" :data="scriptsListData" size="small" @select="onSelect" blockNode v-model:selected-keys="scriptSelectedKeys")
-a-modal.change-modal(v-model:visible='modelVisible' @ok='handleOk' @cancel='handleCancel' :closable="false" :okButtonProps="okButton" :cancelButtonProps="cancelButton")
-    template(#title='')
-    .
-      {{$t('dataExplorer.question')}}
+    a-tree.script-tree(
+      ref="scriptsRef"
+      v-model:selected-keys="scriptSelectedKeys"
+      size="small"
+      blockNode
+      :data="scriptsListData"
+      @select="onSelect"
+    )
+a-modal.change-modal(
+  v-model:visible="modelVisible"
+  :closable="false"
+  :okButtonProps="okButton"
+  :cancelButtonProps="cancelButton"
+  @ok="handleOk"
+  @cancel="handleCancel"
+)
+  template(#title="")
+.
+  {{$t('dataExplorer.question')}}
 </template>
 
 <script lang="ts" name="ScriptsList" setup>

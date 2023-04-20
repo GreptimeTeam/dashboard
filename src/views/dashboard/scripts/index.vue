@@ -15,6 +15,7 @@ a-layout.layout
   const types = ['python']
 
   const results = computed(() => getResultsByType(types))
+
   const queryLogs = computed(() => logs.value.filter((log) => types.includes(log.type)))
   // TODO: add more code type in the future if needed
 </script>
