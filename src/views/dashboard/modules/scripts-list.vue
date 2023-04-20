@@ -27,8 +27,7 @@ a-modal.change-modal(
   @cancel="handleCancel"
 )
   template(#title="")
-.
-  {{$t('dataExplorer.question')}}
+  | {{ $t('dataExplorer.question') }}
 </template>
 
 <script lang="ts" name="ScriptsList" setup>
