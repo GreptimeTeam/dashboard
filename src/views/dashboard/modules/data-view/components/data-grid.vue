@@ -1,34 +1,34 @@
 <template lang="pug">
-a-card(:bordered='false')
-  template(#title, v-if='hasHeader')
-    a-space(size='mini')
+a-card(:bordered="false")
+  template(v-if="hasHeader" #title)
+    a-space(size="mini")
       svg.icon-20
-        use(href='#table')
+        use(href="#table")
       | {{ $t('dataExplorer.table') }}
-  a-spin(style='width: 100%')
-    a-table(:data='gridData', :pagination='pagination')
+  a-spin(style="width: 100%")
+    a-table(:data="gridData" :pagination="pagination")
       template(#columns)
-        template(v-for='column in gridColumns', :key='column.title')
-          template(v-if='timeColumnNames.includes(column.title)')
+        template(v-for="column in gridColumns" :key="column.title")
+          template(v-if="timeColumnNames.includes(column.title)")
             a-table-column(
-              :data-index='timeColumnFormatMap[column.dataIndex] ? `${column.dataIndex}${formatSuffix}` : column.dataIndex',
-              :width='timeColumnWidth'
+              :data-index="timeColumnFormatMap[column.dataIndex] ? `${column.dataIndex}${formatSuffix}` : column.dataIndex"
+              :width="timeColumnWidth"
             )
               template(#title)
                 a-tooltip(
-                  :content='timeColumnFormatMap[column.dataIndex] ? $t("dataExplorer.showTimestamp") : $t("dataExplorer.formatTimestamp")',
-                  placement='top'
+                  placement="top"
+                  :content="timeColumnFormatMap[column.dataIndex] ? $t('dataExplorer.showTimestamp') : $t('dataExplorer.formatTimestamp')"
                 )
                   a-space(
-                    size='mini',
-                    @click='() => handleFormatTimeColumn(column.dataIndex)',
-                    :style='{ cursor: "pointer" }'
+                    size="mini"
+                    :style="{ cursor: 'pointer' }"
+                    @click="() => handleFormatTimeColumn(column.dataIndex)"
                   )
                     svg.icon-20
-                      use(href='#time-index')
+                      use(href="#time-index")
                     | {{ column.title }}
           template(v-else)
-            a-table-column(:title='column.title', :data-index='column.dataIndex')
+            a-table-column(:title="column.title" :data-index="column.dataIndex")
 </template>
 
 <script lang="ts" setup>
@@ -56,15 +56,30 @@ a-card(:bordered='false')
     return columnName.replace(/\./gi, '-')
   }
 
+  const timeColumnNames = computed(() => {
+    return props.data.records.schema.column_schemas
+      .filter((column: any) => dateTypes.includes(column.data_type))
+      .map((column: any) => column.name)
+  })
+
   const gridColumns = computed(() => {
     const { schema } = props.data.records
     if (!schema) return []
-    return schema.column_schemas.map((column: any) => {
-      return {
-        title: column.name,
-        dataIndex: columnNameToDataIndex(column.name),
-      }
-    })
+
+    // use sort to make time columns display on the left first
+    return schema.column_schemas
+      .map((column: any) => {
+        return {
+          title: column.name,
+          dataIndex: columnNameToDataIndex(column.name),
+        }
+      })
+      .sort((a: any, b: any) => {
+        if (timeColumnNames.value.includes(a.title)) {
+          return -1
+        }
+        return 0
+      })
   })
 
   // use ref to make it mutable
@@ -80,12 +95,6 @@ a-card(:bordered='false')
       })
     })()
   )
-
-  const timeColumnNames = computed(() => {
-    return props.data.records.schema.column_schemas
-      .filter((column: any) => dateTypes.includes(column.data_type))
-      .map((column: any) => column.name)
-  })
 
   /**
    * use an extra state to store which time column is formatted
@@ -107,7 +116,7 @@ a-card(:bordered='false')
 
   const handleFormatTimeColumn = (dataIndex: string) => {
     timeColumnFormatMap.value[dataIndex] = !timeColumnFormatMap.value[dataIndex]
-    // Calculate formatted time data on first access
+    // calculate formatted time data on first access
     if (gridData.value.length && !gridData.value[0][`${dataIndex}${formatSuffix}`]) {
       gridData.value.forEach((row: any) => {
         row[`${dataIndex}${formatSuffix}`] = formatTimestamp(row[dataIndex])
@@ -115,6 +124,6 @@ a-card(:bordered='false')
     }
   }
 
-  /** Use a fixed width for the time column to prevent the width from changing automatically after formatting  */
+  /** use a fixed width for the time column to prevent the width from changing automatically after formatting  */
   const timeColumnWidth = 180
 </script>
