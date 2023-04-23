@@ -6,7 +6,9 @@ import editorAPI from '@/api/editor'
 import dayjs from 'dayjs'
 import { dateTypes } from '@/views/dashboard/config'
 import { AnyObject } from '@/types/global'
-import { ResultType } from './types'
+import { HttpResponse, OutputType } from '@/api/interceptor'
+import { ResultType, DimensionType, SchemaType } from './types'
+import { Log, ResultInLog } from '../log/types'
 
 const useCodeRunStore = defineStore('codeRun', () => {
   const { promForm } = useQueryCode()
@@ -15,17 +17,17 @@ const useCodeRunStore = defineStore('codeRun', () => {
   const resultsId = ref(0)
 
   // TODO: Add all the types we decide instead of ECharts if needed in the future.
-  const getDimensionsAndXName = (elements: any) => {
-    const tempDimensions: any = []
+  const getDimensionsAndXName = (schemas: SchemaType[]) => {
+    const tempDimensions: Array<DimensionType> = []
     let xAxisName = ''
     let findTimeFlag = false
-    elements.forEach((element: any) => {
-      if (!findTimeFlag && dateTypes.find((type: string) => type === element.data_type)) {
+    schemas.forEach((schema: SchemaType) => {
+      if (!findTimeFlag && dateTypes.find((type: string) => type === schema.data_type)) {
         findTimeFlag = true
-        xAxisName = element.name
+        xAxisName = schema.name
       }
       const oneDimension = {
-        name: element.name,
+        name: schema.name,
         // Note: let ECharts decide type for now.
       }
 
@@ -42,18 +44,17 @@ const useCodeRunStore = defineStore('codeRun', () => {
 
   const runCode = async (codeInfo: string, type: string, withoutSave = false) => {
     try {
-      let res: any = {}
-      let oneResult = null
-      res = await API_MAP[type](codeInfo)
+      let oneResult = {} as ResultType
+      const res: HttpResponse = await API_MAP[type](codeInfo)
       Message.success({
         content: i18n.global.t('dataExplorer.runSuccess'),
         duration: 2 * 1000,
       })
-      const resultInLog: any = []
-      res.output.forEach((oneRes: any) => {
+      const resultsInLog: Array<ResultInLog> = []
+      res.output.forEach((oneRes: OutputType) => {
         if ('records' in oneRes) {
           const rowLength = oneRes.records.rows.length
-          resultInLog.push({
+          resultsInLog.push({
             records: rowLength,
           })
           if (rowLength >= 0) {
@@ -68,17 +69,18 @@ const useCodeRunStore = defineStore('codeRun', () => {
               results.value.push(oneResult)
             }
           }
-        } else {
-          resultInLog.push({
+        }
+        if ('affectedrows' in oneRes) {
+          resultsInLog.push({
             affectedRows: oneRes.affectedrows,
           })
         }
       })
-      const oneLog = {
+      const oneLog: Log = {
         type,
         ...res,
         codeInfo,
-        result: resultInLog,
+        results: resultsInLog,
       }
       if (type === 'promQL') {
         oneLog.promInfo = {
