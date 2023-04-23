@@ -9,13 +9,22 @@ a-card.editor-card(:bordered="false")
           :placeholder="$t('dataExplorer.input')"
         ) 
     a-space
-      a-button(v-if="isChanged" @click="saveCurrentScript()") {{ $t('dataExplorer.saveScript') }}
-      a-button(v-if="isChanged" @click="saveScriptAndRun()") {{ $t('dataExplorer.saveAndRun') }}
-      a-button(v-if="ifCanRun" @click="run()")
+      a-button(v-if="ifCanRun" :disabled="isButtonDisabled" @click="runScript()")
         .mr-4
-          icon-loading(v-if="secondaryCodeRunning" spin)
+          icon-loading(v-if="scriptRunning" spin)
           icon-play-arrow(v-else)
         | {{ $t('dataExplorer.runScriptAction') }}
+      a-space(v-else)
+        a-button(:disabled="isButtonDisabled" @click="saveCurrentScript()")
+          .mr-4
+            icon-loading(v-if="scriptSaving" spin)
+            icon-play-arrow(v-else)
+          | {{ $t('dataExplorer.saveScript') }}
+        a-button(:disabled="isButtonDisabled" @click="saveScriptAndRun()")
+          .mr-4
+            icon-loading(v-if="scriptRunning" spin)
+            icon-play-arrow(v-else)
+          | {{ $t('dataExplorer.saveAndRun') }}
   CodeMirror(
     v-model="pythonCode"
     :style="style"
@@ -51,9 +60,19 @@ a-card.editor-card(:bordered="false")
 
   const route = useRoute()
   const dataBaseStore = useDataBaseStore()
-  const secondaryCodeRunning = ref(false)
-  const { pythonCode, cursorAt, lastSavedCode, isNewScript, scriptName, isChanged, selectAfterSave, createNewScript } =
-    usePythonCode()
+  const {
+    pythonCode,
+    cursorAt,
+    lastSavedCode,
+    isNewScript,
+    scriptName,
+    isChanged,
+    isButtonDisabled,
+    scriptSaving,
+    scriptRunning,
+    selectAfterSave,
+    createNewScript,
+  } = usePythonCode()
   const { save: saveScript } = usePythonCode()
   const { runQuery } = useQueryCode()
   const { getScriptsTable } = dataBaseStore
@@ -106,19 +125,20 @@ a-card.editor-card(:bordered="false")
   const extensions = [python(), oneDark]
   const saveCurrentScript = async () => {
     const routeName = route.name as string
-
     try {
+      scriptSaving.value = true
       await saveScript(scriptForm.value.scriptName, pythonCode.value.trim())
       await getScriptsTable()
       selectAfterSave(scriptForm.value.scriptName)
     } catch (error: any) {
       // error
     }
+    scriptSaving.value = false
   }
   const saveScriptAndRun = async () => {
     const routeName = route.name as string
     try {
-      secondaryCodeRunning.value = true
+      scriptRunning.value = true
       await saveScript(scriptForm.value.scriptName, pythonCode.value.trim())
       lastSavedCode.value = pythonCode.value
       await runQuery(scriptForm.value.scriptName, codeType)
@@ -127,14 +147,13 @@ a-card.editor-card(:bordered="false")
     } catch (error) {
       // error
     }
-    secondaryCodeRunning.value = false
+    scriptRunning.value = false
   }
 
-  const run = async () => {
+  const runScript = async () => {
     const routeName = route.name as string
-
-    secondaryCodeRunning.value = true
+    scriptRunning.value = true
     await runQuery(scriptForm.value.scriptName, codeType)
-    secondaryCodeRunning.value = false
+    scriptRunning.value = false
   }
 </script>
