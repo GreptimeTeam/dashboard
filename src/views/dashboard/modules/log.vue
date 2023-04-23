@@ -13,10 +13,9 @@ a-list-item.smaller-divider
     icon-check-circle(:style="{ color: 'var(--success-color)' }")
     div {{ log.startTime }}
     div(v-if="codeType === 'python'") {{ $t('dataExplorer.runScript', { name: log.codeInfo }) }}
-    div {{ $tc('dataExplorer.executed', log.result.length, { length: log.result.length }) }}
-    div {{ $t('dataExplorer.results') }}:
-      |
-      span(v-for="(oneResult, index) of log.result" :key="index") {{ oneResult.records >= 0 ? $tc('dataExplorer.select', oneResult.records, { records: oneResult.records }) : $tc('dataExplorer.affected', oneResult.affectedRows, { record: oneResult.affectedRows }) }};
+    div {{ $tc('dataExplorer.executed', log.results.length, { length: log.results.length }) }}
+    div {{ $t('dataExplorer.results') }}
+      span(v-for="(oneResult, index) of log.results" :key="index") {{ oneResult.records >= 0 ? $tc('dataExplorer.select', oneResult.records, { records: oneResult.records }) : $tc('dataExplorer.affected', oneResult.affectedRows, { record: oneResult.affectedRows }) }}
     div {{ $t('dataExplorer.executeTime', { time: log.execution_time_ms }) }}
     div {{ $t('dataExplorer.network', { time: log.networkTime - log.execution_time_ms }) }}
     div {{ $t('dataExplorer.total', { time: log.networkTime }) }}
