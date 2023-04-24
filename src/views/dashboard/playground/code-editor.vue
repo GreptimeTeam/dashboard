@@ -25,7 +25,6 @@
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
   import { sql } from '@codemirror/lang-sql'
-  import Log from '@/views/dashboard/modules/log.vue'
   // data
   const props = defineProps({
     disabled: {
@@ -59,7 +58,8 @@
   const runSqlCommand = async () => {
     isLoading.value = true
     const res = await runQuery(code.value.trim().replace(/\n/gi, ' '), 'sql', true)
-    if (res.record) {
+    // TODO: try something better
+    if (res.record?.records) {
       result.value = res.record
     } else {
       log.value = res.log
@@ -73,30 +73,37 @@
 
 <style lang="stylus" rel="stylesheet/stylus" scoped>
   .code-editor {
-    margin-bottom 20px
+    margin-bottom: 20px;
+
     .code {
-      display flex
-      width 100%
+      display: flex;
+      width: 100%;
+
       .operations {
-        display flex
-        flex-direction column
-        margin-right 10px
+        display: flex;
+        flex-direction: column;
+        margin-right: 10px;
+
         button {
-          margin-bottom 10px
+          margin-bottom: 10px;
         }
       }
+
       :deep(.cm-editor) {
-        width 100%
+        width: 100%;
       }
     }
+
     .arco-code {
-      margin-top 20px
+      margin-top: 20px;
     }
+
     .logs {
-      margin-top 20px
+      margin-top: 20px;
     }
+
     :deep(.arco-btn) {
-      min-width 80px
+      min-width: 80px;
     }
   }
 </style>
