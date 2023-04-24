@@ -44,6 +44,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
 
   const runCode = async (codeInfo: string, type: string, withoutSave = false) => {
     try {
+      // TODO: try something better
       let oneResult = {} as ResultType
       const res: HttpResponse = await API_MAP[type](codeInfo)
       Message.success({
@@ -90,6 +91,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
           Query: codeInfo,
         }
       }
+      // TODO: try something better
       return {
         log: oneLog,
         record: oneResult,
