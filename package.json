@@ -78,7 +78,7 @@
   "devDependencies": {
     "@babel/types": "^7.21.4",
     "@commitlint/cli": "^17.4.2",
-    "@commitlint/config-conventional": "^17.3.0",
+    "@commitlint/config-conventional": "^17.6.1",
     "@prettier/plugin-pug": "^2.4.1",
     "@types/lodash": "^4.14.191",
     "@types/mockjs": "^1.0.7",
