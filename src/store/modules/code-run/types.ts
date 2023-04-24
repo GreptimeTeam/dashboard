@@ -1,6 +1,16 @@
 export interface RecordsType {
   rows: any[]
-  schema: { column_schemas: any[] }
+  schema: { column_schemas: SchemaType[] }
+}
+
+export interface SchemaType {
+  name: string
+  data_type: string
+}
+
+export interface OutputType {
+  records?: RecordsType
+  affectedrows?: any
 }
 
 export interface ResultType {
@@ -10,7 +20,6 @@ export interface ResultType {
   type: string
 }
 
-export interface CodeRunResponseType {
-  log?: any
-  record?: any
+export interface DimensionType {
+  name: string
 }

@@ -1,12 +1,18 @@
 import axios from 'axios'
 import type { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { Message, Modal } from '@arco-design/web-vue'
+import { RecordsType } from '@/store/modules/code-run/types'
 
 const { CancelToken } = axios
+
+export interface OutputType {
+  affectedrows: number
+  records: RecordsType
+}
 export interface HttpResponse<T = unknown> {
   error?: string
   code: number
-  output?: Array<T>
+  output: Array<OutputType>
   execution_time_ms?: number
 }
 export interface Auth {

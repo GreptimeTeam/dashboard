@@ -1,7 +1,7 @@
-import { CodeRunResponseType } from '@/store/modules/code-run/types'
 import { Message } from '@arco-design/web-vue'
 import i18n from '@/locale'
 import { useCodeRunStore } from '@/store'
+import { ResultType } from '@/store/modules/code-run/types'
 import { stringType } from './types'
 
 const queryType = ref('sql')
@@ -50,7 +50,7 @@ export default function useQueryCode() {
     codeType.value = queryType.value
   }
 
-  const runQuery = async (code: any, type = queryType.value, withoutSave = false): Promise<CodeRunResponseType> => {
+  const runQuery = async (code: any, type = queryType.value, withoutSave = false) => {
     const { pushLog } = useLog()
     const { runCode } = useCodeRunStore()
     const res = await runCode(code, type, withoutSave)
@@ -62,7 +62,7 @@ export default function useQueryCode() {
   }
 
   const getResultsByType = (types: string[]) => {
-    return results.value.filter((item) => types.includes(item.type))
+    return results.value.filter((item: ResultType) => types.includes(item.type))
   }
 
   const queryCode = computed({
