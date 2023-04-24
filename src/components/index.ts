@@ -8,10 +8,13 @@ import {
   LegendComponent,
   DataZoomComponent,
   GraphicComponent,
+  DatasetComponent,
+  TransformComponent,
 } from 'echarts/components'
 import Chart from './chart/index.vue'
 import Breadcrumb from './breadcrumb/index.vue'
 import 'echarts/lib/component/dataset'
+import 'echarts/lib/component/transform'
 
 // Manually introduce ECharts modules to reduce packing size
 
@@ -25,6 +28,8 @@ use([
   LegendComponent,
   DataZoomComponent,
   GraphicComponent,
+  DatasetComponent,
+  TransformComponent,
 ])
 
 export default {
