@@ -67,7 +67,7 @@ a-card(v-if="hasChart" :bordered="false")
 
   const chartOptions = ref({})
   const chartForm = reactive({
-    chartType: 'line(smooth)',
+    chartType: 'line',
     ySelectedTypes: [''],
     groupByTypes: [],
   })
