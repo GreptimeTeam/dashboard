@@ -34,13 +34,12 @@ a-card(v-if="hasChart" :bordered="false")
           )
             a-option(v-for="item of groupByOptions" :key="item.index" :value="item.index") {{ item.name }}
     a-row
-      Chart.chart-area(height="330px" :option="option" :update-options="updateOptions")
+      Chart.chart-area(height="330px" :option="chartOptions" :update-options="updateOptions")
 </template>
 
 <script lang="ts" setup>
   import type { PropType } from 'vue'
-  import type { DimensionType, ResultType, SchemaType } from '@/store/modules/code-run/types'
-  import type { SeriesOption } from 'echarts'
+  import type { DimensionType, ResultType, SchemaType, SeriesType } from '@/store/modules/code-run/types'
   import useDataChart from '@/hooks/data-chart'
   import { chartTypeOptions, updateOptions, numberTypes, dateTypes } from '../../../config'
 
@@ -66,7 +65,7 @@ a-card(v-if="hasChart" :bordered="false")
     'update-at-scroll': true,
   }
 
-  const option = ref({})
+  const chartOptions = ref({})
   const chartForm = reactive({
     chartType: 'line(smooth)',
     ySelectedTypes: [''],
@@ -88,8 +87,29 @@ a-card(v-if="hasChart" :bordered="false")
       return map
     }, new Map<Q, T[]>())
 
-  const getSeriesAndLegendNames = ([chartType, ySelectedTypes]: any) => {
-    const series: Array<SeriesOption> = []
+  const generateSeries = (name: string, isGroup?: boolean, datasetIndex?: number) => {
+    const encode = {
+      x: props.data.dimensionsAndXName[1],
+      y: isGroup ? chartForm.ySelectedTypes[0] : name,
+    }
+    const series: SeriesType = {
+      name,
+      type: chartForm.chartType,
+      smooth: false,
+      encode,
+      symbolSize: 4,
+    }
+    if (isGroup) series.datasetIndex = datasetIndex
+    if (chartForm.chartType === 'line(smooth)') {
+      series.type = 'line'
+      series.smooth = true
+      series.symbolSize = 0
+    }
+    return series
+  }
+
+  const getChartConfig = (yAxisTypes: string[]) => {
+    const series: Array<SeriesType> = []
     const legendNames: Array<string> = []
     const dataset: Array<{ dimensions: DimensionType[]; source: [][] }> = []
     if (chartForm.groupByTypes.length === 0) {
@@ -97,24 +117,9 @@ a-card(v-if="hasChart" :bordered="false")
         dimensions: props.data.dimensionsAndXName[0],
         source: props.data.records.rows,
       })
-      ySelectedTypes.forEach((item: string) => {
-        const oneSeries = {
-          name: item,
-          type: chartType,
-          smooth: false,
-          encode: {
-            x: props.data.dimensionsAndXName[1],
-            y: item,
-          },
-          symbolSize: 4,
-        }
-        if (chartType === 'line(smooth)') {
-          oneSeries.type = 'line'
-          oneSeries.smooth = true
-          oneSeries.symbolSize = 0
-        }
-        series.push(oneSeries)
-        legendNames.push(item)
+      yAxisTypes.forEach((yAxisName: string) => {
+        series.push(generateSeries(yAxisName))
+        legendNames.push(yAxisName)
       })
     } else {
       const dataWithGroup = groupByToMap(props.data.records.rows, (value: any) => {
@@ -126,23 +131,7 @@ a-card(v-if="hasChart" :bordered="false")
       })
       let datasetIndex = -1
       dataWithGroup.forEach((groupResults: [][], key: string) => {
-        const oneSeries = {
-          name: key,
-          type: chartType,
-          smooth: false,
-          encode: {
-            x: props.data.dimensionsAndXName[1],
-            y: chartForm.ySelectedTypes[0],
-          },
-          symbolSize: 4,
-          datasetIndex: (datasetIndex += 1),
-        }
-        if (chartType === 'line(smooth)') {
-          oneSeries.type = 'line'
-          oneSeries.smooth = true
-          oneSeries.symbolSize = 0
-        }
-        series.push(oneSeries)
+        series.push(generateSeries(key, true, (datasetIndex += 1)))
         legendNames.push(key)
         dataset.push({
           dimensions: props.data.dimensionsAndXName[0],
@@ -153,8 +142,8 @@ a-card(v-if="hasChart" :bordered="false")
     return { series, legendNames, dataset }
   }
 
-  const makeOption = (item: any) => {
-    const { series, legendNames, dataset } = getSeriesAndLegendNames(item)
+  const makeOptions = () => {
+    const { series, legendNames, dataset } = getChartConfig(chartForm.ySelectedTypes)
     return {
       legend: {
         data: legendNames,
@@ -189,7 +178,7 @@ a-card(v-if="hasChart" :bordered="false")
   })
 
   const drawChart = () => {
-    option.value = makeOption([chartForm.chartType, chartForm.ySelectedTypes])
+    chartOptions.value = makeOptions()
   }
 
   defineExpose({
