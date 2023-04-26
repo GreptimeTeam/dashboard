@@ -12,7 +12,7 @@ export default {
   'dataExplorer.results': 'Results: ',
   'dataExplorer.chart': 'Chart',
   'dataExplorer.chartType': 'Chart Type',
-  'dataExplorer.yType': 'Y Types',
+  'dataExplorer.yType': 'Y-Axis Types',
   'dataExplorer.select': 'Select {records} row;  | Select {records} rows; ',
   'dataExplorer.selectY': 'Please select...',
   'dataExplorer.draw': 'Draw',

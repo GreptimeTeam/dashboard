@@ -1,5 +1,5 @@
 export interface RecordsType {
-  rows: any[]
+  rows: [][]
   schema: { column_schemas: SchemaType[] }
 }
 
@@ -15,7 +15,7 @@ export interface OutputType {
 
 export interface ResultType {
   records: RecordsType
-  dimensionsAndXName: any[]
+  dimensionsAndXName: [DimensionType[], string]
   key: number
   type: string
 }
