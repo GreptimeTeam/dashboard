@@ -19,7 +19,7 @@ The instance is valid within **1 hour** once initiated, and you will need to cre
 ## Create a Time-Series Table
 
 Let's start the journey by creating a simple `system_metrics` table first. Note that we pre-defined `host`
-and `idc` as the primary keys; `ts` and time index, both are important to know
+and `idc` as the primary keys; `ts` as time index, both are important to know
 in GreptimeDB. Click `Run` on the upper left in the panel below to create the table:
 
 
