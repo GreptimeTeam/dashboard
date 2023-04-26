@@ -28,7 +28,7 @@ export interface SeriesType {
   name: string
   type: string
   smooth: boolean
-  encode: {}
+  encode: { x: string; y: string; label?: string[] }
   symbolSize: number
   datasetIndex?: number
 }

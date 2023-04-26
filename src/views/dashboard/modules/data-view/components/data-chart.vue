@@ -90,18 +90,22 @@ a-card(v-if="hasChart" :bordered="false")
     }, new Map<Q, T[]>())
 
   const generateSeries = (name: string, isGroup?: boolean, datasetIndex?: number) => {
-    const encode = {
-      x: props.data.dimensionsAndXName.xAxis,
-      y: isGroup ? chartForm.ySelectedTypes[0] : name,
-    }
+    // TODO: not sure this `isGroup` is the best way
     const series: SeriesType = {
       name,
       type: chartForm.chartType,
       smooth: false,
-      encode,
+      encode: {
+        x: props.data.dimensionsAndXName.xAxis,
+        y: name,
+      },
       symbolSize: 4,
     }
-    if (isGroup) series.datasetIndex = datasetIndex
+    if (isGroup) {
+      series.datasetIndex = datasetIndex
+      series.encode.label = [name, chartForm.ySelectedTypes[0]]
+      series.encode.y = chartForm.ySelectedTypes[0]
+    }
     if (chartForm.chartType === 'line(smooth)') {
       series.type = 'line'
       series.smooth = true
