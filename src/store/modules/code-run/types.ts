@@ -15,7 +15,7 @@ export interface OutputType {
 
 export interface ResultType {
   records: RecordsType
-  dimensionsAndXName: [DimensionType[], string]
+  dimensionsAndXName: { dimensions: DimensionType[]; xAxis: string }
   key: number
   type: string
 }
