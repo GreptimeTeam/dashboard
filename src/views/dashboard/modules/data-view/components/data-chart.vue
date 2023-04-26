@@ -18,19 +18,20 @@ a-card(v-if="hasChart" :bordered="false")
             )
         a-form-item.select-y(:label="$t('dataExplorer.yType')")
           a-select(
-            v-model="chartForm.ySelectedTypes"
+            v-model="chartForm.selectedYTypes"
             multiple
             :placeholder="$t('dataExplorer.selectY')"
             :allow-search="false"
             :trigger-props="triggerProps"
           )
             a-option(v-for="item of yOptions" :key="item.value" :value="item.value") {{ item.value }}
-        a-form-item.select-y(label="Group By")
+        a-form-item.select-y(:label="$t('dataExplorer.groupBy')")
           a-select(
             v-model="chartForm.groupBySelectedTypes"
             multiple
             allow-clear
-            :disabled="chartForm.ySelectedTypes.length === 0"
+            :disabled="isGroupByDisabled"
+            :trigger-props="triggerProps"
           )
             a-option(v-for="item of groupByOptions" :key="item.index" :value="item.index") {{ item.name }}
     a-row
@@ -61,19 +62,21 @@ a-card(v-if="hasChart" :bordered="false")
     },
   })
 
+  const groupBySelectedTypes: Array<number> = []
+  const isGroupByDisabled = ref(false)
+  const chartOptions = ref({})
+  const chartForm = reactive({
+    chartType: 'line',
+    selectedYTypes: [''],
+    groupBySelectedTypes,
+  })
+  const hasTimestamp = props.data.dimensionsAndXName.xAxis !== ''
+  const schemaInRecords = ref(props.data.records.schema)
+
   // TODO: To add this props in every select should not be the best option.
   const triggerProps = {
     'update-at-scroll': true,
   }
-
-  const chartOptions = ref({})
-  const chartForm = reactive({
-    chartType: 'line',
-    ySelectedTypes: [''],
-    groupBySelectedTypes: [],
-  })
-  const hasTimestamp = props.data.dimensionsAndXName.xAxis !== ''
-  const schemaInRecords = computed(() => props.data.records.schema)
 
   // TODO: Add support for more data types not just numbers.
   const yOptions = computed(() => {
@@ -93,7 +96,7 @@ a-card(v-if="hasChart" :bordered="false")
       }))
       .filter(
         (item: SchemaType) =>
-          !dateTypes.find((type: string) => type === item.data_type) && item.name !== chartForm.ySelectedTypes[0]
+          !dateTypes.find((type: string) => type === item.data_type) && item.name !== chartForm.selectedYTypes[0]
       )
   })
 
@@ -128,8 +131,8 @@ a-card(v-if="hasChart" :bordered="false")
     }
     if (isGroup) {
       series.datasetIndex = datasetIndex
-      series.encode.label = [name, chartForm.ySelectedTypes[0]]
-      series.encode.y = chartForm.ySelectedTypes[0]
+      series.encode.label = [name, chartForm.selectedYTypes[0]]
+      series.encode.y = chartForm.selectedYTypes[0]
     }
     if (chartForm.chartType === 'line(smooth)') {
       series.type = 'line'
@@ -174,7 +177,7 @@ a-card(v-if="hasChart" :bordered="false")
   }
 
   const makeOptions = () => {
-    const { series, legendNames, dataset } = getChartConfig(chartForm.ySelectedTypes)
+    const { series, legendNames, dataset } = getChartConfig(chartForm.selectedYTypes)
     return {
       legend: {
         data: legendNames,
@@ -205,10 +208,19 @@ a-card(v-if="hasChart" :bordered="false")
 
   // TODO: Might need to change this
   onMounted(() => {
-    if (hasChart.value) chartForm.ySelectedTypes = [yOptions.value[0].value]
+    if (hasChart.value) chartForm.selectedYTypes = [yOptions.value[0].value]
   })
 
   const drawChart = () => {
     chartOptions.value = makeOptions()
   }
+
+  watchEffect(() => {
+    if (chartForm.selectedYTypes.length !== 1) {
+      isGroupByDisabled.value = true
+      chartForm.groupBySelectedTypes = []
+    } else {
+      isGroupByDisabled.value = false
+    }
+  })
 </script>
