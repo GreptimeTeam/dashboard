@@ -1,6 +1,6 @@
 <template lang="pug">
 a-card(v-if="hasChart" :bordered="false")
-  template(#title)
+  template(v-if="hasHeader" #title)
     a-space(size="mini")
       svg.icon-18
         use(href="#chart")
@@ -30,18 +30,22 @@ a-card(v-if="hasChart" :bordered="false")
 </template>
 
 <script lang="ts" setup>
+  import useDataChart from '@/hooks/data-chart'
+  import type { ResultType } from '@/store/modules/code-run/types'
   import { chartTypeOptions, updateOptions, numberTypes } from '../../../config'
 
-  const props = defineProps({
-    data: {
-      type: Object,
-      default: () => ({}),
-    },
-    hasHeader: {
-      type: Boolean,
-      default: true,
-    },
-  })
+  const props = withDefaults(
+    defineProps<{
+      data: ResultType
+      hasHeader?: boolean
+    }>(),
+    {
+      data: () => {
+        return {} as ResultType
+      },
+      hasHeader: true,
+    }
+  )
 
   // TODO: To add this props in every select should not be the best option.
   const triggerProps = {
@@ -53,22 +57,8 @@ a-card(v-if="hasChart" :bordered="false")
     chartType: 'line(smooth)',
     ySelectedTypes: [''],
   })
-  const hasTimestamp = props.data.dimensionsAndXName[1] !== ''
-  const schemaInRecords = computed(() => props.data.records.schema)
 
-  // TODO: Add support for more data types not just numbers.
-  const yOptions = computed(() => {
-    if (!schemaInRecords.value || !hasTimestamp) return []
-    return schemaInRecords.value.column_schemas
-      .filter((item: any) => numberTypes.find((type: string) => type === item.data_type))
-      .map((item: any) => ({
-        value: item.name,
-      }))
-  })
-
-  const hasChart = computed(() => {
-    return yOptions.value.length > 0
-  })
+  const { yOptions, hasChart } = useDataChart(props.data)
 
   const getSeriesAndLegendNames = ([chartType, ySelectedTypes]: any) => {
     const series: any = []
@@ -79,7 +69,7 @@ a-card(v-if="hasChart" :bordered="false")
         type: chartType,
         smooth: false,
         encode: {
-          x: props.data.dimensionsAndXName[1],
+          x: props?.data?.dimensionsAndXName[1],
           y: item,
         },
         symbolSize: 4,
@@ -136,4 +126,8 @@ a-card(v-if="hasChart" :bordered="false")
   const drawChart = () => {
     option.value = makeOption([chartForm.chartType, chartForm.ySelectedTypes])
   }
+
+  defineExpose({
+    hasChart,
+  })
 </script>

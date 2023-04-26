@@ -33,17 +33,20 @@ a-card(:bordered="false")
 
 <script lang="ts" setup>
   import { dateTypes } from '@/views/dashboard/config'
+  import type { ResultType } from '@/store/modules/code-run/types'
 
-  const props = defineProps({
-    data: {
-      type: Object,
-      default: () => ({}),
-    },
-    hasHeader: {
-      type: Boolean,
-      default: true,
-    },
-  })
+  const props = withDefaults(
+    defineProps<{
+      data: ResultType
+      hasHeader?: boolean
+    }>(),
+    {
+      data: () => {
+        return {} as ResultType
+      },
+      hasHeader: true,
+    }
+  )
 
   const pagination = {
     'total': props.data?.records.rows.length,
@@ -77,23 +80,21 @@ a-card(:bordered="false")
         }
       })
       .sort((a: any, b: any) => {
-        return timeColumnNames.value.includes(b.title) - timeColumnNames.value.includes(a.title)
+        return +timeColumnNames.value.includes(b.title) - +timeColumnNames.value.includes(a.title)
       })
   })
 
   // use ref to make it mutable
-  const gridData = ref(
-    (() => {
-      return props.data.records.rows.map((row: any) => {
-        const tempRow: any = {}
-        row.forEach((item: any, index: number) => {
-          const columnName = columnNameToDataIndex(props.data.records.schema.column_schemas[index].name)
-          tempRow[columnName] = item
-        })
-        return tempRow
+  const gridData = computed(() => {
+    return props.data.records.rows.map((row: any) => {
+      const tempRow: any = {}
+      row.forEach((item: any, index: number) => {
+        const columnName = columnNameToDataIndex(props.data.records.schema.column_schemas[index].name)
+        tempRow[columnName] = item
       })
-    })()
-  )
+      return tempRow
+    })
+  })
 
   /**
    * use an extra state to store which time column is formatted

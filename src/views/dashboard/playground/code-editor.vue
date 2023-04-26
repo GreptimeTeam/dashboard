@@ -2,14 +2,14 @@
 .code-editor
   .code
     .operations(v-if="!disabled")
-      a-button(:loading="isLoading" @click="runSqlCommand") {{ $t('playground.run') }}
-      a-button(@click="reset") {{ $t('playground.reset') }}
+      a-button(:disabled="runDisabled" :loading="isLoading" @click="runSqlCommand") {{ $t('playground.run') }}
+      a-button(v-if="showReset" @click="reset") {{ $t('playground.reset') }}
     CodeMirror(v-model="code" :extensions="extensions" :disabled="disabled")
-  .results(v-if="result")
+  .results(v-if="hasGrid || hasChart")
     a-tabs.playground-tabs(default-active-key="1")
-      a-tab-pane(key="1" title="Table")
+      a-tab-pane(v-if="hasGrid" key="1" title="Table")
         DataGrid(:data="result" :hasHeader="false")
-      a-tab-pane(key="2" title="Chart")
+      a-tab-pane(v-if="hasChart" key="2" title="Chart")
         DataChart(:data="result" :hasHeader="false")
   .logs(v-if="log")
     a-list.log-list(
@@ -25,6 +25,7 @@
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
   import { sql } from '@codemirror/lang-sql'
+  import useDataChart from '@/hooks/data-chart'
   // data
   const props = defineProps({
     disabled: {
@@ -36,6 +37,8 @@
   const { runQuery } = useQueryCode()
   const slots = useSlots()
   const appStore = useAppStore()
+  const hasChart = ref()
+  const hasGrid = ref()
   function codeFormat(code: any) {
     if (!code) return ''
     code = code?.[0]?.children[0]?.children
@@ -54,19 +57,30 @@
     code.value = defaultCode
     result.value = null
     log.value = null
+    hasChart.value = false
+    hasGrid.value = false
   }
   const runSqlCommand = async () => {
     isLoading.value = true
     const res = await runQuery(code.value.trim().replace(/\n/gi, ' '), 'sql', true)
+    result.value = res.record
+
+    const { hasChart: _hasChart, hasGrid: _hasGrid } = useDataChart(result.value)
     // TODO: try something better
-    if (res.record?.records) {
-      result.value = res.record
-    } else {
-      log.value = res.log
-    }
+    log.value = res.log
+    hasChart.value = res.record && _hasChart.value
+    hasGrid.value = _hasGrid.value
     isLoading.value = false
     // todo: refresh tables data and when
   }
+
+  const showReset = computed(() => {
+    return code.value !== defaultCode
+  })
+
+  const runDisabled = computed(() => {
+    return code.value.trim() === ''
+  })
   // lifecycle
   const extensions = [sql(), oneDark]
 </script>
