@@ -39,18 +39,21 @@ a-card(v-if="hasChart" :bordered="false")
 
 <script lang="ts" setup>
   import type { DimensionType, ResultType, SchemaType, SeriesType } from '@/store/modules/code-run/types'
+  import { PropType } from 'vue'
   import { chartTypeOptions, updateOptions, numberTypes, dateTypes } from '../../../config'
 
   const props = defineProps({
     data: {
-      type: Object,
-      default: () =>
-        ({
-          records: { rows: [], schema: { column_schemas: [] } },
-          dimensionsAndXName: [[], ''],
-          key: -1,
-          type: '',
-        } as ResultType),
+      type: Object as PropType<ResultType>,
+      default: () => ({
+        records: { rows: [], schema: { column_schemas: [] } },
+        dimensionsAndXName: {
+          dimensions: [],
+          xAxis: '',
+        },
+        key: -1,
+        type: '',
+      }),
     },
     hasHeader: {
       type: Boolean,
@@ -69,7 +72,7 @@ a-card(v-if="hasChart" :bordered="false")
     ySelectedTypes: [''],
     groupByTypes: [],
   })
-  const hasTimestamp = props.data.dimensionsAndXName[1] !== ''
+  const hasTimestamp = props.data.dimensionsAndXName.xAxis !== ''
   const schemaInRecords = computed(() => props.data.records.schema)
 
   // TODO: Add support for more data types not just numbers.
@@ -113,7 +116,7 @@ a-card(v-if="hasChart" :bordered="false")
 
   const generateSeries = (name: string, isGroup?: boolean, datasetIndex?: number) => {
     const encode = {
-      x: props.data.dimensionsAndXName[1],
+      x: props.data.dimensionsAndXName.xAxis,
       y: isGroup ? chartForm.ySelectedTypes[0] : name,
     }
     const series: SeriesType = {
@@ -138,7 +141,7 @@ a-card(v-if="hasChart" :bordered="false")
     const dataset: Array<{ dimensions: DimensionType[]; source: [][] }> = []
     if (chartForm.groupByTypes.length === 0) {
       dataset.push({
-        dimensions: props.data.dimensionsAndXName[0],
+        dimensions: props.data.dimensionsAndXName.dimensions,
         source: props.data.records.rows,
       })
       yAxisTypes.forEach((yAxisName: string) => {
@@ -158,7 +161,7 @@ a-card(v-if="hasChart" :bordered="false")
         series.push(generateSeries(key, true, (datasetIndex += 1)))
         legendNames.push(key)
         dataset.push({
-          dimensions: props.data.dimensionsAndXName[0],
+          dimensions: props.data.dimensionsAndXName.dimensions,
           source: groupResults,
         })
       })
