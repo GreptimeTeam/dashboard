@@ -27,7 +27,7 @@ a-card(v-if="hasChart" :bordered="false")
             a-option(v-for="item of yOptions" :key="item.value" :value="item.value") {{ item.value }}
         a-form-item.select-y(label="Group By")
           a-select(
-            v-model="chartForm.groupByTypes"
+            v-model="chartForm.groupBySelectedTypes"
             multiple
             allow-clear
             :disabled="chartForm.ySelectedTypes.length === 0"
@@ -114,7 +114,7 @@ a-card(v-if="hasChart" :bordered="false")
     const series: Array<SeriesType> = []
     const legendNames: Array<string> = []
     const dataset: Array<{ dimensions: DimensionType[]; source: [][] }> = []
-    if (chartForm.groupByTypes.length === 0) {
+    if (chartForm.groupBySelectedTypes.length === 0) {
       dataset.push({
         dimensions: props.data.dimensionsAndXName.dimensions,
         source: props.data.records.rows,
@@ -126,8 +126,8 @@ a-card(v-if="hasChart" :bordered="false")
     } else {
       const dataWithGroup = groupByToMap(props.data.records.rows, (value: any) => {
         let string = ``
-        chartForm.groupByTypes.forEach((index: number) => {
-          string = index === 0 ? `${value[index]}` : `${string}, ${value[index]}`
+        chartForm.groupBySelectedTypes.forEach((typeIndex: number, index: number) => {
+          string = index === 0 ? `${value[typeIndex]}` : `${string}, ${value[typeIndex]}`
         })
         return string
       })
