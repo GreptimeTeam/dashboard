@@ -23,3 +23,12 @@ export interface ResultType {
 export interface DimensionType {
   name: string
 }
+
+export interface SeriesType {
+  name: string
+  type: string
+  smooth: boolean
+  encode: {}
+  symbolSize: number
+  datasetIndex?: number
+}
