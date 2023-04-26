@@ -7,6 +7,7 @@
     "createApp": true,
     "createPinia": true,
     "customRef": true,
+    "dataChart": true,
     "defineAsyncComponent": true,
     "defineComponent": true,
     "defineStore": true,

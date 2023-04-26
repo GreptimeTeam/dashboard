@@ -30,6 +30,7 @@ a-card(v-if="hasChart" :bordered="false")
 </template>
 
 <script lang="ts" setup>
+  import useDataChart from '@/hooks/data-chart'
   import { chartTypeOptions, updateOptions, numberTypes } from '../../../config'
 
   const props = defineProps({
@@ -53,22 +54,8 @@ a-card(v-if="hasChart" :bordered="false")
     chartType: 'line(smooth)',
     ySelectedTypes: [''],
   })
-  const hasTimestamp = props.data.dimensionsAndXName[1] !== ''
-  const schemaInRecords = computed(() => props.data.records.schema)
 
-  // TODO: Add support for more data types not just numbers.
-  const yOptions = computed(() => {
-    if (!schemaInRecords.value || !hasTimestamp) return []
-    return schemaInRecords.value.column_schemas
-      .filter((item: any) => numberTypes.find((type: string) => type === item.data_type))
-      .map((item: any) => ({
-        value: item.name,
-      }))
-  })
-
-  const hasChart = computed(() => {
-    return yOptions.value.length > 0
-  })
+  const { yOptions, hasChart } = useDataChart(props.data)
 
   const getSeriesAndLegendNames = ([chartType, ySelectedTypes]: any) => {
     const series: any = []
@@ -136,4 +123,8 @@ a-card(v-if="hasChart" :bordered="false")
   const drawChart = () => {
     option.value = makeOption([chartForm.chartType, chartForm.ySelectedTypes])
   }
+
+  defineExpose({
+    hasChart,
+  })
 </script>

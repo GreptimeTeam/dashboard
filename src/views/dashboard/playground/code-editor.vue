@@ -9,7 +9,7 @@
     a-tabs.playground-tabs(default-active-key="1")
       a-tab-pane(key="1" title="Table")
         DataGrid(:data="result" :hasHeader="false")
-      a-tab-pane(key="2" title="Chart")
+      a-tab-pane(v-if="hasChart" key="2" title="Chart")
         DataChart(:data="result" :hasHeader="false")
   .logs(v-if="log")
     a-list.log-list(
@@ -25,6 +25,7 @@
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
   import { sql } from '@codemirror/lang-sql'
+  import useDataChart from '@/hooks/data-chart'
   // data
   const props = defineProps({
     disabled: {
@@ -36,6 +37,7 @@
   const { runQuery } = useQueryCode()
   const slots = useSlots()
   const appStore = useAppStore()
+  const hasChart = ref()
   function codeFormat(code: any) {
     if (!code) return ''
     code = code?.[0]?.children[0]?.children
@@ -61,6 +63,7 @@
     // TODO: try something better
     if (res.record?.records) {
       result.value = res.record
+      hasChart.value = useDataChart(result.value).hasChart.value
     } else {
       log.value = res.log
     }
