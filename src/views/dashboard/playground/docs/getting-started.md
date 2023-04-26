@@ -109,7 +109,7 @@ summary rows. The code below groups average memory usage by `idc`:
 SELECT idc, avg(memory_util) FROM system_metrics GROUP BY idc;
 ```
 
-There are more aggregate function available, change `avg` to any of these below
+There are more aggregate functions available, change `avg` to any of these below
 and try out:
 
 `max` / `min` / `sum` / `mean`
