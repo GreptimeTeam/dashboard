@@ -48,8 +48,6 @@ a-card(:bordered="false")
     }
   )
 
-  console.log(`data:`, { ...props })
-
   const pagination = {
     'total': props.data?.records.rows.length,
     'show-page-size': true,
