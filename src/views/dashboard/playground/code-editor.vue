@@ -7,7 +7,7 @@
     CodeMirror(v-model="code" :extensions="extensions" :disabled="disabled")
   .results(v-if="result")
     a-tabs.playground-tabs(default-active-key="1")
-      a-tab-pane(key="1" title="Table")
+      a-tab-pane(v-if="hasGrid" key="1" title="Table")
         DataGrid(:data="result" :hasHeader="false")
       a-tab-pane(v-if="hasChart" key="2" title="Chart")
         DataChart(:data="result" :hasHeader="false")
@@ -38,6 +38,7 @@
   const slots = useSlots()
   const appStore = useAppStore()
   const hasChart = ref()
+  const hasGrid = ref()
   function codeFormat(code: any) {
     if (!code) return ''
     code = code?.[0]?.children[0]?.children
@@ -60,13 +61,12 @@
   const runSqlCommand = async () => {
     isLoading.value = true
     const res = await runQuery(code.value.trim().replace(/\n/gi, ' '), 'sql', true)
+    const { hasChart: _hasChart, hasGrid: _hasGrid } = useDataChart(result.value)
     // TODO: try something better
-    if (res.record?.records) {
-      result.value = res.record
-      hasChart.value = useDataChart(result.value).hasChart.value
-    } else {
-      log.value = res.log
-    }
+    result.value = res.record
+    log.value = res.log
+    hasChart.value = res.record && _hasChart.value
+    hasGrid.value = _hasGrid.value
     isLoading.value = false
     // todo: refresh tables data and when
   }
