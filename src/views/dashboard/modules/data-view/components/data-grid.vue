@@ -33,17 +33,20 @@ a-card(:bordered="false")
 
 <script lang="ts" setup>
   import { dateTypes } from '@/views/dashboard/config'
+  import type { ResultType } from '@/store/modules/code-run/types'
 
-  const props = defineProps({
-    data: {
-      type: Object,
-      default: () => ({}),
-    },
-    hasHeader: {
-      type: Boolean,
-      default: true,
-    },
-  })
+  const props = withDefaults(
+    defineProps<{
+      data: ResultType
+      hasHeader?: boolean
+    }>(),
+    {
+      data: () => {
+        return {} as ResultType
+      },
+      hasHeader: true,
+    }
+  )
 
   const pagination = {
     'total': props.data?.records.rows.length,

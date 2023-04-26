@@ -31,18 +31,21 @@ a-card(v-if="hasChart" :bordered="false")
 
 <script lang="ts" setup>
   import useDataChart from '@/hooks/data-chart'
+  import type { ResultType } from '@/store/modules/code-run/types'
   import { chartTypeOptions, updateOptions, numberTypes } from '../../../config'
 
-  const props = defineProps({
-    data: {
-      type: Object,
-      default: () => ({}),
-    },
-    hasHeader: {
-      type: Boolean,
-      default: true,
-    },
-  })
+  const props = withDefaults(
+    defineProps<{
+      data: ResultType
+      hasHeader?: boolean
+    }>(),
+    {
+      data: () => {
+        return {} as ResultType
+      },
+      hasHeader: true,
+    }
+  )
 
   // TODO: To add this props in every select should not be the best option.
   const triggerProps = {
@@ -66,7 +69,7 @@ a-card(v-if="hasChart" :bordered="false")
         type: chartType,
         smooth: false,
         encode: {
-          x: props.data.dimensionsAndXName[1],
+          x: props?.data?.dimensionsAndXName[1],
           y: item,
         },
         symbolSize: 4,

@@ -2,8 +2,8 @@
 .code-editor
   .code
     .operations(v-if="!disabled")
-      a-button(:loading="isLoading" @click="runSqlCommand") {{ $t('playground.run') }}
-      a-button(@click="reset") {{ $t('playground.reset') }}
+      a-button(:disabled="runDisabled" :loading="isLoading" @click="runSqlCommand") {{ $t('playground.run') }}
+      a-button(v-if="showReset" @click="reset") {{ $t('playground.reset') }}
     CodeMirror(v-model="code" :extensions="extensions" :disabled="disabled")
   .results(v-if="hasGrid || hasChart")
     a-tabs.playground-tabs(default-active-key="1")
@@ -57,19 +57,30 @@
     code.value = defaultCode
     result.value = null
     log.value = null
+    hasChart.value = false
+    hasGrid.value = false
   }
   const runSqlCommand = async () => {
     isLoading.value = true
     const res = await runQuery(code.value.trim().replace(/\n/gi, ' '), 'sql', true)
+    result.value = res.record
+
     const { hasChart: _hasChart, hasGrid: _hasGrid } = useDataChart(result.value)
     // TODO: try something better
-    result.value = res.record
     log.value = res.log
     hasChart.value = res.record && _hasChart.value
     hasGrid.value = _hasGrid.value
     isLoading.value = false
     // todo: refresh tables data and when
   }
+
+  const showReset = computed(() => {
+    return code.value !== defaultCode
+  })
+
+  const runDisabled = computed(() => {
+    return code.value.trim() === ''
+  })
   // lifecycle
   const extensions = [sql(), oneDark]
 </script>

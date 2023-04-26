@@ -1,11 +1,10 @@
-export interface RecordsType {
-  rows: any[]
-  schema: { column_schemas: SchemaType[] }
-}
-
 export interface SchemaType {
   name: string
   data_type: string
+}
+export interface RecordsType {
+  rows: any[]
+  schema: { column_schemas: SchemaType[] }
 }
 
 export interface OutputType {
