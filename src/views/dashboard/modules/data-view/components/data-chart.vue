@@ -1,6 +1,6 @@
 <template lang="pug">
 a-card(v-if="hasChart" :bordered="false")
-  template(#title)
+  template(v-if="hasHeader" #title)
     a-space(size="mini")
       svg.icon-18
         use(href="#chart")
