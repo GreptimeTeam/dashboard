@@ -5,7 +5,7 @@
       a-button(:loading="isLoading" @click="runSqlCommand") {{ $t('playground.run') }}
       a-button(@click="reset") {{ $t('playground.reset') }}
     CodeMirror(v-model="code" :extensions="extensions" :disabled="disabled")
-  .results(v-if="result")
+  .results(v-if="hasGrid || hasChart")
     a-tabs.playground-tabs(default-active-key="1")
       a-tab-pane(v-if="hasGrid" key="1" title="Table")
         DataGrid(:data="result" :hasHeader="false")
