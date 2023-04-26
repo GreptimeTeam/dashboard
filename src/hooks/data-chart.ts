@@ -2,7 +2,7 @@ import { ResultType, SchemaType } from '../store/modules/code-run/types'
 import { dateTypes, numberTypes } from '../views/dashboard/config'
 
 export default function useDataChart(data: ResultType, yAxisName: string) {
-  const hasTimestamp = data.dimensionsAndXName[1] !== ''
+  const hasTimestamp = data.dimensionsAndXName.xAxis !== ''
   const schemaInRecords = data.records.schema
 
   // TODO: Add support for more data types not just numbers.
