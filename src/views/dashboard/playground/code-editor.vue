@@ -5,9 +5,9 @@
       a-button(:disabled="runDisabled" :loading="isLoading" @click="runSqlCommand") {{ $t('playground.run') }}
       a-button(v-if="showReset" @click="reset") {{ $t('playground.reset') }}
     CodeMirror(v-model="code" :extensions="extensions" :disabled="disabled")
-  .results(v-if="hasGrid || hasChart")
+  .results(v-if="hasRecords")
     a-tabs.playground-tabs(default-active-key="1")
-      a-tab-pane(v-if="hasGrid" key="1" title="Table")
+      a-tab-pane(key="1" title="Table")
         DataGrid(:data="result" :hasHeader="false")
       a-tab-pane(v-if="hasChart" key="2" title="Chart")
         DataChart(:data="result" :hasHeader="false")
@@ -26,6 +26,7 @@
   import { oneDark } from '@codemirror/theme-one-dark'
   import { sql } from '@codemirror/lang-sql'
   import useDataChart from '@/hooks/data-chart'
+  import type { ResultType } from '@/store/modules/code-run/types'
   // data
   const props = defineProps({
     disabled: {
@@ -38,7 +39,8 @@
   const slots = useSlots()
   const appStore = useAppStore()
   const hasChart = ref()
-  const hasGrid = ref()
+  const hasRecords = ref(false)
+
   function codeFormat(code: any) {
     if (!code) return ''
     code = code?.[0]?.children[0]?.children
@@ -50,26 +52,42 @@
   }
   const defaultCode = codeFormat(slots?.default?.())
   const code = ref(defaultCode)
-  const result = ref()
+  const result = ref({
+    records: { rows: [], schema: { column_schemas: [] } },
+    dimensionsAndXName: {
+      dimensions: [],
+      xAxis: '',
+    },
+    key: -1,
+    type: '',
+  } as ResultType)
   const log = ref()
-  // methods
+  // TODO: better reset
   const reset = () => {
     code.value = defaultCode
-    result.value = null
+    result.value = {
+      records: { rows: [], schema: { column_schemas: [] } },
+      dimensionsAndXName: {
+        dimensions: [],
+        xAxis: '',
+      },
+      key: -1,
+      type: '',
+    }
     log.value = null
     hasChart.value = false
-    hasGrid.value = false
+    hasRecords.value = false
   }
   const runSqlCommand = async () => {
     isLoading.value = true
     const res = await runQuery(code.value.trim().replace(/\n/gi, ' '), 'sql', true)
-    result.value = res.record
-
-    const { hasChart: _hasChart, hasGrid: _hasGrid } = useDataChart(result.value)
+    if (res.lastResult?.records) {
+      hasRecords.value = true
+      result.value = res.lastResult
+      hasChart.value = useDataChart(result.value).hasChart.value
+    }
     // TODO: try something better
     log.value = res.log
-    hasChart.value = res.record && _hasChart.value
-    hasGrid.value = _hasGrid.value
     isLoading.value = false
     // todo: refresh tables data and when
   }

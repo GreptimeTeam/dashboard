@@ -18,22 +18,22 @@ const useCodeRunStore = defineStore('codeRun', () => {
 
   // TODO: Add all the types we decide instead of ECharts if needed in the future.
   const getDimensionsAndXName = (schemas: SchemaType[]) => {
-    const tempDimensions: Array<DimensionType> = []
-    let xAxisName = ''
+    const dimensions: Array<DimensionType> = []
+    let xAxis = ''
     let findTimeFlag = false
     schemas.forEach((schema: SchemaType) => {
       if (!findTimeFlag && dateTypes.find((type: string) => type === schema.data_type)) {
         findTimeFlag = true
-        xAxisName = schema.name
+        xAxis = schema.name
       }
       const oneDimension = {
         name: schema.name,
         // Note: let ECharts decide type for now.
       }
 
-      tempDimensions.push(oneDimension)
+      dimensions.push(oneDimension)
     })
-    return [tempDimensions, xAxisName]
+    return { dimensions, xAxis }
   }
 
   const API_MAP: AnyObject = {
@@ -62,7 +62,10 @@ const useCodeRunStore = defineStore('codeRun', () => {
             resultsId.value += 1
             oneResult = {
               records: oneRes.records,
-              dimensionsAndXName: rowLength === 0 ? [] : getDimensionsAndXName(oneRes.records.schema.column_schemas),
+              dimensionsAndXName:
+                rowLength === 0
+                  ? { dimensions: [], xAxis: '' }
+                  : getDimensionsAndXName(oneRes.records.schema.column_schemas),
               key: resultsId.value,
               type,
             }
@@ -94,7 +97,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
       // TODO: try something better
       return {
         log: oneLog,
-        record: oneResult,
+        lastResult: oneResult,
       }
     } catch (error: any) {
       const oneLog = {

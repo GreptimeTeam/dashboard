@@ -2,8 +2,9 @@ export interface SchemaType {
   name: string
   data_type: string
 }
+
 export interface RecordsType {
-  rows: any[]
+  rows: [][]
   schema: { column_schemas: SchemaType[] }
 }
 
@@ -12,13 +13,22 @@ export interface OutputType {
   affectedrows?: any
 }
 
+export interface DimensionType {
+  name: string
+}
+
 export interface ResultType {
   records: RecordsType
-  dimensionsAndXName: any[]
+  dimensionsAndXName: { dimensions: DimensionType[]; xAxis: string }
   key: number
   type: string
 }
 
-export interface DimensionType {
+export interface SeriesType {
   name: string
+  type: string
+  smooth: boolean
+  encode: { x: string; y: string; label?: string[] }
+  symbolSize: number
+  datasetIndex?: number
 }

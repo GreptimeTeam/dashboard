@@ -68,5 +68,6 @@ module.exports = {
     'prefer-regex-literals': 0,
     'import/no-extraneous-dependencies': 0,
     'noUnusedLocals': 0,
+    'prefer-destructuring': ['error', { object: true, array: false }],
   },
 }

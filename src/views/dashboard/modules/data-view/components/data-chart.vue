@@ -18,75 +18,143 @@ a-card(v-if="hasChart" :bordered="false")
             )
         a-form-item.select-y(:label="$t('dataExplorer.yType')")
           a-select(
-            v-model="chartForm.ySelectedTypes"
+            v-model="chartForm.selectedYTypes"
             multiple
             :placeholder="$t('dataExplorer.selectY')"
             :allow-search="false"
             :trigger-props="triggerProps"
           )
             a-option(v-for="item of yOptions" :key="item.value" :value="item.value") {{ item.value }}
-    a-row
-      Chart.chart-area(height="330px" :option="option" :update-options="updateOptions")
+        a-form-item.select-y(:label="$t('dataExplorer.groupBy')")
+          a-select(
+            v-model="chartForm.groupBySelectedTypes"
+            multiple
+            allow-clear
+            :disabled="isGroupByDisabled"
+            :trigger-props="triggerProps"
+          )
+            a-option(v-for="item of groupByOptions" :key="item.index" :value="item.index") {{ item.name }}
+    a-spin(style="width: 100%" :tip="$t('dataExplorer.chartLoadingTip')" :loading="isChartLoading")
+      template(#element)
+        icon-exclamation-circle-fill
+      Chart.chart-area(height="330px" :option="chartOptions" :update-options="updateOptions")
 </template>
 
 <script lang="ts" setup>
+  import type { PropType } from 'vue'
+  import type { DimensionType, ResultType, SchemaType, SeriesType } from '@/store/modules/code-run/types'
   import useDataChart from '@/hooks/data-chart'
-  import type { ResultType } from '@/store/modules/code-run/types'
-  import { chartTypeOptions, updateOptions, numberTypes } from '../../../config'
+  import { chartTypeOptions, updateOptions, numberTypes, dateTypes } from '../../../config'
 
-  const props = withDefaults(
-    defineProps<{
-      data: ResultType
-      hasHeader?: boolean
-    }>(),
-    {
-      data: () => {
-        return {} as ResultType
-      },
-      hasHeader: true,
-    }
-  )
+  const props = defineProps({
+    data: {
+      type: Object as PropType<ResultType>,
+      default: () => ({
+        records: { rows: [], schema: { column_schemas: [] } },
+        dimensionsAndXName: {
+          dimensions: [],
+          xAxis: '',
+        },
+        key: -1,
+        type: '',
+      }),
+    },
+    hasHeader: {
+      type: Boolean,
+      default: true,
+    },
+  })
 
+  const isGroupByDisabled = ref(false)
+  const isChartLoading = ref(false)
+  const chartOptions = ref({})
+
+  const { yOptions, hasChart, groupByOptions, chartForm } = useDataChart(props.data)
   // TODO: To add this props in every select should not be the best option.
   const triggerProps = {
     'update-at-scroll': true,
   }
 
-  const option = ref({})
-  const chartForm = reactive({
-    chartType: 'line(smooth)',
-    ySelectedTypes: [''],
-  })
-
-  const { yOptions, hasChart } = useDataChart(props.data)
-
-  const getSeriesAndLegendNames = ([chartType, ySelectedTypes]: any) => {
-    const series: any = []
-    const legendNames: any = []
-    ySelectedTypes.forEach((item: string) => {
-      const oneSeries = {
-        name: item,
-        type: chartType,
-        smooth: false,
-        encode: {
-          x: props?.data?.dimensionsAndXName[1],
-          y: item,
-        },
-        symbolSize: 4,
+  // TODO: perhaps a better function
+  const groupByToMap = <T, Q>(array: T[], predicate: (value: T, index: number, array2: T[]) => Q) =>
+    array.reduce((map, value, index, array2) => {
+      const key = predicate(value, index, array2)
+      const collection = map.get(key)
+      if (!collection) {
+        map.set(key, [value])
+      } else {
+        collection.push(value)
       }
-      if (chartType === 'line(smooth)') {
-        oneSeries.type = 'line'
-        oneSeries.smooth = true
-        oneSeries.symbolSize = 0
-      }
-      series.push(oneSeries)
-      legendNames.push(item)
-    })
-    return { series, legendNames }
+      return map
+    }, new Map<Q, T[]>())
+
+  const generateSeries = (name: string, isGroup?: boolean, datasetIndex?: number) => {
+    // TODO: not sure this `isGroup` is the best way
+    const series: SeriesType = {
+      name,
+      type: chartForm.chartType,
+      smooth: false,
+      encode: {
+        x: props.data.dimensionsAndXName.xAxis,
+        y: name,
+      },
+      symbolSize: 4,
+    }
+    if (isGroup) {
+      series.datasetIndex = datasetIndex
+      series.encode.label = [name, chartForm.selectedYTypes[0]]
+      series.encode.y = chartForm.selectedYTypes[0]
+    }
+    if (chartForm.chartType === 'line(smooth)') {
+      series.type = 'line'
+      series.smooth = true
+      series.symbolSize = 0
+    }
+    return series
   }
 
-  const makeOption = (item: any) => {
-    const { series, legendNames } = getSeriesAndLegendNames(item)
+  const getChartConfig = (yAxisTypes: string[]) => {
+    const series: Array<SeriesType> = []
+    const legendNames: Array<string> = []
+    const dataset: Array<{ dimensions: DimensionType[]; source: [][] }> = []
+    if (chartForm.groupBySelectedTypes.length === 0) {
+      dataset.push({
+        dimensions: props.data.dimensionsAndXName.dimensions,
+        source: props.data.records.rows,
+      })
+      yAxisTypes.forEach((yAxisName: string) => {
+        series.push(generateSeries(yAxisName))
+        legendNames.push(yAxisName)
+      })
+      isChartLoading.value = false
+    } else {
+      const dataWithGroup = groupByToMap(props.data.records.rows, (value: any) => {
+        let string = ``
+        chartForm.groupBySelectedTypes.forEach((typeIndex: number, index: number) => {
+          string = index === 0 ? `${value[typeIndex]}` : `${string}, ${value[typeIndex]}`
+        })
+        return string
+      })
+      if (dataWithGroup.size > 20) {
+        isChartLoading.value = true
+      } else {
+        let datasetIndex = -1
+        dataWithGroup.forEach((groupResults: [][], key: string) => {
+          series.push(generateSeries(key, true, (datasetIndex += 1)))
+          legendNames.push(key)
+          dataset.push({
+            dimensions: props.data.dimensionsAndXName.dimensions,
+            source: groupResults,
+          })
+        })
+        isChartLoading.value = false
+      }
+    }
+    return { series, legendNames, dataset }
+  }
+
+  const makeOptions = () => {
+    const { series, legendNames, dataset } = getChartConfig(chartForm.selectedYTypes)
     return {
       legend: {
         data: legendNames,
@@ -94,10 +162,7 @@ a-card(v-if="hasChart" :bordered="false")
       tooltip: {
         trigger: 'axis',
       },
-      dataset: {
-        dimensions: props.data.dimensionsAndXName[0],
-        source: props.data.records.rows,
-      },
+      dataset,
       xAxis: {
         type: 'time',
         name: 'Time',
@@ -120,12 +185,21 @@ a-card(v-if="hasChart" :bordered="false")
 
   // TODO: Might need to change this
   onMounted(() => {
-    if (hasChart.value) chartForm.ySelectedTypes = [yOptions.value[0].value]
+    if (hasChart.value) chartForm.selectedYTypes = [yOptions.value[0].value]
   })
 
   const drawChart = () => {
-    option.value = makeOption([chartForm.chartType, chartForm.ySelectedTypes])
+    chartOptions.value = makeOptions()
   }
+
+  watchEffect(() => {
+    if (chartForm.selectedYTypes.length !== 1) {
+      isGroupByDisabled.value = true
+      chartForm.groupBySelectedTypes = []
+    } else {
+      isGroupByDisabled.value = false
+    }
+  })
 
   defineExpose({
     hasChart,
