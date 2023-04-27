@@ -71,8 +71,11 @@ a-card(v-if="hasChart" :bordered="false")
     selectedYTypes: [''],
     groupBySelectedTypes,
   })
-
   const { yOptions, hasChart, groupByOptions } = useDataChart(props.data, chartForm.selectedYTypes[0])
+  // TODO: To add this props in every select should not be the best option.
+  const triggerProps = {
+    'update-at-scroll': true,
+  }
 
   // TODO: perhaps a better function
   const groupByToMap = <T, Q>(array: T[], predicate: (value: T, index: number, array2: T[]) => Q) =>
