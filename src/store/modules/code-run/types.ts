@@ -13,15 +13,15 @@ export interface OutputType {
   affectedrows?: any
 }
 
+export interface DimensionType {
+  name: string
+}
+
 export interface ResultType {
   records: RecordsType
   dimensionsAndXName: { dimensions: DimensionType[]; xAxis: string }
   key: number
   type: string
-}
-
-export interface DimensionType {
-  name: string
 }
 
 export interface SeriesType {

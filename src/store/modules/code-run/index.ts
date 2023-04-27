@@ -97,7 +97,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
       // TODO: try something better
       return {
         log: oneLog,
-        record: oneResult,
+        lastResult: oneResult,
       }
     } catch (error: any) {
       const oneLog = {

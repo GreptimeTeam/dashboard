@@ -34,7 +34,9 @@ a-card(v-if="hasChart" :bordered="false")
             :trigger-props="triggerProps"
           )
             a-option(v-for="item of groupByOptions" :key="item.index" :value="item.index") {{ item.name }}
-    a-row
+    a-spin(style="width: 100%" :tip="$t('dataExplorer.chartLoadingTip')" :loading="isChartLoading")
+      template(#element)
+        icon-exclamation-circle-fill
       Chart.chart-area(height="330px" :option="chartOptions" :update-options="updateOptions")
 </template>
 
@@ -63,15 +65,11 @@ a-card(v-if="hasChart" :bordered="false")
     },
   })
 
-  const groupBySelectedTypes: Array<number> = []
   const isGroupByDisabled = ref(false)
+  const isChartLoading = ref(false)
   const chartOptions = ref({})
-  const chartForm = reactive({
-    chartType: 'line',
-    selectedYTypes: [''],
-    groupBySelectedTypes,
-  })
-  const { yOptions, hasChart, groupByOptions } = useDataChart(props.data, chartForm.selectedYTypes[0])
+
+  const { yOptions, hasChart, groupByOptions, chartForm } = useDataChart(props.data)
   // TODO: To add this props in every select should not be the best option.
   const triggerProps = {
     'update-at-scroll': true,
@@ -128,6 +126,7 @@ a-card(v-if="hasChart" :bordered="false")
         series.push(generateSeries(yAxisName))
         legendNames.push(yAxisName)
       })
+      isChartLoading.value = false
     } else {
       const dataWithGroup = groupByToMap(props.data.records.rows, (value: any) => {
         let string = ``
@@ -136,15 +135,20 @@ a-card(v-if="hasChart" :bordered="false")
         })
         return string
       })
-      let datasetIndex = -1
-      dataWithGroup.forEach((groupResults: [][], key: string) => {
-        series.push(generateSeries(key, true, (datasetIndex += 1)))
-        legendNames.push(key)
-        dataset.push({
-          dimensions: props.data.dimensionsAndXName.dimensions,
-          source: groupResults,
+      if (dataWithGroup.size > 20) {
+        isChartLoading.value = true
+      } else {
+        let datasetIndex = -1
+        dataWithGroup.forEach((groupResults: [][], key: string) => {
+          series.push(generateSeries(key, true, (datasetIndex += 1)))
+          legendNames.push(key)
+          dataset.push({
+            dimensions: props.data.dimensionsAndXName.dimensions,
+            source: groupResults,
+          })
         })
-      })
+        isChartLoading.value = false
+      }
     }
     return { series, legendNames, dataset }
   }

@@ -1,7 +1,13 @@
 import { ResultType, SchemaType } from '../store/modules/code-run/types'
 import { dateTypes, numberTypes } from '../views/dashboard/config'
 
-export default function useDataChart(data: ResultType, yAxisName: string) {
+export default function useDataChart(data: ResultType) {
+  const groupBySelectedTypes: Array<number> = []
+  const chartForm = reactive({
+    chartType: 'line',
+    selectedYTypes: [''],
+    groupBySelectedTypes,
+  })
   const hasTimestamp = data.dimensionsAndXName.xAxis !== ''
   const schemaInRecords = data.records.schema
 
@@ -22,7 +28,8 @@ export default function useDataChart(data: ResultType, yAxisName: string) {
         index,
       }))
       .filter(
-        (item: SchemaType) => !dateTypes.find((type: string) => type === item.data_type) && item.name !== yAxisName
+        (item: SchemaType) =>
+          !dateTypes.find((type: string) => type === item.data_type) && item.name !== chartForm.selectedYTypes[0]
       )
   })
 
@@ -30,14 +37,10 @@ export default function useDataChart(data: ResultType, yAxisName: string) {
     return yOptions.value.length > 0
   })
 
-  const hasGrid = computed(() => {
-    return data.records.rows.length
-  })
-
   return {
+    chartForm,
     yOptions,
     groupByOptions,
     hasChart,
-    hasGrid,
   }
 }
