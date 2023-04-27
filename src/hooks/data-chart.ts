@@ -9,8 +9,8 @@ export default function useDataChart(data: ResultType, yAxisName: string) {
   const yOptions = computed(() => {
     if (!schemaInRecords || !hasTimestamp) return []
     return schemaInRecords.column_schemas
-      .filter((item: any) => numberTypes.find((type: string) => type === item.data_type))
-      .map((item: any) => ({
+      .filter((item: SchemaType) => numberTypes.find((type: string) => type === item.data_type))
+      .map((item: SchemaType) => ({
         value: item.name,
       }))
   })
@@ -31,7 +31,7 @@ export default function useDataChart(data: ResultType, yAxisName: string) {
   })
 
   const hasGrid = computed(() => {
-    return data.records && !!Object.values(data.records).length
+    return data.records.rows.length
   })
 
   return {

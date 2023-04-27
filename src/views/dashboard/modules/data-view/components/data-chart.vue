@@ -40,7 +40,7 @@ a-card(v-if="hasChart" :bordered="false")
 
 <script lang="ts" setup>
   import type { PropType } from 'vue'
-  import type { DimensionType, ResultType, SchemaType, SeriesType } from '@/store/modules/code-run/types
+  import type { DimensionType, ResultType, SchemaType, SeriesType } from '@/store/modules/code-run/types'
   import useDataChart from '@/hooks/data-chart'
   import { chartTypeOptions, updateOptions, numberTypes, dateTypes } from '../../../config'
 
