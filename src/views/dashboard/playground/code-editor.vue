@@ -85,6 +85,8 @@
       hasRecords.value = true
       result.value = res.lastResult
       hasChart.value = useDataChart(result.value).hasChart.value
+    } else {
+      hasRecords.value = false
     }
     // TODO: try something better
     log.value = res.log
