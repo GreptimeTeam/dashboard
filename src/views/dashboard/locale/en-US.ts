@@ -12,7 +12,8 @@ export default {
   'dataExplorer.results': 'Results: ',
   'dataExplorer.chart': 'Chart',
   'dataExplorer.chartType': 'Chart Type',
-  'dataExplorer.chartLoadingTip': 'More than 20 series is not acceptable, please select another type...',
+  'dataExplorer.chartLoadingTip':
+    'Your chart has too many ({count}) series generated from selected "Group By" columns.',
   'dataExplorer.yType': 'Y-Axis Types',
   'dataExplorer.groupBy': 'Group By',
   'dataExplorer.select': 'Select {records} row;  | Select {records} rows; ',
