@@ -42,7 +42,7 @@ a-card(v-if="hasChart" :bordered="false")
 
 <script lang="ts" setup>
   import type { PropType } from 'vue'
-  import type { DimensionType, ResultType, SchemaType, SeriesType } from '@/store/modules/code-run/types'
+  import type { datasetType, DimensionType, ResultType, SchemaType, SeriesType } from '@/store/modules/code-run/types'
   import useDataChart from '@/hooks/data-chart'
   import { chartTypeOptions, updateOptions, numberTypes, dateTypes } from '../../../config'
 
@@ -99,6 +99,7 @@ a-card(v-if="hasChart" :bordered="false")
         y: name,
       },
       symbolSize: 4,
+      datasetIndex: 1,
     }
     if (isGroup) {
       series.datasetIndex = datasetIndex
@@ -116,11 +117,17 @@ a-card(v-if="hasChart" :bordered="false")
   const getChartConfig = (yAxisTypes: string[]) => {
     const series: Array<SeriesType> = []
     const legendNames: Array<string> = []
-    const dataset: Array<{ dimensions: DimensionType[]; source: [][] }> = []
+    const dataset: Array<datasetType> = []
     if (chartForm.groupBySelectedTypes.length === 0) {
       dataset.push({
         dimensions: props.data.dimensionsAndXName.dimensions,
         source: props.data.records.rows,
+      })
+      dataset.push({
+        transform: {
+          type: 'sort',
+          config: { dimension: props.data.dimensionsAndXName.xAxis, order: 'asc' },
+        },
       })
       yAxisTypes.forEach((yAxisName: string) => {
         series.push(generateSeries(yAxisName))
@@ -140,12 +147,19 @@ a-card(v-if="hasChart" :bordered="false")
       } else {
         let datasetIndex = -1
         dataWithGroup.forEach((groupResults: [][], key: string) => {
-          series.push(generateSeries(key, true, (datasetIndex += 1)))
           legendNames.push(key)
           dataset.push({
             dimensions: props.data.dimensionsAndXName.dimensions,
             source: groupResults,
           })
+          dataset.push({
+            transform: {
+              type: 'sort',
+              config: { dimension: props.data.dimensionsAndXName.xAxis, order: 'asc' },
+            },
+            fromDatasetIndex: (datasetIndex += 1),
+          })
+          series.push(generateSeries(key, true, (datasetIndex += 1)))
         })
         isChartLoading.value = false
       }

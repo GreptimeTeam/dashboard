@@ -32,3 +32,10 @@ export interface SeriesType {
   symbolSize: number
   datasetIndex?: number
 }
+
+export interface datasetType {
+  dimensions?: DimensionType[]
+  source?: [][]
+  transform?: {}
+  fromDatasetIndex?: number
+}
