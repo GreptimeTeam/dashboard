@@ -12,6 +12,7 @@ import {
 import Chart from './chart/index.vue'
 import Breadcrumb from './breadcrumb/index.vue'
 import 'echarts/lib/component/dataset'
+import 'echarts/lib/component/transform'
 
 // Manually introduce ECharts modules to reduce packing size
 
