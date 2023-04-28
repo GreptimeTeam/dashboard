@@ -1,9 +1,13 @@
 <template lang="pug">
-a-modal.guide-modal(v-model:visible="isShow" :mask-closable="false" :ok-text="$t('playground.create')" :hide-cancel="true" :closable="false" @ok="create")
-  template(#title)
-    .
-      {{ $t('playground.refeshTitle')
-      }}
+a-modal.guide-modal(
+  v-model:visible="isShow"
+  :mask-closable="false"
+  :ok-text="$t('playground.create')"
+  :hide-cancel="true"
+  :closable="false"
+  @ok="create"
+)
+  template(#title) {{ $t('playground.refeshTitle') }}
   template(#footer)
   | {{ $t('playground.refeshNote') }}
 </template>

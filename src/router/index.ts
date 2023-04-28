@@ -33,7 +33,14 @@ router.beforeEach(async (to, from, next) => {
     const appStore = useAppStore()
     if (to.query.info) {
       const config = JSON.parse(atob(to.query.info as string))
-      useStorage('config', config)
+      useStorage('config', config, localStorage, {
+        mergeDefaults: (storageValue, defaults) => {
+          return {
+            ...storageValue,
+            ...defaults,
+          }
+        },
+      })
       appStore.updateSettings(config)
       return next({ path: to.path, query: {} })
     }
