@@ -31,21 +31,7 @@ a-modal.guide-modal(
   }
 
   const create = () => {
-    window.grecaptcha.ready(async () => {
-      const token = await window.grecaptcha.execute(VITE_RECAPTCHA_SITE_KEY, { action: 'submit' })
-      const data = (await createPlayground(token)) as any
-
-      const params = btoa(
-        JSON.stringify({
-          username: data.username,
-          password: data.password,
-          database: `${data.teamId}-${data.serviceName}`,
-          dbId: data.dbId,
-        })
-      )
-
-      window.location.href = `https://${Object.values(data.domain)[0]}/dashboard/playground?info=${params}`
-    })
+    window.location.href = `https://greptime.com/playground`
   }
 
   defineExpose({
