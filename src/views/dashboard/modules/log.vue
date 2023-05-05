@@ -4,13 +4,13 @@ a-list-item.smaller-divider
     a-space.log-error.last-overflow(size="mini" fill)
       template(#split)
         a-divider(direction="vertical")
-      icon-close-circle(:style="{ color: 'var(--danger-color)' }") 
+      icon-close-circle.danger-color
       div {{ log.startTime }}
       div {{ $t('dataExplorer.error') }}: {{ log.error }}
   a-space.log-space.last-overflow(v-else-if="'execution_time_ms' in log" size="mini" fill)
     template(#split)
       a-divider(direction="vertical")
-    icon-check-circle(:style="{ color: 'var(--success-color)' }")
+    icon-check-circle.success-color
     div {{ log.startTime }}
     div(v-if="codeType === 'python'") {{ $t('dataExplorer.runScript', { name: log.codeInfo }) }}
     div {{ $tc('dataExplorer.executed', log.results.length, { length: log.results.length }) }}
@@ -33,9 +33,11 @@ a-list-item.smaller-divider
               span.width-35 {{ name }}
               a-typography-text.ml-4(code) {{ value }}
             a-list-item(v-else) {{ log.codeInfo }}
-  a-space.log-space(v-else size="large" fill)
+  a-space.log-space(v-else size="mini" fill)
     template(#split)
       a-divider(direction="vertical")
+    icon-check-circle.success-color
+    div {{ log.startTime }}
     div {{ $t('dataExplorer.saveName', { name: log.codeInfo }) }}
 </template>
 
