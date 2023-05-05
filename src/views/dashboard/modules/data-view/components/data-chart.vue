@@ -41,7 +41,7 @@ a-card(v-if="hasChart" :bordered="false")
             icon-exclamation-circle-fill
             | {{ $tc('dataExplorer.chartLoadingTip', seriesCount, { count: seriesCount }) }}
           a-button(type="primary" @click="showChart")
-            | ok
+            | {{ $t('dataExplorer.ok') }}
       Chart.chart-area(height="330px" :option="chartOptions" :update-options="updateOptions")
 </template>
 
