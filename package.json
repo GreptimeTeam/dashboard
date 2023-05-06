@@ -55,7 +55,7 @@
     "consola": "^2.15.3",
     "dayjs": "^1.11.7",
     "echarts": "^5.4.1",
-    "eslint-plugin@5.59.2": "link:typescript-eslint/eslint-plugin@5.59.2",
+    "eslint-plugin": "^1.0.1",
     "lodash": "^4.17.21",
     "markdown-it-container": "^3.0.0",
     "mitt": "^3.0.0",
