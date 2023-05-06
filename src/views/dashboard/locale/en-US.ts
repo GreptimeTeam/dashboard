@@ -12,9 +12,7 @@ export default {
   'dataExplorer.results': 'Results: ',
   'dataExplorer.chart': 'Chart',
   'dataExplorer.chartType': 'Chart Type',
-  'dataExplorer.chartLoadingTip':
-    'Your chart has too many ({count}) series generated from the selected "Group By" columns.',
-  'dataExplorer.ok': 'OK',
+  'dataExplorer.chartLoadingTip': 'More than 20 series is not acceptable, please select another type...',
   'dataExplorer.yType': 'Y-Axis Types',
   'dataExplorer.groupBy': 'Group By',
   'dataExplorer.select': 'Select {records} row;  | Select {records} rows; ',

@@ -7,7 +7,7 @@ a-card(v-if="hasChart" :bordered="false")
       | {{ $t('dataExplorer.chart') }}
   a-spin(style="width: 100%")
     a-row
-      a-form.chart-form(layout="inline" :model="chartForm")
+      a-form.chart-form(layout="inline" :model="chartForm" :onChange="drawChart()")
         a-form-item(:label="$t('dataExplorer.chartType')")
           a-select(v-model="chartForm.chartType" :trigger-props="triggerProps")
             a-option(
@@ -34,14 +34,9 @@ a-card(v-if="hasChart" :bordered="false")
             :trigger-props="triggerProps"
           )
             a-option(v-for="item of groupByOptions" :key="item.index" :value="item.index") {{ item.name }}
-    a-spin(style="width: 100%" :loading="isChartLoading")
+    a-spin(style="width: 100%" :tip="$t('dataExplorer.chartLoadingTip')" :loading="isChartLoading")
       template(#element)
-        a-space(direction="vertical" :size="30")
-          a-space(:size="10")
-            icon-exclamation-circle-fill.warning-color
-            span.loading-tip {{ $tc('dataExplorer.chartLoadingTip', seriesCount, { count: seriesCount }) }}
-          a-button(type="primary" @click="showChart")
-            | {{ $t('dataExplorer.ok') }}
+        icon-exclamation-circle-fill
       Chart.chart-area(height="330px" :option="chartOptions" :update-options="updateOptions")
 </template>
 
@@ -73,7 +68,6 @@ a-card(v-if="hasChart" :bordered="false")
   const isGroupByDisabled = ref(false)
   const isChartLoading = ref(false)
   const chartOptions = ref({})
-  const seriesCount = ref(0)
 
   const { yOptions, hasChart, groupByOptions, chartForm } = useDataChart(props.data)
   // TODO: To add this props in every select should not be the best option.
@@ -148,28 +142,27 @@ a-card(v-if="hasChart" :bordered="false")
         })
         return string
       })
-      seriesCount.value = dataWithGroup.size
-      if (seriesCount.value > 20) {
+      if (dataWithGroup.size > 20) {
         isChartLoading.value = true
       } else {
+        let datasetIndex = -1
+        dataWithGroup.forEach((groupResults: [][], key: string) => {
+          legendNames.push(key)
+          dataset.push({
+            dimensions: props.data.dimensionsAndXName.dimensions,
+            source: groupResults,
+          })
+          dataset.push({
+            transform: {
+              type: 'sort',
+              config: { dimension: props.data.dimensionsAndXName.xAxis, order: 'asc' },
+            },
+            fromDatasetIndex: (datasetIndex += 1),
+          })
+          series.push(generateSeries(key, true, (datasetIndex += 1)))
+        })
         isChartLoading.value = false
       }
-      let datasetIndex = -1
-      dataWithGroup.forEach((groupResults: [][], key: string) => {
-        legendNames.push(key)
-        dataset.push({
-          dimensions: props.data.dimensionsAndXName.dimensions,
-          source: groupResults,
-        })
-        dataset.push({
-          transform: {
-            type: 'sort',
-            config: { dimension: props.data.dimensionsAndXName.xAxis, order: 'asc' },
-          },
-          fromDatasetIndex: (datasetIndex += 1),
-        })
-        series.push(generateSeries(key, true, (datasetIndex += 1)))
-      })
     }
     return { series, legendNames, dataset }
   }
@@ -213,10 +206,6 @@ a-card(v-if="hasChart" :bordered="false")
     chartOptions.value = makeOptions()
   }
 
-  const showChart = () => {
-    isChartLoading.value = false
-  }
-
   watchEffect(() => {
     if (chartForm.selectedYTypes.length !== 1) {
       isGroupByDisabled.value = true
@@ -225,16 +214,6 @@ a-card(v-if="hasChart" :bordered="false")
       isGroupByDisabled.value = false
     }
   })
-
-  watch(
-    chartForm,
-    () => {
-      drawChart()
-    },
-    {
-      deep: true,
-    }
-  )
 
   defineExpose({
     hasChart,
