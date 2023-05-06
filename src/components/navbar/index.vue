@@ -3,7 +3,7 @@
   .logo-space
     img.logo-text-img(alt="logo" src="/src/assets/images/logo-text.webp")
   .menu
-    a-menu(:selected-keys="menuSelectedKey" @menu-item-click="menuClick" mode="horizontal")
+    a-menu(mode="horizontal" :selected-keys="menuSelectedKey" @menu-item-click="menuClick")
       a-menu-item(key="query")
         | Query
       a-menu-item(key="scripts" v-permission="['dev']")
@@ -13,17 +13,17 @@
   ul.right-side
     li
       a-tooltip(:content="$t('settings.title')")
-        div.pointer
+        .pointer
           svg.icon-20(@click="setVisible")
             use(href="#setting")
     li
       a-dropdown(trigger="hover" position="br" :popup-max-height="false")
-        div.pointer
+        .pointer
           svg.icon-20
             use(href="#dropdown")
         template(#content)
           a-doption(v-for="{ label, link } in dropDownLinks")
-            a-link(:href="link" target="_blank")
+            a-link(target="_blank" :href="link")
               | {{ label }}
 </template>
 

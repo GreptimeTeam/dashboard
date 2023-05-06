@@ -1,9 +1,14 @@
 <template lang="pug">
-a-modal.guide-modal(v-model:visible="guideModal" :mask-closable="false" :ok-text="$t('guide.confirm')" :hide-cancel="true" :closable="false" @ok="handleOk")
+a-modal.guide-modal(
+  v-model:visible="guideModal"
+  :mask-closable="false"
+  :ok-text="$t('guide.confirm')"
+  :hide-cancel="true"
+  :closable="false"
+  @ok="handleOk"
+)
   template(#title)
-    .
-      {{ $t('guide.welcome')
-      }}
+    div {{ $t('guide.welcome') }}
     svg.guide-banner
       use(href="#banner")
   SettingsForm
