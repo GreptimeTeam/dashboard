@@ -48,15 +48,11 @@ a-layout.layout
   // lifecycle
   onMounted(async () => {
     if (appStore.lifetime === 'temporary' && isCloud.value) {
-      await importFiles(`https://www.google.com/recaptcha/api.js?render=${import.meta.env.VITE_RECAPTCHA_SITE_KEY}`)
-      window.grecaptcha.ready(async () => {
-        try {
-          const token = await window.grecaptcha.execute(VITE_RECAPTCHA_SITE_KEY, { action: 'submit' })
-          const data = await getPlaygroundInfo(token, appStore.dbId)
-        } catch (error) {
-          refreshPlaygroundModal.value.toggleModal()
-        }
-      })
+      try {
+        const data = await getPlaygroundInfo(appStore.dbId)
+      } catch (error) {
+        refreshPlaygroundModal.value.toggleModal()
+      }
     }
   })
 </script>
