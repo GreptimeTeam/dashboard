@@ -3,9 +3,16 @@
   a-button(type="primary")
     template(#icon)
       icon-settings
-a-drawer(:width="262" unmount-on-close :visible="globalSettings" :mask-closable="true" @cancel="cancel" :footer="false" )
+a-drawer(
+  unmount-on-close
+  :width="262"
+  :visible="globalSettings"
+  :mask-closable="true"
+  :footer="false"
+  @cancel="cancel"
+)
   template(#title)
-    svg.drawer-icon 
+    svg.drawer-icon
       use(href="#setting2")
     | {{ $t('settings.title') }}
   SettingsForm.settings-form
