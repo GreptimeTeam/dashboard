@@ -36,10 +36,10 @@ a-card(v-if="hasChart" :bordered="false")
             a-option(v-for="item of groupByOptions" :key="item.index" :value="item.index") {{ item.name }}
     a-spin(style="width: 100%" :loading="isChartLoading")
       template(#element)
-        a-space(direction="vertical")
-          div
-            icon-exclamation-circle-fill
-            | {{ $tc('dataExplorer.chartLoadingTip', seriesCount, { count: seriesCount }) }}
+        a-space(direction="vertical" :size="30")
+          a-space(:size="10")
+            icon-exclamation-circle-fill.warning-color
+            span.loading-tip {{ $tc('dataExplorer.chartLoadingTip', seriesCount, { count: seriesCount }) }}
           a-button(type="primary" @click="showChart")
             | {{ $t('dataExplorer.ok') }}
       Chart.chart-area(height="330px" :option="chartOptions" :update-options="updateOptions")
