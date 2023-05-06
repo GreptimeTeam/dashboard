@@ -72,9 +72,9 @@ dependencies:
   echarts:
     specifier: ^5.4.1
     version: 5.4.1
-  eslint-plugin@latest:
-    specifier: link:typescript-eslint/eslint-plugin@latest
-    version: link:typescript-eslint/eslint-plugin@latest
+  eslint-plugin@5.59.2:
+    specifier: link:typescript-eslint/eslint-plugin@5.59.2
+    version: link:typescript-eslint/eslint-plugin@5.59.2
   lodash:
     specifier: ^4.17.21
     version: 4.17.21
