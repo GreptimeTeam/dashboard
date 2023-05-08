@@ -47,7 +47,7 @@
     "@lezer/common": "^1.0.2",
     "@lezer/highlight": "^1.1.2",
     "@lezer/lr": "^1.2.3",
-    "@prometheus-io/codemirror-promql": "^0.42.0",
+    "@prometheus-io/codemirror-promql": "^0.43.1",
     "@vueuse/core": "^10.1.0",
     "arco-design-pro-vue": "^2.6.1",
     "axios": "^0.27.2",
