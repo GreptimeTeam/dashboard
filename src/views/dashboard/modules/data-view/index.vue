@@ -35,11 +35,11 @@ a-tabs.result-tabs(
   const startKey = ref(props.results[0]?.key)
 
   const deleteTab = async (key: number) => {
-    const index = props.results.findIndex((result) => result.key === key)
+    const index = props.results.findIndex((result) => result.key === key && props.types.includes(result.type))
     if (props.results.length === 1) {
       startKey.value = props.results[0].key
     }
-    await removeResult(key)
+    await removeResult(key, props.results[index].type)
     if (activeTabKey.value === key) {
       activeTabKey.value = props.results[index]?.key || props.results.slice(-1)[0].key
     }
