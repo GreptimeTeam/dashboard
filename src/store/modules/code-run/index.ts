@@ -59,7 +59,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
             records: rowLength,
           })
           if (rowLength >= 0) {
-            if (resultKeyCount[type] !== undefined) {
+            if (Reflect.has(resultKeyCount, type)) {
               resultKeyCount[type] += 1
             } else {
               resultKeyCount[type] = 0
