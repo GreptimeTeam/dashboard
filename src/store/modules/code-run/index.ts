@@ -141,8 +141,8 @@ const useCodeRunStore = defineStore('codeRun', () => {
     results.value = results.value.filter((result) => !types.includes(result.type))
   }
 
-  const removeResult = (key: number) => {
-    results.value = results.value.filter((item: ResultType) => item.key !== key)
+  const removeResult = (key: number, type: string) => {
+    results.value = results.value.filter((item: ResultType) => item.key !== key || item.type !== type)
   }
 
   return {
