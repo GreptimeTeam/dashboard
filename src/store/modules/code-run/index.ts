@@ -14,7 +14,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
   const { promForm } = useQueryCode()
 
   const results = ref<ResultType[]>([])
-  const resultsId = reactive({})
+  const resultsId = reactive<{ [key: string]: number }>({})
 
   // TODO: Add all the types we decide instead of ECharts if needed in the future.
   const getDimensionsAndXName = (schemas: SchemaType[]) => {
