@@ -14,7 +14,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
   const { promForm } = useQueryCode()
 
   const results = ref<ResultType[]>([])
-  const resultsId = ref(0)
+  const resultsId = reactive({})
 
   // TODO: Add all the types we decide instead of ECharts if needed in the future.
   const getDimensionsAndXName = (schemas: SchemaType[]) => {
@@ -59,14 +59,19 @@ const useCodeRunStore = defineStore('codeRun', () => {
             records: rowLength,
           })
           if (rowLength >= 0) {
-            resultsId.value += 1
+            if (resultsId[type] !== undefined) {
+              resultsId[type] += 1
+            } else {
+              resultsId[type] = 0
+            }
+
             oneResult = {
               records: oneRes.records,
               dimensionsAndXName:
                 rowLength === 0
                   ? { dimensions: [], xAxis: '' }
                   : getDimensionsAndXName(oneRes.records.schema.column_schemas),
-              key: resultsId.value,
+              key: resultsId[type],
               type,
             }
             if (!withoutSave) {
