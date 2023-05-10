@@ -7,7 +7,7 @@ a-list-item.smaller-divider
       icon-close-circle.danger-color
       div {{ log.startTime }}
       div {{ $t('dataExplorer.error') }}: {{ log.error }}
-  a-space.log-space.last-overflow(v-else-if="'execution_time_ms' in log" size="mini" fill)
+  a-space.log-space.last-overflow(v-else-if="hasExecutionTime" size="mini" fill)
     template(#split)
       a-divider(direction="vertical")
     icon-check-circle.success-color
@@ -54,6 +54,8 @@ a-list-item.smaller-divider
       default: () => ({}),
     },
   })
+
+  const hasExecutionTime = Reflect.has(props.log, 'execution_time_ms')
 
   const copyToClipboard = (code: string) => {
     if (codeType.value === 'sql') copy(format(code, { language: 'mysql', keywordCase: 'upper' }))

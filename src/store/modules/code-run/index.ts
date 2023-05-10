@@ -53,7 +53,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
       })
       const resultsInLog: Array<ResultInLog> = []
       res.output.forEach((oneRes: OutputType) => {
-        if ('records' in oneRes) {
+        if (Reflect.has(oneRes, 'records')) {
           const rowLength = oneRes.records.rows.length
           resultsInLog.push({
             records: rowLength,
@@ -79,7 +79,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
             }
           }
         }
-        if ('affectedrows' in oneRes) {
+        if (Reflect.has(oneRes, 'affectedrows')) {
           resultsInLog.push({
             affectedRows: oneRes.affectedrows,
           })
@@ -110,7 +110,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
         codeInfo,
         ...error,
       }
-      if ('error' in error) {
+      if (Reflect.has(error, 'error')) {
         return {
           log: oneLog,
         }
@@ -128,7 +128,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
         ...res,
       }
     } catch (error: any) {
-      if ('error' in error) {
+      if (Reflect.has(error, 'error')) {
         throw new Error(JSON.stringify(error))
       } else {
         throw new Error('error')
