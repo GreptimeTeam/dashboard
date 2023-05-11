@@ -48,7 +48,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
       let oneResult = {} as ResultType
       const res: HttpResponse = await API_MAP[type](codeInfo)
       Message.success({
-        content: i18n.global.t('dataExplorer.runSuccess'),
+        content: i18n.global.t('dashboard.runSuccess'),
         duration: 2 * 1000,
       })
       const resultsInLog: Array<ResultInLog> = []

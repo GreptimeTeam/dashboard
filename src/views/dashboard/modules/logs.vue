@@ -6,7 +6,7 @@ a-tabs.result-tabs.logs-tab(type="rounded")
       type="secondary"
       status="danger"
       @click="clear"
-    ) {{ $t('dataExplorer.clear') }}
+    ) {{ $t('dashboard.clear') }}
   a-tab-pane(title="Logs")
     a-card(:bordered="false")
       a-list.log-list(
