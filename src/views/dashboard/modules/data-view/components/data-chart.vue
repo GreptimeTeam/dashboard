@@ -4,11 +4,11 @@ a-card(v-if="hasChart" :bordered="false")
     a-space(size="mini")
       svg.icon-18
         use(href="#chart")
-      | {{ $t('dataExplorer.chart') }}
+      | {{ $t('dashboard.chart') }}
   a-spin(style="width: 100%")
     a-row
       a-form.chart-form(layout="inline" :model="chartForm")
-        a-form-item(:label="$t('dataExplorer.chartType')")
+        a-form-item(:label="$t('dashboard.chartType')")
           a-select(v-model="chartForm.chartType" :trigger-props="triggerProps")
             a-option(
               v-for="item of chartTypeOptions"
@@ -16,16 +16,16 @@ a-card(v-if="hasChart" :bordered="false")
               :value="item.value"
               :label="item.value"
             )
-        a-form-item.select-y(:label="$t('dataExplorer.yType')")
+        a-form-item.select-y(:label="$t('dashboard.yType')")
           a-select(
             v-model="chartForm.selectedYTypes"
             multiple
-            :placeholder="$t('dataExplorer.selectY')"
+            :placeholder="$t('dashboard.selectY')"
             :allow-search="false"
             :trigger-props="triggerProps"
           )
             a-option(v-for="item of yOptions" :key="item.value" :value="item.value") {{ item.value }}
-        a-form-item.select-y(:label="$t('dataExplorer.groupBy')")
+        a-form-item.select-y(:label="$t('dashboard.groupBy')")
           a-select(
             v-model="chartForm.groupBySelectedTypes"
             multiple
@@ -39,9 +39,9 @@ a-card(v-if="hasChart" :bordered="false")
         a-space(direction="vertical" :size="30")
           a-space(:size="10")
             icon-exclamation-circle-fill.warning-color
-            span.loading-tip {{ $tc('dataExplorer.chartLoadingTip', seriesCount, { count: seriesCount }) }}
+            span.loading-tip {{ $tc('dashboard.chartLoadingTip', seriesCount, { count: seriesCount }) }}
           a-button(type="primary" @click="showChart")
-            | {{ $t('dataExplorer.ok') }}
+            | {{ $t('dashboard.ok') }}
       Chart.chart-area(height="330px" :option="chartOptions" :update-options="updateOptions")
 </template>
 
