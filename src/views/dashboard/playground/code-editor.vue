@@ -80,7 +80,7 @@
   }
   const runSqlCommand = async () => {
     isLoading.value = true
-    const res = await runQuery(code.value.trim().replace(/\n/gi, ' '), 'sql', true)
+    const res = await runQuery(code.value.trim(), 'sql', true)
     if (res.lastResult?.records) {
       hasRecords.value = true
       result.value = res.lastResult
