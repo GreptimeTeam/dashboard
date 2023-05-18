@@ -27,16 +27,13 @@ We will focus on an example of CPU usage in this document. The example is based 
 - `usage_idle`: the percentage of time that the CPU or CPUs were idle and the system did not have an outstanding disk I/O request
 - `ts`: the timestamp of the record
 
-We will create a table named `cpu_metrics` and insert some data into it. Then we will use SQL to query the data. The protocol used in this example is SQL. Let's get started!
+We will create a table named `cpu_metrics` and insert some data into it. Then we will use SQL to query the data. The query language used in this example is SQL. Let's get started!
 
 
 ## Create a Time-Series Table
 
-GreptimeDB offers a schemaless approach to writing data that eliminates the need to manually create tables using additional protocols. See [Automatic Schema Generation](https://docs.greptime.com/user-guide/write-data#automatic-schema-generation). 
-
-Here we need to create a table manually with SQL protocol. 
 Let's start the journey by creating a simple `cpu_metrics` table. Note that we pre-defined 
-`hostname` as the primary key; `ts` as time index, both are important to know
+`hostname` and `environment` as the primary keys; `ts` as time index, both are important to know
 in GreptimeDB. Click `Run` on the upper left in the panel below to create the table:
 
 ```sql
@@ -48,7 +45,7 @@ CREATE TABLE IF NOT EXISTS cpu_metrics (
     usage_idle DOUBLE,
     ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     TIME INDEX(ts),
-    PRIMARY KEY(hostname)
+    PRIMARY KEY(hostname, environment)
 );
 ```
 
@@ -64,11 +61,11 @@ In GreptimeDB, there are three types of columns:
 DESC TABLE cpu_metrics;
 ```
 
+GreptimeDB offers a schemaless approach to writing data that eliminates the need to manually create tables using additional protocols. See [Automatic Schema Generation](https://docs.greptime.com/user-guide/write-data#automatic-schema-generation). 
+
 ## Add Some Data
 
 Using the `INSERT` statement to easily add data to the table. Below example inserts three rows into the `cpu_metrics` table.
-
-<!-- ts could be timestamp -->
 
 ``` sql
 INSERT INTO cpu_metrics
@@ -112,6 +109,8 @@ VALUES
     ('host_0','test',35,59,36,'2023-04-01T00:11:00+00:00');
 ```
 
+See more about [`INSERT` clause](https://docs.greptime.com/reference/sql/insert).
+
 ## Query Data with SQL
 
 ### Select all data
@@ -136,7 +135,7 @@ Basic arithmetic can be performed on the selected column. For example, the follo
 SELECT usage_user, usage_user * 2 as twice_usage_user FROM cpu_metrics;
 ```
 
-See more about [`Select` clause](https://docs.greptime.com/reference/sql/select).
+See more about [`SELECT` clause](https://docs.greptime.com/reference/sql/select).
 
 ### Filter data by `WHERE` clause 
 
@@ -146,7 +145,7 @@ The `WHERE` clause can be used to filter data. It supports comparisons against s
 SELECT * FROM cpu_metrics WHERE usage_user > 50;
 ```
 
-See more about [`Where` clause](https://docs.greptime.com/reference/sql/where).
+See more about [`WHERE` clause](https://docs.greptime.com/reference/sql/where).
 
 ### Group query results
 
