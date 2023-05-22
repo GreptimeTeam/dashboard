@@ -87,9 +87,8 @@ VALUES
     ('host_0','test',29,58,36,1680307320),
     ('host_1','staging',10,32,50,1680307320),
     ('host_1','test',32,63,22,1680307320),
-    ('host_2','staging',65,15,40,1680307200),
-    ('host_2','test',100,5,36,1680307320),
-    ('host_0','test',32,60,36,1680307440);
+    ('host_2','staging',65,15,40,1680307320),
+    ('host_2','test',100,5,36,1680307320);
 ```
 
 
@@ -99,6 +98,7 @@ Ingest more entries by modifying the values and timestamps.
 ``` sql
 INSERT INTO cpu_metrics
 VALUES
+    ('host_3','test',93,97,8,1680307320),
     ('host_4','test',31,43,11,1680307320),
     ('host_0','test',31,58,34,1680307380),
     ('host_1','test',34,58,20,1680307380),
@@ -107,14 +107,13 @@ VALUES
     ('host_2','test',100,3,36,1680307380),
     ('host_3','test',98,94,5,1680307380),
     ('host_4','test',31,43,11,1680307380),
-    ('host_3','test',97,96,3,1680307680),
-    ('host_4','test',36,44,12,1680307680),
-    ('host_0','test',34,57,37,1680307740),
-    ('host_1','staging',13,36,49,1680307740),
-    ('host_2','test',98,3,38,1680307740),
-    ('host_2','staging',70,13,38,1680307740),
-    ('host_3','test',96,96,4,1680307740),
-    ('host_0','test',35,59,36,1680307860);
+    ('host_0','test',34,57,37,1680307440),
+    ('host_1','test',27,67,19,1680307440),
+    ('host_1','staging',13,36,49,1680307440),
+    ('host_2','test',98,3,38,1680307440),
+    ('host_2','staging',70,13,38,1680307440),
+    ('host_3','test',96,96,4,1680307440),
+    ('host_4','test',36,44,12,1680307440);
 ```
 
 See more about [`INSERT` clause](https://docs.greptime.com/reference/sql/insert).
@@ -123,7 +122,7 @@ See more about [`INSERT` clause](https://docs.greptime.com/reference/sql/insert)
 
 ### Select all data
 
-Run the following SQL statement to query all rows in the table. Then you can switch to the `Chart` tab to see the visualized data.
+Run the following SQL statement to query all rows in the table. After getting the results, click the `Chart` tab to see the visualized data. You can choose `Group By` options to make the visualized data group by `hostname` and `environment`.
 
 ``` sql
 SELECT * FROM cpu_metrics ORDER BY ts DESC;
