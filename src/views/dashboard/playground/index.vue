@@ -22,9 +22,18 @@ a-layout.layout
   const { VITE_RECAPTCHA_SITE_KEY } = import.meta.env
   const { isCloud } = storeToRefs(useAppStore())
   const appStore = useAppStore()
+  const router = useRouter()
+  const { getGistFiles } = useGist()
+
   const refreshPlaygroundModal = ref()
   const currentFile = ref('')
   const files = import.meta.glob('./docs/*.md', { eager: true })
+  const gistFiles = ref([])
+  const { gistId } = router.currentRoute.value.query
+
+  if (gistId) {
+    gistFiles.value = (await getGistFiles(gistId as string)) as any
+  }
 
   const fileList =
     Object.entries(files).map(([key, file]) => {
