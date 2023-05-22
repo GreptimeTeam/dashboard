@@ -7,7 +7,7 @@ title: Quick Start
 Greetings from Greptime Play! Apart from just following a word-document guide, this interactive playground will quickly familiarize you with GreptimeDB and help you to get the most out of it. 
 
 ::: tip Cool feature alert:
-all code blocks in this guide are editable and executable! 
+All code blocks in this guide are editable and executable! 
 :::
 
 By hitting the `Run` button, the code will be executed and run in a temporary, private instance generated
