@@ -58,8 +58,8 @@ a-layout.layout
     }
 
     Object.values({
-      ...officialMdFiles.value,
       ...gistFiles.value,
+      ...officialMdFiles.value,
     }).forEach((value) => {
       const res: any = parseMD(value as string)
       if (res.metadata && res.metadata.title) {
