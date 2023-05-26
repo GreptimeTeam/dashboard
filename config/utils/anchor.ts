@@ -1,6 +1,6 @@
 import type MarkdownIt from 'markdown-it'
 
-export default function archorWithTargetBlank(md: MarkdownIt) {
+export default function anchorWithTargetBlank(md: MarkdownIt) {
   const defaultRender =
     md.renderer.rules.link_open ||
     function (tokens, idx, options, env, self) {

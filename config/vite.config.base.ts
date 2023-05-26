@@ -9,7 +9,7 @@ import MarkdownIt from 'markdown-it'
 import mdPlugin, { Mode } from 'vite-plugin-markdown'
 import customCode from './utils/markdown-it-custom-code'
 import containerPlugin from './utils/containers'
-import archor from './utils/archor'
+import anchor from './utils/anchor'
 
 const useDevMode = true
 export default defineConfig({
@@ -62,7 +62,7 @@ export default defineConfig({
       })
         .use(customCode)
         .use(containerPlugin)
-        .use(archor),
+        .use(anchor),
     }),
   ],
   resolve: {
