@@ -155,7 +155,7 @@ a-card.editor-card(:bordered="false")
   const runQueryAll = async () => {
     primaryCodeRunning.value = true
     // TODO: add better format tool for code
-    await runQuery(queryCode.value.trim().replace(/\n/gi, ' '), queryType.value)
+    await runQuery(queryCode.value.trim(), queryType.value)
     primaryCodeRunning.value = false
     // TODO: refresh tables data and when
   }
