@@ -60,6 +60,7 @@
     "markdown-it-container": "^3.0.0",
     "markdown-it-meta": "^0.0.1",
     "mitt": "^3.0.0",
+    "nanoid": "^4.0.2",
     "nprogress": "^0.2.0",
     "parse-md": "^3.0.3",
     "pinia": "^2.0.29",
