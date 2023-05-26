@@ -9,6 +9,7 @@ import MarkdownIt from 'markdown-it'
 import mdPlugin, { Mode } from 'vite-plugin-markdown'
 import customCode from './utils/markdown-it-custom-code'
 import containerPlugin from './utils/containers'
+import anchor from './utils/anchor'
 
 const useDevMode = true
 export default defineConfig({
@@ -60,7 +61,8 @@ export default defineConfig({
         linkify: false,
       })
         .use(customCode)
-        .use(containerPlugin),
+        .use(containerPlugin)
+        .use(anchor),
     }),
   ],
   resolve: {
