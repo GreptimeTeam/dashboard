@@ -1,13 +1,13 @@
 <script>
   import MarkdownIt from 'markdown-it'
-  import { containerPlugin, customCode } from '@/utils/mdPlugins'
+  import { containerPlugin, customCode, customImage } from '@/utils/mdPlugins'
   import meta from 'markdown-it-meta'
   import comments from 'markdown-it-inline-comments'
   import { compile, h } from 'vue'
   import CodeEditor from './code-editor.vue'
 
   const md = new MarkdownIt()
-  md.use(containerPlugin).use(customCode).use(comments).use(meta)
+  md.use(containerPlugin).use(customCode).use(customImage).use(comments).use(meta)
 
   export default {
     components: {

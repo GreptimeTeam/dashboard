@@ -107,3 +107,26 @@ export function customCode(md: MarkdownIt) {
     return `${res}`
   }
 }
+
+export function customImage(md: MarkdownIt) {
+  const defaultRender = md.renderer.rules.image
+  const isDigital = (str: string) => /^\d+$/.test(str)
+  const hasDigital = (str: string) => /\d+/.test(str)
+
+  md.renderer.rules.image = (tokens, idx, options, env, self) => {
+    const token = tokens[idx]
+    const altInfo = token.content || ''
+    const src = token.attrGet('src') || ''
+
+    const [alt, size, klass] = altInfo.split('|').map((item) => item.trim())
+    let [width, height] = size?.split(/[xX*]/) || []
+
+    if (isDigital(width)) width += 'px'
+    if (isDigital(height)) height += 'px'
+    if (!height) height = width
+
+    return `<div class="${klass}" title="${alt}">
+    <img src="${src}" alt="${alt}" style="width:${width};height:${height}"/>
+    </div>`
+  }
+}
