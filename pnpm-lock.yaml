@@ -1,4 +1,8 @@
-lockfileVersion: '6.0'
+lockfileVersion: '6.1'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
 
 overrides:
   bin-wrapper: npm:bin-wrapper-china
@@ -81,6 +85,9 @@ dependencies:
   markdown-it-container:
     specifier: ^3.0.0
     version: 3.0.0
+  markdown-it-inline-comments:
+    specifier: ^1.0.1
+    version: 1.0.1
   markdown-it-meta:
     specifier: ^0.0.1
     version: 0.0.1
@@ -4634,6 +4641,10 @@ packages:
 
   /markdown-it-container@3.0.0:
     resolution: {integrity: sha512-y6oKTq4BB9OQuY/KLfk/O3ysFhB3IMYoIWhGJEidXt1NQFocFK2sA2t0NYZAMyMShAGL6x5OPIbrmXPIqaN9rw==}
+    dev: false
+
+  /markdown-it-inline-comments@1.0.1:
+    resolution: {integrity: sha512-gObNM3NumcpsU66pO2LmV8MGBfdfFp7TcYME9iuUGs82+JYJWMmBQtAj6/qho4OhKqpR0UX2JTkuuA2HPgHUtQ==}
     dev: false
 
   /markdown-it-meta@0.0.1:
