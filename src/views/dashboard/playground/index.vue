@@ -3,50 +3,45 @@ a-layout.layout
   a-layout-sider
     a-tree.script-tree(
       blockNode
-      :data="fileList"
-      :default-selected-keys="[currentFile]"
+      :data="fileListIndex"
+      :selected-keys="[currentFile]"
       @select="onSelect"
     )
   a-layout-content
     .markdown-container
-      MarkdownContent(v-if="MarkdownContent")
+      RenderHtml(:md="fileList[currentFile]")
     RefreshPlaygroundModal(ref="refreshPlaygroundModal")
 </template>
 
 <script lang="ts" setup name="Playground">
   import { getPlaygroundInfo } from '@/api/playground'
-  import { importFiles } from '@/utils'
-  import CodeEditor from './code-editor.vue'
-
+  import parseMD from 'parse-md'
   // data
-  const { VITE_RECAPTCHA_SITE_KEY } = import.meta.env
   const { isCloud } = storeToRefs(useAppStore())
   const appStore = useAppStore()
+  const router = useRouter()
+  const { getGistFiles } = useGist()
+
   const refreshPlaygroundModal = ref()
   const currentFile = ref('')
-  const files = import.meta.glob('./docs/*.md', { eager: true })
+  const officialMdFiles = ref(import.meta.glob('./docs/*.md', { as: 'raw', eager: true }))
+  const gistFiles = ref({})
+  const fileList = ref({} as any)
 
-  const fileList =
-    Object.entries(files).map(([key, file]) => {
-      const { attributes } = file as any
-      return {
-        title: attributes.title,
-        key,
-      }
-    }) || []
-  currentFile.value = fileList[0]?.key
-
-  const MarkdownContent = computed(() => {
-    const { VueComponentWith } = files[currentFile.value] as any
-    return VueComponentWith({ CodeEditor })
+  const fileListIndex = computed(() => {
+    return Object.keys(fileList.value).map((key) => ({
+      key,
+      title: key,
+    }))
   })
-
   // methods
   const onSelect = (e: string[]) => {
     ;[currentFile.value] = e
   }
   // lifecycle
   onMounted(async () => {
+    const { gistId } = router.currentRoute.value.query
+
     if (appStore.lifetime === 'temporary' && isCloud.value) {
       try {
         const data = await getPlaygroundInfo(appStore.dbId)
@@ -54,6 +49,25 @@ a-layout.layout
         refreshPlaygroundModal.value.toggleModal()
       }
     }
+
+    if (gistId) {
+      gistFiles.value = (await getGistFiles(gistId as string)).reduce((obj: any, file: any) => {
+        obj[file.filename] = file.content
+        return obj
+      }, {}) as any
+    }
+
+    Object.values({
+      ...gistFiles.value,
+      ...officialMdFiles.value,
+    }).forEach((value) => {
+      const res: any = parseMD(value as string)
+      if (res.metadata && res.metadata.title) {
+        fileList.value[res.metadata.title] = value
+      }
+    })
+
+    currentFile.value = Object.keys(fileList.value)[0]
   })
 </script>
 
