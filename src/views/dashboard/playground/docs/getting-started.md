@@ -190,9 +190,7 @@ See more about [`GROUP BY` clause](https://docs.greptime.com/reference/sql/group
 <!-- TODO: add GROUP BY time -->
 <!-- The following SQL statement returns the average CPU usage of all hosts every 5 minutes.-->
 
-<!-- ``` sql -->
 <!-- SELECT avg(usage_user), avg(usage_system), avg(usage_idle) FROM cpu_metrics GROUP BY time(5m); -->
-<!-- ```  -->
 
 ### More aggregate functions
 
