@@ -125,7 +125,7 @@ export function customImage(md: MarkdownIt) {
     if (isDigital(height)) height += 'px'
     if (!height) height = width
 
-    return `<div class="${klass}" title="${alt}">
+    return `<div class="image-container ${klass}" title="${alt}">
     <img src="${src}" alt="${alt}" style="width:${width};height:${height}"/>
     </div>`
   }
@@ -140,3 +140,5 @@ export function customComment(md: MarkdownIt) {
     return defaultRender(tokens, idx, options, env, self)
   }
 }
+
+export function customToc(md: MarkdownIt) {}

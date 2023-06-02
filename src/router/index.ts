@@ -20,8 +20,20 @@ const router = createRouter({
     REDIRECT_MAIN,
     NOT_FOUND_ROUTE,
   ],
-  scrollBehavior() {
-    return { top: 0 }
+  scrollBehavior(to, from, savedPosition) {
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        if (savedPosition) {
+          resolve(savedPosition)
+        }
+        if (to.hash) {
+          resolve({
+            el: to.hash,
+          })
+        }
+        resolve({ top: 0 })
+      }, 0)
+    })
   },
 })
 

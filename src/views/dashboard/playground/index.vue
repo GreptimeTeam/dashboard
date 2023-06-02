@@ -9,7 +9,7 @@ a-layout.layout
     )
   a-layout-content
     .markdown-container
-      RenderHtml(:md="fileList[currentFile]")
+      RenderHtml(:file="fileList[currentFile]")
     RefreshPlaygroundModal(ref="refreshPlaygroundModal")
 </template>
 
@@ -28,6 +28,9 @@ a-layout.layout
   const gistFiles = ref({})
   const fileList = ref({} as any)
 
+  const { gistId } = router.currentRoute.value.query
+  const { filename } = router.currentRoute.value.params
+
   const fileListIndex = computed(() => {
     return Object.keys(fileList.value).map((key) => ({
       key,
@@ -36,12 +39,41 @@ a-layout.layout
   })
   // methods
   const onSelect = (e: string[]) => {
-    ;[currentFile.value] = e
+    router.push({
+      name: 'playground',
+      query: {
+        gistId,
+      },
+      params: {
+        filename: encodeURIComponent(e[0]),
+      },
+    })
+  }
+
+  const loadFilesFromGist = async () => {
+    if (gistId) {
+      gistFiles.value = (await getGistFiles(gistId as string)).reduce((obj: any, file: any) => {
+        obj[file.filename] = file.content
+        return obj
+      }, {}) as any
+    }
   }
   // lifecycle
-  onMounted(async () => {
-    const { gistId } = router.currentRoute.value.query
 
+  const makeFileList = () => {
+    Object.values({
+      ...gistFiles.value,
+      ...officialMdFiles.value,
+    }).forEach((content) => {
+      const res: any = parseMD(content as string)
+      if (res.metadata && res.metadata.title) {
+        fileList.value[res.metadata.title] = res
+      }
+    })
+
+    currentFile.value = (filename && decodeURIComponent(filename as string)) || Object.keys(fileList.value)[0]
+  }
+  onMounted(async () => {
     if (appStore.lifetime === 'temporary' && isCloud.value) {
       try {
         const data = await getPlaygroundInfo(appStore.dbId)
@@ -49,32 +81,18 @@ a-layout.layout
         refreshPlaygroundModal.value.toggleModal()
       }
     }
-
-    if (gistId) {
-      gistFiles.value = (await getGistFiles(gistId as string)).reduce((obj: any, file: any) => {
-        obj[file.filename] = file.content
-        return obj
-      }, {}) as any
-    }
-
-    Object.values({
-      ...gistFiles.value,
-      ...officialMdFiles.value,
-    }).forEach((value) => {
-      const res: any = parseMD(value as string)
-      if (res.metadata && res.metadata.title) {
-        fileList.value[res.metadata.title] = value
-      }
-    })
-
-    currentFile.value = Object.keys(fileList.value)[0]
+    loadFilesFromGist()
+    makeFileList()
   })
+
+  watch(() => gistFiles.value, makeFileList)
 </script>
 
 <style lang="stylus" rel="stylesheet/stylus" scoped>
   .arco-layout-sider
     background-color #fff
     border-radius 10px
+    width 180px !important
   .markdown-container
     background-color #fff
     border-radius 10px

@@ -34,7 +34,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       },
     },
     {
-      path: 'playground',
+      path: 'playground/:filename?',
       name: 'playground',
       component: () => import('@/views/dashboard/playground/index.vue'),
       meta: {
