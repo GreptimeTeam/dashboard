@@ -130,3 +130,13 @@ export function customImage(md: MarkdownIt) {
     </div>`
   }
 }
+
+export function customComment(md: MarkdownIt) {
+  const defaultRender = md.renderer.rules.text!
+  md.renderer.rules.text = (tokens, idx, options, env, self) => {
+    if (tokens[idx].content.startsWith('<!--') && tokens[idx].content.endsWith('-->')) {
+      return ''
+    }
+    return defaultRender(tokens, idx, options, env, self)
+  }
+}
