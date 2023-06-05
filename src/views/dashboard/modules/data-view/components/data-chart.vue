@@ -33,7 +33,7 @@ a-card(v-if="hasChart" :bordered="false")
             :disabled="isGroupByDisabled"
             :trigger-props="triggerProps"
           )
-            a-option(v-for="item of groupByOptions" :key="item.index" :value="item.index") {{ item.name }}
+            a-option(v-for="item of groupByOptions" :key="item.index" :value="item.name") {{ item.name }}
     a-spin(style="width: 100%" :loading="isChartLoading")
       template(#element)
         a-space(direction="vertical" :size="30")
@@ -63,6 +63,10 @@ a-card(v-if="hasChart" :bordered="false")
         key: -1,
         type: '',
       }),
+    },
+    defaultChartForm: {
+      type: Object,
+      default: () => ({}),
     },
     hasHeader: {
       type: Boolean,
@@ -143,7 +147,8 @@ a-card(v-if="hasChart" :bordered="false")
     } else {
       const dataWithGroup = groupByToMap(props.data.records.rows, (value: any) => {
         let string = ``
-        chartForm.groupBySelectedTypes.forEach((typeIndex: number, index: number) => {
+        chartForm.groupBySelectedTypes.forEach((typeName: string, index: number) => {
+          const typeIndex: number = groupByOptions.value.find(({ name }) => name === typeName)?.index ?? -1
           string = index === 0 ? `${value[typeIndex]}` : `${string}, ${value[typeIndex]}`
         })
         return string
@@ -207,6 +212,10 @@ a-card(v-if="hasChart" :bordered="false")
   // TODO: Might need to change this
   onMounted(() => {
     if (hasChart.value) chartForm.selectedYTypes = [yOptions.value[0].value]
+    console.log(`Object.entries(props.defaultChartForm).:`, Object.entries(props.defaultChartForm))
+    Object.entries(props.defaultChartForm).forEach(([key, value]) => {
+      chartForm[key] = value
+    })
   })
 
   const drawChart = () => {

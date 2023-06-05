@@ -2,7 +2,7 @@ import { ResultType, SchemaType } from '../store/modules/code-run/types'
 import { dateTypes, numberTypes } from '../views/dashboard/config'
 
 export default function useDataChart(data: ResultType) {
-  const groupBySelectedTypes: Array<number> = []
+  const groupBySelectedTypes: Array<string> = []
   const chartForm = reactive({
     chartType: 'line',
     selectedYTypes: [''],
