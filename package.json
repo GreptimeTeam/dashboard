@@ -49,7 +49,7 @@
     "@lezer/lr": "^1.2.3",
     "@prometheus-io/codemirror-promql": "^0.42.0",
     "@vueuse/core": "^10.1.0",
-    "arco-design-pro-vue": "^2.6.1",
+    "arco-design-pro-vue": "^2.7.2",
     "axios": "^0.27.2",
     "codemirror": "6.x",
     "consola": "^2.15.3",

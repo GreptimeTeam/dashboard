@@ -1,4 +1,8 @@
-lockfileVersion: '6.0'
+lockfileVersion: '6.1'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
 
 settings:
   autoInstallPeers: false
@@ -59,8 +63,8 @@ dependencies:
     specifier: ^10.1.0
     version: 10.1.2(vue@3.2.47)
   arco-design-pro-vue:
-    specifier: ^2.6.1
-    version: 2.6.1
+    specifier: ^2.7.2
+    version: 2.7.2
   axios:
     specifier: ^0.27.2
     version: 0.27.2
@@ -2137,8 +2141,8 @@ packages:
       picomatch: 2.3.1
     dev: true
 
-  /arco-design-pro-vue@2.6.1:
-    resolution: {integrity: sha512-B+T2TGJCPe5p95kzofRL3ma/BAx1Eumho7fzDFN5VwNpoej6DQLMiNuvIUBPnjLVM3KwPGvCUVyOIxkn7JGLAQ==}
+  /arco-design-pro-vue@2.7.2:
+    resolution: {integrity: sha512-a7FriKhuMCjqEgIXfh5jXxyZ3D7IFaHbu9p4u4dzDnp+aWnwDaROGr987IEZKvI9+5cFz41I5JMLfvKyEZ2JwQ==}
     dependencies:
       fs-extra: 10.1.0
       minimist: 1.2.7
