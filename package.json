@@ -100,7 +100,7 @@
     "@volar/vue-language-plugin-pug": "^1.0.24",
     "@vue/babel-plugin-jsx": "^1.1.1",
     "cross-env": "^7.0.3",
-    "eslint": "^8.31.0",
+    "eslint": "^8.40.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-prettier": "^8.7.0",
     "eslint-import-resolver-typescript": "^3.5.3",
