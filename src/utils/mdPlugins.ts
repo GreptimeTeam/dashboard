@@ -102,7 +102,7 @@ export function customCode(md: MarkdownIt) {
       token.info
         .match(/\((.*)\)/)?.[1]
         .split('|')
-        .map((item) => item.split(',')) || []
+        .map((item) => (item ? item.split(',') : [])) || []
 
     const defaultChartForm = {
       chartType,

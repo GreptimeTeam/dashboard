@@ -35,6 +35,9 @@ title: xxx
 ![alt|{width}x{height}|classes](image_url)
 ```
 
+`![it's me](https://files.catbox.moe/lhez89.jpg)`的渲染结果
+![it's me](https://files.catbox.moe/lhez89.jpg)
+
 `![it's me|200x200](https://files.catbox.moe/lhez89.jpg)`的渲染结果
 ![it's me|200x200](https://files.catbox.moe/lhez89.jpg)
 
@@ -168,4 +171,12 @@ VALUES
 -- ```
 
 SELECT * FROM cpu_metrics_3
+```
+
+``` sql (line(smooth)|data|)
+-- ``` sql (line(smooth)|data|)
+-- SELECT * FROM apm
+-- ```
+
+SELECT * FROM apm
 ```
