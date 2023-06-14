@@ -5,7 +5,7 @@ a-space(direction="vertical" size="medium")
       template(#prefix)
         svg.icon
           use(href="#search")
-    a-tooltip(mini :content="$t('dataExplorer.create')")
+    a-tooltip(mini :content="$t('dashboard.create')")
       .icon-space.pointer(@click="createNewScript()")
         svg.icon
           use(href="#create")
@@ -27,7 +27,7 @@ a-modal.change-modal(
   @cancel="handleCancel"
 )
   template(#title="")
-  | {{ $t('dataExplorer.question') }}
+  | {{ $t('dashboard.question') }}
 </template>
 
 <script lang="ts" name="ScriptsList" setup>

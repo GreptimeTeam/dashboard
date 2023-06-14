@@ -25,7 +25,7 @@ a-space(direction="vertical" size="medium" fill)
         .tree-data
           a-typography-text.data-title(:ellipsis="{ rows: 1, showTooltip: true }") {{ nodeData.title }}
           .data-type {{ nodeData.dataType }}
-        a-tooltip(mini :content="$t('dataExplorer.insertName')")
+        a-tooltip(mini :content="$t('dashboard.insertName')")
           svg.icon-15.copy-icon.pointer(name="copy" @click="insertName(nodeData.title)")
             use(href="#copy")
 </template>

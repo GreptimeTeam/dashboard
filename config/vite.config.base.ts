@@ -5,10 +5,6 @@ import vueJsx from '@vitejs/plugin-vue-jsx'
 import svgLoader from 'vite-svg-loader'
 import Components from 'unplugin-vue-components/vite'
 import AutoImport from 'unplugin-auto-import/vite'
-import MarkdownIt from 'markdown-it'
-import mdPlugin, { Mode } from 'vite-plugin-markdown'
-import customCode from './utils/markdown-it-custom-code'
-import containerPlugin from './utils/containers'
 
 const useDevMode = true
 export default defineConfig({
@@ -51,16 +47,6 @@ export default defineConfig({
       dts: true,
       dirs: ['src/components', 'src/views'],
       extensions: ['vue', 'arco-design'],
-    }),
-    mdPlugin({
-      mode: [Mode.VUE],
-      markdownIt: new MarkdownIt({
-        html: true,
-        xhtmlOut: true,
-        linkify: false,
-      })
-        .use(customCode)
-        .use(containerPlugin),
     }),
   ],
   resolve: {

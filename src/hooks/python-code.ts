@@ -64,7 +64,7 @@ export default function usePythonCode() {
     try {
       const res = await saveScript(name, code)
       Message.success({
-        content: i18n.global.t('dataExplorer.saveSuccess'),
+        content: i18n.global.t('dashboard.saveSuccess'),
         duration: 2 * 1000,
       })
       pushLog(res, 'python')

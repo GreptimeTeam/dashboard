@@ -6,13 +6,13 @@ a-card.editor-card(:bordered="false")
         .mr-4
           icon-loading(v-if="primaryCodeRunning" spin)
           icon-play-arrow(v-else)
-        | {{ $t('dataExplorer.runAll') }}
+        | {{ $t('dashboard.runAll') }}
       a-button(:disabled="isButtonDisabled" @click="runPartQuery()")
         .mr-4
           icon-loading(v-if="secondaryCodeRunning" spin)
           icon-play-arrow(v-else)
-        div(v-if="lineStart === lineEnd") {{ $t('dataExplorer.runLine') }} {{ lineStart }}
-        div(v-else) {{ $t('dataExplorer.runLines') }} {{ lineStart }} - {{ lineEnd }}
+        div(v-if="lineStart === lineEnd") {{ $t('dashboard.runLine') }} {{ lineStart }}
+        div(v-else) {{ $t('dashboard.runLines') }} {{ lineStart }} - {{ lineEnd }}
     .query-select(v-if="!isCloud")
       a-select(v-model="queryType" @change="selectCodeType")
         a-option(v-for="query of queryOptions" :="query")
@@ -36,7 +36,7 @@ a-card.editor-card(:bordered="false")
           :show-time="true"
           :allow-clear="true"
           :trigger-props="{ 'update-at-scroll': true }"
-          :placeholder="[$t('dataExplorer.startTime'), $t('dataExplorer.endTime')]"
+          :placeholder="[$t('dashboard.startTime'), $t('dashboard.endTime')]"
         )
           template(#prefix)
             svg.icon-20
@@ -46,7 +46,7 @@ a-card.editor-card(:bordered="false")
           v-model="promForm.step"
           hide-button
           :style="{ width: '180px' }"
-          :placeholder="$t('dataExplorer.step')"
+          :placeholder="$t('dashboard.step')"
         )
           template(#suffix)
             a-popover(trigger="hover")
@@ -55,16 +55,14 @@ a-card.editor-card(:bordered="false")
               template(#content)
                 a-list(size="small" :split="false" :bordered="false")
                   template(#header)
-                    | {{ $t('dataExplorer.supportedDurations') }}
+                    | {{ $t('dashboard.supportedDurations') }}
                   a-list-item(v-for="item of durations" :key="item")
                     a-typography-text(code) {{ item.key }}
                     span.ml-4 {{ item.value }}
                   a-list-item
-                    span.ml-2 {{ $t('dataExplorer.examples') }}
+                    span.ml-2 {{ $t('dashboard.examples') }}
                     a-typography-text(v-for="item of durationExamples" :key="item" code) {{ item }}
-    a-form-item.time-switch(
-      :label="promForm.isRelative === 1 ? $t('dataExplorer.relative') : $t('dataExplorer.absolute')"
-    )
+    a-form-item.time-switch(:label="promForm.isRelative === 1 ? $t('dashboard.relative') : $t('dashboard.absolute')")
       a-switch(v-model="promForm.isRelative" :checked-value="1" :unchecked-value="0")
   CodeMirror(
     v-model="queryCode"
@@ -157,7 +155,7 @@ a-card.editor-card(:bordered="false")
   const runQueryAll = async () => {
     primaryCodeRunning.value = true
     // TODO: add better format tool for code
-    await runQuery(queryCode.value.trim().replace(/\n/gi, ' '), queryType.value)
+    await runQuery(queryCode.value.trim(), queryType.value)
     primaryCodeRunning.value = false
     // TODO: refresh tables data and when
   }

@@ -4,7 +4,7 @@ a-card(:bordered="false")
     a-space(size="mini")
       svg.icon-20
         use(href="#table")
-      | {{ $t('dataExplorer.table') }}
+      | {{ $t('dashboard.table') }}
   a-spin(style="width: 100%")
     a-table(:data="gridData" :pagination="pagination")
       template(#columns)
@@ -17,7 +17,7 @@ a-card(:bordered="false")
               template(#title)
                 a-tooltip(
                   placement="top"
-                  :content="timeColumnFormatMap[column.dataIndex] ? $t('dataExplorer.showTimestamp') : $t('dataExplorer.formatTimestamp')"
+                  :content="timeColumnFormatMap[column.dataIndex] ? $t('dashboard.showTimestamp') : $t('dashboard.formatTimestamp')"
                 )
                   a-space(
                     size="mini"

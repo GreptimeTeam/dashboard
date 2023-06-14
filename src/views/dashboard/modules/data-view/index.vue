@@ -9,12 +9,12 @@ a-tabs.result-tabs(
   @delete="deleteTab"
 )
   template(#extra)
-    a-button(status="danger" @click="clearResults") {{ $t('dataExplorer.clear') }}
+    a-button(status="danger" @click="clearResults") {{ $t('dashboard.clear') }}
   a-tab-pane(
     v-for="(result, index) of results"
     :key="result.key"
     closable
-    :title="`${$t('dataExplorer.result')} ${result.key - startKey + 1}`"
+    :title="`${$t('dashboard.result')} ${result.key - startKey + 1}`"
   )
     a-space(direction="vertical" size="small" fill)
       DataGrid(:data="result")
@@ -35,11 +35,11 @@ a-tabs.result-tabs(
   const startKey = ref(props.results[0]?.key)
 
   const deleteTab = async (key: number) => {
-    const index = props.results.findIndex((result) => result.key === key)
+    const index = props.results.findIndex((result) => result.key === key && props.types.includes(result.type))
     if (props.results.length === 1) {
       startKey.value = props.results[0].key
     }
-    await removeResult(key)
+    await removeResult(key, props.results[index].type)
     if (activeTabKey.value === key) {
       activeTabKey.value = props.results[index]?.key || props.results.slice(-1)[0].key
     }

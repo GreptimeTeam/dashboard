@@ -42,7 +42,8 @@ router.beforeEach(async (to, from, next) => {
         },
       })
       appStore.updateSettings(config)
-      return next({ path: to.path, query: {} })
+      delete to.query.info
+      return next({ path: to.path, query: to.query })
     }
     appStore.updateSettings(useStorage('config', {}).value)
   } catch (error) {

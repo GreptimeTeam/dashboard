@@ -2,29 +2,29 @@
 a-card.editor-card(:bordered="false")
   a-space.form-space(size="medium")
     a-form(layout="inline" :model="scriptForm")
-      a-form-item(:label="$t('dataExplorer.scriptName')")
+      a-form-item(:label="$t('dashboard.scriptName')")
         a-input(
           v-model:model-value="scriptForm.scriptName"
           v-bind:disabled="!isNewScript"
-          :placeholder="$t('dataExplorer.input')"
+          :placeholder="$t('dashboard.input')"
         ) 
     a-space
       a-button(v-if="ifCanRun" :disabled="isButtonDisabled" @click="runScript()")
         .mr-4
           icon-loading(v-if="scriptRunning" spin)
           icon-play-arrow(v-else)
-        | {{ $t('dataExplorer.runScriptAction') }}
+        | {{ $t('dashboard.runScriptAction') }}
       a-space(v-else)
         a-button(:disabled="isButtonDisabled" @click="saveCurrentScript()")
           .mr-4
             icon-loading(v-if="scriptSaving" spin)
             icon-play-arrow(v-else)
-          | {{ $t('dataExplorer.saveScript') }}
+          | {{ $t('dashboard.saveScript') }}
         a-button(:disabled="isButtonDisabled" @click="saveScriptAndRun()")
           .mr-4
             icon-loading(v-if="scriptRunning" spin)
             icon-play-arrow(v-else)
-          | {{ $t('dataExplorer.saveAndRun') }}
+          | {{ $t('dashboard.saveAndRun') }}
   CodeMirror(
     v-model="pythonCode"
     :style="style"

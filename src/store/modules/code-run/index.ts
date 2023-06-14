@@ -14,7 +14,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
   const { promForm } = useQueryCode()
 
   const results = ref<ResultType[]>([])
-  const resultsId = ref(0)
+  const resultKeyCount = reactive<{ [key: string]: number }>({})
 
   // TODO: Add all the types we decide instead of ECharts if needed in the future.
   const getDimensionsAndXName = (schemas: SchemaType[]) => {
@@ -48,25 +48,30 @@ const useCodeRunStore = defineStore('codeRun', () => {
       let oneResult = {} as ResultType
       const res: HttpResponse = await API_MAP[type](codeInfo)
       Message.success({
-        content: i18n.global.t('dataExplorer.runSuccess'),
+        content: i18n.global.t('dashboard.runSuccess'),
         duration: 2 * 1000,
       })
       const resultsInLog: Array<ResultInLog> = []
       res.output.forEach((oneRes: OutputType) => {
-        if ('records' in oneRes) {
+        if (Reflect.has(oneRes, 'records')) {
           const rowLength = oneRes.records.rows.length
           resultsInLog.push({
             records: rowLength,
           })
           if (rowLength >= 0) {
-            resultsId.value += 1
+            if (Reflect.has(resultKeyCount, type)) {
+              resultKeyCount[type] += 1
+            } else {
+              resultKeyCount[type] = 0
+            }
+
             oneResult = {
               records: oneRes.records,
               dimensionsAndXName:
                 rowLength === 0
                   ? { dimensions: [], xAxis: '' }
                   : getDimensionsAndXName(oneRes.records.schema.column_schemas),
-              key: resultsId.value,
+              key: resultKeyCount[type],
               type,
             }
             if (!withoutSave) {
@@ -74,7 +79,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
             }
           }
         }
-        if ('affectedrows' in oneRes) {
+        if (Reflect.has(oneRes, 'affectedrows')) {
           resultsInLog.push({
             affectedRows: oneRes.affectedrows,
           })
@@ -105,7 +110,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
         codeInfo,
         ...error,
       }
-      if ('error' in error) {
+      if (Reflect.has(error, 'error')) {
         return {
           log: oneLog,
         }
@@ -123,7 +128,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
         ...res,
       }
     } catch (error: any) {
-      if ('error' in error) {
+      if (Reflect.has(error, 'error')) {
         throw new Error(JSON.stringify(error))
       } else {
         throw new Error('error')
@@ -136,8 +141,8 @@ const useCodeRunStore = defineStore('codeRun', () => {
     results.value = results.value.filter((result) => !types.includes(result.type))
   }
 
-  const removeResult = (key: number) => {
-    results.value = results.value.filter((item: ResultType) => item.key !== key)
+  const removeResult = (key: number, type: string) => {
+    results.value = results.value.filter((item: ResultType) => item.key !== key || item.type !== type)
   }
 
   return {

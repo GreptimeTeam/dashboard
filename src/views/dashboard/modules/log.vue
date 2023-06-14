@@ -6,26 +6,26 @@ a-list-item.smaller-divider
         a-divider(direction="vertical")
       icon-close-circle.danger-color
       div {{ log.startTime }}
-      div {{ $t('dataExplorer.error') }}: {{ log.error }}
-  a-space.log-space.last-overflow(v-else-if="'execution_time_ms' in log" size="mini" fill)
+      div {{ $t('dashboard.error') }}: {{ log.error }}
+  a-space.log-space.last-overflow(v-else-if="hasExecutionTime" size="mini" fill)
     template(#split)
       a-divider(direction="vertical")
     icon-check-circle.success-color
     div {{ log.startTime }}
-    div(v-if="codeType === 'python'") {{ $t('dataExplorer.runScript', { name: log.codeInfo }) }}
-    div {{ $tc('dataExplorer.executed', log.results.length, { length: log.results.length }) }}
-    div {{ $t('dataExplorer.results') }}
-      span(v-for="(oneResult, index) of log.results" :key="index") {{ oneResult.records >= 0 ? $tc('dataExplorer.select', oneResult.records, { records: oneResult.records }) : $tc('dataExplorer.affected', oneResult.affectedRows, { record: oneResult.affectedRows }) }}
-    div {{ $t('dataExplorer.executeTime', { time: log.execution_time_ms }) }}
-    div {{ $t('dataExplorer.network', { time: log.networkTime - log.execution_time_ms }) }}
-    div {{ $t('dataExplorer.total', { time: log.networkTime }) }}
+    div(v-if="codeType === 'python'") {{ $t('dashboard.runScript', { name: log.codeInfo }) }}
+    div {{ $tc('dashboard.executed', log.results.length, { length: log.results.length }) }}
+    div {{ $t('dashboard.results') }}
+      span(v-for="(oneResult, index) of log.results" :key="index") {{ oneResult.records >= 0 ? $tc('dashboard.select', oneResult.records, { records: oneResult.records }) : $tc('dashboard.affected', oneResult.affectedRows, { record: oneResult.affectedRows }) }}
+    div {{ $t('dashboard.executeTime', { time: log.execution_time_ms }) }}
+    div {{ $t('dashboard.network', { time: log.networkTime - log.execution_time_ms }) }}
+    div {{ $t('dashboard.total', { time: log.networkTime }) }}
     div(v-if="codeType !== 'python'")
-      a-tooltip(mini :content="copied ? $t('dataExplorer.copied') : $t('dataExplorer.copyToClipboard')")
+      a-tooltip(mini :content="copied ? $t('dashboard.copied') : $t('dashboard.copyToClipboard')")
         svg.icon.pointer.vertical-center(name="copy" @click="copyToClipboard(log.codeInfo)")
           use(href="#copy")
       a-popover
         span.code-space
-          span {{ $t('dataExplorer.query') }}
+          span {{ $t('dashboard.query') }}
           span {{ log.codeInfo }}
         template(#content)
           a-list(size="small" :split="false" :bordered="false")
@@ -38,7 +38,7 @@ a-list-item.smaller-divider
       a-divider(direction="vertical")
     icon-check-circle.success-color
     div {{ log.startTime }}
-    div {{ $t('dataExplorer.saveName', { name: log.codeInfo }) }}
+    div {{ $t('dashboard.saveName', { name: log.codeInfo }) }}
 </template>
 
 <script lang="ts" name="Log" setup>
@@ -54,6 +54,8 @@ a-list-item.smaller-divider
       default: () => ({}),
     },
   })
+
+  const hasExecutionTime = Reflect.has(props.log, 'execution_time_ms')
 
   const copyToClipboard = (code: string) => {
     if (codeType.value === 'sql') copy(format(code, { language: 'mysql', keywordCase: 'upper' }))

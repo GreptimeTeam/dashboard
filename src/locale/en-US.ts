@@ -1,4 +1,4 @@
-import localeDataExplorer from '@/views/dashboard/locale/en-US'
+import localeDashboard from '@/views/dashboard/locale/en-US'
 import localSetting from '@/components/global-setting/local/en-US'
 
 export default {
@@ -23,6 +23,6 @@ export default {
   'playground.create': 'OK',
   'playground.refeshTitle': 'Warning',
   'playground.refeshNote': 'The Playground has been reclaimed due to timeout. Click OK to re-create the playground',
-  ...localeDataExplorer,
+  ...localeDashboard,
   ...localSetting,
 }
