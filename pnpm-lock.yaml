@@ -1,4 +1,8 @@
-lockfileVersion: '6.0'
+lockfileVersion: '6.1'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
 
 overrides:
   bin-wrapper: npm:bin-wrapper-china
@@ -7055,7 +7059,3 @@ packages:
     name: markdown-it-inline-comments
     version: 1.0.1
     dev: false
-
-settings:
-  autoInstallPeers: false
-  excludeLinksFromLockfile: false
