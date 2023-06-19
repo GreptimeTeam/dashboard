@@ -52,7 +52,7 @@
     "arco-design-pro-vue": "^2.7.2",
     "axios": "^0.27.2",
     "codemirror": "6.x",
-    "consola": "^2.15.3",
+    "consola": "^3.1.0",
     "dayjs": "^1.11.7",
     "echarts": "^5.4.1",
     "eslint-plugin": "^1.0.1",
