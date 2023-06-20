@@ -6,6 +6,7 @@ const useDataBaseStore = defineStore('database', () => {
   const tablesData = ref()
   const originTablesTree = ref()
   const scriptsData = ref()
+  const tablesLoading = ref(false)
 
   const getOriginTablesTree = () => {
     const tempArray: Array<TreeData> = []
@@ -44,9 +45,11 @@ const useDataBaseStore = defineStore('database', () => {
 
   async function getTables() {
     try {
+      tablesLoading.value = true
       const res = await editorAPI.getTables()
       tablesData.value = res
       originTablesTree.value = getOriginTablesTree()
+      tablesLoading.value = false
     } catch (error) {
       // some error
     }
@@ -70,7 +73,7 @@ const useDataBaseStore = defineStore('database', () => {
     }
   }
 
-  return { originTablesTree, originScriptsList, getTables, addChildren, getTableByName, getScriptsTable }
+  return { originTablesTree, originScriptsList, tablesLoading, getTables, addChildren, getTableByName, getScriptsTable }
 })
 
 export default useDataBaseStore

@@ -1,5 +1,5 @@
 <template lang="pug">
-a-space(direction="vertical" size="medium" fill)
+a-spin(:loading="tablesLoading")
   a-space.search-space
     a-input(v-model="tablesSearchKey" :allow-clear="true")
       template(#prefix)
@@ -10,6 +10,7 @@ a-space(direction="vertical" size="medium" fill)
         use(href="#refresh")
   a-scrollbar.tree-scrollbar
     a-tree.table-tree(
+      v-if="tablesTreeData && tablesTreeData.length > 0"
       ref="treeRef"
       size="small"
       :data="tablesTreeData"
@@ -28,6 +29,10 @@ a-space(direction="vertical" size="medium" fill)
         a-tooltip(mini :content="$t('dashboard.insertName')")
           svg.icon-15.copy-icon.pointer(name="copy" @click="insertName(nodeData.title)")
             use(href="#copy")
+    a-empty(v-else)
+      template(#image)
+        svg.icon-32
+          use(href="#empty")
 </template>
 
 <script lang="ts" setup>
@@ -41,7 +46,7 @@ a-space(direction="vertical" size="medium" fill)
   const { insertNameToQueryCode } = useQueryCode()
   const { insertNameToPyCode } = usePythonCode()
   const { tablesSearchKey, tablesTreeData } = useSiderTabs()
-
+  const { tablesLoading } = storeToRefs(useDataBaseStore())
   const { getTableByName, getTables, addChildren } = useDataBaseStore()
 
   const treeRef = ref()
