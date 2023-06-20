@@ -1,7 +1,7 @@
 <template lang="pug">
-a-space(direction="vertical" size="medium")
+a-spin(:loading="scriptsLoading")
   a-space.search-space
-    a-input(v-model="scriptsSearchKey" :allow-clear="true")
+    a-input.scripts-search-input(v-model="scriptsSearchKey" :allow-clear="true")
       template(#prefix)
         svg.icon
           use(href="#search")
@@ -9,8 +9,12 @@ a-space(direction="vertical" size="medium")
       .icon-space.pointer(@click="createNewScript()")
         svg.icon
           use(href="#create")
+    .icon-space.pointer(@click="refreshScripts")
+      svg.icon
+        use(href="#refresh")
   a-scrollbar.tree-scrollbar
     a-tree.script-tree(
+      v-if="scriptsListData && scriptsListData.length > 0"
       ref="scriptsRef"
       v-model:selected-keys="scriptSelectedKeys"
       size="small"
@@ -18,6 +22,10 @@ a-space(direction="vertical" size="medium")
       :data="scriptsListData"
       @select="onSelect"
     )
+    a-empty(v-else)
+      template(#image)
+        svg.icon-32
+          use(href="#empty")
 a-modal.change-modal(
   v-model:visible="modelVisible"
   :closable="false"
@@ -54,6 +62,7 @@ a-modal.change-modal(
     createNewScript,
   } = usePythonCode()
   const { scriptsSearchKey, scriptsListData } = useSiderTabs()
+  const { scriptsLoading } = storeToRefs(useDataBaseStore())
   const { getScriptsTable } = useDataBaseStore()
   const { guideModal } = storeToRefs(useAppStore())
 
@@ -78,6 +87,11 @@ a-modal.change-modal(
 
   const handleCancel = () => {
     scriptSelectedKeys.value = lastSelectedKey.value
+  }
+
+  const refreshScripts = () => {
+    scriptsSearchKey.value = ''
+    getScriptsTable()
   }
 
   onMounted(() => {
