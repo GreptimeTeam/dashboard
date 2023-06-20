@@ -54,7 +54,7 @@ a-spin(:loading="tablesLoading")
   const refreshTables = () => {
     tablesSearchKey.value = ''
     getTables()
-    treeRef.value.expandAll(false)
+    if (treeRef.value) treeRef.value.expandAll(false)
   }
 
   const loadMore = (nodeData: any) => {

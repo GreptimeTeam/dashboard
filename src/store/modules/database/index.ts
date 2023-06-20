@@ -44,15 +44,15 @@ const useDataBaseStore = defineStore('database', () => {
   })
 
   async function getTables() {
+    tablesLoading.value = true
     try {
-      tablesLoading.value = true
       const res = await editorAPI.getTables()
       tablesData.value = res
       originTablesTree.value = getOriginTablesTree()
-      tablesLoading.value = false
     } catch (error) {
       // some error
     }
+    tablesLoading.value = false
   }
 
   async function getTableByName(node: any) {
