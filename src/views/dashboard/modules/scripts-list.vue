@@ -49,6 +49,7 @@ a-modal.change-modal(
   const tableSearchKey = ref('')
   const okButton = { type: 'text' }
   const cancelButton = { type: 'primary' }
+  const isRefreshing = ref(false)
 
   const {
     pythonCode,
@@ -60,6 +61,7 @@ a-modal.change-modal(
     isChanged,
     overwriteCode,
     createNewScript,
+    resetScript,
   } = usePythonCode()
   const { scriptsSearchKey, scriptsListData } = useSiderTabs()
   const { scriptsLoading } = storeToRefs(useDataBaseStore())
@@ -76,22 +78,35 @@ a-modal.change-modal(
     }
   }
   const handleOk = () => {
-    if (creating.value) {
+    if (isRefreshing.value) {
+      scriptsSearchKey.value = ''
+      resetScript()
+      getScriptsTable()
+    } else if (creating.value) {
       pythonCode.value = ''
       lastSavedCode.value = ''
       createNewScript()
     } else {
       overwriteCode(selectedNode.value)
     }
+    isRefreshing.value = false
   }
 
   const handleCancel = () => {
     scriptSelectedKeys.value = lastSelectedKey.value
+    isRefreshing.value = false
   }
 
   const refreshScripts = () => {
-    scriptsSearchKey.value = ''
-    getScriptsTable()
+    isRefreshing.value = true
+    if (!isChanged.value) {
+      scriptsSearchKey.value = ''
+      resetScript()
+      getScriptsTable()
+      isRefreshing.value = false
+    } else {
+      modelVisible.value = true
+    }
   }
 
   onMounted(() => {
