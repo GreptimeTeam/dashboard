@@ -1,5 +1,9 @@
 lockfileVersion: '6.0'
 
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
 overrides:
   bin-wrapper: npm:bin-wrapper-china
   rollup: ^2.56.3
@@ -246,7 +250,7 @@ devDependencies:
     specifier: ^3.0.2
     version: 3.0.2
   rollup:
-    specifier: ^2.68.0
+    specifier: ^2.56.3
     version: 2.68.0
   rollup-plugin-visualizer:
     specifier: ^5.8.2
@@ -7002,7 +7006,3 @@ packages:
     dependencies:
       tslib: 2.3.0
     dev: false
-
-settings:
-  autoInstallPeers: true
-  excludeLinksFromLockfile: false
