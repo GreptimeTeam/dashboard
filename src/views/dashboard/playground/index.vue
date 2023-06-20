@@ -8,7 +8,7 @@ a-layout.layout
       @select="onSelect"
     )
   a-layout-content
-    .markdown-container
+    .markdown-container(v-if="fileList[currentFile]")
       RenderHtml(:md="fileList[currentFile]")
     RefreshPlaygroundModal(ref="refreshPlaygroundModal")
 </template>
@@ -72,11 +72,14 @@ a-layout.layout
 </script>
 
 <style lang="stylus" rel="stylesheet/stylus" scoped>
-  .arco-layout-sider
-    background-color #fff
-    border-radius 10px
-  .markdown-container
-    background-color #fff
-    border-radius 10px
-    padding 10px 20px
+  .arco-layout-sider {
+    background-color: #fff;
+    border-radius: 10px;
+  }
+
+  .markdown-container {
+    background-color: #fff;
+    border-radius: 10px;
+    padding: 10px 20px;
+  }
 </style>

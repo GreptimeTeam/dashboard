@@ -114,7 +114,7 @@
     "mockjs": "^1.1.0",
     "prettier": "^2.7.1",
     "pug": "^3.0.2",
-    "rollup": "^3.7.5",
+    "rollup": "^2.68.0",
     "rollup-plugin-visualizer": "^5.8.2",
     "stylelint": "^14.16.0",
     "stylelint-config-prettier": "^9.0.3",
@@ -137,7 +137,6 @@
   },
   "resolutions": {
     "bin-wrapper": "npm:bin-wrapper-china",
-    "rollup": "^2.56.3",
     "gifsicle": "5.2.0"
   }
 }
