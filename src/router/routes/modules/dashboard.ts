@@ -42,6 +42,15 @@ const DASHBOARD: AppRouteRecordRaw = {
         requiresAuth: false,
       },
     },
+    {
+      path: 'status',
+      name: 'status',
+      component: () => import('@/views/dashboard/status/index.vue'),
+      meta: {
+        locale: 'menu.dashboard.status',
+        requiresAuth: false,
+      },
+    },
   ],
 }
 

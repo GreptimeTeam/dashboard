@@ -10,6 +10,8 @@
         | Scripts
       a-menu-item(key="playground")
         | Playground
+      a-menu-item(key="status")
+        | Status
   ul.right-side
     li
       a-tooltip(:content="$t('settings.title')")
