@@ -1,12 +1,16 @@
 <template lang="pug">
 a-layout.layout
   a-layout-content
-
-    a-card(title='GreptimeDB Status')
+    a-card(title="GreptimeDB Status")
       template(#extra)
         a-button(type="text" @click="refreshStatus") refresh
-      a-descriptions(:column='2' bordered)
-        a-descriptions-item(v-for='item of statusInfoRef', :label='item[0]')
+      a-empty(v-if="!statusInfoRef")
+        template(#image)
+          svg.icon-32
+            use(href="#empty")
+        | Status is not supported until GreptimeDB v0.3.1
+      a-descriptions(v-else bordered :column="2")
+        a-descriptions-item(v-for="item of statusInfoRef" :label="item[0]")
           a-tag {{ item[1] }}
 </template>
 
@@ -25,8 +29,9 @@ a-layout.layout
 </script>
 
 <style lang="stylus" rel="stylesheet/stylus" scoped>
-  .arco-layout-content
-    background-color #fff
-    border-radius 10px
-    padding 10px 20px
+  .arco-layout-content {
+    background-color: #fff;
+    border-radius: 10px;
+    padding: 10px 20px;
+  }
 </style>
