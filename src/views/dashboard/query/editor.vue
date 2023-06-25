@@ -13,7 +13,7 @@ a-card.editor-card(:bordered="false")
           icon-play-arrow(v-else)
         div(v-if="lineStart === lineEnd") {{ $t('dashboard.runLine') }} {{ lineStart }}
         div(v-else) {{ $t('dashboard.runLines') }} {{ lineStart }} - {{ lineEnd }}
-    .query-select(v-if="!isCloud")
+    .query-select
       a-select(v-model="queryType" @change="selectCodeType")
         a-option(v-for="query of queryOptions" :="query")
   a-form.space-between.prom-form(layout="inline" v-show="queryType === 'promQL'" :model="promForm")
