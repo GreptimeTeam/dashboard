@@ -10,7 +10,7 @@
         | Scripts
       a-menu-item(key="playground")
         | Playground
-      a-menu-item(key="status")
+      a-menu-item(key="status" v-permission="['dev']")
         | Status
   ul.right-side
     li
