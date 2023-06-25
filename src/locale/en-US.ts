@@ -23,6 +23,8 @@ export default {
   'playground.create': 'OK',
   'playground.refeshTitle': 'Warning',
   'playground.refeshNote': 'The Playground has been reclaimed due to timeout. Click OK to re-create the playground',
+  'status.confirm': 'OK',
+  'status.info': 'GreptimeDB Status data has been copied to clipboard',
   ...localeDashboard,
   ...localSetting,
 }
