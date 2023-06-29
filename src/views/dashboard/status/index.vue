@@ -17,7 +17,8 @@ a-layout.layout
     a-card(v-if="statusInfoRef && statusInfoRef.length > 0" title="GreptimeDB Status")
       template(#extra)
         a-button(type="text" @click="refreshStatus") refresh
-        a-button(type="text" @click="copyToClipboard") copy to clipboard
+        a-typography
+          a-typography-paragraph(copyable @copy="copyToClipboard")
       a-descriptions(bordered :column="2")
         a-descriptions-item(v-for="item of statusInfoRef" :label="item[0]")
           a-tag {{ item[1] }}
