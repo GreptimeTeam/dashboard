@@ -8,20 +8,21 @@ a-modal.guide-modal(
   @ok="handleOk"
 )
   template(#title)
-     div {{ $t('status.info') }}
-     svg.guide-banner
+    div {{ $t('status.info') }}
+    svg.guide-banner
       use(href="#banner")
 
 a-layout.layout
   a-layout-content
-
-    a-card(title='GreptimeDB Status')
+    a-card(v-if="statusInfoRef && statusInfoRef.length > 0" title="GreptimeDB Status")
       template(#extra)
         a-button(type="text" @click="refreshStatus") refresh
         a-button(type="text" @click="copyToClipboard") copy to clipboard
-      a-descriptions(:column='2' bordered)
-        a-descriptions-item(v-for='item of statusInfoRef', :label='item[0]')
+      a-descriptions(bordered :column="2")
+        a-descriptions-item(v-for="item of statusInfoRef" :label="item[0]")
           a-tag {{ item[1] }}
+    a-empty(v-else)
+      template(#extra)
 </template>
 
 <script lang="ts" setup name="Status">
@@ -37,7 +38,7 @@ a-layout.layout
 
   const copyToClipboard = async () => {
     const status = await getStatus()
-    navigator.clipboard.writeText(JSON.stringify(status));
+    navigator.clipboard.writeText(JSON.stringify(status))
     statusModal.value = true
   }
 
