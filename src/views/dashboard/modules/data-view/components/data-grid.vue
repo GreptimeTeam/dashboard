@@ -34,6 +34,7 @@ a-card(:bordered="false")
 <script lang="ts" setup>
   import { dateTypes } from '@/views/dashboard/config'
   import type { ResultType } from '@/store/modules/code-run/types'
+  import dayjs from 'dayjs'
 
   const props = withDefaults(
     defineProps<{
@@ -111,7 +112,11 @@ a-card(:bordered="false")
   const formatSuffix = '--FORMATTED'
 
   function formatTimestamp(timestamp: number) {
-    return new Date(timestamp).toLocaleString()
+    if (timestamp.toString().length === 10) {
+      return dayjs.unix(timestamp).format('YYYY-MM-DD HH:mm:ss')
+    }
+
+    return dayjs(timestamp).format('YYYY-MM-DD HH:mm:ss')
   }
 
   const handleFormatTimeColumn = (dataIndex: string) => {
