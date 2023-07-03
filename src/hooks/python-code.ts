@@ -89,6 +89,7 @@ export default function usePythonCode() {
     overwriteCode,
     createNewScript,
     selectAfterSave,
+    resetScript,
     pythonCode,
     lastSavedCode,
     cursorAt,
