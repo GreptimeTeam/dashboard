@@ -1,5 +1,5 @@
 <template lang="pug">
-a-spin(:loading="tablesLoading")
+a-spin(style="width: 100%" :loading="tablesLoading")
   a-space.search-space
     a-input(v-model="tablesSearchKey" :allow-clear="true")
       template(#prefix)
@@ -13,21 +13,29 @@ a-spin(:loading="tablesLoading")
       v-if="tablesTreeData && tablesTreeData.length > 0"
       ref="treeRef"
       size="small"
+      :block-node="true"
       :data="tablesTreeData"
       :load-more="loadMore"
       :animation="false"
     )
-      template(#title)
+      template(#icon="node")
+        svg.icon-16(v-if="node.node.iconType")
+          use(:href="ICON_MAP[node.node.iconType]")
+      template(#title="nodeData")
+        .tree-data
+          .data-title(v-if="nodeData.iconType")
+            | {{ nodeData.title }}
+          .div(v-if="nodeData.iconType")
+            transition(name="slide-fade")
+              .data-type {{ nodeData.dataType }}
+          a-tooltip.data-type(v-if="!nodeData.iconType" mini :content="nodeData.title")
+            .data-title
+              | {{ nodeData.title }}
       template(#switcher-icon)
         IconDown
       template(#extra="nodeData")
-        svg.icon-16(v-show="nodeData.iconType")
-          use(:href="ICON_MAP[nodeData.iconType]")
-        .tree-data
-          a-typography-text.data-title(:ellipsis="{ rows: 1, showTooltip: true }") {{ nodeData.title }}
-          .data-type {{ nodeData.dataType }}
         a-tooltip(mini :content="$t('dashboard.insertName')")
-          svg.icon-15.copy-icon.pointer(name="copy" @click="insertName(nodeData.title)")
+          svg.icon-15.pointer(name="copy" @click="insertName(nodeData.title)")
             use(href="#copy")
     a-empty(v-else)
       template(#image)
@@ -101,3 +109,19 @@ a-spin(:loading="tablesLoading")
     'TIME INDEX': '#time-index',
   }
 </script>
+
+<style scoped lang="less">
+  .slide-fade-enter-active {
+    transition: all 0.3s ease-out;
+  }
+
+  .slide-fade-leave-active {
+    transition: all 0.8s cubic-bezier(1, 0.5, 0.8, 1);
+  }
+
+  .slide-fade-enter-from,
+  .slide-fade-leave-to {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+</style>

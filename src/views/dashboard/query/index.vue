@@ -1,6 +1,6 @@
 <template lang="pug">
 a-layout.layout
-  a-layout-sider
+  a-layout-sider(:resize-directions="['right']" :width="315")
     ListTabs(:has="['Tables']")
   a-layout-content
     a-space.content-space(direction="vertical" fill size="large")

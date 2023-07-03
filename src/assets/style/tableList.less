@@ -28,26 +28,39 @@
   .tree-data {
     display: flex;
     align-items: center;
-    width: calc(100% - 52px);
+    justify-content: space-between;
+
+    .right {
+      display: flex;
+      width: 15px;
+      padding-left: 2px;
+    }
+
+    .data-type {
+      display: none;
+      padding-left: 3px;
+      color: var(--brand-color);
+      font-size: 12px;
+    }
+  }
+
+  .tree-data:hover {
+    .data-type {
+      display: flex;
+    }
   }
 
   .data-title {
-    flex: 1 1 auto;
     padding-left: 3px;
-    overflow: auto;
+    overflow: hidden;
     color: var(--main-font-color);
     font-size: 14px;
     line-height: 36px;
+    text-overflow: ellipsis;
   }
 
   div.arco-typography {
     margin-bottom: 0;
-  }
-
-  .data-type {
-    padding-left: 3px;
-    color: var(--brand-color);
-    font-size: 12px;
   }
 
   .copy-icon {
@@ -91,9 +104,21 @@
   .arco-tree-node-title {
     margin-left: 0;
     padding: 0;
+    padding-right: 2px;
+    overflow: hidden;
+
+    .arco-tree-node-title-text {
+      width: 100%;
+      overflow: hidden;
+    }
+  }
+
+  .arco-tree-node-title:hover {
+    background-color: transparent;
   }
 
   .arco-tree-node-custom-icon {
+    display: flex;
     margin-right: 4px;
   }
 }
