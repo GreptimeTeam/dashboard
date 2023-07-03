@@ -407,3 +407,20 @@
   margin: 0 !important;
   max-width: calc((100% - 24px) / 2) !important;
 }
+
+/**
+ * Component: Image
+ * -------------------------------------------------------------------------- */
+.markdown-container .md-image {
+  display: block;
+  margin-bottom: 10px;
+  &.center {
+    margin: 0 auto;
+  }
+  &:after {
+    content: attr(title);
+    display: block;
+    text-align: center;
+    color: var(--vp-c-gray-light-1);
+  }
+}
