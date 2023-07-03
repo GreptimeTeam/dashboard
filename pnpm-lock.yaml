@@ -159,8 +159,8 @@ devDependencies:
     specifier: ^17.6.5
     version: 17.6.5
   '@prettier/plugin-pug':
-    specifier: ^2.4.1
-    version: 2.4.1(prettier@2.7.1)
+    specifier: ^2.5.1
+    version: 2.5.1(prettier@2.7.1)
   '@types/lodash':
     specifier: ^4.14.191
     version: 4.14.191
@@ -1280,9 +1280,9 @@ packages:
       tslib: 2.5.3
     dev: true
 
-  /@prettier/plugin-pug@2.4.1(prettier@2.7.1):
-    resolution: {integrity: sha512-TZqlSg1WunJs7n4sLf7JKoVxTTQP/oFFHXXvlgVrvf7M47rx7VmIOMFEBGHHhpCkEk5Ub8WnOsUOwb1IQanygQ==}
-    engines: {node: ^14.17.0 || ^16.13.0 || >=18.0.0, npm: '>=6.14.13'}
+  /@prettier/plugin-pug@2.5.1(prettier@2.7.1):
+    resolution: {integrity: sha512-rauAMYyTv6tgoo4DZ+1TwpytjaoJgcg+8btp0CfAUaHwjxfNo4cuAGgsJS6WVT7vx2Sz4Pkos50xuSNZuvJAWQ==}
+    engines: {node: ^16.13.0 || >=18.0.0, npm: '>=7.10.0'}
     peerDependencies:
       prettier: ^2.3.0
     dependencies:
