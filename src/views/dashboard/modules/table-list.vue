@@ -17,6 +17,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
       :data="tablesTreeData"
       :load-more="loadMore"
       :animation="false"
+      :virtual-list-props="{ height: 'calc(100vh - 220px)' }"
     )
       template(#icon="node")
         svg.icon-16(v-if="node.node.iconType")
