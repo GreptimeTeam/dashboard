@@ -5,7 +5,7 @@ export const DEFAULT_LAYOUT = () => import('@/layout/default-layout.vue')
 const DASHBOARD: AppRouteRecordRaw = {
   path: '/dashboard',
   name: 'dashboard',
-  redirect: 'dashboard/query',
+  redirect: '/dashboard/query',
   component: DEFAULT_LAYOUT,
   meta: {
     locale: 'menu.dashboard',
