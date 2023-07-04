@@ -1,7 +1,7 @@
 <template lang="pug">
 a-layout.layout
   a-layout-sider
-    a-tree.script-tree(
+    a-tree.script-tree.playground-sidebar(
       blockNode
       :data="fileListIndex"
       :selected-keys="[currentFile]"
