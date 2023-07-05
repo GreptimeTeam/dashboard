@@ -8,9 +8,8 @@ a-spin(style="width: 100%" :loading="tablesLoading")
     .icon-space.pointer(@click="refreshTables")
       svg.icon
         use(href="#refresh")
-  a-scrollbar.tree-scrollbar
+  .tree-scrollbar(v-if="tablesTreeData && tablesTreeData.length > 0" ref="treeScrollRef")
     a-tree.table-tree(
-      v-if="tablesTreeData && tablesTreeData.length > 0"
       ref="treeRef"
       size="small"
       :block-node="true"
@@ -18,6 +17,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
       :load-more="loadMore"
       :animation="false"
       :virtual-list-props="{ height: 'calc(100vh - 220px)' }"
+      :class="hasScroll ? 'has-scroll' : 'has-no-scroll'"
     )
       template(#icon="node")
         svg.icon-16(v-if="node.node.iconType")
@@ -38,7 +38,8 @@ a-spin(style="width: 100%" :loading="tablesLoading")
         a-tooltip(mini :content="$t('dashboard.insertName')")
           svg.icon-15.pointer(name="copy" @click="insertName(nodeData.title)")
             use(href="#copy")
-    a-empty(v-else)
+  .tree-scrollbar(v-else)
+    a-empty
       template(#image)
         svg.icon-32
           use(href="#empty")
@@ -50,6 +51,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
   import useQueryCode from '@/hooks/query-code'
   import usePythonCode from '@/hooks/python-code'
   import useSiderTabs from '@/hooks/sider-tabs'
+  import type { TreeData } from '@/store/modules/database/types'
 
   const route = useRoute()
   const { insertNameToQueryCode } = useQueryCode()
@@ -59,12 +61,25 @@ a-spin(style="width: 100%" :loading="tablesLoading")
   const { getTableByName, getTables, addChildren } = useDataBaseStore()
 
   const treeRef = ref()
+  const hasScroll = ref(false)
+  const treeScrollRef = ref<HTMLDivElement>()
 
   const refreshTables = () => {
     tablesSearchKey.value = ''
     getTables()
     if (treeRef.value) treeRef.value.expandAll(false)
   }
+
+  watchEffect(() => {
+    if ((treeScrollRef.value as HTMLDivElement) && tablesTreeData.value) {
+      const child = (treeScrollRef.value as HTMLDivElement).firstElementChild?.firstElementChild
+
+      nextTick(() => {
+        const { clientWidth, offsetWidth } = child as HTMLDivElement
+        hasScroll.value = clientWidth !== offsetWidth
+      })
+    }
+  })
 
   const loadMore = (nodeData: any) => {
     return new Promise<void>((resolve, reject) => {
@@ -74,7 +89,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
           const {
             records: { rows },
           } = output[0]
-          const rowArray: any = []
+          const rowArray: TreeData[] = []
           rows.forEach((row: any) => {
             // TODO: make code more readable
             rowArray.push({

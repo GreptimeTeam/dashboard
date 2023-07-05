@@ -7,5 +7,8 @@ export interface tableState {
 export interface TreeData {
   key: string | number
   title: string
-  children?: Array<TreeData>
+  children?: TreeData[]
+  isLeaf?: boolean
+  dataType?: string
+  iconType?: string
 }

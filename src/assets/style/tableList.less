@@ -25,6 +25,18 @@
 }
 
 .table-tree {
+  &.has-scroll {
+    margin-right: 0;
+
+    .arco-virtual-list {
+      padding-right: 1px;
+    }
+  }
+
+  &.has-no-scroll {
+    margin-right: 16px;
+  }
+
   .tree-data {
     display: flex;
     align-items: center;
