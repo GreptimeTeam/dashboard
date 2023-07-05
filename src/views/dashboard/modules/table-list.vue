@@ -140,4 +140,16 @@ a-spin(style="width: 100%" :loading="tablesLoading")
     transform: translateX(20px);
     opacity: 0;
   }
+  :deep(.arco-virtual-list) {
+    padding-right: 8px;
+    &::-webkit-scrollbar {
+      width: 6px;
+      background-color: #fff;
+    }
+    &::-webkit-scrollbar-thumb {
+      background-color: #e5e5e5;
+      border-radius: 16px;
+    }
+    overflow-y: scroll !important;
+  }
 </style>
