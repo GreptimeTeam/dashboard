@@ -1,13 +1,17 @@
 <script>
   import MarkdownIt from 'markdown-it'
-  import { containerPlugin, customCode } from '@/utils/mdPlugins'
+  import plugins from '@/utils/mdPlugins'
   import meta from 'markdown-it-meta'
   import comments from 'markdown-it-inline-comments'
   import { compile, h } from 'vue'
+  import { objectExpression } from '@babel/types'
   import CodeEditor from './code-editor.vue'
 
   const md = new MarkdownIt()
-  md.use(containerPlugin).use(customCode).use(comments).use(meta)
+  md.use(meta)
+  Object.values(plugins).forEach((plugin) => {
+    md.use(plugin)
+  })
 
   export default {
     components: {

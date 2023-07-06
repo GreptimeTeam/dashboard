@@ -1,8 +1,8 @@
 import type MarkdownIt from 'markdown-it'
-import type { RenderRule } from 'markdown-it/lib/renderer'
-import type Token from 'markdown-it/lib/token'
 import container from 'markdown-it-container'
+import type { RenderRule } from 'markdown-it/lib/renderer'
 import { nanoid } from 'nanoid'
+import type Token from 'markdown-it/lib/token'
 
 type ContainerArgs = [typeof container, string, { render: RenderRule }]
 
@@ -73,8 +73,7 @@ function createCodeGroup(): ContainerArgs {
     },
   ]
 }
-
-export function containerPlugin(md: MarkdownIt) {
+export default function containerPlugin(md: MarkdownIt) {
   md.use(...createContainer('tip', 'TIP', md))
     .use(...createContainer('info', 'INFO', md))
     .use(...createContainer('warning', 'WARNING', md))
@@ -88,22 +87,4 @@ export function containerPlugin(md: MarkdownIt) {
       render: (tokens: Token[], idx: number) => (tokens[idx].nesting === 1 ? `<div class="vp-raw">\n` : `</div>\n`),
     })
     .use(...createCodeGroup())
-}
-
-export function customCode(md: MarkdownIt) {
-  const fence = md.renderer.rules.fence!
-  md.renderer.rules.fence = (...args) => {
-    const rawCode = fence(...args)
-
-    const res = rawCode.replace(
-      /<pre><code class="language-(\w*?)">([\s\S]*)<\/code><\/pre>/,
-      function ($1: string, $2: string) {
-        if ($2.toLowerCase() === 'sql') {
-          return `<code-editor lang="${$2}">${$1}</code-editor>`
-        }
-        return `<code-editor lang="${$2}" disabled>${$1}</code-editor>`
-      }
-    )
-    return `${res}`
-  }
 }
