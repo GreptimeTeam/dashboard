@@ -8,36 +8,35 @@ a-spin(style="width: 100%" :loading="tablesLoading")
     .icon-space.pointer(@click="refreshTables")
       svg.icon
         use(href="#refresh")
-  .tree-scrollbar(v-if="tablesTreeData && tablesTreeData.length > 0" ref="treeScrollRef")
-    a-tree.table-tree(
-      ref="treeRef"
-      size="small"
-      :block-node="true"
-      :data="tablesTreeData"
-      :load-more="loadMore"
-      :animation="false"
-      :virtual-list-props="{ height: 'calc(100vh - 220px)' }"
-      :class="hasScroll ? 'has-scroll' : 'has-no-scroll'"
-    )
-      template(#icon="node")
-        svg.icon-16(v-if="node.node.iconType")
-          use(:href="ICON_MAP[node.node.iconType]")
-      template(#title="nodeData")
-        .tree-data
-          .data-title(v-if="nodeData.iconType")
+  a-tree.table-tree(
+    v-if="tablesTreeData && tablesTreeData.length > 0"
+    ref="treeRef"
+    size="small"
+    :block-node="true"
+    :data="tablesTreeData"
+    :load-more="loadMore"
+    :animation="false"
+    :virtual-list-props="{ height: 'calc(100vh - 220px)' }"
+  )
+    template(#icon="node")
+      svg.icon-16(v-if="node.node.iconType")
+        use(:href="ICON_MAP[node.node.iconType]")
+    template(#title="nodeData")
+      .tree-data
+        .data-title(v-if="nodeData.iconType")
+          | {{ nodeData.title }}
+        .div(v-if="nodeData.iconType")
+          transition(name="slide-fade")
+            .data-type {{ nodeData.dataType }}
+        a-tooltip.data-type(v-if="!nodeData.iconType" mini :content="nodeData.title")
+          .data-title
             | {{ nodeData.title }}
-          .div(v-if="nodeData.iconType")
-            transition(name="slide-fade")
-              .data-type {{ nodeData.dataType }}
-          a-tooltip.data-type(v-if="!nodeData.iconType" mini :content="nodeData.title")
-            .data-title
-              | {{ nodeData.title }}
-      template(#switcher-icon)
-        IconDown
-      template(#extra="nodeData")
-        a-tooltip(mini :content="$t('dashboard.insertName')")
-          svg.icon-15.pointer(name="copy" @click="insertName(nodeData.title)")
-            use(href="#copy")
+    template(#switcher-icon)
+      IconDown
+    template(#extra="nodeData")
+      a-tooltip(mini :content="$t('dashboard.insertName')")
+        svg.icon-15.pointer(name="copy" @click="insertName(nodeData.title)")
+          use(href="#copy")
   .tree-scrollbar(v-else)
     a-empty
       template(#image)
@@ -61,25 +60,12 @@ a-spin(style="width: 100%" :loading="tablesLoading")
   const { getTableByName, getTables, addChildren } = useDataBaseStore()
 
   const treeRef = ref()
-  const hasScroll = ref(false)
-  const treeScrollRef = ref<HTMLDivElement>()
 
   const refreshTables = () => {
     tablesSearchKey.value = ''
     getTables()
     if (treeRef.value) treeRef.value.expandAll(false)
   }
-
-  watchEffect(() => {
-    if ((treeScrollRef.value as HTMLDivElement) && tablesTreeData.value) {
-      const child = (treeScrollRef.value as HTMLDivElement).firstElementChild?.firstElementChild
-
-      nextTick(() => {
-        const { clientWidth, offsetWidth } = child as HTMLDivElement
-        hasScroll.value = clientWidth !== offsetWidth
-      })
-    }
-  })
 
   const loadMore = (nodeData: any) => {
     return new Promise<void>((resolve, reject) => {
@@ -141,15 +127,24 @@ a-spin(style="width: 100%" :loading="tablesLoading")
     opacity: 0;
   }
   :deep(.arco-virtual-list) {
-    padding-right: 8px;
+    padding-right: 3px;
     &::-webkit-scrollbar {
-      width: 6px;
-      background-color: #fff;
+      width: 10px;
     }
     &::-webkit-scrollbar-thumb {
-      background-color: #e5e5e5;
-      border-radius: 16px;
+      background-color: #c9cdd4;
+      border-radius: 6px;
     }
+    &::-webkit-scrollbar-thumb:hover {
+      background-color: #86909c;
+    }
+
     overflow-y: scroll !important;
+    // Firefox
+    scrollbar-color: #c9cdd4 var(--card-bg-color);
+  }
+
+  .table-tree {
+    margin-right: 3px;
   }
 </style>
