@@ -1,5 +1,5 @@
 <template lang="pug">
-a-spin(:loading="scriptsLoading")
+a-spin(style="width: 100%" :loading="scriptsLoading")
   a-space.search-space
     a-input.scripts-search-input(v-model="scriptsSearchKey" :allow-clear="true")
       template(#prefix)

@@ -4,7 +4,8 @@ import { TreeData } from './types'
 const useDataBaseStore = defineStore('database', () => {
   const { database } = storeToRefs(useAppStore())
   const tablesData = ref()
-  const originTablesTree = ref()
+  const originTablesTree = ref<TreeData[]>([])
+
   const scriptsData = ref()
   const tablesLoading = ref(false)
   const scriptsLoading = ref(false)
@@ -23,7 +24,7 @@ const useDataBaseStore = defineStore('database', () => {
     return tempArray
   }
 
-  const addChildren = (key: number, children: TreeData) => {
+  const addChildren = (key: number, children: TreeData[]) => {
     originTablesTree.value[key].children = children
   }
 
