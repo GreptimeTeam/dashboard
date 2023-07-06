@@ -42,6 +42,12 @@ const useCodeRunStore = defineStore('codeRun', () => {
     promQL: editorAPI.runPromQL,
   }
 
+  const CODE_TO_PAGE: { [key: string]: string } = {
+    sql: 'query',
+    promQL: 'query',
+    python: 'scripts',
+  }
+
   const runCode = async (codeInfo: string, type: string, withoutSave = false) => {
     try {
       // TODO: try something better
@@ -59,10 +65,11 @@ const useCodeRunStore = defineStore('codeRun', () => {
             records: rowLength,
           })
           if (rowLength >= 0) {
-            if (Reflect.has(resultKeyCount, type)) {
-              resultKeyCount[type] += 1
+            const pageType = CODE_TO_PAGE[type]
+            if (Reflect.has(resultKeyCount, pageType)) {
+              resultKeyCount[pageType] += 1
             } else {
-              resultKeyCount[type] = 0
+              resultKeyCount[pageType] = 0
             }
 
             oneResult = {
@@ -71,7 +78,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
                 rowLength === 0
                   ? { dimensions: [], xAxis: '' }
                   : getDimensionsAndXName(oneRes.records.schema.column_schemas),
-              key: resultKeyCount[type],
+              key: resultKeyCount[pageType],
               type,
             }
             if (!withoutSave) {
