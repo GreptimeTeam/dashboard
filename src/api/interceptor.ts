@@ -24,6 +24,7 @@ export interface Auth {
 
 axios.interceptors.request.use(
   (config: AxiosRequestConfig) => {
+    const isV1 = !!config.url?.startsWith(`/v1`)
     const appStore = useAppStore()
     const basicAuth = `Basic ${btoa(`${appStore.username}:${appStore.password}`)}`
 
@@ -32,10 +33,13 @@ axios.interceptors.request.use(
     }
     config.headers.authorization = basicAuth
 
-    return {
-      ...config,
-      traceTimeStart: new Date(),
+    if (isV1) {
+      return {
+        ...config,
+        traceTimeStart: new Date(),
+      }
     }
+    return config
   },
   (error) => {
     // do something
@@ -46,6 +50,7 @@ axios.interceptors.request.use(
 axios.interceptors.response.use(
   (response: AxiosResponse<HttpResponse>) => {
     const res = response.data
+    const isV1 = !!response.config.url?.startsWith(`/v1`)
 
     // if the custom code is not 0, it is judged as an error.
     if (res.code && res.code !== 0) {
@@ -53,19 +58,28 @@ axios.interceptors.response.use(
         content: res.error || 'Error',
         duration: 2 * 1000,
       })
+
+      if (isV1) {
+        const error = {
+          error: res.error,
+          startTime: new Date(response.config.traceTimeStart).toLocaleTimeString(),
+        }
+        return Promise.reject(error || 'Error')
+      }
       const error = {
         error: res.error,
-        startTime: new Date(response.config.traceTimeStart).toLocaleTimeString(),
       }
-      // todo: delete logout related code?
-      // 50008: Illegal token; 50012: Other clients logged in; 50014: Token expired;
       return Promise.reject(error || 'Error')
     }
-    return {
-      ...res,
-      networkTime: new Date().valueOf() - response.config.traceTimeStart,
-      startTime: new Date(response.config.traceTimeStart).toLocaleTimeString(),
+
+    if (isV1) {
+      return {
+        ...res,
+        networkTime: new Date().valueOf() - response.config.traceTimeStart,
+        startTime: new Date(response.config.traceTimeStart).toLocaleTimeString(),
+      }
     }
+    return res
   },
   (error) => {
     if (error.response.status === 401) {
