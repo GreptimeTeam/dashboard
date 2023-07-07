@@ -47,16 +47,9 @@ a-card(v-if="hasChart" :bordered="false")
 
 <script lang="ts" setup>
   import type { PropType } from 'vue'
-  import type {
-    datasetType,
-    DimensionType,
-    ResultType,
-    ChartFormType,
-    SchemaType,
-    SeriesType,
-  } from '@/store/modules/code-run/types'
+  import type { datasetType, ResultType, ChartFormType, SeriesType } from '@/store/modules/code-run/types'
   import useDataChart from '@/hooks/data-chart'
-  import { chartTypeOptions, updateOptions, numberTypes, dateTypes } from '../../../config'
+  import { chartTypeOptions, updateOptions } from '../../../config'
 
   const props = defineProps({
     data: {
