@@ -6,7 +6,7 @@
       a-button(v-if="showReset" @click="reset") {{ $t('playground.reset') }}
     CodeMirror(v-model="code" :extensions="extensions" :disabled="disabled")
   .results(v-if="hasRecords")
-    a-tabs.playground-tabs(:default-active-key="defaultActiveKey")
+    a-tabs.playground-tabs(:default-active-key="hasChart? '2' : '1' ")
       a-tab-pane(key="1" title="Table")
         DataGrid(:data="result" :hasHeader="false")
       a-tab-pane(v-if="hasChart" key="2" title="Chart")
@@ -44,7 +44,6 @@
   const appStore = useAppStore()
   const hasChart = ref(false)
   const hasRecords = ref(false)
-  const defaultActiveKey = JSON.parse(props.defaultChartForm).chartType ? '2' : '1'
   const chartForm = JSON.parse(props.defaultChartForm)
 
   function codeFormat(code: any) {

@@ -136,7 +136,6 @@ a-card(v-if="hasChart" :bordered="false")
     const series: Array<SeriesType> = []
     const legendNames: Array<string> = []
     const dataset: Array<datasetType> = []
-    console.log(`chartForm.grp:`, chartForm.groupBySelectedTypes)
     if (chartForm.groupBySelectedTypes.length === 0) {
       dataset.push({
         dimensions: props.data.dimensionsAndXName.dimensions,
@@ -222,8 +221,13 @@ a-card(v-if="hasChart" :bordered="false")
   onMounted(() => {
     if (hasChart.value) chartForm.selectedYTypes = [yOptions.value[0].value]
     Object.entries(props.defaultChartForm).forEach(([key, value]) => {
-      ;(chartForm as any)[key] = value
+      ;(chartForm as any)[key] = (chartForm as any)[key] || value
     })
+    chartForm.chartType = props.defaultChartForm.chartType || 'line'
+    chartForm.selectedYTypes = props.defaultChartForm.selectedYTypes.length
+      ? props.defaultChartForm.selectedYTypes
+      : [yOptions.value[0].value]
+    chartForm.groupBySelectedTypes = props.defaultChartForm.groupBySelectedTypes.concat(chartForm.groupBySelectedTypes)
   })
 
   const drawChart = () => {
