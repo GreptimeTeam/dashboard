@@ -1,4 +1,4 @@
-lockfileVersion: '6.1'
+lockfileVersion: '6.0'
 
 settings:
   autoInstallPeers: true
@@ -25,8 +25,8 @@ dependencies:
     specifier: ^6.1.0
     version: 6.1.0(@codemirror/state@6.2.0)(@codemirror/view@6.9.3)(@lezer/common@1.0.2)
   '@codemirror/lang-sql':
-    specifier: ^6.3.1
-    version: 6.3.1(@codemirror/view@6.9.3)(@lezer/common@1.0.2)
+    specifier: ^6.5.2
+    version: 6.5.2(@codemirror/view@6.9.3)(@lezer/common@1.0.2)
   '@codemirror/language':
     specifier: ^6.6.0
     version: 6.6.0
@@ -689,8 +689,8 @@ packages:
       - '@lezer/common'
     dev: false
 
-  /@codemirror/lang-sql@6.3.1(@codemirror/view@6.9.3)(@lezer/common@1.0.2):
-    resolution: {integrity: sha512-/3MxUNWnjY6Rw9ywHkQl2EKaS8XvFYyQzK/Zer4ikgWfqC+RuatIlg2m4sI1graOFhWPbQk2U3C83q+0jEmdag==}
+  /@codemirror/lang-sql@6.5.2(@codemirror/view@6.9.3)(@lezer/common@1.0.2):
+    resolution: {integrity: sha512-VYiCbApDDRUVx3k0jtZ+b5h2hMkMKZpPR9tx+VgVA3Euuf2MVjVsjx/S2+4AlJjKjS5J6z9+4bEvtponK96e4A==}
     dependencies:
       '@codemirror/autocomplete': 6.4.2(@codemirror/language@6.6.0)(@codemirror/state@6.2.0)(@codemirror/view@6.9.3)(@lezer/common@1.0.2)
       '@codemirror/language': 6.6.0
