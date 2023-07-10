@@ -1,5 +1,5 @@
 <template lang="pug">
-a-spin(:loading="tablesLoading")
+a-spin(style="width: 100%" :loading="tablesLoading")
   a-space.search-space
     a-input(v-model="tablesSearchKey" :allow-clear="true")
       template(#prefix)
@@ -8,28 +8,37 @@ a-spin(:loading="tablesLoading")
     .icon-space.pointer(@click="refreshTables")
       svg.icon
         use(href="#refresh")
-  a-scrollbar.tree-scrollbar
-    a-tree.table-tree(
-      v-if="tablesTreeData && tablesTreeData.length > 0"
-      ref="treeRef"
-      size="small"
-      :data="tablesTreeData"
-      :load-more="loadMore"
-      :animation="false"
-    )
-      template(#title)
-      template(#switcher-icon)
-        IconDown
-      template(#extra="nodeData")
-        svg.icon-16(v-show="nodeData.iconType")
-          use(:href="ICON_MAP[nodeData.iconType]")
-        .tree-data
-          a-typography-text.data-title(:ellipsis="{ rows: 1, showTooltip: true }") {{ nodeData.title }}
-          .data-type {{ nodeData.dataType }}
-        a-tooltip(mini :content="$t('dashboard.insertName')")
-          svg.icon-15.copy-icon.pointer(name="copy" @click="insertName(nodeData.title)")
-            use(href="#copy")
-    a-empty(v-else)
+  a-tree.table-tree(
+    v-if="tablesTreeData && tablesTreeData.length > 0"
+    ref="treeRef"
+    size="small"
+    :block-node="true"
+    :data="tablesTreeData"
+    :load-more="loadMore"
+    :animation="false"
+    :virtual-list-props="{ height: 'calc(100vh - 220px)' }"
+  )
+    template(#icon="node")
+      svg.icon-16(v-if="node.node.iconType")
+        use(:href="ICON_MAP[node.node.iconType]")
+    template(#title="nodeData")
+      .tree-data
+        .data-title(v-if="nodeData.iconType")
+          | {{ nodeData.title }}
+        .div(v-if="nodeData.iconType")
+          transition(name="slide-fade")
+            .data-type {{ nodeData.dataType }}
+        a-tooltip.data-type(v-if="!nodeData.iconType" mini :content="nodeData.title")
+          .data-title
+            | {{ nodeData.title }}
+    template(#switcher-icon)
+      IconDown
+    template(#extra="nodeData")
+      a-tooltip(mini :content="$t('dashboard.insertName')")
+        svg.icon-15.pointer(name="copy" @click="insertName(nodeData.title)")
+          use(href="#copy")
+  .tree-scrollbar(v-else)
+    a-empty
       template(#image)
         svg.icon-32
           use(href="#empty")
@@ -41,6 +50,7 @@ a-spin(:loading="tablesLoading")
   import useQueryCode from '@/hooks/query-code'
   import usePythonCode from '@/hooks/python-code'
   import useSiderTabs from '@/hooks/sider-tabs'
+  import type { TreeData } from '@/store/modules/database/types'
 
   const route = useRoute()
   const { insertNameToQueryCode } = useQueryCode()
@@ -65,7 +75,7 @@ a-spin(:loading="tablesLoading")
           const {
             records: { rows },
           } = output[0]
-          const rowArray: any = []
+          const rowArray: TreeData[] = []
           rows.forEach((row: any) => {
             // TODO: make code more readable
             rowArray.push({
@@ -101,3 +111,40 @@ a-spin(:loading="tablesLoading")
     'TIME INDEX': '#time-index',
   }
 </script>
+
+<style scoped lang="less">
+  .slide-fade-enter-active {
+    transition: all 0.3s ease-out;
+  }
+
+  .slide-fade-leave-active {
+    transition: all 0.8s cubic-bezier(1, 0.5, 0.8, 1);
+  }
+
+  .slide-fade-enter-from,
+  .slide-fade-leave-to {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  :deep(.arco-virtual-list) {
+    padding-right: 3px;
+    &::-webkit-scrollbar {
+      width: 10px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background-color: #c9cdd4;
+      border-radius: 6px;
+    }
+    &::-webkit-scrollbar-thumb:hover {
+      background-color: #86909c;
+    }
+
+    overflow-y: scroll !important;
+    // Firefox
+    scrollbar-color: #c9cdd4 var(--card-bg-color);
+  }
+
+  .table-tree {
+    margin-right: 3px;
+  }
+</style>
