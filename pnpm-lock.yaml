@@ -1,4 +1,4 @@
-lockfileVersion: '6.1'
+lockfileVersion: '6.0'
 
 settings:
   autoInstallPeers: true
@@ -17,16 +17,16 @@ dependencies:
     version: 7.20.5
   '@codemirror/autocomplete':
     specifier: ^6.4.2
-    version: 6.4.2(@codemirror/language@6.6.0)(@codemirror/state@6.2.0)(@codemirror/view@6.9.3)(@lezer/common@1.0.2)
+    version: 6.4.2(@codemirror/language@6.6.0)(@codemirror/state@6.2.0)(@codemirror/view@6.14.1)(@lezer/common@1.0.2)
   '@codemirror/basic-setup':
     specifier: ^0.20.0
     version: 0.20.0
   '@codemirror/lang-python':
     specifier: ^6.1.0
-    version: 6.1.0(@codemirror/state@6.2.0)(@codemirror/view@6.9.3)(@lezer/common@1.0.2)
+    version: 6.1.0(@codemirror/state@6.2.0)(@codemirror/view@6.14.1)(@lezer/common@1.0.2)
   '@codemirror/lang-sql':
     specifier: ^6.3.1
-    version: 6.3.1(@codemirror/view@6.9.3)(@lezer/common@1.0.2)
+    version: 6.3.1(@codemirror/view@6.14.1)(@lezer/common@1.0.2)
   '@codemirror/language':
     specifier: ^6.6.0
     version: 6.6.0
@@ -40,8 +40,8 @@ dependencies:
     specifier: ^6.1.0
     version: 6.1.0
   '@codemirror/view':
-    specifier: ^6.9.3
-    version: 6.9.3
+    specifier: ^6.14.1
+    version: 6.14.1
   '@lezer/common':
     specifier: ^1.0.2
     version: 1.0.2
@@ -53,7 +53,7 @@ dependencies:
     version: 1.2.3
   '@prometheus-io/codemirror-promql':
     specifier: ^0.42.0
-    version: 0.42.0(@codemirror/autocomplete@6.4.2)(@codemirror/language@6.6.0)(@codemirror/lint@6.2.0)(@codemirror/state@6.2.0)(@codemirror/view@6.9.3)(@lezer/common@1.0.2)(@lezer/highlight@1.1.2)(@lezer/lr@1.2.3)
+    version: 0.42.0(@codemirror/autocomplete@6.4.2)(@codemirror/language@6.6.0)(@codemirror/lint@6.2.0)(@codemirror/state@6.2.0)(@codemirror/view@6.14.1)(@lezer/common@1.0.2)(@lezer/highlight@1.1.2)(@lezer/lr@1.2.3)
   '@vueuse/core':
     specifier: ^10.1.0
     version: 10.1.0(vue@3.2.47)
@@ -632,7 +632,7 @@ packages:
       '@lezer/common': 0.16.1
     dev: false
 
-  /@codemirror/autocomplete@6.4.2(@codemirror/language@6.6.0)(@codemirror/state@6.2.0)(@codemirror/view@6.9.3)(@lezer/common@1.0.2):
+  /@codemirror/autocomplete@6.4.2(@codemirror/language@6.6.0)(@codemirror/state@6.2.0)(@codemirror/view@6.14.1)(@lezer/common@1.0.2):
     resolution: {integrity: sha512-8WE2xp+D0MpWEv5lZ6zPW1/tf4AGb358T5GWYiKEuCP8MvFfT3tH2mIF9Y2yr2e3KbHuSvsVhosiEyqCpiJhZQ==}
     peerDependencies:
       '@codemirror/language': ^6.0.0
@@ -642,7 +642,7 @@ packages:
     dependencies:
       '@codemirror/language': 6.6.0
       '@codemirror/state': 6.2.0
-      '@codemirror/view': 6.9.3
+      '@codemirror/view': 6.14.1
       '@lezer/common': 1.0.2
     dev: false
 
@@ -673,14 +673,14 @@ packages:
     dependencies:
       '@codemirror/language': 6.6.0
       '@codemirror/state': 6.2.0
-      '@codemirror/view': 6.9.3
+      '@codemirror/view': 6.14.1
       '@lezer/common': 1.0.2
     dev: false
 
-  /@codemirror/lang-python@6.1.0(@codemirror/state@6.2.0)(@codemirror/view@6.9.3)(@lezer/common@1.0.2):
+  /@codemirror/lang-python@6.1.0(@codemirror/state@6.2.0)(@codemirror/view@6.14.1)(@lezer/common@1.0.2):
     resolution: {integrity: sha512-a/JhyPYn5qz5T8WtAfZCuAZcfClgNVb7UZzdLr76bWUeG7Usd3Un5o8UQOkZ/5Xw+EM5YGHHG+T6ickMYkDcRQ==}
     dependencies:
-      '@codemirror/autocomplete': 6.4.2(@codemirror/language@6.6.0)(@codemirror/state@6.2.0)(@codemirror/view@6.9.3)(@lezer/common@1.0.2)
+      '@codemirror/autocomplete': 6.4.2(@codemirror/language@6.6.0)(@codemirror/state@6.2.0)(@codemirror/view@6.14.1)(@lezer/common@1.0.2)
       '@codemirror/language': 6.6.0
       '@lezer/python': 1.1.7
     transitivePeerDependencies:
@@ -689,10 +689,10 @@ packages:
       - '@lezer/common'
     dev: false
 
-  /@codemirror/lang-sql@6.3.1(@codemirror/view@6.9.3)(@lezer/common@1.0.2):
+  /@codemirror/lang-sql@6.3.1(@codemirror/view@6.14.1)(@lezer/common@1.0.2):
     resolution: {integrity: sha512-/3MxUNWnjY6Rw9ywHkQl2EKaS8XvFYyQzK/Zer4ikgWfqC+RuatIlg2m4sI1graOFhWPbQk2U3C83q+0jEmdag==}
     dependencies:
-      '@codemirror/autocomplete': 6.4.2(@codemirror/language@6.6.0)(@codemirror/state@6.2.0)(@codemirror/view@6.9.3)(@lezer/common@1.0.2)
+      '@codemirror/autocomplete': 6.4.2(@codemirror/language@6.6.0)(@codemirror/state@6.2.0)(@codemirror/view@6.14.1)(@lezer/common@1.0.2)
       '@codemirror/language': 6.6.0
       '@codemirror/state': 6.2.0
       '@lezer/highlight': 1.1.2
@@ -717,7 +717,7 @@ packages:
     resolution: {integrity: sha512-cwUd6lzt3MfNYOobdjf14ZkLbJcnv4WtndYaoBkbor/vF+rCNguMPK0IRtvZJG4dsWiaWPcK8x1VijhvSxnstg==}
     dependencies:
       '@codemirror/state': 6.2.0
-      '@codemirror/view': 6.9.3
+      '@codemirror/view': 6.14.1
       '@lezer/common': 1.0.2
       '@lezer/highlight': 1.1.2
       '@lezer/lr': 1.2.3
@@ -736,7 +736,7 @@ packages:
     resolution: {integrity: sha512-KVCECmR2fFeYBr1ZXDVue7x3q5PMI0PzcIbA+zKufnkniMBo1325t0h1jM85AKp8l3tj67LRxVpZfgDxEXlQkg==}
     dependencies:
       '@codemirror/state': 6.2.0
-      '@codemirror/view': 6.9.3
+      '@codemirror/view': 6.14.1
       crelt: 1.0.6
     dev: false
 
@@ -752,7 +752,7 @@ packages:
     resolution: {integrity: sha512-64/M40YeJPToKvGO6p3fijo2vwUEj4nACEAXElCaYQ50HrXSvRaK+NHEhSh73WFBGdvIdhrV+lL9PdJy2RfCYA==}
     dependencies:
       '@codemirror/state': 6.2.0
-      '@codemirror/view': 6.9.3
+      '@codemirror/view': 6.14.1
       crelt: 1.0.6
     dev: false
 
@@ -769,7 +769,7 @@ packages:
     dependencies:
       '@codemirror/language': 6.6.0
       '@codemirror/state': 6.2.0
-      '@codemirror/view': 6.9.3
+      '@codemirror/view': 6.14.1
       '@lezer/highlight': 1.1.2
     dev: false
 
@@ -781,8 +781,8 @@ packages:
       w3c-keyname: 2.2.8
     dev: false
 
-  /@codemirror/view@6.9.3:
-    resolution: {integrity: sha512-BJ5mvEIhFM+SrNwc5X8pLIvMM9ffjkviVbxpg84Xk2OE8ZyKaEbId8kX+nAYEEso7+qnbwsXe1bkAHsasebMow==}
+  /@codemirror/view@6.14.1:
+    resolution: {integrity: sha512-ofcsI7lRFo4N0rfnd+V3Gh2boQU3DmaaSKhDOvXUWjeOeuupMXer2e/3i9TUFN7aEIntv300EFBWPEiYVm2svg==}
     dependencies:
       '@codemirror/state': 6.2.0
       style-mod: 4.0.3
@@ -1204,7 +1204,7 @@ packages:
       pug-lexer: 5.0.1
     dev: true
 
-  /@prometheus-io/codemirror-promql@0.42.0(@codemirror/autocomplete@6.4.2)(@codemirror/language@6.6.0)(@codemirror/lint@6.2.0)(@codemirror/state@6.2.0)(@codemirror/view@6.9.3)(@lezer/common@1.0.2)(@lezer/highlight@1.1.2)(@lezer/lr@1.2.3):
+  /@prometheus-io/codemirror-promql@0.42.0(@codemirror/autocomplete@6.4.2)(@codemirror/language@6.6.0)(@codemirror/lint@6.2.0)(@codemirror/state@6.2.0)(@codemirror/view@6.14.1)(@lezer/common@1.0.2)(@lezer/highlight@1.1.2)(@lezer/lr@1.2.3):
     resolution: {integrity: sha512-YrvHeyxrYUOGiogWOBDSQDzt63OG0mBxEyDajNFCV0APnU9h/syq1EpZ3HtFGa+hnpVuPAoqWH49QXknbdy2iQ==}
     engines: {node: '>=12.0.0'}
     peerDependencies:
@@ -1215,11 +1215,11 @@ packages:
       '@codemirror/view': ^6.4.0
       '@lezer/common': ^1.0.1
     dependencies:
-      '@codemirror/autocomplete': 6.4.2(@codemirror/language@6.6.0)(@codemirror/state@6.2.0)(@codemirror/view@6.9.3)(@lezer/common@1.0.2)
+      '@codemirror/autocomplete': 6.4.2(@codemirror/language@6.6.0)(@codemirror/state@6.2.0)(@codemirror/view@6.14.1)(@lezer/common@1.0.2)
       '@codemirror/language': 6.6.0
       '@codemirror/lint': 6.2.0
       '@codemirror/state': 6.2.0
-      '@codemirror/view': 6.9.3
+      '@codemirror/view': 6.14.1
       '@lezer/common': 1.0.2
       '@prometheus-io/lezer-promql': 0.42.0(@lezer/highlight@1.1.2)(@lezer/lr@1.2.3)
       lru-cache: 6.0.0
@@ -2276,13 +2276,13 @@ packages:
   /codemirror@6.0.0(@lezer/common@1.0.2):
     resolution: {integrity: sha512-c4XR9QtDn+NhKLM2FBsnRn9SFdRH7G6594DYC/fyKKIsTOcdLF0WNWRd+f6kNyd5j1vgYPucbIeq2XkywYCwhA==}
     dependencies:
-      '@codemirror/autocomplete': 6.4.2(@codemirror/language@6.6.0)(@codemirror/state@6.2.0)(@codemirror/view@6.9.3)(@lezer/common@1.0.2)
+      '@codemirror/autocomplete': 6.4.2(@codemirror/language@6.6.0)(@codemirror/state@6.2.0)(@codemirror/view@6.14.1)(@lezer/common@1.0.2)
       '@codemirror/commands': 6.2.4
       '@codemirror/language': 6.6.0
       '@codemirror/lint': 6.2.0
       '@codemirror/search': 6.5.0
       '@codemirror/state': 6.2.0
-      '@codemirror/view': 6.9.3
+      '@codemirror/view': 6.14.1
     transitivePeerDependencies:
       - '@lezer/common'
     dev: false
@@ -6396,7 +6396,7 @@ packages:
       '@codemirror/commands': 6.2.4
       '@codemirror/language': 6.6.0
       '@codemirror/state': 6.2.0
-      '@codemirror/view': 6.9.3
+      '@codemirror/view': 6.14.1
       codemirror: 6.0.0(@lezer/common@1.0.2)
       vue: 3.2.47
     dev: false
