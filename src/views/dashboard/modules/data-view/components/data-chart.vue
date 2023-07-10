@@ -66,7 +66,11 @@ a-card(v-if="hasChart" :bordered="false")
     },
     defaultChartForm: {
       type: Object as PropType<ChartFormType>,
-      default: () => ({}),
+      default: () => ({
+        chartType: 'line',
+        selectedYTypes: [],
+        groupBySelectedTypes: [],
+      }),
     },
 
     hasHeader: {
@@ -217,10 +221,10 @@ a-card(v-if="hasChart" :bordered="false")
       ;(chartForm as any)[key] = (chartForm as any)[key] || value
     })
     chartForm.chartType = props.defaultChartForm.chartType || 'line'
-    chartForm.selectedYTypes = props.defaultChartForm.selectedYTypes.length
+    chartForm.selectedYTypes = props.defaultChartForm.selectedYTypes?.length
       ? props.defaultChartForm.selectedYTypes
       : [yOptions.value[0].value]
-    chartForm.groupBySelectedTypes = props.defaultChartForm.groupBySelectedTypes.concat(chartForm.groupBySelectedTypes)
+    chartForm.groupBySelectedTypes = [...props.defaultChartForm.groupBySelectedTypes, ...chartForm.groupBySelectedTypes]
   })
 
   const drawChart = () => {
