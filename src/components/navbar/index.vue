@@ -51,6 +51,11 @@
       label: 'Playground',
       permission: ['*'],
     },
+    {
+      key: 'status',
+      label: 'Status',
+      permission: ['dev'],
+    },
   ]
 
   const dropDownLinks = [
