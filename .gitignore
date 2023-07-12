@@ -1,7 +1,12 @@
 node_modules
-.DS_Store
 dist
 dist-ssr
 *.local
 components.d.ts
 auto-imports.d.ts
+
+# editor and IDE paraphernalia
+.idea
+
+# macOS
+.DS_Store
