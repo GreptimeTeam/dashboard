@@ -3,6 +3,12 @@ export interface SchemaType {
   data_type: string
 }
 
+export interface ChartFormType {
+  chartType: string
+  selectedYTypes: string[]
+  groupBySelectedTypes: string[]
+}
+
 export interface RecordsType {
   rows: [][]
   schema: { column_schemas: SchemaType[] }
