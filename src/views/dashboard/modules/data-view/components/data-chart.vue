@@ -33,7 +33,7 @@ a-card(v-if="hasChart" :bordered="false")
             :disabled="isGroupByDisabled"
             :trigger-props="triggerProps"
           )
-            a-option(v-for="item of groupByOptions" :key="item.index" :value="item.index") {{ item.name }}
+            a-option(v-for="item of groupByOptions" :key="item.index" :value="item.name") {{ item.name }}
     a-spin(style="width: 100%" :loading="isChartLoading")
       template(#element)
         a-space(direction="vertical" :size="30")
@@ -47,9 +47,9 @@ a-card(v-if="hasChart" :bordered="false")
 
 <script lang="ts" setup>
   import type { PropType } from 'vue'
-  import type { datasetType, DimensionType, ResultType, SchemaType, SeriesType } from '@/store/modules/code-run/types'
+  import type { datasetType, ResultType, ChartFormType, SeriesType } from '@/store/modules/code-run/types'
   import useDataChart from '@/hooks/data-chart'
-  import { chartTypeOptions, updateOptions, numberTypes, dateTypes } from '../../../config'
+  import { chartTypeOptions, updateOptions } from '../../../config'
 
   const props = defineProps({
     data: {
@@ -64,6 +64,15 @@ a-card(v-if="hasChart" :bordered="false")
         type: '',
       }),
     },
+    defaultChartForm: {
+      type: Object as PropType<ChartFormType>,
+      default: () => ({
+        chartType: 'line',
+        selectedYTypes: [],
+        groupBySelectedTypes: [],
+      }),
+    },
+
     hasHeader: {
       type: Boolean,
       default: true,
@@ -143,7 +152,8 @@ a-card(v-if="hasChart" :bordered="false")
     } else {
       const dataWithGroup = groupByToMap(props.data.records.rows, (value: any) => {
         let string = ``
-        chartForm.groupBySelectedTypes.forEach((typeIndex: number, index: number) => {
+        chartForm.groupBySelectedTypes.forEach((typeName: string, index: number) => {
+          const typeIndex: number = groupByOptions.value.find(({ name }) => name === typeName)?.index ?? -1
           string = index === 0 ? `${value[typeIndex]}` : `${string}, ${value[typeIndex]}`
         })
         return string
@@ -207,6 +217,14 @@ a-card(v-if="hasChart" :bordered="false")
   // TODO: Might need to change this
   onMounted(() => {
     if (hasChart.value) chartForm.selectedYTypes = [yOptions.value[0].value]
+    Object.entries(props.defaultChartForm).forEach(([key, value]) => {
+      ;(chartForm as any)[key] = (chartForm as any)[key] || value
+    })
+    chartForm.chartType = props.defaultChartForm.chartType || 'line'
+    chartForm.selectedYTypes = props.defaultChartForm.selectedYTypes?.length
+      ? props.defaultChartForm.selectedYTypes
+      : [yOptions.value[0].value]
+    chartForm.groupBySelectedTypes = [...props.defaultChartForm.groupBySelectedTypes, ...chartForm.groupBySelectedTypes]
   })
 
   const drawChart = () => {
