@@ -4,7 +4,7 @@
     img.logo-text-img(alt="logo" src="/src/assets/images/logo-text.webp")
   .menu
     a-menu(mode="horizontal" :selected-keys="menuSelectedKey")
-      a-menu-item(v-for="(item, index) in menuConfig" :key="item.key" :v-permission="item.permission")
+      a-menu-item(v-for="(item, index) in menuConfig" :key="item.key" v-permission="item.permission")
         span(
           @click.meta="menuClickWithMeta(item.key)"
           @click.ctrl="menuClickWithMeta(item.key)"
