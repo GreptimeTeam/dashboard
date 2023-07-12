@@ -3,15 +3,13 @@
   .logo-space
     img.logo-text-img(alt="logo" src="/src/assets/images/logo-text.webp")
   .menu
-    a-menu(mode="horizontal" :selected-keys="menuSelectedKey" @menu-item-click="menuClick")
-      a-menu-item(key="query")
-        | Query
-      a-menu-item(key="scripts" v-permission="['dev']")
-        | Scripts
-      a-menu-item(key="playground")
-        | Playground
-      a-menu-item(key="status" v-permission="['dev']")
-        | Status
+    a-menu(mode="horizontal" :selected-keys="menuSelectedKey")
+      a-menu-item(v-for="(item, index) in menuConfig" :key="item.key" :v-permission="item.permission")
+        span(
+          @click.meta="menuClickWithMeta(item.key)"
+          @click.ctrl="menuClickWithMeta(item.key)"
+          @click.exact="menuClick(item.key)"
+        ) {{ item.label }}
   ul.right-side
     li
       a-tooltip(:content="$t('settings.title')")
@@ -36,6 +34,24 @@
 
   const { updateSettings } = useAppStore()
   const menuSelectedKey = ref<string[]>([])
+
+  const menuConfig = [
+    {
+      key: 'query',
+      label: 'Query',
+      permission: ['*'],
+    },
+    {
+      key: 'scripts',
+      label: 'Scripts',
+      permission: ['dev'],
+    },
+    {
+      key: 'playground',
+      label: 'Playground',
+      permission: ['*'],
+    },
+  ]
 
   const dropDownLinks = [
     {
@@ -62,6 +78,11 @@
 
   const menuClick = (key: string) => {
     router.push({ name: key })
+  }
+
+  const menuClickWithMeta = (key: string) => {
+    const url = router.resolve({ name: key })
+    window.open(url.fullPath, '_blank')
   }
 
   listenerRouteChange((newRoute) => {
