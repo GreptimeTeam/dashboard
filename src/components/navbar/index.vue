@@ -39,7 +39,7 @@
     {
       key: 'query',
       label: 'Query',
-      permission: ['*'],
+      permission: ['dev', 'cloud'],
     },
     {
       key: 'scripts',
@@ -49,7 +49,7 @@
     {
       key: 'playground',
       label: 'Playground',
-      permission: ['*'],
+      permission: ['dev', 'cloud'],
     },
     {
       key: 'status',

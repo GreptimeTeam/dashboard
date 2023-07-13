@@ -24,7 +24,6 @@ a-modal.guide-modal(
     },
   })
   const isShow = ref(false)
-  const { VITE_RECAPTCHA_SITE_KEY } = import.meta.env
 
   const toggleModal = () => {
     isShow.value = !isShow.value
