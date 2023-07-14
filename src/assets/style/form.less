@@ -1,5 +1,7 @@
 .guide-modal {
   .arco-modal {
+    width: 384px;
+
     .arco-modal-header {
       height: 74px;
       padding-right: 0;
@@ -16,6 +18,16 @@
 
     .arco-modal-footer {
       padding: 20px 20px 30px;
+
+      .arco-btn {
+        width: 100%;
+        height: 44px;
+      }
+
+      > .arco-btn:not(:nth-child(1)) {
+        margin-top: 10px;
+        margin-left: 0;
+      }
     }
   }
 
@@ -63,11 +75,19 @@
 .change-modal {
   .arco-modal {
     .arco-modal-header {
-      height: 30px;
+      height: 36px;
     }
 
     .arco-modal-body {
+      padding: 12px 20px;
+      font-size: 16px;
       line-height: 28px;
+    }
+
+    .arco-modal-footer {
+      > .arco-btn {
+        width: 74px;
+      }
     }
   }
 }

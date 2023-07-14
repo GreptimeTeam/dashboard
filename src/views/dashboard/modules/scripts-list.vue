@@ -28,6 +28,7 @@ a-spin(style="width: 100%" :loading="scriptsLoading")
           use(href="#empty")
 a-modal.change-modal(
   v-model:visible="modelVisible"
+  width="auto"
   :closable="false"
   :okButtonProps="okButton"
   :cancelButtonProps="cancelButton"
@@ -35,7 +36,9 @@ a-modal.change-modal(
   @cancel="handleCancel"
 )
   template(#title="")
-  | {{ $t('dashboard.question') }}
+  a-space
+    icon-exclamation-circle-fill.warning-color.icon-18
+    | {{ $t('dashboard.question') }}
 </template>
 
 <script lang="ts" name="ScriptsList" setup>
@@ -47,7 +50,7 @@ a-modal.change-modal(
   const selectedNode = ref()
   const scriptsRef = ref()
   const tableSearchKey = ref('')
-  const okButton = { type: 'text' }
+  const okButton = { type: 'outline' }
   const cancelButton = { type: 'primary' }
   const isRefreshing = ref(false)
 
