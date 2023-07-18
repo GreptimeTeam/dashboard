@@ -6,7 +6,7 @@ a-card(:bordered="false")
         use(href="#table")
       | {{ $t('dashboard.table') }}
   a-spin(style="width: 100%")
-    a-table(:data="gridData" :pagination="pagination")
+    a-table.data-table(show-total :data="gridData" :pagination="pagination")
       template(#columns)
         template(v-for="column in gridColumns" :key="column.title")
           template(v-if="timeColumnNames.includes(column.title)")
@@ -52,6 +52,8 @@ a-card(:bordered="false")
   const pagination = {
     'total': props.data?.records.rows.length,
     'show-page-size': true,
+    'show-total': true,
+    'show-jumper': true,
   }
 
   // replace '.' with '-' to make it a valid data-index
