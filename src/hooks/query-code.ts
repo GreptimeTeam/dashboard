@@ -29,7 +29,7 @@ const codes = ref({
 const promForm = ref({
   start: '0',
   end: '0',
-  step: '',
+  step: '15s',
   isRelative: 1,
   time: 5,
   range: [],
