@@ -21,7 +21,6 @@ a-tabs.result-tabs.logs-tab(type="rounded")
 
 <script lang="ts" name="Log" setup>
   import type { Log } from '@/store/modules/log/types'
-  import { useClipboard } from '@vueuse/core'
   import { storeToRefs } from 'pinia'
 
   const props = defineProps<{
@@ -32,7 +31,6 @@ a-tabs.result-tabs.logs-tab(type="rounded")
   const route = useRoute()
   const { clearLogs } = useLog()
   const { codeType } = storeToRefs(useAppStore())
-  const { copy, copied } = useClipboard()
 
   const clear = () => {
     clearLogs(props.types)

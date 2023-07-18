@@ -48,6 +48,8 @@ a-card.editor-card(:bordered="false")
           :style="{ width: '180px' }"
           :placeholder="$t('dashboard.step')"
         )
+          template(#prefix)
+            | Step
           template(#suffix)
             a-popover(trigger="hover")
               svg.icon

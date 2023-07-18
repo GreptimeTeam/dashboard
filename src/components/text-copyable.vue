@@ -2,7 +2,7 @@
 a-typography-text(copyable type="secondary" :copy-text="data")
   span(v-if="showData") {{ data }}
   template(#copy-icon="{ copied }")
-    .icon-18
+    .icon-18.pointer
       svg.icon(v-if="copied === false")
         use(href="#copy")
       svg.icon(v-else)

@@ -19,10 +19,12 @@ a-list-item.smaller-divider
     div {{ $t('dashboard.executeTime', { time: log.execution_time_ms }) }}
     div {{ $t('dashboard.network', { time: log.networkTime - log.execution_time_ms }) }}
     div {{ $t('dashboard.total', { time: log.networkTime }) }}
-    div(v-if="codeType !== 'python'")
-      a-tooltip(mini :content="copied ? $t('dashboard.copied') : $t('dashboard.copyToClipboard')")
-        svg.icon.pointer.vertical-center(name="copy" @click="copyToClipboard(log.codeInfo)")
-          use(href="#copy")
+    a-space(v-if="codeType !== 'python'" :size="2")
+      TextCopyable.log-copy(
+        :data="codeFormatter(log.codeInfo)"
+        :showData="false"
+        :copyTooltip="$t('dashboard.copyToClipboard')"
+      )
       a-popover
         span.code-space
           span {{ $t('dashboard.query') }}
@@ -42,12 +44,10 @@ a-list-item.smaller-divider
 </template>
 
 <script lang="ts" name="Log" setup>
-  import { useClipboard } from '@vueuse/core'
   import { format } from 'sql-formatter'
 
   const route = useRoute()
   const { codeType } = storeToRefs(useAppStore())
-  const { copy, copied } = useClipboard()
   const props = defineProps({
     log: {
       type: Object,
@@ -57,8 +57,8 @@ a-list-item.smaller-divider
 
   const hasExecutionTime = Reflect.has(props.log, 'execution_time_ms')
 
-  const copyToClipboard = (code: string) => {
-    if (codeType.value === 'sql') copy(format(code, { language: 'mysql', keywordCase: 'upper' }))
-    else copy(code)
+  const codeFormatter = (code: string) => {
+    if (codeType.value === 'sql') return format(code, { language: 'mysql', keywordCase: 'upper' })
+    return code
   }
 </script>
