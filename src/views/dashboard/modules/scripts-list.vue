@@ -22,10 +22,7 @@ a-spin(style="width: 100%" :loading="scriptsLoading")
       :data="scriptsListData"
       @select="onSelect"
     )
-    a-empty(v-else)
-      template(#image)
-        svg.icon-32
-          use(href="#empty")
+    EmptyStatus(v-else)
 a-modal.change-modal(
   v-model:visible="modelVisible"
   width="auto"
