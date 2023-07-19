@@ -49,37 +49,30 @@ axios.interceptors.request.use(
 // add response interceptors
 axios.interceptors.response.use(
   (response: AxiosResponse<HttpResponse>) => {
-    const res = response.data
     const isV1 = !!response.config.url?.startsWith(`/v1`)
+    const { data } = response
 
-    // if the custom code is not 0, it is judged as an error.
-    if (res.code && res.code !== 0) {
-      Message.error({
-        content: res.error || 'Error',
-        duration: 2 * 1000,
-      })
-
-      if (isV1) {
+    if (isV1) {
+      if (data.code && data.code !== 0) {
+        // v1 and error
+        Message.error({
+          content: data.error || 'Error',
+          duration: 2 * 1000,
+        })
         const error = {
-          error: res.error,
+          error: data.error,
           startTime: new Date(response.config.traceTimeStart).toLocaleTimeString(),
         }
         return Promise.reject(error || 'Error')
       }
-      const error = {
-        error: res.error,
-      }
-      return Promise.reject(error || 'Error')
-    }
-
-    if (isV1) {
+      // v1 and success
       return {
-        ...res,
+        ...data,
         networkTime: new Date().valueOf() - response.config.traceTimeStart,
         startTime: new Date(response.config.traceTimeStart).toLocaleTimeString(),
       }
     }
-    return res
+    return data
   },
   (error) => {
     if (error.response.status === 401) {
