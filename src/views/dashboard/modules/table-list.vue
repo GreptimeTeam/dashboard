@@ -38,10 +38,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
         svg.icon-15.pointer(name="copy" @click="insertName(nodeData.title)")
           use(href="#copy")
   .tree-scrollbar(v-else)
-    a-empty
-      template(#image)
-        svg.icon-32
-          use(href="#empty")
+    EmptyStatus
 </template>
 
 <script lang="ts" setup>

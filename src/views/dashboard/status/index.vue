@@ -8,11 +8,7 @@ a-layout.layout.status
       a-descriptions(bordered :column="2")
         a-descriptions-item(v-for="item of statusInfoRef" :label="item[0]")
           a-tag {{ item[1] }}
-    a-empty(v-else)
-      template(#image)
-        svg.icon-32
-          use(href="#empty")
-      | Status is not supported until GreptimeDB v0.3.1
+    EmptyStatus(v-else data="Status is not supported until GreptimeDB v0.3.1")
 </template>
 
 <script lang="ts" setup name="Status">

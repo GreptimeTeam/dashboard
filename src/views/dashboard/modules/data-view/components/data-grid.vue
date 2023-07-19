@@ -7,6 +7,8 @@ a-card(:bordered="false")
       | {{ $t('dashboard.table') }}
   a-spin(style="width: 100%")
     a-table.data-table(show-total :data="gridData" :pagination="pagination")
+      template(#empty)
+        EmptyStatus
       template(#columns)
         template(v-for="column in gridColumns" :key="column.title")
           template(v-if="timeColumnNames.includes(column.title)")
