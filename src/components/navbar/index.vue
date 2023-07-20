@@ -141,6 +141,7 @@
     display: flex;
     list-style: none;
     margin-right: 30px;
+    padding-left: 0;
 
     li {
       display: flex;
