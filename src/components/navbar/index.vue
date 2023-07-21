@@ -113,9 +113,14 @@
 
   .menu {
     width: 100%;
-    margin-left: 60px;
+    margin-left: 20px;
     .arco-menu-horizontal {
       background-color: transparent;
+
+      :deep(.arco-menu-inner) {
+        overflow-y: hidden;
+      }
+
       .arco-menu-item {
         padding: 6px 12px;
         line-height: 18px;
@@ -133,6 +138,17 @@
         border-radius: 4px;
         opacity: 1;
         font-weight: 600;
+      }
+
+      :deep(.arco-menu-pop.arco-menu-pop-header.arco-menu-overflow-sub-menu) {
+        color: var(--white-font-color);
+        background-color: transparent;
+        opacity: 0.6;
+      }
+      :deep(.arco-menu-pop.arco-menu-pop-header.arco-menu-selected.arco-menu-overflow-sub-menu) {
+        opacity: 1;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 4px;
       }
     }
   }
