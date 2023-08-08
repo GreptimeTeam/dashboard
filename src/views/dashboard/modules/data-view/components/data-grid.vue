@@ -79,7 +79,6 @@ a-card(:bordered="false")
     // use sort to make time columns display on the left first
     return schema.column_schemas
       .map((column: SchemaType) => {
-        console.log(column)
         return {
           title: column.name,
           dataIndex: columnNameToDataIndex(column.name),
