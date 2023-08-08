@@ -120,9 +120,8 @@ a-card(:bordered="false")
     const formatter = (value: number | null) => {
       switch (dataType) {
         case 'Date':
-          return value && dayjs('1970-01-01').add(value, 'day').format('YYYY-MM-DD HH:mm:ss')
+          return value && dayjs(0).add(value, 'day').format('YYYY-MM-DD HH:mm:ss')
         case 'DateTime':
-          return value && dayjs.unix(value).format('YYYY-MM-DD HH:mm:ss')
         case 'TimestampSecond':
           return value && dayjs.unix(value).format('YYYY-MM-DD HH:mm:ss')
         case 'TimestampMillisecond':
