@@ -31,7 +31,16 @@ export const numberTypes = [
   'Float64',
 ]
 
-export const dateTypes = ['Date', 'DateTime', 'Timestamp', 'TimestampMillisecond']
+export const dateTypes = [
+  'Date',
+  'DateTime',
+  'TimestampSecond',
+  'TimestampMillisecond',
+  'TimestampMicrosecond',
+  'TimestampNanosecond',
+]
+
+export const timestampTypes = ['TimestampSecond', 'TimestampMillisecond', 'TimestampMicrosecond', 'TimestampNanosecond']
 
 export const dataTypesMap = {
   Int8: 'number',

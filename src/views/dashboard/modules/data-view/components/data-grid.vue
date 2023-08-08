@@ -24,7 +24,7 @@ a-card(:bordered="false")
                   a-space(
                     size="mini"
                     :style="{ cursor: 'pointer' }"
-                    @click="() => handleFormatTimeColumn(column.dataIndex)"
+                    @click="() => handleFormatTimeColumn(column.dataIndex, column.dataType)"
                   )
                     svg.icon-20
                       use(href="#time-index")
@@ -35,7 +35,7 @@ a-card(:bordered="false")
 
 <script lang="ts" setup>
   import { dateTypes } from '@/views/dashboard/config'
-  import type { ResultType } from '@/store/modules/code-run/types'
+  import type { ResultType, SchemaType } from '@/store/modules/code-run/types'
   import dayjs from 'dayjs'
 
   const props = withDefaults(
@@ -68,8 +68,8 @@ a-card(:bordered="false")
     const { schema } = props.data.records
     if (!schema) return []
     return props.data.records.schema.column_schemas
-      .filter((column: any) => dateTypes.includes(column.data_type))
-      .map((column: any) => column.name)
+      .filter((column: SchemaType) => dateTypes.includes(column.data_type))
+      .map((column: SchemaType) => column.name)
   })
 
   const gridColumns = computed(() => {
@@ -78,10 +78,12 @@ a-card(:bordered="false")
 
     // use sort to make time columns display on the left first
     return schema.column_schemas
-      .map((column: any) => {
+      .map((column: SchemaType) => {
+        console.log(column)
         return {
           title: column.name,
           dataIndex: columnNameToDataIndex(column.name),
+          dataType: column.data_type,
         }
       })
       .sort((a: any, b: any) => {
@@ -115,21 +117,31 @@ a-card(:bordered="false")
 
   const formatSuffix = '--FORMATTED'
 
-  function formatTimestamp(timestamp: number) {
-    const { length } = timestamp.toString()
-    if (length === 10) {
-      return dayjs.unix(timestamp).format('YYYY-MM-DD HH:mm:ss')
+  const handleFormatTimeColumn = (dataIndex: string, dataType: string) => {
+    const formatter = (value: number | null) => {
+      switch (dataType) {
+        case 'Date':
+          return value && dayjs('1970-01-01').add(value, 'day').format('YYYY-MM-DD HH:mm:ss')
+        case 'DateTime':
+          return value && dayjs.unix(value).format('YYYY-MM-DD HH:mm:ss')
+        case 'TimestampSecond':
+          return value && dayjs.unix(value).format('YYYY-MM-DD HH:mm:ss')
+        case 'TimestampMillisecond':
+          return value && dayjs(value).format('YYYY-MM-DD HH:mm:ss')
+        case 'TimestampMicrosecond':
+          return value && dayjs(value / 1000).format('YYYY-MM-DD HH:mm:ss')
+        case 'TimestampNanosecond':
+          return value && dayjs(value / 1000000).format('YYYY-MM-DD HH:mm:ss')
+        default:
+          return null
+      }
     }
 
-    return dayjs(timestamp).format('YYYY-MM-DD HH:mm:ss')
-  }
-
-  const handleFormatTimeColumn = (dataIndex: string) => {
     timeColumnFormatMap.value[dataIndex] = !timeColumnFormatMap.value[dataIndex]
     // calculate formatted time data on first access
     if (gridData.value.length && !gridData.value[0][`${dataIndex}${formatSuffix}`]) {
       gridData.value.forEach((row: any) => {
-        row[`${dataIndex}${formatSuffix}`] = row[dataIndex] ? formatTimestamp(row[dataIndex]) : row[dataIndex]
+        row[`${dataIndex}${formatSuffix}`] = formatter(row[dataIndex])
       })
     }
   }
