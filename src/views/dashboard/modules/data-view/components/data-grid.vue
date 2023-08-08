@@ -116,7 +116,8 @@ a-card(:bordered="false")
   const formatSuffix = '--FORMATTED'
 
   function formatTimestamp(timestamp: number) {
-    if (timestamp.toString().length === 10) {
+    const { length } = timestamp.toString()
+    if (length === 10) {
       return dayjs.unix(timestamp).format('YYYY-MM-DD HH:mm:ss')
     }
 
@@ -128,7 +129,7 @@ a-card(:bordered="false")
     // calculate formatted time data on first access
     if (gridData.value.length && !gridData.value[0][`${dataIndex}${formatSuffix}`]) {
       gridData.value.forEach((row: any) => {
-        row[`${dataIndex}${formatSuffix}`] = formatTimestamp(row[dataIndex])
+        row[`${dataIndex}${formatSuffix}`] = row[dataIndex] ? formatTimestamp(row[dataIndex]) : row[dataIndex]
       })
     }
   }
