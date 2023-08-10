@@ -1,4 +1,6 @@
 import axios from 'axios'
+import JSONbigint from 'json-bigint'
+
 import type { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { Message, Modal } from '@arco-design/web-vue'
 import { RecordsType } from '@/store/modules/code-run/types'
@@ -24,6 +26,7 @@ export interface Auth {
 
 axios.interceptors.request.use(
   (config: AxiosRequestConfig) => {
+    config.transformResponse = [(data) => data]
     const isV1 = !!config.url?.startsWith(`/v1`)
     const appStore = useAppStore()
     const basicAuth = `Basic ${btoa(`${appStore.username}:${appStore.password}`)}`
@@ -46,10 +49,12 @@ axios.interceptors.request.use(
     return Promise.reject(error)
   }
 )
+
 // add response interceptors
 axios.interceptors.response.use(
-  (response: AxiosResponse<HttpResponse>) => {
+  (response: AxiosResponse) => {
     const isV1 = !!response.config.url?.startsWith(`/v1`)
+    response.data = JSONbigint.parse(response.data)
     const { data } = response
 
     if (isV1) {
