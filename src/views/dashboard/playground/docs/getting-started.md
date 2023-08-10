@@ -154,7 +154,7 @@ SELECT * FROM cpu_metrics WHERE usage_user > 50;
 
 See more about [`WHERE` clause](https://docs.greptime.com/reference/sql/where).
 
-### Group query results
+### Group by Tags
 
 Developers always want to see the general CPU usage to check if there are any problems with the resources. For example, the following SQL statement returns the average CPU usage group by hosts.
 
@@ -187,10 +187,22 @@ SELECT hostname, environment,
 
 See more about [`GROUP BY` clause](https://docs.greptime.com/reference/sql/group_by).
 
-<!-- TODO: add GROUP BY time -->
-<!-- The following SQL statement returns the average CPU usage of all hosts every 5 minutes.-->
+### Group by Time Intervals
 
-<!-- SELECT avg(usage_user), avg(usage_system), avg(usage_idle) FROM cpu_metrics GROUP BY time(5m); -->
+One important scenario for time series data is to group it by time intervals to monitor its trend. The following SQL statement returns the average CPU usage of all hosts every second.
+
+``` sql
+select date_trunc('second', ts) as dt,
+    avg(usage_user),
+    avg(usage_system),
+    avg(usage_idle)
+    FROM cpu_metrics 
+    GROUP BY dt
+```
+
+See more about [`date_trunc` function](https://docs.greptime.com/reference/sql/functions#date-trunc).
+
+<!-- TODO: The following SQL statement returns the average CPU usage of all hosts every 5 minutes.-->
 
 ### More aggregate functions
 
