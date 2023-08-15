@@ -49,6 +49,7 @@ a-card(v-if="hasChart" :bordered="false")
   import type { PropType } from 'vue'
   import type { datasetType, ResultType, ChartFormType, SeriesType } from '@/store/modules/code-run/types'
   import useDataChart from '@/hooks/data-chart'
+  import { bigNumberFormatter } from '@/utils'
   import { chartTypeOptions, updateOptions } from '../../../config'
 
   const props = defineProps({
@@ -187,6 +188,9 @@ a-card(v-if="hasChart" :bordered="false")
   const makeOptions = () => {
     const { series, legendNames, dataset } = getChartConfig(chartForm.selectedYTypes)
     return {
+      grid: {
+        left: 60,
+      },
       legend: {
         data: legendNames,
       },
@@ -209,6 +213,11 @@ a-card(v-if="hasChart" :bordered="false")
             type: 'solid',
           },
         },
+        axisLabel: {
+          formatter: (value: number) => `${bigNumberFormatter(value, 1)}`,
+        },
+        min: (value: any) => value.min - (value.max - value.min) * 0.1,
+        max: (value: any) => value.max + (value.max - value.min) * 0.1,
       },
       series,
     }
