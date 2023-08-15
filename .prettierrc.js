@@ -11,4 +11,5 @@ module.exports = {
   pugSingleQuote: false,
   pugSortAttributesBeginning: ['^v-if$', '^v-else$', '^v-else-if$', '^v-for$', '^:key$', '^ref$', '^v-model'],
   pugSortAttributesEnd: ['^:', '^:disabled$', '^@', '^@click'],
+  endOfLine: 'auto',
 }

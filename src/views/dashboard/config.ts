@@ -72,3 +72,11 @@ export const durations = [
 export const durationExamples = ['1h', '5d1m', '5m', '10s']
 
 export const timeOptionsArray = [5, 10, 15, 30, 60]
+
+export const queryTimeMap: { [key: number]: string } = {
+  5: 'Last 5 minutes',
+  10: 'Last 10 minutes',
+  15: 'Last 15 minutes',
+  30: 'Last 30 minutes',
+  60: 'Last 60 minutes',
+}
