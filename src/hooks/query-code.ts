@@ -1,5 +1,6 @@
 import { Message } from '@arco-design/web-vue'
 import i18n from '@/locale'
+import dayjs from 'dayjs'
 import { useCodeRunStore } from '@/store'
 import { ResultType } from '@/store/modules/code-run/types'
 import { stringType } from './types'
@@ -32,7 +33,7 @@ const promForm = ref({
   step: '15s',
   isRelative: 1,
   time: 5,
-  range: [],
+  range: [dayjs().subtract(5, 'minute').unix().toString(), dayjs().unix().toString()],
 })
 
 export default function useQueryCode() {

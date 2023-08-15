@@ -10,12 +10,12 @@ export interface NumberObject {
   [key: string]: number
 }
 
-export interface Options {
+export interface OptionsType {
   value: unknown
   label: string
 }
 
-export interface NodeOptions extends Options {
+export interface NodeOptions extends OptionsType {
   children?: NodeOptions[]
 }
 

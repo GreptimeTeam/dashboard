@@ -19,28 +19,21 @@ a-card.editor-card(:bordered="false")
   a-form.space-between.prom-form(layout="inline" v-show="queryType === 'promQL'" :model="promForm")
     a-space(size="medium")
       a-form-item(:hide-label="true")
-        a-select(
-          v-if="promForm.isRelative === 1"
-          v-model="promForm.time"
-          :trigger-props="{ 'update-at-scroll': true }"
+        TimeSelect(
+          flex-direction="row-reverse"
+          button-class="query-time-button"
+          :trigger-visible="triggerVisible"
+          :is-relative="promForm.isRelative === 1"
+          :range-picker-visible="rangePickerVisible"
+          :time-length="promForm.time"
+          :time-range="promForm.range"
+          :relative-time-map="queryTimeMap"
+          :relative-time-options="queryTimeOptions"
+          @open-time-select="openTimeSelect"
+          @select-time-range="selectTimeRange"
+          @select-time-length="selectTimeLength"
+          @click-custom="clickCustom"
         )
-          a-option(v-for="time of timeOptions" :="time")
-          template(#prefix)
-            svg.icon-20
-              use(href="#calendar")
-        a-range-picker(
-          v-else
-          v-model="promForm.range"
-          format="YYYY-MM-DD HH:mm:ss"
-          value-format="X"
-          :show-time="true"
-          :allow-clear="true"
-          :trigger-props="{ 'update-at-scroll': true }"
-          :placeholder="[$t('dashboard.startTime'), $t('dashboard.endTime')]"
-        )
-          template(#prefix)
-            svg.icon-20
-              use(href="#calendar")
       a-form-item(:hide-label="true")
         a-input(
           v-model="promForm.step"
@@ -64,8 +57,6 @@ a-card.editor-card(:bordered="false")
                   a-list-item
                     span.ml-2 {{ $t('dashboard.examples') }}
                     a-typography-text(v-for="item of durationExamples" :key="item" code) {{ item }}
-    a-form-item.time-switch(:label="promForm.isRelative === 1 ? $t('dashboard.relative') : $t('dashboard.absolute')")
-      a-switch(v-model="promForm.isRelative" :checked-value="1" :unchecked-value="0")
   CodeMirror(
     v-model="queryCode"
     :style="style"
@@ -87,7 +78,7 @@ a-card.editor-card(:bordered="false")
   import { useCodeRunStore } from '@/store'
   import { keymap } from '@codemirror/view'
   import type { KeyBinding } from '@codemirror/view'
-  import { durations, durationExamples, timeOptionsArray } from '../config'
+  import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '../config'
 
   export interface Props {
     spellcheck?: boolean
@@ -121,6 +112,8 @@ a-card.editor-card(:bordered="false")
   const lineEnd = ref()
   const selectedCode = ref()
   const view = shallowRef()
+  const triggerVisible = ref(false)
+  const rangePickerVisible = ref(false)
 
   const { runQuery } = useQueryCode()
 
@@ -169,12 +162,10 @@ a-card.editor-card(:bordered="false")
   }
 
   // TODO: i18n config
-  const timeOptions = timeOptionsArray
-    .map((value) => ({
-      value,
-      label: `Last ${value} minutes`,
-    }))
-    .concat([{ value: 0, label: 'Custom' }])
+  const queryTimeOptions = timeOptionsArray.map((value) => ({
+    value,
+    label: `Last ${value} minutes`,
+  }))
 
   const defaultKeymap = [
     {
@@ -193,5 +184,29 @@ a-card.editor-card(:bordered="false")
   const extensions = {
     sql: [sql(), oneDark, keymap.of(defaultKeymap as any)],
     promQL: [promQL.asExtension(), oneDark],
+  }
+
+  const openTimeSelect = () => {
+    rangePickerVisible.value = promForm.value.isRelative !== 1
+    triggerVisible.value = true
+  }
+
+  const clickCustom = () => {
+    rangePickerVisible.value = !rangePickerVisible.value
+  }
+
+  const selectTimeRange = (range: string[]) => {
+    promForm.value.range = range
+    promForm.value.time = -1
+    promForm.value.isRelative = 0
+    rangePickerVisible.value = false
+    triggerVisible.value = false
+  }
+
+  const selectTimeLength = (value: number) => {
+    promForm.value.time = value
+    promForm.value.isRelative = 1
+    rangePickerVisible.value = false
+    triggerVisible.value = false
   }
 </script>
