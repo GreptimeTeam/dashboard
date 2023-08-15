@@ -73,10 +73,6 @@ a-trigger(
       type: String,
       default: 'row',
     },
-    relativeTimeOptions: {
-      type: Array<OptionsType>,
-      default: [],
-    },
     buttonClass: {
       type: String,
       default: '',
@@ -84,6 +80,10 @@ a-trigger(
     buttonType: {
       type: String,
       default: 'text',
+    },
+    relativeTimeOptions: {
+      type: Array<OptionsType>,
+      default: [],
     },
     relativeTimeMap: {
       type: Object as PropType<{ [key: number]: string }>,
