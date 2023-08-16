@@ -1,5 +1,5 @@
 import { useDataBaseStore } from '@/store'
-import { TreeData } from '@/store/modules/database/types'
+import { TreeChild, TreeData } from '@/store/modules/database/types'
 
 const tablesSearchKey = ref('')
 const scriptsSearchKey = ref('')
@@ -13,8 +13,8 @@ export default function useSiderTabs() {
       if (item.title.toLowerCase().indexOf(keyword.toLowerCase()) > -1) {
         result.push({ ...item })
       } else if (item.children) {
-        const children: Array<TreeData> = []
-        item.children.forEach((child: TreeData) => {
+        const children: Array<TreeChild> = []
+        item.children.forEach((child: TreeChild) => {
           if (child.title.toLowerCase().indexOf(keyword.toLowerCase()) > -1) {
             children.push({ ...child })
           }
@@ -28,9 +28,9 @@ export default function useSiderTabs() {
   }
 
   const searchList = (keyword: string) => {
-    const loop = (data: any) => {
-      const result: any = []
-      data.forEach((item: any) => {
+    const loop = (data: TreeData[]) => {
+      const result: TreeData[] = []
+      data.forEach((item: TreeData) => {
         if (item.title.toLowerCase().indexOf(keyword.toLowerCase()) > -1) {
           result.push({ ...item })
         }

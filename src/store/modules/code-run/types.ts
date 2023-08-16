@@ -41,7 +41,7 @@ export interface SeriesType {
 
 export interface datasetType {
   dimensions?: DimensionType[]
-  source?: [][]
-  transform?: {}
+  source?: Array<any>
+  transform?: any
   fromDatasetIndex?: number
 }

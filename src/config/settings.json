@@ -22,5 +22,6 @@
   "codeType": "sql",
   "isCloud": false,
   "guideModal": false,
-  "lifetime": "long"
+  "lifetime": "long",
+  "menuSelectedKey": "query"
 }

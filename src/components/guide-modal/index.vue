@@ -5,6 +5,7 @@ a-modal.guide-modal(
   :ok-text="$t('guide.confirm')"
   :hide-cancel="true"
   :closable="false"
+  :width="384"
   @ok="handleOk"
 )
   template(#title)
