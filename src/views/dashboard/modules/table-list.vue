@@ -34,9 +34,12 @@ a-spin(style="width: 100%" :loading="tablesLoading")
     template(#switcher-icon)
       IconDown
     template(#extra="nodeData")
-      a-tooltip(mini :content="$t('dashboard.insertName')")
-        svg.icon-15.pointer(name="copy" @click="insertName(nodeData.title)")
-          use(href="#copy")
+      TextCopyable.no-hover-bg(
+        :data="nodeData.title"
+        :show-data="false"
+        :copy-tooltip="$t('dashboard.insertName')"
+        @copy="insertName(nodeData.title)"
+      )
   .tree-scrollbar(v-else)
     EmptyStatus
 </template>
@@ -47,7 +50,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
   import useQueryCode from '@/hooks/query-code'
   import usePythonCode from '@/hooks/python-code'
   import useSiderTabs from '@/hooks/sider-tabs'
-  import type { TreeData } from '@/store/modules/database/types'
+  import type { TreeChild, TreeData } from '@/store/modules/database/types'
 
   const route = useRoute()
   const { insertNameToQueryCode } = useQueryCode()
@@ -72,10 +75,10 @@ a-spin(style="width: 100%" :loading="tablesLoading")
           const {
             records: { rows },
           } = output[0]
-          const rowArray: TreeData[] = []
+          const treeChildren: TreeChild[] = []
           rows.forEach((row: any) => {
             // TODO: make code more readable
-            rowArray.push({
+            treeChildren.push({
               title: row[0],
               key: `${nodeData.title}.${row[0]}`,
               isLeaf: true,
@@ -83,7 +86,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
               iconType: row[4],
             })
           })
-          addChildren(nodeData.key, rowArray)
+          addChildren(nodeData.key, treeChildren)
           resolve()
         })
         .catch(() => {

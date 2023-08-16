@@ -7,9 +7,9 @@ a-modal.guide-modal(
   :closable="false"
   @ok="create"
 )
-  template(#title) {{ $t('playground.refeshTitle') }}
+  template(#title) {{ $t('playground.refreshTitle') }}
   template(#footer)
-  | {{ $t('playground.refeshNote') }}
+  | {{ $t('playground.refreshNote') }}
 </template>
 
 <script lang="ts" setup name="RefreshPlaygroundModal">
