@@ -26,7 +26,6 @@ export interface Auth {
 
 axios.interceptors.request.use(
   (config: AxiosRequestConfig) => {
-    config.transformResponse = [(data) => data]
     const isV1 = !!config.url?.startsWith(`/v1`)
     const appStore = useAppStore()
     const basicAuth = `Basic ${btoa(`${appStore.username}:${appStore.password}`)}`
@@ -37,6 +36,7 @@ axios.interceptors.request.use(
     config.headers.authorization = basicAuth
 
     if (isV1) {
+      config.transformResponse = [(data) => data]
       return {
         ...config,
         traceTimeStart: new Date(),
@@ -45,19 +45,17 @@ axios.interceptors.request.use(
     return config
   },
   (error) => {
-    // do something
     return Promise.reject(error)
   }
 )
 
-// add response interceptors
 axios.interceptors.response.use(
   (response: AxiosResponse) => {
     const isV1 = !!response.config.url?.startsWith(`/v1`)
-    response.data = JSONbigint.parse(response.data)
-    const { data } = response
 
     if (isV1) {
+      response.data = JSONbigint.parse(response.data)
+      const { data } = response
       if (data.code && data.code !== 0) {
         // v1 and error
         Message.error({
@@ -77,8 +75,10 @@ axios.interceptors.response.use(
         startTime: new Date(response.config.traceTimeStart).toLocaleTimeString(),
       }
     }
+    const { data } = response
     return data
   },
+
   (error) => {
     if (error.response.status === 401) {
       const appStore = useAppStore()

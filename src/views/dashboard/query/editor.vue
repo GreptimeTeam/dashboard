@@ -1,6 +1,6 @@
 <template lang="pug">
 a-card.editor-card(:bordered="false")
-  a-space.space-between
+  a-space.space-between.pb-16
     a-space(size="medium")
       a-button(type="primary" :disabled="isButtonDisabled" @click="runQueryAll()")
         .mr-4
@@ -16,7 +16,7 @@ a-card.editor-card(:bordered="false")
     .query-select
       a-select(v-model="queryType" :trigger-props="{ 'content-class': 'query-select' }" @change="selectCodeType")
         a-option(v-for="query of queryOptions" :="query")
-  a-form.space-between.prom-form(layout="inline" v-show="queryType === 'promQL'" :model="promForm")
+  a-form.space-between.prom-form.mb-16(layout="inline" v-show="queryType === 'promQL'" :model="promForm")
     a-space(size="medium")
       a-form-item(:hide-label="true")
         TimeSelect(

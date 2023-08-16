@@ -3,7 +3,7 @@
   .logo-space
     img.logo-text-img(alt="logo" src="/src/assets/images/logo-text.webp")
   .menu
-    a-menu(mode="horizontal" :selected-keys="menuSelectedKey")
+    a-menu(mode="horizontal" :selected-keys="[menuSelectedKey]")
       a-menu-item(v-for="(item, index) in menuConfig" :key="item.key" v-permission="item.permission")
         span(
           @click.meta="menuClickWithMeta(item.key)"
@@ -17,7 +17,7 @@
           svg.icon-20(@click="setVisible")
             use(href="#setting")
     li
-      a-dropdown(trigger="hover" position="br" :popup-max-height="false")
+      a-dropdown.menu-dropdown(trigger="hover" position="br" :popup-max-height="false")
         .pointer
           svg.icon-20
             use(href="#dropdown")
@@ -33,7 +33,7 @@
   import { listenerRouteChange } from '@/utils/route-listener'
 
   const { updateSettings } = useAppStore()
-  const menuSelectedKey = ref<string[]>([])
+  const { menuSelectedKey } = storeToRefs(useAppStore())
 
   const menuConfig = [
     {
@@ -91,7 +91,7 @@
   }
 
   listenerRouteChange((newRoute) => {
-    menuSelectedKey.value = [newRoute.name as string]
+    menuSelectedKey.value = newRoute.name as string
   }, true)
 </script>
 

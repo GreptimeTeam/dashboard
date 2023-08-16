@@ -1,5 +1,11 @@
 <template lang="pug">
-a-typography-text(copyable type="secondary" :copy-text="data")
+a-typography-text(
+  copyable
+  type="secondary"
+  :copy-text="data"
+  @copy="emit('copy')"
+  :class="class"
+)
   span(v-if="showData") {{ data }}
   template(#copy-icon="{ copied }")
     .icon-18.pointer
@@ -29,11 +35,23 @@ a-typography-text(copyable type="secondary" :copy-text="data")
       type: String,
       default: 'Copied',
     },
+    class: {
+      type: String,
+      default: '',
+    },
   })
+
+  const emit = defineEmits(['copy'])
 </script>
 
 <style lang="less" scoped>
   .arco-typography {
     display: flex;
+  }
+
+  .no-hover-bg {
+    > :deep(.arco-typography-operation-copy:hover) {
+      background-color: inherit;
+    }
   }
 </style>

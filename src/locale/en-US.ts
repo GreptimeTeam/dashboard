@@ -21,10 +21,8 @@ export default {
   'guide.welcome': 'Welcome!',
   'guide.confirm': 'Confirm',
   'playground.create': 'OK',
-  'playground.refeshTitle': 'Warning',
-  'playground.refeshNote': 'The Playground has been reclaimed due to timeout. Click OK to re-create the playground',
-  'status.confirm': 'OK',
-  'status.info': 'GreptimeDB Status data has been copied to clipboard',
+  'playground.refreshTitle': 'Warning',
+  'playground.refreshNote': 'The Playground has been reclaimed due to timeout. Click OK to re-create the playground',
   ...localeDashboard,
   ...localSetting,
 }

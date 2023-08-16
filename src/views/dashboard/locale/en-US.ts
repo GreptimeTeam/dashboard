@@ -1,7 +1,7 @@
 export default {
   'dashboard.tableTree': 'TABLES',
   'dashboard.scripts': 'scripts',
-  'dashboard.insertName': 'Insert name into editor',
+  'dashboard.insertName': 'Copy and paste into editor',
   'dashboard.logs': 'Logs',
   'dashboard.table': 'Table',
   'dashboard.runAll': 'Run All',

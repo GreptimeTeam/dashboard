@@ -1,5 +1,5 @@
 import editorAPI from '@/api/editor'
-import { TreeData } from './types'
+import { TreeChild, TreeData } from './types'
 
 const useDataBaseStore = defineStore('database', () => {
   const { database } = storeToRefs(useAppStore())
@@ -11,12 +11,13 @@ const useDataBaseStore = defineStore('database', () => {
   const scriptsLoading = ref(false)
 
   const getOriginTablesTree = () => {
-    const tempArray: Array<TreeData> = []
+    const tempArray: TreeData[] = []
     let key = 0
     tablesData.value.output[0].records.rows.forEach((item: Array<string>) => {
       const node: TreeData = {
         title: item.join(),
         key,
+        children: [],
       }
       tempArray.push(node)
       key += 1
@@ -24,19 +25,20 @@ const useDataBaseStore = defineStore('database', () => {
     return tempArray
   }
 
-  const addChildren = (key: number, children: TreeData[]) => {
+  const addChildren = (key: number, children: TreeChild[]) => {
     originTablesTree.value[key].children = children
   }
 
   const originScriptsList = computed(() => {
-    const tempArray: any = []
+    const tempArray: TreeData[] = []
     if (scriptsData.value) {
       scriptsData.value.output[0].records.rows.forEach((item: Array<string>) => {
-        const node = {
+        const node: TreeData = {
           title: item[1],
           key: item[1],
           code: item[2],
           isLeaf: true,
+          children: [],
         }
         tempArray.push(node)
       })

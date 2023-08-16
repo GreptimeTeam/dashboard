@@ -137,7 +137,7 @@ a-trigger(
     .arco-dropdown-option:not(.arco-dropdown-option-disabled):hover {
       background-color: var(--light-brand-color);
     }
-    .arco-space-item:last-of-type {
+    :deep(.arco-space-item:last-of-type) {
       border-top: 1px solid var(--light-border-color);
       margin-top: 2px;
       padding-top: 4px;

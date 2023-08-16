@@ -4,11 +4,20 @@ export interface tableState {
   count: number
 }
 
-export interface TreeData {
+export interface TreeChild {
   key: string | number
   title: string
-  children?: TreeData[]
   isLeaf?: boolean
   dataType?: string
   iconType?: string
+}
+
+export interface TreeData {
+  key: string | number
+  title: string
+  children?: TreeChild[]
+  isLeaf?: boolean
+  dataType?: string
+  iconType?: string
+  code?: string
 }
