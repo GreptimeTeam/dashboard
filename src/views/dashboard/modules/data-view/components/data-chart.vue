@@ -188,9 +188,6 @@ a-card(v-if="hasChart" :bordered="false")
   const makeOptions = () => {
     const { series, legendNames, dataset } = getChartConfig(chartForm.selectedYTypes)
     return {
-      grid: {
-        left: 60,
-      },
       legend: {
         data: legendNames,
       },
