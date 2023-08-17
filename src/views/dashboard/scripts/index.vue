@@ -3,7 +3,7 @@ a-layout.layout
   a-layout-sider(:resize-directions="['right']" :width="321")
     ListTabs(:has="['Tables', 'Scripts']")
   a-layout-content
-    a-space.content-space(direction="vertical" fill :size="14")
+    a-space.content-space(direction="vertical" fill size="large")
       PyEditor
       DataView(v-if="!!results?.length" :results="results" :types="types")
       Logs(:logs="queryLogs" :types="types")
