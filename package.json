@@ -49,6 +49,7 @@
     "@lezer/lr": "^1.2.3",
     "@prometheus-io/codemirror-promql": "^0.42.0",
     "@types/json-bigint": "^1.0.1",
+    "@types/numeral": "^2.0.2",
     "@vueuse/core": "^10.1.0",
     "arco-design-pro-vue": "^2.7.2",
     "axios": "^0.27.2",
