@@ -1,5 +1,5 @@
 <template lang="pug">
-a-card.editor-card(:bordered="false")
+a-card.editor-card.padding-16(:bordered="false")
   a-space.form-space(size="medium")
     a-form(layout="inline" :model="scriptForm")
       a-form-item(:label="$t('dashboard.scriptName')")
