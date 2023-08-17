@@ -14,7 +14,7 @@ a-card.editor-card(:bordered="false")
         div(v-if="lineStart === lineEnd") {{ $t('dashboard.runLine') }} {{ lineStart }}
         div(v-else) {{ $t('dashboard.runLines') }} {{ lineStart }} - {{ lineEnd }}
     .query-select
-      a-select(v-model="queryType" @change="selectCodeType")
+      a-select(v-model="queryType" :trigger-props="{ 'content-class': 'query-select' }" @change="selectCodeType")
         a-option(v-for="query of queryOptions" :="query")
   a-form.space-between.prom-form.mb-16(layout="inline" v-show="queryType === 'promQL'" :model="promForm")
     a-space(size="medium")
