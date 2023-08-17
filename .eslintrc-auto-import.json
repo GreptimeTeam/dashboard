@@ -101,7 +101,6 @@
     "PropType": true,
     "Ref": true,
     "VNode": true,
-    "toValue": true,
-    "useWorkbenchStore": true
+    "toValue": true
   }
 }
