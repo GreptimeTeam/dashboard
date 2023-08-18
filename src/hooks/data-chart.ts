@@ -16,9 +16,7 @@ export default function useDataChart(data: ResultType) {
     if (!schemaInRecords || !hasTimestamp) return []
     return schemaInRecords.column_schemas
       .filter((item: SchemaType) => numberTypes.find((type: string) => type === item.data_type))
-      .map((item: SchemaType) => ({
-        value: item.name,
-      }))
+      .map((item: SchemaType) => item.name)
   })
 
   const groupByOptions = computed(() => {
