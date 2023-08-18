@@ -1,5 +1,5 @@
 <template lang="pug">
-a-card.editor-card(:bordered="false")
+a-card.editor-card.padding-16(:bordered="false")
   a-space.space-between.pb-16
     a-space(size="medium")
       a-button(type="primary" :disabled="isButtonDisabled" @click="runQueryAll()")

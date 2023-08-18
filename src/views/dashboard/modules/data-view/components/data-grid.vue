@@ -34,7 +34,7 @@ a-card(:bordered="false")
 </template>
 
 <script lang="ts" setup>
-  import { dateTypes } from '@/views/dashboard/config'
+  import { dateTypes, numberTypes } from '@/views/dashboard/config'
   import type { ResultType, SchemaType } from '@/store/modules/code-run/types'
   import dayjs from 'dayjs'
 
@@ -96,6 +96,11 @@ a-card(:bordered="false")
       const tempRow: any = {}
       row.forEach((item: any, index: number) => {
         const columnName = columnNameToDataIndex(props.data.records.schema.column_schemas[index].name)
+        const type = props.data.records.schema.column_schemas[index].data_type
+        // If item is a big number (as string), convert it to Number for table to show
+        if (numberTypes.includes(type) && typeof item === 'string') {
+          item = Number(item)
+        }
         tempRow[columnName] = item
       })
       return tempRow

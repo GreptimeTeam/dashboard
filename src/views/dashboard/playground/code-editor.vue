@@ -1,5 +1,5 @@
 <template lang="pug">
-.code-editor
+.code-editor.editor-card
   .code
     .operations(v-if="!disabled")
       a-button(:disabled="runDisabled" :loading="isLoading" @click="runSqlCommand") {{ $t('playground.run') }}
