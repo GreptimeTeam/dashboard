@@ -52,9 +52,9 @@ axios.interceptors.request.use(
 axios.interceptors.response.use(
   (response: AxiosResponse) => {
     const isV1 = !!response.config.url?.startsWith(`/v1`)
-
     if (isV1) {
-      response.data = JSONbigint.parse(response.data)
+      response.data = JSONbigint({ storeAsString: true }).parse(response.data)
+
       const { data } = response
       if (data.code && data.code !== 0) {
         // v1 and error

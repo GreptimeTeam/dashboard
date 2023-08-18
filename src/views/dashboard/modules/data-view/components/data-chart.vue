@@ -24,7 +24,7 @@ a-card(v-if="hasChart" :bordered="false")
             :allow-search="false"
             :trigger-props="triggerProps"
           )
-            a-option(v-for="item of yOptions" :key="item.value" :value="item.value") {{ item.value }}
+            a-option(v-for="item of yOptions" :value="item" :label="item") {{ item }}
         a-form-item.select-y(:label="$t('dashboard.groupBy')")
           a-select(
             v-model="chartForm.groupBySelectedTypes"
@@ -217,14 +217,14 @@ a-card(v-if="hasChart" :bordered="false")
   // TODO: Might need to change this
   onMounted(() => {
     if (hasChart.value) {
-      chartForm.selectedYTypes = [yOptions.value[0].value]
+      chartForm.selectedYTypes = [yOptions.value[0]]
       Object.entries(props.defaultChartForm).forEach(([key, value]) => {
         ;(chartForm as any)[key] = (chartForm as any)[key] || value
       })
       chartForm.chartType = props.defaultChartForm.chartType || 'line'
       chartForm.selectedYTypes = props.defaultChartForm.selectedYTypes?.length
         ? props.defaultChartForm.selectedYTypes
-        : [yOptions.value[0].value]
+        : [yOptions.value[0]]
       chartForm.groupBySelectedTypes = [
         ...props.defaultChartForm.groupBySelectedTypes,
         ...chartForm.groupBySelectedTypes,
