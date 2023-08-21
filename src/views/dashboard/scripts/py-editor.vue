@@ -115,8 +115,6 @@ a-card.editor-card.padding-16(:bordered="false")
     }
   }
 
-  const refreshTableData = dataBaseStore.getTables
-
   // extensions: Passed to CodeMirror EditorState.create({ extensions })
   const style = {
     height: '250px',
