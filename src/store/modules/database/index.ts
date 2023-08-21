@@ -54,6 +54,7 @@ const useDataBaseStore = defineStore('database', () => {
       tablesData.value = res
       originTablesTree.value = getOriginTablesTree()
     } catch (error) {
+      tablesLoading.value = false
       return false
     }
     tablesLoading.value = false
