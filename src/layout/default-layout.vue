@@ -18,14 +18,21 @@ a-layout.layout-container
   useResponsive(true)
   const navbarHeight = `52px`
 
-  const { navbar, footer, guideModal } = storeToRefs(useAppStore())
+  const { navbar, footer, guideModal, username, password, database, isCloud, codeType } = storeToRefs(useAppStore())
+  const { getTables, getScriptsTable } = useDataBaseStore()
 
   const paddingStyle = computed(() => {
     const paddingTop = navbar.value ? { paddingTop: navbarHeight } : {}
     return { ...paddingTop }
   })
 
-  guideModal.value = true
+  if (!isCloud.value || !username.value || !password.value || !database.value) {
+    guideModal.value = true
+  } else {
+    getTables()
+    if (codeType.value === 'python') getScriptsTable()
+    guideModal.value = false
+  }
 </script>
 
 <style scoped lang="less">

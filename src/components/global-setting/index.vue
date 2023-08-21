@@ -18,33 +18,39 @@ a-drawer(
   SettingsForm.settings-form
 </template>
 
-<script lang="ts" setup>
+<script lang="ts" setup name="GlobalSetting">
   import { useI18n } from 'vue-i18n'
   import { useAppStore, useDataBaseStore } from '@/store'
   import axios from 'axios'
-  import SettingsForm from './settings-form.vue'
+  import { useStorage } from '@vueuse/core'
 
   const emit = defineEmits(['cancel'])
 
-  const { host, navbar, updateSettings } = useAppStore()
+  const { navbar, updateSettings } = useAppStore()
   const { getTables, getScriptsTable } = useDataBaseStore()
 
   const { t } = useI18n()
   const route = useRoute()
 
-  const { globalSettings } = storeToRefs(useAppStore())
+  const { globalSettings, host, database, username, password } = storeToRefs(useAppStore())
 
-  // TODO: import AnyObject from global.ts
-  const TABLES_MAP: { [key: string]: any } = {
-    query: getTables,
-    scripts: getScriptsTable,
-  }
-
-  const cancel = () => {
+  const cancel = async () => {
     updateSettings({ globalSettings: false })
-    axios.defaults.baseURL = host
-    if (route.name) {
-      TABLES_MAP[route.name as string]?.()
+    axios.defaults.baseURL = host.value
+    const result = await getTables()
+    if (result) {
+      if (route.name === 'scripts') {
+        getScriptsTable()
+      }
+      const config = { database: database.value, username: username.value, password: password.value }
+      useStorage('config', config, localStorage, {
+        mergeDefaults: (storageValue, defaults) => {
+          return {
+            ...storageValue,
+            ...defaults,
+          }
+        },
+      })
     }
 
     emit('cancel')
@@ -55,7 +61,7 @@ a-drawer(
   }
 
   onMounted(() => {
-    axios.defaults.baseURL = host
+    axios.defaults.baseURL = host.value
   })
 </script>
 
