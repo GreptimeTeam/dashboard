@@ -31,6 +31,7 @@ router.beforeEach(async (to, from, next) => {
   try {
     // TODO: Is it necessary to decide this every time we go to a new route?
     const appStore = useAppStore()
+    // Will only happen in cloud (first time enter)
     if (to.query.info) {
       const config = JSON.parse(atob(to.query.info as string))
       useStorage('config', config, localStorage, {
@@ -41,11 +42,11 @@ router.beforeEach(async (to, from, next) => {
           }
         },
       })
+      // Update setting with config from url
       appStore.updateSettings(config)
       delete to.query.info
       return next({ path: to.path, query: to.query })
     }
-    appStore.updateSettings(useStorage('config', {}).value)
   } catch (error) {
     // error
   }

@@ -66,7 +66,6 @@ a-modal.change-modal(
   const { scriptsSearchKey, scriptsListData } = useSiderTabs()
   const { scriptsLoading } = storeToRefs(useDataBaseStore())
   const { getScriptsTable } = useDataBaseStore()
-  const { guideModal } = storeToRefs(useAppStore())
 
   const onSelect = (key: string[], selectedData: { node: object }) => {
     selectedNode.value = selectedData.node
@@ -108,8 +107,4 @@ a-modal.change-modal(
       modelVisible.value = true
     }
   }
-
-  onMounted(() => {
-    getScriptsTable()
-  })
 </script>

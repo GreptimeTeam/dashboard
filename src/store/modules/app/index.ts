@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { Notification } from '@arco-design/web-vue'
 import type { NotificationReturn } from '@arco-design/web-vue/es/notification/interface'
+import { useStorage } from '@vueuse/core'
 import type { RouteRecordNormalized } from 'vue-router'
 import defaultSettings from '@/config/settings.json'
 import editorAPI from '@/api/editor'
@@ -26,6 +27,33 @@ const useAppStore = defineStore('app', {
     updateSettings(partial: Partial<AppState>) {
       // @ts-ignore-next-line
       this.$patch(partial)
+    },
+
+    // Login (check if settings are valid)
+    async login(form: Partial<AppState>) {
+      try {
+        this.updateSettings(form)
+        await editorAPI.runSQL(`select 1`)
+        const config = {
+          host: this.host,
+          database: this.database,
+          username: this.username,
+          password: this.password,
+        }
+        // Only update storage if login success
+        useStorage('config', config, localStorage, {
+          mergeDefaults: (storageValue, defaults) => {
+            return {
+              ...storageValue,
+              ...defaults,
+            }
+          },
+        })
+      } catch (error) {
+        // reset data to be empty.
+        return false
+      }
+      return true
     },
 
     // Change theme color
@@ -70,13 +98,11 @@ const useAppStore = defineStore('app', {
     clearServerMenu() {
       this.serverMenu = []
     },
-    async fetchDatabases(notCloud?: string) {
+    async fetchDatabases() {
       try {
         const res: any = await editorAPI.getDatabases()
         this.databaseList = [...res.output[0].records.rows[0]]
-        if (notCloud) {
-          this.setDefaultDatabase()
-        }
+        this.setDefaultDatabase()
       } catch (error) {
         // some error
       }

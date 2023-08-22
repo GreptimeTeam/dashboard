@@ -21,7 +21,7 @@
   "serverMenu": [],
   "codeType": "sql",
   "isCloud": false,
-  "guideModal": false,
+  "guideModalVisible": false,
   "lifetime": "long",
   "menuSelectedKey": "query"
 }
