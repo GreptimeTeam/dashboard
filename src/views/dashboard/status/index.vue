@@ -1,14 +1,19 @@
 <template lang="pug">
 a-layout.layout.status
   a-layout-content
-    a-card(v-if="statusInfoRef && statusInfoRef.length > 0" title="GreptimeDB Status")
+    a-card(title="GreptimeDB Status")
       template(#extra)
         a-button(type="text" @click="refreshStatus") refresh
-        TextCopyable(copyTooltip="Copy to Clipboard" :data="JSON.stringify(statusData)" :showData="false")
-      a-descriptions(bordered :column="2")
+        TextCopyable(
+          v-if="statusInfoRef && statusInfoRef.length > 0"
+          copyTooltip="Copy to Clipboard"
+          :data="JSON.stringify(statusData)"
+          :showData="false"
+        )
+      a-descriptions(v-if="statusInfoRef && statusInfoRef.length > 0" bordered :column="2")
         a-descriptions-item(v-for="item of statusInfoRef" :label="item[0]")
           a-tag {{ item[1] }}
-    EmptyStatus(v-else data="Status is not supported until GreptimeDB v0.3.1")
+      EmptyStatus(v-else data="Status is not supported until GreptimeDB v0.3.1")
 </template>
 
 <script lang="ts" setup name="Status">
@@ -19,8 +24,12 @@ a-layout.layout.status
   const statusInfoRef = ref()
 
   const refreshStatus = async () => {
-    statusData.value = await getStatus()
-    statusInfoRef.value = Object.entries(statusData.value)
+    try {
+      statusData.value = await getStatus()
+      statusInfoRef.value = Object.entries(statusData.value)
+    } catch (error) {
+      statusInfoRef.value = []
+    }
   }
 
   const handleOk = () => {

@@ -4,12 +4,13 @@ import { TreeChild, TreeData } from './types'
 const useDataBaseStore = defineStore('database', () => {
   const { database } = storeToRefs(useAppStore())
   const tablesData = ref()
+  const originTablesTree = ref<TreeData[]>([])
 
   const scriptsData = ref()
   const tablesLoading = ref(false)
   const scriptsLoading = ref(false)
 
-  const originTablesTree = computed(() => {
+  const getOriginTablesTree = () => {
     const tempArray: TreeData[] = []
     let key = 0
     if (tablesData.value) {
@@ -25,7 +26,7 @@ const useDataBaseStore = defineStore('database', () => {
     }
 
     return tempArray
-  })
+  }
 
   const addChildren = (key: number, children: TreeChild[]) => {
     originTablesTree.value[key].children = children
@@ -56,8 +57,10 @@ const useDataBaseStore = defineStore('database', () => {
     try {
       const res = await editorAPI.getTables()
       tablesData.value = res
+      originTablesTree.value = getOriginTablesTree()
     } catch (error) {
       tablesData.value = null
+      originTablesTree.value = []
       tablesLoading.value = false
       return false
     }
@@ -88,7 +91,7 @@ const useDataBaseStore = defineStore('database', () => {
   }
 
   const resetData = () => {
-    tablesData.value = null
+    originTablesTree.value = []
     scriptsData.value = null
   }
 

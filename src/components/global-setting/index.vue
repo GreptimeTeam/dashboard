@@ -63,7 +63,7 @@ a-drawer(
   const cancel = async () => {
     updateSettings({ globalSettings: false })
     axios.defaults.baseURL = settingsForm.value.host
-    // check if settings are changed
+    // Check if settings are changed
     if (
       settingsForm.value.username !== username.value ||
       settingsForm.value.password !== password.value ||
