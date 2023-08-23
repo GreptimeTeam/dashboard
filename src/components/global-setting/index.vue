@@ -46,7 +46,7 @@ a-drawer(
   const route = useRoute()
 
   const { navbar, updateSettings, login } = useAppStore()
-  const { getTables, getScriptsTable, resetData } = useDataBaseStore()
+  const { getTables, getScriptsTable } = useDataBaseStore()
 
   const { codeType, isCloud, globalSettings, host, database, username, password, databaseList } = storeToRefs(
     useAppStore()
@@ -76,8 +76,6 @@ a-drawer(
         if (codeType.value === 'python') {
           getScriptsTable()
         }
-      } else {
-        resetData()
       }
     }
 

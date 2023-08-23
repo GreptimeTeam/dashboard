@@ -7,6 +7,7 @@ const useUserStore = defineStore('user', () => {
     tables: false,
     scripts: false,
   })
+  const dataNames = ['tables', 'scripts']
 
   function setRole(r: string) {
     role.value = r
@@ -16,11 +17,18 @@ const useUserStore = defineStore('user', () => {
     dataStatusMap.value[name] = status
   }
 
+  const resetDataStatus = () => {
+    dataNames.forEach((name: string) => {
+      updateDataStatus(name, false)
+    })
+  }
+
   return {
     role,
     dataStatusMap,
     setRole,
     updateDataStatus,
+    resetDataStatus,
   }
 })
 

@@ -34,6 +34,8 @@ const useAppStore = defineStore('app', {
       try {
         this.updateSettings(form)
         await editorAPI.runSQL(`select 1`)
+        const { resetDataStatus } = useUserStore()
+        resetDataStatus()
         const config = {
           host: this.host,
           database: this.database,
@@ -50,7 +52,8 @@ const useAppStore = defineStore('app', {
           },
         })
       } catch (error) {
-        // reset data to be empty.
+        const { resetData } = useDataBaseStore()
+        resetData()
         return false
       }
       return true
