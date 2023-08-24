@@ -1,29 +1,43 @@
-// import type { Router, LocationQueryRaw } from 'vue-router';
-// import NProgress from 'nprogress'; // progress bar
+import type { Router } from 'vue-router'
+import NProgress from 'nprogress' // progress bar
+import { useStorage } from '@vueuse/core'
 
-// import { useUserStore } from '@/store';
-// import { isLogin } from '@/utils/auth';
+export default function setupUserLoginInfoGuard(router: Router) {
+  router.beforeEach(async (to, from, next) => {
+    NProgress.start()
 
-// export default function setupUserLoginInfoGuard(router: Router) {
-//   router.beforeEach(async (to, from, next) => {
-//     NProgress.start();
-//     const userStore = useUserStore();
-//       if (userStore.role) {
-//         next();
-//       } else {
-//         try {
-//           await userStore.info();
-//           next();
-//         } catch (error) {
-//           await userStore.logout();
-//           next({
-//             name: 'login',
-//             query: {
-//               redirect: to.name,
-//               ...to.query,
-//             } as LocationQueryRaw,
-//           });
-//         }
-//       }
-//   });
-// }
+    if (from.matched?.[0]?.path === '/dashboard') {
+      return next()
+    }
+    try {
+      const appStore = useAppStore()
+      // If there is info in URL (direct from cloud)
+      if (to.query.info) {
+        const config = JSON.parse(atob(to.query.info as string))
+        useStorage('config', config, localStorage, {
+          mergeDefaults: (storageValue, defaults) => {
+            return {
+              ...storageValue,
+              ...defaults,
+            }
+          },
+        })
+        // Update settings with config from URL
+        appStore.updateSettings(config)
+        delete to.query.info
+        return next({ path: to.path, query: to.query })
+      }
+
+      // Update settings with config from local storage
+      appStore.updateSettings(useStorage('config', {}).value)
+
+      const { isCloud, username, password, database, guideModalVisible } = storeToRefs(useAppStore())
+      if (!isCloud.value || !username.value || !password.value || !database.value) {
+        guideModalVisible.value = true
+      }
+    } catch (error) {
+      // error
+    }
+    return next()
+  })
+}

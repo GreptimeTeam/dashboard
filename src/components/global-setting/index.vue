@@ -86,6 +86,18 @@ a-drawer(
     updateSettings({ globalSettings: true })
   }
 
+  watch(globalSettings, () => {
+    if (globalSettings.value) {
+      settingsForm.value = {
+        username: username.value,
+        password: password.value,
+        host: host.value,
+        databaseList: databaseList.value,
+        database: database.value,
+      }
+    }
+  })
+
   onMounted(() => {
     axios.defaults.baseURL = host.value
   })
