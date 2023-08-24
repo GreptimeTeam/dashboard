@@ -10,12 +10,25 @@ a-layout.layout
 </template>
 
 <script lang="ts" name="Query" setup>
-  const { getResultsByType } = useQueryCode()
+  const { guideModalVisible } = storeToRefs(useAppStore())
+  const { getTables } = useDataBaseStore()
+  const { dataStatusMap } = storeToRefs(useUserStore())
+
   const { logs } = storeToRefs(useLogStore())
+  const { getResultsByType } = useQueryCode()
+
   const types = ['sql', 'promQL']
 
   const results = computed(() => getResultsByType(types))
   const queryLogs = computed(() => logs.value.filter((log) => types.includes(log.type)))
+
+  onActivated(() => {
+    if (!guideModalVisible.value) {
+      if (!dataStatusMap.value.tables) {
+        getTables()
+      }
+    }
+  })
 
   // TODO: add more code type in the future if needed
 </script>

@@ -1,6 +1,6 @@
 <template lang="pug">
 a-modal.guide-modal(
-  v-model:visible="guideModal"
+  v-model:visible="guideModalVisible"
   :mask-closable="false"
   :ok-text="$t('guide.confirm')"
   :hide-cancel="true"
@@ -12,7 +12,23 @@ a-modal.guide-modal(
     div {{ $t('guide.welcome') }}
     svg.guide-banner
       use(href="#banner")
-  SettingsForm
+  a-form(layout="vertical" :model="settingsForm")
+    a-form-item(:label="$t('settings.host')")
+      a-input(v-model="settingsForm.host")
+    a-form-item(:label="$t('settings.database')")
+      a-input(v-if="isCloud" v-model="settingsForm.database")
+      a-select(v-else v-model="settingsForm.database" allow-create)
+        a-option(
+          v-for="item of settingsForm.databaseList"
+          :key="item"
+          :value="item"
+          :label="item"
+        )
+    a-form-item(:label="$t('settings.username')")
+      a-input(v-model="settingsForm.username")
+    a-form-item(:label="$t('settings.password')")
+      a-input-password(v-model="settingsForm.password" autocomplete="off")
+
   template(#footer)
 </template>
 
@@ -20,16 +36,27 @@ a-modal.guide-modal(
   import { useAppStore } from '@/store'
   import SettingsForm from '../global-setting/settings-form.vue'
 
-  const { database, databaseList, codeType, isCloud, guideModal } = storeToRefs(useAppStore())
+  const { username, password, host, database, databaseList, codeType, isCloud, guideModalVisible } = storeToRefs(
+    useAppStore()
+  )
+  const { login } = useAppStore()
   const { getTables, getScriptsTable } = useDataBaseStore()
 
-  const guideForm = ref({
-    database,
+  const settingsForm = ref({
+    username: username.value,
+    password: password.value,
+    host: host.value,
+    databaseList,
+    database: database.value,
   })
 
-  const handleOk = () => {
-    getTables()
-    if (codeType.value === 'python') getScriptsTable()
-    guideModal.value = false
+  const handleOk = async () => {
+    const res = await login(settingsForm.value)
+    if (res) {
+      getTables()
+      if (codeType.value === 'python') {
+        getScriptsTable()
+      }
+    }
   }
 </script>
