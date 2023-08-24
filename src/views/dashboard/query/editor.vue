@@ -209,4 +209,8 @@ a-card.editor-card.padding-16(:bordered="false")
     rangePickerVisible.value = false
     triggerVisible.value = false
   }
+
+  onActivated(() => {
+    selectCodeType()
+  })
 </script>

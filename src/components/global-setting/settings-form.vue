@@ -22,12 +22,13 @@ a-form(layout="vertical" :model="settingsForm")
 
   const { host, databaseList, database, isCloud, username, password } = storeToRefs(useAppStore())
 
+  // TODO: props?
   const settingsForm = ref({
-    username,
-    password,
-    host,
+    username: username.value,
+    password: password.value,
+    host: host.value,
     databaseList,
-    database,
+    database: database.value,
   })
 </script>
 

@@ -15,7 +15,22 @@ a-drawer(
     svg.drawer-icon
       use(href="#setting2")
     | {{ $t('settings.title') }}
-  SettingsForm.settings-form
+  a-form(layout="vertical" :model="settingsForm")
+    a-form-item(:label="$t('settings.host')")
+      a-input(v-model="settingsForm.host")
+    a-form-item(:label="$t('settings.database')")
+      a-input(v-if="isCloud" v-model="settingsForm.database")
+      a-select(v-else v-model="settingsForm.database" allow-create)
+        a-option(
+          v-for="item of settingsForm.databaseList"
+          :key="item"
+          :value="item"
+          :label="item"
+        )
+    a-form-item(:label="$t('settings.username')")
+      a-input(v-model="settingsForm.username")
+    a-form-item(:label="$t('settings.password')")
+      a-input-password(v-model="settingsForm.password" autocomplete="off")
 </template>
 
 <script lang="ts" setup name="GlobalSetting">
@@ -23,34 +38,45 @@ a-drawer(
   import { useAppStore, useDataBaseStore } from '@/store'
   import axios from 'axios'
   import { useStorage } from '@vueuse/core'
+  import editorAPI from '@/api/editor'
 
   const emit = defineEmits(['cancel'])
-
-  const { navbar, updateSettings } = useAppStore()
-  const { getTables, getScriptsTable } = useDataBaseStore()
 
   const { t } = useI18n()
   const route = useRoute()
 
-  const { globalSettings, host, database, username, password } = storeToRefs(useAppStore())
+  const { navbar, updateSettings, login } = useAppStore()
+  const { getTables, getScriptsTable } = useDataBaseStore()
+
+  const { codeType, isCloud, globalSettings, host, database, username, password, databaseList } = storeToRefs(
+    useAppStore()
+  )
+
+  const settingsForm = ref({
+    username: username.value,
+    password: password.value,
+    host: host.value,
+    databaseList,
+    database: database.value,
+  })
 
   const cancel = async () => {
     updateSettings({ globalSettings: false })
-    axios.defaults.baseURL = host.value
-    const result = await getTables()
-    if (result) {
-      if (route.name === 'scripts') {
-        getScriptsTable()
+    axios.defaults.baseURL = settingsForm.value.host
+    // Check if settings are changed
+    if (
+      settingsForm.value.username !== username.value ||
+      settingsForm.value.password !== password.value ||
+      settingsForm.value.database !== database.value ||
+      settingsForm.value.host !== host.value
+    ) {
+      const res = await login(settingsForm.value)
+      if (res) {
+        getTables()
+        if (codeType.value === 'python') {
+          getScriptsTable()
+        }
       }
-      const config = { database: database.value, username: username.value, password: password.value }
-      useStorage('config', config, localStorage, {
-        mergeDefaults: (storageValue, defaults) => {
-          return {
-            ...storageValue,
-            ...defaults,
-          }
-        },
-      })
     }
 
     emit('cancel')
@@ -59,6 +85,18 @@ a-drawer(
   const setVisible = () => {
     updateSettings({ globalSettings: true })
   }
+
+  watch(globalSettings, () => {
+    if (globalSettings.value) {
+      settingsForm.value = {
+        username: username.value,
+        password: password.value,
+        host: host.value,
+        databaseList: databaseList.value,
+        database: database.value,
+      }
+    }
+  })
 
   onMounted(() => {
     axios.defaults.baseURL = host.value

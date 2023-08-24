@@ -30,7 +30,6 @@ a-tabs.result-tabs.logs-tab(type="rounded")
 
   const route = useRoute()
   const { clearLogs } = useLog()
-  const { codeType } = storeToRefs(useAppStore())
 
   const clear = () => {
     clearLogs(props.types)
