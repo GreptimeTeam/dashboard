@@ -35,13 +35,13 @@ a-spin(style="width: 100%" :loading="tablesLoading")
           .div(v-if="nodeData.iconType")
             transition(name="slide-fade")
               .data-type {{ nodeData.dataType }}
-          a-dropdown(trigger="click" position="right" @click="(event) => clickMenu(event, nodeData)")
+          a-dropdown.menu-dropdown(trigger="click" position="right" @click="(event) => clickMenu(event, nodeData)")
             a-button.menu-button(type="text")
               template(#icon)
                 icon-more.icon-18
             template(#content)
               a-doption(v-for="item of SHORTCUT_MAP[nodeData.iconType || 'TABLE']")
-                a-spin(:loading="nodeData.children && !nodeData.children.length")
+                a-spin(style="width: 100%" :loading="nodeData.children && !nodeData.children.length")
                   ShortCut(
                     :type="item.value"
                     :node="nodeData"
