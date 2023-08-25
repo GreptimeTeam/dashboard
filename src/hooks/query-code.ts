@@ -40,11 +40,19 @@ export default function useQueryCode() {
   const { codeType } = storeToRefs(useAppStore())
   const { results } = storeToRefs(useCodeRunStore())
 
-  const insertNameToQueryCode = (name: any) => {
+  const insertNameToQueryCode = (name: string) => {
     codes.value[queryType.value] =
       codes.value[queryType.value].substring(0, cursorAt.value[0]) +
       name +
       codes.value[queryType.value].substring(cursorAt.value[1])
+  }
+
+  const inputFromNewLineToQueryCode = (code: string) => {
+    if (codes.value[queryType.value].trim() !== '') {
+      codes.value[queryType.value] += `\n${code}`
+    } else {
+      codes.value[queryType.value] += code
+    }
   }
 
   const selectCodeType = () => {
@@ -99,6 +107,7 @@ export default function useQueryCode() {
     selectCodeType,
     getResultsByType,
     runQuery,
+    inputFromNewLineToQueryCode,
     queryCode,
     cursorAt,
     queryOptions,

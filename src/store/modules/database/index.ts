@@ -26,8 +26,9 @@ const useDataBaseStore = defineStore('database', () => {
     return tempArray
   }
 
-  const addChildren = (key: number, children: TreeChild[]) => {
+  const addChildren = (key: number, children: TreeChild[], timeIndexName: string) => {
     originTablesTree.value[key].children = children
+    originTablesTree.value[key].timeIndexName = timeIndexName
   }
 
   const originScriptsList = computed(() => {

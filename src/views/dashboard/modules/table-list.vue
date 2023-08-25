@@ -11,7 +11,9 @@ a-spin(style="width: 100%" :loading="tablesLoading")
   a-tree.table-tree(
     v-if="tablesTreeData && tablesTreeData.length > 0"
     ref="treeRef"
+    v-model:expanded-keys="expandedKeys"
     size="small"
+    action-on-node-click="expand"
     :block-node="true"
     :data="tablesTreeData"
     :load-more="loadMore"
@@ -19,27 +21,42 @@ a-spin(style="width: 100%" :loading="tablesLoading")
     :virtual-list-props="{ height: 'calc(100vh - 220px)' }"
   )
     template(#icon="node")
-      svg.icon-16(v-if="node.node.iconType")
-        use(:href="ICON_MAP[node.node.iconType]")
+      a-tooltip(:content="node.node.iconType")
+        svg.icon-16(v-if="node.node.iconType")
+          use(:href="ICON_MAP[node.node.iconType]")
     template(#title="nodeData")
       .tree-data
-        .data-title(v-if="nodeData.iconType")
-          | {{ nodeData.title }}
-        .div(v-if="nodeData.iconType")
-          transition(name="slide-fade")
-            .data-type {{ nodeData.dataType }}
         a-tooltip.data-type(v-if="!nodeData.iconType" mini :content="nodeData.title")
           .data-title
             | {{ nodeData.title }}
+        .data-title(v-else)
+          | {{ nodeData.title }}
+        .tree-data
+          .div(v-if="nodeData.iconType")
+            transition(name="slide-fade")
+              .data-type {{ nodeData.dataType }}
+          a-dropdown(trigger="click" position="right" @click="(event) => clickMenu(event, nodeData)")
+            a-button(type="text")
+              template(#icon)
+                icon-more
+            template(#content)
+              a-doption(v-for="item of SHORTCUT_MAP[nodeData.iconType || 'TABLE']")
+                a-spin(:loading="nodeData.children && !nodeData.children.length")
+                  ShortCut(
+                    :type="item.value"
+                    :node="nodeData"
+                    :parent="originTablesTree[nodeData.parentKey]"
+                    :label="item.label"
+                  )
+              a-doption
+                TextCopyable.no-hover-bg(
+                  :data="nodeData.title"
+                  :show-data="false"
+                  :copy-tooltip="$t('dashboard.insertName')"
+                  @copy="insertName(nodeData.title)"
+                )
     template(#switcher-icon)
       IconDown
-    template(#extra="nodeData")
-      TextCopyable.no-hover-bg(
-        :data="nodeData.title"
-        :show-data="false"
-        :copy-tooltip="$t('dashboard.insertName')"
-        @copy="insertName(nodeData.title)"
-      )
   .tree-scrollbar(v-else)
     EmptyStatus
 </template>
@@ -51,15 +68,17 @@ a-spin(style="width: 100%" :loading="tablesLoading")
   import usePythonCode from '@/hooks/python-code'
   import useSiderTabs from '@/hooks/sider-tabs'
   import type { TreeChild, TreeData } from '@/store/modules/database/types'
+  import type { OptionsType } from '@/types/global'
 
   const route = useRoute()
   const { insertNameToQueryCode } = useQueryCode()
   const { insertNameToPyCode } = usePythonCode()
   const { tablesSearchKey, tablesTreeData } = useSiderTabs()
-  const { tablesLoading } = storeToRefs(useDataBaseStore())
+  const { tablesLoading, originTablesTree } = storeToRefs(useDataBaseStore())
   const { getTableByName, getTables, addChildren } = useDataBaseStore()
 
   const treeRef = ref()
+  const expandedKeys = ref<number[]>()
 
   const refreshTables = () => {
     tablesSearchKey.value = ''
@@ -67,7 +86,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
     if (treeRef.value) treeRef.value.expandAll(false)
   }
 
-  const loadMore = (nodeData: any) => {
+  const loadMore = (nodeData: TreeData) => {
     return new Promise<void>((resolve, reject) => {
       getTableByName(nodeData.title)
         .then((result: any) => {
@@ -76,17 +95,26 @@ a-spin(style="width: 100%" :loading="tablesLoading")
             records: { rows },
           } = output[0]
           const treeChildren: TreeChild[] = []
-          rows.forEach((row: any) => {
-            // TODO: make code more readable
+          let timeIndexName = '%TIME_INDEX%'
+          rows.forEach((row: string[]) => {
+            // row[0]: "Field" (field name),
+            // row[1]: "Type" (data type),
+            // row[2]: "Null",
+            // row[3]: "Default",
+            // row[4]: "Semantic Type",
+            if (row[4] === 'TIME INDEX') {
+              timeIndexName = row[0]
+            }
             treeChildren.push({
               title: row[0],
               key: `${nodeData.title}.${row[0]}`,
               isLeaf: true,
               dataType: row[1],
               iconType: row[4],
+              parentKey: nodeData.key as number,
             })
           })
-          addChildren(nodeData.key, treeChildren)
+          addChildren(nodeData.key as number, treeChildren, timeIndexName)
           resolve()
         })
         .catch(() => {
@@ -109,6 +137,38 @@ a-spin(style="width: 100%" :loading="tablesLoading")
     'FIELD': '#value',
     'PRIMARY KEY': '#primary-key',
     'TIME INDEX': '#time-index',
+  }
+
+  const SHORTCUT_MAP: { [key: string]: OptionsType[] } = {
+    'TABLE': [{ value: 'select*100', label: 'SELECT * 100' }],
+    'FIELD': [
+      { value: 'select100', label: 'SELECT 100' },
+      {
+        value: 'max',
+        label: 'MAX',
+      },
+      {
+        value: 'min',
+        label: 'MIN',
+      },
+    ],
+    'PRIMARY KEY': [
+      { value: 'count', label: 'COUNT' },
+      { value: 'where=', label: 'WHERE =' },
+    ],
+    'TIME INDEX': [
+      { value: 'select*100', label: 'SELECT * 100' },
+      {
+        value: 'where<',
+        label: 'WHERE <',
+      },
+    ],
+  }
+
+  const clickMenu = (event: Event, nodeData: TreeData) => {
+    if (nodeData.children && expandedKeys.value?.includes(nodeData.key as number)) {
+      event.stopPropagation()
+    }
   }
 </script>
 

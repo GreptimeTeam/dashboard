@@ -10,6 +10,7 @@ export interface TreeChild {
   isLeaf?: boolean
   dataType?: string
   iconType?: string
+  parentKey?: number
 }
 
 export interface TreeData {
@@ -20,4 +21,5 @@ export interface TreeData {
   dataType?: string
   iconType?: string
   code?: string
+  timeIndexName?: string
 }
