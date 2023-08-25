@@ -36,9 +36,9 @@ a-spin(style="width: 100%" :loading="tablesLoading")
             transition(name="slide-fade")
               .data-type {{ nodeData.dataType }}
           a-dropdown(trigger="click" position="right" @click="(event) => clickMenu(event, nodeData)")
-            a-button(type="text")
+            a-button.menu-button(type="text")
               template(#icon)
-                icon-more
+                icon-more.icon-18
             template(#content)
               a-doption(v-for="item of SHORTCUT_MAP[nodeData.iconType || 'TABLE']")
                 a-spin(:loading="nodeData.children && !nodeData.children.length")
@@ -49,12 +49,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
                     :label="item.label"
                   )
               a-doption
-                TextCopyable.no-hover-bg(
-                  :data="nodeData.title"
-                  :show-data="false"
-                  :copy-tooltip="$t('dashboard.insertName')"
-                  @copy="insertName(nodeData.title)"
-                )
+                a-button(type="text" @click="copy(nodeData.title)") Copy To Clipboard
     template(#switcher-icon)
       IconDown
   .tree-scrollbar(v-else)
@@ -69,7 +64,10 @@ a-spin(style="width: 100%" :loading="tablesLoading")
   import useSiderTabs from '@/hooks/sider-tabs'
   import type { TreeChild, TreeData } from '@/store/modules/database/types'
   import type { OptionsType } from '@/types/global'
+  import { useClipboard } from '@vueuse/core'
 
+  const source = ref('')
+  const { text, copy, copied, isSupported } = useClipboard({ source })
   const route = useRoute()
   const { insertNameToQueryCode } = useQueryCode()
   const { insertNameToPyCode } = usePythonCode()
