@@ -50,6 +50,8 @@ const useDataBaseStore = defineStore('database', () => {
   })
 
   async function getTables() {
+    const { updateDataStatus } = useUserStore()
+    updateDataStatus('tables', true)
     tablesLoading.value = true
     try {
       const res = await editorAPI.getTables()
@@ -75,14 +77,21 @@ const useDataBaseStore = defineStore('database', () => {
   }
 
   async function getScriptsTable() {
+    const { updateDataStatus } = useUserStore()
+    updateDataStatus('scripts', true)
     scriptsLoading.value = true
     try {
       const res = await editorAPI.getScriptsTable(database.value)
       scriptsData.value = res
     } catch (error) {
-      // some error
+      scriptsData.value = null
     }
     scriptsLoading.value = false
+  }
+
+  const resetData = () => {
+    originTablesTree.value = []
+    scriptsData.value = null
   }
 
   return {
@@ -90,10 +99,13 @@ const useDataBaseStore = defineStore('database', () => {
     originScriptsList,
     tablesLoading,
     scriptsLoading,
+    tablesData,
+    scriptsData,
     getTables,
     addChildren,
     getTableByName,
     getScriptsTable,
+    resetData,
   }
 })
 
