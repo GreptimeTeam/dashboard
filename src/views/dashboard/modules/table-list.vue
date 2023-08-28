@@ -49,7 +49,8 @@ a-spin(style="width: 100%" :loading="tablesLoading")
                     :label="item.label"
                   )
               a-doption
-                a-button(type="text" @click="copy(nodeData.title)") Copy To Clipboard
+                a-tooltip(content="Copy to Clipboard")
+                  a-button(type="text" @click="copy(nodeData.title)") Copy name
     template(#switcher-icon)
       IconDown
   .tree-scrollbar(v-else)
