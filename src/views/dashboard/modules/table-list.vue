@@ -138,27 +138,27 @@ a-spin(style="width: 100%" :loading="tablesLoading")
   }
 
   const SHORTCUT_MAP: { [key: string]: OptionsType[] } = {
-    'TABLE': [{ value: 'select*100', label: 'SELECT * 100' }],
+    'TABLE': [{ value: 'select*100', label: 'Query table' }],
     'FIELD': [
-      { value: 'select100', label: 'SELECT 100' },
+      { value: 'select100', label: 'Query column' },
       {
         value: 'max',
-        label: 'MAX',
+        label: 'Query max',
       },
       {
         value: 'min',
-        label: 'MIN',
+        label: 'Query min',
       },
     ],
     'PRIMARY KEY': [
-      { value: 'count', label: 'COUNT' },
-      { value: 'where=', label: 'WHERE =' },
+      { value: 'count', label: 'Count by' },
+      { value: 'where=', label: 'Filter by' },
     ],
     'TIME INDEX': [
-      { value: 'select*100', label: 'SELECT * 100' },
+      { value: 'select*100', label: 'Query table' },
       {
         value: 'where<',
-        label: 'WHERE <',
+        label: 'Filter by',
       },
     ],
   }
