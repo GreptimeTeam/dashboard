@@ -1,5 +1,5 @@
 import { useDataBaseStore } from '@/store'
-import { TreeChild, TreeData } from '@/store/modules/database/types'
+import { ScriptTreeData, TreeChild, TreeData } from '@/store/modules/database/types'
 
 const tablesSearchKey = ref('')
 const scriptsSearchKey = ref('')
@@ -28,9 +28,9 @@ export default function useSiderTabs() {
   }
 
   const searchList = (keyword: string) => {
-    const loop = (data: TreeData[]) => {
-      const result: TreeData[] = []
-      data.forEach((item: TreeData) => {
+    const loop = (data: ScriptTreeData[]) => {
+      const result: ScriptTreeData[] = []
+      data.forEach((item: ScriptTreeData) => {
         if (item.title.toLowerCase().indexOf(keyword.toLowerCase()) > -1) {
           result.push({ ...item })
         }

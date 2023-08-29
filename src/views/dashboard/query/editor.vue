@@ -105,13 +105,13 @@ a-card.editor-card.padding-16(:bordered="false")
     isButtonDisabled,
     primaryCodeRunning,
     secondaryCodeRunning,
+    view,
     selectCodeType,
   } = useQueryCode()
 
   const lineStart = ref()
   const lineEnd = ref()
   const selectedCode = ref()
-  const view = shallowRef()
   const triggerVisible = ref(false)
   const rangePickerVisible = ref(false)
 
