@@ -6,6 +6,7 @@
     "echarts",
     "Greptime",
     "hoverable",
+    "Keymap",
     "pinia",
     "promql",
     "sider",

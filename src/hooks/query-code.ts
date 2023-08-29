@@ -59,6 +59,8 @@ export default function useQueryCode() {
       changes = {
         from: state.doc.length,
         insert: `${code}`,
+        // TODO: Scroll not working,
+        scrollIntoView: true,
       }
       cursorPosition = state.doc.length + code.length - cursorBack
     } else {
@@ -66,9 +68,11 @@ export default function useQueryCode() {
       changes = {
         from: state.doc.length,
         insert: `\n${code}`,
+        scrollIntoView: true,
       }
       cursorPosition = state.doc.length + code.length + 1 - cursorBack
     }
+    view.value.focus()
     view.value.dispatch({
       changes,
       selection: EditorSelection.create([EditorSelection.cursor(cursorPosition)]),
