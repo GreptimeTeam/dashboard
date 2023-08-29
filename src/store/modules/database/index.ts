@@ -1,23 +1,25 @@
 import editorAPI from '@/api/editor'
-import { TreeChild, TreeData } from './types'
+import { ScriptTreeData, TableTreeChild, TableTreeParent } from './types'
 
 const useDataBaseStore = defineStore('database', () => {
   const { database } = storeToRefs(useAppStore())
   const tablesData = ref()
   const scriptsData = ref()
-  const originTablesTree = ref<TreeData[]>([])
+  const originTablesTree = ref<TableTreeParent[]>([])
   const tablesLoading = ref(false)
   const scriptsLoading = ref(false)
 
   const getOriginTablesTree = () => {
-    const tempArray: TreeData[] = []
+    const tempArray: TableTreeParent[] = []
     let key = 0
     if (tablesData.value) {
       tablesData.value.output[0].records.rows.forEach((item: Array<string>) => {
-        const node: TreeData = {
+        const node: TableTreeParent = {
           title: item.join(),
           key,
           children: [],
+          timeIndexName: '',
+          code: '',
         }
         tempArray.push(node)
         key += 1
@@ -26,16 +28,16 @@ const useDataBaseStore = defineStore('database', () => {
     return tempArray
   }
 
-  const addChildren = (key: number, children: TreeChild[], timeIndexName: string) => {
+  const addChildren = (key: number, children: TableTreeChild[], timeIndexName: string) => {
     originTablesTree.value[key].children = children
     originTablesTree.value[key].timeIndexName = timeIndexName
   }
 
   const originScriptsList = computed(() => {
-    const tempArray: TreeData[] = []
+    const tempArray: ScriptTreeData[] = []
     if (scriptsData.value) {
       scriptsData.value.output[0].records.rows.forEach((item: Array<string>) => {
-        const node: TreeData = {
+        const node: ScriptTreeData = {
           title: item[1],
           key: item[1],
           code: item[2],

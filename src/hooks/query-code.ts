@@ -3,8 +3,10 @@ import i18n from '@/locale'
 import dayjs from 'dayjs'
 import { useCodeRunStore } from '@/store'
 import { ResultType } from '@/store/modules/code-run/types'
+import { EditorSelection } from '@codemirror/state'
 import { stringType } from './types'
 
+const view = shallowRef()
 const queryType = ref('sql')
 const sqlCode = ''
 const promQLCode = ''
@@ -40,19 +42,37 @@ export default function useQueryCode() {
   const { codeType } = storeToRefs(useAppStore())
   const { results } = storeToRefs(useCodeRunStore())
 
+  // Deprecated
   const insertNameToQueryCode = (name: string) => {
-    codes.value[queryType.value] =
-      codes.value[queryType.value].substring(0, cursorAt.value[0]) +
-      name +
-      codes.value[queryType.value].substring(cursorAt.value[1])
+    const { state } = view.value
+    view.value.dispatch(state.replaceSelection(`${name}`))
   }
 
-  const inputFromNewLineToQueryCode = (code: string) => {
-    if (codes.value[queryType.value].trim() !== '') {
-      codes.value[queryType.value] += `\n${code}`
+  const inputFromNewLineToQueryCode = (code: string, cursorBack: number) => {
+    const { state } = view.value
+
+    const lastLineCode = state.doc.text[state.doc.text.length - 1]
+    let changes
+    let cursorPosition
+    if (lastLineCode.trim() === '') {
+      // If the last line is empty, start here
+      changes = {
+        from: state.doc.length,
+        insert: `${code}`,
+      }
+      cursorPosition = state.doc.length + code.length - cursorBack
     } else {
-      codes.value[queryType.value] += code
+      // If the last line is not empty, start from new line
+      changes = {
+        from: state.doc.length,
+        insert: `\n${code}`,
+      }
+      cursorPosition = state.doc.length + code.length + 1 - cursorBack
     }
+    view.value.dispatch({
+      changes,
+      selection: EditorSelection.create([EditorSelection.cursor(cursorPosition)]),
+    })
   }
 
   const selectCodeType = () => {
@@ -108,6 +128,7 @@ export default function useQueryCode() {
     getResultsByType,
     runQuery,
     inputFromNewLineToQueryCode,
+    view,
     queryCode,
     cursorAt,
     queryOptions,

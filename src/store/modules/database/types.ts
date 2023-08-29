@@ -8,18 +8,25 @@ export interface TreeChild {
   key: string | number
   title: string
   isLeaf?: boolean
-  dataType?: string
-  iconType?: string
-  parentKey?: number
 }
 
-export interface TreeData {
-  key: string | number
-  title: string
+export interface TreeData extends TreeChild {
   children?: TreeChild[]
-  isLeaf?: boolean
-  dataType?: string
-  iconType?: string
-  code?: string
-  timeIndexName?: string
+}
+
+export interface TableTreeChild extends TreeChild {
+  key: string
+  dataType: string
+  iconType: string
+  parentKey: number
+}
+
+export interface TableTreeParent extends TreeData {
+  key: number
+  code: string
+  timeIndexName: string
+}
+
+export interface ScriptTreeData extends TreeData {
+  code: string
 }

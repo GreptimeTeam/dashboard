@@ -45,7 +45,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
                   ShortCut(
                     :type="item.value"
                     :node="nodeData"
-                    :parent="originTablesTree[nodeData.parentKey]"
+                    :parent="nodeData.iconType ? originTablesTree[nodeData.parentKey] : nodeData"
                     :label="item.label"
                   )
               a-doption
@@ -63,7 +63,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
   import useQueryCode from '@/hooks/query-code'
   import usePythonCode from '@/hooks/python-code'
   import useSiderTabs from '@/hooks/sider-tabs'
-  import type { TreeChild, TreeData } from '@/store/modules/database/types'
+  import type { TableTreeChild, TableTreeParent } from '@/store/modules/database/types'
   import type { OptionsType } from '@/types/global'
   import { useClipboard } from '@vueuse/core'
 
@@ -85,7 +85,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
     if (treeRef.value) treeRef.value.expandAll(false)
   }
 
-  const loadMore = (nodeData: TreeData) => {
+  const loadMore = (nodeData: TableTreeParent) => {
     return new Promise<void>((resolve, reject) => {
       getTableByName(nodeData.title)
         .then((result: any) => {
@@ -93,7 +93,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
           const {
             records: { rows },
           } = output[0]
-          const treeChildren: TreeChild[] = []
+          const treeChildren: TableTreeChild[] = []
           let timeIndexName = '%TIME_INDEX%'
           rows.forEach((row: string[]) => {
             // row[0]: "Field" (field name),
@@ -110,10 +110,10 @@ a-spin(style="width: 100%" :loading="tablesLoading")
               isLeaf: true,
               dataType: row[1],
               iconType: row[4],
-              parentKey: nodeData.key as number,
+              parentKey: nodeData.key,
             })
           })
-          addChildren(nodeData.key as number, treeChildren, timeIndexName)
+          addChildren(nodeData.key, treeChildren, timeIndexName)
           resolve()
         })
         .catch(() => {
@@ -164,8 +164,8 @@ a-spin(style="width: 100%" :loading="tablesLoading")
     ],
   }
 
-  const clickMenu = (event: Event, nodeData: TreeData) => {
-    if (nodeData.children && expandedKeys.value?.includes(nodeData.key as number)) {
+  const clickMenu = (event: Event, nodeData: TableTreeParent) => {
+    if (nodeData.children && expandedKeys.value?.includes(nodeData.key)) {
       event.stopPropagation()
     }
   }
