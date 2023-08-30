@@ -20,11 +20,19 @@ a-card(v-if="hasChart" :bordered="false")
           a-select(
             v-model="chartForm.selectedYTypes"
             multiple
-            :placeholder="$t('dashboard.selectY')"
+            :placeholder="$t('dashboard.pleaseSelect')"
             :allow-search="false"
             :trigger-props="triggerProps"
           )
             a-option(v-for="item of yOptions" :value="item" :label="item") {{ item }}
+        a-form-item.select-y(:label="$t('dashboard.xType')")
+          a-select(
+            v-model="chartForm.xAxisType"
+            :placeholder="$t('dashboard.pleaseSelect')"
+            :allow-search="false"
+            :trigger-props="triggerProps"
+          )
+            a-option(v-for="item of xOptions" :value="item.name") {{ item.name }}
         a-form-item.select-y(:label="$t('dashboard.groupBy')")
           a-select(
             v-model="chartForm.groupBySelectedTypes"
@@ -70,6 +78,7 @@ a-card(v-if="hasChart" :bordered="false")
         chartType: 'line',
         selectedYTypes: [],
         groupBySelectedTypes: [],
+        xAxisType: '',
       }),
     },
 
@@ -84,7 +93,7 @@ a-card(v-if="hasChart" :bordered="false")
   const chartOptions = ref({})
   const seriesCount = ref(0)
 
-  const { yOptions, hasChart, groupByOptions, chartForm } = useDataChart(props.data)
+  const { yOptions, hasChart, groupByOptions, chartForm, xOptions } = useDataChart(props.data)
   // TODO: To add this props in every select should not be the best option.
   const triggerProps = {
     'update-at-scroll': true,
@@ -218,6 +227,8 @@ a-card(v-if="hasChart" :bordered="false")
   onMounted(() => {
     if (hasChart.value) {
       chartForm.selectedYTypes = [yOptions.value[0]]
+      chartForm.xAxisType = xOptions.value[0].name
+
       Object.entries(props.defaultChartForm).forEach(([key, value]) => {
         ;(chartForm as any)[key] = (chartForm as any)[key] || value
       })
