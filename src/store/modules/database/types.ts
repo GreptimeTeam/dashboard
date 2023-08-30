@@ -11,7 +11,7 @@ export interface TreeChild {
 }
 
 export interface TreeData extends TreeChild {
-  children?: TreeChild[]
+  children: TreeChild[]
 }
 
 export interface TableTreeChild extends TreeChild {
