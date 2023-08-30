@@ -25,6 +25,7 @@ export interface TableTreeParent extends TreeData {
   key: number
   code: string
   timeIndexName: string
+  children: TableTreeChild[]
 }
 
 export interface ScriptTreeData extends TreeData {
