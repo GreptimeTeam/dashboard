@@ -7,6 +7,7 @@ export interface ChartFormType {
   chartType: string
   selectedYTypes: string[]
   groupBySelectedTypes: string[]
+  xAxisType: string
 }
 
 export interface RecordsType {
