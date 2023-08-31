@@ -1,4 +1,4 @@
-import{d as _i,e as Se,aH as Re,C as Le,aE as _n,aG as be,aL as Pn,aM as On,u as te,k as Ps,aO as $p,aN as Vp,b7 as Kp,c as di,D as Nt,G as Up,aI as me,aF as lt,h as Xp,b8 as zp,o as Jp}from"./arco.6cd4d6d1.js";import{O as Os,u as Cn,b as Gp,_ as Cs}from"./index.37983ad6.js";import{o as Wp,T as Hp,u as Qp,d as Zp,e as ed,_ as td}from"./index.2dfa3ea3.js";import{s as nd}from"./index.36a38575.js";import{s as rd,i as id}from"./vue.ffa8a759.js";import"./chart.45194597.js";import"./empty-status.vue_vue_type_script_setup_true_name_EmptyStatus_lang.adf161f7.js";const ad=e=>Os.get(`https://api.github.com/gists/${e}`);function od(){return{getGistFiles:async t=>{const n=await ad(t);return Object.values(n.files)}}}const sd=`---
+import{d as _i,e as Se,aH as Re,C as Le,aE as _n,aG as be,aL as Pn,aM as On,u as te,k as Ps,aO as $p,aN as Vp,b7 as Kp,c as di,D as Nt,G as Up,aI as me,aF as lt,h as Xp,b8 as zp,o as Jp}from"./arco.6cd4d6d1.js";import{O as Os,u as Cn,b as Gp,_ as Cs}from"./index.dce2f637.js";import{o as Wp,T as Hp,u as Qp,d as Zp,e as ed,_ as td}from"./index.7e52d044.js";import{s as nd}from"./index.02e0debc.js";import{s as rd,i as id}from"./vue.ffa8a759.js";import"./chart.45194597.js";import"./empty-status.vue_vue_type_script_setup_true_name_EmptyStatus_lang.fcfa2a8c.js";const ad=e=>Os.get(`https://api.github.com/gists/${e}`);function od(){return{getGistFiles:async t=>{const n=await ad(t);return Object.values(n.files)}}}const sd=`---
 title: Quick Start
 ---
 # Getting Started
@@ -154,7 +154,7 @@ SELECT * FROM cpu_metrics WHERE usage_user > 50;
 
 See more about [\`WHERE\` clause](https://docs.greptime.com/reference/sql/where).
 
-### Group query results
+### Group by Tags
 
 Developers always want to see the general CPU usage to check if there are any problems with the resources. For example, the following SQL statement returns the average CPU usage group by hosts.
 
@@ -187,10 +187,22 @@ SELECT hostname, environment,
 
 See more about [\`GROUP BY\` clause](https://docs.greptime.com/reference/sql/group_by).
 
-<!-- TODO: add GROUP BY time -->
-<!-- The following SQL statement returns the average CPU usage of all hosts every 5 minutes.-->
+### Group by Time Intervals
 
-<!-- SELECT avg(usage_user), avg(usage_system), avg(usage_idle) FROM cpu_metrics GROUP BY time(5m); -->
+One important scenario for time series data is to group it by time intervals to monitor its trend. The following SQL statement returns the average CPU usage of all hosts every second.
+
+\`\`\` sql
+select date_trunc('second', ts) as dt,
+    avg(usage_user),
+    avg(usage_system),
+    avg(usage_idle)
+    FROM cpu_metrics 
+    GROUP BY dt
+\`\`\`
+
+See more about [\`date_trunc\` function](https://docs.greptime.com/reference/sql/functions#date-trunc).
+
+<!-- TODO: The following SQL statement returns the average CPU usage of all hosts every 5 minutes.-->
 
 ### More aggregate functions
 
