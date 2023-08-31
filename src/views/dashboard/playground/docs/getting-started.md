@@ -53,9 +53,11 @@ Once the green marker appears, run `DESC TABLE` to view the details of the table
 
 In GreptimeDB, there are three types of columns:
 
-- `PRIMARY KEY`: key columns that are used for sorting and partitioning
-- `FIELD`: columns which store table values
-- `TIME INDEX`: columns of data type TIME
+- `Tag` columns store metadata that is commonly queried.
+- `Field` columns store data indicators that are collected. The data indicators are generally numerical values.
+- `Timestamp` represents the date and time when the data was generated.
+
+For more information please refer to [Data Model](https://docs.greptime.com/user-guide/concepts/data-model).
 
 ```sql
 DESC TABLE cpu_metrics;
