@@ -28,11 +28,12 @@ a-card(v-if="hasChart" :bordered="false")
         a-form-item.select-y(:label="$t('dashboard.xType')")
           a-select(
             v-model="chartForm.xAxisType"
+            value-key="name"
             :placeholder="$t('dashboard.pleaseSelect')"
             :allow-search="false"
             :trigger-props="triggerProps"
           )
-            a-option(v-for="item of xOptions" :value="item.name") {{ item.name }}
+            a-option(v-for="item of xOptions" :value="item") {{ item.name }}
         a-form-item.select-y(:label="$t('dashboard.groupBy')")
           a-select(
             v-model="chartForm.groupBySelectedTypes"
@@ -57,6 +58,7 @@ a-card(v-if="hasChart" :bordered="false")
   import type { PropType } from 'vue'
   import type { datasetType, ResultType, ChartFormType, SeriesType } from '@/store/modules/code-run/types'
   import useDataChart from '@/hooks/data-chart'
+  import dayjs from 'dayjs'
   import { chartTypeOptions, updateOptions } from '../../../config'
 
   const props = defineProps({
@@ -78,7 +80,6 @@ a-card(v-if="hasChart" :bordered="false")
         chartType: 'line',
         selectedYTypes: [],
         groupBySelectedTypes: [],
-        xAxisType: '',
       }),
     },
 
@@ -114,13 +115,15 @@ a-card(v-if="hasChart" :bordered="false")
 
   const generateSeries = (name: string, isGroup?: boolean, datasetIndex?: number) => {
     // TODO: not sure this `isGroup` is the best way
+
     const series: SeriesType = {
       name,
       type: chartForm.chartType,
       smooth: false,
       encode: {
-        x: props.data.dimensionsAndXName.xAxis,
+        x: chartForm.xAxisType.name,
         y: name,
+        label: [name],
       },
       symbolSize: 4,
       datasetIndex: 1,
@@ -150,7 +153,7 @@ a-card(v-if="hasChart" :bordered="false")
       dataset.push({
         transform: {
           type: 'sort',
-          config: { dimension: props.data.dimensionsAndXName.xAxis, order: 'asc' },
+          config: { dimension: chartForm.xAxisType.name, order: 'asc' },
         },
       })
       yAxisTypes.forEach((yAxisName: string) => {
@@ -183,7 +186,7 @@ a-card(v-if="hasChart" :bordered="false")
         dataset.push({
           transform: {
             type: 'sort',
-            config: { dimension: props.data.dimensionsAndXName.xAxis, order: 'asc' },
+            config: { dimension: chartForm.xAxisType.name, order: 'asc' },
           },
           fromDatasetIndex: (datasetIndex += 1),
         })
@@ -195,6 +198,29 @@ a-card(v-if="hasChart" :bordered="false")
 
   const makeOptions = () => {
     const { series, legendNames, dataset } = getChartConfig(chartForm.selectedYTypes)
+    const xAxis: any = {
+      axisLine: {
+        lineStyle: {
+          type: 'solid',
+        },
+      },
+      axisLabel: {},
+    }
+    const dataType = chartForm.xAxisType.data_type
+    if (dataType === 'Date') {
+      xAxis.axisLabel.formatter = (value: any) => {
+        const date = dayjs(0).add(value, 'day').format('YYYY-MM-DD')
+        return date
+      }
+    } else if (dataType === 'DateTime') {
+      xAxis.axisLabel.formatter = (value: any) => {
+        const date = dayjs.unix(value).format('YYYY-MM-DD HH:mm:ss')
+        return date
+      }
+    } else {
+      xAxis.type = 'time'
+    }
+
     return {
       legend: {
         data: legendNames,
@@ -203,15 +229,7 @@ a-card(v-if="hasChart" :bordered="false")
         trigger: 'axis',
       },
       dataset,
-      xAxis: {
-        type: 'time',
-        name: 'Time',
-        axisLine: {
-          lineStyle: {
-            type: 'solid',
-          },
-        },
-      },
+      xAxis,
       yAxis: {
         axisLine: {
           lineStyle: {
@@ -227,7 +245,7 @@ a-card(v-if="hasChart" :bordered="false")
   onMounted(() => {
     if (hasChart.value) {
       chartForm.selectedYTypes = [yOptions.value[0]]
-      chartForm.xAxisType = xOptions.value[0].name
+      chartForm.xAxisType = xOptions.value[0]
 
       Object.entries(props.defaultChartForm).forEach(([key, value]) => {
         ;(chartForm as any)[key] = (chartForm as any)[key] || value
