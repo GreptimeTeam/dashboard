@@ -1,10 +1,51 @@
 <template lang="pug">
 .code-editor.editor-card
+  a-form.space-between.prom-form.mb-16(layout="inline" v-show="lang === 'promql'" :model="promForm")
+    a-space(size="medium")
+      a-form-item(:hide-label="true")
+        TimeSelect(
+          flex-direction="row-reverse"
+          button-class="query-time-button"
+          :trigger-visible="triggerVisible"
+          :is-relative="promForm.isRelative === 1"
+          :range-picker-visible="rangePickerVisible"
+          :time-length="promForm.time"
+          :time-range="promForm.range"
+          :relative-time-map="queryTimeMap"
+          :relative-time-options="queryTimeOptions"
+          @open-time-select="openTimeSelect"
+          @select-time-range="selectTimeRange"
+          @select-time-length="selectTimeLength"
+          @click-custom="clickCustom"
+        )
+      a-form-item(:hide-label="true")
+        a-input(
+          v-model="promForm.step"
+          hide-button
+          :style="{ width: '180px' }"
+          :placeholder="$t('dashboard.step')"
+        )
+          template(#prefix)
+            | Step
+          template(#suffix)
+            a-popover(trigger="hover")
+              svg.icon
+                use(href="#question")
+              template(#content)
+                a-list(size="small" :split="false" :bordered="false")
+                  template(#header)
+                    | {{ $t('dashboard.supportedDurations') }}
+                  a-list-item(v-for="item of durations" :key="item")
+                    a-typography-text(code) {{ item.key }}
+                    span.ml-4 {{ item.value }}
+                  a-list-item
+                    span.ml-2 {{ $t('dashboard.examples') }}
+                    a-typography-text(v-for="item of durationExamples" :key="item" code) {{ item }}
   .code
     .operations(v-if="!disabled")
-      a-button(:disabled="runDisabled" :loading="isLoading" @click="runSqlCommand") {{ $t('playground.run') }}
+      a-button(:disabled="runDisabled" :loading="isLoading" @click="runCommand") {{ $t('playground.run') }}
       a-button(v-if="showReset" @click="reset") {{ $t('playground.reset') }}
-    CodeMirror(v-model="code" :extensions="extensions" :disabled="disabled")
+    CodeMirror(v-model="code" :extensions="extensions[lang]" :disabled="disabled")
   .results(v-if="hasRecords")
     a-tabs.playground-tabs(:default-active-key="hasChart ? '2' : '1'")
       a-tab-pane(key="1" title="Table")
@@ -18,15 +59,20 @@
       :bordered="false"
       :split="false"
     )
-      Log(codeType="sql" :log="log")
+      Log(:codeType="lang" :log="log")
 </template>
 
 <script lang="ts" setup name="CodeEditor">
+  import dayjs from 'dayjs'
+  import { keymap } from '@codemirror/view'
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
   import { sql } from '@codemirror/lang-sql'
+  import { PromQLExtension } from '@prometheus-io/codemirror-promql'
   import useDataChart from '@/hooks/data-chart'
   import type { ResultType } from '@/store/modules/code-run/types'
+  import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '../config'
+
   // data
   const props = defineProps({
     disabled: {
@@ -37,18 +83,20 @@
       type: String,
       default: '{}',
     },
-    type: {
+    lang: {
       type: String,
       default: 'sql',
     },
   })
   const isLoading = ref(false)
-  const { runQuery } = useQueryCode()
+  const { runQuery, promForm } = useQueryCode()
   const slots = useSlots()
   const appStore = useAppStore()
   const hasChart = ref(false)
   const hasRecords = ref(false)
   const chartForm = JSON.parse(props.defaultChartForm)
+  const rangePickerVisible = ref(false)
+  const triggerVisible = ref(false)
 
   function codeFormat(code: any) {
     if (!code) return ''
@@ -60,8 +108,8 @@
     return code
   }
 
-  const defaultCode = computed(() => codeFormat(slots?.default?.()))
-  const code = ref(defaultCode.value)
+  let defaultCode = codeFormat(slots?.default?.())
+  const code = ref(defaultCode)
   const result = ref({
     records: { rows: [], schema: { column_schemas: [] } },
     dimensionsAndXName: {
@@ -71,9 +119,10 @@
     key: -1,
     type: '',
   } as ResultType)
-  const log = ref()
+  const log = ref('')
   // TODO: better reset
   const reset = () => {
+    defaultCode = codeFormat(slots?.default?.())
     code.value = defaultCode
     result.value = {
       records: { rows: [], schema: { column_schemas: [] } },
@@ -84,13 +133,13 @@
       key: -1,
       type: '',
     }
-    log.value = null
+    log.value = ''
     hasChart.value = false
     hasRecords.value = false
   }
-  const runSqlCommand = async () => {
+  const runCommand = async () => {
     isLoading.value = true
-    const res = await runQuery(code.value.trim(), 'sql', true)
+    const res = await runQuery(code.value.trim(), props.lang, true)
     if (res.lastResult?.records) {
       hasRecords.value = true
       result.value = res.lastResult
@@ -105,17 +154,61 @@
   }
 
   const showReset = computed(() => {
-    return code.value !== defaultCode.value
+    return code.value !== defaultCode
   })
 
   const runDisabled = computed(() => {
     return code.value.trim() === ''
   })
-  const extensions = [sql(), oneDark]
+
+  const queryTimeOptions = timeOptionsArray.map((value) => ({
+    value,
+    label: `Last ${value} minutes`,
+  }))
+
+  const openTimeSelect = () => {
+    rangePickerVisible.value = promForm.value.isRelative !== 1
+    triggerVisible.value = true
+  }
+
+  const clickCustom = () => {
+    rangePickerVisible.value = !rangePickerVisible.value
+  }
+
+  const selectTimeRange = (range: string[]) => {
+    promForm.value.range = range
+    promForm.value.time = -1
+    promForm.value.isRelative = 0
+    rangePickerVisible.value = false
+    triggerVisible.value = false
+  }
+
+  const selectTimeLength = (value: number) => {
+    promForm.value.time = value
+    promForm.value.isRelative = 1
+    rangePickerVisible.value = false
+    triggerVisible.value = false
+  }
+
+  const promQL = new PromQLExtension()
+  const defaultKeymap = [
+    {
+      key: 'alt-Enter',
+      run: () => {
+        runCommand()
+      },
+    },
+  ]
+  const extensions = {
+    sql: [sql(), oneDark, keymap.of(defaultKeymap as any)],
+    promql: [promQL.asExtension(), oneDark, keymap.of(defaultKeymap as any)],
+  }
   // lifecycle
+
   onBeforeUpdate(() => {
-    console.log(`slo:`, defaultCode.value)
-    code.value = codeFormat(slots?.default?.())
+    if (codeFormat(slots?.default?.()) !== defaultCode) {
+      reset()
+    }
   })
 </script>
 

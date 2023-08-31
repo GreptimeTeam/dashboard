@@ -2,9 +2,7 @@
   import MarkdownIt from 'markdown-it'
   import plugins from '@/utils/mdPlugins'
   import meta from 'markdown-it-meta'
-  import comments from 'markdown-it-inline-comments'
   import { compile, h } from 'vue'
-  import { objectExpression } from '@babel/types'
   import CodeEditor from './code-editor.vue'
 
   const md = new MarkdownIt()

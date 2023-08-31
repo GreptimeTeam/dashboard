@@ -39,12 +39,12 @@ const useCodeRunStore = defineStore('codeRun', () => {
   const API_MAP: AnyObject = {
     sql: editorAPI.runSQL,
     python: editorAPI.runScript,
-    promQL: editorAPI.runPromQL,
+    promql: editorAPI.runPromQL,
   }
 
   const CODE_TO_PAGE: { [key: string]: string } = {
     sql: 'query',
-    promQL: 'query',
+    promql: 'query',
     python: 'scripts',
   }
 
@@ -52,7 +52,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
     try {
       // TODO: try something better
       let oneResult = {} as ResultType
-      const res: HttpResponse = await API_MAP[type](codeInfo)
+      const res: HttpResponse = await API_MAP[type.toLowerCase()](codeInfo)
       Message.success({
         content: i18n.global.t('dashboard.runSuccess'),
         duration: 2 * 1000,
@@ -98,7 +98,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
         codeInfo,
         results: resultsInLog,
       }
-      if (type === 'promQL') {
+      if (type.toLowerCase() === 'promql') {
         oneLog.promInfo = {
           Start: dayjs.unix(+promForm.value.start).format('YYYY-MM-DD HH:mm:ss'),
           End: dayjs.unix(+promForm.value.end).format('YYYY-MM-DD HH:mm:ss'),

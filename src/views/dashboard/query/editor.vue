@@ -16,7 +16,7 @@ a-card.editor-card.padding-16(:bordered="false")
     .query-select
       a-select(v-model="queryType" :trigger-props="{ 'content-class': 'query-select' }" @change="selectCodeType")
         a-option(v-for="query of queryOptions" :="query")
-  a-form.space-between.prom-form.mb-16(layout="inline" v-show="queryType === 'promQL'" :model="promForm")
+  a-form.space-between.prom-form.mb-16(layout="inline" v-show="queryType.toLowerCase() === 'promql'" :model="promForm")
     a-space(size="medium")
       a-form-item(:hide-label="true")
         TimeSelect(
@@ -183,7 +183,7 @@ a-card.editor-card.padding-16(:bordered="false")
   ]
   const extensions = {
     sql: [sql(), oneDark, keymap.of(defaultKeymap as any)],
-    promQL: [promQL.asExtension(), oneDark],
+    promQL: [promQL.asExtension(), oneDark, keymap.of(defaultKeymap as any)],
   }
 
   const openTimeSelect = () => {

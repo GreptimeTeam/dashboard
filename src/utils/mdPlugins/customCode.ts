@@ -14,6 +14,7 @@ export default function customCode(md: MarkdownIt) {
         .match(/\((.*)\)/)?.[1]
         .split('|')
         .map((item) => item.split(',')) || []
+
     const defaultChartForm = {
       chartType: chartType || 'line',
       selectedYTypes,
@@ -23,10 +24,10 @@ export default function customCode(md: MarkdownIt) {
     const res = rawCode?.replace(
       /<pre><code class="language-(\w*?)">([\s\S]*)<\/code><\/pre>/,
       ($1: string, $2: string) => {
-        if ($2.toLowerCase() === 'sql') {
-          return `<code-editor lang="${$2}" defaultChartForm='${JSON.stringify(defaultChartForm)}'>${$1}</code-editor>`
-        }
-        return `<code-editor lang="${$2}" disabled>${$1}</code-editor>`
+        const disabled = /sql|promql/.test($2.toLowerCase()) ? '' : 'disabled'
+        return `<code-editor lang="${$2}" defaultChartForm=${JSON.stringify(
+          defaultChartForm
+        )} ${disabled}>${$1}</code-editor>`
       }
     )
     return `${res}`
