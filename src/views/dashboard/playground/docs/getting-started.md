@@ -53,9 +53,11 @@ Once the green marker appears, run `DESC TABLE` to view the details of the table
 
 In GreptimeDB, there are three types of columns:
 
-- `PRIMARY KEY`: key columns that are used for sorting and partitioning
-- `FIELD`: columns which store table values
-- `TIME INDEX`: columns of data type TIME
+- `Tag` columns store metadata that is commonly queried.
+- `Field` columns store data indicators that are collected. The data indicators are generally numerical values.
+- `Timestamp` represents the date and time when the data was generated.
+
+For more information please refer to [Data Model](https://docs.greptime.com/user-guide/concepts/data-model).
 
 ```sql
 DESC TABLE cpu_metrics;
@@ -154,7 +156,7 @@ SELECT * FROM cpu_metrics WHERE usage_user > 50;
 
 See more about [`WHERE` clause](https://docs.greptime.com/reference/sql/where).
 
-### Group query results
+### Group by Tags
 
 Developers always want to see the general CPU usage to check if there are any problems with the resources. For example, the following SQL statement returns the average CPU usage group by hosts.
 
@@ -187,10 +189,22 @@ SELECT hostname, environment,
 
 See more about [`GROUP BY` clause](https://docs.greptime.com/reference/sql/group_by).
 
-<!-- TODO: add GROUP BY time -->
-<!-- The following SQL statement returns the average CPU usage of all hosts every 5 minutes.-->
+### Group by Time Intervals
 
-<!-- SELECT avg(usage_user), avg(usage_system), avg(usage_idle) FROM cpu_metrics GROUP BY time(5m); -->
+One important scenario for time series data is to group it by time intervals to monitor its trend. The following SQL statement returns the average CPU usage of all hosts every second.
+
+``` sql
+select date_trunc('second', ts) as dt,
+    avg(usage_user),
+    avg(usage_system),
+    avg(usage_idle)
+    FROM cpu_metrics 
+    GROUP BY dt
+```
+
+See more about [`date_trunc` function](https://docs.greptime.com/reference/sql/functions#date-trunc).
+
+<!-- TODO: The following SQL statement returns the average CPU usage of all hosts every 5 minutes.-->
 
 ### More aggregate functions
 

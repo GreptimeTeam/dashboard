@@ -94,14 +94,15 @@ a-spin(style="width: 100%" :loading="tablesLoading")
             records: { rows },
           } = output[0]
           const treeChildren: TableTreeChild[] = []
-          let timeIndexName = '%TIME_INDEX%'
+          let timeIndexName = '%TIMESTAMP%'
           rows.forEach((row: string[]) => {
-            // row[0]: "Field" (field name),
+            // row[0]: "Column" (column name),
             // row[1]: "Type" (data type),
-            // row[2]: "Null",
-            // row[3]: "Default",
-            // row[4]: "Semantic Type",
-            if (row[4] === 'TIME INDEX') {
+            // row[2]: "Key" (`PRI` means primary key),
+            // row[3]: "Null",
+            // row[4]: "Default",
+            // row[5]: "Semantic Type" (used as icon type, including `TAG`, `FIELD`, `TIMESTAMP`),
+            if (row[5] === 'TIMESTAMP') {
               timeIndexName = row[0]
             }
             treeChildren.push({
@@ -109,7 +110,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
               key: `${nodeData.title}.${row[0]}`,
               isLeaf: true,
               dataType: row[1],
-              iconType: row[4],
+              iconType: row[5],
               parentKey: nodeData.key,
             })
           })
@@ -134,9 +135,41 @@ a-spin(style="width: 100%" :loading="tablesLoading")
   }
 
   const ICON_MAP: { [key: string]: string } = {
-    'FIELD': '#value',
-    'PRIMARY KEY': '#primary-key',
-    'TIME INDEX': '#time-index',
+    FIELD: '#value',
+    TAG: '#primary-key',
+    TIMESTAMP: '#time-index',
+  }
+
+  const SHORTCUT_MAP: { [key: string]: OptionsType[] } = {
+    TABLE: [{ value: 'select*100', label: 'Query table' }],
+    FIELD: [
+      { value: 'select100', label: 'Query column' },
+      {
+        value: 'max',
+        label: 'Query max',
+      },
+      {
+        value: 'min',
+        label: 'Query min',
+      },
+    ],
+    TAG: [
+      { value: 'count', label: 'Count by' },
+      { value: 'where=', label: 'Filter by' },
+    ],
+    TIMESTAMP: [
+      { value: 'select*100', label: 'Query table' },
+      {
+        value: 'where<',
+        label: 'Filter by',
+      },
+    ],
+  }
+
+  const clickMenu = (event: Event, nodeData: TableTreeParent) => {
+    if (nodeData.children && expandedKeys.value?.includes(nodeData.key)) {
+      event.stopPropagation()
+    }
   }
 
   const SHORTCUT_MAP: { [key: string]: OptionsType[] } = {
