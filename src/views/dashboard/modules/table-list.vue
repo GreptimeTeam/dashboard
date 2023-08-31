@@ -140,32 +140,6 @@ a-spin(style="width: 100%" :loading="tablesLoading")
     TIMESTAMP: '#time-index',
   }
 
-  const SHORTCUT_MAP: { [key: string]: OptionsType[] } = {
-    TABLE: [{ value: 'select*100', label: 'Query table' }],
-    FIELD: [
-      { value: 'select100', label: 'Query column' },
-      {
-        value: 'max',
-        label: 'Query max',
-      },
-      {
-        value: 'min',
-        label: 'Query min',
-      },
-    ],
-    TAG: [
-      { value: 'count', label: 'Count by' },
-      { value: 'where=', label: 'Filter by' },
-    ],
-    TIMESTAMP: [
-      { value: 'select*100', label: 'Query table' },
-      {
-        value: 'where<',
-        label: 'Filter by',
-      },
-    ],
-  }
-
   const clickMenu = (event: Event, nodeData: TableTreeParent) => {
     if (nodeData.children && expandedKeys.value?.includes(nodeData.key)) {
       event.stopPropagation()
@@ -196,12 +170,6 @@ a-spin(style="width: 100%" :loading="tablesLoading")
         label: 'Filter by',
       },
     ],
-  }
-
-  const clickMenu = (event: Event, nodeData: TableTreeParent) => {
-    if (nodeData.children && expandedKeys.value?.includes(nodeData.key)) {
-      event.stopPropagation()
-    }
   }
 </script>
 
