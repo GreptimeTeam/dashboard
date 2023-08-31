@@ -37,6 +37,10 @@
       type: String,
       default: '{}',
     },
+    type: {
+      type: String,
+      default: 'sql',
+    },
   })
   const isLoading = ref(false)
   const { runQuery } = useQueryCode()
@@ -55,8 +59,9 @@
     })
     return code
   }
-  const defaultCode = codeFormat(slots?.default?.())
-  const code = ref(defaultCode)
+
+  const defaultCode = computed(() => codeFormat(slots?.default?.()))
+  const code = ref(defaultCode.value)
   const result = ref({
     records: { rows: [], schema: { column_schemas: [] } },
     dimensionsAndXName: {
@@ -100,14 +105,18 @@
   }
 
   const showReset = computed(() => {
-    return code.value !== defaultCode
+    return code.value !== defaultCode.value
   })
 
   const runDisabled = computed(() => {
     return code.value.trim() === ''
   })
-  // lifecycle
   const extensions = [sql(), oneDark]
+  // lifecycle
+  onBeforeUpdate(() => {
+    console.log(`slo:`, defaultCode.value)
+    code.value = codeFormat(slots?.default?.())
+  })
 </script>
 
 <style lang="stylus" rel="stylesheet/stylus" scoped>
