@@ -16,7 +16,7 @@ export default {
     'Your chart has too many ({count}) series generated from the selected "Group By" columns.',
   'dashboard.ok': 'OK',
   'dashboard.yType': 'Y-Axis Types',
-  'dashboard.xType': 'X-Axis Types',
+  'dashboard.xType': 'X-Axis Type',
   'dashboard.groupBy': 'Group By',
   'dashboard.select': 'Select {records} row;  | Select {records} rows; ',
   'dashboard.pleaseSelect': 'Please select...',
