@@ -1,4 +1,4 @@
-import{d as _i,e as Se,aH as Re,C as Le,aE as _n,aG as be,aL as Pn,aM as On,u as te,k as Ps,aO as $p,aN as Vp,b7 as Kp,c as di,D as Nt,G as Up,aI as me,aF as lt,h as Xp,b8 as zp,o as Jp}from"./arco.6cd4d6d1.js";import{O as Os,u as Cn,b as Gp,_ as Cs}from"./index.c24ffa32.js";import{o as Wp,T as Hp,u as Qp,d as Zp,e as ed,_ as td}from"./index.0926be28.js";import{s as nd}from"./index.3b932361.js";import{s as rd,i as id}from"./vue.ffa8a759.js";import"./chart.45194597.js";import"./empty-status.vue_vue_type_script_setup_true_name_EmptyStatus_lang.1c359056.js";const ad=e=>Os.get(`https://api.github.com/gists/${e}`);function od(){return{getGistFiles:async t=>{const n=await ad(t);return Object.values(n.files)}}}const sd=`---
+import{d as _i,e as Se,aH as Re,C as Le,aE as _n,aG as be,aL as Pn,aM as On,u as te,k as Ps,aO as $p,aN as Vp,b7 as Kp,c as di,D as Nt,G as Up,aI as me,aF as lt,h as Xp,b8 as zp,o as Jp}from"./arco.6cd4d6d1.js";import{O as Os,u as Cn,b as Gp,_ as Cs}from"./index.06517362.js";import{o as Wp,T as Hp,u as Qp,d as Zp,e as ed,_ as td}from"./index.41d57f7d.js";import{s as nd}from"./index.aabf798c.js";import{s as rd,i as id}from"./vue.ffa8a759.js";import"./chart.45194597.js";import"./empty-status.vue_vue_type_script_setup_true_name_EmptyStatus_lang.a50d1caf.js";const ad=e=>Os.get(`https://api.github.com/gists/${e}`);function od(){return{getGistFiles:async t=>{const n=await ad(t);return Object.values(n.files)}}}const sd=`---
 title: Quick Start
 ---
 # Getting Started
@@ -53,9 +53,11 @@ Once the green marker appears, run \`DESC TABLE\` to view the details of the tab
 
 In GreptimeDB, there are three types of columns:
 
-- \`PRIMARY KEY\`: key columns that are used for sorting and partitioning
-- \`FIELD\`: columns which store table values
-- \`TIME INDEX\`: columns of data type TIME
+- \`Tag\` columns store metadata that is commonly queried.
+- \`Field\` columns store data indicators that are collected. The data indicators are generally numerical values.
+- \`Timestamp\` represents the date and time when the data was generated.
+
+For more information please refer to [Data Model](https://docs.greptime.com/user-guide/concepts/data-model).
 
 \`\`\`sql
 DESC TABLE cpu_metrics;
