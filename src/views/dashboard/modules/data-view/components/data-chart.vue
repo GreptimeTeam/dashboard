@@ -264,6 +264,7 @@ a-card(v-if="hasChart" :bordered="false")
     if (hasChart.value) {
       chartForm.selectedYTypes = [yOptions.value[0]]
       chartForm.xAxisType = xOptions.value[0]
+      chartForm.groupBySelectedTypes = [groupByOptions.value[0].name]
 
       Object.entries(props.defaultChartForm).forEach(([key, value]) => {
         ;(chartForm as any)[key] = (chartForm as any)[key] || value
