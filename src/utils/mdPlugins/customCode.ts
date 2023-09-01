@@ -25,9 +25,9 @@ export default function customCode(md: MarkdownIt) {
       /<pre><code class="language-(\w*?)">([\s\S]*)<\/code><\/pre>/,
       ($1: string, $2: string) => {
         const disabled = /sql|promql/.test($2.toLowerCase()) ? '' : 'disabled'
-        return `<code-editor lang="${$2}" defaultChartForm=${JSON.stringify(
+        return `<code-editor lang="${$2}" defaultChartForm='${JSON.stringify(
           defaultChartForm
-        )} ${disabled}>${$1}</code-editor>`
+        )}' ${disabled}>${$1}</code-editor>`
       }
     )
     return `${res}`
