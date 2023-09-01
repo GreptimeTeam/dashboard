@@ -205,20 +205,38 @@ a-card(v-if="hasChart" :bordered="false")
         },
       },
       axisLabel: {},
+      type: 'time',
     }
+
     const dataType = chartForm.xAxisType.data_type
     if (dataType === 'Date') {
-      xAxis.axisLabel.formatter = (value: any) => {
+      xAxis.axisLabel.formatter = (value: number) => {
         const date = dayjs(0).add(value, 'day').format('YYYY-MM-DD')
         return date
       }
+      xAxis.axisPointer = {
+        label: {
+          formatter: (params: any) => {
+            const { value } = params
+            const date = dayjs(0).add(value, 'day').format('YYYY-MM-DD')
+            return date
+          },
+        },
+      }
     } else if (dataType === 'DateTime') {
-      xAxis.axisLabel.formatter = (value: any) => {
+      xAxis.axisLabel.formatter = (value: number) => {
         const date = dayjs.unix(value).format('YYYY-MM-DD HH:mm:ss')
         return date
       }
-    } else {
-      xAxis.type = 'time'
+      xAxis.axisPointer = {
+        label: {
+          formatter: (params: any) => {
+            const { value } = params
+            const date = dayjs.unix(value).format('YYYY-MM-DD HH:mm:ss')
+            return date
+          },
+        },
+      }
     }
 
     return {
