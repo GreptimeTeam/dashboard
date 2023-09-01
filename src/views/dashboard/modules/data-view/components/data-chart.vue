@@ -58,7 +58,7 @@ a-card(v-if="hasChart" :bordered="false")
   import type { PropType } from 'vue'
   import type { datasetType, ResultType, ChartFormType, SeriesType } from '@/store/modules/code-run/types'
   import useDataChart from '@/hooks/data-chart'
-  import dayjs from 'dayjs'
+  import { dateFormatter } from '@/utils'
   import { chartTypeOptions, updateOptions } from '../../../config'
 
   const props = defineProps({
@@ -205,38 +205,27 @@ a-card(v-if="hasChart" :bordered="false")
         },
       },
       axisLabel: {},
-      type: 'time',
     }
 
     const dataType = chartForm.xAxisType.data_type
-    if (dataType === 'Date') {
+
+    if (dataType !== 'TimestampMillisecond') {
       xAxis.axisLabel.formatter = (value: number) => {
-        const date = dayjs(0).add(value, 'day').format('YYYY-MM-DD')
-        return date
+        return dateFormatter(dataType, value)
       }
       xAxis.axisPointer = {
         label: {
           formatter: (params: any) => {
             const { value } = params
-            const date = dayjs(0).add(value, 'day').format('YYYY-MM-DD')
-            return date
+            return dateFormatter(dataType, value)
           },
         },
       }
-    } else if (dataType === 'DateTime') {
-      xAxis.axisLabel.formatter = (value: number) => {
-        const date = dayjs.unix(value).format('YYYY-MM-DD HH:mm:ss')
-        return date
+      xAxis.min = (value: any) => {
+        return value.min
       }
-      xAxis.axisPointer = {
-        label: {
-          formatter: (params: any) => {
-            const { value } = params
-            const date = dayjs.unix(value).format('YYYY-MM-DD HH:mm:ss')
-            return date
-          },
-        },
-      }
+    } else {
+      xAxis.type = 'time'
     }
 
     return {
