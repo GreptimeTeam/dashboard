@@ -25,7 +25,7 @@ a-card(v-if="hasChart" :bordered="false")
             :trigger-props="triggerProps"
           )
             a-option(v-for="item of yOptions" :value="item" :label="item") {{ item }}
-        a-form-item.select-y(:label="$t('dashboard.xType')")
+        a-form-item(:label="$t('dashboard.xType')")
           a-select(
             v-model="chartForm.xAxisType"
             value-key="name"
