@@ -38,7 +38,7 @@
     "@codemirror/autocomplete": "^6.4.2",
     "@codemirror/basic-setup": "^0.20.0",
     "@codemirror/lang-python": "^6.1.0",
-    "@codemirror/lang-sql": "^6.3.1",
+    "@codemirror/lang-sql": "^6.5.2",
     "@codemirror/language": "^6.6.0",
     "@codemirror/lint": "^6.2.0",
     "@codemirror/state": "^6.2.0",
