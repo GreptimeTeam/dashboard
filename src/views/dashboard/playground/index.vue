@@ -9,7 +9,7 @@ a-layout.layout
     )
   a-layout-content
     .markdown-container(v-if="fileList[currentFile]")
-      RenderHtml(:md="fileList[currentFile]")
+      markdownRender(:md="fileList[currentFile]")
     RefreshPlaygroundModal(ref="refreshPlaygroundModal")
 </template>
 

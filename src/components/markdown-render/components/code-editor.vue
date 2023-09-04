@@ -45,7 +45,11 @@
     .operations(v-if="!disabled")
       a-button(:disabled="runDisabled" :loading="isLoading" @click="runCommand") {{ $t('playground.run') }}
       a-button(v-if="showReset" @click="reset") {{ $t('playground.reset') }}
-    CodeMirror(v-model="code" :extensions="extensions[lang]" :disabled="disabled")
+    CodeMirror(
+      v-model="code"
+      :extensions="[mapLanguages(lang)(), oneDark, keymap.of(defaultKeymap)]"
+      :disabled="disabled"
+    )
   .results(v-if="hasRecords")
     a-tabs.playground-tabs(:default-active-key="hasChart ? '2' : '1'")
       a-tab-pane(key="1" title="Table")
@@ -67,11 +71,10 @@
   import { keymap } from '@codemirror/view'
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
-  import { sql } from '@codemirror/lang-sql'
-  import { PromQLExtension } from '@prometheus-io/codemirror-promql'
   import useDataChart from '@/hooks/data-chart'
   import type { ResultType } from '@/store/modules/code-run/types'
-  import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '../config'
+  import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '@/views/dashboard/config'
+  import mapLanguages from './utils'
 
   // data
   const props = defineProps({
@@ -190,7 +193,6 @@
     triggerVisible.value = false
   }
 
-  const promQL = new PromQLExtension()
   const defaultKeymap = [
     {
       key: 'alt-Enter',
@@ -199,10 +201,7 @@
       },
     },
   ]
-  const extensions = {
-    sql: [sql(), oneDark, keymap.of(defaultKeymap as any)],
-    promql: [promQL.asExtension(), oneDark, keymap.of(defaultKeymap as any)],
-  }
+
   // lifecycle
 
   onBeforeUpdate(() => {
