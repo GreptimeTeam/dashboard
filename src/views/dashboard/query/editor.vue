@@ -78,6 +78,7 @@ a-card.editor-card.padding-16(:bordered="false")
   import { useCodeRunStore } from '@/store'
   import { keymap } from '@codemirror/view'
   import type { KeyBinding } from '@codemirror/view'
+  import type { TableTreeChild, TableTreeParent } from '@/store/modules/database/types'
   import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '../config'
 
   export interface Props {
@@ -116,6 +117,7 @@ a-card.editor-card.padding-16(:bordered="false")
   const rangePickerVisible = ref(false)
 
   const { runQuery } = useQueryCode()
+  const { originTablesTree } = storeToRefs(useDataBaseStore())
 
   const handleReady = (payload: any) => {
     view.value = payload.view
@@ -181,10 +183,27 @@ a-card.editor-card.padding-16(:bordered="false")
       },
     },
   ]
-  const extensions = {
-    sql: [sql(), oneDark, keymap.of(defaultKeymap as any)],
+
+  const sqlConfig = computed(() => {
+    const schema: { [key: string]: string[] } = {}
+    originTablesTree.value.forEach((item: TableTreeParent) => {
+      const columns = item.children.map((child: TableTreeChild) => child.title)
+      schema[item.title] = columns
+    })
+
+    return { schema }
+  })
+
+  const extensions: any = ref({
+    sql: [sql(sqlConfig.value), oneDark, keymap.of(defaultKeymap as any)],
     promQL: [promQL.asExtension(), oneDark],
-  }
+  })
+
+  watch(sqlConfig, () => {
+    extensions.value = {
+      sql: [sql(sqlConfig.value), oneDark, keymap.of(defaultKeymap as any)],
+    }
+  })
 
   const openTimeSelect = () => {
     rangePickerVisible.value = promForm.value.isRelative !== 1
