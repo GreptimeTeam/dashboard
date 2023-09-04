@@ -194,15 +194,13 @@ a-card.editor-card.padding-16(:bordered="false")
     return { schema }
   })
 
-  const extensions: any = ref({
+  const extensions = {
     sql: [sql(sqlConfig.value), oneDark, keymap.of(defaultKeymap as any)],
     promQL: [promQL.asExtension(), oneDark],
-  })
+  }
 
   watch(sqlConfig, () => {
-    extensions.value = {
-      sql: [sql(sqlConfig.value), oneDark, keymap.of(defaultKeymap as any)],
-    }
+    extensions.sql = [sql(sqlConfig.value), oneDark, keymap.of(defaultKeymap as any)]
   })
 
   const openTimeSelect = () => {
