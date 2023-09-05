@@ -24,6 +24,9 @@ dependencies:
   '@codemirror/lang-python':
     specifier: ^6.1.0
     version: 6.1.0(@codemirror/state@6.2.0)(@codemirror/view@6.9.3)(@lezer/common@1.0.2)
+  '@codemirror/lang-rust':
+    specifier: ^6.0.1
+    version: 6.0.1
   '@codemirror/lang-sql':
     specifier: ^6.3.1
     version: 6.3.1(@codemirror/view@6.9.3)(@lezer/common@1.0.2)
