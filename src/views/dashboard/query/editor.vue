@@ -78,6 +78,7 @@ a-card.editor-card.padding-16(:bordered="false")
   import { useCodeRunStore } from '@/store'
   import { keymap } from '@codemirror/view'
   import type { KeyBinding } from '@codemirror/view'
+  import type { TableTreeChild, TableTreeParent } from '@/store/modules/database/types'
   import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '../config'
 
   export interface Props {
@@ -116,6 +117,7 @@ a-card.editor-card.padding-16(:bordered="false")
   const rangePickerVisible = ref(false)
 
   const { runQuery } = useQueryCode()
+  const { originTablesTree } = storeToRefs(useDataBaseStore())
 
   const handleReady = (payload: any) => {
     view.value = payload.view
@@ -124,8 +126,6 @@ a-card.editor-card.padding-16(:bordered="false")
   const style = {
     height: '250px',
   }
-
-  const promQL = new PromQLExtension()
 
   // TODO: Try something better. CodeUpdate is constantly changing and the cost is too much.
   const codeUpdate = () => {
@@ -181,10 +181,38 @@ a-card.editor-card.padding-16(:bordered="false")
       },
     },
   ]
+
+  const hints = computed(() => {
+    const schema: { [key: string]: string[] } = {}
+    const initialMetricList = new Set<string>()
+    originTablesTree.value.forEach((item: TableTreeParent) => {
+      const columns = item.children.map((child: TableTreeChild) => {
+        initialMetricList.add(child.title)
+        return child.title
+      })
+      schema[item.title] = columns
+      initialMetricList.add(item.title)
+    })
+
+    return { sql: { schema }, promql: initialMetricList }
+  })
+
   const extensions = {
-    sql: [sql(), oneDark, keymap.of(defaultKeymap as any)],
-    promQL: [promQL.asExtension(), oneDark, keymap.of(defaultKeymap as any)],
+    sql: [sql(hints.value.sql), oneDark, keymap.of(defaultKeymap as any)],
+    promQL: [new PromQLExtension().asExtension(), oneDark, keymap.of(defaultKeymap as any)],
   }
+
+  watch(hints, () => {
+    extensions.sql = [sql(hints.value.sql), oneDark, keymap.of(defaultKeymap as any)]
+    const promQL = new PromQLExtension().setComplete({
+      remote: {
+        cache: {
+          initialMetricList: [...hints.value.promql],
+        },
+      },
+    })
+    extensions.promQL = [promQL.asExtension(), oneDark, keymap.of(defaultKeymap as any)]
+  })
 
   const openTimeSelect = () => {
     rangePickerVisible.value = promForm.value.isRelative !== 1

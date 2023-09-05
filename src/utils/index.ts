@@ -1,4 +1,5 @@
 import numeral from 'numeral'
+import dayjs from 'dayjs'
 
 type TargetContext = '_self' | '_parent' | '_blank' | '_top'
 
@@ -61,6 +62,24 @@ export function bigNumberFormatter(num: number, fixed = FIXED, places = PLACES, 
     s += ` ${units[Math.floor(pow / 3)]}`
   }
   return s
+}
+
+export const dateFormatter = (dataType: string, value: number | null) => {
+  switch (dataType) {
+    case 'Date':
+      return value && dayjs(0).add(value, 'day').format('YYYY-MM-DD HH:mm:ss')
+    case 'DateTime':
+    case 'TimestampSecond':
+      return value && dayjs.unix(value).format('YYYY-MM-DD HH:mm:ss')
+    case 'TimestampMillisecond':
+      return value && dayjs(value).format('YYYY-MM-DD HH:mm:ss')
+    case 'TimestampMicrosecond':
+      return value && dayjs(value / 1000).format('YYYY-MM-DD HH:mm:ss')
+    case 'TimestampNanosecond':
+      return value && dayjs(value / 1000000).format('YYYY-MM-DD HH:mm:ss')
+    default:
+      return null
+  }
 }
 
 export default null

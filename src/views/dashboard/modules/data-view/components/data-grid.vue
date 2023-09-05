@@ -37,6 +37,7 @@ a-card(:bordered="false")
   import { dateTypes, numberTypes } from '@/views/dashboard/config'
   import type { ResultType, SchemaType } from '@/store/modules/code-run/types'
   import dayjs from 'dayjs'
+  import { dateFormatter } from '@/utils'
 
   const props = withDefaults(
     defineProps<{
@@ -122,29 +123,11 @@ a-card(:bordered="false")
   const formatSuffix = '--FORMATTED'
 
   const handleFormatTimeColumn = (dataIndex: string, dataType: string) => {
-    const formatter = (value: number | null) => {
-      switch (dataType) {
-        case 'Date':
-          return value && dayjs(0).add(value, 'day').format('YYYY-MM-DD HH:mm:ss')
-        case 'DateTime':
-        case 'TimestampSecond':
-          return value && dayjs.unix(value).format('YYYY-MM-DD HH:mm:ss')
-        case 'TimestampMillisecond':
-          return value && dayjs(value).format('YYYY-MM-DD HH:mm:ss')
-        case 'TimestampMicrosecond':
-          return value && dayjs(value / 1000).format('YYYY-MM-DD HH:mm:ss')
-        case 'TimestampNanosecond':
-          return value && dayjs(value / 1000000).format('YYYY-MM-DD HH:mm:ss')
-        default:
-          return null
-      }
-    }
-
     timeColumnFormatMap.value[dataIndex] = !timeColumnFormatMap.value[dataIndex]
     // calculate formatted time data on first access
     if (gridData.value.length && !gridData.value[0][`${dataIndex}${formatSuffix}`]) {
       gridData.value.forEach((row: any) => {
-        row[`${dataIndex}${formatSuffix}`] = formatter(row[dataIndex])
+        row[`${dataIndex}${formatSuffix}`] = dateFormatter(dataType, row[dataIndex])
       })
     }
   }

@@ -17,6 +17,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
   const resultKeyCount = reactive<{ [key: string]: number }>({})
 
   // TODO: Add all the types we decide instead of ECharts if needed in the future.
+  // Delete default X name?
   const getDimensionsAndXName = (schemas: SchemaType[]) => {
     const dimensions: Array<DimensionType> = []
     let xAxis = ''
