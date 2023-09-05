@@ -234,6 +234,7 @@ a-card(v-if="hasChart" :bordered="false")
       },
       tooltip: {
         trigger: 'axis',
+        appendToBody: true,
       },
       dataset,
       xAxis,
