@@ -42,28 +42,6 @@ export const regexUrl = new RegExp(
   'i'
 )
 
-export function bigNumberFormatter(num: number, fixed = FIXED, places = PLACES, tiny = false): string {
-  if (!num) return tiny ? '0' : '0 '
-  if (num < 1000) return tiny ? num.toFixed(fixed) : `${num} `
-
-  if (typeof places === 'string') {
-    for (let i = 0; i < units.length; i += 1) {
-      if (places === units[i]) {
-        places = i * 3
-        break
-      }
-    }
-  }
-
-  const pow = Math.min(Math.floor(Math.log(Math.abs(num)) / Math.log(10)), places)
-
-  let s = `${numeral(num / 10 ** (Math.floor(pow / 3) * 3)).format(`0,0[.]${'0'.repeat(fixed)}`)}`
-  if (!tiny) {
-    s += ` ${units[Math.floor(pow / 3)]}`
-  }
-  return s
-}
-
 export const dateFormatter = (dataType: string, value: number | null) => {
   switch (dataType) {
     case 'Date':

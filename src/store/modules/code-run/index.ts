@@ -53,7 +53,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
     try {
       // TODO: try something better
       let oneResult = {} as ResultType
-      const res: HttpResponse = await API_MAP[type.toLowerCase()](codeInfo)
+      const res: HttpResponse = await API_MAP[type](codeInfo)
       Message.success({
         content: i18n.global.t('dashboard.runSuccess'),
         duration: 2 * 1000,
@@ -99,7 +99,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
         codeInfo,
         results: resultsInLog,
       }
-      if (type.toLowerCase() === 'promql') {
+      if (type === 'promql') {
         oneLog.promInfo = {
           Start: dayjs.unix(+promForm.value.start).format('YYYY-MM-DD HH:mm:ss'),
           End: dayjs.unix(+promForm.value.end).format('YYYY-MM-DD HH:mm:ss'),

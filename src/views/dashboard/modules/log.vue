@@ -31,7 +31,7 @@ a-list-item.smaller-divider
           span {{ log.codeInfo }}
         template(#content)
           a-list(size="small" :split="false" :bordered="false")
-            a-list-item(v-if="log.type.toLowerCase() === 'promql'" v-for="(value, name) in log.promInfo")
+            a-list-item(v-if="log.type === 'promql'" v-for="(value, name) in log.promInfo")
               span.width-35 {{ name }}
               a-typography-text.ml-4(code) {{ value }}
             a-list-item(v-else) {{ log.codeInfo }}

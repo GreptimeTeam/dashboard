@@ -109,7 +109,7 @@ export default function useQueryCode() {
 
   const isButtonDisabled = computed(() => {
     if (queryCode.value.trim().length === 0) return true
-    if (queryType.value.toLowerCase() === 'promql') {
+    if (queryType.value === 'promql') {
       const hasRange = promForm.value.range ? promForm.value.range.length > 0 : false
       if (promForm.value.step.trim().length === 0 || (!promForm.value.isRelative && !hasRange)) {
         return true

@@ -1,6 +1,5 @@
 export default function useCodeGroups() {
   document.querySelectorAll('.code-group > .blocks').forEach((el) => {
-    console.log(`el:`, el)
     Array.from(el.children).forEach((child) => {
       child.classList.remove('active')
     })
