@@ -17,7 +17,7 @@ a-layout.layout
   const { logs } = storeToRefs(useLogStore())
   const { getResultsByType } = useQueryCode()
 
-  const types = ['sql', 'promQL']
+  const types = ['sql', 'promql']
 
   const results = computed(() => getResultsByType(types))
   const queryLogs = computed(() => logs.value.filter((log) => types.includes(log.type)))

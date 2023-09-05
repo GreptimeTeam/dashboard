@@ -19,14 +19,14 @@ const queryOptions = [
     label: 'SQL',
   },
   {
-    value: 'promQL',
+    value: 'promql',
     label: 'PromQL',
   },
 ]
 
 const codes = ref({
   sql: sqlCode,
-  promQL: promQLCode,
+  promql: promQLCode,
 } as stringType)
 
 const promForm = ref({

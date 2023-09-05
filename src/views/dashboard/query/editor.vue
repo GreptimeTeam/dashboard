@@ -199,19 +199,19 @@ a-card.editor-card.padding-16(:bordered="false")
 
   const extensions = {
     sql: [sql(hints.value.sql), oneDark, keymap.of(defaultKeymap as any)],
-    promQL: [new PromQLExtension().asExtension(), oneDark, keymap.of(defaultKeymap as any)],
+    promql: [new PromQLExtension().asExtension(), oneDark, keymap.of(defaultKeymap as any)],
   }
 
   watch(hints, () => {
     extensions.sql = [sql(hints.value.sql), oneDark, keymap.of(defaultKeymap as any)]
-    const promQL = new PromQLExtension().setComplete({
+    const promql = new PromQLExtension().setComplete({
       remote: {
         cache: {
           initialMetricList: [...hints.value.promql],
         },
       },
     })
-    extensions.promQL = [promQL.asExtension(), oneDark, keymap.of(defaultKeymap as any)]
+    extensions.promql = [promql.asExtension(), oneDark, keymap.of(defaultKeymap as any)]
   })
 
   const openTimeSelect = () => {
