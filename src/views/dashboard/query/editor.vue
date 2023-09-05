@@ -127,8 +127,6 @@ a-card.editor-card.padding-16(:bordered="false")
     height: '250px',
   }
 
-  const promQL = new PromQLExtension()
-
   // TODO: Try something better. CodeUpdate is constantly changing and the cost is too much.
   const codeUpdate = () => {
     if (view.value) {
@@ -184,23 +182,36 @@ a-card.editor-card.padding-16(:bordered="false")
     },
   ]
 
-  const sqlConfig = computed(() => {
+  const hints = computed(() => {
     const schema: { [key: string]: string[] } = {}
+    const initialMetricList = new Set<string>()
     originTablesTree.value.forEach((item: TableTreeParent) => {
-      const columns = item.children.map((child: TableTreeChild) => child.title)
+      const columns = item.children.map((child: TableTreeChild) => {
+        initialMetricList.add(child.title)
+        return child.title
+      })
       schema[item.title] = columns
+      initialMetricList.add(item.title)
     })
 
-    return { schema }
+    return { sql: { schema }, promql: initialMetricList }
   })
 
   const extensions = {
-    sql: [sql(sqlConfig.value), oneDark, keymap.of(defaultKeymap as any)],
-    promQL: [promQL.asExtension(), oneDark],
+    sql: [sql(hints.value.sql), oneDark, keymap.of(defaultKeymap as any)],
+    promQL: [new PromQLExtension().asExtension(), oneDark],
   }
 
-  watch(sqlConfig, () => {
-    extensions.sql = [sql(sqlConfig.value), oneDark, keymap.of(defaultKeymap as any)]
+  watch(hints, () => {
+    extensions.sql = [sql(hints.value.sql), oneDark, keymap.of(defaultKeymap as any)]
+    const promQL = new PromQLExtension().setComplete({
+      remote: {
+        cache: {
+          initialMetricList: [...hints.value.promql],
+        },
+      },
+    })
+    extensions.promQL = [promQL.asExtension(), oneDark]
   })
 
   const openTimeSelect = () => {
