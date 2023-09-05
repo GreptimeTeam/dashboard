@@ -1,13 +1,53 @@
 ---
 title: Quick Start
 ---
+
 # Getting Started
 
+```javascript
+import SqlOperation from './operation'
+import { SqlState, SqlInsertValuesState, SqlConfigState, InsertQueueConfigState } from '../type/sql'
+
+import axios from 'axios'
+
+const qs = require('qs')
+
+class Sql extends SqlOperation {
+  url: string
+  sql: SqlState
+  insertQueueConfig: InsertQueueConfigState
+  insertValues: Map<string, SqlInsertValuesState>
+  timeoutId: Map<string, ReturnType<typeof setTimeout>>
+
+  constructor(dbname: string, sqlConfig: SqlConfigState) {
+    super()
+    this.sql = {} as SqlState
+    this.insertQueueConfig = sqlConfig.insertQueueConfig
+    this.insertValues = new Map()
+    this.url = `/v1/sql?db=${dbname}`
+    this.timeoutId = new Map()
+  }
+
+  runSQL = async function (sql) {
+    let res: any = await axios.post(
+      this.url,
+      qs.stringify({
+        sql,
+      })
+    )
+    return await res
+  }
+}
+
+export default Sql
+```
+
 ## Preface
-Greetings from Greptime Play! Apart from just following a word-document guide, this interactive playground will quickly familiarize you with GreptimeDB and help you to get the most out of it. 
+
+Greetings from Greptime Play! Apart from just following a word-document guide, this interactive playground will quickly familiarize you with GreptimeDB and help you to get the most out of it.
 
 ::: tip Cool feature alert:
-All code blocks in this guide are editable and executable! 
+All code blocks in this guide are editable and executable!
 :::
 
 By hitting the `Run` button, the code will be executed and run in a temporary, private instance generated
@@ -29,10 +69,9 @@ We will focus on an example of CPU usage in this document. The example is based 
 
 We will create a table named `cpu_metrics` and insert some data into it. Then we will use SQL to query the data. The query language used in this example is SQL. Let's get started!
 
-
 ## Create a Time-Series Table
 
-Let's start the journey by creating a simple `cpu_metrics` table. Note that we pre-defined 
+Let's start the journey by creating a simple `cpu_metrics` table. Note that we pre-defined
 `hostname` and `environment` as the primary keys; `ts` as time index, both are important to know
 in GreptimeDB. Click `Run` on the upper left in the panel below to create the table:
 
@@ -63,13 +102,13 @@ For more information please refer to [Data Model](https://docs.greptime.com/user
 DESC TABLE cpu_metrics;
 ```
 
-GreptimeDB offers a schemaless approach to writing data that eliminates the need to manually create tables using additional protocols. See [Automatic Schema Generation](https://docs.greptime.com/user-guide/write-data#automatic-schema-generation). 
+GreptimeDB offers a schemaless approach to writing data that eliminates the need to manually create tables using additional protocols. See [Automatic Schema Generation](https://docs.greptime.com/user-guide/write-data#automatic-schema-generation).
 
 ## Add Some Data
 
 Using the `INSERT` statement to easily add data to the table. Below example inserts three rows into the `cpu_metrics` table.
 
-``` sql
+```sql
 INSERT INTO cpu_metrics
 VALUES
     ('host_0','test',32,58,36,1680307200050),
@@ -93,11 +132,9 @@ VALUES
     ('host_2','test',100,5,36,1680307320150);
 ```
 
-
 Ingest more entries by modifying the values and timestamps.
 
-
-``` sql
+```sql
 INSERT INTO cpu_metrics
 VALUES
     ('host_3','test',93,97,8,1680307320150),
@@ -126,13 +163,13 @@ See more about [`INSERT` clause](https://docs.greptime.com/reference/sql/insert)
 
 Run the following SQL statement to query all rows in the table. After getting the results, click the `Chart` tab to see the visualized data. You can choose `Group By` options to make the visualized data group by `hostname` and `environment`.
 
-``` sql
+```sql
 SELECT * FROM cpu_metrics ORDER BY ts DESC;
 ```
 
 You can also use `count()` function to get the number of rows in the table.
 
-``` sql
+```sql
 SELECT count(*) FROM cpu_metrics;
 ```
 
@@ -140,17 +177,17 @@ SELECT count(*) FROM cpu_metrics;
 
 Basic arithmetic can be performed on the selected column. For example, the following SQL statement selects the `usage_user` column and mutiply each value by 2.
 
-``` sql
+```sql
 SELECT usage_user, usage_user * 2 as twice_usage_user FROM cpu_metrics;
 ```
 
 See more about [`SELECT` clause](https://docs.greptime.com/reference/sql/select).
 
-### Filter data by `WHERE` clause 
+### Filter data by `WHERE` clause
 
 The `WHERE` clause can be used to filter data. It supports comparisons against string, boolean, and numeric values. The following SQL statement selects the rows where the `usage_user` is greater than 50.
 
-``` sql
+```sql
 SELECT * FROM cpu_metrics WHERE usage_user > 50;
 ```
 
@@ -160,8 +197,8 @@ See more about [`WHERE` clause](https://docs.greptime.com/reference/sql/where).
 
 Developers always want to see the general CPU usage to check if there are any problems with the resources. For example, the following SQL statement returns the average CPU usage group by hosts.
 
-``` sql
-SELECT hostname, 
+```sql
+SELECT hostname,
     avg(usage_user) as usage_user_avg
     FROM cpu_metrics
     GROUP BY hostname;
@@ -169,8 +206,8 @@ SELECT hostname,
 
 Multiple fields can be grouped together. The following SQL statement returns the average CPU usage group by `hostname` and `environment`. The `mean` function alias of `avg` function also can be used to calculate the average value of each field.
 
-``` sql
-SELECT hostname, environment, 
+```sql
+SELECT hostname, environment,
     mean(usage_user) as usage_user_avg
     FROM cpu_metrics
     GROUP BY hostname, environment;
@@ -178,11 +215,11 @@ SELECT hostname, environment,
 
 95 percent usage reflects the peak usage of the CPU. The following SQL statement returns the 95 percent CPU usage group by `hostname` and `environment`.
 
-``` sql
-SELECT hostname, environment, 
-    approx_percentile_cont(usage_user, 0.95) as usage_user_95, 
-    approx_percentile_cont(usage_system, 0.95) as usage_system_95, 
-    approx_percentile_cont(usage_idle, 0.95) as usage_idle_95 
+```sql
+SELECT hostname, environment,
+    approx_percentile_cont(usage_user, 0.95) as usage_user_95,
+    approx_percentile_cont(usage_system, 0.95) as usage_system_95,
+    approx_percentile_cont(usage_idle, 0.95) as usage_idle_95
     FROM cpu_metrics
     GROUP BY hostname, environment;
 ```
@@ -193,12 +230,12 @@ See more about [`GROUP BY` clause](https://docs.greptime.com/reference/sql/group
 
 One important scenario for time series data is to group it by time intervals to monitor its trend. The following SQL statement returns the average CPU usage of all hosts every second.
 
-``` sql
+```sql
 select date_trunc('second', ts) as dt,
     avg(usage_user),
     avg(usage_system),
     avg(usage_idle)
-    FROM cpu_metrics 
+    FROM cpu_metrics
     GROUP BY dt
 ```
 
@@ -217,14 +254,11 @@ and try out:
 
 ## Try it Out
 
-
 Please start exploring by writing some queries in the panel below!
-
 
 ```sql
 
 ```
-
 
 For other advanced features like scripting and protocol supports,
 [Download](https://greptime.com/download/) and run GreptimeDB locally by
