@@ -243,6 +243,8 @@ a-card(v-if="hasChart" :bordered="false")
             type: 'solid',
           },
         },
+        min: 'dataMin',
+        max: 'dataMax',
       },
       series,
     }

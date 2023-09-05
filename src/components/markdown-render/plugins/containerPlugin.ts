@@ -1,27 +1,22 @@
 import type MarkdownIt from 'markdown-it'
-import type { RenderRule } from 'markdown-it/lib/renderer'
-import type Token from 'markdown-it/lib/token'
 import container from 'markdown-it-container'
+import type { RenderRule } from 'markdown-it/lib/renderer'
 import { nanoid } from 'nanoid'
-import { extractTitle } from './preWrapper'
-
-export default function containerPlugin(md: MarkdownIt) {
-  md.use(...createContainer('tip', 'TIP', md))
-    .use(...createContainer('info', 'INFO', md))
-    .use(...createContainer('warning', 'WARNING', md))
-    .use(...createContainer('danger', 'DANGER', md))
-    .use(...createContainer('details', 'Details', md))
-    // explicitly escape Vue syntax
-    .use(container, 'v-pre', {
-      render: (tokens: Token[], idx: number) => (tokens[idx].nesting === 1 ? `<div v-pre>\n` : `</div>\n`),
-    })
-    .use(container, 'raw', {
-      render: (tokens: Token[], idx: number) => (tokens[idx].nesting === 1 ? `<div class="vp-raw">\n` : `</div>\n`),
-    })
-    .use(...createCodeGroup())
-}
+import type Token from 'markdown-it/lib/token'
 
 type ContainerArgs = [typeof container, string, { render: RenderRule }]
+
+const extractLang = (info: string) => {
+  return info
+    .trim()
+    .replace(/:(no-)?line-numbers$/, '')
+    .replace(/(-vue|{| ).*$/, '')
+    .replace(/^vue-html$/, 'template')
+}
+
+const extractTitle = (info: string) => {
+  return info.match(/\[(.*)\]/)?.[1] || extractLang(info) || 'txt'
+}
 
 function createContainer(klass: string, defaultTitle: string, md: MarkdownIt): ContainerArgs {
   return [
@@ -37,14 +32,12 @@ function createContainer(klass: string, defaultTitle: string, md: MarkdownIt): C
             return `<details class="${klass} custom-block"><summary>${title}</summary>\n`
           }
           return `<div class="${klass} custom-block"><p class="custom-block-title">${title}</p>\n`
-        } else {
-          return klass === 'details' ? `</details>\n` : `</div>\n`
         }
+        return klass === 'details' ? `</details>\n` : `</div>\n`
       },
     },
   ]
 }
-
 function createCodeGroup(): ContainerArgs {
   return [
     container,
@@ -56,7 +49,11 @@ function createCodeGroup(): ContainerArgs {
           let tabs = ''
           let checked = 'checked="checked"'
 
-          for (let i = idx + 1; !(tokens[i].nesting === -1 && tokens[i].type === 'container_code-group_close'); ++i) {
+          for (
+            let i = idx + 1;
+            !(tokens[i].nesting === -1 && tokens[i].type === 'container_code-group_close');
+            i += 1
+          ) {
             if (tokens[i].type === 'fence' && tokens[i].tag === 'code') {
               const title = extractTitle(tokens[i].info)
               const id = nanoid(7)
@@ -69,10 +66,25 @@ function createCodeGroup(): ContainerArgs {
             }
           }
 
-          return `<div class="vp-code-group"><div class="tabs">${tabs}</div><div class="blocks">\n`
+          return `<div class="code-group"><div class="tabs">${tabs}</div><div class="blocks">\n`
         }
         return `</div></div>\n`
       },
     },
   ]
+}
+export default function containerPlugin(md: MarkdownIt) {
+  md.use(...createContainer('tip', 'TIP', md))
+    .use(...createContainer('info', 'INFO', md))
+    .use(...createContainer('warning', 'WARNING', md))
+    .use(...createContainer('danger', 'DANGER', md))
+    .use(...createContainer('details', 'Details', md))
+    // explicitly escape Vue syntax
+    .use(container, 'v-pre', {
+      render: (tokens: Token[], idx: number) => (tokens[idx].nesting === 1 ? `<div v-pre>\n` : `</div>\n`),
+    })
+    .use(container, 'raw', {
+      render: (tokens: Token[], idx: number) => (tokens[idx].nesting === 1 ? `<div class="vp-raw">\n` : `</div>\n`),
+    })
+    .use(...createCodeGroup())
 }

@@ -1,6 +1,11 @@
+import numeral from 'numeral'
 import dayjs from 'dayjs'
 
 type TargetContext = '_self' | '_parent' | '_blank' | '_top'
+
+const units = ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y']
+const PLACES = 15
+const FIXED = 2
 
 export const openWindow = (url: string, opts?: { target?: TargetContext; [key: string]: any }) => {
   const { target = '_blank', ...others } = opts || {}

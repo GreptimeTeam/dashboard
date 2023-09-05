@@ -1,11 +1,10 @@
 <script>
-  import MarkdownIt from 'markdown-it'
-  import plugins from '@/utils/mdPlugins'
-  import meta from 'markdown-it-meta'
-  import comments from 'markdown-it-inline-comments'
   import { compile, h } from 'vue'
-  import { objectExpression } from '@babel/types'
-  import CodeEditor from './code-editor.vue'
+  import meta from 'markdown-it-meta'
+  import MarkdownIt from 'markdown-it'
+  import plugins from './plugins'
+  import CodeEditor from './components/code-editor.vue'
+  import codeGroups from './composables/codeGroups'
 
   const md = new MarkdownIt()
   md.use(meta)
@@ -28,13 +27,26 @@
     watch: {
       md: {
         handler(val) {
+          const state = useAppStore()
+
+          const content = val?.replace(/<([^>]+)>/g, (match, key) => {
+            return state[key] || match
+          })
+
+          const mdContent = md.render(content || '')
+
+          this.renderedDocument = mdContent
           this.renderedDocument = md.render(val || '')
         },
         immediate: true,
       },
+    },
+    mounted: () => {
+      codeGroups()
     },
     render() {
       return h(compile(this.renderedDocument)(this))
     },
   }
 </script>
+@/components/markdown-render/mdPlugins

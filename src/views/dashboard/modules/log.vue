@@ -31,7 +31,7 @@ a-list-item.smaller-divider
           span {{ log.codeInfo }}
         template(#content)
           a-list(size="small" :split="false" :bordered="false")
-            a-list-item(v-if="log.type === 'promQL'" v-for="(value, name) in log.promInfo")
+            a-list-item(v-if="log.type === 'promql'" v-for="(value, name) in log.promInfo")
               span.width-35 {{ name }}
               a-typography-text.ml-4(code) {{ value }}
             a-list-item(v-else) {{ log.codeInfo }}
@@ -47,18 +47,23 @@ a-list-item.smaller-divider
   import { format } from 'sql-formatter'
 
   const route = useRoute()
-  const { codeType } = storeToRefs(useAppStore())
+  const { codeType: GlobalCodeType } = storeToRefs(useAppStore())
   const props = defineProps({
     log: {
       type: Object,
       default: () => ({}),
+    },
+    codeType: {
+      type: String,
+      default: 'sql',
     },
   })
 
   const hasExecutionTime = Reflect.has(props.log, 'execution_time_ms')
 
   const codeFormatter = (code: string) => {
-    if (codeType.value === 'sql') return format(code, { language: 'mysql', keywordCase: 'upper' })
+    if ((props.codeType || GlobalCodeType.value) === 'sql')
+      return format(code, { language: 'mysql', keywordCase: 'upper' })
     return code
   }
 </script>
