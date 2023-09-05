@@ -19,7 +19,7 @@ const mapLanguages = (value: string): any => {
     bash: () => StreamLanguage.define(shell),
     promql: () => new PromQLExtension().asExtension(),
   }
-  return mappedLanguages[value] || mapLanguages('bash')
+  return mappedLanguages[value.toLowerCase()] || mapLanguages('bash')
 }
 
 export default mapLanguages
