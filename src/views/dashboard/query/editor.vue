@@ -206,6 +206,7 @@ a-card.editor-card.padding-16(:bordered="false")
     extensions.sql = [sql(hints.value.sql), oneDark, keymap.of(defaultKeymap as any)]
     const promql = new PromQLExtension().setComplete({
       remote: {
+        fetchFn: () => Promise.reject(),
         cache: {
           initialMetricList: [...hints.value.promql],
         },
