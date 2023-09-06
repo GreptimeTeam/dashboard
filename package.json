@@ -60,7 +60,7 @@
     "dayjs": "^1.11.7",
     "echarts": "^5.4.1",
     "eslint-plugin": "^1.0.1",
-    "go": "link:@codemirror/legacy-modes/mode/go",
+    "go": "file:@codemirror/legacy-modes/mode/go",
     "json-bigint": "^1.0.0",
     "lodash": "^4.17.21",
     "markdown-it-container": "^3.0.0",
