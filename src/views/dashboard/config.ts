@@ -80,3 +80,13 @@ export const queryTimeMap: { [key: number]: string } = {
   30: 'Last 30 minutes',
   60: 'Last 60 minutes',
 }
+
+// New: `TAG`, `FIELD`, `TIMESTAMP`
+// Old: `PRIMARY KEY`, `FIELD`, `TIME INDEX`
+export const SEMANTIC_TYPE_MAP: { [key: string]: string } = {
+  'FIELD': 'FIELD',
+  'TAG': 'TAG',
+  'PRIMARY KEY': 'TAG',
+  'TIMESTAMP': 'TIMESTAMP',
+  'TIME INDEX': 'TIMESTAMP',
+}

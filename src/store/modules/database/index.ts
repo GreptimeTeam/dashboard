@@ -1,5 +1,7 @@
 import editorAPI from '@/api/editor'
+import { SEMANTIC_TYPE_MAP } from '@/views/dashboard/config'
 import { ScriptTreeData, TableTreeChild, TableTreeParent } from './types'
+import { SchemaType } from '../code-run/types'
 
 const useDataBaseStore = defineStore('database', () => {
   const { database } = storeToRefs(useAppStore())
@@ -26,6 +28,40 @@ const useDataBaseStore = defineStore('database', () => {
       })
     }
     return tempArray
+  }
+
+  const generateTreeChildren = (nodeData: TableTreeParent, rows: string[][], columnSchemas: SchemaType[]) => {
+    const treeChildren: TableTreeChild[] = []
+    const columnNameIndex = columnSchemas.findIndex((schema: SchemaType) => {
+      return schema.name === 'Field' || schema.name === 'Column'
+    })
+    const dataTypeIndex = columnSchemas.findIndex((schema: SchemaType) => {
+      return schema.name === 'Type'
+    })
+
+    const semanticTypeIndex = columnSchemas.findIndex((schema: SchemaType) => {
+      return schema.name === 'Semantic Type'
+    })
+    let timeIndexName = '%TIMESTAMP%'
+
+    rows.forEach((row: string[]) => {
+      const iconType = SEMANTIC_TYPE_MAP[row[semanticTypeIndex]]
+      if (iconType === 'TIMESTAMP') {
+        timeIndexName = row[columnNameIndex]
+      }
+      treeChildren.push({
+        title: row[columnNameIndex],
+        key: `${nodeData.title}.${row[columnNameIndex]}`,
+        isLeaf: true,
+        dataType: row[dataTypeIndex],
+        iconType,
+        parentKey: nodeData.key,
+      })
+    })
+    return {
+      treeChildren,
+      timeIndexName,
+    }
   }
 
   const addChildren = (key: number, children: TableTreeChild[], timeIndexName: string) => {
@@ -108,6 +144,7 @@ const useDataBaseStore = defineStore('database', () => {
     getTableByName,
     getScriptsTable,
     resetData,
+    generateTreeChildren,
   }
 })
 
