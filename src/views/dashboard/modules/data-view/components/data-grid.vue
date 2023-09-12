@@ -52,12 +52,7 @@ a-card(:bordered="false")
     }
   )
 
-  const pagination = {
-    'total': props.data?.records.rows.length,
-    'show-page-size': true,
-    'show-total': true,
-    'show-jumper': true,
-  }
+  const pagination = ref({})
 
   // replace '.' with '-' to make it a valid data-index
   // useful when '.' is used in column name, such as `SELECT 1.1`, `SELECT 1 AS a.b`
@@ -134,4 +129,13 @@ a-card(:bordered="false")
 
   /** use a fixed width for the time column to prevent the width from changing automatically after formatting  */
   const timeColumnWidth = 180
+
+  onUpdated(() => {
+    pagination.value = {
+      'total': props.data?.records.rows.length,
+      'show-page-size': true,
+      'show-total': true,
+      'show-jumper': true,
+    }
+  })
 </script>
