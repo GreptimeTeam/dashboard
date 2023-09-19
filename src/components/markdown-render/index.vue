@@ -28,15 +28,13 @@
       md: {
         handler(val) {
           const state = useAppStore()
+          state.authorization = `${btoa(`${state.username}:${state.password}`)}`
 
           const content = val?.replace(/<([^>]+)>/g, (match, key) => {
             return state[key] || match
           })
 
-          const mdContent = md.render(content || '')
-
-          this.renderedDocument = mdContent
-          this.renderedDocument = md.render(val || '')
+          this.renderedDocument = md.render(content || '')
         },
         immediate: true,
       },
