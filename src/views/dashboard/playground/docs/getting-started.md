@@ -125,7 +125,7 @@ See more about [`INSERT` clause](https://docs.greptime.com/reference/sql/insert)
 
 Run the following SQL statement to query all rows in the table. After getting the results, click the `Chart` tab to see the visualized data. You can choose `Group By` options to make the visualized data group by `hostname` and `environment`.
 
-```sql
+```sql (line|usage_user|ts|hostname,environment)
 SELECT * FROM cpu_metrics ORDER BY ts DESC;
 ```
 
@@ -149,7 +149,7 @@ See more about [`SELECT` clause](https://docs.greptime.com/reference/sql/select)
 
 The `WHERE` clause can be used to filter data. It supports comparisons against string, boolean, and numeric values. The following SQL statement selects the rows where the `usage_user` is greater than 50.
 
-```sql
+```sql (line|usage_user|ts|hostname,environment)
 SELECT * FROM cpu_metrics WHERE usage_user > 50;
 ```
 
@@ -192,11 +192,11 @@ See more about [`GROUP BY` clause](https://docs.greptime.com/reference/sql/group
 
 One important scenario for time series data is to group it by time intervals to monitor its trend. The following SQL statement returns the average CPU usage of all hosts every second.
 
-```sql
+```sql (line|avg_user,avg_system,avg_idle|dt|dt)
 select date_trunc('second', ts) as dt,
-    avg(usage_user),
-    avg(usage_system),
-    avg(usage_idle)
+    avg(usage_user) as avg_user,
+    avg(usage_system) as avg_system,
+    avg(usage_idle) as avg_idle
     FROM cpu_metrics
     GROUP BY dt
 ```
