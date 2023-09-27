@@ -7,7 +7,7 @@
           flex-direction="row-reverse"
           button-class="query-time-button"
           :trigger-visible="triggerVisible"
-          :is-relative="promForm.isRelative === 1"
+          :is-relative="promForm.time !== 0"
           :range-picker-visible="rangePickerVisible"
           :time-length="promForm.time"
           :time-range="promForm.range"
@@ -25,8 +25,7 @@
           :style="{ width: '180px' }"
           :placeholder="$t('dashboard.step')"
         )
-          template(#prefix)
-            | Step
+          template(#prefix) Step
           template(#suffix)
             a-popover(trigger="hover")
               svg.icon
@@ -50,6 +49,9 @@
       :extensions="[mapLanguages(lang)(), oneDark, keymap.of(defaultKeymap)]"
       :disabled="disabled"
     )
+    a-button.copy(type="text" title="Copy Code" @click="copy")
+      svg.iconpark-icon
+        use(href="#copy182x")
   .results(v-if="hasRecords")
     a-tabs.playground-tabs(:default-active-key="hasChart ? '2' : '1'")
       a-tab-pane(key="1" title="Table")
@@ -72,8 +74,10 @@
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
   import useDataChart from '@/hooks/data-chart'
-  import type { ResultType } from '@/store/modules/code-run/types'
+  import type { PromForm, ResultType } from '@/store/modules/code-run/types'
   import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '@/views/dashboard/config'
+  import i18n from '@/locale'
+  import { Message } from '@arco-design/web-vue'
   import mapLanguages from './utils'
 
   // data
@@ -91,8 +95,18 @@
       default: 'sql',
     },
   })
+
   const isLoading = ref(false)
-  const { runQuery, promForm } = useQueryCode()
+  const { runQuery } = useQueryCode()
+  const promForm = ref<PromForm>(
+    Object.keys(props.defaultChartForm).length
+      ? JSON.parse(props.defaultChartForm)
+      : {
+          time: 5,
+          step: '30s',
+          range: [dayjs().subtract(5, 'minute').unix().toString(), dayjs().unix().toString()],
+        }
+  )
   const slots = useSlots()
   const appStore = useAppStore()
   const hasChart = ref(false)
@@ -142,7 +156,7 @@
   }
   const runCommand = async () => {
     isLoading.value = true
-    const res = await runQuery(code.value.trim(), props.lang, true)
+    const res = await runQuery(code.value.trim(), props.lang, true, promForm.value)
     if (res.lastResult?.records) {
       hasRecords.value = true
       result.value = res.lastResult
@@ -156,6 +170,13 @@
     // todo: refresh tables data and when
   }
 
+  const copy = () => {
+    navigator.clipboard.writeText(code.value)
+    Message.success({
+      content: i18n.global.t('copied'),
+      duration: 2 * 1000,
+    })
+  }
   const showReset = computed(() => {
     return code.value !== defaultCode
   })
@@ -170,7 +191,7 @@
   }))
 
   const openTimeSelect = () => {
-    rangePickerVisible.value = promForm.value.isRelative !== 1
+    rangePickerVisible.value = promForm.value.time === 0
     triggerVisible.value = true
   }
 
@@ -180,15 +201,13 @@
 
   const selectTimeRange = (range: string[]) => {
     promForm.value.range = range
-    promForm.value.time = -1
-    promForm.value.isRelative = 0
+    promForm.value.time = 0
     rangePickerVisible.value = false
     triggerVisible.value = false
   }
 
   const selectTimeLength = (value: number) => {
     promForm.value.time = value
-    promForm.value.isRelative = 1
     rangePickerVisible.value = false
     triggerVisible.value = false
   }
@@ -216,6 +235,7 @@
     margin-bottom: 20px;
 
     .code {
+      position: relative;
       display: flex;
       width: 100%;
 
@@ -244,6 +264,40 @@
 
     :deep(.arco-btn) {
       min-width: 80px;
+    }
+
+    &:hover .copy {
+      opacity: 1;
+    }
+
+    .copy {
+      opacity: 0;
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      min-width: 10px;
+      padding: 0;
+      right: 10px;
+      top: 10px;
+      z-index: 1;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.3s;
+      background-color: var(--vp-c-black-mute);
+
+      &:hover {
+        background-color: var(--vp-c-black-mute);
+      }
+
+      svg {
+        color: var(--vp-c-gray-light-2);
+        width: 20px;
+        height: 20px;
+
+        &:hover {
+          color: var(--vp-c-white-soft);
+        }
+      }
     }
   }
 </style>

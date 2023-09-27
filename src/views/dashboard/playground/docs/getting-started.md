@@ -125,7 +125,7 @@ See more about [`INSERT` clause](https://docs.greptime.com/reference/sql/insert)
 
 Run the following SQL statement to query all rows in the table. After getting the results, click the `Chart` tab to see the visualized data. You can choose `Group By` options to make the visualized data group by `hostname` and `environment`.
 
-```sql
+```sql (line|usage_system|ts|environment,hostname)
 SELECT * FROM cpu_metrics ORDER BY ts DESC;
 ```
 

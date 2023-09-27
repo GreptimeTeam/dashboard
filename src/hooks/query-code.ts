@@ -1,8 +1,5 @@
-import { Message } from '@arco-design/web-vue'
-import i18n from '@/locale'
-import dayjs from 'dayjs'
 import { useCodeRunStore } from '@/store'
-import { ResultType } from '@/store/modules/code-run/types'
+import { ResultType, PromForm } from '@/store/modules/code-run/types'
 import { EditorSelection } from '@codemirror/state'
 import { stringType } from './types'
 
@@ -28,15 +25,6 @@ const codes = ref({
   sql: sqlCode,
   promql: promQLCode,
 } as stringType)
-
-const promForm = ref({
-  start: '0',
-  end: '0',
-  step: '15s',
-  isRelative: 1,
-  time: 5,
-  range: [dayjs().subtract(5, 'minute').unix().toString(), dayjs().unix().toString()],
-})
 
 export default function useQueryCode() {
   const { codeType } = storeToRefs(useAppStore())
@@ -83,11 +71,10 @@ export default function useQueryCode() {
     codeType.value = queryType.value
   }
 
-  const runQuery = async (code: any, type = queryType.value, withoutSave = false) => {
+  const runQuery = async (code: any, type = queryType.value, withoutSave = false, params: PromForm | object = {}) => {
     const { pushLog } = useLog()
     const { runCode } = useCodeRunStore()
-    const res = await runCode(code, type, withoutSave)
-
+    const res = await runCode(code, type, withoutSave, params)
     if (!withoutSave && res.log) {
       pushLog(res.log, type)
     }
@@ -107,25 +94,6 @@ export default function useQueryCode() {
     },
   })
 
-  const isButtonDisabled = computed(() => {
-    if (queryCode.value.trim().length === 0) return true
-    if (queryType.value === 'promql') {
-      const hasRange = promForm.value.range ? promForm.value.range.length > 0 : false
-      if (promForm.value.step.trim().length === 0 || (!promForm.value.isRelative && !hasRange)) {
-        return true
-      }
-    }
-    if (primaryCodeRunning.value || secondaryCodeRunning.value) return true
-    return false
-  })
-
-  watchEffect(() => {
-    if (promForm.value.time === 0) {
-      promForm.value.isRelative = 0
-      promForm.value.time = 5
-    }
-  })
-
   return {
     insertNameToQueryCode,
     selectCodeType,
@@ -136,9 +104,7 @@ export default function useQueryCode() {
     queryCode,
     cursorAt,
     queryOptions,
-    promForm,
     queryType,
-    isButtonDisabled,
     primaryCodeRunning,
     secondaryCodeRunning,
   }

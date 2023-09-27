@@ -10,7 +10,7 @@ In this documentation, we will use Prometheus [node_exporter](https://github.com
 
 ## Sample Data
 
-Node_exporter is a Prometheus exporter for hardware and OS metrics exposed by *NIX kernels.
+Node_exporter is a Prometheus exporter for hardware and OS metrics exposed by \*NIX kernels.
 It is written in Go and has pluggable metric collectors.
 For the metrics it collects, please refer to the [node_exporter Github repository](https://github.com/prometheus/node_exporter).
 
@@ -19,7 +19,7 @@ For the metrics it collects, please refer to the [node_exporter Github repositor
 Spin up a Docker container to write sample data to your database:
 
 ```shell
-docker run --rm -e GREPTIME_URL='https://<host>/v1/prometheus/write?db=<dbname>' \
+docker run --rm -e GREPTIME_URL='<host>/v1/prometheus/write?db=<database>' \
     -e GREPTIME_USERNAME='<username>' \
     -e GREPTIME_PASSWORD='<password>' \
     --name greptime-node-exporter greptime/node-exporter
@@ -33,9 +33,8 @@ We can use the following command to list all the metrics and verify that the dat
 
 For more information about the compatible PromQL HTTP API, please refer to [Prometheus' HTTP API](https://docs.greptime.com/user-guide/query-data/promql#prometheus-http-api).
 
-
 ```curl
-curl -H 'Authorization: Basic <authorization>' https://<host>/v1/prometheus/api/v1/label/__name__/values
+curl -H 'Authorization: Basic <authorization>' <host>/v1/prometheus/api/v1/label/__name__/values
 ```
 
 ## Query Data with PromQL
@@ -90,4 +89,3 @@ Write your own PromQL query below and have fun exploring!
 ```promql
 
 ```
-

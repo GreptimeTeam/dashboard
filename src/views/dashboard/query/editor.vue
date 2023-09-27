@@ -23,7 +23,7 @@ a-card.editor-card.padding-16(:bordered="false")
           flex-direction="row-reverse"
           button-class="query-time-button"
           :trigger-visible="triggerVisible"
-          :is-relative="promForm.isRelative === 1"
+          :is-relative="promForm.time !== 0"
           :range-picker-visible="rangePickerVisible"
           :time-length="promForm.time"
           :time-range="promForm.range"
@@ -41,8 +41,7 @@ a-card.editor-card.padding-16(:bordered="false")
           :style="{ width: '180px' }"
           :placeholder="$t('dashboard.step')"
         )
-          template(#prefix)
-            | Step
+          template(#prefix) Step
           template(#suffix)
             a-popover(trigger="hover")
               svg.icon
@@ -71,6 +70,7 @@ a-card.editor-card.padding-16(:bordered="false")
 </template>
 
 <script lang="ts" setup name="Editor">
+  import dayjs from 'dayjs'
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
   import { sql } from '@codemirror/lang-sql'
@@ -79,6 +79,7 @@ a-card.editor-card.padding-16(:bordered="false")
   import { keymap } from '@codemirror/view'
   import type { KeyBinding } from '@codemirror/view'
   import type { TableTreeChild, TableTreeParent } from '@/store/modules/database/types'
+  import type { PromForm } from '@/store/modules/code-run/types'
   import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '../config'
 
   export interface Props {
@@ -102,8 +103,6 @@ a-card.editor-card.padding-16(:bordered="false")
     queryType,
     cursorAt,
     queryOptions,
-    promForm,
-    isButtonDisabled,
     primaryCodeRunning,
     secondaryCodeRunning,
     view,
@@ -115,10 +114,25 @@ a-card.editor-card.padding-16(:bordered="false")
   const selectedCode = ref()
   const triggerVisible = ref(false)
   const rangePickerVisible = ref(false)
-
+  const promForm = ref<PromForm>({
+    step: '15s',
+    time: 5,
+    range: [dayjs().subtract(5, 'minute').unix().toString(), dayjs().unix().toString()],
+  })
   const { runQuery } = useQueryCode()
   const { originTablesTree } = storeToRefs(useDataBaseStore())
 
+  const isButtonDisabled = computed(() => {
+    if (queryCode.value.trim().length === 0) return true
+    if (queryType.value === 'promql') {
+      const hasRange = promForm.value.range ? promForm.value.range.length > 0 : false
+      if (promForm.value.step.trim().length === 0 || (!promForm.value.time && !hasRange)) {
+        return true
+      }
+    }
+    if (primaryCodeRunning.value || secondaryCodeRunning.value) return true
+    return false
+  })
   const handleReady = (payload: any) => {
     view.value = payload.view
   }
@@ -150,14 +164,14 @@ a-card.editor-card.padding-16(:bordered="false")
   const runQueryAll = async () => {
     primaryCodeRunning.value = true
     // TODO: add better format tool for code
-    await runQuery(queryCode.value.trim(), queryType.value)
+    await runQuery(queryCode.value.trim(), queryType.value, false, promForm.value)
     primaryCodeRunning.value = false
     // TODO: refresh tables data and when
   }
 
   const runPartQuery = async () => {
     secondaryCodeRunning.value = true
-    await runQuery(selectedCode.value.trim(), queryType.value)
+    await runQuery(selectedCode.value.trim(), queryType.value, false, promForm.value)
     secondaryCodeRunning.value = false
   }
 
@@ -216,7 +230,7 @@ a-card.editor-card.padding-16(:bordered="false")
   })
 
   const openTimeSelect = () => {
-    rangePickerVisible.value = promForm.value.isRelative !== 1
+    rangePickerVisible.value = promForm.value.time === 0
     triggerVisible.value = true
   }
 
@@ -226,15 +240,13 @@ a-card.editor-card.padding-16(:bordered="false")
 
   const selectTimeRange = (range: string[]) => {
     promForm.value.range = range
-    promForm.value.time = -1
-    promForm.value.isRelative = 0
+    promForm.value.time = 0
     rangePickerVisible.value = false
     triggerVisible.value = false
   }
 
   const selectTimeLength = (value: number) => {
     promForm.value.time = value
-    promForm.value.isRelative = 1
     rangePickerVisible.value = false
     triggerVisible.value = false
   }

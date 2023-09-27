@@ -1,6 +1,7 @@
 import axios, { AxiosRequestConfig, AxiosRequestHeaders } from 'axios'
 import dayjs from 'dayjs'
 import qs from 'qs'
+import { PromForm } from '@/store/modules/code-run/types'
 
 const sqlUrl = `/v1/sql`
 const scriptUrl = `/v1/scripts`
@@ -36,23 +37,24 @@ const makeScriptConfig = (name: string) => {
   } as AxiosRequestConfig
 }
 
-const makePromParams = (code: string) => {
-  const { promForm } = useQueryCode()
+const makePromParams = (code: string, promForm: PromForm) => {
+  let start
+  let end
   const appStore = useAppStore()
-  if (promForm.value.isRelative) {
+  if (promForm.time !== 0) {
     // TODO: move this into a function?
     const now = dayjs()
-    promForm.value.end = now.unix().toString()
-    promForm.value.start = now.subtract(promForm.value.time, 'minute').unix().toString()
+    end = now.unix().toString()
+    start = now.subtract(promForm.time, 'minute').unix().toString()
   } else {
-    ;[promForm.value.start, promForm.value.end] = promForm.value.range
+    ;[start, end] = promForm.range
   }
   return {
     params: {
       query: code,
-      start: promForm.value.start,
-      end: promForm.value.end,
-      step: promForm.value.step,
+      start,
+      end,
+      step: promForm.step,
       db: appStore.database,
     },
   } as AxiosRequestConfig
@@ -87,8 +89,8 @@ const runScript = (name: string) => {
   return axios.post(runScriptUrl, {}, makeScriptConfig(name))
 }
 
-const runPromQL = (code: string) => {
-  return axios.post(promURL, {}, makePromParams(code))
+const runPromQL = (code: string, promForm: PromForm) => {
+  return axios.post(promURL, {}, makePromParams(code, promForm))
 }
 
 export default {
