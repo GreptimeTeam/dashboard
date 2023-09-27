@@ -57,7 +57,7 @@
       a-tab-pane(key="1" title="Table")
         DataGrid(:data="result" :hasHeader="false")
       a-tab-pane(v-if="hasChart" key="2" title="Chart")
-        DataChart(:data="result" :hasHeader="false" :defaultChartForm="chartForm")
+        DataChart(:data="result" :hasHeader="false" :defaultChartForm="promForm")
   .logs(v-if="log")
     a-list.log-list(
       size="small"
@@ -98,22 +98,18 @@
 
   const isLoading = ref(false)
   const { runQuery } = useQueryCode()
-  const promForm = ref<PromForm>(
-    Object.keys(props.defaultChartForm).length
-      ? JSON.parse(props.defaultChartForm)
-      : {
-          time: 5,
-          step: '30s',
-          range: [dayjs().subtract(5, 'minute').unix().toString(), dayjs().unix().toString()],
-        }
-  )
   const slots = useSlots()
   const appStore = useAppStore()
   const hasChart = ref(false)
   const hasRecords = ref(false)
-  const chartForm = JSON.parse(props.defaultChartForm)
   const rangePickerVisible = ref(false)
   const triggerVisible = ref(false)
+
+  const promForm = ref<PromForm>({
+    time: 5,
+    step: '30s',
+    range: [dayjs().subtract(5, 'minute').unix().toString(), dayjs().unix().toString()],
+  })
 
   function codeFormat(code: any) {
     if (!code) return ''
@@ -153,6 +149,14 @@
     log.value = ''
     hasChart.value = false
     hasRecords.value = false
+    promForm.value =
+      props.lang === 'promql'
+        ? JSON.parse(props.defaultChartForm)
+        : {
+            time: 5,
+            step: '30s',
+            range: [dayjs().subtract(5, 'minute').unix().toString(), dayjs().unix().toString()],
+          }
   }
   const runCommand = async () => {
     isLoading.value = true

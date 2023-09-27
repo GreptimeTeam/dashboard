@@ -47,7 +47,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
     python: 'scripts',
   }
 
-  const runCode = async (codeInfo: string, type: string, withoutSave = false, params = {}) => {
+  const runCode = async (codeInfo: string, type: string, withoutSave = false, params = {} as PromForm) => {
     try {
       // TODO: try something better
       let oneResult = {} as ResultType
@@ -98,11 +98,10 @@ const useCodeRunStore = defineStore('codeRun', () => {
         results: resultsInLog,
       }
       if (type === 'promql') {
-        const options: PromForm = params.step ? params : promForm.value
         oneLog.promInfo = {
-          Start: dayjs.unix(+options.start).format('YYYY-MM-DD HH:mm:ss'),
-          End: dayjs.unix(+options.end).format('YYYY-MM-DD HH:mm:ss'),
-          Step: options.step,
+          Start: dayjs.unix(+params.range[0]).format('YYYY-MM-DD HH:mm:ss'),
+          End: dayjs.unix(+params.range[1]).format('YYYY-MM-DD HH:mm:ss'),
+          Step: params.step,
           Query: codeInfo,
         }
       }

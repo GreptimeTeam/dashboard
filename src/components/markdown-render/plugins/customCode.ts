@@ -23,7 +23,7 @@ export default function customCode(md: MarkdownIt) {
         groupBySelectedTypes: params[3] || [],
       },
       promql: {
-        time: params[0]?.length === 1 ? +params[0][0] : 5,
+        time: params[0]?.length === 1 ? +params[0][0] : 0,
         range: params[0]?.length === 2 ? params[0] : [],
         step: params[1]?.[0] || '15s',
       },
