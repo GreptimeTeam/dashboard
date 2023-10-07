@@ -4,6 +4,7 @@
   import MarkdownIt from 'markdown-it'
   import plugins from './plugins'
   import CodeEditor from './components/code-editor.vue'
+  import ImportPresets from './components/importPresets.vue'
   import codeGroups from './composables/codeGroups'
 
   const md = new MarkdownIt()
@@ -15,6 +16,7 @@
   export default {
     components: {
       CodeEditor,
+      ImportPresets,
     },
     props: {
       md: String,

@@ -23,6 +23,7 @@ export default {
   'playground.create': 'OK',
   'playground.refreshTitle': 'Warning',
   'playground.refreshNote': 'The Playground has been reclaimed due to timeout. Click OK to re-create the playground',
+  'playground.import': 'Import {lines} lines in {time}ms',
   'copied': 'Copied',
   ...localeDashboard,
   ...localSetting,
