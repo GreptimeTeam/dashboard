@@ -48,7 +48,7 @@ Additionally, you can change the query resolution step by inputing a new value i
 
 Any metrics in the metric list above can be queried. For example, we can query the `node_cpu_seconds_total` metric.
 
-```promql (10|30s)
+```promql
 node_cpu_seconds_total
 ```
 
@@ -57,7 +57,7 @@ node_cpu_seconds_total
 We can filter the time series by label.
 For example, return all time series with the metric name `node_cpu_seconds_total` and the label `mode` equals `system`.
 
-```promql (1695744000, 1695799405|1m)
+```promql
 node_cpu_seconds_total{mode="system"}
 ```
 
