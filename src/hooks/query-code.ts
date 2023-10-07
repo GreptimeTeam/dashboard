@@ -71,7 +71,12 @@ export default function useQueryCode() {
     codeType.value = queryType.value
   }
 
-  const runQuery = async (code: any, type = queryType.value, withoutSave = false, params: PromForm | object = {}) => {
+  const runQuery = async (
+    code: any,
+    type = queryType.value,
+    withoutSave = false,
+    params: PromForm = {} as PromForm
+  ) => {
     const { pushLog } = useLog()
     const { runCode } = useCodeRunStore()
     const res = await runCode(code, type, withoutSave, params)
