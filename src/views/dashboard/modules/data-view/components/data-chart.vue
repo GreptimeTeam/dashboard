@@ -262,11 +262,9 @@ a-card(v-if="hasChart" :bordered="false")
 
       chartForm.xAxisType = props.defaultChartForm.xAxisType || xOptions.value[0]
 
-      chartForm.groupBySelectedTypes = props.defaultChartForm.groupBySelectedTypes.length
+      chartForm.groupBySelectedTypes = props.defaultChartForm.groupBySelectedTypes?.length
         ? props.defaultChartForm.groupBySelectedTypes
         : [groupByOptions.value[0].name]
-
-      console.log(`chartForm:`, chartForm)
     }
   })
 
