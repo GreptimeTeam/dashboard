@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { ChartFormType, PromForm, SchemaType } from '@/store/modules/code-run/types'
 import type MarkdownIt from 'markdown-it'
 import type { RenderRule } from 'markdown-it/lib/renderer'
@@ -25,7 +26,10 @@ export default function customCode(md: MarkdownIt) {
       promql: {
         // eslint-disable-next-line no-nested-ternary
         time: params.length === 0 ? 5 : params[0]?.length === 1 ? +params[0][0] : 0,
-        range: params[0]?.length === 2 ? params[0] : [],
+        range:
+          params[0]?.length === 2
+            ? params[0]
+            : [dayjs().subtract(5, 'minute').unix().toString(), dayjs().unix().toString()],
         step: params[1]?.[0] || '30s',
       },
     }
