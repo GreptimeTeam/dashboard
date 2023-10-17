@@ -12,5 +12,6 @@
     "sider",
     "timepicker",
     "VITE"
-  ]
+  ],
+  "i18n-ally.localesPaths": ["src/locale", "src/views/dashboard/locale"]
 }
