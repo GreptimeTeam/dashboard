@@ -59,11 +59,11 @@ a-spin(style="width: 100%" :loading="tablesLoading")
 
 <script lang="ts" setup>
   import { storeToRefs } from 'pinia'
-  import { useDataBaseStore, useAppStore } from '@/store'
+  import { useDataBaseStore } from '@/store'
   import useQueryCode from '@/hooks/query-code'
   import usePythonCode from '@/hooks/python-code'
   import useSiderTabs from '@/hooks/sider-tabs'
-  import type { TableTreeChild, TableTreeParent } from '@/store/modules/database/types'
+  import type { TableTreeParent } from '@/store/modules/database/types'
   import type { OptionsType } from '@/types/global'
   import { useClipboard } from '@vueuse/core'
 
@@ -74,7 +74,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
   const { insertNameToPyCode } = usePythonCode()
   const { tablesSearchKey, tablesTreeData } = useSiderTabs()
   const { tablesLoading, originTablesTree } = storeToRefs(useDataBaseStore())
-  const { getTableByName, getTables, addChildren } = useDataBaseStore()
+  const { getTableByName, getTables, addChildren, generateTreeChildren } = useDataBaseStore()
 
   const treeRef = ref()
   const expandedKeys = ref<number[]>()
@@ -91,29 +91,12 @@ a-spin(style="width: 100%" :loading="tablesLoading")
         .then((result: any) => {
           const { output } = result
           const {
-            records: { rows },
+            records: {
+              rows,
+              schema: { column_schemas: columnSchemas },
+            },
           } = output[0]
-          const treeChildren: TableTreeChild[] = []
-          let timeIndexName = '%TIMESTAMP%'
-          rows.forEach((row: string[]) => {
-            // row[0]: "Column" (column name),
-            // row[1]: "Type" (data type),
-            // row[2]: "Key" (`PRI` means primary key),
-            // row[3]: "Null",
-            // row[4]: "Default",
-            // row[5]: "Semantic Type" (used as icon type, including `TAG`, `FIELD`, `TIMESTAMP`),
-            if (row[5] === 'TIMESTAMP') {
-              timeIndexName = row[0]
-            }
-            treeChildren.push({
-              title: row[0],
-              key: `${nodeData.title}.${row[0]}`,
-              isLeaf: true,
-              dataType: row[1],
-              iconType: row[5],
-              parentKey: nodeData.key,
-            })
-          })
+          const { treeChildren, timeIndexName } = generateTreeChildren(nodeData, rows, columnSchemas)
           addChildren(nodeData.key, treeChildren, timeIndexName)
           resolve()
         })

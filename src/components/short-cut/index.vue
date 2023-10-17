@@ -21,10 +21,11 @@ a-tooltip(:content="codeInfo.code")
   }
 
   const getCodeAndCursorPos = (type: string, node: TreeChild, parent: TableTreeParent) => {
+    const orderBy = parent.timeIndexName !== `%TIMESTAMP%` ? ` ORDER BY ${parent.timeIndexName} ` : ` `
     switch (type) {
       case 'select*100':
         return {
-          code: formatter(`SELECT * FROM ${parent.title} ORDER BY ${parent.timeIndexName} LIMIT 100;`),
+          code: formatter(`SELECT * FROM ${parent.title}${orderBy}LIMIT 100;`),
           cursorPosition: 0,
         }
       case 'count':
@@ -34,14 +35,12 @@ a-tooltip(:content="codeInfo.code")
         }
       case 'where=':
         return {
-          code: formatter(
-            `SELECT * FROM ${parent.title} WHERE ${node.title} =  ORDER BY ${parent.timeIndexName} DESC;`
-          ),
-          cursorPosition: 16 + parent.timeIndexName.length,
+          code: formatter(`SELECT * FROM ${parent.title} WHERE ${node.title} = ${orderBy}DESC;`),
+          cursorPosition: `${orderBy}DESC;`.length,
         }
       case 'select100':
         return {
-          code: formatter(`SELECT ${node.title} FROM ${parent.title} ORDER BY ${parent.timeIndexName} DESC LIMIT 100;`),
+          code: formatter(`SELECT ${node.title} FROM ${parent.title}${orderBy}DESC LIMIT 100;`),
           cursorPosition: 0,
         }
       case 'max':
@@ -56,10 +55,8 @@ a-tooltip(:content="codeInfo.code")
         }
       case 'where<':
         return {
-          code: formatter(
-            `SELECT * FROM ${parent.title} WHERE ${parent.timeIndexName} <  ORDER BY ${parent.timeIndexName} DESC LIMIT 100;`
-          ),
-          cursorPosition: 26 + parent.timeIndexName.length,
+          code: formatter(`SELECT * FROM ${parent.title} WHERE ${parent.timeIndexName} < ${orderBy}DESC LIMIT 100;`),
+          cursorPosition: `${orderBy}DESC LIMIT 100;`.length,
         }
       default:
         return {
