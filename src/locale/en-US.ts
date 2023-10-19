@@ -5,6 +5,8 @@ export default {
   'menu.dashboard': 'Dashboard',
   'menu.dashboard.query': 'Query',
   'menu.dashboard.scripts': 'Scripts',
+  'menu.dashboard.playground': 'Playground',
+  'menu.dashboard.status': 'Status',
   'menu.server.dashboard': 'Dashboard-Server',
   'menu.server.workplace': 'Workplace-Server',
   'menu.server.monitor': 'Monitor-Server',
