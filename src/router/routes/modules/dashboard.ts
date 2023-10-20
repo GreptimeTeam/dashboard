@@ -29,7 +29,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       component: () => import('@/views/dashboard/scripts/index.vue'),
       meta: {
         locale: 'menu.dashboard.scripts',
-        requiresAuth: false,
+        requiresAuth: true,
         roles: ['dev'],
       },
     },
@@ -48,7 +48,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       component: () => import('@/views/dashboard/status/index.vue'),
       meta: {
         locale: 'menu.dashboard.status',
-        requiresAuth: false,
+        requiresAuth: true,
         roles: ['dev'],
       },
     },

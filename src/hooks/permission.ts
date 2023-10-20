@@ -4,6 +4,11 @@ import { useUserStore } from '@/store'
 export default function usePermission() {
   const userStore = useUserStore()
   return {
+    // has access:
+    // 1. requiresAuth === 'false'
+    // 2. no specific roles
+    // 3. roles is *
+    // 4. roles include current userRole
     accessRouter(route: RouteLocationNormalized | RouteRecordRaw) {
       return (
         !route.meta?.requiresAuth ||

@@ -1,39 +1,49 @@
 <template lang="pug">
-.navbar
-  .logo-space
-    img.logo-text-img(alt="logo" src="/src/assets/images/logo-text.webp")
-  .menu
-    a-menu(mode="horizontal" :selected-keys="[menuSelectedKey]")
-      a-menu-item(v-for="(item, index) in menuConfig" :key="item.key" v-permission="item.permission")
-        span(
-          @click.meta="menuClickWithMeta(item.key)"
-          @click.ctrl="menuClickWithMeta(item.key)"
-          @click.exact="menuClick(item.key)"
-        ) {{ item.label }}
-  ul.right-side
-    li
-      a-tooltip(:content="$t('settings.title')")
-        .pointer
-          svg.icon-20(@click="setVisible")
-            use(href="#setting")
-    li
-      a-dropdown.menu-dropdown(trigger="hover" position="br" :popup-max-height="false")
-        .pointer
-          svg.icon-20
-            use(href="#dropdown")
-        template(#content)
-          a-doption(v-for="{ label, link } in dropDownLinks")
-            a-link(target="_blank" :href="link")
-              | {{ label }}
+a-layout.navbar
+  a-layout-header
+    .logo-space
+      img.logo-text-img(alt="logo" src="/src/assets/images/logo-text.webp")
+  a-layout-content
+    .menu
+      a-menu(mode="vertical" :selected-keys="[menuSelectedKey]")
+        a-menu-item(v-for="(item, index) in menu" :key="item.name")
+          span(
+            @click.meta="menuClickWithMeta(item.name)"
+            @click.ctrl="menuClickWithMeta(item.name)"
+            @click.exact="menuClick(item.name)"
+          ) {{ $t(item.meta.locale) }}
+  a-layout-footer
+    ul.footer
+      li
+        a-button(style="width: 100%" @click="setVisible")
+          template(#icon)
+            svg.icon-20
+              use(href="#setting")
+          | {{ $t('settings.title') }}
+      li
+        a-dropdown.menu-dropdown(trigger="hover" position="right" :popup-max-height="false")
+          a-button(style="width: 100%")
+            template(#icon)
+              svg.icon-20
+                use(href="#dropdown")
+            | {{ $t('navbar.docs') }}
+          template(#content)
+            a-doption(v-for="{ label, link } in dropDownLinks")
+              a-link(target="_blank" :href="link")
+                | {{ label }}
 </template>
 
 <script lang="ts" setup name="NavBar">
   import router from '@/router'
   import { useAppStore } from '@/store'
   import { listenerRouteChange } from '@/utils/route-listener'
+  import useMenuTree from '../menu/use-menu-tree'
 
   const { updateSettings } = useAppStore()
   const { menuSelectedKey } = storeToRefs(useAppStore())
+  const { menuTree } = useMenuTree()
+
+  const menu = menuTree.value[0].children
 
   const menuConfig = [
     {
@@ -97,23 +107,19 @@
 
 <style scoped lang="less">
   .navbar {
-    display: flex;
-    justify-content: space-between;
     height: 100%;
-    background: var(--navbar-bg-color);
+    width: 100%;
   }
 
   .logo-space {
-    padding-left: 20px;
-
+    background: var(--navbar-bg-color);
     .logo-text-img {
-      height: 100%;
+      width: 100%;
     }
   }
 
   .menu {
     width: 100%;
-    margin-left: 20px;
     .arco-menu-horizontal {
       background-color: transparent;
 
@@ -153,16 +159,15 @@
     }
   }
 
-  .right-side {
+  .footer {
     display: flex;
     list-style: none;
-    margin-right: 30px;
+    flex-direction: column;
     padding-left: 0;
 
     li {
       display: flex;
       align-items: center;
-      margin-left: 24px;
     }
 
     .arco-link {
