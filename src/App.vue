@@ -3,6 +3,7 @@
     <router-view />
     <guide-modal />
     <global-setting />
+    <query-modal />
   </a-config-provider>
 </template>
 

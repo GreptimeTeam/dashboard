@@ -23,5 +23,6 @@
   "isCloud": false,
   "guideModalVisible": false,
   "lifetime": "long",
-  "menuSelectedKey": "query"
+  "menuSelectedKey": "query",
+  "queryModalVisible": false
 }

@@ -26,4 +26,5 @@ export interface AppState {
   dbId: string
   lifetime: string
   [key: string]: unknown
+  queryModalVisible: boolean
 }
