@@ -98,9 +98,20 @@ const useCodeRunStore = defineStore('codeRun', () => {
         results: resultsInLog,
       }
       if (type === 'promql') {
+        let start
+        let end
+
+        if (params.time !== 0) {
+          // TODO: move this into a function?
+          const now = dayjs()
+          end = now.unix()
+          start = now.subtract(params.time, 'minute').unix()
+        } else {
+          ;[start, end] = params.range
+        }
         oneLog.promInfo = {
-          Start: dayjs.unix(+params.range[0]).format('YYYY-MM-DD HH:mm:ss'),
-          End: dayjs.unix(+params.range[1]).format('YYYY-MM-DD HH:mm:ss'),
+          Start: dayjs.unix(+start).format('YYYY-MM-DD HH:mm:ss'),
+          End: dayjs.unix(+end).format('YYYY-MM-DD HH:mm:ss'),
           Step: params.step,
           Query: codeInfo,
         }
