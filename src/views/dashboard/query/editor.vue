@@ -20,19 +20,12 @@ a-card.editor-card.padding-16(:bordered="false")
     a-space(size="medium")
       a-form-item(:hide-label="true")
         TimeSelect(
+          v-model:time-length="promForm.time"
+          v-model:time-range="promForm.range"
           flex-direction="row-reverse"
           button-class="query-time-button"
-          :trigger-visible="triggerVisible"
-          :is-relative="promForm.time !== 0"
-          :range-picker-visible="rangePickerVisible"
-          :time-length="promForm.time"
-          :time-range="promForm.range"
           :relative-time-map="queryTimeMap"
           :relative-time-options="queryTimeOptions"
-          @open-time-select="openTimeSelect"
-          @select-time-range="selectTimeRange"
-          @select-time-length="selectTimeLength"
-          @click-custom="clickCustom"
         )
       a-form-item(:hide-label="true")
         a-input(
@@ -114,9 +107,9 @@ a-card.editor-card.padding-16(:bordered="false")
   const selectedCode = ref()
   const triggerVisible = ref(false)
   const rangePickerVisible = ref(false)
-  const promForm = ref<PromForm>({
-    step: '15s',
+  const promForm = reactive<PromForm>({
     time: 5,
+    step: '30s',
     range: [dayjs().subtract(5, 'minute').unix().toString(), dayjs().unix().toString()],
   })
   const { runQuery } = useQueryCode()
@@ -125,8 +118,8 @@ a-card.editor-card.padding-16(:bordered="false")
   const isButtonDisabled = computed(() => {
     if (queryCode.value.trim().length === 0) return true
     if (queryType.value === 'promql') {
-      const hasRange = promForm.value.range ? promForm.value.range.length > 0 : false
-      if (promForm.value.step.trim().length === 0 || (!promForm.value.time && !hasRange)) {
+      const hasRange = promForm.range ? promForm.range.length > 0 : false
+      if (promForm.step.trim().length === 0 || (!promForm.time && !hasRange)) {
         return true
       }
     }
@@ -164,14 +157,14 @@ a-card.editor-card.padding-16(:bordered="false")
   const runQueryAll = async () => {
     primaryCodeRunning.value = true
     // TODO: add better format tool for code
-    await runQuery(queryCode.value.trim(), queryType.value, false, promForm.value)
+    await runQuery(queryCode.value.trim(), queryType.value, false, promForm)
     primaryCodeRunning.value = false
     // TODO: refresh tables data and when
   }
 
   const runPartQuery = async () => {
     secondaryCodeRunning.value = true
-    await runQuery(selectedCode.value.trim(), queryType.value, false, promForm.value)
+    await runQuery(selectedCode.value.trim(), queryType.value, false, promForm)
     secondaryCodeRunning.value = false
   }
 
@@ -228,28 +221,6 @@ a-card.editor-card.padding-16(:bordered="false")
     })
     extensions.promql = [promql.asExtension(), oneDark, keymap.of(defaultKeymap as any)]
   })
-
-  const openTimeSelect = () => {
-    rangePickerVisible.value = promForm.value.time === 0
-    triggerVisible.value = true
-  }
-
-  const clickCustom = () => {
-    rangePickerVisible.value = !rangePickerVisible.value
-  }
-
-  const selectTimeRange = (range: string[]) => {
-    promForm.value.range = range
-    promForm.value.time = 0
-    rangePickerVisible.value = false
-    triggerVisible.value = false
-  }
-
-  const selectTimeLength = (value: number) => {
-    promForm.value.time = value
-    rangePickerVisible.value = false
-    triggerVisible.value = false
-  }
 
   onActivated(() => {
     selectCodeType()

@@ -4,19 +4,14 @@
     a-space(size="medium")
       a-form-item(:hide-label="true")
         TimeSelect(
+          v-model:time-length="promForm.time"
+          v-model:time-range="promForm.range"
           flex-direction="row-reverse"
           button-class="query-time-button"
-          :trigger-visible="triggerVisible"
-          :is-relative="promForm.time !== 0"
           :range-picker-visible="rangePickerVisible"
-          :time-length="promForm.time"
-          :time-range="promForm.range"
           :relative-time-map="queryTimeMap"
           :relative-time-options="queryTimeOptions"
           @open-time-select="openTimeSelect"
-          @select-time-range="selectTimeRange"
-          @select-time-length="selectTimeLength"
-          @click-custom="clickCustom"
         )
       a-form-item(:hide-label="true")
         a-input(
@@ -103,9 +98,8 @@
   const hasChart = ref(false)
   const hasRecords = ref(false)
   const rangePickerVisible = ref(false)
-  const triggerVisible = ref(false)
 
-  const promForm = ref<PromForm>({
+  const promForm = reactive<PromForm>({
     time: 5,
     step: '30s',
     range: [dayjs().subtract(5, 'minute').unix().toString(), dayjs().unix().toString()],
@@ -149,18 +143,20 @@
     log.value = ''
     hasChart.value = false
     hasRecords.value = false
-    promForm.value =
-      props.lang === 'promql'
-        ? JSON.parse(props.defaultChartForm)
-        : {
-            time: 5,
-            step: '30s',
-            range: [dayjs().subtract(5, 'minute').unix().toString(), dayjs().unix().toString()],
-          }
+    if (props.lang === 'promql') {
+      const chartForm = JSON.parse(props.defaultChartForm)
+      promForm.time = chartForm.time
+      promForm.step = chartForm.step
+      promForm.range = chartForm.range
+    } else {
+      promForm.time = 5
+      promForm.step = '30s'
+      promForm.range = [dayjs().subtract(5, 'minute').unix().toString(), dayjs().unix().toString()]
+    }
   }
   const runCommand = async () => {
     isLoading.value = true
-    const res = await runQuery(code.value.trim(), props.lang, true, promForm.value)
+    const res = await runQuery(code.value.trim(), props.lang, true, promForm)
     if (res.lastResult?.records) {
       hasRecords.value = true
       result.value = res.lastResult
@@ -193,28 +189,6 @@
     value,
     label: `Last ${value} minutes`,
   }))
-
-  const openTimeSelect = () => {
-    rangePickerVisible.value = promForm.value.time === 0
-    triggerVisible.value = true
-  }
-
-  const clickCustom = () => {
-    rangePickerVisible.value = !rangePickerVisible.value
-  }
-
-  const selectTimeRange = (range: string[]) => {
-    promForm.value.range = range
-    promForm.value.time = 0
-    rangePickerVisible.value = false
-    triggerVisible.value = false
-  }
-
-  const selectTimeLength = (value: number) => {
-    promForm.value.time = value
-    rangePickerVisible.value = false
-    triggerVisible.value = false
-  }
 
   const defaultKeymap = [
     {
