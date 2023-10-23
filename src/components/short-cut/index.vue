@@ -1,6 +1,6 @@
 <template lang="pug">
 a-tooltip(:content="codeInfo.code")
-  a-button(type="text" @click="inputFromNewLineToQueryCode(codeInfo.code, codeInfo.cursorPosition)") {{ label }}
+  a-button(type="text" @click="clickShortCut(codeInfo.code, codeInfo.cursorPosition)") {{ label }}
 </template>
 
 <script lang="ts" setup name="ShortCut">
@@ -14,6 +14,13 @@ a-tooltip(:content="codeInfo.code")
   }>()
 
   const { inputFromNewLineToQueryCode } = useQueryCode()
+
+  const { updateSettings } = useAppStore()
+
+  const clickShortCut = (info: string, cursorPosition: number) => {
+    updateSettings({ queryModalVisible: true })
+    inputFromNewLineToQueryCode(info, cursorPosition)
+  }
 
   const formatter = (code: string) => {
     // No format for now.

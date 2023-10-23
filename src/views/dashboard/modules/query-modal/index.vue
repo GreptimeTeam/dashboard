@@ -3,21 +3,19 @@ a-modal.query-modal(
   v-model:visible="queryModalVisible"
   :ok-text="$t('guide.confirm')"
   :hide-cancel="true"
-  :width="384"
+  :width="800"
   :mask="false"
-  :top="20"
+  :top="MODAL_TO_TOP"
   :align-center="false"
-  :draggable="true"
   :render-to-body="false"
   :mask-style="{ 'pointer-events': 'none' }"
-  @ok="handleOk"
+  :footer="false"
 )
   template(#title)
-    div {{ $t('guide.welcome') }}
-    svg.guide-banner
-      use(href="#banner")
-
-  template(#footer)
+    | {{ $t('menu.dashboard.query') }}
+  a-scrollbar(style="height: calc(100vh - 66px); overflow: auto")
+    Editor
+    DataView(v-if="!!results?.length" :results="results" :types="types")
 </template>
 
 <script lang="ts" setup name="QueryModal">
@@ -25,8 +23,15 @@ a-modal.query-modal(
 
   const { queryModalVisible } = storeToRefs(useAppStore())
   const { login } = useAppStore()
+  const { getResultsByType } = useQueryCode()
+
+  const HEADER_HEIGHT = 36
+  const MODAL_TO_TOP = 20
 
   const handleOk = async () => {}
+  const types = ['sql', 'promql']
+
+  const results = computed(() => getResultsByType(types))
 </script>
 
 <style lang="less" scoped></style>
@@ -36,7 +41,19 @@ a-modal.query-modal(
     pointer-events: none;
     .arco-modal-wrapper {
       .arco-modal {
+        position: absolute;
+        right: 20px;
         pointer-events: auto;
+        box-shadow: 0 2px 10px 0 var(--box-shadow-color);
+        .arco-modal-header {
+          height: 36px;
+        }
+        .arco-modal-body {
+          padding: 0 12px;
+        }
+        .arco-modal-close-btn {
+          font-size: 20px;
+        }
       }
     }
   }
