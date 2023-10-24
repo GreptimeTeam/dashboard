@@ -4,8 +4,8 @@ a-layout.layout
     ListTabs(:has="['Tables']")
   a-layout-content
     a-space.content-space(direction="vertical" fill size="large")
-      Editor 
-      DataView(v-if="!!results?.length" :results="results" :types="types")
+      //- Editor 
+      //- DataView(v-if="!!results?.length" :results="results" :types="types")
       Logs(:logs="queryLogs" :types="types")
 </template>
 

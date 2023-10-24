@@ -17,8 +17,21 @@ a-tabs.result-tabs(
     :title="`${$t('dashboard.result')} ${result.key - startKey + 1}`"
   )
     a-space(direction="vertical" size="small" fill)
-      DataGrid(:data="result")
-      DataChart(:data="result")
+      a-tabs(default-active-key="chart" :animation="true")
+        a-tab-pane(key="chart" :title="$t('dashboard.chart')")
+          template(#title)
+            a-space(size="mini")
+              svg.icon-18
+                use(href="#chart")
+              | {{ $t('dashboard.chart') }}
+          DataChart(:data="result" :has-header="false")
+        a-tab-pane(key="table" :title="$t('dashboard.table')")
+          template(#title)
+            a-space(size="mini")
+              svg.icon-20
+                use(href="#table")
+              | {{ $t('dashboard.table') }}
+          DataGrid(:data="result" :has-header="false")
 </template>
 
 <script lang="ts" name="DataView" setup>

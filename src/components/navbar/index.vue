@@ -4,6 +4,8 @@ a-layout.navbar
     .logo-space
       img.logo-text-img(alt="logo" src="/src/assets/images/logo-text.webp")
   a-layout-content
+    .new-query
+      a-button(type="primary" @click="openQuery") + New Query
     .menu
       a-menu(mode="vertical" :selected-keys="[menuSelectedKey]")
         a-menu-item(v-for="(item, index) in menu" :key="item.name")
@@ -45,29 +47,6 @@ a-layout.navbar
 
   const menu = menuTree.value[0].children
 
-  const menuConfig = [
-    {
-      key: 'query',
-      label: 'Query',
-      permission: ['dev', 'cloud'],
-    },
-    {
-      key: 'scripts',
-      label: 'Scripts',
-      permission: ['dev'],
-    },
-    {
-      key: 'playground',
-      label: 'Playground',
-      permission: ['dev', 'cloud'],
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      permission: ['dev'],
-    },
-  ]
-
   const dropDownLinks = [
     {
       link: 'https://greptime.com/',
@@ -103,6 +82,10 @@ a-layout.navbar
   listenerRouteChange((newRoute) => {
     menuSelectedKey.value = newRoute.name as string
   }, true)
+
+  const openQuery = () => {
+    updateSettings({ queryModalVisible: true })
+  }
 </script>
 
 <style scoped lang="less">
@@ -188,5 +171,12 @@ a-layout.navbar
 
   .arco-dropdown-open {
     opacity: 0.6;
+  }
+
+  .new-query {
+    padding: 12px;
+    .arco-btn {
+      width: 100%;
+    }
   }
 </style>

@@ -7,6 +7,7 @@ a-layout.layout-container
   a-layout-content.layout-content(:style="paddingStyle")
     PageLayout
   Footer(v-if="footer")
+  QueryModal
 </template>
 
 <script lang="ts" setup>
