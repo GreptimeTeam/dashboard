@@ -1,19 +1,23 @@
 <template lang="pug">
 a-modal.query-modal(
   v-model:visible="queryModalVisible"
+  :class="{ 'full-screen': isFullscreen }"
   :ok-text="$t('guide.confirm')"
   :hide-cancel="true"
-  :width="800"
+  :width="isFullscreen ? 'calc(100vw - 200px)' : 800"
   :mask="false"
-  :top="MODAL_TO_TOP"
   :align-center="false"
   :render-to-body="false"
   :mask-style="{ 'pointer-events': 'none' }"
   :footer="false"
+  :draggable="true"
 )
   template(#title)
     | {{ $t('menu.dashboard.query') }}
-  a-scrollbar(style="height: calc(100vh - 66px); overflow: auto")
+    a-button(@click="isFullscreen = !isFullscreen")
+      icon-fullscreen(v-if="!isFullscreen")
+      icon-fullscreen-exit(v-else)
+  a-scrollbar(style="height: calc(100vh - 56px); overflow: auto")
     Editor
     DataView(v-if="!!results?.length" :results="results" :types="types")
 </template>
@@ -27,6 +31,7 @@ a-modal.query-modal(
 
   const HEADER_HEIGHT = 36
   const MODAL_TO_TOP = 20
+  const isFullscreen = ref(false)
 
   const handleOk = async () => {}
   const types = ['sql', 'promql']
@@ -38,15 +43,26 @@ a-modal.query-modal(
 
 <style lang="less">
   .query-modal {
+    &.full-screen {
+      .arco-modal {
+        transform: none !important;
+        position: fixed;
+        right: 0;
+        top: 20px;
+      }
+    }
     pointer-events: none;
     .arco-modal-wrapper {
+      overflow: hidden;
       .arco-modal {
-        position: absolute;
-        right: 20px;
         pointer-events: auto;
         box-shadow: 0 2px 10px 0 var(--box-shadow-color);
         .arco-modal-header {
           height: 36px;
+          .arco-modal-title {
+            padding-right: 20px;
+            justify-content: space-between;
+          }
         }
         .arco-modal-body {
           padding: 0 12px;
@@ -54,6 +70,13 @@ a-modal.query-modal(
         .arco-modal-close-btn {
           font-size: 20px;
         }
+      }
+    }
+    .arco-modal-wrapper:not(.arco-modal-wrapper-moved) {
+      .arco-modal {
+        position: absolute;
+        right: 0;
+        top: 20px;
       }
     }
   }
