@@ -20,8 +20,11 @@ const useDataBaseStore = defineStore('database', () => {
           title: item.join(),
           key,
           children: [],
+          columns: [],
+          details: [],
           timeIndexName: '',
-          code: '',
+          childrenType: 'columns',
+          isLeaf: false,
         }
         tempArray.push(node)
         key += 1
@@ -64,9 +67,10 @@ const useDataBaseStore = defineStore('database', () => {
     }
   }
 
-  const addChildren = (key: number, children: TableTreeChild[], timeIndexName: string) => {
+  const addChildren = (key: number, children: TableTreeChild[], timeIndexName: string, type?: string) => {
     originTablesTree.value[key].children = children
     originTablesTree.value[key].timeIndexName = timeIndexName
+    originTablesTree.value[key][type === 'details' ? 'details' : 'columns'] = children
   }
 
   const originScriptsList = computed(() => {
