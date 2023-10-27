@@ -25,9 +25,9 @@ export interface TableTreeParent extends TreeData {
   key: number
   childrenType: string
   timeIndexName: string
-  children: TableTreeChild[]
+  children: TableTreeChild[] | any[]
   columns: TableTreeChild[]
-  details: TableTreeChild[]
+  details: any[]
 }
 
 export interface ScriptTreeData extends TreeData {

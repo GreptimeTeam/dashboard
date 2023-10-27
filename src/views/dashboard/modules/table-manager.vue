@@ -36,35 +36,40 @@ a-card.table-manager
           svg.icon-16(v-if="node.node.iconType")
             use(:href="ICON_MAP[node.node.iconType]")
       template(#title="nodeData")
-        .tree-data
-          a-tooltip.data-type(v-if="!nodeData.iconType" mini :content="nodeData.title")
+        .tree-data(v-if="!nodeData.isLeaf")
+          a-tooltip.data-type(mini :content="nodeData.title")
             .data-title
               | {{ nodeData.title }}
-              a-button copy
-          .data-title(v-else)
+          .tree-data
+            a-button(
+              :type="nodeData.childrenType === 'details' && expandedKeys?.includes(nodeData.key) ? 'primary' : 'secondary'"
+              @click="(event) => expandChildren(event, nodeData, 'details')"
+            ) details
+            a-button(
+              :type="nodeData.childrenType === 'columns' && expandedKeys?.includes(nodeData.key) ? 'primary' : 'secondary'"
+              @click="(event) => expandChildren(event, nodeData, 'columns')"
+            ) columns
+            a-button(@click.stop)
+              ShortCut(
+                :type="'select*100'"
+                :node="nodeData"
+                :parent="nodeData"
+                :label="'Query'"
+              )
+            TextCopyable.copy(
+              type="text"
+              :data="nodeData.title"
+              :show-data="false"
+              @click.stop
+            )
+        .tree-data(v-else-if="nodeData.dataType")
+          .data-title
             | {{ nodeData.title }}
           .tree-data
-            .div(v-if="nodeData.iconType")
-              transition(name="slide-fade")
-                .data-type {{ nodeData.dataType }}
-            .div(v-else)
-              a-button(
-                :type="nodeData.childrenType === 'details' && expandedKeys?.includes(nodeData.key) ? 'primary' : 'secondary'"
-                @click="(event) => expandChildren(event, nodeData, 'details')"
-              ) details
-              a-button(
-                :type="nodeData.childrenType === 'columns' && expandedKeys?.includes(nodeData.key) ? 'primary' : 'secondary'"
-                @click="(event) => expandChildren(event, nodeData, 'columns')"
-              ) columns
-              a-button
-                ShortCut(
-                  :type="'select*100'"
-                  :node="nodeData"
-                  :parent="nodeData"
-                  :label="'Query table'"
-                )
+            transition(name="slide-fade")
+              .data-type {{ nodeData.dataType }}
             a-dropdown.menu-dropdown(
-              v-if="nodeData.iconType"
+              v-if="nodeData.dataType"
               trigger="click"
               position="right"
               @click="(event) => clickMenu(event, nodeData)"
@@ -81,9 +86,19 @@ a-card.table-manager
                       :parent="nodeData.iconType ? originTablesTree[nodeData.parentKey] : nodeData"
                       :label="item.label"
                     )
-                a-doption
-                  a-tooltip(content="Copy to Clipboard")
-                    a-button(type="text" @click="copy(nodeData.title)") Copy name
+            TextCopyable.copy(
+              type="text"
+              :data="nodeData.title"
+              :show-data="false"
+              @click.stop
+            )
+        a-card(v-else justify="space-around")
+          a-row
+            a-col(:span="12") {{ nodeData.info.rowCount }}
+          a-row
+            a-col(:span="12") {{ nodeData.info.createTable }}
+          a-row
+            a-col(:span="12") {{ nodeData.info.timeScale }}
       template(#switcher-icon)
         IconDown
     .tree-scrollbar(v-else)
@@ -99,6 +114,7 @@ a-card.table-manager
   import type { TableTreeChild, TableTreeParent, TreeData } from '@/store/modules/database/types'
   import type { OptionsType } from '@/types/global'
   import { useClipboard } from '@vueuse/core'
+  import editorAPI from '@/api/editor'
 
   const source = ref('')
   const { text, copy, copied, isSupported } = useClipboard({ source })
@@ -117,12 +133,19 @@ a-card.table-manager
   const treeRef = ref()
   const expandedKeys = ref<number[]>()
 
+  watchEffect(() => {
+    console.log(expandedKeys.value)
+  })
+
   const expandChildren = (event: Event, nodeData: TableTreeParent, type: 'details' | 'columns') => {
+    console.log(nodeData.key)
+    console.log(type)
     if (nodeData[type].length && type !== nodeData.childrenType && expandedKeys.value?.includes(nodeData.key)) {
       event.stopPropagation()
     }
 
     nodeData.children = nodeData[type]
+    console.log(nodeData.children)
     // If children is empty, trigger load-more
     nodeData.childrenType = type
   }
@@ -136,44 +159,20 @@ a-card.table-manager
     })
   })
 
+  // watchEffect(() => {
+  //   if (tablesSearchKey.value.trim().length) {
+  //     if (treeRef.value) treeRef.value.expandAll(false)
+  //   }
+  // })
+
   const refreshTables = () => {
     tablesSearchKey.value = ''
     getTables()
     if (treeRef.value) treeRef.value.expandAll(false)
   }
 
-  const loadMore = (nodeData: TableTreeParent) => {
-    if (nodeData.childrenType === 'details') {
-      return new Promise<void>((resolve, reject) => {
-        getTableByName(nodeData.title)
-          .then((result: any) => {
-            const { output } = result
-            const {
-              records: {
-                rows,
-                schema: { column_schemas: columnSchemas },
-              },
-            } = output[0]
-            const { treeChildren, timeIndexName } = generateTreeChildren(nodeData, rows, columnSchemas)
-            const children: TableTreeChild[] = [
-              {
-                key: `${nodeData.title}.sww`,
-                title: 'dd',
-                dataType: 'ee',
-                iconType: 'ffd',
-                parentKey: nodeData.key,
-                isLeaf: true,
-              },
-            ]
-            addChildren(nodeData.key, children, timeIndexName, 'details')
-            resolve()
-          })
-          .catch(() => {
-            reject()
-          })
-      })
-    }
-    return new Promise<void>((resolve, reject) => {
+  const loadMoreColumns = (nodeData: TableTreeParent) =>
+    new Promise<void>((resolve, reject) => {
       getTableByName(nodeData.title)
         .then((result: any) => {
           const { output } = result
@@ -191,6 +190,84 @@ a-card.table-manager
           reject()
         })
     })
+
+  const loadMore = async (nodeData: TableTreeParent) => {
+    if (nodeData.childrenType === 'details') {
+      if (!nodeData.timeIndexName) {
+        // error?
+        await loadMoreColumns(nodeData)
+      }
+
+      const rowCount = new Promise<object>((resolve, reject) => {
+        editorAPI
+          .runSQL(`select count(*) from ${nodeData.title}`)
+          .then((res: any) => {
+            const result = {
+              key: 'rowCount',
+              value: res.output[0].records.rows[0][0],
+            }
+            resolve(result)
+          })
+          .catch(() => {
+            reject()
+          })
+      })
+
+      const createTable = new Promise<object>((resolve, reject) => {
+        editorAPI
+          .runSQL(`show create table ${nodeData.title}`)
+          .then((res: any) => {
+            const result = {
+              key: 'createTable',
+              value: res.output[0].records.rows[0][1],
+            }
+            resolve(result)
+          })
+          .catch(() => {
+            reject()
+          })
+      })
+
+      const timeScale = new Promise<object>((resolve, reject) => {
+        editorAPI
+          .runSQL(
+            `select min (${nodeData.timeIndexName}) from ${nodeData.title}; select max (${nodeData.timeIndexName}) from ${nodeData.title}`
+          )
+          .then((res: any) => {
+            const result = {
+              key: 'timeScale',
+              value: { min: res.output[0].records.rows[0][0], max: res.output[1].records.rows[0][0] },
+            }
+            resolve(result)
+          })
+          .catch(() => {
+            reject()
+          })
+      })
+
+      return Promise.allSettled([rowCount, createTable, timeScale]).then((result: any[]) => {
+        const info: { [key: string]: any } = {}
+        result
+          .filter((item: any) => item.status === 'fulfilled')
+          .map((item: any) => item.value)
+          .forEach((item: any) => {
+            info[item.key] = item.value
+          })
+
+        const children: any[] = [
+          {
+            key: `${nodeData.title}.details.key`,
+            title: 'title',
+            parentKey: nodeData.key,
+            isLeaf: true,
+            info,
+          },
+        ]
+        // actually we don't need timeIndexName
+        addChildren(nodeData.key, children, nodeData.timeIndexName, 'details')
+      })
+    }
+    return loadMoreColumns(nodeData)
   }
 
   const INSERT_MAP: { [key: string]: any } = {
@@ -282,5 +359,17 @@ a-card.table-manager
 
   .table-tree {
     margin-right: 3px;
+  }
+
+  .arco-typography {
+    display: inline-flex;
+  }
+
+  .detail {
+    justify-content: flex-start;
+    padding-right: 60px;
+    .right {
+      padding-left: 50px;
+    }
   }
 </style>
