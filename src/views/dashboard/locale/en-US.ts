@@ -56,4 +56,8 @@ export default {
   'dashboard.showTimestamp': 'Show Timestamp',
   'playground.run': 'Run',
   'playground.reset': 'Reset',
+  'dashboard.minTime': 'Earliest timestamp',
+  'dashboard.maxTime': 'Latest timestamp',
+  'dashboard.rowCount': 'Row count',
+  'dashboard.createTable': 'Create table SQL',
 }

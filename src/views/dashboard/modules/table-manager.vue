@@ -92,15 +92,27 @@ a-card.table-manager
               :show-data="false"
               @click.stop
             )
-        a-card(v-else justify="space-around")
-          a-row
-            a-col(:span="12") {{ nodeData.info.rowCount }}
-          a-row
-            a-col(:span="12") {{ nodeData.info.createTable }}
-          a-row
-            a-col(:span="12") {{ nodeData.info.timeScale }}
-      template(#switcher-icon)
-        IconDown
+        .data-title(v-else)
+          a-space(v-if="nodeData.title === 'timeScale'" fill style="justify-content: space-between")
+            div {{ $t('dashboard.minTime') }} {{ nodeData.info.min }}
+            div {{ $t('dashboard.maxTime') }} {{ nodeData.info.max }}
+          a-space(v-else-if="nodeData.title === 'rowCount'" fill style="justify-content: space-between")
+            div {{ $t('dashboard.rowCount') }} {{ nodeData.info }}
+            div TTL
+          a-space.create-table(v-else)
+            .left {{ $t('dashboard.createTable') }}
+            a-popover
+              .right
+                TextCopyable(
+                  :data="codeFormatter(nodeData.info.sql)"
+                  :showData="false"
+                  :copyTooltip="$t('dashboard.copyToClipboard')"
+                )
+                | {{ nodeData.info }}
+              template(#content)
+                a-typography-text(code style="white-space: pre-wrap") {{ codeFormatter(nodeData.info.sql) }}
+      template(#switcher-icon="nodeData")
+        IconDown(v-if="!nodeData.isLeaf")
     .tree-scrollbar(v-else)
       EmptyStatus
 </template>
@@ -115,6 +127,7 @@ a-card.table-manager
   import type { OptionsType } from '@/types/global'
   import { useClipboard } from '@vueuse/core'
   import editorAPI from '@/api/editor'
+  import { format } from 'sql-formatter'
 
   const source = ref('')
   const { text, copy, copied, isSupported } = useClipboard({ source })
@@ -219,7 +232,7 @@ a-card.table-manager
           .then((res: any) => {
             const result = {
               key: 'createTable',
-              value: res.output[0].records.rows[0][1],
+              value: { sql: res.output[0].records.rows[0][1], ttl: 'test' },
             }
             resolve(result)
           })
@@ -247,14 +260,23 @@ a-card.table-manager
 
       return Promise.allSettled([rowCount, createTable, timeScale]).then((result: any[]) => {
         const info: { [key: string]: any } = {}
+        const children2: any[] = []
+
         result
           .filter((item: any) => item.status === 'fulfilled')
           .map((item: any) => item.value)
           .forEach((item: any) => {
             info[item.key] = item.value
+            children2.push({
+              key: `${nodeData.title}.details.${item.key}`,
+              title: item.key,
+              parentKey: nodeData.key,
+              isLeaf: true,
+              info: item.value,
+            })
           })
 
-        const children: any[] = [
+        const children1: any[] = [
           {
             key: `${nodeData.title}.details.key`,
             title: 'title',
@@ -264,7 +286,7 @@ a-card.table-manager
           },
         ]
         // actually we don't need timeIndexName
-        addChildren(nodeData.key, children, nodeData.timeIndexName, 'details')
+        addChildren(nodeData.key, children2, nodeData.timeIndexName, 'details')
       })
     }
     return loadMoreColumns(nodeData)
@@ -311,6 +333,10 @@ a-card.table-manager
     if (nodeData.children && expandedKeys.value?.includes(nodeData.key)) {
       event.stopPropagation()
     }
+  }
+
+  const codeFormatter = (code: string) => {
+    return format(code, { language: 'mysql', keywordCase: 'upper' })
   }
 </script>
 
@@ -372,4 +398,41 @@ a-card.table-manager
       padding-left: 50px;
     }
   }
+  .table-tree {
+    :deep(.arco-tree-node) {
+      border-top: 1px solid var(--border-color);
+      border-radius: 0;
+      .arco-tree-node-title {
+        padding: 7px 0;
+      }
+    }
+    :deep(.arco-tree-node.arco-tree-node-is-leaf) {
+      border: none;
+      .arco-tree-node-title {
+        padding: 0;
+      }
+    }
+    :deep(.arco-tree-node.arco-tree-node-is-leaf.arco-tree-node-is-tail) {
+      border-radius: 0;
+
+      .arco-tree-node-title {
+        padding-bottom: 7px;
+      }
+    }
+  }
+  .data-title {
+    height: 36px;
+  }
+  .create-table {
+    height: 36px;
+    .left {
+      width: 120px;
+    }
+    .right {
+      overflow: hidden;
+      height: 36px;
+    }
+  }
 </style>
+
+<style lang="less"></style>
