@@ -93,24 +93,21 @@ a-card.table-manager
               @click.stop
             )
         .data-title(v-else)
-          a-space(v-if="nodeData.title === 'timeScale'" fill style="justify-content: space-between")
+          a-space(v-if="nodeData.title === 'rowAndTime'" fill style="justify-content: space-between")
+            div {{ $t('dashboard.rowCount') }} {{ nodeData.info.rowCount }}
             div {{ $t('dashboard.minTime') }} {{ nodeData.info.min }}
             div {{ $t('dashboard.maxTime') }} {{ nodeData.info.max }}
-          a-space(v-else-if="nodeData.title === 'rowCount'" fill style="justify-content: space-between")
-            div {{ $t('dashboard.rowCount') }} {{ nodeData.info }}
-            div TTL
-          a-space.create-table(v-else)
+            div {{ `TTL` }} {{ nodeData.info.ttl }}
+            a-button(@click="loadMore(tablesTreeData[nodeData.parentKey], true)") re
+          a-space.create-table(v-else align="start")
             .left {{ $t('dashboard.createTable') }}
-            a-popover
-              .right
-                TextCopyable(
-                  :data="codeFormatter(nodeData.info.sql)"
-                  :showData="false"
-                  :copyTooltip="$t('dashboard.copyToClipboard')"
-                )
-                | {{ nodeData.info }}
-              template(#content)
-                a-typography-text(code style="white-space: pre-wrap") {{ codeFormatter(nodeData.info.sql) }}
+            .right
+              TextCopyable(
+                :data="codeFormatter(nodeData.info.sql)"
+                :showData="false"
+                :copyTooltip="$t('dashboard.copyToClipboard')"
+              )
+              a-typography-text(code style="white-space: pre-wrap") {{ codeFormatter(nodeData.info.sql) }}
       template(#switcher-icon="nodeData")
         IconDown(v-if="!nodeData.isLeaf")
     .tree-scrollbar(v-else)
@@ -206,86 +203,91 @@ a-card.table-manager
 
   const loadMore = async (nodeData: TableTreeParent) => {
     if (nodeData.childrenType === 'details') {
-      if (!nodeData.timeIndexName) {
-        // error?
-        await loadMoreColumns(nodeData)
-      }
-
-      const rowCount = new Promise<object>((resolve, reject) => {
-        editorAPI
-          .runSQL(`select count(*) from ${nodeData.title}`)
-          .then((res: any) => {
-            const result = {
-              key: 'rowCount',
-              value: res.output[0].records.rows[0][0],
-            }
-            resolve(result)
-          })
-          .catch(() => {
-            reject()
-          })
-      })
-
       const createTable = new Promise<object>((resolve, reject) => {
         editorAPI
           .runSQL(`show create table ${nodeData.title}`)
           .then((res: any) => {
+            const sql = `${res.output[0].records.rows[0][1]}`
+            console.log(sql.search('ttl = '))
             const result = {
               key: 'createTable',
-              value: { sql: res.output[0].records.rows[0][1], ttl: 'test' },
+              value: { sql, ttl: 'test' },
             }
             resolve(result)
           })
           .catch(() => {
-            reject()
-          })
-      })
-
-      const timeScale = new Promise<object>((resolve, reject) => {
-        editorAPI
-          .runSQL(
-            `select min (${nodeData.timeIndexName}) from ${nodeData.title}; select max (${nodeData.timeIndexName}) from ${nodeData.title}`
-          )
-          .then((res: any) => {
             const result = {
-              key: 'timeScale',
-              value: { min: res.output[0].records.rows[0][0], max: res.output[1].records.rows[0][0] },
+              key: 'createTable',
+              value: { sql: '', ttl: '' },
             }
-            resolve(result)
-          })
-          .catch(() => {
-            reject()
+            reject(result)
           })
       })
 
-      return Promise.allSettled([rowCount, createTable, timeScale]).then((result: any[]) => {
+      const rowAndTime = new Promise<object>((resolve, reject) => {
+        const getRowAndTime = () => {
+          editorAPI
+            .runSQL(
+              `select count(*), min (${nodeData.timeIndexName}), max (${nodeData.timeIndexName}) from ${nodeData.title}`
+            )
+            .then((res: any) => {
+              const resArray = res.output[0].records.rows[0]
+              const result = {
+                key: 'rowAndTime',
+                value: { rowCount: resArray[0], min: resArray[1], max: resArray[2] },
+              }
+              resolve(result)
+            })
+            .catch(() => {
+              const result = {
+                key: 'rowAndTime',
+                value: { rowCount: 0, min: 0, max: 0 },
+              }
+              reject(result)
+            })
+        }
+        if (!nodeData.timeIndexName) {
+          loadMoreColumns(nodeData).then(() => getRowAndTime())
+        } else {
+          getRowAndTime()
+        }
+      })
+
+      return Promise.allSettled([rowAndTime, createTable]).then((result: any[]) => {
         const info: { [key: string]: any } = {}
         const children2: any[] = []
+        const rowAndTimeResult = result[0].value || result[0].reason
+        const createTableResult = result[1].value || result[1].reason
+        children2.push({
+          key: `${nodeData.title}.details.${rowAndTimeResult.key}`,
+          title: rowAndTimeResult.key,
+          parentKey: nodeData.key,
+          tableName: nodeData.title,
+          isLeaf: true,
+          info: { ...rowAndTimeResult.value, ttl: createTableResult.value.ttl },
+        })
 
-        result
-          .filter((item: any) => item.status === 'fulfilled')
-          .map((item: any) => item.value)
-          .forEach((item: any) => {
-            info[item.key] = item.value
-            children2.push({
-              key: `${nodeData.title}.details.${item.key}`,
-              title: item.key,
-              parentKey: nodeData.key,
-              isLeaf: true,
-              info: item.value,
-            })
-          })
+        children2.push({
+          key: `${nodeData.title}.details.${createTableResult.key}`,
+          title: createTableResult.key,
+          parentKey: nodeData.key,
+          tableName: nodeData.title,
+          isLeaf: true,
+          info: createTableResult.value,
+        })
+        // result
+        //   .map((item: any) => item.value)
+        //   .forEach((item: any) => {
+        //     children2.push({
+        //       key: `${nodeData.title}.details.${item.key}`,
+        //       title: item.key,
+        //       parentKey: nodeData.key,
+        //       isLeaf: true,
+        //       // error?
+        //       info: item.value,
+        //     })
+        //   })
 
-        const children1: any[] = [
-          {
-            key: `${nodeData.title}.details.key`,
-            title: 'title',
-            parentKey: nodeData.key,
-            isLeaf: true,
-            info,
-          },
-        ]
-        // actually we don't need timeIndexName
         addChildren(nodeData.key, children2, nodeData.timeIndexName, 'details')
       })
     }
@@ -421,16 +423,13 @@ a-card.table-manager
     }
   }
   .data-title {
-    height: 36px;
   }
   .create-table {
-    height: 36px;
     .left {
       width: 120px;
     }
     .right {
       overflow: hidden;
-      height: 36px;
     }
   }
 </style>
