@@ -1,6 +1,13 @@
 <template lang="pug">
 a-tooltip(:content="codeInfo.code")
-  a-button(type="text" @click="clickShortCut(codeInfo.code, codeInfo.cursorPosition)") {{ label }}
+  a-button(
+    type="text"
+    :class="{ 'arco-btn-only-icon': label === '' }"
+    @click="clickShortCut(codeInfo.code, codeInfo.cursorPosition)"
+  ) {{ label }}
+    template(v-if="label === ''" #icon)
+      svg.icon-18
+        use(href="#query")
 </template>
 
 <script lang="ts" setup name="ShortCut">
