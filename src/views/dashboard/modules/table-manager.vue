@@ -54,13 +54,20 @@ a-card.table-manager(:bordered="false")
                   :class="nodeData.childrenType === 'details' && expandedKeys?.includes(nodeData.key) ? '' : 'icon-color'"
                 )
                   use(href="#details")
-            ShortCut(
-              :type="'select*100'"
-              :node="nodeData"
-              :parent="nodeData"
-              :label="''"
-              @click.stop
-            )
+            a-dropdown.menu-dropdown(trigger="click" position="right" @click="(event) => clickMenu(event, nodeData)")
+              a-button(type="text")
+                template(#icon)
+                  svg.icon-18
+                    use(href="#query")
+              template(#content)
+                a-doption(v-for="item of SHORTCUT_MAP['TABLE']" v-show="route.name === 'query'")
+                  a-spin(style="width: 100%" :loading="nodeData.children && !nodeData.children.length")
+                    ShortCut(
+                      :type="item.value"
+                      :node="nodeData"
+                      :parent="nodeData.iconType ? originTablesTree[nodeData.parentKey] : nodeData"
+                      :label="item.label"
+                    )
             TextCopyable.copy.query-copy(
               type="text"
               :data="nodeData.title"
@@ -92,31 +99,39 @@ a-card.table-manager(:bordered="false")
                       :parent="nodeData.iconType ? originTablesTree[nodeData.parentKey] : nodeData"
                       :label="item.label"
                     )
-            TextCopyable.copy(
+            TextCopyable.copy.query-copy(
               type="text"
               :data="nodeData.title"
               :show-data="false"
               @click.stop
             )
-        .data-title(v-else)
+        .detail-row(v-else)
           a-space(v-if="nodeData.title === 'rowAndTime'" fill style="justify-content: space-between")
-            div {{ $t('dashboard.rowCount') }} {{ nodeData.info.rowCount }}
-            div {{ $t('dashboard.minTime') }} {{ nodeData.info.min }}
-            div {{ $t('dashboard.maxTime') }} {{ nodeData.info.max }}
-            div {{ `TTL` }} {{ nodeData.info.ttl }}
+            a-space(:size="4")
+              span {{ $t('dashboard.rowCount') }}
+              span {{ nodeData.info.rowCount }}
+            a-space(:size="4")
+              span {{ $t('dashboard.minTime') }}
+              span {{ nodeData.info.min }}
+            a-space(:size="4")
+              span {{ $t('dashboard.maxTime') }}
+              span {{ nodeData.info.max }}
+            a-space(:size="4")
+              span {{ `TTL` }}
+              span {{ nodeData.info.ttl }}
             a-button(type="text" @click="loadMore(tablesTreeData[nodeData.parentKey], true)")
               template(#icon)
-                svg.icon-18
+                svg.icon-18.icon-color
                   use(href="#refresh")
           a-space.create-table(v-else align="start")
             .left {{ $t('dashboard.createTable') }}
             .right
+              a-typography-text(code style="white-space: pre-wrap") {{ codeFormatter(nodeData.info.sql) }}
               TextCopyable(
                 :data="codeFormatter(nodeData.info.sql)"
                 :showData="false"
                 :copyTooltip="$t('dashboard.copyToClipboard')"
               )
-              a-typography-text(code style="white-space: pre-wrap") {{ codeFormatter(nodeData.info.sql) }}
       template(#switcher-icon="nodeData")
         svg.icon-18(v-if="!nodeData.isLeaf")
           use(href="#tables")
@@ -416,6 +431,12 @@ a-card.table-manager(:bordered="false")
     :deep(.arco-tree-node) {
       padding-left: 20px;
       line-height: 30px;
+      border-radius: 0;
+      .arco-icon-loading {
+        color: var(--brand-color);
+        height: 18px;
+        width: 18px;
+      }
     }
     :deep(.arco-tree-node:hover) {
       background-color: transparent;
@@ -428,9 +449,8 @@ a-card.table-manager(:bordered="false")
         padding: 7px 0;
       }
     }
-    :deep(.arco-tree-node.arco-tree-node-is-leaf:not(.details)) {
-      padding: 0;
-      padding-left: 20px;
+    :deep(.arco-tree-node.arco-tree-node-is-leaf) {
+      padding: 0 2px 0 20px;
       .arco-tree-node-indent {
         width: 9px;
       }
@@ -445,11 +465,24 @@ a-card.table-manager(:bordered="false")
     }
 
     :deep(.arco-tree-node.arco-tree-node-is-leaf.details) {
-      padding: 0;
-
       .arco-tree-node-title {
-        padding: 7px 0 7px 12px;
         border-radius: 0;
+        border: none;
+      }
+      .detail-row {
+        font-size: 12px;
+        > .arco-space {
+          > .arco-space-item {
+            > .arco-space {
+              .arco-space-item:first-of-type {
+                color: var(--third-font-color);
+              }
+              .arco-space-item:last-of-type {
+                color: var(--small-font-color);
+              }
+            }
+          }
+        }
       }
     }
 
@@ -470,8 +503,10 @@ a-card.table-manager(:bordered="false")
     }
   }
   .create-table {
+    flex-direction: column;
     .left {
       width: 120px;
+      color: var(--third-font-color);
     }
     .right {
       overflow: hidden;
