@@ -1,15 +1,16 @@
 <template lang="pug">
-a-card.table-manager
+a-card.table-manager(:bordered="false")
   template(#title)
-    | Tables
+    a-space
+      | Tables
+      .icon-space.pointer(@click="refreshTables")
+        svg.icon.brand-color
+          use(href="#refresh")
     a-space
       a-input(v-model="tablesSearchKey" :allow-clear="true")
         template(#prefix)
           svg.icon
             use(href="#search")
-      .icon-space.pointer(@click="refreshTables")
-        svg.icon
-          use(href="#refresh")
   a-spin(style="width: 100%" :loading="tablesLoading")
     //- a-list(:data="tablesTreeData" :virtual-list-props="{ height: `calc(100vh - ${listHeight}px)` }")
     //-   template(#item="{ item, index }")
@@ -32,8 +33,8 @@ a-card.table-manager
       :virtual-list-props="{ height: `calc(100vh - ${listHeight}px)` }"
     )
       template.test(#icon="node")
-        a-tooltip(:content="node.node.iconType")
-          svg.icon-16(v-if="node.node.iconType")
+        a-tooltip(v-if="node.node.iconType" :content="node.node.iconType")
+          svg.icon-16
             use(:href="ICON_MAP[node.node.iconType]")
       template(#title="nodeData")
         .tree-data(v-if="!nodeData.isLeaf")
@@ -42,13 +43,17 @@ a-card.table-manager
               | {{ nodeData.title }}
           .tree-data
             a-button(
+              type="text"
+              :type="nodeData.childrenType === 'columns' && expandedKeys?.includes(nodeData.key) ? 'primary' : 'secondary'"
+              @click="(event) => expandChildren(event, nodeData, 'columns')"
+            )
+              template(#icon)
+                svg.icon-16.icon-color
+                  use(href="#columns")
+            a-button(
               :type="nodeData.childrenType === 'details' && expandedKeys?.includes(nodeData.key) ? 'primary' : 'secondary'"
               @click="(event) => expandChildren(event, nodeData, 'details')"
             ) details
-            a-button(
-              :type="nodeData.childrenType === 'columns' && expandedKeys?.includes(nodeData.key) ? 'primary' : 'secondary'"
-              @click="(event) => expandChildren(event, nodeData, 'columns')"
-            ) columns
             a-button(@click.stop)
               ShortCut(
                 :type="'select*100'"
@@ -63,7 +68,7 @@ a-card.table-manager
               @click.stop
             )
         .tree-data(v-else-if="nodeData.dataType")
-          .data-title
+          .data-title.columns
             | {{ nodeData.title }}
           .tree-data
             transition(name="slide-fade")
@@ -98,7 +103,10 @@ a-card.table-manager
             div {{ $t('dashboard.minTime') }} {{ nodeData.info.min }}
             div {{ $t('dashboard.maxTime') }} {{ nodeData.info.max }}
             div {{ `TTL` }} {{ nodeData.info.ttl }}
-            a-button(@click="loadMore(tablesTreeData[nodeData.parentKey], true)") re
+            a-button(type="text" @click="loadMore(tablesTreeData[nodeData.parentKey], true)")
+              template(#icon)
+                svg.icon-18
+                  use(href="#refresh")
           a-space.create-table(v-else align="start")
             .left {{ $t('dashboard.createTable') }}
             .right
@@ -265,6 +273,7 @@ a-card.table-manager
           tableName: nodeData.title,
           isLeaf: true,
           info: { ...rowAndTimeResult.value, ttl: createTableResult.value.ttl },
+          class: 'details',
         })
 
         children2.push({
@@ -274,6 +283,7 @@ a-card.table-manager
           tableName: nodeData.title,
           isLeaf: true,
           info: createTableResult.value,
+          class: 'details',
         })
         // result
         //   .map((item: any) => item.value)
@@ -346,7 +356,7 @@ a-card.table-manager
   .arco-card.table-manager {
     background: var(--card-bg-color);
     border-radius: 10px;
-    padding: 0 12px;
+    padding: 0;
     height: 100%;
     :deep(> .arco-card-header) {
       > .arco-card-header-title {
@@ -401,28 +411,60 @@ a-card.table-manager
     }
   }
   .table-tree {
-    :deep(.arco-tree-node) {
+    :deep(.arco-tree-node:hover) {
+      background-color: transparent;
+    }
+    :deep(.arco-tree-node:not(.arco-tree-node-is-leaf)) {
       border-top: 1px solid var(--border-color);
-      border-radius: 0;
-      .arco-tree-node-title {
-        padding: 7px 0;
-      }
-    }
-    :deep(.arco-tree-node.arco-tree-node-is-leaf) {
-      border: none;
-      .arco-tree-node-title {
-        padding: 0;
-      }
-    }
-    :deep(.arco-tree-node.arco-tree-node-is-leaf.arco-tree-node-is-tail) {
       border-radius: 0;
 
       .arco-tree-node-title {
-        padding-bottom: 7px;
+        padding: 7px 0;
+        line-height: 19px;
+      }
+    }
+    :deep(.arco-tree-node.arco-tree-node-is-leaf:not(.details)) {
+      padding: 0;
+      line-height: 16px;
+      .arco-tree-node-title {
+        padding: 7px 0 7px 12px;
+        border-left: 1px solid var(--border-color);
+        border-radius: 0;
+        line-height: 16px;
+      }
+    }
+    :deep(.arco-tree-node.arco-tree-node-is-leaf:hover) {
+      background: var(--tree-select-brand-color);
+    }
+
+    :deep(.arco-tree-node.arco-tree-node-is-leaf.details) {
+      padding: 0;
+      line-height: 16px;
+      .arco-tree-node-title {
+        padding: 7px 0 7px 12px;
+        border-radius: 0;
+        line-height: 16px;
+      }
+    }
+
+    :deep(.arco-tree-node.arco-tree-node-is-leaf.details:hover) {
+      background: transparent;
+    }
+    :deep(.arco-tree-node.arco-tree-node-is-leaf.arco-tree-node-is-tail) {
+      border-radius: 0;
+      margin-bottom: 8px;
+      .arco-tree-node-title {
       }
     }
   }
   .data-title {
+    line-height: 19px;
+    padding-left: 4px;
+    font-size: 16px;
+    &.columns {
+      color: var(--small-font-color);
+      font-size: 14px;
+    }
   }
   .create-table {
     .left {

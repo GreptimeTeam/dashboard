@@ -10,7 +10,7 @@ a-typography-text(
   template(#copy-icon="{ copied }")
     .icon-18.pointer
       svg.icon(v-if="copied === false")
-        use(href="#copy")
+        use(href="#copy-new")
       svg.icon(v-else)
         icon-check.success-color
   template(#copy-tooltip="{ copied }")

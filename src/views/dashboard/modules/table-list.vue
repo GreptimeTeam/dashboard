@@ -6,7 +6,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
         svg.icon
           use(href="#search")
     .icon-space.pointer(@click="refreshTables")
-      svg.icon
+      svg.icon.brand-color
         use(href="#refresh")
   a-tree.table-tree(
     v-if="tablesTreeData && tablesTreeData.length > 0"
