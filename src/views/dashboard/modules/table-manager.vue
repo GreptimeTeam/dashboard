@@ -168,19 +168,12 @@ a-card.table-manager(:bordered="false")
   const treeRef = ref()
   const expandedKeys = ref<number[]>()
 
-  watchEffect(() => {
-    console.log(expandedKeys.value)
-  })
-
   const expandChildren = (event: Event, nodeData: TableTreeParent, type: 'details' | 'columns') => {
-    console.log(nodeData.key)
-    console.log(type)
     if (nodeData[type].length && type !== nodeData.childrenType && expandedKeys.value?.includes(nodeData.key)) {
       event.stopPropagation()
     }
 
     nodeData.children = nodeData[type]
-    console.log(nodeData.children)
     // If children is empty, trigger load-more
     nodeData.childrenType = type
   }
@@ -193,12 +186,6 @@ a-card.table-manager(:bordered="false")
       }
     })
   })
-
-  // watchEffect(() => {
-  //   if (tablesSearchKey.value.trim().length) {
-  //     if (treeRef.value) treeRef.value.expandAll(false)
-  //   }
-  // })
 
   const refreshTables = () => {
     tablesSearchKey.value = ''
@@ -233,7 +220,7 @@ a-card.table-manager(:bordered="false")
           .runSQL(`show create table ${nodeData.title}`)
           .then((res: any) => {
             const sql = `${res.output[0].records.rows[0][1]}`
-            console.log(sql.search('ttl = '))
+            // console.log(sql.search('ttl = '))
             const result = {
               key: 'createTable',
               value: { sql, ttl: 'test' },
@@ -253,7 +240,7 @@ a-card.table-manager(:bordered="false")
         const getRowAndTime = () => {
           editorAPI
             .runSQL(
-              `select count(*), min (${nodeData.timeIndexName}), max (${nodeData.timeIndexName}) from ${nodeData.title}`
+              `select count(*), min (${nodeData.timeIndexName}), max (${nodeData.timeIndexName}) from "${nodeData.title}"`
             )
             .then((res: any) => {
               const resArray = res.output[0].records.rows[0]
@@ -279,11 +266,10 @@ a-card.table-manager(:bordered="false")
       })
 
       return Promise.allSettled([rowAndTime, createTable]).then((result: any[]) => {
-        const info: { [key: string]: any } = {}
-        const children2: any[] = []
+        const children: any[] = []
         const rowAndTimeResult = result[0].value || result[0].reason
         const createTableResult = result[1].value || result[1].reason
-        children2.push({
+        children.push({
           key: `${nodeData.title}.details.${rowAndTimeResult.key}`,
           title: rowAndTimeResult.key,
           parentKey: nodeData.key,
@@ -293,7 +279,7 @@ a-card.table-manager(:bordered="false")
           class: 'details',
         })
 
-        children2.push({
+        children.push({
           key: `${nodeData.title}.details.${createTableResult.key}`,
           title: createTableResult.key,
           parentKey: nodeData.key,
@@ -302,20 +288,7 @@ a-card.table-manager(:bordered="false")
           info: createTableResult.value,
           class: 'details',
         })
-        // result
-        //   .map((item: any) => item.value)
-        //   .forEach((item: any) => {
-        //     children2.push({
-        //       key: `${nodeData.title}.details.${item.key}`,
-        //       title: item.key,
-        //       parentKey: nodeData.key,
-        //       isLeaf: true,
-        //       // error?
-        //       info: item.value,
-        //     })
-        //   })
-
-        addChildren(nodeData.key, children2, nodeData.timeIndexName, 'details')
+        addChildren(nodeData.key, children, nodeData.timeIndexName, 'details')
       })
     }
     return loadMoreColumns(nodeData)
