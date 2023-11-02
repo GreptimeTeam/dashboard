@@ -12,14 +12,6 @@ a-card.table-manager(:bordered="false")
           svg.icon
             use(href="#search")
   a-spin(style="width: 100%" :loading="tablesLoading")
-    //- a-list(:data="tablesTreeData" :virtual-list-props="{ height: `calc(100vh - ${listHeight}px)` }")
-    //-   template(#item="{ item, index }")
-    //-     a-list-item(:key="index")
-    //-       |
-
-    //- a-table(:data="tablesTreeData" :load-more="tableLoadMore")
-    //-   template(#columns)
-    //-     a-table-column(title="title" data-index="title")
     a-tree.table-tree(
       v-if="tablesTreeData && tablesTreeData.length > 0"
       ref="treeRef"
@@ -112,14 +104,16 @@ a-card.table-manager(:bordered="false")
               span {{ nodeData.info.rowCount }}
             a-space(:size="4")
               span {{ $t('dashboard.minTime') }}
-              span {{ nodeData.info.min }}
+              a-tooltip(:content="`${nodeData.info.min}`")
+                span {{ dateFormatter(nodeData.info.timestampType, nodeData.info.min) }}
             a-space(:size="4")
               span {{ $t('dashboard.maxTime') }}
-              span {{ nodeData.info.max }}
+              a-tooltip(:content="`${nodeData.info.max}`")
+                span {{ dateFormatter(nodeData.info.timestampType, nodeData.info.max) }}
             a-space(:size="4")
               span {{ `TTL` }}
               span {{ nodeData.info.ttl }}
-            a-button(type="text" @click="loadMore(tablesTreeData[nodeData.parentKey], true)")
+            a-button(type="text" @click="loadMore(tablesTreeData[nodeData.parentKey])")
               template(#icon)
                 svg.icon-18.icon-color
                   use(href="#refresh")
@@ -150,6 +144,8 @@ a-card.table-manager(:bordered="false")
   import { useClipboard } from '@vueuse/core'
   import editorAPI from '@/api/editor'
   import { format } from 'sql-formatter'
+  import dayjs from 'dayjs'
+  import { dateFormatter } from '@/utils'
 
   const source = ref('')
   const { text, copy, copied, isSupported } = useClipboard({ source })
@@ -244,9 +240,10 @@ a-card.table-manager(:bordered="false")
             )
             .then((res: any) => {
               const resArray = res.output[0].records.rows[0]
+              const timestampType = res.output[0].records.schema.column_schemas[1].data_type
               const result = {
                 key: 'rowAndTime',
-                value: { rowCount: resArray[0], min: resArray[1], max: resArray[2] },
+                value: { rowCount: resArray[0], min: resArray[1], max: resArray[2], timestampType },
               }
               resolve(result)
             })
