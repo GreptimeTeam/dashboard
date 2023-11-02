@@ -26,7 +26,7 @@ a-card.table-manager(:bordered="false")
     )
       template.test(#icon="node")
         a-tooltip(v-if="node.node.iconType" :content="node.node.iconType")
-          svg.icon-16
+          svg.icon-18
             use(:href="ICON_MAP[node.node.iconType]")
       template(#title="nodeData")
         .tree-data(v-if="!nodeData.isLeaf")
@@ -216,17 +216,18 @@ a-card.table-manager(:bordered="false")
           .runSQL(`show create table ${nodeData.title}`)
           .then((res: any) => {
             const sql = `${res.output[0].records.rows[0][1]}`
-            // console.log(sql.search('ttl = '))
+            const regex = /ttl = '(\w)+'/g
+            const ttl = sql.match(regex)?.[0].slice(7, -1) || '-'
             const result = {
               key: 'createTable',
-              value: { sql, ttl: 'test' },
+              value: { sql, ttl },
             }
             resolve(result)
           })
           .catch(() => {
             const result = {
               key: 'createTable',
-              value: { sql: '', ttl: '' },
+              value: { sql: '', ttl: '-' },
             }
             reject(result)
           })
