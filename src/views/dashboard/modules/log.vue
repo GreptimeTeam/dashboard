@@ -1,46 +1,38 @@
 <template lang="pug">
 a-list-item.smaller-divider
-  a-tooltip(v-if="log.error" :content="log.error")
-    a-space.log-error.last-overflow(size="mini" fill)
-      template(#split)
-        a-divider(direction="vertical")
-      icon-close-circle.danger-color
-      div {{ log.startTime }}
-      div {{ $t('dashboard.error') }}: {{ log.error }}
-  a-space.log-space.last-overflow(v-else-if="hasExecutionTime" size="mini" fill)
-    template(#split)
-      a-divider(direction="vertical")
-    icon-check-circle.success-color
-    div {{ log.startTime }}
-    div(v-if="codeType === 'python'") {{ $t('dashboard.runScript', { name: log.codeInfo }) }}
-    div {{ $tc('dashboard.executed', log.results.length, { length: log.results.length }) }}
-    div {{ $t('dashboard.results') }}
-      span(v-for="(oneResult, index) of log.results" :key="index") {{ oneResult.records >= 0 ? $tc('dashboard.select', oneResult.records, { records: oneResult.records }) : $tc('dashboard.affected', oneResult.affectedRows, { record: oneResult.affectedRows }) }}
-    div {{ $t('dashboard.executeTime', { time: log.execution_time_ms }) }}
-    div {{ $t('dashboard.network', { time: log.networkTime - log.execution_time_ms }) }}
-    div {{ $t('dashboard.total', { time: log.networkTime }) }}
-    a-space(v-if="codeType !== 'python'" :size="2")
-      TextCopyable.log-copy(
-        :data="codeFormatter(log.codeInfo)"
-        :showData="false"
-        :copyTooltip="$t('dashboard.copyToClipboard')"
-      )
-      a-popover
-        span.code-space
-          span {{ $t('dashboard.query') }}
-          span {{ log.codeInfo }}
+  template(v-if="log.type !== 'python' && !log.error" #actions)
+    a-button(@click="openEditor") {{ codeType }}
+  a-space(direction="vertical")
+    a-space.code
+      a-tooltip(v-if="log.error" :content="log.error")
+        div {{ log.error }}
+      a-popover(v-else-if="log.type !== 'python'")
         template(#content)
-          a-list(size="small" :split="false" :bordered="false")
-            a-list-item(v-if="log.type === 'promql'" v-for="(value, name) in log.promInfo")
-              span.width-35 {{ name }}
-              a-typography-text.ml-4(code) {{ value }}
-            a-list-item(v-else) {{ log.codeInfo }}
-  a-space.log-space(v-else size="mini" fill)
-    template(#split)
-      a-divider(direction="vertical")
-    icon-check-circle.success-color
-    div {{ log.startTime }}
-    div {{ $t('dashboard.saveName', { name: log.codeInfo }) }}
+          div
+            a-list(size="small" :split="false" :bordered="false")
+              a-list-item(v-if="log.type === 'promql'" v-for="(value, name) in log.promInfo")
+                span.width-35 {{ name }}
+                a-typography-text.ml-4(code) {{ value }}
+              a-list-item(v-else) {{ log.codeInfo }}
+        div {{ log.codeInfo }}
+      .script(v-else)
+        div(v-if="hasExecutionTime") {{ $t('dashboard.runScript', { name: log.codeInfo }) }}
+        div(v-else) {{ $t('dashboard.saveName', { name: log.codeInfo }) }}
+    a-space.info
+      icon-check-circle.success-color(v-if="!log.error")
+      icon-close-circle.danger-color(v-else)
+      .start-time
+        | {{ log.startTime }}
+      a-space.result(v-if="!log.error" :size="4")
+        div(v-if="hasExecutionTime")
+          span(v-for="(oneResult, index) of log.results" :key="index") {{ oneResult.records >= 0 ? $tc('dashboard.select', oneResult.records, { records: oneResult.records }) : $tc('dashboard.affected', oneResult.affectedRows, { record: oneResult.affectedRows }) }}
+        .total-time(v-if="hasExecutionTime")
+          a-popover
+            template(#content)
+              div {{ $t('dashboard.executeTime', { time: log.execution_time_ms }) }}
+              div {{ $t('dashboard.network', { time: log.networkTime - log.execution_time_ms }) }}
+              div {{ $t('dashboard.total', { time: log.networkTime }) }}
+            div {{ `in ${log.networkTime} ms` }}
 </template>
 
 <script lang="ts" name="Log" setup>
@@ -48,6 +40,9 @@ a-list-item.smaller-divider
 
   const route = useRoute()
   const { codeType: GlobalCodeType } = storeToRefs(useAppStore())
+  const { inputFromNewLineToQueryCode } = useQueryCode()
+  const { updateSettings } = useAppStore()
+
   const props = defineProps({
     log: {
       type: Object,
@@ -65,5 +60,17 @@ a-list-item.smaller-divider
     if ((props.codeType || GlobalCodeType.value) === 'sql')
       return format(code, { language: 'mysql', keywordCase: 'upper' })
     return code
+  }
+
+  const openEditor = () => {
+    console.log(props.log.type)
+
+    updateSettings({ queryModalVisible: true })
+    // queryType.value = props.log.type
+    if (props.log.type === 'sql') {
+      inputFromNewLineToQueryCode(props.log.codeInfo, 0)
+    } else {
+      // replaceCode(props.log.codeInfo)
+    }
   }
 </script>

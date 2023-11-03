@@ -1,5 +1,8 @@
 <template lang="pug">
-a-tabs.result-tabs.logs-tab(type="rounded")
+a-card.logs-card(:bordered="false")
+  template(#title)
+    a-space
+      | Logs
   template(#extra)
     a-button.clear-logs-button(
       v-if="logs.length"
@@ -7,15 +10,13 @@ a-tabs.result-tabs.logs-tab(type="rounded")
       status="danger"
       @click="clear"
     ) {{ $t('dashboard.clear') }}
-  a-tab-pane(title="Logs")
-    a-card(:bordered="false")
-      a-list(
-        v-if="logs.length"
-        size="small"
-        :hoverable="true"
-        :bordered="false"
-      )
-        Log(v-for="log of logs" :key="log" :log="log")
+  a-list(
+    v-if="logs.length"
+    size="small"
+    :hoverable="true"
+    :bordered="false"
+  )
+    Log(v-for="log of logs" :key="log" :log="log")
 </template>
 
 <script lang="ts" name="Log" setup>
@@ -36,6 +37,10 @@ a-tabs.result-tabs.logs-tab(type="rounded")
 </script>
 
 <style lang="less" scoped>
+  .logs-card {
+    height: 100%;
+  }
+
   :deep(.arco-list-content) {
     border-top: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
