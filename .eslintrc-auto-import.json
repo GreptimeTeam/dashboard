@@ -103,6 +103,7 @@
     "VNode": true,
     "toValue": true,
     "useWorkbenchStore": true,
-    "WritableComputedRef": true
+    "WritableComputedRef": true,
+    "stringType": true
   }
 }

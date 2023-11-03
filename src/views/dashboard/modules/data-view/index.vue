@@ -17,8 +17,8 @@ a-tabs.result-tabs(
     :title="`${$t('dashboard.result')} ${result.key - startKey + 1}`"
   )
     a-space(direction="vertical" size="small" fill)
-      a-tabs(default-active-key="chart" :animation="true")
-        a-tab-pane(key="chart" :title="$t('dashboard.chart')")
+      a-tabs(:animation="true")
+        a-tab-pane(v-if="useDataChart(result).hasChart.value" key="chart" :title="$t('dashboard.chart')")
           template(#title)
             a-space(size="mini")
               svg.icon-18
@@ -35,6 +35,7 @@ a-tabs.result-tabs(
 </template>
 
 <script lang="ts" name="DataView" setup>
+  import useDataChart from '@/hooks/data-chart'
   import { useCodeRunStore } from '@/store'
   import type { ResultType } from '@/store/modules/code-run/types'
 

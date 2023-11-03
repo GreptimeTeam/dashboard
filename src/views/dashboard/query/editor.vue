@@ -186,7 +186,7 @@ a-card.editor-card.padding-16(:bordered="false")
     const schema: { [key: string]: string[] } = {}
     const initialMetricList = new Set<string>()
     originTablesTree.value.forEach((item: TableTreeParent) => {
-      const columns = item.children.map((child: TableTreeChild) => {
+      const columns = item.columns.map((child: TableTreeChild) => {
         initialMetricList.add(child.title)
         return child.title
       })

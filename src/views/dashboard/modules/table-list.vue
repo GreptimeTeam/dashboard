@@ -6,7 +6,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
         svg.icon
           use(href="#search")
     .icon-space.pointer(@click="refreshTables")
-      svg.icon
+      svg.icon.brand-color
         use(href="#refresh")
   a-tree.table-tree(
     v-if="tablesTreeData && tablesTreeData.length > 0"
@@ -19,6 +19,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
     :load-more="loadMore"
     :animation="false"
     :virtual-list-props="{ height: 'calc(100vh - 220px)' }"
+    :field-names="{ children: 'columns' }"
   )
     template(#icon="node")
       a-tooltip(:content="node.node.iconType")
@@ -57,7 +58,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
     EmptyStatus
 </template>
 
-<script lang="ts" setup>
+<script lang="ts" setup name="TableList">
   import { storeToRefs } from 'pinia'
   import { useDataBaseStore } from '@/store'
   import useQueryCode from '@/hooks/query-code'
