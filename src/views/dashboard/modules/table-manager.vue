@@ -72,12 +72,7 @@ a-card.table-manager(:bordered="false")
           .tree-data
             transition(name="slide-fade")
               .data-type {{ nodeData.dataType }}
-            a-dropdown.menu-dropdown(
-              v-if="nodeData.dataType"
-              trigger="click"
-              position="right"
-              @click="(event) => clickMenu(event, nodeData)"
-            )
+            a-dropdown.menu-dropdown(v-if="nodeData.dataType" trigger="click" position="right")
               a-button(type="text")
                 template(#icon)
                   svg.icon-18
@@ -113,14 +108,14 @@ a-card.table-manager(:bordered="false")
             a-space(:size="4")
               span {{ `TTL` }}
               span {{ nodeData.info.ttl }}
-            a-button(type="text" @click="loadMore(tablesTreeData[nodeData.parentKey])")
+            a-button.refresh-details(type="text" @click="loadMore(originTablesTree[nodeData.parentKey])")
               template(#icon)
                 svg.icon-18.icon-color
                   use(href="#refresh")
           a-space.create-table(v-else align="start")
             .left {{ $t('dashboard.createTable') }}
             .right
-              a-typography-text(code style="white-space: pre-wrap") {{ codeFormatter(nodeData.info.sql) }}
+              a-typography-text {{ codeFormatter(nodeData.info.sql) }}
               TextCopyable(
                 :data="codeFormatter(nodeData.info.sql)"
                 :showData="false"
@@ -330,8 +325,9 @@ a-card.table-manager(:bordered="false")
   }
 
   const clickMenu = (event: Event, nodeData: TableTreeParent) => {
-    if (nodeData.children && expandedKeys.value?.includes(nodeData.key)) {
-      event.stopPropagation()
+    event.stopPropagation()
+    if (!nodeData.columns.length) {
+      loadMoreColumns(nodeData)
     }
   }
 
@@ -389,6 +385,11 @@ a-card.table-manager(:bordered="false")
 
   .arco-typography {
     display: inline-flex;
+    white-space: pre-wrap;
+    color: var(--small-font-color);
+    background-color: transparent;
+    border: 0;
+    border-radius: 4px;
   }
 
   .detail {
@@ -398,6 +399,7 @@ a-card.table-manager(:bordered="false")
       padding-left: 50px;
     }
   }
+
   .table-tree {
     :deep(.arco-tree-node) {
       padding-left: 20px;
@@ -480,7 +482,11 @@ a-card.table-manager(:bordered="false")
       color: var(--third-font-color);
     }
     .right {
-      overflow: hidden;
+      background: var(--th-bg-color);
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      padding: 0 10px 4px 10px;
+      font-family: monospace;
     }
   }
 
@@ -505,6 +511,27 @@ a-card.table-manager(:bordered="false")
 
   :deep(.arco-tree-node-title) {
     margin-left: 0px;
+  }
+
+  .copy {
+    :deep(.arco-typography-operation-copy),
+    :deep(.arco-typography-operation-copied) {
+      margin-left: 0;
+      padding: 7px;
+      background: none;
+      border-radius: 6px;
+    }
+    :deep(.arco-typography-operation-copy:hover) {
+      background-color: var(--th-bg-color);
+      color: inherit;
+    }
+    :deep(.pointer) {
+      opacity: 1;
+    }
+  }
+
+  .refresh-details {
+    background-color: var(--th-bg-color);
   }
 </style>
 
