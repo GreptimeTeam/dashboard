@@ -1,6 +1,6 @@
 import editorAPI from '@/api/editor'
 import { SEMANTIC_TYPE_MAP } from '@/views/dashboard/config'
-import { ScriptTreeData, TableTreeChild, TableTreeParent } from './types'
+import { ScriptTreeData, TableDetail, TableTreeChild, TableTreeParent } from './types'
 import { SchemaType } from '../code-run/types'
 
 const useDataBaseStore = defineStore('database', () => {
@@ -67,10 +67,19 @@ const useDataBaseStore = defineStore('database', () => {
     }
   }
 
-  const addChildren = (key: number, children: TableTreeChild[] | any[], timeIndexName: string, type?: string) => {
+  const addChildren = (
+    key: number,
+    children: TableTreeChild[] | TableDetail[],
+    timeIndexName: string,
+    type?: string
+  ) => {
     originTablesTree.value[key].children = children
     originTablesTree.value[key].timeIndexName = timeIndexName
-    originTablesTree.value[key][type === 'details' ? 'details' : 'columns'] = children
+    if (type === 'details') {
+      originTablesTree.value[key].details = children as TableDetail[]
+    } else {
+      originTablesTree.value[key].columns = children as TableTreeChild[]
+    }
   }
 
   const originScriptsList = computed(() => {

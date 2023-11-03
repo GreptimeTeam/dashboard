@@ -134,7 +134,7 @@ a-card.table-manager(:bordered="false")
   import useQueryCode from '@/hooks/query-code'
   import usePythonCode from '@/hooks/python-code'
   import useSiderTabs from '@/hooks/sider-tabs'
-  import type { TableTreeChild, TableTreeParent, TreeData } from '@/store/modules/database/types'
+  import type { TableDetail, TableTreeChild, TableTreeParent, TreeData } from '@/store/modules/database/types'
   import type { OptionsType } from '@/types/global'
   import { useClipboard } from '@vueuse/core'
   import editorAPI from '@/api/editor'
@@ -259,7 +259,7 @@ a-card.table-manager(:bordered="false")
       })
 
       return Promise.allSettled([rowAndTime, createTable]).then((result: any[]) => {
-        const children: any[] = []
+        const children: TableDetail[] = []
         const rowAndTimeResult = result[0].value || result[0].reason
         const createTableResult = result[1].value || result[1].reason
         children.push({
