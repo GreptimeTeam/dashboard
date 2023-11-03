@@ -6,25 +6,25 @@ const scriptsSearchKey = ref('')
 const { originTablesTree, originScriptsList } = storeToRefs(useDataBaseStore())
 
 export default function useSiderTabs() {
-  // TODO: try a better function
-  // const searchTree = (keyword: string) => {
-  //   const result: Array<TableTreeParent> = []
-  //   originTablesTree.value.forEach((item: TableTreeParent) => {
-  //     if (item.title.toLowerCase().indexOf(keyword.toLowerCase()) > -1) {
-  //       result.push(item)
-  //     } else if (item.columns?.length && item.childrenType === 'columns') {
-  //       const columns = item.columns.filter(
-  //         (child: TableTreeChild) => child.title.toLowerCase().indexOf(keyword.toLowerCase()) > -1
-  //       )
-  //       if (columns.length) {
-  //         const newItem = item
-  //         newItem.children = columns
-  //         result.push(newItem)
-  //       }
-  //     }
-  //   })
-  //   return result
-  // }
+  // Deprecated.
+  const searchTree = (keyword: string) => {
+    const result: Array<TableTreeParent> = []
+    originTablesTree.value.forEach((item: TableTreeParent) => {
+      if (item.title.toLowerCase().indexOf(keyword.toLowerCase()) > -1) {
+        result.push(item)
+      } else if (item.columns?.length && item.childrenType === 'columns') {
+        const columns = item.columns.filter(
+          (child: TableTreeChild) => child.title.toLowerCase().indexOf(keyword.toLowerCase()) > -1
+        )
+        if (columns.length) {
+          const newItem = item
+          newItem.children = columns
+          result.push(newItem)
+        }
+      }
+    })
+    return result
+  }
 
   const searchList = (keyword: string) => {
     const loop = (data: ScriptTreeData[]) => {
