@@ -25,8 +25,8 @@ a-tooltip(:content="codeInfo.code")
   const { updateSettings } = useAppStore()
 
   const clickShortCut = (info: string, cursorPosition: number) => {
-    updateSettings({ queryModalVisible: true })
     inputFromNewLineToQueryCode(info, cursorPosition)
+    updateSettings({ queryModalVisible: true })
   }
 
   const formatter = (code: string) => {

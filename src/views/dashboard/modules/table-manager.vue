@@ -145,7 +145,6 @@ a-card.table-manager(:bordered="false")
   const source = ref('')
   const { text, copy, copied, isSupported } = useClipboard({ source })
   const route = useRoute()
-  const { insertNameToQueryCode } = useQueryCode()
   const { insertNameToPyCode } = usePythonCode()
   const { tablesSearchKey, tablesTreeData } = useSiderTabs()
   const { tablesLoading, originTablesTree } = storeToRefs(useDataBaseStore())
@@ -288,7 +287,7 @@ a-card.table-manager(:bordered="false")
   }
 
   const INSERT_MAP: { [key: string]: any } = {
-    query: insertNameToQueryCode,
+    // query: insertNameToQueryCode,
     scripts: insertNameToPyCode,
   }
 

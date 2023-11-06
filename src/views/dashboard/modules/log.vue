@@ -63,8 +63,6 @@ a-list-item.smaller-divider
   }
 
   const openEditor = () => {
-    console.log(props.log.type)
-
     updateSettings({ queryModalVisible: true })
     // queryType.value = props.log.type
     if (props.log.type === 'sql') {
