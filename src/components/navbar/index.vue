@@ -2,7 +2,7 @@
 a-layout.navbar
   a-layout-header
     .logo-space
-      img.logo-text-img(alt="logo" src="/src/assets/images/logo-text.webp")
+      img.logo-text-img(alt="logo" src="/src/assets/images/logo-text.png")
   a-layout-content
     .new-query
       a-button(type="primary" @click="openQuery") + New Query
@@ -14,6 +14,9 @@ a-layout.navbar
             @click.ctrl="menuClickWithMeta(item.name)"
             @click.exact="menuClick(item.name)"
           ) {{ $t(item.meta.locale) }}
+          template(#icon)
+            svg.icon-18
+              use(:href="`#${item.meta.icon}`") 
   a-layout-footer
     ul.footer
       li
@@ -46,6 +49,7 @@ a-layout.navbar
   const { menuTree } = useMenuTree()
 
   const menu = menuTree.value[0].children
+  console.log(menu)
 
   const dropDownLinks = [
     {
@@ -95,23 +99,45 @@ a-layout.navbar
   }
 
   .logo-space {
-    background: var(--navbar-bg-color);
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     .logo-text-img {
-      width: 100%;
+      height: 32px;
     }
   }
 
   .menu {
     width: 100%;
+    :deep(.arco-menu-vertical .arco-menu-item.arco-menu-has-icon) {
+      padding-left: 39px;
+    }
+    :deep(.arco-menu-vertical .arco-menu-inner) {
+      padding: 0;
+    }
+
+    :deep(.arco-menu-item.arco-menu-has-icon .arco-menu-icon) {
+      margin-right: 8px;
+    }
+    :deep(.arco-menu-light .arco-menu-item.arco-menu-selected) {
+      background-color: var(--light-brand-color);
+      color: var(--brand-color);
+      .arco-menu-icon {
+        color: var(--brand-color);
+      }
+    }
     .arco-menu-horizontal {
       background-color: transparent;
 
       :deep(.arco-menu-inner) {
         overflow-y: hidden;
+        padding: 0;
       }
 
       .arco-menu-item {
         padding: 6px 12px;
+
         line-height: 18px;
         background-color: transparent;
         color: var(--white-font-color);
@@ -146,8 +172,14 @@ a-layout.navbar
     display: flex;
     list-style: none;
     flex-direction: column;
-    padding-left: 0;
-
+    padding: 0 24px;
+    .arco-btn-secondary[type='button'] {
+      background: var(--list-hover-color);
+      color: var(--small-font-color);
+    }
+    .arco-btn-secondary[type='button']:hover {
+      border: 1px solid var(--border-color);
+    }
     li {
       display: flex;
       align-items: center;
@@ -174,9 +206,10 @@ a-layout.navbar
   }
 
   .new-query {
-    padding: 12px;
+    padding: 24px;
     .arco-btn {
       width: 100%;
+      height: 44px;
     }
   }
 </style>
