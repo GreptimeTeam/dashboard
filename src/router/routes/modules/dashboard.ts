@@ -21,6 +21,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.dashboard.query',
         requiresAuth: false,
+        icon: 'query-menu',
       },
     },
     {
@@ -40,6 +41,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.dashboard.playground',
         requiresAuth: false,
+        icon: 'playground',
       },
     },
     {

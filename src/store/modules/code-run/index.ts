@@ -67,10 +67,12 @@ const useCodeRunStore = defineStore('codeRun', () => {
           })
           if (rowLength >= 0) {
             const pageType = CODE_TO_PAGE[type]
-            if (Reflect.has(resultKeyCount, pageType)) {
-              resultKeyCount[pageType] += 1
-            } else {
-              resultKeyCount[pageType] = 0
+            if (!withoutSave) {
+              if (Reflect.has(resultKeyCount, pageType)) {
+                resultKeyCount[pageType] += 1
+              } else {
+                resultKeyCount[pageType] = 0
+              }
             }
 
             oneResult = {

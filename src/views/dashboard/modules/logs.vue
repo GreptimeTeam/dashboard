@@ -9,12 +9,11 @@ a-tabs.result-tabs.logs-tab(type="rounded")
     ) {{ $t('dashboard.clear') }}
   a-tab-pane(title="Logs")
     a-card(:bordered="false")
-      a-list.log-list(
+      a-list(
         v-if="logs.length"
         size="small"
         :hoverable="true"
         :bordered="false"
-        :split="false"
       )
         Log(v-for="log of logs" :key="log" :log="log")
 </template>
@@ -35,3 +34,13 @@ a-tabs.result-tabs.logs-tab(type="rounded")
     clearLogs(props.types)
   }
 </script>
+
+<style lang="less" scoped>
+  :deep(.arco-list-content) {
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+  }
+  :deep(.arco-list-item:not(:last-child)) {
+    border-color: var(--border-color);
+  }
+</style>
