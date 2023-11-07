@@ -42,7 +42,7 @@ a-list-item.smaller-divider
 
   const route = useRoute()
   const { codeType: GlobalCodeType } = storeToRefs(useAppStore())
-  const { inputFromNewLineToQueryCode } = useQueryCode()
+  const { inputFromNewLineToQueryCode, replaceCode } = useQueryCode()
   const { updateSettings } = useAppStore()
 
   const props = defineProps({
@@ -70,7 +70,7 @@ a-list-item.smaller-divider
     if (props.log.type === 'sql') {
       inputFromNewLineToQueryCode(props.log.codeInfo, 0)
     } else {
-      // replaceCode(props.log.codeInfo)
+      replaceCode(props.log.codeInfo)
     }
   }
 </script>

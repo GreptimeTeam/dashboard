@@ -133,11 +133,18 @@ export default function useQueryCode() {
     codes.value[queryType.value] = ''
   }
 
+  const replaceCode = (code: string) => {
+    queryType.value = 'promql'
+    codeType.value = 'promql'
+    codes.value.promql = code
+  }
+
   return {
     selectCodeType,
     getResultsByType,
     runQuery,
     inputFromNewLineToQueryCode,
+    replaceCode,
     sqlView,
     promqlView,
     queryCode,

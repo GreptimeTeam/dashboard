@@ -71,7 +71,6 @@ a-spin(style="width: 100%" :loading="tablesLoading")
   const source = ref('')
   const { text, copy, copied, isSupported } = useClipboard({ source })
   const route = useRoute()
-  const { insertNameToQueryCode } = useQueryCode()
   const { insertNameToPyCode } = usePythonCode()
   const { tablesSearchKey, tablesTreeData } = useSiderTabs()
   const { tablesLoading, originTablesTree } = storeToRefs(useDataBaseStore())
@@ -108,7 +107,6 @@ a-spin(style="width: 100%" :loading="tablesLoading")
   }
 
   const INSERT_MAP: { [key: string]: any } = {
-    query: insertNameToQueryCode,
     scripts: insertNameToPyCode,
   }
 
