@@ -49,7 +49,6 @@ a-layout.navbar
   const { menuTree } = useMenuTree()
 
   const menu = menuTree.value[0].children
-  console.log(menu)
 
   const dropDownLinks = [
     {
