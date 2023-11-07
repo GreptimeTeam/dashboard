@@ -17,11 +17,11 @@ a-tabs.result-tabs(
     :title="`${$t('dashboard.result')} ${result.key - startKey + 1}`"
   )
     a-space(direction="vertical" size="small" fill)
-      a-tabs(:animation="true")
+      a-tabs.data-view-tabs(:animation="true")
         a-tab-pane(v-if="useDataChart(result).hasChart.value" key="chart" :title="$t('dashboard.chart')")
           template(#title)
             a-space(size="mini")
-              svg.icon-18
+              svg.icon-20
                 use(href="#chart")
               | {{ $t('dashboard.chart') }}
           DataChart(:data="result" :has-header="false")
@@ -77,3 +77,14 @@ a-tabs.result-tabs(
     }
   )
 </script>
+
+<style lang="less">
+  .data-view-tabs {
+    .arco-tabs-nav::before {
+      background-color: transparent;
+    }
+    > .arco-tabs-content > .arco-tabs-content-list > .arco-tabs-content-item {
+      padding: 10px 0;
+    }
+  }
+</style>

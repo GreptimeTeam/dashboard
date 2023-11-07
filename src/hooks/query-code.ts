@@ -129,6 +129,10 @@ export default function useQueryCode() {
     }
   })
 
+  const clearCode = () => {
+    codes.value[queryType.value] = ''
+  }
+
   return {
     selectCodeType,
     getResultsByType,
@@ -145,5 +149,6 @@ export default function useQueryCode() {
     primaryCodeRunning,
     secondaryCodeRunning,
     codes,
+    clearCode,
   }
 }

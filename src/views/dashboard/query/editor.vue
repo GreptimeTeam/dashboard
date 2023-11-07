@@ -57,7 +57,7 @@ a-card.editor-card(:bordered="false")
                   a-list-item
                     span.ml-2 {{ $t('dashboard.examples') }}
                     a-typography-text(v-for="item of durationExamples" :key="item" code) {{ item }}
-  a-tabs(:default-active-key="'sql'" :active-key="queryType")
+  a-tabs.query-tabs(:default-active-key="'sql'" :active-key="queryType")
     a-tab-pane(key="sql")
       CodeMirror(
         v-model="codes.sql"
@@ -225,7 +225,7 @@ a-card.editor-card(:bordered="false")
   })
 
   const extensions = {
-    sql: [sql(hints.value.sql), oneDark, keymap.of(defaultKeymap as any)],
+    sql: [sql(hints.value.sql), oneDark, keymap.of(defaultKeymap as any), autocompletion({ closeOnBlur: false })],
     promql: [new PromQLExtension().asExtension(), oneDark, keymap.of(defaultKeymap as any)],
   }
 
@@ -273,6 +273,17 @@ a-card.editor-card(:bordered="false")
 
 <style lang="less" scoped>
   .editor-card {
-    width: 750px;
+    width: 100%;
+  }
+</style>
+
+<style lang="less">
+  .query-tabs {
+    > .arco-tabs-nav {
+      height: 0;
+    }
+    > .arco-tabs-content {
+      padding-top: 0;
+    }
   }
 </style>

@@ -2,7 +2,7 @@
 a-layout.layout-container
   //- .layout-navbar(v-if="navbar")
   //-   NavBar 
-  a-layout-sider
+  a-layout-sider(:width="286")
     Navbar
   a-layout-content.layout-content(:style="paddingStyle")
     PageLayout
