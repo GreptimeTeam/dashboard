@@ -8,12 +8,14 @@ a-layout.navbar
       a-button(type="primary" @click="openQuery") + New Query
     .menu
       a-menu(mode="vertical" :selected-keys="[menuSelectedKey]")
-        a-menu-item(v-for="(item, index) in menu" :key="item.name")
-          span(
-            @click.meta="menuClickWithMeta(item.name)"
-            @click.ctrl="menuClickWithMeta(item.name)"
-            @click.exact="menuClick(item.name)"
-          ) {{ $t(item.meta.locale) }}
+        a-menu-item(
+          v-for="(item, index) in menu"
+          :key="item.name"
+          @click.meta="menuClickWithMeta(item.name)"
+          @click.ctrl="menuClickWithMeta(item.name)"
+          @click.exact="menuClick(item.name)"
+        )
+          span {{ $t(item.meta.locale) }}
           template(#icon)
             svg.icon-18
               use(:href="`#${item.meta.icon}`") 
@@ -23,14 +25,14 @@ a-layout.navbar
         a-button(style="width: 100%" @click="setVisible")
           template(#icon)
             svg.icon-20
-              use(href="#setting")
+              use(href="#settings")
           | {{ $t('settings.title') }}
       li
         a-dropdown.menu-dropdown(trigger="hover" position="right" :popup-max-height="false")
           a-button(style="width: 100%")
             template(#icon)
-              svg.icon-20
-                use(href="#dropdown")
+              svg.icon-18
+                use(href="#menu")
             | {{ $t('navbar.docs') }}
           template(#content)
             a-doption(v-for="{ label, link } in dropDownLinks")
@@ -111,6 +113,9 @@ a-layout.navbar
     width: 100%;
     :deep(.arco-menu-vertical .arco-menu-item.arco-menu-has-icon) {
       padding-left: 39px;
+      margin-bottom: 2px;
+      border-left: 2px solid transparent;
+      border-radius: 0;
     }
     :deep(.arco-menu-vertical .arco-menu-inner) {
       padding: 0;
@@ -122,6 +127,8 @@ a-layout.navbar
     :deep(.arco-menu-light .arco-menu-item.arco-menu-selected) {
       background-color: var(--light-brand-color);
       color: var(--brand-color);
+      border-left: 2px solid;
+      border-radius: 0;
       .arco-menu-icon {
         color: var(--brand-color);
       }
@@ -173,15 +180,32 @@ a-layout.navbar
     flex-direction: column;
     padding: 0 24px;
     .arco-btn-secondary[type='button'] {
-      background: var(--list-hover-color);
+      background: var(--th-bg-color);
       color: var(--small-font-color);
+      font-size: 16px;
+      display: flex;
+      justify-content: flex-start;
+      padding-left: 62px;
     }
     .arco-btn-secondary[type='button']:hover {
-      border: 1px solid var(--border-color);
+      border-color: inherit;
+      background: var(--light-brand-color);
+      color: var(--brand-color);
+      :deep(.arco-btn-icon) {
+        color: var(--brand-color);
+      }
     }
+    :deep(.arco-btn-icon) {
+      width: 20px;
+      color: var(--third-font-color);
+    }
+
     li {
       display: flex;
       align-items: center;
+      &:first-of-type {
+        margin-bottom: 2px;
+      }
     }
 
     .arco-link {
@@ -198,10 +222,6 @@ a-layout.navbar
       flex-wrap: wrap;
       justify-content: center;
     }
-  }
-
-  .arco-dropdown-open {
-    opacity: 0.6;
   }
 
   .new-query {

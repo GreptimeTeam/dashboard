@@ -39,6 +39,9 @@ a-card.logs-card(:bordered="false")
 <style lang="less" scoped>
   .logs-card {
     height: 100%;
+    :deep(.arco-card-header-title) {
+      font-weight: 800;
+    }
   }
   :deep(.arco-list) {
     border-radius: 0;

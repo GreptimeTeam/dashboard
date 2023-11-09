@@ -1,12 +1,8 @@
 <template lang="pug">
 a-layout.layout
-  a-layout-sider(:resize-directions="['right']" :width="800")
+  a-layout-sider(style="width: 66.6%; min-width: 500px" :resize-directions="['right']")
     TableManager
   a-layout-content
-    //- a-space.content-space(direction="vertical" fill size="large")
-      //- Editor 
-      //- DataView(v-if="!!results?.length" :results="results" :types="types")
-      //- Logs(:logs="queryLogs" :types="types")
     LogsLayout(:logs="queryLogs" :types="types")
 </template>
 
