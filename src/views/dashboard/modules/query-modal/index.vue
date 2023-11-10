@@ -4,7 +4,7 @@ a-modal.query-modal(
   :class="{ 'full-screen': isFullscreen }"
   :ok-text="$t('guide.confirm')"
   :hide-cancel="true"
-  :width="isFullscreen ? 'calc(100vw - 286px)' : 636"
+  :width="isFullscreen ? `calc(100vw - ${MENU_WIDTH}px)` : 636"
   :mask="false"
   :align-center="false"
   :mask-style="{ 'pointer-events': 'none' }"
@@ -15,15 +15,16 @@ a-modal.query-modal(
   template(#title)
     | {{ $t('menu.dashboard.query') }}
     a-space(fill :size="0")
-      a-button.screen-button(type="text" @click="clearCode")
+      a-button.screen-button(type="text" size="small" @click="clearCode")
         template(#icon)
           svg.icon-18
             use(href="#clear")
-      a-button.screen-button(type="text" @click="isFullscreen = !isFullscreen")
+      a-button.screen-button(type="text" size="small" @click="isFullscreen = !isFullscreen")
         template(#icon)
-          svg.icon-16(v-if="!isFullscreen")
+          svg.icon-18(v-if="isFullscreen")
+            use(href="#zoom-out")
+          svg.icon-16(v-else)
             use(href="#zoom")
-          icon-fullscreen-exit(v-else)
   a-space.editor-space(align="start" fill :size="0")
     a-scrollbar(style="height: calc(100vh - 68px); overflow: auto")
       Editor
@@ -39,6 +40,7 @@ a-modal.query-modal(
 
   const HEADER_HEIGHT = 48
   const MODAL_TO_TOP = 20
+  const MENU_WIDTH = 258
   const isFullscreen = ref(false)
   const isLeft = ref(false)
 
@@ -57,8 +59,6 @@ a-modal.query-modal(
 </script>
 
 <style lang="less" scoped>
-  .arco-btn-size-medium.arco-btn-only-icon {
-  }
   .button-space {
     width: 25px;
     height: 25px;
@@ -102,9 +102,17 @@ a-modal.query-modal(
           font-size: 22px;
           color: var(--small-font-color);
           display: flex;
+          height: 28px;
+          width: 28px;
+          align-items: center;
+          justify-content: center;
+          border-radius: 6px;
           svg {
             stroke-width: 3px;
           }
+        }
+        .arco-modal-close-btn:hover {
+          background: var(--th-bg-color);
         }
       }
     }
@@ -145,18 +153,37 @@ a-modal.query-modal(
             background: transparent;
           }
           .arco-tabs-tab {
-            padding: 4px 8px;
-            margin: 10px 4px 0 0;
+            padding: 4px 0;
+            margin: 10px 0 0 0;
             background: var(--th-bg-color);
-            border-radius: 4px;
             color: var(--main-font-color);
-            height: 30px;
+            border-radius: 0 4px 4px 0;
+            &:first-of-type {
+              border-radius: 4px 0 0 4px;
+              > .arco-tabs-tab-title {
+                border-right: 1px solid var(--border-color);
+              }
+            }
+
             &.arco-tabs-tab-active {
               color: var(--brand-color);
               font-weight: 800;
+              letter-spacing: -0.5px;
             }
-            > .arco-tabs-title {
+            > .arco-tabs-tab-title {
+              width: 85px;
+              padding-left: 8px;
               display: flex;
+              font-size: 16px;
+              height: 20px;
+
+              &::before {
+                border-radius: 4px;
+                left: 0;
+                right: 0;
+                top: -4px;
+                bottom: -4px;
+              }
             }
           }
         }
@@ -164,6 +191,10 @@ a-modal.query-modal(
       > .arco-tabs-nav-type-rounded {
         border-bottom: 1px solid var(--border-color);
         padding-bottom: 10px;
+        .arco-icon-hover:hover::before {
+          width: 20px;
+          background-color: var(--card-bg-color);
+        }
         > .arco-tabs-nav-tab {
           > .arco-tabs-nav-tab-list {
             > .arco-tabs-tab:not(:last-of-type) {
@@ -171,8 +202,10 @@ a-modal.query-modal(
             }
             > .arco-tabs-tab {
               background-color: var(--th-bg-color);
-              border-radius: 6px;
-              padding: 10px 10px;
+              border-radius: 4px;
+              padding: 6px 8px;
+              font-size: 14px;
+              line-height: 16px;
             }
           }
         }

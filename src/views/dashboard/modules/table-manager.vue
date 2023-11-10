@@ -24,7 +24,7 @@ a-card.table-manager(:bordered="false")
       :animation="false"
       :virtual-list-props="{ height: `calc(100vh - ${listHeight}px)` }"
     )
-      template.test(#icon="node")
+      template(#icon="node")
         a-tooltip(v-if="node.node.iconType" :content="node.node.iconType")
           svg.icon-18
             use(:href="ICON_MAP[node.node.iconType]")
@@ -124,8 +124,7 @@ a-card.table-manager(:bordered="false")
       template(#switcher-icon="nodeData")
         svg.icon-18(v-if="!nodeData.isLeaf")
           use(href="#tables")
-    .tree-scrollbar(v-else)
-      EmptyStatus
+    EmptyStatus.empty(v-else)
 </template>
 
 <script lang="ts" setup name="TableManager">
@@ -532,6 +531,13 @@ a-card.table-manager(:bordered="false")
 
   .refresh-details {
     background-color: var(--th-bg-color);
+  }
+
+  .empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
   }
 </style>
 

@@ -11,12 +11,14 @@ a-card.logs-card(:bordered="false")
       @click="clear"
     ) {{ $t('dashboard.clear') }}
   a-list(
-    v-if="logs.length"
     size="small"
     :hoverable="true"
     :bordered="false"
+    :class="{ 'empty-list': !logs.length }"
   )
     Log(v-for="log of logs" :key="log" :log="log")
+    template(#empty)
+      EmptyStatus.empty-log
 </template>
 
 <script lang="ts" name="Log" setup>
@@ -43,9 +45,15 @@ a-card.logs-card(:bordered="false")
       font-weight: 800;
     }
   }
+  .empty-list {
+    :deep(.arco-list-content) {
+      border: none;
+    }
+  }
   :deep(.arco-list) {
     border-radius: 0;
   }
+
   :deep(.arco-list-content) {
     border-top: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
@@ -53,6 +61,11 @@ a-card.logs-card(:bordered="false")
     display: flex;
     flex-direction: column-reverse;
   }
+
+  :deep(.arco-list-item-main) {
+    width: calc(100% - 32px);
+  }
+
   :deep(.arco-list-item:not(:last-child)) {
     border-color: var(--border-color);
   }
@@ -68,11 +81,13 @@ a-card.logs-card(:bordered="false")
     width: 32px;
   }
 
-  :deep(.arco-list-item-main) {
-    width: calc(100% - 32px);
-  }
-
   :deep(.arco-list-small .arco-list-content-wrapper .arco-list-content > .arco-list-item) {
     padding: 4px 10px 4px 20px;
+  }
+
+  .empty-log {
+    border: none;
+    flex-direction: column;
+    height: 50vh;
   }
 </style>

@@ -28,7 +28,7 @@ a-layout.navbar
               use(href="#settings")
           | {{ $t('settings.title') }}
       li
-        a-dropdown.menu-dropdown(trigger="hover" position="right" :popup-max-height="false")
+        a-dropdown.menu-dropdown(trigger="click" position="right" :popup-max-height="false")
           a-button(style="width: 100%")
             template(#icon)
               svg.icon-18

@@ -1,6 +1,6 @@
 <template lang="pug">
 a-layout.layout
-  a-layout-sider(style="width: 66.6%; min-width: 500px" :resize-directions="['right']")
+  a-layout-sider.tables-sider(style="width: 66.6%" :resize-directions="['right']")
     TableManager
   a-layout-content
     LogsLayout(:logs="queryLogs" :types="types")
@@ -13,6 +13,10 @@ a-layout.layout
 
   const { logs } = storeToRefs(useLogStore())
   const { getResultsByType } = useQueryCode()
+
+  const MENU_WIDTH = 258 + 16
+  const MODAL_WIDTH = 636
+  const OTHERS_WIDTH = `${MENU_WIDTH + MODAL_WIDTH}px`
 
   const types = ['sql', 'promql']
 
@@ -29,3 +33,11 @@ a-layout.layout
 
   // TODO: add more code type in the future if needed
 </script>
+
+<style lang="less" scoped>
+  .arco-layout-sider.tables-sider {
+    width: 66.6%;
+    min-width: 500px;
+    max-width: calc(100vw - v-bind(OTHERS_WIDTH));
+  }
+</style>

@@ -54,8 +54,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
                   a-button(type="text" @click="copy(nodeData.title)") Copy name
     template(#switcher-icon)
       IconDown
-  .tree-scrollbar(v-else)
-    EmptyStatus
+  EmptyStatus.empty(v-else)
 </template>
 
 <script lang="ts" setup name="TableList">

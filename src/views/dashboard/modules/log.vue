@@ -1,6 +1,6 @@
 <template lang="pug">
 a-list-item.smaller-divider
-  template(v-if="log.type !== 'python' && !log.error" #actions)
+  template(v-if="hasAction && log.type !== 'python' && !log.error" #actions)
     a-button.play(type="text" @click="openEditor")
       template(#icon)
         icon-play-arrow
@@ -53,6 +53,10 @@ a-list-item.smaller-divider
     codeType: {
       type: String,
       default: 'sql',
+    },
+    hasAction: {
+      type: Boolean,
+      default: true,
     },
   })
 

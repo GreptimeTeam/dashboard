@@ -9,7 +9,7 @@ a-tabs.result-tabs(
   @delete="deleteTab"
 )
   template(#extra)
-    a-button(status="danger" @click="clearResults") {{ $t('dashboard.clear') }}
+    a-button(status="danger" size="small" @click="clearResults") {{ $t('dashboard.clear') }}
   a-tab-pane(
     v-for="(result, index) of results"
     :key="result.key"
