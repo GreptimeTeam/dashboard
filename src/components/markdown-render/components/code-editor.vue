@@ -264,4 +264,8 @@
   :deep(.arco-list-small .arco-list-content-wrapper .arco-list-content > .arco-list-item) {
     padding: 10px 20px;
   }
+
+  .arco-list-hover .arco-list-item:hover {
+    background-color: inherit;
+  }
 </style>

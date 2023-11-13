@@ -198,6 +198,11 @@
   .arco-table-container {
     border-color: var(--border-color);
     border-radius: 4px;
+
+    .arco-table-content {
+      border-bottom: 1px solid var(--border-color);
+      border-radius: 4px;
+    }
   }
 
   .arco-table-cell {
@@ -227,6 +232,15 @@
   .arco-table-tr .arco-table-th {
     background-color: var(--th-bg-color);
     border-color: var(--border-color);
+    border-bottom: none;
+  }
+
+  tbody .arco-table-tr:last-of-type {
+    border-bottom: 1px solid var(--border-color);
+
+    .arco-table-td {
+      border: none;
+    }
   }
 }
 

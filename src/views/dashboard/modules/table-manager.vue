@@ -538,6 +538,7 @@ a-card.table-manager(:bordered="false")
     align-items: center;
     justify-content: center;
     flex-direction: column;
+    height: 50vh;
   }
 </style>
 

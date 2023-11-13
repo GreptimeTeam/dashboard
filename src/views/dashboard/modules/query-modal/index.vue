@@ -152,17 +152,24 @@ a-modal.query-modal(
           .arco-tabs-nav-ink {
             background: transparent;
           }
+          .arco-tabs-nav-tab-list > :nth-child(2) {
+            .arco-tabs-tab-title {
+              border-left: 1px solid var(--border-color);
+            }
+          }
           .arco-tabs-tab {
             padding: 4px 0;
             margin: 10px 0 0 0;
             background: var(--th-bg-color);
             color: var(--main-font-color);
-            border-radius: 0 4px 4px 0;
+
             &:first-of-type {
-              border-radius: 4px 0 0 4px;
-              > .arco-tabs-tab-title {
-                border-right: 1px solid var(--border-color);
-              }
+              border-top-left-radius: 4px;
+              border-bottom-left-radius: 4px;
+            }
+            &:nth-last-of-type(2) {
+              border-top-right-radius: 4px;
+              border-bottom-right-radius: 3px;
             }
 
             &.arco-tabs-tab-active {
