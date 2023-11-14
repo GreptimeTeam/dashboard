@@ -129,6 +129,7 @@ a-layout.navbar
       color: var(--brand-color);
       border-left: 2px solid;
       border-radius: 0;
+      border-color: var(--brand-color);
       .arco-menu-icon {
         color: var(--brand-color);
       }

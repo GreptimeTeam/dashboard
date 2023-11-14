@@ -4,7 +4,7 @@ a-modal.query-modal(
   :class="{ 'full-screen': isFullscreen }"
   :ok-text="$t('guide.confirm')"
   :hide-cancel="true"
-  :width="isFullscreen ? `calc(100vw - ${MENU_WIDTH}px)` : 636"
+  :width="isFullscreen ? `calc(100vw - ${MENU_WIDTH}px - 32px)` : 636"
   :mask="false"
   :align-center="false"
   :mask-style="{ 'pointer-events': 'none' }"
@@ -14,7 +14,7 @@ a-modal.query-modal(
 )
   template(#title)
     | {{ $t('menu.dashboard.query') }}
-    a-space(fill :size="0")
+    a-space(fill :size="4")
       a-button.screen-button(type="text" size="small" @click="clearCode")
         template(#icon)
           svg.icon-18
@@ -23,10 +23,10 @@ a-modal.query-modal(
         template(#icon)
           svg.icon-18(v-if="isFullscreen")
             use(href="#zoom-out")
-          svg.icon-16(v-else)
+          svg.icon-18(v-else)
             use(href="#zoom")
   a-space.editor-space(align="start" fill :size="0")
-    a-scrollbar(style="height: calc(100vh - 68px); overflow: auto")
+    a-scrollbar(:style="{ height: `calc(100vh - ${MODAL_TO_TOP * 2 + HEADER_HEIGHT}px)`, overflow: 'auto' }")
       Editor
       DataView.modal-view(v-if="!!results?.length" :results="results" :types="types")
 </template>
@@ -38,8 +38,8 @@ a-modal.query-modal(
   const { login, updateSettings } = useAppStore()
   const { getResultsByType, sqlView, promqlView, queryType, clearCode } = useQueryCode()
 
-  const HEADER_HEIGHT = 48
-  const MODAL_TO_TOP = 20
+  const HEADER_HEIGHT = 58
+  const MODAL_TO_TOP = 16
   const MENU_WIDTH = 258
   const isFullscreen = ref(false)
   const isLeft = ref(false)
@@ -65,7 +65,6 @@ a-modal.query-modal(
   }
 
   .screen-button {
-    width: px;
     font-size: 20px;
     color: var(--small-font-color);
   }
@@ -73,14 +72,6 @@ a-modal.query-modal(
 
 <style lang="less">
   .query-modal {
-    &.full-screen {
-      .arco-modal {
-        transform: none !important;
-        position: fixed;
-        right: 0;
-        top: 20px;
-      }
-    }
     pointer-events: none;
     .arco-modal-wrapper {
       overflow: hidden;
@@ -88,9 +79,8 @@ a-modal.query-modal(
         pointer-events: auto;
         box-shadow: 0 2px 10px 0 var(--box-shadow-color);
         .arco-modal-header {
-          height: 48px;
+          height: 58px;
           .arco-modal-title {
-            padding-right: 13px;
             font-weight: 800;
             justify-content: space-between;
           }
@@ -107,12 +97,14 @@ a-modal.query-modal(
           align-items: center;
           justify-content: center;
           border-radius: 6px;
+          margin-left: 4px;
           svg {
             stroke-width: 3px;
           }
         }
         .arco-modal-close-btn:hover {
           background: var(--th-bg-color);
+          color: var(--brand-color);
         }
       }
     }
@@ -121,7 +113,7 @@ a-modal.query-modal(
       .arco-modal {
         position: absolute;
         right: 0;
-        top: 20px;
+        top: 32px;
       }
     }
 
@@ -132,6 +124,15 @@ a-modal.query-modal(
             left: 60px !important;
           }
         }
+      }
+    }
+
+    &.full-screen {
+      .arco-modal {
+        transform: none !important;
+        position: fixed !important;
+        right: 16px !important;
+        top: 16px !important;
       }
     }
 
