@@ -7,7 +7,7 @@ a-card.table-manager(:bordered="false")
         svg.icon.brand-color
           use(href="#refresh")
     a-space
-      a-input(v-model="tablesSearchKey" :allow-clear="true")
+      a-input(v-model="tablesSearchKey" :allow-clear="true" :placeholder="$t('dashboard.input')")
         template(#prefix)
           svg.icon
             use(href="#search")
@@ -36,20 +36,24 @@ a-card.table-manager(:bordered="false")
           .tree-data
             a-button(type="text" @click="(event) => expandChildren(event, nodeData, 'columns')")
               template(#icon)
-                svg.icon-18(
+                svg.icon-20(
                   :class="nodeData.childrenType === 'columns' && expandedKeys?.includes(nodeData.key) ? '' : 'icon-color'"
                 )
                   use(href="#columns")
             a-button(type="text" @click="(event) => expandChildren(event, nodeData, 'details')")
               template(#icon)
-                svg.icon-18(
+                svg.icon-20(
                   :class="nodeData.childrenType === 'details' && expandedKeys?.includes(nodeData.key) ? '' : 'icon-color'"
                 )
                   use(href="#details")
-            a-dropdown.menu-dropdown(trigger="click" position="right" @click="(event) => clickMenu(event, nodeData)")
+            a-dropdown.menu-dropdown.quick-select(
+              trigger="click"
+              position="right"
+              @click="(event) => clickMenu(event, nodeData)"
+            )
               a-button(type="text")
                 template(#icon)
-                  svg.icon-18
+                  svg.icon-20.icon-color
                     use(href="#query")
               template(#content)
                 a-doption(v-for="item of SHORTCUT_MAP['TABLE']" v-show="route.name === 'query'")
@@ -60,7 +64,7 @@ a-card.table-manager(:bordered="false")
                       :parent="nodeData.iconType ? originTablesTree[nodeData.parentKey] : nodeData"
                       :label="item.label"
                     )
-            TextCopyable.copy.query-copy(
+            TextCopyable.title-copy(
               type="text"
               :data="nodeData.title"
               :show-data="false"
@@ -72,10 +76,10 @@ a-card.table-manager(:bordered="false")
           .tree-data
             transition(name="slide-fade")
               .data-type {{ nodeData.dataType }}
-            a-dropdown.menu-dropdown(v-if="nodeData.dataType" trigger="click" position="right")
+            a-dropdown.menu-dropdown.quick-select(v-if="nodeData.dataType" trigger="click" position="right")
               a-button(type="text")
                 template(#icon)
-                  svg.icon-18
+                  svg.icon-20.icon-color
                     use(href="#query")
               template(#content)
                 a-doption(v-for="item of SHORTCUT_MAP[nodeData.iconType || 'TABLE']" v-show="route.name === 'query'")
@@ -86,7 +90,7 @@ a-card.table-manager(:bordered="false")
                       :parent="nodeData.iconType ? originTablesTree[nodeData.parentKey] : nodeData"
                       :label="item.label"
                     )
-            TextCopyable.copy.query-copy(
+            TextCopyable.title-copy(
               type="text"
               :data="nodeData.title"
               :show-data="false"
@@ -98,29 +102,37 @@ a-card.table-manager(:bordered="false")
               span {{ $t('dashboard.rowCount') }}
               span {{ nodeData.info.rowCount }}
             a-space(:size="4")
-              span {{ $t('dashboard.minTime') }}
-              a-tooltip(:content="`${nodeData.info.min}`")
-                span {{ dateFormatter(nodeData.info.timestampType, nodeData.info.min) }}
-            a-space(:size="4")
-              span {{ $t('dashboard.maxTime') }}
-              a-tooltip(:content="`${nodeData.info.max}`")
-                span {{ dateFormatter(nodeData.info.timestampType, nodeData.info.max) }}
-            a-space(:size="4")
               span {{ `TTL` }}
               span {{ nodeData.info.ttl }}
-            a-button.refresh-details(type="text" @click="loadMore(originTablesTree[nodeData.parentKey])")
+            a-space(:size="4")
+              span {{ $t('dashboard.minTime') }}
+              a-tooltip(v-if="nodeData.info.min !== '-'" :content="`${nodeData.info.min}`")
+                span {{ dateFormatter(nodeData.info.timestampType, nodeData.info.min) }}
+              span(v-else) {{ nodeData.info.min }}
+            a-space(:size="4")
+              span {{ $t('dashboard.maxTime') }}
+              a-tooltip(v-if="nodeData.info.max !== '-'" :content="`${nodeData.info.max}`")
+                span {{ dateFormatter(nodeData.info.timestampType, nodeData.info.max) }}
+              span(v-else) {{ nodeData.info.max }}
+            a-button.refresh-details(
+              type="text"
+              :loading="isRefreshingDetails[nodeData.parentKey]"
+              @click="loadMore(originTablesTree[nodeData.parentKey])"
+            )
               template(#icon)
                 svg.icon-18.icon-color
                   use(href="#refresh")
-          a-space.create-table(v-else align="start")
-            .left {{ $t('dashboard.createTable') }}
-            .right
-              a-typography-text {{ codeFormatter(nodeData.info.sql) }}
-              TextCopyable(
-                :data="codeFormatter(nodeData.info.sql)"
-                :showData="false"
-                :copyTooltip="$t('dashboard.copyToClipboard')"
-              )
+          a-space(v-else)
+            a-space(align="start" :class="{ 'create-table': nodeData.info.sql !== '-' }")
+              .left {{ $t('dashboard.createTable') }}
+              span(v-if="nodeData.info.sql === '-'") {{ nodeData.info.sql }}
+              .right(v-else)
+                a-typography-text {{ codeFormatter(nodeData.info.sql) }}
+                TextCopyable(
+                  :data="codeFormatter(nodeData.info.sql)"
+                  :showData="false"
+                  :copyTooltip="$t('dashboard.copyToClipboard')"
+                )
       template(#switcher-icon="nodeData")
         svg.icon-18(v-if="!nodeData.isLeaf")
           use(href="#tables")
@@ -135,14 +147,11 @@ a-card.table-manager(:bordered="false")
   import useSiderTabs from '@/hooks/sider-tabs'
   import type { TableDetail, TableTreeChild, TableTreeParent, TreeData } from '@/store/modules/database/types'
   import type { OptionsType } from '@/types/global'
-  import { useClipboard } from '@vueuse/core'
   import editorAPI from '@/api/editor'
   import { format } from 'sql-formatter'
   import dayjs from 'dayjs'
   import { dateFormatter } from '@/utils'
 
-  const source = ref('')
-  const { text, copy, copied, isSupported } = useClipboard({ source })
   const route = useRoute()
   const { insertNameToPyCode } = usePythonCode()
   const { tablesSearchKey, tablesTreeData } = useSiderTabs()
@@ -151,8 +160,8 @@ a-card.table-manager(:bordered="false")
 
   const LAYOUT_PADDING = 16
   const HEADER = 58
-
   const listHeight = LAYOUT_PADDING * 3 + HEADER
+  const isRefreshingDetails = ref<{ [key: number]: boolean }>({ 0: false })
 
   const treeRef = ref()
   const expandedKeys = ref<number[]>()
@@ -204,6 +213,8 @@ a-card.table-manager(:bordered="false")
 
   const loadMore = async (nodeData: TableTreeParent) => {
     if (nodeData.childrenType === 'details') {
+      isRefreshingDetails.value[nodeData.key] = true
+
       const createTable = new Promise<object>((resolve, reject) => {
         editorAPI
           .runSQL(`show create table ${nodeData.title}`)
@@ -220,7 +231,7 @@ a-card.table-manager(:bordered="false")
           .catch(() => {
             const result = {
               key: 'createTable',
-              value: { sql: '', ttl: '-' },
+              value: { sql: '-', ttl: '-' },
             }
             reject(result)
           })
@@ -230,21 +241,23 @@ a-card.table-manager(:bordered="false")
         const getRowAndTime = () => {
           editorAPI
             .runSQL(
-              `select count(*), min (${nodeData.timeIndexName}), max (${nodeData.timeIndexName}) from "${nodeData.title}"`
+              nodeData.timeIndexName !== '%TIMESTAMP%'
+                ? `select count(*), min (${nodeData.timeIndexName}), max (${nodeData.timeIndexName}) from "${nodeData.title}"`
+                : `select count(*) from "${nodeData.title}"`
             )
             .then((res: any) => {
               const resArray = res.output[0].records.rows[0]
-              const timestampType = res.output[0].records.schema.column_schemas[1].data_type
+              const timestampType = res.output[0].records.schema.column_schemas[1]?.data_type || '-'
               const result = {
                 key: 'rowAndTime',
-                value: { rowCount: resArray[0], min: resArray[1], max: resArray[2], timestampType },
+                value: { rowCount: resArray[0], min: resArray[1] || '-', max: resArray[2] || '-', timestampType },
               }
               resolve(result)
             })
             .catch(() => {
               const result = {
                 key: 'rowAndTime',
-                value: { rowCount: 0, min: 0, max: 0 },
+                value: { rowCount: '-', min: '-', max: '-' },
               }
               reject(result)
             })
@@ -280,6 +293,7 @@ a-card.table-manager(:bordered="false")
           class: 'details',
         })
         addChildren(nodeData.key, children, nodeData.timeIndexName, 'details')
+        isRefreshingDetails.value[nodeData.key] = false
       })
     }
     return loadMoreColumns(nodeData)
@@ -436,6 +450,13 @@ a-card.table-manager(:bordered="false")
       background: var(--tree-select-brand-color);
     }
 
+    :deep(.arco-tree-node:last-of-type) {
+      border-bottom: 1px solid var(--border-color);
+      &.arco-tree-node-is-leaf {
+        padding-bottom: 8px;
+      }
+    }
+
     :deep(.arco-tree-node.arco-tree-node-is-leaf.details) {
       .arco-tree-node-title {
         border-radius: 0;
@@ -443,13 +464,14 @@ a-card.table-manager(:bordered="false")
       }
       .detail-row {
         font-size: 12px;
+        line-height: 18px;
         > .arco-space {
           > .arco-space-item {
             > .arco-space {
               .arco-space-item:first-of-type {
                 color: var(--third-font-color);
               }
-              .arco-space-item:last-of-type {
+              .arco-space-item:nth-of-type(2) {
                 color: var(--small-font-color);
               }
             }
@@ -476,26 +498,18 @@ a-card.table-manager(:bordered="false")
   }
   .create-table {
     flex-direction: column;
-    .left {
-      width: 120px;
-      color: var(--third-font-color);
-    }
-    .right {
-      background: var(--th-bg-color);
-      border-radius: 6px;
-      border: 1px solid var(--border-color);
-      padding: 0 10px 4px 10px;
-      font-family: monospace;
-    }
   }
 
-  .query-copy {
-    :deep(.arco-typography-operation-copy) {
-      .icon {
-        width: 17px;
-        height: 17px;
-      }
-    }
+  .left {
+    color: var(--third-font-color);
+    padding: 7px 0;
+  }
+  .right {
+    background: var(--th-bg-color);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    padding: 0 10px 4px 10px;
+    font-family: monospace;
   }
 
   :deep(.arco-tree-node-switcher) {
@@ -512,25 +526,17 @@ a-card.table-manager(:bordered="false")
     margin-left: 0px;
   }
 
-  .copy {
+  .title-copy {
     :deep(.arco-typography-operation-copy),
     :deep(.arco-typography-operation-copied) {
       margin-left: 0;
-      padding: 7px;
-      background: none;
-      border-radius: 6px;
+      padding: 0;
     }
-    :deep(.arco-typography-operation-copy:hover) {
-      background-color: var(--th-bg-color);
-      color: inherit;
-    }
-    :deep(.pointer) {
-      opacity: 1;
-    }
-  }
 
-  .refresh-details {
-    background-color: var(--th-bg-color);
+    :deep(.icon) {
+      width: 20px;
+      height: 20px;
+    }
   }
 
   .empty {
@@ -539,6 +545,12 @@ a-card.table-manager(:bordered="false")
     justify-content: center;
     flex-direction: column;
     height: 50vh;
+  }
+
+  .arco-dropdown-open {
+    .icon-color {
+      color: var(--brand-color);
+    }
   }
 </style>
 
