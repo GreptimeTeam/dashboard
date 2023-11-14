@@ -3,7 +3,7 @@ a-list-item.smaller-divider
   template(v-if="hasAction && log.type !== 'python' && !log.error" #actions)
     a-button.play(type="text" @click="openEditor")
       template(#icon)
-        icon-play-arrow
+        icon-play-arrow.icon-color
   a-space(direction="vertical" fill :size="0")
     .code
       a-tooltip(v-if="log.error" :content="log.error")
@@ -121,6 +121,12 @@ a-list-item.smaller-divider
 
   .play {
     font-size: 17px;
+  }
+
+  .arco-btn-text[type='button']:hover {
+    .arco-btn-icon .icon-color {
+      color: var(--brand-color);
+    }
   }
 </style>
 

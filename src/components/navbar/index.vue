@@ -22,7 +22,7 @@ a-layout.navbar
   a-layout-footer
     ul.footer
       li
-        a-button(style="width: 100%" @click="setVisible")
+        a-button(style="width: 100%" :class="{ hover: globalSettings }" @click="setVisible")
           template(#icon)
             svg.icon-20
               use(href="#settings")
@@ -47,7 +47,7 @@ a-layout.navbar
   import useMenuTree from '../menu/use-menu-tree'
 
   const { updateSettings } = useAppStore()
-  const { menuSelectedKey } = storeToRefs(useAppStore())
+  const { menuSelectedKey, globalSettings } = storeToRefs(useAppStore())
   const { menuTree } = useMenuTree()
 
   const menu = menuTree.value[0].children
@@ -188,7 +188,9 @@ a-layout.navbar
       justify-content: flex-start;
       padding-left: 62px;
     }
-    .arco-btn-secondary[type='button']:hover {
+    .arco-btn-secondary[type='button']:hover,
+    .arco-btn-secondary.hover,
+    .arco-btn-secondary.arco-dropdown-open {
       border-color: inherit;
       background: var(--light-brand-color);
       color: var(--brand-color);
