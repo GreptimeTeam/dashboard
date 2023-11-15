@@ -46,11 +46,7 @@ a-card.table-manager(:bordered="false")
                   :class="nodeData.childrenType === 'details' && expandedKeys?.includes(nodeData.key) ? '' : 'icon-color'"
                 )
                   use(href="#details")
-            a-dropdown.menu-dropdown.quick-select(
-              trigger="click"
-              position="right"
-              @click="(event) => clickMenu(event, nodeData)"
-            )
+            a-dropdown.quick-select(trigger="click" position="right" @click="(event) => clickMenu(event, nodeData)")
               a-button(type="text")
                 template(#icon)
                   svg.icon-20.icon-color
@@ -76,7 +72,7 @@ a-card.table-manager(:bordered="false")
           .tree-data
             transition(name="slide-fade")
               .data-type {{ nodeData.dataType }}
-            a-dropdown.menu-dropdown.quick-select(v-if="nodeData.dataType" trigger="click" position="right")
+            a-dropdown.quick-select(v-if="nodeData.dataType" trigger="click" position="right")
               a-button(type="text")
                 template(#icon)
                   svg.icon-20.icon-color
@@ -554,4 +550,28 @@ a-card.table-manager(:bordered="false")
   }
 </style>
 
-<style lang="less"></style>
+<style lang="less">
+  .quick-select {
+    .arco-dropdown-option {
+      padding: 0;
+    }
+    .arco-dropdown .arco-btn-text[type='button'] {
+      border-radius: 0;
+
+      &:hover {
+        background-color: var(--main-bg-color);
+      }
+    }
+
+    .arco-btn-text[type='button'] {
+      justify-content: start;
+      width: 100%;
+      color: var(--small-font-color);
+      font-size: 13px;
+    }
+
+    .arco-btn-text[type='button']:hover {
+      background-color: var(--grey-bg-color);
+    }
+  }
+</style>

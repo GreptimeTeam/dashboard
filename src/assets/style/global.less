@@ -118,27 +118,11 @@ body {
 }
 
 .menu-dropdown {
+  .arco-dropdown-option {
+    padding: 0;
+  }
+
   .arco-dropdown {
-    padding: 4px 0;
-    border: 0;
-    border-radius: 4px;
-    box-shadow: 0 2px 10px 0 var(--box-shadow-color);
-
-    .arco-dropdown-option {
-      padding: 0;
-    }
-
-    .arco-dropdown-option:not(.arco-dropdown-option-disabled):hover {
-      background-color: transparent;
-    }
-
-    .arco-dropdown-option-content {
-      width: 100%;
-      height: 32px;
-      line-height: 32px;
-      border-radius: 0;
-    }
-
     .arco-link {
       justify-content: flex-start;
       width: 100%;
@@ -151,27 +135,6 @@ body {
     .arco-link:hover {
       color: var(--small-font-color);
       background-color: var(--main-bg-color);
-    }
-
-    .arco-btn-text[type='button'] {
-      justify-content: start;
-      width: 100%;
-      color: var(--small-font-color);
-      font-size: 13px;
-    }
-
-    .arco-btn-text[type='button']:hover {
-      background-color: var(--grey-bg-color);
-    }
-  }
-
-  &.quick-select {
-    .arco-dropdown .arco-btn-text[type='button'] {
-      border-radius: 0;
-
-      &:hover {
-        background-color: var(--main-bg-color);
-      }
     }
   }
 }
@@ -251,9 +214,9 @@ body {
 }
 
 .arco-select-dropdown {
-  padding: 0;
+  padding: 4px 0;
   border: 0;
-  border-radius: 6px;
+  border-radius: 4px;
   box-shadow: 0 2px 10px 0 var(--box-shadow-color);
 
   .arco-select-option {
@@ -262,7 +225,7 @@ body {
     font-size: 13px;
     line-height: 32px;
     text-align: left;
-    border-radius: 6px;
+    border-radius: 0;
 
     .arco-checkbox-icon {
       width: 12px;
@@ -309,7 +272,7 @@ body {
 
 .arco-input-wrapper {
   background: var(--grey-bg-color);
-  border-radius: 6px;
+  border-radius: 4px;
 
   .arco-input[disabled] {
     -webkit-text-fill-color: var(--hover-font-color);
