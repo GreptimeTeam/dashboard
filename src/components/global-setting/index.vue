@@ -17,7 +17,7 @@ a-drawer.settings-drawer(
     a-form-item(:label="$t('settings.host')")
       a-input(v-model="settingsForm.host")
     a-form-item(:label="$t('settings.database')")
-      a-input(v-if="isCloud" v-model="settingsForm.database")
+      a-input(v-if="role === 'admin'" v-model="settingsForm.database")
       a-select(v-else v-model="settingsForm.database" allow-create)
         a-option(
           v-for="item of settingsForm.databaseList"
@@ -47,9 +47,8 @@ a-drawer.settings-drawer(
   const { navbar, updateSettings, login } = useAppStore()
   const { getTables, getScriptsTable } = useDataBaseStore()
 
-  const { codeType, isCloud, globalSettings, host, database, username, password, databaseList } = storeToRefs(
-    useAppStore()
-  )
+  const { role } = storeToRefs(useUserStore())
+  const { codeType, globalSettings, host, database, username, password, databaseList } = storeToRefs(useAppStore())
 
   const settingsForm = ref({
     username: username.value,

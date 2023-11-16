@@ -111,7 +111,6 @@ a-card.editor-card(:bordered="false")
 
   const route = useRoute()
 
-  const { isCloud } = storeToRefs(useAppStore())
   const {
     codes,
     queryType,

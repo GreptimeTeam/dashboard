@@ -1,7 +1,7 @@
 {
   "theme": "dark",
   "colorWeak": false,
-  "navbar": false,
+  "navbar": true,
   "menu": false,
   "hideMenu": false,
   "menuCollapse": false,
@@ -20,7 +20,6 @@
   "dbId": "",
   "serverMenu": [],
   "codeType": "sql",
-  "isCloud": false,
   "guideModalVisible": false,
   "lifetime": "long",
   "menuSelectedKey": "query",

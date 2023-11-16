@@ -5,6 +5,7 @@ export const DEFAULT_LAYOUT = () => import('@/layout/default-layout.vue')
 const DASHBOARD: AppRouteRecordRaw = {
   path: '/dashboard',
   name: 'dashboard',
+
   redirect: '/dashboard/query',
   component: DEFAULT_LAYOUT,
   meta: {
@@ -22,6 +23,7 @@ const DASHBOARD: AppRouteRecordRaw = {
         locale: 'menu.dashboard.query',
         requiresAuth: false,
         icon: 'query-menu',
+        roles: ['admin', 'cloud'],
       },
     },
     {
@@ -31,7 +33,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.dashboard.scripts',
         requiresAuth: true,
-        roles: ['dev'],
+        roles: ['admin'],
       },
     },
     {
@@ -41,6 +43,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.dashboard.playground',
         requiresAuth: false,
+        roles: ['admin', 'cloud', 'playground'],
         icon: 'playground',
       },
     },
@@ -51,7 +54,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.dashboard.status',
         requiresAuth: true,
-        roles: ['dev'],
+        roles: ['admin'],
       },
     },
   ],
