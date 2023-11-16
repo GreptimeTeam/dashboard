@@ -18,7 +18,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
     :data="tablesTreeData"
     :load-more="loadMore"
     :animation="false"
-    :virtual-list-props="{ height: 'calc(100vh - 220px)' }"
+    :virtual-list-props="{ height: 'calc(100vh - 160px)' }"
     :field-names="{ children: 'columns' }"
   )
     template(#icon="node")

@@ -39,8 +39,24 @@ a-tabs.result-tabs.logs-tab(type="rounded")
   :deep(.arco-list-content) {
     border-top: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
+    flex-direction: column-reverse;
+    display: flex;
   }
+
+  :deep(.arco-list-small .arco-list-content-wrapper .arco-list-content > .arco-list-item) {
+    padding: 4px 12px;
+  }
+  :deep(.arco-list-item:last-child) {
+    border-bottom: 1px solid var(--border-color);
+  }
+  :deep(.arco-list-item:first-child) {
+    border-bottom: none;
+  }
+
   :deep(.arco-list-item:not(:last-child)) {
     border-color: var(--border-color);
+  }
+  :deep(.arco-list) {
+    border-radius: 0;
   }
 </style>

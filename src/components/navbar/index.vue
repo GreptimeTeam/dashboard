@@ -5,7 +5,9 @@ a-layout.navbar
       img.logo-text-img(alt="logo" src="/src/assets/images/logo-text.png")
   a-layout-content
     .new-query
-      a-button(type="primary" @click="openQuery") + New Query
+      a-button(type="primary" @click="openQuery")
+        span +
+        span New Query
     .menu
       a-menu(mode="vertical" :selected-keys="[menuSelectedKey]")
         a-menu-item(
@@ -28,7 +30,7 @@ a-layout.navbar
               use(href="#settings")
           | {{ $t('settings.title') }}
       li
-        a-dropdown.menu-dropdown(trigger="click" position="right" :popup-max-height="false")
+        a-dropdown.menu-dropdown(trigger="hover" position="right" :popup-max-height="false")
           a-button(style="width: 100%")
             template(#icon)
               svg.icon-18
@@ -232,6 +234,10 @@ a-layout.navbar
     .arco-btn {
       width: 100%;
       height: 44px;
+      :first-child {
+        font-size: 26px;
+        padding-right: 4px;
+      }
     }
   }
 </style>
