@@ -129,13 +129,13 @@ a-trigger(
     .arco-dropdown-option {
       width: 140px;
       &.selected {
-        background-color: var(--light-brand-color);
+        background-color: var(--main-bg-color);
         font-weight: 600;
       }
       border-radius: 6px;
     }
     .arco-dropdown-option:not(.arco-dropdown-option-disabled):hover {
-      background-color: var(--light-brand-color);
+      background-color: var(--main-bg-color);
     }
     :deep(.arco-space-item:last-of-type) {
       border-top: 1px solid var(--light-border-color);

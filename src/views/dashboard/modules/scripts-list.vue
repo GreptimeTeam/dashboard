@@ -10,7 +10,7 @@ a-spin(style="width: 100%" :loading="scriptsLoading")
         svg.icon
           use(href="#create")
     .icon-space.pointer(@click="refreshScripts")
-      svg.icon
+      svg.icon.brand-color
         use(href="#refresh")
   a-scrollbar.tree-scrollbar
     a-tree.script-tree(

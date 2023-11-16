@@ -20,8 +20,8 @@
   "dbId": "",
   "serverMenu": [],
   "codeType": "sql",
-  "isCloud": false,
   "guideModalVisible": false,
   "lifetime": "long",
-  "menuSelectedKey": "query"
+  "menuSelectedKey": "query",
+  "queryModalVisible": false
 }
