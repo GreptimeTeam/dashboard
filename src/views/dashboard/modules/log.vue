@@ -26,9 +26,7 @@ a-list-item.smaller-divider
       .start-time
         | {{ log.startTime }}
       a-space.result(v-if="!log.error" fill :size="4")
-        a-space(v-if="hasExecutionTime" :size="0")
-          template(#split) ;
-          span(v-for="(oneResult, index) of log.results" :key="index") {{ oneResult.records >= 0 ? $tc('dashboard.select', oneResult.records, { records: oneResult.records }) : $tc('dashboard.affected', oneResult.affectedRows, { record: oneResult.affectedRows }) }}
+        span(v-if="hasExecutionTime") {{ log.message }}
         .total-time(v-if="hasExecutionTime")
           a-popover(content-class="total-time-popover")
             template(#content)
