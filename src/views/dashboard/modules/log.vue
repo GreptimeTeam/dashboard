@@ -6,9 +6,9 @@ a-list-item.smaller-divider
         icon-play-arrow.icon-color
   a-space(direction="vertical" fill :size="0")
     .code
-      a-tooltip(v-if="log.error" :content="log.error")
+      a-tooltip(v-if="log.error" position="tl" :content="log.error")
         div {{ log.error }}
-      a-popover(v-else-if="log.type !== 'python'" content-class="code-popup")
+      a-popover(v-else-if="log.type !== 'python'" content-class="code-popup" position="tl")
         template(#content)
           a-list(size="small" :split="false" :bordered="false")
             a-list-item(v-if="log.type === 'promql'" v-for="(value, name) in log.promInfo")
