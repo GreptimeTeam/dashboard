@@ -6,9 +6,9 @@ a-list-item.smaller-divider
         icon-play-arrow.icon-color
   a-space(direction="vertical" fill :size="0")
     .code
-      a-tooltip(v-if="log.error" :content="log.error")
+      a-tooltip(v-if="log.error" position="tl" :content="log.error")
         div {{ log.error }}
-      a-popover(v-else-if="log.type !== 'python'" content-class="code-popup")
+      a-popover(v-else-if="log.type !== 'python'" content-class="code-popup" position="tl")
         template(#content)
           a-list(size="small" :split="false" :bordered="false")
             a-list-item(v-if="log.type === 'promql'" v-for="(value, name) in log.promInfo")
@@ -26,9 +26,7 @@ a-list-item.smaller-divider
       .start-time
         | {{ log.startTime }}
       a-space.result(v-if="!log.error" fill :size="4")
-        a-space(v-if="hasExecutionTime" :size="0")
-          template(#split) ;
-          span(v-for="(oneResult, index) of log.results" :key="index") {{ oneResult.records >= 0 ? $tc('dashboard.select', oneResult.records, { records: oneResult.records }) : $tc('dashboard.affected', oneResult.affectedRows, { record: oneResult.affectedRows }) }}
+        span(v-if="hasExecutionTime") {{ log.message }}
         .total-time(v-if="hasExecutionTime")
           a-popover(content-class="total-time-popover")
             template(#content)

@@ -16,7 +16,8 @@ a-card.logs-card(:bordered="false")
     :bordered="false"
     :class="{ 'empty-list': !logs.length }"
   )
-    Log(v-for="log of logs" :key="log" :log="log")
+    TransitionGroup(name="list")
+      Log(v-for="log of logs" :key="log" :log="log")
     template(#empty)
       EmptyStatus.empty-log
 </template>
@@ -92,5 +93,15 @@ a-card.logs-card(:bordered="false")
     border: none;
     flex-direction: column;
     height: 50vh;
+  }
+
+  .list-enter-active,
+  .list-leave-active {
+    transition: all 0.5s ease;
+  }
+  .list-enter-from,
+  .list-leave-to {
+    opacity: 0;
+    transform: translateX(30px);
   }
 </style>
