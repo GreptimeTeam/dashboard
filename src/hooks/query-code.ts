@@ -99,31 +99,38 @@ export default function useQueryCode() {
     if (!withoutSave && res.log) {
       pushLog(res.log, type)
     }
-    console.log(res)
 
     if (type === 'sql') {
-      const sql = code
-      console.log(sql)
-      const createSQL = 'CREATE TABLE'
-      const createSQL2 = 'CREATE TABLE IF NOT EXISTS'
-      const regex = /CREATE TABLE IF NOT EXISTS[^A-Za-z0-9_-]+[A-Za-z0-9_-]+|CREATE TABLE[^A-Za-z0-9_-]+[A-Za-z0-9_-]+/g
+      const sql = sqlFormatter(code)
+
+      const regex =
+        /CREATE TABLE IF NOT EXISTS[^A-Za-z0-9_-]+[A-Za-z0-9_-]+|CREATE TABLE[^A-Za-z0-9_-]+[A-Za-z0-9_-]+|DROP TABLE[^A-Za-z0-9_-]+[A-Za-z0-9_-]+|ALTER TABLE[^A-Za-z0-9_-]+[A-Za-z0-9_-]+/g
       const matchString = sql.match(regex)
 
-      console.log(matchString)
-      const { refreshTables } = useSiderTabs()
+      const { refreshTables, loadMoreColumns, loadMoreDetails } = useSiderTabs()
+      const { originTablesTree } = storeToRefs(useDataBaseStore())
+
       if (matchString !== null) {
         const matchArray = matchString[0].split(' ')
-        const tableName = matchArray[matchArray.length - 1].match(/[A-Za-z0-9_-]+/g)[0]
-        console.log(tableName)
-        if (!matchString[0].includes('IF NOT EXISTS')) {
+        const tableName = matchArray[matchArray.length - 1].match(/[A-Za-z0-9_-]+/g)?.[0]
+
+        if (
+          (matchString[0].includes('CREATE TABLE') && !matchString[0].includes('IF NOT EXISTS')) ||
+          matchString[0].includes('DROP TABLE')
+        ) {
           refreshTables()
-        } else {
-          const { originTablesTree } = storeToRefs(useDataBaseStore())
+        } else if (!matchString[0].includes('ALTER TABLE')) {
           const isNewTable =
             originTablesTree.value.findIndex((item: TableTreeParent) => item.title === tableName) === -1
           if (isNewTable) {
             refreshTables()
           }
+        } else {
+          // ALTER
+          const tableNodeData = originTablesTree.value.find((item: TableTreeParent) => item.title === tableName)
+          // Affect childrenType?
+          loadMoreColumns(tableNodeData)
+          loadMoreDetails(tableNodeData)
         }
       }
     }
