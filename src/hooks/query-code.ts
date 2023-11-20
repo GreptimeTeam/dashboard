@@ -3,8 +3,13 @@ import i18n from '@/locale'
 import dayjs from 'dayjs'
 import { useCodeRunStore } from '@/store'
 import { ResultType } from '@/store/modules/code-run/types'
+import { TableTreeParent } from '@/store/modules/database/types'
+
 import { EditorSelection } from '@codemirror/state'
+import { sqlFormatter } from '@/utils'
 import { stringType } from './types'
+
+import useSiderTabs from './sider-tabs'
 
 const sqlView = shallowRef()
 const promqlView = shallowRef()
@@ -94,6 +99,35 @@ export default function useQueryCode() {
     if (!withoutSave && res.log) {
       pushLog(res.log, type)
     }
+    console.log(res)
+
+    if (type === 'sql') {
+      const sql = code
+      console.log(sql)
+      const createSQL = 'CREATE TABLE'
+      const createSQL2 = 'CREATE TABLE IF NOT EXISTS'
+      const regex = /CREATE TABLE IF NOT EXISTS[^A-Za-z0-9_-]+[A-Za-z0-9_-]+|CREATE TABLE[^A-Za-z0-9_-]+[A-Za-z0-9_-]+/g
+      const matchString = sql.match(regex)
+
+      console.log(matchString)
+      const { refreshTables } = useSiderTabs()
+      if (matchString !== null) {
+        const matchArray = matchString[0].split(' ')
+        const tableName = matchArray[matchArray.length - 1].match(/[A-Za-z0-9_-]+/g)[0]
+        console.log(tableName)
+        if (!matchString[0].includes('IF NOT EXISTS')) {
+          refreshTables()
+        } else {
+          const { originTablesTree } = storeToRefs(useDataBaseStore())
+          const isNewTable =
+            originTablesTree.value.findIndex((item: TableTreeParent) => item.title === tableName) === -1
+          if (isNewTable) {
+            refreshTables()
+          }
+        }
+      }
+    }
+
     return res
   }
 

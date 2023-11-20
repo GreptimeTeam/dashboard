@@ -67,7 +67,7 @@ const getTables = () => {
 }
 
 const getTableByName = (tableName: string) => {
-  return axios.post(sqlUrl, makeSqlData(`desc table ${tableName}`), addDatabaseParams())
+  return axios.post(sqlUrl, makeSqlData(`desc table "${tableName}"`), addDatabaseParams())
 }
 
 const runSQL = (code: string) => {

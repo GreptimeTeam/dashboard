@@ -14,7 +14,7 @@ a-card.table-manager(:bordered="false")
   a-spin(style="width: 100%" :loading="tablesLoading")
     a-tree.table-tree(
       v-if="tablesTreeData && tablesTreeData.length > 0"
-      ref="treeRef"
+      ref="tablesTreeRef"
       v-model:expanded-keys="expandedKeys"
       size="small"
       action-on-node-click="expand"
@@ -123,9 +123,9 @@ a-card.table-manager(:bordered="false")
               .left {{ $t('dashboard.createTable') }}
               span(v-if="nodeData.info.sql === '-'") {{ nodeData.info.sql }}
               .right(v-else)
-                a-typography-text {{ codeFormatter(nodeData.info.sql) }}
+                a-typography-text {{ codeFormatter(nodeData.info.sql) || 'dd' }}
                 TextCopyable(
-                  :data="codeFormatter(nodeData.info.sql)"
+                  :data="codeFormatter(nodeData.info.sql) || 'sql'"
                   :showData="false"
                   :copyTooltip="$t('dashboard.copyToClipboard')"
                 )
@@ -150,7 +150,7 @@ a-card.table-manager(:bordered="false")
 
   const route = useRoute()
   const { insertNameToPyCode } = usePythonCode()
-  const { tablesSearchKey, tablesTreeData } = useSiderTabs()
+  const { tablesSearchKey, tablesTreeData, tablesTreeRef, refreshTables } = useSiderTabs()
   const { tablesLoading, originTablesTree } = storeToRefs(useDataBaseStore())
   const { getTableByName, getTables, addChildren, generateTreeChildren } = useDataBaseStore()
 
@@ -159,7 +159,6 @@ a-card.table-manager(:bordered="false")
   const listHeight = LAYOUT_PADDING * 3 + HEADER
   const isRefreshingDetails = ref<{ [key: number]: boolean }>({ 0: false })
 
-  const treeRef = ref()
   const expandedKeys = ref<number[]>()
 
   const expandChildren = (event: Event, nodeData: TableTreeParent, type: 'details' | 'columns') => {
@@ -180,12 +179,6 @@ a-card.table-manager(:bordered="false")
       }
     })
   })
-
-  const refreshTables = () => {
-    tablesSearchKey.value = ''
-    getTables()
-    if (treeRef.value) treeRef.value.expandAll(false)
-  }
 
   const loadMoreColumns = (nodeData: TableTreeParent) =>
     new Promise<void>((resolve, reject) => {
@@ -213,7 +206,7 @@ a-card.table-manager(:bordered="false")
 
       const createTable = new Promise<object>((resolve, reject) => {
         editorAPI
-          .runSQL(`show create table ${nodeData.title}`)
+          .runSQL(`show create table "${nodeData.title}"`)
           .then((res: any) => {
             const sql = `${res.output[0].records.rows[0][1]}`
             const regex = /ttl = '(\w)+'/g
@@ -340,7 +333,8 @@ a-card.table-manager(:bordered="false")
   }
 
   const codeFormatter = (code: string) => {
-    return format(code, { language: 'mysql', keywordCase: 'upper' })
+    console.log(code)
+    return code
   }
 </script>
 
