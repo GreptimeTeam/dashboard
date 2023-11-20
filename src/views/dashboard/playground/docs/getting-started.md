@@ -88,13 +88,24 @@ SELECT * FROM cpu_metrics WHERE usage_user > 50 LIMIT 100;
 ```
 
 You can also perform basic arithmetic in the `WHERE` condition.
-For example, the following query returns data where the sum of the field value `usage_user` and 10 is greater than 50.
+For example, the following query returns data where the sum of the field values `usage_user` and `usage_system` is greater than 50.
 
 ```sql
-SELECT * FROM cpu_metrics WHERE usage_user + 10 > 50 LIMIT 100;
+SELECT * FROM cpu_metrics WHERE usage_user + usage_system > 50 LIMIT 100;
+```
+
+Get the timestamp of 5 minites ago by using the `now()` function and `interval` keyword:
+
+Time functions are available in `WHERE` clause.
+For example, the following SQL statement returns data where the `ts` is greater than the timestamp `1680911820000` minus 5 minutes.
+
+```sql
+SELECT * FROM cpu_metrics WHERE ts > (arrow_cast(1680911820000, 'Timestamp(Millisecond, None)') - interval '5 minutes') LIMIT 100;
 ```
 
 See more about [`WHERE` clause](https://docs.greptime.com/reference/sql/where).
+
+<!-- TODO time and data functions in SQL reference -->
 
 ### Group by tags
 
@@ -118,18 +129,7 @@ SELECT hostname, environment,
     LIMIT 100;
 ```
 
-95 percent usage reflects the peak usage of the CPU.
-The following SQL statement returns the 95 percent CPU usage group by `hostname` and `environment`.
-
-```sql
-SELECT hostname, environment,
-    approx_percentile_cont(usage_user, 0.95) as usage_user_95,
-    approx_percentile_cont(usage_system, 0.95) as usage_system_95,
-    approx_percentile_cont(usage_idle, 0.95) as usage_idle_95
-    FROM cpu_metrics
-    GROUP BY hostname, environment
-    LIMIT 100;
-```
+<!-- TODO 95 percent example for response time -->
 
 See more about [`GROUP BY` clause](https://docs.greptime.com/reference/sql/group_by).
 
@@ -230,30 +230,6 @@ SELECT * FROM cpu_metrics_avg_user LIMIT 100;
 ```
 
 Please refer to [INSERT INTO SELECT](https://docs.greptime.com/reference/sql/insert#insert-into-select-statement) documentation for more information.
-
-### Time and date functions
-
-GreptimeDB supports most of the time and date functions in PostgreSQL and Datafusion to help you manipulate time and date conveniently.
-
-For example, you can get the current timestamp by using the `now()` function:
-
-```sql
-SELECT now();
-```
-
-Get the timestamp of 5 minites ago by using the `now()` function and `interval` keyword:
-
-```sql
-SELECT now() - interval '5 minutes';
-```
-
-Extract the year from a timestamp by using the `date_part()` function:
-
-```sql
-SELECT date_part('year', now());
-```
-
-<!-- TODO time and data functions in SQL reference -->
 
 ## Try it Out
 
