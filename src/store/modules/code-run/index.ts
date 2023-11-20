@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import Message from '@arco-design/web-vue/es/message'
 import i18n from '@/locale'
@@ -7,6 +7,7 @@ import dayjs from 'dayjs'
 import { dateTypes } from '@/views/dashboard/config'
 import { AnyObject } from '@/types/global'
 import { HttpResponse, OutputType } from '@/api/interceptor'
+import { sqlFormatter } from '@/utils'
 import { ResultType, DimensionType, SchemaType } from './types'
 import { Log, ResultInLog } from '../log/types'
 
@@ -53,6 +54,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
     try {
       // TODO: try something better
       let oneResult = {} as ResultType
+
       const res: HttpResponse = await API_MAP[type](codeInfo)
 
       const resultsInLog: Array<ResultInLog> = []

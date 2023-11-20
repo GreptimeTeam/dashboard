@@ -3,9 +3,11 @@ import { ScriptTreeData, TableTreeChild, TableTreeParent, TreeChild, TreeData } 
 
 const tablesSearchKey = ref('')
 const scriptsSearchKey = ref('')
-const { originTablesTree, originScriptsList } = storeToRefs(useDataBaseStore())
+const tablesTreeRef = ref()
 
 export default function useSiderTabs() {
+  const { originTablesTree, originScriptsList } = storeToRefs(useDataBaseStore())
+
   // Deprecated.
   const searchTree = (keyword: string) => {
     const result: Array<TableTreeParent> = []
@@ -51,10 +53,22 @@ export default function useSiderTabs() {
     return searchList(scriptsSearchKey.value)
   })
 
+  const refreshTables = () => {
+    tablesSearchKey.value = ''
+    const { getTables } = useDataBaseStore()
+
+    getTables()
+    if (tablesTreeRef.value) {
+      tablesTreeRef.value.expandAll(false)
+    }
+  }
+
   return {
     tablesSearchKey,
     scriptsSearchKey,
     tablesTreeData,
     scriptsListData,
+    tablesTreeRef,
+    refreshTables,
   }
 }
