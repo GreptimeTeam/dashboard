@@ -100,7 +100,7 @@ Time functions are available in `WHERE` clause.
 For example, the following SQL statement returns data where the `ts` is greater than the timestamp `1680911820000` minus 5 minutes.
 
 ```sql
-SELECT * FROM cpu_metrics WHERE ts > (arrow_cast(1680911820000, 'Timestamp(Millisecond, None)') - interval '5 minutes') LIMIT 100;
+SELECT * FROM cpu_metrics WHERE ts > (1680911820000::timestamp_ms - interval '5 minutes') - interval '5 minutes') LIMIT 100;
 ```
 
 See more about [`WHERE` clause](https://docs.greptime.com/reference/sql/where).
@@ -233,13 +233,16 @@ Please refer to [INSERT INTO SELECT](https://docs.greptime.com/reference/sql/ins
 
 ## Try it Out
 
-Congratulations! You have completed the quick start guide.
-Now you can write your own queries and experience the power of GreptimeDB!
+Write your own queries and experience the power of GreptimeDB!
 
 ```sql
 
 ```
 
-For other advanced features like scripting and protocol supports,
-[Download](https://greptime.com/download/) and run GreptimeDB locally by
-following [docs](https://docs.greptime.com).
+## Empower Your Business With Self-Hosted GreptimeDB or GreptimeCloud Now
+
+Congratulations! You have completed the quick start guide.
+Now you can try using self-hosted GreptimeDB or GreptimeCloud to explore more advanced features and empower your business.
+
+- [Download and start self-hosted GreptimeDB](https://greptime.com/product/db)
+- [Sign up for GreptimeCloud](https://greptime.com/product/cloud)
