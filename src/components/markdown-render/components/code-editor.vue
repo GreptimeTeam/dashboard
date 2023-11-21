@@ -56,7 +56,7 @@
         DataGrid(:data="result" :hasHeader="false")
       a-tab-pane(v-if="hasChart" key="2" title="Chart")
         DataChart(:data="result" :hasHeader="false" :defaultChartForm="chartForm")
-  .logs(v-if="log")
+  .logs(v-if="log.type")
     a-list(
       size="small"
       :hoverable="true"
@@ -73,6 +73,7 @@
   import { oneDark } from '@codemirror/theme-one-dark'
   import useDataChart from '@/hooks/data-chart'
   import type { ResultType } from '@/store/modules/code-run/types'
+  import type { Log } from '@/store/modules/log/types'
   import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '@/views/dashboard/config'
   import mapLanguages from './utils'
 
@@ -122,7 +123,7 @@
     key: -1,
     type: '',
   } as ResultType)
-  const log = ref('')
+  const log = ref({} as Log)
   // TODO: better reset
   const reset = () => {
     defaultCode = codeFormat(slots?.default?.())
@@ -136,7 +137,7 @@
       key: -1,
       type: '',
     }
-    log.value = ''
+    log.value = {} as Log
     hasChart.value = false
     hasRecords.value = false
   }
@@ -151,7 +152,7 @@
       hasRecords.value = false
     }
     // TODO: try something better
-    log.value = res.log
+    log.value = res.log || ({} as Log)
     isLoading.value = false
     // todo: refresh tables data and when
   }
