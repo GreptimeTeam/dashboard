@@ -96,7 +96,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
             },
           } = output[0]
           const { treeChildren, timeIndexName } = generateTreeChildren(nodeData, rows, columnSchemas)
-          addChildren(nodeData.key, treeChildren, timeIndexName)
+          addChildren(nodeData.key, treeChildren, timeIndexName, 'columns')
           resolve()
         })
         .catch(() => {

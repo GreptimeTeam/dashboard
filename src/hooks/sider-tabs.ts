@@ -1,5 +1,5 @@
 import { useDataBaseStore } from '@/store'
-import { ScriptTreeData, TableTreeChild, TableTreeParent, TreeChild, TreeData } from '@/store/modules/database/types'
+import { ScriptTreeData, TableDetail, TableTreeChild, TableTreeParent } from '@/store/modules/database/types'
 import editorAPI from '@/api/editor'
 
 const tablesSearchKey = ref('')
@@ -65,8 +65,8 @@ export default function useSiderTabs() {
     }
   }
 
-  const loadMoreColumns = (nodeData: TableTreeParent) =>
-    new Promise<void>((resolve, reject) => {
+  const loadMoreColumns = (nodeData: TableTreeParent, isSilent?: boolean) =>
+    new Promise<TableTreeChild[]>((resolve, reject) => {
       getTableByName(nodeData.title)
         .then((result: any) => {
           const { output } = result
@@ -77,15 +77,15 @@ export default function useSiderTabs() {
             },
           } = output[0]
           const { treeChildren, timeIndexName } = generateTreeChildren(nodeData, rows, columnSchemas)
-          addChildren(nodeData.key, treeChildren, timeIndexName)
-          resolve()
+          addChildren(nodeData.key, treeChildren, timeIndexName, 'columns', isSilent)
+          resolve(treeChildren)
         })
         .catch(() => {
           reject()
         })
     })
 
-  const loadMoreDetails = (nodeData: TableTreeParent) => {
+  const loadMoreDetails = async (nodeData: TableTreeParent, isSilent?: boolean) => {
     isRefreshingDetails.value[nodeData.key] = true
     const createTable = new Promise<object>((resolve, reject) => {
       editorAPI
@@ -141,32 +141,31 @@ export default function useSiderTabs() {
       }
     })
 
-    return Promise.allSettled([rowAndTime, createTable]).then((result: any[]) => {
-      const children: TableDetail[] = []
-      const rowAndTimeResult = result[0].value || result[0].reason
-      const createTableResult = result[1].value || result[1].reason
-      children.push({
-        key: `${nodeData.title}.details.${rowAndTimeResult.key}`,
-        title: rowAndTimeResult.key,
-        parentKey: nodeData.key,
-        tableName: nodeData.title,
-        isLeaf: true,
-        info: { ...rowAndTimeResult.value, ttl: createTableResult.value.ttl },
-        class: 'details',
-      })
-
-      children.push({
-        key: `${nodeData.title}.details.${createTableResult.key}`,
-        title: createTableResult.key,
-        parentKey: nodeData.key,
-        tableName: nodeData.title,
-        isLeaf: true,
-        info: createTableResult.value,
-        class: 'details',
-      })
-      addChildren(nodeData.key, children, nodeData.timeIndexName, 'details')
-      isRefreshingDetails.value[nodeData.key] = false
+    const settledResults: any[] = await Promise.allSettled([rowAndTime, createTable])
+    const children: TableDetail[] = []
+    const rowAndTimeResult = settledResults[0].value || settledResults[0].reason
+    const createTableResult = settledResults[1].value || settledResults[1].reason
+    children.push({
+      key: `${nodeData.title}.details.${rowAndTimeResult.key}`,
+      title: rowAndTimeResult.key,
+      parentKey: nodeData.key,
+      tableName: nodeData.title,
+      isLeaf: true,
+      info: { ...rowAndTimeResult.value, ttl: createTableResult.value.ttl },
+      class: 'details',
     })
+    children.push({
+      key: `${nodeData.title}.details.${createTableResult.key}`,
+      title: createTableResult.key,
+      parentKey: nodeData.key,
+      tableName: nodeData.title,
+      isLeaf: true,
+      info: createTableResult.value,
+      class: 'details',
+    })
+    addChildren(nodeData.key, children, nodeData.timeIndexName, 'details', isSilent)
+    isRefreshingDetails.value[nodeData.key] = false
+    return children
   }
 
   const loadMore = async (nodeData: TableTreeParent) => {

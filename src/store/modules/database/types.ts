@@ -31,7 +31,7 @@ export interface TableDetail extends TreeChild {
 
 export interface TableTreeParent extends TreeData {
   key: number
-  childrenType: string
+  childrenType: 'columns' | 'details'
   timeIndexName: string
   children: TableTreeChild[] | TableDetail[]
   columns: TableTreeChild[]

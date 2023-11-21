@@ -71,9 +71,12 @@ const useDataBaseStore = defineStore('database', () => {
     key: number,
     children: TableTreeChild[] | TableDetail[],
     timeIndexName: string,
-    type?: string
+    type: string,
+    isSilent?: boolean
   ) => {
-    originTablesTree.value[key].children = children
+    if (!isSilent) {
+      originTablesTree.value[key].children = children
+    }
     originTablesTree.value[key].timeIndexName = timeIndexName
     if (type === 'details') {
       originTablesTree.value[key].details = children as TableDetail[]

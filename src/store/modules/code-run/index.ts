@@ -108,14 +108,14 @@ const useCodeRunStore = defineStore('codeRun', () => {
         duration: 2 * 1000,
       })
 
-      const oneLog: Log = {
+      const log: Log = {
         type,
         ...res,
         codeInfo,
         message,
       }
       if (type === 'promql') {
-        oneLog.promInfo = {
+        log.promInfo = {
           Start: dayjs.unix(+promForm.value.start).format('YYYY-MM-DD HH:mm:ss'),
           End: dayjs.unix(+promForm.value.end).format('YYYY-MM-DD HH:mm:ss'),
           Step: promForm.value.step,
@@ -124,18 +124,19 @@ const useCodeRunStore = defineStore('codeRun', () => {
       }
 
       return {
-        log: oneLog,
+        log,
         lastResult: oneResult,
       }
     } catch (error: any) {
-      const oneLog = {
+      const log: Log = {
         type,
         codeInfo,
         ...error,
       }
       if (Reflect.has(error, 'error')) {
         return {
-          log: oneLog,
+          log,
+          error: 'error',
         }
       }
       return { error: 'error' }

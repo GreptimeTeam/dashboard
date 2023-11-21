@@ -123,9 +123,9 @@ a-card.table-manager(:bordered="false")
               .left {{ $t('dashboard.createTable') }}
               span(v-if="nodeData.info.sql === '-'") {{ nodeData.info.sql }}
               .right(v-else)
-                a-typography-text {{ codeFormatter(nodeData.info.sql) || 'dd' }}
+                a-typography-text {{ nodeData.info.sql }}
                 TextCopyable(
-                  :data="codeFormatter(nodeData.info.sql) || 'sql'"
+                  :data="nodeData.info.sql"
                   :showData="false"
                   :copyTooltip="$t('dashboard.copyToClipboard')"
                 )
@@ -136,16 +136,10 @@ a-card.table-manager(:bordered="false")
 </template>
 
 <script lang="ts" setup name="TableManager">
-  import { storeToRefs } from 'pinia'
-  import { useDataBaseStore } from '@/store'
-  import useQueryCode from '@/hooks/query-code'
   import usePythonCode from '@/hooks/python-code'
   import useSiderTabs from '@/hooks/sider-tabs'
-  import type { TableDetail, TableTreeChild, TableTreeParent, TreeData } from '@/store/modules/database/types'
+  import type { TableTreeParent, TreeData } from '@/store/modules/database/types'
   import type { OptionsType } from '@/types/global'
-  import editorAPI from '@/api/editor'
-  import { format } from 'sql-formatter'
-  import dayjs from 'dayjs'
   import { dateFormatter } from '@/utils'
 
   const route = useRoute()
@@ -160,7 +154,6 @@ a-card.table-manager(:bordered="false")
     loadMoreColumns,
   } = useSiderTabs()
   const { tablesLoading, originTablesTree } = storeToRefs(useDataBaseStore())
-  const { getTableByName, getTables, addChildren, generateTreeChildren } = useDataBaseStore()
 
   const LAYOUT_PADDING = 16
   const HEADER = 58
@@ -229,11 +222,6 @@ a-card.table-manager(:bordered="false")
     if (!nodeData.columns.length) {
       loadMoreColumns(nodeData)
     }
-  }
-
-  const codeFormatter = (code: string) => {
-    console.log(code)
-    return code
   }
 </script>
 
