@@ -52,10 +52,6 @@ const useCodeRunStore = defineStore('codeRun', () => {
       // TODO: try something better
       let oneResult = {} as ResultType
       const res: HttpResponse = await API_MAP[type](codeInfo, params)
-      Message.success({
-        content: i18n.global.t('dashboard.runSuccess'),
-        duration: 2 * 1000,
-      })
       const resultsInLog: Array<ResultInLog> = []
       res.output.forEach((oneRes: OutputType) => {
         if (Reflect.has(oneRes, 'records')) {
