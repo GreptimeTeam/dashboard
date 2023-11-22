@@ -102,6 +102,15 @@ export default function useQueryCode() {
     },
   })
 
+  const clearCode = () => {
+    codes.value[queryType.value] = ''
+  }
+
+  const replaceCode = (code: string) => {
+    queryType.value = 'promql'
+    codeType.value = 'promql'
+    codes.value.promql = code
+  }
   return {
     selectCodeType,
     getResultsByType,
