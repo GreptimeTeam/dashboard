@@ -199,7 +199,7 @@ Before storing the query results in a new table, you need to create the table fi
 GreptimeDB supports other protocols that offer a schemaless approach to writing data that eliminates the need to manually create tables. See [Automatic Schema Generation](https://docs.greptime.com/user-guide/write-data/overview#automatic-schema-generation).
 :::
 
-The following SQL statement creates a new table called `cpu_metrics_avg_user` to store the average CPU usage of each host at a 5-minute interval.
+The following SQL statement creates a new table called `cpu_metrics_avg_user` to store the 5-minute average CPU usage of each host.
 
 ```sql
 CREATE TABLE IF NOT EXISTS cpu_metrics_avg_user (
