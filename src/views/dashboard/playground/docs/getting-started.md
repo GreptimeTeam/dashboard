@@ -31,7 +31,7 @@ We will focus on an example of CPU usage in this document. The example is based 
 
 Click the following button to import the sample data into the playground.
 
-`@button:import={"table":"cpu_metrics6","from":"tsbs","label":"Import Presets"}`
+`@button:import={"table":"cpu_metrics","from":"tsbs","label":"Import Presets"}`
 
 Once the import is done, we can explore the data using SQL.
 
