@@ -20,19 +20,12 @@ a-card.editor-card(:bordered="false")
     a-space(size="medium")
       a-form-item(:hide-label="true")
         TimeSelect(
+          v-model:time-length="promForm.time"
+          v-model:time-range="promForm.range"
           flex-direction="row-reverse"
           button-class="query-time-button"
-          :trigger-visible="triggerVisible"
-          :is-relative="promForm.isRelative === 1"
-          :range-picker-visible="rangePickerVisible"
-          :time-length="promForm.time"
-          :time-range="promForm.range"
           :relative-time-map="queryTimeMap"
           :relative-time-options="queryTimeOptions"
-          @open-time-select="openTimeSelect"
-          @select-time-range="selectTimeRange"
-          @select-time-length="selectTimeLength"
-          @click-custom="clickCustom"
         )
       a-form-item(:hide-label="true")
         a-input(
@@ -41,8 +34,7 @@ a-card.editor-card(:bordered="false")
           :style="{ width: '180px' }"
           :placeholder="$t('dashboard.step')"
         )
-          template(#prefix)
-            | Step
+          template(#prefix) Step
           template(#suffix)
             a-popover(trigger="hover")
               svg.icon
@@ -85,6 +77,7 @@ a-card.editor-card(:bordered="false")
 </template>
 
 <script lang="ts" setup name="Editor">
+  import dayjs from 'dayjs'
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
   import { sql } from '@codemirror/lang-sql'
@@ -94,6 +87,7 @@ a-card.editor-card(:bordered="false")
   import type { KeyBinding } from '@codemirror/view'
   import { autocompletion } from '@codemirror/autocomplete'
   import type { TableTreeChild, TableTreeParent } from '@/store/modules/database/types'
+  import type { PromForm } from '@/store/modules/code-run/types'
   import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '../config'
 
   export interface Props {
@@ -113,11 +107,10 @@ a-card.editor-card(:bordered="false")
 
   const {
     codes,
+    queryCode,
     queryType,
     cursorAt,
     queryOptions,
-    promForm,
-    isButtonDisabled,
     primaryCodeRunning,
     secondaryCodeRunning,
     sqlView,
@@ -130,9 +123,25 @@ a-card.editor-card(:bordered="false")
   const selectedCode = ref()
   const triggerVisible = ref(false)
   const rangePickerVisible = ref(false)
-
+  const promForm = reactive<PromForm>({
+    time: 5,
+    step: '30s',
+    range: [dayjs().subtract(5, 'minute').unix().toString(), dayjs().unix().toString()],
+  })
   const { runQuery } = useQueryCode()
   const { originTablesTree } = storeToRefs(useDataBaseStore())
+
+  const isButtonDisabled = computed(() => {
+    if (queryCode.value.trim().length === 0) return true
+    if (queryType.value === 'promql') {
+      const hasRange = promForm.range ? promForm.range.length > 0 : false
+      if (promForm.step.trim().length === 0 || (!promForm.time && !hasRange)) {
+        return true
+      }
+    }
+    if (primaryCodeRunning.value || secondaryCodeRunning.value) return true
+    return false
+  })
 
   const handleReadySql = (payload: any) => {
     sqlView.value = payload.view
@@ -169,7 +178,7 @@ a-card.editor-card(:bordered="false")
   const runQueryAll = async () => {
     primaryCodeRunning.value = true
     // TODO: add better format tool for code
-    await runQuery(codes.value[queryType.value].trim(), queryType.value)
+    await runQuery(queryCode.value.trim(), queryType.value, false, promForm)
     primaryCodeRunning.value = false
     // TODO: refresh tables data and when
   }
@@ -183,7 +192,7 @@ a-card.editor-card(:bordered="false")
 
   const runPartQuery = async () => {
     secondaryCodeRunning.value = true
-    await runQuery(selectedCode.value.trim(), queryType.value)
+    await runQuery(selectedCode.value.trim(), queryType.value, false, promForm)
     secondaryCodeRunning.value = false
   }
 
@@ -240,30 +249,6 @@ a-card.editor-card(:bordered="false")
     })
     extensions.promql = [promql.asExtension(), oneDark, keymap.of(defaultKeymap as any)]
   })
-
-  const openTimeSelect = () => {
-    rangePickerVisible.value = promForm.value.isRelative !== 1
-    triggerVisible.value = true
-  }
-
-  const clickCustom = () => {
-    rangePickerVisible.value = !rangePickerVisible.value
-  }
-
-  const selectTimeRange = (range: string[]) => {
-    promForm.value.range = range
-    promForm.value.time = -1
-    promForm.value.isRelative = 0
-    rangePickerVisible.value = false
-    triggerVisible.value = false
-  }
-
-  const selectTimeLength = (value: number) => {
-    promForm.value.time = value
-    promForm.value.isRelative = 1
-    rangePickerVisible.value = false
-    triggerVisible.value = false
-  }
 
   onActivated(() => {
     selectCodeType()

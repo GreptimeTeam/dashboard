@@ -10,7 +10,7 @@ a-card.logs-card(:bordered="false")
       status="danger"
       @click="clear"
     ) {{ $t('dashboard.clear') }}
-  a-list(
+  a-list.logs-list(
     size="small"
     :hoverable="true"
     :bordered="false"
@@ -18,18 +18,20 @@ a-card.logs-card(:bordered="false")
   )
     TransitionGroup(name="list")
       Log(v-for="log of logs" :key="log" :log="log")
-    template(#empty)
-      EmptyStatus.empty-log
+      EmptyStatus.empty-log(v-if="!logs.length")
 </template>
 
 <script lang="ts" name="Log" setup>
   import type { Log } from '@/store/modules/log/types'
-  import { storeToRefs } from 'pinia'
 
   const props = defineProps<{
     logs: Log[]
     types: string[]
   }>()
+
+  const LAYOUT_PADDING = 16
+  const HEADER = 58
+  const listHeight = `calc(100vh - ${LAYOUT_PADDING * 3 + HEADER}px`
 
   const route = useRoute()
   const { clearLogs } = useLog()
@@ -44,6 +46,9 @@ a-card.logs-card(:bordered="false")
     height: 100%;
     :deep(.arco-card-header-title) {
       font-weight: 800;
+    }
+    :deep(.logs-list > .arco-spin > .arco-scrollbar > .arco-scrollbar-container) {
+      height: v-bind(listHeight);
     }
   }
   .empty-list {

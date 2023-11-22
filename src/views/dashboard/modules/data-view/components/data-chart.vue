@@ -254,21 +254,17 @@ a-card(v-if="hasChart" :bordered="false")
   // TODO: Might need to change this
   onMounted(() => {
     if (hasChart.value) {
-      chartForm.selectedYTypes = [yOptions.value[0]]
-      chartForm.xAxisType = xOptions.value[0]
-      chartForm.groupBySelectedTypes = [groupByOptions.value[0].name]
-
-      Object.entries(props.defaultChartForm).forEach(([key, value]) => {
-        ;(chartForm as any)[key] = (chartForm as any)[key] || value
-      })
       chartForm.chartType = props.defaultChartForm.chartType || 'line'
+
       chartForm.selectedYTypes = props.defaultChartForm.selectedYTypes?.length
         ? props.defaultChartForm.selectedYTypes
         : [yOptions.value[0]]
-      chartForm.groupBySelectedTypes = [
-        ...props.defaultChartForm.groupBySelectedTypes,
-        ...chartForm.groupBySelectedTypes,
-      ]
+
+      chartForm.xAxisType = props.defaultChartForm.xAxisType || xOptions.value[0]
+
+      chartForm.groupBySelectedTypes = props.defaultChartForm.groupBySelectedTypes?.length
+        ? props.defaultChartForm.groupBySelectedTypes
+        : [groupByOptions.value[0].name]
     }
   })
 
@@ -290,7 +286,7 @@ a-card(v-if="hasChart" :bordered="false")
   })
 
   watch(
-    chartForm,
+    [chartForm, () => props],
     () => {
       drawChart()
     },

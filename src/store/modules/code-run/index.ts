@@ -7,12 +7,10 @@ import dayjs from 'dayjs'
 import { dateTypes } from '@/views/dashboard/config'
 import { AnyObject } from '@/types/global'
 import { HttpResponse, OutputType } from '@/api/interceptor'
-import { ResultType, DimensionType, SchemaType } from './types'
+import { ResultType, DimensionType, SchemaType, PromForm } from './types'
 import { Log, ResultInLog } from '../log/types'
 
 const useCodeRunStore = defineStore('codeRun', () => {
-  const { promForm } = useQueryCode()
-
   const results = ref<ResultType[]>([])
   const resultKeyCount = reactive<{ [key: string]: number }>({})
 
@@ -49,12 +47,11 @@ const useCodeRunStore = defineStore('codeRun', () => {
     python: 'scripts',
   }
 
-  const runCode = async (codeInfo: string, type: string, withoutSave = false) => {
+  const runCode = async (codeInfo: string, type: string, withoutSave = false, params = {} as PromForm) => {
     try {
       // TODO: try something better
       let oneResult = {} as ResultType
-      const res: HttpResponse = await API_MAP[type](codeInfo)
-
+      const res: HttpResponse = await API_MAP[type](codeInfo, params)
       const resultsInLog: Array<ResultInLog> = []
       res.output.forEach((oneRes: OutputType) => {
         if (Reflect.has(oneRes, 'records')) {
@@ -113,10 +110,21 @@ const useCodeRunStore = defineStore('codeRun', () => {
         message,
       }
       if (type === 'promql') {
+        let start
+        let end
+
+        if (params.time !== 0) {
+          // TODO: move this into a function?
+          const now = dayjs()
+          end = now.unix()
+          start = now.subtract(params.time, 'minute').unix()
+        } else {
+          ;[start, end] = params.range
+        }
         oneLog.promInfo = {
-          Start: dayjs.unix(+promForm.value.start).format('YYYY-MM-DD HH:mm:ss'),
-          End: dayjs.unix(+promForm.value.end).format('YYYY-MM-DD HH:mm:ss'),
-          Step: promForm.value.step,
+          Start: dayjs.unix(+start).format('YYYY-MM-DD HH:mm:ss'),
+          End: dayjs.unix(+end).format('YYYY-MM-DD HH:mm:ss'),
+          Step: params.step,
           Query: codeInfo,
         }
       }

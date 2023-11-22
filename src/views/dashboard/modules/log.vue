@@ -58,7 +58,7 @@ a-list-item.smaller-divider
     },
   })
 
-  const hasExecutionTime = Reflect.has(props.log, 'execution_time_ms')
+  const hasExecutionTime = computed(() => Reflect.has(props.log, 'execution_time_ms'))
 
   const codeFormatter = (code: string) => {
     if ((props.codeType || GlobalCodeType.value) === 'sql')

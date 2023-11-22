@@ -80,6 +80,7 @@ a-tabs.result-tabs(
 
 <style lang="less">
   .data-view-tabs {
+    width: 100%;
     .arco-tabs-nav::before {
       background-color: transparent;
     }

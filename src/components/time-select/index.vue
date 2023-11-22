@@ -4,7 +4,7 @@ a-trigger(
   trigger="click"
   :position="flexDirection === 'row' ? 'br' : 'bl'"
   :update-at-scroll="true"
-  @click="emit('openTimeSelect')"
+  @click="openTimeSelect"
 )
   a-button(style="padding-left: 8px" :type="buttonType" :class="buttonClass")
     template(#icon)
@@ -32,16 +32,16 @@ a-trigger(
         :disabledDate="(current) => dayjs(current).isAfter(dayjs())"
         :trigger-props="{ 'update-at-scroll': true }"
         :placeholder="[$t('dashboard.startTime'), $t('dashboard.endTime')]"
-        @ok="emit('selectTimeRange', $event)"
+        @ok="selectTimeRange($event)"
       )
       a-space.trigger.relative-time-dropdown(fill direction="vertical" :size="2")
         a-doption(
           v-for="time of relativeTimeOptions"
           :value="time.value"
           :class="time.value === timeLength ? 'selected' : ''"
-          @click="emit('selectTimeLength', time.value)"
+          @click="selectTimeLength(time.value)"
         ) {{ time.label }}
-        a-doption(:class="!isRelative ? 'selected' : ''" @click="emit('clickCustom')") Custom
+        a-doption(:class="!isRelative ? 'selected' : ''" @click="toggleRangePicker") Custom
 </template>
 
 <script lang="ts" setup name="TimeSelect">
@@ -49,18 +49,6 @@ a-trigger(
   import dayjs from 'dayjs'
 
   const props = defineProps({
-    triggerVisible: {
-      type: Boolean,
-      default: false,
-    },
-    isRelative: {
-      type: Boolean,
-      default: true,
-    },
-    rangePickerVisible: {
-      type: Boolean,
-      default: false,
-    },
     timeLength: {
       type: Number,
       default: 10,
@@ -90,14 +78,29 @@ a-trigger(
       default: () => ({}),
     },
   })
+  const emit = defineEmits(['update:timeLength', 'update:timeRange'])
 
-  const emit = defineEmits(['openTimeSelect', 'selectTimeRange', 'selectTimeLength', 'clickCustom'])
+  const rangePickerVisible = ref(false)
   const visible = ref(false)
-  const visibleFromProps = toRef(props, 'triggerVisible')
 
-  watch(visibleFromProps, () => {
-    visible.value = visibleFromProps.value
-  })
+  const isRelative = computed(() => props.timeLength !== 0)
+  const selectTimeRange = (range: any) => {
+    emit('update:timeRange', range)
+    emit('update:timeLength', 0)
+    visible.value = false
+  }
+
+  const selectTimeLength = (value: any) => {
+    emit('update:timeLength', value)
+    visible.value = false
+  }
+
+  const toggleRangePicker = () => {
+    rangePickerVisible.value = !rangePickerVisible.value
+  }
+  const openTimeSelect = () => {
+    visible.value = !visible.value
+  }
 </script>
 
 <style lang="less" scoped>

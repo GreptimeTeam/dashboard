@@ -57,6 +57,7 @@ In the following examples, we will limit the query result to 100 rows to avoid r
 
 ### List metrics
 
+
 Run the following SQL statement to list metrics in the table.
 
 ```sql (line|usage_user|hostname,environment)
