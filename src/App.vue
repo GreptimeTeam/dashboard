@@ -24,18 +24,21 @@
   })
 
   const { setRole } = useUserStore()
-  const { isCloud, host, username, password, database, guideModalVisible, codeType } = storeToRefs(useAppStore())
+  const { host, username, password, database, guideModalVisible, codeType } = storeToRefs(useAppStore())
   const { fetchDatabases, updateSettings } = useAppStore()
   const { getTables, getScriptsTable } = useDataBaseStore()
 
   host.value = window.location.origin
 
-  // TODO: is there a better way to do this?
+  const role = import.meta.env.VITE_ROLE || 'admin'
+  setRole(role)
+
+  if (role === 'playground') {
+    updateSettings({ navbar: false })
+  }
+
   if (import.meta.env.MODE === 'development' || import.meta.env.MODE === 'production') {
     // Assuming local greptimeDB is up and running
     fetchDatabases()
-  } else {
-    isCloud.value = true
-    setRole('cloud')
   }
 </script>

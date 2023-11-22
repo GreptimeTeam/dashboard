@@ -36,7 +36,6 @@ a-card(:bordered="false")
 <script lang="ts" setup>
   import { dateTypes, numberTypes } from '@/views/dashboard/config'
   import type { ResultType, SchemaType } from '@/store/modules/code-run/types'
-  import dayjs from 'dayjs'
   import { dateFormatter } from '@/utils'
 
   const props = withDefaults(

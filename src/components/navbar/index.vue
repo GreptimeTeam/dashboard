@@ -1,62 +1,58 @@
 <template lang="pug">
-.navbar
-  .logo-space
-    img.logo-text-img(alt="logo" src="/src/assets/images/logo-text.webp")
-  .menu
-    a-menu(mode="horizontal" :selected-keys="[menuSelectedKey]")
-      a-menu-item(v-for="(item, index) in menuConfig" :key="item.key" v-permission="item.permission")
-        span(
-          @click.meta="menuClickWithMeta(item.key)"
-          @click.ctrl="menuClickWithMeta(item.key)"
-          @click.exact="menuClick(item.key)"
-        ) {{ item.label }}
-  ul.right-side
-    li
-      a-tooltip(:content="$t('settings.title')")
-        .pointer
-          svg.icon-20(@click="setVisible")
-            use(href="#setting")
-    li
-      a-dropdown.menu-dropdown(trigger="hover" position="br" :popup-max-height="false")
-        .pointer
-          svg.icon-20
-            use(href="#dropdown")
-        template(#content)
-          a-doption(v-for="{ label, link } in dropDownLinks")
-            a-link(target="_blank" :href="link")
-              | {{ label }}
+a-layout.navbar
+  a-layout-header
+    .logo-space
+      img.logo-text-img(alt="logo" src="/src/assets/images/logo-text.png")
+  a-layout-content
+    .new-query
+      a-button(type="primary" @click="openQuery")
+        span +
+        span New Query
+    .menu
+      a-menu(mode="vertical" :selected-keys="[menuSelectedKey]")
+        a-menu-item(
+          v-for="(item, index) in menu"
+          :key="item.name"
+          @click.meta="menuClickWithMeta(item.name)"
+          @click.ctrl="menuClickWithMeta(item.name)"
+          @click.exact="menuClick(item.name)"
+        )
+          span {{ $t(item.meta.locale) }}
+          template(#icon)
+            svg.icon-18
+              use(:href="`#${item.meta.icon}`") 
+  a-layout-footer
+    ul.footer
+      li
+        a-button(style="width: 100%" :class="{ hover: globalSettings }" @click="setVisible")
+          template(#icon)
+            svg.icon-20
+              use(href="#settings")
+          | {{ $t('settings.title') }}
+      li
+        a-dropdown.menu-dropdown(trigger="hover" position="right" :popup-max-height="false")
+          a-button(style="width: 100%")
+            template(#icon)
+              svg.icon-18
+                use(href="#menu")
+            | {{ $t('navbar.docs') }}
+          template(#content)
+            a-doption(v-for="{ label, link } in dropDownLinks")
+              a-link(target="_blank" :href="link")
+                | {{ label }}
 </template>
 
 <script lang="ts" setup name="NavBar">
   import router from '@/router'
   import { useAppStore } from '@/store'
   import { listenerRouteChange } from '@/utils/route-listener'
+  import useMenuTree from '../menu/use-menu-tree'
 
   const { updateSettings } = useAppStore()
-  const { menuSelectedKey } = storeToRefs(useAppStore())
+  const { menuSelectedKey, globalSettings } = storeToRefs(useAppStore())
+  const { menuTree } = useMenuTree()
 
-  const menuConfig = [
-    {
-      key: 'query',
-      label: 'Query',
-      permission: ['dev', 'cloud'],
-    },
-    {
-      key: 'scripts',
-      label: 'Scripts',
-      permission: ['dev'],
-    },
-    {
-      key: 'playground',
-      label: 'Playground',
-      permission: ['dev', 'cloud'],
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      permission: ['dev'],
-    },
-  ]
+  const menu = menuTree.value[0].children
 
   const dropDownLinks = [
     {
@@ -93,36 +89,64 @@
   listenerRouteChange((newRoute) => {
     menuSelectedKey.value = newRoute.name as string
   }, true)
+
+  const openQuery = () => {
+    updateSettings({ queryModalVisible: true })
+  }
 </script>
 
 <style scoped lang="less">
   .navbar {
-    display: flex;
-    justify-content: space-between;
     height: 100%;
-    background: var(--navbar-bg-color);
+    width: 100%;
   }
 
   .logo-space {
-    padding-left: 20px;
-
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     .logo-text-img {
-      height: 100%;
+      height: 32px;
     }
   }
 
   .menu {
     width: 100%;
-    margin-left: 20px;
+    :deep(.arco-menu-vertical .arco-menu-item.arco-menu-has-icon) {
+      padding-left: 39px;
+      margin-bottom: 2px;
+      border-left: 2px solid transparent;
+      border-radius: 0;
+    }
+    :deep(.arco-menu-vertical .arco-menu-inner) {
+      padding: 0;
+    }
+
+    :deep(.arco-menu-item.arco-menu-has-icon .arco-menu-icon) {
+      margin-right: 8px;
+    }
+    :deep(.arco-menu-light .arco-menu-item.arco-menu-selected) {
+      background-color: var(--light-brand-color);
+      color: var(--brand-color);
+      border-left: 2px solid;
+      border-radius: 0;
+      border-color: var(--brand-color);
+      .arco-menu-icon {
+        color: var(--brand-color);
+      }
+    }
     .arco-menu-horizontal {
       background-color: transparent;
 
       :deep(.arco-menu-inner) {
         overflow-y: hidden;
+        padding: 0;
       }
 
       .arco-menu-item {
         padding: 6px 12px;
+
         line-height: 18px;
         background-color: transparent;
         color: var(--white-font-color);
@@ -153,16 +177,40 @@
     }
   }
 
-  .right-side {
+  .footer {
     display: flex;
     list-style: none;
-    margin-right: 30px;
-    padding-left: 0;
+    flex-direction: column;
+    padding: 0 24px;
+    .arco-btn-secondary[type='button'] {
+      background: var(--th-bg-color);
+      color: var(--small-font-color);
+      font-size: 16px;
+      display: flex;
+      justify-content: flex-start;
+      padding-left: 62px;
+    }
+    .arco-btn-secondary[type='button']:hover,
+    .arco-btn-secondary.hover,
+    .arco-btn-secondary.arco-dropdown-open {
+      border-color: inherit;
+      background: var(--light-brand-color);
+      color: var(--brand-color);
+      :deep(.arco-btn-icon) {
+        color: var(--brand-color);
+      }
+    }
+    :deep(.arco-btn-icon) {
+      width: 20px;
+      color: var(--third-font-color);
+    }
 
     li {
       display: flex;
       align-items: center;
-      margin-left: 24px;
+      &:first-of-type {
+        margin-bottom: 2px;
+      }
     }
 
     .arco-link {
@@ -181,7 +229,15 @@
     }
   }
 
-  .arco-dropdown-open {
-    opacity: 0.6;
+  .new-query {
+    padding: 24px;
+    .arco-btn {
+      width: 100%;
+      height: 44px;
+      :first-child {
+        font-size: 26px;
+        padding-right: 4px;
+      }
+    }
   }
 </style>

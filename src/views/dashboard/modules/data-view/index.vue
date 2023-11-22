@@ -9,7 +9,7 @@ a-tabs.result-tabs(
   @delete="deleteTab"
 )
   template(#extra)
-    a-button(status="danger" @click="clearResults") {{ $t('dashboard.clear') }}
+    a-button(status="danger" size="small" @click="clearResults") {{ $t('dashboard.clear') }}
   a-tab-pane(
     v-for="(result, index) of results"
     :key="result.key"
@@ -17,11 +17,25 @@ a-tabs.result-tabs(
     :title="`${$t('dashboard.result')} ${result.key - startKey + 1}`"
   )
     a-space(direction="vertical" size="small" fill)
-      DataGrid(:data="result")
-      DataChart(:data="result")
+      a-tabs.data-view-tabs(:animation="true")
+        a-tab-pane(v-if="useDataChart(result).hasChart.value" key="chart" :title="$t('dashboard.chart')")
+          template(#title)
+            a-space(size="mini")
+              svg.icon-20
+                use(href="#chart")
+              | {{ $t('dashboard.chart') }}
+          DataChart(:data="result" :has-header="false")
+        a-tab-pane(key="table" :title="$t('dashboard.table')")
+          template(#title)
+            a-space(size="mini")
+              svg.icon-20
+                use(href="#table")
+              | {{ $t('dashboard.table') }}
+          DataGrid(:data="result" :has-header="false")
 </template>
 
 <script lang="ts" name="DataView" setup>
+  import useDataChart from '@/hooks/data-chart'
   import { useCodeRunStore } from '@/store'
   import type { ResultType } from '@/store/modules/code-run/types'
 
@@ -63,3 +77,14 @@ a-tabs.result-tabs(
     }
   )
 </script>
+
+<style lang="less">
+  .data-view-tabs {
+    .arco-tabs-nav::before {
+      background-color: transparent;
+    }
+    > .arco-tabs-content > .arco-tabs-content-list > .arco-tabs-content-item {
+      padding: 10px 0;
+    }
+  }
+</style>

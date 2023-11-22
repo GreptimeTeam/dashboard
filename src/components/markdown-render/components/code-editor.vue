@@ -54,13 +54,13 @@
       a-tab-pane(v-if="hasChart" key="2" title="Chart")
         DataChart(:data="result" :hasHeader="false" :defaultChartForm="promForm")
   .logs(v-if="log")
-    a-list.log-list(
+    a-list(
       size="small"
       :hoverable="true"
       :bordered="false"
       :split="false"
     )
-      Log(:codeType="lang" :log="log")
+      Log(:codeType="lang" :log="log" :has-action="false")
 </template>
 
 <script lang="ts" setup name="CodeEditor">
@@ -277,5 +277,27 @@
         }
       }
     }
+  }
+
+  :deep(.arco-list-content) {
+    background: var(--main-bg-color);
+  }
+
+  :deep(.arco-list-item-action) {
+    width: 32px;
+    margin: 0;
+    padding-left: 0;
+  }
+
+  :deep(.arco-list-item-main) {
+    width: 100%;
+  }
+
+  :deep(.arco-list-small .arco-list-content-wrapper .arco-list-content > .arco-list-item) {
+    padding: 10px 20px;
+  }
+
+  .arco-list-hover .arco-list-item:hover {
+    background-color: inherit;
   }
 </style>

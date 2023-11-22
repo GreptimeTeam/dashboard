@@ -1,26 +1,25 @@
 import { useDataBaseStore } from '@/store'
-import { ScriptTreeData, TreeChild, TreeData } from '@/store/modules/database/types'
+import { ScriptTreeData, TableTreeChild, TableTreeParent, TreeChild, TreeData } from '@/store/modules/database/types'
 
 const tablesSearchKey = ref('')
 const scriptsSearchKey = ref('')
 const { originTablesTree, originScriptsList } = storeToRefs(useDataBaseStore())
 
 export default function useSiderTabs() {
-  // TODO: try a better function
+  // Deprecated.
   const searchTree = (keyword: string) => {
-    const result: Array<TreeData> = []
-    originTablesTree.value.forEach((item: TreeData) => {
+    const result: Array<TableTreeParent> = []
+    originTablesTree.value.forEach((item: TableTreeParent) => {
       if (item.title.toLowerCase().indexOf(keyword.toLowerCase()) > -1) {
-        result.push({ ...item })
-      } else if (item.children) {
-        const children: Array<TreeChild> = []
-        item.children.forEach((child: TreeChild) => {
-          if (child.title.toLowerCase().indexOf(keyword.toLowerCase()) > -1) {
-            children.push({ ...child })
-          }
-        })
-        if (children.length) {
-          result.push({ ...item, children })
+        result.push(item)
+      } else if (item.columns?.length && item.childrenType === 'columns') {
+        const columns = item.columns.filter(
+          (child: TableTreeChild) => child.title.toLowerCase().indexOf(keyword.toLowerCase()) > -1
+        )
+        if (columns.length) {
+          const newItem = item
+          newItem.children = columns
+          result.push(newItem)
         }
       }
     })
@@ -42,7 +41,9 @@ export default function useSiderTabs() {
 
   const tablesTreeData = computed(() => {
     if (!tablesSearchKey.value) return originTablesTree.value
-    return searchTree(tablesSearchKey.value)
+    return originTablesTree.value.filter(
+      (item: TableTreeParent) => item.title.toLowerCase().indexOf(tablesSearchKey.value.toLowerCase()) > -1
+    )
   })
 
   const scriptsListData = computed(() => {

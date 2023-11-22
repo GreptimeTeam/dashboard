@@ -1,5 +1,5 @@
 <template lang="pug">
-a-card.editor-card.padding-16(:bordered="false")
+a-card.editor-card(:bordered="false")
   a-space.space-between.pb-16
     a-space(size="medium")
       a-button(type="primary" :disabled="isButtonDisabled" @click="runQueryAll()")
@@ -7,7 +7,7 @@ a-card.editor-card.padding-16(:bordered="false")
           icon-loading(v-if="primaryCodeRunning" spin)
           icon-play-arrow(v-else)
         | {{ $t('dashboard.runAll') }}
-      a-button(:disabled="isButtonDisabled" @click="runPartQuery()")
+      a-button(:disabled="isLineButtonDisabled" @click="runPartQuery()")
         .mr-4
           icon-loading(v-if="secondaryCodeRunning" spin)
           icon-play-arrow(v-else)
@@ -49,17 +49,31 @@ a-card.editor-card.padding-16(:bordered="false")
                   a-list-item
                     span.ml-2 {{ $t('dashboard.examples') }}
                     a-typography-text(v-for="item of durationExamples" :key="item" code) {{ item }}
-  CodeMirror(
-    v-model="queryCode"
-    :style="style"
-    :spellcheck="spellcheck"
-    :autofocus="autofocus"
-    :indent-with-tab="indentWithTab"
-    :tabSize="tabSize"
-    :extensions="extensions[queryType]"
-    @ready="handleReady"
-    @update="codeUpdate"
-  )
+  a-tabs.query-tabs(:default-active-key="'sql'" :active-key="queryType")
+    a-tab-pane(key="sql")
+      CodeMirror(
+        v-model="codes.sql"
+        :style="style"
+        :spellcheck="spellcheck"
+        :autofocus="autofocus"
+        :indent-with-tab="indentWithTab"
+        :tabSize="tabSize"
+        :extensions="extensions.sql"
+        @ready="handleReadySql"
+        @update="codeUpdate('sql')"
+      )
+    a-tab-pane(key="promql")
+      CodeMirror(
+        v-model="codes.promql"
+        :style="style"
+        :spellcheck="spellcheck"
+        :autofocus="autofocus"
+        :indent-with-tab="indentWithTab"
+        :tabSize="tabSize"
+        :extensions="extensions.promql"
+        @ready="handleReadyPromql"
+        @update="codeUpdate('promql')"
+      )
 </template>
 
 <script lang="ts" setup name="Editor">
@@ -71,6 +85,7 @@ a-card.editor-card.padding-16(:bordered="false")
   import { useCodeRunStore } from '@/store'
   import { keymap } from '@codemirror/view'
   import type { KeyBinding } from '@codemirror/view'
+  import { autocompletion } from '@codemirror/autocomplete'
   import type { TableTreeChild, TableTreeParent } from '@/store/modules/database/types'
   import type { PromForm } from '@/store/modules/code-run/types'
   import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '../config'
@@ -90,15 +105,16 @@ a-card.editor-card.padding-16(:bordered="false")
 
   const route = useRoute()
 
-  const { isCloud } = storeToRefs(useAppStore())
   const {
+    codes,
     queryCode,
     queryType,
     cursorAt,
     queryOptions,
     primaryCodeRunning,
     secondaryCodeRunning,
-    view,
+    sqlView,
+    promqlView,
     selectCodeType,
   } = useQueryCode()
 
@@ -126,8 +142,12 @@ a-card.editor-card.padding-16(:bordered="false")
     if (primaryCodeRunning.value || secondaryCodeRunning.value) return true
     return false
   })
-  const handleReady = (payload: any) => {
-    view.value = payload.view
+
+  const handleReadySql = (payload: any) => {
+    sqlView.value = payload.view
+  }
+  const handleReadyPromql = (payload: any) => {
+    promqlView.value = payload.view
   }
 
   const style = {
@@ -135,9 +155,10 @@ a-card.editor-card.padding-16(:bordered="false")
   }
 
   // TODO: Try something better. CodeUpdate is constantly changing and the cost is too much.
-  const codeUpdate = () => {
-    if (view.value) {
-      const { state } = view.value
+  const codeUpdate = (type: string) => {
+    const view = type === 'sql' ? sqlView.value : promqlView.value
+    if (view) {
+      const { state } = view
       const { ranges } = state.selection
       cursorAt.value = [ranges[0].from, ranges[0].to]
       lineStart.value = state.doc.lineAt(ranges[0].from).number
@@ -161,6 +182,13 @@ a-card.editor-card.padding-16(:bordered="false")
     primaryCodeRunning.value = false
     // TODO: refresh tables data and when
   }
+
+  const isLineButtonDisabled = computed(() => {
+    if (!selectedCode.value || selectedCode.value.trim().length === 0) {
+      return true
+    }
+    return isButtonDisabled.value
+  })
 
   const runPartQuery = async () => {
     secondaryCodeRunning.value = true
@@ -193,7 +221,7 @@ a-card.editor-card.padding-16(:bordered="false")
     const schema: { [key: string]: string[] } = {}
     const initialMetricList = new Set<string>()
     originTablesTree.value.forEach((item: TableTreeParent) => {
-      const columns = item.children.map((child: TableTreeChild) => {
+      const columns = item.columns.map((child: TableTreeChild) => {
         initialMetricList.add(child.title)
         return child.title
       })
@@ -205,7 +233,7 @@ a-card.editor-card.padding-16(:bordered="false")
   })
 
   const extensions = {
-    sql: [sql(hints.value.sql), oneDark, keymap.of(defaultKeymap as any)],
+    sql: [sql(hints.value.sql), oneDark, keymap.of(defaultKeymap as any), autocompletion({ closeOnBlur: false })],
     promql: [new PromQLExtension().asExtension(), oneDark, keymap.of(defaultKeymap as any)],
   }
 
@@ -226,3 +254,20 @@ a-card.editor-card.padding-16(:bordered="false")
     selectCodeType()
   })
 </script>
+
+<style lang="less" scoped>
+  .editor-card {
+    width: 100%;
+  }
+</style>
+
+<style lang="less">
+  .query-tabs {
+    > .arco-tabs-nav {
+      height: 0;
+    }
+    > .arco-tabs-content {
+      padding-top: 0;
+    }
+  }
+</style>

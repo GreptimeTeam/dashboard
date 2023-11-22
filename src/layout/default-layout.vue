@@ -1,10 +1,11 @@
 <template lang="pug">
 a-layout.layout-container
-  .layout-navbar(v-if="navbar")
-    NavBar
-  a-layout-content.layout-content(:style="paddingStyle")
+  a-layout-sider.main-sider(:width="258")
+    Navbar(v-if="navbar")
+  a-layout-content.layout-content
     PageLayout
   Footer(v-if="footer")
+  QueryModal
 </template>
 
 <script lang="ts" setup>
@@ -18,12 +19,7 @@ a-layout.layout-container
   useResponsive(true)
   const navbarHeight = `52px`
 
-  const { navbar, footer, username, password, database, isCloud, codeType } = storeToRefs(useAppStore())
-
-  const paddingStyle = computed(() => {
-    const paddingTop = navbar.value ? { paddingTop: navbarHeight } : {}
-    return { ...paddingTop }
-  })
+  const { navbar, footer, username, password, database, codeType } = storeToRefs(useAppStore())
 </script>
 
 <style scoped lang="less">
@@ -46,5 +42,9 @@ a-layout.layout-container
   .layout-content {
     overflow-y: hidden;
     transition: padding 0.2s cubic-bezier(0.34, 0.69, 0.1, 1);
+  }
+
+  .arco-layout-sider-light.main-sider {
+    box-shadow: 4px 0px 10px 0px rgba(131, 34, 255, 0.08);
   }
 </style>

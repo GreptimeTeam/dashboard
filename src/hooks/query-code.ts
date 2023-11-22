@@ -3,7 +3,9 @@ import { ResultType, PromForm } from '@/store/modules/code-run/types'
 import { EditorSelection } from '@codemirror/state'
 import { stringType } from './types'
 
-const view = shallowRef()
+const sqlView = shallowRef()
+const promqlView = shallowRef()
+
 const queryType = ref('sql')
 const sqlCode = ''
 const promQLCode = ''
@@ -31,14 +33,15 @@ export default function useQueryCode() {
   const { results } = storeToRefs(useCodeRunStore())
 
   // Deprecated
-  const insertNameToQueryCode = (name: string) => {
-    const { state } = view.value
-    view.value.dispatch(state.replaceSelection(`${name}`))
-  }
+  // const insertNameToQueryCode = (name: string) => {
+  //   const { state } = view.value
+  //   view.value.dispatch(state.replaceSelection(`${name}`))
+  // }
 
   const inputFromNewLineToQueryCode = (code: string, cursorBack: number) => {
-    const { state } = view.value
-
+    queryType.value = 'sql'
+    codeType.value = 'sql'
+    const { state } = sqlView.value
     const lastLineCode = state.doc.text[state.doc.text.length - 1]
     let changes
     let cursorPosition
@@ -60,8 +63,8 @@ export default function useQueryCode() {
       }
       cursorPosition = state.doc.length + code.length + 1 - cursorBack
     }
-    view.value.focus()
-    view.value.dispatch({
+    sqlView.value.focus()
+    sqlView.value.dispatch({
       changes,
       selection: EditorSelection.create([EditorSelection.cursor(cursorPosition)]),
     })
@@ -100,17 +103,20 @@ export default function useQueryCode() {
   })
 
   return {
-    insertNameToQueryCode,
     selectCodeType,
     getResultsByType,
     runQuery,
     inputFromNewLineToQueryCode,
-    view,
+    replaceCode,
+    sqlView,
+    promqlView,
     queryCode,
     cursorAt,
     queryOptions,
     queryType,
     primaryCodeRunning,
     secondaryCodeRunning,
+    codes,
+    clearCode,
   }
 }

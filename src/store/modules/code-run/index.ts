@@ -61,14 +61,17 @@ const useCodeRunStore = defineStore('codeRun', () => {
         if (Reflect.has(oneRes, 'records')) {
           const rowLength = oneRes.records.rows.length
           resultsInLog.push({
-            records: rowLength,
+            type: 'select',
+            rowCount: rowLength,
           })
           if (rowLength >= 0) {
             const pageType = CODE_TO_PAGE[type]
-            if (Reflect.has(resultKeyCount, pageType)) {
-              resultKeyCount[pageType] += 1
-            } else {
-              resultKeyCount[pageType] = 0
+            if (!withoutSave) {
+              if (Reflect.has(resultKeyCount, pageType)) {
+                resultKeyCount[pageType] += 1
+              } else {
+                resultKeyCount[pageType] = 0
+              }
             }
 
             oneResult = {
@@ -87,15 +90,28 @@ const useCodeRunStore = defineStore('codeRun', () => {
         }
         if (Reflect.has(oneRes, 'affectedrows')) {
           resultsInLog.push({
-            affectedRows: oneRes.affectedrows,
+            type: 'affect',
+            rowCount: oneRes.affectedrows,
           })
         }
       })
+
+      const message = resultsInLog
+        .map((result: ResultInLog) => {
+          return i18n.global.tc(`dashboard.${result.type}`, result.rowCount, { rowCount: result.rowCount })
+        })
+        .join(`;\n`)
+
+      Message.success({
+        content: message,
+        duration: 2 * 1000,
+      })
+
       const oneLog: Log = {
         type,
         ...res,
         codeInfo,
-        results: resultsInLog,
+        message,
       }
       if (type === 'promql') {
         let start
@@ -116,7 +132,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
           Query: codeInfo,
         }
       }
-      // TODO: try something better
+
       return {
         log: oneLog,
         lastResult: oneResult,
