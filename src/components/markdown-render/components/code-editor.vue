@@ -11,7 +11,6 @@
           :range-picker-visible="rangePickerVisible"
           :relative-time-map="queryTimeMap"
           :relative-time-options="queryTimeOptions"
-          @open-time-select="openTimeSelect"
         )
       a-form-item(:hide-label="true")
         a-input(
