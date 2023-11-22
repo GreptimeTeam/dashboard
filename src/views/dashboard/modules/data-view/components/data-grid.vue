@@ -51,7 +51,12 @@ a-card(:bordered="false")
     }
   )
 
-  const pagination = ref({})
+  const pagination = ref({
+    'total': props.data?.records.rows.length,
+    'show-page-size': true,
+    'show-total': true,
+    'show-jumper': true,
+  })
 
   // replace '.' with '-' to make it a valid data-index
   // useful when '.' is used in column name, such as `SELECT 1.1`, `SELECT 1 AS a.b`
