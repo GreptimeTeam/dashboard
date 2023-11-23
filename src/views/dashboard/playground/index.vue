@@ -7,6 +7,9 @@ a-layout.layout
       :selected-keys="[currentFile]"
       @select="onSelect"
     )
+      template(#title="{ key }")
+        a-tooltip(:content="key")
+          span {{ key }}
   a-layout-content
     .markdown-container(v-if="fileList[currentFile]")
       markdownRender(:md="fileList[currentFile]")

@@ -7,6 +7,11 @@ a-layout.layout
 </template>
 
 <script lang="ts" name="Query" setup>
+  import { useMagicKeys, useActiveElement } from '@vueuse/core'
+
+  const { s, q } = useMagicKeys()
+  const activeElement = useActiveElement()
+  const { queryType } = useQueryCode()
   const { guideModalVisible } = storeToRefs(useAppStore())
   const { getTables } = useDataBaseStore()
   const { dataStatusMap } = storeToRefs(useUserStore())
@@ -22,6 +27,23 @@ a-layout.layout
 
   const results = computed(() => getResultsByType(types))
   const queryLogs = computed(() => logs.value.filter((log) => types.includes(log.type)))
+
+  watch(s, (v) => {
+    if (
+      activeElement.value?.tagName !== 'INPUT' &&
+      activeElement.value?.tagName !== 'TEXTAREA' &&
+      !activeElement.value?.classList?.contains('cm-content')
+    )
+      queryType.value = 'sql'
+  })
+  watch(q, (v) => {
+    if (
+      activeElement.value?.tagName !== 'INPUT' &&
+      activeElement.value?.tagName !== 'TEXTAREA' &&
+      !activeElement.value?.classList?.contains('cm-content')
+    )
+      queryType.value = 'promql'
+  })
 
   onActivated(() => {
     if (!guideModalVisible.value) {
