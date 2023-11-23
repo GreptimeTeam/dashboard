@@ -2,114 +2,109 @@
 title: 快速开始
 ---
 
-# Getting Started
+# 快速开始
 
-## Preface
+## 前言
 
-Greetings from Greptime Play! Apart from just following a word-document guide, this interactive playground will quickly familiarize you with GreptimeDB and help you to get the most out of it.
+欢迎来到 Greptime Play！除了按照文档指南进行操作，这个交互式的 Playground 将快速让您熟悉 GreptimeDB，并帮助您充分利用它。
 
-::: tip Cool feature alert:
-All code blocks in this guide are editable and executable!
+::: tip 超酷的功能
+本指南中的所有代码块都可以编辑和执行！
 :::
 
-By hitting the `Run` button, the code will be executed and run in a temporary, private instance generated
-from [GreptimeCloud](https://greptime.com/product/cloud). **You can also explore and experiment with different ideas by editing the codes.**
-:::danger Note that:
-The instance is valid within **1 hour** once initiated, and you will need to create a new one when the time is up. So please never store important data in Greptime Play sessions.
+通过点击 `运行` 按钮，代码将在一个临时的、私有的实例中执行和运行，该实例由 [GreptimeCloud](https://greptime.com/product/cloud) 生成。**您还可以通过编辑代码来探索和尝试不同的想法。**
+
+:::danger 请注意
+实例在启动后有效时间为**1小时**，一旦时间到期，您将需要创建一个新的实例。因此请不要在 Greptime Play 会话中存储重要数据。
 :::
 
-## Sample data
+## 样本数据
 
-We will focus on an example of CPU usage in this document. The example is based on a table named `cpu_metrics`, which contains the following columns:
+在本文档中我们以 CPU 的用量为例，样本数据基于一个名为 `cpu_metrics` 的表，该表包含以下列：
 
-- `hostname`: the host name of the machine
-- `environment`: the environment of the service, e.g. production, staging, etc.
-- `usage_user`: the percentage of CPU utilization that occurred while executing at the user level (application)
-- `usage_system`: the percentage of CPU utilization that occurred while executing at the system level (kernel)
-- `usage_idle`: the percentage of time that the CPU or CPUs were idle and the system did not have an outstanding disk I/O request
-- `ts`: the timestamp of the record
+- `hostname`：机器的主机名
+- `environment`：服务的环境，例如生产、预发布等
+- `usage_user`：在用户级别（应用程序）执行时发生的 CPU 利用率的百分比
+- `usage_system`：在系统级别（内核）执行时发生的 CPU 利用率的百分比
+- `usage_idle`：CPU 或 CPU 空闲的时间百分比，系统没有未完成的磁盘 I/O 请求
+- `ts`：记录的时间戳
 
-Click the following button to import the sample data into the playground.
+点击下面的按钮将样本数据导入到 Playground 中。
 
-`@button:import={"table":"cpu_metrics","from":"tsbs","label":"Import Presets"}`
+`@button:import={"table":"cpu_metrics","from":"tsbs","label":"导入预置数据"}`
 
-Once the import is done, we can explore the data using SQL.
+导入完成后，我们可以使用 SQL 来探索数据。
 
-## Describe the table
+## 查看表信息
 
-You can run `DESC TABLE` to view the details of the table.
+你可以运行 `DESC TABLE` 来查看表的详细信息。
+在 GreptimeDB 中，有三种类型的列：
 
-In GreptimeDB, there are three types of columns:
+- `Tag` 列存储常用查询的元数据。
+- `Field` 列存储收集的数据指标，数据指标通常是数值。
+- `Timestamp` 表示生成数据的日期和时间。
 
-- `Tag` columns store metadata that is commonly queried.
-- `Field` columns store data indicators that are collected. The data indicators are generally numerical values.
-- `Timestamp` represents the date and time when the data was generated.
-
-For more information please refer to [Data Model](https://docs.greptime.com/user-guide/concepts/data-model).
+更多信息请参考 [数据模型](https://docs.greptime.cn/user-guide/concepts/data-model)。
 
 ```sql
 DESC TABLE cpu_metrics;
 ```
 
-## Query Data with SQL
+## 使用 SQL 查询数据
 
-In the following examples, we will limit the query result to 100 rows to avoid returning too much data.
+在下面的示例中，我们将限制查询结果为 100 行以避免返回过多的数据。
 
-### List metrics
+### 简单地列出指标
 
-Run the following SQL statement to list metrics in the table.
+运行下面的 SQL 语句来列出表中的指标。
 
 ```sql (line|usage_user|hostname,environment)
 SELECT * FROM cpu_metrics ORDER BY ts DESC LIMIT 100;
 ```
 
-You can also use `count()` function to get the number of rows in the table.
+你可以使用 `count()` 函数来获取表中的总行数。
 
 ```sql
 SELECT count(*) FROM cpu_metrics;
 ```
 
-### Select a specific column and perform basic arithmetic
+### 选择特定的列并执行基本的算术运算
 
-Basic arithmetic can be performed on the selected column. For example, the following SQL statement selects the `usage_user` column and mutiply each value by 2.
+你可以选择特定的列并对其执行基本的算术运算。例如，下面的 SQL 语句选择 `usage_user` 列并将每个值乘以 2。
 
 ```sql
 SELECT usage_user, usage_user * 2 as twice_usage_user FROM cpu_metrics LIMIT 100;
 ```
 
-See more about [`SELECT` clause](https://docs.greptime.com/reference/sql/select).
+更多信息请参考 [`SELECT` 语句](https://docs.greptime.cn/reference/sql/select)。
 
-### Filter data by `WHERE` clause
+### 使用 `WHERE` 子句过滤数据
 
-The `WHERE` clause can be used to filter data. It supports comparisons against string, boolean, and numeric values. The following SQL statement selects the rows where the `usage_user` is greater than 50.
+`WHERE` 子句可以用来过滤数据。它支持对字符串、布尔值和数值进行比较。下面的 SQL 语句返回 `usage_user` 大于 50 的行。
 
 ```sql
 SELECT * FROM cpu_metrics WHERE usage_user > 50 LIMIT 100;
 ```
 
-You can also perform basic arithmetic in the `WHERE` condition.
-For example, the following query returns data where the sum of the field values `usage_user` and `usage_system` is greater than 50.
+你也可以在 `WHERE` 子句中执行基本的算术运算。例如，下面的 SQL 语句返回 `usage_user` 和 `usage_system` 字段值之和大于 50 的数据。
 
 ```sql
 SELECT * FROM cpu_metrics WHERE usage_user + usage_system > 50 LIMIT 100;
 ```
 
-Get the timestamp of 5 minites ago by using the `now()` function and `interval` keyword:
-
-Time functions are available in `WHERE` clause.
-For example, the following SQL statement returns data where the `ts` is greater than the timestamp `1680911820000` minus 5 minutes.
+`WHERE` 子句中还可以使用时间函数。例如，下面的 SQL 语句返回 `ts` 大于时间戳 `1680911820000` 减去 5 分钟的数据。
 
 ```sql
 SELECT * FROM cpu_metrics WHERE ts > (1680911820000::timestamp_ms - interval '5 minutes') - interval '5 minutes') LIMIT 100;
 ```
 
-See more about [`WHERE` clause](https://docs.greptime.com/reference/sql/where).
+更多信息请参考 [`WHERE` 子句](https://docs.greptime.cn/reference/sql/where)。
 
 <!-- TODO time and data functions in SQL reference -->
 
-### Group by tags
+### 按标签分组
 
-Developers always want to see the general CPU usage to check if there are any problems with the resources. For example, the following SQL statement returns the average CPU usage group by hosts.
+开发人员总是会通过检查 CPU 的总体使用情况以确认资源是否有问题。例如，下面的 SQL 语句按主机分组返回平均 CPU 使用率。
 
 ```sql
 SELECT hostname,
@@ -119,7 +114,7 @@ SELECT hostname,
     LIMIT 100;
 ```
 
-Multiple fields can be grouped together. The following SQL statement returns the average CPU usage group by `hostname` and `environment`. The `mean` function alias of `avg` function also can be used to calculate the average value of each field.
+多个字段可以一起分组。下面的 SQL 语句按 `hostname` 和 `environment` 分组返回平均 CPU 使用率。`avg` 别名函数 `mean` 也可以用来计算每个字段的平均值。
 
 ```sql
 SELECT hostname, environment,
@@ -131,17 +126,16 @@ SELECT hostname, environment,
 
 <!-- TODO 95 percent example for response time -->
 
-See more about [`GROUP BY` clause](https://docs.greptime.com/reference/sql/group_by).
+更多信息请参考 [`GROUP BY` 子句](https://docs.greptime.cn/reference/sql/group_by)。
 
-### Aggregate data within a range of time
+### 在时间范围内聚合数据
 
-One important scenario for time series data is to aggregate data within a specific time range to monitor its trend.
+时间序列数据的一个重要场景是在特定的时间范围内聚合数据以监控其趋势。
 
-#### Aggregate data in 5-minute intervals
+#### 聚合 5 分钟内的数据
 
-The `RANGE` keyword and `ALIGN` keyword can be combined to aggregate data within a specific time range.
-The following SQL statement calculates the average CPU usage of all hosts at a 5-minute interval,
-with data calculated every 1 minute.
+`RANGE` 关键字和 `ALIGN` 关键字可以结合使用以在特定的时间范围内聚合数据。
+下面的 SQL 语句按 5 分钟的时间范围计算所有主机的平均 CPU 使用率，每 1 分钟计算一次数据。
 
 ```sql (line|usage_user_5m_avg,usage_system_5m_avg|ts)
 SELECT
@@ -152,13 +146,12 @@ FROM cpu_metrics
 ALIGN '1m' LIMIT 100;
 ```
 
-See more about [RANGE QUERY](https://docs.greptime.com/reference/sql/range).
+更多信息请参考 [RANGE 查询](https://docs.greptime.cn/reference/sql/range)。
 
-#### Aggregate data in 5-minute intervals and by a tag key
+#### 按标签聚合 5 分钟内的数据
 
-To aggregate data by a tag key, add the tag key to the `BY` keyword after the `ALIGN` keyword.
-The following SQL statement calculates the average CPU usage of each host at a 5-minute interval,
-with data calculated every 1 minute.
+要通过标签键聚合数据，请在 `ALIGN` 关键字后的 `BY` 关键字中添加标签。
+下面的 SQL 语句按主机名聚合 5 分钟范围内的数据，每 1 分钟计算一次数据。
 
 ```sql (line|usage_user_5m_avg|ts|hostname)
 SELECT
@@ -169,15 +162,13 @@ FROM cpu_metrics
 ALIGN '1m' BY (hostname) ORDER BY ts DESC LIMIT 100;
 ```
 
-#### Aggregate data in intervals and fill in missing values
+#### 聚合数据并填充缺失值
 
-Sometimes data may be missing in certain intervals.
-In such cases, the `FILL` keyword can be used to fill in the missing values.
+有时候在某些时间间隔内可能会缺少数据。
+在这种情况下，可以使用 `FILL` 关键字来填充缺失值。
 
-For example, the following SQL statement calculates the average CPU usage of each host at a 5-minute interval,
-with data calculated every 1 minute.
-The missing values are filled using the average value of the two previous points,
-as specified by the `LINEAR` fill option.
+例如，下面的 SQL 语句按 5 分钟的时间范围计算所有主机的平均 CPU 使用率，每 1 分钟计算一次数据。
+缺失的值使用前两个点的平均值填充，这是由 `LINEAR` 填充选项指定的。
 
 ```sql (line|usage_user_5m_avg|ts|hostname)
 SELECT
@@ -188,18 +179,18 @@ FROM cpu_metrics
 ALIGN '1m' BY (hostname) ORDER BY ts DESC LIMIT 100;
 ```
 
-There are other fill options available, please refer to [FILL OPTIONS](https://docs.greptime.com/reference/sql/range#fill-option) documentation.
+还有其他的填充选项可用，请参考 [填充选项](https://docs.greptime.cn/reference/sql/range#fill-option) 文档。
 
-### Write query results to a new table
+### 将查询结果写入新表
 
-After obtaining the query results, you can store them in a new table using the `INSERT INTO` statement.
-Before storing the query results in a new table, you need to create the table first.
+在获取查询结果后，您可以使用 `INSERT INTO` 语句将其存储在新表中。
+在将查询结果存储在新表中之前，您需要先创建表。
 
-:::tip NOTE
-GreptimeDB supports other protocols that offer a schemaless approach to writing data that eliminates the need to manually create tables. See [Automatic Schema Generation](https://docs.greptime.com/user-guide/write-data/overview#automatic-schema-generation).
+:::tip 注意
+GreptimeDB 支持其他协议，这些协议提供了一种无 schema 的写入数据的方法，无需手动创建表。请参考 [自动生成表结构](https://docs.greptime.cn/user-guide/write-data/overview#automatic-schema-generation)。
 :::
 
-The following SQL statement creates a new table called `cpu_metrics_avg_user` to store the 5-minute average CPU usage of each host.
+下面的 SQL 语句创建一个名为 `cpu_metrics_avg_user` 的新表，用于存储每个主机的 5 分钟平均 CPU 使用率。
 
 ```sql
 CREATE TABLE IF NOT EXISTS cpu_metrics_avg_user (
@@ -211,7 +202,7 @@ CREATE TABLE IF NOT EXISTS cpu_metrics_avg_user (
 );
 ```
 
-Then, you can write the query results to the new table by using the `INSERT INTO` statement.
+然后您可以使用 `INSERT INTO` 语句将查询结果写入新表。
 
 ```sql
 INSERT INTO cpu_metrics_avg_user(ts, hostname, usage_user_5m_avg)
@@ -223,26 +214,26 @@ INSERT INTO cpu_metrics_avg_user(ts, hostname, usage_user_5m_avg)
     ALIGN '1m' BY (hostname);
 ```
 
-Check the data in the new table by running the following SQL statement.
+通过运行下面的 SQL 语句检查新表中的数据。
 
 ```sql
 SELECT * FROM cpu_metrics_avg_user LIMIT 100;
 ```
 
-Please refer to [INSERT INTO SELECT](https://docs.greptime.com/reference/sql/insert#insert-into-select-statement) documentation for more information.
+更多信息请参考 [INSERT INTO SELECT](https://docs.greptime.cn/reference/sql/insert#insert-into-select-statement) 文档。
 
-## Try it Out
+## 尝试一下
 
-Write your own queries and experience the power of GreptimeDB!
+自行撰写 SQL 并体验 GreptimeDB 的强大功能！
 
 ```sql
 
 ```
 
-## Empower Your Business With Self-Hosted GreptimeDB or GreptimeCloud Now
+## 使用自托管的 GreptimeDB 或 GreptimeCloud 为您的业务赋能
 
-Congratulations! You have completed the quick start guide.
-Now you can try using self-hosted GreptimeDB or GreptimeCloud to explore more advanced features and empower your business.
+恭喜！您已经完成了快速入门指南。
+现在您可以尝试使用 GreptimeCloud 或自托管的 GreptimeDB 来探索更多高级功能并为您的业务赋能。
 
-- [Download and start self-hosted GreptimeDB](https://greptime.com/product/db)
-- [Sign up for GreptimeCloud](https://greptime.com/product/cloud)
+- [注册 GreptimeCloud](https://greptime.com/product/cloud)
+- [下载并启动自托管的 GreptimeDB](https://greptime.com/product/db)
