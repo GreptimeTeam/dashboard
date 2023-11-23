@@ -6,16 +6,16 @@ title: 快速开始
 
 ## 前言
 
-欢迎来到 Greptime Play！除了按照文档指南进行操作，这个交互式的 Playground 将快速让您熟悉 GreptimeDB，并帮助您充分利用它。
+欢迎来到 Greptime Play！除了按照文档指南进行操作，这个交互式的 Playground 将快速让你熟悉 GreptimeDB，并帮助你充分利用它。
 
 ::: tip 超酷的功能
 本指南中的所有代码块都可以编辑和执行！
 :::
 
-通过点击 `运行` 按钮，代码将在一个临时的、私有的实例中执行和运行，该实例由 [GreptimeCloud](https://greptime.com/product/cloud) 生成。**您还可以通过编辑代码来探索和尝试不同的想法。**
+通过点击 `运行` 按钮，代码将在一个临时的、私有的实例中执行和运行，该实例由 [GreptimeCloud](https://greptime.com/product/cloud) 生成。**你还可以通过编辑代码来探索和尝试不同的想法。**
 
 :::danger 请注意
-实例在启动后有效时间为**1小时**，一旦时间到期，您将需要创建一个新的实例。因此请不要在 Greptime Play 会话中存储重要数据。
+实例在启动后有效时间为**1小时**，一旦时间到期，你将需要创建一个新的实例。因此请不要在 Greptime Play 会话中存储重要数据。
 :::
 
 ## 样本数据
@@ -183,8 +183,8 @@ ALIGN '1m' BY (hostname) ORDER BY ts DESC LIMIT 100;
 
 ### 将查询结果写入新表
 
-在获取查询结果后，您可以使用 `INSERT INTO` 语句将其存储在新表中。
-在将查询结果存储在新表中之前，您需要先创建表。
+在获取查询结果后，你可以使用 `INSERT INTO` 语句将其存储在新表中。
+在将查询结果存储在新表中之前，你需要先创建表。
 
 :::tip 注意
 GreptimeDB 支持其他协议，这些协议提供了一种无 schema 的写入数据的方法，无需手动创建表。请参考 [自动生成表结构](https://docs.greptime.cn/user-guide/write-data/overview#automatic-schema-generation)。
@@ -202,7 +202,7 @@ CREATE TABLE IF NOT EXISTS cpu_metrics_avg_user (
 );
 ```
 
-然后您可以使用 `INSERT INTO` 语句将查询结果写入新表。
+然后你可以使用 `INSERT INTO` 语句将查询结果写入新表。
 
 ```sql
 INSERT INTO cpu_metrics_avg_user(ts, hostname, usage_user_5m_avg)
@@ -230,10 +230,10 @@ SELECT * FROM cpu_metrics_avg_user LIMIT 100;
 
 ```
 
-## 使用自托管的 GreptimeDB 或 GreptimeCloud 为您的业务赋能
+## 使用自托管的 GreptimeDB 或 GreptimeCloud 为你的业务赋能
 
-恭喜！您已经完成了快速入门指南。
-现在您可以尝试使用 GreptimeCloud 或自托管的 GreptimeDB 来探索更多高级功能并为您的业务赋能。
+恭喜！你已经完成了快速入门指南。
+现在你可以尝试使用 GreptimeCloud 或自托管的 GreptimeDB 来探索更多高级功能并为你的业务赋能。
 
 - [注册 GreptimeCloud](https://greptime.com/product/cloud)
 - [下载并启动自托管的 GreptimeDB](https://greptime.com/product/db)
