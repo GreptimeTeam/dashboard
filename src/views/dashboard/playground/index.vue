@@ -19,7 +19,9 @@ a-layout.layout
 <script lang="ts" setup name="Playground">
   import { getPlaygroundInfo } from '@/api/playground'
   import parseMD from 'parse-md'
+
   // data
+  const lang = import.meta.env.VITE_LANG || 'zh'
   const appStore = useAppStore()
   const router = useRouter()
   const { getGistFiles } = useGist()
@@ -27,7 +29,15 @@ a-layout.layout
 
   const refreshPlaygroundModal = ref()
   const currentFile = ref('')
-  const officialMdFiles = ref(import.meta.glob('./docs/*.md', { as: 'raw', eager: true }))
+  const officialMdFiles = ref(
+    Object.entries(import.meta.glob('./docs/**/*.md', { as: 'raw', eager: true })).reduce((arr: any, [key, value]) => {
+      if (new RegExp(`./docs/${lang}/`).test(key)) {
+        arr.push(value)
+      }
+      return arr
+    }, [])
+  )
+
   const gistFiles = ref({})
   const fileList = ref({} as any)
 
@@ -62,13 +72,14 @@ a-layout.layout
 
     Object.values({
       ...gistFiles.value,
-      ...officialMdFiles.value,
-    }).forEach((value) => {
-      const res: any = parseMD(value as string)
-      if (res.metadata && res.metadata.title) {
-        fileList.value[res.metadata.title] = value
-      }
     })
+      .concat(officialMdFiles.value)
+      .forEach((value) => {
+        const res: any = parseMD(value as string)
+        if (res.metadata && res.metadata.title) {
+          fileList.value[res.metadata.title] = value
+        }
+      })
 
     currentFile.value = Object.keys(fileList.value)[0]
   })
