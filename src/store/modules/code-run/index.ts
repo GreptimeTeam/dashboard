@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import Message from '@arco-design/web-vue/es/message'
 import i18n from '@/locale'
@@ -7,6 +7,7 @@ import dayjs from 'dayjs'
 import { dateTypes } from '@/views/dashboard/config'
 import { AnyObject } from '@/types/global'
 import { HttpResponse, OutputType } from '@/api/interceptor'
+import { sqlFormatter } from '@/utils'
 import { ResultType, DimensionType, SchemaType, PromForm } from './types'
 import { Log, ResultInLog } from '../log/types'
 
@@ -103,7 +104,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
         duration: 2 * 1000,
       })
 
-      const oneLog: Log = {
+      const log: Log = {
         type,
         ...res,
         codeInfo,
@@ -121,7 +122,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
         } else {
           ;[start, end] = params.range
         }
-        oneLog.promInfo = {
+        log.promInfo = {
           Start: dayjs.unix(+start).format('YYYY-MM-DD HH:mm:ss'),
           End: dayjs.unix(+end).format('YYYY-MM-DD HH:mm:ss'),
           Step: params.step,
@@ -130,18 +131,19 @@ const useCodeRunStore = defineStore('codeRun', () => {
       }
 
       return {
-        log: oneLog,
+        log,
         lastResult: oneResult,
       }
     } catch (error: any) {
-      const oneLog = {
+      const log: Log = {
         type,
         codeInfo,
         ...error,
       }
       if (Reflect.has(error, 'error')) {
         return {
-          log: oneLog,
+          log,
+          error: 'error',
         }
       }
       return { error: 'error' }

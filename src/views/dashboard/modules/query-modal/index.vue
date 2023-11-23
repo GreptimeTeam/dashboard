@@ -44,7 +44,6 @@ a-modal.query-modal(
   const isFullscreen = ref(false)
   const isLeft = ref(false)
 
-  const handleOk = async () => {}
   const types = ['sql', 'promql']
 
   const results = computed(() => getResultsByType(types))

@@ -14,7 +14,7 @@ a-card.table-manager(:bordered="false")
   a-spin(style="width: 100%" :loading="tablesLoading")
     a-tree.table-tree(
       v-if="tablesTreeData && tablesTreeData.length > 0"
-      ref="treeRef"
+      ref="tablesTreeRef"
       v-model:expanded-keys="expandedKeys"
       size="small"
       action-on-node-click="expand"
@@ -123,9 +123,9 @@ a-card.table-manager(:bordered="false")
               .left {{ $t('dashboard.createTable') }}
               span(v-if="nodeData.info.sql === '-'") {{ nodeData.info.sql }}
               .right(v-else)
-                a-typography-text {{ codeFormatter(nodeData.info.sql) }}
+                a-typography-text {{ nodeData.info.sql }}
                 TextCopyable(
-                  :data="codeFormatter(nodeData.info.sql)"
+                  :data="nodeData.info.sql"
                   :showData="false"
                   :copyTooltip="$t('dashboard.copyToClipboard')"
                 )
@@ -136,30 +136,29 @@ a-card.table-manager(:bordered="false")
 </template>
 
 <script lang="ts" setup name="TableManager">
-  import { storeToRefs } from 'pinia'
-  import { useDataBaseStore } from '@/store'
-  import useQueryCode from '@/hooks/query-code'
   import usePythonCode from '@/hooks/python-code'
   import useSiderTabs from '@/hooks/sider-tabs'
-  import type { TableDetail, TableTreeChild, TableTreeParent, TreeData } from '@/store/modules/database/types'
+  import type { TableTreeParent, TreeData } from '@/store/modules/database/types'
   import type { OptionsType } from '@/types/global'
-  import editorAPI from '@/api/editor'
-  import { format } from 'sql-formatter'
-  import dayjs from 'dayjs'
   import { dateFormatter } from '@/utils'
 
   const route = useRoute()
   const { insertNameToPyCode } = usePythonCode()
-  const { tablesSearchKey, tablesTreeData } = useSiderTabs()
+  const {
+    tablesSearchKey,
+    tablesTreeData,
+    tablesTreeRef,
+    isRefreshingDetails,
+    refreshTables,
+    loadMore,
+    loadMoreColumns,
+  } = useSiderTabs()
   const { tablesLoading, originTablesTree } = storeToRefs(useDataBaseStore())
-  const { getTableByName, getTables, addChildren, generateTreeChildren } = useDataBaseStore()
 
   const LAYOUT_PADDING = 16
   const HEADER = 58
   const listHeight = LAYOUT_PADDING * 3 + HEADER
-  const isRefreshingDetails = ref<{ [key: number]: boolean }>({ 0: false })
 
-  const treeRef = ref()
   const expandedKeys = ref<number[]>()
 
   const expandChildren = (event: Event, nodeData: TableTreeParent, type: 'details' | 'columns') => {
@@ -180,120 +179,6 @@ a-card.table-manager(:bordered="false")
       }
     })
   })
-
-  const refreshTables = () => {
-    tablesSearchKey.value = ''
-    getTables()
-    if (treeRef.value) treeRef.value.expandAll(false)
-  }
-
-  const loadMoreColumns = (nodeData: TableTreeParent) =>
-    new Promise<void>((resolve, reject) => {
-      getTableByName(nodeData.title)
-        .then((result: any) => {
-          const { output } = result
-          const {
-            records: {
-              rows,
-              schema: { column_schemas: columnSchemas },
-            },
-          } = output[0]
-          const { treeChildren, timeIndexName } = generateTreeChildren(nodeData, rows, columnSchemas)
-          addChildren(nodeData.key, treeChildren, timeIndexName)
-          resolve()
-        })
-        .catch(() => {
-          reject()
-        })
-    })
-
-  const loadMore = async (nodeData: TableTreeParent) => {
-    if (nodeData.childrenType === 'details') {
-      isRefreshingDetails.value[nodeData.key] = true
-
-      const createTable = new Promise<object>((resolve, reject) => {
-        editorAPI
-          .runSQL(`show create table ${nodeData.title}`)
-          .then((res: any) => {
-            const sql = `${res.output[0].records.rows[0][1]}`
-            const regex = /ttl = '(\w)+'/g
-            const ttl = sql.match(regex)?.[0].slice(7, -1) || '-'
-            const result = {
-              key: 'createTable',
-              value: { sql, ttl },
-            }
-            resolve(result)
-          })
-          .catch(() => {
-            const result = {
-              key: 'createTable',
-              value: { sql: '-', ttl: '-' },
-            }
-            reject(result)
-          })
-      })
-
-      const rowAndTime = new Promise<object>((resolve, reject) => {
-        const getRowAndTime = () => {
-          editorAPI
-            .runSQL(
-              nodeData.timeIndexName !== '%TIMESTAMP%'
-                ? `select count(*), min (${nodeData.timeIndexName}), max (${nodeData.timeIndexName}) from "${nodeData.title}"`
-                : `select count(*) from "${nodeData.title}"`
-            )
-            .then((res: any) => {
-              const resArray = res.output[0].records.rows[0]
-              const timestampType = res.output[0].records.schema.column_schemas[1]?.data_type || '-'
-              const result = {
-                key: 'rowAndTime',
-                value: { rowCount: resArray[0], min: resArray[1] || '-', max: resArray[2] || '-', timestampType },
-              }
-              resolve(result)
-            })
-            .catch(() => {
-              const result = {
-                key: 'rowAndTime',
-                value: { rowCount: '-', min: '-', max: '-' },
-              }
-              reject(result)
-            })
-        }
-        if (!nodeData.timeIndexName) {
-          loadMoreColumns(nodeData).then(() => getRowAndTime())
-        } else {
-          getRowAndTime()
-        }
-      })
-
-      return Promise.allSettled([rowAndTime, createTable]).then((result: any[]) => {
-        const children: TableDetail[] = []
-        const rowAndTimeResult = result[0].value || result[0].reason
-        const createTableResult = result[1].value || result[1].reason
-        children.push({
-          key: `${nodeData.title}.details.${rowAndTimeResult.key}`,
-          title: rowAndTimeResult.key,
-          parentKey: nodeData.key,
-          tableName: nodeData.title,
-          isLeaf: true,
-          info: { ...rowAndTimeResult.value, ttl: createTableResult.value.ttl },
-          class: 'details',
-        })
-
-        children.push({
-          key: `${nodeData.title}.details.${createTableResult.key}`,
-          title: createTableResult.key,
-          parentKey: nodeData.key,
-          tableName: nodeData.title,
-          isLeaf: true,
-          info: createTableResult.value,
-          class: 'details',
-        })
-        addChildren(nodeData.key, children, nodeData.timeIndexName, 'details')
-        isRefreshingDetails.value[nodeData.key] = false
-      })
-    }
-    return loadMoreColumns(nodeData)
-  }
 
   const INSERT_MAP: { [key: string]: any } = {
     // query: insertNameToQueryCode,
@@ -337,10 +222,6 @@ a-card.table-manager(:bordered="false")
     if (!nodeData.columns.length) {
       loadMoreColumns(nodeData)
     }
-  }
-
-  const codeFormatter = (code: string) => {
-    return format(code, { language: 'mysql', keywordCase: 'upper' })
   }
 </script>
 
