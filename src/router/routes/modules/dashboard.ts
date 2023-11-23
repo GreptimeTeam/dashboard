@@ -33,6 +33,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.dashboard.scripts',
         requiresAuth: true,
+        icon: 'folder-code',
         roles: ['admin'],
       },
     },
@@ -54,6 +55,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.dashboard.status',
         requiresAuth: true,
+        icon: 'database-config',
         roles: ['admin'],
       },
     },
