@@ -11,12 +11,11 @@ In this documentation, we will use Prometheus [node_exporter](https://github.com
 ## Sample Data
 
 Node_exporter is a Prometheus exporter for hardware and OS metrics exposed by \*NIX kernels.
-It is written in Go and has pluggable metric collectors.
 For the metrics it collects, please refer to the [node_exporter Github repository](https://github.com/prometheus/node_exporter).
 
 ## Export Data to GreptimeCloud
 
-Spin up a Docker container to write sample data to your database:
+Copy the following command and run it in your terminal locally to write sample data to your database:
 
 ```shell
 docker run --rm -e GREPTIME_URL='<host>/v1/prometheus/write?db=<database>' \

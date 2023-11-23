@@ -95,8 +95,6 @@ For example, the following query returns data where the sum of the field values 
 SELECT * FROM cpu_metrics WHERE usage_user + usage_system > 50 LIMIT 100;
 ```
 
-Get the timestamp of 5 minites ago by using the `now()` function and `interval` keyword:
-
 Time functions are available in `WHERE` clause.
 For example, the following SQL statement returns data where the `ts` is greater than the timestamp `1680911820000` minus 5 minutes.
 
@@ -243,7 +241,7 @@ Write your own queries and experience the power of GreptimeDB!
 ## Empower Your Business With Self-Hosted GreptimeDB or GreptimeCloud Now
 
 Congratulations! You have completed the quick start guide.
-Now you can try using self-hosted GreptimeDB or GreptimeCloud to explore more advanced features and empower your business.
+Now you can try using GreptimeCloud or self-hosted GreptimeDB to explore more advanced features and empower your business.
 
-- [Download and start self-hosted GreptimeDB](https://greptime.com/product/db)
 - [Sign up for GreptimeCloud](https://greptime.com/product/cloud)
+- [Download and start self-hosted GreptimeDB](https://greptime.com/product/db)
