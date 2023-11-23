@@ -44,8 +44,8 @@
       :disabled="disabled"
     )
     a-button.copy(type="text" title="Copy Code" @click="copy")
-      svg.iconpark-icon
-        use(href="#copy182x")
+      svg
+        use(href="#copy-new")
   .results(v-if="hasRecords")
     a-tabs.playground-tabs(:default-active-key="hasChart ? '2' : '1'")
       a-tab-pane(key="1" title="Table")

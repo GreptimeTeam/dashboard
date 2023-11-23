@@ -1,7 +1,7 @@
 <template lang="pug">
 a-list-item.smaller-divider
   template(v-if="hasAction && log.type !== 'python' && !log.error" #actions)
-    a-button.play(type="text" @click="openEditor")
+    a-button.play(type="text" size="small" @click="openEditor")
       template(#icon)
         icon-play-arrow.icon-color
   a-space(direction="vertical" fill :size="0")
@@ -109,6 +109,7 @@ a-list-item.smaller-divider
     background: var(--th-bg-color);
     border-radius: 4px;
     padding: 0 2px;
+    min-width: max-content;
   }
 
   .result {

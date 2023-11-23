@@ -84,6 +84,7 @@ a-card.logs-card(:bordered="false")
   }
   :deep(.arco-list-item-action) {
     width: 32px;
+    justify-content: flex-end;
   }
 
   :deep(.arco-list-small .arco-list-content-wrapper .arco-list-content > .arco-list-item) {

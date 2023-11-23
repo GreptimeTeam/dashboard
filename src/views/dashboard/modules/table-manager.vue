@@ -123,7 +123,7 @@ a-card.table-manager(:bordered="false")
               .left {{ $t('dashboard.createTable') }}
               span(v-if="nodeData.info.sql === '-'") {{ nodeData.info.sql }}
               .right(v-else)
-                a-typography-text {{ nodeData.info.sql }}
+                a-typography-text.code-space {{ nodeData.info.sql }}
                 TextCopyable(
                   :data="nodeData.info.sql"
                   :showData="false"
@@ -382,11 +382,15 @@ a-card.table-manager(:bordered="false")
     padding: 7px 0;
   }
   .right {
+    display: flex;
     background: var(--th-bg-color);
     border-radius: 6px;
     border: 1px solid var(--border-color);
-    padding: 0 10px 4px 10px;
+    padding: 0 0 4px 10px;
     font-family: monospace;
+    .code-space {
+      padding-top: 6px;
+    }
   }
 
   :deep(.arco-tree-node-switcher) {
