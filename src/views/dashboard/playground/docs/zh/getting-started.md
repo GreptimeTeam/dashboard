@@ -95,7 +95,7 @@ SELECT * FROM cpu_metrics WHERE usage_user + usage_system > 50 LIMIT 100;
 `WHERE` 子句中还可以使用时间函数。例如，下面的 SQL 语句返回 `ts` 大于时间戳 `1680911820000` 减去 5 分钟的数据。
 
 ```sql
-SELECT * FROM cpu_metrics WHERE ts > (1680911820000::timestamp_ms - interval '5 minutes') - interval '5 minutes') LIMIT 100;
+SELECT * FROM cpu_metrics WHERE ts > (1680911820000::timestamp_ms - interval '5 minutes') LIMIT 100;
 ```
 
 更多信息请参考 [`WHERE` 子句](https://docs.greptime.cn/reference/sql/where)。
