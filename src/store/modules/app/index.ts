@@ -104,14 +104,18 @@ const useAppStore = defineStore('app', {
     async fetchDatabases() {
       try {
         const res: any = await editorAPI.getDatabases()
-        this.databaseList = [...res.output[0].records.rows[0]]
-        this.setDefaultDatabase()
+        this.databaseList = res.output[0].records.rows.flat()
+        if (this.databaseList.length) {
+          this.setDefaultDatabase()
+        }
       } catch (error) {
         // some error
       }
     },
     setDefaultDatabase() {
-      this.database = this.databaseList ? this.databaseList[0] : this.database
+      this.database = this.databaseList.includes('public')
+        ? 'public'
+        : this.databaseList.find((item: string) => item !== 'information_schema') || this.databaseList[0]
     },
   },
 })
