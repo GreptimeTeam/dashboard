@@ -39,7 +39,6 @@ a-list-item.smaller-divider
   import { format } from 'sql-formatter'
 
   const route = useRoute()
-  const { codeType: GlobalCodeType } = storeToRefs(useAppStore())
   const { inputFromNewLineToQueryCode, replaceCode } = useQueryCode()
   const { updateSettings } = useAppStore()
 
@@ -48,10 +47,6 @@ a-list-item.smaller-divider
       type: Object,
       default: () => ({}),
     },
-    codeType: {
-      type: String,
-      default: 'sql',
-    },
     hasAction: {
       type: Boolean,
       default: true,
@@ -59,12 +54,6 @@ a-list-item.smaller-divider
   })
 
   const hasExecutionTime = computed(() => Reflect.has(props.log, 'execution_time_ms'))
-
-  const codeFormatter = (code: string) => {
-    if ((props.codeType || GlobalCodeType.value) === 'sql')
-      return format(code, { language: 'mysql', keywordCase: 'upper' })
-    return code
-  }
 
   const openEditor = () => {
     updateSettings({ queryModalVisible: true })

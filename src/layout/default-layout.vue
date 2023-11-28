@@ -11,7 +11,6 @@ a-layout.layout-container
 <script lang="ts" setup>
   import { computed } from 'vue'
   import { useAppStore } from '@/store'
-  import NavBar from '@/components/navbar/index.vue'
   import Footer from '@/components/footer/index.vue'
   import useResponsive from '@/hooks/responsive'
   import PageLayout from './page-layout.vue'
@@ -19,7 +18,7 @@ a-layout.layout-container
   useResponsive(true)
   const navbarHeight = `52px`
 
-  const { navbar, footer, username, password, database, codeType } = storeToRefs(useAppStore())
+  const { navbar, footer } = storeToRefs(useAppStore())
 </script>
 
 <style scoped lang="less">

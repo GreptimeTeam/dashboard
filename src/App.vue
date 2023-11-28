@@ -24,7 +24,7 @@
   })
 
   const { setRole } = useUserStore()
-  const { host, username, password, database, guideModalVisible, codeType } = storeToRefs(useAppStore())
+  const { host, username, password, database, guideModalVisible } = storeToRefs(useAppStore())
   const { fetchDatabases, updateSettings } = useAppStore()
   const { getTables, getScriptsTable } = useDataBaseStore()
 

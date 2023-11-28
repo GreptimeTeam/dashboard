@@ -34,18 +34,10 @@ const codes = ref({
 } as stringType)
 
 export default function useQueryCode() {
-  const { codeType } = storeToRefs(useAppStore())
   const { results } = storeToRefs(useCodeRunStore())
-
-  // Deprecated
-  // const insertNameToQueryCode = (name: string) => {
-  //   const { state } = view.value
-  //   view.value.dispatch(state.replaceSelection(`${name}`))
-  // }
 
   const inputFromNewLineToQueryCode = (code: string, cursorBack: number) => {
     queryType.value = 'sql'
-    codeType.value = 'sql'
     const { state } = sqlView.value
     const lastLineCode = state.doc.text[state.doc.text.length - 1]
     let changes
@@ -75,12 +67,8 @@ export default function useQueryCode() {
     })
   }
 
-  const selectCodeType = () => {
-    codeType.value = queryType.value
-  }
-
   const runQuery = async (
-    code: any,
+    code: string,
     type = queryType.value,
     withoutSave = false,
     params: PromForm = {} as PromForm
@@ -142,33 +130,21 @@ export default function useQueryCode() {
     return results.value.filter((item: ResultType) => types.includes(item.type))
   }
 
-  const queryCode = computed({
-    get: () => {
-      return codes.value[codeType.value] || ''
-    },
-    set: (val) => {
-      codes.value[codeType.value] = val
-    },
-  })
-
   const clearCode = () => {
     codes.value[queryType.value] = ''
   }
 
   const replaceCode = (code: string) => {
     queryType.value = 'promql'
-    codeType.value = 'promql'
     codes.value.promql = code
   }
   return {
-    selectCodeType,
     getResultsByType,
     runQuery,
     inputFromNewLineToQueryCode,
     replaceCode,
     sqlView,
     promqlView,
-    queryCode,
     cursorAt,
     queryOptions,
     queryType,
