@@ -121,7 +121,7 @@ See more about [`INSERT` clause](https://docs.greptime.com/reference/sql/insert)
 
 Run the following SQL statement to query all rows in the table. After getting the results, click the `Chart` tab to see the visualized data. You can choose `Group By` options to make the visualized data group by `hostname` and `environment`.
 
-```sql
+```sql (line|usage_user|ts|hostname,environment)
 SELECT * FROM cpu_metrics ORDER BY ts DESC;
 ```
 
@@ -157,22 +157,8 @@ See more about [`SELECT` clause](https://docs.greptime.com/reference/sql/select)
 
 The `WHERE` clause can be used to filter data. It supports comparisons against string, boolean, and numeric values. The following SQL statement selects the rows where the `usage_user` is greater than 50.
 
-```sql
-SELECT * FROM cpu_metrics WHERE usage_user > 50 LIMIT 100;
-```
-
-You can also perform basic arithmetic in the `WHERE` condition.
-For example, the following query returns data where the sum of the field values `usage_user` and `usage_system` is greater than 50.
-
-```sql
-SELECT * FROM cpu_metrics WHERE usage_user + usage_system > 50 LIMIT 100;
-```
-
-Time functions are available in `WHERE` clause.
-For example, the following SQL statement returns data where the `ts` is greater than the timestamp `1680911820000` minus 5 minutes.
-
-```sql
-SELECT * FROM cpu_metrics WHERE ts > (1680911820000::timestamp_ms - interval '5 minutes') LIMIT 100;
+```sql (line|usage_user|ts|hostname,environment)
+SELECT * FROM cpu_metrics WHERE usage_user > 50;
 ```
 
 See more about [`WHERE` clause](https://docs.greptime.com/reference/sql/where).
@@ -232,13 +218,13 @@ To aggregate data by a tag key, add the tag key to the `BY` keyword after the `A
 The following SQL statement calculates the average CPU usage of each host at a 5-minute interval,
 with data calculated every 1 minute.
 
-```sql (line|usage_user_5m_avg|ts|hostname)
-SELECT
-    ts,
-    hostname,
-    avg(usage_user) RANGE '5m' as usage_user_5m_avg
-FROM cpu_metrics
-ALIGN '1m' BY (hostname) ORDER BY ts DESC LIMIT 100;
+```sql (line|avg_user,avg_system,avg_idle|dt|dt)
+select date_trunc('second', ts) as dt,
+    avg(usage_user) as avg_user,
+    avg(usage_system) as avg_system,
+    avg(usage_idle) as avg_idle
+    FROM cpu_metrics
+    GROUP BY dt
 ```
 
 #### Aggregate data in intervals and fill in missing values
