@@ -34,10 +34,9 @@ a-button(:loading="loading" @click="imp")
           duration: 5 * 1000,
         }),
       })
-    } catch (error) {
-      console.log(`error:`, error)
+    } finally {
+      loading.value = false
     }
-    loading.value = false
   }
   // lifecycle
 </script>
