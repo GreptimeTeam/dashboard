@@ -99,7 +99,7 @@ Time functions are available in `WHERE` clause.
 For example, the following SQL statement returns data where the `ts` is greater than the timestamp `1680911820000` minus 5 minutes.
 
 ```sql
-SELECT * FROM cpu_metrics WHERE ts > (1680911820000::timestamp_ms - interval '5 minutes') - interval '5 minutes') LIMIT 100;
+SELECT * FROM cpu_metrics WHERE ts > (1680911820000::timestamp_ms - interval '5 minutes') LIMIT 100;
 ```
 
 See more about [`WHERE` clause](https://docs.greptime.com/reference/sql/where).
