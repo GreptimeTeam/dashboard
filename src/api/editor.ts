@@ -78,7 +78,10 @@ const runSQL = (code: string) => {
 
 const getScriptsTable = (db: string) => {
   // TODO: update to system schema when upstream ready
-  return axios.post(sqlUrl, makeSqlData(`select * from public.scripts where schema = '${db}'`))
+  return axios.post(
+    sqlUrl,
+    makeSqlData(`select * from public.scripts where schema = 'public' order by gmt_modified desc;`)
+  )
 }
 
 const saveScript = (name: string, code: string) => {

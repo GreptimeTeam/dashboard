@@ -88,7 +88,7 @@ const useDataBaseStore = defineStore('database', () => {
   const originScriptsList = computed(() => {
     const tempArray: ScriptTreeData[] = []
     if (scriptsData.value) {
-      const columnSchemas: SchemaType[] = scriptsData.value.output[0].records.schema.column_schemas
+      const columnSchemas: SchemaType[] = scriptsData.value.output[0].records.schema?.column_schemas || []
       const scriptNameIndex = columnSchemas.findIndex((schema: SchemaType) => {
         return schema.name === 'name'
       })
