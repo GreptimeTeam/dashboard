@@ -17,7 +17,7 @@ a-drawer.settings-drawer(
     a-form-item(:label="$t('settings.host')")
       a-input(v-model="settingsForm.host")
     a-form-item(:label="$t('settings.database')")
-      a-input(v-if="role === 'admin'" v-model="settingsForm.database")
+      a-input(v-if="role !== 'admin'" v-model="settingsForm.database")
       a-select(v-else v-model="settingsForm.database" allow-create)
         a-option(
           v-for="item of settingsForm.databaseList"

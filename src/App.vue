@@ -39,6 +39,7 @@
 
   if (import.meta.env.MODE === 'development' || import.meta.env.MODE === 'production') {
     // Assuming local greptimeDB is up and running
+    // TODO: Refresh databases if needed
     fetchDatabases()
   }
 </script>
