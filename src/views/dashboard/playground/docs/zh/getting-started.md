@@ -58,7 +58,7 @@ DESC TABLE cpu_metrics;
 
 运行下面的 SQL 语句来列出表中的指标。
 
-```sql (line|usage_user|hostname,environment)
+```sql (line|usage_user|ts|hostname,environment)
 SELECT * FROM cpu_metrics ORDER BY ts DESC LIMIT 100;
 ```
 
@@ -153,7 +153,7 @@ ALIGN '1m' LIMIT 100;
 要通过标签键聚合数据，请在 `ALIGN` 关键字后的 `BY` 关键字中添加标签。
 下面的 SQL 语句按主机名聚合 5 分钟范围内的数据，每 1 分钟计算一次数据。
 
-```sql (line|usage_user_5m_avg|ts|hostname)
+```sql (line|usage_user_5m_avg,usage_system_5m_avg|ts)
 SELECT
     ts,
     hostname,

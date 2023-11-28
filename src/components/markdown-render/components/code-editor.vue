@@ -51,7 +51,7 @@
       a-tab-pane(key="1" title="Table")
         DataGrid(:data="result" :hasHeader="false")
       a-tab-pane(v-if="hasChart" key="2" title="Chart")
-        DataChart(:data="result" :hasHeader="false" :defaultChartForm="promForm")
+        DataChart(:data="result" :hasHeader="false" :defaultChartForm="chartParams ? JSON.parse(chartParams) : {}")
   .logs(v-if="log")
     a-list(
       size="small"
@@ -68,7 +68,7 @@
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
   import useDataChart from '@/hooks/data-chart'
-  import type { PromForm, ResultType } from '@/store/modules/code-run/types'
+  import type { ChartFormType, PromForm, ResultType } from '@/store/modules/code-run/types'
   import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '@/views/dashboard/config'
   import i18n from '@/locale'
   import { Message } from '@arco-design/web-vue'
@@ -80,7 +80,11 @@
       type: Boolean,
       default: false,
     },
-    defaultChartForm: {
+    chartParams: {
+      type: String,
+      default: '{}',
+    },
+    promParams: {
       type: String,
       default: '{}',
     },
@@ -143,14 +147,10 @@
     hasChart.value = false
     hasRecords.value = false
     if (props.lang === 'promql') {
-      const chartForm = JSON.parse(props.defaultChartForm)
+      const chartForm = JSON.parse(props.promParams)
       promForm.time = chartForm.time
       promForm.step = chartForm.step
       promForm.range = chartForm.range
-    } else {
-      promForm.time = 5
-      promForm.step = '30s'
-      promForm.range = [dayjs().subtract(5, 'minute').unix().toString(), dayjs().unix().toString()]
     }
   }
   const runCommand = async () => {
