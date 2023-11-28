@@ -16,31 +16,31 @@ export default function customCode(md: MarkdownIt) {
         .match(/\((.*)\)/)?.[1]
         .split('|')
         .map((item) => item.split(',')) || []
-    const defaultChartForm: { [key: string]: ChartFormType | PromForm } = {
-      sql: {
-        chartType: params[0]?.[0] || 'line',
-        selectedYTypes: params[1] || [],
-        xAxisType: { name: params[2]?.[0] || 'ts' } as SchemaType,
-        groupBySelectedTypes: params[3] || [],
-      },
-      promql: {
-        // eslint-disable-next-line no-nested-ternary
-        time: params.length === 0 ? 5 : params[0]?.length === 1 ? +params[0][0] : 0,
-        range:
-          params[0]?.length === 2
-            ? params[0]
-            : [dayjs().subtract(5, 'minute').unix().toString(), dayjs().unix().toString()],
-        step: params[1]?.[0] || '30s',
-      },
+
+    const chartParams: ChartFormType = {
+      chartType: params[0]?.[0] || 'line',
+      selectedYTypes: params[1] || [],
+      xAxisType: (params[2]?.[0] ? { name: params[2]?.[0] } : {}) as SchemaType,
+      groupBySelectedTypes: params[3] || [],
+    }
+
+    const promParams: PromForm = {
+      // eslint-disable-next-line no-nested-ternary
+      time: params.length === 0 ? 5 : params[0]?.length === 1 ? +params[0][0] : 0,
+      range:
+        params[0]?.length === 2
+          ? params[0]
+          : [dayjs().subtract(5, 'minute').unix().toString(), dayjs().unix().toString()],
+      step: params[1]?.[0] || '30s',
     }
 
     const res = rawCode?.replace(
       /<pre><code class="language-(\w*?)">([\s\S]*)<\/code><\/pre>/,
       ($1: string, $2: string) => {
         const disabled = /sql|promql/.test($2.toLowerCase()) ? '' : 'disabled'
-        return `<code-editor lang="${$2}" defaultChartForm='${JSON.stringify(
-          defaultChartForm[$2] || {}
-        )}' ${disabled}>${$1}</code-editor>`
+        return `<code-editor lang="${$2}" chartParams='${JSON.stringify(
+          chartParams || {}
+        )}' promParams='${JSON.stringify(promParams || {})}' ${disabled}>${$1}</code-editor>`
       }
     )
     return `${res}`

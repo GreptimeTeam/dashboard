@@ -260,7 +260,9 @@ a-card(v-if="hasChart" :bordered="false")
         ? props.defaultChartForm.selectedYTypes
         : [yOptions.value[0]]
 
-      chartForm.xAxisType = props.defaultChartForm.xAxisType || xOptions.value[0]
+      chartForm.xAxisType = props.defaultChartForm.xAxisType?.name
+        ? props.defaultChartForm.xAxisType
+        : xOptions.value[0]
 
       chartForm.groupBySelectedTypes = props.defaultChartForm.groupBySelectedTypes?.length
         ? props.defaultChartForm.groupBySelectedTypes

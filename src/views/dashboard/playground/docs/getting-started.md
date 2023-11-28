@@ -133,7 +133,7 @@ In the following examples, we will limit the query result to 100 rows to avoid r
 
 Run the following SQL statement to list metrics in the table.
 
-```sql (line|usage_user|hostname,environment)
+```sql (line|usage_user|ts|hostname,environment)
 SELECT * FROM cpu_metrics ORDER BY ts DESC LIMIT 100;
 ```
 
