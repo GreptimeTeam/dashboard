@@ -20,7 +20,7 @@ export default function customCode(md: MarkdownIt) {
     const chartParams: ChartFormType = {
       chartType: params[0]?.[0] || 'line',
       selectedYTypes: params[1] || [],
-      xAxisType: { name: params[2]?.[0] || '' } as SchemaType,
+      xAxisType: (params[2]?.[0] ? { name: params[2]?.[0] } : {}) as SchemaType,
       groupBySelectedTypes: params[3] || [],
     }
 
