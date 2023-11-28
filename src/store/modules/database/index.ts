@@ -88,11 +88,19 @@ const useDataBaseStore = defineStore('database', () => {
   const originScriptsList = computed(() => {
     const tempArray: ScriptTreeData[] = []
     if (scriptsData.value) {
+      const columnSchemas: SchemaType[] = scriptsData.value.output[0].records.schema.column_schemas
+      const scriptNameIndex = columnSchemas.findIndex((schema: SchemaType) => {
+        return schema.name === 'name'
+      })
+      const scriptCodeIndex = columnSchemas.findIndex((schema: SchemaType) => {
+        return schema.name === 'script'
+      })
+
       scriptsData.value.output[0].records.rows.forEach((item: Array<string>) => {
         const node: ScriptTreeData = {
-          title: item[1],
-          key: item[1],
-          code: item[2],
+          title: item[scriptNameIndex],
+          key: item[scriptNameIndex],
+          code: item[scriptCodeIndex],
           isLeaf: true,
           children: [],
         }

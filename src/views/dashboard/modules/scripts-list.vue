@@ -69,7 +69,6 @@ a-modal.change-modal(
 
   const onSelect = (key: string[], selectedData: { node: object }) => {
     selectedNode.value = selectedData.node
-
     if (!isChanged.value) {
       overwriteCode(selectedData.node)
     } else {
