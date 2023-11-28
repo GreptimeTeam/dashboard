@@ -1,6 +1,6 @@
 import editorAPI from '@/api/editor'
 import { SEMANTIC_TYPE_MAP } from '@/views/dashboard/config'
-import { ScriptTreeData, TableTreeChild, TableTreeParent } from './types'
+import { ScriptTreeData, TableDetail, TableTreeChild, TableTreeParent } from './types'
 import { SchemaType } from '../code-run/types'
 
 const useDataBaseStore = defineStore('database', () => {
@@ -20,8 +20,11 @@ const useDataBaseStore = defineStore('database', () => {
           title: item.join(),
           key,
           children: [],
+          columns: [],
+          details: [],
           timeIndexName: '',
-          code: '',
+          childrenType: 'columns',
+          isLeaf: false,
         }
         tempArray.push(node)
         key += 1
@@ -64,19 +67,40 @@ const useDataBaseStore = defineStore('database', () => {
     }
   }
 
-  const addChildren = (key: number, children: TableTreeChild[], timeIndexName: string) => {
-    originTablesTree.value[key].children = children
+  const addChildren = (
+    key: number,
+    children: TableTreeChild[] | TableDetail[],
+    timeIndexName: string,
+    type: string,
+    isSilent?: boolean
+  ) => {
+    if (!isSilent) {
+      originTablesTree.value[key].children = children
+    }
     originTablesTree.value[key].timeIndexName = timeIndexName
+    if (type === 'details') {
+      originTablesTree.value[key].details = children as TableDetail[]
+    } else {
+      originTablesTree.value[key].columns = children as TableTreeChild[]
+    }
   }
 
   const originScriptsList = computed(() => {
     const tempArray: ScriptTreeData[] = []
     if (scriptsData.value) {
+      const columnSchemas: SchemaType[] = scriptsData.value.output[0].records.schema.column_schemas
+      const scriptNameIndex = columnSchemas.findIndex((schema: SchemaType) => {
+        return schema.name === 'name'
+      })
+      const scriptCodeIndex = columnSchemas.findIndex((schema: SchemaType) => {
+        return schema.name === 'script'
+      })
+
       scriptsData.value.output[0].records.rows.forEach((item: Array<string>) => {
         const node: ScriptTreeData = {
-          title: item[1],
-          key: item[1],
-          code: item[2],
+          title: item[scriptNameIndex],
+          key: item[scriptNameIndex],
+          code: item[scriptCodeIndex],
           isLeaf: true,
           children: [],
         }

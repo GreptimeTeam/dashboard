@@ -1,11 +1,14 @@
+export interface ResultInLog {
+  type: string
+  rowCount: number
+}
+
 export interface Log {
-  results?: ResultInLog[]
   sql?: string
   error?: string
   name?: string
   type: string
-  promInfo?: {}
+  promInfo?: object
   codeInfo: string
+  message: string
 }
-
-export interface ResultInLog {}

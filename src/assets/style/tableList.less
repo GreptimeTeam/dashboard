@@ -10,10 +10,6 @@
     line-height: 42px !important;
   }
 
-  .arco-scrollbar {
-    height: calc(100vh - 220px);
-  }
-
   .arco-tree {
     margin: 0 16px;
   }
@@ -35,12 +31,6 @@
       height: 24px;
       margin-left: 2px;
       border-radius: 4px;
-    }
-
-    .right {
-      display: flex;
-      width: 15px;
-      padding-left: 2px;
     }
 
     .data-type {
@@ -181,8 +171,21 @@
 
 .script-tree {
   &.playground-sidebar {
+    padding-top: 10px;
+    .arco-tree-node {
+      border-radius: 0;
+    }
+    .arco-tree-node-selected {
+      border-left: 2px solid var(--color-primary);
+    }
     .arco-tree-node-title {
-      border-radius: 10px;
+      border-radius: 0px;
+      width: 180px;
+      .arco-tree-node-title-text {
+        width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
     }
   }
 

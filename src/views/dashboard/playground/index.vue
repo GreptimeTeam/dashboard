@@ -7,6 +7,9 @@ a-layout.layout
       :selected-keys="[currentFile]"
       @select="onSelect"
     )
+      template(#title="{ key }")
+        a-tooltip(:content="key")
+          span {{ key }}
   a-layout-content
     .markdown-container(v-if="fileList[currentFile]")
       markdownRender(:md="fileList[currentFile]")
@@ -17,10 +20,10 @@ a-layout.layout
   import { getPlaygroundInfo } from '@/api/playground'
   import parseMD from 'parse-md'
   // data
-  const { isCloud } = storeToRefs(useAppStore())
   const appStore = useAppStore()
   const router = useRouter()
   const { getGistFiles } = useGist()
+  const { role } = storeToRefs(useUserStore())
 
   const refreshPlaygroundModal = ref()
   const currentFile = ref('')
@@ -42,7 +45,7 @@ a-layout.layout
   onMounted(async () => {
     const { gistId } = router.currentRoute.value.query
 
-    if (appStore.lifetime === 'temporary' && isCloud.value) {
+    if (appStore.lifetime === 'temporary' && role.value !== 'admin') {
       try {
         const data = await getPlaygroundInfo(appStore.dbId)
       } catch (error) {

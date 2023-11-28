@@ -20,3 +20,13 @@ export const createPlayground = (token: string) => {
     },
   } as AxiosRequestConfig)
 }
+
+export const importPresets = (db: string, table: string, from: string) => {
+  return axios.post('/v1/import-presets', {}, {
+    params: {
+      db,
+      from,
+      table,
+    },
+  } as AxiosRequestConfig)
+}

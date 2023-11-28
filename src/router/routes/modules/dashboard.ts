@@ -5,6 +5,7 @@ export const DEFAULT_LAYOUT = () => import('@/layout/default-layout.vue')
 const DASHBOARD: AppRouteRecordRaw = {
   path: '/dashboard',
   name: 'dashboard',
+
   redirect: '/dashboard/query',
   component: DEFAULT_LAYOUT,
   meta: {
@@ -21,6 +22,8 @@ const DASHBOARD: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.dashboard.query',
         requiresAuth: false,
+        icon: 'query-menu',
+        roles: ['admin', 'cloud'],
       },
     },
     {
@@ -29,8 +32,9 @@ const DASHBOARD: AppRouteRecordRaw = {
       component: () => import('@/views/dashboard/scripts/index.vue'),
       meta: {
         locale: 'menu.dashboard.scripts',
-        requiresAuth: false,
-        roles: ['dev'],
+        requiresAuth: true,
+        icon: 'folder-code',
+        roles: ['admin'],
       },
     },
     {
@@ -40,6 +44,8 @@ const DASHBOARD: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.dashboard.playground',
         requiresAuth: false,
+        roles: ['admin', 'cloud', 'playground'],
+        icon: 'playground',
       },
     },
     {
@@ -48,8 +54,9 @@ const DASHBOARD: AppRouteRecordRaw = {
       component: () => import('@/views/dashboard/status/index.vue'),
       meta: {
         locale: 'menu.dashboard.status',
-        requiresAuth: false,
-        roles: ['dev'],
+        requiresAuth: true,
+        icon: 'database-config',
+        roles: ['admin'],
       },
     },
   ],

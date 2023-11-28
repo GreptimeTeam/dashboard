@@ -46,3 +46,9 @@ export interface datasetType {
   transform?: any
   fromDatasetIndex?: number
 }
+
+export interface PromForm {
+  time: number
+  range: Array<string>
+  step: string
+}

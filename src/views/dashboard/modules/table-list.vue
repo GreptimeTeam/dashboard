@@ -6,7 +6,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
         svg.icon
           use(href="#search")
     .icon-space.pointer(@click="refreshTables")
-      svg.icon
+      svg.icon.brand-color
         use(href="#refresh")
   a-tree.table-tree(
     v-if="tablesTreeData && tablesTreeData.length > 0"
@@ -18,7 +18,8 @@ a-spin(style="width: 100%" :loading="tablesLoading")
     :data="tablesTreeData"
     :load-more="loadMore"
     :animation="false"
-    :virtual-list-props="{ height: 'calc(100vh - 220px)' }"
+    :virtual-list-props="{ height: 'calc(100vh - 160px)' }"
+    :field-names="{ children: 'columns' }"
   )
     template(#icon="node")
       a-tooltip(:content="node.node.iconType")
@@ -53,14 +54,12 @@ a-spin(style="width: 100%" :loading="tablesLoading")
                   a-button(type="text" @click="copy(nodeData.title)") Copy name
     template(#switcher-icon)
       IconDown
-  .tree-scrollbar(v-else)
-    EmptyStatus
+  EmptyStatus.empty(v-else)
 </template>
 
-<script lang="ts" setup>
+<script lang="ts" setup name="TableList">
   import { storeToRefs } from 'pinia'
   import { useDataBaseStore } from '@/store'
-  import useQueryCode from '@/hooks/query-code'
   import usePythonCode from '@/hooks/python-code'
   import useSiderTabs from '@/hooks/sider-tabs'
   import type { TableTreeParent } from '@/store/modules/database/types'
@@ -70,7 +69,6 @@ a-spin(style="width: 100%" :loading="tablesLoading")
   const source = ref('')
   const { text, copy, copied, isSupported } = useClipboard({ source })
   const route = useRoute()
-  const { insertNameToQueryCode } = useQueryCode()
   const { insertNameToPyCode } = usePythonCode()
   const { tablesSearchKey, tablesTreeData } = useSiderTabs()
   const { tablesLoading, originTablesTree } = storeToRefs(useDataBaseStore())
@@ -97,7 +95,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
             },
           } = output[0]
           const { treeChildren, timeIndexName } = generateTreeChildren(nodeData, rows, columnSchemas)
-          addChildren(nodeData.key, treeChildren, timeIndexName)
+          addChildren(nodeData.key, treeChildren, timeIndexName, 'columns')
           resolve()
         })
         .catch(() => {
@@ -107,7 +105,6 @@ a-spin(style="width: 100%" :loading="tablesLoading")
   }
 
   const INSERT_MAP: { [key: string]: any } = {
-    query: insertNameToQueryCode,
     scripts: insertNameToPyCode,
   }
 

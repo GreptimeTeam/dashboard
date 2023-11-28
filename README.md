@@ -24,12 +24,12 @@ docker compose up
 
 Open you browser and visit `http://localhost:8080/dashboard/`
 
-- Follow [getting started](https://docs.greptime.com/getting-started/overview) to create your table and insert some data
+- Follow [getting started](https://docs.greptime.com/getting-started/try-out-greptimedb) to create your table and insert some data
 - Run a `SELECT` query and check the result as table or chart
 
 ## Development Setup
 
-- [Install GreptimeDB](https://docs.greptime.com/getting-started/overview#install-greptimedb)
+- [Install GreptimeDB](https://docs.greptime.com/getting-started/try-out-greptimedb)
 - Run `./greptime standalone start`
 - Clone this project `git clone https://github.com/GreptimeTeam/dashboard.git`
 - Run `npm install` for dependencies

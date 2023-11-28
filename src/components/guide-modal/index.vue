@@ -16,7 +16,7 @@ a-modal.guide-modal(
     a-form-item(:label="$t('settings.host')")
       a-input(v-model="settingsForm.host")
     a-form-item(:label="$t('settings.database')")
-      a-input(v-if="isCloud" v-model="settingsForm.database")
+      a-input(v-if="role !== 'admin'" v-model="settingsForm.database")
       a-select(v-else v-model="settingsForm.database" allow-create)
         a-option(
           v-for="item of settingsForm.databaseList"
@@ -36,9 +36,9 @@ a-modal.guide-modal(
   import { useAppStore } from '@/store'
   import SettingsForm from '../global-setting/settings-form.vue'
 
-  const { username, password, host, database, databaseList, codeType, isCloud, guideModalVisible } = storeToRefs(
-    useAppStore()
-  )
+  const { username, password, host, database, databaseList, codeType, guideModalVisible } = storeToRefs(useAppStore())
+  const { role } = storeToRefs(useUserStore())
+
   const { login } = useAppStore()
   const { getTables, getScriptsTable } = useDataBaseStore()
 

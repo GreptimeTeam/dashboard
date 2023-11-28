@@ -1,25 +1,23 @@
 <template lang="pug">
-.fixed-settings(v-if="!navbar" @click="setVisible")
+.fixed-settings(v-if="false" @click="setVisible")
   a-button(type="primary")
     template(#icon)
       icon-settings
-a-drawer(
+a-drawer.settings-drawer(
   unmount-on-close
+  placement="left"
   :width="262"
   :visible="globalSettings"
   :mask-closable="true"
   :footer="false"
+  :drawer-style="{ bottom: MARGIN_BOTTOM }"
   @cancel="cancel"
 )
-  template(#title)
-    svg.drawer-icon
-      use(href="#setting2")
-    | {{ $t('settings.title') }}
   a-form(layout="vertical" :model="settingsForm")
     a-form-item(:label="$t('settings.host')")
       a-input(v-model="settingsForm.host")
     a-form-item(:label="$t('settings.database')")
-      a-input(v-if="isCloud" v-model="settingsForm.database")
+      a-input(v-if="role !== 'admin'" v-model="settingsForm.database")
       a-select(v-else v-model="settingsForm.database" allow-create)
         a-option(
           v-for="item of settingsForm.databaseList"
@@ -40,6 +38,7 @@ a-drawer(
   import { useStorage } from '@vueuse/core'
   import editorAPI from '@/api/editor'
 
+  const MARGIN_BOTTOM = `${16 + 32 * 2 + 2}px`
   const emit = defineEmits(['cancel'])
 
   const { t } = useI18n()
@@ -48,9 +47,8 @@ a-drawer(
   const { navbar, updateSettings, login } = useAppStore()
   const { getTables, getScriptsTable } = useDataBaseStore()
 
-  const { codeType, isCloud, globalSettings, host, database, username, password, databaseList } = storeToRefs(
-    useAppStore()
-  )
+  const { role } = storeToRefs(useUserStore())
+  const { codeType, globalSettings, host, database, username, password, databaseList } = storeToRefs(useAppStore())
 
   const settingsForm = ref({
     username: username.value,
@@ -112,6 +110,27 @@ a-drawer(
     svg {
       font-size: 18px;
       vertical-align: -4px;
+    }
+  }
+</style>
+
+<style lang="less">
+  .settings-drawer {
+    .arco-drawer {
+      height: 335px;
+      margin-left: 24px;
+      border-radius: 4px;
+      box-shadow: 0 4px 10px 0 var(--border-color);
+      .arco-form-item {
+        margin-bottom: 16px;
+      }
+      .arco-drawer-header {
+        display: none;
+      }
+
+      .arco-drawer-body {
+        padding: 16px 10px 0 10px;
+      }
     }
   }
 </style>

@@ -19,11 +19,11 @@ export interface AppState {
   host: string
   databaseList: Array<string>
   codeType: string
-  isCloud: boolean
   guideModalVisible: boolean
   username: string
   password: string
   dbId: string
   lifetime: string
   [key: string]: unknown
+  queryModalVisible: boolean
 }

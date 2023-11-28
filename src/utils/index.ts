@@ -1,5 +1,5 @@
-import numeral from 'numeral'
 import dayjs from 'dayjs'
+import { format as sqlFormat } from 'sql-formatter'
 
 type TargetContext = '_self' | '_parent' | '_blank' | '_top'
 
@@ -58,6 +58,10 @@ export const dateFormatter = (dataType: string, value: number | null) => {
     default:
       return null
   }
+}
+
+export const sqlFormatter = (code: string) => {
+  return sqlFormat(code, { language: 'mysql', keywordCase: 'upper' })
 }
 
 export default null

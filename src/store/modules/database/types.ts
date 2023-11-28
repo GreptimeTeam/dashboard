@@ -21,11 +21,21 @@ export interface TableTreeChild extends TreeChild {
   parentKey: number
 }
 
+export interface TableDetail extends TreeChild {
+  key: string
+  parentKey: number
+  tableName: string
+  info: any
+  class: string
+}
+
 export interface TableTreeParent extends TreeData {
   key: number
-  code: string
+  childrenType: 'columns' | 'details'
   timeIndexName: string
-  children: TableTreeChild[]
+  children: TableTreeChild[] | TableDetail[]
+  columns: TableTreeChild[]
+  details: TableDetail[]
 }
 
 export interface ScriptTreeData extends TreeData {

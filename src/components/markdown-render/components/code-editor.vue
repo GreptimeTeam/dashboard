@@ -4,19 +4,13 @@
     a-space(size="medium")
       a-form-item(:hide-label="true")
         TimeSelect(
+          v-model:time-length="promForm.time"
+          v-model:time-range="promForm.range"
           flex-direction="row-reverse"
           button-class="query-time-button"
-          :trigger-visible="triggerVisible"
-          :is-relative="promForm.isRelative === 1"
           :range-picker-visible="rangePickerVisible"
-          :time-length="promForm.time"
-          :time-range="promForm.range"
           :relative-time-map="queryTimeMap"
           :relative-time-options="queryTimeOptions"
-          @open-time-select="openTimeSelect"
-          @select-time-range="selectTimeRange"
-          @select-time-length="selectTimeLength"
-          @click-custom="clickCustom"
         )
       a-form-item(:hide-label="true")
         a-input(
@@ -25,8 +19,7 @@
           :style="{ width: '180px' }"
           :placeholder="$t('dashboard.step')"
         )
-          template(#prefix)
-            | Step
+          template(#prefix) Step
           template(#suffix)
             a-popover(trigger="hover")
               svg.icon
@@ -50,20 +43,23 @@
       :extensions="[mapLanguages(lang)(), oneDark, keymap.of(defaultKeymap)]"
       :disabled="disabled"
     )
+    a-button.copy(type="text" title="Copy Code" @click="copy")
+      svg
+        use(href="#copy-new")
   .results(v-if="hasRecords")
     a-tabs.playground-tabs(:default-active-key="hasChart ? '2' : '1'")
       a-tab-pane(key="1" title="Table")
         DataGrid(:data="result" :hasHeader="false")
       a-tab-pane(v-if="hasChart" key="2" title="Chart")
-        DataChart(:data="result" :hasHeader="false" :defaultChartForm="chartForm")
-  .logs(v-if="log")
-    a-list.log-list(
+        DataChart(:data="result" :hasHeader="false" :defaultChartForm="chartParams ? JSON.parse(chartParams) : {}")
+  .logs(v-if="log.type")
+    a-list(
       size="small"
       :hoverable="true"
       :bordered="false"
       :split="false"
     )
-      Log(:codeType="lang" :log="log")
+      Log(:log="log" :has-action="false")
 </template>
 
 <script lang="ts" setup name="CodeEditor">
@@ -72,8 +68,11 @@
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
   import useDataChart from '@/hooks/data-chart'
-  import type { ResultType } from '@/store/modules/code-run/types'
+  import type { PromForm, ResultType } from '@/store/modules/code-run/types'
+  import type { Log } from '@/store/modules/log/types'
   import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '@/views/dashboard/config'
+  import i18n from '@/locale'
+  import { Message } from '@arco-design/web-vue'
   import mapLanguages from './utils'
 
   // data
@@ -82,7 +81,11 @@
       type: Boolean,
       default: false,
     },
-    defaultChartForm: {
+    chartParams: {
+      type: String,
+      default: '{}',
+    },
+    promParams: {
       type: String,
       default: '{}',
     },
@@ -91,15 +94,20 @@
       default: 'sql',
     },
   })
+
   const isLoading = ref(false)
-  const { runQuery, promForm } = useQueryCode()
+  const { runQuery } = useQueryCode()
   const slots = useSlots()
   const appStore = useAppStore()
   const hasChart = ref(false)
   const hasRecords = ref(false)
-  const chartForm = JSON.parse(props.defaultChartForm)
   const rangePickerVisible = ref(false)
-  const triggerVisible = ref(false)
+
+  const promForm = reactive<PromForm>({
+    time: 5,
+    step: '30s',
+    range: [dayjs().subtract(5, 'minute').unix().toString(), dayjs().unix().toString()],
+  })
 
   function codeFormat(code: any) {
     if (!code) return ''
@@ -122,7 +130,7 @@
     key: -1,
     type: '',
   } as ResultType)
-  const log = ref('')
+  const log = ref({} as Log)
   // TODO: better reset
   const reset = () => {
     defaultCode = codeFormat(slots?.default?.())
@@ -136,13 +144,19 @@
       key: -1,
       type: '',
     }
-    log.value = ''
+    log.value = {} as Log
     hasChart.value = false
     hasRecords.value = false
+    if (props.lang === 'promql') {
+      const chartForm = JSON.parse(props.promParams)
+      promForm.time = chartForm.time
+      promForm.step = chartForm.step
+      promForm.range = chartForm.range
+    }
   }
   const runCommand = async () => {
     isLoading.value = true
-    const res = await runQuery(code.value.trim(), props.lang, true)
+    const res = await runQuery(code.value.trim(), props.lang, true, promForm)
     if (res.lastResult?.records) {
       hasRecords.value = true
       result.value = res.lastResult
@@ -151,11 +165,18 @@
       hasRecords.value = false
     }
     // TODO: try something better
-    log.value = res.log
+    log.value = res.log || ({} as Log)
     isLoading.value = false
     // todo: refresh tables data and when
   }
 
+  const copy = () => {
+    navigator.clipboard.writeText(code.value)
+    Message.success({
+      content: i18n.global.t('copied'),
+      duration: 2 * 1000,
+    })
+  }
   const showReset = computed(() => {
     return code.value !== defaultCode
   })
@@ -168,30 +189,6 @@
     value,
     label: `Last ${value} minutes`,
   }))
-
-  const openTimeSelect = () => {
-    rangePickerVisible.value = promForm.value.isRelative !== 1
-    triggerVisible.value = true
-  }
-
-  const clickCustom = () => {
-    rangePickerVisible.value = !rangePickerVisible.value
-  }
-
-  const selectTimeRange = (range: string[]) => {
-    promForm.value.range = range
-    promForm.value.time = -1
-    promForm.value.isRelative = 0
-    rangePickerVisible.value = false
-    triggerVisible.value = false
-  }
-
-  const selectTimeLength = (value: number) => {
-    promForm.value.time = value
-    promForm.value.isRelative = 1
-    rangePickerVisible.value = false
-    triggerVisible.value = false
-  }
 
   const defaultKeymap = [
     {
@@ -216,6 +213,7 @@
     margin-bottom: 20px;
 
     .code {
+      position: relative;
       display: flex;
       width: 100%;
 
@@ -245,5 +243,61 @@
     :deep(.arco-btn) {
       min-width: 80px;
     }
+
+    &:hover .copy {
+      opacity: 1;
+    }
+
+    .copy {
+      opacity: 0;
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      min-width: 10px;
+      padding: 0;
+      right: 10px;
+      top: 10px;
+      z-index: 1;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.3s;
+      background-color: var(--vp-c-black-mute);
+
+      &:hover {
+        background-color: var(--vp-c-black-mute);
+      }
+
+      svg {
+        color: var(--vp-c-gray-light-2);
+        width: 20px;
+        height: 20px;
+
+        &:hover {
+          color: var(--vp-c-white-soft);
+        }
+      }
+    }
+  }
+
+  :deep(.arco-list-content) {
+    background: var(--main-bg-color);
+  }
+
+  :deep(.arco-list-item-action) {
+    width: 32px;
+    margin: 0;
+    padding-left: 0;
+  }
+
+  :deep(.arco-list-item-main) {
+    width: 100%;
+  }
+
+  :deep(.arco-list-small .arco-list-content-wrapper .arco-list-content > .arco-list-item) {
+    padding: 10px 20px;
+  }
+
+  .arco-list-hover .arco-list-item:hover {
+    background-color: inherit;
   }
 </style>

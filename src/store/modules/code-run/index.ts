@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import Message from '@arco-design/web-vue/es/message'
 import i18n from '@/locale'
@@ -7,12 +7,11 @@ import dayjs from 'dayjs'
 import { dateTypes } from '@/views/dashboard/config'
 import { AnyObject } from '@/types/global'
 import { HttpResponse, OutputType } from '@/api/interceptor'
-import { ResultType, DimensionType, SchemaType } from './types'
+import { sqlFormatter } from '@/utils'
+import { ResultType, DimensionType, SchemaType, PromForm } from './types'
 import { Log, ResultInLog } from '../log/types'
 
 const useCodeRunStore = defineStore('codeRun', () => {
-  const { promForm } = useQueryCode()
-
   const results = ref<ResultType[]>([])
   const resultKeyCount = reactive<{ [key: string]: number }>({})
 
@@ -49,28 +48,27 @@ const useCodeRunStore = defineStore('codeRun', () => {
     python: 'scripts',
   }
 
-  const runCode = async (codeInfo: string, type: string, withoutSave = false) => {
+  const runCode = async (codeInfo: string, type: string, withoutSave = false, params = {} as PromForm) => {
     try {
       // TODO: try something better
       let oneResult = {} as ResultType
-      const res: HttpResponse = await API_MAP[type](codeInfo)
-      Message.success({
-        content: i18n.global.t('dashboard.runSuccess'),
-        duration: 2 * 1000,
-      })
+      const res: HttpResponse = await API_MAP[type](codeInfo, params)
       const resultsInLog: Array<ResultInLog> = []
       res.output.forEach((oneRes: OutputType) => {
         if (Reflect.has(oneRes, 'records')) {
           const rowLength = oneRes.records.rows.length
           resultsInLog.push({
-            records: rowLength,
+            type: 'select',
+            rowCount: rowLength,
           })
           if (rowLength >= 0) {
             const pageType = CODE_TO_PAGE[type]
-            if (Reflect.has(resultKeyCount, pageType)) {
-              resultKeyCount[pageType] += 1
-            } else {
-              resultKeyCount[pageType] = 0
+            if (!withoutSave) {
+              if (Reflect.has(resultKeyCount, pageType)) {
+                resultKeyCount[pageType] += 1
+              } else {
+                resultKeyCount[pageType] = 0
+              }
             }
 
             oneResult = {
@@ -89,38 +87,63 @@ const useCodeRunStore = defineStore('codeRun', () => {
         }
         if (Reflect.has(oneRes, 'affectedrows')) {
           resultsInLog.push({
-            affectedRows: oneRes.affectedrows,
+            type: 'affect',
+            rowCount: oneRes.affectedrows,
           })
         }
       })
-      const oneLog: Log = {
+
+      const message = resultsInLog
+        .map((result: ResultInLog) => {
+          return i18n.global.tc(`dashboard.${result.type}`, result.rowCount, { rowCount: result.rowCount })
+        })
+        .join(`;\n`)
+
+      Message.success({
+        content: message,
+        duration: 2 * 1000,
+      })
+
+      const log: Log = {
         type,
         ...res,
         codeInfo,
-        results: resultsInLog,
+        message,
       }
       if (type === 'promql') {
-        oneLog.promInfo = {
-          Start: dayjs.unix(+promForm.value.start).format('YYYY-MM-DD HH:mm:ss'),
-          End: dayjs.unix(+promForm.value.end).format('YYYY-MM-DD HH:mm:ss'),
-          Step: promForm.value.step,
+        let start
+        let end
+
+        if (params.time !== 0) {
+          // TODO: move this into a function?
+          const now = dayjs()
+          end = now.unix()
+          start = now.subtract(params.time, 'minute').unix()
+        } else {
+          ;[start, end] = params.range
+        }
+        log.promInfo = {
+          Start: dayjs.unix(+start).format('YYYY-MM-DD HH:mm:ss'),
+          End: dayjs.unix(+end).format('YYYY-MM-DD HH:mm:ss'),
+          Step: params.step,
           Query: codeInfo,
         }
       }
-      // TODO: try something better
+
       return {
-        log: oneLog,
+        log,
         lastResult: oneResult,
       }
     } catch (error: any) {
-      const oneLog = {
+      const log: Log = {
         type,
         codeInfo,
         ...error,
       }
       if (Reflect.has(error, 'error')) {
         return {
-          log: oneLog,
+          log,
+          error: 'error',
         }
       }
       return { error: 'error' }

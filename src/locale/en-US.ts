@@ -5,6 +5,8 @@ export default {
   'menu.dashboard': 'Dashboard',
   'menu.dashboard.query': 'Query',
   'menu.dashboard.scripts': 'Scripts',
+  'menu.dashboard.playground': 'Playground',
+  'menu.dashboard.status': 'Status',
   'menu.server.dashboard': 'Dashboard-Server',
   'menu.server.workplace': 'Workplace-Server',
   'menu.server.monitor': 'Monitor-Server',
@@ -23,6 +25,8 @@ export default {
   'playground.create': 'OK',
   'playground.refreshTitle': 'Warning',
   'playground.refreshNote': 'The Playground has been reclaimed due to timeout. Click OK to re-create the playground',
+  'playground.import': 'Import {lines} lines in {time}ms',
+  'copied': 'Copied',
   ...localeDashboard,
   ...localSetting,
 }

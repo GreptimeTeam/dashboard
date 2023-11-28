@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import type { Ref } from 'vue'
 
 const useUserStore = defineStore('user', () => {
-  const role: Ref<string> = ref('dev')
+  const role: Ref<string> = ref('admin')
   const dataStatusMap = ref<{ [key: string]: boolean }>({
     tables: false,
     scripts: false,

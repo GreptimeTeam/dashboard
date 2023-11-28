@@ -1,5 +1,5 @@
 <template lang="pug">
-a-card.editor-card.padding-16(:bordered="false")
+a-card.editor-card(:bordered="false")
   a-space.space-between.pb-16
     a-space(size="medium")
       a-button(type="primary" :disabled="isButtonDisabled" @click="runQueryAll()")
@@ -7,32 +7,25 @@ a-card.editor-card.padding-16(:bordered="false")
           icon-loading(v-if="primaryCodeRunning" spin)
           icon-play-arrow(v-else)
         | {{ $t('dashboard.runAll') }}
-      a-button(:disabled="isButtonDisabled" @click="runPartQuery()")
+      a-button(:disabled="isLineButtonDisabled" @click="runPartQuery()")
         .mr-4
           icon-loading(v-if="secondaryCodeRunning" spin)
           icon-play-arrow(v-else)
         div(v-if="lineStart === lineEnd") {{ $t('dashboard.runLine') }} {{ lineStart }}
         div(v-else) {{ $t('dashboard.runLines') }} {{ lineStart }} - {{ lineEnd }}
     .query-select
-      a-select(v-model="queryType" :trigger-props="{ 'content-class': 'query-select' }" @change="selectCodeType")
+      a-select(v-model="queryType" :trigger-props="{ 'content-class': 'query-select' }")
         a-option(v-for="query of queryOptions" :="query")
   a-form.space-between.prom-form.mb-16(layout="inline" v-show="queryType === 'promql'" :model="promForm")
     a-space(size="medium")
       a-form-item(:hide-label="true")
         TimeSelect(
+          v-model:time-length="promForm.time"
+          v-model:time-range="promForm.range"
           flex-direction="row-reverse"
           button-class="query-time-button"
-          :trigger-visible="triggerVisible"
-          :is-relative="promForm.isRelative === 1"
-          :range-picker-visible="rangePickerVisible"
-          :time-length="promForm.time"
-          :time-range="promForm.range"
           :relative-time-map="queryTimeMap"
           :relative-time-options="queryTimeOptions"
-          @open-time-select="openTimeSelect"
-          @select-time-range="selectTimeRange"
-          @select-time-length="selectTimeLength"
-          @click-custom="clickCustom"
         )
       a-form-item(:hide-label="true")
         a-input(
@@ -41,8 +34,7 @@ a-card.editor-card.padding-16(:bordered="false")
           :style="{ width: '180px' }"
           :placeholder="$t('dashboard.step')"
         )
-          template(#prefix)
-            | Step
+          template(#prefix) Step
           template(#suffix)
             a-popover(trigger="hover")
               svg.icon
@@ -57,20 +49,35 @@ a-card.editor-card.padding-16(:bordered="false")
                   a-list-item
                     span.ml-2 {{ $t('dashboard.examples') }}
                     a-typography-text(v-for="item of durationExamples" :key="item" code) {{ item }}
-  CodeMirror(
-    v-model="queryCode"
-    :style="style"
-    :spellcheck="spellcheck"
-    :autofocus="autofocus"
-    :indent-with-tab="indentWithTab"
-    :tabSize="tabSize"
-    :extensions="extensions[queryType]"
-    @ready="handleReady"
-    @update="codeUpdate"
-  )
+  a-tabs.query-tabs(:default-active-key="'sql'" :active-key="queryType")
+    a-tab-pane(key="sql")
+      CodeMirror(
+        v-model="codes.sql"
+        :style="style"
+        :spellcheck="spellcheck"
+        :autofocus="autofocus"
+        :indent-with-tab="indentWithTab"
+        :tabSize="tabSize"
+        :extensions="extensions.sql"
+        @ready="handleReadySql"
+        @update="codeUpdate('sql')"
+      )
+    a-tab-pane(key="promql")
+      CodeMirror(
+        v-model="codes.promql"
+        :style="style"
+        :spellcheck="spellcheck"
+        :autofocus="autofocus"
+        :indent-with-tab="indentWithTab"
+        :tabSize="tabSize"
+        :extensions="extensions.promql"
+        @ready="handleReadyPromql"
+        @update="codeUpdate('promql')"
+      )
 </template>
 
 <script lang="ts" setup name="Editor">
+  import dayjs from 'dayjs'
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
   import { sql } from '@codemirror/lang-sql'
@@ -78,7 +85,9 @@ a-card.editor-card.padding-16(:bordered="false")
   import { useCodeRunStore } from '@/store'
   import { keymap } from '@codemirror/view'
   import type { KeyBinding } from '@codemirror/view'
+  import { autocompletion } from '@codemirror/autocomplete'
   import type { TableTreeChild, TableTreeParent } from '@/store/modules/database/types'
+  import type { PromForm } from '@/store/modules/code-run/types'
   import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '../config'
 
   export interface Props {
@@ -96,31 +105,43 @@ a-card.editor-card.padding-16(:bordered="false")
 
   const route = useRoute()
 
-  const { isCloud } = storeToRefs(useAppStore())
-  const {
-    queryCode,
-    queryType,
-    cursorAt,
-    queryOptions,
-    promForm,
-    isButtonDisabled,
-    primaryCodeRunning,
-    secondaryCodeRunning,
-    view,
-    selectCodeType,
-  } = useQueryCode()
+  const { codes, queryType, cursorAt, queryOptions, primaryCodeRunning, secondaryCodeRunning, sqlView, promqlView } =
+    useQueryCode()
 
   const lineStart = ref()
   const lineEnd = ref()
   const selectedCode = ref()
   const triggerVisible = ref(false)
   const rangePickerVisible = ref(false)
-
+  const promForm = reactive<PromForm>({
+    time: 5,
+    step: '30s',
+    range: [dayjs().subtract(5, 'minute').unix().toString(), dayjs().unix().toString()],
+  })
   const { runQuery } = useQueryCode()
   const { originTablesTree } = storeToRefs(useDataBaseStore())
 
-  const handleReady = (payload: any) => {
-    view.value = payload.view
+  const isButtonDisabled = computed(() => {
+    if (codes.value[queryType.value].trim().length === 0) {
+      return true
+    }
+    if (queryType.value === 'promql') {
+      const hasRange = promForm.range ? promForm.range.length > 0 : false
+      if (promForm.step.trim().length === 0 || (!promForm.time && !hasRange)) {
+        return true
+      }
+    }
+    if (primaryCodeRunning.value || secondaryCodeRunning.value) {
+      return true
+    }
+    return false
+  })
+
+  const handleReadySql = (payload: any) => {
+    sqlView.value = payload.view
+  }
+  const handleReadyPromql = (payload: any) => {
+    promqlView.value = payload.view
   }
 
   const style = {
@@ -128,9 +149,10 @@ a-card.editor-card.padding-16(:bordered="false")
   }
 
   // TODO: Try something better. CodeUpdate is constantly changing and the cost is too much.
-  const codeUpdate = () => {
-    if (view.value) {
-      const { state } = view.value
+  const codeUpdate = (type: string) => {
+    const view = type === 'sql' ? sqlView.value : promqlView.value
+    if (view && type === queryType.value) {
+      const { state } = view
       const { ranges } = state.selection
       cursorAt.value = [ranges[0].from, ranges[0].to]
       lineStart.value = state.doc.lineAt(ranges[0].from).number
@@ -150,14 +172,21 @@ a-card.editor-card.padding-16(:bordered="false")
   const runQueryAll = async () => {
     primaryCodeRunning.value = true
     // TODO: add better format tool for code
-    await runQuery(queryCode.value.trim(), queryType.value)
+    await runQuery(codes.value[queryType.value].trim(), queryType.value, false, promForm)
     primaryCodeRunning.value = false
     // TODO: refresh tables data and when
   }
 
+  const isLineButtonDisabled = computed(() => {
+    if (!selectedCode.value || selectedCode.value.trim().length === 0) {
+      return true
+    }
+    return isButtonDisabled.value
+  })
+
   const runPartQuery = async () => {
     secondaryCodeRunning.value = true
-    await runQuery(selectedCode.value.trim(), queryType.value)
+    await runQuery(selectedCode.value.trim(), queryType.value, false, promForm)
     secondaryCodeRunning.value = false
   }
 
@@ -186,7 +215,7 @@ a-card.editor-card.padding-16(:bordered="false")
     const schema: { [key: string]: string[] } = {}
     const initialMetricList = new Set<string>()
     originTablesTree.value.forEach((item: TableTreeParent) => {
-      const columns = item.children.map((child: TableTreeChild) => {
+      const columns = item.columns.map((child: TableTreeChild) => {
         initialMetricList.add(child.title)
         return child.title
       })
@@ -198,7 +227,7 @@ a-card.editor-card.padding-16(:bordered="false")
   })
 
   const extensions = {
-    sql: [sql(hints.value.sql), oneDark, keymap.of(defaultKeymap as any)],
+    sql: [sql(hints.value.sql), oneDark, keymap.of(defaultKeymap as any), autocompletion({ closeOnBlur: false })],
     promql: [new PromQLExtension().asExtension(), oneDark, keymap.of(defaultKeymap as any)],
   }
 
@@ -214,32 +243,21 @@ a-card.editor-card.padding-16(:bordered="false")
     })
     extensions.promql = [promql.asExtension(), oneDark, keymap.of(defaultKeymap as any)]
   })
-
-  const openTimeSelect = () => {
-    rangePickerVisible.value = promForm.value.isRelative !== 1
-    triggerVisible.value = true
-  }
-
-  const clickCustom = () => {
-    rangePickerVisible.value = !rangePickerVisible.value
-  }
-
-  const selectTimeRange = (range: string[]) => {
-    promForm.value.range = range
-    promForm.value.time = -1
-    promForm.value.isRelative = 0
-    rangePickerVisible.value = false
-    triggerVisible.value = false
-  }
-
-  const selectTimeLength = (value: number) => {
-    promForm.value.time = value
-    promForm.value.isRelative = 1
-    rangePickerVisible.value = false
-    triggerVisible.value = false
-  }
-
-  onActivated(() => {
-    selectCodeType()
-  })
 </script>
+
+<style lang="less" scoped>
+  .editor-card {
+    width: 100%;
+  }
+</style>
+
+<style lang="less">
+  .query-tabs {
+    > .arco-tabs-nav {
+      height: 0;
+    }
+    > .arco-tabs-content {
+      padding-top: 0;
+    }
+  }
+</style>

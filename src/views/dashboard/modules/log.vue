@@ -1,69 +1,129 @@
 <template lang="pug">
 a-list-item.smaller-divider
-  a-tooltip(v-if="log.error" :content="log.error")
-    a-space.log-error.last-overflow(size="mini" fill)
-      template(#split)
-        a-divider(direction="vertical")
-      icon-close-circle.danger-color
-      div {{ log.startTime }}
-      div {{ $t('dashboard.error') }}: {{ log.error }}
-  a-space.log-space.last-overflow(v-else-if="hasExecutionTime" size="mini" fill)
-    template(#split)
-      a-divider(direction="vertical")
-    icon-check-circle.success-color
-    div {{ log.startTime }}
-    div(v-if="codeType === 'python'") {{ $t('dashboard.runScript', { name: log.codeInfo }) }}
-    div {{ $tc('dashboard.executed', log.results.length, { length: log.results.length }) }}
-    div {{ $t('dashboard.results') }}
-      span(v-for="(oneResult, index) of log.results" :key="index") {{ oneResult.records >= 0 ? $tc('dashboard.select', oneResult.records, { records: oneResult.records }) : $tc('dashboard.affected', oneResult.affectedRows, { record: oneResult.affectedRows }) }}
-    div {{ $t('dashboard.executeTime', { time: log.execution_time_ms }) }}
-    div {{ $t('dashboard.network', { time: log.networkTime - log.execution_time_ms }) }}
-    div {{ $t('dashboard.total', { time: log.networkTime }) }}
-    a-space(v-if="codeType !== 'python'" :size="2")
-      TextCopyable.log-copy(
-        :data="codeFormatter(log.codeInfo)"
-        :showData="false"
-        :copyTooltip="$t('dashboard.copyToClipboard')"
-      )
-      a-popover
-        span.code-space
-          span {{ $t('dashboard.query') }}
-          span {{ log.codeInfo }}
+  template(v-if="hasAction && log.type !== 'python' && !log.error" #actions)
+    a-button.play(type="text" size="small" @click="openEditor")
+      template(#icon)
+        icon-play-arrow.icon-color
+  a-space(direction="vertical" fill :size="0")
+    .code
+      a-tooltip(v-if="log.error" position="tl" :content="log.error")
+        div {{ log.error }}
+      a-popover(v-else-if="log.type !== 'python'" content-class="code-popup" position="tl")
         template(#content)
           a-list(size="small" :split="false" :bordered="false")
             a-list-item(v-if="log.type === 'promql'" v-for="(value, name) in log.promInfo")
               span.width-35 {{ name }}
               a-typography-text.ml-4(code) {{ value }}
-            a-list-item(v-else) {{ log.codeInfo }}
-  a-space.log-space(v-else size="mini" fill)
-    template(#split)
-      a-divider(direction="vertical")
-    icon-check-circle.success-color
-    div {{ log.startTime }}
-    div {{ $t('dashboard.saveName', { name: log.codeInfo }) }}
+            a-list-item(v-else)
+              a-typography-text.popup {{ log.codeInfo }}
+        div {{ log.codeInfo }}
+      .script(v-else)
+        div(v-if="hasExecutionTime") {{ $t('dashboard.runScript', { name: log.codeInfo }) }}
+        div(v-else) {{ $t('dashboard.saveName', { name: log.codeInfo }) }}
+    a-space.info(fill)
+      icon-check-circle.success-color.icon-14(v-if="!log.error")
+      icon-close-circle.danger-color(v-else)
+      .start-time
+        | {{ log.startTime }}
+      a-space.result(v-if="!log.error" fill :size="4")
+        span(v-if="hasExecutionTime") {{ log.message }}
+        .total-time(v-if="hasExecutionTime")
+          a-popover(content-class="total-time-popover")
+            template(#content)
+              div {{ $t('dashboard.executeTime', { time: log.execution_time_ms }) }}
+              div {{ $t('dashboard.network', { time: log.networkTime - log.execution_time_ms }) }}
+            div {{ `in ${log.networkTime} ms` }}
 </template>
 
 <script lang="ts" name="Log" setup>
   import { format } from 'sql-formatter'
 
   const route = useRoute()
-  const { codeType: GlobalCodeType } = storeToRefs(useAppStore())
+  const { inputFromNewLineToQueryCode, replaceCode } = useQueryCode()
+  const { updateSettings } = useAppStore()
+
   const props = defineProps({
     log: {
       type: Object,
       default: () => ({}),
     },
-    codeType: {
-      type: String,
-      default: 'sql',
+    hasAction: {
+      type: Boolean,
+      default: true,
     },
   })
 
-  const hasExecutionTime = Reflect.has(props.log, 'execution_time_ms')
+  const hasExecutionTime = computed(() => Reflect.has(props.log, 'execution_time_ms'))
 
-  const codeFormatter = (code: string) => {
-    if ((props.codeType || GlobalCodeType.value) === 'sql')
-      return format(code, { language: 'mysql', keywordCase: 'upper' })
-    return code
+  const openEditor = () => {
+    updateSettings({ queryModalVisible: true })
+    // queryType.value = props.log.type
+    if (props.log.type === 'sql') {
+      inputFromNewLineToQueryCode(props.log.codeInfo, 0)
+    } else {
+      replaceCode(props.log.codeInfo)
+    }
   }
 </script>
+
+<style lang="less" scoped>
+  .code {
+    font-family: monospace;
+    color: var(--main-font-color);
+    font-size: 14px;
+
+    div {
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+  }
+
+  .popup {
+    color: var(--small-font-color);
+    border: 0;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: monospace;
+    white-space: pre-wrap;
+  }
+
+  .info {
+    > :first-child {
+      font-size: 14px;
+    }
+  }
+
+  .total-time {
+    background: var(--th-bg-color);
+    border-radius: 4px;
+    padding: 0 2px;
+    min-width: max-content;
+  }
+
+  .result {
+    & :deep(.arco-space-item-split) {
+      margin-right: 4px !important;
+    }
+  }
+
+  .play {
+    font-size: 17px;
+  }
+
+  .arco-btn-text[type='button']:hover {
+    .arco-btn-icon .icon-color {
+      color: var(--brand-color);
+    }
+  }
+</style>
+
+<style lang="less">
+  .total-time-popover {
+    font-size: 12px;
+    padding: 4px 10px;
+    .arco-popover-content {
+      color: var(--small-font-color);
+    }
+  }
+</style>
