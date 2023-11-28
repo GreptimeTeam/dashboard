@@ -219,7 +219,7 @@ The following SQL statement calculates the average CPU usage of each host at a 5
 with data calculated every 1 minute.
 
 ```sql (line|avg_user,avg_system,avg_idle|dt|dt)
-select date_trunc('second', ts) as dt,
+SELECT date_trunc('second', ts) as dt,
     avg(usage_user) as avg_user,
     avg(usage_system) as avg_system,
     avg(usage_idle) as avg_idle
