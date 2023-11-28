@@ -59,7 +59,7 @@
       :bordered="false"
       :split="false"
     )
-      Log(:codeType="lang" :log="log" :has-action="false")
+      Log(:log="log" :has-action="false")
 </template>
 
 <script lang="ts" setup name="CodeEditor">

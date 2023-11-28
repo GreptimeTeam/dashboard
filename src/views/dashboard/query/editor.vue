@@ -14,7 +14,7 @@ a-card.editor-card(:bordered="false")
         div(v-if="lineStart === lineEnd") {{ $t('dashboard.runLine') }} {{ lineStart }}
         div(v-else) {{ $t('dashboard.runLines') }} {{ lineStart }} - {{ lineEnd }}
     .query-select
-      a-select(v-model="queryType" :trigger-props="{ 'content-class': 'query-select' }" @change="selectCodeType")
+      a-select(v-model="queryType" :trigger-props="{ 'content-class': 'query-select' }")
         a-option(v-for="query of queryOptions" :="query")
   a-form.space-between.prom-form.mb-16(layout="inline" v-show="queryType === 'promql'" :model="promForm")
     a-space(size="medium")
@@ -105,18 +105,8 @@ a-card.editor-card(:bordered="false")
 
   const route = useRoute()
 
-  const {
-    codes,
-    queryCode,
-    queryType,
-    cursorAt,
-    queryOptions,
-    primaryCodeRunning,
-    secondaryCodeRunning,
-    sqlView,
-    promqlView,
-    selectCodeType,
-  } = useQueryCode()
+  const { codes, queryType, cursorAt, queryOptions, primaryCodeRunning, secondaryCodeRunning, sqlView, promqlView } =
+    useQueryCode()
 
   const lineStart = ref()
   const lineEnd = ref()
@@ -132,14 +122,18 @@ a-card.editor-card(:bordered="false")
   const { originTablesTree } = storeToRefs(useDataBaseStore())
 
   const isButtonDisabled = computed(() => {
-    if (queryCode.value.trim().length === 0) return true
+    if (codes.value[queryType.value].trim().length === 0) {
+      return true
+    }
     if (queryType.value === 'promql') {
       const hasRange = promForm.range ? promForm.range.length > 0 : false
       if (promForm.step.trim().length === 0 || (!promForm.time && !hasRange)) {
         return true
       }
     }
-    if (primaryCodeRunning.value || secondaryCodeRunning.value) return true
+    if (primaryCodeRunning.value || secondaryCodeRunning.value) {
+      return true
+    }
     return false
   })
 
@@ -157,7 +151,7 @@ a-card.editor-card(:bordered="false")
   // TODO: Try something better. CodeUpdate is constantly changing and the cost is too much.
   const codeUpdate = (type: string) => {
     const view = type === 'sql' ? sqlView.value : promqlView.value
-    if (view) {
+    if (view && type === queryType.value) {
       const { state } = view
       const { ranges } = state.selection
       cursorAt.value = [ranges[0].from, ranges[0].to]
@@ -178,7 +172,7 @@ a-card.editor-card(:bordered="false")
   const runQueryAll = async () => {
     primaryCodeRunning.value = true
     // TODO: add better format tool for code
-    await runQuery(queryCode.value.trim(), queryType.value, false, promForm)
+    await runQuery(codes.value[queryType.value].trim(), queryType.value, false, promForm)
     primaryCodeRunning.value = false
     // TODO: refresh tables data and when
   }
@@ -248,10 +242,6 @@ a-card.editor-card(:bordered="false")
       },
     })
     extensions.promql = [promql.asExtension(), oneDark, keymap.of(defaultKeymap as any)]
-  })
-
-  onActivated(() => {
-    selectCodeType()
   })
 </script>
 

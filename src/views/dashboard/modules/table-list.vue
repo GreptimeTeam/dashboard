@@ -60,7 +60,6 @@ a-spin(style="width: 100%" :loading="tablesLoading")
 <script lang="ts" setup name="TableList">
   import { storeToRefs } from 'pinia'
   import { useDataBaseStore } from '@/store'
-  import useQueryCode from '@/hooks/query-code'
   import usePythonCode from '@/hooks/python-code'
   import useSiderTabs from '@/hooks/sider-tabs'
   import type { TableTreeParent } from '@/store/modules/database/types'
