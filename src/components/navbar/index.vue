@@ -113,6 +113,10 @@ a-layout.navbar
 
   .menu {
     width: 100%;
+
+    .arco-menu {
+      font-size: 16px;
+    }
     :deep(.arco-menu-vertical .arco-menu-item.arco-menu-has-icon) {
       padding-left: 39px;
       margin-bottom: 2px;
@@ -189,6 +193,7 @@ a-layout.navbar
       display: flex;
       justify-content: flex-start;
       padding-left: 62px;
+      height: 44px;
     }
     .arco-btn-secondary[type='button']:hover,
     .arco-btn-secondary.hover,
@@ -209,7 +214,7 @@ a-layout.navbar
       display: flex;
       align-items: center;
       &:first-of-type {
-        margin-bottom: 2px;
+        margin-bottom: 10px;
       }
     }
 
@@ -236,8 +241,9 @@ a-layout.navbar
       height: 44px;
       :first-child {
         font-size: 26px;
-        padding-right: 4px;
+        padding-right: 8px;
       }
+      font-size: 16px;
     }
   }
 </style>

@@ -95,7 +95,7 @@ a-list-item.smaller-divider
   .total-time {
     background: var(--th-bg-color);
     border-radius: 4px;
-    padding: 0 2px;
+    padding: 0 4px;
     min-width: max-content;
   }
 

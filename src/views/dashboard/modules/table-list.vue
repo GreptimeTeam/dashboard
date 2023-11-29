@@ -3,7 +3,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
   a-space.search-space
     a-input(v-model="tablesSearchKey" :allow-clear="true")
       template(#prefix)
-        svg.icon
+        svg.icon.icon-color
           use(href="#search")
     .icon-space.pointer(@click="refreshTables")
       svg.icon.brand-color
