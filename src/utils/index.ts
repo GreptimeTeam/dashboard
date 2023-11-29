@@ -61,7 +61,7 @@ export const dateFormatter = (dataType: string, value: number | null) => {
 }
 
 export const sqlFormatter = (code: string) => {
-  return sqlFormat(code, { language: 'mysql', keywordCase: 'upper' })
+  return sqlFormat(code, { language: 'postgresql', keywordCase: 'upper' })
 }
 
 export default null
