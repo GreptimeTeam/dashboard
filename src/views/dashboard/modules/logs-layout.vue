@@ -8,6 +8,7 @@ a-card.logs-card(:bordered="false")
       v-if="logs.length"
       type="secondary"
       status="danger"
+      size="small"
       @click="clear"
     ) {{ $t('dashboard.clear') }}
   a-list.logs-list(

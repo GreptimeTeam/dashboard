@@ -9,7 +9,7 @@ a-card.table-manager(:bordered="false")
     a-space
       a-input(v-model="tablesSearchKey" :allow-clear="true" :placeholder="$t('dashboard.input')")
         template(#prefix)
-          svg.icon
+          svg.icon.icon-color
             use(href="#search")
   a-spin(style="width: 100%" :loading="tablesLoading")
     a-tree.table-tree(
@@ -26,7 +26,7 @@ a-card.table-manager(:bordered="false")
     )
       template(#icon="node")
         a-tooltip(v-if="node.node.iconType" :content="node.node.iconType")
-          svg.icon-18
+          svg.icon-20
             use(:href="ICON_MAP[node.node.iconType]")
       template(#title="nodeData")
         .tree-data(v-if="!nodeData.isLeaf")
@@ -318,8 +318,7 @@ a-card.table-manager(:bordered="false")
         width: 9px;
       }
       .arco-tree-node-title {
-        padding: 0 0 0 12px;
-        border-left: 1px solid var(--border-color);
+        padding: 0 0 0 17px;
         border-radius: 0;
       }
     }
@@ -365,12 +364,13 @@ a-card.table-manager(:bordered="false")
     }
   }
   .data-title {
-    padding-left: 4px;
+    padding-left: 10px;
     font-size: 16px;
     line-height: 30px;
     &.columns {
       color: var(--small-font-color);
       font-size: 14px;
+      padding-left: 8px;
     }
   }
   .create-table {

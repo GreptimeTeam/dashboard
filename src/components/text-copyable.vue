@@ -5,6 +5,7 @@ a-typography-text(
   :copy-text="data"
   @copy="emit('copy')"
   :class="class"
+  :copy-delay="1000"
 )
   span(v-if="showData") {{ data }}
   template(#copy-icon="{ copied }")
