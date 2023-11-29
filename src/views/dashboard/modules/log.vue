@@ -36,8 +36,6 @@ a-list-item.smaller-divider
 </template>
 
 <script lang="ts" name="Log" setup>
-  import { format } from 'sql-formatter'
-
   const route = useRoute()
   const { inputFromNewLineToQueryCode, replaceCode } = useQueryCode()
   const { updateSettings } = useAppStore()

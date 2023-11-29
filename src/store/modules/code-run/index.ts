@@ -7,7 +7,6 @@ import dayjs from 'dayjs'
 import { dateTypes } from '@/views/dashboard/config'
 import { AnyObject } from '@/types/global'
 import { HttpResponse, OutputType } from '@/api/interceptor'
-import { sqlFormatter } from '@/utils'
 import { ResultType, DimensionType, SchemaType, PromForm } from './types'
 import { Log, ResultInLog } from '../log/types'
 
