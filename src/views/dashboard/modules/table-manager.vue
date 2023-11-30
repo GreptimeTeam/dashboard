@@ -93,31 +93,34 @@ a-card.table-manager(:bordered="false")
               @click.stop
             )
         .detail-row(v-else)
-          a-space(v-if="nodeData.title === 'rowAndTime'" fill style="justify-content: space-between")
-            a-space(:size="4")
-              span {{ $t('dashboard.rowCount') }}
-              span {{ nodeData.info.rowCount }}
-            a-space(:size="4")
-              span {{ `TTL` }}
-              span {{ nodeData.info.ttl }}
-            a-space(:size="4")
-              span {{ $t('dashboard.minTime') }}
-              a-tooltip(v-if="nodeData.info.min !== '-'" :content="`${nodeData.info.min}`")
-                span {{ dateFormatter(nodeData.info.timestampType, nodeData.info.min) }}
-              span(v-else) {{ nodeData.info.min }}
-            a-space(:size="4")
-              span {{ $t('dashboard.maxTime') }}
-              a-tooltip(v-if="nodeData.info.max !== '-'" :content="`${nodeData.info.max}`")
-                span {{ dateFormatter(nodeData.info.timestampType, nodeData.info.max) }}
-              span(v-else) {{ nodeData.info.max }}
-            a-button.refresh-details(
-              type="text"
-              :loading="isRefreshingDetails[nodeData.parentKey]"
-              @click="loadMore(originTablesTree[nodeData.parentKey])"
-            )
-              template(#icon)
-                svg.icon-18.icon-color
-                  use(href="#refresh")
+          .count-and-time(v-if="nodeData.title === 'rowAndTime'")
+            a-space
+              a-space(:size="4")
+                span {{ $t('dashboard.rowCount') }}
+                span {{ nodeData.info.rowCount }}
+              a-space(:size="4")
+                span {{ `TTL` }}
+                span {{ nodeData.info.ttl }}
+            a-space
+              a-space(:size="4")
+                span {{ $t('dashboard.minTime') }}
+                a-tooltip(v-if="nodeData.info.min !== '-'" :content="`${nodeData.info.min}`")
+                  span {{ dateFormatter(nodeData.info.timestampType, nodeData.info.min) }}
+                span(v-else) {{ nodeData.info.min }}
+              a-space(:size="4")
+                span {{ $t('dashboard.maxTime') }}
+                a-tooltip(v-if="nodeData.info.max !== '-'" :content="`${nodeData.info.max}`")
+                  span {{ dateFormatter(nodeData.info.timestampType, nodeData.info.max) }}
+                span(v-else) {{ nodeData.info.max }}
+          a-button.refresh-details(
+            v-if="nodeData.title === 'rowAndTime'"
+            type="text"
+            :loading="isRefreshingDetails[nodeData.parentKey]"
+            @click="loadMore(originTablesTree[nodeData.parentKey])"
+          )
+            template(#icon)
+              svg.icon-18.icon-color
+                use(href="#refresh")
           a-space(v-else)
             a-space(align="start" :class="{ 'create-table': nodeData.info.sql !== '-' }")
               .left {{ $t('dashboard.createTable') }}
@@ -237,6 +240,15 @@ a-card.table-manager(:bordered="false")
         font-weight: 800;
       }
     }
+    &.big {
+    }
+    &.small {
+      .detail-row {
+        .arco-space {
+          width: 100%;
+        }
+      }
+    }
   }
   .slide-fade-enter-active {
     transition: all 0.3s ease-out;
@@ -341,6 +353,9 @@ a-card.table-manager(:bordered="false")
       .detail-row {
         font-size: 12px;
         line-height: 18px;
+        display: flex;
+        justify-content: space-between;
+
         > .arco-space {
           > .arco-space-item {
             > .arco-space {

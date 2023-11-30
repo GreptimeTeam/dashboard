@@ -1,7 +1,7 @@
 <template lang="pug">
 a-layout.layout
-  a-layout-sider.tables-sider(style="width: 66.6%" :resize-directions="['right']")
-    TableManager
+  a-layout-sider.tables-sider(style="width: 66.6%" :resize-directions="['right']" @moving-end="moveEnd")
+    TableManager(:class="tableManagerElement?.offsetWidth <= 550 ? 'small' : 'big'")
   a-layout-content
     LogsLayout(:logs="queryLogs" :types="types")
 </template>
@@ -22,6 +22,13 @@ a-layout.layout
   const MENU_WIDTH = 258 + 16
   const MODAL_WIDTH = 636
   const OTHERS_WIDTH = `${MENU_WIDTH + MODAL_WIDTH}px`
+
+  const tableManagerElement = ref<any>()
+
+  const moveEnd = () => {
+    tableManagerElement.value = document.getElementsByClassName('table-manager')[0]
+    console.log(tableManagerElement.value.offsetWidth)
+  }
 
   const types = ['sql', 'promql']
 
@@ -58,7 +65,6 @@ a-layout.layout
 
 <style lang="less" scoped>
   .arco-layout-sider.tables-sider {
-    width: 66.6%;
     min-width: 500px;
     max-width: calc(100vw - v-bind(OTHERS_WIDTH));
   }
