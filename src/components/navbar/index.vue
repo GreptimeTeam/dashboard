@@ -122,6 +122,7 @@ a-layout.navbar
       margin-bottom: 2px;
       border-left: 2px solid transparent;
       border-radius: 0;
+      line-height: 44px;
     }
     :deep(.arco-menu-vertical .arco-menu-inner) {
       padding: 0;
