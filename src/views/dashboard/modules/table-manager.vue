@@ -34,23 +34,26 @@ a-card.table-manager(:bordered="false")
             .data-title
               | {{ nodeData.title }}
           a-space(:size="6")
-            a-button(type="text" size="small" @click="(event) => expandChildren(event, nodeData, 'columns')")
-              template(#icon)
-                svg.icon-18(
-                  :class="nodeData.childrenType === 'columns' && expandedKeys?.includes(nodeData.key) ? '' : 'icon-color'"
-                )
-                  use(href="#columns")
-            a-button(type="text" size="small" @click="(event) => expandChildren(event, nodeData, 'details')")
-              template(#icon)
-                svg.icon-18(
-                  :class="nodeData.childrenType === 'details' && expandedKeys?.includes(nodeData.key) ? '' : 'icon-color'"
-                )
-                  use(href="#details")
-            a-dropdown.quick-select(trigger="click" position="right" @click="(event) => clickMenu(event, nodeData)")
-              a-button(type="text" size="small")
+            a-tooltip(mini :content="$t('dashboard.columns')")
+              a-button(type="text" size="small" @click="(event) => expandChildren(event, nodeData, 'columns')")
                 template(#icon)
-                  svg.icon-18.icon-color
-                    use(href="#query")
+                  svg.icon-18(
+                    :class="nodeData.childrenType === 'columns' && expandedKeys?.includes(nodeData.key) ? '' : 'icon-color'"
+                  )
+                    use(href="#columns")
+            a-tooltip(mini :content="$t('dashboard.details')")
+              a-button(type="text" size="small" @click="(event) => expandChildren(event, nodeData, 'details')")
+                template(#icon)
+                  svg.icon-18(
+                    :class="nodeData.childrenType === 'details' && expandedKeys?.includes(nodeData.key) ? '' : 'icon-color'"
+                  )
+                    use(href="#details")
+            a-dropdown.quick-select(trigger="click" position="right" @click="(event) => clickMenu(event, nodeData)")
+              a-tooltip(mini :content="$t('dashboard.quickSelect')")
+                a-button(type="text" size="small")
+                  template(#icon)
+                    svg.icon-18.icon-color
+                      use(href="#query")
               template(#content)
                 a-doption(v-for="item of SHORTCUT_MAP['TABLE']" v-show="route.name === 'query'")
                   a-spin(style="width: 100%" :loading="nodeData.children && !nodeData.children.length")
@@ -73,10 +76,11 @@ a-card.table-manager(:bordered="false")
             transition(name="slide-fade")
               .data-type {{ nodeData.dataType }}
             a-dropdown.quick-select(v-if="nodeData.dataType" trigger="click" position="right")
-              a-button(type="text" size="small")
-                template(#icon)
-                  svg.icon-18.icon-color
-                    use(href="#query")
+              a-tooltip(mini :content="$t('dashboard.quickSelect')")
+                a-button(type="text" size="small")
+                  template(#icon)
+                    svg.icon-18.icon-color
+                      use(href="#query")
               template(#content)
                 a-doption(v-for="item of SHORTCUT_MAP[nodeData.iconType || 'TABLE']" v-show="route.name === 'query'")
                   a-spin(style="width: 100%" :loading="nodeData.children && !nodeData.children.length")
