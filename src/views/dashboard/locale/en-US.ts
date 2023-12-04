@@ -60,4 +60,7 @@ export default {
   'dashboard.maxTime': 'Latest timestamp',
   'dashboard.rowCount': 'Row count',
   'dashboard.createTable': 'Create table SQL',
+  'dashboard.columns': 'Columns',
+  'dashboard.details': 'Information',
+  'dashboard.quickSelect': 'Quick Query',
 }

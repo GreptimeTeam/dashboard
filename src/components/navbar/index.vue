@@ -24,14 +24,19 @@ a-layout.navbar
   a-layout-footer
     ul.footer
       li
-        a-button(style="width: 100%" :class="{ hover: globalSettings }" @click="setVisible")
+        a-button(
+          style="width: 100%"
+          type="text"
+          :class="{ hover: globalSettings }"
+          @click="setVisible"
+        )
           template(#icon)
             svg.icon-20
               use(href="#settings")
           | {{ $t('settings.title') }}
       li
         a-dropdown.menu-dropdown(trigger="hover" position="right" :popup-max-height="false")
-          a-button(style="width: 100%")
+          a-button(style="width: 100%" type="text")
             template(#icon)
               svg.icon-18
                 use(href="#menu")
@@ -122,6 +127,7 @@ a-layout.navbar
       margin-bottom: 2px;
       border-left: 2px solid transparent;
       border-radius: 0;
+      line-height: 44px;
     }
     :deep(.arco-menu-vertical .arco-menu-inner) {
       padding: 0;
@@ -185,25 +191,22 @@ a-layout.navbar
     display: flex;
     list-style: none;
     flex-direction: column;
-    padding: 0 24px;
-    .arco-btn-secondary[type='button'] {
-      background: var(--th-bg-color);
+    padding: 0;
+    margin: 0;
+    .arco-btn-text[type='button'] {
       color: var(--small-font-color);
       font-size: 16px;
       display: flex;
       justify-content: flex-start;
-      padding-left: 62px;
+      padding-left: 86px;
       height: 44px;
+      border-top: 1px solid var(--border-color);
+      border-radius: 0;
     }
-    .arco-btn-secondary[type='button']:hover,
-    .arco-btn-secondary.hover,
-    .arco-btn-secondary.arco-dropdown-open {
-      border-color: inherit;
-      background: var(--light-brand-color);
-      color: var(--brand-color);
-      :deep(.arco-btn-icon) {
-        color: var(--brand-color);
-      }
+    .arco-btn-text[type='button']:hover,
+    .arco-btn-text.hover,
+    .arco-btn-text.arco-dropdown-open {
+      background: var(--th-bg-color);
     }
     :deep(.arco-btn-icon) {
       width: 20px;
@@ -213,9 +216,6 @@ a-layout.navbar
     li {
       display: flex;
       align-items: center;
-      &:first-of-type {
-        margin-bottom: 10px;
-      }
     }
 
     .arco-link {

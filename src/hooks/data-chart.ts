@@ -11,10 +11,6 @@ export default function useDataChart(data: ResultType) {
   const hasTimestamp = data.dimensionsAndXName.xAxis !== ''
   const schemaInRecords = data.records.schema
 
-  // TODO: Add support for more data types not just numbers.
-
-  // TODO: Use one computed for all options.
-
   const yOptions = computed(() => {
     if (!schemaInRecords || !hasTimestamp) return []
     return schemaInRecords.column_schemas
