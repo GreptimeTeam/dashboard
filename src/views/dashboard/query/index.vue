@@ -1,7 +1,7 @@
 <template lang="pug">
 a-layout.layout
   a-layout-sider.tables-sider(style="width: 66.6%" :resize-directions="['right']" @moving-end="moveEnd")
-    TableManager(:class="tableManagerElement?.offsetWidth <= 600 ? 'small' : 'big'")
+    TableManager(:class="tableManagerElement?.offsetWidth <= 650 ? 'small' : 'big'")
   a-layout-content
     LogsLayout(:logs="queryLogs" :types="types")
 </template>

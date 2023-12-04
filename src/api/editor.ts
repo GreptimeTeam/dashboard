@@ -42,7 +42,6 @@ const makePromParams = (code: string, promForm: PromForm) => {
   let end
   const appStore = useAppStore()
   if (promForm.time !== 0) {
-    // TODO: move this into a function?
     const now = dayjs()
     end = now.unix().toString()
     start = now.subtract(promForm.time, 'minute').unix().toString()

@@ -97,9 +97,10 @@ a-card.table-manager(:bordered="false")
             a-space(:size="4")
               span {{ $t('dashboard.rowCount') }}
               span {{ nodeData.info.rowCount }}
-            a-space(:size="4")
-              span {{ `TTL` }}
-              span {{ nodeData.info.ttl }}
+            a-space
+              a-space(:size="4")
+                span {{ `TTL` }}
+                span {{ nodeData.info.ttl }}
               a-button.refresh-details.row-middle(
                 type="text"
                 :loading="isRefreshingDetails[nodeData.parentKey]"
@@ -267,6 +268,9 @@ a-card.table-manager(:bordered="false")
         > .arco-space {
           width: 50%;
           height: 32px;
+          &:nth-of-type(2) {
+            justify-content: space-between;
+          }
         }
       }
     }
