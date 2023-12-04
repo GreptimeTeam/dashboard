@@ -26,30 +26,30 @@ a-card.table-manager(:bordered="false")
     )
       template(#icon="node")
         a-tooltip(v-if="node.node.iconType" :content="node.node.iconType")
-          svg.icon-20
+          svg.icon-18
             use(:href="ICON_MAP[node.node.iconType]")
       template(#title="nodeData")
         .tree-data(v-if="!nodeData.isLeaf")
           a-tooltip.data-type(mini :content="nodeData.title")
             .data-title
               | {{ nodeData.title }}
-          .tree-data
-            a-button(type="text" @click="(event) => expandChildren(event, nodeData, 'columns')")
+          a-space(:size="6")
+            a-button(type="text" size="small" @click="(event) => expandChildren(event, nodeData, 'columns')")
               template(#icon)
-                svg.icon-20(
+                svg.icon-18(
                   :class="nodeData.childrenType === 'columns' && expandedKeys?.includes(nodeData.key) ? '' : 'icon-color'"
                 )
                   use(href="#columns")
-            a-button(type="text" @click="(event) => expandChildren(event, nodeData, 'details')")
+            a-button(type="text" size="small" @click="(event) => expandChildren(event, nodeData, 'details')")
               template(#icon)
-                svg.icon-20(
+                svg.icon-18(
                   :class="nodeData.childrenType === 'details' && expandedKeys?.includes(nodeData.key) ? '' : 'icon-color'"
                 )
                   use(href="#details")
             a-dropdown.quick-select(trigger="click" position="right" @click="(event) => clickMenu(event, nodeData)")
-              a-button(type="text")
+              a-button(type="text" size="small")
                 template(#icon)
-                  svg.icon-20.icon-color
+                  svg.icon-18.icon-color
                     use(href="#query")
               template(#content)
                 a-doption(v-for="item of SHORTCUT_MAP['TABLE']" v-show="route.name === 'query'")
@@ -73,9 +73,9 @@ a-card.table-manager(:bordered="false")
             transition(name="slide-fade")
               .data-type {{ nodeData.dataType }}
             a-dropdown.quick-select(v-if="nodeData.dataType" trigger="click" position="right")
-              a-button(type="text")
+              a-button(type="text" size="small")
                 template(#icon)
-                  svg.icon-20.icon-color
+                  svg.icon-18.icon-color
                     use(href="#query")
               template(#content)
                 a-doption(v-for="item of SHORTCUT_MAP[nodeData.iconType || 'TABLE']" v-show="route.name === 'query'")
@@ -86,7 +86,7 @@ a-card.table-manager(:bordered="false")
                       :parent="nodeData.iconType ? originTablesTree[nodeData.parentKey] : nodeData"
                       :label="item.label"
                     )
-            TextCopyable.title-copy(
+            TextCopyable.title-copy.columns(
               type="text"
               :data="nodeData.title"
               :show-data="false"
@@ -103,11 +103,12 @@ a-card.table-manager(:bordered="false")
                 span {{ nodeData.info.ttl }}
               a-button.refresh-details.row-middle(
                 type="text"
+                size="small"
                 :loading="isRefreshingDetails[nodeData.parentKey]"
                 @click="loadMore(originTablesTree[nodeData.parentKey])"
               )
                 template(#icon)
-                  svg.icon-18.icon-color
+                  svg.icon-16.icon-color
                     use(href="#refresh")
             a-space(:size="4")
               span {{ $t('dashboard.minTime') }}
@@ -121,16 +122,17 @@ a-card.table-manager(:bordered="false")
               span(v-else) {{ nodeData.info.max }}
             a-button.refresh-details.row-end(
               type="text"
+              size="small"
               :loading="isRefreshingDetails[nodeData.parentKey]"
               @click="loadMore(originTablesTree[nodeData.parentKey])"
             )
               template(#icon)
-                svg.icon-18.icon-color
+                svg.icon-16.icon-color
                   use(href="#refresh")
           a-space(v-else)
-            a-space(align="start" :class="{ 'create-table': nodeData.info.sql !== '-' }")
+            a-space(align="start" :class="{ 'create-table': nodeData.info.sql !== '-' }" :size="4")
               .left {{ $t('dashboard.createTable') }}
-              span(v-if="nodeData.info.sql === '-'") {{ nodeData.info.sql }}
+              span.empty-sql(v-if="nodeData.info.sql === '-'") {{ nodeData.info.sql }}
               .right(v-else)
                 a-typography-text.code-space {{ nodeData.info.sql }}
                 TextCopyable(
@@ -255,7 +257,7 @@ a-card.table-manager(:bordered="false")
           display: none;
         }
         > .arco-space {
-          height: 32px;
+          height: 28px;
         }
       }
     }
@@ -267,7 +269,7 @@ a-card.table-manager(:bordered="false")
         }
         > .arco-space {
           width: 50%;
-          height: 32px;
+          height: 28px;
           &:nth-of-type(2) {
             justify-content: space-between;
           }
@@ -368,6 +370,7 @@ a-card.table-manager(:bordered="false")
     }
 
     :deep(.arco-tree-node.arco-tree-node-is-leaf.details) {
+      cursor: default;
       .arco-tree-node-title {
         border: none;
         margin-left: 10px;
@@ -413,7 +416,12 @@ a-card.table-manager(:bordered="false")
 
   .left {
     color: var(--third-font-color);
-    padding: 7px 0;
+    line-height: 28px;
+  }
+
+  .empty-sql {
+    color: var(--small-font-color);
+    line-height: 28px;
   }
   .right {
     display: flex;
@@ -442,6 +450,9 @@ a-card.table-manager(:bordered="false")
   }
 
   .title-copy {
+    &.columns {
+      margin-left: 6px;
+    }
     :deep(.arco-typography-operation-copy),
     :deep(.arco-typography-operation-copied) {
       margin-left: 0;
@@ -449,8 +460,13 @@ a-card.table-manager(:bordered="false")
     }
 
     :deep(.icon) {
-      width: 20px;
-      height: 20px;
+      width: 18px;
+      height: 18px;
+    }
+
+    :deep(.arco-btn-size-medium.arco-btn-only-icon) {
+      width: 28px;
+      height: 28px;
     }
   }
 
@@ -480,6 +496,10 @@ a-card.table-manager(:bordered="false")
       &:hover {
         background-color: var(--main-bg-color);
       }
+    }
+
+    &.columns {
+      margin-right: 6px;
     }
 
     .arco-btn-text[type='button'] {

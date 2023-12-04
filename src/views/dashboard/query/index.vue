@@ -32,7 +32,6 @@ a-layout.layout
   })
   const moveEnd = () => {
     tableManagerElement.value = document.getElementsByClassName('table-manager')[0]
-    console.log(tableManagerElement.value.offsetWidth)
   }
 
   const types = ['sql', 'promql']
