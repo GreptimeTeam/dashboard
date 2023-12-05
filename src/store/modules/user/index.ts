@@ -3,7 +3,6 @@ import type { Ref } from 'vue'
 
 const useUserStore = defineStore('user', () => {
   const role: Ref<string> = ref('admin')
-  const lang: Ref<string> = ref('en-US')
   const dataStatusMap = ref<{ [key: string]: boolean }>({
     tables: false,
     scripts: false,
@@ -12,9 +11,6 @@ const useUserStore = defineStore('user', () => {
 
   function setRole(r: string) {
     role.value = r
-  }
-  function setLang(r: string) {
-    lang.value = r
   }
 
   const updateDataStatus = (name: string, status: boolean) => {
@@ -29,10 +25,8 @@ const useUserStore = defineStore('user', () => {
 
   return {
     role,
-    lang,
     dataStatusMap,
     setRole,
-    setLang,
     updateDataStatus,
     resetDataStatus,
   }

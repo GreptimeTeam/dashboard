@@ -14,10 +14,11 @@ a-modal.guide-modal(
 
 <script lang="ts" setup name="RefreshPlaygroundModal">
   import { createPlayground } from '@/api/playground'
+  import useLocale from '@/hooks/locale'
   import { useStorage } from '@vueuse/core'
 
   const appStore = useAppStore()
-  const { lang } = storeToRefs(useUserStore())
+  const { currentLocale } = useLocale()
   const props = defineProps({
     visible: {
       type: Boolean,
@@ -31,7 +32,8 @@ a-modal.guide-modal(
   }
 
   const create = () => {
-    window.location.href = lang.value === 'en-US' ? `https://greptime.com/playground` : `https://greptime.cn/playground`
+    window.location.href =
+      currentLocale.value === 'en-US' ? `https://greptime.com/playground` : `https://greptime.cn/playground`
   }
 
   defineExpose({

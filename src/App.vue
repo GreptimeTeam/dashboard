@@ -9,21 +9,23 @@
 <script lang="ts" setup>
   import { computed } from 'vue'
   import enUS from '@arco-design/web-vue/es/locale/lang/en-us'
+  import zhCN from '@arco-design/web-vue/es/locale/lang/zh-cn'
   import useLocale from '@/hooks/locale'
   import { useUserStore, useAppStore } from '@/store'
-  import { useStorage } from '@vueuse/core'
 
   const { currentLocale } = useLocale()
   const locale = computed(() => {
     switch (currentLocale.value) {
       case 'en-US':
         return enUS
+      case 'zh-CN':
+        return zhCN
       default:
         return enUS
     }
   })
 
-  const { setRole, setLang } = useUserStore()
+  const { setRole } = useUserStore()
   const { host, username, password, database, guideModalVisible } = storeToRefs(useAppStore())
   const { fetchDatabases, updateSettings } = useAppStore()
   const { getTables, getScriptsTable } = useDataBaseStore()
@@ -32,9 +34,6 @@
 
   const role = import.meta.env.VITE_ROLE || 'admin'
   setRole(role)
-
-  const lang = import.meta.env.VITE_LANG || 'en-US'
-  setLang(lang)
 
   if (role === 'playground') {
     updateSettings({ navbar: false })
