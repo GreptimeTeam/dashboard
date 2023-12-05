@@ -1,9 +1,9 @@
-import dashboard from './en-US/dashboard.json'
-import feedback from './en-US/feedback.json'
-import menu from './en-US/menu.json'
-import playground from './en-US/playground.json'
-import settings from './en-US/settings.json'
-import workbench from './en-US/workbench.json'
+import dashboard from './en-US/dashboard'
+import feedback from './en-US/feedback'
+import menu from './en-US/menu'
+import playground from './en-US/playground'
+import settings from './en-US/settings'
+import workbench from './en-US/workbench'
 
 export default {
   'alert.createSuccess': 'create alert config Success',

@@ -1,9 +1,9 @@
-import dashboard from './zh-CN/dashboard.json'
-import feedback from './zh-CN/feedback.json'
-import menu from './zh-CN/menu.json'
-import playground from './zh-CN/playground.json'
-import settings from './zh-CN/settings.json'
-import workbench from './zh-CN/workbench.json'
+import dashboard from './zh-CN/dashboard'
+import feedback from './zh-CN/feedback'
+import menu from './zh-CN/menu'
+import playground from './zh-CN/playground'
+import settings from './zh-CN/settings'
+import workbench from './zh-CN/workbench'
 
 export default {
   'navbar.docs': '文档中心',
