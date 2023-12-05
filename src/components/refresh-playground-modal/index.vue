@@ -17,6 +17,7 @@ a-modal.guide-modal(
   import { useStorage } from '@vueuse/core'
 
   const appStore = useAppStore()
+  const { lang } = storeToRefs(useUserStore())
   const props = defineProps({
     visible: {
       type: Boolean,
@@ -30,7 +31,7 @@ a-modal.guide-modal(
   }
 
   const create = () => {
-    window.location.href = `https://greptime.com/playground`
+    window.location.href = lang.value === 'en-US' ? `https://greptime.com/playground` : `https://greptime.cn/playground`
   }
 
   defineExpose({

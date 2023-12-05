@@ -1,0 +1,7 @@
+{
+  "workbench.deleteFileSuccess": "The file was deleted",
+  "workbench.deleteGroupSuccess": "The group was deleted",
+  "workbench.deleteRuleSuccess": "The panel was deleted",
+  "workbench.deleteThreshold": "The threshold was deleted",
+  "workbench.question": "Your unsaved panels will be lost. Are you sure you want to continue?"
+}

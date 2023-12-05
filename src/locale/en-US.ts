@@ -1,32 +1,23 @@
-import localeDashboard from '@/views/dashboard/locale/en-US'
-import localSetting from '@/components/global-setting/local/en-US'
+import dashboard from './en-US/dashboard.json'
+import feedback from './en-US/feedback.json'
+import menu from './en-US/menu.json'
+import playground from './en-US/playground.json'
+import settings from './en-US/settings.json'
+import workbench from './en-US/workbench.json'
 
 export default {
-  'menu.dashboard': 'Dashboard',
-  'menu.dashboard.query': 'Query',
-  'menu.dashboard.scripts': 'Scripts',
-  'menu.dashboard.playground': 'Playground',
-  'menu.dashboard.status': 'Status',
-  'menu.server.dashboard': 'Dashboard-Server',
-  'menu.server.workplace': 'Workplace-Server',
-  'menu.server.monitor': 'Monitor-Server',
-  'menu.list': 'List',
-  'menu.result': 'Result',
-  'menu.exception': 'Exception',
-  'menu.form': 'Form',
-  'menu.profile': 'Profile',
-  'menu.visualization': 'Data Visualization',
-  'menu.user': 'User Center',
-  'menu.faq': 'FAQ',
-  'navbar.docs': 'Docs',
-  'navbar.action.locale': 'Switch to English',
-  'guide.welcome': 'Welcome!',
-  'guide.confirm': 'Confirm',
-  'playground.create': 'OK',
-  'playground.refreshTitle': 'Warning',
-  'playground.refreshNote': 'The Playground has been reclaimed due to timeout. Click OK to re-create the playground',
-  'playground.import': 'Import {lines} lines in {time}ms',
+  'alert.createSuccess': 'create alert config Success',
+  'alert.removeSuccess': 'remove alert config Success',
+  'alert.updateSuccess': 'update alert config Success',
   'copied': 'Copied',
-  ...localeDashboard,
-  ...localSetting,
+  'guide.confirm': 'Confirm',
+  'guide.welcome': 'Welcome!',
+  'navbar.action.locale': 'Switch to English',
+  'navbar.docs': 'Docs',
+  ...dashboard,
+  ...feedback,
+  ...menu,
+  ...playground,
+  ...settings,
+  ...workbench,
 }
