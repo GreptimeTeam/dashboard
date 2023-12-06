@@ -1,4 +1,5 @@
 export default {
+  'settings.host': '主机',
   'settings.title': '设置',
   'settings.auth': '认证',
   'settings.username': '用户名',
