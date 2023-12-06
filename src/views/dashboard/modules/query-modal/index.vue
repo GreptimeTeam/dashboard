@@ -183,6 +183,7 @@ a-modal.query-modal(
               display: flex;
               font-size: 16px;
               height: 20px;
+              align-items: center;
 
               &::before {
                 border-radius: 4px;

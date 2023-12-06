@@ -2,6 +2,7 @@
 .local
 .output.js
 /node_modules/**
+**/icons.js
 
 **/*.svg
 **/*.sh
