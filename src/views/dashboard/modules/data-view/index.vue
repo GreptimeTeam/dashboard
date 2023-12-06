@@ -21,14 +21,14 @@ a-tabs.result-tabs(
         a-tab-pane(v-if="useDataChart(result).hasChart.value" key="chart" :title="$t('dashboard.chart')")
           template(#title)
             a-space(size="mini")
-              svg.icon-20
+              svg.icon-18
                 use(href="#chart")
               | {{ $t('dashboard.chart') }}
           DataChart(:data="result" :has-header="false")
         a-tab-pane(key="table" :title="$t('dashboard.table')")
           template(#title)
             a-space(size="mini")
-              svg.icon-20
+              svg.icon-16
                 use(href="#table")
               | {{ $t('dashboard.table') }}
           DataGrid(:data="result" :has-header="false")
@@ -86,6 +86,10 @@ a-tabs.result-tabs(
     }
     > .arco-tabs-content > .arco-tabs-content-list > .arco-tabs-content-item {
       padding: 10px 0;
+    }
+
+    .arco-tabs-nav-tab-list {
+      display: flex;
     }
   }
 </style>

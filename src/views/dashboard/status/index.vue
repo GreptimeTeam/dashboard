@@ -3,7 +3,7 @@ a-layout.layout.status
   a-layout-content
     a-card(title="GreptimeDB Status")
       template(#extra)
-        a-button(type="text" @click="refreshStatus") refresh
+        a-button(type="text" @click="refreshStatus") Refresh
         TextCopyable(
           v-if="statusInfoRef && statusInfoRef.length > 0"
           copyTooltip="Copy to Clipboard"
