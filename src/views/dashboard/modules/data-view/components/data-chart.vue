@@ -264,9 +264,11 @@ a-card(v-if="hasChart" :bordered="false")
         ? props.defaultChartForm.xAxisType
         : xOptions.value[0]
 
-      chartForm.groupBySelectedTypes = props.defaultChartForm.groupBySelectedTypes?.length
-        ? props.defaultChartForm.groupBySelectedTypes
-        : [groupByOptions.value[0].name]
+      if (props.defaultChartForm.groupBySelectedTypes?.length) {
+        chartForm.groupBySelectedTypes = props.defaultChartForm.groupBySelectedTypes
+      } else if (groupByOptions.value.length) {
+        chartForm.groupBySelectedTypes = [groupByOptions.value[0].name]
+      }
     }
   })
 
@@ -301,3 +303,11 @@ a-card(v-if="hasChart" :bordered="false")
     hasChart,
   })
 </script>
+
+<style scoped lang="less">
+  .chart-form {
+    :deep(.arco-select-view-single) {
+      width: 240px;
+    }
+  }
+</style>

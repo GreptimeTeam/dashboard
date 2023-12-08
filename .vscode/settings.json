@@ -9,6 +9,7 @@
     "Keymap",
     "pinia",
     "promql",
+    "resizebox",
     "sider",
     "timepicker",
     "VITE"

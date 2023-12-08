@@ -2,7 +2,7 @@
 a-layout.layout
   a-layout-sider.tables-sider(style="width: 66.6%" :resize-directions="['right']" @moving-end="moveEnd")
     TableManager(:class="tableManagerElement?.offsetWidth <= 650 ? 'small' : 'big'")
-  a-layout-content
+  a-layout-content.logs-content
     LogsLayout(:logs="queryLogs" :types="types")
 </template>
 
@@ -71,5 +71,14 @@ a-layout.layout
   .arco-layout-sider.tables-sider {
     min-width: v-bind(TABLES_MIN_WIDTH);
     max-width: calc(100vw - v-bind(OTHERS_WIDTH));
+  }
+  .logs-content {
+    padding: 0 16px 0 0;
+  }
+  :deep(.arco-resizebox-trigger-icon-wrapper) {
+    color: var(--main-font-color);
+    font-size: 18px;
+    width: 16px;
+    background-color: transparent;
   }
 </style>

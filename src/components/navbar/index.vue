@@ -195,7 +195,7 @@ a-layout.navbar
     margin: 0;
     .arco-btn-text[type='button'] {
       color: var(--small-font-color);
-      font-size: 16px;
+      font-size: 14px;
       display: flex;
       justify-content: flex-start;
       padding-left: 86px;

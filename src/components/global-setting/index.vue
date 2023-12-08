@@ -35,10 +35,8 @@ a-drawer.settings-drawer(
   import { useI18n } from 'vue-i18n'
   import { useAppStore, useDataBaseStore } from '@/store'
   import axios from 'axios'
-  import { useStorage } from '@vueuse/core'
-  import editorAPI from '@/api/editor'
 
-  const MARGIN_BOTTOM = `${16 + 32 * 2 + 2}px`
+  const MARGIN_BOTTOM = `${44 * 2 + 1}px`
   const emit = defineEmits(['cancel'])
 
   const { t } = useI18n()
