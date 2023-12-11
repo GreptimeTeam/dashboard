@@ -1,11 +1,12 @@
 <template lang="pug">
 a-card.table-manager(:bordered="false")
   template(#title)
-    a-space
+    a-space(:size="10")
       | Tables
-      .icon-space.pointer(@click="refreshTables")
-        svg.icon.brand-color
-          use(href="#refresh")
+      a-button(type="outline" size="small" @click="refreshTables")
+        template(#icon)
+          svg.icon.brand-color
+            use(href="#refresh")
     a-space
       a-input(v-model="tablesSearchKey" :allow-clear="true" :placeholder="$t('dashboard.input')")
         template(#prefix)

@@ -5,9 +5,10 @@ a-spin(style="width: 100%" :loading="tablesLoading")
       template(#prefix)
         svg.icon.icon-color
           use(href="#search")
-    .icon-space.pointer(@click="refreshTables")
-      svg.icon.brand-color
-        use(href="#refresh")
+    a-button(type="outline" size="small" @click="refreshTables")
+      template(#icon)
+        svg.icon.brand-color
+          use(href="#refresh")
   a-tree.table-tree(
     v-if="tablesTreeData && tablesTreeData.length > 0"
     ref="treeRef"
