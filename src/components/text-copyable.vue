@@ -12,7 +12,7 @@ a-typography-text(
   template(#copy-icon="{ copied }")
     a-button(type="text")
       template(#icon)
-        svg.icon(v-if="copied === false")
+        svg.icon.icon-color(v-if="copied === false")
           use(href="#copy-new")
         svg.icon(v-else)
           icon-check.success-color
