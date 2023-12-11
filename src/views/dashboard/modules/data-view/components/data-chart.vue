@@ -51,7 +51,7 @@ a-card(v-if="hasChart" :bordered="false")
             span.loading-tip {{ $tc('dashboard.chartLoadingTip', seriesCount, { count: seriesCount }) }}
           a-button(type="primary" @click="showChart")
             | {{ $t('dashboard.ok') }}
-      Chart.chart-area(height="330px" :option="chartOptions" :update-options="updateOptions")
+      Chart.chart-area(:height="chartHeight" :option="chartOptions" :update-options="updateOptions")
 </template>
 
 <script lang="ts" setup>
@@ -93,6 +93,8 @@ a-card(v-if="hasChart" :bordered="false")
   const isChartLoading = ref(false)
   const chartOptions = ref({})
   const seriesCount = ref(0)
+  const chartHeight = ref('330px')
+  const chartWidth = ref<number>(596)
 
   const { yOptions, hasChart, groupByOptions, chartForm, xOptions } = useDataChart(props.data)
   // TODO: To add this props in every select should not be the best option.
@@ -228,9 +230,56 @@ a-card(v-if="hasChart" :bordered="false")
       xAxis.type = 'time'
     }
 
+    const legendIconHeight = 14
+    const legendIconWidth = 30
+    const legendItemGap = 12
+    const legendTextLineHeight = 15
+    const legendToBottom = 2
+    const gridHeight = 240
+    const legendToGridGap = 24
+    // Legend font size: 12px
+    // monospace font width: 7.23px
+
+    // TODO: better calculation for legend height
+    // legendNames.forEach((name: string) => {
+    //   const width = name.length * 7.23 + legendIconWidth + legendItemGap
+    // })
+
+    const legendsTotalLength =
+      // legend names width
+      legendNames.join('').length * 7.23 +
+      // legend icons width
+      legendIconWidth * legendNames.length +
+      // legend gap
+      legendItemGap * (legendNames.length - 1)
+
+    const legendsRowCount = Math.ceil(legendsTotalLength / chartWidth.value)
+    const legendHight = legendsRowCount * legendTextLineHeight + legendItemGap * (legendsRowCount - 1)
+    const gridToBottom = legendHight + legendToGridGap
+    chartHeight.value = `${gridToBottom + gridHeight}px`
+
     return {
       legend: {
         data: legendNames,
+        bottom: legendToBottom,
+        height: legendHight,
+        itemGap: legendItemGap,
+        itemWidth: legendIconWidth,
+        itemHeight: legendIconHeight,
+        borderWidth: 0,
+        // TODO: legend width, overflow and tooltip
+        textStyle: {
+          overflow: 'truncate',
+          fontFamily: 'monospace',
+          lineHeight: legendTextLineHeight,
+        },
+      },
+      grid: {
+        containLabel: true,
+        left: 12,
+        right: 12,
+        top: 12,
+        bottom: gridToBottom,
       },
       tooltip: {
         trigger: 'axis',
@@ -273,6 +322,16 @@ a-card(v-if="hasChart" :bordered="false")
   })
 
   const drawChart = () => {
+    const MENU_WIDTH = 258
+    const modalElement = ref<any>()
+    modalElement.value = document.getElementsByClassName('query-modal')[0]
+    const isFullScreen = modalElement.value.classList?.contains('full-screen')
+    if (isFullScreen) {
+      chartWidth.value = modalElement.value.offsetWidth - MENU_WIDTH - 16 * 2 - 20 * 2
+    } else {
+      chartWidth.value = 596
+    }
+
     chartOptions.value = makeOptions()
   }
 
