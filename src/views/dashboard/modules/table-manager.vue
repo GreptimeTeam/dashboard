@@ -333,7 +333,7 @@ a-card.table-manager(:bordered="false")
 
   .table-tree {
     :deep(.arco-tree-node) {
-      padding: 0 14px 0 20px;
+      padding: 0 12px 0 20px;
       line-height: 30px;
       border-radius: 0;
       .arco-icon-loading {

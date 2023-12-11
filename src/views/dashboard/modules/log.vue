@@ -68,7 +68,7 @@ a-list-item.smaller-divider
   .code {
     font-family: monospace;
     color: var(--main-font-color);
-    font-size: 14px;
+    font-size: 13px;
 
     div {
       text-overflow: ellipsis;
@@ -90,6 +90,7 @@ a-list-item.smaller-divider
     > :first-child {
       font-size: 14px;
     }
+    font-size: 11px;
   }
 
   .total-time {
@@ -106,7 +107,7 @@ a-list-item.smaller-divider
   }
 
   .play {
-    font-size: 17px;
+    font-size: 16px;
   }
 
   .arco-btn-text[type='button']:hover {

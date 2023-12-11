@@ -87,7 +87,7 @@ a-card.logs-card(:bordered="false")
   }
 
   :deep(.arco-list-small .arco-list-content-wrapper .arco-list-content > .arco-list-item) {
-    padding: 4px 10px 4px 20px;
+    padding: 7px 10px 7px 20px;
   }
 
   .arco-list-hover .arco-list-item:hover {
