@@ -249,7 +249,6 @@ a-card.table-manager(:bordered="false")
     :deep(> .arco-card-header) {
       > .arco-card-header-title {
         justify-content: space-between;
-        font-weight: 800;
       }
     }
     &.big {
