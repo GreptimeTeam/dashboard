@@ -43,11 +43,14 @@ a-card.logs-card(:bordered="false")
 </script>
 
 <style lang="less" scoped>
-  .logs-card {
+  .arco-card.logs-card {
     height: 100%;
 
     :deep(.logs-list > .arco-spin > .arco-scrollbar > .arco-scrollbar-container) {
       height: v-bind(listHeight);
+    }
+    :deep(.arco-card-header) {
+      border-bottom: 1px solid var(--border-color);
     }
   }
   .empty-list {
@@ -60,7 +63,6 @@ a-card.logs-card(:bordered="false")
   }
 
   :deep(.arco-list-content) {
-    border-top: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
     display: flex;
     flex-direction: column-reverse;
