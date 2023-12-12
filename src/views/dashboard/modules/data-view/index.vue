@@ -20,15 +20,15 @@ a-tabs.result-tabs(
       a-tabs.data-view-tabs(:animation="true")
         a-tab-pane(v-if="useDataChart(result).hasChart.value" key="chart" :title="$t('dashboard.chart')")
           template(#title)
-            a-space(size="mini")
-              svg.icon-18
+            a-space(:size="10")
+              svg.icon-16
                 use(href="#chart")
               | {{ $t('dashboard.chart') }}
           DataChart(:data="result" :has-header="false")
         a-tab-pane(key="table" :title="$t('dashboard.table')")
           template(#title)
-            a-space(size="mini")
-              svg.icon-16
+            a-space(:size="10")
+              svg.icon
                 use(href="#table")
               | {{ $t('dashboard.table') }}
           DataGrid(:data="result" :has-header="false")
@@ -85,7 +85,7 @@ a-tabs.result-tabs(
       background-color: transparent;
     }
     > .arco-tabs-content > .arco-tabs-content-list > .arco-tabs-content-item {
-      padding: 10px 0;
+      padding: 15px 0;
     }
 
     .arco-tabs-nav-tab-list {

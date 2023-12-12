@@ -213,7 +213,6 @@ a-layout.navbar
     }
 
     :deep(.arco-btn-size-medium:not(.arco-btn-only-icon) .arco-btn-icon) {
-      margin-right: 10px;
       display: flex;
       width: 16px;
     }

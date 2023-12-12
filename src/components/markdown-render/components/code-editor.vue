@@ -1,6 +1,6 @@
 <template lang="pug">
 .code-editor.editor-card
-  a-form.space-between.prom-form.mb-16(layout="inline" v-show="lang === 'promql'" :model="promForm")
+  a-form.space-between.prom-form.mb-15(layout="inline" v-show="lang === 'promql'" :model="promForm")
     a-space(size="medium")
       a-form-item(:hide-label="true")
         TimeSelect(

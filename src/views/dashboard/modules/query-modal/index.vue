@@ -14,16 +14,16 @@ a-modal.query-modal(
 )
   template(#title)
     | {{ $t('menu.dashboard.query') }}
-    a-space(fill :size="4")
+    a-space(fill :size="3")
       a-button.screen-button(type="text" size="small" @click="clearCode")
         template(#icon)
-          svg.icon-18
+          svg.icon-16
             use(href="#clear")
       a-button.screen-button(type="text" size="small" @click="isFullscreen = !isFullscreen")
         template(#icon)
-          svg.icon-18(v-if="isFullscreen")
+          svg.icon-16(v-if="isFullscreen")
             use(href="#zoom-out")
-          svg.icon-18(v-else)
+          svg.icon-16(v-else)
             use(href="#zoom")
   a-space.editor-space(align="start" fill :size="0")
     a-scrollbar(:style="{ height: `calc(100vh - ${MODAL_TO_TOP * 2 + HEADER_HEIGHT}px)`, overflow: 'auto' }")
@@ -78,9 +78,10 @@ a-modal.query-modal(
         pointer-events: auto;
         box-shadow: 0 2px 10px 0 var(--box-shadow-color);
         .arco-modal-header {
-          height: 58px;
+          height: 60px;
           .arco-modal-title {
             font-weight: 800;
+            font-size: 15px;
             justify-content: space-between;
           }
         }
@@ -95,8 +96,8 @@ a-modal.query-modal(
           width: 28px;
           align-items: center;
           justify-content: center;
-          border-radius: 6px;
-          margin-left: 4px;
+          border-radius: 4px;
+          margin-left: 3px;
           svg {
             stroke-width: 3px;
           }
@@ -145,7 +146,7 @@ a-modal.query-modal(
     }
 
     .modal-view {
-      padding-top: 16px;
+      padding-top: 24px;
       > .arco-tabs-content {
         > .arco-tabs-content-list > .arco-tabs-content-item {
           padding: 0;
@@ -158,8 +159,8 @@ a-modal.query-modal(
             }
           }
           .arco-tabs-tab {
-            padding: 4px 0;
-            margin: 10px 0 0 0;
+            padding: 6px 0;
+            margin: 15px 0 0 0;
             background: var(--th-bg-color);
             color: var(--main-font-color);
 
@@ -178,10 +179,10 @@ a-modal.query-modal(
               letter-spacing: -0.5px;
             }
             > .arco-tabs-tab-title {
-              width: 85px;
-              padding-left: 8px;
+              width: 84px;
+              padding-left: 10px;
               display: flex;
-              font-size: 16px;
+              font-size: 13px;
               height: 20px;
               align-items: center;
 
@@ -189,8 +190,8 @@ a-modal.query-modal(
                 border-radius: 4px;
                 left: 0;
                 right: 0;
-                top: -4px;
-                bottom: -4px;
+                top: -6px;
+                bottom: -6px;
               }
             }
           }
@@ -198,7 +199,7 @@ a-modal.query-modal(
       }
       > .arco-tabs-nav-type-rounded {
         border-bottom: 1px solid var(--border-color);
-        padding-bottom: 10px;
+        padding-bottom: 15px;
         .arco-icon-hover:hover::before {
           width: 20px;
           background-color: var(--card-bg-color);
@@ -211,8 +212,8 @@ a-modal.query-modal(
             > .arco-tabs-tab {
               background-color: var(--th-bg-color);
               border-radius: 4px;
-              padding: 6px 8px;
-              font-size: 14px;
+              padding: 8px 10px;
+              font-size: 13px;
               line-height: 16px;
             }
           }

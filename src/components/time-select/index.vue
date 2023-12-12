@@ -6,7 +6,7 @@ a-trigger(
   :update-at-scroll="true"
   @click="openTimeSelect"
 )
-  a-button(style="padding-left: 8px" :type="buttonType" :class="buttonClass")
+  a-button(:type="buttonType" :class="buttonClass")
     template(#icon)
       svg.icon-20
         use(href="#calendar")
