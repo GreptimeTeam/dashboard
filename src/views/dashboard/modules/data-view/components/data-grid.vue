@@ -26,11 +26,11 @@ a-card(:bordered="false")
                     :style="{ cursor: 'pointer' }"
                     @click="() => handleFormatTimeColumn(column.dataIndex, column.dataType)"
                   )
-                    svg.icon-20
+                    svg.icon-16
                       use(href="#time-index")
                     | {{ column.title }}
           template(v-else)
-            a-table-column(:title="column.title" :data-index="column.dataIndex")
+            a-table-column(:title="column.title" :data-index="column.dataIndex" :ellipsis="true")
 </template>
 
 <script lang="ts" setup>

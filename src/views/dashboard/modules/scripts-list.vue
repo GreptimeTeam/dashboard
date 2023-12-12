@@ -6,12 +6,14 @@ a-spin(style="width: 100%" :loading="scriptsLoading")
         svg.icon
           use(href="#search")
     a-tooltip(mini :content="$t('dashboard.create')")
-      .icon-space.pointer(@click="createNewScript()")
-        svg.icon
-          use(href="#create")
-    .icon-space.pointer(@click="refreshScripts")
-      svg.icon.brand-color
-        use(href="#refresh")
+      a-button(type="outline" size="small" @click="createNewScript()")
+        template(#icon)
+          svg.icon
+            use(href="#create")
+    a-button(type="outline" size="small" @click="refreshScripts")
+      template(#icon)
+        svg.icon.brand-color
+          use(href="#refresh")
   a-scrollbar.tree-scrollbar
     a-tree.script-tree(
       v-if="scriptsListData && scriptsListData.length > 0"

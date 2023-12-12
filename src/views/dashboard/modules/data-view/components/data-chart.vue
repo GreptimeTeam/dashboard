@@ -6,6 +6,15 @@ a-card(v-if="hasChart" :bordered="false")
         use(href="#chart")
       | {{ $t('dashboard.chart') }}
   a-spin(style="width: 100%")
+    a-spin(style="width: 100%" :loading="isChartLoading")
+      template(#element)
+        a-space(direction="vertical" :size="30")
+          a-space(:size="10")
+            icon-exclamation-circle-fill.warning-color
+            span.loading-tip {{ $tc('dashboard.chartLoadingTip', seriesCount, { count: seriesCount }) }}
+          a-button(type="primary" @click="showChart")
+            | {{ $t('dashboard.ok') }}
+      Chart(:height="chartHeight" :option="chartOptions" :update-options="updateOptions")
     a-row
       a-form.chart-form(layout="inline" :model="chartForm")
         a-form-item(:label="$t('dashboard.chartType')")
@@ -16,7 +25,7 @@ a-card(v-if="hasChart" :bordered="false")
               :value="item.value"
               :label="item.value"
             )
-        a-form-item.select-y(:label="$t('dashboard.yType')")
+        a-form-item(:label="$t('dashboard.yType')")
           a-select(
             v-model="chartForm.selectedYTypes"
             multiple
@@ -34,7 +43,7 @@ a-card(v-if="hasChart" :bordered="false")
             :trigger-props="triggerProps"
           )
             a-option(v-for="item of xOptions" :value="item") {{ item.name }}
-        a-form-item.select-y(:label="$t('dashboard.groupBy')")
+        a-form-item(:label="$t('dashboard.groupBy')")
           a-select(
             v-model="chartForm.groupBySelectedTypes"
             multiple
@@ -43,15 +52,6 @@ a-card(v-if="hasChart" :bordered="false")
             :trigger-props="triggerProps"
           )
             a-option(v-for="item of groupByOptions" :key="item.index" :value="item.name") {{ item.name }}
-    a-spin(style="width: 100%" :loading="isChartLoading")
-      template(#element)
-        a-space(direction="vertical" :size="30")
-          a-space(:size="10")
-            icon-exclamation-circle-fill.warning-color
-            span.loading-tip {{ $tc('dashboard.chartLoadingTip', seriesCount, { count: seriesCount }) }}
-          a-button(type="primary" @click="showChart")
-            | {{ $t('dashboard.ok') }}
-      Chart.chart-area(:height="chartHeight" :option="chartOptions" :update-options="updateOptions")
 </template>
 
 <script lang="ts" setup>
@@ -365,8 +365,16 @@ a-card(v-if="hasChart" :bordered="false")
 
 <style scoped lang="less">
   .chart-form {
+    margin-top: 12px;
     :deep(.arco-select-view-single) {
-      width: 240px;
+      min-width: 180px;
+    }
+    :deep(.arco-select-view-multiple.arco-select-view-size-medium) {
+      font-size: 14px;
+      min-width: 180px;
+    }
+    .arco-form-item-layout-inline {
+      margin-right: 38px;
     }
   }
 </style>

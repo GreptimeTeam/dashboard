@@ -31,14 +31,14 @@ a-layout.navbar
           @click="setVisible"
         )
           template(#icon)
-            svg.icon-20
+            svg.icon-16
               use(href="#settings")
           | {{ $t('settings.title') }}
       li
         a-dropdown.menu-dropdown(trigger="hover" position="right" :popup-max-height="false")
           a-button(style="width: 100%" type="text")
             template(#icon)
-              svg.icon-18
+              svg.icon
                 use(href="#menu")
             | {{ $t('navbar.docs') }}
           template(#content)
@@ -120,21 +120,21 @@ a-layout.navbar
     width: 100%;
 
     .arco-menu {
-      font-size: 16px;
+      font-size: 14px;
     }
     :deep(.arco-menu-vertical .arco-menu-item.arco-menu-has-icon) {
-      padding-left: 39px;
+      padding-left: 30px;
       margin-bottom: 2px;
       border-left: 2px solid transparent;
       border-radius: 0;
-      line-height: 44px;
+      line-height: 38px;
     }
     :deep(.arco-menu-vertical .arco-menu-inner) {
       padding: 0;
     }
 
     :deep(.arco-menu-item.arco-menu-has-icon .arco-menu-icon) {
-      margin-right: 8px;
+      margin-right: 10px;
     }
     :deep(.arco-menu-light .arco-menu-item.arco-menu-selected) {
       background-color: var(--light-brand-color);
@@ -195,11 +195,11 @@ a-layout.navbar
     margin: 0;
     .arco-btn-text[type='button'] {
       color: var(--small-font-color);
-      font-size: 14px;
+      font-size: 13px;
       display: flex;
       justify-content: flex-start;
       padding-left: 86px;
-      height: 44px;
+      height: 38px;
       border-top: 1px solid var(--border-color);
       border-radius: 0;
     }
@@ -209,8 +209,12 @@ a-layout.navbar
       background: var(--th-bg-color);
     }
     :deep(.arco-btn-icon) {
-      width: 20px;
       color: var(--third-font-color);
+    }
+
+    :deep(.arco-btn-size-medium:not(.arco-btn-only-icon) .arco-btn-icon) {
+      display: flex;
+      width: 16px;
     }
 
     li {
@@ -238,12 +242,12 @@ a-layout.navbar
     padding: 24px;
     .arco-btn {
       width: 100%;
-      height: 44px;
+      height: 38px;
       :first-child {
         font-size: 26px;
         padding-right: 8px;
       }
-      font-size: 16px;
+      font-size: 14px;
     }
   }
 </style>
