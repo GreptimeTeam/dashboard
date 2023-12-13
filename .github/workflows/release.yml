@@ -81,7 +81,7 @@ jobs:
       - uses: peter-evans/create-pull-request@v4
         with:
           token: ${{ secrets.PR_ACTION }}
-          commit-message: 'https://github.com/GreptimeTeam/dashboard/releases/tag/${{ github.ref_name }}'
+          commit-message: 'feat: update dashboard to ${{ github.ref_name }}'
           committer: GitHub Action <noreply@github.com>
           author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
           signoff: false
@@ -89,4 +89,4 @@ jobs:
           delete-branch: true
           title: 'feat: update dashboard to ${{ github.ref_name }}'
           body: |
-            Update dashboard to ${{ github.ref_name }}
+            'https://github.com/GreptimeTeam/dashboard/releases/tag/${{ github.ref_name }}'
