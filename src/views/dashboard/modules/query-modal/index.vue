@@ -15,10 +15,11 @@ a-modal.query-modal(
   template(#title)
     | {{ $t('menu.dashboard.query') }}
     a-space(fill :size="3")
-      a-button.screen-button(type="text" size="small" @click="clearCode")
-        template(#icon)
-          svg.icon-16
-            use(href="#clear")
+      a-tooltip(mini :content="$t('dashboard.clearCode')")
+        a-button.screen-button(type="text" size="small" @click="clearCode")
+          template(#icon)
+            svg.icon-16
+              use(href="#clear")
       a-button.screen-button(type="text" size="small" @click="isFullscreen = !isFullscreen")
         template(#icon)
           svg.icon-16(v-if="isFullscreen")
@@ -38,7 +39,7 @@ a-modal.query-modal(
   const { login, updateSettings } = useAppStore()
   const { getResultsByType, sqlView, promqlView, queryType, clearCode } = useQueryCode()
 
-  const HEADER_HEIGHT = 58
+  const HEADER_HEIGHT = 60
   const MODAL_TO_TOP = 16
   const MENU_WIDTH = 258
   const isFullscreen = ref(false)
@@ -141,6 +142,9 @@ a-modal.query-modal(
         width: 100%;
         > .arco-scrollbar {
           width: 100%;
+          > .arco-scrollbar-track-direction-vertical {
+            padding-left: 15px;
+          }
         }
       }
     }

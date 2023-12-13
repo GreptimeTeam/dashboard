@@ -9,7 +9,14 @@ a-tabs.result-tabs(
   @delete="deleteTab"
 )
   template(#extra)
-    a-button(status="danger" size="small" @click="clearResults") {{ $t('dashboard.clear') }}
+    a-popconfirm(
+      content="Clear results?"
+      type="warning"
+      ok-text="Clear"
+      cancel-text=""
+      @ok="clearResults"
+    )
+      a-button(status="danger" size="small") {{ $t('dashboard.clear') }}
   a-tab-pane(
     v-for="(result, index) of results"
     :key="result.key"
@@ -28,7 +35,7 @@ a-tabs.result-tabs(
         a-tab-pane(key="table" :title="$t('dashboard.table')")
           template(#title)
             a-space(:size="10")
-              svg.icon
+              svg.icon-16
                 use(href="#table")
               | {{ $t('dashboard.table') }}
           DataGrid(:data="result" :has-header="false")

@@ -30,7 +30,7 @@ a-card(:bordered="false")
                       use(href="#time-index")
                     | {{ column.title }}
           template(v-else)
-            a-table-column(:title="column.title" :data-index="column.dataIndex" :ellipsis="true")
+            a-table-column(:title="column.title" :data-index="column.dataIndex")
 </template>
 
 <script lang="ts" setup>

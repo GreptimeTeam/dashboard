@@ -63,4 +63,5 @@ export default {
   'dashboard.columns': 'Columns',
   'dashboard.details': 'Information',
   'dashboard.quickSelect': 'Quick Query',
+  'dashboard.clearCode': 'Clear code',
 }

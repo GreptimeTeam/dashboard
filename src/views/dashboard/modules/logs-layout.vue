@@ -4,13 +4,19 @@ a-card.logs-card(:bordered="false")
     a-space
       | Logs
   template(#extra)
-    a-button.clear-logs-button(
-      v-if="logs.length"
-      type="secondary"
-      status="danger"
-      size="small"
-      @click="clear"
-    ) {{ $t('dashboard.clear') }}
+    a-popconfirm(
+      content="Clear logs?"
+      type="warning"
+      ok-text="Clear"
+      cancel-text=""
+      @ok="clear"
+    )
+      a-button.clear-logs-button(
+        v-if="logs.length"
+        type="secondary"
+        status="danger"
+        size="small"
+      ) {{ $t('dashboard.clear') }}
   a-list.logs-list(
     size="small"
     :hoverable="true"
