@@ -89,4 +89,4 @@ jobs:
           delete-branch: true
           title: 'feat: update dashboard to ${{ github.ref_name }}'
           body: |
-            Update dashboard to ${{ github.ref_name }}
+            'https://github.com/GreptimeTeam/dashboard/releases/tag/${{ github.ref_name }}'
