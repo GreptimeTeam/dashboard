@@ -17,12 +17,10 @@ a-tabs.result-tabs(
       @ok="clearResults"
     )
       a-button(status="danger" size="small") {{ $t('dashboard.clear') }}
-  a-tab-pane(
-    v-for="(result, index) of results"
-    :key="result.key"
-    closable
-    :title="`${$t('dashboard.result')} ${result.key - startKey + 1}`"
-  )
+  a-tab-pane(v-for="(result, index) of results" :key="result.key" closable)
+    template(#title)
+      a-tooltip(:content="result.code")
+        span {{ `${$t('dashboard.result')} ${result.key - startKey + 1}` }}
     a-space(direction="vertical" size="small" fill)
       a-tabs.data-view-tabs(:animation="true")
         a-tab-pane(v-if="useDataChart(result).hasChart.value" key="chart" :title="$t('dashboard.chart')")

@@ -8,6 +8,7 @@
     "hoverable",
     "Keymap",
     "pinia",
+    "popconfirm",
     "promql",
     "resizebox",
     "sider",

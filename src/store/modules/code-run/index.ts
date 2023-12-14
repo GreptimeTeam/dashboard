@@ -78,6 +78,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
                   : getDimensionsAndXName(oneRes.records.schema.column_schemas),
               key: resultKeyCount[pageType],
               type,
+              code: codeInfo,
             }
             if (!withoutSave) {
               results.value.push(oneResult)
