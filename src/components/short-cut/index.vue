@@ -39,7 +39,7 @@ a-tooltip(:content="codeInfo.code")
     switch (type) {
       case 'select*100':
         return {
-          code: formatter(`SELECT * FROM "${parent.title}"${orderBy}LIMIT 100;`),
+          code: formatter(`SELECT * FROM "${parent.title}"${orderBy}DESC LIMIT 100;`),
           cursorPosition: 0,
         }
       case 'count':
