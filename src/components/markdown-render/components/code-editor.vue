@@ -129,6 +129,7 @@
     },
     key: -1,
     type: '',
+    code: '',
   } as ResultType)
   const log = ref({} as Log)
   // TODO: better reset
@@ -143,6 +144,7 @@
       },
       key: -1,
       type: '',
+      code: '',
     }
     log.value = {} as Log
     hasChart.value = false

@@ -104,6 +104,7 @@
     "toValue": true,
     "useWorkbenchStore": true,
     "WritableComputedRef": true,
-    "stringType": true
+    "stringType": true,
+    "useAIStore": true
   }
 }
