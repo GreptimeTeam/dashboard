@@ -11,5 +11,5 @@ export const DEFAULT_ROUTE_NAME = 'Dashboard'
 export const DEFAULT_ROUTE = {
   title: 'menu.dashboard',
   name: DEFAULT_ROUTE_NAME,
-  fullPath: '/dashboard/query',
+  fullPath: '/dashboard/tables',
 }

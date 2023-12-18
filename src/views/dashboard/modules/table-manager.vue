@@ -56,7 +56,7 @@ a-card.table-manager(:bordered="false")
                     svg.icon-16.icon-color
                       use(href="#query")
               template(#content)
-                a-doption(v-for="item of SHORTCUT_MAP['TABLE']" v-show="route.name === 'query'")
+                a-doption(v-for="item of SHORTCUT_MAP['TABLE']" v-show="menuSelectedKey === 'query'")
                   a-spin(style="width: 100%" :loading="nodeData.children && !nodeData.children.length")
                     ShortCut(
                       :type="item.value"
@@ -83,7 +83,10 @@ a-card.table-manager(:bordered="false")
                     svg.icon-16.icon-color
                       use(href="#query")
               template(#content)
-                a-doption(v-for="item of SHORTCUT_MAP[nodeData.iconType || 'TABLE']" v-show="route.name === 'query'")
+                a-doption(
+                  v-for="item of SHORTCUT_MAP[nodeData.iconType || 'TABLE']"
+                  v-show="menuSelectedKey === 'query'"
+                )
                   a-spin(style="width: 100%" :loading="nodeData.children && !nodeData.children.length")
                     ShortCut(
                       :type="item.value"
@@ -158,7 +161,7 @@ a-card.table-manager(:bordered="false")
   import type { OptionsType } from '@/types/global'
   import { dateFormatter } from '@/utils'
 
-  const route = useRoute()
+  const { menuSelectedKey } = storeToRefs(useAppStore())
   const { insertNameToPyCode } = usePythonCode()
   const {
     tablesSearchKey,

@@ -36,7 +36,6 @@ a-list-item.smaller-divider
 </template>
 
 <script lang="ts" name="Log" setup>
-  const route = useRoute()
   const { inputFromNewLineToQueryCode, replaceCode } = useQueryCode()
   const { updateSettings } = useAppStore()
 

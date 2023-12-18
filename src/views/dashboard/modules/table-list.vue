@@ -42,7 +42,10 @@ a-spin(style="width: 100%" :loading="tablesLoading")
               template(#icon)
                 icon-more.icon-18
             template(#content)
-              a-doption(v-for="item of SHORTCUT_MAP[nodeData.iconType || 'TABLE']" v-show="route.name === 'query'")
+              a-doption(
+                v-for="item of SHORTCUT_MAP[nodeData.iconType || 'TABLE']"
+                v-show="menuSelectedKey === 'query'"
+              )
                 a-spin(style="width: 100%" :loading="nodeData.children && !nodeData.children.length")
                   ShortCut(
                     :type="item.value"
@@ -69,11 +72,11 @@ a-spin(style="width: 100%" :loading="tablesLoading")
 
   const source = ref('')
   const { text, copy, copied, isSupported } = useClipboard({ source })
-  const route = useRoute()
   const { insertNameToPyCode } = usePythonCode()
   const { tablesSearchKey, tablesTreeData } = useSiderTabs()
   const { tablesLoading, originTablesTree } = storeToRefs(useDataBaseStore())
   const { getTableByName, getTables, addChildren, generateTreeChildren } = useDataBaseStore()
+  const { menuSelectedKey } = storeToRefs(useAppStore())
 
   const treeRef = ref()
   const expandedKeys = ref<number[]>()
@@ -107,12 +110,6 @@ a-spin(style="width: 100%" :loading="tablesLoading")
 
   const INSERT_MAP: { [key: string]: any } = {
     scripts: insertNameToPyCode,
-  }
-
-  // Deprecated
-  const insertName = (name: string) => {
-    const routeName = route.name as string
-    return INSERT_MAP[routeName](name)
   }
 
   const ICON_MAP: { [key: string]: string } = {

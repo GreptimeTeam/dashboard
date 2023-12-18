@@ -17,7 +17,7 @@ const DASHBOARD: AppRouteRecordRaw = {
   children: [
     {
       path: 'tables',
-      name: 'tables',
+      name: 'query',
       component: () => import('@/views/dashboard/query/index.vue'),
       meta: {
         locale: 'menu.dashboard.tables',
