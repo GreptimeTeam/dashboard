@@ -38,17 +38,6 @@ const DASHBOARD: AppRouteRecordRaw = {
       },
     },
     {
-      path: 'playground',
-      name: 'playground',
-      component: () => import('@/views/dashboard/playground/index.vue'),
-      meta: {
-        locale: 'menu.dashboard.playground',
-        requiresAuth: false,
-        roles: ['admin', 'cloud', 'playground'],
-        icon: 'playground',
-      },
-    },
-    {
       path: 'status',
       name: 'status',
       component: () => import('@/views/dashboard/status/index.vue'),
