@@ -4,6 +4,7 @@ import localSetting from '@/components/global-setting/local/en-US'
 export default {
   'menu.dashboard': 'Dashboard',
   'menu.dashboard.query': 'Query',
+  'menu.dashboard.tables': 'Tables',
   'menu.dashboard.scripts': 'Scripts',
   'menu.dashboard.playground': 'Playground',
   'menu.dashboard.status': 'Status',
