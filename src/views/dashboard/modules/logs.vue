@@ -27,7 +27,6 @@ a-tabs.result-tabs.logs-tab(type="rounded")
     types: string[]
   }>()
 
-  const route = useRoute()
   const { clearLogs } = useLog()
 
   const clear = () => {

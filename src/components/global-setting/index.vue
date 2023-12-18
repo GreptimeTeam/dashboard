@@ -40,7 +40,6 @@ a-drawer.settings-drawer(
   const emit = defineEmits(['cancel'])
 
   const { t } = useI18n()
-  const route = useRoute()
 
   const { navbar, updateSettings, login } = useAppStore()
   const { getTables, getScriptsTable } = useDataBaseStore()

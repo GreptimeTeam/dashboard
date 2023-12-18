@@ -13,7 +13,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/dashboard/query',
+      redirect: '/dashboard/tables',
     },
     ...appRoutes,
     REDIRECT_MAIN,

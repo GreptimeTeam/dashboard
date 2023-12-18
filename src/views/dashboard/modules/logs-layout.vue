@@ -40,7 +40,6 @@ a-card.logs-card(:bordered="false")
   const HEADER = 58
   const listHeight = `calc(100vh - ${LAYOUT_PADDING * 3 + HEADER}px`
 
-  const route = useRoute()
   const { clearLogs } = useLog()
 
   const clear = () => {

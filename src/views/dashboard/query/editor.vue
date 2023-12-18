@@ -103,8 +103,6 @@ a-card.editor-card(:bordered="false")
     tabSize: 2,
   })
 
-  const route = useRoute()
-
   const { codes, queryType, cursorAt, queryOptions, primaryCodeRunning, secondaryCodeRunning, sqlView, promqlView } =
     useQueryCode()
 

@@ -58,7 +58,6 @@ a-card.editor-card.padding-16(:bordered="false")
     tabSize: 2,
   })
 
-  const route = useRoute()
   const dataBaseStore = useDataBaseStore()
   const {
     pythonCode,
@@ -122,7 +121,6 @@ a-card.editor-card.padding-16(:bordered="false")
 
   const extensions = [python(), oneDark]
   const saveCurrentScript = async () => {
-    const routeName = route.name as string
     try {
       scriptSaving.value = true
       await saveScript(scriptForm.value.scriptName, pythonCode.value.trim())
@@ -134,7 +132,6 @@ a-card.editor-card.padding-16(:bordered="false")
     scriptSaving.value = false
   }
   const saveScriptAndRun = async () => {
-    const routeName = route.name as string
     try {
       scriptRunning.value = true
       await saveScript(scriptForm.value.scriptName, pythonCode.value.trim())
@@ -149,7 +146,6 @@ a-card.editor-card.padding-16(:bordered="false")
   }
 
   const runScript = async () => {
-    const routeName = route.name as string
     scriptRunning.value = true
     await runQuery(scriptForm.value.scriptName, codeType)
     scriptRunning.value = false
