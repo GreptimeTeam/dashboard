@@ -34,6 +34,7 @@ a-modal.query-modal(
 
 <script lang="ts" setup name="QueryModal">
   import { useAppStore } from '@/store'
+  import { listenerRouteChange } from '@/utils/route-listener'
 
   const { queryModalVisible } = storeToRefs(useAppStore())
   const { login, updateSettings } = useAppStore()
@@ -56,6 +57,11 @@ a-modal.query-modal(
       promqlView.value.focus()
     }
   }
+
+  // TODO: close or shrink the modal
+  listenerRouteChange(() => {
+    isFullscreen.value = false
+  })
 </script>
 
 <style lang="less" scoped>
