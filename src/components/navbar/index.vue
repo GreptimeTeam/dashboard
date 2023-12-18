@@ -54,7 +54,7 @@ a-layout.navbar
   import useMenuTree from '../menu/use-menu-tree'
 
   const { updateSettings } = useAppStore()
-  const { menuSelectedKey, globalSettings } = storeToRefs(useAppStore())
+  const { menuSelectedKey, globalSettings, queryModalVisible } = storeToRefs(useAppStore())
   const { menuTree } = useMenuTree()
 
   const menu = menuTree.value[0].children
@@ -96,7 +96,7 @@ a-layout.navbar
   }, true)
 
   const openQuery = () => {
-    updateSettings({ queryModalVisible: true })
+    updateSettings({ queryModalVisible: !queryModalVisible.value })
   }
 </script>
 
