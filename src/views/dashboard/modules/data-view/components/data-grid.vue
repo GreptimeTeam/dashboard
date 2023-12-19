@@ -6,7 +6,12 @@ a-card(:bordered="false")
         use(href="#table")
       | {{ $t('dashboard.table') }}
   a-spin(style="width: 100%")
-    a-table.data-table(show-total :data="gridData" :pagination="pagination")
+    a-table.data-table(
+      show-total
+      column-resizable
+      :data="gridData"
+      :pagination="pagination"
+    ) 
       template(#empty)
         EmptyStatus
       template(#columns)
@@ -14,7 +19,6 @@ a-card(:bordered="false")
           template(v-if="timeColumnNames.includes(column.title)")
             a-table-column(
               :data-index="timeColumnFormatMap[column.dataIndex] ? `${column.dataIndex}${formatSuffix}` : column.dataIndex"
-              :width="timeColumnWidth"
             )
               template(#title)
                 a-tooltip(
@@ -31,6 +35,10 @@ a-card(:bordered="false")
                     | {{ column.title }}
           template(v-else)
             a-table-column(:title="column.title" :data-index="column.dataIndex")
+              template(#cell="{ record }")
+                a-typography-paragraph.cell-data(:ellipsis="{ rows: 3, expandable: true }") {{ record[column.title] }}
+                  template(#expand-node="{ expanded }")
+                    | {{ expanded ? 'Collapse' : 'More' }}
 </template>
 
 <script lang="ts" setup>
@@ -143,3 +151,17 @@ a-card(:bordered="false")
     }
   })
 </script>
+
+<style lang="less" scoped>
+  .cell-data {
+    white-space: pre-wrap;
+    margin-bottom: 0;
+    color: var(--small-font-color);
+  }
+  :deep(.arco-typography-operation-expand) {
+    color: var(--brand-color);
+    &:hover {
+      color: var(--hover-brand-color);
+    }
+  }
+</style>
