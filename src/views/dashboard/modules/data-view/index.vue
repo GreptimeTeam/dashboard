@@ -25,13 +25,6 @@ a-tabs.result-tabs(
   )
     a-space(direction="vertical" size="small" fill)
       a-tabs.data-view-tabs(:animation="true")
-        a-tab-pane(v-if="useDataChart(result).hasChart.value" key="chart" :title="$t('dashboard.chart')")
-          template(#title)
-            a-space(:size="10")
-              svg.icon-16
-                use(href="#chart")
-              | {{ $t('dashboard.chart') }}
-          DataChart(:data="result" :has-header="false")
         a-tab-pane(key="table" :title="$t('dashboard.table')")
           template(#title)
             a-space(:size="10")
@@ -39,6 +32,13 @@ a-tabs.result-tabs(
                 use(href="#table")
               | {{ $t('dashboard.table') }}
           DataGrid(:data="result" :has-header="false")
+        a-tab-pane(v-if="useDataChart(result).hasChart.value" key="chart" :title="$t('dashboard.chart')")
+          template(#title)
+            a-space(:size="10")
+              svg.icon-16
+                use(href="#chart")
+              | {{ $t('dashboard.chart') }}
+          DataChart(:data="result" :has-header="false")
 </template>
 
 <script lang="ts" name="DataView" setup>
