@@ -49,31 +49,32 @@ a-card.editor-card(:bordered="false")
                   a-list-item
                     span.ml-2 {{ $t('dashboard.examples') }}
                     a-typography-text(v-for="item of durationExamples" :key="item" code) {{ item }}
-  a-tabs.query-tabs(:default-active-key="'sql'" :active-key="queryType")
-    a-tab-pane(key="sql")
-      CodeMirror(
-        v-model="codes.sql"
-        :style="style"
-        :spellcheck="spellcheck"
-        :autofocus="autofocus"
-        :indent-with-tab="indentWithTab"
-        :tabSize="tabSize"
-        :extensions="extensions.sql"
-        @ready="handleReadySql"
-        @update="codeUpdate('sql')"
-      )
-    a-tab-pane(key="promql")
-      CodeMirror(
-        v-model="codes.promql"
-        :style="style"
-        :spellcheck="spellcheck"
-        :autofocus="autofocus"
-        :indent-with-tab="indentWithTab"
-        :tabSize="tabSize"
-        :extensions="extensions.promql"
-        @ready="handleReadyPromql"
-        @update="codeUpdate('promql')"
-      )
+  a-resize-box(:directions="['bottom']")
+    a-tabs.query-tabs(:default-active-key="'sql'" :active-key="queryType")
+      a-tab-pane(key="sql")
+        CodeMirror(
+          v-model="codes.sql"
+          :style="style"
+          :spellcheck="spellcheck"
+          :autofocus="autofocus"
+          :indent-with-tab="indentWithTab"
+          :tabSize="tabSize"
+          :extensions="extensions.sql"
+          @ready="handleReadySql"
+          @update="codeUpdate('sql')"
+        )
+      a-tab-pane(key="promql")
+        CodeMirror(
+          v-model="codes.promql"
+          :style="style"
+          :spellcheck="spellcheck"
+          :autofocus="autofocus"
+          :indent-with-tab="indentWithTab"
+          :tabSize="tabSize"
+          :extensions="extensions.promql"
+          @ready="handleReadyPromql"
+          @update="codeUpdate('promql')"
+        )
 </template>
 
 <script lang="ts" setup name="Editor">
@@ -246,16 +247,36 @@ a-card.editor-card(:bordered="false")
 <style lang="less" scoped>
   .editor-card {
     width: 100%;
+    :deep(.ͼo) {
+      height: 100%;
+    }
+  }
+
+  .arco-resizebox {
+    height: 260px;
+  }
+  :deep(.arco-resizebox-trigger-icon-wrapper) {
+    color: var(--main-font-color);
+    font-size: 18px;
+    background-color: var(--th-bg-color);
   }
 </style>
 
 <style lang="less">
   .query-tabs {
+    height: 100%;
     > .arco-tabs-nav {
       height: 0;
     }
     > .arco-tabs-content {
       padding-top: 0;
+      height: 100%;
+      > .arco-tabs-content-list {
+        height: 100%;
+        .arco-tabs-pane {
+          height: 100%;
+        }
+      }
     }
   }
 </style>
