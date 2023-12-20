@@ -156,7 +156,7 @@ a-modal.query-modal(
     }
 
     .modal-view {
-      padding-top: 24px;
+      padding-top: 12px;
       > .arco-tabs-content {
         > .arco-tabs-content-list > .arco-tabs-content-item {
           padding: 0;
