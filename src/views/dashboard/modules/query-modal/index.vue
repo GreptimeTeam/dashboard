@@ -42,7 +42,7 @@ a-modal.query-modal(
 
   const HEADER_HEIGHT = 60
   const MODAL_TO_TOP = 16
-  const MENU_WIDTH = 258
+  const MENU_WIDTH = 242
   const isFullscreen = ref(false)
   const isLeft = ref(false)
 

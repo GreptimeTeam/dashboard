@@ -2,7 +2,7 @@
 a-layout.navbar
   a-layout-header
     .logo-space
-      img.logo-text-img(alt="logo" src="/src/assets/images/logo-text.png")
+      img.logo-text-img(alt="logo" src="/src/assets/images/logo-text.svg")
   a-layout-content
     .new-query
       a-button(type="primary" @click="openQuery")
@@ -107,12 +107,12 @@ a-layout.navbar
   }
 
   .logo-space {
-    height: 64px;
+    height: 60px;
     display: flex;
     align-items: center;
     justify-content: center;
     .logo-text-img {
-      height: 32px;
+      height: 30px;
     }
   }
 
