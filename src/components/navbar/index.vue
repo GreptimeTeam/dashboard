@@ -2,7 +2,7 @@
 a-layout.navbar
   a-layout-header
     .logo-space
-      img.logo-text-img(alt="logo" src="/src/assets/images/logo-text.png")
+      img.logo-text-img(alt="logo" src="/src/assets/images/logo.svg")
   a-layout-content
     .new-query
       a-button(type="primary" @click="openQuery")
