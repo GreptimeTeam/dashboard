@@ -19,7 +19,7 @@ a-layout.layout
   const { logs } = storeToRefs(useLogStore())
   const { getResultsByType } = useQueryCode()
 
-  const MENU_WIDTH = 258 + 16
+  const MENU_WIDTH = 242 + 16
   const MODAL_WIDTH = 636
   const OTHERS_WIDTH = `${MENU_WIDTH + MODAL_WIDTH}px`
   const RESIZE_BOX_WIDTH = 12

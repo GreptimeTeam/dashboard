@@ -107,12 +107,12 @@ a-layout.navbar
   }
 
   .logo-space {
-    height: 64px;
+    height: 60px;
     display: flex;
     align-items: center;
     justify-content: center;
     .logo-text-img {
-      height: 32px;
+      height: 30px;
     }
   }
 
