@@ -63,8 +63,17 @@ const getDatabases = () => {
   return axios.post(sqlUrl, makeSqlData(`show databases`))
 }
 
-const getTables = () => {
+// Deprecated
+const getTablesOld = () => {
   return axios.post(sqlUrl, makeSqlData(`show tables`), addDatabaseParams())
+}
+
+const getTables = () => {
+  const appStore = useAppStore()
+  return axios.post(
+    sqlUrl,
+    makeSqlData(`select * from information_schema.columns where table_schema='${appStore.database}';`)
+  )
 }
 
 const getTableByName = (tableName: string) => {

@@ -172,7 +172,8 @@ export default function useSiderTabs() {
     if (nodeData.childrenType === 'details') {
       return loadMoreDetails(nodeData)
     }
-    return loadMoreColumns(nodeData)
+    originTablesTree.value[nodeData.key].children = nodeData.columns
+    return nodeData.columns
   }
 
   return {

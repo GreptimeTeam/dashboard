@@ -58,7 +58,7 @@ a-card(v-if="hasChart" :bordered="false")
   import type { PropType } from 'vue'
   import type { datasetType, ResultType, ChartFormType, SeriesType } from '@/store/modules/code-run/types'
   import useDataChart from '@/hooks/data-chart'
-  import { dateFormatter } from '@/utils'
+  import { dateFormatter, groupByToMap } from '@/utils'
   import { chartTypeOptions, updateOptions } from '../../../config'
 
   const props = defineProps({
@@ -101,19 +101,6 @@ a-card(v-if="hasChart" :bordered="false")
   const triggerProps = {
     'update-at-scroll': true,
   }
-
-  // TODO: perhaps a better function
-  const groupByToMap = <T, Q>(array: T[], predicate: (value: T, index: number, array2: T[]) => Q) =>
-    array.reduce((map, value, index, array2) => {
-      const key = predicate(value, index, array2)
-      const collection = map.get(key)
-      if (!collection) {
-        map.set(key, [value])
-      } else {
-        collection.push(value)
-      }
-      return map
-    }, new Map<Q, T[]>())
 
   const generateSeries = (name: string, isGroup?: boolean, datasetIndex?: number) => {
     // TODO: not sure this `isGroup` is the best way
