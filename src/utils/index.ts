@@ -70,4 +70,17 @@ export const sqlFormatter = (code: string) => {
   }
 }
 
+// TODO: perhaps a better function
+export const groupByToMap = <T, Q>(array: T[], predicate: (value: T, index: number, array2: T[]) => Q) =>
+  array.reduce((map, value, index, array2) => {
+    const key = predicate(value, index, array2)
+    const collection = map.get(key)
+    if (!collection) {
+      map.set(key, [value])
+    } else {
+      collection.push(value)
+    }
+    return map
+  }, new Map<Q, T[]>())
+
 export default null
