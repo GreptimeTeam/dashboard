@@ -71,11 +71,11 @@ a-spin(style="width: 100%" :loading="tablesLoading")
   import { useClipboard } from '@vueuse/core'
 
   const source = ref('')
-  const { text, copy, copied, isSupported } = useClipboard({ source })
+  const { copy } = useClipboard({ source })
   const { insertNameToPyCode } = usePythonCode()
-  const { tablesSearchKey, tablesTreeData } = useSiderTabs()
+  const { tablesSearchKey, tablesTreeData, loadMoreColumns } = useSiderTabs()
   const { tablesLoading, originTablesTree } = storeToRefs(useDataBaseStore())
-  const { getTableByName, getTables, addChildren, generateTreeChildren } = useDataBaseStore()
+  const { getTables } = useDataBaseStore()
   const { menuSelectedKey } = storeToRefs(useAppStore())
 
   const treeRef = ref()
@@ -88,24 +88,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
   }
 
   const loadMore = (nodeData: TableTreeParent) => {
-    return new Promise<void>((resolve, reject) => {
-      getTableByName(nodeData.title)
-        .then((result: any) => {
-          const { output } = result
-          const {
-            records: {
-              rows,
-              schema: { column_schemas: columnSchemas },
-            },
-          } = output[0]
-          const { treeChildren, timeIndexName } = generateTreeChildren(nodeData, rows, columnSchemas)
-          addChildren(nodeData.key, treeChildren, timeIndexName, 'columns')
-          resolve()
-        })
-        .catch(() => {
-          reject()
-        })
-    })
+    return loadMoreColumns(nodeData)
   }
 
   const INSERT_MAP: { [key: string]: any } = {
