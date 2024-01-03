@@ -13,16 +13,15 @@ const useDataBaseStore = defineStore('database', () => {
   const scriptsLoading = ref(false)
 
   const getIndexes = (columnSchemas: SchemaType[]) => {
-    // TODO: get indexes only once?
     const columnNameIndex = columnSchemas.findIndex((schema: SchemaType) => {
-      return schema.name === 'Field' || schema.name === 'Column' || schema.name === 'column_name'
+      return schema.name === 'column_name'
     })
     const dataTypeIndex = columnSchemas.findIndex((schema: SchemaType) => {
-      return schema.name === 'Type' || schema.name === 'data_type'
+      return schema.name === 'data_type'
     })
 
     const semanticTypeIndex = columnSchemas.findIndex((schema: SchemaType) => {
-      return schema.name === 'Semantic Type' || schema.name === 'semantic_type'
+      return schema.name === 'semantic_type'
     })
 
     return { columnNameIndex, dataTypeIndex, semanticTypeIndex }
@@ -153,8 +152,8 @@ const useDataBaseStore = defineStore('database', () => {
 
   async function getTableByName(node: any) {
     try {
-      const res = await editorAPI.getTableByName(node)
-      return res
+      const res: any = await editorAPI.getTableByName(node)
+      return res.output[0].records
     } catch (error) {
       return false
     }
