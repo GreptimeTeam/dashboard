@@ -49,21 +49,13 @@ a-card.table-manager(:bordered="false")
                     :class="nodeData.childrenType === 'details' && expandedKeys?.includes(nodeData.key) ? '' : 'icon-color'"
                   )
                     use(href="#details")
-            a-dropdown.quick-select(trigger="click" position="right" @click="(event) => clickMenu(event, nodeData)")
-              a-tooltip(mini :content="$t('dashboard.quickSelect')")
-                a-button(type="text" size="small")
-                  template(#icon)
-                    svg.icon-16.icon-color
-                      use(href="#query")
-              template(#content)
-                a-doption(v-for="item of SHORTCUT_MAP['TABLE']" v-show="menuSelectedKey === 'query'")
-                  a-spin(style="width: 100%" :loading="nodeData.children && !nodeData.children.length")
-                    ShortCut(
-                      :type="item.value"
-                      :node="nodeData"
-                      :parent="nodeData.iconType ? originTablesTree[nodeData.parentKey] : nodeData"
-                      :label="item.label"
-                    )
+            a-space(v-for="item of SHORTCUT_MAP['TABLE']" v-show="menuSelectedKey === 'query'" @click.stop)
+              ShortCut(
+                :type="item.value"
+                :node="nodeData"
+                :parent="nodeData.iconType ? originTablesTree[nodeData.parentKey] : nodeData"
+                :label="''"
+              )
             TextCopyable.title-copy(
               type="text"
               :data="nodeData.title"
@@ -87,7 +79,7 @@ a-card.table-manager(:bordered="false")
                   v-for="item of SHORTCUT_MAP[nodeData.iconType || 'TABLE']"
                   v-show="menuSelectedKey === 'query'"
                 )
-                  a-spin(style="width: 100%" :loading="nodeData.children && !nodeData.children.length")
+                  a-spin(style="width: 100%" :loading="nodeData.columns && !nodeData.columns.length")
                     ShortCut(
                       :type="item.value"
                       :node="nodeData"
@@ -234,13 +226,6 @@ a-card.table-manager(:bordered="false")
         label: 'Filter by',
       },
     ],
-  }
-
-  const clickMenu = (event: Event, nodeData: TableTreeParent) => {
-    event.stopPropagation()
-    if (!nodeData.columns.length) {
-      loadMoreColumns(nodeData)
-    }
   }
 </script>
 
