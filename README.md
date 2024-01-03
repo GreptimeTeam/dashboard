@@ -32,8 +32,8 @@ Open you browser and visit `http://localhost:8080/dashboard/`
 - [Install GreptimeDB](https://docs.greptime.com/getting-started/installation/overview)
 - Run `./greptime standalone start`
 - Clone this project `git clone https://github.com/GreptimeTeam/dashboard.git`
-- Run `npm install` for dependencies
-- Run `npm run dev` and visit the URL in output
+- Run `pnpm install` for dependencies
+- Run `pnpm run dev` and visit the URL in output
 
 ## Screenshot
 
