@@ -17,10 +17,10 @@ a-spin(style="width: 100%" :loading="tablesLoading")
     action-on-node-click="expand"
     :block-node="true"
     :data="tablesTreeData"
-    :load-more="loadMore"
     :animation="false"
     :virtual-list-props="{ height: 'calc(100vh - 160px)' }"
     :field-names="{ children: 'columns' }"
+    :default-expand-all="false"
   )
     template(#icon="node")
       a-tooltip(:content="node.node.iconType")
@@ -62,7 +62,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
   const source = ref('')
   const { copy } = useClipboard({ source })
   const { insertNameToPyCode } = usePythonCode()
-  const { tablesSearchKey, tablesTreeData, loadMoreColumns } = useSiderTabs()
+  const { tablesSearchKey, tablesTreeData } = useSiderTabs()
   const { tablesLoading, originTablesTree } = storeToRefs(useDataBaseStore())
   const { getTables } = useDataBaseStore()
   const { menuSelectedKey } = storeToRefs(useAppStore())
@@ -74,10 +74,6 @@ a-spin(style="width: 100%" :loading="tablesLoading")
     tablesSearchKey.value = ''
     getTables()
     if (treeRef.value) treeRef.value.expandAll(false)
-  }
-
-  const loadMore = (nodeData: TableTreeParent) => {
-    return loadMoreColumns(nodeData)
   }
 
   const INSERT_MAP: { [key: string]: any } = {
