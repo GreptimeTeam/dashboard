@@ -12,8 +12,7 @@ const useDataBaseStore = defineStore('database', () => {
   const tablesLoading = ref(false)
   const scriptsLoading = ref(false)
 
-  const generateTreeChildren = (nodeData: TableTreeParent, rows: string[][], columnSchemas: SchemaType[]) => {
-    const treeChildren: TableTreeChild[] = []
+  const getIndexes = (columnSchemas: SchemaType[]) => {
     // TODO: get indexes only once?
     const columnNameIndex = columnSchemas.findIndex((schema: SchemaType) => {
       return schema.name === 'Field' || schema.name === 'Column' || schema.name === 'column_name'
@@ -25,6 +24,14 @@ const useDataBaseStore = defineStore('database', () => {
     const semanticTypeIndex = columnSchemas.findIndex((schema: SchemaType) => {
       return schema.name === 'Semantic Type' || schema.name === 'semantic_type'
     })
+
+    return { columnNameIndex, dataTypeIndex, semanticTypeIndex }
+  }
+
+  const generateTreeChildren = (nodeData: TableTreeParent, rows: string[][], indexes: { [key: string]: number }) => {
+    const treeChildren: TableTreeChild[] = []
+    const { semanticTypeIndex, columnNameIndex, dataTypeIndex } = indexes
+
     let timeIndexName = '%TIMESTAMP%'
 
     rows.forEach((row: string[]) => {
@@ -54,6 +61,7 @@ const useDataBaseStore = defineStore('database', () => {
       const schemas = tablesData.value.schema.column_schemas
 
       const tableNameIndex: number = schemas.findIndex(({ name }) => name === 'table_name')
+      const indexes = getIndexes(schemas)
 
       const dataWithGroup = groupByToMap(tablesData.value.rows, (value: any) => {
         return value[tableNameIndex]
@@ -71,7 +79,7 @@ const useDataBaseStore = defineStore('database', () => {
           isLeaf: false,
         }
 
-        const { treeChildren, timeIndexName } = generateTreeChildren(node, groupResults, schemas)
+        const { treeChildren, timeIndexName } = generateTreeChildren(node, groupResults, indexes)
         node.columns = treeChildren
         node.timeIndexName = timeIndexName
         tempArray.push(node)
@@ -183,6 +191,7 @@ const useDataBaseStore = defineStore('database', () => {
     getScriptsTable,
     resetData,
     generateTreeChildren,
+    getIndexes,
   }
 })
 
