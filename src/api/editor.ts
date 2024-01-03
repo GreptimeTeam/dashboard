@@ -77,7 +77,13 @@ const getTables = () => {
 }
 
 const getTableByName = (tableName: string) => {
-  return axios.post(sqlUrl, makeSqlData(`desc table "${tableName}"`), addDatabaseParams())
+  const appStore = useAppStore()
+  return axios.post(
+    sqlUrl,
+    makeSqlData(
+      `select * from information_schema.columns where table_name='${tableName}' and table_schema='${appStore.database}';`
+    )
+  )
 }
 
 const runSQL = (code: string) => {

@@ -1,6 +1,7 @@
 import { useDataBaseStore } from '@/store'
 import { ScriptTreeData, TableDetail, TableTreeChild, TableTreeParent } from '@/store/modules/database/types'
 import editorAPI from '@/api/editor'
+import { RecordsType } from '@/store/modules/code-run/types'
 
 const tablesSearchKey = ref('')
 const scriptsSearchKey = ref('')
@@ -68,14 +69,11 @@ export default function useSiderTabs() {
   const loadMoreColumns = (nodeData: TableTreeParent, isSilent?: boolean) =>
     new Promise<TableTreeChild[]>((resolve, reject) => {
       getTableByName(nodeData.title)
-        .then((result: any) => {
-          const { output } = result
+        .then((result: RecordsType) => {
           const {
-            records: {
-              rows,
-              schema: { column_schemas: columnSchemas },
-            },
-          } = output[0]
+            rows,
+            schema: { column_schemas: columnSchemas },
+          } = result
 
           const indexes = getIndexes(columnSchemas)
           const { treeChildren, timeIndexName } = generateTreeChildren(nodeData, rows, indexes)
