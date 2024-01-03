@@ -12,13 +12,13 @@
     "build:docker": "vite build --config ./config/vite.config.prod.ts --base /dashboard/ && vue-tsc --noEmit",
     "build:test": "vite build --config ./config/vite.config.prod.ts --mode test --base /dashboard/ && vue-tsc --noEmit",
     "build:staging": "vite build --config ./config/vite.config.prod.ts --mode staging --base /dashboard/ && vue-tsc --noEmit",
-    "report": "cross-env REPORT=true npm run build",
-    "preview": "npm run build && vite preview --host --config ./config/vite.config.base.ts",
-    "preview:cloud": "VITE_ROLE=cloud npm run build && vite preview --host --config ./config/vite.config.base.ts",
+    "report": "cross-env REPORT=true pnpm run build",
+    "preview": "pnpm run build && vite preview --host --config ./config/vite.config.base.ts",
+    "preview:cloud": "VITE_ROLE=cloud pnpm run build && vite preview --host --config ./config/vite.config.base.ts",
     "type:check": "vue-tsc --noEmit --skipLibCheck",
     "lint-staged": "npx lint-staged",
     "prepare": "husky install",
-    "update:lock": "npm i --package-lock-only;pnpm i --lockfile-only"
+    "update:lock": "pnpm i --package-lock-only && pnpm i --lockfile-only"
   },
   "lint-staged": {
     "*.{js,ts,jsx,tsx}": [
