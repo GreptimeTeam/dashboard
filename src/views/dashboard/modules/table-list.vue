@@ -42,17 +42,6 @@ a-spin(style="width: 100%" :loading="tablesLoading")
               template(#icon)
                 icon-more.icon-18
             template(#content)
-              a-doption(
-                v-for="item of SHORTCUT_MAP[nodeData.iconType || 'TABLE']"
-                v-show="menuSelectedKey === 'query'"
-              )
-                a-spin(style="width: 100%" :loading="nodeData.children && !nodeData.children.length")
-                  ShortCut(
-                    :type="item.value"
-                    :node="nodeData"
-                    :parent="nodeData.iconType ? originTablesTree[nodeData.parentKey] : nodeData"
-                    :label="item.label"
-                  )
               a-doption
                 a-tooltip(content="Copy to Clipboard")
                   a-button(type="text" @click="copy(nodeData.title)") Copy name

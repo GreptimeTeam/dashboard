@@ -2,11 +2,12 @@
 a-tooltip(:content="codeInfo.code")
   a-button(
     type="text"
+    size="small"
     :class="{ 'arco-btn-only-icon': label === '' }"
     @click="clickShortCut(codeInfo.code, codeInfo.cursorPosition)"
   ) {{ label }}
     template(v-if="label === ''" #icon)
-      svg.icon-18
+      svg.icon-16.icon-color
         use(href="#query")
 </template>
 
