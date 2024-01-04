@@ -59,7 +59,7 @@ a-card.editor-card(:bordered="false")
           :autofocus="autofocus"
           :indent-with-tab="indentWithTab"
           :tabSize="tabSize"
-          :extensions="extensions.sql"
+          :extensions="[...extensions.sql, keymap.of(defaultKeymap)]"
           @ready="handleReadySql"
           @update="codeUpdate('sql')"
         )
@@ -71,7 +71,7 @@ a-card.editor-card(:bordered="false")
           :autofocus="autofocus"
           :indent-with-tab="indentWithTab"
           :tabSize="tabSize"
-          :extensions="extensions.promql"
+          :extensions="[...extensions.promql, keymap.of(defaultKeymap)]"
           @ready="handleReadyPromql"
           @update="codeUpdate('promql')"
         )
@@ -81,11 +81,9 @@ a-card.editor-card(:bordered="false")
   import dayjs from 'dayjs'
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
-  import { sql } from '@codemirror/lang-sql'
-  import { PromQLExtension } from '@prometheus-io/codemirror-promql'
   import { keymap } from '@codemirror/view'
+
   import type { KeyBinding } from '@codemirror/view'
-  import { autocompletion } from '@codemirror/autocomplete'
   import type { TableTreeChild, TableTreeParent } from '@/store/modules/database/types'
   import type { PromForm } from '@/store/modules/code-run/types'
   import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '../config'
@@ -117,7 +115,7 @@ a-card.editor-card(:bordered="false")
     range: [dayjs().subtract(5, 'minute').unix().toString(), dayjs().unix().toString()],
   })
   const { runQuery } = useQueryCode()
-  const { hints } = storeToRefs(useDataBaseStore())
+  const { extensions } = storeToRefs(useDataBaseStore())
 
   const isButtonDisabled = computed(() => {
     if (codes.value[queryType.value].trim().length === 0) {
@@ -208,24 +206,6 @@ a-card.editor-card(:bordered="false")
       },
     },
   ]
-
-  const extensions = {
-    sql: [sql(hints.value.sql), oneDark, keymap.of(defaultKeymap as any), autocompletion({ closeOnBlur: false })],
-    promql: [new PromQLExtension().asExtension(), oneDark, keymap.of(defaultKeymap as any)],
-  }
-
-  watch(hints.value, () => {
-    extensions.sql = [sql(hints.value.sql), oneDark, keymap.of(defaultKeymap as any)]
-    const promql = new PromQLExtension().setComplete({
-      remote: {
-        fetchFn: () => Promise.reject(),
-        cache: {
-          initialMetricList: [...hints.value.promql],
-        },
-      },
-    })
-    extensions.promql = [promql.asExtension(), oneDark, keymap.of(defaultKeymap as any)]
-  })
 </script>
 
 <style lang="less" scoped>

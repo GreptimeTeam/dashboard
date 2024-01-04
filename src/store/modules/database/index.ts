@@ -1,6 +1,9 @@
 import editorAPI from '@/api/editor'
 import { SEMANTIC_TYPE_MAP } from '@/views/dashboard/config'
 import { groupByToMap } from '@/utils'
+import { oneDark } from '@codemirror/theme-one-dark'
+import { sql } from '@codemirror/lang-sql'
+import { PromQLExtension } from '@prometheus-io/codemirror-promql'
 import { ScriptTreeData, TableDetail, TableTreeChild, TableTreeParent } from './types'
 import { RecordsType, SchemaType } from '../code-run/types'
 
@@ -12,6 +15,11 @@ const useDataBaseStore = defineStore('database', () => {
   const tablesLoading = ref(false)
   const scriptsLoading = ref(false)
   const hints = ref({} as { sql: { schema: { [key: string]: string[] } }; promql: Set<string> })
+
+  const extensions = ref({
+    sql: [sql(hints.value.sql), oneDark],
+    promql: [new PromQLExtension().asExtension(), oneDark],
+  })
 
   const getIndexes = (columnSchemas: SchemaType[]) => {
     const columnNameIndex = columnSchemas.findIndex((schema: SchemaType) => {
@@ -158,6 +166,16 @@ const useDataBaseStore = defineStore('database', () => {
         sql: { schema },
         promql: initialMetricList,
       }
+      const promql = new PromQLExtension().setComplete({
+        remote: {
+          fetchFn: () => Promise.reject(),
+          cache: {
+            initialMetricList: [...hints.value.promql],
+          },
+        },
+      })
+      extensions.value.sql = [sql(hints.value.sql), oneDark]
+      extensions.value.promql = [promql.asExtension(), oneDark]
     } catch (error) {
       tablesData.value = undefined
       originTablesTree.value = []
@@ -203,6 +221,7 @@ const useDataBaseStore = defineStore('database', () => {
     tablesData,
     scriptsData,
     hints,
+    extensions,
     getTables,
     addChildren,
     getTableByName,
