@@ -3,6 +3,7 @@ import { SEMANTIC_TYPE_MAP } from '@/views/dashboard/config'
 import { groupByToMap } from '@/utils'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { sql } from '@codemirror/lang-sql'
+import { Extension } from '@codemirror/state'
 import { PromQLExtension } from '@prometheus-io/codemirror-promql'
 import { ScriptTreeData, TableDetail, TableTreeChild, TableTreeParent } from './types'
 import { RecordsType, SchemaType } from '../code-run/types'
@@ -16,7 +17,10 @@ const useDataBaseStore = defineStore('database', () => {
   const scriptsLoading = ref(false)
   const hints = ref({} as { sql: { schema: { [key: string]: string[] } }; promql: Set<string> })
 
-  const extensions = ref({
+  const extensions = ref<{
+    sql: any[]
+    promql: any[]
+  }>({
     sql: [sql(hints.value.sql), oneDark],
     promql: [new PromQLExtension().asExtension(), oneDark],
   })
