@@ -69,18 +69,28 @@ const useDataBaseStore = defineStore('database', () => {
     }
   }
 
-  const getOriginTablesTree = () => {
+  const getOriginTablesTree = (lastTableTitle: string, lastTableRows: [][]) => {
     const tablesTree: TableTreeParent[] = []
     const schema: { [key: string]: string[] } = {}
     const initialMetricList = new Set<string>()
-    let key = 0
+
+    let key = originTablesTree.value.length
+
     if (tablesData.value) {
       const schemas = tablesData.value.schema.column_schemas
 
       const tableNameIndex: number = schemas.findIndex(({ name }) => name === 'table_name')
       const indexes = getIndexes(schemas)
 
-      const dataWithGroup = groupByToMap(tablesData.value.rows, (value: any) => {
+      if (lastTableTitle && tablesData.value.rows[0][tableNameIndex] === lastTableTitle) {
+        // Last table not finished, pop out and reload.
+        originTablesTree.value.pop()
+        key -= 1
+      } else {
+        lastTableRows = []
+      }
+
+      const dataWithGroup = groupByToMap(lastTableRows.concat(tablesData.value.rows), (value: any) => {
         return value[tableNameIndex]
       })
 
@@ -157,37 +167,69 @@ const useDataBaseStore = defineStore('database', () => {
     return tempArray
   })
 
+  const getColumnsCount = async () => {
+    try {
+      const res: any = await editorAPI.fetchColumnsCount()
+      const count: number = res.output[0].records.rows[0][0]
+      return count
+    } catch {
+      return 0
+    }
+  }
+
   async function getTables() {
     const { updateDataStatus } = useUserStore()
     updateDataStatus('tables', true)
     tablesLoading.value = true
-    try {
-      const res: any = await editorAPI.getTables()
-      tablesData.value = res.output[0].records
-      const { tablesTree, initialMetricList, schema } = getOriginTablesTree()
-      originTablesTree.value = tablesTree
-      hints.value = {
-        sql: { schema },
-        promql: initialMetricList,
-      }
-      const promql = new PromQLExtension().setComplete({
-        remote: {
-          fetchFn: () => Promise.reject(),
-          cache: {
-            initialMetricList: [...hints.value.promql],
+    const total = await getColumnsCount()
+
+    const pageSize = 1000
+
+    const maxPage = Math.ceil(total / pageSize)
+
+    for (
+      let page = 1, lastTableTitle = '', lastColumnsLength = 0, lastTableRows: [][] = [];
+      page <= maxPage;
+      page += 1
+    ) {
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const res: any = await editorAPI.getTables(pageSize, pageSize * (page - 1))
+        tablesData.value = res.output[0].records
+
+        const { tablesTree, initialMetricList, schema } = getOriginTablesTree(lastTableTitle, lastTableRows)
+
+        lastTableTitle = tablesTree[tablesTree.length - 1].title
+        lastColumnsLength = tablesTree[tablesTree.length - 1].columns.length
+        if (tablesData.value) {
+          lastTableRows = tablesData.value.rows.slice(tablesData.value.rows.length - lastColumnsLength)
+        }
+
+        originTablesTree.value.push(...tablesTree)
+
+        // TODO: hints
+        hints.value = {
+          sql: { schema },
+          promql: initialMetricList,
+        }
+        const promql = new PromQLExtension().setComplete({
+          remote: {
+            fetchFn: () => Promise.reject(),
+            cache: {
+              initialMetricList: [...hints.value.promql],
+            },
           },
-        },
-      })
-      extensions.value.sql = [sql(hints.value.sql), oneDark]
-      extensions.value.promql = [promql.asExtension(), oneDark]
-    } catch (error) {
-      tablesData.value = undefined
-      originTablesTree.value = []
+        })
+        extensions.value.sql = [sql(hints.value.sql), oneDark]
+        extensions.value.promql = [promql.asExtension(), oneDark]
+      } catch (error) {
+        tablesData.value = undefined
+        // TODO: limit?
+        originTablesTree.value = []
+        tablesLoading.value = false
+      }
       tablesLoading.value = false
-      return false
     }
-    tablesLoading.value = false
-    return true
   }
 
   async function getTableByName(node: any) {
