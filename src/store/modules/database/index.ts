@@ -15,7 +15,10 @@ const useDataBaseStore = defineStore('database', () => {
   const originTablesTree = ref<TableTreeParent[]>([])
   const tablesLoading = ref(false)
   const scriptsLoading = ref(false)
-  const hints = ref({} as { sql: { schema: { [key: string]: string[] } }; promql: Set<string> })
+  const hints = ref({ sql: { schema: {} }, promql: new Set() } as {
+    sql: { schema: { [key: string]: string[] } }
+    promql: Set<string>
+  })
 
   const extensions = ref<{
     sql: any[]
@@ -71,8 +74,10 @@ const useDataBaseStore = defineStore('database', () => {
 
   const getOriginTablesTree = (lastTableTitle: string, lastTableRows: [][]) => {
     const tablesTree: TableTreeParent[] = []
-    const schema: { [key: string]: string[] } = {}
-    const initialMetricList = new Set<string>()
+    const {
+      sql: { schema },
+      promql,
+    } = hints.value
 
     let key = originTablesTree.value.length
 
@@ -109,18 +114,19 @@ const useDataBaseStore = defineStore('database', () => {
 
         node.columns = treeChildren
         node.timeIndexName = timeIndexName
+        originTablesTree.value.push(node)
         tablesTree.push(node)
         key += 1
 
-        initialMetricList.add(title)
+        promql.add(title)
         schema[title] = columnNames
         columnNames.forEach((name: string) => {
-          initialMetricList.add(name)
+          promql.add(name)
         })
       })
     }
 
-    return { tablesTree, schema, initialMetricList }
+    return { tablesTree }
   }
 
   const addChildren = (
@@ -195,9 +201,10 @@ const useDataBaseStore = defineStore('database', () => {
       try {
         // eslint-disable-next-line no-await-in-loop
         const res: any = await editorAPI.getTables(pageSize, pageSize * (page - 1))
+
         tablesData.value = res.output[0].records
 
-        const { tablesTree, initialMetricList, schema } = getOriginTablesTree(lastTableTitle, lastTableRows)
+        const { tablesTree } = getOriginTablesTree(lastTableTitle, lastTableRows)
 
         lastTableTitle = tablesTree[tablesTree.length - 1].title
         lastColumnsLength = tablesTree[tablesTree.length - 1].columns.length
@@ -205,13 +212,9 @@ const useDataBaseStore = defineStore('database', () => {
           lastTableRows = tablesData.value.rows.slice(tablesData.value.rows.length - lastColumnsLength)
         }
 
-        originTablesTree.value.push(...tablesTree)
+        tablesLoading.value = false
 
-        // TODO: hints
-        hints.value = {
-          sql: { schema },
-          promql: initialMetricList,
-        }
+        // Update hints
         const promql = new PromQLExtension().setComplete({
           remote: {
             fetchFn: () => Promise.reject(),
