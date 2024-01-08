@@ -1,4 +1,4 @@
-lockfileVersion: '6.1'
+lockfileVersion: '6.0'
 
 settings:
   autoInstallPeers: true
@@ -211,10 +211,10 @@ devDependencies:
     version: 5.53.0(eslint@8.40.0)(typescript@5.0.2)
   '@vitejs/plugin-vue':
     specifier: ^3.1.2
-    version: 3.1.2(vite@3.1.7)(vue@3.2.47)
+    version: 3.1.2(vite@3.2.7)(vue@3.2.47)
   '@vitejs/plugin-vue-jsx':
     specifier: ^2.1.1
-    version: 2.1.1(vite@3.1.7)(vue@3.2.47)
+    version: 2.1.1(vite@3.2.7)(vue@3.2.47)
   '@volar/vue-language-plugin-pug':
     specifier: ^1.0.24
     version: 1.0.24
@@ -294,20 +294,20 @@ devDependencies:
     specifier: ^0.25.1
     version: 0.25.1(rollup@3.7.5)(vue@3.2.47)
   vite:
-    specifier: ^3.1.7
-    version: 3.1.7(less@4.1.3)(stylus@0.59.0)
+    specifier: ^3.2.7
+    version: 3.2.7(@types/node@20.3.1)(less@4.1.3)(stylus@0.59.0)
   vite-plugin-compression:
     specifier: ^0.5.1
-    version: 0.5.1(vite@3.1.7)
+    version: 0.5.1(vite@3.2.7)
   vite-plugin-eslint:
     specifier: ^1.8.1
-    version: 1.8.1(eslint@8.40.0)(vite@3.1.7)
+    version: 1.8.1(eslint@8.40.0)(vite@3.2.7)
   vite-plugin-markdown:
     specifier: 2.2.0-2
-    version: 2.2.0-2(vite@3.1.7)
+    version: 2.2.0-2(vite@3.2.7)
   vite-plugin-style-import:
     specifier: 2.0.0
-    version: 2.0.0(vite@3.1.7)
+    version: 2.0.0(vite@3.2.7)
   vite-svg-loader:
     specifier: ^4.0.0
     version: 4.0.0
@@ -2003,7 +2003,7 @@ packages:
       - '@lezer/lr'
     dev: false
 
-  /@vitejs/plugin-vue-jsx@2.1.1(vite@3.1.7)(vue@3.2.47):
+  /@vitejs/plugin-vue-jsx@2.1.1(vite@3.2.7)(vue@3.2.47):
     resolution: {integrity: sha512-JgDhxstQlwnHBvZ1BSnU5mbmyQ14/t5JhREc6YH5kWyu2QdAAOsLF6xgHoIWarj8tddaiwFrNzLbWJPudpXKYA==}
     engines: {node: ^14.18.0 || >=16.0.0}
     peerDependencies:
@@ -2013,20 +2013,20 @@ packages:
       '@babel/core': 7.20.5
       '@babel/plugin-transform-typescript': 7.22.15(@babel/core@7.20.5)
       '@vue/babel-plugin-jsx': 1.1.1(@babel/core@7.20.5)
-      vite: 3.1.7(less@4.1.3)(stylus@0.59.0)
+      vite: 3.2.7(@types/node@20.3.1)(less@4.1.3)(stylus@0.59.0)
       vue: 3.2.47
     transitivePeerDependencies:
       - supports-color
     dev: true
 
-  /@vitejs/plugin-vue@3.1.2(vite@3.1.7)(vue@3.2.47):
+  /@vitejs/plugin-vue@3.1.2(vite@3.2.7)(vue@3.2.47):
     resolution: {integrity: sha512-3zxKNlvA3oNaKDYX0NBclgxTQ1xaFdL7PzwF6zj9tGFziKwmBa3Q/6XcJQxudlT81WxDjEhHmevvIC4Orc1LhQ==}
     engines: {node: ^14.18.0 || >=16.0.0}
     peerDependencies:
       vite: ^3.0.0
       vue: ^3.2.25
     dependencies:
-      vite: 3.1.7(less@4.1.3)(stylus@0.59.0)
+      vite: 3.2.7(@types/node@20.3.1)(less@4.1.3)(stylus@0.59.0)
       vue: 3.2.47
     dev: true
 
@@ -5835,14 +5835,6 @@ packages:
       yargs: 17.7.2
     dev: true
 
-  /rollup@2.78.1:
-    resolution: {integrity: sha512-VeeCgtGi4P+o9hIg+xz4qQpRl6R401LWEXBmxYKOV4zlF82lyhgh2hTZnheFUbANE8l2A41F458iwj2vEYaXJg==}
-    engines: {node: '>=10.0.0'}
-    hasBin: true
-    optionalDependencies:
-      fsevents: 2.3.3
-    dev: true
-
   /rollup@2.79.1:
     resolution: {integrity: sha512-uKxbd0IhMZOhjAiD5oAFp7BqvkA4Dv47qpOCtaNvng4HBwdbWtdOh8f5nZNuk2rp51PMGk3bzfWu5oayNEuYnw==}
     engines: {node: '>=10.0.0'}
@@ -6793,7 +6785,7 @@ packages:
       spdx-correct: 3.2.0
       spdx-expression-parse: 3.0.1
 
-  /vite-plugin-compression@0.5.1(vite@3.1.7):
+  /vite-plugin-compression@0.5.1(vite@3.2.7):
     resolution: {integrity: sha512-5QJKBDc+gNYVqL/skgFAP81Yuzo9R+EAf19d+EtsMF/i8kFUpNi3J/H01QD3Oo8zBQn+NzoCIFkpPLynoOzaJg==}
     peerDependencies:
       vite: '>=2.0.0'
@@ -6801,12 +6793,12 @@ packages:
       chalk: 4.1.2
       debug: 4.3.4
       fs-extra: 10.1.0
-      vite: 3.1.7(less@4.1.3)(stylus@0.59.0)
+      vite: 3.2.7(@types/node@20.3.1)(less@4.1.3)(stylus@0.59.0)
     transitivePeerDependencies:
       - supports-color
     dev: true
 
-  /vite-plugin-eslint@1.8.1(eslint@8.40.0)(vite@3.1.7):
+  /vite-plugin-eslint@1.8.1(eslint@8.40.0)(vite@3.2.7):
     resolution: {integrity: sha512-PqdMf3Y2fLO9FsNPmMX+//2BF5SF8nEWspZdgl4kSt7UvHDRHVVfHvxsD7ULYzZrJDGRxR81Nq7TOFgwMnUang==}
     peerDependencies:
       eslint: '>=7'
@@ -6816,10 +6808,10 @@ packages:
       '@types/eslint': 8.44.2
       eslint: 8.40.0
       rollup: 2.79.1
-      vite: 3.1.7(less@4.1.3)(stylus@0.59.0)
+      vite: 3.2.7(@types/node@20.3.1)(less@4.1.3)(stylus@0.59.0)
     dev: true
 
-  /vite-plugin-markdown@2.2.0-2(vite@3.1.7):
+  /vite-plugin-markdown@2.2.0-2(vite@3.2.7):
     resolution: {integrity: sha512-gXMfgSj+2UpgwFWHg/u+pGO3oRcyreTcQsBBg72mBlmpi8VpAXEW6J7Z7V6EZSHuV/yD+5CRBM2esfLvkQiT8Q==}
     peerDependencies:
       vite: ^2.0.0 || ^3.0.0 || ^4.0.0
@@ -6828,10 +6820,10 @@ packages:
       front-matter: 4.0.2
       htmlparser2: 6.1.0
       markdown-it: 12.3.2
-      vite: 3.1.7(less@4.1.3)(stylus@0.59.0)
+      vite: 3.2.7(@types/node@20.3.1)(less@4.1.3)(stylus@0.59.0)
     dev: true
 
-  /vite-plugin-style-import@2.0.0(vite@3.1.7):
+  /vite-plugin-style-import@2.0.0(vite@3.2.7):
     resolution: {integrity: sha512-qtoHQae5dSUQPo/rYz/8p190VU5y19rtBaeV7ryLa/AYAU/e9CG89NrN/3+k7MR8mJy/GPIu91iJ3zk9foUOSA==}
     peerDependencies:
       vite: '>=2.0.0'
@@ -6843,7 +6835,7 @@ packages:
       fs-extra: 10.1.0
       magic-string: 0.25.9
       pathe: 0.2.0
-      vite: 3.1.7(less@4.1.3)(stylus@0.59.0)
+      vite: 3.2.7(@types/node@20.3.1)(less@4.1.3)(stylus@0.59.0)
     dev: true
 
   /vite-svg-loader@4.0.0:
@@ -6853,30 +6845,37 @@ packages:
       svgo: 3.0.2
     dev: true
 
-  /vite@3.1.7(less@4.1.3)(stylus@0.59.0):
-    resolution: {integrity: sha512-5vCAmU4S8lyVdFCInu9M54f/g8qbOMakVw5xJ4pjoaDy5wgy9sLLZkGdSLN52dlsBqh0tBqxjaqqa8LgPqwRAA==}
+  /vite@3.2.7(@types/node@20.3.1)(less@4.1.3)(stylus@0.59.0):
+    resolution: {integrity: sha512-29pdXjk49xAP0QBr0xXqu2s5jiQIXNvE/xwd0vUizYT2Hzqe4BksNNoWllFVXJf4eLZ+UlVQmXfB4lWrc+t18g==}
     engines: {node: ^14.18.0 || >=16.0.0}
     hasBin: true
     peerDependencies:
+      '@types/node': '>= 14'
       less: '*'
       sass: '*'
       stylus: '*'
+      sugarss: '*'
       terser: ^5.4.0
     peerDependenciesMeta:
+      '@types/node':
+        optional: true
       less:
         optional: true
       sass:
         optional: true
       stylus:
         optional: true
+      sugarss:
+        optional: true
       terser:
         optional: true
     dependencies:
+      '@types/node': 20.3.1
       esbuild: 0.15.18
       less: 4.1.3
       postcss: 8.4.33
       resolve: 1.22.4
-      rollup: 2.78.1
+      rollup: 2.79.1
       stylus: 0.59.0
     optionalDependencies:
       fsevents: 2.3.3
