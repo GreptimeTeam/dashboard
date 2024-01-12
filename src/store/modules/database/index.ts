@@ -161,7 +161,6 @@ const useDataBaseStore = defineStore('database', () => {
       const scriptCodeIndex = columnSchemas.findIndex((schema: SchemaType) => {
         return schema.name === 'script'
       })
-
       scriptsData.value.output[0].records.rows.forEach((item: Array<string>) => {
         const node: ScriptTreeData = {
           title: item[scriptNameIndex],
@@ -251,6 +250,15 @@ const useDataBaseStore = defineStore('database', () => {
     totalTablesLoading.value = false
   }
 
+  const checkTables = () => {
+    const { updateDataStatus } = useUserStore()
+    updateDataStatus('tables', true)
+    if (tablesTreeForDatabase.value[database.value] && tablesTreeForDatabase.value[database.value].length > 0) {
+      return
+    }
+    getTables()
+  }
+
   async function getTableByName(node: any) {
     try {
       const res: any = await editorAPI.getTableByName(node)
@@ -290,6 +298,7 @@ const useDataBaseStore = defineStore('database', () => {
     hints,
     extensions,
     getTables,
+    checkTables,
     addChildren,
     getTableByName,
     getScriptsTable,

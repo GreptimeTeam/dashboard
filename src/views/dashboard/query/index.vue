@@ -13,7 +13,7 @@ a-layout.layout
   const activeElement = useActiveElement()
   const { queryType } = useQueryCode()
   const { guideModalVisible } = storeToRefs(useAppStore())
-  const { getTables } = useDataBaseStore()
+  const { checkTables } = useDataBaseStore()
   const { dataStatusMap } = storeToRefs(useUserStore())
 
   const { logs } = storeToRefs(useLogStore())
@@ -59,7 +59,7 @@ a-layout.layout
   onActivated(() => {
     if (!guideModalVisible.value) {
       if (!dataStatusMap.value.tables) {
-        getTables()
+        checkTables()
       }
     }
   })

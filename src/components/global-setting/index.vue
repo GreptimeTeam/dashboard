@@ -42,7 +42,7 @@ a-drawer.settings-drawer(
   const { t } = useI18n()
 
   const { navbar, updateSettings, login } = useAppStore()
-  const { getTables, getScriptsTable } = useDataBaseStore()
+  const { getScriptsTable, checkTables } = useDataBaseStore()
 
   const { role } = storeToRefs(useUserStore())
   const { codeType, globalSettings, host, database, username, password, databaseList } = storeToRefs(useAppStore())
@@ -67,7 +67,7 @@ a-drawer.settings-drawer(
     ) {
       const res = await login(settingsForm.value)
       if (res) {
-        getTables()
+        checkTables()
         if (codeType.value === 'python') {
           getScriptsTable()
         }
