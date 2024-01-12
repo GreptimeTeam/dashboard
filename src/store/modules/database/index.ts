@@ -192,6 +192,7 @@ const useDataBaseStore = defineStore('database', () => {
     tablesLoading.value = true
     totalTablesLoading.value = true
 
+    // TODO: better not change dom
     tablesTreeForDatabase.value[database.value] = []
 
     const total = await getColumnsCount()
