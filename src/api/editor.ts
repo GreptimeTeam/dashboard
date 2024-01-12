@@ -68,11 +68,22 @@ const getTablesOld = () => {
   return axios.post(sqlUrl, makeSqlData(`show tables`), addDatabaseParams())
 }
 
-const getTables = () => {
+const getTables = (limit?: number, offset?: number) => {
+  const appStore = useAppStore()
+  const suffix = ` limit ${limit} offset ${offset}`
+  return axios.post(
+    sqlUrl,
+    makeSqlData(
+      `select * from information_schema.columns where table_schema='${appStore.database}'${limit ? suffix : ''};`
+    )
+  )
+}
+
+const fetchColumnsCount = () => {
   const appStore = useAppStore()
   return axios.post(
     sqlUrl,
-    makeSqlData(`select * from information_schema.columns where table_schema='${appStore.database}';`)
+    makeSqlData(`select count(*) from information_schema.columns where table_schema='${appStore.database}';`)
   )
 }
 
@@ -119,4 +130,5 @@ export default {
   runScript,
   saveScript,
   runPromQL,
+  fetchColumnsCount,
 }

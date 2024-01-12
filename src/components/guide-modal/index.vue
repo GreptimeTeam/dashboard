@@ -40,7 +40,7 @@ a-modal.guide-modal(
   const { role } = storeToRefs(useUserStore())
 
   const { login } = useAppStore()
-  const { getTables, getScriptsTable } = useDataBaseStore()
+  const { checkTables, getScriptsTable } = useDataBaseStore()
 
   const settingsForm = ref({
     username: username.value,
@@ -53,7 +53,7 @@ a-modal.guide-modal(
   const handleOk = async () => {
     const res = await login(settingsForm.value)
     if (res) {
-      getTables()
+      checkTables()
       if (codeType.value === 'python') {
         getScriptsTable()
       }

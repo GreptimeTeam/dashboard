@@ -63,7 +63,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
   const { copy } = useClipboard({ source })
   const { insertNameToPyCode } = usePythonCode()
   const { tablesSearchKey, tablesTreeData } = useSiderTabs()
-  const { tablesLoading, originTablesTree } = storeToRefs(useDataBaseStore())
+  const { tablesLoading } = storeToRefs(useDataBaseStore())
   const { getTables } = useDataBaseStore()
   const { menuSelectedKey } = storeToRefs(useAppStore())
 

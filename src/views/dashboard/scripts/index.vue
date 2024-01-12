@@ -15,7 +15,7 @@ a-layout.layout
   const { codeType, guideModalVisible } = storeToRefs(useAppStore())
   const { dataStatusMap } = storeToRefs(useUserStore())
 
-  const { getTables, getScriptsTable } = useDataBaseStore()
+  const { checkTables, getScriptsTable } = useDataBaseStore()
 
   const types = ['python']
 
@@ -31,7 +31,7 @@ a-layout.layout
         getScriptsTable()
       }
       if (!dataStatusMap.value.tables) {
-        getTables()
+        checkTables()
       }
     }
   })

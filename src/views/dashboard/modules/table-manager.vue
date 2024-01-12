@@ -3,7 +3,7 @@ a-card.table-manager(:bordered="false")
   template(#title)
     a-space(:size="10")
       | Tables
-      a-button(type="outline" size="small" @click="refreshTables")
+      a-button(type="outline" size="small" @click="refreshTables" :loading="totalTablesLoading")
         template(#icon)
           svg.icon.brand-color
             use(href="#refresh")
@@ -164,7 +164,7 @@ a-card.table-manager(:bordered="false")
     loadMore,
     loadMoreColumns,
   } = useSiderTabs()
-  const { tablesLoading, originTablesTree } = storeToRefs(useDataBaseStore())
+  const { tablesLoading, originTablesTree, totalTablesLoading } = storeToRefs(useDataBaseStore())
 
   const LAYOUT_PADDING = 16
   const HEADER = 58
