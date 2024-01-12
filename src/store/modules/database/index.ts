@@ -12,7 +12,10 @@ const useDataBaseStore = defineStore('database', () => {
   const { database } = storeToRefs(useAppStore())
   const tablesData = ref<RecordsType>()
   const scriptsData = ref()
-  const originTablesTree = ref<TableTreeParent[]>([])
+  const tablesTreeForDatabase = ref({} as { [key: string]: TableTreeParent[] })
+  const originTablesTree = computed(() => {
+    return tablesTreeForDatabase.value[database.value] || []
+  })
   const tablesLoading = ref(false)
   const totalTablesLoading = ref(false)
   const scriptsLoading = ref(false)
@@ -80,7 +83,7 @@ const useDataBaseStore = defineStore('database', () => {
       promql,
     } = hints.value
 
-    let key = originTablesTree.value.length
+    let key = tablesTreeForDatabase.value[database.value].length
 
     if (tablesData.value) {
       const schemas = tablesData.value.schema.column_schemas
@@ -90,7 +93,7 @@ const useDataBaseStore = defineStore('database', () => {
 
       if (lastTableTitle && tablesData.value.rows[0][tableNameIndex] === lastTableTitle) {
         // Last table not finished, pop out and reload.
-        originTablesTree.value.pop()
+        tablesTreeForDatabase.value[database.value].pop()
         key -= 1
       } else {
         lastTableRows = []
@@ -115,7 +118,7 @@ const useDataBaseStore = defineStore('database', () => {
 
         node.columns = treeChildren
         node.timeIndexName = timeIndexName
-        originTablesTree.value.push(node)
+        tablesTreeForDatabase.value[database.value].push(node)
         tablesTree.push(node)
         key += 1
 
@@ -138,13 +141,13 @@ const useDataBaseStore = defineStore('database', () => {
     isSilent?: boolean
   ) => {
     if (!isSilent) {
-      originTablesTree.value[key].children = children
+      tablesTreeForDatabase.value[database.value][key].children = children
     }
-    originTablesTree.value[key].timeIndexName = timeIndexName
+    tablesTreeForDatabase.value[database.value][key].timeIndexName = timeIndexName
     if (type === 'details') {
-      originTablesTree.value[key].details = children as TableDetail[]
+      tablesTreeForDatabase.value[database.value][key].details = children as TableDetail[]
     } else {
-      originTablesTree.value[key].columns = children as TableTreeChild[]
+      tablesTreeForDatabase.value[database.value][key].columns = children as TableTreeChild[]
     }
   }
 
@@ -189,6 +192,8 @@ const useDataBaseStore = defineStore('database', () => {
     updateDataStatus('tables', true)
     tablesLoading.value = true
     totalTablesLoading.value = true
+
+    tablesTreeForDatabase.value[database.value] = []
 
     const total = await getColumnsCount()
     if (total === 0) {
@@ -237,7 +242,7 @@ const useDataBaseStore = defineStore('database', () => {
       } catch (error) {
         tablesData.value = undefined
         // TODO: limit?
-        originTablesTree.value = []
+        tablesTreeForDatabase.value[database.value] = []
         tablesLoading.value = false
         totalTablesLoading.value = false
         break
@@ -269,11 +274,12 @@ const useDataBaseStore = defineStore('database', () => {
   }
 
   const resetData = () => {
-    originTablesTree.value = []
+    tablesTreeForDatabase.value[database.value] = []
     scriptsData.value = null
   }
 
   return {
+    tablesTreeForDatabase,
     originTablesTree,
     originScriptsList,
     tablesLoading,
