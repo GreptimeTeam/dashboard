@@ -242,9 +242,8 @@ const useDataBaseStore = defineStore('database', () => {
         totalTablesLoading.value = false
         break
       }
-      tablesLoading.value = false
-      totalTablesLoading.value = false
     }
+    totalTablesLoading.value = false
   }
 
   async function getTableByName(node: any) {
