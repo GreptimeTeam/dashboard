@@ -14,6 +14,7 @@ const useDataBaseStore = defineStore('database', () => {
   const scriptsData = ref()
   const originTablesTree = ref<TableTreeParent[]>([])
   const tablesLoading = ref(false)
+  const totalTablesLoading = ref(false)
   const scriptsLoading = ref(false)
   const hints = ref({ sql: { schema: {} }, promql: new Set() } as {
     sql: { schema: { [key: string]: string[] } }
@@ -187,7 +188,14 @@ const useDataBaseStore = defineStore('database', () => {
     const { updateDataStatus } = useUserStore()
     updateDataStatus('tables', true)
     tablesLoading.value = true
+    totalTablesLoading.value = true
+
     const total = await getColumnsCount()
+    if (total === 0) {
+      tablesLoading.value = false
+      totalTablesLoading.value = false
+      return
+    }
 
     const pageSize = 1000
 
@@ -212,6 +220,7 @@ const useDataBaseStore = defineStore('database', () => {
           lastTableRows = tablesData.value.rows.slice(tablesData.value.rows.length - lastColumnsLength)
         }
 
+        // Stop loading status when tables of the first page are loaded
         tablesLoading.value = false
 
         // Update hints
@@ -230,8 +239,11 @@ const useDataBaseStore = defineStore('database', () => {
         // TODO: limit?
         originTablesTree.value = []
         tablesLoading.value = false
+        totalTablesLoading.value = false
+        break
       }
       tablesLoading.value = false
+      totalTablesLoading.value = false
     }
   }
 
@@ -266,6 +278,7 @@ const useDataBaseStore = defineStore('database', () => {
     originTablesTree,
     originScriptsList,
     tablesLoading,
+    totalTablesLoading,
     scriptsLoading,
     tablesData,
     scriptsData,
