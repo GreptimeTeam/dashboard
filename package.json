@@ -18,7 +18,7 @@
     "type:check": "vue-tsc --noEmit --skipLibCheck",
     "lint-staged": "npx lint-staged",
     "prepare": "husky install",
-    "update:lock": "pnpm i --package-lock-only && pnpm i --lockfile-only"
+    "update:lock": "pnpm i --lockfile-only"
   },
   "lint-staged": {
     "*.{js,ts,jsx,tsx}": [
@@ -93,7 +93,6 @@
     "@types/lodash": "^4.14.191",
     "@types/markdown-it": "^12.2.3",
     "@types/markdown-it-container": "^2.0.5",
-    "@types/mockjs": "^1.0.7",
     "@types/node": "^20.3.1",
     "@types/nprogress": "^0.2.0",
     "@types/numeral": "^2.0.2",
@@ -117,7 +116,6 @@
     "less": "^4.1.3",
     "lint-staged": "^13.2.0",
     "markdown-it": "^13.0.1",
-    "mockjs": "^1.1.0",
     "prettier": "^2.8.8",
     "pug": "^3.0.2",
     "rollup": "^3.7.5",
@@ -130,7 +128,7 @@
     "typescript": "^5.0.2",
     "unplugin-auto-import": "^0.16.1",
     "unplugin-vue-components": "^0.25.1",
-    "vite": "^3.1.7",
+    "vite": "^3.2.7",
     "vite-plugin-compression": "^0.5.1",
     "vite-plugin-eslint": "^1.8.1",
     "vite-plugin-markdown": "2.2.0-2",
