@@ -12,6 +12,7 @@ a-card(:bordered="false")
       :data="gridData"
       :pagination="pagination"
     ) 
+      |
       template(#empty)
         EmptyStatus
       template(#columns)
@@ -36,7 +37,7 @@ a-card(:bordered="false")
           template(v-else)
             a-table-column(:title="column.title" :data-index="column.dataIndex")
               template(#cell="{ record }")
-                a-typography-paragraph.cell-data(:ellipsis="{ rows: 3, expandable: true }") {{ record[column.title] }}
+                a-typography-paragraph.cell-data(:ellipsis="{ rows: 3, expandable: true }") {{ record[column.dataIndex] }}
                   template(#expand-node="{ expanded }")
                     | {{ expanded ? 'Collapse' : 'More' }}
 </template>
