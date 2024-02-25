@@ -20,9 +20,10 @@ jobs:
   docker:
     name: Build docker image
     runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'GreptimeTeam' }}
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Login to Dockerhub
         uses: docker/login-action@v2
