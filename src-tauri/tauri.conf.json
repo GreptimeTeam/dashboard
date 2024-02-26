@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "identifier": "com.greptime.dev",
   "build": {
-    "beforeDevCommand": "pnpm dev",
+    "beforeDevCommand": "pnpm cloud",
     "devUrl": "http://localhost:5177",
     "beforeBuildCommand": "pnpm build",
     "frontendDist": "../dist"
