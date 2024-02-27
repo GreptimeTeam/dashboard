@@ -13,6 +13,7 @@
   import { useUserStore, useAppStore } from '@/store'
   import { useStorage } from '@vueuse/core'
 
+  const appStore = useAppStore()
   const { currentLocale } = useLocale()
   const locale = computed(() => {
     switch (currentLocale.value) {
@@ -24,7 +25,7 @@
   })
 
   const { setRole } = useUserStore()
-  const { host, username, password, database, guideModalVisible } = storeToRefs(useAppStore())
+  const { host } = storeToRefs(useAppStore())
   const { fetchDatabases, updateSettings } = useAppStore()
   const { getScriptsTable } = useDataBaseStore()
 
@@ -39,6 +40,12 @@
 
   if (import.meta.env.MODE === 'development' || import.meta.env.MODE === 'production') {
     // Assuming local greptimeDB is up and running
+    const { username, password, database }: any = useStorage('config', {}).value
+    updateSettings({
+      username,
+      password,
+      database,
+    })
     fetchDatabases()
   }
 </script>

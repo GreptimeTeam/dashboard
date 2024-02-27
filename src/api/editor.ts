@@ -60,7 +60,7 @@ const makePromParams = (code: string, promForm: PromForm) => {
 }
 
 const getDatabases = () => {
-  return axios.post(sqlUrl, makeSqlData(`show databases`))
+  return axios.post(sqlUrl, makeSqlData(`show databases`), addDatabaseParams())
 }
 
 // Deprecated
@@ -83,7 +83,12 @@ const fetchColumnsCount = () => {
   const appStore = useAppStore()
   return axios.post(
     sqlUrl,
-    makeSqlData(`select count(*) from information_schema.columns where table_schema='${appStore.database}';`)
+    makeSqlData(`select count(*) from information_schema.columns where table_schema='${appStore.database}';`),
+    {
+      params: {
+        db: appStore.database,
+      },
+    } as AxiosRequestConfig
   )
 }
 
@@ -103,9 +108,10 @@ const runSQL = (code: string) => {
 
 const getScriptsTable = (db: string) => {
   // TODO: update to system schema when upstream ready
+  const appStore = useAppStore()
   return axios.post(
     sqlUrl,
-    makeSqlData(`select * from public.scripts where schema = 'public' order by gmt_modified desc;`)
+    makeSqlData(`select * from public.scripts where schema = '${appStore.database}' order by gmt_modified desc;`)
   )
 }
 

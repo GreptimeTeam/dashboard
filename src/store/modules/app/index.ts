@@ -105,7 +105,9 @@ const useAppStore = defineStore('app', {
       try {
         const res: any = await editorAPI.getDatabases()
         this.databaseList = res.output[0].records.rows.flat()
-        if (this.databaseList.length) {
+        if (this.$state.database) {
+          this.database = this.$state.database
+        } else if (this.databaseList.length) {
           this.setDefaultDatabase()
         }
       } catch (error) {

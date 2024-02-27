@@ -12,6 +12,7 @@ a-layout.layout
   const { s, q } = useMagicKeys()
   const activeElement = useActiveElement()
   const { queryType } = useQueryCode()
+  const { fetchDatabases } = useAppStore()
   const { guideModalVisible } = storeToRefs(useAppStore())
   const { checkTables } = useDataBaseStore()
   const { dataStatusMap } = storeToRefs(useUserStore())
@@ -59,6 +60,7 @@ a-layout.layout
   onActivated(() => {
     if (!guideModalVisible.value) {
       if (!dataStatusMap.value.tables) {
+        fetchDatabases()
         checkTables()
       }
     }
