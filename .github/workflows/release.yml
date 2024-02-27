@@ -74,7 +74,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: 'GreptimeTeam/greptimedb'
-          token: ${{ secrets.PR_ACTION }}
       - id: update-version
         run: |
           cd src/servers/dashboard/
