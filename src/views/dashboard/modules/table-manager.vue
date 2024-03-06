@@ -3,7 +3,12 @@ a-card.table-manager(:bordered="false")
   template(#title)
     a-space(:size="10")
       | Tables
-      a-button(type="outline" size="small" @click="refreshTables" :loading="totalTablesLoading")
+      a-button(
+        type="outline"
+        size="small"
+        :loading="totalTablesLoading"
+        @click="refreshTables"
+      )
         template(#icon)
           svg.icon.brand-color
             use(href="#refresh")
@@ -171,6 +176,10 @@ a-card.table-manager(:bordered="false")
   const listHeight = LAYOUT_PADDING * 3 + HEADER
 
   const expandedKeys = ref<number[]>()
+
+  onActivated(() => {
+    tablesTreeRef.value?.scrollIntoView({ top: 0 })
+  })
 
   const expandChildren = (event: Event, nodeData: TableTreeParent, type: 'details' | 'columns') => {
     if (nodeData[type].length && type !== nodeData.childrenType && expandedKeys.value?.includes(nodeData.key)) {

@@ -70,6 +70,10 @@ a-spin(style="width: 100%" :loading="tablesLoading")
   const treeRef = ref()
   const expandedKeys = ref<number[]>()
 
+  onActivated(() => {
+    treeRef.value?.scrollIntoView({ top: 0 })
+  })
+
   const refreshTables = () => {
     tablesSearchKey.value = ''
     getTables()
