@@ -6,4 +6,5 @@ export default {
   'settings.database': 'Database',
   'settings.save': 'Save',
   'settings.host': 'Host',
+  'settings.timezone': 'Timezone',
 }

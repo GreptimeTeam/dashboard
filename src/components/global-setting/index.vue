@@ -29,12 +29,26 @@ a-drawer.settings-drawer(
       a-input(v-model="settingsForm.username")
     a-form-item(:label="$t('settings.password')")
       a-input-password(v-model="settingsForm.password" autocomplete="off")
+    a-form-item(:label="$t('settings.timezone')")
+      a-select(v-model="settingsForm.userTimezone")
+        //- a-option(
+        //-   v-for="item of timezones"
+        //-   :key="item"
+        //-   :value="item"
+        //-   :label="item"
+        //- )
 </template>
 
 <script lang="ts" setup name="GlobalSetting">
   import { useI18n } from 'vue-i18n'
   import { useAppStore, useDataBaseStore } from '@/store'
   import axios from 'axios'
+  import dayjs from 'dayjs'
+  import utc from 'dayjs/plugin/utc'
+  import timezone from 'dayjs/plugin/timezone'
+
+  dayjs.extend(utc)
+  dayjs.extend(timezone)
 
   const MARGIN_BOTTOM = `${44 * 2 + 1}px`
   const emit = defineEmits(['cancel'])
@@ -45,7 +59,9 @@ a-drawer.settings-drawer(
   const { getScriptsTable, checkTables } = useDataBaseStore()
 
   const { role } = storeToRefs(useUserStore())
-  const { codeType, globalSettings, host, database, username, password, databaseList } = storeToRefs(useAppStore())
+  const { codeType, globalSettings, host, database, username, password, databaseList, userTimezone } = storeToRefs(
+    useAppStore()
+  )
 
   const settingsForm = ref({
     username: username.value,
@@ -53,7 +69,9 @@ a-drawer.settings-drawer(
     host: host.value,
     databaseList,
     database: database.value,
+    userTimezone: dayjs.tz.guess(), // America/Chicago
   })
+  console.log('settingsForm', dayjs.tz.guess())
 
   const cancel = async () => {
     updateSettings({ globalSettings: false })
@@ -82,6 +100,10 @@ a-drawer.settings-drawer(
   }
 
   watch(globalSettings, () => {
+    dayjs.tz.setDefault('America/Chicago')
+    console.log(dayjs.tz(dayjs()).utcOffset() / 60)
+    // dayjs.tz.setDefault('Asia/Shanghai')
+    // console.log(dayjs.tz(dayjs()).utcOffset() / 60)
     if (globalSettings.value) {
       settingsForm.value = {
         username: username.value,
@@ -89,7 +111,9 @@ a-drawer.settings-drawer(
         host: host.value,
         databaseList: databaseList.value,
         database: database.value,
+        userTimezone: userTimezone.value || dayjs.tz.name,
       }
+      console.log('settingsForm', settingsForm.value)
     }
   })
 
@@ -114,7 +138,7 @@ a-drawer.settings-drawer(
 <style lang="less">
   .settings-drawer {
     .arco-drawer {
-      height: 335px;
+      height: min-content;
       margin-left: 24px;
       border-radius: 4px;
       box-shadow: 0 4px 10px 0 var(--border-color);
@@ -126,7 +150,7 @@ a-drawer.settings-drawer(
       }
 
       .arco-drawer-body {
-        padding: 16px 10px 0 10px;
+        padding: 16px 10px;
       }
     }
   }

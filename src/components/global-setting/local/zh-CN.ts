@@ -5,4 +5,5 @@ export default {
   'settings.password': '密码',
   'settings.database': '数据库',
   'settings.save': '保存',
+  'settings.timezone': '时区',
 }

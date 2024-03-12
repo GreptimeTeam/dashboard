@@ -26,4 +26,5 @@ export interface AppState {
   lifetime: string
   [key: string]: unknown
   queryModalVisible: boolean
+  userTimezone: string
 }

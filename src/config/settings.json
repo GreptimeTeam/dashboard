@@ -23,5 +23,6 @@
   "guideModalVisible": false,
   "lifetime": "long",
   "menuSelectedKey": "query",
-  "queryModalVisible": false
+  "queryModalVisible": false,
+  "userTimezone": ""
 }
