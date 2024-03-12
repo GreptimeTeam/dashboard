@@ -1,15 +1,15 @@
 <template lang="pug">
 a-layout.navbar
-  a-layout-header
-    .logo-space
-      img.logo-text-img(alt="logo" src="/src/assets/images/logo-text.png")
+  a-layout-header.logo-space
+    svg.logo
+      use(href="#logo")
   a-layout-content
     .new-query
-      a-button(type="primary" @click="openQuery")
-        span +
-        span New Query
+      a-tooltip(content="New Query" position="right")
+        a-button(type="primary" @click="openQuery")
+          span +
     .menu
-      a-menu(mode="vertical" :selected-keys="[menuSelectedKey]")
+      a-menu(mode="vertical" collapsed :selected-keys="[menuSelectedKey]")
         a-menu-item(
           v-for="(item, index) in menu"
           :key="item.name"
@@ -24,23 +24,17 @@ a-layout.navbar
   a-layout-footer
     ul.footer
       li
-        a-button(
-          style="width: 100%"
-          type="text"
-          :class="{ hover: globalSettings }"
-          @click="setVisible"
-        )
-          template(#icon)
-            svg.icon-16
-              use(href="#settings")
-          | {{ $t('settings.title') }}
+        a-tooltip(:content="$t('settings.title')")
+          a-button(type="text" :class="{ hover: globalSettings }" @click="setVisible")
+            template(#icon)
+              svg.icon-16
+                use(href="#settings")
       li
         a-dropdown.menu-dropdown(trigger="hover" position="right" :popup-max-height="false")
-          a-button(style="width: 100%" type="text")
+          a-button.menu-button(type="text")
             template(#icon)
               svg.icon
                 use(href="#menu")
-            | {{ $t('navbar.docs') }}
           template(#content)
             a-doption(v-for="{ label, link } in dropDownLinks")
               a-link(target="_blank" :href="link")
@@ -48,11 +42,11 @@ a-layout.navbar
 </template>
 
 <script lang="ts" setup name="NavBar">
-  import router from '@/router'
   import { useAppStore } from '@/store'
   import { listenerRouteChange } from '@/utils/route-listener'
   import useMenuTree from '../menu/use-menu-tree'
 
+  const router = useRouter()
   const { updateSettings } = useAppStore()
   const { menuSelectedKey, globalSettings, queryModalVisible } = storeToRefs(useAppStore())
   const { menuTree } = useMenuTree()
@@ -107,13 +101,15 @@ a-layout.navbar
   }
 
   .logo-space {
-    height: 60px;
+    height: 52px;
     display: flex;
     align-items: center;
     justify-content: center;
-    .logo-text-img {
-      height: 30px;
-    }
+  }
+
+  .logo {
+    height: 32px;
+    width: 32px;
   }
 
   .menu {
@@ -122,67 +118,51 @@ a-layout.navbar
     .arco-menu {
       font-size: 14px;
     }
+
+    .arco-menu-collapsed {
+      width: 100%;
+    }
     :deep(.arco-menu-vertical .arco-menu-item.arco-menu-has-icon) {
-      padding-left: 30px;
       margin-bottom: 2px;
       border-left: 2px solid transparent;
       border-radius: 0;
       line-height: 38px;
+      display: flex;
+      justify-content: center;
+      margin-right: 2px;
     }
     :deep(.arco-menu-vertical .arco-menu-inner) {
       padding: 0;
     }
 
+    :deep(.arco-menu-title) {
+      width: 0;
+    }
+
+    :deep(.arco-menu-light .arco-menu-item) {
+      &:hover {
+        background-color: transparent;
+        .arco-menu-icon {
+          background-color: var(--th-bg-color);
+        }
+      }
+    }
+
     :deep(.arco-menu-item.arco-menu-has-icon .arco-menu-icon) {
-      margin-right: 10px;
+      margin-right: 0;
+      padding: 10px 13px;
+      border-radius: 4px;
+      color: var(--small-font-color);
     }
     :deep(.arco-menu-light .arco-menu-item.arco-menu-selected) {
-      background-color: var(--light-brand-color);
+      background-color: transparent;
       color: var(--brand-color);
       border-left: 2px solid;
       border-radius: 0;
       border-color: var(--brand-color);
       .arco-menu-icon {
         color: var(--brand-color);
-      }
-    }
-    .arco-menu-horizontal {
-      background-color: transparent;
-
-      :deep(.arco-menu-inner) {
-        overflow-y: hidden;
-        padding: 0;
-      }
-
-      .arco-menu-item {
-        padding: 6px 12px;
-
-        line-height: 18px;
-        background-color: transparent;
-        color: var(--white-font-color);
-        user-select: none;
-        opacity: 0.6;
-        margin-left: 0;
-      }
-      :deep(.arco-menu-selected-label) {
-        display: none;
-      }
-      .arco-menu-item.arco-menu-selected {
-        background: rgb(255 255 255 / 15%);
-        border-radius: 4px;
-        opacity: 1;
-        font-weight: 600;
-      }
-
-      :deep(.arco-menu-pop.arco-menu-pop-header.arco-menu-overflow-sub-menu) {
-        color: var(--white-font-color);
-        background-color: transparent;
-        opacity: 0.6;
-      }
-      :deep(.arco-menu-pop.arco-menu-pop-header.arco-menu-selected.arco-menu-overflow-sub-menu) {
-        opacity: 1;
-        background: rgba(255, 255, 255, 0.15);
-        border-radius: 4px;
+        background-color: var(--light-brand-color);
       }
     }
   }
@@ -197,19 +177,25 @@ a-layout.navbar
       color: var(--small-font-color);
       font-size: 13px;
       display: flex;
-      justify-content: flex-start;
-      padding-left: 86px;
+      border: none;
       height: 38px;
-      border-top: 1px solid var(--border-color);
-      border-radius: 0;
+      border-radius: 4px;
+      width: 44px;
+      &:not(.arco-btn-only-icon) {
+        padding-left: 86px;
+        justify-content: flex-start;
+      }
     }
     .arco-btn-text[type='button']:hover,
     .arco-btn-text.hover,
     .arco-btn-text.arco-dropdown-open {
-      background: var(--th-bg-color);
+      background: var(--list-hover-color);
+      :deep(.arco-btn-icon) {
+        color: var(--main-font-color);
+      }
     }
     :deep(.arco-btn-icon) {
-      color: var(--third-font-color);
+      color: var(--small-font-color);
     }
 
     :deep(.arco-btn-size-medium:not(.arco-btn-only-icon) .arco-btn-icon) {
@@ -220,6 +206,7 @@ a-layout.navbar
     li {
       display: flex;
       align-items: center;
+      justify-content: center;
     }
 
     .arco-link {
@@ -239,15 +226,37 @@ a-layout.navbar
   }
 
   .new-query {
-    padding: 24px;
+    padding: 15px 18px 4px 18px;
     .arco-btn {
       width: 100%;
       height: 38px;
       :first-child {
         font-size: 26px;
-        padding-right: 8px;
       }
       font-size: 14px;
+    }
+  }
+
+  .arco-btn-text[type='button'].menu-button {
+    border: none;
+  }
+
+  .arco-btn-text[type='button'].feedback-button {
+    border: none;
+  }
+
+  .buttons-space {
+    border-top: 1px solid var(--border-color);
+    > :first-child {
+      width: 50%;
+    }
+    > :last-child {
+      width: 50%;
+    }
+    .arco-divider-vertical {
+      margin: 0;
+      height: 26px;
+      border-color: var(--border-color);
     }
   }
 </style>
