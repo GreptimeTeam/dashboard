@@ -24,7 +24,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
   )
     template(#icon="node")
       a-tooltip(:content="node.node.iconType")
-        svg.icon-16(v-if="node.node.iconType")
+        svg.icon(v-if="node.node.iconType")
           use(:href="ICON_MAP[node.node.iconType]")
     template(#title="nodeData")
       .tree-data
