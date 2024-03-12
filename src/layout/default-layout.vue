@@ -1,11 +1,14 @@
 <template lang="pug">
-a-layout.layout-container
-  a-layout-sider.main-sider(:width="80")
-    Navbar(v-if="navbar")
-  a-layout-content.layout-content
-    PageLayout
-  Footer(v-if="footer")
-  QueryModal
+a-layout
+  a-layout.layout-container(style="overflow-y: auto")
+    a-layout-sider.main-sider(v-if="navbar" :width="80")
+      Navbar
+    a-layout-content.layout-content
+      PageLayout
+    Footer(v-if="footer")
+    QueryModal
+  a-layout-footer(v-if="statusLen")
+    status-bar
 </template>
 
 <script lang="ts" setup>
@@ -38,6 +41,8 @@ a-layout.layout-container
       offsetMinutesRemain < 10 ? '0' : ''
     }${offsetMinutesRemain}`
   })
+  const { statusBar: statusData } = useAppStore()
+  const statusLen = computed(() => Object.keys(statusData).length)
 </script>
 
 <style scoped lang="less">

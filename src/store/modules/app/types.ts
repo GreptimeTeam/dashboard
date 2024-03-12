@@ -26,5 +26,11 @@ export interface AppState {
   menuSelectedKey: string
   queryModalVisible: boolean
   userTimezone: string
+  statusBar: Record<string, Array<StatusItem>>
   [key: string]: unknown
+}
+
+export interface StatusItem {
+  msg: string
+  action?: () => void
 }

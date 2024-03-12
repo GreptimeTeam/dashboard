@@ -5,11 +5,12 @@ import { useStorage } from '@vueuse/core'
 import type { RouteRecordNormalized } from 'vue-router'
 import defaultSettings from '@/config/settings.json'
 import editorAPI from '@/api/editor'
-import { AppState } from './types'
+
+// import airoutes from '@/router/routes/extensions/ai'
+import { AppState, StatusItem } from './types'
 
 const useAppStore = defineStore('app', {
-  state: (): AppState => ({ ...defaultSettings }),
-
+  state: (): AppState => ({ ...defaultSettings, statusBar: {} }),
   getters: {
     appCurrentSetting(state: AppState): AppState {
       return { ...state }
@@ -24,6 +25,10 @@ const useAppStore = defineStore('app', {
 
   actions: {
     // Update app settings
+
+    setStatusBar(key: string, item: StatusItem[]) {
+      this.statusBar[key] = item
+    },
     updateSettings(partial: Partial<AppState>) {
       // @ts-ignore-next-line
       this.$patch(partial)
