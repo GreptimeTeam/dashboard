@@ -32,6 +32,7 @@ const useAppStore = defineStore('app', {
     // Login (check if settings are valid)
     async login(form: Partial<AppState>) {
       try {
+        console.log('form', form)
         this.updateSettings(form)
         await editorAPI.runSQL(`select 1`)
         const { resetDataStatus } = useUserStore()

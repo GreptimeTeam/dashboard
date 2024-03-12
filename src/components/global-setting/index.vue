@@ -29,6 +29,10 @@ a-drawer.settings-drawer(
       a-input(v-model="settingsForm.username")
     a-form-item(:label="$t('settings.password')")
       a-input-password(v-model="settingsForm.password" autocomplete="off")
+    a-form-item(tooltip="Used as x-greptime-timezone HTTP header" :label="$t('settings.timezone')")
+      a-input(v-model="settingsForm.userTimezone" allow-search allow-clear)
+      template(#extra)
+        div Accepted format is [+-]hh:mm
 </template>
 
 <script lang="ts" setup name="GlobalSetting">
@@ -45,7 +49,9 @@ a-drawer.settings-drawer(
   const { getScriptsTable, checkTables } = useDataBaseStore()
 
   const { role } = storeToRefs(useUserStore())
-  const { codeType, globalSettings, host, database, username, password, databaseList } = storeToRefs(useAppStore())
+  const { codeType, globalSettings, host, database, username, password, databaseList, userTimezone } = storeToRefs(
+    useAppStore()
+  )
 
   const settingsForm = ref({
     username: username.value,
@@ -53,11 +59,13 @@ a-drawer.settings-drawer(
     host: host.value,
     databaseList,
     database: database.value,
+    userTimezone: userTimezone.value, // America/Chicago
   })
 
   const cancel = async () => {
     updateSettings({ globalSettings: false })
     axios.defaults.baseURL = settingsForm.value.host
+    console.log(settingsForm.value.userTimezone)
     // Check if settings are changed
     if (
       settingsForm.value.username !== username.value ||
@@ -65,6 +73,7 @@ a-drawer.settings-drawer(
       settingsForm.value.database !== database.value ||
       settingsForm.value.host !== host.value
     ) {
+      console.log('settings changed', settingsForm.value)
       const res = await login(settingsForm.value)
       if (res) {
         checkTables()
@@ -89,7 +98,10 @@ a-drawer.settings-drawer(
         host: host.value,
         databaseList: databaseList.value,
         database: database.value,
+        userTimezone: userTimezone.value,
       }
+      console.log(userTimezone.value)
+      console.log('settingsForm', settingsForm.value)
     }
   })
 
@@ -114,7 +126,7 @@ a-drawer.settings-drawer(
 <style lang="less">
   .settings-drawer {
     .arco-drawer {
-      height: 335px;
+      height: min-content;
       margin-left: 24px;
       border-radius: 4px;
       box-shadow: 0 4px 10px 0 var(--border-color);
@@ -126,7 +138,7 @@ a-drawer.settings-drawer(
       }
 
       .arco-drawer-body {
-        padding: 16px 10px 0 10px;
+        padding: 16px 10px;
       }
     }
   }

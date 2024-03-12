@@ -13,12 +13,33 @@ a-layout.layout-container
   import { useAppStore } from '@/store'
   import Footer from '@/components/footer/index.vue'
   import useResponsive from '@/hooks/responsive'
+  import dayjs from 'dayjs'
+  import utc from 'dayjs/plugin/utc'
+  import timezone from 'dayjs/plugin/timezone'
   import PageLayout from './page-layout.vue'
+
+  dayjs.extend(utc)
+  dayjs.extend(timezone)
 
   useResponsive(true)
   const navbarHeight = `52px`
 
-  const { navbar, footer } = storeToRefs(useAppStore())
+  const { navbar, footer, userTimezone } = storeToRefs(useAppStore())
+
+  onMounted(() => {
+    // TODO: Use default timezone or timezone from local storage
+    const offsetMinutes = dayjs.tz(dayjs()).utcOffset()
+
+    const offsetHours = Math.floor(offsetMinutes / 60)
+    const offsetMinutesRemain = Math.abs(offsetMinutes % 60)
+    const sign = offsetHours > 0 ? '+' : '-'
+    const absOffsetHours = Math.abs(offsetHours)
+    userTimezone.value = `${sign}${absOffsetHours < 10 ? '0' : ''}${absOffsetHours}:${
+      offsetMinutesRemain < 10 ? '0' : ''
+    }${offsetMinutesRemain}`
+
+    console.log(userTimezone.value)
+  })
 </script>
 
 <style scoped lang="less">
