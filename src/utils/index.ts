@@ -42,22 +42,56 @@ export const regexUrl = new RegExp(
   'i'
 )
 
-export const dateFormatter = (dataType: string, value: number | null) => {
+export const dateToMs = (dataType: string, value: number | null) => {
   switch (dataType) {
     case 'Date':
-      return value && dayjs(0).add(value, 'day').format('YYYY-MM-DD HH:mm:ss')
+      return value && dayjs(0).add(value, 'day').valueOf()
     case 'DateTime':
     case 'TimestampSecond':
-      return value && dayjs.unix(value).format('YYYY-MM-DD HH:mm:ss')
+      return value && dayjs.unix(value).valueOf()
     case 'TimestampMillisecond':
-      return value && dayjs(value).format('YYYY-MM-DD HH:mm:ss')
+      return value
     case 'TimestampMicrosecond':
-      return value && dayjs(value / 1000).format('YYYY-MM-DD HH:mm:ss')
+      return value && value / 1000
     case 'TimestampNanosecond':
-      return value && dayjs(value / 1000000).format('YYYY-MM-DD HH:mm:ss')
+      return value && value / 1000000
     default:
       return null
   }
+}
+
+export const dateData = (dataType: string, value: number | null) => {
+  if (value === null) {
+    return null
+  }
+  return dayjs(dateToMs(dataType, value))
+  // console.log('dataType', dataType, value)
+  // switch (dataType) {
+  //   case 'Date':
+  //     return value && dayjs(0).add(value, 'day')
+  //   case 'DateTime':
+  //   case 'TimestampSecond':
+  //     return value && dayjs.unix(value).tz()
+  //   case 'TimestampMillisecond':
+  //     return value && dayjs(value).tz()
+  //   case 'TimestampMicrosecond':
+  //     return value && dayjs(value / 1000).tz()
+  //   case 'TimestampNanosecond':
+  //     return value && dayjs(value / 1000000).tz()
+  //   default:
+  //     return null
+  // }
+}
+
+export const dateFormatter = (dataType: string, value: number | null, format?: string) => {
+  const date = dateData(dataType, value)
+  if (!format) {
+    format = 'YYYY-MM-DD HH:mm:ss'
+  }
+  if (date) {
+    return date.format(format)
+  }
+  return null
 }
 
 export const sqlFormatter = (code: string) => {

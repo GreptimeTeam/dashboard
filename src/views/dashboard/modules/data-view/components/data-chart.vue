@@ -58,7 +58,7 @@ a-card(v-if="hasChart" :bordered="false")
   import type { PropType } from 'vue'
   import type { datasetType, ResultType, ChartFormType, SeriesType } from '@/store/modules/code-run/types'
   import useDataChart from '@/hooks/data-chart'
-  import { dateFormatter, groupByToMap } from '@/utils'
+  import { dateData, dateFormatter, dateToMs, groupByToMap } from '@/utils'
   import { chartTypeOptions, updateOptions } from '../../../config'
 
   const props = defineProps({
@@ -139,6 +139,7 @@ a-card(v-if="hasChart" :bordered="false")
         dimensions: props.data.dimensionsAndXName.dimensions,
         source: props.data.records.rows,
       })
+
       dataset.push({
         transform: {
           type: 'sort',
@@ -187,6 +188,7 @@ a-card(v-if="hasChart" :bordered="false")
 
   const makeOptions = () => {
     const { series, legendNames, dataset } = getChartConfig(chartForm.selectedYTypes)
+    console.log(props.data.records.rows)
     const xAxis: any = {
       axisLine: {
         lineStyle: {
@@ -198,23 +200,20 @@ a-card(v-if="hasChart" :bordered="false")
 
     const dataType = chartForm.xAxisType.data_type
 
-    if (dataType !== 'TimestampMillisecond') {
-      xAxis.axisLabel.formatter = (value: number) => {
-        return dateFormatter(dataType, value)
-      }
-      xAxis.axisPointer = {
-        label: {
-          formatter: (params: any) => {
-            const { value } = params
-            return dateFormatter(dataType, value)
-          },
+    xAxis.axisLabel.formatter = (value: number) => {
+      console.log(dateToMs(dataType, value))
+      return dateFormatter(dataType, value)
+    }
+    xAxis.axisPointer = {
+      label: {
+        formatter: (params: any) => {
+          const { value } = params
+          return dateFormatter(dataType, value)
         },
-      }
-      xAxis.min = (value: any) => {
-        return value.min
-      }
-    } else {
-      xAxis.type = 'time'
+      },
+    }
+    xAxis.min = (value: any) => {
+      return value.min
     }
 
     const legendIconHeight = 14
