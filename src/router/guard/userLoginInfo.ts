@@ -29,7 +29,6 @@ export default function setupUserLoginInfoGuard(router: Router) {
       }
 
       // Update settings with config from local storage
-      console.log('useStorage', useStorage('config', {}).value)
       appStore.updateSettings(useStorage('config', {}).value)
       const { role } = storeToRefs(useUserStore())
 

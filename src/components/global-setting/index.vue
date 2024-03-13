@@ -105,8 +105,6 @@ a-drawer.settings-drawer(
         database: database.value,
         userTimezone: userTimezone.value,
       }
-      console.log(userTimezone.value)
-      console.log('settingsForm', settingsForm.value)
     }
   })
 
