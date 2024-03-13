@@ -6,7 +6,7 @@
 a-drawer.settings-drawer(
   unmount-on-close
   placement="left"
-  :width="262"
+  :width="310"
   :visible="globalSettings"
   :mask-closable="true"
   :footer="false"
@@ -30,9 +30,15 @@ a-drawer.settings-drawer(
     a-form-item(:label="$t('settings.password')")
       a-input-password(v-model="settingsForm.password" autocomplete="off")
     a-form-item(tooltip="Used as x-greptime-timezone HTTP header" :label="$t('settings.timezone')")
-      a-input(v-model="settingsForm.userTimezone" allow-search allow-clear)
+      a-input(v-model="settingsForm.userTimezone" allow-clear placeholder="±hh:mm or timezone name")
       template(#extra)
-        div Accepted format is [+-]hh:mm
+        div
+          | Use DST offsets from UTC, such as
+          span.bold {{ ` -07:00. ` }}
+          | Or a timezone name, such as
+          span.bold {{ ` US/Pacific. ` }}
+          | See more at
+          a-link(icon href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones" target="_blank") Wiki.
 </template>
 
 <script lang="ts" setup name="GlobalSetting">
@@ -63,9 +69,9 @@ a-drawer.settings-drawer(
   })
 
   const cancel = async () => {
-    updateSettings({ globalSettings: false })
+    // TODO: check userTimezone format validation
+    updateSettings({ globalSettings: false, userTimezone: settingsForm.value.userTimezone })
     axios.defaults.baseURL = settingsForm.value.host
-    console.log(settingsForm.value.userTimezone)
     // Check if settings are changed
     if (
       settingsForm.value.username !== username.value ||
@@ -73,7 +79,6 @@ a-drawer.settings-drawer(
       settingsForm.value.database !== database.value ||
       settingsForm.value.host !== host.value
     ) {
-      console.log('settings changed', settingsForm.value)
       const res = await login(settingsForm.value)
       if (res) {
         checkTables()
@@ -139,6 +144,22 @@ a-drawer.settings-drawer(
 
       .arco-drawer-body {
         padding: 16px 10px;
+      }
+    }
+    .bold {
+      font-weight: 600;
+    }
+    .arco-form-item-extra {
+      font-size: 11px;
+    }
+    .arco-link {
+      margin-left: 2px;
+      color: var(--brand-color);
+      font-size: 11px;
+      padding: 0 2px;
+      .arco-link-icon {
+        font-size: 11px;
+        margin-right: 1px;
       }
     }
   }
