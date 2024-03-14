@@ -18,12 +18,12 @@ export interface AppState {
   database: string
   host: string
   databaseList: Array<string>
-  codeType: string
   guideModalVisible: boolean
   username: string
   password: string
   dbId: string
   lifetime: string
-  [key: string]: unknown
+  menuSelectedKey: string
   queryModalVisible: boolean
+  [key: string]: unknown
 }

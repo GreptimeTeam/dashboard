@@ -19,7 +19,6 @@
   "password": "",
   "dbId": "",
   "serverMenu": [],
-  "codeType": "sql",
   "guideModalVisible": false,
   "lifetime": "long",
   "menuSelectedKey": "query",
