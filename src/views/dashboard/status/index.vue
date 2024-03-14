@@ -1,9 +1,9 @@
 <template lang="pug">
 a-layout.layout.status
   a-layout-content
-    a-card(title="GreptimeDB Status")
+    a-card(title="GreptimeDB Status" :bordered="false")
       template(#extra)
-        a-button(type="text" @click="refreshStatus") Refresh
+        a-button(type="text" :loading="loading" @click="refreshStatus") Refresh
         TextCopyable(
           v-if="statusInfoRef && statusInfoRef.length > 0"
           copyTooltip="Copy to Clipboard"
@@ -22,14 +22,17 @@ a-layout.layout.status
   const statusModal = ref()
   const statusData = ref()
   const statusInfoRef = ref()
+  const loading = ref(false)
 
   const refreshStatus = async () => {
     try {
+      loading.value = true
       statusData.value = await getStatus()
       statusInfoRef.value = Object.entries(statusData.value)
     } catch (error) {
       statusInfoRef.value = []
     }
+    loading.value = false
   }
 
   const handleOk = () => {
@@ -53,11 +56,17 @@ a-layout.layout.status
   }
 
   .status {
-    .arco-typography {
+    padding-right: 16px;
+    :deep(.arco-typography) {
       line-height: 32px;
 
       &.copy {
         margin-bottom: 0;
+      }
+
+      .arco-typography-operation-copy,
+      .arco-typography-operation-copied {
+        padding: 0;
       }
     }
   }
