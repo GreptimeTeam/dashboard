@@ -6,7 +6,7 @@
 a-drawer.settings-drawer(
   unmount-on-close
   placement="left"
-  :width="262"
+  :width="323"
   :visible="globalSettings"
   :mask-closable="true"
   :footer="false"
@@ -29,6 +29,22 @@ a-drawer.settings-drawer(
       a-input(v-model="settingsForm.username")
     a-form-item(:label="$t('settings.password')")
       a-input-password(v-model="settingsForm.password" autocomplete="off")
+    a-form-item
+      template(#label)
+        a-space(:size="4")
+          span {{ $t('settings.timezone') }}
+          a-tooltip(content="Used as x-greptime-timezone HTTP header" mini position="tl")
+            svg.icon-12
+              use(href="#question")
+      a-input(v-model="settingsForm.userTimezone" allow-clear placeholder="±[h]h:mm or timezone name")
+      template(#extra)
+        div
+          | Use DST offsets from UTC, such as
+          span.bold {{ ` -07:00. ` }}
+          | Or a timezone name, such as
+          span.bold {{ ` US/Pacific. ` }}
+          | See more at
+          a-link(icon href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones" target="_blank") Wiki.
 </template>
 
 <script lang="ts" setup name="GlobalSetting">
@@ -36,7 +52,7 @@ a-drawer.settings-drawer(
   import { useAppStore, useDataBaseStore } from '@/store'
   import axios from 'axios'
 
-  const MARGIN_BOTTOM = `${44 * 2 + 1}px`
+  const MARGIN_BOTTOM = `${38 * 2 + 8}px`
   const emit = defineEmits(['cancel'])
 
   const { t } = useI18n()
@@ -45,7 +61,7 @@ a-drawer.settings-drawer(
   const { checkTables } = useDataBaseStore()
 
   const { role } = storeToRefs(useUserStore())
-  const { globalSettings, host, database, username, password, databaseList } = storeToRefs(useAppStore())
+  const { globalSettings, host, database, username, password, databaseList, userTimezone } = storeToRefs(useAppStore())
 
   const settingsForm = ref({
     username: username.value,
@@ -53,10 +69,12 @@ a-drawer.settings-drawer(
     host: host.value,
     databaseList,
     database: database.value,
+    userTimezone: userTimezone.value,
   })
 
   const cancel = async () => {
-    updateSettings({ globalSettings: false })
+    // TODO: check userTimezone format validation
+    updateSettings({ globalSettings: false, userTimezone: settingsForm.value.userTimezone })
     axios.defaults.baseURL = settingsForm.value.host
     // Check if settings are changed
     if (
@@ -86,6 +104,7 @@ a-drawer.settings-drawer(
         host: host.value,
         databaseList: databaseList.value,
         database: database.value,
+        userTimezone: userTimezone.value,
       }
     }
   })
@@ -111,19 +130,44 @@ a-drawer.settings-drawer(
 <style lang="less">
   .settings-drawer {
     .arco-drawer {
-      height: 335px;
-      margin-left: 24px;
+      height: min-content;
+      margin-left: 18px;
       border-radius: 4px;
       box-shadow: 0 4px 10px 0 var(--border-color);
+      border: 1px solid var(--border-color);
+      .arco-form-item-label-col {
+        margin-bottom: 5px;
+        > .arco-form-item-label {
+          color: var(--main-font-color);
+          font-size: 13px;
+          opacity: 1;
+        }
+      }
       .arco-form-item {
-        margin-bottom: 16px;
+        margin-bottom: 10px;
       }
       .arco-drawer-header {
         display: none;
       }
 
       .arco-drawer-body {
-        padding: 16px 10px 0 10px;
+        padding: 16px 16px 10px 16px;
+      }
+    }
+    .bold {
+      font-weight: 600;
+    }
+    .arco-form-item-extra {
+      font-size: 11px;
+    }
+    .arco-link {
+      margin-left: 2px;
+      color: var(--brand-color);
+      font-size: 11px;
+      padding: 0 2px;
+      .arco-link-icon {
+        font-size: 11px;
+        margin-right: 1px;
       }
     }
   }

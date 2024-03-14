@@ -34,7 +34,6 @@ a-modal.guide-modal(
 
 <script lang="ts" setup name="GuideModal">
   import { useAppStore } from '@/store'
-  import SettingsForm from '../global-setting/settings-form.vue'
 
   const { username, password, host, database, databaseList, menuSelectedKey, guideModalVisible } = storeToRefs(
     useAppStore()

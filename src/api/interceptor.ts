@@ -36,6 +36,9 @@ axios.interceptors.request.use(
     config.headers.authorization = basicAuth
 
     if (isV1) {
+      if (appStore.userTimezone) {
+        config.headers['x-greptime-timezone'] = appStore.userTimezone
+      }
       config.transformResponse = [(data) => data]
       return {
         ...config,

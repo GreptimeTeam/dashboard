@@ -25,5 +25,6 @@ export interface AppState {
   lifetime: string
   menuSelectedKey: string
   queryModalVisible: boolean
+  userTimezone: string
   [key: string]: unknown
 }
