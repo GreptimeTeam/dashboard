@@ -1,5 +1,6 @@
 import type { RouteRecordNormalized } from 'vue-router'
-
+import { AppRouteRecordRaw } from '@/router/routes/types'
+import { Component } from 'vue'
 export interface AppState {
   theme: string
   colorWeak: boolean
@@ -27,10 +28,13 @@ export interface AppState {
   queryModalVisible: boolean
   userTimezone: string
   statusBar: Record<string, Array<StatusItem>>
+  statusBarLeft: Record<string, Array<StatusItem>>
   [key: string]: unknown
 }
 
-export interface StatusItem {
-  msg: string
-  action?: () => void
+export interface StatusItemSimple {
+  text?: string
+  icon?: Component | string
+  onClick?: (item: any, evt: PointerEvent) => void
 }
+export type StatusItem = StatusItemSimple | Component

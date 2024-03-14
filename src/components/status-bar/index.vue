@@ -1,12 +1,15 @@
+import { slice } from 'lodash';
 <template lang="pug">
-a-space.status-bar
-  template(v-for="itemType in Object.keys(statusBar)")
-    a-link(size="mini" v-for="item in statusBar[itemType]" @click="() => item.action && item.action(item)")
-      | {{ item.msg }}
+.status-bar
+  status-bar-list(:items="statusBarLeft")
+  status-bar-list(:items="statusBar")
 </template>
 
 <script setup name="StatusBar" lang="ts">
-  const { statusBar } = useAppStore()
+  import { useAppStore } from '@/store'
+  import StatusBarList from './status-list.vue'
+
+  const { statusBar, statusBarLeft } = useAppStore()
 </script>
 
 <style lang="less" scoped>
@@ -15,6 +18,6 @@ a-space.status-bar
     height: 24px;
     line-height: 24px;
     display: flex;
-    justify-content: right;
+    justify-content: space-between;
   }
 </style>

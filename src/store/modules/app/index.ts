@@ -10,7 +10,7 @@ import editorAPI from '@/api/editor'
 import { AppState, StatusItem } from './types'
 
 const useAppStore = defineStore('app', {
-  state: (): AppState => ({ ...defaultSettings, statusBar: {} }),
+  state: (): AppState => ({ ...defaultSettings, statusBar: {}, statusBarLeft: {} }),
   getters: {
     appCurrentSetting(state: AppState): AppState {
       return { ...state }
@@ -25,9 +25,28 @@ const useAppStore = defineStore('app', {
 
   actions: {
     // Update app settings
-
-    setStatusBar(key: string, item: StatusItem[]) {
-      this.statusBar[key] = item
+    // key: status grouped by key
+    setStatusBar(key: string, item: StatusItem | StatusItem[], timeout?: number) {
+      if (!Array.isArray(item)) {
+        item = [item]
+      }
+      this.statusBar[key] = item as StatusItem[]
+      if (timeout) {
+        setTimeout(() => {
+          this.statusBar[key] = []
+        }, timeout)
+      }
+    },
+    setStatusBarLeft(key: string, item: StatusItem | StatusItem[], timeout?: number) {
+      if (!Array.isArray(item)) {
+        item = [item]
+      }
+      this.statusBarLeft[key] = item as StatusItem[]
+      if (timeout) {
+        setTimeout(() => {
+          this.statusBarLeft[key] = []
+        }, timeout)
+      }
     },
     updateSettings(partial: Partial<AppState>) {
       // @ts-ignore-next-line
