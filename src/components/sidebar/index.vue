@@ -19,16 +19,16 @@ a-layout.navbar
 </template>
 
 <script lang="ts" setup name="SideBar">
-  import greptimeAILogo from '@/assets/images/logo-greptime-ai.png'
   import { useAppStore } from '@/store'
   import { listenerRouteChange } from '@/utils/route-listener'
   import useMenuTree from '@/components/menu/use-menu-tree'
   import { Button, Tooltip, Popover } from '@arco-design/web-vue'
 
-  const { path, title } = defineProps<{
+  const props = defineProps<{
     path: string[]
     title: string
   }>()
+  const { path, title } = toRefs(props)
 
   const router = useRouter()
   const { setStatusBar, setStatusBarLeft } = useAppStore()
@@ -55,8 +55,7 @@ a-layout.navbar
   }
 
   const { menuTree } = useMenuTree()
-
-  const menu = computed(() => getMenuByPath(path.slice(), menuTree.value))
+  const menu = computed(() => getMenuByPath(path.value.slice(), menuTree.value))
   const menuClick = (key: string) => {
     router.push({ name: key })
   }
@@ -67,7 +66,7 @@ a-layout.navbar
   }
 
   listenerRouteChange((newRoute) => {
-    const pageName = newRoute.path.substring(path.join('').length + path.length + 1)
+    const pageName = newRoute.path.substring(path.value.join('').length + path.value.length + 1)
     submenuSelectedKey.value = pageName as string
     // setStatusBar('ai', {text: 'progress 10%'}, 2000)
     // setStatusBarLeft('ai', {text: 'progress 10%'}, 2000)
