@@ -63,7 +63,9 @@ axios.interceptors.response.use(
         // v1 and error
         Message.error({
           content: data.error || 'Error',
-          duration: 2 * 1000,
+          duration: 5 * 1000,
+          closable: true,
+          resetOnHover: true,
         })
         const error = {
           error: data.error,
@@ -87,10 +89,17 @@ axios.interceptors.response.use(
       const appStore = useAppStore()
       appStore.updateSettings({ globalSettings: true })
     }
+    const data = JSON.parse(error.response.data)
     Message.error({
-      content: error.message || 'Request Error',
-      duration: 2 * 1000,
+      content: data.error || 'Request Error',
+      duration: 5 * 1000,
+      closable: true,
+      resetOnHover: true,
     })
-    return Promise.reject(error)
+    const errorResponse = {
+      error: data.error,
+      startTime: new Date(error.response.config.traceTimeStart).toLocaleTimeString(),
+    }
+    return Promise.reject(errorResponse || error.message || 'Request Error')
   }
 )
