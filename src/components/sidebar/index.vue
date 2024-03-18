@@ -34,7 +34,7 @@ a-layout.navbar
   const { setStatusBar, setStatusBarLeft } = useAppStore()
   const submenuSelectedKey = ref('')
 
-  function getMenuByPath(pathArr: string[], menuTree: any) {
+  function getMenuByPath(pathArr: string[], menuTree: any): any {
     let levelPath = pathArr.shift()
     if (levelPath?.startsWith('/')) {
       levelPath = levelPath.substring(1)
