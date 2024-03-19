@@ -1,5 +1,5 @@
 import localeDashboard from '@/views/dashboard/locale/en-US'
-import localSetting from '@/components/global-setting/local/en-US'
+import localeSetting from '@/components/global-setting/locale/en-US'
 
 export default {
   'menu.dashboard': 'Dashboard',
@@ -8,6 +8,10 @@ export default {
   'menu.dashboard.scripts': 'Scripts',
   'menu.dashboard.playground': 'Playground',
   'menu.dashboard.status': 'Status',
+  'menu.dashboard.ingest': 'Ingest',
+  'menu.dashboard.influxdb': 'InfluxDB',
+  'menu.dashboard.write': 'Write',
+  'menu.dashboard.upload': 'Upload',
   'menu.server.dashboard': 'Dashboard-Server',
   'menu.server.workplace': 'Workplace-Server',
   'menu.server.monitor': 'Monitor-Server',
@@ -29,5 +33,5 @@ export default {
   'playground.import': 'Import {lines} lines in {time}ms',
   'copied': 'Copied',
   ...localeDashboard,
-  ...localSetting,
+  ...localeSetting,
 }

@@ -27,6 +27,54 @@ const DASHBOARD: AppRouteRecordRaw = {
       },
     },
     {
+      path: 'ingest',
+      name: 'ingest',
+      component: () => import('@/views/dashboard/ingest/index.vue'),
+      meta: {
+        locale: 'menu.dashboard.ingest',
+        requiresAuth: false,
+        icon: 'query-menu',
+        roles: ['admin', 'cloud'],
+      },
+      children: [
+        {
+          path: 'influxdb',
+          name: 'influxdb',
+          component: null,
+          meta: {
+            locale: 'menu.dashboard.influxdb',
+            requiresAuth: false,
+            icon: 'query-menu',
+            roles: ['admin', 'cloud'],
+          },
+          children: [
+            {
+              path: 'write',
+              name: 'influxdb-write',
+              component: () => import('@/views/dashboard/ingest/influxdb/write.vue'),
+              meta: {
+                locale: 'menu.dashboard.write',
+                requiresAuth: false,
+                roles: ['admin', 'cloud'],
+                icon: 'query-menu',
+              },
+            },
+            {
+              path: 'upload',
+              name: 'influxdb-upload',
+              component: () => import('@/views/dashboard/ingest/influxdb/upload.vue'),
+              meta: {
+                locale: 'menu.dashboard.upload',
+                requiresAuth: false,
+                roles: ['admin', 'cloud'],
+                icon: 'query-menu',
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
       path: 'scripts',
       name: 'scripts',
       component: () => import('@/views/dashboard/scripts/index.vue'),
