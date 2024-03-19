@@ -8,24 +8,23 @@ div
     button(@click="uploadFile") Reupload File
 </template>
 
-<script>
-  export default {
-    data() {
-      return {
-        file: null,
-      }
-    },
-    methods: {
-      uploadFile() {
-        // let input = document.createElement('input')
-        // input.type = 'file'
-        // input.onchange = (e) => {
-        //   this.file = e.target.files[0]
-        // }
-        // input.click()
-      },
-    },
+<script setup lang="ts">
+  const file = null
+  const uploadFile = () => {
+    // let input = document.createElement('input')
+    // input.type = 'file'
+    // input.onchange = (e) => {
+    //   this.file = e.target.files[0]
+    // }
+    // input.click()
   }
+
+  onMounted(() => {
+    console.log('upload mounted')
+  })
+  onActivated(() => {
+    console.log('activated upload')
+  })
 </script>
 
 <style scoped>

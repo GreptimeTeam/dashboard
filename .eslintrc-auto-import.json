@@ -104,6 +104,9 @@
     "toValue": true,
     "useWorkbenchStore": true,
     "WritableComputedRef": true,
-    "stringType": true
+    "stringType": true,
+    "ExtractDefaultPropTypes": true,
+    "ExtractPropTypes": true,
+    "ExtractPublicPropTypes": true
   }
 }

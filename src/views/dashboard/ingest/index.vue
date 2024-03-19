@@ -17,9 +17,14 @@ a-layout.layout
             svg.icon
               use(:href="`#${child.meta.icon}`")
             span {{ $t(child.meta.locale) }}
-  a-layout-content
-    TopBar
-    router-view
+  a-layout-content.layout-content
+    a-layout-header
+      TopBar
+    a-layout-content
+      router-view(v-slot="{ Component }")
+        component(v-if="route.meta.ignoreCache" :key="route.fullPath" :is="Component")
+        keep-alive(v-else)
+          component(:key="route.name" :is="Component")
 </template>
 
 <script lang="ts" setup name="Ingest">
@@ -28,9 +33,18 @@ a-layout.layout
   import { listenerRouteChange } from '@/utils/route-listener'
   import { useI18n } from 'vue-i18n'
 
+  const route = useRoute()
   const { t } = useI18n()
 
   const { menuTree } = useMenuTree()
+
+  onMounted(() => {
+    console.log('mounted')
+  })
+
+  onActivated(() => {
+    console.log('activated')
+  })
 
   const menu = menuTree.value[0].children[1].children
   console.log(menu)
@@ -49,3 +63,13 @@ a-layout.layout
   //   window.open(url.fullPath, '_blank')
   // }
 </script>
+
+<style lang="less" scoped>
+  .layout {
+    padding: 0;
+    background: var(--card-bg-color);
+  }
+  .layout-content {
+    padding: 20px;
+  }
+</style>
