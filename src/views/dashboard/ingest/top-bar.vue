@@ -7,7 +7,9 @@ a-space.top-bar
 </template>
 
 <script lang="ts" setup name="TopBar">
+  // TODO: use same precision for both pages
   const precision = ref('ms')
+
   onMounted(() => {
     console.log('mounted top bar')
   })

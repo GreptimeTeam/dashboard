@@ -1,22 +1,28 @@
 <template lang="pug">
-div
-  .upload-box(v-if="!file")
-    button(@click="uploadFile") Upload File
-  .file-info(v-else)
-    p File Name: {{ file.name }}
-    p File Size: {{ file.size }} bytes
-    button(@click="uploadFile") Reupload File
+a-upload(action="/" @before-upload="beforeUpload")
+  template(#upload-button)
+    .upload-box(v-if="!file")
+      a-space(size="middle" direction="vertical" align="center")
+        | Drop or click to upload(10MB max)
+        a-button(type="primary") Upload
+    .file-info(v-else)
+      p File Name: {{ file.name }}
+      p File Size: {{ file.size }} bytes
+      a-button Reupload File
 </template>
 
-<script setup lang="ts">
-  const file = null
-  const uploadFile = () => {
-    // let input = document.createElement('input')
-    // input.type = 'file'
-    // input.onchange = (e) => {
-    //   this.file = e.target.files[0]
-    // }
-    // input.click()
+<script lang="ts" setup>
+  const file = ref(null as File | null)
+  const beforeUpload = (newFile: File) => {
+    console.log('before upload', newFile)
+    // use filereader to read file
+    const reader = new FileReader()
+    reader.readAsText(newFile)
+    reader.onload = (e: any) => {
+      console.log(e.target.result)
+    }
+    file.value = newFile
+    return false
   }
 
   onMounted(() => {
