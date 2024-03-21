@@ -49,11 +49,11 @@ const DASHBOARD: AppRouteRecordRaw = {
           },
           children: [
             {
-              path: 'write',
-              name: 'influxdb-write',
-              component: () => import('@/views/dashboard/ingest/influxdb/write.vue'),
+              path: 'input',
+              name: 'influxdb-input',
+              component: () => import('@/views/dashboard/ingest/influxdb/input.vue'),
               meta: {
-                locale: 'menu.dashboard.write',
+                locale: 'menu.dashboard.input',
                 requiresAuth: false,
                 roles: ['admin', 'cloud'],
                 icon: 'query-menu',

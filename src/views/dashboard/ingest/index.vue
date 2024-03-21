@@ -18,13 +18,10 @@ a-layout.layout
               use(:href="`#${child.meta.icon}`")
             span {{ $t(child.meta.locale) }}
   a-layout-content.layout-content
-    a-layout-header
-      TopBar
-    a-layout-content
-      router-view(v-slot="{ Component }")
-        component(v-if="route.meta.ignoreCache" :key="route.fullPath" :is="Component")
-        keep-alive(v-else)
-          component(:key="route.name" :is="Component")
+    router-view(v-slot="{ Component }")
+      component(v-if="route.meta.ignoreCache" :key="route.fullPath" :is="Component")
+      keep-alive(v-else)
+        component(:key="route.name" :is="Component")
 </template>
 
 <script lang="ts" setup name="Ingest">

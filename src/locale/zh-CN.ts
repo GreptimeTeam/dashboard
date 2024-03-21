@@ -12,6 +12,7 @@ export default {
   'menu.dashboard.influxdb': 'InfluxDB',
   'menu.dashboard.write': '写入',
   'menu.dashboard.upload': '上传',
+  'menu.dashboard.input': '输入',
   'menu.server.dashboard': '仪表盘-服务端',
   'menu.server.workplace': '工作台-服务端',
   'menu.server.monitor': '实时监控-服务端',

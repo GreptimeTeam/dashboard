@@ -12,6 +12,7 @@ export default {
   'menu.dashboard.influxdb': 'InfluxDB',
   'menu.dashboard.write': 'Write',
   'menu.dashboard.upload': 'Upload',
+  'menu.dashboard.input': 'Input',
   'menu.server.dashboard': 'Dashboard-Server',
   'menu.server.workplace': 'Workplace-Server',
   'menu.server.monitor': 'Monitor-Server',

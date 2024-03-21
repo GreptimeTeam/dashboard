@@ -1,14 +1,27 @@
 <template lang="pug">
 a-space.top-bar
-  a-button(type="primary" @click="submit") Submit
+  a-button(
+    type="primary"
+    :loading="loading"
+    :disabled="disabled"
+    @click="clickSubmit"
+  ) Write
   a-select(v-model="precision" style="width: 200px" :options="precisionOptions")
     template(#title)
     span Precision
 </template>
 
 <script lang="ts" setup name="TopBar">
-  // TODO: use same precision for both pages
+  const props = defineProps<{
+    disabled: boolean
+    loading: boolean
+  }>()
+  const emits = defineEmits(['submit'])
   const precision = ref('ms')
+
+  const clickSubmit = () => {
+    emits('submit', precision.value)
+  }
 
   onMounted(() => {
     console.log('mounted top bar')
@@ -16,9 +29,6 @@ a-space.top-bar
   onActivated(() => {
     console.log('activated  top bar')
   })
-  const submit = () => {
-    console.log('submit')
-  }
 
   const precisionOptions = [
     {
