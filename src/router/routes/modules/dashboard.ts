@@ -30,6 +30,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       path: 'ingest',
       name: 'ingest',
       component: () => import('@/views/dashboard/ingest/index.vue'),
+      redirect: '/dashboard/ingest/influxdb/input',
       meta: {
         locale: 'menu.dashboard.ingest',
         requiresAuth: false,
@@ -39,7 +40,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       children: [
         {
           path: 'influxdb',
-          name: 'influxdb',
+          redirect: '/dashboard/ingest/influxdb/input',
           component: null,
           meta: {
             locale: 'menu.dashboard.influxdb',

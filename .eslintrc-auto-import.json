@@ -107,6 +107,7 @@
     "stringType": true,
     "ExtractDefaultPropTypes": true,
     "ExtractPropTypes": true,
-    "ExtractPublicPropTypes": true
+    "ExtractPublicPropTypes": true,
+    "useIngestStore": true
   }
 }

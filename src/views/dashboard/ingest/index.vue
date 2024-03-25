@@ -4,7 +4,7 @@ a-layout.layout
     a-card(:title="$t('menu.dashboard.ingest')" :bordered="false")
       a-menu(
         mode="vertical"
-        :selected-keys="[menuSelectedKey]"
+        :selected-keys="[activeTab]"
         :collapsed="false"
         :default-open-keys="['influxdb']"
       )
@@ -34,31 +34,13 @@ a-layout.layout
   const { t } = useI18n()
 
   const { menuTree } = useMenuTree()
-
-  onMounted(() => {
-    console.log('mounted')
-  })
-
-  onActivated(() => {
-    console.log('activated')
-  })
+  const { activeTab } = storeToRefs(useIngestStore())
 
   const menu = menuTree.value[0].children[1].children
-  console.log(menu)
-  const menuSelectedKey = ref('influxdb-upload')
 
   const menuClick = (parent: string, child: string) => {
     router.push({ name: child })
   }
-
-  listenerRouteChange((newRoute) => {
-    menuSelectedKey.value = newRoute.name as string
-  }, true)
-
-  // const menuClickWithMeta = (key: string) => {
-  //   const url = router.resolve({ name: key })
-  //   window.open(url.fullPath, '_blank')
-  // }
 </script>
 
 <style lang="less" scoped>
