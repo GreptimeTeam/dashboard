@@ -22,6 +22,8 @@ a-layout-content
 </template>
 
 <script lang="ts" setup>
+  import Message from '@arco-design/web-vue/es/message'
+
   const { writeInfluxDB } = useCodeRunStore()
 
   const file = ref(null as File | null)
@@ -29,7 +31,12 @@ a-layout-content
   const dataFromFile = ref('')
   const beforeUpload = (newFile: File) => {
     console.log('before upload', newFile)
-    // use filereader to read file
+    if (newFile.size > 10 * 1024 * 1024) {
+      // file size limit
+      Message.error('File size limit 10MB')
+      return false
+    }
+    // use fileReader to read file
     const reader = new FileReader()
     reader.readAsText(newFile)
     reader.onload = (e: any) => {
