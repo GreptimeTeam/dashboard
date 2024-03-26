@@ -1,7 +1,7 @@
 <template lang="pug">
 a-layout-header
   TopBar(:disabled="!file" :loading="isWriteLoading" @submit="submit")
-a-layout-content
+a-layout-content.main-content
   a-upload(
     action="/"
     :auto-upload="false"

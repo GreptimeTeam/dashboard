@@ -40,6 +40,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       children: [
         {
           path: 'influxdb',
+          name: 'influxdb',
           redirect: '/dashboard/ingest/influxdb/input',
           component: null,
           meta: {

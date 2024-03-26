@@ -52,3 +52,9 @@ a-layout.layout
     padding: 20px;
   }
 </style>
+
+<style lang="less">
+  .main-content {
+    height: calc(100% - 52px);
+  }
+</style>
