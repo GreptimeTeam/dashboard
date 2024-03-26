@@ -19,9 +19,8 @@ a-layout.layout
             span {{ $t(child.meta.locale) }}
   a-layout-content.layout-content
     router-view(v-slot="{ Component }")
-      component(v-if="route.meta.ignoreCache" :key="route.fullPath" :is="Component")
-      keep-alive(v-else)
-        component(:key="route.name" :is="Component")
+      keep-alive
+        component(:is="Component")
     LogsNew(v-if="ingestLogs.length" :logs="ingestLogs" :types="[activeTab]")
 </template>
 
