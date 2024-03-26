@@ -18,10 +18,13 @@ a-layout.layout
               use(:href="`#${child.meta.icon}`")
             span {{ $t(child.meta.locale) }}
   a-layout-content.layout-content
-    router-view(v-slot="{ Component }")
-      keep-alive
-        component(:is="Component")
-    LogsNew(v-if="ingestLogs.length" :logs="ingestLogs" :types="[activeTab]")
+    a-space.layout-space(direction="vertical" fill size="0")
+      router-view(v-slot="{ Component }")
+        keep-alive
+          component(:is="Component")
+      a-tabs.panel-tabs(v-if="ingestLogs.length" type="card")
+        a-tab-pane(title="Log" key="log")
+          LogsNew(:logs="ingestLogs" :types="[activeTab]")
 </template>
 
 <script lang="ts" setup name="Ingest">
@@ -52,6 +55,24 @@ a-layout.layout
   }
   .layout-content {
     padding: 20px;
+  }
+  :deep(.layout-space) {
+    height: 100%;
+    > .arco-space-item:first-of-type {
+      height: 100%;
+    }
+  }
+  .panel-tabs {
+    max-height: 155px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    :deep(> .arco-tabs-content) {
+      height: calc(100% - 30px);
+      // TODO: better scrollbar style
+
+      overflow: auto;
+    }
   }
 </style>
 
