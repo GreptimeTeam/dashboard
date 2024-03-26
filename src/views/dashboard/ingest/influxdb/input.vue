@@ -17,8 +17,11 @@ a-layout-content.main-content
 <script lang="ts" setup>
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { basicSetup } from 'codemirror'
+  import type { Log } from '@/store/modules/log/types'
 
   const { writeInfluxDB } = useCodeRunStore()
+  const { activeTab } = storeToRefs(useIngestStore())
+  const { pushLog } = useLog()
 
   const data = ref('')
   const style = {
@@ -30,13 +33,25 @@ a-layout-content.main-content
   const submit = async (precision: string) => {
     loading.value = true
     const result = await writeInfluxDB(data.value, precision)
-    console.log('result', result)
+    let log: Log
     if (Reflect.has(result, 'error')) {
       // error
+      log = {
+        type: activeTab.value,
+        codeInfo: '',
+        message: 'Failed to write data',
+        error: result.error,
+        startTime: result.startTime,
+      }
     } else {
-      // success
-      // data.value = ''
+      log = {
+        type: activeTab.value,
+        codeInfo: '',
+        message: 'Data written successfully',
+        startTime: result.startTime,
+      }
     }
+    pushLog(log, activeTab.value)
     loading.value = false
   }
 

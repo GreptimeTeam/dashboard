@@ -22,12 +22,12 @@ a-layout.layout
       component(v-if="route.meta.ignoreCache" :key="route.fullPath" :is="Component")
       keep-alive(v-else)
         component(:key="route.name" :is="Component")
+    LogsNew(v-if="ingestLogs.length" :logs="ingestLogs" :types="[activeTab]")
 </template>
 
 <script lang="ts" setup name="Ingest">
   import useMenuTree from '@/components/menu/use-menu-tree'
   import router from '@/router'
-  import { listenerRouteChange } from '@/utils/route-listener'
   import { useI18n } from 'vue-i18n'
 
   const route = useRoute()
@@ -35,6 +35,9 @@ a-layout.layout
 
   const { menuTree } = useMenuTree()
   const { activeTab } = storeToRefs(useIngestStore())
+  const { logs } = storeToRefs(useLogStore())
+
+  const ingestLogs = computed(() => logs.value.filter((log) => activeTab.value.includes(log.type)))
 
   const menu = menuTree.value[0].children[1].children
 

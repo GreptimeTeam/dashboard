@@ -9,7 +9,7 @@ export default {
   'menu.dashboard.playground': 'Playground',
   'menu.dashboard.status': 'Status',
   'menu.dashboard.ingest': 'Ingest',
-  'menu.dashboard.influxdb': 'InfluxDB',
+  'menu.dashboard.influxdb': 'InfluxDB Line Protocol',
   'menu.dashboard.write': 'Write',
   'menu.dashboard.upload': 'Upload',
   'menu.dashboard.input': 'Input',
