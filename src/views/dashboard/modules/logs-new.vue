@@ -7,8 +7,10 @@ a-card(:bordered="false")
         icon-close-circle.danger-color(v-else)
         .start-time
           | {{ log.startTime }}
-        | {{ log.message }}
         div(v-if="log.codeInfo") {{ log.codeInfo }}
+        div(v-if="log.message") {{ log.message }}
+        .total-time(v-if="!log.error")
+          div {{ `in ${log.networkTime} ms` }}
         div(v-if="log.error") {{ log.error }}
 </template>
 
@@ -50,5 +52,12 @@ a-card(:bordered="false")
   }
   :deep(.arco-list) {
     border-radius: 0;
+  }
+
+  .total-time {
+    background: var(--th-bg-color);
+    border-radius: 4px;
+    padding: 0 4px;
+    min-width: max-content;
   }
 </style>

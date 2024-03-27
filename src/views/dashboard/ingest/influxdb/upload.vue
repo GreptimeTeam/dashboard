@@ -69,7 +69,7 @@ a-layout-content.main-content
       log = {
         type: 'influxdb-upload',
         codeInfo: fileInfo,
-        message: 'Failed to write data',
+        message: '',
         error: result.error,
         startTime: result.startTime,
       }
@@ -80,8 +80,9 @@ a-layout-content.main-content
       log = {
         type: 'influxdb-upload',
         codeInfo: fileInfo,
-        message: 'Data written successfully',
+        message: 'Data written',
         startTime: result.startTime,
+        networkTime: result.networkTime,
       }
     }
     pushLog(log, activeTab.value)

@@ -39,7 +39,7 @@ a-layout-content.main-content
       log = {
         type: activeTab.value,
         codeInfo: '',
-        message: 'Failed to write data',
+        message: '',
         error: result.error,
         startTime: result.startTime,
       }
@@ -47,8 +47,9 @@ a-layout-content.main-content
       log = {
         type: activeTab.value,
         codeInfo: '',
-        message: 'Data written successfully',
+        message: 'Data written',
         startTime: result.startTime,
+        networkTime: result.networkTime,
       }
     }
     pushLog(log, activeTab.value)
