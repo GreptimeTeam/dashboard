@@ -34,7 +34,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.dashboard.ingest',
         requiresAuth: false,
-        icon: 'query-menu',
+        icon: 'ingest',
         roles: ['admin', 'cloud'],
       },
       children: [
