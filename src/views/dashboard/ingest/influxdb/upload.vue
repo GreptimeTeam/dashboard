@@ -11,14 +11,27 @@ a-layout-content.main-content
     @before-upload="beforeUpload"
   )
     template(#upload-button)
-      .upload-box(v-if="!file")
-        a-space(size="middle" direction="vertical" align="center")
-          | Drop or click to upload(10MB max)
-          a-button(type="primary") Upload
-      .file-info(v-else)
-        p File Name: {{ file.name }}
-        p File Size: {{ fileSize }}
-        a-button Reupload File
+      .upload-box
+        a-space(
+          v-if="!file"
+          direction="vertical"
+          align="center"
+          :size="30"
+        )
+          .tip Drop or click to upload (10MB max)
+          a-button(type="primary" size="large") Upload
+        a-space(
+          v-else
+          direction="vertical"
+          align="center"
+          :size="30"
+        )
+          a-space(direction="vertical" :size="10")
+            .reupload
+              svg.icon-30
+                use(href="#bigupload")
+            .file-info {{ `${file.name} (${fileSize})` }}
+          a-button(type="secondary" size="large") Reupload
 </template>
 
 <script lang="ts" setup>
@@ -88,29 +101,52 @@ a-layout-content.main-content
     pushLog(log, activeTab.value)
     isWriteLoading.value = false
   }
-
-  onMounted(() => {
-    console.log('upload mounted')
-  })
-  onActivated(() => {
-    console.log('activated upload')
-  })
 </script>
 
-<style scoped>
+<style lang="less" scoped>
+  .arco-upload {
+    width: 100%;
+    padding: 0 105px;
+    max-width: 960px;
+  }
+
   .upload-box {
-    width: 200px;
-    height: 200px;
-    border: 2px dashed #000;
+    width: 100%;
+    height: 262px;
+    border: 2px dashed var(--border-color);
     display: flex;
     justify-content: center;
     align-items: center;
+    .arco-btn {
+      font-size: 14px;
+      font-family: 'Gilroy';
+      padding: 12px 32px;
+      height: 42px;
+    }
+  }
+
+  .tip {
+    font-family: Gilroy, Gilroy;
+    font-weight: 800;
+    font-size: 16px;
+    color: var(--main-font-color);
+    line-height: 28px;
+  }
+
+  .reupload {
+    display: flex;
+    color: var(--brand-color);
+    justify-content: center;
   }
 
   .file-info {
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .main-content {
     display: flex;
-    flex-direction: column;
-    justify-content: center;
     align-items: center;
+    justify-content: center;
   }
 </style>

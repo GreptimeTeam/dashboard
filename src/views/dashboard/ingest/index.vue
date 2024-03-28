@@ -1,7 +1,7 @@
 <template lang="pug">
 a-layout.layout
   a-layout-sider(:resize-directions="['right']" :width="275")
-    a-card(:title="$t('menu.dashboard.ingest')" :bordered="false")
+    a-card.sidebar(:title="$t('menu.dashboard.ingest')" :bordered="false")
       a-menu(
         mode="vertical"
         :selected-keys="[activeTab]"
@@ -17,25 +17,27 @@ a-layout.layout
             svg.icon
               use(:href="`#${child.meta.icon}`")
             span {{ $t(child.meta.locale) }}
-  a-layout-content.layout-content
+  a-layout-content.layout-content(:class="{ 'has-panel': !footer }")
     a-space.layout-space(direction="vertical" fill :size="0")
       router-view(v-slot="{ Component }")
         keep-alive
           component(:is="Component")
-      a-tabs.panel-tabs(v-if="!footer" type="card")
+      a-tabs.panel-tabs(v-if="!footer")
         a-tab-pane(title="Log" key="log")
           LogsNew(:logs="ingestLogs" :types="[activeTab]")
         template(#extra)
           a-tooltip(content="Hide panel" position="tr")
-            a-button(type="text" @click="footer = true")
-              svg.icon
-                use(href="#pull-down")
+            a-button(type="text" size="mini" @click="footer = true")
+              template(#icon)
+                svg.icon-12
+                  use(href="#pull-down")
       a-layout-footer(v-else)
         div
         a-tooltip(content="Show panel for log" position="tr")
-          a-button(type="text" @click="footer = false")
-            svg.icon
-              use(href="#log")
+          a-button(type="text" size="mini" @click="footer = false")
+            template(#icon)
+              svg.icon
+                use(href="#log")
 </template>
 
 <script lang="ts" setup name="Ingest">
@@ -71,36 +73,151 @@ a-layout.layout
   .layout {
     padding: 0;
     background: var(--card-bg-color);
+    > .arco-layout-sider {
+      min-width: 210px;
+      border-left: 1px solid var(--border-color);
+    }
   }
   .layout-content {
     padding: 20px 20px 0 20px;
+    height: 100vh;
   }
   .arco-layout-footer {
     display: flex;
     justify-content: space-between;
+    .arco-btn-size-mini.arco-btn-only-icon {
+      width: 26px;
+      height: 26px;
+      padding: 0;
+    }
   }
   :deep(.layout-space) {
     height: 100%;
     > .arco-space-item:first-of-type {
-      height: 100%;
+      flex: 1;
+      overflow: auto;
     }
   }
-  .panel-tabs {
+  :deep(.arco-card.sidebar) {
+    height: 100%;
+    border-radius: 0;
+    .arco-card-header {
+      height: 52px;
+    }
+    .arco-menu {
+      .icon {
+        margin-right: 6px;
+      }
+      .arco-menu-inner {
+        padding: 0;
+        .arco-menu-inline-header {
+          display: flex;
+          align-items: center;
+          margin: 0;
+          padding: 0 15px;
+          font-size: 13px;
+          height: 30px;
+          line-height: 30px;
+          border-radius: 0;
+          .arco-menu-icon-suffix {
+            right: 15px;
+          }
+          &.arco-menu-selected {
+            background: var(--light-brand-color);
+            color: var(--brand-color);
+            font-weight: 600;
+            .arco-icon {
+              color: var(--brand-color);
+            }
+          }
+        }
+        .arco-menu-item {
+          margin: 0;
+          padding-left: 35px;
+          height: 28px;
+          line-height: 28px;
+          font-size: 13px;
+          border-radius: 0;
+          &:hover {
+            background-color: var(--th-bg-color);
+          }
+          &.arco-menu-selected {
+            background: transparent;
+            color: var(--brand-color);
+          }
+          .arco-menu-indent {
+            width: 0;
+          }
+          .arco-menu-item-inner {
+            display: inline-flex;
+            align-items: center;
+          }
+        }
+      }
+    }
+  }
+  :deep(.arco-tabs.panel-tabs) {
     max-height: 155px;
     display: flex;
     flex-direction: column;
     height: 100%;
+    border-top: 1px solid var(--border-color);
+
+    .arco-tabs-content-list {
+      height: 100%;
+    }
+
+    .arco-tabs-content .arco-tabs-content-item {
+      height: 100%;
+      // TODO: better scrollbar style
+      overflow: auto;
+    }
+    .arco-tabs-tab {
+      border-radius: 0;
+      border-top: none;
+      height: 100%;
+      margin: 0;
+      padding: 0 15px;
+    }
+    .arco-tabs-content {
+      padding: 0 0 20px 0;
+    }
+    .arco-tabs-nav-ink {
+      background: var(--brand-color);
+    }
+    .arco-tabs-nav {
+      height: 26px;
+      background: var(--th-bg-color);
+      &:before {
+        display: none;
+      }
+    }
+    .arco-tabs-nav-tab {
+      height: 100%;
+    }
+    .arco-tabs-tab-active {
+      color: var(--main-font-color);
+      background: var(--card-bg-color);
+    }
     :deep(> .arco-tabs-content) {
       height: calc(100% - 30px);
       // TODO: better scrollbar style
-
       overflow: auto;
+    }
+  }
+
+  .has-panel {
+    :deep(.arco-card.light-editor-card) {
+      .ͼ1.cm-editor {
+        border-bottom: none;
+        border-radius: 4px 4px 0 0;
+      }
     }
   }
 </style>
 
 <style lang="less">
   .main-content {
-    height: calc(100% - 52px);
+    height: calc(100% - 48px);
   }
 </style>

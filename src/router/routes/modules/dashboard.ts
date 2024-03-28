@@ -58,7 +58,7 @@ const DASHBOARD: AppRouteRecordRaw = {
                 locale: 'menu.dashboard.input',
                 requiresAuth: false,
                 roles: ['admin', 'cloud'],
-                icon: 'query-menu',
+                icon: 'input',
               },
             },
             {
@@ -69,7 +69,7 @@ const DASHBOARD: AppRouteRecordRaw = {
                 locale: 'menu.dashboard.upload',
                 requiresAuth: false,
                 roles: ['admin', 'cloud'],
-                icon: 'query-menu',
+                icon: 'upload',
               },
             },
           ],
