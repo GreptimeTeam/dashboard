@@ -1,7 +1,7 @@
 <template lang="pug">
 a-layout.layout
   a-layout-sider(:resize-directions="['right']" :width="275")
-    a-card(:title="$t('menu.dashboard.ingest')" :bordered="false")
+    a-card.sidebar(:title="$t('menu.dashboard.ingest')" :bordered="false")
       a-menu(
         mode="vertical"
         :selected-keys="[activeTab]"
@@ -71,6 +71,10 @@ a-layout.layout
   .layout {
     padding: 0;
     background: var(--card-bg-color);
+    > .arco-layout-sider {
+      min-width: 210px;
+      border-left: 1px solid var(--border-color);
+    }
   }
   .layout-content {
     padding: 20px 20px 0 20px;
@@ -83,6 +87,64 @@ a-layout.layout
     height: 100%;
     > .arco-space-item:first-of-type {
       height: 100%;
+    }
+  }
+  :deep(.arco-card.sidebar) {
+    height: 100%;
+    border-radius: 0;
+    .arco-card-header {
+      height: 52px;
+    }
+    .arco-menu {
+      .icon {
+        margin-right: 6px;
+      }
+      .arco-menu-inner {
+        padding: 0;
+        .arco-menu-inline-header {
+          display: flex;
+          align-items: center;
+          margin: 0;
+          padding: 0 15px;
+          font-size: 13px;
+          height: 30px;
+          line-height: 30px;
+          border-radius: 0;
+          .arco-menu-icon-suffix {
+            right: 15px;
+          }
+          &.arco-menu-selected {
+            background: var(--light-brand-color);
+            color: var(--brand-color);
+            font-weight: 600;
+            .arco-icon {
+              color: var(--brand-color);
+            }
+          }
+        }
+        .arco-menu-item {
+          margin: 0;
+          padding-left: 35px;
+          height: 28px;
+          line-height: 28px;
+          font-size: 13px;
+          border-radius: 0;
+          &:hover {
+            background-color: var(--th-bg-color);
+          }
+          &.arco-menu-selected {
+            background: transparent;
+            color: var(--brand-color);
+          }
+          .arco-menu-indent {
+            width: 0;
+          }
+          .arco-menu-item-inner {
+            display: inline-flex;
+            align-items: center;
+          }
+        }
+      }
     }
   }
   .panel-tabs {
