@@ -2,15 +2,16 @@
 a-card(:bordered="false")
   a-list(size="small" :hoverable="true" :bordered="false")
     a-list-item(v-for="log of logs" :key="log" :log="log")
-      a-space.info(fill)
+      a-space.info(fill :size="10")
         icon-check-circle.success-color.icon-14(v-if="!log.error")
         icon-close-circle.danger-color(v-else)
         .start-time
           | {{ log.startTime }}
         div(v-if="log.codeInfo") {{ log.codeInfo }}
-        div(v-if="log.message") {{ log.message }}
-        .total-time(v-if="!log.error")
-          div {{ `in ${log.networkTime} ms` }}
+        a-space(v-if="log.message" :size="3")
+          | {{ log.message }}
+          .total-time(v-if="!log.error")
+            | {{ `in ${log.networkTime} ms` }}
         div(v-if="log.error") {{ log.error }}
 </template>
 
@@ -31,20 +32,19 @@ a-card(:bordered="false")
 
 <style lang="less" scoped>
   :deep(.arco-list-content) {
-    border-top: 1px solid var(--border-color);
-    border-bottom: 1px solid var(--border-color);
     flex-direction: column-reverse;
     display: flex;
+  }
+
+  .start-time {
+    font-size: 11px;
   }
 
   :deep(.arco-list-small .arco-list-content-wrapper .arco-list-content > .arco-list-item) {
     padding: 4px 12px;
   }
-  :deep(.arco-list-item:last-child) {
+  :deep(.arco-list-item) {
     border-bottom: 1px solid var(--border-color);
-  }
-  :deep(.arco-list-item:first-child) {
-    border-bottom: none;
   }
 
   :deep(.arco-list-item:not(:last-child)) {
@@ -52,6 +52,8 @@ a-card(:bordered="false")
   }
   :deep(.arco-list) {
     border-radius: 0;
+    font-size: 12px;
+    color: var(--main-font-color);
   }
 
   .total-time {

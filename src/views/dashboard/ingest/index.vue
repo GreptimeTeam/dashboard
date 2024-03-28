@@ -17,19 +17,20 @@ a-layout.layout
             svg.icon
               use(:href="`#${child.meta.icon}`")
             span {{ $t(child.meta.locale) }}
-  a-layout-content.layout-content
+  a-layout-content.layout-content(:class="{ 'has-panel': !footer }")
     a-space.layout-space(direction="vertical" fill :size="0")
       router-view(v-slot="{ Component }")
         keep-alive
           component(:is="Component")
-      a-tabs.panel-tabs(v-if="!footer" type="card")
+      a-tabs.panel-tabs(v-if="!footer")
         a-tab-pane(title="Log" key="log")
           LogsNew(:logs="ingestLogs" :types="[activeTab]")
         template(#extra)
           a-tooltip(content="Hide panel" position="tr")
-            a-button(type="text" @click="footer = true")
-              svg.icon
-                use(href="#pull-down")
+            a-button(type="text" size="mini" @click="footer = true")
+              template(#icon)
+                svg.icon-12
+                  use(href="#pull-down")
       a-layout-footer(v-else)
         div
         a-tooltip(content="Show panel for log" position="tr")
@@ -79,6 +80,7 @@ a-layout.layout
   }
   .layout-content {
     padding: 20px 20px 0 20px;
+    height: 100vh;
   }
   .arco-layout-footer {
     display: flex;
@@ -92,7 +94,8 @@ a-layout.layout
   :deep(.layout-space) {
     height: 100%;
     > .arco-space-item:first-of-type {
-      height: 100%;
+      flex: 1;
+      overflow: auto;
     }
   }
   :deep(.arco-card.sidebar) {
@@ -153,15 +156,62 @@ a-layout.layout
       }
     }
   }
-  .panel-tabs {
+  :deep(.arco-tabs.panel-tabs) {
     max-height: 155px;
     display: flex;
     flex-direction: column;
     height: 100%;
+    border-top: 1px solid var(--border-color);
+
+    .arco-tabs-content-list {
+      height: 100%;
+    }
+
+    .arco-tabs-content .arco-tabs-content-item {
+      height: 100%;
+      // TODO: better scrollbar style
+      overflow: auto;
+    }
+    .arco-tabs-tab {
+      border-radius: 0;
+      border-top: none;
+      height: 100%;
+      margin: 0;
+      padding: 0 15px;
+    }
+    .arco-tabs-content {
+      padding: 0 0 20px 0;
+    }
+    .arco-tabs-nav-ink {
+      background: var(--brand-color);
+    }
+    .arco-tabs-nav {
+      height: 26px;
+      background: var(--th-bg-color);
+      &:before {
+        display: none;
+      }
+    }
+    .arco-tabs-nav-tab {
+      height: 100%;
+    }
+    .arco-tabs-tab-active {
+      color: var(--main-font-color);
+      background: var(--card-bg-color);
+    }
     :deep(> .arco-tabs-content) {
       height: calc(100% - 30px);
       // TODO: better scrollbar style
       overflow: auto;
+    }
+  }
+
+  .has-panel {
+    :deep(.arco-card.light-editor-card) {
+      .ͼ1.cm-editor {
+        border-bottom: none;
+        border-radius: 4px 4px 0 0;
+      }
     }
   }
 </style>
