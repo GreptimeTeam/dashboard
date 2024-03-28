@@ -20,7 +20,6 @@ a-tabs.result-tabs.logs-tab(type="rounded")
 
 <script lang="ts" name="Log" setup>
   import type { Log } from '@/store/modules/log/types'
-  import { storeToRefs } from 'pinia'
 
   const props = defineProps<{
     logs: Log[]

@@ -42,13 +42,13 @@ a-layout.navbar
 </template>
 
 <script lang="ts" setup name="NavBar">
-  import { useAppStore } from '@/store'
   import { listenerRouteChange } from '@/utils/route-listener'
   import useMenuTree from '../menu/use-menu-tree'
 
   const router = useRouter()
   const { updateSettings } = useAppStore()
   const { menuSelectedKey, globalSettings, queryModalVisible } = storeToRefs(useAppStore())
+  const { activeTab } = storeToRefs(useIngestStore())
   const { menuTree } = useMenuTree()
 
   const menu = menuTree.value[0].children
@@ -77,7 +77,11 @@ a-layout.navbar
   }
 
   const menuClick = (key: string) => {
-    router.push({ name: key })
+    if (key === 'ingest') {
+      router.push({ name: activeTab.value || (menu[1].children[0].name as string) })
+    } else {
+      router.push({ name: key })
+    }
   }
 
   const menuClickWithMeta = (key: string) => {
@@ -86,7 +90,10 @@ a-layout.navbar
   }
 
   listenerRouteChange((newRoute) => {
-    menuSelectedKey.value = newRoute.name as string
+    menuSelectedKey.value = newRoute.matched[1].name as string
+    if (newRoute.matched[1].name === 'ingest') {
+      activeTab.value = newRoute.matched[3].name as string
+    }
   }, true)
 
   const openQuery = () => {

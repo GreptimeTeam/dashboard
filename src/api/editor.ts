@@ -7,6 +7,8 @@ const sqlUrl = `/v1/sql`
 const scriptUrl = `/v1/scripts`
 const runScriptUrl = `/v1/run-script`
 const promURL = `/v1/promql`
+const influxURL = `/v1/influxdb`
+
 const textHeaders = {
   'Content-Type': 'text/plain',
 } as AxiosRequestHeaders
@@ -63,11 +65,6 @@ const getDatabases = () => {
   return axios.post(sqlUrl, makeSqlData(`show databases`))
 }
 
-// Deprecated
-const getTablesOld = () => {
-  return axios.post(sqlUrl, makeSqlData(`show tables`), addDatabaseParams())
-}
-
 const getTables = (limit?: number, offset?: number) => {
   const appStore = useAppStore()
   const suffix = ` limit ${limit} offset ${offset}`
@@ -121,6 +118,18 @@ const runPromQL = (code: string, promForm: PromForm) => {
   return axios.post(promURL, {}, makePromParams(code, promForm))
 }
 
+const writeInfluxDB = (data: string, precision: string) => {
+  const appStore = useAppStore()
+  const config = {
+    params: {
+      db: appStore.database,
+      precision,
+    },
+    headers: textHeaders,
+  } as AxiosRequestConfig
+  return axios.post(`${influxURL}/write`, data, config)
+}
+
 export default {
   getTables,
   getTableByName,
@@ -131,4 +140,5 @@ export default {
   saveScript,
   runPromQL,
   fetchColumnsCount,
+  writeInfluxDB,
 }
