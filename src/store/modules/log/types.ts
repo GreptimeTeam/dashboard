@@ -11,4 +11,6 @@ export interface Log {
   promInfo?: object
   codeInfo: string
   message: string
+  startTime?: string
+  networkTime?: number
 }

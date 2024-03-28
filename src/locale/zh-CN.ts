@@ -9,7 +9,7 @@ export default {
   'menu.dashboard.playground': '沙盒',
   'menu.dashboard.status': '状态',
   'menu.dashboard.ingest': '摄取',
-  'menu.dashboard.influxdb': 'InfluxDB',
+  'menu.dashboard.influxdb': 'InfluxDB 行协议',
   'menu.dashboard.write': '写入',
   'menu.dashboard.upload': '上传',
   'menu.dashboard.input': '输入',

@@ -1,21 +1,17 @@
 <template lang="pug">
-a-tabs.result-tabs.logs-tab(type="rounded")
-  template(#extra)
-    a-button.clear-logs-button(
-      v-if="logs.length"
-      type="secondary"
-      status="danger"
-      @click="clear"
-    ) {{ $t('dashboard.clear') }}
-  a-tab-pane(title="Logs")
-    a-card(:bordered="false")
-      a-list(
-        v-if="logs.length"
-        size="small"
-        :hoverable="true"
-        :bordered="false"
-      )
-        Log(v-for="log of logs" :key="log" :log="log")
+a-card(:bordered="false")
+  a-list(size="small" :hoverable="true" :bordered="false")
+    a-list-item(v-for="log of logs" :key="log" :log="log")
+      a-space.info(fill)
+        icon-check-circle.success-color.icon-14(v-if="!log.error")
+        icon-close-circle.danger-color(v-else)
+        .start-time
+          | {{ log.startTime }}
+        div(v-if="log.codeInfo") {{ log.codeInfo }}
+        div(v-if="log.message") {{ log.message }}
+        .total-time(v-if="!log.error")
+          div {{ `in ${log.networkTime} ms` }}
+        div(v-if="log.error") {{ log.error }}
 </template>
 
 <script lang="ts" name="Log" setup>
@@ -56,5 +52,12 @@ a-tabs.result-tabs.logs-tab(type="rounded")
   }
   :deep(.arco-list) {
     border-radius: 0;
+  }
+
+  .total-time {
+    background: var(--th-bg-color);
+    border-radius: 4px;
+    padding: 0 4px;
+    min-width: max-content;
   }
 </style>

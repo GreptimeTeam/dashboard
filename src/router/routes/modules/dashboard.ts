@@ -30,19 +30,19 @@ const DASHBOARD: AppRouteRecordRaw = {
       path: 'ingest',
       name: 'ingest',
       component: () => import('@/views/dashboard/ingest/index.vue'),
-      redirect: '/dashboard/ingest/influxdb/input',
+      redirect: '/dashboard/ingest/influxdb-line-protocol/input',
       meta: {
         locale: 'menu.dashboard.ingest',
         requiresAuth: false,
-        icon: 'query-menu',
+        icon: 'ingest',
         roles: ['admin', 'cloud'],
       },
       children: [
         {
-          path: 'influxdb',
+          path: 'influxdb-line-protocol',
           name: 'influxdb',
-          redirect: '/dashboard/ingest/influxdb/input',
-          component: null,
+          redirect: '/dashboard/ingest/influxdb-line-protocol/input',
+          component: () => import('@/views/dashboard/ingest/influxdb/index.vue'),
           meta: {
             locale: 'menu.dashboard.influxdb',
             requiresAuth: false,

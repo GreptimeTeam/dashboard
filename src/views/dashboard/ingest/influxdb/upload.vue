@@ -17,41 +17,44 @@ a-layout-content.main-content
           a-button(type="primary") Upload
       .file-info(v-else)
         p File Name: {{ file.name }}
-        p File Size: {{ file.size }} bytes
+        p File Size: {{ fileSize }}
         a-button Reupload File
 </template>
 
 <script lang="ts" setup>
+  import type { Log } from '@/store/modules/log/types'
   import Message from '@arco-design/web-vue/es/message'
 
   const { writeInfluxDB } = useCodeRunStore()
+  const { activeTab } = storeToRefs(useIngestStore())
+  const { pushLog } = useLog()
 
   const file = ref(null as File | null)
+  const fileSize = computed(() => {
+    if (file.value) {
+      if (file.value.size < 1024) {
+        return `${file.value.size} bytes`
+      }
+      if (file.value.size < 1024 * 1024) {
+        return `${(file.value.size / 1024).toFixed(2)} KB`
+      }
+      return `${(file.value.size / 1024 / 1024).toFixed(2)} MB`
+    }
+    return 0
+  })
   const isWriteLoading = ref(false)
   const dataFromFile = ref('')
   const beforeUpload = (newFile: File) => {
-    console.log('before upload', newFile)
     if (newFile.size > 10 * 1024 * 1024) {
-      // file size limit
       Message.error('File size limit 10MB')
       return false
     }
-    // use fileReader to read file
     const reader = new FileReader()
     reader.readAsText(newFile)
     reader.onload = (e: any) => {
-      console.log('onload', e.target.result)
       dataFromFile.value = e.target.result
     }
-    reader.onloadstart = () => {
-      console.log('start')
-    }
-    reader.onloadend = () => {
-      console.log('end')
-    }
-    reader.onprogress = (e: ProgressEvent) => {
-      console.log('progress', e)
-    }
+
     file.value = newFile
     return false
   }
@@ -59,14 +62,30 @@ a-layout-content.main-content
   const submit = async (precision: string) => {
     isWriteLoading.value = true
     const result = await writeInfluxDB(dataFromFile.value, precision)
-    console.log('result', result)
+    let log: Log
+    const fileInfo = file.value ? `${file.value.name}(${fileSize.value})` : ''
     if (Reflect.has(result, 'error')) {
       // error
+      log = {
+        type: 'influxdb-upload',
+        codeInfo: fileInfo,
+        message: '',
+        error: result.error,
+        startTime: result.startTime,
+      }
     } else {
       // success
       // clear file
       file.value = null
+      log = {
+        type: 'influxdb-upload',
+        codeInfo: fileInfo,
+        message: 'Data written',
+        startTime: result.startTime,
+        networkTime: result.networkTime,
+      }
     }
+    pushLog(log, activeTab.value)
     isWriteLoading.value = false
   }
 
