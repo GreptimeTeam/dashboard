@@ -55,13 +55,6 @@ a-layout-content.main-content
     pushLog(log, activeTab.value)
     loading.value = false
   }
-
-  onMounted(() => {
-    console.log('mounted write')
-  })
-  onActivated(() => {
-    console.log('activated write')
-  })
 </script>
 
 <style lang="less">
