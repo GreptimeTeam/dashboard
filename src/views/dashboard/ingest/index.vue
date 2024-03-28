@@ -33,9 +33,10 @@ a-layout.layout
       a-layout-footer(v-else)
         div
         a-tooltip(content="Show panel for log" position="tr")
-          a-button(type="text" @click="footer = false")
-            svg.icon
-              use(href="#log")
+          a-button(type="text" size="mini" @click="footer = false")
+            template(#icon)
+              svg.icon
+                use(href="#log")
 </template>
 
 <script lang="ts" setup name="Ingest">
@@ -82,6 +83,11 @@ a-layout.layout
   .arco-layout-footer {
     display: flex;
     justify-content: space-between;
+    .arco-btn-size-mini.arco-btn-only-icon {
+      width: 26px;
+      height: 26px;
+      padding: 0;
+    }
   }
   :deep(.layout-space) {
     height: 100%;
@@ -155,7 +161,6 @@ a-layout.layout
     :deep(> .arco-tabs-content) {
       height: calc(100% - 30px);
       // TODO: better scrollbar style
-
       overflow: auto;
     }
   }
@@ -163,6 +168,6 @@ a-layout.layout
 
 <style lang="less">
   .main-content {
-    height: calc(100% - 52px);
+    height: calc(100% - 48px);
   }
 </style>
