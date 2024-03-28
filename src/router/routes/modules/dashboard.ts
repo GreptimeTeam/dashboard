@@ -42,7 +42,7 @@ const DASHBOARD: AppRouteRecordRaw = {
           path: 'influxdb-line-protocol',
           name: 'influxdb',
           redirect: '/dashboard/ingest/influxdb-line-protocol/input',
-          component: null,
+          component: () => import('@/views/dashboard/ingest/influxdb/index.vue'),
           meta: {
             locale: 'menu.dashboard.influxdb',
             requiresAuth: false,
