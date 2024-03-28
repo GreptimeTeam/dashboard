@@ -2,13 +2,17 @@
 a-space.top-bar
   a-button(
     type="primary"
+    size="small"
     :loading="loading"
     :disabled="disabled"
     @click="clickSubmit"
   ) Write
-  a-select(v-model="precision" style="width: 200px" :options="precisionOptions")
-    template(#title)
-    span Precision
+  a-select(
+    v-model="precision"
+    style="width: 140px"
+    size="small"
+    :options="precisionOptions"
+  )
 </template>
 
 <script lang="ts" setup name="TopBar">
@@ -22,13 +26,6 @@ a-space.top-bar
   const clickSubmit = () => {
     emits('submit', precision.value)
   }
-
-  onMounted(() => {
-    console.log('mounted top bar')
-  })
-  onActivated(() => {
-    console.log('activated  top bar')
-  })
 
   const precisionOptions = [
     {
@@ -56,5 +53,13 @@ a-space.top-bar
     justify-content: space-between;
     padding-bottom: 20px;
     background: var(--card-bg-color);
+    :deep(.arco-select-view-value) {
+      font-size: 13px;
+      color: var(--main-font-color);
+    }
+    :deep(.arco-select-view-single) {
+      background: transparent;
+      border-color: var(--border-color);
+    }
   }
 </style>
