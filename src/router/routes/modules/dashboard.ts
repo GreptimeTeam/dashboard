@@ -46,7 +46,7 @@ const DASHBOARD: AppRouteRecordRaw = {
           meta: {
             locale: 'menu.dashboard.influxdb',
             requiresAuth: false,
-            icon: 'query-menu',
+            icon: 'influxdb',
             roles: ['admin', 'cloud'],
           },
           children: [

@@ -96,12 +96,15 @@ axios.interceptors.response.use(
       appStore.updateSettings({ globalSettings: true })
     }
     const data = JSON.parse(error.response.data)
-    Message.error({
-      content: data.error || 'Request Error',
-      duration: 5 * 1000,
-      closable: true,
-      resetOnHover: true,
-    })
+    const isInflux = !!error.config.url?.startsWith(`/v1/influxdb`)
+    if (!isInflux) {
+      Message.error({
+        content: data.error || 'Request Error',
+        duration: 5 * 1000,
+        closable: true,
+        resetOnHover: true,
+      })
+    }
     const errorResponse = {
       error: data.error,
       startTime: new Date(error.response.config.traceTimeStart).toLocaleTimeString(),

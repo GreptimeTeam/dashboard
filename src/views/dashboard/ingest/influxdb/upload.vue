@@ -31,7 +31,7 @@ a-layout-content.main-content
               svg.icon-30
                 use(href="#bigupload")
             .file-info {{ `${file.name} (${fileSize})` }}
-          a-button(type="secondary" size="large") Reupload
+          a-button(type="secondary" size="large") Upload again
 </template>
 
 <script lang="ts" setup>
@@ -118,6 +118,7 @@ a-layout-content.main-content
     justify-content: center;
     align-items: center;
     .arco-btn {
+      font-weight: 800;
       font-size: 14px;
       font-family: 'Gilroy';
       padding: 12px 32px;
@@ -126,7 +127,7 @@ a-layout-content.main-content
   }
 
   .tip {
-    font-family: Gilroy, Gilroy;
+    font-family: 'Gilroy';
     font-weight: 800;
     font-size: 16px;
     color: var(--main-font-color);
