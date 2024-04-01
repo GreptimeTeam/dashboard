@@ -57,10 +57,17 @@ axios.interceptors.response.use(
     const isV1 = !!response.config.url?.startsWith(`/v1`)
     const isInflux = !!response.config.url?.startsWith(`/v1/influxdb`)
     if (isInflux) {
-      return {
-        networkTime: new Date().valueOf() - response.config.traceTimeStart,
+      if (response.status === 204) {
+        return {
+          networkTime: new Date().valueOf() - response.config.traceTimeStart,
+          startTime: new Date(response.config.traceTimeStart).toLocaleTimeString(),
+        }
+      }
+      const errorResponse = {
+        error: response.data.error || 'Error',
         startTime: new Date(response.config.traceTimeStart).toLocaleTimeString(),
       }
+      return Promise.reject(errorResponse)
     }
     if (isV1) {
       response.data = JSONbigint({ storeAsString: true }).parse(response.data)
@@ -74,10 +81,10 @@ axios.interceptors.response.use(
           resetOnHover: true,
         })
         const error = {
-          error: data.error,
+          error: data.error || 'Error',
           startTime: new Date(response.config.traceTimeStart).toLocaleTimeString(),
         }
-        return Promise.reject(error || 'Error')
+        return Promise.reject(error)
       }
       // v1 and success
       return {
@@ -106,9 +113,9 @@ axios.interceptors.response.use(
       })
     }
     const errorResponse = {
-      error: data.error,
+      error: data.error || error.message || 'Request Error',
       startTime: new Date(error.response.config.traceTimeStart).toLocaleTimeString(),
     }
-    return Promise.reject(errorResponse || error.message || 'Request Error')
+    return Promise.reject(errorResponse)
   }
 )
