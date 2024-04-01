@@ -39,7 +39,7 @@ a-layout-content.main-content
   import Message from '@arco-design/web-vue/es/message'
 
   const { writeInfluxDB } = useCodeRunStore()
-  const { activeTab } = storeToRefs(useIngestStore())
+  const { activeTab, footer } = storeToRefs(useIngestStore())
   const { pushLog } = useLog()
 
   const file = ref(null as File | null)
@@ -98,6 +98,7 @@ a-layout-content.main-content
       }
     }
     pushLog(log, activeTab.value)
+    footer.value[activeTab.value] = false
     isWriteLoading.value = false
   }
 </script>

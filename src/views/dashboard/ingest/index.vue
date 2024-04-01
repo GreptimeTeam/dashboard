@@ -17,27 +17,33 @@ a-layout.layout
             svg.icon
               use(:href="`#${child.meta.icon}`")
             span {{ $t(child.meta.locale) }}
-  a-layout-content.layout-content(:class="{ 'has-panel': !footer }")
+  a-layout-content.layout-content(:class="{ 'has-panel': !footer[activeTab] }")
     a-space.layout-space(direction="vertical" fill :size="0")
       router-view(v-slot="{ Component }")
         keep-alive
           component(:is="Component")
-      a-tabs.panel-tabs(v-if="!footer")
-        a-tab-pane(title="Log" key="log")
-          LogsNew(:key="activeTab" :logs="ingestLogs" :types="[activeTab]")
-        template(#extra)
-          a-tooltip(content="Hide panel" position="tr")
-            a-button(type="text" size="mini" @click="footer = true")
-              template(#icon)
-                svg.icon-12
-                  use(href="#pull-down")
-      a-layout-footer(v-else)
-        div
-        a-tooltip(content="Show panel for log" position="tr")
-          a-button(type="text" size="mini" @click="footer = false")
-            template(#icon)
-              svg.icon
-                use(href="#log")
+      a-resize-box.panel-resize(
+        v-if="!footer[activeTab]"
+        :key="activeTab"
+        :directions="['top']"
+        :style="{ 'max-height': '40vh', 'min-height': '74.85px' }"
+      )
+        a-tabs.panel-tabs
+          a-tab-pane(title="Log" key="log")
+            LogsNew(:key="activeTab" :logs="ingestLogs" :types="[activeTab]")
+          template(#extra)
+            a-tooltip(content="Hide Panel" position="tr")
+              a-button(type="text" size="mini" @click="footer[activeTab] = true")
+                template(#icon)
+                  svg.icon-12
+                    use(href="#pull-down")
+    a-layout-footer(v-if="footer[activeTab]")
+      div
+      a-tooltip(content="Show Panel" position="tr")
+        a-button(type="text" size="mini" @click="footer[activeTab] = false")
+          template(#icon)
+            svg.icon
+              use(href="#log")
 </template>
 
 <script lang="ts" setup name="Ingest">
@@ -48,20 +54,13 @@ a-layout.layout
   const route = useRoute()
   const { t } = useI18n()
   const { menuTree } = useMenuTree()
-  const { activeTab } = storeToRefs(useIngestStore())
+  const { activeTab, footer } = storeToRefs(useIngestStore())
   const { logs } = storeToRefs(useLogStore())
 
-  const footer = ref(true)
-
-  const ingestLogs = computed(() => logs.value.filter((log) => activeTab.value.includes(log.type)))
-
-  watch(ingestLogs, () => {
-    if (ingestLogs.value.length > 0) {
-      footer.value = false
-    } else {
-      footer.value = true
-    }
+  const ingestLogs = computed(() => {
+    return logs.value.filter((log) => activeTab.value.includes(log.type))
   })
+
   const menu = menuTree.value[0].children[1].children
 
   const menuClick = (parent: string, child: string) => {
@@ -75,6 +74,7 @@ a-layout.layout
     background: var(--card-bg-color);
     > .arco-layout-sider {
       min-width: 210px;
+      max-width: 40vw;
       border-left: 1px solid var(--border-color);
     }
   }
@@ -92,7 +92,7 @@ a-layout.layout
     }
   }
   :deep(.layout-space) {
-    height: 100%;
+    height: calc(100% - 26px);
     > .arco-space-item:first-of-type {
       flex: 1;
       overflow: auto;
@@ -123,7 +123,6 @@ a-layout.layout
             right: 15px;
           }
           &.arco-menu-selected {
-            background: var(--light-brand-color);
             color: var(--brand-color);
             font-weight: 600;
             .arco-icon {
@@ -142,7 +141,8 @@ a-layout.layout
             background-color: var(--th-bg-color);
           }
           &.arco-menu-selected {
-            background: transparent;
+            font-weight: 600;
+            background: var(--light-brand-color);
             color: var(--brand-color);
           }
           .arco-menu-indent {
@@ -157,7 +157,6 @@ a-layout.layout
     }
   }
   :deep(.arco-tabs.panel-tabs) {
-    max-height: 155px;
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -171,6 +170,7 @@ a-layout.layout
       height: 100%;
       // TODO: better scrollbar style
       overflow: auto;
+      // TODO
     }
     .arco-tabs-tab {
       border-radius: 0;
@@ -207,6 +207,9 @@ a-layout.layout
   }
 
   .has-panel {
+    :deep(.layout-space) {
+      height: 100%;
+    }
     :deep(.arco-card.light-editor-card) {
       .ͼ1.cm-editor {
         border-bottom: none;
