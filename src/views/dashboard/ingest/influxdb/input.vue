@@ -1,6 +1,6 @@
 <template lang="pug">
 a-layout-header
-  TopBar(:disabled="!data.trim()" :loading="false" @submit="submit")
+  TopBar(:disabled="!data.trim()" :loading="loading" @submit="submit")
 a-layout-content.main-content
   a-card.light-editor-card(:bordered="false")
     CodeMirror(

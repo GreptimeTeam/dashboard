@@ -67,7 +67,6 @@ a-layout-content.main-content
     reader.onload = (e: any) => {
       dataFromFile.value = e.target.result
     }
-
     file.value = newFile
     return false
   }

@@ -24,7 +24,7 @@ a-layout.layout
           component(:is="Component")
       a-tabs.panel-tabs(v-if="!footer")
         a-tab-pane(title="Log" key="log")
-          LogsNew(:logs="ingestLogs" :types="[activeTab]")
+          LogsNew(:key="activeTab" :logs="ingestLogs" :types="[activeTab]")
         template(#extra)
           a-tooltip(content="Hide panel" position="tr")
             a-button(type="text" size="mini" @click="footer = true")

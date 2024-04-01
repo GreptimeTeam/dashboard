@@ -21,7 +21,8 @@ a-space.top-bar
     loading: boolean
   }>()
   const emits = defineEmits(['submit'])
-  const precision = ref('ms')
+
+  const { precision } = storeToRefs(useIngestStore())
 
   const clickSubmit = () => {
     emits('submit', precision.value)
