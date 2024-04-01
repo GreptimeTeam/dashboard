@@ -169,8 +169,8 @@ a-layout.layout
     .arco-tabs-content .arco-tabs-content-item {
       height: 100%;
       // TODO: better scrollbar style
+      max-height: calc(40vh - 32px - 20px);
       overflow: auto;
-      // TODO
     }
     .arco-tabs-tab {
       border-radius: 0;
