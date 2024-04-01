@@ -1,18 +1,19 @@
 <template lang="pug">
 a-card(:bordered="false")
   a-list(size="small" :hoverable="true" :bordered="false")
-    a-list-item(v-for="log of logs" :key="log" :log="log")
-      a-space.info(fill :size="10")
-        icon-check-circle.success-color.icon-14(v-if="!log.error")
-        icon-close-circle.danger-color(v-else)
-        .start-time
-          | {{ log.startTime }}
-        div(v-if="log.codeInfo") {{ log.codeInfo }}
-        a-space(v-if="log.message" :size="3")
-          | {{ log.message }}
-          .total-time(v-if="!log.error")
-            | {{ `in ${log.networkTime} ms` }}
-        div(v-if="log.error") {{ log.error }}
+    TransitionGroup(name="list")
+      a-list-item(v-for="log of logs" :key="log" :log="log")
+        a-space.info(fill :size="10")
+          icon-check-circle.success-color.icon-14(v-if="!log.error")
+          icon-close-circle.danger-color(v-else)
+          .start-time
+            | {{ log.startTime }}
+          div(v-if="log.codeInfo") {{ log.codeInfo }}
+          a-space(v-if="log.message" :size="3")
+            | {{ log.message }}
+            .total-time(v-if="!log.error")
+              | {{ `in ${log.networkTime} ms` }}
+          div(v-if="log.error") {{ log.error }}
 </template>
 
 <script lang="ts" name="Log" setup>
@@ -61,5 +62,21 @@ a-card(:bordered="false")
     border-radius: 4px;
     padding: 0 4px;
     min-width: max-content;
+  }
+
+  .list-move,
+  .list-enter-active,
+  .list-leave-active {
+    transition: all 0.5s ease;
+  }
+
+  .list-enter-from,
+  .list-leave-to {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+
+  .list-leave-active {
+    position: absolute;
   }
 </style>
