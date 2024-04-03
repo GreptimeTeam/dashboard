@@ -35,7 +35,7 @@ a-drawer.ingest(
   .markdown-container.ingest
     MarkdownRender(:md="doc")
   | To learn more about influxdb line protocol on GreptimeDB, visit our
-  a(href="https://docs.greptime.com/user-guide/write-data/influxdb-line" target="_blank") documentation
+  a(href="https://docs.greptime.com/user-guide/write-data/influxdb-line" target="_blank") documentation.
 </template>
 
 <script lang="ts" setup name="TopBar">
@@ -104,7 +104,7 @@ a-drawer.ingest(
       }
     }
     .arco-drawer-body {
-      color: var(--color-gray-3);
+      color: var(--color-p-text);
       font-size: 13px;
       a {
         color: var(--brand-color);
@@ -123,12 +123,14 @@ a-drawer.ingest(
         background: var(--color-code-bg);
         border-radius: 4px;
         padding: 0 6px;
-        border: 1px solid var(--color-dark-primary-1);
+        color: var(--color-code);
+        line-height: 20px;
+
         code {
           font-size: 12px;
           white-space: normal;
           font-size: 12px;
-          color: var(--color-red-3);
+          line-height: 20px;
         }
       }
       p {
