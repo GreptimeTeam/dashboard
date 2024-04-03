@@ -118,20 +118,27 @@ a-drawer.ingest(
       h3 {
         margin: 10px 0 10px;
       }
+      pre {
+        margin: 0;
+        background: var(--color-code-bg);
+        border-radius: 4px;
+        padding: 0 6px;
+        border: 1px solid var(--color-dark-primary-1);
+        code {
+          font-size: 12px;
+          white-space: normal;
+          font-size: 12px;
+          color: var(--color-red-3);
+        }
+      }
       p {
         margin: 10px 0;
         font-size: 13px;
       }
       code {
         font-size: 12px;
-        color: var(--color-red-3);
-        background: var(--color-code-bg);
-        border-radius: var(--border-radius-s);
-        border: 1px solid var(--color-dark-primary-1);
       }
-      pre {
-        margin: 0;
-      }
+
       ul {
         margin: 10px 0;
       }

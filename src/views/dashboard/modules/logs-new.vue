@@ -13,7 +13,13 @@ a-card(:bordered="false")
             | {{ log.message }}
             .total-time(v-if="!log.error")
               | {{ `in ${log.networkTime} ms` }}
-          div(v-if="log.error") {{ log.error }}
+          a-tooltip(
+            v-if="log.error"
+            position="tr"
+            content-class="ingest-log-tooltip"
+            :content="log.error"
+          )
+            div {{ log.error }}
 </template>
 
 <script lang="ts" name="Log" setup>
@@ -39,6 +45,27 @@ a-card(:bordered="false")
 
   .start-time {
     font-size: 11px;
+  }
+
+  .info {
+    :deep(.arco-space-item:last-of-type) {
+      overflow: hidden;
+      > div {
+        text-overflow: ellipsis;
+
+        overflow: hidden;
+      }
+    }
+  }
+
+  :deep(.arco-list-item-main) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :deep(.arco-item-main) {
+    width: 100%;
   }
 
   :deep(.arco-list-small .arco-list-content-wrapper .arco-list-content > .arco-list-item) {
@@ -75,8 +102,10 @@ a-card(:bordered="false")
     opacity: 0;
     transform: translateX(30px);
   }
+</style>
 
-  .list-leave-active {
-    position: absolute;
+<style lang="less">
+  .ingest-log-tooltip {
+    max-width: 600px;
   }
 </style>

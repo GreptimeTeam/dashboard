@@ -1,4 +1,4 @@
-### About Line Protocol
+### About InfluxDB Line Protocol
 
 The general syntax of an InfluxDB Line Protocol data point is as follows:
 
