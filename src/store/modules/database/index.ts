@@ -37,7 +37,7 @@ const useDataBaseStore = defineStore('database', () => {
       return schema.name === 'column_name'
     })
     const dataTypeIndex = columnSchemas.findIndex((schema: SchemaType) => {
-      return schema.name === 'data_type'
+      return schema.name === 'greptime_data_type' || schema.name === 'data_type'
     })
 
     const semanticTypeIndex = columnSchemas.findIndex((schema: SchemaType) => {
