@@ -274,8 +274,17 @@ const useDataBaseStore = defineStore('database', () => {
     updateDataStatus('scripts', true)
     scriptsLoading.value = true
     try {
-      const res = await editorAPI.getScriptsTable(database.value)
-      scriptsData.value = res
+      const res: any = await editorAPI.checkScriptsTable()
+      if (res.output[0].records.rows[0][0] === 0) {
+        scriptsData.value = null
+      } else {
+        try {
+          const scripts = await editorAPI.getScriptsTable()
+          scriptsData.value = scripts
+        } catch (error) {
+          scriptsData.value = null
+        }
+      }
     } catch (error) {
       scriptsData.value = null
     }
