@@ -11,8 +11,7 @@ a-card(:bordered="false")
       column-resizable
       :data="gridData"
       :pagination="pagination"
-    ) 
-      |
+    )
       template(#empty)
         EmptyStatus
       template(#columns)
