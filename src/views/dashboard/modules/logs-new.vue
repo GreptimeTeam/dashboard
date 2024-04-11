@@ -8,7 +8,14 @@ a-card(:bordered="false")
           icon-close-circle.danger-color(v-else)
           .start-time
             | {{ log.startTime }}
-          div(v-if="log.codeInfo") {{ log.codeInfo }}
+          a-popover(
+            v-if="log.codeInfo"
+            trigger="click"
+            position="tl"
+            content-class="code-tooltip"
+            :content="log.codeTooltip"
+          )
+            .file-info {{ log.codeInfo }}
           a-space(v-if="log.message" :size="3")
             | {{ log.message }}
             .total-time(v-if="!log.error")
@@ -41,6 +48,9 @@ a-card(:bordered="false")
   :deep(.arco-list-content) {
     flex-direction: column-reverse;
     display: flex;
+    .file-info {
+      cursor: pointer;
+    }
   }
 
   .start-time {
@@ -52,7 +62,6 @@ a-card(:bordered="false")
       overflow: hidden;
       > div {
         text-overflow: ellipsis;
-
         overflow: hidden;
       }
     }
@@ -107,5 +116,9 @@ a-card(:bordered="false")
 <style lang="less">
   .ingest-log-tooltip {
     max-width: 600px;
+  }
+  .arco-popover-popup-content.code-tooltip {
+    font-family: monospace;
+    white-space: pre;
   }
 </style>

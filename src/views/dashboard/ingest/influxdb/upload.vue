@@ -1,6 +1,5 @@
 <template lang="pug">
 a-layout-header
-  TopBar(:disabled="!file" :loading="isWriteLoading" @submit="submit")
 a-layout-content.main-content
   a-upload(
     action="/"
@@ -12,16 +11,11 @@ a-layout-content.main-content
   )
     template(#upload-button)
       .upload-box
-        a-space(
-          v-if="!file"
-          direction="vertical"
-          align="center"
-          :size="30"
-        )
+        a-space(direction="vertical" align="center" :size="30")
           .tip Drop or click to upload (10MB max)
           a-button(type="primary" size="large") Upload
         a-space(
-          v-else
+          v-if="false"
           direction="vertical"
           align="center"
           :size="30"
@@ -32,6 +26,23 @@ a-layout-content.main-content
                 use(href="#bigupload")
             .file-info {{ `${file.name} (${fileSize})` }}
           a-button(type="secondary" size="large") Upload again
+a-modal(v-model:visible="visible" title="Preview file content")
+  template(#title)
+    TopBar(
+      :disabled="!file"
+      :loading="isWriteLoading"
+      :hasDoc="false"
+      @submit="submit"
+    )
+  a-spin(tip="Reading file..." style="width: 100%" :loading="isReadingFile")
+    a-scrollbar(:style="{ 'max-height': `calc(100vh - 200px)`, overflow: 'auto' }")
+      a-typography-paragraph(title="" :ellipsis="{ rows: 10, expandable: true }")
+        template(#expand-node="{ expanded }")
+          div(v-if="expanded") Collapse
+          div(v-else)
+            a.text ...
+            a.button Load All
+        | {{ dataFromFile }}
 </template>
 
 <script lang="ts" setup>
@@ -43,6 +54,11 @@ a-layout-content.main-content
   const { pushLog } = useLog()
 
   const file = ref(null as File | null)
+  const visible = ref(false)
+  const isWriteLoading = ref(false)
+  const isReadingFile = ref(false)
+  const dataFromFile = ref('')
+
   const fileSize = computed(() => {
     if (file.value) {
       if (file.value.size < 1024) {
@@ -55,19 +71,27 @@ a-layout-content.main-content
     }
     return 0
   })
-  const isWriteLoading = ref(false)
-  const dataFromFile = ref('')
+
   const beforeUpload = (newFile: File) => {
+    visible.value = true
     if (newFile.size > 10 * 1024 * 1024) {
       Message.error('File size limit 10MB')
       return false
     }
+
     const reader = new FileReader()
     reader.readAsText(newFile)
     reader.onload = (e: any) => {
       dataFromFile.value = e.target.result
     }
+    reader.onloadstart = () => {
+      isReadingFile.value = true
+    }
+    reader.onloadend = () => {
+      isReadingFile.value = false
+    }
     file.value = newFile
+
     return false
   }
 
@@ -92,6 +116,7 @@ a-layout-content.main-content
       log = {
         type: 'influxdb-upload',
         codeInfo: fileInfo,
+        codeTooltip: dataFromFile.value.split('\n').slice(0, 10).join('\n'),
         message: 'Data written',
         startTime: result.startTime,
         networkTime: result.networkTime,
@@ -100,6 +125,9 @@ a-layout-content.main-content
     pushLog(log, activeTab.value)
     footer.value[activeTab.value] = false
     isWriteLoading.value = false
+    file.value = null
+    dataFromFile.value = ''
+    visible.value = false
   }
 </script>
 
@@ -149,5 +177,23 @@ a-layout-content.main-content
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  :deep(.arco-typography) {
+    font-family: monospace;
+    color: var(--main-font-color);
+    margin: 0;
+
+    .arco-typography-operation-expand {
+      color: var(--brand-color);
+      font-family: 'Open Sans';
+      display: flex;
+      .text {
+        color: var(--main-font-color);
+      }
+      .button {
+        text-decoration-line: underline;
+      }
+    }
   }
 </style>

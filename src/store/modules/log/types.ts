@@ -10,6 +10,7 @@ export interface Log {
   type: string
   promInfo?: object
   codeInfo: string
+  codeTooltip?: string
   message: string
   startTime?: string
   networkTime?: number

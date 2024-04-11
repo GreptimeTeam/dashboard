@@ -15,6 +15,7 @@ a-space.top-bar
       @click="clickSubmit"
     ) Write
   a-tooltip(
+    v-if="hasDoc"
     content="About InfluxDB Line Protocol"
     position="tr"
     trigger="hover"
@@ -25,6 +26,7 @@ a-space.top-bar
         svg.icon-16.brand-color(v-if="!visible")
           use(href="#document")
         icon-close.icon-16(v-else)
+  div(v-else)
 a-drawer.ingest(
   v-model:visible="visible"
   placement="right"
@@ -33,17 +35,28 @@ a-drawer.ingest(
   :header="false"
 )
   .markdown-container.ingest
-    MarkdownRender(:md="doc")
+    SimpleMarkdown(:md="doc")
   | To learn more about influxdb line protocol on GreptimeDB, visit our
   a(href="https://docs.greptime.com/user-guide/write-data/influxdb-line" target="_blank") documentation.
 </template>
 
 <script lang="ts" setup name="TopBar">
-  const props = defineProps<{
-    disabled: boolean
-    loading: boolean
-  }>()
+  const props = defineProps({
+    disabled: {
+      type: Boolean,
+      default: false,
+    },
+    loading: {
+      type: Boolean,
+      default: false,
+    },
+    hasDoc: {
+      type: Boolean,
+      default: true,
+    },
+  })
   const emits = defineEmits(['submit'])
+
   const { precision } = storeToRefs(useIngestStore())
   const visible = ref(false)
 
