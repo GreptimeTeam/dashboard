@@ -30,9 +30,9 @@ a-space.top-bar
 a-drawer.ingest(
   v-model:visible="visible"
   placement="right"
-  :width="437"
+  title=""
+  :width="510"
   :footer="false"
-  :header="false"
 )
   .markdown-container.ingest
     SimpleMarkdown(:md="doc")
@@ -111,19 +111,24 @@ a-drawer.ingest(
 <style lang="less">
   .arco-drawer-container.ingest {
     .arco-drawer {
-      top: 54px;
+      top: 20px;
       border: 1px solid var(--border-color);
       border-radius: 4px;
-      height: calc(100% - 54px - 26px);
+      height: calc(100% - 20px - 26px);
       margin-right: 20px;
       box-shadow: 0px 2px 20px 0px var(--box-shadow-color);
       .arco-drawer-header {
         border: none;
+        justify-content: flex-end;
+        height: 30px;
+        padding-right: 14px;
+        align-items: flex-end;
       }
     }
     .arco-drawer-body {
       color: var(--color-p-text);
       font-size: 13px;
+      padding: 0 16px 16px 16px;
       a {
         color: var(--brand-color);
         font-size: 13px;
@@ -134,7 +139,7 @@ a-drawer.ingest(
     .markdown-container.ingest {
       margin-bottom: 10px;
       h3 {
-        margin: 10px 0 10px;
+        margin: 0 0 10px;
       }
       pre {
         margin: 0;
