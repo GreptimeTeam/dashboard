@@ -1,12 +1,7 @@
 <template lang="pug">
 a-space.top-bar
   a-space(:size="15")
-    a-select(
-      v-model="precision"
-      style="width: 140px"
-      size="small"
-      :options="precisionOptions"
-    )
+    a-select(v-model="precision" size="small" :options="precisionOptions")
     a-button(
       type="primary"
       size="small"

@@ -26,23 +26,34 @@ a-layout-content.main-content
                 use(href="#bigupload")
             .file-info {{ `${file.name} (${fileSize})` }}
           a-button(type="secondary" size="large") Upload again
-a-modal(v-model:visible="visible" title="Preview file content")
+a-modal(
+  v-model:visible="visible"
+  title="Preview file content"
+  modal-class="file-modal"
+  :footer="false"
+  @close="resetFile"
+)
   template(#title)
     TopBar(
-      :disabled="!file"
+      :disabled="!dataFromFile || isWriteLoading"
       :loading="isWriteLoading"
       :hasDoc="false"
       @submit="submit"
     )
   a-spin(tip="Reading file..." style="width: 100%" :loading="isReadingFile")
-    a-scrollbar(:style="{ 'max-height': `calc(100vh - 200px)`, overflow: 'auto' }")
-      a-typography-paragraph(title="" :ellipsis="{ rows: 10, expandable: true }")
+    a-scrollbar(:style="{ 'max-height': `calc(100vh - 200px)`, overflow: 'auto', 'min-height': '100px' }")
+      a-typography-paragraph(v-if="dataFromFile" title="" :ellipsis="{ rows: 12, expandable: true, ellipsisStr: '' }")
         template(#expand-node="{ expanded }")
           div(v-if="expanded") Collapse
           div(v-else)
             a.text ...
             a.button Load All
         | {{ dataFromFile }}
+      .error(v-if="errorMessage")
+        a-space(:size="10")
+        a-alert(type="error" show-icon)
+          a-typography-paragraph(title="" :ellipsis="{ rows: 3, showTooltip: true }")
+            | {{ errorMessage }}
 </template>
 
 <script lang="ts" setup>
@@ -58,6 +69,7 @@ a-modal(v-model:visible="visible" title="Preview file content")
   const isWriteLoading = ref(false)
   const isReadingFile = ref(false)
   const dataFromFile = ref('')
+  const errorMessage = ref('')
 
   const fileSize = computed(() => {
     if (file.value) {
@@ -72,13 +84,18 @@ a-modal(v-model:visible="visible" title="Preview file content")
     return 0
   })
 
+  const resetFile = () => {
+    file.value = null
+    errorMessage.value = ''
+    dataFromFile.value = ''
+  }
+
   const beforeUpload = (newFile: File) => {
-    visible.value = true
     if (newFile.size > 10 * 1024 * 1024) {
       Message.error('File size limit 10MB')
       return false
     }
-
+    visible.value = true
     const reader = new FileReader()
     reader.readAsText(newFile)
     reader.onload = (e: any) => {
@@ -91,7 +108,6 @@ a-modal(v-model:visible="visible" title="Preview file content")
       isReadingFile.value = false
     }
     file.value = newFile
-
     return false
   }
 
@@ -109,10 +125,11 @@ a-modal(v-model:visible="visible" title="Preview file content")
         error: result.error,
         startTime: result.startTime,
       }
+      errorMessage.value = result.error
     } else {
       // success
       // clear file
-      file.value = null
+      resetFile()
       log = {
         type: 'influxdb-upload',
         codeInfo: fileInfo,
@@ -121,13 +138,11 @@ a-modal(v-model:visible="visible" title="Preview file content")
         startTime: result.startTime,
         networkTime: result.networkTime,
       }
+      visible.value = false
     }
     pushLog(log, activeTab.value)
     footer.value[activeTab.value] = false
     isWriteLoading.value = false
-    file.value = null
-    dataFromFile.value = ''
-    visible.value = false
   }
 </script>
 
@@ -183,6 +198,9 @@ a-modal(v-model:visible="visible" title="Preview file content")
     font-family: monospace;
     color: var(--main-font-color);
     margin: 0;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    padding: 10px;
 
     .arco-typography-operation-expand {
       color: var(--brand-color);
@@ -193,6 +211,28 @@ a-modal(v-model:visible="visible" title="Preview file content")
       }
       .button {
         text-decoration-line: underline;
+      }
+    }
+  }
+
+  :deep(.arco-spin-tip) {
+    color: var(--brand-color);
+  }
+</style>
+
+<style lang="less">
+  .arco-modal.file-modal {
+    .arco-modal-header {
+      height: auto;
+    }
+    .arco-modal-body {
+      padding: 0 20px 20px 20px;
+    }
+    .top-bar {
+      padding: 20px 0;
+      width: 100%;
+      .arco-select-view-single {
+        width: 123px;
       }
     }
   }
