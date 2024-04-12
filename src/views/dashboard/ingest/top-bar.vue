@@ -1,8 +1,14 @@
 <template lang="pug">
 a-space.top-bar
   a-space(:size="15")
-    a-select(v-model="precision" size="small" :options="precisionOptions")
+    a-select(
+      v-if="hasButtons"
+      v-model="precision"
+      size="small"
+      :options="precisionOptions"
+    )
     a-button(
+      v-if="hasButtons"
       type="primary"
       size="small"
       :loading="loading"
@@ -21,7 +27,6 @@ a-space.top-bar
         svg.icon-16.brand-color(v-if="!visible")
           use(href="#document")
         icon-close.icon-16(v-else)
-  div(v-else)
 a-drawer.ingest(
   v-model:visible="visible"
   placement="right"
@@ -46,6 +51,10 @@ a-drawer.ingest(
       default: false,
     },
     hasDoc: {
+      type: Boolean,
+      default: true,
+    },
+    hasButtons: {
       type: Boolean,
       default: true,
     },
@@ -92,6 +101,7 @@ a-drawer.ingest(
       color: var(--main-font-color);
     }
     :deep(.arco-select-view-single) {
+      width: 130px;
       background: transparent;
       border-color: var(--border-color);
     }

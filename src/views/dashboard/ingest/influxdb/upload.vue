@@ -1,5 +1,6 @@
 <template lang="pug">
 a-layout-header
+  TopBar(:hasButtons="false")
 a-layout-content.main-content
   a-upload(
     action="/"
@@ -10,22 +11,28 @@ a-layout-content.main-content
     @before-upload="beforeUpload"
   )
     template(#upload-button)
-      .upload-box
-        a-space(direction="vertical" align="center" :size="30")
-          .tip Drop or click to upload (10MB max)
-          a-button(type="primary" size="large") Upload
+      .upload-box(:class="{ error: sizeError }")
         a-space(
-          v-if="false"
+          v-if="!sizeError"
           direction="vertical"
           align="center"
           :size="30"
         )
-          a-space(direction="vertical" :size="10")
+          .tip Drop or click to upload (10MB max)
+          a-button(type="primary" size="large") Upload
+        a-space(
+          v-else
+          direction="vertical"
+          align="center"
+          :size="30"
+        )
+          a-space(direction="vertical" align="center" :size="10")
             .reupload
               svg.icon-30
-                use(href="#bigupload")
-            .file-info {{ `${file.name} (${fileSize})` }}
-          a-button(type="secondary" size="large") Upload again
+                use(href="#mistake30")
+            .tip {{ `${file.name} (${fileSize}) is too large` }}
+            .file-info {{ `The file size limit is 10MB` }}
+          a-button(type="primary" size="large") Upload
 a-modal(
   v-model:visible="visible"
   title="Preview file content"
@@ -40,25 +47,23 @@ a-modal(
       :hasDoc="false"
       @submit="submit"
     )
+  .error(v-if="errorMessage")
+    a-alert(type="error" show-icon)
+      a-typography-text(title="" :ellipsis="{ rows: 1, showTooltip: true }")
+        | {{ errorMessage }}
   a-spin(tip="Reading file..." style="width: 100%" :loading="isReadingFile")
-    a-scrollbar(:style="{ 'max-height': `calc(100vh - 200px)`, overflow: 'auto', 'min-height': '100px' }")
-      a-typography-paragraph(v-if="dataFromFile" title="" :ellipsis="{ rows: 12, expandable: true, ellipsisStr: '' }")
+    a-scrollbar.file-scrollbar
+      a-typography-text.file(v-if="dataFromFile" title="" :ellipsis="{ rows: 12, expandable: true, ellipsisStr: '' }")
         template(#expand-node="{ expanded }")
           div(v-if="expanded") Collapse
           div(v-else)
             a.text ...
             a.button Load All
         | {{ dataFromFile }}
-      .error(v-if="errorMessage")
-        a-space(:size="10")
-        a-alert(type="error" show-icon)
-          a-typography-paragraph(title="" :ellipsis="{ rows: 3, showTooltip: true }")
-            | {{ errorMessage }}
 </template>
 
 <script lang="ts" setup>
   import type { Log } from '@/store/modules/log/types'
-  import Message from '@arco-design/web-vue/es/message'
 
   const { writeInfluxDB } = useCodeRunStore()
   const { activeTab, footer } = storeToRefs(useIngestStore())
@@ -68,6 +73,7 @@ a-modal(
   const visible = ref(false)
   const isWriteLoading = ref(false)
   const isReadingFile = ref(false)
+  const sizeError = ref(false)
   const dataFromFile = ref('')
   const errorMessage = ref('')
 
@@ -88,11 +94,14 @@ a-modal(
     file.value = null
     errorMessage.value = ''
     dataFromFile.value = ''
+    sizeError.value = false
   }
 
   const beforeUpload = (newFile: File) => {
+    file.value = newFile
+    sizeError.value = false
     if (newFile.size > 10 * 1024 * 1024) {
-      Message.error('File size limit 10MB')
+      sizeError.value = true
       return false
     }
     visible.value = true
@@ -107,7 +116,6 @@ a-modal(
     reader.onloadend = () => {
       isReadingFile.value = false
     }
-    file.value = newFile
     return false
   }
 
@@ -160,6 +168,10 @@ a-modal(
     display: flex;
     justify-content: center;
     align-items: center;
+    &.error {
+      border-color: var(--danger-color);
+      background: var(--danger-bg-color);
+    }
     .arco-btn {
       font-weight: 800;
       font-size: 14px;
@@ -179,8 +191,8 @@ a-modal(
 
   .reupload {
     display: flex;
-    color: var(--brand-color);
     justify-content: center;
+    padding-bottom: 10px;
   }
 
   .file-info {
@@ -194,7 +206,20 @@ a-modal(
     justify-content: center;
   }
 
-  :deep(.arco-typography) {
+  .error {
+    :deep(.arco-alert) {
+      padding: 7px 16px;
+      border-radius: 4px;
+      background: var(--danger-bg-color);
+      .arco-typography {
+        color: var(--main-font-color);
+        margin: 0;
+        font-size: 13px;
+      }
+    }
+  }
+
+  :deep(.arco-typography.file) {
     font-family: monospace;
     color: var(--main-font-color);
     margin: 0;
@@ -215,6 +240,13 @@ a-modal(
     }
   }
 
+  :deep(.arco-scrollbar-container.file-scrollbar) {
+    max-height: calc(100vh - 200px);
+    overflow: auto;
+    min-height: 100px;
+    margin-top: 15px;
+  }
+
   :deep(.arco-spin-tip) {
     color: var(--brand-color);
   }
@@ -222,14 +254,19 @@ a-modal(
 
 <style lang="less">
   .arco-modal.file-modal {
+    width: 800px;
     .arco-modal-header {
       height: auto;
+      padding: 30px 30px 15px 30px;
+      .arco-modal-close-btn {
+        font-size: 16px;
+      }
     }
     .arco-modal-body {
-      padding: 0 20px 20px 20px;
+      padding: 0 30px 30px 30px;
     }
     .top-bar {
-      padding: 20px 0;
+      padding: 0;
       width: 100%;
       .arco-select-view-single {
         width: 123px;
