@@ -9,20 +9,20 @@ a-card(:bordered="false")
           .start-time
             | {{ log.startTime }}
           a-popover(
-            v-if="log.codeInfo"
-            trigger="click"
+            v-if="log.codeInfo && log.codeTooltip"
             position="tl"
             content-class="code-tooltip"
             :content="log.codeTooltip"
           )
             .file-info {{ log.codeInfo }}
+          .file-info(v-else-if="log.codeInfo") {{ log.codeInfo }}
           a-space(v-if="log.message" :size="3")
             | {{ log.message }}
             .total-time(v-if="!log.error")
               | {{ `in ${log.networkTime} ms` }}
           a-tooltip(
             v-if="log.error"
-            position="tr"
+            position="tl"
             content-class="ingest-log-tooltip"
             :content="log.error"
           )
@@ -48,9 +48,6 @@ a-card(:bordered="false")
   :deep(.arco-list-content) {
     flex-direction: column-reverse;
     display: flex;
-    .file-info {
-      cursor: pointer;
-    }
   }
 
   .start-time {

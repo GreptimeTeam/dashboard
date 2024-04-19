@@ -137,7 +137,6 @@ a-modal(
     } else {
       // success
       // clear file
-      resetFile()
       log = {
         type: 'influxdb-upload',
         codeInfo: fileInfo,
@@ -151,6 +150,7 @@ a-modal(
     pushLog(log, activeTab.value)
     footer.value[activeTab.value] = false
     isWriteLoading.value = false
+    resetFile()
   }
 </script>
 
