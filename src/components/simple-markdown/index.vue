@@ -2,7 +2,7 @@
   import { compile, h } from 'vue'
   import meta from 'markdown-it-meta'
   import MarkdownIt from 'markdown-it'
-  import CodeEditor from './components/code-editor.vue'
+  import SimpleCodeEditor from './components/simple-code-editor.vue'
   import plugins from './plugins'
 
   const md = new MarkdownIt()
@@ -14,7 +14,7 @@
 
   export default {
     components: {
-      CodeEditor,
+      SimpleCodeEditor,
     },
     props: {
       md: String,
