@@ -1,6 +1,6 @@
 <template lang="pug">
 a-layout-header
-  TopBar(:disabled="!file" :loading="isWriteLoading" @submit="submit")
+  TopBar(:hasButtons="false")
 a-layout-content.main-content
   a-upload(
     action="/"
@@ -11,9 +11,9 @@ a-layout-content.main-content
     @before-upload="beforeUpload"
   )
     template(#upload-button)
-      .upload-box
+      .upload-box(:class="{ error: sizeError }")
         a-space(
-          v-if="!file"
+          v-if="!sizeError"
           direction="vertical"
           align="center"
           :size="30"
@@ -26,23 +26,57 @@ a-layout-content.main-content
           align="center"
           :size="30"
         )
-          a-space(direction="vertical" :size="10")
+          a-space(direction="vertical" align="center" :size="10")
             .reupload
               svg.icon-30
-                use(href="#bigupload")
-            .file-info {{ `${file.name} (${fileSize})` }}
-          a-button(type="secondary" size="large") Upload again
+                use(href="#mistake30")
+            .tip {{ `${file.name} (${fileSize}) is too large` }}
+            .file-info {{ `The file size limit is 10MB` }}
+          a-button(type="primary" size="large") Upload
+a-modal(
+  v-model:visible="visible"
+  title="Preview file content"
+  modal-class="file-modal"
+  :footer="false"
+  @close="resetFile"
+)
+  template(#title)
+    TopBar(
+      :disabled="!dataFromFile || isWriteLoading"
+      :loading="isWriteLoading"
+      :hasDoc="false"
+      @submit="submit"
+    )
+  .error(v-if="errorMessage")
+    a-alert(type="error" show-icon)
+      a-typography-text(title="" :ellipsis="{ rows: 1, showTooltip: true }")
+        | {{ errorMessage }}
+  a-spin(tip="Reading file..." style="width: 100%" :loading="isReadingFile")
+    a-scrollbar.file-scrollbar
+      a-typography-text.file(v-if="dataFromFile" title="" :ellipsis="{ rows: 12, expandable: true, ellipsisStr: '' }")
+        template(#expand-node="{ expanded }")
+          div(v-if="expanded") Collapse
+          div(v-else)
+            a.text ...
+            a.button Load All
+        | {{ dataFromFile }}
 </template>
 
 <script lang="ts" setup>
   import type { Log } from '@/store/modules/log/types'
-  import Message from '@arco-design/web-vue/es/message'
 
   const { writeInfluxDB } = useCodeRunStore()
   const { activeTab, footer } = storeToRefs(useIngestStore())
   const { pushLog } = useLog()
 
   const file = ref(null as File | null)
+  const visible = ref(false)
+  const isWriteLoading = ref(false)
+  const isReadingFile = ref(false)
+  const sizeError = ref(false)
+  const dataFromFile = ref('')
+  const errorMessage = ref('')
+
   const fileSize = computed(() => {
     if (file.value) {
       if (file.value.size < 1024) {
@@ -55,19 +89,33 @@ a-layout-content.main-content
     }
     return 0
   })
-  const isWriteLoading = ref(false)
-  const dataFromFile = ref('')
+
+  const resetFile = () => {
+    file.value = null
+    errorMessage.value = ''
+    dataFromFile.value = ''
+    sizeError.value = false
+  }
+
   const beforeUpload = (newFile: File) => {
+    file.value = newFile
+    sizeError.value = false
     if (newFile.size > 10 * 1024 * 1024) {
-      Message.error('File size limit 10MB')
+      sizeError.value = true
       return false
     }
+    visible.value = true
     const reader = new FileReader()
     reader.readAsText(newFile)
     reader.onload = (e: any) => {
       dataFromFile.value = e.target.result
     }
-    file.value = newFile
+    reader.onloadstart = () => {
+      isReadingFile.value = true
+    }
+    reader.onloadend = () => {
+      isReadingFile.value = false
+    }
     return false
   }
 
@@ -85,17 +133,20 @@ a-layout-content.main-content
         error: result.error,
         startTime: result.startTime,
       }
+      errorMessage.value = result.error
     } else {
       // success
       // clear file
-      file.value = null
+      resetFile()
       log = {
         type: 'influxdb-upload',
         codeInfo: fileInfo,
+        codeTooltip: dataFromFile.value.split('\n').slice(0, 10).join('\n'),
         message: 'Data written',
         startTime: result.startTime,
         networkTime: result.networkTime,
       }
+      visible.value = false
     }
     pushLog(log, activeTab.value)
     footer.value[activeTab.value] = false
@@ -117,6 +168,10 @@ a-layout-content.main-content
     display: flex;
     justify-content: center;
     align-items: center;
+    &.error {
+      border-color: var(--danger-color);
+      background: var(--danger-bg-color);
+    }
     .arco-btn {
       font-weight: 800;
       font-size: 14px;
@@ -136,8 +191,8 @@ a-layout-content.main-content
 
   .reupload {
     display: flex;
-    color: var(--brand-color);
     justify-content: center;
+    padding-bottom: 10px;
   }
 
   .file-info {
@@ -149,5 +204,73 @@ a-layout-content.main-content
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  .error {
+    :deep(.arco-alert) {
+      padding: 7px 16px;
+      border-radius: 4px;
+      background: var(--danger-bg-color);
+      .arco-typography {
+        color: var(--main-font-color);
+        margin: 0;
+        font-size: 13px;
+      }
+    }
+  }
+
+  :deep(.arco-typography.file) {
+    font-family: monospace;
+    color: var(--main-font-color);
+    margin: 0;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    padding: 10px;
+
+    .arco-typography-operation-expand {
+      color: var(--brand-color);
+      font-family: 'Open Sans';
+      display: flex;
+      .text {
+        color: var(--main-font-color);
+      }
+      .button {
+        text-decoration-line: underline;
+      }
+    }
+  }
+
+  :deep(.arco-scrollbar-container.file-scrollbar) {
+    max-height: calc(100vh - 200px);
+    overflow: auto;
+    min-height: 100px;
+    margin-top: 15px;
+  }
+
+  :deep(.arco-spin-tip) {
+    color: var(--brand-color);
+  }
+</style>
+
+<style lang="less">
+  .arco-modal.file-modal {
+    width: 800px;
+    .arco-modal-header {
+      height: auto;
+      padding: 30px 30px 15px 30px;
+      .arco-modal-close-btn {
+        font-size: 16px;
+      }
+    }
+    .arco-modal-body {
+      padding: 0 30px 30px 30px;
+    }
+    .top-bar {
+      padding: 0;
+      width: 100%;
+      .arco-select-view-single {
+        width: 123px;
+      }
+    }
   }
 </style>

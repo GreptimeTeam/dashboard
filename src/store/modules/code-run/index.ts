@@ -178,7 +178,6 @@ const useCodeRunStore = defineStore('codeRun', () => {
   const writeInfluxDB = async (data: string, precision: string) => {
     try {
       const res: any = await editorAPI.writeInfluxDB(data, precision)
-      Message.success('Write successfully!')
       return res
     } catch (error: any) {
       return error

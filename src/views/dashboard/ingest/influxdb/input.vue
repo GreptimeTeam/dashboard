@@ -5,6 +5,7 @@ a-layout-content.main-content
   a-card.light-editor-card(:bordered="false")
     CodeMirror(
       v-model="data"
+      :placeholder="placeholder"
       :extensions="extensions"
       :style="style"
       :spellcheck="true"
@@ -24,6 +25,7 @@ a-layout-content.main-content
   const { pushLog } = useLog()
 
   const data = ref('')
+  const placeholder = 'cpu_usage,host=server1,region=us-west usage_user=80,usage_system=10 1621401600000000000'
   const style = {
     height: '100%',
   }

@@ -8,12 +8,25 @@ a-card(:bordered="false")
           icon-close-circle.danger-color(v-else)
           .start-time
             | {{ log.startTime }}
-          div(v-if="log.codeInfo") {{ log.codeInfo }}
+          a-popover(
+            v-if="log.codeInfo"
+            trigger="click"
+            position="tl"
+            content-class="code-tooltip"
+            :content="log.codeTooltip"
+          )
+            .file-info {{ log.codeInfo }}
           a-space(v-if="log.message" :size="3")
             | {{ log.message }}
             .total-time(v-if="!log.error")
               | {{ `in ${log.networkTime} ms` }}
-          div(v-if="log.error") {{ log.error }}
+          a-tooltip(
+            v-if="log.error"
+            position="tr"
+            content-class="ingest-log-tooltip"
+            :content="log.error"
+          )
+            div {{ log.error }}
 </template>
 
 <script lang="ts" name="Log" setup>
@@ -35,10 +48,33 @@ a-card(:bordered="false")
   :deep(.arco-list-content) {
     flex-direction: column-reverse;
     display: flex;
+    .file-info {
+      cursor: pointer;
+    }
   }
 
   .start-time {
     font-size: 11px;
+  }
+
+  .info {
+    :deep(.arco-space-item:last-of-type) {
+      overflow: hidden;
+      > div {
+        text-overflow: ellipsis;
+        overflow: hidden;
+      }
+    }
+  }
+
+  :deep(.arco-list-item-main) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :deep(.arco-item-main) {
+    width: 100%;
   }
 
   :deep(.arco-list-small .arco-list-content-wrapper .arco-list-content > .arco-list-item) {
@@ -75,8 +111,14 @@ a-card(:bordered="false")
     opacity: 0;
     transform: translateX(30px);
   }
+</style>
 
-  .list-leave-active {
-    position: absolute;
+<style lang="less">
+  .ingest-log-tooltip {
+    max-width: 600px;
+  }
+  .arco-popover-popup-content.code-tooltip {
+    font-family: monospace;
+    white-space: pre;
   }
 </style>
