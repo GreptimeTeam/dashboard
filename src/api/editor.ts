@@ -98,8 +98,11 @@ const runSQL = (code: string) => {
   return axios.post(sqlUrl, makeSqlData(code), addDatabaseParams())
 }
 
-const getScriptsTable = (db: string) => {
-  // TODO: update to system schema when upstream ready
+const checkScriptsTable = () => {
+  return axios.post(sqlUrl, makeSqlData(`select count(1) from information_schema.tables where table_name='scripts'`))
+}
+
+const getScriptsTable = () => {
   return axios.post(
     sqlUrl,
     makeSqlData(`select * from public.scripts where schema = 'public' order by gmt_modified desc;`)
@@ -141,4 +144,5 @@ export default {
   runPromQL,
   fetchColumnsCount,
   writeInfluxDB,
+  checkScriptsTable,
 }

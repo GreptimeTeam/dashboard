@@ -37,7 +37,7 @@ const useDataBaseStore = defineStore('database', () => {
       return schema.name === 'column_name'
     })
     const dataTypeIndex = columnSchemas.findIndex((schema: SchemaType) => {
-      return schema.name === 'data_type'
+      return schema.name === 'greptime_data_type' || schema.name === 'data_type'
     })
 
     const semanticTypeIndex = columnSchemas.findIndex((schema: SchemaType) => {
@@ -274,8 +274,17 @@ const useDataBaseStore = defineStore('database', () => {
     updateDataStatus('scripts', true)
     scriptsLoading.value = true
     try {
-      const res = await editorAPI.getScriptsTable(database.value)
-      scriptsData.value = res
+      const res: any = await editorAPI.checkScriptsTable()
+      if (res.output[0].records.rows[0][0] === 0) {
+        scriptsData.value = null
+      } else {
+        try {
+          const scripts = await editorAPI.getScriptsTable()
+          scriptsData.value = scripts
+        } catch (error) {
+          scriptsData.value = null
+        }
+      }
     } catch (error) {
       scriptsData.value = null
     }

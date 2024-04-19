@@ -11,8 +11,7 @@ a-card(:bordered="false")
       column-resizable
       :data="gridData"
       :pagination="pagination"
-    ) 
-      |
+    )
       template(#empty)
         EmptyStatus
       template(#columns)
@@ -38,8 +37,6 @@ a-card(:bordered="false")
             a-table-column(:title="column.title" :data-index="column.dataIndex")
               template(#cell="{ record }")
                 a-typography-paragraph.cell-data(:ellipsis="{ rows: 3, expandable: true }") {{ record[column.dataIndex] }}
-                  template(#expand-node="{ expanded }")
-                    | {{ expanded ? 'Collapse' : 'More' }}
 </template>
 
 <script lang="ts" setup>
