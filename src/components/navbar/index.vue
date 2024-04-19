@@ -77,6 +77,9 @@ a-layout.navbar
   }
 
   const menuClick = (key: string) => {
+    if (key !== menuSelectedKey.value) {
+      updateSettings({ queryModalVisible: false })
+    }
     if (key === 'ingest') {
       router.push({ name: activeTab.value || (menu[1].children[0].name as string) })
     } else {
