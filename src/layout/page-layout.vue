@@ -1,12 +1,9 @@
-<template>
-  <router-view v-slot="{ Component }">
-    <transition name="fade" mode="out-in" appear>
-      <component :is="Component" v-if="route.meta.ignoreCache" :key="route.fullPath" />
-      <keep-alive v-else>
-        <component :is="Component" :key="route.name" />
-      </keep-alive>
-    </transition>
-  </router-view>
+<template lang="pug">
+router-view(v-slot="{ Component }")
+  transition(name="fade" mode="out-in" appear)
+    component(v-if="route.meta.ignoreCache" :is="Component")
+    keep-alive(v-else)
+      component(:is="Component")
 </template>
 
 <script lang="ts" setup name="PageLayout">

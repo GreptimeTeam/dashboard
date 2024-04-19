@@ -55,9 +55,22 @@ axios.interceptors.request.use(
 axios.interceptors.response.use(
   (response: AxiosResponse) => {
     const isV1 = !!response.config.url?.startsWith(`/v1`)
+    const isInflux = !!response.config.url?.startsWith(`/v1/influxdb`)
+    if (isInflux) {
+      if (response.status === 204) {
+        return {
+          networkTime: new Date().valueOf() - response.config.traceTimeStart,
+          startTime: new Date(response.config.traceTimeStart).toLocaleTimeString(),
+        }
+      }
+      const errorResponse = {
+        error: response.data.error || 'Error',
+        startTime: new Date(response.config.traceTimeStart).toLocaleTimeString(),
+      }
+      return Promise.reject(errorResponse)
+    }
     if (isV1) {
       response.data = JSONbigint({ storeAsString: true }).parse(response.data)
-
       const { data } = response
       if (data.code && data.code !== 0) {
         // v1 and error
@@ -68,10 +81,10 @@ axios.interceptors.response.use(
           resetOnHover: true,
         })
         const error = {
-          error: data.error,
+          error: data.error || 'Error',
           startTime: new Date(response.config.traceTimeStart).toLocaleTimeString(),
         }
-        return Promise.reject(error || 'Error')
+        return Promise.reject(error)
       }
       // v1 and success
       return {
@@ -90,16 +103,19 @@ axios.interceptors.response.use(
       appStore.updateSettings({ globalSettings: true })
     }
     const data = JSON.parse(error.response.data)
-    Message.error({
-      content: data.error || 'Request Error',
-      duration: 5 * 1000,
-      closable: true,
-      resetOnHover: true,
-    })
+    const isInflux = !!error.config.url?.startsWith(`/v1/influxdb`)
+    if (!isInflux) {
+      Message.error({
+        content: data.error || 'Request Error',
+        duration: 5 * 1000,
+        closable: true,
+        resetOnHover: true,
+      })
+    }
     const errorResponse = {
-      error: data.error,
+      error: data.error || error.message || 'Request Error',
       startTime: new Date(error.response.config.traceTimeStart).toLocaleTimeString(),
     }
-    return Promise.reject(errorResponse || error.message || 'Request Error')
+    return Promise.reject(errorResponse)
   }
 )

@@ -35,6 +35,7 @@
   --tooltip-bg-color: rgba(23, 12, 44, 0.9);
   --hover-font-color: rgba(23, 12, 44, 0.6);
   --border-color: rgba(209, 206, 213, 1);
+  --box-shadow-color: rgba(209, 206, 213, 0.6);
   --light-border-color: rgba(23, 12, 44, 0.07);
   --grey-bg-color: rgba(23, 12, 44, 0.04);
   --success-color: rgba(32, 195, 123, 1);
@@ -42,11 +43,10 @@
   --warning-color: rgba(220, 174, 40, 1);
   --warning-bg-color: rgba(252, 247, 230, 1);
   --danger-color: rgba(234, 50, 95, 1);
-  --danger-bg-color: #fdebef;
+  --danger-bg-color: rgba(255, 240, 244, 1);
   --danger-bg-hover-color: rgba(239, 60, 104, 0.2);
   --switch-unchecked-color: rgba(36, 201, 128, 1);
   --editor-active-line-color: rgba(252, 253, 255, 0.14);
-  --box-shadow-color: rgba(83, 82, 87, 0.4);
   --disabled-color: rgba(223, 223, 223, 1);
 }
 
@@ -223,6 +223,11 @@ body {
   height: 20px;
 }
 
+.icon-30 {
+  width: 30px;
+  height: 30px;
+}
+
 .icon-32 {
   width: 32px;
   height: 32px;
@@ -238,13 +243,13 @@ body {
 
 .arco-select-dropdown {
   padding: 4px 0;
-  border: 0;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
-  box-shadow: 0 2px 10px 0 var(--box-shadow-color);
+  box-shadow: 0px 1px 10px 0px var(--box-shadow-color);
 
   .arco-select-option {
     padding: 0 8px;
-    color: var(--small-font-color);
+    color: var(--main-font-color);
     font-size: 13px;
     line-height: 32px;
     text-align: left;
@@ -274,6 +279,7 @@ body {
 
   .arco-select-option-active {
     background-color: var(--list-hover-color);
+    font-weight: 600;
   }
 
   .arco-select-option:not(.arco-select-dropdown .arco-select-option-disabled):hover {
@@ -433,6 +439,13 @@ body {
   font-family: 'Open Sans';
   font-style: normal;
   src: local('Open Sans'), url('../fonts/OpenSans-ExtraBold.ttf');
+}
+
+@font-face {
+  font-weight: 400;
+  font-family: 'Gilroy';
+  font-style: normal;
+  src: local('Gilroy'), url('../fonts/Gilroy-Regular.otf');
 }
 
 @font-face {

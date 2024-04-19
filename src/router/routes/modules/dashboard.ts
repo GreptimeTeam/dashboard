@@ -27,6 +27,56 @@ const DASHBOARD: AppRouteRecordRaw = {
       },
     },
     {
+      path: 'ingest',
+      name: 'ingest',
+      component: () => import('@/views/dashboard/ingest/index.vue'),
+      redirect: '/dashboard/ingest/influxdb-line-protocol/input',
+      meta: {
+        locale: 'menu.dashboard.ingest',
+        requiresAuth: false,
+        icon: 'ingest',
+        roles: ['admin', 'cloud'],
+      },
+      children: [
+        {
+          path: 'influxdb-line-protocol',
+          name: 'influxdb',
+          redirect: '/dashboard/ingest/influxdb-line-protocol/input',
+          component: () => import('@/views/dashboard/ingest/influxdb/index.vue'),
+          meta: {
+            locale: 'menu.dashboard.influxdb',
+            requiresAuth: false,
+            icon: 'influxdb',
+            roles: ['admin', 'cloud'],
+          },
+          children: [
+            {
+              path: 'input',
+              name: 'influxdb-input',
+              component: () => import('@/views/dashboard/ingest/influxdb/input.vue'),
+              meta: {
+                locale: 'menu.dashboard.input',
+                requiresAuth: false,
+                roles: ['admin', 'cloud'],
+                icon: 'input',
+              },
+            },
+            {
+              path: 'upload',
+              name: 'influxdb-upload',
+              component: () => import('@/views/dashboard/ingest/influxdb/upload.vue'),
+              meta: {
+                locale: 'menu.dashboard.upload',
+                requiresAuth: false,
+                roles: ['admin', 'cloud'],
+                icon: 'upload',
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
       path: 'scripts',
       name: 'scripts',
       component: () => import('@/views/dashboard/scripts/index.vue'),
