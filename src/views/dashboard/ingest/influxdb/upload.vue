@@ -146,11 +146,11 @@ a-modal(
         networkTime: result.networkTime,
       }
       visible.value = false
+      resetFile()
     }
     pushLog(log, activeTab.value)
     footer.value[activeTab.value] = false
     isWriteLoading.value = false
-    resetFile()
   }
 </script>
 
