@@ -56,7 +56,7 @@ a-modal(
       CodeMirror(v-if="dataFromFile" v-model="codeInEditor" :disabled="true")
     span.load(v-if="collapsed && remainingLines")
       a.text ...{{ remainingLines }} lines more
-      a.button(type="text" size="mini" @click="loadMore") Load All
+      a.button(type="text" size="mini" @click="loadMore") Expand
 </template>
 
 <script lang="ts" setup>
@@ -232,27 +232,6 @@ a-modal(
     }
   }
 
-  :deep(.arco-typography.file) {
-    font-family: monospace;
-    color: var(--main-font-color);
-    margin: 0;
-    border-radius: 4px;
-    border: 1px solid var(--border-color);
-    padding: 10px;
-
-    .arco-typography-operation-expand {
-      color: var(--brand-color);
-      font-family: 'Open Sans';
-      display: flex;
-      .text {
-        color: var(--main-font-color);
-      }
-      .button {
-        text-decoration-line: underline;
-      }
-    }
-  }
-
   :deep(.arco-card.file-scrollbar) {
     max-height: calc(100vh - 200px);
     overflow: auto;
@@ -262,6 +241,9 @@ a-modal(
     .ͼ1 .cm-content {
       width: calc(100% - 40px);
       white-space: pre-wrap;
+    }
+    .ͼ4 .cm-line {
+      color: var(--main-font-color);
     }
   }
 
