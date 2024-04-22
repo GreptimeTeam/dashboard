@@ -36,7 +36,7 @@ a-card(:bordered="false")
           template(v-else)
             a-table-column(:title="column.title" :data-index="column.dataIndex")
               template(#cell="{ record }")
-                a-typography-paragraph.cell-data(:ellipsis="{ rows: 3, expandable: true }") {{ record[column.dataIndex] }}
+                a-typography-paragraph.cell-data(title :ellipsis="{ rows: 3, expandable: true }") {{ record[column.dataIndex] }}
 </template>
 
 <script lang="ts" setup>
