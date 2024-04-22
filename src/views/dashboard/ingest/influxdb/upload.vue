@@ -150,10 +150,14 @@ a-modal(
     } else {
       // success
       // clear file
+      const codeTooltip =
+        remainingLines.value > 0
+          ? `${dataFromFile.value.split('\n').slice(0, 10).join('\n')}\n...${remainingLines.value} lines more`
+          : dataFromFile.value
       log = {
         type: 'influxdb-upload',
         codeInfo: fileInfo,
-        codeTooltip: `${dataFromFile.value.split('\n').slice(0, 10).join('\n')}\n...${remainingLines.value} lines more`,
+        codeTooltip,
         message: 'Data written',
         startTime: result.startTime,
         networkTime: result.networkTime,
