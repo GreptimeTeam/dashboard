@@ -52,17 +52,15 @@ a-modal(
       a-typography-text(title="" :ellipsis="{ rows: 1, showTooltip: true }")
         | {{ errorMessage }}
   a-spin(tip="Reading file..." style="width: 100%" :loading="isReadingFile")
-    a-scrollbar.file-scrollbar
-      a-typography-text.file(v-if="dataFromFile" title="" :ellipsis="{ rows: 12, expandable: true, ellipsisStr: '' }")
-        template(#expand-node="{ expanded }")
-          div(v-if="expanded") Collapse
-          div(v-else)
-            a.text ...
-            a.button Load All
-        | {{ dataFromFile }}
+    a-card.file-scrollbar(:bordered="false")
+      CodeMirror(v-if="dataFromFile" v-model="codeInEditor" :disabled="true")
+    span.load(v-if="collapsed && remainingLines")
+      a.text ...{{ remainingLines }} lines more
+      a.button(type="text" size="mini" @click="loadMore") Load All
 </template>
 
 <script lang="ts" setup>
+  import { Codemirror as CodeMirror } from 'vue-codemirror'
   import type { Log } from '@/store/modules/log/types'
 
   const { writeInfluxDB } = useCodeRunStore()
@@ -74,8 +72,19 @@ a-modal(
   const isWriteLoading = ref(false)
   const isReadingFile = ref(false)
   const sizeError = ref(false)
+  const collapsed = ref(true)
   const dataFromFile = ref('')
+  const codeInEditor = ref('')
   const errorMessage = ref('')
+
+  const remainingLines = computed(() => {
+    return dataFromFile.value.split('\n').length > 10 ? dataFromFile.value.split('\n').length - 10 : 0
+  })
+
+  const loadMore = () => {
+    collapsed.value = false
+    codeInEditor.value = dataFromFile.value
+  }
 
   const fileSize = computed(() => {
     if (file.value) {
@@ -94,6 +103,8 @@ a-modal(
     file.value = null
     errorMessage.value = ''
     dataFromFile.value = ''
+    codeInEditor.value = ''
+    collapsed.value = true
     sizeError.value = false
   }
 
@@ -108,7 +119,9 @@ a-modal(
     const reader = new FileReader()
     reader.readAsText(newFile)
     reader.onload = (e: any) => {
+      collapsed.value = true
       dataFromFile.value = e.target.result
+      codeInEditor.value = dataFromFile.value.split('\n').slice(0, 10).join('\n')
     }
     reader.onloadstart = () => {
       isReadingFile.value = true
@@ -140,7 +153,7 @@ a-modal(
       log = {
         type: 'influxdb-upload',
         codeInfo: fileInfo,
-        codeTooltip: dataFromFile.value.split('\n').slice(0, 10).join('\n'),
+        codeTooltip: `${dataFromFile.value.split('\n').slice(0, 10).join('\n')}\n...${remainingLines.value} lines more`,
         message: 'Data written',
         startTime: result.startTime,
         networkTime: result.networkTime,
@@ -240,11 +253,16 @@ a-modal(
     }
   }
 
-  :deep(.arco-scrollbar-container.file-scrollbar) {
+  :deep(.arco-card.file-scrollbar) {
     max-height: calc(100vh - 200px);
     overflow: auto;
     min-height: 100px;
-    margin-top: 15px;
+    border-radius: 0;
+
+    .ͼ1 .cm-content {
+      width: calc(100% - 40px);
+      white-space: pre-wrap;
+    }
   }
 
   :deep(.arco-spin-tip) {
@@ -264,6 +282,24 @@ a-modal(
     }
     .arco-modal-body {
       padding: 0 30px 30px 30px;
+      .arco-spin {
+        margin-top: 15px;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+      }
+      .load {
+        padding-left: 6px;
+        font-size: 13px;
+      }
+      .text {
+        color: var(--main-font-color);
+        padding-right: 4px;
+      }
+      .button {
+        cursor: pointer;
+        color: var(--brand-color);
+        text-decoration-line: underline;
+      }
     }
     .top-bar {
       padding: 0;
