@@ -13,6 +13,22 @@ You are welcome to try out our dashboard directly with GreptimeDB's binary or wi
 - Visit `http://localhost:4000/dashboard`
 
 ### With Docker
+⭐We recommend using docker-compose to setup both greptimedb and dashboard.
+1. Use the `curl` command to get the `docker-compose` configuration file
+> Tips: If you are located in China and do not have access to an external network, you are likely to encounter network-related problems when executing the following commands.
+```
+curl -O https://raw.githubusercontent.com/greptimeteam/dashboard/main/docker/docker-compose.yml
+```
+> Solution: Download the `docker-compose.yml` file locally and transfer it to the VM or server using `SFTP`. Or just copy the contents of [this file](https://github.com/GreptimeTeam/dashboard/blob/main/docker/docker-compose.yml) and create the file in the virtual machine or server.
+2. Launching the application
+```
+docker compose up
+```
+3. Open you browser and visit `http://localhost:8080/dashboard/`
+- Follow [getting started](https://docs.greptime.com/getting-started/quick-start/mysql#try-out-basic-sql-operations) to create your table and insert some data
+- Run a `SELECT` query and check the result as table or chart
+
+<!-- ### With Docker
 
 We recommend using `docker-compose` to setup both greptimedb and
 dashboard.
@@ -25,7 +41,7 @@ docker compose up
 Open you browser and visit `http://localhost:8080/dashboard/`
 
 - Follow [getting started](https://docs.greptime.com/getting-started/quick-start/mysql#try-out-basic-sql-operations) to create your table and insert some data
-- Run a `SELECT` query and check the result as table or chart
+- Run a `SELECT` query and check the result as table or chart -->
 
 ## Development Setup
 
