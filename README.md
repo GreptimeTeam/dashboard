@@ -15,7 +15,6 @@ You are welcome to try out our dashboard directly with GreptimeDB's binary or wi
 ### With Docker
 ⭐We recommend using docker-compose to setup both greptimedb and dashboard.
 1. Use the `curl` command to get the `docker-compose` configuration file
-> Tips: If you are located in China and do not have access to an external network, you are likely to encounter network-related problems when executing the following commands.
 ```
 curl -O https://raw.githubusercontent.com/greptimeteam/dashboard/main/docker/docker-compose.yml
 ```
