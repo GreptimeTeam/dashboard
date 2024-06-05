@@ -18,7 +18,7 @@ You are welcome to try out our dashboard directly with GreptimeDB's binary or wi
 ```
 curl -O https://raw.githubusercontent.com/greptimeteam/dashboard/main/docker/docker-compose.yml
 ```
-> Solution: Download the `docker-compose.yml` file locally and transfer it to the VM or server using `SFTP`. Or just copy the contents of [this file](https://github.com/GreptimeTeam/dashboard/blob/main/docker/docker-compose.yml) and create the file in the virtual machine or server.
+> Tips: If you encounter network-related problems when executing the `curl` commands. Download the `docker-compose.yml` file manually or simply copy and paste the [contents](https://github.com/GreptimeTeam/dashboard/blob/main/docker/docker-compose.yml) into an empty `yml` file on your machine or server, based on what you need.
 2. Launching the application
 ```
 docker compose up
