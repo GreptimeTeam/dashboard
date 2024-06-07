@@ -10,7 +10,7 @@ const isRefreshingDetails = ref<{ [key: number]: boolean }>({ 0: false })
 
 export default function useSiderTabs() {
   const { originTablesTree, originScriptsList } = storeToRefs(useDataBaseStore())
-  const { getTableByName, addChildren, generateTreeChildren, getTables, getIndexes } = useDataBaseStore()
+  const { getTableByName, addChildren, generateTreeChildren, getTables, getIndexesForColumns } = useDataBaseStore()
 
   // Deprecated.
   const searchTree = (keyword: string) => {
@@ -74,8 +74,7 @@ export default function useSiderTabs() {
             rows,
             schema: { column_schemas: columnSchemas },
           } = result
-
-          const indexes = getIndexes(columnSchemas)
+          const indexes = getIndexesForColumns(columnSchemas)
           const { treeChildren, timeIndexName } = generateTreeChildren(nodeData, rows, indexes)
           addChildren(nodeData.key, treeChildren, timeIndexName, 'columns', isSilent)
           resolve(treeChildren)

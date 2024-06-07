@@ -32,7 +32,7 @@ const useDataBaseStore = defineStore('database', () => {
     promql: [new PromQLExtension().asExtension(), oneDark],
   })
 
-  const getIndexes = (columnSchemas: SchemaType[]) => {
+  const getIndexesForColumns = (columnSchemas: SchemaType[]) => {
     const columnNameIndex = columnSchemas.findIndex((schema: SchemaType) => {
       return schema.name === 'column_name'
     })
@@ -44,7 +44,22 @@ const useDataBaseStore = defineStore('database', () => {
       return schema.name === 'semantic_type'
     })
 
-    return { columnNameIndex, dataTypeIndex, semanticTypeIndex }
+    const tableTypeIndex = columnSchemas.findIndex((schema: SchemaType) => {
+      return schema.name === 'table_type'
+    })
+
+    return { columnNameIndex, dataTypeIndex, semanticTypeIndex, tableTypeIndex }
+  }
+
+  const getIndexesForTables = (columnSchemas: SchemaType[]) => {
+    const tableNameIndex = columnSchemas.findIndex((schema: SchemaType) => {
+      return schema.name === 'table_name'
+    })
+    const tableTypeIndex = columnSchemas.findIndex((schema: SchemaType) => {
+      return schema.name === 'table_type'
+    })
+
+    return { tableNameIndex, tableTypeIndex }
   }
 
   const generateTreeChildren = (nodeData: TableTreeParent, rows: string[][], indexes: { [key: string]: number }) => {
@@ -86,10 +101,10 @@ const useDataBaseStore = defineStore('database', () => {
     let key = tablesTreeForDatabase.value[database.value].length
 
     if (tablesData.value) {
-      const schemas = tablesData.value.schema.column_schemas
-
-      const tableNameIndex: number = schemas.findIndex(({ name }) => name === 'table_name')
-      const indexes = getIndexes(schemas)
+      const schemas: SchemaType[] = tablesData.value.schema.column_schemas || []
+      // const tableNameIndex: number = schemas.findIndex(({ name }) => name === 'table_name')
+      const { tableNameIndex, tableTypeIndex } = getIndexesForTables(schemas)
+      const indexes = getIndexesForColumns(schemas)
 
       if (lastTableTitle && tablesData.value.rows[0][tableNameIndex] === lastTableTitle) {
         // Last table not finished, pop out and reload.
@@ -104,6 +119,7 @@ const useDataBaseStore = defineStore('database', () => {
       })
 
       dataWithGroup.forEach((groupResults: [][], title: string) => {
+        console.log(title)
         const node: TableTreeParent = {
           title,
           key,
@@ -113,7 +129,9 @@ const useDataBaseStore = defineStore('database', () => {
           timeIndexName: '',
           childrenType: 'columns',
           isLeaf: false,
+          tableType: groupResults[0][tableTypeIndex],
         }
+        console.log(groupResults[0], node.tableType)
         const { treeChildren, timeIndexName, columnNames } = generateTreeChildren(node, groupResults, indexes)
 
         node.columns = treeChildren
@@ -314,7 +332,7 @@ const useDataBaseStore = defineStore('database', () => {
     getScriptsTable,
     resetData,
     generateTreeChildren,
-    getIndexes,
+    getIndexesForColumns,
   }
 })
 
