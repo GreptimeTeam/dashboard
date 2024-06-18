@@ -59,7 +59,6 @@ export default function useSiderTabs() {
 
   const refreshTables = () => {
     tablesSearchKey.value = ''
-
     getTables()
     if (tablesTreeRef.value) {
       tablesTreeRef.value.expandAll(false)
@@ -87,6 +86,13 @@ export default function useSiderTabs() {
   const loadMoreDetails = async (nodeData: TableTreeParent, isSilent?: boolean) => {
     isRefreshingDetails.value[nodeData.key] = true
     const createTable = new Promise<object>((resolve, reject) => {
+      if (nodeData.tableType !== 'BASE TABLE') {
+        resolve({
+          key: 'createTable',
+          value: { sql: '-', ttl: '-' },
+        })
+        return
+      }
       editorAPI
         .runSQL(`show create table "${nodeData.title}"`)
         .then((res: any) => {
@@ -171,8 +177,7 @@ export default function useSiderTabs() {
     if (nodeData.childrenType === 'details') {
       return loadMoreDetails(nodeData)
     }
-    originTablesTree.value[nodeData.key].children = nodeData.columns
-    return nodeData.columns
+    return loadMoreColumns(nodeData)
   }
 
   return {
