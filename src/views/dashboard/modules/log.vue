@@ -18,7 +18,7 @@ a-list-item.smaller-divider
               a-typography-text.popup {{ log.codeInfo }}
         div {{ log.codeInfo }}
       .script(v-else)
-        div(v-if="hasExecutionTime") {{ $t('dashboard.runScript', { name: log.codeInfo }) }}
+        div(v-if="hasResult") {{ $t('dashboard.runScript', { name: log.codeInfo }) }}
         div(v-else) {{ $t('dashboard.saveName', { name: log.codeInfo }) }}
     a-space.info(fill)
       icon-check-circle.success-color.icon-14(v-if="!log.error")
@@ -51,6 +51,7 @@ a-list-item.smaller-divider
   })
 
   const hasExecutionTime = computed(() => Reflect.has(props.log, 'execution_time_ms'))
+  const hasResult = computed(() => Reflect.has(props.log, 'message'))
 
   const openEditor = () => {
     updateSettings({ queryModalVisible: true })
