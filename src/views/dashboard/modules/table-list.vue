@@ -18,6 +18,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
     :block-node="true"
     :data="tablesTreeData"
     :animation="false"
+    :load-more="loadMore"
     :virtual-list-props="{ height: 'calc(100vh - 160px)' }"
     :field-names="{ children: 'columns' }"
     :default-expand-all="false"
@@ -62,7 +63,7 @@ a-spin(style="width: 100%" :loading="tablesLoading")
   const source = ref('')
   const { copy } = useClipboard({ source })
   const { insertNameToPyCode } = usePythonCode()
-  const { tablesSearchKey, tablesTreeData } = useSiderTabs()
+  const { tablesSearchKey, tablesTreeData, loadMoreColumns: loadMore } = useSiderTabs()
   const { tablesLoading } = storeToRefs(useDataBaseStore())
   const { getTables } = useDataBaseStore()
   const { menuSelectedKey } = storeToRefs(useAppStore())
