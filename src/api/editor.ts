@@ -71,16 +71,17 @@ const getTables = (limit?: number, offset?: number) => {
   return axios.post(
     sqlUrl,
     makeSqlData(
-      `select * from information_schema.columns where table_schema='${appStore.database}'${limit ? suffix : ''};`
-    )
+      `select * from information_schema.tables where table_schema='${appStore.database}'${limit ? suffix : ''};`
+    ),
+    addDatabaseParams()
   )
 }
 
-const fetchColumnsCount = () => {
+const fetchTablesCount = () => {
   const appStore = useAppStore()
   return axios.post(
     sqlUrl,
-    makeSqlData(`select count(*) from information_schema.columns where table_schema='${appStore.database}';`)
+    makeSqlData(`select count(*) from information_schema.tables where table_schema='${appStore.database}';`)
   )
 }
 
@@ -142,7 +143,7 @@ export default {
   runScript,
   saveScript,
   runPromQL,
-  fetchColumnsCount,
   writeInfluxDB,
   checkScriptsTable,
+  fetchTablesCount,
 }

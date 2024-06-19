@@ -160,15 +160,8 @@ a-card.table-manager(:bordered="false")
 
   const { menuSelectedKey } = storeToRefs(useAppStore())
   const { insertNameToPyCode } = usePythonCode()
-  const {
-    tablesSearchKey,
-    tablesTreeData,
-    tablesTreeRef,
-    isRefreshingDetails,
-    refreshTables,
-    loadMore,
-    loadMoreColumns,
-  } = useSiderTabs()
+  const { tablesSearchKey, tablesTreeData, tablesTreeRef, isRefreshingDetails, refreshTables, loadMore } =
+    useSiderTabs()
   const { tablesLoading, originTablesTree, totalTablesLoading } = storeToRefs(useDataBaseStore())
 
   const LAYOUT_PADDING = 16
