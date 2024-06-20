@@ -13,7 +13,6 @@
   import { useUserStore, useAppStore } from '@/store'
   import { useStorage } from '@vueuse/core'
 
-  const appStore = useAppStore()
   const { currentLocale } = useLocale()
   const locale = computed(() => {
     switch (currentLocale.value) {
@@ -26,7 +25,7 @@
 
   const { setRole } = useUserStore()
   const { host } = storeToRefs(useAppStore())
-  const { fetchDatabases, updateSettings } = useAppStore()
+  const { updateSettings } = useAppStore()
 
   host.value = window.location.origin
 
@@ -45,7 +44,5 @@
       password,
       database,
     })
-    // TODO: only check tables after database is fetched
-    fetchDatabases()
   }
 </script>

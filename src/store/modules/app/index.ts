@@ -30,9 +30,11 @@ const useAppStore = defineStore('app', {
     },
 
     // Login (check if settings are valid)
-    async login(form: Partial<AppState>) {
+    async login(form?: Partial<AppState>) {
       try {
-        this.updateSettings(form)
+        if (form) {
+          this.updateSettings(form)
+        }
         await editorAPI.runSQL(`select 1`)
         const { resetDataStatus } = useUserStore()
         resetDataStatus()
@@ -105,11 +107,13 @@ const useAppStore = defineStore('app', {
       try {
         const res: any = await editorAPI.getDatabases()
         this.databaseList = res.output[0].records.rows.flat()
-        if (this.$state.database) {
+        if (this.$state.database && this.databaseList.includes(this.$state.database)) {
           this.database = this.$state.database
         } else if (this.databaseList.length) {
           this.setDefaultDatabase()
         }
+        // check if settings are valid
+        this.login()
       } catch (error) {
         // some error
       }

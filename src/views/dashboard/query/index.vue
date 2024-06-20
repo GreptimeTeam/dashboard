@@ -57,10 +57,10 @@ a-layout.layout
       queryType.value = 'promql'
   })
 
-  onActivated(() => {
+  onActivated(async () => {
     if (!guideModalVisible.value) {
       if (!dataStatusMap.value.tables) {
-        fetchDatabases()
+        await fetchDatabases()
         checkTables()
       }
     }
