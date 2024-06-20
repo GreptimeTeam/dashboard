@@ -19,9 +19,9 @@
   "password": "",
   "dbId": "",
   "serverMenu": [],
-  "codeType": "sql",
   "guideModalVisible": false,
   "lifetime": "long",
   "menuSelectedKey": "query",
-  "queryModalVisible": false
+  "queryModalVisible": false,
+  "userTimezone": ""
 }

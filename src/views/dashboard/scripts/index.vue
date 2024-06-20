@@ -12,7 +12,7 @@ a-layout.layout
 <script lang="ts" name="Scripts" setup>
   const { getResultsByType } = useQueryCode()
   const { logs } = storeToRefs(useLogStore())
-  const { codeType, guideModalVisible } = storeToRefs(useAppStore())
+  const { guideModalVisible } = storeToRefs(useAppStore())
   const { dataStatusMap } = storeToRefs(useUserStore())
 
   const { checkTables, getScriptsTable } = useDataBaseStore()
@@ -25,7 +25,6 @@ a-layout.layout
   // TODO: add more code type in the future if needed
 
   onActivated(() => {
-    codeType.value = 'python'
     if (!guideModalVisible.value) {
       if (!dataStatusMap.value.scripts) {
         getScriptsTable()

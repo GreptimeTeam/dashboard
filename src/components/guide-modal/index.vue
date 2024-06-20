@@ -34,13 +34,14 @@ a-modal.guide-modal(
 
 <script lang="ts" setup name="GuideModal">
   import { useAppStore } from '@/store'
-  import SettingsForm from '../global-setting/settings-form.vue'
 
-  const { username, password, host, database, databaseList, codeType, guideModalVisible } = storeToRefs(useAppStore())
+  const { username, password, host, database, databaseList, menuSelectedKey, guideModalVisible } = storeToRefs(
+    useAppStore()
+  )
   const { role } = storeToRefs(useUserStore())
 
   const { login } = useAppStore()
-  const { checkTables, getScriptsTable } = useDataBaseStore()
+  const { checkTables } = useDataBaseStore()
 
   const settingsForm = ref({
     username: username.value,
@@ -54,9 +55,6 @@ a-modal.guide-modal(
     const res = await login(settingsForm.value)
     if (res) {
       checkTables()
-      if (codeType.value === 'python') {
-        getScriptsTable()
-      }
     }
   }
 </script>

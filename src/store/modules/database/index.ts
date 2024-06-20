@@ -19,9 +19,20 @@ const useDataBaseStore = defineStore('database', () => {
   const tablesLoading = ref(false)
   const totalTablesLoading = ref(false)
   const scriptsLoading = ref(false)
-  const hints = ref({ sql: { schema: {} }, promql: new Set() } as {
-    sql: { schema: { [key: string]: string[] } }
-    promql: Set<string>
+
+  const hints = computed(() => {
+    const schema: { [key: string]: string[] } = {}
+    const initialMetricList = new Set<string>()
+    originTablesTree.value.forEach((item: TableTreeParent) => {
+      const columns = item.columns.map((child: TableTreeChild) => {
+        initialMetricList.add(child.title)
+        return child.title
+      })
+      schema[item.title] = columns
+      initialMetricList.add(item.title)
+    })
+
+    return { sql: { schema }, promql: initialMetricList }
   })
 
   const extensions = ref<{
@@ -32,19 +43,47 @@ const useDataBaseStore = defineStore('database', () => {
     promql: [new PromQLExtension().asExtension(), oneDark],
   })
 
-  const getIndexes = (columnSchemas: SchemaType[]) => {
+  watch(hints, () => {
+    extensions.value.sql = [sql(hints.value.sql), oneDark]
+    const promql = new PromQLExtension().setComplete({
+      remote: {
+        fetchFn: () => Promise.reject(),
+        cache: {
+          initialMetricList: [...hints.value.promql],
+        },
+      },
+    })
+    extensions.value.promql = [promql.asExtension(), oneDark]
+  })
+
+  const getIndexesForColumns = (columnSchemas: SchemaType[]) => {
     const columnNameIndex = columnSchemas.findIndex((schema: SchemaType) => {
       return schema.name === 'column_name'
     })
     const dataTypeIndex = columnSchemas.findIndex((schema: SchemaType) => {
-      return schema.name === 'data_type'
+      return schema.name === 'greptime_data_type' || schema.name === 'data_type'
     })
 
     const semanticTypeIndex = columnSchemas.findIndex((schema: SchemaType) => {
       return schema.name === 'semantic_type'
     })
 
-    return { columnNameIndex, dataTypeIndex, semanticTypeIndex }
+    const tableTypeIndex = columnSchemas.findIndex((schema: SchemaType) => {
+      return schema.name === 'table_type'
+    })
+
+    return { columnNameIndex, dataTypeIndex, semanticTypeIndex, tableTypeIndex }
+  }
+
+  const getIndexesForTables = (columnSchemas: SchemaType[]) => {
+    const tableNameIndex = columnSchemas.findIndex((schema: SchemaType) => {
+      return schema.name === 'table_name'
+    })
+    const tableTypeIndex = columnSchemas.findIndex((schema: SchemaType) => {
+      return schema.name === 'table_type'
+    })
+
+    return { tableNameIndex, tableTypeIndex }
   }
 
   const generateTreeChildren = (nodeData: TableTreeParent, rows: string[][], indexes: { [key: string]: number }) => {
@@ -76,36 +115,14 @@ const useDataBaseStore = defineStore('database', () => {
     }
   }
 
-  const getOriginTablesTree = (lastTableTitle: string, lastTableRows: [][]) => {
-    const tablesTree: TableTreeParent[] = []
-    const {
-      sql: { schema },
-      promql,
-    } = hints.value
-
+  const getOriginTablesTree = () => {
     let key = tablesTreeForDatabase.value[database.value].length
-
     if (tablesData.value) {
-      const schemas = tablesData.value.schema.column_schemas
-
-      const tableNameIndex: number = schemas.findIndex(({ name }) => name === 'table_name')
-      const indexes = getIndexes(schemas)
-
-      if (lastTableTitle && tablesData.value.rows[0][tableNameIndex] === lastTableTitle) {
-        // Last table not finished, pop out and reload.
-        tablesTreeForDatabase.value[database.value].pop()
-        key -= 1
-      } else {
-        lastTableRows = []
-      }
-
-      const dataWithGroup = groupByToMap(lastTableRows.concat(tablesData.value.rows), (value: any) => {
-        return value[tableNameIndex]
-      })
-
-      dataWithGroup.forEach((groupResults: [][], title: string) => {
+      const schemas: SchemaType[] = tablesData.value.schema?.column_schemas || []
+      const { tableNameIndex, tableTypeIndex } = getIndexesForTables(schemas)
+      tablesData.value.rows.forEach((row: string[]) => {
         const node: TableTreeParent = {
-          title,
+          title: row[tableNameIndex],
           key,
           children: [],
           columns: [],
@@ -113,24 +130,12 @@ const useDataBaseStore = defineStore('database', () => {
           timeIndexName: '',
           childrenType: 'columns',
           isLeaf: false,
+          tableType: row[tableTypeIndex],
         }
-        const { treeChildren, timeIndexName, columnNames } = generateTreeChildren(node, groupResults, indexes)
-
-        node.columns = treeChildren
-        node.timeIndexName = timeIndexName
         tablesTreeForDatabase.value[database.value].push(node)
-        tablesTree.push(node)
         key += 1
-
-        promql.add(title)
-        schema[title] = columnNames
-        columnNames.forEach((name: string) => {
-          promql.add(name)
-        })
       })
     }
-
-    return { tablesTree }
   }
 
   const addChildren = (
@@ -176,9 +181,9 @@ const useDataBaseStore = defineStore('database', () => {
     return tempArray
   })
 
-  const getColumnsCount = async () => {
+  const getTablesCount = async () => {
     try {
-      const res: any = await editorAPI.fetchColumnsCount()
+      const res: any = await editorAPI.fetchTablesCount()
       const count: number = res.output[0].records.rows[0][0]
       return count
     } catch {
@@ -194,51 +199,25 @@ const useDataBaseStore = defineStore('database', () => {
 
     // TODO: better not change dom
     tablesTreeForDatabase.value[database.value] = []
-
-    const total = await getColumnsCount()
+    const total = await getTablesCount()
     if (total === 0) {
       tablesLoading.value = false
       totalTablesLoading.value = false
       return
     }
 
-    const pageSize = 1000
-
+    // TODO: limit?
+    const pageSize = 300
     const maxPage = Math.ceil(total / pageSize)
 
-    for (
-      let page = 1, lastTableTitle = '', lastColumnsLength = 0, lastTableRows: [][] = [];
-      page <= maxPage;
-      page += 1
-    ) {
+    for (let page = 1; page <= maxPage; page += 1) {
       try {
         // eslint-disable-next-line no-await-in-loop
         const res: any = await editorAPI.getTables(pageSize, pageSize * (page - 1))
-
         tablesData.value = res.output[0].records
-
-        const { tablesTree } = getOriginTablesTree(lastTableTitle, lastTableRows)
-
-        lastTableTitle = tablesTree[tablesTree.length - 1].title
-        lastColumnsLength = tablesTree[tablesTree.length - 1].columns.length
-        if (tablesData.value) {
-          lastTableRows = tablesData.value.rows.slice(tablesData.value.rows.length - lastColumnsLength)
-        }
-
+        getOriginTablesTree()
         // Stop loading status when tables of the first page are loaded
         tablesLoading.value = false
-
-        // Update hints
-        const promql = new PromQLExtension().setComplete({
-          remote: {
-            fetchFn: () => Promise.reject(),
-            cache: {
-              initialMetricList: [...hints.value.promql],
-            },
-          },
-        })
-        extensions.value.sql = [sql(hints.value.sql), oneDark]
-        extensions.value.promql = [promql.asExtension(), oneDark]
       } catch (error) {
         tablesData.value = undefined
         // TODO: limit?
@@ -274,8 +253,17 @@ const useDataBaseStore = defineStore('database', () => {
     updateDataStatus('scripts', true)
     scriptsLoading.value = true
     try {
-      const res = await editorAPI.getScriptsTable(database.value)
-      scriptsData.value = res
+      const res: any = await editorAPI.checkScriptsTable()
+      if (res.output[0].records.rows[0][0] === 0) {
+        scriptsData.value = null
+      } else {
+        try {
+          const scripts = await editorAPI.getScriptsTable()
+          scriptsData.value = scripts
+        } catch (error) {
+          scriptsData.value = null
+        }
+      }
     } catch (error) {
       scriptsData.value = null
     }
@@ -305,7 +293,7 @@ const useDataBaseStore = defineStore('database', () => {
     getScriptsTable,
     resetData,
     generateTreeChildren,
-    getIndexes,
+    getIndexesForColumns,
   }
 })
 

@@ -7,6 +7,8 @@ const sqlUrl = `/v1/sql`
 const scriptUrl = `/v1/scripts`
 const runScriptUrl = `/v1/run-script`
 const promURL = `/v1/promql`
+const influxURL = `/v1/influxdb`
+
 const textHeaders = {
   'Content-Type': 'text/plain',
 } as AxiosRequestHeaders
@@ -60,12 +62,7 @@ const makePromParams = (code: string, promForm: PromForm) => {
 }
 
 const getDatabases = () => {
-  return axios.post(sqlUrl, makeSqlData(`show databases`), addDatabaseParams())
-}
-
-// Deprecated
-const getTablesOld = () => {
-  return axios.post(sqlUrl, makeSqlData(`show tables`), addDatabaseParams())
+  return axios.post(sqlUrl, makeSqlData(`show databases`))
 }
 
 const getTables = (limit?: number, offset?: number) => {
@@ -74,21 +71,17 @@ const getTables = (limit?: number, offset?: number) => {
   return axios.post(
     sqlUrl,
     makeSqlData(
-      `select * from information_schema.columns where table_schema='${appStore.database}'${limit ? suffix : ''};`
-    )
+      `select * from information_schema.tables where table_schema='${appStore.database}'${limit ? suffix : ''};`
+    ),
+    addDatabaseParams()
   )
 }
 
-const fetchColumnsCount = () => {
+const fetchTablesCount = () => {
   const appStore = useAppStore()
   return axios.post(
     sqlUrl,
-    makeSqlData(`select count(*) from information_schema.columns where table_schema='${appStore.database}';`),
-    {
-      params: {
-        db: appStore.database,
-      },
-    } as AxiosRequestConfig
+    makeSqlData(`select count(*) from information_schema.tables where table_schema='${appStore.database}';`)
   )
 }
 
@@ -106,12 +99,14 @@ const runSQL = (code: string) => {
   return axios.post(sqlUrl, makeSqlData(code), addDatabaseParams())
 }
 
-const getScriptsTable = (db: string) => {
-  // TODO: update to system schema when upstream ready
-  const appStore = useAppStore()
+const checkScriptsTable = () => {
+  return axios.post(sqlUrl, makeSqlData(`select count(1) from information_schema.tables where table_name='scripts'`))
+}
+
+const getScriptsTable = () => {
   return axios.post(
     sqlUrl,
-    makeSqlData(`select * from public.scripts where schema = '${appStore.database}' order by gmt_modified desc;`)
+    makeSqlData(`select * from public.scripts where schema = 'public' order by gmt_modified desc;`)
   )
 }
 
@@ -127,6 +122,18 @@ const runPromQL = (code: string, promForm: PromForm) => {
   return axios.post(promURL, {}, makePromParams(code, promForm))
 }
 
+const writeInfluxDB = (data: string, precision: string) => {
+  const appStore = useAppStore()
+  const config = {
+    params: {
+      db: appStore.database,
+      precision,
+    },
+    headers: textHeaders,
+  } as AxiosRequestConfig
+  return axios.post(`${influxURL}/write`, data, config)
+}
+
 export default {
   getTables,
   getTableByName,
@@ -136,5 +143,7 @@ export default {
   runScript,
   saveScript,
   runPromQL,
-  fetchColumnsCount,
+  writeInfluxDB,
+  checkScriptsTable,
+  fetchTablesCount,
 }

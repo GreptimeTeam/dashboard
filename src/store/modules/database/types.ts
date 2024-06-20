@@ -36,6 +36,7 @@ export interface TableTreeParent extends TreeData {
   children: TableTreeChild[] | TableDetail[]
   columns: TableTreeChild[]
   details: TableDetail[]
+  tableType?: string
 }
 
 export interface ScriptTreeData extends TreeData {

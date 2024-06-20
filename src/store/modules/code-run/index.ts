@@ -175,12 +175,21 @@ const useCodeRunStore = defineStore('codeRun', () => {
     results.value = results.value.filter((item: ResultType) => item.key !== key || item.type !== type)
   }
 
+  const writeInfluxDB = async (data: string, precision: string) => {
+    try {
+      const res: any = await editorAPI.writeInfluxDB(data, precision)
+      return res
+    } catch (error: any) {
+      return error
+    }
+  }
   return {
     results,
     runCode,
     saveScript,
     removeResult,
     clear,
+    writeInfluxDB,
   }
 })
 export default useCodeRunStore
