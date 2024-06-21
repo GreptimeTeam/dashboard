@@ -24,8 +24,8 @@
   })
 
   const { setRole } = useUserStore()
-  const { host, username, password, database, guideModalVisible } = storeToRefs(useAppStore())
-  const { fetchDatabases, updateSettings } = useAppStore()
+  const { host } = storeToRefs(useAppStore())
+  const { updateSettings } = useAppStore()
 
   host.value = window.location.origin
 
@@ -38,7 +38,11 @@
 
   if (import.meta.env.MODE === 'development' || import.meta.env.MODE === 'production') {
     // Assuming local greptimeDB is up and running
-    // TODO: only check tables after database is fetched
-    fetchDatabases()
+    const { username, password, database }: any = useStorage('config', {}).value
+    updateSettings({
+      username,
+      password,
+      database,
+    })
   }
 </script>

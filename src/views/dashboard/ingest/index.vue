@@ -56,6 +56,9 @@ a-layout.layout
   const { menuTree } = useMenuTree()
   const { activeTab, footer } = storeToRefs(useIngestStore())
   const { logs } = storeToRefs(useLogStore())
+  const { dataStatusMap } = storeToRefs(useUserStore())
+  const { checkTables } = useDataBaseStore()
+  const { fetchDatabases } = useAppStore()
 
   const ingestLogs = computed(() => {
     return logs.value.filter((log) => activeTab.value.includes(log.type))
@@ -66,6 +69,13 @@ a-layout.layout
   const menuClick = (parent: string, child: string) => {
     router.push({ name: child })
   }
+
+  onActivated(async () => {
+    if (!dataStatusMap.value.tables) {
+      await fetchDatabases()
+      checkTables()
+    }
+  })
 </script>
 
 <style lang="less" scoped>
