@@ -29,30 +29,34 @@ const useAppStore = defineStore('app', {
       this.$patch(partial)
     },
 
-    // Login (check if settings are valid)
-    async login(form?: Partial<AppState>) {
-      try {
-        if (form) {
-          this.updateSettings(form)
-        }
-        await editorAPI.runSQL(`select 1`)
-        const { resetDataStatus } = useUserStore()
-        resetDataStatus()
-        const config = {
+    updateConfigStorage(config?: Partial<AppState>) {
+      if (!config) {
+        config = {
           host: this.host,
           database: this.database,
           username: this.username,
           password: this.password,
         }
+      }
+      useStorage('config', config, localStorage, {
+        mergeDefaults: (storageValue, defaults) => {
+          return {
+            ...storageValue,
+            ...defaults,
+          }
+        },
+      })
+    },
+
+    async login(form: Partial<AppState>) {
+      try {
+        this.updateSettings(form)
+        // check if settings are valid
+        await editorAPI.runSQL(`select 1`)
+        const { resetDataStatus } = useUserStore()
+        resetDataStatus()
         // Only update storage if login success
-        useStorage('config', config, localStorage, {
-          mergeDefaults: (storageValue, defaults) => {
-            return {
-              ...storageValue,
-              ...defaults,
-            }
-          },
-        })
+        this.updateConfigStorage()
       } catch (error) {
         const { resetData } = useDataBaseStore()
         resetData()
@@ -112,8 +116,8 @@ const useAppStore = defineStore('app', {
         } else if (this.databaseList.length) {
           this.setDefaultDatabase()
         }
-        // check if settings are valid
-        this.login()
+        // update database in local storage
+        this.updateConfigStorage({ database: this.database })
       } catch (error) {
         // some error
       }

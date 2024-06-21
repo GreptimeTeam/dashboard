@@ -37,7 +37,6 @@ a-modal.query-modal(
   import { listenerRouteChange } from '@/utils/route-listener'
 
   const { queryModalVisible } = storeToRefs(useAppStore())
-  const { login, updateSettings } = useAppStore()
   const { getResultsByType, sqlView, promqlView, queryType, clearCode } = useQueryCode()
 
   const HEADER_HEIGHT = 60

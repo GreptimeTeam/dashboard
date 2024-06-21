@@ -192,8 +192,6 @@ const useDataBaseStore = defineStore('database', () => {
   }
 
   async function getTables() {
-    const { updateDataStatus } = useUserStore()
-    updateDataStatus('tables', true)
     tablesLoading.value = true
     totalTablesLoading.value = true
 
