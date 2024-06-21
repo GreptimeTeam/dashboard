@@ -4,7 +4,9 @@ a-tooltip(:content="codeInfo.code")
     type="text"
     size="small"
     :class="{ 'arco-btn-only-icon': label === '' }"
+    :loading="isLoading"
     @click="clickShortCut(codeInfo.code, codeInfo.cursorPosition)"
+    @mouseenter="hoverQuickSelect(node)"
   ) {{ label }}
     template(v-if="label === ''" #icon)
       svg.icon-16.icon-color
@@ -12,6 +14,7 @@ a-tooltip(:content="codeInfo.code")
 </template>
 
 <script lang="ts" setup name="ShortCut">
+  import useSiderTabs from '@/hooks/sider-tabs'
   import type { TableTreeParent, TreeChild } from '@/store/modules/database/types'
 
   const props = defineProps<{
@@ -22,8 +25,10 @@ a-tooltip(:content="codeInfo.code")
   }>()
 
   const { inputFromNewLineToQueryCode } = useQueryCode()
-
+  const { loadMoreColumns } = useSiderTabs()
   const { updateSettings } = useAppStore()
+
+  const isLoading = ref(false)
 
   const clickShortCut = (info: string, cursorPosition: number) => {
     inputFromNewLineToQueryCode(info, cursorPosition)
@@ -33,6 +38,18 @@ a-tooltip(:content="codeInfo.code")
   const formatter = (code: string) => {
     // No format for now.
     return code
+  }
+
+  const hoverQuickSelect = async (nodeData: TableTreeParent) => {
+    if (nodeData.isLeaf) {
+      return
+    }
+    if (nodeData.columns.length) {
+      return
+    }
+    isLoading.value = true
+    await loadMoreColumns(nodeData)
+    isLoading.value = false
   }
 
   const getCodeAndCursorPos = (type: string, node: TreeChild, parent: TableTreeParent) => {
