@@ -6,7 +6,7 @@ export const LOCALE_OPTIONS = [
   { label: '中文', value: 'zh-CN' },
   { label: 'English', value: 'en-US' },
 ]
-const defaultLocale = localStorage.getItem('arco-locale') || 'en-US'
+const defaultLocale = localStorage.getItem('arco-locale') || import.meta.env.VITE_LANG || 'en-US'
 
 const i18n = createI18n({
   locale: defaultLocale,
