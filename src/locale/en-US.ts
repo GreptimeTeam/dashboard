@@ -1,38 +1,16 @@
-import localeDashboard from '@/views/dashboard/locale/en-US'
-import localeSetting from '@/components/global-setting/locale/en-US'
+import dashboard from './en-US/dashboard'
+import settings from './en-US/settings'
+import menu from './en-US/menu'
+import playground from './en-US/playground'
 
 export default {
-  'menu.dashboard': 'Dashboard',
-  'menu.dashboard.query': 'Query',
-  'menu.dashboard.tables': 'Tables',
-  'menu.dashboard.scripts': 'Scripts',
-  'menu.dashboard.playground': 'Playground',
-  'menu.dashboard.status': 'Status',
-  'menu.dashboard.ingest': 'Ingest',
-  'menu.dashboard.influxdb': 'InfluxDB Line Protocol',
-  'menu.dashboard.write': 'Write',
-  'menu.dashboard.upload': 'Upload',
-  'menu.dashboard.input': 'Input',
-  'menu.server.dashboard': 'Dashboard-Server',
-  'menu.server.workplace': 'Workplace-Server',
-  'menu.server.monitor': 'Monitor-Server',
-  'menu.list': 'List',
-  'menu.result': 'Result',
-  'menu.exception': 'Exception',
-  'menu.form': 'Form',
-  'menu.profile': 'Profile',
-  'menu.visualization': 'Data Visualization',
-  'menu.user': 'User Center',
-  'menu.faq': 'FAQ',
-  'navbar.docs': 'Docs',
   'navbar.action.locale': 'Switch to English',
-  'guide.welcome': 'Welcome!',
-  'guide.confirm': 'Confirm',
-  'playground.create': 'OK',
-  'playground.refreshTitle': 'Warning',
-  'playground.refreshNote': 'The Playground has been reclaimed due to timeout. Click OK to re-create the playground',
-  'playground.import': 'Import {lines} lines in {time}ms',
+  'navbar.docs': 'Docs',
   'copied': 'Copied',
-  ...localeDashboard,
-  ...localeSetting,
+  'guide.confirm': 'Confirm',
+  'guide.welcome': 'Welcome!',
+  ...dashboard,
+  ...settings,
+  ...menu,
+  ...playground,
 }
