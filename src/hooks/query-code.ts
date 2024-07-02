@@ -34,31 +34,23 @@ const codes = ref({
 
 export default function useQueryCode() {
   const { results } = storeToRefs(useCodeRunStore())
-
   const inputFromNewLineToQueryCode = (code: string, cursorBack: number) => {
     queryType.value = 'sql'
     const { state } = sqlView.value
-    const lastLineCode = state.doc.text[state.doc.text.length - 1]
-    let changes
-    let cursorPosition
-    if (lastLineCode.trim() === '') {
-      // If the last line is empty, start here
-      changes = {
-        from: state.doc.length,
-        insert: `${code}`,
-        // TODO: Scroll not working,
-        scrollIntoView: true,
-      }
-      cursorPosition = state.doc.length + code.length - cursorBack
-    } else {
-      // If the last line is not empty, start from new line
-      changes = {
-        from: state.doc.length,
-        insert: `\n${code}`,
-        scrollIntoView: true,
-      }
-      cursorPosition = state.doc.length + code.length + 1 - cursorBack
+
+    let lastChild
+    if (state.doc.children) {
+      lastChild = state.doc.children[state.doc.children.length - 1]
     }
+    const lastLineCode = state.doc.children
+      ? state.doc.children[state.doc.children.length - 1].text[lastChild.text.length - 1]
+      : state.doc.text[state.doc.text.length - 1]
+    const changes = {
+      from: state.doc.length,
+      insert: `${lastLineCode.trim() === '' ? '' : '\n'}${code}`,
+      scrollIntoView: true,
+    }
+    const cursorPosition = state.doc.length + code.length + (lastLineCode.trim() === '' ? 0 : 1) - cursorBack
     sqlView.value.focus()
     sqlView.value.dispatch({
       changes,
