@@ -194,7 +194,6 @@ const useDataBaseStore = defineStore('database', () => {
   async function getTables() {
     tablesLoading.value = true
     totalTablesLoading.value = true
-
     // TODO: better not change dom
     tablesTreeForDatabase.value[database.value] = []
     const total = await getTablesCount()
@@ -228,13 +227,13 @@ const useDataBaseStore = defineStore('database', () => {
     totalTablesLoading.value = false
   }
 
-  const checkTables = () => {
+  const checkTables = async () => {
     const { updateDataStatus } = useUserStore()
     updateDataStatus('tables', true)
     if (tablesTreeForDatabase.value[database.value] && tablesTreeForDatabase.value[database.value].length > 0) {
       return
     }
-    getTables()
+    await getTables()
   }
 
   async function getTableByName(node: any) {

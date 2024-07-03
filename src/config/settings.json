@@ -21,7 +21,7 @@
   "serverMenu": [],
   "guideModalVisible": false,
   "lifetime": "long",
-  "menuSelectedKey": "query",
+  "menuSelectedKey": "tables",
   "queryModalVisible": false,
   "userTimezone": ""
 }

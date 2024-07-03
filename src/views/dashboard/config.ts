@@ -1,3 +1,6 @@
+import { DriveStep } from 'driver.js'
+import i18n from '@/locale'
+
 export const chartTypeOptions: any = [
   {
     key: 1,
@@ -90,3 +93,84 @@ export const SEMANTIC_TYPE_MAP: { [key: string]: string } = {
   'TIMESTAMP': 'TIMESTAMP',
   'TIME INDEX': 'TIMESTAMP',
 }
+
+export const navbarSteps: DriveStep[] = [
+  {
+    element: '#new-query',
+    popover: {
+      title: i18n.global.t('menu.newQuery'),
+      description: i18n.global.t('menu.tour.newQuery'),
+    },
+  },
+  {
+    element: '#menu-tables',
+    popover: {
+      title: i18n.global.t('menu.dashboard.tables'),
+      description: i18n.global.t('menu.tour.tables'),
+    },
+  },
+  {
+    element: '#menu-ingest',
+    popover: {
+      title: i18n.global.t('menu.dashboard.ingest'),
+      description: i18n.global.t('menu.tour.ingest'),
+    },
+  },
+]
+
+export const tableSteps: DriveStep[] = [
+  {
+    element: '#table-0',
+    popover: {
+      description: '',
+      side: 'right',
+      popoverClass: 'table-buttons global',
+      onPopoverRender(popover) {
+        const icons = ['columns', 'details', 'query', 'copy-new']
+        const div = document.createElement('div')
+        const hintTitles = [
+          i18n.global.t('dashboard.columns'),
+          i18n.global.t('dashboard.details'),
+          i18n.global.t('dashboard.quickSelect'),
+          'Copy',
+        ]
+        const hints = [
+          i18n.global.t('dashboard.hints.columns'),
+          i18n.global.t('dashboard.hints.details'),
+          i18n.global.t('dashboard.hints.quickSelect'),
+          i18n.global.t('dashboard.hints.copy'),
+        ]
+        const title = document.createElement('div')
+        title.className = 'title'
+        title.innerHTML = 'Table Menu'
+        div.appendChild(title)
+        for (let i = 0; i < 4; i += 1) {
+          const row = document.createElement('row')
+          row.style.display = 'flex'
+          row.className = 'row'
+          const iconButton = document.createElement('div')
+          iconButton.className = 'icon-button'
+          iconButton.innerHTML = `<svg class="icon-16 brand-color"><use href="#${icons[i]}"></use></svg>`
+          row.appendChild(iconButton)
+          const hint = document.createElement('div')
+          hint.className = 'hint'
+          const hintTitle = document.createElement('div')
+          hintTitle.className = 'hint-title'
+          hintTitle.innerHTML = hintTitles[i]
+          const hintDescription = document.createElement('div')
+          hintDescription.className = 'hint-description'
+          hintDescription.innerHTML = hints[i]
+          hint.appendChild(hintTitle)
+          hint.appendChild(hintDescription)
+          row.appendChild(hint)
+          div.appendChild(row)
+        }
+        popover.wrapper.insertBefore(div, popover.wrapper.firstChild)
+      },
+    },
+  },
+]
+
+const navbarStepElements = navbarSteps.map((step) => step.element)
+
+const tableStepElements = tableSteps.map((step) => step.element)

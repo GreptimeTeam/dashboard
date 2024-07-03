@@ -35,9 +35,7 @@ a-modal.guide-modal(
 <script lang="ts" setup name="GuideModal">
   import { useAppStore } from '@/store'
 
-  const { username, password, host, database, databaseList, menuSelectedKey, guideModalVisible } = storeToRefs(
-    useAppStore()
-  )
+  const { username, password, host, database, databaseList, guideModalVisible } = storeToRefs(useAppStore())
   const { role } = storeToRefs(useUserStore())
 
   const { login } = useAppStore()
