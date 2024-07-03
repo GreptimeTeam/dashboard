@@ -39,7 +39,7 @@ a-card.table-manager(:bordered="false")
           a-tooltip.data-type(mini :content="nodeData.title")
             .data-title
               | {{ nodeData.title }}
-          a-space(:size="6")
+          a-space(:size="6" :id="`table-${nodeData.key}`")
             a-tooltip(mini :content="$t('dashboard.columns')")
               a-button(type="text" size="small" @click="(event) => expandChildren(event, nodeData, 'columns')")
                 template(#icon)
@@ -54,7 +54,7 @@ a-card.table-manager(:bordered="false")
                     :class="nodeData.childrenType === 'details' && expandedKeys?.includes(nodeData.key) ? '' : 'icon-color'"
                   )
                     use(href="#details")
-            a-space(v-for="item of SHORTCUT_MAP['TABLE']" v-show="menuSelectedKey === 'query'" @click.stop)
+            a-space(v-for="item of SHORTCUT_MAP['TABLE']" v-show="menuSelectedKey === 'tables'" @click.stop)
               ShortCut(
                 :type="item.value"
                 :node="nodeData"
@@ -82,7 +82,7 @@ a-card.table-manager(:bordered="false")
               template(#content)
                 a-doption(
                   v-for="item of SHORTCUT_MAP[nodeData.iconType || 'TABLE']"
-                  v-show="menuSelectedKey === 'query'"
+                  v-show="menuSelectedKey === 'tables'"
                 )
                   a-spin(style="width: 100%" :loading="nodeData.columns && !nodeData.columns.length")
                     ShortCut(

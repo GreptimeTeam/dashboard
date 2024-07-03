@@ -25,14 +25,12 @@ a-layout.layout
   // TODO: add more code type in the future if needed
 
   onActivated(async () => {
-    if (!guideModalVisible.value) {
-      if (!dataStatusMap.value.scripts) {
-        getScriptsTable()
-      }
-      if (!dataStatusMap.value.tables) {
-        await fetchDatabases()
-        checkTables()
-      }
+    if (!dataStatusMap.value.scripts) {
+      getScriptsTable()
+    }
+    if (!dataStatusMap.value.tables) {
+      await fetchDatabases()
+      await checkTables()
     }
   })
 </script>

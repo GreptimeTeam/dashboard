@@ -7,18 +7,20 @@ a-layout.layout
 </template>
 
 <script lang="ts" name="Query" setup>
-  import { useMagicKeys, useActiveElement } from '@vueuse/core'
+  import { useMagicKeys, useActiveElement, useStorage } from '@vueuse/core'
+  import { driver } from 'driver.js'
+  import 'driver.js/dist/driver.css'
+  import { navbarSteps, tableSteps } from '../config'
 
   const { s, q } = useMagicKeys()
   const activeElement = useActiveElement()
-  const { queryType } = useQueryCode()
+  const { queryType, getResultsByType } = useQueryCode()
   const { fetchDatabases } = useAppStore()
-  const { guideModalVisible } = storeToRefs(useAppStore())
   const { checkTables } = useDataBaseStore()
+  const { guideModalVisible } = storeToRefs(useAppStore())
+  const { originTablesTree } = storeToRefs(useDataBaseStore())
   const { dataStatusMap } = storeToRefs(useUserStore())
-
   const { logs } = storeToRefs(useLogStore())
-  const { getResultsByType } = useQueryCode()
 
   const MENU_WIDTH = 242 + 16
   const MODAL_WIDTH = 636
@@ -57,12 +59,43 @@ a-layout.layout
       queryType.value = 'promql'
   })
 
-  onActivated(async () => {
-    if (!guideModalVisible.value) {
-      if (!dataStatusMap.value.tables) {
-        await fetchDatabases()
-        checkTables()
+  const globalTour = driver({
+    showProgress: false,
+    allowClose: false,
+    disableActiveInteraction: true,
+    overlayOpacity: 0.4,
+    showButtons: ['next', 'close'],
+    stagePadding: 7,
+    stageRadius: 4,
+    popoverClass: 'global',
+    popoverOffset: 10,
+    steps: [],
+
+    onCloseClick: () => {
+      const tourStatus = useStorage('tourStatus', { navbar: false })
+      tourStatus.value.navbar = true
+      globalTour.destroy()
+    },
+    onNextClick: () => {
+      const tourStatus = useStorage('tourStatus', { navbar: false })
+      tourStatus.value.navbar = true
+      globalTour.moveNext()
+      if (!globalTour.getActiveStep()) {
+        globalTour.destroy()
       }
+    },
+  })
+
+  onActivated(async () => {
+    if (!dataStatusMap.value.tables) {
+      await fetchDatabases()
+      await checkTables()
+    }
+    const tourStatus = useStorage('tourStatus', { navbar: false })
+    if (!tourStatus.value.navbar) {
+      const steps = originTablesTree.value.length > 0 ? [...navbarSteps, ...tableSteps] : [...navbarSteps]
+      globalTour.setSteps(steps)
+      globalTour.drive(0)
     }
   })
 

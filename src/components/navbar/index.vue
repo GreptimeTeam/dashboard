@@ -5,8 +5,8 @@ a-layout.navbar
       use(href="#logo")
   a-layout-content
     .new-query
-      a-tooltip(content="New Query" position="right")
-        a-button(type="primary" @click="openQuery")
+      a-tooltip(position="right" :content="$t('menu.newQuery')")
+        a-button#new-query(type="primary" @click="openQuery")
           span +
     .menu
       a-menu(mode="vertical" collapsed :selected-keys="[menuSelectedKey]")
@@ -19,7 +19,7 @@ a-layout.navbar
         )
           span {{ $t(item.meta.locale) }}
           template(#icon)
-            svg.icon-18
+            svg.icon-18(:id="`menu-${item.name}`")
               use(:href="`#${item.meta.icon}`") 
   a-layout-footer
     ul.footer

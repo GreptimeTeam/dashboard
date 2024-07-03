@@ -66,7 +66,6 @@ a-spin(style="width: 100%" :loading="tablesLoading")
   const { tablesSearchKey, tablesTreeData, loadMoreColumns: loadMore } = useSiderTabs()
   const { tablesLoading } = storeToRefs(useDataBaseStore())
   const { getTables } = useDataBaseStore()
-  const { menuSelectedKey } = storeToRefs(useAppStore())
 
   const treeRef = ref()
   const expandedKeys = ref<number[]>()
