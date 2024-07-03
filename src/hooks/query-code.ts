@@ -48,14 +48,13 @@ export default function useQueryCode() {
     const changes = {
       from: state.doc.length,
       insert: `${lastLineCode.trim() === '' ? '' : '\n'}${code}`,
-      // TODO: scroll not working
-      scrollIntoView: true,
     }
     const cursorPosition = state.doc.length + code.length + (lastLineCode.trim() === '' ? 0 : 1) - cursorBack
     sqlView.value.focus()
     sqlView.value.dispatch({
       changes,
       selection: EditorSelection.create([EditorSelection.cursor(cursorPosition)]),
+      scrollIntoView: true,
     })
   }
 
