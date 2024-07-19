@@ -1,11 +1,12 @@
 <template lang="pug">
-a-layout.layout-container
-  a-layout-sider.main-sider(:width="80")
-    Navbar(v-if="navbar")
-  a-layout-content.layout-content
-    PageLayout
+a-layout
+  a-layout.layout-container
+    a-layout-sider.main-sider(v-if="navbar" :width="80")
+      Navbar
+    a-layout-content.layout-content
+      PageLayout
   Footer(v-if="footer")
-  QueryModal
+QueryModal
 </template>
 
 <script lang="ts" setup>
@@ -45,7 +46,7 @@ a-layout.layout-container
 
   .layout-container {
     width: 100%;
-    height: 100%;
+    height: calc(100% - 26px);
   }
 
   .layout-navbar {
