@@ -83,4 +83,6 @@ export const groupByToMap = <T, Q>(array: T[], predicate: (value: T, index: numb
     return map
   }, new Map<Q, T[]>())
 
+export const getIconUrl = (iconName: string) => new URL(`/src/assets/images/${iconName}.png`, import.meta.url).href
+
 export default null
