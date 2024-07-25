@@ -100,13 +100,14 @@ const runSQL = (code: string) => {
 }
 
 const checkScriptsTable = () => {
-  return axios.post(sqlUrl, makeSqlData(`select count(1) from information_schema.tables where table_name='scripts'`))
+  return axios.post(sqlUrl, makeSqlData(`select count(1) from information_schema.tables where table_name='scripts';`))
 }
 
 const getScriptsTable = () => {
+  const appStore = useAppStore()
   return axios.post(
     sqlUrl,
-    makeSqlData(`select * from public.scripts where schema = 'public' order by gmt_modified desc;`)
+    makeSqlData(`select * from public.scripts where schema = '${appStore.database}' order by gmt_modified desc;`)
   )
 }
 
