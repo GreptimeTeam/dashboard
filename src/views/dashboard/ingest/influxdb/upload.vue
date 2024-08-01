@@ -261,7 +261,7 @@ a-modal(
     width: 800px;
     .arco-modal-header {
       height: auto;
-      padding: 30px 30px 15px 30px;
+      padding: 15px 30px 0 30px;
       .arco-modal-close-btn {
         font-size: 16px;
       }
@@ -291,7 +291,7 @@ a-modal(
       padding: 0;
       width: 100%;
       .arco-select-view-single {
-        width: 123px;
+        width: 126px;
       }
     }
   }

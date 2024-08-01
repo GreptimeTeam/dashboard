@@ -28,7 +28,7 @@ a-card.table-manager(:bordered="false")
       :data="tablesTreeData"
       :load-more="loadMore"
       :animation="false"
-      :virtual-list-props="{ height: `calc(100vh - ${listHeight}px)` }"
+      :virtual-list-props="{ height: `var(--tables-list-height)` }"
     )
       template(#icon="node")
         a-tooltip(v-if="node.node.iconType" :content="node.node.iconType")
@@ -163,10 +163,6 @@ a-card.table-manager(:bordered="false")
   const { tablesSearchKey, tablesTreeData, tablesTreeRef, isRefreshingDetails, refreshTables, loadMore } =
     useSiderTabs()
   const { tablesLoading, originTablesTree, totalTablesLoading } = storeToRefs(useDataBaseStore())
-
-  const LAYOUT_PADDING = 16
-  const HEADER = 58
-  const listHeight = LAYOUT_PADDING * 3 + HEADER
 
   const expandedKeys = ref<number[]>()
 

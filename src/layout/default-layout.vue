@@ -46,7 +46,7 @@ QueryModal
 
   .layout-container {
     width: 100%;
-    height: calc(100% - 26px);
+    height: calc(100% - var(--footer-height));
   }
 
   .layout-navbar {

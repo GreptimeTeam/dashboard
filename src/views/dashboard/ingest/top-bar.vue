@@ -94,7 +94,8 @@ a-drawer.ingest(
   .top-bar {
     display: flex;
     justify-content: space-between;
-    padding-bottom: 20px;
+    padding-right: 20px;
+    height: 58px;
     background: var(--card-bg-color);
     :deep(.arco-select-view-value) {
       font-size: 13px;
