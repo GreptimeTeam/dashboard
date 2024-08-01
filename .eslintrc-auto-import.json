@@ -108,6 +108,7 @@
     "ExtractDefaultPropTypes": true,
     "ExtractPropTypes": true,
     "ExtractPublicPropTypes": true,
-    "useIngestStore": true
+    "useIngestStore": true,
+    "useStatusBarStore": true
   }
 }

@@ -12,6 +12,7 @@
 @import url('./docs.less');
 @import url('./custom-block.less');
 @import url('./tour.less');
+@import url('./new.less');
 
 * {
   box-sizing: border-box;
@@ -65,6 +66,13 @@ body {
   background-color: var(--main-bg-color);
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
+  --tables-header-height: 58px;
+  --tables-layout-padding: 16px;
+  --footer-height: 30px;
+  --tables-list-height: calc(
+    100vh - var(--tables-header-height) - var(--footer-height) - var(--tables-layout-padding) -
+      var(--tables-layout-padding)
+  );
 }
 
 .arco-overlay-message {
@@ -414,6 +422,10 @@ body {
 
 :focus {
   outline: none;
+}
+
+.uppercase {
+  text-transform: uppercase;
 }
 
 #app {

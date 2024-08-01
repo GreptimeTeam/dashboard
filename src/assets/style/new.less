@@ -1,0 +1,108 @@
+.new-layout {
+  padding: 0;
+  background: var(--card-bg-color);
+  border-left: 1px solid var(--border-color);
+  height: 100%;
+
+  > .arco-layout-sider {
+    box-shadow: none;
+    min-width: 210px;
+    max-width: 40vw;
+    &.hide-sider {
+      display: none;
+    }
+  }
+
+  > .layout-content {
+    height: 100%;
+  }
+
+  .arco-layout-footer {
+    display: flex;
+    justify-content: space-between;
+    padding-right: 20px;
+
+    .arco-btn-size-mini.arco-btn-only-icon {
+      width: 26px;
+      height: 26px;
+      padding: 0;
+    }
+  }
+  .main-content {
+    height: calc(100% - 58px);
+    padding-right: 20px;
+  }
+  .layout-space {
+    height: 100%;
+
+    > .arco-space-item:first-of-type {
+      flex: 1;
+      overflow: auto;
+      padding-left: 18px;
+    }
+  }
+
+  .arco-tabs.panel-tabs {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--main-bg-color);
+
+    .arco-tabs-content-list {
+      height: 100%;
+    }
+
+    .arco-tabs-content .arco-tabs-content-item {
+      height: 100%;
+      // TODO: better scrollbar style
+      max-height: calc(40vh - 32px);
+      overflow: auto;
+    }
+
+    .arco-tabs-tab {
+      border-radius: 0;
+      // border-top: none;
+      height: 100%;
+      margin: 0;
+      padding: 0 15px;
+    }
+
+    .arco-tabs-content {
+      padding: 0;
+    }
+
+    .arco-tabs-nav-ink {
+      background: var(--brand-color);
+    }
+
+    .arco-tabs-nav {
+      height: 28px;
+      background: var(--main-bg-color);
+
+      &:before {
+        background-color: var(--border-color);
+      }
+    }
+
+    .arco-tabs-nav-tab {
+      height: 100%;
+    }
+
+    .arco-tabs-tab-active {
+      color: var(--main-font-color);
+      font-weight: 600;
+    }
+
+    :deep(> .arco-tabs-content) {
+      height: calc(100% - 30px);
+      // TODO: better scrollbar style
+      overflow: auto;
+    }
+  }
+
+  .has-panel {
+    .layout-space {
+      height: 100%;
+    }
+  }
+}

@@ -1,5 +1,5 @@
 <template lang="pug">
-a-layout.layout
+a-layout.new-layout
   a-layout-sider(:resize-directions="['right']" :width="275")
     a-card.sidebar(:title="$t('menu.dashboard.ingest')" :bordered="false")
       a-menu(
@@ -37,23 +37,18 @@ a-layout.layout
                 template(#icon)
                   svg.icon-12
                     use(href="#pull-down")
-    a-layout-footer(v-if="footer[activeTab]")
-      div
-      a-tooltip(content="Show Panel" position="tr")
-        a-button(type="text" size="mini" @click="footer[activeTab] = false")
-          template(#icon)
-            svg.icon
-              use(href="#log")
 </template>
 
 <script lang="ts" setup name="Ingest">
   import useMenuTree from '@/components/menu/use-menu-tree'
   import router from '@/router'
   import { useStorage } from '@vueuse/core'
+  import type { StatusContentSimple } from '@/store/modules/status-bar'
   import { driver } from 'driver.js'
   import 'driver.js/dist/driver.css'
   import { useI18n } from 'vue-i18n'
   import { navbarSteps } from '../config'
+  import PanelIcon from './panel-icon.vue'
 
   const route = useRoute()
   const { t } = useI18n()
@@ -63,6 +58,7 @@ a-layout.layout
   const { dataStatusMap } = storeToRefs(useUserStore())
   const { checkTables } = useDataBaseStore()
   const { fetchDatabases } = useAppStore()
+  const panelId = ref<number | null>(null)
 
   const ingestLogs = computed(() => {
     return logs.value.filter((log) => activeTab.value.includes(log.type))
@@ -103,6 +99,16 @@ a-layout.layout
   })
 
   onActivated(async () => {
+    const { statusRight } = storeToRefs(useStatusBarStore())
+    const { add } = useStatusBarStore()
+    const statusItem: StatusContentSimple = {
+      icon: shallowRef(PanelIcon),
+      onClick: () => {
+        footer.value[activeTab.value] = !footer.value[activeTab.value]
+      },
+    }
+    panelId.value = add(statusItem, { pos: 'right' })
+
     const tourStatus = useStorage('tourStatus', { navbar: false })
     if (!tourStatus.value.navbar) {
       globalTour.setSteps(navbarSteps)
@@ -113,41 +119,21 @@ a-layout.layout
       await checkTables()
     }
   })
+
+  onDeactivated(() => {
+    const { remove } = useStatusBarStore()
+    remove(panelId.value as number)
+  })
 </script>
 
 <style lang="less" scoped>
-  .layout {
-    padding: 0;
-    background: var(--card-bg-color);
-    > .arco-layout-sider {
-      min-width: 210px;
-      max-width: 40vw;
-      border-left: 1px solid var(--border-color);
-    }
-  }
-  .layout-content {
-    padding: 20px 20px 0 20px;
-    height: 100vh;
-  }
-  .arco-layout-footer {
-    display: flex;
-    justify-content: space-between;
-    .arco-btn-size-mini.arco-btn-only-icon {
-      width: 26px;
-      height: 26px;
-      padding: 0;
-    }
-  }
   :deep(.layout-space) {
-    height: calc(100% - 26px);
-    > .arco-space-item:first-of-type {
-      flex: 1;
-      overflow: auto;
-    }
+    height: calc(100% - 18px);
   }
   :deep(.arco-card.sidebar) {
     height: 100%;
     border-radius: 0;
+
     .arco-card-header {
       height: 52px;
     }
@@ -203,71 +189,13 @@ a-layout.layout
       }
     }
   }
-  :deep(.arco-tabs.panel-tabs) {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    border-top: 1px solid var(--border-color);
-
-    .arco-tabs-content-list {
-      height: 100%;
-    }
-
-    .arco-tabs-content .arco-tabs-content-item {
-      height: 100%;
-      // TODO: better scrollbar style
-      max-height: calc(40vh - 32px - 20px);
-      overflow: auto;
-    }
-    .arco-tabs-tab {
-      border-radius: 0;
-      border-top: none;
-      height: 100%;
-      margin: 0;
-      padding: 0 15px;
-    }
-    .arco-tabs-content {
-      padding: 0 0 20px 0;
-    }
-    .arco-tabs-nav-ink {
-      background: var(--brand-color);
-    }
-    .arco-tabs-nav {
-      height: 26px;
-      background: var(--th-bg-color);
-      &:before {
-        display: none;
-      }
-    }
-    .arco-tabs-nav-tab {
-      height: 100%;
-    }
-    .arco-tabs-tab-active {
-      color: var(--main-font-color);
-      background: var(--card-bg-color);
-    }
-    :deep(> .arco-tabs-content) {
-      height: calc(100% - 30px);
-      // TODO: better scrollbar style
-      overflow: auto;
-    }
-  }
 
   .has-panel {
-    :deep(.layout-space) {
-      height: 100%;
-    }
     :deep(.arco-card.light-editor-card) {
       .ͼ1.cm-editor {
         border-bottom: none;
         border-radius: 4px 4px 0 0;
       }
     }
-  }
-</style>
-
-<style lang="less">
-  .main-content {
-    height: calc(100% - 48px);
   }
 </style>

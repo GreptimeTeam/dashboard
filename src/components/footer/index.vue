@@ -2,14 +2,17 @@
 a-layout-footer.footer
   a-space(:size="20")
     img.logo(:src="getIconUrl(`${role === 'cloud' ? 'cloud' : 'logo-text'}`)")
-    a-space(:size="0")
-      img.icon(:src="getIconUrl('service')")
+    a-space(:size="5")
+      svg.service-icon
+        use(href="#service")
       .service-name {{ serviceName || hostName }}
     a-space.region(v-if="region?.vendor" :size="0")
       img.icon(:src="getIconUrl(region.vendor)")
-      .text {{ region.vendor.toUpperCase() }}
+      .text.uppercase {{ region.vendor }}
       img.icon(:src="getIconUrl(region.country)")
       .text {{ region.location }}
+  .right
+    StatusList(:items="statusRight")
 </template>
 
 <script lang="ts" setup>
@@ -19,40 +22,52 @@ a-layout-footer.footer
   const { regionVendor, regionLocation, regionCountry, serviceName }: any = useStorage('config', {}).value
   const { host } = storeToRefs(useAppStore())
   const { role } = storeToRefs(useUserStore())
+  const { statusRight } = storeToRefs(useStatusBarStore())
+
   const region = ref({
     vendor: regionVendor,
     location: regionLocation,
     country: regionCountry,
   })
 
-  const hostName = computed(() => host.value.split('//')[1].split(':')[0])
+  const hostName = window.location.hostname
   const vendorIcon = getIconUrl(region.value.vendor)
 </script>
 
 <style lang="less" scoped>
   .footer {
-    padding-left: 15px;
+    padding: 0 15px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 26px;
-    color: var(--color-text-2);
+    height: var(--footer-height);
+
     text-align: center;
-    font-size: 11px;
+    font-size: 13px;
+    .arco-link {
+      display: flex;
+    }
   }
   .logo {
     height: 18px;
   }
   .service-name {
-    font-weight: 800;
+    color: var(--main-font-color);
+    font-weight: 600;
   }
-
-  .icon {
-    height: 12px;
-    width: auto;
-    margin-right: 5px;
+  .service-icon {
+    height: 18px;
+    width: 18px;
   }
-  .text {
-    margin-right: 9px;
+  .region {
+    .icon {
+      height: 13px;
+      width: auto;
+      margin-right: 6px;
+    }
+    .text {
+      margin-right: 10px;
+      color: var(--small-font-color);
+    }
   }
 </style>

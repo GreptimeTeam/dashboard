@@ -36,10 +36,6 @@ a-card.logs-card(:bordered="false")
     types: string[]
   }>()
 
-  const LAYOUT_PADDING = 16
-  const HEADER = 58
-  const listHeight = `calc(100vh - ${LAYOUT_PADDING * 3 + HEADER}px`
-
   const { clearLogs } = useLog()
 
   const clear = () => {
@@ -52,7 +48,7 @@ a-card.logs-card(:bordered="false")
     height: 100%;
 
     :deep(.logs-list > .arco-spin > .arco-scrollbar > .arco-scrollbar-container) {
-      height: v-bind(listHeight);
+      height: var(--tables-list-height);
     }
     :deep(.arco-card-header) {
       border-bottom: 1px solid var(--border-color);
