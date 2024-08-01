@@ -158,6 +158,7 @@ a-card(:bordered="false")
   }
   :deep(.arco-typography-operation-expand) {
     color: var(--brand-color);
+    display: flex;
     &:hover {
       color: var(--hover-brand-color);
     }
