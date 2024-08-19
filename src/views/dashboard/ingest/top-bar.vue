@@ -37,7 +37,7 @@ a-drawer.ingest(
   .markdown-container.ingest
     SimpleMarkdown(:md="doc")
   | To learn more about influxdb line protocol on GreptimeDB, visit our
-  a(href="https://docs.greptime.com/user-guide/write-data/influxdb-line" target="_blank") documentation.
+  a(href="https://docs.greptime.com/user-guide/ingest-data/for-iot/influxdb-line-protocol" target="_blank") documentation.
 </template>
 
 <script lang="ts" setup name="TopBar">

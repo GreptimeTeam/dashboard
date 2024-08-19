@@ -64,7 +64,7 @@ For more information please refer to [Data Model](https://docs.greptime.com/user
 DESC TABLE cpu_metrics;
 ```
 
-GreptimeDB offers a schemaless approach to writing data that eliminates the need to manually create tables using additional protocols. See [Automatic Schema Generation](https://docs.greptime.com/user-guide/write-data#automatic-schema-generation).
+GreptimeDB offers a schemaless approach to writing data that eliminates the need to manually create tables using additional protocols. See [Automatic Schema Generation](https://docs.greptime.com/user-guide/ingest-data/overview#automatic-schema-generation).
 
 ## Add Some Data
 
@@ -254,7 +254,7 @@ After obtaining the query results, you can store them in a new table using the `
 Before storing the query results in a new table, you need to create the table first.
 
 :::tip NOTE
-GreptimeDB supports other protocols that offer a schemaless approach to writing data that eliminates the need to manually create tables. See [Automatic Schema Generation](https://docs.greptime.com/user-guide/write-data/overview#automatic-schema-generation).
+GreptimeDB supports other protocols that offer a schemaless approach to writing data that eliminates the need to manually create tables. See [Automatic Schema Generation](https://docs.greptime.com/user-guide/ingest-data/overview#automatic-schema-generation).
 :::
 
 The following SQL statement creates a new table called `cpu_metrics_avg_user` to store the 5-minute average CPU usage of each host.
