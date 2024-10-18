@@ -1,6 +1,6 @@
 <template lang="pug">
-a-tabs.result-tabs(
-  type="rounded"
+a-tabs.panel-tabs(
+  type="line"
   lazy-load
   editable
   :active-key="activeTabKey"
@@ -97,6 +97,16 @@ a-tabs.result-tabs(
 
     .arco-tabs-nav-tab-list {
       display: flex;
+    }
+  }
+</style>
+
+<style lang="less" scoped>
+  .arco-tabs.panel-tabs {
+    .arco-tabs-content .arco-tabs-content-item {
+      height: 100%;
+      // TODO: better scrollbar style
+      max-height: none;
     }
   }
 </style>

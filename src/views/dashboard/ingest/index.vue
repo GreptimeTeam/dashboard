@@ -64,7 +64,7 @@ a-layout.new-layout
     return logs.value.filter((log) => activeTab.value.includes(log.type))
   })
 
-  const menu = menuTree.value[0].children[1].children
+  const menu = menuTree.value[0].children.filter((item: any) => item.name === 'ingest')[0].children
 
   const menuClick = (parent: string, child: string) => {
     router.push({ name: child })

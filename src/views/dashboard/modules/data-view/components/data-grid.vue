@@ -9,8 +9,11 @@ a-card(:bordered="false")
     a-table.data-table(
       show-total
       column-resizable
+      size="mini"
       :data="gridData"
       :pagination="pagination"
+      :scroll="{ y: '100%', x: '100%' }"
+      :bordered="false"
     )
       template(#empty)
         EmptyStatus
@@ -30,7 +33,7 @@ a-card(:bordered="false")
                     :style="{ cursor: 'pointer' }"
                     @click="() => handleFormatTimeColumn(column.dataIndex, column.dataType)"
                   )
-                    svg.icon-16
+                    svg.icon-12
                       use(href="#time-index")
                     | {{ column.title }}
           template(v-else)

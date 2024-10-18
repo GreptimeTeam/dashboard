@@ -6,7 +6,7 @@ const DASHBOARD: AppRouteRecordRaw = {
   path: '/dashboard',
   name: 'dashboard',
 
-  redirect: '/dashboard/tables',
+  redirect: '/dashboard/query',
   component: DEFAULT_LAYOUT,
   meta: {
     locale: 'menu.dashboard',
@@ -16,14 +16,27 @@ const DASHBOARD: AppRouteRecordRaw = {
   },
   children: [
     {
+      path: 'query',
+      name: 'query',
+      component: () => import('@/views/dashboard/query/index.vue'),
+      meta: {
+        locale: 'menu.dashboard.query',
+        requiresAuth: false,
+        icon: 'query-menu',
+        roles: ['admin', 'cloud'],
+      },
+    },
+    {
       path: 'tables',
       name: 'tables',
+      redirect: '/dashboard/query',
       component: () => import('@/views/dashboard/query/index.vue'),
       meta: {
         locale: 'menu.dashboard.tables',
         requiresAuth: false,
         icon: 'query-menu',
         roles: ['admin', 'cloud'],
+        hideInMenu: true,
       },
     },
     {

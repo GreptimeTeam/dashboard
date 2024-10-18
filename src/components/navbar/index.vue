@@ -5,9 +5,6 @@ a-layout.navbar
       use(href="#logo")
   a-layout-content
     .new-query
-      a-tooltip(position="right" :content="$t('menu.newQuery')")
-        a-button#new-query(type="primary" @click="openQuery")
-          span +
     .menu
       a-menu(mode="vertical" collapsed :selected-keys="[menuSelectedKey]")
         a-menu-item(
@@ -47,8 +44,8 @@ a-layout.navbar
 
   const router = useRouter()
   const { updateSettings } = useAppStore()
-  const { menuSelectedKey, globalSettings, queryModalVisible } = storeToRefs(useAppStore())
-  const { activeTab } = storeToRefs(useIngestStore())
+  const { menuSelectedKey, globalSettings, isFullScreen } = storeToRefs(useAppStore())
+  const { activeTab: ingestTab } = storeToRefs(useIngestStore())
   const { menuTree } = useMenuTree()
 
   const menu = menuTree.value[0].children
@@ -77,13 +74,16 @@ a-layout.navbar
   }
 
   const menuClick = (key: string) => {
-    if (key !== menuSelectedKey.value) {
-      updateSettings({ queryModalVisible: false })
-    }
-    if (key === 'ingest') {
-      router.push({ name: activeTab.value || (menu[1].children[0].name as string) })
-    } else {
-      router.push({ name: key })
+    // if (key === menuSelectedKey.value) {
+    //   isFullScreen.value = !isFullScreen.value
+    // }
+    switch (key) {
+      case 'ingest':
+        router.push({ name: ingestTab.value || 'ingest' })
+        break
+      default:
+        router.push({ name: key })
+        break
     }
   }
 
@@ -95,13 +95,9 @@ a-layout.navbar
   listenerRouteChange((newRoute) => {
     menuSelectedKey.value = newRoute.matched[1].name as string
     if (newRoute.matched[1].name === 'ingest') {
-      activeTab.value = newRoute.matched[3].name as string
+      ingestTab.value = newRoute.matched[3].name as string
     }
   }, true)
-
-  const openQuery = () => {
-    updateSettings({ queryModalVisible: !queryModalVisible.value })
-  }
 </script>
 
 <style scoped lang="less">

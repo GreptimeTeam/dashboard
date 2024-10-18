@@ -54,7 +54,6 @@ a-list-item.smaller-divider
   const hasResult = computed(() => Reflect.has(props.log, 'message'))
 
   const openEditor = () => {
-    updateSettings({ queryModalVisible: true })
     // queryType.value = props.log.type
     if (props.log.type === 'sql') {
       inputFromNewLineToQueryCode(props.log.codeInfo, 0)

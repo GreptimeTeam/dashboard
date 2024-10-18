@@ -24,7 +24,7 @@ export interface AppState {
   dbId: string
   lifetime: string
   menuSelectedKey: string
-  queryModalVisible: boolean
   userTimezone: string
+  isFullScreen: boolean
   [key: string]: unknown
 }

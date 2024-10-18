@@ -1,6 +1,5 @@
 <template lang="pug">
 a-modal.query-modal(
-  v-model:visible="queryModalVisible"
   :class="{ 'full-screen': isFullscreen }"
   :ok-text="$t('guide.confirm')"
   :hide-cancel="true"
@@ -36,7 +35,6 @@ a-modal.query-modal(
   import { useAppStore } from '@/store'
   import { listenerRouteChange } from '@/utils/route-listener'
 
-  const { queryModalVisible } = storeToRefs(useAppStore())
   const { getResultsByType, sqlView, promqlView, queryType, clearCode } = useQueryCode()
 
   const HEADER_HEIGHT = 60
