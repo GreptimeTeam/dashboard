@@ -22,6 +22,6 @@
   "guideModalVisible": false,
   "lifetime": "long",
   "menuSelectedKey": "tables",
-  "queryModalVisible": false,
-  "userTimezone": ""
+  "userTimezone": "",
+  "isFullScreen": false
 }

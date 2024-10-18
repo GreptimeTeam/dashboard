@@ -30,7 +30,7 @@ a-layout.new-layout
       )
         a-tabs.panel-tabs
           a-tab-pane(title="Log" key="log")
-            LogsNew(:key="activeTab" :logs="ingestLogs" :types="[activeTab]")
+            LogsNew(:key="activeTab" :logs="ingestLogs")
           template(#extra)
             a-tooltip(content="Hide Panel" position="tr")
               a-button(type="text" size="mini" @click="footer[activeTab] = true")
@@ -64,7 +64,7 @@ a-layout.new-layout
     return logs.value.filter((log) => activeTab.value.includes(log.type))
   })
 
-  const menu = menuTree.value[0].children[1].children
+  const menu = menuTree.value[0].children.filter((item: any) => item.name === 'ingest')[0].children
 
   const menuClick = (parent: string, child: string) => {
     router.push({ name: child })

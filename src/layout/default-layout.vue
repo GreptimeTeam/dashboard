@@ -6,7 +6,6 @@ a-layout
     a-layout-content.layout-content
       PageLayout
   Footer(v-if="footer")
-QueryModal
 </template>
 
 <script lang="ts" setup>
@@ -59,6 +58,7 @@ QueryModal
   }
 
   .layout-content {
+    width: calc(100vw - var(--navbar-width-collapsed));
     overflow-y: hidden;
     transition: padding 0.2s cubic-bezier(0.34, 0.69, 0.1, 1);
   }

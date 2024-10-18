@@ -1,26 +1,36 @@
 <template lang="pug">
-a-card(:bordered="false")
-  a-list(size="small" :hoverable="true" :bordered="false")
-    TransitionGroup(name="list")
+a-card.log(:bordered="false")
+  a-list(
+    size="small"
+    :hoverable="true"
+    :bordered="false"
+    :class="{ simple: simple }"
+  )
+    TransitionGroup(:name="!simple ? 'list' : ''")
       a-list-item(v-for="log of logs" :key="log" :log="log")
-        a-space.info(fill :size="10")
-          icon-check-circle.success-color.icon-14(v-if="!log.error")
-          icon-close-circle.danger-color(v-else)
+        a-space.info(fill :size="8")
           .start-time
             | {{ log.startTime }}
-          a-popover(
-            v-if="log.codeInfo && log.codeTooltip"
-            position="tl"
-            content-class="code-tooltip"
-            :content="log.codeTooltip"
-          )
-            .file-info {{ log.codeInfo }}
-          .file-info(v-else-if="log.codeInfo") {{ log.codeInfo }}
+          .tag
+            .danger-color(v-if="log.error") [error]
+            .success-color(v-else) [info]
+          div(v-if="!simple && !log.codeTooltip && log.codeInfo")
+            .code-info(v-if="log.type === 'sql' || log.type === 'promql'") {{ log.codeInfo }}
+            .file-info(v-else) {{ log.codeInfo }}
           a-space(v-if="log.message" :size="3")
             | {{ log.message }}
             .total-time(v-if="!log.error")
               | {{ `in ${log.networkTime} ms` }}
-          a-tooltip(
+          a-popover(
+            v-if="!simple && log.codeTooltip"
+            position="tl"
+            content-class="code-tooltip"
+            :content="log.codeTooltip"
+          )
+            .code-info(v-if="log.type === 'sql' || log.type === 'promql'") {{ log.codeInfo }}
+            .file-info(v-else) {{ log.codeInfo }}
+
+          a-popover(
             v-if="log.error"
             position="tl"
             content-class="ingest-log-tooltip"
@@ -32,16 +42,15 @@ a-card(:bordered="false")
 <script lang="ts" name="Log" setup>
   import type { Log } from '@/store/modules/log/types'
 
-  const props = defineProps<{
-    logs: Log[]
-    types: string[]
-  }>()
-
-  const { clearLogs } = useLog()
-
-  const clear = () => {
-    clearLogs(props.types)
-  }
+  const props = defineProps({
+    logs: {
+      type: Array as PropType<Log[]>,
+    },
+    simple: {
+      type: Boolean,
+      default: false,
+    },
+  })
 </script>
 
 <style lang="less" scoped>
@@ -54,6 +63,14 @@ a-card(:bordered="false")
     font-size: 11px;
   }
 
+  .tag {
+    width: 37px;
+  }
+
+  .code-info {
+    font-family: monospace;
+  }
+
   .info {
     :deep(.arco-space-item:last-of-type) {
       overflow: hidden;
@@ -62,6 +79,11 @@ a-card(:bordered="false")
         overflow: hidden;
       }
     }
+  }
+
+  .arco-card.log {
+    border-radius: 0;
+    background: transparent;
   }
 
   :deep(.arco-list-item-main) {
@@ -75,7 +97,7 @@ a-card(:bordered="false")
   }
 
   :deep(.arco-list-small .arco-list-content-wrapper .arco-list-content > .arco-list-item) {
-    padding: 4px 12px;
+    padding: 6px 12px;
   }
   :deep(.arco-list-item) {
     border-bottom: 1px solid var(--border-color);
@@ -108,14 +130,32 @@ a-card(:bordered="false")
     opacity: 0;
     transform: translateX(30px);
   }
+
+  :deep(.simple) {
+    height: 32px;
+    margin-bottom: 20px;
+    .arco-list-item {
+      border: none;
+      background: var(--danger-bg-color);
+      border-radius: 4px;
+    }
+  }
+
+  .file-info {
+    font-weight: 600;
+  }
 </style>
 
 <style lang="less">
   .ingest-log-tooltip {
     max-width: 600px;
+    font-size: 13px;
+    padding: 6px 10px;
   }
   .arco-popover-popup-content.code-tooltip {
     font-family: monospace;
     white-space: pre;
+    font-size: 13px;
+    padding: 6px 10px;
   }
 </style>

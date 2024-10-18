@@ -32,7 +32,6 @@ a-tooltip(:content="codeInfo.code")
 
   const clickShortCut = (info: string, cursorPosition: number) => {
     inputFromNewLineToQueryCode(info, cursorPosition)
-    updateSettings({ queryModalVisible: true })
   }
 
   const formatter = (code: string) => {

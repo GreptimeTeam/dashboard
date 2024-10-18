@@ -7,6 +7,7 @@ import dayjs from 'dayjs'
 import { dateTypes } from '@/views/dashboard/config'
 import { AnyObject } from '@/types/global'
 import { HttpResponse, OutputType } from '@/api/interceptor'
+import { isObject } from '@/utils/is'
 import { ResultType, DimensionType, SchemaType, PromForm } from './types'
 import { Log, ResultInLog } from '../log/types'
 
@@ -108,6 +109,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
         ...res,
         codeInfo,
         message,
+        codeTooltip: codeInfo,
       }
       if (type === 'promql') {
         let start
@@ -139,7 +141,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
         codeInfo,
         ...error,
       }
-      if (Reflect.has(error, 'error')) {
+      if (isObject(error) && Reflect.has(error, 'error')) {
         return {
           log,
           error: 'error',
@@ -158,7 +160,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
         ...res,
       }
     } catch (error: any) {
-      if (Reflect.has(error, 'error')) {
+      if (isObject(error) && Reflect.has(error, 'error')) {
         throw new Error(JSON.stringify(error))
       } else {
         throw new Error('error')

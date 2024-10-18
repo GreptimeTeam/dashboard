@@ -311,13 +311,7 @@ a-card(v-if="hasChart" :bordered="false")
   const drawChart = () => {
     const MENU_WIDTH = 242
     const modalElement = ref<any>()
-    modalElement.value = document.getElementsByClassName('query-modal')[0]
-    const isFullScreen = modalElement.value.classList?.contains('full-screen')
-    if (isFullScreen) {
-      chartWidth.value = modalElement.value.offsetWidth - MENU_WIDTH - 16 * 2 - 20 * 2
-    } else {
-      chartWidth.value = 596
-    }
+    chartWidth.value = 800
 
     chartOptions.value = makeOptions()
   }

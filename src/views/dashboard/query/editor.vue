@@ -222,7 +222,6 @@ a-card.editor-card(:bordered="false")
   :deep(.arco-resizebox-trigger-icon-wrapper) {
     color: var(--main-font-color);
     font-size: 18px;
-    background-color: var(--th-bg-color);
   }
 </style>
 

@@ -22,7 +22,8 @@ export default {
   'menu.user': 'User Center',
   'menu.visualization': 'Data Visualization',
   'menu.newQuery': 'New Query',
-  'menu.tour.newQuery': 'Place SQL and PromQL query in our query editor.',
+  'menu.tour.query':
+    'Check full list of tables and their metadata of your instance. Place SQL and PromQL query in our query editor.',
   'menu.tour.tables': 'Full list of tables and their metadata of your instance.',
   'menu.tour.ingest': 'Ingest time-series data from the Ingest UI.',
   'menu.tour.workbench': 'Build advanced dashboard using UI builder and YAML based configuration, all managed by git.',

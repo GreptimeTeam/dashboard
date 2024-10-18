@@ -22,8 +22,7 @@ export default {
   'menu.user': '个人中心',
   'menu.faq': '常见问题',
   'menu.newQuery': '新查询',
-  'menu.tour.newQuery': '在查询编辑器中放置 SQL 和 PromQL 查询。',
-  'menu.tour.tables': '您实例的所有表及其元数据的完整列表。',
+  'menu.tour.query': '查看实例的完整表列表及其元数据。将 SQL 和 PromQL 查询放入我们的查询编辑器。',
   'menu.tour.ingest': '从 Ingest UI 中摄取时间序列数据。',
   'menu.tour.workbench': '使用 UI 构建器和基于 YAML 的配置构建高级仪表板，所有这些都由 git 管理。',
 }

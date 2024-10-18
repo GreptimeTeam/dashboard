@@ -46,9 +46,9 @@ export const dateFormatter = (dataType: string, value: number | null) => {
   switch (dataType) {
     case 'Date':
       return value && dayjs(0).add(value, 'day').format('YYYY-MM-DD HH:mm:ss')
-    case 'DateTime':
     case 'TimestampSecond':
       return value && dayjs.unix(value).format('YYYY-MM-DD HH:mm:ss')
+    case 'DateTime':
     case 'TimestampMillisecond':
       return value && dayjs(value).format('YYYY-MM-DD HH:mm:ss')
     case 'TimestampMicrosecond':
