@@ -30,7 +30,7 @@ a-layout.new-layout
       )
         a-tabs.panel-tabs
           a-tab-pane(title="Log" key="log")
-            LogsNew(:key="activeTab" :logs="ingestLogs" :types="[activeTab]")
+            LogsNew(:key="activeTab" :logs="ingestLogs")
           template(#extra)
             a-tooltip(content="Hide Panel" position="tr")
               a-button(type="text" size="mini" @click="footer[activeTab] = true")

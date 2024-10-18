@@ -19,7 +19,7 @@ a-layout.new-layout
       )
         a-tabs.panel-tabs
           a-tab-pane(title="Log" key="log")
-            LogsNew(:types="types" :logs="queryLogs")
+            LogsNew(:logs="queryLogs")
 </template>
 
 <script lang="ts" setup name="QueryNew">
@@ -94,7 +94,7 @@ a-layout.new-layout
     }
     const tourStatus = useStorage('tourStatus', { navbar: false })
     if (!tourStatus.value.navbar) {
-      const steps = originTablesTree.value.length > 0 ? [...navbarSteps, ...tableSteps] : [...navbarSteps]
+      const steps = [...navbarSteps]
       globalTour.setSteps(steps)
       globalTour.drive(0)
     }

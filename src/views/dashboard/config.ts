@@ -96,17 +96,10 @@ export const SEMANTIC_TYPE_MAP: { [key: string]: string } = {
 
 export const navbarSteps: DriveStep[] = [
   {
-    element: '#new-query',
+    element: '#menu-query',
     popover: {
-      title: i18n.global.t('menu.newQuery'),
-      description: i18n.global.t('menu.tour.newQuery'),
-    },
-  },
-  {
-    element: '#menu-tables',
-    popover: {
-      title: i18n.global.t('menu.dashboard.tables'),
-      description: i18n.global.t('menu.tour.tables'),
+      title: i18n.global.t('menu.dashboard.query'),
+      description: i18n.global.t('menu.tour.query'),
     },
   },
   {
