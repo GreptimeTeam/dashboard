@@ -1,5 +1,5 @@
 <template lang="pug">
-a-card(:bordered="false")
+a-card.data-grid(:bordered="false")
   template(v-if="hasHeader" #title)
     a-space(size="mini")
       svg.icon-20
@@ -40,6 +40,15 @@ a-card(:bordered="false")
             a-table-column(:title="column.title" :data-index="column.dataIndex")
               template(#cell="{ record }")
                 a-typography-paragraph.cell-data(title :ellipsis="{ rows: 3, expandable: true }") {{ record[column.dataIndex] }}
+                  template(#expand-node="{ expanded }")
+                    a-tooltip(
+                      v-if="!expanded"
+                      content="Expand"
+                      mini
+                      placement="top"
+                    )
+                      span {{ '+' }}
+                    span(v-else) {{ '' }}
 </template>
 
 <script lang="ts" setup>
@@ -162,6 +171,9 @@ a-card(:bordered="false")
   :deep(.arco-typography-operation-expand) {
     color: var(--brand-color);
     display: flex;
+    span {
+      width: 100%;
+    }
     &:hover {
       color: var(--hover-brand-color);
     }

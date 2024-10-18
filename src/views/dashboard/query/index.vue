@@ -11,7 +11,7 @@ a-layout.new-layout
         :size="0"
       )
         Editor
-        DataView.modal-view(v-if="!!results?.length" :results="results" :types="types")
+        DataView(v-if="!!results?.length" :results="results" :types="types")
       a-resize-box.panel-resize(
         v-model:height="logsHeight"
         :directions="['top']"
@@ -112,8 +112,12 @@ a-layout.new-layout
   :deep(.editor-space) {
     padding-top: 10px;
     height: 100%;
+    .editor-card .ͼ1.cm-editor {
+      border-radius: 0;
+    }
     > .arco-space-item {
       width: 100%;
+      padding-right: 0;
       > .arco-scrollbar {
         width: 100%;
         > .arco-scrollbar-track-direction-vertical {
@@ -129,85 +133,6 @@ a-layout.new-layout
       .arco-resizebox-trigger-icon-wrapper {
         font-size: 12px;
       }
-    }
-  }
-  :deep(.modal-view) {
-    > .arco-tabs-content {
-      > .arco-tabs-content-list > .arco-tabs-content-item {
-        padding: 0;
-        .arco-tabs-nav-ink {
-          background: transparent;
-        }
-        .arco-tabs-nav-tab-list > :nth-child(2) {
-          .arco-tabs-tab-title {
-            border-left: 1px solid var(--border-color);
-          }
-        }
-        .arco-tabs-tab {
-          padding: 2px 0;
-          margin: 0;
-          color: var(--main-font-color);
-          &:first-of-type {
-            border-top-left-radius: 4px;
-            border-bottom-left-radius: 4px;
-          }
-          &:nth-last-of-type(2) {
-            border-top-right-radius: 4px;
-            border-bottom-right-radius: 3px;
-          }
-          &.arco-tabs-tab-active {
-            color: var(--brand-color);
-            font-weight: 400;
-          }
-          > .arco-tabs-tab-title {
-            width: 84px;
-            padding-left: 10px;
-            display: flex;
-            font-size: 12px;
-            height: 20px;
-            &::before {
-              border-radius: 4px;
-              left: 0;
-              right: 0;
-              top: -6px;
-              bottom: -6px;
-            }
-          }
-        }
-      }
-    }
-    > .arco-tabs-nav-type-rounded {
-      border-bottom: 1px solid var(--border-color);
-      padding-bottom: 0;
-      // .arco-icon-hover:hover::before {
-      //   width: 20px;
-      //   background-color: var(--card-bg-color);
-      // }
-      > .arco-tabs-nav-tab {
-        > .arco-tabs-nav-tab-list {
-          > .arco-tabs-tab:not(:last-of-type) {
-          }
-          > .arco-tabs-tab {
-            border-radius: 0;
-            padding: 7px 6px;
-            font-size: 12px;
-            line-height: 12px;
-          }
-        }
-      }
-    }
-    .data-view-tabs > .arco-tabs-content > .arco-tabs-content-list > .arco-tabs-content-item {
-      padding: 0;
-    }
-    .arco-table.data-table .arco-table-container {
-      border-radius: 0;
-      border: none;
-    }
-    .arco-table-size-mini .arco-table-td {
-      font-size: 11px;
-    }
-    .arco-table-size-mini .arco-table-th {
-      padding: 4px 0;
     }
   }
 </style>

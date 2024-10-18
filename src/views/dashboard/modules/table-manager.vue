@@ -482,7 +482,6 @@ a-card.table-manager(:bordered="false")
   }
 
   .arco-input-wrapper.search-table {
-    width: 228px;
     padding: 0 10px;
     font-family: 'Open Sans';
     :deep(> .arco-input-prefix) {
