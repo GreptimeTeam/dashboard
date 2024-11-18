@@ -67,11 +67,13 @@ const getDatabases = () => {
 
 const getTables = (limit?: number, offset?: number) => {
   const appStore = useAppStore()
-  const suffix = ` limit ${limit} offset ${offset}`
+  const suffix = `limit ${limit} offset ${offset}`
   return axios.post(
     sqlUrl,
     makeSqlData(
-      `select * from information_schema.tables where table_schema='${appStore.database}'${limit ? suffix : ''};`
+      `select * from information_schema.tables where table_schema='${appStore.database}' order by table_name ${
+        limit ? suffix : ''
+      };`
     ),
     addDatabaseParams()
   )
