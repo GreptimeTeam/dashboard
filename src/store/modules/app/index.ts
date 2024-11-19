@@ -110,7 +110,21 @@ const useAppStore = defineStore('app', {
     async fetchDatabases() {
       try {
         const res: any = await editorAPI.getDatabases()
-        this.databaseList = res.output[0].records.rows.flat()
+        this.databaseList = res.output[0].records.rows.flat().sort((a: string, b: string) => {
+          if (a === 'public') {
+            return -1
+          }
+          if (b === 'public') {
+            return 1
+          }
+          if (a === 'greptime_private' || a === 'information_schema') {
+            return 1
+          }
+          if (b === 'greptime_private' || b === 'information_schema') {
+            return -1
+          }
+          return 0
+        })
         if (this.$state.database && this.databaseList.includes(this.$state.database)) {
           this.database = this.$state.database
         } else if (this.databaseList.length) {
