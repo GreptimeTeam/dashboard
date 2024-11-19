@@ -130,6 +130,7 @@ a-layout.new-layout
       }
     }
     .editor-card {
+      padding-right: 1px;
       .arco-resizebox-trigger-icon-wrapper {
         font-size: 12px;
       }
