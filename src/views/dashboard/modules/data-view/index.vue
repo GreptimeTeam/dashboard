@@ -101,6 +101,9 @@ a-tabs.panel-tabs(
 </style>
 
 <style lang="less" scoped>
+  .arco-btn {
+    border-radius: 2px;
+  }
   .arco-tabs.panel-tabs {
     .arco-tabs-content .arco-tabs-content-item {
       height: 100%;

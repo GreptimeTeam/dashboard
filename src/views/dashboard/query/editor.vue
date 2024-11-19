@@ -7,15 +7,21 @@ a-card.editor-card(:bordered="false")
           icon-loading(v-if="primaryCodeRunning" spin)
           icon-play-arrow(v-else)
         | {{ $t('dashboard.runAll') }}
-      a-button(:disabled="isLineButtonDisabled" @click="runPartQuery()")
+      a-button(type="outline" :disabled="isLineButtonDisabled" @click="runPartQuery()")
         .mr-4
           icon-loading(v-if="secondaryCodeRunning" spin)
           icon-play-arrow(v-else)
         div(v-if="lineStart === lineEnd") {{ $t('dashboard.runLine') }} {{ lineStart }}
         div(v-else) {{ $t('dashboard.runLines') }} {{ lineStart }} - {{ lineEnd }}
     .query-select
-      a-select(v-model="queryType" :trigger-props="{ 'content-class': 'query-select' }")
-        a-option(v-for="query of queryOptions" :="query")
+      a-space(size="medium")
+        a-tooltip(mini :content="$t('dashboard.clearCode')")
+          a-button(type="outline" :disabled="isButtonDisabled" @click="clearCode")
+            template(#icon)
+              svg.icon-16
+                use(href="#clear")
+        a-select(v-model="queryType" :trigger-props="{ 'content-class': 'query-select' }")
+          a-option(v-for="query of queryOptions" :="query")
   a-form.space-between.prom-form.mb-15(layout="inline" v-show="queryType === 'promql'" :model="promForm")
     a-space(:size="10")
       a-form-item(:hide-label="true")
@@ -101,8 +107,17 @@ a-card.editor-card(:bordered="false")
     tabSize: 2,
   })
 
-  const { codes, queryType, cursorAt, queryOptions, primaryCodeRunning, secondaryCodeRunning, sqlView, promqlView } =
-    useQueryCode()
+  const {
+    codes,
+    queryType,
+    cursorAt,
+    queryOptions,
+    primaryCodeRunning,
+    secondaryCodeRunning,
+    sqlView,
+    promqlView,
+    clearCode,
+  } = useQueryCode()
 
   const lineStart = ref()
   const lineEnd = ref()
@@ -213,6 +228,12 @@ a-card.editor-card(:bordered="false")
     width: 100%;
     :deep(.ͼo) {
       height: 100%;
+    }
+    .arco-btn {
+      border-radius: 2px;
+    }
+    :deep(.arco-select-view-single) {
+      border-radius: 2px;
     }
   }
 
