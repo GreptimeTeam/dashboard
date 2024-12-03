@@ -24,7 +24,7 @@ curl -O https://raw.githubusercontent.com/greptimeteam/dashboard/main/docker/doc
 docker compose up
 ```
 3. Open you browser and visit `http://localhost:8080/dashboard/`
-- Follow [getting started](https://docs.greptime.com/getting-started/quick-start/mysql#try-out-basic-sql-operations) to create your table and insert some data
+- Follow [getting started](https://docs.greptime.com/getting-started/quick-start#create-tables) to create your table and insert some data
 - Run a `SELECT` query and check the result as table or chart
 
 <!-- ### With Docker
