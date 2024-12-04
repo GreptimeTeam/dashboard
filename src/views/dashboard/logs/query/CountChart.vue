@@ -152,7 +152,7 @@ VCharts(
       const countTs = columnSchemas[0].data_type as TimeType
       const multiple = TimeTypes[countTs]
       let tmpData = []
-      tmpData = countRows.map((v) => [toMs(Number(v[0]), multiple), v[1]])
+      tmpData = countRows.map((v: Array<any>) => [toMs(Number(v[0]), multiple), v[1]])
       data.value = tmpData
       nextTick(() => {
         chart.value.dispatchAction({

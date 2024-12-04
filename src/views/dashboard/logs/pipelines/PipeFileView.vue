@@ -83,7 +83,7 @@ a-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
   import { create, list, del, debug, getByName } from '@/api/pipeline'
   import type { PipeFile } from '@/api/pipeline'
 
-  const emit = defineEmits(['refresh'])
+  const emit = defineEmits(['refresh', 'del'])
   const props = defineProps<{
     filename: undefined | string
   }>()

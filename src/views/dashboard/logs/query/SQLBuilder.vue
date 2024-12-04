@@ -58,7 +58,7 @@ a-form(
 
 <script setup name="SQLBuilder" lang="ts">
   import useLogQueryStore, { typeMap } from '@/store/modules/logquery'
-  import type { Condition } from '@/store/modules/logquery'
+  import type { Condition } from '@/views/dashboard/logs/query/types'
 
   const { tableMap, inputTableName, tsColumn, queryForm: form, limit } = storeToRefs(useLogQueryStore())
 
