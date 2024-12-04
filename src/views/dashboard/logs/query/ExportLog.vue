@@ -30,7 +30,7 @@ a-button(size="small" type="text" @click="exportSql")
     }
     const sql = getExportSql()
     editorAPI.runSQLWithCSV(sql).then((result) => {
-      fileDownload(result as unknown as string, `${inputTableName.value}_log.csv}`)
+      fileDownload(result as unknown as string, `${inputTableName.value}.csv`)
     })
   }
 </script>
