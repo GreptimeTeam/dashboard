@@ -64,7 +64,8 @@
   import type { TimeType } from './until'
 
   const props = defineProps({ wrapLine: Boolean, size: String })
-  const { getColumnByName, query, displayedColumns } = useLogQueryStore()
+  const { getColumnByName, query } = useLogQueryStore()
+  const { displayedColumns } = storeToRefs(useLogQueryStore())
   const {
     rows,
     currRow,
@@ -123,7 +124,7 @@
       tmpColumns = tmpColumns.filter((c) => c.name !== tsColumn.value.name)
       tmpColumns.unshift(tsColumn.value)
     }
-    tmpColumns = tmpColumns.filter((c) => displayedColumns[inputTableName.value]?.indexOf(c.name) > -1)
+    tmpColumns = tmpColumns.filter((c) => displayedColumns.value[inputTableName.value]?.indexOf(c.name) > -1)
     let totalStrLen = -1
 
     if (row) {
@@ -170,7 +171,7 @@
   })
 
   const dataFields = computed(() => {
-    return displayedColumns[inputTableName.value].filter((field) => field !== tsColumn.value?.name) || []
+    return displayedColumns.value[inputTableName.value].filter((field) => field !== tsColumn.value.name)
   })
   const getEntryFields = (record) => {
     const copyRecord = { ...record }
