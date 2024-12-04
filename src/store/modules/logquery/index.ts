@@ -234,10 +234,10 @@ const useLogQueryStore = defineStore('logQuery', () => {
       if (editorType.value !== 'builder') {
         return
       }
-      let str = `select * from ${inputTableName.value}`
+      let str = `SELECT * FROM ${inputTableName.value}`
       const where = buildCondition()
       if (where.length) {
-        str += ` where ${where.join('')}`
+        str += ` WHERE ${where.join('')}`
       }
       if (tsColumn.value) {
         str += ` ORDER BY ${tsColumn.value?.name} ${queryForm.orderBy}`
