@@ -45,6 +45,7 @@
     "@codemirror/state": "^6.2.0",
     "@codemirror/theme-one-dark": "^6.1.0",
     "@codemirror/view": "^6.9.3",
+    "@codemirror/lang-json": "^6.0.1",
     "@lezer/common": "^1.0.2",
     "@lezer/highlight": "^1.1.2",
     "@lezer/lr": "^1.2.3",
