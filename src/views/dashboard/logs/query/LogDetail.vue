@@ -39,6 +39,7 @@ a-drawer(
   const { selectedRowKey, currRow, rows } = storeToRefs(useLogQueryStore())
   const viewRow = computed(() => {
     const obj = { ...currRow.value }
+    delete obj.index
     return obj
   })
 

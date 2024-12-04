@@ -197,7 +197,7 @@
   const detailVisible = ref(false)
 
   const handleRowClick = (row) => {
-    selectedRowKey.value = row.index
+    selectedRowKey.value = row.key
     detailVisible.value = true
   }
 

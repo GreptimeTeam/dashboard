@@ -228,6 +228,6 @@ export function toObj(row: any, columns: Array<SchemaType>, index: number, tsCol
     const column = columns[i]
     obj[column.name] = row[i]
   }
-  obj.key = tsColumn ? obj[tsColumn.name] : index
+  obj.key = index
   return obj
 }
