@@ -12,6 +12,7 @@ a-form(
       placeholder="Select Table"
       :options="tables"
       :allow-search="true"
+      :trigger-props="{ autoFitPopupMinWidth: true }"
       @change="handleTableChange"
     )
   a-form-item(label="Where" field="conditions")
