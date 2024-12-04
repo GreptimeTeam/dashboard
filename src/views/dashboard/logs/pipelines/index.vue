@@ -7,7 +7,7 @@ a-spin(style="width: 100%; height: 100%")
           a-space.space-between(fill style="width: 100%")
             | Log Pipelines
             a-button-group
-              a-tooltip(mini position="bl" :content="New File")
+              a-tooltip(mini position="bl" content="New File")
                 a-button#new-file.icon-button(type="text" size="small" @click="clickNewFile")
                   template(#icon)
                     svg.icon-16
