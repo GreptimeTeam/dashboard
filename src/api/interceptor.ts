@@ -80,7 +80,7 @@ axios.interceptors.response.use(
       return Promise.reject(errorResponse)
     }
     if (isV1) {
-      if (response.config.params.format === 'csv') {
+      if (response.config.params && response.config.params.format === 'csv') {
         return response.data
       }
       response.data = JSONbigint({ storeAsString: true }).parse(response.data)
@@ -120,7 +120,8 @@ axios.interceptors.response.use(
     }
     const data = JSON.parse(error.response.data)
     const isInflux = !!error.config.url?.startsWith(`/v1/influxdb`)
-    if (!isInflux) {
+    const tableName = parseTable(decodeURIComponent(error.response.config.data))
+    if (!isInflux && ignoreList.indexOf(tableName) === -1) {
       Message.error({
         content: data.error || 'Request Error',
         duration: 5 * 1000,

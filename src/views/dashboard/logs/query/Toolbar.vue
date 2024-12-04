@@ -170,4 +170,7 @@
   :deep(.arco-radio-group-button) {
     background-color: var(--color-fill-3);
   }
+  :deep(.arco-radio-button.arco-radio-checked) {
+    color: var(--color-primary);
+  }
 </style>
