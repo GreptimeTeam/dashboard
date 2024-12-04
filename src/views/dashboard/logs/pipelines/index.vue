@@ -41,6 +41,10 @@ a-spin(style="width: 100%; height: 100%")
   import type { PipeFile } from '@/api/pipeline'
   import PipeFileView from './PipeFileView.vue'
 
+  const { fetchDatabases } = useAppStore()
+  const { dataStatusMap } = storeToRefs(useUserStore())
+  const { checkTables } = useDataBaseStore()
+
   const route = useRoute()
   const { filename } = route.query
   const selectedKeys = ref<Array<string>>(filename ? [filename as string] : [])
@@ -89,6 +93,17 @@ a-spin(style="width: 100%; height: 100%")
         query: {},
       })
     }
+  })
+
+  onActivated(async () => {
+    await Promise.all([
+      (async () => {
+        if (!dataStatusMap.value.tables) {
+          await fetchDatabases()
+          await checkTables()
+        }
+      })(),
+    ])
   })
 </script>
 

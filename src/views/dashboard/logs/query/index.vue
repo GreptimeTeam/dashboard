@@ -60,6 +60,10 @@
   import Toolbar from './Toolbar.vue'
   import Pagination from './Pagination.vue'
 
+  const { fetchDatabases } = useAppStore()
+  const { dataStatusMap } = storeToRefs(useUserStore())
+  const { checkTables } = useDataBaseStore()
+
   const { getSchemas, getRelativeRange } = useLogQueryStore()
   const {
     rows,
@@ -81,6 +85,17 @@
   getSchemas()
   const pageKey = computed(() => {
     return `${queryNum.value}_${tableIndex.value}`
+  })
+
+  onActivated(async () => {
+    await Promise.all([
+      (async () => {
+        if (!dataStatusMap.value.tables) {
+          await fetchDatabases()
+          await checkTables()
+        }
+      })(),
+    ])
   })
 </script>
 
