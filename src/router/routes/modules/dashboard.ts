@@ -101,17 +101,6 @@ const DASHBOARD: AppRouteRecordRaw = {
       },
     },
     {
-      path: 'status',
-      name: 'status',
-      component: () => import('@/views/dashboard/status/index.vue'),
-      meta: {
-        locale: 'menu.dashboard.status',
-        requiresAuth: true,
-        icon: 'database-config',
-        roles: ['admin'],
-      },
-    },
-    {
       path: 'log-query',
       component: () => import('@/views/dashboard/logs/query/index.vue'),
       name: 'log-query',
@@ -131,6 +120,17 @@ const DASHBOARD: AppRouteRecordRaw = {
         requiresAuth: false,
         roles: ['admin', 'cloud'],
         icon: 'configuration',
+      },
+    },
+    {
+      path: 'status',
+      name: 'status',
+      component: () => import('@/views/dashboard/status/index.vue'),
+      meta: {
+        locale: 'menu.dashboard.status',
+        requiresAuth: true,
+        icon: 'database-config',
+        roles: ['admin'],
       },
     },
   ],
