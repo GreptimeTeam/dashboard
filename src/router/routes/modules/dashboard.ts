@@ -111,6 +111,28 @@ const DASHBOARD: AppRouteRecordRaw = {
         roles: ['admin'],
       },
     },
+    {
+      path: 'log-query',
+      component: () => import('@/views/dashboard/logs/query/index.vue'),
+      name: 'log-query',
+      meta: {
+        locale: 'menu.dashboard.logquery',
+        requiresAuth: false,
+        icon: 'log',
+        roles: ['admin', 'cloud'],
+      },
+    },
+    {
+      path: 'log-pipeline',
+      name: 'log-pipeline',
+      component: () => import('@/views/dashboard/logs/pipelines/index.vue'),
+      meta: {
+        locale: 'menu.dashboard.logpipeline',
+        requiresAuth: false,
+        roles: ['admin', 'cloud'],
+        icon: 'configuration',
+      },
+    },
   ],
 }
 

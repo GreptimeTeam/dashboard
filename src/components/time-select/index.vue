@@ -1,18 +1,20 @@
 <template lang="pug">
-a-trigger(
+a-trigger#time-select(
   v-model:popup-visible="visible"
   trigger="click"
   :position="flexDirection === 'row' ? 'br' : 'bl'"
   :update-at-scroll="true"
-  @click="openTimeSelect"
+  :popup-offset="4"
+  :click-outside-to-close="guideStep === 'stopTour' || guideStep === ''"
 )
-  a-button(:type="buttonType" :class="buttonClass")
+  a-button(:type="buttonType" :class="buttonClass" :size="buttonSize")
     template(#icon)
-      svg.icon-18
+      svg.icon-16
         use(href="#time")
-    div(v-if="isRelative") {{ relativeTimeMap[timeLength] }}
+    div(v-if="isRelative") {{ relativeTimeMap[timeLength] || props.emptyStr}}
     div(v-else) {{ `${dayjs.unix(timeRange[0]).format('YYYY-MM-DD HH:mm:ss')} - ${dayjs.unix(timeRange[1]).format('YYYY-MM-DD HH:mm:ss')} ` }}
   template(#content)
+    a-space.hide
     a-space(
       fill
       align="start"
@@ -21,7 +23,7 @@ a-trigger(
     )
       template(#split)
         div(style="width: 4px")
-      a-range-picker.no-border.box-shadow(
+      a-range-picker.box-shadow(
         v-show="rangePickerVisible"
         hide-trigger
         format="YYYY-MM-DD HH:mm:ss"
@@ -41,7 +43,7 @@ a-trigger(
           :class="time.value === timeLength ? 'selected' : ''"
           @click="selectTimeLength(time.value)"
         ) {{ time.label }}
-        a-doption(:class="!isRelative ? 'selected' : ''" @click="toggleRangePicker") Custom
+        a-doption(:class="!isRelative ? 'selected' : ''" @click="rangePickerVisible = !rangePickerVisible") Custom
 </template>
 
 <script lang="ts" setup name="TimeSelect">
@@ -69,6 +71,10 @@ a-trigger(
       type: String,
       default: 'text',
     },
+    buttonSize: {
+      type: String,
+      default: 'medium',
+    },
     relativeTimeOptions: {
       type: Array<OptionsType>,
       default: [],
@@ -77,30 +83,43 @@ a-trigger(
       type: Object as PropType<{ [key: number]: string }>,
       default: () => ({}),
     },
+    guideStep: {
+      type: String,
+      default: '',
+    },
+    emptyStr: {
+      type: String,
+      default: '',
+    },
   })
-  const emit = defineEmits(['update:timeLength', 'update:timeRange'])
+  const emit = defineEmits(['update:timeLength', 'update:timeRange', 'change', 'updateTourStep'])
 
   const rangePickerVisible = ref(false)
   const visible = ref(false)
 
-  const isRelative = computed(() => props.timeLength !== 0)
+  const isRelative = computed(() => props.timeLength !== 0 || props.timeRange.length === 0)
   const selectTimeRange = (range: any) => {
     emit('update:timeRange', range)
     emit('update:timeLength', 0)
+    emit('change')
     visible.value = false
   }
 
   const selectTimeLength = (value: any) => {
     emit('update:timeLength', value)
+    emit('change')
     visible.value = false
   }
 
-  const toggleRangePicker = () => {
-    rangePickerVisible.value = !rangePickerVisible.value
-  }
-  const openTimeSelect = () => {
-    visible.value = !visible.value
-  }
+  watchEffect(() => {
+    if (props.guideStep === 'openTimeSelectStep') {
+      visible.value = true
+      emit('updateTourStep')
+    } else if (props.guideStep === 'stopTour') {
+      visible.value = false
+      emit('change')
+    }
+  })
 </script>
 
 <style lang="less" scoped>
@@ -117,28 +136,28 @@ a-trigger(
   }
 
   .box-shadow {
-    box-shadow: 0 2px 10px 0 var(--box-shadow-color);
+    box-shadow: 0 1px 10px 0 var(--box-shadow-color);
   }
 
   .trigger {
+    border: 1px solid var(--border-color);
     background-color: var(--card-bg-color);
-    box-shadow: 0 2px 10px 0 var(--box-shadow-color);
-    padding: 6px;
-    border-radius: 6px;
+    box-shadow: 0 1px 10px 0 var(--box-shadow-color);
+    padding: 4px 0;
+    border-radius: 4px;
     align-items: flex-start;
   }
 
   .relative-time-dropdown {
     .arco-dropdown-option {
-      width: 140px;
+      width: 135px;
       &.selected {
-        background-color: var(--main-bg-color);
+        background-color: var(--list-hover-color);
         font-weight: 600;
       }
-      border-radius: 6px;
     }
     .arco-dropdown-option:not(.arco-dropdown-option-disabled):hover {
-      background-color: var(--main-bg-color);
+      background-color: var(--list-hover-color);
     }
     :deep(.arco-space-item:last-of-type) {
       border-top: 1px solid var(--light-border-color);

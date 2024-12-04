@@ -27,4 +27,6 @@ export default {
   'menu.tour.tables': 'Full list of tables and their metadata of your instance.',
   'menu.tour.ingest': 'Ingest time-series data from the Ingest UI.',
   'menu.tour.workbench': 'Build advanced dashboard using UI builder and YAML based configuration, all managed by git.',
+  'menu.dashboard.logquery': 'Log Query',
+  'menu.dashboard.logpipeline': 'Log Pipelines',
 }

@@ -32,7 +32,7 @@
     ]
   },
   "dependencies": {
-    "@arco-design/web-vue": "^2.41.0",
+    "@arco-design/web-vue": "^2.56.2",
     "@babel/core": "^7.20.5",
     "@codemirror/autocomplete": "^6.4.2",
     "@codemirror/lang-java": "^6.0.1",
@@ -84,7 +84,8 @@
     "vue-codemirror": "^6.1.1",
     "vue-echarts": "^6.5.0",
     "vue-i18n": "^9.2.2",
-    "vue-router": "^4.0.14"
+    "vue-router": "^4.0.14",
+    "js-file-download": "^0.4.12"
   },
   "devDependencies": {
     "@babel/types": "^7.21.4",

@@ -69,5 +69,6 @@ module.exports = {
     'import/no-extraneous-dependencies': 0,
     'noUnusedLocals': 0,
     'prefer-destructuring': ['error', { object: true, array: false }],
+    'no-continue': 1,
   },
 }

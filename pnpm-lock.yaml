@@ -1,4 +1,4 @@
-lockfileVersion: '6.1'
+lockfileVersion: '6.0'
 
 settings:
   autoInstallPeers: true
@@ -10,8 +10,8 @@ overrides:
 
 dependencies:
   '@arco-design/web-vue':
-    specifier: ^2.41.0
-    version: 2.41.0(vue@3.2.47)
+    specifier: ^2.56.2
+    version: 2.56.3(vue@3.2.47)
   '@babel/core':
     specifier: ^7.20.5
     version: 7.20.5
@@ -93,6 +93,9 @@ dependencies:
   eslint-plugin:
     specifier: ^1.0.1
     version: 1.0.1
+  js-file-download:
+    specifier: ^0.4.12
+    version: 0.4.12
   json-bigint:
     specifier: ^1.0.0
     version: 1.0.0
@@ -346,8 +349,8 @@ packages:
       color: 3.2.1
     dev: false
 
-  /@arco-design/web-vue@2.41.0(vue@3.2.47):
-    resolution: {integrity: sha512-g3hurEQsdK1LIxYoHc3wvCMdajet1W2y8khSbtSYdjeFaa3B00aaYkworysANLUMLeAg/TEOvDbF+YupxNfuHA==}
+  /@arco-design/web-vue@2.56.3(vue@3.2.47):
+    resolution: {integrity: sha512-D2CPIXRBUPcg37TFsfWROZddCWFZnIwqGpsOhOn2BhmH89UFqtBGpTxyuMdYJEwKNXunp3dVL6V69ZMmJBRPOg==}
     peerDependencies:
       vue: ^3.1.0
     dependencies:
@@ -4590,6 +4593,10 @@ packages:
 
   /isexe@2.0.0:
     resolution: {integrity: sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==}
+
+  /js-file-download@0.4.12:
+    resolution: {integrity: sha512-rML+NkoD08p5Dllpjo0ffy4jRHeY6Zsapvr/W86N7E0yuzAO6qa5X9+xog6zQNlH102J7IXljNY2FtS6Lj3ucg==}
+    dev: false
 
   /js-sdsl@4.4.2:
     resolution: {integrity: sha512-dwXFwByc/ajSV6m5bcKAPwe4yDDF6D614pxmIi5odytzxRlwqF6nwoiCek80Ixc7Cvma5awClxrzFtxCQvcM8w==}
