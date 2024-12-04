@@ -23,27 +23,26 @@ export type PipeFile = {
 function nanoTimestampToUTCString(nanoTimestamp: bigint) {
   nanoTimestamp = BigInt(nanoTimestamp)
   const divide1 = BigInt(1000000000)
-  const seconds = nanoTimestamp / divide1 // 纳秒转秒
+  const seconds = nanoTimestamp / divide1 // na to s
   const divide2 = BigInt(1000000)
-  const milliseconds = Number((nanoTimestamp % divide1) / divide2) // 毫秒部分
-  const nanoseconds = Number(nanoTimestamp % divide2) // 纳秒部分
+  const milliseconds = Number((nanoTimestamp % divide1) / divide2) // ms
+  const nanoseconds = Number(nanoTimestamp % divide2)
 
-  // 使用 Date 对象将秒转换为 UTC
   const date = new Date(Number(seconds) * 1000)
   const isoString = date.toISOString().replace('Z', '').replace('.000', '')
-  // 拼接毫秒和纳秒部分
   return `${isoString}.${String(milliseconds).padStart(3, '0')}${String(nanoseconds).padStart(6, '0')}Z`
 }
 
 /* eslint-enable */
 export function create(pipeFile: PipeFile) {
+  const appStore = useAppStore()
   const { content, name } = pipeFile
   const file = new File([content], `${name}.yaml`, {
     type: 'application/yaml',
   })
   const formData = new FormData()
   formData.append('file', file)
-  return axios.postForm(`${url}/${name}`, formData)
+  return axios.postForm(`${url}/${name}?db=${appStore.database}`, formData)
 }
 
 export function list() {
@@ -76,15 +75,18 @@ export function getByName(name: string): Promise<PipeFile> {
 }
 
 export function del(name: string, version: string) {
+  const appStore = useAppStore()
   return axios.delete(`${url}/${name}`, {
     params: {
+      db: appStore.database,
       version,
     },
   })
 }
 
 export function debug(name: string, content: any) {
-  return axios.post(`${url}/dryrun?pipeline_name=${name}`, JSON.parse(content), {
+  const appStore = useAppStore()
+  return axios.post(`${url}/dryrun?pipeline_name=${name}&db=${appStore.database}`, JSON.parse(content), {
     headers: {
       'Content-Type': 'application/json', // Set Content-Type
     },

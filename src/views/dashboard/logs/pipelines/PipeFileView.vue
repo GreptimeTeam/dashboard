@@ -180,7 +180,7 @@ transform:
   }
 
   const debugForm = reactive({
-    content: '',
+    content: '{}',
   })
 
   const extensions = [basicSetup, json()]
