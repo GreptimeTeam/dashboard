@@ -13,6 +13,7 @@ import Chart from './chart/index.vue'
 import Breadcrumb from './breadcrumb/index.vue'
 import 'echarts/lib/component/dataset'
 import 'echarts/lib/component/transform'
+import YMLEditor from './yml-editor.vue'
 
 // Manually introduce ECharts modules to reduce packing size
 
@@ -32,5 +33,6 @@ export default {
   install(Vue: App) {
     Vue.component('Chart', Chart)
     Vue.component('Breadcrumb', Breadcrumb)
+    Vue.component('YMLEditorSimple', YMLEditor)
   },
 }

@@ -2,6 +2,7 @@ import axios, { AxiosRequestConfig, AxiosRequestHeaders } from 'axios'
 import dayjs from 'dayjs'
 import qs from 'qs'
 import { PromForm } from '@/store/modules/code-run/types'
+import { HttpResponse } from './interceptor'
 
 const sqlUrl = `/v1/sql`
 const scriptUrl = `/v1/scripts`
@@ -99,7 +100,7 @@ const getTableByName = (tableName: string, database?: string) => {
   )
 }
 
-const runSQL = (code: string) => {
+const runSQL = (code: string): Promise<HttpResponse> => {
   return axios.post(sqlUrl, makeSqlData(code), addDatabaseParams())
 }
 
@@ -138,6 +139,11 @@ const writeInfluxDB = (data: string, precision: string) => {
   } as AxiosRequestConfig
   return axios.post(`${influxURL}/write`, data, config)
 }
+const runSQLWithCSV = (code: string): Promise<HttpResponse> => {
+  const params = addDatabaseParams()
+  params.params.format = 'csv'
+  return axios.post(sqlUrl, makeSqlData(code), params)
+}
 
 export default {
   getTables,
@@ -151,4 +157,5 @@ export default {
   writeInfluxDB,
   checkScriptsTable,
   fetchTablesCount,
+  runSQLWithCSV,
 }

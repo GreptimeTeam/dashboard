@@ -13,6 +13,11 @@ import '@/api/interceptor'
 
 const app: App = createApp(Apps)
 
+app.config.errorHandler = (err, vm, info) => {
+  console.error(err, info)
+  // Optionally show an error message to users
+}
+
 app.use(ArcoVue, {})
 app.use(ArcoVueIcon)
 

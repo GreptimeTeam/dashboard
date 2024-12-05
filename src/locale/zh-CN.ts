@@ -2,6 +2,7 @@ import dashboard from './zh-CN/dashboard'
 import menu from './zh-CN/menu'
 import playground from './zh-CN/playground'
 import settings from './zh-CN/settings'
+import logquery from './zh-CN/logquery'
 
 export default {
   'navbar.action.locale': '切换到中文',
