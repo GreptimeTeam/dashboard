@@ -86,6 +86,7 @@ export default function useQueryCode() {
         if (tableName.startsWith(`'`) || tableName.startsWith(`"`)) {
           tableName = tableName.slice(1, tableName.length - 1)
         }
+        // TODO: What about `show create table`?
         if (
           (matchString.includes('CREATE TABLE') && !matchString.includes('IF NOT EXISTS')) ||
           matchString.includes('DROP TABLE')
@@ -105,7 +106,7 @@ export default function useQueryCode() {
           if (tableNodeData) {
             // Silently load more
             await loadMoreColumns(tableNodeData, true)
-            await loadMoreDetails(tableNodeData, true)
+            // await loadMoreDetails(tableNodeData, true)
             // Update new children
             originTablesTree.value[tableNodeData.key].children =
               originTablesTree.value[tableNodeData.key][tableNodeData.childrenType]

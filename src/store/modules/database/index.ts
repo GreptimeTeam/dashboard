@@ -19,6 +19,7 @@ const useDataBaseStore = defineStore('database', () => {
   const tablesLoading = ref(false)
   const totalTablesLoading = ref(false)
   const scriptsLoading = ref(false)
+  const databaseActiveKeys = ref<string[]>(['public'])
 
   const hints = computed(() => {
     const schema: { [key: string]: string[] } = {}
@@ -115,14 +116,14 @@ const useDataBaseStore = defineStore('database', () => {
     }
   }
 
-  const getOriginTablesTree = () => {
-    let key = tablesTreeForDatabase.value[database.value].length
-    if (tablesData.value) {
-      const schemas: SchemaType[] = tablesData.value.schema?.column_schemas || []
+  const getOriginTablesTree = (tempTablesData: RecordsType, db: string) => {
+    let key = tablesTreeForDatabase.value[db].length
+    if (tempTablesData) {
+      const schemas: SchemaType[] = tempTablesData.schema?.column_schemas || []
       const { tableNameIndex, tableTypeIndex } = getIndexesForTables(schemas)
-      tablesData.value.rows.forEach((row: string[]) => {
+      tempTablesData.rows.forEach((item: Array<string>) => {
         const node: TableTreeParent = {
-          title: row[tableNameIndex],
+          title: item[tableNameIndex],
           key,
           children: [],
           columns: [],
@@ -130,9 +131,9 @@ const useDataBaseStore = defineStore('database', () => {
           timeIndexName: '',
           childrenType: 'columns',
           isLeaf: false,
-          tableType: row[tableTypeIndex],
+          tableType: item[tableTypeIndex],
         }
-        tablesTreeForDatabase.value[database.value].push(node)
+        tablesTreeForDatabase.value[db].push(node)
         key += 1
       })
     }
@@ -143,16 +144,18 @@ const useDataBaseStore = defineStore('database', () => {
     children: TableTreeChild[] | TableDetail[],
     timeIndexName: string,
     type: string,
-    isSilent?: boolean
+    isSilent?: boolean,
+    specifiedDB?: string
   ) => {
+    const db = specifiedDB || database.value
     if (!isSilent) {
-      tablesTreeForDatabase.value[database.value][key].children = children
+      tablesTreeForDatabase.value[db][key].children = children
     }
-    tablesTreeForDatabase.value[database.value][key].timeIndexName = timeIndexName
+    tablesTreeForDatabase.value[db][key].timeIndexName = timeIndexName
     if (type === 'details') {
-      tablesTreeForDatabase.value[database.value][key].details = children as TableDetail[]
+      tablesTreeForDatabase.value[db][key].details = children as TableDetail[]
     } else {
-      tablesTreeForDatabase.value[database.value][key].columns = children as TableTreeChild[]
+      tablesTreeForDatabase.value[db][key].columns = children as TableTreeChild[]
     }
   }
 
@@ -181,9 +184,9 @@ const useDataBaseStore = defineStore('database', () => {
     return tempArray
   })
 
-  const getTablesCount = async () => {
+  const getTablesCount = async (db?: string) => {
     try {
-      const res: any = await editorAPI.fetchTablesCount()
+      const res: any = await editorAPI.fetchTablesCount(db)
       const count: number = res.output[0].records.rows[0][0]
       return count
     } catch {
@@ -191,12 +194,14 @@ const useDataBaseStore = defineStore('database', () => {
     }
   }
 
-  async function getTables() {
+  async function getTables(specifiedDB?: string) {
     tablesLoading.value = true
     totalTablesLoading.value = true
+    const db = specifiedDB || database.value
     // TODO: better not change dom
-    tablesTreeForDatabase.value[database.value] = []
-    const total = await getTablesCount()
+    tablesTreeForDatabase.value[db] = []
+
+    const total = await getTablesCount(db)
     if (total === 0) {
       tablesLoading.value = false
       totalTablesLoading.value = false
@@ -210,13 +215,18 @@ const useDataBaseStore = defineStore('database', () => {
     for (let page = 1; page <= maxPage; page += 1) {
       try {
         // eslint-disable-next-line no-await-in-loop
-        const res: any = await editorAPI.getTables(pageSize, pageSize * (page - 1))
-        tablesData.value = res.output[0].records
-        getOriginTablesTree()
+        const res: any = await editorAPI.getTables(pageSize, pageSize * (page - 1), db)
+        if (db === database.value) {
+          tablesData.value = res.output[0].records
+        }
+        getOriginTablesTree(res.output[0].records, db)
+
         // Stop loading status when tables of the first page are loaded
         tablesLoading.value = false
       } catch (error) {
-        tablesData.value = undefined
+        if (db === database.value) {
+          tablesData.value = undefined
+        }
         // TODO: limit?
         tablesTreeForDatabase.value[database.value] = []
         tablesLoading.value = false
@@ -236,9 +246,9 @@ const useDataBaseStore = defineStore('database', () => {
     await getTables()
   }
 
-  async function getTableByName(node: any) {
+  async function getTableByName(tableName: any, db?: string) {
     try {
-      const res: any = await editorAPI.getTableByName(node)
+      const res: any = await editorAPI.getTableByName(tableName, db)
       return res.output[0].records
     } catch (error) {
       return false
@@ -283,6 +293,7 @@ const useDataBaseStore = defineStore('database', () => {
     scriptsData,
     hints,
     extensions,
+    databaseActiveKeys,
     getTables,
     checkTables,
     addChildren,

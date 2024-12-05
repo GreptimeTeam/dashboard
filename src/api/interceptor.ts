@@ -76,7 +76,7 @@ axios.interceptors.response.use(
         // v1 and error
         Message.error({
           content: data.error || 'Error',
-          duration: 5 * 1000,
+          duration: 2 * 1000,
           closable: true,
           resetOnHover: true,
         })
@@ -107,7 +107,7 @@ axios.interceptors.response.use(
     if (!isInflux) {
       Message.error({
         content: data.error || 'Request Error',
-        duration: 5 * 1000,
+        duration: 2 * 1000,
         closable: true,
         resetOnHover: true,
       })
