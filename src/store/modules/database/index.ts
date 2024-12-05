@@ -228,7 +228,7 @@ const useDataBaseStore = defineStore('database', () => {
           tablesData.value = undefined
         }
         // TODO: limit?
-        tablesTreeForDatabase.value[database.value] = []
+        tablesTreeForDatabase.value[db] = []
         tablesLoading.value = false
         totalTablesLoading.value = false
         break
