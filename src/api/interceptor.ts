@@ -23,6 +23,15 @@ export interface Auth {
 }
 
 // todo: can we use env and proxy at the same time?
+export const TableNameReg = /(?<=from|FROM)\s+([^\s;]+)/
+export function parseTable(sql: string) {
+  const result = sql.match(TableNameReg)
+  if (result && result.length) {
+    const arr = result[1].trim().split('.')
+    return arr[arr.length - 1]
+  }
+  return ''
+}
 
 axios.interceptors.request.use(
   (config: AxiosRequestConfig) => {
@@ -51,6 +60,7 @@ axios.interceptors.request.use(
     return Promise.reject(error)
   }
 )
+const ignoreList = ['pipelines']
 
 axios.interceptors.response.use(
   (response: AxiosResponse) => {
@@ -70,16 +80,22 @@ axios.interceptors.response.use(
       return Promise.reject(errorResponse)
     }
     if (isV1) {
+      if (response.config.params && response.config.params.format === 'csv') {
+        return response.data
+      }
       response.data = JSONbigint({ storeAsString: true }).parse(response.data)
       const { data } = response
       if (data.code && data.code !== 0) {
         // v1 and error
-        Message.error({
-          content: data.error || 'Error',
-          duration: 5 * 1000,
-          closable: true,
-          resetOnHover: true,
-        })
+        const tableName = parseTable(decodeURIComponent(response.config.data))
+        if (ignoreList.indexOf(tableName) === -1) {
+          Message.error({
+            content: data.error || 'Error',
+            duration: 5 * 1000,
+            closable: true,
+            resetOnHover: true,
+          })
+        }
         const error = {
           error: data.error || 'Error',
           startTime: new Date(response.config.traceTimeStart).toLocaleTimeString(),
@@ -104,7 +120,8 @@ axios.interceptors.response.use(
     }
     const data = JSON.parse(error.response.data)
     const isInflux = !!error.config.url?.startsWith(`/v1/influxdb`)
-    if (!isInflux) {
+    const tableName = parseTable(decodeURIComponent(error.response.config.data))
+    if (!isInflux && ignoreList.indexOf(tableName) === -1) {
       Message.error({
         content: data.error || 'Request Error',
         duration: 5 * 1000,
