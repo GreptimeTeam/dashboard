@@ -230,10 +230,10 @@ a-card.editor-card(:bordered="false")
       height: 100%;
     }
     .arco-btn {
-      border-radius: 2px;
+      border-radius: 4px;
     }
     :deep(.arco-select-view-single) {
-      border-radius: 2px;
+      border-radius: 4px;
     }
   }
 

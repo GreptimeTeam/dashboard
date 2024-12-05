@@ -9,7 +9,7 @@ const tablesTreeRef = ref()
 const isRefreshingDetails = ref<{ [key: number]: boolean }>({ 0: false })
 
 export default function useSiderTabs() {
-  const { originTablesTree, originScriptsList } = storeToRefs(useDataBaseStore())
+  const { originTablesTree, originScriptsList, databaseActiveKeys } = storeToRefs(useDataBaseStore())
   const { getTableByName, addChildren, generateTreeChildren, getTables, getIndexesForColumns } = useDataBaseStore()
 
   // Deprecated.
@@ -57,17 +57,19 @@ export default function useSiderTabs() {
     return searchList(scriptsSearchKey.value)
   })
 
-  const refreshTables = () => {
+  const refreshTables = async (db?: string) => {
+    const { database: currentDB } = storeToRefs(useAppStore())
+    const database = db || currentDB.value
     tablesSearchKey.value = ''
-    getTables()
-    if (tablesTreeRef.value) {
-      tablesTreeRef.value.expandAll(false)
+    await getTables(database)
+    if (tablesTreeRef.value && tablesTreeRef.value[database]) {
+      tablesTreeRef.value[database].expandAll(false)
     }
   }
 
-  const loadMoreColumns = (nodeData: TableTreeParent, isSilent?: boolean) =>
+  const loadMoreColumns = (nodeData: TableTreeParent, isSilent?: boolean, database?: string) =>
     new Promise<TableTreeChild[]>((resolve, reject) => {
-      getTableByName(nodeData.title)
+      getTableByName(nodeData.title, database)
         .then((result: RecordsType) => {
           const {
             rows,
@@ -75,7 +77,7 @@ export default function useSiderTabs() {
           } = result
           const indexes = getIndexesForColumns(columnSchemas)
           const { treeChildren, timeIndexName } = generateTreeChildren(nodeData, rows, indexes)
-          addChildren(nodeData.key, treeChildren, timeIndexName, 'columns', isSilent)
+          addChildren(nodeData.key, treeChildren, timeIndexName, 'columns', isSilent, database)
           resolve(treeChildren)
         })
         .catch(() => {
@@ -83,6 +85,7 @@ export default function useSiderTabs() {
         })
     })
 
+  // Deprecated.
   const loadMoreDetails = async (nodeData: TableTreeParent, isSilent?: boolean) => {
     isRefreshingDetails.value[nodeData.key] = true
     const createTable = new Promise<object>((resolve, reject) => {
@@ -174,10 +177,10 @@ export default function useSiderTabs() {
   }
 
   const loadMore = async (nodeData: TableTreeParent) => {
-    if (nodeData.childrenType === 'details') {
-      return loadMoreDetails(nodeData)
-    }
-    return loadMoreColumns(nodeData)
+    // if (nodeData.childrenType === 'details') {
+    //   return loadMoreDetails(nodeData)
+    // }
+    return loadMoreColumns(nodeData, false, databaseActiveKeys.value[0])
   }
 
   return {

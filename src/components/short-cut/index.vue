@@ -22,6 +22,7 @@ a-tooltip(:content="codeInfo.code")
     type: string
     node: TreeChild
     parent: TableTreeParent
+    database: string
   }>()
 
   const { inputFromNewLineToQueryCode } = useQueryCode()
@@ -47,7 +48,7 @@ a-tooltip(:content="codeInfo.code")
       return
     }
     isLoading.value = true
-    await loadMoreColumns(nodeData)
+    await loadMoreColumns(nodeData, false, props.database)
     isLoading.value = false
   }
 

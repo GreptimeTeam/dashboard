@@ -165,21 +165,7 @@ a-layout.new-layout
         width: 13px;
       }
     }
-    .arco-space.table-buttons {
-      > .arco-space-item:nth-of-type(1) {
-        display: none;
-      }
-      > .arco-space-item:nth-of-type(2) {
-        display: none;
-      }
-      > .arco-space-item:nth-of-type(3) {
-        margin-right: 0;
-        .arco-btn-size-small.arco-btn-only-icon {
-          width: 24px;
-          height: 24px;
-        }
-      }
-    }
+
     .title-copy {
       .arco-btn-size-medium.arco-btn-only-icon {
         width: 24px;

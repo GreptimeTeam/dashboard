@@ -11,7 +11,7 @@ a-trigger#time-select(
     template(#icon)
       svg.icon-16
         use(href="#time")
-    div(v-if="isRelative") {{ relativeTimeMap[timeLength] || props.emptyStr}}
+    div(v-if="isRelative") {{ relativeTimeMap[timeLength] || props.emptyStr }}
     div(v-else) {{ `${dayjs.unix(timeRange[0]).format('YYYY-MM-DD HH:mm:ss')} - ${dayjs.unix(timeRange[1]).format('YYYY-MM-DD HH:mm:ss')} ` }}
   template(#content)
     a-space.hide

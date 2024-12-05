@@ -91,7 +91,7 @@ axios.interceptors.response.use(
         if (ignoreList.indexOf(tableName) === -1) {
           Message.error({
             content: data.error || 'Error',
-            duration: 5 * 1000,
+            duration: 3 * 1000,
             closable: true,
             resetOnHover: true,
           })
@@ -124,7 +124,7 @@ axios.interceptors.response.use(
     if (!isInflux && ignoreList.indexOf(tableName) === -1) {
       Message.error({
         content: data.error || 'Request Error',
-        duration: 5 * 1000,
+        duration: 3 * 1000,
         closable: true,
         resetOnHover: true,
       })

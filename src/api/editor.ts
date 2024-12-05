@@ -66,34 +66,36 @@ const getDatabases = () => {
   return axios.post(sqlUrl, makeSqlData(`show databases`))
 }
 
-const getTables = (limit?: number, offset?: number) => {
+const getTables = (limit?: number, offset?: number, database?: string) => {
   const appStore = useAppStore()
   const suffix = `limit ${limit} offset ${offset}`
   return axios.post(
     sqlUrl,
     makeSqlData(
-      `select * from information_schema.tables where table_schema='${appStore.database}' order by table_name ${
-        limit ? suffix : ''
-      };`
+      `select * from information_schema.tables where table_schema='${
+        database || appStore.database
+      }' order by table_name ${limit ? suffix : ''};`
     ),
     addDatabaseParams()
   )
 }
 
-const fetchTablesCount = () => {
+const fetchTablesCount = (database?: string) => {
   const appStore = useAppStore()
   return axios.post(
     sqlUrl,
-    makeSqlData(`select count(*) from information_schema.tables where table_schema='${appStore.database}';`)
+    makeSqlData(`select count(*) from information_schema.tables where table_schema='${database || appStore.database}';`)
   )
 }
 
-const getTableByName = (tableName: string) => {
+const getTableByName = (tableName: string, database?: string) => {
   const appStore = useAppStore()
   return axios.post(
     sqlUrl,
     makeSqlData(
-      `select * from information_schema.columns where table_name='${tableName}' and table_schema='${appStore.database}';`
+      `select * from information_schema.columns where table_name='${tableName}' and table_schema='${
+        database || appStore.database
+      }';`
     )
   )
 }

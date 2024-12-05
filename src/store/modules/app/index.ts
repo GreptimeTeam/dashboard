@@ -110,22 +110,51 @@ const useAppStore = defineStore('app', {
     async fetchDatabases() {
       try {
         const res: any = await editorAPI.getDatabases()
-        this.databaseList = res.output[0].records.rows.flat()
-        if (this.$state.database && this.databaseList.includes(this.$state.database)) {
-          this.database = this.$state.database
-        } else if (this.databaseList.length) {
-          this.setDefaultDatabase()
-        }
-        // update database in local storage
         this.updateConfigStorage({ database: this.database })
+        this.databaseList = res.output[0].records.rows.map((item: string[]) => item[0])
+        this.databaseList = this.databaseList.sort((a: string, b: string) => {
+          if (a === 'public') {
+            return -1
+          }
+          if (b === 'public') {
+            return 1
+          }
+          if (a === 'greptime_private' || a === 'information_schema') {
+            return 1
+          }
+          if (b === 'greptime_private' || b === 'information_schema') {
+            return -1
+          }
+          return 0
+        })
+
+        if (!this.databaseList.includes(this.database)) {
+          this.database = this.databaseList[0]
+        }
+        const { databaseActiveKeys: keys } = storeToRefs(useDataBaseStore())
+        keys.value = [this.database]
+
+        return true
       } catch (error) {
         // some error
+
+        this.databaseList = []
+        return false
       }
     },
     setDefaultDatabase() {
       this.database = this.databaseList.includes('public')
         ? 'public'
         : this.databaseList.find((item: string) => item !== 'information_schema') || this.databaseList[0]
+    },
+
+    async getDBandTables() {
+      const databaseStore = useDataBaseStore()
+      const hasDB = await this.fetchDatabases()
+      if (!hasDB) {
+        return
+      }
+      await databaseStore.checkTables()
     },
   },
 })
