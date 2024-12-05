@@ -90,17 +90,6 @@ const DASHBOARD: AppRouteRecordRaw = {
       ],
     },
     {
-      path: 'scripts',
-      name: 'scripts',
-      component: () => import('@/views/dashboard/scripts/index.vue'),
-      meta: {
-        locale: 'menu.dashboard.scripts',
-        requiresAuth: true,
-        icon: 'scripts',
-        roles: ['admin'],
-      },
-    },
-    {
       path: 'status',
       name: 'status',
       component: () => import('@/views/dashboard/status/index.vue'),
