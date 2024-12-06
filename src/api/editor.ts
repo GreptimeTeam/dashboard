@@ -20,11 +20,11 @@ const makeSqlData = (sql: string) => {
   })
 }
 
-const addDatabaseParams = () => {
+const addDatabaseParams = (database?: string) => {
   const appStore = useAppStore()
   return {
     params: {
-      db: appStore.database,
+      db: database || appStore.database,
     },
   } as AxiosRequestConfig
 }
@@ -100,8 +100,8 @@ const getTableByName = (tableName: string, database?: string) => {
   )
 }
 
-const runSQL = (code: string): Promise<HttpResponse> => {
-  return axios.post(sqlUrl, makeSqlData(code), addDatabaseParams())
+const runSQL = (code: string, database?: string): Promise<HttpResponse> => {
+  return axios.post(sqlUrl, makeSqlData(code), addDatabaseParams(database))
 }
 
 const checkScriptsTable = () => {

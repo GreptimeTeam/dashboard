@@ -85,8 +85,7 @@ export default function useSiderTabs() {
         })
     })
 
-  // Deprecated.
-  const loadMoreDetails = async (nodeData: TableTreeParent, isSilent?: boolean) => {
+  const loadMoreDetails = async (nodeData: TableTreeParent, isSilent?: boolean, database?: string) => {
     isRefreshingDetails.value[nodeData.key] = true
     const createTable = new Promise<object>((resolve, reject) => {
       if (nodeData.tableType !== 'BASE TABLE') {
@@ -97,7 +96,7 @@ export default function useSiderTabs() {
         return
       }
       editorAPI
-        .runSQL(`show create table "${nodeData.title}"`)
+        .runSQL(`show create table "${nodeData.title}"`, database)
         .then((res: any) => {
           const sql = `${res.output[0].records.rows[0][1]}`
           const regex = /ttl = '(\w)+'/g
@@ -123,7 +122,8 @@ export default function useSiderTabs() {
           .runSQL(
             nodeData.timeIndexName !== '%TIMESTAMP%'
               ? `select count(*), min (${nodeData.timeIndexName}), max (${nodeData.timeIndexName}) from "${nodeData.title}"`
-              : `select count(*) from "${nodeData.title}"`
+              : `select count(*) from "${nodeData.title}"`,
+            database
           )
           .then((res: any) => {
             const resArray = res.output[0].records.rows[0]
@@ -143,7 +143,7 @@ export default function useSiderTabs() {
           })
       }
       if (!nodeData.timeIndexName) {
-        loadMoreColumns(nodeData).then(() => getRowAndTime())
+        loadMoreColumns(nodeData, false, database).then(() => getRowAndTime())
       } else {
         getRowAndTime()
       }
@@ -171,15 +171,15 @@ export default function useSiderTabs() {
       info: createTableResult.value,
       class: 'details',
     })
-    addChildren(nodeData.key, children, nodeData.timeIndexName, 'details', isSilent)
+    addChildren(nodeData.key, children, nodeData.timeIndexName, 'details', isSilent, database)
     isRefreshingDetails.value[nodeData.key] = false
     return children
   }
 
   const loadMore = async (nodeData: TableTreeParent) => {
-    // if (nodeData.childrenType === 'details') {
-    //   return loadMoreDetails(nodeData)
-    // }
+    if (nodeData.childrenType === 'details') {
+      return loadMoreDetails(nodeData, false, databaseActiveKeys.value[0])
+    }
     return loadMoreColumns(nodeData, false, databaseActiveKeys.value[0])
   }
 
