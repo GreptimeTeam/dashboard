@@ -97,6 +97,14 @@
       })(),
     ])
   })
+  const appStore = useAppStore()
+  watch(
+    () => appStore.database,
+    () => {
+      // reload after local storage write complete
+      setTimeout(() => window.location.reload(), 100)
+    }
+  )
 </script>
 
 <style lang="less">
