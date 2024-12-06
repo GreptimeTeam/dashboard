@@ -126,7 +126,7 @@ const useLogQueryStore = defineStore('logQuery', () => {
 
   const mergeColumn = useLocalStorage('logquery-merge-column', true)
   const showKeys = useLocalStorage('logquery-show-keys', true)
-
+  const appStore = useAppStore()
   function getSchemas() {
     return editorAPI
       .runSQL(
@@ -137,7 +137,7 @@ const useLogQueryStore = defineStore('logQuery', () => {
           data_type
         FROM 
           information_schema.columns
-        Where table_schema != 'information_schema'
+        Where table_schema == '${appStore.database}'
         ORDER BY 
           table_name
         `
