@@ -1,5 +1,5 @@
 <template lang="pug">
-.container
+.container(:key="containerKey")
   div(style="padding: 0; background-color: var(--color-neutral-2); margin: 0")
     Toolbar
     SQLBuilder(
@@ -64,7 +64,7 @@
   const { dataStatusMap } = storeToRefs(useUserStore())
   const { checkTables } = useDataBaseStore()
 
-  const { getSchemas, getRelativeRange } = useLogQueryStore()
+  const { getSchemas, getRelativeRange, reset } = useLogQueryStore()
   const {
     rows,
     editorType,
@@ -87,16 +87,26 @@
     return `${queryNum.value}_${tableIndex.value}`
   })
 
-  onActivated(async () => {
-    await Promise.all([
-      (async () => {
-        if (!dataStatusMap.value.tables) {
-          await fetchDatabases()
-          await checkTables()
-        }
-      })(),
-    ])
-  })
+  Promise.all([
+    (async () => {
+      if (!dataStatusMap.value.tables) {
+        await fetchDatabases()
+        await checkTables()
+      }
+    })(),
+  ])
+
+  const appStore = useAppStore()
+  const containerKey = ref('')
+  watch(
+    () => appStore.database,
+    () => {
+      containerKey.value = String(Date.now())
+      reset()
+      getSchemas()
+      // setTimeout(() => window.location.reload(), 1500)
+    }
+  )
 </script>
 
 <style lang="less">
