@@ -64,7 +64,7 @@ export default {
   'dashboard.clearCode': 'Clear code',
   'dashboard.refresh': 'Refresh',
   'dashboard.hints.columns': 'View column name and type, create quick query from any column.',
-  'dashboard.hints.details': 'View metadata of the table.',
+  'dashboard.hints.details': 'Metadata of the table',
   'dashboard.hints.quickSelect': 'Shortcut for generating SQL query for the table.',
   'dashboard.hints.copy': 'Copy table name to clipboard.',
 }

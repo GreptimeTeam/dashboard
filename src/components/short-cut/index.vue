@@ -1,5 +1,5 @@
 <template lang="pug">
-a-tooltip(:content="codeInfo.code")
+a-tooltip(position="right" :content="codeInfo.code")
   a-button(
     type="text"
     size="small"
@@ -8,8 +8,8 @@ a-tooltip(:content="codeInfo.code")
     @click="clickShortCut(codeInfo.code, codeInfo.cursorPosition)"
     @mouseenter="hoverQuickSelect(node)"
   ) {{ label }}
-    template(v-if="label === ''" #icon)
-      svg.icon-16.icon-color
+    template(v-if="icon" #icon)
+      svg.icon-16.icon-color.query-icon
         use(href="#query")
 </template>
 
@@ -23,6 +23,7 @@ a-tooltip(:content="codeInfo.code")
     node: TreeChild
     parent: TableTreeParent
     database: string
+    icon?: boolean
   }>()
 
   const { inputFromNewLineToQueryCode } = useQueryCode()
@@ -57,37 +58,39 @@ a-tooltip(:content="codeInfo.code")
     switch (type) {
       case 'select*100':
         return {
-          code: formatter(`SELECT * FROM "${parent.title}"${orderBy}DESC LIMIT 100;`),
+          code: formatter(`SELECT * FROM ${props.database}."${parent.title}"${orderBy}DESC LIMIT 100;`),
           cursorPosition: 0,
         }
       case 'count':
         return {
-          code: formatter(`SELECT count(*) FROM "${parent.title}" GROUP BY ${node.title};`),
+          code: formatter(`SELECT count(*) FROM ${props.database}."${parent.title}" GROUP BY ${node.title};`),
           cursorPosition: 0,
         }
       case 'where=':
         return {
-          code: formatter(`SELECT * FROM "${parent.title}" WHERE ${node.title} = ${orderBy}DESC;`),
+          code: formatter(`SELECT * FROM ${props.database}."${parent.title}" WHERE ${node.title} = ${orderBy}DESC;`),
           cursorPosition: `${orderBy}DESC;`.length,
         }
       case 'select100':
         return {
-          code: formatter(`SELECT ${node.title} FROM "${parent.title}"${orderBy}DESC LIMIT 100;`),
+          code: formatter(`SELECT ${node.title} FROM ${props.database}."${parent.title}"${orderBy}DESC LIMIT 100;`),
           cursorPosition: 0,
         }
       case 'max':
         return {
-          code: formatter(`SELECT max(${node.title}) FROM "${parent.title}";`),
+          code: formatter(`SELECT max(${node.title}) FROM ${props.database}."${parent.title}";`),
           cursorPosition: 0,
         }
       case 'min':
         return {
-          code: formatter(`SELECT min(${node.title}) FROM "${parent.title}";`),
+          code: formatter(`SELECT min(${node.title}) FROM ${props.database}."${parent.title}";`),
           cursorPosition: 0,
         }
       case 'where<':
         return {
-          code: formatter(`SELECT * FROM "${parent.title}" WHERE ${parent.timeIndexName} < ${orderBy}DESC LIMIT 100;`),
+          code: formatter(
+            `SELECT * FROM ${props.database}."${parent.title}" WHERE ${parent.timeIndexName} < ${orderBy}DESC LIMIT 100;`
+          ),
           cursorPosition: `${orderBy}DESC LIMIT 100;`.length,
         }
       default:
