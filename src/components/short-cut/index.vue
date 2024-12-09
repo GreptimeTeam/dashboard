@@ -1,5 +1,5 @@
 <template lang="pug">
-a-popover(position="right" :content="codeInfo.code")
+a-tooltip(position="right" :content="codeInfo.code")
   a-button(
     type="text"
     size="small"

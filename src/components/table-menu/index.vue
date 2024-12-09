@@ -1,46 +1,63 @@
 <template lang="pug">
-a-dropdown.menu-dropdown(trigger="click" position="right")
+a-dropdown.tables(trigger="click" position="right")
   a-button.menu-button(type="text" @click="(event) => clickMenu(event, nodeData)")
     template(#icon)
       svg.icon-14.rotate-90
         use(href="#extra")
   template(#content)
     a-doption(
-      :class="nodeData.childrenType === 'columns' && expandedKeys?.includes(nodeData.key) ? 'selected' : 'icon-color'"
+      v-if="!isColumn"
+      click.stop
+      :class="nodeData.childrenType === 'columns' && expandedKeys?.includes(nodeData.key) ? 'selected' : ''"
+      @click="(event) => expandChildren(event, nodeData, 'columns')"
     )
-      a-button(type="text" size="small" @click="(event) => expandChildren(event, nodeData, 'columns')")
+      template(#icon)
+        svg.icon
+          use(href="#columns")
+      | {{ $t('dashboard.columns') }}
+    a-tooltip(position="right" :content="$t('dashboard.hints.details')")
+      a-doption(
+        v-if="!isColumn"
+        :class="nodeData.childrenType === 'details' && expandedKeys?.includes(nodeData.key) ? 'selected' : ''"
+        @click="(event) => expandChildren(event, nodeData, 'details')"
+      )
         template(#icon)
           svg.icon
-            use(href="#columns")
-        | {{ $t('dashboard.columns') }}
-    a-doption(
-      :class="nodeData.childrenType === 'details' && expandedKeys?.includes(nodeData.key) ? 'selected' : 'icon-color'"
-    )
-      a-popover(position="right" :content="$t('dashboard.hints.details')")
-        a-button(type="text" size="small" @click="(event) => expandChildren(event, nodeData, 'details')")
-          template(#icon)
-            svg.icon
-              use(href="#details")
-          | {{ $t('dashboard.details') }}
-    a-doption(click.stop)
+            use(href="#details")
+        | {{ $t('dashboard.details') }}
+    a-doption(v-if="!isColumn" click.stop)
       a-space(v-for="item of SHORTCUT_MAP['TABLE']") 
         ShortCut(
           icon
           :type="item.value"
           :node="nodeData"
           :parent="nodeData.iconType ? expandedTablesTree[nodeData.parentKey] : nodeData"
-          :label="'Quick select'"
+          :label="'Query table'"
           :database="database"
         )
-    a-doption
-      a-popover(content="Copy to Clipboard" position="right")
-        a-button(type="text" size="small" @click="copy(nodeData.title)")
-          template(#icon)
-            svg.icon.icon-color(v-if="copied === false")
-              use(href="#copy-new")
-            svg.icon(v-else)
-              icon-check.success-color
-          | Copy name
+    a-doption(v-else)
+      a-dropdown.quick-select(trigger="hover" position="right")
+        a-space(:size="6")
+          svg.icon.icon-color
+            use(href="#query")
+          | {{ $t('dashboard.quickSelect') }}
+        template(#content)
+          a-doption(v-for="item of SHORTCUT_MAP[nodeData.iconType]")
+            ShortCut(
+              :type="item.value"
+              :node="nodeData"
+              :parent="nodeData.iconType ? expandedTablesTree[nodeData.parentKey] : nodeData"
+              :label="item.label"
+              :database="database"
+            )
+    a-tooltip(content="Copy to Clipboard" position="right")
+      a-doption(@click="copy(nodeData.title)")
+        template(#icon)
+          svg.icon.icon-color(v-if="copied === false")
+            use(href="#copy-new")
+          svg.icon(v-else)
+            icon-check.success-color
+        | Copy name
 </template>
 
 <script lang="ts" setup name="TableMenu">
@@ -50,9 +67,10 @@ a-dropdown.menu-dropdown(trigger="click" position="right")
 
   const props = defineProps<{
     nodeData: TableTreeParent
-    expandedKeys: number[]
-    expandedTablesTree: TableTreeParent[]
+    expandedKeys?: number[]
+    expandedTablesTree?: TableTreeParent[]
     database: string
+    isColumn?: boolean
   }>()
   const emits = defineEmits(['expandChildren'])
   const source = ref('')
@@ -65,6 +83,28 @@ a-dropdown.menu-dropdown(trigger="click" position="right")
 
   const SHORTCUT_MAP: { [key: string]: OptionsType[] } = {
     TABLE: [{ value: 'select*100', label: 'Query table' }],
+    FIELD: [
+      { value: 'select100', label: 'Query column' },
+      {
+        value: 'max',
+        label: 'Query max',
+      },
+      {
+        value: 'min',
+        label: 'Query min',
+      },
+    ],
+    TAG: [
+      { value: 'count', label: 'Count by' },
+      { value: 'where=', label: 'Filter by' },
+    ],
+    TIMESTAMP: [
+      { value: 'select*100', label: 'Query table' },
+      {
+        value: 'where<',
+        label: 'Filter by',
+      },
+    ],
   }
 
   const clickMenu = (event: MouseEvent, nodeData: TableTreeParent) => {
@@ -80,26 +120,6 @@ a-dropdown.menu-dropdown(trigger="click" position="right")
     border-radius: 0;
     width: 100%;
     justify-content: flex-start;
-    padding: 0 28px 0 12px;
-  }
-  .arco-dropdown-option {
-    .arco-dropdown-option-content {
-      .arco-btn-text[type='button'] {
-        svg {
-          color: var(--small-font-color);
-        }
-      }
-    }
-    &.selected {
-      .arco-dropdown-option-content {
-        .arco-btn-text[type='button'] {
-          color: var(--brand-color);
-          svg {
-            color: var(--brand-font-color);
-          }
-        }
-      }
-    }
   }
 
   .menu-button {
@@ -119,5 +139,40 @@ a-dropdown.menu-dropdown(trigger="click" position="right")
   :deep(.query-icon) {
     width: 14px;
     height: 14px;
+  }
+</style>
+
+<style lang="less">
+  .tables {
+    .arco-dropdown {
+      .arco-dropdown-option {
+        &:not(.arco-dropdown-option-disabled, .arco-dropdown-option-has-suffix):hover {
+          background-color: var(--list-hover-color);
+        }
+        .arco-dropdown-option-content {
+          .arco-btn-text[type='button'] {
+            padding: 0 16px 0 0;
+            svg {
+              color: var(--small-font-color);
+            }
+            &:hover {
+              background: transparent;
+            }
+          }
+        }
+        &.arco-dropdown-option-has-suffix {
+          padding: 0;
+          &:hover {
+            background: transparent;
+          }
+        }
+      }
+      .arco-dropdown-option.selected {
+        color: var(--brand-color);
+        svg {
+          color: var(--brand-font-color);
+        }
+      }
+    }
   }
 </style>

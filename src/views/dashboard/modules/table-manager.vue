@@ -71,28 +71,13 @@ a-card.table-manager(:bordered="false")
               .tree-data
                 transition(name="slide-fade")
                   .data-type {{ nodeData.dataType }}
-                a-dropdown.quick-select(v-if="nodeData.dataType" trigger="click" position="right")
-                  a-tooltip(mini :content="$t('dashboard.quickSelect')")
-                    a-button(type="text" size="small")
-                      template(#icon)
-                        svg.icon-16.icon-color
-                          use(href="#query")
-                  template(#content)
-                    a-doption(v-for="item of SHORTCUT_MAP[nodeData.iconType || 'TABLE']")
-                      a-spin(style="width: 100%" :loading="nodeData.columns && !nodeData.columns.length")
-                        ShortCut(
-                          :type="item.value"
-                          :node="nodeData"
-                          :parent="nodeData.iconType ? expandedTablesTree[nodeData.parentKey] : nodeData"
-                          :label="item.label"
-                          :database="database"
-                        )
-                TextCopyable.title-copy.columns(
-                  type="text"
-                  :data="nodeData.title"
-                  :show-data="false"
-                  @click.stop
-                )
+                TableMenu(
+                  isColumn
+                  :nodeData="nodeData"
+                  :database="database"
+                  :expandedKeys="expandedKeys"
+                  :expandedTablesTree="expandedTablesTree"
+                  @expandChildren="expandChildren")
             .detail-row(v-else)
               .count-and-time(v-if="nodeData.title === 'rowAndTime'")
                 a-space(:size="4")

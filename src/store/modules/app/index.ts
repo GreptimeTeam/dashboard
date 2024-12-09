@@ -49,6 +49,7 @@ const useAppStore = defineStore('app', {
     },
 
     async login(form: Partial<AppState>) {
+      // TODO: add a save and test button
       try {
         this.updateSettings(form)
         // check if settings are valid
