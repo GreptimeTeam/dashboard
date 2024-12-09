@@ -129,8 +129,21 @@ const useLogQueryStore = defineStore('logQuery', () => {
   const appStore = useAppStore()
   function getSchemas() {
     const db = appStore.database
-    const tableCatalog = db.split('-').slice(0, -1).join('-') || 'greptime'
-    const tableSchema = db.split('-').slice(-1).join('-')
+    const tableCatalog = db?.split('-').slice(0, -1).join('-')
+    const tableSchema = db?.split('-').slice(-1).join('-')
+
+    const conditions = []
+    if (tableCatalog) {
+      conditions.push(`table_catalog='${tableCatalog}'`)
+    }
+    if (tableSchema) {
+      conditions.push(`table_schema='${tableSchema}'`)
+    }
+    let where = ''
+    if (conditions.length) {
+      where = `WHERE ${conditions.join(' and ')}`
+    }
+
     return editorAPI
       .runSQL(
         `SELECT 
@@ -140,7 +153,7 @@ const useLogQueryStore = defineStore('logQuery', () => {
           data_type
         FROM 
           information_schema.columns
-        Where table_catalog == '${tableCatalog}' and table_schema='${tableSchema}'
+        ${where}
         ORDER BY 
           table_name
         `
