@@ -145,5 +145,6 @@
   "resolutions": {
     "bin-wrapper": "npm:bin-wrapper-china",
     "gifsicle": "5.2.0"
-  }
+  },
+  "packageManager": "pnpm@9.1.0"
 }
