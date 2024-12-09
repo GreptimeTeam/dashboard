@@ -273,6 +273,13 @@ const useLogQueryStore = defineStore('logQuery', () => {
     }
   })
 
+  function reset() {
+    inputTableName.value = ''
+    sql.value = ''
+    editingSql.value = ''
+    queryForm.conditions = []
+    rows.value = []
+  }
   return {
     sql,
     query,
@@ -304,6 +311,7 @@ const useLogQueryStore = defineStore('logQuery', () => {
     dataLoadFlag,
     showKeys,
     queryColumns,
+    reset,
   }
 })
 export default useLogQueryStore
