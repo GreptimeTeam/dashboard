@@ -128,6 +128,9 @@ const useLogQueryStore = defineStore('logQuery', () => {
   const showKeys = useLocalStorage('logquery-show-keys', true)
   const appStore = useAppStore()
   function getSchemas() {
+    const db = appStore.database
+    const tableCatalog = db.split('-').slice(0, -1).join('-') || 'greptime'
+    const tableSchema = db.split('-').slice(-1).join('-')
     return editorAPI
       .runSQL(
         `SELECT 
@@ -137,7 +140,7 @@ const useLogQueryStore = defineStore('logQuery', () => {
           data_type
         FROM 
           information_schema.columns
-        Where table_schema == '${appStore.database}'
+        Where table_catalog == '${tableCatalog}' and table_schema='${tableSchema}'
         ORDER BY 
           table_name
         `
