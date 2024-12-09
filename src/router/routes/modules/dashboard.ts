@@ -94,6 +94,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       component: () => import('@/views/dashboard/logs/query/index.vue'),
       name: 'log-query',
       meta: {
+        ignoreCache: true,
         locale: 'menu.dashboard.logquery',
         requiresAuth: false,
         icon: 'log',

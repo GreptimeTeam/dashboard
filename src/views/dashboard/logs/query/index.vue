@@ -101,8 +101,7 @@
   watch(
     () => appStore.database,
     () => {
-      // reload after local storage write complete
-      setTimeout(() => window.location.reload(), 100)
+      setTimeout(() => window.location.reload(), 1500)
     }
   )
 </script>
