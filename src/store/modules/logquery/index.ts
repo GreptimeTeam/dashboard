@@ -204,10 +204,10 @@ const useLogQueryStore = defineStore('logQuery', () => {
       let val = escapeSqlString(condition.value)
       if (condition.op === 'not contains') {
         val = `-"${val}"`
-      } else if (condition.op === 'match sequence') {
+      } else if (condition.op === 'contains') {
         val = `"${val}"`
       }
-      return `MATCHES(${condition.field.name},'"${val}"')`
+      return `MATCHES(${condition.field.name},'${val}')`
     }
     return `${condition.field.name} ${condition.op} '"${escapeSqlString(condition.value)}"'`
   }
