@@ -75,6 +75,7 @@
     limit,
     queryLoading,
     refresh,
+    editingTableName,
   } = storeToRefs(useLogQueryStore())
   // parse time range when ts column confirmed
   watchOnce(tsColumn, () => {
@@ -108,9 +109,10 @@
   // const queryLoading = ref(false)
 
   function handleQuery() {
-    if (!inputTableName.value) {
+    if (!editingTableName.value) {
       return
     }
+    inputTableName.value = editingTableName.value
     sqlData.value = editingSql.value
     if (editorType.value === 'text') {
       sqlData.value = processSQL(sqlData.value, tsColumn.value?.name, limit.value)

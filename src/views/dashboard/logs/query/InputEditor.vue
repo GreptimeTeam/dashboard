@@ -63,7 +63,7 @@
 
   // parse table name
   watch(
-    editingSql,
+    sql,
     () => {
       inputTableName.value = parseTable(editingSql.value)
       limit.value = parseLimit(editingSql.value)

@@ -43,7 +43,8 @@ const useLogQueryStore = defineStore('logQuery', () => {
 
   const rangeTime = ref<Array<string>>([])
   const time = ref(10)
-  const inputTableName = ref('')
+  const inputTableName = ref('') // table after query
+  const editingTableName = ref('') // table in editing
 
   const columns = computed(() => {
     if (!inputTableName.value) {
@@ -242,15 +243,15 @@ const useLogQueryStore = defineStore('logQuery', () => {
   }
 
   watch(
-    [queryForm, unifiedRange, limit],
+    [queryForm, unifiedRange, limit, editingTableName],
     () => {
-      if (!inputTableName.value) {
+      if (!editingTableName.value) {
         return
       }
       if (editorType.value !== 'builder') {
         return
       }
-      let str = `SELECT * FROM ${inputTableName.value}`
+      let str = `SELECT * FROM ${editingTableName.value}`
       const where = buildCondition()
       if (where.length) {
         str += ` WHERE ${where.join('')}`
@@ -274,6 +275,7 @@ const useLogQueryStore = defineStore('logQuery', () => {
   })
 
   function reset() {
+    editingTableName.value = ''
     inputTableName.value = ''
     sql.value = ''
     editingSql.value = ''
@@ -290,6 +292,7 @@ const useLogQueryStore = defineStore('logQuery', () => {
     selectedRowKey,
     rangeTime,
     inputTableName,
+    editingTableName,
     tsColumn,
     time,
     unifiedRange,
