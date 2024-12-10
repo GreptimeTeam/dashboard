@@ -116,11 +116,13 @@
       editingSql.value = processSQL(editingSql.value, tsColumn.value?.name, limit.value)
     }
     sqlData.value = editingSql.value
-    if (refresh.value) {
-      mayRefresh()
-    } else {
-      queryNum.value += 1
-    }
+    nextTick(() => {
+      if (refresh.value) {
+        mayRefresh()
+      } else {
+        queryNum.value += 1
+      }
+    })
 
     // queryLoading.value = true
     // query().finally(() => {

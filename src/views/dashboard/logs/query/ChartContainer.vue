@@ -23,7 +23,7 @@ a-card
   import FunnelChart from './FunnelChart.vue'
 
   const currChart = ref('count')
-  const { columns } = storeToRefs(useLogQueryStore())
+  const { columns, inputTableName } = storeToRefs(useLogQueryStore())
   const frequencyField = ref('')
   const filterFields = computed(() =>
     columns.value.filter((column) => column.data_type === 'string').map((column) => column.name)
@@ -39,6 +39,10 @@ a-card
       return 'Write Count '
     }
     return 'Frequency Distribution'
+  })
+
+  watch(inputTableName, () => {
+    currChart.value = 'count'
   })
 </script>
 
