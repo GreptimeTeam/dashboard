@@ -7,7 +7,7 @@
       style="padding: 10px 20px; border: 1px solid var(--color-neutral-3); border-top: none; background-color: var(--color-bg-2)"
     )
     InputEditor(v-else)
-  CountChart.block(
+  ChartContainer.block(
     v-if="showChart"
     style="margin: 5px 0 0; padding: 10px 0; background-color: var(--color-bg-2); border: 1px solid var(--color-neutral-3); flex-shrink: 0"
   )
@@ -55,7 +55,7 @@
   import useLogQueryStore from '@/store/modules/logquery'
   import InputEditor from './InputEditor.vue'
   import LogTableData from './TableData.vue'
-  import CountChart from './CountChart.vue'
+  import ChartContainer from './ChartContainer.vue'
   import SQLBuilder from './SQLBuilder.vue'
   import Toolbar from './Toolbar.vue'
   import Pagination from './Pagination.vue'

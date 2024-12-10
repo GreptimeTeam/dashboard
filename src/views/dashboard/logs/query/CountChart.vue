@@ -114,7 +114,7 @@ VCharts(
   })
 
   const countSql = computed(() => {
-    if (!tsColumn.value) {
+    if (!tsColumn.value || !inputTableName.value) {
       return ''
     }
 

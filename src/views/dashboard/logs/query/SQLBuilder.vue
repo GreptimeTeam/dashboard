@@ -7,12 +7,11 @@ a-form(
 )
   a-form-item(field="table" label="Table")
     a-select(
-      v-model="inputTableName"
+      v-model="editingTableName"
       style="width: auto"
       placeholder="Select Table"
       :options="tables"
       :allow-search="true"
-      :trigger-props="{ autoFitPopupMinWidth: true }"
       @change="handleTableChange"
     )
   a-form-item(label="Where" field="conditions")
@@ -28,7 +27,7 @@ a-form(
             @change="() => handleFieldChange(condition)"
           )
             a-option(
-              v-for="column in tableMap[inputTableName]"
+              v-for="column in tableMap[editingTableName]"
               :key="column.label"
               :label="column.name"
               :value="column"
@@ -61,7 +60,15 @@ a-form(
   import useLogQueryStore, { typeMap } from '@/store/modules/logquery'
   import type { Condition } from '@/views/dashboard/logs/query/types'
 
-  const { tableMap, inputTableName, tsColumn, queryForm: form, limit } = storeToRefs(useLogQueryStore())
+  const {
+    tableMap,
+    inputTableName,
+    tsColumn,
+    queryForm: form,
+    limit,
+    editingTableName,
+  } = storeToRefs(useLogQueryStore())
+  const { getOpByField } = useLogQueryStore()
 
   // inputTableName.value = 'syslog'
   const tables = computed<Array<string>>(() => {
@@ -69,7 +76,7 @@ a-form(
   })
 
   function addCondition() {
-    if (!inputTableName.value) {
+    if (!editingTableName.value) {
       return
     }
     form.value.conditions.push({
@@ -78,25 +85,6 @@ a-form(
       value: '',
       rel: 'and',
     })
-  }
-
-  type TypeKey = keyof typeof typeMap
-  const opMap = {
-    String: ['contains', 'not contains', '=', '!=', 'like'],
-    Number: ['=', '!=', '>', '>=', '<', '<='],
-    Time: ['>', '>=', '<', '<='],
-  }
-  type OpKey = keyof typeof opMap
-
-  function getOpByField(field: string): string[] {
-    const fields = tableMap.value[inputTableName.value]
-    const index = fields.findIndex((f) => f.name === field)
-    if (index === -1) {
-      return []
-    }
-    const type = fields[index].data_type as TypeKey
-    const opKey = typeMap[type] as OpKey
-    return opMap[opKey] || []
   }
 
   function removeCondition(index: number) {
