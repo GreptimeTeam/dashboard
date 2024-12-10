@@ -171,6 +171,9 @@
   })
 
   const dataFields = computed(() => {
+    if (!tsColumn.value) {
+      return displayedColumns.value[inputTableName.value]
+    }
     return displayedColumns.value[inputTableName.value].filter((field) => field !== tsColumn.value.name)
   })
   const getEntryFields = (record) => {
