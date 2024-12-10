@@ -61,18 +61,6 @@
     })
   })
 
-  // parse table name
-  watch(
-    sql,
-    () => {
-      inputTableName.value = parseTable(editingSql.value)
-      limit.value = parseLimit(editingSql.value)
-    },
-    {
-      immediate: true,
-    }
-  )
-
   const customSelectionTheme = EditorView.theme({
     '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection':
       {

@@ -58,7 +58,7 @@
   import { watchOnce, useStorage } from '@vueuse/core'
   import useLogQueryStore from '@/store/modules/logquery'
   import { relativeTimeMap, relativeTimeOptions } from '../../config'
-  import { parseTimeRange, processSQL } from './until'
+  import { parseTimeRange, processSQL, parseTable, parseLimit, addTsCondition } from './until'
   import SavedQuery from './SavedQuery.vue'
   import ExportLog from './ExportLog.vue'
 
@@ -77,18 +77,7 @@
     refresh,
     editingTableName,
   } = storeToRefs(useLogQueryStore())
-  // parse time range when ts column confirmed
-  watchOnce(tsColumn, () => {
-    if (tsColumn.value && editorType.value === 'text') {
-      time.value = 0
-      const parseResult = parseTimeRange(sqlData.value, tsColumn.value.name, tsColumn.value.multiple)
-      if (Array.isArray(parseResult) && parseResult.length === 2) {
-        rangeTime.value = parseResult
-      } else {
-        time.value = parseResult as number
-      }
-    }
-  })
+  const { getRelativeRange } = useLogQueryStore()
 
   let refreshTimeout = -1
   function mayRefresh() {
@@ -113,15 +102,27 @@
       return
     }
     inputTableName.value = editingTableName.value
-    sqlData.value = editingSql.value
+
     if (editorType.value === 'text') {
-      sqlData.value = processSQL(sqlData.value, tsColumn.value?.name, limit.value)
+      inputTableName.value = parseTable(editingSql.value)
+      limit.value = parseLimit(editingSql.value)
     }
-    if (refresh.value) {
-      mayRefresh()
-    } else {
-      queryNum.value += 1
-    }
+    nextTick(() => {
+      if (editorType.value === 'text') {
+        if (tsColumn.value) {
+          const { multiple } = tsColumn.value
+          const [start, end] = getRelativeRange(multiple)
+          editingSql.value = addTsCondition(editingSql.value, tsColumn.value.name, start, end)
+        }
+        editingSql.value = processSQL(editingSql.value, tsColumn.value?.name, limit.value)
+      }
+      sqlData.value = editingSql.value
+      if (refresh.value) {
+        mayRefresh()
+      } else {
+        queryNum.value += 1
+      }
+    })
 
     // queryLoading.value = true
     // query().finally(() => {
