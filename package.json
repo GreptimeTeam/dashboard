@@ -8,8 +8,8 @@
   "scripts": {
     "dev": "vite --config ./config/vite.config.dev.ts",
     "cloud": "VITE_ROLE=cloud vite --config ./config/vite.config.dev.ts",
-    "build": "vite build --config ./config/vite.config.prod.ts && vue-tsc --noEmit",
-    "build:docker": "vite build --config ./config/vite.config.prod.ts --base /dashboard/ && vue-tsc --noEmit",
+    "build": "vite build --config ./config/vite.config.prod.ts",
+    "build:docker": "vite build --config ./config/vite.config.prod.ts --base /dashboard/",
     "build:test": "vite build --config ./config/vite.config.prod.ts --mode test --base /dashboard/ && vue-tsc --noEmit",
     "build:staging": "vite build --config ./config/vite.config.prod.ts --mode staging --base /dashboard/ && vue-tsc --noEmit",
     "report": "cross-env REPORT=true pnpm run build",
