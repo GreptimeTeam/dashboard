@@ -90,7 +90,7 @@ export function addTsCondition(sql: string, column: string, start: number | stri
     return replaceSql
   }
   whereIndex = findWhereClausePosition(sql)
-  return `${sql.slice(0, whereIndex)} where ${column} >= ${start} and ${column} < ${end} ${sql.slice(whereIndex)}`
+  return `${sql.slice(0, whereIndex - 1)} WHERE ${column} >= ${start} and ${column} < ${end} ${sql.slice(whereIndex)}`
 }
 
 export const TableNameReg = /(?<=from|FROM)\s+([^\s;]+)/
@@ -197,7 +197,7 @@ export function processSQL(sql: string, tsColumn: string | undefined, limit: num
   let orderByClause = ''
   const upperSql = sql.toUpperCase()
   if (upperSql.indexOf('ORDER BY') === -1 && tsColumn) {
-    orderByClause = ` ORDER BY ${tsColumn} DESC `
+    orderByClause = ` ORDER BY ${tsColumn} DESC`
   }
   // Check if LIMIT exists
   const limitMatch = sql.match(/\bLIMIT\b/i)
@@ -208,7 +208,7 @@ export function processSQL(sql: string, tsColumn: string | undefined, limit: num
     return `${sql.slice(0, index - 1)}${orderByClause} ${sql.slice(index)}`
   }
 
-  return `${sql}${orderByClause}LIMIT ${limit}`.trim()
+  return `${sql}${orderByClause} LIMIT ${limit}`.trim()
 }
 
 export function parseLimit(sql: string) {
