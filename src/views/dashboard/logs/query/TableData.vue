@@ -9,8 +9,7 @@
     :pagination="false"
     :row-selection="rowSelection"
     :bordered="false"
-    :class="{ wrap_table: wrapLine, single_column: mergeColumn, multiple_column: !mergeColumn }"
-    @row-click="handleRowClick"
+    :class="{ wrap_table: wrapLine, single_column: mergeColumn, multiple_column: !mergeColumn, builder_type: editorType === 'builder' }"
   )
     template(#columns)
       template(v-for="column in tableColumns")
@@ -21,7 +20,7 @@
           :header-cell-style="column.headerCellStyle"
         )
           template(#cell="{ record }")
-            | {{ renderTs(record, column.dataIndex) }}
+            span(style="cursor: pointer" @click="() => handleTsClick(record)") {{ renderTs(record, column.dataIndex) }}
           template(#title)
             a-tooltip(
               placement="top"
@@ -38,30 +37,46 @@
           :header-cell-style="column.headerCellStyle"
         )
           template(#cell="{ record }")
-            span.entity-field(v-for="field in getEntryFields(record)")
+            span.entity-field.clickable(
+              v-for="field in getEntryFields(record)"
+              @click="(event) => handleContextMenu(record, field[0], event)"
+            )
               template(v-if="showKeys")
                 span(style="color: var(--color-text-3)")
                   | {{ field[0] }}:
                 | {{ field[1] }}
               template(v-else)
                 | {{ field[1] }}
-        a-table-column(
+        a-table-column.clickable(
           v-else
           :data-index="column.dataIndex"
           :title="column.title"
           :header-cell-style="column.headerCellStyle"
         )
+          template(#cell="{ record }")
+            span.clickable(@click="(event) => handleContextMenu(record, column.dataIndex, event)") {{ record[column.dataIndex] }}
 
   LogDetail(v-model:visible="detailVisible")
+  a-dropdown#td-context(
+    v-model:popup-visible="contextMenuVisible"
+    trigger="custom"
+    :style="{ top: `${contextMenuPosition.y}px`, left: `${contextMenuPosition.x}px` }"
+    @clickoutside="hideContextMenu"
+    @select="handleMenuClick"
+  ) 
+    template(#content)
+      a-doption(value="copy") Copy Field Value
+      a-dsubmenu(trigger="hover") Filter
+        template(#content)
+          a-doption(v-for="op in filterOptions" :value="`filter_${op}`") {{ op }} value
 </template>
 
 <script setup lang="ts" name="LogTableData">
+  import { Message } from '@arco-design/web-vue'
   import { useElementSize, useLocalStorage } from '@vueuse/core'
   import useLogQueryStore from '@/store/modules/logquery'
-  import type { TableColumnData } from '@arco-design/web-vue'
   import LogDetail from './LogDetail.vue'
   import { toDateStr, TimeTypes } from './until'
-  import type { TimeType } from './until'
 
   const props = defineProps({ wrapLine: Boolean, size: String })
   const { getColumnByName, query } = useLogQueryStore()
@@ -78,8 +93,12 @@
     dataLoadFlag,
     showKeys,
     queryColumns,
+    queryForm,
+    editingSql,
+    editorType,
   } = storeToRefs(useLogQueryStore())
 
+  const { getOpByField } = useLogQueryStore()
   const tsViewStr = ref(true)
   function changeTsView() {
     tsViewStr.value = !tsViewStr.value
@@ -171,6 +190,9 @@
   })
 
   const dataFields = computed(() => {
+    if (!tsColumn.value) {
+      return displayedColumns.value[inputTableName.value]
+    }
     return displayedColumns.value[inputTableName.value].filter((field) => field !== tsColumn.value.name)
   })
   const getEntryFields = (record) => {
@@ -197,7 +219,7 @@
 
   const detailVisible = ref(false)
 
-  const handleRowClick = (row) => {
+  const handleTsClick = (row) => {
     selectedRowKey.value = row.key
     detailVisible.value = true
   }
@@ -213,7 +235,48 @@
   watch([dataLoadFlag, tableColumns], () => {
     tableKey.value = `table_${Math.random()}`
   })
-  const formContainerStyle = computed(() => `height: ${height} px`)
+
+  const contextMenuVisible = ref(false)
+  const contextMenuPosition = ref({ x: 0, y: 0 })
+  const filterOptions = shallowRef([])
+  const triggerCell = ref()
+  const handleContextMenu = (row, columnName, event) => {
+    if (editorType.value !== 'builder') {
+      return
+    }
+    triggerCell.value = [row, columnName]
+    event.preventDefault()
+    filterOptions.value = getOpByField(columnName)
+    contextMenuPosition.value = { x: event.clientX, y: event.clientY }
+    contextMenuVisible.value = true
+  }
+  const hideContextMenu = () => {
+    contextMenuVisible.value = false
+  }
+  const handleMenuClick = async (action) => {
+    if (!triggerCell.value) {
+      return
+    }
+    const [row, columnName] = triggerCell.value
+    const columnMeta = getColumnByName(columnName)
+    if (action === 'copy') {
+      await navigator.clipboard.writeText(row[columnName])
+      Message.success('copy success')
+    } else if (action.startsWith('filter')) {
+      queryForm.value.conditions.push({
+        field: columnMeta,
+        op: action.split('_')[1],
+        value: row[columnName],
+        rel: 'and',
+      })
+
+      nextTick(() => {
+        sql.value = editingSql.value
+        queryNum.value += 1
+      })
+    }
+    hideContextMenu()
+  }
 </script>
 
 <style lang="less" scoped>
@@ -231,7 +294,7 @@
     width: 800px;
     overflow: hidden;
   }
-  :deep(.arco-table-td .arco-table-cell) {
+  .builder_type .clickable {
     cursor: pointer;
   }
   :deep(.arco-drawer) {
@@ -273,4 +336,8 @@
   // :deep(.arco-table-tr:hover) .entity-field {
   //   background-color: #fff;
   // }
+  #td-context {
+    position: absolute;
+    z-index: 999999;
+  }
 </style>

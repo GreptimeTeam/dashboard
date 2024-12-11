@@ -2,7 +2,6 @@
 a-button(size="small" type="text" @click="exportSql")
   | Export as csv
 </template>
-
 <script setup name="ExportLog" lang="ts">
   import fileDownload from 'js-file-download'
   import editorAPI from '@/api/editor'
@@ -34,5 +33,4 @@ a-button(size="small" type="text" @click="exportSql")
     })
   }
 </script>
-
 <style scoped lang="less"></style>

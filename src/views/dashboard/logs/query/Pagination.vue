@@ -109,7 +109,7 @@ a-space(v-if="pages.length")
   function loadPage(start: number, end: number, pageIndex: number) {
     pages.value[pageIndex].loading = true
     const tsName = tsColumn.value?.name as string
-    const pageSql = addTsCondition(sql.value, tsName, start, end)
+    const pageSql = addTsCondition(sql.value, tsName, start, end + 1)
     queryPage(pageSql)
       .then(() => {
         const index = pages.value.findIndex((page) => page.start === start && page.end === end)

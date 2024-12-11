@@ -90,7 +90,7 @@ export function addTsCondition(sql: string, column: string, start: number | stri
     return replaceSql
   }
   whereIndex = findWhereClausePosition(sql)
-  return `${sql.slice(0, whereIndex)} where ${column} >= ${start} and ${column} < ${end} ${sql.slice(whereIndex)}`
+  return `${sql.slice(0, whereIndex - 1)} WHERE ${column} >= ${start} and ${column} < ${end} ${sql.slice(whereIndex)}`
 }
 
 export const TableNameReg = /(?<=from|FROM)\s+([^\s;]+)/
@@ -194,17 +194,21 @@ export function toDateStr(time: number, multiple: number, format?: string) {
 const LIMIT_RE = /LIMIT\s+(\d+)/
 
 export function processSQL(sql: string, tsColumn: string | undefined, limit: number) {
+  let orderByClause = ''
   const upperSql = sql.toUpperCase()
   if (upperSql.indexOf('ORDER BY') === -1 && tsColumn) {
-    sql += ` ORDER BY ${tsColumn} desc`
+    orderByClause = ` ORDER BY ${tsColumn} DESC`
   }
-  const limitResult = LIMIT_RE.exec(upperSql)
-  if (!limitResult) {
-    sql += ` LIMIT ${limit}`
-  } else {
-    sql.replace(LIMIT_RE, `LIMIT ${limit}`)
+  // Check if LIMIT exists
+  const limitMatch = sql.match(/\bLIMIT\b/i)
+
+  if (limitMatch) {
+    // Insert ORDER BY before LIMIT
+    const { index } = limitMatch
+    return `${sql.slice(0, index - 1)}${orderByClause} ${sql.slice(index)}`
   }
-  return sql
+
+  return `${sql}${orderByClause} LIMIT ${limit}`.trim()
 }
 
 export function parseLimit(sql: string) {

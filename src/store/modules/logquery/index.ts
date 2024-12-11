@@ -43,7 +43,8 @@ const useLogQueryStore = defineStore('logQuery', () => {
 
   const rangeTime = ref<Array<string>>([])
   const time = ref(10)
-  const inputTableName = ref('')
+  const inputTableName = ref('') // table after query
+  const editingTableName = ref('') // table in editing
 
   const columns = computed(() => {
     if (!inputTableName.value) {
@@ -82,8 +83,10 @@ const useLogQueryStore = defineStore('logQuery', () => {
   type Multiple = 1000 | 1000000 | 1000000000
   const multipleRe = /timestamp\((\d)\)/
   const dataLoadFlag = ref(0)
-  const tsColumn = computed<TSColumn>(() => {
-    const fields = tableMap.value[inputTableName.value] || []
+  const tsColumn = shallowRef<TSColumn>()
+
+  const getTsColumn = (tableName: string) => {
+    const fields = tableMap.value[tableName] || []
     const field = fields.filter((column) => column.data_type.toLowerCase().indexOf('timestamp') > -1)[0]
     if (!field) {
       return null
@@ -94,7 +97,7 @@ const useLogQueryStore = defineStore('logQuery', () => {
       multiple: (1000 ** (Number(timescale[1]) / 3)) as Multiple,
       ...field,
     }
-  })
+  }
 
   const query = () => {
     queryLoading.value = true
@@ -204,12 +207,12 @@ const useLogQueryStore = defineStore('logQuery', () => {
       let val = escapeSqlString(condition.value)
       if (condition.op === 'not contains') {
         val = `-"${val}"`
-      } else if (condition.op === 'match sequence') {
+      } else if (condition.op === 'contains') {
         val = `"${val}"`
       }
-      return `MATCHES(${condition.field.name},'"${val}"')`
+      return `MATCHES(${condition.field.name},'${val}')`
     }
-    return `${condition.field.name} ${condition.op} '"${escapeSqlString(condition.value)}"'`
+    return `${condition.field.name} ${condition.op} '${escapeSqlString(condition.value)}'`
   }
 
   function buildCondition() {
@@ -242,15 +245,16 @@ const useLogQueryStore = defineStore('logQuery', () => {
   }
 
   watch(
-    [queryForm, unifiedRange, limit],
+    [queryForm, unifiedRange, limit, editingTableName],
     () => {
-      if (!inputTableName.value) {
+      if (!editingTableName.value) {
         return
       }
       if (editorType.value !== 'builder') {
         return
       }
-      let str = `SELECT * FROM ${inputTableName.value}`
+      tsColumn.value = getTsColumn(editingTableName.value)
+      let str = `SELECT * FROM ${editingTableName.value}`
       const where = buildCondition()
       if (where.length) {
         str += ` WHERE ${where.join('')}`
@@ -273,13 +277,34 @@ const useLogQueryStore = defineStore('logQuery', () => {
     }
   })
 
+  type TypeKey = keyof typeof typeMap
+  const opMap = {
+    String: ['=', 'contains', 'not contains', '!=', 'like'],
+    Number: ['=', '!=', '>', '>=', '<', '<='],
+    Time: ['>', '>=', '<', '<='],
+  }
+  type OpKey = keyof typeof opMap
+
+  function getOpByField(field: string): string[] {
+    const fields = tableMap.value[editingTableName.value]
+    const index = fields.findIndex((f) => f.name === field)
+    if (index === -1) {
+      return []
+    }
+    const type = fields[index].data_type as TypeKey
+    const opKey = typeMap[type] as OpKey
+    return opMap[opKey] || []
+  }
+
   function reset() {
+    editingTableName.value = ''
     inputTableName.value = ''
     sql.value = ''
     editingSql.value = ''
     queryForm.conditions = []
     rows.value = []
   }
+
   return {
     sql,
     query,
@@ -290,6 +315,7 @@ const useLogQueryStore = defineStore('logQuery', () => {
     selectedRowKey,
     rangeTime,
     inputTableName,
+    editingTableName,
     tsColumn,
     time,
     unifiedRange,
@@ -311,7 +337,10 @@ const useLogQueryStore = defineStore('logQuery', () => {
     dataLoadFlag,
     showKeys,
     queryColumns,
+    getOpByField,
     reset,
+    getTsColumn,
   }
 })
+
 export default useLogQueryStore
