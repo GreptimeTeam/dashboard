@@ -286,7 +286,7 @@ const useLogQueryStore = defineStore('logQuery', () => {
   type OpKey = keyof typeof opMap
 
   function getOpByField(field: string): string[] {
-    const fields = tableMap.value[inputTableName.value]
+    const fields = tableMap.value[editingTableName.value]
     const index = fields.findIndex((f) => f.name === field)
     if (index === -1) {
       return []
