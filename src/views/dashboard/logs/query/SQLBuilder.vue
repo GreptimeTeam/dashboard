@@ -12,6 +12,7 @@ a-form(
       placeholder="Select Table"
       :options="tables"
       :allow-search="true"
+      :trigger-props="{ autoFitPopupMinWidth: true }"
       @change="handleTableChange"
     )
   a-form-item(label="Where" field="conditions")
@@ -24,6 +25,7 @@ a-form(
             allow-search
             placeholder="field"
             value-key="name"
+            :trigger-props="{ autoFitPopupMinWidth: true }"
             @change="() => handleFieldChange(condition)"
           )
             a-option(
@@ -35,6 +37,7 @@ a-form(
           a-select.operator(
             v-model="condition.op"
             placeholder="operator"
+            :trigger-props="{ autoFitPopupMinWidth: true }"
             :options="getOpByField(condition.field && condition.field.name)"
           )
           a-input.value(v-model="condition.value" placeholder="value")
