@@ -6,7 +6,7 @@ a-card
       template(#icon)
         icon-down
       template(#content)
-        a-doption(value="count") Write Count
+        a-doption(value="count") Row Count
         a-dsubmenu(trigger="hover" position="lt")
           template(#default)
             | Frequency Distribution
@@ -36,7 +36,7 @@ a-card
   }
   const menuStr = computed(() => {
     if (currChart.value === 'count') {
-      return 'Write Count '
+      return 'Row Count'
     }
     return 'Frequency Distribution'
   })

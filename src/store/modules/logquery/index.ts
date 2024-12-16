@@ -26,65 +26,26 @@ type ColumnsMap = {
 }
 
 const useLogQueryStore = defineStore('logQuery', () => {
+  /** sql state */
+  // current query result sql
   const sql = ref(``)
+  // editing sql
   const editingSql = ref('')
-  // const columns = shallowRef<Array<SchemaType>>([])
-  const displayedColumns = useStorage<ColumnsMap>('logquery-table-column-visible', {})
-  const rows = shallowRef<Array<any>>([])
-  const tableMap = ref<TableMap>({})
-
-  const selectedRowKey = ref(-1)
-  const currRow = computed(() => {
-    if (selectedRowKey.value > -1) {
-      return rows.value[selectedRowKey.value]
-    }
-    return null
-  })
-
-  const rangeTime = ref<Array<string>>([])
-  const time = ref(10)
   const inputTableName = ref('') // table after query
   const editingTableName = ref('') // table in editing
-
+  // table schema map
+  const tableMap = ref<TableMap>({})
+  // computed queried columns schema
   const columns = computed(() => {
     if (!inputTableName.value) {
       return []
     }
-    return tableMap.value[inputTableName.value]
+    return tableMap.value[inputTableName.value] || []
   })
-  const queryNum = ref(0)
-  const tableIndex = ref(0)
-  const editorType = ref('builder')
-  const queryColumns = shallowRef<Array<SchemaType>>([])
-
-  const queryForm = reactive({
-    conditions: [] as Array<Condition>,
-    orderBy: 'DESC',
-  })
-
-  const limit = ref(1000)
-  const queryLoading = ref(false)
-  const refresh = ref(false)
-  // unix seconds
-  const unifiedRange = computed(() => {
-    if (time.value && time.value > 0) {
-      return [dayjs().subtract(time.value, 'minute').unix(), dayjs().unix()]
-    }
-    return rangeTime.value.map((v) => Number(v))
-  })
-
-  const getRelativeRange = (multiple: number) => {
-    if (time.value && time.value > 0) {
-      return [`now() - Interval '${time.value}m'`, 'now()']
-    }
-    return rangeTime.value.map((v) => Number(v) * multiple)
-  }
+  const tsColumn = shallowRef<TSColumn>()
   // multiple relative to s, one of 1000 1000 * 1000 1000 * 1000 * 1000
   type Multiple = 1000 | 1000000 | 1000000000
   const multipleRe = /timestamp\((\d)\)/
-  const dataLoadFlag = ref(0)
-  const tsColumn = shallowRef<TSColumn>()
-
   const getTsColumn = (tableName: string) => {
     const fields = tableMap.value[tableName] || []
     const field = fields.filter((column) => column.data_type.toLowerCase().indexOf('timestamp') > -1)[0]
@@ -98,7 +59,87 @@ const useLogQueryStore = defineStore('logQuery', () => {
       ...field,
     }
   }
+  // editing ts column
+  const editingTsColumn = computed<TSColumn>(() => {
+    return getTsColumn(editingTableName.value)
+  })
 
+  /** for table */
+  // column visible
+  const displayedColumns = useStorage<ColumnsMap>('logquery-table-column-visible', {})
+  // table rows
+  const rows = shallowRef<Array<any>>([])
+  // selected row key for detail view
+  const selectedRowKey = ref(-1)
+  const currRow = computed(() => {
+    if (selectedRowKey.value > -1) {
+      return rows.value[selectedRowKey.value]
+    }
+    return null
+  })
+
+  /** toolbar */
+  // time select range time
+  const rangeTime = ref<Array<string>>([])
+  // time select relative time
+  const time = ref(10)
+
+  // for make all query
+  const queryNum = ref(0)
+  // for table query
+  const tableIndex = ref(0)
+  // editor type
+  const editorType = ref('builder')
+  // query Columns differ from columns, keep orders with query
+  const queryColumns = shallowRef<Array<SchemaType>>([])
+
+  const queryLoading = ref(false)
+  const refresh = ref(false)
+  // always return two element array, because time select component use two variable to implement relative time and range time
+  const unifiedRange = computed(() => {
+    if (time.value && time.value > 0) {
+      return [dayjs().subtract(time.value, 'minute').unix(), dayjs().unix()]
+    }
+    return rangeTime.value.map((v) => Number(v))
+  })
+
+  // convert to time unit by query table, ts column may have different timestamp accuracy
+  const getRelativeRange = (multiple: number) => {
+    if (time.value && time.value > 0) {
+      return [`now() - Interval '${time.value}m'`, 'now()']
+    }
+    return rangeTime.value.map((v) => Number(v) * multiple)
+  }
+
+  const dataLoadFlag = ref(0)
+
+  /** for sql builder */
+  const queryForm = reactive({
+    conditions: [] as Array<Condition>,
+    orderBy: 'DESC',
+  })
+  type TypeKey = keyof typeof typeMap
+  const opMap = {
+    String: ['=', 'contains', 'not contains', '!=', 'like'],
+    Number: ['=', '!=', '>', '>=', '<', '<='],
+    Time: ['>', '>=', '<', '<='],
+  }
+  type OpKey = keyof typeof opMap
+
+  // get Operator List by field
+  function getOpByField(field: string): string[] {
+    const fields = tableMap.value[editingTableName.value]
+    const index = fields.findIndex((f) => f.name === field)
+    if (index === -1) {
+      return []
+    }
+    const type = fields[index].data_type as TypeKey
+    const opKey = typeMap[type] as OpKey
+    return opMap[opKey] || []
+  }
+  const limit = ref(1000)
+
+  // query handler
   const query = () => {
     queryLoading.value = true
     return editorAPI
@@ -121,11 +162,11 @@ const useLogQueryStore = defineStore('logQuery', () => {
     return columns.value[index]
   }
 
-  const getColumn = (name: string) => {
-    const allColumns = tableMap.value[inputTableName.value]
-    const index = allColumns.findIndex((column) => column.name === name)
-    return allColumns[index]
-  }
+  // const getColumn = (name: string) => {
+  //   const allColumns = tableMap.value[inputTableName.value]
+  //   const index = allColumns.findIndex((column) => column.name === name)
+  //   return allColumns[index]
+  // }
 
   const mergeColumn = useLocalStorage('logquery-merge-column', true)
   const showKeys = useLocalStorage('logquery-show-keys', true)
@@ -231,21 +272,22 @@ const useLogQueryStore = defineStore('logQuery', () => {
       }
     }
     if (unifiedRange.value.length === 2) {
-      if (tsColumn.value) {
-        const { multiple } = tsColumn.value
+      if (editingTsColumn.value) {
+        const { multiple } = editingTsColumn.value
         const [start, end] = getRelativeRange(multiple)
         let prefix = ' AND'
         if (!where.length) {
           prefix = ''
         }
-        where.push(`${prefix} ${tsColumn.value.name} >= ${start} AND ${tsColumn.value.name} < ${end}`)
+        where.push(`${prefix} ${editingTsColumn.value.name} >= ${start} AND ${editingTsColumn.value.name} < ${end}`)
       }
     }
     return where
   }
 
+  // construct editing sql
   watch(
-    [queryForm, unifiedRange, limit, editingTableName],
+    [queryForm, unifiedRange, limit, editingTableName, editingTsColumn],
     () => {
       if (!editingTableName.value) {
         return
@@ -253,14 +295,14 @@ const useLogQueryStore = defineStore('logQuery', () => {
       if (editorType.value !== 'builder') {
         return
       }
-      tsColumn.value = getTsColumn(editingTableName.value)
       let str = `SELECT * FROM ${editingTableName.value}`
       const where = buildCondition()
       if (where.length) {
         str += ` WHERE ${where.join('')}`
       }
-      if (tsColumn.value) {
-        str += ` ORDER BY ${tsColumn.value?.name} ${queryForm.orderBy}`
+      const tmpTsColumn = editingTsColumn.value
+      if (tmpTsColumn) {
+        str += ` ORDER BY ${tmpTsColumn.name} ${queryForm.orderBy}`
       }
       str += ` LIMIT ${limit.value}`
       editingSql.value = str
@@ -271,30 +313,12 @@ const useLogQueryStore = defineStore('logQuery', () => {
     }
   )
 
+  // reset displayedColumn when columns change
   watch(columns, () => {
     if (!displayedColumns.value[inputTableName.value]) {
       displayedColumns.value[inputTableName.value] = columns.value.map((c) => c.name)
     }
   })
-
-  type TypeKey = keyof typeof typeMap
-  const opMap = {
-    String: ['=', 'contains', 'not contains', '!=', 'like'],
-    Number: ['=', '!=', '>', '>=', '<', '<='],
-    Time: ['>', '>=', '<', '<='],
-  }
-  type OpKey = keyof typeof opMap
-
-  function getOpByField(field: string): string[] {
-    const fields = tableMap.value[editingTableName.value]
-    const index = fields.findIndex((f) => f.name === field)
-    if (index === -1) {
-      return []
-    }
-    const type = fields[index].data_type as TypeKey
-    const opKey = typeMap[type] as OpKey
-    return opMap[opKey] || []
-  }
 
   function reset() {
     editingTableName.value = ''
@@ -317,6 +341,7 @@ const useLogQueryStore = defineStore('logQuery', () => {
     inputTableName,
     editingTableName,
     tsColumn,
+    editingTsColumn,
     time,
     unifiedRange,
     queryNum,
@@ -326,7 +351,6 @@ const useLogQueryStore = defineStore('logQuery', () => {
     editorType,
     queryForm,
     buildCondition,
-    getColumn,
     editingSql,
     displayedColumns,
     limit,
@@ -339,7 +363,6 @@ const useLogQueryStore = defineStore('logQuery', () => {
     queryColumns,
     getOpByField,
     reset,
-    getTsColumn,
   }
 })
 

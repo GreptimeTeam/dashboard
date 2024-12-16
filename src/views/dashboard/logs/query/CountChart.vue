@@ -142,6 +142,7 @@ VCharts(
 
   function countQuery() {
     if (!countSql.value) {
+      data.value = []
       return
     }
     editorAPI.runSQL(countSql.value).then((result) => {
