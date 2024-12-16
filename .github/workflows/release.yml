@@ -34,37 +34,14 @@ jobs:
           tar -czvf release/build.tar.gz ./dist
           cd release && shasum -a 256 build.tar.gz > sha256.txt && cd ../
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build.tar.gz
-          path: release/build.tar.gz
-
-      - name: Upload checksum of artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: sha256.txt
-          path: release/sha256.txt
-
-  release:
-    name: Release artifacts
-    # Release artifacts only when all the artifacts are built successfully.
-    needs: [build]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v4
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-
       - name: Publish release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
-          name: 'Release ${{ github.ref_name }}'
+          generate_release_notes: true
+          prerelease: false
           files: |
-            **/build.tar.gz
-            **/sha256.txt
+            release/build.tar.gz
+            release/sha256.txt
 
   sync:
     name: Create PR to update VERSION
