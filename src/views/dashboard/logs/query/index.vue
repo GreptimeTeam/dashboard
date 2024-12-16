@@ -35,7 +35,7 @@
       a-checkbox(v-model="compact" type="button" size="small")
         | Compact Mode
       a-checkbox(v-model="wrap" size="small")
-        span(style="color: var(--color-text-2)") {{ $t('logquery.wrapLines') }}
+        span {{ $t('logquery.wrapLines') }}
 
     a-space
       a-trigger(v-if="columns.length" trigger="click" :unmount-on-close="false")

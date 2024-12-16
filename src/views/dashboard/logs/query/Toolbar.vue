@@ -76,8 +76,9 @@
     queryLoading,
     refresh,
     editingTableName,
+    editingTsColumn,
   } = storeToRefs(useLogQueryStore())
-  const { getRelativeRange, getTsColumn } = useLogQueryStore()
+  const { getRelativeRange } = useLogQueryStore()
 
   let refreshTimeout = -1
   function mayRefresh() {
@@ -102,12 +103,12 @@
       return
     }
     inputTableName.value = editingTableName.value
-
+    tsColumn.value = editingTsColumn.value
     if (editorType.value === 'text') {
       inputTableName.value = parseTable(editingSql.value)
 
       limit.value = parseLimit(editingSql.value)
-      tsColumn.value = getTsColumn(inputTableName.value)
+
       if (tsColumn.value) {
         const { multiple } = tsColumn.value
         const [start, end] = getRelativeRange(multiple)

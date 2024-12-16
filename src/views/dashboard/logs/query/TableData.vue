@@ -9,7 +9,7 @@
     :pagination="false"
     :row-selection="rowSelection"
     :bordered="false"
-    :class="{ wrap_table: wrapLine, single_column: mergeColumn, multiple_column: !mergeColumn, builder_type: editorType === 'builder' }"
+    :class="{ wrap_table: wrapLine, single_column: mergeColumn, multiple_column: !mergeColumn, builder_type: editorType === 'builder', compact: isCompact }"
   )
     template(#columns)
       template(v-for="column in tableColumns")
@@ -29,7 +29,7 @@
               a-space(size="mini" :style="{ cursor: 'pointer' }" @click="changeTsView")
                 svg.icon-12
                   use(href="#time-index")
-                | {{ tsColumn.name }}
+                | {{ tsColumn && tsColumn.name }}
         a-table-column(
           v-else-if="mergeColumn"
           :data-index="column.dataIndex"
@@ -37,16 +37,12 @@
           :header-cell-style="column.headerCellStyle"
         )
           template(#cell="{ record }")
-            span.entity-field.clickable(
-              v-for="field in getEntryFields(record)"
-              @click="(event) => handleContextMenu(record, field[0], event)"
-            )
-              template(v-if="showKeys")
-                span(style="color: var(--color-text-3)")
-                  | {{ field[0] }}:
-                | {{ field[1] }}
-              template(v-else)
-                | {{ field[1] }}
+            span.entity-field(v-for="field in getEntryFields(record)")
+              span(v-if="showKeys" style="color: var(--color-text-3)")
+                | {{ field[0] }}:
+              | {{ field[1] }}
+              svg.td-config-icon(@click="(event) => handleContextMenu(record, field[0], event)")
+                use(href="#menu")
         a-table-column.clickable(
           v-else
           :data-index="column.dataIndex"
@@ -54,7 +50,9 @@
           :header-cell-style="column.headerCellStyle"
         )
           template(#cell="{ record }")
-            span.clickable(@click="(event) => handleContextMenu(record, column.dataIndex, event)") {{ record[column.dataIndex] }}
+            span {{ record[column.dataIndex] }}
+            svg.td-config-icon(@click="(event) => handleContextMenu(record, column.dataIndex, event)")
+              use(href="#menu")
 
   LogDetail(v-model:visible="detailVisible")
   a-dropdown#td-context(
@@ -244,10 +242,11 @@
     if (editorType.value !== 'builder') {
       return
     }
+    const rect = event.target.getBoundingClientRect()
     triggerCell.value = [row, columnName]
     event.preventDefault()
     filterOptions.value = getOpByField(columnName)
-    contextMenuPosition.value = { x: event.clientX, y: event.clientY }
+    contextMenuPosition.value = { x: rect.left, y: rect.y }
     contextMenuVisible.value = true
   }
   const hideContextMenu = () => {
@@ -339,5 +338,43 @@
   #td-context {
     position: absolute;
     z-index: 999999;
+  }
+  .td-config-icon {
+    margin-left: 3px;
+    cursor: pointer;
+    visibility: hidden;
+    width: 12px;
+    height: 12px;
+    color: var(--color-primary);
+  }
+  .multiple_column:not(.arco-table-empty) {
+    :deep(.arco-table-td-content) {
+      position: relative;
+      width: auto;
+      padding-right: 15px;
+    }
+    .td-config-icon {
+      position: absolute;
+      right: 0;
+      top: 5px;
+    }
+  }
+  .compact.multiple_column {
+    :deep(.arco-table-td-content) {
+      padding-right: 12px;
+    }
+    .td-config-icon {
+      top: 4px;
+    }
+  }
+  .compact .td-config-icon {
+    width: 9px;
+    height: 9px;
+  }
+  .multiple_column.builder_type :deep(.arco-table-cell:hover) .td-config-icon {
+    visibility: visible;
+  }
+  .single_column.builder_type .entity-field:hover .td-config-icon {
+    visibility: visible;
   }
 </style>

@@ -47,7 +47,7 @@ a-form(
       icon-plus(style="cursor: pointer; font-size: 14px" @click="addCondition")
   a-form-item(label="ORDER BY")
     a-space
-      a-typography-text(v-if="tsColumn" code) {{ tsColumn.name }}
+      a-typography-text(v-if="editingTsColumn" code) {{ editingTsColumn.name }}
       a-select(v-model="form.orderBy" style="width: auto" :options="['DESC', 'ASC']")
       | LIMIT
       a-input-number(
@@ -66,7 +66,7 @@ a-form(
   const {
     tableMap,
     inputTableName,
-    tsColumn,
+    editingTsColumn,
     queryForm: form,
     limit,
     editingTableName,
