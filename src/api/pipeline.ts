@@ -96,7 +96,7 @@ export function debug(name: string, content: any) {
 export function debugContent(pipeline: string, data: any) {
   const appStore = useAppStore()
   return axios.post(
-    `${url}/dryrun?&db=${appStore.getCurrentDB()}`,
+    `${url}/dryrun?&db=${appStore.database}`,
     {
       data,
       pipeline,
