@@ -4,14 +4,13 @@
     template(#icon)
       icon-settings
 a-drawer.settings-drawer(
+  v-model:visible="globalSettings"
   unmount-on-close
   placement="left"
   :width="323"
-  :visible="globalSettings"
   :mask-closable="true"
   :footer="false"
   :drawer-style="{ bottom: MARGIN_BOTTOM }"
-  @cancel="cancel"
 )
   a-form(layout="vertical" :model="settingsForm")
     a-form-item(:label="$t('settings.host')")
@@ -45,6 +44,18 @@ a-drawer.settings-drawer(
           span.bold {{ ` US/Pacific. ` }}
           | See more at
           a-link(icon href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones" target="_blank") Wiki.
+    a-form-item.save
+      a-button(
+        type="primary"
+        long
+        :loading="loginLoading"
+        @click="save"
+      ) {{ $t('settings.save') }}
+      template(#extra)
+        span.danger-color(v-if="loginStatus === 'fail'") {{ $t('settings.saveTip') }}
+        span.success-color(v-if="loginStatus === 'success'")
+          icon-check-circle
+          | {{ $t('settings.saveSuccess') }}
 </template>
 
 <script lang="ts" setup name="GlobalSetting">
@@ -53,8 +64,6 @@ a-drawer.settings-drawer(
   import axios from 'axios'
 
   const MARGIN_BOTTOM = `${38 * 2 + 8}px`
-  const emit = defineEmits(['cancel'])
-
   const { t } = useI18n()
 
   const { navbar, updateSettings, login } = useAppStore()
@@ -62,6 +71,9 @@ a-drawer.settings-drawer(
 
   const { role } = storeToRefs(useUserStore())
   const { globalSettings, host, database, username, password, databaseList, userTimezone } = storeToRefs(useAppStore())
+
+  const loginStatus = ref('')
+  const loginLoading = ref(false)
 
   const settingsForm = ref({
     username: username.value,
@@ -72,25 +84,25 @@ a-drawer.settings-drawer(
     userTimezone: userTimezone.value,
   })
 
-  const cancel = async () => {
+  const save = async () => {
     // TODO: check userTimezone format validation
-    updateSettings({ globalSettings: false, userTimezone: settingsForm.value.userTimezone })
-    axios.defaults.baseURL = settingsForm.value.host
-    // Check if settings are changed
-    if (
-      settingsForm.value.username !== username.value ||
-      settingsForm.value.password !== password.value ||
-      settingsForm.value.database !== database.value ||
-      settingsForm.value.host !== host.value
-    ) {
-      const res = await login(settingsForm.value)
-      if (res) {
-        getScriptsTable()
-        checkTables()
-      }
-    }
+    updateSettings({ userTimezone: settingsForm.value.userTimezone })
 
-    emit('cancel')
+    axios.defaults.baseURL = settingsForm.value.host
+    loginLoading.value = true
+    const res = await login(settingsForm.value)
+    if (res) {
+      loginStatus.value = 'success'
+      checkTables()
+      setTimeout(() => {
+        updateSettings({
+          globalSettings: false,
+        })
+      }, 2000)
+    } else {
+      loginStatus.value = 'fail'
+    }
+    loginLoading.value = false
   }
 
   const setVisible = () => {
@@ -107,6 +119,7 @@ a-drawer.settings-drawer(
         database: database.value,
         userTimezone: userTimezone.value,
       }
+      loginStatus.value = ''
     }
   })
 
@@ -146,6 +159,11 @@ a-drawer.settings-drawer(
       }
       .arco-form-item {
         margin-bottom: 10px;
+        &.save {
+          .arco-form-item-extra {
+            font-size: 12px;
+          }
+        }
       }
       .arco-drawer-header {
         display: none;
