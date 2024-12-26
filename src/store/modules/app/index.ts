@@ -49,7 +49,6 @@ const useAppStore = defineStore('app', {
     },
 
     async login(form: Partial<AppState>) {
-      // TODO: add a save and test button
       try {
         this.updateSettings(form)
         // check if settings are valid
@@ -61,6 +60,7 @@ const useAppStore = defineStore('app', {
       } catch (error) {
         const { resetData } = useDataBaseStore()
         resetData()
+        this.updateSettings({ globalSettings: true })
         return false
       }
       return true

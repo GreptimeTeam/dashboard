@@ -7,4 +7,5 @@ export default {
   'settings.database': '数据库',
   'settings.save': '保存',
   'settings.timezone': '时区',
+  'settings.saveTip': '认证失败，请检查您的设置。',
 }

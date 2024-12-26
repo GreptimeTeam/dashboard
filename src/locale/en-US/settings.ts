@@ -3,8 +3,9 @@ export default {
   'settings.database': 'Database',
   'settings.host': 'Host',
   'settings.password': 'Password',
-  'settings.save': 'Save',
+  'settings.save': 'Save and Test',
   'settings.title': 'Settings',
   'settings.username': 'Username',
   'settings.timezone': 'Timezone',
+  'settings.saveTip': 'Authentication failed. Please check your settings.',
 }
