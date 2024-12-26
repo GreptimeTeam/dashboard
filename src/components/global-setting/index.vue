@@ -44,7 +44,7 @@ a-drawer.settings-drawer(
           span.bold {{ ` US/Pacific. ` }}
           | See more at
           a-link(icon href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones" target="_blank") Wiki.
-    a-form-item
+    a-form-item.save
       a-button(
         type="primary"
         long
@@ -52,7 +52,10 @@ a-drawer.settings-drawer(
         @click="save"
       ) {{ $t('settings.save') }}
       template(#extra)
-        span.fail(v-if="!loginSuccess") {{ $t('settings.saveTip') }}
+        span.danger-color(v-if="loginStatus === 'fail'") {{ $t('settings.saveTip') }}
+        span.success-color(v-if="loginStatus === 'success'")
+          icon-check-circle
+          | {{ $t('settings.saveSuccess') }}
 </template>
 
 <script lang="ts" setup name="GlobalSetting">
@@ -69,7 +72,7 @@ a-drawer.settings-drawer(
   const { role } = storeToRefs(useUserStore())
   const { globalSettings, host, database, username, password, databaseList, userTimezone } = storeToRefs(useAppStore())
 
-  const loginSuccess = ref(true)
+  const loginStatus = ref('')
   const loginLoading = ref(false)
 
   const settingsForm = ref({
@@ -87,10 +90,17 @@ a-drawer.settings-drawer(
 
     axios.defaults.baseURL = settingsForm.value.host
     loginLoading.value = true
-    loginSuccess.value = await login(settingsForm.value)
-    if (loginSuccess.value) {
-      updateSettings({ globalSettings: false })
+    const res = await login(settingsForm.value)
+    if (res) {
+      loginStatus.value = 'success'
       checkTables()
+      setTimeout(() => {
+        updateSettings({
+          globalSettings: false,
+        })
+      }, 2000)
+    } else {
+      loginStatus.value = 'fail'
     }
     loginLoading.value = false
   }
@@ -109,6 +119,7 @@ a-drawer.settings-drawer(
         database: database.value,
         userTimezone: userTimezone.value,
       }
+      loginStatus.value = ''
     }
   })
 
@@ -148,6 +159,11 @@ a-drawer.settings-drawer(
       }
       .arco-form-item {
         margin-bottom: 10px;
+        &.save {
+          .arco-form-item-extra {
+            font-size: 12px;
+          }
+        }
       }
       .arco-drawer-header {
         display: none;
@@ -155,16 +171,6 @@ a-drawer.settings-drawer(
 
       .arco-drawer-body {
         padding: 16px 16px 10px 16px;
-      }
-
-      .save {
-        .arco-form-item {
-          margin-bottom: 0;
-        }
-      }
-
-      .fail {
-        color: var(--danger-color);
       }
     }
     .bold {

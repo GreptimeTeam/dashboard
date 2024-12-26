@@ -8,4 +8,5 @@ export default {
   'settings.username': 'Username',
   'settings.timezone': 'Timezone',
   'settings.saveTip': 'Authentication failed. Please check your settings.',
+  'settings.saveSuccess': 'Success!',
 }
