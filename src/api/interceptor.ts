@@ -25,10 +25,15 @@ export interface Auth {
 // todo: can we use env and proxy at the same time?
 export const TableNameReg = /(?<=from|FROM)\s+([^\s;]+)/
 export function parseTable(sql: string) {
-  const result = sql.match(TableNameReg)
-  if (result && result.length) {
-    const arr = result[1].trim().split('.')
-    return arr[arr.length - 1]
+  try {
+    sql = decodeURIComponent(sql)
+    const result = sql.match(TableNameReg)
+    if (result && result.length) {
+      const arr = result[1].trim().split('.')
+      return arr[arr.length - 1]
+    }
+  } catch (e) {
+    return ''
   }
   return ''
 }
@@ -87,7 +92,7 @@ axios.interceptors.response.use(
       const { data } = response
       if (data.code && data.code !== 0) {
         // v1 and error
-        const tableName = parseTable(decodeURIComponent(response.config.data))
+        const tableName = parseTable(response.config.data)
         if (ignoreList.indexOf(tableName) === -1) {
           Message.error({
             content: data.error || 'Error',
@@ -120,7 +125,7 @@ axios.interceptors.response.use(
     }
     const data = JSON.parse(error.response.data)
     const isInflux = !!error.config.url?.startsWith(`/v1/influxdb`)
-    const tableName = parseTable(decodeURIComponent(error.response.config.data))
+    const tableName = parseTable(error.response.config.data)
     if (!isInflux && ignoreList.indexOf(tableName) === -1) {
       Message.error({
         content: data.error || 'Request Error',
