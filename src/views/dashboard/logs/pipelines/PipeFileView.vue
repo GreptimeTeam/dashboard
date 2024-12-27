@@ -34,7 +34,7 @@ a-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
             div 
           YMLEditorSimple(v-model="currFile.content" style="width: 100%; height: 525px")
   a-layout-content
-    div(v-if="!isCreating" style="display: flex; flex-direction: column")
+    div(style="display: flex; flex-direction: column")
       a-card.light-editor-card(title="Input" style="flex: 1" :bordered="false")
         template(#extra)
           a-space
@@ -71,8 +71,6 @@ a-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
             :tabSize="2"
             :disabled="true"
           )
-    a-card(v-else style="padding: 20px; border: none")
-      | After Create Pipeline, you can <a href="https://docs.greptime.com/user-guide/logs/manage-pipelines#debug-writing-logs" target="_blank">debug writing log</a> online.
 </template>
 
 <script setup name="PipeFileView" lang="ts">
@@ -80,7 +78,7 @@ a-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { basicSetup } from 'codemirror'
   import { json } from '@codemirror/lang-json'
-  import { create, list, del, debug, getByName } from '@/api/pipeline'
+  import { create, list, del, debugContent, getByName } from '@/api/pipeline'
   import type { PipeFile } from '@/api/pipeline'
 
   const emit = defineEmits(['refresh', 'del'])
@@ -88,7 +86,7 @@ a-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
     filename: undefined | string
   }>()
 
-  const debugTip = JSON.stringify({ demoLogKey: 'demo log data' }, null, 2)
+  const debugTip = 'Input raw Strings or JSON Object Array'
   const currFile = reactive<PipeFile>({
     name: '',
     content: `processors:
@@ -96,39 +94,28 @@ a-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
       fields:
         - message
       patterns:
-        - '%{ip_address} - %{user} [%{request_time}] "%{http_method} %{request_path} HTTP/%{http_version}" %{status_code} %{response_size}'
-      ignore_missing: true
+        - '%{ip} - %{user} [%{datetime}] "%{method} %{path} %{protocol}" %{status} %{size}'
   - date:
       fields:
-        - request_time
+        - datetime
       formats:
-        # 29/Oct/2024:17:51:29 +0800
         - "%d/%b/%Y:%H:%M:%S %z"
-
 transform:
   - fields:
-      - ip_address
-      - http_method
-      - http_version
-    type: string
-    index: tag
-  - fields:
-      - status_code
-    type: int32
-    index: tag
-  - fields:
-      - request_path
-    type: string
-    index: fulltext
-  - fields:
+      - message
+      - ip
       - user
+      - method
+      - path
+      - protocol
     type: string
   - fields:
-      - response_size
-    type: int32
+      - status
+      - size
+    type: int64
   - fields:
-      - request_time
-    type: time
+      - datetime
+    type: timestamp
     index: timestamp`,
     version: '',
   })
@@ -180,7 +167,8 @@ transform:
   }
 
   const debugForm = reactive({
-    content: '{}',
+    content:
+      '210.207.142.115 - AnthraX [26/Dec/2024:16:47:19 +0800] "DELETE /do-not-access/needs-work HTTP/2.0" 200 4488',
   })
 
   const extensions = [basicSetup, json()]
@@ -189,10 +177,13 @@ transform:
     let content
     try {
       content = JSON.parse(debugForm.content)
+      if (!Array.isArray(content)) {
+        content = [content]
+      }
     } catch (e) {
-      content = null
+      content = debugForm.content.split('\n')
     }
-    debug(currFile.name, debugForm.content).then((result) => {
+    debugContent(currFile.content, content).then((result) => {
       debugResponse.value = JSON.stringify(result, null, 2)
     })
   }
