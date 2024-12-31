@@ -237,12 +237,18 @@ const useLogQueryStore = defineStore('logQuery', () => {
   function singleCondition(condition: Condition) {
     const column = condition.field
     const columnType = typeMap[column.data_type as keyof typeof typeMap]
+
+    let columnName = condition.field.name
+    if (columnName.toUpperCase() !== columnName && columnName.toLowerCase() !== columnName) {
+      columnName = `"${columnName}"`
+    }
+
     if (columnType === 'Number' || columnType === 'Time') {
-      return `${condition.field.name} ${condition.op} ${condition.value}`
+      return `${columnName} ${condition.op} ${condition.value}`
     }
     if (condition.op === 'like') {
-      // return `MATCHES(${condition.field.name},'"${escapeSqlString(condition.value)}"')`
-      return `${condition.field.name} like '%${condition.value}%'`
+      // return `MATCHES(${columnName},'"${escapeSqlString(condition.value)}"')`
+      return `${columnName} like '%${condition.value}%'`
     }
     if (['contains', 'not contains', 'match sequence'].indexOf(condition.op) > -1) {
       let val = escapeSqlString(condition.value)
@@ -251,9 +257,9 @@ const useLogQueryStore = defineStore('logQuery', () => {
       } else if (condition.op === 'contains') {
         val = `"${val}"`
       }
-      return `MATCHES(${condition.field.name},'${val}')`
+      return `MATCHES(${columnName},'${val}')`
     }
-    return `${condition.field.name} ${condition.op} '${escapeSqlString(condition.value)}'`
+    return `${columnName} ${condition.op} '${escapeSqlString(condition.value)}'`
   }
 
   function buildCondition() {
