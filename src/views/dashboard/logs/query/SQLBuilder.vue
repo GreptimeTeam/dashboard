@@ -60,7 +60,7 @@ a-form(
 </template>
 
 <script setup name="SQLBuilder" lang="ts">
-  import useLogQueryStore, { typeMap } from '@/store/modules/logquery'
+  import useLogQueryStore from '@/store/modules/logquery'
   import type { Condition } from '@/views/dashboard/logs/query/types'
 
   const {

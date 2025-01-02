@@ -8,21 +8,24 @@ import { SchemaType } from '../code-run/types'
 
 type TableMap = { [key: string]: Array<ColumnType> }
 
-export const typeMap = {
-  'string': 'String',
-  'int unsigned': 'Number',
-  'bigint': 'Number',
-  'int32': 'Number',
-  'int64': 'Number',
-  'double': 'Number',
-  'float64': 'Number',
-  'timestamp': 'Time',
-  'timestamp(3)': 'Time',
-  'timestamp(6)': 'Time',
-  'timestamp(9)': 'Time',
-}
+const numberTypeRe = /(int|float|decimal|double)/i
+const timeTypeRe = /(timestamp|date)/i
 type ColumnsMap = {
   [key: string]: Array<string>
+}
+
+function getColumnOpType(dataType) {
+  let opType = ''
+  if (dataType === 'string') {
+    opType = 'String'
+  } else if (dataType === 'boolean') {
+    opType = 'Boolean'
+  } else if (numberTypeRe.test(dataType)) {
+    opType = 'Number'
+  } else if (timeTypeRe.test(dataType)) {
+    opType = 'Time'
+  }
+  return opType
 }
 
 const useLogQueryStore = defineStore('logQuery', () => {
@@ -118,11 +121,11 @@ const useLogQueryStore = defineStore('logQuery', () => {
     conditions: [] as Array<Condition>,
     orderBy: 'DESC',
   })
-  type TypeKey = keyof typeof typeMap
   const opMap = {
     String: ['=', 'contains', 'not contains', '!=', 'like'],
     Number: ['=', '!=', '>', '>=', '<', '<='],
     Time: ['>', '>=', '<', '<='],
+    Boolean: ['=', '!='],
   }
   type OpKey = keyof typeof opMap
 
@@ -133,8 +136,9 @@ const useLogQueryStore = defineStore('logQuery', () => {
     if (index === -1) {
       return []
     }
-    const type = fields[index].data_type as TypeKey
-    const opKey = typeMap[type] as OpKey
+    const type = fields[index].data_type
+
+    const opKey = getColumnOpType(type) as OpKey
     return opMap[opKey] || []
   }
   const limit = ref(1000)
@@ -236,7 +240,7 @@ const useLogQueryStore = defineStore('logQuery', () => {
 
   function singleCondition(condition: Condition) {
     const column = condition.field
-    const columnType = typeMap[column.data_type as keyof typeof typeMap]
+    const columnType = getColumnOpType(column.data_type)
 
     let columnName = condition.field.name
     if (columnName.toUpperCase() !== columnName && columnName.toLowerCase() !== columnName) {
