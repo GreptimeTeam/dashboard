@@ -124,6 +124,9 @@ a-drawer.settings-drawer(
   })
 
   onMounted(() => {
+    if (!host.value) {
+      host.value = window.location.href.replace(/\/dashboard(?!.*\/dashboard).*/, '')
+    }
     axios.defaults.baseURL = host.value
   })
 </script>

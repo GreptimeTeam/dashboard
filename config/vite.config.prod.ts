@@ -9,6 +9,7 @@ import configStyleImportPlugin from './plugin/styleImport'
 
 export default mergeConfig(
   {
+    base: '',
     mode: 'production',
     plugins: [
       configCompressPlugin('gzip'),

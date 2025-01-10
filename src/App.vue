@@ -27,10 +27,7 @@
   })
 
   const { setRole } = useUserStore()
-  const { host } = storeToRefs(useAppStore())
   const { updateSettings } = useAppStore()
-
-  host.value = window.location.origin
 
   const role = import.meta.env.VITE_ROLE || 'admin'
   setRole(role)
@@ -41,11 +38,12 @@
 
   if (import.meta.env.MODE === 'development' || import.meta.env.MODE === 'production') {
     // Assuming local greptimeDB is up and running
-    const { username, password, database }: any = useStorage('config', {}).value
+    const { username, password, database, host }: any = useStorage('config', {}).value
     updateSettings({
       username,
       password,
       database,
+      host,
     })
   }
 </script>
