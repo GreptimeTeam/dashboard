@@ -45,7 +45,7 @@ jobs:
 
   sync:
     name: Create PR to update VERSION
-    needs: [build, release]
+    needs: [build]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
