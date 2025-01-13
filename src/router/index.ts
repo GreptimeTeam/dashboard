@@ -8,8 +8,22 @@ import createRouteGuard from './guard'
 
 NProgress.configure({ showSpinner: false }) // NProgress Configuration
 
+const extractContextPath = (path: string): string => {
+    // Find the index of 'dashboard'
+    const dashboardIndex = path.lastIndexOf('/dashboard');
+
+    if (dashboardIndex === -1) {
+        return ''; // Return empty string if 'dashboard' is not found
+    }
+
+    // Extract the substring up to 'dashboard'
+    const contextPath = path.substring(0, dashboardIndex + 1);
+
+    return contextPath;
+};
+
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(extractContextPath(window.location.pathname)),
   routes: [
     {
       path: '/',
