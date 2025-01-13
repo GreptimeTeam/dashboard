@@ -10,7 +10,7 @@ NProgress.configure({ showSpinner: false }) // NProgress Configuration
 
 const extractContextPath = (path: string): string => {
     // Find the index of 'dashboard'
-    const dashboardIndex = path.indexOf('/dashboard');
+    const dashboardIndex = path.lastIndexOf('/dashboard');
 
     if (dashboardIndex === -1) {
         return ''; // Return empty string if 'dashboard' is not found
