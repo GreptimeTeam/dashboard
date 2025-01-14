@@ -123,12 +123,14 @@ axios.interceptors.response.use(
       const appStore = useAppStore()
       appStore.updateSettings({ globalSettings: true })
     }
-    const data = JSON.parse(error.response.data)
+
+    const { data } = error.response
+
     const isInflux = !!error.config.url?.startsWith(`/v1/influxdb`)
     const tableName = parseTable(error.response.config.data)
     if (!isInflux && ignoreList.indexOf(tableName) === -1) {
       Message.error({
-        content: data.error || 'Request Error',
+        content: data.error || error.message || 'Request Error',
         duration: 3 * 1000,
         closable: true,
         resetOnHover: true,
