@@ -125,8 +125,13 @@ a-drawer.settings-drawer(
 
   onMounted(() => {
     if (!host.value) {
-      host.value = window.location.href.replace(/\/dashboard(?!.*\/dashboard).*/, '')
+      const { origin, pathname } = window.location
+      const index = pathname.lastIndexOf('/dashboard')
+      if (index !== -1) {
+        host.value = `${origin}${pathname.slice(0, index)}`
+      }
     }
+
     axios.defaults.baseURL = host.value
   })
 </script>
