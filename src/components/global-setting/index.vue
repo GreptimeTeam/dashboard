@@ -66,7 +66,7 @@ a-drawer.settings-drawer(
   const MARGIN_BOTTOM = `${38 * 2 + 8}px`
   const { t } = useI18n()
 
-  const { navbar, updateSettings, login } = useAppStore()
+  const { navbar, updateSettings, login, updateConfigStorage } = useAppStore()
   const { checkTables, getScriptsTable } = useDataBaseStore()
 
   const { role } = storeToRefs(useUserStore())
@@ -129,7 +129,10 @@ a-drawer.settings-drawer(
       const index = pathname.lastIndexOf('/dashboard')
       if (index !== -1) {
         host.value = `${origin}${pathname.slice(0, index)}`
+      } else {
+        host.value = `${origin}${pathname}`
       }
+      updateConfigStorage({ host: host.value })
     }
 
     axios.defaults.baseURL = host.value
