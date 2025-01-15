@@ -42,12 +42,15 @@ axios.interceptors.request.use(
   (config: AxiosRequestConfig) => {
     const isV1 = !!config.url?.startsWith(`/v1`)
     const appStore = useAppStore()
-    const basicAuth = `Basic ${btoa(`${appStore.username}:${appStore.password}`)}`
 
     if (!config.headers) {
       config.headers = {}
     }
-    config.headers.authorization = basicAuth
+
+    if (appStore.username || appStore.password) {
+      const basicAuth = `Basic ${btoa(`${appStore.username}:${appStore.password}`)}`
+      config.headers.authorization = basicAuth
+    }
 
     if (isV1) {
       if (appStore.userTimezone) {
