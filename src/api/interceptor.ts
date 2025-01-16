@@ -5,8 +5,6 @@ import type { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { Message, Modal } from '@arco-design/web-vue'
 import { RecordsType } from '@/store/modules/code-run/types'
 
-const { CancelToken } = axios
-
 export interface OutputType {
   affectedrows: number
   records: RecordsType
@@ -122,9 +120,19 @@ axios.interceptors.response.use(
   },
 
   (error) => {
+    const isV1 = !!error.config.url?.startsWith(`/v1`)
+
     if (error.response.status === 401) {
       const appStore = useAppStore()
       appStore.updateSettings({ globalSettings: true })
+    }
+
+    if (isV1) {
+      try {
+        error.response.data = JSON.parse(error.response.data)
+      } catch (e) {
+        //
+      }
     }
 
     const { data } = error.response
