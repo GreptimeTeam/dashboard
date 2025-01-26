@@ -36,6 +36,7 @@ const useAppStore = defineStore('app', {
           database: this.database,
           username: this.username,
           password: this.password,
+          authHeader: this.authHeader,
         }
       }
       useStorage('config', config, localStorage, {

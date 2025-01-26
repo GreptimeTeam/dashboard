@@ -28,6 +28,16 @@ a-drawer.settings-drawer(
       a-input(v-model="settingsForm.username")
     a-form-item(:label="$t('settings.password')")
       a-input-password(v-model="settingsForm.password" autocomplete="off")
+    a-form-item(v-if="settingsForm.username || settingsForm.password")
+      template(#label)
+        a-space(:size="4")
+          span {{ $t('settings.authHeader') }}
+          a-tooltip(mini position="tl" :content="$t('settings.authHeaderTip')")
+            svg.icon-12
+              use(href="#question")
+      a-select(v-model="settingsForm.authHeader")
+        a-option(value="Authorization") Authorization(default)
+        a-option(value="x-greptime-auth") x-greptime-auth
     a-form-item
       template(#label)
         a-space(:size="4")
@@ -70,7 +80,9 @@ a-drawer.settings-drawer(
   const { checkTables, getScriptsTable } = useDataBaseStore()
 
   const { role } = storeToRefs(useUserStore())
-  const { globalSettings, host, database, username, password, databaseList, userTimezone } = storeToRefs(useAppStore())
+  const { globalSettings, host, database, username, password, databaseList, userTimezone, authHeader } = storeToRefs(
+    useAppStore()
+  )
 
   const loginStatus = ref('')
   const loginLoading = ref(false)
@@ -82,6 +94,7 @@ a-drawer.settings-drawer(
     databaseList,
     database: database.value,
     userTimezone: userTimezone.value,
+    authHeader: authHeader.value,
   })
 
   const save = async () => {
@@ -118,6 +131,7 @@ a-drawer.settings-drawer(
         databaseList: databaseList.value,
         database: database.value,
         userTimezone: userTimezone.value,
+        authHeader: authHeader.value || 'Authorization',
       }
       loginStatus.value = ''
     }

@@ -26,5 +26,6 @@ export interface AppState {
   menuSelectedKey: string
   userTimezone: string
   isFullScreen: boolean
+  authHeader: string
   [key: string]: unknown
 }
