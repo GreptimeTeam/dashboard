@@ -14,7 +14,6 @@ a-modal.guide-modal(
 
 <script lang="ts" setup name="RefreshPlaygroundModal">
   import { createPlayground } from '@/api/playground'
-  import { useStorage } from '@vueuse/core'
 
   const appStore = useAppStore()
   const props = defineProps({

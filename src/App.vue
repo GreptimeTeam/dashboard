@@ -38,12 +38,13 @@
 
   if (import.meta.env.MODE === 'development' || import.meta.env.MODE === 'production') {
     // Assuming local greptimeDB is up and running
-    const { username, password, database, host }: any = useStorage('config', {}).value
+    const { username, password, database, host, authHeader }: any = useStorage('config', {}).value
     updateSettings({
       username,
       password,
       database,
       host,
+      authHeader,
     })
   }
 </script>
