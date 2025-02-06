@@ -47,11 +47,8 @@ axios.interceptors.request.use(
 
     if (appStore.username || appStore.password) {
       const basicAuth = `Basic ${btoa(`${appStore.username}:${appStore.password}`)}`
-      if (!appStore.authHeader || appStore.authHeader === 'Authorization') {
-        config.headers.authorization = basicAuth
-      } else {
-        config.headers[appStore.authHeader] = basicAuth
-      }
+      const authHeader = appStore.authHeader || 'Authorization'
+      config.headers[authHeader] = basicAuth
     }
 
     if (isV1) {
