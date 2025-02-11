@@ -169,13 +169,13 @@ a-card.editor-card(:bordered="false")
       lineStart.value = state.doc.lineAt(ranges[0].from).number
       lineEnd.value = state.doc.lineAt(ranges[0].to).number
       if (state.doc.text) {
-        selectedCode.value = state.doc.text.slice(lineStart.value - 1, lineEnd.value).join(' ')
+        selectedCode.value = state.doc.text.slice(lineStart.value - 1, lineEnd.value).join('\n')
       } else {
         let tempCode: Array<string> = []
         state.doc.children.forEach((leaf: { text: [] }) => {
           tempCode = tempCode.concat(leaf.text)
         })
-        selectedCode.value = tempCode.slice(lineStart.value - 1, lineEnd.value).join(' ')
+        selectedCode.value = tempCode.slice(lineStart.value - 1, lineEnd.value).join('\n')
       }
     }
   }
