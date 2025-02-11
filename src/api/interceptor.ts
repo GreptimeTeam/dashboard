@@ -2,7 +2,7 @@ import axios from 'axios'
 import JSONbigint from 'json-bigint'
 
 import type { AxiosRequestConfig, AxiosResponse } from 'axios'
-import { Message, Modal } from '@arco-design/web-vue'
+import { Message } from '@arco-design/web-vue'
 import { RecordsType } from '@/store/modules/code-run/types'
 
 export interface OutputType {
@@ -47,7 +47,8 @@ axios.interceptors.request.use(
 
     if (appStore.username || appStore.password) {
       const basicAuth = `Basic ${btoa(`${appStore.username}:${appStore.password}`)}`
-      config.headers.authorization = basicAuth
+      const authHeader = appStore.authHeader || 'Authorization'
+      config.headers[authHeader] = basicAuth
     }
 
     if (isV1) {
