@@ -1,0 +1,69 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.6.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        run: pnpm build:dashboard-edge
+
+      - name: Build Tauri application
+        run: pnpm tauri build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: tauri-build
+          path: src-tauri/target/release/bundle/
+
+  release:
+    name: Release artifacts
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v3
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: tauri-build
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: src-tauri/target/release/bundle/**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
