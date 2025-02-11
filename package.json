@@ -49,7 +49,7 @@
     "@lezer/common": "^1.0.2",
     "@lezer/highlight": "^1.1.2",
     "@lezer/lr": "^1.2.3",
-    "@prometheus-io/codemirror-promql": "^0.42.0",
+    "@prometheus-io/codemirror-promql": "^0.301.0",
     "@types/json-bigint": "^1.0.1",
     "@uiw/codemirror-extensions-langs": "^4.21.13",
     "@vueuse/core": "^10.1.0",
