@@ -2,8 +2,9 @@ name: 'App publish'
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    branches: ['private/addtauri', 'private/dev']
+  pull_request:
+    branches: ['private/addtauri', 'private/dev']
   workflow_dispatch:
 
 jobs:
