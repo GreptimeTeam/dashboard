@@ -38,10 +38,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
-          cache: 'pnpm' # Set this to npm, yarn or pnpm.
 
-      - name: Install pnpm
-        run: npm install -g pnpm@8.6.0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.1.0
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable # Set this to dtolnay/rust-toolchain@nightly
