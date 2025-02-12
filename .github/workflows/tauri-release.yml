@@ -2,9 +2,9 @@ name: 'App publish'
 
 on:
   push:
-    branches: ['private/addtauri', 'private/dev']
+    branches: ['private/feat/addtauri', 'private/dev']
   pull_request:
-    branches: ['private/addtauri', 'private/dev']
+    branches: ['private/feat/addtauri', 'private/dev']
   workflow_dispatch:
 
 jobs:
