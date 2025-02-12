@@ -1,8 +1,6 @@
 name: Tauri Release
 
 on:
-  push:
-    branches: ['private/feat/addtauri', 'private/dev']
   pull_request:
     branches: ['private/feat/addtauri', 'private/dev']
   workflow_dispatch:
