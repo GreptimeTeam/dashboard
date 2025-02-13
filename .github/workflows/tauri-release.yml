@@ -75,12 +75,6 @@ jobs:
       - name: Generate latest.json
         run: pnpm tauri build
 
-      - name: Upload latest.json
-        uses: actions/upload-artifact@v3
-        with:
-          name: latest.json
-          path: src-tauri/target/release/latest.json
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
