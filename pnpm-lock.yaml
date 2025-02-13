@@ -5482,6 +5482,10 @@ snapshots:
       '@tauri-apps/cli-win32-ia32-msvc': 2.2.5
       '@tauri-apps/cli-win32-x64-msvc': 2.2.5
 
+  '@tauri-apps/plugin-updater@2.5.0':
+    dependencies:
+      '@tauri-apps/api': 2.2.0
+
   '@trysound/sax@0.2.0': {}
 
   '@tsconfig/node10@1.0.9': {}

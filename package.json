@@ -50,6 +50,9 @@
     "@lezer/highlight": "^1.1.2",
     "@lezer/lr": "^1.2.3",
     "@prometheus-io/codemirror-promql": "^0.42.0",
+    "@tauri-apps/api": "^2.2.0",
+    "@tauri-apps/plugin-updater": "~2",
+
     "@types/json-bigint": "^1.0.1",
     "@uiw/codemirror-extensions-langs": "^4.21.13",
     "@vueuse/core": "^10.1.0",
