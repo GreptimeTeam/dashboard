@@ -39,7 +39,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDU1QzA3RDRDODdGODJGMDMKUldRREwvaUhUSDNBVlpmOUNxRTdKOWpteGVlYXF3bEdWdGJlcTluRmwrQTdnR1YrR3kwS01XdzQK%",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDU2MzI1OTE1MUU0RjgzRjkKUldUNWcwOGVGVmt5VnIxOFpiMkxFK1l5dGsvczhzQ29YR1N0dXkzT0Z0TTB1OGY1eVlqTVQ2TXUK",
       "endpoints": ["https://github.com/GreptimeTeam/dashboard-private/releases/latest/download/latest.json"]
     }
   }
