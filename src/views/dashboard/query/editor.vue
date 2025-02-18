@@ -91,6 +91,7 @@ a-card.editor-card(:bordered="false")
   import type { KeyBinding } from '@codemirror/view'
   import type { TableTreeChild, TableTreeParent } from '@/store/modules/database/types'
   import type { PromForm } from '@/store/modules/code-run/types'
+  import { useStorage } from '@vueuse/core'
   import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '../config'
 
   export interface Props {
@@ -201,14 +202,11 @@ a-card.editor-card(:bordered="false")
   }
 
   window.addEventListener('beforeunload', () => {
-    localStorage.setItem('codes', JSON.stringify(codes.value))
+    localStorage.setItem('queryCode', JSON.stringify(codes.value))
   })
 
   onMounted(() => {
-    const localCodes = localStorage.getItem('codes')
-    if (localCodes) {
-      codes.value = JSON.parse(localCodes)
-    }
+    codes.value = useStorage('queryCode', { sql: '', promql: '' }).value
   })
 
   // TODO: i18n config
