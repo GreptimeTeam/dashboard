@@ -88,10 +88,10 @@ a-card.editor-card(:bordered="false")
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
   import { keymap } from '@codemirror/view'
-
   import type { KeyBinding } from '@codemirror/view'
   import type { TableTreeChild, TableTreeParent } from '@/store/modules/database/types'
   import type { PromForm } from '@/store/modules/code-run/types'
+  import { useStorage } from '@vueuse/core'
   import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '../config'
 
   export interface Props {
@@ -200,6 +200,14 @@ a-card.editor-card(:bordered="false")
     await runQuery(selectedCode.value.trim(), queryType.value, false, promForm)
     secondaryCodeRunning.value = false
   }
+
+  window.addEventListener('beforeunload', () => {
+    localStorage.setItem('queryCode', JSON.stringify(codes.value))
+  })
+
+  onMounted(() => {
+    codes.value = useStorage('queryCode', { sql: '', promql: '' }).value
+  })
 
   // TODO: i18n config
   const queryTimeOptions = timeOptionsArray.map((value) => ({
