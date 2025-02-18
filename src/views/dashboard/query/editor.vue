@@ -88,7 +88,6 @@ a-card.editor-card(:bordered="false")
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { oneDark } from '@codemirror/theme-one-dark'
   import { keymap } from '@codemirror/view'
-
   import type { KeyBinding } from '@codemirror/view'
   import type { TableTreeChild, TableTreeParent } from '@/store/modules/database/types'
   import type { PromForm } from '@/store/modules/code-run/types'
@@ -200,6 +199,17 @@ a-card.editor-card(:bordered="false")
     await runQuery(selectedCode.value.trim(), queryType.value, false, promForm)
     secondaryCodeRunning.value = false
   }
+
+  window.addEventListener('beforeunload', () => {
+    localStorage.setItem('codes', JSON.stringify(codes.value))
+  })
+
+  onMounted(() => {
+    const localCodes = localStorage.getItem('codes')
+    if (localCodes) {
+      codes.value = JSON.parse(localCodes)
+    }
+  })
 
   // TODO: i18n config
   const queryTimeOptions = timeOptionsArray.map((value) => ({
