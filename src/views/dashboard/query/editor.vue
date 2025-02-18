@@ -3,16 +3,18 @@ a-card.editor-card(:bordered="false")
   a-space.space-between.pb-15
     a-space(size="medium")
       a-button(type="primary" :disabled="isButtonDisabled" @click="runQueryAll()")
-        .mr-4
+        a-space(:size="4")
           icon-loading(v-if="primaryCodeRunning" spin)
           icon-play-arrow(v-else)
-        | {{ $t('dashboard.runAll') }}
+          | {{ $t('dashboard.runAll') }}
+          icon-close-circle-fill.icon-16(v-if="primaryCodeRunning")
       a-button(type="outline" :disabled="isLineButtonDisabled" @click="runPartQuery()")
-        .mr-4
+        a-space(:size="4")
           icon-loading(v-if="secondaryCodeRunning" spin)
           icon-play-arrow(v-else)
-        div(v-if="lineStart === lineEnd") {{ $t('dashboard.runLine') }} {{ lineStart }}
-        div(v-else) {{ $t('dashboard.runLines') }} {{ lineStart }} - {{ lineEnd }}
+          div(v-if="lineStart === lineEnd") {{ $t('dashboard.runLine') }} {{ lineStart }}
+          div(v-else) {{ $t('dashboard.runLines') }} {{ lineStart }} - {{ lineEnd }}
+          icon-close-circle-fill.icon-16(v-if="secondaryCodeRunning")
     .query-select
       a-space(size="medium")
         a-tooltip(mini :content="$t('dashboard.clearCode')")
@@ -142,9 +144,6 @@ a-card.editor-card(:bordered="false")
         return true
       }
     }
-    if (primaryCodeRunning.value || secondaryCodeRunning.value) {
-      return true
-    }
     return false
   })
 
@@ -181,6 +180,11 @@ a-card.editor-card(:bordered="false")
   }
 
   const runQueryAll = async () => {
+    if (primaryCodeRunning.value) {
+      primaryCodeRunning.value = false
+      secondaryCodeRunning.value = false
+      return
+    }
     primaryCodeRunning.value = true
     // TODO: add better format tool for code
     await runQuery(codes.value[queryType.value].trim(), queryType.value, false, promForm)
@@ -196,6 +200,11 @@ a-card.editor-card(:bordered="false")
   })
 
   const runPartQuery = async () => {
+    if (secondaryCodeRunning.value) {
+      primaryCodeRunning.value = false
+      secondaryCodeRunning.value = false
+      return
+    }
     secondaryCodeRunning.value = true
     await runQuery(selectedCode.value.trim(), queryType.value, false, promForm)
     secondaryCodeRunning.value = false
