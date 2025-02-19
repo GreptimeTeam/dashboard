@@ -8,42 +8,42 @@ on:
 name: Release
 
 jobs:
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v4
+  # build:
+  #   name: Build
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout sources
+  #       uses: actions/checkout@v4
 
-      - name: Clean up
-        shell: bash
-        run: rm -rf release && mkdir -p release
+  #     - name: Clean up
+  #       shell: bash
+  #       run: rm -rf release && mkdir -p release
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 8
+  #     - name: Install pnpm
+  #       uses: pnpm/action-setup@v3
+  #       with:
+  #         version: 8
 
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+  #     - name: Install dependencies
+  #       run: pnpm install --no-frozen-lockfile
 
-      - name: Run build
-        run: pnpm run build:docker
+  #     - name: Run build
+  #       run: pnpm run build:docker
 
-      - name: Calculate checksum and rename binary
-        shell: bash
-        run: |
-          tar -czvf release/build.tar.gz ./dist
-          cd release && shasum -a 256 build.tar.gz > sha256.txt && cd ../
+  #     - name: Calculate checksum and rename binary
+  #       shell: bash
+  #       run: |
+  #         tar -czvf release/build.tar.gz ./dist
+  #         cd release && shasum -a 256 build.tar.gz > sha256.txt && cd ../
 
-      - name: Publish release
-        uses: softprops/action-gh-release@v2
-        with:
-          generate_release_notes: true
-          prerelease: false
-          files: |
-            release/build.tar.gz
-            release/sha256.txt
+  #     - name: Publish release
+  #       uses: softprops/action-gh-release@v2
+  #       with:
+  #         generate_release_notes: true
+  #         prerelease: false
+  #         files: |
+  #           release/build.tar.gz
+  #           release/sha256.txt
 
   publish-tauri:
     permissions:
@@ -62,6 +62,9 @@ jobs:
             args: ''
 
     runs-on: ${{ matrix.platform }}
+    env:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD}}
     steps:
       - uses: actions/checkout@v4
 
@@ -94,6 +97,32 @@ jobs:
       - name: install frontend dependencies
         # If you don't have `beforeBuildCommand` configured you may want to build your frontend here too.
         run: pnpm install --frozen-lockfile
+
+      - name: Import macOS certificate
+        if: matrix.platform == 'macos-latest'
+        run: |
+          echo "${{ secrets.MACOS_CERTIFICATE }}" | base64 --decode > certificate.p12
+          security create-keychain -p "" build.keychain
+          security import certificate.p12 -k build.keychain -P "${{ secrets.MACOS_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
+          security list-keychains -s build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+
+      - name: import windows certificate
+        if: matrix.platform == 'windows-latest'
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          New-Item -ItemType directory -Path certificate
+          Set-Content -Path certificate/tempCert.txt -Value $env:WINDOWS_CERTIFICATE
+          certutil -decode certificate/tempCert.txt certificate/certificate.pfx
+          Remove-Item -path certificate -include tempCert.txt
+          Import-PfxCertificate -FilePath certificate/certificate.pfx -CertStoreLocation Cert:\CurrentUser\My -Password (ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -Force -AsPlainText)
 
       - uses: tauri-apps/tauri-action@v0
         env:
