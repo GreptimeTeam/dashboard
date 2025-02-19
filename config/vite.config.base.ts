@@ -8,6 +8,8 @@ import AutoImport from 'unplugin-auto-import/vite'
 
 const useDevMode = true
 export default defineConfig({
+  clearScreen: false,
+  envPrefix: ['VITE_', 'TAURI_'],
   server: {
     cors: true,
     open: true,
@@ -15,6 +17,7 @@ export default defineConfig({
       strict: true,
     },
     port: 5177,
+    strictPort: true,
     proxy: {
       '/v1': {
         target: 'http://127.0.0.1:4000',
