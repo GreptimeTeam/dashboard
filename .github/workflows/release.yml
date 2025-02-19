@@ -1,6 +1,6 @@
 on:
   push:
-    branches: ['feat/tauri']
+    branches: ['feat/newtauri']
     tags:
       - 'v*.*.*'
 
