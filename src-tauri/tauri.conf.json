@@ -6,15 +6,15 @@
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5177",
-    "beforeDevCommand": "pnpm edge",
-    "beforeBuildCommand": "pnpm build:dashboard-edge"
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build"
   },
   "app": {
     "windows": [
       {
         "title": "GreptimeDashboard",
-        "width": 800,
-        "height": 600,
+        "width": 1200,
+        "height": 800,
         "resizable": true,
         "fullscreen": false
       }
