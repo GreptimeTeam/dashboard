@@ -1,6 +1,5 @@
 on:
   push:
-    branches: ['feat/newtauri']
     tags:
       - 'v*.*.*'
     workflow_dispatch:
