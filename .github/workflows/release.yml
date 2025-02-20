@@ -11,7 +11,7 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     outputs:
-      release_tag: ${{ steps.set_tag.outputs.tag_name }}  # Store tag for other jobs
+      tag_name: ${{ steps.get_tag.outputs.tag_name }}  # Store tag for other jobs
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
@@ -44,12 +44,16 @@ jobs:
           files: |
             release/build.tar.gz
             release/sha256.txt
-      - name: Set release tag
-        id: set_tag
-        run: echo "tag_name=${{ env.tag_name }}" >> $GITHUB_ENV
+      - name: Get tag name
+        id: get_tag
+        run: echo "tag_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+      - name: Save tag name to outputs
+        run: echo "tag_name=${{ env.tag_name }}" >> $GITHUB_OUTPUT
 
 
   publish-tauri:
+    needs: build
     permissions:
       contents: write
     strategy:
@@ -69,7 +73,7 @@ jobs:
     env:
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
       TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD}}
-      RELEASE_TAG: ${{ needs.build.outputs.release_tag }}  # Get the release tag from the build job
+      RELEASE_TAG: ${{ needs.build.outputs.tag_name }}  # Get the release tag from the build job
     steps:
       - uses: actions/checkout@v4
 
