@@ -44,12 +44,11 @@ jobs:
           files: |
             release/build.tar.gz
             release/sha256.txt
+
       - name: Get tag name
         id: get_tag
-        run: echo "tag_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+        run: echo "tag_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
-      - name: Save tag name to outputs
-        run: echo "tag_name=${{ env.tag_name }}" >> $GITHUB_OUTPUT
 
 
   publish-tauri:
@@ -137,7 +136,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ env.RELEASE_TAG }}
+          tagName: ${{ needs.build.outputs.tag_name }}
           prerelease: false
           args: ${{ matrix.args }}
 
