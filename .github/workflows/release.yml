@@ -36,7 +36,6 @@ jobs:
         run: |
           tar -czvf release/build.tar.gz ./dist
           cd release && shasum -a 256 build.tar.gz > sha256.txt && cd ../
-
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
@@ -45,7 +44,8 @@ jobs:
           files: |
             release/build.tar.gz
             release/sha256.txt
-      - name: Store Release Tag Output
+      - name: Set release tag
+        id: set_tag
         run: echo "tag_name=${{ env.tag_name }}" >> $GITHUB_ENV
 
 
