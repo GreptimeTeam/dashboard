@@ -11,10 +11,6 @@ import '@arco-design/web-vue/dist/arco.css'
 import '@/assets/style/global.less'
 import '@/api/interceptor'
 
-// eslint-disable-next-line no-underscore-dangle
-if (window.__TAURI__) {
-  import('./tauri/checkupdate')
-}
 const app: App = createApp(Apps)
 
 app.config.errorHandler = (err, vm, info) => {

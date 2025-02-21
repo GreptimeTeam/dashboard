@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "greptime_dashboard",
-  "version": "0.1.0",
+  "productName": "Greptime Dashboard",
+  "version": "test0.8.0-alpha.5",
   "identifier": "com.greptime",
   "build": {
     "frontendDist": "../dist",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "GreptimeDashboard",
+        "title": "Greptime Dashboard",
         "width": 1200,
         "height": 800,
         "resizable": true,
@@ -21,6 +21,9 @@
     ],
     "security": {
       "csp": null
+    },
+    "trayIcon": {
+      "iconPath": "icons/icon.png"
     }
   },
 
