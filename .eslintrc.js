@@ -70,5 +70,7 @@ module.exports = {
     'noUnusedLocals': 0,
     'prefer-destructuring': ['error', { object: true, array: false }],
     'no-continue': 1,
+    'no-console': 0,
+    'no-underscore-dangle': 0,
   },
 }
