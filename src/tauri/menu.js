@@ -16,7 +16,6 @@ async function setAppMenu() {
       id: 'info',
       text: `Version : ${version}`,
       action: () => {
-        console.log('Version Info:', version)
         const webview = new WebviewWindow('client', {
           url: '/#/client/about',
           title: 'About Greptime Dashboard',
