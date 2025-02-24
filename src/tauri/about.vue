@@ -1,10 +1,21 @@
 <template>
   <div class="flex">
     <div style="display: flex; align-items: center; justify-content: center"
-      >Current version:&nbsp; <h2>{{ version }}</h2></div
+      >Current version:&nbsp; <b>{{ version }}</b></div
     >
+    <br />
     <button v-disabled="!isChecking && !newUpdate" class="btn" @click="checkUpdate"> Check update </button>
-    <button v-if="!isInstalling && newUpdate" class="btn" @click="install"> Install update </button>
+    <div
+      v-if="!isInstalling && newUpdate"
+      style="display: flex; align-items: center; flex-direction: column; margin-top: 20px"
+    >
+      <div
+        >Found update <b>{{ newUpdate.version }}</b> released at
+        {{ dayjs(newUpdate.date, 'YYYY-MM-DD HH:mm:ss.SSS Z').format('YYYY-MM-DD HH:mm:ss') }}</div
+      >
+      <br />
+      <button class="btn" @click="install"> Install update </button>
+    </div>
     <div v-if="isInstalling" class="progress">
       <span>{{ progress }}%</span>
       <div class="progress-bar" :style="{ width: progress + '%' }"></div>
@@ -19,10 +30,11 @@
   import { check } from '@tauri-apps/plugin-updater'
   import { relaunch } from '@tauri-apps/plugin-process'
   import { getVersion } from '@tauri-apps/api/app'
+  import dayjs from 'dayjs'
 
   const isChecking = ref(false)
   const isInstalling = ref(false)
-  const newUpdate = ref(null)
+  const newUpdate = shallowRef(null)
   const totalSize = ref(0)
   const downloadedSize = ref(0)
   const noUpdate = ref(false)
@@ -33,6 +45,7 @@
 
   const progress = computed(() => (totalSize.value ? Math.round((downloadedSize.value / totalSize.value) * 100) : 0))
 
+  let updater = null
   async function checkUpdate() {
     isChecking.value = true
     try {
@@ -43,6 +56,7 @@
       }
       console.log(`Should update: ${update.available}`, update)
       newUpdate.value = update
+      updater = update
     } catch (e) {
       console.error(e)
     } finally {
@@ -56,7 +70,8 @@
     isInstalling.value = true
     downloadedSize.value = 0
     try {
-      await newUpdate.value.downloadAndInstall((downloadProgress) => {
+      await updater.downloadAndInstall((downloadProgress) => {
+        console.log(downloadProgress)
         switch (downloadProgress.event) {
           case 'Started':
             totalSize.value = downloadProgress.data.contentLength
