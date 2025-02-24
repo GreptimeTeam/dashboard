@@ -11,7 +11,6 @@ export default mergeConfig(
   {
     base: '',
     mode: 'production',
-    base: './',
     plugins: [
       configCompressPlugin('gzip'),
       configVisualizerPlugin(),

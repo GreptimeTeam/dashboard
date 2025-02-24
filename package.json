@@ -1,5 +1,5 @@
 {
-  "name": "greptime_dashboard",
+  "name": "Greptime Dashboard",
   "description": "dashboard for GreptimeDB",
   "version": "1.0.0",
   "private": true,

@@ -14,6 +14,7 @@
   import { useUserStore, useAppStore } from '@/store'
   import { useStorage } from '@vueuse/core'
   import { invoke, isTauri } from '@tauri-apps/api/core'
+  import { getCurrentWindow } from '@tauri-apps/api/window'
 
   const { currentLocale } = useLocale()
   const locale = computed(() => {
@@ -54,10 +55,13 @@
       const isTauriEnv = await isTauri()
       console.log(isTauriEnv)
       if (isTauriEnv) {
-        import('@/tauri/index')
+        const appWindow = getCurrentWindow()
+        if (appWindow.label === 'main') {
+          import('@/tauri/index')
+          await invoke('plugin:app|is_running')
+        }
+        console.log('Running in Tauri environment')
       }
-      await invoke('plugin:app|is_running')
-      console.log('Running in Tauri environment')
     } catch (e) {
       console.log('Not running in Tauri environment')
     }
