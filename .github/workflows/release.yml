@@ -139,7 +139,7 @@ jobs:
         with:
           tagName: ${{ needs.build.outputs.tag_name }}
           prerelease: false
-          args: ${{ matrix.args }}
+          args: --debug ${{ matrix.args }}
 
   # sync:
   #   name: Create PR to update VERSION
