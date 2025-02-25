@@ -1,5 +1,5 @@
 import ClientLayout from '@/tauri/layout.vue'
-import { AppRouteRecordRaw } from '../types'
+import { AppRouteRecordRaw } from './types'
 
 export default {
   path: '/client',

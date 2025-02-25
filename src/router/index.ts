@@ -5,6 +5,7 @@ import 'nprogress/nprogress.css'
 import { appRoutes } from './routes'
 import { REDIRECT_MAIN, NOT_FOUND_ROUTE } from './routes/base'
 import createRouteGuard from './guard'
+import client from './routes/client'
 
 NProgress.configure({ showSpinner: false }) // NProgress Configuration
 
@@ -30,6 +31,7 @@ const router = createRouter({
       redirect: '/dashboard/query',
     },
     ...appRoutes,
+    client,
     REDIRECT_MAIN,
     NOT_FOUND_ROUTE,
   ],
