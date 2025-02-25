@@ -22,7 +22,7 @@ async function setAppMenu() {
           alwaysOnTop: true,
           center: true,
           height: 300,
-          width: 720,
+          width: 780,
         })
         webview.once('tauri://created', function () {
           console.log('webview created')
