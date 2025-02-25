@@ -153,8 +153,8 @@ a-drawer.settings-drawer(
         }
       }
       updateConfigStorage({ host: host.value })
-      axios.defaults.baseURL = host.value
     }
+    axios.defaults.baseURL = host.value
   })
 </script>
 
