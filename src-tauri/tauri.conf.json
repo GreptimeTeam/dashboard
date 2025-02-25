@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Greptime Dashboard",
-  "version": "0.8.0-alpha.11",
+  "version": "0.8.0-alpha.12",
   "identifier": "com.greptime",
   "build": {
     "frontendDist": "../dist",
@@ -29,7 +29,13 @@
     "active": true,
     "targets": "all",
     "createUpdaterArtifacts": true,
-    "icon": ["icons/64x64.png", "icons/128x128.png", "icons/icon.icns", "icons/icon.ico"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
     "macOS": {
       "entitlements": null,
       "exceptionDomain": "",
