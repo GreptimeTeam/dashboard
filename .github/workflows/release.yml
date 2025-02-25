@@ -41,6 +41,7 @@ jobs:
         with:
           generate_release_notes: true
           prerelease: false
+          make_latest: false
           files: |
             release/build.tar.gz
             release/sha256.txt
