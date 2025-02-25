@@ -2,6 +2,7 @@ export type ColumnType = {
   name: string
   data_type: string
   label: string
+  semantic_type: string
 }
 
 export type Condition = {
