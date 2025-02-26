@@ -51,7 +51,9 @@ const useLogQueryStore = defineStore('logQuery', () => {
   const multipleRe = /timestamp\((\d)\)/
   const getTsColumn = (tableName: string) => {
     const fields = tableMap.value[tableName] || []
-    const field = fields.filter((column) => column.data_type.toLowerCase().indexOf('timestamp') > -1)[0]
+    const tsColumns = fields.filter((column) => column.data_type.toLowerCase().indexOf('timestamp') > -1)
+    const tsIndexColumns = tsColumns.filter((column) => column.semantic_type === 'TIMESTAMP')
+    const field = tsIndexColumns.length ? tsIndexColumns[0] : tsColumns[0]
     if (!field) {
       return null
     }
@@ -198,7 +200,8 @@ const useLogQueryStore = defineStore('logQuery', () => {
           table_name,
           table_schema,
           column_name,
-          data_type
+          data_type,
+          semantic_type
         FROM 
           information_schema.columns
         ${where}
@@ -219,6 +222,7 @@ const useLogQueryStore = defineStore('logQuery', () => {
             name: row[2],
             data_type: row[3],
             label: row[2],
+            semantic_type: row[4],
           })
         }
         tableMap.value = tmp
@@ -233,7 +237,6 @@ const useLogQueryStore = defineStore('logQuery', () => {
     return value
       .replace(/\\/g, '\\\\') // Escape backslashes
       .replace(/'/g, "''") // Escape single quotes by doubling
-      .replace(/"/g, '\\"') // Escape double quotes (if needed)
       .replace(/\n/g, '\\n') // Escape newline
       .replace(/\r/g, '\\r') // Escape carriage return
   }
@@ -241,7 +244,7 @@ const useLogQueryStore = defineStore('logQuery', () => {
   function singleCondition(condition: Condition) {
     const column = condition.field
     const columnType = getColumnOpType(column.data_type)
-
+    const conditionVal = escapeSqlString(condition.value)
     let columnName = condition.field.name
     if (columnName.toUpperCase() !== columnName && columnName.toLowerCase() !== columnName) {
       columnName = `"${columnName}"`
@@ -252,7 +255,7 @@ const useLogQueryStore = defineStore('logQuery', () => {
     }
     if (condition.op === 'like') {
       // return `MATCHES(${columnName},'"${escapeSqlString(condition.value)}"')`
-      return `${columnName} like '%${condition.value}%'`
+      return `${columnName} like '%${conditionVal}%'`
     }
     if (['contains', 'not contains', 'match sequence'].indexOf(condition.op) > -1) {
       let val = escapeSqlString(condition.value)
