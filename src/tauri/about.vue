@@ -1,7 +1,7 @@
 <template>
   <div class="flex">
     <div style="display: flex; align-items: center; justify-content: center"
-      >Current version:&nbsp; <b>{{ version }}</b></div
+      >Current Version:&nbsp; <b>{{ version }}</b></div
     >
     <br />
     <button v-disabled="!isChecking && !newUpdate" class="btn" @click="checkUpdate"> Check update </button>
