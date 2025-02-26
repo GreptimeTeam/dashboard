@@ -5,7 +5,7 @@ a-layout-footer.footer
     a-space(:size="5")
       svg.service-icon
         use(href="#service")
-      .service-name {{ serviceName || hostName }}
+      .service-name {{ serviceName || host }}
     a-space.region(v-if="region?.vendor" :size="0")
       img.icon(:src="getIconUrl(region.vendor)")
       .text.uppercase {{ region.vendor }}
@@ -30,7 +30,6 @@ a-layout-footer.footer
     country: regionCountry,
   })
 
-  const hostName = window.location.hostname
   const vendorIcon = getIconUrl(region.value.vendor)
 </script>
 
