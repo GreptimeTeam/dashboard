@@ -38,7 +38,7 @@ async function setAppMenu() {
     // })
 
     const submenu = await Submenu.new({
-      text: 'app',
+      text: 'App',
       items: [aboutItem, quitItem],
     })
     const menu = await Menu.new({
