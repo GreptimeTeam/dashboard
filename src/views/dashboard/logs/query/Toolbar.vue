@@ -112,7 +112,9 @@
       if (tsColumn.value) {
         const { multiple } = tsColumn.value
         const [start, end] = getRelativeRange(multiple)
-        editingSql.value = addTsCondition(editingSql.value, tsColumn.value.name, start, end)
+        if (start && end) {
+          editingSql.value = addTsCondition(editingSql.value, tsColumn.value.name, start, end)
+        }
       }
       editingSql.value = processSQL(editingSql.value, tsColumn.value?.name, limit.value)
     }
