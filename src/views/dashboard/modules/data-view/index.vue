@@ -160,9 +160,6 @@ a-tabs.panel-tabs(
       .arco-table-size-mini .arco-table-td {
         font-size: 11px;
       }
-      .arco-table-size-mini .arco-table-th {
-        padding: 4px 0;
-      }
     }
     :deep(.data-view-tabs) {
       width: 100%;

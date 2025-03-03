@@ -6,7 +6,7 @@ a-card.data-grid(:bordered="false")
         use(href="#table")
       | {{ $t('dashboard.table') }}
   a-spin(style="width: 100%")
-    a-table.data-table(
+    a-table(
       show-total
       column-resizable
       size="mini"
