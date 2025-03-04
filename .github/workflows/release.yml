@@ -1,7 +1,7 @@
 on:
   push:
     tags:
-      - 'test*.*.*'
+      - 'v*.*.*'
     workflow_dispatch:
 
 name: Release
@@ -41,7 +41,7 @@ jobs:
         with:
           generate_release_notes: true
           prerelease: false
-          make_latest: false
+          make_latest: true
           files: |
             release/build.tar.gz
             release/sha256.txt
@@ -141,41 +141,41 @@ jobs:
           prerelease: false
           args: ${{ matrix.args }}
 
-  # sync:
-  #   name: Create PR to update VERSION
-  #   needs: [build]
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #       with:
-  #         repository: 'GreptimeTeam/greptimedb'
-  #     - id: update-version
-  #       run: |
-  #         cd src/servers/dashboard/
-  #         echo ${{ github.ref_name }} > VERSION
-  #     - uses: peter-evans/create-pull-request@v4
-  #       with:
-  #         token: ${{ secrets.PR_ACTION }}
-  #         commit-message: 'feat: update dashboard to ${{ github.ref_name }}'
-  #         committer: GitHub Action <noreply@github.com>
-  #         author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
-  #         signoff: false
-  #         branch: dashboard/${{ github.ref_name }}
-  #         delete-branch: true
-  #         title: 'feat: update dashboard to ${{ github.ref_name }}'
-  #         body: |
-  #           I hereby agree to the terms of the [GreptimeDB CLA](https://github.com/GreptimeTeam/.github/blob/main/CLA.md).
+  sync:
+    name: Create PR to update VERSION
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: 'GreptimeTeam/greptimedb'
+      - id: update-version
+        run: |
+          cd src/servers/dashboard/
+          echo ${{ github.ref_name }} > VERSION
+      - uses: peter-evans/create-pull-request@v4
+        with:
+          token: ${{ secrets.PR_ACTION }}
+          commit-message: 'feat: update dashboard to ${{ github.ref_name }}'
+          committer: GitHub Action <noreply@github.com>
+          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+          signoff: false
+          branch: dashboard/${{ github.ref_name }}
+          delete-branch: true
+          title: 'feat: update dashboard to ${{ github.ref_name }}'
+          body: |
+            I hereby agree to the terms of the [GreptimeDB CLA](https://github.com/GreptimeTeam/.github/blob/main/CLA.md).
 
-  #           ## Refer to a related PR or issue link (optional)
+            ## Refer to a related PR or issue link (optional)
 
-  #           ## What's changed and what's your intention?
+            ## What's changed and what's your intention?
 
-  #           AS TITLE
+            AS TITLE
 
-  #           https://github.com/GreptimeTeam/dashboard/releases/tag/${{ github.ref_name }}
+            https://github.com/GreptimeTeam/dashboard/releases/tag/${{ github.ref_name }}
 
-  #           ## Checklist
+            ## Checklist
 
-  #           - [ ]  I have written the necessary rustdoc comments.
-  #           - [ ]  I have added the necessary unit tests and integration tests.
-  #           - [x]  This PR does not require documentation updates.
+            - [ ]  I have written the necessary rustdoc comments.
+            - [ ]  I have added the necessary unit tests and integration tests.
+            - [x]  This PR does not require documentation updates.
