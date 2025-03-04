@@ -53,14 +53,12 @@
   onMounted(async () => {
     try {
       const isTauriEnv = await isTauri()
-      console.log(isTauriEnv)
       if (isTauriEnv) {
         const appWindow = getCurrentWindow()
         if (appWindow.label === 'main') {
           import('@/tauri/index')
           await invoke('plugin:app|is_running')
         }
-        console.log('Running in Tauri environment')
       }
     } catch (e) {
       console.log('Not running in Tauri environment')

@@ -1,10 +1,8 @@
 import { Menu, MenuItem, Submenu, PredefinedMenuItem } from '@tauri-apps/api/menu'
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { getVersion } from '@tauri-apps/api/app'
-import checkForUpdates from './checkupdate'
 
 async function setAppMenu() {
-  console.log('setAppMenu')
   try {
     const quitItem = await PredefinedMenuItem.new({
       text: 'Quit',
@@ -46,7 +44,6 @@ async function setAppMenu() {
       items: [submenu],
     })
     await menu.setAsAppMenu()
-    console.log('✅ Menu set successfully')
   } catch (error) {
     console.error('❌ Failed to set application menu:', error)
     if (error instanceof Error) {

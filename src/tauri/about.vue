@@ -54,7 +54,6 @@
         noUpdate.value = true
         return
       }
-      console.log(`Should update: ${update.available}`, update)
       newUpdate.value = update
       updater = update
     } catch (e) {
@@ -71,7 +70,6 @@
     downloadedSize.value = 0
     try {
       await updater.downloadAndInstall((downloadProgress) => {
-        console.log(downloadProgress)
         switch (downloadProgress.event) {
           case 'Started':
             totalSize.value = downloadProgress.data.contentLength
@@ -83,7 +81,6 @@
             break
         }
       })
-      console.log('Installation complete, restarting...')
       // await new Promise((resolve) => setTimeout(resolve, 2000))
       await relaunch()
     } catch (e) {
