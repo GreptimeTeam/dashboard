@@ -174,7 +174,7 @@ a-drawer.settings-drawer(
 <style lang="less">
   .settings-drawer {
     .arco-drawer {
-      height: 320px;
+      height: auto;
       margin-left: 18px;
       border-radius: 4px;
       box-shadow: 0 4px 10px 0 var(--border-color);

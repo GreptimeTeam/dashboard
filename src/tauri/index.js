@@ -1,2 +1,1 @@
-// import './checkupdate'
 import './menu'
