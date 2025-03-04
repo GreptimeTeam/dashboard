@@ -178,6 +178,7 @@ a-tabs.panel-tabs(
       }
       .arco-card.data-grid {
         height: 100%;
+        padding: 0 8px;
         > .arco-card-body {
           height: 100%;
           > .arco-spin {

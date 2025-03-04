@@ -1,7 +1,7 @@
 <template lang="pug">
 a-card.editor-card(:bordered="false")
   a-space.space-between.pb-15
-    a-space(size="medium")
+    a-space.editor-header(size="medium")
       a-button(type="primary" :disabled="isButtonDisabled" @click="runQueryAll()")
         a-space(:size="4")
           icon-loading(v-if="primaryCodeRunning" spin)
@@ -243,6 +243,9 @@ a-card.editor-card(:bordered="false")
 <style lang="less" scoped>
   .editor-card {
     width: 100%;
+    .editor-header {
+      padding-left: 8px;
+    }
     :deep(.ͼo) {
       height: 100%;
     }
@@ -276,6 +279,7 @@ a-card.editor-card(:bordered="false")
         height: 100%;
         .arco-tabs-pane {
           height: 100%;
+          padding-left: 8px;
         }
       }
     }

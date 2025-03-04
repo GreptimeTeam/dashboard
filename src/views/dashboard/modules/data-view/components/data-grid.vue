@@ -7,7 +7,6 @@ a-card.data-grid(:bordered="false")
       | {{ $t('dashboard.table') }}
   a-spin(style="width: 100%")
     a-table(
-      show-total
       column-resizable
       size="mini"
       :data="gridData"
@@ -151,12 +150,7 @@ a-card.data-grid(:bordered="false")
   const timeColumnWidth = 180
 
   onUpdated(() => {
-    pagination.value = {
-      'total': props.data?.records.rows.length,
-      'show-page-size': true,
-      'show-total': true,
-      'show-jumper': true,
-    }
+    pagination.value.total = props.data?.records.rows.length
   })
 </script>
 
