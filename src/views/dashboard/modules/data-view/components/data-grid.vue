@@ -6,14 +6,13 @@ a-card.data-grid(:bordered="false")
         use(href="#table")
       | {{ $t('dashboard.table') }}
   a-spin(style="width: 100%")
-    a-table.data-table(
-      show-total
+    a-table(
       column-resizable
       size="mini"
       :data="gridData"
       :pagination="pagination"
       :scroll="{ y: '100%', x: '100%' }"
-      :bordered="false"
+      :bordered="{ headerCell: true }"
     )
       template(#empty)
         EmptyStatus
@@ -37,18 +36,14 @@ a-card.data-grid(:bordered="false")
                       use(href="#time-index")
                     | {{ column.title }}
           template(v-else)
-            a-table-column(:title="column.title" :data-index="column.dataIndex")
+            a-table-column(
+              :tooltip="column.tooltip"
+              :title="column.title"
+              :data-index="column.dataIndex"
+              :ellipsis="column.ellipsis"
+            )
               template(#cell="{ record }")
-                a-typography-paragraph.cell-data(title :ellipsis="{ rows: 3, expandable: true }") {{ record[column.dataIndex] }}
-                  template(#expand-node="{ expanded }")
-                    a-tooltip(
-                      v-if="!expanded"
-                      content="Expand"
-                      mini
-                      placement="top"
-                    )
-                      span {{ '+' }}
-                    span(v-else) {{ '' }}
+                | {{ record[column.dataIndex] }}
 </template>
 
 <script lang="ts" setup>
@@ -101,6 +96,8 @@ a-card.data-grid(:bordered="false")
           title: column.name,
           dataIndex: columnNameToDataIndex(column.name),
           dataType: column.data_type,
+          ellipsis: true,
+          tooltip: { 'content-class': 'cell-data-tooltip', 'position': 'tl' },
         }
       })
       .sort((a: any, b: any) => {
@@ -153,12 +150,7 @@ a-card.data-grid(:bordered="false")
   const timeColumnWidth = 180
 
   onUpdated(() => {
-    pagination.value = {
-      'total': props.data?.records.rows.length,
-      'show-page-size': true,
-      'show-total': true,
-      'show-jumper': true,
-    }
+    pagination.value.total = props.data?.records.rows.length
   })
 </script>
 

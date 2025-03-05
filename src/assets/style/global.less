@@ -123,6 +123,7 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
   }
 }
@@ -134,6 +135,11 @@ body {
   font-size: 12px;
   background-color: var(--tooltip-bg-color);
   border-radius: 6px;
+  &.cell-data-tooltip {
+    white-space: pre-wrap;
+    font-family: monospace;
+    max-width: 800px;
+  }
 }
 
 .arco-tooltip-mini {
