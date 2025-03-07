@@ -13,6 +13,8 @@
   import useLocale from '@/hooks/locale'
   import { useUserStore, useAppStore } from '@/store'
   import { useStorage } from '@vueuse/core'
+  import { invoke, isTauri } from '@tauri-apps/api/core'
+  import { getCurrentWindow } from '@tauri-apps/api/window'
 
   const { currentLocale } = useLocale()
   const locale = computed(() => {
@@ -47,4 +49,19 @@
       authHeader,
     })
   }
+
+  onMounted(async () => {
+    try {
+      const isTauriEnv = await isTauri()
+      if (isTauriEnv) {
+        const appWindow = getCurrentWindow()
+        if (appWindow.label === 'main') {
+          import('@/tauri/index')
+          await invoke('plugin:app|is_running')
+        }
+      }
+    } catch (e) {
+      console.log('Not running in Tauri environment')
+    }
+  })
 </script>
