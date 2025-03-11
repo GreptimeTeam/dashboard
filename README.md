@@ -42,6 +42,10 @@ Open you browser and visit `http://localhost:8080/dashboard/`
 - Follow [getting started](https://docs.greptime.com/getting-started/quick-start/mysql#try-out-basic-sql-operations) to create your table and insert some data
 - Run a `SELECT` query and check the result as table or chart -->
 
+### With Dashboard Desktop App
+With the desktop version of the Dashboard app, run dashboard alone, linking to a local or remote greptimedb.
+- Download Dashboard App from [release page](https://github.com/GreptimeTeam/dashboard/releases)
+
 ## Development Setup
 
 - [Install GreptimeDB](https://docs.greptime.com/getting-started/installation/overview)
