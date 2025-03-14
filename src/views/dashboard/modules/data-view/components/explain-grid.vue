@@ -33,16 +33,19 @@
     :pagination="false"
     :bordered="false"
     :scroll="tableScroll"
+    :expandable="{ expandedRowRender: expandedRowRender, rowExpandable: rowExpandable, expandedRowKeys: expandedKeys }"
+    @row-click="handleRowClick"
   )
     template(#columns)
       a-table-column(
-        title="Step"
+        title="Plan"
         data-index="step"
         fixed="left"
         :width="220"
       )
         template(#cell="{ record }")
-          .step-cell {{ record.step }}
+          .step-cell
+            span {{ record.step }}
       template(v-for="nodeIndex in filteredNodeIndices" :key="nodeIndex")
         a-table-column(
           :title="`Node ${nodeIndex}`"
@@ -59,16 +62,30 @@
                 .metric(v-if="record[`node${nodeIndex}`] && record[`node${nodeIndex}`][getActiveMetric] !== undefined")
                   span.metric-key {{ getActiveMetric }}:
                   span.metric-value {{ record[`node${nodeIndex}`][getActiveMetric] }}
-                //- .more-metrics(v-if="Object.keys(record[`node${nodeIndex - 1}`]).length > 1") ...
 </template>
 
 <script lang="ts" setup name="ExplainGrid">
-  import { ref, computed } from 'vue'
+  import { ref, computed, h } from 'vue'
 
   const props = defineProps<{
     data: [number, number, string][]
     index: number
   }>()
+
+  const expandedKeys = ref<string[]>([])
+
+  // Function to toggle a row's expanded state
+  const toggleRowExpansion = (record: any) => {
+    const { key } = record
+    const index = expandedKeys.value.indexOf(key)
+    if (index > -1) {
+      // Remove if already expanded
+      expandedKeys.value.splice(index, 1)
+    } else {
+      // Add to expanded keys
+      expandedKeys.value.push(key)
+    }
+  }
 
   const metricsExpanded = ref(false)
   const selectedMetric = ref<string | null>(null)
@@ -177,6 +194,52 @@
     return firstKey ? [firstKey, sortedMetrics[firstKey]] : ['', '']
   }
 
+  // Determine if a row has additional details to show
+  const rowExpandable = (record: any) => {
+    return record.param || record.hasAdditionalDetails
+  }
+
+  // Render expanded row content
+  const expandedRowRender = (record: any) => {
+    const details = []
+
+    // Add param if available
+    if (record.param) {
+      details.push({
+        label: 'Parameters',
+        value: record.param,
+      })
+    }
+
+    // Add other fields as needed
+    if (record.output_rows !== undefined) {
+      details.push({
+        label: 'Output Rows',
+        value: record.output_rows,
+      })
+    }
+
+    if (record.elapsed_compute !== undefined) {
+      details.push({
+        label: 'Compute Time',
+        value: `${record.elapsed_compute} ns`,
+      })
+    }
+
+    return h('div', { class: 'expanded-row' }, [
+      h(
+        'div',
+        { class: 'expanded-row-details' },
+        details.map((item) =>
+          h('div', { class: 'detail-item' }, [
+            h('span', { class: 'detail-label' }, `${item.label}: `),
+            h('span', { class: 'detail-value' }, item.value),
+          ])
+        )
+      ),
+    ])
+  }
+
   const flattenPlan = (
     plan: any,
     result: any[] = [],
@@ -197,6 +260,10 @@
       key: currentPath.join('/'),
       step: `${linePrefix}${plan.name}`,
       path: currentPath,
+      param: plan.param, // Include param in the row data
+      output_rows: plan.output_rows,
+      elapsed_compute: plan.elapsed_compute,
+      hasAdditionalDetails: Boolean(plan.param || plan.output_rows !== undefined || plan.elapsed_compute !== undefined),
     }
 
     result.push(row)
@@ -287,6 +354,13 @@
       // maxWidth: nodeCount <= 2 ? `${(nodeCount + 1) * 220}px` : '100%',
     }
   })
+
+  // Row click handler
+  const handleRowClick = (record: any) => {
+    if (rowExpandable(record)) {
+      toggleRowExpansion(record)
+    }
+  }
 </script>
 
 <style lang="less" scoped>
@@ -364,5 +438,53 @@
   :deep(.arco-table-td) {
     vertical-align: top; // Align all cell content to the top
     padding-top: 8px; // Add padding at the top of all cells
+  }
+
+  .expanded-row {
+    padding: 8px 0;
+    background-color: var(--color-bg-1);
+  }
+
+  .expanded-row-details {
+    padding: 0 16px 0 36px; // Extra left padding for tree alignment
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .detail-item {
+    display: flex;
+    align-items: center;
+  }
+
+  .detail-label {
+    color: var(--color-text-3);
+    margin-right: 8px;
+    font-weight: 500;
+  }
+
+  .detail-value {
+    color: var(--color-text-1);
+    font-family: monospace;
+    overflow-wrap: break-word;
+  }
+
+  // Add styles to make rows with expandable content look clickable
+  :deep(.arco-table-tr) {
+    &:hover {
+      cursor: default;
+    }
+  }
+
+  :deep(.arco-table-tr-expand) {
+    &:hover {
+      cursor: pointer;
+    }
+  }
+
+  // Add custom class to expandable rows
+  :deep(.arco-table-tr[class*='expand']) {
+    cursor: pointer;
   }
 </style>
