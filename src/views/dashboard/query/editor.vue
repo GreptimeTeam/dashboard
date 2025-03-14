@@ -15,6 +15,7 @@ a-card.editor-card(:bordered="false")
           div(v-if="lineStart === lineEnd") {{ $t('dashboard.runLine') }} {{ lineStart }}
           div(v-else) {{ $t('dashboard.runLines') }} {{ lineStart }} - {{ lineEnd }}
           icon-close-circle-fill.icon-16(v-if="secondaryCodeRunning")
+      a-button(type="outline" @click="explain") {{ $t('dashboard.explain') }}
     .query-select
       a-space(size="medium")
         a-tooltip(mini :content="$t('dashboard.clearCode')")
@@ -131,7 +132,7 @@ a-card.editor-card(:bordered="false")
     step: '30s',
     range: [dayjs().subtract(5, 'minute').unix().toString(), dayjs().unix().toString()],
   })
-  const { runQuery } = useQueryCode()
+  const { runQuery, explainQuery } = useQueryCode()
   const { extensions } = storeToRefs(useDataBaseStore())
 
   const isButtonDisabled = computed(() => {
@@ -208,6 +209,10 @@ a-card.editor-card(:bordered="false")
     secondaryCodeRunning.value = true
     await runQuery(selectedCode.value.trim(), queryType.value, false, promForm)
     secondaryCodeRunning.value = false
+  }
+
+  const explain = async () => {
+    await explainQuery(`explain analyze format json ${codes.value[queryType.value]}`, queryType.value)
   }
 
   window.addEventListener('beforeunload', () => {

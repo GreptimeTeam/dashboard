@@ -29,6 +29,7 @@ export interface ResultType {
   dimensionsAndXName: { dimensions: DimensionType[]; xAxis: string }
   key: number
   type: string
+  name?: string
 }
 
 export interface SeriesType {

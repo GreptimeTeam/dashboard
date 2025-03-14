@@ -21,10 +21,10 @@ a-tabs.panel-tabs(
     v-for="(result, index) of results"
     :key="result.key"
     closable
-    :title="`${$t('dashboard.result')} ${result.key - startKey + 1}`"
+    :title="`${$t(`dashboard.${result.name}`)} ${result.key - startKey + 1}`"
   )
     a-tabs.data-view-tabs(:animation="true")
-      a-tab-pane(key="table" :title="$t('dashboard.table')")
+      a-tab-pane(v-if="result.name === 'result'" key="table" :title="$t('dashboard.table')")
         template(#title)
           a-space(:size="10")
             svg.icon-16
@@ -38,6 +38,21 @@ a-tabs.panel-tabs(
               use(href="#chart")
             | {{ $t('dashboard.chart') }}
         DataChart(:data="result" :has-header="false")
+      a-tab-pane(v-if="result.name === 'explain'" key="explain-grid" :title="`table`")
+        a-space(direction="vertical")
+          ExplainGrid(
+            v-for="(stage, index) in getStages(result)"
+            :key="index"
+            :data="stage"
+            :index="index"
+          )
+      a-tab-pane(v-if="result.name === 'explain'" key="explain-chart" :title="`chart`")
+        ExplainChart(
+          v-for="(stage, index) in result.records.rows.filter((row) => row[0] !== null)"
+          :key="index"
+          :data="stage"
+          :index="index"
+        )
 </template>
 
 <script lang="ts" name="DataView" setup>
@@ -82,6 +97,24 @@ a-tabs.panel-tabs(
       }
     }
   )
+  const getStages = computed(() => (result: ResultType) => {
+    const { rows } = result.records
+
+    const rowsData = rows.filter((row: any) => row[0] !== null)
+    const stagesMap = new Map()
+    rowsData.forEach((row: any) => {
+      const stageIndex = row[0].toString()
+      const nodeIndex = row[1].toString()
+      const plan = JSON.parse(row[2])
+
+      if (stagesMap.has(stageIndex)) {
+        stagesMap.set(stageIndex, [...stagesMap.get(stageIndex), row])
+      } else {
+        stagesMap.set(stageIndex, [row])
+      }
+    })
+    return Array.from(stagesMap.values())
+  })
 </script>
 
 <style lang="less">

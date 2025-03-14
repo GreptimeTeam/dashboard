@@ -48,11 +48,110 @@ const useCodeRunStore = defineStore('codeRun', () => {
     python: 'scripts',
   }
 
-  const runCode = async (codeInfo: string, type: string, withoutSave = false, params = {} as PromForm) => {
+  const exmpleRes: any = {
+    output: [
+      {
+        records: {
+          schema: {
+            column_schemas: [
+              {
+                name: 'stage',
+                data_type: 'UInt32',
+              },
+              {
+                name: 'node',
+                data_type: 'UInt32',
+              },
+              {
+                name: 'plan',
+                data_type: 'String',
+              },
+            ],
+          },
+          rows: [
+            [
+              0,
+              0,
+              '{"name":"ProjectionExec","param":"expr=[date_bin(Utf8(\\"interval 1 day\\"),live_connection_log.record_time)@0 as record_time_window2, device_model@1 as device_model, count(Int64(1))@2 as ]","output_rows":0,"elapsed_compute":19586,"metrics":{},"children":[{"name":"AggregateExec","param":"mode=FinalPartitioned, gby=[date_bin(Utf8(\\"interval 1 day\\"),live_connection_log.record_time)@0 as date_bin(Utf8(\\"interval 1 day\\"),live_connection_log.record_time), device_model@1 as device_model], aggr=[count(Int64(1))]","output_rows":0,"elapsed_compute":191616,"metrics":{"spilled_rows":0,"peak_mem_used":3840,"spill_count":0,"spilled_bytes":0},"children":[{"name":"CoalesceBatchesExec","param":"target_batch_size=8192","output_rows":0,"elapsed_compute":631,"metrics":{},"children":[{"name":"RepartitionExec","param":"partitioning=Hash([date_bin(Utf8(\\"interval 1 day\\"),live_connection_log.record_time)@0, device_model@1], 32), input_partitions=32","output_rows":0,"elapsed_compute":0,"metrics":{"repartition_time":35440,"send_time":1024,"fetch_time":12378552},"children":[{"name":"AggregateExec","param":"mode=Partial, gby=[date_bin(CAST(interval 1 day AS Interval(MonthDayNano)), record_time@1) as date_bin(Utf8(\\"interval 1 day\\"),live_connection_log.record_time), device_model@0 as device_model], aggr=[count(Int64(1))]","output_rows":0,"elapsed_compute":295784,"metrics":{"spilled_rows":0,"spilled_bytes":0,"spill_count":0,"skipped_aggregation_rows":0,"peak_mem_used":3840},"children":[{"name":"ProjectionExec","param":"expr=[device_model@10 as device_model, record_time@24 as record_time]","output_rows":0,"elapsed_compute":32,"metrics":{},"children":[{"name":"MergeScanExec","param":"peers=[4612794875904(1074, 0), 4612794875905(1074, 1), 4612794875906(1074, 2), 4612794875907(1074, 3), 4612794875908(1074, 4), 4612794875909(1074, 5), 4612794875910(1074, 6), 4612794875911(1074, 7), 4612794875912(1074, 8), 4612794875913(1074, 9), 4612794875914(1074, 10), ]","output_rows":0,"elapsed_compute":0,"metrics":{"greptime_exec_read_cost":0,"first_consume_time":11625941,"finish_time":11630099,"ready_time":9687264},"children":[]}]}]}]}]}]}]}',
+            ],
+            [
+              1,
+              0,
+              '{"name":"CoalesceBatchesExec","param":"target_batch_size=8192","output_rows":0,"elapsed_compute":531,"metrics":{},"children":[{"name":"FilterExec","param":"record_time@24 >= 1739669990000000000 AND record_time@24 <= 1739756390000000000 AND connect_protocol@19 = 3","output_rows":0,"elapsed_compute":32,"metrics":{},"children":[{"name":"RepartitionExec","param":"partitioning=RoundRobinBatch(32), input_partitions=1","output_rows":0,"elapsed_compute":0,"metrics":{"repartition_time":1,"send_time":32,"fetch_time":15429},"children":[{"name":"UnorderedScan","param":"region=4612794875906(1074, 2), partition_count=0 (0 memtable ranges, 0 file 0 ranges)","output_rows":0,"elapsed_compute":0,"metrics":{"elapsed_poll":7614,"elapsed_await":1,"mem_used":0},"children":[]}]}]}]}',
+            ],
+            [
+              1,
+              1,
+              '{"name":"CoalesceBatchesExec","param":"target_batch_size=8192","output_rows":0,"elapsed_compute":672,"metrics":{},"children":[{"name":"FilterExec","param":"record_time@24 >= 1739669990000000000 AND record_time@24 <= 1739756390000000000 AND connect_protocol@19 = 3","output_rows":0,"elapsed_compute":32,"metrics":{},"children":[{"name":"RepartitionExec","param":"partitioning=RoundRobinBatch(32), input_partitions=1","output_rows":0,"elapsed_compute":0,"metrics":{"repartition_time":1,"send_time":32,"fetch_time":4198},"children":[{"name":"UnorderedScan","param":"region=4612794875905(1074, 1), partition_count=0 (0 memtable ranges, 0 file 0 ranges)","output_rows":0,"elapsed_compute":0,"metrics":{"elapsed_poll":1412,"mem_used":0,"elapsed_await":1},"children":[]}]}]}]}',
+            ],
+            [
+              1,
+              2,
+              '{"name":"CoalesceBatchesExec","param":"target_batch_size=8192","output_rows":0,"elapsed_compute":641,"metrics":{},"children":[{"name":"FilterExec","param":"record_time@24 >= 1739669990000000000 AND record_time@24 <= 1739756390000000000 AND connect_protocol@19 = 3","output_rows":0,"elapsed_compute":32,"metrics":{},"children":[{"name":"RepartitionExec","param":"partitioning=RoundRobinBatch(32), input_partitions=1","output_rows":0,"elapsed_compute":0,"metrics":{"fetch_time":10830,"repartition_time":1,"send_time":32},"children":[{"name":"UnorderedScan","param":"region=4612794875911(1074, 7), partition_count=0 (0 memtable ranges, 0 file 0 ranges)","output_rows":0,"elapsed_compute":0,"metrics":{"mem_used":0,"elapsed_await":1,"elapsed_poll":1513},"children":[]}]}]}]}',
+            ],
+            [
+              1,
+              3,
+              '{"name":"CoalesceBatchesExec","param":"target_batch_size=8192","output_rows":0,"elapsed_compute":601,"metrics":{},"children":[{"name":"FilterExec","param":"record_time@24 >= 1739669990000000000 AND record_time@24 <= 1739756390000000000 AND connect_protocol@19 = 3","output_rows":0,"elapsed_compute":32,"metrics":{},"children":[{"name":"RepartitionExec","param":"partitioning=RoundRobinBatch(32), input_partitions=1","output_rows":0,"elapsed_compute":0,"metrics":{"send_time":32,"fetch_time":8166,"repartition_time":1},"children":[{"name":"UnorderedScan","param":"region=4612794875908(1074, 4), partition_count=0 (0 memtable ranges, 0 file 0 ranges)","output_rows":0,"elapsed_compute":0,"metrics":{"elapsed_await":1,"mem_used":0,"elapsed_poll":1383},"children":[]}]}]}]}',
+            ],
+            [
+              1,
+              4,
+              '{"name":"CoalesceBatchesExec","param":"target_batch_size=8192","output_rows":0,"elapsed_compute":642,"metrics":{},"children":[{"name":"FilterExec","param":"record_time@24 >= 1739669990000000000 AND record_time@24 <= 1739756390000000000 AND connect_protocol@19 = 3","output_rows":0,"elapsed_compute":32,"metrics":{},"children":[{"name":"RepartitionExec","param":"partitioning=RoundRobinBatch(32), input_partitions=1","output_rows":0,"elapsed_compute":0,"metrics":{"repartition_time":1,"send_time":32,"fetch_time":5961},"children":[{"name":"UnorderedScan","param":"region=4612794875914(1074, 10), partition_count=0 (0 memtable ranges, 0 file 0 ranges)","output_rows":0,"elapsed_compute":0,"metrics":{"elapsed_poll":1372,"elapsed_await":1,"mem_used":0},"children":[]}]}]}]}',
+            ],
+            [
+              1,
+              5,
+              '{"name":"CoalesceBatchesExec","param":"target_batch_size=8192","output_rows":0,"elapsed_compute":651,"metrics":{},"children":[{"name":"FilterExec","param":"record_time@24 >= 1739669990000000000 AND record_time@24 <= 1739756390000000000 AND connect_protocol@19 = 3","output_rows":0,"elapsed_compute":32,"metrics":{},"children":[{"name":"RepartitionExec","param":"partitioning=RoundRobinBatch(32), input_partitions=1","output_rows":0,"elapsed_compute":0,"metrics":{"fetch_time":9708,"repartition_time":1,"send_time":32},"children":[{"name":"UnorderedScan","param":"region=4612794875909(1074, 5), partition_count=0 (0 memtable ranges, 0 file 0 ranges)","output_rows":0,"elapsed_compute":0,"metrics":{"elapsed_await":1,"elapsed_poll":1222,"mem_used":0},"children":[]}]}]}]}',
+            ],
+            [
+              1,
+              6,
+              '{"name":"CoalesceBatchesExec","param":"target_batch_size=8192","output_rows":0,"elapsed_compute":641,"metrics":{},"children":[{"name":"FilterExec","param":"record_time@24 >= 1739669990000000000 AND record_time@24 <= 1739756390000000000 AND connect_protocol@19 = 3","output_rows":0,"elapsed_compute":32,"metrics":{},"children":[{"name":"RepartitionExec","param":"partitioning=RoundRobinBatch(32), input_partitions=1","output_rows":0,"elapsed_compute":0,"metrics":{"fetch_time":13566,"repartition_time":1,"send_time":32},"children":[{"name":"UnorderedScan","param":"region=4612794875907(1074, 3), partition_count=0 (0 memtable ranges, 0 file 0 ranges)","output_rows":0,"elapsed_compute":0,"metrics":{"mem_used":0,"elapsed_poll":1032,"elapsed_await":1},"children":[]}]}]}]}',
+            ],
+            [
+              1,
+              7,
+              '{"name":"CoalesceBatchesExec","param":"target_batch_size=8192","output_rows":0,"elapsed_compute":680,"metrics":{},"children":[{"name":"FilterExec","param":"record_time@24 >= 1739669990000000000 AND record_time@24 <= 1739756390000000000 AND connect_protocol@19 = 3","output_rows":0,"elapsed_compute":32,"metrics":{},"children":[{"name":"RepartitionExec","param":"partitioning=RoundRobinBatch(32), input_partitions=1","output_rows":0,"elapsed_compute":0,"metrics":{"fetch_time":3547,"repartition_time":1,"send_time":32},"children":[{"name":"UnorderedScan","param":"region=4612794875910(1074, 6), partition_count=0 (0 memtable ranges, 0 file 0 ranges)","output_rows":0,"elapsed_compute":0,"metrics":{"elapsed_poll":631,"mem_used":0,"elapsed_await":1},"children":[]}]}]}]}',
+            ],
+            [
+              1,
+              8,
+              '{"name":"CoalesceBatchesExec","param":"target_batch_size=8192","output_rows":0,"elapsed_compute":561,"metrics":{},"children":[{"name":"FilterExec","param":"record_time@24 >= 1739669990000000000 AND record_time@24 <= 1739756390000000000 AND connect_protocol@19 = 3","output_rows":0,"elapsed_compute":32,"metrics":{},"children":[{"name":"RepartitionExec","param":"partitioning=RoundRobinBatch(32), input_partitions=1","output_rows":0,"elapsed_compute":0,"metrics":{"repartition_time":1,"fetch_time":15659,"send_time":32},"children":[{"name":"UnorderedScan","param":"region=4612794875912(1074, 8), partition_count=0 (0 memtable ranges, 0 file 0 ranges)","output_rows":0,"elapsed_compute":0,"metrics":{"mem_used":0,"elapsed_await":1,"elapsed_poll":4849},"children":[]}]}]}]}',
+            ],
+            [
+              1,
+              9,
+              '{"name":"CoalesceBatchesExec","param":"target_batch_size=8192","output_rows":0,"elapsed_compute":600,"metrics":{},"children":[{"name":"FilterExec","param":"record_time@24 >= 1739669990000000000 AND record_time@24 <= 1739756390000000000 AND connect_protocol@19 = 3","output_rows":0,"elapsed_compute":32,"metrics":{},"children":[{"name":"RepartitionExec","param":"partitioning=RoundRobinBatch(32), input_partitions=1","output_rows":0,"elapsed_compute":0,"metrics":{"fetch_time":6913,"send_time":32,"repartition_time":1},"children":[{"name":"UnorderedScan","param":"region=4612794875913(1074, 9), partition_count=0 (0 memtable ranges, 0 file 0 ranges)","output_rows":0,"elapsed_compute":0,"metrics":{"mem_used":0,"elapsed_await":1,"elapsed_poll":1784},"children":[]}]}]}]}',
+            ],
+            [
+              1,
+              10,
+              '{"name":"CoalesceBatchesExec","param":"target_batch_size=8192","output_rows":0,"elapsed_compute":611,"metrics":{},"children":[{"name":"FilterExec","param":"record_time@24 >= 1739669990000000000 AND record_time@24 <= 1739756390000000000 AND connect_protocol@19 = 3","output_rows":0,"elapsed_compute":32,"metrics":{},"children":[{"name":"RepartitionExec","param":"partitioning=RoundRobinBatch(32), input_partitions=1","output_rows":0,"elapsed_compute":0,"metrics":{"send_time":32,"fetch_time":4960,"repartition_time":1},"children":[{"name":"UnorderedScan","param":"region=4612794875904(1074, 0), partition_count=0 (0 memtable ranges, 0 file 0 ranges)","output_rows":0,"elapsed_compute":0,"metrics":{"mem_used":0,"elapsed_await":1,"elapsed_poll":1172},"children":[]}]}]}]}',
+            ],
+            [null, null, 'Total rows: 0'],
+          ],
+          total_rows: 13,
+        },
+      },
+    ],
+    execution_time_ms: 3,
+  }
+
+  const runCode = async (
+    codeInfo: string,
+    type: string,
+    withoutSave = false,
+    params = {} as PromForm,
+    resultType = 'result'
+  ) => {
     try {
       // TODO: try something better
       let oneResult = {} as ResultType
-      const res: HttpResponse = await API_MAP[type](codeInfo, params)
+      const res = exmpleRes as HttpResponse
+      // const res: HttpResponse = await API_MAP[type](codeInfo, params)
+
+      console.log(res)
       const resultsInLog: Array<ResultInLog> = []
       res.output.forEach((oneRes: OutputType) => {
         if (Reflect.has(oneRes, 'records')) {
@@ -79,6 +178,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
                   : getDimensionsAndXName(oneRes.records.schema.column_schemas),
               key: resultKeyCount[pageType],
               type,
+              name: resultType,
             }
             if (!withoutSave) {
               results.value.push(oneResult)
