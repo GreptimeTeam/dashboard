@@ -48,7 +48,7 @@ a-tabs.panel-tabs(
           )
       a-tab-pane(v-if="result.name === 'explain'" key="explain-chart" :title="`chart`")
         ExplainChart(
-          v-for="(stage, index) in result.records.rows.filter((row) => row[0] !== null)"
+          v-for="(stage, index) in getStages(result)"
           :key="index"
           :data="stage"
           :index="index"

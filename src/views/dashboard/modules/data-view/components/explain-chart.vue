@@ -1,28 +1,113 @@
 <template>
-  <!-- The tree will be drawn into this div -->
-  <div ref="chartContainer" style="padding: 8px"></div>
+  <div class="explain-chart">
+    <div class="chart-controls">
+      <a-select v-model="selectedNode" size="mini" style="width: 120px; margin-right: 8px" placeholder="Select node">
+        <a-option v-for="node in availableNodes" :key="node" :value="node">Node {{ node }}</a-option>
+      </a-select>
+      <a-select
+        v-model="selectedMetric"
+        size="mini"
+        style="width: 150px; margin-right: 8px"
+        placeholder="Select metric"
+        allow-clear
+      >
+        <a-option v-for="metric in availableMetrics" :key="metric.value" :value="metric.value">{{
+          metric.label
+        }}</a-option>
+      </a-select>
+      <a-button type="text" size="mini" @click="toggleMetricsExpanded">
+        <template #icon>
+          <icon-expand v-if="!metricsExpanded" />
+          <icon-shrink v-else />
+        </template>
+        {{ metricsExpanded ? 'Collapse' : 'Expand' }}
+      </a-button>
+    </div>
+    <div ref="chartContainer" style="padding: 8px"></div>
+  </div>
 </template>
 
 <script lang="ts" setup>
-  import { onMounted, ref, watch } from 'vue'
+  import { onMounted, ref, watch, computed } from 'vue'
   import * as d3 from 'd3'
   import { flextree } from 'd3-flextree'
-  import ArcoVue from '@arco-design/web-vue/es/arco-vue'
+  import { IconExpand, IconShrink } from '@arco-design/web-vue/es/icon'
 
-  const props = defineProps<{ data: any }>()
+  const props = defineProps<{
+    data: any[] // This is an array of rows from getStages
+    index: number
+  }>()
 
   const chartContainer = ref<HTMLDivElement | null>(null)
+  const metricsExpanded = ref(false)
+  const selectedMetric = ref<string>('output_rows')
+  const selectedNode = ref<number | null>(null)
 
-  function toHierarchy(plan: any) {
-    return {
-      name: plan.name || 'Root',
-      metrics: plan.metrics,
-      children: (plan.children || []).map((child) => toHierarchy(child)),
-    }
+  // Define the order of importance for metrics
+  const importanceOrder = [
+    'output_rows', // How many rows this step produces
+    'elapsed_compute', // Processing time for this step
+    'fetch_time', // Time spent fetching data
+    'elapsed_poll', // Time spent waiting for data
+    'repartition_time', // Time spent repartitioning data
+    'send_time', // Time spent sending data
+    'mem_used', // Memory consumption
+    'elapsed_await', // Time spent waiting
+  ]
+
+  // Generate available metrics for the dropdown
+  const availableMetrics = computed(() => {
+    return importanceOrder.map((metric) => ({
+      label: metric,
+      value: metric,
+    }))
+  })
+
+  // Get list of available nodes
+  const availableNodes = computed(() => {
+    if (!props.data || props.data.length === 0) return []
+    return [...new Set(props.data.map((row) => row[1]))].sort((a, b) => a - b)
+  })
+
+  // Watch for changes in available nodes to set default selection
+  watch(
+    availableNodes,
+    (nodes) => {
+      if (nodes.length > 0 && selectedNode.value === null) {
+        selectedNode.value = nodes[0]
+      }
+    },
+    { immediate: true }
+  )
+
+  // Function to process plans from multiple nodes into a unified tree
+  function processNodesData(data) {
+    // Each data item is [stageIndex, nodeIndex, planJson]
+    const nodeMap = new Map()
+
+    // Group by node
+    data.forEach((row) => {
+      const nodeIdx = row[1]
+      nodeMap.set(nodeIdx, {
+        nodeIndex: nodeIdx,
+        plan: JSON.parse(row[2]),
+      })
+    })
+
+    return Array.from(nodeMap.values())
   }
 
-  const clickNode = (node: any) => {
-    console.log(node, 'node')
+  function toHierarchy(plan, nodeIndex) {
+    return {
+      name: plan.name || 'Root',
+      nodeIndex,
+      metrics: {
+        ...(plan.metrics || {}),
+        output_rows: plan.output_rows,
+        elapsed_compute: plan.elapsed_compute,
+      },
+      children: (plan.children || []).map((child) => toHierarchy(child, nodeIndex)),
+    }
   }
 
   function renderTree() {
@@ -35,8 +120,14 @@
 
     const svg = d3.select(chartContainer.value).append('svg').attr('width', width).attr('height', height)
 
-    if (!props.data) return
-    const rootData = toHierarchy(JSON.parse(props.data[2]))
+    if (!props.data || props.data.length === 0) return
+
+    // Find the selected node's data
+    const nodeData = props.data.find((row) => row[1] === selectedNode.value)
+    if (!nodeData) return
+
+    const planData = JSON.parse(nodeData[2])
+    const rootData = toHierarchy(planData, selectedNode.value)
 
     const layout = flextree()
       .nodeSize([200, 120])
@@ -101,65 +192,138 @@
     node
       .append('foreignObject')
       .attr('width', 200)
-      .attr('height', 80)
-      .html(
-        (d) => `
-      <div style="width: 200px; height: 80px; display: flex; align-items: center; justify-content: center">
-        <div class="plan-card" style="width: 180px">
-          <div class="plan-name">${d.data.name}</div>
-          ${
-            d.data.metrics
-              ? `
-            <div class="plan-metrics">
-              ${Object.entries(d.data.metrics)
-                .map(
-                  ([key, value]) => `
-                  <div class="metric-item">
-                    <span class="metric-key">${key}:</span>
-                    <span class="metric-value">${value}</span>
-                  </div>
-                `
-                )
-                .join('')}
-            </div>
-          `
-              : ''
+      .attr('height', metricsExpanded.value ? 120 : 80)
+      .html((d) => {
+        // Create the card header with node info
+        const header = `
+          <div class="plan-header">
+            <div class="plan-name">${d.data.name}</div>
+            <div class="node-badge">Node ${d.data.nodeIndex}</div>
+          </div>
+        `
+
+        // Create metrics section based on expanded state
+        let metricsHtml = ''
+
+        if (metricsExpanded.value) {
+          // Show all metrics when expanded
+          if (d.data.metrics && Object.keys(d.data.metrics).length > 0) {
+            const sortedMetrics = {}
+
+            // First add metrics in our importance order
+            importanceOrder.forEach((key) => {
+              if (d.data.metrics[key] !== undefined) {
+                sortedMetrics[key] = d.data.metrics[key]
+              }
+            })
+
+            // Then add any remaining metrics
+            Object.keys(d.data.metrics).forEach((key) => {
+              if (sortedMetrics[key] === undefined) {
+                sortedMetrics[key] = d.data.metrics[key]
+              }
+            })
+
+            metricsHtml = `
+              <div class="plan-metrics">
+                ${Object.entries(sortedMetrics)
+                  .map(
+                    ([key, value]) => `
+                    <div class="metric-item">
+                      <span class="metric-key">${key}:</span>
+                      <span class="metric-value">${value}</span>
+                    </div>
+                  `
+                  )
+                  .join('')}
+              </div>
+            `
           }
-        </div>
-      </div>
-    `
-      )
-      .on('click', (event, d) => clickNode(d)) // Add click handler here instead
+        }
+        // Show only selected metric when collapsed
+        else if (d.data.metrics && d.data.metrics[selectedMetric.value] !== undefined) {
+          metricsHtml = `
+              <div class="plan-metrics">
+                <div class="metric-item">
+                  <span class="metric-key">${selectedMetric.value}:</span>
+                  <span class="metric-value">${d.data.metrics[selectedMetric.value]}</span>
+                </div>
+              </div>
+            `
+        }
+
+        return `
+          <div style="width: 200px; height: ${
+            metricsExpanded.value ? '120' : '80'
+          }px; display: flex; align-items: center; justify-content: center">
+            <div class="plan-card">
+              ${header}
+              ${metricsHtml}
+            </div>
+          </div>
+        `
+      })
+  }
+
+  const toggleMetricsExpanded = () => {
+    metricsExpanded.value = !metricsExpanded.value
+    renderTree()
   }
 
   onMounted(() => {
     renderTree()
   })
 
-  watch(
-    () => props.data,
-    () => {
-      console.log('Data changed, re-rendering tree')
-      renderTree()
-    }
-  )
+  watch([() => props.data, selectedMetric, selectedNode], () => {
+    renderTree()
+  })
 </script>
 
 <style lang="less">
+  .explain-chart {
+    .chart-controls {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+      padding: 0 8px;
+    }
+  }
+
   .plan-card {
-    background-color: #f0f0f0;
+    width: 180px;
+    background-color: var(--color-bg-2);
+    border: 1px solid var(--color-border-2);
     border-radius: 4px;
     padding: 8px;
     cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+
+    .plan-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
 
     .plan-name {
       font-weight: bold;
-      margin-bottom: 4px;
+      color: var(--color-text-1);
+      font-size: 13px;
+    }
+
+    .node-badge {
+      font-size: 11px;
+      color: var(--color-text-3);
+      background-color: var(--color-fill-2);
+      padding: 2px 6px;
+      border-radius: 10px;
     }
 
     .plan-metrics {
       font-size: 12px;
-      color: #666;
+      color: var(--color-text-2);
+      border-top: 1px solid var(--color-border-2);
+      padding-top: 6px;
     }
 
     .metric-item {
@@ -169,11 +333,13 @@
     }
 
     .metric-key {
+      color: var(--color-text-3);
       margin-right: 8px;
     }
 
     .metric-value {
       font-family: monospace;
+      color: var(--color-text-1);
     }
   }
 </style>
