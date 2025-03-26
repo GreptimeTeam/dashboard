@@ -148,8 +148,8 @@ const useCodeRunStore = defineStore('codeRun', () => {
     try {
       // TODO: try something better
       let oneResult = {} as ResultType
-      const res = exmpleRes as HttpResponse
-      // const res: HttpResponse = await API_MAP[type](codeInfo, params)
+      // const res = exmpleRes as HttpResponse
+      const res: HttpResponse = await API_MAP[type](codeInfo, params)
 
       console.log(res)
       const resultsInLog: Array<ResultInLog> = []
