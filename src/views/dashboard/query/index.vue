@@ -10,8 +10,13 @@ a-layout.new-layout
         direction="vertical"
         :size="0"
       )
-        Editor
-        DataView(v-if="!!results?.length" :results="results" :types="types")
+        Editor(@select-explain-tab="selectExplainTab")
+        DataView(
+          v-if="!!results?.length"
+          ref="dataViewRef"
+          :results="results"
+          :types="types"
+        )
       a-resize-box.panel-resize(
         v-model:height="logsHeight"
         :directions="['top']"
@@ -42,6 +47,7 @@ a-layout.new-layout
   const logsHeight = ref(66)
   const results = computed(() => getResultsByType(types))
   const queryLogs = computed(() => logs.value.filter((log) => types.includes(log.type)))
+  const dataViewRef = ref(null)
 
   watch(s, (v) => {
     if (
@@ -59,6 +65,12 @@ a-layout.new-layout
     )
       queryType.value = 'promql'
   })
+
+  const selectExplainTab = (tabKey) => {
+    if (dataViewRef.value) {
+      dataViewRef.value.selectTab(tabKey)
+    }
+  }
 
   const globalTour = driver({
     showProgress: false,

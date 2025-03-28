@@ -119,8 +119,8 @@ export default function useQueryCode() {
 
   const explainQuery = async (code: string, type = queryType.value) => {
     const { runCode } = useCodeRunStore()
-    console.log(code, type)
-    await runCode(code, type, false, {} as PromForm, 'explain')
+    const result = await runCode(code, type, false, {}, 'explain')
+    return result
   }
   const getResultsByType = (types: string[]) => {
     return results.value.filter((item: ResultType) => types.includes(item.type))

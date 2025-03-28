@@ -211,8 +211,20 @@ a-card.editor-card(:bordered="false")
     secondaryCodeRunning.value = false
   }
 
+  const emit = defineEmits(['select-explain-tab'])
+
   const explain = async () => {
-    await explainQuery(`explain analyze format json ${codes.value[queryType.value]}`, queryType.value)
+    const result: any = await explainQuery(
+      `explain analyze format json ${codes.value[queryType.value]}`,
+      queryType.value
+    )
+    // If there's a result with an explain tab, focus on it
+    if (result && result.lastResult) {
+      const { lastResult } = result
+      // Emit an event to parent to select this tab
+      // eslint-disable-next-line vue/custom-event-name-casing
+      emit('select-explain-tab', lastResult.key)
+    }
   }
 
   window.addEventListener('beforeunload', () => {

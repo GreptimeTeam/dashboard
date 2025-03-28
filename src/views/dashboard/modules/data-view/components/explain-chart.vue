@@ -124,12 +124,19 @@
     singleMetricHeight: 20,
     expandedBaseHeight: 25,
     metricLineHeight: 18,
-    padding: 60, // Padding between nodes
+    padding: 20, // Padding between nodes
+    horizontalPadding: 60, // Add this new parameter for horizontal spacing
+  }
+
+  const NODE_INDEX_CARD = {
+    width: 70, // Reduced from 100
+    height: 30, // Reduced from 40
+    fontSize: 12, // Reduced from 14
   }
 
   const chartContainer = ref<HTMLDivElement | null>(null)
   const metricsExpanded = ref(false)
-  const selectedMetric = ref<string>('fetch_time')
+  const selectedMetric = ref<string>('')
   const activeNodeIndex = ref<number | null>(null)
   const highlightType = ref<string>('NONE') // Highlight type: NONE, ROWS, DURATION
 
@@ -269,6 +276,8 @@
       })
     })
 
+    console.log(Array.from(nodeMap.values()))
+
     return Array.from(nodeMap.values())
   }
 
@@ -276,6 +285,8 @@
   function calculateMaxMetrics(nodesData) {
     let totalMaxRows = 0
     let totalMaxDuration = 0
+
+    console.log(nodesData, 'nodesData')
 
     // Process all nodes to find max values
     nodesData.forEach(({ plan }) => {
@@ -485,7 +496,7 @@
         progressBarHtml = `
           <div class="metric-progress-container">
             <div class="metric-label">
-              <span>Rows: ${outputRows} (${rowsPercentage}%)</span>
+              <span>Rows: ${outputRows}</span>
             </div>
             <div class="metric-progress">
               <div class="metric-progress-bar" style="width: ${rowsPercentage}%; background-color: ${progressColor}"></div>
@@ -498,7 +509,7 @@
         progressBarHtml = `
           <div class="metric-progress-container">
             <div class="metric-label">
-              <span>Duration: ${formatTimeValue(elapsedCompute)} (${durationPercentage}%)</span>
+              <span>Duration: ${formatTimeValue(elapsedCompute)}</span>
             </div>
             <div class="metric-progress">
               <div class="metric-progress-bar" style="width: ${durationPercentage}%; background-color: ${progressColor}"></div>
@@ -606,9 +617,12 @@
       const treeLayout = flextree({
         nodeSize: (node) => {
           if (node.data && node.data.size) {
-            return [node.data.size[0], node.data.size[1] + CARD_DIMENSIONS.padding]
+            return [node.data.size[0] + CARD_DIMENSIONS.horizontalPadding, node.data.size[1] + CARD_DIMENSIONS.padding]
           }
-          return [CARD_DIMENSIONS.width, CARD_DIMENSIONS.minHeight + CARD_DIMENSIONS.padding]
+          return [
+            CARD_DIMENSIONS.width + CARD_DIMENSIONS.horizontalPadding,
+            CARD_DIMENSIONS.minHeight + CARD_DIMENSIONS.padding,
+          ]
         },
       })
 
@@ -669,7 +683,7 @@
 
           progressContainer.html(`
             <div class="metric-label">
-              <span>Rows: ${outputRows} (${rowsPercentage}%)</span>
+              <span>Rows: ${outputRows}</span>
             </div>
             <div class="metric-progress">
               <div class="metric-progress-bar" style="width: ${rowsPercentage}%; background-color: ${progressColor}"></div>
@@ -679,9 +693,12 @@
           const durationPercentage = Math.round((elapsedCompute / maxDuration.value) * 100)
           const progressColor = getProgressColor(durationPercentage)
 
+          const precisePercentage = ((elapsedCompute / maxDuration.value) * 100).toFixed(2)
+          console.log(precisePercentage, 'precisePercentage')
+
           progressContainer.html(`
             <div class="metric-label">
-              <span>Duration: ${formatTimeValue(elapsedCompute)} (${durationPercentage}%)</span>
+              <span>Duration: ${formatTimeValue(elapsedCompute)}</span>
             </div>
             <div class="metric-progress">
               <div class="metric-progress-bar" style="width: ${durationPercentage}%; background-color: ${progressColor}"></div>
@@ -797,7 +814,7 @@
 
             progressContainer.html(`
               <div class="metric-label">
-                <span>Rows: ${outputRows} (${rowsPercentage}%)</span>
+                <span>Rows: ${outputRows}</span>
               </div>
               <div class="metric-progress">
                 <div class="metric-progress-bar" style="width: ${rowsPercentage}%; background-color: ${progressColor}"></div>
@@ -805,11 +822,14 @@
             `)
           } else if (highlightType.value === 'DURATION' && maxDuration.value > 0) {
             const durationPercentage = Math.round((elapsedCompute / maxDuration.value) * 100)
+            // get precise percentage
+            const precisePercentage = ((elapsedCompute / maxDuration.value) * 100).toFixed(2)
+            console.log(precisePercentage, 'precisePercentage')
             const progressColor = getProgressColor(durationPercentage)
 
             progressContainer.html(`
               <div class="metric-label">
-                <span>Duration: ${formatTimeValue(elapsedCompute)} (${durationPercentage}%)</span>
+                <span>Duration: ${formatTimeValue(elapsedCompute)} </span>
               </div>
               <div class="metric-progress">
                 <div class="metric-progress-bar" style="width: ${durationPercentage}%; background-color: ${progressColor}"></div>
@@ -898,28 +918,26 @@
       const nodeIndexCard = treeGroup
         .append('g')
         .attr('class', `node-index-card ${activeNodeIndex.value === nodeIndex ? 'active-node-index' : ''}`)
-        .attr('transform', `translate(${treeWidth / 2 - 50}, 25)`)
+        .attr('transform', `translate(${treeWidth / 2 - NODE_INDEX_CARD.width / 2}, 20)`) // Centered with new width
 
       // Card rectangle
       nodeIndexCard
         .append('rect')
-        .attr('width', 100)
-        .attr('height', 40)
-        .attr('rx', 5)
-        .attr('ry', 5)
+        .attr('width', NODE_INDEX_CARD.width)
+        .attr('height', NODE_INDEX_CARD.height)
+        .attr('rx', 4) // Slightly smaller corner radius
+        .attr('ry', 4)
         .attr('class', activeNodeIndex.value === nodeIndex ? 'node-index-rect active' : 'node-index-rect')
         .style('fill', 'var(--card-bg-color)')
-        .style('stroke', activeNodeIndex.value === nodeIndex ? 'var(--brand-color)' : 'var(--border-color)')
-        .style('stroke-width', activeNodeIndex.value === nodeIndex ? 2 : 1)
 
       // Card text
       nodeIndexCard
         .append('text')
-        .attr('x', 50)
-        .attr('y', 25)
+        .attr('x', NODE_INDEX_CARD.width / 2)
+        .attr('y', NODE_INDEX_CARD.height / 2)
         .attr('text-anchor', 'middle')
         .attr('dominant-baseline', 'middle')
-        .attr('font-size', 14)
+        .attr('font-size', NODE_INDEX_CARD.fontSize)
         .attr('font-weight', 'bold')
         .attr('fill', 'var(--main-font-color)')
         .text(`Node ${nodeIndex}`)
@@ -948,12 +966,15 @@
       const treeLayout = flextree({
         nodeSize: (node) => {
           if (node.data && node.data.size) {
-            return [node.data.size[0], node.data.size[1] + CARD_DIMENSIONS.padding]
+            // Increase the horizontal size by adding horizontalPadding
+            return [node.data.size[0] + CARD_DIMENSIONS.horizontalPadding, node.data.size[1] + CARD_DIMENSIONS.padding]
           }
-          return [CARD_DIMENSIONS.width, CARD_DIMENSIONS.minHeight + CARD_DIMENSIONS.padding]
+          return [
+            CARD_DIMENSIONS.width + CARD_DIMENSIONS.horizontalPadding,
+            CARD_DIMENSIONS.minHeight + CARD_DIMENSIONS.padding,
+          ]
         },
       })
-
       // Apply layout
       const layoutRoot = treeLayout(hierarchy)
 
@@ -977,27 +998,27 @@
       // Create tree container with offset
       const treeContainer = treeGroup
         .append('g')
-        .attr('transform', `translate(${offsetX}, 90)`)
+        .attr('transform', `translate(${offsetX}, 60)`)
         .style('overflow', 'visible')
 
-      // Get root node position for connecting line
       const rootNodeX = layoutRoot.x + offsetX
       const rootNodeY = layoutRoot.y
 
-      // Add connection between node index card and tree root
+      // Calculate the bottom of the node index card
+      const cardBottom = 20 + NODE_INDEX_CARD.height
+      // 3. Add connection between node index card and tree root
       treeGroup
         .append('path')
         .attr(
           'd',
-          `M${treeWidth / 2},65C${treeWidth / 2},${(65 + rootNodeY) / 2} ${rootNodeX},${
-            (65 + rootNodeY) / 2
-          } ${rootNodeX},${rootNodeY}`
+          `M${treeWidth / 2},${cardBottom}C${treeWidth / 2},${(cardBottom + rootNodeY + 60) / 2} ${rootNodeX},${
+            (cardBottom + rootNodeY + 60) / 2
+          } ${rootNodeX},${rootNodeY + 60}`
         )
         .attr('fill', 'none')
         .attr('stroke', 'var(--border-color)')
-        .attr('stroke-width', 2)
+        .attr('stroke-width', 1)
         .attr('class', 'node-index-link')
-
       // Add links between nodes
       treeContainer
         .selectAll('.link')
@@ -1245,7 +1266,7 @@
 
     &.active-card {
       border: 1px solid var(--brand-color);
-      box-shadow: 0 0 8px var(--hover-brand-color);
+      box-shadow: 0 0 10px var(--box-shadow-color);
     }
 
     .plan-header {
@@ -1324,11 +1345,6 @@
 
     &.active-tree {
       opacity: 1;
-
-      .node-index-link {
-        stroke: var(--brand-color);
-        stroke-width: 2px;
-      }
     }
 
     g {
@@ -1344,7 +1360,6 @@
     &.active {
       fill: var(--light-brand-color);
       stroke: var(--brand-color);
-      stroke-width: 2px;
     }
   }
 

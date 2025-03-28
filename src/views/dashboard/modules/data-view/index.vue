@@ -21,7 +21,7 @@ a-tabs.panel-tabs(
     v-for="(result, index) of results"
     :key="result.key"
     closable
-    :title="`${$t(`dashboard.${result.name}`)} ${result.key - startKey + 1}`"
+    :title="getTabTitle(result)"
   )
     a-tabs.data-view-tabs(:animation="true")
       a-tab-pane(v-if="result.name === 'result'" key="table" :title="$t('dashboard.table')")
@@ -57,6 +57,7 @@ a-tabs.panel-tabs(
 
 <script lang="ts" name="DataView" setup>
   import useDataChart from '@/hooks/data-chart'
+  import i18n from '@/locale'
   import { useCodeRunStore } from '@/store'
   import type { ResultType } from '@/store/modules/code-run/types'
 
@@ -65,9 +66,29 @@ a-tabs.panel-tabs(
     types: string[]
   }>()
 
-  const { removeResult, clear } = useCodeRunStore()
+  const { removeResult, clear, ensureExplainAtTop } = useCodeRunStore()
   const activeTabKey = ref(props.results[0]?.key)
   const startKey = ref(props.results[0]?.key)
+
+  // Update title generation for tabs
+  const getTabTitle = (result: ResultType) => {
+    if (result.name === 'explain') {
+      return `${i18n.global.t(`dashboard.${result.name}`)}`
+    }
+    // For regular results, find its index among non-explain results
+    const regularResults = props.results.filter((r) => r.name !== 'explain')
+    const index = regularResults.findIndex((r) => r.key === result.key)
+    return `${i18n.global.t(`dashboard.${result.name}`)} ${index + 1}`
+  }
+
+  // Add a method to select specific tab
+  const selectTab = (key: number) => {
+    activeTabKey.value = key
+  }
+
+  defineExpose({
+    selectTab,
+  })
 
   const deleteTab = async (key: number) => {
     const index = props.results.findIndex((result) => result.key === key && props.types.includes(result.type))
@@ -115,6 +136,17 @@ a-tabs.panel-tabs(
     })
     return Array.from(stagesMap.values())
   })
+
+  // Call ensureExplainAtTop whenever results change
+  watch(
+    () => props.results,
+    (newResults) => {
+      if (newResults.length > 0) {
+        ensureExplainAtTop()
+      }
+    },
+    { immediate: true }
+  )
 </script>
 
 <style lang="less">

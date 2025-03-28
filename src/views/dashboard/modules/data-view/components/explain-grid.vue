@@ -1,7 +1,7 @@
 <template lang="pug">
 .explain-grid(:style="gridStyle")
   .grid-header
-    | Stage {{ props.index }}
+    .stage-index Stage {{ props.index }}
     .header-controls
       a-select(
         v-model="selectedNodes"
@@ -57,11 +57,11 @@
               template(v-if="metricsExpanded")
                 .metric(v-for="(value, key) in getImportantMetrics(record[`node${nodeIndex}`])" :key="key")
                   span.metric-key {{ key }}:
-                  span.metric-value {{ value }}
+                  span.metric-value {{ isTimeMetric(key) ? formatTimeValue(value) : value }}
               template(v-else)
                 .metric(v-if="record[`node${nodeIndex}`] && record[`node${nodeIndex}`][getActiveMetric] !== undefined")
                   span.metric-key {{ getActiveMetric }}:
-                  span.metric-value {{ record[`node${nodeIndex}`][getActiveMetric] }}
+                  span.metric-value {{ isTimeMetric(getActiveMetric) ? formatTimeValue(record[`node${nodeIndex}`][getActiveMetric]) : record[`node${nodeIndex}`][getActiveMetric] }}
 </template>
 
 <script lang="ts" setup name="ExplainGrid">
@@ -73,6 +73,27 @@
   }>()
 
   const expandedKeys = ref<string[]>([])
+
+  const formatTimeValue = (nanoseconds: number | undefined): string => {
+    if (nanoseconds === undefined || nanoseconds === null) return '0'
+
+    // Convert to appropriate unit
+    if (nanoseconds < 1000) {
+      return `${nanoseconds}ns`
+    }
+    if (nanoseconds < 1000000) {
+      return `${(nanoseconds / 1000).toFixed(2)}μs`
+    }
+    if (nanoseconds < 1000000000) {
+      return `${(nanoseconds / 1000000).toFixed(2)}ms`
+    }
+    return `${(nanoseconds / 1000000000).toFixed(2)}s`
+  }
+
+  // Add helper to check if a metric is time-based
+  const isTimeMetric = (key: string): boolean => {
+    return key.includes('time') || key.includes('elapsed')
+  }
 
   // Function to toggle a row's expanded state
   const toggleRowExpansion = (record: any) => {
@@ -209,20 +230,27 @@
         label: 'Parameters',
         value: record.param,
       })
-    }
 
-    // Add other fields as needed
-    if (record.output_rows !== undefined) {
-      details.push({
-        label: 'Output Rows',
-        value: record.output_rows,
-      })
-    }
+      // Add other metrics with formatting
+      Object.entries(record).forEach(([key, value]) => {
+        // Skip already handled properties and non-metrics
+        if (
+          key === 'param' ||
+          key === 'elapsed_compute' ||
+          !isTimeMetric(key) ||
+          key === 'key' ||
+          key === 'step' ||
+          key === 'path' ||
+          key.startsWith('node') ||
+          key === 'hasAdditionalDetails'
+        ) {
+          return
+        }
 
-    if (record.elapsed_compute !== undefined) {
-      details.push({
-        label: 'Compute Time',
-        value: `${record.elapsed_compute} ns`,
+        details.push({
+          label: key,
+          value: isTimeMetric(key) ? formatTimeValue(value as number) : value,
+        })
       })
     }
 
@@ -374,6 +402,14 @@
     justify-content: flex-start;
     align-items: center;
     margin-bottom: 8px;
+    .stage-index {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--color-text-1);
+      margin-right: 10px;
+      margin-left: 10px;
+      width: 80px;
+    }
   }
 
   .header-controls {
@@ -438,6 +474,9 @@
   :deep(.arco-table-td) {
     vertical-align: top; // Align all cell content to the top
     padding-top: 8px; // Add padding at the top of all cells
+    // &.arco-table-expand {
+    //   visibility: hidden; // Hide the expand icon
+    // }
   }
 
   .expanded-row {
