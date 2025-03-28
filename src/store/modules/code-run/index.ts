@@ -355,7 +355,9 @@ const useCodeRunStore = defineStore('codeRun', () => {
     removeResult,
     clear,
     writeInfluxDB,
-    ensureExplainAtTop, // Export the new method
+    ensureExplainAtTop,
+    manageExplainResult,
+    explainResultKeyCount,
   }
 })
 export default useCodeRunStore

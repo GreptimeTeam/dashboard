@@ -16,6 +16,15 @@ a-card.editor-card(:bordered="false")
           div(v-else) {{ $t('dashboard.runLines') }} {{ lineStart }} - {{ lineEnd }}
           icon-close-circle-fill.icon-16(v-if="secondaryCodeRunning")
       a-button(type="outline" @click="explain") {{ $t('dashboard.explain') }}
+      a-button.toolbar-button(
+        type="secondary"
+        size="small"
+        title="Import Explain Result"
+        @click="showImportExplainModal"
+      )
+        template(#icon)
+          icon-import
+        | Import Explain
     .query-select
       a-space(size="medium")
         a-tooltip(mini :content="$t('dashboard.clearCode')")
@@ -84,6 +93,14 @@ a-card.editor-card(:bordered="false")
           @ready="handleReadyPromql"
           @update="codeUpdate('promql')"
         )
+  a-modal(v-model:visible="importExplainModalVisible" title="Import Explain Result" @ok="handleImportExplain")
+    a-form(layout="vertical" :model="importExplainForm" :auto-label-width="true")
+      a-form-item(field="explainJson" label="Paste Explain JSON Result" validate-trigger="blur")
+        a-textarea(
+          v-model="importExplainForm.explainJson"
+          :placeholder="'Paste JSON output with plan data here'"
+          :auto-size="{ minRows: 10, maxRows: 20 }"
+        )
 </template>
 
 <script lang="ts" setup name="Editor">
@@ -95,6 +112,8 @@ a-card.editor-card(:bordered="false")
   import type { TableTreeChild, TableTreeParent } from '@/store/modules/database/types'
   import type { PromForm } from '@/store/modules/code-run/types'
   import { useStorage } from '@vueuse/core'
+  import { Message } from '@arco-design/web-vue'
+
   import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '../config'
 
   export interface Props {
@@ -134,6 +153,60 @@ a-card.editor-card(:bordered="false")
   })
   const { runQuery, explainQuery } = useQueryCode()
   const { extensions } = storeToRefs(useDataBaseStore())
+  const { explainResultKeyCount } = storeToRefs(useCodeRunStore())
+  const importExplainModalVisible = ref(false)
+  const importExplainForm = reactive({
+    explainJson: '',
+  })
+
+  const emit = defineEmits(['select-explain-tab'])
+
+  // Show the import explain modal
+  const showImportExplainModal = () => {
+    importExplainModalVisible.value = true
+  }
+
+  // Handle importing explain data
+  const handleImportExplain = async () => {
+    const { manageExplainResult } = useCodeRunStore()
+
+    try {
+      // Parse the input JSON
+      const jsonData = JSON.parse(importExplainForm.explainJson)
+      console.log(JSON.parse(JSON.stringify(jsonData)))
+      // Check if it has the expected structure
+      if (!jsonData.output || !jsonData.output[0]?.records) {
+        throw new Error('Invalid explain result format. Expected "output" array with records.')
+      }
+
+      // Create a result object similar to what runCode would create
+      const explainResult = {
+        records: jsonData.output[0].records,
+        dimensionsAndXName: { dimensions: [], xAxis: '' },
+        key: explainResultKeyCount.value,
+        type: queryType.value || 'sql',
+        name: 'explain',
+      }
+
+      // Add to results using the existing management function
+      manageExplainResult(explainResult)
+
+      // Increment the key counter
+      explainResultKeyCount.value += 1
+
+      // Emit event to select the explain tab
+      // eslint-disable-next-line vue/custom-event-name-casing
+      emit('select-explain-tab', explainResult.key)
+
+      // Clear the form and close the modal
+      importExplainForm.explainJson = ''
+      importExplainModalVisible.value = false
+
+      Message.success('Explain result imported successfully')
+    } catch (error) {
+      Message.error(`Failed to parse explain result: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
 
   const isButtonDisabled = computed(() => {
     if (codes.value[queryType.value].trim().length === 0) {
@@ -210,8 +283,6 @@ a-card.editor-card(:bordered="false")
     await runQuery(selectedCode.value.trim(), queryType.value, false, promForm)
     secondaryCodeRunning.value = false
   }
-
-  const emit = defineEmits(['select-explain-tab'])
 
   const explain = async () => {
     const result: any = await explainQuery(

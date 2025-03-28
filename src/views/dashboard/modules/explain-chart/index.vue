@@ -1,95 +1,50 @@
-<template>
-  <div class="explain-chart">
-    <div class="chart-controls">
-      <div class="node-selector">
-        <span class="node-label">Nodes:</span>
-        <div class="node-buttons">
-          <a-button
-            v-for="node in availableNodes"
-            :key="node"
-            size="mini"
-            :type="activeNodeIndex === node ? 'primary' : 'outline'"
-            @click="scrollToNode(node)"
-          >
-            {{ node }}
-          </a-button>
-        </div>
-      </div>
-      <div class="flex-spacer"></div>
-
-      <!-- Highlight type radio group -->
-      <div class="highlight-controls">
-        <span class="control-label">Highlight:</span>
-        <a-radio-group v-model="highlightType" type="button" size="mini">
-          <a-radio value="NONE">none</a-radio>
-          <a-radio value="ROWS" :disabled="!hasPlanRows">rows</a-radio>
-          <a-radio value="DURATION" :disabled="!hasDurationMetrics">duration</a-radio>
-        </a-radio-group>
-      </div>
-
-      <a-select
-        v-model="selectedMetric"
-        size="mini"
-        style="width: 150px; margin-left: 16px; margin-right: 8px"
-        placeholder="Select metric"
-        allow-clear
-      >
-        <a-option v-for="metric in availableMetrics" :key="metric.value" :value="metric.value">{{
-          metric.label
-        }}</a-option>
-      </a-select>
-      <a-button type="text" size="mini" @click="toggleMetricsExpanded">
-        <template #icon>
-          <icon-expand v-if="!metricsExpanded" />
-          <icon-shrink v-else />
-        </template>
-        {{ metricsExpanded ? 'Collapse' : 'Expand' }}
-      </a-button>
-    </div>
-    <div class="chart-scroll-container">
-      <div ref="chartContainer" class="chart-container grab-bing">
-        <!-- Zoom controls -->
-        <div class="zoom-controls">
-          <a-button type="text" size="mini" @click="zoomIn">
-            <icon-zoom-in />
-          </a-button>
-          <a-button type="text" size="mini" @click="resetZoom">
-            <icon-refresh />
-          </a-button>
-          <a-button type="text" size="mini" @click="zoomOut">
-            <icon-zoom-out />
-          </a-button>
-        </div>
-
-        <!-- Navigation arrows -->
-        <div v-if="availableNodes.length > 1" class="navigation-arrows">
-          <a-button
-            type="text"
-            size="large"
-            class="nav-arrow left"
-            :disabled="activeNodeIndex === availableNodes[0]"
-            @click="navigateToPrevNode"
-          >
-            <icon-left />
-          </a-button>
-          <a-button
-            type="text"
-            size="large"
-            class="nav-arrow right"
-            :disabled="activeNodeIndex === availableNodes[availableNodes.length - 1]"
-            @click="navigateToNextNode"
-          >
-            <icon-right />
-          </a-button>
-        </div>
-      </div>
-    </div>
-  </div>
+<template lang="pug">
+.explain-chart
+  ChartControls(
+    v-model:highlight-type="highlightType"
+    v-model:selected-metric="selectedMetric"
+    v-model:metrics-expanded="metricsExpanded"
+    :available-nodes="availableNodes"
+    :active-node-index="activeNodeIndex"
+    :max-rows="maxRows"
+    :max-duration="maxDuration"
+    :available-metrics="availableMetrics"
+    @node-selected="scrollToNode"
+  )
+  .chart-scroll-container
+    .chart-container.grab-bing(ref="chartContainer")
+      //- Zoom controls
+      .zoom-controls
+        a-button(type="text" size="mini" @click="zoomIn")
+          template(#icon)
+            IconZoomIn
+        a-button(type="text" size="mini" @click="resetZoom")
+          template(#icon)
+            icon-refresh
+        a-button(type="text" size="mini" @click="zoomOut")
+          template(#icon)
+            icon-zoom-out
+      //- Navigation arrows
+      .navigation-arrows(v-if="availableNodes.length > 1")
+        a-button.nav-arrow.left(
+          type="text"
+          size="large"
+          :disabled="activeNodeIndex === availableNodes[0]"
+          @click="navigateToPrevNode"
+        )
+          icon-left
+        a-button.nav-arrow.right(
+          type="text"
+          size="large"
+          :disabled="activeNodeIndex === availableNodes[availableNodes.length - 1]"
+          @click="navigateToNextNode"
+        )
+          icon-right
 </template>
 
-<script lang="ts" setup>
-  import { onMounted, ref, watch, computed, nextTick } from 'vue'
+<script lang="ts" setup name="ExplainChart">
   import * as d3 from 'd3'
+  import { createVNode, render } from 'vue'
   import { flextree } from 'd3-flextree'
   import {
     IconExpand,
@@ -857,6 +812,77 @@
     }
   }
 
+  // Replace the createApp code with this simpler approach
+  function renderControls() {
+    if (!chartContainer.value) return
+
+    // Create zoom controls
+    const zoomControlsDiv = document.createElement('div')
+    zoomControlsDiv.className = 'zoom-controls'
+    chartContainer.value.appendChild(zoomControlsDiv)
+
+    // Create zoom buttons with Arco icons
+    const zoomControlsContainer = document.createElement('div')
+    zoomControlsDiv.appendChild(zoomControlsContainer)
+
+    // Render zoom controls using Vue
+    const zoomButtonsVNode = createVNode('div', { class: 'zoom-buttons-container' }, [
+      createVNode(
+        'button',
+        {
+          class: 'arco-btn arco-btn-text arco-btn-size-mini',
+          onClick: zoomIn,
+        },
+        [createVNode(IconZoomIn)]
+      ),
+
+      createVNode(
+        'button',
+        {
+          class: 'arco-btn arco-btn-text arco-btn-size-mini',
+          onClick: resetZoom,
+        },
+        [createVNode(IconRefresh)]
+      ),
+
+      createVNode(
+        'button',
+        {
+          class: 'arco-btn arco-btn-text arco-btn-size-mini',
+          onClick: zoomOut,
+        },
+        [createVNode(IconZoomOut)]
+      ),
+    ])
+
+    render(zoomButtonsVNode, zoomControlsContainer)
+
+    // Add navigation arrows if needed
+    if (availableNodes.value.length > 1) {
+      const navArrowsDiv = document.createElement('div')
+      navArrowsDiv.className = 'navigation-arrows'
+      chartContainer.value.appendChild(navArrowsDiv)
+
+      // Create left arrow
+      const leftBtn = document.createElement('button')
+      leftBtn.className = 'arco-btn arco-btn-text arco-btn-size-large nav-arrow left'
+      leftBtn.disabled = activeNodeIndex.value === availableNodes.value[0]
+      leftBtn.innerHTML =
+        '<span class="arco-icon"><svg viewBox="0 0 48 48" fill="none"><path d="M32 8.4 16.444 23.956 32 39.513" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'
+      leftBtn.addEventListener('click', navigateToPrevNode)
+      navArrowsDiv.appendChild(leftBtn)
+
+      // Create right arrow
+      const rightBtn = document.createElement('button')
+      rightBtn.className = 'arco-btn arco-btn-text arco-btn-size-large nav-arrow right'
+      rightBtn.disabled = activeNodeIndex.value === availableNodes.value[availableNodes.value.length - 1]
+      rightBtn.innerHTML =
+        '<span class="arco-icon"><svg viewBox="0 0 48 48" fill="none"><path d="m16 8.4 15.556 15.556L16 39.513" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'
+      rightBtn.addEventListener('click', navigateToNextNode)
+      navArrowsDiv.appendChild(rightBtn)
+    }
+  }
+
   function renderTree() {
     if (!chartContainer.value || !props.data || props.data.length === 0) return
 
@@ -1060,6 +1086,12 @@
         })
         .html((d) => renderNode(d, nodeIndex))
     })
+
+    const zoomControlsDiv = document.createElement('div')
+    zoomControlsDiv.className = 'zoom-controls'
+    chartContainer.value.appendChild(zoomControlsDiv)
+
+    renderControls()
 
     // Set initial active node
     if (activeNodeIndex.value === null && availableNodes.value.length > 0) {
