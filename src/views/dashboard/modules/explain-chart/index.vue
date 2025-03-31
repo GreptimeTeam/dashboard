@@ -13,38 +13,20 @@
   )
   .chart-scroll-container
     .chart-container.grab-bing(ref="chartContainer")
-      //- Zoom controls
-      .zoom-controls
-        a-button(type="text" size="mini" @click="zoomIn")
-          template(#icon)
-            IconZoomIn
-        a-button(type="text" size="mini" @click="resetZoom")
-          template(#icon)
-            icon-refresh
-        a-button(type="text" size="mini" @click="zoomOut")
-          template(#icon)
-            icon-zoom-out
-      //- Navigation arrows
-      .navigation-arrows(v-if="availableNodes.length > 1")
-        a-button.nav-arrow.left(
-          type="text"
-          size="large"
-          :disabled="activeNodeIndex === availableNodes[0]"
-          @click="navigateToPrevNode"
-        )
-          icon-left
-        a-button.nav-arrow.right(
-          type="text"
-          size="large"
-          :disabled="activeNodeIndex === availableNodes[availableNodes.length - 1]"
-          @click="navigateToNextNode"
-        )
-          icon-right
+    .controls-wrapper
+      ZoomControls(@zoom-in="zoomIn" @zoom-out="zoomOut" @reset-zoom="resetZoom")
+      NavigationArrows(
+        v-if="availableNodes.length > 1"
+        :available-nodes="availableNodes"
+        :active-node-index="activeNodeIndex"
+        @prev="navigateToPrevNode"
+        @next="navigateToNextNode"
+      )
 </template>
 
 <script lang="ts" setup name="ExplainChart">
   import * as d3 from 'd3'
-  import { createVNode, render } from 'vue'
+  import { createVNode, render, h } from 'vue'
   import { flextree } from 'd3-flextree'
   import {
     IconExpand,
@@ -55,6 +37,8 @@
     IconLeft,
     IconRight,
   } from '@arco-design/web-vue/es/icon'
+  import PlanCard from './plan-card.vue'
+  import NavigationArrows from './navigation-arrows.vue'
 
   interface FlexHierarchyPointNode extends d3.HierarchyPointNode<any> {
     xSize: number
@@ -94,6 +78,7 @@
   const selectedMetric = ref<string>('')
   const activeNodeIndex = ref<number | null>(null)
   const highlightType = ref<string>('NONE') // Highlight type: NONE, ROWS, DURATION
+  const nodesData = ref([])
 
   // Zoom and pan states
   const transform = ref('translate(0,0) scale(1)')
@@ -116,13 +101,35 @@
   const hasDurationMetrics = computed(() => maxDuration.value > 0)
 
   // Get available metrics for the dropdown
+  // Add this computed property to extract all unique metrics from your plans
   const availableMetrics = computed(() => {
-    return importanceOrder
-      .filter((metric) => !['outputRows', 'elapsedCompute'].includes(metric))
-      .map((metric) => ({
-        label: metric,
-        value: metric,
-      }))
+    const metricKeys = new Set()
+
+    // Process all nodes from all plans to collect unique metric keys
+    nodesData.value.forEach(({ plan }) => {
+      function traverseNode(node) {
+        // Add metrics from this node
+        if (node.metrics) {
+          Object.keys(node.metrics).forEach((key) => {
+            // Skip the metrics we already show in progress bars
+            if (!['output_rows', 'elapsed_compute', 'outputRows', 'elapsedCompute'].includes(key)) {
+              metricKeys.add(key)
+            }
+          })
+        }
+
+        // Process children
+        if (node.children) {
+          node.children.forEach(traverseNode)
+        }
+      }
+
+      traverseNode(plan)
+    })
+
+    // Convert Set to array and sort alphabetically
+    console.log('Available metrics:', Array.from(metricKeys).sort())
+    return Array.from(metricKeys).sort()
   })
 
   // Get all available nodes from the data
@@ -201,17 +208,29 @@
     svg.call(zoomListener.value.transform, d3.zoomIdentity.translate(svg.attr('width') / 4, 50).scale(0.7))
   }
 
+  function getSvgAndGroup() {
+    if (!chartContainer.value) return { svg: null, group: null }
+    const svg = d3.select(chartContainer.value).select('svg')
+    const group = svg.select('g') // Main transform group
+    return { svg, group }
+  }
+
   // Zoom in function
   function zoomIn() {
-    if (!chartContainer.value) return
-    d3.select(chartContainer.value).select('svg').transition().duration(300).call(zoomListener.value.scaleBy, 1.3)
+    const { svg } = getSvgAndGroup()
+    if (!svg) return
+
+    // Use the current transform state
+    svg.transition().duration(300).call(zoomListener.value.scaleBy, 1.3)
   }
 
   // Zoom out function
   function zoomOut() {
-    if (!chartContainer.value) return
-    d3.select(chartContainer.value)
-      .select('svg')
+    const { svg } = getSvgAndGroup()
+    if (!svg) return
+
+    // Use the current transform state
+    svg
       .transition()
       .duration(300)
       .call(zoomListener.value.scaleBy, 1 / 1.3)
@@ -231,32 +250,22 @@
       })
     })
 
-    console.log(Array.from(nodeMap.values()))
-
     return Array.from(nodeMap.values())
   }
 
-  // Calculate max metrics for the entire plan
-  function calculateMaxMetrics(nodesData) {
+  function calculateMaxMetrics() {
     let totalMaxRows = 0
     let totalMaxDuration = 0
 
-    console.log(nodesData, 'nodesData')
-
     // Process all nodes to find max values
-    nodesData.forEach(({ plan }) => {
+    nodesData.value.forEach(({ plan }) => {
       function traversePlan(node) {
-        // Check for metrics
-        if (node.metrics) {
-          // Check for output_rows
-          if (node.output_rows) {
-            totalMaxRows = Math.max(totalMaxRows, node.output_rows)
-          }
-          // Check for elapsed_compute
-          if (node.elapsed_compute) {
-            totalMaxDuration = Math.max(totalMaxDuration, node.elapsed_compute)
-          }
-        }
+        // Fix: Look for metrics in both places
+        const outputRows = node.output_rows || (node.metrics && node.metrics.output_rows) || 0
+        const elapsedCompute = node.elapsed_compute || (node.metrics && node.metrics.elapsed_compute) || 0
+
+        totalMaxRows = Math.max(totalMaxRows, outputRows)
+        totalMaxDuration = Math.max(totalMaxDuration, elapsedCompute)
 
         // Process children
         if (node.children) {
@@ -324,35 +333,81 @@
     }
   }
 
-  // Reset zoom to fit current node
   function resetZoom() {
-    if (!chartContainer.value || activeNodeIndex.value === null) return
+    if (!chartContainer.value || activeNodeIndex.value === null || activeNodeIndex.value === undefined) return
 
-    // Get current node tree group
-    const nodeGroup = d3.select(chartContainer.value).select(`svg g .tree-group.node-${activeNodeIndex.value}`)
+    // Get current container dimensions
+    const containerWidth = chartContainer.value.clientWidth
+    const containerHeight = chartContainer.value.clientHeight
 
-    if (!nodeGroup.empty()) {
-      const nodeGroupElement = nodeGroup.node()
-      if (nodeGroupElement) {
-        const bbox = nodeGroupElement.getBBox()
-        const containerRect = chartContainer.value.getBoundingClientRect()
+    // Get SVG selections
+    const { svg, group } = getSvgAndGroup()
+    if (!svg || !group) return
 
-        // Calculate appropriate scale
-        const scaleValue = Math.min(0.9, Math.min(containerRect.width / bbox.width, containerRect.height / bbox.height))
+    // Update SVG dimensions
+    svg.attr('width', containerWidth).attr('height', containerHeight)
 
-        // Position to center this node's tree
-        const transX = (containerRect.width - bbox.width * scaleValue) / 2 - bbox.x * scaleValue
-        const transY = (containerRect.height - bbox.height * scaleValue) / 2 - bbox.y * scaleValue
+    // Find the active tree group
+    const activeNodeGroup = svg.select(`g .tree-group.node-${activeNodeIndex.value}`)
+    if (activeNodeGroup.empty()) return
 
-        // Apply transform
-        d3.select(chartContainer.value)
-          .select('svg')
-          .transition()
-          .duration(750)
-          .call(zoomListener.value.transform, d3.zoomIdentity.translate(transX, transY).scale(scaleValue))
-      }
+    // Get the bounding box
+    const groupNode = activeNodeGroup.node()
+    if (!groupNode) return
+    const groupBBox = groupNode.getBBox()
+
+    // Use minimal padding - just enough for visual clarity
+    const padding = 20 // Reduced from 50
+
+    // Calculate scale to fit tree
+    const scaleX = containerWidth / (groupBBox.width + padding * 2)
+    const scaleY = containerHeight / (groupBBox.height + padding * 2)
+
+    // Use a reasonable scale that fits but isn't too small
+    // Use Math.min but with a reasonable minimum scale to prevent tiny charts
+    const newScale = Math.min(scaleX, scaleY, maxScale) // Remove Math.max(..., 0.7) to allow smaller scales
+
+    // Calculate translation to center the tree precisely
+    const tx = containerWidth / 2 - (groupBBox.x + groupBBox.width / 2) * newScale
+    const ty = containerHeight / 2 - (groupBBox.y + groupBBox.height / 2) * newScale
+
+    // Create a proper transform object and apply it
+    const transform2 = d3.zoomIdentity.translate(tx, ty).scale(newScale)
+
+    // Apply transform through the zoom behavior to keep state consistent
+    svg.transition().duration(750).call(zoomListener.value.transform, transform2)
+
+    // Scale is updated automatically by the zoom event listener
+  }
+
+  // Add this function to better handle resize events
+  function setContainerDimensions() {
+    if (!chartContainer.value) return
+
+    chartContainer.value.getBoundingClientRect()
+
+    // Also update SVG dimensions
+    const svg = d3.select(chartContainer.value as HTMLDivElement).select('svg')
+    if (!svg.empty()) {
+      svg.attr('width', chartContainer.value.clientWidth).attr('height', chartContainer.value.clientHeight)
     }
   }
+
+  // Call this function in the handleResize function
+  function handleResize() {
+    if (chartContainer.value) {
+      setContainerDimensions()
+      resetZoom()
+    }
+  }
+
+  onMounted(() => {
+    window.addEventListener('resize', handleResize)
+  })
+
+  onBeforeUnmount(() => {
+    window.removeEventListener('resize', handleResize)
+  })
 
   function scrollToNode(nodeIdx) {
     const previousNodeId = activeNodeIndex.value
@@ -375,14 +430,17 @@
     const position = nodePositions.value.get(nodeIdx)
     if (position !== undefined && chartContainer.value) {
       const containerRect = chartContainer.value.getBoundingClientRect()
-      const svg = d3.select(chartContainer.value).select('svg').node()
+      const svg = d3
+        .select(chartContainer.value as HTMLDivElement)
+        .select('svg')
+        .node()
       const currentTransform = d3.zoomTransform(svg)
 
       // Calculate the translation needed to center on this node
       const desiredTransX = containerRect.width / 2 - position * currentTransform.k
 
       // Apply new transform that preserves vertical position and scale
-      d3.select(chartContainer.value)
+      d3.select(chartContainer.value as HTMLDivElement)
         .select('svg')
         .transition()
         .duration(500)
@@ -393,9 +451,8 @@
     }
   }
 
-  // Navigate to previous node
   function navigateToPrevNode() {
-    if (!activeNodeIndex.value) return
+    if (activeNodeIndex.value === null || activeNodeIndex.value === undefined) return
 
     const currentIndex = availableNodes.value.indexOf(activeNodeIndex.value)
     if (currentIndex > 0) {
@@ -403,9 +460,8 @@
     }
   }
 
-  // Navigate to next node
   function navigateToNextNode() {
-    if (!activeNodeIndex.value) return
+    if (activeNodeIndex.value === null || activeNodeIndex.value === undefined) return
 
     const currentIndex = availableNodes.value.indexOf(activeNodeIndex.value)
     if (currentIndex < availableNodes.value.length - 1) {
@@ -607,60 +663,39 @@
       })
     })
   }
-
   function updateProgressBars(currentHighlightType) {
     if (!chartContainer.value) return
 
-    // Select all plan cards by foreignObject
-    d3.selectAll('.node foreignObject').each(function updateCardWithProgressBar() {
+    // Since we're using Vue components, we need to re-render them with updated props
+    d3.selectAll('.node foreignObject').each(function () {
       const nodeData = d3.select(this.parentNode).datum()
       if (!nodeData || !nodeData.data) return
 
-      // Get the HTML content inside the foreignObject
-      const cardContainer = d3.select(this).select('.plan-node-container')
-      const card = cardContainer.select('.plan-card')
+      // Get the container div where the Vue component is mounted
+      const container = this.querySelector('div')
+      if (!container) return
 
-      // Remove existing progress bar
-      card.select('.metric-progress-container').remove()
+      // Get the node index from the tree group - FIX HERE
+      // Use DOM closest() method instead of D3's selection.closest()
+      const treeGroupElement = this.parentNode.closest('.tree-group')
+      if (!treeGroupElement) return
 
-      // Add progress bar if needed
-      if (currentHighlightType !== 'NONE') {
-        const nodeMetrics = nodeData.data.metrics || {}
-        const outputRows = nodeMetrics.output_rows || 0
-        const elapsedCompute = nodeMetrics.elapsed_compute || 0
+      const nodeIdxMatch = treeGroupElement.className.baseVal.match(/node-(\d+)/)
+      const nodeIndex = nodeIdxMatch ? parseInt(nodeIdxMatch[1], 10) : null
 
-        // Create progress bar container
-        const progressContainer = card.append('div').attr('class', 'metric-progress-container')
-
-        if (currentHighlightType === 'ROWS' && maxRows.value > 0) {
-          const rowsPercentage = Math.round((outputRows / maxRows.value) * 100)
-          const progressColor = getProgressColor(rowsPercentage)
-
-          progressContainer.html(`
-            <div class="metric-label">
-              <span>Rows: ${outputRows}</span>
-            </div>
-            <div class="metric-progress">
-              <div class="metric-progress-bar" style="width: ${rowsPercentage}%; background-color: ${progressColor}"></div>
-            </div>
-          `)
-        } else if (currentHighlightType === 'DURATION' && maxDuration.value > 0) {
-          const durationPercentage = Math.round((elapsedCompute / maxDuration.value) * 100)
-          const progressColor = getProgressColor(durationPercentage)
-
-          const precisePercentage = ((elapsedCompute / maxDuration.value) * 100).toFixed(2)
-          console.log(precisePercentage, 'precisePercentage')
-
-          progressContainer.html(`
-            <div class="metric-label">
-              <span>Duration: ${formatTimeValue(elapsedCompute)}</span>
-            </div>
-            <div class="metric-progress">
-              <div class="metric-progress-bar" style="width: ${durationPercentage}%; background-color: ${progressColor}"></div>
-            </div>
-          `)
-        }
-      }
+      // Re-render the PlanCard component with updated props
+      render(
+        h(PlanCard, {
+          nodeData: nodeData.data,
+          highlightType: currentHighlightType,
+          maxRows: maxRows.value,
+          maxDuration: maxDuration.value,
+          selectedMetric: selectedMetric.value,
+          metricsExpanded: metricsExpanded.value,
+          isActive: activeNodeIndex.value === nodeIndex,
+        }),
+        container
+      )
 
       // Calculate new height
       const hasMetrics =
@@ -673,8 +708,7 @@
       // Update the node's size in the hierarchy
       updateNodeSize(nodeData.data, CARD_DIMENSIONS.width, cardHeight)
 
-      // Apply new height to DOM
-      card.style('height', `${cardHeight}px`)
+      // Update foreignObject height
       d3.select(this).attr('height', cardHeight + 10)
     })
 
@@ -687,200 +721,53 @@
   function updateMetricsDisplay() {
     if (!chartContainer.value) return
 
-    // Update metrics in the DOM
-    d3.selectAll('.node foreignObject').each(function updateCardMetrics() {
+    // Use the same approach as updateProgressBars - rerender the Vue components
+    d3.selectAll('.node foreignObject').each(function () {
       const nodeData = d3.select(this.parentNode).datum()
       if (!nodeData || !nodeData.data) return
 
-      // Get the HTML content inside the foreignObject
-      const cardContainer = d3.select(this).select('.plan-node-container')
-      const card = cardContainer.select('.plan-card')
+      // Get the container div where the Vue component is mounted
+      const container = this.querySelector('div')
+      if (!container) return
 
-      // Clear existing metrics and keep progress bar temporarily
-      const progressBar = card.select('.metric-progress-container').remove()
-      card.select('.plan-metrics').remove()
+      // Get the node index from the tree group
+      const treeGroupElement = this.parentNode.closest('.tree-group')
+      if (!treeGroupElement) return
 
-      // Re-add metrics with updated content
-      const nodeMetrics = nodeData.data.metrics || {}
-      const hasMetrics =
-        metricsExpanded.value || (selectedMetric.value && nodeMetrics[selectedMetric.value] !== undefined)
+      const nodeIdxMatch = treeGroupElement.className.baseVal.match(/node-(\d+)/)
+      const nodeIndex = nodeIdxMatch ? parseInt(nodeIdxMatch[1], 10) : null
 
-      if (hasMetrics) {
-        if (metricsExpanded.value) {
-          // Generate expanded metrics HTML
-          const sortedMetrics = {}
-          importanceOrder.forEach((key) => {
-            if (nodeMetrics[key] !== undefined && !['outputRows', 'elapsedCompute'].includes(key)) {
-              const isTimeMetric = key.includes('time') || key.includes('elapsed')
-              sortedMetrics[key] = isTimeMetric ? formatTimeValue(nodeMetrics[key]) : nodeMetrics[key]
-            }
-          })
-
-          Object.keys(nodeMetrics).forEach((key) => {
-            if (
-              sortedMetrics[key] === undefined &&
-              !['output_rows', 'elapsed_compute', 'outputRows', 'elapsedCompute'].includes(key)
-            ) {
-              const isTimeMetric = key.includes('time') || key.includes('elapsed')
-              sortedMetrics[key] = isTimeMetric ? formatTimeValue(nodeMetrics[key]) : nodeMetrics[key]
-            }
-          })
-
-          // Insert new metrics HTML
-          if (Object.keys(sortedMetrics).length > 0) {
-            const metricsDiv = card.append('div').attr('class', 'plan-metrics')
-
-            Object.entries(sortedMetrics).forEach(([key, value]) => {
-              metricsDiv
-                .append('div')
-                .attr('class', 'metric-item')
-                .html(`<span class="metric-key">${key}:</span><span class="metric-value">${value}</span>`)
-            })
-          }
-        } else if (selectedMetric.value && nodeMetrics[selectedMetric.value] !== undefined) {
-          // Add single selected metric
-          const isTimeMetric = selectedMetric.value.includes('time') || selectedMetric.value.includes('elapsed')
-          const displayValue = isTimeMetric
-            ? formatTimeValue(nodeMetrics[selectedMetric.value])
-            : nodeMetrics[selectedMetric.value]
-
-          card.append('div').attr('class', 'plan-metrics')
-            .html(`<div class="metric-item"><span class="metric-key">${selectedMetric.value}:</span>
-                  <span class="metric-value">${displayValue}</span></div>`)
-        }
-      }
-
-      // Re-add progress bar if needed
-      if (highlightType.value !== 'NONE') {
-        if (progressBar && progressBar.node()) {
-          card.node().appendChild(progressBar.node())
-        } else {
-          // Add progress bar if it wasn't there before
-          const nodeMetrics2 = nodeData.data.metrics || {}
-          const outputRows = nodeMetrics2.output_rows || 0
-          const elapsedCompute = nodeMetrics2.elapsed_compute || 0
-
-          // Create progress bar container
-          const progressContainer = card.append('div').attr('class', 'metric-progress-container')
-
-          if (highlightType.value === 'ROWS' && maxRows.value > 0) {
-            const rowsPercentage = Math.round((outputRows / maxRows.value) * 100)
-            const progressColor = getProgressColor(rowsPercentage)
-
-            progressContainer.html(`
-              <div class="metric-label">
-                <span>Rows: ${outputRows}</span>
-              </div>
-              <div class="metric-progress">
-                <div class="metric-progress-bar" style="width: ${rowsPercentage}%; background-color: ${progressColor}"></div>
-              </div>
-            `)
-          } else if (highlightType.value === 'DURATION' && maxDuration.value > 0) {
-            const durationPercentage = Math.round((elapsedCompute / maxDuration.value) * 100)
-            // get precise percentage
-            const precisePercentage = ((elapsedCompute / maxDuration.value) * 100).toFixed(2)
-            console.log(precisePercentage, 'precisePercentage')
-            const progressColor = getProgressColor(durationPercentage)
-
-            progressContainer.html(`
-              <div class="metric-label">
-                <span>Duration: ${formatTimeValue(elapsedCompute)} </span>
-              </div>
-              <div class="metric-progress">
-                <div class="metric-progress-bar" style="width: ${durationPercentage}%; background-color: ${progressColor}"></div>
-              </div>
-            `)
-          }
-        }
-      }
+      // Re-render the PlanCard component with updated props
+      render(
+        h(PlanCard, {
+          nodeData: nodeData.data,
+          highlightType: highlightType.value,
+          maxRows: maxRows.value,
+          maxDuration: maxDuration.value,
+          selectedMetric: selectedMetric.value,
+          metricsExpanded: metricsExpanded.value,
+          isActive: activeNodeIndex.value === nodeIndex,
+        }),
+        container
+      )
 
       // Calculate new height
-      const metricsLines = calculateMetricsLines(nodeMetrics, hasMetrics)
-      const cardHeight = calculateCardHeight(highlightType.value !== 'NONE', hasMetrics, metricsLines)
+      const hasMetrics =
+        metricsExpanded.value ||
+        (selectedMetric.value && nodeData.data.metrics && nodeData.data.metrics[selectedMetric.value] !== undefined)
+      const hasProgressBar = highlightType.value !== 'NONE'
+      const metricsLines = calculateMetricsLines(nodeData.data.metrics || {}, hasMetrics)
+      const cardHeight = calculateCardHeight(hasProgressBar, hasMetrics, metricsLines)
 
       // Update the node's size in the hierarchy
       updateNodeSize(nodeData.data, CARD_DIMENSIONS.width, cardHeight)
 
-      // Apply new height directly to DOM
-      card.style('height', `${cardHeight}px`)
+      // Update foreignObject height
       d3.select(this).attr('height', cardHeight + 10)
     })
 
     // Update the tree layout
-    if (chartContainer.value) {
-      updateTreeLayout()
-    }
-  }
-
-  // Replace the createApp code with this simpler approach
-  function renderControls() {
-    if (!chartContainer.value) return
-
-    // Create zoom controls
-    const zoomControlsDiv = document.createElement('div')
-    zoomControlsDiv.className = 'zoom-controls'
-    chartContainer.value.appendChild(zoomControlsDiv)
-
-    // Create zoom buttons with Arco icons
-    const zoomControlsContainer = document.createElement('div')
-    zoomControlsDiv.appendChild(zoomControlsContainer)
-
-    // Render zoom controls using Vue
-    const zoomButtonsVNode = createVNode('div', { class: 'zoom-buttons-container' }, [
-      createVNode(
-        'button',
-        {
-          class: 'arco-btn arco-btn-text arco-btn-size-mini',
-          onClick: zoomIn,
-        },
-        [createVNode(IconZoomIn)]
-      ),
-
-      createVNode(
-        'button',
-        {
-          class: 'arco-btn arco-btn-text arco-btn-size-mini',
-          onClick: resetZoom,
-        },
-        [createVNode(IconRefresh)]
-      ),
-
-      createVNode(
-        'button',
-        {
-          class: 'arco-btn arco-btn-text arco-btn-size-mini',
-          onClick: zoomOut,
-        },
-        [createVNode(IconZoomOut)]
-      ),
-    ])
-
-    render(zoomButtonsVNode, zoomControlsContainer)
-
-    // Add navigation arrows if needed
-    if (availableNodes.value.length > 1) {
-      const navArrowsDiv = document.createElement('div')
-      navArrowsDiv.className = 'navigation-arrows'
-      chartContainer.value.appendChild(navArrowsDiv)
-
-      // Create left arrow
-      const leftBtn = document.createElement('button')
-      leftBtn.className = 'arco-btn arco-btn-text arco-btn-size-large nav-arrow left'
-      leftBtn.disabled = activeNodeIndex.value === availableNodes.value[0]
-      leftBtn.innerHTML =
-        '<span class="arco-icon"><svg viewBox="0 0 48 48" fill="none"><path d="M32 8.4 16.444 23.956 32 39.513" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'
-      leftBtn.addEventListener('click', navigateToPrevNode)
-      navArrowsDiv.appendChild(leftBtn)
-
-      // Create right arrow
-      const rightBtn = document.createElement('button')
-      rightBtn.className = 'arco-btn arco-btn-text arco-btn-size-large nav-arrow right'
-      rightBtn.disabled = activeNodeIndex.value === availableNodes.value[availableNodes.value.length - 1]
-      rightBtn.innerHTML =
-        '<span class="arco-icon"><svg viewBox="0 0 48 48" fill="none"><path d="m16 8.4 15.556 15.556L16 39.513" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'
-      rightBtn.addEventListener('click', navigateToNextNode)
-      navArrowsDiv.appendChild(rightBtn)
-    }
+    updateTreeLayout()
   }
 
   function renderTree() {
@@ -894,8 +781,9 @@
       .select(chartContainer.value)
       .append('svg')
       .attr('width', chartContainer.value.clientWidth)
-      .attr('height', chartContainer.value.clientHeight || 600) // Set minimum height
+      .attr('height', chartContainer.value.clientHeight) // Remove the "|| 600" fallback
       .attr('class', 'explain-svg')
+      .attr('viewBox', `0 0 ${chartContainer.value.clientWidth} ${chartContainer.value.clientHeight}`)
 
     // Apply zoom behavior safely
     applyZoom(svg)
@@ -904,23 +792,23 @@
     const mainGroup = svg.append('g')
 
     // Process all node data - we need one tree per node
-    const nodesData = processNodesData(props.data)
+    nodesData.value = processNodesData(props.data)
 
     // If no nodes, return early
-    if (!nodesData.length) return
+    if (!nodesData.value.length) return
 
     // Calculate max metrics
-    calculateMaxMetrics(nodesData)
+    calculateMaxMetrics()
 
     // Calculate total width based on number of trees
-    const treeWidth = 300 // Width per tree
-    const spacing = 100 // Spacing between trees
+    const treeWidth = 250 // Smaller width per tree (was 300)
+    const spacing = 50 // Smaller spacing (was 100)
 
     // Clear node positions map
     nodePositions.value.clear()
 
     // Render each node's tree
-    nodesData.forEach((nodeData, index) => {
+    nodesData.value.forEach((nodeData, index) => {
       const { nodeIndex, plan } = nodeData
 
       // Convert plan data to hierarchy-friendly format
@@ -1084,14 +972,30 @@
           const cardHeight = calculateCardHeight(hasProgressBar, hasMetrics, metricsLines)
           return cardHeight + 10
         })
-        .html((d) => renderNode(d, nodeIndex))
+        .each(function (d) {
+          // Create a div to mount the Vue component
+          const container = document.createElement('div')
+          this.appendChild(container)
+
+          // Mount the NodeCard component
+          render(
+            h(PlanCard, {
+              nodeData: d.data,
+              highlightType: highlightType.value,
+              maxRows: maxRows.value,
+              maxDuration: maxDuration.value,
+              selectedMetric: selectedMetric.value,
+              metricsExpanded: metricsExpanded.value,
+              isActive: activeNodeIndex.value === nodeIndex,
+            }),
+            container
+          )
+        })
     })
 
     const zoomControlsDiv = document.createElement('div')
     zoomControlsDiv.className = 'zoom-controls'
     chartContainer.value.appendChild(zoomControlsDiv)
-
-    renderControls()
 
     // Set initial active node
     if (activeNodeIndex.value === null && availableNodes.value.length > 0) {
@@ -1173,6 +1077,21 @@
     height: 100%;
     width: 100%;
 
+    .controls-wrapper {
+      position: absolute;
+      bottom: 10px;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      z-index: 10;
+      pointer-events: none; // Allow clicking through wrapper to SVG
+
+      > * {
+        pointer-events: auto; // Re-enable pointer events for children
+      }
+    }
+
     .chart-controls {
       display: flex;
       align-items: center;
@@ -1227,6 +1146,9 @@
       position: relative;
       height: 100%;
       cursor: grab;
+      display: flex;
+      justify-content: center;
+      align-items: center;
 
       &:active {
         cursor: grabbing;
@@ -1276,6 +1198,11 @@
           cursor: not-allowed;
         }
       }
+    }
+
+    .zoom-controls,
+    .navigation-arrows {
+      pointer-events: auto; // Re-enable pointer events for controls
     }
   }
 

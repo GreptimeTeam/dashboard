@@ -27,7 +27,7 @@
     placeholder="Select metric"
     allow-clear
   )
-    a-option(v-for="metric in availableMetrics" :key="metric.value" :value="metric.value") {{ metric.label }}
+    a-option(v-for="metric in availableMetrics" :key="metric" :value="metric") {{ metric }}
   a-button(type="text" size="mini" @click="onToggleMetricsExpanded")
     template(#icon)
       icon-expand(v-if="!metricsExpanded")
@@ -47,7 +47,7 @@
     metricsExpanded: boolean
     maxRows: number
     maxDuration: number
-    availableMetrics: Array<{ label: string; value: string }>
+    availableMetrics: Array<string>
   }>()
 
   const emit = defineEmits<{
