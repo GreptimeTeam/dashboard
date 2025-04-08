@@ -136,7 +136,7 @@ a-card.data-grid(:bordered="false")
 
     const charWidths = {
       default: 7.2, // average character width
-      narrow: 5.4, // i, l, t, etc.
+      narrow: 5.4, // narrow characters: i, l, j, t, f, r
       wide: 10.8, // m, w, etc.
       uppercase: 9, // A-Z
     }
@@ -154,8 +154,8 @@ a-card.data-grid(:bordered="false")
         width += charWidths.default
       }
     }
-
-    return Math.ceil(width) + 32
+    const PADDING = 16 * 2
+    return Math.ceil(width) + PADDING
   }
 
   const getColumnWidth = (column) => {
