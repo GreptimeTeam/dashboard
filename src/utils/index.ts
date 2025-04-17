@@ -62,10 +62,41 @@ export const dateFormatter = (dataType: string, value: number | null) => {
 
 export const sqlFormatter = (code: string) => {
   try {
-    const sql = sqlFormat(code, { language: 'postgresql', keywordCase: 'upper' })
-    return sql
-  } catch {
-    // format error
+    const trimmed = code.trim()
+    const isInsert = /^INSERT\s+INTO/i.test(trimmed)
+    let formatted
+
+    try {
+      formatted = sqlFormat(trimmed, {
+        language: 'postgresql',
+        keywordCase: 'preserve',
+        expressionWidth: isInsert ? 160 : 80, // Higher value for INSERT to avoid breaking VALUES
+      })
+
+      // Special post-processing for INSERT statements to keep VALUES on single line
+      if (isInsert) {
+        // Regex to find multi-line value groups and make them single line
+        formatted = formatted.replace(
+          /\(\s+(['"][^'"]*['"]|[^,)]+)\s*,\s*(['"][^'"]*['"]|[^,)]+)\s*(?:,\s*(['"][^'"]*['"]|[^,)]+)\s*)*\)/g,
+          (match) => {
+            // Convert newlines and excess spaces to a single space within the value group
+            return match.replace(/\s+/g, ' ')
+          }
+        )
+      }
+      formatted = formatted.endsWith(';') ? formatted : `${formatted};`
+
+      // Add ONE newline after semicolons (not at the end)
+      formatted = formatted.replace(/;(?!$)/g, ';\n')
+      formatted = formatted.replace(/\n\s*\n/g, '\n\n')
+    } catch (formattingError) {
+      console.warn(`Failed to format SQL statement: ${formattingError}`)
+      formatted = trimmed.endsWith(';') ? trimmed : `${trimmed};`
+    }
+
+    return formatted
+  } catch (error) {
+    console.error('SQL formatting error:', error)
     return code
   }
 }
