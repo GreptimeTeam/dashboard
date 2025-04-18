@@ -201,6 +201,7 @@ a-card.editor-card(:bordered="false")
         key: explainResultKeyCount.value,
         type: queryType.value || 'sql',
         name: 'explain',
+        executionTime: jsonData.execution_time_ms,
       }
 
       // Add to results using the existing management function

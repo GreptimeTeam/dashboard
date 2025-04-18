@@ -53,6 +53,19 @@ a-tabs.panel-tabs(
           :data="stage"
           :index="index"
         )
+      a-tab-pane(v-if="result.name === 'explain'" key="explain-raw" :title="`raw`")
+        template(#title)
+          a-space(:size="10")
+            svg.icon-16
+              use(href="#code")
+            | Raw
+        a-card.raw-json-card(:bordered="false")
+          template(#title)
+            a-button(size="mini" type="outline" @click="exportExplainJson(result)")
+              template(#icon)
+                icon-download
+              | {{ $t('dashboard.download') }}
+          pre.raw-json {{ formatRawJson(result) }}
 </template>
 
 <script lang="ts" name="DataView" setup>
@@ -60,6 +73,8 @@ a-tabs.panel-tabs(
   import i18n from '@/locale'
   import { useCodeRunStore } from '@/store'
   import type { ResultType } from '@/store/modules/code-run/types'
+  import { Message } from '@arco-design/web-vue'
+  import fileDownload from 'js-file-download'
 
   const props = defineProps<{
     results: ResultType[]
@@ -147,6 +162,35 @@ a-tabs.panel-tabs(
     },
     { immediate: true }
   )
+
+  const reconstructExplainJson = (result: ResultType) => {
+    return {
+      output: [
+        {
+          records: result.records,
+        },
+      ],
+      execution_time_ms: result.executionTime,
+    }
+  }
+
+  const formatRawJson = (result: ResultType) => {
+    try {
+      return JSON.stringify(reconstructExplainJson(result), null, 2)
+    } catch (e) {
+      return 'Error formatting JSON data'
+    }
+  }
+
+  const exportExplainJson = (result: ResultType) => {
+    try {
+      const jsonData = JSON.stringify(reconstructExplainJson(result), null, 2)
+      fileDownload(jsonData, 'explain-analyze-greptimedb.json', 'application/json')
+      Message.success('JSON downloaded successfully')
+    } catch (e) {
+      Message.error(`Failed to export JSON: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
 </script>
 
 <style lang="less">
@@ -271,6 +315,27 @@ a-tabs.panel-tabs(
           }
         }
       }
+    }
+  }
+
+  .raw-json-card {
+    padding: 8px 12px;
+
+    :deep(.arco-card-header) {
+      height: 40px;
+    }
+
+    :deep(.arco-card-body) {
+      height: calc(100% - 40px);
+      padding: 8px;
+      overflow: auto;
+    }
+
+    .raw-json {
+      white-space: pre-wrap;
+      font-family: monospace;
+      font-size: 12px;
+      margin: 0;
     }
   }
 </style>

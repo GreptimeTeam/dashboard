@@ -69,4 +69,5 @@ export default {
   'dashboard.hints.quickSelect': 'Shortcut for generating SQL query for the table.',
   'dashboard.hints.copy': 'Copy table name to clipboard.',
   'dashboard.explain': 'Explain',
+  'dashboard.download': 'Download',
 }

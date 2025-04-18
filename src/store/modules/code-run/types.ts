@@ -30,6 +30,7 @@ export interface ResultType {
   key: number
   type: string
   name?: string
+  executionTime?: number
 }
 
 export interface SeriesType {
