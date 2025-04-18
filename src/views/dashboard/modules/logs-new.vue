@@ -14,7 +14,14 @@ a-card.log(:bordered="false")
           .tag
             .danger-color(v-if="log.error") [error]
             .success-color(v-else) [info]
-          div(v-if="!simple && !log.codeTooltip && log.codeInfo")
+          a-popover(
+            v-if="log.error"
+            position="tl"
+            content-class="ingest-log-tooltip"
+            :content="log.error"
+          )
+            div {{ log.error }}
+          div(v-else-if="!simple && !log.codeTooltip && log.codeInfo")
             .code-info(v-if="log.type === 'sql' || log.type === 'promql'") {{ log.codeInfo }}
             .file-info(v-else) {{ log.codeInfo }}
           a-space(v-if="log.message" :size="3")
@@ -29,14 +36,6 @@ a-card.log(:bordered="false")
           )
             .code-info(v-if="log.type === 'sql' || log.type === 'promql'") {{ log.codeInfo }}
             .file-info(v-else) {{ log.codeInfo }}
-
-          a-popover(
-            v-if="log.error"
-            position="tl"
-            content-class="ingest-log-tooltip"
-            :content="log.error"
-          )
-            div {{ log.error }}
 </template>
 
 <script lang="ts" name="Log" setup>

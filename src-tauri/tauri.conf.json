@@ -1,0 +1,53 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "Greptime Dashboard",
+  "version": "0.8.21",
+  "identifier": "com.greptime",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5177",
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Greptime Dashboard",
+        "width": 1200,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false,
+        "devtools": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "createUpdaterArtifacts": true,
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "macOS": {
+      "entitlements": null,
+      "exceptionDomain": "",
+      "frameworks": [],
+      "minimumSystemVersion": "10.13",
+      "signingIdentity": "sun-code"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDU2MzI1OTE1MUU0RjgzRjkKUldUNWcwOGVGVmt5VnIxOFpiMkxFK1l5dGsvczhzQ29YR1N0dXkzT0Z0TTB1OGY1eVlqTVQ2TXUK",
+      "endpoints": ["https://github.com/GreptimeTeam/dashboard/releases/latest/download/latest.json"]
+    }
+  }
+}

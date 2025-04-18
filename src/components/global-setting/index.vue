@@ -72,6 +72,7 @@ a-drawer.settings-drawer(
   import { useI18n } from 'vue-i18n'
   import { useAppStore, useDataBaseStore } from '@/store'
   import axios from 'axios'
+  import { isTauri } from '@tauri-apps/api/core'
 
   const MARGIN_BOTTOM = `${38 * 2 + 8}px`
   const { t } = useI18n()
@@ -139,16 +140,20 @@ a-drawer.settings-drawer(
 
   onMounted(() => {
     if (!host.value) {
-      const { origin, pathname } = window.location
-      const index = pathname.lastIndexOf('/dashboard')
-      if (index !== -1) {
-        host.value = `${origin}${pathname.slice(0, index)}`
+      const tauriEnv = isTauri()
+      if (tauriEnv) {
+        host.value = 'http://localhost:4000'
       } else {
-        host.value = `${origin}${pathname}`
+        const { origin, pathname } = window.location
+        const index = pathname.lastIndexOf('/dashboard')
+        if (index !== -1) {
+          host.value = `${origin}${pathname.slice(0, index)}`
+        } else {
+          host.value = `${origin}${pathname}`
+        }
       }
       updateConfigStorage({ host: host.value })
     }
-
     axios.defaults.baseURL = host.value
   })
 </script>
@@ -169,7 +174,7 @@ a-drawer.settings-drawer(
 <style lang="less">
   .settings-drawer {
     .arco-drawer {
-      height: min-content;
+      height: auto;
       margin-left: 18px;
       border-radius: 4px;
       box-shadow: 0 4px 10px 0 var(--border-color);

@@ -6,14 +6,13 @@ a-card.data-grid(:bordered="false")
         use(href="#table")
       | {{ $t('dashboard.table') }}
   a-spin(style="width: 100%")
-    a-table.data-table(
-      show-total
+    a-table(
       column-resizable
       size="mini"
       :data="gridData"
       :pagination="pagination"
-      :scroll="{ y: '100%', x: '100%' }"
-      :bordered="false"
+      :scroll="{ y: '100%', x: tableWidth }"
+      :bordered="{ headerCell: true }"
     )
       template(#empty)
         EmptyStatus
@@ -21,6 +20,7 @@ a-card.data-grid(:bordered="false")
         template(v-for="column in gridColumns" :key="column.title")
           template(v-if="timeColumnNames.includes(column.title)")
             a-table-column(
+              :width="getColumnWidth(column)"
               :data-index="timeColumnFormatMap[column.dataIndex] ? `${column.dataIndex}${formatSuffix}` : column.dataIndex"
             )
               template(#title)
@@ -37,18 +37,15 @@ a-card.data-grid(:bordered="false")
                       use(href="#time-index")
                     | {{ column.title }}
           template(v-else)
-            a-table-column(:title="column.title" :data-index="column.dataIndex")
+            a-table-column(
+              :tooltip="column.tooltip"
+              :title="column.title"
+              :data-index="column.dataIndex"
+              :ellipsis="column.ellipsis"
+              :width="getColumnWidth(column)"
+            )
               template(#cell="{ record }")
-                a-typography-paragraph.cell-data(title :ellipsis="{ rows: 3, expandable: true }") {{ record[column.dataIndex] }}
-                  template(#expand-node="{ expanded }")
-                    a-tooltip(
-                      v-if="!expanded"
-                      content="Expand"
-                      mini
-                      placement="top"
-                    )
-                      span {{ '+' }}
-                    span(v-else) {{ '' }}
+                | {{ record[column.dataIndex] }}
 </template>
 
 <script lang="ts" setup>
@@ -68,6 +65,13 @@ a-card.data-grid(:bordered="false")
       hasHeader: true,
     }
   )
+
+  const timeColumnWidth = 140
+
+  const MIN_COLUMN_WIDTHS = {
+    timestamp: timeColumnWidth,
+    boolean: 80,
+  }
 
   const pagination = ref({
     'total': props.data?.records.rows.length,
@@ -101,6 +105,8 @@ a-card.data-grid(:bordered="false")
           title: column.name,
           dataIndex: columnNameToDataIndex(column.name),
           dataType: column.data_type,
+          ellipsis: true,
+          tooltip: { 'content-class': 'cell-data-tooltip', 'position': 'tl' },
         }
       })
       .sort((a: any, b: any) => {
@@ -123,6 +129,54 @@ a-card.data-grid(:bordered="false")
       })
       return tempRow
     })
+  })
+
+  const calculateTextWidth = (text) => {
+    if (!text) return 0
+
+    const charWidths = {
+      default: 7.2, // average character width
+      narrow: 5.4, // narrow characters: i, l, j, t, f, r
+      wide: 10.8, // m, w, etc.
+      uppercase: 9, // A-Z
+    }
+
+    let width = 0
+    for (let i = 0; i < text.length; i += 1) {
+      const char = text[i]
+      if (char.match(/[A-Z]/)) {
+        width += charWidths.uppercase
+      } else if (char.match(/[iljtfr]/)) {
+        width += charWidths.narrow
+      } else if (char.match(/[mw]/)) {
+        width += charWidths.wide
+      } else {
+        width += charWidths.default
+      }
+    }
+    const PADDING = 16 * 2
+    return Math.ceil(width) + PADDING
+  }
+
+  const getColumnWidth = (column) => {
+    const titleWidth = calculateTextWidth(column.title)
+
+    if (timeColumnNames.value.includes(column.title)) {
+      return Math.max(titleWidth, MIN_COLUMN_WIDTHS.timestamp)
+    }
+    if (column.dataType && column.dataType.toLowerCase() === 'boolean') {
+      return Math.max(titleWidth, MIN_COLUMN_WIDTHS.boolean)
+    }
+
+    return Math.max(titleWidth, 80)
+  }
+
+  const tableWidth = computed(() => {
+    if (!gridColumns.value.length) return '100%'
+
+    const calculatedWidth = gridColumns.value.reduce((total, column) => total + getColumnWidth(column), 0)
+
+    return `${calculatedWidth}px`
   })
 
   /**
@@ -149,16 +203,8 @@ a-card.data-grid(:bordered="false")
     }
   }
 
-  /** use a fixed width for the time column to prevent the width from changing automatically after formatting  */
-  const timeColumnWidth = 180
-
   onUpdated(() => {
-    pagination.value = {
-      'total': props.data?.records.rows.length,
-      'show-page-size': true,
-      'show-total': true,
-      'show-jumper': true,
-    }
+    pagination.value.total = props.data?.records.rows.length
   })
 </script>
 

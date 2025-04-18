@@ -1,20 +1,25 @@
 <template lang="pug">
 a-card.editor-card(:bordered="false")
   a-space.space-between.pb-15
-    a-space(size="medium")
+    a-space.editor-header(size="medium")
       a-button(type="primary" :disabled="isButtonDisabled" @click="runQueryAll()")
         a-space(:size="4")
           icon-loading(v-if="primaryCodeRunning" spin)
           icon-play-arrow(v-else)
           | {{ $t('dashboard.runAll') }}
           icon-close-circle-fill.icon-16(v-if="primaryCodeRunning")
-      a-button(type="outline" :disabled="isLineButtonDisabled" @click="runPartQuery()")
-        a-space(:size="4")
-          icon-loading(v-if="secondaryCodeRunning" spin)
-          icon-play-arrow(v-else)
-          div(v-if="lineStart === lineEnd") {{ $t('dashboard.runLine') }} {{ lineStart }}
-          div(v-else) {{ $t('dashboard.runLines') }} {{ lineStart }} - {{ lineEnd }}
-          icon-close-circle-fill.icon-16(v-if="secondaryCodeRunning")
+      a-popover(
+        v-if="queryType === 'sql'"
+        position="rt"
+        content-class="code-tooltip"
+        :content="currentStatement"
+      )
+        a-button(type="outline" :disabled="isLineButtonDisabled" @click="runPartQuery()")
+          a-space(:size="4")
+            icon-loading(v-if="secondaryCodeRunning" spin)
+            icon-play-arrow(v-else)
+            div {{ $t('dashboard.runQuery') + ' #' + currentQueryNumber }}
+            icon-close-circle-fill.icon-16(v-if="secondaryCodeRunning") 
       a-button(type="outline" @click="explain") {{ $t('dashboard.explain') }}
       a-button.toolbar-button(
         type="secondary"
@@ -27,6 +32,10 @@ a-card.editor-card(:bordered="false")
         | Import Explain
     .query-select
       a-space(size="medium")
+        a-tooltip(v-if="queryType === 'sql'" mini :content="$t('dashboard.format')")
+          a-button(type="outline" :disabled="isButtonDisabled" @click="formatSql")
+            template(#icon)
+              icon-code-block.icon-18
         a-tooltip(mini :content="$t('dashboard.clearCode')")
           a-button(type="outline" :disabled="isButtonDisabled" @click="clearCode")
             template(#icon)
@@ -112,6 +121,7 @@ a-card.editor-card(:bordered="false")
   import type { TableTreeChild, TableTreeParent } from '@/store/modules/database/types'
   import type { PromForm } from '@/store/modules/code-run/types'
   import { useStorage } from '@vueuse/core'
+  import { sqlFormatter, parseSqlStatements, findStatementAtPosition, debounce } from '@/utils/sql'
   import { Message } from '@arco-design/web-vue'
 
   import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '../config'
@@ -141,9 +151,7 @@ a-card.editor-card(:bordered="false")
     clearCode,
   } = useQueryCode()
 
-  const lineStart = ref()
-  const lineEnd = ref()
-  const selectedCode = ref()
+  const currentSqlPreview = ref('')
   const triggerVisible = ref(false)
   const rangePickerVisible = ref(false)
   const promForm = reactive<PromForm>({
@@ -153,6 +161,8 @@ a-card.editor-card(:bordered="false")
   })
   const { runQuery, explainQuery } = useQueryCode()
   const { extensions } = storeToRefs(useDataBaseStore())
+  const currentQueryNumber = ref<number>(0)
+  const currentStatement = ref<string>('')
   const { explainResultKeyCount } = storeToRefs(useCodeRunStore())
   const importExplainModalVisible = ref(false)
   const importExplainForm = reactive({
@@ -232,26 +242,46 @@ a-card.editor-card(:bordered="false")
     height: '250px',
   }
 
-  // TODO: Try something better. CodeUpdate is constantly changing and the cost is too much.
-  const codeUpdate = (type: string) => {
-    const view = type === 'sql' ? sqlView.value : promqlView.value
-    if (view && type === queryType.value) {
-      const { state } = view
-      const { ranges } = state.selection
-      cursorAt.value = [ranges[0].from, ranges[0].to]
-      lineStart.value = state.doc.lineAt(ranges[0].from).number
-      lineEnd.value = state.doc.lineAt(ranges[0].to).number
-      if (state.doc.text) {
-        selectedCode.value = state.doc.text.slice(lineStart.value - 1, lineEnd.value).join('\n')
-      } else {
-        let tempCode: Array<string> = []
-        state.doc.children.forEach((leaf: { text: [] }) => {
-          tempCode = tempCode.concat(leaf.text)
-        })
-        selectedCode.value = tempCode.slice(lineStart.value - 1, lineEnd.value).join('\n')
-      }
+  const updateCurrentStatement = (sql: string, cursorPosition: number) => {
+    if (!sql || queryType.value !== 'sql') {
+      currentQueryNumber.value = 0
+      currentStatement.value = ''
+      return
+    }
+
+    const statements = parseSqlStatements(sql)
+    const result = findStatementAtPosition(statements, cursorPosition)
+
+    if (result) {
+      const { statement, index } = result
+      currentQueryNumber.value = index + 1
+      currentStatement.value = statement.text
+
+      // Create a preview version (first few words) of the SQL statement
+      const previewText = statement.text.replace(/\s+/g, ' ').substring(0, 25).trim()
+      currentSqlPreview.value = previewText + (previewText.length < statement.text.length ? '...' : '')
+    } else {
+      currentQueryNumber.value = 0
+      currentStatement.value = ''
+      currentSqlPreview.value = 'dashboard.runSQL'
     }
   }
+
+  const identifySqlStatement = (fullCode: string, cursorPosition: number) => {
+    updateCurrentStatement(fullCode, cursorPosition)
+  }
+
+  const codeUpdate = debounce((type: string) => {
+    const view = type === 'sql' ? sqlView.value : promqlView.value
+    if (view && type === queryType.value) {
+      const { ranges } = view.state.selection
+      cursorAt.value = [ranges[0].from, ranges[0].to]
+
+      if (type === 'sql') {
+        identifySqlStatement(view.state.doc.toString(), ranges[0].from)
+      }
+    }
+  }, 150)
 
   const runQueryAll = async () => {
     if (primaryCodeRunning.value) {
@@ -267,10 +297,7 @@ a-card.editor-card(:bordered="false")
   }
 
   const isLineButtonDisabled = computed(() => {
-    if (!selectedCode.value || selectedCode.value.trim().length === 0) {
-      return true
-    }
-    return isButtonDisabled.value
+    return currentQueryNumber.value === 0 || isButtonDisabled.value
   })
 
   const runPartQuery = async () => {
@@ -280,8 +307,15 @@ a-card.editor-card(:bordered="false")
       return
     }
     secondaryCodeRunning.value = true
-    await runQuery(selectedCode.value.trim(), queryType.value, false, promForm)
+
+    await runQuery(currentStatement.value, queryType.value, false, promForm)
     secondaryCodeRunning.value = false
+  }
+
+  const formatSql = () => {
+    if (queryType.value === 'sql' && codes.value.sql.trim().length > 0) {
+      codes.value.sql = sqlFormatter(codes.value.sql)
+    }
   }
 
   const explain = async () => {
@@ -312,6 +346,7 @@ a-card.editor-card(:bordered="false")
     label: `Last ${value} minutes`,
   }))
 
+  // TODO: fix this
   const defaultKeymap = [
     {
       key: 'alt-Enter',
@@ -331,6 +366,9 @@ a-card.editor-card(:bordered="false")
 <style lang="less" scoped>
   .editor-card {
     width: 100%;
+    .editor-header {
+      padding-left: 8px;
+    }
     :deep(.ͼo) {
       height: 100%;
     }
@@ -364,6 +402,7 @@ a-card.editor-card(:bordered="false")
         height: 100%;
         .arco-tabs-pane {
           height: 100%;
+          padding-left: 8px;
         }
       }
     }

@@ -125,7 +125,7 @@ a-layout.new-layout
     padding-top: 10px;
     height: 100%;
     .editor-card .ͼ1.cm-editor {
-      border-radius: 0;
+      border-radius: 4px 4px 0 0;
     }
     > .arco-space-item {
       width: 100%;
