@@ -5,7 +5,7 @@
     .node-buttons
       a-button(
         v-for="node in availableNodes"
-        :key="node"
+        :key="`${inputPrefix}-node-${node}`"
         size="mini"
         :type="activeNodeIndex === node ? 'primary' : 'outline'"
         @click="onNodeSelect(node)"
@@ -15,7 +15,12 @@
   // Highlight type radio group
   .highlight-controls
     span.control-label Highlight:
-    a-radio-group(v-model="localHighlightType" type="button" size="mini")
+    a-radio-group(
+      v-model="localHighlightType"
+      type="button"
+      size="mini"
+      :id="`${inputPrefix}-highlight`"
+    )
       a-radio(value="NONE") none
       a-radio(value="ROWS" :disabled="!hasPlanRows") rows
       a-radio(value="DURATION" :disabled="!hasDurationMetrics") duration
@@ -26,6 +31,7 @@
     style="width: 150px; margin-left: 16px; margin-right: 8px"
     placeholder="Select metric"
     allow-clear
+    :id="`${inputPrefix}-metric`"
   )
     a-option(v-for="metric in availableMetrics" :key="metric" :value="metric") {{ metric }}
   a-button(type="text" size="mini" @click="onToggleMetricsExpanded")
@@ -48,6 +54,7 @@
     maxRows: number
     maxDuration: number
     availableMetrics: Array<string>
+    stageIndex: number
   }>()
 
   const emit = defineEmits<{
@@ -56,6 +63,7 @@
     (e: 'update:metricsExpanded', value: boolean): void
     (e: 'nodeSelected', nodeIndex: number): void
   }>()
+  const inputPrefix = computed(() => `chart-control-stage-${props.stageIndex}`)
 
   // Create local reactive values that sync with parent props
   const localHighlightType = ref(props.highlightType)

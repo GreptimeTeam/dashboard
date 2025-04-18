@@ -1,5 +1,5 @@
 <template lang="pug">
-.plan-card(:class="{ 'active-card': isActive }" :style="cardStyle")
+.plan-card(:class="{ 'active-card': isActive }" :style="cardStyle" :id="cardId")
   .plan-header
     .plan-name {{ nodeName }}
     .plan-param(v-if="nodeData.param") {{ nodeData.param }}
@@ -46,7 +46,13 @@
       type: Boolean,
       default: false,
     },
+    stageIndex: {
+      type: Number,
+      required: true,
+    },
   })
+
+  const cardId = computed(() => `plan-card-stage-${props.stageIndex}-node-${props.nodeData?.nodeIndex}`)
 
   // Node name
   const nodeName = computed(() => {
