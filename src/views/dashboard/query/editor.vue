@@ -103,8 +103,7 @@ a-card.editor-card(:bordered="false")
   import type { TableTreeChild, TableTreeParent } from '@/store/modules/database/types'
   import type { PromForm } from '@/store/modules/code-run/types'
   import { useStorage } from '@vueuse/core'
-  import { sqlFormatter } from '@/utils'
-  import { parseSqlStatements, findStatementAtPosition, debounce } from '@/utils/sql'
+  import { sqlFormatter, parseSqlStatements, findStatementAtPosition, debounce } from '@/utils/sql'
   import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '../config'
 
   export interface Props {

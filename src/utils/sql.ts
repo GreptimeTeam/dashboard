@@ -1,3 +1,5 @@
+import { format as sqlFormat } from 'sql-formatter'
+
 export const parseSqlStatements = (sql: string): { text: string; start: number; end: number }[] => {
   if (!sql) return []
 
@@ -5,9 +7,34 @@ export const parseSqlStatements = (sql: string): { text: string; start: number; 
   let currentStart = 0
   let inString = false
   let stringChar = ''
+  let inSingleLineComment = false
+  let inMultiLineComment = false
 
   for (let i = 0; i < sql.length; i += 1) {
     const char = sql[i]
+    const nextChar = i < sql.length - 1 ? sql[i + 1] : ''
+
+    // Handle end of single-line comment at newline
+    if (inSingleLineComment && (char === '\n' || char === '\r')) {
+      inSingleLineComment = false
+    }
+
+    // Check for end of multi-line comment
+    if (inMultiLineComment && char === '*' && nextChar === '/') {
+      inMultiLineComment = false
+      i += 1 // Skip the closing '/'
+    }
+
+    // Check for start of comments
+    if (char === '-' && nextChar === '-') {
+      inSingleLineComment = true
+      i += 1 // Skip the next '-'
+    }
+
+    if (char === '/' && nextChar === '*') {
+      inMultiLineComment = true
+      i += 1 // Skip the '*'
+    }
 
     // Handle string literals to avoid detecting semicolons inside strings
     if ((char === "'" || char === '"') && (i === 0 || sql[i - 1] !== '\\')) {
@@ -19,8 +46,8 @@ export const parseSqlStatements = (sql: string): { text: string; start: number; 
       }
     }
 
-    // When we find a semicolon outside a string, we've found a statement boundary
-    if (char === ';' && !inString) {
+    // When we find a semicolon outside a string and outside comments, we've found a statement boundary
+    if (char === ';' && !inString && !inSingleLineComment && !inMultiLineComment) {
       statements.push({
         text: sql.substring(currentStart, i + 1).trim(),
         start: currentStart,
@@ -63,6 +90,43 @@ export const findStatementAtPosition = (
   }
 
   return null
+}
+
+export const sqlFormatter = (code: string) => {
+  try {
+    const trimmed = code.trim()
+    const isInsert = /^INSERT\s+INTO/i.test(trimmed)
+    let formatted
+
+    try {
+      formatted = sqlFormat(trimmed, {
+        language: 'postgresql',
+        keywordCase: 'preserve',
+        expressionWidth: isInsert ? 160 : 80, // Higher value for INSERT to avoid breaking VALUES
+      })
+
+      // Special post-processing for INSERT statements to keep VALUES on single line
+      if (isInsert) {
+        // Regex to find multi-line value groups and make them single line
+        formatted = formatted.replace(
+          /\(\s+(['"][^'"]*['"]|[^,)]+)\s*,\s*(['"][^'"]*['"]|[^,)]+)\s*(?:,\s*(['"][^'"]*['"]|[^,)]+)\s*)*\)/g,
+          (match) => {
+            // Convert newlines and excess spaces to a single space within the value group
+            return match.replace(/\s+/g, ' ')
+          }
+        )
+      }
+      formatted = formatted.endsWith(';') ? formatted : `${formatted};`
+    } catch (formattingError) {
+      console.warn(`Failed to format SQL statement: ${formattingError}`)
+      formatted = trimmed.endsWith(';') ? trimmed : `${trimmed};`
+    }
+
+    return formatted
+  } catch (error) {
+    console.error('SQL formatting error:', error)
+    return code
+  }
 }
 
 export function debounce<T extends (...args: any[]) => any>(fn: T, delay: number): (...args: Parameters<T>) => void {
