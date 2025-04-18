@@ -8,7 +8,12 @@ a-card.editor-card(:bordered="false")
           icon-play-arrow(v-else)
           | {{ $t('dashboard.runAll') }}
           icon-close-circle-fill.icon-16(v-if="primaryCodeRunning")
-      a-tooltip(v-if="queryType === 'sql'" :content="selectedCode")
+      a-popover(
+        v-if="queryType === 'sql'"
+        position="rt"
+        content-class="code-tooltip"
+        :content="currentStatement"
+      )
         a-button(type="outline" :disabled="isLineButtonDisabled" @click="runPartQuery()")
           a-space(:size="4")
             icon-loading(v-if="secondaryCodeRunning" spin)
@@ -99,6 +104,7 @@ a-card.editor-card(:bordered="false")
   import type { PromForm } from '@/store/modules/code-run/types'
   import { useStorage } from '@vueuse/core'
   import { sqlFormatter } from '@/utils'
+  import { parseSqlStatements, findStatementAtPosition, debounce } from '@/utils/sql'
   import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '../config'
 
   export interface Props {
@@ -126,9 +132,6 @@ a-card.editor-card(:bordered="false")
     clearCode,
   } = useQueryCode()
 
-  const lineStart = ref()
-  const lineEnd = ref()
-  const selectedCode = ref()
   const currentSqlPreview = ref('')
   const triggerVisible = ref(false)
   const rangePickerVisible = ref(false)
@@ -140,6 +143,7 @@ a-card.editor-card(:bordered="false")
   const { runQuery } = useQueryCode()
   const { extensions } = storeToRefs(useDataBaseStore())
   const currentQueryNumber = ref<number>(0)
+  const currentStatement = ref<string>('')
 
   const isButtonDisabled = computed(() => {
     if (codes.value[queryType.value].trim().length === 0) {
@@ -165,112 +169,46 @@ a-card.editor-card(:bordered="false")
     height: '250px',
   }
 
-  // Function to identify the complete SQL statement at cursor position
-  const identifySqlStatement = (fullCode: string, cursorPosition: number) => {
-    if (!fullCode || queryType.value !== 'sql') {
+  const updateCurrentStatement = (sql: string, cursorPosition: number) => {
+    if (!sql || queryType.value !== 'sql') {
       currentQueryNumber.value = 0
+      currentStatement.value = ''
       return
     }
 
-    // Split the code by semicolons while preserving their positions
-    const statements: { text: string; start: number; end: number }[] = []
-    let currentStart = 0
-    let inString = false
-    let stringChar = ''
+    const statements = parseSqlStatements(sql)
+    const result = findStatementAtPosition(statements, cursorPosition)
 
-    for (let i = 0; i < fullCode.length; i += 1) {
-      const char = fullCode[i]
-
-      // Handle string literals to avoid detecting semicolons inside strings
-      if ((char === "'" || char === '"') && (i === 0 || fullCode[i - 1] !== '\\')) {
-        if (!inString) {
-          inString = true
-          stringChar = char
-        } else if (char === stringChar) {
-          inString = false
-        }
-      }
-
-      // When we find a semicolon outside a string, we've found a statement boundary
-      if (char === ';' && !inString) {
-        statements.push({
-          text: fullCode.substring(currentStart, i + 1).trim(),
-          start: currentStart,
-          end: i,
-        })
-        currentStart = i + 1
-      }
-    }
-
-    // Add the last statement if it doesn't end with a semicolon
-    if (currentStart < fullCode.length) {
-      statements.push({
-        text: fullCode.substring(currentStart).trim(),
-        start: currentStart,
-        end: fullCode.length - 1,
-      })
-    }
-
-    // First check if cursor is exactly after a semicolon
-    if (cursorPosition > 0 && fullCode[cursorPosition - 1] === ';') {
-      // Find the statement that ends at this position
-      for (let i = 0; i < statements.length; i += 1) {
-        if (statements[i].end === cursorPosition - 1) {
-          currentQueryNumber.value = i + 1
-          const previewText = statements[i].text.replace(/\s+/g, ' ').substring(0, 25).trim()
-          currentSqlPreview.value = previewText + (previewText.length < statements[i].text.length ? '...' : '')
-          selectedCode.value = statements[i].text
-          return
-        }
-      }
-    }
-
-    // Regular case - find which statement contains our cursor
-    const currentStatement = statements.find((stmt) => cursorPosition >= stmt.start && cursorPosition <= stmt.end)
-
-    if (currentStatement) {
-      // Set the query number (1-based index)
-      currentQueryNumber.value = statements.indexOf(currentStatement) + 1
+    if (result) {
+      const { statement, index } = result
+      currentQueryNumber.value = index + 1
+      currentStatement.value = statement.text
 
       // Create a preview version (first few words) of the SQL statement
-      const previewText = currentStatement.text.replace(/\s+/g, ' ').substring(0, 25).trim()
-
-      currentSqlPreview.value = previewText + (previewText.length < currentStatement.text.length ? '...' : '')
-      selectedCode.value = currentStatement.text
+      const previewText = statement.text.replace(/\s+/g, ' ').substring(0, 25).trim()
+      currentSqlPreview.value = previewText + (previewText.length < statement.text.length ? '...' : '')
     } else {
-      currentSqlPreview.value = 'dashboard.runSQL'
       currentQueryNumber.value = 0
+      currentStatement.value = ''
+      currentSqlPreview.value = 'dashboard.runSQL'
     }
   }
 
-  // TODO: Try something better. CodeUpdate is constantly changing and the cost is too much.
-  const codeUpdate = (type: string) => {
+  const identifySqlStatement = (fullCode: string, cursorPosition: number) => {
+    updateCurrentStatement(fullCode, cursorPosition)
+  }
+
+  const codeUpdate = debounce((type: string) => {
     const view = type === 'sql' ? sqlView.value : promqlView.value
     if (view && type === queryType.value) {
-      const { state } = view
-      const { ranges } = state.selection
+      const { ranges } = view.state.selection
       cursorAt.value = [ranges[0].from, ranges[0].to]
-      lineStart.value = state.doc.lineAt(ranges[0].from).number
-      lineEnd.value = state.doc.lineAt(ranges[0].to).number
 
-      // Extract code
-      let tempCode: Array<string> = []
-      if (state.doc.text) {
-        tempCode = state.doc.text.slice(lineStart.value - 1, lineEnd.value)
-        selectedCode.value = tempCode.join('\n')
-      } else {
-        state.doc.children.forEach((leaf: { text: [] }) => {
-          tempCode = tempCode.concat(leaf.text)
-        })
-        selectedCode.value = tempCode.slice(lineStart.value - 1, lineEnd.value).join('\n')
-      }
-
-      // If SQL, identify the complete statement that contains the current selection
       if (type === 'sql') {
-        identifySqlStatement(state.doc.toString(), ranges[0].from)
+        identifySqlStatement(view.state.doc.toString(), ranges[0].from)
       }
     }
-  }
+  }, 150)
 
   const runQueryAll = async () => {
     if (primaryCodeRunning.value) {
@@ -286,10 +224,7 @@ a-card.editor-card(:bordered="false")
   }
 
   const isLineButtonDisabled = computed(() => {
-    if (!selectedCode.value || selectedCode.value.trim().length === 0) {
-      return true
-    }
-    return isButtonDisabled.value
+    return currentQueryNumber.value === 0 || isButtonDisabled.value
   })
 
   const runPartQuery = async () => {
@@ -300,13 +235,7 @@ a-card.editor-card(:bordered="false")
     }
     secondaryCodeRunning.value = true
 
-    // Use the selected statement for SQL, otherwise use the selected lines
-    const codeToRun =
-      queryType.value === 'sql' && selectedCode.value.trim().includes(';')
-        ? selectedCode.value.trim()
-        : selectedCode.value.trim()
-
-    await runQuery(codeToRun, queryType.value, false, promForm)
+    await runQuery(currentStatement.value, queryType.value, false, promForm)
     secondaryCodeRunning.value = false
   }
 
@@ -330,6 +259,7 @@ a-card.editor-card(:bordered="false")
     label: `Last ${value} minutes`,
   }))
 
+  // TODO: fix this
   const defaultKeymap = [
     {
       key: 'alt-Enter',
