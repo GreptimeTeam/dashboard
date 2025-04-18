@@ -68,5 +68,5 @@ export default {
   'dashboard.hints.details': 'Metadata of the table',
   'dashboard.hints.quickSelect': 'Shortcut for generating SQL query for the table.',
   'dashboard.hints.copy': 'Copy table name to clipboard.',
-  'dashboard.explain': 'Explain',
+  'dashboard.explain': 'Explain Query',
 }

@@ -2,34 +2,39 @@
 a-card.editor-card(:bordered="false")
   a-space.space-between.pb-15
     a-space.editor-header(size="medium")
-      a-button(type="primary" :disabled="isButtonDisabled" @click="runQueryAll()")
-        a-space(:size="4")
-          icon-loading(v-if="primaryCodeRunning" spin)
-          icon-play-arrow(v-else)
-          | {{ $t('dashboard.runAll') }}
-          icon-close-circle-fill.icon-16(v-if="primaryCodeRunning")
       a-popover(
         v-if="queryType === 'sql'"
         position="rt"
         content-class="code-tooltip"
         :content="currentStatement"
       )
-        a-button(type="outline" :disabled="isLineButtonDisabled" @click="runPartQuery()")
+        a-button(type="primary" :disabled="isLineButtonDisabled" @click="runPartQuery()")
           a-space(:size="4")
             icon-loading(v-if="secondaryCodeRunning" spin)
             icon-play-arrow(v-else)
             div {{ $t('dashboard.runQuery') + ' #' + currentQueryNumber }}
             icon-close-circle-fill.icon-16(v-if="secondaryCodeRunning") 
-      a-button(type="outline" @click="explain") {{ $t('dashboard.explain') }}
-      a-button.toolbar-button(
-        type="secondary"
-        size="small"
-        title="Import Explain Result"
-        @click="showImportExplainModal"
-      )
+      a-dropdown-button(type="outline" position="bl" @click="explainCurrentStatement")
+        a-popover(
+          v-if="queryType === 'sql'"
+          position="bl"
+          content-class="code-tooltip"
+          :content="currentStatement"
+        )
+          | {{ $t('dashboard.explain') + `${currentQueryNumber ? ' #' + currentQueryNumber : ''} ` }}
         template(#icon)
-          icon-import
-        | Import Explain
+          icon-down
+        template(#content)
+          a-doption(title="Import Explain Result" @click="showImportExplainModal")
+            template(#icon)
+              icon-import
+            | Import Explain
+      a-button(type="outline" :disabled="isButtonDisabled" @click="runQueryAll()")
+        a-space(:size="4")
+          icon-loading(v-if="primaryCodeRunning" spin)
+          icon-play-arrow(v-else)
+          | {{ $t('dashboard.runAll') }}
+          icon-close-circle-fill.icon-16(v-if="primaryCodeRunning")
     .query-select
       a-space(size="medium")
         a-tooltip(v-if="queryType === 'sql'" mini :content="$t('dashboard.format')")
@@ -271,7 +276,7 @@ a-card.editor-card(:bordered="false")
     updateCurrentStatement(fullCode, cursorPosition)
   }
 
-  const codeUpdate = debounce((type: string) => {
+  const codeUpdate = (type: string) => {
     const view = type === 'sql' ? sqlView.value : promqlView.value
     if (view && type === queryType.value) {
       const { ranges } = view.state.selection
@@ -281,7 +286,7 @@ a-card.editor-card(:bordered="false")
         identifySqlStatement(view.state.doc.toString(), ranges[0].from)
       }
     }
-  }, 150)
+  }
 
   const runQueryAll = async () => {
     if (primaryCodeRunning.value) {
@@ -318,17 +323,17 @@ a-card.editor-card(:bordered="false")
     }
   }
 
-  const explain = async () => {
-    const result: any = await explainQuery(
-      `explain analyze format json ${codes.value[queryType.value]}`,
-      queryType.value
-    )
-    // If there's a result with an explain tab, focus on it
-    if (result && result.lastResult) {
-      const { lastResult } = result
-      // Emit an event to parent to select this tab
-      // eslint-disable-next-line vue/custom-event-name-casing
-      emit('select-explain-tab', lastResult.key)
+  const explainCurrentStatement = async () => {
+    if (!isButtonDisabled.value) {
+      const result: any = await explainQuery(
+        `explain analyze format json ${currentStatement.value || codes.value[queryType.value]}`,
+        queryType.value
+      )
+      if (result && result.lastResult) {
+        const { lastResult } = result
+        // eslint-disable-next-line vue/custom-event-name-casing
+        emit('select-explain-tab', lastResult.key)
+      }
     }
   }
 
