@@ -1,5 +1,4 @@
 import dayjs from 'dayjs'
-import { format as sqlFormat } from 'sql-formatter'
 
 type TargetContext = '_self' | '_parent' | '_blank' | '_top'
 
@@ -57,16 +56,6 @@ export const dateFormatter = (dataType: string, value: number | null) => {
       return value && dayjs(value / 1000000).format('YYYY-MM-DD HH:mm:ss')
     default:
       return null
-  }
-}
-
-export const sqlFormatter = (code: string) => {
-  try {
-    const sql = sqlFormat(code, { language: 'postgresql', keywordCase: 'upper' })
-    return sql
-  } catch {
-    // format error
-    return code
   }
 }
 
