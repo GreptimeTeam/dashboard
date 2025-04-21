@@ -12,10 +12,12 @@ a-layout.new-layout
       )
         Editor(@select-explain-tab="selectExplainTab")
         DataView(
-          v-if="!!results?.length"
+          v-if="!!results?.length || !!explainResult"
           ref="dataViewRef"
           :results="results"
           :types="types"
+          :explainResult="explainResult"
+          @update:explainResult="(val) => (explainResult = val)"
         )
       a-resize-box.panel-resize(
         v-model:height="logsHeight"
@@ -43,6 +45,7 @@ a-layout.new-layout
   const { checkTables } = useDataBaseStore()
   const { originTablesTree } = storeToRefs(useDataBaseStore())
   const { queryType, getResultsByType } = useQueryCode()
+  const { explainResult } = storeToRefs(useCodeRunStore())
   const types = ['sql', 'promql']
   const logsHeight = ref(66)
   const results = computed(() => getResultsByType(types))
@@ -66,9 +69,9 @@ a-layout.new-layout
       queryType.value = 'promql'
   })
 
-  const selectExplainTab = (tabKey) => {
+  const selectExplainTab = () => {
     if (dataViewRef.value) {
-      dataViewRef.value.selectTab(tabKey)
+      dataViewRef.value.selectTab('explain')
     }
   }
 

@@ -18,10 +18,45 @@ a-tabs.panel-tabs(
     )
       a-button(status="danger" size="small") {{ $t('dashboard.clear') }}
   a-tab-pane(
+    v-if="explainResult"
+    key="explain"
+    closable
+    :title="`${$t('dashboard.explain')}`"
+  )
+    a-tabs.data-view-tabs(:animation="true")
+      a-tab-pane(key="explain-grid" :title="`table`")
+        a-space(direction="vertical")
+          ExplainGrid(
+            v-for="(stage, index) in getStages(explainResult)"
+            :key="index"
+            :data="stage"
+            :index="index"
+          )
+      a-tab-pane(key="explain-chart" :title="`chart`")
+        ExplainChart(
+          v-for="(stage, index) in getStages(explainResult)"
+          :key="index"
+          :data="stage"
+          :index="index"
+        )
+      a-tab-pane(key="explain-raw" :title="`raw`")
+        template(#title)
+          a-space(:size="10")
+            svg.icon-16
+              use(href="#code")
+            | Raw
+        a-card.raw-json-card(:bordered="false")
+          template(#title)
+            a-button(size="mini" type="outline" @click="exportExplainJson(explainResult)")
+              template(#icon)
+                icon-download
+              | {{ $t('dashboard.download') }}
+          pre.raw-json {{ formatRawJson(explainResult) }}
+  a-tab-pane(
     v-for="(result, index) of results"
     :key="result.key"
     closable
-    :title="getTabTitle(result)"
+    :title="`${$t('dashboard.result')} ${result.key - startKey + 1}`"
   )
     a-tabs.data-view-tabs(:animation="true")
       a-tab-pane(v-if="result.name === 'result'" key="table" :title="$t('dashboard.table')")
@@ -79,25 +114,17 @@ a-tabs.panel-tabs(
   const props = defineProps<{
     results: ResultType[]
     types: string[]
+    explainResult?: ResultType
   }>()
 
-  const { removeResult, clear, ensureExplainAtTop } = useCodeRunStore()
-  const activeTabKey = ref(props.results[0]?.key)
-  const startKey = ref(props.results[0]?.key)
+  const emit = defineEmits(['update:explainResult'])
 
-  // Update title generation for tabs
-  const getTabTitle = (result: ResultType) => {
-    if (result.name === 'explain') {
-      return `${i18n.global.t(`dashboard.${result.name}`)}`
-    }
-    // For regular results, find its index among non-explain results
-    const regularResults = props.results.filter((r) => r.name !== 'explain')
-    const index = regularResults.findIndex((r) => r.key === result.key)
-    return `${i18n.global.t(`dashboard.${result.name}`)} ${index + 1}`
-  }
+  const { removeResult, clear } = useCodeRunStore()
+  const activeTabKey = ref<string | number>()
+  const startKey = ref<number>((props.results[0]?.key as number) || 0)
 
   // Add a method to select specific tab
-  const selectTab = (key: number) => {
+  const selectTab = (key: number | string) => {
     activeTabKey.value = key
   }
 
@@ -105,10 +132,20 @@ a-tabs.panel-tabs(
     selectTab,
   })
 
-  const deleteTab = async (key: number) => {
+  const deleteTab = async (key: number | string) => {
+    if (key === 'explain') {
+      emit('update:explainResult', null)
+
+      if (activeTabKey.value === 'explain') {
+        const firstResultKey = props.results.length > 0 ? props.results[0].key : undefined
+        activeTabKey.value = firstResultKey
+      }
+      return
+    }
+
     const index = props.results.findIndex((result) => result.key === key && props.types.includes(result.type))
     if (props.results.length === 1) {
-      startKey.value = props.results[0].key
+      startKey.value = props.results[0].key as number
     }
     await removeResult(key, props.results[index].type)
     if (activeTabKey.value === key) {
@@ -116,12 +153,12 @@ a-tabs.panel-tabs(
     }
   }
 
-  const tabClick = (key: any) => {
+  const tabClick = (key: string | number) => {
     activeTabKey.value = key
   }
 
   const clearResults = () => {
-    startKey.value = props.results[0].key
+    startKey.value = props.results[0]?.key as number
     clear(props.types)
   }
 
@@ -133,6 +170,17 @@ a-tabs.panel-tabs(
       }
     }
   )
+
+  watch(
+    () => props.explainResult,
+    (newValue, oldValue) => {
+      if (newValue && newValue !== oldValue && newValue.key) {
+        activeTabKey.value = 'explain'
+      }
+    },
+    { immediate: true }
+  )
+
   const getStages = computed(() => (result: ResultType) => {
     const { rows } = result.records
 
@@ -140,8 +188,6 @@ a-tabs.panel-tabs(
     const stagesMap = new Map()
     rowsData.forEach((row: any) => {
       const stageIndex = row[0].toString()
-      const nodeIndex = row[1].toString()
-      const plan = JSON.parse(row[2])
 
       if (stagesMap.has(stageIndex)) {
         stagesMap.set(stageIndex, [...stagesMap.get(stageIndex), row])
@@ -151,17 +197,6 @@ a-tabs.panel-tabs(
     })
     return Array.from(stagesMap.values())
   })
-
-  // Call ensureExplainAtTop whenever results change
-  watch(
-    () => props.results,
-    (newResults) => {
-      if (newResults.length > 0) {
-        ensureExplainAtTop()
-      }
-    },
-    { immediate: true }
-  )
 
   const reconstructExplainJson = (result: ResultType) => {
     return {

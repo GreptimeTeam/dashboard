@@ -27,7 +27,7 @@ export interface DimensionType {
 export interface ResultType {
   records: RecordsType
   dimensionsAndXName: { dimensions: DimensionType[]; xAxis: string }
-  key: number
+  key: number | string
   type: string
   name?: string
   executionTime?: number

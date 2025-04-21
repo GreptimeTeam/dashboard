@@ -168,13 +168,13 @@ a-card.editor-card(:bordered="false")
   const { extensions } = storeToRefs(useDataBaseStore())
   const currentQueryNumber = ref<number>(0)
   const currentStatement = ref<string>('')
-  const { explainResultKeyCount } = storeToRefs(useCodeRunStore())
+  const { explainResultKeyCount, explainResult } = storeToRefs(useCodeRunStore())
   const importExplainModalVisible = ref(false)
   const importExplainForm = reactive({
     explainJson: '',
   })
 
-  const emit = defineEmits(['select-explain-tab'])
+  const emit = defineEmits(['selectExplainTab'])
 
   // Show the import explain modal
   const showImportExplainModal = () => {
@@ -183,8 +183,6 @@ a-card.editor-card(:bordered="false")
 
   // Handle importing explain data
   const handleImportExplain = async () => {
-    const { manageExplainResult } = useCodeRunStore()
-
     try {
       // Parse the input JSON
       const jsonData = JSON.parse(importExplainForm.explainJson)
@@ -195,24 +193,18 @@ a-card.editor-card(:bordered="false")
       }
 
       // Create a result object similar to what runCode would create
-      const explainResult = {
+      const newResult = {
         records: jsonData.output[0].records,
         dimensionsAndXName: { dimensions: [], xAxis: '' },
-        key: explainResultKeyCount.value,
+        key: `explain - ${(explainResultKeyCount.value += 1)}`,
         type: queryType.value || 'sql',
         name: 'explain',
         executionTime: jsonData.execution_time_ms,
       }
 
-      // Add to results using the existing management function
-      manageExplainResult(explainResult)
+      explainResult.value = newResult
 
-      // Increment the key counter
-      explainResultKeyCount.value += 1
-
-      // Emit event to select the explain tab
-      // eslint-disable-next-line vue/custom-event-name-casing
-      emit('select-explain-tab', explainResult.key)
+      emit('selectExplainTab')
 
       // Clear the form and close the modal
       importExplainForm.explainJson = ''
@@ -330,10 +322,9 @@ a-card.editor-card(:bordered="false")
         `explain analyze format json ${currentStatement.value || codes.value[queryType.value]}`,
         queryType.value
       )
-      if (result && result.lastResult) {
-        const { lastResult } = result
+      if (result) {
         // eslint-disable-next-line vue/custom-event-name-casing
-        emit('select-explain-tab', lastResult.key)
+        emit('selectExplainTab')
       }
     }
   }
