@@ -27,7 +27,7 @@ a-tabs.panel-tabs(
       a-tab-pane(key="explain-grid")
         template(#title)
           | {{ $t('dashboard.table') }}
-        a-space(direction="vertical")
+        a-space(direction="vertical" :size="0")
           ExplainGrid(
             v-for="(stage, index) in getStages(explainResult)"
             :key="index"

@@ -71,9 +71,6 @@
   const minScale = 0.1
   const maxScale = 3
 
-  // Define the order of importance for metrics
-  const importanceOrder = ['fetch_time', 'elapsed_poll', 'repartition_time', 'send_time', 'mem_used', 'elapsed_await']
-
   // Create a line generator function
   const lineGen = computed(() => {
     return (link: FlexHierarchyPointLink) => {
@@ -147,7 +144,7 @@
   }
 
   function resetZoom() {
-    if (!treeContainer.value || props.activeNodeIndex === null) return
+    if (!treeContainer.value) return
 
     // Get container dimensions
     const containerWidth = treeContainer.value.clientWidth
@@ -160,34 +157,84 @@
     // Update SVG dimensions
     svg.attr('width', containerWidth).attr('height', containerHeight)
 
-    // Find the active tree group
-    const activeNodeGroup = svg.select(`g .tree-group.node-${props.activeNodeIndex}`)
-    if (activeNodeGroup.empty()) return
+    // If there's an active node, center on it (existing code)
+    if (props.activeNodeIndex !== null) {
+      try {
+        // Existing code for centering on active node
+        const activeNodeGroup = svg.select(`g .tree-group.node-${props.activeNodeIndex}`)
+        if (!activeNodeGroup.empty()) {
+          const groupNode = activeNodeGroup.node()
+          if (!groupNode) return
+          const groupBBox = groupNode.getBBox()
 
-    // Get the bounding box
-    const groupNode = activeNodeGroup.node()
-    if (!groupNode) return
-    const groupBBox = groupNode.getBBox()
+          // Use minimal padding
+          const padding = 20
+          const scaleX = containerWidth / (groupBBox.width + padding * 2)
+          const scaleY = containerHeight / (groupBBox.height + padding * 2)
+          const newScale = Math.min(scaleX, scaleY, maxScale)
 
-    // Use minimal padding
-    const padding = 20
+          // Calculate translation to center the tree
+          const tx = containerWidth / 2 - (groupBBox.x + groupBBox.width / 2) * newScale
+          const ty = containerHeight / 2 - (groupBBox.y + groupBBox.height / 2) * newScale
 
-    // Calculate scale to fit tree
-    const scaleX = containerWidth / (groupBBox.width + padding * 2)
-    const scaleY = containerHeight / (groupBBox.height + padding * 2)
+          // Create a proper transform object and apply it
+          const transform2 = d3.zoomIdentity.translate(tx, ty).scale(newScale)
 
-    // Use a reasonable scale that fits
-    const newScale = Math.min(scaleX, scaleY, maxScale)
+          // Apply transform
+          svg.transition().duration(750).call(zoomListener.value.transform, transform2)
+          return
+        }
+      } catch (e) {
+        console.warn('Failed to center on active node, using improved centering', e)
+      }
+    }
 
-    // Calculate translation to center the tree
-    const tx = containerWidth / 2 - (groupBBox.x + groupBBox.width / 2) * newScale
-    const ty = containerHeight / 2 - (groupBBox.y + groupBBox.height / 2) * newScale
+    // Center and scale all trees
+    try {
+      // Select all tree groups
+      const allTreeGroups = svg.selectAll('g .tree-group')
+      if (!allTreeGroups.empty()) {
+        // Calculate overall bounding box for all trees
+        const totalBBox = { x: Infinity, y: Infinity, width: 0, height: 0, right: 0, bottom: 0 }
 
-    // Create a proper transform object and apply it
-    const transform2 = d3.zoomIdentity.translate(tx, ty).scale(newScale)
+        allTreeGroups.each(function () {
+          const groupBBox = this.getBBox()
+          totalBBox.x = Math.min(totalBBox.x, groupBBox.x)
+          totalBBox.y = Math.min(totalBBox.y, groupBBox.y)
+          totalBBox.right = Math.max(totalBBox.right, groupBBox.x + groupBBox.width)
+          totalBBox.bottom = Math.max(totalBBox.bottom, groupBBox.y + groupBBox.height)
+        })
 
-    // Apply transform
-    svg.transition().duration(750).call(zoomListener.value.transform, transform2)
+        // Complete the bounding box calculation
+        totalBBox.width = totalBBox.right - totalBBox.x
+        totalBBox.height = totalBBox.bottom - totalBBox.y
+
+        // Add padding for better visualization
+        const padding = 20
+
+        // Calculate scale to fit all trees with padding
+        const scaleX = (containerWidth - padding * 2) / totalBBox.width
+        const scaleY = (containerHeight - padding * 2) / totalBBox.height
+
+        // Use the smaller scale to ensure everything fits
+        const newScale = Math.min(scaleX, scaleY, 1.0) // Cap at 1.0 to avoid too much zoom
+
+        // Calculate translation to center all trees
+        const tx = containerWidth / 2 - (totalBBox.x + totalBBox.width / 2) * newScale
+        const ty = containerHeight / 2 - (totalBBox.y + totalBBox.height / 2) * newScale
+
+        // Create transform and apply it
+        const optimalTransform = d3.zoomIdentity.translate(tx, ty).scale(newScale)
+        svg.transition().duration(750).call(zoomListener.value.transform, optimalTransform)
+        return
+      }
+    } catch (e) {
+      console.warn('Failed to calculate optimal transform, using default', e)
+    }
+
+    // Fallback to a more reasonable default if all else fails
+    const defaultTransform = d3.zoomIdentity.translate(containerWidth / 2, containerHeight / 4).scale(0.7)
+    svg.transition().duration(750).call(zoomListener.value.transform, defaultTransform)
   }
 
   // Add these functions to the script section

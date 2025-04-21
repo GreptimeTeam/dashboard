@@ -93,9 +93,6 @@
   const maxRows = ref(0)
   const maxDuration = ref(0)
 
-  // Define the order of importance for metrics
-  const importanceOrder = ['fetch_time', 'elapsed_poll', 'repartition_time', 'send_time', 'mem_used', 'elapsed_await']
-
   // Check if we have rows and duration metrics
   const hasPlanRows = computed(() => maxRows.value > 0)
   const hasDurationMetrics = computed(() => maxDuration.value > 0)

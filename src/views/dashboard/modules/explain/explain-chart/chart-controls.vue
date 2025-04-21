@@ -10,11 +10,8 @@
         :type="activeNodeIndex === node ? 'primary' : 'outline'"
         @click="onNodeSelect(node)"
       ) {{ node }}
-  .flex-spacer
-
-  // Highlight type radio group
   .highlight-controls
-    span.control-label Highlight:
+    span.control-label Highlight
     a-radio-group(
       v-model="localHighlightType"
       type="button"
@@ -24,7 +21,6 @@
       a-radio(value="NONE") none
       a-radio(value="ROWS" :disabled="!hasPlanRows") rows
       a-radio(value="DURATION" :disabled="!hasDurationMetrics") duration
-
   a-select(
     v-model="localSelectedMetric"
     size="mini"
@@ -124,6 +120,7 @@
         margin-right: 8px;
         font-size: 13px;
         color: var(--small-font-color);
+        font-family: 'Gilroy';
       }
 
       .node-buttons {

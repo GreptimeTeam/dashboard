@@ -46,24 +46,20 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
           template(#cell="{ record }")
             .metrics(v-if="record[`node${nodeIndex}`]")
               template(v-if="metricsExpanded")
-                //- For expanded view, show all metrics
                 template(v-for="(value, key) in getImportantMetrics(record[`node${nodeIndex}`])" :key="key")
                   .metric
                     .metric-header
                       span.metric-key {{ metricKeyMap(key) }}:
                       span.metric-value {{ isTimeMetric(key) ? formatTimeValue(value) : value }}
-                    //- Show progress bar for rows/duration
                     .metric-progress-bar-wrapper(v-if="isProgressMetric(key)")
                       .metric-progress-bar(
                         :style="{ width: `${getNodeMetricPercentage(record, nodeIndex, key)}%`, backgroundColor: getNodeProgressBarColor(record, nodeIndex, key) }"
                       )
               template(v-else)
-                //- For collapsed view, show just the selected metric
                 .metric(v-if="record[`node${nodeIndex}`] && record[`node${nodeIndex}`][getActiveMetric] !== undefined")
                   .metric-header
                     span.metric-key {{ metricKeyMap(getActiveMetric) }}:
                     span.metric-value {{ isTimeMetric(getActiveMetric) ? formatTimeValue(record[`node${nodeIndex}`][getActiveMetric]) : record[`node${nodeIndex}`][getActiveMetric] }}
-                  //- Show progress bar for rows/duration
                   .metric-progress-bar-wrapper(v-if="isProgressMetric(getActiveMetric)")
                     .metric-progress-bar(
                       :style="{ width: `${getNodeMetricPercentage(record, nodeIndex, getActiveMetric)}%`, backgroundColor: getNodeProgressBarColor(record, nodeIndex, getActiveMetric) }"
@@ -118,7 +114,7 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
   const metricKeyMap = (key: string): string => {
     const map: Record<string, string> = {
       output_rows: 'Rows',
-      elapsed_compute: 'Elapsed Time',
+      elapsed_compute: 'Duration',
     }
     return (
       map[key] ||
@@ -173,26 +169,6 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     { immediate: true }
   )
 
-  // Define the order of importance for metrics
-  const importanceOrder = [
-    'output_rows', // How many rows this step produces
-    'elapsed_compute', // Processing time for this step
-    'fetch_time', // Time spent fetching data
-    'elapsed_poll', // Time spent waiting for data
-    'repartition_time', // Time spent repartitioning data
-    'send_time', // Time spent sending data
-    'mem_used', // Memory consumption
-    'elapsed_await', // Time spent waiting
-  ]
-
-  // Generate available metrics for the dropdown
-  const availableMetrics = computed(() => {
-    return importanceOrder.map((metric) => ({
-      label: metric,
-      value: metric,
-    }))
-  })
-
   const selectMetric = (value: string) => {
     metricsExpanded.value = false
   }
@@ -200,45 +176,27 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
   const getImportantMetrics = (metrics: Record<string, any>) => {
     if (!metrics) return {}
 
-    // Define the order of importance for metrics
-
-    // Sort the metrics by importance
     const sortedMetrics: Record<string, any> = {}
 
-    // First add metrics in our importance order
-    importanceOrder.forEach((key) => {
-      if (metrics[key] !== undefined) {
-        sortedMetrics[key] = metrics[key]
-      }
-    })
+    // Always show output_rows and elapsed_compute first if they exist
+    if (metrics.output_rows !== undefined) {
+      sortedMetrics.output_rows = metrics.output_rows
+    }
 
-    // Then add any remaining metrics in their original order
-    Object.keys(metrics).forEach((key) => {
-      if (sortedMetrics[key] === undefined) {
-        sortedMetrics[key] = metrics[key]
-      }
-    })
+    if (metrics.elapsed_compute !== undefined) {
+      sortedMetrics.elapsed_compute = metrics.elapsed_compute
+    }
+
+    // Then add any remaining metrics in alphabetical order
+    Object.keys(metrics)
+      .sort((a, b) => a.localeCompare(b))
+      .forEach((key) => {
+        if (key !== 'output_rows' && key !== 'elapsed_compute') {
+          sortedMetrics[key] = metrics[key]
+        }
+      })
 
     return sortedMetrics
-  }
-
-  const getFirstImportantMetric = (metrics: Record<string, any>, preferredMetric?: string): [string, any] => {
-    if (!metrics) return ['', '']
-
-    // Return preferred metric if specified and available
-    if (preferredMetric && metrics[preferredMetric] !== undefined) {
-      return [preferredMetric, metrics[preferredMetric]]
-    }
-
-    // Return output_rows if available
-    if (metrics.output_rows !== undefined) {
-      return ['output_rows', metrics.output_rows]
-    }
-
-    // Otherwise return first metric by importance order
-    const sortedMetrics = getImportantMetrics(metrics)
-    const firstKey = Object.keys(sortedMetrics)[0]
-    return firstKey ? [firstKey, sortedMetrics[firstKey]] : ['', '']
   }
 
   // Determine if a row has additional details to show
@@ -392,6 +350,48 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
       })
     })
     return flattened
+  })
+
+  const availableMetrics = computed(() => {
+    // Use a Set to track unique metrics across all nodes
+    const metricsSet = new Set<string>()
+
+    // Process the tableData to extract all available metrics
+    tableData.value.forEach((row) => {
+      // Check each node
+      filteredNodeIndices.value.forEach((nodeIndex) => {
+        const nodeData = row[`node${nodeIndex}`]
+        if (!nodeData) return
+
+        // Add all metrics from this node
+        Object.keys(nodeData).forEach((key) => {
+          // Only include numeric metrics that make sense for comparison
+          if (typeof nodeData[key] === 'number') {
+            metricsSet.add(key)
+          }
+        })
+      })
+    })
+
+    // Convert to array and sort
+    const metricsList = Array.from(metricsSet)
+
+    // Place output_rows and elapsed_compute first, then alphabetically
+    return metricsList
+      .sort((a, b) => {
+        // Always put output_rows and elapsed_compute first
+        if (a === 'output_rows') return -1
+        if (b === 'output_rows') return 1
+        if (a === 'elapsed_compute') return -1
+        if (b === 'elapsed_compute') return 1
+
+        // Then sort alphabetically
+        return a.localeCompare(b)
+      })
+      .map((metric) => ({
+        value: metric,
+        label: metricKeyMap(metric),
+      }))
   })
 
   // Calculate appropriate table scroll settings
