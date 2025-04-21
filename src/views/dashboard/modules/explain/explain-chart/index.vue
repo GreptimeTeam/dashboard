@@ -385,12 +385,25 @@
   // Watch handlers for data changes
   watch(
     () => props.data,
-    () => {
+    (newData, oldData) => {
+      activeNodeIndex.value = null
+      selectedMetric.value = ''
+      highlightType.value = 'NONE'
+      metricsExpanded.value = false
+
       calculateMaxMetrics()
-      if (treeView.value) {
-        treeView.value.renderTree()
-      }
-    }
+
+      nextTick(() => {
+        if (treeView.value) {
+          treeView.value.renderTree()
+
+          setTimeout(() => {
+            resetZoom()
+          }, 100)
+        }
+      })
+    },
+    { immediate: true }
   )
 
   // Also call it during component setup
@@ -425,8 +438,11 @@
   .explain-chart {
     display: flex;
     flex-direction: column;
-    height: 100%;
-    width: 100%;
+    height: calc(100% - 32px);
+    margin: 16px;
+    padding: 16px 16px;
+    border-radius: 6px;
+    box-shadow: 0 4px 10px 0 var(--border-color);
 
     .controls-wrapper {
       position: absolute;

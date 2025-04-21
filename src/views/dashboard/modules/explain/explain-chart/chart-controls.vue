@@ -30,7 +30,7 @@
     :id="`${inputPrefix}-metric`"
   )
     a-option(v-for="metric in availableMetrics" :key="metric" :value="metric") {{ metric }}
-  a-button(type="text" size="mini" @click="onToggleMetricsExpanded")
+  a-button(type="outline" size="mini" @click="onToggleMetricsExpanded")
     template(#icon)
       icon-expand(v-if="!metricsExpanded")
       icon-shrink(v-else)
