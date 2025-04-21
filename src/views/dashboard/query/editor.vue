@@ -14,18 +14,20 @@ a-card.editor-card(:bordered="false")
             icon-play-arrow(v-else)
             div {{ $t('dashboard.runQuery') + ' #' + currentQueryNumber }}
             icon-close-circle-fill.icon-16(v-if="secondaryCodeRunning") 
-      a-dropdown-button(type="outline" position="bl" @click="explainCurrentStatement")
-        a-popover(
-          v-if="queryType === 'sql'"
-          position="bl"
-          content-class="code-tooltip"
-          :content="currentStatement"
-        )
-          | {{ $t('dashboard.explain') + `${currentQueryNumber ? ' #' + currentQueryNumber : ''} ` }}
+      a-dropdown-button(
+        type="outline"
+        position="bl"
+        :disabled="isButtonDisabled || explainQueryRunning"
+        @click="explainCurrentStatement"
+      )
+        a-popover(position="bl" content-class="code-tooltip" :content="currentStatement")
+          a-space(:size="4")
+            icon-loading(v-if="explainQueryRunning" spin)
+            span {{ $t('dashboard.explainQuery') + `${currentQueryNumber ? ' #' + currentQueryNumber : ''} ` }}
         template(#icon)
           icon-down
         template(#content)
-          a-doption(title="Import Explain Result" @click="showImportExplainModal")
+          a-doption(title="Import Explain Result" :disabled="explainQueryRunning" @click="showImportExplainModal")
             template(#icon)
               icon-import
             | Import Explain
@@ -166,13 +168,14 @@ a-card.editor-card(:bordered="false")
   })
   const { runQuery, explainQuery } = useQueryCode()
   const { extensions } = storeToRefs(useDataBaseStore())
-  const currentQueryNumber = ref<number>(0)
-  const currentStatement = ref<string>('')
   const { explainResultKeyCount, explainResult } = storeToRefs(useCodeRunStore())
-  const importExplainModalVisible = ref(false)
   const importExplainForm = reactive({
     explainJson: '',
   })
+  const currentQueryNumber = ref<number>(0)
+  const currentStatement = ref<string>('')
+  const importExplainModalVisible = ref(false)
+  const explainQueryRunning = ref(false)
 
   const emit = defineEmits(['selectExplainTab'])
 
@@ -186,7 +189,6 @@ a-card.editor-card(:bordered="false")
     try {
       // Parse the input JSON
       const jsonData = JSON.parse(importExplainForm.explainJson)
-      console.log(JSON.parse(JSON.stringify(jsonData)))
       // Check if it has the expected structure
       if (!jsonData.output || !jsonData.output[0]?.records) {
         throw new Error('Invalid explain result format. Expected "output" array with records.')
@@ -318,13 +320,17 @@ a-card.editor-card(:bordered="false")
 
   const explainCurrentStatement = async () => {
     if (!isButtonDisabled.value) {
-      const result: any = await explainQuery(
-        `explain analyze format json ${currentStatement.value || codes.value[queryType.value]}`,
-        queryType.value
-      )
-      if (result) {
-        // eslint-disable-next-line vue/custom-event-name-casing
-        emit('selectExplainTab')
+      explainQueryRunning.value = true
+      try {
+        const result: any = await explainQuery(
+          `explain analyze format json ${currentStatement.value || codes.value[queryType.value]}`,
+          queryType.value
+        )
+        if (result) {
+          emit('selectExplainTab')
+        }
+      } finally {
+        explainQueryRunning.value = false
       }
     }
   }

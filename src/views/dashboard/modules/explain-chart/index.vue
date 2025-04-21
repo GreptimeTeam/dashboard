@@ -127,8 +127,6 @@
       traverseNode(plan)
     })
 
-    // Convert Set to array and sort alphabetically
-    console.log('Available metrics:', Array.from(metricKeys).sort())
     return Array.from(metricKeys).sort()
   })
 
