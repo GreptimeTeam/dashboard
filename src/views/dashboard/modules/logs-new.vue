@@ -28,12 +28,18 @@ a-card.log(:bordered="false")
             | {{ log.message }}
             .total-time(v-if="!log.error")
               | {{ `in ${log.networkTime} ms` }}
-          a-popover(
-            v-if="!simple && log.codeTooltip"
-            position="tl"
-            content-class="code-tooltip"
-            :content="log.codeTooltip"
-          )
+          a-popover(v-if="!simple && log.codeTooltip" position="tl" content-class="code-tooltip")
+            template(#content)
+              div(v-if="log.type !== 'promql'") {{ log.codeTooltip }}
+              a-list(
+                v-else
+                size="small"
+                :split="false"
+                :bordered="false"
+              )
+                a-list-item(v-for="(value, name) in log.promInfo")
+                  span.width-35 {{ name }}
+                  a-typography-text.ml-4(code) {{ value }}
             .code-info(v-if="log.type === 'sql' || log.type === 'promql'") {{ log.codeInfo }}
             .file-info(v-else) {{ log.codeInfo }}
 </template>

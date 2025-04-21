@@ -15,6 +15,7 @@ a-card.editor-card(:bordered="false")
             div {{ $t('dashboard.runQuery') + ' #' + currentQueryNumber }}
             icon-close-circle-fill.icon-16(v-if="secondaryCodeRunning") 
       a-dropdown-button(
+        v-if="queryType === 'sql'"
         type="outline"
         position="bl"
         :disabled="isButtonDisabled || explainQueryRunning"
@@ -31,7 +32,11 @@ a-card.editor-card(:bordered="false")
             template(#icon)
               icon-import
             | Import Explain
-      a-button(type="outline" :disabled="isButtonDisabled" @click="runQueryAll()")
+      a-button(
+        :type="queryType === 'promql' ? 'primary' : 'outline'"
+        :disabled="isButtonDisabled"
+        @click="runQueryAll()"
+      )
         a-space(:size="4")
           icon-loading(v-if="primaryCodeRunning" spin)
           icon-play-arrow(v-else)
@@ -389,6 +394,9 @@ a-card.editor-card(:bordered="false")
   :deep(.arco-resizebox-trigger-icon-wrapper) {
     color: var(--main-font-color);
     font-size: 18px;
+  }
+  .prom-form {
+    padding-left: 8px;
   }
 </style>
 
