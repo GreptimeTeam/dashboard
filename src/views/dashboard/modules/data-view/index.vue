@@ -24,7 +24,9 @@ a-tabs.panel-tabs(
     :title="`${$t('dashboard.explain')}`"
   )
     a-tabs.data-view-tabs(:animation="true")
-      a-tab-pane(key="explain-grid" :title="`table`")
+      a-tab-pane(key="explain-grid")
+        template(#title)
+          | {{ $t('dashboard.table') }}
         a-space(direction="vertical")
           ExplainGrid(
             v-for="(stage, index) in getStages(explainResult)"
@@ -32,19 +34,18 @@ a-tabs.panel-tabs(
             :data="stage"
             :index="index"
           )
-      a-tab-pane(key="explain-chart" :title="`chart`")
+      a-tab-pane(key="explain-chart")
+        template(#title)
+          | {{ $t('dashboard.chart') }}
         ExplainChart(
           v-for="(stage, index) in getStages(explainResult)"
           :key="index"
           :data="stage"
           :index="index"
         )
-      a-tab-pane(key="explain-raw" :title="`raw`")
+      a-tab-pane(key="explain-raw")
         template(#title)
-          a-space(:size="10")
-            svg.icon-16
-              use(href="#code")
-            | Raw
+          | {{ $t('dashboard.raw') }}
         a-card.raw-json-card(:bordered="false")
           template(#title)
             a-button(size="mini" type="outline" @click="exportExplainJson(explainResult)")
@@ -59,48 +60,20 @@ a-tabs.panel-tabs(
     :title="`${$t('dashboard.result')} ${result.key - startKey + 1}`"
   )
     a-tabs.data-view-tabs(:animation="true")
-      a-tab-pane(v-if="result.name === 'result'" key="table" :title="$t('dashboard.table')")
+      a-tab-pane(v-if="result.name === 'result'" key="table")
         template(#title)
           a-space(:size="10")
             svg.icon-16
               use(href="#table")
             | {{ $t('dashboard.table') }}
         DataGrid(:data="result" :has-header="false")
-      a-tab-pane(v-if="useDataChart(result).hasChart.value" key="chart" :title="$t('dashboard.chart')")
+      a-tab-pane(v-if="useDataChart(result).hasChart.value" key="chart")
         template(#title)
           a-space(:size="10")
             svg.icon-16
               use(href="#chart")
             | {{ $t('dashboard.chart') }}
         DataChart(:data="result" :has-header="false")
-      a-tab-pane(v-if="result.name === 'explain'" key="explain-grid" :title="`table`")
-        a-space(direction="vertical")
-          ExplainGrid(
-            v-for="(stage, index) in getStages(result)"
-            :key="index"
-            :data="stage"
-            :index="index"
-          )
-      a-tab-pane(v-if="result.name === 'explain'" key="explain-chart" :title="`chart`")
-        ExplainChart(
-          v-for="(stage, index) in getStages(result)"
-          :key="index"
-          :data="stage"
-          :index="index"
-        )
-      a-tab-pane(v-if="result.name === 'explain'" key="explain-raw" :title="`raw`")
-        template(#title)
-          a-space(:size="10")
-            svg.icon-16
-              use(href="#code")
-            | Raw
-        a-card.raw-json-card(:bordered="false")
-          template(#title)
-            a-button(size="mini" type="outline" @click="exportExplainJson(result)")
-              template(#icon)
-                icon-download
-              | {{ $t('dashboard.download') }}
-          pre.raw-json {{ formatRawJson(result) }}
 </template>
 
 <script lang="ts" name="DataView" setup>
@@ -260,7 +233,7 @@ a-tabs.panel-tabs(
         .arco-tabs-nav-ink {
           background: transparent;
         }
-        .arco-tabs-nav-tab-list > :nth-child(2) {
+        .arco-tabs-nav-tab-list > :not(:first-child) {
           .arco-tabs-tab-title {
             border-left: 1px solid var(--border-color);
           }

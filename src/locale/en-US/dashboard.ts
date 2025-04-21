@@ -71,4 +71,5 @@ export default {
   'dashboard.explain': 'Explain',
   'dashboard.explainQuery': 'Explain Query',
   'dashboard.download': 'Download',
+  'dashboard.raw': 'Raw',
 }
