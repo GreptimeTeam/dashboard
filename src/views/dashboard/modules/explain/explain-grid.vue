@@ -69,7 +69,7 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
 
 <script lang="ts" setup name="ExplainGrid">
   import { h } from 'vue'
-  import { formatMetricName } from './utils'
+  import { formatMetricName, formatTimeValue } from './utils'
 
   const props = defineProps<{
     data: [number, number, string][]
@@ -77,22 +77,6 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
   }>()
 
   const expandedKeys = ref<string[]>([])
-
-  const formatTimeValue = (nanoseconds: number | undefined): string => {
-    if (nanoseconds === undefined || nanoseconds === null) return '0'
-
-    // Convert to appropriate unit
-    if (nanoseconds < 1000) {
-      return `${nanoseconds}ns`
-    }
-    if (nanoseconds < 1000000) {
-      return `${(nanoseconds / 1000).toFixed(2)}μs`
-    }
-    if (nanoseconds < 1000000000) {
-      return `${(nanoseconds / 1000000).toFixed(2)}ms`
-    }
-    return `${(nanoseconds / 1000000000).toFixed(2)}s`
-  }
 
   // Add helper to check if a metric is time-based
   const isTimeMetric = (key: string): boolean => {
