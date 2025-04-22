@@ -34,6 +34,7 @@ a-card.editor-card(:bordered="false")
           a-space(:size="4")
             icon-loading(v-if="explainQueryRunning" spin)
             span {{ $t('dashboard.explainQuery') + `${currentQueryNumber ? ' #' + currentQueryNumber : ''} ` }}
+            icon-close-circle-fill.icon-16(v-if="explainQueryRunning") 
         template(#icon)
           icon-down
         template(#content)
@@ -341,6 +342,11 @@ a-card.editor-card(:bordered="false")
   }
 
   const explainCurrentStatement = async () => {
+    if (explainQueryRunning.value) {
+      explainQueryRunning.value = false
+      return
+    }
+
     if (!isButtonDisabled.value) {
       explainQueryRunning.value = true
       try {
