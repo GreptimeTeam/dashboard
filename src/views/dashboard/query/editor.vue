@@ -3,7 +3,6 @@ a-card.editor-card(:bordered="false")
   a-space.space-between.pb-15
     a-space.editor-header(size="medium")
       a-dropdown-button(
-        v-if="queryType === 'sql'"
         type="primary"
         position="bl"
         :disabled="isButtonDisabled || explainQueryRunning"
@@ -13,16 +12,17 @@ a-card.editor-card(:bordered="false")
           a-space(:size="4")
             icon-loading(v-if="secondaryCodeRunning" spin)
             icon-play-arrow(v-else)
-            div {{ $t('dashboard.runQuery') + ' #' + currentQueryNumber }}
+            div {{ $t('dashboard.runQuery') + (queryType === 'sql' && currentQueryNumber ? ' #' + currentQueryNumber : '') }}
             icon-close-circle-fill.icon-16(v-if="secondaryCodeRunning") 
         template(#icon)
           icon-down
         template(#content)
-          a-doption(:disabled="secondaryCodeRunning" @click="exportCsv")
+          a-doption(:disabled="secondaryCodeRunning || queryType === 'promql'" @click="exportCsv")
             template(#icon)
               svg.icon
                 use(href="#export")
-            | {{ $t('dashboard.exportCSV') }}
+            a-popover(position="rt" content-class="code-tooltip" :content="currentStatement")
+              span {{ $t('dashboard.exportCSV') }}
       a-dropdown-button(
         v-if="queryType === 'sql'"
         type="outline"
@@ -42,7 +42,8 @@ a-card.editor-card(:bordered="false")
               icon-import
             | {{ $t('dashboard.importExplain') }}
       a-button(
-        :type="queryType === 'promql' ? 'primary' : 'outline'"
+        v-if="queryType === 'sql'"
+        type="outline"
         :disabled="isButtonDisabled"
         @click="runQueryAll()"
       )
@@ -264,9 +265,15 @@ a-card.editor-card(:bordered="false")
   }
 
   const updateCurrentStatement = (sql: string, cursorPosition: number) => {
-    if (!sql || queryType.value !== 'sql') {
+    if (!sql) {
       currentQueryNumber.value = 0
       currentStatement.value = ''
+      return
+    }
+
+    if (queryType.value === 'promql') {
+      currentQueryNumber.value = 0
+      currentStatement.value = sql
       return
     }
 
@@ -288,19 +295,13 @@ a-card.editor-card(:bordered="false")
     }
   }
 
-  const identifySqlStatement = (fullCode: string, cursorPosition: number) => {
-    updateCurrentStatement(fullCode, cursorPosition)
-  }
-
   const codeUpdate = (type: string) => {
     const view = type === 'sql' ? sqlView.value : promqlView.value
     if (view && type === queryType.value) {
       const { ranges } = view.state.selection
       cursorAt.value = [ranges[0].from, ranges[0].to]
 
-      if (type === 'sql') {
-        identifySqlStatement(view.state.doc.toString(), ranges[0].from)
-      }
+      updateCurrentStatement(view.state.doc.toString(), ranges[0].from)
     }
   }
 
