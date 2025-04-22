@@ -17,7 +17,7 @@ a-card.editor-card(:bordered="false")
         template(#icon)
           icon-down
         template(#content)
-          a-doption(:disabled="secondaryCodeRunning || queryType === 'promql'" @click="exportCsv")
+          a-doption(:disabled="secondaryCodeRunning" @click="exportCsv")
             template(#icon)
               svg.icon
                 use(href="#export")

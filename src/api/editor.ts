@@ -59,7 +59,6 @@ const makePromParams = (code: string, promForm: PromForm, format?: string) => {
       end,
       step: promForm.step,
       db: appStore.database,
-      // TODO: wait for API
       format,
     },
   } as AxiosRequestConfig
@@ -128,7 +127,6 @@ const runScript = (name: string) => {
 }
 
 const runPromQL = (code: string, promForm: PromForm, format?: string) => {
-  // TODO: wait for API
   return axios.post(promURL, {}, makePromParams(code, promForm, format))
 }
 
