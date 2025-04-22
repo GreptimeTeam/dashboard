@@ -51,7 +51,7 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
                   .metric
                     .metric-header
                       span.metric-key {{ formatMetricName(key) }}:
-                      span.metric-value {{ isTimeMetric(key) ? formatTimeValue(value) : value }}
+                      span.metric-value {{ formatMetricValue(key, value) }}
                     .metric-progress-bar-wrapper(v-if="isProgressMetric(key)")
                       .metric-progress-bar(
                         :style="{ width: `${getNodeMetricPercentage(record, nodeIndex, key)}%`, backgroundColor: getNodeProgressBarColor(record, nodeIndex, key) }"
@@ -60,7 +60,7 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
                 .metric(v-if="record[`node${nodeIndex}`] && record[`node${nodeIndex}`][getActiveMetric] !== undefined")
                   .metric-header
                     span.metric-key {{ formatMetricName(getActiveMetric) }}:
-                    span.metric-value {{ isTimeMetric(getActiveMetric) ? formatTimeValue(record[`node${nodeIndex}`][getActiveMetric]) : record[`node${nodeIndex}`][getActiveMetric] }}
+                    span.metric-value {{ formatMetricValue(getActiveMetric, record[`node${nodeIndex}`][getActiveMetric]) }}
                   .metric-progress-bar-wrapper(v-if="isProgressMetric(getActiveMetric)")
                     .metric-progress-bar(
                       :style="{ width: `${getNodeMetricPercentage(record, nodeIndex, getActiveMetric)}%`, backgroundColor: getNodeProgressBarColor(record, nodeIndex, getActiveMetric) }"
@@ -69,7 +69,7 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
 
 <script lang="ts" setup name="ExplainGrid">
   import { h } from 'vue'
-  import { formatMetricName, formatTimeValue } from './utils'
+  import { formatMetricName, formatTimeValue, formatMetricValue } from './utils'
 
   const props = defineProps<{
     data: [number, number, string][]
@@ -77,11 +77,6 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
   }>()
 
   const expandedKeys = ref<string[]>([])
-
-  // Add helper to check if a metric is time-based
-  const isTimeMetric = (key: string): boolean => {
-    return key.includes('time') || key.includes('elapsed')
-  }
 
   // Function to toggle a row's expanded state
   const toggleRowExpansion = (record: any) => {
@@ -169,30 +164,8 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     // Add param if available
     if (record.param) {
       details.push({
-        label: 'Parameters',
+        label: 'Param',
         value: record.param,
-      })
-
-      // Add other metrics with formatting
-      Object.entries(record).forEach(([key, value]) => {
-        // Skip already handled properties and non-metrics
-        if (
-          key === 'param' ||
-          key === 'elapsed_compute' ||
-          !isTimeMetric(key) ||
-          key === 'key' ||
-          key === 'step' ||
-          key === 'path' ||
-          key.startsWith('node') ||
-          key === 'hasAdditionalDetails'
-        ) {
-          return
-        }
-
-        details.push({
-          label: key,
-          value: isTimeMetric(key) ? formatTimeValue(value as number) : value,
-        })
       })
     }
 

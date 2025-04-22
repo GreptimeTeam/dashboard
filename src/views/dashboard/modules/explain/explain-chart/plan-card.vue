@@ -16,7 +16,7 @@
 
 <script lang="ts" setup name="PlanCard">
   import { computed } from 'vue'
-  import { formatMetricName, formatTimeValue } from '../utils'
+  import { formatMetricName, formatTimeValue, formatNumber, formatMetricValue } from '../utils'
 
   const props = defineProps({
     nodeData: {
@@ -94,20 +94,6 @@
     return ''
   })
 
-  function formatNumber(value) {
-    return new Intl.NumberFormat().format(value)
-  }
-
-  function formatBytes(bytes) {
-    if (bytes < 1024) return `${bytes}B`
-    const kb = bytes / 1024
-    if (kb < 1024) return `${Math.round(kb)}KB`
-    const mb = kb / 1024
-    if (mb < 1024) return `${Math.round(mb)}MB`
-    const gb = mb / 1024
-    return `${gb.toFixed(2)}GB`
-  }
-
   const formattedProgressValue = computed(() => {
     if (props.highlightType === 'ROWS') {
       const outputRows =
@@ -156,18 +142,4 @@
 
     return {}
   })
-
-  function formatMetricValue(key, value) {
-    if (typeof value === 'number') {
-      if (key.includes('time') || key.includes('duration') || key.includes('elapsed')) {
-        return formatTimeValue(value)
-      }
-      if (key.includes('bytes')) {
-        return formatBytes(value)
-      }
-
-      return formatNumber(value)
-    }
-    return value
-  }
 </script>
