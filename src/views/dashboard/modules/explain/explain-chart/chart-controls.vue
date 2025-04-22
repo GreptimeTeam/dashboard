@@ -19,8 +19,8 @@
       :id="`${inputPrefix}-highlight`"
     )
       a-radio(value="NONE") None
-      a-radio(value="ROWS" :disabled="!hasPlanRows") Rows
-      a-radio(value="DURATION" :disabled="!hasDurationMetrics") Duration
+      a-radio(value="ROWS") Rows
+      a-radio(value="DURATION") Duration
   a-select(
     v-model="localSelectedMetric"
     size="mini"
@@ -64,9 +64,6 @@
 
   const localHighlightType = ref(props.highlightType)
   const localSelectedMetric = ref(props.selectedMetric)
-
-  const hasPlanRows = computed(() => props.maxRows > 0)
-  const hasDurationMetrics = computed(() => props.maxDuration > 0)
 
   watch(
     () => props.highlightType,
@@ -137,5 +134,9 @@
     .flex-spacer {
       flex: 1;
     }
+  }
+
+  .arco-radio-button.arco-radio-checked {
+    color: var(--brand-color);
   }
 </style>

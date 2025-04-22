@@ -23,7 +23,7 @@ a-tabs.panel-tabs(
     closable
     :title="`${$t('dashboard.explain')}`"
   )
-    a-tabs.data-view-tabs(:animation="true")
+    a-tabs.data-view-tabs(lazy-load :animation="true")
       a-tab-pane(key="explain-grid")
         template(#title)
           | {{ $t('dashboard.table') }}

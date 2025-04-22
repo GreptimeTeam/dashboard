@@ -65,7 +65,7 @@
   const metricsExpanded = ref(false)
   const selectedMetric = ref<string>('')
   const activeNodeIndex = ref<number | null>(null)
-  const highlightType = ref<string>('NONE') // Highlight type: NONE, ROWS, DURATION
+  const highlightType = ref<string>('DURATION') // Highlight type: NONE, ROWS, DURATION
   const nodesData = ref([])
   const treeView = ref(null)
   const componentId = computed(() => `explain-chart-stage-${props.index}`)
@@ -375,31 +375,49 @@
     }
   }
 
+  const areDataArraysEqual = (newData, oldData) => {
+    if (!newData || !oldData) return newData === oldData
+    if (newData.length !== oldData.length) return false
+
+    return newData.every((newRow, index) => {
+      const oldRow = oldData[index]
+      if (newRow[0] !== oldRow[0] || newRow[1] !== oldRow[1]) return false
+
+      try {
+        return JSON.stringify(JSON.parse(newRow[2])) === JSON.stringify(JSON.parse(oldRow[2]))
+      } catch (e) {
+        return newRow[2] === oldRow[2]
+      }
+    })
+  }
+
   // Watch handlers for data changes
   watch(
     () => props.data,
     (newData, oldData) => {
-      activeNodeIndex.value = null
-      selectedMetric.value = ''
-      highlightType.value = 'NONE'
-      metricsExpanded.value = false
+      // Only reset if the data content actually changed
+      if (!oldData || !areDataArraysEqual(newData, oldData)) {
+        activeNodeIndex.value = null
+        selectedMetric.value = ''
+        highlightType.value = 'DURATION'
+        metricsExpanded.value = false
 
-      calculateMaxMetrics()
+        calculateMaxMetrics()
 
-      nextTick(() => {
-        if (treeView.value) {
-          treeView.value.renderTree()
+        nextTick(() => {
+          if (treeView.value) {
+            treeView.value.renderTree()
 
-          setTimeout(() => {
-            resetZoom()
-          }, 100)
-        }
-      })
+            setTimeout(() => {
+              resetZoom()
+            }, 100)
+          }
+        })
+      }
     },
     { immediate: true }
   )
 
-  // Also call it during component setup
   onMounted(() => {
     calculateMaxMetrics()
     window.addEventListener('resize', handleResize)

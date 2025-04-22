@@ -25,7 +25,7 @@
     },
     highlightType: {
       type: String,
-      default: 'NONE',
+      default: 'DURATION',
     },
     maxRows: {
       type: Number,
