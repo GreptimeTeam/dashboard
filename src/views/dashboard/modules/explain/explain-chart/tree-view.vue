@@ -36,7 +36,7 @@
     },
     highlightType: {
       type: String,
-      default: 'NONE',
+      default: 'DURATION',
     },
     selectedMetric: {
       type: String,
