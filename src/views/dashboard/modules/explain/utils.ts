@@ -15,6 +15,10 @@ export const NODE_INDEX_CARD = {
   fontSize: 12,
 }
 
+export function formatNumber(value) {
+  return new Intl.NumberFormat().format(value)
+}
+
 export function formatTimeValue(nanoseconds) {
   if (nanoseconds === undefined || nanoseconds === null) return '0'
 
@@ -22,6 +26,17 @@ export function formatTimeValue(nanoseconds) {
   if (nanoseconds < 1000000) return `${(nanoseconds / 1000).toFixed(2)}μs`
   if (nanoseconds < 1000000000) return `${(nanoseconds / 1000000).toFixed(2)}ms`
   return `${(nanoseconds / 1000000000).toFixed(2)}s`
+}
+
+export function formatMetricValue(key, value) {
+  if (typeof value === 'number') {
+    if (key.includes('elapsed_compute')) {
+      return formatTimeValue(value)
+    }
+
+    return formatNumber(value)
+  }
+  return value
 }
 
 export function getProgressColor(percentage) {

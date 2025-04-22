@@ -44,7 +44,7 @@
   import { createVNode, render, h } from 'vue'
   import { flextree } from 'd3-flextree'
   import PlanCard from './plan-card.vue'
-  import { CARD_DIMENSIONS, NODE_INDEX_CARD, formatTimeValue, getProgressColor, formatMetricName } from '../utils'
+  import { CARD_DIMENSIONS, NODE_INDEX_CARD, getProgressColor, formatMetricName } from '../utils'
 
   interface FlexHierarchyPointNode extends d3.HierarchyPointNode<any> {
     xSize: number
