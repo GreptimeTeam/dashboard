@@ -16,7 +16,7 @@
 
 <script lang="ts" setup name="PlanCard">
   import { computed } from 'vue'
-  import { formatMetricName } from '../utils'
+  import { formatMetricName, formatTimeValue } from '../utils'
 
   const props = defineProps({
     nodeData: {
@@ -98,16 +98,6 @@
     return new Intl.NumberFormat().format(value)
   }
 
-  function formatDuration(nanoseconds) {
-    if (nanoseconds < 1000) return `${nanoseconds}ns`
-    const microseconds = nanoseconds / 1000
-    if (microseconds < 1000) return `${Math.round(microseconds)}µs`
-    const milliseconds = microseconds / 1000
-    if (milliseconds < 1000) return `${Math.round(milliseconds)}ms`
-    const seconds = milliseconds / 1000
-    return `${seconds.toFixed(2)}s`
-  }
-
   function formatBytes(bytes) {
     if (bytes < 1024) return `${bytes}B`
     const kb = bytes / 1024
@@ -127,7 +117,7 @@
     if (props.highlightType === 'DURATION') {
       const elapsedCompute =
         props.nodeData.elapsed_compute || (props.nodeData.metrics && props.nodeData.metrics.elapsed_compute) || 0
-      return formatDuration(elapsedCompute)
+      return formatTimeValue(elapsedCompute)
     }
     return ''
   })
@@ -170,7 +160,7 @@
   function formatMetricValue(key, value) {
     if (typeof value === 'number') {
       if (key.includes('time') || key.includes('duration') || key.includes('elapsed')) {
-        return formatDuration(value)
+        return formatTimeValue(value)
       }
       if (key.includes('bytes')) {
         return formatBytes(value)
