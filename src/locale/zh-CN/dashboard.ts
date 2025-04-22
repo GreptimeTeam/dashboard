@@ -72,4 +72,6 @@ export default {
   'dashboard.explainQuery': 'Explain Query',
   'dashboard.download': 'Download',
   'dashboard.raw': 'Raw',
+  'dashboard.importExplain': 'Import Result JSON',
+  'dashboard.exportCSV': 'Export Result as CSV',
 }

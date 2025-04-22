@@ -88,7 +88,7 @@ axios.interceptors.response.use(
     }
     if (isV1) {
       if (response.config.params && response.config.params.format === 'csv') {
-        return response.data
+        return response.data || []
       }
       response.data = JSONbigint({ storeAsString: true }).parse(response.data)
       const { data } = response
