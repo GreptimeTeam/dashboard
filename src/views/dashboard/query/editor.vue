@@ -2,24 +2,46 @@
 a-card.editor-card(:bordered="false")
   a-space.space-between.pb-15
     a-space.editor-header(size="medium")
-      a-button(type="primary" :disabled="isButtonDisabled" @click="runQueryAll()")
-        a-space(:size="4")
-          icon-loading(v-if="primaryCodeRunning" spin)
-          icon-play-arrow(v-else)
-          | {{ $t('dashboard.runAll') }}
-          icon-close-circle-fill.icon-16(v-if="primaryCodeRunning")
       a-popover(
         v-if="queryType === 'sql'"
         position="rt"
         content-class="code-tooltip"
         :content="currentStatement"
       )
-        a-button(type="outline" :disabled="isLineButtonDisabled" @click="runPartQuery()")
+        a-button(type="primary" :disabled="isLineButtonDisabled" @click="runPartQuery()")
           a-space(:size="4")
             icon-loading(v-if="secondaryCodeRunning" spin)
             icon-play-arrow(v-else)
             div {{ $t('dashboard.runQuery') + ' #' + currentQueryNumber }}
             icon-close-circle-fill.icon-16(v-if="secondaryCodeRunning") 
+      a-dropdown-button(
+        v-if="queryType === 'sql'"
+        type="outline"
+        position="bl"
+        :disabled="isButtonDisabled || explainQueryRunning"
+        @click="explainCurrentStatement"
+      )
+        a-popover(position="bl" content-class="code-tooltip" :content="currentStatement")
+          a-space(:size="4")
+            icon-loading(v-if="explainQueryRunning" spin)
+            span {{ $t('dashboard.explainQuery') + `${currentQueryNumber ? ' #' + currentQueryNumber : ''} ` }}
+        template(#icon)
+          icon-down
+        template(#content)
+          a-doption(title="Import Explain Result" :disabled="explainQueryRunning" @click="showImportExplainModal")
+            template(#icon)
+              icon-import
+            | Import Explain
+      a-button(
+        :type="queryType === 'promql' ? 'primary' : 'outline'"
+        :disabled="isButtonDisabled"
+        @click="runQueryAll()"
+      )
+        a-space(:size="4")
+          icon-loading(v-if="primaryCodeRunning" spin)
+          icon-play-arrow(v-else)
+          | {{ $t('dashboard.runAll') }}
+          icon-close-circle-fill.icon-16(v-if="primaryCodeRunning")
     .query-select
       a-space(size="medium")
         a-tooltip(v-if="queryType === 'sql'" mini :content="$t('dashboard.format')")
@@ -92,6 +114,14 @@ a-card.editor-card(:bordered="false")
           @ready="handleReadyPromql"
           @update="codeUpdate('promql')"
         )
+  a-modal(v-model:visible="importExplainModalVisible" title="Import Explain Result" @ok="handleImportExplain")
+    a-form(layout="vertical" :model="importExplainForm" :auto-label-width="true")
+      a-form-item(field="explainJson" label="Paste Explain JSON Result" validate-trigger="blur")
+        a-textarea(
+          v-model="importExplainForm.explainJson"
+          :placeholder="'Paste JSON output with plan data here'"
+          :auto-size="{ minRows: 10, maxRows: 20 }"
+        )
 </template>
 
 <script lang="ts" setup name="Editor">
@@ -104,6 +134,8 @@ a-card.editor-card(:bordered="false")
   import type { PromForm } from '@/store/modules/code-run/types'
   import { useStorage } from '@vueuse/core'
   import { sqlFormatter, parseSqlStatements, findStatementAtPosition, debounce } from '@/utils/sql'
+  import { Message } from '@arco-design/web-vue'
+
   import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '../config'
 
   export interface Props {
@@ -139,10 +171,57 @@ a-card.editor-card(:bordered="false")
     step: '30s',
     range: [dayjs().subtract(5, 'minute').unix().toString(), dayjs().unix().toString()],
   })
-  const { runQuery } = useQueryCode()
+  const { runQuery, explainQuery } = useQueryCode()
   const { extensions } = storeToRefs(useDataBaseStore())
+  const { explainResultKeyCount, explainResult } = storeToRefs(useCodeRunStore())
+  const importExplainForm = reactive({
+    explainJson: '',
+  })
   const currentQueryNumber = ref<number>(0)
   const currentStatement = ref<string>('')
+  const importExplainModalVisible = ref(false)
+  const explainQueryRunning = ref(false)
+
+  const emit = defineEmits(['selectExplainTab'])
+
+  // Show the import explain modal
+  const showImportExplainModal = () => {
+    importExplainModalVisible.value = true
+  }
+
+  // Handle importing explain data
+  const handleImportExplain = async () => {
+    try {
+      // Parse the input JSON
+      const jsonData = JSON.parse(importExplainForm.explainJson)
+      // Check if it has the expected structure
+      if (!jsonData.output || !jsonData.output[0]?.records) {
+        throw new Error('Invalid explain result format. Expected "output" array with records.')
+      }
+
+      // Create a result object similar to what runCode would create
+      const newResult = {
+        records: jsonData.output[0].records,
+        dimensionsAndXName: { dimensions: [], xAxis: '' },
+        key: `explain - ${(explainResultKeyCount.value += 1)}`,
+        type: queryType.value || 'sql',
+        name: 'explain',
+        executionTime: jsonData.execution_time_ms,
+      }
+
+      explainResult.value = newResult
+
+      emit('selectExplainTab')
+
+      // Clear the form and close the modal
+      importExplainForm.explainJson = ''
+      importExplainModalVisible.value = false
+
+      Message.success('Explain result imported successfully')
+    } catch (error) {
+      Message.error(`Failed to parse explain result: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
 
   const isButtonDisabled = computed(() => {
     if (codes.value[queryType.value].trim().length === 0) {
@@ -197,7 +276,7 @@ a-card.editor-card(:bordered="false")
     updateCurrentStatement(fullCode, cursorPosition)
   }
 
-  const codeUpdate = debounce((type: string) => {
+  const codeUpdate = (type: string) => {
     const view = type === 'sql' ? sqlView.value : promqlView.value
     if (view && type === queryType.value) {
       const { ranges } = view.state.selection
@@ -207,7 +286,7 @@ a-card.editor-card(:bordered="false")
         identifySqlStatement(view.state.doc.toString(), ranges[0].from)
       }
     }
-  }, 150)
+  }
 
   const runQueryAll = async () => {
     if (primaryCodeRunning.value) {
@@ -241,6 +320,23 @@ a-card.editor-card(:bordered="false")
   const formatSql = () => {
     if (queryType.value === 'sql' && codes.value.sql.trim().length > 0) {
       codes.value.sql = sqlFormatter(codes.value.sql)
+    }
+  }
+
+  const explainCurrentStatement = async () => {
+    if (!isButtonDisabled.value) {
+      explainQueryRunning.value = true
+      try {
+        const result: any = await explainQuery(
+          `explain analyze format json ${currentStatement.value || codes.value[queryType.value]}`,
+          queryType.value
+        )
+        if (result) {
+          emit('selectExplainTab')
+        }
+      } finally {
+        explainQueryRunning.value = false
+      }
     }
   }
 
@@ -298,6 +394,9 @@ a-card.editor-card(:bordered="false")
   :deep(.arco-resizebox-trigger-icon-wrapper) {
     color: var(--main-font-color);
     font-size: 18px;
+  }
+  .prom-form {
+    padding-left: 8px;
   }
 </style>
 

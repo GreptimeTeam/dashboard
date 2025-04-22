@@ -10,8 +10,15 @@ a-layout.new-layout
         direction="vertical"
         :size="0"
       )
-        Editor
-        DataView(v-if="!!results?.length" :results="results" :types="types")
+        Editor(@select-explain-tab="selectExplainTab")
+        DataView(
+          v-if="!!results?.length || !!explainResult"
+          ref="dataViewRef"
+          :results="results"
+          :types="types"
+          :explainResult="explainResult"
+          @update:explainResult="(val) => (explainResult = val)"
+        )
       a-resize-box.panel-resize(
         v-model:height="logsHeight"
         :directions="['top']"
@@ -38,10 +45,12 @@ a-layout.new-layout
   const { checkTables } = useDataBaseStore()
   const { originTablesTree } = storeToRefs(useDataBaseStore())
   const { queryType, getResultsByType } = useQueryCode()
+  const { explainResult } = storeToRefs(useCodeRunStore())
   const types = ['sql', 'promql']
   const logsHeight = ref(66)
   const results = computed(() => getResultsByType(types))
   const queryLogs = computed(() => logs.value.filter((log) => types.includes(log.type)))
+  const dataViewRef = ref(null)
 
   watch(s, (v) => {
     if (
@@ -59,6 +68,12 @@ a-layout.new-layout
     )
       queryType.value = 'promql'
   })
+
+  const selectExplainTab = () => {
+    if (dataViewRef.value) {
+      dataViewRef.value.selectTab('explain')
+    }
+  }
 
   const globalTour = driver({
     showProgress: false,

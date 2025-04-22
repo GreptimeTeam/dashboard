@@ -117,6 +117,11 @@ export default function useQueryCode() {
     return res
   }
 
+  const explainQuery = async (code: string, type = queryType.value) => {
+    const { runCode } = useCodeRunStore()
+    const result = await runCode(code, type, false, {}, 'explain')
+    return result
+  }
   const getResultsByType = (types: string[]) => {
     return results.value.filter((item: ResultType) => types.includes(item.type))
   }
@@ -134,6 +139,7 @@ export default function useQueryCode() {
     runQuery,
     inputFromNewLineToQueryCode,
     replaceCode,
+    explainQuery,
     sqlView,
     promqlView,
     cursorAt,

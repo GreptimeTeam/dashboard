@@ -14,6 +14,7 @@ import { Log, ResultInLog } from '../log/types'
 const useCodeRunStore = defineStore('codeRun', () => {
   const results = ref<ResultType[]>([])
   const resultKeyCount = reactive<{ [key: string]: number }>({})
+  const explainResult = ref<ResultType>()
 
   // TODO: Add all the types we decide instead of ECharts if needed in the future.
   // Delete default X name?
@@ -48,7 +49,15 @@ const useCodeRunStore = defineStore('codeRun', () => {
     python: 'scripts',
   }
 
-  const runCode = async (codeInfo: string, type: string, withoutSave = false, params = {} as PromForm) => {
+  const explainResultKeyCount = ref(0)
+
+  const runCode = async (
+    codeInfo: string,
+    type: string,
+    withoutSave = false,
+    params = {} as PromForm,
+    resultType = 'result'
+  ) => {
     try {
       // TODO: try something better
       let oneResult = {} as ResultType
@@ -63,7 +72,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
           })
           if (rowLength >= 0) {
             const pageType = CODE_TO_PAGE[type]
-            if (!withoutSave) {
+            if (!withoutSave && resultType !== 'explain') {
               if (Reflect.has(resultKeyCount, pageType)) {
                 resultKeyCount[pageType] += 1
               } else {
@@ -77,11 +86,18 @@ const useCodeRunStore = defineStore('codeRun', () => {
                 rowLength === 0
                   ? { dimensions: [], xAxis: '' }
                   : getDimensionsAndXName(oneRes.records.schema.column_schemas),
-              key: resultKeyCount[pageType],
+              key:
+                resultType === 'explain' ? `explain-${(explainResultKeyCount.value += 1)}` : resultKeyCount[pageType],
               type,
+              name: resultType,
+              executionTime: res.execution_time_ms,
             }
             if (!withoutSave) {
-              results.value.push(oneResult)
+              if (resultType === 'explain') {
+                explainResult.value = oneResult
+              } else {
+                results.value.push(oneResult)
+              }
             }
           }
         }
@@ -99,10 +115,12 @@ const useCodeRunStore = defineStore('codeRun', () => {
         })
         .join(`;\n`)
 
-      Message.success({
-        content: message,
-        duration: 2 * 1000,
-      })
+      if (resultType !== 'explain') {
+        Message.success({
+          content: message,
+          duration: 2 * 1000,
+        })
+      }
 
       const log: Log = {
         type,
@@ -171,9 +189,10 @@ const useCodeRunStore = defineStore('codeRun', () => {
   const clear = (type: string | string[]) => {
     const types = Array.isArray(type) ? type : [type]
     results.value = results.value.filter((result) => !types.includes(result.type))
+    explainResult.value = null
   }
 
-  const removeResult = (key: number, type: string) => {
+  const removeResult = (key: number | string, type: string) => {
     results.value = results.value.filter((item: ResultType) => item.key !== key || item.type !== type)
   }
 
@@ -192,6 +211,8 @@ const useCodeRunStore = defineStore('codeRun', () => {
     removeResult,
     clear,
     writeInfluxDB,
+    explainResultKeyCount,
+    explainResult,
   }
 })
 export default useCodeRunStore

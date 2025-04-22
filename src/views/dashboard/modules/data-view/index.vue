@@ -18,20 +18,56 @@ a-tabs.panel-tabs(
     )
       a-button(status="danger" size="small") {{ $t('dashboard.clear') }}
   a-tab-pane(
+    v-if="explainResult"
+    key="explain"
+    closable
+    :title="`${$t('dashboard.explain')}`"
+  )
+    a-tabs.data-view-tabs(:animation="true")
+      a-tab-pane(key="explain-grid")
+        template(#title)
+          | {{ $t('dashboard.table') }}
+        a-space(direction="vertical" :size="0")
+          ExplainGrid(
+            v-for="(stage, index) in getStages(explainResult)"
+            :key="index"
+            :data="stage"
+            :index="index"
+          )
+      a-tab-pane(key="explain-chart")
+        template(#title)
+          | {{ $t('dashboard.chart') }}
+        ExplainChart(
+          v-for="(stage, index) in getStages(explainResult)"
+          :key="index"
+          :data="stage"
+          :index="index"
+        )
+      a-tab-pane(key="explain-raw")
+        template(#title)
+          | {{ $t('dashboard.raw') }}
+        a-card.raw-json-card(:bordered="false")
+          template(#title)
+            a-button(size="mini" type="outline" @click="exportExplainJson(explainResult)")
+              template(#icon)
+                icon-download
+              | {{ $t('dashboard.download') }}
+          pre.raw-json {{ formatRawJson(explainResult) }}
+  a-tab-pane(
     v-for="(result, index) of results"
     :key="result.key"
     closable
     :title="`${$t('dashboard.result')} ${result.key - startKey + 1}`"
   )
     a-tabs.data-view-tabs(:animation="true")
-      a-tab-pane(key="table" :title="$t('dashboard.table')")
+      a-tab-pane(v-if="result.name === 'result'" key="table")
         template(#title)
           a-space(:size="10")
             svg.icon-16
               use(href="#table")
             | {{ $t('dashboard.table') }}
         DataGrid(:data="result" :has-header="false")
-      a-tab-pane(v-if="useDataChart(result).hasChart.value" key="chart" :title="$t('dashboard.chart')")
+      a-tab-pane(v-if="useDataChart(result).hasChart.value" key="chart")
         template(#title)
           a-space(:size="10")
             svg.icon-16
@@ -42,22 +78,47 @@ a-tabs.panel-tabs(
 
 <script lang="ts" name="DataView" setup>
   import useDataChart from '@/hooks/data-chart'
+  import i18n from '@/locale'
   import { useCodeRunStore } from '@/store'
   import type { ResultType } from '@/store/modules/code-run/types'
+  import { Message } from '@arco-design/web-vue'
+  import fileDownload from 'js-file-download'
 
   const props = defineProps<{
     results: ResultType[]
     types: string[]
+    explainResult?: ResultType
   }>()
 
-  const { removeResult, clear } = useCodeRunStore()
-  const activeTabKey = ref(props.results[0]?.key)
-  const startKey = ref(props.results[0]?.key)
+  const emit = defineEmits(['update:explainResult'])
 
-  const deleteTab = async (key: number) => {
+  const { removeResult, clear } = useCodeRunStore()
+  const activeTabKey = ref<string | number>()
+  const startKey = ref<number>((props.results[0]?.key as number) || 0)
+
+  // Add a method to select specific tab
+  const selectTab = (key: number | string) => {
+    activeTabKey.value = key
+  }
+
+  defineExpose({
+    selectTab,
+  })
+
+  const deleteTab = async (key: number | string) => {
+    if (key === 'explain') {
+      emit('update:explainResult', null)
+
+      if (activeTabKey.value === 'explain') {
+        const firstResultKey = props.results.length > 0 ? props.results[0].key : undefined
+        activeTabKey.value = firstResultKey
+      }
+      return
+    }
+
     const index = props.results.findIndex((result) => result.key === key && props.types.includes(result.type))
     if (props.results.length === 1) {
-      startKey.value = props.results[0].key
+      startKey.value = props.results[0].key as number
     }
     await removeResult(key, props.results[index].type)
     if (activeTabKey.value === key) {
@@ -65,12 +126,12 @@ a-tabs.panel-tabs(
     }
   }
 
-  const tabClick = (key: any) => {
+  const tabClick = (key: string | number) => {
     activeTabKey.value = key
   }
 
   const clearResults = () => {
-    startKey.value = props.results[0].key
+    startKey.value = props.results[0]?.key as number
     clear(props.types)
   }
 
@@ -82,6 +143,62 @@ a-tabs.panel-tabs(
       }
     }
   )
+
+  watch(
+    () => props.explainResult,
+    (newValue, oldValue) => {
+      if (newValue && newValue !== oldValue && newValue.key) {
+        activeTabKey.value = 'explain'
+      }
+    },
+    { immediate: true }
+  )
+
+  const getStages = computed(() => (result: ResultType) => {
+    const { rows } = result.records
+
+    const rowsData = rows.filter((row: any) => row[0] !== null)
+    const stagesMap = new Map()
+    rowsData.forEach((row: any) => {
+      const stageIndex = row[0].toString()
+
+      if (stagesMap.has(stageIndex)) {
+        stagesMap.set(stageIndex, [...stagesMap.get(stageIndex), row])
+      } else {
+        stagesMap.set(stageIndex, [row])
+      }
+    })
+    return Array.from(stagesMap.values())
+  })
+
+  const reconstructExplainJson = (result: ResultType) => {
+    return {
+      output: [
+        {
+          records: result.records,
+        },
+      ],
+      execution_time_ms: result.executionTime,
+    }
+  }
+
+  const formatRawJson = (result: ResultType) => {
+    try {
+      return JSON.stringify(reconstructExplainJson(result), null, 2)
+    } catch (e) {
+      return 'Error formatting JSON data'
+    }
+  }
+
+  const exportExplainJson = (result: ResultType) => {
+    try {
+      const jsonData = JSON.stringify(reconstructExplainJson(result), null, 2)
+      fileDownload(jsonData, 'explain-analyze-greptimedb.json', 'application/json')
+      Message.success('JSON downloaded successfully')
+    } catch (e) {
+      Message.error(`Failed to export JSON: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
 </script>
 
 <style lang="less">
@@ -116,7 +233,7 @@ a-tabs.panel-tabs(
         .arco-tabs-nav-ink {
           background: transparent;
         }
-        .arco-tabs-nav-tab-list > :nth-child(2) {
+        .arco-tabs-nav-tab-list > :not(:first-child) {
           .arco-tabs-tab-title {
             border-left: 1px solid var(--border-color);
           }
@@ -206,6 +323,27 @@ a-tabs.panel-tabs(
           }
         }
       }
+    }
+  }
+
+  .raw-json-card {
+    padding: 8px 12px;
+
+    :deep(.arco-card-header) {
+      height: 40px;
+    }
+
+    :deep(.arco-card-body) {
+      height: calc(100% - 40px);
+      padding: 8px;
+      overflow: auto;
+    }
+
+    .raw-json {
+      white-space: pre-wrap;
+      font-family: monospace;
+      font-size: 12px;
+      margin: 0;
     }
   }
 </style>
