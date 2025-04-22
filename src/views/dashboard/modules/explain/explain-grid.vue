@@ -15,9 +15,10 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
       a-select(
         v-model="selectedMetric"
         size="mini"
-        style="width: 180px; margin-right: 8px"
+        style="width: fit-content; margin-right: 8px"
         placeholder="Metric select"
         allow-clear
+        :trigger-props="{ autoFitPopupMinWidth: true }"
         @change="selectMetric"
       )
         a-option(v-for="metric in availableMetrics" :key="metric.value" :value="metric.value") {{ metric.label }}
@@ -49,7 +50,7 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
                 template(v-for="(value, key) in getImportantMetrics(record[`node${nodeIndex}`])" :key="key")
                   .metric
                     .metric-header
-                      span.metric-key {{ metricKeyMap(key) }}:
+                      span.metric-key {{ formatMetricName(key) }}:
                       span.metric-value {{ isTimeMetric(key) ? formatTimeValue(value) : value }}
                     .metric-progress-bar-wrapper(v-if="isProgressMetric(key)")
                       .metric-progress-bar(
@@ -58,7 +59,7 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
               template(v-else)
                 .metric(v-if="record[`node${nodeIndex}`] && record[`node${nodeIndex}`][getActiveMetric] !== undefined")
                   .metric-header
-                    span.metric-key {{ metricKeyMap(getActiveMetric) }}:
+                    span.metric-key {{ formatMetricName(getActiveMetric) }}:
                     span.metric-value {{ isTimeMetric(getActiveMetric) ? formatTimeValue(record[`node${nodeIndex}`][getActiveMetric]) : record[`node${nodeIndex}`][getActiveMetric] }}
                   .metric-progress-bar-wrapper(v-if="isProgressMetric(getActiveMetric)")
                     .metric-progress-bar(
@@ -67,7 +68,8 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
 </template>
 
 <script lang="ts" setup name="ExplainGrid">
-  import { ref, computed, h, onMounted } from 'vue'
+  import { h } from 'vue'
+  import { formatMetricName } from './utils'
 
   const props = defineProps<{
     data: [number, number, string][]
@@ -108,20 +110,6 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
       // Add to expanded keys
       expandedKeys.value.push(key)
     }
-  }
-
-  const metricKeyMap = (key: string): string => {
-    const map: Record<string, string> = {
-      output_rows: 'Rows',
-      elapsed_compute: 'Duration',
-    }
-    return (
-      map[key] ||
-      key
-        .split('_')
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ')
-    )
   }
 
   const metricsExpanded = ref(false)
@@ -371,7 +359,7 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
       })
       .map((metric) => ({
         value: metric,
-        label: metricKeyMap(metric),
+        label: formatMetricName(metric),
       }))
   })
 

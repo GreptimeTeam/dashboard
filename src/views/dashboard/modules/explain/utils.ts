@@ -29,3 +29,17 @@ export function getProgressColor(percentage) {
   if (percentage < 80) return 'var(--warning-color)'
   return 'var(--danger-color)'
 }
+
+export function formatMetricName(key: string): string {
+  const map: Record<string, string> = {
+    output_rows: 'Rows',
+    elapsed_compute: 'Duration',
+  }
+  return (
+    map[key] ||
+    key
+      .split('_')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+  )
+}
