@@ -75,7 +75,6 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
   }>()
 
   const expandedKeys = ref<string[]>([])
-  const gridId = `grid-${props.index}-${Date.now().toString().slice(-6)}`
 
   const formatTimeValue = (nanoseconds: number | undefined): string => {
     if (nanoseconds === undefined || nanoseconds === null) return '0'
@@ -130,12 +129,10 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
 
   // Auto-select duration metric by default
   onMounted(() => {
-    selectedMetric.value = 'elapsed_compute' // Default to duration metric
+    selectedMetric.value = 'elapsed_compute'
   })
 
-  // Update the first most important metric lookup
   const getActiveMetric = computed(() => {
-    // Use selected metric if specified, otherwise use default
     return selectedMetric.value || 'output_rows'
   })
 
@@ -157,17 +154,6 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     }
     return selectedNodes.value
   })
-
-  watch(
-    availableNodes,
-    (newNodes) => {
-      if (newNodes.length > 0 && selectedNodes.value.length === 0) {
-        // Default to showing all nodes
-        selectedNodes.value = []
-      }
-    },
-    { immediate: true }
-  )
 
   const selectMetric = (value: string) => {
     metricsExpanded.value = false
@@ -301,11 +287,6 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     return result
   }
 
-  const maxNodeIndex = computed(() => {
-    if (!props.data || props.data.length === 0) return 0
-    return Math.max(...props.data.map((row) => row[1]))
-  })
-
   const tableData = computed(() => {
     if (!props.data || props.data.length === 0) return []
 
@@ -394,59 +375,11 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
       }))
   })
 
-  // Calculate appropriate table scroll settings
-  const tableScroll = computed(() => {
-    return { x: 'max-content', y: '100%' }
-  })
-
   // Row click handler
   const handleRowClick = (record: any) => {
     if (rowExpandable(record)) {
       toggleRowExpansion(record)
     }
-  }
-
-  const shouldShowProgressBar = (record: any): boolean => {
-    return selectedMetric.value && record[selectedMetric.value] !== undefined
-  }
-
-  const getMetricLabel = (metric: string | null): string => {
-    return metric || ''
-  }
-
-  const formatMetricValue = (record: any, metric: string | null): string => {
-    if (!metric || record[metric] === undefined) return ''
-    return isTimeMetric(metric) ? formatTimeValue(record[metric]) : record[metric].toString()
-  }
-
-  const getProgressPercentage = (record: any, metric: string | null): number => {
-    if (!metric || record[metric] === undefined) return 0
-    const maxValue = Math.max(...tableData.value.map((row) => row[metric] || 0))
-    return maxValue > 0 ? (record[metric] / maxValue) * 100 : 0
-  }
-
-  const getProgressBarColor = (record: any, metric: string | null): string => {
-    if (!metric || record[metric] === undefined) return '#ccc'
-    const percentage = getProgressPercentage(record, metric)
-    if (percentage > 75) return '#f56c6c'
-    if (percentage > 50) return '#e6a23c'
-    return '#67c23a'
-  }
-
-  const shouldShowNodeProgressBar = (record: any, nodeIndex: number): boolean => {
-    if (!selectedMetric.value || !record[`node${nodeIndex}`]) return false
-
-    const nodeMetrics = record[`node${nodeIndex}`]
-
-    // Check if the node has the selected metric
-    return nodeMetrics[selectedMetric.value] !== undefined
-  }
-
-  const formatNodeMetricValue = (record: any, nodeIndex: number, metric: string | null): string => {
-    if (!metric || !record[`node${nodeIndex}`] || record[`node${nodeIndex}`][metric] === undefined) return ''
-
-    const value = record[`node${nodeIndex}`][metric]
-    return isTimeMetric(metric) ? formatTimeValue(value) : value.toString()
   }
 
   const getNodeProgressPercentage = (record: any, nodeIndex: number, metric: string | null): number => {

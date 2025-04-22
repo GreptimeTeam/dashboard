@@ -35,7 +35,6 @@
 
   defineEmits(['prev', 'next'])
 
-  // Computed properties to determine button states
   const isFirstNode = computed(() => props.activeNodeIndex === props.availableNodes[0])
 
   const isLastNode = computed(() => props.activeNodeIndex === props.availableNodes[props.availableNodes.length - 1])

@@ -43,15 +43,6 @@
   import * as d3 from 'd3'
   import { createVNode, render, h } from 'vue'
   import { flextree } from 'd3-flextree'
-  import {
-    IconExpand,
-    IconShrink,
-    IconZoomIn,
-    IconZoomOut,
-    IconRefresh,
-    IconLeft,
-    IconRight,
-  } from '@arco-design/web-vue/es/icon'
 
   import PlanCard from './plan-card.vue'
   import { CARD_DIMENSIONS, NODE_INDEX_CARD, formatTimeValue, getProgressColor } from './utils'

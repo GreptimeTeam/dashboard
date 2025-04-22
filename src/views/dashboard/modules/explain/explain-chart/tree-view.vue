@@ -469,9 +469,6 @@
         .attr('transform', `translate(${index * (treeWidth + spacing)}, 0)`)
         .style('overflow', 'visible')
 
-      // Add node index card, links, etc...
-      // Add this code to the renderTree function where indicated
-
       // Add node index card
       const nodeIndexCard = treeGroup
         .append('g')

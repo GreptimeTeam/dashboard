@@ -71,13 +71,11 @@
 
   const progressPercentage = computed(() => {
     if (props.highlightType === 'ROWS' && props.maxRows > 0) {
-      // Fix: Check for metrics in both places - directly and in metrics object
       const outputRows =
         props.nodeData.output_rows || (props.nodeData.metrics && props.nodeData.metrics.output_rows) || 0
       return Math.min(100, (outputRows / props.maxRows) * 100)
     }
     if (props.highlightType === 'DURATION' && props.maxDuration > 0) {
-      // Fix: Check for metrics in both places - directly and in metrics object
       const elapsedCompute =
         props.nodeData.elapsed_compute || (props.nodeData.metrics && props.nodeData.metrics.elapsed_compute) || 0
       return Math.min(100, (elapsedCompute / props.maxDuration) * 100)
@@ -121,13 +119,11 @@
 
   const formattedProgressValue = computed(() => {
     if (props.highlightType === 'ROWS') {
-      // Fix: Check for metrics in both places
       const outputRows =
         props.nodeData.output_rows || (props.nodeData.metrics && props.nodeData.metrics.output_rows) || 0
       return formatNumber(outputRows)
     }
     if (props.highlightType === 'DURATION') {
-      // Fix: Check for metrics in both places
       const elapsedCompute =
         props.nodeData.elapsed_compute || (props.nodeData.metrics && props.nodeData.metrics.elapsed_compute) || 0
       return formatDuration(elapsedCompute)
@@ -169,10 +165,6 @@
 
     return {}
   })
-  // Helper functions
-  // function formatMetricName(key) {
-  //   return key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
-  // }
 
   function formatMetricValue(key, value) {
     if (typeof value === 'number') {

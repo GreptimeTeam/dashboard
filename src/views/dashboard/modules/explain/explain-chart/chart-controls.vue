@@ -61,39 +61,28 @@
   }>()
   const inputPrefix = computed(() => `chart-control-stage-${props.stageIndex}`)
 
-  // Create local reactive values that sync with parent props
   const localHighlightType = ref(props.highlightType)
   const localSelectedMetric = ref(props.selectedMetric)
 
-  // Computed properties for conditional disabling
   const hasPlanRows = computed(() => props.maxRows > 0)
   const hasDurationMetrics = computed(() => props.maxDuration > 0)
 
-  // Sync local values with props
   watch(
     () => props.highlightType,
-    (value) => {
-      localHighlightType.value = value
+    (val) => {
+      localHighlightType.value = val
     }
   )
-
   watch(
     () => props.selectedMetric,
-    (value) => {
-      localSelectedMetric.value = value
+    (val) => {
+      localSelectedMetric.value = val
     }
   )
 
-  // Emit changes back to parent
-  watch(localHighlightType, (value) => {
-    emit('update:highlightType', value)
-  })
+  watch(localHighlightType, (val) => emit('update:highlightType', val))
+  watch(localSelectedMetric, (val) => emit('update:selectedMetric', val))
 
-  watch(localSelectedMetric, (value) => {
-    emit('update:selectedMetric', value)
-  })
-
-  // Handler functions
   const onNodeSelect = (nodeIndex: number) => {
     emit('nodeSelected', nodeIndex)
   }
