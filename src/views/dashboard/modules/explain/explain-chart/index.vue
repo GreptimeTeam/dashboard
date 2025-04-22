@@ -43,9 +43,8 @@
   import * as d3 from 'd3'
   import { createVNode, render, h } from 'vue'
   import { flextree } from 'd3-flextree'
-
   import PlanCard from './plan-card.vue'
-  import { CARD_DIMENSIONS, NODE_INDEX_CARD, formatTimeValue, getProgressColor } from './utils'
+  import { CARD_DIMENSIONS, NODE_INDEX_CARD, formatTimeValue, getProgressColor, formatMetricName } from '../utils'
 
   interface FlexHierarchyPointNode extends d3.HierarchyPointNode<any> {
     xSize: number
@@ -88,8 +87,6 @@
   const hasPlanRows = computed(() => maxRows.value > 0)
   const hasDurationMetrics = computed(() => maxDuration.value > 0)
 
-  // Get available metrics for the dropdown
-  // Add this computed property to extract all unique metrics from your plans
   const availableMetrics = computed(() => {
     const metricKeys = new Set()
 
@@ -115,7 +112,12 @@
       traverseNode(plan)
     })
 
-    return Array.from(metricKeys).sort()
+    return Array.from(metricKeys)
+      .sort()
+      .map((key) => ({
+        value: key,
+        label: formatMetricName(key.toString()),
+      }))
   })
 
   // Get all available nodes from the data

@@ -10,12 +10,13 @@
       .metric-progress-bar(:style="{ width: `${progressPercentage}%`, backgroundColor: progressColor }")
   .plan-metrics(v-if="showMetrics")
     .metric-item(v-for="(value, key) in filteredMetrics" :key="key")
-      span.metric-key {{ key }}:
+      span.metric-key {{ formatMetricName(key) }}:
       span.metric-value {{ formatMetricValue(key, value) }}
 </template>
 
 <script lang="ts" setup name="PlanCard">
   import { computed } from 'vue'
+  import { formatMetricName } from '../utils'
 
   const props = defineProps({
     nodeData: {

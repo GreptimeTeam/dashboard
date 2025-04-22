@@ -18,18 +18,19 @@
       size="mini"
       :id="`${inputPrefix}-highlight`"
     )
-      a-radio(value="NONE") none
-      a-radio(value="ROWS" :disabled="!hasPlanRows") rows
-      a-radio(value="DURATION" :disabled="!hasDurationMetrics") duration
+      a-radio(value="NONE") None
+      a-radio(value="ROWS" :disabled="!hasPlanRows") Rows
+      a-radio(value="DURATION" :disabled="!hasDurationMetrics") Duration
   a-select(
     v-model="localSelectedMetric"
     size="mini"
-    style="width: 150px; margin-left: 16px; margin-right: 8px"
+    style="width: fit-content; margin-left: 16px; margin-right: 8px"
     placeholder="Select metric"
     allow-clear
     :id="`${inputPrefix}-metric`"
+    :trigger-props="{ autoFitPopupMinWidth: true }"
   )
-    a-option(v-for="metric in availableMetrics" :key="metric" :value="metric") {{ metric }}
+    a-option(v-for="metric in availableMetrics" :key="metric.value" :value="metric.value") {{ metric.label }}
   a-button(type="outline" size="mini" @click="onToggleMetricsExpanded")
     template(#icon)
       icon-expand(v-if="!metricsExpanded")
