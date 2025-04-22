@@ -141,7 +141,7 @@ export default function useQueryCode() {
       const res = await runWithFormat(code, queryType.value, promForm, format)
       return res
     } catch (error) {
-      const enhancedError = error instanceof Error ? error : new Error(`Export failed: ${String(error)}`)
+      const enhancedError = error instanceof Error ? error : new Error(`Export failed`)
       throw enhancedError
     }
   }
