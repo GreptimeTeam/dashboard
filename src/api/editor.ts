@@ -40,7 +40,7 @@ const makeScriptConfig = (name: string) => {
   } as AxiosRequestConfig
 }
 
-const makePromParams = (code: string, promForm: PromForm) => {
+const makePromParams = (code: string, promForm: PromForm, format?: string) => {
   let start
   let end
   const appStore = useAppStore()
@@ -51,6 +51,7 @@ const makePromParams = (code: string, promForm: PromForm) => {
   } else {
     ;[start, end] = promForm.range
   }
+
   return {
     params: {
       query: code,
@@ -58,6 +59,8 @@ const makePromParams = (code: string, promForm: PromForm) => {
       end,
       step: promForm.step,
       db: appStore.database,
+      // TODO: wait for API
+      format,
     },
   } as AxiosRequestConfig
 }
@@ -124,8 +127,9 @@ const runScript = (name: string) => {
   return axios.post(runScriptUrl, {}, makeScriptConfig(name))
 }
 
-const runPromQL = (code: string, promForm: PromForm) => {
-  return axios.post(promURL, {}, makePromParams(code, promForm))
+const runPromQL = (code: string, promForm: PromForm, format?: string) => {
+  // TODO: wait for API
+  return axios.post(promURL, {}, makePromParams(code, promForm, format))
 }
 
 const writeInfluxDB = (data: string, precision: string) => {
@@ -139,9 +143,10 @@ const writeInfluxDB = (data: string, precision: string) => {
   } as AxiosRequestConfig
   return axios.post(`${influxURL}/write`, data, config)
 }
-const runSQLWithCSV = (code: string): Promise<HttpResponse> => {
+
+const runSQLWithCSV = (code: string, format?: string): Promise<HttpResponse> => {
   const params = addDatabaseParams()
-  params.params.format = 'csv'
+  params.params.format = format || 'csv'
   return axios.post(sqlUrl, makeSqlData(code), params)
 }
 

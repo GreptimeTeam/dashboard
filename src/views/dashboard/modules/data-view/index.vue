@@ -60,7 +60,7 @@ a-tabs.panel-tabs(
     :title="`${$t('dashboard.result')} ${result.key - startKey + 1}`"
   )
     a-tabs.data-view-tabs(:animation="true")
-      a-tab-pane(v-if="result.name === 'result'" key="table")
+      a-tab-pane(key="table")
         template(#title)
           a-space(:size="10")
             svg.icon-16

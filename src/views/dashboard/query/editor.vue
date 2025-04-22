@@ -2,18 +2,27 @@
 a-card.editor-card(:bordered="false")
   a-space.space-between.pb-15
     a-space.editor-header(size="medium")
-      a-popover(
+      a-dropdown-button(
         v-if="queryType === 'sql'"
-        position="rt"
-        content-class="code-tooltip"
-        :content="currentStatement"
+        type="primary"
+        position="bl"
+        :disabled="isButtonDisabled || explainQueryRunning"
+        @click="runPartQuery()"
       )
-        a-button(type="primary" :disabled="isLineButtonDisabled" @click="runPartQuery()")
+        a-popover(position="bl" content-class="code-tooltip" :content="currentStatement")
           a-space(:size="4")
             icon-loading(v-if="secondaryCodeRunning" spin)
             icon-play-arrow(v-else)
             div {{ $t('dashboard.runQuery') + ' #' + currentQueryNumber }}
             icon-close-circle-fill.icon-16(v-if="secondaryCodeRunning") 
+        template(#icon)
+          icon-down
+        template(#content)
+          a-doption(:disabled="secondaryCodeRunning" @click="exportCsv")
+            template(#icon)
+              svg.icon
+                use(href="#export")
+            | {{ $t('dashboard.exportCSV') }}
       a-dropdown-button(
         v-if="queryType === 'sql'"
         type="outline"
@@ -28,10 +37,10 @@ a-card.editor-card(:bordered="false")
         template(#icon)
           icon-down
         template(#content)
-          a-doption(title="Import Explain Result" :disabled="explainQueryRunning" @click="showImportExplainModal")
+          a-doption(:disabled="explainQueryRunning" @click="showImportExplainModal")
             template(#icon)
               icon-import
-            | Import Explain
+            | {{ $t('dashboard.importExplain') }}
       a-button(
         :type="queryType === 'promql' ? 'primary' : 'outline'"
         :disabled="isButtonDisabled"
@@ -114,12 +123,18 @@ a-card.editor-card(:bordered="false")
           @ready="handleReadyPromql"
           @update="codeUpdate('promql')"
         )
-  a-modal(v-model:visible="importExplainModalVisible" title="Import Explain Result" @ok="handleImportExplain")
+  a-modal(
+    v-model:visible="importExplainModalVisible"
+    title="Import Explain Result JSON"
+    modal-class="import-explain-modal"
+    :width="800"
+    @ok="handleImportExplain"
+  )
     a-form(layout="vertical" :model="importExplainForm" :auto-label-width="true")
-      a-form-item(field="explainJson" label="Paste Explain JSON Result" validate-trigger="blur")
+      a-form-item(field="explainJson" validate-trigger="blur")
         a-textarea(
           v-model="importExplainForm.explainJson"
-          :placeholder="'Paste JSON output with plan data here'"
+          :placeholder="placeholder"
           :auto-size="{ minRows: 10, maxRows: 20 }"
         )
 </template>
@@ -135,6 +150,7 @@ a-card.editor-card(:bordered="false")
   import { useStorage } from '@vueuse/core'
   import { sqlFormatter, parseSqlStatements, findStatementAtPosition, debounce } from '@/utils/sql'
   import { Message } from '@arco-design/web-vue'
+  import fileDownload from 'js-file-download'
 
   import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '../config'
 
@@ -171,7 +187,7 @@ a-card.editor-card(:bordered="false")
     step: '30s',
     range: [dayjs().subtract(5, 'minute').unix().toString(), dayjs().unix().toString()],
   })
-  const { runQuery, explainQuery } = useQueryCode()
+  const { runQuery, explainQuery, exportWithFormat } = useQueryCode()
   const { extensions } = storeToRefs(useDataBaseStore())
   const { explainResultKeyCount, explainResult } = storeToRefs(useCodeRunStore())
   const importExplainForm = reactive({
@@ -340,6 +356,20 @@ a-card.editor-card(:bordered="false")
     }
   }
 
+  const exportCsv = async () => {
+    try {
+      secondaryCodeRunning.value = true
+      const res = await exportWithFormat(currentStatement.value, promForm, 'csv')
+      fileDownload(res, `export_${queryType.value}_greptimedb.csv`)
+      Message.success('Exported successfully')
+    } catch (error) {
+      console.log(error)
+      Message.error(`Failed to export CSV`)
+    } finally {
+      secondaryCodeRunning.value = false
+    }
+  }
+
   window.addEventListener('beforeunload', () => {
     localStorage.setItem('queryCode', JSON.stringify(codes.value))
   })
@@ -369,6 +399,22 @@ a-card.editor-card(:bordered="false")
       },
     },
   ]
+
+  const placeholder = `Paste response from explain analyze format json here. Example format:
+{
+  "output": [
+    {
+      "records": {
+        "schema": {
+          "column_schemas": []
+        },
+        "rows": [],
+        "total_rows": 0
+      }
+    }
+  ],
+  "execution_time_ms": 0
+}`
 </script>
 
 <style lang="less" scoped>
@@ -416,6 +462,17 @@ a-card.editor-card(:bordered="false")
           padding-left: 8px;
         }
       }
+    }
+  }
+
+  .arco-btn-group .arco-btn-primary:not(:last-child) {
+    border-right: 0.5px solid white;
+  }
+
+  .import-explain-modal {
+    .arco-textarea {
+      font-family: monospace;
+      min-height: 400px;
     }
   }
 </style>

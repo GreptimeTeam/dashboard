@@ -204,6 +204,15 @@ const useCodeRunStore = defineStore('codeRun', () => {
       return error
     }
   }
+
+  const runWithFormat = async (code: string, queryType: string, promForm?: PromForm, format?: string) => {
+    const res: any =
+      queryType === 'sql'
+        ? await editorAPI.runSQLWithCSV(code, format)
+        : await editorAPI.runPromQL(code, promForm, format)
+    return res
+  }
+
   return {
     results,
     runCode,
@@ -213,6 +222,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
     writeInfluxDB,
     explainResultKeyCount,
     explainResult,
+    runWithFormat,
   }
 })
 export default useCodeRunStore

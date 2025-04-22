@@ -134,6 +134,17 @@ export default function useQueryCode() {
     queryType.value = 'promql'
     codes.value.promql = code
   }
+
+  const exportWithFormat = async (code: string, promForm?: PromForm, format?: string) => {
+    try {
+      const { runWithFormat } = useCodeRunStore()
+      const res = await runWithFormat(code, queryType.value, promForm, format)
+      return res
+    } catch (error) {
+      const enhancedError = error instanceof Error ? error : new Error(`Export failed: ${String(error)}`)
+      throw enhancedError
+    }
+  }
   return {
     getResultsByType,
     runQuery,
@@ -149,5 +160,6 @@ export default function useQueryCode() {
     secondaryCodeRunning,
     codes,
     clearCode,
+    exportWithFormat,
   }
 }
