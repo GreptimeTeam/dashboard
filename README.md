@@ -56,8 +56,8 @@ With the desktop version of the Dashboard app, you can run it independently, con
 
 ## Screenshot
 
-![Dashboard Screenshot](screenshot.png 'Dashboard Screenshot')
-
+![Dashboard Screenshot](screenshot1.png 'Dashboard Screenshot')
+![Dashboard Screenshot](screenshot2.png 'Dashboard Screenshot')
 ## Contributing
 
 - Please refer to [contribution guidelines](https://github.com/GreptimeTeam/greptimedb/blob/75dcf2467b022d4378f904efe5aae5027298986e/CONTRIBUTING.md) for more information.
