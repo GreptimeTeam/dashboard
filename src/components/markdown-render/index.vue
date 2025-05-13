@@ -1,5 +1,6 @@
+<!-- eslint-disable vue/one-component-per-file -->
 <script>
-  import { compile, h } from 'vue'
+  import { h, defineComponent } from 'vue'
   import meta from 'markdown-it-meta'
   import MarkdownIt from 'markdown-it'
   import plugins from './plugins'
@@ -41,11 +42,29 @@
         immediate: true,
       },
     },
-    mounted: () => {
+    mounted() {
       codeGroups()
     },
     render() {
-      return h(compile(this.renderedDocument)(this))
+      if (!this.renderedDocument) {
+        return h('div')
+      }
+
+      try {
+        // Create a wrapper component with the rendered markdown
+        const template = `<div class="markdown-content">${this.renderedDocument}</div>`
+        const component = defineComponent({
+          template,
+          components: this.$options.components,
+        })
+        return h(component)
+      } catch (error) {
+        console.error('Markdown render error:', error)
+        return h('div', {
+          class: 'markdown-error',
+          innerHTML: this.renderedDocument,
+        })
+      }
     },
   }
 </script>

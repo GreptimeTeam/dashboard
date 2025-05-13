@@ -37,7 +37,19 @@
     },
 
     render() {
-      return h(compile(this.renderedDocument, { delimiters: ['${{', '}}'] })(this))
+      if (!this.renderedDocument) {
+        return h('div')
+      }
+
+      try {
+        return h('div', {
+          class: 'markdown-render',
+          innerHTML: this.renderedDocument,
+        })
+      } catch (error) {
+        console.error('Markdown render error:', error)
+        return h('div', { class: 'markdown-error' }, 'Error rendering content')
+      }
     },
   }
 </script>
