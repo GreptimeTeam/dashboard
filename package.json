@@ -155,5 +155,10 @@
     "bin-wrapper": "npm:bin-wrapper-china",
     "gifsicle": "5.2.0"
   },
-  "packageManager": "pnpm@9.1.0"
+  "packageManager": "pnpm@9.1.0",
+  "pnpm": {
+    "overrides": {
+      "braces": "^3.0.3"
+    }
+  }
 }
