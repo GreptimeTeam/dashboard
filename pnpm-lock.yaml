@@ -64,8 +64,8 @@ importers:
         specifier: ^1.2.3
         version: 1.2.3
       '@prometheus-io/codemirror-promql':
-        specifier: ^0.42.0
-        version: 0.42.0(@codemirror/autocomplete@6.4.2(@codemirror/language@6.6.0)(@codemirror/state@6.2.0)(@codemirror/view@6.9.3)(@lezer/common@1.0.2))(@codemirror/language@6.6.0)(@codemirror/lint@6.2.0)(@codemirror/state@6.2.0)(@codemirror/view@6.9.3)(@lezer/common@1.0.2)(@lezer/highlight@1.1.2)(@lezer/lr@1.2.3)
+        specifier: ^0.303.1
+        version: 0.303.1(@codemirror/autocomplete@6.4.2(@codemirror/language@6.6.0)(@codemirror/state@6.2.0)(@codemirror/view@6.9.3)(@lezer/common@1.0.2))(@codemirror/language@6.6.0)(@codemirror/lint@6.2.0)(@codemirror/state@6.2.0)(@codemirror/view@6.9.3)(@lezer/common@1.0.2)(@lezer/highlight@1.1.2)(@lezer/lr@1.2.3)
       '@tauri-apps/api':
         specifier: ^2.*
         version: 2.2.0
@@ -1117,8 +1117,8 @@ packages:
     peerDependencies:
       prettier: ^2.3.0
 
-  '@prometheus-io/codemirror-promql@0.42.0':
-    resolution: {integrity: sha512-YrvHeyxrYUOGiogWOBDSQDzt63OG0mBxEyDajNFCV0APnU9h/syq1EpZ3HtFGa+hnpVuPAoqWH49QXknbdy2iQ==}
+  '@prometheus-io/codemirror-promql@0.303.1':
+    resolution: {integrity: sha512-6YlQF+r0flzHw/3naVeXmuZSQbItbpbpJWv6f10/m3kXIRfz1btS9QzfcvrcUhOLU00aq0JW9Ick2DdHT/m8zQ==}
     engines: {node: '>=12.0.0'}
     peerDependencies:
       '@codemirror/autocomplete': ^6.4.0
@@ -1128,8 +1128,8 @@ packages:
       '@codemirror/view': ^6.4.0
       '@lezer/common': ^1.0.1
 
-  '@prometheus-io/lezer-promql@0.42.0':
-    resolution: {integrity: sha512-07z8G75497YV3w6SOkjK2XqXiWbP9NBQPkuoMpRmUB8GVtzuJ/3dNGHaM9rc9QPo32cKTLX34SDw++oLYwcLvA==}
+  '@prometheus-io/lezer-promql@0.303.1':
+    resolution: {integrity: sha512-iEOY6k5ydRjPxewkQw8s9ahXJJBItGwY806Ro6hEdmIyM39GY5URCT0a3aKjLWhdWi234yqiX9aIqzjWRTDp+w==}
     peerDependencies:
       '@lezer/highlight': ^1.1.2
       '@lezer/lr': ^1.2.3
@@ -3156,6 +3156,10 @@ packages:
 
   lower-case@2.0.2:
     resolution: {integrity: sha512-7fm3l3NAF9WfN6W3JOmf5drwpVqX78JtoGJ3A6W0a6ZnldM41w2fV5D490psKFTpMds8TJse/eHLFFsNHHjHgg==}
+
+  lru-cache@11.1.0:
+    resolution: {integrity: sha512-QIXZUBJUx+2zHUdQujWejBkcD9+cs94tLn0+YL8UrCh+D5sCXZ4c7LaEH48pNwRY3MLDgqUFyhlCyjJPf1WP0A==}
+    engines: {node: 20 || >=22}
 
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
@@ -5626,7 +5630,7 @@ snapshots:
       prettier: 2.8.8
       pug-lexer: 5.0.1
 
-  '@prometheus-io/codemirror-promql@0.42.0(@codemirror/autocomplete@6.4.2(@codemirror/language@6.6.0)(@codemirror/state@6.2.0)(@codemirror/view@6.9.3)(@lezer/common@1.0.2))(@codemirror/language@6.6.0)(@codemirror/lint@6.2.0)(@codemirror/state@6.2.0)(@codemirror/view@6.9.3)(@lezer/common@1.0.2)(@lezer/highlight@1.1.2)(@lezer/lr@1.2.3)':
+  '@prometheus-io/codemirror-promql@0.303.1(@codemirror/autocomplete@6.4.2(@codemirror/language@6.6.0)(@codemirror/state@6.2.0)(@codemirror/view@6.9.3)(@lezer/common@1.0.2))(@codemirror/language@6.6.0)(@codemirror/lint@6.2.0)(@codemirror/state@6.2.0)(@codemirror/view@6.9.3)(@lezer/common@1.0.2)(@lezer/highlight@1.1.2)(@lezer/lr@1.2.3)':
     dependencies:
       '@codemirror/autocomplete': 6.4.2(@codemirror/language@6.6.0)(@codemirror/state@6.2.0)(@codemirror/view@6.9.3)(@lezer/common@1.0.2)
       '@codemirror/language': 6.6.0
@@ -5634,13 +5638,13 @@ snapshots:
       '@codemirror/state': 6.2.0
       '@codemirror/view': 6.9.3
       '@lezer/common': 1.0.2
-      '@prometheus-io/lezer-promql': 0.42.0(@lezer/highlight@1.1.2)(@lezer/lr@1.2.3)
-      lru-cache: 6.0.0
+      '@prometheus-io/lezer-promql': 0.303.1(@lezer/highlight@1.1.2)(@lezer/lr@1.2.3)
+      lru-cache: 11.1.0
     transitivePeerDependencies:
       - '@lezer/highlight'
       - '@lezer/lr'
 
-  '@prometheus-io/lezer-promql@0.42.0(@lezer/highlight@1.1.2)(@lezer/lr@1.2.3)':
+  '@prometheus-io/lezer-promql@0.303.1(@lezer/highlight@1.1.2)(@lezer/lr@1.2.3)':
     dependencies:
       '@lezer/highlight': 1.1.2
       '@lezer/lr': 1.2.3
@@ -7955,6 +7959,8 @@ snapshots:
   lower-case@2.0.2:
     dependencies:
       tslib: 2.6.2
+
+  lru-cache@11.1.0: {}
 
   lru-cache@5.1.1:
     dependencies:
