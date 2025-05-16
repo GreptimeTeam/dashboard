@@ -93,13 +93,14 @@ export function debug(name: string, content: any) {
   })
 }
 
-export function debugContent(pipeline: string, data: any) {
+export function debugContent(pipeline: string, data: any, contentType: string) {
   const appStore = useAppStore()
   return axios.post(
     `${url}/dryrun?&db=${appStore.database}`,
     {
       data,
       pipeline,
+      data_type: contentType,
     },
     {
       headers: {

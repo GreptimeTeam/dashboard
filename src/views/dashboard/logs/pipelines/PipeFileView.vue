@@ -39,6 +39,10 @@ a-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
         template(#extra)
           a-space
             a-button(size="small" @click="handleDebug") Test
+            a-select(v-model="selectedContentType" style="width: 150px" placeholder="Content Type")
+              a-option(value="text/plain") text/plain
+              a-option(value="application/json") application/json
+              a-option(value="application/x-ndjson") application/x-ndjson
             //- a(href="https://github.com/GreptimeTeam/demo-scene/tree/main/vector-ingestion" target="_blank") Write Log Demo
 
         .right-content
@@ -171,19 +175,42 @@ transform:
       '210.207.142.115 - AnthraX [26/Dec/2024:16:47:19 +0800] "DELETE /do-not-access/needs-work HTTP/2.0" 200 4488',
   })
 
+  const selectedContentType = ref('text/plain')
+  // Watch for content changes to auto-detect content type
+  watch(
+    () => debugForm.content,
+    (newContent) => {
+      try {
+        JSON.parse(newContent)
+        selectedContentType.value = 'application/json'
+      } catch (e) {
+        // If content contains newlines and each line is valid JSON, it's NDJSON
+        if (newContent.includes('\n')) {
+          const lines = newContent.split('\n').filter((line) => line.trim())
+          const isNDJSON = lines.every((line) => {
+            try {
+              JSON.parse(line)
+              return true
+            } catch {
+              return false
+            }
+          })
+          if (isNDJSON) {
+            selectedContentType.value = 'application/x-ndjson'
+          } else {
+            selectedContentType.value = 'text/plain'
+          }
+        } else {
+          selectedContentType.value = 'text/plain'
+        }
+      }
+    }
+  )
+
   const extensions = [basicSetup, json()]
   const debugResponse = ref('')
   function handleDebug() {
-    let content
-    try {
-      content = JSON.parse(debugForm.content)
-      if (!Array.isArray(content)) {
-        content = [content]
-      }
-    } catch (e) {
-      content = debugForm.content.split('\n')
-    }
-    debugContent(currFile.content, content).then((result) => {
+    debugContent(currFile.content, debugForm.content, selectedContentType.value).then((result) => {
       debugResponse.value = JSON.stringify(result, null, 2)
     })
   }
