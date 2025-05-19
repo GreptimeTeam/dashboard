@@ -25,7 +25,7 @@ a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
         :disabled="!isCreating"
         :rules="rules"
       )
-        .form-description Input the pipeline configuration here to define how logs are parsed and transformed, You can use the test function right side before Save.
+        .form-description Input the pipeline configuration here to define how logs are parsed and transformed, You can test on the right side whether it's already saved.
         a-form-item(field="name" label="Pipeline name" style="width: 200px")
           a-input(v-model="currFile.name" placeholder="Pipeline name")
         a-form-item(v-if="!isCreating" field="version" label="Version")
@@ -36,8 +36,8 @@ a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
           .editor-container
             YMLEditorSimple(v-model="currFile.content" style="width: 100%; height: 100%")
   a-layout-content
-    div(style="display: flex; flex-direction: column")
-      a-card.light-editor-card(title="Input" style="flex: 1" :bordered="false")
+    .content-container
+      a-card.light-editor-card(title="Input" :bordered="false")
         template(#extra)
           a-space
             a-button(size="small" @click="handleDebug") Test
@@ -45,38 +45,38 @@ a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
               a-option(value="text/plain") text
               a-option(value="application/json") json
               a-option(value="application/x-ndjson") ndjson
-            //- a(href="https://github.com/GreptimeTeam/demo-scene/tree/main/vector-ingestion" target="_blank") Write Log Demo
-
         .right-content
           a-alert(v-if="ymlError" type="error")
             | {{ ymlError }}
           a-typography-text(type="secondary")
             | Input your original log to see parse results.
-          CodeMirror(
-            v-model="debugForm.content"
-            style="height: 320px; width: 100%; margin-top: 5px"
-            :extensions="extensions"
-            :spellcheck="true"
-            :autofocus="true"
-            :indent-with-tab="true"
-            :tabSize="2"
-            :placeholder="debugTip"
-          )
+          .input-editor
+            CodeMirror(
+              v-model="debugForm.content"
+              style="width: 100%; height: 100%"
+              :extensions="extensions"
+              :spellcheck="true"
+              :autofocus="true"
+              :indent-with-tab="true"
+              :tabSize="2"
+              :placeholder="debugTip"
+            )
 
-      a-card.light-editor-card(title="Output" style="flex: 1" :bordered="false")
+      a-card.light-editor-card(title="Output" :bordered="false")
         .right-content
           a-typography-text(type="secondary")
             | Parsed logs displayed here. Logs that ingested via API will follow this structure.
-          CodeMirror(
-            style="height: 340px; width: 100%; margin-top: 5px"
-            :model-value="debugResponse"
-            :extensions="extensions"
-            :spellcheck="true"
-            :autofocus="true"
-            :indent-with-tab="true"
-            :tabSize="2"
-            :disabled="true"
-          )
+          .output-editor
+            CodeMirror(
+              style="width: 100%; height: 100%"
+              :model-value="debugResponse"
+              :extensions="extensions"
+              :spellcheck="true"
+              :autofocus="true"
+              :indent-with-tab="true"
+              :tabSize="2"
+              :disabled="true"
+            )
 </template>
 
 <script setup name="PipeFileView" lang="ts">
@@ -236,15 +236,51 @@ transform:
   }
   .right-content {
     padding: 0 10px 10px 10px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
   }
   :deep(.arco-card.light-editor-card) {
     padding-right: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
   }
   :deep(.arco-layout-sider-light) {
     box-shadow: none;
   }
   :deep(.arco-form-item-content-flex) {
     display: block;
+  }
+
+  .content-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .input-editor,
+  .output-editor {
+    flex: 1;
+    min-height: 0;
+    margin-top: 5px;
+
+    :deep(.cm-editor) {
+      height: 100%;
+    }
+  }
+
+  .output-editor {
+    :deep(.cm-editor) {
+      background-color: var(--color-fill-2);
+      cursor: not-allowed;
+    }
+
+    :deep(.cm-content) {
+      color: var(--color-text-2);
+    }
   }
 
   .form-description {
@@ -254,8 +290,7 @@ transform:
   }
 
   .full-height-layout {
-    height: calc(100vh - 150px); // Subtract header height and alert height
-    margin-top: 16px;
+    height: calc(100vh - 133px); // Subtract header height and alert height
 
     :deep(.arco-layout) {
       height: 100%;
@@ -274,6 +309,7 @@ transform:
 
     :deep(.arco-card-body) {
       padding: 0; // Remove default padding that might cause overflow
+      height: 100%;
     }
   }
 
