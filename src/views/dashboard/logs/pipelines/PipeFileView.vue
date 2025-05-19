@@ -2,8 +2,8 @@
 a-page-header(title="Pipeline Configuration" :show-back="false")
 
 a-alert Pipeline is a mechanism in GreptimeDB for parsing and transforming log data, <a href="https://docs.greptime.com/user-guide/logs/pipeline-config" target="_blank">read more</a>
-a-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
-  a-layout-sider(:resize-directions="['right']" :width="650")
+a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
+  a-layout-sider(:resize-directions="['right']" :width="800")
     a-card(title="Pipeline" :bordered="false")
       template(#extra)
         a-space
@@ -25,6 +25,7 @@ a-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
         :disabled="!isCreating"
         :rules="rules"
       )
+        .form-description Input the pipeline configuration here to define how logs are parsed and transformed, You can use the test function right side before Save.
         a-form-item(field="name" label="Pipeline name" style="width: 200px")
           a-input(v-model="currFile.name" placeholder="Pipeline name")
         a-form-item(v-if="!isCreating" field="version" label="Version")
@@ -32,7 +33,8 @@ a-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
         a-form-item(field="content" label="Yaml Content")
           template(#help)
             div 
-          YMLEditorSimple(v-model="currFile.content" style="width: 100%; height: 525px")
+          .editor-container
+            YMLEditorSimple(v-model="currFile.content" style="width: 100%; height: 100%")
   a-layout-content
     div(style="display: flex; flex-direction: column")
       a-card.light-editor-card(title="Input" style="flex: 1" :bordered="false")
@@ -40,9 +42,9 @@ a-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
           a-space
             a-button(size="small" @click="handleDebug") Test
             a-select(v-model="selectedContentType" style="width: 150px" placeholder="Content Type")
-              a-option(value="text/plain") text/plain
-              a-option(value="application/json") application/json
-              a-option(value="application/x-ndjson") application/x-ndjson
+              a-option(value="text/plain") text
+              a-option(value="application/json") json
+              a-option(value="application/x-ndjson") ndjson
             //- a(href="https://github.com/GreptimeTeam/demo-scene/tree/main/vector-ingestion" target="_blank") Write Log Demo
 
         .right-content
@@ -90,7 +92,6 @@ a-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
     filename: undefined | string
   }>()
 
-  const debugTip = 'Input raw Strings or JSON Object Array'
   const currFile = reactive<PipeFile>({
     name: '',
     content: `processors:
@@ -241,5 +242,55 @@ transform:
   }
   :deep(.arco-layout-sider-light) {
     box-shadow: none;
+  }
+  :deep(.arco-form-item-content-flex) {
+    display: block;
+  }
+
+  .form-description {
+    color: var(--color-text-3);
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+
+  .full-height-layout {
+    height: calc(100vh - 150px); // Subtract header height and alert height
+    margin-top: 16px;
+
+    :deep(.arco-layout) {
+      height: 100%;
+    }
+
+    :deep(.arco-layout-content) {
+      height: 100%;
+      overflow: auto;
+    }
+
+    :deep(.arco-layout-sider) {
+      height: 100%;
+      overflow: auto;
+      overflow-x: hidden; // Prevent horizontal scrollbar
+    }
+
+    :deep(.arco-card-body) {
+      padding: 0; // Remove default padding that might cause overflow
+    }
+  }
+
+  .editor-container {
+    min-height: 300px; // Set a minimum height
+  }
+
+  // Add styles for editor borders
+  :deep(.cm-editor) {
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+  }
+
+  :deep(.editor-container) {
+    .cm-editor {
+      border: 1px solid var(--color-border);
+      border-radius: 4px;
+    }
   }
 </style>
