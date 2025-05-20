@@ -34,7 +34,7 @@ a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
           template(#help)
             div 
           .editor-container
-            YMLEditorSimple(v-model="currFile.content" style="width: 100%")
+            YMLEditorSimple(v-model="currFile.content" style="width: 100%; height: calc(-470px + 100vh)")
   a-layout-content
     .content-container
       a-card.light-editor-card(title="Input" :bordered="false")
@@ -259,6 +259,7 @@ transform:
     display: flex;
     flex-direction: column;
     gap: 16px;
+    padding-bottom: 16px;
   }
 
   .input-editor,
