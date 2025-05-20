@@ -479,7 +479,8 @@
     .header {
       display: flex;
       justify-content: space-between;
-      border-bottom: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--light-border-color);
+      padding-bottom: 6px;
       .arco-radio-group-button {
         border-radius: 6px;
       }
