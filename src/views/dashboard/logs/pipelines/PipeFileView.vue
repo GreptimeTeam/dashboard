@@ -2,8 +2,8 @@
 a-page-header(title="Pipeline Configuration" :show-back="false")
 
 a-alert Pipeline is a mechanism in GreptimeDB for parsing and transforming log data, <a href="https://docs.greptime.com/user-guide/logs/pipeline-config" target="_blank">read more</a>
-a-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
-  a-layout-sider(:resize-directions="['right']" :width="650")
+a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
+  a-layout-sider(:resize-directions="['right']" :width="800")
     a-card(title="Pipeline" :bordered="false")
       template(#extra)
         a-space
@@ -25,6 +25,7 @@ a-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
         :disabled="!isCreating"
         :rules="rules"
       )
+        .form-description Input the pipeline configuration here to define how logs are parsed and transformed, You can test on the right side whether it's already saved.
         a-form-item(field="name" label="Pipeline name" style="width: 200px")
           a-input(v-model="currFile.name" placeholder="Pipeline name")
         a-form-item(v-if="!isCreating" field="version" label="Version")
@@ -32,45 +33,50 @@ a-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
         a-form-item(field="content" label="Yaml Content")
           template(#help)
             div 
-          YMLEditorSimple(v-model="currFile.content" style="width: 100%; height: 525px")
+          .editor-container
+            YMLEditorSimple(v-model="currFile.content" style="width: 100%; height: calc(-470px + 100vh)")
   a-layout-content
-    div(style="display: flex; flex-direction: column")
-      a-card.light-editor-card(title="Input" style="flex: 1" :bordered="false")
+    .content-container
+      a-card.light-editor-card(title="Input" :bordered="false")
         template(#extra)
           a-space
             a-button(size="small" @click="handleDebug") Test
-            //- a(href="https://github.com/GreptimeTeam/demo-scene/tree/main/vector-ingestion" target="_blank") Write Log Demo
-
+            a-select(v-model="selectedContentType" style="width: 150px" placeholder="Content Type")
+              a-option(value="text/plain") text
+              a-option(value="application/json") json
+              a-option(value="application/x-ndjson") ndjson
         .right-content
           a-alert(v-if="ymlError" type="error")
             | {{ ymlError }}
           a-typography-text(type="secondary")
             | Input your original log to see parse results.
-          CodeMirror(
-            v-model="debugForm.content"
-            style="height: 320px; width: 100%; margin-top: 5px"
-            :extensions="extensions"
-            :spellcheck="true"
-            :autofocus="true"
-            :indent-with-tab="true"
-            :tabSize="2"
-            :placeholder="debugTip"
-          )
+          .input-editor
+            CodeMirror(
+              v-model="debugForm.content"
+              style="width: 100%; height: 100%"
+              :extensions="extensions"
+              :spellcheck="true"
+              :autofocus="true"
+              :indent-with-tab="true"
+              :tabSize="2"
+              :placeholder="debugTip"
+            )
 
-      a-card.light-editor-card(title="Output" style="flex: 1" :bordered="false")
+      a-card.light-editor-card(title="Output" :bordered="false")
         .right-content
           a-typography-text(type="secondary")
             | Parsed logs displayed here. Logs that ingested via API will follow this structure.
-          CodeMirror(
-            style="height: 340px; width: 100%; margin-top: 5px"
-            :model-value="debugResponse"
-            :extensions="extensions"
-            :spellcheck="true"
-            :autofocus="true"
-            :indent-with-tab="true"
-            :tabSize="2"
-            :disabled="true"
-          )
+          .output-editor
+            CodeMirror(
+              style="width: 100%; height: 100%"
+              :model-value="debugResponse"
+              :extensions="extensions"
+              :spellcheck="true"
+              :autofocus="true"
+              :indent-with-tab="true"
+              :tabSize="2"
+              :disabled="true"
+            )
 </template>
 
 <script setup name="PipeFileView" lang="ts">
@@ -86,7 +92,6 @@ a-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
     filename: undefined | string
   }>()
 
-  const debugTip = 'Input raw Strings or JSON Object Array'
   const currFile = reactive<PipeFile>({
     name: '',
     content: `processors:
@@ -171,19 +176,42 @@ transform:
       '210.207.142.115 - AnthraX [26/Dec/2024:16:47:19 +0800] "DELETE /do-not-access/needs-work HTTP/2.0" 200 4488',
   })
 
+  const selectedContentType = ref('text/plain')
+  // Watch for content changes to auto-detect content type
+  watch(
+    () => debugForm.content,
+    (newContent) => {
+      try {
+        JSON.parse(newContent)
+        selectedContentType.value = 'application/json'
+      } catch (e) {
+        // If content contains newlines and each line is valid JSON, it's NDJSON
+        if (newContent.includes('\n')) {
+          const lines = newContent.split('\n').filter((line) => line.trim())
+          const isNDJSON = lines.every((line) => {
+            try {
+              JSON.parse(line)
+              return true
+            } catch {
+              return false
+            }
+          })
+          if (isNDJSON) {
+            selectedContentType.value = 'application/x-ndjson'
+          } else {
+            selectedContentType.value = 'text/plain'
+          }
+        } else {
+          selectedContentType.value = 'text/plain'
+        }
+      }
+    }
+  )
+
   const extensions = [basicSetup, json()]
   const debugResponse = ref('')
   function handleDebug() {
-    let content
-    try {
-      content = JSON.parse(debugForm.content)
-      if (!Array.isArray(content)) {
-        content = [content]
-      }
-    } catch (e) {
-      content = debugForm.content.split('\n')
-    }
-    debugContent(currFile.content, content).then((result) => {
+    debugContent(currFile.content, debugForm.content, selectedContentType.value).then((result) => {
       debugResponse.value = JSON.stringify(result, null, 2)
     })
   }
@@ -208,11 +236,101 @@ transform:
   }
   .right-content {
     padding: 0 10px 10px 10px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
   }
   :deep(.arco-card.light-editor-card) {
     padding-right: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
   }
   :deep(.arco-layout-sider-light) {
     box-shadow: none;
+  }
+  :deep(.arco-form-item-content-flex) {
+    display: block;
+  }
+
+  .content-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-bottom: 16px;
+  }
+
+  .input-editor,
+  .output-editor {
+    flex: 1;
+    min-height: 0;
+    margin-top: 5px;
+
+    :deep(.cm-editor) {
+      height: 100%;
+    }
+  }
+
+  .output-editor {
+    :deep(.cm-editor) {
+      background-color: var(--color-fill-2);
+      cursor: not-allowed;
+    }
+
+    :deep(.cm-content) {
+      color: var(--color-text-2);
+    }
+  }
+
+  .form-description {
+    color: var(--color-text-3);
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+
+  .full-height-layout {
+    height: calc(100vh - 133px); // Subtract header height and alert height
+
+    :deep(.arco-layout) {
+      height: 100%;
+    }
+
+    :deep(.arco-layout-content) {
+      height: 100%;
+      overflow: auto;
+    }
+
+    :deep(.arco-layout-sider) {
+      height: 100%;
+      overflow: auto;
+      overflow-x: hidden; // Prevent horizontal scrollbar
+    }
+
+    :deep(.arco-card-body) {
+      padding: 0; // Remove default padding that might cause overflow
+      height: 100%;
+    }
+  }
+
+  .editor-container {
+    min-height: 300px; // Set a minimum height
+  }
+
+  // Add styles for editor borders
+  :deep(.cm-editor) {
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+  }
+
+  :deep(.editor-container) {
+    .cm-editor {
+      border: 1px solid var(--color-border);
+      border-radius: 4px;
+    }
+  }
+  :deep(.cm-editor.cm-focused) {
+    outline: 0;
   }
 </style>
