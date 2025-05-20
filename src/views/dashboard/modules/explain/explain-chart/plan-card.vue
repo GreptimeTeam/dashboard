@@ -1,5 +1,5 @@
 <template lang="pug">
-.plan-card(:class="{ 'active-card': isActive }" :style="cardStyle" :id="cardId")
+.plan-card(:class="{ 'active-card': isActive }" :id="cardId")
   .plan-header
     .plan-name {{ nodeName }}
     .plan-param(v-if="nodeData.param") {{ nodeData.param }}
@@ -58,13 +58,6 @@
   // Node name
   const nodeName = computed(() => {
     return props.nodeData.name || 'Unknown Operation'
-  })
-
-  // Card style
-  const cardStyle = computed(() => {
-    return {
-      borderColor: props.isActive ? 'var(--brand-color)' : 'var(--border-color)',
-    }
   })
 
   // Progress bar visibility and data

@@ -38,10 +38,10 @@ a-tabs.panel-tabs(
         template(#title)
           | {{ $t('dashboard.chart') }}
         ExplainChart(
-          v-for="(stage, index) in getStages(explainResult)"
-          :key="index"
-          :data="stage"
-          :index="index"
+          :data="stages[activeStageIndex]"
+          :index="activeStageIndex"
+          :total-stages="stages.length"
+          @change-stage="activeStageIndex = $event"
         )
       a-tab-pane(key="explain-raw")
         template(#title)
@@ -199,6 +199,20 @@ a-tabs.panel-tabs(
       Message.error(`Failed to export JSON: ${e instanceof Error ? e.message : String(e)}`)
     }
   }
+
+  const stages = computed(() => {
+    if (!props.explainResult) return []
+    return getStages.value(props.explainResult)
+  })
+
+  const activeStageIndex = ref(1)
+
+  watch(
+    () => props.explainResult,
+    () => {
+      activeStageIndex.value = 1
+    }
+  )
 </script>
 
 <style lang="less">

@@ -32,7 +32,7 @@
     },
     activeNodeIndex: {
       type: Number,
-      default: null,
+      default: 0,
     },
     highlightType: {
       type: String,
@@ -158,35 +158,34 @@
     svg.attr('width', containerWidth).attr('height', containerHeight)
 
     // If there's an active node, center on it (existing code)
-    if (props.activeNodeIndex !== null) {
-      try {
-        // Existing code for centering on active node
-        const activeNodeGroup = svg.select(`g .tree-group.node-${props.activeNodeIndex}`)
-        if (!activeNodeGroup.empty()) {
-          const groupNode = activeNodeGroup.node()
-          if (!groupNode) return
-          const groupBBox = groupNode.getBBox()
 
-          // Use minimal padding
-          const padding = 20
-          const scaleX = containerWidth / (groupBBox.width + padding * 2)
-          const scaleY = containerHeight / (groupBBox.height + padding * 2)
-          const newScale = Math.min(scaleX, scaleY, maxScale)
+    try {
+      // Existing code for centering on active node
+      const activeNodeGroup = svg.select(`g .tree-group.node-${props.activeNodeIndex}`)
+      if (!activeNodeGroup.empty()) {
+        const groupNode = activeNodeGroup.node()
+        if (!groupNode) return
+        const groupBBox = groupNode.getBBox()
 
-          // Calculate translation to center the tree
-          const tx = containerWidth / 2 - (groupBBox.x + groupBBox.width / 2) * newScale
-          const ty = containerHeight / 2 - (groupBBox.y + groupBBox.height / 2) * newScale
+        // Use minimal padding
+        const padding = 20
+        const scaleX = containerWidth / (groupBBox.width + padding * 2)
+        const scaleY = containerHeight / (groupBBox.height + padding * 2)
+        const newScale = Math.min(scaleX, scaleY, maxScale)
 
-          // Create a proper transform object and apply it
-          const transform2 = d3.zoomIdentity.translate(tx, ty).scale(newScale)
+        // Calculate translation to center the tree
+        const tx = containerWidth / 2 - (groupBBox.x + groupBBox.width / 2) * newScale
+        const ty = containerHeight / 2 - (groupBBox.y + groupBBox.height / 2) * newScale
 
-          // Apply transform
-          svg.transition().duration(750).call(zoomListener.value.transform, transform2)
-          return
-        }
-      } catch (e) {
-        console.warn('Failed to center on active node, using improved centering', e)
+        // Create a proper transform object and apply it
+        const transform2 = d3.zoomIdentity.translate(tx, ty).scale(newScale)
+
+        // Apply transform
+        svg.transition().duration(750).call(zoomListener.value.transform, transform2)
+        return
       }
+    } catch (e) {
+      console.warn('Failed to center on active node, using improved centering', e)
     }
 
     // Center and scale all trees
@@ -483,7 +482,6 @@
         .attr('rx', 4) // Slightly smaller corner radius
         .attr('ry', 4)
         .attr('class', props.activeNodeIndex === nodeIndex ? 'node-index-rect active' : 'node-index-rect')
-        .style('fill', 'var(--card-bg-color)')
 
       // Card text
       nodeIndexCard
@@ -786,19 +784,16 @@
   }
 
   :deep(.node-index-rect) {
-    fill: var(--card-bg-color);
-    stroke: var(--border-color);
+    fill: var(--light-brand-color);
     stroke-width: 1px;
 
     &.active {
       fill: var(--light-brand-color);
-      stroke: var(--brand-color);
     }
   }
 
   :deep(.node-index-link) {
     stroke-linecap: round;
-    stroke-dasharray: 4 2;
   }
 
   :deep(.link) {
