@@ -1,15 +1,5 @@
 <template lang="pug">
 .chart-controls
-  .node-selector
-    span.node-label Nodes:
-    .node-buttons
-      a-button(
-        v-for="node in availableNodes"
-        :key="`${inputPrefix}-node-${node}`"
-        size="mini"
-        :type="activeNodeIndex === node ? 'primary' : 'outline'"
-        @click="onNodeSelect(node)"
-      ) {{ node }}
   .highlight-controls
     span.control-label Highlight
     a-radio-group(
@@ -25,7 +15,7 @@
     v-model="localSelectedMetric"
     size="mini"
     style="width: fit-content; margin-left: 16px; margin-right: 8px"
-    placeholder="Select metric"
+    placeholder="Select Metric"
     allow-clear
     :id="`${inputPrefix}-metric`"
     :trigger-props="{ autoFitPopupMinWidth: true }"
@@ -44,7 +34,7 @@
 
   const props = defineProps<{
     availableNodes: number[]
-    activeNodeIndex: number | null
+    activeNodeIndex: number
     highlightType: string
     selectedMetric: string
     metricsExpanded: boolean
@@ -95,28 +85,6 @@
     display: flex;
     align-items: center;
     padding: 8px;
-    border-bottom: 1px solid var(--border-color);
-    background-color: var(--card-bg-color);
-
-    .node-selector {
-      display: flex;
-      align-items: center;
-      margin-right: 16px;
-
-      .node-label {
-        margin-right: 8px;
-        font-size: 13px;
-        color: var(--small-font-color);
-        font-family: 'Gilroy';
-      }
-
-      .node-buttons {
-        display: flex;
-        gap: 4px;
-        flex-wrap: wrap;
-        max-width: 300px;
-      }
-    }
 
     .highlight-controls {
       display: flex;
@@ -134,9 +102,5 @@
     .flex-spacer {
       flex: 1;
     }
-  }
-
-  .arco-radio-button.arco-radio-checked {
-    color: var(--brand-color);
   }
 </style>

@@ -1,17 +1,21 @@
 <template lang="pug">
 .explain-chart(:id="`explain-chart-stage-${index}`")
-  ChartControls(
-    v-model:highlight-type="highlightType"
-    v-model:selected-metric="selectedMetric"
-    v-model:metrics-expanded="metricsExpanded"
-    :available-nodes="availableNodes"
-    :active-node-index="activeNodeIndex"
-    :max-rows="maxRows"
-    :max-duration="maxDuration"
-    :available-metrics="availableMetrics"
-    :stage-index="index"
-    @node-selected="scrollToNode"
-  )
+  .header
+    .stage-navigation
+      a-radio-group(v-model="localStageIndex" type="button" @change="onStageChange")
+        a-radio(v-for="i in totalStages" :key="i - 1" :value="i - 1") Stage {{ i - 1 }}
+    ChartControls(
+      v-model:highlight-type="highlightType"
+      v-model:selected-metric="selectedMetric"
+      v-model:metrics-expanded="metricsExpanded"
+      :available-nodes="availableNodes"
+      :active-node-index="activeNodeIndex"
+      :max-rows="maxRows"
+      :max-duration="maxDuration"
+      :available-metrics="availableMetrics"
+      :stage-index="index"
+      @node-selected="scrollToNode"
+    )
   .chart-scroll-container
     .chart-container.grab-bing(ref="chartContainer")
       TreeView(
@@ -59,12 +63,15 @@
   const props = defineProps<{
     data: any[] // This is an array of rows from getStages
     index: number
+    totalStages: number // Add this prop to know total number of stages
   }>()
+
+  const emit = defineEmits(['changeStage'])
 
   const chartContainer = ref<HTMLDivElement | null>(null)
   const metricsExpanded = ref(false)
   const selectedMetric = ref<string>('')
-  const activeNodeIndex = ref<number | null>(null)
+  const activeNodeIndex = ref<number>(0)
   const highlightType = ref<string>('DURATION') // Highlight type: NONE, ROWS, DURATION
   const nodesData = ref([])
   const treeView = ref(null)
@@ -397,7 +404,7 @@
     (newData, oldData) => {
       // Only reset if the data content actually changed
       if (!oldData || !areDataArraysEqual(newData, oldData)) {
-        activeNodeIndex.value = null
+        activeNodeIndex.value = 0
         selectedMetric.value = ''
         highlightType.value = 'DURATION'
         metricsExpanded.value = false
@@ -417,6 +424,21 @@
     },
     { immediate: true }
   )
+
+  const localStageIndex = ref(props.index)
+
+  watch(
+    () => props.index,
+    (newIndex) => {
+      localStageIndex.value = newIndex
+    }
+  )
+
+  function onStageChange(newStageIndex) {
+    if (newStageIndex >= 0 && newStageIndex < props.totalStages) {
+      emit('changeStage', newStageIndex)
+    }
+  }
 
   onMounted(() => {
     calculateMaxMetrics()
@@ -454,6 +476,32 @@
     padding: 16px 16px;
     border-radius: 6px;
     box-shadow: 0 4px 10px 0 var(--border-color);
+    .header {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--light-border-color);
+      padding-bottom: 6px;
+      .arco-radio-group-button {
+        border-radius: 6px;
+      }
+      .arco-radio-button {
+        border-radius: 6px;
+        &.arco-radio-checked {
+          color: var(--brand-color);
+          border-color: var(--brand-color);
+          background-color: var(--card-bg-color);
+        }
+      }
+    }
+    .stage-navigation {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+
+      .arco-radio-group-button {
+        font-family: 'Gilroy';
+      }
+    }
 
     .controls-wrapper {
       position: absolute;
@@ -467,49 +515,6 @@
 
       > * {
         pointer-events: auto; // Re-enable pointer events for children
-      }
-    }
-
-    .chart-controls {
-      display: flex;
-      align-items: center;
-      padding: 8px;
-      border-bottom: 1px solid var(--border-color);
-
-      .node-selector {
-        display: flex;
-        align-items: center;
-        margin-right: 16px;
-
-        .node-label {
-          margin-right: 8px;
-          font-size: 13px;
-          color: var(--small-font-color);
-        }
-
-        .node-buttons {
-          display: flex;
-          gap: 4px;
-          flex-wrap: wrap;
-          max-width: 300px;
-        }
-      }
-
-      .highlight-controls {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-left: auto;
-        margin-right: 16px;
-
-        .control-label {
-          font-size: 13px;
-          color: var(--small-font-color);
-        }
-      }
-
-      .flex-spacer {
-        flex: 1;
       }
     }
 
@@ -602,7 +607,6 @@
     transition: height 0.3s ease;
 
     &.active-card {
-      border: 1px solid var(--brand-color);
       box-shadow: 0 0 10px var(--box-shadow-color);
     }
 
@@ -687,31 +691,6 @@
     g {
       overflow: visible !important;
     }
-  }
-
-  .node-index-rect {
-    fill: var(--card-bg-color);
-    stroke: var(--border-color);
-    stroke-width: 1px;
-
-    &.active {
-      fill: var(--light-brand-color);
-      stroke: var(--brand-color);
-    }
-  }
-
-  .node-index-link {
-    stroke-linecap: round;
-    stroke-dasharray: 4 2;
-  }
-
-  .link {
-    stroke: var(--border-color);
-    stroke-width: 2px !important;
-    stroke-linecap: square;
-    stroke-linejoin: round;
-    pointer-events: none;
-    z-index: 1;
   }
 
   .node {

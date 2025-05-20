@@ -12,21 +12,22 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
         allow-clear
       )
         a-option(v-for="nodeId in availableNodes" :key="nodeId" :value="nodeId") Node {{ nodeId }}
-      a-select(
-        v-model="selectedMetric"
-        size="mini"
-        style="width: fit-content; margin-right: 8px"
-        placeholder="Metric select"
-        allow-clear
-        :trigger-props="{ autoFitPopupMinWidth: true }"
-        @change="selectMetric"
-      )
-        a-option(v-for="metric in availableMetrics" :key="metric.value" :value="metric.value") {{ metric.label }}
-      a-button(type="outline" size="mini" @click="toggleMetricsExpanded")
-        template(#icon)
-          icon-expand(v-if="!metricsExpanded")
-          icon-shrink(v-else)
-        | {{ metricsExpanded ? 'Collapse Metrics' : 'Expand Metrics' }}
+      a-space.metric-control(:size="0")
+        a-select(
+          v-model="selectedMetric"
+          size="mini"
+          style="width: fit-content; margin-right: 8px"
+          placeholder="Select Metric"
+          allow-clear
+          :trigger-props="{ autoFitPopupMinWidth: true }"
+          @change="selectMetric"
+        )
+          a-option(v-for="metric in availableMetrics" :key="metric.value" :value="metric.value") {{ metric.label }}
+        a-button(type="outline" size="mini" @click="toggleMetricsExpanded")
+          template(#icon)
+            icon-expand(v-if="!metricsExpanded")
+            icon-shrink(v-else)
+          | {{ metricsExpanded ? 'Collapse' : 'Expand' }}
   a-table(
     size="mini"
     column-resizable
@@ -397,6 +398,8 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
   .header-controls {
     display: flex;
     align-items: center;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--light-border-color);
   }
 
   .metrics {
