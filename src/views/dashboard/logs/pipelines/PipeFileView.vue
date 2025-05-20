@@ -34,7 +34,7 @@ a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
           template(#help)
             div 
           .editor-container
-            YMLEditorSimple(v-model="currFile.content" style="width: 100%; height: 100%")
+            YMLEditorSimple(v-model="currFile.content" style="width: 100%")
   a-layout-content
     .content-container
       a-card.light-editor-card(title="Input" :bordered="false")
@@ -328,5 +328,8 @@ transform:
       border: 1px solid var(--color-border);
       border-radius: 4px;
     }
+  }
+  :deep(.cm-editor.cm-focused) {
+    outline: 0;
   }
 </style>
