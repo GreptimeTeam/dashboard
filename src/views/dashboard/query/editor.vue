@@ -350,10 +350,23 @@ a-card.editor-card(:bordered="false")
     if (!isButtonDisabled.value) {
       explainQueryRunning.value = true
       try {
-        const result: any = await explainQuery(
-          `explain analyze format json ${currentStatement.value || codes.value[queryType.value]}`,
-          queryType.value
-        )
+        const queryString = currentStatement.value || codes.value[queryType.value]
+        let explainCommand = ''
+
+        if (
+          queryString.trim().toLowerCase().startsWith('tql eval') ||
+          queryString.trim().toLowerCase().startsWith('tql evaluate')
+        ) {
+          const matches = queryString.match(/^tql\s+eval(?:uate)?\s+([\s\S]*)$/i)
+          if (matches && matches[1]) {
+            // TODO: wait for API ready
+            explainCommand = `tql analyze format json ${matches[1].trim()}`
+          }
+        } else {
+          explainCommand = `explain analyze format json ${queryString}`
+        }
+
+        const result: any = await explainQuery(explainCommand, queryType.value)
         if (result) {
           emit('selectExplainTab')
         }
