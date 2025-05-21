@@ -117,9 +117,9 @@ export default function useQueryCode() {
     return res
   }
 
-  const explainQuery = async (code: string, type = queryType.value) => {
+  const explainQuery = async (code: string, type: string) => {
     const { runCode } = useCodeRunStore()
-    const result = await runCode(code, type, false, {}, 'explain')
+    const result = await runCode(code, type, false, {} as PromForm, 'explain')
     return result
   }
   const getResultsByType = (types: string[]) => {
