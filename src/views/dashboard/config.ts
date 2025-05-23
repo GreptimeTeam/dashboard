@@ -32,6 +32,7 @@ export const numberTypes = [
   'UInt64',
   'Float32',
   'Float64',
+  // 'Decimal',
 ]
 
 export const dateTypes = [
