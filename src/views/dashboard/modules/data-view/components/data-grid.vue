@@ -8,7 +8,7 @@ a-card.data-grid(:bordered="false")
   a-space.toolbar(v-if="hasExpandableContent")
     a-checkbox(v-model="wrapLines" size="small" @change="toggleLineWrapping")
       | {{ $t('dashboard.wrapLines') }}
-  a-spin(style="width: 100%; height: calc(100% - 28px)")
+  a-spin.table-spin
     a-table(
       column-resizable
       size="mini"
@@ -89,6 +89,7 @@ a-card.data-grid(:bordered="false")
 
   const wrapLines = ref(false)
   const timeColumnWidth = 140
+  const toolbarHeight = '20px'
 
   const MIN_COLUMN_WIDTHS = {
     timestamp: timeColumnWidth,
@@ -379,7 +380,6 @@ a-card.data-grid(:bordered="false")
   .cell-content {
     position: relative;
     white-space: nowrap;
-    color: var(--small-font-color);
     text-overflow: ellipsis;
     overflow: hidden;
     word-break: normal;
@@ -436,9 +436,10 @@ a-card.data-grid(:bordered="false")
 
   .toolbar {
     padding: 0 8px;
-    height: 28px;
+    height: v-bind(toolbarHeight);
     width: 100%;
     justify-content: flex-end;
+    align-items: flex-start;
 
     .arco-checkbox {
       font-size: 11px;
@@ -448,5 +449,10 @@ a-card.data-grid(:bordered="false")
   .icon-14 {
     width: 14px;
     height: 14px;
+  }
+
+  :deep(.arco-spin.table-spin) {
+    width: 100%;
+    height: calc(100% - v-bind(toolbarHeight)) !important;
   }
 </style>
