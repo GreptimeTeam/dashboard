@@ -266,7 +266,7 @@ a-tabs.panel-tabs(
           }
           &.arco-tabs-tab-active {
             color: var(--brand-color);
-            font-weight: 400;
+            font-weight: 600;
           }
           > .arco-tabs-tab-title {
             width: 84px;

@@ -127,6 +127,7 @@ a-layout.new-layout
   :deep(.editor-space) {
     padding-top: 10px;
     height: 100%;
+    padding-right: 6px;
     .editor-card .ͼ1.cm-editor {
       border-radius: 4px 4px 0 0;
     }
