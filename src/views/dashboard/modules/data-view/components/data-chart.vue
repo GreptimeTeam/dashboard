@@ -313,7 +313,7 @@ a-card(v-if="hasChart" :bordered="false")
     const modalElement = ref<any>()
     chartWidth.value = 800
 
-    chartOptions.value = makeOptions()
+    chartOptions.value = JSON.parse(JSON.stringify(makeOptions()))
   }
 
   const showChart = () => {
