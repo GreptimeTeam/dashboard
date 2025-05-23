@@ -7,6 +7,8 @@ const useIngestStore = defineStore('ingest', () => {
   const footer = ref<{ [key: string]: boolean }>({
     'influxdb-input': true,
     'influxdb-upload': true,
+    'log-ingestion-input': true,
+    'log-ingestion-upload': true,
   })
 
   return {
