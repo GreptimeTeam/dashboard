@@ -176,7 +176,7 @@
       arr.push({
         dataIndex: tsColumn.value.name,
         title: tsColumn.value.name,
-        headerCellStyle: { width: '170px' },
+        headerCellStyle: { width: tsViewStr.value ? '220px' : '170px' },
       })
     }
     arr.push({
