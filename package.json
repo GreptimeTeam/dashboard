@@ -97,6 +97,7 @@
     "vue-router": "^4.0.14"
   },
   "devDependencies": {
+    "@vue/language-plugin-pug": "^2.0.5",
     "@babel/types": "^7.21.4",
     "@commitlint/cli": "^17.4.2",
     "@commitlint/config-conventional": "^17.6.5",
@@ -114,7 +115,7 @@
     "@typescript-eslint/parser": "^5.53.0",
     "@vitejs/plugin-vue": "^3.1.2",
     "@vitejs/plugin-vue-jsx": "^2.1.1",
-    "@volar/vue-language-plugin-pug": "^1.0.24",
+    "@volar/vue-language-plugin-pug": "^1.6.5",
     "@vue/babel-plugin-jsx": "^1.1.1",
     "cross-env": "^7.0.3",
     "eslint": "^8.40.0",

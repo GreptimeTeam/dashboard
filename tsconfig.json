@@ -20,6 +20,9 @@
     "skipLibCheck": true,
     "noUnusedLocals": false
   },
+  "vueCompilerOptions": {
+    "plugins": ["@volar/vue-language-plugin-pug", "@vue/language-plugin-pug"]
+  },
   "include": ["src/**/*", "src/**/*.vue", "*.ts"],
   "exclude": ["node_modules"]
 }
