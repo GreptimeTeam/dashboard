@@ -22,7 +22,12 @@
           )
           a-button(type="primary" @click="handleQuery") Execute Query
       .sql-container
-        SQLBuilder(v-if="sqlMode === 'builder'" v-model:sql="builderSql" @update:sql="handleBuilderSqlUpdate")
+        SQLBuilder(
+          v-if="sqlMode === 'builder'"
+          v-model:sql="builderSql"
+          v-model:table="currentTable"
+          @update:sql="handleBuilderSqlUpdate"
+        )
         CodeMirror(
           v-else
           v-model="editorSql"
@@ -56,7 +61,9 @@
           )
             template(#cell="{ record }")
               template(v-if="col.name === 'traceid'")
-                router-link(:to="{ name: 'dashboard-TraceDetail', params: { id: record[col.name] } }") {{ record[col.name] }}
+                router-link(
+                  :to="{ name: 'dashboard-TraceDetail', params: { id: record[col.name] }, query: { table: currentTable } }"
+                ) {{ record[col.name] }}
               template(v-else-if="col.name === 'attributes'")
                 pre {{ JSON.stringify(record[col.name], null, 2) }}
               template(v-else)
@@ -77,6 +84,7 @@
   const sqlMode = ref('builder')
   const builderSql = ref('')
   const editorSql = ref('')
+  const currentTable = ref('')
   const loading = ref(false)
   const results = ref([])
   const columns = ref<Array<{ name: string; data_type: string }>>([])

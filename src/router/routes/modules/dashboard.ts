@@ -128,7 +128,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       component: () => import('@/views/dashboard/traces/index.vue'),
       name: 'trace-query',
       meta: {
-        ignoreCache: true,
+        ignoreCache: false,
         locale: 'menu.traces.list',
         requiresAuth: false,
         icon: 'icon-code',

@@ -1,24 +1,28 @@
 <template lang="pug">
-a-page-header(title="Trace Details" @back="handleBack")
+.trace-detail-container
+  .page-header
+    .header-content
+      a-button(type="text" @click="handleBack")
+        icon-left
+        span Back
+      h2 Trace Details
+  .content-container
+    a-card.light-editor-card(title="Trace Information" :bordered="false")
+      .right-content
+        a-descriptions(layout="inline-horizontal" :data="traceInfo" :column="2")
+          template(#trace_id)
+            a-typography-text(type="primary") {{ traceInfo.trace_id }}
+          template(#status)
+            a-tag(:color="getStatusColor(traceInfo.status)") {{ traceInfo.status }}
+          template(#duration)
+            | {{ formatDuration(traceInfo.duration) }}
+          template(#start_time)
+            | {{ formatTime(traceInfo.start_time) }}
 
-a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
-  a-layout-content
-    .content-container
-      a-card.light-editor-card(title="Trace Information" :bordered="false")
-        .right-content
-          a-descriptions(layout="inline-horizontal" :data="traceInfo" :column="2")
-            template(#trace_id)
-              a-typography-text(type="primary") {{ traceInfo.trace_id }}
-            template(#status)
-              a-tag(:color="getStatusColor(traceInfo.status)") {{ traceInfo.status }}
-            template(#duration)
-              | {{ formatDuration(traceInfo.duration) }}
-            template(#start_time)
-              | {{ formatTime(traceInfo.start_time) }}
-
-      a-card.light-editor-card(title="Trace Timeline" :bordered="false")
-        .right-content
-          .timeline-container
+    a-card.light-editor-card(title="Trace Timeline" :bordered="false")
+      .right-content
+        .timeline-container
+          a-spin(:loading="loading")
             a-timeline
               a-timeline-item(v-for="span in traceSpans" :key="span.span_id" :color="getStatusColor(span.status)")
                 template(#dot)
@@ -37,58 +41,104 @@ a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
                       a-space
                         a-tag(v-for="(value, key) in span.attributes" :key="key" size="small") {{ key }}: {{ value }}
 
-      a-card.light-editor-card(title="Trace Attributes" :bordered="false")
-        .right-content
-          a-table(:columns="attributeColumns" :data="attributeData" :pagination="false")
+    a-card.light-editor-card(title="Trace Attributes" :bordered="false")
+      .right-content
+        a-table(:columns="attributeColumns" :data="attributeData" :pagination="false")
 </template>
 
 <script setup name="TraceDetail" lang="ts">
   import { ref, reactive, onMounted } from 'vue'
   import { useRoute, useRouter } from 'vue-router'
-  import { IconCode, IconStorage, IconLink } from '@arco-design/web-vue/es/icon'
+  import { IconCode, IconStorage, IconLink, IconLeft } from '@arco-design/web-vue/es/icon'
+  import editorAPI from '@/api/editor'
 
   const route = useRoute()
   const router = useRouter()
+  const loading = ref(false)
 
-  // Mock data for demonstration
+  interface Span {
+    span_id: string
+    trace_id: string
+    parent_span_id: string
+    service_name: string
+    name: string
+    start_time: number
+    duration: number
+    status: string
+    attributes: Record<string, any>
+  }
+
   const traceInfo = reactive({
     trace_id: route.params.id,
-    service_name: 'user-service',
-    operation_name: 'get_user',
-    start_time: new Date().getTime(),
-    duration: 150,
-    status: 'success',
+    service_name: '',
+    operation_name: '',
+    start_time: 0,
+    duration: 0,
+    status: '',
   })
 
-  const traceSpans = ref([
-    {
-      span_id: 'span-1',
-      name: 'HTTP GET /api/users',
-      service_name: 'user-service',
-      type: 'http',
-      start_time: new Date().getTime() - 100,
-      duration: 50,
-      status: 'success',
-      attributes: {
-        method: 'GET',
-        url: '/api/users',
-        status_code: '200',
-      },
-    },
-    {
-      span_id: 'span-2',
-      name: 'Database Query',
-      service_name: 'user-service',
-      type: 'database',
-      start_time: new Date().getTime() - 50,
-      duration: 30,
-      status: 'success',
-      attributes: {
-        query: 'SELECT * FROM users WHERE id = ?',
-        rows: '1',
-      },
-    },
-  ])
+  const traceSpans = ref<Span[]>([])
+  const rootSpan = ref<Span | null>(null)
+
+  async function fetchTraceData() {
+    loading.value = true
+    try {
+      const tableName = (route.query.table as string) || 'spans'
+      const result = await editorAPI.runSQL(`
+        SELECT 
+          span_id,
+          trace_id,
+          parent_span_id,
+          service_name,
+          span_name as name,
+          timestamp as start_time,
+          duration_nano as duration,
+          status,
+          attributes
+        FROM ${tableName}
+        WHERE trace_id = '${route.params.id}'
+        ORDER BY start_time ASC
+      `)
+
+      if (result.output?.[0]?.records) {
+        const records = result.output[0].records as unknown as {
+          schema: { column_schemas: Array<{ name: string; data_type: string }> }
+          rows: any[][]
+        }
+
+        traceSpans.value = records.rows.map((row: any[]) => {
+          const span: Span = {
+            span_id: row[0],
+            trace_id: row[1],
+            parent_span_id: row[2],
+            service_name: row[3],
+            name: row[4],
+            start_time: row[5],
+            duration: row[6],
+            status: row[7],
+            attributes: row[8] ? JSON.parse(row[8]) : {},
+          }
+          return span
+        })
+
+        // Find root span (span with no parent)
+        rootSpan.value = traceSpans.value.find((span) => !span.parent_span_id) || null
+
+        if (rootSpan.value) {
+          // Update trace info from root span
+          traceInfo.service_name = rootSpan.value.service_name
+          traceInfo.operation_name = rootSpan.value.name
+          traceInfo.start_time = rootSpan.value.start_time
+          traceInfo.duration = rootSpan.value.duration
+          traceInfo.status = rootSpan.value.status
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch trace data:', error)
+    } finally {
+      loading.value = false
+    }
+  }
 
   const attributeColumns = [
     {
@@ -107,9 +157,9 @@ a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
     { key: 'environment', value: 'production' },
   ])
 
-  // Handlers
-  function handleBack() {
-    router.back()
+  const handleBack = () => {
+    console.log('Back button clicked')
+    router.push({ name: 'trace-query' })
   }
 
   // Utility functions
@@ -140,11 +190,47 @@ a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
   }
 
   onMounted(() => {
-    // TODO: Fetch actual trace data using the ID
+    fetchTraceData()
   })
 </script>
 
 <style lang="less" scoped>
+  .trace-detail-container {
+    height: calc(100vh - 133px);
+    overflow: auto;
+  }
+
+  .page-header {
+    padding: 16px 16px 0;
+    border-bottom: 1px solid var(--color-border);
+
+    .header-content {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      h2 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 500;
+      }
+
+      :deep(.arco-btn) {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+    }
+  }
+
+  .content-container {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-bottom: 16px;
+  }
+
   :deep(.arco-card) {
     border-radius: 0;
     border-bottom: none;
@@ -163,14 +249,6 @@ a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
     display: flex;
     flex-direction: column;
     min-height: 0;
-  }
-
-  .content-container {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    padding-bottom: 16px;
   }
 
   .timeline-container {
@@ -200,24 +278,6 @@ a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
 
     .span-attributes {
       margin-top: 4px;
-    }
-  }
-
-  .full-height-layout {
-    height: calc(100vh - 133px);
-
-    :deep(.arco-layout) {
-      height: 100%;
-    }
-
-    :deep(.arco-layout-content) {
-      height: 100%;
-      overflow: auto;
-    }
-
-    :deep(.arco-card-body) {
-      padding: 0;
-      height: 100%;
     }
   }
 </style>

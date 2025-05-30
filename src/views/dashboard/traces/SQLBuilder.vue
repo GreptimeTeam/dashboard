@@ -109,7 +109,7 @@ a-form(
     sql: string
   }>()
 
-  const emit = defineEmits(['update:sql'])
+  const emit = defineEmits(['update:sql', 'update:table'])
 
   const tables = ref<string[]>([])
   const tableMap = ref<{ [key: string]: TableField[] }>({})
@@ -218,6 +218,7 @@ a-form(
     form.conditions = []
     form.orderByField = ''
     fetchTableFields(form.table)
+    emit('update:table', form.table)
   }
 
   // Watch for timeColumns changes to add default time range condition
