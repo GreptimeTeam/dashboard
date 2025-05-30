@@ -1,7 +1,8 @@
 <template lang="pug">
-a-page-header(title="Trace Query" :show-back="false")
-a-layout.full-height-layout
-  a-layout-content
+.trace-query-container
+  .page-header
+    h2 Trace Query
+  .content-wrapper
     a-card(:bordered="false")
       .toolbar
         a-space
@@ -54,7 +55,9 @@ a-layout.full-height-layout
             :data-index="col.name"
           )
             template(#cell="{ record }")
-              template(v-if="col.name === 'attributes'")
+              template(v-if="col.name === 'traceid'")
+                router-link(:to="{ name: 'dashboard-TraceDetail', params: { id: record[col.name] } }") {{ record[col.name] }}
+              template(v-else-if="col.name === 'attributes'")
                 pre {{ JSON.stringify(record[col.name], null, 2) }}
               template(v-else)
                 | {{ record[col.name] }}
@@ -122,25 +125,28 @@ a-layout.full-height-layout
 </script>
 
 <style lang="less" scoped>
-  .full-height-layout {
-    height: calc(100vh - 60px);
+  .trace-query-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
 
-    :deep(.arco-layout) {
-      height: 100%;
+  .page-header {
+    padding: 16px 16px 0;
+    h2 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 500;
     }
+  }
 
-    :deep(.arco-layout-content) {
-      height: 100%;
-      overflow: auto;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    :deep(.arco-card-body) {
-      padding: 0;
-    }
+  .content-wrapper {
+    flex: 1;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow: auto;
   }
 
   .toolbar {

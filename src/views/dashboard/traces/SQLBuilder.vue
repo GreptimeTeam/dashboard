@@ -1,41 +1,47 @@
 <template lang="pug">
-a-form(layout="vertical" :model="form")
+a-form(
+  layout="horizontal"
+  label-align="left"
+  size="small"
+  auto-label-width
+  :model="form"
+)
   a-form-item(label="Table")
     a-select(
       v-model="form.table"
-      style="width: 200px"
+      style="width: auto"
       placeholder="Select table"
       :options="tables"
       @change="handleTableChange"
     )
-  a-form-item(label="Conditions")
+  a-form-item(label="Where")
     .condition-list
       .condition-item(v-for="(condition, index) in form.conditions" :key="index")
         a-space
           a-select(
             v-if="condition.isTimeColumn"
             v-model="condition.field"
-            style="width: 200px"
+            style="width: auto"
             placeholder="Select field"
             :options="fieldsOptions"
           )
           a-select(
             v-else
             v-model="condition.field"
-            style="width: 200px"
+            style="width: auto"
             placeholder="Select field"
             :options="fieldsOptions"
           )
           a-select(
             v-model="condition.operator"
-            style="width: 120px"
+            style="width: auto"
             placeholder="Operator"
             :options="getOperators(condition.field)"
           )
           template(v-if="!condition.isTimeColumn && !isSpecialTimeOperator(condition.operator)")
             a-input(
               v-model="condition.value"
-              style="width: 200px"
+              style="width: auto"
               placeholder="Value"
               :disabled="isSpecialTimeOperator(condition.operator)"
             )
@@ -268,7 +274,7 @@ a-form(layout="vertical" :model="form")
         return `${condition.field} ${condition.operator} '${condition.value}'`
       })
 
-    let sql = `SELECT * FROM ${form.table}`
+    let sql = `SELECT trace_id as traceId, service_name as serviceName, span_name as operationName, timestamp as startTime, duration_nano as duration FROM ${form.table}`
     if (conditions.length > 0) {
       sql += ` WHERE ${conditions.join(' AND ')}`
     }
@@ -303,31 +309,16 @@ a-form(layout="vertical" :model="form")
     justify-content: center !important;
   }
 
-  .input-group {
-    justify-content: flex-start;
-    align-items: flex-start;
-    :deep(.field) {
-      width: auto;
-      flex: 0 0 auto;
-    }
-    :deep(.operator) {
-      & .arco-select-view-input {
-        width: 60px;
-      }
-      width: auto;
-      flex: 0 0 auto;
-    }
-    :deep(.value) {
-      width: 100px;
-      flex: 0 0 auto;
-    }
+  .condition-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
 
-  .condition-wrapper {
+  .condition-item {
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px 20px;
     align-items: center;
+    gap: 8px;
   }
 
   :deep(.arco-input-append) {

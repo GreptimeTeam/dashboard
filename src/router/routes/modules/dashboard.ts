@@ -136,8 +136,8 @@ const DASHBOARD: AppRouteRecordRaw = {
       },
     },
     {
-      path: 'traces/:id',
-      name: 'TraceDetail',
+      path: 'traces/detail/:id',
+      name: 'dashboard-TraceDetail',
       component: () => import('@/views/dashboard/traces/[id].vue'),
       meta: {
         locale: 'menu.traces.detail',
