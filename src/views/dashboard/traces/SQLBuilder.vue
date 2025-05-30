@@ -105,6 +105,10 @@ a-form(
     semantic_type: string
   }
 
+  const props = defineProps<{
+    sql: string
+  }>()
+
   const emit = defineEmits(['update:sql'])
 
   const tables = ref<string[]>([])
@@ -286,6 +290,14 @@ a-form(
     return sql
   }
 
+  // Initialize SQL if empty
+  onMounted(() => {
+    fetchTables()
+    if (!props.sql) {
+      emit('update:sql', generateSQL())
+    }
+  })
+
   // Watch for any changes in the form and emit the generated SQL
   watch(
     () => ({ ...form }),
@@ -294,10 +306,6 @@ a-form(
     },
     { deep: true }
   )
-
-  onMounted(() => {
-    fetchTables()
-  })
 </script>
 
 <style lang="less" scoped>

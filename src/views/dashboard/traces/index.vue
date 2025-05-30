@@ -22,10 +22,10 @@
           )
           a-button(type="primary" @click="handleQuery") Execute Query
       .sql-container
-        SQLBuilder(v-if="sqlMode === 'builder'" v-model:sql="sqlQuery")
+        SQLBuilder(v-if="sqlMode === 'builder'" v-model:sql="builderSql" @update:sql="handleBuilderSqlUpdate")
         CodeMirror(
           v-else
-          v-model="sqlQuery"
+          v-model="editorSql"
           style="width: 100%; height: 100%"
           :extensions="extensions"
           :spellcheck="true"
@@ -64,7 +64,7 @@
 </template>
 
 <script setup name="TraceQuery" lang="ts">
-  import { ref, computed } from 'vue'
+  import { ref, computed, watch } from 'vue'
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { basicSetup } from 'codemirror'
   import { sql as sqlLang } from '@codemirror/lang-sql'
@@ -75,7 +75,8 @@
   import SQLBuilder from './SQLBuilder.vue'
 
   const sqlMode = ref('builder')
-  const sqlQuery = ref('')
+  const builderSql = ref('')
+  const editorSql = ref('')
   const loading = ref(false)
   const results = ref([])
   const columns = ref<Array<{ name: string; data_type: string }>>([])
@@ -85,22 +86,35 @@
   const timeRange = ref<string[]>([])
   const extensions = [basicSetup, sqlLang()]
 
+  // Handle SQL builder updates
+  function handleBuilderSqlUpdate(sql: string) {
+    builderSql.value = sql
+  }
+
+  // Watch for mode changes
+  watch(sqlMode, (newMode) => {
+    if (newMode === 'editor' && !editorSql.value) {
+      editorSql.value = builderSql.value
+    }
+  })
+
   async function handleQuery() {
-    if (!sqlQuery.value) return
+    const query = sqlMode.value === 'builder' ? builderSql.value : editorSql.value
+    if (!query) return
 
     loading.value = true
     try {
-      let query = sqlQuery.value
+      let finalQuery = query
 
       // Add time range condition if selected
       if (timeLength.value > 0) {
         const [start, end] = [`now() - Interval '${timeLength.value}m'`, 'now()']
-        query = query.replace("'$timeend'", end).replace("'$timestart'", start)
+        finalQuery = finalQuery.replace("'$timeend'", end).replace("'$timestart'", start)
       } else if (timeRange.value.length === 2) {
-        query = query.replace('$timeend', timeRange.value[1]).replace('$timestart', timeRange.value[0])
+        finalQuery = finalQuery.replace('$timeend', timeRange.value[1]).replace('$timestart', timeRange.value[0])
       }
 
-      const result = await editorAPI.runSQL(query)
+      const result = await editorAPI.runSQL(finalQuery)
       if (result.output?.[0]?.records) {
         const records = result.output[0].records as unknown as {
           schema: { column_schemas: Array<{ name: string; data_type: string }> }
@@ -114,7 +128,6 @@
           })
           return record
         })
-        console.log(results.value, 'results', columns.value)
       }
     } catch (error) {
       console.error('Query failed:', error)
