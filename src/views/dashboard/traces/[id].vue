@@ -7,40 +7,65 @@
         span Back
       h2 Trace Details
   .content-container
-    a-card.light-editor-card(title="Trace Timeline" :bordered="false")
-      .timeline-header(style="display: flex; align-items: stretch")
-        .span-name(:style="headerStyle") Operation Name
-        .time-ticks
-          .tick(v-for="(tick, index) in 4" :key="index")
-            .tick-label {{ formatTickTime(index) }}
-            .tick-label(v-if="index === 3" style="text-align: right") {{ formatDuration(rootSpan?.duration_nano || 0) }}
-      a-spin.spin-block(:loading="loading")
-        a-tree(
-          :key="spanTree.length ? spanTree[0].span_id : ''"
-          ref="treeRef"
-          blockNode
-          default-expand-all
-          :data="spanTree"
-        )
-          template(#title="data")
-            .span-item
-              .span-info(:style="getSpanInfoStyle(data._level)")
-                span.span-name {{ data.span_name }}
-                a-tag(size="small") {{ data.service_name }}
-              .span-timeline
-                .time-bar-container
-                  .time-bar(
-                    :style=`{
-                          left: getRelativePosition(data) + '%',
-                          width: getDurationWidth(data) + '%'
-                        }`
-                    :class="{ error: data.status === 'error' }"
-                  )
-                    .time-info
-                      span.span-duration {{ formatDuration(data.duration_nano) }}
+    .cards-row
+      a-card.light-editor-card(title="Trace Timeline" :bordered="false")
+        .timeline-header(style="display: flex; align-items: stretch")
+          .span-name(:style="headerStyle") Operation Name
+          .time-ticks
+            .tick(v-for="(tick, index) in 4" :key="index")
+              .tick-label {{ formatTickTime(index) }}
+              .tick-label(v-if="index === 3" style="text-align: right") {{ formatDuration(rootSpan?.duration_nano || 0) }}
+        a-spin.spin-block(:loading="loading")
+          a-tree(
+            :key="spanTree.length ? spanTree[0].span_id : ''"
+            ref="treeRef"
+            blockNode
+            default-expand-all
+            :data="spanTree"
+            @select="handleSpanSelect"
+          )
+            template(#title="data")
+              .span-item
+                .span-info(:style="getSpanInfoStyle(data._level)")
+                  span.span-name {{ data.span_name }}
+                  a-tag(size="small") {{ data.service_name }}
+                .span-timeline
+                  .time-bar-container
+                    .time-bar(
+                      :style=`{
+                        left: getRelativePosition(data) + '%',
+                        width: getDurationWidth(data) + '%'
+                      }`
+                      :class="{ error: data.status === 'error' }"
+                    )
+                      .time-info
+                        span.span-duration {{ formatDuration(data.duration_nano) }}
 
-    a-card.light-editor-card(title="Trace Attributes" :bordered="false")
-      a-table(:columns="attributeColumns" :data="attributeData" :pagination="false")
+      a-card.light-editor-card(title="Span Attributes" :bordered="false")
+        .no-selection(v-if="!selectedSpan") Select a span to view its attributes
+        template(v-else)
+          .span-header
+            .span-name
+              span.span-name {{ selectedSpan.span_name }}
+          .summary-container
+            .summary-item
+              span.summary-label Service
+              span.summary-value {{ selectedSpan.service_name }}
+            .divider
+            .summary-item
+              span.summary-label Duration
+              span.summary-value {{ formatDuration(selectedSpan.duration_nano) }}
+            .divider
+            .summary-item
+              span.summary-label StartTime
+              span.summary-value {{ formatTime(selectedSpan.timestamp) }}
+
+        a-descriptions(layout="vertical" bordered :column="2")
+          a-descriptions-item(v-for="item of spanInfoData")
+            template(#label)
+              a-typography-text(copyable type="secondary" :copy-text="String(item.value)")
+                | {{ item.label }} : {{ item.type }}
+            | {{ item.value }}
 </template>
 
 <script setup name="TraceDetail" lang="ts">
@@ -56,7 +81,8 @@
 
   // Utility functions
   function formatTime(timestamp: number) {
-    return new Date(timestamp).toLocaleString()
+    const ms = timestamp / 1_000_000
+    return new Date(ms).toISOString()
   }
 
   function formatDuration(duration: number) {
@@ -110,6 +136,60 @@
   const traceEndTime = ref(0)
 
   const treeRef = ref()
+
+  const selectedSpan = ref<Span | null>(null)
+
+  const spanInfoData = computed(() => {
+    if (!selectedSpan.value) return []
+
+    const span = selectedSpan.value
+    const result = []
+
+    // Add all span properties except _level and attributes
+    Object.entries(span).forEach(([key, value]) => {
+      if (
+        key !== '_level' &&
+        key !== 'children' &&
+        !key.startsWith('span_attributes.') &&
+        !key.startsWith('resource_attributes.')
+      ) {
+        let formattedValue = value
+        if (key === 'timestamp' || key === 'timestamp_end') {
+          formattedValue = formatTime(value)
+        } else if (typeof value === 'object') {
+          formattedValue = JSON.stringify(value, null, 2)
+        } else {
+          formattedValue = String(value)
+        }
+
+        result.push({
+          label: key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+          value: formattedValue,
+        })
+      }
+    })
+
+    const mergedAttributes = ['span_attributes', 'resource_attributes']
+
+    mergedAttributes.forEach((prefix) => {
+      const obj = Object.entries(span)
+        .filter(([key]) => key.startsWith(prefix))
+        .reduce((acc, [key, value]) => {
+          const cleanKey = key.replace(prefix, '')
+          acc[cleanKey] = value
+          return acc
+        }, {} as Record<string, any>)
+
+      if (Object.keys(obj).length > 0) {
+        result.push({
+          label: prefix,
+          value: JSON.stringify(obj, null, 2),
+        })
+      }
+    })
+
+    return result
+  })
 
   function buildSpanTree(spans: Span[]): Span[] {
     const spanMap = new Map<string, Span>()
@@ -249,23 +329,6 @@
     }
   }
 
-  const attributeColumns = [
-    {
-      title: 'Key',
-      dataIndex: 'key',
-    },
-    {
-      title: 'Value',
-      dataIndex: 'value',
-    },
-  ]
-
-  const attributeData = ref([
-    { key: 'user_id', value: '123' },
-    { key: 'region', value: 'us-west' },
-    { key: 'environment', value: 'production' },
-  ])
-
   const handleBack = () => {
     console.log('Back button clicked')
     router.push({ name: 'trace-query' })
@@ -286,6 +349,20 @@
     const duration = rootSpan.value.duration_nano
     const tickTime = (duration * index) / 4
     return formatDuration(tickTime)
+  }
+
+  function handleSpanSelect(spanId, span: any) {
+    console.log(span, 'span')
+    selectedSpan.value = span.node
+  }
+
+  function isJsonString(str: string) {
+    try {
+      const result = JSON.parse(str)
+      return typeof result === 'object' && result !== null
+    } catch (e) {
+      return false
+    }
   }
 
   fetchTraceData()
@@ -326,6 +403,25 @@
     flex-direction: column;
     gap: 16px;
     padding-bottom: 16px;
+  }
+
+  .cards-row {
+    display: flex;
+    gap: 16px;
+    flex: 1;
+    min-height: 0;
+
+    .light-editor-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+
+      &:first-child {
+        flex: 2;
+      }
+    }
   }
 
   :deep(.arco-card) {
@@ -469,5 +565,89 @@
     display: block;
     width: 100%;
     height: 100%;
+  }
+
+  .span-header {
+    padding: 0;
+    border: 1px solid var(--color-border);
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--color-text-2);
+    background-color: var(--color-fill-2);
+
+    .span-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+      padding: 4px;
+
+      .span-name {
+        font-size: 14px;
+      }
+    }
+  }
+
+  .no-selection {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--color-text-3);
+    font-size: 14px;
+  }
+
+  :deep(.arco-table) {
+    .arco-table-th {
+      background-color: var(--color-fill-2);
+      font-weight: 500;
+    }
+
+    .arco-table-td {
+      padding: 8px 16px;
+    }
+  }
+
+  .json-value {
+    margin: 0;
+    padding: 8px;
+    background-color: var(--color-fill-2);
+    border-radius: 4px;
+    font-family: monospace;
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .summary-container {
+    display: flex;
+    align-items: left;
+
+    border-top: none;
+    margin-bottom: 8px;
+
+    .summary-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 16px;
+
+      .summary-label {
+        font-size: 12px;
+        color: var(--color-text-3);
+      }
+
+      .summary-value {
+        font-size: 12px;
+        color: var(--color-text-1);
+      }
+    }
+
+    .divider {
+      width: 1px;
+      height: 16px;
+      background-color: var(--color-border);
+    }
   }
 </style>
