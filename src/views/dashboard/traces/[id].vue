@@ -5,7 +5,6 @@
       a-button(type="text" @click="handleBack")
         icon-left
         span Back
-      h2 Trace Details
   .content-container
     .cards-row
       a-card.light-editor-card(title="Trace Timeline" :bordered="false")
@@ -16,49 +15,64 @@
               .tick-label {{ formatTickTime(index) }}
               .tick-label(v-if="index === 3" style="text-align: right") {{ formatDuration(rootSpan?.duration_nano || 0) }}
         a-spin.spin-block(:loading="loading")
-          a-tree(
-            :key="spanTree.length ? spanTree[0].span_id : ''"
-            ref="treeRef"
-            blockNode
-            default-expand-all
-            :data="spanTree"
-            @select="handleSpanSelect"
-          )
-            template(#title="data")
-              .span-item
-                .span-info(:style="getSpanInfoStyle(data._level)")
-                  span.span-name {{ data.span_name }}
-                  a-tag(size="small") {{ data.service_name }}
-                .span-timeline
-                  .time-bar-container
-                    .time-bar(
-                      :style=`{
-                        left: getRelativePosition(data) + '%',
-                        width: getDurationWidth(data) + '%'
-                      }`
-                      :class="{ error: data.status === 'error' }"
-                    )
-                      .time-info
-                        span.span-duration {{ formatDuration(data.duration_nano) }}
+          .tree-container
+            a-tree(
+              :key="spanTree.length ? spanTree[0].span_id : ''"
+              ref="treeRef"
+              blockNode
+              default-expand-all
+              :data="spanTree"
+              @select="handleSpanSelect"
+            )
+              template(#title="data")
+                .span-item
+                  .span-info(:style="getSpanInfoStyle(data._level)")
+                    span.span-name {{ data.span_name }}
+                    a-tag(size="small") {{ data.service_name }}
+                  .span-timeline
+                    .time-bar-container
+                      .time-bar(
+                        :style=`{
+                          left: getRelativePosition(data) + '%',
+                          width: getDurationWidth(data) + '%'
+                        }`
+                        :class="{ error: data.status === 'error' }"
+                      )
+                        .time-info
+                          span.span-duration {{ formatDuration(data.duration_nano) }}
+      a-card#trace-attributes.light-editor-card.drawer-container(
+        :bordered="false"
+        :class="{ 'drawer-visible': drawerVisible }"
+      )
 
-      a-card.light-editor-card(title="Span Attributes" :bordered="false")
-        .no-selection(v-if="!selectedSpan") Select a span to view its attributes
-        template(v-else)
-          .span-header
-            .span-name
-              span.span-name {{ selectedSpan.span_name }}
-          .summary-container
-            .summary-item
-              span.summary-label Service
-              span.summary-value {{ selectedSpan.service_name }}
-            .divider
-            .summary-item
-              span.summary-label Duration
-              span.summary-value {{ formatDuration(selectedSpan.duration_nano) }}
-            .divider
-            .summary-item
-              span.summary-label StartTime
-              span.summary-value {{ formatTime(selectedSpan.timestamp) }}
+      a-drawer(
+        v-model:visible="drawerVisible"
+        popup-container="#trace-attributes"
+        placement="right"
+        width="100%"
+        :footer="false"
+        :mask="false"
+        :unmount-on-close="true"
+        :modal="false"
+      )
+        template(#title)
+          .drawer-title
+            span Span Attributes
+        .span-header
+          .span-name
+            | {{ selectedSpan?.span_name }}
+        .summary-container
+          .summary-item
+            span.summary-label Service
+            span.summary-value {{ selectedSpan?.service_name }}
+          .divider
+          .summary-item
+            span.summary-label Duration
+            span.summary-value {{ formatDuration(selectedSpan?.duration_nano) }}
+          .divider
+          .summary-item
+            span.summary-label StartTime
+            span.summary-value {{ formatTime(selectedSpan?.timestamp) }}
 
         a-descriptions(layout="vertical" bordered :column="2")
           a-descriptions-item(v-for="item of spanInfoData")
@@ -71,7 +85,7 @@
 <script setup name="TraceDetail" lang="ts">
   import { ref, reactive, onMounted, computed, nextTick } from 'vue'
   import { useRoute, useRouter } from 'vue-router'
-  import { IconCode, IconStorage, IconLink, IconLeft } from '@arco-design/web-vue/es/icon'
+  import { IconCode, IconStorage, IconLink, IconLeft, IconClose } from '@arco-design/web-vue/es/icon'
   import editorAPI from '@/api/editor'
 
   const route = useRoute()
@@ -351,9 +365,12 @@
     return formatDuration(tickTime)
   }
 
+  const drawerVisible = ref(false)
+
   function handleSpanSelect(spanId, span: any) {
     console.log(span, 'span')
     selectedSpan.value = span.node
+    drawerVisible.value = true
   }
 
   function isJsonString(str: string) {
@@ -370,8 +387,8 @@
 
 <style lang="less" scoped>
   .trace-detail-container {
-    height: calc(100vh - 133px);
-    overflow: auto;
+    height: 100%;
+    overflow: hidden;
   }
 
   .page-header {
@@ -649,5 +666,67 @@
       height: 16px;
       background-color: var(--color-border);
     }
+  }
+
+  :deep(.arco-card-header) {
+    .arco-card-header-extra {
+      .arco-btn {
+        color: var(--color-text-3);
+
+        &:hover {
+          color: var(--color-text-1);
+        }
+      }
+    }
+  }
+
+  .drawer-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    font-weight: 800;
+    font-size: 15px;
+    line-height: 20px;
+    height: 58px;
+  }
+
+  :deep(.arco-drawer) {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--color-bg-2);
+    border-left: 1px solid var(--color-border);
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+  }
+
+  :deep(.arco-drawer-header) {
+    border-bottom: 1px solid var(--color-border);
+    padding: 16px;
+    height: 58px;
+  }
+
+  :deep(.arco-drawer-body) {
+    padding: 0;
+  }
+  .drawer-container.light-editor-card {
+    flex: 0;
+  }
+  .light-editor-card.drawer-container.drawer-visible {
+    flex: 1;
+  }
+
+  .tree-container {
+    height: calc(100vh - 200px);
+    overflow: auto;
+    padding: 8px 0;
+  }
+
+  :deep(.arco-tree) {
+    height: 100%;
+  }
+  :deep(.arco-drawer-body) {
+    padding: 10px;
   }
 </style>
