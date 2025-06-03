@@ -74,12 +74,25 @@
             span.summary-label StartTime
             span.summary-value {{ formatTime(selectedSpan?.timestamp) }}
 
-        a-descriptions(layout="vertical" bordered :column="2")
-          a-descriptions-item(v-for="item of spanInfoData")
-            template(#label)
-              a-typography-text(copyable type="secondary" :copy-text="String(item.value)")
-                | {{ item.label }} : {{ item.type }}
-            | {{ item.value }}
+        a-tabs(v-model:active-key="viewMode" type="card-gutter")
+          a-tab-pane(key="table" title="Table View")
+            a-descriptions(layout="vertical" bordered :column="2")
+              a-descriptions-item(v-for="item of spanInfoData")
+                template(#label)
+                  a-typography-text(copyable type="secondary" :copy-text="String(item.value)")
+                    | {{ item.label }} : {{ item.type }}
+                | {{ item.value }}
+          a-tab-pane(key="json" title="JSON View")
+            CodeMirror(
+              :modelValue="jsonView"
+              :extensions="extensions"
+              :style="codeMirrorStyle"
+              :spellcheck="true"
+              :autofocus="true"
+              :indent-with-tab="true"
+              :tabSize="2"
+              :disabled="true"
+            )
 </template>
 
 <script setup name="TraceDetail" lang="ts">
@@ -87,6 +100,9 @@
   import { useRoute, useRouter } from 'vue-router'
   import { IconCode, IconStorage, IconLink, IconLeft, IconClose } from '@arco-design/web-vue/es/icon'
   import editorAPI from '@/api/editor'
+  import { json } from '@codemirror/lang-json'
+  import { EditorView } from '@codemirror/view'
+  import { Codemirror as CodeMirror } from 'vue-codemirror'
 
   const route = useRoute()
   const router = useRouter()
@@ -381,6 +397,18 @@
       return false
     }
   }
+
+  const viewMode = ref('table')
+  const extensions = [json(), EditorView.theme({})]
+  const codeMirrorStyle = {
+    height: 'calc(100vh - 300px)',
+    fontSize: '14px',
+  }
+
+  const jsonView = computed(() => {
+    if (!selectedSpan.value) return ''
+    return JSON.stringify(selectedSpan.value, null, 2)
+  })
 
   fetchTraceData()
 </script>
@@ -728,5 +756,41 @@
   }
   :deep(.arco-drawer-body) {
     padding: 10px;
+  }
+
+  .view-switch {
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .view-container {
+    padding: 16px;
+  }
+
+  :deep(.cm-editor) {
+    height: 100%;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+  }
+
+  :deep(.cm-scroller) {
+    font-family: monospace;
+  }
+
+  :deep(.arco-tabs) {
+    .arco-tabs-nav {
+      margin-bottom: 16px;
+    }
+
+    .arco-tabs-content {
+      padding: 0;
+    }
+  }
+
+  .json-view-header {
+    display: flex;
+    justify-content: flex-end;
+    padding: 8px 0;
+    margin-bottom: 8px;
   }
 </style>
