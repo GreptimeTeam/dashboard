@@ -81,13 +81,14 @@ a-form(
 </template>
 
 <script setup name="TraceSQLBuilder" lang="ts">
-  import { ref, reactive, watch, onMounted } from 'vue'
+  import { ref, watch, onMounted, computed } from 'vue'
+  import { useStorage } from '@vueuse/core'
   import editorAPI from '@/api/editor'
 
   interface Condition {
     field: string
     operator: string
-    value: string | string[]
+    value: string
     isTimeColumn?: boolean
   }
 
@@ -105,37 +106,33 @@ a-form(
     semantic_type: string
   }
 
-  const props = defineProps<{
-    sql: string
-  }>()
-
   const emit = defineEmits(['update:sql', 'update:table'])
 
   const tables = ref<string[]>([])
   const tableMap = ref<{ [key: string]: TableField[] }>({})
 
-  const form = reactive<Form>({
+  // Use useStorage for form state
+  const form = useStorage<Form>('trace-sql-builder-form', {
     conditions: [],
     orderByField: '',
     orderBy: 'DESC',
     limit: 100,
     table: '',
   })
-  const multipleRe = /timestamp\((\d)\)/
+
   const fields = computed(() => {
-    if (!form.table || !tableMap.value[form.table]) return []
-    return tableMap.value[form.table]
+    if (!form.value.table || !tableMap.value[form.value.table]) return []
+    return tableMap.value[form.value.table]
   })
+
   const fieldsOptions = computed(() => {
-    return (
-      fields.value.map((column) => ({
-        label: column.name,
-        value: column.name,
-      })) || []
-    )
+    return fields.value.map((column) => ({
+      label: column.name,
+      value: column.name,
+    }))
   })
+
   const timeColumns = computed(() => {
-    console.log(fields.value, 'fields')
     const tsColumns = fields.value.filter((column) => column.data_type.toLowerCase().indexOf('timestamp') > -1)
     const tsIndexColumns = tsColumns.filter((column) => column.semantic_type === 'TIMESTAMP')
     return tsIndexColumns.map((column) => ({
@@ -143,6 +140,7 @@ a-form(
       value: column.name,
     }))
   })
+
   const orderOptions = [
     { label: 'ASC', value: 'ASC' },
     { label: 'DESC', value: 'DESC' },
@@ -210,23 +208,19 @@ a-form(
     }
   }
 
-  function getTableFields(tableName: string) {
-    return tableMap.value[tableName]?.map((field) => field.name) || []
-  }
-
   function handleTableChange() {
-    form.conditions = []
-    form.orderByField = ''
-    fetchTableFields(form.table)
-    emit('update:table', form.table)
+    form.value.conditions = []
+    form.value.orderByField = ''
+    fetchTableFields(form.value.table)
+    emit('update:table', form.value.table)
   }
 
   // Watch for timeColumns changes to add default time range condition
   watch(timeColumns, (newTimeColumns) => {
-    if (form.table && newTimeColumns.length > 0) {
+    if (form.value.table && newTimeColumns.length > 0) {
       const firstTimeColumn = newTimeColumns[0]
-      if (form.conditions.length === 0) {
-        form.conditions = [
+      if (form.value.conditions.length === 0) {
+        form.value.conditions = [
           {
             field: firstTimeColumn.value,
             operator: 'BETWEEN_TIME',
@@ -235,14 +229,14 @@ a-form(
           },
         ]
       }
-      if (!form.orderByField) {
-        form.orderByField = firstTimeColumn.value
+      if (!form.value.orderByField) {
+        form.value.orderByField = firstTimeColumn.value
       }
     }
   })
 
   function addCondition() {
-    form.conditions.push({
+    form.value.conditions.push({
       field: '',
       operator: '=',
       value: '',
@@ -251,11 +245,11 @@ a-form(
   }
 
   function removeCondition(index: number) {
-    form.conditions.splice(index, 1)
+    form.value.conditions.splice(index, 1)
   }
 
   function generateSQL() {
-    const conditions = form.conditions
+    const conditions = form.value.conditions
       .filter((condition) => {
         if (condition.isTimeColumn) {
           return condition.field && (isSpecialTimeOperator(condition.operator) || condition.value)
@@ -279,34 +273,31 @@ a-form(
         return `${condition.field} ${condition.operator} '${condition.value}'`
       })
 
-    let sql = `SELECT trace_id as traceId, service_name as serviceName, span_name as operationName, timestamp as startTime, duration_nano as duration FROM ${form.table}`
+    let sql = `SELECT trace_id as traceId, service_name as serviceName, span_name as operationName, timestamp as startTime, duration_nano as duration FROM ${form.value.table}`
     if (conditions.length > 0) {
       sql += ` WHERE ${conditions.join(' AND ')}`
     }
-    if (form.orderByField) {
-      sql += ` ORDER BY ${form.orderByField} ${form.orderBy}`
+    if (form.value.orderByField) {
+      sql += ` ORDER BY ${form.value.orderByField} ${form.value.orderBy}`
     }
-    sql += ` LIMIT ${form.limit}`
+    sql += ` LIMIT ${form.value.limit}`
 
     return sql
   }
 
-  // Initialize SQL if empty
-  onMounted(() => {
-    fetchTables()
-    if (!props.sql) {
-      emit('update:sql', generateSQL())
-    }
-  })
-
-  // Watch for any changes in the form and emit the generated SQL
+  // Watch for form changes and emit SQL updates
   watch(
-    () => ({ ...form }),
+    () => form.value,
     () => {
       emit('update:sql', generateSQL())
     },
-    { deep: true }
+    { immediate: true, deep: true }
   )
+
+  // Load saved state on mount
+  onMounted(() => {
+    fetchTables()
+  })
 </script>
 
 <style lang="less" scoped>

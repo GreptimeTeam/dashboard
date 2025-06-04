@@ -20,14 +20,9 @@
             :relative-time-map="relativeTimeMap"
             :relative-time-options="relativeTimeOptions"
           )
-          a-button(type="primary" @click="handleQuery") Execute Query
+          a-button(type="primary" size="small" @click="handleQuery") Query
       .sql-container
-        SQLBuilder(
-          v-if="sqlMode === 'builder'"
-          v-model:sql="builderSql"
-          v-model:table="currentTable"
-          @update:sql="handleBuilderSqlUpdate"
-        )
+        SQLBuilder(v-if="sqlMode === 'builder'" @update:sql="handleBuilderSqlUpdate")
         CodeMirror(
           v-else
           v-model="editorSql"
