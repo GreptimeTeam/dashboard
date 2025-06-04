@@ -188,7 +188,7 @@ export type TimeType = keyof typeof TimeTypes
 export function toDateStr(time: number, multiple: number, format?: string) {
   // const multiple = TimeTypes[type]
   const ms = toMs(time, multiple)
-  return dayjs(ms).format(format || 'MM-DD HH:mm:ss.SSS')
+  return dayjs(ms).format(format || 'YYYY-MM-DD HH:mm:ss.SSS')
 }
 
 const LIMIT_RE = /LIMIT\s+(\d+)/
