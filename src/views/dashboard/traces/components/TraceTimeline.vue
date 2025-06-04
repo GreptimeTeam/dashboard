@@ -1,10 +1,20 @@
 <template lang="pug">
 .timeline-header(style="display: flex; align-items: stretch")
-  .span-name(:style="headerStyle") Operation Name
-  .time-ticks
-    .tick(v-for="(tick, index) in 4" :key="index")
-      .tick-label {{ formatTickTime(index) }}
-      .tick-label(v-if="index === 3" style="text-align: right") {{ formatDuration(rootSpan?.duration_nano || 0) }}
+  a-split(v-model:size="spanInfoWidth" :min="200" :max="500")
+    template(#first)
+      .span-name Operation Name
+    template(#second)
+      .time-ticks
+        .tick(v-for="(tick, index) in 4" :key="index")
+          .tick-label {{ formatTickTime(index) }}
+          .tick-label(v-if="index === 3" style="text-align: right") {{ formatDuration(rootSpan?.duration_nano || 0) }}
+    template(#resize-trigger)
+      .resize-trigger(
+        style="width: 1px; height: calc(100vh - 150px); background-color: var(--color-border); position: absolute; cursor: col-resize; z-index: 1000"
+      )
+        icon-drag-dot-vertical(
+          style="position: absolute; left: -8px; top: 50%; transform: translateY(-50%); color: var(--color-text-3)"
+        )
 a-spin.spin-block(:loading="loading")
   .tree-container
     a-tree(
@@ -37,6 +47,7 @@ a-spin.spin-block(:loading="loading")
   import { ref, computed } from 'vue'
   import type { PropType } from 'vue'
   import type { TreeNodeData } from '@arco-design/web-vue'
+  import { IconDragDotVertical } from '@arco-design/web-vue/es/icon'
   import type { Span } from '../utils'
   import { formatDuration, getRelativePosition, getDurationWidth } from '../utils'
 
@@ -58,7 +69,7 @@ a-spin.spin-block(:loading="loading")
   const emit = defineEmits(['spanSelect'])
 
   const treeRef = ref()
-  const spanInfoWidth = ref(300)
+  const spanInfoWidth = ref('300px')
 
   function formatTickTime(index: number): string {
     if (!props.rootSpan) return ''
@@ -76,15 +87,10 @@ a-spin.spin-block(:loading="loading")
     }
   }
 
-  const headerStyle = computed(() => ({
-    width: `${spanInfoWidth.value + 35}px`,
-    minWidth: `${spanInfoWidth.value}px`,
-  }))
-
   function getSpanInfoStyle(level: number) {
     return {
-      width: `calc(${spanInfoWidth.value}px - ${level * 22}px)`,
-      minWidth: `calc(${spanInfoWidth.value}px - ${level * 22}px)`,
+      width: `calc(${spanInfoWidth.value} - ${level * 22}px)`,
+      minWidth: `calc(${spanInfoWidth.value} - ${level * 22}px)`,
     }
   }
 </script>
@@ -106,7 +112,14 @@ a-spin.spin-block(:loading="loading")
       gap: 8px;
       flex-shrink: 0;
       padding: 8px 8px;
+      height: 100%;
     }
+  }
+
+  :deep(.arco-split) {
+    width: 100%;
+    height: 100%;
+    user-select: none;
   }
 
   .time-ticks {
@@ -217,5 +230,15 @@ a-spin.spin-block(:loading="loading")
     display: block;
     width: 100%;
     height: 100%;
+  }
+
+  .resize-trigger {
+    &:hover {
+      background-color: var(--color-primary);
+
+      :deep(.arco-icon) {
+        color: var(--color-primary);
+      }
+    }
   }
 </style>
