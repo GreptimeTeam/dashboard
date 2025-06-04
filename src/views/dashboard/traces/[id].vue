@@ -24,7 +24,7 @@
 </template>
 
 <script setup name="TraceDetail" lang="ts">
-  import { ref, reactive, computed } from 'vue'
+  import { ref, reactive, computed, watch, onActivated, onDeactivated } from 'vue'
   import { useRoute, useRouter } from 'vue-router'
   import { IconLeft } from '@arco-design/web-vue/es/icon'
   import editorAPI from '@/api/editor'
@@ -43,6 +43,15 @@
 
   const traceStartTime = ref(0)
   const traceEndTime = ref(0)
+
+  // Reset all state
+  function resetState() {
+    traceSpans.value = []
+    selectedSpan.value = null
+    drawerVisible.value = false
+    traceStartTime.value = 0
+    traceEndTime.value = 0
+  }
 
   async function fetchTraceData() {
     loading.value = true
@@ -91,7 +100,22 @@
   const spanTree = computed(() => buildSpanTree(traceSpans.value))
   const rootSpan = computed(() => traceSpans.value.find((span) => !span.parent_span_id) || null)
 
-  fetchTraceData()
+  // Watch for route changes
+
+  // Handle component activation (when navigating to detail page)
+  onActivated(() => {
+    // Only fetch data if we're on the detail page
+    if (route.name === 'dashboard-TraceDetail') {
+      resetState()
+      fetchTraceData()
+    }
+  })
+
+  // Handle component deactivation (when navigating away from detail page)
+  onDeactivated(() => {
+    // Reset state when leaving the detail page
+    resetState()
+  })
 </script>
 
 <style lang="less" scoped>
