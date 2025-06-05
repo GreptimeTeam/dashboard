@@ -211,8 +211,6 @@ a-form(
   function handleTableChange() {
     form.value.conditions = []
     form.value.orderByField = ''
-    fetchTableFields(form.value.table)
-    emit('update:table', form.value.table)
   }
 
   // Watch for timeColumns changes to add default time range condition
@@ -298,6 +296,15 @@ a-form(
   onMounted(() => {
     fetchTables()
   })
+
+  watch(
+    () => form.value.table,
+    () => {
+      fetchTableFields(form.value.table)
+      emit('update:table', form.value.table)
+    },
+    { immediate: true }
+  )
 </script>
 
 <style lang="less" scoped>

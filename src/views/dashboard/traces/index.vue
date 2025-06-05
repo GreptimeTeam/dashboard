@@ -22,7 +22,11 @@
           )
           a-button(type="primary" size="small" @click="handleQuery") Query
       .sql-container
-        SQLBuilder(v-if="sqlMode === 'builder'" @update:sql="handleBuilderSqlUpdate")
+        SQLBuilder(
+          v-if="sqlMode === 'builder'"
+          @update:sql="handleBuilderSqlUpdate"
+          @update:table="currentTable = $event"
+        )
         CodeMirror(
           v-else
           v-model="editorSql"
@@ -34,6 +38,16 @@
           :tabSize="2"
           :placeholder="'Enter your SQL query here...'"
         )
+
+    a-card(v-if="builderSql || editorSql" title="Trace Count Over Time" :bordered="false")
+      CountChart(
+        ref="countChartRef"
+        :sql="finalQuery"
+        :time-length="timeLength"
+        :time-range="timeRange"
+        :table-name="currentTable"
+        @time-range-update="handleTimeRangeUpdate"
+      )
 
     a-card(title="Results" :bordered="false")
       a-table(
@@ -75,6 +89,7 @@
   import { relativeTimeMap, relativeTimeOptions } from '@/views/dashboard/config'
   import TimeSelect from '@/components/time-select/index.vue'
   import SQLBuilder from './SQLBuilder.vue'
+  import CountChart from './components/CountChart.vue'
 
   const sqlMode = ref('builder')
   const builderSql = ref('')
@@ -83,6 +98,7 @@
   const loading = ref(false)
   const results = ref([])
   const columns = ref<Array<{ name: string; data_type: string }>>([])
+  const countChartRef = ref()
 
   // Time range selection
   const timeLength = ref(10) // Default to last 10 minutes
@@ -100,24 +116,24 @@
       editorSql.value = builderSql.value
     }
   })
+  const finalQuery = computed(() => {
+    const query = sqlMode.value === 'builder' ? builderSql.value : editorSql.value
+    let sql = query
+    if (timeLength.value > 0) {
+      const [start, end] = [`now() - Interval '${timeLength.value}m'`, 'now()']
+      sql = query.replace("'$timeend'", end).replace("'$timestart'", start)
+    } else if (timeRange.value.length === 2) {
+      sql = query.replace('$timeend', timeRange.value[1]).replace('$timestart', timeRange.value[0])
+    }
+    return sql
+  })
 
   async function handleQuery() {
-    const query = sqlMode.value === 'builder' ? builderSql.value : editorSql.value
-    if (!query) return
+    if (!finalQuery.value) return
 
     loading.value = true
     try {
-      let finalQuery = query
-
-      // Add time range condition if selected
-      if (timeLength.value > 0) {
-        const [start, end] = [`now() - Interval '${timeLength.value}m'`, 'now()']
-        finalQuery = finalQuery.replace("'$timeend'", end).replace("'$timestart'", start)
-      } else if (timeRange.value.length === 2) {
-        finalQuery = finalQuery.replace('$timeend', timeRange.value[1]).replace('$timestart', timeRange.value[0])
-      }
-
-      const result = await editorAPI.runSQL(finalQuery)
+      const result = await editorAPI.runSQL(finalQuery.value)
       if (result.output?.[0]?.records) {
         const records = result.output[0].records as unknown as {
           schema: { column_schemas: Array<{ name: string; data_type: string }> }
@@ -132,11 +148,22 @@
           return record
         })
       }
+
+      // Trigger count chart query after main query succeeds
+      if (countChartRef.value && finalQuery) {
+        countChartRef.value.executeCountQuery()
+      }
     } catch (error) {
       console.error('Query failed:', error)
     } finally {
       loading.value = false
     }
+  }
+
+  function handleTimeRangeUpdate(newTimeRange: string[]) {
+    timeLength.value = 0 // Switch to custom mode
+    timeRange.value = newTimeRange
+    handleQuery() // Re-run query with new time range
   }
 </script>
 

@@ -29,4 +29,5 @@ export default {
   'menu.tour.workbench': 'Build advanced dashboard using UI builder and YAML based configuration, all managed by git.',
   'menu.dashboard.logquery': 'Log Query',
   'menu.dashboard.logpipeline': 'Log Pipelines',
+  'menu.traces.list': 'Traces',
 }
