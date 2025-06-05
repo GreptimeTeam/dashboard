@@ -67,9 +67,27 @@
       template(#title)
         .results-header
           span Results
-          span.results-count(v-if="results.length > 0") ({{ results.length }} {{ results.length === 1 ? 'record' : 'records' }})
+          span.results-count(v-if="totalResults > 0") 
+            | ({{ totalResults }} {{ totalResults === 1 ? 'record' : 'records' }}
+            template(v-if="totalResults > pageSize")
+              | , showing {{ Math.min((currentPage - 1) * pageSize + 1, totalResults) }}-{{ Math.min(currentPage * pageSize, totalResults) }}
+            | )
       template(#extra)
         a-space
+          a-pagination(
+            v-if="totalResults > pageSize"
+            v-model:current="currentPage"
+            v-model:page-size="pageSize"
+            size="small"
+            simple
+            :total="totalResults"
+            :show-total="false"
+            :show-jumper="false"
+            :show-page-size="true"
+            :page-size-options="[10, 20, 50, 100]"
+            @change="handlePageChange"
+            @page-size-change="handlePageSizeChange"
+          )
           a-trigger(v-if="columns.length" trigger="click" :unmount-on-close="false")
             a-button(type="text" style="color: var(--color-text-2)")
               template(#icon)
@@ -88,9 +106,10 @@
       a-table(
         :data="results"
         :loading="loading"
-        :pagination="true"
+        :pagination="false"
         :bordered="false"
-        :stripe="true"
+        :stripe="false"
+        :class="{ trace_table: true, multiple_column: true }"
       )
         template(#empty)
           a-empty(description="No data")
@@ -131,7 +150,7 @@
   const editorSql = ref('')
   const currentTable = ref('')
   const loading = ref(false)
-  const results = ref([])
+  const allResults = ref([])
   const columns = ref<Array<{ name: string; data_type: string }>>([])
   const countChartRef = ref()
   const sqlEditorRef = ref()
@@ -145,9 +164,23 @@
   // Default columns to show for traces (when no selection is made)
   const defaultTraceColumns = ['trace_id', 'service_name', 'span_name', 'timestamp', 'duration_nano']
 
+  // Pagination state
+  const currentPage = ref(1)
+  const pageSize = ref(20)
+
   // Time range selection
   const timeLength = ref(10) // Default to last 10 minutes
   const timeRange = ref<string[]>([])
+
+  // Computed paginated results
+  const results = computed(() => {
+    const start = (currentPage.value - 1) * pageSize.value
+    const end = start + pageSize.value
+    return allResults.value.slice(start, end)
+  })
+
+  // Total count for pagination
+  const totalResults = computed(() => allResults.value.length)
 
   // Computed visible columns based on selection
   const visibleColumns = computed(() => {
@@ -244,13 +277,16 @@
           rows: any[][]
         }
         columns.value = records.schema.column_schemas
-        results.value = records.rows.map((row: any[]) => {
+        allResults.value = records.rows.map((row: any[]) => {
           const record: any = {}
           records.schema.column_schemas.forEach((col: { name: string }, index: number) => {
             record[col.name] = row[index]
           })
           return record
         })
+
+        // Reset to first page when new query results arrive
+        currentPage.value = 1
       }
 
       // Trigger count chart query after main query succeeds
@@ -268,6 +304,16 @@
     timeLength.value = 0 // Switch to custom mode
     timeRange.value = newTimeRange
     handleQuery() // Re-run query with new time range
+  }
+
+  // Pagination handlers
+  function handlePageChange(page: number) {
+    currentPage.value = page
+  }
+
+  function handlePageSizeChange(size: number) {
+    pageSize.value = size
+    currentPage.value = 1 // Reset to first page when page size changes
   }
 </script>
 
@@ -334,6 +380,33 @@
 
   .column-controls {
     min-width: 200px;
+  }
+
+  // Table styling to match logs TableData
+  :deep(.trace_table) {
+    font-family: 'Roboto Mono', monospace;
+
+    .arco-table-element {
+      font-family: 'Roboto Mono', monospace;
+    }
+
+    .arco-table-td,
+    .arco-table-th {
+      white-space: nowrap;
+    }
+
+    .arco-table-size-medium .arco-table-cell {
+      padding: 7px 10px;
+    }
+
+    &.multiple_column {
+      width: 100%;
+
+      .arco-table-td-content {
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
   }
 
   :deep(.arco-card) {
