@@ -48,7 +48,7 @@
       template(#title)
         .chart-header
           span Trace Count Over Time
-          a-button(type="text" size="small" @click="chartExpanded = !chartExpanded")
+          a-button(type="text" size="small" @click="handleChartToggle")
             template(#icon)
               icon-down(v-if="chartExpanded")
               icon-right(v-else)
@@ -59,6 +59,7 @@
           :time-length="timeLength"
           :time-range="timeRange"
           :table-name="currentTable"
+          :should-fetch="chartExpanded"
           @time-range-update="handleTimeRangeUpdate"
         )
 
@@ -166,7 +167,7 @@
 </template>
 
 <script setup name="TraceQuery" lang="ts">
-  import { ref, computed, watch, shallowRef } from 'vue'
+  import { ref, computed, watch, shallowRef, nextTick } from 'vue'
   import { useLocalStorage } from '@vueuse/core'
   import { IconCode, IconDown, IconRight, IconSettings } from '@arco-design/web-vue/es/icon'
   import editorAPI from '@/api/editor'
@@ -359,8 +360,8 @@
         currentPage.value = 1
       }
 
-      // Trigger count chart query after main query succeeds
-      if (countChartRef.value && finalQuery.value) {
+      // Trigger count chart query only if chart is expanded
+      if (chartExpanded.value && countChartRef.value && finalQuery.value) {
         countChartRef.value.executeCountQuery()
       }
     } catch (error) {
@@ -374,6 +375,18 @@
     timeLength.value = 0 // Switch to custom mode
     timeRange.value = newTimeRange
     handleQuery() // Re-run query with new time range
+  }
+
+  // Handle chart expansion/collapse
+  function handleChartToggle() {
+    chartExpanded.value = !chartExpanded.value
+
+    // Trigger chart data fetch when expanding
+    if (chartExpanded.value && finalQuery.value) {
+      nextTick(() => {
+        countChartRef.value.executeCountQuery()
+      })
+    }
   }
 
   // Pagination handlers
