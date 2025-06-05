@@ -45,17 +45,46 @@
           :show-toolbar="true"
         )
 
-    a-card(v-if="builderSql || editorSql" title="Trace Count Over Time" :bordered="false")
-      CountChart(
-        ref="countChartRef"
-        :sql="finalQuery"
-        :time-length="timeLength"
-        :time-range="timeRange"
-        :table-name="currentTable"
-        @time-range-update="handleTimeRangeUpdate"
-      )
+    a-card(v-if="builderSql || editorSql" :bordered="false")
+      template(#title)
+        .chart-header
+          span Trace Count Over Time
+          a-button(type="text" size="small" @click="chartExpanded = !chartExpanded")
+            template(#icon)
+              icon-down(v-if="chartExpanded")
+              icon-right(v-else)
+      template(v-if="chartExpanded")
+        CountChart(
+          ref="countChartRef"
+          :sql="finalQuery"
+          :time-length="timeLength"
+          :time-range="timeRange"
+          :table-name="currentTable"
+          @time-range-update="handleTimeRangeUpdate"
+        )
 
-    a-card(title="Results" :bordered="false")
+    a-card(:bordered="false")
+      template(#title)
+        .results-header
+          span Results
+          span.results-count(v-if="results.length > 0") ({{ results.length }} {{ results.length === 1 ? 'record' : 'records' }})
+      template(#extra)
+        a-space
+          a-trigger(v-if="columns.length" trigger="click" :unmount-on-close="false")
+            a-button(type="text" style="color: var(--color-text-2)")
+              template(#icon)
+                icon-settings
+              | Columns
+            template(#content)
+              a-card(style="padding: 10px; min-width: 200px")
+                .column-controls
+                  a-space(direction="vertical" size="small")
+                    a-space
+                      a-button(type="text" size="mini" @click="selectAllColumns") Select All
+                      a-button(type="text" size="mini" @click="deselectAllColumns") Deselect All
+                    a-checkbox-group(v-model="displayedColumns" direction="vertical")
+                      a-checkbox(v-for="column in columns" :key="column.name" :value="column.name")
+                        | {{ column.name }}
       a-table(
         :data="results"
         :loading="loading"
@@ -69,13 +98,13 @@
           a-spin(dot)
         template(#columns)
           a-table-column(
-            v-for="col in columns"
+            v-for="col in visibleColumns"
             :key="col.name"
             :title="col.name"
             :data-index="col.name"
           )
             template(#cell="{ record }")
-              template(v-if="col.name === 'traceid'")
+              template(v-if="col.name === 'traceid' || col.name === 'trace_id'")
                 router-link(
                   :to="{ name: 'dashboard-TraceDetail', params: { id: record[col.name] }, query: { table: currentTable } }"
                 ) {{ record[col.name] }}
@@ -87,7 +116,8 @@
 
 <script setup name="TraceQuery" lang="ts">
   import { ref, computed, watch } from 'vue'
-  import { IconCode } from '@arco-design/web-vue/es/icon'
+  import { useLocalStorage } from '@vueuse/core'
+  import { IconCode, IconDown, IconRight, IconSettings } from '@arco-design/web-vue/es/icon'
   import editorAPI from '@/api/editor'
   import dayjs from 'dayjs'
   import { relativeTimeMap, relativeTimeOptions } from '@/views/dashboard/config'
@@ -106,9 +136,45 @@
   const countChartRef = ref()
   const sqlEditorRef = ref()
 
+  // Chart expanded state with localStorage persistence
+  const chartExpanded = useLocalStorage('trace-chart-expanded', true)
+
+  // Column visibility state with localStorage persistence
+  const displayedColumns = useLocalStorage<string[]>('trace-displayed-columns', [])
+
+  // Default columns to show for traces (when no selection is made)
+  const defaultTraceColumns = ['trace_id', 'service_name', 'span_name', 'timestamp', 'duration_nano']
+
   // Time range selection
   const timeLength = ref(10) // Default to last 10 minutes
   const timeRange = ref<string[]>([])
+
+  // Computed visible columns based on selection
+  const visibleColumns = computed(() => {
+    let columnsToShow = []
+
+    if (displayedColumns.value.length === 0) {
+      // Show default trace columns if available, otherwise show all
+      const availableDefaults = columns.value.filter(
+        (col) => defaultTraceColumns.includes(col.name.toLowerCase()) || defaultTraceColumns.includes(col.name)
+      )
+      columnsToShow = availableDefaults.length > 0 ? availableDefaults : columns.value
+    } else {
+      columnsToShow = columns.value.filter((col) => displayedColumns.value.includes(col.name))
+    }
+
+    // Sort columns to ensure trace_id is always first
+    return columnsToShow.sort((a, b) => {
+      const isATraceId = a.name === 'trace_id' || a.name === 'traceid'
+      const isBTraceId = b.name === 'trace_id' || b.name === 'traceid'
+
+      if (isATraceId && !isBTraceId) return -1
+      if (!isATraceId && isBTraceId) return 1
+
+      // Keep original order for other columns
+      return 0
+    })
+  })
 
   // Handle SQL builder updates
   function handleBuilderSqlUpdate(sql: string) {
@@ -122,10 +188,35 @@
     }
   }
 
+  // Column selection functions
+  function selectAllColumns() {
+    displayedColumns.value = columns.value.map((col) => col.name)
+  }
+
+  function deselectAllColumns() {
+    displayedColumns.value = []
+  }
+
   // Watch for mode changes
   watch(sqlMode, (newMode) => {
     if (newMode === 'editor' && !editorSql.value) {
       editorSql.value = builderSql.value
+    }
+  })
+
+  // Watch for column changes and update displayed columns if empty
+  watch(columns, (newColumns) => {
+    if (displayedColumns.value.length === 0 && newColumns.length > 0) {
+      // Set default selection to common trace fields if they exist
+      const defaultColumns = newColumns
+        .filter((col) => defaultTraceColumns.includes(col.name.toLowerCase()) || defaultTraceColumns.includes(col.name))
+        .map((col) => col.name)
+
+      if (defaultColumns.length > 0) {
+        displayedColumns.value = defaultColumns
+      } else {
+        displayedColumns.value = newColumns.map((col) => col.name)
+      }
     }
   })
 
@@ -218,6 +309,31 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+  }
+
+  .chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    font-weight: normal;
+  }
+
+  .results-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: normal;
+  }
+
+  .results-count {
+    color: var(--color-text-3);
+    font-size: 12px;
+    font-weight: normal;
+  }
+
+  .column-controls {
+    min-width: 200px;
   }
 
   :deep(.arco-card) {

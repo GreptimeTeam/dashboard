@@ -271,7 +271,7 @@ a-form(
         return `${condition.field} ${condition.operator} '${condition.value}'`
       })
 
-    let sql = `SELECT trace_id as traceId, service_name as serviceName, span_name as operationName, timestamp as startTime, duration_nano as duration FROM ${form.value.table}`
+    let sql = `SELECT * FROM ${form.value.table}`
     if (conditions.length > 0) {
       sql += ` WHERE ${conditions.join(' AND ')}`
     }
