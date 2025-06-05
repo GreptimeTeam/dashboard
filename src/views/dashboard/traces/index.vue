@@ -1,7 +1,5 @@
 <template lang="pug">
 .trace-query-container
-  .page-header
-    h2 Trace Query
   .content-wrapper
     a-card(:bordered="false")
       .toolbar
@@ -122,11 +120,19 @@
             :title="col.name"
             :data-index="col.name"
           )
+            template(v-if="isTimeColumn(col)" #title)
+              a-tooltip(placement="top" :content="tsViewStr ? 'Show raw timestamp' : 'Format timestamp'")
+                a-space(size="mini" :style="{ cursor: 'pointer' }" @click="changeTsView")
+                  svg.icon-12
+                    use(href="#time-index")
+                  | {{ col.name }}
             template(#cell="{ record }")
               template(v-if="col.name === 'traceid' || col.name === 'trace_id'")
                 router-link(
                   :to="{ name: 'dashboard-TraceDetail', params: { id: record[col.name] }, query: { table: currentTable } }"
                 ) {{ record[col.name] }}
+              template(v-else-if="isTimeColumn(col)")
+                span(style="cursor: pointer") {{ renderTs(record, col.name) }}
               template(v-else-if="col.name === 'attributes'")
                 pre {{ JSON.stringify(record[col.name], null, 2) }}
               template(v-else)
@@ -168,6 +174,9 @@
   const currentPage = ref(1)
   const pageSize = ref(20)
 
+  // Timestamp display state
+  const tsViewStr = ref(true) // true for formatted, false for raw timestamp
+
   // Time range selection
   const timeLength = ref(10) // Default to last 10 minutes
   const timeRange = ref<string[]>([])
@@ -208,6 +217,40 @@
       return 0
     })
   })
+
+  // Timestamp utilities
+  function isTimeColumn(column: { name: string; data_type: string }) {
+    return column.data_type.toLowerCase().includes('timestamp')
+  }
+
+  function changeTsView() {
+    tsViewStr.value = !tsViewStr.value
+  }
+
+  function renderTs(record: any, columnName: string) {
+    if (tsViewStr.value) {
+      // Format timestamp as readable date
+      const timestamp = record[columnName]
+      if (timestamp) {
+        // Handle different timestamp formats (nanoseconds, microseconds, milliseconds)
+        let ms = timestamp
+        if (typeof timestamp === 'string') {
+          ms = parseInt(timestamp, 10)
+        }
+        // Convert to milliseconds if it's in nanoseconds or microseconds
+        if (ms > 1000000000000000) {
+          // nanoseconds
+          ms /= 1000000
+        } else if (ms > 1000000000000) {
+          // microseconds
+          ms /= 1000
+        }
+        return dayjs(ms).format('YYYY-MM-DD HH:mm:ss.SSS')
+      }
+      return timestamp
+    }
+    return record[columnName]
+  }
 
   // Handle SQL builder updates
   function handleBuilderSqlUpdate(sql: string) {
