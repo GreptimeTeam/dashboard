@@ -9,6 +9,15 @@
           a-radio-group(v-model="sqlMode" type="button")
             a-radio(value="builder") Builder
             a-radio(value="editor") Editor
+          a-button(
+            v-if="sqlMode === 'editor'"
+            type="outline"
+            size="small"
+            @click="handleFormatSQL"
+          )
+            template(#icon)
+              icon-code
+            | Format
           TimeSelect(
             v-model:time-length="timeLength"
             v-model:time-range="timeRange"
@@ -27,16 +36,13 @@
           @update:sql="handleBuilderSqlUpdate"
           @update:table="currentTable = $event"
         )
-        CodeMirror(
+        SQLEditor(
           v-else
+          ref="sqlEditorRef"
           v-model="editorSql"
-          style="width: 100%; height: 100%"
-          :extensions="extensions"
-          :spellcheck="true"
-          :autofocus="true"
-          :indent-with-tab="true"
-          :tabSize="2"
-          :placeholder="'Enter your SQL query here...'"
+          editor-height="140px"
+          placeholder="Enter your SQL query here..."
+          :show-toolbar="true"
         )
 
     a-card(v-if="builderSql || editorSql" title="Trace Count Over Time" :bordered="false")
@@ -81,14 +87,13 @@
 
 <script setup name="TraceQuery" lang="ts">
   import { ref, computed, watch } from 'vue'
-  import { Codemirror as CodeMirror } from 'vue-codemirror'
-  import { basicSetup } from 'codemirror'
-  import { sql as sqlLang } from '@codemirror/lang-sql'
+  import { IconCode } from '@arco-design/web-vue/es/icon'
   import editorAPI from '@/api/editor'
   import dayjs from 'dayjs'
   import { relativeTimeMap, relativeTimeOptions } from '@/views/dashboard/config'
   import TimeSelect from '@/components/time-select/index.vue'
   import SQLBuilder from './SQLBuilder.vue'
+  import SQLEditor from './components/SQLEditor.vue'
   import CountChart from './components/CountChart.vue'
 
   const sqlMode = ref('builder')
@@ -99,15 +104,22 @@
   const results = ref([])
   const columns = ref<Array<{ name: string; data_type: string }>>([])
   const countChartRef = ref()
+  const sqlEditorRef = ref()
 
   // Time range selection
   const timeLength = ref(10) // Default to last 10 minutes
   const timeRange = ref<string[]>([])
-  const extensions = [basicSetup, sqlLang()]
 
   // Handle SQL builder updates
   function handleBuilderSqlUpdate(sql: string) {
     builderSql.value = sql
+  }
+
+  // Handle format SQL
+  function handleFormatSQL() {
+    if (sqlEditorRef.value) {
+      sqlEditorRef.value.formatSQL()
+    }
   }
 
   // Watch for mode changes
@@ -116,6 +128,7 @@
       editorSql.value = builderSql.value
     }
   })
+
   const finalQuery = computed(() => {
     const query = sqlMode.value === 'builder' ? builderSql.value : editorSql.value
     let sql = query
@@ -150,7 +163,7 @@
       }
 
       // Trigger count chart query after main query succeeds
-      if (countChartRef.value && finalQuery) {
+      if (countChartRef.value && finalQuery.value) {
         countChartRef.value.executeCountQuery()
       }
     } catch (error) {
@@ -205,16 +218,6 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
-
-    :deep(.cm-editor) {
-      height: 100%;
-      border: 1px solid var(--color-border);
-      border-radius: 4px;
-    }
-
-    :deep(.cm-editor.cm-focused) {
-      outline: 0;
-    }
   }
 
   :deep(.arco-card) {
