@@ -102,52 +102,54 @@
                     a-checkbox-group(v-model="displayedColumns" direction="vertical")
                       a-checkbox(v-for="column in columns" :key="column.name" :value="column.name")
                         | {{ column.name }}
-      a-table(
-        :data="results"
-        :loading="loading"
-        :pagination="false"
-        :bordered="false"
-        :stripe="false"
-        :class="{ trace_table: true, multiple_column: true }"
-      )
-        template(#empty)
-          a-empty(description="No data")
-        template(#loading)
-          a-spin(dot)
-        template(#columns)
-          a-table-column(
-            v-for="col in visibleColumns"
-            :key="col.name"
-            :title="col.name"
-            :data-index="col.name"
-          )
-            template(v-if="isTimeColumn(col)" #title)
-              a-tooltip(placement="top" :content="tsViewStr ? 'Show raw timestamp' : 'Format timestamp'")
-                a-space(size="mini" :style="{ cursor: 'pointer' }" @click="changeTsView")
-                  svg.icon-12
-                    use(href="#time-index")
-                  | {{ col.name }}
-            template(#cell="{ record }")
-              template(v-if="col.name === 'traceid' || col.name === 'trace_id'")
-                router-link(
-                  :to="{ name: 'dashboard-TraceDetail', params: { id: record[col.name] }, query: { table: currentTable } }"
-                ) {{ record[col.name] }}
-              template(v-else-if="isTimeColumn(col)")
-                span(style="cursor: pointer") {{ renderTs(record, col.name) }}
-                svg.td-config-icon(
-                  v-if="sqlMode === 'builder'"
-                  @click="(event) => handleContextMenu(record, col.name, event)"
-                )
-                  use(href="#menu")
-              template(v-else-if="col.name === 'attributes'")
-                pre {{ JSON.stringify(record[col.name], null, 2) }}
-              template(v-else)
-                span {{ record[col.name] }}
-                svg.td-config-icon(
-                  v-if="sqlMode === 'builder'"
-                  @click="(event) => handleContextMenu(record, col.name, event)"
-                )
-                  use(href="#menu")
+      .table-container
+        a-table(
+          :data="results"
+          :loading="loading"
+          :pagination="false"
+          :bordered="false"
+          :stripe="false"
+          :class="{ trace_table: true, multiple_column: true }"
+          :scroll="{ y: 1400 }"
+        )
+          template(#empty)
+            a-empty(description="No data")
+          template(#loading)
+            a-spin(dot)
+          template(#columns)
+            a-table-column(
+              v-for="col in visibleColumns"
+              :key="col.name"
+              :title="col.name"
+              :data-index="col.name"
+            )
+              template(v-if="isTimeColumn(col)" #title)
+                a-tooltip(placement="top" :content="tsViewStr ? 'Show raw timestamp' : 'Format timestamp'")
+                  a-space(size="mini" :style="{ cursor: 'pointer' }" @click="changeTsView")
+                    svg.icon-12
+                      use(href="#time-index")
+                    | {{ col.name }}
+              template(#cell="{ record }")
+                template(v-if="col.name === 'traceid' || col.name === 'trace_id'")
+                  router-link(
+                    :to="{ name: 'dashboard-TraceDetail', params: { id: record[col.name] }, query: { table: currentTable } }"
+                  ) {{ record[col.name] }}
+                template(v-else-if="isTimeColumn(col)")
+                  span(style="cursor: pointer") {{ renderTs(record, col.name) }}
+                  svg.td-config-icon(
+                    v-if="sqlMode === 'builder'"
+                    @click="(event) => handleContextMenu(record, col.name, event)"
+                  )
+                    use(href="#menu")
+                template(v-else-if="col.name === 'attributes'")
+                  pre {{ JSON.stringify(record[col.name], null, 2) }}
+                template(v-else)
+                  span {{ record[col.name] }}
+                  svg.td-config-icon(
+                    v-if="sqlMode === 'builder'"
+                    @click="(event) => handleContextMenu(record, col.name, event)"
+                  )
+                    use(href="#menu")
 
   a-dropdown#td-context(
     v-model:popup-visible="contextMenuVisible"
@@ -444,18 +446,10 @@
 
 <style lang="less" scoped>
   .trace-query-container {
-    height: 100%;
+    height: 100vh;
     display: flex;
     flex-direction: column;
-  }
-
-  .page-header {
-    padding: 16px 16px 0;
-    h2 {
-      margin: 0;
-      font-size: 20px;
-      font-weight: 500;
-    }
+    overflow: hidden;
   }
 
   .content-wrapper {
@@ -463,11 +457,13 @@
     padding: 16px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    overflow: auto;
+    gap: 8px;
+    overflow: hidden;
+    min-height: 0; // Important for flexbox
   }
 
   .toolbar {
+    flex-shrink: 0;
     padding: 16px;
     border-bottom: 1px solid var(--color-border);
     display: flex;
@@ -476,6 +472,7 @@
   }
 
   .sql-container {
+    flex-shrink: 0;
     padding: 16px;
     display: flex;
     flex-direction: column;
@@ -507,6 +504,15 @@
     min-width: 200px;
   }
 
+  // Table container for flexible height
+  .table-container {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
   // Context menu positioning
   #td-context {
     position: absolute;
@@ -526,9 +532,19 @@
   // Table styling to match logs TableData
   :deep(.trace_table) {
     font-family: 'Roboto Mono', monospace;
+    height: 100%;
+
+    .arco-table {
+      height: 100%;
+    }
+
+    .arco-table-container {
+      height: 100%;
+    }
 
     .arco-table-element {
       font-family: 'Roboto Mono', monospace;
+      height: 100%;
     }
 
     .arco-table-td,
@@ -567,6 +583,22 @@
   :deep(.arco-card) {
     border-radius: 0;
     border-bottom: none;
+
+    // Make the last card (results) expandable
+    &:last-child {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+
+      .arco-card-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        padding: 0;
+      }
+    }
   }
 
   :deep(.arco-table-th) {
