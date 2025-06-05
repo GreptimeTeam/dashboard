@@ -81,7 +81,7 @@ a-form(
 </template>
 
 <script setup name="TraceSQLBuilder" lang="ts">
-  import { ref, watch, onMounted, computed } from 'vue'
+  import { ref, watch, onMounted, computed, readonly } from 'vue'
   import { useStorage } from '@vueuse/core'
   import editorAPI from '@/api/editor'
 
@@ -106,12 +106,12 @@ a-form(
     semantic_type: string
   }
 
-  const emit = defineEmits(['update:sql', 'update:table'])
+  const emit = defineEmits(['update:sql', 'update:table', 'update:modelValue'])
 
   const tables = ref<string[]>([])
   const tableMap = ref<{ [key: string]: TableField[] }>({})
 
-  // Use useStorage for form state
+  // Use useStorage for form state, but allow override from props
   const form = useStorage<Form>('trace-sql-builder-form', {
     conditions: [],
     orderByField: '',
@@ -305,6 +305,28 @@ a-form(
     },
     { immediate: true }
   )
+
+  // Function to add a filter condition from external components
+  function addFilterCondition(columnName: string, operator: string, value: string) {
+    const column = fields.value.find((col) => col.name === columnName)
+    if (!column) return
+
+    const isTimeCol = column.data_type.toLowerCase().includes('timestamp')
+
+    const newCondition: Condition = {
+      field: columnName,
+      operator,
+      value: String(value),
+      isTimeColumn: isTimeCol,
+    }
+
+    form.value.conditions.push(newCondition)
+  }
+
+  // Expose methods for external use
+  defineExpose({
+    addFilterCondition,
+  })
 </script>
 
 <style lang="less" scoped>

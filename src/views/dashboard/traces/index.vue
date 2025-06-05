@@ -31,6 +31,7 @@
       .sql-container
         SQLBuilder(
           v-if="sqlMode === 'builder'"
+          ref="sqlBuilderRef"
           @update:sql="handleBuilderSqlUpdate"
           @update:table="currentTable = $event"
         )
@@ -133,14 +134,37 @@
                 ) {{ record[col.name] }}
               template(v-else-if="isTimeColumn(col)")
                 span(style="cursor: pointer") {{ renderTs(record, col.name) }}
+                svg.td-config-icon(
+                  v-if="sqlMode === 'builder'"
+                  @click="(event) => handleContextMenu(record, col.name, event)"
+                )
+                  use(href="#menu")
               template(v-else-if="col.name === 'attributes'")
                 pre {{ JSON.stringify(record[col.name], null, 2) }}
               template(v-else)
-                | {{ record[col.name] }}
+                span {{ record[col.name] }}
+                svg.td-config-icon(
+                  v-if="sqlMode === 'builder'"
+                  @click="(event) => handleContextMenu(record, col.name, event)"
+                )
+                  use(href="#menu")
+
+  a-dropdown#td-context(
+    v-model:popup-visible="contextMenuVisible"
+    trigger="contextMenu"
+    :style="{ position: 'fixed', top: `${contextMenuPosition.y}px`, left: `${contextMenuPosition.x}px`, zIndex: 9999 }"
+    @clickoutside="hideContextMenu"
+    @select="handleMenuClick"
+  ) 
+    template(#content)
+      a-doption(value="copy") Copy Field Value
+      a-dsubmenu(trigger="hover") Filter
+        template(#content)
+          a-doption(v-for="op in filterOptions" :key="op" :value="`filter_${op}`") {{ op }} value
 </template>
 
 <script setup name="TraceQuery" lang="ts">
-  import { ref, computed, watch } from 'vue'
+  import { ref, computed, watch, shallowRef } from 'vue'
   import { useLocalStorage } from '@vueuse/core'
   import { IconCode, IconDown, IconRight, IconSettings } from '@arco-design/web-vue/es/icon'
   import editorAPI from '@/api/editor'
@@ -160,6 +184,7 @@
   const columns = ref<Array<{ name: string; data_type: string }>>([])
   const countChartRef = ref()
   const sqlEditorRef = ref()
+  const sqlBuilderRef = ref()
 
   // Chart expanded state with localStorage persistence
   const chartExpanded = useLocalStorage('trace-chart-expanded', true)
@@ -358,6 +383,63 @@
     pageSize.value = size
     currentPage.value = 1 // Reset to first page when page size changes
   }
+
+  // Context menu functionality
+  const contextMenuVisible = ref(false)
+  const contextMenuPosition = ref({ x: 0, y: 0 })
+  const filterOptions = shallowRef([])
+  const triggerCell = ref()
+
+  function handleContextMenu(record: any, columnName: string, event: Event) {
+    if (sqlMode.value !== 'builder') {
+      return
+    }
+    const rect = (event.target as Element).getBoundingClientRect()
+    triggerCell.value = [record, columnName]
+    event.preventDefault()
+
+    // Set available filter options based on column type
+    const column = columns.value.find((col) => col.name === columnName)
+    if (column) {
+      if (isTimeColumn(column)) {
+        filterOptions.value = ['>=', '<=']
+      } else {
+        filterOptions.value = ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'NOT LIKE']
+      }
+    }
+
+    contextMenuPosition.value = { x: rect.left, y: rect.y }
+    contextMenuVisible.value = true
+  }
+
+  function hideContextMenu() {
+    contextMenuVisible.value = false
+  }
+
+  async function handleMenuClick(value: string | number | Record<string, any>) {
+    const action = String(value)
+    if (!triggerCell.value) {
+      return
+    }
+    const [record, columnName] = triggerCell.value
+
+    if (action === 'copy') {
+      try {
+        await navigator.clipboard.writeText(record[columnName])
+        // Show success message
+        console.log('Copied to clipboard:', record[columnName])
+      } catch (error) {
+        console.error('Failed to copy to clipboard:', error)
+      }
+    } else if (action.startsWith('filter')) {
+      const operator = action.split('_')[1]
+      // Add filter condition to SQLBuilder
+      if (sqlBuilderRef.value && sqlBuilderRef.value.addFilterCondition) {
+        sqlBuilderRef.value.addFilterCondition(columnName, operator, record[columnName])
+      }
+    }
+    hideContextMenu()
+  }
 </script>
 
 <style lang="less" scoped>
@@ -425,6 +507,22 @@
     min-width: 200px;
   }
 
+  // Context menu positioning
+  #td-context {
+    position: absolute;
+    z-index: 999999;
+  }
+
+  // Menu icon styling (matches logs TableData)
+  .td-config-icon {
+    margin-left: 3px;
+    cursor: pointer;
+    visibility: hidden;
+    width: 12px;
+    height: 12px;
+    color: var(--color-primary);
+  }
+
   // Table styling to match logs TableData
   :deep(.trace_table) {
     font-family: 'Roboto Mono', monospace;
@@ -448,7 +546,21 @@
       .arco-table-td-content {
         overflow: hidden;
         text-overflow: ellipsis;
+        position: relative;
+        width: auto;
+        padding-right: 15px;
       }
+
+      .td-config-icon {
+        position: absolute;
+        right: 0;
+        top: 5px;
+      }
+    }
+
+    // Show menu icon on hover when in builder mode
+    &.multiple_column .arco-table-cell:hover .td-config-icon {
+      visibility: visible;
     }
   }
 
