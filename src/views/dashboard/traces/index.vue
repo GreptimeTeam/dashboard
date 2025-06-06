@@ -32,7 +32,7 @@
         SQLBuilder(
           v-if="sqlMode === 'builder'"
           ref="sqlBuilderRef"
-          :has-time-limit="hasTimeLimit"
+          :has-time-limit="timeLength > 0"
           @update:sql="handleBuilderSqlUpdate"
           @update:table="currentTable = $event"
         )

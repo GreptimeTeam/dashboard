@@ -11,58 +11,50 @@ a-form(
       v-model="form.table"
       style="width: auto"
       placeholder="Select table"
+      :allow-search="true"
+      :trigger-props="{ autoFitPopupMinWidth: true }"
       :options="tables"
       @change="handleTableChange"
     )
   a-form-item(label="Where")
-    .condition-list
-      .condition-item(v-for="(condition, index) in form.conditions" :key="index")
-        a-space
+    .condition-wrapper
+      a-space(v-for="(condition, index) in form.conditions" :key="index")
+        a-input-group.input-group
           a-select(
-            v-if="condition.isTimeColumn"
-            v-model="condition.field"
+            v-if="index > 0"
+            v-model="condition.relation"
             style="width: auto"
-            placeholder="Select field"
+            :options="['AND', 'OR']"
+          )
+          a-select.field(
+            v-model="condition.field"
+            allow-search
+            placeholder="field"
+            style="width: auto"
+            :trigger-props="{ autoFitPopupMinWidth: true }"
             :options="fieldsOptions"
           )
-          a-select(
-            v-else
-            v-model="condition.field"
-            style="width: auto"
-            placeholder="Select field"
-            :options="fieldsOptions"
-          )
-          a-select(
+          a-select.operator(
             v-model="condition.operator"
+            placeholder="operator"
             style="width: auto"
-            placeholder="Operator"
+            :trigger-props="{ autoFitPopupMinWidth: true }"
             :options="getOperators(condition.field)"
           )
-          template(v-if="!condition.isTimeColumn && !isSpecialTimeOperator(condition.operator)")
-            a-input(
-              v-model="condition.value"
-              style="width: auto"
-              placeholder="Value"
-              :disabled="isSpecialTimeOperator(condition.operator)"
-            )
+          a-input.value(v-model="condition.value" placeholder="value")
+            template(#append)
+              icon-minus(style="cursor: pointer; font-size: 14px" @click="() => removeCondition(index)")
 
-          a-button(
-            v-if="form.conditions.length > 0"
-            type="text"
-            status="danger"
-            @click="removeCondition(index)"
-          )
-            template(#icon)
-              icon-delete
-          icon-plus(style="cursor: pointer; font-size: 14px" @click="addCondition")
-      icon-plus(v-if="form.conditions.length < 1" style="cursor: pointer; font-size: 14px" @click="addCondition")
+      icon-plus(style="cursor: pointer; font-size: 14px" @click="addCondition")
   a-form-item(label="Order By")
     a-space
       a-select(
         v-model="form.orderByField"
         style="width: 200px"
         placeholder="Select field"
-        :options="timeColumns"
+        allow-search
+        :options="fieldsOptions"
+        :trigger-props="{ autoFitPopupMinWidth: true }"
       )
       a-select(
         v-model="form.orderBy"
@@ -89,6 +81,7 @@ a-form(
     field: string
     operator: string
     value: string
+    relation?: string
     isTimeColumn?: boolean
   }
 
@@ -151,29 +144,50 @@ a-form(
     { label: 'DESC', value: 'DESC' },
   ]
 
-  const timeOperators = [
-    { label: 'Between TimeRange', value: 'BETWEEN_TIME' },
-    { label: 'Any time', value: 'ANY_TIME' },
-    { label: '>=', value: '>=' },
-    { label: '<=', value: '<=' },
-  ]
+  // Operator mapping based on field data type (similar to log query)
+  const operatorMap = {
+    String: ['=', '!=', 'LIKE', 'NOT LIKE'],
+    Number: ['=', '!=', '>', '>=', '<', '<='],
+    Time: ['>', '>=', '<', '<='],
+    Boolean: ['=', '!='],
+    Default: ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'NOT LIKE'],
+  }
 
-  const normalOperators = [
-    { label: '=', value: '=' },
-    { label: '!=', value: '!=' },
-    { label: '>', value: '>' },
-    { label: '<', value: '<' },
-    { label: '>=', value: '>=' },
-    { label: '<=', value: '<=' },
-    { label: 'LIKE', value: 'LIKE' },
-    { label: 'NOT LIKE', value: 'NOT LIKE' },
-  ]
+  function getFieldType(fieldName: string): string {
+    const field = fields.value.find((f) => f.name === fieldName)
+    if (!field) return 'Default'
+
+    const dataType = field.data_type.toLowerCase()
+
+    if (dataType.includes('timestamp') || dataType.includes('date')) {
+      return 'Time'
+    }
+    if (
+      dataType.includes('int') ||
+      dataType.includes('float') ||
+      dataType.includes('double') ||
+      dataType.includes('decimal')
+    ) {
+      return 'Number'
+    }
+    if (dataType.includes('bool')) {
+      return 'Boolean'
+    }
+    if (dataType.includes('string') || dataType.includes('varchar') || dataType.includes('text')) {
+      return 'String'
+    }
+
+    return 'Default'
+  }
 
   function getOperators(field: string) {
-    if (field.toLowerCase().includes('time')) {
-      return timeOperators
-    }
-    return normalOperators
+    const fieldType = getFieldType(field)
+    const operators = operatorMap[fieldType] || operatorMap.Default
+
+    return operators.map((op) => ({
+      label: op,
+      value: op,
+    }))
   }
 
   function isSpecialTimeOperator(operator: string) {
@@ -233,6 +247,7 @@ a-form(
       field: '',
       operator: '=',
       value: '',
+      relation: 'AND',
       isTimeColumn: false,
     })
   }
@@ -240,32 +255,76 @@ a-form(
   function removeCondition(index: number) {
     form.value.conditions.splice(index, 1)
   }
+  function escapeSqlString(value: string) {
+    if (typeof value !== 'string') {
+      return value // Only escape if it's a string
+    }
 
+    // Replace common SQL special characters with their escaped versions
+    return value
+      .replace(/\\/g, '\\\\') // Escape backslashes
+      .replace(/'/g, "''") // Escape single quotes by doubling
+      .replace(/\n/g, '\\n') // Escape newline
+      .replace(/\r/g, '\\r') // Escape carriage return
+  }
+
+  function singleCondition(condition: Condition) {
+    const column = condition.field
+    const columnType = getFieldType(column)
+    const conditionVal = escapeSqlString(condition.value)
+    let columnName = condition.field
+    // if (columnName.toUpperCase() !== columnName && columnName.toLowerCase() !== columnName) {
+    //   columnName = `"${columnName}"`
+    // }
+    columnName = `"${columnName}"`
+    if (columnType === 'Number' || columnType === 'Time') {
+      return `${columnName} ${condition.operator} ${condition.value}`
+    }
+    if (condition.operator === 'like') {
+      // return `MATCHES(${columnName},'"${escapeSqlString(condition.value)}"')`
+      return `${columnName} like '%${conditionVal}%'`
+    }
+    if (['contains', 'not contains', 'match sequence'].indexOf(condition.operator) > -1) {
+      let val = escapeSqlString(condition.value)
+      if (condition.operator === 'not contains') {
+        val = `-"${val}"`
+      } else if (condition.operator === 'contains') {
+        val = `"${val}"`
+      }
+      return `MATCHES(${columnName},'${val}')`
+    }
+    return `${columnName} ${condition.operator} '${escapeSqlString(condition.value)}'`
+  }
   const generatedSQL = computed(() => {
     const conditions = form.value.conditions
       .filter((condition) => {
-        if (condition.isTimeColumn) {
-          return condition.field && (isSpecialTimeOperator(condition.operator) || condition.value)
-        }
         return condition.field && condition.operator && condition.value
       })
-      .map((condition) => {
-        if (condition.operator === 'LIKE' || condition.operator === 'NOT LIKE') {
-          return `${condition.field} ${condition.operator} '%${condition.value}%'`
+      .map((condition, index) => {
+        let conditionStr = singleCondition(condition)
+        // Add relation for conditions after the first one
+        if (index > 0) {
+          conditionStr = `${condition.relation || 'AND'} ${conditionStr}`
         }
-        return `${condition.field} ${condition.operator} '${condition.value}'`
+        return conditionStr
       })
 
-    // Add timestamp range condition when timeLength > 0
+    // Add timestamp range condition when hasTimeLimit is true
     const timeConditions = [...conditions]
     if (props.hasTimeLimit && timeColumns.value.length > 0) {
       const firstTimeColumn = timeColumns.value[0]
-      timeConditions.push(`${firstTimeColumn.value} < '$timeend' AND ${firstTimeColumn.value} > '$timestart'`)
+      const timeCondition = `${firstTimeColumn.value} < '$timeend' AND ${firstTimeColumn.value} > '$timestart'`
+
+      if (timeConditions.length > 0) {
+        timeConditions.push(`AND ${timeCondition}`)
+      } else {
+        timeConditions.push(timeCondition)
+      }
     }
 
     let sql = `SELECT * FROM ${form.value.table}`
     if (timeConditions.length > 0) {
-      sql += ` WHERE ${timeConditions.join(' AND ')}`
+      sql += ` WHERE ${timeConditions.join(' ')}`
     }
     if (form.value.orderByField) {
       sql += ` ORDER BY ${form.value.orderByField} ${form.value.orderBy}`
@@ -331,16 +390,26 @@ a-form(
     justify-content: center !important;
   }
 
-  .condition-list {
+  .condition-wrapper {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
+    gap: 12px;
+    align-items: center;
   }
 
-  .condition-item {
+  .input-group {
     display: flex;
-    align-items: center;
-    gap: 8px;
+  }
+
+  .field {
+    width: 150px;
+  }
+
+  .arco-select.operator {
+    width: auto;
+  }
+
+  .value {
+    width: 100px;
   }
 
   :deep(.arco-input-append) {
