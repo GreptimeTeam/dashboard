@@ -236,4 +236,7 @@ a-drawer(
       padding: 0;
     }
   }
+  :deep(.arco-descriptions-item-value) {
+    vertical-align: top;
+  }
 </style>

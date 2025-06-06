@@ -35,7 +35,8 @@ a-spin.spin-block(:loading="loading")
               .time-bar(
                 :style=`{
                   left: getRelativePosition(data, rootSpan?.timestamp || 0, (rootSpan?.timestamp || 0) + (rootSpan?.duration_nano || 0)) + '%',
-                  width: getDurationWidth(data, rootSpan?.timestamp || 0, (rootSpan?.timestamp || 0) + (rootSpan?.duration_nano || 0)) + '%'
+                  width: getDurationWidth(data, rootSpan?.timestamp || 0, (rootSpan?.timestamp || 0) + (rootSpan?.duration_nano || 0)) + '%',
+                  backgroundColor: data.status === 'error' ? 'var(--color-danger-light-1)' : getServiceColor(data.service_name)
                 }`
                 :class="{ error: data.status === 'error' }"
               )
@@ -71,6 +72,36 @@ a-spin.spin-block(:loading="loading")
   const treeRef = ref()
   const spanInfoWidth = ref('300px')
 
+  // Predefined color palette for service names
+  const serviceColors = [
+    '#7B9BFF', // Muted blue
+    '#52C41A', // Muted green
+    '#FA8C16', // Muted orange
+    '#597EF7', // Muted indigo (replacing red)
+    '#9254DE', // Muted purple
+    '#36CFC9', // Muted teal
+    '#D4B106', // Muted gold (replacing pink)
+    '#FADB14', // Muted yellow
+    '#8C8C8C', // Muted gray
+    '#40A9FF', // Muted light blue
+    '#95DE64', // Muted light green
+    '#FFC069', // Muted light orange
+  ]
+
+  function getServiceColor(serviceName: string): string {
+    if (!serviceName) return serviceColors[0]
+
+    // Create a simple hash from service name to consistently assign colors
+    let hash = 0
+    for (let i = 0; i < serviceName.length; i += 1) {
+      const char = serviceName.charCodeAt(i)
+      hash = (hash * 31 + char) % Number.MAX_SAFE_INTEGER
+    }
+
+    const colorIndex = Math.abs(hash) % serviceColors.length
+    return serviceColors[colorIndex]
+  }
+
   function formatTickTime(index: number): string {
     if (!props.rootSpan) return ''
     const duration = props.rootSpan.duration_nano
@@ -89,7 +120,7 @@ a-spin.spin-block(:loading="loading")
 
   function getSpanInfoStyle(level: number) {
     return {
-      width: `calc(${spanInfoWidth.value} - 33px - ${level * 22}px)`,
+      width: `calc(${spanInfoWidth.value} - 36px - ${level * 22}px)`,
     }
   }
 </script>
@@ -127,6 +158,7 @@ a-spin.spin-block(:loading="loading")
     align-items: stretch;
     justify-content: space-between;
     width: 100%;
+    height: 100%;
 
     .tick {
       flex: 1;
@@ -186,13 +218,8 @@ a-spin.spin-block(:loading="loading")
         height: 6px;
         top: 50%;
         transform: translateY(-50%);
-        background-color: var(--color-primary);
         border-radius: 2px;
         transition: all 0.2s;
-
-        &.error {
-          background-color: var(--color-danger-light-1);
-        }
 
         .time-info {
           position: absolute;
