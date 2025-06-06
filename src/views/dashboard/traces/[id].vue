@@ -195,7 +195,7 @@
   }
 
   .content-container {
-    padding: 16px;
+    padding: 16px 8px 16px 16px;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -204,7 +204,7 @@
 
   .cards-row {
     display: flex;
-    gap: 16px;
+    gap: 8px;
     flex: 1;
     min-height: 0;
 
