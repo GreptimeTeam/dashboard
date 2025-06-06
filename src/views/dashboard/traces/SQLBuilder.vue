@@ -185,7 +185,7 @@ a-form(
       const result = await editorAPI.runSQL(
         `SELECT DISTINCT table_name
        FROM information_schema.columns
-       WHERE table_schema = 'public'
+       WHERE column_name = 'trace_id'
        ORDER BY table_name`
       )
       tables.value = result.output[0].records.rows.map((row: string[]) => row[0])
