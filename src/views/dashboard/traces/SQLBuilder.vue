@@ -116,7 +116,13 @@ a-form(
 
   // Use useStorage for form state, but allow override from props
   const form = useStorage<Form>('trace-sql-builder-form', {
-    conditions: [],
+    conditions: [
+      {
+        field: 'parent_span_id',
+        operator: 'Not Exist',
+        value: '',
+      },
+    ],
     orderByField: '',
     orderBy: 'DESC',
     limit: 100,
@@ -204,6 +210,7 @@ a-form(
        ORDER BY table_name`
       )
       tables.value = result.output[0].records.rows.map((row: string[]) => row[0])
+      form.value.table = tables.value[0]
     } catch (error) {
       console.error('Failed to fetch tables:', error)
     }
