@@ -25,13 +25,14 @@
             empty-str="Select Time Range"
             button-size="small"
             :relative-time-map="relativeTimeMap"
-            :relative-time-options="relativeTimeOptions"
+            :relative-time-options="[{ value: 0, label: 'No Time Limit' }, ...relativeTimeOptions]"
           )
           a-button(type="primary" size="small" @click="handleQuery") Query
       .sql-container
         SQLBuilder(
           v-if="sqlMode === 'builder'"
           ref="sqlBuilderRef"
+          :has-time-limit="hasTimeLimit"
           @update:sql="handleBuilderSqlUpdate"
           @update:table="currentTable = $event"
         )
@@ -209,6 +210,8 @@
   const timeLength = ref(10) // Default to last 10 minutes
   const timeRange = ref<string[]>([])
 
+  const hasTimeLimit = computed(() => timeLength.value > 0 || timeRange.value.length > 0)
+
   // Computed paginated results
   const results = computed(() => {
     const start = (currentPage.value - 1) * pageSize.value
@@ -331,7 +334,9 @@
       const [start, end] = [`now() - Interval '${timeLength.value}m'`, 'now()']
       sql = query.replace("'$timeend'", end).replace("'$timestart'", start)
     } else if (timeRange.value.length === 2) {
-      sql = query.replace('$timeend', timeRange.value[1]).replace('$timestart', timeRange.value[0])
+      sql = query
+        .replace('$timeend', new Date(Number(timeRange.value[1]) * 1000).toISOString())
+        .replace('$timestart', new Date(Number(timeRange.value[0]) * 1000).toISOString())
     }
     return sql
   })
@@ -558,6 +563,11 @@
     .arco-table-element {
       font-family: 'Roboto Mono', monospace;
       height: 100%;
+    }
+
+    // Center align empty state
+    .arco-table-tr-empty .arco-table-cell {
+      justify-content: center;
     }
 
     .arco-table-td,

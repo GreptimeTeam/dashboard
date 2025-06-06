@@ -106,7 +106,12 @@ a-form(
     semantic_type: string
   }
 
-  const emit = defineEmits(['update:sql', 'update:table', 'update:modelValue'])
+  const emit = defineEmits(['update:sql', 'update:table'])
+
+  // Props for timeLength
+  const props = defineProps<{
+    hasTimeLimit?: boolean
+  }>()
 
   const tables = ref<string[]>([])
   const tableMap = ref<{ [key: string]: TableField[] }>({})
@@ -213,20 +218,10 @@ a-form(
     form.value.orderByField = ''
   }
 
-  // Watch for timeColumns changes to add default time range condition
+  // Watch for timeColumns changes - no longer add default time range condition
   watch(timeColumns, (newTimeColumns) => {
     if (form.value.table && newTimeColumns.length > 0) {
       const firstTimeColumn = newTimeColumns[0]
-      if (form.value.conditions.length === 0) {
-        form.value.conditions = [
-          {
-            field: firstTimeColumn.value,
-            operator: 'BETWEEN_TIME',
-            value: '',
-            isTimeColumn: true,
-          },
-        ]
-      }
       if (!form.value.orderByField) {
         form.value.orderByField = firstTimeColumn.value
       }
@@ -246,7 +241,7 @@ a-form(
     form.value.conditions.splice(index, 1)
   }
 
-  function generateSQL() {
+  const generatedSQL = computed(() => {
     const conditions = form.value.conditions
       .filter((condition) => {
         if (condition.isTimeColumn) {
@@ -255,25 +250,22 @@ a-form(
         return condition.field && condition.operator && condition.value
       })
       .map((condition) => {
-        if (condition.isTimeColumn) {
-          switch (condition.operator) {
-            case 'BETWEEN_TIME':
-              return `${condition.field} < '$timeend' AND ${condition.field} > '$timestart'`
-            case 'ANY_TIME':
-              return `1=1` // Always true condition
-            default:
-              return `${condition.field} ${condition.operator} '${condition.value}'`
-          }
-        }
         if (condition.operator === 'LIKE' || condition.operator === 'NOT LIKE') {
           return `${condition.field} ${condition.operator} '%${condition.value}%'`
         }
         return `${condition.field} ${condition.operator} '${condition.value}'`
       })
 
+    // Add timestamp range condition when timeLength > 0
+    const timeConditions = [...conditions]
+    if (props.hasTimeLimit && timeColumns.value.length > 0) {
+      const firstTimeColumn = timeColumns.value[0]
+      timeConditions.push(`${firstTimeColumn.value} < '$timeend' AND ${firstTimeColumn.value} > '$timestart'`)
+    }
+
     let sql = `SELECT * FROM ${form.value.table}`
-    if (conditions.length > 0) {
-      sql += ` WHERE ${conditions.join(' AND ')}`
+    if (timeConditions.length > 0) {
+      sql += ` WHERE ${timeConditions.join(' AND ')}`
     }
     if (form.value.orderByField) {
       sql += ` ORDER BY ${form.value.orderByField} ${form.value.orderBy}`
@@ -281,15 +273,15 @@ a-form(
     sql += ` LIMIT ${form.value.limit}`
 
     return sql
-  }
+  })
 
-  // Watch for form changes and emit SQL updates
+  // Watch for SQL changes and emit updates
   watch(
-    () => form.value,
-    () => {
-      emit('update:sql', generateSQL())
+    generatedSQL,
+    (newSQL) => {
+      emit('update:sql', newSQL)
     },
-    { immediate: true, deep: true }
+    { immediate: true }
   )
 
   // Load saved state on mount
@@ -321,6 +313,7 @@ a-form(
     }
 
     form.value.conditions.push(newCondition)
+    // SQL will automatically regenerate due to computed property
   }
 
   // Expose methods for external use
