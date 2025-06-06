@@ -41,11 +41,16 @@ a-form(
             :trigger-props="{ autoFitPopupMinWidth: true }"
             :options="getOperators(condition.field)"
           )
-          a-input.value(v-model="condition.value" placeholder="value")
-            template(#append)
-              icon-minus(style="cursor: pointer; font-size: 14px" @click="() => removeCondition(index)")
+          a-input.value(
+            v-if="condition.operator !== 'Not Exist' && condition.operator !== 'Exist'"
+            v-model="condition.value"
+            placeholder="value"
+          )
+          a-button(@click="() => removeCondition(index)")
+            icon-minus(style="cursor: pointer; font-size: 14px")
 
-      icon-plus(style="cursor: pointer; font-size: 14px" @click="addCondition")
+      a-button(type="text" @click="addCondition")
+        icon-plus(style="cursor: pointer; font-size: 14px")
   a-form-item(label="Order By")
     a-space
       a-select(
@@ -146,11 +151,11 @@ a-form(
 
   // Operator mapping based on field data type (similar to log query)
   const operatorMap = {
-    String: ['=', '!=', 'LIKE', 'NOT LIKE'],
-    Number: ['=', '!=', '>', '>=', '<', '<='],
-    Time: ['>', '>=', '<', '<='],
-    Boolean: ['=', '!='],
-    Default: ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'NOT LIKE'],
+    String: ['=', '!=', 'LIKE', 'NOT LIKE', 'Not Exist', 'Exist'],
+    Number: ['=', '!=', '>', '>=', '<', '<=', 'Not Exist', 'Exist'],
+    Time: ['>', '>=', '<', '<=', 'Not Exist', 'Exist'],
+    Boolean: ['=', '!=', 'Not Exist', 'Exist'],
+    Default: ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'NOT LIKE', 'Not Exist', 'Exist'],
   }
 
   function getFieldType(fieldName: string): string {
@@ -188,10 +193,6 @@ a-form(
       label: op,
       value: op,
     }))
-  }
-
-  function isSpecialTimeOperator(operator: string) {
-    return operator === 'BETWEEN_TIME' || operator === 'ANY_TIME'
   }
 
   async function fetchTables() {
@@ -277,6 +278,12 @@ a-form(
     //   columnName = `"${columnName}"`
     // }
     columnName = `"${columnName}"`
+    if (condition.operator === 'Exist') {
+      return `${columnName} is not null`
+    }
+    if (condition.operator === 'Not Exist') {
+      return `${columnName} is null`
+    }
     if (columnType === 'Number' || columnType === 'Time') {
       return `${columnName} ${condition.operator} ${condition.value}`
     }
@@ -298,6 +305,9 @@ a-form(
   const generatedSQL = computed(() => {
     const conditions = form.value.conditions
       .filter((condition) => {
+        if (condition.operator === 'Not Exist' || condition.operator === 'Exist') {
+          return condition.field
+        }
         return condition.field && condition.operator && condition.value
       })
       .map((condition, index) => {
@@ -418,5 +428,12 @@ a-form(
 
   :deep(.arco-select-view-input) {
     width: 100px;
+  }
+  :deep(.arco-btn-secondary[type='button']) {
+    color: var(--color-text-2);
+    background-color: var(--color-secondary);
+  }
+  :deep(.arco-btn-text[type='button']) {
+    color: var(--color-text-2);
   }
 </style>
