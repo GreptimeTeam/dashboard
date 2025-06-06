@@ -4,7 +4,14 @@
     .header-content
       a-button(type="text" @click="handleBack")
         icon-left
-        span Back
+      .trace-info
+        .trace-title
+          span.operation-name {{ rootSpan?.span_name || 'Unknown Operation' }}
+          a-tag.span-count {{ traceSpans.length }} span{{ traceSpans.length === 1 ? '' : 's' }}
+        .trace-id
+          span.label Trace ID:
+          a-typography-text.trace-id-value(copyable :copy-text="traceId")
+            | {{ traceId }}
   .content-container
     .cards-row
       a-card.light-editor-card(title="Trace Timeline" :bordered="false")
@@ -99,6 +106,7 @@
 
   const spanTree = computed(() => buildSpanTree(traceSpans.value))
   const rootSpan = computed(() => traceSpans.value.find((span) => !span.parent_span_id) || null)
+  const traceId = computed(() => route.params.id as string)
 
   // Watch for route changes
 
@@ -125,24 +133,63 @@
   }
 
   .page-header {
-    padding: 16px 16px 0;
+    padding: 0 16px 0;
     border-bottom: 1px solid var(--color-border);
 
     .header-content {
       display: flex;
       align-items: center;
-      gap: 8px;
-
-      h2 {
-        margin: 0;
-        font-size: 20px;
-        font-weight: 500;
-      }
-
+      gap: 16px;
+      padding: 8px 0;
       :deep(.arco-btn) {
         display: flex;
         align-items: center;
         gap: 4px;
+      }
+    }
+
+    .trace-info {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+
+      .trace-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        .operation-name {
+          font-size: 20px;
+          font-weight: 600;
+          color: var(--color-text-1);
+        }
+
+        .span-count {
+          background-color: var(--color-primary-light-1);
+          color: var(--color-primary);
+          border: 1px solid var(--color-primary-light-3);
+          font-size: 12px;
+          padding: 2px 8px;
+        }
+      }
+
+      .trace-id {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .label {
+          font-size: 12px;
+          color: var(--color-text-3);
+          font-weight: 500;
+        }
+
+        .trace-id-value {
+          font-family: 'Roboto Mono', monospace;
+          font-size: 12px;
+          color: var(--color-text-2);
+        }
       }
     }
   }

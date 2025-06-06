@@ -1,6 +1,6 @@
 <template lang="pug">
 .timeline-header(style="display: flex; align-items: stretch")
-  a-split(v-model:size="spanInfoWidth" :min="200" :max="500")
+  a-split(v-model:size="spanInfoWidth" :min="200" :max="1000")
     template(#first)
       .span-name Operation Name
     template(#second)
@@ -89,8 +89,7 @@ a-spin.spin-block(:loading="loading")
 
   function getSpanInfoStyle(level: number) {
     return {
-      width: `calc(${spanInfoWidth.value} - ${level * 22}px)`,
-      minWidth: `calc(${spanInfoWidth.value} - ${level * 22}px)`,
+      width: `calc(${spanInfoWidth.value} - 33px - ${level * 22}px)`,
     }
   }
 </script>
