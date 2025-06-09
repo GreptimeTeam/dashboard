@@ -86,7 +86,7 @@ a-form(
     field: string
     operator: string
     value: string
-    relation?: string
+    relation?: 'AND' | 'OR'
     isTimeColumn?: boolean
   }
 
@@ -386,6 +386,7 @@ a-form(
       operator,
       value: String(value),
       isTimeColumn: isTimeCol,
+      relation: 'AND',
     }
 
     form.value.conditions.push(newCondition)
