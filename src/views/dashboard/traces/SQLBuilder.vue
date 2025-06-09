@@ -78,7 +78,7 @@ a-form(
 </template>
 
 <script setup name="TraceSQLBuilder" lang="ts">
-  import { ref, watch, onMounted, computed, readonly } from 'vue'
+  import { ref, watch, onMounted, computed, readonly, reactive } from 'vue'
   import editorAPI from '@/api/editor'
 
   interface Condition {
@@ -114,7 +114,7 @@ a-form(
   const tables = ref<string[]>([])
   const tableMap = ref<{ [key: string]: TableField[] }>({})
 
-  // Use initial form state from props if provided, otherwise use localStorage
+  // Use initial form state from props if provided, otherwise use default
   const defaultFormState: Form = {
     conditions: [
       {
@@ -129,15 +129,15 @@ a-form(
     table: '',
   }
 
-  // Initialize form state based on props or localStorage
-  const form = ref<Form>(props.initialFormState || defaultFormState)
+  // Initialize form state as reactive object
+  const form = reactive<Form>(props.initialFormState || defaultFormState)
 
   // Watch for prop changes and update form
   watch(
     () => props.initialFormState,
     (newFormState) => {
       if (newFormState) {
-        form.value = { ...newFormState }
+        Object.assign(form, newFormState)
       }
     },
     { immediate: true }
@@ -153,8 +153,8 @@ a-form(
   )
 
   const fields = computed(() => {
-    if (!form.value.table || !tableMap.value[form.value.table]) return []
-    return tableMap.value[form.value.table]
+    if (!form.table || !tableMap.value[form.table]) return []
+    return tableMap.value[form.table]
   })
 
   const fieldsOptions = computed(() => {
@@ -236,7 +236,7 @@ a-form(
 
       // Only set default table if we don't have initial form state from props
       if (!props.initialFormState && tables.value.length > 0) {
-        form.value.table = tables.value[0]
+        form.table = tables.value[0]
       }
     } catch (error) {
       console.error('Failed to fetch tables:', error)
@@ -263,22 +263,22 @@ a-form(
   }
 
   function handleTableChange() {
-    form.value.conditions = []
-    form.value.orderByField = ''
+    form.conditions = []
+    form.orderByField = ''
   }
 
   // Watch for timeColumns changes - no longer add default time range condition
   watch(timeColumns, (newTimeColumns) => {
-    if (form.value.table && newTimeColumns.length > 0) {
+    if (form.table && newTimeColumns.length > 0) {
       const firstTimeColumn = newTimeColumns[0]
-      if (!form.value.orderByField) {
-        form.value.orderByField = firstTimeColumn.value
+      if (!form.orderByField) {
+        form.orderByField = firstTimeColumn.value
       }
     }
   })
 
   function addCondition() {
-    form.value.conditions.push({
+    form.conditions.push({
       field: '',
       operator: '=',
       value: '',
@@ -288,7 +288,7 @@ a-form(
   }
 
   function removeCondition(index: number) {
-    form.value.conditions.splice(index, 1)
+    form.conditions.splice(index, 1)
   }
   function escapeSqlString(value: string) {
     if (typeof value !== 'string') {
@@ -337,7 +337,7 @@ a-form(
     return `${columnName} ${condition.operator} '${escapeSqlString(condition.value)}'`
   }
   const generatedSQL = computed(() => {
-    const conditions = form.value.conditions
+    const conditions = form.conditions
       .filter((condition) => {
         if (condition.operator === 'Not Exist' || condition.operator === 'Exist') {
           return condition.field
@@ -366,14 +366,14 @@ a-form(
       }
     }
 
-    let sql = `SELECT * FROM ${form.value.table}`
+    let sql = `SELECT * FROM ${form.table}`
     if (timeConditions.length > 0) {
       sql += ` WHERE ${timeConditions.join(' ')}`
     }
-    if (form.value.orderByField) {
-      sql += ` ORDER BY ${form.value.orderByField} ${form.value.orderBy}`
+    if (form.orderByField) {
+      sql += ` ORDER BY ${form.orderByField} ${form.orderBy}`
     }
-    sql += ` LIMIT ${form.value.limit}`
+    sql += ` LIMIT ${form.limit}`
 
     return sql
   })
@@ -382,7 +382,7 @@ a-form(
   watch(
     generatedSQL,
     (newSQL) => {
-      if (form.value.table) emit('update:sql', newSQL)
+      if (form.table) emit('update:sql', newSQL)
     },
     { immediate: true }
   )
@@ -393,9 +393,9 @@ a-form(
   })
 
   watch(
-    () => form.value.table,
+    () => form.table,
     () => {
-      fetchTableFields(form.value.table)
+      fetchTableFields(form.table)
       // Table value is now extracted from form state in parent component
     },
     { immediate: true }
@@ -416,7 +416,7 @@ a-form(
       relation: 'AND',
     }
 
-    form.value.conditions.push(newCondition)
+    form.conditions.push(newCondition)
     // SQL will automatically regenerate due to computed property
   }
 
