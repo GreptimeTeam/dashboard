@@ -336,7 +336,11 @@ a-form(
     }
     return `${columnName} ${condition.operator} '${escapeSqlString(condition.value)}'`
   }
-  const generatedSQL = computed(() => {
+
+  watch([form, timeColumns, () => props.hasTimeLimit], () => {
+    if (!form.table) return
+    if (!timeColumns.value.length) return
+    const availableTimeColumns = timeColumns.value
     const conditions = form.conditions
       .filter((condition) => {
         if (condition.operator === 'Not Exist' || condition.operator === 'Exist') {
@@ -355,8 +359,8 @@ a-form(
 
     // Add timestamp range condition when hasTimeLimit is true
     const timeConditions = [...conditions]
-    if (props.hasTimeLimit && timeColumns.value.length > 0) {
-      const firstTimeColumn = timeColumns.value[0]
+    if (props.hasTimeLimit && availableTimeColumns.length > 0) {
+      const firstTimeColumn = availableTimeColumns[0]
       const timeCondition = `${firstTimeColumn.value} < '$timeend' AND ${firstTimeColumn.value} > '$timestart'`
 
       if (timeConditions.length > 0) {
@@ -374,18 +378,8 @@ a-form(
       sql += ` ORDER BY ${form.orderByField} ${form.orderBy}`
     }
     sql += ` LIMIT ${form.limit}`
-
-    return sql
+    emit('update:sql', sql)
   })
-
-  // Watch for SQL changes and emit updates
-  watch(
-    generatedSQL,
-    (newSQL) => {
-      if (form.table && timeColumns.value.length > 0) emit('update:sql', newSQL)
-    },
-    { immediate: true }
-  )
 
   // Load saved state on mount
   onMounted(() => {
