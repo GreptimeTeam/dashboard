@@ -382,7 +382,7 @@ a-form(
   watch(
     generatedSQL,
     (newSQL) => {
-      if (form.table) emit('update:sql', newSQL)
+      if (form.table && timeColumns.value.length > 0) emit('update:sql', newSQL)
     },
     { immediate: true }
   )

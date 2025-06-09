@@ -125,18 +125,7 @@
   const currentBuilderFormState = ref(null)
 
   // Get initial form state from URL query
-  const initialBuilderFormState = computed(() => {
-    const { builderForm } = route.query
-    if (builderForm) {
-      try {
-        return JSON.parse(decodeURIComponent(builderForm as string))
-      } catch (error) {
-        console.warn('Failed to parse builder form state from URL:', error)
-        return null
-      }
-    }
-    return null
-  })
+  const initialBuilderFormState = ref(null)
 
   // Computed table name - get from form state or parse from SQL
   const tableName = computed(() => {
@@ -163,16 +152,11 @@
     // Update SQL mode
     query.sqlMode = sqlMode.value
 
-    // Update time selection
-    query.timeLength = timeLength.value.toString()
-
     if (timeRange.value.length === 2) {
-      query.timeStart = timeRange.value[0]
-      query.timeEnd = timeRange.value[1]
-      delete query.timeRange
+      query.timeRange = timeRange.value
+      delete query.timeLength
     } else {
-      delete query.timeStart
-      delete query.timeEnd
+      query.timeLength = timeLength.value.toString()
       delete query.timeRange
     }
 
@@ -200,10 +184,17 @@
       sqlMode: querySqlMode,
       timeLength: queryTimeLength,
       timeRange: queryTimeRange,
-      timeStart,
-      timeEnd,
       editorSql: queryEditorSql,
     } = route.query
+    const { builderForm } = route.query
+    if (builderForm) {
+      try {
+        initialBuilderFormState.value = JSON.parse(decodeURIComponent(builderForm as string))
+      } catch (error) {
+        console.warn('Failed to parse builder form state from URL:', error)
+      }
+    }
+    currentBuilderFormState.value = initialBuilderFormState.value
 
     // Initialize SQL mode
     if (querySqlMode && ['builder', 'editor'].includes(querySqlMode as string)) {
@@ -211,7 +202,7 @@
     }
 
     // Initialize time selection
-    if (queryTimeLength) {
+    if (queryTimeLength !== undefined) {
       const length = parseInt(queryTimeLength as string, 10)
       if (!Number.isNaN(length)) {
         timeLength.value = length
@@ -220,8 +211,6 @@
 
     if (queryTimeRange && Array.isArray(queryTimeRange)) {
       timeRange.value = queryTimeRange as string[]
-    } else if (timeStart && timeEnd) {
-      timeRange.value = [timeStart as string, timeEnd as string]
     }
 
     // Initialize editor SQL if provided
@@ -350,15 +339,16 @@
       })
     }
   })
+  initializeFromQuery()
 
   // Watch for route query changes (e.g., browser back/forward)
-  watch(
-    () => route.query,
-    () => {
-      initializeFromQuery()
-    },
-    { deep: true }
-  )
+  // watch(
+  //   () => route.query,
+  //   () => {
+  //     initializeFromQuery()
+  //   },
+  //   { deep: true }
+  // )
 </script>
 
 <style lang="less" scoped>
