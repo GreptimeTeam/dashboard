@@ -95,7 +95,7 @@
 
   const handleBack = () => {
     console.log('Back button clicked')
-    router.push({ name: 'trace-query' })
+    router.back()
   }
 
   function handleSpanSelect(spanId: string, span: any) {

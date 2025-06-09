@@ -43,8 +43,9 @@
           v-if="sqlMode === 'builder'"
           ref="sqlBuilderRef"
           :has-time-limit="hasTimeLimit"
+          :initial-form-state="initialBuilderFormState"
           @update:sql="handleBuilderSqlUpdate"
-          @update:table="currentTable = $event"
+          @update:form="handleBuilderFormUpdate"
         )
         SQLEditor(
           v-else
@@ -69,7 +70,7 @@
           :sql="finalQuery"
           :time-length="timeLength"
           :time-range="timeRange"
-          :table-name="currentTable"
+          :table-name="tableName"
           :should-fetch="chartExpanded"
           @time-range-update="handleTimeRangeUpdate"
         )
@@ -78,15 +79,16 @@
       :data="allResults"
       :columns="columns"
       :loading="loading"
-      :current-table="currentTable"
+      :table-name="tableName"
       :sql-mode="sqlMode"
       @filterConditionAdd="handleFilterConditionAdd"
     )
 </template>
 
 <script setup name="TraceQuery" lang="ts">
-  import { ref, computed, watch, nextTick } from 'vue'
-  import { useLocalStorage } from '@vueuse/core'
+  import { ref, computed, watch, nextTick, onMounted } from 'vue'
+  import { useLocalStorage, watchOnce } from '@vueuse/core'
+  import { useRoute, useRouter } from 'vue-router'
   import { IconCode, IconDown, IconRight, IconDownload } from '@arco-design/web-vue/es/icon'
   import editorAPI from '@/api/editor'
   import fileDownload from 'js-file-download'
@@ -97,10 +99,12 @@
   import CountChart from './components/CountChart.vue'
   import TraceTable from './components/TraceTable.vue'
 
+  const route = useRoute()
+  const router = useRouter()
+
   const sqlMode = ref('builder')
   const builderSql = ref('')
   const editorSql = ref('')
-  const currentTable = ref('')
   const loading = ref(false)
   const allResults = ref([])
   const columns = ref<Array<{ name: string; data_type: string }>>([])
@@ -111,15 +115,132 @@
   // Chart expanded state with localStorage persistence
   const chartExpanded = useLocalStorage('trace-chart-expanded', true)
 
-  // Time range selection
+  // Time range selection - will be synced with URL query params
   const timeLength = ref(10) // Default to last 10 minutes
   const timeRange = ref<string[]>([])
 
   const hasTimeLimit = computed(() => timeLength.value > 0 || timeRange.value.length > 0)
 
+  // Store current builder form state for URL update after successful query
+  const currentBuilderFormState = ref(null)
+
+  // Get initial form state from URL query
+  const initialBuilderFormState = computed(() => {
+    const { builderForm } = route.query
+    if (builderForm) {
+      try {
+        return JSON.parse(decodeURIComponent(builderForm as string))
+      } catch (error) {
+        console.warn('Failed to parse builder form state from URL:', error)
+        return null
+      }
+    }
+    return null
+  })
+
+  // Computed table name - get from form state or parse from SQL
+  const tableName = computed(() => {
+    if (sqlMode.value === 'builder' && currentBuilderFormState.value?.table) {
+      return currentBuilderFormState.value.table
+    }
+
+    if (sqlMode.value === 'editor' && editorSql.value) {
+      // Parse table name from SQL query
+      const sql = editorSql.value.trim()
+      const fromMatch = sql.match(/FROM\s+([`"']?)(\w+)\1/i)
+      if (fromMatch) {
+        return fromMatch[2]
+      }
+    }
+
+    return ''
+  })
+
+  // Update URL query parameters without navigation
+  function updateQueryParams() {
+    const query: Record<string, any> = { ...route.query }
+
+    // Update SQL mode
+    query.sqlMode = sqlMode.value
+
+    // Update time selection
+    query.timeLength = timeLength.value.toString()
+
+    if (timeRange.value.length === 2) {
+      query.timeStart = timeRange.value[0]
+      query.timeEnd = timeRange.value[1]
+      delete query.timeRange
+    } else {
+      delete query.timeStart
+      delete query.timeEnd
+      delete query.timeRange
+    }
+
+    // Update editor SQL if in editor mode
+    if (sqlMode.value === 'editor' && editorSql.value) {
+      query.editorSql = encodeURIComponent(editorSql.value)
+    } else {
+      delete query.editorSql
+    }
+
+    // Update builder form state if available
+    if (sqlMode.value === 'builder' && currentBuilderFormState.value) {
+      query.builderForm = encodeURIComponent(JSON.stringify(currentBuilderFormState.value))
+    } else {
+      delete query.builderForm
+    }
+
+    // Update URL without triggering navigation
+    router.replace({ query })
+  }
+
+  // Initialize state from URL query parameters
+  function initializeFromQuery() {
+    const {
+      sqlMode: querySqlMode,
+      timeLength: queryTimeLength,
+      timeRange: queryTimeRange,
+      timeStart,
+      timeEnd,
+      editorSql: queryEditorSql,
+    } = route.query
+
+    // Initialize SQL mode
+    if (querySqlMode && ['builder', 'editor'].includes(querySqlMode as string)) {
+      sqlMode.value = querySqlMode as string
+    }
+
+    // Initialize time selection
+    if (queryTimeLength) {
+      const length = parseInt(queryTimeLength as string, 10)
+      if (!Number.isNaN(length)) {
+        timeLength.value = length
+      }
+    }
+
+    if (queryTimeRange && Array.isArray(queryTimeRange)) {
+      timeRange.value = queryTimeRange as string[]
+    } else if (timeStart && timeEnd) {
+      timeRange.value = [timeStart as string, timeEnd as string]
+    }
+
+    // Initialize editor SQL if provided
+    if (queryEditorSql) {
+      editorSql.value = decodeURIComponent(queryEditorSql as string)
+    }
+  }
+
   // Handle SQL builder updates
   function handleBuilderSqlUpdate(sql: string) {
     builderSql.value = sql
+  }
+
+  // Handle SQLBuilder form state updates
+  function handleBuilderFormUpdate(formState: any) {
+    // Store form state but don't update URL immediately
+    // URL will be updated after successful query execution
+    currentBuilderFormState.value = formState
+    // Table name is now computed from form state
   }
 
   // Handle format SQL
@@ -134,6 +255,7 @@
     if (newMode === 'editor' && !editorSql.value) {
       editorSql.value = builderSql.value
     }
+    // Don't update URL immediately, wait for successful query
   })
 
   const finalQuery = computed(() => {
@@ -152,11 +274,11 @@
 
   // Export traces as CSV
   function exportSql() {
-    if (!finalQuery.value || !currentTable.value) {
+    if (!finalQuery.value || !tableName.value) {
       return
     }
     editorAPI.runSQLWithCSV(finalQuery.value).then((result) => {
-      const filename = currentTable.value || 'traces'
+      const filename = tableName.value || 'traces'
       fileDownload(result as unknown as string, `${filename}.csv`)
     })
   }
@@ -180,6 +302,9 @@
           })
           return record
         })
+
+        // Update URL parameters only after successful query
+        updateQueryParams()
       }
 
       // Trigger count chart query only if chart is expanded
@@ -217,6 +342,23 @@
       sqlBuilderRef.value.addFilterCondition(columnName, operator, value)
     }
   }
+
+  watchOnce(finalQuery, () => {
+    if (finalQuery.value) {
+      nextTick(() => {
+        handleQuery()
+      })
+    }
+  })
+
+  // Watch for route query changes (e.g., browser back/forward)
+  watch(
+    () => route.query,
+    () => {
+      initializeFromQuery()
+    },
+    { deep: true }
+  )
 </script>
 
 <style lang="less" scoped>

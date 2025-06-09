@@ -79,7 +79,6 @@ a-form(
 
 <script setup name="TraceSQLBuilder" lang="ts">
   import { ref, watch, onMounted, computed, readonly } from 'vue'
-  import { useStorage } from '@vueuse/core'
   import editorAPI from '@/api/editor'
 
   interface Condition {
@@ -104,18 +103,19 @@ a-form(
     semantic_type: string
   }
 
-  const emit = defineEmits(['update:sql', 'update:table'])
+  const emit = defineEmits(['update:sql', 'update:form'])
 
-  // Props for timeLength
+  // Props for timeLength and initial form state
   const props = defineProps<{
     hasTimeLimit?: boolean
+    initialFormState?: Form | null
   }>()
 
   const tables = ref<string[]>([])
   const tableMap = ref<{ [key: string]: TableField[] }>({})
 
-  // Use useStorage for form state, but allow override from props
-  const form = useStorage<Form>('trace-sql-builder-form', {
+  // Use initial form state from props if provided, otherwise use localStorage
+  const defaultFormState: Form = {
     conditions: [
       {
         field: 'parent_span_id',
@@ -127,7 +127,30 @@ a-form(
     orderBy: 'DESC',
     limit: 100,
     table: '',
-  })
+  }
+
+  // Initialize form state based on props or localStorage
+  const form = ref<Form>(props.initialFormState || defaultFormState)
+
+  // Watch for prop changes and update form
+  watch(
+    () => props.initialFormState,
+    (newFormState) => {
+      if (newFormState) {
+        form.value = { ...newFormState }
+      }
+    },
+    { immediate: true }
+  )
+
+  // Watch form changes and emit updates for URL persistence
+  watch(
+    form,
+    (newForm) => {
+      emit('update:form', newForm)
+    },
+    { deep: true }
+  )
 
   const fields = computed(() => {
     if (!form.value.table || !tableMap.value[form.value.table]) return []
@@ -210,7 +233,11 @@ a-form(
        ORDER BY table_name`
       )
       tables.value = result.output[0].records.rows.map((row: string[]) => row[0])
-      form.value.table = tables.value[0]
+
+      // Only set default table if we don't have initial form state from props
+      if (!props.initialFormState && tables.value.length > 0) {
+        form.value.table = tables.value[0]
+      }
     } catch (error) {
       console.error('Failed to fetch tables:', error)
     }
@@ -355,7 +382,7 @@ a-form(
   watch(
     generatedSQL,
     (newSQL) => {
-      emit('update:sql', newSQL)
+      if (form.value.table) emit('update:sql', newSQL)
     },
     { immediate: true }
   )
@@ -369,7 +396,7 @@ a-form(
     () => form.value.table,
     () => {
       fetchTableFields(form.value.table)
-      emit('update:table', form.value.table)
+      // Table value is now extracted from form state in parent component
     },
     { immediate: true }
   )

@@ -69,7 +69,7 @@ a-card(:bordered="false")
           template(#cell="{ record }")
             template(v-if="col.name === 'traceid' || col.name === 'trace_id'")
               router-link(
-                :to="{ name: 'dashboard-TraceDetail', params: { id: record[col.name] }, query: { table: currentTable } }"
+                :to="{ name: 'dashboard-TraceDetail', params: { id: record[col.name] }, query: { table: props.tableName } }"
               ) {{ record[col.name] }}
               svg.td-config-icon(
                 v-if="sqlMode === 'builder'"
@@ -134,7 +134,7 @@ a-dropdown#td-context(
       type: Boolean,
       default: false,
     },
-    currentTable: {
+    tableName: {
       type: String,
       default: '',
     },
