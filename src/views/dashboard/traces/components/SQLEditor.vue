@@ -123,13 +123,6 @@
       let formatted = formattedLines.join('\n')
 
       // Clean up extra spaces around operators
-      formatted = formatted.replace(/\s*=\s*/g, ' = ')
-      formatted = formatted.replace(/\s*<\s*/g, ' < ')
-      formatted = formatted.replace(/\s*>\s*/g, ' > ')
-      formatted = formatted.replace(/\s*<=\s*/g, ' <= ')
-      formatted = formatted.replace(/\s*>=\s*/g, ' >= ')
-      formatted = formatted.replace(/\s*!=\s*/g, ' != ')
-      formatted = formatted.replace(/\s*<>\s*/g, ' <> ')
 
       // Clean up AS keyword spacing
       formatted = formatted.replace(/\s+AS\s+/gi, ' AS ')

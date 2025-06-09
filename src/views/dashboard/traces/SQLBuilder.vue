@@ -361,7 +361,7 @@ a-form(
     const timeConditions = [...conditions]
     if (props.hasTimeLimit && availableTimeColumns.length > 0) {
       const firstTimeColumn = availableTimeColumns[0]
-      const timeCondition = `${firstTimeColumn.value} < '$timeend' AND ${firstTimeColumn.value} > '$timestart'`
+      const timeCondition = `${firstTimeColumn.value} <= '$timeend' AND ${firstTimeColumn.value} > '$timestart'`
 
       if (timeConditions.length > 0) {
         timeConditions.push(`AND ${timeCondition}`)

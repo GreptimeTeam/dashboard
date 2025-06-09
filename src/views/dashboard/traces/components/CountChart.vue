@@ -138,7 +138,7 @@ VCharts(
     }
 
     // Extract WHERE clause from the original SQL
-    const whereMatch = props.sql.match(/WHERE\s+(.+?)(?:\s+ORDER\s+BY|\s+LIMIT|$)/i)
+    const whereMatch = props.sql.match(/WHERE\s+([\s\S]+?)(?:\s+ORDER\s+BY|\s+LIMIT\s+|\s*$)/i)
     const whereClause = whereMatch ? `WHERE ${whereMatch[1]}` : ''
 
     return `SELECT

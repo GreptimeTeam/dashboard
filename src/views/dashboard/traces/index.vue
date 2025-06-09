@@ -7,16 +7,6 @@
           a-radio-group(v-model="sqlMode" type="button")
             a-radio(value="builder") Builder
             a-radio(value="editor") Editor
-          a-button(
-            v-if="sqlMode === 'editor'"
-            type="outline"
-            size="small"
-            @click="handleFormatSQL"
-          )
-            template(#icon)
-              icon-code
-            | Format
-        a-space
           TimeSelect(
             v-model:time-length="timeLength"
             v-model:time-range="timeRange"
@@ -29,6 +19,16 @@
             :relative-time-options="[{ value: 0, label: 'No Time Limit' }, ...relativeTimeOptions]"
           )
           a-button(type="primary" size="small" @click="handleQuery") Run query
+          a-button(
+            v-if="sqlMode === 'editor'"
+            type="outline"
+            size="small"
+            @click="handleFormatSQL"
+          )
+            template(#icon)
+              icon-code
+            | Format
+        a-space
           a-button(
             type="outline"
             size="small"
@@ -244,7 +244,6 @@
     if (newMode === 'editor' && !editorSql.value) {
       editorSql.value = builderSql.value
     }
-    // Don't update URL immediately, wait for successful query
   })
 
   const finalQuery = computed(() => {
@@ -340,15 +339,6 @@
     }
   })
   initializeFromQuery()
-
-  // Watch for route query changes (e.g., browser back/forward)
-  // watch(
-  //   () => route.query,
-  //   () => {
-  //     initializeFromQuery()
-  //   },
-  //   { deep: true }
-  // )
 </script>
 
 <style lang="less" scoped>
