@@ -16,6 +16,7 @@
             template(#icon)
               icon-code
             | Format
+        a-space
           TimeSelect(
             v-model:time-length="timeLength"
             v-model:time-range="timeRange"
@@ -27,12 +28,21 @@
             :relative-time-map="relativeTimeMap"
             :relative-time-options="[{ value: 0, label: 'No Time Limit' }, ...relativeTimeOptions]"
           )
-          a-button(type="primary" size="small" @click="handleQuery") Query
+          a-button(type="primary" size="small" @click="handleQuery") Run query
+          a-button(
+            type="outline"
+            size="small"
+            :disabled="!finalQuery || loading"
+            @click="exportSql"
+          )
+            template(#icon)
+              icon-download
+            | Export
       .sql-container
         SQLBuilder(
           v-if="sqlMode === 'builder'"
           ref="sqlBuilderRef"
-          :has-time-limit="timeLength > 0"
+          :has-time-limit="hasTimeLimit"
           @update:sql="handleBuilderSqlUpdate"
           @update:table="currentTable = $event"
         )
@@ -77,8 +87,9 @@
 <script setup name="TraceQuery" lang="ts">
   import { ref, computed, watch, nextTick } from 'vue'
   import { useLocalStorage } from '@vueuse/core'
-  import { IconCode, IconDown, IconRight } from '@arco-design/web-vue/es/icon'
+  import { IconCode, IconDown, IconRight, IconDownload } from '@arco-design/web-vue/es/icon'
   import editorAPI from '@/api/editor'
+  import fileDownload from 'js-file-download'
   import { relativeTimeMap, relativeTimeOptions } from '@/views/dashboard/config'
   import TimeSelect from '@/components/time-select/index.vue'
   import SQLBuilder from './SQLBuilder.vue'
@@ -138,6 +149,17 @@
     }
     return sql
   })
+
+  // Export traces as CSV
+  function exportSql() {
+    if (!finalQuery.value || !currentTable.value) {
+      return
+    }
+    editorAPI.runSQLWithCSV(finalQuery.value).then((result) => {
+      const filename = currentTable.value || 'traces'
+      fileDownload(result as unknown as string, `${filename}.csv`)
+    })
+  }
 
   async function handleQuery() {
     if (!finalQuery.value) return
