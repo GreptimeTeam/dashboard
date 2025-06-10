@@ -133,7 +133,7 @@
   }
 
   .page-header {
-    padding: 0 16px 0;
+    padding: 0 8px 0;
     border-bottom: 1px solid var(--color-border);
 
     .header-content {
@@ -195,7 +195,7 @@
   }
 
   .content-container {
-    padding: 16px 8px 16px 16px;
+    padding: 8px;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -216,7 +216,7 @@
       overflow: hidden;
 
       &:first-child {
-        flex: 2;
+        flex: 1.4;
       }
     }
   }

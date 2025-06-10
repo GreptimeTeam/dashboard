@@ -15,8 +15,8 @@
             flex-direction="row-reverse"
             empty-str="Select Time Range"
             button-size="small"
-            :relative-time-map="{ 0: 'No Time Limit', ...relativeTimeMap }"
-            :relative-time-options="[{ value: 0, label: 'No Time Limit' }, ...relativeTimeOptions]"
+            :relative-time-map="{ 0: 'Any time', ...relativeTimeMap }"
+            :relative-time-options="[{ value: 0, label: 'Any time' }, ...relativeTimeOptions]"
           )
           a-button(type="primary" size="small" @click="handleQuery") Run query
           a-button(
@@ -351,7 +351,7 @@
 
   .content-wrapper {
     flex: 1;
-    padding: 16px;
+    padding: 8px;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -361,7 +361,7 @@
 
   .toolbar {
     flex-shrink: 0;
-    padding: 16px;
+    padding: 8px;
     border-bottom: 1px solid var(--color-border);
     display: flex;
     justify-content: space-between;
