@@ -11,6 +11,7 @@ VCharts(
 <script setup name="TraceCountChart" lang="ts">
   import { ref, computed, watch, shallowRef, nextTick } from 'vue'
   import VCharts from 'vue-echarts'
+  import * as echarts from 'echarts'
   import editorAPI from '@/api/editor'
 
   interface Props {
@@ -55,11 +56,11 @@ VCharts(
     },
     dataZoom: [
       {
-        type: 'inside',
+        type: 'inside', // Enables zoom by dragging
         xAxisIndex: 0,
         yAxisIndex: 'none',
-        start: 0,
-        end: 100,
+        start: 0, // Default start percentage (0%)
+        end: 100, // Default end percentage (100%)
       },
     ],
     xAxis: {
@@ -165,13 +166,11 @@ VCharts(
         data.value = tmpData.reverse() // Reverse to show chronological order
 
         nextTick(() => {
-          if (chart.value?.chart) {
-            chart.value.chart.dispatchAction({
-              type: 'takeGlobalCursor',
-              key: 'dataZoomSelect',
-              dataZoomSelectActive: true,
-            })
-          }
+          chart.value.dispatchAction({
+            type: 'takeGlobalCursor',
+            key: 'dataZoomSelect',
+            dataZoomSelectActive: true,
+          })
         })
       }
     } catch (error) {
@@ -194,11 +193,11 @@ VCharts(
     }
 
     // Convert to ISO strings for time range
-    const startTime = new Date(start).toISOString()
-    const endTime = new Date(end).toISOString()
+    const startTime = new Date(start).getTime()
+    const endTime = new Date(end).getTime()
 
     // Emit the time range update
-    emit('timeRangeUpdate', [startTime, endTime])
+    emit('timeRangeUpdate', [startTime / 1000, endTime / 1000])
   }
 
   // Expose the method to parent component

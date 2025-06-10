@@ -15,7 +15,7 @@
             flex-direction="row-reverse"
             empty-str="Select Time Range"
             button-size="small"
-            :relative-time-map="relativeTimeMap"
+            :relative-time-map="{ 0: 'No Time Limit', ...relativeTimeMap }"
             :relative-time-options="[{ value: 0, label: 'No Time Limit' }, ...relativeTimeOptions]"
           )
           a-button(type="primary" size="small" @click="handleQuery") Run query
@@ -307,7 +307,7 @@
   }
 
   function handleTimeRangeUpdate(newTimeRange: string[]) {
-    timeLength.value = 0 // Switch to custom mode
+    timeLength.value = -1 // Switch to custom mode
     timeRange.value = newTimeRange
     handleQuery() // Re-run query with new time range
   }
@@ -403,5 +403,11 @@
         padding: 0;
       }
     }
+  }
+  :deep(.arco-radio-button.arco-radio-checked) {
+    color: var(--color-primary);
+  }
+  :deep(.arco-input-group > *) {
+    border-radius: 0;
   }
 </style>
