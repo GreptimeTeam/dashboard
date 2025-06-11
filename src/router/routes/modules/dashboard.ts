@@ -70,7 +70,7 @@ const DASHBOARD: AppRouteRecordRaw = {
         ignoreCache: false,
         locale: 'menu.traces.list',
         requiresAuth: false,
-        icon: 'tree',
+        icon: 'traces',
         roles: ['admin', 'cloud'],
         keepAlive: true,
       },
