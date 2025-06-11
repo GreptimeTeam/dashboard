@@ -66,7 +66,7 @@ const DASHBOARD: AppRouteRecordRaw = {
             {
               path: 'input',
               name: 'influxdb-input',
-              component: () => import('@/views/dashboard/ingest/influxdb/input.vue'),
+              component: () => import('@/views/dashboard/ingest/influxdb/input-influxdb.vue'),
               meta: {
                 locale: 'menu.dashboard.input',
                 requiresAuth: false,
@@ -77,7 +77,7 @@ const DASHBOARD: AppRouteRecordRaw = {
             {
               path: 'upload',
               name: 'influxdb-upload',
-              component: () => import('@/views/dashboard/ingest/influxdb/upload.vue'),
+              component: () => import('@/views/dashboard/ingest/influxdb/upload-influxdb.vue'),
               meta: {
                 locale: 'menu.dashboard.upload',
                 requiresAuth: false,
