@@ -87,6 +87,42 @@ const DASHBOARD: AppRouteRecordRaw = {
             },
           ],
         },
+        {
+          path: 'log-ingestion',
+          name: 'log-ingestion',
+          redirect: '/dashboard/ingest/log-ingestion/input',
+          component: () => import('@/views/dashboard/ingest/log-ingestion/index.vue'),
+          meta: {
+            locale: 'menu.dashboard.log-ingestion',
+            requiresAuth: false,
+            icon: 'log',
+            roles: ['admin', 'cloud'],
+          },
+          children: [
+            {
+              path: 'input',
+              name: 'log-ingestion-input',
+              component: () => import('@/views/dashboard/ingest/log-ingestion/input-log-ingestion.vue'),
+              meta: {
+                locale: 'menu.dashboard.input',
+                requiresAuth: false,
+                roles: ['admin', 'cloud'],
+                icon: 'input',
+              },
+            },
+            {
+              path: 'upload',
+              name: 'log-ingestion-upload',
+              component: () => import('@/views/dashboard/ingest/log-ingestion/upload-log-ingestion.vue'),
+              meta: {
+                locale: 'menu.dashboard.upload',
+                requiresAuth: false,
+                roles: ['admin', 'cloud'],
+                icon: 'upload',
+              },
+            },
+          ],
+        },
       ],
     },
     {

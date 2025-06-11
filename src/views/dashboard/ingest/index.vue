@@ -6,7 +6,7 @@ a-layout.new-layout
         mode="vertical"
         :selected-keys="[activeTab]"
         :collapsed="false"
-        :default-open-keys="['influxdb']"
+        :default-open-keys="['influxdb', 'log-ingestion']"
       )
         a-sub-menu(v-for="(item, index) in menu" :key="item.name")
           template(#title)

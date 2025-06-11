@@ -6,6 +6,7 @@ import editorAPI from './editor'
 const { runSQL } = editorAPI
 const url = '/v1/events/pipelines'
 const sqlUrl = `/v1/sql`
+const pipelineLogsUrl = '/v1/events/logs'
 
 const makeSqlData = (sql: string) => {
   return qs.stringify({
@@ -55,6 +56,19 @@ export function list() {
         version: nanoTimestampToUTCString(row[1]),
       }
     })
+  })
+}
+
+export const postPipelineLogs = (db: string, table: string, pipelineName: string, data: string) => {
+  return axios.post(pipelineLogsUrl, `[${data}]`, {
+    params: {
+      db,
+      table,
+      pipeline_name: pipelineName,
+    },
+    headers: {
+      'Content-Type': 'application/json',
+    },
   })
 }
 

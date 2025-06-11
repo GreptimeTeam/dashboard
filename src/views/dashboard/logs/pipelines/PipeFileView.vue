@@ -59,7 +59,6 @@ a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
               :autofocus="true"
               :indent-with-tab="true"
               :tabSize="2"
-              :placeholder="debugTip"
             )
 
       a-card.light-editor-card(title="Output" :bordered="false")

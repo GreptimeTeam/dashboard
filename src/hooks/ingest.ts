@@ -29,19 +29,6 @@ export default function useIngest() {
     },
   })
 
-  const getLogIngestionInputConfig = (pipeline: Ref<string>): IngestConfig => ({
-    type: 'log-ingestion',
-    tabKey: 'log-ingestion-input',
-    submitLabel: 'Process',
-    placeholder: 'Enter your log data here...',
-    hasDoc: false,
-    successMessage: 'Log processed successfully',
-    submitHandler: async (content: string) => {},
-    get params() {
-      return { pipeline: pipeline.value }
-    },
-  })
-
   const getInfluxdbUploadConfig = (precision: Ref<string>): IngestConfig => ({
     type: 'influxdb',
     tabKey: 'influxdb-upload',
@@ -56,15 +43,35 @@ export default function useIngest() {
     },
   })
 
-  const getLogIngestionUploadConfig = (pipeline: Ref<string>): IngestConfig => ({
+  const getLogIngestionInputConfig = (pipeline: Ref<string>, table: Ref<string>): IngestConfig => ({
+    type: 'log-ingestion',
+    tabKey: 'log-ingestion-input',
+    submitLabel: 'Write',
+    placeholder: `{"name": "Alice", "age": 20, "is_student": true, "score": 90.5,"object": {"a":1,"b":2}},
+{"age": 21, "is_student": false, "score": 85.5, "company": "A" ,"whatever": null},
+{"name": "Charlie", "age": 22, "is_student": true, "score": 95.5,"array":[1,2,3]}
+`,
+    hasDoc: false,
+    successMessage: 'Data written successfully',
+    submitHandler: async (content: string) => {
+      return codeRunStore.processLogs(content, table.value, pipeline.value)
+    },
+    get params() {
+      return { pipeline: pipeline.value, table: table.value }
+    },
+  })
+
+  const getLogIngestionUploadConfig = (pipeline: Ref<string>, table: Ref<string>): IngestConfig => ({
     type: 'log-ingestion',
     tabKey: 'log-ingestion-upload',
-    submitLabel: 'Process',
+    submitLabel: 'Write',
     hasDoc: false,
-    successMessage: 'Log processed successfully',
-    submitHandler: async (content: string) => {},
+    successMessage: 'Data written successfully',
+    submitHandler: async (content: string) => {
+      return codeRunStore.processLogs(content, table.value, pipeline.value)
+    },
     get params() {
-      return { pipeline: pipeline.value }
+      return { pipeline: pipeline.value, table: table.value }
     },
   })
 
