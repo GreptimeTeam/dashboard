@@ -20,11 +20,22 @@ a-spin.spin-block(:loading="loading")
     a-tree(
       :key="spanTree.length ? spanTree[0].span_id : ''"
       ref="treeRef"
-      blockNode
       default-expand-all
       :data="spanTree"
       @select="handleSpanSelect"
     )
+      template(#icon="{ node, expanded }")
+        .expand-info(
+          v-if="node.children && node.children.length > 0"
+          :class="{ expanded: expanded }"
+          :style="{ backgroundColor: getServiceColor(node.service_name) }"
+          @click.stop="toggleExpand(node, expanded)"
+        )
+          .expand-icon
+            icon-down(v-if="expanded")
+            icon-right(v-else)
+          .child-count {{ getChildCount(node, expanded) }}
+        .no-expand-icon(v-else :style="{ backgroundColor: getServiceColor(node.service_name) }")
       template(#title="data")
         .span-item
           .span-info(:style="getSpanInfoStyle(data._level)")
@@ -48,7 +59,7 @@ a-spin.spin-block(:loading="loading")
   import { ref, computed } from 'vue'
   import type { PropType } from 'vue'
   import type { TreeNodeData } from '@arco-design/web-vue'
-  import { IconDragDotVertical } from '@arco-design/web-vue/es/icon'
+  import { IconDragDotVertical, IconDown, IconRight } from '@arco-design/web-vue/es/icon'
   import type { Span } from '../utils'
   import { formatDuration, getRelativePosition, getDurationWidth } from '../utils'
 
@@ -70,7 +81,7 @@ a-spin.spin-block(:loading="loading")
   const emit = defineEmits(['spanSelect'])
 
   const treeRef = ref()
-  const spanInfoWidth = ref('300px')
+  const spanInfoWidth = ref('400px')
 
   // Predefined color palette for service names
   const serviceColors = [
@@ -102,6 +113,48 @@ a-spin.spin-block(:loading="loading")
     return serviceColors[colorIndex]
   }
 
+  // Calculate direct children count
+  function getDirectChildrenCount(node: TreeNodeData): number {
+    return node.children ? node.children.length : 0
+  }
+
+  // Calculate total children count (including sub-children)
+  function getTotalChildrenCount(node: TreeNodeData): number {
+    if (!node.children || node.children.length === 0) {
+      return 0
+    }
+
+    let total = node.children.length
+    node.children.forEach((child) => {
+      total += getTotalChildrenCount(child)
+    })
+    return total
+  }
+
+  // Get child count based on expanded state
+  function getChildCount(node: TreeNodeData, expanded: boolean): number {
+    if (!node.children || node.children.length === 0) {
+      return 0
+    }
+
+    return expanded ? getDirectChildrenCount(node) : getTotalChildrenCount(node)
+  }
+
+  function handleSpanSelect(
+    selectedKeys: (string | number)[],
+    data: { selected?: boolean; selectedNodes: TreeNodeData[]; node?: TreeNodeData; e?: Event }
+  ): void {
+    if (data.node) {
+      emit('spanSelect', data.node.key, data.node)
+    }
+  }
+
+  function getSpanInfoStyle(level: number): { width: string } {
+    return {
+      width: `calc(${spanInfoWidth.value} - 50px - ${level * 22}px)`,
+    }
+  }
+
   function formatTickTime(index: number): string {
     if (!props.rootSpan) return ''
     const duration = props.rootSpan.duration_nano
@@ -109,18 +162,15 @@ a-spin.spin-block(:loading="loading")
     return formatDuration(tickTime)
   }
 
-  function handleSpanSelect(
-    selectedKeys: (string | number)[],
-    data: { selected?: boolean; selectedNodes: TreeNodeData[]; node?: TreeNodeData; e?: Event }
-  ) {
-    if (data.node) {
-      emit('spanSelect', data.node.key, data.node)
-    }
-  }
-
-  function getSpanInfoStyle(level: number) {
-    return {
-      width: `calc(${spanInfoWidth.value} - 36px - ${level * 22}px)`,
+  function toggleExpand(node: TreeNodeData, expanded: boolean): void {
+    if (node.children && node.children.length > 0 && treeRef.value) {
+      if (expanded) {
+        // Collapse the tree node
+        treeRef.value.expandNode(node.key, false)
+      } else {
+        // Expand the tree node
+        treeRef.value.expandNode(node.key, true)
+      }
     }
   }
 </script>
@@ -176,7 +226,7 @@ a-spin.spin-block(:loading="loading")
   }
 
   .tree-container {
-    height: calc(100vh - 200px);
+    height: calc(100vh - 196px);
     overflow: auto;
     padding: 8px 0;
   }
@@ -185,10 +235,71 @@ a-spin.spin-block(:loading="loading")
     height: 100%;
   }
 
+  // Hide default tree expand/collapse icons
+  :deep(.arco-tree-node-switcher) {
+    display: none !important;
+  }
+  :deep(.arco-tree-node-selected .arco-tree-node-title) {
+    color: var(--color-primary);
+  }
+  .expand-info {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 11px;
+    min-width: 32px;
+    justify-content: center;
+
+    &:hover {
+      border-color: var(--color-primary);
+      opacity: 0.8;
+    }
+
+    &.expanded {
+      border-color: var(--color-primary);
+      opacity: 0.9;
+    }
+
+    .expand-icon {
+      display: flex;
+      align-items: center;
+      font-size: 10px;
+      height: 22px;
+    }
+
+    .child-count {
+      font-weight: 500;
+      font-size: 10px;
+    }
+  }
+  .no-expand-icon {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  .child-count-icon {
+    background-color: var(--color-primary-light-1);
+    color: var(--color-primary);
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1;
+  }
+
   .span-item {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 8px;
     width: 100%;
     position: relative;
 
@@ -266,5 +377,11 @@ a-spin.spin-block(:loading="loading")
         color: var(--color-primary);
       }
     }
+  }
+  :deep(.arco-tree-node-title) {
+    display: flex;
+  }
+  :deep(.arco-tree-node-title-text) {
+    flex: 1;
   }
 </style>
