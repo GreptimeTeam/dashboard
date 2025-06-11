@@ -30,7 +30,7 @@ a-card(:bordered="false")
             icon-settings
           | Columns
         template(#content)
-          a-card(style="padding: 10px; min-width: 200px")
+          a-card(style="padding: 10px; min-width: 200px; max-height: 500px; overflow-y: auto")
             .column-controls
               a-space(direction="vertical" size="small")
                 a-space

@@ -15,9 +15,22 @@
   .content-container
     .cards-row
       a-card.light-editor-card(title="Trace Timeline" :bordered="false")
+        template(#extra)
+          .service-filter
+            span.filter-label Services:
+            a-select(
+              v-model="selectedServices"
+              multiple
+              allow-clear
+              placeholder="Select services to filter"
+              style="min-width: 200px"
+              size="small"
+            )
+              a-option(v-for="service in uniqueServices" :key="service" :value="service")
+                | {{ service }}
         trace-timeline(
           :loading="loading"
-          :span-tree="spanTree"
+          :span-tree="filteredSpanTree"
           :root-span="rootSpan"
           @span-select="handleSpanSelect"
         )
@@ -47,15 +60,45 @@
   const traceSpans = ref<Span[]>([])
   const selectedSpan = ref<Span | null>(null)
   const drawerVisible = ref(false)
+  const selectedServices = ref<string[]>([])
 
   const traceStartTime = ref(0)
   const traceEndTime = ref(0)
+
+  // Get unique services from trace spans
+  const uniqueServices = computed(() => {
+    const services = [...new Set(traceSpans.value.map((span) => span.service_name).filter(Boolean))]
+    return services.sort()
+  })
+
+  // Watch for unique services changes - don't auto-select all services
+  watch(
+    uniqueServices,
+    (newServices) => {
+      // Clear invalid selections when services change
+      selectedServices.value = selectedServices.value.filter((service) => newServices.includes(service))
+    },
+    { immediate: true }
+  )
+
+  // Filter spans based on selected services
+  const filteredSpans = computed(() => {
+    // When no services are selected, show all spans
+    if (selectedServices.value.length === 0) {
+      return traceSpans.value
+    }
+    return traceSpans.value.filter((span) => selectedServices.value.includes(span.service_name))
+  })
+
+  // Build span tree from filtered spans
+  const filteredSpanTree = computed(() => buildSpanTree(filteredSpans.value))
 
   // Reset all state
   function resetState() {
     traceSpans.value = []
     selectedSpan.value = null
     drawerVisible.value = false
+    selectedServices.value = [] // Start with no services selected (show all)
     traceStartTime.value = 0
     traceEndTime.value = 0
   }
@@ -218,6 +261,32 @@
       &:first-child {
         flex: 1.4;
       }
+    }
+  }
+
+  .service-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .filter-label {
+      font-size: 12px;
+      color: var(--color-text-2);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    :deep(.arco-select) {
+      min-width: 200px;
+    }
+
+    :deep(.arco-select-view-value) {
+      font-size: 12px;
+    }
+
+    :deep(.arco-tag) {
+      font-size: 11px;
+      padding: 1px 6px;
     }
   }
 
