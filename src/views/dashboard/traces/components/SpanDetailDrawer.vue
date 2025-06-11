@@ -87,6 +87,8 @@ a-drawer(
       if (
         key !== '_level' &&
         key !== 'children' &&
+        key !== 'key' &&
+        key !== 'title' &&
         !key.startsWith('span_attributes.') &&
         !key.startsWith('resource_attributes.')
       ) {
@@ -130,7 +132,9 @@ a-drawer(
 
   const jsonView = computed(() => {
     if (!props.span) return ''
-    return JSON.stringify(props.span, null, 2)
+    const { span } = props
+    const { key, title, _level, children, ...rest } = span
+    return JSON.stringify(rest, null, 2)
   })
 </script>
 
@@ -160,7 +164,7 @@ a-drawer(
     display: flex;
     align-items: left;
     border-top: none;
-    margin-bottom: 8px;
+    margin: 16px 0;
 
     .summary-item {
       display: flex;

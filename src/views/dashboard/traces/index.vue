@@ -1,5 +1,7 @@
 <template lang="pug">
 .trace-query-container
+  .page-header
+    | Traces
   .content-wrapper
     a-card(:bordered="false")
       .toolbar
@@ -409,5 +411,20 @@
   }
   :deep(.arco-input-group > *) {
     border-radius: 0;
+  }
+
+  .page-header {
+    padding: 8px 12px;
+    background: var(--card-bg-color);
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 0;
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--main-font-color);
+    font-family: 'Gilroy', sans-serif;
+    line-height: 1.2;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
   }
 </style>

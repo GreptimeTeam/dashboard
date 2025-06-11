@@ -40,7 +40,7 @@
         :class="{ 'drawer-visible': drawerVisible }"
       )
 
-      span-detail-drawer(v-model="drawerVisible" :span="selectedSpan")
+      SpanDetailDrawer(v-model="drawerVisible" :span="selectedSpan")
 </template>
 
 <script setup name="TraceDetail" lang="ts">
@@ -176,18 +176,25 @@
   }
 
   .page-header {
-    padding: 0 8px 0;
-    border-bottom: 1px solid var(--color-border);
-
+    padding: 8px 12px;
+    background: var(--card-bg-color);
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 0;
+    min-height: 48px;
     .header-content {
       display: flex;
       align-items: center;
-      gap: 16px;
-      padding: 8px 0;
+      gap: 20px;
+
       :deep(.arco-btn) {
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 6px;
+        color: var(--small-font-color);
+
+        &:hover {
+          color: var(--brand-color);
+        }
       }
     }
 
@@ -195,43 +202,49 @@
       flex: 1;
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 24px;
 
       .trace-title {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 16px;
 
         .operation-name {
-          font-size: 20px;
-          font-weight: 600;
-          color: var(--color-text-1);
+          font-size: 15px;
+          font-weight: 800;
+          color: var(--main-font-color);
+          font-family: 'Gilroy', sans-serif;
+          line-height: 1.2;
         }
 
         .span-count {
-          background-color: var(--color-primary-light-1);
-          color: var(--color-primary);
-          border: 1px solid var(--color-primary-light-3);
-          font-size: 12px;
-          padding: 2px 8px;
+          background-color: var(--light-brand-color);
+          color: var(--brand-color);
+          border: 1px solid var(--brand-color);
+          font-size: 13px;
+          font-weight: 600;
+          padding: 4px 10px;
+          border-radius: 6px;
+          line-height: 1;
         }
       }
 
       .trace-id {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 12px;
 
         .label {
-          font-size: 12px;
-          color: var(--color-text-3);
-          font-weight: 500;
+          font-size: 13px;
+          color: var(--small-font-color);
+          font-weight: 600;
         }
 
         .trace-id-value {
           font-family: 'Roboto Mono', monospace;
-          font-size: 12px;
-          color: var(--color-text-2);
+          font-size: 13px;
+          color: var(--main-font-color);
+          font-weight: 500;
         }
       }
     }
