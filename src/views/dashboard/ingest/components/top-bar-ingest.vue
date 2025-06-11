@@ -1,46 +1,19 @@
 <template lang="pug">
 a-space.top-bar
   a-space(:size="15")
-    a-select(
-      v-if="hasButtons"
-      v-model="precision"
-      size="small"
-      :options="precisionOptions"
-    )
+    slot(name="selector")
     a-button(
       v-if="hasButtons"
       type="primary"
       size="small"
       :loading="loading"
       :disabled="disabled"
-      @click="clickSubmit"
-    ) Write
-  a-tooltip(
-    v-if="hasDoc"
-    content="About InfluxDB Line Protocol"
-    position="tr"
-    trigger="hover"
-    mini
-  )
-    a-button(type="outline" size="small" @click="visible = !visible")
-      template(#icon)
-        svg.icon-16.brand-color(v-if="!visible")
-          use(href="#document")
-        icon-close.icon-16(v-else)
-a-drawer.ingest(
-  v-model:visible="visible"
-  placement="right"
-  title=""
-  :width="510"
-  :footer="false"
-)
-  .markdown-container.ingest
-    SimpleMarkdown(:md="doc")
-  | To learn more about influxdb line protocol on GreptimeDB, visit our
-  a(href="https://docs.greptime.com/user-guide/ingest-data/for-iot/influxdb-line-protocol" target="_blank") documentation.
+      @click="emitSubmit"
+    ) {{ submitLabel }}
+  slot(name="extra")
 </template>
 
-<script lang="ts" setup name="TopBar">
+<script lang="ts" setup name="TopBarIngest">
   const props = defineProps({
     disabled: {
       type: Boolean,
@@ -50,44 +23,21 @@ a-drawer.ingest(
       type: Boolean,
       default: false,
     },
-    hasDoc: {
-      type: Boolean,
-      default: true,
-    },
     hasButtons: {
       type: Boolean,
       default: true,
     },
+    submitLabel: {
+      type: String,
+      default: 'Submit',
+    },
   })
+
   const emits = defineEmits(['submit'])
 
-  const { precision } = storeToRefs(useIngestStore())
-  const visible = ref(false)
-
-  const clickSubmit = () => {
-    emits('submit', precision.value)
+  const emitSubmit = () => {
+    emits('submit')
   }
-
-  const precisionOptions = [
-    {
-      value: 'ns',
-      label: 'Nanoseconds',
-    },
-    {
-      value: 'us',
-      label: 'Microseconds',
-    },
-    {
-      value: 'ms',
-      label: 'Milliseconds',
-    },
-    {
-      value: 's',
-      label: 'Seconds',
-    },
-  ]
-
-  const doc = Object.entries(import.meta.glob('./doc.md', { as: 'raw', eager: true }))[0][1]
 </script>
 
 <style lang="less" scoped>

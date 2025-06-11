@@ -104,6 +104,9 @@
     "watch": true,
     "watchEffect": true,
     "watchPostEffect": true,
-    "watchSyncEffect": true
+    "watchSyncEffect": true,
+    "IngestConfig": true,
+    "useIngest": true,
+    "ingest": true
   }
 }
