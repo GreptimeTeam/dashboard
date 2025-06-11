@@ -10,7 +10,7 @@ a-layout.new-layout
       )
         a-sub-menu(v-for="(item, index) in menu" :key="item.name")
           template(#title)
-            svg.icon
+            svg.icon-15
               use(:href="`#${item.meta.icon}`")
             span {{ $t(item.meta.locale) }}
           a-menu-item(v-for="child in item.children" :key="child.name" @click="menuClick(item.name, child.name)")
@@ -138,7 +138,8 @@ a-layout.new-layout
       height: 52px;
     }
     .arco-menu {
-      .icon {
+      .icon,
+      .icon-15 {
         margin-right: 6px;
       }
       .arco-menu-inner {

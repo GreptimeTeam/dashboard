@@ -95,7 +95,7 @@ const DASHBOARD: AppRouteRecordRaw = {
           meta: {
             locale: 'menu.dashboard.log-ingestion',
             requiresAuth: false,
-            icon: 'log',
+            icon: 'upload-logs',
             roles: ['admin', 'cloud'],
           },
           children: [
