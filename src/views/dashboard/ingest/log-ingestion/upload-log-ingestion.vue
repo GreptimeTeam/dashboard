@@ -27,9 +27,9 @@ BaseUpload(:config="config")
       .select-item
         span.label Format
         a-select(v-model="contentType" size="small" :style="{ width: '110px' }")
-          a-option(value="text/plain") text
-          a-option(value="application/json") json
-          a-option(value="application/x-ndjson") ndjson
+          a-option(value="text/plain") Plain Text
+          a-option(value="application/json") JSON
+          a-option(value="application/x-ndjson") NDJSON
 
   template(#modal-selector)
     a-space(:size="15")
