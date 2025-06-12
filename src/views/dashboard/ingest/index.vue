@@ -1,6 +1,6 @@
 <template lang="pug">
 a-layout.new-layout
-  a-layout-sider(:resize-directions="['right']" :width="275")
+  a-layout-sider(:resize-directions="['right']" :width="200")
     a-card.sidebar(:title="$t('menu.dashboard.ingest')" :bordered="false")
       a-menu(
         mode="vertical"
