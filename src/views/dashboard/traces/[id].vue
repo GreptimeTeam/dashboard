@@ -147,7 +147,6 @@
     drawerVisible.value = true
   }
 
-  const spanTree = computed(() => buildSpanTree(traceSpans.value))
   const rootSpan = computed(() => traceSpans.value.find((span) => !span.parent_span_id) || null)
   const traceId = computed(() => route.params.id as string)
 

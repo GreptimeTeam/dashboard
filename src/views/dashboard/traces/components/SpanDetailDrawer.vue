@@ -13,9 +13,12 @@ a-drawer(
   template(#title)
     .drawer-title
       span Span Attributes
+
   .span-header
     .span-name
       | {{ span?.span_name }}
+    a-typography-text.trace-id-value(copyable :copy-text="span?.span_id")
+      | {{ span?.span_id }}
   .summary-container
     .summary-item
       span.summary-label Service
@@ -140,6 +143,9 @@ a-drawer(
 
 <style lang="less" scoped>
   .span-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     padding: 0;
     border: 1px solid var(--color-border);
     margin-bottom: 8px;
