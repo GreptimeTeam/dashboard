@@ -59,15 +59,21 @@ export function list() {
   })
 }
 
-export const postPipelineLogs = (db: string, table: string, pipelineName: string, data: string) => {
-  return axios.post(pipelineLogsUrl, `[${data}]`, {
+export const postPipelineLogs = (
+  db: string,
+  table: string,
+  pipelineName: string,
+  data: string,
+  contentType = 'application/x-ndjson'
+) => {
+  return axios.post(pipelineLogsUrl, data, {
     params: {
       db,
       table,
       pipeline_name: pipelineName,
     },
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': contentType,
     },
   })
 }

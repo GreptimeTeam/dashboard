@@ -7,10 +7,10 @@ BaseInput(:config="config")
         a-select(
           v-model="tableForPipeline"
           size="small"
-          placeholder="Select table"
+          allow-search
           :options="tableOptions"
           :loading="tableLoading"
-          :style="{ minWidth: '180px', width: 'auto' }"
+          :style="{ minWidth: '140px' }"
           :trigger-props="{ autoFitPopupMinWidth: true }"
         )
       .select-item
@@ -18,18 +18,25 @@ BaseInput(:config="config")
         a-select(
           v-model="pipelineName"
           size="small"
-          placeholder="Select pipeline"
+          allow-search
           :options="pipelineOptions"
           :loading="pipelineLoading"
+          :style="{ minWidth: '140px' }"
           :trigger-props="{ autoFitPopupMinWidth: true }"
         )
+      .select-item
+        span.label Format
+        a-select(v-model="contentType" size="small" :style="{ width: '110px' }")
+          a-option(value="text/plain") Plain Text
+          a-option(value="application/json") JSON
+          a-option(value="application/x-ndjson") NDJSON
 </template>
 
 <script lang="ts" setup>
   const ingestStore = useIngestStore()
   const dataBaseStore = useDataBaseStore()
 
-  const { pipelineName, tableForPipeline, pipelineOptions, pipelineLoading } = storeToRefs(ingestStore)
+  const { pipelineName, tableForPipeline, contentType, pipelineOptions, pipelineLoading } = storeToRefs(ingestStore)
 
   const tableOptions = computed(() => {
     return dataBaseStore.originTablesTree.map((table) => ({
@@ -54,7 +61,7 @@ BaseInput(:config="config")
   })
 
   const { getLogIngestionInputConfig } = useIngest()
-  const config = getLogIngestionInputConfig(pipelineName, tableForPipeline)
+  const config = getLogIngestionInputConfig(pipelineName, tableForPipeline, contentType)
 </script>
 
 <style lang="less" scoped>

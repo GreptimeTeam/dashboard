@@ -43,35 +43,41 @@ export default function useIngest() {
     },
   })
 
-  const getLogIngestionInputConfig = (pipeline: Ref<string>, table: Ref<string>): IngestConfig => ({
+  const getLogIngestionInputConfig = (
+    pipeline: Ref<string>,
+    table: Ref<string>,
+    contentType: Ref<string>
+  ): IngestConfig => ({
     type: 'log-ingestion',
     tabKey: 'log-ingestion-input',
     submitLabel: 'Write',
-    placeholder: `{"name": "Alice", "age": 20, "is_student": true, "score": 90.5,"object": {"a":1,"b":2}},
-{"age": 21, "is_student": false, "score": 85.5, "company": "A" ,"whatever": null},
-{"name": "Charlie", "age": 22, "is_student": true, "score": 95.5,"array":[1,2,3]}
-`,
+    placeholder: `{"message": "hello world", "time": "2024-07-12T16:18:53.048"}
+{"message": "hello greptime", "time": "2024-07-12T16:18:53.048"}`,
     hasDoc: false,
     successMessage: 'Data written successfully',
     submitHandler: async (content: string) => {
-      return codeRunStore.processLogs(content, table.value, pipeline.value)
+      return codeRunStore.processLogs(content, table.value, pipeline.value, contentType.value)
     },
     get params() {
-      return { pipeline: pipeline.value, table: table.value }
+      return { pipeline: pipeline.value, table: table.value, contentType: contentType.value }
     },
   })
 
-  const getLogIngestionUploadConfig = (pipeline: Ref<string>, table: Ref<string>): IngestConfig => ({
+  const getLogIngestionUploadConfig = (
+    pipeline: Ref<string>,
+    table: Ref<string>,
+    contentType: Ref<string>
+  ): IngestConfig => ({
     type: 'log-ingestion',
     tabKey: 'log-ingestion-upload',
     submitLabel: 'Write',
     hasDoc: false,
     successMessage: 'Data written successfully',
     submitHandler: async (content: string) => {
-      return codeRunStore.processLogs(content, table.value, pipeline.value)
+      return codeRunStore.processLogs(content, table.value, pipeline.value, contentType.value)
     },
     get params() {
-      return { pipeline: pipeline.value, table: table.value }
+      return { pipeline: pipeline.value, table: table.value, contentType: contentType.value }
     },
   })
 

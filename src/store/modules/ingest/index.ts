@@ -5,6 +5,7 @@ const useIngestStore = defineStore('ingest', () => {
   const precision = ref('ns')
   const pipelineName = ref('')
   const tableForPipeline = ref('')
+  const contentType = ref('application/x-ndjson')
   const pipelineList = ref([])
   const pipelineLoading = ref(false)
 
@@ -40,6 +41,7 @@ const useIngestStore = defineStore('ingest', () => {
     footer,
     pipelineName,
     tableForPipeline,
+    contentType,
     pipelineList,
     pipelineLoading,
     pipelineOptions,

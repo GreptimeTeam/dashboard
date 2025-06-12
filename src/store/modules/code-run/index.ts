@@ -206,10 +206,10 @@ const useCodeRunStore = defineStore('codeRun', () => {
     }
   }
 
-  const processLogs = async (data: string, table: string, pipeline: string) => {
+  const processLogs = async (data: string, table: string, pipeline: string, contentType: string) => {
     try {
       const appStore = useAppStore()
-      const res = await postPipelineLogs(appStore.database, table, pipeline, data)
+      const res = await postPipelineLogs(appStore.database, table, pipeline, data, contentType)
 
       return res
     } catch (error: any) {
