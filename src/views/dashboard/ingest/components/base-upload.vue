@@ -66,7 +66,15 @@ a-layout-content.main-content
 
     a-spin(style="width: 100%" :tip="config.readingTip || 'Reading file...'" :loading="isReadingFile")
       a-card.file-scrollbar(:bordered="false")
-        CodeMirror(v-if="dataFromFile" v-model="codeInEditor" :disabled="true")
+        CodeMirror(
+          v-model="codeInEditor"
+          :style="{ height: '100%' }"
+          :extensions="extensions"
+          :spellcheck="true"
+          :indent-with-tab="true"
+          :tabSize="2"
+          :disabled="true"
+        )
       span.load(v-if="collapsed && remainingLines")
         a.text ...{{ remainingLines }} lines more
         a.button(type="text" size="mini" @click="loadMore") {{ config.expandText || 'Expand' }}
@@ -85,6 +93,7 @@ a-layout-content.main-content
 <script lang="ts" setup>
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { basicSetup } from 'codemirror'
+  import { json } from '@codemirror/lang-json' // 导入JSON语法支持
   import type { Log } from '@/store/modules/log/types'
   import { isObject } from '@/utils/is'
 
@@ -218,6 +227,16 @@ a-layout-content.main-content
     footer.value[activeTab.value] = false
     isProcessLoading.value = false
   }
+
+  const extensions = computed(() => {
+    const contentType = props.config?.params?.contentType
+
+    if (contentType === 'application/json' || contentType === 'application/x-ndjson') {
+      return [basicSetup, json()]
+    }
+
+    return [basicSetup]
+  })
 </script>
 
 <style lang="less" scoped>

@@ -47,6 +47,8 @@ a-space.top-bar
     padding-right: 20px;
     height: 58px;
     background: var(--card-bg-color);
+    width: 100%;
+
     :deep(.arco-select-view-value) {
       font-size: 13px;
       color: var(--main-font-color);

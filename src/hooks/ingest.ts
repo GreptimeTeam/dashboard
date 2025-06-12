@@ -14,6 +14,24 @@ export interface IngestConfig {
 export default function useIngest() {
   const codeRunStore = useCodeRunStore()
 
+  const getPlaceholderByContentType = (contentType: string): string => {
+    if (contentType === 'application/json') {
+      return `[
+  {"message": "hello world", "time": "2024-07-12T16:18:53.048"},
+  {"message": "hello greptime", "time": "2024-07-12T16:18:53.048"}
+]`
+    }
+
+    if (contentType === 'application/x-ndjson') {
+      return `{"message": "hello world", "time": "2024-07-12T16:18:53.048"}
+{"message": "hello greptime", "time": "2024-07-12T16:18:53.048"}`
+    }
+
+    // text/plain
+    return `hello world 2024-07-12T16:18:53.048
+hello greptime 2024-07-12T16:18:53.048`
+  }
+
   const getInfluxdbInputConfig = (precision: Ref<string>): IngestConfig => ({
     type: 'influxdb',
     tabKey: 'influxdb-input',
@@ -26,19 +44,6 @@ export default function useIngest() {
     },
     get params() {
       return { precision: precision.value }
-    },
-  })
-
-  const getLogIngestionInputConfig = (pipeline: Ref<string>): IngestConfig => ({
-    type: 'log-ingestion',
-    tabKey: 'log-ingestion-input',
-    submitLabel: 'Process',
-    placeholder: 'Enter your log data here...',
-    hasDoc: false,
-    successMessage: 'Log processed successfully',
-    submitHandler: async (content: string) => {},
-    get params() {
-      return { pipeline: pipeline.value }
     },
   })
 
@@ -56,15 +61,45 @@ export default function useIngest() {
     },
   })
 
-  const getLogIngestionUploadConfig = (pipeline: Ref<string>): IngestConfig => ({
+  const getLogIngestionInputConfig = (
+    pipeline: Ref<string>,
+    table: Ref<string>,
+    contentType: Ref<string>
+  ): IngestConfig => ({
+    type: 'log-ingestion',
+    tabKey: 'log-ingestion-input',
+    submitLabel: 'Write',
+    get placeholder() {
+      return getPlaceholderByContentType(contentType.value)
+    },
+    hasDoc: false,
+    successMessage: 'Data written successfully',
+    submitHandler: async (content: string) => {
+      return codeRunStore.processLogs(content, table.value, pipeline.value, contentType.value)
+    },
+    get params() {
+      return { pipeline: pipeline.value, table: table.value, contentType: contentType.value }
+    },
+  })
+
+  const getLogIngestionUploadConfig = (
+    pipeline: Ref<string>,
+    table: Ref<string>,
+    contentType: Ref<string>
+  ): IngestConfig => ({
     type: 'log-ingestion',
     tabKey: 'log-ingestion-upload',
-    submitLabel: 'Process',
+    submitLabel: 'Write',
+    get placeholder() {
+      return getPlaceholderByContentType(contentType.value)
+    },
     hasDoc: false,
-    successMessage: 'Log processed successfully',
-    submitHandler: async (content: string) => {},
+    successMessage: 'Data written successfully',
+    submitHandler: async (content: string) => {
+      return codeRunStore.processLogs(content, table.value, pipeline.value, contentType.value)
+    },
     get params() {
-      return { pipeline: pipeline.value }
+      return { pipeline: pipeline.value, table: table.value, contentType: contentType.value }
     },
   })
 
