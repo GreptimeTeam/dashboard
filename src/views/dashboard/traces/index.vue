@@ -359,6 +359,7 @@
     gap: 8px;
     overflow: hidden;
     min-height: 0; // Important for flexbox
+    margin-bottom: 22px;
   }
 
   .toolbar {

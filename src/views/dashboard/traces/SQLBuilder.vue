@@ -72,6 +72,7 @@ a-form(
       v-model="form.limit"
       style="width: 200px"
       placeholder="Limit"
+      :step="100"
       :min="1"
       :max="1000"
     )
@@ -125,7 +126,7 @@ a-form(
     ],
     orderByField: '',
     orderBy: 'DESC',
-    limit: 100,
+    limit: 1000,
     table: '',
   }
 
