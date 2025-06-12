@@ -42,6 +42,7 @@ a-drawer.ingest(
 <script lang="ts" setup>
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { basicSetup } from 'codemirror'
+  import { json } from '@codemirror/lang-json'
   import type { Log } from '@/store/modules/log/types'
 
   const props = defineProps({
@@ -59,7 +60,16 @@ a-drawer.ingest(
   const content = ref('')
   const docVisible = ref(false)
   const style = { height: '100%' }
-  const extensions = [basicSetup]
+
+  const extensions = computed(() => {
+    const contentType = props.config?.params?.contentType
+
+    if (contentType === 'application/json' || contentType === 'application/x-ndjson') {
+      return [basicSetup, json()]
+    }
+
+    return [basicSetup]
+  })
 
   const toggleDoc = () => {
     docVisible.value = !docVisible.value

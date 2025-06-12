@@ -14,6 +14,24 @@ export interface IngestConfig {
 export default function useIngest() {
   const codeRunStore = useCodeRunStore()
 
+  const getPlaceholderByContentType = (contentType: string): string => {
+    if (contentType === 'application/json') {
+      return `[
+  {"message": "hello world", "time": "2024-07-12T16:18:53.048"},
+  {"message": "hello greptime", "time": "2024-07-12T16:18:53.048"}
+]`
+    }
+
+    if (contentType === 'application/x-ndjson') {
+      return `{"message": "hello world", "time": "2024-07-12T16:18:53.048"}
+{"message": "hello greptime", "time": "2024-07-12T16:18:53.048"}`
+    }
+
+    // text/plain
+    return `hello world 2024-07-12T16:18:53.048
+hello greptime 2024-07-12T16:18:53.048`
+  }
+
   const getInfluxdbInputConfig = (precision: Ref<string>): IngestConfig => ({
     type: 'influxdb',
     tabKey: 'influxdb-input',
@@ -51,8 +69,9 @@ export default function useIngest() {
     type: 'log-ingestion',
     tabKey: 'log-ingestion-input',
     submitLabel: 'Write',
-    placeholder: `{"message": "hello world", "time": "2024-07-12T16:18:53.048"}
-{"message": "hello greptime", "time": "2024-07-12T16:18:53.048"}`,
+    get placeholder() {
+      return getPlaceholderByContentType(contentType.value)
+    },
     hasDoc: false,
     successMessage: 'Data written successfully',
     submitHandler: async (content: string) => {
@@ -71,6 +90,9 @@ export default function useIngest() {
     type: 'log-ingestion',
     tabKey: 'log-ingestion-upload',
     submitLabel: 'Write',
+    get placeholder() {
+      return getPlaceholderByContentType(contentType.value)
+    },
     hasDoc: false,
     successMessage: 'Data written successfully',
     submitHandler: async (content: string) => {
