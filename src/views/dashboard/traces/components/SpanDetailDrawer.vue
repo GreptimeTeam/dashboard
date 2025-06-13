@@ -30,7 +30,7 @@ a-drawer(
     .divider
     .summary-item
       span.summary-label StartTime
-      span.summary-value {{ formatTime(span?.timestamp) }}
+      span.summary-value {{ dayjs(span?.timestamp / 1000000).format('YYYY-MM-DD HH:mm:ss.SSS') }}
 
   a-tabs(v-model:active-key="viewMode" type="card-gutter")
     a-tab-pane(key="table" title="Table View")
@@ -55,10 +55,11 @@ a-drawer(
 
 <script setup lang="ts">
   import { ref, computed } from 'vue'
+  import dayjs from 'dayjs'
   import { json } from '@codemirror/lang-json'
   import { EditorView } from '@codemirror/view'
   import { Codemirror as CodeMirror } from 'vue-codemirror'
-  import { formatTime, formatDuration } from '../utils'
+  import { formatDuration } from '../utils'
   import type { Span } from '../utils'
 
   const props = defineProps<{
@@ -97,7 +98,7 @@ a-drawer(
       ) {
         let formattedValue = value
         if (key === 'timestamp' || key === 'timestamp_end') {
-          formattedValue = formatTime(value)
+          formattedValue = dayjs(value / 1000000).format('YYYY-MM-DD HH:mm:ss.SSS')
         } else if (typeof value === 'object') {
           formattedValue = JSON.stringify(value, null, 2)
         } else {

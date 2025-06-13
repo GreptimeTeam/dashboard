@@ -68,7 +68,6 @@ export function buildSpanTree(spans: Span[]): Span[] {
 }
 
 export function getRelativePosition(span: Span, startTime: number, endTime: number): number {
-  console.log(span.timestamp, startTime, endTime)
   if (!startTime || !endTime) return 0
   const spanTime = span.timestamp
   return ((spanTime - startTime) / (endTime - startTime)) * 100
