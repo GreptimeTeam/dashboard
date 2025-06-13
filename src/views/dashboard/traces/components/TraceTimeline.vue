@@ -319,6 +319,12 @@ a-spin.spin-block(:loading="loading")
       align-items: center;
       gap: 8px;
       flex-shrink: 0;
+      overflow: hidden;
+      .span-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
     }
 
     .span-timeline {
