@@ -29,6 +29,7 @@
               a-option(v-for="service in uniqueServices" :key="service" :value="service")
                 | {{ service }}
         trace-timeline(
+          v-if="rootSpan && filteredSpanTree.length > 0"
           :loading="loading"
           :span-tree="filteredSpanTree"
           :root-span="rootSpan"
@@ -90,8 +91,26 @@
     return traceSpans.value.filter((span) => selectedServices.value.includes(span.service_name))
   })
 
-  // Build span tree from filtered spans
-  const filteredSpanTree = computed(() => buildSpanTree(filteredSpans.value))
+  // Build span tree from filtered spans - only include necessary properties for timeline
+  const filteredSpanTree = computed(() => {
+    // Filter spans to only include essential properties for timeline rendering
+    const essentialSpans = filteredSpans.value.map((span) => ({
+      _level: span._level || 0,
+      key: span.span_id,
+      span_name: span.span_name,
+      span_status_code: span.span_status_code,
+      status: span.status,
+      span_id: span.span_id,
+      parent_span_id: span.parent_span_id,
+      duration_nano: span.duration_nano,
+      timestamp: span.timestamp,
+      timestamp_end: span.timestamp_end,
+      trace_id: span.trace_id,
+      service_name: span.service_name,
+    }))
+
+    return buildSpanTree(essentialSpans)
+  })
 
   // Reset all state
   function resetState() {
@@ -111,7 +130,7 @@
         SELECT *
         FROM ${tableName}
         WHERE trace_id = '${route.params.id}'
-        ORDER BY timestamp DESC
+        ORDER BY timestamp ASC
       `)
 
       if (result.output?.[0]?.records) {
@@ -120,7 +139,6 @@
           rows: any[][]
         }
         traceSpans.value = processSpanData(records)
-
         // Calculate trace time range
         const timestamps = traceSpans.value.map((span) => span.timestamp)
         traceStartTime.value = Math.min(...timestamps)
@@ -137,8 +155,8 @@
     router.back()
   }
 
-  function handleSpanSelect(spanId: string, span: any) {
-    selectedSpan.value = span
+  function handleSpanSelect(spanId: string) {
+    selectedSpan.value = traceSpans.value.find((span) => span.span_id === spanId) || null
     drawerVisible.value = true
   }
 
