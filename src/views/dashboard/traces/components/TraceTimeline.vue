@@ -88,18 +88,18 @@ a-spin.spin-block(:loading="loading")
 
   // Predefined color palette for service names - moderate saturation, avoiding red/orange/gray
   const serviceColors = [
-    '#70A4BC', // Muted Sky Blue
-    '#9BBB95', // Soft Sage Green
-    '#A08DAE', // Dusty Lavender
-    '#7EC4B5', // Calm Teal
-    '#B3B074', // Subtle Olive Green (Yellow-Green)
-    '#6A9FC2', // Medium Muted Blue
-    '#6F9F68', // Deeper Muted Green
-    '#88709B', // Muted Plum Purple
-    '#5DA2A4', // Deeper Muted Aqua
-    '#C7B5A0', // Warm Beige / Fawn (desaturated light brown)
-    '#C9A8B1', // Muted Rose / Blush Pink
-    '#4D7B9D', // Dark Muted Blue
+    '#70A4BC', // Muted Sky Blue (Cool, Light Blue)
+    '#8DB47A', // Soft Sage Green (Slightly Brighter Green)
+    '#9985B1', // Dusty Lavender (Clearer Purple)
+    '#6ABAA5', // Calm Teal (More Distinct Blue-Green)
+    '#C7B47E', // Muted Gold / Ochre (Richer Yellow-Brown)
+    '#5A8FC0', // Medium Muted Blue (More Vibrant Medium Blue)
+    '#7C6091', // Muted Plum (Deeper, More Defined Purple)
+    '#C0A890', // Light Warm Brown (A Distinct Earth Tone)
+    '#BD8C91', // Muted Berry Pink (More Prominent Pink, still soft)
+    '#3F6A90', // Deeper Ocean Blue (Solid, Darker Blue)
+    '#A08C78', // Dark Muted Brown (Robust Earthy Brown)
+    '#52805B', // Deep Forest Green (Solid, Dark Green)
   ]
 
   function getServiceColor(serviceName: string): string {
