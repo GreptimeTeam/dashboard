@@ -119,10 +119,7 @@
           schema: { column_schemas: Array<{ name: string; data_type: string }> }
           rows: any[][]
         }
-        console.log(records, 'records')
-
         traceSpans.value = processSpanData(records)
-        console.log(traceSpans.value, 'traceSpans')
 
         // Calculate trace time range
         const timestamps = traceSpans.value.map((span) => span.timestamp)
@@ -137,12 +134,10 @@
   }
 
   const handleBack = () => {
-    console.log('Back button clicked')
     router.back()
   }
 
   function handleSpanSelect(spanId: string, span: any) {
-    console.log(span, 'span')
     selectedSpan.value = span
     drawerVisible.value = true
   }

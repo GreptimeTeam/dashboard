@@ -35,7 +35,8 @@ a-spin.spin-block(:loading="loading")
             icon-down(v-if="expanded")
             icon-right(v-else)
           .child-count {{ getChildCount(node, expanded) }}
-        .no-expand-icon(v-else :style="{ backgroundColor: getServiceColor(node.service_name) }")
+        .leaf-node(v-else)
+          .no-expand-icon(:style="{ backgroundColor: getServiceColor(node.service_name) }")
       template(#title="data")
         .span-item
           .span-info(:style="getSpanInfoStyle(data._level)")
@@ -77,26 +78,28 @@ a-spin.spin-block(:loading="loading")
       default: null,
     },
   })
-
+  watchEffect(() => {
+    console.log(props.spanTree, props.rootSpan)
+  })
   const emit = defineEmits(['spanSelect'])
 
   const treeRef = ref()
   const spanInfoWidth = ref('400px')
 
-  // Predefined color palette for service names
+  // Predefined color palette for service names - moderate saturation, avoiding red/orange/gray
   const serviceColors = [
-    '#7B9BFF', // Muted blue
-    '#52C41A', // Muted green
-    '#FA8C16', // Muted orange
-    '#597EF7', // Muted indigo (replacing red)
-    '#9254DE', // Muted purple
-    '#36CFC9', // Muted teal
-    '#D4B106', // Muted gold (replacing pink)
-    '#FADB14', // Muted yellow
-    '#8C8C8C', // Muted gray
-    '#40A9FF', // Muted light blue
-    '#95DE64', // Muted light green
-    '#FFC069', // Muted light orange
+    '#70A4BC', // Muted Sky Blue
+    '#9BBB95', // Soft Sage Green
+    '#A08DAE', // Dusty Lavender
+    '#7EC4B5', // Calm Teal
+    '#B3B074', // Subtle Olive Green (Yellow-Green)
+    '#6A9FC2', // Medium Muted Blue
+    '#6F9F68', // Deeper Muted Green
+    '#88709B', // Muted Plum Purple
+    '#5DA2A4', // Deeper Muted Aqua
+    '#C7B5A0', // Warm Beige / Fawn (desaturated light brown)
+    '#C9A8B1', // Muted Rose / Blush Pink
+    '#4D7B9D', // Dark Muted Blue
   ]
 
   function getServiceColor(serviceName: string): string {
@@ -151,7 +154,7 @@ a-spin.spin-block(:loading="loading")
 
   function getSpanInfoStyle(level: number): { width: string } {
     return {
-      width: `calc(${spanInfoWidth.value} - 50px - ${level * 22}px)`,
+      width: `calc(${spanInfoWidth.value} - 52px - ${level * 22}px)`,
     }
   }
 
@@ -241,18 +244,19 @@ a-spin.spin-block(:loading="loading")
   }
   :deep(.arco-tree-node-selected .arco-tree-node-title) {
     color: var(--color-primary);
+    background-color: var(--color-fill-2);
   }
   .expand-info {
     display: flex;
     align-items: center;
     gap: 4px;
     padding: 2px 6px;
-    border: 1px solid var(--color-border);
     border-radius: 4px;
     cursor: pointer;
     transition: all 0.2s;
     font-size: 11px;
-    min-width: 32px;
+    width: 32px;
+    height: 28px;
     justify-content: center;
 
     &:hover {
@@ -273,14 +277,21 @@ a-spin.spin-block(:loading="loading")
     }
 
     .child-count {
-      font-weight: 500;
+      font-weight: bold;
       font-size: 10px;
     }
   }
-  .no-expand-icon {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
+  .leaf-node {
+    width: 32px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    .no-expand-icon {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
   }
   .child-count-icon {
     background-color: var(--color-primary-light-1);
@@ -329,7 +340,6 @@ a-spin.spin-block(:loading="loading")
         height: 6px;
         top: 50%;
         transform: translateY(-50%);
-        border-radius: 2px;
         transition: all 0.2s;
 
         .time-info {
@@ -380,6 +390,8 @@ a-spin.spin-block(:loading="loading")
   }
   :deep(.arco-tree-node-title) {
     display: flex;
+    padding-right: 0;
+    margin-left: 0;
   }
   :deep(.arco-tree-node-title-text) {
     flex: 1;
