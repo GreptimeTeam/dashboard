@@ -112,14 +112,16 @@ a-drawer(
       }
     })
 
-    const mergedAttributes = ['span_attributes', 'resource_attributes']
+    const mergedAttributes = ['span_attributes.', 'resource_attributes.']
 
     mergedAttributes.forEach((prefix) => {
       const obj = Object.entries(span)
         .filter(([key]) => key.startsWith(prefix))
         .reduce((acc, [key, value]) => {
           const cleanKey = key.replace(prefix, '')
-          acc[cleanKey] = value
+          if (value !== null && value !== undefined) {
+            acc[cleanKey] = value
+          }
           return acc
         }, {} as Record<string, any>)
 

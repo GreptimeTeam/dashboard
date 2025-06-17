@@ -91,9 +91,6 @@ VCharts(
         data: data.value,
         barMaxWidth: 25,
         barWidth: '50%',
-        itemStyle: {
-          color: '#bdc4cd',
-        },
       },
     ],
     graphic: {
