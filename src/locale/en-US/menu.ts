@@ -30,4 +30,5 @@ export default {
   'menu.dashboard.logquery': 'Log Query',
   'menu.dashboard.logpipeline': 'Log Pipelines',
   'menu.traces.list': 'Traces',
+  'menu.dashboard.log-ingestion': 'Log Ingestion',
 }

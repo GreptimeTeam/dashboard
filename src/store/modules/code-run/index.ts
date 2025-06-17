@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import Message from '@arco-design/web-vue/es/message'
 import i18n from '@/locale'
 import editorAPI from '@/api/editor'
+import { postPipelineLogs } from '@/api/pipeline'
 import dayjs from 'dayjs'
 import { dateTypes } from '@/views/dashboard/config'
 import { AnyObject } from '@/types/global'
@@ -205,6 +206,17 @@ const useCodeRunStore = defineStore('codeRun', () => {
     }
   }
 
+  const processLogs = async (data: string, table: string, pipeline: string, contentType: string) => {
+    try {
+      const appStore = useAppStore()
+      const res = await postPipelineLogs(appStore.database, table, pipeline, data, contentType)
+
+      return res
+    } catch (error: any) {
+      return error
+    }
+  }
+
   const runWithFormat = async (code: string, queryType: string, promForm?: PromForm, format?: string) => {
     const res: any =
       queryType === 'sql'
@@ -212,7 +224,6 @@ const useCodeRunStore = defineStore('codeRun', () => {
         : await editorAPI.runPromQL(code, promForm, format)
     return res
   }
-
   return {
     results,
     runCode,
@@ -223,6 +234,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
     explainResultKeyCount,
     explainResult,
     runWithFormat,
+    processLogs,
   }
 })
 export default useCodeRunStore
