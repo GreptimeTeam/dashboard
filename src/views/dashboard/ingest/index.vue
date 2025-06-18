@@ -1,16 +1,16 @@
 <template lang="pug">
 a-layout.new-layout
-  a-layout-sider(:resize-directions="['right']" :width="275")
+  a-layout-sider(:resize-directions="['right']" :width="200")
     a-card.sidebar(:title="$t('menu.dashboard.ingest')" :bordered="false")
       a-menu(
         mode="vertical"
         :selected-keys="[activeTab]"
         :collapsed="false"
-        :default-open-keys="['influxdb']"
+        :default-open-keys="['influxdb', 'log-ingestion']"
       )
         a-sub-menu(v-for="(item, index) in menu" :key="item.name")
           template(#title)
-            svg.icon
+            svg.icon-15
               use(:href="`#${item.meta.icon}`")
             span {{ $t(item.meta.locale) }}
           a-menu-item(v-for="child in item.children" :key="child.name" @click="menuClick(item.name, child.name)")
@@ -41,18 +41,18 @@ a-layout.new-layout
 
 <script lang="ts" setup name="Ingest">
   import useMenuTree from '@/components/menu/use-menu-tree'
-  import router from '@/router'
   import { useStorage } from '@vueuse/core'
   import type { StatusContentSimple } from '@/store/modules/status-bar'
   import { driver } from 'driver.js'
   import 'driver.js/dist/driver.css'
-  import { useI18n } from 'vue-i18n'
   import { navbarSteps } from '../config'
+
   import PanelIcon from './panel-icon.vue'
 
+  const router = useRouter()
   const route = useRoute()
-  const { t } = useI18n()
   const { menuTree } = useMenuTree()
+
   const { activeTab, footer } = storeToRefs(useIngestStore())
   const { logs } = storeToRefs(useLogStore())
   const { dataStatusMap } = storeToRefs(useUserStore())
@@ -138,7 +138,8 @@ a-layout.new-layout
       height: 52px;
     }
     .arco-menu {
-      .icon {
+      .icon,
+      .icon-15 {
         margin-right: 6px;
       }
       .arco-menu-inner {
@@ -187,6 +188,56 @@ a-layout.new-layout
           }
         }
       }
+    }
+  }
+
+  :deep(.arco-card.light-editor-card) {
+    height: 100%;
+    border-radius: 4px;
+    padding-right: 0;
+
+    .arco-card-body {
+      height: 100%;
+    }
+
+    .ͼc {
+      color: #0550ae;
+    }
+
+    .ͼo {
+      font-size: 14px;
+
+      .cm-gutters {
+        background-color: var(--grey-bg-color);
+      }
+    }
+
+    .ͼ1 .cm-scroller {
+      border-radius: 4px;
+    }
+
+    .ͼ1 .cm-content {
+      padding: 10px 0 !important;
+      width: calc(100% - 40px);
+      white-space: pre-wrap;
+    }
+
+    .ͼ1 .cm-line {
+      padding: 0 8px;
+      color: var(--main-font-color);
+    }
+
+    .ͼ1 .cm-selectionMatch {
+      background-color: rgba(255, 255, 0, 0.4);
+    }
+
+    .ͼ1.cm-editor {
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+    }
+
+    .ͼ1.cm-editor.cm-focused {
+      outline: 0;
     }
   }
 

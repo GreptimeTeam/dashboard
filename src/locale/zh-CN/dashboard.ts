@@ -74,4 +74,5 @@ export default {
   'dashboard.raw': 'Raw',
   'dashboard.importExplain': 'Import Result JSON',
   'dashboard.exportCSV': 'Export Result as CSV',
+  'dashboard.wrapLine': 'Wrap Lines',
 }

@@ -1,6 +1,15 @@
 <template lang="pug">
 a-layout-header
-  TopBar(:hasButtons="false")
+  TopBarIngest(:hasButtons="false")
+    template(#selector)
+      slot(name="selector" :config="config")
+    template(#extra)
+      slot(
+        name="extra"
+        :toggleDoc="toggleDoc"
+        :docVisible="docVisible"
+        :config="config"
+      )
 a-layout-content.main-content
   a-upload(
     action="/"
@@ -18,8 +27,8 @@ a-layout-content.main-content
           align="center"
           :size="30"
         )
-          .tip Drop or click to upload (10MB max)
-          a-button(type="primary" size="large") Upload
+          .tip {{ config.dragText || 'Drop or click to upload' }} ({{ config.maxSize || 10 }}MB max)
+          a-button(type="primary" size="large") {{ config.buttonText || 'Upload' }}
         a-space(
           v-else
           direction="vertical"
@@ -31,51 +40,93 @@ a-layout-content.main-content
               svg.icon-30
                 use(href="#mistake30")
             .tip {{ `${file.name} (${fileSize}) is too large` }}
-            .file-info {{ `The file size limit is 10MB` }}
-          a-button(type="primary" size="large") Upload
-a-modal(
-  v-model:visible="visible"
-  title="Preview file content"
-  modal-class="file-modal"
-  :footer="false"
-  @close="resetFile"
-)
-  template(#title)
-    TopBar(
-      :disabled="!dataFromFile || isWriteLoading"
-      :loading="isWriteLoading"
-      :hasDoc="false"
-      @submit="submit"
-    )
-  .error(v-if="errorMessage")
-    a-alert(type="error" show-icon)
-      a-typography-text(title="" :ellipsis="{ rows: 1, showTooltip: true }")
-        | {{ errorMessage }}
-  a-spin(tip="Reading file..." style="width: 100%" :loading="isReadingFile")
-    a-card.file-scrollbar(:bordered="false")
-      CodeMirror(v-if="dataFromFile" v-model="codeInEditor" :disabled="true")
-    span.load(v-if="collapsed && remainingLines")
-      a.text ...{{ remainingLines }} lines more
-      a.button(type="text" size="mini" @click="loadMore") Expand
+            .file-info {{ `The file size limit is ${config.maxSize || 10}MB` }}
+          a-button(type="primary" size="large") {{ config.buttonText || 'Upload' }}
+
+  a-modal(
+    v-model:visible="visible"
+    modal-class="file-modal"
+    :title="config.modalTitle || 'Preview file content'"
+    :footer="false"
+    @close="resetFile"
+  )
+    template(#title)
+      TopBarIngest(
+        :disabled="!dataFromFile || isProcessLoading"
+        :loading="isProcessLoading"
+        :submitLabel="config.submitLabel || 'Process'"
+        @submit="submit"
+      )
+        template(#selector)
+          slot(name="modal-selector" :config="config")
+
+    .error(v-if="errorMessage")
+      a-alert(type="error" show-icon)
+        a-typography-text(title="" :ellipsis="{ rows: 1, showTooltip: true }") {{ errorMessage }}
+
+    a-spin(style="width: 100%" :tip="config.readingTip || 'Reading file...'" :loading="isReadingFile")
+      a-card.file-scrollbar(:bordered="false")
+        CodeMirror(
+          v-model="codeInEditor"
+          :style="{ height: '100%' }"
+          :extensions="extensions"
+          :spellcheck="true"
+          :indent-with-tab="true"
+          :tabSize="2"
+          :disabled="true"
+        )
+      span.load(v-if="collapsed && remainingLines")
+        a.text ...{{ remainingLines }} lines more
+        a.button(type="text" size="mini" @click="loadMore") {{ config.expandText || 'Expand' }}
+
+  a-drawer.ingest(
+    v-if="config.hasDoc"
+    v-model:visible="docVisible"
+    placement="right"
+    title=""
+    :width="510"
+    :footer="false"
+  )
+    slot(name="doc-content" :config="config")
 </template>
 
 <script lang="ts" setup>
   import { Codemirror as CodeMirror } from 'vue-codemirror'
+  import { basicSetup } from 'codemirror'
+  import { json } from '@codemirror/lang-json' // 导入JSON语法支持
   import type { Log } from '@/store/modules/log/types'
+  import { isObject } from '@/utils/is'
 
-  const { writeInfluxDB } = useCodeRunStore()
+  const props = defineProps({
+    config: {
+      type: Object,
+      required: true,
+    },
+  })
+
+  const route = useRoute()
+  const { pushLog } = useLog(route)
   const { activeTab, footer } = storeToRefs(useIngestStore())
-  const { pushLog } = useLog()
 
-  const file = ref(null as File | null)
+  const file = ref(null)
   const visible = ref(false)
-  const isWriteLoading = ref(false)
+  const isProcessLoading = ref(false)
   const isReadingFile = ref(false)
   const sizeError = ref(false)
   const collapsed = ref(true)
   const dataFromFile = ref('')
   const codeInEditor = ref('')
   const errorMessage = ref('')
+
+  const docVisible = ref(false)
+
+  const toggleDoc = () => {
+    docVisible.value = !docVisible.value
+  }
+
+  onActivated(() => {
+    activeTab.value = props.config.tabKey
+  })
 
   const remainingLines = computed(() => {
     return dataFromFile.value.split('\n').length > 10 ? dataFromFile.value.split('\n').length - 10 : 0
@@ -108,13 +159,16 @@ a-modal(
     sizeError.value = false
   }
 
-  const beforeUpload = (newFile: File) => {
+  const beforeUpload = (newFile) => {
     file.value = newFile
     sizeError.value = false
-    if (newFile.size > 10 * 1024 * 1024) {
+
+    const maxBytes = (props.config.maxSize || 10) * 1024 * 1024
+    if (newFile.size > maxBytes) {
       sizeError.value = true
       return false
     }
+
     visible.value = true
     const reader = new FileReader()
     reader.readAsText(newFile)
@@ -132,15 +186,18 @@ a-modal(
     return false
   }
 
-  const submit = async (precision: string) => {
-    isWriteLoading.value = true
-    const result = await writeInfluxDB(dataFromFile.value, precision)
-    let log: Log
+  const submit = async () => {
+    if (!dataFromFile.value || isProcessLoading.value) return
+
+    isProcessLoading.value = true
+    const result = await props.config.submitHandler(dataFromFile.value, props.config.params)
+
     const fileInfo = file.value ? `${file.value.name}(${fileSize.value})` : ''
-    if (Reflect.has(result, 'error')) {
-      // error
+
+    let log: Log
+    if (isObject(result) && Reflect.has(result, 'error')) {
       log = {
-        type: 'influxdb-upload',
+        type: props.config.tabKey,
         codeInfo: fileInfo,
         message: '',
         error: result.error,
@@ -148,30 +205,49 @@ a-modal(
       }
       errorMessage.value = result.error
     } else {
-      // success
-      // clear file
       const codeTooltip =
         remainingLines.value > 0
           ? `${dataFromFile.value.split('\n').slice(0, 10).join('\n')}\n...${remainingLines.value} lines more`
           : dataFromFile.value
+
       log = {
-        type: 'influxdb-upload',
+        type: props.config.tabKey,
         codeInfo: fileInfo,
         codeTooltip,
         message: 'Data written',
         startTime: result.startTime,
         networkTime: result.networkTime,
       }
-      visible.value = false
+
       resetFile()
+      visible.value = false
     }
-    pushLog(log, activeTab.value)
+
+    pushLog(log, props.config.tabKey)
     footer.value[activeTab.value] = false
-    isWriteLoading.value = false
+    isProcessLoading.value = false
   }
+
+  const extensions = computed(() => {
+    const contentType = props.config?.params?.contentType
+
+    if (contentType === 'application/json' || contentType === 'application/x-ndjson') {
+      return [basicSetup, json()]
+    }
+
+    return [basicSetup]
+  })
 </script>
 
 <style lang="less" scoped>
+  .top-bar {
+    display: flex;
+    justify-content: space-between;
+    padding-right: 20px;
+    height: 58px;
+    background: var(--card-bg-color);
+  }
+
   .arco-upload {
     width: 100%;
     padding: 0 105px;
@@ -285,13 +361,6 @@ a-modal(
         cursor: pointer;
         color: var(--brand-color);
         text-decoration-line: underline;
-      }
-    }
-    .top-bar {
-      padding: 0;
-      width: 100%;
-      .arco-select-view-single {
-        width: 126px;
       }
     }
   }

@@ -27,4 +27,5 @@ export default {
   'menu.tour.workbench': '使用 UI 构建器和基于 YAML 的配置构建高级仪表板，所有这些都由 git 管理。',
   'menu.dashboard.logquery': '日志查询',
   'menu.dashboard.logpipeline': '日志 Pipelines',
+  'menu.dashboard.log-ingestion': '日志摄取',
 }
