@@ -361,7 +361,6 @@ a-card.editor-card(:bordered="false")
             start = now.subtract(promForm.time, 'minute').unix().toString()
           }
           const rangePrefix = `(${start}, ${end}, '${promForm.step}')`
-          // TODO: wait for API ready
           explainCommand = `tql analyze format json ${rangePrefix} ${queryString}`
         } else if (
           queryString.trim().toLowerCase().startsWith('tql eval') ||

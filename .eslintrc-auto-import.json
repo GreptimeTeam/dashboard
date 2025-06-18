@@ -116,6 +116,9 @@
     "onWatcherCleanup": true,
     "useId": true,
     "useModel": true,
-    "useTemplateRef": true
+    "useTemplateRef": true,
+    "IngestConfig": true,
+    "ingest": true,
+    "useIngest": true
   }
 }
