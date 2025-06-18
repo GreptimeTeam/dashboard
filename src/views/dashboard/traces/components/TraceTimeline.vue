@@ -78,9 +78,7 @@ a-spin.spin-block(:loading="loading")
       default: null,
     },
   })
-  watchEffect(() => {
-    console.log(props.spanTree, props.rootSpan)
-  })
+
   const emit = defineEmits(['spanSelect'])
 
   const treeRef = ref()
