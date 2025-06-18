@@ -24,7 +24,6 @@ a-card.editor-card(:bordered="false")
             a-popover(position="rt" content-class="code-tooltip" :content="currentStatement")
               span {{ $t('dashboard.exportCSV') }}
       a-dropdown-button(
-        v-if="queryType === 'sql'"
         type="outline"
         position="bl"
         :disabled="isButtonDisabled || explainQueryRunning"
@@ -350,10 +349,32 @@ a-card.editor-card(:bordered="false")
     if (!isButtonDisabled.value) {
       explainQueryRunning.value = true
       try {
-        const result: any = await explainQuery(
-          `explain analyze format json ${currentStatement.value || codes.value[queryType.value]}`,
-          queryType.value
-        )
+        const queryString = currentStatement.value || codes.value[queryType.value]
+        let explainCommand = ''
+
+        if (queryType.value === 'promql') {
+          let start = promForm.range[0]
+          let end = promForm.range[1]
+          if (promForm.time) {
+            const now = dayjs()
+            end = now.unix().toString()
+            start = now.subtract(promForm.time, 'minute').unix().toString()
+          }
+          const rangePrefix = `(${start}, ${end}, '${promForm.step}')`
+          explainCommand = `tql analyze format json ${rangePrefix} ${queryString}`
+        } else if (
+          queryString.trim().toLowerCase().startsWith('tql eval') ||
+          queryString.trim().toLowerCase().startsWith('tql evaluate')
+        ) {
+          const matches = queryString.match(/^tql\s+eval(?:uate)?\s+([\s\S]*)$/i)
+          if (matches && matches[1]) {
+            explainCommand = `tql analyze format json ${matches[1].trim()}`
+          }
+        } else {
+          explainCommand = `explain analyze format json ${queryString}`
+        }
+
+        const result: any = await explainQuery(explainCommand, 'sql')
         if (result) {
           emit('selectExplainTab')
         }
