@@ -142,7 +142,7 @@ VCharts(
     return `SELECT
             date_bin('${intervalSeconds.value} seconds', timestamp) AS time_bucket,
             COUNT(*) AS event_count
-        FROM ${props.tableName}
+        FROM "${props.tableName}"
         ${whereClause}
         GROUP BY time_bucket
         ORDER BY time_bucket DESC

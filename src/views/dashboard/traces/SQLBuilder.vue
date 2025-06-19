@@ -371,12 +371,12 @@ a-form(
       }
     }
 
-    let sql = `SELECT * FROM ${form.table}`
+    let sql = `SELECT * FROM "${form.table}"`
     if (timeConditions.length > 0) {
       sql += ` WHERE ${timeConditions.join(' ')}`
     }
     if (form.orderByField) {
-      sql += ` ORDER BY ${form.orderByField} ${form.orderBy}`
+      sql += ` ORDER BY "${form.orderByField}" ${form.orderBy}`
     }
     sql += ` LIMIT ${form.limit}`
     emit('update:sql', sql)
