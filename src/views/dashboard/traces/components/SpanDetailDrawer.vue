@@ -32,7 +32,7 @@ a-drawer(
       span.summary-label StartTime
       span.summary-value {{ dayjs(span?.timestamp / 1000000).format('YYYY-MM-DD HH:mm:ss.SSS') }}
 
-  a-tabs(v-model:active-key="viewMode" type="card-gutter")
+  a-tabs(v-model:active-key="viewMode")
     a-tab-pane(key="table" title="Table View")
       a-descriptions(layout="vertical" bordered :column="2")
         a-descriptions-item(v-for="item of spanInfoData")
@@ -251,5 +251,8 @@ a-drawer(
   }
   :deep(.arco-descriptions-item-value) {
     vertical-align: top;
+  }
+  :deep(.descriptions-size-medium .arco-descriptions-item-value-block) {
+    font-size: 13px;
   }
 </style>
