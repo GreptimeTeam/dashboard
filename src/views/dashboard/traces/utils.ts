@@ -104,3 +104,61 @@ export function processSpanData(records: {
     return span
   })
 }
+
+// Validate SQL query
+export function validateSQL(sql: string): { isValid: boolean; error?: string } {
+  if (!sql || !sql.trim()) {
+    return { isValid: false, error: 'SQL query is empty' }
+  }
+
+  const trimmedSql = sql.trim().toLowerCase()
+
+  // Check if it starts with a valid SQL keyword
+  const validStartKeywords = ['select', 'with', 'show', 'describe', 'explain']
+  const startsWithValidKeyword = validStartKeywords.some((keyword) => trimmedSql.startsWith(keyword))
+
+  if (!startsWithValidKeyword) {
+    return {
+      isValid: false,
+      error: `SQL must start with one of: ${validStartKeywords.join(', ').toUpperCase()}`,
+    }
+  }
+
+  // For SELECT queries, ensure they have a FROM clause (basic validation)
+  if (trimmedSql.startsWith('select')) {
+    if (!trimmedSql.includes(' from ')) {
+      return { isValid: false, error: 'SELECT queries must include a FROM clause' }
+    }
+  }
+
+  // Check for balanced parentheses
+  const sqlChars = sql.split('')
+  let openParens = 0
+
+  const hasUnmatchedParens = sqlChars.some((char) => {
+    if (char === '(') openParens += 1
+    if (char === ')') openParens -= 1
+    return openParens < 0
+  })
+
+  if (hasUnmatchedParens) {
+    return { isValid: false, error: 'Unmatched closing parenthesis' }
+  }
+
+  if (openParens > 0) {
+    return { isValid: false, error: 'Unmatched opening parenthesis' }
+  }
+
+  // Check for balanced quotes - simple approach
+  const singleQuoteCount = (sql.match(/'/g) || []).length
+  const doubleQuoteCount = (sql.match(/"/g) || []).length
+
+  if (singleQuoteCount % 2 !== 0) {
+    return { isValid: false, error: 'Unmatched single quote' }
+  }
+  if (doubleQuoteCount % 2 !== 0) {
+    return { isValid: false, error: 'Unmatched double quote' }
+  }
+
+  return { isValid: true }
+}

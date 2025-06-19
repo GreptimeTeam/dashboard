@@ -100,6 +100,7 @@
   import SQLEditor from './components/SQLEditor.vue'
   import CountChart from './components/CountChart.vue'
   import TraceTable from './components/TraceTable.vue'
+  import { validateSQL } from './utils'
 
   const route = useRoute()
   const router = useRouter()
@@ -335,6 +336,16 @@
 
   watchOnce(finalQuery, () => {
     if (finalQuery.value) {
+      // Validate SQL before executing - only in editor mode
+      if (sqlMode.value === 'editor') {
+        const validation = validateSQL(finalQuery.value)
+        if (!validation.isValid) {
+          console.error('SQL validation failed:', validation.error)
+          // You can add a toast notification or other user feedback here
+          return
+        }
+      }
+
       nextTick(() => {
         handleQuery()
       })
