@@ -309,9 +309,6 @@ a-form(
     const columnType = getFieldType(column)
     const conditionVal = escapeSqlString(condition.value)
     let columnName = condition.field
-    // if (columnName.toUpperCase() !== columnName && columnName.toLowerCase() !== columnName) {
-    //   columnName = `"${columnName}"`
-    // }
     columnName = `"${columnName}"`
     if (condition.operator === 'Exist') {
       return `${columnName} is not null`
