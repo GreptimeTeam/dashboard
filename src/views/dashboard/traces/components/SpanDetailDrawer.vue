@@ -38,7 +38,7 @@ a-drawer(
         a-descriptions-item(v-for="item of spanInfoData")
           template(#label)
             a-typography-text(copyable type="secondary" :copy-text="String(item.value)")
-              | {{ item.label }} : {{ item.type }}
+              | {{ item.label }}
           | {{ item.value }}
     a-tab-pane(key="json" title="JSON View")
       CodeMirror(
