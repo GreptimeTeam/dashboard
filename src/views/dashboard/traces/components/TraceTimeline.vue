@@ -46,8 +46,8 @@ a-spin.spin-block(:loading="loading")
             .time-bar-container
               .time-bar(
                 :style=`{
-                  left: getRelativePosition(data, rootSpan?.timestamp || 0, (rootSpan?.timestamp || 0) + (rootSpan?.duration_nano || 0)) + '%',
-                  width: getDurationWidth(data, rootSpan?.timestamp || 0, (rootSpan?.timestamp || 0) + (rootSpan?.duration_nano || 0)) + '%',
+                  left: getRelativePosition(data, rootTimeStamp, rootEndTimeStamp) + '%',
+                  width: getDurationWidth(data, rootTimeStamp, rootEndTimeStamp) + '%',
                   backgroundColor: data.status === 'error' ? 'var(--color-danger-light-1)' : getServiceColor(data.service_name)
                 }`
                 :class="{ error: data.status === 'error' }"
@@ -84,6 +84,10 @@ a-spin.spin-block(:loading="loading")
   const treeRef = ref()
   const spanInfoWidth = ref('400px')
 
+  const rootTimeStamp = computed(() => props.rootSpan?.timestamp || 0)
+  const rootEndTimeStamp = computed(() => {
+    return (props.rootSpan?.timestamp || 0) + (props.rootSpan?.duration_nano || 0)
+  })
   // Predefined color palette for service names - moderate saturation, avoiding red/orange/gray
   const serviceColors = [
     '#70A4BC', // Muted Sky Blue (Cool, Light Blue)
