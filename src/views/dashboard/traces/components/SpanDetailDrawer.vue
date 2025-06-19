@@ -252,7 +252,7 @@ a-drawer(
   :deep(.arco-descriptions-item-value) {
     vertical-align: top;
   }
-  :deep(.descriptions-size-medium .arco-descriptions-item-value-block) {
+  :deep(.arco-descriptions-size-medium .arco-descriptions-item-label-block) {
     font-size: 13px;
   }
 </style>
