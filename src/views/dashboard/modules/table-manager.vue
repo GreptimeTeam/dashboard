@@ -48,7 +48,7 @@ a-card.table-manager(:bordered="false")
           :data="tablesTreeData"
           :load-more="loadMore"
           :animation="false"
-          :virtual-list-props="{threshold:10, height: `calc(100vh - ${collapseHeadersHeight}px - var(--tables-header-height) - var(--footer-height))` }"
+          :virtual-list-props="{threshold:100, buffer:20, height: `calc(100vh - ${collapseHeadersHeight}px - var(--tables-header-height) - var(--footer-height))` }"
         )
           template(#icon="node")
             a-tooltip(v-if="node.node.iconType" :content="node.node.iconType")
