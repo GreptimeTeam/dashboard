@@ -94,7 +94,7 @@ a-trigger#time-select(
   })
   const emit = defineEmits(['update:timeLength', 'update:timeRange', 'change', 'updateTourStep'])
 
-  const rangePickerVisible = ref(props.timeRange.length > 0)
+  const rangePickerVisible = ref(false)
   const visible = ref(false)
 
   const isRelative = computed(() => props.timeLength !== 0 || props.timeRange.length === 0)
