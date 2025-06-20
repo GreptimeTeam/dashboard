@@ -17,11 +17,15 @@ a-button(size="small" type="text" @click="exportSql")
       fields.push(tsColumn.value.name)
     }
     fields = [...fields, ...columns.value.map((column) => column.name).filter((v) => v !== tsColumn?.value.name)]
-    const where = getWhereClause(editingSql.value)
+    let where = getWhereClause(editingSql.value)
+    if (where) {
+      where = `WHERE ${where}`
+    }
     const order = parseOrderBy(editingSql.value) || 'desc'
-    return `SELECT ${fields.join(', ')} FROM ${inputTableName.value} WHERE ${where} ORDER BY ${
+    const limit = 10000
+    return `SELECT ${fields.join(', ')} FROM ${inputTableName.value} ${where} ORDER BY ${
       tsColumn.value.name
-    } ${order}`
+    } ${order} LIMIT ${limit}`
   }
 
   function exportSql() {

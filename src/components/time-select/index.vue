@@ -40,7 +40,7 @@ a-trigger#time-select(
         a-doption(
           v-for="time of relativeTimeOptions"
           :value="time.value"
-          :class="time.value === timeLength ? 'selected' : ''"
+          :class="isSingleTimeSelected(time.value) ? 'selected' : ''"
           @click="selectTimeLength(time.value)"
         ) {{ time.label }}
         a-doption(:class="!isRelative ? 'selected' : ''" @click="rangePickerVisible = !rangePickerVisible") Custom
@@ -107,8 +107,10 @@ a-trigger#time-select(
 
   const selectTimeLength = (value: any) => {
     emit('update:timeLength', value)
+    emit('update:timeRange', [])
     emit('change')
     visible.value = false
+    rangePickerVisible.value = false
   }
 
   watchEffect(() => {
@@ -120,6 +122,13 @@ a-trigger#time-select(
       emit('change')
     }
   })
+
+  function isSingleTimeSelected(value: any) {
+    if (props.timeRange.length > 0) {
+      return false
+    }
+    return props.timeLength === value
+  }
 </script>
 
 <style lang="less" scoped>

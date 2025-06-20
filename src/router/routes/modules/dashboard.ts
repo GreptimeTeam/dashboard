@@ -149,6 +149,30 @@ const DASHBOARD: AppRouteRecordRaw = {
       },
     },
     {
+      path: 'traces',
+      component: () => import('@/views/dashboard/traces/index.vue'),
+      name: 'trace-query',
+      meta: {
+        ignoreCache: false,
+        locale: 'menu.traces.list',
+        requiresAuth: false,
+        icon: 'traces',
+        roles: ['admin', 'cloud'],
+        keepAlive: true,
+      },
+    },
+    {
+      path: 'traces/detail/:id',
+      name: 'dashboard-TraceDetail',
+      component: () => import('@/views/dashboard/traces/[id].vue'),
+      meta: {
+        locale: 'menu.traces.detail',
+        requiresAuth: false,
+        roles: ['admin', 'cloud'],
+        hideInMenu: true,
+      },
+    },
+    {
       path: 'status',
       name: 'status',
       component: () => import('@/views/dashboard/status/index.vue'),
