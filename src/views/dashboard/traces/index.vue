@@ -20,7 +20,7 @@
             :relative-time-map="{ 0: 'Any time', ...relativeTimeMap }"
             :relative-time-options="[{ value: 0, label: 'Any time' }, ...relativeTimeOptions]"
           )
-          a-button(type="primary" size="small" @click="handleQuery") Run query
+          a-button(type="primary" size="small" @click="handleQuery") {{ $t('dashboard.runQuery') }}
           a-button(
             v-if="sqlMode === 'editor'"
             type="outline"
