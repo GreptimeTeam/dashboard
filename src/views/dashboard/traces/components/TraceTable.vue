@@ -68,9 +68,7 @@ a-card(:bordered="false")
                 | {{ col.name }}
           template(#cell="{ record }")
             template(v-if="col.name === 'traceid' || col.name === 'trace_id'")
-              router-link(
-                :to="{ name: 'dashboard-TraceDetail', params: { id: record[col.name] }, query: { table: props.tableName } }"
-              ) {{ record[col.name] }}
+              a-link(@click="handleTraceClick(record[col.name])") {{ record[col.name] }}
               svg.td-config-icon(
                 v-if="sqlMode === 'builder'"
                 @click="(event) => handleContextMenu(record, col.name, event)"
@@ -108,6 +106,7 @@ a-dropdown#td-context(
 <script setup lang="ts">
   import { ref, computed, watch, shallowRef } from 'vue'
   import { useLocalStorage } from '@vueuse/core'
+  import { useRouter } from 'vue-router'
   import { IconSettings } from '@arco-design/web-vue/es/icon'
   import dayjs from 'dayjs'
   import type { PropType } from 'vue'
@@ -145,6 +144,16 @@ a-dropdown#td-context(
   })
 
   const emit = defineEmits(['filterConditionAdd'])
+  const router = useRouter()
+
+  // Handle trace ID link click
+  function handleTraceClick(traceId: string) {
+    router.push({
+      name: 'dashboard-TraceDetail',
+      params: { id: traceId },
+      query: { table: props.tableName },
+    })
+  }
 
   // Column visibility state with localStorage persistence
   const displayedColumns = useLocalStorage<string[]>('trace-displayed-columns', [])
