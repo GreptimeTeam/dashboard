@@ -246,9 +246,7 @@ const useLogQueryStore = defineStore('logQuery', () => {
     const columnType = getColumnOpType(column.data_type)
     const conditionVal = escapeSqlString(condition.value)
     let columnName = condition.field.name
-    if (columnName.toUpperCase() !== columnName && columnName.toLowerCase() !== columnName) {
-      columnName = `"${columnName}"`
-    }
+    columnName = `"${columnName}"`
 
     if (columnType === 'Number' || columnType === 'Time') {
       return `${columnName} ${condition.op} ${condition.value}`
@@ -308,14 +306,14 @@ const useLogQueryStore = defineStore('logQuery', () => {
       if (editorType.value !== 'builder') {
         return
       }
-      let str = `SELECT * FROM ${editingTableName.value}`
+      let str = `SELECT * FROM "${editingTableName.value}"`
       const where = buildCondition()
       if (where.length) {
         str += ` WHERE ${where.join('')}`
       }
       const tmpTsColumn = editingTsColumn.value
       if (tmpTsColumn) {
-        str += ` ORDER BY ${tmpTsColumn.name} ${queryForm.orderBy}`
+        str += ` ORDER BY "${tmpTsColumn.name}" ${queryForm.orderBy}`
       }
       str += ` LIMIT ${limit.value}`
       editingSql.value = str
