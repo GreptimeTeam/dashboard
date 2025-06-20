@@ -4,7 +4,7 @@ Dashboard is a data-visualization platform for [GreptimeDB](https://github.com/g
 
 ## Quick Start
 
-You are welcome to try out our dashboard directly with GreptimeDB's binary or with Docker.
+You can try out our Dashboard in one of the following ways: (1) using GreptimeDB's binary, (2) using Docker, or (3) using the Desktop App.
 
 ### With GreptimeDB's binary
 
@@ -23,11 +23,9 @@ curl -O https://raw.githubusercontent.com/greptimeteam/dashboard/main/docker/doc
 ```
 docker compose up
 ```
-3. Open you browser and visit `http://localhost:8080/dashboard/`
+3. Open your browser and visit `http://localhost:8080/dashboard/`
 - Follow [getting started](https://docs.greptime.com/getting-started/quick-start#create-tables) to create your table and insert some data
 - Run a `SELECT` query and check the result as table or chart
-
-<!-- ### With Docker
 
 We recommend using `docker-compose` to setup both greptimedb and
 dashboard.
@@ -56,12 +54,16 @@ With the desktop version of the Dashboard app, you can run it independently, con
 
 ## Screenshot
 
+### Query - Result
 ![Dashboard Screenshot](screenshot1.png 'Dashboard Screenshot')
+
+### Query - Explain
 ![Dashboard Screenshot](screenshot2.png 'Dashboard Screenshot')
+
 ## Contributing
 
 - Please refer to [contribution guidelines](https://github.com/GreptimeTeam/greptimedb/blob/75dcf2467b022d4378f904efe5aae5027298986e/CONTRIBUTING.md) for more information.
-- This is the very first edition of our Dashboard. In the future we hope to add more and more features for users, and we welcome everyone to make contributions in any way you see fit.
+- This is an early-stage version of our Dashboard. We're continuously adding new features, and we warmly welcome contributions of all kinds.
 
 ## License
 
