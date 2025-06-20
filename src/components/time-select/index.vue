@@ -97,7 +97,6 @@ a-trigger#time-select(
   const rangePickerVisible = ref(props.timeRange.length > 0)
   const visible = ref(false)
 
-  // const isRelative = computed(() => props.timeRange.length === 0)
   const isRelative = computed(() => props.timeLength !== 0 || props.timeRange.length === 0)
   const selectTimeRange = (range: any) => {
     emit('update:timeRange', range)
