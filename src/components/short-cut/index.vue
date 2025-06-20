@@ -54,7 +54,7 @@ a-tooltip(position="right" :content="codeInfo.code")
   }
 
   const getCodeAndCursorPos = (type: string, node: TreeChild, parent: TableTreeParent) => {
-    const orderBy = parent.timeIndexName !== `%TIMESTAMP%` ? ` ORDER BY ${parent.timeIndexName} ` : ` `
+    const orderBy = parent.timeIndexName !== `%TIMESTAMP%` ? ` ORDER BY "${parent.timeIndexName}" ` : ` `
     switch (type) {
       case 'select*100':
         return {
@@ -63,33 +63,33 @@ a-tooltip(position="right" :content="codeInfo.code")
         }
       case 'count':
         return {
-          code: formatter(`SELECT count(*) FROM ${props.database}."${parent.title}" GROUP BY ${node.title};`),
+          code: formatter(`SELECT count(*) FROM ${props.database}."${parent.title}" GROUP BY "${node.title}";`),
           cursorPosition: 0,
         }
       case 'where=':
         return {
-          code: formatter(`SELECT * FROM ${props.database}."${parent.title}" WHERE ${node.title} = ${orderBy}DESC;`),
+          code: formatter(`SELECT * FROM ${props.database}."${parent.title}" WHERE "${node.title}" = ${orderBy}DESC;`),
           cursorPosition: `${orderBy}DESC;`.length,
         }
       case 'select100':
         return {
-          code: formatter(`SELECT ${node.title} FROM ${props.database}."${parent.title}"${orderBy}DESC LIMIT 100;`),
+          code: formatter(`SELECT "${node.title}" FROM ${props.database}."${parent.title}"${orderBy}DESC LIMIT 100;`),
           cursorPosition: 0,
         }
       case 'max':
         return {
-          code: formatter(`SELECT max(${node.title}) FROM ${props.database}."${parent.title}";`),
+          code: formatter(`SELECT max("${node.title}") FROM ${props.database}."${parent.title}";`),
           cursorPosition: 0,
         }
       case 'min':
         return {
-          code: formatter(`SELECT min(${node.title}) FROM ${props.database}."${parent.title}";`),
+          code: formatter(`SELECT min("${node.title}") FROM ${props.database}."${parent.title}";`),
           cursorPosition: 0,
         }
       case 'where<':
         return {
           code: formatter(
-            `SELECT * FROM ${props.database}."${parent.title}" WHERE ${parent.timeIndexName} < ${orderBy}DESC LIMIT 100;`
+            `SELECT * FROM ${props.database}."${parent.title}" WHERE "${parent.timeIndexName}" < ${orderBy}DESC LIMIT 100;`
           ),
           cursorPosition: `${orderBy}DESC LIMIT 100;`.length,
         }
