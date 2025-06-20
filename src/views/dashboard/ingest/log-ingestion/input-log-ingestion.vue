@@ -8,6 +8,7 @@ BaseInput(:config="config")
           v-model="tableForPipeline"
           size="small"
           allow-search
+          allow-create
           :options="tableOptions"
           :loading="tableLoading"
           :style="{ minWidth: '140px' }"
@@ -50,10 +51,6 @@ BaseInput(:config="config")
   onActivated(async () => {
     await dataBaseStore.checkTables()
     await ingestStore.fetchPipelines()
-
-    if (tableOptions.value.length > 0 && !tableForPipeline.value) {
-      tableForPipeline.value = tableOptions.value[0].value
-    }
 
     if (pipelineOptions.value.length > 0 && !pipelineName.value) {
       pipelineName.value = pipelineOptions.value[0].value
