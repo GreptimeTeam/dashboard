@@ -38,8 +38,10 @@
             @click="exportSql"
           )
             template(#icon)
-              icon-download
-            | Export
+              svg.icon
+                use(href="#export")
+            | {{ $t('dashboard.exportCSV') }}
+
       .sql-container
         SQLBuilder(
           v-if="sqlMode === 'builder'"
