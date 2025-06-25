@@ -87,7 +87,7 @@ axios.interceptors.response.use(
       return Promise.reject(errorResponse)
     }
     if (isV1) {
-      if (response.config.params && response.config.params.format === 'csv') {
+      if (response.config.params?.format?.includes('csv')) {
         return response.data || []
       }
       response.data = JSONbigint({ storeAsString: true }).parse(response.data)

@@ -387,7 +387,7 @@ a-card.editor-card(:bordered="false")
   const exportCsv = async () => {
     try {
       secondaryCodeRunning.value = true
-      const res = await exportWithFormat(currentStatement.value, promForm, 'csv')
+      const res = await exportWithFormat(currentStatement.value, promForm, 'csvWithNames')
       fileDownload(res, `export_${queryType.value}_greptimedb.csv`)
       Message.success('Exported successfully')
     } catch (error) {
@@ -429,20 +429,20 @@ a-card.editor-card(:bordered="false")
   ]
 
   const placeholder = `Paste response from explain analyze format json here. Example format:
-{
-  "output": [
-    {
-      "records": {
-        "schema": {
-          "column_schemas": []
-        },
-        "rows": [],
-        "total_rows": 0
+  {
+    "output": [
+      {
+        "records": {
+          "schema": {
+            "column_schemas": []
+          },
+          "rows": [],
+          "total_rows": 0
+        }
       }
-    }
-  ],
-  "execution_time_ms": 0
-}`
+    ],
+    "execution_time_ms": 0
+  }`
 </script>
 
 <style lang="less" scoped>
