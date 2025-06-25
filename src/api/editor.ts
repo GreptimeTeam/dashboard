@@ -144,7 +144,7 @@ const writeInfluxDB = (data: string, precision: string) => {
 
 const runSQLWithCSV = (code: string, format?: string): Promise<HttpResponse> => {
   const params = addDatabaseParams()
-  params.params.format = format || 'csv'
+  params.params.format = format || 'csvWithNames'
   return axios.post(sqlUrl, makeSqlData(code), params)
 }
 
