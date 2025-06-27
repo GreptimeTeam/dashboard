@@ -1,22 +1,25 @@
 <template lang="pug">
-a-page-header(title="Pipeline Configuration" :show-back="false")
-
-a-alert Pipeline is a mechanism in GreptimeDB for parsing and transforming log data, <a href="https://docs.greptime.com/user-guide/logs/pipeline-config" target="_blank">read more</a>
-a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
-  a-layout-sider(:resize-directions="['right']" :width="800")
-    a-card(title="Pipeline" :bordered="false")
-      template(#extra)
-        a-space
-          a-button(type="primary" size="small" @click="handleSave")
-            | Save
-          a-popconfirm(content="Are you sure you want to delete?" @ok="handleDelete")
-            a-button(
-              v-if="!isCreating"
-              type="text"
-              status="warning"
-              size="small"
-            )
-              | Delete
+.page-container
+  .page-header-container
+    .page-header-2 {{ isCreating ? 'Create Pipeline' : `Edit Pipeline: ${currFile.name}` }}
+    .page-description Pipeline is a mechanism in GreptimeDB for parsing and transforming log data,
+      |
+      a(href="https://docs.greptime.com/user-guide/logs/pipeline-config" target="_blank") read more
+  a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
+    a-layout-sider(:resize-directions="['right']" :width="800")
+      a-card(title="Pipeline" :bordered="false")
+        template(#extra)
+          a-space
+            a-button(type="primary" size="small" @click="handleSave")
+              | Save
+            a-popconfirm(content="Are you sure you want to delete?" @ok="handleDelete")
+              a-button(
+                v-if="!isCreating"
+                type="text"
+                status="warning"
+                size="small"
+              )
+                | Delete
       a-form(
         ref="formRef"
         layout="vertical"
@@ -33,49 +36,49 @@ a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
         a-form-item(field="content" label="Yaml Content")
           template(#help)
             div 
-          .editor-container
-            YMLEditorSimple(v-model="currFile.content" style="width: 100%; height: calc(-470px + 100vh)")
-  a-layout-content
-    .content-container
-      a-card.light-editor-card(title="Input" :bordered="false")
-        template(#extra)
-          a-space
-            a-button(size="small" @click="handleDebug") Test
-            a-select(v-model="selectedContentType" style="width: 150px" placeholder="Content Type")
-              a-option(value="text/plain") text
-              a-option(value="application/json") json
-              a-option(value="application/x-ndjson") ndjson
-        .right-content
-          a-alert(v-if="ymlError" type="error")
-            | {{ ymlError }}
-          a-typography-text(type="secondary")
-            | Input your original log to see parse results.
-          .input-editor
-            CodeMirror(
-              v-model="debugForm.content"
-              style="width: 100%; height: 100%"
-              :extensions="extensions"
-              :spellcheck="true"
-              :autofocus="true"
-              :indent-with-tab="true"
-              :tabSize="2"
-            )
+          .editor-container(:class="editorHeightClass")
+            YMLEditorSimple(v-model="currFile.content" style="width: 100%; height: 100%")
+    a-layout-content
+      .content-container
+        a-card.light-editor-card(title="Input" :bordered="false")
+          template(#extra)
+            a-space
+              a-button(size="small" @click="handleDebug") Test
+              a-select(v-model="selectedContentType" style="width: 150px" placeholder="Content Type")
+                a-option(value="text/plain") text
+                a-option(value="application/json") json
+                a-option(value="application/x-ndjson") ndjson
+          .right-content
+            a-alert(v-if="ymlError" type="error")
+              | {{ ymlError }}
+            a-typography-text(type="secondary")
+              | Input your original log to see parse results.
+            .input-editor
+              CodeMirror(
+                v-model="debugForm.content"
+                style="width: 100%; height: 100%"
+                :extensions="extensions"
+                :spellcheck="true"
+                :autofocus="true"
+                :indent-with-tab="true"
+                :tabSize="2"
+              )
 
-      a-card.light-editor-card(title="Output" :bordered="false")
-        .right-content
-          a-typography-text(type="secondary")
-            | Parsed logs displayed here. Logs that ingested via API will follow this structure.
-          .output-editor
-            CodeMirror(
-              style="width: 100%; height: 100%"
-              :model-value="debugResponse"
-              :extensions="extensions"
-              :spellcheck="true"
-              :autofocus="true"
-              :indent-with-tab="true"
-              :tabSize="2"
-              :disabled="true"
-            )
+        a-card.light-editor-card(title="Output" :bordered="false")
+          .right-content
+            a-typography-text(type="secondary")
+              | Parsed logs displayed here. Logs that ingested via API will follow this structure.
+            .output-editor
+              CodeMirror(
+                style="width: 100%; height: 100%"
+                :model-value="debugResponse"
+                :extensions="extensions"
+                :spellcheck="true"
+                :autofocus="true"
+                :indent-with-tab="true"
+                :tabSize="2"
+                :disabled="true"
+              )
 </template>
 
 <script setup name="PipeFileView" lang="ts">
@@ -226,6 +229,10 @@ transform:
     }
   }
   getData()
+
+  const editorHeightClass = computed(() => {
+    return isCreating.value ? 'creating' : 'editing'
+  })
 </script>
 
 <style lang="less" scoped>
@@ -258,7 +265,7 @@ transform:
     display: flex;
     flex-direction: column;
     gap: 16px;
-    padding-bottom: 16px;
+    padding-bottom: 12px;
   }
 
   .input-editor,
@@ -289,8 +296,23 @@ transform:
     margin-bottom: 16px;
   }
 
+  .page-container {
+    height: calc(100vh - 30px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .page-header-container {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
+  }
+
   .full-height-layout {
-    height: calc(100vh - 133px); // Subtract header height and alert height
+    flex: 1;
+    min-height: 0;
 
     :deep(.arco-layout) {
       height: 100%;
@@ -314,7 +336,17 @@ transform:
   }
 
   .editor-container {
-    min-height: 300px; // Set a minimum height
+    min-height: 300px;
+    height: calc(100vh - 420px);
+  }
+
+  .editor-container {
+    min-height: 300px;
+    height: calc(100vh - 343px); // Taller for creating mode (no version field)
+  }
+
+  .editor-container.editing {
+    height: calc(100vh - 422px); // Shorter for editing mode (has version field)
   }
 
   // Add styles for editor borders
@@ -331,5 +363,34 @@ transform:
   }
   :deep(.cm-editor.cm-focused) {
     outline: 0;
+  }
+
+  .page-header-2 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-text-1);
+    padding: 0 12px;
+    margin-bottom: 0;
+    border-bottom: none;
+    background-color: transparent;
+    flex-shrink: 0;
+    height: 58px;
+    line-height: 58px;
+  }
+
+  .page-description {
+    flex: 1;
+    color: var(--color-text-3);
+    font-size: 14px;
+    line-height: 1.5;
+
+    a {
+      color: var(--color-primary);
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
   }
 </style>
