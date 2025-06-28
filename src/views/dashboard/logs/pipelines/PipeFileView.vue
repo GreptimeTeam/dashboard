@@ -7,7 +7,7 @@
       a(href="https://docs.greptime.com/user-guide/logs/pipeline-config" target="_blank") read more
   a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
     a-layout-sider(:resize-directions="['right']" :width="800")
-      a-card(title="Pipeline" :bordered="false")
+      a-card.light-editor-card(title="Pipeline" :bordered="false")
         template(#extra)
           a-space
             a-button(type="primary" size="small" @click="handleSave")
@@ -38,47 +38,70 @@
             div 
           .editor-container(:class="editorHeightClass")
             YMLEditorSimple(v-model="currFile.content" style="width: 100%; height: 100%")
-    a-layout-content
-      .content-container
-        a-card.light-editor-card(title="Input" :bordered="false")
-          template(#extra)
-            a-space
-              a-button(size="small" @click="handleDebug") Test
-              a-select(v-model="selectedContentType" style="width: 150px" placeholder="Content Type")
-                a-option(value="text/plain") text
-                a-option(value="application/json") json
-                a-option(value="application/x-ndjson") ndjson
-          .right-content
-            a-alert(v-if="ymlError" type="error")
-              | {{ ymlError }}
-            a-typography-text(type="secondary")
-              | Input your original log to see parse results.
-            .input-editor
-              CodeMirror(
-                v-model="debugForm.content"
-                style="width: 100%; height: 100%"
-                :extensions="extensions"
-                :spellcheck="true"
-                :autofocus="true"
-                :indent-with-tab="true"
-                :tabSize="2"
-              )
+    a-layout-content.content-wrapper(
+      style="display: flex; flex-direction: column; height: 100%; gap: 16px; padding-bottom: 24px"
+    )
+      a-card.light-editor-card(title="Input" :bordered="false")
+        template(#extra)
+          a-space
+            a-button(size="small" @click="handleDebug") Test
+            a-select(v-model="selectedContentType" style="width: 150px" placeholder="Content Type")
+              a-option(value="text/plain") text
+              a-option(value="application/json") json
+              a-option(value="application/x-ndjson") ndjson
 
-        a-card.light-editor-card(title="Output" :bordered="false")
-          .right-content
-            a-typography-text(type="secondary")
-              | Parsed logs displayed here. Logs that ingested via API will follow this structure.
-            .output-editor
-              CodeMirror(
-                style="width: 100%; height: 100%"
-                :model-value="debugResponse"
-                :extensions="extensions"
-                :spellcheck="true"
-                :autofocus="true"
-                :indent-with-tab="true"
-                :tabSize="2"
-                :disabled="true"
-              )
+        a-alert(v-if="ymlError" type="error")
+          | {{ ymlError }}
+        a-typography-text(type="secondary")
+          | Input your original log to see parse results.
+        .input-editor
+          CodeMirror(
+            v-model="debugForm.content"
+            style="width: 100%; height: 100%"
+            :extensions="extensions"
+            :spellcheck="true"
+            :autofocus="true"
+            :indent-with-tab="true"
+            :tabSize="2"
+          )
+
+      a-card.light-editor-card(title="Output" :bordered="false")
+        template(#extra)
+
+        .output-header
+          a-typography-text(type="secondary")
+            | Parsed logs displayed here. Logs that ingested via API will follow this structure.
+          a-radio-group.output-view-toggle(v-model="outputViewMode" type="button" size="small")
+            a-radio(value="table") Table
+            a-radio(value="json") JSON
+
+        a-empty(
+          v-if="parsedOutputData.records && parsedOutputData.records.rows.length === 0"
+          style="border: 1px solid var(--color-border); border-radius: 6px; height: 100%; display: flex; align-items: center; justify-content: center; margin-top: 8px; flex: 1"
+          description="No parsed data. Click Test to see results."
+        )
+
+        // Table View
+        .output-table(
+          v-if="outputViewMode === 'table' && parsedOutputData.records && parsedOutputData.records.rows.length > 0"
+        )
+          DataGrid(:data="parsedOutputData" :has-header="false")
+
+        // JSON View  
+        .input-editor(
+          v-if="outputViewMode === 'json' && parsedOutputData.records && parsedOutputData.records.rows.length > 0"
+          style="margin-bottom: 20px"
+        )
+          CodeMirror(
+            style="width: 100%; height: 100%"
+            :model-value="debugResponse"
+            :extensions="extensions"
+            :spellcheck="true"
+            :autofocus="true"
+            :indent-with-tab="true"
+            :tabSize="2"
+            :disabled="true"
+          )
 </template>
 
 <script setup name="PipeFileView" lang="ts">
@@ -88,25 +111,28 @@
   import { json } from '@codemirror/lang-json'
   import { create, list, del, debugContent, getByName } from '@/api/pipeline'
   import type { PipeFile } from '@/api/pipeline'
+  import DataGrid from '@/views/dashboard/modules/data-view/components/data-grid.vue'
 
   const emit = defineEmits(['refresh', 'del'])
   const props = defineProps<{
     filename: undefined | string
   }>()
 
+  const isCreating = computed(() => !props.filename)
+
   const currFile = reactive<PipeFile>({
     name: '',
     content: `processors:
-  - dissect:
-      fields:
-        - message
-      patterns:
-        - '%{ip} - %{user} [%{datetime}] "%{method} %{path} %{protocol}" %{status} %{size}'
-  - date:
-      fields:
-        - datetime
-      formats:
-        - "%d/%b/%Y:%H:%M:%S %z"
+    - dissect:
+        fields:
+          - message
+        patterns:
+          - '%{ip} - %{user} [%{datetime}] "%{method} %{path} %{protocol}" %{status} %{size}'
+    - date:
+        fields:
+          - datetime
+        formats:
+          - "%d/%b/%Y:%H:%M:%S %z"
 transform:
   - fields:
       - message
@@ -128,9 +154,6 @@ transform:
   })
 
   const route = useRoute()
-  const isCreating = computed(() => {
-    return !props.filename
-  })
 
   const formRef = ref()
 
@@ -173,16 +196,37 @@ transform:
     ],
   }
 
+  const selectedContentType = ref('text/plain')
+
+  // Default content examples for different content types
+  const defaultContent =
+    '210.207.142.115 - AnthraX [26/Dec/2024:16:47:19 +0800] "DELETE /do-not-access/needs-work HTTP/2.0" 200 4488'
+  const defaultJsonContent =
+    '210.207.142.115 - AnthraX [26/Dec/2024:16:47:19 +0800] \\"DELETE /do-not-access/needs-work HTTP/2.0\\" 200 4488'
+  const defaultContentExamples = {
+    'text/plain': defaultContent,
+    'application/json': `{"message": "${defaultJsonContent}"}`,
+    'application/x-ndjson': `{"message": "${defaultJsonContent}"}\n{"message": "${defaultJsonContent}"}`,
+  }
+
   const debugForm = reactive({
-    content:
-      '210.207.142.115 - AnthraX [26/Dec/2024:16:47:19 +0800] "DELETE /do-not-access/needs-work HTTP/2.0" 200 4488',
+    content: defaultContentExamples[selectedContentType.value],
   })
 
-  const selectedContentType = ref('text/plain')
+  // Update content when content type changes
+  watch(selectedContentType, (newType) => {
+    debugForm.content = defaultContentExamples[newType]
+  })
+
   // Watch for content changes to auto-detect content type
   watch(
     () => debugForm.content,
     (newContent) => {
+      // Skip auto-detection if content matches one of our default examples
+      if (Object.values(defaultContentExamples).includes(newContent)) {
+        return
+      }
+
       try {
         JSON.parse(newContent)
         selectedContentType.value = 'application/json'
@@ -212,9 +256,57 @@ transform:
 
   const extensions = [basicSetup, json()]
   const debugResponse = ref('')
+
+  const editorHeightClass = computed(() => {
+    return isCreating.value ? 'creating' : 'editing'
+  })
+
+  const outputViewMode = ref('table')
+  const parsedOutputData = ref({
+    records: {
+      rows: [],
+      schema: {
+        column_schemas: [],
+      },
+    },
+    dimensionsAndXName: {
+      dimensions: [],
+      xAxis: '',
+    },
+    key: 0,
+    type: 'table',
+  })
+
   function handleDebug() {
     debugContent(currFile.content, debugForm.content, selectedContentType.value).then((result) => {
-      debugResponse.value = JSON.stringify(result, null, 2)
+      debugResponse.value = JSON.stringify(result[0], null, 2)
+      console.log(result)
+      const rows = result[0].rows.map((row) => {
+        return row.map((item) => {
+          return item.value
+        })
+      })
+      console.log(rows)
+      const schema = result[0].schema || []
+
+      // Parse response for DataGrid format
+      parsedOutputData.value = {
+        records: {
+          rows,
+          schema: {
+            column_schemas: schema.map((col) => ({
+              name: col.name,
+              data_type: col.data_type || 'String',
+            })),
+          },
+        },
+        dimensionsAndXName: {
+          dimensions: schema.map((col) => col.name),
+          xAxis: schema.length > 0 ? schema[0].name : '',
+        },
+        key: Date.now(),
+        type: 'table',
+      }
     })
   }
 
@@ -229,73 +321,12 @@ transform:
     }
   }
   getData()
-
-  const editorHeightClass = computed(() => {
-    return isCreating.value ? 'creating' : 'editing'
-  })
 </script>
 
 <style lang="less" scoped>
-  :deep(.arco-card) {
-    border-radius: 0;
-    border-bottom: none;
-  }
-  .right-content {
-    padding: 0 10px 10px 10px;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-  }
-  :deep(.arco-card.light-editor-card) {
-    padding-right: 0;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-  }
-  :deep(.arco-layout-sider-light) {
-    box-shadow: none;
-  }
-  :deep(.arco-form-item-content-flex) {
-    display: block;
-  }
-
-  .content-container {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    padding-bottom: 12px;
-  }
-
-  .input-editor,
-  .output-editor {
-    flex: 1;
-    min-height: 0;
-    margin-top: 5px;
-
-    :deep(.cm-editor) {
-      height: 100%;
-    }
-  }
-
-  .output-editor {
-    :deep(.cm-editor) {
-      background-color: var(--color-fill-2);
-      cursor: not-allowed;
-    }
-
-    :deep(.cm-content) {
-      color: var(--color-text-2);
-    }
-  }
-
-  .form-description {
-    color: var(--color-text-3);
-    font-size: 14px;
-    margin-bottom: 16px;
-  }
-
+  // ===================
+  // PAGE LAYOUT
+  // ===================
   .page-container {
     height: calc(100vh - 30px);
     display: flex;
@@ -308,61 +339,6 @@ transform:
     gap: 16px;
     border-bottom: 1px solid var(--color-border);
     flex-shrink: 0;
-  }
-
-  .full-height-layout {
-    flex: 1;
-    min-height: 0;
-
-    :deep(.arco-layout) {
-      height: 100%;
-    }
-
-    :deep(.arco-layout-content) {
-      height: 100%;
-      overflow: auto;
-    }
-
-    :deep(.arco-layout-sider) {
-      height: 100%;
-      overflow: auto;
-      overflow-x: hidden; // Prevent horizontal scrollbar
-    }
-
-    :deep(.arco-card-body) {
-      padding: 0; // Remove default padding that might cause overflow
-      height: 100%;
-    }
-  }
-
-  .editor-container {
-    min-height: 300px;
-    height: calc(100vh - 420px);
-  }
-
-  .editor-container {
-    min-height: 300px;
-    height: calc(100vh - 343px); // Taller for creating mode (no version field)
-  }
-
-  .editor-container.editing {
-    height: calc(100vh - 422px); // Shorter for editing mode (has version field)
-  }
-
-  // Add styles for editor borders
-  :deep(.cm-editor) {
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-  }
-
-  :deep(.editor-container) {
-    .cm-editor {
-      border: 1px solid var(--color-border);
-      border-radius: 4px;
-    }
-  }
-  :deep(.cm-editor.cm-focused) {
-    outline: 0;
   }
 
   .page-header-2 {
@@ -391,6 +367,132 @@ transform:
       &:hover {
         text-decoration: underline;
       }
+    }
+  }
+
+  .full-height-layout {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .content-wrapper {
+    :deep(.arco-card-body) {
+      padding: 10px 10px 0 10px;
+    }
+  }
+
+  // ===================
+  // EDITOR COMPONENTS
+  // ===================
+  .editor-container {
+    min-height: 300px;
+    height: calc(100vh - 343px); // Taller for creating mode (no version field)
+
+    &.editing {
+      height: calc(100vh - 422px); // Shorter for editing mode (has version field)
+    }
+  }
+
+  .input-editor,
+  .output-editor {
+    flex: 1;
+    min-height: 0;
+    margin-top: 5px;
+
+    :deep(.cm-editor) {
+      height: 100%;
+    }
+  }
+
+  .output-editor {
+    :deep(.cm-editor) {
+      background-color: var(--color-fill-2);
+      cursor: not-allowed;
+    }
+
+    :deep(.cm-content) {
+      color: var(--color-text-2);
+    }
+  }
+
+  // ===================
+  // CARD COMPONENTS
+  // ===================
+  .light-editor-card {
+    display: flex;
+    flex-direction: column;
+
+    :deep(.arco-card-body) {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .input-editor {
+      margin-top: 8px;
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+  }
+
+  // ===================
+  // OUTPUT SECTION
+  // ===================
+  .output-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .output-view-toggle {
+    width: auto !important;
+    display: inline-flex !important;
+    flex-shrink: 0 !important;
+    align-self: flex-start !important;
+  }
+
+  // ===================
+  // FORM ELEMENTS
+  // ===================
+  .form-description {
+    color: var(--color-text-3);
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+
+  // ===================
+  // ARCO DESIGN OVERRIDES
+  // ===================
+  :deep(.arco-card) {
+    border-radius: 0;
+    border-bottom: none;
+  }
+
+  :deep(.arco-card.light-editor-card) {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  :deep(.arco-radio-button.arco-radio-checked) {
+    color: var(--color-primary);
+  }
+
+  :deep(.cm-editor) {
+    border-radius: 4px;
+
+    &.cm-focused {
+      outline: 0;
+    }
+  }
+
+  :deep(.editor-container) {
+    .cm-editor {
+      border: 1px solid var(--color-border);
+      border-radius: 4px;
     }
   }
 </style>
