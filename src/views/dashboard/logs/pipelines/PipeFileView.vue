@@ -6,7 +6,7 @@
       |
       a(href="https://docs.greptime.com/user-guide/logs/pipeline-config" target="_blank") read more
   a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
-    a-layout-sider(:resize-directions="['right']" :width="800")
+    a-layout-sider(style="width: 45%" :resize-directions="['right']")
       a-card.light-editor-card(title="Pipeline" :bordered="false")
         template(#extra)
           a-space
@@ -36,10 +36,10 @@
         a-form-item(field="content" label="Yaml Content")
           template(#help)
             div 
-          .editor-container(:class="editorHeightClass")
+          .full-width-height-editor.pipeline-editor(:class="editorHeightClass")
             YMLEditorSimple(v-model="currFile.content" style="width: 100%; height: 100%")
     a-layout-content.content-wrapper(
-      style="display: flex; flex-direction: column; height: 100%; gap: 16px; padding-bottom: 24px"
+      style="display: flex; flex-direction: column; gap: 16px; padding-bottom: 22px; flex-wrap: wrap"
     )
       a-card.light-editor-card(title="Input" :bordered="false")
         template(#extra)
@@ -54,7 +54,7 @@
           | {{ ymlError }}
         a-typography-text(type="secondary")
           | Input your original log to see parse results.
-        .input-editor
+        .full-width-height-editor
           CodeMirror(
             v-model="debugForm.content"
             style="width: 100%; height: 100%"
@@ -88,7 +88,7 @@
           DataGrid(:data="parsedOutputData" :has-header="false")
 
         // JSON View  
-        .input-editor(
+        .full-width-height-editor(
           v-if="outputViewMode === 'json' && parsedOutputData.records && parsedOutputData.records.rows.length > 0"
           style="margin-bottom: 20px"
         )
@@ -328,9 +328,9 @@ transform:
   // PAGE LAYOUT
   // ===================
   .page-container {
-    height: calc(100vh - 30px);
     display: flex;
     flex-direction: column;
+    height: calc(100vh - 30px);
   }
 
   .page-header-container {
@@ -384,34 +384,11 @@ transform:
   // ===================
   // EDITOR COMPONENTS
   // ===================
-  .editor-container {
-    min-height: 300px;
-    height: calc(100vh - 343px); // Taller for creating mode (no version field)
+  .full-width-height-editor.pipeline-editor {
+    height: calc(100vh - 330px); // Taller for creating mode (no version field)
 
     &.editing {
-      height: calc(100vh - 422px); // Shorter for editing mode (has version field)
-    }
-  }
-
-  .input-editor,
-  .output-editor {
-    flex: 1;
-    min-height: 0;
-    margin-top: 5px;
-
-    :deep(.cm-editor) {
-      height: 100%;
-    }
-  }
-
-  .output-editor {
-    :deep(.cm-editor) {
-      background-color: var(--color-fill-2);
-      cursor: not-allowed;
-    }
-
-    :deep(.cm-content) {
-      color: var(--color-text-2);
+      height: calc(100vh - 408px); // Shorter for editing mode (has version field)
     }
   }
 
@@ -427,13 +404,6 @@ transform:
       display: flex;
       flex-direction: column;
       height: 100%;
-    }
-
-    .input-editor {
-      margin-top: 8px;
-      border: 1px solid var(--color-border);
-      border-radius: 6px;
-      overflow: hidden;
     }
   }
 
@@ -480,19 +450,10 @@ transform:
   :deep(.arco-radio-button.arco-radio-checked) {
     color: var(--color-primary);
   }
-
-  :deep(.cm-editor) {
+  .output-table {
+    overflow: auto;
+    flex: 1;
+    border: 1px solid var(--color-border);
     border-radius: 4px;
-
-    &.cm-focused {
-      outline: 0;
-    }
-  }
-
-  :deep(.editor-container) {
-    .cm-editor {
-      border: 1px solid var(--color-border);
-      border-radius: 4px;
-    }
   }
 </style>
