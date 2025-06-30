@@ -288,13 +288,11 @@ transform:
   function handleDebug() {
     debugContent(currFile.content, debugForm.content, selectedContentType.value).then((result) => {
       debugResponse.value = JSON.stringify(result[0], null, 2)
-      console.log(result)
       const rows = result[0].rows.map((row) => {
         return row.map((item) => {
           return item.value
         })
       })
-      console.log(rows)
       const schema = result[0].schema || []
 
       // Parse response for DataGrid format
