@@ -2,15 +2,18 @@
 .page-container
   .page-header-container
     div(style="display: flex; align-items: center; justify-content: space-between")
-      .page-header-2 {{ isCreating ? 'Create Pipeline' : `Edit Pipeline: ${currFile.name}` }}
-      .page-description Pipeline is a mechanism in GreptimeDB for parsing and transforming log data,
-        |
-        a(href="https://docs.greptime.com/user-guide/logs/pipeline-config" target="_blank") read more
+      .page-header-2 {{ isCreating ? 'Create Pipeline' : `Edit Pipeline - ${currFile.name}` }}
     a-button(size="small" style="margin-right: 8px" @click="handleIngest")
       | Ingest With Pipeline
   a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
     a-layout-sider(style="width: 45%" :resize-directions="['right']")
       a-card.light-editor-card(title="Pipeline Details" :bordered="false")
+        template(#title)
+          .card-title-with-description
+            .card-title Pipeline Details
+            .card-description Pipeline is a mechanism in GreptimeDB for parsing and transforming log data,
+              |
+              a(href="https://docs.greptime.com/user-guide/logs/pipeline-config" target="_blank") read more
         template(#extra)
           a-space
             a-button(type="primary" size="small" @click="handleSave")
@@ -56,7 +59,7 @@
         template(#title)
           .card-title-with-description
             .card-title Input
-            .card-description Input your original log to see the parse results from the current pipeline content.
+            .card-description Input your original log for processing by the current pipeline configuration
 
         a-alert(v-if="ymlError" type="error")
           | {{ ymlError }}
@@ -80,7 +83,7 @@
         template(#title)
           .card-title-with-description
             .card-title Output
-            .card-description Parsed logs displayed here. Logs that ingested via API will follow this structure.
+            .card-description Processed logs displayed here. Logs that ingested via API will follow this structure.
 
         a-empty(
           v-if="parsedOutputData.records && parsedOutputData.records.rows.length === 0"
