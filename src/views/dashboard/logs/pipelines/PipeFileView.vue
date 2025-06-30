@@ -47,7 +47,12 @@
       a-card.light-editor-card(title="Input" :bordered="false")
         template(#extra)
           a-space
-            a-select(v-model="selectedContentType" style="width: 150px" placeholder="Content Type")
+            a-select(
+              v-model="selectedContentType"
+              style="width: 150px"
+              placeholder="Content Type"
+              @change="handleInputChange"
+            )
               a-option(value="text/plain") text
               a-option(value="application/json") json
               a-option(value="application/x-ndjson") ndjson
@@ -221,10 +226,9 @@ transform:
     content: defaultContentExamples[selectedContentType.value],
   })
 
-  // Update content when content type changes
-  watch(selectedContentType, (newType) => {
-    debugForm.content = defaultContentExamples[newType]
-  })
+  const handleInputChange = (type: string) => {
+    debugForm.content = defaultContentExamples[type]
+  }
 
   // Watch for content changes to auto-detect content type
   watch(
