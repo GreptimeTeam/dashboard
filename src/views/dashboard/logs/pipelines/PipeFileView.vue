@@ -1,10 +1,13 @@
 <template lang="pug">
 .page-container
   .page-header-container
-    .page-header-2 {{ isCreating ? 'Create Pipeline' : `Edit Pipeline: ${currFile.name}` }}
-    .page-description Pipeline is a mechanism in GreptimeDB for parsing and transforming log data,
-      |
-      a(href="https://docs.greptime.com/user-guide/logs/pipeline-config" target="_blank") read more
+    div(style="display: flex; align-items: center; justify-content: space-between")
+      .page-header-2 {{ isCreating ? 'Create Pipeline' : `Edit Pipeline: ${currFile.name}` }}
+      .page-description Pipeline is a mechanism in GreptimeDB for parsing and transforming log data,
+        |
+        a(href="https://docs.greptime.com/user-guide/logs/pipeline-config" target="_blank") read more
+    a-button(size="small" style="margin-right: 8px" @click="handleIngest")
+      | Ingest With Pipeline
   a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
     a-layout-sider(style="width: 45%" :resize-directions="['right']")
       a-card.light-editor-card(title="Pipeline" :bordered="false")
@@ -112,6 +115,7 @@
   import { create, list, del, debugContent, getByName } from '@/api/pipeline'
   import type { PipeFile } from '@/api/pipeline'
   import DataGrid from '@/views/dashboard/modules/data-view/components/data-grid.vue'
+  import router from '@/router'
 
   const emit = defineEmits(['refresh', 'del'])
   const props = defineProps<{
@@ -321,6 +325,15 @@ transform:
     }
   }
   getData()
+
+  const handleIngest = () => {
+    router.push({
+      name: 'log-ingestion-input',
+      query: {
+        pipeline: currFile.name,
+      },
+    })
+  }
 </script>
 
 <style lang="less" scoped>
@@ -339,6 +352,7 @@ transform:
     gap: 16px;
     border-bottom: 1px solid var(--color-border);
     flex-shrink: 0;
+    justify-content: space-between;
   }
 
   .page-header-2 {
