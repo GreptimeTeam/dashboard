@@ -43,9 +43,7 @@
             div 
           .full-width-height-editor.pipeline-editor(:class="editorHeightClass")
             YMLEditorSimple(v-model="currFile.content" style="width: 100%; height: 100%")
-    a-layout-content.content-wrapper(
-      style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 22px; flex-wrap: wrap"
-    )
+    a-layout-content.content-wrapper(style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 22px")
       a-card.light-editor-card(title="Input" :bordered="false")
         template(#extra)
           a-space
@@ -74,7 +72,7 @@
             :tabSize="2"
           )
 
-      a-card.light-editor-card(title="Output" :bordered="false")
+      a-card.light-editor-card.output(title="Output" :bordered="false")
         template(#extra)
           a-radio-group.output-view-toggle(v-model="outputViewMode" type="button" size="small")
             a-radio(value="table") Table
@@ -100,7 +98,6 @@
         // JSON View  
         .full-width-height-editor(
           v-if="outputViewMode === 'json' && parsedOutputData.records && parsedOutputData.records.rows.length > 0"
-          style="margin-bottom: 20px"
         )
           CodeMirror(
             style="width: 100%; height: 100%"
@@ -400,6 +397,7 @@ transform:
   .content-wrapper {
     :deep(.arco-card-body) {
       padding: 10px 10px 0 10px;
+      overflow: hidden;
     }
   }
 
@@ -426,6 +424,10 @@ transform:
       display: flex;
       flex-direction: column;
       height: 100%;
+      overflow: hidden; // Prevent content from expanding card
+    }
+    :deep(.arco-card-header) {
+      flex-shrink: 0;
     }
   }
 
@@ -446,6 +448,13 @@ transform:
     align-self: flex-start !important;
   }
 
+  .output-table {
+    overflow: auto;
+    flex: 1;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+  }
+
   // ===================
   // ARCO DESIGN OVERRIDES
   // ===================
@@ -462,12 +471,6 @@ transform:
 
   :deep(.arco-radio-button.arco-radio-checked) {
     color: var(--color-primary);
-  }
-  .output-table {
-    overflow: auto;
-    flex: 1;
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
   }
 </style>
 
@@ -486,12 +489,5 @@ transform:
       line-height: 1.4;
       font-weight: normal;
     }
-  }
-
-  .output-table {
-    overflow: auto;
-    flex: 1;
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
   }
 </style>
