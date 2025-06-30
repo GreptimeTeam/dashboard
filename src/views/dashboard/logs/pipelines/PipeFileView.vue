@@ -10,7 +10,7 @@
       | Ingest With Pipeline
   a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
     a-layout-sider(style="width: 45%" :resize-directions="['right']")
-      a-card.light-editor-card(title="Pipeline" :bordered="false")
+      a-card.light-editor-card(title="Pipeline Details" :bordered="false")
         template(#extra)
           a-space
             a-button(type="primary" size="small" @click="handleSave")
@@ -26,12 +26,11 @@
       a-form(
         ref="formRef"
         layout="vertical"
-        style="padding: 0 10px; margin-top: 20px"
+        style="padding: 0 10px"
         :model="currFile"
         :disabled="!isCreating"
         :rules="rules"
       )
-        .form-description Input the pipeline configuration here to define how logs are parsed and transformed, You can test on the right side whether it's already saved.
         a-form-item(field="name" label="Pipeline name" style="width: 200px")
           a-input(v-model="currFile.name" placeholder="Pipeline name")
         a-form-item(v-if="!isCreating" field="version" label="Version")
@@ -42,21 +41,25 @@
           .full-width-height-editor.pipeline-editor(:class="editorHeightClass")
             YMLEditorSimple(v-model="currFile.content" style="width: 100%; height: 100%")
     a-layout-content.content-wrapper(
-      style="display: flex; flex-direction: column; gap: 16px; padding-bottom: 22px; flex-wrap: wrap"
+      style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 22px; flex-wrap: wrap"
     )
       a-card.light-editor-card(title="Input" :bordered="false")
         template(#extra)
           a-space
-            a-button(size="small" @click="handleDebug") Test
             a-select(v-model="selectedContentType" style="width: 150px" placeholder="Content Type")
               a-option(value="text/plain") text
               a-option(value="application/json") json
               a-option(value="application/x-ndjson") ndjson
 
+            a-button(size="small" @click="handleDebug") Test
+
+        template(#title)
+          .card-title-with-description
+            .card-title Input
+            .card-description Input your original log to see the parse results from the current pipeline content.
+
         a-alert(v-if="ymlError" type="error")
           | {{ ymlError }}
-        a-typography-text(type="secondary")
-          | Input your original log to see parse results.
         .full-width-height-editor
           CodeMirror(
             v-model="debugForm.content"
@@ -70,13 +73,14 @@
 
       a-card.light-editor-card(title="Output" :bordered="false")
         template(#extra)
-
-        .output-header
-          a-typography-text(type="secondary")
-            | Parsed logs displayed here. Logs that ingested via API will follow this structure.
           a-radio-group.output-view-toggle(v-model="outputViewMode" type="button" size="small")
             a-radio(value="table") Table
             a-radio(value="json") JSON
+
+        template(#title)
+          .card-title-with-description
+            .card-title Output
+            .card-description Parsed logs displayed here. Logs that ingested via API will follow this structure.
 
         a-empty(
           v-if="parsedOutputData.records && parsedOutputData.records.rows.length === 0"
@@ -370,9 +374,10 @@ transform:
 
   .page-description {
     flex: 1;
-    color: var(--color-text-3);
-    font-size: 14px;
-    line-height: 1.5;
+    font-size: 13px;
+    color: var(--color-text-2);
+    line-height: 1.4;
+    font-weight: normal;
 
     a {
       color: var(--color-primary);
@@ -399,10 +404,10 @@ transform:
   // EDITOR COMPONENTS
   // ===================
   .full-width-height-editor.pipeline-editor {
-    height: calc(100vh - 330px); // Taller for creating mode (no version field)
+    height: calc(100vh - 275px); // Taller for creating mode (no version field)
 
     &.editing {
-      height: calc(100vh - 408px); // Shorter for editing mode (has version field)
+      height: calc(100vh - 354px); // Shorter for editing mode (has version field)
     }
   }
 
@@ -439,15 +444,6 @@ transform:
   }
 
   // ===================
-  // FORM ELEMENTS
-  // ===================
-  .form-description {
-    color: var(--color-text-3);
-    font-size: 14px;
-    margin-bottom: 16px;
-  }
-
-  // ===================
   // ARCO DESIGN OVERRIDES
   // ===================
   :deep(.arco-card) {
@@ -464,6 +460,31 @@ transform:
   :deep(.arco-radio-button.arco-radio-checked) {
     color: var(--color-primary);
   }
+  .output-table {
+    overflow: auto;
+    flex: 1;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+  }
+</style>
+
+<style scoped lang="less">
+  .card-title-with-description {
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--color-text-1);
+      margin-bottom: 4px;
+    }
+
+    .card-description {
+      font-size: 13px;
+      color: var(--color-text-2);
+      line-height: 1.4;
+      font-weight: normal;
+    }
+  }
+
   .output-table {
     overflow: auto;
     flex: 1;
