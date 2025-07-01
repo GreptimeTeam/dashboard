@@ -129,7 +129,6 @@ a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08); 
   import { json } from '@codemirror/lang-json'
   import { create, list, del, debugContent, getByName } from '@/api/pipeline'
   import type { PipeFile } from '@/api/pipeline'
-  import DataGrid from '@/views/dashboard/modules/data-view/components/data-grid.vue'
   import router from '@/router'
 
   const emit = defineEmits(['refresh', 'del'])
