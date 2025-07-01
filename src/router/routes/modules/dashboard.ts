@@ -127,11 +127,24 @@ const DASHBOARD: AppRouteRecordRaw = {
     },
     {
       path: 'log-query',
+      redirect: '/dashboard/logs-query',
       component: () => import('@/views/dashboard/logs/query/index.vue'),
-      name: 'log-query',
       meta: {
         ignoreCache: true,
-        locale: 'menu.dashboard.logquery',
+        locale: 'menu.dashboard.logsQuery',
+        requiresAuth: false,
+        icon: 'log',
+        roles: ['admin', 'cloud'],
+        hideInMenu: true,
+      },
+    },
+    {
+      path: 'logs-query',
+      component: () => import('@/views/dashboard/logs/query/index.vue'),
+      name: 'logs-query',
+      meta: {
+        ignoreCache: true,
+        locale: 'menu.dashboard.logsQuery',
         requiresAuth: false,
         icon: 'log',
         roles: ['admin', 'cloud'],
@@ -139,10 +152,22 @@ const DASHBOARD: AppRouteRecordRaw = {
     },
     {
       path: 'log-pipeline',
-      name: 'log-pipeline',
+      redirect: '/dashboard/logs-pipelines',
       component: () => import('@/views/dashboard/logs/pipelines/index.vue'),
       meta: {
-        locale: 'menu.dashboard.logpipeline',
+        locale: 'menu.dashboard.logPipeline',
+        requiresAuth: false,
+        roles: ['admin', 'cloud'],
+        icon: 'configuration',
+        hideInMenu: true,
+      },
+    },
+    {
+      path: 'logs-pipelines',
+      name: 'logs-pipelines',
+      component: () => import('@/views/dashboard/logs/pipelines/index.vue'),
+      meta: {
+        locale: 'menu.dashboard.logPipeline',
         requiresAuth: false,
         roles: ['admin', 'cloud'],
         icon: 'configuration',

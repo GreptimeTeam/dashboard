@@ -5,7 +5,7 @@ a-spin(style="width: 100%; height: 100%")
       a-card.files-card(:bordered="false")
         template(#title)
           a-space.space-between(fill style="width: 100%")
-            | Log Pipelines
+            | {{ $t('menu.dashboard.logPipeline') }}
             a-button-group
               a-tooltip(mini position="bl" content="New File")
                 a-button#new-file.icon-button(type="text" size="small" @click="clickNewFile")

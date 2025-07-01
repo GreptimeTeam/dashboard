@@ -20,7 +20,7 @@
   import { Codemirror } from 'vue-codemirror'
   import { sql } from '@codemirror/lang-sql'
   import { oneDark } from '@codemirror/theme-one-dark'
-  import useLogQueryStore from '@/store/modules/logquery'
+  import useLogsQueryStore from '@/store/modules/logs-query'
   import { addTsCondition, parseTable, parseTimeRange, processSQL, parseLimit } from './until'
 
   const {
@@ -34,8 +34,8 @@
     tableMap,
     editingSql,
     limit,
-  } = storeToRefs(useLogQueryStore())
-  const { getSchemas, getRelativeRange } = useLogQueryStore()
+  } = storeToRefs(useLogsQueryStore())
+  const { getSchemas, getRelativeRange } = useLogsQueryStore()
   const emit = defineEmits(['query'])
 
   // getSchemas()

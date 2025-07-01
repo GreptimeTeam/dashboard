@@ -24,7 +24,7 @@ a-drawer(
 </template>
 
 <script setup lang="ts" name="LogDetail">
-  import useLogQueryStore from '@/store/modules/logquery'
+  import useLogsQueryStore from '@/store/modules/logs-query'
   import JSONView from './JSONView.vue'
   import FormView from './FormView.vue'
 
@@ -36,7 +36,7 @@ a-drawer(
   const handleCancel = () => {
     emit('update:visible', false)
   }
-  const { selectedRowKey, currRow, rows } = storeToRefs(useLogQueryStore())
+  const { selectedRowKey, currRow, rows } = storeToRefs(useLogsQueryStore())
   const viewRow = computed(() => {
     const obj = { ...currRow.value }
     delete obj.index

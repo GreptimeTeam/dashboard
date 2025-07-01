@@ -13,7 +13,7 @@ VCharts(
   import * as echarts from 'echarts'
   import { watchOnce } from '@vueuse/core'
   import editorAPI from '@/api/editor'
-  import useLogQueryStore from '@/store/modules/logquery'
+  import useLogsQueryStore from '@/store/modules/logs-query'
   import { calculateInterval, generateTimeRange, toMs, TimeTypes, getWhereClause, addTsCondition, toObj } from './until'
   import type { TimeType } from './until'
 
@@ -67,9 +67,9 @@ VCharts(
   }))
 
   const { inputTableName, unifiedRange, tsColumn, queryNum, sql, editorType, rows, tableIndex } = storeToRefs(
-    useLogQueryStore()
+    useLogsQueryStore()
   )
-  const { getRelativeRange, buildCondition, query } = useLogQueryStore()
+  const { getRelativeRange, buildCondition, query } = useLogsQueryStore()
 
   const chartSql = computed(() => {
     if (!tsColumn.value) {

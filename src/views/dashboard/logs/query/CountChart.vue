@@ -14,7 +14,7 @@ VCharts(
   import * as echarts from 'echarts'
   import { watchOnce } from '@vueuse/core'
   import editorAPI from '@/api/editor'
-  import useLogQueryStore from '@/store/modules/logquery'
+  import useLogsQueryStore from '@/store/modules/logs-query'
   import { calculateInterval, generateTimeRange, toMs, TimeTypes, getWhereClause, addTsCondition, toObj } from './until'
   import type { TimeType } from './until'
 
@@ -102,9 +102,9 @@ VCharts(
   }))
 
   const { inputTableName, unifiedRange, tsColumn, queryNum, sql, editorType, rows, tableIndex } = storeToRefs(
-    useLogQueryStore()
+    useLogsQueryStore()
   )
-  const { getRelativeRange, buildCondition, query } = useLogQueryStore()
+  const { getRelativeRange, buildCondition, query } = useLogsQueryStore()
 
   const intervalSeconds = computed(() => {
     if (unifiedRange.value.length && unifiedRange.value[0] !== unifiedRange.value[1]) {
@@ -130,14 +130,14 @@ VCharts(
     }
 
     return `SELECT
-            date_bin('${intervalSeconds.value} seconds',${tsColumn.value.name})  AS time_bucket,
-            COUNT(*) AS event_count
-        FROM "${inputTableName.value}"
-        ${condition}
-        GROUP BY time_bucket
-        ORDER BY time_bucket DESC
-        limit 200
-        `
+                    date_bin('${intervalSeconds.value} seconds',${tsColumn.value.name})  AS time_bucket,
+                    COUNT(*) AS event_count
+                FROM "${inputTableName.value}"
+                ${condition}
+                GROUP BY time_bucket
+                ORDER BY time_bucket DESC
+                limit 200
+                `
   })
 
   function countQuery() {

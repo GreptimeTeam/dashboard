@@ -28,7 +28,7 @@ function getColumnOpType(dataType) {
   return opType
 }
 
-const useLogQueryStore = defineStore('logQuery', () => {
+const useLogsQueryStore = defineStore('logsQuery', () => {
   /** sql state */
   // current query result sql
   const sql = ref(``)
@@ -71,7 +71,7 @@ const useLogQueryStore = defineStore('logQuery', () => {
 
   /** for table */
   // column visible
-  const displayedColumns = useStorage<ColumnsMap>('logquery-table-column-visible', {})
+  const displayedColumns = useStorage<ColumnsMap>('logsQuery-table-column-visible', {})
   // table rows
   const rows = shallowRef<Array<any>>([])
   // selected row key for detail view
@@ -174,8 +174,8 @@ const useLogQueryStore = defineStore('logQuery', () => {
   //   return allColumns[index]
   // }
 
-  const mergeColumn = useLocalStorage('logquery-merge-column', true)
-  const showKeys = useLocalStorage('logquery-show-keys', true)
+  const mergeColumn = useLocalStorage('logsQuery-merge-column', true)
+  const showKeys = useLocalStorage('logsQuery-show-keys', true)
   const appStore = useAppStore()
   function getSchemas() {
     const db = appStore.database
@@ -377,4 +377,4 @@ const useLogQueryStore = defineStore('logQuery', () => {
   }
 })
 
-export default useLogQueryStore
+export default useLogsQueryStore

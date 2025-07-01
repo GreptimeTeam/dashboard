@@ -1,0 +1,15 @@
+export default {
+  'logsQuery.run': 'Run',
+  'logsQuery.saveSql': 'Save SQL',
+  'logsQuery.savedSql': 'Saved SQL',
+  'logsQuery.showTables': 'Show tables',
+  'logsQuery.results': 'Results',
+  'logsQuery.hideStatChart': 'Hide chart',
+  'logsQuery.showStatChart': 'Show chart',
+  'logsQuery.live': 'Live',
+  'logsQuery.columns': 'Columns',
+  'logsQuery.wrapLines': 'Wrap lines',
+  'logsQuery.nodata': 'No Data',
+  'logsQuery.newer': 'Newer',
+  'logsQuery.older': 'Older',
+}

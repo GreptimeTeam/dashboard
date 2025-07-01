@@ -2,7 +2,7 @@
 a-space(v-if="pages.length")
   a-button.btn(size="small" :loading="olderLoading" @click="loadOlder")
     icon-left
-    | {{ $t('logquery.older') }}
+    | {{ $t('logsQuery.older') }}
   a-space(style="overflow-x: auto; max-width: 55vw")
     a-button.btn(
       v-for="(page, index) in pages"
@@ -14,22 +14,22 @@ a-space(v-if="pages.length")
     )
       | {{ page.label }}
   a-button.btn(size="small" :loading="newerLoading" @click="loadNewer")
-    | {{ $t('logquery.newer') }}
+    | {{ $t('logsQuery.newer') }}
     icon-right
 </template>
 
 <script setup name="Pagination" lang="ts">
   import { watchOnce } from '@vueuse/core'
   import editorAPI from '@/api/editor'
-  import useLogQueryStore from '@/store/modules/logquery'
+  import useLogsQueryStore from '@/store/modules/logs-query'
   import type { SchemaType } from '@/store/modules/code-run/types'
   import { addTsCondition, TimeTypes, toDateStr, toObj } from './until'
   import type { TimeType } from './until'
 
   const { columns, rows, currRow, selectedRowKey, queryNum, sql, tsColumn, unifiedRange, limit } = storeToRefs(
-    useLogQueryStore()
+    useLogsQueryStore()
   )
-  const { getRelativeRange, getColumnByName } = useLogQueryStore()
+  const { getRelativeRange, getColumnByName } = useLogsQueryStore()
 
   const leftDisabled = ref(false)
   const rightDisabled = ref(false)

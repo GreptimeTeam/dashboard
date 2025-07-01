@@ -8,7 +8,7 @@ a-descriptions(layout="vertical" bordered :column="1")
 </template>
 
 <script setup name="FormView" type="ts">
-  import useLogQueryStore from '@/store/modules/logquery';
+  import useLogsQueryStore from '@/store/modules/logs-query'
 
   const displayValue = (val, type) => {
     switch (type) {
@@ -20,16 +20,18 @@ a-descriptions(layout="vertical" bordered :column="1")
   }
 
   const props = defineProps(['data'])
-  const { columns } = storeToRefs(useLogQueryStore())
+  const { columns } = storeToRefs(useLogsQueryStore())
   const formData = computed(() => {
-    return Object.keys(props.data).filter((v) => v !== 'key').map((v) => {
-      const columnType = columns.value.filter(c => c.name === v)[0]?.data_type;
-      return {
-        label: v,
-        type: columnType,
-        value: displayValue(props.data[v], columnType)
-      }
-    })
+    return Object.keys(props.data)
+      .filter((v) => v !== 'key')
+      .map((v) => {
+        const columnType = columns.value.filter((c) => c.name === v)[0]?.data_type
+        return {
+          label: v,
+          type: columnType,
+          value: displayValue(props.data[v], columnType),
+        }
+      })
   })
 </script>
 

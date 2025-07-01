@@ -15,8 +15,8 @@
     style="padding: 3px 15px; height: 40px; white-space: nowrap; color: var(--color-text-2); display: flex; justify-content: space-between; border: 1px solid var(--color-neutral-3); background-color: var(--color-bg-2); margin: 5px 0"
   )
     a-space
-      | {{ $t('logquery.results') }}: {{ rows.length }}
-      span(:title="showChart ? $t('logquery.hideStatChart') : $t('logquery.showStatChart')")
+      | {{ $t('logsQuery.results') }}: {{ rows.length }}
+      span(:title="showChart ? $t('logsQuery.hideStatChart') : $t('logsQuery.showStatChart')")
         icon-bar-chart(
           style="cursor: pointer"
           size="small"
@@ -35,12 +35,12 @@
       a-checkbox(v-model="compact" type="button" size="small")
         | Compact Mode
       a-checkbox(v-model="wrap" size="small")
-        span {{ $t('logquery.wrapLines') }}
+        span {{ $t('logsQuery.wrapLines') }}
 
     a-space
       a-trigger(v-if="columns.length" trigger="click" :unmount-on-close="false")
         a-button(type="text" style="color: var(--color-text-2)")
-          | {{ $t('logquery.columns') }}
+          | {{ $t('logsQuery.columns') }}
         template(#content)
           a-card(style="padding: 10px")
             a-checkbox-group(v-model="displayedColumns[inputTableName]" direction="vertical")
@@ -52,7 +52,7 @@
 
 <script ts setup name="QueryIndex">
   import { useStorage } from '@vueuse/core'
-  import useLogQueryStore from '@/store/modules/logquery'
+  import useLogsQueryStore from '@/store/modules/logs-query'
   import InputEditor from './InputEditor.vue'
   import LogTableData from './TableData.vue'
   import ChartContainer from './ChartContainer.vue'
@@ -64,7 +64,7 @@
   const { dataStatusMap } = storeToRefs(useUserStore())
   const { checkTables } = useDataBaseStore()
 
-  const { getSchemas, getRelativeRange, reset } = useLogQueryStore()
+  const { getSchemas, getRelativeRange, reset } = useLogsQueryStore()
   const {
     rows,
     editorType,
@@ -77,9 +77,9 @@
     mergeColumn,
     showKeys,
     tsColumn,
-  } = storeToRefs(useLogQueryStore())
-  const showChart = useStorage('logquery-chart-visible', true)
-  const compact = useStorage('logquery-table-compact', false)
+  } = storeToRefs(useLogsQueryStore())
+  const showChart = useStorage('logsQuery-chart-visible', true)
+  const compact = useStorage('logsQuery-table-compact', false)
   const size = computed(() => (compact.value ? 'mini' : 'medium'))
   const wrap = ref(false)
   getSchemas()
