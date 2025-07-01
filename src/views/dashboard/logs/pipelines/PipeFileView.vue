@@ -223,7 +223,7 @@ transform:
     '210.207.142.115 - AnthraX [26/Dec/2024:16:47:19 +0800] \\"DELETE /do-not-access/needs-work HTTP/2.0\\" 200 4488'
   const defaultContentExamples = {
     'text/plain': defaultContent,
-    'application/json': `{"message": "${defaultJsonContent}"}`,
+    'application/json': JSON.stringify([{ message: defaultContent }, { message: defaultContent }], null, 2),
     'application/x-ndjson': `{"message": "${defaultJsonContent}"}\n{"message": "${defaultJsonContent}"}`,
   }
 
