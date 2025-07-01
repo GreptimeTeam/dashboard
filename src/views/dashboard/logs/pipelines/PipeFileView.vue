@@ -3,7 +3,12 @@
   .page-header-container
     div(style="display: flex; align-items: center; justify-content: space-between")
       .page-header-2 {{ isCreating ? 'Create Pipeline' : `Edit Pipeline - ${currFile.name}` }}
-    a-button(size="small" style="margin-right: 8px" @click="handleIngest")
+    a-button(
+      v-if="!isCreating"
+      size="small"
+      style="margin-right: 8px"
+      @click="handleIngest"
+    )
       | Ingest With Pipeline
   a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
     a-layout-sider(style="width: 45%" :resize-directions="['right']")
@@ -29,7 +34,7 @@
       a-form(
         ref="formRef"
         layout="vertical"
-        style="padding: 0 10px"
+        style="padding: 10px 10px 0 10px"
         :model="currFile"
         :disabled="!isCreating"
         :rules="rules"
@@ -90,7 +95,7 @@
 
         a-empty(
           v-if="parsedOutputData.records && parsedOutputData.records.rows.length === 0"
-          style="border: 1px solid var(--color-border); border-radius: 6px; height: 100%; display: flex; align-items: center; justify-content: center; margin-top: 8px; flex: 1"
+          style="border: 1px solid var(--color-border); border-radius: 2px; height: 100%; display: flex; align-items: center; justify-content: center; margin-top: 8px; flex: 1"
           description="No parsed data. Click Test to see results."
         )
 
@@ -407,10 +412,10 @@ transform:
   // EDITOR COMPONENTS
   // ===================
   .full-width-height-editor.pipeline-editor {
-    height: calc(100vh - 275px); // Taller for creating mode (no version field)
+    height: calc(100vh - 285px); // Taller for creating mode (no version field)
 
     &.editing {
-      height: calc(100vh - 354px); // Shorter for editing mode (has version field)
+      height: calc(100vh - 364px); // Shorter for editing mode (has version field)
     }
   }
 
@@ -454,7 +459,7 @@ transform:
     overflow: auto;
     flex: 1;
     border: 1px solid var(--color-border);
-    border-radius: 4px;
+    border-radius: 2px;
   }
 
   // ===================
@@ -474,9 +479,6 @@ transform:
   :deep(.arco-radio-button.arco-radio-checked) {
     color: var(--color-primary);
   }
-</style>
-
-<style scoped lang="less">
   .card-title-with-description {
     .card-title {
       font-size: 16px;
