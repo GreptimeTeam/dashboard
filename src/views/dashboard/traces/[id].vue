@@ -325,6 +325,7 @@
   }
 
   :deep(.arco-card.light-editor-card) {
+    height: auto;
     padding-right: 0;
     flex: 1;
     display: flex;

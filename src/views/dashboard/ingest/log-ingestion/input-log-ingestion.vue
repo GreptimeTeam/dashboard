@@ -36,7 +36,7 @@ BaseInput(:config="config")
 <script lang="ts" setup>
   const ingestStore = useIngestStore()
   const dataBaseStore = useDataBaseStore()
-
+  const route = useRoute()
   const { pipelineName, tableForPipeline, contentType, pipelineOptions, pipelineLoading } = storeToRefs(ingestStore)
 
   const tableOptions = computed(() => {
@@ -49,6 +49,9 @@ BaseInput(:config="config")
   const tableLoading = computed(() => dataBaseStore.tablesLoading)
 
   onActivated(async () => {
+    if (route.query.pipeline) {
+      pipelineName.value = route.query.pipeline as string
+    }
     await dataBaseStore.checkTables()
     await ingestStore.fetchPipelines()
 

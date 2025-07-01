@@ -1,14 +1,15 @@
 <template lang="pug">
-a-page-header(title="Pipeline Configuration" :show-back="false")
-
-a-alert Pipeline is a mechanism in GreptimeDB for parsing and transforming log data, <a href="https://docs.greptime.com/user-guide/logs/pipeline-config" target="_blank">read more</a>
-a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
-  a-layout-sider(:resize-directions="['right']" :width="800")
-    a-card(title="Pipeline" :bordered="false")
+a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08); height: calc(100vh - 30px)")
+  a-layout-sider(style="width: 45%" :resize-directions="['right']")
+    a-card.light-editor-card(:bordered="false")
+      template(#title)
+        .card-title-with-description
+          .card-title {{ isCreating ? 'Create Pipeline' : `Edit Pipeline - ${currFile.name}` }}
+          .card-description Pipeline is a mechanism in GreptimeDB for parsing and transforming log data,
+            |
+            a(href="https://docs.greptime.com/user-guide/logs/pipeline-config" target="_blank") read more
       template(#extra)
         a-space
-          a-button(type="primary" size="small" @click="handleSave")
-            | Save
           a-popconfirm(content="Are you sure you want to delete?" @ok="handleDelete")
             a-button(
               v-if="!isCreating"
@@ -17,65 +18,108 @@ a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
               size="small"
             )
               | Delete
-      a-form(
-        ref="formRef"
-        layout="vertical"
-        style="padding: 0 10px; margin-top: 20px"
-        :model="currFile"
-        :disabled="!isCreating"
-        :rules="rules"
+          a-button(type="primary" size="small" @click="handleSave")
+            | Save
+    a-form(
+      ref="formRef"
+      layout="vertical"
+      style="padding: 10px 10px 0 10px"
+      :model="currFile"
+      :rules="rules"
+    )
+      a-form-item(
+        v-if="isCreating"
+        field="name"
+        label="Pipeline name"
+        style="width: 200px"
       )
-        .form-description Input the pipeline configuration here to define how logs are parsed and transformed, You can test on the right side whether it's already saved.
-        a-form-item(field="name" label="Pipeline name" style="width: 200px")
-          a-input(v-model="currFile.name" placeholder="Pipeline name")
-        a-form-item(v-if="!isCreating" field="version" label="Version")
+        a-input(v-model="currFile.name" placeholder="Pipeline name")
+      a-form-item(v-if="!isCreating" field="version" label="Version")
+        a-space
           | {{ currFile.version }}
-        a-form-item(field="content" label="Yaml Content")
-          template(#help)
-            div 
-          .editor-container
-            YMLEditorSimple(v-model="currFile.content" style="width: 100%; height: calc(-470px + 100vh)")
-  a-layout-content
-    .content-container
-      a-card.light-editor-card(title="Input" :bordered="false")
-        template(#extra)
-          a-space
-            a-button(size="small" @click="handleDebug") Test
-            a-select(v-model="selectedContentType" style="width: 150px" placeholder="Content Type")
-              a-option(value="text/plain") text
-              a-option(value="application/json") json
-              a-option(value="application/x-ndjson") ndjson
-        .right-content
-          a-alert(v-if="ymlError" type="error")
-            | {{ ymlError }}
-          a-typography-text(type="secondary")
-            | Input your original log to see parse results.
-          .input-editor
-            CodeMirror(
-              v-model="debugForm.content"
-              style="width: 100%; height: 100%"
-              :extensions="extensions"
-              :spellcheck="true"
-              :autofocus="true"
-              :indent-with-tab="true"
-              :tabSize="2"
-            )
+          a-button(
+            v-if="!isCreating"
+            type="text"
+            size="small"
+            @click="handleIngest"
+          )
+            | Ingest With Pipeline
+      a-form-item(field="content" label="Yaml Content")
+        template(#help)
+          div 
+        .full-width-height-editor.pipeline-editor(:class="editorHeightClass")
+          YMLEditorSimple(v-model="currFile.content" style="width: 100%; height: 100%")
+  a-layout-content.content-wrapper(style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 22px")
+    a-card.light-editor-card(title="Input" :bordered="false")
+      template(#extra)
+        a-space
+          a-select(
+            v-model="selectedContentType"
+            style="width: 150px"
+            placeholder="Content Type"
+            @change="handleInputChange"
+          )
+            a-option(value="text/plain") text
+            a-option(value="application/json") json
+            a-option(value="application/x-ndjson") ndjson
 
-      a-card.light-editor-card(title="Output" :bordered="false")
-        .right-content
-          a-typography-text(type="secondary")
-            | Parsed logs displayed here. Logs that ingested via API will follow this structure.
-          .output-editor
-            CodeMirror(
-              style="width: 100%; height: 100%"
-              :model-value="debugResponse"
-              :extensions="extensions"
-              :spellcheck="true"
-              :autofocus="true"
-              :indent-with-tab="true"
-              :tabSize="2"
-              :disabled="true"
-            )
+          a-button(size="small" @click="handleDebug") Test
+
+      template(#title)
+        .card-title-with-description
+          .card-title Input
+          .card-description Input your original log for processing by the current pipeline configuration
+
+      a-alert(v-if="ymlError" type="error")
+        | {{ ymlError }}
+      .full-width-height-editor
+        CodeMirror(
+          v-model="debugForm.content"
+          style="width: 100%; height: 100%"
+          :extensions="extensions"
+          :spellcheck="true"
+          :autofocus="true"
+          :indent-with-tab="true"
+          :tabSize="2"
+        )
+
+    a-card.light-editor-card.output(title="Output" :bordered="false")
+      template(#extra)
+        a-radio-group.output-view-toggle(v-model="outputViewMode" type="button" size="small")
+          a-radio(value="table") Table
+          a-radio(value="json") JSON
+
+      template(#title)
+        .card-title-with-description
+          .card-title Output
+          .card-description Processed logs displayed here. Logs that ingested via API will follow this structure.
+
+      a-empty(
+        v-if="parsedOutputData.records && parsedOutputData.records.rows.length === 0"
+        style="border: 1px solid var(--color-border); border-radius: 2px; height: 100%; display: flex; align-items: center; justify-content: center; margin-top: 8px; flex: 1"
+        description="No parsed data. Click Test to see results."
+      )
+
+      // Table View
+      .output-table(
+        v-if="outputViewMode === 'table' && parsedOutputData.records && parsedOutputData.records.rows.length > 0"
+      )
+        DataGrid(:data="parsedOutputData" :has-header="false")
+
+      // JSON View  
+      .full-width-height-editor(
+        v-if="outputViewMode === 'json' && parsedOutputData.records && parsedOutputData.records.rows.length > 0"
+      )
+        CodeMirror(
+          style="width: 100%; height: 100%"
+          :model-value="debugResponse"
+          :extensions="extensions"
+          :spellcheck="true"
+          :autofocus="true"
+          :indent-with-tab="true"
+          :tabSize="2"
+          :disabled="true"
+        )
 </template>
 
 <script setup name="PipeFileView" lang="ts">
@@ -85,11 +129,14 @@ a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08)")
   import { json } from '@codemirror/lang-json'
   import { create, list, del, debugContent, getByName } from '@/api/pipeline'
   import type { PipeFile } from '@/api/pipeline'
+  import router from '@/router'
 
   const emit = defineEmits(['refresh', 'del'])
   const props = defineProps<{
     filename: undefined | string
   }>()
+
+  const isCreating = computed(() => !props.filename)
 
   const currFile = reactive<PipeFile>({
     name: '',
@@ -124,14 +171,7 @@ transform:
     version: '',
   })
 
-  const route = useRoute()
-  const isCreating = computed(() => {
-    return !props.filename
-  })
-
   const formRef = ref()
-
-  const appStore = useAppStore()
 
   const handleSave = () => {
     formRef.value?.validate((error: any) => {
@@ -170,16 +210,36 @@ transform:
     ],
   }
 
+  const selectedContentType = ref('text/plain')
+
+  // Default content examples for different content types
+  const defaultContent =
+    '210.207.142.115 - AnthraX [26/Dec/2024:16:47:19 +0800] "DELETE /do-not-access/needs-work HTTP/2.0" 200 4488'
+  const defaultJsonContent =
+    '210.207.142.115 - AnthraX [26/Dec/2024:16:47:19 +0800] \\"DELETE /do-not-access/needs-work HTTP/2.0\\" 200 4488'
+  const defaultContentExamples = {
+    'text/plain': defaultContent,
+    'application/json': JSON.stringify([{ message: defaultContent }, { message: defaultContent }], null, 2),
+    'application/x-ndjson': `{"message": "${defaultJsonContent}"}\n{"message": "${defaultJsonContent}"}`,
+  }
+
   const debugForm = reactive({
-    content:
-      '210.207.142.115 - AnthraX [26/Dec/2024:16:47:19 +0800] "DELETE /do-not-access/needs-work HTTP/2.0" 200 4488',
+    content: defaultContentExamples[selectedContentType.value],
   })
 
-  const selectedContentType = ref('text/plain')
+  const handleInputChange = (type: string) => {
+    debugForm.content = defaultContentExamples[type]
+  }
+
   // Watch for content changes to auto-detect content type
   watch(
     () => debugForm.content,
     (newContent) => {
+      // Skip auto-detection if content matches one of our default examples
+      if (Object.values(defaultContentExamples).includes(newContent)) {
+        return
+      }
+
       try {
         JSON.parse(newContent)
         selectedContentType.value = 'application/json'
@@ -209,9 +269,55 @@ transform:
 
   const extensions = [basicSetup, json()]
   const debugResponse = ref('')
+
+  const editorHeightClass = computed(() => {
+    return isCreating.value ? 'creating' : 'editing'
+  })
+
+  const outputViewMode = ref('table')
+  const parsedOutputData = ref({
+    records: {
+      rows: [],
+      schema: {
+        column_schemas: [],
+      },
+    },
+    dimensionsAndXName: {
+      dimensions: [],
+      xAxis: '',
+    },
+    key: 0,
+    type: 'table',
+  })
+
   function handleDebug() {
     debugContent(currFile.content, debugForm.content, selectedContentType.value).then((result) => {
-      debugResponse.value = JSON.stringify(result, null, 2)
+      debugResponse.value = JSON.stringify(result[0], null, 2)
+      const rows = result[0].rows.map((row) => {
+        return row.map((item) => {
+          return item.value
+        })
+      })
+      const schema = result[0].schema || []
+
+      // Parse response for DataGrid format
+      parsedOutputData.value = {
+        records: {
+          rows,
+          schema: {
+            column_schemas: schema.map((col) => ({
+              name: col.name,
+              data_type: col.data_type || 'String',
+            })),
+          },
+        },
+        dimensionsAndXName: {
+          dimensions: schema.map((col) => col.name),
+          xAxis: schema.length > 0 ? schema[0].name : '',
+        },
+        key: Date.now(),
+        type: 'table',
+      }
     })
   }
 
@@ -226,110 +332,113 @@ transform:
     }
   }
   getData()
+
+  const handleIngest = () => {
+    router.push({
+      name: 'log-ingestion-input',
+      query: {
+        pipeline: currFile.name,
+      },
+    })
+  }
 </script>
 
 <style lang="less" scoped>
+  .content-wrapper {
+    :deep(.arco-card-body) {
+      padding: 10px 10px 0 10px;
+      overflow: hidden;
+    }
+  }
+
+  // ===================
+  // EDITOR COMPONENTS
+  // ===================
+  .full-width-height-editor.pipeline-editor {
+    height: calc(100vh - 238px); // Taller for creating mode (no version field)
+
+    &.editing {
+      height: calc(100vh - 238px); // Shorter for editing mode (has version field)
+    }
+  }
+
+  // ===================
+  // CARD COMPONENTS
+  // ===================
+  .light-editor-card {
+    display: flex;
+    flex-direction: column;
+
+    :deep(.arco-card-body) {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden; // Prevent content from expanding card
+    }
+    :deep(.arco-card-header) {
+      flex-shrink: 0;
+      margin-top: 12px;
+    }
+  }
+
+  // ===================
+  // OUTPUT SECTION
+  // ===================
+  .output-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .output-view-toggle {
+    width: auto !important;
+    display: inline-flex !important;
+    flex-shrink: 0 !important;
+    align-self: flex-start !important;
+  }
+
+  .output-table {
+    overflow: auto;
+    flex: 1;
+    border: 1px solid var(--color-border);
+    border-radius: 2px;
+  }
+
+  // ===================
+  // ARCO DESIGN OVERRIDES
+  // ===================
   :deep(.arco-card) {
     border-radius: 0;
     border-bottom: none;
   }
-  .right-content {
-    padding: 0 10px 10px 10px;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-  }
+
   :deep(.arco-card.light-editor-card) {
-    padding-right: 0;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-  }
-  :deep(.arco-layout-sider-light) {
-    box-shadow: none;
-  }
-  :deep(.arco-form-item-content-flex) {
-    display: block;
-  }
-
-  .content-container {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    padding-bottom: 16px;
-  }
-
-  .input-editor,
-  .output-editor {
     flex: 1;
     min-height: 0;
-    margin-top: 5px;
-
-    :deep(.cm-editor) {
-      height: 100%;
-    }
+    overflow: hidden;
   }
 
-  .output-editor {
-    :deep(.cm-editor) {
-      background-color: var(--color-fill-2);
-      cursor: not-allowed;
+  :deep(.arco-radio-button.arco-radio-checked) {
+    color: var(--color-primary);
+  }
+  .card-title-with-description {
+    overflow: hidden;
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--color-text-1);
+      margin-bottom: 4px;
     }
 
-    :deep(.cm-content) {
+    .card-description {
+      font-size: 13px;
       color: var(--color-text-2);
+      line-height: 1.4;
+      font-weight: normal;
+      text-overflow: ellipsis;
+      overflow: hidden;
     }
-  }
-
-  .form-description {
-    color: var(--color-text-3);
-    font-size: 14px;
-    margin-bottom: 16px;
-  }
-
-  .full-height-layout {
-    height: calc(100vh - 133px); // Subtract header height and alert height
-
-    :deep(.arco-layout) {
-      height: 100%;
-    }
-
-    :deep(.arco-layout-content) {
-      height: 100%;
-      overflow: auto;
-    }
-
-    :deep(.arco-layout-sider) {
-      height: 100%;
-      overflow: auto;
-      overflow-x: hidden; // Prevent horizontal scrollbar
-    }
-
-    :deep(.arco-card-body) {
-      padding: 0; // Remove default padding that might cause overflow
-      height: 100%;
-    }
-  }
-
-  .editor-container {
-    min-height: 300px; // Set a minimum height
-  }
-
-  // Add styles for editor borders
-  :deep(.cm-editor) {
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-  }
-
-  :deep(.editor-container) {
-    .cm-editor {
-      border: 1px solid var(--color-border);
-      border-radius: 4px;
-    }
-  }
-  :deep(.cm-editor.cm-focused) {
-    outline: 0;
   }
 </style>
