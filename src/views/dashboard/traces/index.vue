@@ -358,7 +358,7 @@
 
 <style lang="less" scoped>
   .trace-query-container {
-    height: 100vh;
+    height: calc(100vh - 30px);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -366,13 +366,12 @@
 
   .content-wrapper {
     flex: 1;
-    padding: 8px;
+    padding: 8px 8px 0 8px;
     display: flex;
     flex-direction: column;
     gap: 8px;
     overflow: hidden;
     min-height: 0; // Important for flexbox
-    margin-bottom: 22px;
   }
 
   .toolbar {
