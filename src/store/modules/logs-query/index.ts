@@ -28,7 +28,7 @@ function getColumnOpType(dataType) {
   return opType
 }
 
-const useLogQueryStore = defineStore('logQuery', () => {
+const useLogsQueryStore = defineStore('logsQuery', () => {
   /** sql state */
   // current query result sql
   const sql = ref(``)
@@ -377,4 +377,4 @@ const useLogQueryStore = defineStore('logQuery', () => {
   }
 })
 
-export default useLogQueryStore
+export default useLogsQueryStore

@@ -60,7 +60,7 @@ a-form(
 </template>
 
 <script setup name="SQLBuilder" lang="ts">
-  import useLogQueryStore from '@/store/modules/logquery'
+  import useLogsQueryStore from '@/store/modules/logs-query'
   import type { Condition } from '@/views/dashboard/logs/query/types'
 
   const {
@@ -70,8 +70,8 @@ a-form(
     queryForm: form,
     limit,
     editingTableName,
-  } = storeToRefs(useLogQueryStore())
-  const { getOpByField } = useLogQueryStore()
+  } = storeToRefs(useLogsQueryStore())
+  const { getOpByField } = useLogsQueryStore()
 
   // inputTableName.value = 'syslog'
   const tables = computed<Array<string>>(() => {

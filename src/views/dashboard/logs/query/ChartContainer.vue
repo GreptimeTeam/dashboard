@@ -18,12 +18,12 @@ a-card
 </template>
 
 <script setup name="ChartContainer" lang="ts">
-  import useLogQueryStore from '@/store/modules/logquery'
+  import useLogsQueryStore from '@/store/modules/logs-query'
   import CountChart from './CountChart.vue'
   import FunnelChart from './FunnelChart.vue'
 
   const currChart = ref('count')
-  const { columns, inputTableName } = storeToRefs(useLogQueryStore())
+  const { columns, inputTableName } = storeToRefs(useLogsQueryStore())
   const frequencyField = ref('')
   const filterFields = computed(() =>
     columns.value.filter((column) => column.data_type === 'string').map((column) => column.name)

@@ -5,7 +5,7 @@ a-trigger(
   trigger="click"
   :unmount-on-close="false"
 )
-  a-button(type="text" size="small") {{ $t('logquery.savedSql') }}
+  a-button(type="text" size="small") {{ $t('logsQuery.savedSql') }}
   template(#content)
     a-card(title="Saved SQL" style="width: 700px")
       a-list(:max-height="600")
@@ -18,12 +18,12 @@ a-trigger(
 </template>
 
 <script setup name="SavedQuery" type="ts">
-  import useLogQueryStore from '@/store/modules/logquery';
-  import { useStorage } from '@vueuse/core';
+  import useLogsQueryStore from '@/store/modules/logs-query'
+  import { useStorage } from '@vueuse/core'
 
   const queryList = useStorage('log-query-list', [])
-  const {editingSql, editorType} = storeToRefs(useLogQueryStore())
-  function useSql (sqlStr) {
+  const { editingSql, editorType } = storeToRefs(useLogsQueryStore())
+  function useSql(sqlStr) {
     editingSql.value = sqlStr
     editorType.value = 'text'
   }

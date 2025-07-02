@@ -72,13 +72,13 @@
 <script setup lang="ts" name="LogTableData">
   import { Message } from '@arco-design/web-vue'
   import { useElementSize, useLocalStorage } from '@vueuse/core'
-  import useLogQueryStore from '@/store/modules/logquery'
+  import useLogsQueryStore from '@/store/modules/logs-query'
   import LogDetail from './LogDetail.vue'
   import { toDateStr, TimeTypes } from './until'
 
   const props = defineProps({ wrapLine: Boolean, size: String })
-  const { getColumnByName, query } = useLogQueryStore()
-  const { displayedColumns } = storeToRefs(useLogQueryStore())
+  const { getColumnByName, query } = useLogsQueryStore()
+  const { displayedColumns } = storeToRefs(useLogsQueryStore())
   const {
     rows,
     currRow,
@@ -94,9 +94,9 @@
     queryForm,
     editingSql,
     editorType,
-  } = storeToRefs(useLogQueryStore())
+  } = storeToRefs(useLogsQueryStore())
 
-  const { getOpByField } = useLogQueryStore()
+  const { getOpByField } = useLogsQueryStore()
   const tsViewStr = ref(true)
   function changeTsView() {
     tsViewStr.value = !tsViewStr.value

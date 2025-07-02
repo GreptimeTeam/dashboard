@@ -6,10 +6,10 @@ a-button(size="small" type="text" @click="exportSql")
 <script setup name="ExportLog" lang="ts">
   import fileDownload from 'js-file-download'
   import editorAPI from '@/api/editor'
-  import useLogQueryStore from '@/store/modules/logquery'
+  import useLogsQueryStore from '@/store/modules/logs-query'
   import { getWhereClause, parseOrderBy } from './until'
 
-  const { editingSql, columns, tsColumn, inputTableName } = storeToRefs(useLogQueryStore())
+  const { editingSql, columns, tsColumn, inputTableName } = storeToRefs(useLogsQueryStore())
 
   function getExportSql() {
     let fields = []

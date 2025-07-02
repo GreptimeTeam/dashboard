@@ -26,21 +26,21 @@
   )
     template(#icon)
       icon-refresh
-    | {{ $t('logquery.run') }}
+    | {{ $t('logsQuery.run') }}
   a-checkbox(v-model="refresh" size="small")
-    span(style="color: var(--color-text-2)") {{ $t('logquery.live') }}
+    span(style="color: var(--color-text-2)") {{ $t('logsQuery.live') }}
   a-button(
     type="text"
     status="normal"
     :loading="saveLoading"
     @click="saveQuery"
-  ) {{ $t('logquery.saveSql') }}
+  ) {{ $t('logsQuery.saveSql') }}
 
   a-space(style="margin-left: auto")
     SavedQuery
     a-trigger(position="bottom" auto-fit-position :unmount-on-close="false")
       a-button(type="text" size="small")
-        | {{ $t('logquery.showTables') }}
+        | {{ $t('logsQuery.showTables') }}
       template(#content)
         a-card(style="width: 500px; padding: 10px")
           a-select(v-model="selectedTable" :options="tables" :allow-search="true")
@@ -56,7 +56,7 @@
 
 <script setup name="Toolbar" lang="ts">
   import { watchOnce, useStorage } from '@vueuse/core'
-  import useLogQueryStore from '@/store/modules/logquery'
+  import useLogsQueryStore from '@/store/modules/logs-query'
   import { relativeTimeMap, relativeTimeOptions } from '../../config'
   import { parseTimeRange, processSQL, parseTable, parseLimit, addTsCondition } from './until'
   import SavedQuery from './SavedQuery.vue'
@@ -77,8 +77,8 @@
     refresh,
     editingTableName,
     editingTsColumn,
-  } = storeToRefs(useLogQueryStore())
-  const { getRelativeRange } = useLogQueryStore()
+  } = storeToRefs(useLogsQueryStore())
+  const { getRelativeRange } = useLogsQueryStore()
 
   let refreshTimeout = -1
   function mayRefresh() {
@@ -95,7 +95,7 @@
     mayRefresh()
   })
 
-  const { query } = useLogQueryStore()
+  const { query } = useLogsQueryStore()
   // const queryLoading = ref(false)
 
   function handleQuery() {
