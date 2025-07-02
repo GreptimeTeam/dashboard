@@ -78,8 +78,9 @@
     showKeys,
     tsColumn,
   } = storeToRefs(useLogsQueryStore())
-  const showChart = useStorage('logsQuery-chart-visible', true)
-  const compact = useStorage('logsQuery-table-compact', false)
+  const showChart = useStorage('logquery-chart-visible', true)
+  const compact = useStorage('logquery-table-compact', false)
+
   const size = computed(() => (compact.value ? 'mini' : 'medium'))
   const wrap = ref(false)
   getSchemas()

@@ -141,7 +141,7 @@ const DASHBOARD: AppRouteRecordRaw = {
     {
       path: 'logs-query',
       component: () => import('@/views/dashboard/logs/query/index.vue'),
-      name: 'logs-query',
+      name: 'log-query',
       meta: {
         ignoreCache: true,
         locale: 'menu.dashboard.logsQuery',
@@ -164,7 +164,7 @@ const DASHBOARD: AppRouteRecordRaw = {
     },
     {
       path: 'logs-pipelines',
-      name: 'logs-pipelines',
+      name: 'log-pipeline',
       component: () => import('@/views/dashboard/logs/pipelines/index.vue'),
       meta: {
         locale: 'menu.dashboard.logPipeline',

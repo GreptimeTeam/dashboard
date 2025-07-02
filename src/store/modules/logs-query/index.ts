@@ -71,7 +71,7 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
 
   /** for table */
   // column visible
-  const displayedColumns = useStorage<ColumnsMap>('logsQuery-table-column-visible', {})
+  const displayedColumns = useStorage<ColumnsMap>('logquery-table-column-visible', {})
   // table rows
   const rows = shallowRef<Array<any>>([])
   // selected row key for detail view
@@ -174,8 +174,8 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
   //   return allColumns[index]
   // }
 
-  const mergeColumn = useLocalStorage('logsQuery-merge-column', true)
-  const showKeys = useLocalStorage('logsQuery-show-keys', true)
+  const mergeColumn = useLocalStorage('logquery-merge-column', true)
+  const showKeys = useLocalStorage('logquery-show-keys', true)
   const appStore = useAppStore()
   function getSchemas() {
     const db = appStore.database

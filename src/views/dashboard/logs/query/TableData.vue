@@ -225,7 +225,7 @@
   watch(queryNum, () => {
     query()
   })
-  const isCompact = useLocalStorage('logsQuery-table-compact', false)
+  const isCompact = useLocalStorage('logquery-table-compact', false)
   const headerHeight = computed(() => {
     return isCompact.value ? 25 : 38
   })
