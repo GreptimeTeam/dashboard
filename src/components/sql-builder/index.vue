@@ -80,7 +80,9 @@ a-form(
 
 <script setup name="SQLBuilder" lang="ts">
   import { ref, watch, onMounted, computed, readonly, reactive } from 'vue'
+  import { storeToRefs } from 'pinia'
   import editorAPI from '@/api/editor'
+  import { useAppStore } from '@/store'
 
   interface Condition {
     field: string
@@ -115,6 +117,9 @@ a-form(
 
   const tables = ref<string[]>([])
   const tableMap = ref<{ [key: string]: TableField[] }>({})
+
+  // Get current database from app store
+  const { database } = storeToRefs(useAppStore())
 
   // Use initial form state from props if provided, otherwise use default
   const defaultFormState: Form = {
@@ -228,11 +233,11 @@ a-form(
 
   async function fetchTables() {
     try {
-      let sql = `SELECT DISTINCT table_name FROM information_schema.columns`
+      let sql = `SELECT DISTINCT table_name FROM information_schema.columns WHERE table_schema = '${database.value}'`
 
       // Add filter if specified (e.g., for traces we want tables with trace_id column)
       if (props.tableFilter) {
-        sql += ` WHERE column_name = '${props.tableFilter}'`
+        sql += ` AND column_name = '${props.tableFilter}'`
       }
 
       sql += ` ORDER BY table_name`
