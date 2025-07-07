@@ -41,11 +41,10 @@
         SQLBuilder(
           v-if="sqlMode === 'builder'"
           ref="sqlBuilderRef"
+          v-model:form-state="initialBuilderFormState"
           table-filter="trace_id"
-          :initial-form-state="initialBuilderFormState"
           :time-range-values="timeRangeValues"
           @update:sql="handleBuilderSqlUpdate"
-          @update:form="handleBuilderFormUpdate"
         )
         SQLEditor(
           v-else
@@ -234,13 +233,17 @@
     builderSql.value = sql
   }
 
-  // Handle SQLBuilder form state updates
-  function handleBuilderFormUpdate(formState: any) {
-    // Store form state but don't update URL immediately
-    // URL will be updated after successful query execution
-    currentBuilderFormState.value = formState
-    // Table name is now computed from form state
-  }
+  // Watch for form state changes to update currentBuilderFormState for URL updates
+  watch(
+    initialBuilderFormState,
+    (newFormState) => {
+      // Store form state but don't update URL immediately
+      // URL will be updated after successful query execution
+      currentBuilderFormState.value = newFormState
+      // Table name is now computed from form state
+    },
+    { deep: true }
+  )
 
   // Handle format SQL
   function handleFormatSQL() {

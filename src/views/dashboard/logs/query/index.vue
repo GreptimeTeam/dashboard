@@ -5,11 +5,10 @@
     SQLBuilder(
       v-if="editorType === 'builder'"
       ref="sqlBuilderRef"
+      v-model:form-state="currentBuilderFormState"
       style="padding: 10px 20px; border: 1px solid var(--color-neutral-3); border-top: none; background-color: var(--color-bg-2)"
-      :initial-form-state="initialBuilderFormState"
       :time-range-values="timeRangeValues"
       @update:sql="handleBuilderSqlUpdate"
-      @update:form="handleBuilderFormUpdate"
     )
     InputEditor(v-else)
   ChartContainer.block(
@@ -52,7 +51,12 @@
               a-checkbox(v-for="column in columns" :value="column.name")
                 | {{ column.name }}
       Pagination(v-if="!refresh && tsColumn" :key="pageKey")
-  LogTableData(style="flex: 1 1 auto; overflow: auto" :wrap-line="wrap" :size="size")
+  LogTableData(
+    style="flex: 1 1 auto; overflow: auto"
+    :wrap-line="wrap"
+    :size="size"
+    @filter-condition-add="handleFilterConditionAdd"
+  )
 </template>
 
 <script ts setup name="QueryIndex">
@@ -93,7 +97,6 @@
 
   // SQLBuilder integration
   const sqlBuilderRef = ref()
-  const initialBuilderFormState = ref(null)
   const currentBuilderFormState = ref(null)
 
   // Time limit for SQLBuilder
@@ -117,20 +120,39 @@
     sql.value = generatedSql
   }
 
-  // Handle SQLBuilder form state updates
-  function handleBuilderFormUpdate(formState) {
-    currentBuilderFormState.value = formState
-    // Update the editing table name in the store
-    if (formState.table) {
-      logsStore.editingTableName = formState.table
-      logsStore.inputTableName = formState.table
+  // Handle filter condition from table context menu
+  function handleFilterConditionAdd(columnName, operator, value) {
+    if (!currentBuilderFormState.value) return
 
-      // Update the timestamp column when table changes
-      nextTick(() => {
-        tsColumn.value = editingTsColumn.value
-      })
+    // Add new condition to the form state
+    const newCondition = {
+      field: columnName,
+      operator,
+      value: String(value),
+      relation: 'AND',
+      isTimeColumn: false,
     }
+
+    currentBuilderFormState.value.conditions.push(newCondition)
   }
+
+  // Watch for form state changes to update store and handle table changes
+  watch(
+    currentBuilderFormState,
+    (formState) => {
+      // Update the editing table name in the store
+      if (formState?.table) {
+        logsStore.editingTableName = formState.table
+        // logsStore.inputTableName = formState.table
+
+        // Update the timestamp column when table changes
+        nextTick(() => {
+          tsColumn.value = editingTsColumn.value
+        })
+      }
+    },
+    { deep: true }
+  )
   const showChart = useStorage('logquery-chart-visible', true)
   const compact = useStorage('logquery-table-compact', false)
 

@@ -57,7 +57,7 @@
   LogDetail(v-model:visible="detailVisible")
   a-dropdown#td-context(
     v-model:popup-visible="contextMenuVisible"
-    trigger="custom"
+    trigger="contextMenu"
     :style="{ top: `${contextMenuPosition.y}px`, left: `${contextMenuPosition.x}px` }"
     @clickoutside="hideContextMenu"
     @select="handleMenuClick"
@@ -76,7 +76,11 @@
   import LogDetail from './LogDetail.vue'
   import { toDateStr, TimeTypes } from './until'
 
-  const props = defineProps({ wrapLine: Boolean, size: String })
+  const props = defineProps<{
+    wrapLine: boolean
+    size: 'small' | 'mini' | 'medium' | 'large'
+  }>()
+  const emit = defineEmits(['filterConditionAdd'])
   const { getColumnByName, query } = useLogsQueryStore()
   const { displayedColumns } = storeToRefs(useLogsQueryStore())
   const {
@@ -84,15 +88,12 @@
     currRow,
     selectedRowKey,
     queryNum,
-    sql,
     tsColumn,
     inputTableName,
     mergeColumn,
     dataLoadFlag,
     showKeys,
     queryColumns,
-    queryForm,
-    editingSql,
     editorType,
   } = storeToRefs(useLogsQueryStore())
 
@@ -210,7 +211,7 @@
   })
 
   const rowSelection = ref({
-    type: 'radio',
+    type: 'radio' as const,
     checkStrictly: false,
     selectedRowKeys: computed(() => [selectedRowKey.value]),
   })
@@ -257,22 +258,13 @@
       return
     }
     const [row, columnName] = triggerCell.value
-    const columnMeta = getColumnByName(columnName)
     if (action === 'copy') {
       await navigator.clipboard.writeText(row[columnName])
       Message.success('copy success')
     } else if (action.startsWith('filter')) {
-      queryForm.value.conditions.push({
-        field: columnMeta,
-        op: action.split('_')[1],
-        value: row[columnName],
-        rel: 'and',
-      })
-
-      nextTick(() => {
-        sql.value = editingSql.value
-        queryNum.value += 1
-      })
+      const operator = action.split('_')[1]
+      // Emit filter condition to parent instead of directly modifying store
+      emit('filterConditionAdd', columnName, operator, row[columnName])
     }
     hideContextMenu()
   }

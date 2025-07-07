@@ -106,11 +106,11 @@ a-form(
     semantic_type: string
   }
 
-  const emit = defineEmits(['update:sql', 'update:form'])
+  const emit = defineEmits(['update:sql', 'update:formState'])
 
-  // Props for timeLength and initial form state
+  // Props for form state and configuration
   const props = defineProps<{
-    initialFormState?: Form | null
+    formState?: Form | null
     tableFilter?: string // Optional filter for which tables to show (e.g., 'trace_id' for traces)
     timeRangeValues?: string[] // Pre-processed time range values [start, end] - unified for all systems
   }>()
@@ -121,7 +121,7 @@ a-form(
   // Get current database from app store
   const { database } = storeToRefs(useAppStore())
 
-  // Use initial form state from props if provided, otherwise use default
+  // Use form state from props if provided, otherwise use default
   const defaultFormState: Form = {
     conditions: [
       {
@@ -137,11 +137,11 @@ a-form(
   }
 
   // Initialize form state as reactive object
-  const form = reactive<Form>(props.initialFormState || defaultFormState)
+  const form = reactive<Form>(props.formState || defaultFormState)
 
   // Watch for prop changes and update form
   watch(
-    () => props.initialFormState,
+    () => props.formState,
     (newFormState) => {
       if (newFormState) {
         Object.assign(form, newFormState)
@@ -150,11 +150,11 @@ a-form(
     { immediate: true }
   )
 
-  // Watch form changes and emit updates for URL persistence
+  // Watch form changes and emit updates for v-model
   watch(
     form,
     (newForm) => {
-      emit('update:form', newForm)
+      emit('update:formState', newForm)
     },
     { deep: true }
   )
@@ -245,8 +245,8 @@ a-form(
       const result = await editorAPI.runSQL(sql)
       tables.value = result.output[0].records.rows.map((row: string[]) => row[0])
 
-      // Only set default table if we don't have initial form state from props
-      if (!props.initialFormState && tables.value.length > 0) {
+      // Only set default table if we don't have form state from props
+      if (!props.formState && tables.value.length > 0) {
         form.table = tables.value[0]
       }
     } catch (error) {
