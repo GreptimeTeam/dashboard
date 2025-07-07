@@ -296,33 +296,7 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
     return where
   }
 
-  // construct editing sql
-  watch(
-    [queryForm, unifiedRange, limit, editingTableName, editingTsColumn],
-    () => {
-      if (!editingTableName.value) {
-        return
-      }
-      if (editorType.value !== 'builder') {
-        return
-      }
-      let str = `SELECT * FROM "${editingTableName.value}"`
-      const where = buildCondition()
-      if (where.length) {
-        str += ` WHERE ${where.join('')}`
-      }
-      const tmpTsColumn = editingTsColumn.value
-      if (tmpTsColumn) {
-        str += ` ORDER BY "${tmpTsColumn.name}" ${queryForm.orderBy}`
-      }
-      str += ` LIMIT ${limit.value}`
-      editingSql.value = str
-    },
-    {
-      immediate: true,
-      deep: true,
-    }
-  )
+  // Note: SQL building is now handled by the general SQLBuilder component
 
   // reset displayedColumn when columns change
   watch(columns, () => {

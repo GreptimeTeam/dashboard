@@ -108,9 +108,9 @@ a-form(
 
   // Props for timeLength and initial form state
   const props = defineProps<{
-    hasTimeLimit?: boolean
     initialFormState?: Form | null
     tableFilter?: string // Optional filter for which tables to show (e.g., 'trace_id' for traces)
+    timeRangeValues?: string[] // Pre-processed time range values [start, end] - unified for all systems
   }>()
 
   const tables = ref<string[]>([])
@@ -296,6 +296,18 @@ a-form(
   function removeCondition(index: number) {
     form.conditions.splice(index, 1)
   }
+
+  // Internal time range processing - unified logic for all consumers
+  function processTimeRange(sql: string): string {
+    // Handle pre-processed time range values - unified for all systems
+    if (props.timeRangeValues && props.timeRangeValues.length === 2) {
+      const [start, end] = props.timeRangeValues
+      return sql.replace(/\$timestart/g, start).replace(/\$timeend/g, end)
+    }
+
+    return sql
+  }
+
   function escapeSqlString(value: string) {
     if (typeof value !== 'string') {
       return value // Only escape if it's a string
@@ -340,7 +352,7 @@ a-form(
     return `${columnName} ${condition.operator} '${escapeSqlString(condition.value)}'`
   }
 
-  watch([form, timeColumns, () => props.hasTimeLimit], () => {
+  watch([form, timeColumns, () => props.timeRangeValues], () => {
     if (!form.table) return
     if (!timeColumns.value.length) return
     const availableTimeColumns = timeColumns.value
@@ -360,11 +372,11 @@ a-form(
         return conditionStr
       })
 
-    // Add timestamp range condition when hasTimeLimit is true
+    // Add timestamp range condition when timeRangeValues is provided
     const timeConditions = [...conditions]
-    if (props.hasTimeLimit && availableTimeColumns.length > 0) {
+    if (props.timeRangeValues && props.timeRangeValues.length > 0 && availableTimeColumns.length > 0) {
       const firstTimeColumn = availableTimeColumns[0]
-      const timeCondition = `${firstTimeColumn.value} <= '$timeend' AND ${firstTimeColumn.value} > '$timestart'`
+      const timeCondition = `${firstTimeColumn.value} <= $timeend AND ${firstTimeColumn.value} > $timestart`
 
       if (timeConditions.length > 0) {
         timeConditions.push(`AND ${timeCondition}`)
@@ -381,6 +393,12 @@ a-form(
       sql += ` ORDER BY "${form.orderByField}" ${form.orderBy}`
     }
     sql += ` LIMIT ${form.limit}`
+
+    // Process time range internally
+    if (props.timeRangeValues && props.timeRangeValues.length > 0 && availableTimeColumns.length > 0) {
+      sql = processTimeRange(sql)
+    }
+
     emit('update:sql', sql)
   })
 

@@ -4,7 +4,12 @@
     Toolbar
     SQLBuilder(
       v-if="editorType === 'builder'"
+      ref="sqlBuilderRef"
       style="padding: 10px 20px; border: 1px solid var(--color-neutral-3); border-top: none; background-color: var(--color-bg-2)"
+      :initial-form-state="initialBuilderFormState"
+      :time-range-values="timeRangeValues"
+      @update:sql="handleBuilderSqlUpdate"
+      @update:form="handleBuilderFormUpdate"
     )
     InputEditor(v-else)
   ChartContainer.block(
@@ -52,11 +57,12 @@
 
 <script ts setup name="QueryIndex">
   import { useStorage } from '@vueuse/core'
+  import { nextTick } from 'vue'
   import useLogsQueryStore from '@/store/modules/logs-query'
+  import SQLBuilder from '@/components/sql-builder/index.vue'
   import InputEditor from './InputEditor.vue'
   import LogTableData from './TableData.vue'
   import ChartContainer from './ChartContainer.vue'
-  import SQLBuilder from './SQLBuilder.vue'
   import Toolbar from './Toolbar.vue'
   import Pagination from './Pagination.vue'
 
@@ -64,7 +70,8 @@
   const { dataStatusMap } = storeToRefs(useUserStore())
   const { checkTables } = useDataBaseStore()
 
-  const { getSchemas, getRelativeRange, reset } = useLogsQueryStore()
+  const logsStore = useLogsQueryStore()
+  const { getSchemas, getRelativeRange, reset, query } = logsStore
   const {
     rows,
     editorType,
@@ -77,7 +84,53 @@
     mergeColumn,
     showKeys,
     tsColumn,
-  } = storeToRefs(useLogsQueryStore())
+    sql,
+    editingSql,
+    time,
+    rangeTime,
+    editingTsColumn,
+  } = storeToRefs(logsStore)
+
+  // SQLBuilder integration
+  const sqlBuilderRef = ref()
+  const initialBuilderFormState = ref(null)
+  const currentBuilderFormState = ref(null)
+
+  // Time limit for SQLBuilder
+  const hasTimeLimit = computed(() => time.value > 0 || rangeTime.value.length > 0)
+
+  // Pre-processed time range values for logs system
+  const timeRangeValues = computed(() => {
+    if (!hasTimeLimit.value || !tsColumn.value) return []
+
+    const { multiple } = tsColumn.value
+    const [start, end] = getRelativeRange(multiple)
+    if (start && end) {
+      return [start, end]
+    }
+    return []
+  })
+
+  // Handle SQLBuilder updates
+  function handleBuilderSqlUpdate(generatedSql) {
+    editingSql.value = generatedSql
+    sql.value = generatedSql
+  }
+
+  // Handle SQLBuilder form state updates
+  function handleBuilderFormUpdate(formState) {
+    currentBuilderFormState.value = formState
+    // Update the editing table name in the store
+    if (formState.table) {
+      logsStore.editingTableName = formState.table
+      logsStore.inputTableName = formState.table
+
+      // Update the timestamp column when table changes
+      nextTick(() => {
+        tsColumn.value = editingTsColumn.value
+      })
+    }
+  }
   const showChart = useStorage('logquery-chart-visible', true)
   const compact = useStorage('logquery-table-compact', false)
 

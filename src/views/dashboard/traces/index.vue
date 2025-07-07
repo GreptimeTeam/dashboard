@@ -47,8 +47,8 @@
           v-if="sqlMode === 'builder'"
           ref="sqlBuilderRef"
           table-filter="trace_id"
-          :has-time-limit="hasTimeLimit"
           :initial-form-state="initialBuilderFormState"
+          :time-range-values="timeRangeValues"
           @update:sql="handleBuilderSqlUpdate"
           @update:form="handleBuilderFormUpdate"
         )
@@ -126,6 +126,23 @@
   const timeRange = ref<string[]>([])
 
   const hasTimeLimit = computed(() => timeLength.value > 0 || timeRange.value.length > 0)
+
+  // Compute time range values for SQLBuilder - unified format
+  const timeRangeValues = computed(() => {
+    if (timeRange.value.length === 2) {
+      // Absolute time range - convert timestamps to ISO strings
+      const start = new Date(Number(timeRange.value[0]) * 1000).toISOString()
+      const end = new Date(Number(timeRange.value[1]) * 1000).toISOString()
+      return [`'${start}'`, `'${end}'`]
+    }
+    if (timeLength.value > 0) {
+      // Relative time range - use SQL interval (no quotes around SQL functions)
+      const start = `now() - Interval '${timeLength.value}m'`
+      const end = `now()`
+      return [start, end]
+    }
+    return []
+  })
 
   // Store current builder form state for URL update after successful query
   const currentBuilderFormState = ref(null)
@@ -253,17 +270,26 @@
   })
 
   const finalQuery = computed(() => {
+    // Time processing is now handled by SQLBuilder for builder mode
+    // For editor mode, we need to process time range manually
     const query = sqlMode.value === 'builder' ? builderSql.value : editorSql.value
-    let sql = query
-    if (timeLength.value > 0) {
-      const [start, end] = [`now() - Interval '${timeLength.value}m'`, 'now()']
-      sql = query.replace("'$timeend'", end).replace("'$timestart'", start)
-    } else if (timeRange.value.length === 2) {
-      sql = query
-        .replace('$timeend', new Date(Number(timeRange.value[1]) * 1000).toISOString())
-        .replace('$timestart', new Date(Number(timeRange.value[0]) * 1000).toISOString())
+
+    if (sqlMode.value === 'editor') {
+      // Manual time processing for editor mode
+      let sql = query
+      if (timeLength.value > 0) {
+        const start = `now() - Interval '${timeLength.value}m'`
+        const end = 'now()'
+        sql = sql.replace(/\$timestart/g, start).replace(/\$timeend/g, end)
+      } else if (timeRange.value.length === 2) {
+        const start = new Date(Number(timeRange.value[0]) * 1000).toISOString()
+        const end = new Date(Number(timeRange.value[1]) * 1000).toISOString()
+        sql = sql.replace(/\$timestart/g, `'${start}'`).replace(/\$timeend/g, `'${end}'`)
+      }
+      return sql
     }
-    return sql
+
+    return query
   })
 
   // Export traces as CSV
