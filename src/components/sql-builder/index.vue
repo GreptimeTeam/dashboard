@@ -113,6 +113,7 @@ a-form(
     formState?: Form | null
     tableFilter?: string // Optional filter for which tables to show (e.g., 'trace_id' for traces)
     timeRangeValues?: string[] // Pre-processed time range values [start, end] - unified for all systems
+    defaultConditions?: Condition[] // Default conditions for the form
   }>()
 
   const tables = ref<string[]>([])
@@ -123,13 +124,7 @@ a-form(
 
   // Use form state from props if provided, otherwise use default
   const defaultFormState: Form = {
-    conditions: [
-      {
-        field: 'parent_span_id',
-        operator: 'Not Exist',
-        value: '',
-      },
-    ],
+    conditions: props.defaultConditions || [],
     orderByField: '',
     orderBy: 'DESC',
     limit: 1000,

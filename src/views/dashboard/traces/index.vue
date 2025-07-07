@@ -44,6 +44,7 @@
           v-model:form-state="initialBuilderFormState"
           table-filter="trace_id"
           :time-range-values="timeRangeValues"
+          :default-conditions="[{ field: 'parent_span_id', operator: 'Not Exist', value: '', relation: 'AND' }]"
           @update:sql="handleBuilderSqlUpdate"
         )
         SQLEditor(
