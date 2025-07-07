@@ -7,17 +7,7 @@
       | Builder
     a-radio(value="text")
       | Code
-  TimeSelect(
-    v-model:time-length="time"
-    v-model:time-range="rangeTime"
-    button-type="outline"
-    button-class="icon-button time-select"
-    flex-direction="row-reverse"
-    empty-str="Select Time Range"
-    button-size="small"
-    :relative-time-map="relativeTimeMap"
-    :relative-time-options="[{ value: 0, label: 'No Time Limit' }, ...relativeTimeOptions]"
-  )
+  TimeRangeSelect(v-model:time-length="time" v-model:time-range="rangeTime")
   a-button(
     type="primary"
     size="small"
@@ -57,7 +47,7 @@
 <script setup name="Toolbar" lang="ts">
   import { watchOnce, useStorage } from '@vueuse/core'
   import useLogsQueryStore from '@/store/modules/logs-query'
-  import { relativeTimeMap, relativeTimeOptions } from '../../config'
+  import TimeRangeSelect from '@/components/time-range-select/index.vue'
   import { parseTimeRange, processSQL, parseTable, parseLimit, addTsCondition } from './until'
   import SavedQuery from './SavedQuery.vue'
   import ExportLog from './ExportLog.vue'

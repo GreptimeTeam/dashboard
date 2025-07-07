@@ -9,16 +9,11 @@
           a-radio-group(v-model="sqlMode" type="button")
             a-radio(value="builder") Builder
             a-radio(value="editor") Editor
-          TimeSelect(
+          TimeRangeSelect(
+            ref="timeRangeSelectRef"
             v-model:time-length="timeLength"
             v-model:time-range="timeRange"
-            button-type="outline"
-            button-class="icon-button time-select"
-            flex-direction="row-reverse"
-            empty-str="Select Time Range"
-            button-size="small"
-            :relative-time-map="{ 0: 'Any time', ...relativeTimeMap }"
-            :relative-time-options="[{ value: 0, label: 'Any time' }, ...relativeTimeOptions]"
+            @update:time-range-values="handleTimeRangeValuesUpdate"
           )
           a-button(type="primary" size="small" @click="handleQuery") {{ $t('dashboard.runQuery') }}
           a-button(
@@ -91,14 +86,14 @@
 </template>
 
 <script setup name="TraceQuery" lang="ts">
-  import { ref, computed, watch, nextTick, onMounted } from 'vue'
+  import { ref, computed, watch, nextTick } from 'vue'
   import { useLocalStorage, watchOnce } from '@vueuse/core'
   import { useRoute, useRouter } from 'vue-router'
   import { IconCode, IconDown, IconRight, IconDownload } from '@arco-design/web-vue/es/icon'
   import editorAPI from '@/api/editor'
   import fileDownload from 'js-file-download'
   import { relativeTimeMap, relativeTimeOptions } from '@/views/dashboard/config'
-  import TimeSelect from '@/components/time-select/index.vue'
+  import TimeRangeSelect from '@/components/time-range-select/index.vue'
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import SQLEditor from './components/SQLEditor.vue'
   import CountChart from './components/CountChart.vue'
@@ -127,22 +122,14 @@
 
   const hasTimeLimit = computed(() => timeLength.value > 0 || timeRange.value.length > 0)
 
-  // Compute time range values for SQLBuilder - unified format
-  const timeRangeValues = computed(() => {
-    if (timeRange.value.length === 2) {
-      // Absolute time range - convert timestamps to ISO strings
-      const start = new Date(Number(timeRange.value[0]) * 1000).toISOString()
-      const end = new Date(Number(timeRange.value[1]) * 1000).toISOString()
-      return [`'${start}'`, `'${end}'`]
-    }
-    if (timeLength.value > 0) {
-      // Relative time range - use SQL interval (no quotes around SQL functions)
-      const start = `now() - Interval '${timeLength.value}m'`
-      const end = `now()`
-      return [start, end]
-    }
-    return []
-  })
+  // Time range values for SQLBuilder - now comes from TimeRangeSelect component
+  const timeRangeValues = ref<string[]>([])
+  const timeRangeSelectRef = ref()
+
+  // Handler for TimeRangeSelect updates
+  function handleTimeRangeValuesUpdate(newTimeRangeValues: string[]) {
+    timeRangeValues.value = newTimeRangeValues
+  }
 
   // Store current builder form state for URL update after successful query
   const currentBuilderFormState = ref(null)
