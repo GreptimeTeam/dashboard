@@ -78,7 +78,7 @@ a-form(
     )
 </template>
 
-<script setup name="TraceSQLBuilder" lang="ts">
+<script setup name="SQLBuilder" lang="ts">
   import { ref, watch, onMounted, computed, readonly, reactive } from 'vue'
   import editorAPI from '@/api/editor'
 
@@ -110,6 +110,7 @@ a-form(
   const props = defineProps<{
     hasTimeLimit?: boolean
     initialFormState?: Form | null
+    tableFilter?: string // Optional filter for which tables to show (e.g., 'trace_id' for traces)
   }>()
 
   const tables = ref<string[]>([])
@@ -227,12 +228,16 @@ a-form(
 
   async function fetchTables() {
     try {
-      const result = await editorAPI.runSQL(
-        `SELECT DISTINCT table_name
-       FROM information_schema.columns
-       WHERE column_name = 'trace_id'
-       ORDER BY table_name`
-      )
+      let sql = `SELECT DISTINCT table_name FROM information_schema.columns`
+
+      // Add filter if specified (e.g., for traces we want tables with trace_id column)
+      if (props.tableFilter) {
+        sql += ` WHERE column_name = '${props.tableFilter}'`
+      }
+
+      sql += ` ORDER BY table_name`
+
+      const result = await editorAPI.runSQL(sql)
       tables.value = result.output[0].records.rows.map((row: string[]) => row[0])
 
       // Only set default table if we don't have initial form state from props

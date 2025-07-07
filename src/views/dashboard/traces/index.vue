@@ -46,6 +46,7 @@
         SQLBuilder(
           v-if="sqlMode === 'builder'"
           ref="sqlBuilderRef"
+          table-filter="trace_id"
           :has-time-limit="hasTimeLimit"
           :initial-form-state="initialBuilderFormState"
           @update:sql="handleBuilderSqlUpdate"
@@ -98,7 +99,7 @@
   import fileDownload from 'js-file-download'
   import { relativeTimeMap, relativeTimeOptions } from '@/views/dashboard/config'
   import TimeSelect from '@/components/time-select/index.vue'
-  import SQLBuilder from './SQLBuilder.vue'
+  import SQLBuilder from '@/components/sql-builder/index.vue'
   import SQLEditor from './components/SQLEditor.vue'
   import CountChart from './components/CountChart.vue'
   import TraceTable from './components/TraceTable.vue'
