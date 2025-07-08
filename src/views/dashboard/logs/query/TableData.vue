@@ -4,12 +4,12 @@
     :key="tableKey"
     style="flex-shrink: 0"
     :size="props.size"
-    :data="rows"
+    :data="results"
     :virtual-list-props="{ height: height - headerHeight, buffer: 36 }"
     :pagination="false"
     :row-selection="rowSelection"
     :bordered="false"
-    :class="{ wrap_table: wrapLine, single_column: mergeColumn, multiple_column: !mergeColumn, builder_type: editorType === 'builder', compact: isCompact }"
+    :class="{ wrap_table: wrapLine, single_column: mergeColumn, multiple_column: !mergeColumn, builder_type: sqlMode === 'builder', compact: isCompact }"
   )
     template(#columns)
       template(v-for="column in tableColumns")
@@ -41,7 +41,10 @@
               span(v-if="showKeys" style="color: var(--color-text-3)")
                 | {{ field[0] }}:
               | {{ field[1] }}
-              svg.td-config-icon(@click="(event) => handleContextMenu(record, field[0], event)")
+              svg.td-config-icon(
+                v-if="sqlMode === 'builder'"
+                @click="(event) => handleContextMenu(record, field[0], event)"
+              )
                 use(href="#menu")
         a-table-column.clickable(
           v-else
@@ -51,10 +54,13 @@
         )
           template(#cell="{ record }")
             span {{ record[column.dataIndex] }}
-            svg.td-config-icon(@click="(event) => handleContextMenu(record, column.dataIndex, event)")
+            svg.td-config-icon(
+              v-if="sqlMode === 'builder'"
+              @click="(event) => handleContextMenu(record, column.dataIndex, event)"
+            )
               use(href="#menu")
 
-  LogDetail(v-model:visible="detailVisible")
+  LogDetail(v-model:visible="detailVisible" :record="selectedRecord")
   a-dropdown#td-context(
     v-model:popup-visible="contextMenuVisible"
     trigger="contextMenu"
@@ -70,55 +76,84 @@
 </template>
 
 <script setup lang="ts" name="LogTableData">
+  import { ref, computed, watch, shallowRef } from 'vue'
+  import type { PropType } from 'vue'
   import { Message } from '@arco-design/web-vue'
   import { useElementSize, useLocalStorage } from '@vueuse/core'
-  import useLogsQueryStore from '@/store/modules/logs-query'
   import LogDetail from './LogDetail.vue'
   import { toDateStr, TimeTypes } from './until'
+  import type { ColumnType, TSColumn } from './types'
 
-  const props = defineProps<{
-    wrapLine: boolean
-    size: 'small' | 'mini' | 'medium' | 'large'
-  }>()
-  const emit = defineEmits(['filterConditionAdd'])
-  const { getColumnByName, query } = useLogsQueryStore()
-  const { displayedColumns } = storeToRefs(useLogsQueryStore())
-  const {
-    rows,
-    currRow,
-    selectedRowKey,
-    queryNum,
-    tsColumn,
-    inputTableName,
-    mergeColumn,
-    dataLoadFlag,
-    showKeys,
-    queryColumns,
-    editorType,
-  } = storeToRefs(useLogsQueryStore())
+  interface TableData {
+    [key: string]: any
+  }
 
-  const { getOpByField } = useLogsQueryStore()
+  const props = withDefaults(
+    defineProps<{
+      wrapLine: boolean
+      size: 'small' | 'mini' | 'medium' | 'large'
+      data: TableData[]
+      columns: ColumnType[]
+      sqlMode: string
+      tsColumn: TSColumn | null
+      columnMode: 'separate' | 'merged' | 'merged-with-keys'
+      displayedColumns: string[]
+    }>(),
+    {
+      wrapLine: false,
+      size: 'medium',
+      data: () => [],
+      columns: () => [],
+      sqlMode: 'editor',
+      tsColumn: null,
+      columnMode: 'separate',
+      displayedColumns: () => [],
+    }
+  )
+
+  const emit = defineEmits(['filterConditionAdd', 'rowSelect'])
+
+  // Computed paginated results
+  const results = computed(() => {
+    console.log('props.data', props.data)
+    return props.data
+  })
+
+  // Local state for row selection
+  const selectedRowKey = ref(null)
+  const selectedRecord = computed(() => {
+    return props.data.find((row) => row.key === selectedRowKey.value)
+  })
+
+  // Derived values from columnMode
+  const mergeColumn = computed(() => props.columnMode !== 'separate')
+  const showKeys = computed(() => props.columnMode === 'merged-with-keys')
+
+  // Timestamp utilities
   const tsViewStr = ref(true)
   function changeTsView() {
     tsViewStr.value = !tsViewStr.value
   }
-  const tableContainer = ref(null)
-  const { width: tableWidth, height } = useElementSize(tableContainer)
 
   const renderTs = (record: any, columnName: string) => {
     if (tsViewStr.value) {
-      return toDateStr(record[columnName], tsColumn.value?.multiple)
+      return toDateStr(record[columnName], props.tsColumn?.multiple)
     }
     return record[columnName]
   }
 
-  const isTimeColumn = (name: string) => {
-    const columnMeta = getColumnByName(name)
-    if (columnMeta && columnMeta.data_type.indexOf('timestamp') > -1) {
-      return true
+  // Timestamp utilities
+  function isTimeColumn(column: ColumnType | string) {
+    if (typeof column === 'string') {
+      // Find column by name
+      const col = props.columns.find((c) => c.name === column)
+      return col ? col.data_type.toLowerCase().includes('timestamp') : false
     }
-    return false
+    return column.data_type.toLowerCase().includes('timestamp')
   }
+
+  const tableContainer = ref(null)
+  const { width: tableWidth, height } = useElementSize(tableContainer)
 
   function findMaxLenCol(row) {
     let max = 0
@@ -133,16 +168,16 @@
   }
 
   const seperateColumns = computed(() => {
-    const row = rows.value[0] as any
+    const row = results.value[0] as any
     if (!row) {
       return []
     }
-    let tmpColumns = queryColumns.value.slice()
-    if (tsColumn.value) {
-      tmpColumns = tmpColumns.filter((c) => c.name !== tsColumn.value.name)
-      tmpColumns.unshift(tsColumn.value)
+    let tmpColumns = props.columns.slice()
+    if (props.tsColumn) {
+      tmpColumns = tmpColumns.filter((c) => c.name !== props.tsColumn.name)
+      tmpColumns.unshift(props.tsColumn)
     }
-    tmpColumns = tmpColumns.filter((c) => displayedColumns.value[inputTableName.value]?.indexOf(c.name) > -1)
+    tmpColumns = tmpColumns.filter((c) => props.displayedColumns?.indexOf(c.name) > -1)
     let totalStrLen = -1
 
     if (row) {
@@ -173,10 +208,10 @@
 
   const mergedColumns = computed(() => {
     const arr = []
-    if (tsColumn.value) {
+    if (props.tsColumn) {
       arr.push({
-        dataIndex: tsColumn.value.name,
-        title: tsColumn.value.name,
+        dataIndex: props.tsColumn.name,
+        title: props.tsColumn.name,
         headerCellStyle: { width: tsViewStr.value ? '220px' : '170px' },
       })
     }
@@ -189,11 +224,12 @@
   })
 
   const dataFields = computed(() => {
-    if (!tsColumn.value) {
-      return displayedColumns.value[inputTableName.value]
+    if (!props.tsColumn) {
+      return props.displayedColumns
     }
-    return displayedColumns.value[inputTableName.value].filter((field) => field !== tsColumn.value.name)
+    return props.displayedColumns.filter((field) => field !== props.tsColumn.name)
   })
+
   const getEntryFields = (record) => {
     const copyRecord = { ...record }
     delete copyRecord.index
@@ -220,39 +256,53 @@
 
   const handleTsClick = (row) => {
     selectedRowKey.value = row.key
+    emit('rowSelect', row)
     detailVisible.value = true
   }
 
-  watch(queryNum, () => {
-    query()
-  })
   const isCompact = useLocalStorage('logquery-table-compact', false)
   const headerHeight = computed(() => {
     return isCompact.value ? 25 : 38
   })
   const tableKey = ref('table')
-  watch([dataLoadFlag, tableColumns], () => {
+
+  // Watch for data changes to refresh table
+  watch([() => props.data, tableColumns], () => {
     tableKey.value = `table_${Math.random()}`
   })
 
+  // Context menu functionality
   const contextMenuVisible = ref(false)
   const contextMenuPosition = ref({ x: 0, y: 0 })
   const filterOptions = shallowRef([])
   const triggerCell = ref()
-  const handleContextMenu = (row, columnName, event) => {
-    if (editorType.value !== 'builder') {
+
+  function handleContextMenu(record: TableData, columnName: string, event: Event) {
+    if (props.sqlMode !== 'builder') {
       return
     }
-    const rect = event.target.getBoundingClientRect()
-    triggerCell.value = [row, columnName]
+    const rect = (event.target as Element).getBoundingClientRect()
+    triggerCell.value = [record, columnName]
     event.preventDefault()
-    filterOptions.value = getOpByField(columnName)
+
+    // Set available filter options based on column type
+    const column = props.columns.find((col) => col.name === columnName)
+    if (column) {
+      if (isTimeColumn(column)) {
+        filterOptions.value = ['>=', '<=']
+      } else {
+        filterOptions.value = ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'NOT LIKE']
+      }
+    }
+
     contextMenuPosition.value = { x: rect.left, y: rect.y }
     contextMenuVisible.value = true
   }
+
   const hideContextMenu = () => {
     contextMenuVisible.value = false
   }
+
   const handleMenuClick = async (action) => {
     if (!triggerCell.value) {
       return

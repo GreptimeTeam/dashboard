@@ -55,7 +55,14 @@
     style="flex: 1 1 auto; overflow: auto"
     :wrap-line="wrap"
     :size="size"
+    :data="rows"
+    :columns="columns"
+    :sql-mode="editorType"
+    :ts-column="tsColumn"
+    :column-mode="mergeColumn && showKeys ? 'merged-with-keys' : mergeColumn ? 'merged' : 'separate'"
+    :displayed-columns="displayedColumns[inputTableName] || []"
     @filter-condition-add="handleFilterConditionAdd"
+    @row-select="handleRowSelect"
   )
 </template>
 
@@ -136,6 +143,12 @@
     currentBuilderFormState.value.conditions.push(newCondition)
   }
 
+  // Handle row selection from table
+  function handleRowSelect(row) {
+    // Update the store's selected row if needed
+    logsStore.currRow = row
+  }
+
   // Watch for form state changes to update store and handle table changes
   watch(
     currentBuilderFormState,
@@ -183,6 +196,9 @@
       // setTimeout(() => window.location.reload(), 1500)
     }
   )
+  watch(queryNum, () => {
+    query()
+  })
 </script>
 
 <style lang="less">
