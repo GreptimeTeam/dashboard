@@ -7,7 +7,11 @@
       | Builder
     a-radio(value="text")
       | Code
-  TimeRangeSelect(v-model:time-length="time" v-model:time-range="rangeTime")
+  TimeRangeSelect(
+    v-model:time-length="time"
+    v-model:time-range="rangeTime"
+    @update:time-range-values="handleTimeRangeValuesUpdate"
+  )
   a-button(
     type="primary"
     size="small"
@@ -46,7 +50,9 @@
 </template>
 
 <script setup name="Toolbar" lang="ts">
+  import { ref, watch, nextTick } from 'vue'
   import { watchOnce, useStorage } from '@vueuse/core'
+  import { storeToRefs } from 'pinia'
   import useLogsQueryStore from '@/store/modules/logs-query'
   import TimeRangeSelect from '@/components/time-range-select/index.vue'
   import { parseTimeRange, processSQL, parseTable, parseLimit, addTsCondition } from './until'
@@ -73,11 +79,13 @@
     time,
     editorType,
     currentTableName,
-    editingSql,
+    editorSql,
     limit,
     refresh,
+    timeRangeValues,
   } = storeToRefs(useLogsQueryStore())
-  const { getRelativeRange } = useLogsQueryStore()
+
+  const emit = defineEmits(['timeRangeValuesUpdate'])
 
   function handleQuery() {
     if (!currentTableName.value) {
@@ -90,20 +98,13 @@
     }
 
     if (editorType.value === 'text') {
-      currentTableName.value = parseTable(editingSql.value)
-
-      limit.value = parseLimit(editingSql.value)
-
-      if (props.tsColumn) {
-        const { multiple } = props.tsColumn
-        const [start, end] = getRelativeRange(multiple)
-        if (start && end) {
-          editingSql.value = addTsCondition(editingSql.value, props.tsColumn.name, start, end)
-        }
-      }
-      editingSql.value = processSQL(editingSql.value, props.tsColumn?.name, limit.value)
+      currentTableName.value = parseTable(editorSql.value)
+      limit.value = parseLimit(editorSql.value)
+      // No need to add TS condition - SQL should already have $timestart/$timeend placeholders
+      // The finalQuery computation will handle placeholder replacement
+      editorSql.value = processSQL(editorSql.value, props.tsColumn?.name, limit.value)
     }
-    sqlData.value = editingSql.value
+    sqlData.value = editorSql.value
     nextTick(() => {
       queryNum.value += 1
     })
@@ -116,8 +117,8 @@
     }
     saveLoading.value = true
     const queryList = useStorage<Array<string>>('log-query-list', [])
-    if (queryList.value.indexOf(editingSql.value) === -1) {
-      queryList.value.unshift(editingSql.value)
+    if (queryList.value.indexOf(editorSql.value) === -1) {
+      queryList.value.unshift(editorSql.value)
     }
     setTimeout(() => {
       saveLoading.value = false
@@ -145,6 +146,11 @@
       clearTimeout(refreshTimeout)
     }
   })
+
+  // Handler for TimeRangeSelect updates
+  function handleTimeRangeValuesUpdate(newTimeRangeValues: string[]) {
+    emit('timeRangeValuesUpdate', newTimeRangeValues)
+  }
 </script>
 
 <style scoped lang="less">

@@ -4,8 +4,9 @@
 </template>
 
 <script setup name="CountChart" lang="ts">
-  import { nextTick } from 'vue'
+  import { nextTick, shallowRef, ref, computed, watch } from 'vue'
   import { watchOnce } from '@vueuse/core'
+  import { storeToRefs } from 'pinia'
   import { useI18n } from 'vue-i18n'
   import Chart from '@/components/chart/index.vue'
   import editorAPI from '@/api/editor'
@@ -107,12 +108,13 @@
     },
   }))
 
-  const { currentTableName, unifiedRange, queryNum, sql, editorType, tableIndex } = storeToRefs(useLogsQueryStore())
-  const { getRelativeRange } = useLogsQueryStore()
+  const { currentTableName, timeRangeValues, unixTimeRange, queryNum, sql, editorType, tableIndex } = storeToRefs(
+    useLogsQueryStore()
+  )
 
   const intervalSeconds = computed(() => {
-    if (unifiedRange.value.length && unifiedRange.value[0] !== unifiedRange.value[1]) {
-      return calculateInterval(unifiedRange.value[0], unifiedRange.value[1])
+    if (unixTimeRange.value.length === 2 && unixTimeRange.value[0] !== unixTimeRange.value[1]) {
+      return calculateInterval(unixTimeRange.value[0], unixTimeRange.value[1])
     }
     return 60
   })
@@ -197,10 +199,14 @@
         return 0
       })
     if (!props.tsColumn || !visiblePoints.length) return
-    const { name, multiple } = props.tsColumn
-    const dataStart = Math.floor(visiblePoints[0][0] / 1000) * multiple
-    const dataEnd = (Math.floor(visiblePoints[visiblePoints.length - 1][0] / 1000) + intervalSeconds.value) * multiple
-    const pageSql = addTsCondition(sql.value, name, dataStart, dataEnd)
+
+    // Use simple timestamp values for zoom range
+    const dataStart = Math.floor(visiblePoints[0][0] / 1000)
+    const dataEnd = Math.floor(visiblePoints[visiblePoints.length - 1][0] / 1000) + intervalSeconds.value
+
+    // Replace time placeholders with zoom range values - no multiple conversion needed
+    const pageSql = sql.value.replace(/\$timestart/g, dataStart.toString()).replace(/\$timeend/g, dataEnd.toString())
+
     editorAPI.runSQL(pageSql).then((result) => {
       const columns = result.output[0].records.schema.column_schemas
       const newRows = result.output[0].records.rows.map((row, index) => {

@@ -1,38 +1,23 @@
 import { defineStore } from 'pinia'
+import { ref, reactive, computed } from 'vue'
 import dayjs from 'dayjs'
 import { useLocalStorage, useStorage } from '@vueuse/core'
 import editorAPI from '@/api/editor'
 import { ColumnType, Condition, TSColumn } from '@/views/dashboard/logs/query/types'
 import { SchemaType } from '../code-run/types'
+import useAppStore from '../app'
 
 type TableMap = { [key: string]: Array<ColumnType> }
-
-const numberTypeRe = /(int|float|decimal|double)/i
-const timeTypeRe = /(timestamp|date)/i
 type ColumnsMap = {
   [key: string]: Array<string>
-}
-
-function getColumnOpType(dataType) {
-  let opType = ''
-  if (dataType === 'string') {
-    opType = 'String'
-  } else if (dataType === 'boolean') {
-    opType = 'Boolean'
-  } else if (numberTypeRe.test(dataType)) {
-    opType = 'Number'
-  } else if (timeTypeRe.test(dataType)) {
-    opType = 'Time'
-  }
-  return opType
 }
 
 const useLogsQueryStore = defineStore('logsQuery', () => {
   /** sql state */
   // current query result sql
   const sql = ref(``)
-  // editing sql
-  const editingSql = ref('')
+  // editor sql with placeholders
+  const editorSql = ref('')
   const currentTableName = ref('') // current table name
 
   // tsColumn is now computed in the component from query results
@@ -47,6 +32,8 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
   const rangeTime = ref<Array<string>>([])
   // time select relative time
   const time = ref(10)
+  // processed time range values from TimeRangeSelect component
+  const timeRangeValues = ref<string[]>([])
 
   // for make all query
   const queryNum = ref(0)
@@ -56,21 +43,14 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
   const editorType = ref('builder')
 
   const refresh = ref(false)
-  // always return two element array, because time select component use two variable to implement relative time and range time
-  const unifiedRange = computed(() => {
+
+  // Unix timestamp range for numeric calculations (intervals, pagination, etc.)
+  const unixTimeRange = computed(() => {
     if (time.value && time.value > 0) {
       return [dayjs().subtract(time.value, 'minute').unix(), dayjs().unix()]
     }
     return rangeTime.value.map((v) => Number(v))
   })
-
-  // convert to time unit by query table, ts column may have different timestamp accuracy
-  const getRelativeRange = (multiple: number) => {
-    if (time.value && time.value > 0) {
-      return [`now() - Interval '${time.value}m'`, 'now()']
-    }
-    return rangeTime.value.map((v) => Number(v) * multiple)
-  }
 
   /** for sql builder */
   const queryForm = reactive({
@@ -140,7 +120,7 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
   function reset() {
     currentTableName.value = ''
     sql.value = ''
-    editingSql.value = ''
+    editorSql.value = ''
     queryForm.conditions = []
   }
 
@@ -149,13 +129,12 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
     currentTableName,
     rangeTime,
     time,
-    unifiedRange,
+    timeRangeValues,
     queryNum,
     getSchemas,
-    getRelativeRange,
     editorType,
     queryForm,
-    editingSql,
+    editorSql,
     displayedColumns,
     limit,
     refresh,
@@ -163,6 +142,7 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
     mergeColumn,
     showKeys,
     reset,
+    unixTimeRange,
   }
 })
 

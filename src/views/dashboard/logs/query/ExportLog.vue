@@ -14,32 +14,30 @@ a-button(size="small" type="text" @click="exportSql")
     tsColumn: Object,
   })
 
-  const { editingSql, currentTableName } = storeToRefs(useLogsQueryStore())
+  const { editorSql, currentTableName } = storeToRefs(useLogsQueryStore())
 
   function getExportSql() {
-    try {
-      let fields = []
-      if (props.tsColumn && props.tsColumn.name) {
-        fields.push(props.tsColumn.name)
-      }
-      if (props.columns && Array.isArray(props.columns)) {
+    if (props.columns && props.columns.length > 0) {
+      try {
+        let fields = []
+        if (props.tsColumn && props.tsColumn.name) {
+          fields.push(props.tsColumn.name)
+        }
         fields = [
           ...fields,
           ...props.columns.map((column) => column?.name).filter((v) => v && v !== props.tsColumn?.name),
         ]
+        const where = getWhereClause(editorSql.value)
+        const order = parseOrderBy(editorSql.value) || 'desc'
+        const limit = 10000
+        return `SELECT ${fields.join(', ')} FROM ${currentTableName.value} ${where} ORDER BY ${
+          props.tsColumn?.name || 'id'
+        } ${order} LIMIT ${limit}`
+      } catch (error) {
+        return `SELECT * FROM ${currentTableName.value} LIMIT 10000`
       }
-      let where = getWhereClause(editingSql.value)
-      if (where) {
-        where = `WHERE ${where}`
-      }
-      const order = parseOrderBy(editingSql.value) || 'desc'
-      const limit = 10000
-      return `SELECT ${fields.join(', ')} FROM ${currentTableName.value} ${where} ORDER BY ${
-        props.tsColumn?.name || 'id'
-      } ${order} LIMIT ${limit}`
-    } catch (error) {
-      return `SELECT * FROM ${currentTableName.value} LIMIT 10000`
     }
+    return `SELECT * FROM ${currentTableName.value} LIMIT 10000`
   }
 
   function exportSql() {

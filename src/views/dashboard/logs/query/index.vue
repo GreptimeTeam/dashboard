@@ -1,13 +1,18 @@
 <template lang="pug">
 .container(:key="containerKey")
   div(style="padding: 0; background-color: var(--color-neutral-2); margin: 0")
-    Toolbar(:query-loading="queryLoading" :columns="columns" :ts-column="tsColumn")
+    Toolbar(
+      :query-loading="queryLoading"
+      :columns="columns"
+      :ts-column="tsColumn"
+      @time-range-values-update="handleTimeRangeValuesUpdate"
+    )
     SQLBuilder(
       v-if="editorType === 'builder'"
       ref="sqlBuilderRef"
       v-model:form-state="currentBuilderFormState"
       style="padding: 10px 20px; border: 1px solid var(--color-neutral-3); border-top: none; background-color: var(--color-bg-2)"
-      :time-range-values="timeRangeValues"
+      :time-range-values="builderTimeRangeValues"
       @update:sql="handleBuilderSqlUpdate"
     )
     InputEditor(v-else :schema="schemaForEditor" :ts-column="tsColumn")
@@ -98,7 +103,7 @@
   const { checkTables } = useDataBaseStore()
 
   const logsStore = useLogsQueryStore()
-  const { getRelativeRange, reset } = logsStore
+  const { reset } = logsStore
   const {
     editorType,
     queryNum,
@@ -109,9 +114,10 @@
     mergeColumn,
     showKeys,
     sql,
-    editingSql,
+    editorSql,
     time,
     rangeTime,
+    timeRangeValues,
   } = storeToRefs(logsStore)
 
   // Local state for query data (moved from store)
@@ -164,20 +170,7 @@
   const queryLoading = ref(false)
 
   // Local query method (moved from store)
-  const query = () => {
-    queryLoading.value = true
-    return editorAPI
-      .runSQL(sql.value)
-      .then((result) => {
-        queryColumns.value = result.output[0].records.schema.column_schemas
-        rows.value = result.output[0].records.rows.map((row, index) => {
-          return toObj(row, queryColumns.value, index, tsColumn.value)
-        })
-      })
-      .finally(() => {
-        queryLoading.value = false
-      })
-  }
+  // Placeholder for executeQuery - will be defined after finalQuery
 
   // Helper function to get column by name
   const getColumnByName = (name) => {
@@ -188,21 +181,18 @@
   // SQLBuilder integration
   const sqlBuilderRef = ref()
   const currentBuilderFormState = ref(null)
+  const builderSql = ref('')
+
+  // Handler for TimeRangeSelect updates
+  function handleTimeRangeValuesUpdate(newTimeRangeValues) {
+    timeRangeValues.value = newTimeRangeValues
+  }
 
   // Time limit for SQLBuilder
   const hasTimeLimit = computed(() => time.value > 0 || rangeTime.value.length > 0)
 
-  // Pre-processed time range values for logs system
-  const timeRangeValues = computed(() => {
-    if (!hasTimeLimit.value || !tsColumn.value) return []
-
-    const { multiple } = tsColumn.value
-    const [start, end] = getRelativeRange(multiple)
-    if (start && end) {
-      return [start, end]
-    }
-    return []
-  })
+  // Use timeRangeValues directly for SQLBuilder (no conversion needed)
+  const builderTimeRangeValues = computed(() => timeRangeValues.value)
 
   // Handle SQLBuilder updates
   function handleBuilderSqlUpdate(generatedSql) {
@@ -210,8 +200,75 @@
     if (refresh.value) {
       refresh.value = false
     }
-    editingSql.value = generatedSql
+    builderSql.value = generatedSql
     sql.value = generatedSql
+  }
+
+  // Watch for editor type changes - generate editorSql from builder when switching
+  watch(editorType, (newMode) => {
+    if (newMode === 'text' && !editorSql.value && builderSql.value) {
+      // Generate editorSql with placeholders from builder SQL
+      let generatedSql = builderSql.value
+
+      // Replace time conditions with placeholders
+      if (tsColumn.value) {
+        const tsColumnName = tsColumn.value.name
+        // Replace time range conditions with placeholders
+        generatedSql = generatedSql.replace(
+          new RegExp(`${tsColumnName}\\s*>=\\s*[^\\s]+`, 'gi'),
+          `${tsColumnName} >= $timestart`
+        )
+        generatedSql = generatedSql.replace(
+          new RegExp(`${tsColumnName}\\s*<=\\s*[^\\s]+`, 'gi'),
+          `${tsColumnName} <= $timeend`
+        )
+      }
+
+      editorSql.value = generatedSql
+    }
+  })
+
+  // Final query computation with placeholder replacement
+  const finalQuery = computed(() => {
+    const query = editorType.value === 'builder' ? builderSql.value : editorSql.value
+
+    if (editorType.value === 'text' && tsColumn.value) {
+      // Replace placeholders with actual time values
+      let processedSql = query
+
+      if (timeRangeValues.value.length === 2) {
+        // Use processed time range values directly
+        const [startTs, endTs] = timeRangeValues.value
+        processedSql = processedSql.replace(/\$timestart/g, `'${startTs}'`).replace(/\$timeend/g, `'${endTs}'`)
+      }
+
+      return processedSql
+    }
+
+    return query
+  })
+
+  // Update sql ref when finalQuery changes
+  watch(finalQuery, (newQuery) => {
+    if (newQuery) {
+      sql.value = newQuery
+    }
+  })
+
+  // Local query method (moved from store)
+  const executeQuery = () => {
+    queryLoading.value = true
+    return editorAPI
+      .runSQL(finalQuery.value)
+      .then((result) => {
+        queryColumns.value = result.output[0].records.schema.column_schemas
+        rows.value = result.output[0].records.rows.map((row, index) => {
+          return toObj(row, queryColumns.value, index, tsColumn.value)
+        })
+      })
+      .finally(() => {
+        queryLoading.value = false
+      })
   }
 
   // Handle filter condition from table context menu
@@ -248,7 +305,7 @@
 
   // Handle chart query request
   function handleChartQuery() {
-    query()
+    executeQuery()
   }
 
   // Watch for form state changes to update store and handle table changes
@@ -269,7 +326,7 @@
 
   // Watch for queryNum changes to trigger query
   watch(queryNum, () => {
-    query()
+    executeQuery()
   })
 
   // Stop live query when time range changes
@@ -284,7 +341,7 @@
   )
 
   // Stop live query when SQL is manually edited in text mode
-  watch(editingSql, (newSql, oldSql) => {
+  watch(editorSql, (newSql, oldSql) => {
     if (newSql !== oldSql && refresh.value && editorType.value === 'text') {
       refresh.value = false
     }

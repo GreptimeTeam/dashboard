@@ -2,7 +2,7 @@
 .editor
   .main
     Codemirror(
-      v-model="editingSql"
+      v-model="editorSql"
       placeholder="Please enter the sql."
       :style="{ width: '100%', height: config.height, fontSize: '14px' }"
       :extensions="extensions"
@@ -15,11 +15,12 @@
 </template>
 
 <script lang="ts" setup name="InputEditor">
-  import { defineComponent, reactive, shallowRef, computed, watch, onMounted } from 'vue'
+  import { defineComponent, reactive, shallowRef, computed, watch, onMounted, nextTick } from 'vue'
   import { EditorView, ViewUpdate } from '@codemirror/view'
   import { Codemirror } from 'vue-codemirror'
   import { sql } from '@codemirror/lang-sql'
   import { oneDark } from '@codemirror/theme-one-dark'
+  import { storeToRefs } from 'pinia'
   import useLogsQueryStore from '@/store/modules/logs-query'
   import { addTsCondition, parseTable, parseTimeRange, processSQL, parseLimit } from './until'
   import type { TSColumn } from './types'
@@ -29,12 +30,11 @@
     rangeTime,
     currentTableName,
     queryNum,
-    unifiedRange,
     time,
-    editingSql,
+    editorSql,
     limit,
+    timeRangeValues,
   } = storeToRefs(useLogsQueryStore())
-  const { getRelativeRange } = useLogsQueryStore()
   const emit = defineEmits(['query'])
 
   interface Props {
@@ -56,16 +56,10 @@
     language: 'mysql',
   }
 
-  // add sql ts condition when ts change
-  watch(unifiedRange, () => {
-    nextTick(() => {
-      if (unifiedRange.value.length === 2) {
-        if (!props.tsColumn) return
-        const { multiple } = props.tsColumn
-        const [start, end] = getRelativeRange(multiple)
-        editingSql.value = addTsCondition(editingSql.value, props.tsColumn.name, start, end)
-      }
-    })
+  // Watch timeRangeValues - no need to auto-add conditions since SQL uses placeholders
+  // The finalQuery computation in the main component will handle placeholder replacement
+  watch(timeRangeValues, () => {
+    // timeRangeValues updated - placeholder replacement will be handled by finalQuery
   })
 
   const customSelectionTheme = EditorView.theme({

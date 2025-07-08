@@ -19,7 +19,9 @@ a-space(v-if="pages.length")
 </template>
 
 <script setup name="Pagination" lang="ts">
+  import { ref, nextTick } from 'vue'
   import { watchOnce } from '@vueuse/core'
+  import { storeToRefs } from 'pinia'
   import editorAPI from '@/api/editor'
   import useLogsQueryStore from '@/store/modules/logs-query'
   import type { SchemaType } from '@/store/modules/code-run/types'
@@ -37,8 +39,7 @@ a-space(v-if="pages.length")
 
   const emit = defineEmits(['update:rows'])
 
-  const { queryNum, unifiedRange } = storeToRefs(useLogsQueryStore())
-  const { getRelativeRange } = useLogsQueryStore()
+  const { queryNum, timeRangeValues } = storeToRefs(useLogsQueryStore())
 
   const leftDisabled = ref(false)
   const rightDisabled = ref(false)
@@ -116,11 +117,16 @@ a-space(v-if="pages.length")
     }
   }
 
+  // Helper function to replace time placeholders in SQL
+  function replaceTimePlaceholders(sql: string, start: any, end: any) {
+    return sql.replace(/\$timestart/g, start.toString()).replace(/\$timeend/g, end.toString())
+  }
+
   function loadPage(start: number, end: number, pageIndex: number) {
     if (!props.tsColumn) return
     pages.value[pageIndex].loading = true
-    const tsName = props.tsColumn.name as string
-    const pageSql = addTsCondition(props.sql, tsName, start, Number(end) + 1)
+
+    const pageSql = replaceTimePlaceholders(props.sql, start, Number(end) + 1)
     queryPage(pageSql)
       .then(() => {
         const index = pages.value.findIndex((page) => page.start === start && page.end === end)
@@ -132,14 +138,16 @@ a-space(v-if="pages.length")
   }
 
   function loadOlder() {
-    if (!props.tsColumn) {
+    if (!props.tsColumn || !timeRangeValues.value.length) {
       return
     }
     olderLoading.value = true
     const end = pages.value[0].start
-    const { multiple } = props.tsColumn
-    const [start] = getRelativeRange(multiple)
-    let pageSql = addTsCondition(props.sql, props.tsColumn.name, start, end)
+
+    // Use the start from timeRangeValues directly
+    const [startValue] = timeRangeValues.value
+
+    let pageSql = replaceTimePlaceholders(props.sql, startValue, end)
     pageSql = replaceOrder(pageSql, 'ASC', 'DESC')
     const order = getOrder()
     const reverse = order === 'ASC'
@@ -156,14 +164,16 @@ a-space(v-if="pages.length")
   }
 
   function loadNewer() {
-    if (!props.tsColumn) {
+    if (!props.tsColumn || !timeRangeValues.value.length) {
       return
     }
     newerLoading.value = true
     const start = pages.value[pages.value.length - 1].end
-    const { multiple } = props.tsColumn
-    const [, end] = getRelativeRange(multiple)
-    let pageSql = addTsCondition(props.sql, props.tsColumn.name, start, end)
+
+    // Use the end from timeRangeValues directly
+    const [, endValue] = timeRangeValues.value
+
+    let pageSql = replaceTimePlaceholders(props.sql, start, endValue)
     pageSql = replaceOrder(pageSql, 'DESC', 'ASC')
     const order = getOrder()
     const reverse = order === 'DESC'
