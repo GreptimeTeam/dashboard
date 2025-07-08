@@ -8,8 +8,6 @@ a-descriptions(layout="vertical" bordered :column="1")
 </template>
 
 <script setup name="FormView" type="ts">
-  import useLogsQueryStore from '@/store/modules/logs-query'
-
   const displayValue = (val, type) => {
     switch (type) {
       case 'json':
@@ -19,13 +17,16 @@ a-descriptions(layout="vertical" bordered :column="1")
     }
   }
 
-  const props = defineProps(['data'])
-  const { columns } = storeToRefs(useLogsQueryStore())
+  const props = defineProps({
+    data: Object,
+    columns: Array
+  })
+
   const formData = computed(() => {
     return Object.keys(props.data)
       .filter((v) => v !== 'key')
       .map((v) => {
-        const columnType = columns.value.filter((c) => c.name === v)[0]?.data_type
+        const columnType = props.columns?.filter((c) => c.name === v)[0]?.data_type
         return {
           label: v,
           type: columnType,

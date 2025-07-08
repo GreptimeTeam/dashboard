@@ -1,6 +1,6 @@
 <template lang="pug">
 a-drawer(
-  v-if="currRow"
+  v-if="record"
   popup-container="#log-table-container"
   ok-text="Close"
   :width="800"
@@ -12,42 +12,38 @@ a-drawer(
 )
   template(#title)
     a-space
-      a-button(type="text" :disabled="selectedRowKey === 0" @click="handlePre")
-        icon-arrow-up
-      a-button(type="text" :disabled="selectedRowKey === rows.length - 1" @click="handleNext")
-        icon-arrow-down
+      | Log Detail
   a-tabs
     a-tab-pane(title="Fields" key="1")
-      FormView(:data="viewRow")
+      FormView(:data="viewRow" :columns="props.columns")
     a-tab-pane(title="JSON" key="2")
       JSONView(:jsonStr="JSON.stringify(viewRow, null, 2)")
 </template>
 
 <script setup lang="ts" name="LogDetail">
-  import useLogsQueryStore from '@/store/modules/logs-query'
   import JSONView from './JSONView.vue'
   import FormView from './FormView.vue'
 
-  const props = defineProps<{ visible: boolean }>()
+  const props = defineProps({
+    visible: Boolean,
+    record: Object,
+    columns: Array,
+  })
+
   const emit = defineEmits(['update:visible'])
+
   const handleOk = () => {
     emit('update:visible', false)
   }
+
   const handleCancel = () => {
     emit('update:visible', false)
   }
-  const { selectedRowKey, currRow, rows } = storeToRefs(useLogsQueryStore())
+
   const viewRow = computed(() => {
-    const obj = { ...currRow.value }
+    if (!props.record) return {}
+    const obj = { ...props.record }
     delete obj.index
     return obj
   })
-
-  const handlePre = () => {
-    selectedRowKey.value -= 1
-  }
-
-  const handleNext = () => {
-    selectedRowKey.value += 1
-  }
 </script>

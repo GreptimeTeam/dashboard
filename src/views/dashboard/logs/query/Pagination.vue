@@ -25,11 +25,20 @@ a-space(v-if="pages.length")
   import type { SchemaType } from '@/store/modules/code-run/types'
   import { addTsCondition, TimeTypes, toDateStr, toObj } from './until'
   import type { TimeType } from './until'
+  import type { ColumnType, TSColumn } from './types'
 
-  const { columns, rows, currRow, selectedRowKey, queryNum, sql, tsColumn, unifiedRange, limit } = storeToRefs(
-    useLogsQueryStore()
-  )
-  const { getRelativeRange, getColumnByName } = useLogsQueryStore()
+  const props = defineProps<{
+    rows: any[]
+    columns: ColumnType[]
+    sql: string
+    tsColumn: TSColumn | null
+    limit: number
+  }>()
+
+  const emit = defineEmits(['update:rows'])
+
+  const { queryNum, unifiedRange } = storeToRefs(useLogsQueryStore())
+  const { getRelativeRange } = useLogsQueryStore()
 
   const leftDisabled = ref(false)
   const rightDisabled = ref(false)
@@ -47,8 +56,9 @@ a-space(v-if="pages.length")
   type Order = 'ASC' | 'DESC'
 
   function getOrder(): Order {
-    const orderRe = new RegExp(`ORDER BY ${tsColumn.value.name}\\s+(DESC|ASC)`, 'i')
-    const result = orderRe.exec(sql.value)
+    if (!props.tsColumn) return 'DESC'
+    const orderRe = new RegExp(`ORDER BY ${props.tsColumn.name}\\s+(DESC|ASC)`, 'i')
+    const result = orderRe.exec(props.sql)
     if (result) {
       return result[1] as Order
     }
@@ -56,7 +66,8 @@ a-space(v-if="pages.length")
   }
 
   function replaceOrder(sqlStr: string, from: Order, to: Order) {
-    const orderRe = new RegExp(`(ORDER BY ${tsColumn.value.name})\\s+(${from})`, 'i')
+    if (!props.tsColumn) return sqlStr
+    const orderRe = new RegExp(`(ORDER BY ${props.tsColumn.name})\\s+(${from})`, 'i')
     return sqlStr.replace(orderRe, `$1 ${to}`)
   }
 
@@ -67,30 +78,29 @@ a-space(v-if="pages.length")
       const arr = []
       if (reverse) {
         for (let i = rowsTmp.length - 1; i >= 0; i -= 1) {
-          arr.push(toObj(rowsTmp[i], queryColumns, i, tsColumn.value))
+          arr.push(toObj(rowsTmp[i], queryColumns, i, props.tsColumn))
         }
       } else {
         for (let i = 0; i < rowsTmp.length; i += 1) {
-          arr.push(toObj(rowsTmp[i], queryColumns, i, tsColumn.value))
+          arr.push(toObj(rowsTmp[i], queryColumns, i, props.tsColumn))
         }
       }
-      rows.value = arr
+      emit('update:rows', arr)
     })
   }
 
   function addPage(direction = 'right') {
     const order = getOrder()
-    if (!rows.value.length || !tsColumn.value) {
+    if (!props.rows.length || !props.tsColumn) {
       currPage.value = {}
       return
     }
-    const tsName = tsColumn.value?.name as string
-    const first = order === 'ASC' ? rows.value[0] : rows.value[rows.value.length - 1]
-    const last = order === 'ASC' ? rows.value[rows.value.length - 1] : rows.value[0]
+    const tsName = props.tsColumn?.name as string
+    const first = order === 'ASC' ? props.rows[0] : props.rows[props.rows.length - 1]
+    const last = order === 'ASC' ? props.rows[props.rows.length - 1] : props.rows[0]
 
-    // const { data_type: dataType } = getColumnByName(tsName) as TimeType
-    const startLabel = toDateStr(first[tsName], tsColumn.value?.multiple, 'HH:mm:ss')
-    const endLabel = toDateStr(last[tsName], tsColumn.value?.multiple, 'HH:mm:ss')
+    const startLabel = toDateStr(first[tsName], props.tsColumn?.multiple, 'HH:mm:ss')
+    const endLabel = toDateStr(last[tsName], props.tsColumn?.multiple, 'HH:mm:ss')
     const pageTmp = {
       label: `${startLabel}—${endLabel}`,
       start: first[tsName],
@@ -107,9 +117,10 @@ a-space(v-if="pages.length")
   }
 
   function loadPage(start: number, end: number, pageIndex: number) {
+    if (!props.tsColumn) return
     pages.value[pageIndex].loading = true
-    const tsName = tsColumn.value?.name as string
-    const pageSql = addTsCondition(sql.value, tsName, start, Number(end) + 1)
+    const tsName = props.tsColumn.name as string
+    const pageSql = addTsCondition(props.sql, tsName, start, Number(end) + 1)
     queryPage(pageSql)
       .then(() => {
         const index = pages.value.findIndex((page) => page.start === start && page.end === end)
@@ -121,22 +132,21 @@ a-space(v-if="pages.length")
   }
 
   function loadOlder() {
-    if (!tsColumn.value) {
+    if (!props.tsColumn) {
       return
     }
     olderLoading.value = true
     const end = pages.value[0].start
-    const { multiple } = tsColumn.value
+    const { multiple } = props.tsColumn
     const [start] = getRelativeRange(multiple)
-    let pageSql = addTsCondition(sql.value, tsColumn.value.name, start, end)
-    // pageSql = pageSql.replace('ASC', 'DESC')
+    let pageSql = addTsCondition(props.sql, props.tsColumn.name, start, end)
     pageSql = replaceOrder(pageSql, 'ASC', 'DESC')
     const order = getOrder()
     const reverse = order === 'ASC'
     queryPage(pageSql, reverse)
       .then(() => {
         addPage('left')
-        if (rows.value.length < limit.value) {
+        if (props.rows.length < props.limit) {
           leftDisabled.value = true
         }
       })
@@ -146,22 +156,21 @@ a-space(v-if="pages.length")
   }
 
   function loadNewer() {
-    if (!tsColumn.value) {
+    if (!props.tsColumn) {
       return
     }
     newerLoading.value = true
     const start = pages.value[pages.value.length - 1].end
-    const { multiple } = tsColumn.value
+    const { multiple } = props.tsColumn
     const [, end] = getRelativeRange(multiple)
-    let pageSql = addTsCondition(sql.value, tsColumn.value.name, start, end)
-    // pageSql = pageSql.replace('DESC', 'ASC')
+    let pageSql = addTsCondition(props.sql, props.tsColumn.name, start, end)
     pageSql = replaceOrder(pageSql, 'DESC', 'ASC')
     const order = getOrder()
     const reverse = order === 'DESC'
     queryPage(pageSql, reverse)
       .then(() => {
         addPage('right')
-        if (rows.value.length < limit.value) {
+        if (props.rows.length < props.limit) {
           rightDisabled.value = true
         }
       })
@@ -170,18 +179,21 @@ a-space(v-if="pages.length")
       })
   }
 
-  // add page when click run
-  watchOnce(rows, () => {
-    nextTick(() => {
-      if (rows.value && rows.value.length) {
-        pages.value = []
-        addPage()
-      }
-    })
-  })
+  // add page when rows change
+  watchOnce(
+    () => props.rows,
+    () => {
+      nextTick(() => {
+        if (props.rows && props.rows.length) {
+          pages.value = []
+          addPage()
+        }
+      })
+    }
+  )
 
   // add page after click uncheck live
-  if (rows.value && rows.value.length > 0) {
+  if (props.rows && props.rows.length > 0) {
     addPage()
   }
 </script>

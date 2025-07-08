@@ -14,11 +14,10 @@ VCharts(
   import { watchOnce } from '@vueuse/core'
   import editorAPI from '@/api/editor'
   import useLogsQueryStore from '@/store/modules/logs-query'
-  import { calculateInterval, generateTimeRange, toMs, TimeTypes, getWhereClause, addTsCondition, toObj } from './until'
-  import type { TimeType } from './until'
+  import { getWhereClause } from './until'
 
   const props = defineProps(['column'])
-  const data = shallowRef<Array<any>>([])
+  const data = shallowRef([])
   const { t } = useI18n()
   const chart = ref()
   const chartOptions = computed(() => ({
@@ -66,13 +65,11 @@ VCharts(
     },
   }))
 
-  const { inputTableName, unifiedRange, tsColumn, queryNum, sql, editorType, rows, tableIndex } = storeToRefs(
-    useLogsQueryStore()
-  )
-  const { getRelativeRange, buildCondition, query } = useLogsQueryStore()
+  const { inputTableName, queryNum, sql, editorType } = storeToRefs(useLogsQueryStore())
+  const { buildCondition } = useLogsQueryStore()
 
   const chartSql = computed(() => {
-    if (!tsColumn.value) {
+    if (!inputTableName.value) {
       return ''
     }
 

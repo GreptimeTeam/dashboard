@@ -11,7 +11,7 @@
   a-button(
     type="primary"
     size="small"
-    :loading="queryLoading"
+    :loading="props.queryLoading"
     @click="handleQuery"
   )
     template(#icon)
@@ -41,7 +41,7 @@
               span(v-for="field in tableMap[selectedTable] || []" style="display: flex; flex-wrap: wrap; gap: 0px")
                 a-typography-text(copyable :copy-text="field.name")
                   | {{ field.name }} : {{ field.data_type }}
-      ExportLog
+      ExportLog(:columns="props.columns" :ts-column="props.tsColumn")
 </template>
 
 <script setup name="Toolbar" lang="ts">
@@ -51,6 +51,12 @@
   import { parseTimeRange, processSQL, parseTable, parseLimit, addTsCondition } from './until'
   import SavedQuery from './SavedQuery.vue'
   import ExportLog from './ExportLog.vue'
+
+  const props = defineProps({
+    queryLoading: Boolean,
+    columns: Array,
+    tsColumn: Object,
+  })
 
   const {
     sql: sqlData,
@@ -63,7 +69,6 @@
     tableMap,
     editingSql,
     limit,
-    queryLoading,
     refresh,
     editingTableName,
     editingTsColumn,
@@ -85,8 +90,7 @@
     mayRefresh()
   })
 
-  const { query } = useLogsQueryStore()
-  // const queryLoading = ref(false)
+  // queryLoading is now passed as prop from parent
 
   function handleQuery() {
     if (!editingTableName.value) {
@@ -123,9 +127,7 @@
     // })
   }
 
-  if (sqlData.value) {
-    query()
-  }
+  // Initial query is now handled by parent component
 
   const selectedTable = ref<string>('')
   // set init selected table for tips

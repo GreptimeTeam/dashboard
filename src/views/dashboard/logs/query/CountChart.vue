@@ -1,24 +1,26 @@
 <template lang="pug">
-VCharts(
-  ref="chart"
-  style="width: 100%; height: 120px"
-  :option="chartOptions"
-  :autoresize="true"
-  @datazoom="handleZoom"
-)
+.chart-container
+  Chart(ref="chart" :options="chartOptions" @dataZoom="handleZoom")
 </template>
 
-<script setup name="LogCountChart" lang="ts">
-  import VCharts from 'vue-echarts'
-  import { useI18n } from 'vue-i18n'
-  import * as echarts from 'echarts'
+<script setup name="CountChart" lang="ts">
+  import { nextTick } from 'vue'
   import { watchOnce } from '@vueuse/core'
+  import { useI18n } from 'vue-i18n'
+  import Chart from '@/components/chart/index.vue'
   import editorAPI from '@/api/editor'
   import useLogsQueryStore from '@/store/modules/logs-query'
-  import { calculateInterval, generateTimeRange, toMs, TimeTypes, getWhereClause, addTsCondition, toObj } from './until'
-  import type { TimeType } from './until'
+  import { getWhereClause, toMs, toObj, addTsCondition, calculateInterval, TimeTypes } from './until'
 
-  const data = shallowRef<Array<any>>([])
+  const props = defineProps({
+    rows: Array,
+    columns: Array,
+    tsColumn: Object,
+  })
+
+  const emit = defineEmits(['update:rows', 'query'])
+
+  const data = shallowRef([])
   const { t } = useI18n()
   const chart = ref()
   const chartOptions = computed(() => ({
@@ -63,7 +65,7 @@ VCharts(
       position: 20,
       minInterval: 1,
       axisLabel: {
-        formatter: (value: number) => {
+        formatter: (value) => {
           if (value >= 1000000) {
             return `${value / 1000000}M`
           }
@@ -101,10 +103,8 @@ VCharts(
     },
   }))
 
-  const { inputTableName, unifiedRange, tsColumn, queryNum, sql, editorType, rows, tableIndex } = storeToRefs(
-    useLogsQueryStore()
-  )
-  const { getRelativeRange, buildCondition, query } = useLogsQueryStore()
+  const { inputTableName, unifiedRange, queryNum, sql, editorType, tableIndex } = storeToRefs(useLogsQueryStore())
+  const { getRelativeRange, buildCondition } = useLogsQueryStore()
 
   const intervalSeconds = computed(() => {
     if (unifiedRange.value.length && unifiedRange.value[0] !== unifiedRange.value[1]) {
@@ -114,7 +114,7 @@ VCharts(
   })
 
   const countSql = computed(() => {
-    if (!tsColumn.value || !inputTableName.value) {
+    if (!props.tsColumn || !inputTableName.value) {
       return ''
     }
 
@@ -130,7 +130,7 @@ VCharts(
     }
 
     return `SELECT
-            date_bin('${intervalSeconds.value} seconds',${tsColumn.value.name})  AS time_bucket,
+            date_bin('${intervalSeconds.value} seconds',${props.tsColumn.name})  AS time_bucket,
             COUNT(*) AS event_count
         FROM "${inputTableName.value}"
         ${condition}
@@ -150,10 +150,10 @@ VCharts(
         rows: countRows,
         schema: { column_schemas: columnSchemas },
       } = result.output[0].records
-      const countTs = columnSchemas[0].data_type as TimeType
+      const countTs = columnSchemas[0].data_type
       const multiple = TimeTypes[countTs]
       let tmpData = []
-      tmpData = countRows.map((v: Array<any>) => [toMs(Number(v[0]), multiple), v[1]])
+      tmpData = countRows.map((v) => [toMs(Number(v[0]), multiple), v[1]])
       data.value = tmpData
       nextTick(() => {
         chart.value.dispatchAction({
@@ -185,12 +185,12 @@ VCharts(
     const start = e.batch[0].startValue
     const end = e.batch[0].endValue
     if (!start || !end) {
-      query()
+      emit('query')
       return
     }
     const xAxisPoints = chart.value.chart.getOption().series[0].data
     const visiblePoints = xAxisPoints
-      .filter((point) => point[0] >= start && point[0] <= end)
+      .filter((point) => point && point[0] >= start && point[0] <= end)
       .sort((a, b) => {
         if (a[0] > b[0]) {
           return 1
@@ -200,17 +200,17 @@ VCharts(
         }
         return 0
       })
-    const { name, multiple } = tsColumn.value
+    if (!props.tsColumn || !visiblePoints.length) return
+    const { name, multiple } = props.tsColumn
     const dataStart = Math.floor(visiblePoints[0][0] / 1000) * multiple
     const dataEnd = (Math.floor(visiblePoints[visiblePoints.length - 1][0] / 1000) + intervalSeconds.value) * multiple
-    // console.log(tsColumn.value)
     const pageSql = addTsCondition(sql.value, name, dataStart, dataEnd)
-    // console.log(pageSql)
     editorAPI.runSQL(pageSql).then((result) => {
       const columns = result.output[0].records.schema.column_schemas
-      rows.value = result.output[0].records.rows.map((row, index) => {
-        return toObj(row, columns, index, tsColumn.value)
+      const newRows = result.output[0].records.rows.map((row, index) => {
+        return toObj(row, columns, index, props.tsColumn)
       })
+      emit('update:rows', newRows)
       tableIndex.value += 1
     })
   }

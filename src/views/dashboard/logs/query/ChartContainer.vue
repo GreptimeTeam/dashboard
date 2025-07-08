@@ -13,7 +13,14 @@ a-card
           template(#content)
             a-doption(v-for="field in filterFields" :value="`frequency_${field}`") {{ field }}
 
-  CountChart(v-if="currChart == 'count'")
+  CountChart(
+    v-if="currChart == 'count'"
+    :rows="props.rows"
+    :columns="props.columns"
+    :ts-column="props.tsColumn"
+    @update:rows="$emit('update:rows', $event)"
+    @query="$emit('query')"
+  )
   FunnelChart(v-if="currChart == 'frequency'" :key="frequencyField" :column="frequencyField")
 </template>
 
@@ -22,12 +29,28 @@ a-card
   import CountChart from './CountChart.vue'
   import FunnelChart from './FunnelChart.vue'
 
+  const props = defineProps({
+    columns: Array,
+    rows: Array,
+    tsColumn: Object,
+  })
+
+  const emit = defineEmits(['update:rows', 'query'])
+
   const currChart = ref('count')
-  const { columns, inputTableName } = storeToRefs(useLogsQueryStore())
+  const { inputTableName } = storeToRefs(useLogsQueryStore())
   const frequencyField = ref('')
-  const filterFields = computed(() =>
-    columns.value.filter((column) => column.data_type === 'string').map((column) => column.name)
-  )
+  const filterFields = computed(() => {
+    try {
+      if (!props.columns || !Array.isArray(props.columns)) return []
+      return props.columns
+        .filter((column) => column && column.data_type === 'string')
+        .map((column) => column.name)
+        .filter((name) => name)
+    } catch (error) {
+      return []
+    }
+  })
   function select(action) {
     currChart.value = action.split('_')[0]
     if (currChart.value === 'frequency') {

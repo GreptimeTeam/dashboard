@@ -3,7 +3,6 @@ import dayjs from 'dayjs'
 import { useLocalStorage, useStorage } from '@vueuse/core'
 import editorAPI from '@/api/editor'
 import { ColumnType, Condition, TSColumn } from '@/views/dashboard/logs/query/types'
-import { toObj } from '@/views/dashboard/logs/query/until'
 import { SchemaType } from '../code-run/types'
 
 type TableMap = { [key: string]: Array<ColumnType> }
@@ -38,13 +37,7 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
   const editingTableName = ref('') // table in editing
   // table schema map
   const tableMap = ref<TableMap>({})
-  // computed queried columns schema
-  const columns = computed(() => {
-    if (!inputTableName.value) {
-      return []
-    }
-    return tableMap.value[inputTableName.value] || []
-  })
+
   const tsColumn = shallowRef<TSColumn>()
   // multiple relative to s, one of 1000 1000 * 1000 1000 * 1000 * 1000
   type Multiple = 1000 | 1000000 | 1000000000
@@ -72,16 +65,7 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
   /** for table */
   // column visible
   const displayedColumns = useStorage<ColumnsMap>('logquery-table-column-visible', {})
-  // table rows
-  const rows = shallowRef<Array<any>>([])
-  // selected row key for detail view
-  const selectedRowKey = ref(-1)
-  const currRow = computed(() => {
-    if (selectedRowKey.value > -1) {
-      return rows.value[selectedRowKey.value]
-    }
-    return null
-  })
+  // selected row key for detail view - removed currRow as it's not needed in store
 
   /** toolbar */
   // time select range time
@@ -95,10 +79,7 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
   const tableIndex = ref(0)
   // editor type
   const editorType = ref('builder')
-  // query Columns differ from columns, keep orders with query
-  const queryColumns = shallowRef<Array<SchemaType>>([])
 
-  const queryLoading = ref(false)
   const refresh = ref(false)
   // always return two element array, because time select component use two variable to implement relative time and range time
   const unifiedRange = computed(() => {
@@ -115,8 +96,6 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
     }
     return rangeTime.value.map((v) => Number(v) * multiple)
   }
-
-  const dataLoadFlag = ref(0)
 
   /** for sql builder */
   const queryForm = reactive({
@@ -144,35 +123,6 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
     return opMap[opKey] || []
   }
   const limit = ref(1000)
-
-  // query handler
-  const query = () => {
-    queryLoading.value = true
-    return editorAPI
-      .runSQL(sql.value)
-      .then((result) => {
-        // columns.value = result.output[0].records.schema.column_schemas
-        queryColumns.value = result.output[0].records.schema.column_schemas
-        rows.value = result.output[0].records.rows.map((row, index) => {
-          return toObj(row, queryColumns.value, index, tsColumn.value)
-        })
-      })
-      .finally(() => {
-        queryLoading.value = false
-        dataLoadFlag.value = Math.random()
-      })
-  }
-
-  const getColumnByName = (name: string) => {
-    const index = columns.value.findIndex((column) => column.name === name)
-    return columns.value[index]
-  }
-
-  // const getColumn = (name: string) => {
-  //   const allColumns = tableMap.value[inputTableName.value]
-  //   const index = allColumns.findIndex((column) => column.name === name)
-  //   return allColumns[index]
-  // }
 
   const mergeColumn = useLocalStorage('logquery-merge-column', true)
   const showKeys = useLocalStorage('logquery-show-keys', true)
@@ -298,35 +248,21 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
 
   // Note: SQL building is now handled by the general SQLBuilder component
 
-  // reset displayedColumn when columns change
-  watch(columns, () => {
-    if (!displayedColumns.value[inputTableName.value]) {
-      displayedColumns.value[inputTableName.value] = columns.value.map((c) => c.name)
-    }
-  })
-
   function reset() {
     editingTableName.value = ''
     inputTableName.value = ''
     sql.value = ''
     editingSql.value = ''
     queryForm.conditions = []
-    rows.value = []
   }
 
   return {
     sql,
-    query,
-    rows,
-    columns,
-    getColumnByName,
-    currRow,
-    selectedRowKey,
-    rangeTime,
     inputTableName,
     editingTableName,
     tsColumn,
     editingTsColumn,
+    rangeTime,
     time,
     unifiedRange,
     queryNum,
@@ -339,13 +275,10 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
     editingSql,
     displayedColumns,
     limit,
-    queryLoading,
     refresh,
     tableIndex,
     mergeColumn,
-    dataLoadFlag,
     showKeys,
-    queryColumns,
     getOpByField,
     reset,
   }

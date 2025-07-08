@@ -60,7 +60,7 @@
             )
               use(href="#menu")
 
-  LogDetail(v-model:visible="detailVisible" :record="selectedRecord")
+      LogDetail(v-model:visible="detailVisible" :record="selectedRecord" :columns="props.columns")
   a-dropdown#td-context(
     v-model:popup-visible="contextMenuVisible"
     trigger="contextMenu"

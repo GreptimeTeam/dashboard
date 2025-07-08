@@ -1,7 +1,7 @@
 <template lang="pug">
 .container(:key="containerKey")
   div(style="padding: 0; background-color: var(--color-neutral-2); margin: 0")
-    Toolbar
+    Toolbar(:query-loading="queryLoading" :columns="columns" :ts-column="tsColumn")
     SQLBuilder(
       v-if="editorType === 'builder'"
       ref="sqlBuilderRef"
@@ -14,6 +14,11 @@
   ChartContainer.block(
     v-if="showChart"
     style="margin: 5px 0 0; padding: 10px 0; background-color: var(--color-bg-2); border: 1px solid var(--color-neutral-3); flex-shrink: 0"
+    :columns="columns"
+    :rows="rows"
+    :ts-column="tsColumn"
+    @update:rows="handleChartRowsUpdate"
+    @query="handleChartQuery"
   )
   div(
     style="padding: 3px 15px; height: 40px; white-space: nowrap; color: var(--color-text-2); display: flex; justify-content: space-between; border: 1px solid var(--color-neutral-3); background-color: var(--color-bg-2); margin: 5px 0"
@@ -50,7 +55,16 @@
             a-checkbox-group(v-model="displayedColumns[inputTableName]" direction="vertical")
               a-checkbox(v-for="column in columns" :value="column.name")
                 | {{ column.name }}
-      Pagination(v-if="!refresh && tsColumn" :key="pageKey")
+      Pagination(
+        v-if="!refresh && tsColumn"
+        :key="pageKey"
+        :rows="rows"
+        :columns="columns"
+        :sql="sql"
+        :ts-column="tsColumn"
+        :limit="logsStore.limit"
+        @update:rows="handlePaginationRowsUpdate"
+      )
   LogTableData(
     style="flex: 1 1 auto; overflow: auto"
     :wrap-line="wrap"
@@ -68,7 +82,8 @@
 
 <script ts setup name="QueryIndex">
   import { useStorage } from '@vueuse/core'
-  import { nextTick } from 'vue'
+  import { nextTick, ref, computed, shallowRef, watch } from 'vue'
+  import editorAPI from '@/api/editor'
   import useLogsQueryStore from '@/store/modules/logs-query'
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import InputEditor from './InputEditor.vue'
@@ -76,19 +91,18 @@
   import ChartContainer from './ChartContainer.vue'
   import Toolbar from './Toolbar.vue'
   import Pagination from './Pagination.vue'
+  import { toObj } from './until'
 
   const { fetchDatabases } = useAppStore()
   const { dataStatusMap } = storeToRefs(useUserStore())
   const { checkTables } = useDataBaseStore()
 
   const logsStore = useLogsQueryStore()
-  const { getSchemas, getRelativeRange, reset, query } = logsStore
+  const { getSchemas, getRelativeRange, reset } = logsStore
   const {
-    rows,
     editorType,
     queryNum,
     displayedColumns,
-    columns,
     inputTableName,
     refresh,
     tableIndex,
@@ -101,6 +115,39 @@
     rangeTime,
     editingTsColumn,
   } = storeToRefs(logsStore)
+
+  // Local state for query data (moved from store)
+  const rows = shallowRef([])
+  const columns = computed(() => {
+    if (!inputTableName.value) {
+      return []
+    }
+    return logsStore.tableMap[inputTableName.value] || []
+  })
+  const queryColumns = shallowRef([])
+  const queryLoading = ref(false)
+
+  // Local query method (moved from store)
+  const query = () => {
+    queryLoading.value = true
+    return editorAPI
+      .runSQL(sql.value)
+      .then((result) => {
+        queryColumns.value = result.output[0].records.schema.column_schemas
+        rows.value = result.output[0].records.rows.map((row, index) => {
+          return toObj(row, queryColumns.value, index, tsColumn.value)
+        })
+      })
+      .finally(() => {
+        queryLoading.value = false
+      })
+  }
+
+  // Helper function to get column by name
+  const getColumnByName = (name) => {
+    const index = columns.value.findIndex((column) => column.name === name)
+    return columns.value[index]
+  }
 
   // SQLBuilder integration
   const sqlBuilderRef = ref()
@@ -145,8 +192,23 @@
 
   // Handle row selection from table
   function handleRowSelect(row) {
-    // Update the store's selected row if needed
-    logsStore.currRow = row
+    // Store selected row locally if needed for other components
+    // Could emit to parent or handle locally as needed
+  }
+
+  // Handle pagination rows update
+  function handlePaginationRowsUpdate(newRows) {
+    rows.value = newRows
+  }
+
+  // Handle chart rows update
+  function handleChartRowsUpdate(newRows) {
+    rows.value = newRows
+  }
+
+  // Handle chart query request
+  function handleChartQuery() {
+    query()
   }
 
   // Watch for form state changes to update store and handle table changes
@@ -156,7 +218,6 @@
       // Update the editing table name in the store
       if (formState?.table) {
         logsStore.editingTableName = formState.table
-        // logsStore.inputTableName = formState.table
 
         // Update the timestamp column when table changes
         nextTick(() => {
@@ -166,6 +227,19 @@
     },
     { deep: true }
   )
+
+  // Watch for queryNum changes to trigger query
+  watch(queryNum, () => {
+    query()
+  })
+
+  // Watch columns changes to update displayed columns
+  watch(columns, () => {
+    if (!displayedColumns.value[inputTableName.value]) {
+      displayedColumns.value[inputTableName.value] = columns.value.map((c) => c.name)
+    }
+  })
+
   const showChart = useStorage('logquery-chart-visible', true)
   const compact = useStorage('logquery-table-compact', false)
 
@@ -193,12 +267,11 @@
       containerKey.value = String(Date.now())
       reset()
       getSchemas()
-      // setTimeout(() => window.location.reload(), 1500)
+      // Reset local state when database changes
+      rows.value = []
+      queryColumns.value = []
     }
   )
-  watch(queryNum, () => {
-    query()
-  })
 </script>
 
 <style lang="less">
