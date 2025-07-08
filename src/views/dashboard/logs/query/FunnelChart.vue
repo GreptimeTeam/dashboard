@@ -66,23 +66,15 @@ VCharts(
   }))
 
   const { currentTableName, queryNum, sql, editorType } = storeToRefs(useLogsQueryStore())
-  const { buildCondition } = useLogsQueryStore()
 
   const chartSql = computed(() => {
     if (!currentTableName.value) {
       return ''
     }
 
-    let condition = ''
-    if (editorType.value === 'text') {
-      condition += getWhereClause(sql.value)
-    }
-    if (editorType.value === 'builder') {
-      condition += buildCondition().join('')
-    }
-    if (condition !== '') {
-      condition = `Where ${condition}`
-    }
+    // Extract WHERE clause from the generated SQL (works for both text and builder modes)
+    const whereClause = getWhereClause(sql.value)
+    const condition = whereClause ? `WHERE ${whereClause}` : ''
 
     return `SELECT ${props.column} ,count(*) AS c FROM ${currentTableName.value} ${condition} GROUP BY ${props.column} ORDER BY c DESC`
   })

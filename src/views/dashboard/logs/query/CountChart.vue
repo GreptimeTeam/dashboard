@@ -108,7 +108,7 @@
   }))
 
   const { currentTableName, unifiedRange, queryNum, sql, editorType, tableIndex } = storeToRefs(useLogsQueryStore())
-  const { getRelativeRange, buildCondition } = useLogsQueryStore()
+  const { getRelativeRange } = useLogsQueryStore()
 
   const intervalSeconds = computed(() => {
     if (unifiedRange.value.length && unifiedRange.value[0] !== unifiedRange.value[1]) {
@@ -122,16 +122,9 @@
       return ''
     }
 
-    let condition = ''
-    if (editorType.value === 'text') {
-      condition += getWhereClause(sql.value)
-    }
-    if (editorType.value === 'builder') {
-      condition += buildCondition().join('')
-    }
-    if (condition !== '') {
-      condition = `Where ${condition}`
-    }
+    // Extract WHERE clause from the generated SQL (works for both text and builder modes)
+    const whereClause = getWhereClause(sql.value)
+    const condition = whereClause ? `WHERE ${whereClause}` : ''
 
     return `SELECT
             date_bin('${intervalSeconds.value} seconds',${props.tsColumn.name})  AS time_bucket,

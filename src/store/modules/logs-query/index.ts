@@ -77,20 +77,7 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
     conditions: [] as Array<Condition>,
     orderBy: 'DESC',
   })
-  const opMap = {
-    String: ['=', 'contains', 'not contains', '!=', 'like'],
-    Number: ['=', '!=', '>', '>=', '<', '<='],
-    Time: ['>', '>=', '<', '<='],
-    Boolean: ['=', '!='],
-  }
-  type OpKey = keyof typeof opMap
 
-  // get Operator List by field
-  function getOpByField(field: string): string[] {
-    // This function is no longer needed since we don't maintain tableMap
-    // Keeping it for backward compatibility but returning empty array
-    return []
-  }
   const limit = ref(1000)
 
   const mergeColumn = useLocalStorage('logquery-merge-column', true)
@@ -147,64 +134,6 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
         // tableMap is no longer used, this function is kept for backward compatibility
       })
   }
-  function escapeSqlString(value: string) {
-    if (typeof value !== 'string') {
-      return value // Only escape if it's a string
-    }
-
-    // Replace common SQL special characters with their escaped versions
-    return value
-      .replace(/\\/g, '\\\\') // Escape backslashes
-      .replace(/'/g, "''") // Escape single quotes by doubling
-      .replace(/\n/g, '\\n') // Escape newline
-      .replace(/\r/g, '\\r') // Escape carriage return
-  }
-
-  function singleCondition(condition: Condition) {
-    const column = condition.field
-    const columnType = getColumnOpType(column.data_type)
-    const conditionVal = escapeSqlString(condition.value)
-    let columnName = condition.field.name
-    columnName = `"${columnName}"`
-
-    if (columnType === 'Number' || columnType === 'Time') {
-      return `${columnName} ${condition.op} ${condition.value}`
-    }
-    if (condition.op === 'like') {
-      // return `MATCHES(${columnName},'"${escapeSqlString(condition.value)}"')`
-      return `${columnName} like '%${conditionVal}%'`
-    }
-    if (['contains', 'not contains', 'match sequence'].indexOf(condition.op) > -1) {
-      let val = escapeSqlString(condition.value)
-      if (condition.op === 'not contains') {
-        val = `-"${val}"`
-      } else if (condition.op === 'contains') {
-        val = `"${val}"`
-      }
-      return `MATCHES(${columnName},'${val}')`
-    }
-    return `${columnName} ${condition.op} '${escapeSqlString(condition.value)}'`
-  }
-
-  function buildCondition() {
-    const where = []
-    const conditions = queryForm.conditions.filter((v) => v.field && v.op && v.value)
-    for (let i = 0; i < conditions.length; i += 1) {
-      const condition = conditions[i]
-      if (i === 0) {
-        where.push(singleCondition(condition))
-        continue
-      }
-      if (condition.rel === 'and') {
-        where.push(` AND ${singleCondition(condition)}`)
-      } else {
-        where.push(` OR ${singleCondition(condition)}`)
-      }
-    }
-    // Time range conditions are now handled in the component
-    // since tsColumn is computed there
-    return where
-  }
 
   // Note: SQL building is now handled by the general SQLBuilder component
 
@@ -226,7 +155,6 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
     getRelativeRange,
     editorType,
     queryForm,
-    buildCondition,
     editingSql,
     displayedColumns,
     limit,
@@ -234,7 +162,6 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
     tableIndex,
     mergeColumn,
     showKeys,
-    getOpByField,
     reset,
   }
 })
