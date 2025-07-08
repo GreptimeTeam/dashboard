@@ -62,60 +62,6 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
 
   const mergeColumn = useLocalStorage('logquery-merge-column', true)
   const showKeys = useLocalStorage('logquery-show-keys', true)
-  const appStore = useAppStore()
-  function getSchemas() {
-    const db = appStore.database
-    const tableCatalog = db?.split('-').slice(0, -1).join('-')
-    const tableSchema = db?.split('-').slice(-1).join('-')
-
-    const conditions = []
-    if (tableCatalog) {
-      conditions.push(`table_catalog='${tableCatalog}'`)
-    }
-    if (tableSchema) {
-      conditions.push(`table_schema='${tableSchema}'`)
-    }
-    let where = ''
-    if (conditions.length) {
-      where = `WHERE ${conditions.join(' and ')}`
-    }
-
-    return editorAPI
-      .runSQL(
-        `SELECT 
-          table_name,
-          table_schema,
-          column_name,
-          data_type,
-          semantic_type
-        FROM 
-          information_schema.columns
-        ${where}
-        ORDER BY 
-          table_name
-        `
-      )
-      .then((result) => {
-        const { rows: schemaRows } = result.output[0].records
-        const tmp: TableMap = {}
-        for (let i = 0; i < schemaRows.length; i += 1) {
-          const row = schemaRows[i] as string[]
-          const tableName = row[0]
-          if (!tmp[tableName]) {
-            tmp[tableName] = []
-          }
-          tmp[tableName].push({
-            name: row[2],
-            data_type: row[3],
-            label: row[2],
-            semantic_type: row[4],
-          })
-        }
-        // tableMap is no longer used, this function is kept for backward compatibility
-      })
-  }
-
-  // Note: SQL building is now handled by the general SQLBuilder component
 
   function reset() {
     currentTableName.value = ''
@@ -131,7 +77,6 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
     time,
     timeRangeValues,
     queryNum,
-    getSchemas,
     editorType,
     queryForm,
     editorSql,
