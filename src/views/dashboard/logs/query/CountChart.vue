@@ -12,11 +12,15 @@
   import useLogsQueryStore from '@/store/modules/logs-query'
   import { getWhereClause, toMs, toObj, addTsCondition, calculateInterval, TimeTypes } from './until'
 
-  const props = defineProps({
-    rows: Array,
-    columns: Array,
-    tsColumn: Object,
-  })
+  import type { TSColumn, ColumnType } from './types'
+
+  interface Props {
+    rows?: any[]
+    columns?: ColumnType[]
+    tsColumn?: TSColumn | null
+  }
+
+  const props = defineProps<Props>()
 
   const emit = defineEmits(['update:rows', 'query'])
 
@@ -103,7 +107,7 @@
     },
   }))
 
-  const { inputTableName, unifiedRange, queryNum, sql, editorType, tableIndex } = storeToRefs(useLogsQueryStore())
+  const { currentTableName, unifiedRange, queryNum, sql, editorType, tableIndex } = storeToRefs(useLogsQueryStore())
   const { getRelativeRange, buildCondition } = useLogsQueryStore()
 
   const intervalSeconds = computed(() => {
@@ -114,7 +118,7 @@
   })
 
   const countSql = computed(() => {
-    if (!props.tsColumn || !inputTableName.value) {
+    if (!props.tsColumn || !currentTableName.value) {
       return ''
     }
 
@@ -132,7 +136,7 @@
     return `SELECT
             date_bin('${intervalSeconds.value} seconds',${props.tsColumn.name})  AS time_bucket,
             COUNT(*) AS event_count
-        FROM "${inputTableName.value}"
+        FROM "${currentTableName.value}"
         ${condition}
         GROUP BY time_bucket
         ORDER BY time_bucket DESC
@@ -152,8 +156,7 @@
       } = result.output[0].records
       const countTs = columnSchemas[0].data_type
       const multiple = TimeTypes[countTs]
-      let tmpData = []
-      tmpData = countRows.map((v) => [toMs(Number(v[0]), multiple), v[1]])
+      const tmpData: [number, number][] = countRows.map((v: any[]) => [toMs(Number(v[0]), multiple), v[1]])
       data.value = tmpData
       nextTick(() => {
         chart.value.dispatchAction({

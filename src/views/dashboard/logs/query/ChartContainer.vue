@@ -28,17 +28,24 @@ a-card
   import useLogsQueryStore from '@/store/modules/logs-query'
   import CountChart from './CountChart.vue'
   import FunnelChart from './FunnelChart.vue'
+  import type { ColumnType, TSColumn } from './types'
 
-  const props = defineProps({
-    columns: Array,
-    rows: Array,
-    tsColumn: Object,
+  interface Props {
+    columns?: ColumnType[]
+    rows?: any[]
+    tsColumn?: TSColumn | null
+  }
+
+  const props = withDefaults(defineProps<Props>(), {
+    columns: () => [],
+    rows: () => [],
+    tsColumn: null,
   })
 
   const emit = defineEmits(['update:rows', 'query'])
 
   const currChart = ref('count')
-  const { inputTableName } = storeToRefs(useLogsQueryStore())
+  const { currentTableName } = storeToRefs(useLogsQueryStore())
   const frequencyField = ref('')
   const filterFields = computed(() => {
     try {
@@ -64,7 +71,7 @@ a-card
     return 'Frequency Distribution'
   })
 
-  watch(inputTableName, () => {
+  watch(currentTableName, () => {
     currChart.value = 'count'
   })
 </script>

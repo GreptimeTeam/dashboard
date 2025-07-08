@@ -14,7 +14,7 @@ a-button(size="small" type="text" @click="exportSql")
     tsColumn: Object,
   })
 
-  const { editingSql, inputTableName } = storeToRefs(useLogsQueryStore())
+  const { editingSql, currentTableName } = storeToRefs(useLogsQueryStore())
 
   function getExportSql() {
     try {
@@ -34,21 +34,21 @@ a-button(size="small" type="text" @click="exportSql")
       }
       const order = parseOrderBy(editingSql.value) || 'desc'
       const limit = 10000
-      return `SELECT ${fields.join(', ')} FROM ${inputTableName.value} ${where} ORDER BY ${
+      return `SELECT ${fields.join(', ')} FROM ${currentTableName.value} ${where} ORDER BY ${
         props.tsColumn?.name || 'id'
       } ${order} LIMIT ${limit}`
     } catch (error) {
-      return `SELECT * FROM ${inputTableName.value} LIMIT 10000`
+      return `SELECT * FROM ${currentTableName.value} LIMIT 10000`
     }
   }
 
   function exportSql() {
-    if (!inputTableName.value) {
+    if (!currentTableName.value) {
       return
     }
     const sql = getExportSql()
     editorAPI.runSQLWithCSV(sql).then((result) => {
-      fileDownload(result as unknown as string, `${inputTableName.value}.csv`)
+      fileDownload(result as unknown as string, `${currentTableName.value}.csv`)
     })
   }
 </script>

@@ -22,12 +22,12 @@
   import { oneDark } from '@codemirror/theme-one-dark'
   import useLogsQueryStore from '@/store/modules/logs-query'
   import { addTsCondition, parseTable, parseTimeRange, processSQL, parseLimit } from './until'
+  import type { TSColumn } from './types'
 
   const {
     sql: sqlData,
     rangeTime,
-    inputTableName,
-    tsColumn,
+    currentTableName,
     queryNum,
     unifiedRange,
     time,
@@ -37,11 +37,14 @@
   const { getRelativeRange } = useLogsQueryStore()
   const emit = defineEmits(['query'])
 
-  const props = defineProps({
-    schema: {
-      type: Object,
-      default: () => ({}),
-    },
+  interface Props {
+    schema?: Record<string, string[]>
+    tsColumn?: TSColumn | null
+  }
+
+  const props = withDefaults(defineProps<Props>(), {
+    schema: () => ({}),
+    tsColumn: null,
   })
 
   const config = {
@@ -57,10 +60,10 @@
   watch(unifiedRange, () => {
     nextTick(() => {
       if (unifiedRange.value.length === 2) {
-        if (!tsColumn.value) return
-        const { multiple } = tsColumn.value
+        if (!props.tsColumn) return
+        const { multiple } = props.tsColumn
         const [start, end] = getRelativeRange(multiple)
-        editingSql.value = addTsCondition(editingSql.value, tsColumn.value.name, start, end)
+        editingSql.value = addTsCondition(editingSql.value, props.tsColumn.name, start, end)
       }
     })
   })

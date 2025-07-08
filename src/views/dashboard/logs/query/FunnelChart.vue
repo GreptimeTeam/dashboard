@@ -65,11 +65,11 @@ VCharts(
     },
   }))
 
-  const { inputTableName, queryNum, sql, editorType } = storeToRefs(useLogsQueryStore())
+  const { currentTableName, queryNum, sql, editorType } = storeToRefs(useLogsQueryStore())
   const { buildCondition } = useLogsQueryStore()
 
   const chartSql = computed(() => {
-    if (!inputTableName.value) {
+    if (!currentTableName.value) {
       return ''
     }
 
@@ -84,7 +84,7 @@ VCharts(
       condition = `Where ${condition}`
     }
 
-    return `SELECT ${props.column} ,count(*) AS c FROM ${inputTableName.value} ${condition} GROUP BY ${props.column} ORDER BY c DESC`
+    return `SELECT ${props.column} ,count(*) AS c FROM ${currentTableName.value} ${condition} GROUP BY ${props.column} ORDER BY c DESC`
   })
 
   function chartQuery() {

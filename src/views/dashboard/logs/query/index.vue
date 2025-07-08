@@ -10,7 +10,7 @@
       :time-range-values="timeRangeValues"
       @update:sql="handleBuilderSqlUpdate"
     )
-    InputEditor(v-else :schema="schemaForEditor")
+    InputEditor(v-else :schema="schemaForEditor" :ts-column="tsColumn")
   ChartContainer.block(
     v-if="showChart"
     style="margin: 5px 0 0; padding: 10px 0; background-color: var(--color-bg-2); border: 1px solid var(--color-neutral-3); flex-shrink: 0"
