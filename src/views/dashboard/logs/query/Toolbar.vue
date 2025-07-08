@@ -72,38 +72,25 @@
     queryNum,
     time,
     editorType,
-    inputTableName,
+    currentTableName,
     editingSql,
     limit,
     refresh,
-    editingTableName,
   } = storeToRefs(useLogsQueryStore())
   const { getRelativeRange } = useLogsQueryStore()
 
-  let refreshTimeout = -1
-  function mayRefresh() {
-    if (refresh.value && sqlData.value) {
-      queryNum.value += 1
-      refreshTimeout = window.setTimeout(() => {
-        mayRefresh()
-      }, 3000)
-    } else {
-      clearTimeout(refreshTimeout)
-    }
-  }
-  watch([refresh], () => {
-    mayRefresh()
-  })
-
-  // queryLoading is now passed as prop from parent
-
   function handleQuery() {
-    if (!editingTableName.value) {
+    if (!currentTableName.value) {
       return
     }
-    inputTableName.value = editingTableName.value
+
+    // Stop live query when user manually triggers a query
+    if (refresh.value) {
+      refresh.value = false
+    }
+
     if (editorType.value === 'text') {
-      inputTableName.value = parseTable(editingSql.value)
+      currentTableName.value = parseTable(editingSql.value)
 
       limit.value = parseLimit(editingSql.value)
 
@@ -118,24 +105,13 @@
     }
     sqlData.value = editingSql.value
     nextTick(() => {
-      if (refresh.value) {
-        mayRefresh()
-      } else {
-        queryNum.value += 1
-      }
+      queryNum.value += 1
     })
-
-    // queryLoading.value = true
-    // query().finally(() => {
-    //   queryLoading.value = false
-    // })
   }
-
-  // Initial query is now handled by parent component
 
   const saveLoading = ref(false)
   const saveQuery = () => {
-    if (!inputTableName.value) {
+    if (!currentTableName.value) {
       return
     }
     saveLoading.value = true
@@ -147,6 +123,28 @@
       saveLoading.value = false
     }, 100)
   }
+
+  // Live query functionality - simplified
+  let refreshTimeout = -1
+  function mayRefresh() {
+    if (refresh.value && sqlData.value) {
+      queryNum.value += 1
+      refreshTimeout = window.setTimeout(() => {
+        mayRefresh()
+      }, 3000)
+    } else {
+      clearTimeout(refreshTimeout)
+    }
+  }
+
+  // Watch for refresh toggle to start/stop live queries
+  watch(refresh, (newValue) => {
+    if (newValue) {
+      mayRefresh()
+    } else {
+      clearTimeout(refreshTimeout)
+    }
+  })
 </script>
 
 <style scoped lang="less">

@@ -52,7 +52,7 @@
           | {{ $t('logsQuery.columns') }}
         template(#content)
           a-card(style="padding: 10px")
-            a-checkbox-group(v-model="displayedColumns[inputTableName]" direction="vertical")
+            a-checkbox-group(v-model="displayedColumns[currentTableName]" direction="vertical")
               a-checkbox(v-for="column in columns" :value="column.name")
                 | {{ column.name }}
       Pagination(
@@ -74,7 +74,7 @@
     :sql-mode="editorType"
     :ts-column="tsColumn"
     :column-mode="mergeColumn && showKeys ? 'merged-with-keys' : mergeColumn ? 'merged' : 'separate'"
-    :displayed-columns="displayedColumns[inputTableName] || []"
+    :displayed-columns="displayedColumns[currentTableName] || []"
     @filter-condition-add="handleFilterConditionAdd"
     @row-select="handleRowSelect"
   )
@@ -103,7 +103,7 @@
     editorType,
     queryNum,
     displayedColumns,
-    inputTableName,
+    currentTableName,
     refresh,
     tableIndex,
     mergeColumn,
@@ -154,10 +154,10 @@
 
   // Schema format for SQL editor - group columns by table name
   const schemaForEditor = computed(() => {
-    if (!inputTableName.value || !columns.value.length) return {}
+    if (!currentTableName.value || !columns.value.length) return {}
 
     return {
-      [inputTableName.value]: columns.value.map((col) => col.name),
+      [currentTableName.value]: columns.value.map((col) => col.name),
     }
   })
 
@@ -206,6 +206,10 @@
 
   // Handle SQLBuilder updates
   function handleBuilderSqlUpdate(generatedSql) {
+    // Stop live query when user makes changes
+    if (refresh.value) {
+      refresh.value = false
+    }
     editingSql.value = generatedSql
     sql.value = generatedSql
   }
@@ -251,11 +255,13 @@
   watch(
     currentBuilderFormState,
     (formState) => {
-      // Update the editing table name in the store
+      // Update the current table name in the store
       if (formState?.table) {
-        logsStore.editingTableName = formState.table
-
-        // tsColumn is now computed automatically from query results
+        // Stop live query when table changes
+        if (refresh.value && currentTableName.value !== formState.table) {
+          refresh.value = false
+        }
+        currentTableName.value = formState.table
       }
     },
     { deep: true }
@@ -266,10 +272,28 @@
     query()
   })
 
+  // Stop live query when time range changes
+  watch(
+    [time, rangeTime],
+    () => {
+      if (refresh.value) {
+        refresh.value = false
+      }
+    },
+    { deep: true }
+  )
+
+  // Stop live query when SQL is manually edited in text mode
+  watch(editingSql, (newSql, oldSql) => {
+    if (newSql !== oldSql && refresh.value && editorType.value === 'text') {
+      refresh.value = false
+    }
+  })
+
   // Watch columns changes to update displayed columns
   watch(columns, () => {
-    if (!displayedColumns.value[inputTableName.value]) {
-      displayedColumns.value[inputTableName.value] = columns.value.map((c) => c.name)
+    if (!displayedColumns.value[currentTableName.value]) {
+      displayedColumns.value[currentTableName.value] = columns.value.map((c) => c.name)
     }
   })
 

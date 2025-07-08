@@ -33,8 +33,7 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
   const sql = ref(``)
   // editing sql
   const editingSql = ref('')
-  const inputTableName = ref('') // table after query
-  const editingTableName = ref('') // table in editing
+  const currentTableName = ref('') // current table name
 
   // tsColumn is now computed in the component from query results
 
@@ -210,8 +209,7 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
   // Note: SQL building is now handled by the general SQLBuilder component
 
   function reset() {
-    editingTableName.value = ''
-    inputTableName.value = ''
+    currentTableName.value = ''
     sql.value = ''
     editingSql.value = ''
     queryForm.conditions = []
@@ -219,8 +217,7 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
 
   return {
     sql,
-    inputTableName,
-    editingTableName,
+    currentTableName,
     rangeTime,
     time,
     unifiedRange,
