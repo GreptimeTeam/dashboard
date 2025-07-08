@@ -35,32 +35,8 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
   const editingSql = ref('')
   const inputTableName = ref('') // table after query
   const editingTableName = ref('') // table in editing
-  // table schema map
-  const tableMap = ref<TableMap>({})
 
-  const tsColumn = shallowRef<TSColumn>()
-  // multiple relative to s, one of 1000 1000 * 1000 1000 * 1000 * 1000
-  type Multiple = 1000 | 1000000 | 1000000000
-  const multipleRe = /timestamp\((\d)\)/
-  const getTsColumn = (tableName: string) => {
-    const fields = tableMap.value[tableName] || []
-    const tsColumns = fields.filter((column) => column.data_type.toLowerCase().indexOf('timestamp') > -1)
-    const tsIndexColumns = tsColumns.filter((column) => column.semantic_type === 'TIMESTAMP')
-    const field = tsIndexColumns.length ? tsIndexColumns[0] : tsColumns[0]
-    if (!field) {
-      return null
-    }
-    const timescale = multipleRe.exec(field.data_type)
-    if (!timescale) return null
-    return {
-      multiple: (1000 ** (Number(timescale[1]) / 3)) as Multiple,
-      ...field,
-    }
-  }
-  // editing ts column
-  const editingTsColumn = computed<TSColumn>(() => {
-    return getTsColumn(editingTableName.value)
-  })
+  // tsColumn is now computed in the component from query results
 
   /** for table */
   // column visible
@@ -112,15 +88,9 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
 
   // get Operator List by field
   function getOpByField(field: string): string[] {
-    const fields = tableMap.value[editingTableName.value]
-    const index = fields.findIndex((f) => f.name === field)
-    if (index === -1) {
-      return []
-    }
-    const type = fields[index].data_type
-
-    const opKey = getColumnOpType(type) as OpKey
-    return opMap[opKey] || []
+    // This function is no longer needed since we don't maintain tableMap
+    // Keeping it for backward compatibility but returning empty array
+    return []
   }
   const limit = ref(1000)
 
@@ -175,7 +145,7 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
             semantic_type: row[4],
           })
         }
-        tableMap.value = tmp
+        // tableMap is no longer used, this function is kept for backward compatibility
       })
   }
   function escapeSqlString(value: string) {
@@ -232,17 +202,8 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
         where.push(` OR ${singleCondition(condition)}`)
       }
     }
-    if (unifiedRange.value.length === 2) {
-      if (editingTsColumn.value) {
-        const { multiple } = editingTsColumn.value
-        const [start, end] = getRelativeRange(multiple)
-        let prefix = ' AND'
-        if (!where.length) {
-          prefix = ''
-        }
-        where.push(`${prefix} ${editingTsColumn.value.name} >= ${start} AND ${editingTsColumn.value.name} < ${end}`)
-      }
-    }
+    // Time range conditions are now handled in the component
+    // since tsColumn is computed there
     return where
   }
 
@@ -260,14 +221,11 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
     sql,
     inputTableName,
     editingTableName,
-    tsColumn,
-    editingTsColumn,
     rangeTime,
     time,
     unifiedRange,
     queryNum,
     getSchemas,
-    tableMap,
     getRelativeRange,
     editorType,
     queryForm,

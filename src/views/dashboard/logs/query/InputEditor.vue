@@ -31,14 +31,18 @@
     queryNum,
     unifiedRange,
     time,
-    tableMap,
     editingSql,
     limit,
   } = storeToRefs(useLogsQueryStore())
-  const { getSchemas, getRelativeRange } = useLogsQueryStore()
+  const { getRelativeRange } = useLogsQueryStore()
   const emit = defineEmits(['query'])
 
-  // getSchemas()
+  const props = defineProps({
+    schema: {
+      type: Object,
+      default: () => ({}),
+    },
+  })
 
   const config = {
     disabled: false,
@@ -70,7 +74,7 @@
 
   const extensions = computed(() => {
     const result = [customSelectionTheme]
-    result.push(sql({ schema: tableMap.value }))
+    result.push(sql({ schema: props.schema }))
     return result
   })
 

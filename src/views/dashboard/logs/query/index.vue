@@ -10,7 +10,7 @@
       :time-range-values="timeRangeValues"
       @update:sql="handleBuilderSqlUpdate"
     )
-    InputEditor(v-else)
+    InputEditor(v-else :schema="schemaForEditor")
   ChartContainer.block(
     v-if="showChart"
     style="margin: 5px 0 0; padding: 10px 0; background-color: var(--color-bg-2); border: 1px solid var(--color-neutral-3); flex-shrink: 0"
@@ -98,7 +98,7 @@
   const { checkTables } = useDataBaseStore()
 
   const logsStore = useLogsQueryStore()
-  const { getSchemas, getRelativeRange, reset } = logsStore
+  const { getRelativeRange, reset } = logsStore
   const {
     editorType,
     queryNum,
@@ -108,23 +108,59 @@
     tableIndex,
     mergeColumn,
     showKeys,
-    tsColumn,
     sql,
     editingSql,
     time,
     rangeTime,
-    editingTsColumn,
   } = storeToRefs(logsStore)
 
   // Local state for query data (moved from store)
   const rows = shallowRef([])
-  const columns = computed(() => {
-    if (!inputTableName.value) {
-      return []
-    }
-    return logsStore.tableMap[inputTableName.value] || []
-  })
   const queryColumns = shallowRef([])
+
+  // Convert queryColumns to the format expected by other components
+  const columns = computed(() => {
+    return queryColumns.value.map((col) => ({
+      name: col.name,
+      data_type: col.data_type,
+      label: col.name,
+      semantic_type: col.semantic_type || (col.data_type?.toLowerCase().includes('timestamp') ? 'TIMESTAMP' : 'FIELD'),
+    }))
+  })
+
+  // Computed timestamp column from available columns
+  const tsColumn = computed(() => {
+    if (!columns.value.length) return null
+
+    // Find timestamp columns by data type
+    const tsColumns = columns.value.filter((col) => col.data_type.toLowerCase().includes('timestamp'))
+
+    // Prefer columns with TIMESTAMP semantic type
+    const tsIndexColumns = tsColumns.filter((col) => col.semantic_type === 'TIMESTAMP')
+    const selectedColumn = tsIndexColumns.length ? tsIndexColumns[0] : tsColumns[0]
+
+    if (!selectedColumn) return null
+
+    // Extract timestamp precision from data type (e.g., timestamp(3) -> 3)
+    const multipleRe = /timestamp\((\d)\)/i
+    const timescale = multipleRe.exec(selectedColumn.data_type)
+    const multiple = timescale ? 1000 ** (Number(timescale[1]) / 3) : 1000
+
+    return {
+      ...selectedColumn,
+      multiple,
+    }
+  })
+
+  // Schema format for SQL editor - group columns by table name
+  const schemaForEditor = computed(() => {
+    if (!inputTableName.value || !columns.value.length) return {}
+
+    return {
+      [inputTableName.value]: columns.value.map((col) => col.name),
+    }
+  })
+
   const queryLoading = ref(false)
 
   // Local query method (moved from store)
@@ -219,10 +255,7 @@
       if (formState?.table) {
         logsStore.editingTableName = formState.table
 
-        // Update the timestamp column when table changes
-        nextTick(() => {
-          tsColumn.value = editingTsColumn.value
-        })
+        // tsColumn is now computed automatically from query results
       }
     },
     { deep: true }
@@ -245,7 +278,6 @@
 
   const size = computed(() => (compact.value ? 'mini' : 'medium'))
   const wrap = ref(false)
-  getSchemas()
   const pageKey = computed(() => {
     return `${queryNum.value}_${tableIndex.value}`
   })
@@ -266,7 +298,6 @@
     () => {
       containerKey.value = String(Date.now())
       reset()
-      getSchemas()
       // Reset local state when database changes
       rows.value = []
       queryColumns.value = []
