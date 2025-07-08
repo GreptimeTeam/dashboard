@@ -108,7 +108,7 @@
     },
   }))
 
-  const { currentTableName, timeRangeValues, unixTimeRange, queryNum, sql, editorType, tableIndex } = storeToRefs(
+  const { currentTableName, timeRangeValues, unixTimeRange, queryNum, sql, editorType } = storeToRefs(
     useLogsQueryStore()
   )
 
@@ -213,7 +213,6 @@
         return toObj(row, columns, index, props.tsColumn)
       })
       emit('update:rows', newRows)
-      tableIndex.value += 1
     })
   }
 </script>

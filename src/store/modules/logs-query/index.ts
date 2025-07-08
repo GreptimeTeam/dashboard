@@ -38,7 +38,7 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
   // for make all query
   const queryNum = ref(0)
   // for table query
-  const tableIndex = ref(0)
+
   // editor type
   const editorType = ref('builder')
 
@@ -138,7 +138,6 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
     displayedColumns,
     limit,
     refresh,
-    tableIndex,
     mergeColumn,
     showKeys,
     reset,

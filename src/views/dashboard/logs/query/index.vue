@@ -110,7 +110,6 @@
     displayedColumns,
     currentTableName,
     refresh,
-    tableIndex,
     mergeColumn,
     showKeys,
     sql,
@@ -360,7 +359,7 @@
   const size = computed(() => (compact.value ? 'mini' : 'medium'))
   const wrap = ref(false)
   const pageKey = computed(() => {
-    return `${queryNum.value}_${tableIndex.value}`
+    return `${queryNum.value}`
   })
 
   Promise.all([
