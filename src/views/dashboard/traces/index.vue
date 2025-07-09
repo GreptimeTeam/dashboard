@@ -71,7 +71,7 @@
           :time-length="timeLength"
           :time-range="timeRange"
           :table-name="tableName"
-          :should-fetch="chartExpanded"
+          :ts-column="{ name: 'timestamp', multiple: 1000000000 }"
           @time-range-update="handleTimeRangeUpdate"
         )
           TraceTable(
@@ -95,7 +95,7 @@
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import useQueryUrlSync from '@/hooks/query-url-sync'
   import SQLEditor from './components/SQLEditor.vue'
-  import CountChart from './components/CountChart.vue'
+  import CountChart from '@/components/count-chart/index.vue'
   import TraceTable from './components/TraceTable.vue'
   import { validateSQL } from './utils'
 

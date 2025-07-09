@@ -15,8 +15,8 @@ a-card
 
   CountChart(
     v-if="currChart == 'count'"
-    :rows="props.rows"
-    :columns="props.columns"
+    :sql="sqlForChart"
+    :table-name="currentTableName"
     :ts-column="props.tsColumn"
     :refresh-trigger="props.refreshTrigger"
     @update:rows="$emit('update:rows', $event)"
@@ -29,8 +29,9 @@ a-card
   import { ref, computed, watch } from 'vue'
   import { storeToRefs } from 'pinia'
   import useLogsQueryStore from '@/store/modules/logs-query'
-  import CountChart from './CountChart.vue'
+  import CountChart from '@/components/count-chart/index.vue'
   import FunnelChart from './FunnelChart.vue'
+  import { getWhereClause } from './until'
   import type { ColumnType, TSColumn } from './types'
 
   interface Props {
@@ -50,8 +51,11 @@ a-card
   const emit = defineEmits(['update:rows', 'query'])
 
   const currChart = ref('count')
-  const { currentTableName } = storeToRefs(useLogsQueryStore())
+  const { currentTableName, sql } = storeToRefs(useLogsQueryStore())
   const frequencyField = ref('')
+
+  // Computed SQL for chart (extracts the main query)
+  const sqlForChart = computed(() => sql.value)
   const filterFields = computed(() => {
     try {
       if (!props.columns || !Array.isArray(props.columns)) return []

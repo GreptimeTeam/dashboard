@@ -8,21 +8,36 @@ VCharts(
 )
 </template>
 
-<script setup name="TraceCountChart" lang="ts">
+<script setup name="CountChart" lang="ts">
   import { ref, computed, watch, shallowRef, nextTick } from 'vue'
   import VCharts from 'vue-echarts'
   import * as echarts from 'echarts'
   import editorAPI from '@/api/editor'
 
-  interface Props {
-    sql: string
-    timeLength: number
-    timeRange: string[]
-    tableName: string
+  interface TSColumn {
+    name: string
+    multiple?: number
   }
 
-  const props = defineProps<Props>()
-  const emit = defineEmits(['timeRangeUpdate'])
+  interface Props {
+    sql: string
+    tableName: string
+    tsColumn?: TSColumn | null
+    // Time range props (for traces compatibility)
+    timeLength?: number
+    timeRange?: string[]
+    // Refresh trigger (for logs compatibility)
+    refreshTrigger?: number
+  }
+
+  const props = withDefaults(defineProps<Props>(), {
+    tsColumn: null,
+    timeLength: 0,
+    timeRange: () => [],
+    refreshTrigger: 0,
+  })
+
+  const emit = defineEmits(['timeRangeUpdate', 'update:rows', 'query'])
 
   const data = shallowRef<Array<any>>([])
   const chart = ref()
@@ -91,6 +106,9 @@ VCharts(
         data: data.value,
         barMaxWidth: 25,
         barWidth: '50%',
+        itemStyle: {
+          color: '#bdc4cd',
+        },
       },
     ],
     graphic: {
@@ -109,18 +127,19 @@ VCharts(
     },
   }))
 
-  const intervalSeconds = computed(() => {
-    if (props.timeLength > 0) {
+  // Default interval calculation (traces style)
+  const defaultIntervalCalculator = (timeLength?: number, timeRange?: string[]) => {
+    if (timeLength && timeLength > 0) {
       // Calculate interval based on time length
-      const minutes = props.timeLength
+      const minutes = timeLength
       if (minutes <= 60) return 60 // 1 minute intervals for <= 1 hour
       if (minutes <= 720) return 300 // 5 minute intervals for <= 12 hours
       if (minutes <= 1440) return 900 // 15 minute intervals for <= 24 hours
       return 3600 // 1 hour intervals for > 24 hours
     }
-    if (props.timeRange.length === 2) {
-      const start = new Date(props.timeRange[0]).getTime()
-      const end = new Date(props.timeRange[1]).getTime()
+    if (timeRange && timeRange.length === 2) {
+      const start = new Date(timeRange[0]).getTime()
+      const end = new Date(timeRange[1]).getTime()
       const diffMinutes = (end - start) / (1000 * 60)
       if (diffMinutes <= 60) return 60
       if (diffMinutes <= 720) return 300
@@ -128,10 +147,53 @@ VCharts(
       return 3600
     }
     return 60
+  }
+
+  const intervalSeconds = computed(() => {
+    return defaultIntervalCalculator(props.timeLength, props.timeRange)
   })
 
+  // Timestamp converter using tsColumn multiple
+  const convertTimestamp = (timestamp: any) => {
+    if (!props.tsColumn?.multiple) {
+      // Default to nanoseconds (traces style)
+      return new Date(timestamp / 1000 / 1000).getTime()
+    }
+
+    // Use the multiple from tsColumn to convert to milliseconds
+    const { multiple } = props.tsColumn
+    let ms = timestamp
+
+    // Convert based on the timestamp precision
+    if (multiple === 1) {
+      // Seconds to milliseconds
+      ms = timestamp * 1000
+    } else if (multiple === 1000) {
+      // Already milliseconds
+      ms = timestamp
+    } else if (multiple === 1000000) {
+      // Microseconds to milliseconds
+      ms = timestamp / 1000
+    } else if (multiple === 1000000000) {
+      // Nanoseconds to milliseconds
+      ms = timestamp / 1000000
+    } else {
+      // General case: convert using multiple
+      const timescale = (String(multiple).length - 1) / 3
+      if (timescale === 0) {
+        ms = timestamp * 1000
+      } else if (timescale === 1) {
+        ms = timestamp
+      } else {
+        ms = timestamp / 1000 ** (timescale - 1)
+      }
+    }
+
+    return ms
+  }
+
   const countSql = computed(() => {
-    if (!props.tableName || !props.sql) {
+    if (!props.tableName || !props.sql || !props.tsColumn?.name) {
       return ''
     }
 
@@ -140,7 +202,7 @@ VCharts(
     const whereClause = whereMatch ? `WHERE ${whereMatch[1]}` : ''
 
     return `SELECT
-            date_bin('${intervalSeconds.value} seconds', timestamp) AS time_bucket,
+            date_bin('${intervalSeconds.value} seconds', ${props.tsColumn.name}) AS time_bucket,
             COUNT(*) AS event_count
         FROM "${props.tableName}"
         ${whereClause}
@@ -159,11 +221,13 @@ VCharts(
       const result = await editorAPI.runSQL(countSql.value)
       if (result.output?.[0]?.records) {
         const { rows } = result.output[0].records
-        const tmpData = rows.map((row: any[]) => [new Date(row[0] / 1000 / 1000).getTime(), row[1]])
+
+        // Convert timestamps using tsColumn multiple
+        const tmpData = rows.map((row: any[]) => [convertTimestamp(row[0]), row[1]])
         data.value = tmpData.reverse() // Reverse to show chronological order
 
         nextTick(() => {
-          chart.value.dispatchAction({
+          chart.value?.dispatchAction({
             type: 'takeGlobalCursor',
             key: 'dataZoomSelect',
             dataZoomSelectActive: true,
@@ -186,15 +250,35 @@ VCharts(
     const end = e.batch[0].endValue
 
     if (!start || !end) {
+      // For logs compatibility - emit query event when no valid zoom range
+      emit('query')
       return
     }
 
-    // Convert to ISO strings for time range
+    // Convert to timestamp values for time range update
     const startTime = new Date(start).getTime()
     const endTime = new Date(end).getTime()
 
-    // Emit the time range update
+    // Emit the time range update (traces style)
     emit('timeRangeUpdate', [startTime / 1000, endTime / 1000])
+
+    // For logs compatibility - also emit rows update if needed
+    // This would need to be handled by the parent component
+  }
+
+  // Watch for refresh trigger changes (logs compatibility)
+  watch(
+    () => props.refreshTrigger,
+    () => {
+      if (props.refreshTrigger > 0) {
+        countQuery()
+      }
+    }
+  )
+
+  // Initial query if SQL is available
+  if (props.sql) {
+    countQuery()
   }
 
   // Expose the method to parent component
