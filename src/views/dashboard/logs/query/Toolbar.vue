@@ -75,39 +75,19 @@
   const {
     sql: sqlData,
     rangeTime,
-    queryNum,
     time,
     editorType,
     currentTableName,
-    editorSql,
     limit,
-    refresh,
     timeRangeValues,
+    refresh,
   } = storeToRefs(useLogsQueryStore())
 
-  const emit = defineEmits(['timeRangeValuesUpdate'])
+  const emit = defineEmits(['timeRangeValuesUpdate', 'query'])
 
   function handleQuery() {
-    if (!currentTableName.value) {
-      return
-    }
-
-    // Stop live query when user manually triggers a query
-    if (refresh.value) {
-      refresh.value = false
-    }
-
-    if (editorType.value === 'text') {
-      currentTableName.value = parseTable(editorSql.value)
-      limit.value = parseLimit(editorSql.value)
-      // No need to add TS condition - SQL should already have $timestart/$timeend placeholders
-      // The finalQuery computation will handle placeholder replacement
-      editorSql.value = processSQL(editorSql.value, props.tsColumn?.name, limit.value)
-    }
-    sqlData.value = editorSql.value
-    nextTick(() => {
-      queryNum.value += 1
-    })
+    // Simply emit the query event - let parent handle the logic
+    emit('query')
   }
 
   const saveLoading = ref(false)
@@ -117,8 +97,8 @@
     }
     saveLoading.value = true
     const queryList = useStorage<Array<string>>('log-query-list', [])
-    if (queryList.value.indexOf(editorSql.value) === -1) {
-      queryList.value.unshift(editorSql.value)
+    if (queryList.value.indexOf(sqlData.value) === -1) {
+      queryList.value.unshift(sqlData.value)
     }
     setTimeout(() => {
       saveLoading.value = false
@@ -129,7 +109,7 @@
   let refreshTimeout = -1
   function mayRefresh() {
     if (refresh.value && sqlData.value) {
-      queryNum.value += 1
+      emit('query')
       refreshTimeout = window.setTimeout(() => {
         mayRefresh()
       }, 3000)

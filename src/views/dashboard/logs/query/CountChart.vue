@@ -19,6 +19,7 @@
     rows?: any[]
     columns?: ColumnType[]
     tsColumn?: TSColumn | null
+    refreshTrigger?: number
   }
 
   const props = defineProps<Props>()
@@ -108,9 +109,7 @@
     },
   }))
 
-  const { currentTableName, timeRangeValues, unixTimeRange, queryNum, sql, editorType } = storeToRefs(
-    useLogsQueryStore()
-  )
+  const { currentTableName, timeRangeValues, unixTimeRange, sql, editorType } = storeToRefs(useLogsQueryStore())
 
   const intervalSeconds = computed(() => {
     if (unixTimeRange.value.length === 2 && unixTimeRange.value[0] !== unixTimeRange.value[1]) {
@@ -175,9 +174,12 @@
     countQuery()
   }
 
-  watch(queryNum, () => {
-    countQuery()
-  })
+  watch(
+    () => props.refreshTrigger,
+    () => {
+      countQuery()
+    }
+  )
 
   function handleZoom(e) {
     const start = e.batch[0].startValue

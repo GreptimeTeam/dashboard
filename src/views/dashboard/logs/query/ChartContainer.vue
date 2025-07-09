@@ -18,6 +18,7 @@ a-card
     :rows="props.rows"
     :columns="props.columns"
     :ts-column="props.tsColumn"
+    :refresh-trigger="props.refreshTrigger"
     @update:rows="$emit('update:rows', $event)"
     @query="$emit('query')"
   )
@@ -25,6 +26,8 @@ a-card
 </template>
 
 <script setup name="ChartContainer" lang="ts">
+  import { ref, computed, watch } from 'vue'
+  import { storeToRefs } from 'pinia'
   import useLogsQueryStore from '@/store/modules/logs-query'
   import CountChart from './CountChart.vue'
   import FunnelChart from './FunnelChart.vue'
@@ -34,12 +37,14 @@ a-card
     columns?: ColumnType[]
     rows?: any[]
     tsColumn?: TSColumn | null
+    refreshTrigger?: number
   }
 
   const props = withDefaults(defineProps<Props>(), {
     columns: () => [],
     rows: () => [],
     tsColumn: null,
+    refreshTrigger: 0,
   })
 
   const emit = defineEmits(['update:rows', 'query'])

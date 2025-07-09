@@ -6,6 +6,7 @@
       :columns="columns"
       :ts-column="tsColumn"
       @time-range-values-update="handleTimeRangeValuesUpdate"
+      @query="handleToolbarQuery"
     )
     SQLBuilder(
       v-if="editorType === 'builder'"
@@ -22,6 +23,7 @@
     :columns="columns"
     :rows="rows"
     :ts-column="tsColumn"
+    :refresh-trigger="chartRefreshTrigger"
     @update:rows="handleChartRowsUpdate"
     @query="handleChartQuery"
   )
@@ -62,7 +64,7 @@
                 | {{ column.name }}
       Pagination(
         v-if="!refresh && tsColumn"
-        :key="pageKey"
+        :key="paginationKey"
         :rows="rows"
         :columns="columns"
         :sql="sql"
@@ -96,7 +98,7 @@
   import ChartContainer from './ChartContainer.vue'
   import Toolbar from './Toolbar.vue'
   import Pagination from './Pagination.vue'
-  import { toObj } from './until'
+  import { toObj, parseTable, parseLimit, processSQL } from './until'
 
   const { fetchDatabases } = useAppStore()
   const { dataStatusMap } = storeToRefs(useUserStore())
@@ -104,24 +106,51 @@
 
   const logsStore = useLogsQueryStore()
   const { reset } = logsStore
-  const {
-    editorType,
-    queryNum,
-    displayedColumns,
-    currentTableName,
-    refresh,
-    mergeColumn,
-    showKeys,
-    sql,
-    editorSql,
-    time,
-    rangeTime,
-    timeRangeValues,
-  } = storeToRefs(logsStore)
+  const { editorType, currentTableName, sql, time, rangeTime, timeRangeValues, refresh } = storeToRefs(logsStore)
 
   // Local state for query data (moved from store)
   const rows = shallowRef([])
   const queryColumns = shallowRef([])
+
+  // Local UI state (moved from store)
+  const mergeColumn = useStorage('logquery-merge-column', true)
+  const showKeys = useStorage('logquery-show-keys', true)
+  const displayedColumns = useStorage('logquery-table-column-visible', {})
+
+  // Local editor state (moved from store)
+  const editorSql = ref('')
+
+  // SQLBuilder form state (moved from store)
+  const currentBuilderFormState = ref(null)
+
+  // Query execution state
+  const queryLoading = ref(false)
+
+  // Direct query execution method - more explicit than queryNum counter
+  const executeQuery = () => {
+    queryLoading.value = true
+    return editorAPI
+      .runSQL(finalQuery.value)
+      .then((result) => {
+        queryColumns.value = result.output[0].records.schema.column_schemas
+        rows.value = result.output[0].records.rows.map((row, index) => {
+          return toObj(row, queryColumns.value, index, tsColumn.value)
+        })
+        // Trigger chart refresh after main query
+        triggerChartRefresh()
+        // Refresh pagination to ensure it updates with new data
+        refreshPagination()
+      })
+      .finally(() => {
+        queryLoading.value = false
+      })
+  }
+
+  // Chart refresh trigger - explicit method
+  const chartRefreshTrigger = ref(0)
+  const triggerChartRefresh = () => {
+    chartRefreshTrigger.value++
+  }
 
   // Convert queryColumns to the format expected by other components
   const columns = computed(() => {
@@ -166,8 +195,6 @@
     }
   })
 
-  const queryLoading = ref(false)
-
   // Local query method (moved from store)
   // Placeholder for executeQuery - will be defined after finalQuery
 
@@ -179,7 +206,6 @@
 
   // SQLBuilder integration
   const sqlBuilderRef = ref()
-  const currentBuilderFormState = ref(null)
   const builderSql = ref('')
 
   // Handler for TimeRangeSelect updates
@@ -254,22 +280,6 @@
     }
   })
 
-  // Local query method (moved from store)
-  const executeQuery = () => {
-    queryLoading.value = true
-    return editorAPI
-      .runSQL(finalQuery.value)
-      .then((result) => {
-        queryColumns.value = result.output[0].records.schema.column_schemas
-        rows.value = result.output[0].records.rows.map((row, index) => {
-          return toObj(row, queryColumns.value, index, tsColumn.value)
-        })
-      })
-      .finally(() => {
-        queryLoading.value = false
-      })
-  }
-
   // Handle filter condition from table context menu
   function handleFilterConditionAdd(columnName, operator, value) {
     if (!currentBuilderFormState.value) return
@@ -307,6 +317,31 @@
     executeQuery()
   }
 
+  // Handle manual query execution from toolbar
+  function handleToolbarQuery() {
+    if (!currentTableName.value) {
+      return
+    }
+
+    // Stop live query when user manually triggers a query
+    if (refresh.value) {
+      refresh.value = false
+    }
+
+    if (editorType.value === 'text') {
+      currentTableName.value = parseTable(editorSql.value)
+      logsStore.limit = parseLimit(editorSql.value)
+      // Process SQL with placeholders
+      editorSql.value = processSQL(editorSql.value, tsColumn.value?.name, logsStore.limit)
+    }
+
+    // Set the processed SQL to the store
+    sql.value = editorSql.value
+
+    // Execute the query
+    executeQuery()
+  }
+
   // Watch for form state changes to update store and handle table changes
   watch(
     currentBuilderFormState,
@@ -322,11 +357,6 @@
     },
     { deep: true }
   )
-
-  // Watch for queryNum changes to trigger query
-  watch(queryNum, () => {
-    executeQuery()
-  })
 
   // Stop live query when time range changes
   watch(
@@ -358,9 +388,12 @@
 
   const size = computed(() => (compact.value ? 'mini' : 'medium'))
   const wrap = ref(false)
-  const pageKey = computed(() => {
-    return `${queryNum.value}`
-  })
+
+  // Key for forcing pagination re-render when needed
+  const paginationKey = ref(0)
+  const refreshPagination = () => {
+    paginationKey.value++
+  }
 
   Promise.all([
     (async () => {
