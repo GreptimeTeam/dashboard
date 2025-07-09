@@ -126,30 +126,10 @@
   // Query execution state
   const queryLoading = ref(false)
 
-  // Direct query execution method - more explicit than queryNum counter
-  const executeQuery = () => {
-    queryLoading.value = true
-    return editorAPI
-      .runSQL(finalQuery.value)
-      .then((result) => {
-        queryColumns.value = result.output[0].records.schema.column_schemas
-        rows.value = result.output[0].records.rows.map((row, index) => {
-          return toObj(row, queryColumns.value, index, tsColumn.value)
-        })
-        // Trigger chart refresh after main query
-        triggerChartRefresh()
-        // Refresh pagination to ensure it updates with new data
-        refreshPagination()
-      })
-      .finally(() => {
-        queryLoading.value = false
-      })
-  }
-
   // Chart refresh trigger - explicit method
   const chartRefreshTrigger = ref(0)
   const triggerChartRefresh = () => {
-    chartRefreshTrigger.value++
+    chartRefreshTrigger.value += 1
   }
 
   // Convert queryColumns to the format expected by other components
@@ -194,6 +174,12 @@
       [currentTableName.value]: columns.value.map((col) => col.name),
     }
   })
+
+  // Key for forcing pagination re-render when needed
+  const paginationKey = ref(0)
+  const refreshPagination = () => {
+    paginationKey.value += 1
+  }
 
   // Local query method (moved from store)
   // Placeholder for executeQuery - will be defined after finalQuery
@@ -272,6 +258,26 @@
 
     return query
   })
+
+  // Direct query execution method - more explicit than queryNum counter
+  const executeQuery = () => {
+    queryLoading.value = true
+    return editorAPI
+      .runSQL(finalQuery.value)
+      .then((result) => {
+        queryColumns.value = result.output[0].records.schema.column_schemas
+        rows.value = result.output[0].records.rows.map((row, index) => {
+          return toObj(row, queryColumns.value, index, tsColumn.value)
+        })
+        // Trigger chart refresh after main query
+        triggerChartRefresh()
+        // Refresh pagination to ensure it updates with new data
+        refreshPagination()
+      })
+      .finally(() => {
+        queryLoading.value = false
+      })
+  }
 
   // Update sql ref when finalQuery changes
   watch(finalQuery, (newQuery) => {
@@ -388,12 +394,6 @@
 
   const size = computed(() => (compact.value ? 'mini' : 'medium'))
   const wrap = ref(false)
-
-  // Key for forcing pagination re-render when needed
-  const paginationKey = ref(0)
-  const refreshPagination = () => {
-    paginationKey.value++
-  }
 
   Promise.all([
     (async () => {
