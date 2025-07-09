@@ -1,78 +1,36 @@
 <template lang="pug">
 #log-table-container(ref="tableContainer")
-  a-table.log_table(
-    :key="tableKey"
-    style="flex-shrink: 0"
-    :size="props.size"
-    :data="results"
+  DataTable(
+    :data="data"
+    :columns="visibleColumnsForTable"
+    :loading="false"
+    :size="size"
+    :table-classes="tableClassesDynamic"
     :virtual-list-props="{ height: height - headerHeight, buffer: 36 }"
-    :pagination="false"
     :row-selection="rowSelection"
-    :bordered="false"
-    :class="{ wrap_table: wrapLine, single_column: mergeColumn, multiple_column: !mergeColumn, builder_type: sqlMode === 'builder', compact: isCompact }"
+    :show-table-header="false"
+    :show-pagination="false"
+    :show-column-selector="false"
+    :ts-column="tsColumn"
+    :show-context-menu="sqlMode === 'builder'"
+    :editor-type="sqlMode"
+    @filter-condition-add="$emit('filterConditionAdd', $event)"
+    @row-select="$emit('rowSelect', $event)"
   )
-    template(#columns)
-      template(v-for="column in tableColumns")
-        a-table-column(
-          v-if="isTimeColumn(column.dataIndex)"
-          :data-index="column.dataIndex"
-          :title="column.title"
-          :header-cell-style="column.headerCellStyle"
-        )
-          template(#cell="{ record }")
-            span(style="cursor: pointer" @click="() => handleTsClick(record)") {{ renderTs(record, column.dataIndex) }}
-          template(#title)
-            a-tooltip(
-              placement="top"
-              :content="tsViewStr ? $t('dashboard.showTimestamp') : $t('dashboard.formatTimestamp')"
-            )
-              a-space(size="mini" :style="{ cursor: 'pointer' }" @click="changeTsView")
-                svg.icon-12
-                  use(href="#time-index")
-                | {{ tsColumn && tsColumn.name }}
-        a-table-column(
-          v-else-if="mergeColumn"
-          :data-index="column.dataIndex"
-          :title="column.title"
-          :header-cell-style="column.headerCellStyle"
-        )
-          template(#cell="{ record }")
-            span.entity-field(v-for="field in getEntryFields(record)")
-              span(v-if="showKeys" style="color: var(--color-text-3)")
-                | {{ field[0] }}:
-              | {{ field[1] }}
-              svg.td-config-icon(
-                v-if="sqlMode === 'builder'"
-                @click="(event) => handleContextMenu(record, field[0], event)"
-              )
-                use(href="#menu")
-        a-table-column.clickable(
-          v-else
-          :data-index="column.dataIndex"
-          :title="column.title"
-          :header-cell-style="column.headerCellStyle"
-        )
-          template(#cell="{ record }")
-            span {{ record[column.dataIndex] }}
-            svg.td-config-icon(
-              v-if="sqlMode === 'builder'"
-              @click="(event) => handleContextMenu(record, column.dataIndex, event)"
-            )
-              use(href="#menu")
+    // Custom slot for timestamp column
+    template(v-if="tsColumn" #[`column-${tsColumn.name}`]="{ record, renderedValue }")
+      span(style="cursor: pointer" @click="() => handleTsClick(record)") {{ renderedValue }}
 
-      LogDetail(v-model:visible="detailVisible" :record="selectedRecord" :columns="props.columns")
-  a-dropdown#td-context(
-    v-model:popup-visible="contextMenuVisible"
-    trigger="contextMenu"
-    :style="{ top: `${contextMenuPosition.y}px`, left: `${contextMenuPosition.x}px` }"
-    @clickoutside="hideContextMenu"
-    @select="handleMenuClick"
-  ) 
-    template(#content)
-      a-doption(value="copy") Copy Field Value
-      a-dsubmenu(trigger="hover") Filter
-        template(#content)
-          a-doption(v-for="op in filterOptions" :value="`filter_${op}`") {{ op }} value
+    // Custom slot for merged entity column (when mergeColumn is true)
+    template(v-if="mergeColumn" #column-entity="{ record, showContextMenu, handleContextMenu }")
+      span.entity-field(v-for="field in getEntryFields(record)" :key="field[0]")
+        span(v-if="showKeys" style="color: var(--color-text-3)")
+          | {{ field[0] }}:
+        | {{ field[1] }}
+        svg.td-config-icon(v-if="showContextMenu" @click="(event) => handleContextMenu(record, field[0], event)")
+          use(href="#menu")
+
+  LogDetail(v-model:visible="detailVisible" :record="selectedRecord" :columns="props.columns")
 </template>
 
 <script setup lang="ts" name="LogTableData">
@@ -80,6 +38,7 @@
   import type { PropType } from 'vue'
   import { Message } from '@arco-design/web-vue'
   import { useElementSize, useLocalStorage } from '@vueuse/core'
+  import DataTable from '@/components/data-table/index.vue'
   import LogDetail from './LogDetail.vue'
   import { toDateStr, TimeTypes } from './until'
   import type { ColumnType, TSColumn } from './types'
@@ -128,6 +87,13 @@
   // Derived values from columnMode
   const mergeColumn = computed(() => props.columnMode !== 'separate')
   const showKeys = computed(() => props.columnMode === 'merged-with-keys')
+
+  // Visible columns for the DataTable
+  const visibleColumnsForTable = computed(() => {
+    return props.columns.filter((col) => props.displayedColumns?.indexOf(col.name) > -1)
+  })
+
+  // Note: tableClassesDynamic will be defined after isCompact
 
   // Timestamp utilities
   const tsViewStr = ref(true)
@@ -264,6 +230,16 @@
   const headerHeight = computed(() => {
     return isCompact.value ? 25 : 38
   })
+
+  // Dynamic table classes
+  const tableClassesDynamic = computed(() => ({
+    log_table: true,
+    wrap_table: props.wrapLine,
+    single_column: mergeColumn.value,
+    multiple_column: !mergeColumn.value,
+    builder_type: props.sqlMode === 'builder',
+    compact: isCompact.value,
+  }))
   const tableKey = ref('table')
 
   // Watch for data changes to refresh table

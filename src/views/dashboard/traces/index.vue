@@ -74,14 +74,14 @@
           :ts-column="{ name: 'timestamp', multiple: 1000000000 }"
           @time-range-update="handleTimeRangeUpdate"
         )
-          TraceTable(
-            :data="allResults"
-            :columns="columns"
-            :loading="loading"
-            :table-name="tableName"
-            :editor-type="editorType"
-            @filterConditionAdd="handleFilterConditionAdd"
-          )
+      TraceTable(
+        :data="allResults"
+        :columns="columns"
+        :loading="loading"
+        :table-name="tableName"
+        :editor-type="editorType"
+        @filterConditionAdd="handleFilterConditionAdd"
+      )
 </template>
 
 <script setup name="TraceQuery" lang="ts">
@@ -94,8 +94,8 @@
   import TimeRangeSelect from '@/components/time-range-select/index.vue'
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import useQueryUrlSync from '@/hooks/query-url-sync'
-  import SQLEditor from './components/SQLEditor.vue'
   import CountChart from '@/components/count-chart/index.vue'
+  import SQLEditor from './components/SQLEditor.vue'
   import TraceTable from './components/TraceTable.vue'
   import { validateSQL } from './utils'
 

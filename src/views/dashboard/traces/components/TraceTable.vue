@@ -39,76 +39,34 @@ a-card(:bordered="false")
                 a-checkbox-group(v-model="displayedColumns" direction="vertical")
                   a-checkbox(v-for="column in columns" :key="column.name" :value="column.name")
                     | {{ column.name }}
-  .table-container
-    a-table(
-      :data="results"
-      :loading="loading"
-      :pagination="false"
-      :bordered="false"
-      :stripe="false"
-      :class="{ trace_table: true, multiple_column: true }"
-      :scroll="{ y: 1400 }"
-    )
-      template(#empty)
-        a-empty(description="No data")
-      template(#loading)
-        a-spin(dot)
-      template(#columns)
-        a-table-column(
-          v-for="col in visibleColumns"
-          :key="col.name"
-          :title="col.name"
-          :data-index="col.name"
-        )
-          template(v-if="isTimeColumn(col)" #title)
-            a-tooltip(placement="top" :content="tsViewStr ? 'Show raw timestamp' : 'Format timestamp'")
-              a-space(size="mini" :style="{ cursor: 'pointer' }" @click="changeTsView")
-                svg.icon-12
-                  use(href="#time-index")
-                | {{ col.name }}
-          template(#cell="{ record }")
-            template(v-if="col.name === 'traceid' || col.name === 'trace_id'")
-              a-link(@click="handleTraceClick(record[col.name])") {{ record[col.name] }}
-              svg.td-config-icon(
-                v-if="editorType === 'builder'"
-                @click="(event) => handleContextMenu(record, col.name, event)"
-              )
-                use(href="#menu")
-            template(v-else-if="isTimeColumn(col)")
-              span(style="cursor: pointer") {{ renderTs(record, col.name) }}
-              svg.td-config-icon(
-                v-if="editorType === 'builder'"
-                @click="(event) => handleContextMenu(record, col.name, event)"
-              )
-                use(href="#menu")
-            template(v-else)
-              span {{ record[col.name] }}
-              svg.td-config-icon(
-                v-if="editorType === 'builder'"
-                @click="(event) => handleContextMenu(record, col.name, event)"
-              )
-                use(href="#menu")
 
-a-dropdown#td-context(
-  v-model:popup-visible="contextMenuVisible"
-  trigger="contextMenu"
-  :style="{ position: 'fixed', top: `${contextMenuPosition.y}px`, left: `${contextMenuPosition.x}px`, zIndex: 9999 }"
-  @clickoutside="hideContextMenu"
-  @select="handleMenuClick"
-) 
-  template(#content)
-    a-doption(value="copy") Copy Field Value
-    a-dsubmenu(trigger="hover") Filter
-      template(#content)
-        a-doption(v-for="op in filterOptions" :key="op" :value="`filter_${op}`") {{ op }} value
+  DataTable(
+    :data="paginatedResults"
+    :columns="visibleColumns"
+    :loading="loading"
+    :table-classes="{ trace_table: true, multiple_column: true }"
+    :ts-column="{ name: 'timestamp', multiple: 1000000000 }"
+    :editor-type="editorType"
+    @filter-condition-add="$emit('filterConditionAdd', $event)"
+  )
+    // Custom slot for trace ID columns to make them clickable
+    template(#column-traceid="{ record, showContextMenu, handleContextMenu }")
+      a-link(@click="handleTraceClick(record.traceid)") {{ record.traceid }}
+      svg.td-config-icon(v-if="showContextMenu" @click="(event) => handleContextMenu(record, 'traceid', event)")
+        use(href="#menu")
+
+    template(#column-trace_id="{ record, showContextMenu, handleContextMenu }")
+      a-link(@click="handleTraceClick(record.trace_id)") {{ record.trace_id }}
+      svg.td-config-icon(v-if="showContextMenu" @click="(event) => handleContextMenu(record, 'trace_id', event)")
+        use(href="#menu")
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, watch, shallowRef } from 'vue'
+  import { computed, ref, watch } from 'vue'
   import { useLocalStorage } from '@vueuse/core'
   import { useRouter } from 'vue-router'
   import { IconSettings } from '@arco-design/web-vue/es/icon'
-  import dayjs from 'dayjs'
+  import DataTable from '@/components/data-table/index.vue'
   import type { PropType } from 'vue'
 
   interface Column {
@@ -146,37 +104,27 @@ a-dropdown#td-context(
   const emit = defineEmits(['filterConditionAdd'])
   const router = useRouter()
 
-  // Handle trace ID link click
-  function handleTraceClick(traceId: string) {
-    router.push({
-      name: 'dashboard-TraceDetail',
-      params: { id: traceId },
-      query: { table: props.tableName },
-    })
-  }
+  // Default columns to show for traces (when no selection is made)
+  const defaultTraceColumns = ['trace_id', 'service_name', 'span_name', 'timestamp', 'duration_nano']
 
   // Column visibility state with localStorage persistence
   const displayedColumns = useLocalStorage<string[]>('trace-displayed-columns', [])
 
-  // Default columns to show for traces (when no selection is made)
-  const defaultTraceColumns = ['trace_id', 'service_name', 'span_name', 'timestamp', 'duration_nano']
-
-  // Pagination state
-  const currentPage = ref(1)
+  // Pagination and results info for title
   const pageSize = ref(20)
-
-  // Timestamp display state
-  const tsViewStr = ref(true) // true for formatted, false for raw timestamp
+  const currentPage = ref(1)
+  const totalResults = computed(() => props.data.length)
 
   // Computed paginated results
-  const results = computed(() => {
+  const paginatedResults = computed(() => {
     const start = (currentPage.value - 1) * pageSize.value
     const end = start + pageSize.value
     return props.data.slice(start, end)
   })
 
-  // Total count for pagination
-  const totalResults = computed(() => props.data.length)
+  watchEffect(() => {
+    console.log('paginatedResults', paginatedResults.value)
+  })
 
   // Computed visible columns based on selection
   const visibleColumns = computed(() => {
@@ -204,40 +152,6 @@ a-dropdown#td-context(
       return 0
     })
   })
-
-  // Timestamp utilities
-  function isTimeColumn(column: Column) {
-    return column.data_type.toLowerCase().includes('timestamp')
-  }
-
-  function changeTsView() {
-    tsViewStr.value = !tsViewStr.value
-  }
-
-  function renderTs(record: TableData, columnName: string) {
-    if (tsViewStr.value) {
-      // Format timestamp as readable date
-      const timestamp = record[columnName]
-      if (timestamp) {
-        // Handle different timestamp formats (nanoseconds, microseconds, milliseconds)
-        let ms = timestamp
-        if (typeof timestamp === 'string') {
-          ms = parseInt(timestamp, 10)
-        }
-        // Convert to milliseconds if it's in nanoseconds or microseconds
-        if (ms > 1000000000000000) {
-          // nanoseconds
-          ms /= 1000000
-        } else if (ms > 1000000000000) {
-          // microseconds
-          ms /= 1000
-        }
-        return dayjs(ms).format('YYYY-MM-DD HH:mm:ss.SSS')
-      }
-      return timestamp
-    }
-    return record[columnName]
-  }
 
   // Column selection functions
   function selectAllColumns() {
@@ -279,61 +193,6 @@ a-dropdown#td-context(
     currentPage.value = 1 // Reset to first page when page size changes
   }
 
-  // Context menu functionality
-  const contextMenuVisible = ref(false)
-  const contextMenuPosition = ref({ x: 0, y: 0 })
-  const filterOptions = shallowRef([])
-  const triggerCell = ref()
-
-  function handleContextMenu(record: TableData, columnName: string, event: Event) {
-    if (props.editorType !== 'builder') {
-      return
-    }
-    const rect = (event.target as Element).getBoundingClientRect()
-    triggerCell.value = [record, columnName]
-    event.preventDefault()
-
-    // Set available filter options based on column type
-    const column = props.columns.find((col) => col.name === columnName)
-    if (column) {
-      if (isTimeColumn(column)) {
-        filterOptions.value = ['>=', '<=']
-      } else {
-        filterOptions.value = ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'NOT LIKE']
-      }
-    }
-
-    contextMenuPosition.value = { x: rect.left, y: rect.y }
-    contextMenuVisible.value = true
-  }
-
-  function hideContextMenu() {
-    contextMenuVisible.value = false
-  }
-
-  async function handleMenuClick(value: string | number | Record<string, any>) {
-    const action = String(value)
-    if (!triggerCell.value) {
-      return
-    }
-    const [record, columnName] = triggerCell.value
-
-    if (action === 'copy') {
-      try {
-        await navigator.clipboard.writeText(record[columnName])
-        // Show success message
-        console.log('Copied to clipboard:', record[columnName])
-      } catch (error) {
-        console.error('Failed to copy to clipboard:', error)
-      }
-    } else if (action.startsWith('filter')) {
-      const operator = action.split('_')[1]
-      // Emit filter condition to parent
-      emit('filterConditionAdd', columnName, operator, record[columnName])
-    }
-    hideContextMenu()
-  }
-
   // Reset pagination when data changes
   watch(
     () => props.data,
@@ -341,6 +200,15 @@ a-dropdown#td-context(
       currentPage.value = 1
     }
   )
+
+  // Handle trace ID link click
+  function handleTraceClick(traceId: string) {
+    router.push({
+      name: 'dashboard-TraceDetail',
+      params: { id: traceId },
+      query: { table: props.tableName },
+    })
+  }
 </script>
 
 <style lang="less" scoped>
@@ -361,22 +229,11 @@ a-dropdown#td-context(
     min-width: 200px;
   }
 
-  // Table container for flexible height
-  .table-container {
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
+  // Custom trace table styling can be added here if needed
+  :deep(.trace_table) {
+    // Any trace-specific table styles
   }
 
-  // Context menu positioning
-  #td-context {
-    position: absolute;
-    z-index: 999999;
-  }
-
-  // Menu icon styling (matches logs TableData)
   .td-config-icon {
     margin-left: 3px;
     cursor: pointer;
@@ -384,6 +241,23 @@ a-dropdown#td-context(
     width: 12px;
     height: 12px;
     color: var(--color-primary);
+  }
+
+  :deep(.arco-card) {
+    border-radius: 0;
+    border-bottom: none;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+
+    .arco-card-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      padding: 0;
+    }
   }
 
   // Table styling to match logs TableData
