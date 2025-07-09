@@ -53,6 +53,7 @@
 <script ts setup name="QueryIndex">
   import { useStorage } from '@vueuse/core'
   import useLogsQueryStore from '@/store/modules/logs-query'
+  import { useDatabases } from '@/hooks/databases'
   import InputEditor from './InputEditor.vue'
   import LogTableData from './TableData.vue'
   import ChartContainer from './ChartContainer.vue'
@@ -60,7 +61,7 @@
   import Toolbar from './Toolbar.vue'
   import Pagination from './Pagination.vue'
 
-  const { fetchDatabases } = useAppStore()
+  const { databases, databasesLoading, subscribe, cleanup } = useDatabases()
   const { dataStatusMap } = storeToRefs(useUserStore())
   const { checkTables } = useDataBaseStore()
 
@@ -88,14 +89,34 @@
     return `${queryNum.value}_${tableIndex.value}`
   })
 
-  Promise.all([
-    (async () => {
-      if (!dataStatusMap.value.tables) {
-        await fetchDatabases()
-        await checkTables()
-      }
-    })(),
-  ])
+  // 等待数据库加载完成后再检查表格
+  const checkTablesWhenReady = async () => {
+    if (!dataStatusMap.value.tables && databases.value.length > 0) {
+      await checkTables()
+    }
+  }
+
+  onMounted(() => {
+    subscribe()
+
+    if (!databasesLoading.value && databases.value.length > 0) {
+      checkTablesWhenReady()
+    } else {
+      watch(
+        [databasesLoading, databases],
+        async ([loading, dbs]) => {
+          if (!loading && dbs.length > 0) {
+            await checkTablesWhenReady()
+          }
+        },
+        { immediate: true }
+      )
+    }
+  })
+
+  onUnmounted(() => {
+    cleanup()
+  })
 
   const appStore = useAppStore()
   const containerKey = ref('')

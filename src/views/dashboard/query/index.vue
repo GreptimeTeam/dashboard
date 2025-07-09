@@ -33,6 +33,7 @@ a-layout.new-layout
   import { useMagicKeys, useActiveElement, useStorage } from '@vueuse/core'
   import { driver } from 'driver.js'
   import 'driver.js/dist/driver.css'
+  import { useDatabases } from '@/hooks/databases'
   import { navbarSteps, tableSteps } from '../config'
 
   const { s, q } = useMagicKeys()
@@ -41,11 +42,13 @@ a-layout.new-layout
   const { logs } = storeToRefs(useLogStore())
   const { activeTab, footer } = storeToRefs(useIngestStore())
   const { dataStatusMap } = storeToRefs(useUserStore())
-  const { fetchDatabases } = useAppStore()
   const { checkTables } = useDataBaseStore()
   const { originTablesTree } = storeToRefs(useDataBaseStore())
   const { queryType, getResultsByType } = useQueryCode()
   const { explainResult } = storeToRefs(useCodeRunStore())
+
+  // 使用 database hook
+  const { databases, databasesLoading, subscribe, cleanup } = useDatabases()
   const types = ['sql', 'promql']
   const logsHeight = ref(66)
   const results = computed(() => getResultsByType(types))
@@ -103,16 +106,42 @@ a-layout.new-layout
   })
 
   onActivated(async () => {
-    if (!dataStatusMap.value.tables) {
-      await fetchDatabases()
-      await checkTables()
+    // 订阅数据库变化
+    subscribe()
+
+    // 等待数据库加载完成后再检查表格
+    const checkTablesWhenReady = async () => {
+      if (!dataStatusMap.value.tables && databases.value.length > 0) {
+        await checkTables()
+      }
     }
+
+    // 如果数据库已经加载完成，立即检查表格
+    if (!databasesLoading.value && databases.value.length > 0) {
+      await checkTablesWhenReady()
+    } else {
+      // 否则等待数据库加载完成
+      watch(
+        [databasesLoading, databases],
+        async ([loading, dbs]) => {
+          if (!loading && dbs.length > 0) {
+            await checkTablesWhenReady()
+          }
+        },
+        { immediate: true }
+      )
+    }
+
     const tourStatus = useStorage('tourStatus', { navbar: false })
     if (!tourStatus.value.navbar) {
       const steps = [...navbarSteps]
       globalTour.setSteps(steps)
       globalTour.drive(0)
     }
+  })
+
+  onDeactivated(() => {
+    cleanup()
   })
 
   // TODO: add more code type in the future if needed

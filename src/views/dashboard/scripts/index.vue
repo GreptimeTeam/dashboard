@@ -10,12 +10,15 @@ a-layout.layout
 </template>
 
 <script lang="ts" name="Scripts" setup>
+  import { useDatabases } from '@/hooks/databases'
+
   const { getResultsByType } = useQueryCode()
   const { logs } = storeToRefs(useLogStore())
+
   const { guideModalVisible } = storeToRefs(useAppStore())
   const { dataStatusMap } = storeToRefs(useUserStore())
   const { checkTables, getScriptsTable } = useDataBaseStore()
-  const { fetchDatabases } = useAppStore()
+  const { databases, databasesLoading, subscribe, cleanup } = useDatabases()
 
   const types = ['python']
 
@@ -25,12 +28,35 @@ a-layout.layout
   // TODO: add more code type in the future if needed
 
   onActivated(async () => {
+    subscribe()
+
     if (!dataStatusMap.value.scripts) {
       getScriptsTable()
     }
-    if (!dataStatusMap.value.tables) {
-      await fetchDatabases()
-      await checkTables()
+
+    // 等待数据库加载完成后再检查表格
+    const checkTablesWhenReady = async () => {
+      if (!dataStatusMap.value.tables && databases.value.length > 0) {
+        await checkTables()
+      }
     }
+
+    if (!databasesLoading.value && databases.value.length > 0) {
+      await checkTablesWhenReady()
+    } else {
+      watch(
+        [databasesLoading, databases],
+        async ([loading, dbs]) => {
+          if (!loading && dbs.length > 0) {
+            await checkTablesWhenReady()
+          }
+        },
+        { immediate: true }
+      )
+    }
+  })
+
+  onDeactivated(() => {
+    cleanup()
   })
 </script>
