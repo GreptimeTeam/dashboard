@@ -212,7 +212,6 @@
       refresh.value = false
     }
     builderSql.value = generatedSql
-    sql.value = generatedSql
   }
 
   // Watch for editor type changes - generate editorSql from builder when switching

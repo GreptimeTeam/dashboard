@@ -1,20 +1,39 @@
 <template lang="pug">
-a-button(size="small" type="text" @click="exportSql")
-  | Export as CSV
+a-button(
+  type="outline"
+  size="small"
+  :disabled="!currentTableName"
+  @click="exportSql"
+)
+  template(#icon)
+    svg.icon
+      use(href="#export")
+  | {{ $t('dashboard.exportCSV') }}
 </template>
 
 <script setup name="ExportLog" lang="ts">
+  import { storeToRefs } from 'pinia'
   import fileDownload from 'js-file-download'
   import editorAPI from '@/api/editor'
   import useLogsQueryStore from '@/store/modules/logs-query'
   import { getWhereClause, parseOrderBy } from './until'
 
-  const props = defineProps({
-    columns: Array,
-    tsColumn: Object,
-  })
+  interface TSColumn {
+    name: string
+    multiple?: number
+  }
 
-  const { editorSql, currentTableName } = storeToRefs(useLogsQueryStore())
+  interface Column {
+    name: string
+    data_type: string
+  }
+
+  const props = defineProps<{
+    columns: Column[]
+    tsColumn: TSColumn | null
+  }>()
+
+  const { sql, currentTableName } = storeToRefs(useLogsQueryStore())
 
   function getExportSql() {
     if (props.columns && props.columns.length > 0) {
@@ -27,8 +46,8 @@ a-button(size="small" type="text" @click="exportSql")
           ...fields,
           ...props.columns.map((column) => column?.name).filter((v) => v && v !== props.tsColumn?.name),
         ]
-        const where = getWhereClause(editorSql.value)
-        const order = parseOrderBy(editorSql.value) || 'desc'
+        const where = getWhereClause(sql.value)
+        const order = parseOrderBy(sql.value) || 'desc'
         const limit = 10000
         return `SELECT ${fields.join(', ')} FROM ${currentTableName.value} ${where} ORDER BY ${
           props.tsColumn?.name || 'id'
