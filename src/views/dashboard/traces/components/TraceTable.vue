@@ -70,21 +70,21 @@ a-card(:bordered="false")
             template(v-if="col.name === 'traceid' || col.name === 'trace_id'")
               a-link(@click="handleTraceClick(record[col.name])") {{ record[col.name] }}
               svg.td-config-icon(
-                v-if="sqlMode === 'builder'"
+                v-if="editorType === 'builder'"
                 @click="(event) => handleContextMenu(record, col.name, event)"
               )
                 use(href="#menu")
             template(v-else-if="isTimeColumn(col)")
               span(style="cursor: pointer") {{ renderTs(record, col.name) }}
               svg.td-config-icon(
-                v-if="sqlMode === 'builder'"
+                v-if="editorType === 'builder'"
                 @click="(event) => handleContextMenu(record, col.name, event)"
               )
                 use(href="#menu")
             template(v-else)
               span {{ record[col.name] }}
               svg.td-config-icon(
-                v-if="sqlMode === 'builder'"
+                v-if="editorType === 'builder'"
                 @click="(event) => handleContextMenu(record, col.name, event)"
               )
                 use(href="#menu")
@@ -137,7 +137,7 @@ a-dropdown#td-context(
       type: String,
       default: '',
     },
-    sqlMode: {
+    editorType: {
       type: String,
       default: 'builder',
     },
@@ -286,7 +286,7 @@ a-dropdown#td-context(
   const triggerCell = ref()
 
   function handleContextMenu(record: TableData, columnName: string, event: Event) {
-    if (props.sqlMode !== 'builder') {
+    if (props.editorType !== 'builder') {
       return
     }
     const rect = (event.target as Element).getBoundingClientRect()

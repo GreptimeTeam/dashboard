@@ -6,9 +6,9 @@
     a-card(:bordered="false")
       .toolbar
         a-space
-          a-radio-group(v-model="sqlMode" type="button")
+          a-radio-group(v-model="editorType" type="button")
             a-radio(value="builder") Builder
-            a-radio(value="editor") Editor
+            a-radio(value="text") Text
           TimeRangeSelect(
             ref="timeRangeSelectRef"
             v-model:time-length="timeLength"
@@ -17,7 +17,7 @@
           )
           a-button(type="primary" size="small" @click="handleQuery") {{ $t('dashboard.runQuery') }}
           a-button(
-            v-if="sqlMode === 'editor'"
+            v-if="editorType === 'text'"
             type="outline"
             size="small"
             @click="handleFormatSQL"
@@ -39,9 +39,9 @@
 
       .sql-container
         SQLBuilder(
-          v-if="sqlMode === 'builder'"
+          v-if="editorType === 'builder'"
           ref="sqlBuilderRef"
-          v-model:form-state="initialBuilderFormState"
+          v-model:form-state="currentBuilderFormState"
           table-filter="trace_id"
           :time-range-values="timeRangeValues"
           :default-conditions="[{ field: 'parent_span_id', operator: 'Not Exist', value: '', relation: 'AND' }]"
@@ -74,36 +74,32 @@
           :should-fetch="chartExpanded"
           @time-range-update="handleTimeRangeUpdate"
         )
-
-    TraceTable(
-      :data="allResults"
-      :columns="columns"
-      :loading="loading"
-      :table-name="tableName"
-      :sql-mode="sqlMode"
-      @filterConditionAdd="handleFilterConditionAdd"
-    )
+          TraceTable(
+            :data="allResults"
+            :columns="columns"
+            :loading="loading"
+            :table-name="tableName"
+            :editor-type="editorType"
+            @filterConditionAdd="handleFilterConditionAdd"
+          )
 </template>
 
 <script setup name="TraceQuery" lang="ts">
   import { ref, computed, watch, nextTick } from 'vue'
   import { useLocalStorage, watchOnce } from '@vueuse/core'
-  import { useRoute, useRouter } from 'vue-router'
   import { IconCode, IconDown, IconRight, IconDownload } from '@arco-design/web-vue/es/icon'
   import editorAPI from '@/api/editor'
   import fileDownload from 'js-file-download'
   import { relativeTimeMap, relativeTimeOptions } from '@/views/dashboard/config'
   import TimeRangeSelect from '@/components/time-range-select/index.vue'
   import SQLBuilder from '@/components/sql-builder/index.vue'
+  import useQueryUrlSync from '@/hooks/query-url-sync'
   import SQLEditor from './components/SQLEditor.vue'
   import CountChart from './components/CountChart.vue'
   import TraceTable from './components/TraceTable.vue'
   import { validateSQL } from './utils'
 
-  const route = useRoute()
-  const router = useRouter()
-
-  const sqlMode = ref('builder')
+  const editorType = ref('builder')
   const builderSql = ref('')
   const editorSql = ref('')
   const loading = ref(false)
@@ -134,16 +130,25 @@
   // Store current builder form state for URL update after successful query
   const currentBuilderFormState = ref(null)
 
-  // Get initial form state from URL query
-  const initialBuilderFormState = ref(null)
+  // Initialize URL synchronization hook
+  const { updateQueryParams, initializeFromQuery } = useQueryUrlSync({
+    modeRef: editorType,
+    timeLength,
+    timeRange,
+    editorSql,
+    builderFormState: currentBuilderFormState,
+    // Note: tableName is computed and not stored in URL
+    defaultMode: 'builder',
+    defaultTimeLength: 10,
+  })
 
   // Computed table name - get from form state or parse from SQL
   const tableName = computed(() => {
-    if (sqlMode.value === 'builder' && currentBuilderFormState.value?.table) {
+    if (editorType.value === 'builder' && currentBuilderFormState.value?.table) {
       return currentBuilderFormState.value.table
     }
 
-    if (sqlMode.value === 'editor' && editorSql.value) {
+    if (editorType.value === 'text' && editorSql.value) {
       // Parse table name from SQL query
       const sql = editorSql.value.trim()
       const fromMatch = sql.match(/FROM\s+([`"']?)(\w+)\1/i)
@@ -155,80 +160,6 @@
     return ''
   })
 
-  // Update URL query parameters without navigation
-  function updateQueryParams() {
-    const query: Record<string, any> = { ...route.query }
-
-    // Update SQL mode
-    query.sqlMode = sqlMode.value
-
-    if (timeRange.value.length === 2) {
-      query.timeRange = timeRange.value
-      delete query.timeLength
-    } else {
-      query.timeLength = timeLength.value.toString()
-      delete query.timeRange
-    }
-
-    // Update editor SQL if in editor mode
-    if (sqlMode.value === 'editor' && editorSql.value) {
-      query.editorSql = encodeURIComponent(editorSql.value)
-    } else {
-      delete query.editorSql
-    }
-
-    // Update builder form state if available
-    if (sqlMode.value === 'builder' && currentBuilderFormState.value) {
-      query.builderForm = encodeURIComponent(JSON.stringify(currentBuilderFormState.value))
-    } else {
-      delete query.builderForm
-    }
-
-    // Update URL without triggering navigation
-    router.replace({ query })
-  }
-
-  // Initialize state from URL query parameters
-  function initializeFromQuery() {
-    const {
-      sqlMode: querySqlMode,
-      timeLength: queryTimeLength,
-      timeRange: queryTimeRange,
-      editorSql: queryEditorSql,
-    } = route.query
-    const { builderForm } = route.query
-    if (builderForm) {
-      try {
-        initialBuilderFormState.value = JSON.parse(decodeURIComponent(builderForm as string))
-      } catch (error) {
-        console.warn('Failed to parse builder form state from URL:', error)
-      }
-    }
-    currentBuilderFormState.value = initialBuilderFormState.value
-
-    // Initialize SQL mode
-    if (querySqlMode && ['builder', 'editor'].includes(querySqlMode as string)) {
-      sqlMode.value = querySqlMode as string
-    }
-
-    // Initialize time selection
-    if (queryTimeLength !== undefined) {
-      const length = parseInt(queryTimeLength as string, 10)
-      if (!Number.isNaN(length)) {
-        timeLength.value = length
-      }
-    }
-
-    if (queryTimeRange && Array.isArray(queryTimeRange)) {
-      timeRange.value = queryTimeRange as string[]
-    }
-
-    // Initialize editor SQL if provided
-    if (queryEditorSql) {
-      editorSql.value = decodeURIComponent(queryEditorSql as string)
-    }
-  }
-
   // Handle SQL builder updates
   function handleBuilderSqlUpdate(sql: string) {
     builderSql.value = sql
@@ -236,11 +167,10 @@
 
   // Watch for form state changes to update currentBuilderFormState for URL updates
   watch(
-    initialBuilderFormState,
+    currentBuilderFormState,
     (newFormState) => {
       // Store form state but don't update URL immediately
       // URL will be updated after successful query execution
-      currentBuilderFormState.value = newFormState
       // Table name is now computed from form state
     },
     { deep: true }
@@ -254,8 +184,8 @@
   }
 
   // Watch for mode changes
-  watch(sqlMode, (newMode) => {
-    if (newMode === 'editor' && !editorSql.value) {
+  watch(editorType, (newMode) => {
+    if (newMode === 'text' && !editorSql.value) {
       editorSql.value = builderSql.value
     }
   })
@@ -263,9 +193,9 @@
   const finalQuery = computed(() => {
     // Time processing is now handled by SQLBuilder for builder mode
     // For editor mode, we need to process time range manually
-    const query = sqlMode.value === 'builder' ? builderSql.value : editorSql.value
+    const query = editorType.value === 'builder' ? builderSql.value : editorSql.value
 
-    if (sqlMode.value === 'editor') {
+    if (editorType.value === 'text') {
       // Manual time processing for editor mode
       let sql = query
       if (timeLength.value > 0) {
@@ -357,7 +287,7 @@
   watchOnce(finalQuery, () => {
     if (finalQuery.value) {
       // Validate SQL before executing - only in editor mode
-      if (sqlMode.value === 'editor') {
+      if (editorType.value === 'text') {
         const validation = validateSQL(finalQuery.value)
         if (!validation.isValid) {
           console.error('SQL validation failed:', validation.error)

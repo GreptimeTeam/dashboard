@@ -88,10 +88,15 @@
 </template>
 
 <script ts setup name="QueryIndex">
-  import { useStorage } from '@vueuse/core'
+  import { useStorage, watchOnce } from '@vueuse/core'
   import { nextTick, ref, computed, shallowRef, watch } from 'vue'
+  import { storeToRefs } from 'pinia'
   import editorAPI from '@/api/editor'
   import useLogsQueryStore from '@/store/modules/logs-query'
+  import useAppStore from '@/store/modules/app'
+  import useUserStore from '@/store/modules/user'
+  import useDataBaseStore from '@/store/modules/database'
+  import useQueryUrlSync from '@/hooks/query-url-sync'
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import InputEditor from './InputEditor.vue'
   import LogTableData from './TableData.vue'
@@ -132,6 +137,12 @@
     chartRefreshTrigger.value += 1
   }
 
+  // Key for forcing pagination re-render when needed
+  const paginationKey = ref(0)
+  const refreshPagination = () => {
+    paginationKey.value += 1
+  }
+
   // Convert queryColumns to the format expected by other components
   const columns = computed(() => {
     return queryColumns.value.map((col) => ({
@@ -166,30 +177,6 @@
     }
   })
 
-  // Schema format for SQL editor - group columns by table name
-  const schemaForEditor = computed(() => {
-    if (!currentTableName.value || !columns.value.length) return {}
-
-    return {
-      [currentTableName.value]: columns.value.map((col) => col.name),
-    }
-  })
-
-  // Key for forcing pagination re-render when needed
-  const paginationKey = ref(0)
-  const refreshPagination = () => {
-    paginationKey.value += 1
-  }
-
-  // Local query method (moved from store)
-  // Placeholder for executeQuery - will be defined after finalQuery
-
-  // Helper function to get column by name
-  const getColumnByName = (name) => {
-    const index = columns.value.findIndex((column) => column.name === name)
-    return columns.value[index]
-  }
-
   // SQLBuilder integration
   const sqlBuilderRef = ref()
   const builderSql = ref('')
@@ -212,6 +199,7 @@
       refresh.value = false
     }
     builderSql.value = generatedSql
+    sql.value = generatedSql
   }
 
   // Watch for editor type changes - generate editorSql from builder when switching
@@ -258,8 +246,41 @@
     return query
   })
 
+  // Update sql ref when finalQuery changes
+  watch(finalQuery, (newQuery) => {
+    if (newQuery) {
+      sql.value = newQuery
+    }
+  })
+
+  // Schema format for SQL editor - group columns by table name
+  const schemaForEditor = computed(() => {
+    if (!currentTableName.value || !columns.value.length) return {}
+
+    return {
+      [currentTableName.value]: columns.value.map((col) => col.name),
+    }
+  })
+
+  // Initialize URL synchronization hook
+  const { updateQueryParams, initializeFromQuery } = useQueryUrlSync({
+    modeRef: editorType,
+    timeLength: time,
+    timeRange: rangeTime,
+    editorSql,
+    builderFormState: currentBuilderFormState,
+    tableName: currentTableName,
+    defaultMode: 'builder',
+    defaultTimeLength: 10,
+  })
+
   // Direct query execution method - more explicit than queryNum counter
   const executeQuery = () => {
+    // Prevent concurrent executions
+    if (queryLoading.value) {
+      return Promise.resolve()
+    }
+
     queryLoading.value = true
     return editorAPI
       .runSQL(finalQuery.value)
@@ -272,18 +293,13 @@
         triggerChartRefresh()
         // Refresh pagination to ensure it updates with new data
         refreshPagination()
+        // Update URL parameters only after successful query
+        updateQueryParams()
       })
       .finally(() => {
         queryLoading.value = false
       })
   }
-
-  // Update sql ref when finalQuery changes
-  watch(finalQuery, (newQuery) => {
-    if (newQuery) {
-      sql.value = newQuery
-    }
-  })
 
   // Handle filter condition from table context menu
   function handleFilterConditionAdd(columnName, operator, value) {
@@ -415,6 +431,18 @@
       queryColumns.value = []
     }
   )
+
+  // Automatic query execution when URL contains sufficient data
+  watchOnce(finalQuery, () => {
+    if (finalQuery.value && currentTableName.value) {
+      nextTick(() => {
+        executeQuery()
+      })
+    }
+  })
+
+  // Initialize from URL query parameters
+  initializeFromQuery()
 </script>
 
 <style lang="less">
