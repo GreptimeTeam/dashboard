@@ -63,8 +63,8 @@ a-button(
     if (!currentTableName.value) {
       return
     }
-    const sql = getExportSql()
-    editorAPI.runSQLWithCSV(sql).then((result) => {
+    const exportSql = getExportSql()
+    editorAPI.runSQLWithCSV(exportSql).then((result) => {
       fileDownload(result as unknown as string, `${currentTableName.value}.csv`)
     })
   }
