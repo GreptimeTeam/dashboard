@@ -26,20 +26,6 @@
     span(style="color: var(--color-text-2)") {{ $t('logsQuery.live') }}
 
   a-space(style="margin-left: auto")
-    a-trigger(
-      v-if="props.columns.length"
-      position="bottom"
-      auto-fit-position
-      :unmount-on-close="false"
-    )
-      a-button(type="text" size="small")
-        | {{ $t('logsQuery.showTables') }}
-      template(#content)
-        a-card(style="width: 500px; padding: 10px")
-          div(style="display: flex; gap: 10px; flex-wrap: wrap")
-            span(v-for="field in props.columns" :key="field?.name" style="display: flex; flex-wrap: wrap; gap: 0px")
-              a-typography-text(copyable :copy-text="field?.name")
-                | {{ field?.name }} : {{ field?.data_type }}
     ExportLog(:columns="props.columns" :ts-column="props.tsColumn")
 </template>
 
