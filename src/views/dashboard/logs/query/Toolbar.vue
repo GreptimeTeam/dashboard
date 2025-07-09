@@ -10,6 +10,7 @@
   TimeRangeSelect(
     v-model:time-length="time"
     v-model:time-range="rangeTime"
+    button-type="outline"
     @update:time-range-values="handleTimeRangeValuesUpdate"
   )
   a-button(
@@ -23,15 +24,8 @@
     | {{ $t('logsQuery.run') }}
   a-checkbox(v-model="refresh" size="small")
     span(style="color: var(--color-text-2)") {{ $t('logsQuery.live') }}
-  a-button(
-    type="text"
-    status="normal"
-    :loading="saveLoading"
-    @click="saveQuery"
-  ) {{ $t('logsQuery.saveSql') }}
 
   a-space(style="margin-left: auto")
-    SavedQuery
     a-trigger(
       v-if="props.columns.length"
       position="bottom"
@@ -51,12 +45,10 @@
 
 <script setup name="Toolbar" lang="ts">
   import { ref, watch, nextTick } from 'vue'
-  import { watchOnce, useStorage } from '@vueuse/core'
   import { storeToRefs } from 'pinia'
   import useLogsQueryStore from '@/store/modules/logs-query'
   import TimeRangeSelect from '@/components/time-range-select/index.vue'
   import { parseTimeRange, processSQL, parseTable, parseLimit, addTsCondition } from './until'
-  import SavedQuery from './SavedQuery.vue'
   import ExportLog from './ExportLog.vue'
   import type { ColumnType, TSColumn } from './types'
 
@@ -88,21 +80,6 @@
   function handleQuery() {
     // Simply emit the query event - let parent handle the logic
     emit('query')
-  }
-
-  const saveLoading = ref(false)
-  const saveQuery = () => {
-    if (!currentTableName.value) {
-      return
-    }
-    saveLoading.value = true
-    const queryList = useStorage<Array<string>>('log-query-list', [])
-    if (queryList.value.indexOf(sqlData.value) === -1) {
-      queryList.value.unshift(sqlData.value)
-    }
-    setTimeout(() => {
-      saveLoading.value = false
-    }, 100)
   }
 
   // Live query functionality - simplified
