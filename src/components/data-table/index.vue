@@ -457,7 +457,7 @@ a-dropdown#td-context(
       }
     } else if (action.startsWith('filter')) {
       const operator = action.split('_')[1]
-      emit('filterConditionAdd', columnName, operator, record[columnName])
+      emit('filterConditionAdd', { columnName, operator, value: record[columnName] })
     }
     hideContextMenu()
   }
@@ -475,6 +475,11 @@ a-dropdown#td-context(
     }
   }
 
+  :deep(.arco-table-tr-empty .arco-table-td) {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
   // Context menu positioning
   #td-context {
     position: absolute;

@@ -14,7 +14,7 @@
     :ts-column="tsColumn"
     :show-context-menu="sqlMode === 'builder'"
     :class="{ builder_type: sqlMode === 'builder' }"
-    @filter-condition-add="$emit('filterConditionAdd', $event)"
+    @filter-condition-add="handleFilterConditionAdd"
     @row-select="$emit('rowSelect', $event)"
   )
     // Custom slot for timestamp column
@@ -87,6 +87,11 @@
   const headerHeight = computed(() => {
     return isCompact.value ? 25 : 38
   })
+
+  const handleFilterConditionAdd = (event) => {
+    console.log(event)
+    emit('filterConditionAdd', event)
+  }
 </script>
 
 <style lang="less" scoped></style>

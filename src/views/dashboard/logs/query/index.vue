@@ -298,7 +298,7 @@
   }
 
   // Handle filter condition from table context menu
-  function handleFilterConditionAdd(columnName, operator, value) {
+  function handleFilterConditionAdd({ columnName, operator, value }) {
     if (!currentBuilderFormState.value) return
 
     // Add new condition to the form state

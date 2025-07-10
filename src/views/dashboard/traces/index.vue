@@ -278,7 +278,7 @@
   }
 
   // Handle filter condition from table context menu
-  function handleFilterConditionAdd(columnName: string, operator: string, value: any) {
+  function handleFilterConditionAdd({ columnName, operator, value }) {
     if (sqlBuilderRef.value && sqlBuilderRef.value.addFilterCondition) {
       sqlBuilderRef.value.addFilterCondition(columnName, operator, value)
     }
