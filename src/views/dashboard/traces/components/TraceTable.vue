@@ -44,8 +44,10 @@ a-card(:bordered="false")
     :data="paginatedResults"
     :columns="visibleColumns"
     :loading="loading"
-    :table-classes="{ trace_table: true, multiple_column: true }"
-    :ts-column="{ name: 'timestamp', multiple: 1000000000 }"
+    :table-classes="{ trace_table: true }"
+    :column-mode="'separate'"
+    :displayed-columns="displayedColumns"
+    :ts-column="{ name: 'timestamp', data_type: 'TimestampNanosecond' }"
     :editor-type="editorType"
     @filter-condition-add="$emit('filterConditionAdd', $event)"
   )

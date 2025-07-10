@@ -99,7 +99,7 @@
   import useQueryUrlSync from '@/hooks/query-url-sync'
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import InputEditor from './InputEditor.vue'
-  import LogTableData from './TableData.vue'
+  import LogTableData from './LogsTable.vue'
   import ChartContainer from './ChartContainer.vue'
   import Toolbar from './Toolbar.vue'
   import Pagination from './Pagination.vue'
@@ -166,14 +166,10 @@
 
     if (!selectedColumn) return null
 
-    // Extract timestamp precision from data type (e.g., timestamp(3) -> 3)
-    const multipleRe = /timestamp\((\d)\)/i
-    const timescale = multipleRe.exec(selectedColumn.data_type)
-    const multiple = timescale ? 1000 ** (Number(timescale[1]) / 3) : 1000
-
+    // Return the column with data_type - DataTable will calculate the multiple automatically
     return {
-      ...selectedColumn,
-      multiple,
+      name: selectedColumn.name,
+      data_type: selectedColumn.data_type,
     }
   })
 

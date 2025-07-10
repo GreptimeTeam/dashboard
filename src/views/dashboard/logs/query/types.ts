@@ -5,13 +5,14 @@ export type ColumnType = {
   semantic_type: string
 }
 
-export type Condition = {
-  field: ColumnType
-  op: string
-  value: string
-  rel: 'and' | 'or'
+export enum TimeTypes {
+  SECOND = 'second',
+  MILLISECOND = 'millisecond',
+  MICROSECOND = 'microsecond',
+  NANOSECOND = 'nanosecond',
 }
 
-export type TSColumn = ColumnType & {
-  multiple: number
+export type TSColumn = {
+  name: string
+  data_type?: string
 }

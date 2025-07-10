@@ -1,53 +1,69 @@
 <template lang="pug">
-a-table(
-  :data="data"
-  :loading="loading"
-  :pagination="false"
-  :bordered="false"
-  :stripe="false"
-  :class="tableClasses"
-  :scroll="scrollConfig"
-  :size="size"
-  :virtual-list-props="virtualListProps"
-  :row-selection="rowSelection"
-)
-  template(#empty)
-    a-empty(description="No data")
-  template(#loading)
-    a-spin(dot)
-  template(#columns)
-    a-table-column(
-      v-for="col in visibleColumns"
-      :key="col.name"
-      :title="col.name"
-      :data-index="col.name"
-      :header-cell-style="col.headerCellStyle"
-    )
-      template(v-if="isTimeColumn(col)" #title)
-        a-tooltip(placement="top" :content="tsViewStr ? 'Show raw timestamp' : 'Format timestamp'")
+.data-table-container(ref="tableContainer")
+  a-table(
+    :data="processedData"
+    :columns="arcoColumns"
+    :loading="loading"
+    :pagination="false"
+    :bordered="false"
+    :stripe="false"
+    :class="tableClassesDynamic"
+    :scroll="scrollConfig"
+    :size="size"
+    :virtual-list-props="virtualListProps"
+    :row-selection="rowSelection"
+  )
+    template(#empty)
+      a-empty(description="No data")
+    template(#loading)
+      a-spin(dot)
+
+    // Custom column title for timestamp columns
+    template(v-for="col in processedColumns" :key="`title-${col.name}`" #[`${col.name}-title`])
+      template(v-if="isTimeColumn(col)")
+        a-tooltip(
+          placement="top"
+          :content="tsViewStr ? $t('dashboard.showTimestamp') : $t('dashboard.formatTimestamp')"
+        )
           a-space(size="mini" :style="{ cursor: 'pointer' }" @click="changeTsView")
             svg.icon-12
               use(href="#time-index")
             | {{ col.name }}
-      template(#cell="{ record }")
-        slot(
-          :name="`column-${col.name}`"
-          :record="record"
-          :column="col"
-          :is-time-column="isTimeColumn(col)"
-          :rendered-value="getRenderedValue(record, col)"
-          :show-context-menu="showContextMenu"
-          :handle-context-menu="handleContextMenu"
-        )
-          // Default cell rendering (fallback when no custom slot provided)
-          template(v-if="isTimeColumn(col)")
-            span(style="cursor: pointer") {{ renderTs(record, col.name) }}
-            svg.td-config-icon(v-if="showContextMenu" @click="(event) => handleContextMenu(record, col.name, event)")
+      template(v-else)
+        | {{ col.title || col.name }}
+
+    // Custom cell rendering slots
+    template(v-for="col in processedColumns" :key="col.name" #[`${col.name}`]="{ record }")
+      slot(
+        :name="`column-${col.name}`"
+        :record="record"
+        :column="col"
+        :is-time-column="isTimeColumn(col)"
+        :rendered-value="getRenderedValue(record, col)"
+        :show-context-menu="showContextMenu"
+        :handle-context-menu="handleContextMenu"
+      )
+        // Default cell rendering (fallback when no custom slot provided)
+        template(v-if="col.name === 'Merged_Column' && mergeColumn")
+          // Special rendering for merged column
+          span.entity-field(v-for="field in record.Merged_Column" :key="field[0]")
+            span(v-if="showKeys" style="color: var(--color-text-3)")
+              | {{ field[0] }}:
+            | {{ field[1] }}
+            svg.td-config-icon(v-if="showContextMenu" @click="(event) => handleContextMenu(record, field[0], event)")
               use(href="#menu")
-          template(v-else)
-            span {{ record[col.name] }}
-            svg.td-config-icon(v-if="showContextMenu" @click="(event) => handleContextMenu(record, col.name, event)")
-              use(href="#menu")
+        template(v-else-if="isTimeColumn(col)")
+          a-tooltip(
+            placement="top"
+            :content="tsViewStr ? $t('dashboard.showTimestamp') : $t('dashboard.formatTimestamp')"
+          )
+            span(style="cursor: pointer" @click="changeTsView") {{ renderTs(record, col.name) }}
+          svg.td-config-icon(v-if="showContextMenu" @click="(event) => handleContextMenu(record, col.name, event)")
+            use(href="#menu")
+        template(v-else)
+          span {{ record[col.name] }}
+          svg.td-config-icon(v-if="showContextMenu" @click="(event) => handleContextMenu(record, col.name, event)")
+            use(href="#menu")
 
 // Context menu
 a-dropdown#td-context(
@@ -66,11 +82,11 @@ a-dropdown#td-context(
 
 <script setup lang="ts">
   import { ref, computed, shallowRef } from 'vue'
+  import { useElementSize } from '@vueuse/core'
   import dayjs from 'dayjs'
 
   interface TSColumn {
     name: string
-    multiple?: number
     data_type?: string
   }
 
@@ -78,6 +94,7 @@ a-dropdown#td-context(
     name: string
     data_type: string
     headerCellStyle?: any
+    title?: string
   }
 
   interface TableData {
@@ -97,12 +114,20 @@ a-dropdown#td-context(
     virtualListProps?: object
     rowSelection?: object
 
+    // Column mode handling
+    columnMode?: 'separate' | 'merged' | 'merged-with-keys'
+    displayedColumns?: string[]
+
     // Timestamp handling
     tsColumn?: TSColumn | null
 
     // Context menu
     showContextMenu?: boolean
     editorType?: string
+
+    // Table styling options for dynamic classes
+    wrapLine?: boolean
+    compact?: boolean
   }
 
   const props = withDefaults(defineProps<Props>(), {
@@ -114,9 +139,13 @@ a-dropdown#td-context(
     scrollConfig: () => ({ y: 1400 }),
     virtualListProps: undefined,
     rowSelection: undefined,
+    columnMode: 'separate',
+    displayedColumns: () => [],
     tsColumn: null,
     showContextMenu: true,
     editorType: 'builder',
+    wrapLine: false,
+    compact: false,
   })
 
   const emit = defineEmits(['filterConditionAdd', 'rowSelect'])
@@ -124,51 +153,231 @@ a-dropdown#td-context(
   // Timestamp display state
   const tsViewStr = ref(true) // true for formatted, false for raw timestamp
 
-  // All columns are visible - no column management in the core table
-  const visibleColumns = computed(() => props.columns)
+  // Column mode logic
+  const mergeColumn = computed(() => props.columnMode !== 'separate')
+  const showKeys = computed(() => props.columnMode === 'merged-with-keys')
+
+  // Dynamic table classes computation
+  const tableClassesDynamic = computed(() => {
+    const baseClasses = {
+      wrap_table: props.wrapLine,
+      single_column: props.columnMode !== 'separate',
+      multiple_column: props.columnMode === 'separate',
+      builder_type: props.editorType === 'builder',
+      compact: props.compact,
+    }
+
+    // Merge with any additional classes passed via props
+    if (typeof props.tableClasses === 'string') {
+      return { ...baseClasses, [props.tableClasses]: true }
+    }
+    if (typeof props.tableClasses === 'object') {
+      return { ...baseClasses, ...props.tableClasses }
+    }
+
+    return baseClasses
+  })
+
+  // Table container ref for width calculation
+  const tableContainer = ref<HTMLElement>()
+  const { width: tableWidth } = useElementSize(tableContainer)
 
   // Timestamp utilities
   function isTimeColumn(column: Column) {
     return column.data_type.toLowerCase().includes('timestamp')
   }
 
+  // Width calculation utilities
+  function findMaxLenCol(row: any) {
+    let max = 0
+    let maxName = ''
+    Object.keys(row).forEach((k) => {
+      if (String(row[k]).length > max) {
+        max = String(row[k]).length
+        maxName = k
+      }
+    })
+    return maxName
+  }
+
+  function getWidth(currLen: number, totalLen: number, containerWidth: number) {
+    let width = (Math.floor((currLen / totalLen) * 1000) / 1000) * containerWidth
+    width = Math.max(150, width)
+    width = Math.min(600, width)
+    return `${width}px`
+  }
+
+  // Universal timestamp conversion to milliseconds
+  function convertTimestampToMilliseconds(timestamp: number, dataType: string): number {
+    const type = dataType.toLowerCase()
+
+    // Determine the source unit and convert to milliseconds
+    if (type.includes('timestampsecond')) {
+      // Seconds to milliseconds: multiply by 1000
+      return timestamp * 1000
+    }
+    if (type.includes('timestampmillisecond')) {
+      // Already in milliseconds: no conversion needed
+      return timestamp
+    }
+    if (type.includes('timestampmicrosecond')) {
+      // Microseconds to milliseconds: divide by 1000
+      return timestamp / 1000
+    }
+    if (type.includes('timestampnanosecond')) {
+      // Nanoseconds to milliseconds: divide by 1,000,000
+      return timestamp / 1000000
+    }
+
+    // Fallback: try regex pattern for timestamp(n) format
+    const multipleRe = /timestamp\((\d)\)/i
+    const timescale = multipleRe.exec(dataType)
+    if (timescale) {
+      const precision = Number(timescale[1])
+      // precision 0 = seconds, 3 = milliseconds, 6 = microseconds, 9 = nanoseconds
+      const conversionFactor = 10 ** (precision - 3)
+      return timestamp / conversionFactor
+    }
+
+    // Default fallback: assume seconds
+    return timestamp * 1000
+  }
+
+  // Computed columns based on mode
+  const processedColumns = computed(() => {
+    if (!mergeColumn.value) {
+      // Separate mode: filter and arrange columns with width calculation
+      let tmpColumns = props.columns.slice()
+      if (props.tsColumn) {
+        tmpColumns = tmpColumns.filter((c) => c.name !== props.tsColumn.name)
+        tmpColumns.unshift({
+          name: props.tsColumn.name,
+          data_type: props.tsColumn.data_type || 'timestamp',
+          title: props.tsColumn.name,
+        } as Column)
+      }
+      tmpColumns = tmpColumns.filter((c) => props.displayedColumns?.indexOf(c.name) > -1)
+
+      // Calculate widths based on content
+      const row = props.data[0]
+      if (!row || !tableWidth.value) {
+        return tmpColumns.map((column) => ({
+          ...column,
+          headerCellStyle: { width: 'auto' },
+        }))
+      }
+
+      const totalStrLen = Object.keys(row).reduce((acc, curr) => {
+        acc += String(row[curr]).length
+        return acc
+      }, 0)
+
+      const maxLenName = findMaxLenCol(row)
+
+      return tmpColumns.map((column) => {
+        const widthStr =
+          row && column.name !== maxLenName
+            ? getWidth(String(row[column.name]).length, totalStrLen, tableWidth.value)
+            : 'auto'
+
+        return {
+          ...column,
+          headerCellStyle: { width: widthStr },
+        }
+      })
+    }
+
+    // Merged mode: create timestamp + merged column
+    const arr = []
+    if (props.tsColumn) {
+      const width = tsViewStr.value ? '220px' : '170px'
+
+      arr.push({
+        name: props.tsColumn.name,
+        title: props.tsColumn.name,
+        data_type: props.tsColumn.data_type || 'timestamp',
+        headerCellStyle: { width },
+      } as Column)
+    }
+    arr.push({
+      name: 'Merged_Column',
+      title: 'Data',
+      data_type: 'merged',
+      headerCellStyle: { width: 'auto' },
+    } as Column)
+    return arr
+  })
+
+  // Convert to Arco Design table column format
+  const arcoColumns = computed(() => {
+    return processedColumns.value.map((col) => ({
+      title: col.title || col.name,
+      dataIndex: col.name,
+      slotName: col.name,
+      titleSlotName: isTimeColumn(col) ? `${col.name}-title` : undefined,
+      headerCellStyle: col.headerCellStyle,
+    }))
+  })
+
+  // Data fields for merged mode
+  const dataFields = computed(() => {
+    if (!props.tsColumn) {
+      return props.displayedColumns
+    }
+    return props.displayedColumns.filter((field) => field !== props.tsColumn.name)
+  })
+
+  // Helper function for getting entry fields in merged mode
+  const getEntryFields = (record: any) => {
+    const copyRecord = { ...record }
+    delete copyRecord.index
+    Object.keys(copyRecord).forEach((k) => {
+      if (dataFields.value.indexOf(k) === -1) {
+        delete copyRecord[k]
+      }
+    })
+    return Object.entries(copyRecord)
+  }
+
+  // Computed data based on mode
+  const processedData = computed(() => {
+    if (!mergeColumn.value) {
+      // Separate mode: use original data
+      return props.data
+    }
+
+    // Merged mode: transform data to include merged column
+    return props.data.map((record) => {
+      const transformedRecord = { ...record }
+
+      // Create the merged data field from all non-timestamp fields
+      const entryFields = getEntryFields(record)
+      transformedRecord.Merged_Column = entryFields
+
+      return transformedRecord
+    })
+  })
+
   function changeTsView() {
     tsViewStr.value = !tsViewStr.value
   }
 
   function renderTs(record: any, columnName: string) {
-    if (tsViewStr.value && props.tsColumn?.multiple) {
-      // Format timestamp using tsColumn multiple
-      const timestamp = record[columnName]
-      if (timestamp) {
-        const { multiple } = props.tsColumn
-        let ms = timestamp
+    const timestamp = record[columnName]
+    if (!timestamp) return timestamp
 
-        // Convert based on the timestamp precision
-        if (multiple === 1) {
-          ms = timestamp * 1000
-        } else if (multiple === 1000) {
-          ms = timestamp
-        } else if (multiple === 1000000) {
-          ms = timestamp / 1000
-        } else if (multiple === 1000000000) {
-          ms = timestamp / 1000000
-        } else {
-          // General case
-          const timescale = (String(multiple).length - 1) / 3
-          if (timescale === 0) {
-            ms = timestamp * 1000
-          } else if (timescale === 1) {
-            ms = timestamp
-          } else {
-            ms = timestamp / 1000 ** (timescale - 1)
-          }
-        }
+    if (tsViewStr.value) {
+      // Show formatted timestamp
+      const column = processedColumns.value.find((col) => col.name === columnName)
+      if (!column) return timestamp
 
-        return dayjs(ms).format('YYYY-MM-DD HH:mm:ss.SSS')
-      }
+      // Use universal conversion function
+      const ms = convertTimestampToMilliseconds(timestamp, column.data_type)
+      return dayjs(ms).format('YYYY-MM-DD HH:mm:ss.SSS')
     }
-    return record[columnName]
+
+    // Show raw timestamp number
+    return timestamp
   }
 
   function getRenderedValue(record: any, column: Column) {
@@ -259,7 +468,16 @@ a-dropdown#td-context(
   }
 
   // Show menu icon on hover when context menu is enabled
-  :deep(.arco-table-cell:hover .td-config-icon) {
+  :deep(.arco-table-cell:hover .cell-content .td-config-icon) {
+    visibility: visible;
+  }
+
+  // Merged column styling
+  .entity-field {
+    margin-right: 10px;
+  }
+
+  .entity-field:hover .td-config-icon {
     visibility: visible;
   }
 
@@ -273,5 +491,103 @@ a-dropdown#td-context(
       white-space: pre-wrap;
       word-break: break-all;
     }
+  }
+  :deep(.arco-table-tr .arco-table-operation:first-child) {
+    display: none;
+  }
+  :deep(.arco-table-selection-radio-col) {
+    display: none;
+  }
+  #log-table-container {
+    position: relative;
+  }
+  :deep(.arco-drawer-container) {
+    left: auto;
+    width: 800px;
+    overflow: hidden;
+  }
+  .builder_type .clickable {
+    cursor: pointer;
+  }
+  :deep(.arco-drawer) {
+    border: 1px solid var(--color-neutral-3);
+  }
+  .multiple_column {
+    :deep(.arco-virtual-list > .arco-table-element) {
+      width: 100%;
+    }
+    width: 100%;
+    :deep(.arco-table-td-content) {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+  :deep(.arco-table-element) {
+    font-family: 'Roboto Mono', monospace;
+  }
+
+  :deep(.arco-table-td),
+  :deep(.arco-table-th) {
+    white-space: nowrap;
+  }
+  .wrap_table :deep(.arco-table-td),
+  .wrap_table :deep(.arco-table-th) {
+    white-space: wrap;
+  }
+  :deep(.arco-table-size-medium .arco-table-cell) {
+    padding: 7px 10px;
+  }
+  .entity-field {
+    margin-right: 10px;
+    // background-color: var(--color-neutral-2);
+    // border-radius: 2px;
+  }
+  // .single_column.arco-table :deep(.arco-table-td) {
+  //   border: none;
+  // }
+  // :deep(.arco-table-tr:hover) .entity-field {
+  //   background-color: #fff;
+  // }
+  #td-context {
+    position: absolute;
+    z-index: 999999;
+  }
+  .td-config-icon {
+    margin-left: 3px;
+    cursor: pointer;
+    visibility: hidden;
+    width: 12px;
+    height: 12px;
+    color: var(--color-primary);
+  }
+  .multiple_column {
+    :deep(.arco-table-td-content) {
+      position: relative;
+      width: auto;
+      padding-right: 15px;
+    }
+    .td-config-icon {
+      position: absolute;
+      right: 0;
+      top: 5px;
+    }
+  }
+  .compact.multiple_column {
+    :deep(.arco-table-td-content) {
+      padding-right: 12px;
+    }
+    .td-config-icon {
+      top: 4px;
+    }
+  }
+  .compact .td-config-icon {
+    width: 9px;
+    height: 9px;
+  }
+  .multiple_column.builder_type :deep(.arco-table-cell:hover) .td-config-icon {
+    visibility: visible;
+  }
+  .single_column.builder_type .entity-field:hover .td-config-icon {
+    visibility: visible;
   }
 </style>
