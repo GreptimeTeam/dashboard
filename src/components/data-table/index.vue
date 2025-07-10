@@ -2,7 +2,6 @@
 .data-table-container(ref="tableContainer")
   a-table(
     :data="processedData"
-    :columns="arcoColumns"
     :loading="loading"
     :pagination="false"
     :bordered="false"
@@ -18,52 +17,75 @@
     template(#loading)
       a-spin(dot)
 
-    // Custom column title for timestamp columns
-    template(v-for="col in processedColumns" :key="`title-${col.name}`" #[`${col.name}-title`])
-      template(v-if="isTimeColumn(col)")
-        a-tooltip(
-          placement="top"
-          :content="tsViewStr ? $t('dashboard.showTimestamp') : $t('dashboard.formatTimestamp')"
-        )
-          a-space(size="mini" :style="{ cursor: 'pointer' }" @click="changeTsView")
-            svg.icon-12
-              use(href="#time-index")
-            | {{ col.name }}
-      template(v-else)
-        | {{ col.title || col.name }}
+    // Define columns using the straightforward approach
+    template(#columns)
+      template(v-for="col in processedColumns" :key="col.name")
+        a-table-column(:data-index="col.name" :title="col.title || col.name" :header-cell-style="col.headerCellStyle")
+          // Custom title slot - allow parent components to override column titles
+          template(#title)
+            slot(
+              :name="`title-${col.name}`"
+              :column="col"
+              :is-time-column="isTimeColumn(col)"
+              :ts-view-str="tsViewStr"
+              :change-ts-view="changeTsView"
+            )
+              // Default title rendering (fallback when no custom title slot provided)
+              template(v-if="isTimeColumn(col)")
+                a-tooltip(
+                  placement="top"
+                  :content="tsViewStr ? $t('dashboard.showTimestamp') : $t('dashboard.formatTimestamp')"
+                )
+                  a-space(size="mini" :style="{ cursor: 'pointer' }" @click="changeTsView")
+                    svg.icon-12
+                      use(href="#time-index")
+                    | {{ col.name }}
+              template(v-else)
+                | {{ col.title || col.name }}
 
-    // Custom cell rendering slots
-    template(v-for="col in processedColumns" :key="col.name" #[`${col.name}`]="{ record }")
-      slot(
-        :name="`column-${col.name}`"
-        :record="record"
-        :column="col"
-        :is-time-column="isTimeColumn(col)"
-        :rendered-value="getRenderedValue(record, col)"
-        :show-context-menu="showContextMenu"
-        :handle-context-menu="handleContextMenu"
-      )
-        // Default cell rendering (fallback when no custom slot provided)
-        template(v-if="col.name === 'Merged_Column' && mergeColumn")
-          // Special rendering for merged column
-          span.entity-field(v-for="field in record.Merged_Column" :key="field[0]")
-            span(v-if="showKeys" style="color: var(--color-text-3)")
-              | {{ field[0] }}:
-            | {{ field[1] }}
-            svg.td-config-icon(v-if="showContextMenu" @click="(event) => handleContextMenu(record, field[0], event)")
-              use(href="#menu")
-        template(v-else-if="isTimeColumn(col)")
-          a-tooltip(
-            placement="top"
-            :content="tsViewStr ? $t('dashboard.showTimestamp') : $t('dashboard.formatTimestamp')"
-          )
-            span(style="cursor: pointer" @click="changeTsView") {{ renderTs(record, col.name) }}
-          svg.td-config-icon(v-if="showContextMenu" @click="(event) => handleContextMenu(record, col.name, event)")
-            use(href="#menu")
-        template(v-else)
-          span {{ record[col.name] }}
-          svg.td-config-icon(v-if="showContextMenu" @click="(event) => handleContextMenu(record, col.name, event)")
-            use(href="#menu")
+          // Custom cell slot - allow parent components to override cell rendering
+          template(#cell="{ record }")
+            slot(
+              :name="`column-${col.name}`"
+              :record="record"
+              :column="col"
+              :is-time-column="isTimeColumn(col)"
+              :rendered-value="getRenderedValue(record, col)"
+              :show-context-menu="showContextMenu"
+              :handle-context-menu="handleContextMenu"
+              :ts-view-str="tsViewStr"
+              :change-ts-view="changeTsView"
+            )
+              // Default cell rendering (fallback when no custom slot provided)
+              template(v-if="col.name === 'Merged_Column' && mergeColumn")
+                // Special rendering for merged column
+                span.entity-field(v-for="field in record.Merged_Column" :key="field[0]")
+                  span(v-if="showKeys" style="color: var(--color-text-3)")
+                    | {{ field[0] }}:
+                  | {{ field[1] }}
+                  svg.td-config-icon(
+                    v-if="showContextMenu"
+                    @click="(event) => handleContextMenu(record, field[0], event)"
+                  )
+                    use(href="#menu")
+              template(v-else-if="isTimeColumn(col)")
+                a-tooltip(
+                  placement="top"
+                  :content="tsViewStr ? $t('dashboard.showTimestamp') : $t('dashboard.formatTimestamp')"
+                )
+                  span(style="cursor: pointer" @click="changeTsView") {{ renderTs(record, col.name) }}
+                svg.td-config-icon(
+                  v-if="showContextMenu"
+                  @click="(event) => handleContextMenu(record, col.name, event)"
+                )
+                  use(href="#menu")
+              template(v-else)
+                span {{ record[col.name] }}
+                svg.td-config-icon(
+                  v-if="showContextMenu"
+                  @click="(event) => handleContextMenu(record, col.name, event)"
+                )
+                  use(href="#menu")
 
 // Context menu
 a-dropdown#td-context(
@@ -306,17 +328,6 @@ a-dropdown#td-context(
       headerCellStyle: { width: 'auto' },
     } as Column)
     return arr
-  })
-
-  // Convert to Arco Design table column format
-  const arcoColumns = computed(() => {
-    return processedColumns.value.map((col) => ({
-      title: col.title || col.name,
-      dataIndex: col.name,
-      slotName: col.name,
-      titleSlotName: isTimeColumn(col) ? `${col.name}-title` : undefined,
-      headerCellStyle: col.headerCellStyle,
-    }))
   })
 
   // Data fields for merged mode
