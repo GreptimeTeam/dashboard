@@ -131,7 +131,7 @@ a-dropdown#td-context(
 
     // Table configuration
     size?: 'small' | 'mini' | 'medium' | 'large'
-    tableClasses?: string | object
+    class?: string | object
     scrollConfig?: object
     virtualListProps?: object
     rowSelection?: object
@@ -145,7 +145,6 @@ a-dropdown#td-context(
 
     // Context menu
     showContextMenu?: boolean
-    editorType?: string
 
     // Table styling options for dynamic classes
     wrapLine?: boolean
@@ -157,15 +156,14 @@ a-dropdown#td-context(
     columns: () => [],
     loading: false,
     size: 'medium',
-    tableClasses: '',
-    scrollConfig: () => ({ y: 1400 }),
+    class: '',
+    scrollConfig: () => ({ y: '100%' }),
     virtualListProps: undefined,
     rowSelection: undefined,
     columnMode: 'separate',
     displayedColumns: () => [],
     tsColumn: null,
     showContextMenu: true,
-    editorType: 'builder',
     wrapLine: false,
     compact: false,
   })
@@ -182,27 +180,27 @@ a-dropdown#td-context(
   // Dynamic table classes computation
   const tableClassesDynamic = computed(() => {
     const baseClasses = {
-      wrap_table: props.wrapLine,
-      single_column: props.columnMode !== 'separate',
-      multiple_column: props.columnMode === 'separate',
-      builder_type: props.editorType === 'builder',
-      compact: props.compact,
+      'wrap_table': props.wrapLine,
+      'single_column': props.columnMode !== 'separate',
+      'multiple_column': props.columnMode === 'separate',
+      'compact': props.compact,
+      'virtual-list-active': !!props.virtualListProps, // Add class when virtual list is active
     }
 
     // Merge with any additional classes passed via props
-    if (typeof props.tableClasses === 'string') {
-      return { ...baseClasses, [props.tableClasses]: true }
+    if (typeof props.class === 'string') {
+      return { ...baseClasses, [props.class]: true }
     }
-    if (typeof props.tableClasses === 'object') {
-      return { ...baseClasses, ...props.tableClasses }
+    if (typeof props.class === 'object') {
+      return { ...baseClasses, ...props.class }
     }
 
     return baseClasses
   })
 
-  // Table container ref for width calculation
+  // Table container ref for width calculation and height calculation
   const tableContainer = ref<HTMLElement>()
-  const { width: tableWidth } = useElementSize(tableContainer)
+  const { width: tableWidth, height: tableHeight } = useElementSize(tableContainer)
 
   // Timestamp utilities
   function isTimeColumn(column: Column) {
@@ -268,7 +266,7 @@ a-dropdown#td-context(
   // Computed columns based on mode
   const processedColumns = computed(() => {
     if (!mergeColumn.value) {
-      // Separate mode: filter and arrange columns with width calculation
+      // Separate mode: filter and arrange columns
       let tmpColumns = props.columns.slice()
       if (props.tsColumn) {
         tmpColumns = tmpColumns.filter((c) => c.name !== props.tsColumn.name)
@@ -280,52 +278,62 @@ a-dropdown#td-context(
       }
       tmpColumns = tmpColumns.filter((c) => props.displayedColumns?.indexOf(c.name) > -1)
 
-      // Calculate widths based on content
-      const row = props.data[0]
-      if (!row || !tableWidth.value) {
-        return tmpColumns.map((column) => ({
-          ...column,
-          headerCellStyle: { width: 'auto' },
-        }))
+      // Only calculate widths when virtual list is active
+      if (props.virtualListProps) {
+        // Virtual list mode: calculate widths based on content
+        const row = props.data[0]
+        if (!row || !tableWidth.value) {
+          return tmpColumns.map((column) => ({
+            ...column,
+            headerCellStyle: { width: 'auto' },
+          }))
+        }
+
+        const totalStrLen = Object.keys(row).reduce((acc, curr) => {
+          acc += String(row[curr]).length
+          return acc
+        }, 0)
+
+        const maxLenName = findMaxLenCol(row)
+
+        return tmpColumns.map((column) => {
+          const widthStr =
+            row && column.name !== maxLenName
+              ? getWidth(String(row[column.name]).length, totalStrLen, tableWidth.value)
+              : 'auto'
+
+          return {
+            ...column,
+            headerCellStyle: { width: widthStr },
+          }
+        })
       }
 
-      const totalStrLen = Object.keys(row).reduce((acc, curr) => {
-        acc += String(row[curr]).length
-        return acc
-      }, 0)
-
-      const maxLenName = findMaxLenCol(row)
-
-      return tmpColumns.map((column) => {
-        const widthStr =
-          row && column.name !== maxLenName
-            ? getWidth(String(row[column.name]).length, totalStrLen, tableWidth.value)
-            : 'auto'
-
-        return {
-          ...column,
-          headerCellStyle: { width: widthStr },
-        }
-      })
+      // Non-virtual list mode: let CSS handle all widths
+      return tmpColumns.map((column) => ({
+        ...column,
+        headerCellStyle: undefined,
+      }))
     }
 
     // Merged mode: create timestamp + merged column
     const arr = []
     if (props.tsColumn) {
-      const width = tsViewStr.value ? '220px' : '170px'
+      // Only set width when virtual list is active
+      const headerCellStyle = props.virtualListProps ? { width: tsViewStr.value ? '220px' : '170px' } : undefined
 
       arr.push({
         name: props.tsColumn.name,
         title: props.tsColumn.name,
         data_type: props.tsColumn.data_type || 'timestamp',
-        headerCellStyle: { width },
+        headerCellStyle,
       } as Column)
     }
     arr.push({
       name: 'Merged_Column',
       title: 'Data',
       data_type: 'merged',
-      headerCellStyle: { width: 'auto' },
+      headerCellStyle: props.virtualListProps ? { width: 'auto' } : undefined,
     } as Column)
     return arr
   })
@@ -407,7 +415,7 @@ a-dropdown#td-context(
   const triggerCell = ref()
 
   function handleContextMenu(record: TableData, columnName: string, event: Event) {
-    if (!props.showContextMenu || props.editorType !== 'builder') {
+    if (!props.showContextMenu) {
       return
     }
 
@@ -453,15 +461,20 @@ a-dropdown#td-context(
     }
     hideContextMenu()
   }
-
-  // Expose methods for parent components
-  defineExpose({
-    changeTsView,
-    renderTs,
-  })
 </script>
 
 <style lang="less" scoped>
+  // Data table container - full height layout with fixed header
+  .data-table-container {
+    height: 100%; // Always fill parent height
+    overflow: hidden; // Prevent container overflow
+
+    // Table wrapper height management
+    :deep(.arco-table-wrapper) {
+      height: 100%;
+    }
+  }
+
   // Context menu positioning
   #td-context {
     position: absolute;
@@ -517,7 +530,10 @@ a-dropdown#td-context(
     width: 800px;
     overflow: hidden;
   }
-  .builder_type .clickable {
+  .clickable {
+    cursor: pointer;
+  }
+  .builder-type .clickable {
     cursor: pointer;
   }
   :deep(.arco-drawer) {
@@ -550,15 +566,8 @@ a-dropdown#td-context(
   }
   .entity-field {
     margin-right: 10px;
-    // background-color: var(--color-neutral-2);
-    // border-radius: 2px;
   }
-  // .single_column.arco-table :deep(.arco-table-td) {
-  //   border: none;
-  // }
-  // :deep(.arco-table-tr:hover) .entity-field {
-  //   background-color: #fff;
-  // }
+
   #td-context {
     position: absolute;
     z-index: 999999;
@@ -595,10 +604,16 @@ a-dropdown#td-context(
     width: 9px;
     height: 9px;
   }
-  .multiple_column.builder_type :deep(.arco-table-cell:hover) .td-config-icon {
+  .multiple_column :deep(.arco-table-cell:hover) .td-config-icon {
     visibility: visible;
   }
-  .single_column.builder_type .entity-field:hover .td-config-icon {
+  .single_column .entity-field:hover .td-config-icon {
+    visibility: visible;
+  }
+  .builder-type.multiple_column :deep(.arco-table-cell:hover) .td-config-icon {
+    visibility: visible;
+  }
+  .builder-type.single_column .entity-field:hover .td-config-icon {
     visibility: visible;
   }
 </style>

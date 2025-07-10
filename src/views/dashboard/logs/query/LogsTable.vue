@@ -13,7 +13,7 @@
     :row-selection="rowSelection"
     :ts-column="tsColumn"
     :show-context-menu="sqlMode === 'builder'"
-    :editor-type="sqlMode"
+    :class="{ builder_type: sqlMode === 'builder' }"
     @filter-condition-add="$emit('filterConditionAdd', $event)"
     @row-select="$emit('rowSelect', $event)"
   )

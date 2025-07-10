@@ -44,11 +44,11 @@ a-card(:bordered="false")
     :data="paginatedResults"
     :columns="visibleColumns"
     :loading="loading"
-    :table-classes="{ trace_table: true }"
+    :classes="{ trace_table: true }"
     :column-mode="'separate'"
     :displayed-columns="displayedColumns"
     :ts-column="{ name: 'timestamp', data_type: 'TimestampNanosecond' }"
-    :editor-type="editorType"
+    :class="{ builder_type: editorType === 'builder' }"
     @filter-condition-add="$emit('filterConditionAdd', $event)"
   )
     // Custom slot for trace ID columns to make them clickable
