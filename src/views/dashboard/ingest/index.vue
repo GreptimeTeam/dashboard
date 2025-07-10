@@ -45,7 +45,6 @@ a-layout.new-layout
   import type { StatusContentSimple } from '@/store/modules/status-bar'
   import { driver } from 'driver.js'
   import 'driver.js/dist/driver.css'
-  import { useDatabases } from '@/hooks/databases'
   import { navbarSteps } from '../config'
 
   import PanelIcon from './panel-icon.vue'
@@ -58,7 +57,7 @@ a-layout.new-layout
   const { logs } = storeToRefs(useLogStore())
   const { dataStatusMap } = storeToRefs(useUserStore())
   const { checkTables } = useDataBaseStore()
-  const { databases, databasesLoading, subscribe, cleanup } = useDatabases()
+  const { fetchDatabases } = useAppStore()
   const panelId = ref<number | null>(null)
 
   const ingestLogs = computed(() => {
@@ -100,8 +99,6 @@ a-layout.new-layout
   })
 
   onActivated(async () => {
-    subscribe()
-
     const { statusRight } = storeToRefs(useStatusBarStore())
     const { add } = useStatusBarStore()
     const statusItem: StatusContentSimple = {
@@ -117,31 +114,13 @@ a-layout.new-layout
       globalTour.setSteps(navbarSteps)
       globalTour.drive(0)
     }
-
-    // 等待数据库加载完成后再检查表格
-    const checkTablesWhenReady = async () => {
-      if (!dataStatusMap.value.tables && databases.value.length > 0) {
-        await checkTables()
-      }
-    }
-
-    if (!databasesLoading.value && databases.value.length > 0) {
-      await checkTablesWhenReady()
-    } else {
-      watch(
-        [databasesLoading, databases],
-        async ([loading, dbs]) => {
-          if (!loading && dbs.length > 0) {
-            await checkTablesWhenReady()
-          }
-        },
-        { immediate: true }
-      )
+    if (!dataStatusMap.value.tables) {
+      await fetchDatabases()
+      await checkTables()
     }
   })
 
   onDeactivated(() => {
-    cleanup()
     const { remove } = useStatusBarStore()
     remove(panelId.value as number)
   })

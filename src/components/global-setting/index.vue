@@ -15,31 +15,11 @@ a-drawer.settings-drawer(
   a-form(layout="vertical" :model="settingsForm")
     a-form-item(:label="$t('settings.host')")
       a-input(v-model="settingsForm.host")
-    a-form-item
-      template(#label)
-        a-space(align="center" :size="8")
-          span {{ $t('settings.database') }}
-          a-button(
-            v-if="role === 'admin'"
-            type="text"
-            size="mini"
-            :loading="databasesLoading"
-            :title="'刷新数据库列表'"
-            @click="refreshDatabases"
-          )
-            template(#icon)
-              svg.icon
-                use(href="#refresh")
+    a-form-item(:label="$t('settings.database')")
       a-input(v-if="role !== 'admin'" v-model="settingsForm.database")
-      a-select(
-        v-else
-        v-model="settingsForm.database"
-        allow-create
-        :loading="databasesLoading"
-        :placeholder="databasesLoading ? '加载数据库列表...' : '选择数据库'"
-      )
+      a-select(v-else v-model="settingsForm.database" allow-create)
         a-option(
-          v-for="item of databases"
+          v-for="item of settingsForm.databaseList"
           :key="item"
           :value="item"
           :label="item"
@@ -91,21 +71,19 @@ a-drawer.settings-drawer(
 <script lang="ts" setup name="GlobalSetting">
   import { useI18n } from 'vue-i18n'
   import { useAppStore, useDataBaseStore } from '@/store'
-  import { useDatabases } from '@/hooks/databases'
   import axios from 'axios'
   import { isTauri } from '@tauri-apps/api/core'
 
   const MARGIN_BOTTOM = `${38 * 2 + 8}px`
   const { t } = useI18n()
 
-  const { updateSettings, login, updateConfigStorage } = useAppStore()
+  const { navbar, updateSettings, login, updateConfigStorage } = useAppStore()
   const { checkTables, getScriptsTable } = useDataBaseStore()
 
-  // 使用 database hook 获取数据库列表
-  const { databases, databasesLoading, refresh: refreshDatabases, subscribe, cleanup } = useDatabases()
-
   const { role } = storeToRefs(useUserStore())
-  const { globalSettings, host, database, username, password, userTimezone, authHeader } = storeToRefs(useAppStore())
+  const { globalSettings, host, database, username, password, databaseList, userTimezone, authHeader } = storeToRefs(
+    useAppStore()
+  )
 
   const loginStatus = ref('')
   const loginLoading = ref(false)
@@ -114,7 +92,7 @@ a-drawer.settings-drawer(
     username: username.value,
     password: password.value,
     host: host.value,
-    databaseList: databases, // 使用 databases hook 的数据
+    databaseList,
     database: database.value,
     userTimezone: userTimezone.value,
     authHeader: authHeader.value,
@@ -122,21 +100,15 @@ a-drawer.settings-drawer(
 
   const save = async () => {
     // TODO: check userTimezone format validation
-    // @ts-ignore
     updateSettings({ userTimezone: settingsForm.value.userTimezone })
 
-    // @ts-ignore
     axios.defaults.baseURL = settingsForm.value.host
     loginLoading.value = true
-    // @ts-ignore
     const res = await login(settingsForm.value)
     if (res) {
       loginStatus.value = 'success'
       checkTables()
-      // 登录成功后刷新数据库列表
-      refreshDatabases()
       setTimeout(() => {
-        // @ts-ignore
         updateSettings({
           globalSettings: false,
         })
@@ -148,7 +120,6 @@ a-drawer.settings-drawer(
   }
 
   const setVisible = () => {
-    // @ts-ignore
     updateSettings({ globalSettings: true })
   }
 
@@ -158,7 +129,7 @@ a-drawer.settings-drawer(
         username: username.value,
         password: password.value,
         host: host.value,
-        databaseList: databases.value,
+        databaseList: databaseList.value,
         database: database.value,
         userTimezone: userTimezone.value,
         authHeader: authHeader.value || 'Authorization',
@@ -168,9 +139,6 @@ a-drawer.settings-drawer(
   })
 
   onMounted(() => {
-    // 订阅数据库数据变化
-    subscribe()
-
     if (!host.value) {
       const tauriEnv = isTauri()
       if (tauriEnv) {
@@ -184,16 +152,9 @@ a-drawer.settings-drawer(
           host.value = `${origin}${pathname}`
         }
       }
-      // @ts-ignore
       updateConfigStorage({ host: host.value })
     }
-    // @ts-ignore
     axios.defaults.baseURL = host.value
-  })
-
-  onUnmounted(() => {
-    // 清理订阅
-    cleanup()
   })
 </script>
 
@@ -256,17 +217,6 @@ a-drawer.settings-drawer(
       .arco-link-icon {
         font-size: 11px;
         margin-right: 1px;
-      }
-    }
-
-    // 数据库选择器和刷新按钮的布局
-    .arco-space {
-      width: 100%;
-      .arco-btn {
-        .icon {
-          width: 14px;
-          height: 14px;
-        }
       }
     }
   }

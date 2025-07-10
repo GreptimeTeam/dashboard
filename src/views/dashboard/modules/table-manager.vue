@@ -7,7 +7,6 @@ a-card.table-manager(:bordered="false")
         type="outline"
         size="small"
         :loading="totalTablesLoading"
-        :disabled="databasesLoading"
         @click="refreshTablesTree()"
       )
         template(#icon)
@@ -19,26 +18,11 @@ a-card.table-manager(:bordered="false")
         size="mini"
         :allow-clear="true"
         :placeholder="$t('dashboard.input')"
-        :disabled="databasesLoading"
       )
         template(#prefix)
           svg.icon.icon-color
             use(href="#search")
-  
-  // 数据库加载状态
-  .database-loading(v-if="databasesLoading")
-    a-spin(style="width: 100%" :loading="true")
-      .loading-text 正在加载数据库列表...
-  
-  // 数据库加载错误
-  .database-error(v-else-if="databasesError")
-    a-result(status="error" title="数据库加载失败")
-      template(#subtitle) {{ databasesError }}
-      template(#extra)
-        a-button(type="primary" @click="refreshDatabases") 重试
-  
-  // 表格内容（数据库加载完成后显示）
-  a-spin(v-else style="width: 100%" :loading="tablesLoading")
+  a-spin(style="width: 100%" :loading="tablesLoading")
     a-collapse.databases(
       v-model:active-key="databaseActiveKeys"
       accordion
@@ -50,7 +34,7 @@ a-card.table-manager(:bordered="false")
           use(href="#down")
         svg.icon.icon-color.rotate-270(v-else)
           use(href="#down")
-      a-collapse-item(v-for="database of databases" :key="database")
+      a-collapse-item(v-for="database of databaseList" :key="database")
         template(#header)
           a-space(:size="10")
             | {{ database }}
@@ -59,7 +43,7 @@ a-card.table-manager(:bordered="false")
           v-model:expanded-keys="expandedKeys"
           size="small"
           action-on-node-click="expand"
-          :ref="(el: any) => setRefMap(el, database)"
+          :ref="(el: refItem) => setRefMap(el, database)"
           :block-node="true"
           :data="tablesTreeData"
           :load-more="loadMore"
@@ -143,22 +127,20 @@ a-card.table-manager(:bordered="false")
 <script lang="ts" setup name="TableManager">
   import usePythonCode from '@/hooks/python-code'
   import useSiderTabs from '@/hooks/sider-tabs'
-  import { useDatabases } from '@/hooks/databases'
   import type { TableTreeParent, TreeData } from '@/store/modules/database/types'
   import type { OptionsType } from '@/types/global'
   import { dateFormatter } from '@/utils'
 
-  // 使用 database hook
-  const { databases, databasesLoading, databasesError, refresh: refreshDatabases, subscribe, cleanup } = useDatabases()
-
+  const { databaseList, database: storeDB } = storeToRefs(useAppStore())
   const { insertNameToPyCode } = usePythonCode()
   const { tablesSearchKey, tablesTreeRef, refreshTables, loadMore, loadMoreColumns, isRefreshingDetails } =
     useSiderTabs()
   const { tablesLoading, totalTablesLoading, tablesTreeForDatabase, databaseActiveKeys } = storeToRefs(
     useDataBaseStore()
   )
+  const { fetchDatabases } = useAppStore()
 
-  const collapseHeadersHeight = computed(() => (databases.value?.length || 0) * 36)
+  const collapseHeadersHeight = computed(() => databaseList.value.length * 36)
 
   const expandedKeys = ref<number[]>([])
 
@@ -173,7 +155,7 @@ a-card.table-manager(:bordered="false")
     if (databaseActiveKeys.value[0]) {
       await refreshTables(databaseActiveKeys.value[0])
     } else {
-      refreshDatabases()
+      await fetchDatabases()
     }
   }
 
@@ -259,15 +241,6 @@ a-card.table-manager(:bordered="false")
       },
     ],
   }
-
-  // 生命周期管理
-  onMounted(() => {
-    subscribe()
-  })
-
-  onUnmounted(() => {
-    cleanup()
-  })
 </script>
 
 <style scoped lang="less">

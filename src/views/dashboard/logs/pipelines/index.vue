@@ -39,10 +39,9 @@ a-spin(style="width: 100%; height: 100%")
 <script lang="ts" name="PipeIndex" setup>
   import { list } from '@/api/pipeline'
   import type { PipeFile } from '@/api/pipeline'
-  import { useDatabases } from '@/hooks/databases'
   import PipeFileView from './PipeFileView.vue'
 
-  const { databases, databasesLoading, subscribe, cleanup } = useDatabases()
+  const { fetchDatabases } = useAppStore()
   const { dataStatusMap } = storeToRefs(useUserStore())
   const { checkTables } = useDataBaseStore()
 
@@ -97,32 +96,14 @@ a-spin(style="width: 100%; height: 100%")
   })
 
   onActivated(async () => {
-    subscribe()
-
-    // 等待数据库加载完成后再检查表格
-    const checkTablesWhenReady = async () => {
-      if (!dataStatusMap.value.tables && databases.value.length > 0) {
-        await checkTables()
-      }
-    }
-
-    if (!databasesLoading.value && databases.value.length > 0) {
-      await checkTablesWhenReady()
-    } else {
-      watch(
-        [databasesLoading, databases],
-        async ([loading, dbs]) => {
-          if (!loading && dbs.length > 0) {
-            await checkTablesWhenReady()
-          }
-        },
-        { immediate: true }
-      )
-    }
-  })
-
-  onDeactivated(() => {
-    cleanup()
+    await Promise.all([
+      (async () => {
+        if (!dataStatusMap.value.tables) {
+          await fetchDatabases()
+          await checkTables()
+        }
+      })(),
+    ])
   })
 </script>
 
