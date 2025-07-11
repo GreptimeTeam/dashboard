@@ -106,8 +106,8 @@ const useAppStore = defineStore('app', () => {
 
   const fetchDatabases = async (): Promise<boolean> => {
     try {
-      const res: any = await editorAPI.getDatabases()
       updateConfigStorage({ database: database.value })
+      const res: any = await editorAPI.getDatabases()
 
       const databases = res.output[0].records.rows.map((item: string[]) => item[0])
       databaseList.value = databases.sort((a: string, b: string) => {
@@ -127,24 +127,11 @@ const useAppStore = defineStore('app', () => {
 
       return true
     } catch (error) {
-      databaseList.value = []
+      // databaseList.value = []
+      // database.value = 'public'
+      globalSettings.value = true
       return false
     }
-  }
-
-  const setDefaultDatabase = () => {
-    database.value = databaseList.value.includes('public')
-      ? 'public'
-      : databaseList.value.find((item: string) => item !== 'information_schema') || databaseList.value[0]
-  }
-
-  const getDBandTables = async () => {
-    const databaseStore = useDataBaseStore()
-    const hasDB = await fetchDatabases()
-    if (!hasDB) {
-      return
-    }
-    await databaseStore.checkTables()
   }
 
   return {
@@ -178,8 +165,6 @@ const useAppStore = defineStore('app', () => {
     toggleDevice,
     toggleMenu,
     fetchDatabases,
-    setDefaultDatabase,
-    getDBandTables,
   }
 })
 

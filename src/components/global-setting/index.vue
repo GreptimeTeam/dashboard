@@ -15,9 +15,24 @@ a-drawer.settings-drawer(
   a-form(layout="vertical" :model="settingsForm")
     a-form-item(:label="$t('settings.host')")
       a-input(v-model="settingsForm.host")
-    a-form-item(:label="$t('settings.database')")
-      a-input(v-if="role !== 'admin'" v-model="settingsForm.database")
-      a-select(v-else v-model="settingsForm.database" allow-create)
+    a-form-item
+      template(#label)
+        .label-with-button
+          span {{ $t('settings.database') }}
+          a-button.refresh-button(
+            type="text"
+            size="mini"
+            :loading="databasesLoading"
+            @click="refreshDatabases"
+          )
+            template(#icon)
+              icon-refresh
+      a-select(
+        v-model="settingsForm.database"
+        allow-create
+        :trigger-props="{ autoFitPopupMinWidth: true }"
+        :loading="databasesLoading"
+      )
         a-option(
           v-for="item of settingsForm.databaseList"
           :key="item"
@@ -77,7 +92,7 @@ a-drawer.settings-drawer(
   const MARGIN_BOTTOM = `${38 * 2 + 8}px`
   const { t } = useI18n()
 
-  const { navbar, updateSettings, login, updateConfigStorage } = useAppStore()
+  const { updateSettings, login, updateConfigStorage, fetchDatabases } = useAppStore()
   const { checkTables, getScriptsTable } = useDataBaseStore()
 
   const { role } = storeToRefs(useUserStore())
@@ -87,6 +102,7 @@ a-drawer.settings-drawer(
 
   const loginStatus = ref('')
   const loginLoading = ref(false)
+  const databasesLoading = ref(false)
 
   const settingsForm = ref({
     username: username.value,
@@ -138,7 +154,7 @@ a-drawer.settings-drawer(
     }
   })
 
-  onMounted(() => {
+  onMounted(async () => {
     if (!host.value) {
       const tauriEnv = isTauri()
       if (tauriEnv) {
@@ -155,7 +171,25 @@ a-drawer.settings-drawer(
       updateConfigStorage({ host: host.value })
     }
     axios.defaults.baseURL = host.value
+    const res = await fetchDatabases()
+    settingsForm.value.databaseList = databaseList.value
+    settingsForm.value.database = database.value
+    if (res) {
+      await save()
+    }
   })
+
+  const refreshDatabases = async () => {
+    databasesLoading.value = true
+    axios.defaults.baseURL = settingsForm.value.host
+    try {
+      await fetchDatabases()
+      settingsForm.value.databaseList = databaseList.value
+      settingsForm.value.database = database.value
+    } finally {
+      databasesLoading.value = false
+    }
+  }
 </script>
 
 <style scoped lang="less">
@@ -167,6 +201,19 @@ a-drawer.settings-drawer(
     svg {
       font-size: 18px;
       vertical-align: -4px;
+    }
+  }
+
+  .label-with-button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+
+    .refresh-button {
+      margin-left: 4px;
+      padding: 0;
+      font-size: 14px;
     }
   }
 </style>

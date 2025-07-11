@@ -13,8 +13,7 @@ a-layout.layout
   const { getResultsByType } = useQueryCode()
   const { logs } = storeToRefs(useLogStore())
   const { dataStatusMap } = storeToRefs(useUserStore())
-  const { checkTables, getScriptsTable } = useDataBaseStore()
-  const { fetchDatabases } = useAppStore()
+  const { getScriptsTable } = useDataBaseStore()
 
   const types = ['python']
 
@@ -26,10 +25,6 @@ a-layout.layout
   onActivated(async () => {
     if (!dataStatusMap.value.scripts) {
       getScriptsTable()
-    }
-    if (!dataStatusMap.value.tables) {
-      await fetchDatabases()
-      await checkTables()
     }
   })
 </script>

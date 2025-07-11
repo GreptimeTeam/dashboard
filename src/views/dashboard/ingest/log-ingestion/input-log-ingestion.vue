@@ -52,7 +52,6 @@ BaseInput(:config="config")
     if (route.query.pipeline) {
       pipelineName.value = route.query.pipeline as string
     }
-    await dataBaseStore.checkTables()
     await ingestStore.fetchPipelines()
 
     if (pipelineOptions.value.length > 0 && !pipelineName.value) {
