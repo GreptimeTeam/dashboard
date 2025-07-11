@@ -76,7 +76,6 @@ BaseUpload(:config="config")
   const tableLoading = computed(() => dataBaseStore.tablesLoading)
 
   onActivated(async () => {
-    await dataBaseStore.checkTables()
     await ingestStore.fetchPipelines()
 
     if (pipelineOptions.value.length > 0 && !pipelineName.value) {

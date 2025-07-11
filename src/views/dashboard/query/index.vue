@@ -41,8 +41,6 @@ a-layout.new-layout
   const { logs } = storeToRefs(useLogStore())
   const { activeTab, footer } = storeToRefs(useIngestStore())
   const { dataStatusMap } = storeToRefs(useUserStore())
-  const { fetchDatabases } = useAppStore()
-  const { checkTables } = useDataBaseStore()
   const { originTablesTree } = storeToRefs(useDataBaseStore())
   const { queryType, getResultsByType } = useQueryCode()
   const { explainResult } = storeToRefs(useCodeRunStore())
@@ -103,10 +101,6 @@ a-layout.new-layout
   })
 
   onActivated(async () => {
-    if (!dataStatusMap.value.tables) {
-      await fetchDatabases()
-      await checkTables()
-    }
     const tourStatus = useStorage('tourStatus', { navbar: false })
     if (!tourStatus.value.navbar) {
       const steps = [...navbarSteps]

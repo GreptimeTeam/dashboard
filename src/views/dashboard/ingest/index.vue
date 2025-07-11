@@ -56,8 +56,6 @@ a-layout.new-layout
   const { activeTab, footer } = storeToRefs(useIngestStore())
   const { logs } = storeToRefs(useLogStore())
   const { dataStatusMap } = storeToRefs(useUserStore())
-  const { checkTables } = useDataBaseStore()
-  const { fetchDatabases } = useAppStore()
   const panelId = ref<number | null>(null)
 
   const ingestLogs = computed(() => {
@@ -113,10 +111,6 @@ a-layout.new-layout
     if (!tourStatus.value.navbar) {
       globalTour.setSteps(navbarSteps)
       globalTour.drive(0)
-    }
-    if (!dataStatusMap.value.tables) {
-      await fetchDatabases()
-      await checkTables()
     }
   })
 

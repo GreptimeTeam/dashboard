@@ -12,35 +12,13 @@ export default function setupPermissionGuard(router: Router) {
     const userStore = useUserStore()
     const Permission = usePermission()
     const permissionsAllow = Permission.accessRouter(to)
-    if (appStore.menuFromServer) {
-      // Handle routing configuration from the server
-
-      // Refine the permission logic from the server's menu configuration as needed
-      if (!appStore.appAsyncMenus.length && !WHITE_LIST.find((el) => el.name === to.name)) {
-        await appStore.fetchServerMenuConfig()
-      }
-      const serverMenuConfig = [...appStore.appAsyncMenus, ...WHITE_LIST]
-
-      let exist = false
-      while (serverMenuConfig.length && !exist) {
-        const element = serverMenuConfig.shift()
-        if (element?.name === to.name) exist = true
-
-        if (element?.children) {
-          serverMenuConfig.push(...(element.children as unknown as RouteRecordNormalized[]))
-        }
-      }
-      if (exist && permissionsAllow) {
-        next()
-      } else next(NOT_FOUND)
-    } else {
-      // eslint-disable-next-line no-lonely-if
-      if (permissionsAllow) next()
-      else {
-        const destination = Permission.findFirstPermissionRoute(appRoutes, userStore.role) || NOT_FOUND
-        next(destination)
-      }
+    // eslint-disable-next-line no-lonely-if
+    if (permissionsAllow) next()
+    else {
+      const destination = Permission.findFirstPermissionRoute(appRoutes, userStore.role) || NOT_FOUND
+      next(destination)
     }
+
     NProgress.done()
   })
 }

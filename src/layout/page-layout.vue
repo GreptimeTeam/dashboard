@@ -1,9 +1,9 @@
 <template lang="pug">
 router-view(v-slot="{ Component }")
   transition(name="fade" mode="out-in" appear)
-    component(v-if="route.meta.ignoreCache" :is="Component")
+    component(v-if="route.meta.ignoreCache" :is="Component" :database="appStore.database")
     keep-alive(v-else)
-      component(:is="Component")
+      component(:is="Component" :database="appStore.database")
 </template>
 
 <script lang="ts" setup name="PageLayout">
@@ -12,6 +12,7 @@ router-view(v-slot="{ Component }")
 
   const route = useRoute()
   const tabBarStore = useTabBarStore()
+  const appStore = useAppStore()
 
   const cacheList = computed(() => tabBarStore.getCacheList)
 </script>
