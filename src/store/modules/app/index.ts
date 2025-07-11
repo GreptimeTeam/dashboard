@@ -6,6 +6,7 @@ import type { AppState } from './types'
 const useAppStore = defineStore('app', () => {
   // State
   const theme = ref(defaultSettings.theme)
+  const navbar = ref(defaultSettings.navbar)
   const device = ref(defaultSettings.device)
   const hideMenu = ref(defaultSettings.hideMenu)
   const menuCollapse = ref(defaultSettings.menuCollapse)
@@ -149,6 +150,7 @@ const useAppStore = defineStore('app', () => {
   return {
     // State
     theme,
+    navbar,
     device,
     hideMenu,
     host,
