@@ -15,7 +15,7 @@
         SQLBuilder(
           v-if="editorType === 'builder'"
           ref="sqlBuilderRef"
-          v-model:form-state="currentBuilderFormState"
+          v-model:form-state="builderFormState"
           :time-range-values="builderTimeRangeValues"
           @update:sql="handleBuilderSqlUpdate"
         )
@@ -109,7 +109,8 @@
 
   const logsStore = useLogsQueryStore()
   const { reset } = logsStore
-  const { editorType, currentTableName, sql, time, rangeTime, timeRangeValues, refresh } = storeToRefs(logsStore)
+  const { editorType, currentTableName, sql, time, rangeTime, timeRangeValues, refresh, builderFormState } =
+    storeToRefs(logsStore)
 
   // Local state for query data (moved from store)
   const rows = shallowRef([])
@@ -120,14 +121,8 @@
   const showKeys = useStorage('logquery-show-keys', true)
   const displayedColumns = useStorage('logquery-table-column-visible', {})
 
-  // Chart expanded state with localStorage persistence
-  const showChart = useLocalStorage('logs-chart-expanded', true)
-
   // Local editor state (moved from store)
   const editorSql = ref('')
-
-  // SQLBuilder form state (moved from store)
-  const currentBuilderFormState = ref(null)
 
   // Query execution state
   const queryLoading = ref(false)
@@ -182,9 +177,6 @@
   function handleTimeRangeValuesUpdate(newTimeRangeValues) {
     timeRangeValues.value = newTimeRangeValues
   }
-
-  // Time limit for SQLBuilder
-  const hasTimeLimit = computed(() => time.value > 0 || rangeTime.value.length > 0)
 
   // Use timeRangeValues directly for SQLBuilder (no conversion needed)
   const builderTimeRangeValues = computed(() => timeRangeValues.value)
@@ -265,7 +257,7 @@
     timeLength: time,
     timeRange: rangeTime,
     editorSql,
-    builderFormState: currentBuilderFormState,
+    builderFormState,
     tableName: currentTableName,
     defaultMode: 'builder',
     defaultTimeLength: 10,
@@ -300,7 +292,7 @@
 
   // Handle filter condition from table context menu
   function handleFilterConditionAdd({ columnName, operator, value }) {
-    if (!currentBuilderFormState.value) return
+    if (!builderFormState.value) return
 
     // Add new condition to the form state
     const newCondition = {
@@ -311,7 +303,7 @@
       isTimeColumn: false,
     }
 
-    currentBuilderFormState.value.conditions.push(newCondition)
+    builderFormState.value.conditions.push(newCondition)
   }
 
   // Handle row selection from table
@@ -347,7 +339,6 @@
     }
 
     if (editorType.value === 'text') {
-      currentTableName.value = parseTable(editorSql.value)
       logsStore.limit = parseLimit(editorSql.value)
       // Process SQL with placeholders
       editorSql.value = processSQL(editorSql.value, tsColumn.value?.name, logsStore.limit)
@@ -360,17 +351,13 @@
     executeQuery()
   }
 
-  // Watch for form state changes to update store and handle table changes
+  // Watch for form state changes to stop live query when table changes
   watch(
-    currentBuilderFormState,
-    (formState) => {
-      // Update the current table name in the store
-      if (formState?.table) {
-        // Stop live query when table changes
-        if (refresh.value && currentTableName.value !== formState.table) {
-          refresh.value = false
-        }
-        currentTableName.value = formState.table
+    builderFormState,
+    (formState, oldFormState) => {
+      // Stop live query when table changes
+      if (formState?.table && oldFormState?.table && refresh.value && formState.table !== oldFormState.table) {
+        refresh.value = false
       }
     },
     { deep: true }
