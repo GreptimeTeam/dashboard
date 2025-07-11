@@ -88,93 +88,65 @@
   import { ref, computed, watch, nextTick } from 'vue'
   import { useLocalStorage, watchOnce } from '@vueuse/core'
   import { IconCode, IconDown, IconRight, IconDownload } from '@arco-design/web-vue/es/icon'
-  import editorAPI from '@/api/editor'
-  import fileDownload from 'js-file-download'
+  import { storeToRefs } from 'pinia'
   import { relativeTimeMap, relativeTimeOptions } from '@/views/dashboard/config'
   import TimeRangeSelect from '@/components/time-range-select/index.vue'
   import SQLBuilder from '@/components/sql-builder/index.vue'
-  import useQueryUrlSync from '@/hooks/query-url-sync'
   import CountChart from '@/components/count-chart/index.vue'
+  import useTracesQueryStore from '@/store/modules/traces-query'
   import SQLEditor from './components/SQLEditor.vue'
   import TraceTable from './components/TraceTable.vue'
   import { validateSQL } from './utils'
 
-  const editorType = ref('builder')
-  const builderSql = ref('')
-  const editorSql = ref('')
-  const loading = ref(false)
+  const tracesStore = useTracesQueryStore()
+
+  // Get reactive refs from store
+  const {
+    editorType,
+    builderSql,
+    editorSql,
+    loading,
+    columns,
+    time: timeLength,
+    rangeTime: timeRange,
+    timeRangeValues,
+    builderFormState: currentBuilderFormState,
+    currentTableName: tableName,
+    finalQuery,
+  } = storeToRefs(tracesStore)
+
+  // Local state for query results (not stored in store)
   const allResults = ref([])
-  const columns = ref<Array<{ name: string; data_type: string }>>([])
+
+  // Chart expanded state with localStorage persistence (component-specific)
+  const chartExpanded = useLocalStorage('trace-chart-expanded', true)
+
+  // Get store methods
+  const {
+    initializeFromQuery,
+    executeQuery,
+    exportToCSV,
+    updateBuilderSql,
+    updateTimeRangeValues,
+    addFilterCondition,
+  } = tracesStore
+
   const countChartRef = ref()
   const sqlEditorRef = ref()
   const sqlBuilderRef = ref()
-
-  // Chart expanded state with localStorage persistence
-  const chartExpanded = useLocalStorage('trace-chart-expanded', true)
-
-  // Time range selection - will be synced with URL query params
-  const timeLength = ref(10) // Default to last 10 minutes
-  const timeRange = ref<string[]>([])
+  const timeRangeSelectRef = ref()
 
   const hasTimeLimit = computed(() => timeLength.value > 0 || timeRange.value.length > 0)
 
-  // Time range values for SQLBuilder - now comes from TimeRangeSelect component
-  const timeRangeValues = ref<string[]>([])
-  const timeRangeSelectRef = ref()
-
   // Handler for TimeRangeSelect updates
   function handleTimeRangeValuesUpdate(newTimeRangeValues: string[]) {
-    timeRangeValues.value = newTimeRangeValues
+    updateTimeRangeValues(newTimeRangeValues)
   }
-
-  // Store current builder form state for URL update after successful query
-  const currentBuilderFormState = ref(null)
-
-  // Initialize URL synchronization hook
-  const { updateQueryParams, initializeFromQuery } = useQueryUrlSync({
-    modeRef: editorType,
-    timeLength,
-    timeRange,
-    editorSql,
-    builderFormState: currentBuilderFormState,
-    // Note: tableName is computed and not stored in URL
-    defaultMode: 'builder',
-    defaultTimeLength: 10,
-  })
-
-  // Computed table name - get from form state or parse from SQL
-  const tableName = computed(() => {
-    if (editorType.value === 'builder' && currentBuilderFormState.value?.table) {
-      return currentBuilderFormState.value.table
-    }
-
-    if (editorType.value === 'text' && editorSql.value) {
-      // Parse table name from SQL query
-      const sql = editorSql.value.trim()
-      const fromMatch = sql.match(/FROM\s+([`"']?)(\w+)\1/i)
-      if (fromMatch) {
-        return fromMatch[2]
-      }
-    }
-
-    return ''
-  })
 
   // Handle SQL builder updates
   function handleBuilderSqlUpdate(sql: string) {
-    builderSql.value = sql
+    updateBuilderSql(sql)
   }
-
-  // Watch for form state changes to update currentBuilderFormState for URL updates
-  watch(
-    currentBuilderFormState,
-    (newFormState) => {
-      // Store form state but don't update URL immediately
-      // URL will be updated after successful query execution
-      // Table name is now computed from form state
-    },
-    { deep: true }
-  )
 
   // Handle format SQL
   function handleFormatSQL() {
@@ -183,79 +155,20 @@
     }
   }
 
-  // Watch for mode changes
-  watch(editorType, (newMode) => {
-    if (newMode === 'text' && !editorSql.value) {
-      editorSql.value = builderSql.value
-    }
-  })
+  // Note: editorSql generation when switching to text mode is now handled by the base store
 
-  const finalQuery = computed(() => {
-    // Time processing is now handled by SQLBuilder for builder mode
-    // For editor mode, we need to process time range manually
-    const query = editorType.value === 'builder' ? builderSql.value : editorSql.value
-
-    if (editorType.value === 'text') {
-      // Manual time processing for editor mode
-      let sql = query
-      if (timeLength.value > 0) {
-        const start = `now() - Interval '${timeLength.value}m'`
-        const end = 'now()'
-        sql = sql.replace(/\$timestart/g, start).replace(/\$timeend/g, end)
-      } else if (timeRange.value.length === 2) {
-        const start = new Date(Number(timeRange.value[0]) * 1000).toISOString()
-        const end = new Date(Number(timeRange.value[1]) * 1000).toISOString()
-        sql = sql.replace(/\$timestart/g, `'${start}'`).replace(/\$timeend/g, `'${end}'`)
-      }
-      return sql
-    }
-
-    return query
-  })
-
-  // Export traces as CSV
+  // Export traces as CSV - use store method
   function exportSql() {
-    if (!finalQuery.value || !tableName.value) {
-      return
-    }
-    editorAPI.runSQLWithCSV(finalQuery.value).then((result) => {
-      const filename = tableName.value || 'traces'
-      fileDownload(result as unknown as string, `${filename}.csv`)
-    })
+    exportToCSV()
   }
 
   async function handleQuery() {
-    if (!finalQuery.value) return
+    const results = await executeQuery()
+    allResults.value = results || []
 
-    loading.value = true
-    try {
-      const result = await editorAPI.runSQL(finalQuery.value)
-      if (result.output?.[0]?.records) {
-        const records = result.output[0].records as unknown as {
-          schema: { column_schemas: Array<{ name: string; data_type: string }> }
-          rows: any[][]
-        }
-        columns.value = records.schema.column_schemas
-        allResults.value = records.rows.map((row: any[]) => {
-          const record: any = {}
-          records.schema.column_schemas.forEach((col: { name: string }, index: number) => {
-            record[col.name] = row[index]
-          })
-          return record
-        })
-
-        // Update URL parameters only after successful query
-        updateQueryParams()
-      }
-
-      // Trigger count chart query only if chart is expanded
-      if (chartExpanded.value && countChartRef.value && finalQuery.value) {
-        countChartRef.value.executeCountQuery()
-      }
-    } catch (error) {
-      console.error('Query failed:', error)
-    } finally {
-      loading.value = false
+    // Trigger count chart query only if chart is expanded
+    if (chartExpanded.value && countChartRef.value && finalQuery.value) {
+      countChartRef.value.executeCountQuery()
     }
   }
 
@@ -279,8 +192,12 @@
 
   // Handle filter condition from table context menu
   function handleFilterConditionAdd({ columnName, operator, value }) {
+    // Try to use SQLBuilder component method first (for immediate UI update)
     if (sqlBuilderRef.value && sqlBuilderRef.value.addFilterCondition) {
       sqlBuilderRef.value.addFilterCondition(columnName, operator, value)
+    } else {
+      // Fallback to store method (for consistent state management)
+      addFilterCondition(columnName, operator, value)
     }
   }
 

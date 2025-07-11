@@ -2,17 +2,14 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useBaseQueryStore } from '@/store/composables/useBaseQueryStore'
 
-const useLogsQueryStore = defineStore('logsQuery', () => {
+const useTracesQueryStore = defineStore('tracesQuery', () => {
   // Initialize base query store functionality
   const baseStore = useBaseQueryStore({
-    storeId: 'logsQuery',
+    storeId: 'tracesQuery',
     defaultEditorType: 'builder',
     defaultTimeLength: 10,
     defaultLimit: 1000,
   })
-
-  // Logs-specific state
-  const refresh = ref(false)
 
   // Extract state and methods from base store
   const {
@@ -41,11 +38,9 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
     columns,
   } = baseStore
 
-  // Logs-specific reset function that includes base reset
-  function reset() {
-    baseReset()
-    refresh.value = false
-  }
+  // Note: executeQuery is now provided by the base store
+
+  // Note: reset is now provided by the base store (includes loading, allResults, columns reset)
 
   return {
     // Base store state and methods
@@ -73,10 +68,9 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
     loading,
     columns,
 
-    // Logs-specific state and methods
-    refresh,
-    reset,
+    // Reset function from base store
+    reset: baseReset,
   }
 })
 
-export default useLogsQueryStore
+export default useTracesQueryStore

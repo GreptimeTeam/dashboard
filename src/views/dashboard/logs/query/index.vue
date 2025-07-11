@@ -65,7 +65,7 @@
           :key="paginationKey"
           :rows="rows"
           :columns="columns"
-          :sql="sql"
+          :sql="finalQuery"
           :ts-column="tsColumn"
           :limit="logsStore.limit"
           @update:rows="handlePaginationRowsUpdate"
@@ -94,7 +94,7 @@
   import useAppStore from '@/store/modules/app'
   import useUserStore from '@/store/modules/user'
   import useDataBaseStore from '@/store/modules/database'
-  import useQueryUrlSync from '@/hooks/query-url-sync'
+
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import InputEditor from './InputEditor.vue'
   import LogTableData from './LogsTable.vue'
@@ -108,9 +108,27 @@
   const { checkTables } = useDataBaseStore()
 
   const logsStore = useLogsQueryStore()
-  const { reset } = logsStore
-  const { editorType, currentTableName, sql, time, rangeTime, timeRangeValues, refresh, builderFormState } =
-    storeToRefs(logsStore)
+  const {
+    reset,
+    initializeFromQuery,
+    updateQueryParams,
+    executeQuery: baseExecuteQuery,
+    addFilterCondition,
+  } = logsStore
+  const {
+    editorType,
+    currentTableName,
+    time,
+    rangeTime,
+    timeRangeValues,
+    refresh,
+    builderFormState,
+    editorSql,
+    finalQuery,
+    loading: queryLoading,
+    columns,
+    builderSql,
+  } = storeToRefs(logsStore)
 
   // Local state for query data (moved from store)
   const rows = shallowRef([])
@@ -120,12 +138,6 @@
   const mergeColumn = useStorage('logquery-merge-column', true)
   const showKeys = useStorage('logquery-show-keys', true)
   const displayedColumns = useStorage('logquery-table-column-visible', {})
-
-  // Local editor state (moved from store)
-  const editorSql = ref('')
-
-  // Query execution state
-  const queryLoading = ref(false)
 
   // Chart refresh trigger - explicit method
   const chartRefreshTrigger = ref(0)
@@ -138,16 +150,6 @@
   const refreshPagination = () => {
     paginationKey.value += 1
   }
-
-  // Convert queryColumns to the format expected by other components
-  const columns = computed(() => {
-    return queryColumns.value.map((col) => ({
-      name: col.name,
-      data_type: col.data_type,
-      label: col.name,
-      semantic_type: col.semantic_type || (col.data_type?.toLowerCase().includes('timestamp') ? 'TIMESTAMP' : 'FIELD'),
-    }))
-  })
 
   // Computed timestamp column from available columns
   const tsColumn = computed(() => {
@@ -170,15 +172,13 @@
   })
 
   // SQLBuilder integration
-  const sqlBuilderRef = ref()
-  const builderSql = ref('')
 
   // Handler for TimeRangeSelect updates
   function handleTimeRangeValuesUpdate(newTimeRangeValues) {
     timeRangeValues.value = newTimeRangeValues
   }
 
-  // Use timeRangeValues directly for SQLBuilder (no conversion needed)
+  // Use timeRangeValues for SQLBuilder (processed time values)
   const builderTimeRangeValues = computed(() => timeRangeValues.value)
 
   // Handle SQLBuilder updates
@@ -187,60 +187,15 @@
     if (refresh.value) {
       refresh.value = false
     }
+
     builderSql.value = generatedSql
-    sql.value = generatedSql
   }
 
-  // Watch for editor type changes - generate editorSql from builder when switching
-  watch(editorType, (newMode) => {
-    if (newMode === 'text' && !editorSql.value && builderSql.value) {
-      // Generate editorSql with placeholders from builder SQL
-      let generatedSql = builderSql.value
+  // Note: editorSql generation when switching to text mode is now handled by the base store
 
-      // Replace time conditions with placeholders
-      if (tsColumn.value) {
-        const tsColumnName = tsColumn.value.name
-        // Replace time range conditions with placeholders
-        generatedSql = generatedSql.replace(
-          new RegExp(`${tsColumnName}\\s*>=\\s*[^\\s]+`, 'gi'),
-          `${tsColumnName} >= $timestart`
-        )
-        generatedSql = generatedSql.replace(
-          new RegExp(`${tsColumnName}\\s*<=\\s*[^\\s]+`, 'gi'),
-          `${tsColumnName} <= $timeend`
-        )
-      }
+  // Note: finalQuery computation with placeholder replacement is now handled by the base store
 
-      editorSql.value = generatedSql
-    }
-  })
-
-  // Final query computation with placeholder replacement
-  const finalQuery = computed(() => {
-    const query = editorType.value === 'builder' ? builderSql.value : editorSql.value
-
-    if (editorType.value === 'text' && tsColumn.value) {
-      // Replace placeholders with actual time values
-      let processedSql = query
-
-      if (timeRangeValues.value.length === 2) {
-        // Use processed time range values directly
-        const [startTs, endTs] = timeRangeValues.value
-        processedSql = processedSql.replace(/\$timestart/g, `'${startTs}'`).replace(/\$timeend/g, `'${endTs}'`)
-      }
-
-      return processedSql
-    }
-
-    return query
-  })
-
-  // Update sql ref when finalQuery changes
-  watch(finalQuery, (newQuery) => {
-    if (newQuery) {
-      sql.value = newQuery
-    }
-  })
+  // Note: finalQuery is now the single source of truth for the processed SQL query
 
   // Schema format for SQL editor - group columns by table name
   const schemaForEditor = computed(() => {
@@ -251,59 +206,40 @@
     }
   })
 
-  // Initialize URL synchronization hook
-  const { updateQueryParams, initializeFromQuery } = useQueryUrlSync({
-    modeRef: editorType,
-    timeLength: time,
-    timeRange: rangeTime,
-    editorSql,
-    builderFormState,
-    tableName: currentTableName,
-    defaultMode: 'builder',
-    defaultTimeLength: 10,
-  })
+  // Logs-specific result transformation function
+  const transformLogsResults = (rawRows, columnsData) => {
+    if (rawRows.length === 0 || columnsData.length === 0) return rawRows
 
-  // Direct query execution method - more explicit than queryNum counter
-  const executeQuery = () => {
+    return rawRows.map((row, index) => {
+      return toObj(row, columnsData, index, tsColumn.value)
+    })
+  }
+
+  // Enhanced executeQuery that uses base store and handles logs-specific UI logic
+  const executeQuery = async () => {
     // Prevent concurrent executions
     if (queryLoading.value) {
-      return Promise.resolve()
+      return
     }
 
-    queryLoading.value = true
-    return editorAPI
-      .runSQL(finalQuery.value)
-      .then((result) => {
-        queryColumns.value = result.output[0].records.schema.column_schemas
-        rows.value = result.output[0].records.rows.map((row, index) => {
-          return toObj(row, queryColumns.value, index, tsColumn.value)
-        })
-        // Trigger chart refresh after main query
-        triggerChartRefresh()
-        // Refresh pagination to ensure it updates with new data
-        refreshPagination()
-        // Update URL parameters only after successful query
-        updateQueryParams()
-      })
-      .finally(() => {
-        queryLoading.value = false
-      })
+    try {
+      // Execute query using base store's unified logic with transformation
+      const transformedRows = await baseExecuteQuery()
+
+      // Set the returned rows
+      rows.value = transformedRows || []
+
+      // UI-specific actions after successful query
+      triggerChartRefresh()
+      refreshPagination()
+    } catch (error) {
+      console.error('Query execution failed:', error)
+    }
   }
 
   // Handle filter condition from table context menu
   function handleFilterConditionAdd({ columnName, operator, value }) {
-    if (!builderFormState.value) return
-
-    // Add new condition to the form state
-    const newCondition = {
-      field: columnName,
-      operator,
-      value: String(value),
-      relation: 'AND',
-      isTimeColumn: false,
-    }
-
-    builderFormState.value.conditions.push(newCondition)
+    addFilterCondition(columnName, operator, value)
   }
 
   // Handle row selection from table
@@ -344,8 +280,7 @@
       editorSql.value = processSQL(editorSql.value, tsColumn.value?.name, logsStore.limit)
     }
 
-    // Set the processed SQL to the store
-    sql.value = editorSql.value
+    // Note: editorSql changes are automatically reflected in finalQuery
 
     // Execute the query
     executeQuery()

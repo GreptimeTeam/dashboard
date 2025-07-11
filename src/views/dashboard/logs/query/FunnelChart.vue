@@ -65,7 +65,7 @@ VCharts(
     },
   }))
 
-  const { currentTableName, queryNum, sql, editorType } = storeToRefs(useLogsQueryStore())
+  const { currentTableName, finalQuery } = storeToRefs(useLogsQueryStore())
 
   const chartSql = computed(() => {
     if (!currentTableName.value) {
@@ -73,7 +73,7 @@ VCharts(
     }
 
     // Extract WHERE clause from the generated SQL (works for both text and builder modes)
-    const whereClause = getWhereClause(sql.value)
+    const whereClause = getWhereClause(finalQuery.value)
     const condition = whereClause ? `WHERE ${whereClause}` : ''
 
     return `SELECT ${props.column} ,count(*) AS c FROM ${currentTableName.value} ${condition} GROUP BY ${props.column} ORDER BY c DESC`
@@ -95,10 +95,6 @@ VCharts(
   if (chartSql.value) {
     chartQuery()
   }
-
-  watch(queryNum, () => {
-    chartQuery()
-  })
 </script>
 
 <style scoped lang="less"></style>

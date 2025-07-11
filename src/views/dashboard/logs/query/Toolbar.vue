@@ -48,16 +48,9 @@
     tsColumn: null,
   })
 
-  const {
-    sql: sqlData,
-    rangeTime,
-    time,
-    editorType,
-    currentTableName,
-    limit,
-    timeRangeValues,
-    refresh,
-  } = storeToRefs(useLogsQueryStore())
+  const { finalQuery, rangeTime, time, editorType, currentTableName, limit, timeRangeValues, refresh } = storeToRefs(
+    useLogsQueryStore()
+  )
 
   const emit = defineEmits(['timeRangeValuesUpdate', 'query'])
 
@@ -69,7 +62,7 @@
   // Live query functionality - simplified
   let refreshTimeout = -1
   function mayRefresh() {
-    if (refresh.value && sqlData.value) {
+    if (refresh.value && finalQuery.value) {
       emit('query')
       refreshTimeout = window.setTimeout(() => {
         mayRefresh()

@@ -59,14 +59,14 @@ a-card(:bordered="false")
   const emit = defineEmits(['update:rows', 'query'])
 
   const currChart = ref('count')
-  const { currentTableName, sql } = storeToRefs(useLogsQueryStore())
+  const { currentTableName, finalQuery } = storeToRefs(useLogsQueryStore())
   const frequencyField = ref('')
 
   // Chart expanded state with localStorage persistence
   const chartExpanded = useLocalStorage('logs-chart-expanded', true)
 
   // Computed SQL for chart (extracts the main query)
-  const sqlForChart = computed(() => sql.value)
+  const sqlForChart = computed(() => finalQuery.value)
   const filterFields = computed(() => {
     try {
       if (!props.columns || !Array.isArray(props.columns)) return []

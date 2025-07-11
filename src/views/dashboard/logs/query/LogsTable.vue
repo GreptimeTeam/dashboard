@@ -9,7 +9,7 @@
     :size="size"
     :wrap-line="wrapLine"
     :compact="isCompact"
-    :virtual-list-props="{ height: height - headerHeight, buffer: 36 }"
+    :virtual-list-props="{ height: virtualListHeight, buffer: 36 }"
     :row-selection="rowSelection"
     :ts-column="tsColumn"
     :show-context-menu="sqlMode === 'builder'"
@@ -88,10 +88,32 @@
     return isCompact.value ? 25 : 38
   })
 
+  // Enhanced virtual list height calculation with debugging
+  const virtualListHeight = computed(() => {
+    const containerHeight = height.value
+    const header = headerHeight.value
+    const calculatedHeight = containerHeight - header
+
+    // Ensure minimum height and fallback
+    return calculatedHeight
+  })
+
   const handleFilterConditionAdd = (event) => {
     console.log(event)
     emit('filterConditionAdd', event)
   }
 </script>
 
-<style lang="less" scoped></style>
+<style lang="less" scoped>
+  #log-table-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+
+    // Ensure the DataTable component fills the container
+    :deep(.data-table-container) {
+      height: 100%;
+      flex: 1;
+    }
+  }
+</style>

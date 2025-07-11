@@ -33,7 +33,7 @@ a-button(
     tsColumn: TSColumn | null
   }>()
 
-  const { sql, currentTableName } = storeToRefs(useLogsQueryStore())
+  const { finalQuery, currentTableName } = storeToRefs(useLogsQueryStore())
 
   function getExportSql() {
     if (props.columns && props.columns.length > 0) {
@@ -46,8 +46,8 @@ a-button(
           ...fields,
           ...props.columns.map((column) => column?.name).filter((v) => v && v !== props.tsColumn?.name),
         ]
-        const where = getWhereClause(sql.value)
-        const order = parseOrderBy(sql.value) || 'desc'
+        const where = getWhereClause(finalQuery.value)
+        const order = parseOrderBy(finalQuery.value) || 'desc'
         const limit = 10000
         return `SELECT ${fields.join(', ')} FROM ${currentTableName.value} ${where} ORDER BY ${
           props.tsColumn?.name || 'id'
