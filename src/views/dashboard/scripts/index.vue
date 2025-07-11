@@ -12,7 +12,6 @@ a-layout.layout
 <script lang="ts" name="Scripts" setup>
   const { getResultsByType } = useQueryCode()
   const { logs } = storeToRefs(useLogStore())
-  const { guideModalVisible } = storeToRefs(useAppStore())
   const { dataStatusMap } = storeToRefs(useUserStore())
   const { checkTables, getScriptsTable } = useDataBaseStore()
   const { fetchDatabases } = useAppStore()

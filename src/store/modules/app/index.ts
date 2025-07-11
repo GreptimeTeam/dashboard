@@ -1,164 +1,184 @@
-import { defineStore } from 'pinia'
-import { Notification } from '@arco-design/web-vue'
-import type { NotificationReturn } from '@arco-design/web-vue/es/notification/interface'
 import { useStorage } from '@vueuse/core'
-import type { RouteRecordNormalized } from 'vue-router'
 import defaultSettings from '@/config/settings.json'
 import editorAPI from '@/api/editor'
-import { AppState } from './types'
+import type { AppState } from './types'
 
-const useAppStore = defineStore('app', {
-  state: (): AppState => ({ ...defaultSettings }),
+const useAppStore = defineStore('app', () => {
+  // State
+  const theme = ref(defaultSettings.theme)
+  const device = ref(defaultSettings.device)
+  const hideMenu = ref(defaultSettings.hideMenu)
+  const menuCollapse = ref(defaultSettings.menuCollapse)
+  const footer = ref(defaultSettings.footer)
+  const menuWidth = ref(defaultSettings.menuWidth)
+  const globalSettings = ref(defaultSettings.globalSettings)
+  const host = ref(defaultSettings.host)
+  const database = ref(defaultSettings.database)
+  const databaseList = ref<string[]>(defaultSettings.databaseList)
+  const guideModalVisible = ref(defaultSettings.guideModalVisible)
+  const username = ref(defaultSettings.username)
+  const password = ref(defaultSettings.password)
+  const dbId = ref(defaultSettings.dbId)
+  const lifetime = ref(defaultSettings.lifetime)
+  const menuSelectedKey = ref(defaultSettings.menuSelectedKey)
+  const userTimezone = ref(defaultSettings.userTimezone)
+  const isFullScreen = ref(defaultSettings.isFullScreen)
+  const authHeader = ref(defaultSettings.authHeader)
 
-  getters: {
-    appCurrentSetting(state: AppState): AppState {
-      return { ...state }
-    },
-    appDevice(state: AppState) {
-      return state.device
-    },
-    appAsyncMenus(state: AppState): RouteRecordNormalized[] {
-      return state.serverMenu as unknown as RouteRecordNormalized[]
-    },
-  },
+  // Actions
+  const updateSettings = (partial: Partial<AppState>) => {
+    if (partial.theme !== undefined) theme.value = partial.theme
+    if (partial.device !== undefined) device.value = partial.device
+    if (partial.hideMenu !== undefined) hideMenu.value = partial.hideMenu
+    if (partial.host !== undefined) host.value = partial.host
+    if (partial.database !== undefined) database.value = partial.database
+    if (partial.username !== undefined) username.value = partial.username
+    if (partial.password !== undefined) password.value = partial.password
+    if (partial.authHeader !== undefined) authHeader.value = partial.authHeader
+    if (partial.globalSettings !== undefined) globalSettings.value = partial.globalSettings
+    if (partial.databaseList !== undefined) databaseList.value = partial.databaseList
+    if (partial.menuCollapse !== undefined) menuCollapse.value = partial.menuCollapse
+    if (partial.footer !== undefined) footer.value = partial.footer
+    if (partial.menuWidth !== undefined) menuWidth.value = partial.menuWidth
+    if (partial.guideModalVisible !== undefined) guideModalVisible.value = partial.guideModalVisible
+    if (partial.dbId !== undefined) dbId.value = partial.dbId
+    if (partial.lifetime !== undefined) lifetime.value = partial.lifetime
+    if (partial.menuSelectedKey !== undefined) menuSelectedKey.value = partial.menuSelectedKey
+    if (partial.userTimezone !== undefined) userTimezone.value = partial.userTimezone
+    if (partial.isFullScreen !== undefined) isFullScreen.value = partial.isFullScreen
+  }
 
-  actions: {
-    // Update app settings
-    updateSettings(partial: Partial<AppState>) {
-      // @ts-ignore-next-line
-      this.$patch(partial)
-    },
+  const updateConfigStorage = (config?: Partial<AppState>) => {
+    const configToSave = config || {
+      host: host.value,
+      database: database.value,
+      username: username.value,
+      password: password.value,
+      authHeader: authHeader.value,
+    }
 
-    updateConfigStorage(config?: Partial<AppState>) {
-      if (!config) {
-        config = {
-          host: this.host,
-          database: this.database,
-          username: this.username,
-          password: this.password,
-          authHeader: this.authHeader,
+    useStorage('config', configToSave, localStorage, {
+      mergeDefaults: (storageValue, defaults) => {
+        return {
+          ...storageValue,
+          ...defaults,
         }
-      }
-      useStorage('config', config, localStorage, {
-        mergeDefaults: (storageValue, defaults) => {
-          return {
-            ...storageValue,
-            ...defaults,
-          }
-        },
-      })
-    },
+      },
+    })
+  }
 
-    async login(form: Partial<AppState>) {
-      try {
-        this.updateSettings(form)
-        // check if settings are valid
-        await editorAPI.runSQL(`select 1`)
-        const { resetDataStatus } = useUserStore()
-        resetDataStatus()
-        // Only update storage if login success
-        this.updateConfigStorage()
-      } catch (error) {
-        const { resetData } = useDataBaseStore()
-        resetData()
-        this.updateSettings({ globalSettings: true })
-        return false
-      }
+  const login = async (form: Partial<AppState>): Promise<boolean> => {
+    try {
+      updateSettings(form)
+      // check if settings are valid
+      await editorAPI.runSQL(`select 1`)
+      const { resetDataStatus } = useUserStore()
+      resetDataStatus()
+      // Only update storage if login success
+      updateConfigStorage()
       return true
-    },
+    } catch (error) {
+      const { resetData } = useDataBaseStore()
+      resetData()
+      updateSettings({ globalSettings: true })
+      return false
+    }
+  }
 
-    // Change theme color
-    toggleTheme(dark: boolean) {
-      if (dark) {
-        this.theme = 'dark'
-        document.body.setAttribute('arco-theme', 'dark')
-      } else {
-        this.theme = 'light'
-        document.body.removeAttribute('arco-theme')
+  const toggleTheme = (dark: boolean) => {
+    if (dark) {
+      theme.value = 'dark'
+      document.body.setAttribute('arco-theme', 'dark')
+    } else {
+      theme.value = 'light'
+      document.body.removeAttribute('arco-theme')
+    }
+  }
+
+  const toggleDevice = (deviceType: string) => {
+    device.value = deviceType
+  }
+
+  const toggleMenu = (value: boolean) => {
+    hideMenu.value = value
+  }
+
+  const fetchDatabases = async (): Promise<boolean> => {
+    try {
+      const res: any = await editorAPI.getDatabases()
+      updateConfigStorage({ database: database.value })
+
+      const databases = res.output[0].records.rows.map((item: string[]) => item[0])
+      databaseList.value = databases.sort((a: string, b: string) => {
+        if (a === 'public') return -1
+        if (b === 'public') return 1
+        if (a === 'greptime_private' || a === 'information_schema') return 1
+        if (b === 'greptime_private' || b === 'information_schema') return -1
+        return 0
+      })
+
+      if (!databaseList.value.includes(database.value)) {
+        database.value = databaseList.value[0]
       }
-    },
-    toggleDevice(device: string) {
-      this.device = device
-    },
-    toggleMenu(value: boolean) {
-      this.hideMenu = value
-    },
-    async fetchServerMenuConfig() {
-      let notifyInstance: NotificationReturn | null = null
-      try {
-        notifyInstance = Notification.info({
-          id: 'menuNotice', // Keep the instance id the same
-          content: 'loading',
-          closable: true,
-        })
 
-        notifyInstance = Notification.success({
-          id: 'menuNotice',
-          content: 'success',
-          closable: true,
-        })
-      } catch (error) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        notifyInstance = Notification.error({
-          id: 'menuNotice',
-          content: 'error',
-          closable: true,
-        })
-      }
-    },
-    clearServerMenu() {
-      this.serverMenu = []
-    },
-    async fetchDatabases() {
-      try {
-        const res: any = await editorAPI.getDatabases()
-        this.updateConfigStorage({ database: this.database })
-        this.databaseList = res.output[0].records.rows.map((item: string[]) => item[0])
-        this.databaseList = this.databaseList.sort((a: string, b: string) => {
-          if (a === 'public') {
-            return -1
-          }
-          if (b === 'public') {
-            return 1
-          }
-          if (a === 'greptime_private' || a === 'information_schema') {
-            return 1
-          }
-          if (b === 'greptime_private' || b === 'information_schema') {
-            return -1
-          }
-          return 0
-        })
+      const { databaseActiveKeys: keys } = storeToRefs(useDataBaseStore())
+      keys.value = [database.value]
 
-        if (!this.databaseList.includes(this.database)) {
-          this.database = this.databaseList[0]
-        }
-        const { databaseActiveKeys: keys } = storeToRefs(useDataBaseStore())
-        keys.value = [this.database]
+      return true
+    } catch (error) {
+      databaseList.value = []
+      return false
+    }
+  }
 
-        return true
-      } catch (error) {
-        // some error
+  const setDefaultDatabase = () => {
+    database.value = databaseList.value.includes('public')
+      ? 'public'
+      : databaseList.value.find((item: string) => item !== 'information_schema') || databaseList.value[0]
+  }
 
-        this.databaseList = []
-        return false
-      }
-    },
-    setDefaultDatabase() {
-      this.database = this.databaseList.includes('public')
-        ? 'public'
-        : this.databaseList.find((item: string) => item !== 'information_schema') || this.databaseList[0]
-    },
+  const getDBandTables = async () => {
+    const databaseStore = useDataBaseStore()
+    const hasDB = await fetchDatabases()
+    if (!hasDB) {
+      return
+    }
+    await databaseStore.checkTables()
+  }
 
-    async getDBandTables() {
-      const databaseStore = useDataBaseStore()
-      const hasDB = await this.fetchDatabases()
-      if (!hasDB) {
-        return
-      }
-      await databaseStore.checkTables()
-    },
-  },
+  return {
+    // State
+    theme,
+    device,
+    hideMenu,
+    host,
+    database,
+    username,
+    password,
+    authHeader,
+    globalSettings,
+    databaseList,
+    guideModalVisible,
+    menuCollapse,
+    footer,
+    menuWidth,
+    dbId,
+    lifetime,
+    menuSelectedKey,
+    userTimezone,
+    isFullScreen,
+
+    // Actions
+    updateSettings,
+    updateConfigStorage,
+    login,
+    toggleTheme,
+    toggleDevice,
+    toggleMenu,
+    fetchDatabases,
+    setDefaultDatabase,
+    getDBandTables,
+  }
 })
 
 export default useAppStore
