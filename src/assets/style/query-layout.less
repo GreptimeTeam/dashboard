@@ -1,0 +1,112 @@
+// Shared styles for query layout pages (logs query, traces, etc.)
+.query-layout {
+  // Main container layout
+  .query-container {
+    height: calc(100vh - 30px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  // Content wrapper with padding and gap
+  .content-wrapper {
+    flex: 1;
+    padding: 8px 8px 0 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: hidden;
+    min-height: 0; // Important for flexbox
+  }
+
+  // Toolbar styling (shared between logs and traces)
+  .toolbar {
+    flex-shrink: 0;
+    padding: 8px;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 50px;
+  }
+
+  // SQL editor/builder container
+  .sql-container {
+    flex-shrink: 0;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  // Chart header layout
+  .chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    font-weight: normal;
+  }
+
+  // Page header styling
+  .page-header {
+    padding: 8px 12px;
+    background: var(--card-bg-color);
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 0;
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--main-font-color);
+    font-family: 'Gilroy', sans-serif;
+    line-height: 1.2;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+  }
+
+  // Shared arco-card styling
+  .query-layout-cards {
+    .arco-card {
+      border-radius: 0;
+      border-bottom: none;
+
+      .arco-card-header {
+        height: auto;
+        padding: 9px 10px;
+      }
+
+      // Make the last card (results) expandable
+      &:last-child {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+
+        .arco-card-body {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          min-height: 0;
+          padding: 0;
+        }
+      }
+    }
+
+    .arco-radio-button.arco-radio-checked {
+      color: var(--color-primary);
+    }
+
+    .arco-input-group > * {
+      border-radius: 0;
+    }
+  }
+
+  .arco-card .arco-card-header-title {
+    font-weight: normal;
+  }
+
+  // Active state styling
+  .active {
+    color: var(--color-primary);
+  }
+}

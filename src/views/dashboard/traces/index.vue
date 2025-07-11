@@ -1,8 +1,8 @@
 <template lang="pug">
-.trace-query-container
+.query-layout.trace-query-container.query-container
   .page-header
     | Traces
-  .content-wrapper
+  .content-wrapper.query-layout-cards
     a-card(:bordered="false")
       .toolbar
         a-space
@@ -74,14 +74,14 @@
           :ts-column="{ name: 'timestamp', multiple: 1000000000 }"
           @time-range-update="handleTimeRangeUpdate"
         )
-      TraceTable(
-        :data="allResults"
-        :columns="columns"
-        :loading="loading"
-        :table-name="tableName"
-        :editor-type="editorType"
-        @filterConditionAdd="handleFilterConditionAdd"
-      )
+    TraceTable(
+      :data="allResults"
+      :columns="columns"
+      :loading="loading"
+      :table-name="tableName"
+      :editor-type="editorType"
+      @filterConditionAdd="handleFilterConditionAdd"
+    )
 </template>
 
 <script setup name="TraceQuery" lang="ts">
@@ -305,87 +305,7 @@
 </script>
 
 <style lang="less" scoped>
-  .trace-query-container {
-    height: calc(100vh - 30px);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
+  @import '@/assets/style/query-layout.less';
 
-  .content-wrapper {
-    flex: 1;
-    padding: 8px 8px 0 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    overflow: hidden;
-    min-height: 0; // Important for flexbox
-  }
-
-  .toolbar {
-    flex-shrink: 0;
-    padding: 8px;
-    border-bottom: 1px solid var(--color-border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .sql-container {
-    flex-shrink: 0;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .chart-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    font-weight: normal;
-  }
-
-  :deep(.arco-card) {
-    border-radius: 0;
-    border-bottom: none;
-
-    // Make the last card (results) expandable
-    &:last-child {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-
-      .arco-card-body {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        min-height: 0;
-        padding: 0;
-      }
-    }
-  }
-  :deep(.arco-radio-button.arco-radio-checked) {
-    color: var(--color-primary);
-  }
-  :deep(.arco-input-group > *) {
-    border-radius: 0;
-  }
-
-  .page-header {
-    padding: 8px 12px;
-    background: var(--card-bg-color);
-    border-bottom: 1px solid var(--border-color);
-    margin-bottom: 0;
-    font-size: 15px;
-    font-weight: 800;
-    color: var(--main-font-color);
-    font-family: 'Gilroy', sans-serif;
-    line-height: 1.2;
-    min-height: 48px;
-    display: flex;
-    align-items: center;
-  }
+  // No traces-specific styles needed - all moved to shared CSS
 </style>

@@ -1,12 +1,10 @@
 <template lang="pug">
-.toolbar(
-  style="display: flex; gap: 10px; padding: 3px 8px; align-items: center; margin-bottom: 0px; border: 1px solid var(--color-neutral-3)"
-)
-  a-radio-group(v-model="editorType" type="button" size="small")
+.toolbar
+  a-radio-group(v-model="editorType" type="button")
     a-radio(value="builder")
       | Builder
     a-radio(value="text")
-      | Code
+      | Text
   TimeRangeSelect(
     v-model:time-length="time"
     v-model:time-range="rangeTime"
@@ -97,16 +95,14 @@
 </script>
 
 <style scoped lang="less">
-  :deep(.arco-btn-text[type='button']) {
-    color: var(--color-text-2);
-  }
-  :deep(.arco-radio-group-button) {
-    background-color: #fff;
-  }
-  :deep(.arco-radio-button.arco-radio-checked) {
-    color: var(--color-primary);
-  }
-  :deep(.arco-radio-button.arco-radio-checked) {
-    background-color: #a376ff33 !important;
+  .toolbar {
+    flex-shrink: 0;
+    padding: 8px;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 50px;
+    gap: 10px;
   }
 </style>

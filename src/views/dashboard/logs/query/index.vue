@@ -1,96 +1,94 @@
 <template lang="pug">
-.container(:key="containerKey")
-  div(style="padding: 0; background-color: var(--color-neutral-2); margin: 0")
-    Toolbar(
-      :query-loading="queryLoading"
-      :columns="columns"
-      :ts-column="tsColumn"
-      @time-range-values-update="handleTimeRangeValuesUpdate"
-      @query="handleToolbarQuery"
-    )
-    SQLBuilder(
-      v-if="editorType === 'builder'"
-      ref="sqlBuilderRef"
-      v-model:form-state="currentBuilderFormState"
-      style="padding: 10px 20px; border: 1px solid var(--color-neutral-3); border-top: none; background-color: var(--color-bg-2)"
-      :time-range-values="builderTimeRangeValues"
-      @update:sql="handleBuilderSqlUpdate"
-    )
-    InputEditor(v-else :schema="schemaForEditor" :ts-column="tsColumn")
-  ChartContainer.block(
-    v-if="showChart"
-    style="margin: 5px 0 0; padding: 10px 0; background-color: var(--color-bg-2); border: 1px solid var(--color-neutral-3); flex-shrink: 0"
-    :columns="columns"
-    :rows="rows"
-    :ts-column="tsColumn"
-    :refresh-trigger="chartRefreshTrigger"
-    @update:rows="handleChartRowsUpdate"
-    @query="handleChartQuery"
-  )
-  div(
-    style="padding: 3px 15px; height: 40px; white-space: nowrap; color: var(--color-text-2); display: flex; justify-content: space-between; border: 1px solid var(--color-neutral-3); background-color: var(--color-bg-2); margin: 5px 0"
-  )
-    a-space
-      | {{ $t('logsQuery.results') }}: {{ rows.length }}
-      span(:title="showChart ? $t('logsQuery.hideStatChart') : $t('logsQuery.showStatChart')")
-        icon-bar-chart(
-          style="cursor: pointer"
-          size="small"
-          :class="{ active: showChart }"
-          @click="() => (showChart = !showChart)"
-        ) 
-      a-checkbox(v-model="mergeColumn" type="button" size="small")
-        | Single Column
-      a-checkbox(
-        v-if="mergeColumn"
-        v-model="showKeys"
-        type="button"
-        size="small"
-      )
-        | Show Keys
-      a-checkbox(v-model="compact" type="button" size="small")
-        | Compact Mode
-      a-checkbox(v-model="wrap" size="small")
-        span {{ $t('logsQuery.wrapLines') }}
-
-    a-space
-      a-trigger(v-if="columns.length" trigger="click" :unmount-on-close="false")
-        a-button(type="text" style="color: var(--color-text-2)")
-          | {{ $t('logsQuery.columns') }}
-        template(#content)
-          a-card(style="padding: 10px")
-            a-checkbox-group(v-model="displayedColumns[currentTableName]" direction="vertical")
-              a-checkbox(v-for="column in columns" :value="column.name")
-                | {{ column.name }}
-      Pagination(
-        v-if="!refresh && tsColumn"
-        :key="paginationKey"
-        :rows="rows"
+.query-layout.logs-query-container.query-container(:key="containerKey")
+  .page-header
+    | Logs
+  .content-wrapper.query-layout-cards
+    a-card(:bordered="false")
+      Toolbar(
+        :query-loading="queryLoading"
         :columns="columns"
-        :sql="sql"
         :ts-column="tsColumn"
-        :limit="logsStore.limit"
-        @update:rows="handlePaginationRowsUpdate"
+        @time-range-values-update="handleTimeRangeValuesUpdate"
+        @query="handleToolbarQuery"
       )
-  LogTableData(
-    style="flex: 1 1 auto; overflow: auto"
-    :wrap-line="wrap"
-    :size="size"
-    :data="rows"
-    :columns="columns"
-    :sql-mode="editorType"
-    :ts-column="tsColumn"
-    :column-mode="mergeColumn && showKeys ? 'merged-with-keys' : mergeColumn ? 'merged' : 'separate'"
-    :displayed-columns="displayedColumns[currentTableName] || []"
-    @filter-condition-add="handleFilterConditionAdd"
-    @row-select="handleRowSelect"
-  )
+      .sql-container
+        SQLBuilder(
+          v-if="editorType === 'builder'"
+          ref="sqlBuilderRef"
+          v-model:form-state="currentBuilderFormState"
+          :time-range-values="builderTimeRangeValues"
+          @update:sql="handleBuilderSqlUpdate"
+        )
+        InputEditor(v-else :schema="schemaForEditor" :ts-column="tsColumn")
+
+    ChartContainer(
+      :columns="columns"
+      :rows="rows"
+      :ts-column="tsColumn"
+      :refresh-trigger="chartRefreshTrigger"
+      @update:rows="handleChartRowsUpdate"
+      @query="handleChartQuery"
+    )
+
+    a-card(:bordered="false")
+      template(#title)
+        a-space
+          span.results-header
+            span {{ $t('logsQuery.results') }}
+            span.results-count
+              | ({{ rows.length }} {{ rows.length > 1 ? 'records' : 'record' }})
+          a-checkbox(v-model="mergeColumn" type="button" size="small")
+            | Single Column
+          a-checkbox(
+            v-if="mergeColumn"
+            v-model="showKeys"
+            type="button"
+            size="small"
+          )
+            | Show Keys
+          a-checkbox(v-model="compact" type="button" size="small")
+            | Compact Mode
+          a-checkbox(v-model="wrap" size="small")
+            span {{ $t('logsQuery.wrapLines') }}
+
+      template(#extra)
+        a-trigger(v-if="columns.length" trigger="click" :unmount-on-close="false")
+          a-button(type="text" style="color: var(--color-text-2)")
+            | {{ $t('logsQuery.columns') }}
+          template(#content)
+            a-card(style="padding: 10px")
+              a-checkbox-group(v-model="displayedColumns[currentTableName]" direction="vertical")
+                a-checkbox(v-for="column in columns" :value="column.name")
+                  | {{ column.name }}
+        Pagination(
+          v-if="!refresh && tsColumn"
+          :key="paginationKey"
+          :rows="rows"
+          :columns="columns"
+          :sql="sql"
+          :ts-column="tsColumn"
+          :limit="logsStore.limit"
+          @update:rows="handlePaginationRowsUpdate"
+        )
+      LogTableData(
+        :wrap-line="wrap"
+        :size="size"
+        :data="rows"
+        :columns="columns"
+        :sql-mode="editorType"
+        :ts-column="tsColumn"
+        :column-mode="mergeColumn && showKeys ? 'merged-with-keys' : mergeColumn ? 'merged' : 'separate'"
+        :displayed-columns="displayedColumns[currentTableName] || []"
+        @filter-condition-add="handleFilterConditionAdd"
+        @row-select="handleRowSelect"
+      )
 </template>
 
 <script ts setup name="QueryIndex">
-  import { useStorage, watchOnce } from '@vueuse/core'
+  import { useStorage, watchOnce, useLocalStorage } from '@vueuse/core'
   import { nextTick, ref, computed, shallowRef, watch } from 'vue'
   import { storeToRefs } from 'pinia'
+  import { IconDown, IconRight } from '@arco-design/web-vue/es/icon'
   import editorAPI from '@/api/editor'
   import useLogsQueryStore from '@/store/modules/logs-query'
   import useAppStore from '@/store/modules/app'
@@ -121,6 +119,9 @@
   const mergeColumn = useStorage('logquery-merge-column', true)
   const showKeys = useStorage('logquery-show-keys', true)
   const displayedColumns = useStorage('logquery-table-column-visible', {})
+
+  // Chart expanded state with localStorage persistence
+  const showChart = useLocalStorage('logs-chart-expanded', true)
 
   // Local editor state (moved from store)
   const editorSql = ref('')
@@ -400,9 +401,7 @@
     }
   })
 
-  const showChart = useStorage('logquery-chart-visible', true)
   const compact = useStorage('logquery-table-compact', false)
-
   const size = computed(() => (compact.value ? 'mini' : 'medium'))
   const wrap = ref(false)
 
@@ -442,13 +441,5 @@
 </script>
 
 <style lang="less">
-  .container {
-    padding: 5px 5px 0 5px;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-  }
-  .active {
-    color: var(--color-primary);
-  }
+  @import '@/assets/style/query-layout.less';
 </style>
