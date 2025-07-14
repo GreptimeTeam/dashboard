@@ -71,7 +71,7 @@
           :time-length="timeLength"
           :time-range="timeRange"
           :table-name="tableName"
-          :ts-column="{ name: 'timestamp', multiple: 1000000000 }"
+          :ts-column="tsColumn"
           @time-range-update="handleTimeRangeUpdate"
         )
     TraceTable(
@@ -113,6 +113,7 @@
     builderFormState: currentBuilderFormState,
     currentTableName: tableName,
     finalQuery,
+    tsColumn,
   } = storeToRefs(tracesStore)
 
   // Local state for query results (not stored in store)
@@ -122,14 +123,7 @@
   const chartExpanded = useLocalStorage('trace-chart-expanded', true)
 
   // Get store methods
-  const {
-    initializeFromQuery,
-    executeQuery,
-    exportToCSV,
-    updateBuilderSql,
-    updateTimeRangeValues,
-    addFilterCondition,
-  } = tracesStore
+  const { initializeFromQuery, executeQuery, exportToCSV, updateBuilderSql, addFilterCondition } = tracesStore
 
   const countChartRef = ref()
   const sqlEditorRef = ref()
@@ -138,9 +132,18 @@
 
   const hasTimeLimit = computed(() => timeLength.value > 0 || timeRange.value.length > 0)
 
+  // Check if all required values are available for initial query
+  const canExecuteInitialQuery = computed(() => {
+    return tsColumn.value && finalQuery.value && tableName.value
+  })
+
+  // Track if we've already executed the initial query
+  const hasExecutedInitialQuery = ref(false)
+
   // Handler for TimeRangeSelect updates
   function handleTimeRangeValuesUpdate(newTimeRangeValues: string[]) {
-    updateTimeRangeValues(newTimeRangeValues)
+    // Time range updates are handled directly by the TimeRangeSelect component
+    // through v-model bindings to timeLength and timeRange
   }
 
   // Handle SQL builder updates
@@ -173,7 +176,7 @@
   }
 
   function handleTimeRangeUpdate(newTimeRange: string[]) {
-    timeLength.value = -1 // Switch to custom mode
+    timeLength.value = 0 // Switch to custom mode
     timeRange.value = newTimeRange
     handleQuery() // Re-run query with new time range
   }
@@ -201,23 +204,28 @@
     }
   }
 
-  watchOnce(finalQuery, () => {
-    if (finalQuery.value) {
+  // Watch for when all async values are available
+  watch(canExecuteInitialQuery, (canExecute) => {
+    if (canExecute && !hasExecutedInitialQuery.value) {
+      console.log('All async values available for initial query:')
+      console.log('tsColumn:', tsColumn.value)
+      console.log('finalQuery:', finalQuery.value)
+      console.log('tableName:', tableName.value)
+
       // Validate SQL before executing - only in editor mode
       if (editorType.value === 'text') {
         const validation = validateSQL(finalQuery.value)
         if (!validation.isValid) {
           console.error('SQL validation failed:', validation.error)
-          // You can add a toast notification or other user feedback here
           return
         }
       }
 
-      nextTick(() => {
-        handleQuery()
-      })
+      hasExecutedInitialQuery.value = true
+      handleQuery()
     }
   })
+
   initializeFromQuery()
 </script>
 

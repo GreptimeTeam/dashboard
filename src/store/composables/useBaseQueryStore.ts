@@ -47,13 +47,24 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
     ...options,
   }
 
-  /** Builder SQL from SQL builder component */
-  const builderSql = ref('')
-
   /** Time selection state - shared across components */
   const rangeTime = ref<Array<string>>([])
   const time = ref(opts.defaultTimeLength)
-  const timeRangeValues = ref<string[]>([])
+  const timeRangeValues = computed(() => {
+    if (rangeTime.value.length === 2) {
+      // Absolute time range - convert timestamps to ISO strings
+      const start = new Date(Number(rangeTime.value[0]) * 1000).toISOString()
+      const end = new Date(Number(rangeTime.value[1]) * 1000).toISOString()
+      return [`'${start}'`, `'${end}'`]
+    }
+    if (time.value > 0) {
+      // Relative time range - use SQL interval (no quotes around SQL functions)
+      const start = `now() - Interval '${time.value}m'`
+      const end = `now()`
+      return [start, end]
+    }
+    return [] // Any time / no time limit
+  })
 
   /** Editor configuration - shared */
   const editorType = ref<'builder' | 'text'>(opts.defaultEditorType as 'builder' | 'text')
@@ -70,7 +81,7 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
   /** Query execution state - shared */
   const refresh = ref(false)
   const loading = ref(false)
-  const columns = ref<Array<{ name: string; data_type: string; label: string; semantic_type: string }>>([])
+  const columns = shallowRef<Array<{ name: string; data_type: string; label: string; semantic_type: string }>>([])
 
   /** Computed table name - derived from builder form state or SQL parsing */
   const currentTableName = computed(() => {
@@ -86,6 +97,128 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
       }
     }
     return tableName
+  })
+
+  /** Computed timestamp column from form state - readonly property */
+  const tsColumn = computed(() => {
+    console.log('builderFormState store', builderFormState.value)
+    return builderFormState.value?.tsColumn || null
+  })
+
+  /** Helper functions for SQL builder logic */
+  function escapeSqlString(value: string) {
+    if (typeof value !== 'string') {
+      return value
+    }
+    return value.replace(/\\/g, '\\\\').replace(/'/g, "''").replace(/\n/g, '\\n').replace(/\r/g, '\\r')
+  }
+
+  function getFieldType(fieldName: string): string {
+    const field = columns.value.find((f) => f.name === fieldName)
+    if (!field) return 'Default'
+
+    const dataType = field.data_type.toLowerCase()
+
+    if (dataType.includes('timestamp') || dataType.includes('date')) {
+      return 'Time'
+    }
+    if (
+      dataType.includes('int') ||
+      dataType.includes('float') ||
+      dataType.includes('double') ||
+      dataType.includes('decimal')
+    ) {
+      return 'Number'
+    }
+    if (dataType.includes('bool')) {
+      return 'Boolean'
+    }
+    if (dataType.includes('string') || dataType.includes('varchar') || dataType.includes('text')) {
+      return 'String'
+    }
+
+    return 'Default'
+  }
+
+  function singleCondition(condition: any) {
+    const column = condition.field
+    const columnType = getFieldType(column)
+    const conditionVal = escapeSqlString(condition.value)
+    let columnName = condition.field
+    columnName = `"${columnName}"`
+
+    if (condition.operator === 'Exist') {
+      return `${columnName} is not null`
+    }
+    if (condition.operator === 'Not Exist') {
+      return `${columnName} is null`
+    }
+    if (columnType === 'Number' || columnType === 'Time') {
+      return `${columnName} ${condition.operator} ${condition.value}`
+    }
+    if (condition.operator === 'like') {
+      return `${columnName} like '%${conditionVal}%'`
+    }
+    if (['contains', 'not contains', 'match sequence'].indexOf(condition.operator) > -1) {
+      let val = escapeSqlString(condition.value)
+      if (condition.operator === 'not contains') {
+        val = `-"${val}"`
+      } else if (condition.operator === 'contains') {
+        val = `"${val}"`
+      }
+      return `MATCHES(${columnName},'${val}')`
+    }
+    return `${columnName} ${condition.operator} '${escapeSqlString(condition.value)}'`
+  }
+
+  /** Computed builder SQL generated from form state */
+  const builderSql = computed(() => {
+    if (!builderFormState.value?.table) return ''
+
+    const form = builderFormState.value
+    const conditions = form.conditions || []
+
+    // Process conditions
+    const processedConditions = conditions
+      .filter((condition) => {
+        if (condition.operator === 'Not Exist' || condition.operator === 'Exist') {
+          return condition.field
+        }
+        return condition.field && condition.operator && condition.value
+      })
+      .map((condition, index) => {
+        let conditionStr = singleCondition(condition)
+        // Add relation for conditions after the first one
+        if (index > 0) {
+          conditionStr = `${condition.relation || 'AND'} ${conditionStr}`
+        }
+        return conditionStr
+      })
+
+    // Add timestamp range condition when timeRangeValues is provided
+    const timeConditions = [...processedConditions]
+    if (timeRangeValues.value.length > 0 && tsColumn.value) {
+      const [startTs, endTs] = timeRangeValues.value
+      const timeCondition = `${tsColumn.value.name} < ${endTs} AND ${tsColumn.value.name} >= ${startTs}`
+
+      if (timeConditions.length > 0) {
+        timeConditions.push(`AND ${timeCondition}`)
+      } else {
+        timeConditions.push(timeCondition)
+      }
+    }
+
+    // Build SQL
+    let sql = `SELECT * FROM "${form.table}"`
+    if (timeConditions.length > 0) {
+      sql += ` WHERE ${timeConditions.join(' ')}`
+    }
+    if (form.orderByField) {
+      sql += ` ORDER BY "${form.orderByField}" ${form.orderBy || 'DESC'}`
+    }
+    sql += ` LIMIT ${form.limit || limit.value}`
+
+    return sql
   })
 
   /** Computed values used by multiple components */
@@ -246,11 +379,9 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
 
   function reset() {
     builderFormState.value = null
-    builderSql.value = ''
     editorSql.value = ''
     time.value = opts.defaultTimeLength
     rangeTime.value = []
-    timeRangeValues.value = []
     editorType.value = opts.defaultEditorType as 'builder' | 'text'
     refresh.value = false
     loading.value = false
@@ -258,11 +389,8 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
   }
 
   function updateBuilderSql(newSql: string) {
-    builderSql.value = newSql
-  }
-
-  function updateTimeRangeValues(newTimeRangeValues: string[]) {
-    timeRangeValues.value = newTimeRangeValues
+    // builderSql is now computed, so this method is kept for compatibility but doesn't do anything
+    // The SQL is generated automatically from builderFormState
   }
 
   // Base query execution function that can be extended
@@ -378,25 +506,6 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
     builderFormState.value.conditions.push(newCondition)
   }
 
-  // Timestamp column detection - shared business logic
-  const timestampColumn = computed(() => {
-    if (!columns.value.length) return null
-
-    // Find timestamp columns by data type
-    const tsColumns = columns.value.filter((col) => col.data_type.toLowerCase().includes('timestamp'))
-
-    // Prefer columns with TIMESTAMP semantic type if available
-    const tsIndexColumns = tsColumns.filter((col) => col.semantic_type === 'TIMESTAMP')
-    const selectedColumn = tsIndexColumns.length ? tsIndexColumns[0] : tsColumns[0]
-
-    if (!selectedColumn) return null
-
-    return {
-      name: selectedColumn.name,
-      data_type: selectedColumn.data_type,
-    }
-  })
-
   return {
     // State
     builderSql,
@@ -417,14 +526,13 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
     columns,
 
     // Computed utilities
-    timestampColumn,
+    tsColumn,
 
     // Methods
     reset,
     initializeFromQuery,
     updateQueryParams,
     updateBuilderSql,
-    updateTimeRangeValues,
     executeBaseQuery,
     executeQuery,
     exportToCSV,

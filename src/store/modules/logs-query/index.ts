@@ -27,11 +27,11 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
     limit,
     finalQuery,
     unixTimeRange,
+    tsColumn,
     reset: baseReset,
     initializeFromQuery,
     updateQueryParams,
     updateBuilderSql,
-    updateTimeRangeValues,
     executeBaseQuery,
     executeQuery,
     exportToCSV,
@@ -60,21 +60,19 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
     limit,
     finalQuery,
     unixTimeRange,
+    tsColumn,
     initializeFromQuery,
     updateQueryParams,
     updateBuilderSql,
-    updateTimeRangeValues,
     executeBaseQuery,
     executeQuery,
     exportToCSV,
     addFilterCondition,
-
     // Query execution state from base store
     loading,
     columns,
-
-    // Logs-specific state and methods
     refresh,
+    // Reset function from base store
     reset,
   }
 })

@@ -8,7 +8,6 @@
         :query-loading="queryLoading"
         :columns="columns"
         :ts-column="tsColumn"
-        @time-range-values-update="handleTimeRangeValuesUpdate"
         @query="handleToolbarQuery"
       )
       .sql-container
@@ -26,8 +25,7 @@
       :rows="rows"
       :ts-column="tsColumn"
       :refresh-trigger="chartRefreshTrigger"
-      @update:rows="handleChartRowsUpdate"
-      @query="handleChartQuery"
+      @timeRangeUpdate="handleTimeRangeUpdate"
     )
 
     a-card(:bordered="false")
@@ -52,7 +50,7 @@
             span {{ $t('logsQuery.wrapLines') }}
 
       template(#extra)
-        a-trigger(v-if="columns.length" trigger="click" :unmount-on-close="false")
+        a-trigger(v-if="columns && columns.length" trigger="click" :unmount-on-close="false")
           a-button(type="text" style="color: var(--color-text-2)")
             | {{ $t('logsQuery.columns') }}
           template(#content)
@@ -128,6 +126,7 @@
     loading: queryLoading,
     columns,
     builderSql,
+    tsColumn,
   } = storeToRefs(logsStore)
 
   // Local state for query data (moved from store)
@@ -151,35 +150,16 @@
     paginationKey.value += 1
   }
 
-  // Computed timestamp column from available columns
-  const tsColumn = computed(() => {
-    if (!columns.value.length) return null
-
-    // Find timestamp columns by data type
-    const tsColumns = columns.value.filter((col) => col.data_type.toLowerCase().includes('timestamp'))
-
-    // Prefer columns with TIMESTAMP semantic type
-    const tsIndexColumns = tsColumns.filter((col) => col.semantic_type === 'TIMESTAMP')
-    const selectedColumn = tsIndexColumns.length ? tsIndexColumns[0] : tsColumns[0]
-
-    if (!selectedColumn) return null
-
-    // Return the column with data_type - DataTable will calculate the multiple automatically
-    return {
-      name: selectedColumn.name,
-      data_type: selectedColumn.data_type,
-    }
-  })
-
-  // SQLBuilder integration
-
-  // Handler for TimeRangeSelect updates
-  function handleTimeRangeValuesUpdate(newTimeRangeValues) {
-    timeRangeValues.value = newTimeRangeValues
-  }
-
   // Use timeRangeValues for SQLBuilder (processed time values)
   const builderTimeRangeValues = computed(() => timeRangeValues.value)
+
+  // Check if all required values are available for initial query
+  const canExecuteInitialQuery = computed(() => {
+    return tsColumn.value && finalQuery.value && currentTableName.value
+  })
+
+  // Track if we've already executed the initial query
+  const hasExecutedInitialQuery = ref(false)
 
   // Handle SQLBuilder updates
   function handleBuilderSqlUpdate(generatedSql) {
@@ -188,14 +168,9 @@
       refresh.value = false
     }
 
-    builderSql.value = generatedSql
+    // Note: builderSql is now computed from builderFormState, so this method is for compatibility
+    // The actual SQL generation happens in the base store
   }
-
-  // Note: editorSql generation when switching to text mode is now handled by the base store
-
-  // Note: finalQuery computation with placeholder replacement is now handled by the base store
-
-  // Note: finalQuery is now the single source of truth for the processed SQL query
 
   // Schema format for SQL editor - group columns by table name
   const schemaForEditor = computed(() => {
@@ -205,15 +180,6 @@
       [currentTableName.value]: columns.value.map((col) => col.name),
     }
   })
-
-  // Logs-specific result transformation function
-  const transformLogsResults = (rawRows, columnsData) => {
-    if (rawRows.length === 0 || columnsData.length === 0) return rawRows
-
-    return rawRows.map((row, index) => {
-      return toObj(row, columnsData, index, tsColumn.value)
-    })
-  }
 
   // Enhanced executeQuery that uses base store and handles logs-specific UI logic
   const executeQuery = async () => {
@@ -237,6 +203,12 @@
     }
   }
 
+  function handleTimeRangeUpdate(newTimeRange) {
+    time.value = 0 // Switch to custom mode
+    rangeTime.value = newTimeRange
+    executeQuery() // Re-run query with new time range
+  }
+
   // Handle filter condition from table context menu
   function handleFilterConditionAdd({ columnName, operator, value }) {
     addFilterCondition(columnName, operator, value)
@@ -251,16 +223,6 @@
   // Handle pagination rows update
   function handlePaginationRowsUpdate(newRows) {
     rows.value = newRows
-  }
-
-  // Handle chart rows update
-  function handleChartRowsUpdate(newRows) {
-    rows.value = newRows
-  }
-
-  // Handle chart query request
-  function handleChartQuery() {
-    executeQuery()
   }
 
   // Handle manual query execution from toolbar
@@ -349,17 +311,20 @@
     }
   )
 
-  // Automatic query execution when URL contains sufficient data
-  watchOnce(finalQuery, () => {
-    if (finalQuery.value && currentTableName.value) {
-      nextTick(() => {
-        executeQuery()
-      })
-    }
-  })
-
   // Initialize from URL query parameters
   initializeFromQuery()
+
+  // Watch for when all async values are available
+  watch(canExecuteInitialQuery, (canExecute) => {
+    if (canExecute && !hasExecutedInitialQuery.value) {
+      console.log('All async values available for initial query:')
+      console.log('tsColumn:', tsColumn.value)
+      console.log('finalQuery:', finalQuery.value)
+      console.log('tableName:', currentTableName.value)
+      hasExecutedInitialQuery.value = true
+      executeQuery()
+    }
+  })
 </script>
 
 <style lang="less">

@@ -27,6 +27,7 @@ a-card(:bordered="false")
       :refresh-trigger="props.refreshTrigger"
       @update:rows="$emit('update:rows', $event)"
       @query="$emit('query')"
+      @timeRangeUpdate="handleTimeRangeUpdate"
     )
     FunnelChart(v-if="currChart == 'frequency'" :key="frequencyField" :column="frequencyField")
 </template>
@@ -56,7 +57,7 @@ a-card(:bordered="false")
     refreshTrigger: 0,
   })
 
-  const emit = defineEmits(['update:rows', 'query'])
+  const emit = defineEmits(['timeRangeUpdate'])
 
   const currChart = ref('count')
   const { currentTableName, finalQuery } = storeToRefs(useLogsQueryStore())
@@ -108,6 +109,10 @@ a-card(:bordered="false")
   watch(currentTableName, () => {
     currChart.value = 'count'
   })
+
+  function handleTimeRangeUpdate(timeRange: string[]) {
+    emit('timeRangeUpdate', timeRange)
+  }
 </script>
 
 <style scoped lang="less">

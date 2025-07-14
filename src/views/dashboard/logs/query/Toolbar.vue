@@ -5,12 +5,7 @@
       | Builder
     a-radio(value="text")
       | Text
-  TimeRangeSelect(
-    v-model:time-length="time"
-    v-model:time-range="rangeTime"
-    button-type="outline"
-    @update:time-range-values="handleTimeRangeValuesUpdate"
-  )
+  TimeRangeSelect(v-model:time-length="time" v-model:time-range="rangeTime" button-type="outline")
   a-button(
     type="primary"
     size="small"
@@ -48,11 +43,9 @@
     tsColumn: null,
   })
 
-  const { finalQuery, rangeTime, time, editorType, currentTableName, limit, timeRangeValues, refresh } = storeToRefs(
-    useLogsQueryStore()
-  )
+  const { finalQuery, rangeTime, time, editorType, timeRangeValues, refresh } = storeToRefs(useLogsQueryStore())
 
-  const emit = defineEmits(['timeRangeValuesUpdate', 'query'])
+  const emit = defineEmits(['query'])
 
   function handleQuery() {
     // Simply emit the query event - let parent handle the logic
@@ -80,11 +73,6 @@
       clearTimeout(refreshTimeout)
     }
   })
-
-  // Handler for TimeRangeSelect updates
-  function handleTimeRangeValuesUpdate(newTimeRangeValues: string[]) {
-    emit('timeRangeValuesUpdate', newTimeRangeValues)
-  }
 </script>
 
 <style scoped lang="less">

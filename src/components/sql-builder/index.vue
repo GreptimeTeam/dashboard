@@ -98,6 +98,7 @@ a-form(
     orderBy: string
     limit: number
     table: string
+    tsColumn?: { name: string; data_type: string } | null // Readonly timestamp column
   }
 
   interface TableField {
@@ -129,6 +130,7 @@ a-form(
     orderBy: 'DESC',
     limit: 1000,
     table: '',
+    tsColumn: null,
   }
 
   // Initialize form state as reactive object
@@ -174,6 +176,35 @@ a-form(
       value: column.name,
     }))
   })
+
+  /** Computed timestamp column from available columns - included in form state */
+  const tsColumn = computed(() => {
+    if (!fields.value.length) return null
+
+    // Find timestamp columns by data type
+    const tsColumns = fields.value.filter((col) => col.data_type.toLowerCase().includes('timestamp'))
+
+    // Prefer columns with TIMESTAMP semantic type
+    const tsIndexColumns = tsColumns.filter((col) => col.semantic_type === 'TIMESTAMP')
+    const selectedColumn = tsIndexColumns.length ? tsIndexColumns[0] : tsColumns[0]
+
+    if (!selectedColumn) return null
+
+    // Return the column with data_type - DataTable will calculate the multiple automatically
+    return {
+      name: selectedColumn.name,
+      data_type: selectedColumn.data_type,
+    }
+  })
+
+  // Watch tsColumn changes and update form state
+  watch(
+    tsColumn,
+    (newTsColumn) => {
+      form.tsColumn = newTsColumn
+    },
+    { immediate: true }
+  )
 
   const orderOptions = [
     { label: 'ASC', value: 'ASC' },
@@ -296,111 +327,6 @@ a-form(
   function removeCondition(index: number) {
     form.conditions.splice(index, 1)
   }
-
-  // Internal time range processing - unified logic for all consumers
-  function processTimeRange(sql: string): string {
-    // Handle pre-processed time range values - unified for all systems
-    if (props.timeRangeValues && props.timeRangeValues.length === 2) {
-      const [start, end] = props.timeRangeValues
-      return sql.replace(/\$timestart/g, start).replace(/\$timeend/g, end)
-    }
-
-    return sql
-  }
-
-  function escapeSqlString(value: string) {
-    if (typeof value !== 'string') {
-      return value // Only escape if it's a string
-    }
-
-    // Replace common SQL special characters with their escaped versions
-    return value
-      .replace(/\\/g, '\\\\') // Escape backslashes
-      .replace(/'/g, "''") // Escape single quotes by doubling
-      .replace(/\n/g, '\\n') // Escape newline
-      .replace(/\r/g, '\\r') // Escape carriage return
-  }
-
-  function singleCondition(condition: Condition) {
-    const column = condition.field
-    const columnType = getFieldType(column)
-    const conditionVal = escapeSqlString(condition.value)
-    let columnName = condition.field
-    columnName = `"${columnName}"`
-    if (condition.operator === 'Exist') {
-      return `${columnName} is not null`
-    }
-    if (condition.operator === 'Not Exist') {
-      return `${columnName} is null`
-    }
-    if (columnType === 'Number' || columnType === 'Time') {
-      return `${columnName} ${condition.operator} ${condition.value}`
-    }
-    if (condition.operator === 'like') {
-      // return `MATCHES(${columnName},'"${escapeSqlString(condition.value)}"')`
-      return `${columnName} like '%${conditionVal}%'`
-    }
-    if (['contains', 'not contains', 'match sequence'].indexOf(condition.operator) > -1) {
-      let val = escapeSqlString(condition.value)
-      if (condition.operator === 'not contains') {
-        val = `-"${val}"`
-      } else if (condition.operator === 'contains') {
-        val = `"${val}"`
-      }
-      return `MATCHES(${columnName},'${val}')`
-    }
-    return `${columnName} ${condition.operator} '${escapeSqlString(condition.value)}'`
-  }
-
-  watch([form, timeColumns, () => props.timeRangeValues], () => {
-    if (!form.table) return
-    if (!timeColumns.value.length) return
-    const availableTimeColumns = timeColumns.value
-    const conditions = form.conditions
-      .filter((condition) => {
-        if (condition.operator === 'Not Exist' || condition.operator === 'Exist') {
-          return condition.field
-        }
-        return condition.field && condition.operator && condition.value
-      })
-      .map((condition, index) => {
-        let conditionStr = singleCondition(condition)
-        // Add relation for conditions after the first one
-        if (index > 0) {
-          conditionStr = `${condition.relation || 'AND'} ${conditionStr}`
-        }
-        return conditionStr
-      })
-
-    // Add timestamp range condition when timeRangeValues is provided
-    const timeConditions = [...conditions]
-    if (props.timeRangeValues && props.timeRangeValues.length > 0 && availableTimeColumns.length > 0) {
-      const firstTimeColumn = availableTimeColumns[0]
-      const timeCondition = `${firstTimeColumn.value} <= $timeend AND ${firstTimeColumn.value} > $timestart`
-
-      if (timeConditions.length > 0) {
-        timeConditions.push(`AND ${timeCondition}`)
-      } else {
-        timeConditions.push(timeCondition)
-      }
-    }
-
-    let sql = `SELECT * FROM "${form.table}"`
-    if (timeConditions.length > 0) {
-      sql += ` WHERE ${timeConditions.join(' ')}`
-    }
-    if (form.orderByField) {
-      sql += ` ORDER BY "${form.orderByField}" ${form.orderBy}`
-    }
-    sql += ` LIMIT ${form.limit}`
-
-    // Process time range internally
-    if (props.timeRangeValues && props.timeRangeValues.length > 0 && availableTimeColumns.length > 0) {
-      sql = processTimeRange(sql)
-    }
-
-    emit('update:sql', sql)
-  })
 
   // Load saved state on mount
   onMounted(() => {
