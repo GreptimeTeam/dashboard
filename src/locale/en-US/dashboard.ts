@@ -75,4 +75,5 @@ export default {
   'dashboard.importExplain': 'Import Result JSON',
   'dashboard.exportCSV': 'Export Result as CSV',
   'dashboard.wrapLines': 'Wrap Lines',
+  'dashboard.copy': 'Copy',
 }

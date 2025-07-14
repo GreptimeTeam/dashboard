@@ -48,10 +48,18 @@ a-tabs.panel-tabs(
           | {{ $t('dashboard.raw') }}
         a-card.raw-json-card(:bordered="false")
           template(#title)
-            a-button(size="mini" type="outline" @click="exportExplainJson(explainResult)")
-              template(#icon)
-                icon-download
-              | {{ $t('dashboard.download') }}
+            a-space
+              a-button(size="mini" type="outline" @click="exportExplainJson(explainResult)")
+                template(#icon)
+                  icon-download
+                | {{ $t('dashboard.download') }}
+              TextCopyable(
+                type="outline"
+                size="mini"
+                buttonText
+                :data="formatRawJson(explainResult)"
+                :show-data="false"
+              )
           pre.raw-json {{ formatRawJson(explainResult) }}
   a-tab-pane(
     v-for="(result, index) of results"
@@ -232,9 +240,6 @@ a-tabs.panel-tabs(
 </style>
 
 <style lang="less" scoped>
-  .arco-btn {
-    border-radius: 2px;
-  }
   .arco-tabs.panel-tabs {
     .arco-tabs-content .arco-tabs-content-item {
       height: 100%;
