@@ -71,7 +71,7 @@ a-card(:bordered="false")
     try {
       if (!props.columns || !Array.isArray(props.columns)) return []
       return props.columns
-        .filter((column) => column && column.data_type === 'string')
+        .filter((column) => column && column.data_type === 'String')
         .map((column) => column.name)
         .filter((name) => name)
     } catch (error) {
