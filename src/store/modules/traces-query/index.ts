@@ -6,9 +6,9 @@ const useTracesQueryStore = defineStore('tracesQuery', () => {
   // Initialize base query store functionality
   const baseStore = useBaseQueryStore({
     storeId: 'tracesQuery',
-    defaultEditorType: 'builder',
-    defaultTimeLength: 10,
-    defaultLimit: 1000,
+    editorType: 'builder',
+    time: 10,
+    limit: 1000,
   })
 
   return {

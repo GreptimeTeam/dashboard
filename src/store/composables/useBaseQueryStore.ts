@@ -6,11 +6,11 @@ export interface BaseQueryStoreOptions {
   /** Store identifier for debugging */
   storeId: string
   /** Default editor mode */
-  defaultEditorType?: 'builder' | 'text'
+  editorType?: 'builder' | 'text'
   /** Default time length in minutes */
-  defaultTimeLength?: number
+  time?: number
   /** Default limit for query results */
-  defaultLimit?: number
+  limit?: number
   /** Custom URL parameter names */
   urlParams?: {
     editorType?: string
@@ -19,8 +19,6 @@ export interface BaseQueryStoreOptions {
     editorSql?: string
     builderForm?: string
   }
-  /** Optional result transformation function */
-  transformResults?: (rawRows: any[], columns: any[], additionalData?: any) => any[]
 }
 
 export interface QueryExecutionState {
@@ -34,9 +32,9 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
 
   // Default options
   const opts = {
-    defaultEditorType: 'builder',
-    defaultTimeLength: 10,
-    defaultLimit: 1000,
+    editorType: 'builder',
+    time: 10,
+    limit: 1000,
     urlParams: {
       editorType: 'editorType',
       timeLength: 'timeLength',
@@ -49,7 +47,7 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
 
   /** Time selection state - shared across components */
   const rangeTime = ref<Array<string>>([])
-  const time = ref(opts.defaultTimeLength)
+  const time = ref(opts.time)
   const timeRangeValues = computed(() => {
     if (rangeTime.value.length === 2) {
       // Absolute time range - convert timestamps to ISO strings
@@ -67,16 +65,13 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
   })
 
   /** Editor configuration - shared */
-  const editorType = ref<'builder' | 'text'>(opts.defaultEditorType as 'builder' | 'text')
+  const editorType = ref<'builder' | 'text'>(opts.editorType as 'builder' | 'text')
 
   /** Editor SQL for text mode */
   const editorSql = ref('')
 
   /** Builder form state - shared */
   const builderFormState = ref(null)
-
-  /** Query configuration - shared */
-  const limit = ref(opts.defaultLimit)
 
   /** Query execution state - shared */
   const refresh = ref(false)
@@ -246,7 +241,7 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
     if (form.orderByField) {
       sql += ` ORDER BY "${form.orderByField}" ${form.orderBy || 'DESC'}`
     }
-    sql += ` LIMIT ${form.limit || limit.value}`
+    sql += ` LIMIT ${form.limit}`
 
     return sql
   }
@@ -363,9 +358,9 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
   function reset() {
     builderFormState.value = null
     editorSql.value = ''
-    time.value = opts.defaultTimeLength
+    time.value = opts.time
     rangeTime.value = []
-    editorType.value = opts.defaultEditorType as 'builder' | 'text'
+    editorType.value = opts.editorType as 'builder' | 'text'
     refresh.value = false
     loading.value = false
     columns.value = []
@@ -494,7 +489,6 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
     editorType,
     editorSql,
     builderFormState,
-    limit,
     refresh,
     finalQuery,
 

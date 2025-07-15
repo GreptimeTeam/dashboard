@@ -69,6 +69,7 @@
           @update:rows="handlePaginationRowsUpdate"
         )
       LogTableData(
+        :key="currentTableName"
         :wrap-line="wrap"
         :size="size"
         :data="rows"
@@ -318,6 +319,27 @@
       console.log('tableName:', currentTableName.value)
       hasExecutedInitialQuery.value = true
       executeQuery()
+    }
+  })
+
+  // Watch for currentTableName changes to reset store and page state
+  watch(currentTableName, (newTableName, oldTableName) => {
+    if (newTableName && oldTableName && newTableName !== oldTableName) {
+      console.log('Table name changed from', oldTableName, 'to', newTableName)
+
+      // Reset store state
+      reset()
+
+      // Reset local state
+      rows.value = []
+      queryColumns.value = []
+      hasExecutedInitialQuery.value = false
+
+      // Reset pagination
+      refreshPagination()
+
+      // Reset chart
+      triggerChartRefresh()
     }
   })
 </script>

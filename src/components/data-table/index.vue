@@ -1,6 +1,7 @@
 <template lang="pug">
 .data-table-container(ref="tableContainer")
   a-table(
+    :key="columnMode"
     :data="processedData"
     :loading="loading"
     :pagination="false"
@@ -266,7 +267,7 @@ a-dropdown#td-context(
 
           if (row && column.name !== maxLenName) {
             if (column.name === props.tsColumn?.name) {
-              widthStr = '220px'
+              widthStr = '240px'
             } else {
               widthStr = getWidth(String(row[column.name]).length, totalStrLen, tableWidth.value)
             }

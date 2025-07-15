@@ -11,8 +11,8 @@
             a-radio(value="text") Text
           TimeRangeSelect(
             ref="timeRangeSelectRef"
-            v-model:time-length="timeLength"
-            v-model:time-range="timeRange"
+            v-model:time-length="time"
+            v-model:time-range="rangeTime"
             @update:time-range-values="handleTimeRangeValuesUpdate"
           )
           a-button(type="primary" size="small" @click="handleQuery") {{ $t('dashboard.runQuery') }}
@@ -41,7 +41,7 @@
         SQLBuilder(
           v-if="editorType === 'builder'"
           ref="sqlBuilderRef"
-          v-model:form-state="currentBuilderFormState"
+          v-model:form-state="builderFormState"
           table-filter="trace_id"
           :time-range-values="timeRangeValues"
           :default-conditions="[{ field: 'parent_span_id', operator: 'Not Exist', value: '', relation: 'AND' }]"
@@ -68,9 +68,9 @@
         CountChart(
           ref="countChartRef"
           :sql="finalQuery"
-          :time-length="timeLength"
-          :time-range="timeRange"
-          :table-name="tableName"
+          :time-length="time"
+          :time-range="rangeTime"
+          :table-name="currentTableName"
           :ts-column="tsColumn"
           @time-range-update="handleTimeRangeUpdate"
         )
@@ -78,7 +78,7 @@
       :data="allResults"
       :columns="columns"
       :loading="loading"
-      :table-name="tableName"
+      :table-name="currentTableName"
       :editor-type="editorType"
       @filterConditionAdd="handleFilterConditionAdd"
     )
@@ -107,11 +107,11 @@
     editorSql,
     loading,
     columns,
-    time: timeLength,
-    rangeTime: timeRange,
+    time,
+    rangeTime,
     timeRangeValues,
-    builderFormState: currentBuilderFormState,
-    currentTableName: tableName,
+    builderFormState,
+    currentTableName,
     finalQuery,
     tsColumn,
   } = storeToRefs(tracesStore)
@@ -123,18 +123,18 @@
   const chartExpanded = useLocalStorage('trace-chart-expanded', true)
 
   // Get store methods
-  const { initializeFromQuery, executeQuery, exportToCSV, updateBuilderSql, addFilterCondition } = tracesStore
+  const { initializeFromQuery, executeQuery, exportToCSV, addFilterCondition } = tracesStore
 
   const countChartRef = ref()
   const sqlEditorRef = ref()
   const sqlBuilderRef = ref()
   const timeRangeSelectRef = ref()
 
-  const hasTimeLimit = computed(() => timeLength.value > 0 || timeRange.value.length > 0)
+  const hasTimeLimit = computed(() => time.value > 0 || rangeTime.value.length > 0)
 
   // Check if all required values are available for initial query
   const canExecuteInitialQuery = computed(() => {
-    return tsColumn.value && finalQuery.value && tableName.value
+    return tsColumn.value && finalQuery.value && currentTableName.value
   })
 
   // Track if we've already executed the initial query
@@ -148,7 +148,8 @@
 
   // Handle SQL builder updates
   function handleBuilderSqlUpdate(sql: string) {
-    updateBuilderSql(sql)
+    // Note: builderSql is now computed from builderFormState, so this method is for compatibility
+    // The actual SQL generation happens in the base store
   }
 
   // Handle format SQL
@@ -176,8 +177,8 @@
   }
 
   function handleTimeRangeUpdate(newTimeRange: string[]) {
-    timeLength.value = 0 // Switch to custom mode
-    timeRange.value = newTimeRange
+    time.value = 0 // Switch to custom mode
+    rangeTime.value = newTimeRange
     handleQuery() // Re-run query with new time range
   }
 
@@ -210,7 +211,7 @@
       console.log('All async values available for initial query:')
       console.log('tsColumn:', tsColumn.value)
       console.log('finalQuery:', finalQuery.value)
-      console.log('tableName:', tableName.value)
+      console.log('tableName:', currentTableName.value)
 
       // Validate SQL before executing - only in editor mode
       if (editorType.value === 'text') {
@@ -223,6 +224,25 @@
 
       hasExecutedInitialQuery.value = true
       handleQuery()
+    }
+  })
+
+  // Watch for currentTableName changes to reset store and page state
+  watch(currentTableName, (newTableName, oldTableName) => {
+    if (newTableName && oldTableName && newTableName !== oldTableName) {
+      console.log('Table name changed from', oldTableName, 'to', newTableName)
+
+      // Reset store state
+      tracesStore.reset()
+
+      // Reset local state
+      allResults.value = []
+      hasExecutedInitialQuery.value = false
+
+      // Reset chart if expanded
+      if (chartExpanded.value && countChartRef.value) {
+        countChartRef.value.resetChart()
+      }
     }
   })
 
