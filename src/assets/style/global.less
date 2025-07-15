@@ -66,7 +66,7 @@ body {
   background-color: var(--main-bg-color);
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
-  --navbar-width: 160px;
+  --navbar-width: 180px;
   --navbar-width-collapsed: 80px;
   --tables-header-height: 58px;
   --tables-layout-padding: 16px;
@@ -147,10 +147,6 @@ body {
   border-radius: 4px;
 }
 
-.arco-trigger-arrow {
-  display: none;
-}
-
 .menu-dropdown {
   .arco-dropdown-option {
     padding: 0;
@@ -169,7 +165,7 @@ body {
 
     .arco-link:hover {
       color: var(--small-font-color);
-      background-color: var(--main-bg-color);
+      background-color: var(--th-bg-color);
     }
   }
 }
@@ -216,6 +212,11 @@ body {
   height: 12px;
 }
 
+.icon-13 {
+  width: 13px;
+  height: 13px;
+}
+
 .icon {
   width: 14px;
   height: 14px;
@@ -249,14 +250,6 @@ body {
 .icon-32 {
   width: 32px;
   height: 32px;
-}
-
-.arco-icon-hover::before {
-  width: 0;
-}
-
-.arco-icon-hover:hover::before {
-  background-color: transparent;
 }
 
 .arco-checkbox-checked .arco-checkbox-icon {
@@ -401,6 +394,14 @@ body {
   margin-bottom: 12px;
 }
 
+.mr-20 {
+  margin-right: 20px;
+}
+
+.pl-8 {
+  padding-left: 8px;
+}
+
 .success-color {
   color: var(--success-color);
 }
@@ -429,6 +430,10 @@ body {
   font-size: 13px;
 }
 
+.arco-tag-icon {
+  display: flex;
+}
+
 :focus {
   outline: none;
 }
@@ -443,6 +448,16 @@ body {
 
 .rotate-270 {
   transform: rotate(270deg);
+}
+
+.capitalize {
+  text-transform: capitalize;
+}
+
+.arco-icon {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3px;
 }
 
 #app {

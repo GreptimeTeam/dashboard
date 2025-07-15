@@ -131,16 +131,19 @@ a-card.table-manager(:bordered="false")
   import type { OptionsType } from '@/types/global'
   import { dateFormatter } from '@/utils'
 
-  const { databaseList, database: storeDB } = storeToRefs(useAppStore())
+  const props = defineProps<{
+    databaseList: string[]
+  }>()
+
+  const { fetchDatabases } = useAppStore()
   const { insertNameToPyCode } = usePythonCode()
   const { tablesSearchKey, tablesTreeRef, refreshTables, loadMore, loadMoreColumns, isRefreshingDetails } =
     useSiderTabs()
   const { tablesLoading, totalTablesLoading, tablesTreeForDatabase, databaseActiveKeys } = storeToRefs(
     useDataBaseStore()
   )
-  const { fetchDatabases } = useAppStore()
 
-  const collapseHeadersHeight = computed(() => databaseList.value.length * 36)
+  const collapseHeadersHeight = computed(() => props.databaseList.length * 36)
 
   const expandedKeys = ref<number[]>([])
 
@@ -188,20 +191,9 @@ a-card.table-manager(:bordered="false")
   const expandChildren = (event: Event, nodeData: TableTreeParent, type: 'details' | 'columns') => {
     expandedKeys.value.push(nodeData.key)
     nodeData.children = nodeData[type]
-
     nodeData.childrenType = type
-    // TODO: If children is empty, trigger load-more ?
     loadMore(nodeData)
   }
-
-  const gridColumns = computed(() => {
-    return tablesTreeData.value.map((data: TreeData) => {
-      return {
-        title: data.title,
-        dataIndex: data.title,
-      }
-    })
-  })
 
   const clickMenu = (event: Event, nodeData: TableTreeParent, database: string) => {
     event.stopPropagation()
@@ -215,32 +207,6 @@ a-card.table-manager(:bordered="false")
     TAG: '#primary-key',
     TIMESTAMP: '#time-index',
   }
-
-  const SHORTCUT_MAP: { [key: string]: OptionsType[] } = {
-    TABLE: [{ value: 'select*100', label: 'Query table' }],
-    FIELD: [
-      { value: 'select100', label: 'Query column' },
-      {
-        value: 'max',
-        label: 'Query max',
-      },
-      {
-        value: 'min',
-        label: 'Query min',
-      },
-    ],
-    TAG: [
-      { value: 'count', label: 'Count by' },
-      { value: 'where=', label: 'Filter by' },
-    ],
-    TIMESTAMP: [
-      { value: 'select*100', label: 'Query table' },
-      {
-        value: 'where<',
-        label: 'Filter by',
-      },
-    ],
-  }
 </script>
 
 <style scoped lang="less">
@@ -249,6 +215,64 @@ a-card.table-manager(:bordered="false")
     border-radius: 10px;
     padding: 0;
     height: 100%;
+
+    :deep(.arco-tree.table-tree) {
+      .arco-tree-node {
+        border: none;
+        > .arco-tree-node-title {
+          margin-left: 2px;
+        }
+        &:not(.arco-tree-node-is-leaf) {
+          > .arco-tree-node-title {
+            padding: 2px 0;
+          }
+        }
+        &.arco-tree-node-is-leaf.arco-tree-node-is-tail {
+          margin-bottom: 0;
+        }
+      }
+      .icon-16 {
+        height: 14px;
+        width: 14px;
+      }
+      .icon {
+        height: 13px;
+        width: 13px;
+      }
+    }
+    .arco-space.table-buttons {
+      > .arco-space-item:nth-of-type(1) {
+        display: none;
+      }
+      > .arco-space-item:nth-of-type(2) {
+        display: none;
+      }
+      > .arco-space-item:nth-of-type(3) {
+        margin-right: 0;
+        .arco-btn-size-small.arco-btn-only-icon {
+          width: 24px;
+          height: 24px;
+        }
+      }
+    }
+
+    .title-copy {
+      .arco-btn-size-medium.arco-btn-only-icon {
+        width: 24px;
+        height: 24px;
+      }
+      .arco-typography-operation-copy,
+      .arco-typography-operation-copied {
+        display: flex;
+      }
+      &.columns {
+        margin-left: 0;
+      }
+    }
+    .arco-btn-size-small.arco-btn-only-icon {
+      width: 24px;
+      height: 24px;
+    }
 
     :deep(> .arco-card-header) {
       padding: 10px 0 10px 15px;
@@ -338,7 +362,7 @@ a-card.table-manager(:bordered="false")
 
   .table-tree {
     :deep(.arco-tree-node) {
-      padding: 0 12px 0 20px;
+      padding: 0px 0px 0 18px;
       line-height: 30px;
       border-radius: 0;
 
@@ -528,6 +552,12 @@ a-card.table-manager(:bordered="false")
     }
   }
 
+  :deep(.arco-space.search) {
+    .arco-space-item {
+      justify-content: flex-end;
+    }
+  }
+
   .arco-input-wrapper.search-table {
     padding: 0 10px;
     font-family: 'Open Sans';
@@ -535,16 +565,6 @@ a-card.table-manager(:bordered="false")
 
     :deep(> .arco-input-prefix) {
       padding-right: 10px;
-    }
-  }
-
-  .arco-card.table-manager:not(.query-tables) {
-    .arco-tree-node-switcher-icon {
-      width: 16px;
-
-      svg {
-        transform: rotate(0);
-      }
     }
   }
 </style>

@@ -289,10 +289,6 @@ a-tabs.panel-tabs(
           }
         }
       }
-      .arco-table.data-table .arco-table-container {
-        border-radius: 0;
-        border: none;
-      }
       .arco-table-size-mini .arco-table-td {
         font-size: 11px;
       }

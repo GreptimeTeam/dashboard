@@ -17,3 +17,11 @@ a-empty(:description="data")
     },
   })
 </script>
+
+<style lang="less" scoped>
+  .arco-empty {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+</style>

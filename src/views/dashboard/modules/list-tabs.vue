@@ -6,7 +6,6 @@ a-tabs.sider-tabs(v-model:active-key="tabActiveKey" type="rounded" :class="{ 'on
 </template>
 
 <script lang="ts" name="ListTabs" setup>
-  import TableList from './table-list.vue'
   import ScriptsList from './scripts-list.vue'
 
   const props = defineProps<{
@@ -15,10 +14,6 @@ a-tabs.sider-tabs(v-model:active-key="tabActiveKey" type="rounded" :class="{ 'on
 
   const tabActiveKey = ref(props.has.length - 1)
   const tabsConfig = [
-    {
-      title: 'Tables',
-      component: TableList,
-    },
     {
       title: 'Scripts',
       component: ScriptsList,
