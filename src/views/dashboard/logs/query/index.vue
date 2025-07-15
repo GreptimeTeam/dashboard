@@ -63,7 +63,7 @@
           :key="paginationKey"
           :rows="rows"
           :columns="columns"
-          :sql="finalQuery"
+          :sql="builderSql"
           :ts-column="tsColumn"
           :limit="logsStore.limit"
           @update:rows="handlePaginationRowsUpdate"
@@ -229,11 +229,6 @@
   function handleToolbarQuery() {
     if (!currentTableName.value) {
       return
-    }
-
-    // Stop live query when user manually triggers a query
-    if (refresh.value) {
-      refresh.value = false
     }
 
     if (editorType.value === 'text') {

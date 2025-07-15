@@ -20,26 +20,26 @@ a-space(v-if="pages.length")
 
 <script setup name="Pagination" lang="ts">
   import { ref, nextTick } from 'vue'
-  import { watchOnce } from '@vueuse/core'
   import { storeToRefs } from 'pinia'
   import editorAPI from '@/api/editor'
   import useLogsQueryStore from '@/store/modules/logs-query'
   import type { SchemaType } from '@/store/modules/code-run/types'
-  import { addTsCondition, TimeTypes, toDateStr, toObj } from './until'
+  import convertTimestampToMilliseconds from '@/utils/datetime'
+  import dayjs from 'dayjs'
+  import { addTsCondition, TimeTypes, toObj } from './until'
   import type { TimeType } from './until'
   import type { ColumnType, TSColumn } from './types'
 
   const props = defineProps<{
     rows: any[]
     columns: ColumnType[]
-    sql: string
     tsColumn: TSColumn | null
     limit: number
   }>()
 
   const emit = defineEmits(['update:rows'])
-
-  const { queryNum, timeRangeValues } = storeToRefs(useLogsQueryStore())
+  const { buildSQLFromFormState } = useLogsQueryStore()
+  const { timeRangeValues, builderFormState } = storeToRefs(useLogsQueryStore())
 
   const leftDisabled = ref(false)
   const rightDisabled = ref(false)
@@ -53,24 +53,6 @@ a-space(v-if="pages.length")
   const currPage = ref<PageRange>()
   const newerLoading = ref(false)
   const olderLoading = ref(false)
-
-  type Order = 'ASC' | 'DESC'
-
-  function getOrder(): Order {
-    if (!props.tsColumn) return 'DESC'
-    const orderRe = new RegExp(`ORDER BY ${props.tsColumn.name}\\s+(DESC|ASC)`, 'i')
-    const result = orderRe.exec(props.sql)
-    if (result) {
-      return result[1] as Order
-    }
-    return 'DESC'
-  }
-
-  function replaceOrder(sqlStr: string, from: Order, to: Order) {
-    if (!props.tsColumn) return sqlStr
-    const orderRe = new RegExp(`(ORDER BY ${props.tsColumn.name})\\s+(${from})`, 'i')
-    return sqlStr.replace(orderRe, `$1 ${to}`)
-  }
 
   function queryPage(pageSql: string, reverse = false) {
     return editorAPI.runSQL(pageSql).then((result) => {
@@ -90,8 +72,14 @@ a-space(v-if="pages.length")
     })
   }
 
+  function formatDate(value: number, dataType: string) {
+    const ms = convertTimestampToMilliseconds(value, dataType)
+    return dayjs(ms).format('HH:mm:ss')
+  }
+
   function addPage(direction = 'right') {
-    const order = getOrder()
+    const order = builderFormState.value.orderBy
+
     if (!props.rows.length || !props.tsColumn) {
       currPage.value = {}
       return
@@ -100,8 +88,8 @@ a-space(v-if="pages.length")
     const first = order === 'ASC' ? props.rows[0] : props.rows[props.rows.length - 1]
     const last = order === 'ASC' ? props.rows[props.rows.length - 1] : props.rows[0]
 
-    const startLabel = toDateStr(first[tsName], props.tsColumn?.multiple, 'HH:mm:ss')
-    const endLabel = toDateStr(last[tsName], props.tsColumn?.multiple, 'HH:mm:ss')
+    const startLabel = formatDate(first[tsName], props.tsColumn?.data_type)
+    const endLabel = formatDate(last[tsName], props.tsColumn?.data_type)
     const pageTmp = {
       label: `${startLabel}—${endLabel}`,
       start: first[tsName],
@@ -119,14 +107,14 @@ a-space(v-if="pages.length")
 
   // Helper function to replace time placeholders in SQL
   function replaceTimePlaceholders(sql: string, start: any, end: any) {
-    return sql.replace(/\$timestart/g, start.toString()).replace(/\$timeend/g, end.toString())
+    return sql.replace(/\$timestart/g, start).replace(/\$timeend/g, end)
   }
 
-  function loadPage(start: number, end: number, pageIndex: number) {
+  function loadPage(start, end, pageIndex: number) {
     if (!props.tsColumn) return
     pages.value[pageIndex].loading = true
-
-    const pageSql = replaceTimePlaceholders(props.sql, start, Number(end) + 1)
+    const sql = buildSQLFromFormState({ ...builderFormState.value }, [start, end])
+    const pageSql = replaceTimePlaceholders(sql, start, Number(end) + 1)
     queryPage(pageSql)
       .then(() => {
         const index = pages.value.findIndex((page) => page.start === start && page.end === end)
@@ -138,7 +126,7 @@ a-space(v-if="pages.length")
   }
 
   function loadOlder() {
-    if (!props.tsColumn || !timeRangeValues.value.length) {
+    if (!props.tsColumn) {
       return
     }
     olderLoading.value = true
@@ -146,10 +134,10 @@ a-space(v-if="pages.length")
 
     // Use the start from timeRangeValues directly
     const [startValue] = timeRangeValues.value
+    const sql = buildSQLFromFormState({ ...builderFormState.value, orderBy: 'DESC' }, [startValue, end])
 
-    let pageSql = replaceTimePlaceholders(props.sql, startValue, end)
-    pageSql = replaceOrder(pageSql, 'ASC', 'DESC')
-    const order = getOrder()
+    const pageSql = replaceTimePlaceholders(sql, startValue, end)
+    const order = builderFormState.value.orderBy
     const reverse = order === 'ASC'
     queryPage(pageSql, reverse)
       .then(() => {
@@ -164,7 +152,7 @@ a-space(v-if="pages.length")
   }
 
   function loadNewer() {
-    if (!props.tsColumn || !timeRangeValues.value.length) {
+    if (!props.tsColumn) {
       return
     }
     newerLoading.value = true
@@ -172,10 +160,9 @@ a-space(v-if="pages.length")
 
     // Use the end from timeRangeValues directly
     const [, endValue] = timeRangeValues.value
-
-    let pageSql = replaceTimePlaceholders(props.sql, start, endValue)
-    pageSql = replaceOrder(pageSql, 'DESC', 'ASC')
-    const order = getOrder()
+    const sql = buildSQLFromFormState({ ...builderFormState.value, orderBy: 'ASC' }, [start, endValue])
+    const pageSql = replaceTimePlaceholders(sql, start, endValue)
+    const order = builderFormState.value.orderBy
     const reverse = order === 'DESC'
     queryPage(pageSql, reverse)
       .then(() => {
@@ -188,19 +175,6 @@ a-space(v-if="pages.length")
         newerLoading.value = false
       })
   }
-
-  // add page when rows change
-  watchOnce(
-    () => props.rows,
-    () => {
-      nextTick(() => {
-        if (props.rows && props.rows.length) {
-          pages.value = []
-          addPage()
-        }
-      })
-    }
-  )
 
   // add page after click uncheck live
   if (props.rows && props.rows.length > 0) {

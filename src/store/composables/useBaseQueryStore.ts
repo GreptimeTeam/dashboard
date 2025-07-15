@@ -171,12 +171,36 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
     return `${columnName} ${condition.operator} '${escapeSqlString(condition.value)}'`
   }
 
-  /** Computed builder SQL generated from form state */
-  const builderSql = computed(() => {
-    if (!builderFormState.value?.table) return ''
+  /** Build SQL from form state and time ranges */
+  /**
+   * Build SQL from form state and time ranges
+   *
+   * @param formState - The form state object containing table, conditions, orderBy, etc.
+   * @param timeRanges - Optional array of time range values for timestamp filtering (uses store values if not provided)
+   * @param timestampColumn - Optional timestamp column object with name property (uses store value if not provided)
+   * @returns Generated SQL string
+   *
+   * @example
+   * ```typescript
+   * // Basic usage with form state only - uses store's timeRangeValues and tsColumn
+   * const sql = buildSQLFromFormState(formState)
+   *
+   * // With custom time ranges and timestamp column
+   * const sql = buildSQLFromFormState(formState, customTimeRanges, customTsColumn)
+   *
+   * // With custom time ranges but store's timestamp column
+   * const sql = buildSQLFromFormState(formState, customTimeRanges)
+   * ```
+   */
+  function buildSQLFromFormState(formState: any, timeRanges?: any[], timestampColumn?: any): string {
+    if (!formState?.table) return ''
 
-    const form = builderFormState.value
+    const form = formState
     const conditions = form.conditions || []
+
+    // Use store values as fallbacks if parameters are not provided
+    const effectiveTimeRanges = timeRanges || timeRangeValues.value
+    const effectiveTimestampColumn = timestampColumn || tsColumn.value
 
     // Process conditions
     const processedConditions = conditions
@@ -195,15 +219,21 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
         return conditionStr
       })
 
-    // Add timestamp range condition when timeRangeValues is provided
+    // Add timestamp range condition when timeRanges is provided
     const timeConditions = [...processedConditions]
-    if (timeRangeValues.value.length > 0 && tsColumn.value) {
-      const [startTs, endTs] = timeRangeValues.value
-      const timeCondition = `${tsColumn.value.name} < ${endTs} AND ${tsColumn.value.name} >= ${startTs}`
+    if (effectiveTimeRanges && effectiveTimeRanges.length > 0 && effectiveTimestampColumn) {
+      let timeCondition = ''
+      if (effectiveTimeRanges[0] && !effectiveTimeRanges[1]) {
+        timeCondition = `${effectiveTimestampColumn.name} > $timestart`
+      } else if (effectiveTimeRanges[1] && !effectiveTimeRanges[0]) {
+        timeCondition = `${effectiveTimestampColumn.name} < $timeend`
+      } else if (effectiveTimeRanges[0] && effectiveTimeRanges[1]) {
+        timeCondition = `${effectiveTimestampColumn.name} <= $timeend AND ${effectiveTimestampColumn.name} >= $timestart`
+      }
 
-      if (timeConditions.length > 0) {
+      if (timeCondition && timeConditions.length > 0) {
         timeConditions.push(`AND ${timeCondition}`)
-      } else {
+      } else if (timeCondition) {
         timeConditions.push(timeCondition)
       }
     }
@@ -219,14 +249,11 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
     sql += ` LIMIT ${form.limit || limit.value}`
 
     return sql
-  })
+  }
 
-  /** Computed values used by multiple components */
-  const unixTimeRange = computed(() => {
-    if (time.value && time.value > 0) {
-      return [dayjs().subtract(time.value, 'minute').unix(), dayjs().unix()]
-    }
-    return rangeTime.value.map((v) => Number(v))
+  /** Computed builder SQL generated from form state */
+  const builderSql = computed(() => {
+    return buildSQLFromFormState(builderFormState.value)
   })
 
   /** Final query with time processing */
@@ -235,31 +262,16 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
     // For editor mode, we need to process time range manually
     const query = editorType.value === 'builder' ? builderSql.value : editorSql.value
 
-    if (editorType.value === 'text') {
-      // Manual time processing for editor mode
-      let processedSql = query
+    let processedSql = query
 
-      // Enhanced time processing logic
-      if (timeRangeValues.value.length === 2) {
-        // Use processed time range values directly (preferred for logs)
-        const [startTs, endTs] = timeRangeValues.value
-        processedSql = processedSql.replace(/\$timestart/g, `'${startTs}'`).replace(/\$timeend/g, `'${endTs}'`)
-      } else if (time.value > 0) {
-        // Fallback to relative time processing (for traces)
-        const start = `now() - Interval '${time.value}m'`
-        const end = 'now()'
-        processedSql = processedSql.replace(/\$timestart/g, start).replace(/\$timeend/g, end)
-      } else if (rangeTime.value.length === 2) {
-        // ISO date processing for custom ranges
-        const start = new Date(Number(rangeTime.value[0]) * 1000).toISOString()
-        const end = new Date(Number(rangeTime.value[1]) * 1000).toISOString()
-        processedSql = processedSql.replace(/\$timestart/g, `'${start}'`).replace(/\$timeend/g, `'${end}'`)
-      }
-
-      return processedSql
+    // Enhanced time processing logic
+    if (timeRangeValues.value.length === 2) {
+      // Use processed time range values directly (preferred for logs)
+      const [startTs, endTs] = timeRangeValues.value
+      processedSql = processedSql.replace(/\$timestart/g, `${startTs}`).replace(/\$timeend/g, `${endTs}`)
     }
 
-    return query
+    return processedSql
   })
 
   // Initialize state from URL query parameters
@@ -341,36 +353,7 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
   // Watch for editor type changes - generate editorSql from builder when switching to text
   watch(editorType, (newMode: 'builder' | 'text') => {
     if (newMode === 'text' && !editorSql.value && builderSql.value) {
-      // Generate editorSql with time placeholders from builder SQL
-      let generatedSql = builderSql.value
-
-      // Replace time conditions with placeholders for common timestamp column patterns
-      // This handles both logs (with various timestamp columns) and traces (with timestamp column)
-      const timeColumnPatterns = [
-        'timestamp',
-        'ts',
-        'time',
-        'created_at',
-        'updated_at',
-        'event_time',
-        'log_time',
-        'date_time',
-        'datetime',
-      ]
-
-      timeColumnPatterns.forEach((columnName) => {
-        // Replace time range conditions with placeholders
-        generatedSql = generatedSql.replace(
-          new RegExp(`${columnName}\\s*>=\\s*[^\\s]+`, 'gi'),
-          `${columnName} >= $timestart`
-        )
-        generatedSql = generatedSql.replace(
-          new RegExp(`${columnName}\\s*<=\\s*[^\\s]+`, 'gi'),
-          `${columnName} <= $timeend`
-        )
-      })
-
-      editorSql.value = generatedSql
+      editorSql.value = builderSql.value
     }
   })
 
@@ -386,11 +369,6 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
     refresh.value = false
     loading.value = false
     columns.value = []
-  }
-
-  function updateBuilderSql(newSql: string) {
-    // builderSql is now computed, so this method is kept for compatibility but doesn't do anything
-    // The SQL is generated automatically from builderFormState
   }
 
   // Base query execution function that can be extended
@@ -519,7 +497,6 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
     limit,
     refresh,
     finalQuery,
-    unixTimeRange,
 
     // Query execution state
     loading,
@@ -532,11 +509,11 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
     reset,
     initializeFromQuery,
     updateQueryParams,
-    updateBuilderSql,
     executeBaseQuery,
     executeQuery,
     exportToCSV,
     addFilterCondition,
+    buildSQLFromFormState,
 
     // Options for customization
     options: opts,

@@ -15,31 +15,7 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
   const refresh = ref(false)
 
   // Extract state and methods from base store
-  const {
-    builderSql,
-    currentTableName,
-    rangeTime,
-    time,
-    timeRangeValues,
-    editorType,
-    editorSql,
-    builderFormState,
-    limit,
-    finalQuery,
-    unixTimeRange,
-    tsColumn,
-    reset: baseReset,
-    initializeFromQuery,
-    updateQueryParams,
-    updateBuilderSql,
-    executeBaseQuery,
-    executeQuery,
-    exportToCSV,
-    addFilterCondition,
-    // Query execution state from base store
-    loading,
-    columns,
-  } = baseStore
+  const { reset: baseReset } = baseStore
 
   // Logs-specific reset function that includes base reset
   function reset() {
@@ -49,30 +25,8 @@ const useLogsQueryStore = defineStore('logsQuery', () => {
 
   return {
     // Base store state and methods
-    builderSql,
-    currentTableName,
-    rangeTime,
-    time,
-    timeRangeValues,
-    editorType,
-    editorSql,
-    builderFormState,
-    limit,
-    finalQuery,
-    unixTimeRange,
-    tsColumn,
-    initializeFromQuery,
-    updateQueryParams,
-    updateBuilderSql,
-    executeBaseQuery,
-    executeQuery,
-    exportToCSV,
-    addFilterCondition,
-    // Query execution state from base store
-    loading,
-    columns,
+    ...baseStore,
     refresh,
-    // Reset function from base store
     reset,
   }
 })

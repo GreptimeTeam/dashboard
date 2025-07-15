@@ -106,6 +106,7 @@ a-dropdown#td-context(
   import { ref, computed, shallowRef } from 'vue'
   import { useElementSize } from '@vueuse/core'
   import dayjs from 'dayjs'
+  import convertTimestampToMilliseconds from '@/utils/datetime'
 
   interface TSColumn {
     name: string
@@ -227,42 +228,6 @@ a-dropdown#td-context(
     return `${width}px`
   }
 
-  // Universal timestamp conversion to milliseconds
-  function convertTimestampToMilliseconds(timestamp: number, dataType: string): number {
-    const type = dataType.toLowerCase()
-
-    // Determine the source unit and convert to milliseconds
-    if (type.includes('timestampsecond')) {
-      // Seconds to milliseconds: multiply by 1000
-      return timestamp * 1000
-    }
-    if (type.includes('timestampmillisecond')) {
-      // Already in milliseconds: no conversion needed
-      return timestamp
-    }
-    if (type.includes('timestampmicrosecond')) {
-      // Microseconds to milliseconds: divide by 1000
-      return timestamp / 1000
-    }
-    if (type.includes('timestampnanosecond')) {
-      // Nanoseconds to milliseconds: divide by 1,000,000
-      return timestamp / 1000000
-    }
-
-    // Fallback: try regex pattern for timestamp(n) format
-    const multipleRe = /timestamp\((\d)\)/i
-    const timescale = multipleRe.exec(dataType)
-    if (timescale) {
-      const precision = Number(timescale[1])
-      // precision 0 = seconds, 3 = milliseconds, 6 = microseconds, 9 = nanoseconds
-      const conversionFactor = 10 ** (precision - 3)
-      return timestamp / conversionFactor
-    }
-
-    // Default fallback: assume seconds
-    return timestamp * 1000
-  }
-
   // Computed columns based on mode
   const processedColumns = computed(() => {
     if (!mergeColumn.value) {
@@ -297,10 +262,15 @@ a-dropdown#td-context(
         const maxLenName = findMaxLenCol(row)
 
         return tmpColumns.map((column) => {
-          const widthStr =
-            row && column.name !== maxLenName
-              ? getWidth(String(row[column.name]).length, totalStrLen, tableWidth.value)
-              : 'auto'
+          let widthStr = 'auto'
+
+          if (row && column.name !== maxLenName) {
+            if (column.name === props.tsColumn?.name) {
+              widthStr = '220px'
+            } else {
+              widthStr = getWidth(String(row[column.name]).length, totalStrLen, tableWidth.value)
+            }
+          }
 
           return {
             ...column,
