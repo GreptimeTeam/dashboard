@@ -1,7 +1,7 @@
 <template lang="pug">
 a-layout.layout
   a-layout-sider(:resize-directions="['right']" :width="321")
-    ListTabs(:has="['Tables', 'Scripts']")
+    ListTabs(:has="['Scripts']")
   a-layout-content
     a-space.content-space(direction="vertical" fill size="large")
       PyEditor

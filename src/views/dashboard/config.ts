@@ -19,6 +19,7 @@ export const chartTypeOptions: any = [
     value: 'bar',
   },
 ]
+
 export const updateOptions = { notMerge: true }
 
 export const numberTypes = [
@@ -95,6 +96,32 @@ export const SEMANTIC_TYPE_MAP: { [key: string]: string } = {
   'TIME INDEX': 'TIMESTAMP',
 }
 
+export const relativeTimeOptions = [
+  { value: 1, label: 'Last 1 minute' },
+  { value: 10, label: 'Last 10 minutes' },
+  { value: 30, label: 'Last 30 minutes' },
+  { value: 60, label: 'Last 1 hour' },
+  { value: 180, label: 'Last 3 hours' },
+  { value: 360, label: 'Last 6 hours' },
+  { value: 720, label: 'Last 12 hours' },
+  { value: 1440, label: 'Last 24 hours' },
+  { value: 2880, label: 'Last 2 days' },
+  { value: 10080, label: 'Last 7 days' },
+]
+
+export const relativeTimeMap: { [key: number]: string } = {
+  1: 'Last 1 minute',
+  10: 'Last 10 minutes',
+  30: 'Last 30 minutes',
+  60: 'Last 1 hour',
+  180: 'Last 3 hours',
+  360: 'Last 6 hours',
+  720: 'Last 12 hours',
+  1440: 'Last 24 hours',
+  2880: 'Last 2 days',
+  10080: 'Last 7 days',
+}
+
 export const navbarSteps: DriveStep[] = [
   {
     element: '#menu-query',
@@ -168,29 +195,3 @@ export const tableSteps: DriveStep[] = [
 const navbarStepElements = navbarSteps.map((step) => step.element)
 
 const tableStepElements = tableSteps.map((step) => step.element)
-
-export const relativeTimeOptions = [
-  { value: 1, label: 'Last 1 minute' },
-  { value: 10, label: 'Last 10 minutes' },
-  { value: 30, label: 'Last 30 minutes' },
-  { value: 60, label: 'Last 1 hour' },
-  { value: 180, label: 'Last 3 hours' },
-  { value: 360, label: 'Last 6 hours' },
-  { value: 720, label: 'Last 12 hours' },
-  { value: 1440, label: 'Last 24 hours' },
-  { value: 2880, label: 'Last 2 days' },
-  { value: 10080, label: 'Last 7 days' },
-]
-
-export const relativeTimeMap: { [key: number]: string } = {
-  1: 'Last 1 minute',
-  10: 'Last 10 minutes',
-  30: 'Last 30 minutes',
-  60: 'Last 1 hour',
-  180: 'Last 3 hours',
-  360: 'Last 6 hours',
-  720: 'Last 12 hours',
-  1440: 'Last 24 hours',
-  2880: 'Last 2 days',
-  10080: 'Last 7 days',
-}

@@ -5,7 +5,7 @@ import { RecordsType } from '@/store/modules/code-run/types'
 
 const tablesSearchKey = ref('')
 const scriptsSearchKey = ref('')
-const tablesTreeRef = ref()
+const tablesTreeRef = ref<{ [key: string]: any }>({})
 const isRefreshingDetails = ref<{ [key: number]: boolean }>({ 0: false })
 
 export default function useSiderTabs() {
@@ -45,13 +45,6 @@ export default function useSiderTabs() {
     return loop(originScriptsList.value)
   }
 
-  const tablesTreeData = computed(() => {
-    if (!tablesSearchKey.value) return originTablesTree.value
-    return originTablesTree.value.filter(
-      (item: TableTreeParent) => item.title.toLowerCase().indexOf(tablesSearchKey.value.toLowerCase()) > -1
-    )
-  })
-
   const scriptsListData = computed(() => {
     if (!scriptsSearchKey.value) return originScriptsList.value
     return searchList(scriptsSearchKey.value)
@@ -75,6 +68,7 @@ export default function useSiderTabs() {
             rows,
             schema: { column_schemas: columnSchemas },
           } = result
+
           const indexes = getIndexesForColumns(columnSchemas)
           const { treeChildren, timeIndexName } = generateTreeChildren(nodeData, rows, indexes)
           addChildren(nodeData.key, treeChildren, timeIndexName, 'columns', isSilent, database)
@@ -186,7 +180,6 @@ export default function useSiderTabs() {
   return {
     tablesSearchKey,
     scriptsSearchKey,
-    tablesTreeData,
     scriptsListData,
     isRefreshingDetails,
     tablesTreeRef,
