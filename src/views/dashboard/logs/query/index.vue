@@ -15,6 +15,7 @@
           v-if="editorType === 'builder'"
           ref="sqlBuilderRef"
           v-model:form-state="builderFormState"
+          storage-key="logs-query-table"
           :time-range-values="builderTimeRangeValues"
           @update:sql="handleBuilderSqlUpdate"
         )
@@ -33,8 +34,9 @@
         a-space
           span.results-header
             span {{ $t('logsQuery.results') }}
-            span.results-count
-              | ({{ rows.length }} {{ rows.length > 1 ? 'records' : 'record' }})
+            span.results-count(v-if="rows.length > 0") 
+              | ({{ rows.length }} {{ rows.length === 1 ? 'record' : 'records' }}
+              | )
           a-checkbox(v-model="mergeColumn" type="button" size="small")
             | Single Column
           a-checkbox(
@@ -346,4 +348,9 @@
 
 <style lang="less">
   @import '@/assets/style/query-layout.less';
+  .results-count {
+    color: var(--color-text-3);
+    font-size: 12px;
+    font-weight: normal;
+  }
 </style>

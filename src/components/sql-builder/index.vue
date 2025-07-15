@@ -49,7 +49,7 @@ a-form(
           a-button(@click="() => removeCondition(index)")
             icon-minus(style="cursor: pointer; font-size: 14px")
 
-      a-button(type="text" @click="addCondition")
+      a-button(@click="addCondition")
         icon-plus(style="cursor: pointer; font-size: 14px")
   a-form-item(label="Order By")
     a-space
@@ -80,6 +80,7 @@ a-form(
 
 <script setup name="SQLBuilder" lang="ts">
   import { ref, watch, onMounted, computed, readonly, reactive } from 'vue'
+  import { useLocalStorage } from '@vueuse/core'
   import { storeToRefs } from 'pinia'
   import editorAPI from '@/api/editor'
   import { useAppStore } from '@/store'
@@ -115,6 +116,7 @@ a-form(
     tableFilter?: string // Optional filter for which tables to show (e.g., 'trace_id' for traces)
     timeRangeValues?: string[] // Pre-processed time range values [start, end] - unified for all systems
     defaultConditions?: Condition[] // Default conditions for the form
+    storageKey?: string // Optional storage key for localStorage (e.g., 'logs-query-table', 'traces-query-table')
   }>()
 
   const tables = ref<string[]>([])
@@ -123,13 +125,22 @@ a-form(
   // Get current database from app store
   const { database } = storeToRefs(useAppStore())
 
+  // Use localStorage to remember the last selected table
+  const storageKey = props.storageKey || 'sql-builder-last-table'
+  const lastSelectedTable = useLocalStorage(storageKey, '')
+
+  // Clear localStorage when database changes to avoid invalid table references
+  watch(database, () => {
+    lastSelectedTable.value = ''
+  })
+
   // Use form state from props if provided, otherwise use default
   const defaultFormState: Form = {
     conditions: props.defaultConditions || [],
     orderByField: '',
     orderBy: 'DESC',
     limit: 1000,
-    table: '',
+    table: lastSelectedTable.value || '',
     tsColumn: null,
   }
 
@@ -271,9 +282,16 @@ a-form(
       const result = await editorAPI.runSQL(sql)
       tables.value = result.output[0].records.rows.map((row: string[]) => row[0])
 
-      // Only set default table if we don't have form state from props
-      if (!props.formState && tables.value.length > 0) {
-        form.table = tables.value[0]
+      // Validate and set table from localStorage or default
+      if (!props.formState) {
+        if (lastSelectedTable.value && tables.value.includes(lastSelectedTable.value)) {
+          // Use the remembered table if it still exists
+          form.table = lastSelectedTable.value
+        } else if (tables.value.length > 0) {
+          // Use first available table if remembered table doesn't exist
+          form.table = tables.value[0]
+          lastSelectedTable.value = tables.value[0]
+        }
       }
     } catch (error) {
       console.error('Failed to fetch tables:', error)
@@ -300,6 +318,10 @@ a-form(
   }
 
   function handleTableChange() {
+    // Save the selected table to localStorage
+    lastSelectedTable.value = form.table
+
+    // Reset form state for new table
     form.conditions = []
     form.orderByField = ''
   }
@@ -335,7 +357,11 @@ a-form(
 
   watch(
     () => form.table,
-    () => {
+    (newTable) => {
+      if (newTable) {
+        // Save to localStorage whenever table changes
+        lastSelectedTable.value = newTable
+      }
       fetchTableFields(form.table)
       // Table value is now extracted from form state in parent component
     },

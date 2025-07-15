@@ -10,6 +10,21 @@ a-card(:bordered="false")
         | )
   template(#extra)
     a-space
+      a-trigger(v-if="columns.length" trigger="click" :unmount-on-close="false")
+        a-button(type="text" style="color: var(--color-text-2)")
+          template(#icon)
+          | Columns
+        template(#content)
+          a-card(style="padding: 10px; min-width: 200px; max-height: 500px; overflow-y: auto")
+            .column-controls
+              a-space(direction="vertical" size="small")
+                a-space
+                  a-button(type="text" size="mini" @click="selectAllColumns") Select All
+                  a-button(type="text" size="mini" @click="deselectAllColumns") Deselect All
+                a-checkbox-group(v-model="displayedColumns" direction="vertical")
+                  a-checkbox(v-for="column in columns" :key="column.name" :value="column.name")
+                    | {{ column.name }}
+
       a-pagination(
         v-if="totalResults > pageSize"
         v-model:current="currentPage"
@@ -24,21 +39,6 @@ a-card(:bordered="false")
         @change="handlePageChange"
         @page-size-change="handlePageSizeChange"
       )
-      a-trigger(v-if="columns.length" trigger="click" :unmount-on-close="false")
-        a-button(type="text" style="color: var(--color-text-2)")
-          template(#icon)
-            icon-settings
-          | Columns
-        template(#content)
-          a-card(style="padding: 10px; min-width: 200px; max-height: 500px; overflow-y: auto")
-            .column-controls
-              a-space(direction="vertical" size="small")
-                a-space
-                  a-button(type="text" size="mini" @click="selectAllColumns") Select All
-                  a-button(type="text" size="mini" @click="deselectAllColumns") Deselect All
-                a-checkbox-group(v-model="displayedColumns" direction="vertical")
-                  a-checkbox(v-for="column in columns" :key="column.name" :value="column.name")
-                    | {{ column.name }}
 
   DataTable(
     :data="paginatedResults"
@@ -51,12 +51,6 @@ a-card(:bordered="false")
     :class="{ builder_type: editorType === 'builder' }"
     @filter-condition-add="$emit('filterConditionAdd', $event)"
   )
-    // Custom slot for trace ID columns to make them clickable
-    template(#column-traceid="{ record, showContextMenu, handleContextMenu }")
-      a-link(@click="handleTraceClick(record.traceid)") {{ record.traceid }}
-      svg.td-config-icon(v-if="showContextMenu" @click="(event) => handleContextMenu(record, 'traceid', event)")
-        use(href="#menu")
-
     template(#column-trace_id="{ record, showContextMenu, handleContextMenu }")
       a-link(@click="handleTraceClick(record.trace_id)") {{ record.trace_id }}
       svg.td-config-icon(v-if="showContextMenu" @click="(event) => handleContextMenu(record, 'trace_id', event)")
@@ -231,11 +225,6 @@ a-card(:bordered="false")
     min-width: 200px;
   }
 
-  // Custom trace table styling can be added here if needed
-  :deep(.trace_table) {
-    // Any trace-specific table styles
-  }
-
   .td-config-icon {
     margin-left: 3px;
     cursor: pointer;
@@ -243,107 +232,5 @@ a-card(:bordered="false")
     width: 12px;
     height: 12px;
     color: var(--color-primary);
-  }
-
-  :deep(.arco-card) {
-    border-radius: 0;
-    border-bottom: none;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-
-    .arco-card-body {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-      padding: 0;
-    }
-  }
-
-  // Table styling to match logs TableData
-  :deep(.trace_table) {
-    font-family: 'Roboto Mono', monospace;
-    height: 100%;
-
-    .arco-table {
-      height: 100%;
-    }
-
-    .arco-table-container {
-      height: 100%;
-    }
-
-    .arco-table-element {
-      font-family: 'Roboto Mono', monospace;
-      height: 100%;
-    }
-
-    // Center align empty state
-    .arco-table-tr-empty .arco-table-cell {
-      justify-content: center;
-    }
-
-    .arco-table-td,
-    .arco-table-th {
-      white-space: nowrap;
-    }
-
-    .arco-table-size-medium .arco-table-cell {
-      padding: 7px 10px;
-    }
-
-    &.multiple_column {
-      width: 100%;
-
-      .arco-table-td-content {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        position: relative;
-        width: auto;
-        padding-right: 15px;
-      }
-
-      .td-config-icon {
-        position: absolute;
-        right: 0;
-        top: 5px;
-      }
-    }
-
-    // Show menu icon on hover when in builder mode
-    &.multiple_column .arco-table-cell:hover .td-config-icon {
-      visibility: visible;
-    }
-  }
-
-  :deep(.arco-card) {
-    border-radius: 0;
-    border-bottom: none;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-
-    .arco-card-body {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-      padding: 0;
-    }
-  }
-
-  :deep(.arco-table-th) {
-    background-color: var(--color-fill-2);
-  }
-
-  :deep(.arco-table-td) {
-    pre {
-      margin: 0;
-      white-space: pre-wrap;
-      word-break: break-all;
-    }
   }
 </style>

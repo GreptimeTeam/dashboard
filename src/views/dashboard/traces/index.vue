@@ -13,7 +13,7 @@
             ref="timeRangeSelectRef"
             v-model:time-length="time"
             v-model:time-range="rangeTime"
-            @update:time-range-values="handleTimeRangeValuesUpdate"
+            button-type="outline"
           )
           a-button(type="primary" size="small" @click="handleQuery") {{ $t('dashboard.runQuery') }}
           a-button(
@@ -43,6 +43,7 @@
           ref="sqlBuilderRef"
           v-model:form-state="builderFormState"
           table-filter="trace_id"
+          storage-key="traces-query-table"
           :time-range-values="timeRangeValues"
           :default-conditions="[{ field: 'parent_span_id', operator: 'Not Exist', value: '', relation: 'AND' }]"
           @update:sql="handleBuilderSqlUpdate"
@@ -139,12 +140,6 @@
 
   // Track if we've already executed the initial query
   const hasExecutedInitialQuery = ref(false)
-
-  // Handler for TimeRangeSelect updates
-  function handleTimeRangeValuesUpdate(newTimeRangeValues: string[]) {
-    // Time range updates are handled directly by the TimeRangeSelect component
-    // through v-model bindings to timeLength and timeRange
-  }
 
   // Handle SQL builder updates
   function handleBuilderSqlUpdate(sql: string) {
@@ -249,7 +244,7 @@
   initializeFromQuery()
 </script>
 
-<style lang="less" scoped>
+<style lang="less">
   @import '@/assets/style/query-layout.less';
 
   // No traces-specific styles needed - all moved to shared CSS
