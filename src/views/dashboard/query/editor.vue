@@ -26,10 +26,16 @@ a-card.editor-card(:bordered="false")
       a-dropdown-button(
         type="outline"
         position="bl"
-        :disabled="isButtonDisabled || explainQueryRunning"
+        :disabled="explainQueryRunning"
+        :class="{ 'explain-disabled': isButtonDisabled }"
         @click="explainCurrentStatement"
       )
-        a-popover(position="bl" content-class="code-tooltip" :content="currentStatement")
+        a-popover(
+          position="bl"
+          content-class="code-tooltip"
+          :content="currentStatement"
+          :disabled="isButtonDisabled"
+        )
           a-space(:size="4")
             icon-loading(v-if="explainQueryRunning" spin)
             span {{ $t('dashboard.explainQuery') + `${currentQueryNumber ? ' #' + currentQueryNumber : ''} ` }}
@@ -137,6 +143,7 @@ a-card.editor-card(:bordered="false")
           v-model="importExplainForm.explainJson"
           :placeholder="placeholder"
           :auto-size="{ minRows: 10, maxRows: 20 }"
+          @paste="onPaste"
         )
 </template>
 
@@ -443,6 +450,24 @@ a-card.editor-card(:bordered="false")
     ],
     "execution_time_ms": 0
   }`
+
+  const onPaste = (event: ClipboardEvent) => {
+    const { clipboardData } = event
+    if (clipboardData) {
+      const pastedText = clipboardData.getData('text/plain')
+      importExplainForm.explainJson = pastedText
+      try {
+        const jsonData = JSON.parse(pastedText)
+        if (jsonData.output && jsonData.output[0] && jsonData.output[0].records) {
+          handleImportExplain()
+        } else {
+          Message.error('Invalid JSON format. Please ensure it matches the expected structure.')
+        }
+      } catch (error) {
+        Message.error(`Failed to parse JSON: ${error instanceof Error ? error.message : String(error)}`)
+      }
+    }
+  }
 </script>
 
 <style lang="less" scoped>
@@ -471,6 +496,12 @@ a-card.editor-card(:bordered="false")
   }
   .prom-form {
     padding-left: 8px;
+  }
+
+  .explain-disabled {
+    > :first-child {
+      cursor: not-allowed;
+    }
   }
 </style>
 
