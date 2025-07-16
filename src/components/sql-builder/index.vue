@@ -1,6 +1,6 @@
 <template lang="pug">
 a-form(
-  layout="horizontal"
+  layout="inline"
   label-align="left"
   size="small"
   auto-label-width
@@ -9,7 +9,7 @@ a-form(
   a-form-item(label="Table")
     a-select(
       v-model="form.table"
-      style="width: auto"
+      style="width: 120px"
       placeholder="Select table"
       :allow-search="true"
       :trigger-props="{ autoFitPopupMinWidth: true }"
@@ -30,7 +30,7 @@ a-form(
             v-model="condition.field"
             allow-search
             placeholder="field"
-            style="width: auto"
+            style="width: 140px"
             :trigger-props="{ autoFitPopupMinWidth: true }"
             :options="fieldsOptions"
           )
@@ -45,37 +45,51 @@ a-form(
             v-if="condition.operator !== 'Not Exist' && condition.operator !== 'Exist'"
             v-model="condition.value"
             placeholder="value"
+            style="width: 60px"
           )
           a-button(@click="() => removeCondition(index)")
             icon-minus(style="cursor: pointer; font-size: 14px")
 
       a-button(@click="addCondition")
         icon-plus(style="cursor: pointer; font-size: 14px")
-  a-form-item(label="Order By")
-    a-space
-      a-select(
-        v-model="form.orderByField"
-        style="width: 200px"
-        placeholder="Select field"
-        allow-search
-        :options="fieldsOptions"
-        :trigger-props="{ autoFitPopupMinWidth: true }"
-      )
-      a-select(
-        v-model="form.orderBy"
-        style="width: 120px"
-        placeholder="Order"
-        :options="orderOptions"
-      )
-  a-form-item(label="Limit")
-    a-input-number(
-      v-model="form.limit"
-      style="width: 200px"
-      placeholder="Limit"
-      :step="100"
-      :min="1"
-      :max="1000"
-    )
+
+    // More options trigger
+  a-trigger(trigger="click" :unmount-on-close="false")
+    a-button.more-toggle(size="mini" type="text")
+      | More
+      icon-down(style="font-size: 10px; margin-left: 4px")
+
+    template(#content)
+      .more-popup
+        .more-popup-header
+          h4 More Options
+        .more-popup-content
+          a-form-item(label="Order By")
+            a-space(size="small")
+              a-input-group
+                a-select(
+                  v-model="form.orderByField"
+                  style="width: 140px"
+                  placeholder="Select field"
+                  allow-search
+                  :trigger-props="{ autoFitPopupMinWidth: true }"
+                  :options="fieldsOptions"
+                )
+                a-select(
+                  v-model="form.orderBy"
+                  style="width: 80px"
+                  placeholder="Order"
+                  :options="orderOptions"
+                )
+          a-form-item(label="Limit")
+            a-input-number(
+              v-model="form.limit"
+              style="width: 80px"
+              placeholder="Limit"
+              :step="100"
+              :min="1"
+              :max="10000"
+            )
 </template>
 
 <script setup name="SQLBuilder" lang="ts">
@@ -394,18 +408,17 @@ a-form(
 </script>
 
 <style lang="less" scoped>
-  .arco-form-item {
-    margin-bottom: 10px;
-  }
-
   :deep(.operator .arco-select-view-value) {
     justify-content: center !important;
   }
-
+  :deep(.arco-form-layout-inline .arco-form-item) {
+    margin-bottom: 0;
+  }
   .condition-wrapper {
     display: flex;
     gap: 12px;
     align-items: center;
+    flex-wrap: wrap;
   }
 
   .input-group {
@@ -437,5 +450,39 @@ a-form(
   }
   :deep(.arco-btn-text[type='button']) {
     color: var(--color-text-2);
+  }
+
+  .more-toggle {
+    color: var(--color-text-2);
+    font-size: 14px;
+    line-height: 2;
+  }
+
+  .more-count {
+    color: var(--color-text-3);
+  }
+
+  .more-popup {
+    background: var(--color-bg-1);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 280px;
+  }
+
+  .more-popup-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .more-popup-header h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-1);
+  }
+
+  .more-popup-content {
+    padding: 16px;
   }
 </style>
