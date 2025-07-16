@@ -21,7 +21,7 @@
     // Define columns using the straightforward approach
     template(#columns)
       template(v-for="col in processedColumns" :key="col.name")
-        a-table-column(:data-index="col.name" :title="col.title || col.name" :header-cell-style="col.headerCellStyle")
+        a-table-column(:width="col.width" :data-index="col.name" :title="col.title || col.name")
           // Custom title slot - allow parent components to override column titles
           template(#title)
             slot(
@@ -117,7 +117,6 @@ a-dropdown#td-context(
   interface Column {
     name: string
     data_type: string
-    headerCellStyle?: any
     title?: string
   }
 
@@ -226,7 +225,7 @@ a-dropdown#td-context(
     let width = (Math.floor((currLen / totalLen) * 1000) / 1000) * containerWidth
     width = Math.max(150, width)
     width = Math.min(600, width)
-    return `${width}px`
+    return width
   }
 
   // Computed columns based on mode
@@ -251,7 +250,6 @@ a-dropdown#td-context(
         if (!row || !tableWidth.value) {
           return tmpColumns.map((column) => ({
             ...column,
-            headerCellStyle: { width: 'auto' },
           }))
         }
 
@@ -263,19 +261,19 @@ a-dropdown#td-context(
         const maxLenName = findMaxLenCol(row)
 
         return tmpColumns.map((column) => {
-          let widthStr = 'auto'
+          let width
 
           if (row && column.name !== maxLenName) {
             if (column.name === props.tsColumn?.name) {
-              widthStr = '240px'
+              width = 230
             } else {
-              widthStr = getWidth(String(row[column.name]).length, totalStrLen, tableWidth.value)
+              width = getWidth(String(row[column.name]).length, totalStrLen, tableWidth.value)
             }
           }
 
           return {
             ...column,
-            headerCellStyle: { width: widthStr },
+            width,
           }
         })
       }
@@ -283,28 +281,24 @@ a-dropdown#td-context(
       // Non-virtual list mode: let CSS handle all widths
       return tmpColumns.map((column) => ({
         ...column,
-        headerCellStyle: undefined,
       }))
     }
 
     // Merged mode: create timestamp + merged column
     const arr = []
     if (props.tsColumn) {
-      // Only set width when virtual list is active
-      const headerCellStyle = props.virtualListProps ? { width: tsViewStr.value ? '220px' : '170px' } : undefined
-
       arr.push({
         name: props.tsColumn.name,
         title: props.tsColumn.name,
         data_type: props.tsColumn.data_type || 'timestamp',
-        headerCellStyle,
+        width: 220,
       } as Column)
     }
     arr.push({
       name: 'Merged_Column',
       title: 'Data',
       data_type: 'merged',
-      headerCellStyle: props.virtualListProps ? { width: 'auto' } : undefined,
+      width: 'auto',
     } as Column)
     return arr
   })
