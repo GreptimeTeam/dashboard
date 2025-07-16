@@ -15,8 +15,6 @@ CodeMirror(
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { basicSetup } from 'codemirror'
 
-  import * as yamlMode from '@codemirror/legacy-modes/mode/yaml'
-  import { StreamLanguage, LanguageSupport } from '@codemirror/language'
   import { json } from '@codemirror/lang-json'
 
   const props = defineProps(['jsonStr'])

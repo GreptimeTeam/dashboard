@@ -27,7 +27,6 @@
   import { storeToRefs } from 'pinia'
   import useLogsQueryStore from '@/store/modules/logs-query'
   import TimeRangeSelect from '@/components/time-range-select/index.vue'
-  import { parseTimeRange, processSQL, parseTable, parseLimit, addTsCondition } from './until'
   import ExportLog from './ExportLog.vue'
   import type { ColumnType, TSColumn } from './types'
 

@@ -25,8 +25,6 @@ a-card(:bordered="false")
       :table-name="currentTableName"
       :ts-column="props.tsColumn"
       :refresh-trigger="props.refreshTrigger"
-      @update:rows="$emit('update:rows', $event)"
-      @query="$emit('query')"
       @timeRangeUpdate="handleTimeRangeUpdate"
     )
     FunnelChart(v-if="currChart == 'frequency'" :key="frequencyField" :column="frequencyField")
@@ -97,13 +95,6 @@ a-card(:bordered="false")
   // Handle chart expansion/collapse
   function toggleChart() {
     chartExpanded.value = !chartExpanded.value
-
-    // Trigger chart data fetch when expanding
-    if (chartExpanded.value && sqlForChart.value) {
-      nextTick(() => {
-        emit('query')
-      })
-    }
   }
 
   watch(currentTableName, () => {

@@ -118,10 +118,6 @@ a-card(:bordered="false")
     return props.data.slice(start, end)
   })
 
-  watchEffect(() => {
-    console.log('paginatedResults', paginatedResults.value)
-  })
-
   // Computed visible columns based on selection
   const visibleColumns = computed(() => {
     let columnsToShow = []

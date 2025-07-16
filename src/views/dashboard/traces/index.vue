@@ -131,8 +131,6 @@
   const sqlBuilderRef = ref()
   const timeRangeSelectRef = ref()
 
-  const hasTimeLimit = computed(() => time.value > 0 || rangeTime.value.length > 0)
-
   // Check if all required values are available for initial query
   const canExecuteInitialQuery = computed(() => {
     return finalQuery.value
