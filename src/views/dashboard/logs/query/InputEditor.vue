@@ -25,16 +25,7 @@
   import { addTsCondition, parseTable, parseTimeRange, processSQL, parseLimit } from './until'
   import type { TSColumn } from './types'
 
-  const {
-    sql: sqlData,
-    rangeTime,
-    currentTableName,
-    queryNum,
-    time,
-    editorSql,
-    limit,
-    timeRangeValues,
-  } = storeToRefs(useLogsQueryStore())
+  const { editorSql, timeRangeValues } = storeToRefs(useLogsQueryStore())
   const emit = defineEmits(['query'])
 
   interface Props {
@@ -111,6 +102,5 @@
     border-bottom-left-radius: 2px;
     border-bottom-right-radius: 2px;
     border: 1px solid var(--color-neutral-3);
-    border-top: none;
   }
 </style>

@@ -158,7 +158,7 @@
 
   // Check if all required values are available for initial query
   const canExecuteInitialQuery = computed(() => {
-    return tsColumn.value && finalQuery.value && currentTableName.value
+    return finalQuery.value
   })
 
   // Track if we've already executed the initial query
@@ -313,16 +313,22 @@
   initializeFromQuery()
 
   // Watch for when all async values are available
-  watch(canExecuteInitialQuery, (canExecute) => {
-    if (canExecute && !hasExecutedInitialQuery.value) {
-      console.log('All async values available for initial query:')
-      console.log('tsColumn:', tsColumn.value)
-      console.log('finalQuery:', finalQuery.value)
-      console.log('tableName:', currentTableName.value)
-      hasExecutedInitialQuery.value = true
-      executeQuery()
+  watch(
+    canExecuteInitialQuery,
+    (canExecute) => {
+      if (canExecute && !hasExecutedInitialQuery.value) {
+        console.log('All async values available for initial query:')
+        console.log('tsColumn:', tsColumn.value)
+        console.log('finalQuery:', finalQuery.value)
+        console.log('tableName:', currentTableName.value)
+        hasExecutedInitialQuery.value = true
+        executeQuery()
+      }
+    },
+    {
+      immediate: true,
     }
-  })
+  )
 
   // Watch for currentTableName changes to reset store and page state
   watch(currentTableName, (newTableName, oldTableName) => {
