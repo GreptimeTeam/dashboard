@@ -1,0 +1,22 @@
+name: Dispatch sync to private repo
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify private repo to sync
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.PR_ACTION }}
+          repository: GreptimeTeam/dashboard-private
+          event-type: sync-upstream
+          client-payload: |
+            {
+              "ref": "${{ github.ref }}",
+              "sha": "${{ github.sha }}"
+            }
