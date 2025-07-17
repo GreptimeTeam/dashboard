@@ -114,7 +114,7 @@ a-card.editor-card(:bordered="false")
           :autofocus="autofocus"
           :indent-with-tab="indentWithTab"
           :tabSize="tabSize"
-          :extensions="[...extensions.sql, keymap.of(defaultKeymap)]"
+          :extensions="extensionsForSql"
           @ready="handleReadySql"
           @update="codeUpdate('sql')"
         )
@@ -126,7 +126,7 @@ a-card.editor-card(:bordered="false")
           :autofocus="autofocus"
           :indent-with-tab="indentWithTab"
           :tabSize="tabSize"
-          :extensions="[...extensions.promql, keymap.of(defaultKeymap)]"
+          :extensions="extensionsForPromql"
           @ready="handleReadyPromql"
           @update="codeUpdate('promql')"
         )
@@ -150,10 +150,8 @@ a-card.editor-card(:bordered="false")
 <script lang="ts" setup name="Editor">
   import dayjs from 'dayjs'
   import { Codemirror as CodeMirror } from 'vue-codemirror'
-  import { oneDark } from '@codemirror/theme-one-dark'
   import { keymap } from '@codemirror/view'
-  import type { KeyBinding } from '@codemirror/view'
-  import type { TableTreeChild, TableTreeParent } from '@/store/modules/database/types'
+  import { acceptCompletion } from '@codemirror/autocomplete'
   import type { PromForm } from '@/store/modules/code-run/types'
   import { useStorage } from '@vueuse/core'
   import { sqlFormatter, parseSqlStatements, findStatementAtPosition, debounce } from '@/utils/sql'
@@ -433,8 +431,14 @@ a-card.editor-card(:bordered="false")
         runPartQuery()
       },
     },
+    {
+      key: 'Tab',
+      run: acceptCompletion,
+    },
   ]
 
+  const extensionsForSql = [...extensions.value.sql, keymap.of(defaultKeymap as any)]
+  const extensionsForPromql = [...extensions.value.promql, keymap.of(defaultKeymap as any)]
   const placeholder = `Paste response from explain analyze format json here. Example format:
   {
     "output": [
