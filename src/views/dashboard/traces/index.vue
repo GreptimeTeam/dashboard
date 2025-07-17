@@ -46,6 +46,7 @@
           storage-key="traces-query-table"
           :time-range-values="timeRangeValues"
           :default-conditions="[{ field: 'parent_span_id', operator: 'Not Exist', value: '', relation: 'AND' }]"
+          :quick-field-names="['trace_id', 'service_name']"
           @update:sql="handleBuilderSqlUpdate"
         )
         SQLEditor(
@@ -230,7 +231,6 @@
 
       // Reset local state
       allResults.value = []
-      hasExecutedInitialQuery.value = false
 
       // Reset chart if expanded
       if (chartExpanded.value && countChartRef.value) {

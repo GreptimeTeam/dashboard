@@ -358,8 +358,6 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
   function reset() {
     builderFormState.value = null
     editorSql.value = ''
-    time.value = opts.time
-    rangeTime.value = []
     editorType.value = opts.editorType as 'builder' | 'text'
     refresh.value = false
     loading.value = false

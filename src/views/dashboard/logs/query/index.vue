@@ -341,7 +341,6 @@
       // Reset local state
       rows.value = []
       queryColumns.value = []
-      hasExecutedInitialQuery.value = false
 
       // Reset pagination
       refreshPagination()

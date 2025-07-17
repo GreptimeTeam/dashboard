@@ -16,7 +16,7 @@ a-form(
       :options="tables"
       @change="handleTableChange"
     )
-  a-form-item(label="Where")
+  a-form-item(label="Filters" style="margin-right: 12px")
     .condition-wrapper
       a-space(v-for="(condition, index) in form.conditions" :key="index")
         a-input-group.input-group
@@ -47,10 +47,10 @@ a-form(
             placeholder="value"
             style="width: 60px"
           )
-          a-button(@click="() => removeCondition(index)")
+          a-button.field-action(@click="() => removeCondition(index)")
             icon-minus(style="cursor: pointer; font-size: 14px")
 
-      a-button(@click="addCondition")
+      a-button.field-action(@click="addCondition")
         icon-plus(style="cursor: pointer; font-size: 14px")
 
   // More options trigger
@@ -91,6 +91,15 @@ a-form(
                 :min="1"
                 :max="10000"
               )
+
+// Quick Filters component
+QuickFilters(
+  :fields="fields"
+  :form="form"
+  :quick-field-names="props.quickFieldNames"
+  :storage-key="storageKey"
+  @apply="applyQuickFilter"
+)
 </template>
 
 <script setup name="SQLBuilder" lang="ts">
@@ -99,6 +108,7 @@ a-form(
   import { storeToRefs } from 'pinia'
   import editorAPI from '@/api/editor'
   import { useAppStore } from '@/store'
+  import QuickFilters from '@/components/quick-filters'
 
   interface Condition {
     field: string
@@ -106,6 +116,22 @@ a-form(
     value: string
     relation?: 'AND' | 'OR'
     isTimeColumn?: boolean
+  }
+
+  interface TableField {
+    name: string
+    data_type: string
+    semantic_type: string
+  }
+
+  interface QuickFilter {
+    name: string
+    table: string
+    conditions: Condition[]
+    orderByField: string
+    orderBy: string
+    limit: number
+    createdAt: number
   }
 
   interface Form {
@@ -117,12 +143,6 @@ a-form(
     tsColumn?: { name: string; data_type: string } | null // Readonly timestamp column
   }
 
-  interface TableField {
-    name: string
-    data_type: string
-    semantic_type: string
-  }
-
   const emit = defineEmits(['update:sql', 'update:formState'])
 
   // Props for form state and configuration
@@ -132,6 +152,7 @@ a-form(
     timeRangeValues?: string[] // Pre-processed time range values [start, end] - unified for all systems
     defaultConditions?: Condition[] // Default conditions for the form
     storageKey?: string // Optional storage key for localStorage (e.g., 'logs-query-table', 'traces-query-table')
+    quickFieldNames?: string[] // Array of field names for quick condition buttons
   }>()
 
   const tables = ref<string[]>([])
@@ -143,11 +164,6 @@ a-form(
   // Use localStorage to remember the last selected table
   const storageKey = props.storageKey || 'sql-builder-last-table'
   const lastSelectedTable = useLocalStorage(storageKey, '')
-
-  // Clear localStorage when database changes to avoid invalid table references
-  watch(database, () => {
-    lastSelectedTable.value = ''
-  })
 
   // Use form state from props if provided, otherwise use default
   const defaultFormState: Form = {
@@ -400,6 +416,20 @@ a-form(
 
     form.conditions.push(newCondition)
     // SQL will automatically regenerate due to computed property
+  }
+
+  // Function to apply a saved quick filter
+  function applyQuickFilter(quickFilter: QuickFilter) {
+    // Switch to the saved table if different
+    if (quickFilter.table !== form.table) {
+      form.table = quickFilter.table
+    }
+
+    // Apply the saved conditions and settings
+    form.conditions = [...quickFilter.conditions]
+    form.orderByField = quickFilter.orderByField
+    form.orderBy = quickFilter.orderBy
+    form.limit = quickFilter.limit
   }
 
   // Expose methods for external use
