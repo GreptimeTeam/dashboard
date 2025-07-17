@@ -9,7 +9,7 @@ a-form(
   a-form-item(label="Table")
     a-select(
       v-model="form.table"
-      style="width: 120px"
+      style="min-width: 120px; width: auto"
       placeholder="Select table"
       :allow-search="true"
       :trigger-props="{ autoFitPopupMinWidth: true }"
@@ -53,43 +53,44 @@ a-form(
       a-button(@click="addCondition")
         icon-plus(style="cursor: pointer; font-size: 14px")
 
-    // More options trigger
-  a-trigger(trigger="click" :unmount-on-close="false")
-    a-button.more-toggle(size="mini" type="text")
-      | More
-      icon-down(style="font-size: 10px; margin-left: 4px")
+  // More options trigger
+  a-form-item
+    a-trigger(trigger="click" :unmount-on-close="false")
+      a-button.more-toggle(type="text")
+        | More
+        icon-down(style="font-size: 10px; margin-left: 4px")
 
-    template(#content)
-      .more-popup
-        .more-popup-header
-          h4 More Options
-        .more-popup-content
-          a-form-item(label="Order By")
-            a-space(size="small")
-              a-input-group
-                a-select(
-                  v-model="form.orderByField"
-                  style="width: 140px"
-                  placeholder="Select field"
-                  allow-search
-                  :trigger-props="{ autoFitPopupMinWidth: true }"
-                  :options="fieldsOptions"
-                )
-                a-select(
-                  v-model="form.orderBy"
-                  style="width: 80px"
-                  placeholder="Order"
-                  :options="orderOptions"
-                )
-          a-form-item(label="Limit")
-            a-input-number(
-              v-model="form.limit"
-              style="width: 80px"
-              placeholder="Limit"
-              :step="100"
-              :min="1"
-              :max="10000"
-            )
+      template(#content)
+        .more-popup
+          .more-popup-header
+            h4 More Options
+          .more-popup-content
+            a-form-item(label="Order By")
+              a-space(size="small")
+                a-input-group.input-group
+                  a-select(
+                    v-model="form.orderByField"
+                    style="width: auto"
+                    placeholder="Select field"
+                    allow-search
+                    :trigger-props="{ autoFitPopupMinWidth: true }"
+                    :options="fieldsOptions"
+                  )
+                  a-select(
+                    v-model="form.orderBy"
+                    style="width: 80px"
+                    placeholder="Order"
+                    :options="orderOptions"
+                  )
+            a-form-item(label="Limit")
+              a-input-number(
+                v-model="form.limit"
+                style="width: 80px"
+                placeholder="Limit"
+                :step="100"
+                :min="1"
+                :max="10000"
+              )
 </template>
 
 <script setup name="SQLBuilder" lang="ts">
@@ -411,6 +412,9 @@ a-form(
   :deep(.operator .arco-select-view-value) {
     justify-content: center !important;
   }
+  :deep(.arco-form-item-label-col) {
+    padding-right: 8px;
+  }
   :deep(.arco-form-layout-inline .arco-form-item) {
     margin-bottom: 0;
   }
@@ -484,5 +488,16 @@ a-form(
 
   .more-popup-content {
     padding: 16px;
+  }
+
+  // Fix input group corners in popup to match condition input group
+  .more-popup :deep(.input-group) .arco-select-view {
+    border-radius: 0 !important;
+  }
+  .more-popup-content :deep(.arco-form-item-label) {
+    min-width: 70px; // or whatever width fits your longest label
+    width: 70px;
+    display: inline-block;
+    text-align: right;
   }
 </style>
