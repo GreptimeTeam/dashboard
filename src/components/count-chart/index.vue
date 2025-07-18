@@ -211,6 +211,17 @@ VCharts(
         LIMIT 200`
   })
 
+  // Helper function to update chart cursor state
+  function updateChartCursor(hasData: boolean) {
+    nextTick(() => {
+      chart.value?.dispatchAction({
+        type: 'takeGlobalCursor',
+        key: 'dataZoomSelect',
+        dataZoomSelectActive: hasData,
+      })
+    })
+  }
+
   async function countQuery() {
     if (!countSql.value) {
       data.value = []
@@ -226,13 +237,8 @@ VCharts(
         const tmpData = rows.map((row: any[]) => [convertTimestamp(row[0]), row[1]])
         data.value = tmpData.reverse() // Reverse to show chronological order
 
-        nextTick(() => {
-          chart.value?.dispatchAction({
-            type: 'takeGlobalCursor',
-            key: 'dataZoomSelect',
-            dataZoomSelectActive: true,
-          })
-        })
+        // Update chart cursor state based on data availability
+        updateChartCursor(rows.length > 0)
       }
     } catch (error) {
       console.error('Failed to fetch count data:', error)
