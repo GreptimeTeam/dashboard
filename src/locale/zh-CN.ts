@@ -10,6 +10,7 @@ export default {
   'copied': '已复制',
   'guide.confirm': '确定',
   'guide.welcome': '欢迎！',
+  'news.seeAll': '查看所有资讯',
   ...dashboard,
   ...menu,
   ...playground,
