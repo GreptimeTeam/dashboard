@@ -10,6 +10,7 @@ export default {
   'copied': 'Copied',
   'guide.confirm': 'Confirm',
   'guide.welcome': 'Welcome!',
+  'news.seeAll': 'See all news',
   ...dashboard,
   ...settings,
   ...menu,

@@ -107,6 +107,8 @@
     "watchSyncEffect": true,
     "IngestConfig": true,
     "useIngest": true,
-    "ingest": true
+    "ingest": true,
+    "initializeNews": true,
+    "useNews": true
   }
 }

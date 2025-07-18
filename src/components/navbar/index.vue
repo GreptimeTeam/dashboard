@@ -36,17 +36,25 @@ a-layout.navbar
             a-doption(v-for="{ label, link } in dropDownLinks")
               a-link(target="_blank" :href="link")
                 | {{ label }}
+            a-doption.news(@click="showNews")
+              | {{ $t('menu.news') }}
+NewsModal(ref="newsModal" :news-list="newsList" :loading="isLoadingNews")
 </template>
 
 <script lang="ts" setup name="NavBar">
   import { listenerRouteChange } from '@/utils/route-listener'
+  import { useNews } from '@/hooks/news'
   import useMenuTree from '../menu/use-menu-tree'
+  import NewsModal from './news-modal.vue'
 
   const router = useRouter()
   const { updateSettings } = useAppStore()
   const { menuSelectedKey, globalSettings, isFullScreen } = storeToRefs(useAppStore())
   const { activeTab: ingestTab } = storeToRefs(useIngestStore())
   const { menuTree } = useMenuTree()
+  const { newsList, isLoadingNews } = useNews()
+
+  const newsModal = ref()
 
   const menu = menuTree.value[0].children
 
@@ -71,6 +79,10 @@ a-layout.navbar
 
   const setVisible = () => {
     updateSettings({ globalSettings: true })
+  }
+
+  const showNews = () => {
+    newsModal.value.show()
   }
 
   const menuClick = (key: string) => {
