@@ -15,7 +15,16 @@
             v-model:time-range="rangeTime"
             button-type="outline"
           )
-          a-button(type="primary" size="small" @click="handleQuery") {{ $t('dashboard.runQuery') }}
+          a-button(
+            type="primary"
+            size="small"
+            :loading="loading"
+            @click="handleQuery"
+          ) 
+            template(#icon)
+              icon-loading(v-if="loading" spin)
+              icon-play-arrow(v-else)
+            | {{ $t('dashboard.runQuery') }}
           a-button(
             v-if="editorType === 'text'"
             type="outline"

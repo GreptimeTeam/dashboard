@@ -11,10 +11,11 @@
     size="small"
     :loading="props.queryLoading"
     @click="handleQuery"
-  )
+  ) 
     template(#icon)
-      icon-refresh
-    | {{ $t('logsQuery.run') }}
+      icon-loading(v-if="props.queryLoading" spin)
+      icon-play-arrow(v-else)
+    | {{ $t('dashboard.runQuery') }}
   a-checkbox(v-model="refresh" size="small")
     span(style="color: var(--color-text-2)") {{ $t('logsQuery.live') }}
 
