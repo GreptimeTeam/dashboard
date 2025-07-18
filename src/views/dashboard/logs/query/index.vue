@@ -155,7 +155,7 @@
 
   // Check if all required values are available for initial query
   const canExecuteInitialQuery = computed(() => {
-    return finalQuery.value
+    return finalQuery.value && tsColumn.value
   })
 
   // Track if we've already executed the initial query
@@ -338,9 +338,6 @@
       // Reset local state
       rows.value = []
       queryColumns.value = []
-
-      // Reset pagination
-      refreshPagination()
 
       // Reset chart
       chartContainerRef.value?.triggerCurrentChartQuery()

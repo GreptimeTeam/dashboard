@@ -187,14 +187,14 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
    * const sql = buildSQLFromFormState(formState, customTimeRanges)
    * ```
    */
-  function buildSQLFromFormState(formState: any, timeRanges?: any[], timestampColumn?: any): string {
+  function buildSQLFromFormState(formState: any, specialTimeRanges?: any[], timestampColumn?: any): string {
     if (!formState?.table) return ''
 
     const form = formState
     const conditions = form.conditions || []
 
-    // Use store values as fallbacks if parameters are not provided
-    const effectiveTimeRanges = timeRanges || timeRangeValues.value
+    // Use passed parameters or store values as fallbacks
+    const effectiveTimeRanges = specialTimeRanges !== undefined ? specialTimeRanges : timeRangeValues.value
     const effectiveTimestampColumn = timestampColumn || tsColumn.value
 
     // Process conditions
@@ -248,7 +248,10 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
 
   /** Computed builder SQL generated from form state */
   const builderSql = computed(() => {
-    return buildSQLFromFormState(builderFormState.value)
+    // Evaluate timeRangeValues first, then pass it as a parameter
+    // This ensures timeRangeValues is computed before SQL generation
+    const currentTimeRanges = timeRangeValues.value
+    return buildSQLFromFormState(builderFormState.value, currentTimeRanges)
   })
 
   /** Final query with time processing */
@@ -259,10 +262,11 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
 
     let processedSql = query
 
-    // Enhanced time processing logic
-    if (timeRangeValues.value.length === 2) {
+    // Enhanced time processing logic - use the same time ranges that were used in builderSql
+    const currentTimeRanges = timeRangeValues.value
+    if (currentTimeRanges.length === 2) {
       // Use processed time range values directly (preferred for logs)
-      const [startTs, endTs] = timeRangeValues.value
+      const [startTs, endTs] = currentTimeRanges
       processedSql = processedSql.replace(/\$timestart/g, `${startTs}`).replace(/\$timeend/g, `${endTs}`)
     }
 
@@ -364,37 +368,16 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
     columns.value = []
   }
 
-  // Base query execution function that can be extended
-  async function executeBaseQuery(customExecutor?: (query: string) => Promise<any>) {
-    if (!finalQuery.value) return null
-
-    try {
-      if (customExecutor) {
-        return await customExecutor(finalQuery.value)
-      }
-
-      // Default execution using editor API
-      const editorAPI = await import('@/api/editor')
-      const result = await editorAPI.default.runSQL(finalQuery.value)
-
-      // Update URL parameters only after successful query
-      updateQueryParams()
-
-      return result
-    } catch (error) {
-      console.error(`[${opts.storeId}] Query failed:`, error)
-      throw error
-    }
-  }
-
   // Unified executeQuery function with results handling
-  async function executeQuery(transformCallback?: (rawRows: any[], columnsData: any[], additionalData?: any) => any[]) {
-    if (!finalQuery.value) return []
+  async function executeQuery() {
+    // Capture the current query at execution time to prevent race conditions
+    const currentQuery = finalQuery.value
+    if (!currentQuery) return []
 
     loading.value = true
     try {
       const editorAPI = await import('@/api/editor')
-      const result = await editorAPI.default.runSQL(finalQuery.value)
+      const result = await editorAPI.default.runSQL(currentQuery)
 
       if (result.output?.[0]?.records) {
         const records = result.output[0].records as unknown as {
@@ -418,13 +401,10 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
           return record
         })
 
-        // Apply optional transformation if provided and return the result
-        const finalRows = transformCallback ? transformCallback(processedRows, columns.value) : processedRows
-
         // Update URL parameters only after successful query
         updateQueryParams()
 
-        return finalRows
+        return processedRows
       }
 
       return []
@@ -501,7 +481,6 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
     reset,
     initializeFromQuery,
     updateQueryParams,
-    executeBaseQuery,
     executeQuery,
     exportToCSV,
     addFilterCondition,

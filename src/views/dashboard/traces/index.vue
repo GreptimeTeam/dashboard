@@ -143,7 +143,7 @@
 
   // Check if all required values are available for initial query
   const canExecuteInitialQuery = computed(() => {
-    return finalQuery.value
+    return finalQuery.value && tsColumn.value
   })
 
   // Track if we've already executed the initial query
