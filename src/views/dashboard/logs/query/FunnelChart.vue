@@ -92,9 +92,20 @@ VCharts(
     })
   }
 
+  // Expose method to trigger chart query
+  function executeChartQuery() {
+    chartQuery()
+  }
+
+  // Initial query if SQL is available
   if (chartSql.value) {
     chartQuery()
   }
+
+  // Expose the method to parent component
+  defineExpose({
+    executeChartQuery,
+  })
 </script>
 
 <style scoped lang="less"></style>

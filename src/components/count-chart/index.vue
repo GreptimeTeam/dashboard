@@ -26,15 +26,12 @@ VCharts(
     // Time range props (for traces compatibility)
     timeLength?: number
     timeRange?: string[]
-    // Refresh trigger (for logs compatibility)
-    refreshTrigger?: number
   }
 
   const props = withDefaults(defineProps<Props>(), {
     tsColumn: null,
     timeLength: 0,
     timeRange: () => [],
-    refreshTrigger: 0,
   })
 
   const emit = defineEmits(['timeRangeUpdate', 'update:rows', 'query'])
@@ -270,21 +267,6 @@ VCharts(
 
     // For logs compatibility - also emit rows update if needed
     // This would need to be handled by the parent component
-  }
-
-  // Watch for refresh trigger changes (logs compatibility)
-  watch(
-    () => props.refreshTrigger,
-    () => {
-      if (props.refreshTrigger > 0) {
-        countQuery()
-      }
-    }
-  )
-
-  // Initial query if SQL is available
-  if (props.sql) {
-    countQuery()
   }
 
   // Expose the method to parent component

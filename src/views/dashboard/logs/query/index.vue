@@ -22,10 +22,10 @@
         InputEditor(v-else :schema="schemaForEditor" :ts-column="tsColumn")
 
     ChartContainer(
+      ref="chartContainerRef"
       :columns="columns"
       :rows="rows"
       :ts-column="tsColumn"
-      :refresh-trigger="chartRefreshTrigger"
       @timeRangeUpdate="handleTimeRangeUpdate"
     )
 
@@ -141,11 +141,8 @@
   const showKeys = useStorage('logquery-show-keys', true)
   const displayedColumns = useStorage('logquery-table-column-visible', {})
 
-  // Chart refresh trigger - explicit method
-  const chartRefreshTrigger = ref(0)
-  const triggerChartRefresh = () => {
-    chartRefreshTrigger.value += 1
-  }
+  // Chart container ref for triggering count queries
+  const chartContainerRef = ref()
 
   // Key for forcing pagination re-render when needed
   const paginationKey = ref(0)
@@ -199,7 +196,7 @@
       rows.value = transformedRows || []
 
       // UI-specific actions after successful query
-      triggerChartRefresh()
+      chartContainerRef.value?.triggerCurrentChartQuery()
       refreshPagination()
     } catch (error) {
       console.error('Query execution failed:', error)
@@ -346,7 +343,7 @@
       refreshPagination()
 
       // Reset chart
-      triggerChartRefresh()
+      chartContainerRef.value?.triggerCurrentChartQuery()
     }
   })
 </script>

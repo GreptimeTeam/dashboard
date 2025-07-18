@@ -21,13 +21,18 @@ a-card(:bordered="false")
   template(v-if="chartExpanded")
     CountChart(
       v-if="currChart == 'count'"
+      ref="countChartRef"
       :sql="sqlForChart"
       :table-name="currentTableName"
       :ts-column="props.tsColumn"
-      :refresh-trigger="props.refreshTrigger"
       @timeRangeUpdate="handleTimeRangeUpdate"
     )
-    FunnelChart(v-if="currChart == 'frequency'" :key="frequencyField" :column="frequencyField")
+    FunnelChart(
+      v-if="currChart == 'frequency'"
+      :key="frequencyField"
+      ref="funnelChartRef"
+      :column="frequencyField"
+    )
 </template>
 
 <script setup name="ChartContainer" lang="ts">
@@ -45,14 +50,12 @@ a-card(:bordered="false")
     columns?: ColumnType[]
     rows?: any[]
     tsColumn?: TSColumn | null
-    refreshTrigger?: number
   }
 
   const props = withDefaults(defineProps<Props>(), {
     columns: () => [],
     rows: () => [],
     tsColumn: null,
-    refreshTrigger: 0,
   })
 
   const emit = defineEmits(['timeRangeUpdate'])
@@ -60,6 +63,8 @@ a-card(:bordered="false")
   const currChart = ref('count')
   const { currentTableName, finalQuery } = storeToRefs(useLogsQueryStore())
   const frequencyField = ref('')
+  const countChartRef = ref()
+  const funnelChartRef = ref()
 
   // Chart expanded state with localStorage persistence
   const chartExpanded = useLocalStorage('logs-chart-expanded', true)
@@ -92,9 +97,27 @@ a-card(:bordered="false")
     return 'Frequency Distribution'
   })
 
+  // Method to trigger the current chart query based on chart type
+  function triggerCurrentChartQuery() {
+    if (!chartExpanded.value || !finalQuery.value) return
+
+    if (currChart.value === 'count' && countChartRef.value) {
+      countChartRef.value.executeCountQuery()
+    } else if (currChart.value === 'frequency' && funnelChartRef.value) {
+      funnelChartRef.value.executeChartQuery()
+    }
+  }
+
   // Handle chart expansion/collapse
   function toggleChart() {
     chartExpanded.value = !chartExpanded.value
+
+    // Trigger chart data fetch when expanding
+    if (chartExpanded.value && finalQuery.value) {
+      nextTick(() => {
+        triggerCurrentChartQuery()
+      })
+    }
   }
 
   watch(currentTableName, () => {
@@ -104,6 +127,11 @@ a-card(:bordered="false")
   function handleTimeRangeUpdate(timeRange: string[]) {
     emit('timeRangeUpdate', timeRange)
   }
+
+  // Expose the methods to parent component
+  defineExpose({
+    triggerCurrentChartQuery,
+  })
 </script>
 
 <style scoped lang="less">
