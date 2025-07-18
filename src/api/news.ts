@@ -14,6 +14,34 @@ export interface NewsResponse {
 const NEWS_CONFIG = {
   proxyUrl: 'https://proxy-for-blogs-rss-in-dashboard.greptime.workers.dev',
 }
+const CACHE_KEY = 'greptime_news_cache'
+const TTL_MS = 10 * 60 * 1000
+
+const setCachedNews = (items: NewsItem[]) => {
+  const data = {
+    items,
+    timestamp: Date.now(),
+  }
+  localStorage.setItem(CACHE_KEY, JSON.stringify(data))
+}
+
+const getCachedNews = (): NewsResponse | null => {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY)
+    if (!raw) return null
+
+    const { items, timestamp } = JSON.parse(raw)
+    if (Date.now() - timestamp > TTL_MS) {
+      localStorage.removeItem(CACHE_KEY)
+      return null
+    }
+
+    return { items }
+  } catch {
+    localStorage.removeItem(CACHE_KEY)
+    return null
+  }
+}
 
 const formatDate = (pubDate: string): string => {
   try {
@@ -62,6 +90,11 @@ const parseXmlRss = (xmlString: string): NewsItem[] => {
 
 export const fetchGreptimeNews = async (): Promise<NewsResponse> => {
   try {
+    const cached = getCachedNews()
+    if (cached) {
+      return cached
+    }
+
     const response = await fetch(NEWS_CONFIG.proxyUrl, {
       method: 'GET',
       headers: {
@@ -76,6 +109,9 @@ export const fetchGreptimeNews = async (): Promise<NewsResponse> => {
 
     const xmlData = await response.text()
     const parsedItems = parseXmlRss(xmlData)
+
+    // Cache the parsed items (top 3 news items)
+    setCachedNews(parsedItems)
 
     if (parsedItems.length === 0) {
       console.warn('No news items found in RSS feed')
