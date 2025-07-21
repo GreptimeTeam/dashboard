@@ -149,7 +149,6 @@ QuickFilters(
   const props = defineProps<{
     formState?: Form | null
     tableFilter?: string // Optional filter for which tables to show (e.g., 'trace_id' for traces)
-    timeRangeValues?: string[] // Pre-processed time range values [start, end] - unified for all systems
     defaultConditions?: Condition[] // Default conditions for the form
     storageKey?: string // Optional storage key for localStorage (e.g., 'logs-query-table', 'traces-query-table')
     quickFieldNames?: string[] // Array of field names for quick condition buttons

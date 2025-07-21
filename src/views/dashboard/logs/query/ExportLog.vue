@@ -2,7 +2,7 @@
 a-button(
   type="outline"
   size="small"
-  :disabled="!currentTableName"
+  :disabled="!queryState.tableName"
   @click="exportSql"
 )
   template(#icon)
@@ -33,7 +33,8 @@ a-button(
     tsColumn: TSColumn | null
   }>()
 
-  const { finalQuery, currentTableName } = storeToRefs(useLogsQueryStore())
+  const { queryState } = useLogsQueryStore()
+  const { finalQuery } = storeToRefs(useLogsQueryStore())
 
   function getExportSql() {
     if (props.columns && props.columns.length > 0) {
@@ -49,22 +50,22 @@ a-button(
         const where = getWhereClause(finalQuery.value)
         const order = parseOrderBy(finalQuery.value) || 'desc'
         const limit = 10000
-        return `SELECT ${fields.join(', ')} FROM ${currentTableName.value} ${where} ORDER BY ${
+        return `SELECT ${fields.join(', ')} FROM ${queryState.tableName} ${where} ORDER BY ${
           props.tsColumn?.name || 'id'
         } ${order} LIMIT ${limit}`
       } catch (error) {
-        return `SELECT * FROM ${currentTableName.value} LIMIT 10000`
+        return `SELECT * FROM ${queryState.tableName} LIMIT 10000`
       }
     }
-    return `SELECT * FROM ${currentTableName.value} LIMIT 10000`
+    return `SELECT * FROM ${queryState.tableName} LIMIT 10000`
   }
 
   function exportSql() {
-    if (!currentTableName.value) {
+    if (!queryState.tableName) {
       return
     }
     editorAPI.runSQLWithCSV(getExportSql()).then((result) => {
-      fileDownload(result as unknown as string, `${currentTableName.value}.csv`)
+      fileDownload(result as unknown as string, `${queryState.tableName}.csv`)
     })
   }
 </script>

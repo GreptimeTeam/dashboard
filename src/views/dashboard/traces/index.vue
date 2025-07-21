@@ -58,14 +58,7 @@
           :quick-field-names="['trace_id', 'service_name']"
           @update:sql="handleBuilderSqlUpdate"
         )
-        SQLEditor(
-          v-else
-          ref="sqlEditorRef"
-          v-model="editorSql"
-          editor-height="140px"
-          placeholder="Enter your SQL query here..."
-          :show-toolbar="true"
-        )
+        SqlTextEditor(v-else v-model="editorSql" @update:sql-info="handleSqlInfoUpdate")
 
     a-card(v-if="builderSql || editorSql" :bordered="false")
       template(#title)
@@ -78,18 +71,18 @@
       template(v-if="chartExpanded")
         CountChart(
           ref="countChartRef"
-          :sql="finalQuery"
-          :time-length="time"
-          :time-range="rangeTime"
-          :table-name="currentTableName"
-          :ts-column="tsColumn"
+          :sql="queryState.sql"
+          :time-range="queryState.rangeTime"
+          :table-name="queryState.tableName"
+          :ts-column="queryState.tsColumn"
+          :time="queryState.time"
           @time-range-update="handleTimeRangeUpdate"
         )
     TraceTable(
       :data="allResults"
       :columns="columns"
       :loading="loading"
-      :table-name="currentTableName"
+      :table-name="queryState.tableName"
       :editor-type="editorType"
       @filterConditionAdd="handleFilterConditionAdd"
     )
@@ -105,7 +98,7 @@
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import CountChart from '@/components/count-chart/index.vue'
   import useTracesQueryStore from '@/store/modules/traces-query'
-  import SQLEditor from './components/SQLEditor.vue'
+  import SqlTextEditor from '@/components/sql-text-editor/index.vue'
   import TraceTable from './components/TraceTable.vue'
   import { validateSQL } from './utils'
 
@@ -122,7 +115,7 @@
     rangeTime,
     timeRangeValues,
     builderFormState,
-    currentTableName,
+    queryState,
     finalQuery,
     tsColumn,
   } = storeToRefs(tracesStore)
@@ -135,15 +128,17 @@
 
   // Get store methods
   const { initializeFromQuery, executeQuery, exportToCSV, addFilterCondition } = tracesStore
-
+  const { editorTsColumn, editorTableName } = storeToRefs(useTracesQueryStore())
   const countChartRef = ref()
-  const sqlEditorRef = ref()
   const sqlBuilderRef = ref()
   const timeRangeSelectRef = ref()
 
   // Check if all required values are available for initial query
   const canExecuteInitialQuery = computed(() => {
-    return finalQuery.value && tsColumn.value
+    if (editorType.value === 'builder') {
+      return finalQuery.value && tsColumn.value && builderFormState.value?.table
+    }
+    return editorTsColumn.value && editorTableName.value
   })
 
   // Track if we've already executed the initial query
@@ -155,11 +150,16 @@
     // The actual SQL generation happens in the base store
   }
 
-  // Handle format SQL
+  // Handle format SQL - removed since SqlTextEditor doesn't have format functionality
   function handleFormatSQL() {
-    if (sqlEditorRef.value) {
-      sqlEditorRef.value.formatSQL()
-    }
+    // Format functionality not available in SqlTextEditor
+    console.warn('Format SQL functionality not available in SqlTextEditor')
+  }
+
+  // Handle SQL info updates from SqlTextEditor
+  function handleSqlInfoUpdate(sqlInfo: { tableName: string; tsColumn: any }) {
+    editorTableName.value = sqlInfo.tableName
+    editorTsColumn.value = sqlInfo.tsColumn
   }
 
   // Note: editorSql generation when switching to text mode is now handled by the base store
@@ -214,7 +214,7 @@
       console.log('All async values available for initial query:')
       console.log('tsColumn:', tsColumn.value)
       console.log('finalQuery:', finalQuery.value)
-      console.log('tableName:', currentTableName.value)
+      console.log('tableName:', queryState.value.tableName)
 
       // Validate SQL before executing - only in editor mode
       if (editorType.value === 'text') {
@@ -227,24 +227,6 @@
 
       hasExecutedInitialQuery.value = true
       handleQuery()
-    }
-  })
-
-  // Watch for currentTableName changes to reset store and page state
-  watch(currentTableName, (newTableName, oldTableName) => {
-    if (newTableName && oldTableName && newTableName !== oldTableName) {
-      console.log('Table name changed from', oldTableName, 'to', newTableName)
-
-      // Reset store state
-      tracesStore.reset()
-
-      // Reset local state
-      allResults.value = []
-
-      // Reset chart if expanded
-      if (chartExpanded.value && countChartRef.value) {
-        countChartRef.value.resetChart()
-      }
     }
   })
 

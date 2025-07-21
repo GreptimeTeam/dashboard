@@ -17,7 +17,7 @@
     @filter-condition-add="handleFilterConditionAdd"
     @row-select="$emit('rowSelect', $event)"
   )
-    // Custom slot for timestamp column
+    // Custom slot for timestamp column 
     template(v-if="tsColumn" #[`column-${tsColumn.name}`]="{ record, renderedValue }")
       span(style="cursor: pointer" @click="() => handleTsClick(record)") {{ renderedValue }}
 
@@ -102,6 +102,10 @@
     console.log(event)
     emit('filterConditionAdd', event)
   }
+
+  watchEffect(() => {
+    console.log('displayedColumns', props.displayedColumns)
+  })
 </script>
 
 <style lang="less" scoped>

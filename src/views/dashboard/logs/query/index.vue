@@ -16,16 +16,15 @@
           ref="sqlBuilderRef"
           v-model:form-state="builderFormState"
           storage-key="logs-query-table"
-          :time-range-values="builderTimeRangeValues"
           @update:sql="handleBuilderSqlUpdate"
         )
-        InputEditor(v-else :schema="schemaForEditor" :ts-column="tsColumn")
+        SqlTextEditor(v-if="editorType === 'text'" v-model="editorSql" @update:sql-info="handleSqlInfoUpdate")
 
     ChartContainer(
       ref="chartContainerRef"
       :columns="columns"
       :rows="rows"
-      :ts-column="tsColumn"
+      :ts-column="queryState.tsColumn"
       @timeRangeUpdate="handleTimeRangeUpdate"
     )
 
@@ -57,11 +56,11 @@
             | {{ $t('logsQuery.columns') }}
           template(#content)
             a-card(style="padding: 10px")
-              a-checkbox-group(v-model="displayedColumns[currentTableName]" direction="vertical")
+              a-checkbox-group(v-model="displayedColumns[queryState.tableName]" direction="vertical")
                 a-checkbox(v-for="column in columns" :value="column.name")
                   | {{ column.name }}
         Pagination(
-          v-if="!refresh && tsColumn"
+          v-if="!refresh && editorType === 'builder' && builderFormState"
           :key="paginationKey"
           :rows="rows"
           :columns="columns"
@@ -71,15 +70,15 @@
           @update:rows="handlePaginationRowsUpdate"
         )
       LogTableData(
-        :key="currentTableName"
+        :key="queryState.tableName"
         :wrap-line="wrap"
         :size="size"
         :data="rows"
         :columns="columns"
-        :sql-mode="editorType"
-        :ts-column="tsColumn"
+        :sql-mode="queryState.editorType"
+        :ts-column="queryState.tsColumn"
         :column-mode="mergeColumn && showKeys ? 'merged-with-keys' : mergeColumn ? 'merged' : 'separate'"
-        :displayed-columns="displayedColumns[currentTableName] || []"
+        :displayed-columns="displayedColumns[queryState.tableName] || []"
         @filter-condition-add="handleFilterConditionAdd"
         @row-select="handleRowSelect"
       )
@@ -97,7 +96,7 @@
   import useDataBaseStore from '@/store/modules/database'
 
   import SQLBuilder from '@/components/sql-builder/index.vue'
-  import InputEditor from './InputEditor.vue'
+  import SqlTextEditor from '@/components/sql-text-editor/index.vue'
   import LogTableData from './LogsTable.vue'
   import ChartContainer from './ChartContainer.vue'
   import Toolbar from './Toolbar.vue'
@@ -109,16 +108,9 @@
   const { checkTables } = useDataBaseStore()
 
   const logsStore = useLogsQueryStore()
-  const {
-    reset,
-    initializeFromQuery,
-    updateQueryParams,
-    executeQuery: baseExecuteQuery,
-    addFilterCondition,
-  } = logsStore
+  const { reset, initializeFromQuery, executeQuery: baseExecuteQuery, addFilterCondition } = logsStore
   const {
     editorType,
-    currentTableName,
     time,
     rangeTime,
     timeRangeValues,
@@ -130,7 +122,10 @@
     columns,
     builderSql,
     tsColumn,
+    editorTsColumn,
+    editorTableName,
   } = storeToRefs(logsStore)
+  const { queryState } = useLogsQueryStore()
 
   // Local state for query data (moved from store)
   const rows = shallowRef([])
@@ -150,12 +145,12 @@
     paginationKey.value += 1
   }
 
-  // Use timeRangeValues for SQLBuilder (processed time values)
-  const builderTimeRangeValues = computed(() => timeRangeValues.value)
-
   // Check if all required values are available for initial query
   const canExecuteInitialQuery = computed(() => {
-    return finalQuery.value && tsColumn.value
+    if (editorType.value === 'builder') {
+      return finalQuery.value && tsColumn.value && builderFormState.value?.table
+    }
+    return editorTsColumn.value && editorTableName.value
   })
 
   // Track if we've already executed the initial query
@@ -171,15 +166,6 @@
     // Note: builderSql is now computed from builderFormState, so this method is for compatibility
     // The actual SQL generation happens in the base store
   }
-
-  // Schema format for SQL editor - group columns by table name
-  const schemaForEditor = computed(() => {
-    if (!currentTableName.value || !columns.value.length) return {}
-
-    return {
-      [currentTableName.value]: columns.value.map((col) => col.name),
-    }
-  })
 
   // Enhanced executeQuery that uses base store and handles logs-specific UI logic
   const executeQuery = async () => {
@@ -227,10 +213,6 @@
 
   // Handle manual query execution from toolbar
   function handleToolbarQuery() {
-    if (!currentTableName.value) {
-      return
-    }
-
     if (editorType.value === 'text') {
       logsStore.limit = parseLimit(editorSql.value)
       // Process SQL with placeholders
@@ -241,6 +223,12 @@
 
     // Execute the query
     executeQuery()
+  }
+
+  // Handle SQL info updates from SqlTextEditor
+  function handleSqlInfoUpdate(sqlInfo) {
+    editorTableName.value = sqlInfo.tableName
+    editorTsColumn.value = sqlInfo.tsColumn
   }
 
   // Watch for form state changes to stop live query when table changes
@@ -275,9 +263,13 @@
 
   // Watch columns changes to update displayed columns
   watch(columns, () => {
-    if (!displayedColumns.value[currentTableName.value]) {
-      displayedColumns.value[currentTableName.value] = columns.value.map((c) => c.name)
+    if (!displayedColumns.value[queryState.tableName]) {
+      displayedColumns.value[queryState.tableName] = columns.value.map((c) => c.name)
     }
+  })
+
+  watchEffect(() => {
+    console.log('displayedColumns-----', displayedColumns)
   })
 
   const compact = useStorage('logquery-table-compact', false)
@@ -317,7 +309,7 @@
         console.log('All async values available for initial query:')
         console.log('tsColumn:', tsColumn.value)
         console.log('finalQuery:', finalQuery.value)
-        console.log('tableName:', currentTableName.value)
+        console.log('tableName:', queryState.tableName)
         hasExecutedInitialQuery.value = true
         executeQuery()
       }
@@ -328,21 +320,21 @@
   )
 
   // Watch for currentTableName changes to reset store and page state
-  watch(currentTableName, (newTableName, oldTableName) => {
-    if (newTableName && oldTableName && newTableName !== oldTableName) {
-      console.log('Table name changed from', oldTableName, 'to', newTableName)
+  // watch(queryState.tableName, (newTableName, oldTableName) => {
+  //   if (newTableName && oldTableName && newTableName !== oldTableName) {
+  //     console.log('Table name changed from', oldTableName, 'to', newTableName)
 
-      // Reset store state
-      reset()
+  //     // Reset store state
+  //     reset()
 
-      // Reset local state
-      rows.value = []
-      queryColumns.value = []
+  //     // Reset local state
+  //     rows.value = []
+  //     queryColumns.value = []
 
-      // Reset chart
-      chartContainerRef.value?.triggerCurrentChartQuery()
-    }
-  })
+  //     // Reset chart
+  //     chartContainerRef.value?.triggerCurrentChartQuery()
+  //   }
+  // })
 </script>
 
 <style lang="less">

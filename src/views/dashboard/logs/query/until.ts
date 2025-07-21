@@ -97,7 +97,10 @@ export const TableNameReg = /(?<=from|FROM)\s+([^\s;]+)/
 export function parseTable(sql: string) {
   const result = sql.match(TableNameReg)
   if (result && result.length) {
-    const arr = result[1].trim().split('.')
+    const tableName = result[1].trim()
+    // Remove quotes if they exist
+    const cleanTableName = tableName.replace(/^["'`]|["'`]$/g, '')
+    const arr = cleanTableName.split('.')
     return arr[arr.length - 1]
   }
   return ''

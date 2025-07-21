@@ -1,6 +1,7 @@
 import { ref, computed, watch, type Ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import dayjs from 'dayjs'
+import { TSColumn } from '@/views/dashboard/logs/query/types'
 
 export interface BaseQueryStoreOptions {
   /** Store identifier for debugging */
@@ -69,6 +70,8 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
 
   /** Editor SQL for text mode */
   const editorSql = ref('')
+  const editorTsColumn = ref<TSColumn | null>(null)
+  const editorTableName = ref<string | null>(null)
 
   /** Builder form state - shared */
   const builderFormState = ref(null)
@@ -78,26 +81,33 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
   const loading = ref(false)
   const columns = shallowRef<Array<{ name: string; data_type: string; label: string; semantic_type: string }>>([])
 
-  /** Computed table name - derived from builder form state or SQL parsing */
-  const currentTableName = computed(() => {
-    let tableName = ''
-    if (editorType.value === 'builder' && builderFormState.value?.table) {
-      tableName = builderFormState.value.table
-    } else {
-      // Parse from editorSql for text mode
-      const sqlToCheck = editorSql.value
-      const fromMatch = sqlToCheck.trim().match(/FROM\s+([`"']?)(\w+)\1/i)
-      if (fromMatch) {
-        tableName = fromMatch[2]
-      }
-    }
-    return tableName
+  /** Last executed query parameters - used for chart and table rendering */
+  const queryState = reactive<{
+    editorType: 'builder' | 'text'
+    sql: string
+    tsColumn: TSColumn | null
+    tableName: string
+    timeRangeValues: any[]
+    time: number
+    rangeTime: any[]
+  }>({
+    editorType: 'builder',
+    sql: '',
+    tsColumn: null,
+    tableName: '',
+    timeRangeValues: [],
+    time: 10,
+    rangeTime: [],
   })
+
+  // Remove currentTableName computed - use queryState.tableName instead
 
   /** Computed timestamp column from form state - readonly property */
   const tsColumn = computed(() => {
-    console.log('builderFormState store', builderFormState.value)
-    return builderFormState.value?.tsColumn || null
+    if (editorType.value === 'text') {
+      return editorTsColumn.value || null
+    }
+    return builderFormState.value?.tsColumn
   })
 
   /** Helper functions for SQL builder logic */
@@ -356,8 +366,8 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
     }
   })
 
-  // Watch for changes and update URL automatically
-  watch([editorType, time, rangeTime, editorSql, builderFormState], updateQueryParams, { deep: true })
+  // Remove automatic URL updates on every change to prevent unnecessary re-renders
+  // URL will be updated only after successful query execution
 
   function reset() {
     builderFormState.value = null
@@ -366,6 +376,15 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
     refresh.value = false
     loading.value = false
     columns.value = []
+    Object.assign(queryState, {
+      editorType: 'builder',
+      sql: '',
+      tsColumn: null,
+      tableName: '',
+      timeRangeValues: [],
+      time: 10,
+      rangeTime: [],
+    })
   }
 
   // Unified executeQuery function with results handling
@@ -391,6 +410,20 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
           semantic_type:
             col.semantic_type || (col.data_type?.toLowerCase().includes('timestamp') ? 'TIMESTAMP' : 'FIELD'),
         }))
+        console.log('editorTableName.value', editorTableName.value)
+        // Store the query parameters that were actually used in this execution
+        Object.assign(queryState, {
+          editorType: editorType.value,
+          sql: currentQuery,
+          tsColumn: tsColumn.value,
+          tableName:
+            editorType.value === 'builder' && builderFormState.value?.table
+              ? builderFormState.value.table
+              : editorTableName.value || '',
+          timeRangeValues: [...timeRangeValues.value], // Create a copy to prevent mutations
+          time: time.value,
+          rangeTime: [...rangeTime.value],
+        })
 
         // Convert raw rows to objects
         const processedRows = records.rows.map((row: any[]) => {
@@ -418,7 +451,7 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
 
   // Base export function
   async function exportToCSV() {
-    if (!finalQuery.value || !currentTableName.value) {
+    if (!finalQuery.value || !queryState.tableName) {
       return
     }
 
@@ -426,7 +459,7 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
       const editorAPI = await import('@/api/editor')
       const result = await editorAPI.default.runSQLWithCSV(finalQuery.value)
       const { default: fileDownload } = await import('js-file-download')
-      const filename = currentTableName.value || opts.storeId
+      const filename = queryState.tableName || opts.storeId
       fileDownload(result as unknown as string, `${filename}.csv`)
     } catch (error) {
       console.error(`[${opts.storeId}] Export failed:`, error)
@@ -456,16 +489,19 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
 
     builderFormState.value.conditions.push(newCondition)
   }
-
+  watchEffect(() => {
+    console.log('queryState', queryState)
+  })
   return {
     // State
     builderSql,
-    currentTableName,
     rangeTime,
     time,
     timeRangeValues,
     editorType,
     editorSql,
+    editorTsColumn,
+    editorTableName,
     builderFormState,
     refresh,
     finalQuery,
@@ -473,6 +509,7 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
     // Query execution state
     loading,
     columns,
+    queryState,
 
     // Computed utilities
     tsColumn,

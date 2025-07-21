@@ -23,7 +23,7 @@ a-card(:bordered="false")
       v-if="currChart == 'count'"
       ref="countChartRef"
       :sql="sqlForChart"
-      :table-name="currentTableName"
+      :table-name="queryState?.tableName"
       :ts-column="props.tsColumn"
       @timeRangeUpdate="handleTimeRangeUpdate"
     )
@@ -61,7 +61,8 @@ a-card(:bordered="false")
   const emit = defineEmits(['timeRangeUpdate'])
 
   const currChart = ref('count')
-  const { currentTableName, finalQuery } = storeToRefs(useLogsQueryStore())
+  const { queryState } = useLogsQueryStore()
+  const { finalQuery } = storeToRefs(useLogsQueryStore())
   const frequencyField = ref('')
   const countChartRef = ref()
   const funnelChartRef = ref()
@@ -120,9 +121,12 @@ a-card(:bordered="false")
     }
   }
 
-  watch(currentTableName, () => {
-    currChart.value = 'count'
-  })
+  watch(
+    () => queryState.tableName,
+    () => {
+      currChart.value = 'count'
+    }
+  )
 
   function handleTimeRangeUpdate(timeRange: string[]) {
     emit('timeRangeUpdate', timeRange)
