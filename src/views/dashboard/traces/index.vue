@@ -211,11 +211,6 @@
   // Watch for when all async values are available
   watch(canExecuteInitialQuery, (canExecute) => {
     if (canExecute && !hasExecutedInitialQuery.value) {
-      console.log('All async values available for initial query:')
-      console.log('tsColumn:', tsColumn.value)
-      console.log('finalQuery:', finalQuery.value)
-      console.log('tableName:', queryState.value.tableName)
-
       // Validate SQL before executing - only in editor mode
       if (editorType.value === 'text') {
         const validation = validateSQL(finalQuery.value)

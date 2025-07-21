@@ -313,15 +313,13 @@ QuickFilters(
       tables.value = result.output[0].records.rows.map((row: string[]) => row[0])
 
       // Validate and set table from localStorage or default
-      if (!props.formState) {
-        if (lastSelectedTable.value && tables.value.includes(lastSelectedTable.value)) {
-          // Use the remembered table if it still exists
-          form.table = lastSelectedTable.value
-        } else if (tables.value.length > 0) {
-          // Use first available table if remembered table doesn't exist
-          form.table = tables.value[0]
-          lastSelectedTable.value = tables.value[0]
-        }
+      if (lastSelectedTable.value && tables.value.includes(lastSelectedTable.value)) {
+        // Use the remembered table if it still exists
+        form.table = lastSelectedTable.value
+      } else if (tables.value.length > 0) {
+        // Use first available table if remembered table doesn't exist
+        form.table = tables.value[0]
+        lastSelectedTable.value = tables.value[0]
       }
     } catch (error) {
       console.error('Failed to fetch tables:', error)
@@ -381,9 +379,16 @@ QuickFilters(
   }
 
   // Load saved state on mount
-  onMounted(() => {
-    fetchTables()
-  })
+
+  watch(
+    () => database.value,
+    () => {
+      fetchTables()
+    },
+    {
+      immediate: true,
+    }
+  )
 
   watch(
     () => form.table,

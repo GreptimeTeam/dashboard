@@ -308,10 +308,6 @@
     canExecuteInitialQuery,
     (canExecute) => {
       if (canExecute && !hasExecutedInitialQuery.value) {
-        console.log('All async values available for initial query:')
-        console.log('tsColumn:', tsColumn.value)
-        console.log('finalQuery:', finalQuery.value)
-        console.log('tableName:', queryState.tableName)
         hasExecutedInitialQuery.value = true
         executeQuery()
       }
@@ -320,23 +316,6 @@
       immediate: true,
     }
   )
-
-  // Watch for currentTableName changes to reset store and page state
-  // watch(queryState.tableName, (newTableName, oldTableName) => {
-  //   if (newTableName && oldTableName && newTableName !== oldTableName) {
-  //     console.log('Table name changed from', oldTableName, 'to', newTableName)
-
-  //     // Reset store state
-  //     reset()
-
-  //     // Reset local state
-  //     rows.value = []
-  //     queryColumns.value = []
-
-  //     // Reset chart
-  //     chartContainerRef.value?.triggerCurrentChartQuery()
-  //   }
-  // })
 </script>
 
 <style lang="less">
