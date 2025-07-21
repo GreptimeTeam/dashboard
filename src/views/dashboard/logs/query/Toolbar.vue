@@ -20,7 +20,16 @@
     span(style="color: var(--color-text-2)") {{ $t('logsQuery.live') }}
 
   a-space(style="margin-left: auto")
-    ExportLog(:columns="props.columns" :ts-column="props.tsColumn")
+    a-button(
+      type="outline"
+      size="small"
+      :disabled="!finalQuery || props.queryLoading"
+      @click="exportSql"
+    )
+      template(#icon)
+        svg.icon
+          use(href="#export")
+      | {{ $t('dashboard.exportCSV') }}
 </template>
 
 <script setup name="Toolbar" lang="ts">
@@ -28,7 +37,6 @@
   import { storeToRefs } from 'pinia'
   import useLogsQueryStore from '@/store/modules/logs-query'
   import TimeRangeSelect from '@/components/time-range-select/index.vue'
-  import ExportLog from './ExportLog.vue'
   import type { ColumnType, TSColumn } from './types'
 
   interface Props {
@@ -73,6 +81,11 @@
       clearTimeout(refreshTimeout)
     }
   })
+
+  const logsStore = useLogsQueryStore()
+  function exportSql() {
+    logsStore.exportToCSV()
+  }
 </script>
 
 <style scoped lang="less">
