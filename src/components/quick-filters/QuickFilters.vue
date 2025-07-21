@@ -11,11 +11,6 @@
         @close="removeQuickFilter(quickFilter.name)"
       >
         <span :title="'Click to apply quick filter'">{{ quickFilter.name }}</span>
-        <a-icon
-          name="close"
-          style="cursor: pointer; font-size: 12px; margin-left: 4px"
-          @click.stop="removeQuickFilter(quickFilter.name)"
-        />
       </a-tag>
       <a-tag class="quick-fields-save" type="text" style="cursor: pointer" @click="showSaveQuickFilter = true">
         <template #icon>
