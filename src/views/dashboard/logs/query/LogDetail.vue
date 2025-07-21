@@ -1,6 +1,6 @@
 <template lang="pug">
 a-drawer(
-  v-if="record"
+  v-if="currRow"
   popup-container="#log-table-container"
   ok-text="Close"
   :width="800"
@@ -12,10 +12,13 @@ a-drawer(
 )
   template(#title)
     a-space
-      | Log Detail
+      a-button(type="text" :disabled="selectedRowKey === 0" @click="handlePre")
+        icon-arrow-up
+      a-button(type="text" :disabled="selectedRowKey === rows.length - 1" @click="handleNext")
+        icon-arrow-down
   a-tabs
     a-tab-pane(title="Fields" key="1")
-      FormView(:data="viewRow" :columns="props.columns")
+      FormView(:data="viewRow")
     a-tab-pane(title="JSON" key="2")
       JSONView(:jsonStr="JSON.stringify(viewRow, null, 2)")
 </template>
@@ -24,26 +27,38 @@ a-drawer(
   import JSONView from './JSONView.vue'
   import FormView from './FormView.vue'
 
-  const props = defineProps({
-    visible: Boolean,
-    record: Object,
-    columns: Array,
-  })
-
-  const emit = defineEmits(['update:visible'])
-
+  const props = defineProps<{
+    visible: boolean
+    selectedRowKey: number
+    currRow: any
+    rows: any[]
+  }>()
+  const emit = defineEmits(['update:visible', 'update:selectedRowKey'])
   const handleOk = () => {
     emit('update:visible', false)
   }
-
   const handleCancel = () => {
     emit('update:visible', false)
   }
 
   const viewRow = computed(() => {
-    if (!props.record) return {}
-    const obj = { ...props.record }
+    const obj = { ...props.currRow }
     delete obj.index
     return obj
   })
+
+  const handlePre = () => {
+    emit('update:selectedRowKey', props.selectedRowKey - 1)
+  }
+
+  const handleNext = () => {
+    emit('update:selectedRowKey', props.selectedRowKey + 1)
+  }
 </script>
+
+<style lang="less">
+  // Global styles for drawer since it's rendered in a portal
+  #log-table-container .arco-drawer {
+    border: 1px solid var(--color-neutral-3) !important;
+  }
+</style>

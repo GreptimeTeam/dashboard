@@ -18,10 +18,16 @@
     @row-select="$emit('rowSelect', $event)"
   )
     // Custom slot for timestamp column 
-    template(v-if="tsColumn" #[`column-${tsColumn.name}`]="{ record, renderedValue }")
-      span(style="cursor: pointer" @click="() => handleTsClick(record)") {{ renderedValue }}
+    template(v-if="tsColumn" #[`column-${tsColumn.name}`]="{ record, renderedValue, rowIndex }")
+      .clickable-ts(@click="() => handleTsClick(record, rowIndex)") {{ renderedValue }}
 
-  LogDetail(v-model:visible="detailVisible" :record="selectedRecord" :columns="props.columns")
+  LogDetail(
+    v-model:visible="detailVisible"
+    :selected-row-key="selectedRowKey"
+    :curr-row="selectedRecord"
+    :rows="data"
+    @update:selected-row-key="selectedRowKey = $event"
+  )
 </template>
 
 <script setup lang="ts" name="LogTableData">
@@ -63,7 +69,7 @@
   // Local state for row selection
   const selectedRowKey = ref(null)
   const selectedRecord = computed(() => {
-    return props.data.find((row) => row.key === selectedRowKey.value)
+    return props.data[selectedRowKey.value]
   })
 
   const tableContainer = ref(null)
@@ -77,8 +83,8 @@
 
   const detailVisible = ref(false)
 
-  const handleTsClick = (row) => {
-    selectedRowKey.value = row.key
+  const handleTsClick = (row, rowIndex) => {
+    selectedRowKey.value = rowIndex
     emit('rowSelect', row)
     detailVisible.value = true
   }
@@ -99,13 +105,8 @@
   })
 
   const handleFilterConditionAdd = (event) => {
-    console.log(event)
     emit('filterConditionAdd', event)
   }
-
-  watchEffect(() => {
-    console.log('displayedColumns', props.displayedColumns)
-  })
 </script>
 
 <style lang="less" scoped>
@@ -118,6 +119,16 @@
     :deep(.data-table-container) {
       height: 100%;
       flex: 1;
+    }
+  }
+
+  .clickable-ts {
+    cursor: pointer;
+    color: var(--color-primary-6);
+    text-decoration: underline;
+
+    &:hover {
+      color: var(--color-primary-5);
     }
   }
 </style>

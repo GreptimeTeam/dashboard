@@ -2,6 +2,7 @@
 .data-table-container(ref="tableContainer")
   a-table(
     :key="columnMode"
+    row-key="__rowIndex"
     :data="processedData"
     :loading="loading"
     :pagination="false"
@@ -45,10 +46,11 @@
                 | {{ col.title || col.name }}
 
           // Custom cell slot - allow parent components to override cell rendering
-          template(#cell="{ record }")
+          template(#cell="{ record, rowIndex }")
             slot(
               :name="`column-${col.name}`"
               :record="record"
+              :row-index="rowIndex"
               :column="col"
               :is-time-column="isTimeColumn(col)"
               :rendered-value="getRenderedValue(record, col)"
@@ -327,12 +329,17 @@ a-dropdown#td-context(
   const processedData = computed(() => {
     if (!mergeColumn.value) {
       // Separate mode: use original data
-      return props.data
+      return props.data.map((record, index) => {
+        return {
+          ...record,
+          __rowIndex: index,
+        }
+      })
     }
 
     // Merged mode: transform data to include merged column
-    return props.data.map((record) => {
-      const transformedRecord = { ...record }
+    return props.data.map((record, index) => {
+      const transformedRecord = { ...record, __rowIndex: index }
 
       // Create the merged data field from all non-timestamp fields
       const entryFields = getEntryFields(record)
