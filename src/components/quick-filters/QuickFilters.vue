@@ -97,7 +97,9 @@
   }>()
 
   const quickFiltersStorageKey = computed(() => `${props.storageKey}-${props.form.table}-quick-filters`)
+  const clearedFiltersKey = computed(() => `${props.storageKey}-${props.form.table}-filters-cleared`)
   let savedQuickFilters = useLocalStorage(quickFiltersStorageKey.value, [] as QuickFilter[])
+  const userClearedFilters = useLocalStorage(clearedFiltersKey.value, false)
 
   const showSaveQuickFilter = ref(false)
   const formRef = ref()
@@ -151,7 +153,8 @@
   }
 
   function initializeQuickFilters() {
-    if (savedQuickFilters.value.length === 0 && props.quickFieldNames) {
+    // Only initialize default filters if user hasn't manually cleared them
+    if (savedQuickFilters.value.length === 0 && !userClearedFilters.value && props.quickFieldNames) {
       const defaults = createDefaultQuickFilters()
       if (defaults.length > 0) {
         savedQuickFilters.value = defaults
@@ -184,6 +187,9 @@
       }
       savedQuickFilters.value.push(newQuickFilter)
 
+      // Reset the cleared flag since user is actively using filters
+      userClearedFilters.value = false
+
       saveQuickFilterForm.name = ''
       showSaveQuickFilter.value = false
       return true
@@ -198,6 +204,10 @@
     const idx = savedQuickFilters.value.findIndex((filter) => filter.name === filterId)
     if (idx !== -1) {
       savedQuickFilters.value.splice(idx, 1)
+      // Mark that user has manually cleared filters
+      if (savedQuickFilters.value.length === 0) {
+        userClearedFilters.value = true
+      }
     }
   }
 </script>
