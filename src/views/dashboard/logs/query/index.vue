@@ -51,24 +51,30 @@
             span {{ $t('logsQuery.wrapLines') }}
 
       template(#extra)
-        a-trigger(v-if="columns && columns.length" trigger="click" :unmount-on-close="false")
-          a-button(type="text" style="color: var(--color-text-2)")
-            | {{ $t('logsQuery.columns') }}
-          template(#content)
-            a-card(style="padding: 10px")
-              a-checkbox-group(v-model="displayedColumns[queryState.tableName]" direction="vertical")
-                a-checkbox(v-for="column in columns" :value="column.name")
-                  | {{ column.name }}
-        Pagination(
-          v-if="!refresh && editorType === 'builder' && builderFormState"
-          :key="paginationKey"
-          :rows="rows"
-          :columns="columns"
-          :sql="builderSql"
-          :ts-column="tsColumn"
-          :limit="logsStore.limit"
-          @update:rows="handlePaginationRowsUpdate"
-        )
+        a-space
+          a-trigger(
+            v-if="columns && columns.length"
+            trigger="click"
+            size="small"
+            :unmount-on-close="false"
+          )
+            a-button(type="text" style="color: var(--color-text-2)")
+              | {{ $t('logsQuery.columns') }}
+            template(#content)
+              a-card(style="padding: 10px")
+                a-checkbox-group(v-model="displayedColumns[queryState.tableName]" direction="vertical")
+                  a-checkbox(v-for="column in columns" :value="column.name")
+                    | {{ column.name }}
+          Pagination(
+            v-if="!refresh && editorType === 'builder' && builderFormState"
+            :key="paginationKey"
+            :rows="rows"
+            :columns="columns"
+            :sql="builderSql"
+            :ts-column="tsColumn"
+            :limit="logsStore.limit"
+            @update:rows="handlePaginationRowsUpdate"
+          )
       LogTableData(
         :key="queryState.tableName"
         :wrap-line="wrap"
@@ -266,10 +272,6 @@
     if (!displayedColumns.value[queryState.tableName]) {
       displayedColumns.value[queryState.tableName] = columns.value.map((c) => c.name)
     }
-  })
-
-  watchEffect(() => {
-    console.log('displayedColumns-----', displayedColumns)
   })
 
   const compact = useStorage('logquery-table-compact', false)

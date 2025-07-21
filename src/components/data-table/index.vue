@@ -339,10 +339,10 @@ a-dropdown#td-context(
 
     // Merged mode: transform data to include merged column
     return props.data.map((record, index) => {
-      const transformedRecord = { ...record, __rowIndex: index }
+      const transformedRecord = { ...record, __rowIndex: index } as any
 
       // Create the merged data field from all non-timestamp fields
-      const entryFields = getEntryFields(record)
+      const entryFields = getEntryFields(record).filter((value) => value[1] !== null && value[1] !== undefined)
       transformedRecord.Merged_Column = entryFields
 
       return transformedRecord
