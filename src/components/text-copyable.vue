@@ -6,16 +6,19 @@ a-typography-text(
   @copy="emit('copy')"
   :class="class"
   :copy-delay="1000"
+  :size="size"
   :copy-tooltip-props="{ 'mini' : true }"
 )
   span(v-if="showData") {{ data }}
   template(#copy-icon="{ copied }")
-    a-button(type="text")
+    a-button(:type="type" :size="size" )
       template(#icon)
         svg.icon.icon-color(v-if="copied === false")
           use(href="#copy-new")
         svg.icon(v-else)
           icon-check.success-color
+      template(#default v-if="buttonText")
+        | {{ copied ? copiedTooltip : copyTooltip }}
   template(#copy-tooltip="{ copied }")
     | {{ copied ? copiedTooltip : copyTooltip }}
 </template>
@@ -42,6 +45,18 @@ a-typography-text(
       type: String,
       default: '',
     },
+    type: {
+      type: String as () => 'text' | 'secondary' | 'dashed' | 'outline' | 'primary',
+      default: 'text',
+    },
+    size: {
+      type: String as () => 'mini' | 'small' | 'medium' | 'large',
+      default: 'medium',
+    },
+    buttonText: {
+      type: Boolean,
+      default: false,
+    },
   })
 
   const emit = defineEmits(['copy'])
@@ -63,8 +78,10 @@ a-typography-text(
     background-color: inherit;
   }
 
-  .icon {
-    width: 20px;
-    height: 20px;
+  .arco-btn-size-mini {
+    .icon {
+      width: 12px;
+      height: 12px;
+    }
   }
 </style>

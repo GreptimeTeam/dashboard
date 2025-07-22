@@ -30,12 +30,6 @@ export default function setupUserLoginInfoGuard(router: Router) {
 
       // Update settings with config from local storage
       appStore.updateSettings(useStorage('config', {}).value)
-      const { role } = storeToRefs(useUserStore())
-
-      const { guideModalVisible } = storeToRefs(useAppStore())
-      if (role.value === 'cloud') {
-        guideModalVisible.value = true
-      }
     } catch (error) {
       // error
     }

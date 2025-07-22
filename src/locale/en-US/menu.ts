@@ -31,4 +31,5 @@ export default {
   'menu.dashboard.logPipeline': 'Logs Pipelines',
   'menu.traces.list': 'Traces Query',
   'menu.dashboard.log-ingestion': 'Log Ingestion',
+  'menu.news': 'Latest News',
 }

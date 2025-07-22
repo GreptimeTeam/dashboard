@@ -119,6 +119,14 @@
     "watchEffect": true,
     "watchPostEffect": true,
     "watchSyncEffect": true,
+<<<<<<< HEAD
     "queryUrlSync": true
+=======
+    "IngestConfig": true,
+    "useIngest": true,
+    "ingest": true,
+    "initializeNews": true,
+    "useNews": true
+>>>>>>> 293f1510d9339418ce6847449a4d6cdf28c53811
   }
 }

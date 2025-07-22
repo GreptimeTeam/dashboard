@@ -109,9 +109,7 @@
   import Pagination from './Pagination.vue'
   import { toObj, parseTable, parseLimit, processSQL } from './until'
 
-  const { fetchDatabases } = useAppStore()
   const { dataStatusMap } = storeToRefs(useUserStore())
-  const { checkTables } = useDataBaseStore()
 
   const logsStore = useLogsQueryStore()
   const { reset, initializeFromQuery, executeQuery: baseExecuteQuery, addFilterCondition } = logsStore
@@ -277,15 +275,6 @@
   const compact = useStorage('logquery-table-compact', false)
   const size = computed(() => (compact.value ? 'mini' : 'medium'))
   const wrap = ref(false)
-
-  Promise.all([
-    (async () => {
-      if (!dataStatusMap.value.tables) {
-        await fetchDatabases()
-        await checkTables()
-      }
-    })(),
-  ])
 
   const appStore = useAppStore()
   const containerKey = ref('')

@@ -2,6 +2,7 @@ import axios, { AxiosRequestConfig, AxiosRequestHeaders } from 'axios'
 import dayjs from 'dayjs'
 import qs from 'qs'
 import { PromForm } from '@/store/modules/code-run/types'
+import { calculateRange } from '@/utils/date-time'
 import { HttpResponse } from './interceptor'
 
 const sqlUrl = `/v1/sql`
@@ -9,6 +10,7 @@ const scriptUrl = `/v1/scripts`
 const runScriptUrl = `/v1/run-script`
 const promURL = `/v1/promql`
 const influxURL = `/v1/influxdb`
+const promRangeURL = `/v1/prometheus/api/v1/query_range`
 
 const textHeaders = {
   'Content-Type': 'text/plain',
@@ -41,17 +43,8 @@ const makeScriptConfig = (name: string) => {
 }
 
 const makePromParams = (code: string, promForm: PromForm, format?: string) => {
-  let start
-  let end
   const appStore = useAppStore()
-  if (promForm.time !== 0) {
-    const now = dayjs()
-    end = now.unix().toString()
-    start = now.subtract(promForm.time, 'minute').unix().toString()
-  } else {
-    ;[start, end] = promForm.range
-  }
-
+  const [start, end] = calculateRange(promForm.time, promForm.range)
   return {
     params: {
       query: code,

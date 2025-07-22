@@ -1,7 +1,7 @@
 <template lang="pug">
 a-layout.layout
   a-layout-sider(:resize-directions="['right']" :width="321")
-    ListTabs(:has="['Tables', 'Scripts']")
+    ListTabs(:has="['Scripts']")
   a-layout-content
     a-space.content-space(direction="vertical" fill size="large")
       PyEditor
@@ -12,10 +12,8 @@ a-layout.layout
 <script lang="ts" name="Scripts" setup>
   const { getResultsByType } = useQueryCode()
   const { logs } = storeToRefs(useLogStore())
-  const { guideModalVisible } = storeToRefs(useAppStore())
   const { dataStatusMap } = storeToRefs(useUserStore())
-  const { checkTables, getScriptsTable } = useDataBaseStore()
-  const { fetchDatabases } = useAppStore()
+  const { getScriptsTable } = useDataBaseStore()
 
   const types = ['python']
 
@@ -27,10 +25,6 @@ a-layout.layout
   onActivated(async () => {
     if (!dataStatusMap.value.scripts) {
       getScriptsTable()
-    }
-    if (!dataStatusMap.value.tables) {
-      await fetchDatabases()
-      await checkTables()
     }
   })
 </script>
