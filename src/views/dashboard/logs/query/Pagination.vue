@@ -20,26 +20,20 @@ a-space(v-if="pages.length")
 
 <script setup name="Pagination" lang="ts">
   import { ref, nextTick } from 'vue'
-  import { storeToRefs } from 'pinia'
   import editorAPI from '@/api/editor'
-  import useLogsQueryStore from '@/store/modules/logs-query'
   import type { SchemaType } from '@/store/modules/code-run/types'
+  import type { QueryState, ColumnType } from '@/types/query'
   import convertTimestampToMilliseconds from '@/utils/datetime'
   import dayjs from 'dayjs'
   import { TimeTypes, toObj } from './until'
-  import type { TimeType } from './until'
-  import type { ColumnType, TSColumn } from './types'
 
   const props = defineProps<{
     rows: any[]
     columns: ColumnType[]
-    tsColumn: TSColumn | null
-    limit: number
+    queryState: QueryState
   }>()
 
   const emit = defineEmits(['update:rows'])
-  const { buildSQLFromFormState } = useLogsQueryStore()
-  const { timeRangeValues, builderFormState } = storeToRefs(useLogsQueryStore())
 
   const leftDisabled = ref(false)
   const rightDisabled = ref(false)
@@ -61,11 +55,11 @@ a-space(v-if="pages.length")
       const arr = []
       if (reverse) {
         for (let i = rowsTmp.length - 1; i >= 0; i -= 1) {
-          arr.push(toObj(rowsTmp[i], queryColumns, i, props.tsColumn))
+          arr.push(toObj(rowsTmp[i], queryColumns, i, props.queryState.tsColumn))
         }
       } else {
         for (let i = 0; i < rowsTmp.length; i += 1) {
-          arr.push(toObj(rowsTmp[i], queryColumns, i, props.tsColumn))
+          arr.push(toObj(rowsTmp[i], queryColumns, i, props.queryState.tsColumn))
         }
       }
       emit('update:rows', arr)
@@ -78,18 +72,18 @@ a-space(v-if="pages.length")
   }
 
   function addPage(direction = 'right') {
-    const order = builderFormState.value.orderBy
+    const order = props.queryState.orderBy
 
-    if (!props.rows.length || !props.tsColumn) {
+    if (!props.rows.length || !props.queryState.tsColumn) {
       currPage.value = {}
       return
     }
-    const tsName = props.tsColumn?.name as string
+    const tsName = props.queryState.tsColumn?.name as string
     const first = order === 'ASC' ? props.rows[0] : props.rows[props.rows.length - 1]
     const last = order === 'ASC' ? props.rows[props.rows.length - 1] : props.rows[0]
 
-    const startLabel = formatDate(first[tsName], props.tsColumn?.data_type)
-    const endLabel = formatDate(last[tsName], props.tsColumn?.data_type)
+    const startLabel = formatDate(first[tsName], props.queryState.tsColumn?.data_type)
+    const endLabel = formatDate(last[tsName], props.queryState.tsColumn?.data_type)
     const pageTmp = {
       label: `${startLabel}—${endLabel}`,
       start: first[tsName],
@@ -111,9 +105,9 @@ a-space(v-if="pages.length")
   }
 
   function loadPage(start, end, pageIndex: number) {
-    if (!props.tsColumn) return
+    if (!props.queryState.tsColumn) return
     pages.value[pageIndex].loading = true
-    const sql = buildSQLFromFormState({ ...builderFormState.value }, [start, end])
+    const sql = props.queryState.generateSql(props.queryState.sourceState, [start, end])
     const pageSql = replaceTimePlaceholders(sql, start, Number(end) + 1)
     queryPage(pageSql)
       .then(() => {
@@ -126,23 +120,23 @@ a-space(v-if="pages.length")
   }
 
   function loadOlder() {
-    if (!props.tsColumn) {
+    if (!props.queryState.tsColumn) {
       return
     }
     olderLoading.value = true
     const end = pages.value[0].start
 
     // Use the start from timeRangeValues directly
-    const [startValue] = timeRangeValues.value
-    const sql = buildSQLFromFormState({ ...builderFormState.value, orderBy: 'DESC' }, [startValue, end])
+    const [startValue] = props.queryState.timeRangeValues
+    const sql = props.queryState.generateSql({ ...props.queryState.sourceState, orderBy: 'DESC' }, [startValue, end])
 
     const pageSql = replaceTimePlaceholders(sql, startValue, end)
-    const order = builderFormState.value.orderBy
+    const order = props.queryState.orderBy
     const reverse = order === 'ASC'
     queryPage(pageSql, reverse)
       .then(() => {
         addPage('left')
-        if (props.rows.length < props.limit) {
+        if (props.rows.length < props.queryState.limit) {
           leftDisabled.value = true
         }
       })
@@ -152,22 +146,22 @@ a-space(v-if="pages.length")
   }
 
   function loadNewer() {
-    if (!props.tsColumn) {
+    if (!props.queryState.tsColumn) {
       return
     }
     newerLoading.value = true
     const start = pages.value[pages.value.length - 1].end
 
     // Use the end from timeRangeValues directly
-    const [, endValue] = timeRangeValues.value
-    const sql = buildSQLFromFormState({ ...builderFormState.value, orderBy: 'ASC' }, [start, endValue])
+    const [, endValue] = props.queryState.timeRangeValues
+    const sql = props.queryState.generateSql({ ...props.queryState.sourceState, orderBy: 'ASC' }, [start, endValue])
     const pageSql = replaceTimePlaceholders(sql, start, endValue)
-    const order = builderFormState.value.orderBy
+    const order = props.queryState.orderBy
     const reverse = order === 'DESC'
     queryPage(pageSql, reverse)
       .then(() => {
         addPage('right')
-        if (props.rows.length < props.limit) {
+        if (props.rows.length < props.queryState.limit) {
           rightDisabled.value = true
         }
       })

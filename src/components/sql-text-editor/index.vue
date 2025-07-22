@@ -22,8 +22,8 @@
   import { oneDark } from '@codemirror/theme-one-dark'
   import { useDebounceFn } from '@vueuse/core'
   import editorAPI from '@/api/editor'
-  import { parseTable } from '@/views/dashboard/logs/query/until'
-  import type { TSColumn } from '@/views/dashboard/logs/query/types'
+  import { parseTable, parseLimit, parseOrderBy } from '@/views/dashboard/logs/query/until'
+  import type { TextEditorFormState, TSColumn } from '@/types/query'
 
   interface Props {
     modelValue: string
@@ -43,7 +43,7 @@
 
   const emit = defineEmits<{
     'update:modelValue': [value: string]
-    'update:sqlInfo': [value: { tableName: string; tsColumn: TSColumn | null }]
+    'update:sqlInfo': [value: TextEditorFormState]
   }>()
 
   // Local SQL state
@@ -140,9 +140,14 @@
 
     // Extract table name
     tableName.value = extractTableName(sqlText)
+    const limit = parseLimit(sqlText)
+    const orderBy = parseOrderBy(sqlText) as 'DESC' | 'ASC' | null
     emit('update:sqlInfo', {
-      tableName: tableName.value,
+      table: tableName.value,
       tsColumn: null,
+      limit,
+      orderBy,
+      sql: sqlText,
     })
   }
 
@@ -156,10 +161,7 @@
         nextTick(async () => {
           const tsColumn = await extractTsColumn(localSql.value)
           if (tsColumn) {
-            emit('update:sqlInfo', {
-              tableName: newTableName,
-              tsColumn,
-            })
+            parseAndEmitSqlInfo(localSql.value)
           }
         })
       }

@@ -22,6 +22,18 @@ export interface BaseQueryStoreOptions {
   }
 }
 
+export interface QueryState {
+  editorType: 'builder' | 'text'
+  sql: string
+  tsColumn: TSColumn | null
+  table: string
+  timeRangeValues: any[]
+  time: number
+  rangeTime: any[]
+  limit: number
+  orderBy: 'DESC' | 'ASC'
+}
+
 export interface QueryExecutionState {
   loading: Ref<boolean>
   columns: Ref<Array<{ name: string; data_type: string; label: string; semantic_type: string }>>
@@ -82,22 +94,16 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
   const columns = shallowRef<Array<{ name: string; data_type: string; label: string; semantic_type: string }>>([])
 
   /** Last executed query parameters - used for chart and table rendering */
-  const queryState = reactive<{
-    editorType: 'builder' | 'text'
-    sql: string
-    tsColumn: TSColumn | null
-    tableName: string
-    timeRangeValues: any[]
-    time: number
-    rangeTime: any[]
-  }>({
+  const queryState = reactive<QueryState>({
     editorType: 'builder',
     sql: '',
     tsColumn: null,
-    tableName: '',
+    table: '',
     timeRangeValues: [],
     time: 10,
     rangeTime: [],
+    limit: opts.limit,
+    orderBy: 'DESC',
   })
 
   // Remove currentTableName computed - use queryState.tableName instead
@@ -256,23 +262,14 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
     return sql
   }
 
-  /** Computed builder SQL generated from form state */
-  const builderSql = computed(() => {
-    // Evaluate timeRangeValues first, then pass it as a parameter
-    // This ensures timeRangeValues is computed before SQL generation
-    const currentTimeRanges = timeRangeValues.value
-    return buildSQLFromFormState(builderFormState.value, currentTimeRanges)
-  })
-
   /** Executable SQL with time processing */
   const executableSql = computed(() => {
-    // Time processing is handled by SQLBuilder for builder mode
-    // For editor mode, we need to process time range manually
-    const query = editorType.value === 'builder' ? builderSql.value : editorSql.value
+    // For now, only handle editor mode since builder logic was moved to useSqlBuilderHook
+    const query = editorSql.value
 
     let processedSql = query
 
-    // Enhanced time processing logic - use the same time ranges that were used in builderSql
+    // Enhanced time processing logic
     const currentTimeRanges = timeRangeValues.value
     if (currentTimeRanges.length === 2) {
       // Use processed time range values directly (preferred for logs)
@@ -361,9 +358,9 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
 
   // Watch for editor type changes - generate editorSql from builder when switching to text
   watch(editorType, (newMode: 'builder' | 'text') => {
-    if (newMode === 'text' && !editorSql.value && builderSql.value) {
-      editorSql.value = builderSql.value
-    }
+    // Note: builderSql logic was moved to useSqlBuilderHook
+    // This watch is kept for compatibility but may need to be updated
+    // when integrating with the new hook-based architecture
   })
 
   // Remove automatic URL updates on every change to prevent unnecessary re-renders
@@ -384,6 +381,7 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
       timeRangeValues: [],
       time: 10,
       rangeTime: [],
+      limit: opts.limit,
     })
   }
 
@@ -423,6 +421,7 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
           timeRangeValues: [...timeRangeValues.value], // Create a copy to prevent mutations
           time: time.value,
           rangeTime: [...rangeTime.value],
+          limit: opts.limit,
         })
 
         // Convert raw rows to objects
@@ -467,34 +466,12 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
     }
   }
 
-  // Filter condition management - shared business logic
-  function addFilterCondition(columnName: string, operator: string, value: string) {
-    if (!builderFormState.value) {
-      console.warn(`[${opts.storeId}] Cannot add filter condition: no builder form state`)
-      return
-    }
-
-    // Add new condition to the form state
-    const newCondition = {
-      field: columnName,
-      operator,
-      value: String(value),
-      relation: 'AND',
-      isTimeColumn: false,
-    }
-
-    if (!builderFormState.value.conditions) {
-      builderFormState.value.conditions = []
-    }
-
-    builderFormState.value.conditions.push(newCondition)
-  }
   watchEffect(() => {
     console.log('queryState', queryState)
   })
   return {
     // State
-    builderSql,
+
     rangeTime,
     time,
     timeRangeValues,
@@ -502,7 +479,6 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
     editorSql,
     editorTsColumn,
     editorTableName,
-    builderFormState,
     refresh,
     executableSql,
 
@@ -520,8 +496,6 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
     updateQueryParams,
     executeQuery,
     exportToCSV,
-    addFilterCondition,
-    buildSQLFromFormState,
 
     // Options for customization
     options: opts,

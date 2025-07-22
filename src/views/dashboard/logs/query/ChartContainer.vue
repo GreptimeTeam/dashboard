@@ -23,8 +23,8 @@ a-card(:bordered="false")
       v-if="currChart == 'count'"
       ref="countChartRef"
       :sql="sqlForChart"
-      :table-name="queryState?.tableName"
-      :ts-column="props.tsColumn"
+      :table-name="queryState?.table"
+      :ts-column="queryState?.tsColumn"
       @timeRangeUpdate="handleTimeRangeUpdate"
     )
     FunnelChart(
@@ -37,32 +37,28 @@ a-card(:bordered="false")
 
 <script setup name="ChartContainer" lang="ts">
   import { ref, computed, watch, nextTick } from 'vue'
-  import { storeToRefs } from 'pinia'
   import { useLocalStorage } from '@vueuse/core'
   import { IconDown, IconRight } from '@arco-design/web-vue/es/icon'
-  import useLogsQueryStore from '@/store/modules/logs-query'
+  import type { ColumnType, TSColumn, QueryState } from '@/types/query'
   import CountChart from '@/components/count-chart/index.vue'
   import FunnelChart from './FunnelChart.vue'
-  import { getWhereClause } from './until'
-  import type { ColumnType, TSColumn } from './types'
 
   interface Props {
     columns?: ColumnType[]
     rows?: any[]
-    tsColumn?: TSColumn | null
+    queryState?: QueryState | null
   }
 
   const props = withDefaults(defineProps<Props>(), {
     columns: () => [],
     rows: () => [],
-    tsColumn: null,
+    queryState: null,
   })
 
   const emit = defineEmits(['timeRangeUpdate'])
 
   const currChart = ref('count')
-  const { queryState } = useLogsQueryStore()
-  const { executableSql } = storeToRefs(useLogsQueryStore())
+
   const frequencyField = ref('')
   const countChartRef = ref()
   const funnelChartRef = ref()
@@ -71,7 +67,7 @@ a-card(:bordered="false")
   const chartExpanded = useLocalStorage('logs-chart-expanded', true)
 
   // Computed SQL for chart (extracts the main query)
-  const sqlForChart = computed(() => executableSql.value)
+  const sqlForChart = computed(() => props.queryState?.sql)
   const filterFields = computed(() => {
     try {
       if (!props.columns || !Array.isArray(props.columns)) return []
@@ -100,7 +96,7 @@ a-card(:bordered="false")
 
   // Method to trigger the current chart query based on chart type
   function triggerCurrentChartQuery() {
-    if (!chartExpanded.value || !executableSql.value) return
+    if (!chartExpanded.value || !props.queryState?.sql) return
 
     if (currChart.value === 'count' && countChartRef.value) {
       countChartRef.value.executeCountQuery()
@@ -114,19 +110,12 @@ a-card(:bordered="false")
     chartExpanded.value = !chartExpanded.value
 
     // Trigger chart data fetch when expanding
-    if (chartExpanded.value && executableSql.value) {
+    if (chartExpanded.value && props.queryState?.sql) {
       nextTick(() => {
         triggerCurrentChartQuery()
       })
     }
   }
-
-  watch(
-    () => queryState.tableName,
-    () => {
-      currChart.value = 'count'
-    }
-  )
 
   function handleTimeRangeUpdate(timeRange: string[]) {
     emit('timeRangeUpdate', timeRange)

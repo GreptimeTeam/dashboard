@@ -109,14 +109,7 @@ QuickFilters(
   import editorAPI from '@/api/editor'
   import { useAppStore } from '@/store'
   import QuickFilters from '@/components/quick-filters'
-
-  interface Condition {
-    field: string
-    operator: string
-    value: string
-    relation?: 'AND' | 'OR'
-    isTimeColumn?: boolean
-  }
+  import type { Condition, BuilderFormState as Form } from '@/types/query'
 
   interface TableField {
     name: string
@@ -132,15 +125,6 @@ QuickFilters(
     orderBy: string
     limit: number
     createdAt: number
-  }
-
-  interface Form {
-    conditions: Condition[]
-    orderByField: string
-    orderBy: string
-    limit: number
-    table: string
-    tsColumn?: { name: string; data_type: string } | null // Readonly timestamp column
   }
 
   const emit = defineEmits(['update:sql', 'update:formState'])
@@ -192,6 +176,7 @@ QuickFilters(
   watch(
     form,
     (newForm) => {
+      console.log('form update', newForm)
       emit('update:formState', newForm)
     },
     { deep: true }

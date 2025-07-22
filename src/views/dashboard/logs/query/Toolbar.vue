@@ -1,6 +1,6 @@
 <template lang="pug">
 .toolbar
-  a-radio-group(v-model="editorType" type="button")
+  a-radio-group(v-model="editorType" type="button" @update:modelValue="handleEditorTypeChange")
     a-radio(value="builder")
       | Builder
     a-radio(value="text")
@@ -16,7 +16,7 @@
       icon-loading(v-if="props.queryLoading" spin)
       icon-play-arrow(v-else)
     | {{ $t('dashboard.runQuery') }}
-  a-checkbox(v-model="refresh" size="small")
+  a-checkbox(model-value="refresh" size="small" @update:modelValue="handleRefreshChange")
     span(style="color: var(--color-text-2)") {{ $t('logsQuery.live') }}
 
   a-space(style="margin-left: auto")
@@ -34,8 +34,6 @@
 
 <script setup name="Toolbar" lang="ts">
   import { ref, watch, nextTick } from 'vue'
-  import { storeToRefs } from 'pinia'
-  import useLogsQueryStore from '@/store/modules/logs-query'
   import TimeRangeSelect from '@/components/time-range-select/index.vue'
   import type { ColumnType, TSColumn } from './types'
 
@@ -43,27 +41,57 @@
     queryLoading?: boolean
     columns?: ColumnType[]
     tsColumn?: TSColumn | null
+    refresh: boolean
+    executableSql: string
+    editorType: 'builder' | 'text'
+    time: number
+    rangeTime: string[]
   }
 
   const props = withDefaults(defineProps<Props>(), {
     queryLoading: false,
     columns: () => [],
     tsColumn: null,
+    refresh: false,
+    executableSql: '',
+    editorType: 'builder',
+    time: 10,
+    rangeTime: () => [],
   })
 
-  const { executableSql, rangeTime, time, editorType, timeRangeValues, refresh } = storeToRefs(useLogsQueryStore())
-
-  const emit = defineEmits(['query'])
+  const emit = defineEmits([
+    'query',
+    'update:refresh',
+    'export',
+    'update:editorType',
+    'update:time',
+    'update:rangeTime',
+  ])
 
   function handleQuery() {
-    // Simply emit the query event - let parent handle the logic
     emit('query')
+  }
+
+  function handleRefreshChange(val: boolean) {
+    emit('update:refresh', val)
+  }
+
+  function handleEditorTypeChange(val: 'builder' | 'text') {
+    emit('update:editorType', val)
+  }
+
+  function handleTimeChange(val: number) {
+    emit('update:time', val)
+  }
+
+  function handleRangeTimeChange(val: string[]) {
+    emit('update:rangeTime', val)
   }
 
   // Live query functionality - simplified
   let refreshTimeout = -1
   function mayRefresh() {
-    if (refresh.value && executableSql.value) {
+    if (props.refresh && props.executableSql) {
       emit('query')
       refreshTimeout = window.setTimeout(() => {
         mayRefresh()
@@ -73,18 +101,19 @@
     }
   }
 
-  // Watch for refresh toggle to start/stop live queries
-  watch(refresh, (newValue) => {
-    if (newValue) {
-      mayRefresh()
-    } else {
-      clearTimeout(refreshTimeout)
+  watch(
+    () => props.refresh,
+    (newValue) => {
+      if (newValue) {
+        mayRefresh()
+      } else {
+        clearTimeout(refreshTimeout)
+      }
     }
-  })
+  )
 
-  const logsStore = useLogsQueryStore()
   function exportSql() {
-    logsStore.exportToCSV()
+    emit('export')
   }
 </script>
 
