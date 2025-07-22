@@ -26,7 +26,7 @@ a-space(v-if="pages.length")
   import type { SchemaType } from '@/store/modules/code-run/types'
   import convertTimestampToMilliseconds from '@/utils/datetime'
   import dayjs from 'dayjs'
-  import { addTsCondition, TimeTypes, toObj } from './until'
+  import { TimeTypes, toObj } from './until'
   import type { TimeType } from './until'
   import type { ColumnType, TSColumn } from './types'
 

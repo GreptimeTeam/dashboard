@@ -62,7 +62,7 @@ a-card(:bordered="false")
 
   const currChart = ref('count')
   const { queryState } = useLogsQueryStore()
-  const { finalQuery } = storeToRefs(useLogsQueryStore())
+  const { executableSql } = storeToRefs(useLogsQueryStore())
   const frequencyField = ref('')
   const countChartRef = ref()
   const funnelChartRef = ref()
@@ -71,7 +71,7 @@ a-card(:bordered="false")
   const chartExpanded = useLocalStorage('logs-chart-expanded', true)
 
   // Computed SQL for chart (extracts the main query)
-  const sqlForChart = computed(() => finalQuery.value)
+  const sqlForChart = computed(() => executableSql.value)
   const filterFields = computed(() => {
     try {
       if (!props.columns || !Array.isArray(props.columns)) return []
@@ -100,7 +100,7 @@ a-card(:bordered="false")
 
   // Method to trigger the current chart query based on chart type
   function triggerCurrentChartQuery() {
-    if (!chartExpanded.value || !finalQuery.value) return
+    if (!chartExpanded.value || !executableSql.value) return
 
     if (currChart.value === 'count' && countChartRef.value) {
       countChartRef.value.executeCountQuery()
@@ -114,7 +114,7 @@ a-card(:bordered="false")
     chartExpanded.value = !chartExpanded.value
 
     // Trigger chart data fetch when expanding
-    if (chartExpanded.value && finalQuery.value) {
+    if (chartExpanded.value && executableSql.value) {
       nextTick(() => {
         triggerCurrentChartQuery()
       })

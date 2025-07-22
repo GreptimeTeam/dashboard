@@ -264,8 +264,8 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
     return buildSQLFromFormState(builderFormState.value, currentTimeRanges)
   })
 
-  /** Final query with time processing */
-  const finalQuery = computed(() => {
+  /** Executable SQL with time processing */
+  const executableSql = computed(() => {
     // Time processing is handled by SQLBuilder for builder mode
     // For editor mode, we need to process time range manually
     const query = editorType.value === 'builder' ? builderSql.value : editorSql.value
@@ -390,7 +390,7 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
   // Unified executeQuery function with results handling
   async function executeQuery() {
     // Capture the current query at execution time to prevent race conditions
-    const currentQuery = finalQuery.value
+    const currentQuery = executableSql.value
     if (!currentQuery) return []
 
     loading.value = true
@@ -451,13 +451,13 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
 
   // Base export function
   async function exportToCSV() {
-    if (!finalQuery.value || !queryState.tableName) {
+    if (!executableSql.value || !queryState.tableName) {
       return
     }
 
     try {
       const editorAPI = await import('@/api/editor')
-      const result = await editorAPI.default.runSQLWithCSV(finalQuery.value)
+      const result = await editorAPI.default.runSQLWithCSV(executableSql.value)
       const { default: fileDownload } = await import('js-file-download')
       const filename = queryState.tableName || opts.storeId
       fileDownload(result as unknown as string, `${filename}.csv`)
@@ -504,7 +504,7 @@ export function useBaseQueryStore(options: BaseQueryStoreOptions) {
     editorTableName,
     builderFormState,
     refresh,
-    finalQuery,
+    executableSql,
 
     // Query execution state
     loading,

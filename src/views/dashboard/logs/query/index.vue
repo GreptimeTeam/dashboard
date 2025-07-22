@@ -121,7 +121,7 @@
     refresh,
     builderFormState,
     editorSql,
-    finalQuery,
+    executableSql,
     loading: queryLoading,
     columns,
     builderSql,
@@ -152,7 +152,7 @@
   // Check if all required values are available for initial query
   const canExecuteInitialQuery = computed(() => {
     if (editorType.value === 'builder') {
-      return finalQuery.value && tsColumn.value && builderFormState.value?.table
+      return executableSql.value && tsColumn.value && builderFormState.value?.table
     }
     return editorTsColumn.value && editorTableName.value
   })
@@ -223,7 +223,7 @@
       editorSql.value = processSQL(editorSql.value, tsColumn.value?.name, logsStore.limit)
     }
 
-    // Note: editorSql changes are automatically reflected in finalQuery
+    // Note: editorSql changes are automatically reflected in executableSql
 
     // Execute the query
     executeQuery()

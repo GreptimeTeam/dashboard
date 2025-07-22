@@ -38,7 +38,7 @@
           a-button(
             type="outline"
             size="small"
-            :disabled="!finalQuery || loading"
+            :disabled="!executableSql || loading"
             @click="exportSql"
           )
             template(#icon)
@@ -116,7 +116,7 @@
     timeRangeValues,
     builderFormState,
     queryState,
-    finalQuery,
+    executableSql,
     tsColumn,
   } = storeToRefs(tracesStore)
 
@@ -136,7 +136,7 @@
   // Check if all required values are available for initial query
   const canExecuteInitialQuery = computed(() => {
     if (editorType.value === 'builder') {
-      return finalQuery.value && tsColumn.value && builderFormState.value?.table
+      return executableSql.value && tsColumn.value && builderFormState.value?.table
     }
     return editorTsColumn.value && editorTableName.value
   })
@@ -174,7 +174,7 @@
     allResults.value = results || []
 
     // Trigger count chart query only if chart is expanded
-    if (chartExpanded.value && countChartRef.value && finalQuery.value) {
+    if (chartExpanded.value && countChartRef.value && executableSql.value) {
       countChartRef.value.executeCountQuery()
     }
   }
@@ -190,7 +190,7 @@
     chartExpanded.value = !chartExpanded.value
 
     // Trigger chart data fetch when expanding
-    if (chartExpanded.value && finalQuery.value) {
+    if (chartExpanded.value && executableSql.value) {
       nextTick(() => {
         countChartRef.value.executeCountQuery()
       })
@@ -213,7 +213,7 @@
     if (canExecute && !hasExecutedInitialQuery.value) {
       // Validate SQL before executing - only in editor mode
       if (editorType.value === 'text') {
-        const validation = validateSQL(finalQuery.value)
+        const validation = validateSQL(executableSql.value)
         if (!validation.isValid) {
           console.error('SQL validation failed:', validation.error)
           return

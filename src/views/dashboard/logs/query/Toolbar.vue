@@ -23,7 +23,7 @@
     a-button(
       type="outline"
       size="small"
-      :disabled="!finalQuery || props.queryLoading"
+      :disabled="!executableSql || props.queryLoading"
       @click="exportSql"
     )
       template(#icon)
@@ -51,7 +51,7 @@
     tsColumn: null,
   })
 
-  const { finalQuery, rangeTime, time, editorType, timeRangeValues, refresh } = storeToRefs(useLogsQueryStore())
+  const { executableSql, rangeTime, time, editorType, timeRangeValues, refresh } = storeToRefs(useLogsQueryStore())
 
   const emit = defineEmits(['query'])
 
@@ -63,7 +63,7 @@
   // Live query functionality - simplified
   let refreshTimeout = -1
   function mayRefresh() {
-    if (refresh.value && finalQuery.value) {
+    if (refresh.value && executableSql.value) {
       emit('query')
       refreshTimeout = window.setTimeout(() => {
         mayRefresh()
