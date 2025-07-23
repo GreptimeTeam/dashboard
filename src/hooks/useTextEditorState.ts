@@ -1,44 +1,23 @@
-import { reactive } from 'vue'
-import { TSColumn } from '@/views/dashboard/logs/query/types'
+import { ref, type Ref } from 'vue'
+import { TextEditorFormState } from '@/types/query'
 
-export interface TextEditorState {
-  editorSql: string
-  editorTsColumn: TSColumn | null
-  editorTableName: string
-}
-
-const useTextEditorState = (defaults: Partial<TextEditorState> = {}) => {
-  const state = reactive<TextEditorState>({
-    editorSql: '',
-    editorTsColumn: null,
-    editorTableName: '',
-    ...defaults,
+const useTextEditorState = (timeRangeValues: Ref<string[]>) => {
+  const textEditorState = reactive<TextEditorFormState>({
+    table: '',
+    orderBy: 'DESC',
+    limit: 1000,
+    tsColumn: null,
+    sql: '',
   })
 
-  function reset() {
-    state.editorSql = ''
-    state.editorTsColumn = null
-    state.editorTableName = ''
-  }
-
-  function updateSql(sql: string) {
-    state.editorSql = sql
-  }
-
-  function updateTsColumn(tsColumn: TSColumn | null) {
-    state.editorTsColumn = tsColumn
-  }
-
-  function updateTableName(tableName: string) {
-    state.editorTableName = tableName
+  const generateSql = (state: TextEditorFormState, timeRange: any[]) => {
+    const [startTs, endTs] = timeRange
+    return state.sql.replace(/\$timestart/g, `${startTs}`).replace(/\$timeend/g, `${endTs}`)
   }
 
   return {
-    state,
-    reset,
-    updateSql,
-    updateTsColumn,
-    updateTableName,
+    textEditorState,
+    generateSql,
   }
 }
 

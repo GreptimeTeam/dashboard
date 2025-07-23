@@ -1,6 +1,6 @@
 import { useRoute, useRouter } from 'vue-router'
 
-const useQueryUrlSync = ({ builder, textEditorState, timeRange, editorType, urlParams = {} as any }) => {
+const useQueryUrlSync = ({ builderFormState, textEditorState, timeRange, editorType, urlParams = {} as any }) => {
   const route = useRoute()
   const router = useRouter()
 
@@ -31,13 +31,13 @@ const useQueryUrlSync = ({ builder, textEditorState, timeRange, editorType, urlP
 
     // Editor SQL
     if (queryEditorSql) {
-      textEditorState.value.sql = decodeURIComponent(queryEditorSql as string)
+      textEditorState.sql = decodeURIComponent(queryEditorSql as string)
     }
 
     // Builder form state
     if (queryBuilderForm) {
       try {
-        Object.assign(builder.builderFormState, JSON.parse(decodeURIComponent(queryBuilderForm as string)))
+        Object.assign(builderFormState, JSON.parse(decodeURIComponent(queryBuilderForm as string)))
       } catch (error) {
         console.warn('Failed to parse builder form state from URL:', error)
       }
@@ -57,14 +57,14 @@ const useQueryUrlSync = ({ builder, textEditorState, timeRange, editorType, urlP
       delete query[urlParams.timeRange || 'timeRange']
     }
     // Editor SQL
-    if (editorType.value === 'text' && textEditorState.value.sql) {
-      query[urlParams.editorSql || 'editorSql'] = encodeURIComponent(textEditorState.value.sql)
+    if (editorType.value === 'text' && textEditorState.sql) {
+      query[urlParams.editorSql || 'editorSql'] = encodeURIComponent(textEditorState.sql)
     } else {
       delete query[urlParams.editorSql || 'editorSql']
     }
     // Builder form state
-    if (editorType.value === 'builder' && builder.builderFormState) {
-      query[urlParams.builderForm || 'builderForm'] = encodeURIComponent(JSON.stringify(builder.builderFormState))
+    if (editorType.value === 'builder' && builderFormState) {
+      query[urlParams.builderForm || 'builderForm'] = encodeURIComponent(JSON.stringify(builderFormState))
     } else {
       delete query[urlParams.builderForm || 'builderForm']
     }

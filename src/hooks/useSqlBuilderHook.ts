@@ -1,4 +1,4 @@
-import { computed, type Ref, reactive, watchEffect } from 'vue'
+import { computed, type Ref, reactive, watchEffect, ref } from 'vue'
 import { TSColumn } from '@/views/dashboard/logs/query/types'
 import { Condition, BuilderFormState } from '@/types/query'
 
@@ -16,7 +16,7 @@ export interface SqlBuilderHookOptions {
 export function useSqlBuilderHook(options: SqlBuilderHookOptions) {
   const { timeRangeValues, tsColumn, storageKey, defaultFormState } = options
 
-  // Initialize builder form state
+  // Initialize builder form state as reactive
   const builderFormState = reactive<BuilderFormState>({
     table: '',
     conditions: [],
@@ -27,23 +27,23 @@ export function useSqlBuilderHook(options: SqlBuilderHookOptions) {
     ...defaultFormState,
   })
 
-  // Persist form state to localStorage if storageKey is provided
-  if (storageKey) {
-    const savedState = localStorage.getItem(`${storageKey}-form-state`)
-    if (savedState) {
-      try {
-        const parsed = JSON.parse(savedState)
-        Object.assign(builderFormState, parsed)
-      } catch (error) {
-        console.warn('Failed to parse saved form state:', error)
-      }
-    }
+  // // Persist form state to localStorage if storageKey is provided
+  // if (storageKey) {
+  //   const savedState = localStorage.getItem(`${storageKey}-form-state`)
+  //   if (savedState) {
+  //     try {
+  //       const parsed = JSON.parse(savedState)
+  //       Object.assign(builderFormState, parsed)
+  //     } catch (error) {
+  //       console.warn('Failed to parse saved form state:', error)
+  //     }
+  //   }
 
-    // Watch for changes and save to localStorage
-    watchEffect(() => {
-      localStorage.setItem(`${storageKey}-form-state`, JSON.stringify(builderFormState))
-    })
-  }
+  //   // Watch for changes and save to localStorage
+  //   watchEffect(() => {
+  //     localStorage.setItem(`${storageKey}-form-state`, JSON.stringify(builderFormState))
+  //   })
+  // }
 
   function escapeSqlString(value: string) {
     if (typeof value !== 'string') return value
@@ -114,7 +114,7 @@ export function useSqlBuilderHook(options: SqlBuilderHookOptions) {
 
     // Use passed parameters or store values as fallbacks
     const effectiveTimeRanges = specialTimeRanges !== undefined ? specialTimeRanges : timeRangeValues.value
-    const effectiveTimestampColumn = tsColumn?.value
+    const effectiveTimestampColumn = builderFormState.tsColumn
 
     // Process conditions
     const processedConditions = conditions
@@ -182,14 +182,8 @@ export function useSqlBuilderHook(options: SqlBuilderHookOptions) {
     builderFormState.conditions.push(newCondition)
   }
 
-  // Computed builder SQL
-  const builderSql = computed(() => {
-    return generateSql(builderFormState, timeRangeValues.value)
-  })
-
   return {
     builderFormState,
-    builderSql,
     addFilterCondition,
     generateSql,
   }

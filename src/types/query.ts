@@ -40,5 +40,6 @@ export interface QueryState extends BaseState {
   time: number
   rangeTime: any[]
   sourceState: TextEditorFormState | BuilderFormState
+  sql: string
   generateSql: (queryState: TextEditorFormState | BuilderFormState, timeRange: any[]) => string
 }

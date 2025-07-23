@@ -1,14 +1,10 @@
-import { ref, computed, reactive } from 'vue'
-import type { BuilderFormState, QueryState } from '@/types/query'
+import { ref, computed, reactive, shallowRef, watch } from 'vue'
+import type { BuilderFormState, QueryState, TextEditorFormState } from '@/types/query'
+import { has } from 'markdown-it/lib/common/utils'
 
-const generateSql = (builderFormState: BuilderFormState, timeRange: any[]) => {
-  const [startTs, endTs] = timeRange
-  return builderFormState.sql.replace(/\$timestart/g, `${startTs}`).replace(/\$timeend/g, `${endTs}`)
-}
-
-const useQueryExecution = (builder, textEditorState, timeRange) => {
+const useQueryExecution = (builder, textEditor, timeRange) => {
   const editorType = ref<'builder' | 'text'>('builder')
-  const defaultQueryState: QueryState = {
+  const queryState = reactive<QueryState>({
     editorType: 'builder',
     tsColumn: null,
     table: '',
@@ -18,57 +14,67 @@ const useQueryExecution = (builder, textEditorState, timeRange) => {
     limit: 1000,
     orderBy: 'DESC',
     sourceState: builder.builderFormState,
+    sql: '',
     generateSql: () => {
       return ''
     },
-  }
-  const queryState = reactive<QueryState>({ ...defaultQueryState })
+  })
   const loading = ref(false)
   const columns = ref<any[]>([])
   const rows = shallowRef<any[]>([])
 
-  const executableSql = computed(() => {
-    if (editorType.value === 'builder') {
-      return builder.builderSql.value
-    }
-    return textEditorState.value.sql
-  })
-
+  const hasExecutedInitialQuery = ref(false)
   const canExecuteInitialQuery = computed(() => {
     if (editorType.value === 'builder') {
-      return builder.builderSql.value && builder.builderFormState.tsColumn
+      return builder.builderFormState.table && builder.builderFormState.tsColumn && !hasExecutedInitialQuery.value
     }
-    return textEditorState.value.sql && textEditorState.value.tsColumn
+    return textEditor.textEditorState.sql && textEditor.textEditorState.tsColumn && !hasExecutedInitialQuery.value
   })
 
+  function getCurrentStateProp(prop: string) {
+    if (editorType.value === 'builder') {
+      return builder.builderFormState[prop]
+    }
+    return textEditor.textEditorState[prop]
+  }
+
   async function executeQuery() {
+    hasExecutedInitialQuery.value = true
     console.log(builder.builderFormState, 'builder.builderFormState executeQuery')
-    let currentQuery = executableSql.value
+    let currentSql =
+      editorType.value === 'builder'
+        ? builder.generateSql(builder.builderFormState, timeRange.timeRangeValues.value)
+        : textEditor.textEditorState.sql
+
+    // Update queryState directly since it's reactive
     Object.assign(queryState, {
       editorType: editorType.value,
-      sql: currentQuery,
-      tsColumn: editorType.value === 'builder' ? builder.builderFormState.tsColumn : textEditorState.value.tsColumn,
-      table: editorType.value === 'builder' ? builder.builderFormState.table : textEditorState.value.table,
+      sql: currentSql,
+      tsColumn: getCurrentStateProp('tsColumn'),
+      table: getCurrentStateProp('table'),
       timeRangeValues: [...timeRange.timeRangeValues.value],
       time: timeRange.time.value,
       rangeTime: [...timeRange.rangeTime.value],
-      sourceState: editorType.value === 'builder' ? builder.builderFormState : textEditorState.value,
-      generatedSql: editorType.value === 'builder' ? builder.buildSQLFromFormState : generateSql,
+      sourceState: editorType.value === 'builder' ? builder.builderFormState : textEditor.textEditorState,
+      generateSql: editorType.value === 'builder' ? builder.generateSql : textEditor.generateSql,
+      orderBy: getCurrentStateProp('orderBy'),
+      limit: getCurrentStateProp('limit'),
     })
+
     // Process $timestart and $timeend in the SQL string
     const currentTimeRanges = timeRange.timeRangeValues.value
     if (currentTimeRanges.length === 2) {
       const [startTs, endTs] = currentTimeRanges
-      currentQuery = currentQuery.replace(/\$timestart/g, `${startTs}`).replace(/\$timeend/g, `${endTs}`)
+      currentSql = currentSql.replace(/\$timestart/g, `${startTs}`).replace(/\$timeend/g, `${endTs}`)
     }
-    if (!currentQuery) return []
+    if (!currentSql) return []
     loading.value = true
     try {
       const { default: editorAPI } = await import('@/api/editor')
-      const result = await editorAPI.runSQL(currentQuery)
+      const result = await editorAPI.runSQL(currentSql)
       if (result.output?.[0]?.records) {
         const { records } = result.output[0]
-        columns.value = records.schema.column_schemas.map((col) => ({
+        columns.value = records.schema.column_schemas.map((col: any) => ({
           name: col.name,
           data_type: col.data_type,
           label: col.name,
@@ -97,7 +103,7 @@ const useQueryExecution = (builder, textEditorState, timeRange) => {
   }
 
   async function exportToCSV() {
-    let currentQuery = executableSql.value
+    let currentQuery = queryState.sql
     // Process $timestart and $timeend in the SQL string
     const currentTimeRanges = timeRange.timeRangeValues.value
     if (currentTimeRanges.length === 2) {
@@ -120,14 +126,13 @@ const useQueryExecution = (builder, textEditorState, timeRange) => {
   }
 
   watch(editorType, (newMode: 'builder' | 'text') => {
-    if (newMode === 'text' && !textEditorState.value.sql && builder.builderSql.value) {
-      textEditorState.value.sql = builder.builderSql.value
+    if (newMode === 'text' && !textEditor.textEditorState.sql && builder.builderFormState.table) {
+      textEditor.textEditorState.sql = builder.generateSql(builder.builderFormState, timeRange.timeRangeValues.value)
     }
   })
 
   return {
     editorType,
-    executableSql,
     executeQuery,
     exportToCSV,
     queryState,

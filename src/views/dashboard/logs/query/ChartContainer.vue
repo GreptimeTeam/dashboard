@@ -23,8 +23,8 @@ a-card(:bordered="false")
       v-if="currChart == 'count'"
       ref="countChartRef"
       :sql="sqlForChart"
-      :table-name="queryState?.table"
-      :ts-column="queryState?.tsColumn"
+      :table-name="queryState.table"
+      :ts-column="queryState.tsColumn"
       @timeRangeUpdate="handleTimeRangeUpdate"
     )
     FunnelChart(
@@ -32,6 +32,8 @@ a-card(:bordered="false")
       :key="frequencyField"
       ref="funnelChartRef"
       :column="frequencyField"
+      :table="queryState.table"
+      :sql="queryState.sql"
     )
 </template>
 
@@ -96,12 +98,16 @@ a-card(:bordered="false")
 
   // Method to trigger the current chart query based on chart type
   function triggerCurrentChartQuery() {
-    if (!chartExpanded.value || !props.queryState?.sql) return
+    if (!chartExpanded.value || !props.queryState.sql) return
 
     if (currChart.value === 'count' && countChartRef.value) {
-      countChartRef.value.executeCountQuery()
+      nextTick(() => {
+        countChartRef.value.executeCountQuery()
+      })
     } else if (currChart.value === 'frequency' && funnelChartRef.value) {
-      funnelChartRef.value.executeChartQuery()
+      nextTick(() => {
+        funnelChartRef.value.executeChartQuery()
+      })
     }
   }
 
@@ -110,7 +116,7 @@ a-card(:bordered="false")
     chartExpanded.value = !chartExpanded.value
 
     // Trigger chart data fetch when expanding
-    if (chartExpanded.value && props.queryState?.sql) {
+    if (chartExpanded.value && props.queryState.sql) {
       nextTick(() => {
         triggerCurrentChartQuery()
       })

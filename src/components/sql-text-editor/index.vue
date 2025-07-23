@@ -43,7 +43,7 @@
 
   const emit = defineEmits<{
     'update:modelValue': [value: string]
-    'update:sqlInfo': [value: TextEditorFormState]
+    'update:sqlInfo': [value: Partial<TextEditorFormState>]
   }>()
 
   // Local SQL state
@@ -144,7 +144,6 @@
     const orderBy = parseOrderBy(sqlText) as 'DESC' | 'ASC' | null
     emit('update:sqlInfo', {
       table: tableName.value,
-      tsColumn: null,
       limit,
       orderBy,
       sql: sqlText,
@@ -161,7 +160,15 @@
         nextTick(async () => {
           const tsColumn = await extractTsColumn(localSql.value)
           if (tsColumn) {
-            parseAndEmitSqlInfo(localSql.value)
+            const limit = parseLimit(localSql.value)
+            const orderBy = parseOrderBy(localSql.value) as 'DESC' | 'ASC' | null
+            emit('update:sqlInfo', {
+              tsColumn,
+              table: tableName.value,
+              sql: localSql.value,
+              limit,
+              orderBy,
+            })
           }
         })
       }

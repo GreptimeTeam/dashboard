@@ -31,7 +31,7 @@
           a-button(
             type="outline"
             size="small"
-            :disabled="!executableSql || queryLoading"
+            :disabled="!queryState.table || queryLoading"
             @click="exportSql"
           )
             template(#icon)
@@ -47,7 +47,7 @@
         )
         SqlTextEditor(
           v-if="editorType === 'text'"
-          v-model="textEditorState.sql"
+          v-model="textEditor.textEditorState.sql"
           @update:sql-info="handleSqlInfoUpdate"
         )
 
@@ -122,33 +122,23 @@
 <script setup lang="ts">
   import { ref, computed, shallowRef, watch, onMounted, toRefs } from 'vue'
   import { useStorage, useLocalStorage } from '@vueuse/core'
-  import { useSqlBuilderHook, useTimeRange, useQueryExecution, useQueryUrlSync } from '@/hooks'
+  import { useSqlBuilderHook, useTimeRange, useQueryExecution, useQueryUrlSync, useTextEditorState } from '@/hooks'
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import SqlTextEditor from '@/components/sql-text-editor/index.vue'
   import LogTableData from './LogsTable.vue'
   import ChartContainer from './ChartContainer.vue'
   import Pagination from './Pagination.vue'
 
-  // 3. Time range state
-
   const timeRange = useTimeRange()
-  const { rangeTime, time, timeRangeValues } = toRefs(timeRange)
-  // 1. Builder form state
+  const { rangeTime, time, timeRangeValues } = timeRange
+
   const builder = useSqlBuilderHook({ storageKey: 'logs-query-table', timeRangeValues })
-  const { builderFormState, builderSql, addFilterCondition, generateSql } = builder
+  const { builderFormState, addFilterCondition, generateSql } = builder
 
-  const textEditorState = ref({
-    table: '',
-    orderBy: 'DESC',
-    limit: 1000,
-    tsColumn: null,
-    sql: '',
-  })
+  const textEditor = useTextEditorState(timeRangeValues)
 
-  // 4. Query execution state
   const {
     editorType,
-    executableSql,
     executeQuery,
     exportToCSV,
     queryState,
@@ -156,10 +146,16 @@
     columns,
     rows,
     canExecuteInitialQuery,
-  } = useQueryExecution(builder, textEditorState, timeRange)
+  } = useQueryExecution(builder, textEditor, timeRange)
 
   // 5. URL sync
-  const urlSync = useQueryUrlSync({ builder, textEditorState, timeRange, editorType })
+  const urlSync = useQueryUrlSync({
+    builderFormState,
+    textEditorState: textEditor.textEditorState,
+    timeRange,
+    editorType,
+  })
+
   const { initializeFromQuery, updateQueryParams } = urlSync
 
   // Local UI state
@@ -179,7 +175,7 @@
 
     updateQueryParams()
     nextTick(() => {
-      chartContainerRef.value.triggerCurrentChartQuery()
+      chartContainerRef.value?.triggerCurrentChartQuery()
     })
   }
   function exportSql() {
@@ -189,7 +185,7 @@
   // Live query logic
   let refreshTimeout = -1
   function mayRefresh() {
-    if (refresh.value && executableSql.value) {
+    if (refresh.value) {
       handleQuery()
       refreshTimeout = window.setTimeout(() => {
         mayRefresh()
@@ -231,17 +227,13 @@
   }
 
   function handleSqlInfoUpdate(sqlInfo) {
-    textEditorState.value = { ...textEditorState.value, ...sqlInfo }
+    Object.assign(textEditor.textEditorState, sqlInfo)
   }
 
   watch(columns, () => {
     if (!displayedColumns.value[queryState.table]) {
       displayedColumns.value[queryState.table] = columns.value.map((c) => c.name)
     }
-  })
-
-  watch(queryState, () => {
-    console.log(queryState, 'queryState')
   })
 
   // Initialize from URL query parameters
@@ -252,8 +244,7 @@
   watch(
     canExecuteInitialQuery,
     (canExecute) => {
-      if (canExecute && !hasExecutedInitialQuery.value) {
-        hasExecutedInitialQuery.value = true
+      if (canExecute) {
         nextTick(() => {
           handleQuery()
         })
@@ -269,5 +260,15 @@
     color: var(--color-text-3);
     font-size: 12px;
     font-weight: normal;
+  }
+  .toolbar {
+    flex-shrink: 0;
+    padding: 8px;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 50px;
+    gap: 10px;
   }
 </style>

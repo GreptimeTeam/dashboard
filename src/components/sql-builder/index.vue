@@ -176,7 +176,6 @@ QuickFilters(
   watch(
     form,
     (newForm) => {
-      console.log('form update', newForm)
       emit('update:formState', newForm)
     },
     { deep: true }
@@ -417,7 +416,7 @@ QuickFilters(
     // Apply the saved conditions and settings
     form.conditions = [...quickFilter.conditions]
     form.orderByField = quickFilter.orderByField
-    form.orderBy = quickFilter.orderBy
+    form.orderBy = quickFilter.orderBy as 'DESC' | 'ASC'
     form.limit = quickFilter.limit
   }
 

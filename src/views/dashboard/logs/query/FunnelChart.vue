@@ -16,7 +16,18 @@ VCharts(
   import useLogsQueryStore from '@/store/modules/logs-query'
   import { getWhereClause } from './until'
 
-  const props = defineProps(['column'])
+  interface Props {
+    sql: string
+    column: string
+    table: string
+  }
+
+  const props = withDefaults(defineProps<Props>(), {
+    column: '',
+    table: '',
+    sql: '',
+  })
+
   const data = shallowRef([])
   const { t } = useI18n()
   const chart = ref()
@@ -65,18 +76,16 @@ VCharts(
     },
   }))
 
-  const { queryState, executableSql } = storeToRefs(useLogsQueryStore())
-
   const chartSql = computed(() => {
-    if (!queryState.value.tableName) {
+    if (!props.table) {
       return ''
     }
 
     // Extract WHERE clause from the generated SQL (works for both text and builder modes)
-    const whereClause = getWhereClause(executableSql.value)
+    const whereClause = getWhereClause(props.sql)
     const condition = whereClause ? `WHERE ${whereClause}` : ''
 
-    return `SELECT ${props.column} ,count(*) AS c FROM ${queryState.value.tableName} ${condition} GROUP BY ${props.column} ORDER BY c DESC`
+    return `SELECT ${props.column} ,count(*) AS c FROM ${props.table} ${condition} GROUP BY ${props.column} ORDER BY c DESC`
   })
 
   function chartQuery() {
