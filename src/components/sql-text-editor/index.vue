@@ -91,42 +91,16 @@
   // Function to extract timestamp column from SQL and update schema
   async function extractTsColumn(sqlText: string): Promise<TSColumn | null> {
     if (!sqlText || !tableName.value) return null
-    console.log(tableName.value)
     try {
-      // Get table schema to find timestamp columns
-      const result = await editorAPI.runSQL(
-        `SELECT column_name, data_type, semantic_type
-         FROM information_schema.columns
-         WHERE table_name = '${tableName.value}'
-         ORDER BY column_name`
-      )
+      const columns = await editorAPI.getTableSchema(tableName.value)
 
-      if (result.output?.[0]?.records?.rows) {
-        const columns = result.output[0].records.rows.map((row: string[]) => ({
-          name: row[0],
-          data_type: row[1],
-          semantic_type: row[2],
-        }))
+      schema.value[tableName.value] = columns
+      const tsColumns = columns.filter((col) => col.data_type.toLowerCase().includes('timestamp'))
 
-        // Update schema for SQL syntax highlighting
-        schema.value = {
-          [tableName.value]: columns.map((col) => col.name),
-        }
-
-        // Find timestamp columns by data type
-        const tsColumns = columns.filter((col) => col.data_type.toLowerCase().includes('timestamp'))
-
-        // Prefer columns with TIMESTAMP semantic type
-        const tsIndexColumns = tsColumns.filter((col) => col.semantic_type === 'TIMESTAMP')
-        const selectedColumn = tsIndexColumns.length ? tsIndexColumns[0] : tsColumns[0]
-
-        if (selectedColumn) {
-          return {
-            name: selectedColumn.name,
-            data_type: selectedColumn.data_type,
-          }
-        }
-      }
+      // Prefer columns with TIMESTAMP semantic type
+      const tsIndexColumns = tsColumns.filter((col) => col.semantic_type === 'TIMESTAMP')
+      const selectedColumn = tsIndexColumns.length ? tsIndexColumns[0] : tsColumns[0]
+      return selectedColumn
     } catch (error) {
       console.warn('Failed to extract timestamp column:', error)
     }

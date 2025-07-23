@@ -166,13 +166,6 @@
 
   watch(canExecuteInitialQuery, (canExecute) => {
     if (canExecute) {
-      if (editorType.value === 'text') {
-        const validation = validateSQL(queryState.sql)
-        if (!validation.isValid) {
-          console.error('SQL validation failed:', validation.error)
-          return
-        }
-      }
       handleQuery()
     }
   })

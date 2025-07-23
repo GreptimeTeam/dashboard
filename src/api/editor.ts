@@ -22,6 +22,16 @@ const makeSqlData = (sql: string) => {
   })
 }
 
+const columnTypeMap = {
+  'timestamp(9)': 'TimestampNanosecond',
+  'timestamp(6)': 'TimestampMicrosecond',
+  'timestamp(3)': 'TimestampMillisecond',
+  'timestamp(0)': 'TimestampSecond',
+  'timestamp': 'TimestampSecond',
+  'date': 'Date',
+  'datetime': 'DateTime',
+}
+
 const addDatabaseParams = (database?: string) => {
   const appStore = useAppStore()
   return {
@@ -141,6 +151,33 @@ const runSQLWithCSV = (code: string, format?: string): Promise<HttpResponse> => 
   return axios.post(sqlUrl, makeSqlData(code), params)
 }
 
+/**
+ * Fetches the schema (column_name, data_type, semantic_type) for a given table.
+ */
+const getTableSchema = (tableName: string, database?: string) => {
+  const appStore = useAppStore()
+  return axios
+    .post(
+      sqlUrl,
+      makeSqlData(
+        `SELECT column_name, data_type, semantic_type FROM information_schema.columns WHERE table_name = '${tableName}' AND table_schema = '${
+          database || appStore.database
+        }' ORDER BY column_name`
+      ),
+      addDatabaseParams(database)
+    )
+    .then((res) => {
+      return res.output[0].records.rows.map((row: string[]) => {
+        const dataType = columnTypeMap[row[1].toLowerCase()] || row[1]
+        return {
+          name: row[0],
+          data_type: dataType,
+          semantic_type: row[2],
+        }
+      })
+    })
+}
+
 export default {
   getTables,
   getTableByName,
@@ -154,4 +191,5 @@ export default {
   checkScriptsTable,
   fetchTablesCount,
   runSQLWithCSV,
+  getTableSchema,
 }

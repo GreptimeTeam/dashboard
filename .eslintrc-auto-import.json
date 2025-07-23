@@ -119,10 +119,12 @@
     "watchEffect": true,
     "watchPostEffect": true,
     "watchSyncEffect": true,
-    "IngestConfig": true,
-    "useIngest": true,
-    "ingest": true,
     "initializeNews": true,
-    "useNews": true
+    "useNews": true,
+    "SqlBuilderHookOptions": true,
+    "useQueryExecution": true,
+    "useSqlBuilderHook": true,
+    "useTextEditorState": true,
+    "useTimeRange": true
   }
 }
