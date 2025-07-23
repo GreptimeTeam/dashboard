@@ -140,21 +140,22 @@ VCharts(
   // Timestamp converter using tsColumn data_type
   const convertTimestamp = (timestamp: any) => {
     const { tsColumn } = props.queryState
+
     if (!tsColumn?.data_type) {
       // Default to nanoseconds (traces style)
       return new Date(timestamp / 1000 / 1000).getTime()
     }
     const type = tsColumn.data_type.toLowerCase()
-    if (type.includes('nano')) {
+    if (type.toLowerCase().includes('nano')) {
       return timestamp / 1_000_000
     }
-    if (type.includes('micro')) {
+    if (type.toLowerCase().includes('micro')) {
       return timestamp / 1_000
     }
-    if (type.includes('milli')) {
+    if (type.toLowerCase().includes('milli')) {
       return timestamp
     }
-    if (type.includes('second')) {
+    if (type.toLowerCase().includes('second')) {
       return timestamp * 1000
     }
     // Fallback: try to use as milliseconds
