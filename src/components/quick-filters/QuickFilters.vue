@@ -91,8 +91,8 @@
     storageKey: string
   }>()
 
-  const quickFiltersStorageKey = computed(() => `${props.storageKey}-${props.form.table}-quick-filters`)
-  const clearedFiltersKey = computed(() => `${props.storageKey}-${props.form.table}-filters-cleared`)
+  const quickFiltersStorageKey = computed(() => `${props.storageKey}-quick-filters`)
+  const clearedFiltersKey = computed(() => `${props.storageKey}-filters-cleared`)
   let savedQuickFilters = useLocalStorage(quickFiltersStorageKey.value, [] as QuickFilter[])
   const userClearedFilters = useLocalStorage(clearedFiltersKey.value, false)
 
