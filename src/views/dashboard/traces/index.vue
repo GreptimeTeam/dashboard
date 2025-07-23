@@ -38,7 +38,7 @@
           a-button(
             type="outline"
             size="small"
-            :disabled="!executableSql || loading"
+            :disabled="!queryState.sql || loading"
             @click="exportSql"
           )
             template(#icon)
@@ -56,11 +56,10 @@
           :time-range-values="timeRangeValues"
           :default-conditions="[{ field: 'parent_span_id', operator: 'Not Exist', value: '', relation: 'AND' }]"
           :quick-field-names="['trace_id', 'service_name']"
-          @update:sql="handleBuilderSqlUpdate"
         )
-        SqlTextEditor(v-else v-model="editorSql" @update:sql-info="handleSqlInfoUpdate")
+        SqlTextEditor(v-else v-model="textEditor.textEditorState.sql" @update:sql-info="handleSqlInfoUpdate")
 
-    a-card(v-if="builderSql || editorSql" :bordered="false")
+    a-card(v-if="queryState.sql || textEditor.textEditorState.sql" :bordered="false")
       template(#title)
         .chart-header
           span Trace Count Over Time
@@ -69,102 +68,66 @@
               icon-down(v-if="chartExpanded")
               icon-right(v-else)
       template(v-if="chartExpanded")
-        CountChart(
-          ref="countChartRef"
-          :sql="queryState.sql"
-          :time-range="queryState.rangeTime"
-          :table-name="queryState.tableName"
-          :ts-column="queryState.tsColumn"
-          :time="queryState.time"
-          @time-range-update="handleTimeRangeUpdate"
-        )
+        CountChart(ref="countChartRef" :query-state="queryState" @timeRangeUpdate="handleTimeRangeUpdate")
     TraceTable(
       :data="allResults"
       :columns="columns"
       :loading="loading"
-      :table-name="queryState.tableName"
-      :editor-type="editorType"
+      :query-state="queryState"
       @filterConditionAdd="handleFilterConditionAdd"
     )
 </template>
 
 <script setup name="TraceQuery" lang="ts">
-  import { ref, computed, watch, nextTick } from 'vue'
-  import { useLocalStorage, watchOnce } from '@vueuse/core'
+  import { ref, computed, watch, nextTick, onMounted } from 'vue'
+  import { useLocalStorage } from '@vueuse/core'
   import { IconCode, IconDown, IconRight, IconDownload } from '@arco-design/web-vue/es/icon'
-  import { storeToRefs } from 'pinia'
-  import { relativeTimeMap, relativeTimeOptions } from '@/views/dashboard/config'
   import TimeRangeSelect from '@/components/time-range-select/index.vue'
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import CountChart from '@/components/count-chart/index.vue'
-  import useTracesQueryStore from '@/store/modules/traces-query'
   import SqlTextEditor from '@/components/sql-text-editor/index.vue'
+  import { useSqlBuilderHook, useTextEditorState, useTimeRange, useQueryExecution, useQueryUrlSync } from '@/hooks'
   import TraceTable from './components/TraceTable.vue'
   import { validateSQL } from './utils'
 
-  const tracesStore = useTracesQueryStore()
+  // 1. Time range state
+  const timeRange = useTimeRange()
+  const { rangeTime, time, timeRangeValues } = timeRange
 
-  // Get reactive refs from store
-  const {
-    editorType,
-    builderSql,
-    editorSql,
-    loading,
-    columns,
-    time,
-    rangeTime,
-    timeRangeValues,
+  // 2. Builder form state
+  const builder = useSqlBuilderHook({ storageKey: 'traces-query-table', timeRangeValues })
+  const { builderFormState, addFilterCondition, generateSql } = builder
+
+  // 3. Text editor state
+  const textEditor = useTextEditorState(timeRangeValues)
+
+  // 4. Query execution state
+  const { editorType, executeQuery, exportToCSV, queryState, loading, columns, rows, canExecuteInitialQuery } =
+    useQueryExecution(builder, textEditor, timeRange)
+
+  // 5. URL sync
+  const urlSync = useQueryUrlSync({
     builderFormState,
-    queryState,
-    executableSql,
-    tsColumn,
-  } = storeToRefs(tracesStore)
+    textEditorState: textEditor.textEditorState,
+    timeRange,
+    editorType,
+  })
+  const { initializeFromQuery, updateQueryParams } = urlSync
 
-  // Local state for query results (not stored in store)
   const allResults = ref([])
-
-  // Chart expanded state with localStorage persistence (component-specific)
   const chartExpanded = useLocalStorage('trace-chart-expanded', true)
-
-  // Get store methods
-  const { initializeFromQuery, executeQuery, exportToCSV, addFilterCondition } = tracesStore
-  const { editorTsColumn, editorTableName } = storeToRefs(useTracesQueryStore())
   const countChartRef = ref()
   const sqlBuilderRef = ref()
   const timeRangeSelectRef = ref()
-
-  // Check if all required values are available for initial query
-  const canExecuteInitialQuery = computed(() => {
-    if (editorType.value === 'builder') {
-      return executableSql.value && tsColumn.value && builderFormState.value?.table
-    }
-    return editorTsColumn.value && editorTableName.value
-  })
-
-  // Track if we've already executed the initial query
-  const hasExecutedInitialQuery = ref(false)
-
-  // Handle SQL builder updates
-  function handleBuilderSqlUpdate(sql: string) {
-    // Note: builderSql is now computed from builderFormState, so this method is for compatibility
-    // The actual SQL generation happens in the base store
-  }
-
-  // Handle format SQL - removed since SqlTextEditor doesn't have format functionality
   function handleFormatSQL() {
     // Format functionality not available in SqlTextEditor
     console.warn('Format SQL functionality not available in SqlTextEditor')
   }
 
-  // Handle SQL info updates from SqlTextEditor
-  function handleSqlInfoUpdate(sqlInfo: { tableName: string; tsColumn: any }) {
-    editorTableName.value = sqlInfo.tableName
-    editorTsColumn.value = sqlInfo.tsColumn
+  function handleSqlInfoUpdate(sqlInfo) {
+    Object.assign(textEditor.textEditorState, sqlInfo)
   }
 
-  // Note: editorSql generation when switching to text mode is now handled by the base store
-
-  // Export traces as CSV - use store method
   function exportSql() {
     exportToCSV()
   }
@@ -172,60 +135,51 @@
   async function handleQuery() {
     const results = await executeQuery()
     allResults.value = results || []
-
-    // Trigger count chart query only if chart is expanded
-    if (chartExpanded.value && countChartRef.value && executableSql.value) {
+    if (chartExpanded.value && countChartRef.value && queryState.sql) {
       countChartRef.value.executeCountQuery()
     }
+    updateQueryParams()
   }
 
-  function handleTimeRangeUpdate(newTimeRange: string[]) {
+  function handleTimeRangeUpdate(newTimeRange) {
     time.value = 0 // Switch to custom mode
     rangeTime.value = newTimeRange
-    handleQuery() // Re-run query with new time range
+    handleQuery()
   }
 
-  // Handle chart expansion/collapse
   function handleChartToggle() {
     chartExpanded.value = !chartExpanded.value
-
-    // Trigger chart data fetch when expanding
-    if (chartExpanded.value && executableSql.value) {
+    if (chartExpanded.value && queryState.sql) {
       nextTick(() => {
-        countChartRef.value.executeCountQuery()
+        countChartRef.value?.executeCountQuery()
       })
     }
   }
 
-  // Handle filter condition from table context menu
   function handleFilterConditionAdd({ columnName, operator, value }) {
-    // Try to use SQLBuilder component method first (for immediate UI update)
     if (sqlBuilderRef.value && sqlBuilderRef.value.addFilterCondition) {
       sqlBuilderRef.value.addFilterCondition(columnName, operator, value)
     } else {
-      // Fallback to store method (for consistent state management)
       addFilterCondition(columnName, operator, value)
     }
   }
 
-  // Watch for when all async values are available
   watch(canExecuteInitialQuery, (canExecute) => {
-    if (canExecute && !hasExecutedInitialQuery.value) {
-      // Validate SQL before executing - only in editor mode
+    if (canExecute) {
       if (editorType.value === 'text') {
-        const validation = validateSQL(executableSql.value)
+        const validation = validateSQL(queryState.sql)
         if (!validation.isValid) {
           console.error('SQL validation failed:', validation.error)
           return
         }
       }
-
-      hasExecutedInitialQuery.value = true
       handleQuery()
     }
   })
 
-  initializeFromQuery()
+  onMounted(() => {
+    initializeFromQuery()
+  })
 </script>
 
 <style lang="less">

@@ -64,6 +64,7 @@ a-card(:bordered="false")
   import { IconSettings } from '@arco-design/web-vue/es/icon'
   import DataTable from '@/components/data-table/index.vue'
   import type { PropType } from 'vue'
+  import type { QueryState } from '@/types/query'
 
   interface Column {
     name: string
@@ -87,9 +88,9 @@ a-card(:bordered="false")
       type: Boolean,
       default: false,
     },
-    tableName: {
-      type: String,
-      default: '',
+    queryState: {
+      type: Object as PropType<QueryState>,
+      default: () => ({}),
     },
     editorType: {
       type: String,
@@ -198,7 +199,7 @@ a-card(:bordered="false")
     router.push({
       name: 'dashboard-TraceDetail',
       params: { id: traceId },
-      query: { table: props.tableName },
+      query: { table: props.queryState.table },
     })
   }
 </script>
