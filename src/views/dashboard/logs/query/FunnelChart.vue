@@ -13,19 +13,16 @@ VCharts(
   import * as echarts from 'echarts'
   import { watchOnce } from '@vueuse/core'
   import editorAPI from '@/api/editor'
-  import useLogsQueryStore from '@/store/modules/logs-query'
+  import type { QueryState } from '@/types/query'
   import { getWhereClause } from './until'
 
   interface Props {
-    sql: string
+    queryState: QueryState
     column: string
-    table: string
   }
 
   const props = withDefaults(defineProps<Props>(), {
     column: '',
-    table: '',
-    sql: '',
   })
 
   const data = shallowRef([])
@@ -77,15 +74,16 @@ VCharts(
   }))
 
   const chartSql = computed(() => {
-    if (!props.table) {
+    const { timeRangeValues } = props.queryState
+    if (!props.queryState.table || !props.column) {
       return ''
     }
-
     // Extract WHERE clause from the generated SQL (works for both text and builder modes)
-    const whereClause = getWhereClause(props.sql)
+    const [startTs, endTs] = timeRangeValues
+    const currentSql = props.queryState.sql.replace(/\$timestart/g, `${startTs}`).replace(/\$timeend/g, `${endTs}`)
+    const whereClause = getWhereClause(currentSql)
     const condition = whereClause ? `WHERE ${whereClause}` : ''
-
-    return `SELECT ${props.column} ,count(*) AS c FROM ${props.table} ${condition} GROUP BY ${props.column} ORDER BY c DESC`
+    return `SELECT ${props.column} ,count(*) AS c FROM ${props.queryState.table} ${condition} GROUP BY ${props.column} ORDER BY c DESC`
   })
 
   function chartQuery() {

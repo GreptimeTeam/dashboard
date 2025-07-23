@@ -22,9 +22,7 @@ a-card(:bordered="false")
     CountChart(
       v-if="currChart == 'count'"
       ref="countChartRef"
-      :sql="sqlForChart"
-      :table-name="queryState.table"
-      :ts-column="queryState.tsColumn"
+      :query-state="queryState"
       @timeRangeUpdate="handleTimeRangeUpdate"
     )
     FunnelChart(
@@ -32,8 +30,7 @@ a-card(:bordered="false")
       :key="frequencyField"
       ref="funnelChartRef"
       :column="frequencyField"
-      :table="queryState.table"
-      :sql="queryState.sql"
+      :query-state="queryState"
     )
 </template>
 
@@ -68,8 +65,6 @@ a-card(:bordered="false")
   // Chart expanded state with localStorage persistence
   const chartExpanded = useLocalStorage('logs-chart-expanded', true)
 
-  // Computed SQL for chart (extracts the main query)
-  const sqlForChart = computed(() => props.queryState?.sql)
   const filterFields = computed(() => {
     try {
       if (!props.columns || !Array.isArray(props.columns)) return []

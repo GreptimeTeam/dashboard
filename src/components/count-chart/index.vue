@@ -13,26 +13,13 @@ VCharts(
   import VCharts from 'vue-echarts'
   import * as echarts from 'echarts'
   import editorAPI from '@/api/editor'
-
-  interface TSColumn {
-    name: string
-    multiple?: number
-  }
+  import type { QueryState } from '@/types/query'
 
   interface Props {
-    sql: string
-    tableName: string
-    tsColumn?: TSColumn | null
-    // Time range props (for traces compatibility)
-    timeLength?: number
-    timeRange?: string[]
+    queryState: QueryState
   }
 
-  const props = withDefaults(defineProps<Props>(), {
-    tsColumn: null,
-    timeLength: 0,
-    timeRange: () => [],
-  })
+  const props = defineProps<Props>()
 
   const emit = defineEmits(['timeRangeUpdate', 'update:rows', 'query'])
 
@@ -147,61 +134,50 @@ VCharts(
   }
 
   const intervalSeconds = computed(() => {
-    return defaultIntervalCalculator(props.timeLength, props.timeRange)
+    return defaultIntervalCalculator(props.queryState.time, props.queryState.rangeTime)
   })
 
-  // Timestamp converter using tsColumn multiple
+  // Timestamp converter using tsColumn data_type
   const convertTimestamp = (timestamp: any) => {
-    if (!props.tsColumn?.multiple) {
+    const { tsColumn } = props.queryState
+    if (!tsColumn?.data_type) {
       // Default to nanoseconds (traces style)
       return new Date(timestamp / 1000 / 1000).getTime()
     }
-
-    // Use the multiple from tsColumn to convert to milliseconds
-    const { multiple } = props.tsColumn
-    let ms = timestamp
-
-    // Convert based on the timestamp precision
-    if (multiple === 1) {
-      // Seconds to milliseconds
-      ms = timestamp * 1000
-    } else if (multiple === 1000) {
-      // Already milliseconds
-      ms = timestamp
-    } else if (multiple === 1000000) {
-      // Microseconds to milliseconds
-      ms = timestamp / 1000
-    } else if (multiple === 1000000000) {
-      // Nanoseconds to milliseconds
-      ms = timestamp / 1000000
-    } else {
-      // General case: convert using multiple
-      const timescale = (String(multiple).length - 1) / 3
-      if (timescale === 0) {
-        ms = timestamp * 1000
-      } else if (timescale === 1) {
-        ms = timestamp
-      } else {
-        ms = timestamp / 1000 ** (timescale - 1)
-      }
+    const type = tsColumn.data_type.toLowerCase()
+    if (type.includes('nano')) {
+      return timestamp / 1_000_000
     }
-
-    return ms
+    if (type.includes('micro')) {
+      return timestamp / 1_000
+    }
+    if (type.includes('milli')) {
+      return timestamp
+    }
+    if (type.includes('second')) {
+      return timestamp * 1000
+    }
+    // Fallback: try to use as milliseconds
+    return timestamp
   }
 
   const countSql = computed(() => {
-    if (!props.tableName || !props.sql || !props.tsColumn?.name) {
+    const { table, sql, tsColumn, timeRangeValues } = props.queryState
+    if (!table || !sql || !tsColumn?.name) {
       return ''
     }
 
     // Extract WHERE clause from the original SQL
-    const whereMatch = props.sql.match(/WHERE\s+([\s\S]+?)(?:\s+ORDER\s+BY|\s+LIMIT\s+|\s*$)/i)
+    const [startTs, endTs] = timeRangeValues
+    const currentSql = sql.replace(/\$timestart/g, `${startTs}`).replace(/\$timeend/g, `${endTs}`)
+    const whereMatch = currentSql.match(/WHERE\s+([\s\S]+?)(?:\s+ORDER\s+BY|\s+LIMIT\s+|\s*$)/i)
+
     const whereClause = whereMatch ? `WHERE ${whereMatch[1]}` : ''
 
     return `SELECT
-            date_bin('${intervalSeconds.value} seconds', ${props.tsColumn.name}) AS time_bucket,
+            date_bin('${intervalSeconds.value} seconds', ${tsColumn.name}) AS time_bucket,
             COUNT(*) AS event_count
-        FROM "${props.tableName}"
+        FROM "${table}"
         ${whereClause}
         GROUP BY time_bucket
         ORDER BY time_bucket DESC
