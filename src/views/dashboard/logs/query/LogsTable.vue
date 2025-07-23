@@ -67,7 +67,7 @@
   const emit = defineEmits(['filterConditionAdd', 'rowSelect'])
 
   // Local state for row selection
-  const selectedRowKey = ref(null)
+  const selectedRowKey = ref<number | null>(null)
   const selectedRecord = computed(() => {
     return props.data[selectedRowKey.value]
   })

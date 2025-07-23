@@ -29,7 +29,7 @@ a-drawer(
 
   const props = defineProps<{
     visible: boolean
-    selectedRowKey: number
+    selectedRowKey: number | null
     currRow: any
     rows: any[]
   }>()

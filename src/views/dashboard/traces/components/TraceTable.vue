@@ -44,11 +44,10 @@ a-card(:bordered="false")
     :data="paginatedResults"
     :columns="visibleColumns"
     :loading="loading"
-    :classes="{ trace_table: true }"
     :column-mode="'separate'"
     :displayed-columns="displayedColumns"
     :ts-column="{ name: 'timestamp', data_type: 'TimestampNanosecond' }"
-    :class="{ builder_type: editorType === 'builder' }"
+    :class="{ builder_type: queryState.editorType === 'builder', trace_table: true }"
     @filter-condition-add="$emit('filterConditionAdd', $event)"
   )
     template(#column-trace_id="{ record, showContextMenu, handleContextMenu }")
@@ -91,10 +90,6 @@ a-card(:bordered="false")
     queryState: {
       type: Object as PropType<QueryState>,
       default: () => ({}),
-    },
-    editorType: {
-      type: String,
-      default: 'builder',
     },
   })
 

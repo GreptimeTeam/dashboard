@@ -53,7 +53,6 @@
           v-model:form-state="builderFormState"
           table-filter="trace_id"
           storage-key="traces-query-table"
-          :time-range-values="timeRangeValues"
           :default-conditions="[{ field: 'parent_span_id', operator: 'Not Exist', value: '', relation: 'AND' }]"
           :quick-field-names="['trace_id', 'service_name']"
         )

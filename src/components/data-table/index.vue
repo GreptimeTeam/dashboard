@@ -300,7 +300,6 @@ a-dropdown#td-context(
       name: 'Merged_Column',
       title: 'Data',
       data_type: 'merged',
-      width: 'auto',
     } as Column)
     return arr
   })
