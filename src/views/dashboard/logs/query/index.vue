@@ -115,7 +115,6 @@
         :column-mode="mergeColumn && showKeys ? 'merged-with-keys' : mergeColumn ? 'merged' : 'separate'"
         :displayed-columns="displayedColumns[queryState.table] || []"
         @filter-condition-add="handleFilterConditionAdd"
-        @row-select="handleRowSelect"
       )
 </template>
 
@@ -188,7 +187,7 @@
   }
 
   // Live query logic
-  let refreshTimeout = -1
+  let refreshTimeout: number | undefined = -1
   function mayRefresh() {
     if (refresh.value) {
       handleQuery(false)
@@ -223,10 +222,6 @@
 
   function handleFilterConditionAdd({ columnName, operator, value }) {
     addFilterCondition(columnName, operator, value)
-  }
-
-  function handleRowSelect(row) {
-    // Implement as needed
   }
 
   function handlePaginationRowsUpdate(newRows) {

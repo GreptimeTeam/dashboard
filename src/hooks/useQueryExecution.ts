@@ -1,7 +1,6 @@
 import { ref, reactive, computed, watch, shallowRef } from 'vue'
 import { replaceTimePlaceholders } from '@/utils/sql'
-import type { QueryState, TextEditorFormState, BuilderFormState } from '@/types/query'
-import { has } from 'markdown-it/lib/common/utils'
+import type { QueryState } from '@/types/query'
 
 const useQueryExecution = (builder, textEditor, timeRange) => {
   const editorType = ref<'builder' | 'text'>('builder')

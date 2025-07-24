@@ -15,11 +15,10 @@
 </template>
 
 <script lang="ts" setup name="SqlTextEditor">
-  import { defineComponent, reactive, shallowRef, computed, watch, onMounted, nextTick } from 'vue'
-  import { EditorView, ViewUpdate } from '@codemirror/view'
+  import { shallowRef, computed, watch, nextTick } from 'vue'
+  import { EditorView } from '@codemirror/view'
   import { Codemirror } from 'vue-codemirror'
   import { sql } from '@codemirror/lang-sql'
-  import { oneDark } from '@codemirror/theme-one-dark'
   import { useDebounceFn } from '@vueuse/core'
   import editorAPI from '@/api/editor'
   import { parseTable, parseLimit, parseOrderBy } from '@/views/dashboard/logs/query/until'

@@ -25,15 +25,7 @@
               icon-loading(v-if="loading" spin)
               icon-play-arrow(v-else)
             | {{ $t('dashboard.runQuery') }}
-          a-button(
-            v-if="editorType === 'text'"
-            type="outline"
-            size="small"
-            @click="handleFormatSQL"
-          )
-            template(#icon)
-              icon-code
-            | Format
+
         a-space
           a-button(
             type="outline"
@@ -114,10 +106,6 @@
   const countChartRef = ref()
   const sqlBuilderRef = ref()
   const timeRangeSelectRef = ref()
-  function handleFormatSQL() {
-    // Format functionality not available in SqlTextEditor
-    console.warn('Format SQL functionality not available in SqlTextEditor')
-  }
 
   function handleSqlInfoUpdate(sqlInfo) {
     Object.assign(textEditor.textEditorState, sqlInfo)
