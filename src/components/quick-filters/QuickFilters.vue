@@ -1,58 +1,56 @@
-<template>
-  <div class="quick-fields-section">
-    Quick Filters
-    <div style="display: flex; flex-wrap: wrap; gap: 8px">
-      <a-tag
-        v-for="quickFilter in savedQuickFilters"
-        :key="quickFilter.name"
-        style="cursor: pointer"
-        :closable="true"
-        @click="onApplyQuickFilter(quickFilter)"
-        @close="removeQuickFilter(quickFilter.name)"
-      >
-        <span :title="'Click to apply quick filter'">{{ quickFilter.name }}</span>
-      </a-tag>
-      <a-tag class="quick-fields-save" type="text" style="cursor: pointer" @click="showSaveQuickFilter = true">
-        <template #icon>
-          <icon-plus />
-        </template>
-        Save Current Search
-      </a-tag>
-    </div>
-    <a-modal
-      v-model:visible="showSaveQuickFilter"
-      title="Save Current Search as Quick Filter"
-      :width="500"
-      :on-before-ok="saveCurrentAsQuickFilter"
-      @cancel="showSaveQuickFilter = false"
-    >
-      <a-form ref="formRef" layout="vertical" :model="saveQuickFilterForm" :rules="saveQuickFilterRules">
-        <a-form-item label="Name" field="name">
-          <a-input v-model="saveQuickFilterForm.name" placeholder="Enter a name for this quick filter" maxlength="50" />
-        </a-form-item>
-      </a-form>
-      <a-descriptions size="small" title="Current Search" :column="1" bordered layout="vertical">
-        <a-descriptions-item label="Table">
-          <a-tag color="blue">{{ props.form.table }}</a-tag>
-        </a-descriptions-item>
-        <a-descriptions-item v-if="props.form.conditions.length > 0" label="Conditions">
-          <div class="conditions-list">
-            <a-tag
-              v-for="(condition, index) in props.form.conditions"
-              :key="index"
-              color="green"
-              style="margin-bottom: 4px; margin-right: 4px"
-            >
-              {{ condition.field }} {{ condition.operator }} {{ condition.value }}
-            </a-tag>
-          </div>
-        </a-descriptions-item>
-        <a-descriptions-item v-else label="Conditions">
-          <a-tag color="gray">No conditions set</a-tag>
-        </a-descriptions-item>
-      </a-descriptions>
-    </a-modal>
-  </div>
+<template lang="pug">
+.quick-fields-section
+  | Quick Filters
+  div(style="display: flex; flex-wrap: wrap; gap: 8px")
+    a-tag(
+      v-for="quickFilter in savedQuickFilters"
+      :key="quickFilter.name"
+      style="cursor: pointer"
+      :closable="true"
+      @click="onApplyQuickFilter(quickFilter)"
+      @close="removeQuickFilter(quickFilter.name)"
+    )
+      span(:title="'Click to apply quick filter'") {{ quickFilter.name }}
+    a-tag.quick-fields-save(type="text" style="cursor: pointer" @click="showSaveQuickFilter = true")
+      template(#icon)
+        icon-plus
+      | Save Current Search
+  a-modal(
+    v-model:visible="showSaveQuickFilter"
+    title="Save Current Search as Quick Filter"
+    :width="500"
+    :on-before-ok="saveCurrentAsQuickFilter"
+    @cancel="showSaveQuickFilter = false"
+  )
+    a-form(
+      ref="formRef"
+      layout="vertical"
+      :model="saveQuickFilterForm"
+      :rules="saveQuickFilterRules"
+    )
+      a-form-item(label="Name" field="name")
+        a-input(v-model="saveQuickFilterForm.name" placeholder="Enter a name for this quick filter" maxlength="50")
+      a-form-item(label="Description" field="description")
+        a-descriptions(
+          size="small"
+          bordered
+          layout="vertical"
+          style="width: 100%"
+          :column="1"
+        )
+          a-descriptions-item(label="Table")
+            a-tag(color="blue") {{ props.form.table }}
+          a-descriptions-item(v-if="props.form.conditions.length > 0" label="Conditions")
+            .conditions-list
+              a-tag(
+                v-for="(condition, index) in props.form.conditions"
+                :key="index"
+                color="green"
+                style="margin-bottom: 4px; margin-right: 4px"
+              )
+                | {{ condition.field }} {{ condition.operator }} {{ condition.value }}
+          a-descriptions-item(v-else label="Conditions")
+            a-tag(color="gray") No conditions set
 </template>
 
 <script setup lang="ts">

@@ -131,7 +131,7 @@
   const timeRange = useTimeRange()
   const { rangeTime, time, timeRangeValues } = timeRange
 
-  const builder = useSqlBuilderHook({ storageKey: 'logs-query-table', timeRangeValues })
+  const builder = useSqlBuilderHook({ storageKey: 'logsquery-table', timeRangeValues })
   const { builderFormState, addFilterCondition, generateSql } = builder
 
   const textEditor = useTextEditorState(timeRangeValues)
