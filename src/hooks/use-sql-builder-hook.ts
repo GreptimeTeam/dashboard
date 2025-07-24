@@ -187,3 +187,5 @@ export function useSqlBuilderHook(options: SqlBuilderHookOptions) {
     generateSql,
   }
 }
+
+export default useSqlBuilderHook
