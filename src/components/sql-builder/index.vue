@@ -509,4 +509,7 @@ QuickFilters(
     display: inline-block;
     text-align: right;
   }
+  .field-action {
+    padding: 0 8px;
+  }
 </style>

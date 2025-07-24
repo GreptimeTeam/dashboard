@@ -169,11 +169,14 @@
     paginationKey.value += 1
   }
   const refresh = ref(false)
-  const hasExecutedInitialQuery = ref(false)
-  function handleQuery() {
-    executeQuery()
+  function handleQuery(newQuery = true) {
+    executeQuery(newQuery).then(() => {
+      if (newQuery) {
+        updateQueryParams()
+        refreshPagination()
+      }
+    })
 
-    updateQueryParams()
     nextTick(() => {
       chartContainerRef.value?.triggerCurrentChartQuery()
     })
@@ -186,7 +189,7 @@
   let refreshTimeout = -1
   function mayRefresh() {
     if (refresh.value) {
-      handleQuery()
+      handleQuery(false)
       refreshTimeout = window.setTimeout(() => {
         mayRefresh()
       }, 3000)
@@ -211,7 +214,9 @@
   function handleTimeRangeUpdate(newTimeRange) {
     time.value = 0 // Switch to custom mode
     rangeTime.value = newTimeRange
-    executeQuery()
+    executeQuery().then(() => {
+      refreshPagination()
+    })
   }
 
   function handleFilterConditionAdd({ columnName, operator, value }) {

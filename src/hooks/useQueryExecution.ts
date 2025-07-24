@@ -38,28 +38,35 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
     return textEditor.textEditorState[prop]
   }
 
-  async function executeQuery() {
+  async function executeQuery(newQuery = true) {
     hasExecutedInitialQuery.value = true
-    console.log(builder.builderFormState, 'builder.builderFormState executeQuery')
-    let currentSql =
-      editorType.value === 'builder'
-        ? builder.generateSql(builder.builderFormState, timeRange.timeRangeValues.value)
-        : textEditor.textEditorState.sql
-
-    // Update queryState directly since it's reactive
-    Object.assign(queryState, {
-      editorType: editorType.value,
-      sql: currentSql,
-      tsColumn: getCurrentStateProp('tsColumn'),
-      table: getCurrentStateProp('table'),
-      timeRangeValues: [...timeRange.timeRangeValues.value],
-      time: timeRange.time.value,
-      rangeTime: [...timeRange.rangeTime.value],
-      sourceState: editorType.value === 'builder' ? builder.builderFormState : textEditor.textEditorState,
-      generateSql: editorType.value === 'builder' ? builder.generateSql : textEditor.generateSql,
-      orderBy: getCurrentStateProp('orderBy'),
-      limit: getCurrentStateProp('limit'),
-    })
+    let currentSql = ''
+    if (!newQuery) {
+      currentSql = queryState.sql
+    } else {
+      currentSql =
+        editorType.value === 'builder'
+          ? builder.generateSql(builder.builderFormState, timeRange.timeRangeValues.value)
+          : textEditor.textEditorState.sql
+    }
+    if (newQuery) {
+      // Update queryState directly since it's reactive
+      Object.assign(queryState, {
+        editorType: editorType.value,
+        sql: currentSql,
+        tsColumn: getCurrentStateProp('tsColumn'),
+        table: getCurrentStateProp('table'),
+        timeRangeValues: [...timeRange.timeRangeValues.value],
+        time: timeRange.time.value,
+        rangeTime: [...timeRange.rangeTime.value],
+        sourceState: {
+          ...(editorType.value === 'builder' ? builder.builderFormState : textEditor.textEditorState),
+        },
+        generateSql: editorType.value === 'builder' ? builder.generateSql : textEditor.generateSql,
+        orderBy: getCurrentStateProp('orderBy'),
+        limit: getCurrentStateProp('limit'),
+      })
+    }
 
     // Process $timestart and $timeend in the SQL string
     const currentTimeRanges = timeRange.timeRangeValues.value
