@@ -45,7 +45,6 @@
           v-model:form-state="builderFormState"
           table-filter="trace_id"
           storage-key="traces-query-table"
-          :default-conditions="[{ field: 'parent_span_id', operator: 'Not Exist', value: '', relation: 'AND' }]"
           :quick-field-names="['trace_id', 'service_name']"
         )
         SqlTextEditor(v-else v-model="textEditor.textEditorState.sql" @update:sql-info="handleSqlInfoUpdate")
@@ -82,7 +81,13 @@
   const { rangeTime, time, timeRangeValues } = timeRange
 
   // 2. Builder form state
-  const builder = useSqlBuilderHook({ storageKey: 'traces-query-table', timeRangeValues })
+  const builder = useSqlBuilderHook({
+    storageKey: 'traces-query-table',
+    timeRangeValues,
+    defaultFormState: {
+      conditions: [{ field: 'parent_span_id', operator: 'Not Exist', value: '', relation: 'AND' }],
+    },
+  })
   const { builderFormState, addFilterCondition, generateSql } = builder
 
   // 3. Text editor state

@@ -132,9 +132,8 @@ QuickFilters(
 
   // Props for form state and configuration
   const props = defineProps<{
-    formState?: Form | null
+    formState: Form | null
     tableFilter?: string // Optional filter for which tables to show (e.g., 'trace_id' for traces)
-    defaultConditions?: Condition[] // Default conditions for the form
     storageKey?: string // Optional storage key for localStorage (e.g., 'logs-query-table', 'traces-query-table')
     quickFieldNames?: string[] // Array of field names for quick condition buttons
   }>()
@@ -149,18 +148,8 @@ QuickFilters(
   const storageKey = props.storageKey || 'sql-builder-last-table'
   const lastSelectedTable = useLocalStorage(storageKey, '')
 
-  // Use form state from props if provided, otherwise use default
-  const defaultFormState: Form = {
-    conditions: props.defaultConditions || [],
-    orderByField: '',
-    orderBy: 'DESC',
-    limit: 1000,
-    table: lastSelectedTable.value || '',
-    tsColumn: null,
-  }
-
   // Initialize form state as reactive object
-  const form = reactive<Form>(props.formState || defaultFormState)
+  const form = reactive<Form>(props.formState)
 
   // Watch for prop changes and update form
   watch(
@@ -177,7 +166,7 @@ QuickFilters(
   watch(
     form,
     (newForm) => {
-      emit('update:formState', newForm)
+      Object.assign(props.formState, newForm)
     },
     { deep: true }
   )
