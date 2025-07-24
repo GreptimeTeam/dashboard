@@ -246,6 +246,9 @@ VCharts(
     // This would need to be handled by the parent component
   }
 
+  if (countSql.value) {
+    countQuery()
+  }
   // Expose the method to parent component
   defineExpose({
     executeCountQuery,

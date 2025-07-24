@@ -63,7 +63,7 @@ a-card(:bordered="false")
   const funnelChartRef = ref()
 
   // Chart expanded state with localStorage persistence
-  const chartExpanded = useLocalStorage('logs-chart-expanded', true)
+  const chartExpanded = useLocalStorage('logquery-chart-expanded', true)
 
   const filterFields = computed(() => {
     try {
