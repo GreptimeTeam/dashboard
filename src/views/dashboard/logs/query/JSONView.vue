@@ -17,7 +17,9 @@ CodeMirror(
 
   import { json } from '@codemirror/lang-json'
 
-  const props = defineProps(['jsonStr'])
+  const props = defineProps<{
+    jsonStr: string
+  }>()
 
   // TODO: markdown extension
   const extensions = [basicSetup, json()]

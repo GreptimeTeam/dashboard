@@ -42,8 +42,8 @@
   })
 
   const emit = defineEmits<{
-    'update:modelValue': [value: string]
-    'update:sqlInfo': [value: Partial<TextEditorFormState>]
+    (event: 'update:modelValue', value: string): void
+    (event: 'update:sqlInfo', value: TextEditorFormState): void
   }>()
 
   // Local SQL state
@@ -121,7 +121,7 @@
       limit,
       orderBy,
       sql: sqlText,
-    })
+    } as TextEditorFormState)
   }
 
   // Create debounced version of parseAndEmitSqlInfo
@@ -142,7 +142,7 @@
               sql: localSql.value,
               limit,
               orderBy,
-            })
+            } as TextEditorFormState)
           }
         })
       }

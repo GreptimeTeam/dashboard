@@ -1,6 +1,6 @@
 import dayjs from 'dayjs'
 import type { SchemaType } from '@/store/modules/code-run/types'
-import { TSColumn } from './types'
+import type { TSColumn } from '@/types/query'
 
 function findWhereClausePosition(sql: string) {
   // Normalize case for easier comparison

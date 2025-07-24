@@ -36,10 +36,6 @@ TimeSelect(
   const timeLength = defineModel<number>('timeLength', { default: 0 }) // 0 means "Any time" by default
   const timeRange = defineModel<string[]>('timeRange', { default: () => [] })
 
-  watchEffect(() => {
-    console.log('timeLength', timeLength.value)
-    console.log('timeRange', timeRange.value)
-  })
   // Add "Any time" option to relative time options
   const relativeTimeMapWithAny = computed(() => ({
     '-1': 'Any time',

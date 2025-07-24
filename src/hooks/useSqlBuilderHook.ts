@@ -1,6 +1,5 @@
 import { computed, type Ref, reactive, watchEffect, ref } from 'vue'
-import { TSColumn } from '@/views/dashboard/logs/query/types'
-import { Condition, BuilderFormState } from '@/types/query'
+import type { Condition, BuilderFormState, TSColumn } from '@/types/query'
 
 export interface SqlBuilderHookOptions {
   /** Time range values for SQL generation */
