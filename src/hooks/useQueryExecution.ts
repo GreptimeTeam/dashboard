@@ -38,10 +38,10 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
     return textEditor.textEditorState[prop]
   }
 
-  async function executeQuery(newQuery = true) {
+  async function executeQuery(isNewQuery = true) {
     hasExecutedInitialQuery.value = true
     let currentSql = ''
-    if (!newQuery) {
+    if (!isNewQuery) {
       currentSql = queryState.sql
     } else {
       currentSql =
@@ -49,7 +49,7 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
           ? builder.generateSql(builder.builderFormState, timeRange.timeRangeValues.value)
           : textEditor.textEditorState.sql
     }
-    if (newQuery) {
+    if (isNewQuery) {
       // Update queryState directly since it's reactive
       Object.assign(queryState, {
         editorType: editorType.value,

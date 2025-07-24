@@ -81,13 +81,9 @@
   import { ref, computed, watch, nextTick, onMounted } from 'vue'
   import { useLocalStorage } from '@vueuse/core'
   import { IconCode, IconDown, IconRight, IconDownload } from '@arco-design/web-vue/es/icon'
-  import TimeRangeSelect from '@/components/time-range-select/index.vue'
   import SQLBuilder from '@/components/sql-builder/index.vue'
-  import CountChart from '@/components/count-chart/index.vue'
   import SqlTextEditor from '@/components/sql-text-editor/index.vue'
-  import { useSqlBuilderHook, useTextEditorState, useTimeRange, useQueryExecution, useQueryUrlSync } from '@/hooks'
   import TraceTable from './components/TraceTable.vue'
-  import { validateSQL } from './utils'
 
   // 1. Time range state
   const timeRange = useTimeRange()

@@ -33,9 +33,8 @@
 <script setup lang="ts" name="LogTableData">
   import { ref, computed, watch, shallowRef } from 'vue'
   import { useElementSize, useLocalStorage } from '@vueuse/core'
-  import DataTable from '@/components/data-table/index.vue'
+  import type { ColumnType, TSColumn } from '@/types/query'
   import LogDetail from './LogDetail.vue'
-  import type { ColumnType, TSColumn } from './types'
 
   interface TableData {
     [key: string]: any

@@ -61,7 +61,6 @@ a-card(:bordered="false")
   import { useLocalStorage } from '@vueuse/core'
   import { useRouter } from 'vue-router'
   import { IconSettings } from '@arco-design/web-vue/es/icon'
-  import DataTable from '@/components/data-table/index.vue'
   import type { PropType } from 'vue'
   import type { QueryState } from '@/types/query'
 

@@ -120,9 +120,8 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, shallowRef, watch, onMounted, toRefs } from 'vue'
+  import { ref, computed, shallowRef, watch, onMounted, toRefs, nextTick } from 'vue'
   import { useStorage, useLocalStorage } from '@vueuse/core'
-  import { useSqlBuilderHook, useTimeRange, useQueryExecution, useQueryUrlSync, useTextEditorState } from '@/hooks'
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import SqlTextEditor from '@/components/sql-text-editor/index.vue'
   import LogTableData from './LogsTable.vue'
@@ -169,9 +168,12 @@
     paginationKey.value += 1
   }
   const refresh = ref(false)
-  function handleQuery(newQuery = true) {
-    executeQuery(newQuery).then(() => {
-      if (newQuery) {
+  function handleQuery(newQuery: boolean | MouseEvent = true) {
+    // If called from click event, newQuery will be a MouseEvent, so default to true
+    const isNewQuery = typeof newQuery === 'boolean' ? newQuery : true
+
+    executeQuery(isNewQuery).then(() => {
+      if (isNewQuery) {
         updateQueryParams()
         refreshPagination()
       }
