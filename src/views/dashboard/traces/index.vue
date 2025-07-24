@@ -86,7 +86,7 @@
   const { builderFormState, addFilterCondition, generateSql } = builder
 
   // 3. Text editor state
-  const textEditor = useTextEditorState(timeRangeValues)
+  const textEditor = useTextEditorState()
 
   // 4. Query execution state
   const { editorType, executeQuery, exportToCSV, queryState, loading, columns, rows, canExecuteInitialQuery } =

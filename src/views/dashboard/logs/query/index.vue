@@ -133,7 +133,7 @@
   const builder = useSqlBuilderHook({ storageKey: 'logsquery-table', timeRangeValues })
   const { builderFormState, addFilterCondition, generateSql } = builder
 
-  const textEditor = useTextEditorState(timeRangeValues)
+  const textEditor = useTextEditorState()
 
   const {
     editorType,

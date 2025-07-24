@@ -2,7 +2,7 @@ import { ref, type Ref } from 'vue'
 import { TextEditorFormState } from '@/types/query'
 import { replaceTimePlaceholders } from '@/utils/sql'
 
-const useTextEditorState = (timeRangeValues: Ref<string[]>) => {
+const useTextEditorState = () => {
   const textEditorState = reactive<TextEditorFormState>({
     table: '',
     orderBy: 'DESC',
