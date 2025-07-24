@@ -49,6 +49,10 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
           ? builder.generateSql(builder.builderFormState, timeRange.timeRangeValues.value)
           : textEditor.textEditorState.sql
     }
+    if (getCurrentStateProp('table') !== queryState?.table) {
+      columns.value = []
+      rows.value = []
+    }
     if (isNewQuery) {
       // Update queryState directly since it's reactive
       Object.assign(queryState, {
