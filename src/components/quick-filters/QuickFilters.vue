@@ -31,17 +31,24 @@
           <a-input v-model="saveQuickFilterForm.name" placeholder="Enter a name for this quick filter" maxlength="50" />
         </a-form-item>
       </a-form>
-      <a-descriptions size="small" title="Current Search" :column="1">
-        <a-descriptions-item label="Table">{{ props.form.table }}</a-descriptions-item>
+      <a-descriptions size="small" title="Current Search" :column="1" bordered layout="vertical">
+        <a-descriptions-item label="Table">
+          <a-tag color="blue">{{ props.form.table }}</a-tag>
+        </a-descriptions-item>
         <a-descriptions-item v-if="props.form.conditions.length > 0" label="Conditions">
-          <a-descriptions size="small" :column="1">
-            <a-descriptions-item v-for="(condition, index) in props.form.conditions" :key="index">
+          <div class="conditions-list">
+            <a-tag
+              v-for="(condition, index) in props.form.conditions"
+              :key="index"
+              color="green"
+              style="margin-bottom: 4px; margin-right: 4px"
+            >
               {{ condition.field }} {{ condition.operator }} {{ condition.value }}
-            </a-descriptions-item>
-          </a-descriptions>
+            </a-tag>
+          </div>
         </a-descriptions-item>
         <a-descriptions-item v-else label="Conditions">
-          <em>No conditions set</em>
+          <a-tag color="gray">No conditions set</a-tag>
         </a-descriptions-item>
       </a-descriptions>
     </a-modal>
