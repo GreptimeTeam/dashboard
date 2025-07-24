@@ -1,5 +1,6 @@
-import { ref, computed, reactive, shallowRef, watch } from 'vue'
-import type { BuilderFormState, QueryState, TextEditorFormState } from '@/types/query'
+import { ref, reactive, computed, watch, shallowRef } from 'vue'
+import { replaceTimePlaceholders } from '@/utils/sql'
+import type { QueryState, TextEditorFormState, BuilderFormState } from '@/types/query'
 import { has } from 'markdown-it/lib/common/utils'
 
 const useQueryExecution = (builder, textEditor, timeRange) => {
@@ -70,10 +71,7 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
 
     // Process $timestart and $timeend in the SQL string
     const currentTimeRanges = timeRange.timeRangeValues.value
-    if (currentTimeRanges.length === 2) {
-      const [startTs, endTs] = currentTimeRanges
-      currentSql = currentSql.replace(/\$timestart/g, `${startTs}`).replace(/\$timeend/g, `${endTs}`)
-    }
+    currentSql = replaceTimePlaceholders(currentSql, currentTimeRanges)
     if (!currentSql) return []
     loading.value = true
     try {
@@ -115,7 +113,7 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
     const currentTimeRanges = timeRange.timeRangeValues.value
     if (currentTimeRanges.length === 2) {
       const [startTs, endTs] = currentTimeRanges
-      currentQuery = currentQuery.replace(/\$timestart/g, `${startTs}`).replace(/\$timeend/g, `${endTs}`)
+      currentQuery = replaceTimePlaceholders(currentQuery, [startTs, endTs])
     }
     if (!currentQuery || !queryState.table) {
       return

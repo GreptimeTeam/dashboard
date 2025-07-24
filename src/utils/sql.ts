@@ -136,3 +136,40 @@ export function debounce<T extends (...args: any[]) => any>(fn: T, delay: number
     timer = window.setTimeout(() => fn(...args), delay)
   }
 }
+
+/**
+ * Replaces $timestart and $timeend placeholders in SQL string with actual timestamp values.
+ * If time ranges are empty or incomplete, the placeholders are replaced with appropriate defaults.
+ *
+ * @param sql - The SQL string containing $timestart and $timeend placeholders
+ * @param timeRanges - Array of time range values [startTs, endTs] or empty array
+ * @returns SQL string with placeholders replaced
+ */
+export function replaceTimePlaceholders(sql: string, timeRanges: any[]): string {
+  if (!sql) return sql
+
+  let result = sql
+
+  // Handle $timestart replacement
+  if (result.includes('$timestart')) {
+    if (timeRanges && timeRanges.length >= 1 && timeRanges[0]) {
+      result = result.replace(/\$timestart/g, `${timeRanges[0]}`)
+    } else {
+      // Replace with a reasonable default (e.g., 24 hours ago)
+      result = result.replace(/\$timestart/g, `now() - Interval '10m'`)
+    }
+  }
+
+  // Handle $timeend replacement
+  if (result.includes('$timeend')) {
+    if (timeRanges && timeRanges.length >= 2 && timeRanges[1]) {
+      result = result.replace(/\$timeend/g, `${timeRanges[1]}`)
+    } else {
+      // Replace with current timestamp as default
+
+      result = result.replace(/\$timeend/g, `now()`)
+    }
+  }
+
+  return result
+}

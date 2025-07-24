@@ -14,6 +14,7 @@ VCharts(
   import { watchOnce } from '@vueuse/core'
   import editorAPI from '@/api/editor'
   import type { QueryState } from '@/types/query'
+  import { replaceTimePlaceholders } from '@/utils/sql'
   import { getWhereClause } from './until'
 
   interface Props {
@@ -80,7 +81,7 @@ VCharts(
     }
     // Extract WHERE clause from the generated SQL (works for both text and builder modes)
     const [startTs, endTs] = timeRangeValues
-    const currentSql = props.queryState.sql.replace(/\$timestart/g, `${startTs}`).replace(/\$timeend/g, `${endTs}`)
+    const currentSql = replaceTimePlaceholders(props.queryState.sql, [startTs, endTs])
     const whereClause = getWhereClause(currentSql)
     const condition = whereClause ? `WHERE ${whereClause}` : ''
     return `SELECT ${props.column} ,count(*) AS c FROM ${props.queryState.table} ${condition} GROUP BY ${props.column} ORDER BY c DESC`

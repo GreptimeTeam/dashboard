@@ -24,6 +24,7 @@ a-space(v-if="pages.length")
   import type { SchemaType } from '@/store/modules/code-run/types'
   import type { QueryState, ColumnType } from '@/types/query'
   import { convertTimestampToMilliseconds } from '@/utils/date-time'
+  import { replaceTimePlaceholders } from '@/utils/sql'
   import dayjs from 'dayjs'
   import { toObj } from './until'
 
@@ -99,16 +100,11 @@ a-space(v-if="pages.length")
     }
   }
 
-  // Helper function to replace time placeholders in SQL
-  function replaceTimePlaceholders(sql: string, start: any, end: any) {
-    return sql.replace(/\$timestart/g, start).replace(/\$timeend/g, end)
-  }
-
   function loadPage(start, end, pageIndex: number) {
     if (!props.queryState.tsColumn) return
     pages.value[pageIndex].loading = true
     const sql = props.queryState.generateSql(props.queryState.sourceState, [start, end])
-    const pageSql = replaceTimePlaceholders(sql, start, Number(end) + 1)
+    const pageSql = replaceTimePlaceholders(sql, [start, Number(end) + 1])
     queryPage(pageSql)
       .then(() => {
         const index = pages.value.findIndex((page) => page.start === start && page.end === end)
@@ -130,7 +126,7 @@ a-space(v-if="pages.length")
     const [startValue] = props.queryState.timeRangeValues
     const sql = props.queryState.generateSql({ ...props.queryState.sourceState, orderBy: 'DESC' }, [startValue, end])
 
-    const pageSql = replaceTimePlaceholders(sql, startValue, end)
+    const pageSql = replaceTimePlaceholders(sql, [startValue, end])
     const order = props.queryState.orderBy
     const reverse = order === 'ASC'
     queryPage(pageSql, reverse)
@@ -155,7 +151,7 @@ a-space(v-if="pages.length")
     // Use the end from timeRangeValues directly
     const [, endValue] = props.queryState.timeRangeValues
     const sql = props.queryState.generateSql({ ...props.queryState.sourceState, orderBy: 'ASC' }, [start, endValue])
-    const pageSql = replaceTimePlaceholders(sql, start, endValue)
+    const pageSql = replaceTimePlaceholders(sql, [start, endValue])
     const order = props.queryState.orderBy
     const reverse = order === 'DESC'
     queryPage(pageSql, reverse)

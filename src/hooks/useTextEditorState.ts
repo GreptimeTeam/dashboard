@@ -1,5 +1,6 @@
 import { ref, type Ref } from 'vue'
 import { TextEditorFormState } from '@/types/query'
+import { replaceTimePlaceholders } from '@/utils/sql'
 
 const useTextEditorState = (timeRangeValues: Ref<string[]>) => {
   const textEditorState = reactive<TextEditorFormState>({
@@ -12,7 +13,7 @@ const useTextEditorState = (timeRangeValues: Ref<string[]>) => {
 
   const generateSql = (state: TextEditorFormState, timeRange: any[]) => {
     const [startTs, endTs] = timeRange
-    return state.sql.replace(/\$timestart/g, `${startTs}`).replace(/\$timeend/g, `${endTs}`)
+    return replaceTimePlaceholders(state.sql, [startTs, endTs])
   }
 
   return {

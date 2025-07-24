@@ -14,6 +14,7 @@ VCharts(
   import * as echarts from 'echarts'
   import editorAPI from '@/api/editor'
   import type { QueryState } from '@/types/query'
+  import { replaceTimePlaceholders } from '@/utils/sql'
 
   interface Props {
     queryState: QueryState
@@ -170,7 +171,7 @@ VCharts(
 
     // Extract WHERE clause from the original SQL
     const [startTs, endTs] = timeRangeValues
-    const currentSql = sql.replace(/\$timestart/g, `${startTs}`).replace(/\$timeend/g, `${endTs}`)
+    const currentSql = replaceTimePlaceholders(sql, [startTs, endTs])
     const whereMatch = currentSql.match(/WHERE\s+([\s\S]+?)(?:\s+ORDER\s+BY|\s+LIMIT\s+|\s*$)/i)
 
     const whereClause = whereMatch ? `WHERE ${whereMatch[1]}` : ''
