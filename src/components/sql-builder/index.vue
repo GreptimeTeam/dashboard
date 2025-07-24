@@ -108,7 +108,7 @@ QuickFilters(
   import { storeToRefs } from 'pinia'
   import editorAPI from '@/api/editor'
   import { useAppStore } from '@/store'
-  import QuickFilters from '@/components/quick-filters'
+  import QuickFilters from '@/components/quick-filters/index.vue'
   import type { Condition, BuilderFormState as Form } from '@/types/query'
   import { TsTypeMapping } from '@/utils/date-time'
 

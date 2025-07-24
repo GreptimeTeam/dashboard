@@ -53,7 +53,7 @@
             a-tag(color="gray") No conditions set
 </template>
 
-<script setup lang="ts">
+<script setup lang="ts" name="QuickFilters">
   import { ref, computed, watch, reactive, nextTick } from 'vue'
   import { useLocalStorage } from '@vueuse/core'
 
