@@ -82,9 +82,6 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
           name: col.name,
           data_type: col.data_type,
           label: col.name,
-          semantic_type:
-            col.semantic_type?.toString() ||
-            (col.data_type?.toLowerCase().includes('timestamp') ? 'TIMESTAMP' : 'FIELD'),
         }))
 
         const processedRows = records.rows.map((row) => {
