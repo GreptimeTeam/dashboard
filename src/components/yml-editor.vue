@@ -22,7 +22,7 @@ a-card.light-editor-card(:bordered="false")
 
   const props = defineProps<{
     modelValue: string
-    disabled: boolean
+    disabled?: boolean
   }>()
   const emit = defineEmits<{
     (event: 'update:modelValue', value: string): void
