@@ -43,3 +43,13 @@ export interface QueryState extends BaseState {
   sql: string
   generateSql: (queryState: TextEditorFormState | BuilderFormState, timeRange: any[]) => string
 }
+
+export enum SqlDataTypeMapping {
+  TimestampNanosecond = 'timestamp(9)',
+  TimestampMicrosecond = 'timestamp(6)',
+  TimestampMillisecond = 'timestamp(3)',
+  TimestampSecond = 'timestamp(0)',
+  Timestamp = 'timestamp',
+  Date = 'date',
+  DateTime = 'datetime',
+}

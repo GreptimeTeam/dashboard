@@ -1,5 +1,5 @@
 import dayjs from 'dayjs'
-import convertTimestampToMilliseconds from './datetime'
+import { convertTimestampToMilliseconds } from './date-time'
 
 type TargetContext = '_self' | '_parent' | '_blank' | '_top'
 

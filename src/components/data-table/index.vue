@@ -109,7 +109,7 @@ a-dropdown#td-context(
   import { ref, computed, shallowRef } from 'vue'
   import { useElementSize } from '@vueuse/core'
   import dayjs from 'dayjs'
-  import convertTimestampToMilliseconds from '@/utils/datetime'
+  import { convertTimestampToMilliseconds } from '@/utils/date-time'
 
   interface TSColumn {
     name: string

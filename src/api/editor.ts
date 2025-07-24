@@ -22,16 +22,6 @@ const makeSqlData = (sql: string) => {
   })
 }
 
-const columnTypeMap = {
-  'timestamp(9)': 'TimestampNanosecond',
-  'timestamp(6)': 'TimestampMicrosecond',
-  'timestamp(3)': 'TimestampMillisecond',
-  'timestamp(0)': 'TimestampSecond',
-  'timestamp': 'TimestampSecond',
-  'date': 'Date',
-  'datetime': 'DateTime',
-}
-
 const addDatabaseParams = (database?: string) => {
   const appStore = useAppStore()
   return {
@@ -168,10 +158,9 @@ const getTableSchema = (tableName: string, database?: string) => {
     )
     .then((res) => {
       return res.output[0].records.rows.map((row: string[]) => {
-        const dataType = columnTypeMap[row[1].toLowerCase()] || row[1]
         return {
           name: row[0],
-          data_type: dataType,
+          data_type: row[1],
           semantic_type: row[2],
         }
       })

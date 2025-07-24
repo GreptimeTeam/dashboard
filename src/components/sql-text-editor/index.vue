@@ -24,6 +24,7 @@
   import editorAPI from '@/api/editor'
   import { parseTable, parseLimit, parseOrderBy } from '@/views/dashboard/logs/query/until'
   import type { TextEditorFormState, TSColumn } from '@/types/query'
+  import { TsTypeMapping } from '@/utils/date-time'
 
   interface Props {
     modelValue: string
@@ -100,7 +101,10 @@
       // Prefer columns with TIMESTAMP semantic type
       const tsIndexColumns = tsColumns.filter((col) => col.semantic_type === 'TIMESTAMP')
       const selectedColumn = tsIndexColumns.length ? tsIndexColumns[0] : tsColumns[0]
-      return selectedColumn
+      return {
+        ...selectedColumn,
+        data_type: TsTypeMapping[selectedColumn.data_type] || selectedColumn.data_type,
+      }
     } catch (error) {
       console.warn('Failed to extract timestamp column:', error)
     }

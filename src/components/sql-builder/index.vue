@@ -110,6 +110,7 @@ QuickFilters(
   import { useAppStore } from '@/store'
   import QuickFilters from '@/components/quick-filters'
   import type { Condition, BuilderFormState as Form } from '@/types/query'
+  import { TsTypeMapping } from '@/utils/date-time'
 
   interface TableField {
     name: string
@@ -218,7 +219,7 @@ QuickFilters(
     // Return the column with data_type - DataTable will calculate the multiple automatically
     return {
       name: selectedColumn.name,
-      data_type: selectedColumn.data_type,
+      data_type: TsTypeMapping[selectedColumn.data_type] || selectedColumn.data_type,
     }
   })
 
