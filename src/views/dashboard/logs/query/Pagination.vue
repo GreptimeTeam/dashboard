@@ -23,9 +23,9 @@ a-space(v-if="pages.length")
   import editorAPI from '@/api/editor'
   import type { SchemaType } from '@/store/modules/code-run/types'
   import type { QueryState, ColumnType } from '@/types/query'
-  import convertTimestampToMilliseconds from '@/utils/datetime'
+  import { convertTimestampToMilliseconds } from '@/utils/date-time'
   import dayjs from 'dayjs'
-  import { TimeTypes, toObj } from './until'
+  import { toObj } from './until'
 
   const props = defineProps<{
     rows: any[]
