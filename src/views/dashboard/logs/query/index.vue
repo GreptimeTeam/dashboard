@@ -42,8 +42,8 @@
         SQLBuilder(
           v-if="editorType === 'builder'"
           ref="sqlBuilderRef"
-          v-model:form-state="builderFormState"
           storage-key="logs-query-table"
+          :form-state="builderFormState"
         )
         SqlTextEditor(
           v-if="editorType === 'text'"

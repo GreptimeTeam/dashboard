@@ -152,13 +152,13 @@ QuickFilters(
   const form = reactive<Form>(props.formState)
   // Watch form changes and emit updates for v-model
   // just to declare support for model, indeed this watch is not needed
-  watch(
-    form,
-    (newForm) => {
-      emit('update:formState', newForm)
-    },
-    { deep: true }
-  )
+  // watch(
+  //   form,
+  //   (newForm) => {
+  //     emit('update:formState', newForm)
+  //   },
+  //   { deep: true }
+  // )
 
   const fields = computed(() => {
     if (!form.table || !tableMap.value[form.table]) return []

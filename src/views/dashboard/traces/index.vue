@@ -42,9 +42,9 @@
         SQLBuilder(
           v-if="editorType === 'builder'"
           ref="sqlBuilderRef"
-          v-model:form-state="builderFormState"
           table-filter="trace_id"
           storage-key="traces-query-table"
+          :form-state="builderFormState"
           :quick-field-names="['trace_id', 'service_name']"
         )
         SqlTextEditor(v-else v-model="textEditor.textEditorState.sql" @update:sql-info="handleSqlInfoUpdate")
