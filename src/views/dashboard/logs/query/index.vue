@@ -233,7 +233,10 @@
   }
 
   watch(columns, () => {
-    if (!displayedColumns.value[queryState.table]) {
+    if (!columns.value.length) {
+      return
+    }
+    if (!displayedColumns.value[queryState.table] || !displayedColumns.value[queryState.table].length) {
       displayedColumns.value[queryState.table] = columns.value.map((c) => c.name)
     }
   })
