@@ -15,7 +15,17 @@ const NEWS_CONFIG = {
   proxyUrl: 'https://proxy-for-blogs-rss-in-dashboard.greptime.workers.dev',
 }
 const CACHE_KEY = 'greptime_news_cache'
+const UID_KEY = 'greptime_anon_id'
 const TTL_MS = 10 * 60 * 1000
+
+const getAnonId = () => {
+  let id = localStorage.getItem(UID_KEY)
+  if (!id) {
+    id = crypto.randomUUID()
+    localStorage.setItem(UID_KEY, id)
+  }
+  return id
+}
 
 const setCachedNews = (items: NewsItem[]) => {
   const data = {
@@ -91,6 +101,7 @@ const parseXmlRss = (xmlString: string): NewsItem[] => {
 export const fetchGreptimeNews = async (): Promise<NewsResponse> => {
   try {
     const cached = getCachedNews()
+    const anonId = getAnonId()
     if (cached) {
       return cached
     }
@@ -98,7 +109,8 @@ export const fetchGreptimeNews = async (): Promise<NewsResponse> => {
     const response = await fetch(NEWS_CONFIG.proxyUrl, {
       method: 'GET',
       headers: {
-        Accept: 'application/xml, text/xml, */*',
+        'Accept': 'application/xml, text/xml, */*',
+        'X-Oss-Uid': anonId,
       },
     })
 
