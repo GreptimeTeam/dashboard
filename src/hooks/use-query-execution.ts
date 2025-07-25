@@ -20,7 +20,7 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
     },
   })
   const loading = ref(false)
-  const columns = ref<any[]>([])
+  const columns = shallowRef<any[]>([])
   const rows = shallowRef<any[]>([])
 
   const hasExecutedInitialQuery = ref(false)
