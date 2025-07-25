@@ -32,7 +32,7 @@
     ]
   },
   "dependencies": {
-    "@arco-design/web-vue": "^2.56.2",
+    "@arco-design/web-vue": "^2.57.0",
     "@babel/core": "^7.20.5",
     "@codemirror/autocomplete": "6.9.0",
     "@codemirror/lang-java": "6.0.1",

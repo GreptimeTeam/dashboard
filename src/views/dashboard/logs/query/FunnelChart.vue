@@ -13,12 +13,20 @@ VCharts(
   import * as echarts from 'echarts'
   import { watchOnce } from '@vueuse/core'
   import editorAPI from '@/api/editor'
-  import useLogsQueryStore from '@/store/modules/logs-query'
-  import { calculateInterval, generateTimeRange, toMs, TimeTypes, getWhereClause, addTsCondition, toObj } from './until'
-  import type { TimeType } from './until'
+  import type { QueryState } from '@/types/query'
+  import { replaceTimePlaceholders } from '@/utils/sql'
+  import { getWhereClause } from './until'
 
-  const props = defineProps(['column'])
-  const data = shallowRef<Array<any>>([])
+  interface Props {
+    queryState: QueryState
+    column: string
+  }
+
+  const props = withDefaults(defineProps<Props>(), {
+    column: '',
+  })
+
+  const data = shallowRef([])
   const { t } = useI18n()
   const chart = ref()
   const chartOptions = computed(() => ({
@@ -66,28 +74,17 @@ VCharts(
     },
   }))
 
-  const { inputTableName, unifiedRange, tsColumn, queryNum, sql, editorType, rows, tableIndex } = storeToRefs(
-    useLogsQueryStore()
-  )
-  const { getRelativeRange, buildCondition, query } = useLogsQueryStore()
-
   const chartSql = computed(() => {
-    if (!tsColumn.value) {
+    const { timeRangeValues } = props.queryState
+    if (!props.queryState.table || !props.column) {
       return ''
     }
-
-    let condition = ''
-    if (editorType.value === 'text') {
-      condition += getWhereClause(sql.value)
-    }
-    if (editorType.value === 'builder') {
-      condition += buildCondition().join('')
-    }
-    if (condition !== '') {
-      condition = `Where ${condition}`
-    }
-
-    return `SELECT ${props.column} ,count(*) AS c FROM ${inputTableName.value} ${condition} GROUP BY ${props.column} ORDER BY c DESC`
+    // Extract WHERE clause from the generated SQL (works for both text and builder modes)
+    const [startTs, endTs] = timeRangeValues
+    const currentSql = replaceTimePlaceholders(props.queryState.sql, [startTs, endTs])
+    const whereClause = getWhereClause(currentSql)
+    const condition = whereClause ? `WHERE ${whereClause}` : ''
+    return `SELECT ${props.column} ,count(*) AS c FROM ${props.queryState.table} ${condition} GROUP BY ${props.column} ORDER BY c DESC`
   })
 
   function chartQuery() {
@@ -103,12 +100,19 @@ VCharts(
     })
   }
 
+  // Expose method to trigger chart query
+  function executeChartQuery() {
+    chartQuery()
+  }
+
+  // Initial query if SQL is available
   if (chartSql.value) {
     chartQuery()
   }
 
-  watch(queryNum, () => {
-    chartQuery()
+  // Expose the method to parent component
+  defineExpose({
+    executeChartQuery,
   })
 </script>
 

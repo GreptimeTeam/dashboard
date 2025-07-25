@@ -24,30 +24,41 @@ a-drawer(
 </template>
 
 <script setup lang="ts" name="LogDetail">
-  import useLogsQueryStore from '@/store/modules/logs-query'
   import JSONView from './JSONView.vue'
   import FormView from './FormView.vue'
 
-  const props = defineProps<{ visible: boolean }>()
-  const emit = defineEmits(['update:visible'])
+  const props = defineProps<{
+    visible: boolean
+    selectedRowKey: number | null
+    currRow: any
+    rows: any[]
+  }>()
+  const emit = defineEmits(['update:visible', 'update:selectedRowKey'])
   const handleOk = () => {
     emit('update:visible', false)
   }
   const handleCancel = () => {
     emit('update:visible', false)
   }
-  const { selectedRowKey, currRow, rows } = storeToRefs(useLogsQueryStore())
+
   const viewRow = computed(() => {
-    const obj = { ...currRow.value }
+    const obj = { ...props.currRow }
     delete obj.index
     return obj
   })
 
   const handlePre = () => {
-    selectedRowKey.value -= 1
+    emit('update:selectedRowKey', props.selectedRowKey - 1)
   }
 
   const handleNext = () => {
-    selectedRowKey.value += 1
+    emit('update:selectedRowKey', props.selectedRowKey + 1)
   }
 </script>
+
+<style lang="less">
+  // Global styles for drawer since it's rendered in a portal
+  #log-table-container .arco-drawer {
+    border: 1px solid var(--color-neutral-3) !important;
+  }
+</style>

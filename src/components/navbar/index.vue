@@ -105,7 +105,7 @@ NewsModal(ref="newsModal" :news-list="newsList" :loading="isLoadingNews")
   }
 
   listenerRouteChange((newRoute) => {
-    menuSelectedKey.value = newRoute.matched[1].name as string
+    menuSelectedKey.value = newRoute.meta.activeMenu || (newRoute.matched[1].name as string)
     if (newRoute.matched[1].name === 'ingest') {
       ingestTab.value = newRoute.matched[3].name as string
     }

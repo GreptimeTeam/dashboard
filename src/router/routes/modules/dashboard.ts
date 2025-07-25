@@ -195,6 +195,7 @@ const DASHBOARD: AppRouteRecordRaw = {
         requiresAuth: false,
         roles: ['admin', 'cloud'],
         hideInMenu: true,
+        activeMenu: 'trace-query',
       },
     },
     {

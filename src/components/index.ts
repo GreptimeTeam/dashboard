@@ -11,6 +11,7 @@ import {
 } from 'echarts/components'
 import Chart from './chart/index.vue'
 import Breadcrumb from './breadcrumb/index.vue'
+import TimeRangeSelect from './time-range-select/index.vue'
 import 'echarts/lib/component/dataset'
 import 'echarts/lib/component/transform'
 import YMLEditor from './yml-editor.vue'
@@ -33,6 +34,7 @@ export default {
   install(Vue: App) {
     Vue.component('Chart', Chart)
     Vue.component('Breadcrumb', Breadcrumb)
+    Vue.component('TimeRangeSelect', TimeRangeSelect)
     Vue.component('YMLEditorSimple', YMLEditor)
   },
 }
