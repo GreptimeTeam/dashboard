@@ -303,7 +303,8 @@ a-card(v-if="hasChart" :bordered="false")
       if (props.defaultChartForm.groupBySelectedTypes?.length) {
         chartForm.groupBySelectedTypes = props.defaultChartForm.groupBySelectedTypes
       } else if (groupByOptions.value.length) {
-        chartForm.groupBySelectedTypes = [groupByOptions.value[0].name]
+        // all the name comes from the groupByOptions
+        chartForm.groupBySelectedTypes = groupByOptions.value.map((item) => item.name)
       }
     }
   })

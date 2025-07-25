@@ -24,10 +24,7 @@ export default function useDataChart(data: ResultType) {
         ...item,
         index,
       }))
-      .filter(
-        (item: SchemaType) =>
-          !dateTypes.find((type: string) => type === item.data_type) && item.name !== chartForm.selectedYTypes[0]
-      )
+      .filter((item: SchemaType) => item.data_type === 'String' && item.name !== chartForm.selectedYTypes[0])
   })
 
   const xOptions = computed(() => {
