@@ -150,23 +150,12 @@ QuickFilters(
 
   // Initialize form state as reactive object
   const form = reactive<Form>(props.formState)
-
-  // Watch for prop changes and update form
-  watch(
-    () => props.formState,
-    (newFormState) => {
-      if (newFormState) {
-        Object.assign(form, newFormState)
-      }
-    },
-    { immediate: true }
-  )
-
   // Watch form changes and emit updates for v-model
+  // just to declare support for model, indeed this watch is not needed
   watch(
     form,
     (newForm) => {
-      Object.assign(props.formState, newForm)
+      emit('update:formState', newForm)
     },
     { deep: true }
   )
