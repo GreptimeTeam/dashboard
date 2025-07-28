@@ -185,6 +185,7 @@ export function useSqlBuilderHook(options: SqlBuilderHookOptions) {
     builderFormState,
     addFilterCondition,
     generateSql,
+    defaultFormState,
   }
 }
 

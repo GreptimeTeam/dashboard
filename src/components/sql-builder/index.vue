@@ -136,6 +136,7 @@ QuickFilters(
     tableFilter?: string // Optional filter for which tables to show (e.g., 'trace_id' for traces)
     storageKey?: string // Optional storage key for localStorage (e.g., 'logs-query-table', 'traces-query-table')
     quickFieldNames?: string[] // Array of field names for quick condition buttons
+    defaultFormState?: Form
   }>()
 
   const tables = ref<string[]>([])
@@ -302,10 +303,7 @@ QuickFilters(
   function handleTableChange() {
     // Save the selected table to localStorage
     lastSelectedTable.value = form.table
-
-    // Reset form state for new table
-    form.conditions = []
-    form.orderByField = ''
+    Object.assign(form, props.defaultFormState, { table: form.table })
   }
 
   // Watch for timeColumns changes - no longer add default time range condition
