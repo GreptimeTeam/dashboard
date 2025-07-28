@@ -283,7 +283,6 @@ QuickFilters(
       } else if (tables.value.length > 0) {
         // Use first available table if remembered table doesn't exist
         form.table = tables.value[0]
-        lastSelectedTable.value = tables.value[0]
       }
     } catch (error) {
       console.error('Failed to fetch tables:', error)
@@ -302,7 +301,6 @@ QuickFilters(
 
   function handleTableChange() {
     // Save the selected table to localStorage
-    lastSelectedTable.value = form.table
     Object.assign(form, props.defaultFormState, { table: form.table })
   }
 
