@@ -155,8 +155,8 @@ export function replaceTimePlaceholders(sql: string, timeRanges: any[]): string 
     if (timeRanges && timeRanges.length >= 1 && timeRanges[0]) {
       result = result.replace(/\$timestart/g, `${timeRanges[0]}`)
     } else {
-      // Replace with a reasonable default (e.g., 24 hours ago)
-      result = result.replace(/\$timestart/g, `now() - Interval '10m'`)
+      // Replace with minimal time when no valid time range is provided
+      result = result.replace(/\$timestart/g, `'1970-01-01 00:00:00'`)
     }
   }
 
