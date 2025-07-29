@@ -122,12 +122,13 @@
   }
 
   async function handleQuery() {
-    const results = await executeQuery()
-    allResults.value = results || []
+    executeQuery().then((results) => {
+      allResults.value = results || []
+      updateQueryParams()
+    })
     if (chartExpanded.value && countChartRef.value && queryState.sql) {
       countChartRef.value.executeCountQuery()
     }
-    updateQueryParams()
   }
 
   function handleTimeRangeUpdate(newTimeRange) {
