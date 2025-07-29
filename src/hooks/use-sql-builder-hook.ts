@@ -9,22 +9,22 @@ export interface SqlBuilderHookOptions {
   /** Storage key for persisting form state */
   storageKey?: string
   /** Default form state */
-  defaultFormState?: Partial<BuilderFormState>
+  defaultFormState?: Partial<BuilderFormState> | null
 }
 
 export function useSqlBuilderHook(options: SqlBuilderHookOptions) {
   const { timeRangeValues, tsColumn, storageKey, defaultFormState } = options
-
-  // Initialize builder form state as reactive
-  const builderFormState = reactive<BuilderFormState>({
+  const initState = {
     table: '',
     conditions: [],
     orderByField: '',
-    orderBy: 'DESC',
+    orderBy: 'DESC' as 'DESC' | 'ASC',
     limit: 1000,
     tsColumn: null,
     ...defaultFormState,
-  })
+  }
+  // Initialize builder form state as reactive
+  const builderFormState = reactive<BuilderFormState>({ ...initState })
 
   // // Persist form state to localStorage if storageKey is provided
   // if (storageKey) {
@@ -49,59 +49,40 @@ export function useSqlBuilderHook(options: SqlBuilderHookOptions) {
     return value.replace(/'/g, "''")
   }
 
-  function getFieldType(fieldName: string): string {
-    // This could be enhanced to get actual field types from schema
-    if (fieldName.toLowerCase().includes('time') || fieldName.toLowerCase().includes('ts')) {
-      return 'TIMESTAMP'
-    }
-    return 'STRING'
-  }
-
   function singleCondition(condition: Condition) {
     const { field, operator, value } = condition
-    const fieldType = getFieldType(field)
+
+    // Helper function to format value based on type
+    const formatValue = (val: any) => {
+      if (typeof val === 'number' || typeof val === 'boolean') {
+        return val // No escaping or quoting for numbers/booleans
+      }
+      return `'${escapeSqlString(val)}'` // Escape and quote strings
+    }
 
     switch (operator) {
-      case '=':
-        if (fieldType === 'TIMESTAMP') {
-          return `"${field}" = ${value}`
-        }
-        return `"${field}" = '${escapeSqlString(value)}'`
-      case '!=':
-        if (fieldType === 'TIMESTAMP') {
-          return `"${field}" != ${value}`
-        }
-        return `"${field}" != '${escapeSqlString(value)}'`
-      case '>':
-        return `"${field}" > ${value}`
-      case '>=':
-        return `"${field}" >= ${value}`
-      case '<':
-        return `"${field}" < ${value}`
-      case '<=':
-        return `"${field}" <= ${value}`
       case 'LIKE':
-        return `"${field}" LIKE '%${escapeSqlString(value)}%'`
+        return `"${field}" LIKE '%${escapeSqlString(String(value))}%'`
       case 'NOT LIKE':
-        return `"${field}" NOT LIKE '%${escapeSqlString(value)}%'`
+        return `"${field}" NOT LIKE '%${escapeSqlString(String(value))}%'`
       case 'IN':
         if (Array.isArray(value)) {
-          const escapedValues = value.map((v) => `'${escapeSqlString(v)}'`).join(', ')
+          const escapedValues = value.map((v) => formatValue(v)).join(', ')
           return `"${field}" IN (${escapedValues})`
         }
-        return `"${field}" IN ('${escapeSqlString(value)}')`
+        return `"${field}" IN (${formatValue(value)})`
       case 'NOT IN':
         if (Array.isArray(value)) {
-          const escapedValues = value.map((v) => `'${escapeSqlString(v)}'`).join(', ')
+          const escapedValues = value.map((v) => formatValue(v)).join(', ')
           return `"${field}" NOT IN (${escapedValues})`
         }
-        return `"${field}" NOT IN ('${escapeSqlString(value)}')`
+        return `"${field}" NOT IN (${formatValue(value)})`
       case 'Exist':
         return `"${field}" IS NOT NULL`
       case 'Not Exist':
         return `"${field}" IS NULL`
       default:
-        return `"${field}" ${operator} '${escapeSqlString(value)}'`
+        return `"${field}" ${operator} ${formatValue(value)}`
     }
   }
 
@@ -185,7 +166,7 @@ export function useSqlBuilderHook(options: SqlBuilderHookOptions) {
     builderFormState,
     addFilterCondition,
     generateSql,
-    defaultFormState,
+    defaultFormState: initState,
   }
 }
 

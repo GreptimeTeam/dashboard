@@ -1,7 +1,7 @@
 export interface Condition {
   field: string
   operator: string
-  value: string
+  value: string | number | boolean
   relation?: 'AND' | 'OR'
   isTimeColumn?: boolean
 }
@@ -42,14 +42,4 @@ export interface QueryState extends BaseState {
   sourceState: TextEditorFormState | BuilderFormState
   sql: string
   generateSql: (queryState: TextEditorFormState | BuilderFormState, timeRange: any[]) => string
-}
-
-export enum SqlDataTypeMapping {
-  TimestampNanosecond = 'timestamp(9)',
-  TimestampMicrosecond = 'timestamp(6)',
-  TimestampMillisecond = 'timestamp(3)',
-  TimestampSecond = 'timestamp(0)',
-  Timestamp = 'timestamp',
-  Date = 'date',
-  DateTime = 'datetime',
 }

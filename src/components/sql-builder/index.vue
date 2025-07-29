@@ -41,12 +41,26 @@ a-form(
             :trigger-props="{ autoFitPopupMinWidth: true }"
             :options="getOperators(condition.field)"
           )
-          a-input.value(
-            v-if="condition.operator !== 'Not Exist' && condition.operator !== 'Exist'"
-            v-model="condition.value"
-            placeholder="value"
-            style="width: 60px"
-          )
+          template(v-if="condition.operator !== 'Not Exist' && condition.operator !== 'Exist'")
+            a-input.value(
+              v-if="getFieldType(condition.field) === 'Number'"
+              v-model.number="condition.value"
+              placeholder="value"
+              style="width: 60px"
+            )
+            a-select.value(
+              v-else-if="getFieldType(condition.field) === 'Boolean'"
+              v-model.boolean="condition.value"
+              placeholder="value"
+              style="width: 60px"
+              :options="['true', 'false']"
+            )
+            a-input.value(
+              v-else
+              v-model="condition.value"
+              placeholder="value"
+              style="width: 60px"
+            )
           a-button.field-action(@click="() => removeCondition(index)")
             icon-minus(style="cursor: pointer; font-size: 14px")
 
@@ -301,7 +315,10 @@ QuickFilters(
 
   function handleTableChange() {
     // Save the selected table to localStorage
-    Object.assign(form, props.defaultFormState, { table: form.table })
+    lastSelectedTable.value = form.table
+
+    // Reset form state for new table with deep clone
+    Object.assign(form, JSON.parse(JSON.stringify(props.defaultFormState || {})), { table: form.table })
   }
 
   // Watch for timeColumns changes - no longer add default time range condition
