@@ -131,7 +131,7 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
   }
 
   watch(editorType, (newMode: 'builder' | 'text') => {
-    if (newMode === 'text' && !textEditor.textEditorState.sql && builder.builderFormState.table) {
+    if (newMode === 'text' && builder.builderFormState.table) {
       textEditor.textEditorState.sql = builder.generateSql(builder.builderFormState, timeRange.timeRangeValues.value)
     }
   })
