@@ -19,17 +19,22 @@ a-space(v-if="pages.length")
 </template>
 
 <script setup name="Pagination" lang="ts">
-  import { watchOnce } from '@vueuse/core'
+  import { ref, nextTick } from 'vue'
   import editorAPI from '@/api/editor'
-  import useLogsQueryStore from '@/store/modules/logs-query'
   import type { SchemaType } from '@/store/modules/code-run/types'
-  import { addTsCondition, TimeTypes, toDateStr, toObj } from './until'
-  import type { TimeType } from './until'
+  import type { QueryState, ColumnType } from '@/types/query'
+  import { convertTimestampToMilliseconds } from '@/utils/date-time'
+  import { replaceTimePlaceholders } from '@/utils/sql'
+  import dayjs from 'dayjs'
+  import { toObj } from './until'
 
-  const { columns, rows, currRow, selectedRowKey, queryNum, sql, tsColumn, unifiedRange, limit } = storeToRefs(
-    useLogsQueryStore()
-  )
-  const { getRelativeRange, getColumnByName } = useLogsQueryStore()
+  const props = defineProps<{
+    rows: any[]
+    columns: ColumnType[]
+    queryState: QueryState
+  }>()
+
+  const emit = defineEmits(['update:rows'])
 
   const leftDisabled = ref(false)
   const rightDisabled = ref(false)
@@ -44,22 +49,6 @@ a-space(v-if="pages.length")
   const newerLoading = ref(false)
   const olderLoading = ref(false)
 
-  type Order = 'ASC' | 'DESC'
-
-  function getOrder(): Order {
-    const orderRe = new RegExp(`ORDER BY ${tsColumn.value.name}\\s+(DESC|ASC)`, 'i')
-    const result = orderRe.exec(sql.value)
-    if (result) {
-      return result[1] as Order
-    }
-    return 'DESC'
-  }
-
-  function replaceOrder(sqlStr: string, from: Order, to: Order) {
-    const orderRe = new RegExp(`(ORDER BY ${tsColumn.value.name})\\s+(${from})`, 'i')
-    return sqlStr.replace(orderRe, `$1 ${to}`)
-  }
-
   function queryPage(pageSql: string, reverse = false) {
     return editorAPI.runSQL(pageSql).then((result) => {
       const rowsTmp = result.output[0].records.rows
@@ -67,30 +56,35 @@ a-space(v-if="pages.length")
       const arr = []
       if (reverse) {
         for (let i = rowsTmp.length - 1; i >= 0; i -= 1) {
-          arr.push(toObj(rowsTmp[i], queryColumns, i, tsColumn.value))
+          arr.push(toObj(rowsTmp[i], queryColumns, i, props.queryState.tsColumn))
         }
       } else {
         for (let i = 0; i < rowsTmp.length; i += 1) {
-          arr.push(toObj(rowsTmp[i], queryColumns, i, tsColumn.value))
+          arr.push(toObj(rowsTmp[i], queryColumns, i, props.queryState.tsColumn))
         }
       }
-      rows.value = arr
+      emit('update:rows', arr)
     })
   }
 
+  function formatDate(value: number, dataType: string) {
+    const ms = convertTimestampToMilliseconds(value, dataType)
+    return dayjs(ms).format('HH:mm:ss')
+  }
+
   function addPage(direction = 'right') {
-    const order = getOrder()
-    if (!rows.value.length || !tsColumn.value) {
+    const order = props.queryState.orderBy
+
+    if (!props.rows.length || !props.queryState.tsColumn) {
       currPage.value = {}
       return
     }
-    const tsName = tsColumn.value?.name as string
-    const first = order === 'ASC' ? rows.value[0] : rows.value[rows.value.length - 1]
-    const last = order === 'ASC' ? rows.value[rows.value.length - 1] : rows.value[0]
+    const tsName = props.queryState.tsColumn?.name as string
+    const first = order === 'ASC' ? props.rows[0] : props.rows[props.rows.length - 1]
+    const last = order === 'ASC' ? props.rows[props.rows.length - 1] : props.rows[0]
 
-    // const { data_type: dataType } = getColumnByName(tsName) as TimeType
-    const startLabel = toDateStr(first[tsName], tsColumn.value?.multiple, 'HH:mm:ss')
-    const endLabel = toDateStr(last[tsName], tsColumn.value?.multiple, 'HH:mm:ss')
+    const startLabel = formatDate(first[tsName], props.queryState.tsColumn?.data_type)
+    const endLabel = formatDate(last[tsName], props.queryState.tsColumn?.data_type)
     const pageTmp = {
       label: `${startLabel}—${endLabel}`,
       start: first[tsName],
@@ -106,10 +100,11 @@ a-space(v-if="pages.length")
     }
   }
 
-  function loadPage(start: number, end: number, pageIndex: number) {
+  function loadPage(start, end, pageIndex: number) {
+    if (!props.queryState.tsColumn) return
     pages.value[pageIndex].loading = true
-    const tsName = tsColumn.value?.name as string
-    const pageSql = addTsCondition(sql.value, tsName, start, Number(end) + 1)
+    const sql = props.queryState.generateSql(props.queryState.sourceState, [start, end])
+    const pageSql = replaceTimePlaceholders(sql, [start, Number(end) + 1])
     queryPage(pageSql)
       .then(() => {
         const index = pages.value.findIndex((page) => page.start === start && page.end === end)
@@ -121,22 +116,23 @@ a-space(v-if="pages.length")
   }
 
   function loadOlder() {
-    if (!tsColumn.value) {
+    if (!props.queryState.tsColumn) {
       return
     }
     olderLoading.value = true
     const end = pages.value[0].start
-    const { multiple } = tsColumn.value
-    const [start] = getRelativeRange(multiple)
-    let pageSql = addTsCondition(sql.value, tsColumn.value.name, start, end)
-    // pageSql = pageSql.replace('ASC', 'DESC')
-    pageSql = replaceOrder(pageSql, 'ASC', 'DESC')
-    const order = getOrder()
+
+    // Use the start from timeRangeValues directly
+    const [startValue] = props.queryState.timeRangeValues
+    const sql = props.queryState.generateSql({ ...props.queryState.sourceState, orderBy: 'DESC' }, [startValue, end])
+
+    const pageSql = replaceTimePlaceholders(sql, [startValue, end])
+    const order = props.queryState.orderBy
     const reverse = order === 'ASC'
     queryPage(pageSql, reverse)
       .then(() => {
         addPage('left')
-        if (rows.value.length < limit.value) {
+        if (props.rows.length < props.queryState.limit) {
           leftDisabled.value = true
         }
       })
@@ -146,22 +142,22 @@ a-space(v-if="pages.length")
   }
 
   function loadNewer() {
-    if (!tsColumn.value) {
+    if (!props.queryState.tsColumn) {
       return
     }
     newerLoading.value = true
     const start = pages.value[pages.value.length - 1].end
-    const { multiple } = tsColumn.value
-    const [, end] = getRelativeRange(multiple)
-    let pageSql = addTsCondition(sql.value, tsColumn.value.name, start, end)
-    // pageSql = pageSql.replace('DESC', 'ASC')
-    pageSql = replaceOrder(pageSql, 'DESC', 'ASC')
-    const order = getOrder()
+
+    // Use the end from timeRangeValues directly
+    const [, endValue] = props.queryState.timeRangeValues
+    const sql = props.queryState.generateSql({ ...props.queryState.sourceState, orderBy: 'ASC' }, [start, endValue])
+    const pageSql = replaceTimePlaceholders(sql, [start, endValue])
+    const order = props.queryState.orderBy
     const reverse = order === 'DESC'
     queryPage(pageSql, reverse)
       .then(() => {
         addPage('right')
-        if (rows.value.length < limit.value) {
+        if (props.rows.length < props.queryState.limit) {
           rightDisabled.value = true
         }
       })
@@ -170,18 +166,8 @@ a-space(v-if="pages.length")
       })
   }
 
-  // add page when click run
-  watchOnce(rows, () => {
-    nextTick(() => {
-      if (rows.value && rows.value.length) {
-        pages.value = []
-        addPage()
-      }
-    })
-  })
-
   // add page after click uncheck live
-  if (rows.value && rows.value.length > 0) {
+  if (props.rows && props.rows.length > 0) {
     addPage()
   }
 </script>

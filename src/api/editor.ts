@@ -141,6 +141,32 @@ const runSQLWithCSV = (code: string, format?: string): Promise<HttpResponse> => 
   return axios.post(sqlUrl, makeSqlData(code), params)
 }
 
+/**
+ * Fetches the schema (column_name, data_type, semantic_type) for a given table.
+ */
+const getTableSchema = (tableName: string, database?: string) => {
+  const appStore = useAppStore()
+  return axios
+    .post(
+      sqlUrl,
+      makeSqlData(
+        `SELECT column_name, data_type, semantic_type FROM information_schema.columns WHERE table_name = '${tableName}' AND table_schema = '${
+          database || appStore.database
+        }' ORDER BY column_name`
+      ),
+      addDatabaseParams(database)
+    )
+    .then((res) => {
+      return res.output[0].records.rows.map((row: string[]) => {
+        return {
+          name: row[0],
+          data_type: row[1],
+          semantic_type: row[2],
+        }
+      })
+    })
+}
+
 export default {
   getTables,
   getTableByName,
@@ -154,4 +180,5 @@ export default {
   checkScriptsTable,
   fetchTablesCount,
   runSQLWithCSV,
+  getTableSchema,
 }

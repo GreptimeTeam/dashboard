@@ -20,8 +20,13 @@ a-card.light-editor-card(:bordered="false")
   import * as yamlMode from '@codemirror/legacy-modes/mode/yaml'
   import { StreamLanguage, LanguageSupport } from '@codemirror/language'
 
-  const props = defineProps(['modelValue', 'disabled'])
-  const emit = defineEmits(['update:modelValue'])
+  const props = defineProps<{
+    modelValue: string
+    disabled?: boolean
+  }>()
+  const emit = defineEmits<{
+    (event: 'update:modelValue', value: string): void
+  }>()
 
   const yaml = new LanguageSupport(StreamLanguage.define(yamlMode.yaml))
 

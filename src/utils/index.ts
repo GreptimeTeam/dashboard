@@ -1,4 +1,5 @@
 import dayjs from 'dayjs'
+import { convertTimestampToMilliseconds } from './date-time'
 
 type TargetContext = '_self' | '_parent' | '_blank' | '_top'
 
@@ -42,20 +43,18 @@ export const regexUrl = new RegExp(
 )
 
 export const dateFormatter = (dataType: string, value: number | null) => {
+  if (!value) return null
+
   switch (dataType) {
     case 'Date':
-      return value && dayjs(0).add(value, 'day').format('YYYY-MM-DD HH:mm:ss')
-    case 'TimestampSecond':
-      return value && dayjs.unix(value).format('YYYY-MM-DD HH:mm:ss')
+      return dayjs(0).add(value, 'day').format('YYYY-MM-DD HH:mm:ss')
     case 'DateTime':
-    case 'TimestampMillisecond':
-      return value && dayjs(value).format('YYYY-MM-DD HH:mm:ss')
-    case 'TimestampMicrosecond':
-      return value && dayjs(value / 1000).format('YYYY-MM-DD HH:mm:ss')
-    case 'TimestampNanosecond':
-      return value && dayjs(value / 1000000).format('YYYY-MM-DD HH:mm:ss')
-    default:
-      return null
+      return dayjs(value).format('YYYY-MM-DD HH:mm:ss')
+    default: {
+      // Use the universal timestamp conversion utility for all timestamp types
+      const ms = convertTimestampToMilliseconds(value, dataType)
+      return dayjs(ms).format('YYYY-MM-DD HH:mm:ss')
+    }
   }
 }
 

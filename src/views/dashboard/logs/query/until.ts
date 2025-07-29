@@ -1,6 +1,6 @@
 import dayjs from 'dayjs'
 import type { SchemaType } from '@/store/modules/code-run/types'
-import { TSColumn } from './types'
+import type { TSColumn } from '@/types/query'
 
 function findWhereClausePosition(sql: string) {
   // Normalize case for easier comparison
@@ -97,7 +97,10 @@ export const TableNameReg = /(?<=from|FROM)\s+([^\s;]+)/
 export function parseTable(sql: string) {
   const result = sql.match(TableNameReg)
   if (result && result.length) {
-    const arr = result[1].trim().split('.')
+    const tableName = result[1].trim()
+    // Remove quotes if they exist
+    const cleanTableName = tableName.replace(/^["'`]|["'`]$/g, '')
+    const arr = cleanTableName.split('.')
     return arr[arr.length - 1]
   }
   return ''
