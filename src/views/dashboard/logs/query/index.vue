@@ -250,7 +250,7 @@
   watch(
     canExecuteInitialQuery,
     (canExecute) => {
-      if (canExecute) {
+      if (canExecute && urlSync.hasInitParams.value) {
         nextTick(() => {
           handleQuery()
         })
