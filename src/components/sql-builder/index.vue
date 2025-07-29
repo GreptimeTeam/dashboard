@@ -45,8 +45,8 @@ a-form(
             a-input.value(
               v-if="getFieldType(condition.field) === 'Number' || getFieldType(condition.field) === 'Time'"
               v-model.number="condition.value"
-              placeholder="value"
               style="width: 60px"
+              :placeholder="condition.operator === 'IN' || condition.operator === 'NOT IN' ? 'val1,val2' : 'value'"
             )
             a-select.value(
               v-else-if="getFieldType(condition.field) === 'Boolean'"
@@ -58,8 +58,8 @@ a-form(
             a-input.value(
               v-else
               v-model="condition.value"
-              placeholder="value"
               style="width: 60px"
+              :placeholder="condition.operator === 'IN' || condition.operator === 'NOT IN' ? 'val1,val2' : 'value'"
             )
           a-button.field-action(@click="() => removeCondition(index)")
             icon-minus(style="cursor: pointer; font-size: 14px")
