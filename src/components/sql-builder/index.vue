@@ -43,7 +43,7 @@ a-form(
           )
           template(v-if="condition.operator !== 'Not Exist' && condition.operator !== 'Exist'")
             a-input.value(
-              v-if="getFieldType(condition.field) === 'Number'"
+              v-if="getFieldType(condition.field) === 'Number' || getFieldType(condition.field) === 'Time'"
               v-model.number="condition.value"
               placeholder="value"
               style="width: 60px"
