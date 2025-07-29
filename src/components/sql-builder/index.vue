@@ -232,11 +232,11 @@ QuickFilters(
 
   // Operator mapping based on field data type (similar to log query)
   const operatorMap = {
-    String: ['=', '!=', 'LIKE', 'NOT LIKE', 'Not Exist', 'Exist'],
-    Number: ['=', '!=', '>', '>=', '<', '<=', 'Not Exist', 'Exist'],
-    Time: ['>', '>=', '<', '<=', 'Not Exist', 'Exist'],
+    String: ['=', '!=', 'LIKE', 'NOT LIKE', 'Not Exist', 'Exist', 'IN', 'NOT IN'],
+    Number: ['=', '!=', '>', '>=', '<', '<=', 'Not Exist', 'Exist', 'IN', 'NOT IN'],
+    Time: ['>', '>=', '<', '<=', 'Not Exist', 'Exist', 'IN', 'NOT IN'],
     Boolean: ['=', '!=', 'Not Exist', 'Exist'],
-    Default: ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'NOT LIKE', 'Not Exist', 'Exist'],
+    Default: ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'NOT LIKE', 'Not Exist', 'Exist', 'IN', 'NOT IN'],
   }
 
   function getFieldType(fieldName: string): string {

@@ -65,24 +65,26 @@ export function useSqlBuilderHook(options: SqlBuilderHookOptions) {
         return `"${field}" LIKE '%${escapeSqlString(String(value))}%'`
       case 'NOT LIKE':
         return `"${field}" NOT LIKE '%${escapeSqlString(String(value))}%'`
-      case 'IN':
-        if (Array.isArray(value)) {
-          const escapedValues = value.map((v) => formatValue(v)).join(', ')
-          return `"${field}" IN (${escapedValues})`
-        }
-        return `"${field}" IN (${formatValue(value)})`
-      case 'NOT IN':
-        if (Array.isArray(value)) {
-          const escapedValues = value.map((v) => formatValue(v)).join(', ')
-          return `"${field}" NOT IN (${escapedValues})`
-        }
-        return `"${field}" NOT IN (${formatValue(value)})`
+      case 'IN': {
+        const inVal = (value as string)
+          .split(',')
+          .map((v) => formatValue(v.trim()))
+          .join(',')
+        return `"${field}" IN (${inVal})`
+      }
+      case 'NOT IN': {
+        const inVal = (value as string)
+          .split(',')
+          .map((v) => formatValue(v.trim()))
+          .join(',')
+        return `"${field}" NOT IN (${inVal})`
+      }
       case 'Exist':
         return `"${field}" IS NOT NULL`
       case 'Not Exist':
         return `"${field}" IS NULL`
       default:
-        return `"${field}" ${operator} ${formatValue(value)}`
+        return `"${field}"${operator}${formatValue(value)}`
     }
   }
 
