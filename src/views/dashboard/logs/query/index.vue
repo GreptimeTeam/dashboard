@@ -219,6 +219,9 @@
     executeQuery().then(() => {
       refreshPagination()
     })
+    nextTick(() => {
+      chartContainerRef.value?.triggerCurrentChartQuery()
+    })
   }
 
   function handleFilterConditionAdd({ columnName, operator, value }) {
