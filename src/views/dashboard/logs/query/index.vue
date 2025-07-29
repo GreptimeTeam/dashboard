@@ -7,7 +7,7 @@
       .toolbar
         a-radio-group(type="button" :model-value="editorType" @update:modelValue="(val) => (editorType = val)")
           a-radio(value="builder") Builder
-          a-radio(value="text") Text
+          a-radio(value="text") Code
         TimeRangeSelect(
           button-type="outline"
           :time-length="time"

@@ -8,7 +8,7 @@
         a-space
           a-radio-group(v-model="editorType" type="button")
             a-radio(value="builder") Builder
-            a-radio(value="text") Text
+            a-radio(value="text") Code
           TimeRangeSelect(
             ref="timeRangeSelectRef"
             v-model:time-length="time"
