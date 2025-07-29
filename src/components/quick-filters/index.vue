@@ -56,14 +56,7 @@
 <script setup lang="ts" name="QuickFilters">
   import { ref, computed, watch, reactive, nextTick } from 'vue'
   import { useLocalStorage } from '@vueuse/core'
-
-  interface Condition {
-    field: string
-    operator: string
-    value: string
-    relation?: 'AND' | 'OR'
-    isTimeColumn?: boolean
-  }
+  import type { BuilderFormState, Condition } from '@/types/query'
 
   interface TableField {
     name: string
@@ -71,13 +64,8 @@
     semantic_type: string
   }
 
-  interface QuickFilter {
+  interface QuickFilter extends BuilderFormState {
     name: string
-    table: string
-    conditions: Condition[]
-    orderByField: string
-    orderBy: string
-    limit: number
     createdAt: number
   }
 
@@ -85,13 +73,7 @@
 
   const props = defineProps<{
     fields: TableField[]
-    form: {
-      table: string
-      orderByField: string
-      orderBy: string
-      limit: number
-      conditions: Condition[]
-    }
+    form: BuilderFormState
     quickFieldNames?: string[]
     storageKey: string
   }>()
@@ -148,6 +130,7 @@
           orderBy: props.form.orderBy,
           limit: props.form.limit,
           createdAt: Date.now(),
+          tsColumn: null,
         }
       })
   }
@@ -184,6 +167,7 @@
         orderBy: props.form.orderBy,
         limit: props.form.limit,
         createdAt: Date.now(),
+        tsColumn: null,
       }
       savedQuickFilters.value.push(newQuickFilter)
 
