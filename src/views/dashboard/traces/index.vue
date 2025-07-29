@@ -46,6 +46,7 @@
           storage-key="traces-query-table"
           :form-state="builderFormState"
           :quick-field-names="['trace_id', 'service_name']"
+          :default-form-state="defaultFormState"
         )
         SqlTextEditor(v-else v-model="textEditor.textEditorState.sql" @update:sql-info="handleSqlInfoUpdate")
 
@@ -88,7 +89,7 @@
       conditions: [{ field: 'parent_span_id', operator: 'Not Exist', value: '', relation: 'AND' }],
     },
   })
-  const { builderFormState, addFilterCondition, generateSql } = builder
+  const { builderFormState, addFilterCondition, generateSql, defaultFormState } = builder
 
   // 3. Text editor state
   const textEditor = useTextEditorState()

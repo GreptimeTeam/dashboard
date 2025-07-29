@@ -44,6 +44,7 @@
           ref="sqlBuilderRef"
           storage-key="logs-query-table"
           :form-state="builderFormState"
+          :default-form-state="defaultFormState"
         )
         SqlTextEditor(
           v-if="editorType === 'text'"
@@ -131,7 +132,7 @@
   const { rangeTime, time, timeRangeValues } = timeRange
 
   const builder = useSqlBuilderHook({ storageKey: 'logsquery-table', timeRangeValues })
-  const { builderFormState, addFilterCondition, generateSql } = builder
+  const { builderFormState, addFilterCondition, generateSql, defaultFormState } = builder
 
   const textEditor = useTextEditorState()
 
