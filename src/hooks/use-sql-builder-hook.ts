@@ -53,11 +53,14 @@ export function useSqlBuilderHook(options: SqlBuilderHookOptions) {
     const { field, operator, value } = condition
 
     // Helper function to format value based on type
-    const formatValue = (val: any) => {
-      if (typeof val === 'number' || typeof val === 'boolean') {
-        return val // No escaping or quoting for numbers/booleans
+    const formatValue = (val: any, fieldType: Condition['fieldType']) => {
+      if (fieldType === 'Number' || fieldType === 'Time') {
+        return Number(val)
       }
-      return `'${escapeSqlString(val)}'` // Escape and quote strings
+      if (fieldType === 'Boolean') {
+        return Boolean(val)
+      }
+      return `'${escapeSqlString(val)}'`
     }
 
     switch (operator) {
@@ -68,14 +71,14 @@ export function useSqlBuilderHook(options: SqlBuilderHookOptions) {
       case 'IN': {
         const inVal = (value as string)
           .split(',')
-          .map((v) => formatValue(v.trim()))
+          .map((v) => formatValue(v.trim(), condition.fieldType))
           .join(',')
         return `"${field}" IN (${inVal})`
       }
       case 'NOT IN': {
         const inVal = (value as string)
           .split(',')
-          .map((v) => formatValue(v.trim()))
+          .map((v) => formatValue(v.trim(), condition.fieldType))
           .join(',')
         return `"${field}" NOT IN (${inVal})`
       }
@@ -84,7 +87,7 @@ export function useSqlBuilderHook(options: SqlBuilderHookOptions) {
       case 'Not Exist':
         return `"${field}" IS NULL`
       default:
-        return `"${field}"${operator}${formatValue(value)}`
+        return `"${field}"${operator}${formatValue(value, condition.fieldType)}`
     }
   }
 

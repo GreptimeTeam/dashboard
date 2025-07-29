@@ -4,6 +4,7 @@ export interface Condition {
   value: string | number | boolean
   relation?: 'AND' | 'OR'
   isTimeColumn?: boolean
+  fieldType?: string
 }
 
 export type TSColumn = {

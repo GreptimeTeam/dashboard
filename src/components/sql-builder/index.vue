@@ -33,6 +33,7 @@ a-form(
             style="width: 140px"
             :trigger-props="{ autoFitPopupMinWidth: true }"
             :options="fieldsOptions"
+            @change="() => handleFieldChange(condition)"
           )
           a-select.operator(
             v-model="condition.operator"
@@ -42,14 +43,8 @@ a-form(
             :options="getOperators(condition.field)"
           )
           template(v-if="condition.operator !== 'Not Exist' && condition.operator !== 'Exist'")
-            a-input.value(
-              v-if="getFieldType(condition.field) === 'Number' || getFieldType(condition.field) === 'Time'"
-              v-model.number="condition.value"
-              style="width: 60px"
-              :placeholder="condition.operator === 'IN' || condition.operator === 'NOT IN' ? 'val1,val2' : 'value'"
-            )
             a-select.value(
-              v-else-if="getFieldType(condition.field) === 'Boolean'"
+              v-if="getFieldType(condition.field) === 'Boolean'"
               v-model.boolean="condition.value"
               placeholder="value"
               style="width: 60px"
@@ -241,7 +236,7 @@ QuickFilters(
 
   function getFieldType(fieldName: string): string {
     const field = fields.value.find((f) => f.name === fieldName)
-    if (!field) return 'Default'
+    if (!field) return 'String'
 
     const dataType = field.data_type.toLowerCase()
 
@@ -259,11 +254,8 @@ QuickFilters(
     if (dataType.includes('bool')) {
       return 'Boolean'
     }
-    if (dataType.includes('string') || dataType.includes('varchar') || dataType.includes('text')) {
-      return 'String'
-    }
 
-    return 'Default'
+    return 'String'
   }
 
   function getOperators(field: string) {
@@ -338,7 +330,12 @@ QuickFilters(
       value: '',
       relation: 'AND',
       isTimeColumn: false,
+      fieldType: 'String',
     })
+  }
+
+  function handleFieldChange(condition: Condition) {
+    condition.fieldType = getFieldType(condition.field)
   }
 
   function removeCondition(index: number) {
@@ -383,6 +380,7 @@ QuickFilters(
       value: String(value),
       isTimeColumn: isTimeCol,
       relation: 'AND',
+      fieldType: getFieldType(columnName),
     }
 
     form.conditions.push(newCondition)
