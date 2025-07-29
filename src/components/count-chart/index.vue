@@ -15,6 +15,7 @@ VCharts(
   import editorAPI from '@/api/editor'
   import type { QueryState } from '@/types/query'
   import { replaceTimePlaceholders } from '@/utils/sql'
+  import { convertTimestampToMilliseconds } from '@/utils/date-time'
 
   interface Props {
     queryState: QueryState
@@ -138,31 +139,6 @@ VCharts(
     return defaultIntervalCalculator(props.queryState.time, props.queryState.rangeTime)
   })
 
-  // Timestamp converter using tsColumn data_type
-  const convertTimestamp = (timestamp: any) => {
-    const { tsColumn } = props.queryState
-
-    if (!tsColumn?.data_type) {
-      // Default to nanoseconds (traces style)
-      return new Date(timestamp / 1000 / 1000).getTime()
-    }
-    const type = tsColumn.data_type.toLowerCase()
-    if (type.toLowerCase().includes('nano')) {
-      return timestamp / 1_000_000
-    }
-    if (type.toLowerCase().includes('micro')) {
-      return timestamp / 1_000
-    }
-    if (type.toLowerCase().includes('milli')) {
-      return timestamp
-    }
-    if (type.toLowerCase().includes('second')) {
-      return timestamp * 1000
-    }
-    // Fallback: try to use as milliseconds
-    return timestamp
-  }
-
   const countSql = computed(() => {
     const { table, sql, tsColumn, timeRangeValues } = props.queryState
     if (!table || !sql || !tsColumn?.name) {
@@ -209,7 +185,10 @@ VCharts(
         const { rows } = result.output[0].records
 
         // Convert timestamps using tsColumn multiple
-        const tmpData = rows.map((row: any[]) => [convertTimestamp(row[0]), row[1]])
+        const tmpData = rows.map((row: any[]) => [
+          convertTimestampToMilliseconds(row[0], props.queryState.tsColumn.data_type),
+          row[1],
+        ])
         data.value = tmpData.reverse() // Reverse to show chronological order
 
         // Update chart cursor state based on data availability
