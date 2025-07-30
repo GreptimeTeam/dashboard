@@ -145,14 +145,13 @@ const runSQLWithCSV = (code: string, format?: string): Promise<HttpResponse> => 
  * Fetches the schema (column_name, data_type, semantic_type) for a given table.
  */
 const getTableSchema = (tableName: string, database?: string) => {
-  const appStore = useAppStore()
+  const { tableSchema, tableCatalog } = storeToRefs(useAppStore())
+
   return axios
     .post(
       sqlUrl,
       makeSqlData(
-        `SELECT column_name, data_type, semantic_type FROM information_schema.columns WHERE table_name = '${tableName}' AND table_schema = '${
-          database || appStore.database
-        }' ORDER BY column_name`
+        `SELECT column_name, data_type, semantic_type FROM information_schema.columns WHERE table_name = '${tableName}' AND table_catalog = '${tableCatalog.value}' AND table_schema = '${tableSchema.value}' ORDER BY column_name`
       ),
       addDatabaseParams(database)
     )

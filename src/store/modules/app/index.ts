@@ -134,6 +134,13 @@ const useAppStore = defineStore('app', () => {
     }
   }
 
+  const tableCatalog = computed(() => {
+    return database.value.split('-').slice(0, -1).join('-') || 'greptime'
+  })
+  const tableSchema = computed(() => {
+    return database.value.split('-').slice(-1).join('-')
+  })
+
   return {
     // State
     theme,
@@ -165,6 +172,8 @@ const useAppStore = defineStore('app', () => {
     toggleDevice,
     toggleMenu,
     fetchDatabases,
+    tableCatalog,
+    tableSchema,
   }
 })
 
