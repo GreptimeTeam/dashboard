@@ -49,7 +49,7 @@ NewsModal(ref="newsModal" :news-list="newsList" :loading="isLoadingNews")
 
   const router = useRouter()
   const { updateSettings } = useAppStore()
-  const { menuSelectedKey, globalSettings, isFullScreen } = storeToRefs(useAppStore())
+  const { menuSelectedKey, globalSettings, hideSidebar } = storeToRefs(useAppStore())
   const { activeTab: ingestTab } = storeToRefs(useIngestStore())
   const { menuTree } = useMenuTree()
   const { newsList, isLoadingNews } = useNews()
@@ -86,9 +86,11 @@ NewsModal(ref="newsModal" :news-list="newsList" :loading="isLoadingNews")
   }
 
   const menuClick = (key: string) => {
-    // if (key === menuSelectedKey.value) {
-    //   isFullScreen.value = !isFullScreen.value
-    // }
+    if (key === menuSelectedKey.value) {
+      hideSidebar.value = !hideSidebar.value
+    } else {
+      hideSidebar.value = false
+    }
     switch (key) {
       case 'ingest':
         router.push({ name: ingestTab.value || 'ingest' })

@@ -1,6 +1,6 @@
 <template lang="pug">
 a-layout.new-layout
-  a-layout-sider(:resize-directions="['right']" :width="320" :class="isFullScreen ? 'hide-sider' : ''")
+  a-layout-sider(:resize-directions="['right']" :width="320" :class="hideSidebar ? 'hide-sider' : ''")
     TableManager(:databaseList="databaseList")
   a-layout-content.layout-content(:class="{ 'has-panel': !footer[activeTab] }")
     a-space.layout-space(direction="vertical" fill :size="0")
@@ -37,7 +37,7 @@ a-layout.new-layout
 
   const { s, q } = useMagicKeys()
   const activeElement = useActiveElement()
-  const { isFullScreen, databaseList } = storeToRefs(useAppStore())
+  const { hideSidebar, databaseList } = storeToRefs(useAppStore())
   const { logs } = storeToRefs(useLogStore())
   const { activeTab, footer } = storeToRefs(useIngestStore())
   const { dataStatusMap } = storeToRefs(useUserStore())

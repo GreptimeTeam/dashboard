@@ -76,4 +76,5 @@ export default {
   'dashboard.exportCSV': 'Export Result as CSV',
   'dashboard.wrapLine': 'Wrap Lines',
   'dashboard.copy': 'Copy',
+  'dashboard.hideSidebar': 'Hide sidebar',
 }

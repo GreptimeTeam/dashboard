@@ -19,6 +19,6 @@
   "lifetime": "long",
   "menuSelectedKey": "tables",
   "userTimezone": "",
-  "isFullScreen": false,
+  "hideSidebar": false,
   "authHeader": "Authorization"
 }

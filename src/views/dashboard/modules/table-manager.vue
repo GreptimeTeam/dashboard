@@ -13,15 +13,30 @@ a-card.table-manager(:bordered="false")
           svg.icon.brand-color
             use(href="#refresh")
     a-space
-      a-input.search-table(
-        v-model="tablesSearchKey"
-        size="mini"
-        :allow-clear="true"
-        :placeholder="$t('dashboard.input')"
-      )
-        template(#prefix)
-          svg.icon.icon-color
-            use(href="#search")
+      a-space(align="center" :size="0")
+        a-input.search-table(
+          v-model="tablesSearchKey"
+          size="mini"
+          :allow-clear="true"
+          :placeholder="$t('dashboard.input')"
+        )
+          template(#prefix)
+            svg.icon.icon-color
+              use(href="#search")
+        a-tooltip(
+          :content="$t('dashboard.hideSidebar')"
+          position="tr"
+          v-model:popup-visible="tooltipVisible"
+          mini
+        )
+          a-button(
+            type="secondary"
+            size="mini"
+            @click="toggleSidebar"
+          )
+            template(#icon)
+              svg.icon.icon-color.rotate-270(:class="{ 'rotate-180': hideSidebar }")
+                use(href="#collapse")
   a-spin(style="width: 100%" :loading="tablesLoading")
     a-collapse.databases(
       v-model:active-key="databaseActiveKeys"
@@ -135,7 +150,9 @@ a-card.table-manager(:bordered="false")
     databaseList: string[]
   }>()
 
-  const { fetchDatabases } = useAppStore()
+  const appStore = useAppStore()
+  const { fetchDatabases } = appStore
+  const { hideSidebar } = storeToRefs(appStore)
   const { insertNameToPyCode } = usePythonCode()
   const { tablesSearchKey, tablesTreeRef, refreshTables, loadMore, loadMoreColumns, isRefreshingDetails } =
     useSiderTabs()
@@ -146,6 +163,7 @@ a-card.table-manager(:bordered="false")
   const collapseHeadersHeight = computed(() => props.databaseList.length * 36)
 
   const expandedKeys = ref<number[]>([])
+  const tooltipVisible = ref(false)
 
   const setRefMap = (el: any, database: string) => {
     if (!tablesTreeRef.value) {
@@ -206,6 +224,11 @@ a-card.table-manager(:bordered="false")
     FIELD: '#value',
     TAG: '#primary-key',
     TIMESTAMP: '#time-index',
+  }
+
+  const toggleSidebar = () => {
+    tooltipVisible.value = false
+    hideSidebar.value = !hideSidebar.value
   }
 </script>
 
@@ -275,7 +298,7 @@ a-card.table-manager(:bordered="false")
     }
 
     :deep(> .arco-card-header) {
-      padding: 10px 0 10px 15px;
+      padding: 10px 6px 10px 15px;
       height: 52px;
 
       > .arco-card-header-title {
@@ -561,10 +584,14 @@ a-card.table-manager(:bordered="false")
   .arco-input-wrapper.search-table {
     padding: 0 10px;
     font-family: 'Open Sans';
-    width: calc(100% - 15px);
+    width: calc(100% - 8px);
 
     :deep(> .arco-input-prefix) {
       padding-right: 10px;
+    }
+
+    :deep(> .arco-input-suffix) {
+      padding-left: 8px;
     }
   }
 </style>

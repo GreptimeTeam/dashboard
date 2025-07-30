@@ -5,7 +5,7 @@ a-card.data-grid(:bordered="false")
       svg.icon-20
         use(href="#table")
       | {{ $t('dashboard.table') }}
-  a-space.toolbar(v-if="hasExpandableContent")
+  a-space.toolbar
     a-checkbox(v-model="wrapLines" size="small" @change="toggleLineWrapping")
       | {{ $t('dashboard.wrapLines') }}
   a-spin.table-spin
@@ -272,17 +272,6 @@ a-card.data-grid(:bordered="false")
   const isCellVisiblyExpanded = (rowIndex, columnKey) => {
     return wrapLines.value || expandedCells.value[`${rowIndex}-${columnKey}`]
   }
-
-  const hasExpandableContent = computed(() => {
-    if (!gridData.value || gridData.value.length === 0) return false
-
-    return gridData.value.some((row) =>
-      Object.keys(row).some((key) => {
-        if (key === '__types') return false
-        return needsExpansion(row[key], row.__types?.[key])
-      })
-    )
-  })
 
   const toggleCell = (rowIndex, columnKey, forceExpand = false) => {
     const key = `${rowIndex}-${columnKey}`
