@@ -152,7 +152,7 @@ QuickFilters(
   const tableMap = ref<{ [key: string]: TableField[] }>({})
 
   // Get current database from app store
-  const { database } = storeToRefs(useAppStore())
+  const { database, tableCatalog, tableSchema } = storeToRefs(useAppStore())
 
   // Use localStorage to remember the last selected table
   const storageKey = props.storageKey || 'sql-builder-last-table'
@@ -270,7 +270,7 @@ QuickFilters(
 
   async function fetchTables() {
     try {
-      let sql = `SELECT DISTINCT table_name FROM information_schema.columns WHERE table_schema = '${database.value}'`
+      let sql = `SELECT DISTINCT table_name FROM information_schema.columns WHERE table_catalog = '${tableCatalog.value}' AND table_schema = '${tableSchema.value}'`
 
       // Add filter if specified (e.g., for traces we want tables with trace_id column)
       if (props.tableFilter) {
