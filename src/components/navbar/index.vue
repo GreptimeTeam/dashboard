@@ -118,6 +118,7 @@ NewsModal(ref="newsModal" :news-list="newsList" :loading="isLoadingNews")
   .navbar {
     height: 100%;
     width: 100%;
+    border-right: 1px solid var(--border-color);
   }
 
   .logo-space {
