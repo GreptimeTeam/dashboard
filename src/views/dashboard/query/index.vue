@@ -55,10 +55,15 @@ a-layout.new-layout
 
   const sidebarWidth = useStorage('sidebarWidth', 320)
 
+  watch(sidebarWidth, (newWidth) => {
+    if (newWidth < 100) {
+      sidebarWidth.value = 100
+    }
+  })
+
   const actualSidebarWidth = computed(() => {
     const minWidth = 100
     const maxWidth = window.innerWidth * 0.4
-
     return Math.max(minWidth, Math.min(sidebarWidth.value, maxWidth))
   })
 
