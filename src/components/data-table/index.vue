@@ -243,7 +243,10 @@ a-dropdown#td-context(
           title: props.tsColumn.name,
         } as Column)
       }
-      tmpColumns = tmpColumns.filter((c) => props.displayedColumns?.indexOf(c.name) > -1)
+      tmpColumns =
+        props.displayedColumns.length > 0
+          ? tmpColumns.filter((c) => props.displayedColumns?.indexOf(c.name) > -1)
+          : tmpColumns
 
       // Only calculate widths when virtual list is active
       if (props.virtualListProps) {
