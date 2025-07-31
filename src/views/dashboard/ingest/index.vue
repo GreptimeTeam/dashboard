@@ -1,6 +1,6 @@
 <template lang="pug">
 a-layout.new-layout
-  a-layout-sider(:resize-directions="['right']" :width="200")
+  a-layout-sider(:resize-directions="['right']" :width="200" :class="hideSidebar ? 'hide-sider' : ''")
     a-card.sidebar(:title="$t('menu.dashboard.ingest')" :bordered="false")
       a-menu(
         mode="vertical"
@@ -52,7 +52,7 @@ a-layout.new-layout
   const router = useRouter()
   const route = useRoute()
   const { menuTree } = useMenuTree()
-
+  const { hideSidebar } = storeToRefs(useAppStore())
   const { activeTab, footer } = storeToRefs(useIngestStore())
   const { logs } = storeToRefs(useLogStore())
   const { dataStatusMap } = storeToRefs(useUserStore())

@@ -23,7 +23,7 @@ const useAppStore = defineStore('app', () => {
   const lifetime = ref(defaultSettings.lifetime)
   const menuSelectedKey = ref(defaultSettings.menuSelectedKey)
   const userTimezone = ref(defaultSettings.userTimezone)
-  const isFullScreen = ref(defaultSettings.isFullScreen)
+  const hideSidebar = ref(defaultSettings.hideSidebar)
   const authHeader = ref(defaultSettings.authHeader)
 
   // Actions
@@ -46,7 +46,7 @@ const useAppStore = defineStore('app', () => {
     if (partial.lifetime !== undefined) lifetime.value = partial.lifetime
     if (partial.menuSelectedKey !== undefined) menuSelectedKey.value = partial.menuSelectedKey
     if (partial.userTimezone !== undefined) userTimezone.value = partial.userTimezone
-    if (partial.isFullScreen !== undefined) isFullScreen.value = partial.isFullScreen
+    if (partial.hideSidebar !== undefined) hideSidebar.value = partial.hideSidebar
   }
 
   const updateConfigStorage = (config?: Partial<AppState>) => {
@@ -155,7 +155,7 @@ const useAppStore = defineStore('app', () => {
     lifetime,
     menuSelectedKey,
     userTimezone,
-    isFullScreen,
+    hideSidebar,
 
     // Actions
     updateSettings,

@@ -21,7 +21,7 @@ export interface AppState {
   lifetime: string
   menuSelectedKey: string
   userTimezone: string
-  isFullScreen: boolean
+  hideSidebar: boolean
   authHeader: string
   [key: string]: unknown
 }

@@ -1,7 +1,13 @@
 <template lang="pug">
 a-layout.new-layout
-  a-layout-sider(:resize-directions="['right']" :width="320" :class="isFullScreen ? 'hide-sider' : ''")
-    TableManager(:databaseList="databaseList")
+  a-resize-box(
+    v-model:width="sidebarWidth"
+    :directions="['right']"
+    :style="{ 'min-width': '100px', 'max-width': '40vw' }"
+    :class="hideSidebar ? 'hide-sider' : ''"
+  )
+    a-layout-sider(:width="actualSidebarWidth")
+      TableManager(:databaseList="databaseList")
   a-layout-content.layout-content(:class="{ 'has-panel': !footer[activeTab] }")
     a-space.layout-space(direction="vertical" fill :size="0")
       a-space.editor-space(
@@ -37,7 +43,7 @@ a-layout.new-layout
 
   const { s, q } = useMagicKeys()
   const activeElement = useActiveElement()
-  const { isFullScreen, databaseList } = storeToRefs(useAppStore())
+  const { hideSidebar, databaseList } = storeToRefs(useAppStore())
   const { logs } = storeToRefs(useLogStore())
   const { activeTab, footer } = storeToRefs(useIngestStore())
   const { dataStatusMap } = storeToRefs(useUserStore())
@@ -46,6 +52,16 @@ a-layout.new-layout
   const { explainResult } = storeToRefs(useCodeRunStore())
   const types = ['sql', 'promql']
   const logsHeight = ref(66)
+
+  const sidebarWidth = useStorage('sidebarWidth', 320)
+
+  const actualSidebarWidth = computed(() => {
+    const minWidth = 100
+    const maxWidth = window.innerWidth * 0.4
+
+    return Math.max(minWidth, Math.min(sidebarWidth.value, maxWidth))
+  })
+
   const results = computed(() => getResultsByType(types))
   const queryLogs = computed(() => logs.value.filter((log) => types.includes(log.type)))
   const dataViewRef = ref(null)
