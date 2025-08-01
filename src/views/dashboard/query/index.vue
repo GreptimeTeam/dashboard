@@ -23,7 +23,9 @@ a-layout.new-layout
           :results="results"
           :types="types"
           :explainResult="explainResult"
+          :is-in-full-size-mode="false"
           @update:explainResult="(val) => (explainResult = val)"
+          @toggle-full-size="handleToggleFullSize"
         )
       a-resize-box.panel-resize(
         v-model:height="logsHeight"
@@ -33,6 +35,27 @@ a-layout.new-layout
         a-tabs.panel-tabs
           a-tab-pane(title="Log" key="log")
             LogsNew(:logs="queryLogs")
+
+  a-modal.full-size-modal(
+    v-model:visible="isFullSizeMode"
+    :class="{ 'full-screen': isFullSizeMode }"
+    :align-center="false"
+    :footer="false"
+    :closable="false"
+    :header="false"
+    :esc-to-close="true"
+    :mask-style="{ backgroundColor: 'transparent', 'pointer-events': 'auto' }"
+  )
+    DataView.full-size(
+      v-if="!!results?.length || !!explainResult"
+      :results="results"
+      :types="types"
+      :explainResult="explainResult"
+      :show-full-size-button="false"
+      :is-in-full-size-mode="true"
+      @update:explainResult="(val) => (explainResult = val)"
+      @toggle-full-size="isFullSizeMode = false"
+    )
 </template>
 
 <script lang="ts" setup name="QueryNew">
@@ -41,7 +64,7 @@ a-layout.new-layout
   import 'driver.js/dist/driver.css'
   import { navbarSteps, tableSteps } from '../config'
 
-  const { s, q } = useMagicKeys()
+  const { s, q, escape } = useMagicKeys()
   const activeElement = useActiveElement()
   const { hideSidebar, databaseList } = storeToRefs(useAppStore())
   const { logs } = storeToRefs(useLogStore())
@@ -52,6 +75,7 @@ a-layout.new-layout
   const { explainResult } = storeToRefs(useCodeRunStore())
   const types = ['sql', 'promql']
   const logsHeight = ref(66)
+  const isFullSizeMode = ref(false)
 
   const sidebarWidth = useStorage('sidebarWidth', 320)
 
@@ -88,10 +112,24 @@ a-layout.new-layout
       queryType.value = 'promql'
   })
 
+  watch(escape, (v) => {
+    if (v && isFullSizeMode.value) {
+      isFullSizeMode.value = false
+    }
+  })
+
   const selectExplainTab = () => {
     if (dataViewRef.value) {
       dataViewRef.value.selectTab('explain')
     }
+  }
+
+  const handleToggleFullSize = (fullSize: boolean) => {
+    isFullSizeMode.value = fullSize
+  }
+
+  const toggleFullSize = () => {
+    isFullSizeMode.value = !isFullSizeMode.value
   }
 
   const globalTour = driver({
@@ -164,6 +202,33 @@ a-layout.new-layout
       padding-right: 1px;
       .arco-resizebox-trigger-icon-wrapper {
         font-size: 12px;
+      }
+    }
+  }
+</style>
+
+<style lang="less">
+  .full-size-modal {
+    .arco-modal-wrapper {
+      overflow: hidden;
+      .arco-modal {
+        pointer-events: auto;
+        box-shadow: 0 2px 10px 0 var(--box-shadow-color);
+        width: calc(100vw - var(--navbar-width-collapsed) - 16px);
+        border: 1px solid var(--border-color);
+        .arco-modal-body {
+          padding: 8px 16px;
+          height: calc(100vh - var(--footer-height) - 20px);
+        }
+      }
+    }
+
+    &.full-screen {
+      .arco-modal {
+        transform: none !important;
+        position: fixed !important;
+        right: 6px !important;
+        top: 10px !important;
       }
     }
   }

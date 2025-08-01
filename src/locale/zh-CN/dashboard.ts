@@ -63,6 +63,8 @@ export default {
   'dashboard.details': 'Information',
   'dashboard.quickSelect': 'Quick Query',
   'dashboard.clearCode': 'Clear Code',
+  'dashboard.fullSizeMode': '全屏模式',
+  'dashboard.exitFullSize': '退出全屏',
   'dashboard.refresh': 'Refresh',
   'dashboard.hints.columns': 'View column name and type, create quick query from any column.',
   'dashboard.hints.details': 'View metadata of the table.',
