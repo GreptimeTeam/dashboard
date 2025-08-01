@@ -174,8 +174,15 @@ a-drawer.settings-drawer(
     const res = await fetchDatabases()
     settingsForm.value.databaseList = databaseList.value
     settingsForm.value.database = database.value
+
     if (res) {
-      await save()
+      const loginSuccess = await login({})
+      if (loginSuccess) {
+        loginStatus.value = 'success'
+        checkTables()
+      } else {
+        loginStatus.value = 'fail'
+      }
     }
   })
 

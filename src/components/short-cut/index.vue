@@ -28,7 +28,6 @@ a-tooltip(position="right" :content="codeInfo.code")
 
   const { inputFromNewLineToQueryCode } = useQueryCode()
   const { loadMoreColumns } = useSiderTabs()
-  const { updateSettings } = useAppStore()
 
   const isLoading = ref(false)
 
