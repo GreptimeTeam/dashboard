@@ -214,7 +214,6 @@ export default function useQueryCode() {
   }
 
   onBeforeUnmount(() => {
-    console.log('Cleaning up timers')
     if (refreshTablesTimer) {
       clearTimeout(refreshTablesTimer)
     }
