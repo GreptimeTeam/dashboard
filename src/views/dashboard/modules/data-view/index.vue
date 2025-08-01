@@ -9,14 +9,20 @@ a-tabs.panel-tabs(
   @delete="deleteTab"
 )
   template(#extra)
-    a-popconfirm(
-      content="Clear results?"
-      type="warning"
-      ok-text="Clear"
-      cancel-text=""
-      @ok="clearResults"
-    )
-      a-button(status="danger" size="small") {{ $t('dashboard.clear') }}
+    a-space(:size="8")
+      a-tooltip(mini :content="props.isInFullSizeMode ? $t('dashboard.exitFullSize') : $t('dashboard.fullSizeMode')")
+        a-button(size="small" @click="toggleFullSize")
+          template(#icon)
+            svg.icon-16
+              use(href="#zoom")
+      a-popconfirm(
+        content="Clear results?"
+        type="warning"
+        ok-text="Clear"
+        cancel-text=""
+        @ok="clearResults"
+      )
+        a-button(status="danger" size="small") {{ $t('dashboard.clear') }}
   a-tab-pane(
     v-if="explainResult"
     key="explain"
@@ -96,9 +102,10 @@ a-tabs.panel-tabs(
     results: ResultType[]
     types: string[]
     explainResult?: ResultType
+    isInFullSizeMode?: boolean
   }>()
 
-  const emit = defineEmits(['update:explainResult'])
+  const emit = defineEmits(['update:explainResult', 'toggleFullSize'])
 
   const { removeResult, clear } = useCodeRunStore()
   const activeTabKey = ref<string | number>()
@@ -141,6 +148,10 @@ a-tabs.panel-tabs(
   const clearResults = () => {
     startKey.value = props.results[0]?.key as number
     clear(props.types)
+  }
+
+  const toggleFullSize = () => {
+    emit('toggleFullSize', !props.isInFullSizeMode)
   }
 
   watch(
@@ -338,6 +349,15 @@ a-tabs.panel-tabs(
           }
         }
       }
+    }
+  }
+
+  &.full-size {
+    :deep(> .arco-tabs-nav) {
+      height: 40px;
+    }
+    :deep(> .arco-tabs-content) {
+      height: calc(100% - 40px);
     }
   }
 

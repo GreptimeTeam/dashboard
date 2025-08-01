@@ -63,6 +63,8 @@ export default {
   'dashboard.details': 'Information',
   'dashboard.quickSelect': 'Quick Query',
   'dashboard.clearCode': 'Clear Code',
+  'dashboard.fullSizeMode': 'View fullscreen',
+  'dashboard.exitFullSize': 'Exit fullscreen',
   'dashboard.refresh': 'Refresh',
   'dashboard.hints.columns': 'View column name and type, create quick query from any column.',
   'dashboard.hints.details': 'Metadata of the table',
