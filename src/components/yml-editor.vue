@@ -1,6 +1,7 @@
 <template lang="pug">
 a-card.light-editor-card(:bordered="false")
   CodeMirror(
+    :placeholder="props.placeholder"
     :modelValue="props.modelValue"
     :extensions="extensions"
     :style="style"
@@ -23,6 +24,7 @@ a-card.light-editor-card(:bordered="false")
   const props = defineProps<{
     modelValue: string
     disabled?: boolean
+    placeholder?: string
   }>()
   const emit = defineEmits<{
     (event: 'update:modelValue', value: string): void
@@ -44,5 +46,11 @@ a-card.light-editor-card(:bordered="false")
 <style lang="less" scoped>
   :deep(.arco-card.light-editor-card) {
     padding-right: 0;
+  }
+  :deep(.arco-card-body) {
+    height: 100%;
+  }
+  :deep(.cm-focused) {
+    outline: none;
   }
 </style>
