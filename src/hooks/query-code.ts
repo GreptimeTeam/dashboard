@@ -58,57 +58,28 @@ export default function useQueryCode() {
     })
   }
 
-  // Debounce timers
-  let refreshTablesTimer: ReturnType<typeof setTimeout> | null = null
-  let fetchDatabasesTimer: ReturnType<typeof setTimeout> | null = null
-
   // Parse SQL command to extract operation details
   const parseSqlCommand = (sql: string) => {
     const regex =
       /\bSHOW\s+CREATE\s+TABLE\b|(?:CREATE|DROP|ALTER)\s+(DATABASE|TABLE)\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?[`"]?([\w.-]+)[`"]?/gi
-    const commands = []
 
     // Reset regex state to ensure proper matching
     regex.lastIndex = 0
-    let match = regex.exec(sql)
+    const match = regex.exec(sql)
 
-    while (match !== null) {
-      // Skip SHOW CREATE TABLE matches (they won't have capture groups)
-      if (match[1]) {
-        // Extract action from the full match
-        const fullMatch = match[0]
-        const action = fullMatch.split(/\s+/)[0].toUpperCase() // First word is the action
-        commands.push({
-          action,
-          object: match[1].toUpperCase(),
-          name: match[2],
-        })
+    // Return immediately after finding the first match
+    if (match && match[1]) {
+      // Extract action from the full match
+      const fullMatch = match[0]
+      const action = fullMatch.split(/\s+/)[0].toUpperCase() // First word is the action
+      return {
+        action,
+        object: match[1].toUpperCase(),
+        name: match[2],
       }
-      match = regex.exec(sql)
     }
 
-    return commands
-  }
-
-  // Debounced refresh functions
-  const debouncedRefreshTables = () => {
-    if (refreshTablesTimer) {
-      clearTimeout(refreshTablesTimer)
-    }
-    refreshTablesTimer = setTimeout(() => {
-      const { refreshTables } = useSiderTabs()
-      refreshTables()
-    }, 300)
-  }
-
-  const debouncedFetchDatabases = () => {
-    if (fetchDatabasesTimer) {
-      clearTimeout(fetchDatabasesTimer)
-    }
-    fetchDatabasesTimer = setTimeout(() => {
-      const { fetchDatabases } = useAppStore()
-      fetchDatabases()
-    }, 300)
+    return null
   }
 
   const runQuery = async (
@@ -125,59 +96,36 @@ export default function useQueryCode() {
     }
     if (!res.error && type === 'sql') {
       const sql = sqlFormatter(code)
-      const commands = parseSqlCommand(sql)
+      const command = parseSqlCommand(sql)
 
-      if (commands.length > 0) {
-        const { loadMoreColumns } = useSiderTabs()
+      if (command) {
+        const { refreshTables, loadMoreColumns } = useSiderTabs()
         const { originTablesTree } = storeToRefs(useDataBaseStore())
+        const { fetchDatabases } = useAppStore()
 
-        let needRefreshTables = false
-        let needRefreshDatabases = false
-        const alterTableTasks: Promise<void>[] = []
+        const commandType = `${command.action}_${command.object}`
 
-        // Process commands using forEach
-        commands.forEach((cmd) => {
-          const commandType = `${cmd.action}_${cmd.object}`
-
-          switch (commandType) {
-            case 'CREATE_DATABASE':
-            case 'DROP_DATABASE':
-              needRefreshDatabases = true
-              break
-            case 'CREATE_TABLE':
-            case 'DROP_TABLE':
-              needRefreshTables = true
-              break
-            case 'ALTER_TABLE': {
-              const tableNodeData = originTablesTree.value.find((item: TableTreeParent) => item.title === cmd.name)
-              if (tableNodeData) {
-                // Collect async tasks to be executed later
-                const task = Promise.resolve().then(async () => {
-                  await loadMoreColumns(tableNodeData, true)
-                  // Update new children
-                  originTablesTree.value[tableNodeData.key].children =
-                    originTablesTree.value[tableNodeData.key][tableNodeData.childrenType]
-                })
-                alterTableTasks.push(task)
-              }
-              break
+        switch (commandType) {
+          case 'CREATE_DATABASE':
+          case 'DROP_DATABASE':
+            await fetchDatabases()
+            break
+          case 'CREATE_TABLE':
+          case 'DROP_TABLE':
+            refreshTables()
+            break
+          case 'ALTER_TABLE': {
+            const tableNodeData = originTablesTree.value.find((item: TableTreeParent) => item.title === command.name)
+            if (tableNodeData) {
+              await loadMoreColumns(tableNodeData, true)
+              // Update new children
+              originTablesTree.value[tableNodeData.key].children =
+                originTablesTree.value[tableNodeData.key][tableNodeData.childrenType]
             }
-            default:
-              break
+            break
           }
-        })
-
-        // Execute all ALTER TABLE tasks in parallel
-        if (alterTableTasks.length > 0) {
-          await Promise.all(alterTableTasks)
-        }
-
-        // Apply debounced refreshes
-        if (needRefreshDatabases) {
-          debouncedFetchDatabases()
-        }
-        if (needRefreshTables) {
-          debouncedRefreshTables()
+          default:
+            break
         }
       }
     }
@@ -212,15 +160,6 @@ export default function useQueryCode() {
       throw enhancedError
     }
   }
-
-  onBeforeUnmount(() => {
-    if (refreshTablesTimer) {
-      clearTimeout(refreshTablesTimer)
-    }
-    if (fetchDatabasesTimer) {
-      clearTimeout(fetchDatabasesTimer)
-    }
-  })
 
   return {
     getResultsByType,
