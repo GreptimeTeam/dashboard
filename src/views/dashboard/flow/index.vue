@@ -10,7 +10,7 @@
           span.results-count(v-if="totalResults > 0") 
             | ({{ totalResults }} {{ totalResults === 1 ? 'record' : 'records' }})
       template(#extra)
-        a-button(size="small" @click="showCreate") Create
+        a-button(size="small" @click="showCreate") Create Flow
       DataTable(
         :data="data"
         :columns="columns"
@@ -18,38 +18,32 @@
         :show-context-menu="false"
       )
         template(#column-operate="{ record }")
-          a-popconfirm(content="Confirm to delete?" @ok="del(record)")
-            a-button(size="small") Delete
-    a-drawer(
-      v-if="form"
-      v-model:visible="addVisible"
-      title="Flow Create"
-      ok-text="Close"
-      :width="800"
-      :mask="false"
-      :hide-cancel="true"
+          a-space
+            a-button(size="small" @click="showEdit(record)") Edit
+            a-popconfirm(content="Confirm to delete?" @ok="del(record)")
+              a-button(size="small" status="danger") Delete
+
+    FlowDetailModal(
+      v-model:visible="modalVisible"
+      :is-edit="isEdit"
+      :edit-data="editData"
+      @saved="handleFlowSaved"
     )
-      a-form(layout="vertical" :model="form" @submit="create")
-        a-form-item(field="content" label="Content")
-          YmlEditor(v-model="form.content" language="sql" style="width: 100%; height: 500px")
-        a-form-item
-          a-button(html-type="submit" type="primary") Submit
 </template>
 
 <script setup name="FlowList" lang="ts">
   import type { TableColumnData } from '@arco-design/web-vue'
+  import { Message } from '@arco-design/web-vue'
   import editorAPI from '@/api/editor'
-  import YmlEditor from '@/components/yml-editor.vue'
   import DataTable from '@/components/data-table/index.vue'
+  import FlowDetailModal from './components/FlowDetailModal.vue'
   import { toObj } from '../logs/query/until'
 
   // Define the desired column order
   const displayedColumns = [
     'flow_name',
-    'flow_type',
-    'flow_id',
-    'source_table_names',
     'sink_table_name',
+    'source_table_names',
     'comment',
     'created_time',
     'updated_time',
@@ -63,10 +57,15 @@
   // Results header state
   const totalResults = ref(0)
 
+  // Modal state
+  const modalVisible = ref(false)
+  const isEdit = ref(false)
+  const editData = ref(null)
+
   function list() {
     loading.value = true
     editorAPI
-      .runSQL('select * from  INFORMATION_SCHEMA.FLOWS')
+      .runSQL('SHOW FLOWS')
       .then((result) => {
         const schemas = result.output[0].records.schema.column_schemas
 
@@ -99,34 +98,58 @@
         // Update total results count
         totalResults.value = data.value.length
 
-        console.log(data.value, columns.value)
         loading.value = false
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error('Failed to load flows:', error)
         loading.value = false
         totalResults.value = 0
+        Message.error('Failed to load flows list')
       })
   }
+
+  // Initial load
   list()
 
-  const addVisible = ref(false)
-  const form = reactive({ content: '' })
-
-  function showCreate() {
-    addVisible.value = true
+  function handleFlowSaved(eventData: { success: boolean; message?: string; mode: string }) {
+    const { success, message } = eventData
+    if (success) {
+      // Show success message
+      if (message) {
+        Message.success(message)
+      }
+      // Always refresh the flow list after successful save
+      list()
+    } else if (message) {
+      // Show error message
+      Message.error(message)
+    }
   }
 
-  function create() {
-    editorAPI.runSQL(form.content).then((result) => {
-      list()
-      addVisible.value = false
-    })
+  function showCreate() {
+    isEdit.value = false
+    editData.value = null
+    modalVisible.value = true
+  }
+
+  function showEdit(record) {
+    isEdit.value = true
+    editData.value = record
+    modalVisible.value = true
   }
 
   function del(record) {
-    editorAPI.runSQL(`DROP FLOW IF EXISTS ${record.flow_name}`).then((result) => {
-      list()
-    })
+    editorAPI
+      .runSQL(`DROP FLOW IF EXISTS ${record.flow_name}`)
+      .then((result) => {
+        Message.success('Flow deleted successfully')
+        list()
+      })
+      .catch((error) => {
+        console.error('Delete flow failed:', error)
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        Message.error(`Delete flow failed: ${errorMessage}`)
+      })
   }
 </script>
 

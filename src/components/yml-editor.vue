@@ -45,4 +45,10 @@ a-card.light-editor-card(:bordered="false")
   :deep(.arco-card.light-editor-card) {
     padding-right: 0;
   }
+  :deep(.arco-card-body) {
+    height: 100%;
+  }
+  :deep(.cm-focused) {
+    outline: none;
+  }
 </style>
