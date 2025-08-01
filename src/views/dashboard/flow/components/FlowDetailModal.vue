@@ -1,12 +1,16 @@
 <template lang="pug">
 a-drawer(
   v-model:visible="visible"
-  :title="isEdit ? 'Edit Flow' : 'Create Flow'"
+  popup-container=".query-layout"
   :width="900"
   :mask="false"
   :hide-cancel="true"
   @cancel="handleCancel"
 )
+  template(#title)
+    span(v-if="isEdit") Edit Flow:&nbsp;
+      strong {{ formData.flow_name }}
+    span(v-else) Create Flow
   .flow-detail-container
     // System information (always visible at top in edit mode)
     template(v-if="isEdit")
@@ -18,68 +22,78 @@ a-drawer(
         :column="2"
       )
         a-descriptions-item(label="Flow ID")
-          | {{ formData.flowId || '-' }}
+          | {{ formData.flow_id || '-' }}
         a-descriptions-item(label="State Size")
-          | {{ formData.stateSize || '-' }}
+          | {{ formData.state_size || '-' }}
         a-descriptions-item(label="Source Table Names" :span="2")
-          | {{ formData.sourceTableNames || '-' }}
+          | {{ formData.source_table_names || '-' }}
         a-descriptions-item(label="Source Table IDs" :span="2")
-          | {{ formData.sourceTableIds || '-' }}
+          | {{ formData.source_table_ids || '-' }}
         a-descriptions-item(label="Created Time")
-          | {{ formData.createdTime || '-' }}
+          | {{ formData.created_time ? new Date(formData.created_time).toLocaleString() : '-' }}
         a-descriptions-item(label="Updated Time")
-          | {{ formData.updatedTime || '-' }}
+          | {{ formData.updated_time ? new Date(formData.updated_time).toLocaleString() : '-' }}
         a-descriptions-item(label="Last Execution")
-          | {{ formData.lastExecutionTime || '-' }}
-    a-radio-group(
-      v-model="editorMode"
-      type="button"
-      size="small"
-      style="margin-bottom: 16px"
+          | {{ formData.last_execution_time ? new Date(formData.last_execution_time).toLocaleString() : '-' }}
+    div(
+      style="display: flex; justify-content: space-between; align-items: center; background-color: var(--color-fill-1); padding: 8px 4px; margin-bottom: 16px"
     )
-      a-radio(value="form") Form
-      a-radio(value="text") Raw
+      a-radio-group(v-model="editorMode" type="button" size="small")
+        a-radio(value="form") Form
+        a-radio(value="text") Raw
+      a-button(
+        v-if="isEdit"
+        type="outline"
+        size="small"
+        @click="handleCloneFlow"
+      )
+        icon-copy(style="margin-right: 4px")
+        | Clone Flow
 
     // Form mode
     template(v-if="editorMode === 'form'")
       a-form(layout="vertical" :model="formData")
-        // User-editable fields
-        .editable-fields-section
-          a-row(:gutter="16")
-            a-col(:span="12")
-              a-form-item(field="flowName" label="Flow Name" required)
-                a-input(v-model="formData.flowName" placeholder="Enter flow name")
-            a-col(:span="12")
-              a-form-item(field="sinkTable" label="Sink Table" required)
-                a-select(
-                  v-model="formData.sinkTable"
-                  style="width: 100%"
-                  placeholder="Select sink table"
-                  :allow-search="true"
-                  :allow-create="true"
-                  :loading="tablesLoading"
-                  :trigger-props="{ autoFitPopupMinWidth: true }"
-                  :options="availableTables.map((table) => ({ label: table, value: table }))"
-                )
-
-          a-row(:gutter="16")
-            a-col(:span="12")
-              a-form-item(field="expireAfter" label="Expire After (Optional)")
-                a-input(v-model="formData.expireAfter" placeholder="e.g., '1 hour'::INTERVAL")
-            a-col(:span="12")
-              a-form-item(v-if="!isEdit" field="ifNotExists" label="Options")
-                a-checkbox(v-model="formData.ifNotExists") IF NOT EXISTS
-
-          a-form-item(field="comment" label="Comment (Optional)")
-            a-textarea(v-model="formData.comment" placeholder="Enter flow description" :rows="2")
-
-          a-form-item(field="flowDefinition" label="Flow Definition" required)
-            YmlEditor(
-              v-model="formData.flowDefinition"
-              language="sql"
-              placeholder="SELECT max(temperature) as max_temp, date_bin('10 seconds'::INTERVAL, ts) as time_window FROM temp_sensor_data GROUP BY time_window"
-              style="width: 100%; height: 200px; border: 1px solid var(--color-border); border-radius: 4px; overflow: hidden"
+        a-row(:gutter="16")
+          a-col(:span="12")
+            a-form-item(
+              v-if="!isEdit"
+              field="flow_name"
+              label="Flow Name"
+              required
             )
+              a-input(v-model="formData.flow_name" placeholder="Enter flow name")
+        a-row(:gutter="16")
+          a-col(:span="12")
+            a-form-item(field="sink_table_name" label="Sink Table" required)
+              a-select(
+                v-model="formData.sink_table_name"
+                style="width: 100%"
+                placeholder="Select sink table"
+                :allow-search="true"
+                :allow-create="true"
+                :loading="tablesLoading"
+                :trigger-props="{ autoFitPopupMinWidth: true }"
+                :options="availableTables.map((table) => ({ label: table, value: table }))"
+              )
+
+        a-row(:gutter="16")
+          a-col(:span="12")
+            a-form-item(field="expire_after" label="Expire After (Optional)")
+              a-input(v-model="formData.expire_after" placeholder="e.g., '1 hour'::INTERVAL")
+          a-col(:span="12")
+            a-form-item(v-if="!isEdit" field="ifNotExists" label="Options")
+              a-checkbox(v-model="formData.ifNotExists") IF NOT EXISTS
+
+        a-form-item(field="comment" label="Comment (Optional)")
+          a-textarea(v-model="formData.comment" placeholder="Enter flow description" :rows="2")
+
+        a-form-item(field="flow_definition" label="Flow Select SQL Definition" required)
+          YmlEditor(
+            v-model="formData.flow_definition"
+            language="sql"
+            style="width: 100%; height: 200px; border: 1px solid var(--color-border); border-radius: 4px; overflow: hidden"
+            :placeholder="defaultFlowDefinitionPlaceholder"
+          )
 
     // Text editor mode  
     template(v-else)
@@ -90,8 +104,8 @@ a-drawer(
               YmlEditor(
                 v-model="textEditorData.content"
                 language="sql"
-                placeholder="CREATE FLOW IF NOT EXISTS my_flow&#10;SINK TO my_sink_table&#10;EXPIRE AFTER '1 hour'::INTERVAL&#10;COMMENT 'My flow description'&#10;AS&#10;SELECT max(temperature) as max_temp,&#10;       date_bin('10 seconds'::INTERVAL, ts) as time_window&#10;FROM temp_sensor_data&#10;GROUP BY time_window;"
                 style="width: 100%; height: 500px; border: 1px solid var(--color-border); border-radius: 4px; overflow: hidden"
+                :placeholder="defaultTextEditorPlaceholder"
               )
 
   template(#footer)
@@ -115,7 +129,6 @@ a-drawer(
 
   interface Props {
     visible: boolean
-    isEdit?: boolean
     editData?: any
   }
 
@@ -126,7 +139,6 @@ a-drawer(
 
   const props = withDefaults(defineProps<Props>(), {
     visible: false,
-    isEdit: false,
     editData: null,
   })
 
@@ -137,34 +149,55 @@ a-drawer(
   const loading = ref(false)
   const fetchingFlowSQL = ref(false)
 
+  // Edit mode: calculated from editData initially, can change when cloning
+  const isEdit = ref(!!props.editData?.flow_name)
+
   // Get current database from app store
-  const { database } = storeToRefs(useAppStore())
+  const { tableCatalog, tableSchema, database } = storeToRefs(useAppStore())
 
   // Available tables for sink table selection
   const availableTables = ref<string[]>([])
   const tablesLoading = ref(false)
 
-  // Form data for structured input
+  // Default placeholder for SQL editors
+  const defaultFlowDefinitionPlaceholder = `SELECT 
+  max(temperature) as max_temp,
+  date_bin('10 seconds'::INTERVAL, ts) as time_window
+FROM temp_sensor_data 
+GROUP BY time_window`
+
+  const defaultTextEditorPlaceholder = `CREATE FLOW IF NOT EXISTS my_flow
+SINK TO my_sink_table
+EXPIRE AFTER '1 hour'::INTERVAL
+COMMENT 'My flow description'
+AS
+SELECT 
+  max(temperature) as max_temp,
+  date_bin('10 seconds'::INTERVAL, ts) as time_window
+FROM temp_sensor_data
+GROUP BY time_window;`
+
+  // Form data for structured input - using same prop names as editData
   const formData = reactive({
     // User-editable fields
-    flowName: '',
-    sinkTable: '',
-    expireAfter: '',
-    comment: '',
-    flowDefinition: '',
+    flow_name: props.editData?.flow_name || '',
+    sink_table_name: props.editData?.sink_table_name || '',
+    expire_after: props.editData?.expire_after || '',
+    comment: props.editData?.comment || '',
+    flow_definition: props.editData?.flow_definition || '',
     ifNotExists: true,
 
     // Readonly system fields (for edit mode display)
-    flowId: '',
-    stateSize: '',
-    tableCatalog: '',
-    sourceTableIds: '',
-    flownodeIds: '',
-    options: '',
-    createdTime: '',
-    updatedTime: '',
-    lastExecutionTime: '',
-    sourceTableNames: '',
+    flow_id: props.editData?.flow_id || '',
+    state_size: props.editData?.state_size || '',
+    table_catalog: props.editData?.table_catalog || '',
+    source_table_ids: props.editData?.source_table_ids || '',
+    flownode_ids: props.editData?.flownode_ids || '',
+    options: props.editData?.options || '',
+    created_time: props.editData?.created_time || '',
+    updated_time: props.editData?.updated_time || '',
+    last_execution_time: props.editData?.last_execution_time || '',
+    source_table_names: props.editData?.source_table_names || '',
   })
 
   // Text editor data for raw SQL
@@ -182,7 +215,7 @@ a-drawer(
   const fetchAvailableTables = async () => {
     try {
       tablesLoading.value = true
-      const sql = `SELECT DISTINCT table_name FROM information_schema.columns WHERE table_schema = '${database.value}' ORDER BY table_name`
+      const sql = `SELECT DISTINCT table_name FROM information_schema.columns WHERE table_schema = '${tableSchema.value}' and table_catalog = '${tableCatalog.value}' ORDER BY table_name`
       const result = await editorAPI.runSQL(sql)
       availableTables.value = result.output[0].records.rows.map((row: string[]) => row[0])
     } catch (error) {
@@ -191,32 +224,6 @@ a-drawer(
     } finally {
       tablesLoading.value = false
     }
-  }
-
-  // Reset form data
-  const resetForm = () => {
-    // Reset user-editable fields
-    formData.flowName = ''
-    formData.sinkTable = ''
-    formData.expireAfter = ''
-    formData.comment = ''
-    formData.flowDefinition = ''
-    formData.ifNotExists = true
-
-    // Reset readonly fields
-    formData.flowId = ''
-    formData.stateSize = ''
-    formData.tableCatalog = ''
-    formData.sourceTableIds = ''
-    formData.flownodeIds = ''
-    formData.options = ''
-    formData.createdTime = ''
-    formData.updatedTime = ''
-    formData.lastExecutionTime = ''
-    formData.sourceTableNames = ''
-
-    textEditorData.content = ''
-    editorMode.value = 'form'
   }
 
   // Format SQL for better readability
@@ -259,7 +266,6 @@ a-drawer(
           if (Array.isArray(firstRow) && firstRow.length > 0) {
             // The SHOW CREATE FLOW typically returns the SQL in the second column, fallback to first
             const createFlowSQL = firstRow[1] || firstRow[0]
-            console.log(createFlowSQL, 'createFlowSQL')
             if (createFlowSQL) {
               // Format the SQL for better readability
               textEditorData.content = formatFlowSQL(createFlowSQL)
@@ -270,32 +276,27 @@ a-drawer(
     } catch (error) {
       console.error('Failed to fetch flow SQL:', error)
       // Fallback content if SHOW CREATE FLOW fails
-      textEditorData.content = `-- Failed to fetch flow definition for: ${flowName}
--- Please write the flow definition manually
-CREATE OR REPLACE  FLOW ${flowName}
-SINK TO your_sink_table
-AS
-SELECT
-  -- Add your aggregation functions here
-  max(column_name) as max_value,
-  date_bin('10 seconds'::INTERVAL, ts) as time_window
-FROM source_table
-GROUP BY time_window`
+      textEditorData.content = ``
     } finally {
       fetchingFlowSQL.value = false
     }
   }
 
+  // Initialize textEditorData for edit mode after fetchFlowSQL is defined
+  if (props.editData?.flow_name) {
+    fetchFlowSQL(props.editData.flow_name)
+  }
+
   // Generate CREATE FLOW SQL from form data
   const generateFlowSQL = () => {
-    const parts = ['CREATE OR REPLACE FLOW']
+    const parts = [isEdit.value ? 'CREATE OR REPLACE FLOW' : 'CREATE FLOW']
 
-    if (formData.ifNotExists && !props.isEdit) {
+    if (formData.ifNotExists && !isEdit.value) {
       parts.push('IF NOT EXISTS')
     }
 
-    parts.push(formData.flowName)
-    parts.push('SINK TO', formData.sinkTable)
+    parts.push(formData.flow_name)
+    parts.push('SINK TO', formData.sink_table_name)
 
     // if (formData.expireAfter) {
     //   parts.push('EXPIRE AFTER', formData.expireAfter)
@@ -306,7 +307,7 @@ GROUP BY time_window`
     }
 
     parts.push('AS')
-    parts.push(formData.flowDefinition)
+    parts.push(formData.flow_definition)
 
     return parts.join('\n')
   }
@@ -316,18 +317,16 @@ GROUP BY time_window`
     try {
       loading.value = true
       const result = await editorAPI.runSQL(sql)
-      console.log('Flow operation result:', result)
 
       // Emit success event
       emit('saved', {
         success: true,
-        message: props.isEdit ? 'Flow updated successfully' : 'Flow created successfully',
+        message: isEdit.value ? 'Flow updated successfully' : 'Flow created successfully',
         mode,
       })
 
-      // Close modal and reset form
+      // Close modal
       visible.value = false
-      resetForm()
     } catch (error) {
       console.error('Flow operation failed:', error)
 
@@ -347,7 +346,7 @@ GROUP BY time_window`
 
   // Form submission handler
   const handleSubmit = () => {
-    if (!formData.flowName || !formData.sinkTable || !formData.flowDefinition) {
+    if (!formData.flow_name || !formData.sink_table_name || !formData.flow_definition) {
       // Could add validation message here
       return
     }
@@ -365,62 +364,18 @@ GROUP BY time_window`
     saveFlow(textEditorData.content, 'text')
   }
 
+  // Clone flow handler - switch to create mode
+  const handleCloneFlow = () => {
+    isEdit.value = false
+    formData.flow_name = '' // Clear the flow name for new flow
+  }
+
   // Cancel handler
   const handleCancel = () => {
     visible.value = false
-    resetForm()
   }
 
-  // Watch for edit data changes
-  watch(
-    () => props.editData,
-    async (newData) => {
-      if (newData && props.isEdit) {
-        // Populate user-editable fields
-        formData.flowName = newData.flow_name || ''
-        formData.sinkTable = newData.sink_table_name || ''
-        formData.comment = newData.comment || ''
-        formData.flowDefinition = newData.flow_definition || ''
-        formData.expireAfter = newData.expire_after ? String(newData.expire_after) : ''
-
-        // Populate readonly system fields
-        formData.flowId = newData.flow_id ? String(newData.flow_id) : ''
-        formData.stateSize = newData.state_size ? String(newData.state_size) : ''
-        formData.tableCatalog = newData.table_catalog || ''
-        formData.sourceTableIds = newData.source_table_ids || ''
-        formData.flownodeIds = newData.flownode_ids || ''
-        formData.options = newData.options || ''
-        formData.sourceTableNames = newData.source_table_names || ''
-
-        // Format timestamps for display
-        formData.createdTime = newData.created_time ? new Date(newData.created_time).toLocaleString() : ''
-        formData.updatedTime = newData.updated_time ? new Date(newData.updated_time).toLocaleString() : ''
-        formData.lastExecutionTime = newData.last_execution_time
-          ? new Date(newData.last_execution_time).toLocaleString()
-          : ''
-
-        // Fetch the actual flow creation SQL for text editor mode
-        if (newData.flow_name) {
-          await fetchFlowSQL(newData.flow_name)
-        }
-      }
-    },
-    { immediate: true }
-  )
-
-  // Watch for modal visibility changes
-  watch(
-    () => props.visible,
-    (isVisible) => {
-      if (!isVisible) {
-        resetForm()
-      } else {
-        // Fetch tables when modal opens
-        fetchAvailableTables()
-      }
-    }
-  )
-
+  fetchAvailableTables()
   // Watch for database changes
   watch(
     () => database.value,
@@ -429,88 +384,10 @@ GROUP BY time_window`
     },
     { immediate: true }
   )
-
-  // Expose loading state for parent component
-  defineExpose({
-    setLoading: (state: boolean) => {
-      loading.value = state
-    },
-  })
 </script>
 
-<style scoped lang="less">
-  .flow-detail-container {
-    .readonly-fields-section {
-      margin-bottom: 24px;
-      padding: 16px;
-      background-color: var(--color-fill-1);
-      border-radius: 6px;
-      border: 1px solid var(--color-border-2);
-
-      h4 {
-        margin: 0 0 16px 0;
-        color: var(--color-text-2);
-        font-size: 14px;
-        font-weight: 600;
-      }
-    }
-
-    .mode-selector {
-      margin-bottom: 20px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid var(--color-border);
-    }
-
-    .editable-fields-section {
-      h4 {
-        margin: 0 0 16px 0;
-        color: var(--color-text-1);
-        font-size: 14px;
-        font-weight: 600;
-      }
-    }
-  }
-
-  .drawer-footer {
-    display: flex;
-    justify-content: flex-end;
-    padding: 16px 0;
-  }
-
-  :deep(.arco-form-item-label) {
-    font-weight: 500;
-  }
-
-  :deep(.arco-input),
-  :deep(.arco-textarea) {
-    border-radius: 4px;
-  }
-
-  // Readonly field styling
-  :deep(.arco-input[readonly]),
-  :deep(.arco-textarea[readonly]) {
-    background-color: var(--color-fill-2);
-    color: var(--color-text-3);
-    cursor: default;
-
-    &:hover {
-      border-color: var(--color-border);
-    }
-  }
-
-  :deep(.arco-radio-group) {
-    .arco-radio-button {
-      border-radius: 4px;
-    }
-
-    .arco-radio-button:first-child {
-      border-top-right-radius: 0;
-      border-bottom-right-radius: 0;
-    }
-
-    .arco-radio-button:last-child {
-      border-top-left-radius: 0;
-      border-bottom-left-radius: 0;
-    }
+<style lang="less" scoped>
+  :deep(.arco-drawer) {
+    border: 1px solid var(--color-neutral-3) !important;
   }
 </style>

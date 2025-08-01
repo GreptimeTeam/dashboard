@@ -1,6 +1,7 @@
 <template lang="pug">
 a-card.light-editor-card(:bordered="false")
   CodeMirror(
+    :placeholder="props.placeholder"
     :modelValue="props.modelValue"
     :extensions="extensions"
     :style="style"
@@ -23,6 +24,7 @@ a-card.light-editor-card(:bordered="false")
   const props = defineProps<{
     modelValue: string
     disabled?: boolean
+    placeholder?: string
   }>()
   const emit = defineEmits<{
     (event: 'update:modelValue', value: string): void

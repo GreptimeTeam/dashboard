@@ -24,6 +24,7 @@
               a-button(size="small" status="danger") Delete
 
     FlowDetailModal(
+      :key="editData?.flow_name"
       v-model:visible="modalVisible"
       :is-edit="isEdit"
       :edit-data="editData"
@@ -65,7 +66,7 @@
   function list() {
     loading.value = true
     editorAPI
-      .runSQL('SHOW FLOWS')
+      .runSQL('select * from  INFORMATION_SCHEMA.FLOWS')
       .then((result) => {
         const schemas = result.output[0].records.schema.column_schemas
 
@@ -93,7 +94,15 @@
           .map((columnName) => allColumns.find((col) => col.name === columnName))
           .filter(Boolean) // Remove undefined columns
 
-        data.value = result.output[0].records.rows.map((row, index) => toObj(row, schemas, index, null))
+        data.value = result.output[0].records.rows.map((row, index) => {
+          const obj = toObj(row, schemas, index, null)
+          // Convert expire_after to seconds if it is Int64
+          const expireAfterSchema = schemas.filter((v) => v.name === 'expire_after')
+          if (expireAfterSchema[0].data_type === 'Int64' && obj.expire_after !== null) {
+            obj.expire_after = `${obj.expire_after} s`
+          }
+          return obj
+        })
 
         // Update total results count
         totalResults.value = data.value.length
@@ -153,9 +162,11 @@
   }
 </script>
 
-<style scoped lang="less">
+<style lang="less">
   @import '@/assets/style/query-layout.less';
+</style>
 
+<style scoped lang="less">
   .results-header {
     display: flex;
     align-items: center;
