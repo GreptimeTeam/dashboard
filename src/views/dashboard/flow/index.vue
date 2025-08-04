@@ -184,6 +184,9 @@
 </style>
 
 <style scoped lang="less">
+  .flow-query-container {
+    position: relative;
+  }
   .title-with-subtitle {
     display: flex;
     gap: 16px;
