@@ -69,6 +69,9 @@ a-drawer(
                 :trigger-props="{ autoFitPopupMinWidth: true }"
                 :options="availableTables.map((table) => ({ label: table, value: table }))"
               )
+              | &nbsp;
+              a-button(type="text" :loading="creatingTable" @click="showCreateTableModal")
+                | Create Sink Table
 
         a-row(:gutter="16")
           a-col(:span="12")
@@ -112,10 +115,34 @@ a-drawer(
           @click="editorMode === 'form' ? handleSubmit() : handleTextSubmit()"
         ) 
           | {{ isEdit ? 'Update' : 'Create' }} Flow
+
+  // Create Table Modal
+  a-modal(
+    v-model:visible="createTableModalVisible"
+    title="Create Sink Table"
+    :width="700"
+    @ok="createTable"
+    @cancel="createTableModalVisible = false"
+  )
+    template(#footer)
+      a-space
+        a-button(@click="createTableModalVisible = false") Cancel
+        a-button(type="primary" :loading="creatingTable" @click="createTable") Create Table
+
+    .create-table-content
+      p Create a new sink table with SQL. The table will be automatically added to the sink table options.
+
+      YmlEditor(
+        v-model="createTableSQL"
+        language="sql"
+        style="width: 100%; height: 300px; border: 1px solid var(--color-border); border-radius: 4px; overflow: hidden"
+        :placeholder="defaultCreateTableSQL"
+      )
 </template>
 
 <script setup lang="ts">
   import { ref, reactive, watch, computed } from 'vue'
+  import { Message } from '@arco-design/web-vue'
   import { storeToRefs } from 'pinia'
   import YmlEditor from '@/components/yml-editor.vue'
   import editorAPI from '@/api/editor'
@@ -160,11 +187,16 @@ a-drawer(
   const availableTables = ref<string[]>([])
   const tablesLoading = ref(false)
 
+  // Table creation state
+  const createTableModalVisible = ref(false)
+  const creatingTable = ref(false)
+  const createTableSQL = ref('')
+
   // Default placeholder for SQL editors
-  const defaultFlowDefinitionPlaceholder = `SELECT 
+  const defaultFlowDefinitionPlaceholder = `SELECT
   max(temperature) as max_temp,
   date_bin('10 seconds'::INTERVAL, ts) as time_window
-FROM temp_sensor_data 
+FROM temp_sensor_data
 GROUP BY time_window`
 
   const defaultTextEditorPlaceholder = `CREATE FLOW IF NOT EXISTS my_flow
@@ -172,11 +204,23 @@ SINK TO my_sink_table
 EXPIRE AFTER '1 hour'::INTERVAL
 COMMENT 'My flow description'
 AS
-SELECT 
+SELECT
   max(temperature) as max_temp,
   date_bin('10 seconds'::INTERVAL, ts) as time_window
 FROM temp_sensor_data
 GROUP BY time_window;`
+
+  const defaultCreateTableSQL = `CREATE TABLE ngx_access_log (
+  ip_address STRING,
+  http_method STRING,
+  request STRING,
+  status_code INT16,
+  body_bytes_sent INT32,
+  user_agent STRING,
+  response_size INT32,
+  ts TIMESTAMP TIME INDEX,
+  PRIMARY KEY (ip_address, http_method, user_agent, status_code)
+) WITH ('append_mode'='true')`
 
   // Form data for structured input - using same prop names as editData
   const formData = reactive({
@@ -224,6 +268,34 @@ GROUP BY time_window;`
       availableTables.value = []
     } finally {
       tablesLoading.value = false
+    }
+  }
+
+  // Show create table modal
+  const showCreateTableModal = () => {
+    createTableModalVisible.value = true
+  }
+
+  // Create table from SQL
+  const createTable = async () => {
+    if (!createTableSQL.value.trim()) {
+      return
+    }
+
+    try {
+      creatingTable.value = true
+      await editorAPI.runSQL(createTableSQL.value)
+
+      // Refresh available tables
+      await fetchAvailableTables()
+
+      // Close modal and reset
+      createTableModalVisible.value = false
+      createTableSQL.value = ''
+
+      Message.success('Table created successfully')
+    } finally {
+      creatingTable.value = false
     }
   }
 
@@ -397,5 +469,13 @@ GROUP BY time_window;`
 <style lang="less" scoped>
   :deep(.arco-drawer) {
     border: 1px solid var(--color-neutral-3) !important;
+  }
+
+  .create-table-content {
+    p {
+      margin-bottom: 16px;
+      color: var(--color-text-2);
+      line-height: 1.5;
+    }
   }
 </style>

@@ -79,7 +79,7 @@
   function list() {
     loading.value = true
     editorAPI
-      .runSQL('select * from  INFORMATION_SCHEMA.FLOWS')
+      .runSQL('select * from  INFORMATION_SCHEMA.FLOWS order by created_time desc')
       .then((result) => {
         const schemas = result.output[0].records.schema.column_schemas
 
@@ -187,6 +187,7 @@
   .title-with-subtitle {
     display: flex;
     gap: 16px;
+    color: var(--color-text-2);
     .subtitle {
       font-size: 14px;
       line-height: 1.4;
