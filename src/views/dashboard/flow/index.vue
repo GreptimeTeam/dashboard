@@ -39,7 +39,7 @@
   import type { ColumnType } from '@/types/query'
   import editorAPI from '@/api/editor'
   import DataTable from '@/components/data-table/index.vue'
-  import FlowDetailModal from './components/FlowDetailModal.vue'
+  import FlowDetailModal from './components/flow-detail-modal.vue'
   import { toObj } from '../logs/query/until'
 
   // Define the desired column order
