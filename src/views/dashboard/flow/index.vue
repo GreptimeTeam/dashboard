@@ -1,7 +1,16 @@
 <template lang="pug">
 .query-layout.flow-query-container.query-container
-  .page-header
-    | Flow
+  .page-header.title-with-subtitle
+    .main-title Flow
+    .subtitle
+      | real-time computation of data streams.
+      a(
+        href="https://docs.greptime.com/user-guide/flow-computation/overview"
+        target="_blank"
+        rel="noopener noreferrer"
+      )
+        | Learn more
+        icon-external-link(style="margin-left: 4px; font-size: 12px")
   .content-wrapper.query-layout-cards
     a-card(:bordered="false")
       template(#title)
@@ -175,6 +184,23 @@
 </style>
 
 <style scoped lang="less">
+  .title-with-subtitle {
+    display: flex;
+    gap: 16px;
+    .subtitle {
+      font-size: 14px;
+      line-height: 1.4;
+      font-weight: normal;
+      a {
+        margin-left: 8px;
+
+        &:hover {
+          color: var(--color-primary-5);
+        }
+      }
+    }
+  }
+
   .results-header {
     display: flex;
     align-items: center;
