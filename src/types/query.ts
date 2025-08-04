@@ -32,7 +32,7 @@ export type ColumnType = {
   name: string
   data_type: string
   label: string
-  semantic_type: string
+  semantic_type?: string
 }
 
 export interface QueryState extends BaseState {

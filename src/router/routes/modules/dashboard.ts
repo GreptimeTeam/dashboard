@@ -205,7 +205,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.dashboard.flow',
         requiresAuth: false,
-        icon: 'tree',
+        icon: 'streaming',
         roles: ['admin', 'cloud'],
       },
     },

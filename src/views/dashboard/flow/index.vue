@@ -1,7 +1,7 @@
 <template lang="pug">
 .query-layout.flow-query-container.query-container
   .page-header
-    | Flows
+    | Flow
   .content-wrapper.query-layout-cards
     a-card(:bordered="false")
       template(#title)
@@ -24,17 +24,19 @@
               a-button(size="small" status="danger") Delete
 
     FlowDetailModal(
-      :key="editData?.flow_name"
+      :key="editData?.flow_id"
       v-model:visible="modalVisible"
-      :is-edit="isEdit"
       :edit-data="editData"
+      :raw-data="textEditorData"
+      :schema-columns="schemaColumns"
       @saved="handleFlowSaved"
+      @clone="handleClone"
     )
 </template>
 
 <script setup name="FlowList" lang="ts">
-  import type { TableColumnData } from '@arco-design/web-vue'
   import { Message } from '@arco-design/web-vue'
+  import type { ColumnType } from '@/types/query'
   import editorAPI from '@/api/editor'
   import DataTable from '@/components/data-table/index.vue'
   import FlowDetailModal from './components/FlowDetailModal.vue'
@@ -51,7 +53,7 @@
     'operate',
   ]
 
-  const columns = shallowRef<Array<TableColumnData>>([])
+  const columns = shallowRef<Array<ColumnType>>([])
   const data = shallowRef<Array<any>>([])
   const loading = ref(false)
 
@@ -62,6 +64,8 @@
   const modalVisible = ref(false)
   const isEdit = ref(false)
   const editData = ref(null)
+  const textEditorData = ref('')
+  const schemaColumns = shallowRef<Array<ColumnType>>([])
 
   function list() {
     loading.value = true
@@ -71,23 +75,21 @@
         const schemas = result.output[0].records.schema.column_schemas
 
         // Build all available columns from schema
-        const schemaColumns = schemas.map((v) => ({
+        schemaColumns.value = schemas.map((v) => ({
           name: v.name,
-          title: v.name,
+          label: v.name,
           data_type: v.data_type,
-          dataIndex: v.name,
         }))
 
         // Add the operate column
         const operateColumn = {
           name: 'operate',
-          title: 'Operate',
+          label: 'Operate',
           data_type: 'string',
-          dataIndex: 'operate',
         }
 
         // Combine all columns
-        const allColumns = [...schemaColumns, operateColumn]
+        const allColumns = [...schemaColumns.value, operateColumn]
 
         // Filter and order columns based on displayedColumns array
         columns.value = displayedColumns
@@ -99,7 +101,7 @@
           // Convert expire_after to seconds if it is Int64
           const expireAfterSchema = schemas.filter((v) => v.name === 'expire_after')
           if (expireAfterSchema[0].data_type === 'Int64' && obj.expire_after !== null) {
-            obj.expire_after = `${obj.expire_after} s`
+            obj.expire_after = `'${obj.expire_after} s'`
           }
           return obj
         })
@@ -138,6 +140,7 @@
   function showCreate() {
     isEdit.value = false
     editData.value = null
+    textEditorData.value = ''
     modalVisible.value = true
   }
 
@@ -159,6 +162,11 @@
         const errorMessage = error instanceof Error ? error.message : 'Unknown error'
         Message.error(`Delete flow failed: ${errorMessage}`)
       })
+  }
+
+  function handleClone(cloneData: any) {
+    editData.value = cloneData.formData
+    textEditorData.value = cloneData.rawData
   }
 </script>
 

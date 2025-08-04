@@ -30,9 +30,9 @@ a-drawer(
         a-descriptions-item(label="Source Table IDs" :span="2")
           | {{ formData.source_table_ids || '-' }}
         a-descriptions-item(label="Created Time")
-          | {{ formData.created_time ? new Date(formData.created_time).toLocaleString() : '-' }}
+          | {{ formData.created_time ? renderTs(formData.created_time, schemaColumns.find((col) => col.name === 'created_time')?.data_type) : '-' }}
         a-descriptions-item(label="Updated Time")
-          | {{ formData.updated_time ? new Date(formData.updated_time).toLocaleString() : '-' }}
+          | {{ formData.updated_time ? renderTs(formData.updated_time, schemaColumns.find((col) => col.name === 'updated_time')?.data_type) : '-' }}
         a-descriptions-item(label="Last Execution")
           | {{ formData.last_execution_time ? new Date(formData.last_execution_time).toLocaleString() : '-' }}
     div(
@@ -54,15 +54,9 @@ a-drawer(
     template(v-if="editorMode === 'form'")
       a-form(layout="vertical" :model="formData")
         a-row(:gutter="16")
-          a-col(:span="12")
-            a-form-item(
-              v-if="!isEdit"
-              field="flow_name"
-              label="Flow Name"
-              required
-            )
+          a-col(v-if="!isEdit" :span="12")
+            a-form-item(field="flow_name" label="Flow Name" required)
               a-input(v-model="formData.flow_name" placeholder="Enter flow name")
-        a-row(:gutter="16")
           a-col(:span="12")
             a-form-item(field="sink_table_name" label="Sink Table" required)
               a-select(
@@ -85,7 +79,7 @@ a-drawer(
               a-checkbox(v-model="formData.ifNotExists") IF NOT EXISTS
 
         a-form-item(field="comment" label="Comment (Optional)")
-          a-textarea(v-model="formData.comment" placeholder="Enter flow description" :rows="2")
+          a-input(v-model="formData.comment" placeholder="Enter flow description" :rows="2")
 
         a-form-item(field="flow_definition" label="Flow Select SQL Definition" required)
           YmlEditor(
@@ -126,31 +120,38 @@ a-drawer(
   import YmlEditor from '@/components/yml-editor.vue'
   import editorAPI from '@/api/editor'
   import { useAppStore } from '@/store'
+  import type { ColumnType } from '@/types/query'
+  import { convertTimestampToMilliseconds } from '@/utils/date-time'
+  import dayjs from 'dayjs'
 
   interface Props {
     visible: boolean
     editData?: any
+    rawData?: string
+    schemaColumns?: ColumnType[]
   }
 
   interface Emits {
     (e: 'update:visible', value: boolean): void
+    (e: 'clone', data: { formData: any; rawData: string }): void
     (e: 'saved', data: { success: boolean; message?: string; mode: string }): void
   }
 
   const props = withDefaults(defineProps<Props>(), {
     visible: false,
     editData: null,
+    rawData: '',
   })
 
   const emit = defineEmits<Emits>()
 
-  // Editor mode: 'form' or 'text'
+  // Editor mode: 'form' or 'text', default to 'text' if rawData is provided
   const editorMode = ref('form')
   const loading = ref(false)
   const fetchingFlowSQL = ref(false)
 
-  // Edit mode: calculated from editData initially, can change when cloning
-  const isEdit = ref(!!props.editData?.flow_name)
+  // Edit mode: calculated from editData initially, false if rawData is provided (for cloning)
+  const isEdit = ref(!!props.editData?.flow_id && !props.rawData)
 
   // Get current database from app store
   const { tableCatalog, tableSchema, database } = storeToRefs(useAppStore())
@@ -202,7 +203,7 @@ GROUP BY time_window;`
 
   // Text editor data for raw SQL
   const textEditorData = reactive({
-    content: '',
+    content: props.rawData || '',
   })
 
   // Computed visibility
@@ -298,9 +299,9 @@ GROUP BY time_window;`
     parts.push(formData.flow_name)
     parts.push('SINK TO', formData.sink_table_name)
 
-    // if (formData.expireAfter) {
-    //   parts.push('EXPIRE AFTER', formData.expireAfter)
-    // }
+    if (formData.expire_after) {
+      parts.push('EXPIRE AFTER', formData.expire_after)
+    }
 
     if (formData.comment) {
       parts.push(`COMMENT '${formData.comment.replace(/'/g, "''")}'`)
@@ -364,10 +365,12 @@ GROUP BY time_window;`
     saveFlow(textEditorData.content, 'text')
   }
 
-  // Clone flow handler - switch to create mode
+  // Clone flow handler - emit both form and raw data
   const handleCloneFlow = () => {
-    isEdit.value = false
-    formData.flow_name = '' // Clear the flow name for new flow
+    emit('clone', {
+      formData: { ...formData, flow_id: '', flow_name: '' },
+      rawData: textEditorData.content,
+    })
   }
 
   // Cancel handler
@@ -384,6 +387,11 @@ GROUP BY time_window;`
     },
     { immediate: true }
   )
+
+  function renderTs(timestamp: number, dataType: string) {
+    const ms = convertTimestampToMilliseconds(timestamp, dataType)
+    return dayjs(ms).format('YYYY-MM-DD HH:mm:ss.SSS')
+  }
 </script>
 
 <style lang="less" scoped>
