@@ -3,7 +3,7 @@ a-descriptions(layout="vertical" bordered :column="1")
   a-descriptions-item(v-for="item of formData")
     template(#label)
       a-typography-text(copyable type="secondary" :copy-text="String(item.value)")
-        | {{ item.label }} : {{ item.type }}
+        | {{ item.title }} : {{ item.type }}
     | {{ item.value }}
 </template>
 
@@ -28,7 +28,7 @@ a-descriptions(layout="vertical" bordered :column="1")
       .map((v) => {
         const columnType = props.columns?.filter((c) => c.name === v)[0]?.data_type
         return {
-          label: v,
+          title: v,
           type: columnType,
           value: displayValue(props.data[v], columnType),
         }

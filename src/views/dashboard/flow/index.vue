@@ -85,14 +85,14 @@
         // Build all available columns from schema
         schemaColumns.value = schemas.map((v) => ({
           name: v.name,
-          label: v.name,
+          title: v.name,
           data_type: v.data_type,
         }))
 
         // Add the operate column
         const operateColumn = {
           name: 'operate',
-          label: 'Actions',
+          title: 'Actions',
           data_type: 'string',
         }
 

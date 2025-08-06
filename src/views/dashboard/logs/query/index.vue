@@ -146,7 +146,6 @@
     rows,
     canExecuteInitialQuery,
   } = useQueryExecution(builder, textEditor, timeRange)
-
   // 5. URL sync
   const urlSync = useQueryUrlSync({
     builderFormState,

@@ -26,6 +26,7 @@
     :selected-row-key="selectedRowKey"
     :curr-row="selectedRecord"
     :rows="data"
+    :columns="columns"
     @update:selected-row-key="selectedRowKey = $event"
   )
 </template>

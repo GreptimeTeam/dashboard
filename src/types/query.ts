@@ -31,7 +31,7 @@ export interface BuilderFormState extends BaseState {
 export type ColumnType = {
   name: string
   data_type: string
-  label: string
+  title: string
   semantic_type?: string
 }
 

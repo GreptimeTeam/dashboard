@@ -110,17 +110,7 @@ a-dropdown#td-context(
   import { useElementSize } from '@vueuse/core'
   import dayjs from 'dayjs'
   import { convertTimestampToMilliseconds } from '@/utils/date-time'
-
-  interface TSColumn {
-    name: string
-    data_type?: string
-  }
-
-  interface Column {
-    name: string
-    data_type: string
-    title?: string
-  }
+  import type { ColumnType, TSColumn } from '@/types/query'
 
   interface TableData {
     [key: string]: any
@@ -129,7 +119,7 @@ a-dropdown#td-context(
   interface Props {
     // Data
     data: TableData[]
-    columns: Column[]
+    columns: ColumnType[]
     loading?: boolean
 
     // Table configuration
@@ -206,7 +196,7 @@ a-dropdown#td-context(
   const { width: tableWidth, height: tableHeight } = useElementSize(tableContainer)
 
   // Timestamp utilities
-  function isTimeColumn(column: Column) {
+  function isTimeColumn(column: ColumnType) {
     return column.data_type.toLowerCase().includes('timestamp')
   }
 
@@ -241,7 +231,7 @@ a-dropdown#td-context(
           name: props.tsColumn.name,
           data_type: props.tsColumn.data_type || 'timestamp',
           title: props.tsColumn.name,
-        } as Column)
+        } as ColumnType)
       }
       tmpColumns =
         props.displayedColumns.length > 0
@@ -297,13 +287,13 @@ a-dropdown#td-context(
         title: props.tsColumn.name,
         data_type: props.tsColumn.data_type || 'timestamp',
         width: 220,
-      } as Column)
+      } as ColumnType)
     }
     arr.push({
       name: 'Merged_Column',
       title: 'Data',
       data_type: 'merged',
-    } as Column)
+    } as ColumnType)
     return arr
   })
 
@@ -373,7 +363,7 @@ a-dropdown#td-context(
     return timestamp
   }
 
-  function getRenderedValue(record: any, column: Column) {
+  function getRenderedValue(record: any, column: ColumnType) {
     if (isTimeColumn(column)) {
       return renderTs(record, column.name)
     }
