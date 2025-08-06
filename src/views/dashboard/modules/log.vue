@@ -65,7 +65,7 @@ a-list-item.smaller-divider
 
 <style lang="less" scoped>
   .code {
-    font-family: monospace;
+    font-family: var(--font-mono);
     color: var(--main-font-color);
     font-size: 13px;
 
@@ -81,7 +81,7 @@ a-list-item.smaller-divider
     border: 0;
     border-radius: 4px;
     font-size: 12px;
-    font-family: monospace;
+    font-family: var(--font-mono);
     white-space: pre-wrap;
   }
 

@@ -502,7 +502,7 @@ a-card.table-manager(:bordered="false")
     border-radius: 6px;
     border: 1px solid var(--border-color);
     padding: 0 0 4px 10px;
-    font-family: monospace;
+    font-family: var(--font-mono);
 
     .code-space {
       padding-top: 6px;

@@ -427,7 +427,7 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
 
     .metric-value {
       color: var(--color-text-1);
-      font-family: monospace;
+      font-family: var(--font-mono);
       text-overflow: ellipsis;
       overflow: hidden;
     }
@@ -460,7 +460,7 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
       margin-bottom: 4px;
 
       .metric-value {
-        font-family: monospace;
+        font-family: var(--font-mono);
         color: var(--color-text-1);
       }
     }
@@ -492,7 +492,7 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
 
   .step-cell {
     white-space: pre; // Preserve whitespace for tree structure
-    font-family: monospace; // Use monospace for better tree alignment
+    font-family: var(--font-mono); // Use var(--font-mono) for better tree alignment
     align-self: flex-start; // Align at the top
   }
 
@@ -520,7 +520,7 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     }
     .detail-value {
       color: var(--color-text-1);
-      font-family: monospace;
+      font-family: var(--font-mono);
       word-break: normal;
       white-space: pre-line;
     }

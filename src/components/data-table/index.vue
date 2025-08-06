@@ -526,7 +526,7 @@ a-dropdown#td-context(
     }
   }
   :deep(.arco-table-element) {
-    font-family: 'Roboto Mono', monospace;
+    font-family: var(--font-mono);
   }
 
   :deep(.arco-table-td),

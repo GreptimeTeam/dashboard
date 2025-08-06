@@ -253,7 +253,7 @@
         }
 
         .trace-id-value {
-          font-family: 'Roboto Mono', monospace;
+          font-family: var(--font-mono);
           font-size: 13px;
           color: var(--main-font-color);
           font-weight: 500;

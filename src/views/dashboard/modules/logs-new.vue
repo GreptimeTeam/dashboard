@@ -73,7 +73,7 @@ a-card.log(:bordered="false")
   }
 
   .code-info {
-    font-family: monospace;
+    font-family: var(--font-mono);
   }
 
   .info {
@@ -158,7 +158,7 @@ a-card.log(:bordered="false")
     padding: 6px 10px;
   }
   .arco-popover-popup-content.code-tooltip {
-    font-family: monospace;
+    font-family: var(--font-mono);
     white-space: pre;
     font-size: 13px;
     padding: 6px 10px;

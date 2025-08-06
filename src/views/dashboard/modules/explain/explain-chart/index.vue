@@ -669,7 +669,7 @@
     }
 
     .metric-value {
-      font-family: monospace;
+      font-family: var(--font-mono);
       color: var(--main-font-color);
       flex-shrink: 0;
     }

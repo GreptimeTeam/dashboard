@@ -38,6 +38,6 @@ a-descriptions(layout="vertical" bordered :column="1")
 
 <style scoped lang="less">
   :deep(.arco-descriptions-item-value) {
-    font-family: 'Roboto Mono', monospace;
+    font-family: var(--font-mono);
   }
 </style>

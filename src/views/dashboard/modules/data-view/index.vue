@@ -376,7 +376,7 @@ a-tabs.panel-tabs(
 
     .raw-json {
       white-space: pre-wrap;
-      font-family: monospace;
+      font-family: var(--font-mono);
       font-size: 12px;
       margin: 0;
     }
