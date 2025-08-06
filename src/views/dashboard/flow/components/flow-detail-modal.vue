@@ -1,5 +1,5 @@
 <template lang="pug">
-a-drawer(
+a-drawer.custom-drawer(
   v-model:visible="visible"
   popup-container=".query-layout"
   :width="900"
