@@ -67,7 +67,7 @@ a-drawer.custom-drawer(
                 :allow-create="true"
                 :loading="tablesLoading"
                 :trigger-props="{ autoFitPopupMinWidth: true }"
-                :options="availableTables.map((table) => ({ label: table, value: table }))"
+                :options="originTablesTree.map((table) => ({ label: table.title, value: table.title }))"
               )
               | &nbsp;
               a-button(type="text" :loading="creatingTable" @click="showCreateTableModal")
@@ -183,9 +183,7 @@ a-drawer.custom-drawer(
   // Get current database from app store
   const { tableCatalog, tableSchema, database } = storeToRefs(useAppStore())
 
-  // Available tables for sink table selection
-  const availableTables = ref<string[]>([])
-  const tablesLoading = ref(false)
+  const { originTablesTree, tablesLoading } = storeToRefs(useDataBaseStore())
 
   // Table creation state
   const createTableModalVisible = ref(false)
@@ -256,21 +254,6 @@ GROUP BY time_window;`
     set: (value) => emit('update:visible', value),
   })
 
-  // Fetch available tables for sink table selection
-  const fetchAvailableTables = async () => {
-    try {
-      tablesLoading.value = true
-      const sql = `SELECT DISTINCT table_name FROM information_schema.columns WHERE table_schema = '${tableSchema.value}' and table_catalog = '${tableCatalog.value}' ORDER BY table_name`
-      const result = await editorAPI.runSQL(sql)
-      availableTables.value = result.output[0].records.rows.map((row: string[]) => row[0])
-    } catch (error) {
-      console.error('Failed to fetch tables:', error)
-      availableTables.value = []
-    } finally {
-      tablesLoading.value = false
-    }
-  }
-
   // Show create table modal
   const showCreateTableModal = () => {
     createTableModalVisible.value = true
@@ -285,9 +268,6 @@ GROUP BY time_window;`
     try {
       creatingTable.value = true
       await editorAPI.runSQL(createTableSQL.value)
-
-      // Refresh available tables
-      await fetchAvailableTables()
 
       // Close modal and reset
       createTableModalVisible.value = false
@@ -449,16 +429,6 @@ GROUP BY time_window;`
   const handleCancel = () => {
     visible.value = false
   }
-
-  fetchAvailableTables()
-  // Watch for database changes
-  watch(
-    () => database.value,
-    () => {
-      fetchAvailableTables()
-    },
-    { immediate: true }
-  )
 
   function renderTs(timestamp: number, dataType: string) {
     const ms = convertTimestampToMilliseconds(timestamp, dataType)
