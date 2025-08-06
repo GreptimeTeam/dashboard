@@ -18,7 +18,10 @@
           span.results-count(v-if="totalResults > 0") 
             | ({{ totalResults }} {{ totalResults === 1 ? 'record' : 'records' }})
       template(#extra)
-        a-button(size="small" @click="showCreate") Create Flow
+        a-button(size="small" type="primary" @click="showCreate") 
+          template(#icon)
+            icon-plus
+          | New Flow
       DataTable(
         :data="data"
         :columns="columns"
