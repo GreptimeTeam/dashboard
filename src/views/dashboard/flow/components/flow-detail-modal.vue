@@ -3,7 +3,8 @@ a-drawer.custom-drawer(
   v-model:visible="visible"
   popup-container=".query-layout"
   :width="900"
-  :mask="false"
+  :mask="true"
+  :mask-closable="true"
   :hide-cancel="true"
   @cancel="handleCancel"
 )
