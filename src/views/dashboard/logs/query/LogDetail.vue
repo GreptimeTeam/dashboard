@@ -18,12 +18,13 @@ a-drawer(
         icon-arrow-down
   a-tabs
     a-tab-pane(title="Fields" key="1")
-      FormView(:data="viewRow")
+      FormView(:data="viewRow" :columns="columns")
     a-tab-pane(title="JSON" key="2")
       JSONView(:jsonStr="JSON.stringify(viewRow, null, 2)")
 </template>
 
 <script setup lang="ts" name="LogDetail">
+  import type { ColumnType } from '@/types/query'
   import JSONView from './JSONView.vue'
   import FormView from './FormView.vue'
 
@@ -32,6 +33,7 @@ a-drawer(
     selectedRowKey: number | null
     currRow: any
     rows: any[]
+    columns: ColumnType[]
   }>()
   const emit = defineEmits(['update:visible', 'update:selectedRowKey'])
   const handleOk = () => {

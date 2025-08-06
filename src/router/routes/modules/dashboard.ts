@@ -199,6 +199,17 @@ const DASHBOARD: AppRouteRecordRaw = {
       },
     },
     {
+      path: 'flow',
+      component: () => import('@/views/dashboard/flow/index.vue'),
+      name: 'flow',
+      meta: {
+        locale: 'menu.dashboard.flow',
+        requiresAuth: false,
+        icon: 'streaming',
+        roles: ['admin', 'cloud'],
+      },
+    },
+    {
       path: 'status',
       name: 'status',
       component: () => import('@/views/dashboard/status/index.vue'),

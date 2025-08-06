@@ -1,6 +1,6 @@
 import { ref, reactive, computed, watch, shallowRef } from 'vue'
 import { replaceTimePlaceholders } from '@/utils/sql'
-import type { QueryState } from '@/types/query'
+import type { ColumnType, QueryState } from '@/types/query'
 
 const useQueryExecution = (builder, textEditor, timeRange) => {
   const editorType = ref<'builder' | 'text'>('builder')
@@ -20,7 +20,7 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
     },
   })
   const loading = ref(false)
-  const columns = shallowRef<any[]>([])
+  const columns = shallowRef<ColumnType[]>([])
   const rows = shallowRef<any[]>([])
 
   const hasExecutedInitialQuery = ref(false)
@@ -85,7 +85,7 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
         columns.value = records.schema.column_schemas.map((col: any) => ({
           name: col.name,
           data_type: col.data_type,
-          label: col.name,
+          title: col.name,
         }))
 
         const processedRows = records.rows.map((row) => {

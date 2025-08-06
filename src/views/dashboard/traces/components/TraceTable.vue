@@ -62,12 +62,7 @@ a-card(:bordered="false")
   import { useRouter } from 'vue-router'
   import { IconSettings } from '@arco-design/web-vue/es/icon'
   import type { PropType } from 'vue'
-  import type { QueryState } from '@/types/query'
-
-  interface Column {
-    name: string
-    data_type: string
-  }
+  import type { ColumnType, QueryState } from '@/types/query'
 
   interface TableData {
     [key: string]: any
@@ -79,7 +74,7 @@ a-card(:bordered="false")
       default: () => [],
     },
     columns: {
-      type: Array as PropType<Column[]>,
+      type: Array as PropType<ColumnType[]>,
       default: () => [],
     },
     loading: {
