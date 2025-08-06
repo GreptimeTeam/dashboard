@@ -178,7 +178,7 @@ a-drawer(
   const fetchingFlowSQL = ref(false)
 
   // Edit mode: calculated from editData initially, false if rawData is provided (for cloning)
-  const isEdit = ref(!!props.editData?.flow_id && !props.rawData)
+  const isEdit = ref(!!props.editData?.flow_id)
 
   // Get current database from app store
   const { tableCatalog, tableSchema, database } = storeToRefs(useAppStore())
