@@ -184,7 +184,7 @@ a-drawer.custom-drawer(
   const { tableCatalog, tableSchema, database } = storeToRefs(useAppStore())
 
   const { originTablesTree, tablesLoading } = storeToRefs(useDataBaseStore())
-
+  const { getTables } = useDataBaseStore()
   // Table creation state
   const createTableModalVisible = ref(false)
   const creatingTable = ref(false)
@@ -268,7 +268,7 @@ GROUP BY time_window;`
     try {
       creatingTable.value = true
       await editorAPI.runSQL(createTableSQL.value)
-
+      await getTables()
       // Close modal and reset
       createTableModalVisible.value = false
       createTableSQL.value = ''
