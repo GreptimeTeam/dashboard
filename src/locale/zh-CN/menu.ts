@@ -29,4 +29,5 @@ export default {
   'menu.dashboard.logPipeline': '日志 Pipelines',
   'menu.dashboard.log-ingestion': '日志摄取',
   'menu.news': '最新资讯',
+  'menu.dashboard.flow': 'Flow',
 }

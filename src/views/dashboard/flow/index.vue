@@ -3,14 +3,13 @@
   .page-header.title-with-subtitle
     .main-title Flow
     .subtitle
-      | real-time computation of data streams.
+      | Real-time computation of data streams.
       a(
         href="https://docs.greptime.com/user-guide/flow-computation/overview"
         target="_blank"
         rel="noopener noreferrer"
       )
         | Learn more
-        icon-external-link(style="margin-left: 4px; font-size: 12px")
   .content-wrapper.query-layout-cards
     a-card(:bordered="false")
       template(#title)
@@ -29,7 +28,7 @@
         template(#column-operate="{ record }")
           a-space
             a-button(size="small" @click="showEdit(record)") Edit
-            a-popconfirm(content="Confirm to delete?" @ok="del(record)")
+            a-popconfirm(content="Confirm deletion?" type="warning" @ok="del(record)")
               a-button(size="small" status="danger") Delete
 
     FlowDetailModal(
@@ -93,7 +92,7 @@
         // Add the operate column
         const operateColumn = {
           name: 'operate',
-          label: 'Operate',
+          label: 'Actions',
           data_type: 'string',
         }
 
