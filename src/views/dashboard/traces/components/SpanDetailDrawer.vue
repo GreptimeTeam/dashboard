@@ -236,10 +236,6 @@ a-drawer(
     border-radius: 4px;
   }
 
-  :deep(.cm-scroller) {
-    font-family: monospace;
-  }
-
   :deep(.arco-tabs) {
     .arco-tabs-nav {
       margin-bottom: 16px;

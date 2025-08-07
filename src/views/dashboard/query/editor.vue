@@ -534,7 +534,7 @@ a-card.editor-card(:bordered="false")
 
   .import-explain-modal {
     .arco-textarea {
-      font-family: monospace;
+      font-family: var(--font-mono);
       min-height: 400px;
     }
   }

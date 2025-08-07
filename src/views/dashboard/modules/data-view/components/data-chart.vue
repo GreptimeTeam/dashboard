@@ -257,7 +257,7 @@ a-card(v-if="hasChart" :bordered="false")
         // TODO: legend width, overflow and tooltip
         textStyle: {
           overflow: 'truncate',
-          fontFamily: 'monospace',
+          fontFamily: 'Google Sans Code',
           lineHeight: legendTextLineHeight,
         },
       },
