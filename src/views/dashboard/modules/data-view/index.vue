@@ -29,44 +29,7 @@ a-tabs.panel-tabs(
     closable
     :title="`${$t('dashboard.explain')}`"
   )
-    a-tabs.data-view-tabs(lazy-load :animation="true")
-      a-tab-pane(key="explain-grid")
-        template(#title)
-          | {{ $t('dashboard.table') }}
-        a-space(direction="vertical" :size="0")
-          ExplainGrid(
-            v-for="(stage, index) in getStages(explainResult)"
-            :key="index"
-            :data="stage"
-            :index="index"
-          )
-      a-tab-pane(key="explain-chart")
-        template(#title)
-          | {{ $t('dashboard.chart') }}
-        ExplainChart(
-          :data="stages[activeStageIndex]"
-          :index="activeStageIndex"
-          :total-stages="stages.length"
-          @change-stage="activeStageIndex = $event"
-        )
-      a-tab-pane(key="explain-raw")
-        template(#title)
-          | {{ $t('dashboard.raw') }}
-        a-card.raw-json-card(:bordered="false")
-          template(#title)
-            a-space
-              a-button(size="mini" type="outline" @click="exportExplainJson(explainResult)")
-                template(#icon)
-                  icon-download
-                | {{ $t('dashboard.download') }}
-              TextCopyable(
-                type="outline"
-                size="mini"
-                buttonText
-                :data="formatRawJson(explainResult)"
-                :show-data="false"
-              )
-          pre.raw-json {{ formatRawJson(explainResult) }}
+    ExplainTabs(:data="explainResult")
   a-tab-pane(
     v-for="(result, index) of results"
     :key="result.key"
@@ -97,6 +60,7 @@ a-tabs.panel-tabs(
   import type { ResultType } from '@/store/modules/code-run/types'
   import { Message } from '@arco-design/web-vue'
   import fileDownload from 'js-file-download'
+  import ExplainTabs from '@/components/explain-tabs/index.vue'
 
   const props = defineProps<{
     results: ResultType[]
@@ -171,66 +135,6 @@ a-tabs.panel-tabs(
       }
     },
     { immediate: true }
-  )
-
-  const getStages = computed(() => (result: ResultType) => {
-    const { rows } = result.records
-
-    const rowsData = rows.filter((row: any) => row[0] !== null)
-    const stagesMap = new Map()
-    rowsData.forEach((row: any) => {
-      const stageIndex = row[0].toString()
-
-      if (stagesMap.has(stageIndex)) {
-        stagesMap.set(stageIndex, [...stagesMap.get(stageIndex), row])
-      } else {
-        stagesMap.set(stageIndex, [row])
-      }
-    })
-    return Array.from(stagesMap.values())
-  })
-
-  const reconstructExplainJson = (result: ResultType) => {
-    return {
-      output: [
-        {
-          records: result.records,
-        },
-      ],
-      execution_time_ms: result.executionTime,
-    }
-  }
-
-  const formatRawJson = (result: ResultType) => {
-    try {
-      return JSON.stringify(reconstructExplainJson(result), null, 2)
-    } catch (e) {
-      return 'Error formatting JSON data'
-    }
-  }
-
-  const exportExplainJson = (result: ResultType) => {
-    try {
-      const jsonData = JSON.stringify(reconstructExplainJson(result), null, 2)
-      fileDownload(jsonData, 'explain-analyze-greptimedb.json', 'application/json')
-      Message.success('JSON downloaded successfully')
-    } catch (e) {
-      Message.error(`Failed to export JSON: ${e instanceof Error ? e.message : String(e)}`)
-    }
-  }
-
-  const stages = computed(() => {
-    if (!props.explainResult) return []
-    return getStages.value(props.explainResult)
-  })
-
-  const activeStageIndex = ref(1)
-
-  watch(
-    () => props.explainResult,
-    () => {
-      activeStageIndex.value = 1
-    }
   )
 </script>
 
@@ -349,36 +253,6 @@ a-tabs.panel-tabs(
           }
         }
       }
-    }
-  }
-
-  &.full-size {
-    :deep(> .arco-tabs-nav) {
-      height: 40px;
-    }
-    :deep(> .arco-tabs-content) {
-      height: calc(100% - 40px);
-    }
-  }
-
-  .raw-json-card {
-    padding: 8px 12px;
-
-    :deep(.arco-card-header) {
-      height: 40px;
-    }
-
-    :deep(.arco-card-body) {
-      height: calc(100% - 40px);
-      padding: 8px;
-      overflow: auto;
-    }
-
-    .raw-json {
-      white-space: pre-wrap;
-      font-family: var(--font-mono);
-      font-size: 12px;
-      margin: 0;
     }
   }
 </style>

@@ -65,6 +65,7 @@ a-typography-text(
 <style lang="less" scoped>
   .arco-typography {
     display: flex;
+    align-items: center;
   }
 
   .no-hover-bg {
