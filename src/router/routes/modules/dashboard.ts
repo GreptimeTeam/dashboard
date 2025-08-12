@@ -27,6 +27,17 @@ const DASHBOARD: AppRouteRecordRaw = {
       },
     },
     {
+      path: 'metrics',
+      name: 'metrics',
+      component: () => import('@/views/dashboard/metrics/index.vue'),
+      meta: {
+        locale: 'menu.dashboard.metrics',
+        requiresAuth: false,
+        icon: 'metric',
+        roles: ['admin', 'cloud'],
+      },
+    },
+    {
       path: 'tables',
       name: 'tables',
       redirect: '/dashboard/query',

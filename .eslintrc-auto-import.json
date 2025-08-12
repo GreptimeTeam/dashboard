@@ -125,6 +125,21 @@
     "useQueryExecution": true,
     "useSqlBuilderHook": true,
     "useTextEditorState": true,
-    "useTimeRange": true
+    "useTimeRange": true,
+    "DirectiveBinding": true,
+    "ExtractDefaultPropTypes": true,
+    "ExtractPropTypes": true,
+    "ExtractPublicPropTypes": true,
+    "MaybeRef": true,
+    "MaybeRefOrGetter": true,
+    "onWatcherCleanup": true,
+    "useId": true,
+    "useMetrics": true,
+    "useModel": true,
+    "useTemplateRef": true,
+    "LabelData": true,
+    "MetricData": true,
+    "QueryResult": true,
+    "RangeQueryResult": true
   }
 }
