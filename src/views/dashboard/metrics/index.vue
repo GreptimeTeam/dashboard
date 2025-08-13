@@ -35,12 +35,14 @@ a-layout.new-layout
           a-input(
             v-model="step"
             size="small"
-            placeholder="Step (auto-calculated, e.g. 15s)"
-            style="width: 120px"
-            title="Step is automatically calculated based on time range. You can override with custom values like '15s', '1m', '5m', etc."
+            placeholder="auto"
+            style="width: 150px"
+            title="Step in seconds. Automatically calculated based on time range for optimal performance (max 500 data points)."
           )
             template(#prepend)
               | Step
+            template(#append)
+              | S
           a-button(
             type="primary"
             size="small"
@@ -63,7 +65,13 @@ a-layout.new-layout
     .section-divider
 
     // Query Results Section - Chart
-    MetricsChart(:data="queryResults" :loading="queryLoading" :query="currentQuery")
+    MetricsChart(
+      :data="queryResults"
+      :loading="queryLoading"
+      :query="currentQuery"
+      :time-range="unixTimeRange.length === 2 ? unixTimeRange : []"
+      :step="computedStep"
+    )
 
     .section-divider(v-if="queryResults && queryResults.length > 0")
 
@@ -129,7 +137,7 @@ a-layout.new-layout
   // Query state
   const queryLoading = ref(false)
   const queryResults = ref<any[]>([])
-  const step = ref('15s')
+  const step = ref() // Step in seconds, not string format
 
   // URL sync state
   const hasInitParams = ref(false)
@@ -159,7 +167,7 @@ a-layout.new-layout
 
     // Step parameter
     if (urlStep && typeof urlStep === 'string') {
-      step.value = urlStep
+      step.value = parseInt(urlStep, 10)
     }
   }
 
@@ -184,8 +192,8 @@ a-layout.new-layout
     }
 
     // Step parameter
-    if (step.value && step.value !== '15s') {
-      query.step = step.value
+    if (step.value && step.value !== 15) {
+      query.step = step.value.toString()
     } else {
       delete query.step
     }
@@ -259,28 +267,45 @@ a-layout.new-layout
     return rows
   })
 
-  // Auto compute step based on time range
+  // Auto compute step based on time range and max data points (500)
   const computedStep = computed(() => {
     // If step is manually set, use it
-    if (step.value && step.value !== '15s') {
+    if (step.value) {
+      console.log('Using manually set step:', step.value)
       return step.value
     }
 
-    // Auto-calculate step based on unixTimeRange
+    // Auto-calculate step based on unixTimeRange to get max 500 data points
     if (unixTimeRange.value.length === 2) {
-      const [start, end] = unixTimeRange.value
+      const [start, end] = unixTimeRange.value as [number, number]
       const diffSeconds = end - start
 
-      if (diffSeconds <= 300) return '15s' // 5 minutes or less
-      if (diffSeconds <= 1800) return '1m' // 30 minutes or less
-      if (diffSeconds <= 7200) return '5m' // 2 hours or less
-      if (diffSeconds <= 21600) return '15m' // 6 hours or less
-      if (diffSeconds <= 86400) return '1h' // 1 day or less
-      if (diffSeconds <= 604800) return '6h' // 1 week or less
-      return '1d' // More than 1 week
+      // Target max 500 data points for good chart performance
+      const maxDataPoints = 500
+      const targetStepSeconds = Math.ceil(diffSeconds / maxDataPoints)
+
+      console.log('Step calculation:', {
+        start: new Date(start * 1000).toISOString(),
+        end: new Date(end * 1000).toISOString(),
+        diffSeconds,
+        maxDataPoints,
+        targetStepSeconds,
+      })
+
+      // Convert to human-readable step format
+      if (targetStepSeconds <= 15) return 15
+      if (targetStepSeconds <= 60) return 60
+      if (targetStepSeconds <= 300) return 300
+      if (targetStepSeconds <= 900) return 900
+      if (targetStepSeconds <= 3600) return 3600
+      if (targetStepSeconds <= 21600) return 21600
+      if (targetStepSeconds <= 86400) return 86400
+      if (targetStepSeconds <= 604800) return 604800
+      return 86400 // Fallback for very long ranges
     }
 
-    return '15s' // Default fallback
+    console.log('No time range available, using default step: 15 seconds')
+    return 15 // Default fallback
   })
 
   const promqlEditorRef = ref()

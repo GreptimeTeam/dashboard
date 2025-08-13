@@ -50,13 +50,6 @@ export function useMetrics() {
   const queryResult = ref<QueryResult | null>(null)
   const rangeQueryResult = ref<RangeQueryResult | null>(null)
 
-  // Time range for queries
-  const timeRange = ref({
-    start: Math.floor(Date.now() / 1000) - 3600, // 1 hour ago
-    end: Math.floor(Date.now() / 1000), // now
-    step: '15s',
-  })
-
   // Computed properties
   const metricNames = computed(() => metrics.value.map((m) => m.name))
   const labelNames = computed(() => labels.value.map((l) => l.name))
@@ -156,21 +149,21 @@ export function useMetrics() {
   }
 
   // Execute PromQL range query
-  const executeRangeQuery = async (query: string, start?: number, end?: number, step?: string) => {
+  const executeRangeQuery = async (query: string, start?: number, end?: number, step?: number) => {
     try {
       loading.value = true
       error.value = null
       currentQuery.value = query
 
-      const startTime = start || timeRange.value.start
-      const endTime = end || timeRange.value.end
-      const stepValue = step || timeRange.value.step
+      const startTime = start
+      const endTime = end
+      const stepValue = step
 
       const response = await executePromQLRange(
         query,
         startTime.toString(),
         endTime.toString(),
-        stepValue,
+        stepValue.toString(), // Convert number to string for API call
         appStore.database
       )
       rangeQueryResult.value = response.data
@@ -182,11 +175,6 @@ export function useMetrics() {
     } finally {
       loading.value = false
     }
-  }
-
-  // Update time range
-  const updateTimeRange = (start: number, end: number, step: string) => {
-    timeRange.value = { start, end, step }
   }
 
   // Clear results
@@ -219,7 +207,6 @@ export function useMetrics() {
     currentQuery,
     queryResult,
     rangeQueryResult,
-    timeRange,
 
     // Computed
     metricNames,
@@ -231,7 +218,6 @@ export function useMetrics() {
     fetchLabelValues,
     executeQuery,
     executeRangeQuery,
-    updateTimeRange,
     clearResults,
     initialize,
     searchMetrics,
