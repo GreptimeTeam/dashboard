@@ -83,6 +83,7 @@ a-layout.new-layout
 <script setup lang="ts">
   import { ref, computed, onMounted, watch, nextTick } from 'vue'
   import { useStorage } from '@vueuse/core'
+  import { useRoute, useRouter } from 'vue-router'
   import { useMetrics } from '@/hooks/use-metrics'
   import { Message } from '@arco-design/web-vue'
   import { IconLoading, IconPlayArrow } from '@arco-design/web-vue/es/icon'
@@ -90,6 +91,10 @@ a-layout.new-layout
   import TimeRangeSelect from '@/components/time-range-select/index.vue'
   import MetricSidebar from './components/MetricSidebar.vue'
   import PromQLEditor from './components/PromQLEditor.vue'
+
+  // Router for URL sync
+  const route = useRoute()
+  const router = useRouter()
 
   // Use the metrics composable
   const {
@@ -126,6 +131,77 @@ a-layout.new-layout
   const queryResults = ref<any[]>([])
   const step = ref('15s')
   const autoStep = ref(true)
+
+  // URL sync state
+  const hasInitParams = ref(false)
+
+  // Initialize from URL query parameters
+  const initializeFromQuery = () => {
+    const { promql, timeLength, timeRange: urlTimeRange, step: urlStep, autoStep: urlAutoStep } = route.query
+
+    // PromQL query
+    if (promql && typeof promql === 'string') {
+      currentQuery.value = decodeURIComponent(promql)
+      hasInitParams.value = true
+    }
+
+    // Time length (relative time)
+    if (timeLength !== undefined) {
+      const length = parseInt(timeLength as string, 10)
+      if (!Number.isNaN(length)) {
+        time.value = length
+      }
+    }
+
+    // Time range (absolute time)
+    if (urlTimeRange && Array.isArray(urlTimeRange)) {
+      rangeTime.value = urlTimeRange as [string, string]
+    }
+
+    // Step parameter
+    if (urlStep && typeof urlStep === 'string') {
+      step.value = urlStep
+      autoStep.value = false
+    }
+
+    // Auto step setting
+    if (urlAutoStep !== undefined) {
+      autoStep.value = urlAutoStep === 'true'
+    }
+  }
+
+  // Update URL query parameters
+  const updateQueryParams = () => {
+    const query = { ...route.query }
+
+    // PromQL query
+    if (currentQuery.value.trim()) {
+      query.promql = encodeURIComponent(currentQuery.value)
+    } else {
+      delete query.promql
+    }
+
+    // Time selection
+    if (rangeTime.value.length === 2) {
+      query.timeRange = rangeTime.value
+      delete query.timeLength
+    } else {
+      query.timeLength = time.value.toString()
+      delete query.timeRange
+    }
+
+    // Step parameter
+    if (!autoStep.value && step.value) {
+      query.step = step.value
+    } else {
+      delete query.step
+    }
+
+    // Auto step setting
+    query.autoStep = autoStep.value.toString()
+
+    router.replace({ query })
+  }
 
   // Table configuration
   const tableColumns = computed(() => [
@@ -222,7 +298,9 @@ a-layout.new-layout
 
       if (result && result.result) {
         queryResults.value = result.result
-        Message.success(`Query executed successfully - ${result.result.length} series found`)
+
+        // Update URL parameters after successful query
+        updateQueryParams()
       } else {
         queryResults.value = []
         Message.info('Query executed but no data returned')
@@ -266,7 +344,18 @@ a-layout.new-layout
 
   // Initialize
   onMounted(() => {
+    // Initialize from URL first
+    initializeFromQuery()
+
+    // Fetch initial data
     fetchMetrics()
+
+    // Execute query if we have initial params
+    if (hasInitParams.value && currentQuery.value.trim()) {
+      nextTick(() => {
+        handleRunQuery()
+      })
+    }
   })
 </script>
 

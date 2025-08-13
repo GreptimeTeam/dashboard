@@ -6,6 +6,7 @@
       allow-search
       placeholder="Search metrics..."
       size="small"
+      allow-clear
       :filter-option="false"
       :options="metricOptions"
       :loading="loading"
