@@ -55,29 +55,26 @@ a-layout.new-layout
       .query-section
         PromQLEditor(ref="promqlEditorRef" v-model="currentQuery")
 
-      // Query Results Section
-      a-card(v-if="queryResults && queryResults.length > 0" :bordered="false")
-        template(#title)
-          a-space
-            span.results-header
-              span Query Results
-              span.results-count(v-if="queryResults.length > 0") 
-                | ({{ queryResults.length }} {{ queryResults.length === 1 ? 'series' : 'series' }})
-            a-button(type="text" size="small" @click="clearResults")
-              template(#icon)
-                svg.icon
-                  use(href="#delete")
-              | Clear
+    // Query Results Section - Chart and Table
+    MetricsChart(:data="queryResults" :loading="queryLoading" :query="currentQuery")
 
-        .results-section
-          a-table(
-            size="small"
-            :columns="tableColumns"
-            :data="queryResults"
-            :loading="queryLoading"
-            :pagination="pagination"
-            :scroll="{ x: 800 }"
-          )
+    // Table View
+    a-card(v-if="queryResults && queryResults.length > 0" :bordered="false")
+      template(#title)
+        span.results-header
+          span Table View
+          span.results-count(v-if="queryResults.length > 0") 
+            | ({{ queryResults.length }} {{ queryResults.length === 1 ? 'series' : 'series' }})
+
+      .results-section
+        a-table(
+          size="small"
+          :columns="tableColumns"
+          :data="tableData"
+          :loading="queryLoading"
+          :pagination="tablePagination"
+          :scroll="{ x: 800 }"
+        )
 </template>
 
 <script setup lang="ts">
@@ -91,6 +88,7 @@ a-layout.new-layout
   import TimeRangeSelect from '@/components/time-range-select/index.vue'
   import MetricSidebar from './components/MetricSidebar.vue'
   import PromQLEditor from './components/PromQLEditor.vue'
+  import MetricsChart from './components/MetricsChart.vue'
 
   // Router for URL sync
   const route = useRoute()
@@ -203,59 +201,80 @@ a-layout.new-layout
     router.replace({ query })
   }
 
-  // Table configuration
-  const tableColumns = computed(() => [
-    {
-      title: 'Metric',
-      dataIndex: 'metric',
-      key: 'metric',
-      width: 200,
-      render: ({ record }: any) => record.metric?.__name__ || 'Unknown',
-    },
-    {
-      title: 'Labels',
-      dataIndex: 'labels',
-      key: 'labels',
-      width: 300,
-      render: ({ record }: any) => {
-        const metricLabels = { ...record.metric }
-        delete metricLabels.__name__
-        return Object.entries(metricLabels)
-          .map(([k, v]) => `${k}="${v}"`)
-          .join(', ')
-      },
-    },
-    {
-      title: 'Values',
-      dataIndex: 'values',
-      key: 'values',
-      render: ({ record }: any) => {
-        if (record.values && record.values.length > 0) {
-          return `${record.values.length} data points`
-        }
-        if (record.value) {
-          return `${record.value[1]} at ${dayjs.unix(record.value[0]).format('HH:mm:ss')}`
-        }
-        return 'No data'
-      },
-    },
-  ])
-
-  const pagination = computed(() => ({
-    current: 1,
-    pageSize: 50,
-    total: queryResults.value.length,
-    showTotal: true,
-    showPageSize: true,
-    pageSizeOptions: ['20', '50', '100', '200'],
-  }))
-
   // Computed properties
   const actualSidebarWidth = computed(() => {
     const minWidth = 100
     const maxWidth = window.innerWidth * 0.4
     return Math.max(minWidth, Math.min(sidebarWidth.value, maxWidth))
   })
+
+  // Table configuration
+  const tableColumns = computed(() => [
+    {
+      title: 'Series',
+      dataIndex: 'series',
+      key: 'series',
+      width: 300,
+      ellipsis: true,
+    },
+    {
+      title: 'Value',
+      dataIndex: 'value',
+      key: 'value',
+      width: 120,
+      align: 'right' as const,
+    },
+    {
+      title: 'Timestamp',
+      dataIndex: 'timestamp',
+      key: 'timestamp',
+      width: 180,
+    },
+  ])
+
+  const tableData = computed(() => {
+    if (!queryResults.value || queryResults.value.length === 0) return []
+
+    const rows: any[] = []
+    queryResults.value.forEach((series) => {
+      const metricName = series.metric?.__name__ || 'unknown'
+      const seriesLabels = { ...series.metric }
+      delete seriesLabels.__name__
+
+      const labelStr = Object.entries(seriesLabels)
+        .map(([k, v]) => `${k}="${v}"`)
+        .join(', ')
+      const seriesName = labelStr ? `${metricName}{${labelStr}}` : metricName
+
+      if (series.values && series.values.length > 0) {
+        // Show latest value for each series
+        const latestValue = series.values[series.values.length - 1]
+        rows.push({
+          series: seriesName,
+          value: parseFloat(latestValue[1]).toFixed(4),
+          timestamp: dayjs.unix(latestValue[0]).format('YYYY-MM-DD HH:mm:ss'),
+        })
+      } else if (series.value) {
+        // Instant query result
+        rows.push({
+          series: seriesName,
+          value: parseFloat(series.value[1]).toFixed(4),
+          timestamp: dayjs.unix(series.value[0]).format('YYYY-MM-DD HH:mm:ss'),
+        })
+      }
+    })
+
+    return rows
+  })
+
+  const tablePagination = computed(() => ({
+    current: 1,
+    pageSize: 20,
+    total: tableData.value.length,
+    showTotal: true,
+    showPageSize: true,
+    pageSizeOptions: ['10', '20', '50', '100'],
+  }))
 
   // Auto compute step based on time range
   const computedStep = computed(() => {
@@ -298,6 +317,7 @@ a-layout.new-layout
 
       if (result && result.result) {
         queryResults.value = result.result
+        Message.success(`Query executed successfully - ${result.result.length} series found`)
 
         // Update URL parameters after successful query
         updateQueryParams()
@@ -442,6 +462,19 @@ a-layout.new-layout
 
     .arco-table-container {
       border-radius: 0;
+    }
+  }
+
+  .results-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+
+    .results-count {
+      color: var(--color-text-secondary);
+      font-weight: normal;
+      font-size: 12px;
     }
   }
 
