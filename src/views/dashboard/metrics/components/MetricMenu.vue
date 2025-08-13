@@ -5,16 +5,21 @@ a-dropdown.metric-menu(trigger="click" position="bl" :popup-container="'body'")
       svg.icon-14.rotate-90
         use(href="#extra")
   template(#content)
-    a-doption(@click="handleCopy")
-      template(#icon)
-        svg.icon
-          use(href="#copy-new")
-      | Copy {{ getItemType() }}
-    a-doption(@click="handleInsert")
-      template(#icon)
-        svg.icon
-          use(href="#insert")
-      | Insert {{ getItemType() }}
+    // For label nodes - only show label name insertion
+    template(v-if="nodeData.type === 'label'")
+      a-doption(@click="handleInsertLabel")
+        | Insert Label Name
+
+    // For value nodes - show operators for label=value combinations
+    template(v-else-if="nodeData.type === 'value'")
+      a-doption(@click="handleInsertEquals")
+        | {{ nodeData.labelName }}="{{ nodeData.value }}"
+      a-doption(@click="handleInsertNotEquals")
+        | {{ nodeData.labelName }}!="{{ nodeData.value }}"
+      a-doption(@click="handleInsertRegexMatch")
+        | {{ nodeData.labelName }}=~"{{ nodeData.value }}"
+      a-doption(@click="handleInsertRegexNotMatch")
+        | {{ nodeData.labelName }}!~"{{ nodeData.value }}"
 </template>
 
 <script setup lang="ts">
@@ -33,31 +38,34 @@ a-dropdown.metric-menu(trigger="click" position="bl" :popup-container="'body'")
     (e: 'insertText', text: string): void
   }>()
 
-  const getItemType = () => {
-    return props.nodeData.type === 'label' ? 'Label' : 'Value'
-  }
-
-  const getTextContent = () => {
-    if (props.nodeData.type === 'label') {
-      return `${props.nodeData.title}=""`
-    }
-    if (props.nodeData.type === 'value') {
-      return `${props.nodeData.labelName}="${props.nodeData.value}"`
-    }
-    return props.nodeData.title
-  }
-
   const handleMenuClick = (event: Event) => {
     event.stopPropagation()
   }
 
-  const handleCopy = () => {
-    const text = getTextContent()
-    emits('copyText', text)
+  // Handler for label nodes - insert just the label name
+  const handleInsertLabel = () => {
+    const text = `${props.nodeData.title}`
+    emits('insertText', text)
   }
 
-  const handleInsert = () => {
-    const text = getTextContent()
+  // Handlers for value nodes with different operators
+  const handleInsertEquals = () => {
+    const text = `${props.nodeData.labelName}="${props.nodeData.value}"`
+    emits('insertText', text)
+  }
+
+  const handleInsertNotEquals = () => {
+    const text = `${props.nodeData.labelName}!="${props.nodeData.value}"`
+    emits('insertText', text)
+  }
+
+  const handleInsertRegexMatch = () => {
+    const text = `${props.nodeData.labelName}=~"${props.nodeData.value}"`
+    emits('insertText', text)
+  }
+
+  const handleInsertRegexNotMatch = () => {
+    const text = `${props.nodeData.labelName}!~"${props.nodeData.value}"`
     emits('insertText', text)
   }
 </script>

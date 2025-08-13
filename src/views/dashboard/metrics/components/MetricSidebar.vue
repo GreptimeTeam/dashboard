@@ -17,11 +17,10 @@
       type="text"
       size="small"
       :title="`Copy metric: ${selectedMetric}`"
-      @click="copySelectedMetric"
+      @click="insertSelectedMetric"
     )
       template(#icon)
-        svg.icon
-          use(href="#copy-new")
+        icon-plus
 
   a-tree.metrics-tree(
     v-model:expanded-keys="expandedKeys"
@@ -179,9 +178,9 @@
     }
   }
 
-  const copySelectedMetric = () => {
+  const insertSelectedMetric = () => {
     if (selectedMetric.value) {
-      emit('copyText', selectedMetric.value)
+      emit('insertText', selectedMetric.value)
     }
   }
 
@@ -240,6 +239,9 @@
   :deep(.metrics-tree) {
     .data-title {
       color: var(--main-font-color);
+    }
+    .arco-tree-node.arco-tree-node-is-leaf .data-title {
+      color: var(--small-font-color);
     }
     .label-count {
       color: var(--small-font-color);
