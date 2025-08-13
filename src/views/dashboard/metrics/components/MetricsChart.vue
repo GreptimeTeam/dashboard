@@ -168,9 +168,6 @@ a-card.metrics-chart(:bordered="false")
     })
 
     return {
-      title: {
-        show: false,
-      },
       tooltip: {
         trigger: 'axis',
         axisPointer: {
@@ -298,28 +295,6 @@ a-card.metrics-chart(:bordered="false")
   const toggleStacked = () => {
     isStacked.value = !isStacked.value
   }
-
-  // Watch for data changes and resize chart
-  watch(
-    () => props.data,
-    () => {
-      if (chartRef.value) {
-        nextTick(() => {
-          chartRef.value.resize()
-        })
-      }
-    },
-    { deep: true }
-  )
-
-  // Expose methods
-  defineExpose({
-    resize: () => {
-      if (chartRef.value) {
-        chartRef.value.resize()
-      }
-    },
-  })
 </script>
 
 <style lang="less" scoped>
