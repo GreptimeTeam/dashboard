@@ -53,27 +53,27 @@ a-layout.new-layout
             | Run Query
 
       .query-section
-        PromQLEditor(ref="promqlEditorRef" v-model="currentQuery")
+        PromQLEditor(ref="promqlEditorRef" v-model="currentQuery" style="height: 100px")
 
-    // Query Results Section - Chart and Table
+    .section-divider
+
+    // Query Results Section - Chart
     MetricsChart(:data="queryResults" :loading="queryLoading" :query="currentQuery")
 
-    // Table View
-    a-card(v-if="queryResults && queryResults.length > 0" :bordered="false")
-      template(#title)
-        span.results-header
-          span Table View
-          span.results-count(v-if="queryResults.length > 0") 
-            | ({{ queryResults.length }} {{ queryResults.length === 1 ? 'series' : 'series' }})
+    .section-divider(v-if="queryResults && queryResults.length > 0")
 
-      .results-section
+    a-card(v-if="queryResults && queryResults.length > 0" :bordered="false")
+      .toolbar
+        | Table View
+      .table-section(v-if="queryResults && queryResults.length > 0")
         a-table(
           size="small"
           :columns="tableColumns"
           :data="tableData"
           :loading="queryLoading"
-          :pagination="tablePagination"
+          :pagination="false"
           :scroll="{ x: 800 }"
+          :bordered="false"
         )
 </template>
 
@@ -267,15 +267,6 @@ a-layout.new-layout
     return rows
   })
 
-  const tablePagination = computed(() => ({
-    current: 1,
-    pageSize: 20,
-    total: tableData.value.length,
-    showTotal: true,
-    showPageSize: true,
-    pageSizeOptions: ['10', '20', '50', '100'],
-  }))
-
   // Auto compute step based on time range
   const computedStep = computed(() => {
     if (!autoStep.value) return step.value
@@ -380,9 +371,12 @@ a-layout.new-layout
 </script>
 
 <style lang="less" scoped>
+  :deep(.arco-layout-sider-light) {
+    box-shadow: none;
+  }
   .new-layout {
     height: 100vh;
-    background: var(--color-bg-container);
+    background: #fff;
   }
 
   .metrics-sidebar {
@@ -428,9 +422,10 @@ a-layout.new-layout
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px;
+    padding: 8px;
     border-bottom: 1px solid var(--color-border);
     background: var(--color-bg-container);
+    height: 50px;
 
     .arco-space {
       align-items: center;
@@ -442,42 +437,17 @@ a-layout.new-layout
   }
 
   .query-section {
-    padding: 16px;
-    border-bottom: 1px solid var(--color-border);
+    padding: 8px;
   }
 
-  .results-section {
-    .results-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: 600;
-
-      .results-count {
-        color: var(--color-text-secondary);
-        font-weight: normal;
-        font-size: 12px;
-      }
-    }
-
-    .arco-table-container {
-      border-radius: 0;
-    }
+  .section-divider {
+    height: 4px;
+    background: var(--color-neutral-3);
+    border: none;
+    margin: 0;
+    position: relative;
   }
-
-  .results-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: 600;
-
-    .results-count {
-      color: var(--color-text-secondary);
-      font-weight: normal;
-      font-size: 12px;
-    }
+  :deep(.arco-table-th) {
+    background-color: #fff;
   }
-
-  // Import query layout styles
-  @import '@/assets/style/query-layout.less';
 </style>

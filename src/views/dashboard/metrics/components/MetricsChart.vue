@@ -1,22 +1,22 @@
 <template lang="pug">
-.metrics-chart
-  .chart-container(v-if="hasData")
-    .chart-header
-      .chart-title
-        span Chart View
-        span.series-count(v-if="seriesData.length > 0") 
-          | ({{ seriesData.length }} {{ seriesData.length === 1 ? 'series' : 'series' }})
-      .chart-controls
-        a-button(type="outline" size="small" @click="toggleStacked")
-          | {{ isStacked ? 'Unstack' : 'Stack' }}
+a-card.metrics-chart(:bordered="false")
+  .toolbar(v-if="hasData")
+    a-space
+      span Chart View
+      span.series-count(v-if="seriesData.length > 0") 
+        | ({{ seriesData.length }} {{ seriesData.length === 1 ? 'series' : 'series' }})
 
-    .chart-content
-      Chart(
-        ref="chartRef"
-        :option="chartOption"
-        :loading="loading"
-        :style="{ height: chartHeight }"
-      )
+    a-space(style="margin-left: auto")
+      a-button(type="outline" size="small" @click="toggleStacked")
+        | {{ isStacked ? 'Unstack' : 'Stack' }}
+
+  .chart-section(v-if="hasData")
+    Chart(
+      ref="chartRef"
+      :option="chartOption"
+      :loading="loading"
+      :style="{ height: chartHeight }"
+    )
 
   .empty-state(v-else)
     a-empty(description="No data to display")
@@ -214,52 +214,27 @@
 
 <style lang="less" scoped>
   .metrics-chart {
-    .chart-container {
-      border: 1px solid var(--color-border);
-      border-radius: 6px;
-      background: var(--color-bg-container);
-    }
-
-    .chart-header {
+    .toolbar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 16px 20px;
+      padding: 8px;
       border-bottom: 1px solid var(--color-border);
-
-      .chart-title {
-        display: flex;
+      background: var(--color-bg-container);
+      height: 50px;
+      .arco-space {
         align-items: center;
-        gap: 8px;
-        font-weight: 600;
-        font-size: 16px;
-
-        .series-count {
-          color: var(--color-text-secondary);
-          font-weight: normal;
-          font-size: 14px;
-        }
       }
 
-      .chart-controls {
-        display: flex;
-        align-items: center;
-        gap: 12px;
+      .series-count {
+        color: var(--color-text-secondary);
+        font-size: 12px;
+        font-weight: normal;
       }
     }
 
-    .chart-content {
-      padding: 20px;
-
-      .chart-view {
-        min-height: 400px;
-      }
-
-      .table-view {
-        .arco-table-container {
-          border: none;
-        }
-      }
+    .chart-section {
+      padding: 16px;
     }
 
     .empty-state {

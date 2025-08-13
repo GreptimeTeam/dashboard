@@ -1,18 +1,17 @@
 <template lang="pug">
-a-card.promql-editor-card
-  CodeMirror(
-    :placeholder="placeholder"
-    :modelValue="props.modelValue"
-    :extensions="extensions"
-    :style="style"
-    :spellcheck="false"
-    :autofocus="false"
-    :indent-with-tab="true"
-    :tabSize="2"
-    :disabled="disabled"
-    @change="codeUpdate"
-    @ready="onEditorReady"
-  )
+CodeMirror(
+  style="height: 100%; border: 1px solid var(--color-border)"
+  :placeholder="placeholder"
+  :modelValue="props.modelValue"
+  :extensions="extensions"
+  :spellcheck="false"
+  :autofocus="false"
+  :indent-with-tab="true"
+  :tabSize="2"
+  :disabled="disabled"
+  @change="codeUpdate"
+  @ready="onEditorReady"
+)
 </template>
 
 <script setup lang="ts">
@@ -204,11 +203,6 @@ a-card.promql-editor-card
 
     return exts
   })
-
-  // Editor style
-  const style = {
-    height: '120px',
-  }
 
   // Handle code changes
   const codeUpdate = (content: string) => {
