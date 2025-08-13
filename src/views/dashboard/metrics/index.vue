@@ -35,9 +35,9 @@ a-layout.new-layout
           a-input(
             v-model="step"
             size="small"
-            placeholder="Step (e.g. 15s)"
+            placeholder="Step (auto-calculated, e.g. 15s)"
             style="width: 120px"
-            :disabled="autoStep"
+            title="Step is automatically calculated based on time range. You can override with custom values like '15s', '1m', '5m', etc."
           )
             template(#prepend)
               | Step
@@ -53,7 +53,12 @@ a-layout.new-layout
             | Run Query
 
       .query-section
-        PromQLEditor(ref="promqlEditorRef" v-model="currentQuery" style="height: 100px")
+        PromQLEditor(
+          ref="promqlEditorRef"
+          v-model="currentQuery"
+          style="height: 100px"
+          placeholder="Enter PromQL query"
+        )
 
     .section-divider
 
@@ -82,6 +87,7 @@ a-layout.new-layout
   import { useStorage } from '@vueuse/core'
   import { useRoute, useRouter } from 'vue-router'
   import { useMetrics } from '@/hooks/use-metrics'
+  import useTimeRange from '@/hooks/use-time-range'
   import { Message } from '@arco-design/web-vue'
   import { IconLoading, IconPlayArrow } from '@arco-design/web-vue/es/icon'
   import dayjs from 'dayjs'
@@ -94,6 +100,10 @@ a-layout.new-layout
   const route = useRoute()
   const router = useRouter()
 
+  // Time range state
+  const timeRangeState = useTimeRange({ time: 10 })
+  const { rangeTime, time, unixTimeRange } = timeRangeState
+
   // Use the metrics composable
   const {
     metrics,
@@ -103,7 +113,6 @@ a-layout.new-layout
     currentQuery,
     queryResult,
     rangeQueryResult,
-    timeRange,
     fetchMetrics,
     fetchLabels,
     fetchLabelValues,
@@ -117,25 +126,17 @@ a-layout.new-layout
   // Sidebar state
   const sidebarWidth = useStorage('metrics-sidebar-width', 320)
 
-  // Time range state
-  const time = ref(15) // minutes
-  const rangeTime = ref<[string, string]>([
-    dayjs().subtract(15, 'minute').format('YYYY-MM-DD HH:mm:ss'),
-    dayjs().format('YYYY-MM-DD HH:mm:ss'),
-  ])
-
   // Query state
   const queryLoading = ref(false)
   const queryResults = ref<any[]>([])
   const step = ref('15s')
-  const autoStep = ref(true)
 
   // URL sync state
   const hasInitParams = ref(false)
 
   // Initialize from URL query parameters
   const initializeFromQuery = () => {
-    const { promql, timeLength, timeRange: urlTimeRange, step: urlStep, autoStep: urlAutoStep } = route.query
+    const { promql, timeLength, timeRange: urlTimeRange, step: urlStep } = route.query
 
     // PromQL query
     if (promql && typeof promql === 'string') {
@@ -159,12 +160,6 @@ a-layout.new-layout
     // Step parameter
     if (urlStep && typeof urlStep === 'string') {
       step.value = urlStep
-      autoStep.value = false
-    }
-
-    // Auto step setting
-    if (urlAutoStep !== undefined) {
-      autoStep.value = urlAutoStep === 'true'
     }
   }
 
@@ -189,14 +184,11 @@ a-layout.new-layout
     }
 
     // Step parameter
-    if (!autoStep.value && step.value) {
+    if (step.value && step.value !== '15s') {
       query.step = step.value
     } else {
       delete query.step
     }
-
-    // Auto step setting
-    query.autoStep = autoStep.value.toString()
 
     router.replace({ query })
   }
@@ -269,15 +261,26 @@ a-layout.new-layout
 
   // Auto compute step based on time range
   const computedStep = computed(() => {
-    if (!autoStep.value) return step.value
+    // If step is manually set, use it
+    if (step.value && step.value !== '15s') {
+      return step.value
+    }
 
-    const diffMinutes = time.value
-    if (diffMinutes <= 5) return '15s'
-    if (diffMinutes <= 15) return '30s'
-    if (diffMinutes <= 60) return '1m'
-    if (diffMinutes <= 360) return '5m'
-    if (diffMinutes <= 1440) return '15m'
-    return '1h'
+    // Auto-calculate step based on unixTimeRange
+    if (unixTimeRange.value.length === 2) {
+      const [start, end] = unixTimeRange.value
+      const diffSeconds = end - start
+
+      if (diffSeconds <= 300) return '15s' // 5 minutes or less
+      if (diffSeconds <= 1800) return '1m' // 30 minutes or less
+      if (diffSeconds <= 7200) return '5m' // 2 hours or less
+      if (diffSeconds <= 21600) return '15m' // 6 hours or less
+      if (diffSeconds <= 86400) return '1h' // 1 day or less
+      if (diffSeconds <= 604800) return '6h' // 1 week or less
+      return '1d' // More than 1 week
+    }
+
+    return '15s' // Default fallback
   })
 
   const promqlEditorRef = ref()
@@ -293,8 +296,8 @@ a-layout.new-layout
     queryLoading.value = true
     try {
       // Use range query for time series data
-      const start = dayjs(rangeTime.value[0]).unix()
-      const end = dayjs(rangeTime.value[1]).unix()
+      const start = unixTimeRange.value[0]
+      const end = unixTimeRange.value[1]
       const stepValue = computedStep.value
 
       console.log('Executing PromQL query:', {
@@ -346,11 +349,8 @@ a-layout.new-layout
   }
 
   // Watch for time range changes
-  watch([time, rangeTime], () => {
-    if (autoStep.value) {
-      // Trigger reactivity for computed step
-      step.value = computedStep.value
-    }
+  watch(unixTimeRange, () => {
+    step.value = computedStep.value
   })
 
   // Initialize
@@ -441,7 +441,7 @@ a-layout.new-layout
   }
 
   .section-divider {
-    height: 4px;
+    height: 6px;
     background: var(--color-neutral-3);
     border: none;
     margin: 0;

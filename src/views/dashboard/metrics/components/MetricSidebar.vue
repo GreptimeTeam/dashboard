@@ -13,11 +13,11 @@
       @search="onMetricSearch"
       @change="onMetricChange"
     )
-    a-button.copy-metric-button(
+    a-button.insert-metric-button(
       v-if="selectedMetric"
       type="text"
       size="small"
-      :title="`Copy metric: ${selectedMetric}`"
+      :title="`Insert metric: ${selectedMetric}`"
       @click="insertSelectedMetric"
     )
       template(#icon)
@@ -47,6 +47,7 @@
 
 <script setup lang="ts">
   import { computed, ref, watch, onMounted, nextTick } from 'vue'
+  import { useLocalStorage } from '@vueuse/core'
   import { useMetrics } from '@/hooks/use-metrics'
   import MetricMenu from './MetricMenu.vue'
 
@@ -57,29 +58,10 @@
 
   const { metrics, labels, loading, fetchMetrics, fetchLabels, fetchLabelValues, searchMetrics } = useMetrics()
 
-  const selectedMetric = ref<string | null>(null)
+  // Use useLocalStorage hook for selectedMetric persistence
+  const selectedMetric = useLocalStorage<string | null>('metrics-explorer-last-selected', null)
   const expandedKeys = ref<string[]>([])
 
-  // Storage key for persisting last selected metric
-  const STORAGE_KEY = 'metrics-explorer-last-selected'
-
-  // Save selected metric to localStorage
-  const saveSelectedMetric = (metricName: string | null) => {
-    if (metricName) {
-      localStorage.setItem(STORAGE_KEY, metricName)
-    } else {
-      localStorage.removeItem(STORAGE_KEY)
-    }
-  }
-
-  // Load selected metric from localStorage
-  const loadSelectedMetric = (): string | null => {
-    try {
-      return localStorage.getItem(STORAGE_KEY)
-    } catch {
-      return null
-    }
-  }
   const metricsTreeData = ref<any[]>([])
   const buildTreeForSelectedMetric = () => {
     if (!selectedMetric.value) {
@@ -109,20 +91,9 @@
       return
     }
 
-    const storedMetric = loadSelectedMetric()
-
     // Check if stored metric exists in current results
-    if (storedMetric && metrics.value.some((m) => m.name === storedMetric)) {
-      selectedMetric.value = storedMetric
-      onMetricChange(storedMetric)
-      return
-    }
-
-    // If no stored metric or it doesn't exist, select first item
-    const firstMetric = metrics.value[0]?.name
-    if (firstMetric) {
-      selectedMetric.value = firstMetric
-      onMetricChange(firstMetric)
+    if (selectedMetric.value && metrics.value.some((m) => m.name === selectedMetric.value)) {
+      onMetricChange(selectedMetric.value)
     }
   }
 
@@ -132,9 +103,7 @@
 
   watch(selectedMetric, (newMetric) => {
     buildTreeForSelectedMetric()
-    saveSelectedMetric(newMetric)
   })
-  watch(labels, buildTreeForSelectedMetric)
 
   // Watch for metrics changes and auto-select
   watch(
