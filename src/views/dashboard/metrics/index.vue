@@ -18,6 +18,7 @@ a-layout.new-layout
             v-model:time-length="time"
             v-model:time-range="rangeTime"
             button-type="outline"
+            :show-any-time="false"
           )
           a-input(
             v-model="step"
@@ -175,7 +176,7 @@ a-layout.new-layout
     }
 
     // Step parameter
-    if (step.value && step.value !== 15) {
+    if (step.value) {
       query.step = step.value.toString()
     } else {
       delete query.step
@@ -350,11 +351,6 @@ a-layout.new-layout
       promqlEditorRef.value.insertTextAtCursor(text)
     }
   }
-
-  // Watch for time range changes
-  watch(unixTimeRange, () => {
-    step.value = computedStep.value
-  })
 
   // Initialize
   onMounted(() => {
