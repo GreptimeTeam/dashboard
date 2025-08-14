@@ -180,6 +180,10 @@ a-card.metrics-chart(:bordered="false")
               seriesName,
               value: [, value],
             } = param
+
+            // Skip tooltip for null values (filled gaps)
+            if (value === null || value === undefined) return
+
             content += `
               <div style="margin: 2px 0;">
                 <span style="display: inline-block; width: 10px; height: 10px; background: ${color}; border-radius: 50%; margin-right: 8px;"></span>
