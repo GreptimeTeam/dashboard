@@ -14,12 +14,12 @@ a-card.metrics-chart(:bordered="false")
         a-radio(value="stacked-line") Stacked Lines
 
   .chart-section(v-if="hasData")
-    .chart-container
+    .chart-container(style="padding: 16px 0")
       Chart(
         ref="chartRef"
         :option="chartOption"
         :loading="loading"
-        :style="{ height: '500px' }"
+        :style="{ height: '560px' }"
       )
 
   .empty-state(v-else)
@@ -72,10 +72,6 @@ a-card.metrics-chart(:bordered="false")
     // Step is already in seconds, no need to parse
     if (!stepSeconds) return series
 
-    console.log('=== fillMissingTimestamps called ===')
-    console.log('Input series:', series)
-    console.log('Start:', start, 'End:', end, 'Step (seconds):', stepSeconds)
-
     // Generate expected timestamps
     const expectedTimestamps: number[] = []
     let current = start
@@ -84,13 +80,8 @@ a-card.metrics-chart(:bordered="false")
       current += stepSeconds
     }
 
-    console.log('Expected timestamps:', expectedTimestamps)
-
     // Fill missing data points
     return series.map((serie) => {
-      console.log('Processing series:', serie.metric?.__name__)
-      console.log('Original values:', serie.values)
-
       const filledData: [number, string | number][] = []
 
       expectedTimestamps.forEach((timestamp) => {
@@ -98,16 +89,12 @@ a-card.metrics-chart(:bordered="false")
         const existingPoint = serie.values?.find((point: any) => point[0] === timestamp)
 
         if (existingPoint) {
-          console.log(`Found data for timestamp ${timestamp}:`, existingPoint)
           filledData.push(existingPoint)
         } else {
           // Fill with null for missing timestamps
-          console.log(`No data for timestamp ${timestamp}, filling with null`)
           filledData.push([timestamp, null])
         }
       })
-
-      console.log('Filled data:', filledData)
 
       return {
         ...serie,
@@ -127,19 +114,13 @@ a-card.metrics-chart(:bordered="false")
     // Fill missing timestamps if time range and step are available
     if (props.timeRange && props.timeRange.length === 2 && props.step) {
       const [start, end] = props.timeRange as [number, number]
-      console.log('Calling fillMissingTimestamps with:', { start, end, step: props.step })
       filteredData = fillMissingTimestamps(filteredData, start, end, props.step)
-      console.log('After filling timestamps:', filteredData)
-    } else {
-      console.log('Skipping timestamp filling - missing timeRange or step')
     }
-
     return filteredData
   })
 
   const chartOption = computed(() => {
     if (!hasData.value) return {}
-    console.log('seriesData', seriesData.value)
     const series = seriesData.value.map((item, index) => {
       const metricName = item.metric.__name__ || 'unknown'
       const labels = { ...item.metric }
@@ -195,11 +176,14 @@ a-card.metrics-chart(:bordered="false")
     return {
       tooltip: {
         trigger: 'axis',
+        confine: true, // Prevent tooltip from going outside chart bounds
+        enterable: false, // Prevent mouse from entering tooltip
         axisPointer: {
-          type: 'cross',
+          type: 'cross', // Restored cross-hair functionality
           animation: false,
           label: {
             backgroundColor: 'var(--color-bg-popup)',
+            show: false, // Hide the axis pointer label to reduce interference
           },
         },
         formatter: (params: any[]) => {

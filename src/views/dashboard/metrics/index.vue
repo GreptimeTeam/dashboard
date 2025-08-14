@@ -208,12 +208,6 @@ a-layout.new-layout
       width: 120,
       align: 'right' as const,
     },
-    {
-      title: 'Timestamp',
-      dataIndex: 'timestamp',
-      key: 'timestamp',
-      width: 180,
-    },
   ])
 
   const tableData = computed(() => {
@@ -229,21 +223,13 @@ a-layout.new-layout
         .map(([k, v]) => `${k}="${v}"`)
         .join(', ')
       const seriesName = labelStr ? `${metricName}{${labelStr}}` : metricName
-
+      console.log('series', series)
       if (series.values && series.values.length > 0) {
         // Show latest value for each series
         const latestValue = series.values[series.values.length - 1]
         rows.push({
           series: seriesName,
-          value: parseFloat(latestValue[1]).toFixed(4),
-          timestamp: dayjs.unix(latestValue[0]).format('YYYY-MM-DD HH:mm:ss'),
-        })
-      } else if (series.value) {
-        // Instant query result
-        rows.push({
-          series: seriesName,
-          value: parseFloat(series.value[1]).toFixed(4),
-          timestamp: dayjs.unix(series.value[0]).format('YYYY-MM-DD HH:mm:ss'),
+          value: latestValue[1],
         })
       }
     })
