@@ -11,7 +11,7 @@ a-layout.new-layout
 
   a-layout-content.layout-content
     a-card(:bordered="false")
-      .toolbar
+      .section-title
         a-space
           TimeRangeSelect(
             ref="timeRangeSelectRef"
@@ -64,7 +64,7 @@ a-layout.new-layout
     .section-divider(v-if="queryResults && queryResults.length > 0")
 
     a-card(v-if="queryResults && queryResults.length > 0" :bordered="false")
-      .toolbar
+      .section-title
         | Table View
       .table-section(v-if="queryResults && queryResults.length > 0")
         a-table(
@@ -417,15 +417,7 @@ a-layout.new-layout
     }
   }
 
-  .toolbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px;
-    border-bottom: 1px solid var(--color-border);
-    background: var(--color-bg-container);
-    height: 50px;
-
+  .section-title {
     .arco-space {
       align-items: center;
     }

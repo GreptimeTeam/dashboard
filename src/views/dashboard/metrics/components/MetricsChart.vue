@@ -1,6 +1,6 @@
 <template lang="pug">
 a-card.metrics-chart(:bordered="false")
-  .toolbar(v-if="hasData")
+  .section-title(v-if="hasData")
     a-space
       span Chart View
       span.series-count(v-if="seriesData.length > 0") 
@@ -323,25 +323,6 @@ a-card.metrics-chart(:bordered="false")
 
 <style lang="less" scoped>
   .metrics-chart {
-    .toolbar {
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--color-border);
-      background: var(--color-bg-container);
-      height: 50px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-
-      .series-count {
-        color: var(--color-text-secondary);
-        font-size: 12px;
-      }
-    }
-
-    .chart-section {
-      padding: 16px;
-    }
-
     .empty-state {
       text-align: center;
       padding: 60px 20px;
