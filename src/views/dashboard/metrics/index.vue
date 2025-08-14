@@ -57,7 +57,7 @@ a-layout.new-layout
       :data="queryResults"
       :loading="queryLoading"
       :query="currentQuery"
-      :time-range="unixTimeRange.length === 2 ? unixTimeRange : []"
+      :time-range="currentTimeRange"
       :step="computedStep"
     )
 
@@ -122,6 +122,7 @@ a-layout.new-layout
   const queryLoading = ref(false)
   const queryResults = ref<any[]>([])
   const step = ref() // Step in seconds, not string format
+  const currentTimeRange = ref<number[]>([]) // Store current time range for consistency
 
   // URL sync state
   const hasInitParams = ref(false)
@@ -245,9 +246,9 @@ a-layout.new-layout
       return step.value
     }
 
-    // Auto-calculate step based on unixTimeRange to get max 500 data points
-    if (unixTimeRange.value.length === 2) {
-      const [start, end] = unixTimeRange.value as [number, number]
+    // Auto-calculate step based on currentTimeRange to get max 500 data points
+    if (currentTimeRange.value.length === 2) {
+      const [start, end] = currentTimeRange.value as [number, number]
       const diffSeconds = end - start
 
       // Target max 500 data points for good chart performance
@@ -290,10 +291,16 @@ a-layout.new-layout
 
     queryLoading.value = true
     try {
+      // Get time range once and store for consistency
+      currentTimeRange.value = unixTimeRange()
+
       // Use range query for time series data
-      const start = unixTimeRange.value[0]
-      const end = unixTimeRange.value[1]
+      const start = currentTimeRange.value[0]
+      const end = currentTimeRange.value[1]
       const stepValue = computedStep.value
+      if (!start || !end) {
+        throw new Error('Invalid time range. Please select a valid time range.')
+      }
 
       console.log('Executing PromQL query:', {
         query: currentQuery.value,

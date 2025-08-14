@@ -20,19 +20,19 @@ const useTimeRange = (defaults = { time: 10 }) => {
     return [] // Any time / no time limit
   })
 
-  const unixTimeRange = computed(() => {
-    if (rangeTime.value.length === 2) {
-      // Absolute time range - return unix timestamps
-      return [Number(rangeTime.value[0]), Number(rangeTime.value[1])]
-    }
+  const unixTimeRange = () => {
     if (time.value > 0) {
       // Relative time range - calculate unix timestamps
       const now = Math.floor(Date.now() / 1000)
       const start = now - time.value * 60 // Convert minutes to seconds
       return [start, now]
     }
+    if (rangeTime.value.length === 2) {
+      // Absolute time range - return unix timestamps
+      return [Number(rangeTime.value[0]), Number(rangeTime.value[1])]
+    }
     return [] // Any time / no time limit
-  })
+  }
 
   function reset() {
     rangeTime.value = []
