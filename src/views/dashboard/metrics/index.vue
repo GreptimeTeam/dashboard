@@ -59,6 +59,8 @@ a-layout.new-layout
       :query="currentQuery"
       :time-range="currentTimeRange"
       :step="computedStep"
+      :chart-type="chartType"
+      @update:chart-type="chartType = $event"
     )
 
     .section-divider(v-if="queryResults && queryResults.length > 0")
@@ -123,13 +125,14 @@ a-layout.new-layout
   const queryResults = ref<any[]>([])
   const step = ref() // Step in seconds, not string format
   const currentTimeRange = ref<number[]>([]) // Store current time range for consistency
+  const chartType = ref('line') // Chart type state
 
   // URL sync state
   const hasInitParams = ref(false)
 
   // Initialize from URL query parameters
   const initializeFromQuery = () => {
-    const { promql, timeLength, timeRange: urlTimeRange, step: urlStep } = route.query
+    const { promql, timeLength, timeRange: urlTimeRange, step: urlStep, chartType: urlChartType } = route.query
 
     // PromQL query
     if (promql && typeof promql === 'string') {
@@ -153,6 +156,11 @@ a-layout.new-layout
     // Step parameter
     if (urlStep && typeof urlStep === 'string') {
       step.value = parseInt(urlStep, 10)
+    }
+
+    // Chart type
+    if (urlChartType && typeof urlChartType === 'string') {
+      chartType.value = urlChartType
     }
   }
 
@@ -181,6 +189,13 @@ a-layout.new-layout
       query.step = step.value.toString()
     } else {
       delete query.step
+    }
+
+    // Chart type
+    if (chartType.value && chartType.value !== 'line') {
+      query.chartType = chartType.value
+    } else {
+      delete query.chartType
     }
 
     router.replace({ query })

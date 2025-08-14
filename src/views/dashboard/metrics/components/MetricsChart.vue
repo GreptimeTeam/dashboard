@@ -7,7 +7,7 @@ a-card.metrics-chart(:bordered="false")
         | ({{ seriesData.length }} {{ seriesData.length === 1 ? 'series' : 'series' }}, step: {{ step }}s)
 
     a-space(style="margin-left: auto")
-      a-radio-group(v-model="chartType" type="button" size="small")
+      a-radio-group(v-model="localChartType" type="button" size="small")
         a-radio(value="line") Lines
         a-radio(value="bar") Bars
         a-radio(value="scatter") Points
@@ -41,11 +41,19 @@ a-card.metrics-chart(:bordered="false")
     query: string
     timeRange: number[] | []
     step: number // Step in seconds, not string format
+    chartType: string // Chart type from parent
+  }>()
+
+  const emit = defineEmits<{
+    (e: 'update:chartType', value: string): void
   }>()
 
   // Chart state
   const chartRef = ref()
-  const chartType = ref('line') // Default to 'line'
+  const localChartType = computed({
+    get: () => props.chartType,
+    set: (value: string) => emit('update:chartType', value),
+  })
 
   // Helper functions for chart type handling
   const getChartType = (type: string): string => {
@@ -144,13 +152,13 @@ a-card.metrics-chart(:bordered="false")
 
       return {
         name: seriesName,
-        type: getChartType(chartType.value),
+        type: getChartType(localChartType.value),
         data,
         smooth: false,
-        symbol: chartType.value === 'scatter' ? 'circle' : 'none',
-        symbolSize: chartType.value === 'scatter' ? 4 : 0,
+        symbol: localChartType.value === 'scatter' ? 'circle' : 'none',
+        symbolSize: localChartType.value === 'scatter' ? 4 : 0,
         lineStyle:
-          chartType.value === 'scatter'
+          localChartType.value === 'scatter'
             ? undefined
             : {
                 width: 1.5,
@@ -159,9 +167,9 @@ a-card.metrics-chart(:bordered="false")
           focus: 'series',
         },
         connectNulls: false, // Don't connect lines across null values (gaps)
-        showSymbol: chartType.value === 'scatter', // Show symbols only for scatter/points
+        showSymbol: localChartType.value === 'scatter', // Show symbols only for scatter/points
         // Add area fill for stacked lines
-        areaStyle: isStackedChart(chartType.value)
+        areaStyle: isStackedChart(localChartType.value)
           ? {
               opacity: 0.6,
             }
