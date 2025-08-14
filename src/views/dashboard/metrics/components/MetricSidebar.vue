@@ -87,10 +87,9 @@ a-card.metrics-sidebar(:bordered="false")
   }>()
 
   // Use the metrics composable
-  const { metrics, loading, fetchMetrics, fetchLabels, fetchLabelValues, searchMetrics } = useMetrics()
+  const { metrics, loading, fetchMetrics, fetchLabelValues, searchMetrics } = useMetrics()
 
   // Sidebar state
-  const sidebarWidth = useStorage('metrics-sidebar-width', 320)
   const selectedMetric = useLocalStorage<string | null>('metrics-explorer-last-selected', null)
   const expandedKeys = ref<string[]>([])
 
@@ -223,7 +222,7 @@ a-card.metrics-sidebar(:bordered="false")
     align-items: center;
     gap: 8px;
     margin-bottom: 16px;
-
+    flex-wrap: nowrap;
     .a-select {
       flex: 1;
     }

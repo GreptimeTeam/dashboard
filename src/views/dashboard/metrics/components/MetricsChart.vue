@@ -7,8 +7,11 @@ a-card.metrics-chart(:bordered="false")
         | ({{ seriesData.length }} {{ seriesData.length === 1 ? 'series' : 'series' }}, step: {{ step }}s)
 
     a-space(style="margin-left: auto")
-      a-button(type="outline" size="small" @click="toggleStacked")
-        | {{ isStacked ? 'Unstack' : 'Stack' }}
+      a-radio-group(v-model="chartType" type="button" size="small")
+        a-radio(value="line") Lines
+        a-radio(value="bar") Bars
+        a-radio(value="scatter") Points
+        a-radio(value="stacked-line") Stacked Lines
 
   .chart-section(v-if="hasData")
     .chart-container
@@ -42,7 +45,25 @@ a-card.metrics-chart(:bordered="false")
 
   // Chart state
   const chartRef = ref()
-  const isStacked = ref(false)
+  const chartType = ref('line') // Default to 'line'
+
+  // Helper functions for chart type handling
+  const getChartType = (type: string): string => {
+    switch (type) {
+      case 'stacked-line':
+        return 'line'
+      case 'scatter':
+        return 'scatter'
+      case 'bar':
+        return 'bar'
+      default:
+        return 'line'
+    }
+  }
+
+  const isStackedChart = (type: string): boolean => {
+    return type === 'stacked-line' || type === 'stacked-bar'
+  }
 
   // Fill missing timestamps in time series data
   const fillMissingTimestamps = (series: any[], start: number, end: number, stepSeconds: number) => {
@@ -142,21 +163,34 @@ a-card.metrics-chart(:bordered="false")
 
       return {
         name: seriesName,
-        type: 'line',
+        type: getChartType(chartType.value),
         data,
         smooth: false,
-        symbol: 'none',
-        lineStyle: {
-          width: 1.5,
-        },
+        symbol: chartType.value === 'scatter' ? 'circle' : 'none',
+        symbolSize: chartType.value === 'scatter' ? 4 : 0,
+        lineStyle:
+          chartType.value === 'scatter'
+            ? undefined
+            : {
+                width: 1.5,
+              },
         emphasis: {
           focus: 'series',
         },
-        stack: isStacked.value ? 'total' : undefined,
         connectNulls: false, // Don't connect lines across null values (gaps)
-        showSymbol: false, // Hide symbols for cleaner look
+        showSymbol: chartType.value === 'scatter', // Show symbols only for scatter/points
+        // Add area fill for stacked lines
+        areaStyle: isStackedChart(chartType.value)
+          ? {
+              opacity: 0.6,
+            }
+          : undefined,
       }
     })
+
+    // watchEffect(() => {
+    //   console.log('chartOption', chartOption.value, props.data)
+    // })
 
     return {
       tooltip: {
@@ -285,11 +319,6 @@ a-card.metrics-chart(:bordered="false")
       backgroundColor: 'transparent',
     }
   })
-
-  // Methods
-  const toggleStacked = () => {
-    isStacked.value = !isStacked.value
-  }
 </script>
 
 <style lang="less" scoped>
