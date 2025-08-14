@@ -7,19 +7,6 @@ a-layout.new-layout
   )
     a-layout-sider(:width="actualSidebarWidth")
       a-card.metrics-sidebar(:bordered="false")
-        template(#title)
-          a-space(:size="10")
-            | Metrics Explorer
-            a-button(
-              type="outline"
-              size="small"
-              :loading="loading"
-              @click="refreshData"
-            )
-              template(#icon)
-                svg.icon.brand-color
-                  use(href="#refresh")
-
         MetricSidebar(@copyText="handleCopyText" @insertText="handleInsertText")
 
   a-layout-content.layout-content
@@ -126,8 +113,6 @@ a-layout.new-layout
     fetchLabelValues,
     executeQuery,
     executeRangeQuery,
-    clearResults,
-    updateTimeRange,
     searchMetrics,
   } = useMetrics()
 

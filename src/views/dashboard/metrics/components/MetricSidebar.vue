@@ -1,66 +1,146 @@
 <template lang="pug">
-.metric-sidebar
-  .metric-select-container
-    a-select(
-      v-model="selectedMetric"
-      allow-search
-      placeholder="Search metrics..."
-      size="small"
-      allow-clear
-      :filter-option="false"
-      :options="metricOptions"
-      :loading="loading"
-      @search="onMetricSearch"
-      @change="onMetricChange"
-    )
-    a-button.insert-metric-button(
-      v-if="selectedMetric"
-      type="text"
-      size="small"
-      :title="`Insert metric: ${selectedMetric}`"
-      @click="insertSelectedMetric"
-    )
+a-card.metrics-sidebar(:bordered="false")
+  template(#title)
+    a-space(:size="10")
+      | Metrics
+      a-button(
+        type="outline"
+        size="small"
+        :loading="loading"
+        @click="refreshData"
+      )
+        template(#icon)
+          svg.icon.brand-color
+            use(href="#refresh")
+  template(#extra)
+    a-button(type="text" size="mini" @click="showMetricsExplorer = true")
       template(#icon)
-        icon-plus
+        icon-search
+      | Browse
 
-  a-tree.metrics-tree(
-    v-model:expanded-keys="expandedKeys"
-    size="small"
-    action-on-node-click="expand"
-    :block-node="true"
-    :data="metricsTreeData"
-    :load-more="loadLabelValues"
-    :animation="false"
-  )
-    template(#switcher-icon="nodeData")
-      svg.icon-16.icon-color(v-if="!nodeData.isLeaf")
-        use(href="#down")
-    template(#title="nodeData")
-      .tree-data
-        .data-title {{ nodeData.title }}
-        MetricMenu(
-          :nodeData="nodeData"
-          @copyText="$emit('copyText', $event)"
-          @insertText="$emit('insertText', $event)"
-        )
+  .metrics-section
+    .metric-select-container
+      a-select(
+        v-model="selectedMetric"
+        allow-search
+        placeholder="Search metrics..."
+        size="small"
+        allow-clear
+        :options="metricOptions"
+        :loading="loading"
+        @search="onMetricSearch"
+        @change="onMetricChange"
+      )
+      a-button.insert-metric-button(
+        v-if="selectedMetric"
+        type="text"
+        size="small"
+        :title="`Insert metric: ${selectedMetric}`"
+        @click="insertSelectedMetric"
+      )
+        template(#icon)
+          icon-plus
+
+    // Metrics Explorer Modal
+    MetricsExplorer(
+      v-model:visible="showMetricsExplorer"
+      :metrics="metrics"
+      :loading="loading"
+      @select="selectMetricFromExplorer"
+    )
+
+    a-tree.metrics-tree(
+      v-model:expanded-keys="expandedKeys"
+      size="small"
+      action-on-node-click="expand"
+      :block-node="true"
+      :data="metricsTreeData"
+      :load-more="loadLabelValues"
+      :animation="false"
+    )
+      template(#switcher-icon="nodeData")
+        svg.icon-16.icon-color(v-if="!nodeData.isLeaf")
+          use(href="#down")
+      template(#title="nodeData")
+        .tree-data
+          .data-title {{ nodeData.title }}
+          MetricMenu(
+            :nodeData="nodeData"
+            @copyText="$emit('copyText', $event)"
+            @insertText="$emit('insertText', $event)"
+          )
 </template>
 
 <script setup lang="ts">
-  import { computed, ref, watch, onMounted, nextTick } from 'vue'
+  import { ref, computed, watch, nextTick, onMounted } from 'vue'
   import { useLocalStorage } from '@vueuse/core'
+  import { useStorage } from '@vueuse/core'
+  import { IconSearch, IconLoading } from '@arco-design/web-vue/es/icon'
   import { useMetrics } from '@/hooks/use-metrics'
   import MetricMenu from './MetricMenu.vue'
+  import MetricsExplorer from './MetricsExplorer.vue'
 
   const emit = defineEmits<{
     (e: 'copyText', text: string): void
     (e: 'insertText', text: string): void
   }>()
 
+  // Use the metrics composable
   const { metrics, labels, loading, fetchMetrics, fetchLabels, fetchLabelValues, searchMetrics } = useMetrics()
 
-  // Use useLocalStorage hook for selectedMetric persistence
+  // Sidebar state
+  const sidebarWidth = useStorage('metrics-sidebar-width', 320)
   const selectedMetric = useLocalStorage<string | null>('metrics-explorer-last-selected', null)
   const expandedKeys = ref<string[]>([])
+
+  // Metrics explorer state
+  const showMetricsExplorer = ref(false)
+
+  // Computed properties
+  const metricOptions = computed(() => {
+    return metrics.value.map((metric) => ({
+      label: metric.name,
+      value: metric.name,
+    }))
+  })
+
+  // Methods
+  const onMetricSearch = async (query: string) => {
+    if (query.trim()) {
+      await searchMetrics(query)
+    }
+  }
+
+  const onMetricChange = (value: string) => {
+    selectedMetric.value = value
+    if (value) {
+      fetchLabels(value)
+    }
+  }
+
+  const selectMetricFromExplorer = (metricName: string) => {
+    selectedMetric.value = metricName
+    showMetricsExplorer.value = false
+    if (metricName) {
+      fetchLabels(metricName)
+    }
+  }
+
+  const refreshData = async () => {
+    await fetchMetrics()
+  }
+
+  const onExpand = (keys: string[]) => {
+    // Handle tree expansion if needed
+  }
+
+  const handleCopyText = (text: string) => {
+    emit('copyText', text)
+  }
+
+  const handleInsertText = (text: string) => {
+    emit('insertText', text)
+  }
 
   const metricsTreeData = ref<any[]>([])
   const buildTreeForSelectedMetric = () => {
@@ -78,12 +158,6 @@
       children: [],
     }))
   }
-  const onMetricChange = async (metricName: string) => {
-    selectedMetric.value = metricName
-    expandedKeys.value = []
-    await fetchLabels(metricName)
-    buildTreeForSelectedMetric()
-  }
 
   // Auto-select logic: storage first, then first item in results
   const autoSelectMetric = () => {
@@ -96,10 +170,6 @@
       onMetricChange(selectedMetric.value)
     }
   }
-
-  const metricOptions = computed(() => {
-    return (metrics.value || []).map((m) => ({ label: m.name, value: m.name }))
-  })
 
   watch(selectedMetric, (newMetric) => {
     buildTreeForSelectedMetric()
@@ -116,20 +186,6 @@
     },
     { flush: 'post' }
   )
-
-  const onMetricSearch = async (text: string) => {
-    const names = await searchMetrics(text)
-    const set = new Set(names)
-    const next = Array.from(set).map((name) => ({ name }))
-    metrics.value = next as any
-
-    // After search, auto-select if no current selection
-    if (!selectedMetric.value && next.length > 0) {
-      nextTick(() => {
-        autoSelectMetric()
-      })
-    }
-  }
 
   const loadLabelValues = async (nodeData: any) => {
     if (nodeData.type === 'label' && !nodeData.children?.length) {
@@ -202,7 +258,11 @@
   :deep(.arco-tree-node-switcher) {
     width: 16px;
   }
-  .metric-sidebar {
+  .metrics-section {
+    height: 100%;
+    background: var(--color-bg-container);
+    border-right: 1px solid var(--color-border);
+    overflow-y: auto;
     padding: 0 15px;
   }
   // Tree node styling to match query sidebar

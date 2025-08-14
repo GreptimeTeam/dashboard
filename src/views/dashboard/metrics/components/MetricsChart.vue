@@ -4,7 +4,7 @@ a-card.metrics-chart(:bordered="false")
     a-space
       span Chart View
       span.series-count(v-if="seriesData.length > 0") 
-        | ({{ seriesData.length }} {{ seriesData.length === 1 ? 'series' : 'series' }}, step: {{ formatStep(step) }})
+        | ({{ seriesData.length }} {{ seriesData.length === 1 ? 'series' : 'series' }}, step: {{ step }}s)
 
     a-space(style="margin-left: auto")
       a-button(type="outline" size="small" @click="toggleStacked")
@@ -43,14 +43,6 @@ a-card.metrics-chart(:bordered="false")
   const chartRef = ref()
   const isStacked = ref(false)
   const chartHeight = ref('400px')
-
-  // Format step from seconds to human-readable format
-  const formatStep = (stepSeconds: number): string => {
-    if (stepSeconds < 60) return `${stepSeconds}s`
-    if (stepSeconds < 3600) return `${Math.floor(stepSeconds / 60)}m`
-    if (stepSeconds < 86400) return `${Math.floor(stepSeconds / 3600)}h`
-    return `${Math.floor(stepSeconds / 86400)}d`
-  }
 
   // Fill missing timestamps in time series data
   const fillMissingTimestamps = (series: any[], start: number, end: number, stepSeconds: number) => {
