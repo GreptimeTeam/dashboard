@@ -14,7 +14,6 @@ a-layout.new-layout
       .section-title
         a-space
           TimeRangeSelect(
-            ref="timeRangeSelectRef"
             v-model:time-length="time"
             v-model:time-range="rangeTime"
             button-type="outline"
@@ -103,26 +102,14 @@ a-layout.new-layout
   const { rangeTime, time, unixTimeRange } = timeRangeState
 
   // Use the metrics composable
-  const {
-    metrics,
-    loading,
-    error,
-    currentQuery,
-    queryResult,
-    rangeQueryResult,
-    fetchMetrics,
-    fetchLabelValues,
-    executeQuery,
-    executeRangeQuery,
-    searchMetrics,
-  } = useMetrics()
+  const { currentQuery, rangeQueryResult: queryResults, fetchMetrics, executeRangeQuery } = useMetrics()
 
   // Sidebar state
   const sidebarWidth = useStorage('metrics-sidebar-width', 320)
 
   // Query state
   const queryLoading = ref(false)
-  const queryResults = ref<any[]>([])
+
   const step = ref() // Step in seconds, not string format
   const currentTimeRange = ref<number[]>([]) // Store current time range for consistency
   const chartType = ref('line') // Chart type state
@@ -295,7 +282,6 @@ a-layout.new-layout
   })
 
   const promqlEditorRef = ref()
-  const timeRangeSelectRef = ref()
 
   // Query execution
   const handleRunQuery = async () => {
@@ -304,45 +290,17 @@ a-layout.new-layout
       return
     }
 
-    queryLoading.value = true
-    try {
-      // Get time range once and store for consistency
-      currentTimeRange.value = unixTimeRange()
+    // Get time range once and store for consistency
+    currentTimeRange.value = unixTimeRange()
 
-      // Use range query for time series data
-      const start = currentTimeRange.value[0]
-      const end = currentTimeRange.value[1]
-      const stepValue = computedStep.value
-      if (!start || !end) {
-        throw new Error('Invalid time range. Please select a valid time range.')
-      }
+    // Use range query for time series data
+    const start = currentTimeRange.value[0]
+    const end = currentTimeRange.value[1]
+    const stepValue = computedStep.value
 
-      console.log('Executing PromQL query:', {
-        query: currentQuery.value,
-        start,
-        end,
-        step: stepValue,
-      })
-
-      const result = await executeRangeQuery(currentQuery.value, start, end, stepValue)
-
-      if (result && result.result) {
-        queryResults.value = result.result
-        Message.success(`Query executed successfully - ${result.result.length} series found`)
-
-        // Update URL parameters after successful query
-        updateQueryParams()
-      } else {
-        queryResults.value = []
-        Message.info('Query executed but no data returned')
-      }
-    } catch (err: any) {
-      console.error('Query execution failed:', err)
-      Message.error(`Query failed: ${err.message || 'Unknown error'}`)
-      queryResults.value = []
-    } finally {
-      queryLoading.value = false
-    }
+    executeRangeQuery(currentQuery.value, start, end, stepValue).then(() => {
+      updateQueryParams()
+    })
   }
 
   const handleCopyText = async (text: string) => {

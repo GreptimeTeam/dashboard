@@ -44,11 +44,12 @@ export function useMetrics() {
 
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const queryLoading = ref(false)
 
   // Current query state
   const currentQuery = ref('')
   const queryResult = ref<QueryResult | null>(null)
-  const rangeQueryResult = ref<RangeQueryResult | null>(null)
+  const rangeQueryResult = ref<Array<any>>(null)
 
   // Computed properties
   const metricNames = computed(() => metrics.value.map((m) => m.name))
@@ -109,29 +110,10 @@ export function useMetrics() {
     }
   }
 
-  // Execute PromQL query
-  const executeQuery = async (query: string, time?: number) => {
-    try {
-      loading.value = true
-      error.value = null
-      currentQuery.value = query
-
-      const response = await executePromQL(query, time?.toString(), appStore.database)
-      queryResult.value = response.data
-      return response.data
-    } catch (err: any) {
-      error.value = err.message || 'Failed to execute query'
-      console.error('Error executing query:', err)
-      throw err
-    } finally {
-      loading.value = false
-    }
-  }
-
   // Execute PromQL range query
   const executeRangeQuery = async (query: string, start?: number, end?: number, step?: number) => {
     try {
-      loading.value = true
+      queryLoading.value = true
       error.value = null
       currentQuery.value = query
 
@@ -146,14 +128,14 @@ export function useMetrics() {
         stepValue.toString(), // Convert number to string for API call
         appStore.database
       )
-      rangeQueryResult.value = response.data
+      rangeQueryResult.value = response.data.result
       return response.data
     } catch (err: any) {
       error.value = err.message || 'Failed to execute range query'
       console.error('Error executing range query:', err)
       throw err
     } finally {
-      loading.value = false
+      queryLoading.value = false
     }
   }
 
@@ -185,8 +167,8 @@ export function useMetrics() {
     // Methods
     fetchMetrics,
     fetchLabelValues,
-    executeQuery,
     executeRangeQuery,
     searchMetrics,
+    queryLoading,
   }
 }
