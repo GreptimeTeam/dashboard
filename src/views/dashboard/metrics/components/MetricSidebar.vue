@@ -29,7 +29,6 @@ a-card.metrics-sidebar(:bordered="false")
         :options="metricOptions"
         :loading="loading"
         @search="onMetricSearch"
-        @change="onMetricChange"
       )
       a-button.insert-metric-button(
         v-if="selectedMetric"
@@ -76,6 +75,8 @@ a-card.metrics-sidebar(:bordered="false")
   import { useLocalStorage } from '@vueuse/core'
   import { useStorage } from '@vueuse/core'
   import { IconSearch, IconLoading } from '@arco-design/web-vue/es/icon'
+  import { getLabelNames } from '@/api/metrics'
+  import { useAppStore } from '@/store'
   import { useMetrics } from '@/hooks/use-metrics'
   import MetricMenu from './MetricMenu.vue'
   import MetricsExplorer from './MetricsExplorer.vue'
@@ -86,12 +87,15 @@ a-card.metrics-sidebar(:bordered="false")
   }>()
 
   // Use the metrics composable
-  const { metrics, labels, loading, fetchMetrics, fetchLabels, fetchLabelValues, searchMetrics } = useMetrics()
+  const { metrics, loading, fetchMetrics, fetchLabels, fetchLabelValues, searchMetrics } = useMetrics()
 
   // Sidebar state
   const sidebarWidth = useStorage('metrics-sidebar-width', 320)
   const selectedMetric = useLocalStorage<string | null>('metrics-explorer-last-selected', null)
   const expandedKeys = ref<string[]>([])
+
+  // Local state for labels
+  const labels = ref<any[]>([])
 
   // Metrics explorer state
   const showMetricsExplorer = ref(false)
@@ -105,16 +109,26 @@ a-card.metrics-sidebar(:bordered="false")
   })
 
   // Methods
-  const onMetricSearch = async (query: string) => {
-    if (query.trim()) {
-      await searchMetrics(query)
+  // Fetch labels for a specific metric and store locally
+  const fetchLabelsForMetric = async (metricName: string) => {
+    try {
+      const response = await getLabelNames(metricName)
+      if (response && response.data) {
+        labels.value = response.data
+          .filter((name: string) => name !== '__name__')
+          .map((name: string) => ({ name, values: [] }))
+      } else {
+        labels.value = []
+      }
+    } catch (error) {
+      console.error('Error fetching labels:', error)
+      labels.value = []
     }
   }
 
-  const onMetricChange = (value: string) => {
-    selectedMetric.value = value
-    if (value) {
-      fetchLabels(value)
+  const onMetricSearch = async (query: string) => {
+    if (query.trim()) {
+      await searchMetrics(query)
     }
   }
 
@@ -122,7 +136,7 @@ a-card.metrics-sidebar(:bordered="false")
     selectedMetric.value = metricName
     showMetricsExplorer.value = false
     if (metricName) {
-      fetchLabels(metricName)
+      fetchLabelsForMetric(metricName)
     }
   }
 
@@ -159,33 +173,9 @@ a-card.metrics-sidebar(:bordered="false")
     }))
   }
 
-  // Auto-select logic: storage first, then first item in results
-  const autoSelectMetric = () => {
-    if (!metrics.value?.length) {
-      return
-    }
-
-    // Check if stored metric exists in current results
-    if (selectedMetric.value && metrics.value.some((m) => m.name === selectedMetric.value)) {
-      onMetricChange(selectedMetric.value)
-    }
-  }
-
-  watch(selectedMetric, (newMetric) => {
+  watch(labels, (newMetric) => {
     buildTreeForSelectedMetric()
   })
-
-  // Watch for metrics changes and auto-select
-  watch(
-    metrics,
-    () => {
-      // Only auto-select if no metric is currently selected
-      if (!selectedMetric.value) {
-        autoSelectMetric()
-      }
-    },
-    { flush: 'post' }
-  )
 
   const loadLabelValues = async (nodeData: any) => {
     if (nodeData.type === 'label' && !nodeData.children?.length) {
@@ -212,11 +202,19 @@ a-card.metrics-sidebar(:bordered="false")
 
   onMounted(async () => {
     await fetchMetrics()
-    // Auto-select after initial fetch
-    nextTick(() => {
-      autoSelectMetric()
-    })
   })
+
+  watch(
+    () => selectedMetric.value,
+    (newMetric) => {
+      if (newMetric) {
+        fetchLabelsForMetric(newMetric)
+      }
+    },
+    {
+      immediate: true,
+    }
+  )
 </script>
 
 <style scoped lang="less">

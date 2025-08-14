@@ -41,7 +41,7 @@ export function useMetrics() {
 
   // Reactive state
   const metrics = ref<MetricData[]>([])
-  const labels = ref<LabelData[]>([])
+
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -52,7 +52,6 @@ export function useMetrics() {
 
   // Computed properties
   const metricNames = computed(() => metrics.value.map((m) => m.name))
-  const labelNames = computed(() => labels.value.map((l) => l.name))
 
   // Fetch all metric names
   const fetchMetrics = async (_match?: string) => {
@@ -90,25 +89,6 @@ export function useMetrics() {
     } catch (err: any) {
       console.error('Error remote searching metrics:', err)
       return []
-    } finally {
-      loading.value = false
-    }
-  }
-
-  // Fetch all label names
-  const fetchLabels = async (match?: string) => {
-    try {
-      loading.value = true
-      error.value = null
-      const response = await getLabelNames(match, appStore.database)
-      if (response.data) {
-        const names: string[] = response.data.filter((n: string) => n !== '__name__')
-        const labelList = names.map((name: string) => ({ name, values: [] }))
-        labels.value = labelList
-      }
-    } catch (err: any) {
-      error.value = err.message || 'Failed to fetch labels'
-      console.error('Error fetching labels:', err)
     } finally {
       loading.value = false
     }
@@ -189,37 +169,24 @@ export function useMetrics() {
     () => appStore.database,
     () => {
       fetchMetrics()
-      fetchLabels()
     }
   )
-
-  // Initialize
-  const initialize = async () => {
-    await Promise.all([fetchMetrics(), fetchLabels()])
-  }
 
   return {
     // State
     metrics,
-    labels,
     loading,
     error,
     currentQuery,
     queryResult,
     rangeQueryResult,
-
     // Computed
     metricNames,
-    labelNames,
-
     // Methods
     fetchMetrics,
-    fetchLabels,
     fetchLabelValues,
     executeQuery,
     executeRangeQuery,
-    clearResults,
-    initialize,
     searchMetrics,
   }
 }

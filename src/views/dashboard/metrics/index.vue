@@ -102,14 +102,12 @@ a-layout.new-layout
   // Use the metrics composable
   const {
     metrics,
-    labels,
     loading,
     error,
     currentQuery,
     queryResult,
     rangeQueryResult,
     fetchMetrics,
-    fetchLabels,
     fetchLabelValues,
     executeQuery,
     executeRangeQuery,
@@ -336,11 +334,6 @@ a-layout.new-layout
     } finally {
       queryLoading.value = false
     }
-  }
-
-  // Refresh data
-  const refreshData = async () => {
-    await fetchMetrics()
   }
 
   const handleCopyText = async (text: string) => {

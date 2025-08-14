@@ -11,12 +11,13 @@ a-card.metrics-chart(:bordered="false")
         | {{ isStacked ? 'Unstack' : 'Stack' }}
 
   .chart-section(v-if="hasData")
-    Chart(
-      ref="chartRef"
-      :option="chartOption"
-      :loading="loading"
-      :style="{ height: chartHeight }"
-    )
+    .chart-container
+      Chart(
+        ref="chartRef"
+        :option="chartOption"
+        :loading="loading"
+        :style="{ height: '500px' }"
+      )
 
   .empty-state(v-else)
     a-empty(description="No data to display")
@@ -42,7 +43,6 @@ a-card.metrics-chart(:bordered="false")
   // Chart state
   const chartRef = ref()
   const isStacked = ref(false)
-  const chartHeight = ref('400px')
 
   // Fill missing timestamps in time series data
   const fillMissingTimestamps = (series: any[], start: number, end: number, stepSeconds: number) => {
@@ -116,7 +116,6 @@ a-card.metrics-chart(:bordered="false")
     return filteredData
   })
 
-  // Transform data for chart
   const chartOption = computed(() => {
     if (!hasData.value) return {}
     console.log('seriesData', seriesData.value)
@@ -292,21 +291,17 @@ a-card.metrics-chart(:bordered="false")
 <style lang="less" scoped>
   .metrics-chart {
     .toolbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px;
+      padding: 16px 20px;
       border-bottom: 1px solid var(--color-border);
       background: var(--color-bg-container);
       height: 50px;
-      .arco-space {
-        align-items: center;
-      }
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
 
       .series-count {
         color: var(--color-text-secondary);
         font-size: 12px;
-        font-weight: normal;
       }
     }
 
@@ -315,19 +310,15 @@ a-card.metrics-chart(:bordered="false")
     }
 
     .empty-state {
-      padding: 60px 20px;
       text-align: center;
+      padding: 60px 20px;
+      color: var(--color-text-secondary);
 
       .empty-icon {
-        width: 48px;
-        height: 48px;
-        color: var(--color-text-disabled);
+        width: 64px;
+        height: 64px;
         margin-bottom: 16px;
-      }
-
-      :deep(.arco-empty-description) {
-        color: var(--color-text-secondary);
-        font-size: 14px;
+        opacity: 0.5;
       }
     }
   }
