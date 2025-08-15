@@ -15,11 +15,11 @@ a-card.metrics-chart(:bordered="false")
 
   .chart-section(v-if="hasData")
     .chart-container(style="padding: 16px 0")
-      Chart(
+      SimpleChart(
+        :key="props.query"
         ref="chartRef"
-        :option="chartOption"
-        :loading="loading"
-        :style="{ height: '560px' }"
+        height="560px"
+        :options="chartOption"
       )
 
   .empty-state(v-else)
@@ -32,7 +32,7 @@ a-card.metrics-chart(:bordered="false")
 
 <script setup lang="ts">
   import { ref, computed, watch, nextTick } from 'vue'
-  import Chart from '@/components/chart/index.vue'
+  import SimpleChart from '@/components/simple-chart/index.vue'
   import dayjs from 'dayjs'
 
   const props = defineProps<{
@@ -240,7 +240,7 @@ a-card.metrics-chart(:bordered="false")
         containLabel: true,
       },
       xAxis: {
-        type: 'time',
+        type: 'time' as const,
         axisLabel: {
           formatter: (value: number) => dayjs(value).format('HH:mm'),
           interval: 0,
@@ -248,7 +248,7 @@ a-card.metrics-chart(:bordered="false")
         splitLine: {
           show: true,
           lineStyle: {
-            type: 'dashed',
+            type: 'dashed' as const,
             color: 'var(--color-border)',
           },
         },
@@ -259,7 +259,7 @@ a-card.metrics-chart(:bordered="false")
         },
       },
       yAxis: {
-        type: 'value',
+        type: 'value' as const,
         // Calculate min/max from actual data values
         min: (value: any) => {
           // Find the minimum non-null value across all series
@@ -302,7 +302,7 @@ a-card.metrics-chart(:bordered="false")
         splitLine: {
           lineStyle: {
             color: 'var(--color-border-light)',
-            type: 'dashed',
+            type: 'dashed' as const,
           },
         },
       },

@@ -53,6 +53,7 @@ a-layout.new-layout
 
     // Query Results Section - Chart
     MetricsChart(
+      :key="chartKey"
       :data="queryResults"
       :loading="queryLoading"
       :query="currentQuery"
@@ -283,6 +284,13 @@ a-layout.new-layout
 
   const promqlEditorRef = ref()
 
+  // Track previous query for time alignment
+  const previousQuery = ref('')
+  const previousTimeRange = ref<number[]>([])
+
+  // Force chart recreation when query changes
+  const chartKey = ref(0)
+
   // Query execution
   const handleRunQuery = async () => {
     if (!currentQuery.value.trim()) {
@@ -291,12 +299,54 @@ a-layout.new-layout
     }
 
     // Get time range once and store for consistency
-    currentTimeRange.value = unixTimeRange()
+    const newTimeRange = unixTimeRange()
+    const stepValue = computedStep.value
+
+    // Check if this is the same PromQL query
+    const isSameQuery = previousQuery.value === currentQuery.value
+
+    if (isSameQuery && previousTimeRange.value.length === 2) {
+      // Same query: ensure time difference is integer multiple of step
+      const [prevStart, prevEnd] = previousTimeRange.value
+      const [newStart, newEnd] = newTimeRange
+
+      // Calculate time difference
+      const timeDiff = newEnd - prevEnd
+
+      // Ensure time difference is integer multiple of step
+      const alignedTimeDiff = Math.round(timeDiff / stepValue) * stepValue
+      const alignedNewEnd = prevEnd + alignedTimeDiff
+      const alignedNewStart = alignedNewEnd - (newEnd - newStart)
+
+      console.log('Same query detected, aligning time:', {
+        prevEnd,
+        newEnd,
+        timeDiff,
+        stepValue,
+        alignedTimeDiff,
+        alignedNewEnd,
+        alignedNewStart,
+      })
+
+      // Use aligned time range
+      currentTimeRange.value = [alignedNewStart, alignedNewEnd]
+    } else {
+      // Different query or first query: use original time range
+      currentTimeRange.value = newTimeRange
+      console.log('Different query or first query, using original time range')
+
+      // Force chart recreation for different query
+      chartKey.value += 1
+      console.log('Chart key incremented for different query:', chartKey.value)
+    }
+
+    // Store current query and time range for next comparison
+    previousQuery.value = currentQuery.value
+    previousTimeRange.value = [...currentTimeRange.value]
 
     // Use range query for time series data
     const start = currentTimeRange.value[0]
     const end = currentTimeRange.value[1]
-    const stepValue = computedStep.value
 
     executeRangeQuery(currentQuery.value, start, end, stepValue).then(() => {
       updateQueryParams()
