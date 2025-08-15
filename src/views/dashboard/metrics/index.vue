@@ -29,7 +29,7 @@ a-layout.new-layout
             template(#prepend)
               | Step
             template(#append)
-              | S
+              | s
           a-button(
             type="primary"
             size="small"
