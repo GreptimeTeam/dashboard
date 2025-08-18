@@ -6,7 +6,7 @@ CodeMirror(
   :extensions="extensions"
   :spellcheck="false"
   :autofocus="false"
-  :indent-with-tab="true"
+  :indent-with-tab="false"
   :tabSize="2"
   :disabled="disabled"
   @change="codeUpdate"
@@ -21,6 +21,8 @@ CodeMirror(
   import { PromQLExtension } from '@prometheus-io/codemirror-promql'
   import { useAppStore } from '@/store'
   import axios from 'axios'
+  import { keymap } from '@codemirror/view'
+  import { Prec } from '@codemirror/state'
 
   const props = defineProps<{
     modelValue: string
@@ -193,9 +195,19 @@ CodeMirror(
       .asExtension()
   }
 
+  // Custom keymap to prevent Enter from creating new lines (Prometheus UI style)
+  const singleLineKeymap = Prec.highest(
+    keymap.of([
+      {
+        key: 'Enter',
+        run: () => true, // Prevent default behavior - no new lines
+      },
+    ])
+  )
+
   // Extensions array
   const extensions = computed(() => {
-    const exts = [basicSetup]
+    const exts = [basicSetup, singleLineKeymap]
 
     if (promqlExtension.value) {
       exts.push(promqlExtension.value)
@@ -284,5 +296,123 @@ CodeMirror(
   }
   :deep(.cm-focused) {
     outline: none;
+  }
+
+  // Single line editor styles (Prometheus UI style)
+  :deep(.cm-editor) {
+    height: 40px;
+    overflow: visible;
+  }
+
+  :deep(.cm-scroller) {
+    overflow: visible;
+  }
+
+  :deep(.cm-content) {
+    line-height: 40px;
+    padding: 0 8px;
+    min-height: 40px;
+  }
+
+  :deep(.cm-line) {
+    padding: 0;
+  }
+  :deep(.cm-activeLine) {
+    background-color: transparent;
+  }
+
+  // Hide line numbers like Prometheus UI
+  :deep(.cm-gutters) {
+    display: none !important;
+  }
+
+  :deep(.cm-lineNumbers) {
+    display: none !important;
+  }
+
+  // Ensure autocomplete popup is visible
+  :deep(.cm-tooltip) {
+    z-index: 1000;
+  }
+
+  :deep(.cm-tooltip.cm-completionInfo) {
+    z-index: 1001;
+  }
+
+  // Prometheus UI style autocomplete popup
+  :deep(.cm-tooltip.cm-tooltip-autocomplete) {
+    background-color: #f8f8f8;
+    border: 1px solid rgba(52, 79, 113, 0.2);
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+
+    & > ul {
+      max-height: 350px;
+      font-family: 'DejaVu Sans Mono', monospace;
+      max-width: unset;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    & > ul > li {
+      padding: 8px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(52, 79, 113, 0.1);
+
+      &:hover {
+        background-color: #ddd;
+      }
+
+      &[aria-selected] {
+        background-color: #d6ebff;
+        color: unset;
+      }
+
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+
+    min-width: 30%;
+  }
+
+  // Prometheus UI style completion info popup
+  :deep(.cm-tooltip.cm-completionInfo) {
+    background-color: #d6ebff;
+    border: 1px solid rgba(52, 79, 113, 0.2);
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    margin-top: -11px;
+    padding: 12px;
+    font-family: 'Open Sans', 'Lucida Sans Unicode', 'Lucida Grande', sans-serif;
+    min-width: 250px;
+    max-width: min-content;
+    z-index: 1001;
+  }
+
+  // Prometheus UI style completion icons
+  :deep(.cm-completionIcon) {
+    box-sizing: content-box;
+    font-size: 16px;
+    line-height: 1;
+    margin-right: 10px;
+    vertical-align: top;
+    color: #007acc;
+    opacity: 1;
+  }
+
+  // Prometheus UI style matched text highlighting
+  :deep(.cm-completionMatchedText) {
+    color: #0066bf;
+    text-decoration: none;
+    font-weight: bold;
+  }
+
+  // Prometheus UI style completion details
+  :deep(.cm-completionDetail) {
+    float: right;
+    color: #999;
+    font-size: 12px;
   }
 </style>
