@@ -30,12 +30,22 @@ a-tabs.panel-tabs(
     :title="`${$t('dashboard.explain')}`"
   )
     ExplainTabs(:data="explainResult")
-  a-tab-pane(
-    v-for="(result, index) of results"
-    :key="result.key"
-    closable
-    :title="`${$t('dashboard.result')} ${result.key - startKey + 1}`"
-  )
+  a-tab-pane(v-for="(result) of results" :key="result.key" closable)
+    template(#title)
+      a-space(:size="8")
+        span {{ `${$t('dashboard.result')} ${Number(result.key) - startKey + 1}` }}
+        a-tooltip(v-if="result.query" mini :content="result.query")
+          svg.icon-14.query-icon
+            use(href="#code")
+        a-tooltip(v-if="result.query" mini :content="$t('dashboard.refresh')")
+          a-button(
+            size="mini"
+            type="text"
+            :loading="refreshingKeys.has(result.key)"
+            @click.stop="refreshSingleResult(result)"
+          )
+            template(#icon)
+              icon-refresh.icon-12
     a-tabs.data-view-tabs(:animation="true")
       a-tab-pane(key="table")
         template(#title)
@@ -55,11 +65,9 @@ a-tabs.panel-tabs(
 
 <script lang="ts" name="DataView" setup>
   import useDataChart from '@/hooks/data-chart'
-  import i18n from '@/locale'
+  import useQueryCode from '@/hooks/query-code'
   import { useCodeRunStore } from '@/store'
   import type { ResultType } from '@/store/modules/code-run/types'
-  import { Message } from '@arco-design/web-vue'
-  import fileDownload from 'js-file-download'
   import ExplainTabs from '@/components/explain-tabs/index.vue'
 
   const props = defineProps<{
@@ -72,8 +80,10 @@ a-tabs.panel-tabs(
   const emit = defineEmits(['update:explainResult', 'toggleFullSize'])
 
   const { removeResult, clear } = useCodeRunStore()
+  const { refreshResult } = useQueryCode()
   const activeTabKey = ref<string | number>()
   const startKey = ref<number>((props.results[0]?.key as number) || 0)
+  const refreshingKeys = ref(new Set<string | number>())
 
   // Add a method to select specific tab
   const selectTab = (key: number | string) => {
@@ -112,6 +122,18 @@ a-tabs.panel-tabs(
   const clearResults = () => {
     startKey.value = props.results[0]?.key as number
     clear(props.types)
+  }
+
+  const refreshSingleResult = async (result: ResultType) => {
+    refreshingKeys.value.add(result.key)
+
+    try {
+      await refreshResult(result.key, result.type)
+    } catch (error: any) {
+      //
+    } finally {
+      refreshingKeys.value.delete(result.key)
+    }
   }
 
   const toggleFullSize = () => {
@@ -253,6 +275,18 @@ a-tabs.panel-tabs(
           }
         }
       }
+    }
+  }
+
+  // 新增：查询图标和刷新按钮样式
+  .query-icon {
+    color: var(--color-text-3);
+    opacity: 0.7;
+  }
+
+  .arco-btn[size='mini'] {
+    .icon-12 {
+      font-size: 12px;
     }
   }
 </style>
