@@ -241,7 +241,7 @@ a-layout.new-layout
     return rows
   })
 
-  // Auto compute step based on time range and max data points (500)
+  // Step calculation using exact Prometheus UI logic
   const computedStep = computed(() => {
     // If step is manually set, use it
     if (step.value) {
@@ -249,37 +249,31 @@ a-layout.new-layout
       return step.value
     }
 
-    // Auto-calculate step based on currentTimeRange to get max 500 data points
+    // Auto-calculate step using Prometheus UI's exact logic
     if (currentTimeRange.value.length === 2) {
       const [start, end] = currentTimeRange.value as [number, number]
       const diffSeconds = end - start
 
-      // Target max 500 data points for good chart performance
-      const maxDataPoints = 500
-      const targetStepSeconds = Math.ceil(diffSeconds / maxDataPoints)
+      // Prometheus UI logic: range / 250000 for ~250 data points
+      // Since we're working in seconds, we need to adjust the divisor: 250000/1000 = 250
+      const targetStepSeconds = Math.max(Math.floor(diffSeconds / 250), 1)
 
-      console.log('Step calculation:', {
+      console.log('Prometheus UI step calculation:', {
         start: new Date(start * 1000).toISOString(),
         end: new Date(end * 1000).toISOString(),
         diffSeconds,
-        maxDataPoints,
         targetStepSeconds,
+        expectedDataPoints: Math.floor(diffSeconds / targetStepSeconds),
+        prometheusLogic: `${diffSeconds}s / 250 = ${diffSeconds / 250} → Math.floor(${
+          diffSeconds / 250
+        }) = ${Math.floor(diffSeconds / 250)} → Math.max(${Math.floor(diffSeconds / 250)}, 1) = ${targetStepSeconds}`,
       })
 
-      // Convert to human-readable step format
-      if (targetStepSeconds <= 15) return 15
-      if (targetStepSeconds <= 60) return 60
-      if (targetStepSeconds <= 300) return 300
-      if (targetStepSeconds <= 900) return 900
-      if (targetStepSeconds <= 3600) return 3600
-      if (targetStepSeconds <= 21600) return 21600
-      if (targetStepSeconds <= 86400) return 86400
-      if (targetStepSeconds <= 604800) return 604800
-      return 86400 // Fallback for very long ranges
+      return targetStepSeconds
     }
 
-    console.log('No time range available, using default step: 15 seconds')
-    return 15 // Default fallback
+    console.log('No time range available, using default step: 1 second (Prometheus UI default)')
+    return 1 // Prometheus UI default when no range
   })
 
   const promqlEditorRef = ref()
