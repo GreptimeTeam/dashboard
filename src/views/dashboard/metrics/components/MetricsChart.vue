@@ -14,9 +14,9 @@ a-card.metrics-chart(:bordered="false")
         a-radio(value="stacked-line") Stacked Lines
 
   .chart-section(v-if="hasData")
-    .chart-container(style="padding: 16px 0")
+    .chart-container(style="padding: 24px 0")
       Chart(
-        :key="props.query"
+        :key="chartKey"
         ref="chartRef"
         height="560px"
         :options="chartOption"
@@ -34,9 +34,10 @@ a-card.metrics-chart(:bordered="false")
   import { ref, computed, watch, nextTick } from 'vue'
   import Chart from '@/components/chart/index.vue'
   import dayjs from 'dayjs'
+  import type { EChartsOption } from 'echarts'
 
   const props = defineProps<{
-    data: any[]
+    data: any[] | null
     loading: boolean
     query: string
     timeRange: number[] | []
@@ -68,6 +69,10 @@ a-card.metrics-chart(:bordered="false")
         return 'line'
     }
   }
+
+  const chartKey = computed(() => {
+    return props.query + props.step
+  })
 
   const isStackedChart = (type: string): boolean => {
     return type === 'stacked-line' || type === 'stacked-bar'
@@ -127,7 +132,7 @@ a-card.metrics-chart(:bordered="false")
     return filteredData
   })
 
-  const chartOption = computed(() => {
+  const chartOption = computed<EChartsOption>(() => {
     if (!hasData.value) return {}
     const series = seriesData.value.map((item, index) => {
       const metricName = item.metric.__name__ || 'unknown'
@@ -233,33 +238,37 @@ a-card.metrics-chart(:bordered="false")
         }, {} as Record<string, boolean>),
       },
       grid: {
-        left: '3%',
-        right: '4%',
-        bottom: series.length > 0 ? '15%' : '3%',
+        left: '2%',
+        right: '2%',
+        bottom: series.length > 0 ? '10%' : '3%',
         top: '3%',
         containLabel: true,
       },
       xAxis: {
-        type: 'time' as const,
+        type: 'time',
         axisLabel: {
           formatter: (value: number) => dayjs(value).format('HH:mm'),
           interval: 0,
         },
+
+        axisLine: {
+          show: true,
+        },
+        axisTick: {
+          show: true,
+          lineStyle: {
+            width: 1,
+          },
+        },
         splitLine: {
           show: true,
           lineStyle: {
-            type: 'dashed' as const,
-            color: 'var(--color-border)',
-          },
-        },
-        axisLine: {
-          lineStyle: {
-            color: 'var(--color-border)',
+            type: 'dashed',
           },
         },
       },
       yAxis: {
-        type: 'value' as const,
+        type: 'value',
         // Calculate min/max from actual data values
         min: (value: any) => {
           // Find the minimum non-null value across all series
@@ -290,20 +299,23 @@ a-card.metrics-chart(:bordered="false")
             }
           })
           // Add some padding above the maximum value
-          console.log('maxValue', maxValue, maxValue === -Infinity ? 100 : Math.ceil(maxValue * 1.1))
           return Math.ceil(maxValue * 1.001)
         },
         axisLine: {
+          show: true,
+        },
+        axisTick: {
+          show: true,
           lineStyle: {
-            color: 'var(--color-border)',
+            width: 1,
           },
         },
         axisLabel: {
           color: 'var(--color-text-secondary)',
         },
         splitLine: {
+          show: true,
           lineStyle: {
-            color: 'var(--color-border-light)',
             type: 'dashed' as const,
           },
         },
@@ -311,7 +323,7 @@ a-card.metrics-chart(:bordered="false")
       series,
       animation: false,
       backgroundColor: 'transparent',
-    }
+    } as EChartsOption
   })
 </script>
 

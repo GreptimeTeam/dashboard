@@ -30,7 +30,7 @@ a-modal(
           icon-search
 
     .loading-state(v-else-if="loading")
-      a-spin(size="large")
+      a-spin
         template(#icon)
           icon-loading(spin)
 
