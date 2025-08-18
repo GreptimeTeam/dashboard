@@ -64,7 +64,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
     const pageType = CODE_TO_PAGE[type]
 
     let resultKey = key
-    if (!resultKey) {
+    if (key === undefined) {
       if (resultType === 'explain') {
         resultKey = `explain-${(explainResultKeyCount.value += 1)}`
       } else {

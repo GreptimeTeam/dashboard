@@ -34,10 +34,7 @@ a-tabs.panel-tabs(
     template(#title)
       a-space(:size="8")
         span {{ `${$t('dashboard.result')} ${Number(result.key) - startKey + 1}` }}
-        a-tooltip(v-if="result.query" mini :content="result.query")
-          svg.icon-14.query-icon
-            use(href="#code")
-        a-tooltip(v-if="result.query" mini :content="$t('dashboard.refresh')")
+        a-popover(v-if="result.query" mini :content="result.query")
           a-button(
             size="mini"
             type="text"
