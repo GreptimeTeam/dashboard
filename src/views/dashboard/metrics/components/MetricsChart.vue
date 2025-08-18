@@ -15,7 +15,7 @@ a-card.metrics-chart(:bordered="false")
 
   .chart-section(v-if="hasData")
     .chart-container(style="padding: 16px 0")
-      SimpleChart(
+      Chart(
         :key="props.query"
         ref="chartRef"
         height="560px"
@@ -32,7 +32,7 @@ a-card.metrics-chart(:bordered="false")
 
 <script setup lang="ts">
   import { ref, computed, watch, nextTick } from 'vue'
-  import SimpleChart from '@/components/simple-chart/index.vue'
+  import Chart from '@/components/chart/index.vue'
   import dayjs from 'dayjs'
 
   const props = defineProps<{
@@ -273,8 +273,9 @@ a-card.metrics-chart(:bordered="false")
               })
             }
           })
+          console.log('minValue', minValue)
           // Add some padding below the minimum value
-          return minValue === Infinity ? 0 : Math.floor(minValue * 0.9)
+          return Math.floor(minValue * 0.999)
         },
         max: (value: any) => {
           // Find the maximum non-null value across all series
@@ -289,7 +290,8 @@ a-card.metrics-chart(:bordered="false")
             }
           })
           // Add some padding above the maximum value
-          return maxValue === -Infinity ? 100 : Math.ceil(maxValue * 1.1)
+          console.log('maxValue', maxValue, maxValue === -Infinity ? 100 : Math.ceil(maxValue * 1.1))
+          return Math.ceil(maxValue * 1.001)
         },
         axisLine: {
           lineStyle: {
