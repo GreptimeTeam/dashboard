@@ -7,7 +7,7 @@ a-layout.new-layout
   )
     a-layout-sider(:width="actualSidebarWidth")
       a-card.metrics-sidebar(:bordered="false")
-        MetricSidebar(@copyText="handleCopyText" @insertText="handleInsertText")
+      MetricSidebar(@copyText="handleCopyText" @insertText="handleInsertText")
 
   a-layout-content.layout-content
     a-card(:bordered="false")
@@ -138,12 +138,14 @@ a-layout.new-layout
       const length = parseInt(timeLength as string, 10)
       if (!Number.isNaN(length)) {
         time.value = length
+        rangeTime.value = []
       }
     }
 
     // Time range (absolute time)
     if (urlTimeRange && Array.isArray(urlTimeRange)) {
       rangeTime.value = urlTimeRange as [string, string]
+      time.value = 0
     }
 
     // Step parameter
@@ -285,9 +287,7 @@ a-layout.new-layout
     if (promqlEditorRef.value) {
       promqlEditorRef.value.insertTextAtCursor(text)
     }
-  }
-
-  // Watch for router query changes and auto-execute query if promql is present
+  } // Watch for router query changes and auto-execute query if promql is present
   watch(
     () => [route.query.promql, route.query.timeRange, route.query.timeLength, route.query.queryid],
     (newVal) => {

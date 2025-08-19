@@ -69,6 +69,13 @@
           notMerge: true,
           lazyUpdate: true,
         })
+        nextTick(() => {
+          chartInstance?.dispatchAction({
+            type: 'takeGlobalCursor',
+            key: 'dataZoomSelect',
+            dataZoomSelectActive: true,
+          })
+        })
       })
     },
     { deep: true, flush: 'post' }

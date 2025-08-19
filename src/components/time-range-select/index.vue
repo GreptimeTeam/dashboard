@@ -38,18 +38,6 @@ TimeSelect(
   const timeLength = defineModel<number>('timeLength', { default: 0 }) // 0 means "Any time" by default
   const timeRange = defineModel<string[]>('timeRange', { default: () => [] })
 
-  // Watch for showAnyTime changes to adjust default timeLength if needed
-  watch(
-    () => props.showAnyTime,
-    (showAnyTime) => {
-      if (!showAnyTime && timeLength.value === 0) {
-        // If "Any time" is disabled and current value is "Any time", switch to 10 minutes
-        timeLength.value = 10
-      }
-    },
-    { immediate: true }
-  )
-
   // Add "Any time" option to relative time options
   const relativeTimeMapWithAny = computed(() => {
     if (!props.showAnyTime) return relativeTimeMap
