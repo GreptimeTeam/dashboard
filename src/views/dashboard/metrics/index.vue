@@ -53,11 +53,11 @@ a-layout.new-layout
 
     // Query Results Section - Chart
     MetricsChart(
-      :key="currentQuery + computedStep"
+      :key="currentQuery + queryStep"
       :data="queryResults"
       :loading="queryLoading"
       :query="currentQuery"
-      :step="computedStep"
+      :step="queryStep"
       :chart-type="chartType"
       :time-range="currentTimeRange"
       @update:chart-type="chartType = $event"
@@ -107,7 +107,7 @@ a-layout.new-layout
     rangeTime,
     time,
     unixTimeRange,
-    computedStep,
+    queryStep,
     manualStep,
     currentTimeRange,
   } = useMetrics()
@@ -120,6 +120,8 @@ a-layout.new-layout
   const chartType = ref('line') // Chart type state
   // URL sync state
   const hasInitParams = ref(false)
+  // Track if we're currently updating query params to prevent double execution
+  const isUpdatingQueryParams = ref(false)
 
   // Initialize from URL query parameters
   const initializeFromQuery = () => {
@@ -157,6 +159,8 @@ a-layout.new-layout
 
   // Update URL query parameters
   const updateQueryParams = () => {
+    isUpdatingQueryParams.value = true
+
     const query = { ...route.query }
 
     // PromQL query
@@ -188,8 +192,12 @@ a-layout.new-layout
     } else {
       delete query.chartType
     }
+    // query.queryid = Math.random().toString(36).substring(2, 15)
 
-    router.push({ query })
+    router.push({ query }).finally(() => {
+      // Reset the flag after router update completes
+      isUpdatingQueryParams.value = false
+    })
   }
 
   // Computed properties
@@ -248,17 +256,10 @@ a-layout.new-layout
 
   // Query execution - now much simpler with reactive hook
   const handleRunQuery = async () => {
-    if (!currentQuery.value.trim()) {
-      Message.warning('Please enter a PromQL query')
-      return
-    }
-
-    try {
-      await executeQuery(currentQuery.value)
-      updateQueryParams()
-    } catch (error) {
-      console.error('Query execution failed:', error)
-    }
+    updateQueryParams()
+    nextTick(() => {
+      executeQuery(currentQuery.value)
+    })
   }
 
   // Handle time range update from chart selection
@@ -286,20 +287,29 @@ a-layout.new-layout
     }
   }
 
+  // Watch for router query changes and auto-execute query if promql is present
+  watch(
+    () => [route.query.promql, route.query.timeRange, route.query.timeLength, route.query.queryid],
+    (newVal) => {
+      // Skip if we're currently updating query params ourselves
+      if (isUpdatingQueryParams.value) return
+
+      initializeFromQuery()
+      if (currentQuery.value) {
+        nextTick(() => {
+          executeQuery(currentQuery.value)
+        })
+      }
+    },
+    { immediate: true }
+  )
+
   // Initialize
   onMounted(() => {
     // Initialize from URL first
-    initializeFromQuery()
 
     // Fetch initial data
     fetchMetrics()
-
-    // Execute query if we have initial params
-    if (hasInitParams.value && currentQuery.value.trim()) {
-      nextTick(() => {
-        handleRunQuery()
-      })
-    }
   })
 </script>
 

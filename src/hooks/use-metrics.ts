@@ -52,6 +52,7 @@ export function useMetrics() {
   const currentTimeRange = ref<number[]>([])
   const queryResult = ref<QueryResult | null>(null)
   const rangeQueryResult = ref<Array<any>>(null)
+  const queryStep = ref<number>()
 
   // Time range and step management
   const timeRangeState = useTimeRange({ time: 10 })
@@ -68,7 +69,7 @@ export function useMetrics() {
   const metricNames = computed(() => metrics.value.map((m) => m.name))
 
   // Auto compute step based on user-selected time range using Prometheus UI logic
-  const computedStep = computed(() => {
+  const getQueryStep = () => {
     // If step is manually set, use it
     if (manualStep.value) {
       console.log('Using manually set step:', manualStep.value)
@@ -86,7 +87,7 @@ export function useMetrics() {
       return targetStepSeconds
     }
     return 1 // Prometheus UI default when no range
-  })
+  }
 
   // Fetch all metric names
   const fetchMetrics = async (_match?: string) => {
@@ -182,7 +183,8 @@ export function useMetrics() {
 
     // Get time range and step
     const timeRange = unixTimeRange()
-    const stepValue = computedStep.value
+    queryStep.value = getQueryStep()
+    const stepValue = queryStep.value
 
     // Check if this is the same PromQL query (important for partial series updates)
     const isSameQuery = previousQuery.value === query && previousStep.value === stepValue
@@ -260,7 +262,7 @@ export function useMetrics() {
     // Computed
     metricNames,
     unixTimeRange,
-    computedStep,
+    queryStep,
 
     // Methods
     fetchMetrics,
