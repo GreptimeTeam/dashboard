@@ -9,17 +9,17 @@ a-tabs.panel-tabs(
   @delete="deleteTab"
 )
   template(#extra)
-    a-space(:size="8")
+    a-space.result-extra(:size="8")
       a-tooltip(mini :content="props.isInFullSizeMode ? $t('dashboard.exitFullSize') : $t('dashboard.fullSizeMode')")
         a-button(size="small" @click="toggleFullSize")
           template(#icon)
             svg.icon-16
               use(href="#zoom")
       a-popconfirm(
-        content="Clear results?"
         type="warning"
-        ok-text="Clear"
         cancel-text=""
+        :content="$t('dashboard.clearResults')"
+        :ok-text="$t('dashboard.clear')"
         @ok="clearResults"
       )
         a-button(status="danger" size="small") {{ $t('dashboard.clear') }}
@@ -32,18 +32,39 @@ a-tabs.panel-tabs(
     ExplainTabs(:data="explainResult")
   a-tab-pane(v-for="(result) of results" :key="result.key" closable)
     template(#title)
-      a-space(:size="8")
-        span {{ `${$t('dashboard.result')} ${Number(result.key) - startKey + 1}` }}
-        a-popover(v-if="result.query" mini :content="result.query")
-          a-button(
-            size="mini"
-            type="text"
-            :loading="refreshingKeys.has(result.key)"
-            @click.stop="refreshSingleResult(result)"
-          )
-            template(#icon)
-              icon-refresh.icon-12
+      span {{ `${$t('dashboard.result')} ${Number(result.key) - startKey + 1}` }}
     a-tabs.data-view-tabs(:animation="true")
+      template(v-if="result.query" #extra)
+        a-space.toolbar(:size="4")
+          a-tooltip(mini position="br" :content="$t('dashboard.rerunQuery')")
+            a-button(
+              type="secondary"
+              size="mini"
+              :loading="refreshingKeys.has(result.key)"
+              @click="refreshSingleResult(result)"
+            )
+              template(#icon)
+                svg.icon-12
+                  use(href="#refresh")
+              | {{ $t('dashboard.rerunQuery') }}
+          a-typography-text(
+            copyable
+            button-text
+            size="mini"
+            :copy-tooltip-props="{ position: 'br', 'content-class': 'query-tooltip' }"
+            :copy-text="result.query"
+            :copy-delay="1000"
+          )
+            template(#copy-icon="{ copied }")
+              a-button(type="secondary" size="mini")
+                template(#icon)
+                  svg.icon-12(v-if="!copied")
+                    use(href="#copy-new")
+                  svg.icon-12(v-else)
+                    icon-check.success-color
+                | {{ $t('dashboard.copy') }}
+            template(#copy-tooltip)
+              pre {{ result.query }}
       a-tab-pane(key="table")
         template(#title)
           a-space(:size="10")
@@ -275,15 +296,33 @@ a-tabs.panel-tabs(
     }
   }
 
-  // 新增：查询图标和刷新按钮样式
-  .query-icon {
-    color: var(--color-text-3);
-    opacity: 0.7;
+  .toolbar {
+    .arco-btn {
+      border-radius: 2px;
+      height: 22px;
+    }
+    padding-right: 4px;
+    padding-bottom: 4px;
   }
 
-  .arco-btn[size='mini'] {
-    .icon-12 {
-      font-size: 12px;
+  .result-extra {
+    .arco-btn {
+      height: 26px;
     }
+  }
+
+  :global(.query-tooltip) {
+    max-width: 600px !important;
+    width: max-content;
+  }
+
+  :global(.query-tooltip pre) {
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin: 0;
+    padding: 0;
+    max-width: 580px;
+    overflow-wrap: break-word;
   }
 </style>

@@ -77,6 +77,8 @@ export default {
   'dashboard.importExplain': 'Import Result JSON',
   'dashboard.exportCSV': 'Export Result as CSV',
   'dashboard.wrapLine': 'Wrap Lines',
-  'dashboard.copy': 'Copy',
-  'dashboard.hideSidebar': 'Hide sidebar',
+  'dashboard.copy': '复制',
+  'dashboard.hideSidebar': '隐藏侧边栏',
+  'dashboard.rerunQuery': '重新执行查询',
+  'dashboard.clearResults': '清除结果？',
 }
