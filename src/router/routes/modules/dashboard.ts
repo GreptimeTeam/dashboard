@@ -33,7 +33,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.dashboard.metrics',
         requiresAuth: false,
-        icon: 'metric',
+        icon: 'Node16',
         roles: ['admin', 'cloud'],
       },
     },
