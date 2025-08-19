@@ -61,6 +61,7 @@ a-layout.new-layout
       :chart-type="chartType"
       :time-range="currentTimeRange"
       @update:chart-type="chartType = $event"
+      @time-range-update="handleTimeRangeUpdate"
     )
 
     .section-divider(v-if="queryResults && queryResults.length > 0")
@@ -105,6 +106,7 @@ a-layout.new-layout
     // Time range state
     rangeTime,
     time,
+    unixTimeRange,
     computedStep,
     manualStep,
     currentTimeRange,
@@ -187,7 +189,7 @@ a-layout.new-layout
       delete query.chartType
     }
 
-    router.replace({ query })
+    router.push({ query })
   }
 
   // Computed properties
@@ -257,6 +259,16 @@ a-layout.new-layout
     } catch (error) {
       console.error('Query execution failed:', error)
     }
+  }
+
+  // Handle time range update from chart selection
+  const handleTimeRangeUpdate = (newTimeRange: [number, number]) => {
+    console.log('📅 Time range updated from chart:', newTimeRange)
+    // Switch to custom time range mode and update the time range
+    time.value = 0 // Switch to custom mode
+    rangeTime.value = [newTimeRange[0].toString(), newTimeRange[1].toString()]
+    // Execute new query with updated time range
+    handleRunQuery()
   }
 
   const handleCopyText = async (text: string) => {

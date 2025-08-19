@@ -20,6 +20,7 @@ a-card.metrics-chart(:bordered="false")
         ref="chartRef"
         height="560px"
         :options="chartOption"
+        @datazoom="handleDataZoom"
       )
 
   .empty-state(v-else)
@@ -47,6 +48,7 @@ a-card.metrics-chart(:bordered="false")
 
   const emit = defineEmits<{
     (e: 'update:chartType', value: string): void
+    (e: 'timeRangeUpdate', value: [number, number]): void
   }>()
 
   // Chart state
@@ -73,6 +75,29 @@ a-card.metrics-chart(:bordered="false")
   const chartKey = computed(() => {
     return props.query + props.step
   })
+
+  // Handle range selection on chart
+  const handleDataZoom = (event: any) => {
+    if (!event.batch || !event.batch[0]) return
+
+    const { startValue, endValue } = event.batch[0]
+
+    if (!startValue || !endValue) return
+
+    // Convert from milliseconds to seconds for time range
+    const startTime = Math.floor(new Date(startValue).getTime() / 1000)
+    const endTime = Math.floor(new Date(endValue).getTime() / 1000)
+
+    console.log('📊 Chart range selected:', {
+      startValue,
+      endValue,
+      startTime,
+      endTime,
+    })
+
+    // Emit time range update
+    emit('timeRangeUpdate', [startTime, endTime])
+  }
 
   const isStackedChart = (type: string): boolean => {
     return type === 'stacked-line' || type === 'stacked-bar'
@@ -240,10 +265,36 @@ a-card.metrics-chart(:bordered="false")
       grid: {
         left: '2%',
         right: '2%',
-        bottom: series.length > 0 ? '10%' : '3%',
+        bottom: series.length > 0 ? '15%' : '3%', // More space for dataZoom
         top: '3%',
         containLabel: true,
       },
+      dataZoom: [
+        {
+          type: 'inside',
+          xAxisIndex: 0,
+          yAxisIndex: 'none',
+          zoomOnMouseWheel: true, // Enable mouse wheel zoom
+          moveOnMouseMove: true, // Enable mouse drag pan
+          preventDefaultMouseMove: false, // Allow normal mouse behavior
+        },
+      ],
+      toolbox: {
+        orient: 'vertical',
+        itemSize: 15,
+        top: -115,
+        right: -1115,
+        feature: {
+          dataZoom: {
+            yAxisIndex: 'none',
+            title: {
+              zoom: 'Zoom',
+              back: 'Reset',
+            },
+          },
+        },
+      },
+
       xAxis: {
         type: 'time',
         axisLabel: {
@@ -340,6 +391,38 @@ a-card.metrics-chart(:bordered="false")
         margin-bottom: 16px;
         opacity: 0.5;
       }
+    }
+
+    // Hide toolbox but keep functionality
+    :deep(.echarts-tooltip) {
+      // Keep tooltip visible
+    }
+
+    :deep(.echarts-toolbox) {
+      // Hide toolbox completely but keep zoom functionality
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    // Alternative approach - hide any toolbox elements
+    :deep([class*='toolbox']) {
+      display: none !important;
+    }
+
+    // Hide toolbox using multiple selectors to ensure it's hidden
+    :deep(.echarts-toolbox),
+    :deep(.ec-toolbox),
+    :deep([class*='ec-toolbox']),
+    :deep([class*='toolbox']) {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      width: 0 !important;
+      height: 0 !important;
+      overflow: hidden !important;
     }
   }
 </style>

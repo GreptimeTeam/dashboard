@@ -16,6 +16,10 @@
     height: '400px',
   })
 
+  const emit = defineEmits<{
+    (e: 'datazoom', value: any): void
+  }>()
+
   const chartContainer = ref<HTMLDivElement>()
   let chartInstance: echarts.ECharts | null = null
 
@@ -37,6 +41,17 @@
       chartInstance.setOption(props.options, {
         notMerge: true,
         lazyUpdate: true,
+      })
+      nextTick(() => {
+        chartInstance?.dispatchAction({
+          type: 'takeGlobalCursor',
+          key: 'dataZoomSelect',
+          dataZoomSelectActive: true,
+        })
+      })
+      // Add event listeners
+      chartInstance.on('datazoom', (event) => {
+        emit('datazoom', event)
       })
     }
   })
