@@ -3,7 +3,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
+  import { ref, onMounted, onBeforeUnmount, onUnmounted, nextTick, watch } from 'vue'
   import * as echarts from 'echarts'
   import type { EChartsOption } from 'echarts'
 
@@ -18,6 +18,12 @@
 
   const chartContainer = ref<HTMLDivElement>()
   let chartInstance: echarts.ECharts | null = null
+
+  // Track when this instance is being unmounted due to key change
+  const isUnmounting = ref(false)
+  onBeforeUnmount(() => {
+    isUnmounting.value = true
+  })
 
   const resizeChart = () => {
     if (chartInstance) {
@@ -35,26 +41,22 @@
     }
   })
 
-  // Watch for options changes and reset chart completely
+  // Watch for options changes - run after DOM patch to avoid key change conflicts
   watch(
     () => props.options,
     (newOptions) => {
-      if (newOptions && chartContainer.value) {
-        console.log('🔄 Options changed, resetting chart completely')
-        // Dispose existing chart
-        if (chartInstance) {
-          chartInstance.dispose()
-          chartInstance = null
-        }
-        // Create new chart with new options
-        chartInstance = echarts.init(chartContainer.value)
+      // Skip if instance gone or unmounting due to key change
+      if (!chartInstance || !chartContainer.value || isUnmounting.value) return
+
+      nextTick(() => {
+        console.log('🔄 Options changed, updating chart')
         chartInstance.setOption(newOptions, {
           notMerge: true,
           lazyUpdate: true,
         })
-      }
+      })
     },
-    { deep: true, immediate: false }
+    { deep: true, flush: 'post' }
   )
 
   onUnmounted(() => {

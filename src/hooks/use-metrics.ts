@@ -9,6 +9,7 @@ import {
   searchMetricNames,
 } from '@/api/metrics'
 import { useAppStore } from '@/store'
+import useTimeRange from '@/hooks/use-time-range'
 
 export interface MetricData {
   name: string
@@ -48,11 +49,44 @@ export function useMetrics() {
 
   // Current query state
   const currentQuery = ref('')
+  const currentTimeRange = ref<number[]>([])
   const queryResult = ref<QueryResult | null>(null)
   const rangeQueryResult = ref<Array<any>>(null)
 
+  // Time range and step management
+  const timeRangeState = useTimeRange({ time: 10 })
+  const { rangeTime, time, unixTimeRange } = timeRangeState
+
+  // Manual step override
+  const manualStep = ref<number>()
+
+  // Track previous query for partial updates
+  const previousQuery = ref('')
+  const previousStep = ref<number>()
+
   // Computed properties
   const metricNames = computed(() => metrics.value.map((m) => m.name))
+
+  // Auto compute step based on user-selected time range using Prometheus UI logic
+  const computedStep = computed(() => {
+    // If step is manually set, use it
+    if (manualStep.value) {
+      console.log('Using manually set step:', manualStep.value)
+      return manualStep.value
+    }
+
+    // Auto-calculate step based on user-selected time range
+    const timeRange = unixTimeRange()
+    if (timeRange.length === 2) {
+      const [start, end] = timeRange as [number, number]
+      const diffSeconds = end - start
+
+      // Use Prometheus UI's exact logic: range / 250 for ~250 data points
+      const targetStepSeconds = Math.max(Math.floor(diffSeconds / 250), 1)
+      return targetStepSeconds
+    }
+    return 1 // Prometheus UI default when no range
+  })
 
   // Fetch all metric names
   const fetchMetrics = async (_match?: string) => {
@@ -110,7 +144,7 @@ export function useMetrics() {
     }
   }
 
-  // Execute PromQL range query
+  // Execute PromQL range query (lower-level method)
   const executeRangeQuery = async (query: string, start?: number, end?: number, step?: number) => {
     try {
       queryLoading.value = true
@@ -123,11 +157,12 @@ export function useMetrics() {
 
       const response = await executePromQLRange(
         query,
-        startTime.toString(),
-        endTime.toString(),
-        stepValue.toString(), // Convert number to string for API call
+        (startTime || 0).toString(),
+        (endTime || 0).toString(),
+        (stepValue || 1).toString(), // Convert number to string for API call
         appStore.database
       )
+
       rangeQueryResult.value = response.data.result
       return response.data
     } catch (err: any) {
@@ -139,11 +174,59 @@ export function useMetrics() {
     }
   }
 
-  // Clear results
-  const clearResults = () => {
-    queryResult.value = null
-    rangeQueryResult.value = null
-    error.value = null
+  // Execute PromQL range query with automatic time range and step
+  const executeQuery = async (query: string) => {
+    if (!query.trim()) {
+      throw new Error('Query cannot be empty')
+    }
+
+    // Get time range and step
+    const timeRange = unixTimeRange()
+    const stepValue = computedStep.value
+
+    // Check if this is the same PromQL query (important for partial series updates)
+    const isSameQuery = previousQuery.value === query && previousStep.value === stepValue
+
+    let actualTimeRange: number[]
+
+    if (isSameQuery) {
+      // Same query: align time range to step boundaries for consistent timestamps
+      const [rawStart, rawEnd] = timeRange
+      const duration = rawEnd - rawStart
+
+      // Align end time to step boundary (round down to nearest step)
+      const alignedEnd = Math.floor(rawEnd / stepValue) * stepValue
+      // Align start time to maintain duration
+      const alignedStart = alignedEnd - duration
+
+      actualTimeRange = [alignedStart, alignedEnd]
+    } else {
+      // Different query: align to step boundaries for clean timestamps
+      const [rawStart, rawEnd] = timeRange
+      const duration = rawEnd - rawStart
+
+      // Align both start and end to step boundaries
+      const alignedEnd = Math.floor(rawEnd / stepValue) * stepValue
+      const alignedStart = alignedEnd - duration
+      actualTimeRange = [alignedStart, alignedEnd]
+    }
+
+    // Store current query state for next comparison
+    previousQuery.value = query
+    previousStep.value = stepValue
+    currentTimeRange.value = actualTimeRange
+    const [start, end] = actualTimeRange
+
+    console.log('🚀 Executing query with step-aligned params:', {
+      query,
+      timeRange: actualTimeRange,
+      start: new Date(start * 1000).toISOString(),
+      end: new Date(end * 1000).toISOString(),
+      step: stepValue,
+      isSameQuery,
+    })
+
+    return executeRangeQuery(query, start, end, stepValue)
   }
 
   // Watch database changes to refresh data
@@ -160,15 +243,30 @@ export function useMetrics() {
     loading,
     error,
     currentQuery,
+    currentTimeRange,
     queryResult,
     rangeQueryResult,
+    queryLoading,
+
+    // Time range state
+    rangeTime,
+    time,
+    manualStep,
+
+    // Previous query tracking (for partial updates)
+    previousQuery,
+    previousStep,
+
     // Computed
     metricNames,
+    unixTimeRange,
+    computedStep,
+
     // Methods
     fetchMetrics,
     fetchLabelValues,
-    executeRangeQuery,
+    executeQuery, // High-level reactive method
+    executeRangeQuery, // Low-level method
     searchMetrics,
-    queryLoading,
   }
 }

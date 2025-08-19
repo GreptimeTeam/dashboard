@@ -20,7 +20,7 @@ a-layout.new-layout
             :show-any-time="false"
           )
           a-input(
-            v-model="step"
+            v-model="manualStep"
             size="small"
             placeholder="auto"
             style="width: 150px"
@@ -53,13 +53,13 @@ a-layout.new-layout
 
     // Query Results Section - Chart
     MetricsChart(
-      :key="chartKey"
+      :key="currentQuery + computedStep"
       :data="queryResults"
       :loading="queryLoading"
       :query="currentQuery"
-      :time-range="currentTimeRange"
       :step="computedStep"
       :chart-type="chartType"
+      :time-range="currentTimeRange"
       @update:chart-type="chartType = $event"
     )
 
@@ -85,10 +85,8 @@ a-layout.new-layout
   import { useStorage } from '@vueuse/core'
   import { useRoute, useRouter } from 'vue-router'
   import { useMetrics } from '@/hooks/use-metrics'
-  import useTimeRange from '@/hooks/use-time-range'
   import { Message } from '@arco-design/web-vue'
   import { IconLoading, IconPlayArrow } from '@arco-design/web-vue/es/icon'
-  import dayjs from 'dayjs'
   import TimeRangeSelect from '@/components/time-range-select/index.vue'
   import MetricSidebar from './components/MetricSidebar.vue'
   import PromQLEditor from './components/PromQLEditor.vue'
@@ -98,23 +96,26 @@ a-layout.new-layout
   const route = useRoute()
   const router = useRouter()
 
-  // Time range state
-  const timeRangeState = useTimeRange({ time: 10 })
-  const { rangeTime, time, unixTimeRange } = timeRangeState
-
-  // Use the metrics composable
-  const { currentQuery, rangeQueryResult: queryResults, fetchMetrics, executeRangeQuery } = useMetrics()
+  // Use the metrics composable with integrated time range and step calculation
+  const {
+    currentQuery,
+    rangeQueryResult: queryResults,
+    fetchMetrics,
+    executeQuery,
+    // Time range state
+    rangeTime,
+    time,
+    computedStep,
+    manualStep,
+    currentTimeRange,
+  } = useMetrics()
 
   // Sidebar state
   const sidebarWidth = useStorage('metrics-sidebar-width', 320)
 
   // Query state
   const queryLoading = ref(false)
-
-  const step = ref() // Step in seconds, not string format
-  const currentTimeRange = ref<number[]>([]) // Store current time range for consistency
   const chartType = ref('line') // Chart type state
-
   // URL sync state
   const hasInitParams = ref(false)
 
@@ -143,7 +144,7 @@ a-layout.new-layout
 
     // Step parameter
     if (urlStep && typeof urlStep === 'string') {
-      step.value = parseInt(urlStep, 10)
+      manualStep.value = parseInt(urlStep, 10)
     }
 
     // Chart type
@@ -173,8 +174,8 @@ a-layout.new-layout
     }
 
     // Step parameter
-    if (step.value) {
-      query.step = step.value.toString()
+    if (manualStep.value) {
+      query.step = manualStep.value.toString()
     } else {
       delete query.step
     }
@@ -241,110 +242,21 @@ a-layout.new-layout
     return rows
   })
 
-  // Step calculation using exact Prometheus UI logic
-  const computedStep = computed(() => {
-    // If step is manually set, use it
-    if (step.value) {
-      console.log('Using manually set step:', step.value)
-      return step.value
-    }
-
-    // Auto-calculate step using Prometheus UI's exact logic
-    if (currentTimeRange.value.length === 2) {
-      const [start, end] = currentTimeRange.value as [number, number]
-      const diffSeconds = end - start
-
-      // Prometheus UI logic: range / 250000 for ~250 data points
-      // Since we're working in seconds, we need to adjust the divisor: 250000/1000 = 250
-      const targetStepSeconds = Math.max(Math.floor(diffSeconds / 250), 1)
-
-      console.log('Prometheus UI step calculation:', {
-        start: new Date(start * 1000).toISOString(),
-        end: new Date(end * 1000).toISOString(),
-        diffSeconds,
-        targetStepSeconds,
-        expectedDataPoints: Math.floor(diffSeconds / targetStepSeconds),
-        prometheusLogic: `${diffSeconds}s / 250 = ${diffSeconds / 250} → Math.floor(${
-          diffSeconds / 250
-        }) = ${Math.floor(diffSeconds / 250)} → Math.max(${Math.floor(diffSeconds / 250)}, 1) = ${targetStepSeconds}`,
-      })
-
-      return targetStepSeconds
-    }
-
-    console.log('No time range available, using default step: 1 second (Prometheus UI default)')
-    return 1 // Prometheus UI default when no range
-  })
-
   const promqlEditorRef = ref()
 
-  // Track previous query for time alignment
-  const previousQuery = ref('')
-  const previousTimeRange = ref<number[]>([])
-
-  // Force chart recreation when query changes
-  const chartKey = ref(0)
-
-  // Query execution
+  // Query execution - now much simpler with reactive hook
   const handleRunQuery = async () => {
     if (!currentQuery.value.trim()) {
       Message.warning('Please enter a PromQL query')
       return
     }
 
-    // Get time range once and store for consistency
-    const newTimeRange = unixTimeRange()
-    const stepValue = computedStep.value
-
-    // Check if this is the same PromQL query
-    const isSameQuery = previousQuery.value === currentQuery.value
-
-    if (isSameQuery && previousTimeRange.value.length === 2) {
-      // Same query: ensure time difference is integer multiple of step
-      const [prevStart, prevEnd] = previousTimeRange.value
-      const [newStart, newEnd] = newTimeRange
-
-      // Calculate time difference
-      const timeDiff = newEnd - prevEnd
-
-      // Ensure time difference is integer multiple of step
-      const alignedTimeDiff = Math.round(timeDiff / stepValue) * stepValue
-      const alignedNewEnd = prevEnd + alignedTimeDiff
-      const alignedNewStart = alignedNewEnd - (newEnd - newStart)
-
-      console.log('Same query detected, aligning time:', {
-        prevEnd,
-        newEnd,
-        timeDiff,
-        stepValue,
-        alignedTimeDiff,
-        alignedNewEnd,
-        alignedNewStart,
-      })
-
-      // Use aligned time range
-      currentTimeRange.value = [alignedNewStart, alignedNewEnd]
-    } else {
-      // Different query or first query: use original time range
-      currentTimeRange.value = newTimeRange
-      console.log('Different query or first query, using original time range')
-
-      // Force chart recreation for different query
-      chartKey.value += 1
-      console.log('Chart key incremented for different query:', chartKey.value)
-    }
-
-    // Store current query and time range for next comparison
-    previousQuery.value = currentQuery.value
-    previousTimeRange.value = [...currentTimeRange.value]
-
-    // Use range query for time series data
-    const start = currentTimeRange.value[0]
-    const end = currentTimeRange.value[1]
-
-    executeRangeQuery(currentQuery.value, start, end, stepValue).then(() => {
+    try {
+      await executeQuery(currentQuery.value)
       updateQueryParams()
-    })
+    } catch (error) {
+      console.error('Query execution failed:', error)
+    }
   }
 
   const handleCopyText = async (text: string) => {
