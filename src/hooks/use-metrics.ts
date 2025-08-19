@@ -52,6 +52,7 @@ export function useMetrics() {
   const currentTimeRange = ref<number[]>([])
   const queryResult = ref<QueryResult | null>(null)
   const rangeQueryResult = ref<Array<any>>(null)
+  const instantQueryResult = ref<Array<any>>(null) // For table data
   const queryStep = ref<number>()
 
   // Time range and step management
@@ -142,6 +143,27 @@ export function useMetrics() {
     } catch (err: any) {
       console.error(`Error fetching values for label ${labelName}:`, err)
       return []
+    }
+  }
+
+  // Execute PromQL instant query (for table data - current values)
+  const executeInstantQuery = async (query: string) => {
+    try {
+      error.value = null
+      currentQuery.value = query
+
+      const response = await executePromQL(query, currentTimeRange.value[1].toString(), appStore.database)
+
+      console.log('💾 Instant query result:', {
+        resultLength: response.data.result?.length || 0,
+        sampleResult: response.data.result?.[0] || [],
+      })
+      instantQueryResult.value = response.data.result
+      return response.data
+    } catch (err: any) {
+      error.value = err.message || 'Failed to execute instant query'
+      console.error('Error executing instant query:', err)
+      throw err
     }
   }
 
@@ -248,6 +270,7 @@ export function useMetrics() {
     currentTimeRange,
     queryResult,
     rangeQueryResult,
+    instantQueryResult, // For table data
     queryLoading,
 
     // Time range state
@@ -268,6 +291,7 @@ export function useMetrics() {
     fetchMetrics,
     fetchLabelValues,
     executeQuery, // High-level reactive method
+    executeInstantQuery, // For table data
     executeRangeQuery, // Low-level method
     searchMetrics,
   }

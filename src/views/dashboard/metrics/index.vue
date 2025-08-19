@@ -66,10 +66,10 @@ a-layout.new-layout
 
     .section-divider(v-if="queryResults && queryResults.length > 0")
 
-    a-card(v-if="queryResults && queryResults.length > 0" :bordered="false")
+    a-card(v-if="tableResults && tableResults.length > 0" :bordered="false")
       .section-title
         | Table View
-      .table-section(v-if="queryResults && queryResults.length > 0")
+      .table-section(v-if="tableResults && tableResults.length > 0")
         a-table(
           size="small"
           :columns="tableColumns"
@@ -101,8 +101,10 @@ a-layout.new-layout
   const {
     currentQuery,
     rangeQueryResult: queryResults,
+    instantQueryResult: tableResults,
     fetchMetrics,
     executeQuery,
+    executeInstantQuery,
     // Time range state
     rangeTime,
     time,
@@ -228,10 +230,10 @@ a-layout.new-layout
   ])
 
   const tableData = computed(() => {
-    if (!queryResults.value || queryResults.value.length === 0) return []
-
+    if (!tableResults.value || tableResults.value.length === 0) return []
+    console.log('tableResults', tableResults.value)
     const rows: any[] = []
-    queryResults.value.forEach((series) => {
+    tableResults.value.forEach((series) => {
       const metricName = series.metric?.__name__ || 'unknown'
       const seriesLabels = { ...series.metric }
       delete seriesLabels.__name__
@@ -240,13 +242,12 @@ a-layout.new-layout
         .map(([k, v]) => `${k}="${v}"`)
         .join(', ')
       const seriesName = labelStr ? `${metricName}{${labelStr}}` : metricName
-      console.log('series', series)
-      if (series.values && series.values.length > 0) {
-        // Show latest value for each series
-        const latestValue = series.values[series.values.length - 1]
+
+      // Instant query returns single value, not array of values
+      if (series.value !== undefined) {
         rows.push({
           series: seriesName,
-          value: latestValue[1],
+          value: series.value[1],
         })
       }
     })
@@ -259,8 +260,13 @@ a-layout.new-layout
   // Query execution - now much simpler with reactive hook
   const handleRunQuery = async () => {
     updateQueryParams()
-    nextTick(() => {
-      executeQuery(currentQuery.value)
+    nextTick(async () => {
+      // Execute range query for chart
+      await executeQuery(currentQuery.value)
+      // Execute instant query for table
+      if (currentQuery.value.trim()) {
+        await executeInstantQuery(currentQuery.value)
+      }
     })
   }
 
@@ -296,8 +302,11 @@ a-layout.new-layout
 
       initializeFromQuery()
       if (currentQuery.value) {
-        nextTick(() => {
-          executeQuery(currentQuery.value)
+        nextTick(async () => {
+          // Execute range query for chart
+          await executeQuery(currentQuery.value)
+          // Execute instant query for table
+          await executeInstantQuery(currentQuery.value)
         })
       }
     },
