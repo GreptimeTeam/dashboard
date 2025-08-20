@@ -149,7 +149,7 @@ a-tabs.panel-tabs(
     try {
       await refreshResult(result.key, result.type)
     } catch (error: any) {
-      //
+      console.error(error)
     } finally {
       refreshingKeys.value.delete(result.key)
     }
