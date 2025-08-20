@@ -159,8 +159,10 @@ a-card.log(:bordered="false")
   }
   .arco-popover-popup-content.code-tooltip {
     font-family: var(--font-mono);
-    white-space: pre;
     font-size: 13px;
     padding: 6px 10px;
+    white-space: pre-wrap;
+    max-width: 600px;
+    word-break: break-word;
   }
 </style>

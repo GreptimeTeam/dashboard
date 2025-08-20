@@ -161,12 +161,24 @@ export default function useQueryCode() {
     }
   }
 
+  const refreshResult = async (key: number | string, type: string, params: PromForm = {} as PromForm) => {
+    const { pushLog } = useLog()
+    const { refreshResult: storeRefreshResult } = useCodeRunStore()
+
+    const res = await storeRefreshResult(key, type, params)
+    if (res.log) {
+      pushLog(res.log, type)
+    }
+    return res
+  }
+
   return {
     getResultsByType,
     runQuery,
     inputFromNewLineToQueryCode,
     replaceCode,
     explainQuery,
+    refreshResult,
     sqlView,
     promqlView,
     cursorAt,

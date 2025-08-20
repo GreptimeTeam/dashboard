@@ -48,22 +48,30 @@ export const parseSqlStatements = (sql: string): { text: string; start: number; 
 
     // When we find a semicolon outside a string and outside comments, we've found a statement boundary
     if (char === ';' && !inString && !inSingleLineComment && !inMultiLineComment) {
-      statements.push({
-        text: sql.substring(currentStart, i + 1).trim(),
-        start: currentStart,
-        end: i,
-      })
+      const statementText = sql.substring(currentStart, i + 1).trim()
+      // Only add non-empty statements (ignore standalone semicolons)
+      if (statementText && statementText !== ';') {
+        statements.push({
+          text: statementText,
+          start: currentStart,
+          end: i,
+        })
+      }
       currentStart = i + 1
     }
   }
 
   // Add the last statement if it doesn't end with a semicolon
   if (currentStart < sql.length) {
-    statements.push({
-      text: sql.substring(currentStart).trim(),
-      start: currentStart,
-      end: sql.length - 1,
-    })
+    const lastStatementText = sql.substring(currentStart).trim()
+    // Only add non-empty statements
+    if (lastStatementText) {
+      statements.push({
+        text: lastStatementText,
+        start: currentStart,
+        end: sql.length - 1,
+      })
+    }
   }
 
   return statements

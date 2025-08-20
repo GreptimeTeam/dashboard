@@ -26,7 +26,8 @@ a-drawer.settings-drawer(
             @click="refreshDatabases"
           )
             template(#icon)
-              icon-refresh
+              svg.icon
+                use(href="#refresh")
       a-select(
         v-model="settingsForm.database"
         allow-create

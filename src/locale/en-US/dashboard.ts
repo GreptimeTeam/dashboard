@@ -79,4 +79,6 @@ export default {
   'dashboard.wrapLines': 'Wrap Lines',
   'dashboard.copy': 'Copy',
   'dashboard.hideSidebar': 'Hide sidebar',
+  'dashboard.rerunQuery': 'Rerun Query',
+  'dashboard.clearResults': 'Clear results?',
 }
