@@ -1,5 +1,10 @@
 <template lang="pug">
-a-dropdown.metric-menu(trigger="click" position="bl" :popup-container="'body'")
+a-dropdown.metric-menu(
+  trigger="click"
+  position="bl"
+  :popup-container="'body'"
+  @popup-visible-change="handleMenuDropdownVisibleChange"
+)
   a-button.menu-button(type="text" @click="handleMenuClick")
     template(#icon)
       svg.icon-14.rotate-90
@@ -24,14 +29,15 @@ a-dropdown.metric-menu(trigger="click" position="bl" :popup-container="'body'")
           size="small"
           placeholder="Select value"
           style="width: 120px; margin-bottom: 8px"
+          :allow-clear="true"
         )
           a-option(v-for="child in nodeData.children || []" :key="child.value" :value="child.value") {{ child.value }}
 
         pre {{ nodeData.title }}{{ selectedOperator }}"{{ selectedValue }}"
         a-space
-          a-button.insert-button(type="primary" size="small" @click="handleInsertLabelWithValue")
+          a-button.insert-button(size="small" @click="handleInsertLabelWithValue")
             | Insert
-          a-button.copy-button(type="primary" size="small" @click="handleCopyLabelWithValue")
+          a-button.copy-button(size="small" @click="handleCopyLabelWithValue")
             | Copy
 
     // For value nodes - show operator select only, value is the node itself
@@ -89,10 +95,19 @@ a-dropdown.metric-menu(trigger="click" position="bl" :popup-container="'body'")
   const emits = defineEmits<{
     (e: 'copyText', text: string): void
     (e: 'insertText', text: string): void
+    (e: 'loadValues', data: any): void
   }>()
 
   const handleMenuClick = (event: Event) => {
     event.stopPropagation()
+  }
+
+  // Handle main menu dropdown visibility change to load values when opened
+  const handleMenuDropdownVisibleChange = (visible: boolean) => {
+    if (visible && props.nodeData.type === 'label' && props.nodeData.metricName && props.nodeData.title) {
+      // Load values when the main menu dropdown opens
+      emits('loadValues', props.nodeData)
+    }
   }
 
   // Insert label with selected operator and value

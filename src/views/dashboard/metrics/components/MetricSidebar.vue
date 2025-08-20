@@ -67,6 +67,7 @@ a-card.metrics-sidebar(:bordered="false")
             :nodeData="nodeData"
             @copyText="$emit('copyText', $event)"
             @insertText="$emit('insertText', $event)"
+            @loadValues="loadLabelValues"
           )
 </template>
 
@@ -141,18 +142,6 @@ a-card.metrics-sidebar(:bordered="false")
 
   const refreshData = async () => {
     await fetchMetrics()
-  }
-
-  const onExpand = (keys: string[]) => {
-    // Handle tree expansion if needed
-  }
-
-  const handleCopyText = (text: string) => {
-    emit('copyText', text)
-  }
-
-  const handleInsertText = (text: string) => {
-    emit('insertText', text)
   }
 
   const metricsTreeData = ref<any[]>([])
