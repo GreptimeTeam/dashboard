@@ -45,7 +45,7 @@ a-tabs.panel-tabs(
             a-typography-text.query-text(code :ellipsis="{ rows: 1, css: true }") {{ result.query }}
         .toolbar-actions
           a-space(:size="0")
-            a-tooltip(mini position="br" :content="$t('dashboard.rerunQuery')")
+            a-tooltip(mini position="tr" :content="$t('dashboard.rerunQuery')")
               a-button(
                 type="secondary"
                 size="mini"
