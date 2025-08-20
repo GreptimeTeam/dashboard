@@ -48,6 +48,17 @@ a-card.metrics-sidebar(:bordered="false")
       @select="selectMetricFromExplorer"
     )
 
+    // Single MetricMenu instance - controlled from outside
+    MetricMenu(
+      v-if="metricMenuVisible"
+      v-model:popup-visible="metricMenuVisible"
+      :style="{ position: 'fixed', top: `${contextMenuPosition.y}px`, left: `${contextMenuPosition.x}px`, zIndex: 9 }"
+      :nodeData="selectedNodeData"
+      @copyText="$emit('copyText', $event)"
+      @insertText="$emit('insertText', $event)"
+      @loadValues="loadLabelValues"
+    )
+
     a-tree.metrics-tree(
       v-model:expanded-keys="expandedKeys"
       size="small"
@@ -63,12 +74,10 @@ a-card.metrics-sidebar(:bordered="false")
       template(#title="nodeData")
         .tree-data
           .data-title {{ nodeData.title }}
-          MetricMenu(
-            :nodeData="nodeData"
-            @copyText="$emit('copyText', $event)"
-            @insertText="$emit('insertText', $event)"
-            @loadValues="loadLabelValues"
-          )
+          a-button.menu-button(type="text" @click="handleContextMenu($event, nodeData)")
+            template(#icon)
+              svg.icon-14.rotate-90
+                use(href="#extra")
 </template>
 
 <script setup lang="ts">
@@ -99,6 +108,11 @@ a-card.metrics-sidebar(:bordered="false")
 
   // Metrics explorer state
   const showMetricsExplorer = ref(false)
+
+  // Single MetricMenu state
+  const metricMenuVisible = ref(false)
+  const selectedNodeData = ref<any>(null)
+  const contextMenuPosition = ref({ x: 0, y: 0 })
 
   // Computed properties
   const metricOptions = computed(() => {
@@ -186,6 +200,16 @@ a-card.metrics-sidebar(:bordered="false")
     if (selectedMetric.value) {
       emit('insertText', selectedMetric.value)
     }
+  }
+
+  function handleContextMenu(event: Event, nodeData) {
+    const rect = (event.target as Element).getBoundingClientRect()
+    event.preventDefault()
+    event.stopPropagation()
+    selectedNodeData.value = nodeData
+
+    contextMenuPosition.value = { x: rect.left, y: rect.y }
+    metricMenuVisible.value = true
   }
 
   onMounted(async () => {
@@ -308,6 +332,26 @@ a-card.metrics-sidebar(:bordered="false")
     .arco-tree-node.arco-tree-node-is-leaf .arco-tree-node-title {
       padding: 0 10px;
       border-radius: 0;
+    }
+  }
+  .metric-menu {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .menu-button {
+    visibility: hidden;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+
+    .icon-14 {
+      width: 14px;
+      height: 14px;
     }
   }
 </style>

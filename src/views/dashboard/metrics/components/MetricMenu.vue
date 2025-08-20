@@ -3,12 +3,9 @@ a-dropdown.metric-menu(
   trigger="click"
   position="bl"
   :popup-container="'body'"
+  :popup-visible="popupVisible"
   @popup-visible-change="handleMenuDropdownVisibleChange"
 )
-  a-button.menu-button(type="text" @click="handleMenuClick")
-    template(#icon)
-      svg.icon-14.rotate-90
-        use(href="#extra")
   template(#content)
     // For label nodes - show operator and value selects
     template(v-if="nodeData.type === 'label'")
@@ -63,6 +60,8 @@ a-dropdown.metric-menu(
 </template>
 
 <script setup lang="ts">
+  import { ref, watch, onMounted } from 'vue'
+
   const props = defineProps<{
     nodeData: {
       type: 'label' | 'value'
@@ -72,6 +71,7 @@ a-dropdown.metric-menu(
       metricName?: string
       children?: { metricName: string; labelName: string; value: string; type: 'value' }[]
     }
+    popupVisible?: boolean
   }>()
 
   console.log('MetricMenu props:', props.nodeData)
@@ -96,16 +96,28 @@ a-dropdown.metric-menu(
     (e: 'copyText', text: string): void
     (e: 'insertText', text: string): void
     (e: 'loadValues', data: any): void
+    (e: 'update:popupVisible', visible: boolean): void
   }>()
 
+  // Load values when component mounts for label nodes
+  onMounted(() => {
+    if (props.nodeData.type === 'label' && props.nodeData.metricName && props.nodeData.title) {
+      emits('loadValues', props.nodeData)
+    }
+  })
+
+  // Handle menu button click
   const handleMenuClick = (event: Event) => {
     event.stopPropagation()
   }
 
-  // Handle main menu dropdown visibility change to load values when opened
+  // Handle dropdown visibility change
   const handleMenuDropdownVisibleChange = (visible: boolean) => {
+    // Emit visibility update for v-model binding
+    emits('update:popupVisible', visible)
+
     if (visible && props.nodeData.type === 'label' && props.nodeData.metricName && props.nodeData.title) {
-      // Load values when the main menu dropdown opens
+      // Load values when the dropdown opens
       emits('loadValues', props.nodeData)
     }
   }
@@ -170,27 +182,6 @@ a-dropdown.metric-menu(
 </script>
 
 <style scoped lang="less">
-  .metric-menu {
-    position: absolute;
-    right: 4px;
-    top: 50%;
-    transform: translateY(-50%);
-  }
-
-  .menu-button {
-    visibility: hidden;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-
-    .icon-14 {
-      width: 14px;
-      height: 14px;
-    }
-  }
-
   .label-controls,
   .value-controls {
     padding: 8px;
