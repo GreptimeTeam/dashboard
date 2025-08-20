@@ -269,7 +269,7 @@ a-card.metrics-chart(:bordered="false")
       grid: {
         left: '2%',
         right: '2%',
-        bottom: series.length > 0 ? '15%' : '3%', // More space for dataZoom
+        bottom: series.length > 0 ? '9%' : '3%', // More space for dataZoom
         top: '3%',
         containLabel: true,
       },
