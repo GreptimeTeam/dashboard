@@ -52,6 +52,7 @@ const useCodeRunStore = defineStore('codeRun', () => {
   }
 
   const explainResultKeyCount = ref(0)
+  const refreshCounter = ref(0)
 
   const createResultFromOutput = (
     output: OutputType,
@@ -256,6 +257,8 @@ const useCodeRunStore = defineStore('codeRun', () => {
           targetResult.key
         )
         updatedResult.executionTime = res.execution_time_ms
+        refreshCounter.value += 1
+        updatedResult.refreshCount = refreshCounter.value
 
         // replace
         results.value[resultIndex] = updatedResult

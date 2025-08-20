@@ -32,6 +32,7 @@ export interface ResultType {
   name?: string
   executionTime?: number
   query?: string
+  refreshCount?: number
 }
 
 export interface SeriesType {

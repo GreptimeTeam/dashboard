@@ -47,6 +47,7 @@ a-tabs.panel-tabs(
           a-space(:size="0")
             a-tooltip(mini position="tr" :content="$t('dashboard.rerunQuery')")
               a-button(
+                v-if="result.type === 'sql'"
                 type="secondary"
                 size="mini"
                 :loading="refreshingKeys.has(result.key)"
@@ -71,14 +72,14 @@ a-tabs.panel-tabs(
                 a-space.title(direction="vertical" :size="4")
                   svg.icon-16
                     use(href="#table")
-            DataGrid(:data="result" :has-header="false")
+            DataGrid(:key="`table-${result.key}-${result.refreshCount || 0}`" :data="result" :has-header="false")
           a-tab-pane(v-if="useDataChart(result).hasChart.value" key="chart")
             template(#title)
               a-tooltip(mini position="bl" :content="$t('dashboard.chart')")
                 a-space.title(direction="vertical" :size="4")
                   svg.icon-16
                     use(href="#chart")
-            DataChart(:data="result" :has-header="false")
+            DataChart(:key="`chart-${result.key}-${result.refreshCount || 0}`" :data="result" :has-header="false")
 </template>
 
 <script lang="ts" name="DataView" setup>
