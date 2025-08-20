@@ -320,12 +320,19 @@ CodeMirror(
 
   :deep(.cm-scroller) {
     overflow: visible;
+    font-family: var(--vp-font-family-base);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.5;
   }
 
   :deep(.cm-content) {
     line-height: 40px;
     padding: 0 8px;
     min-height: 40px;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
   }
 
   :deep(.cm-line) {

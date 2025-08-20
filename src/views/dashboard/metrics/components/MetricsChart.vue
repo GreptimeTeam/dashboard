@@ -191,10 +191,16 @@ a-card.metrics-chart(:bordered="false")
           localChartType.value === 'scatter'
             ? undefined
             : {
-                width: 1.5,
+                width: 1.5, // Wider lines like Prometheus UI
+                color: undefined, // Use default series color
+                opacity: 1, // Full opacity for better visibility
               },
         emphasis: {
           focus: 'series',
+          lineStyle: {
+            width: 2, // Even wider on hover/focus
+            opacity: 1,
+          },
         },
         connectNulls: false, // Don't connect lines across null values (gaps)
         showSymbol: localChartType.value === 'scatter', // Show symbols only for scatter/points
@@ -253,8 +259,6 @@ a-card.metrics-chart(:bordered="false")
         },
       },
       legend: {
-        type: 'scroll',
-        orient: 'horizontal',
         bottom: 0,
         data: series.map((s) => s.name),
         selected: series.reduce((acc, s) => {
