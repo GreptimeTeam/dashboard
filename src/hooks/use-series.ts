@@ -40,38 +40,15 @@ export function useSeries() {
   const rangeQueryResult = ref<Array<any>>(null)
   const instantQueryResult = ref<Array<any>>(null) // For table data
   const queryStep = ref<number>()
+  const currentStep = ref(0)
 
   // Time range and step management
   const timeRangeState = useTimeRange({ time: 10 })
   const { rangeTime, time, unixTimeRange } = timeRangeState
 
-  // Manual step override
-  const manualStep = ref<number>()
-
   // Track previous query for partial updates
   const previousQuery = ref('')
   const previousStep = ref<number>()
-
-  // Auto compute step based on user-selected time range using Prometheus UI logic
-  const getQueryStep = () => {
-    // If step is manually set, use it
-    if (manualStep.value) {
-      console.log('Using manually set step:', manualStep.value)
-      return manualStep.value
-    }
-
-    // Auto-calculate step based on user-selected time range
-    const timeRange = unixTimeRange()
-    if (timeRange.length === 2) {
-      const [start, end] = timeRange as [number, number]
-      const diffSeconds = end - start
-
-      // Use Prometheus UI's exact logic: range / 250 for ~250 data points
-      const targetStepSeconds = Math.max(Math.floor(diffSeconds / 250), 1)
-      return targetStepSeconds
-    }
-    return 1 // Prometheus UI default when no range
-  }
 
   // Execute PromQL instant query (for table data - current values)
   const executeInstantQuery = async (query: string) => {
@@ -128,9 +105,8 @@ export function useSeries() {
 
     // Get time range and step
     const timeRange = unixTimeRange()
-    queryStep.value = getQueryStep()
-    const stepValue = queryStep.value
-
+    const stepValue = currentStep.value
+    queryStep.value = stepValue
     // Check if this is the same PromQL query (important for partial series updates)
     const isSameQuery = previousQuery.value === query && previousStep.value === stepValue
 
@@ -188,7 +164,6 @@ export function useSeries() {
     // Time range state
     rangeTime,
     time,
-    manualStep,
 
     // Previous query tracking (for partial updates)
     previousQuery,
@@ -197,6 +172,7 @@ export function useSeries() {
     // Computed
     unixTimeRange,
     queryStep,
+    currentStep,
 
     // Methods
     executeQuery, // High-level reactive method

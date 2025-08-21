@@ -19,17 +19,8 @@ a-layout.new-layout
             button-type="outline"
             :show-any-time="false"
           )
-          a-input(
-            v-model="manualStep"
-            size="small"
-            placeholder="auto"
-            style="width: 150px"
-            title="Step in seconds. Automatically calculated based on time range for optimal performance (max 500 data points)."
-          )
-            template(#prepend)
-              | Step
-            template(#append)
-              | s
+          StepSelector(v-model="selectedStepOption" :unix-time-range="unixTimeRange" @step-change="handleStepChange")
+
           a-button(
             type="primary"
             size="small"
@@ -92,6 +83,7 @@ a-layout.new-layout
   import MetricSidebar from './components/MetricSidebar.vue'
   import PromQLEditor from './components/PromQLEditor.vue'
   import MetricsChart from './components/MetricsChart.vue'
+  import StepSelector from './components/StepSelector.vue'
 
   // Router for URL sync
   const route = useRoute()
@@ -109,8 +101,8 @@ a-layout.new-layout
     time,
     unixTimeRange,
     queryStep,
-    manualStep,
     currentTimeRange,
+    currentStep,
   } = useSeries()
 
   // Sidebar state
@@ -119,6 +111,15 @@ a-layout.new-layout
   // Query state
   const queryLoading = ref(false)
   const chartType = ref('line') // Chart type state
+
+  // Step selector state
+  const selectedStepOption = ref('medium') // User selection model
+
+  // Handle step changes from StepSelector component
+  const handleStepChange = (step: number) => {
+    console.log('handleStepChange', step)
+    currentStep.value = step
+  }
   // URL sync state
   const hasInitParams = ref(false)
   // Track if we're currently updating query params to prevent double execution
@@ -151,7 +152,7 @@ a-layout.new-layout
 
     // Step parameter
     if (urlStep && typeof urlStep === 'string') {
-      manualStep.value = parseInt(urlStep, 10)
+      selectedStepOption.value = urlStep
     }
 
     // Chart type
@@ -183,8 +184,8 @@ a-layout.new-layout
     }
 
     // Step parameter
-    if (manualStep.value) {
-      query.step = manualStep.value.toString()
+    if (selectedStepOption.value && selectedStepOption.value !== 'medium') {
+      query.step = selectedStepOption.value
     } else {
       delete query.step
     }
