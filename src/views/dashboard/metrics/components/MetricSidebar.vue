@@ -60,7 +60,6 @@ a-card.metrics-sidebar(:bordered="false")
     )
 
     a-tree.metrics-tree(
-      v-model:expanded-keys="expandedKeys"
       size="small"
       action-on-node-click="expand"
       :block-node="true"
@@ -83,10 +82,8 @@ a-card.metrics-sidebar(:bordered="false")
 <script setup lang="ts">
   import { ref, computed, watch, nextTick, onMounted } from 'vue'
   import { useLocalStorage } from '@vueuse/core'
-  import { useStorage } from '@vueuse/core'
   import { IconSearch, IconLoading } from '@arco-design/web-vue/es/icon'
   import { getLabelNames } from '@/api/metrics'
-  import { useAppStore } from '@/store'
   import { useMetrics } from '@/hooks/use-metrics'
   import MetricMenu from './MetricMenu.vue'
   import MetricsExplorer from './MetricsExplorer.vue'
@@ -101,7 +98,6 @@ a-card.metrics-sidebar(:bordered="false")
 
   // Sidebar state
   const selectedMetric = useLocalStorage<string | null>('metrics-explorer-last-selected', null)
-  const expandedKeys = ref<string[]>([])
 
   // Local state for labels
   const labels = ref<any[]>([])
@@ -221,6 +217,8 @@ a-card.metrics-sidebar(:bordered="false")
     (newMetric) => {
       if (newMetric) {
         fetchLabelsForMetric(newMetric)
+      } else {
+        labels.value = []
       }
     },
     {
