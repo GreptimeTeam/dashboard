@@ -1,13 +1,6 @@
 import { ref, computed, watch } from 'vue'
 // import { useStorage } from '@vueuse/core'
-import {
-  getMetricNames,
-  getLabelNames,
-  getLabelValues,
-  executePromQL,
-  executePromQLRange,
-  searchMetricNames,
-} from '@/api/metrics'
+import { executePromQL, executePromQLRange } from '@/api/metrics'
 import { useAppStore } from '@/store'
 import useTimeRange from '@/hooks/use-time-range'
 
@@ -41,10 +34,6 @@ export function useMetrics() {
   const appStore = useAppStore()
 
   // Reactive state
-  const metrics = ref<MetricData[]>([])
-
-  const loading = ref(false)
-  const error = ref<string | null>(null)
   const queryLoading = ref(false)
 
   // Current query state
@@ -65,9 +54,6 @@ export function useMetrics() {
   // Track previous query for partial updates
   const previousQuery = ref('')
   const previousStep = ref<number>()
-
-  // Computed properties
-  const metricNames = computed(() => metrics.value.map((m) => m.name))
 
   // Auto compute step based on user-selected time range using Prometheus UI logic
   const getQueryStep = () => {
@@ -90,66 +76,9 @@ export function useMetrics() {
     return 1 // Prometheus UI default when no range
   }
 
-  // Fetch all metric names
-  const fetchMetrics = async (_match?: string) => {
-    try {
-      loading.value = true
-      error.value = null
-      const response = await getMetricNames(appStore.database)
-      if (response.data) {
-        const metricList = response.data.map((name: string) => ({ name }))
-        metrics.value = metricList
-      }
-    } catch (err: any) {
-      error.value = err.message || 'Failed to fetch metrics'
-      console.error('Error fetching metrics:', err)
-    } finally {
-      loading.value = false
-    }
-  }
-
-  // Remote search for metric names
-  const searchMetrics = async (keyword: string) => {
-    try {
-      loading.value = true
-      error.value = null
-      const safe = keyword.trim()
-      if (!safe) {
-        await fetchMetrics()
-        return metrics.value.map((m) => m.name)
-      }
-      // Build a permissive regex body, escape quotes
-      const regex = `${safe.replace(/"/g, '\\"')}`
-      const resp = await searchMetricNames(regex, appStore.database)
-      const list: string[] = resp.data || []
-      return list
-    } catch (err: any) {
-      console.error('Error remote searching metrics:', err)
-      return []
-    } finally {
-      loading.value = false
-    }
-  }
-
-  // Fetch values for a specific label
-  const fetchLabelValues = async (labelName: string, match?: string) => {
-    try {
-      const response = await getLabelValues(labelName, match, appStore.database)
-      if (response.data) {
-        const values = response.data
-        return values
-      }
-      return []
-    } catch (err: any) {
-      console.error(`Error fetching values for label ${labelName}:`, err)
-      return []
-    }
-  }
-
   // Execute PromQL instant query (for table data - current values)
   const executeInstantQuery = async (query: string) => {
     try {
-      error.value = null
       currentQuery.value = query
 
       const response = await executePromQL(query, currentTimeRange.value[1].toString(), appStore.database)
@@ -161,7 +90,6 @@ export function useMetrics() {
       instantQueryResult.value = response.data.result
       return response.data
     } catch (err: any) {
-      error.value = err.message || 'Failed to execute instant query'
       console.error('Error executing instant query:', err)
       throw err
     }
@@ -171,7 +99,6 @@ export function useMetrics() {
   const executeRangeQuery = async (query: string, start?: number, end?: number, step?: number) => {
     try {
       queryLoading.value = true
-      error.value = null
       currentQuery.value = query
 
       const startTime = start
@@ -189,7 +116,6 @@ export function useMetrics() {
       rangeQueryResult.value = response.data.result
       return response.data
     } catch (err: any) {
-      error.value = err.message || 'Failed to execute range query'
       console.error('Error executing range query:', err)
       throw err
     } finally {
@@ -253,19 +179,8 @@ export function useMetrics() {
     return executeRangeQuery(query, start, end, stepValue)
   }
 
-  // Watch database changes to refresh data
-  watch(
-    () => appStore.database,
-    () => {
-      fetchMetrics()
-    }
-  )
-
   return {
     // State
-    metrics,
-    loading,
-    error,
     currentQuery,
     currentTimeRange,
     queryResult,
@@ -283,16 +198,12 @@ export function useMetrics() {
     previousStep,
 
     // Computed
-    metricNames,
     unixTimeRange,
     queryStep,
 
     // Methods
-    fetchMetrics,
-    fetchLabelValues,
     executeQuery, // High-level reactive method
     executeInstantQuery, // For table data
     executeRangeQuery, // Low-level method
-    searchMetrics,
   }
 }

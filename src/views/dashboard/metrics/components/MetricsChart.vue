@@ -42,7 +42,7 @@ a-card.metrics-chart(:bordered="false")
     loading: boolean
     query: string
     timeRange: number[] | []
-    step: number // Step in seconds, not string format
+    step: number | undefined // Step in seconds, not string format
     chartType: string // Chart type from parent
   }>()
 

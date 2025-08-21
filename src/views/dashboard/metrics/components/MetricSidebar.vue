@@ -83,8 +83,8 @@ a-card.metrics-sidebar(:bordered="false")
   import { ref, computed, watch, nextTick, onMounted } from 'vue'
   import { useLocalStorage } from '@vueuse/core'
   import { IconSearch, IconLoading } from '@arco-design/web-vue/es/icon'
-  import { getLabelNames } from '@/api/metrics'
-  import { useMetrics } from '@/hooks/use-metrics'
+  import { getLabelNames, getMetricNames, getLabelValues, searchMetricNames } from '@/api/metrics'
+  import { useAppStore } from '@/store'
   import MetricMenu from './MetricMenu.vue'
   import MetricsExplorer from './MetricsExplorer.vue'
 
@@ -93,8 +93,12 @@ a-card.metrics-sidebar(:bordered="false")
     (e: 'insertText', text: string): void
   }>()
 
-  // Use the metrics composable
-  const { metrics, loading, fetchMetrics, fetchLabelValues, searchMetrics } = useMetrics()
+  // App store for database
+  const appStore = useAppStore()
+
+  // Local state for metrics
+  const metrics = ref<Array<{ name: string }>>([])
+  const loading = ref(false)
 
   // Sidebar state
   const selectedMetric = useLocalStorage<string | null>('metrics-explorer-last-selected', null)
@@ -118,6 +122,22 @@ a-card.metrics-sidebar(:bordered="false")
     }))
   })
 
+  // Common method to fetch metrics
+  const getMetrics = async () => {
+    try {
+      loading.value = true
+      const response = await getMetricNames(appStore.database)
+      if (response.data) {
+        const metricList = response.data.map((name: string) => ({ name }))
+        metrics.value = metricList
+      }
+    } catch (err: any) {
+      console.error('Error fetching metrics:', err)
+    } finally {
+      loading.value = false
+    }
+  }
+
   // Methods
   // Fetch labels for a specific metric and store locally
   const fetchLabelsForMetric = async (metricName: string) => {
@@ -138,8 +158,18 @@ a-card.metrics-sidebar(:bordered="false")
 
   const onMetricSearch = async (query: string) => {
     if (query.trim()) {
-      await searchMetrics(query)
+      try {
+        const safe = query.trim()
+        const regex = `${safe.replace(/"/g, '\\"')}`
+        const resp = await searchMetricNames(regex, appStore.database)
+        const list: string[] = resp.data || []
+        return list
+      } catch (err: any) {
+        console.error('Error remote searching metrics:', err)
+        return []
+      }
     }
+    return []
   }
 
   const selectMetricFromExplorer = (metricName: string) => {
@@ -151,7 +181,7 @@ a-card.metrics-sidebar(:bordered="false")
   }
 
   const refreshData = async () => {
-    await fetchMetrics()
+    await getMetrics()
   }
 
   const metricsTreeData = ref<any[]>([])
@@ -177,18 +207,25 @@ a-card.metrics-sidebar(:bordered="false")
 
   const loadLabelValues = async (nodeData: any) => {
     if (nodeData.type === 'label' && !nodeData.children?.length) {
-      const values = await fetchLabelValues(nodeData.labelName, nodeData.metricName)
-      nodeData.children = values.map((value: string) => ({
-        key: `value-${nodeData.metricName}-${nodeData.labelName}-${value}`,
-        title: value,
-        type: 'value',
-        metricName: nodeData.metricName,
-        labelName: nodeData.labelName,
-        value,
-        isLeaf: true,
-      }))
-      metricsTreeData.value = [...metricsTreeData.value]
-      await nextTick()
+      try {
+        const response = await getLabelValues(nodeData.labelName, nodeData.metricName, appStore.database)
+        if (response.data) {
+          const values = response.data
+          nodeData.children = values.map((value: string) => ({
+            key: `value-${nodeData.metricName}-${nodeData.labelName}-${value}`,
+            title: value,
+            type: 'value',
+            metricName: nodeData.metricName,
+            labelName: nodeData.labelName,
+            value,
+            isLeaf: true,
+          }))
+          metricsTreeData.value = [...metricsTreeData.value]
+          await nextTick()
+        }
+      } catch (err: any) {
+        console.error(`Error fetching values for label ${nodeData.labelName}:`, err)
+      }
     }
   }
 
@@ -209,8 +246,16 @@ a-card.metrics-sidebar(:bordered="false")
   }
 
   onMounted(async () => {
-    await fetchMetrics()
+    await getMetrics()
   })
+
+  // Watch for database changes to refresh metrics
+  watch(
+    () => appStore.database,
+    () => {
+      getMetrics()
+    }
+  )
 
   watch(
     () => selectedMetric.value,

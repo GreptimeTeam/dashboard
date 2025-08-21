@@ -102,7 +102,6 @@ a-layout.new-layout
     currentQuery,
     rangeQueryResult: queryResults,
     instantQueryResult: tableResults,
-    fetchMetrics,
     executeQuery,
     executeInstantQuery,
     // Time range state
@@ -316,9 +315,6 @@ a-layout.new-layout
   // Initialize
   onMounted(() => {
     // Initialize from URL first
-
-    // Fetch initial data
-    fetchMetrics()
   })
 </script>
 
