@@ -1,20 +1,17 @@
+/**
+ * Composable for managing PromQL queries and time series data
+ * Handles both instant queries (for table data) and range queries (for charts)
+ * with automatic time range alignment and step calculation
+ *
+ * This hook is specifically for series data operations, not metric metadata
+ */
 import { ref, computed, watch } from 'vue'
 // import { useStorage } from '@vueuse/core'
 import { executePromQL, executePromQLRange } from '@/api/metrics'
 import { useAppStore } from '@/store'
 import useTimeRange from '@/hooks/use-time-range'
 
-export interface MetricData {
-  name: string
-  description?: string
-}
-
-export interface LabelData {
-  name: string
-  values: string[]
-}
-
-export interface QueryResult {
+export interface SeriesQueryResult {
   status: string
   data: {
     resultType: string
@@ -22,7 +19,7 @@ export interface QueryResult {
   }
 }
 
-export interface RangeQueryResult {
+export interface SeriesRangeResult {
   status: string
   data: {
     resultType: string
@@ -30,7 +27,7 @@ export interface RangeQueryResult {
   }
 }
 
-export function useMetrics() {
+export function useSeries() {
   const appStore = useAppStore()
 
   // Reactive state
@@ -39,7 +36,7 @@ export function useMetrics() {
   // Current query state
   const currentQuery = ref('')
   const currentTimeRange = ref<number[]>([])
-  const queryResult = ref<QueryResult | null>(null)
+  const queryResult = ref<SeriesQueryResult | null>(null)
   const rangeQueryResult = ref<Array<any>>(null)
   const instantQueryResult = ref<Array<any>>(null) // For table data
   const queryStep = ref<number>()

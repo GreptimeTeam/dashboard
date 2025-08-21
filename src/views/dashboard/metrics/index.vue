@@ -85,7 +85,7 @@ a-layout.new-layout
   import { ref, computed, onMounted, watch, nextTick } from 'vue'
   import { useStorage } from '@vueuse/core'
   import { useRoute, useRouter } from 'vue-router'
-  import { useMetrics } from '@/hooks/use-metrics'
+  import { useSeries } from '@/hooks/use-series'
   import { Message } from '@arco-design/web-vue'
   import { IconLoading, IconPlayArrow } from '@arco-design/web-vue/es/icon'
   import TimeRangeSelect from '@/components/time-range-select/index.vue'
@@ -97,7 +97,7 @@ a-layout.new-layout
   const route = useRoute()
   const router = useRouter()
 
-  // Use the metrics composable with integrated time range and step calculation
+  // Use the series composable with integrated time range and step calculation
   const {
     currentQuery,
     rangeQueryResult: queryResults,
@@ -111,7 +111,7 @@ a-layout.new-layout
     queryStep,
     manualStep,
     currentTimeRange,
-  } = useMetrics()
+  } = useSeries()
 
   // Sidebar state
   const sidebarWidth = useStorage('metrics-sidebar-width', 320)
