@@ -2,13 +2,15 @@
 a-modal.timestamp-assistance-modal(
   v-model:visible="visible"
   unmount-on-close
-  :width="640"
+  :width="600"
   :footer="false"
   :mask-closable="true"
 )
   template(#title)
     a-space
-      span 🕒 {{ $t('dashboard.timeAssistance') }}
+      svg.icon
+        use(href="#time-index")
+      | {{ $t('dashboard.timeAssistance') }}
       a-tag(size="small" color="blue") Ctrl+Shift+;
   a-space(direction="vertical" fill :size="16")
     a-space
@@ -36,9 +38,13 @@ a-modal.timestamp-assistance-modal(
       span.section-subtitle Action:
       a-radio-group(v-model="action" type="button" size="small")
         a-radio(value="insert")
-          span ↗️ {{ insertActionText }}
+          a-space(size="mini")
+            icon-edit
+            | {{ insertActionText }}
         a-radio(value="copy")
-          span 📋 Copy
+          a-space(size="mini")
+            icon-copy
+            | Copy
     a-space.option(align="start" fill :size="32")
       a-space(direction="vertical" fill :size="8")
         .section-subtitle Timestamp
@@ -115,7 +121,9 @@ a-modal.timestamp-assistance-modal(
         scrollIntoView: true,
       })
 
-      console.log('Text inserted successfully:', text)
+      // Focus the editor after insertion
+      view.focus()
+
       return true
     } catch (error) {
       console.error('Failed to insert text to CodeMirror:', error)
@@ -126,7 +134,6 @@ a-modal.timestamp-assistance-modal(
   const copyText = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text)
-      console.log('Text copied to clipboard:', text)
     } catch (error) {
       console.error('Failed to copy text:', error)
     }
@@ -221,12 +228,9 @@ a-modal.timestamp-assistance-modal(
       return
     }
 
-    console.log('Acting on text:', text, 'Action:', action.value)
-
     if (action.value === 'insert') {
       const done = insertToCM(text)
       if (!done) {
-        console.log('Insert failed, falling back to copy')
         copyText(text)
       }
     } else {
@@ -237,7 +241,6 @@ a-modal.timestamp-assistance-modal(
 
   const onChoose = () => {
     const v = chosen.value
-    console.log('onChoose called with value:', v)
     if (!v) {
       console.warn('No value chosen')
       return
@@ -254,11 +257,8 @@ a-modal.timestamp-assistance-modal(
 
     refreshSelectionState()
 
-    console.log('Time assistance opened, CodeMirror available:', !!props.cm)
     if (props.cm) {
-      console.log('CodeMirror state:', !!props.cm.state)
       const selection = props.cm.state?.selection?.main
-      console.log('Current selection:', selection?.from, 'to', selection?.to, 'hasSelection:', hasSelection.value)
     }
   }
 
@@ -277,6 +277,12 @@ a-modal.timestamp-assistance-modal(
 
 <style lang="less">
   .timestamp-assistance-modal {
+    .arco-modal {
+      padding-top: 10px;
+    }
+    .arco-modal-title {
+      font-family: 'Gilroy';
+    }
     .arco-picker.timestamp {
       padding: 0 0 0 10px;
       width: 100%;
@@ -293,6 +299,9 @@ a-modal.timestamp-assistance-modal(
     }
     .action {
       padding-left: 4px;
+      .arco-radio-button-content {
+        font-size: 12px;
+      }
     }
     .option {
       padding-left: 4px;

@@ -48,13 +48,13 @@ a-card.editor-card(:bordered="false")
             template(#icon)
               icon-import
             | {{ $t('dashboard.importExplain') }}
-      a-tooltip(position="br" content="Alt + Enter" mini)
-        a-button(
-          v-if="queryType === 'sql'"
-          type="outline"
-          :disabled="isButtonDisabled"
-          @click="runQueryAll()"
-        )
+      a-tooltip(
+        v-if="queryType === 'sql'"
+        position="br"
+        content="Alt + Enter"
+        mini
+      )
+        a-button(type="outline" :disabled="isButtonDisabled" @click="runQueryAll()")
           a-space(:size="4")
             icon-loading(v-if="primaryCodeRunning" spin)
             icon-play-arrow(v-else)
@@ -65,7 +65,7 @@ a-card.editor-card(:bordered="false")
           template(#icon)
             svg.icon-18
               use(href="#time-index")
-      TimeAssistance(ref="tsRef" :cm="sqlView")
+      TimeAssistance(ref="tsRef" :cm="currentView")
     .query-select
       a-space(size="medium")
         a-tooltip(v-if="queryType === 'sql'" mini :content="$t('dashboard.format')")
@@ -195,6 +195,11 @@ a-card.editor-card(:bordered="false")
     clearCode,
   } = useQueryCode()
 
+  // Get current active CodeMirror view based on query type
+  const currentView = computed(() => {
+    return queryType.value === 'sql' ? sqlView.value : promqlView.value
+  })
+
   const currentSqlPreview = ref('')
   const promForm = reactive<PromForm>({
     time: 5,
@@ -215,7 +220,6 @@ a-card.editor-card(:bordered="false")
   const emit = defineEmits(['selectExplainTab'])
 
   const openTimeAssistance = () => {
-    console.log('Opening time assistance')
     if (tsRef.value) {
       tsRef.value?.open()
     }
@@ -435,7 +439,6 @@ a-card.editor-card(:bordered="false")
     {
       key: `Ctrl-Enter`,
       run: () => {
-        console.log('Cmd/Ctrl+Enter pressed')
         runPartQuery()
         return true
       },
