@@ -126,7 +126,7 @@ a-card.metrics-sidebar(:bordered="false")
   const getMetrics = async () => {
     try {
       loading.value = true
-      const response = await getMetricNames(appStore.database)
+      const response = await getMetricNames()
       if (response.data) {
         const metricList = response.data.map((name: string) => ({ name }))
         metrics.value = metricList
@@ -161,7 +161,7 @@ a-card.metrics-sidebar(:bordered="false")
       try {
         const safe = query.trim()
         const regex = `${safe.replace(/"/g, '\\"')}`
-        const resp = await searchMetricNames(regex, appStore.database)
+        const resp = await searchMetricNames(regex)
         const list: string[] = resp.data || []
         return list
       } catch (err: any) {
@@ -208,7 +208,7 @@ a-card.metrics-sidebar(:bordered="false")
   const loadLabelValues = async (nodeData: any) => {
     if (nodeData.type === 'label' && !nodeData.children?.length) {
       try {
-        const response = await getLabelValues(nodeData.labelName, nodeData.metricName, appStore.database)
+        const response = await getLabelValues(nodeData.labelName, nodeData.metricName)
         if (response.data) {
           const values = response.data
           nodeData.children = values.map((value: string) => ({

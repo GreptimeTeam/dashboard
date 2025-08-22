@@ -55,7 +55,7 @@ export function useSeries() {
     try {
       currentQuery.value = query
 
-      const response = await executePromQL(query, currentTimeRange.value[1].toString(), appStore.database)
+      const response = await executePromQL(query, currentTimeRange.value[1].toString())
 
       console.log('💾 Instant query result:', {
         resultLength: response.data.result?.length || 0,
@@ -83,8 +83,7 @@ export function useSeries() {
         query,
         (startTime || 0).toString(),
         (endTime || 0).toString(),
-        (stepValue || 1).toString(), // Convert number to string for API call
-        appStore.database
+        (stepValue || 1).toString() // Convert number to string for API call
       )
 
       rangeQueryResult.value = response.data.result

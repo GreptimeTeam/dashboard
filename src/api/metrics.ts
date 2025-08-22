@@ -3,11 +3,11 @@ import { useAppStore } from '@/store'
 
 const prometheusBaseURL = `/v1/prometheus/api/v1`
 
-const addDatabaseParams = (database?: string) => {
+const addDatabaseParams = () => {
   const appStore = useAppStore()
   return {
     params: {
-      db: database || appStore.database,
+      db: appStore.database,
     },
   } as AxiosRequestConfig
 }
@@ -26,20 +26,23 @@ const toSeriesSelector = (m: string): string => {
 
 /**
  * Get all metric names
- * @param database - Optional database name, defaults to current database
  * @returns Promise with array of metric names
  */
-export const getMetricNames = (database?: string) => {
-  return axios.get(`${prometheusBaseURL}/label/__name__/values`, addDatabaseParams(database))
+export const getMetricNames = () => {
+  const config = addDatabaseParams()
+  config.params = {
+    ...config.params,
+    limit: 100,
+  }
+  return axios.get(`${prometheusBaseURL}/label/__name__/values`, config)
 }
 
 /**
  * Search metric names remotely using a regex-based match
  * @param regex - Regex body for metric name (without leading/trailing /)
- * @param database - Optional database name
  */
-export const searchMetricNames = (regex: string, database?: string) => {
-  const config = addDatabaseParams(database)
+export const searchMetricNames = (regex: string) => {
+  const config = addDatabaseParams()
   // Prom-compatible: pass match parameter to filter by __name__ regex
   config.params = {
     ...config.params,
@@ -51,11 +54,10 @@ export const searchMetricNames = (regex: string, database?: string) => {
 /**
  * Get all label names (attributes) for metrics
  * @param match - Metric selector(s) or metric name(s). Will be normalized to match[] selectors
- * @param database - Optional database name, defaults to current database
  * @returns Promise with array of label names
  */
-export const getLabelNames = (match?: string, database?: string) => {
-  const config = addDatabaseParams(database)
+export const getLabelNames = (match?: string) => {
+  const config = addDatabaseParams()
   if (match) {
     config.params.match = [toSeriesSelector(match)]
   }
@@ -66,11 +68,10 @@ export const getLabelNames = (match?: string, database?: string) => {
  * Get all values for a specific label
  * @param labelName - The label name to get values for
  * @param match - Metric selector(s) or metric name(s). Will be normalized to match[] selectors
- * @param database - Optional database name, defaults to current database
  * @returns Promise with array of label values
  */
-export const getLabelValues = (labelName: string, match?: string, database?: string) => {
-  const config = addDatabaseParams(database)
+export const getLabelValues = (labelName: string, match?: string) => {
+  const config = addDatabaseParams()
   if (match) {
     config.params.match = [toSeriesSelector(match)]
   }
@@ -82,11 +83,10 @@ export const getLabelValues = (labelName: string, match?: string, database?: str
  * @param match - Metric selector
  * @param start - Start timestamp
  * @param end - End timestamp
- * @param database - Optional database name, defaults to current database
  * @returns Promise with series data
  */
-export const getSeries = (match: string, start?: string, end?: string, database?: string) => {
-  const config = addDatabaseParams(database)
+export const getSeries = (match: string, start?: string, end?: string) => {
+  const config = addDatabaseParams()
   config.params = {
     ...config.params,
     match,
@@ -100,11 +100,10 @@ export const getSeries = (match: string, start?: string, end?: string, database?
  * Execute a PromQL query
  * @param query - PromQL query string
  * @param time - Query time (Unix timestamp)
- * @param database - Optional database name, defaults to current database
  * @returns Promise with query results
  */
-export const executePromQL = (query: string, time?: string, database?: string) => {
-  const config = addDatabaseParams(database)
+export const executePromQL = (query: string, time?: string) => {
+  const config = addDatabaseParams()
   config.params = {
     ...config.params,
     query,
@@ -119,11 +118,10 @@ export const executePromQL = (query: string, time?: string, database?: string) =
  * @param start - Start timestamp
  * @param end - End timestamp
  * @param step - Query step
- * @param database - Optional database name, defaults to current database
  * @returns Promise with range query results
  */
-export const executePromQLRange = (query: string, start: string, end: string, step: string, database?: string) => {
-  const config = addDatabaseParams(database)
+export const executePromQLRange = (query: string, start: string, end: string, step: string) => {
+  const config = addDatabaseParams()
   config.params = {
     ...config.params,
     query,
