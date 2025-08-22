@@ -21,7 +21,7 @@ CodeMirror(
   import { PromQLExtension } from '@prometheus-io/codemirror-promql'
   import { useAppStore } from '@/store'
   import axios from 'axios'
-  import { keymap } from '@codemirror/view'
+  import { keymap, EditorView } from '@codemirror/view'
   import { Prec } from '@codemirror/state'
 
   const props = defineProps<{
@@ -202,6 +202,18 @@ CodeMirror(
         key: 'Enter',
         run: () => true, // Prevent default behavior - no new lines
       },
+      {
+        key: 'Shift-Enter',
+        run: () => true, // Prevent Shift+Enter new lines
+      },
+      {
+        key: 'Ctrl-Enter',
+        run: () => true, // Prevent Ctrl+Enter new lines
+      },
+      {
+        key: 'Cmd-Enter',
+        run: () => true, // Prevent Cmd+Enter new lines (Mac)
+      },
     ])
   )
 
@@ -216,9 +228,11 @@ CodeMirror(
     return exts
   })
 
-  // Handle code changes
+  // Handle code changes and filter out newlines
   const codeUpdate = (content: string) => {
-    emit('update:modelValue', content)
+    // Remove all newlines to enforce single-line behavior
+    const singleLineContent = content.replace(/[\r\n]+/g, ' ').trim()
+    emit('update:modelValue', singleLineContent)
   }
 
   // Handle editor ready
