@@ -240,14 +240,11 @@ a-modal.timestamp-assistance-modal(
     if (action.value === 'insert') {
       const done = insertToCM(text)
       if (done) {
-        Message.success({ content: `${insertActionText.value}d successfully`, duration: 1000 })
-      } else {
-        copyText(text)
-        Message.success({ content: 'Copied to clipboard', duration: 1000 })
+        Message.success({ content: 'Success', duration: 1000 })
       }
     } else {
       copyText(text)
-      Message.success({ content: 'Copied to clipboard', duration: 1000 })
+      Message.success({ content: 'Success', duration: 1000 })
     }
     visible.value = false
   }
