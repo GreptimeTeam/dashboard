@@ -1,26 +1,28 @@
 <template lang="pug">
 .step-selector
-  a-select(
-    v-model:model-value="currentSelection"
-    size="small"
-    style="width: 120px"
-    placeholder="Step"
-    title="Select step resolution or enter custom value"
-  )
-    a-option(
-      v-for="option in stepOptions"
-      :key="option.value"
-      :value="option.value"
-      :label="option.label"
+  a-dropdown(:popup-max-height="false" @select="handleDropdownSelect")
+    a-button(
+      size="small"
+      style="display: flex; justify-content: space-between; width: 130px"
+      :title="'Select step resolution or enter custom value'"
     )
-      | {{ option.label }}
+      | {{ getCurrentSelectionLabel() }}
+      icon-down
+    template(#content)
+      a-doption(
+        v-for="option in stepOptions"
+        :key="option.value"
+        style="width: 130px"
+        :value="option.value"
+      )
+        | {{ option.label }}
 
   a-input(
     v-if="currentSelection === 'custom'"
     v-model="customStepInput"
     size="small"
     placeholder="e.g., 30s, 2m, 1h"
-    style="width: 120px; margin-left: 8px"
+    style="width: 80px; margin-left: 8px"
     title="Enter custom step with time units (s, m, h) or just seconds"
     :status="isCustomStepValid ? 'normal' : 'error'"
   )
@@ -28,6 +30,7 @@
 
 <script setup lang="ts">
   import { ref, computed, watch, onMounted } from 'vue'
+  import { IconDown } from '@arco-design/web-vue/es/icon'
 
   // Props
   const props = defineProps<{
@@ -115,6 +118,17 @@
     if (currentSelection.value !== 'custom') return true
     return parseStepInput(customStepInput.value) !== null
   })
+
+  // Helper function to get current selection label
+  const getCurrentSelectionLabel = () => {
+    const option = stepOptions.find((opt) => opt.value === currentSelection.value)
+    return option ? option.label : 'Step'
+  }
+
+  // Handle dropdown selection
+  const handleDropdownSelect = (value: string) => {
+    currentSelection.value = value
+  }
 
   // Watch for selection changes
   watch(currentSelection, (newSelection) => {
