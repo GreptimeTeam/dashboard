@@ -272,7 +272,6 @@ a-modal.timestamp-assistance-modal(
 
     if (props.cm) {
       const selection = props.cm.state?.selection?.main
-    }
   }
 
   const close = () => {
