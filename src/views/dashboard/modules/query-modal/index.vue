@@ -102,9 +102,6 @@ a-modal.query-modal(
           justify-content: center;
           border-radius: 4px;
           margin-left: 3px;
-          svg {
-            stroke-width: 3px;
-          }
         }
         .arco-modal-close-btn:hover {
           background: var(--th-bg-color);

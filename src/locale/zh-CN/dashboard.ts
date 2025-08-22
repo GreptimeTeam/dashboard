@@ -81,4 +81,5 @@ export default {
   'dashboard.hideSidebar': '隐藏侧边栏',
   'dashboard.rerunQuery': '重新执行查询',
   'dashboard.clearResults': '清除结果？',
+  'dashboard.timeAssistance': 'Time Assistance',
 }
