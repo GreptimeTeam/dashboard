@@ -19,7 +19,11 @@ a-layout.new-layout
             button-type="outline"
             :show-any-time="false"
           )
-          StepSelector(v-model="selectedStepOption" :unix-time-range="unixTimeRange" @step-change="handleStepChange")
+          StepSelector(
+            v-model:selection-type="stepSelectionType"
+            v-model:step-value="currentStep"
+            :unix-time-range="unixTimeRange"
+          )
 
           a-button(
             type="primary"
@@ -113,13 +117,7 @@ a-layout.new-layout
   const chartType = ref('line') // Chart type state
 
   // Step selector state
-  const selectedStepOption = ref('medium') // User selection model
-
-  // Handle step changes from StepSelector component
-  const handleStepChange = (step: number) => {
-    console.log('handleStepChange', step)
-    currentStep.value = step
-  }
+  const stepSelectionType = ref('medium') // Selection type: low/medium/high/fixed/custom
   // URL sync state
   const hasInitParams = ref(false)
   // Track if we're currently updating query params to prevent double execution
@@ -127,7 +125,7 @@ a-layout.new-layout
 
   // Initialize from URL query parameters
   const initializeFromQuery = () => {
-    const { promql, timeLength, timeRange: urlTimeRange, step: urlStep, chartType: urlChartType } = route.query
+    const { promql, timeLength, timeRange: urlTimeRange, stepType, stepValue, chartType: urlChartType } = route.query
 
     // PromQL query
     if (promql && typeof promql === 'string') {
@@ -151,8 +149,12 @@ a-layout.new-layout
     }
 
     // Step parameter
-    if (urlStep && typeof urlStep === 'string') {
-      selectedStepOption.value = urlStep
+    if (stepType && typeof stepType === 'string') {
+      stepSelectionType.value = stepType
+    }
+
+    if (stepValue && typeof stepValue === 'string') {
+      currentStep.value = parseInt(stepValue, 10)
     }
 
     // Chart type
@@ -183,12 +185,8 @@ a-layout.new-layout
       delete query.timeRange
     }
 
-    // Step parameter
-    if (selectedStepOption.value && selectedStepOption.value !== 'medium') {
-      query.step = selectedStepOption.value
-    } else {
-      delete query.step
-    }
+    query.stepType = stepSelectionType.value
+    query.stepValue = currentStep.value.toString()
 
     // Chart type
     if (chartType.value && chartType.value !== 'line') {
