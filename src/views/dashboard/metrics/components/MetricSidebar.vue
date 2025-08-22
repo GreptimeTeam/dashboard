@@ -279,11 +279,19 @@ a-card.metrics-sidebar(:bordered="false")
     gap: 8px;
     margin-bottom: 16px;
     flex-wrap: nowrap;
+
     .a-select {
-      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+
+      :deep(.arco-select-view) {
+        min-width: 0;
+      }
     }
 
     .copy-metric-button {
+      flex-shrink: 0;
+      flex-grow: 0;
       width: 28px;
       height: 28px;
       padding: 0;
@@ -313,9 +321,11 @@ a-card.metrics-sidebar(:bordered="false")
   }
   .metrics-section {
     height: 100%;
+
     background: var(--color-bg-container);
     border-right: 1px solid var(--color-border);
     overflow-y: auto;
+    overflow-x: auto;
     padding: 0 15px;
   }
   // Tree node styling to match query sidebar
