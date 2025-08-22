@@ -180,13 +180,20 @@ a-card.metrics-chart(:bordered="false")
       })
       // Don't filter out null values - let ECharts handle them with connectNulls: false
 
+      // Determine if we should show symbols based on data point count
+      const shouldShowSymbols = localChartType.value === 'scatter' || data.length <= 50
+      let symbolSize = 0
+      if (shouldShowSymbols) {
+        symbolSize = localChartType.value === 'scatter' ? 6 : 5
+      }
+
       return {
         name: seriesName,
         type: getChartType(localChartType.value),
         data,
         smooth: false,
-        symbol: localChartType.value === 'scatter' ? 'circle' : 'none',
-        symbolSize: localChartType.value === 'scatter' ? 4 : 0,
+        symbol: shouldShowSymbols ? 'circle' : 'none',
+        symbolSize: 5,
         lineStyle:
           localChartType.value === 'scatter'
             ? undefined
@@ -203,7 +210,6 @@ a-card.metrics-chart(:bordered="false")
           },
         },
         connectNulls: false, // Don't connect lines across null values (gaps)
-        showSymbol: localChartType.value === 'scatter', // Show symbols only for scatter/points
         // Add area fill for stacked lines
         areaStyle: isStackedChart(localChartType.value)
           ? {
