@@ -81,4 +81,5 @@ export default {
   'dashboard.hideSidebar': 'Hide sidebar',
   'dashboard.rerunQuery': 'Rerun Query',
   'dashboard.clearResults': 'Clear results?',
+  'dashboard.timeAssistance': 'Time Input Assistance',
 }

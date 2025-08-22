@@ -17,5 +17,9 @@
     "VITE"
   ],
   "vue-i18n.i18nPaths": "src/locale,src/views/dashboard/locale",
-  "i18n-ally.localesPaths": ["src/locale", "src/views/dashboard/locale"]
+  "i18n-ally.localesPaths": [
+    "src/locale",
+    "src/views/dashboard/locale"
+  ],
+  "editor.formatOnSave": true
 }

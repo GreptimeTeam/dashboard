@@ -8,12 +8,13 @@ a-card.editor-card(:bordered="false")
         :disabled="isButtonDisabled || explainQueryRunning"
         @click="runPartQuery()"
       )
-        a-popover(position="bl" content-class="code-tooltip" :content="currentStatement")
-          a-space(:size="4")
-            icon-loading(v-if="secondaryCodeRunning" spin)
-            icon-play-arrow(v-else)
-            div {{ $t('dashboard.runQuery') + (queryType === 'sql' && currentQueryNumber ? ' #' + currentQueryNumber : '') }}
-            icon-close-circle-fill.icon-16(v-if="secondaryCodeRunning") 
+        a-tooltip(position="left" content="Ctrl + Enter")
+          a-popover(position="bl" content-class="code-tooltip" :content="currentStatement")
+            a-space(:size="4")
+              icon-loading(v-if="secondaryCodeRunning" spin)
+              icon-play-arrow(v-else)
+              div {{ $t('dashboard.runQuery') + (queryType === 'sql' && currentQueryNumber ? ' #' + currentQueryNumber : '') }}
+              icon-close-circle-fill.icon-16(v-if="secondaryCodeRunning") 
         template(#icon)
           icon-down
         template(#content)
@@ -47,17 +48,24 @@ a-card.editor-card(:bordered="false")
             template(#icon)
               icon-import
             | {{ $t('dashboard.importExplain') }}
-      a-button(
-        v-if="queryType === 'sql'"
-        type="outline"
-        :disabled="isButtonDisabled"
-        @click="runQueryAll()"
-      )
-        a-space(:size="4")
-          icon-loading(v-if="primaryCodeRunning" spin)
-          icon-play-arrow(v-else)
-          | {{ $t('dashboard.runAll') }}
-          icon-close-circle-fill.icon-16(v-if="primaryCodeRunning")
+      a-tooltip(position="br" content="Alt + Enter" mini)
+        a-button(
+          v-if="queryType === 'sql'"
+          type="outline"
+          :disabled="isButtonDisabled"
+          @click="runQueryAll()"
+        )
+          a-space(:size="4")
+            icon-loading(v-if="primaryCodeRunning" spin)
+            icon-play-arrow(v-else)
+            | {{ $t('dashboard.runAll') }}
+            icon-close-circle-fill.icon-16(v-if="primaryCodeRunning")
+      a-tooltip(mini position="right" :content="$t('dashboard.timeAssistance')")
+        a-button(type="secondary" @click="openTimeAssistance")
+          template(#icon)
+            svg.icon-18
+              use(href="#time-index")
+      TimeAssistance(ref="tsRef" :cm="sqlView")
     .query-select
       a-space(size="medium")
         a-tooltip(v-if="queryType === 'sql'" mini :content="$t('dashboard.format')")
@@ -154,7 +162,7 @@ a-card.editor-card(:bordered="false")
   import { acceptCompletion } from '@codemirror/autocomplete'
   import type { PromForm } from '@/store/modules/code-run/types'
   import { useStorage } from '@vueuse/core'
-  import { sqlFormatter, parseSqlStatements, findStatementAtPosition, debounce } from '@/utils/sql'
+  import { sqlFormatter, parseSqlStatements, findStatementAtPosition } from '@/utils/sql'
   import { Message } from '@arco-design/web-vue'
   import fileDownload from 'js-file-download'
 
@@ -173,6 +181,8 @@ a-card.editor-card(:bordered="false")
     tabSize: 2,
   })
 
+  const tsRef = ref<InstanceType<typeof import('./time-assistance.vue').default> | null>(null)
+
   const {
     codes,
     queryType,
@@ -186,8 +196,6 @@ a-card.editor-card(:bordered="false")
   } = useQueryCode()
 
   const currentSqlPreview = ref('')
-  const triggerVisible = ref(false)
-  const rangePickerVisible = ref(false)
   const promForm = reactive<PromForm>({
     time: 5,
     step: '30s',
@@ -206,6 +214,12 @@ a-card.editor-card(:bordered="false")
 
   const emit = defineEmits(['selectExplainTab'])
 
+  const openTimeAssistance = () => {
+    console.log('Opening time assistance')
+    if (tsRef.value) {
+      tsRef.value?.open()
+    }
+  }
   // Show the import explain modal
   const showImportExplainModal = () => {
     importExplainModalVisible.value = true
@@ -417,28 +431,37 @@ a-card.editor-card(:bordered="false")
     label: `Last ${value} minutes`,
   }))
 
-  // TODO: fix this
-  const defaultKeymap = [
+  const myKeymap = keymap.of([
     {
-      key: 'alt-Enter',
+      key: `Ctrl-Enter`,
       run: () => {
-        runQueryAll()
+        console.log('Cmd/Ctrl+Enter pressed')
+        runPartQuery()
+        return true
       },
     },
     {
-      key: 'ctrl-Enter',
+      key: 'Alt-Enter', // Run All
       run: () => {
-        runPartQuery()
+        runQueryAll()
+        return true
+      },
+    },
+    {
+      key: 'Ctrl-Shift-;', // Time Assistant（Cmd/Ctrl+Shift+;）
+      run: () => {
+        openTimeAssistance()
+        return true
       },
     },
     {
       key: 'Tab',
       run: acceptCompletion,
     },
-  ]
+  ])
 
-  const extensionsForSql = [...extensions.value.sql, keymap.of(defaultKeymap as any)]
-  const extensionsForPromql = [...extensions.value.promql, keymap.of(defaultKeymap as any)]
+  const extensionsForSql = [myKeymap, ...extensions.value.sql]
+  const extensionsForPromql = [myKeymap, ...extensions.value.promql]
   const placeholder = `Paste response from explain analyze format json here. Example format:
   {
     "output": [
