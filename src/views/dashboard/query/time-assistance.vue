@@ -11,55 +11,57 @@ a-modal.timestamp-assistance-modal(
       svg.icon
         use(href="#time-index")
       | {{ $t('dashboard.timeAssistance') }}
-      a-tag(size="small" color="blue") Ctrl+Shift+;
-  a-space(direction="vertical" fill :size="16")
-    a-space
-      a-date-picker.timestamp(
-        v-model="picked"
-        show-time
-        format="YYYY-MM-DD HH:mm:ss.SSS"
-        value-format="YYYY-MM-DD HH:mm:ss.SSS"
-        style="width: 210px"
-        type="outline"
-        :allow-clear="false"
-      )
-        template(#prefix)
-          svg.icon-16
-            use(href="#time")
-      a-input.digits(
-        v-model="microNanoDigits"
-        placeholder="000000"
-        maxlength="6"
-        @blur="onMicroNanoBlur"
-      )
-        template(#suffix)
-          span µs/ns
-    a-space.action(align="center")
-      span.section-subtitle Action:
-      a-radio-group(v-model="action" type="button" size="small")
-        a-radio(value="insert")
-          a-space(size="mini")
-            icon-edit
-            | {{ insertActionText }}
-        a-radio(value="copy")
-          a-space(size="mini")
-            icon-copy
-            | Copy
-    a-space.option(align="start" fill :size="32")
-      a-space(direction="vertical" fill :size="8")
-        .section-subtitle Timestamp
-        a-radio-group(v-model="chosen" type="button" @change="onChoose")
-          a-space(direction="vertical" fill :size="4")
-            a-radio(v-for="opt in timestampOpts" :key="opt.value" :value="opt.value") {{ opt.label }}
-      a-space(direction="vertical" fill :size="8")
-        .section-subtitle Formatted
-        a-radio-group(v-model="chosen" type="button" @change="onChoose")
-          a-space(direction="vertical" fill :size="4")
-            a-radio(v-for="opt in literalOpts" :key="opt.value" :value="opt.value") {{ opt.label }}
+      a-tag.ctrl(size="small" color="blue") Ctrl Shift ;
+  a-form(auto-label-width :model="tsForm")
+    a-form-item(label="Step 1")
+      a-space
+        .action Select time
+        a-date-picker.timestamp(
+          v-model="picked"
+          show-time
+          format="YYYY-MM-DD HH:mm:ss.SSS"
+          value-format="YYYY-MM-DD HH:mm:ss.SSS"
+          style="width: 210px"
+          type="outline"
+          :allow-clear="false"
+        )
+          template(#prefix)
+            svg.icon
+              use(href="#time")
+    a-form-item(label="Step 2")
+      a-space(direction="vertical")
+        a-space.action(align="center")
+          span.section-subtitle Click a value below to
+          a-radio-group(v-model="action" type="button" size="small")
+            a-radio(value="insert")
+              a-space(size="mini")
+                icon-edit
+                | {{ insertActionText }}
+            a-radio(value="copy")
+              a-space(size="mini")
+                icon-copy
+                | Copy
+        a-space.option(direction="vertical" fill :size="8")
+          a-space(
+            v-for="(unit, index) in ['s', 'ms', 'µs', 'ns']"
+            :key="unit"
+            align="center"
+            :size="8"
+          )
+            a-tag.unit(size="small" color="blue") {{ unit }}
+            a-radio-group(
+              v-model="chosen"
+              type="button"
+              size="large"
+              @change="onChoose"
+            )
+              a-radio(:value="timestampOpts[index].value") {{ timestampOpts[index].value }}
+              a-radio(:value="literalOpts[index].value") {{ literalOpts[index].value }}
 </template>
 
 <script setup lang="ts">
   import dayjs from 'dayjs'
+  import { Message } from '@arco-design/web-vue'
 
   interface CMViewLike {
     state: any
@@ -73,6 +75,13 @@ a-modal.timestamp-assistance-modal(
   const chosen = ref<string>('')
   const microNanoDigits = ref<string>('000000')
   const formattedMicroNano = ref<string>('000000')
+  const tsForm = reactive({
+    picked,
+    action,
+    chosen,
+    microNanoDigits,
+    formattedMicroNano,
+  })
 
   // Trigger for forcing reactive updates
   const refreshTrigger = ref(0)
@@ -122,7 +131,7 @@ a-modal.timestamp-assistance-modal(
       })
 
       // Focus the editor after insertion
-      view.focus()
+      view.focus?.()
 
       return true
     } catch (error) {
@@ -230,11 +239,15 @@ a-modal.timestamp-assistance-modal(
 
     if (action.value === 'insert') {
       const done = insertToCM(text)
-      if (!done) {
+      if (done) {
+        Message.success({ content: `${insertActionText.value}d successfully`, duration: 1000 })
+      } else {
         copyText(text)
+        Message.success({ content: 'Copied to clipboard', duration: 1000 })
       }
     } else {
       copyText(text)
+      Message.success({ content: 'Copied to clipboard', duration: 1000 })
     }
     visible.value = false
   }
@@ -279,6 +292,9 @@ a-modal.timestamp-assistance-modal(
   .timestamp-assistance-modal {
     .arco-modal {
       padding-top: 10px;
+      .arco-modal-body {
+        padding: 10px 26px 20px 26px;
+      }
     }
     .arco-modal-title {
       font-family: 'Gilroy';
@@ -289,6 +305,9 @@ a-modal.timestamp-assistance-modal(
       .arco-picker-suffix-icon {
         display: none;
       }
+      input {
+        font-size: 12px;
+      }
     }
     .arco-input-wrapper.digits {
       width: 110px;
@@ -297,14 +316,41 @@ a-modal.timestamp-assistance-modal(
         padding-left: 0;
       }
     }
+
+    .arco-tag.ctrl {
+      font-weight: 600;
+    }
     .action {
-      padding-left: 4px;
+      padding-top: 2px;
+      font-size: 12px;
       .arco-radio-button-content {
         font-size: 12px;
       }
     }
     .option {
       padding-left: 4px;
+
+      .arco-tag {
+        width: 26px;
+        text-align: center;
+        display: inline-flex;
+        justify-content: center;
+      }
+      .arco-radio-group-button {
+        background-color: transparent;
+      }
+
+      .arco-radio-button:hover {
+        color: var(--main-font-color);
+        background-color: var(--list-hover-color);
+      }
+
+      .arco-radio-button-content {
+        min-width: 170px;
+        text-align: left;
+        font-family: var(--font-mono);
+        font-size: 12px;
+      }
     }
   }
 </style>
