@@ -68,8 +68,8 @@ a-card.editor-card(:bordered="false")
       TimeAssistance(ref="tsRef" :cm="currentView")
     .query-select
       a-space(size="medium")
-        a-tooltip(v-if="queryType === 'sql'" mini :content="$t('dashboard.format')")
-          a-button(type="outline" :disabled="isButtonDisabled" @click="formatSql")
+        a-tooltip(mini :content="$t('dashboard.format')")
+          a-button(type="outline" :disabled="isButtonDisabled" @click="formatSql()")
             template(#icon)
               icon-code-block.icon-18
         a-tooltip(mini :content="$t('dashboard.clearCode')")
@@ -162,7 +162,7 @@ a-card.editor-card(:bordered="false")
   import { acceptCompletion } from '@codemirror/autocomplete'
   import type { PromForm } from '@/store/modules/code-run/types'
   import { useStorage } from '@vueuse/core'
-  import { sqlFormatter, parseSqlStatements, findStatementAtPosition } from '@/utils/sql'
+  import { sqlFormatter, parseSqlStatements, findStatementAtPosition, promqlFormatter } from '@/utils/sql'
   import { Message } from '@arco-design/web-vue'
   import fileDownload from 'js-file-download'
 
@@ -357,9 +357,15 @@ a-card.editor-card(:bordered="false")
     secondaryCodeRunning.value = false
   }
 
-  const formatSql = () => {
+  const formatSql = async () => {
     if (queryType.value === 'sql' && codes.value.sql.trim().length > 0) {
       codes.value.sql = sqlFormatter(codes.value.sql)
+    } else if (queryType.value === 'promql' && codes.value.promql.trim().length > 0) {
+      try {
+        codes.value.promql = await promqlFormatter(codes.value.promql)
+      } catch (error) {
+        //
+      }
     }
   }
 
@@ -422,11 +428,33 @@ a-card.editor-card(:bordered="false")
   }
 
   window.addEventListener('beforeunload', () => {
-    localStorage.setItem('queryCode', JSON.stringify(codes.value))
+    localStorage.setItem(
+      'queryCode',
+      JSON.stringify({
+        sql: codes.value.sql,
+        promql: codes.value.promql,
+        type: queryType.value,
+      })
+    )
   })
 
   onMounted(() => {
-    codes.value = useStorage('queryCode', { sql: '', promql: '' }).value
+    const stored = useStorage('queryCode', { sql: '', promql: '', type: 'sql' }).value
+    codes.value.sql = stored.sql || ''
+    codes.value.promql = stored.promql || ''
+    queryType.value = stored.type || 'sql'
+  })
+
+  // Watch queryType changes and save to localStorage immediately
+  watch(queryType, () => {
+    localStorage.setItem(
+      'queryCode',
+      JSON.stringify({
+        sql: codes.value.sql,
+        promql: codes.value.promql,
+        type: queryType.value,
+      })
+    )
   })
 
   // TODO: i18n config
