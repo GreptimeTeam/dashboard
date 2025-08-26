@@ -17,7 +17,7 @@ overrides:
   '@codemirror/lang-java': 6.0.1
   '@codemirror/lang-python': 6.1.3
   '@codemirror/lang-rust': 6.0.1
-  '@codemirror/lang-sql': 6.5.4
+  '@codemirror/lang-sql': 6.9.1
   '@prometheus-io/codemirror-promql': 0.305.0
   '@uiw/codemirror-extensions-langs': 4.21.13
   '@lezer/lr': 1.3.10
@@ -51,8 +51,8 @@ importers:
         specifier: 6.0.1
         version: 6.0.1
       '@codemirror/lang-sql':
-        specifier: 6.5.4
-        version: 6.5.4(@codemirror/view@6.18.0)(@lezer/common@1.2.0)
+        specifier: 6.9.1
+        version: 6.9.1(@codemirror/view@6.18.0)
       '@codemirror/language':
         specifier: 6.9.0
         version: 6.9.0
@@ -572,8 +572,8 @@ packages:
   '@codemirror/lang-sass@6.0.2':
     resolution: {integrity: sha512-l/bdzIABvnTo1nzdY6U+kPAC51czYQcOErfzQ9zSm9D8GmNPD0WTW8st/CJwBTPLO8jlrbyvlSEcN20dc4iL0Q==}
 
-  '@codemirror/lang-sql@6.5.4':
-    resolution: {integrity: sha512-5Gq7fYtT/5HbNyIG7a8vYaqOYQU3JbgtBe3+derkrFUXRVcjkf8WVgz++PIbMFAQsOFMDdDR+uiNM8ZRRuXH+w==}
+  '@codemirror/lang-sql@6.9.1':
+    resolution: {integrity: sha512-ecSk3gm/mlINcURMcvkCZmXgdzPSq8r/yfCtTB4vgqGGIbBC2IJIAy7GqYTy5pgBEooTVmHP2GZK6Z7h63CDGg==}
 
   '@codemirror/lang-vue@0.1.3':
     resolution: {integrity: sha512-QSKdtYTDRhEHCfo5zOShzxCmqKJvgGrZwDQSdbvCRJ5pRLWBS7pD/8e/tH44aVQT6FKm0t6RVNoSUWHOI5vNug==}
@@ -4924,16 +4924,16 @@ snapshots:
     transitivePeerDependencies:
       - '@codemirror/view'
 
-  '@codemirror/lang-sql@6.5.4(@codemirror/view@6.18.0)(@lezer/common@1.2.0)':
+  '@codemirror/lang-sql@6.9.1(@codemirror/view@6.18.0)':
     dependencies:
       '@codemirror/autocomplete': 6.9.0(@codemirror/language@6.9.0)(@codemirror/state@6.4.1)(@codemirror/view@6.18.0)(@lezer/common@1.2.0)
       '@codemirror/language': 6.9.0
       '@codemirror/state': 6.4.1
+      '@lezer/common': 1.2.0
       '@lezer/highlight': 1.2.0
       '@lezer/lr': 1.3.10
     transitivePeerDependencies:
       - '@codemirror/view'
-      - '@lezer/common'
 
   '@codemirror/lang-vue@0.1.3':
     dependencies:
@@ -4989,7 +4989,7 @@ snapshots:
       '@codemirror/lang-python': 6.1.3(@codemirror/state@6.4.1)(@codemirror/view@6.18.0)(@lezer/common@1.2.0)
       '@codemirror/lang-rust': 6.0.1
       '@codemirror/lang-sass': 6.0.2(@codemirror/view@6.18.0)
-      '@codemirror/lang-sql': 6.5.4(@codemirror/view@6.18.0)(@lezer/common@1.2.0)
+      '@codemirror/lang-sql': 6.9.1(@codemirror/view@6.18.0)
       '@codemirror/lang-vue': 0.1.3
       '@codemirror/lang-wast': 6.0.2
       '@codemirror/lang-xml': 6.1.0
@@ -5103,7 +5103,7 @@ snapshots:
       '@types/node': 20.5.1
       chalk: 4.1.2
       cosmiconfig: 8.3.6(typescript@5.9.2)
-      cosmiconfig-typescript-loader: 4.4.0(@types/node@20.5.1)(cosmiconfig@8.3.6(typescript@5.9.2))(ts-node@10.9.2(@types/node@20.5.1)(typescript@5.9.2))(typescript@5.9.2)
+      cosmiconfig-typescript-loader: 4.4.0(@types/node@20.5.1)(cosmiconfig@8.3.6(typescript@5.9.2))(ts-node@10.9.2(@types/node@20.19.11)(typescript@5.9.2))(typescript@5.9.2)
       lodash.isplainobject: 4.0.6
       lodash.merge: 4.6.2
       lodash.uniq: 4.5.0
@@ -5872,7 +5872,7 @@ snapshots:
       '@codemirror/lang-python': 6.1.3(@codemirror/state@6.4.1)(@codemirror/view@6.18.0)(@lezer/common@1.2.0)
       '@codemirror/lang-rust': 6.0.1
       '@codemirror/lang-sass': 6.0.2(@codemirror/view@6.18.0)
-      '@codemirror/lang-sql': 6.5.4(@codemirror/view@6.18.0)(@lezer/common@1.2.0)
+      '@codemirror/lang-sql': 6.9.1(@codemirror/view@6.18.0)
       '@codemirror/lang-vue': 0.1.3
       '@codemirror/lang-wast': 6.0.2
       '@codemirror/lang-xml': 6.1.0
@@ -6504,7 +6504,7 @@ snapshots:
     dependencies:
       is-what: 3.14.1
 
-  cosmiconfig-typescript-loader@4.4.0(@types/node@20.5.1)(cosmiconfig@8.3.6(typescript@5.9.2))(ts-node@10.9.2(@types/node@20.5.1)(typescript@5.9.2))(typescript@5.9.2):
+  cosmiconfig-typescript-loader@4.4.0(@types/node@20.5.1)(cosmiconfig@8.3.6(typescript@5.9.2))(ts-node@10.9.2(@types/node@20.19.11)(typescript@5.9.2))(typescript@5.9.2):
     dependencies:
       '@types/node': 20.5.1
       cosmiconfig: 8.3.6(typescript@5.9.2)
