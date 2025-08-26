@@ -172,7 +172,7 @@
     "@lezer/highlight": "1.2.0",
     "@lezer/common": "1.2.0"
   },
-  "packageManager": "pnpm@9.1.0",
+  "packageManager": "pnpm@9.12.1",
   "pnpm": {
     "overrides": {
       "braces": "^3.0.3"

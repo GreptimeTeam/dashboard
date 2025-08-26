@@ -21,9 +21,9 @@ jobs:
         run: rm -rf release && mkdir -p release
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 9.12.1
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -90,7 +90,7 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 9.1.0
+          version: 9.12.1
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable # Set this to dtolnay/rust-toolchain@nightly
