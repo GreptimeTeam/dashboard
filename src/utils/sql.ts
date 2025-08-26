@@ -131,9 +131,7 @@ export const sqlFormatter = (code: string) => {
       console.warn(`Failed to format SQL statement: ${formattingError}`)
       Message.warning('Failed to format. Please check console for details.')
       formatted = trimmed.endsWith(';') ? trimmed : `${trimmed};`
-      return formatted
     }
-
     return formatted
   } catch (error) {
     console.error('SQL formatting error:', error)
