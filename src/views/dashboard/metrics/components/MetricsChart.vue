@@ -33,7 +33,7 @@ a-card.metrics-chart(:bordered="false")
 
 <script setup lang="ts">
   import { ref, computed, watch, nextTick } from 'vue'
-  import Chart from '@/components/chart/index.vue'
+  import Chart from '@/components/raw-chart/index.vue'
   import dayjs from 'dayjs'
   import type { EChartsOption } from 'echarts'
 
