@@ -84,10 +84,10 @@ a-layout.new-layout
   import { Message } from '@arco-design/web-vue'
   import { IconLoading, IconPlayArrow } from '@arco-design/web-vue/es/icon'
   import TimeRangeSelect from '@/components/time-range-select/index.vue'
-  import MetricSidebar from './components/MetricSidebar.vue'
-  import PromQLEditor from './components/PromQLEditor.vue'
-  import MetricsChart from './components/MetricsChart.vue'
-  import StepSelector from './components/StepSelector.vue'
+  import MetricSidebar from './components/metric-sidebar.vue'
+  import PromQLEditor from './components/prom-ql-editor.vue'
+  import MetricsChart from './components/metrics-chart.vue'
+  import StepSelector from './components/step-selector.vue'
 
   // Router for URL sync
   const route = useRoute()

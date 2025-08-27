@@ -85,8 +85,8 @@ a-card.metrics-sidebar(:bordered="false")
   import { IconSearch, IconLoading } from '@arco-design/web-vue/es/icon'
   import { getLabelNames, getMetricNames, getLabelValues, searchMetricNames } from '@/api/metrics'
   import { useAppStore } from '@/store'
-  import MetricMenu from './MetricMenu.vue'
-  import MetricsExplorer from './MetricsExplorer.vue'
+  import MetricMenu from './metric-menu.vue'
+  import MetricsExplorer from './metrics-explorer.vue'
 
   const emit = defineEmits<{
     (e: 'copyText', text: string): void
