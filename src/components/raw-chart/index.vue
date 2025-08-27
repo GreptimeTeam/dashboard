@@ -4,6 +4,7 @@
 
 <script setup lang="ts">
   import { ref, onMounted, onBeforeUnmount, onUnmounted, nextTick, watch } from 'vue'
+  import { useResizeObserver } from '@vueuse/core'
   import * as echarts from 'echarts'
   import type { EChartsOption } from 'echarts'
 
@@ -30,10 +31,21 @@
   })
 
   const resizeChart = () => {
-    if (chartInstance) {
-      chartInstance.resize()
+    if (chartInstance && chartContainer.value && !isUnmounting.value) {
+      try {
+        chartInstance.resize()
+      } catch (error) {
+        console.warn('Failed to resize chart:', error)
+      }
     }
   }
+
+  // Use VueUse's useResizeObserver for automatic chart resizing
+  useResizeObserver(chartContainer, () => {
+    if (!isUnmounting.value) {
+      resizeChart()
+    }
+  })
 
   onMounted(() => {
     if (chartContainer.value && props.options) {
