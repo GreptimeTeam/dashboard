@@ -8,6 +8,9 @@ a-dropdown.metric-menu(
 )
   template(#content)
     .form
+      .close-button(@click="handleClose")
+        icon-close (size="24")
+
       .expression-row
         .control-label {{ nodeData.labelName }}
 
@@ -96,6 +99,11 @@ a-dropdown.metric-menu(
     }
   }
 
+  // Handle close button click
+  const handleClose = () => {
+    emits('update:popupVisible', false)
+  }
+
   // Insert label with selected operator and value
   const handleInsertLabelWithValue = () => {
     const text = `${props.nodeData.labelName}${selectedOperator.value}"${selectedValue.value}"`
@@ -115,7 +123,26 @@ a-dropdown.metric-menu(
     padding: 20px;
     display: flex;
     flex-direction: column;
+    position: relative;
   }
+
+  .close-button {
+    position: absolute;
+    top: -2px;
+    right: 2px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    color: var(--color-text-3);
+    transition: all 0.2s ease;
+    display: flex;
+
+    &:hover {
+      background-color: var(--color-fill-3);
+      color: var(--color-text-1);
+    }
+  }
+
   .expression-row {
     background-color: var(--color-fill-2);
     padding: 10px;
