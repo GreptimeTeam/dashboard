@@ -271,11 +271,20 @@ a-card.metrics-chart(:bordered="false")
           acc[s.name] = true
           return acc
         }, {} as Record<string, boolean>),
+        orient: 'vertical',
+        align: 'left',
+        itemGap: 8,
+        itemWidth: 14,
+        itemHeight: 14,
+        textStyle: {
+          fontSize: 11,
+          color: 'var(--color-text-1)',
+        },
       },
       grid: {
         left: '2%',
         right: '2%',
-        bottom: series.length > 0 ? '9%' : '3%', // More space for dataZoom
+        bottom: series.length > 0 ? `${Math.min(10 + series.length * 2, 40)}%` : '3%', // Dynamic bottom margin based on series count
         top: '3%',
         containLabel: true,
       },
