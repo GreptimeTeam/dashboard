@@ -307,11 +307,6 @@ a-card.metrics-chart(:bordered="false")
 
       xAxis: {
         type: 'time',
-        axisLabel: {
-          formatter: (value: number) => dayjs(value).format('HH:mm'),
-          interval: 0,
-        },
-
         axisLine: {
           show: true,
         },
