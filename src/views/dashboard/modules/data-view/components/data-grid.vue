@@ -89,7 +89,7 @@ a-card.data-grid(:bordered="false")
 
   const wrapLines = ref(false)
   const timeColumnWidth = 140
-  const toolbarHeight = '20px'
+  const toolbarHeight = '26px'
 
   const MIN_COLUMN_WIDTHS = {
     timestamp: timeColumnWidth,
@@ -424,11 +424,10 @@ a-card.data-grid(:bordered="false")
   }
 
   .toolbar {
-    padding: 0 8px;
+    padding: 4px 8px;
     height: v-bind(toolbarHeight);
     width: 100%;
     justify-content: flex-end;
-    align-items: flex-start;
 
     .arco-checkbox {
       font-size: 11px;

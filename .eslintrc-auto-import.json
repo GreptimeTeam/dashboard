@@ -103,7 +103,6 @@
     "useLink": true,
     "useLog": true,
     "useLogStore": true,
-    "useMetrics": true,
     "useModel": true,
     "useNews": true,
     "useQueryCode": true,
@@ -111,6 +110,7 @@
     "useQueryUrlSync": true,
     "useRoute": true,
     "useRouter": true,
+    "useSeries": true,
     "useSlots": true,
     "useSqlBuilderHook": true,
     "useStatusBarStore": true,
@@ -123,7 +123,6 @@
     "watch": true,
     "watchEffect": true,
     "watchPostEffect": true,
-    "watchSyncEffect": true,
-    "useSeries": true
+    "watchSyncEffect": true
   }
 }

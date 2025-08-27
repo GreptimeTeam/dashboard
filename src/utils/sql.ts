@@ -1,4 +1,6 @@
 import { format as sqlFormat } from 'sql-formatter'
+import { formatPromqlQuery, type PromqlFormatResponse } from '@/api/formatter'
+import { Message } from '@arco-design/web-vue'
 
 export const parseSqlStatements = (sql: string): { text: string; start: number; end: number }[] => {
   if (!sql) return []
@@ -48,22 +50,30 @@ export const parseSqlStatements = (sql: string): { text: string; start: number; 
 
     // When we find a semicolon outside a string and outside comments, we've found a statement boundary
     if (char === ';' && !inString && !inSingleLineComment && !inMultiLineComment) {
-      statements.push({
-        text: sql.substring(currentStart, i + 1).trim(),
-        start: currentStart,
-        end: i,
-      })
+      const statementText = sql.substring(currentStart, i + 1).trim()
+      // Only add non-empty statements (ignore standalone semicolons)
+      if (statementText && statementText !== ';') {
+        statements.push({
+          text: statementText,
+          start: currentStart,
+          end: i,
+        })
+      }
       currentStart = i + 1
     }
   }
 
   // Add the last statement if it doesn't end with a semicolon
   if (currentStart < sql.length) {
-    statements.push({
-      text: sql.substring(currentStart).trim(),
-      start: currentStart,
-      end: sql.length - 1,
-    })
+    const lastStatementText = sql.substring(currentStart).trim()
+    // Only add non-empty statements
+    if (lastStatementText) {
+      statements.push({
+        text: lastStatementText,
+        start: currentStart,
+        end: sql.length - 1,
+      })
+    }
   }
 
   return statements
@@ -119,12 +129,30 @@ export const sqlFormatter = (code: string) => {
       formatted = formatted.endsWith(';') ? formatted : `${formatted};`
     } catch (formattingError) {
       console.warn(`Failed to format SQL statement: ${formattingError}`)
+      Message.warning('Failed to format. Please check console for details.')
       formatted = trimmed.endsWith(';') ? trimmed : `${trimmed};`
     }
-
     return formatted
   } catch (error) {
     console.error('SQL formatting error:', error)
+    return code
+  }
+}
+
+export const promqlFormatter = async (code: string): Promise<string> => {
+  try {
+    const trimmed = code.trim()
+    if (!trimmed) {
+      return code
+    }
+    const response = await formatPromqlQuery(trimmed)
+    if (response.status === 'success') {
+      return response.data
+    }
+    console.warn('Unexpected response format from PromQL formatter:', response)
+    return trimmed
+  } catch (error) {
+    console.error('PromQL formatting error:', error)
     return code
   }
 }
