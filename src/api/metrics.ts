@@ -1,5 +1,6 @@
 import axios, { AxiosRequestConfig } from 'axios'
 import { useAppStore } from '@/store'
+import { lib } from 'markdown-it/lib/common/utils'
 
 const prometheusBaseURL = `/v1/prometheus/api/v1`
 
@@ -32,7 +33,7 @@ export const getMetricNames = () => {
   const config = addDatabaseParams()
   config.params = {
     ...config.params,
-    limit: 100,
+    limit: 500,
   }
   return axios.get(`${prometheusBaseURL}/label/__name__/values`, config)
 }
@@ -46,6 +47,7 @@ export const searchMetricNames = (regex: string) => {
   // Prom-compatible: pass match parameter to filter by __name__ regex
   config.params = {
     ...config.params,
+    limit: 500,
     match: [`{__name__=~".*${regex}.*"}`],
   }
   return axios.get(`${prometheusBaseURL}/label/__name__/values`, config)

@@ -52,8 +52,6 @@ a-dropdown.metric-menu(
     popupVisible?: boolean
   }>()
 
-  console.log('MetricMenu props:', props.nodeData)
-
   // Reactive state for label controls
   const selectedOperator = ref<string>('=')
   const selectedValue = ref<string>('')
@@ -64,8 +62,11 @@ a-dropdown.metric-menu(
     (newNodeData) => {
       console.log('nodeData changed:', newNodeData)
       selectedOperator.value = '='
-      selectedValue.value = ''
-      console.log('Reset values - operator:', selectedOperator.value, 'value:', selectedValue.value)
+      if (newNodeData.type === 'label') {
+        selectedValue.value = ''
+      } else {
+        selectedValue.value = newNodeData.value
+      }
     },
     { immediate: true }
   )
@@ -83,11 +84,6 @@ a-dropdown.metric-menu(
       emits('loadValues', props.nodeData)
     }
   })
-
-  // Handle menu button click
-  const handleMenuClick = (event: Event) => {
-    event.stopPropagation()
-  }
 
   // Handle dropdown visibility change
   const handleMenuDropdownVisibleChange = (visible: boolean) => {
