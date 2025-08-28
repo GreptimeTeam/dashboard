@@ -281,7 +281,7 @@ a-card.metrics-chart(:bordered="false")
           type: 'inside',
           xAxisIndex: 0,
           yAxisIndex: 'none',
-          zoomOnMouseWheel: true, // Enable mouse wheel zoom
+          zoomOnMouseWheel: false, // Enable mouse wheel zoom
           moveOnMouseMove: true, // Enable mouse drag pan
           preventDefaultMouseMove: false, // Allow normal mouse behavior
         },
