@@ -94,6 +94,7 @@ a-card.metrics-sidebar(:bordered="false")
   // Local state for metrics
   const metrics = ref<Array<{ name: string }>>([])
   const loading = ref(false)
+  const currentSearchQuery = ref('')
 
   // Sidebar state
   const selectedMetric = useLocalStorage<string | null>('metrics-explorer-last-selected', null)
@@ -125,6 +126,8 @@ a-card.metrics-sidebar(:bordered="false")
       if (response.data) {
         const metricList = response.data.map((name: string) => ({ name }))
         metrics.value = metricList
+        // Clear search query when fetching all metrics
+        currentSearchQuery.value = ''
       }
     } catch (err: any) {
       console.error('Error fetching metrics:', err)
@@ -152,6 +155,9 @@ a-card.metrics-sidebar(:bordered="false")
   }
 
   const onMetricSearch = async (query: string) => {
+    // Store the current search query
+    currentSearchQuery.value = query
+
     if (query.trim()) {
       try {
         const safe = query.trim()
@@ -176,7 +182,27 @@ a-card.metrics-sidebar(:bordered="false")
   }
 
   const refreshData = async () => {
-    await getMetrics()
+    if (currentSearchQuery.value.trim()) {
+      // If there's a current search, refresh with the search query
+      try {
+        loading.value = true
+        const safe = currentSearchQuery.value.trim()
+        const regex = `${safe.replace(/"/g, '\\"')}`
+        const resp = await searchMetricNames(regex)
+        if (resp.data) {
+          const metricList = resp.data.map((name: string) => ({ name }))
+          metrics.value = metricList
+        }
+      } catch (err: any) {
+        // Fallback to fetching all metrics
+        await getMetrics()
+      } finally {
+        loading.value = false
+      }
+    } else {
+      // If no search query, refresh all metrics
+      await getMetrics()
+    }
   }
 
   const metricsTreeData = ref<any[]>([])
