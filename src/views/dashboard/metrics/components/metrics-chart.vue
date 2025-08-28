@@ -18,7 +18,7 @@ a-card.metrics-chart(:bordered="false")
       Chart(
         :key="chartKey"
         ref="chartRef"
-        height="560px"
+        height="660px"
         :options="chartOption"
         @datazoom="handleDataZoom"
       )
@@ -210,6 +210,7 @@ a-card.metrics-chart(:bordered="false")
           : undefined,
       }
     })
+    const gridBottom = series.length > 0 ? Math.min(Math.max(series.length * 40, 50), 160) : 30
 
     return {
       tooltip: {
@@ -254,25 +255,14 @@ a-card.metrics-chart(:bordered="false")
       },
       legend: {
         bottom: 0,
-        data: series.map((s) => s.name),
-        selected: series.reduce((acc, s) => {
-          acc[s.name] = true
-          return acc
-        }, {} as Record<string, boolean>),
+        type: 'scroll',
         orient: 'vertical',
-        align: 'left',
-        itemGap: 8,
-        itemWidth: 14,
-        itemHeight: 14,
-        textStyle: {
-          fontSize: 11,
-          color: 'var(--color-text-1)',
-        },
+        top: 660 - gridBottom + 20,
       },
       grid: {
         left: '2%',
         right: '2%',
-        bottom: series.length > 0 ? `${Math.min(10 + series.length * 2, 40)}%` : '3%', // Dynamic bottom margin based on series count
+        bottom: gridBottom, // Dynamic bottom margin based on series count
         top: '3%',
         containLabel: true,
       },
