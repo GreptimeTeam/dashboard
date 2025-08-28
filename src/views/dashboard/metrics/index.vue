@@ -25,16 +25,17 @@ a-layout.new-layout
             :unix-time-range="unixTimeRange"
           )
 
-          a-button(
-            type="primary"
-            size="small"
-            :loading="queryLoading"
-            @click="handleRunQuery"
-          )
-            template(#icon)
-              icon-loading(v-if="queryLoading" spin)
-              icon-play-arrow(v-else)
-            | Run Query
+          a-tooltip(content="Ctrl + Enter" position="right")
+            a-button(
+              type="primary"
+              size="small"
+              :loading="queryLoading"
+              @click="handleRunQuery"
+            )
+              template(#icon)
+                icon-loading(v-if="queryLoading" spin)
+                icon-play-arrow(v-else)
+              | Run Query
 
       .query-section
         PromQLEditor(
