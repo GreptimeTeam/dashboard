@@ -94,17 +94,12 @@ CodeMirror(
 
   // Custom HTTP client for GreptimeDB API
   const myHTTPClient = async (resource: any, options: any = {}): Promise<Response> => {
-    console.log('PromQL fetchFn called with:', resource, options)
-
     const requestUrl = normalizeUrl(resource)
 
     // Skip metadata requests as GreptimeDB doesn't support this endpoint
     if (requestUrl.includes('/metadata')) {
-      console.log('Ignoring metadata request - not supported by GreptimeDB')
       return createResponse({ status: 'success', data: {} })
     }
-
-    console.log('Making request to:', requestUrl)
 
     try {
       const { method = 'GET', headers = {}, params, body } = options
@@ -128,8 +123,6 @@ CodeMirror(
         url: requestUrl,
         ...config,
       })
-
-      console.log('PromQL API response:', response.status, response.data)
 
       // Format response data based on endpoint type
       let responseData = { status: 'success', data: response.data }
@@ -164,7 +157,6 @@ CodeMirror(
         }
       }
 
-      console.log('Formatted response for PromQL extension:', responseData)
       return createResponse(responseData, response.status, response.statusText)
     } catch (error: any) {
       console.error('PromQL fetch error:', error)
@@ -180,8 +172,6 @@ CodeMirror(
   const promqlExtension = ref<any>(null)
 
   const initializePromQLExtension = () => {
-    console.log('Initializing PromQL extension')
-
     promqlExtension.value = new PromQLExtension()
       .activateCompletion(true)
       .activateLinter(true)
@@ -238,7 +228,6 @@ CodeMirror(
   // Handle editor ready
   const onEditorReady = (payload: any) => {
     editorView = payload.view
-    console.log('PromQL editor ready:', editorView)
   }
 
   // Public method to insert text at cursor
@@ -282,7 +271,6 @@ CodeMirror(
   watch(
     () => appStore.database,
     () => {
-      console.log('Database changed, reinitializing PromQL extension')
       initializePromQLExtension()
     }
   )

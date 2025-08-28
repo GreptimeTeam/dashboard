@@ -63,7 +63,6 @@ a-dropdown.metric-menu(
   watch(
     () => props.nodeData,
     (newNodeData) => {
-      console.log('nodeData changed:', newNodeData)
       selectedOperator.value = '='
       if (newNodeData.type === 'label') {
         selectedValue.value = ''

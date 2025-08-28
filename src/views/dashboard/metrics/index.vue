@@ -229,7 +229,6 @@ a-layout.new-layout
 
   const tableData = computed(() => {
     if (!tableResults.value || tableResults.value.length === 0) return []
-    console.log('tableResults', tableResults.value)
     const rows: any[] = []
     tableResults.value.forEach((series) => {
       const metricName = series.metric?.__name__ || 'unknown'
@@ -270,7 +269,6 @@ a-layout.new-layout
 
   // Handle time range update from chart selection
   const handleTimeRangeUpdate = (newTimeRange: [number, number]) => {
-    console.log('📅 Time range updated from chart:', newTimeRange)
     // Switch to custom time range mode and update the time range
     time.value = 0 // Switch to custom mode
     rangeTime.value = [newTimeRange[0].toString(), newTimeRange[1].toString()]

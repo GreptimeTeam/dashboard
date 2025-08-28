@@ -87,14 +87,6 @@ a-card.metrics-chart(:bordered="false")
     // Convert from milliseconds to seconds for time range
     const startTime = Math.floor(new Date(startValue).getTime() / 1000)
     const endTime = Math.floor(new Date(endValue).getTime() / 1000)
-
-    console.log('📊 Chart range selected:', {
-      startValue,
-      endValue,
-      startTime,
-      endTime,
-    })
-
     // Emit time range update
     emit('timeRangeUpdate', [startTime, endTime])
   }
@@ -218,10 +210,6 @@ a-card.metrics-chart(:bordered="false")
           : undefined,
       }
     })
-
-    // watchEffect(() => {
-    //   console.log('chartOption', chartOption.value, props.data)
-    // })
 
     return {
       tooltip: {
@@ -347,7 +335,6 @@ a-card.metrics-chart(:bordered="false")
               })
             }
           })
-          console.log('minValue', minValue)
           // Add some padding below the minimum value
           return Math.floor(minValue * 0.999)
         },
