@@ -13,6 +13,8 @@ a-modal(
         placeholder="Search metrics with fuzzy matching..."
         size="large"
         allow-clear
+        @input="handleSearch"
+        @clear="handleClear"
       )
         template(#prefix)
           icon-search
@@ -24,7 +26,7 @@ a-modal(
         .metric-name(v-html="highlightMatch(metric.name, searchQuery)")
         .metric-description(v-if="metric.description") {{ metric.description }}
 
-    .empty-state(v-else-if="searchQuery")
+    .empty-state(v-else-if="searchQuery && !loading")
       a-empty(description="No metrics found")
         template(#image)
           icon-search
@@ -33,30 +35,15 @@ a-modal(
       a-spin
         template(#icon)
           icon-loading(spin)
-
-    .initial-state(v-else)
-      .browse-hint
-        h3 Browse and filter all metrics and metadata with a fuzzy search
-        p Start typing to search for metrics, or browse through the list below
-      .popular-metrics(v-if="popularMetrics.length > 0")
-        h4 Popular Metrics
-        .metric-tags
-          a-tag(
-            v-for="metric in popularMetrics"
-            :key="metric"
-            style="cursor: pointer; margin: 4px"
-            @click="selectMetric(metric)"
-          ) {{ metric }}
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, watch } from 'vue'
+  import { ref, computed, watch, onMounted } from 'vue'
   import { IconSearch, IconLoading } from '@arco-design/web-vue/es/icon'
+  import { searchMetricNames, getMetricNames } from '@/api/metrics'
 
   const props = defineProps<{
     visible: boolean
-    metrics: any[]
-    loading: boolean
   }>()
 
   const emit = defineEmits<{
@@ -66,6 +53,9 @@ a-modal(
 
   // Local state
   const searchQuery = ref('')
+  const metrics = ref<any[]>([])
+  const loading = ref(false)
+  const searchTimeout = ref<number | null>(null)
 
   // Computed property for local visible state
   const localVisible = computed({
@@ -75,18 +65,38 @@ a-modal(
 
   // Computed properties
   const filteredMetrics = computed(() => {
-    if (!searchQuery.value) return props.metrics
-
-    const query = searchQuery.value.toLowerCase()
-    return props.metrics.filter((metric) => metric.name.toLowerCase().includes(query))
-  })
-
-  const popularMetrics = computed(() => {
-    // Return some common metrics for quick access
-    return ['go_goroutines', 'go_memstats_alloc_bytes', 'prometheus_http_requests_total', 'prometheus_build_info']
+    return metrics.value
   })
 
   // Methods
+  const fetchMetrics = async (query?: string) => {
+    loading.value = true
+    try {
+      let response
+      if (query && query.trim()) {
+        // Search for specific metrics
+        response = await searchMetricNames(query.trim())
+      } else {
+        // Fetch all available metrics
+        response = await getMetricNames()
+      }
+
+      if (response && response.data) {
+        metrics.value = response.data.map((metricName: string) => ({
+          name: metricName,
+          description: '', // Add description if available in your API
+        }))
+      } else {
+        metrics.value = []
+      }
+    } catch (error) {
+      console.error('Failed to fetch metrics:', error)
+      metrics.value = []
+    } finally {
+      loading.value = false
+    }
+  }
+
   const selectMetric = (metricName: string) => {
     emit('select', metricName)
     emit('update:visible', false)
@@ -99,15 +109,54 @@ a-modal(
     return text.replace(regex, '<span class="highlight">$1</span>')
   }
 
-  // Watch for visible changes to reset search
+  const handleSearch = () => {
+    // Clear previous timeout
+    if (searchTimeout.value) {
+      clearTimeout(searchTimeout.value)
+    }
+
+    // Debounce search requests
+    searchTimeout.value = window.setTimeout(() => {
+      if (searchQuery.value.trim()) {
+        fetchMetrics(searchQuery.value.trim())
+      } else {
+        // If search is cleared, fetch default metrics
+        fetchMetrics()
+      }
+    }, 300) // 300ms debounce
+  }
+
+  const handleClear = () => {
+    searchQuery.value = ''
+    fetchMetrics()
+  }
+
+  // Watch for visible changes to reset search and fetch default metrics
   watch(
     () => props.visible,
     (newVisible) => {
-      if (!newVisible) {
+      if (newVisible) {
+        // Fetch default metrics when modal opens
+        fetchMetrics()
+      } else {
         searchQuery.value = ''
+        metrics.value = []
+        if (searchTimeout.value) {
+          clearTimeout(searchTimeout.value)
+          searchTimeout.value = null
+        }
       }
     }
   )
+
+  // Cleanup on unmount
+  onMounted(() => {
+    return () => {
+      if (searchTimeout.value) {
+        clearTimeout(searchTimeout.value)
+      }
+    }
+  })
 </script>
 
 <style lang="less" scoped>
@@ -171,21 +220,6 @@ a-modal(
 
       p {
         margin: 0;
-      }
-    }
-
-    .popular-metrics {
-      padding: 20px;
-
-      h4 {
-        margin-bottom: 12px;
-        color: var(--color-text-primary);
-      }
-
-      .metric-tags {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
       }
     }
   }

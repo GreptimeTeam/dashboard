@@ -41,12 +41,7 @@ a-card.metrics-sidebar(:bordered="false")
           icon-plus
 
     // Metrics Explorer Modal
-    MetricsExplorer(
-      v-model:visible="showMetricsExplorer"
-      :metrics="metrics"
-      :loading="loading"
-      @select="selectMetricFromExplorer"
-    )
+    MetricsExplorer(v-model:visible="showMetricsExplorer" @select="selectMetricFromExplorer")
 
     // Single MetricMenu instance - controlled from outside
     MetricMenu(
