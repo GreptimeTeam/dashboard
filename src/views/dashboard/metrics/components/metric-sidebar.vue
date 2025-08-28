@@ -6,6 +6,7 @@ a-card.metrics-sidebar(:bordered="false")
       a-button(
         type="outline"
         size="small"
+        style="width: 24px; height: 24px"
         :loading="loading"
         @click="refreshData"
       )
@@ -17,6 +18,16 @@ a-card.metrics-sidebar(:bordered="false")
       template(#icon)
         icon-search
       | Browse
+    a-tooltip(
+      v-model:popup-visible="tooltipVisible"
+      position="tr"
+      mini
+      :content="$t('dashboard.hideSidebar')"
+    )
+      a-button(type="secondary" size="mini" @click="toggleSidebar")
+        template(#icon)
+          svg.icon.icon-color.rotate-270(:class="{ 'rotate-180': hideSidebar }")
+            use(href="#collapse")
 
   .metrics-section
     .metric-select-container
@@ -292,6 +303,12 @@ a-card.metrics-sidebar(:bordered="false")
       immediate: true,
     }
   )
+  const tooltipVisible = ref(false)
+  const { hideSidebar } = storeToRefs(appStore)
+  const toggleSidebar = () => {
+    tooltipVisible.value = false
+    hideSidebar.value = !hideSidebar.value
+  }
 </script>
 
 <style scoped lang="less">
@@ -417,6 +434,12 @@ a-card.metrics-sidebar(:bordered="false")
     .icon-14 {
       width: 14px;
       height: 14px;
+    }
+  }
+
+  .metrics-sidebar {
+    :deep(.arco-card-header) {
+      padding: 10px 5px 10px 15px;
     }
   }
 </style>

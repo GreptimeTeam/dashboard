@@ -4,6 +4,7 @@ a-layout.new-layout
     v-model:width="sidebarWidth"
     :directions="['right']"
     :style="{ 'min-width': '100px', 'max-width': '40vw' }"
+    :class="hideSidebar ? 'hide-sider' : ''"
   )
     a-layout-sider(style="min-width: 210px" :width="actualSidebarWidth")
       a-card.metrics-sidebar(:bordered="false")
@@ -311,10 +312,7 @@ a-layout.new-layout
     { immediate: true }
   )
 
-  // Initialize
-  onMounted(() => {
-    // Initialize from URL first
-  })
+  const { hideSidebar } = storeToRefs(useAppStore())
 </script>
 
 <style lang="less" scoped>
