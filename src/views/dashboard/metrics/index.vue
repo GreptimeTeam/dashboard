@@ -5,7 +5,7 @@ a-layout.new-layout
     :directions="['right']"
     :style="{ 'min-width': '100px', 'max-width': '40vw' }"
   )
-    a-layout-sider(:width="actualSidebarWidth")
+    a-layout-sider(style="min-width: 210px" :width="actualSidebarWidth")
       a-card.metrics-sidebar(:bordered="false")
       MetricSidebar(@copyText="handleCopyText" @insertText="handleInsertText")
 

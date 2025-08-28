@@ -323,7 +323,6 @@ a-card.metrics-sidebar(:bordered="false")
     height: 100%;
 
     background: var(--color-bg-container);
-    border-right: 1px solid var(--color-border);
     overflow-y: auto;
     overflow-x: auto;
     padding: 0 15px;
@@ -406,5 +405,8 @@ a-card.metrics-sidebar(:bordered="false")
       width: 14px;
       height: 14px;
     }
+  }
+  :deep(.arco-select-view-single) {
+    width: 90%;
   }
 </style>
