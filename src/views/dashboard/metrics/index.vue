@@ -42,6 +42,7 @@ a-layout.new-layout
           v-model="currentQuery"
           style="height: 100px"
           placeholder="Enter PromQL query"
+          @query="handleRunQuery"
         )
 
     .section-divider

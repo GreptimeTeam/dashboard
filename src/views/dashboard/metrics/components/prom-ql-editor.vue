@@ -32,6 +32,7 @@ CodeMirror(
 
   const emit = defineEmits<{
     (e: 'update:modelValue', value: string): void
+    (e: 'query'): void
   }>()
 
   const appStore = useAppStore()
@@ -198,11 +199,16 @@ CodeMirror(
       },
       {
         key: 'Ctrl-Enter',
-        run: () => true, // Prevent Ctrl+Enter new lines
+        run: () => {
+          emit('query')
+          return true // Prevent default behavior
+        },
       },
       {
         key: 'Cmd-Enter',
-        run: () => true, // Prevent Cmd+Enter new lines (Mac)
+        run: () => {
+          return true // Prevent default behavior (Mac)
+        },
       },
     ])
   )
