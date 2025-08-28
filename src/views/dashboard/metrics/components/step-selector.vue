@@ -2,6 +2,7 @@
 .step-selector
   a-dropdown(:popup-max-height="false" @select="handleDropdownSelect")
     a-button(
+      type="outline"
       size="small"
       style="display: flex; justify-content: space-between; width: 130px"
       :title="'Select step resolution or enter custom value'"
