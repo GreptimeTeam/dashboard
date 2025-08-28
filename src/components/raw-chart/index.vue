@@ -76,7 +76,6 @@
       if (!chartInstance || !chartContainer.value || isUnmounting.value) return
 
       nextTick(() => {
-        console.log('🔄 Options changed, updating chart')
         chartInstance.setOption(newOptions, {
           notMerge: true,
           lazyUpdate: true,
