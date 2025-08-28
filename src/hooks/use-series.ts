@@ -52,16 +52,12 @@ export function useSeries() {
 
   // Execute PromQL instant query (for table data - current values)
   const executeInstantQuery = async (query: string) => {
-    try {
-      currentQuery.value = query
+    currentQuery.value = query
 
-      const response = await executePromQL(query, currentTimeRange.value[1].toString())
+    const response = await executePromQL(query, currentTimeRange.value[1].toString())
 
-      instantQueryResult.value = response.data.result
-      return response.data
-    } catch (err: any) {
-      throw err
-    }
+    instantQueryResult.value = response.data.result
+    return response.data
   }
 
   // Execute PromQL range query (lower-level method)
@@ -83,8 +79,6 @@ export function useSeries() {
 
       rangeQueryResult.value = response.data.result
       return response.data
-    } catch (err: any) {
-      throw err
     } finally {
       queryLoading.value = false
     }
