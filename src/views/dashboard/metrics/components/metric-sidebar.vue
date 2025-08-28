@@ -20,25 +20,26 @@ a-card.metrics-sidebar(:bordered="false")
 
   .metrics-section
     .metric-select-container
-      a-select(
-        v-model="selectedMetric"
-        allow-search
-        placeholder="Search metrics..."
-        size="small"
-        allow-clear
-        :options="metricOptions"
-        :loading="loading"
-        @search="onMetricSearch"
-      )
-      a-button.insert-metric-button(
-        v-if="selectedMetric"
-        type="text"
-        size="small"
-        :title="`Insert metric: ${selectedMetric}`"
-        @click="insertSelectedMetric"
-      )
-        template(#icon)
-          icon-plus
+      .metric-select
+        a-select(
+          v-model="selectedMetric"
+          allow-search
+          placeholder="Search metrics..."
+          size="small"
+          allow-clear
+          :options="metricOptions"
+          :loading="loading"
+          @search="onMetricSearch"
+        )
+      a-tooltip(:content="`Insert metric: ${selectedMetric}`")
+        a-button.insert-metric-button(
+          v-if="selectedMetric"
+          type="text"
+          size="small"
+          @click="insertSelectedMetric"
+        )
+          template(#icon)
+            icon-plus
 
     // Metrics Explorer Modal
     MetricsExplorer(v-model:visible="showMetricsExplorer" @select="selectMetricFromExplorer")
@@ -297,20 +298,12 @@ a-card.metrics-sidebar(:bordered="false")
   .metric-select-container {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
     margin-bottom: 16px;
     flex-wrap: nowrap;
+    overflow-x: auto;
 
-    .a-select {
-      min-width: 0;
-      overflow: hidden;
-
-      :deep(.arco-select-view) {
-        min-width: 0;
-      }
-    }
-
-    .copy-metric-button {
+    .insert-metric-button {
       flex-shrink: 0;
       flex-grow: 0;
       width: 28px;
@@ -318,12 +311,11 @@ a-card.metrics-sidebar(:bordered="false")
       padding: 0;
       display: flex;
       align-items: center;
-      justify-content: center;
-
-      .icon {
-        width: 14px;
-        height: 14px;
-      }
+    }
+    .metric-select {
+      flex-shrink: 1;
+      flex-grow: 0;
+      width: auto;
     }
   }
 
@@ -426,8 +418,5 @@ a-card.metrics-sidebar(:bordered="false")
       width: 14px;
       height: 14px;
     }
-  }
-  :deep(.arco-select-view-single) {
-    width: 90%;
   }
 </style>
