@@ -39,6 +39,7 @@ a-modal(
 
 <script setup lang="ts">
   import { ref, computed, watch, onMounted } from 'vue'
+  import { useDebounce } from '@vueuse/core'
   import { IconSearch, IconLoading } from '@arco-design/web-vue/es/icon'
   import { searchMetricNames, getMetricNames } from '@/api/metrics'
 
@@ -55,7 +56,9 @@ a-modal(
   const searchQuery = ref('')
   const metrics = ref<any[]>([])
   const loading = ref(false)
-  const searchTimeout = ref<number | null>(null)
+
+  // Use VueUse's useDebounce for search query
+  const debouncedSearchQuery = useDebounce(searchQuery, 300)
 
   // Computed property for local visible state
   const localVisible = computed({
@@ -110,26 +113,22 @@ a-modal(
   }
 
   const handleSearch = () => {
-    // Clear previous timeout
-    if (searchTimeout.value) {
-      clearTimeout(searchTimeout.value)
-    }
-
-    // Debounce search requests
-    searchTimeout.value = window.setTimeout(() => {
-      if (searchQuery.value.trim()) {
-        fetchMetrics(searchQuery.value.trim())
-      } else {
-        // If search is cleared, fetch default metrics
-        fetchMetrics()
-      }
-    }, 300) // 300ms debounce
+    // Search is handled automatically by the debounced watcher
   }
 
   const handleClear = () => {
     searchQuery.value = ''
     fetchMetrics()
   }
+
+  // Watch for debounced search query changes
+  watch(debouncedSearchQuery, (newQuery) => {
+    if (newQuery && newQuery.trim()) {
+      fetchMetrics(newQuery.trim())
+    } else {
+      fetchMetrics()
+    }
+  })
 
   // Watch for visible changes to reset search and fetch default metrics
   watch(
@@ -141,21 +140,13 @@ a-modal(
       } else {
         searchQuery.value = ''
         metrics.value = []
-        if (searchTimeout.value) {
-          clearTimeout(searchTimeout.value)
-          searchTimeout.value = null
-        }
       }
     }
   )
 
   // Cleanup on unmount
   onMounted(() => {
-    return () => {
-      if (searchTimeout.value) {
-        clearTimeout(searchTimeout.value)
-      }
-    }
+    // No manual cleanup needed with useDebounce
   })
 </script>
 
@@ -205,21 +196,6 @@ a-modal(
           font-size: 12px;
           color: var(--color-text-secondary);
         }
-      }
-    }
-
-    .browse-hint {
-      text-align: center;
-      padding: 40px 20px;
-      color: var(--color-text-secondary);
-
-      h3 {
-        margin-bottom: 8px;
-        color: var(--color-text-primary);
-      }
-
-      p {
-        margin: 0;
       }
     }
   }
