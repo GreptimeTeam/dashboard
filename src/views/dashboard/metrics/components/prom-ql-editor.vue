@@ -306,13 +306,6 @@ CodeMirror(
     outline: none;
   }
 
-  // Active outline when focused
-  :deep(.cm-editor.cm-focused) {
-    border: 2px solid var(--color-primary);
-    border-radius: 4px;
-    box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.1);
-  }
-
   // Smooth transition for focus state
   :deep(.cm-editor) {
     border: 1px solid var(--color-border);
