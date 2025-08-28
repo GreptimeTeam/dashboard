@@ -57,14 +57,9 @@ export function useSeries() {
 
       const response = await executePromQL(query, currentTimeRange.value[1].toString())
 
-      console.log('💾 Instant query result:', {
-        resultLength: response.data.result?.length || 0,
-        sampleResult: response.data.result?.[0] || [],
-      })
       instantQueryResult.value = response.data.result
       return response.data
     } catch (err: any) {
-      console.error('Error executing instant query:', err)
       throw err
     }
   }
@@ -89,7 +84,6 @@ export function useSeries() {
       rangeQueryResult.value = response.data.result
       return response.data
     } catch (err: any) {
-      console.error('Error executing range query:', err)
       throw err
     } finally {
       queryLoading.value = false
@@ -138,15 +132,6 @@ export function useSeries() {
     previousStep.value = stepValue
     currentTimeRange.value = actualTimeRange
     const [start, end] = actualTimeRange
-
-    console.log('🚀 Executing query with step-aligned params:', {
-      query,
-      timeRange: actualTimeRange,
-      start: new Date(start * 1000).toISOString(),
-      end: new Date(end * 1000).toISOString(),
-      step: stepValue,
-      isSameQuery,
-    })
 
     return executeRangeQuery(query, start, end, stepValue)
   }
