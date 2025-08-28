@@ -14,20 +14,21 @@ a-card.metrics-sidebar(:bordered="false")
           svg.icon.brand-color
             use(href="#refresh")
   template(#extra)
-    a-button(type="text" size="mini" @click="showMetricsExplorer = true")
-      template(#icon)
-        icon-search
-      | Browse
-    a-tooltip(
-      v-model:popup-visible="tooltipVisible"
-      position="tr"
-      mini
-      :content="$t('dashboard.hideSidebar')"
-    )
-      a-button(type="secondary" size="mini" @click="toggleSidebar")
+    a-space
+      a-button(type="text" size="mini" @click="showMetricsExplorer = true")
         template(#icon)
-          svg.icon.icon-color.rotate-270(:class="{ 'rotate-180': hideSidebar }")
-            use(href="#collapse")
+          icon-search
+        | Browse
+      a-tooltip(
+        v-model:popup-visible="tooltipVisible"
+        position="tr"
+        mini
+        :content="$t('dashboard.hideSidebar')"
+      )
+        a-button(type="secondary" size="mini" @click="toggleSidebar")
+          template(#icon)
+            svg.icon.icon-color.rotate-270(:class="{ 'rotate-180': hideSidebar }")
+              use(href="#collapse")
 
   .metrics-section
     .metric-select-container
