@@ -18,7 +18,7 @@ a-card.metrics-chart(:bordered="false")
       Chart(
         :key="chartKey"
         ref="chartRef"
-        height="660px"
+        height="610px"
         :options="chartOption"
         @datazoom="handleDataZoom"
       )
@@ -251,7 +251,7 @@ a-card.metrics-chart(:bordered="false")
         bottom: 0,
         type: 'scroll',
         orient: 'vertical',
-        top: 660 - gridBottom + 20,
+        top: 610 - gridBottom + 20,
       },
       grid: {
         left: 30,
