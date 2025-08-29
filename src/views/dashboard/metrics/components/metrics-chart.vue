@@ -210,8 +210,9 @@ a-card.metrics-chart(:bordered="false")
           : undefined,
       }
     })
-    const gridBottom = series.length > 0 ? Math.min(Math.max(series.length * 40, 50), 160) : 30
 
+    const gridBottom = Math.min(series.length * 40 + 20, 160)
+    console.log('gridBottom', gridBottom)
     return {
       tooltip: {
         trigger: 'axis',
@@ -231,24 +232,24 @@ a-card.metrics-chart(:bordered="false")
           const time = dayjs(params[0].value[0]).format('YYYY-MM-DD HH:mm:ss')
           let content = `<div style="margin-bottom: 4px; font-weight: 600;">${time}</div>`
 
-          params.forEach((param) => {
-            const {
-              color,
-              seriesName,
-              value: [, value],
-            } = param
+          // Only show the first series (the one being hovered)
+          const param = params[0]
+          const {
+            color,
+            seriesName,
+            value: [, value],
+          } = param
 
-            // Skip tooltip for null values (filled gaps)
-            if (value === null || value === undefined) return
+          // Skip tooltip for null values (filled gaps)
+          if (value === null || value === undefined) return ''
 
-            content += `
-              <div style="margin: 2px 0;">
-                <span style="display: inline-block; width: 10px; height: 10px; background: ${color}; border-radius: 50%; margin-right: 8px;"></span>
-                <span style="font-weight: 500;">${seriesName}:</span>
-                <span style="float: right; margin-left: 20px;">${value}</span>
-              </div>
-            `
-          })
+          content += `
+            <div style="margin: 2px 0;">
+              <span style="display: inline-block; width: 10px; height: 10px; background: ${color}; border-radius: 50%; margin-right: 8px;"></span>
+              <span style="font-weight: 500;">${seriesName}:</span>
+              <span style="float: right; margin-left: 20px;">${value}</span>
+            </div>
+          `
 
           return content
         },
