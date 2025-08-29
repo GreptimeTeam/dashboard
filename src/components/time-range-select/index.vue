@@ -25,10 +25,12 @@ TimeSelect(
       flexDirection?: string
       emptyStr?: string
       buttonSize?: string
+      showAnyTime?: boolean // New prop to control "Any time" option
     }>(),
     {
       emptyStr: 'Any time',
       buttonSize: 'small',
+      showAnyTime: true, // Default to showing "Any time" option
     }
   )
 
@@ -37,12 +39,18 @@ TimeSelect(
   const timeRange = defineModel<string[]>('timeRange', { default: () => [] })
 
   // Add "Any time" option to relative time options
-  const relativeTimeMapWithAny = computed(() => ({
-    '-1': 'Any time',
-    ...relativeTimeMap,
-  }))
+  const relativeTimeMapWithAny = computed(() => {
+    if (!props.showAnyTime) return relativeTimeMap
+    return {
+      '-1': 'Any time',
+      ...relativeTimeMap,
+    }
+  })
 
-  const relativeTimeOptionsWithAny = computed(() => [{ value: -1, label: 'Any time' }, ...relativeTimeOptions])
+  const relativeTimeOptionsWithAny = computed(() => {
+    if (!props.showAnyTime) return relativeTimeOptions
+    return [{ value: -1, label: 'Any time' }, ...relativeTimeOptions]
+  })
 
   // Read-only computed property: timeRangeValues - unified format
 

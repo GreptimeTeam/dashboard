@@ -1,6 +1,7 @@
 export default {
   'menu.dashboard.playground': 'Playground',
   'menu.dashboard.query': 'Query',
+  'menu.dashboard.metrics': 'Metrics Query',
   'menu.dashboard.tables': 'Tables',
   'menu.dashboard.scripts': 'Scripts',
   'menu.dashboard.status': 'Status',
