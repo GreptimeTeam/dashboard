@@ -173,7 +173,7 @@ a-card.metrics-chart(:bordered="false")
       // Don't filter out null values - let ECharts handle them with connectNulls: false
 
       // Determine if we should show symbols based on data point count
-      const shouldShowSymbols = localChartType.value === 'scatter' || data.length <= 50
+      const shouldShowSymbols = localChartType.value === 'scatter' || data.length <= 20
       let symbolSize = 0
       if (shouldShowSymbols) {
         symbolSize = localChartType.value === 'scatter' ? 6 : 5
@@ -261,10 +261,10 @@ a-card.metrics-chart(:bordered="false")
         top: 660 - gridBottom + 20,
       },
       grid: {
-        left: '2%',
-        right: '2%',
+        left: 30,
+        right: 30,
         bottom: gridBottom, // Dynamic bottom margin based on series count
-        top: '3%',
+        top: 30,
         containLabel: true,
       },
       dataZoom: [

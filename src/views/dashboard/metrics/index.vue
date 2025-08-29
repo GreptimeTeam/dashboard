@@ -320,7 +320,7 @@ a-layout.new-layout
     box-shadow: none;
   }
   .new-layout {
-    height: 100vh;
+    height: calc(100vh - 29px);
     background: #fff;
   }
 
