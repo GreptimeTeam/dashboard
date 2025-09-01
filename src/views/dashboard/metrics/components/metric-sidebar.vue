@@ -186,6 +186,9 @@ a-card.metrics-sidebar(:bordered="false")
   }, 300) // 300ms delay
 
   const onMetricSearch = async (query: string) => {
+    // Store the current search query
+    currentSearchQuery.value = query
+
     // Execute the debounced search
     await debouncedSearch(query)
   }
