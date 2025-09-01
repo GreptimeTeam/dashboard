@@ -110,13 +110,14 @@ a-layout.new-layout
     queryStep,
     currentTimeRange,
     currentStep,
+    queryLoading,
   } = useSeries()
 
   // Sidebar state
   const sidebarWidth = useStorage('metrics-sidebar-width', 320)
 
   // Query state
-  const queryLoading = ref(false)
+
   const chartType = ref('line') // Chart type state
 
   // Step selector state
