@@ -2,7 +2,7 @@
 a-card.metrics-sidebar(:bordered="false")
   template(#title)
     a-space(:size="10")
-      | Metrics
+      | Metrics Query
       a-button(
         type="outline"
         size="small"

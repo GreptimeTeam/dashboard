@@ -27,7 +27,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       },
     },
     {
-      path: 'metrics',
+      path: 'metrics-query',
       name: 'metrics',
       component: () => import('@/views/dashboard/metrics/index.vue'),
       meta: {
