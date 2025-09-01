@@ -1,7 +1,7 @@
 <template lang="pug">
 .query-layout.trace-query-container.query-container
   .page-header
-    | Traces
+    | {{ $t('menu.dashboard.traces') }}
   .content-wrapper.query-layout-cards
     a-card(:bordered="false")
       .toolbar

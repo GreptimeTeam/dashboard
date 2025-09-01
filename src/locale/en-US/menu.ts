@@ -1,6 +1,7 @@
 export default {
   'menu.dashboard.playground': 'Playground',
   'menu.dashboard.query': 'Query',
+  'menu.dashboard.metrics': 'Metrics Query',
   'menu.dashboard.tables': 'Tables',
   'menu.dashboard.scripts': 'Scripts',
   'menu.dashboard.status': 'Status',
@@ -33,4 +34,5 @@ export default {
   'menu.dashboard.log-ingestion': 'Log Ingestion',
   'menu.news': 'Latest News',
   'menu.dashboard.flow': 'Flow',
+  'menu.dashboard.traces': 'Traces Query',
 }
