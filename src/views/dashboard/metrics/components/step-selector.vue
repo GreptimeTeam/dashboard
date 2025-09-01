@@ -23,7 +23,7 @@
     v-model="customStepInput"
     size="small"
     placeholder="e.g., 30s, 2m, 1h"
-    style="width: 80px; margin-left: 8px"
+    style="width: 80px"
     title="Enter custom step with time units (s, m, h) or just seconds"
     :status="isCustomStepValid ? 'normal' : 'error'"
   )
@@ -195,6 +195,6 @@
   .step-selector {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
   }
 </style>
