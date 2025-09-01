@@ -177,6 +177,7 @@ a-card.metrics-sidebar(:bordered="false")
         const regex = `${safe.replace(/"/g, '\\"')}`
         const resp = await searchMetricNames(regex)
         const list: string[] = resp.data || []
+        metrics.value = list.map((name: string) => ({ name }))
         return list
       } catch (err: any) {
         console.error('Error remote searching metrics:', err)
@@ -334,6 +335,7 @@ a-card.metrics-sidebar(:bordered="false")
       flex-shrink: 1;
       flex-grow: 0;
       width: auto;
+      overflow: hidden;
     }
   }
 
