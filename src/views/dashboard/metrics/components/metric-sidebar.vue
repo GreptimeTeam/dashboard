@@ -89,7 +89,7 @@ a-card.metrics-sidebar(:bordered="false")
 
 <script setup lang="ts">
   import { ref, computed, watch, nextTick, onMounted } from 'vue'
-  import { useLocalStorage } from '@vueuse/core'
+  import { useLocalStorage, useDebounceFn } from '@vueuse/core'
   import { IconSearch, IconLoading } from '@arco-design/web-vue/es/icon'
   import { getLabelNames, getMetricNames, getLabelValues, searchMetricNames } from '@/api/metrics'
   import { useAppStore } from '@/store'
@@ -167,10 +167,8 @@ a-card.metrics-sidebar(:bordered="false")
     }
   }
 
-  const onMetricSearch = async (query: string) => {
-    // Store the current search query
-    currentSearchQuery.value = query
-
+  // Debounced search function using VueUse
+  const debouncedSearch = useDebounceFn(async (query: string) => {
     if (query.trim()) {
       try {
         const safe = query.trim()
@@ -178,13 +176,18 @@ a-card.metrics-sidebar(:bordered="false")
         const resp = await searchMetricNames(regex)
         const list: string[] = resp.data || []
         metrics.value = list.map((name: string) => ({ name }))
-        return list
       } catch (err: any) {
         console.error('Error remote searching metrics:', err)
-        return []
+        metrics.value = []
       }
+    } else {
+      metrics.value = []
     }
-    return []
+  }, 300) // 300ms delay
+
+  const onMetricSearch = async (query: string) => {
+    // Execute the debounced search
+    await debouncedSearch(query)
   }
 
   const selectMetricFromExplorer = (metricName: string) => {
