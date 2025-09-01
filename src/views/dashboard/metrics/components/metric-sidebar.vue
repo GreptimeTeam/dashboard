@@ -340,7 +340,7 @@ a-card.metrics-sidebar(:bordered="false")
     .metric-select {
       flex-shrink: 1;
       flex-grow: 0;
-      width: auto;
+      width: 100%;
       overflow: hidden;
     }
   }
