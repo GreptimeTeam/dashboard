@@ -35,6 +35,7 @@ const DASHBOARD: AppRouteRecordRaw = {
         requiresAuth: false,
         icon: 'Node16',
         roles: ['admin', 'cloud'],
+        ignoreCache: true,
       },
     },
     {
