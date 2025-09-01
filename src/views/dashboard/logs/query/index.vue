@@ -1,7 +1,7 @@
 <template lang="pug">
 .query-layout.logs-query-container.query-container
   .page-header
-    | Logs Query
+    | {{ $t('menu.dashboard.logsQuery') }}
   .content-wrapper.query-layout-cards
     a-card(:bordered="false")
       .toolbar

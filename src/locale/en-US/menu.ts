@@ -34,4 +34,5 @@ export default {
   'menu.dashboard.log-ingestion': 'Log Ingestion',
   'menu.news': 'Latest News',
   'menu.dashboard.flow': 'Flow',
+  'menu.dashboard.traces': 'Traces Query',
 }
