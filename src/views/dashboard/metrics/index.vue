@@ -36,7 +36,7 @@ a-layout.new-layout
               template(#icon)
                 icon-loading(v-if="queryLoading" spin)
                 icon-play-arrow(v-else)
-              | Run Query
+              | {{ $t('dashboard.runQuery') }}
 
       .query-section
         PromQLEditor(
