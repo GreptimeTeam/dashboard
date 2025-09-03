@@ -14,6 +14,7 @@ export interface NewsResponse {
 const NEWS_CONFIG = {
   proxyUrl: 'https://proxy-for-blogs-rss-in-dashboard.greptime.workers.dev',
 }
+
 const CACHE_KEY = 'greptime_news_cache'
 const UID_KEY = 'greptime_anon_id'
 const TTL_MS = 10 * 60 * 1000
@@ -28,44 +29,36 @@ const getAnonId = () => {
 }
 
 const setCachedNews = (items: NewsItem[]) => {
-  const data = {
-    items,
-    timestamp: Date.now(),
-  }
-  localStorage.setItem(CACHE_KEY, JSON.stringify(data))
+  if (!items || items.length === 0) return
+  localStorage.setItem(CACHE_KEY, JSON.stringify({ items, timestamp: Date.now() }))
 }
 
-const getCachedNews = (): NewsResponse | null => {
+const getCachedNews = (): { items: NewsItem[]; timestamp: number } | null => {
   try {
     const raw = localStorage.getItem(CACHE_KEY)
     if (!raw) return null
-
     const { items, timestamp } = JSON.parse(raw)
-    if (Date.now() - timestamp > TTL_MS) {
-      localStorage.removeItem(CACHE_KEY)
-      return null
-    }
-
-    return { items }
+    return { items, timestamp }
   } catch {
-    localStorage.removeItem(CACHE_KEY)
+    // localStorage.removeItem(CACHE_KEY)
     return null
   }
 }
 
+const isFresh = (ts: number) => Date.now() - ts <= TTL_MS
+
 const formatDate = (pubDate: string): string => {
   try {
     const date = dayjs(pubDate)
-    if (!date.isValid()) {
-      return pubDate
-    }
+    if (!date.isValid()) return pubDate
     return date.format('MMMM D, YYYY')
-  } catch (error) {
+  } catch {
     return pubDate
   }
 }
 
-const parseXmlRss = (xmlString: string): NewsItem[] => {
+// Parse RSS XML and return top N items (default 3)
+const parseXmlRss = (xmlString: string, topN = 3): NewsItem[] => {
   try {
     const parser = new DOMParser()
     const doc = parser.parseFromString(xmlString, 'text/xml')
@@ -78,7 +71,7 @@ const parseXmlRss = (xmlString: string): NewsItem[] => {
 
     const items = doc.querySelectorAll('item')
     return Array.from(items)
-      .slice(0, 3)
+      .slice(0, topN)
       .map((item) => {
         const title = item.querySelector('title')?.textContent || ''
         const link = item.querySelector('link')?.textContent || ''
@@ -99,42 +92,44 @@ const parseXmlRss = (xmlString: string): NewsItem[] => {
 }
 
 export const fetchGreptimeNews = async (): Promise<NewsResponse> => {
-  try {
-    const cached = getCachedNews()
-    const anonId = getAnonId()
-    if (cached) {
-      return cached
-    }
+  const cached = getCachedNews()
 
+  if (cached && isFresh(cached.timestamp)) {
+    return { items: cached.items }
+  }
+
+  const { role } = useUserStore()
+  const headers: Record<string, string> = {
+    Accept: 'application/xml, text/xml, */*',
+  }
+  if (role === 'admin') {
+    headers['X-Oss-Uid'] = getAnonId()
+  }
+
+  try {
     const response = await fetch(NEWS_CONFIG.proxyUrl, {
       method: 'GET',
-      headers: {
-        'Accept': 'application/xml, text/xml, */*',
-        'X-Oss-Uid': anonId,
-      },
+      headers,
     })
 
     if (!response.ok) {
       console.warn('Failed to fetch RSS feed:', response.status, response.statusText)
-      return { items: [] }
+      return { items: cached?.items ?? [] }
     }
 
     const xmlData = await response.text()
     const parsedItems = parseXmlRss(xmlData)
 
-    // Cache the parsed items (top 3 news items)
     setCachedNews(parsedItems)
 
     if (parsedItems.length === 0) {
       console.warn('No news items found in RSS feed')
-      return { items: [] }
+      return { items: cached?.items ?? [] }
     }
 
-    return {
-      items: parsedItems,
-    }
+    return { items: parsedItems }
   } catch (error: any) {
-    console.warn('Failed to fetch Greptime news:', error.message)
-    return { items: [] }
+    console.warn('Failed to fetch Greptime news:', error?.message || error)
+    return { items: cached?.items ?? [] }
   }
 }
