@@ -38,13 +38,17 @@
                   placement="top"
                   :content="tsViewStr ? $t('dashboard.showTimestamp') : $t('dashboard.formatTimestamp')"
                 )
-                  a-space(size="mini" :style="{ cursor: 'pointer' }" @click="changeTsView")
+                  a-space(
+                    size="mini"
+                    :style="{ cursor: 'pointer' }"
+                    :class="col.semantic_type?.toLowerCase()"
+                    @click="changeTsView"
+                  )
                     svg.icon-12
                       use(href="#time-index")
                     | {{ col.name }}
               template(v-else)
-                | {{ col.title || col.name }}
-
+                span(:class="col.semantic_type?.toLowerCase()") {{ col.title || col.name }}
           // Custom cell slot - allow parent components to override cell rendering
           template(#cell="{ record, rowIndex }")
             slot(
