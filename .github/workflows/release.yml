@@ -11,7 +11,7 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     outputs:
-      tag_name: ${{ steps.get_tag.outputs.tag_name }}  # Store tag for other jobs
+      tag_name: ${{ steps.get_tag.outputs.tag_name }} # Store tag for other jobs
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
@@ -50,8 +50,6 @@ jobs:
         id: get_tag
         run: echo "tag_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
-
-
   publish-tauri:
     needs: build
     permissions:
@@ -73,7 +71,7 @@ jobs:
     env:
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
       TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD}}
-      RELEASE_TAG: ${{ needs.build.outputs.tag_name }}  # Get the release tag from the build job
+      RELEASE_TAG: ${{ needs.build.outputs.tag_name }} # Get the release tag from the build job
     steps:
       - uses: actions/checkout@v4
 
@@ -132,6 +130,17 @@ jobs:
           certutil -decode certificate/tempCert.txt certificate/certificate.pfx
           Remove-Item -path certificate -include tempCert.txt
           Import-PfxCertificate -FilePath certificate/certificate.pfx -CertStoreLocation Cert:\CurrentUser\My -Password (ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -Force -AsPlainText)
+
+      - name: Update tauri version to match tag
+        run: |
+          # Extract version from tag (remove 'v' prefix if present)
+          VERSION=${RELEASE_TAG#v}
+          # Update tauri.conf.json with the tag version
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            powershell -Command "(Get-Content src-tauri/tauri.conf.json) -replace '\"version\": \"[^\"]*\"', '\"version\": \"$VERSION\"' | Set-Content src-tauri/tauri.conf.json"
+          else
+            sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
+          fi
 
       - uses: tauri-apps/tauri-action@v0
         env:
