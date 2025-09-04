@@ -139,7 +139,8 @@ jobs:
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             powershell -Command "(Get-Content src-tauri/tauri.conf.json) -replace '\"version\": \"[^\"]*\"', '\"version\": \"$VERSION\"' | Set-Content src-tauri/tauri.conf.json"
           else
-            sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
+            # Linux/macOS - use empty string for macOS compatibility
+            sed -i '' "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
           fi
 
       - uses: tauri-apps/tauri-action@v0
