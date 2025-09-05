@@ -199,9 +199,10 @@ a-dropdown#td-context(
   const tableContainer = ref<HTMLElement>()
   const { width: tableWidth, height: tableHeight } = useElementSize(tableContainer)
 
+  const TimeTypes = ['TimestampSecond', 'TimestampMillisecond', 'TimestampMicroSecond', 'TimestampNanosecond']
   // Timestamp utilities
   function isTimeColumn(column: ColumnType) {
-    return column.data_type.toLowerCase().includes('timestamp')
+    return TimeTypes.indexOf(column.data_type) > -1
   }
 
   // Width calculation utilities
@@ -351,6 +352,7 @@ a-dropdown#td-context(
 
   function renderTs(record: any, columnName: string) {
     const timestamp = record[columnName]
+
     if (!timestamp) return timestamp
 
     if (tsViewStr.value) {
