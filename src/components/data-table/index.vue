@@ -116,6 +116,7 @@ a-dropdown#td-context(
   import { dateTypes } from '@/views/dashboard/config'
   import { convertTimestampToMilliseconds } from '@/utils/date-time'
   import type { ColumnType, TSColumn } from '@/types/query'
+  import { dateFormatter } from '@/utils'
 
   interface TableData {
     [key: string]: any
@@ -361,7 +362,7 @@ a-dropdown#td-context(
       if (!column) return timestamp
 
       // Use universal conversion function
-      const ms = convertTimestampToMilliseconds(timestamp, column.data_type)
+      const ms = dateFormatter(column.data_type, timestamp)
       return dayjs(ms).format('YYYY-MM-DD HH:mm:ss.SSS')
     }
 
