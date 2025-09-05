@@ -38,13 +38,17 @@
                   placement="top"
                   :content="tsViewStr ? $t('dashboard.showTimestamp') : $t('dashboard.formatTimestamp')"
                 )
-                  a-space(size="mini" :style="{ cursor: 'pointer' }" @click="changeTsView")
+                  a-space(
+                    size="mini"
+                    :style="{ cursor: 'pointer' }"
+                    :class="col.semantic_type?.toLowerCase()"
+                    @click="changeTsView"
+                  )
                     svg.icon-12
                       use(href="#time-index")
                     | {{ col.name }}
               template(v-else)
-                | {{ col.title || col.name }}
-
+                span(:class="col.semantic_type?.toLowerCase()") {{ col.title || col.name }}
           // Custom cell slot - allow parent components to override cell rendering
           template(#cell="{ record, rowIndex }")
             slot(
@@ -109,8 +113,10 @@ a-dropdown#td-context(
   import { ref, computed, shallowRef } from 'vue'
   import { useElementSize } from '@vueuse/core'
   import dayjs from 'dayjs'
+  import { dateTypes } from '@/views/dashboard/config'
   import { convertTimestampToMilliseconds } from '@/utils/date-time'
   import type { ColumnType, TSColumn } from '@/types/query'
+  import { dateFormatter } from '@/utils'
 
   interface TableData {
     [key: string]: any
@@ -197,7 +203,7 @@ a-dropdown#td-context(
 
   // Timestamp utilities
   function isTimeColumn(column: ColumnType) {
-    return column.data_type.toLowerCase().includes('timestamp')
+    return dateTypes.indexOf(column.data_type) > -1
   }
 
   // Width calculation utilities
@@ -347,6 +353,7 @@ a-dropdown#td-context(
 
   function renderTs(record: any, columnName: string) {
     const timestamp = record[columnName]
+
     if (!timestamp) return timestamp
 
     if (tsViewStr.value) {
@@ -355,7 +362,7 @@ a-dropdown#td-context(
       if (!column) return timestamp
 
       // Use universal conversion function
-      const ms = convertTimestampToMilliseconds(timestamp, column.data_type)
+      const ms = dateFormatter(column.data_type, timestamp)
       return dayjs(ms).format('YYYY-MM-DD HH:mm:ss.SSS')
     }
 

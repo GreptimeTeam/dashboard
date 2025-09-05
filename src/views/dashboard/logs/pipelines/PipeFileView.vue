@@ -1,5 +1,7 @@
 <template lang="pug">
-a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08); height: calc(100vh - 30px)")
+a-layout.full-height-layout.pipefile-view(
+  style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08); height: calc(100vh - 30px)"
+)
   a-layout-sider(style="width: 45%" :resize-directions="['right']")
     a-card.light-editor-card(:bordered="false")
       template(#title)
@@ -49,7 +51,7 @@ a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08); 
           div 
         .full-width-height-editor.pipeline-editor(:class="editorHeightClass")
           YMLEditorSimple(v-model="currFile.content" style="width: 100%; height: 100%")
-  a-layout-content.content-wrapper(style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 22px")
+  a-layout-content.content-wrapper(style="display: flex; flex-direction: column; padding-bottom: 22px")
     a-card.light-editor-card(title="Input" :bordered="false")
       template(#extra)
         a-space
@@ -63,7 +65,7 @@ a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08); 
             a-option(value="application/json") json
             a-option(value="application/x-ndjson") ndjson
 
-          a-button(size="small" @click="handleDebug") Test
+          a-button(size="small" type="primary" @click="handleDebug") Test
 
       template(#title)
         .card-title-with-description
@@ -82,7 +84,7 @@ a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08); 
           :indent-with-tab="true"
           :tabSize="2"
         )
-
+    .section-divider
     a-card.light-editor-card.output(title="Output" :bordered="false")
       template(#extra)
         a-radio-group.output-view-toggle(v-model="outputViewMode" type="button" size="small")
@@ -94,9 +96,24 @@ a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08); 
           .card-title Output
           .card-description Processed logs displayed here. Logs that ingested via API will follow this structure.
 
+      // Semantic Type Legend
+      .semantic-legend(
+        v-if="outputViewMode === 'table' && parsedOutputData.records && parsedOutputData.records.rows.length > 0"
+      )
+        .legend-items
+          .legend-item
+            .legend-color.field
+            .legend-label Field
+          .legend-item
+            .legend-color.tag
+            .legend-label Tag
+          .legend-item
+            .legend-color.timestamp
+            .legend-label Timestamp
+
       a-empty(
         v-if="parsedOutputData.records && parsedOutputData.records.rows.length === 0"
-        style="border: 1px solid var(--color-border); border-radius: 2px; height: 100%; display: flex; align-items: center; justify-content: center; margin-top: 8px; flex: 1"
+        style="border: 1px solid var(--color-border); border-radius: 2px; height: 100%; display: flex; align-items: center; justify-content: center; flex: 1"
         description="No parsed data. Click Test to see results."
       )
 
@@ -104,7 +121,13 @@ a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08); 
       .output-table(
         v-if="outputViewMode === 'table' && parsedOutputData.records && parsedOutputData.records.rows.length > 0"
       )
-        DataGrid(:data="parsedOutputData" :has-header="false")
+        DataTable(
+          :data="tableData"
+          :columns="tableColumns"
+          :loading="false"
+          :show-context-menu="false"
+          :wrap-line="true"
+        )
 
       // JSON View  
       .full-width-height-editor(
@@ -129,7 +152,10 @@ a-layout.full-height-layout(style="box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08); 
   import { json } from '@codemirror/lang-json'
   import { create, list, del, debugContent, getByName } from '@/api/pipeline'
   import type { PipeFile } from '@/api/pipeline'
+  import type { ColumnType } from '@/types/query'
   import router from '@/router'
+  import DataTable from '@/components/data-table/index.vue'
+  import { toObj } from '../query/until'
 
   const emit = defineEmits(['refresh', 'del'])
   const props = defineProps<{
@@ -290,6 +316,10 @@ transform:
     type: 'table',
   })
 
+  // DataTable specific variables
+  const tableData = ref<Array<any>>([])
+  const tableColumns = ref<Array<ColumnType>>([])
+
   function handleDebug() {
     debugContent(currFile.content, debugForm.content, selectedContentType.value).then((result) => {
       debugResponse.value = JSON.stringify(result[0], null, 2)
@@ -300,7 +330,7 @@ transform:
       })
       const schema = result[0].schema || []
 
-      // Parse response for DataGrid format
+      // Parse response for DataGrid format (keep for compatibility)
       parsedOutputData.value = {
         records: {
           rows,
@@ -318,6 +348,19 @@ transform:
         key: Date.now(),
         type: 'table',
       }
+
+      // Update DataTable format
+      const schemas = schema.map((col) => ({
+        name: col.name,
+        title: col.name,
+        data_type: col.data_type || 'String',
+        semantic_type: col.colume_type,
+      }))
+
+      tableColumns.value = schemas
+      tableData.value = rows.map((row, index) => {
+        return toObj(row, schemas, index, null)
+      })
     })
   }
 
@@ -378,7 +421,6 @@ transform:
     }
     :deep(.arco-card-header) {
       flex-shrink: 0;
-      margin-top: 12px;
     }
   }
 
@@ -440,5 +482,110 @@ transform:
       text-overflow: ellipsis;
       overflow: hidden;
     }
+  }
+
+  // ===================
+  // SEMANTIC TYPE STYLES
+  // ===================
+
+  // Define semantic type colors as CSS variables at component level
+  .pipefile-view {
+    --semantic-field-bg: #f6ffed;
+    --semantic-field-text: #36b174;
+    --semantic-field-legend: #36b174;
+
+    --semantic-tag-bg: #fff7e6;
+    --semantic-tag-text: #e1b84d;
+    --semantic-tag-legend: #e1b84d;
+
+    --semantic-timestamp-bg: #e6f4ff;
+    --semantic-timestamp-text: #417aff;
+    --semantic-timestamp-legend: #417aff;
+    font-size: 13px;
+  }
+
+  .semantic-legend {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+    justify-content: flex-end;
+
+    .legend-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-2);
+    }
+
+    .legend-items {
+      display: flex;
+      gap: 16px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+
+      .legend-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+        border: 1px solid var(--color-border-3);
+
+        &.field {
+          background-color: var(--semantic-field-legend);
+        }
+
+        &.tag {
+          background-color: var(--semantic-tag-legend);
+        }
+
+        &.timestamp {
+          background-color: var(--semantic-timestamp-legend);
+        }
+      }
+
+      .legend-label {
+        font-size: 12px;
+        color: var(--color-text-2);
+      }
+    }
+  }
+
+  .output-table {
+    :deep(.arco-table-th-title) {
+      .timestamp {
+        background-color: var(--semantic-timestamp-bg);
+        color: var(--semantic-timestamp-text);
+        padding: 2px 4px;
+      }
+
+      .field {
+        background-color: var(--semantic-field-bg);
+        color: var(--semantic-field-text);
+        padding: 2px 4px;
+      }
+
+      .tag {
+        background-color: var(--semantic-tag-bg);
+        color: var(--semantic-tag-text);
+        padding: 2px 4px;
+      }
+    }
+    :deep(.arco-table-size-medium .arco-table-td) {
+      font-size: 13px;
+    }
+  }
+  .light-editor-card :deep(.arco-card-header) {
+    border-bottom: 1px solid var(--color-border);
+    height: 70px;
+  }
+  .section-divider {
+    height: 6px;
+    background: var(--color-neutral-3);
+    border: none;
+    margin: 10px 0 0;
+    position: relative;
   }
 </style>
