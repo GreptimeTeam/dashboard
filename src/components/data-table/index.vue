@@ -113,6 +113,7 @@ a-dropdown#td-context(
   import { ref, computed, shallowRef } from 'vue'
   import { useElementSize } from '@vueuse/core'
   import dayjs from 'dayjs'
+  import { dateTypes } from '@/views/dashboard/config'
   import { convertTimestampToMilliseconds } from '@/utils/date-time'
   import type { ColumnType, TSColumn } from '@/types/query'
 
@@ -199,10 +200,9 @@ a-dropdown#td-context(
   const tableContainer = ref<HTMLElement>()
   const { width: tableWidth, height: tableHeight } = useElementSize(tableContainer)
 
-  const TimeTypes = ['TimestampSecond', 'TimestampMillisecond', 'TimestampMicroSecond', 'TimestampNanosecond']
   // Timestamp utilities
   function isTimeColumn(column: ColumnType) {
-    return TimeTypes.indexOf(column.data_type) > -1
+    return dateTypes.indexOf(column.data_type) > -1
   }
 
   // Width calculation utilities
