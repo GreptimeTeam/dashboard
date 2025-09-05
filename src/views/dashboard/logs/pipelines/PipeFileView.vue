@@ -84,7 +84,7 @@ a-layout.full-height-layout.pipefile-view(
           :indent-with-tab="true"
           :tabSize="2"
         )
-
+    .section-divider
     a-card.light-editor-card.output(title="Output" :bordered="false")
       template(#extra)
         a-radio-group.output-view-toggle(v-model="outputViewMode" type="button" size="small")
@@ -502,6 +502,7 @@ transform:
     --semantic-timestamp-bg: #e6f4ff;
     --semantic-timestamp-text: #417aff;
     --semantic-timestamp-legend: #417aff;
+    font-size: 13px;
   }
 
   .semantic-legend {
@@ -573,5 +574,18 @@ transform:
         padding: 2px 4px;
       }
     }
+    :deep(.arco-table-size-medium .arco-table-td) {
+      font-size: 13px;
+    }
+  }
+  .light-editor-card :deep(.arco-card-header) {
+    border-bottom: 1px solid var(--color-border);
+  }
+  .section-divider {
+    height: 6px;
+    background: var(--color-neutral-3);
+    border: none;
+    margin: 0;
+    position: relative;
   }
 </style>
