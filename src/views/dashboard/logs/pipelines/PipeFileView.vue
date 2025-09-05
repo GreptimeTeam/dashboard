@@ -51,7 +51,7 @@ a-layout.full-height-layout.pipefile-view(
           div 
         .full-width-height-editor.pipeline-editor(:class="editorHeightClass")
           YMLEditorSimple(v-model="currFile.content" style="width: 100%; height: 100%")
-  a-layout-content.content-wrapper(style="display: flex; flex-direction: column; gap: 24px; padding-bottom: 22px")
+  a-layout-content.content-wrapper(style="display: flex; flex-direction: column; padding-bottom: 22px")
     a-card.light-editor-card(title="Input" :bordered="false")
       template(#extra)
         a-space
@@ -113,7 +113,7 @@ a-layout.full-height-layout.pipefile-view(
 
       a-empty(
         v-if="parsedOutputData.records && parsedOutputData.records.rows.length === 0"
-        style="border: 1px solid var(--color-border); border-radius: 2px; height: 100%; display: flex; align-items: center; justify-content: center; margin-top: 8px; flex: 1"
+        style="border: 1px solid var(--color-border); border-radius: 2px; height: 100%; display: flex; align-items: center; justify-content: center; flex: 1"
         description="No parsed data. Click Test to see results."
       )
 
@@ -421,7 +421,6 @@ transform:
     }
     :deep(.arco-card-header) {
       flex-shrink: 0;
-      margin-top: 12px;
     }
   }
 
@@ -580,12 +579,13 @@ transform:
   }
   .light-editor-card :deep(.arco-card-header) {
     border-bottom: 1px solid var(--color-border);
+    height: 70px;
   }
   .section-divider {
     height: 6px;
     background: var(--color-neutral-3);
     border: none;
-    margin: 0;
+    margin: 10px 0 0;
     position: relative;
   }
 </style>
