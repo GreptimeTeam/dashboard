@@ -51,7 +51,7 @@ jobs:
         id: get_tag
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "tag_name=test-release-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+            echo "tag_name=test-$(echo ${{ github.sha }} | cut -c1-8)" >> $GITHUB_OUTPUT
           else
             echo "tag_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           fi
