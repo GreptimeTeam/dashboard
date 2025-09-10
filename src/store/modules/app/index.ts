@@ -56,6 +56,7 @@ const useAppStore = defineStore('app', () => {
       username: username.value,
       password: password.value,
       authHeader: authHeader.value,
+      userTimezone: userTimezone.value,
     }
 
     useStorage('config', configToSave, localStorage, {

@@ -75,7 +75,7 @@ a-drawer.settings-drawer(
         type="primary"
         long
         :loading="loginLoading"
-        @click="save"
+        @click="save()"
       ) {{ $t('settings.save') }}
       template(#extra)
         span.danger-color(v-if="loginStatus === 'fail'") {{ $t('settings.saveTip') }}
