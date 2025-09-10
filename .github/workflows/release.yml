@@ -50,7 +50,20 @@ jobs:
 
       - name: Get tag name
         id: get_tag
-        run: echo "tag_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "tag_name=test-$(echo ${{ github.sha }} | cut -c1-8)" >> $GITHUB_OUTPUT
+          else
+            echo "tag_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create test tag (manual trigger only)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git tag ${{ steps.get_tag.outputs.tag_name }}
+          git push origin ${{ steps.get_tag.outputs.tag_name }}
 
   publish-tauri:
     needs: build
