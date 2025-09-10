@@ -131,22 +131,21 @@ jobs:
           Remove-Item -path certificate -include tempCert.txt
           Import-PfxCertificate -FilePath certificate/certificate.pfx -CertStoreLocation Cert:\CurrentUser\My -Password (ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -Force -AsPlainText)
 
-      - name: Extract version from tag
-        run: echo "VERSION=${RELEASE_TAG#v}" >> $GITHUB_ENV
-
-      - name: Update tauri version on Windows
-        if: runner.os == 'Windows'
-        shell: pwsh
+      - name: Update tauri version to match tag
+        shell: bash
         run: |
-          (Get-Content src-tauri/tauri.conf.json) -replace '\"version\": \"[^\"]*\"', '\"version\": \"$env:VERSION\"' | Set-Content src-tauri/tauri.conf.json
-
-      - name: Update tauri version on macOS
-        if: runner.os == 'macOS'
-        run: sed -i '' "s/\"version\": \"[^\"]*\"/\"version\": \"${{ env.VERSION }}\"/" src-tauri/tauri.conf.json
-
-      - name: Update tauri version on Linux
-        if: runner.os == 'Linux'
-        run: sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"${{ env.VERSION }}\"/" src-tauri/tauri.conf.json
+          # Extract version from tag (remove 'v' prefix if present)
+          VERSION=${RELEASE_TAG#v}
+          # Update tauri.conf.json with the tag version
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            powershell -Command "(Get-Content src-tauri/tauri.conf.json) -replace '\"version\": \"[^\"]*\"', '\"version\": \"$VERSION\"' | Set-Content src-tauri/tauri.conf.json"
+          elif [[ "$RUNNER_OS" == "macOS" ]]; then
+            # Correct syntax for macOS (BSD sed)
+            sed -i '' "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
+          else
+            # Correct syntax for Linux (GNU sed)
+            sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
+          fi
 
       - uses: tauri-apps/tauri-action@v0
         env:
