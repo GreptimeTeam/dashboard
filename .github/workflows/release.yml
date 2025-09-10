@@ -43,6 +43,7 @@ jobs:
         with:
           generate_release_notes: true
           prerelease: false
+          draft: true
           make_latest: true
           files: |
             release/build.tar.gz
@@ -154,6 +155,7 @@ jobs:
         with:
           tagName: ${{ needs.build.outputs.tag_name }}
           prerelease: false
+          draft: true
           args: ${{ matrix.args }}
 
   sync:
