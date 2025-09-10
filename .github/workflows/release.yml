@@ -48,7 +48,7 @@ jobs:
 
       - name: Get tag name
         id: get_tag
-        run: echo "tag_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        run: echo "tag_name=v0.0.1" >> $GITHUB_OUTPUT
 
   publish-tauri:
     needs: build
