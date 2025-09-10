@@ -138,7 +138,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          (Get-Content src-tauri/tauri.conf.json) -replace '"version": "[^"]*"', '"version": "$env:VERSION"' | Set-Content src-tauri/tauri.conf.json
+          (Get-Content src-tauri/tauri.conf.json) -replace '\"version\": \"[^\"]*\"', '\"version\": \"$env:VERSION\"' | Set-Content src-tauri/tauri.conf.json
 
       - name: Update tauri version on macOS
         if: runner.os == 'macOS'
