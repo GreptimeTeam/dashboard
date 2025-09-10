@@ -61,7 +61,12 @@ a-drawer.settings-drawer(
           a-tooltip(content="Used as x-greptime-timezone HTTP header" mini position="tl")
             svg.icon-12
               use(href="#question")
-      a-input(v-model="settingsForm.userTimezone" allow-clear placeholder="±[h]h:mm or timezone name")
+      a-input(
+        v-model="settingsForm.userTimezone"
+        allow-clear
+        placeholder="±[h]h:mm or timezone name"
+        :error="!isValidTimezone"
+      )
       template(#extra)
         div
           | Use DST offsets from UTC, such as
@@ -89,6 +94,7 @@ a-drawer.settings-drawer(
   import { useAppStore, useDataBaseStore } from '@/store'
   import axios from 'axios'
   import { isTauri } from '@tauri-apps/api/core'
+  import dayjs from 'dayjs'
 
   const MARGIN_BOTTOM = `${38 * 2 + 8}px`
   const { t } = useI18n()
@@ -104,6 +110,7 @@ a-drawer.settings-drawer(
   const loginStatus = ref('')
   const loginLoading = ref(false)
   const databasesLoading = ref(false)
+  const isValidTimezone = ref(true)
 
   const settingsForm = ref({
     username: username.value,
@@ -115,8 +122,33 @@ a-drawer.settings-drawer(
     authHeader: authHeader.value,
   })
 
+  const checkTimezone = (tz: string): boolean => {
+    if (!tz.trim()) {
+      isValidTimezone.value = true
+      return true
+    }
+
+    // ±[h]h:mm
+    const offsetRegex = /^([+-])(\d|0\d|1[0-4]):(00|15|30|45)$/
+    if (offsetRegex.test(tz)) {
+      isValidTimezone.value = true
+      return true
+    }
+
+    try {
+      dayjs().tz(tz)
+      isValidTimezone.value = true
+      return true
+    } catch (e) {
+      isValidTimezone.value = false
+      return false
+    }
+  }
+
   const save = async () => {
-    // TODO: check userTimezone format validation
+    if (!checkTimezone(settingsForm.value.userTimezone)) {
+      return
+    }
     updateSettings({ userTimezone: settingsForm.value.userTimezone })
 
     axios.defaults.baseURL = settingsForm.value.host
@@ -129,7 +161,7 @@ a-drawer.settings-drawer(
         updateSettings({
           globalSettings: false,
         })
-      }, 2000)
+      }, 3000)
     } else {
       loginStatus.value = 'fail'
     }
