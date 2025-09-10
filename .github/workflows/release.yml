@@ -138,9 +138,12 @@ jobs:
           # Update tauri.conf.json with the tag version
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             powershell -Command "(Get-Content src-tauri/tauri.conf.json) -replace '\"version\": \"[^\"]*\"', '\"version\": \"$VERSION\"' | Set-Content src-tauri/tauri.conf.json"
-          else
-            # Linux/macOS - use empty string for macOS compatibility
+          elif [[ "$RUNNER_OS" == "macOS" ]]; then
+            # Correct syntax for macOS (BSD sed)
             sed -i '' "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
+          else
+            # Correct syntax for Linux (GNU sed)
+            sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
           fi
 
       - uses: tauri-apps/tauri-action@v0
@@ -155,6 +158,7 @@ jobs:
     name: Create PR to update VERSION
     needs: [build]
     runs-on: ubuntu-latest
+    if: false
     steps:
       - uses: actions/checkout@v4
         with:
