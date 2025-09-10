@@ -26,9 +26,7 @@ a-layout
 
   const { navbar, footer, userTimezone } = storeToRefs(useAppStore())
 
-  onMounted(() => {
-    // TODO: Use default timezone or timezone from local storage?
-    // Get default timezone
+  const setDefaultTimezone = () => {
     const offsetMinutes = dayjs.tz(dayjs()).utcOffset()
     const offsetHours = Math.floor(offsetMinutes / 60)
     const offsetMinutesRemain = Math.abs(offsetMinutes % 60)
@@ -37,6 +35,12 @@ a-layout
     userTimezone.value = `${sign}${absOffsetHours < 10 ? '0' : ''}${absOffsetHours}:${
       offsetMinutesRemain < 10 ? '0' : ''
     }${offsetMinutesRemain}`
+  }
+
+  onMounted(() => {
+    if (!userTimezone.value) {
+      setDefaultTimezone()
+    }
   })
 </script>
 
