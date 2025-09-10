@@ -41,7 +41,6 @@ jobs:
         with:
           generate_release_notes: true
           prerelease: false
-          draft: true
           make_latest: true
           files: |
             release/build.tar.gz
@@ -49,20 +48,7 @@ jobs:
 
       - name: Get tag name
         id: get_tag
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "tag_name=test-$(echo ${{ github.sha }} | cut -c1-8)" >> $GITHUB_OUTPUT
-          else
-            echo "tag_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Create test tag (manual trigger only)
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git tag ${{ steps.get_tag.outputs.tag_name }}
-          git push origin ${{ steps.get_tag.outputs.tag_name }}
+        run: echo "tag_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
   publish-tauri:
     needs: build
@@ -152,12 +138,9 @@ jobs:
           # Update tauri.conf.json with the tag version
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             powershell -Command "(Get-Content src-tauri/tauri.conf.json) -replace '\"version\": \"[^\"]*\"', '\"version\": \"$VERSION\"' | Set-Content src-tauri/tauri.conf.json"
-          elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            # Correct syntax for macOS (BSD sed)
-            sed -i '' "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
           else
-            # Correct syntax for Linux (GNU sed)
-            sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
+            # Linux/macOS - use empty string for macOS compatibility
+            sed -i '' "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
           fi
 
       - uses: tauri-apps/tauri-action@v0
@@ -166,14 +149,12 @@ jobs:
         with:
           tagName: ${{ needs.build.outputs.tag_name }}
           prerelease: false
-          draft: true
           args: ${{ matrix.args }}
 
   sync:
     name: Create PR to update VERSION
     needs: [build]
     runs-on: ubuntu-latest
-    if: false # Disable sync task temporarily
     steps:
       - uses: actions/checkout@v4
         with:
