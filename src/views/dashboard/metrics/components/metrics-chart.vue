@@ -16,9 +16,6 @@ a-card.metrics-chart(:bordered="false")
             :unix-time-range="unixTimeRange"
           )
 
-      span.series-count(v-if="seriesData.length > 0") 
-        | ({{ seriesData.length }} {{ seriesData.length === 1 ? 'series' : 'series' }}, step: {{ step }}s)
-
     a-space(style="margin-left: auto")
       a-radio-group(v-model="localChartType" type="button" size="small")
         a-radio(value="line") Lines
@@ -35,6 +32,8 @@ a-card.metrics-chart(:bordered="false")
         :options="chartOption"
         @datazoom="handleDataZoom"
       )
+      .series-count(v-if="seriesData.length > 0") 
+        | ({{ seriesData.length }} {{ seriesData.length === 1 ? 'series' : 'series' }}, step: {{ step }}s)
 
   .empty-state(v-else)
     a-empty(description="No data to display")
@@ -48,7 +47,7 @@ a-card.metrics-chart(:bordered="false")
   import { ref, computed, watch, nextTick, inject } from 'vue'
   import Chart from '@/components/raw-chart/index.vue'
   import TimeRangeSelect from '@/components/time-range-select/index.vue'
-  import { IconLoading, IconPlayArrow } from '@arco-design/web-vue/es/icon'
+
   import dayjs from 'dayjs'
   import type { EChartsOption } from 'echarts'
   import StepSelector from './step-selector.vue'
@@ -400,11 +399,6 @@ a-card.metrics-chart(:bordered="false")
       }
     }
 
-    // Hide toolbox but keep functionality
-    :deep(.echarts-tooltip) {
-      // Keep tooltip visible
-    }
-
     :deep(.echarts-toolbox) {
       // Hide toolbox completely but keep zoom functionality
       display: none !important;
@@ -431,5 +425,9 @@ a-card.metrics-chart(:bordered="false")
       height: 0 !important;
       overflow: hidden !important;
     }
+  }
+  .series-count {
+    text-align: center;
+    color: var(--color-text-secondary);
   }
 </style>

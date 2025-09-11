@@ -52,7 +52,9 @@ a-layout.new-layout
               :pagination="false"
               :scroll="{ x: 800 }"
               :bordered="false"
+              :show-header="false"
             )
+
           .empty-state(v-else)
             a-empty(description="No data to display")
               template(#image)
@@ -234,14 +236,14 @@ a-layout.new-layout
       title: 'Series',
       dataIndex: 'series',
       key: 'series',
-      width: 300,
+      width: 400,
       ellipsis: true,
     },
     {
-      title: 'Value',
-      dataIndex: 'value',
-      key: 'value',
-      width: 120,
+      title: 'Values',
+      dataIndex: 'values',
+      key: 'values',
+      width: 200,
       align: 'right' as const,
     },
   ])
@@ -259,11 +261,22 @@ a-layout.new-layout
         .join(', ')
       const seriesName = labelStr ? `${metricName}{${labelStr}}` : metricName
 
-      // Instant query returns single value, not array of values
+      // Handle both single value and multiple timestamp-value pairs
       if (series.value !== undefined) {
+        let valuesList
+        // Check if value is a single [timestamp, value] pair or array of pairs
+        if (Array.isArray(series.value) && series.value.length === 2 && !Array.isArray(series.value[0])) {
+          valuesList = series.value[1]
+        } else if (Array.isArray(series.value) && Array.isArray(series.value[0])) {
+          // Multiple timestamp-value pairs: [[timestamp, value], [timestamp, value], ...]
+          valuesList = series.value
+            .map((valuePoint: [number, string]) => `${valuePoint[0]} ${valuePoint[1]}`)
+            .join('\n')
+        }
+
         rows.push({
           series: seriesName,
-          value: series.value[1],
+          values: valuesList,
         })
       }
     })
@@ -454,6 +467,7 @@ a-layout.new-layout
   :deep(.arco-tabs-content) {
     padding-top: 0;
   }
+
   .table-section {
     margin-top: 16px;
   }
