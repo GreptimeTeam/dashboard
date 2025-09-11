@@ -42,13 +42,7 @@ a-layout.new-layout
                 size="small"
                 @change="handleInstantQueryTimeChange"
               )
-              a-button(
-                type="primary"
-                size="small"
-                :loading="queryLoading"
-                @click="handleTableQuery"
-              )
-                | Execute
+
           .table-section(v-if="tableResults && tableResults.length > 0")
             a-table(
               size="small"
@@ -67,8 +61,8 @@ a-layout.new-layout
 
 <script setup lang="ts">
   import { ref, computed, onMounted, watch, nextTick, provide } from 'vue'
-  import { useStorage } from '@vueuse/core'
   import { useRoute, useRouter } from 'vue-router'
+  import { useStorage } from '@vueuse/core'
   import { useSeries } from '@/hooks/use-series'
   import { Message } from '@arco-design/web-vue'
   import { IconExclamationCircleFill } from '@arco-design/web-vue/es/icon'
@@ -105,7 +99,7 @@ a-layout.new-layout
   const sidebarWidth = useStorage('metrics-sidebar-width', 320)
 
   // Tab state
-  const activeTab = useStorage('metrics-active-tab', 'graph')
+  const activeTab = ref(route.query.tab || 'table')
 
   // Query state
   const chartType = ref('line') // Chart type state
@@ -115,8 +109,6 @@ a-layout.new-layout
 
   // URL sync state
   const hasInitParams = ref(false)
-  // Track if we're currently updating query params to prevent double execution
-  const isUpdatingQueryParams = ref(false)
 
   // Initialize from URL query parameters
   const initializeFromQuery = () => {
@@ -128,6 +120,7 @@ a-layout.new-layout
       stepValue,
       chartType: urlChartType,
       tab,
+      instantTime,
     } = route.query
 
     // PromQL query
@@ -165,16 +158,28 @@ a-layout.new-layout
       chartType.value = urlChartType
     }
 
-    // Active tab
+    // Active tab - sync from URL, default to 'graph'
     if (tab && typeof tab === 'string' && ['graph', 'table'].includes(tab)) {
       activeTab.value = tab
+    } else {
+      activeTab.value = 'graph'
+    }
+
+    // Instant query time
+    if (instantTime && typeof instantTime === 'string') {
+      try {
+        const parsedTime = new Date(instantTime)
+        if (!Number.isNaN(parsedTime.getTime())) {
+          instantQueryTime.value = parsedTime
+        }
+      } catch (e) {
+        // Invalid date, ignore
+      }
     }
   }
 
   // Update URL query parameters
   const updateQueryParams = () => {
-    isUpdatingQueryParams.value = true
-
     const query = { ...route.query }
 
     // PromQL query
@@ -203,20 +208,17 @@ a-layout.new-layout
       delete query.chartType
     }
 
-    // Active tab
-    if (activeTab.value && activeTab.value !== 'graph') {
-      query.tab = activeTab.value
+    query.tab = activeTab.value
+
+    // Instant query time (for table tab)
+    if (instantQueryTime.value && activeTab.value === 'table') {
+      query.instantTime = instantQueryTime.value.toISOString()
     } else {
-      delete query.tab
+      delete query.instantTime
     }
     // query.queryid = Math.random().toString(36).substring(2, 15)
 
-    router.push({ query }).finally(() => {
-      // Reset the flag after router update completes
-      nextTick(() => {
-        isUpdatingQueryParams.value = false
-      })
-    })
+    router.push({ query })
   }
 
   // Computed properties
@@ -271,37 +273,31 @@ a-layout.new-layout
 
   const promqlEditorRef = ref()
 
-  // Query execution for chart (range query only)
-  const handleChartQuery = async () => {
+  // Unified query trigger - only updates URL parameters
+  const triggerQuery = () => {
+    // Add unique queryId to trigger execution
+    const currentParams = { ...route.query }
+    currentParams.queryId = Math.random().toString(36).substring(2, 15)
+    router.replace({ query: currentParams })
+  }
+  const handleQuery = () => {
     updateQueryParams()
-    nextTick(async () => {
-      await executeQuery(currentQuery.value)
-    })
+    triggerQuery()
   }
 
-  // Query execution for table (instant query only)
-  const handleTableQuery = async () => {
-    if (currentQuery.value.trim()) {
-      await executeInstantQuery(currentQuery.value)
-    }
-  }
-
-  // General query execution - executes based on active tab
-  const handleRunQuery = async () => {
-    if (activeTab.value === 'graph') {
-      await handleChartQuery()
-    } else if (activeTab.value === 'table') {
-      await handleTableQuery()
-    }
-  }
+  // Legacy handlers that now just trigger through URL
+  const handleChartQuery = handleQuery
+  const handleTableQuery = handleQuery
+  const handleRunQuery = handleQuery
 
   // Handle time range update from chart selection
   const handleTimeRangeUpdate = (newTimeRange: [number, number]) => {
     // Switch to custom time range mode and update the time range
     time.value = 0 // Switch to custom mode
     rangeTime.value = [newTimeRange[0].toString(), newTimeRange[1].toString()]
-    // Execute new query with updated time range
-    handleRunQuery()
+    // Trigger query through URL update
+    updateQueryParams()
+    triggerQuery()
   }
 
   // Provide the context to child components
@@ -332,49 +328,43 @@ a-layout.new-layout
   // Handle instant query time change
   const handleInstantQueryTimeChange = (date: Date) => {
     instantQueryTime.value = date
-  }
-
-  // Handle instant query execution
-  const handleInstantQuery = async () => {
-    if (currentQuery.value.trim()) {
-      await executeInstantQuery(currentQuery.value)
+    // Auto-trigger query when time changes if there's a query and we're on table tab
+    if (currentQuery.value.trim() && activeTab.value === 'table') {
+      triggerQuery()
     }
   }
 
-  // Watch for tab changes and update URL
-  watch(activeTab, (newTab) => {
-    if (!isUpdatingQueryParams.value) {
-      updateQueryParams()
-    }
-
-    // Execute appropriate query when switching tabs if there's a query
-    if (currentQuery.value.trim()) {
-      nextTick(async () => {
-        if (newTab === 'graph') {
-          await handleChartQuery()
-        } else if (newTab === 'table') {
-          await handleTableQuery()
-        }
-      })
-    }
+  // Initialize from query parameters only once on mount
+  onMounted(() => {
+    initializeFromQuery()
+    nextTick(() => {
+      triggerQuery()
+    })
   })
 
-  // Watch for router query changes and auto-execute query if promql is present
-  watch(
-    () => [route.query.promql, route.query.timeRange, route.query.timeLength, route.query.queryid],
-    (newVal) => {
-      // Skip if we're currently updating query params ourselves
-      if (isUpdatingQueryParams.value) return
+  watch(activeTab, (newTab) => {
+    updateQueryParams()
+    setTimeout(() => {
+      triggerQuery()
+    }, 1)
+  })
 
-      initializeFromQuery()
-      if (currentQuery.value) {
+  // Watch only queryId to execute queries
+  watch(
+    () => route.query.queryId,
+    (newQueryId) => {
+      // Only execute if we have a queryId and a query
+      if (newQueryId && currentQuery.value.trim()) {
         nextTick(async () => {
-          // Execute query based on active tab
-          await handleRunQuery()
+          // Execute appropriate query based on active tab
+          if (activeTab.value === 'graph') {
+            await executeQuery(currentQuery.value)
+          } else if (activeTab.value === 'table') {
+            await executeInstantQuery(currentQuery.value)
+          }
         })
       }
-    },
-    { immediate: true }
+    }
   )
 
   const { hideSidebar } = storeToRefs(useAppStore())
