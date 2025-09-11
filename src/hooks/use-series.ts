@@ -42,6 +42,9 @@ export function useSeries() {
   const queryStep = ref<number>()
   const currentStep = ref(0)
 
+  // Instant query specific time (for table data)
+  const instantQueryTime = ref<Date | null>(null)
+
   // Time range and step management
   const timeRangeState = useTimeRange({ time: 10 })
   const { rangeTime, time, unixTimeRange } = timeRangeState
@@ -51,10 +54,14 @@ export function useSeries() {
   const previousStep = ref<number>()
 
   // Execute PromQL instant query (for table data - current values)
-  const executeInstantQuery = async (query: string) => {
+  const executeInstantQuery = async (query: string, timestamp?: Date) => {
     currentQuery.value = query
 
-    const response = await executePromQL(query, currentTimeRange.value[1].toString())
+    // Use provided timestamp, or instantQueryTime, or current time as fallback
+    const queryTime = timestamp || instantQueryTime.value || new Date()
+    const unixTimestamp = Math.floor(queryTime.getTime() / 1000).toString()
+
+    const response = await executePromQL(query, unixTimestamp)
 
     instantQueryResult.value = response.data.result
     return response.data
@@ -138,6 +145,7 @@ export function useSeries() {
     rangeQueryResult,
     instantQueryResult, // For table data
     queryLoading,
+    instantQueryTime, // For instant query timestamp
 
     // Time range state
     rangeTime,

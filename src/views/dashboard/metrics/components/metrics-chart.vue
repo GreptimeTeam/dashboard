@@ -1,8 +1,21 @@
 <template lang="pug">
 a-card.metrics-chart(:bordered="false")
-  .section-title(v-if="hasData")
+  .section-title
     a-space
-      span Chart View
+      .tab-controls
+        a-space
+          TimeRangeSelect(
+            v-model:time-length="time"
+            v-model:time-range="rangeTime"
+            button-type="outline"
+            :show-any-time="false"
+          )
+          StepSelector(
+            v-model:selection-type="stepSelectionType"
+            v-model:step-value="currentStep"
+            :unix-time-range="unixTimeRange"
+          )
+
       span.series-count(v-if="seriesData.length > 0") 
         | ({{ seriesData.length }} {{ seriesData.length === 1 ? 'series' : 'series' }}, step: {{ step }}s)
 
@@ -32,31 +45,37 @@ a-card.metrics-chart(:bordered="false")
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, watch, nextTick } from 'vue'
+  import { ref, computed, watch, nextTick, inject } from 'vue'
   import Chart from '@/components/raw-chart/index.vue'
+  import TimeRangeSelect from '@/components/time-range-select/index.vue'
+  import { IconLoading, IconPlayArrow } from '@arco-design/web-vue/es/icon'
   import dayjs from 'dayjs'
   import type { EChartsOption } from 'echarts'
+  import StepSelector from './step-selector.vue'
 
-  const props = defineProps<{
-    data: any[] | null
-    loading: boolean
-    query: string
-    timeRange: number[] | []
-    step: number | undefined // Step in seconds, not string format
-    chartType: string // Chart type from parent
-  }>()
+  // Inject the metrics context
+  const metricsContext = inject('metricsContext') as any
 
-  const emit = defineEmits<{
-    (e: 'update:chartType', value: string): void
-    (e: 'timeRangeUpdate', value: [number, number]): void
-  }>()
+  // Destructure the context for easier access
+  const {
+    rangeQueryResult,
+    queryLoading: loading,
+    currentQuery: query,
+    currentTimeRange: timeRange,
+    queryStep: step,
+    chartType,
+    time,
+    rangeTime,
+    unixTimeRange,
+    stepSelectionType,
+    currentStep,
+    handleChartQuery,
+    handleTimeRangeUpdate,
+  } = metricsContext
 
   // Chart state
   const chartRef = ref()
-  const localChartType = computed({
-    get: () => props.chartType,
-    set: (value: string) => emit('update:chartType', value),
-  })
+  const localChartType = chartType
 
   // Helper functions for chart type handling
   const getChartType = (type: string): string => {
@@ -73,7 +92,7 @@ a-card.metrics-chart(:bordered="false")
   }
 
   const chartKey = computed(() => {
-    return props.query + props.step
+    return query.value + step.value
   })
 
   // Handle range selection on chart
@@ -87,8 +106,8 @@ a-card.metrics-chart(:bordered="false")
     // Convert from milliseconds to seconds for time range
     const startTime = Math.floor(new Date(startValue).getTime() / 1000)
     const endTime = Math.floor(new Date(endValue).getTime() / 1000)
-    // Emit time range update
-    emit('timeRangeUpdate', [startTime, endTime])
+    // Call the time range update handler from context
+    handleTimeRangeUpdate([startTime, endTime])
   }
 
   const isStackedChart = (type: string): boolean => {
@@ -134,17 +153,17 @@ a-card.metrics-chart(:bordered="false")
   }
 
   // Computed properties
-  const hasData = computed(() => props.data && props.data.length > 0)
+  const hasData = computed(() => rangeQueryResult.value && rangeQueryResult.value.length > 0)
 
   const seriesData = computed(() => {
     if (!hasData.value) return []
 
-    let filteredData = props.data.filter((series) => series.values && series.values.length > 0)
+    let filteredData = rangeQueryResult.value.filter((series) => series.values && series.values.length > 0)
 
     // Fill missing timestamps if time range and step are available
-    if (props.timeRange && props.timeRange.length === 2 && props.step) {
-      const [start, end] = props.timeRange as [number, number]
-      filteredData = fillMissingTimestamps(filteredData, start, end, props.step)
+    if (timeRange.value && timeRange.value.length === 2 && step.value) {
+      const [start, end] = timeRange.value as [number, number]
+      filteredData = fillMissingTimestamps(filteredData, start, end, step.value)
     }
     return filteredData
   })
@@ -221,9 +240,9 @@ a-card.metrics-chart(:bordered="false")
         enterable: false,
         formatter: (params: any[]) => {
           if (!params || params.length === 0) return ''
-
-          const time = dayjs(params[0].value[0]).format('YYYY-MM-DD HH:mm:ss')
-          let content = `<div style="margin-bottom: 8px; font-weight: 600; color: #333;">${time}</div>`
+          let content = `<div style="margin-bottom: 8px; font-weight: 600; color: #333;">${dayjs(
+            params[0].value[0]
+          ).format('YYYY-MM-DD HH:mm:ss')}</div>`
 
           params.forEach((param) => {
             const {
@@ -365,6 +384,9 @@ a-card.metrics-chart(:bordered="false")
 
 <style lang="less" scoped>
   .metrics-chart {
+    .tab-controls {
+    }
+
     .empty-state {
       text-align: center;
       padding: 60px 20px;

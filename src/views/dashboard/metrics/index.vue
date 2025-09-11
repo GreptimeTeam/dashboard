@@ -12,91 +12,78 @@ a-layout.new-layout
 
   a-layout-content.layout-content
     a-card(:bordered="false")
-      .section-title
-        a-space
-          TimeRangeSelect(
-            v-model:time-length="time"
-            v-model:time-range="rangeTime"
-            button-type="outline"
-            :show-any-time="false"
-          )
-          StepSelector(
-            v-model:selection-type="stepSelectionType"
-            v-model:step-value="currentStep"
-            :unix-time-range="unixTimeRange"
-          )
-
-          a-tooltip(content="Ctrl + Enter" position="right")
-            a-button(
-              type="primary"
-              size="small"
-              :loading="queryLoading"
-              @click="handleRunQuery"
-            )
-              template(#icon)
-                icon-loading(v-if="queryLoading" spin)
-                icon-play-arrow(v-else)
-              | {{ $t('dashboard.runQuery') }}
-
       .query-section
         PromQLEditor(
           ref="promqlEditorRef"
           v-model="currentQuery"
-          style="height: 100px"
           placeholder="Enter PromQL query"
+          :query-loading="queryLoading"
           @query="handleRunQuery"
         )
 
     .section-divider
 
-    // Query Results Section - Chart
-    MetricsChart(
-      :key="currentQuery + queryStep"
-      :data="queryResults"
-      :loading="queryLoading"
-      :query="currentQuery"
-      :step="queryStep"
-      :chart-type="chartType"
-      :time-range="currentTimeRange"
-      @update:chart-type="chartType = $event"
-      @time-range-update="handleTimeRangeUpdate"
-    )
+    // Results tabs section
+    a-card(:bordered="false")
+      a-tabs(v-model:active-key="activeTab" type="line")
+        a-tab-pane(key="graph" title="Graph")
+          MetricsChart
 
-    .section-divider(v-if="queryResults && queryResults.length > 0")
-
-    a-card(v-if="tableResults && tableResults.length > 0" :bordered="false")
-      .section-title
-        | Table View
-      .table-section(v-if="tableResults && tableResults.length > 0")
-        a-table(
-          size="small"
-          :columns="tableColumns"
-          :data="tableData"
-          :loading="queryLoading"
-          :pagination="false"
-          :scroll="{ x: 800 }"
-          :bordered="false"
-        )
+        a-tab-pane(key="table" title="Table")
+          .section-title
+            a-space
+              a-date-picker(
+                v-model="instantQueryTime"
+                show-time
+                format="YYYY-MM-DD HH:mm:ss"
+                placeholder="Evaluation time"
+                allow-clear
+                style="width: 200px"
+                size="small"
+                @change="handleInstantQueryTimeChange"
+              )
+              a-button(
+                type="primary"
+                size="small"
+                :loading="queryLoading"
+                @click="handleTableQuery"
+              )
+                | Execute
+          .table-section(v-if="tableResults && tableResults.length > 0")
+            a-table(
+              size="small"
+              :columns="tableColumns"
+              :data="tableData"
+              :loading="queryLoading"
+              :pagination="false"
+              :scroll="{ x: 800 }"
+              :bordered="false"
+            )
+          .empty-state(v-else)
+            a-empty(description="No data to display")
+              template(#image)
+                icon-exclamation-circle-fill
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, onMounted, watch, nextTick } from 'vue'
+  import { ref, computed, onMounted, watch, nextTick, provide } from 'vue'
   import { useStorage } from '@vueuse/core'
   import { useRoute, useRouter } from 'vue-router'
   import { useSeries } from '@/hooks/use-series'
   import { Message } from '@arco-design/web-vue'
-  import { IconLoading, IconPlayArrow } from '@arco-design/web-vue/es/icon'
-  import TimeRangeSelect from '@/components/time-range-select/index.vue'
+  import { IconExclamationCircleFill } from '@arco-design/web-vue/es/icon'
+  import { storeToRefs } from 'pinia'
+  import { useAppStore } from '@/store'
   import MetricSidebar from './components/metric-sidebar.vue'
   import PromQLEditor from './components/prom-ql-editor.vue'
   import MetricsChart from './components/metrics-chart.vue'
-  import StepSelector from './components/step-selector.vue'
 
   // Router for URL sync
   const route = useRoute()
   const router = useRouter()
 
   // Use the series composable with integrated time range and step calculation
+  const seriesHook = useSeries()
   const {
     currentQuery,
     rangeQueryResult: queryResults,
@@ -111,17 +98,21 @@ a-layout.new-layout
     currentTimeRange,
     currentStep,
     queryLoading,
-  } = useSeries()
+    instantQueryTime,
+  } = seriesHook
 
   // Sidebar state
   const sidebarWidth = useStorage('metrics-sidebar-width', 320)
 
-  // Query state
+  // Tab state
+  const activeTab = useStorage('metrics-active-tab', 'graph')
 
+  // Query state
   const chartType = ref('line') // Chart type state
 
   // Step selector state
   const stepSelectionType = ref('medium') // Selection type: low/medium/high/fixed/custom
+
   // URL sync state
   const hasInitParams = ref(false)
   // Track if we're currently updating query params to prevent double execution
@@ -129,7 +120,15 @@ a-layout.new-layout
 
   // Initialize from URL query parameters
   const initializeFromQuery = () => {
-    const { promql, timeLength, timeRange: urlTimeRange, stepType, stepValue, chartType: urlChartType } = route.query
+    const {
+      promql,
+      timeLength,
+      timeRange: urlTimeRange,
+      stepType,
+      stepValue,
+      chartType: urlChartType,
+      tab,
+    } = route.query
 
     // PromQL query
     if (promql && typeof promql === 'string') {
@@ -165,6 +164,11 @@ a-layout.new-layout
     if (urlChartType && typeof urlChartType === 'string') {
       chartType.value = urlChartType
     }
+
+    // Active tab
+    if (tab && typeof tab === 'string' && ['graph', 'table'].includes(tab)) {
+      activeTab.value = tab
+    }
   }
 
   // Update URL query parameters
@@ -198,11 +202,20 @@ a-layout.new-layout
     } else {
       delete query.chartType
     }
+
+    // Active tab
+    if (activeTab.value && activeTab.value !== 'graph') {
+      query.tab = activeTab.value
+    } else {
+      delete query.tab
+    }
     // query.queryid = Math.random().toString(36).substring(2, 15)
 
     router.push({ query }).finally(() => {
       // Reset the flag after router update completes
-      isUpdatingQueryParams.value = false
+      nextTick(() => {
+        isUpdatingQueryParams.value = false
+      })
     })
   }
 
@@ -258,17 +271,28 @@ a-layout.new-layout
 
   const promqlEditorRef = ref()
 
-  // Query execution - now much simpler with reactive hook
-  const handleRunQuery = async () => {
+  // Query execution for chart (range query only)
+  const handleChartQuery = async () => {
     updateQueryParams()
     nextTick(async () => {
-      // Execute range query for chart
       await executeQuery(currentQuery.value)
-      // Execute instant query for table
-      if (currentQuery.value.trim()) {
-        await executeInstantQuery(currentQuery.value)
-      }
     })
+  }
+
+  // Query execution for table (instant query only)
+  const handleTableQuery = async () => {
+    if (currentQuery.value.trim()) {
+      await executeInstantQuery(currentQuery.value)
+    }
+  }
+
+  // General query execution - executes based on active tab
+  const handleRunQuery = async () => {
+    if (activeTab.value === 'graph') {
+      await handleChartQuery()
+    } else if (activeTab.value === 'table') {
+      await handleTableQuery()
+    }
   }
 
   // Handle time range update from chart selection
@@ -279,6 +303,16 @@ a-layout.new-layout
     // Execute new query with updated time range
     handleRunQuery()
   }
+
+  // Provide the context to child components
+  provide('metricsContext', {
+    // Series hook data and methods
+    ...seriesHook,
+    // Additional shared state and methods
+    chartType,
+    stepSelectionType,
+    handleTimeRangeUpdate,
+  })
 
   const handleCopyText = async (text: string) => {
     try {
@@ -293,7 +327,39 @@ a-layout.new-layout
     if (promqlEditorRef.value) {
       promqlEditorRef.value.insertTextAtCursor(text)
     }
-  } // Watch for router query changes and auto-execute query if promql is present
+  }
+
+  // Handle instant query time change
+  const handleInstantQueryTimeChange = (date: Date) => {
+    instantQueryTime.value = date
+  }
+
+  // Handle instant query execution
+  const handleInstantQuery = async () => {
+    if (currentQuery.value.trim()) {
+      await executeInstantQuery(currentQuery.value)
+    }
+  }
+
+  // Watch for tab changes and update URL
+  watch(activeTab, (newTab) => {
+    if (!isUpdatingQueryParams.value) {
+      updateQueryParams()
+    }
+
+    // Execute appropriate query when switching tabs if there's a query
+    if (currentQuery.value.trim()) {
+      nextTick(async () => {
+        if (newTab === 'graph') {
+          await handleChartQuery()
+        } else if (newTab === 'table') {
+          await handleTableQuery()
+        }
+      })
+    }
+  })
+
+  // Watch for router query changes and auto-execute query if promql is present
   watch(
     () => [route.query.promql, route.query.timeRange, route.query.timeLength, route.query.queryid],
     (newVal) => {
@@ -303,10 +369,8 @@ a-layout.new-layout
       initializeFromQuery()
       if (currentQuery.value) {
         nextTick(async () => {
-          // Execute range query for chart
-          await executeQuery(currentQuery.value)
-          // Execute instant query for table
-          await executeInstantQuery(currentQuery.value)
+          // Execute query based on active tab
+          await handleRunQuery()
         })
       }
     },
@@ -387,5 +451,27 @@ a-layout.new-layout
   }
   :deep(.arco-table-th) {
     background-color: #fff;
+  }
+
+  .table-controls {
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--color-border);
+
+    .arco-space {
+      align-items: center;
+    }
+  }
+  :deep(.arco-tabs-content) {
+    padding-top: 0;
+  }
+  .table-section {
+    margin-top: 16px;
+  }
+
+  .empty-state {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
   }
 </style>

@@ -1,17 +1,31 @@
 <template lang="pug">
-CodeMirror(
-  style="height: 100%"
-  :placeholder="placeholder"
-  :modelValue="props.modelValue"
-  :extensions="extensions"
-  :spellcheck="false"
-  :autofocus="false"
-  :indent-with-tab="false"
-  :tabSize="2"
-  :disabled="disabled"
-  @change="codeUpdate"
-  @ready="onEditorReady"
-)
+.promql-editor-container
+  CodeMirror(
+    style="height: 100%"
+    :placeholder="placeholder"
+    :modelValue="props.modelValue"
+    :extensions="extensions"
+    :spellcheck="false"
+    :autofocus="false"
+    :indent-with-tab="false"
+    :tabSize="2"
+    :disabled="disabled"
+    @change="codeUpdate"
+    @ready="onEditorReady"
+  )
+  .query-button-container
+    a-tooltip(content="Ctrl + Enter" position="right")
+      a-button(
+        type="primary"
+        size="large"
+        style="height: 40px; border-radius: 0 4px 4px 0"
+        :loading="queryLoading"
+        @click="handleQuery"
+      )
+        template(#icon)
+          icon-loading(v-if="queryLoading" spin)
+          icon-play-arrow(v-else)
+        | Execute Query
 </template>
 
 <script setup lang="ts">
@@ -23,11 +37,13 @@ CodeMirror(
   import axios from 'axios'
   import { keymap, EditorView } from '@codemirror/view'
   import { Prec } from '@codemirror/state'
+  import { IconLoading, IconPlayArrow } from '@arco-design/web-vue/es/icon'
 
   const props = defineProps<{
     modelValue: string
     disabled?: boolean
     placeholder?: string
+    queryLoading?: boolean
   }>()
 
   const emit = defineEmits<{
@@ -71,6 +87,10 @@ CodeMirror(
     } as unknown as Response
   }
 
+  // Handle query execution
+  const handleQuery = () => {
+    emit('query')
+  }
   // Helper function to normalize URL paths
   const normalizeUrl = (resource: any): string => {
     const requestUrl = typeof resource === 'object' && resource.url ? resource.url : resource
@@ -200,7 +220,7 @@ CodeMirror(
       {
         key: 'Ctrl-Enter',
         run: () => {
-          emit('query')
+          handleQuery()
           return true // Prevent default behavior
         },
       },
@@ -296,6 +316,19 @@ CodeMirror(
 </script>
 
 <style lang="less" scoped>
+  .promql-editor-container {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    min-height: 40px;
+  }
+
+  .query-button-container {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
   :deep(.arco-card.light-editor-card) {
     padding-right: 0;
   }
@@ -309,7 +342,7 @@ CodeMirror(
   // Smooth transition for focus state
   :deep(.cm-editor) {
     border: 1px solid var(--color-border);
-    border-radius: 4px;
+    border-radius: 4px 0 0 4px;
     transition: all 0.2s ease-in-out;
   }
 
@@ -317,6 +350,7 @@ CodeMirror(
   :deep(.cm-editor) {
     height: 40px;
     overflow: visible;
+    width: 100%;
   }
 
   :deep(.cm-scroller) {
