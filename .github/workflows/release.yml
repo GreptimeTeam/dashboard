@@ -132,6 +132,7 @@ jobs:
           Import-PfxCertificate -FilePath certificate/certificate.pfx -CertStoreLocation Cert:\CurrentUser\My -Password (ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -Force -AsPlainText)
 
       - name: Update tauri version to match tag
+        shell: bash
         run: |
           # Extract version from tag (remove 'v' prefix if present)
           VERSION=${RELEASE_TAG#v}
