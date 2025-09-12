@@ -42,7 +42,6 @@ a-layout.new-layout
           .table-section
             a-table(
               size="small"
-              :columns="tableColumns"
               :data="tableData"
               :loading="queryLoading"
               :pagination="false"
@@ -50,6 +49,21 @@ a-layout.new-layout
               :bordered="false"
               :show-header="false"
             )
+              template(#columns)
+                a-table-column(title="Series" data-index="series" :width="600")
+                  template(#cell="{ record }")
+                    .series-cell
+                      | {{ record.metricName }}{
+                      template(v-if="record.labels && record.labels.length > 0")
+                        template(v-for="(label, index) in record.labels" :key="index")
+                          strong {{ label.key }}
+                          | ="{{ label.value }}"
+                          span(v-if="index < record.labels.length - 1") ,
+                      | }
+                a-table-column(title="Values" data-index="values" :width="200")
+                  template(#cell="{ record }")
+                    .values-cell {{ record.values }}
+
         a-tab-pane(key="graph" title="Graph")
           MetricsChart
         template(#extra)
@@ -239,24 +253,6 @@ a-layout.new-layout
     return Math.max(minWidth, Math.min(sidebarWidth.value, maxWidth))
   })
 
-  // Table configuration
-  const tableColumns = computed(() => [
-    {
-      title: 'Series',
-      dataIndex: 'series',
-      key: 'series',
-      width: 400,
-      ellipsis: true,
-    },
-    {
-      title: 'Values',
-      dataIndex: 'values',
-      key: 'values',
-      width: 200,
-      align: 'right' as const,
-    },
-  ])
-
   const tableData = computed(() => {
     if (!tableResults.value || tableResults.value.length === 0) return []
     const rows: any[] = []
@@ -269,6 +265,12 @@ a-layout.new-layout
         .map(([k, v]) => `${k}="${v}"`)
         .join(', ')
       const seriesName = labelStr ? `${metricName}{${labelStr}}` : metricName
+
+      // Create structured labels for template rendering
+      const labels = Object.entries(seriesLabels).map(([key, value]) => ({
+        key,
+        value,
+      }))
 
       // Handle both single value and multiple timestamp-value pairs
       if (series.value !== undefined) {
@@ -285,6 +287,8 @@ a-layout.new-layout
 
         rows.push({
           series: seriesName,
+          metricName,
+          labels,
           values: valuesList,
         })
       }
@@ -480,10 +484,6 @@ a-layout.new-layout
     color: var(--color-text-3);
     font-weight: normal;
     margin-right: 8px;
-  }
-
-  .table-section {
-    margin-top: 16px;
   }
 
   .empty-state {
