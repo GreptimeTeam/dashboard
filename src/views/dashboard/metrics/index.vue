@@ -37,7 +37,6 @@ a-layout.new-layout
                 allow-clear
                 style="width: 200px"
                 size="small"
-                @change="handleInstantQueryTimeChange"
               )
 
           .table-section
@@ -64,7 +63,6 @@ a-layout.new-layout
   import { useStorage } from '@vueuse/core'
   import { useSeries } from '@/hooks/use-series'
   import { Message } from '@arco-design/web-vue'
-  import { IconExclamationCircleFill } from '@arco-design/web-vue/es/icon'
   import { storeToRefs } from 'pinia'
   import { useAppStore } from '@/store'
   import MetricSidebar from './components/metric-sidebar.vue'
@@ -209,7 +207,7 @@ a-layout.new-layout
 
     // Instant query time (for table tab)
     if (instantQueryTime.value && activeTab.value === 'table') {
-      query.instantTime = instantQueryTime.value.toISOString()
+      query.instantTime = instantQueryTime.value as unknown as string
     } else {
       delete query.instantTime
     }
@@ -341,15 +339,6 @@ a-layout.new-layout
   const handleInsertText = (text: string) => {
     if (promqlEditorRef.value) {
       promqlEditorRef.value.insertTextAtCursor(text)
-    }
-  }
-
-  // Handle instant query time change
-  const handleInstantQueryTimeChange = (date: Date) => {
-    instantQueryTime.value = date
-    // Auto-trigger query when time changes if there's a query and we're on table tab
-    if (currentQuery.value.trim() && activeTab.value === 'table') {
-      updateQueryParams()
     }
   }
 
