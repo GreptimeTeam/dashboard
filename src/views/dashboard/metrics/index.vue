@@ -257,7 +257,7 @@ a-layout.new-layout
     if (!tableResults.value || tableResults.value.length === 0) return []
     const rows: any[] = []
     tableResults.value.forEach((series) => {
-      const metricName = series.metric?.__name__ || 'unknown'
+      const metricName = series.metric?.__name__
       const seriesLabels = { ...series.metric }
       delete seriesLabels.__name__
 
