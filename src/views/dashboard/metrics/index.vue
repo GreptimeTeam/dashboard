@@ -213,9 +213,25 @@ a-layout.new-layout
     } else {
       delete query.instantTime
     }
-    // query.queryid = Math.random().toString(36).substring(2, 15)
 
-    router.push({ query })
+    const prevQuery = { ...route.query }
+    delete prevQuery.queryId
+    delete query.queryId
+    const newQueryWithoutId = { ...query }
+
+    // Add unique queryId to trigger execution
+    query.queryId = Math.random().toString(36).substring(2, 15)
+
+    // Compare queries without queryId to determine navigation method
+    const paramsChanged = JSON.stringify(prevQuery) !== JSON.stringify(newQueryWithoutId)
+
+    if (paramsChanged) {
+      // Parameters changed, add to navigation history
+      router.push({ query })
+    } else {
+      // Only queryId changed (execution trigger), replace current entry
+      router.replace({ query })
+    }
   }
 
   // Computed properties
@@ -289,22 +305,10 @@ a-layout.new-layout
     return tableResults.value?.length || 0
   })
 
-  // Unified query trigger - only updates URL parameters
-  const triggerQuery = () => {
-    // Add unique queryId to trigger execution
-    const currentParams = { ...route.query }
-    currentParams.queryId = Math.random().toString(36).substring(2, 15)
-    router.replace({ query: currentParams })
-  }
-  const handleQuery = () => {
-    updateQueryParams()
-    triggerQuery()
-  }
-
-  // Legacy handlers that now just trigger through URL
-  const handleChartQuery = handleQuery
-  const handleTableQuery = handleQuery
-  const handleRunQuery = handleQuery
+  // Legacy handlers that now just update query params (which triggers execution)
+  const handleChartQuery = updateQueryParams
+  const handleTableQuery = updateQueryParams
+  const handleRunQuery = updateQueryParams
 
   // Handle time range update from chart selection
   const handleTimeRangeUpdate = (newTimeRange: [number, number]) => {
@@ -313,7 +317,6 @@ a-layout.new-layout
     rangeTime.value = [newTimeRange[0].toString(), newTimeRange[1].toString()]
     // Trigger query through URL update
     updateQueryParams()
-    triggerQuery()
   }
 
   // Provide the context to child components
@@ -346,7 +349,7 @@ a-layout.new-layout
     instantQueryTime.value = date
     // Auto-trigger query when time changes if there's a query and we're on table tab
     if (currentQuery.value.trim() && activeTab.value === 'table') {
-      triggerQuery()
+      updateQueryParams()
     }
   }
 
@@ -354,16 +357,28 @@ a-layout.new-layout
   onMounted(() => {
     initializeFromQuery()
     nextTick(() => {
-      triggerQuery()
+      updateQueryParams()
     })
   })
 
   watch(activeTab, (newTab) => {
     updateQueryParams()
-    setTimeout(() => {
-      triggerQuery()
-    }, 1)
   })
+
+  // Watch for route query changes (excluding queryId) to sync back to variables
+  watch(
+    () => {
+      const { queryId, ...otherParams } = route.query
+      return otherParams
+    },
+    (newParams, oldParams) => {
+      // Only sync if parameters actually changed (not just queryId)
+      if (JSON.stringify(newParams) !== JSON.stringify(oldParams)) {
+        initializeFromQuery()
+      }
+    },
+    { deep: true }
+  )
 
   // Watch only queryId to execute queries
   watch(
