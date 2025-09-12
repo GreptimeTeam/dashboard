@@ -32,8 +32,6 @@ a-card.metrics-chart(:bordered="false")
         :options="chartOption"
         @datazoom="handleDataZoom"
       )
-      .series-count(v-if="seriesData.length > 0") 
-        | ({{ seriesData.length }} {{ seriesData.length === 1 ? 'series' : 'series' }}, step: {{ step }}s)
 
   .empty-state(v-else)
     a-empty(description="No data to display")

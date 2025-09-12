@@ -26,9 +26,6 @@ a-layout.new-layout
     // Results tabs section
     a-card(:bordered="false")
       a-tabs(v-model:active-key="activeTab" type="line")
-        a-tab-pane(key="graph" title="Graph")
-          MetricsChart
-
         a-tab-pane(key="table" title="Table")
           .section-title
             a-space
@@ -43,7 +40,7 @@ a-layout.new-layout
                 @change="handleInstantQueryTimeChange"
               )
 
-          .table-section(v-if="tableResults && tableResults.length > 0")
+          .table-section
             a-table(
               size="small"
               :columns="tableColumns"
@@ -54,11 +51,11 @@ a-layout.new-layout
               :bordered="false"
               :show-header="false"
             )
-
-          .empty-state(v-else)
-            a-empty(description="No data to display")
-              template(#image)
-                icon-exclamation-circle-fill
+        a-tab-pane(key="graph" title="Graph")
+          MetricsChart
+        template(#extra)
+          .series-count(v-if="seriesCount > 0") 
+            | Result series: {{ seriesCount }} &nbsp;&nbsp; step: {{ currentStep }}s
 </template>
 
 <script setup lang="ts">
@@ -82,7 +79,7 @@ a-layout.new-layout
   const seriesHook = useSeries()
   const {
     currentQuery,
-    rangeQueryResult: queryResults,
+    rangeQueryResult,
     instantQueryResult: tableResults,
     executeQuery,
     executeInstantQuery,
@@ -163,8 +160,6 @@ a-layout.new-layout
     // Active tab - sync from URL, default to 'graph'
     if (tab && typeof tab === 'string' && ['graph', 'table'].includes(tab)) {
       activeTab.value = tab
-    } else {
-      activeTab.value = 'graph'
     }
 
     // Instant query time
@@ -270,7 +265,7 @@ a-layout.new-layout
         } else if (Array.isArray(series.value) && Array.isArray(series.value[0])) {
           // Multiple timestamp-value pairs: [[timestamp, value], [timestamp, value], ...]
           valuesList = series.value
-            .map((valuePoint: [number, string]) => `${valuePoint[0]} ${valuePoint[1]}`)
+            .map((valuePoint: [number, string]) => `${valuePoint[0]} @${valuePoint[1]}`)
             .join('\n')
         }
 
@@ -285,6 +280,14 @@ a-layout.new-layout
   })
 
   const promqlEditorRef = ref()
+
+  // Series count for display in tab extra
+  const seriesCount = computed(() => {
+    if (activeTab.value === 'graph') {
+      return rangeQueryResult.value?.length || 0
+    }
+    return tableResults.value?.length || 0
+  })
 
   // Unified query trigger - only updates URL parameters
   const triggerQuery = () => {
@@ -466,6 +469,13 @@ a-layout.new-layout
   }
   :deep(.arco-tabs-content) {
     padding-top: 0;
+  }
+
+  .series-count {
+    font-size: 12px;
+    color: var(--color-text-3);
+    font-weight: normal;
+    margin-right: 8px;
   }
 
   .table-section {
