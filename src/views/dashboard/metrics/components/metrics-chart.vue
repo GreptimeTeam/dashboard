@@ -28,7 +28,7 @@ a-card.metrics-chart(:bordered="false")
       Chart(
         :key="chartKey"
         ref="chartRef"
-        height="610px"
+        :height="chartHeight + 'px'"
         :options="chartOption"
         @datazoom="handleDataZoom"
       )
@@ -165,6 +165,17 @@ a-card.metrics-chart(:bordered="false")
     return filteredData
   })
 
+  const graphHeight = 530
+  const legendHeight = computed(() => {
+    return Math.min(seriesData.value.length * 20, 300)
+  })
+  // Dynamic chart height based on series count
+  const chartHeight = computed(() => {
+    const baseHeight = graphHeight
+    const dynamicHeight = legendHeight.value
+    return baseHeight + dynamicHeight
+  })
+
   const chartOption = computed<EChartsOption>(() => {
     if (!hasData.value) return {}
     const series = seriesData.value.map((item, index) => {
@@ -186,7 +197,6 @@ a-card.metrics-chart(:bordered="false")
         }
         return [timestamp * 1000, parseFloat(value as string)]
       })
-      // Don't filter out null values - let ECharts handle them with connectNulls: false
 
       // Determine if we should show symbols based on data point count
       const shouldShowSymbols = localChartType.value === 'scatter' || data.length <= 20
@@ -228,8 +238,6 @@ a-card.metrics-chart(:bordered="false")
       }
     })
 
-    const gridBottom = Math.min(series.length * 40 + 20, 160)
-
     return {
       tooltip: {
         trigger: 'axis',
@@ -267,12 +275,13 @@ a-card.metrics-chart(:bordered="false")
         bottom: 0,
         type: 'scroll',
         orient: 'vertical',
-        top: 610 - gridBottom + 20,
+        top: chartHeight.value - legendHeight.value + 10,
+        itemHeight: 20,
       },
       grid: {
         left: 30,
         right: 30,
-        bottom: gridBottom, // Dynamic bottom margin based on series count
+        bottom: legendHeight.value, // Dynamic bottom margin based on series count
         top: 30,
         containLabel: true,
       },
@@ -381,9 +390,6 @@ a-card.metrics-chart(:bordered="false")
 
 <style lang="less" scoped>
   .metrics-chart {
-    .tab-controls {
-    }
-
     .empty-state {
       text-align: center;
       padding: 60px 20px;
