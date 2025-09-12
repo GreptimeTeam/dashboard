@@ -492,4 +492,10 @@ a-layout.new-layout
     align-items: center;
     min-height: 200px;
   }
+  :deep(.arco-tabs-tab-active) {
+    color: var(--brand-color);
+  }
+  :deep(.arco-tabs-nav-ink) {
+    background-color: var(--brand-color);
+  }
 </style>
