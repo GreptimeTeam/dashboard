@@ -42,16 +42,17 @@ a-card.metrics-chart(:bordered="false")
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, watch, nextTick, inject } from 'vue'
+  import { ref, computed, watch, nextTick, inject, type Ref, type ComputedRef } from 'vue'
   import Chart from '@/components/raw-chart/index.vue'
   import TimeRangeSelect from '@/components/time-range-select/index.vue'
 
   import dayjs from 'dayjs'
   import type { EChartsOption } from 'echarts'
   import StepSelector from './step-selector.vue'
+  import type { MetricsContext } from '../types'
 
   // Inject the metrics context
-  const metricsContext = inject('metricsContext') as any
+  const metricsContext = inject<MetricsContext>('metricsContext')
 
   // Destructure the context for easier access
   const {
@@ -66,7 +67,6 @@ a-card.metrics-chart(:bordered="false")
     unixTimeRange,
     stepSelectionType,
     currentStep,
-    handleChartQuery,
     handleTimeRangeUpdate,
   } = metricsContext
 

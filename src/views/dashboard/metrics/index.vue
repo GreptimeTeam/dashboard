@@ -79,6 +79,7 @@ a-layout.new-layout
   import { Message } from '@arco-design/web-vue'
   import { storeToRefs } from 'pinia'
   import { useAppStore } from '@/store'
+  import type { MetricsContext } from './types'
   import MetricSidebar from './components/metric-sidebar.vue'
   import PromQLEditor from './components/prom-ql-editor.vue'
   import MetricsChart from './components/metrics-chart.vue'
@@ -98,9 +99,6 @@ a-layout.new-layout
     // Time range state
     rangeTime,
     time,
-    unixTimeRange,
-    queryStep,
-    currentTimeRange,
     currentStep,
     queryLoading,
     instantQueryTime,
@@ -307,9 +305,6 @@ a-layout.new-layout
     return tableResults.value?.length || 0
   })
 
-  // Legacy handlers that now just update query params (which triggers execution)
-  const handleChartQuery = updateQueryParams
-  const handleTableQuery = updateQueryParams
   const handleRunQuery = updateQueryParams
 
   // Handle time range update from chart selection
@@ -322,7 +317,7 @@ a-layout.new-layout
   }
 
   // Provide the context to child components
-  provide('metricsContext', {
+  provide<MetricsContext>('metricsContext', {
     // Series hook data and methods
     ...seriesHook,
     // Additional shared state and methods
