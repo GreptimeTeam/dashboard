@@ -143,7 +143,9 @@ a-layout.new-layout
       const length = parseInt(timeLength as string, 10)
       if (!Number.isNaN(length)) {
         time.value = length
-        rangeTime.value = []
+        if (rangeTime.value.length > 0) {
+          rangeTime.value = []
+        }
       }
     }
 
@@ -174,14 +176,7 @@ a-layout.new-layout
 
     // Instant query time
     if (instantTime && typeof instantTime === 'string') {
-      try {
-        const parsedTime = new Date(instantTime)
-        if (!Number.isNaN(parsedTime.getTime())) {
-          instantQueryTime.value = parsedTime
-        }
-      } catch (e) {
-        // Invalid date, ignore
-      }
+      instantQueryTime.value = instantTime
     }
   }
 
@@ -324,6 +319,7 @@ a-layout.new-layout
     chartType,
     stepSelectionType,
     handleTimeRangeUpdate,
+    updateQueryParams,
   })
 
   const handleCopyText = async (text: string) => {
@@ -354,6 +350,13 @@ a-layout.new-layout
       updateQueryParams()
     }, 200)
   })
+
+  watch(
+    () => instantQueryTime.value,
+    () => {
+      updateQueryParams()
+    }
+  )
 
   // Watch for route query changes (excluding queryId) to sync back to variables
   watch(

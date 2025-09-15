@@ -43,7 +43,7 @@ export function useSeries() {
   const currentStep = ref(0)
 
   // Instant query specific time (for table data)
-  const instantQueryTime = ref<Date | null>(null)
+  const instantQueryTime = ref<string | null>(null)
 
   // Time range and step management
   const timeRangeState = useTimeRange({ time: 10 })
@@ -59,7 +59,7 @@ export function useSeries() {
 
     // Use provided timestamp, or instantQueryTime, or current time as fallback
     const queryTime = timestamp || instantQueryTime.value || new Date()
-    const unixTimestamp = Math.floor(queryTime.getTime() / 1000).toString()
+    const unixTimestamp = Math.floor(new Date(queryTime).getTime() / 1000).toString()
 
     const response = await executePromQL(query, unixTimestamp)
 

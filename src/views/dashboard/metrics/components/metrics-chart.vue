@@ -68,11 +68,22 @@ a-card.metrics-chart(:bordered="false")
     stepSelectionType,
     currentStep,
     handleTimeRangeUpdate,
+    updateQueryParams,
   } = metricsContext
 
   // Chart state
   const chartRef = ref()
   const localChartType = chartType
+
+  // Watch for time range changes only - step changes are handled separately
+  // to avoid multiple executions when time change causes step change
+  watch(
+    () => JSON.stringify({ time: time.value, rangeTime: rangeTime.value, step: currentStep.value }),
+    () => {
+      // Update URL parameters when time range changes
+      updateQueryParams()
+    }
+  )
 
   // Helper functions for chart type handling
   const getChartType = (type: string): string => {

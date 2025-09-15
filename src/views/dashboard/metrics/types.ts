@@ -7,4 +7,5 @@ export interface MetricsContext extends ReturnType<typeof useSeries> {
   chartType: Ref<string>
   stepSelectionType: Ref<string>
   handleTimeRangeUpdate: (newTimeRange: [number, number]) => void
+  updateQueryParams: () => void
 }
