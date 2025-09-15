@@ -167,13 +167,14 @@ a-card.metrics-chart(:bordered="false")
 
   const graphHeight = 530
   const legendHeight = computed(() => {
-    return Math.min(seriesData.value.length * 20, 300)
+    return Math.min(seriesData.value.length * 20, 240)
   })
+  const legendGap = 30
   // Dynamic chart height based on series count
   const chartHeight = computed(() => {
     const baseHeight = graphHeight
     const dynamicHeight = legendHeight.value
-    return baseHeight + dynamicHeight
+    return baseHeight + dynamicHeight + legendGap
   })
 
   const chartOption = computed<EChartsOption>(() => {
@@ -275,13 +276,12 @@ a-card.metrics-chart(:bordered="false")
         bottom: 0,
         type: 'scroll',
         orient: 'vertical',
-        top: chartHeight.value - legendHeight.value + 10,
-        itemHeight: 20,
+        top: graphHeight + 20,
       },
       grid: {
         left: 30,
         right: 30,
-        bottom: legendHeight.value, // Dynamic bottom margin based on series count
+        bottom: legendHeight.value + legendGap, // Dynamic bottom margin based on series count
         top: 30,
         containLabel: true,
       },
