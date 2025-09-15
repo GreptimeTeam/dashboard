@@ -350,7 +350,9 @@ a-layout.new-layout
   })
 
   watch(activeTab, (newTab) => {
-    updateQueryParams()
+    setTimeout(() => {
+      updateQueryParams()
+    }, 200)
   })
 
   // Watch for route query changes (excluding queryId) to sync back to variables

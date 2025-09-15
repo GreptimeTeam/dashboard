@@ -155,7 +155,7 @@ a-card.metrics-chart(:bordered="false")
   const seriesData = computed(() => {
     if (!hasData.value) return []
 
-    let filteredData = rangeQueryResult.value.filter((series) => series.values && series.values.length > 0)
+    let filteredData = rangeQueryResult.value.slice()
 
     // Fill missing timestamps if time range and step are available
     if (timeRange.value && timeRange.value.length === 2 && step.value) {
