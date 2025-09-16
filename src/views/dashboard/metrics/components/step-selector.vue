@@ -31,6 +31,7 @@
 
 <script setup lang="ts">
   import { ref, computed, watch, onMounted } from 'vue'
+  import { useDebounceFn } from '@vueuse/core'
   import { IconDown } from '@arco-design/web-vue/es/icon'
 
   // Props
@@ -144,15 +145,18 @@
     emit('update:selectionType', selectedOption.value)
   })
 
-  // Watch for custom step input changes
-  watch(customStepInput, (newInput) => {
+  // Debounced function for custom step input changes
+  const debouncedStepUpdate = useDebounceFn((newInput: string) => {
     if (currentSelection.value === 'custom' && newInput) {
       const parsedValue = parseStepInput(newInput)
       if (parsedValue !== null) {
         emit('update:stepValue', parsedValue)
       }
     }
-  })
+  }, 500) // 500ms debounce
+
+  // Watch for custom step input changes
+  watch(customStepInput, debouncedStepUpdate)
 
   // Helper function to format step for display
   const formatStepDisplay = (step: number): string => {
