@@ -186,7 +186,7 @@ a-card.metrics-chart(:bordered="false")
   const legendHeight = computed(() => {
     const seriesCount = seriesData.value.length
     const maxAvailableHeight = windowHeight.value - graphHeight - legendGap - 200 // 200px for other UI elements
-    const calculatedHeight = seriesCount * (legendItemHeight + 5)
+    const calculatedHeight = seriesCount * (legendItemHeight + 10)
     return Math.min(calculatedHeight, Math.max(maxAvailableHeight, 100)) // Minimum 100px
   })
   // Dynamic chart height based on series count
@@ -297,7 +297,7 @@ a-card.metrics-chart(:bordered="false")
         orient: 'vertical',
         top: graphHeight + 20,
         itemHeight: legendItemHeight,
-        itemGap: 5,
+        itemGap: 10,
       },
       grid: {
         left: 30,
