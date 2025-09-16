@@ -43,6 +43,7 @@ a-card.metrics-chart(:bordered="false")
 
 <script setup lang="ts">
   import { ref, computed, watch, nextTick, inject, type Ref, type ComputedRef } from 'vue'
+  import { useWindowSize } from '@vueuse/core'
   import Chart from '@/components/raw-chart/index.vue'
   import TimeRangeSelect from '@/components/time-range-select/index.vue'
 
@@ -74,6 +75,9 @@ a-card.metrics-chart(:bordered="false")
   // Chart state
   const chartRef = ref()
   const localChartType = chartType
+
+  // Get window size for responsive legend height
+  const { height: windowHeight } = useWindowSize()
 
   // Watch for time range changes only - step changes are handled separately
   // to avoid multiple executions when time change causes step change
@@ -177,10 +181,14 @@ a-card.metrics-chart(:bordered="false")
   })
 
   const graphHeight = 530
-  const legendHeight = computed(() => {
-    return Math.min(seriesData.value.length * 20, 240)
-  })
   const legendGap = 30
+  const legendItemHeight = 18
+  const legendHeight = computed(() => {
+    const seriesCount = seriesData.value.length
+    const maxAvailableHeight = windowHeight.value - graphHeight - legendGap - 200 // 200px for other UI elements
+    const calculatedHeight = seriesCount * (legendItemHeight + 5)
+    return Math.min(calculatedHeight, Math.max(maxAvailableHeight, 100)) // Minimum 100px
+  })
   // Dynamic chart height based on series count
   const chartHeight = computed(() => {
     const baseHeight = graphHeight
@@ -288,6 +296,8 @@ a-card.metrics-chart(:bordered="false")
         type: 'scroll',
         orient: 'vertical',
         top: graphHeight + 20,
+        itemHeight: legendItemHeight,
+        itemGap: 5,
       },
       grid: {
         left: 30,
