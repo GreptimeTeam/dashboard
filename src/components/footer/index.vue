@@ -12,12 +12,23 @@ a-layout-footer.footer
       img.icon(:src="getIconUrl(region.country)")
       .text {{ region.location }}
   .right
-    StatusList(:items="statusRight")
+    a-space(:size="10")
+      a-select(
+        v-if="dev"
+        v-model="innerLocale"
+        size="mini"
+        :style="{ width: '112px' }"
+        @change="onChangeLocale"
+      )
+        a-option(value="en-US") English
+        a-option(value="zh-CN") 中文
+      StatusList(:items="statusRight")
 </template>
 
 <script lang="ts" setup>
   import { getIconUrl } from '@/utils'
   import { useStorage } from '@vueuse/core'
+  import useLocale from '@/hooks/locale'
 
   const { regionVendor, regionLocation, regionCountry, serviceName }: any = useStorage('config', {}).value
   const { host } = storeToRefs(useAppStore())
@@ -31,6 +42,17 @@ a-layout-footer.footer
   })
 
   const vendorIcon = getIconUrl(region.value.vendor)
+
+  const { currentLocale, changeLocale } = useLocale()
+  const innerLocale = ref(currentLocale.value)
+
+  watch(currentLocale, (val) => {
+    innerLocale.value = val
+  })
+  const onChangeLocale = (val: string) => changeLocale(val)
+
+  // Not yet used in production
+  const dev = import.meta.env.MODE === 'development'
 </script>
 
 <style lang="less" scoped>

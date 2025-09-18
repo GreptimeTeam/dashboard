@@ -191,7 +191,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       name: 'trace-query',
       meta: {
         ignoreCache: false,
-        locale: 'menu.traces.list',
+        locale: 'menu.dashboard.traces',
         requiresAuth: false,
         icon: 'traces',
         roles: ['admin', 'cloud'],
@@ -203,7 +203,6 @@ const DASHBOARD: AppRouteRecordRaw = {
       name: 'dashboard-TraceDetail',
       component: () => import('@/views/dashboard/traces/[id].vue'),
       meta: {
-        locale: 'menu.traces.detail',
         requiresAuth: false,
         roles: ['admin', 'cloud'],
         hideInMenu: true,

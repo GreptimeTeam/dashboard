@@ -55,7 +55,6 @@ export default {
   'dashboard.step': 'step',
   'dashboard.supportedDurations': 'Supported Durations',
   'dashboard.table': 'Table',
-  'dashboard.tableTree': 'TABLES',
   'dashboard.total': 'Total: {time} ms',
   'dashboard.xType': 'X-Axis Type',
   'dashboard.yType': 'Y-Axis Types',
@@ -77,9 +76,9 @@ export default {
   'dashboard.importExplain': 'Import Result JSON',
   'dashboard.exportCSV': 'Export Result as CSV',
   'dashboard.wrapLines': 'Wrap Lines',
-  'dashboard.copy': 'Copy',
   'dashboard.hideSidebar': 'Hide sidebar',
   'dashboard.rerunQuery': 'Rerun Query',
   'dashboard.clearResults': 'Clear results?',
   'dashboard.timeAssistance': 'Time Input Assistance',
+  'dashboard.fetchingDatabases': 'Fetching databases...',
 }

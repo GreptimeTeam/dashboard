@@ -9,7 +9,7 @@ export default function useLocale() {
   })
   const changeLocale = (value: string) => {
     i18.locale.value = value
-    localStorage.setItem('arco-locale', value)
+    localStorage.setItem('greptime-locale', value)
     Message.success(i18.t('navbar.action.locale'))
   }
   return {
