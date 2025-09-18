@@ -92,9 +92,11 @@ export default function useSiderTabs() {
       editorAPI
         .runSQL(`show create table "${nodeData.title}"`, database)
         .then((res: any) => {
-          const sql = `${res.output[0].records.rows[0][1]}`
-          const regex = /ttl = '(\w)+'/g
-          const ttl = sql.match(regex)?.[0].slice(7, -1) || '-'
+          const originSQL = `${res.output[0].records.rows[0][1]}`
+          const sql = originSQL.endsWith(';') ? originSQL : `${originSQL};`
+          // Extract TTL using regex
+          const match = sql.match(/ttl\s*=\s*'([^']+)'/i)
+          const ttl = match?.[1] || '-'
           const result = {
             key: 'createTable',
             value: { sql, ttl },
