@@ -15,16 +15,19 @@ a-card.light-editor-card(:bordered="false")
 </template>
 
 <script lang="ts" setup name="YMLEditorSimple">
+  import { computed } from 'vue'
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { basicSetup } from 'codemirror'
 
   import * as yamlMode from '@codemirror/legacy-modes/mode/yaml'
   import { StreamLanguage, LanguageSupport } from '@codemirror/language'
+  import { sql } from '@codemirror/lang-sql'
 
   const props = defineProps<{
     modelValue: string
     disabled?: boolean
     placeholder?: string
+    language?: string
   }>()
   const emit = defineEmits<{
     (event: 'update:modelValue', value: string): void
@@ -32,8 +35,17 @@ a-card.light-editor-card(:bordered="false")
 
   const yaml = new LanguageSupport(StreamLanguage.define(yamlMode.yaml))
 
-  // TODO: markdown extension
-  const extensions = [basicSetup, yaml]
+  const extensions = computed(() => {
+    const baseExtensions = [basicSetup]
+
+    if (props.language === 'sql') {
+      baseExtensions.push(sql())
+    } else {
+      baseExtensions.push(yaml)
+    }
+
+    return baseExtensions
+  })
   const codeUpdate = (content) => {
     emit('update:modelValue', content)
   }
