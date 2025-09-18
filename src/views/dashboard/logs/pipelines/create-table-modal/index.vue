@@ -105,7 +105,7 @@ a-modal(
       visible.value = false
       tableName.value = ''
       formData.createTableSQL = ''
-      Notification.success('Table created successfully')
+      Notification.success('SQL executed successfully')
     } finally {
       creating.value = false
     }
