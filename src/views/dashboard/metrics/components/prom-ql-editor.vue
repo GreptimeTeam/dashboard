@@ -25,7 +25,7 @@
         template(#icon)
           icon-loading(v-if="queryLoading" spin)
           icon-play-arrow(v-else)
-        | Execute Query
+        | {{ $t('dashboard.runQuery') }}
 </template>
 
 <script setup lang="ts">
