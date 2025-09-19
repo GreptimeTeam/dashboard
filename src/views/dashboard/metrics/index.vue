@@ -12,147 +12,132 @@ a-layout.new-layout
 
   a-layout-content.layout-content
     a-card(:bordered="false")
-      .section-title
-        a-space
-          TimeRangeSelect(
-            v-model:time-length="time"
-            v-model:time-range="rangeTime"
-            button-type="outline"
-            :show-any-time="false"
-          )
-          StepSelector(
-            v-model:selection-type="stepSelectionType"
-            v-model:step-value="currentStep"
-            :unix-time-range="unixTimeRange"
-          )
-
-          a-tooltip(content="Ctrl + Enter" position="right")
-            a-button(
-              type="primary"
-              size="small"
-              :loading="queryLoading"
-              @click="handleRunQuery"
-            )
-              template(#icon)
-                icon-loading(v-if="queryLoading" spin)
-                icon-play-arrow(v-else)
-              | {{ $t('dashboard.runQuery') }}
-
       .query-section
         PromQLEditor(
           ref="promqlEditorRef"
           v-model="currentQuery"
-          style="height: 100px"
           placeholder="Enter PromQL query"
+          :query-loading="queryLoading"
           @query="handleRunQuery"
         )
 
     .section-divider
 
-    // Query Results Section - Chart
-    MetricsChart(
-      :key="currentQuery + queryStep"
-      :data="queryResults"
-      :loading="queryLoading"
-      :query="currentQuery"
-      :step="queryStep"
-      :chart-type="chartType"
-      :time-range="currentTimeRange"
-      @update:chart-type="chartType = $event"
-      @time-range-update="handleTimeRangeUpdate"
-    )
+    a-card(:bordered="false")
+      a-tabs(v-model:active-key="activeTab" type="line")
+        a-tab-pane(key="table" title="Table")
+          .section-title
+            a-space
+              a-date-picker(
+                v-model="instantQueryTime"
+                show-time
+                format="YYYY-MM-DD HH:mm:ss"
+                placeholder="Evaluation time"
+                allow-clear
+                style="width: 200px"
+                size="small"
+              )
 
-    .section-divider(v-if="queryResults && queryResults.length > 0")
+          .table-section
+            a-table(
+              size="small"
+              :data="tableData"
+              :loading="queryLoading"
+              :pagination="false"
+              :scroll="{ x: 800 }"
+              :bordered="false"
+              :show-header="false"
+            )
+              template(#columns)
+                a-table-column(title="Series" data-index="series" :width="600")
+                  template(#cell="{ record }")
+                    .series-cell
+                      | {{ record.metricName }}{
+                      template(v-if="record.labels && record.labels.length > 0")
+                        template(v-for="(label, index) in record.labels" :key="index")
+                          strong {{ label.key }}
+                          | ="{{ label.value }}"
+                          span(v-if="index < record.labels.length - 1") ,
+                      | }
+                a-table-column(title="Values" data-index="values" :width="200")
+                  template(#cell="{ record }")
+                    .values-cell {{ record.values }}
 
-    a-card(v-if="tableResults && tableResults.length > 0" :bordered="false")
-      .section-title
-        | Table View
-      .table-section(v-if="tableResults && tableResults.length > 0")
-        a-table(
-          size="small"
-          :columns="tableColumns"
-          :data="tableData"
-          :loading="queryLoading"
-          :pagination="false"
-          :scroll="{ x: 800 }"
-          :bordered="false"
-        )
+        a-tab-pane(key="graph" title="Graph")
+          MetricsChart
+        template(#extra)
+          .series-count(v-if="seriesCount > 0") 
+            | Result series: {{ seriesCount }} &nbsp;&nbsp; step: {{ currentStep }}s
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, onMounted, watch, nextTick } from 'vue'
-  import { useStorage } from '@vueuse/core'
+  import { ref, computed, onMounted, watch, nextTick, provide } from 'vue'
   import { useRoute, useRouter } from 'vue-router'
+  import { useStorage } from '@vueuse/core'
   import { useSeries } from '@/hooks/use-series'
   import { Message } from '@arco-design/web-vue'
-  import { IconLoading, IconPlayArrow } from '@arco-design/web-vue/es/icon'
-  import TimeRangeSelect from '@/components/time-range-select/index.vue'
+  import { storeToRefs } from 'pinia'
+  import { useAppStore } from '@/store'
+  import type { MetricsContext } from './types'
   import MetricSidebar from './components/metric-sidebar.vue'
   import PromQLEditor from './components/prom-ql-editor.vue'
   import MetricsChart from './components/metrics-chart.vue'
-  import StepSelector from './components/step-selector.vue'
 
-  // Router for URL sync
   const route = useRoute()
   const router = useRouter()
-
-  // Use the series composable with integrated time range and step calculation
+  const seriesHook = useSeries()
   const {
     currentQuery,
-    rangeQueryResult: queryResults,
+    rangeQueryResult,
     instantQueryResult: tableResults,
     executeQuery,
     executeInstantQuery,
-    // Time range state
     rangeTime,
     time,
-    unixTimeRange,
-    queryStep,
-    currentTimeRange,
     currentStep,
     queryLoading,
-  } = useSeries()
+    instantQueryTime,
+  } = seriesHook
 
-  // Sidebar state
   const sidebarWidth = useStorage('metrics-sidebar-width', 320)
-
-  // Query state
-
-  const chartType = ref('line') // Chart type state
-
-  // Step selector state
-  const stepSelectionType = ref('medium') // Selection type: low/medium/high/fixed/custom
-  // URL sync state
+  const activeTab = ref(route.query.tab || 'table')
+  const chartType = ref('line')
+  const stepSelectionType = ref('medium')
   const hasInitParams = ref(false)
-  // Track if we're currently updating query params to prevent double execution
-  const isUpdatingQueryParams = ref(false)
 
   // Initialize from URL query parameters
   const initializeFromQuery = () => {
-    const { promql, timeLength, timeRange: urlTimeRange, stepType, stepValue, chartType: urlChartType } = route.query
+    const {
+      promql,
+      timeLength,
+      timeRange: urlTimeRange,
+      stepType,
+      stepValue,
+      chartType: urlChartType,
+      tab,
+      instantTime,
+    } = route.query
 
-    // PromQL query
     if (promql && typeof promql === 'string') {
       currentQuery.value = decodeURIComponent(promql)
       hasInitParams.value = true
     }
 
-    // Time length (relative time)
     if (timeLength !== undefined) {
       const length = parseInt(timeLength as string, 10)
       if (!Number.isNaN(length)) {
         time.value = length
-        rangeTime.value = []
+        if (rangeTime.value.length > 0) {
+          rangeTime.value = []
+        }
       }
     }
 
-    // Time range (absolute time)
     if (urlTimeRange && Array.isArray(urlTimeRange)) {
       rangeTime.value = urlTimeRange as [string, string]
       time.value = 0
     }
 
-    // Step parameter
     if (stepType && typeof stepType === 'string') {
       stepSelectionType.value = stepType
     }
@@ -161,26 +146,29 @@ a-layout.new-layout
       currentStep.value = parseInt(stepValue, 10)
     }
 
-    // Chart type
     if (urlChartType && typeof urlChartType === 'string') {
       chartType.value = urlChartType
+    }
+
+    if (tab && typeof tab === 'string' && ['graph', 'table'].includes(tab)) {
+      activeTab.value = tab
+    }
+
+    if (instantTime && typeof instantTime === 'string') {
+      instantQueryTime.value = instantTime
     }
   }
 
   // Update URL query parameters
   const updateQueryParams = () => {
-    isUpdatingQueryParams.value = true
-
     const query = { ...route.query }
 
-    // PromQL query
     if (currentQuery.value.trim()) {
       query.promql = encodeURIComponent(currentQuery.value)
     } else {
       delete query.promql
     }
 
-    // Time selection
     if (rangeTime.value.length === 2) {
       query.timeRange = rangeTime.value
       delete query.timeLength
@@ -192,18 +180,34 @@ a-layout.new-layout
     query.stepType = stepSelectionType.value
     query.stepValue = currentStep.value.toString()
 
-    // Chart type
     if (chartType.value && chartType.value !== 'line') {
       query.chartType = chartType.value
     } else {
       delete query.chartType
     }
-    // query.queryid = Math.random().toString(36).substring(2, 15)
 
-    router.push({ query }).finally(() => {
-      // Reset the flag after router update completes
-      isUpdatingQueryParams.value = false
-    })
+    query.tab = activeTab.value
+
+    if (instantQueryTime.value && activeTab.value === 'table') {
+      query.instantTime = instantQueryTime.value as unknown as string
+    } else {
+      delete query.instantTime
+    }
+
+    const prevQuery = { ...route.query }
+    delete prevQuery.queryId
+    delete query.queryId
+    const newQueryWithoutId = { ...query }
+
+    query.queryId = Math.random().toString(36).substring(2, 15)
+
+    const paramsChanged = JSON.stringify(prevQuery) !== JSON.stringify(newQueryWithoutId)
+
+    if (paramsChanged) {
+      router.push({ query })
+    } else {
+      router.replace({ query })
+    }
   }
 
   // Computed properties
@@ -213,29 +217,11 @@ a-layout.new-layout
     return Math.max(minWidth, Math.min(sidebarWidth.value, maxWidth))
   })
 
-  // Table configuration
-  const tableColumns = computed(() => [
-    {
-      title: 'Series',
-      dataIndex: 'series',
-      key: 'series',
-      width: 300,
-      ellipsis: true,
-    },
-    {
-      title: 'Value',
-      dataIndex: 'value',
-      key: 'value',
-      width: 120,
-      align: 'right' as const,
-    },
-  ])
-
   const tableData = computed(() => {
     if (!tableResults.value || tableResults.value.length === 0) return []
     const rows: any[] = []
     tableResults.value.forEach((series) => {
-      const metricName = series.metric?.__name__ || 'unknown'
+      const metricName = series.metric?.__name__
       const seriesLabels = { ...series.metric }
       delete seriesLabels.__name__
 
@@ -244,11 +230,26 @@ a-layout.new-layout
         .join(', ')
       const seriesName = labelStr ? `${metricName}{${labelStr}}` : metricName
 
-      // Instant query returns single value, not array of values
+      const labels = Object.entries(seriesLabels).map(([key, value]) => ({
+        key,
+        value,
+      }))
+
       if (series.value !== undefined) {
+        let valuesList
+        if (Array.isArray(series.value) && series.value.length === 2 && !Array.isArray(series.value[0])) {
+          valuesList = series.value[1]
+        } else if (Array.isArray(series.value) && Array.isArray(series.value[0])) {
+          valuesList = series.value
+            .map((valuePoint: [number, string]) => `${valuePoint[0]} @${valuePoint[1]}`)
+            .join('\n')
+        }
+
         rows.push({
           series: seriesName,
-          value: series.value[1],
+          metricName,
+          labels,
+          values: valuesList,
         })
       }
     })
@@ -258,27 +259,27 @@ a-layout.new-layout
 
   const promqlEditorRef = ref()
 
-  // Query execution - now much simpler with reactive hook
-  const handleRunQuery = async () => {
-    updateQueryParams()
-    nextTick(async () => {
-      // Execute range query for chart
-      await executeQuery(currentQuery.value)
-      // Execute instant query for table
-      if (currentQuery.value.trim()) {
-        await executeInstantQuery(currentQuery.value)
-      }
-    })
-  }
+  const seriesCount = computed(() => {
+    if (activeTab.value === 'graph') {
+      return rangeQueryResult.value?.length || 0
+    }
+    return tableResults.value?.length || 0
+  })
 
-  // Handle time range update from chart selection
+  const handleRunQuery = updateQueryParams
+
   const handleTimeRangeUpdate = (newTimeRange: [number, number]) => {
-    // Switch to custom time range mode and update the time range
-    time.value = 0 // Switch to custom mode
+    time.value = 0
     rangeTime.value = [newTimeRange[0].toString(), newTimeRange[1].toString()]
-    // Execute new query with updated time range
-    handleRunQuery()
+    updateQueryParams()
   }
+  provide<MetricsContext>('metricsContext', {
+    ...seriesHook,
+    chartType,
+    stepSelectionType,
+    handleTimeRangeUpdate,
+    updateQueryParams,
+  })
 
   const handleCopyText = async (text: string) => {
     try {
@@ -293,24 +294,54 @@ a-layout.new-layout
     if (promqlEditorRef.value) {
       promqlEditorRef.value.insertTextAtCursor(text)
     }
-  } // Watch for router query changes and auto-execute query if promql is present
-  watch(
-    () => [route.query.promql, route.query.timeRange, route.query.timeLength, route.query.queryid],
-    (newVal) => {
-      // Skip if we're currently updating query params ourselves
-      if (isUpdatingQueryParams.value) return
+  }
 
-      initializeFromQuery()
-      if (currentQuery.value) {
-        nextTick(async () => {
-          // Execute range query for chart
-          await executeQuery(currentQuery.value)
-          // Execute instant query for table
-          await executeInstantQuery(currentQuery.value)
-        })
+  onMounted(() => {
+    initializeFromQuery()
+    nextTick(() => {
+      updateQueryParams()
+    })
+  })
+
+  watch(activeTab, (newTab) => {
+    setTimeout(() => {
+      updateQueryParams()
+    }, 200)
+  })
+
+  watch(
+    () => instantQueryTime.value,
+    () => {
+      updateQueryParams()
+    }
+  )
+
+  watch(
+    () => {
+      const { queryId, ...otherParams } = route.query
+      return otherParams
+    },
+    (newParams, oldParams) => {
+      if (JSON.stringify(newParams) !== JSON.stringify(oldParams)) {
+        initializeFromQuery()
       }
     },
-    { immediate: true }
+    { deep: true }
+  )
+
+  watch(
+    () => route.query.queryId,
+    (newQueryId) => {
+      if (newQueryId && currentQuery.value.trim()) {
+        nextTick(async () => {
+          if (activeTab.value === 'graph') {
+            await executeQuery(currentQuery.value)
+          } else if (activeTab.value === 'table') {
+            await executeInstantQuery(currentQuery.value)
+          }
+        })
+      }
+    }
   )
 
   const { hideSidebar } = storeToRefs(useAppStore())
@@ -387,5 +418,37 @@ a-layout.new-layout
   }
   :deep(.arco-table-th) {
     background-color: #fff;
+  }
+
+  .table-controls {
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--color-border);
+
+    .arco-space {
+      align-items: center;
+    }
+  }
+  :deep(.arco-tabs-content) {
+    padding-top: 0;
+  }
+
+  .series-count {
+    font-size: 12px;
+    color: var(--color-text-3);
+    font-weight: normal;
+    margin-right: 8px;
+  }
+
+  .empty-state {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+  }
+  :deep(.arco-tabs-tab-active) {
+    color: var(--brand-color);
+  }
+  :deep(.arco-tabs-nav-ink) {
+    background-color: var(--brand-color);
   }
 </style>

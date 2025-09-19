@@ -1,10 +1,20 @@
 <template lang="pug">
 a-card.metrics-chart(:bordered="false")
-  .section-title(v-if="hasData")
+  .section-title
     a-space
-      span Chart View
-      span.series-count(v-if="seriesData.length > 0") 
-        | ({{ seriesData.length }} {{ seriesData.length === 1 ? 'series' : 'series' }}, step: {{ step }}s)
+      .tab-controls
+        a-space
+          TimeRangeSelect(
+            v-model:time-length="time"
+            v-model:time-range="rangeTime"
+            button-type="outline"
+            :show-any-time="false"
+          )
+          StepSelector(
+            v-model:selection-type="stepSelectionType"
+            v-model:step-value="currentStep"
+            :unix-time-range="unixTimeRange"
+          )
 
     a-space(style="margin-left: auto")
       a-radio-group(v-model="localChartType" type="button" size="small")
@@ -18,7 +28,7 @@ a-card.metrics-chart(:bordered="false")
       Chart(
         :key="chartKey"
         ref="chartRef"
-        height="610px"
+        :height="chartHeight + 'px'"
         :options="chartOption"
         @datazoom="handleDataZoom"
       )
@@ -32,33 +42,44 @@ a-card.metrics-chart(:bordered="false")
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, watch, nextTick } from 'vue'
+  import { ref, computed, watch, nextTick, inject, type Ref, type ComputedRef } from 'vue'
+  import { useWindowSize } from '@vueuse/core'
   import Chart from '@/components/raw-chart/index.vue'
+  import TimeRangeSelect from '@/components/time-range-select/index.vue'
+
   import dayjs from 'dayjs'
   import type { EChartsOption } from 'echarts'
+  import StepSelector from './step-selector.vue'
+  import type { MetricsContext } from '../types'
 
-  const props = defineProps<{
-    data: any[] | null
-    loading: boolean
-    query: string
-    timeRange: number[] | []
-    step: number | undefined // Step in seconds, not string format
-    chartType: string // Chart type from parent
-  }>()
+  const metricsContext = inject<MetricsContext>('metricsContext')
+  const {
+    rangeQueryResult,
+    queryLoading: loading,
+    currentQuery: query,
+    currentTimeRange: timeRange,
+    queryStep: step,
+    chartType,
+    time,
+    rangeTime,
+    unixTimeRange,
+    stepSelectionType,
+    currentStep,
+    handleTimeRangeUpdate,
+    updateQueryParams,
+  } = metricsContext
 
-  const emit = defineEmits<{
-    (e: 'update:chartType', value: string): void
-    (e: 'timeRangeUpdate', value: [number, number]): void
-  }>()
-
-  // Chart state
   const chartRef = ref()
-  const localChartType = computed({
-    get: () => props.chartType,
-    set: (value: string) => emit('update:chartType', value),
-  })
+  const localChartType = chartType
 
-  // Helper functions for chart type handling
+  const { height: windowHeight } = useWindowSize()
+
+  watch(
+    () => JSON.stringify({ time: time.value, rangeTime: rangeTime.value, step: currentStep.value }),
+    () => {
+      updateQueryParams()
+    }
+  )
   const getChartType = (type: string): string => {
     switch (type) {
       case 'stacked-line':
@@ -73,10 +94,9 @@ a-card.metrics-chart(:bordered="false")
   }
 
   const chartKey = computed(() => {
-    return props.query + props.step
+    return query.value + step.value
   })
 
-  // Handle range selection on chart
   const handleDataZoom = (event: any) => {
     if (!event.batch || !event.batch[0]) return
 
@@ -84,25 +104,20 @@ a-card.metrics-chart(:bordered="false")
 
     if (!startValue || !endValue) return
 
-    // Convert from milliseconds to seconds for time range
     const startTime = Math.floor(new Date(startValue).getTime() / 1000)
     const endTime = Math.floor(new Date(endValue).getTime() / 1000)
-    // Emit time range update
-    emit('timeRangeUpdate', [startTime, endTime])
+    handleTimeRangeUpdate([startTime, endTime])
   }
 
   const isStackedChart = (type: string): boolean => {
     return type === 'stacked-line' || type === 'stacked-bar'
   }
 
-  // Fill missing timestamps in time series data
   const fillMissingTimestamps = (series: any[], start: number, end: number, stepSeconds: number) => {
     if (!series || series.length === 0) return []
 
-    // Step is already in seconds, no need to parse
     if (!stepSeconds) return series
 
-    // Generate expected timestamps
     const expectedTimestamps: number[] = []
     let current = start
     while (current <= end) {
@@ -110,18 +125,15 @@ a-card.metrics-chart(:bordered="false")
       current += stepSeconds
     }
 
-    // Fill missing data points
     return series.map((serie) => {
       const filledData: [number, string | number][] = []
 
       expectedTimestamps.forEach((timestamp) => {
-        // Find existing data point for this timestamp
         const existingPoint = serie.values?.find((point: any) => point[0] === timestamp)
 
         if (existingPoint) {
           filledData.push(existingPoint)
         } else {
-          // Fill with null for missing timestamps
           filledData.push([timestamp, null])
         }
       })
@@ -133,20 +145,33 @@ a-card.metrics-chart(:bordered="false")
     })
   }
 
-  // Computed properties
-  const hasData = computed(() => props.data && props.data.length > 0)
+  const hasData = computed(() => rangeQueryResult.value && rangeQueryResult.value.length > 0)
 
   const seriesData = computed(() => {
     if (!hasData.value) return []
 
-    let filteredData = props.data.filter((series) => series.values && series.values.length > 0)
+    let filteredData = rangeQueryResult.value.slice()
 
-    // Fill missing timestamps if time range and step are available
-    if (props.timeRange && props.timeRange.length === 2 && props.step) {
-      const [start, end] = props.timeRange as [number, number]
-      filteredData = fillMissingTimestamps(filteredData, start, end, props.step)
+    if (timeRange.value && timeRange.value.length === 2 && step.value) {
+      const [start, end] = timeRange.value as [number, number]
+      filteredData = fillMissingTimestamps(filteredData, start, end, step.value)
     }
     return filteredData
+  })
+
+  const graphHeight = 530
+  const legendGap = 30
+  const legendItemHeight = 18
+  const legendHeight = computed(() => {
+    const seriesCount = seriesData.value.length
+    const maxAvailableHeight = windowHeight.value - graphHeight - legendGap - 200
+    const calculatedHeight = seriesCount * (legendItemHeight + 10)
+    return Math.min(calculatedHeight, Math.max(maxAvailableHeight, 100))
+  })
+  const chartHeight = computed(() => {
+    const baseHeight = graphHeight
+    const dynamicHeight = legendHeight.value
+    return baseHeight + dynamicHeight + legendGap
   })
 
   const chartOption = computed<EChartsOption>(() => {
@@ -156,23 +181,18 @@ a-card.metrics-chart(:bordered="false")
       const labels = { ...item.metric }
       delete labels.__name__
 
-      // Create series name from metric and labels
       const labelStr = Object.entries(labels)
         .map(([k, v]) => `${k}="${v}"`)
         .join(', ')
       const seriesName = labelStr ? `${metricName}{${labelStr}}` : metricName
 
-      // Transform values to chart data points
       const data = item.values.map(([timestamp, value]: [number, string | number]) => {
         if (value === null) {
-          // Return null to create a gap in the chart
           return [timestamp * 1000, null]
         }
         return [timestamp * 1000, parseFloat(value as string)]
       })
-      // Don't filter out null values - let ECharts handle them with connectNulls: false
 
-      // Determine if we should show symbols based on data point count
       const shouldShowSymbols = localChartType.value === 'scatter' || data.length <= 20
       let symbolSize = 0
       if (shouldShowSymbols) {
@@ -190,29 +210,25 @@ a-card.metrics-chart(:bordered="false")
           localChartType.value === 'scatter'
             ? undefined
             : {
-                width: 1.5, // Wider lines like Prometheus UI
-                color: undefined, // Use default series color
-                opacity: 1, // Full opacity for better visibility
+                width: 1.5,
+                color: undefined,
+                opacity: 1,
               },
         emphasis: {
           focus: 'series',
           lineStyle: {
-            width: 2, // Even wider on hover/focus
+            width: 2,
             opacity: 1,
           },
         },
-        connectNulls: false, // Don't connect lines across null values (gaps)
-        // Add area fill for stacked lines
+        connectNulls: false,
         areaStyle: isStackedChart(localChartType.value)
           ? {
               opacity: 0.6,
             }
           : undefined,
-        // Individual series tooltip - REMOVED: Not working properly for line charts
       }
     })
-
-    const gridBottom = Math.min(series.length * 40 + 20, 160)
 
     return {
       tooltip: {
@@ -221,9 +237,9 @@ a-card.metrics-chart(:bordered="false")
         enterable: false,
         formatter: (params: any[]) => {
           if (!params || params.length === 0) return ''
-
-          const time = dayjs(params[0].value[0]).format('YYYY-MM-DD HH:mm:ss')
-          let content = `<div style="margin-bottom: 8px; font-weight: 600; color: #333;">${time}</div>`
+          let content = `<div style="margin-bottom: 8px; font-weight: 600; color: #333;">${dayjs(
+            params[0].value[0]
+          ).format('YYYY-MM-DD HH:mm:ss')}</div>`
 
           params.forEach((param) => {
             const {
@@ -232,7 +248,6 @@ a-card.metrics-chart(:bordered="false")
               value: [, value],
             } = param
 
-            // Skip tooltip for null values (filled gaps)
             if (value === null || value === undefined) return
 
             content += `
@@ -251,12 +266,14 @@ a-card.metrics-chart(:bordered="false")
         bottom: 0,
         type: 'scroll',
         orient: 'vertical',
-        top: 610 - gridBottom + 20,
+        top: graphHeight + 20,
+        itemHeight: legendItemHeight,
+        itemGap: 10,
       },
       grid: {
         left: 30,
         right: 30,
-        bottom: gridBottom, // Dynamic bottom margin based on series count
+        bottom: legendHeight.value + legendGap,
         top: 30,
         containLabel: true,
       },
@@ -265,9 +282,9 @@ a-card.metrics-chart(:bordered="false")
           type: 'inside',
           xAxisIndex: 0,
           yAxisIndex: 'none',
-          zoomOnMouseWheel: false, // Enable mouse wheel zoom
-          moveOnMouseMove: true, // Enable mouse drag pan
-          preventDefaultMouseMove: false, // Allow normal mouse behavior
+          zoomOnMouseWheel: false,
+          moveOnMouseMove: true,
+          preventDefaultMouseMove: false,
         },
       ],
       toolbox: {
@@ -306,9 +323,7 @@ a-card.metrics-chart(:bordered="false")
       },
       yAxis: {
         type: 'value',
-        // Calculate min/max from actual data values
         min: (value: any) => {
-          // Find the minimum non-null value across all series
           let minValue = Infinity
           series.forEach((s) => {
             if (s.data && Array.isArray(s.data)) {
@@ -319,11 +334,9 @@ a-card.metrics-chart(:bordered="false")
               })
             }
           })
-          // Add some padding below the minimum value
           return Math.floor(minValue * 0.999)
         },
         max: (value: any) => {
-          // Find the maximum non-null value across all series
           let maxValue = -Infinity
           series.forEach((s) => {
             if (s.data && Array.isArray(s.data)) {
@@ -334,7 +347,6 @@ a-card.metrics-chart(:bordered="false")
               })
             }
           })
-          // Add some padding above the maximum value
           return Math.ceil(maxValue * 1.001)
         },
         axisLine: {
@@ -378,25 +390,16 @@ a-card.metrics-chart(:bordered="false")
       }
     }
 
-    // Hide toolbox but keep functionality
-    :deep(.echarts-tooltip) {
-      // Keep tooltip visible
-    }
-
     :deep(.echarts-toolbox) {
-      // Hide toolbox completely but keep zoom functionality
       display: none !important;
       visibility: hidden !important;
       opacity: 0 !important;
       pointer-events: none !important;
     }
 
-    // Alternative approach - hide any toolbox elements
     :deep([class*='toolbox']) {
       display: none !important;
     }
-
-    // Hide toolbox using multiple selectors to ensure it's hidden
     :deep(.echarts-toolbox),
     :deep(.ec-toolbox),
     :deep([class*='ec-toolbox']),
@@ -409,5 +412,9 @@ a-card.metrics-chart(:bordered="false")
       height: 0 !important;
       overflow: hidden !important;
     }
+  }
+  .series-count {
+    text-align: center;
+    color: var(--color-text-secondary);
   }
 </style>

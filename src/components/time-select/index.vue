@@ -107,8 +107,10 @@ a-trigger#time-select(
 
   const selectTimeLength = (value: any) => {
     emit('update:timeLength', value)
-    emit('update:timeRange', [])
-    emit('change')
+    if (props.timeRange.length > 0) {
+      emit('update:timeRange', [])
+    }
+
     visible.value = false
     rangePickerVisible.value = false
   }
