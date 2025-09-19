@@ -41,8 +41,6 @@ a-spin(style="width: 100%; height: 100%")
   import type { PipeFile } from '@/api/pipeline'
   import PipeFileView from './PipeFileView.vue'
 
-  const { dataStatusMap } = storeToRefs(useUserStore())
-
   const route = useRoute()
   const { filename } = route.query
   const selectedKeys = ref<Array<string>>(filename ? [filename as string] : [])

@@ -129,3 +129,17 @@ export function debugContent(pipeline: string, data: any, contentType: string) {
     }
   )
 }
+
+export function getPipelineDDL(pipelineName: string, tableName: string) {
+  const appStore = useAppStore()
+  return axios
+    .get(`/v1/pipelines/${pipelineName}/ddl`, {
+      params: {
+        table: tableName,
+        db: appStore.database,
+      },
+    })
+    .then((result) => {
+      return result.sql.sql
+    })
+}
