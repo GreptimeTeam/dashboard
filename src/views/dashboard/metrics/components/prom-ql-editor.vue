@@ -54,10 +54,7 @@
   const appStore = useAppStore()
   let editorView: any = null
 
-  // Use the same Prometheus API base URL as in metrics.ts
   const prometheusBaseURL = '/v1/prometheus/api/v1'
-
-  // Helper function to create a Response-like object with proper body stream
   const createResponse = (data: any, status = 200, statusText = 'OK'): Response => {
     const responseBody = JSON.stringify(data)
     const bodyStream = new ReadableStream({
@@ -74,7 +71,7 @@
       headers: new Headers(),
       redirected: false,
       type: 'cors' as const,
-      url: '', // This URL is not used by the extension, it uses the one from the original request
+      url: '',
       body: bodyStream,
       bodyUsed: false,
       clone: () => ({ ...data, body: bodyStream }),
@@ -87,11 +84,9 @@
     } as unknown as Response
   }
 
-  // Handle query execution
   const handleQuery = () => {
     emit('query')
   }
-  // Helper function to normalize URL paths
   const normalizeUrl = (resource: any): string => {
     const requestUrl = typeof resource === 'object' && resource.url ? resource.url : resource
 
@@ -113,11 +108,9 @@
     return requestUrl
   }
 
-  // Custom HTTP client for GreptimeDB API
   const myHTTPClient = async (resource: any, options: any = {}): Promise<Response> => {
     const requestUrl = normalizeUrl(resource)
 
-    // Skip metadata requests as GreptimeDB doesn't support this endpoint
     if (requestUrl.includes('/metadata')) {
       return createResponse({ status: 'success', data: {} })
     }
@@ -145,32 +138,25 @@
         ...config,
       })
 
-      // Format response data based on endpoint type
       let responseData = { status: 'success', data: response.data }
 
-      // Handle different endpoint types
       if (
         requestUrl.includes('/label/__name__/values') ||
         requestUrl.includes('/labels') ||
         (requestUrl.includes('/label/') && requestUrl.includes('/values'))
       ) {
-        // For metric names, label names, and label values - wrap array in prometheus format
         responseData = { status: 'success', data: response.data }
 
-        // Ensure data is an array
         if (!Array.isArray(response.data)) {
           responseData.data = []
         }
       } else if (requestUrl.includes('/series')) {
-        // For series requests (used for label suggestions) - return raw series objects
         responseData = { status: 'success', data: response.data }
 
-        // Ensure data is an array
         if (!Array.isArray(response.data)) {
           responseData.data = []
         }
       } else {
-        // Default case - wrap in prometheus format
         responseData = { status: 'success', data: response.data }
 
         if (!Array.isArray(response.data)) {
@@ -200,40 +186,38 @@
         remote: {
           url: '',
           fetchFn: myHTTPClient,
-          lookbackInterval: 60 * 60 * 1000, // 1 hour
+          lookbackInterval: 60 * 60 * 1000,
         },
       })
       .asExtension()
   }
 
-  // Custom keymap to prevent Enter from creating new lines (Prometheus UI style)
   const singleLineKeymap = Prec.highest(
     keymap.of([
       {
         key: 'Enter',
-        run: () => true, // Prevent default behavior - no new lines
+        run: () => true,
       },
       {
         key: 'Shift-Enter',
-        run: () => true, // Prevent Shift+Enter new lines
+        run: () => true,
       },
       {
         key: 'Ctrl-Enter',
         run: () => {
           handleQuery()
-          return true // Prevent default behavior
+          return true
         },
       },
       {
         key: 'Cmd-Enter',
         run: () => {
-          return true // Prevent default behavior (Mac)
+          return true
         },
       },
     ])
   )
 
-  // Extensions array
   const extensions = computed(() => {
     const exts = [basicSetup, singleLineKeymap]
 
@@ -244,19 +228,14 @@
     return exts
   })
 
-  // Handle code changes and filter out newlines
   const codeUpdate = (content: string) => {
-    // Remove all newlines to enforce single-line behavior
     const singleLineContent = content.replace(/[\r\n]+/g, ' ').trim()
     emit('update:modelValue', singleLineContent)
   }
 
-  // Handle editor ready
   const onEditorReady = (payload: any) => {
     editorView = payload.view
   }
-
-  // Public method to insert text at cursor
   const insertTextAtCursor = (text: string) => {
     if (!editorView) return
 
@@ -274,26 +253,22 @@
     editorView.focus()
   }
 
-  // Focus the editor
   const focus = () => {
     if (editorView) {
       editorView.focus()
     }
   }
 
-  // Get current cursor position
   const getCursorPosition = () => {
     if (!editorView) return 0
     return editorView.state.selection.main.head
   }
 
-  // Get current text
   const getText = () => {
     if (!editorView) return ''
     return editorView.state.doc.toString()
   }
 
-  // Watch for database changes and refresh extension
   watch(
     () => appStore.database,
     () => {
@@ -301,12 +276,9 @@
     }
   )
 
-  // Initialize on mount
   onMounted(() => {
     initializePromQLExtension()
   })
-
-  // Expose methods for parent component
   defineExpose({
     insertTextAtCursor,
     focus,
@@ -339,14 +311,12 @@
     outline: none;
   }
 
-  // Smooth transition for focus state
   :deep(.cm-editor) {
     border: 1px solid var(--color-border);
     border-radius: 4px 0 0 4px;
     transition: all 0.2s ease-in-out;
   }
 
-  // Single line editor styles (Prometheus UI style)
   :deep(.cm-editor) {
     height: 40px;
     overflow: visible;
@@ -377,7 +347,6 @@
     background-color: transparent;
   }
 
-  // Hide line numbers like Prometheus UI
   :deep(.cm-gutters) {
     display: none !important;
   }
@@ -386,7 +355,6 @@
     display: none !important;
   }
 
-  // Ensure autocomplete popup is visible
   :deep(.cm-tooltip) {
     z-index: 1000;
   }
@@ -394,8 +362,6 @@
   :deep(.cm-tooltip.cm-completionInfo) {
     z-index: 1001;
   }
-
-  // Prometheus UI style autocomplete popup
   :deep(.cm-tooltip.cm-tooltip-autocomplete) {
     background-color: #f8f8f8;
     border: 1px solid rgba(52, 79, 113, 0.2);
@@ -433,7 +399,6 @@
     min-width: 30%;
   }
 
-  // Prometheus UI style completion info popup
   :deep(.cm-tooltip.cm-completionInfo) {
     background-color: #d6ebff;
     border: 1px solid rgba(52, 79, 113, 0.2);
@@ -447,7 +412,6 @@
     z-index: 1001;
   }
 
-  // Prometheus UI style completion icons
   :deep(.cm-completionIcon) {
     box-sizing: content-box;
     font-size: 16px;
@@ -458,14 +422,11 @@
     opacity: 1;
   }
 
-  // Prometheus UI style matched text highlighting
   :deep(.cm-completionMatchedText) {
     color: #0066bf;
     text-decoration: none;
     font-weight: bold;
   }
-
-  // Prometheus UI style completion details
   :deep(.cm-completionDetail) {
     float: right;
     color: #999;

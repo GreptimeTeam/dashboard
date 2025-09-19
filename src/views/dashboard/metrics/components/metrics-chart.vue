@@ -52,10 +52,7 @@ a-card.metrics-chart(:bordered="false")
   import StepSelector from './step-selector.vue'
   import type { MetricsContext } from '../types'
 
-  // Inject the metrics context
   const metricsContext = inject<MetricsContext>('metricsContext')
-
-  // Destructure the context for easier access
   const {
     rangeQueryResult,
     queryLoading: loading,
@@ -72,24 +69,17 @@ a-card.metrics-chart(:bordered="false")
     updateQueryParams,
   } = metricsContext
 
-  // Chart state
   const chartRef = ref()
   const localChartType = chartType
 
-  // Get window size for responsive legend height
   const { height: windowHeight } = useWindowSize()
 
-  // Watch for time range changes only - step changes are handled separately
-  // to avoid multiple executions when time change causes step change
   watch(
     () => JSON.stringify({ time: time.value, rangeTime: rangeTime.value, step: currentStep.value }),
     () => {
-      // Update URL parameters when time range changes
       updateQueryParams()
     }
   )
-
-  // Helper functions for chart type handling
   const getChartType = (type: string): string => {
     switch (type) {
       case 'stacked-line':
@@ -107,7 +97,6 @@ a-card.metrics-chart(:bordered="false")
     return query.value + step.value
   })
 
-  // Handle range selection on chart
   const handleDataZoom = (event: any) => {
     if (!event.batch || !event.batch[0]) return
 
@@ -115,10 +104,8 @@ a-card.metrics-chart(:bordered="false")
 
     if (!startValue || !endValue) return
 
-    // Convert from milliseconds to seconds for time range
     const startTime = Math.floor(new Date(startValue).getTime() / 1000)
     const endTime = Math.floor(new Date(endValue).getTime() / 1000)
-    // Call the time range update handler from context
     handleTimeRangeUpdate([startTime, endTime])
   }
 
@@ -126,14 +113,11 @@ a-card.metrics-chart(:bordered="false")
     return type === 'stacked-line' || type === 'stacked-bar'
   }
 
-  // Fill missing timestamps in time series data
   const fillMissingTimestamps = (series: any[], start: number, end: number, stepSeconds: number) => {
     if (!series || series.length === 0) return []
 
-    // Step is already in seconds, no need to parse
     if (!stepSeconds) return series
 
-    // Generate expected timestamps
     const expectedTimestamps: number[] = []
     let current = start
     while (current <= end) {
@@ -141,18 +125,15 @@ a-card.metrics-chart(:bordered="false")
       current += stepSeconds
     }
 
-    // Fill missing data points
     return series.map((serie) => {
       const filledData: [number, string | number][] = []
 
       expectedTimestamps.forEach((timestamp) => {
-        // Find existing data point for this timestamp
         const existingPoint = serie.values?.find((point: any) => point[0] === timestamp)
 
         if (existingPoint) {
           filledData.push(existingPoint)
         } else {
-          // Fill with null for missing timestamps
           filledData.push([timestamp, null])
         }
       })
@@ -164,7 +145,6 @@ a-card.metrics-chart(:bordered="false")
     })
   }
 
-  // Computed properties
   const hasData = computed(() => rangeQueryResult.value && rangeQueryResult.value.length > 0)
 
   const seriesData = computed(() => {
@@ -172,7 +152,6 @@ a-card.metrics-chart(:bordered="false")
 
     let filteredData = rangeQueryResult.value.slice()
 
-    // Fill missing timestamps if time range and step are available
     if (timeRange.value && timeRange.value.length === 2 && step.value) {
       const [start, end] = timeRange.value as [number, number]
       filteredData = fillMissingTimestamps(filteredData, start, end, step.value)
@@ -185,11 +164,10 @@ a-card.metrics-chart(:bordered="false")
   const legendItemHeight = 18
   const legendHeight = computed(() => {
     const seriesCount = seriesData.value.length
-    const maxAvailableHeight = windowHeight.value - graphHeight - legendGap - 200 // 200px for other UI elements
+    const maxAvailableHeight = windowHeight.value - graphHeight - legendGap - 200
     const calculatedHeight = seriesCount * (legendItemHeight + 10)
-    return Math.min(calculatedHeight, Math.max(maxAvailableHeight, 100)) // Minimum 100px
+    return Math.min(calculatedHeight, Math.max(maxAvailableHeight, 100))
   })
-  // Dynamic chart height based on series count
   const chartHeight = computed(() => {
     const baseHeight = graphHeight
     const dynamicHeight = legendHeight.value
@@ -203,22 +181,18 @@ a-card.metrics-chart(:bordered="false")
       const labels = { ...item.metric }
       delete labels.__name__
 
-      // Create series name from metric and labels
       const labelStr = Object.entries(labels)
         .map(([k, v]) => `${k}="${v}"`)
         .join(', ')
       const seriesName = labelStr ? `${metricName}{${labelStr}}` : metricName
 
-      // Transform values to chart data points
       const data = item.values.map(([timestamp, value]: [number, string | number]) => {
         if (value === null) {
-          // Return null to create a gap in the chart
           return [timestamp * 1000, null]
         }
         return [timestamp * 1000, parseFloat(value as string)]
       })
 
-      // Determine if we should show symbols based on data point count
       const shouldShowSymbols = localChartType.value === 'scatter' || data.length <= 20
       let symbolSize = 0
       if (shouldShowSymbols) {
@@ -236,25 +210,23 @@ a-card.metrics-chart(:bordered="false")
           localChartType.value === 'scatter'
             ? undefined
             : {
-                width: 1.5, // Wider lines like Prometheus UI
-                color: undefined, // Use default series color
-                opacity: 1, // Full opacity for better visibility
+                width: 1.5,
+                color: undefined,
+                opacity: 1,
               },
         emphasis: {
           focus: 'series',
           lineStyle: {
-            width: 2, // Even wider on hover/focus
+            width: 2,
             opacity: 1,
           },
         },
-        connectNulls: false, // Don't connect lines across null values (gaps)
-        // Add area fill for stacked lines
+        connectNulls: false,
         areaStyle: isStackedChart(localChartType.value)
           ? {
               opacity: 0.6,
             }
           : undefined,
-        // Individual series tooltip - REMOVED: Not working properly for line charts
       }
     })
 
@@ -276,7 +248,6 @@ a-card.metrics-chart(:bordered="false")
               value: [, value],
             } = param
 
-            // Skip tooltip for null values (filled gaps)
             if (value === null || value === undefined) return
 
             content += `
@@ -302,7 +273,7 @@ a-card.metrics-chart(:bordered="false")
       grid: {
         left: 30,
         right: 30,
-        bottom: legendHeight.value + legendGap, // Dynamic bottom margin based on series count
+        bottom: legendHeight.value + legendGap,
         top: 30,
         containLabel: true,
       },
@@ -311,9 +282,9 @@ a-card.metrics-chart(:bordered="false")
           type: 'inside',
           xAxisIndex: 0,
           yAxisIndex: 'none',
-          zoomOnMouseWheel: false, // Enable mouse wheel zoom
-          moveOnMouseMove: true, // Enable mouse drag pan
-          preventDefaultMouseMove: false, // Allow normal mouse behavior
+          zoomOnMouseWheel: false,
+          moveOnMouseMove: true,
+          preventDefaultMouseMove: false,
         },
       ],
       toolbox: {
@@ -352,9 +323,7 @@ a-card.metrics-chart(:bordered="false")
       },
       yAxis: {
         type: 'value',
-        // Calculate min/max from actual data values
         min: (value: any) => {
-          // Find the minimum non-null value across all series
           let minValue = Infinity
           series.forEach((s) => {
             if (s.data && Array.isArray(s.data)) {
@@ -365,11 +334,9 @@ a-card.metrics-chart(:bordered="false")
               })
             }
           })
-          // Add some padding below the minimum value
           return Math.floor(minValue * 0.999)
         },
         max: (value: any) => {
-          // Find the maximum non-null value across all series
           let maxValue = -Infinity
           series.forEach((s) => {
             if (s.data && Array.isArray(s.data)) {
@@ -380,7 +347,6 @@ a-card.metrics-chart(:bordered="false")
               })
             }
           })
-          // Add some padding above the maximum value
           return Math.ceil(maxValue * 1.001)
         },
         axisLine: {
@@ -425,19 +391,15 @@ a-card.metrics-chart(:bordered="false")
     }
 
     :deep(.echarts-toolbox) {
-      // Hide toolbox completely but keep zoom functionality
       display: none !important;
       visibility: hidden !important;
       opacity: 0 !important;
       pointer-events: none !important;
     }
 
-    // Alternative approach - hide any toolbox elements
     :deep([class*='toolbox']) {
       display: none !important;
     }
-
-    // Hide toolbox using multiple selectors to ensure it's hidden
     :deep(.echarts-toolbox),
     :deep(.ec-toolbox),
     :deep([class*='ec-toolbox']),

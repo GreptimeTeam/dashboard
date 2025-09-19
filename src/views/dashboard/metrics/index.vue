@@ -23,7 +23,6 @@ a-layout.new-layout
 
     .section-divider
 
-    // Results tabs section
     a-card(:bordered="false")
       a-tabs(v-model:active-key="activeTab" type="line")
         a-tab-pane(key="table" title="Table")
@@ -84,11 +83,8 @@ a-layout.new-layout
   import PromQLEditor from './components/prom-ql-editor.vue'
   import MetricsChart from './components/metrics-chart.vue'
 
-  // Router for URL sync
   const route = useRoute()
   const router = useRouter()
-
-  // Use the series composable with integrated time range and step calculation
   const seriesHook = useSeries()
   const {
     currentQuery,
@@ -96,7 +92,6 @@ a-layout.new-layout
     instantQueryResult: tableResults,
     executeQuery,
     executeInstantQuery,
-    // Time range state
     rangeTime,
     time,
     currentStep,
@@ -104,19 +99,10 @@ a-layout.new-layout
     instantQueryTime,
   } = seriesHook
 
-  // Sidebar state
   const sidebarWidth = useStorage('metrics-sidebar-width', 320)
-
-  // Tab state
   const activeTab = ref(route.query.tab || 'table')
-
-  // Query state
-  const chartType = ref('line') // Chart type state
-
-  // Step selector state
-  const stepSelectionType = ref('medium') // Selection type: low/medium/high/fixed/custom
-
-  // URL sync state
+  const chartType = ref('line')
+  const stepSelectionType = ref('medium')
   const hasInitParams = ref(false)
 
   // Initialize from URL query parameters
@@ -132,13 +118,11 @@ a-layout.new-layout
       instantTime,
     } = route.query
 
-    // PromQL query
     if (promql && typeof promql === 'string') {
       currentQuery.value = decodeURIComponent(promql)
       hasInitParams.value = true
     }
 
-    // Time length (relative time)
     if (timeLength !== undefined) {
       const length = parseInt(timeLength as string, 10)
       if (!Number.isNaN(length)) {
@@ -149,13 +133,11 @@ a-layout.new-layout
       }
     }
 
-    // Time range (absolute time)
     if (urlTimeRange && Array.isArray(urlTimeRange)) {
       rangeTime.value = urlTimeRange as [string, string]
       time.value = 0
     }
 
-    // Step parameter
     if (stepType && typeof stepType === 'string') {
       stepSelectionType.value = stepType
     }
@@ -164,17 +146,14 @@ a-layout.new-layout
       currentStep.value = parseInt(stepValue, 10)
     }
 
-    // Chart type
     if (urlChartType && typeof urlChartType === 'string') {
       chartType.value = urlChartType
     }
 
-    // Active tab - sync from URL, default to 'graph'
     if (tab && typeof tab === 'string' && ['graph', 'table'].includes(tab)) {
       activeTab.value = tab
     }
 
-    // Instant query time
     if (instantTime && typeof instantTime === 'string') {
       instantQueryTime.value = instantTime
     }
@@ -184,14 +163,12 @@ a-layout.new-layout
   const updateQueryParams = () => {
     const query = { ...route.query }
 
-    // PromQL query
     if (currentQuery.value.trim()) {
       query.promql = encodeURIComponent(currentQuery.value)
     } else {
       delete query.promql
     }
 
-    // Time selection
     if (rangeTime.value.length === 2) {
       query.timeRange = rangeTime.value
       delete query.timeLength
@@ -203,7 +180,6 @@ a-layout.new-layout
     query.stepType = stepSelectionType.value
     query.stepValue = currentStep.value.toString()
 
-    // Chart type
     if (chartType.value && chartType.value !== 'line') {
       query.chartType = chartType.value
     } else {
@@ -212,7 +188,6 @@ a-layout.new-layout
 
     query.tab = activeTab.value
 
-    // Instant query time (for table tab)
     if (instantQueryTime.value && activeTab.value === 'table') {
       query.instantTime = instantQueryTime.value as unknown as string
     } else {
@@ -224,17 +199,13 @@ a-layout.new-layout
     delete query.queryId
     const newQueryWithoutId = { ...query }
 
-    // Add unique queryId to trigger execution
     query.queryId = Math.random().toString(36).substring(2, 15)
 
-    // Compare queries without queryId to determine navigation method
     const paramsChanged = JSON.stringify(prevQuery) !== JSON.stringify(newQueryWithoutId)
 
     if (paramsChanged) {
-      // Parameters changed, add to navigation history
       router.push({ query })
     } else {
-      // Only queryId changed (execution trigger), replace current entry
       router.replace({ query })
     }
   }
@@ -259,20 +230,16 @@ a-layout.new-layout
         .join(', ')
       const seriesName = labelStr ? `${metricName}{${labelStr}}` : metricName
 
-      // Create structured labels for template rendering
       const labels = Object.entries(seriesLabels).map(([key, value]) => ({
         key,
         value,
       }))
 
-      // Handle both single value and multiple timestamp-value pairs
       if (series.value !== undefined) {
         let valuesList
-        // Check if value is a single [timestamp, value] pair or array of pairs
         if (Array.isArray(series.value) && series.value.length === 2 && !Array.isArray(series.value[0])) {
           valuesList = series.value[1]
         } else if (Array.isArray(series.value) && Array.isArray(series.value[0])) {
-          // Multiple timestamp-value pairs: [[timestamp, value], [timestamp, value], ...]
           valuesList = series.value
             .map((valuePoint: [number, string]) => `${valuePoint[0]} @${valuePoint[1]}`)
             .join('\n')
@@ -292,7 +259,6 @@ a-layout.new-layout
 
   const promqlEditorRef = ref()
 
-  // Series count for display in tab extra
   const seriesCount = computed(() => {
     if (activeTab.value === 'graph') {
       return rangeQueryResult.value?.length || 0
@@ -302,20 +268,13 @@ a-layout.new-layout
 
   const handleRunQuery = updateQueryParams
 
-  // Handle time range update from chart selection
   const handleTimeRangeUpdate = (newTimeRange: [number, number]) => {
-    // Switch to custom time range mode and update the time range
-    time.value = 0 // Switch to custom mode
+    time.value = 0
     rangeTime.value = [newTimeRange[0].toString(), newTimeRange[1].toString()]
-    // Trigger query through URL update
     updateQueryParams()
   }
-
-  // Provide the context to child components
   provide<MetricsContext>('metricsContext', {
-    // Series hook data and methods
     ...seriesHook,
-    // Additional shared state and methods
     chartType,
     stepSelectionType,
     handleTimeRangeUpdate,
@@ -337,7 +296,6 @@ a-layout.new-layout
     }
   }
 
-  // Initialize from query parameters only once on mount
   onMounted(() => {
     initializeFromQuery()
     nextTick(() => {
@@ -358,14 +316,12 @@ a-layout.new-layout
     }
   )
 
-  // Watch for route query changes (excluding queryId) to sync back to variables
   watch(
     () => {
       const { queryId, ...otherParams } = route.query
       return otherParams
     },
     (newParams, oldParams) => {
-      // Only sync if parameters actually changed (not just queryId)
       if (JSON.stringify(newParams) !== JSON.stringify(oldParams)) {
         initializeFromQuery()
       }
@@ -373,14 +329,11 @@ a-layout.new-layout
     { deep: true }
   )
 
-  // Watch only queryId to execute queries
   watch(
     () => route.query.queryId,
     (newQueryId) => {
-      // Only execute if we have a queryId and a query
       if (newQueryId && currentQuery.value.trim()) {
         nextTick(async () => {
-          // Execute appropriate query based on active tab
           if (activeTab.value === 'graph') {
             await executeQuery(currentQuery.value)
           } else if (activeTab.value === 'table') {

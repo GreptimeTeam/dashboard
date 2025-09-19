@@ -53,10 +53,7 @@ a-card.metrics-sidebar(:bordered="false")
           template(#icon)
             icon-plus
 
-    // Metrics Explorer Modal
     MetricsExplorer(v-model:visible="showMetricsExplorer" @select="selectMetricFromExplorer")
-
-    // Single MetricMenu instance - controlled from outside
     MetricMenu(
       v-if="metricMenuVisible"
       v-model:popup-visible="metricMenuVisible"
@@ -101,29 +98,21 @@ a-card.metrics-sidebar(:bordered="false")
     (e: 'insertText', text: string): void
   }>()
 
-  // App store for database
   const appStore = useAppStore()
 
-  // Local state for metrics
   const metrics = ref<Array<{ name: string }>>([])
   const loading = ref(false)
   const currentSearchQuery = ref('')
 
-  // Sidebar state
   const selectedMetric = useLocalStorage<string | null>('metrics-explorer-last-selected', null)
 
-  // Local state for labels
   const labels = ref<any[]>([])
 
-  // Metrics explorer state
   const showMetricsExplorer = ref(false)
 
-  // Single MetricMenu state
   const metricMenuVisible = ref(false)
   const selectedNodeData = ref<any>(null)
   const contextMenuPosition = ref({ x: 0, y: 0 })
-
-  // Computed properties
   const metricOptions = computed(() => {
     return metrics.value.map((metric) => ({
       label: metric.name,
@@ -131,7 +120,6 @@ a-card.metrics-sidebar(:bordered="false")
     }))
   })
 
-  // Common method to fetch metrics
   const getMetrics = async () => {
     try {
       loading.value = true
@@ -139,7 +127,6 @@ a-card.metrics-sidebar(:bordered="false")
       if (response.data) {
         const metricList = response.data.map((name: string) => ({ name }))
         metrics.value = metricList
-        // Clear search query when fetching all metrics
         currentSearchQuery.value = ''
       }
     } catch (err: any) {
@@ -148,9 +135,6 @@ a-card.metrics-sidebar(:bordered="false")
       loading.value = false
     }
   }
-
-  // Methods
-  // Fetch labels for a specific metric and store locally
   const fetchLabelsForMetric = async (metricName: string) => {
     try {
       const response = await getLabelNames(metricName)
@@ -167,7 +151,6 @@ a-card.metrics-sidebar(:bordered="false")
     }
   }
 
-  // Debounced search function using VueUse
   const debouncedSearch = useDebounceFn(async (query: string) => {
     if (query.trim()) {
       try {
@@ -183,13 +166,10 @@ a-card.metrics-sidebar(:bordered="false")
     } else {
       metrics.value = []
     }
-  }, 300) // 300ms delay
+  }, 300)
 
   const onMetricSearch = async (query: string) => {
-    // Store the current search query
     currentSearchQuery.value = query
-
-    // Execute the debounced search
     await debouncedSearch(query)
   }
 
@@ -203,7 +183,6 @@ a-card.metrics-sidebar(:bordered="false")
 
   const refreshData = async () => {
     if (currentSearchQuery.value.trim()) {
-      // If there's a current search, refresh with the search query
       try {
         loading.value = true
         const safe = currentSearchQuery.value.trim()
@@ -214,13 +193,11 @@ a-card.metrics-sidebar(:bordered="false")
           metrics.value = metricList
         }
       } catch (err: any) {
-        // Fallback to fetching all metrics
         await getMetrics()
       } finally {
         loading.value = false
       }
     } else {
-      // If no search query, refresh all metrics
       await getMetrics()
     }
   }
@@ -290,7 +267,6 @@ a-card.metrics-sidebar(:bordered="false")
     await getMetrics()
   })
 
-  // Watch for database changes to refresh metrics
   watch(
     () => appStore.database,
     () => {
@@ -366,7 +342,6 @@ a-card.metrics-sidebar(:bordered="false")
     overflow-x: auto;
     padding: 0 15px;
   }
-  // Tree node styling to match query sidebar
   :deep(.metrics-tree) {
     .data-title {
       color: var(--main-font-color);
