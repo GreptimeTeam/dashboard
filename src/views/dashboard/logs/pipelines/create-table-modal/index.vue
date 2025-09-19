@@ -12,7 +12,10 @@ a-modal(
       a-button(type="primary" :loading="creating" @click="handleCreate") Create Table
 
   .create-table-content
-    a-form-item(label="Table Name" style="background-color: var(--color-fill-2); padding: 16px; border-radius: 4px")
+    a-space(
+      style="background-color: var(--color-fill-2); padding: 16px; border-radius: 4px; width: 100%; margin-bottom: 16px"
+    )
+      span.label Table Name
       a-input(v-model="tableName" placeholder="Enter table name" style="width: 200px; margin-right: 8px")
       a-button(type="outline" :loading="loadingDDL" @click="handleGetDDL") Get CREATE TABLE SQL from Pipeline
 
