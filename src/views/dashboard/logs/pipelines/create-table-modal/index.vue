@@ -44,7 +44,6 @@ a-modal(
   import { getPipelineDDL } from '@/api/pipeline'
 
   const props = defineProps<{ pipelineName: string }>()
-  const emit = defineEmits<{ (e: 'tableCreated'): void }>()
 
   const visible = ref(false)
   const creating = ref(false)
@@ -104,7 +103,6 @@ a-modal(
 
       creating.value = true
       await editorAPI.runSQL(formData.createTableSQL)
-      emit('tableCreated')
       visible.value = false
       tableName.value = ''
       formData.createTableSQL = ''

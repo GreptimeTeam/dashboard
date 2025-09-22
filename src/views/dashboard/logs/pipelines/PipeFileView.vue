@@ -145,7 +145,7 @@ a-layout.full-height-layout.pipefile-view(
         )
 
   // Create Table Modal
-  CreateTableModal(ref="createTableModalRef" :pipeline-name="currFile.name" @tableCreated="() => {}")
+  CreateTableModal(ref="createTableModalRef" :pipeline-name="currFile.name")
 </template>
 
 <script setup name="PipeFileView" lang="ts">
