@@ -22,6 +22,12 @@ a-layout.full-height-layout.pipefile-view(
               | Delete
           a-button(type="primary" size="small" @click="handleSave")
             | Save
+    a-card.pipeline-actions-card(v-if="!isCreating")
+      a-button(type="text" size="small" @click="handleIngest") 
+        | Ingest With Pipeline
+      a-button(type="text" size="small" @click="showCreateTableModal")
+        | Create Table from Pipeline
+
     a-form(
       ref="formRef"
       layout="vertical"
@@ -39,18 +45,12 @@ a-layout.full-height-layout.pipefile-view(
       a-form-item(v-if="!isCreating" field="version" label="Version")
         a-space
           | {{ currFile.version }}
-          a-button(
-            v-if="!isCreating"
-            type="text"
-            size="small"
-            @click="handleIngest"
-          )
-            | Ingest With Pipeline
+
       a-form-item(field="content" label="Yaml Content")
         template(#help)
           div 
         .full-width-height-editor.pipeline-editor(:class="editorHeightClass")
-          YMLEditorSimple(v-model="currFile.content" style="width: 100%; height: 100%")
+          LangEditor(v-model="currFile.content" style="width: 100%; height: 100%")
   a-layout-content.content-wrapper(style="display: flex; flex-direction: column; padding-bottom: 22px")
     a-card.light-editor-card(title="Input" :bordered="false")
       template(#extra)
@@ -143,6 +143,9 @@ a-layout.full-height-layout.pipefile-view(
           :tabSize="2"
           :disabled="true"
         )
+
+  // Create Table Modal
+  CreateTableModal(ref="createTableModalRef" :pipeline-name="currFile.name")
 </template>
 
 <script setup name="PipeFileView" lang="ts">
@@ -155,6 +158,8 @@ a-layout.full-height-layout.pipefile-view(
   import type { ColumnType } from '@/types/query'
   import router from '@/router'
   import DataTable from '@/components/data-table/index.vue'
+  import LangEditor from '@/components/lang-editor.vue'
+  import CreateTableModal from './create-table-modal/index.vue'
   import { toObj } from '../query/until'
 
   const emit = defineEmits(['refresh', 'del'])
@@ -366,6 +371,8 @@ transform:
 
   const ymlError = ref('')
 
+  const createTableModalRef = ref()
+
   function getData() {
     const name = props.filename
     if (name) {
@@ -384,6 +391,13 @@ transform:
       },
     })
   }
+
+  // Show create table modal
+  const showCreateTableModal = () => {
+    if (createTableModalRef.value?.open) {
+      createTableModalRef.value.open()
+    }
+  }
 </script>
 
 <style lang="less" scoped>
@@ -401,7 +415,7 @@ transform:
     height: calc(100vh - 238px); // Taller for creating mode (no version field)
 
     &.editing {
-      height: calc(100vh - 238px); // Shorter for editing mode (has version field)
+      height: calc(100vh - 298px); // Shorter for editing mode (has version field)
     }
   }
 
@@ -587,5 +601,19 @@ transform:
     border: none;
     margin: 10px 0 0;
     position: relative;
+  }
+
+  // ===================
+  // PIPELINE ACTIONS CARD
+  // ===================
+  .pipeline-actions-card {
+    border: 1px solid var(--color-border-2);
+    border-radius: 4px;
+    margin: 10px 10px 0 10px;
+    padding: 10px 2px;
+
+    :deep(.arco-card-body) {
+      padding: 0;
+    }
   }
 </style>

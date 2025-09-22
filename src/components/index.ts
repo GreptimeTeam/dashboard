@@ -14,7 +14,7 @@ import Breadcrumb from './breadcrumb/index.vue'
 import TimeRangeSelect from './time-range-select/index.vue'
 import 'echarts/lib/component/dataset'
 import 'echarts/lib/component/transform'
-import YMLEditor from './yml-editor.vue'
+import LangEditor from './lang-editor.vue'
 
 // Manually introduce ECharts modules to reduce packing size
 
@@ -35,6 +35,6 @@ export default {
     Vue.component('Chart', Chart)
     Vue.component('Breadcrumb', Breadcrumb)
     Vue.component('TimeRangeSelect', TimeRangeSelect)
-    Vue.component('YMLEditorSimple', YMLEditor)
+    Vue.component('LangEditor', LangEditor)
   },
 }

@@ -14,26 +14,36 @@ a-card.light-editor-card(:bordered="false")
   )
 </template>
 
-<script lang="ts" setup name="YMLEditorSimple">
+<script lang="ts" setup name="LangEditor">
+  import { computed } from 'vue'
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { basicSetup } from 'codemirror'
-
-  import * as yamlMode from '@codemirror/legacy-modes/mode/yaml'
-  import { StreamLanguage, LanguageSupport } from '@codemirror/language'
+  import mapLanguages from '@/components/markdown-render/components/utils'
 
   const props = defineProps<{
     modelValue: string
     disabled?: boolean
     placeholder?: string
+    language?: string
   }>()
   const emit = defineEmits<{
     (event: 'update:modelValue', value: string): void
   }>()
 
-  const yaml = new LanguageSupport(StreamLanguage.define(yamlMode.yaml))
+  const extensions = computed(() => {
+    const baseExtensions = [basicSetup]
+    const language = props.language || 'yaml'
+    const languageExtension = mapLanguages(language)
 
-  // TODO: markdown extension
-  const extensions = [basicSetup, yaml]
+    if (typeof languageExtension === 'function') {
+      baseExtensions.push(languageExtension())
+    } else {
+      baseExtensions.push(languageExtension)
+    }
+
+    return baseExtensions
+  })
+
   const codeUpdate = (content) => {
     emit('update:modelValue', content)
   }

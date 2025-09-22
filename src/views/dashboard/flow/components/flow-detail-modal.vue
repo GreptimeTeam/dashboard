@@ -86,7 +86,7 @@ a-drawer.custom-drawer(
           a-input(v-model="formData.comment" placeholder="Enter flow description" :rows="2")
 
         a-form-item(field="flow_definition" label="Flow Select SQL Definition" required)
-          YmlEditor(
+          LangEditor(
             v-model="formData.flow_definition"
             language="sql"
             style="width: 100%; height: 200px; border: 1px solid var(--color-border); border-radius: 4px; overflow: hidden"
@@ -99,7 +99,7 @@ a-drawer.custom-drawer(
         a-form(layout="vertical" :model="textEditorData")
           a-form-item(field="content" label="Flow Statement")
             a-spin(style="width: 100%" :loading="fetchingFlowSQL")
-              YmlEditor(
+              LangEditor(
                 v-model="textEditorData.content"
                 language="sql"
                 style="width: 100%; height: 500px; border: 1px solid var(--color-border); border-radius: 4px; overflow: hidden"
@@ -133,7 +133,7 @@ a-drawer.custom-drawer(
     .create-table-content
       p Create a new sink table with SQL. The table will be automatically added to the sink table options.
 
-      YmlEditor(
+      LangEditor(
         v-model="createTableSQL"
         language="sql"
         style="width: 100%; height: 300px; border: 1px solid var(--color-border); border-radius: 4px; overflow: hidden"
@@ -145,7 +145,7 @@ a-drawer.custom-drawer(
   import { ref, reactive, watch, computed } from 'vue'
   import { Message } from '@arco-design/web-vue'
   import { storeToRefs } from 'pinia'
-  import YmlEditor from '@/components/yml-editor.vue'
+  import LangEditor from '@/components/lang-editor.vue'
   import editorAPI from '@/api/editor'
   import { useAppStore } from '@/store'
   import type { ColumnType } from '@/types/query'
