@@ -50,7 +50,7 @@ a-layout.full-height-layout.pipefile-view(
         template(#help)
           div 
         .full-width-height-editor.pipeline-editor(:class="editorHeightClass")
-          YMLEditorSimple(v-model="currFile.content" style="width: 100%; height: 100%")
+          LangEditor(v-model="currFile.content" style="width: 100%; height: 100%")
   a-layout-content.content-wrapper(style="display: flex; flex-direction: column; padding-bottom: 22px")
     a-card.light-editor-card(title="Input" :bordered="false")
       template(#extra)
@@ -158,7 +158,7 @@ a-layout.full-height-layout.pipefile-view(
   import type { ColumnType } from '@/types/query'
   import router from '@/router'
   import DataTable from '@/components/data-table/index.vue'
-  import YMLEditorSimple from '@/components/yml-editor.vue'
+  import LangEditor from '@/components/lang-editor.vue'
   import CreateTableModal from './create-table-modal/index.vue'
   import { toObj } from '../query/until'
 

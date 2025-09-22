@@ -28,7 +28,7 @@ a-modal(
         @submit="handleCreate"
       )
         a-form-item(field="createTableSQL" label="CREATE TABLE SQL" required)
-          YMLEditorSimple(
+          LangEditor(
             v-model="formData.createTableSQL"
             language="sql"
             style="width: 100%; height: 300px; border: 1px solid var(--color-border); border-radius: 4px; overflow: hidden"
@@ -39,7 +39,7 @@ a-modal(
 <script setup lang="ts">
   import { ref, reactive, computed, defineExpose } from 'vue'
   import { Notification } from '@arco-design/web-vue'
-  import YMLEditorSimple from '@/components/yml-editor.vue'
+  import LangEditor from '@/components/lang-editor.vue'
   import editorAPI from '@/api/editor'
   import { getPipelineDDL } from '@/api/pipeline'
 

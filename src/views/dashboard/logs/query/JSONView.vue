@@ -11,7 +11,7 @@ CodeMirror(
 )
 </template>
 
-<script lang="ts" setup name="YMLEditor">
+<script lang="ts" setup name="JSONView">
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { basicSetup } from 'codemirror'
 
