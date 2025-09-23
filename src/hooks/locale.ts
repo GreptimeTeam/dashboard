@@ -1,19 +1,20 @@
-import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
+import { useLocalStorage } from '@vueuse/core'
+import { useI18n } from 'vue-i18n'
 
 export default function useLocale() {
-  const i18 = useI18n()
-  const currentLocale = computed(() => {
-    return i18.locale.value
+  const { t, locale } = useI18n()
+
+  const STORAGE_KEY = 'greptime-locale'
+
+  const currentLocale = useLocalStorage(STORAGE_KEY, 'en-US')
+
+  watch(currentLocale, (val) => {
+    locale.value = val
   })
-  const changeLocale = (value: string) => {
-    i18.locale.value = value
-    localStorage.setItem('greptime-locale', value)
-    Message.success(i18.t('navbar.action.locale'))
+
+  const onChangeLocale = () => {
+    Message.success(t('navbar.action.locale'))
   }
-  return {
-    currentLocale,
-    changeLocale,
-  }
+  return { currentLocale, onChangeLocale }
 }

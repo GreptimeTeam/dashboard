@@ -15,7 +15,7 @@ a-layout-footer.footer
     a-space(:size="10")
       a-select(
         v-if="dev"
-        v-model="innerLocale"
+        v-model="currentLocale"
         size="mini"
         :style="{ width: '112px' }"
         @change="onChangeLocale"
@@ -43,13 +43,7 @@ a-layout-footer.footer
 
   const vendorIcon = getIconUrl(region.value.vendor)
 
-  const { currentLocale, changeLocale } = useLocale()
-  const innerLocale = ref(currentLocale.value)
-
-  watch(currentLocale, (val) => {
-    innerLocale.value = val
-  })
-  const onChangeLocale = (val: string) => changeLocale(val)
+  const { currentLocale, onChangeLocale } = useLocale()
 
   // Not yet used in production
   const dev = import.meta.env.MODE === 'development'
