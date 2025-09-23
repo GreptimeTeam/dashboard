@@ -43,12 +43,15 @@ a-trigger#time-select(
           :class="isSingleTimeSelected(time.value) ? 'selected' : ''"
           @click="selectTimeLength(time.value)"
         ) {{ time.label }}
-        a-doption(:class="!isRelative ? 'selected' : ''" @click="rangePickerVisible = !rangePickerVisible") Custom
+        a-doption(:class="!isRelative ? 'selected' : ''" @click="rangePickerVisible = !rangePickerVisible") {{ t('time-select.custom') }}
 </template>
 
 <script lang="ts" setup name="TimeSelect">
   import type { OptionsType } from '@/types/global'
   import dayjs from 'dayjs'
+  import { useI18n } from 'vue-i18n'
+
+  const { t } = useI18n()
 
   const props = defineProps({
     timeLength: {

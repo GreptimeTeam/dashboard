@@ -38,22 +38,24 @@ a-layout.navbar
                 | {{ label }}
             a-doption.news(@click="showNews")
               | {{ $t('menu.news') }}
-NewsModal(ref="newsModal" :news-list="newsList" :loading="isLoadingNews")
+NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
 </template>
 
 <script lang="ts" setup name="NavBar">
+  import { useI18n } from 'vue-i18n'
   import { listenerRouteChange } from '@/utils/route-listener'
   import { useNews } from '@/hooks/news'
   import useMenuTree from '../menu/use-menu-tree'
   import NewsModal from './news-modal.vue'
 
   const router = useRouter()
+  const { t } = useI18n()
   const { updateSettings } = useAppStore()
   const { menuSelectedKey, globalSettings, hideSidebar } = storeToRefs(useAppStore())
   const { activeTab: ingestTab } = storeToRefs(useIngestStore())
   const { menuTree } = useMenuTree()
   const { newsList, isLoadingNews } = useNews()
-
+  const newsListMutable = computed(() => (newsList.value ? [...newsList.value] : []))
   const newsModal = ref()
 
   const menu = menuTree.value[0].children

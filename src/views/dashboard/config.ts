@@ -96,6 +96,38 @@ export const SEMANTIC_TYPE_MAP: { [key: string]: string } = {
   'TIME INDEX': 'TIMESTAMP',
 }
 
+export const getRelativeTimeOptions = (t: (key: string) => string) => [
+  { value: 1, label: t('time-select.last1Minute') },
+  { value: 10, label: t('time-select.last10Minutes') },
+  { value: 30, label: t('time-select.last30Minutes') },
+  { value: 60, label: t('time-select.last1Hour') },
+  { value: 180, label: t('time-select.last3Hours') },
+  { value: 360, label: t('time-select.last6Hours') },
+  { value: 720, label: t('time-select.last12Hours') },
+  { value: 1440, label: t('time-select.last24Hours') },
+  { value: 2880, label: t('time-select.last2Days') },
+  { value: 10080, label: t('time-select.last7Days') },
+]
+
+export const getRelativeTimeMap = (t: (key: string) => string): { [key: number]: string } => ({
+  1: t('time-select.last1Minute'),
+  10: t('time-select.last10Minutes'),
+  30: t('time-select.last30Minutes'),
+  60: t('time-select.last1Hour'),
+  180: t('time-select.last3Hours'),
+  360: t('time-select.last6Hours'),
+  720: t('time-select.last12Hours'),
+  1440: t('time-select.last24Hours'),
+  2880: t('time-select.last2Days'),
+  10080: t('time-select.last7Days'),
+})
+
+export const getTimeOptionsForEdge = (t: (key: string) => string) => [
+  { value: 1440, label: t('time-select.last24Hours') },
+  { value: 2880, label: t('time-select.last2Days') },
+  { value: 4320, label: t('time-select.last3Days') },
+]
+
 export const relativeTimeOptions = [
   { value: 1, label: 'Last 1 minute' },
   { value: 10, label: 'Last 10 minutes' },
