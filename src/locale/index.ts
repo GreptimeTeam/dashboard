@@ -11,7 +11,7 @@ const STORAGE_KEY = 'greptime-locale'
 
 function detectLocale(): string {
   // 1) explicit storage
-  const stored = localStorage.getItem('greptime-locale')
+  const stored = localStorage.getItem(STORAGE_KEY)
   if (stored) return stored
 
   // 2) env default
