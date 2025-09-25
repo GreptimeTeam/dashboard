@@ -157,6 +157,13 @@ a-drawer.settings-drawer(
     if (res) {
       loginStatus.value = 'success'
       checkTables()
+
+      const fetchPromise = fetchDatabases()
+
+      fetchPromise.then(() => {
+        settingsForm.value.databaseList = databaseList.value
+      })
+
       setTimeout(() => {
         updateSettings({
           globalSettings: false,
