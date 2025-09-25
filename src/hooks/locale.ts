@@ -14,7 +14,10 @@ export default function useLocale() {
   })
 
   const onChangeLocale = () => {
-    Message.success(t('navbar.action.locale'))
+    nextTick(() => {
+      Message.success(t('navbar.action.locale'))
+    })
   }
+
   return { currentLocale, onChangeLocale }
 }
