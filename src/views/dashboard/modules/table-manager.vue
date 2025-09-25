@@ -173,7 +173,7 @@ a-card.table-manager(:bordered="false")
   }
 
   const refreshTablesTree = async () => {
-    if (databaseActiveKeys.value[0]) {
+    if (databaseActiveKeys.value[0] && props.databaseList.includes(databaseActiveKeys.value[0])) {
       await refreshTables(databaseActiveKeys.value[0])
     } else {
       await fetchDatabases()
