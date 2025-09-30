@@ -23,7 +23,7 @@ a-layout.full-height-layout.pipefile-view(
           a-button(type="primary" size="small" @click="handleSave")
             | Save
     a-card.pipeline-actions-card(v-if="!isCreating")
-      a-button(type="text" size="small" @click="handleIngest") 
+      a-button(type="text" size="small" @click="handleIngest")
         | Ingest With Pipeline
       a-button(type="text" size="small" @click="showCreateTableModal")
         | Create Table from Pipeline
@@ -48,7 +48,7 @@ a-layout.full-height-layout.pipefile-view(
 
       a-form-item(field="content" label="Yaml Content")
         template(#help)
-          div 
+          div
         .full-width-height-editor.pipeline-editor(:class="editorHeightClass")
           LangEditor(v-model="currFile.content" style="width: 100%; height: 100%")
   a-layout-content.content-wrapper(style="display: flex; flex-direction: column; padding-bottom: 22px")
@@ -129,7 +129,7 @@ a-layout.full-height-layout.pipefile-view(
           :wrap-line="true"
         )
 
-      // JSON View  
+      // JSON View
       .full-width-height-editor(
         v-if="outputViewMode === 'json' && parsedOutputData.records && parsedOutputData.records.rows.length > 0"
       )
@@ -359,7 +359,7 @@ transform:
         name: col.name,
         title: col.name,
         data_type: col.data_type || 'String',
-        semantic_type: col.colume_type,
+        semantic_type: col.column_type,
       }))
 
       tableColumns.value = schemas
