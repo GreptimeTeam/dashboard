@@ -81,4 +81,5 @@ export default {
   'dashboard.clearResults': 'Clear results?',
   'dashboard.timeAssistance': 'Time Input Assistance',
   'dashboard.fetchingDatabases': 'Fetching databases...',
+  'metrics.showFullSeriesName': 'Show full series name',
 }

@@ -17,6 +17,7 @@ a-card.metrics-chart(:bordered="false")
           )
 
     a-space(style="margin-left: auto")
+      a-checkbox(v-model="showFullSeriesName") {{ t('metrics.showFullSeriesName') }}
       a-radio-group(v-model="localChartType" type="button" size="small")
         a-radio(value="line") Lines
         a-radio(value="bar") Bars
@@ -49,6 +50,7 @@ a-card.metrics-chart(:bordered="false")
 
   import dayjs from 'dayjs'
   import type { EChartsOption } from 'echarts'
+  import { useI18n } from 'vue-i18n'
   import StepSelector from './step-selector.vue'
   import type { MetricsContext } from '../types'
 
@@ -68,6 +70,8 @@ a-card.metrics-chart(:bordered="false")
     handleTimeRangeUpdate,
     updateQueryParams,
   } = metricsContext
+
+  const { t } = useI18n()
 
   const chartRef = ref()
   const localChartType = chartType
@@ -176,18 +180,27 @@ a-card.metrics-chart(:bordered="false")
     const dynamicHeight = legendHeight.value
     return baseHeight + dynamicHeight + legendGap
   })
-
+  const showFullSeriesName = ref(false)
   const chartOption = computed<EChartsOption>(() => {
     if (!hasData.value) return {}
+    // Option: control whether to display full series name or compact unique-label name
+
     const metricNamesInOrder: string[] = []
     const labelMapsInOrder: Record<string, string>[] = []
+    const fullNamesInOrder: string[] = []
 
+    // Collect metric names, label maps, and full names in order
     seriesData.value.forEach((item) => {
       const metricName = item.metric.__name__ || 'unknown'
       const labels = { ...item.metric }
       delete labels.__name__
       metricNamesInOrder.push(metricName)
       labelMapsInOrder.push(labels)
+
+      const labelStr = Object.entries(labels)
+        .map(([k, v]) => `${k}="${v}"`)
+        .join(', ')
+      fullNamesInOrder.push(labelStr ? `${metricName}{${labelStr}}` : metricName)
     })
 
     // Precompute which label keys actually differ across series
@@ -207,7 +220,7 @@ a-card.metrics-chart(:bordered="false")
       return diff
     })()
 
-    // Helper to build display name using only differing labels
+    // Helper to build compact display name using only differing labels
     const buildDisplayName = (idx: number): string => {
       const metricName = metricNamesInOrder[idx] || 'unknown'
       const lm = labelMapsInOrder[idx] || {}
@@ -217,6 +230,10 @@ a-card.metrics-chart(:bordered="false")
       })
       const diffStr = pairs.length > 0 ? `{${pairs.join(', ')}}` : ''
       return `${metricName}${diffStr}`
+    }
+
+    const getSeriesName = (idx: number): string => {
+      return showFullSeriesName.value ? fullNamesInOrder[idx] : buildDisplayName(idx)
     }
 
     const series = seriesData.value.map((item, index) => {
@@ -234,7 +251,7 @@ a-card.metrics-chart(:bordered="false")
       }
 
       return {
-        name: buildDisplayName(index),
+        name: getSeriesName(index),
         type: getChartType(localChartType.value),
         data,
         smooth: false,
