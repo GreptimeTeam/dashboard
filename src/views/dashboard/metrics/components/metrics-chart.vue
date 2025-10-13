@@ -179,16 +179,47 @@ a-card.metrics-chart(:bordered="false")
 
   const chartOption = computed<EChartsOption>(() => {
     if (!hasData.value) return {}
-    const series = seriesData.value.map((item, index) => {
+    const metricNamesInOrder: string[] = []
+    const labelMapsInOrder: Record<string, string>[] = []
+
+    seriesData.value.forEach((item) => {
       const metricName = item.metric.__name__ || 'unknown'
       const labels = { ...item.metric }
       delete labels.__name__
+      metricNamesInOrder.push(metricName)
+      labelMapsInOrder.push(labels)
+    })
 
-      const labelStr = Object.entries(labels)
-        .map(([k, v]) => `${k}="${v}"`)
-        .join(', ')
-      const seriesName = labelStr ? `${metricName}{${labelStr}}` : metricName
+    // Precompute which label keys actually differ across series
+    const differingKeys = (() => {
+      const keyToValues = new Map<string, Set<string>>()
+      labelMapsInOrder.forEach((lm) => {
+        Object.entries(lm).forEach(([k, v]) => {
+          if (!keyToValues.has(k)) keyToValues.set(k, new Set<string>())
+          const s = keyToValues.get(k)
+          if (s) s.add(String(v))
+        })
+      })
+      const diff = new Set<string>()
+      keyToValues.forEach((values, key) => {
+        if (values.size > 1) diff.add(key)
+      })
+      return diff
+    })()
 
+    // Helper to build display name using only differing labels
+    const buildDisplayName = (idx: number): string => {
+      const metricName = metricNamesInOrder[idx] || 'unknown'
+      const lm = labelMapsInOrder[idx] || {}
+      const pairs: string[] = []
+      Object.keys(lm).forEach((k) => {
+        if (differingKeys.has(k)) pairs.push(`${k}="${lm[k]}"`)
+      })
+      const diffStr = pairs.length > 0 ? `{${pairs.join(', ')}}` : ''
+      return `${metricName}${diffStr}`
+    }
+
+    const series = seriesData.value.map((item, index) => {
       const data = item.values.map(([timestamp, value]: [number, string | number]) => {
         if (value === null) {
           return [timestamp * 1000, null]
@@ -203,7 +234,7 @@ a-card.metrics-chart(:bordered="false")
       }
 
       return {
-        name: seriesName,
+        name: buildDisplayName(index),
         type: getChartType(localChartType.value),
         data,
         smooth: false,
@@ -244,26 +275,16 @@ a-card.metrics-chart(:bordered="false")
             params[0].value[0]
           ).format('YYYY-MM-DD HH:mm:ss')}</div>`
 
-          // Check if any series name is too long (more than 50 characters)
-          const hasLongNames = params.some((param) => param.seriesName.length > 60)
-
           params.forEach((param) => {
             const {
               color,
-              seriesName,
+              seriesIndex: sIdx,
               value: [, value],
+              seriesName,
             } = param
-
             if (value === null || value === undefined) return
 
-            // If series names are long, show only the labels part (remove metric name)
-            let displayName = seriesName
-            if (hasLongNames) {
-              const match = seriesName.match(/\{(.*)\}/)
-              if (match) {
-                displayName = `{${match[1]}}`
-              }
-            }
+            const displayName = seriesName
 
             content += `
               <div style="margin: 2px 0;">
