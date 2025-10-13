@@ -161,12 +161,15 @@ a-card.metrics-chart(:bordered="false")
 
   const graphHeight = 530
   const legendGap = 30
-  const legendItemHeight = 18
+  const legendItemHeight = 15
+  const legendItemGap = 8
   const legendHeight = computed(() => {
     const seriesCount = seriesData.value.length
-    const maxAvailableHeight = windowHeight.value - graphHeight - legendGap - 200
-    const calculatedHeight = seriesCount * (legendItemHeight + 10)
-    return Math.min(calculatedHeight, Math.max(maxAvailableHeight, 100))
+    if (seriesCount === 0) return 0
+
+    // Calculate height including itemGap: each item needs height + gap (except last item)
+    const calculatedHeight = seriesCount * legendItemHeight + (seriesCount - 1) * (legendItemGap * 0.67)
+    return calculatedHeight
   })
   const chartHeight = computed(() => {
     const baseHeight = graphHeight
@@ -276,11 +279,10 @@ a-card.metrics-chart(:bordered="false")
       },
       legend: {
         bottom: 0,
-        type: 'scroll',
         orient: 'vertical',
         top: graphHeight + 20,
         itemHeight: legendItemHeight,
-        itemGap: 10,
+        itemGap: legendItemGap,
       },
       grid: {
         left: 30,
