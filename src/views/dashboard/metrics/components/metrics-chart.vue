@@ -241,6 +241,9 @@ a-card.metrics-chart(:bordered="false")
             params[0].value[0]
           ).format('YYYY-MM-DD HH:mm:ss')}</div>`
 
+          // Check if any series name is too long (more than 50 characters)
+          const hasLongNames = params.some((param) => param.seriesName.length > 60)
+
           params.forEach((param) => {
             const {
               color,
@@ -250,10 +253,19 @@ a-card.metrics-chart(:bordered="false")
 
             if (value === null || value === undefined) return
 
+            // If series names are long, show only the labels part (remove metric name)
+            let displayName = seriesName
+            if (hasLongNames) {
+              const match = seriesName.match(/\{(.*)\}/)
+              if (match) {
+                displayName = `{${match[1]}}`
+              }
+            }
+
             content += `
               <div style="margin: 2px 0;">
                 <span style="display: inline-block; width: 10px; height: 10px; background: ${color}; border-radius: 50%; margin-right: 8px;"></span>
-                <span style="font-weight: 500;">${seriesName}:</span>
+                <span style="font-weight: 500;">${displayName}:</span>
                 <span style="float: right; margin-left: 20px;">${value}</span>
               </div>
             `
