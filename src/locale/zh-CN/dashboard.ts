@@ -79,4 +79,5 @@ export default {
   'dashboard.clearResults': '清除结果？',
   'dashboard.timeAssistance': '时间输入助手',
   'dashboard.fetchingDatabases': '正在获取数据库...',
+  'metrics.showFullSeriesName': '显示全名',
 }

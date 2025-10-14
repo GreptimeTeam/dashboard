@@ -17,6 +17,7 @@ a-card.metrics-chart(:bordered="false")
           )
 
     a-space(style="margin-left: auto")
+      a-checkbox(v-model="showFullSeriesName") {{ t('metrics.showFullSeriesName') }}
       a-radio-group(v-model="localChartType" type="button" size="small")
         a-radio(value="line") Lines
         a-radio(value="bar") Bars
@@ -49,6 +50,7 @@ a-card.metrics-chart(:bordered="false")
 
   import dayjs from 'dayjs'
   import type { EChartsOption } from 'echarts'
+  import { useI18n } from 'vue-i18n'
   import StepSelector from './step-selector.vue'
   import type { MetricsContext } from '../types'
 
@@ -68,6 +70,8 @@ a-card.metrics-chart(:bordered="false")
     handleTimeRangeUpdate,
     updateQueryParams,
   } = metricsContext
+
+  const { t } = useI18n()
 
   const chartRef = ref()
   const localChartType = chartType
@@ -161,32 +165,87 @@ a-card.metrics-chart(:bordered="false")
 
   const graphHeight = 530
   const legendGap = 30
-  const legendItemHeight = 18
+  const legendItemHeight = 15
+  const legendItemGap = 8
   const legendHeight = computed(() => {
     const seriesCount = seriesData.value.length
-    const maxAvailableHeight = windowHeight.value - graphHeight - legendGap - 200
-    const calculatedHeight = seriesCount * (legendItemHeight + 10)
-    return Math.min(calculatedHeight, Math.max(maxAvailableHeight, 100))
+    if (seriesCount === 0) return 0
+
+    // Calculate height including itemGap: each item needs height + gap (except last item)
+    const calculatedHeight = seriesCount * legendItemHeight + (seriesCount - 1) * (legendItemGap * 0.67)
+    return calculatedHeight
   })
   const chartHeight = computed(() => {
     const baseHeight = graphHeight
     const dynamicHeight = legendHeight.value
     return baseHeight + dynamicHeight + legendGap
   })
-
+  const showFullSeriesName = ref(false)
   const chartOption = computed<EChartsOption>(() => {
     if (!hasData.value) return {}
-    const series = seriesData.value.map((item, index) => {
+    // Option: control whether to display full series name or compact unique-label name
+
+    const metricNamesInOrder: string[] = []
+    const labelMapsInOrder: Record<string, string>[] = []
+    const fullNamesInOrder: string[] = []
+
+    // Collect metric names, label maps, and full names in order
+    seriesData.value.forEach((item) => {
       const metricName = item.metric.__name__ || 'unknown'
       const labels = { ...item.metric }
       delete labels.__name__
+      metricNamesInOrder.push(metricName)
+      labelMapsInOrder.push(labels)
 
       const labelStr = Object.entries(labels)
         .map(([k, v]) => `${k}="${v}"`)
         .join(', ')
-      const seriesName = labelStr ? `${metricName}{${labelStr}}` : metricName
+      fullNamesInOrder.push(labelStr ? `${metricName}{${labelStr}}` : metricName)
+    })
 
-      const data = item.values.map(([timestamp, value]: [number, string | number]) => {
+    // Precompute which label keys actually differ across series
+    const differingKeys = (() => {
+      const totalSeries = labelMapsInOrder.length
+      // collect union of all label keys across series
+      const allKeys = new Set<string>()
+      labelMapsInOrder.forEach((lm) => {
+        Object.keys(lm).forEach((k) => allKeys.add(k))
+      })
+
+      const diff = new Set<string>()
+      // for each key, collect values across all series; treat missing as a distinct sentinel
+      allKeys.forEach((key) => {
+        const values = new Set<string>()
+        labelMapsInOrder.forEach((lm) => {
+          const v = lm[key]
+          values.add(v === undefined ? '__MISSING__' : String(v))
+        })
+        // values.size > 1 means at least 2 series have different values for this key
+        if (totalSeries === 1 || values.size > 1) {
+          diff.add(key)
+        }
+      })
+      return diff
+    })()
+
+    // Helper to build compact display name using only differing labels
+    const buildDisplayName = (idx: number): string => {
+      const metricName = metricNamesInOrder[idx] || 'unknown'
+      const lm = labelMapsInOrder[idx] || {}
+      const pairs: string[] = []
+      Object.keys(lm).forEach((k) => {
+        if (differingKeys.has(k)) pairs.push(`${k}="${lm[k]}"`)
+      })
+      const diffStr = pairs.length > 0 ? `{${pairs.join(', ')}}` : ''
+      return `${metricName}${diffStr}`
+    }
+
+    const getSeriesName = (idx: number): string => {
+      return showFullSeriesName.value ? fullNamesInOrder[idx] : buildDisplayName(idx)
+    }
+
+    const series = seriesData.value.map((item, index) => {
+      const data = (item.values as Array<[number, string | number]>).map(([timestamp, value]) => {
         if (value === null) {
           return [timestamp * 1000, null]
         }
@@ -200,7 +259,7 @@ a-card.metrics-chart(:bordered="false")
       }
 
       return {
-        name: seriesName,
+        name: getSeriesName(index),
         type: getChartType(localChartType.value),
         data,
         smooth: false,
@@ -244,16 +303,18 @@ a-card.metrics-chart(:bordered="false")
           params.forEach((param) => {
             const {
               color,
-              seriesName,
+              seriesIndex: sIdx,
               value: [, value],
+              seriesName,
             } = param
-
             if (value === null || value === undefined) return
+
+            const displayName = seriesName
 
             content += `
               <div style="margin: 2px 0;">
                 <span style="display: inline-block; width: 10px; height: 10px; background: ${color}; border-radius: 50%; margin-right: 8px;"></span>
-                <span style="font-weight: 500;">${seriesName}:</span>
+                <span style="font-weight: 500;">${displayName}:</span>
                 <span style="float: right; margin-left: 20px;">${value}</span>
               </div>
             `
@@ -264,11 +325,10 @@ a-card.metrics-chart(:bordered="false")
       },
       legend: {
         bottom: 0,
-        type: 'scroll',
         orient: 'vertical',
         top: graphHeight + 20,
         itemHeight: legendItemHeight,
-        itemGap: 10,
+        itemGap: legendItemGap,
       },
       grid: {
         left: 30,
@@ -283,8 +343,10 @@ a-card.metrics-chart(:bordered="false")
           xAxisIndex: 0,
           yAxisIndex: 'none',
           zoomOnMouseWheel: false,
+          moveOnMouseWheel: false,
           moveOnMouseMove: true,
           preventDefaultMouseMove: false,
+          preventDefaultMouseWheel: false,
         },
       ],
       toolbox: {
