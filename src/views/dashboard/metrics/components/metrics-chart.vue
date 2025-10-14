@@ -343,8 +343,10 @@ a-card.metrics-chart(:bordered="false")
           xAxisIndex: 0,
           yAxisIndex: 'none',
           zoomOnMouseWheel: false,
+          moveOnMouseWheel: false,
           moveOnMouseMove: true,
           preventDefaultMouseMove: false,
+          preventDefaultMouseWheel: false,
         },
       ],
       toolbox: {

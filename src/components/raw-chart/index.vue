@@ -23,12 +23,27 @@
 
   const chartContainer = ref<HTMLDivElement>()
   let chartInstance: echarts.ECharts | null = null
+  let removeWheelListener: (() => void) | null = null
 
   // Track when this instance is being unmounted due to key change
   const isUnmounting = ref(false)
   onBeforeUnmount(() => {
     isUnmounting.value = true
   })
+
+  const attachWheelPassthrough = () => {
+    if (!chartContainer.value) return
+    const el = chartContainer.value
+    const onWheel = (e: WheelEvent) => {
+      // Do not call preventDefault so page can scroll; just block ECharts handlers
+      e.stopImmediatePropagation()
+    }
+    el.addEventListener('wheel', onWheel, { capture: true, passive: false })
+    removeWheelListener = () => {
+      el.removeEventListener('wheel', onWheel, { capture: true } as any)
+      removeWheelListener = null
+    }
+  }
 
   const resizeChart = () => {
     if (chartInstance && chartContainer.value && !isUnmounting.value) {
@@ -65,6 +80,8 @@
       chartInstance.on('datazoom', (event) => {
         emit('datazoom', event)
       })
+      // Ensure wheel scroll bubbles to page
+      attachWheelPassthrough()
     }
   })
 
@@ -93,6 +110,7 @@
   )
 
   onUnmounted(() => {
+    if (removeWheelListener) removeWheelListener()
     if (chartInstance) {
       chartInstance.dispose()
       chartInstance = null
