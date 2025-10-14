@@ -205,17 +205,25 @@ a-card.metrics-chart(:bordered="false")
 
     // Precompute which label keys actually differ across series
     const differingKeys = (() => {
-      const keyToValues = new Map<string, Set<string>>()
+      const totalSeries = labelMapsInOrder.length
+      // collect union of all label keys across series
+      const allKeys = new Set<string>()
       labelMapsInOrder.forEach((lm) => {
-        Object.entries(lm).forEach(([k, v]) => {
-          if (!keyToValues.has(k)) keyToValues.set(k, new Set<string>())
-          const s = keyToValues.get(k)
-          if (s) s.add(String(v))
-        })
+        Object.keys(lm).forEach((k) => allKeys.add(k))
       })
+
       const diff = new Set<string>()
-      keyToValues.forEach((values, key) => {
-        if (values.size > 1) diff.add(key)
+      // for each key, collect values across all series; treat missing as a distinct sentinel
+      allKeys.forEach((key) => {
+        const values = new Set<string>()
+        labelMapsInOrder.forEach((lm) => {
+          const v = lm[key]
+          values.add(v === undefined ? '__MISSING__' : String(v))
+        })
+        // values.size > 1 means at least 2 series have different values for this key
+        if (totalSeries === 1 || values.size > 1) {
+          diff.add(key)
+        }
       })
       return diff
     })()
@@ -237,7 +245,7 @@ a-card.metrics-chart(:bordered="false")
     }
 
     const series = seriesData.value.map((item, index) => {
-      const data = item.values.map(([timestamp, value]: [number, string | number]) => {
+      const data = (item.values as Array<[number, string | number]>).map(([timestamp, value]) => {
         if (value === null) {
           return [timestamp * 1000, null]
         }
