@@ -23,5 +23,5 @@ export default {
   'logsQuery.json': 'JSON',
   'logsQuery.newFile': '新建文件',
   'logsQuery.rowCountOverTime': '单位时间新增行数',
-  'logsQuery.frequencyDistribution': '字段频率分布',
+  'logsQuery.frequencyDistribution': '列值分布',
 }
