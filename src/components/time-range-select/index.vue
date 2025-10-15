@@ -15,7 +15,7 @@ TimeSelect(
 <script setup lang="ts">
   import { computed, watch, defineModel } from 'vue'
   import { useI18n } from 'vue-i18n'
-  import { relativeTimeMap, relativeTimeOptions } from '@/views/dashboard/config'
+  import { getRelativeTimeMap, getRelativeTimeOptions } from '@/views/dashboard/config'
   import TimeSelect from '@/components/time-select/index.vue'
 
   const { t } = useI18n()
@@ -45,18 +45,21 @@ TimeSelect(
   // Computed empty string with i18n
   const emptyStrComputed = computed(() => props.emptyStr || t('time-select.anyTime'))
 
+  const relativeTimeMap = computed(() => getRelativeTimeMap(t))
+  const relativeTimeOptions = computed(() => getRelativeTimeOptions(t))
+
   // Add "Any time" option to relative time options
   const relativeTimeMapWithAny = computed(() => {
-    if (!props.showAnyTime) return relativeTimeMap
+    if (!props.showAnyTime) return relativeTimeMap.value
     return {
       '-1': t('time-select.anyTime'),
-      ...relativeTimeMap,
+      ...relativeTimeMap.value,
     }
   })
 
   const relativeTimeOptionsWithAny = computed(() => {
-    if (!props.showAnyTime) return relativeTimeOptions
-    return [{ value: -1, label: t('time-select.anyTime') }, ...relativeTimeOptions]
+    if (!props.showAnyTime) return relativeTimeOptions.value
+    return [{ value: -1, label: t('time-select.anyTime') }, ...relativeTimeOptions.value]
   })
 
   // Read-only computed property: timeRangeValues - unified format
