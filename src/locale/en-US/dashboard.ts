@@ -82,4 +82,5 @@ export default {
   'dashboard.timeAssistance': 'Time Input Assistance',
   'dashboard.fetchingDatabases': 'Fetching databases...',
   'metrics.showFullSeriesName': 'Show full series name',
+  'dashboard.run': 'Run',
 }

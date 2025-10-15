@@ -6,7 +6,7 @@ a-layout.full-height-layout.pipefile-view(
     a-card.light-editor-card(:bordered="false")
       template(#title)
         .card-title-with-description
-          .card-title {{ isCreating ? 'Create Pipeline' : `Edit Pipeline - ${currFile.name}` }}
+          .card-title {{ isCreating ? `${t('common.create')} Pipeline` : `${t('common.edit')} Pipeline - ${currFile.name}` }}
           .card-description Pipeline is a mechanism in GreptimeDB for parsing and transforming log data,
             |
             a(href="https://docs.greptime.com/user-guide/logs/pipeline-config" target="_blank") read more
@@ -19,9 +19,9 @@ a-layout.full-height-layout.pipefile-view(
               status="warning"
               size="small"
             )
-              | Delete
+              | {{ t('common.delete') }}
           a-button(type="primary" size="small" @click="handleSave")
-            | Save
+            | {{ t('common.save') }}
     a-card.pipeline-actions-card(v-if="!isCreating")
       a-button(type="text" size="small" @click="handleIngest")
         | Ingest With Pipeline
@@ -65,7 +65,7 @@ a-layout.full-height-layout.pipefile-view(
             a-option(value="application/json") json
             a-option(value="application/x-ndjson") ndjson
 
-          a-button(size="small" type="primary" @click="handleDebug") Test
+          a-button(size="small" type="primary" @click="handleDebug") {{ t('pipeline.test') }}
 
       template(#title)
         .card-title-with-description
@@ -153,6 +153,7 @@ a-layout.full-height-layout.pipefile-view(
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { basicSetup } from 'codemirror'
   import { json } from '@codemirror/lang-json'
+  import { useI18n } from 'vue-i18n'
   import { create, list, del, debugContent, getByName } from '@/api/pipeline'
   import type { PipeFile } from '@/api/pipeline'
   import type { ColumnType } from '@/types/query'
@@ -161,6 +162,8 @@ a-layout.full-height-layout.pipefile-view(
   import LangEditor from '@/components/lang-editor.vue'
   import CreateTableModal from './create-table-modal/index.vue'
   import { toObj } from '../query/until'
+
+  const { t } = useI18n()
 
   const emit = defineEmits(['refresh', 'del'])
   const props = defineProps<{

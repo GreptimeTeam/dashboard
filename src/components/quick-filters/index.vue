@@ -1,6 +1,6 @@
 <template lang="pug">
 .quick-fields-section
-  | Quick Filters
+  | {{ t('quickFilters.title') }}
   div(style="display: flex; flex-wrap: wrap; gap: 8px")
     a-tag(
       v-for="quickFilter in savedQuickFilters"
@@ -10,14 +10,14 @@
       @click="onApplyQuickFilter(quickFilter)"
       @close="removeQuickFilter(quickFilter.name)"
     )
-      span(:title="'Click to apply quick filter'") {{ quickFilter.name }}
+      span(:title="t('quickFilters.clickToApplyTitle')") {{ quickFilter.name }}
     a-tag.quick-fields-save(type="text" style="cursor: pointer" @click="showSaveQuickFilter = true")
       template(#icon)
         icon-plus
-      | Save Current Search
+      | {{ t('quickFilters.saveCurrentSearch') }}
   a-modal(
     v-model:visible="showSaveQuickFilter"
-    title="Save Current Search as Quick Filter"
+    :title="t('quickFilters.saveModalTitle')"
     :width="500"
     :on-before-ok="saveCurrentAsQuickFilter"
     @cancel="showSaveQuickFilter = false"
@@ -28,9 +28,9 @@
       :model="saveQuickFilterForm"
       :rules="saveQuickFilterRules"
     )
-      a-form-item(label="Name" field="name")
-        a-input(v-model="saveQuickFilterForm.name" placeholder="Enter a name for this quick filter" maxlength="50")
-      a-form-item(label="Description" field="description")
+      a-form-item(field="name" :label="t('quickFilters.name')")
+        a-input(v-model="saveQuickFilterForm.name" maxlength="50" :placeholder="t('quickFilters.namePlaceholder')")
+      a-form-item(field="description" :label="t('quickFilters.description')")
         a-descriptions(
           size="small"
           bordered
@@ -38,9 +38,9 @@
           style="width: 100%"
           :column="1"
         )
-          a-descriptions-item(label="Table")
+          a-descriptions-item(:label="t('quickFilters.table')")
             a-tag(color="blue") {{ props.form.table }}
-          a-descriptions-item(v-if="props.form.conditions.length > 0" label="Conditions")
+          a-descriptions-item(v-if="props.form.conditions.length > 0" :label="t('quickFilters.conditions')")
             .conditions-list
               a-tag(
                 v-for="(condition, index) in props.form.conditions"
@@ -49,12 +49,13 @@
                 style="margin-bottom: 4px; margin-right: 4px"
               )
                 | {{ condition.field }} {{ condition.operator }} {{ condition.value }}
-          a-descriptions-item(v-else label="Conditions")
-            a-tag(color="gray") No conditions set
+          a-descriptions-item(v-else :label="t('quickFilters.conditions')")
+            a-tag(color="gray") {{ t('quickFilters.noConditions') }}
 </template>
 
 <script setup lang="ts" name="QuickFilters">
   import { ref, computed, watch, reactive, nextTick } from 'vue'
+  import { useI18n } from 'vue-i18n'
   import { useLocalStorage } from '@vueuse/core'
   import type { BuilderFormState, Condition } from '@/types/query'
 
@@ -70,6 +71,7 @@
   }
 
   const emit = defineEmits(['apply'])
+  const { t } = useI18n()
 
   const props = defineProps<{
     fields: TableField[]
@@ -89,15 +91,15 @@
 
   const saveQuickFilterRules = {
     name: [
-      { required: true, message: 'Name is required' },
-      { minLength: 2, message: 'Name must be at least 2 characters' },
-      { maxLength: 50, message: 'Name must be less than 50 characters' },
+      { required: true, message: t('quickFilters.nameRequired') },
+      { minLength: 2, message: t('quickFilters.nameMin') },
+      { maxLength: 50, message: t('quickFilters.nameMax') },
       {
         validator: (value: string, cb: (msg?: string) => void) => {
           const trimmedName = value.trim().toLowerCase()
           const existingFilter = savedQuickFilters.value.find((filter) => filter.name.toLowerCase() === trimmedName)
           if (existingFilter) {
-            cb('A quick filter with this name already exists')
+            cb(t('quickFilters.nameExists'))
           } else {
             cb()
           }

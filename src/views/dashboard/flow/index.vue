@@ -14,7 +14,7 @@
     a-card(:bordered="false")
       template(#title)
         .results-header
-          span Results
+          span {{ $t('logsQuery.results') }}
           span.results-count(v-if="totalResults > 0") 
             | ({{ totalResults }} {{ totalResults === 1 ? 'record' : 'records' }})
       template(#extra)

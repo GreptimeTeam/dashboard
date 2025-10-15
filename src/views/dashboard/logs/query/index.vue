@@ -6,8 +6,8 @@
     a-card(:bordered="false")
       .toolbar
         a-radio-group(type="button" :model-value="editorType" @update:modelValue="(val) => (editorType = val)")
-          a-radio(value="builder") Builder
-          a-radio(value="text") Code
+          a-radio(value="builder") {{ $t('logsQuery.builder') }}
+          a-radio(value="text") {{ $t('logsQuery.code') }}
         TimeRangeSelect(
           button-type="outline"
           :time-length="time"
@@ -24,7 +24,7 @@
           template(#icon)
             icon-loading(v-if="queryLoading" spin)
             icon-play-arrow(v-else)
-          | {{ $t('dashboard.runQuery') }}
+          | {{ $t('dashboard.run') }}
         a-checkbox(size="small" :model-value="refresh" @update:modelValue="(val) => (refresh = val)")
           span(style="color: var(--color-text-2)") {{ $t('logsQuery.live') }}
         a-space(style="margin-left: auto")
@@ -66,19 +66,19 @@
           span.results-header
             span {{ $t('logsQuery.results') }}
             span.results-count(v-if="rows.length > 0") 
-              | ({{ rows.length }} {{ rows.length === 1 ? 'record' : 'records' }}
+              | ({{ rows.length }} {{ rows.length === 1 ? $t('logsQuery.record') : $t('logsQuery.records') }}
               | )
           a-checkbox(v-model="mergeColumn" type="button" size="small")
-            | Single Column
+            | {{ $t('logsQuery.singleColumn') }}
           a-checkbox(
             v-if="mergeColumn"
             v-model="showKeys"
             type="button"
             size="small"
           )
-            | Show Keys
+            | {{ $t('logsQuery.showKeys') }}
           a-checkbox(v-model="compact" type="button" size="small")
-            | Compact Mode
+            | {{ $t('logsQuery.compactMode') }}
           a-checkbox(v-model="wrap" size="small")
             span {{ $t('logsQuery.wrapLines') }}
 

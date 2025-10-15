@@ -2,7 +2,7 @@
 a-card(:bordered="false")
   template(#title)
     .results-header
-      span Results
+      span {{ $t('logsQuery.results') }}
       span.results-count(v-if="totalResults > 0") 
         | ({{ totalResults }} {{ totalResults === 1 ? 'record' : 'records' }}
         template(v-if="totalResults > pageSize")
@@ -13,7 +13,7 @@ a-card(:bordered="false")
       a-trigger(v-if="columns.length" trigger="click" :unmount-on-close="false")
         a-button(type="text" style="color: var(--color-text-2)")
           template(#icon)
-          | Columns
+          | {{ $t('logsQuery.columns') }}
         template(#content)
           a-card(style="padding: 10px; min-width: 200px; max-height: 500px; overflow-y: auto")
             .column-controls

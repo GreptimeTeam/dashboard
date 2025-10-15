@@ -129,29 +129,29 @@ export const getTimeOptionsForEdge = (t: (key: string) => string) => [
 ]
 
 export const relativeTimeOptions = [
-  { value: 1, label: 'Last 1 minute' },
-  { value: 10, label: 'Last 10 minutes' },
-  { value: 30, label: 'Last 30 minutes' },
-  { value: 60, label: 'Last 1 hour' },
-  { value: 180, label: 'Last 3 hours' },
-  { value: 360, label: 'Last 6 hours' },
-  { value: 720, label: 'Last 12 hours' },
-  { value: 1440, label: 'Last 24 hours' },
-  { value: 2880, label: 'Last 2 days' },
-  { value: 10080, label: 'Last 7 days' },
+  { value: 1, label: i18n.global.t('time-select.last1Minute') },
+  { value: 10, label: i18n.global.t('time-select.last10Minutes') },
+  { value: 30, label: i18n.global.t('time-select.last30Minutes') },
+  { value: 60, label: i18n.global.t('time-select.last1Hour') },
+  { value: 180, label: i18n.global.t('time-select.last3Hours') },
+  { value: 360, label: i18n.global.t('time-select.last6Hours') },
+  { value: 720, label: i18n.global.t('time-select.last12Hours') },
+  { value: 1440, label: i18n.global.t('time-select.last24Hours') },
+  { value: 2880, label: i18n.global.t('time-select.last2Days') },
+  { value: 10080, label: i18n.global.t('time-select.last7Days') },
 ]
 
 export const relativeTimeMap: { [key: number]: string } = {
-  1: 'Last 1 minute',
-  10: 'Last 10 minutes',
-  30: 'Last 30 minutes',
-  60: 'Last 1 hour',
-  180: 'Last 3 hours',
-  360: 'Last 6 hours',
-  720: 'Last 12 hours',
-  1440: 'Last 24 hours',
-  2880: 'Last 2 days',
-  10080: 'Last 7 days',
+  1: i18n.global.t('time-select.last1Minute'),
+  10: i18n.global.t('time-select.last10Minutes'),
+  30: i18n.global.t('time-select.last30Minutes'),
+  60: i18n.global.t('time-select.last1Hour'),
+  180: i18n.global.t('time-select.last3Hours'),
+  360: i18n.global.t('time-select.last6Hours'),
+  720: i18n.global.t('time-select.last12Hours'),
+  1440: i18n.global.t('time-select.last24Hours'),
+  2880: i18n.global.t('time-select.last2Days'),
+  10080: i18n.global.t('time-select.last7Days'),
 }
 
 export const navbarSteps: DriveStep[] = [

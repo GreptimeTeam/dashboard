@@ -7,10 +7,10 @@ a-card(:bordered="false")
           | {{ menuStr }} &nbsp;
           icon-down
         template(#content)
-          a-doption(value="count") Row Count Over Time
+          a-doption(value="count") {{ $t('logsQuery.rowCountOverTime') }}
           a-dsubmenu(trigger="hover" position="lt")
             template(#default)
-              | Frequency Distribution
+              | {{ $t('logsQuery.frequencyDistribution') }}
             template(#content)
               a-doption(v-for="field in filterFields" :value="`frequency_${field}`") {{ field }}
       a-button(type="text" size="small" @click="toggleChart")
@@ -37,10 +37,13 @@ a-card(:bordered="false")
 <script setup name="ChartContainer" lang="ts">
   import { ref, computed, watch, nextTick } from 'vue'
   import { useLocalStorage } from '@vueuse/core'
+  import { useI18n } from 'vue-i18n'
   import { IconDown, IconRight } from '@arco-design/web-vue/es/icon'
   import type { ColumnType, TSColumn, QueryState } from '@/types/query'
   import CountChart from '@/components/count-chart/index.vue'
   import FunnelChart from './FunnelChart.vue'
+
+  const { t } = useI18n()
 
   interface Props {
     columns?: ColumnType[]
@@ -86,9 +89,9 @@ a-card(:bordered="false")
 
   const menuStr = computed(() => {
     if (currChart.value === 'count') {
-      return 'Row Count Over Time'
+      return t('logsQuery.rowCountOverTime') as string
     }
-    return 'Frequency Distribution'
+    return t('logsQuery.frequencyDistribution') as string
   })
 
   // Method to trigger the current chart query based on chart type
