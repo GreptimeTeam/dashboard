@@ -24,7 +24,7 @@
           template(#icon)
             icon-loading(v-if="queryLoading" spin)
             icon-play-arrow(v-else)
-          | {{ $t('dashboard.runQuery') }}
+          | {{ $t('dashboard.run') }}
         a-checkbox(size="small" :model-value="refresh" @update:modelValue="(val) => (refresh = val)")
           span(style="color: var(--color-text-2)") {{ $t('logsQuery.live') }}
         a-space(style="margin-left: auto")

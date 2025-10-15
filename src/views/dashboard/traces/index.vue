@@ -24,7 +24,7 @@
             template(#icon)
               icon-loading(v-if="loading" spin)
               icon-play-arrow(v-else)
-            | {{ $t('dashboard.runQuery') }}
+            | {{ $t('dashboard.run') }}
 
         a-space
           a-button(

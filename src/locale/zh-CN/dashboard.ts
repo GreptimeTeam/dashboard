@@ -35,7 +35,7 @@ export default {
   'dashboard.runAll': '运行全部',
   'dashboard.runLine': '运行当前行',
   'dashboard.runLines': '运行选中行',
-  'dashboard.runQuery': '查询',
+  'dashboard.runQuery': '运行语句',
   'dashboard.runScript': '运行脚本：{name}',
   'dashboard.runScriptAction': '运行脚本',
   'dashboard.runSuccess': '运行成功',
@@ -80,4 +80,5 @@ export default {
   'dashboard.timeAssistance': '时间输入助手',
   'dashboard.fetchingDatabases': '正在获取数据库...',
   'metrics.showFullSeriesName': '显示全名',
+  'dashboard.run': '查询',
 }
