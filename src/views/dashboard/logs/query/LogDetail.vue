@@ -2,7 +2,7 @@
 a-drawer(
   v-if="currRow"
   popup-container="#log-table-container"
-  ok-text="Close"
+  :ok-text="$t('common.close')"
   :width="800"
   :visible="props.visible"
   :mask="false"
@@ -17,9 +17,9 @@ a-drawer(
       a-button(type="text" :disabled="selectedRowKey === rows.length - 1" @click="handleNext")
         icon-arrow-down
   a-tabs
-    a-tab-pane(title="Fields" key="1")
+    a-tab-pane(key="1" :title="$t('logsQuery.fields')")
       FormView(:data="viewRow" :columns="columns")
-    a-tab-pane(title="JSON" key="2")
+    a-tab-pane(key="2" :title="$t('logsQuery.json')")
       JSONView(:jsonStr="JSON.stringify(viewRow, null, 2)")
 </template>
 

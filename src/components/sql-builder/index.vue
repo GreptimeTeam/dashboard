@@ -6,17 +6,17 @@ a-form(
   auto-label-width
   :model="form"
 )
-  a-form-item(label="Table")
+  a-form-item(:label="t('sqlBuilder.table')")
     a-select(
       v-model="form.table"
       style="min-width: 120px; width: auto"
-      placeholder="Select table"
+      :placeholder="t('sqlBuilder.selectTable')"
       :allow-search="true"
       :trigger-props="{ autoFitPopupMinWidth: true }"
       :options="tables"
       @change="handleTableChange"
     )
-  a-form-item(label="Filters" style="margin-right: 12px")
+  a-form-item(style="margin-right: 12px" :label="t('sqlBuilder.filters')")
     .condition-wrapper
       a-space(v-for="(condition, index) in form.conditions" :key="index")
         a-input-group.input-group
@@ -24,21 +24,21 @@ a-form(
             v-if="index > 0"
             v-model="condition.relation"
             style="width: auto"
-            :options="['AND', 'OR']"
+            :options="relationOptions"
           )
           a-select.field(
             v-model="condition.field"
             allow-search
-            placeholder="field"
             style="width: 140px"
+            :placeholder="t('sqlBuilder.field')"
             :trigger-props="{ autoFitPopupMinWidth: true }"
             :options="fieldsOptions"
             @change="() => handleFieldChange(condition)"
           )
           a-select.operator(
             v-model="condition.operator"
-            placeholder="operator"
             style="width: auto"
+            :placeholder="t('sqlBuilder.operator')"
             :trigger-props="{ autoFitPopupMinWidth: true }"
             :options="getOperators(condition.field)"
           )
@@ -46,15 +46,15 @@ a-form(
             a-select.value(
               v-if="getFieldType(condition.field) === 'Boolean'"
               v-model.boolean="condition.value"
-              placeholder="value"
               style="width: 60px"
+              :placeholder="t('sqlBuilder.value')"
               :options="['true', 'false']"
             )
             a-input.value(
               v-else
               v-model="condition.value"
               style="width: 60px"
-              :placeholder="condition.operator === 'IN' || condition.operator === 'NOT IN' ? 'val1,val2' : 'value'"
+              :placeholder="condition.operator === 'IN' || condition.operator === 'NOT IN' ? t('sqlBuilder.commaValuesHint') : t('sqlBuilder.value')"
             )
           a-button.field-action(@click="() => removeCondition(index)")
             icon-minus(style="cursor: pointer; font-size: 14px")
@@ -66,36 +66,36 @@ a-form(
   a-form-item
     a-trigger(trigger="click" :unmount-on-close="false")
       a-button.more-toggle(type="text")
-        | More
+        | {{ t('sqlBuilder.more') }}
         icon-down(style="font-size: 10px; margin-left: 4px")
 
       template(#content)
         .more-popup
           .more-popup-header
-            h4 More Options
+            h4 {{ t('sqlBuilder.moreOptions') }}
           .more-popup-content
-            a-form-item(label="Order By")
+            a-form-item(:label="t('sqlBuilder.orderBy')")
               a-space(size="small")
                 a-input-group.input-group
                   a-select(
                     v-model="form.orderByField"
                     style="width: auto"
-                    placeholder="Select field"
                     allow-search
+                    :placeholder="t('sqlBuilder.selectField')"
                     :trigger-props="{ autoFitPopupMinWidth: true }"
                     :options="fieldsOptions"
                   )
                   a-select(
                     v-model="form.orderBy"
                     style="width: 80px"
-                    placeholder="Order"
+                    :placeholder="t('sqlBuilder.order')"
                     :options="orderOptions"
                   )
-            a-form-item(label="Limit")
+            a-form-item(:label="t('sqlBuilder.limit')")
               a-input-number(
                 v-model="form.limit"
                 style="width: 80px"
-                placeholder="Limit"
+                :placeholder="t('sqlBuilder.limit')"
                 :step="100"
                 :min="1"
                 :max="10000"
@@ -113,6 +113,7 @@ QuickFilters(
 
 <script setup name="SQLBuilder" lang="ts">
   import { ref, watch, onMounted, computed, readonly, reactive } from 'vue'
+  import { useI18n } from 'vue-i18n'
   import { useLocalStorage } from '@vueuse/core'
   import { storeToRefs } from 'pinia'
   import editorAPI from '@/api/editor'
@@ -120,6 +121,8 @@ QuickFilters(
   import QuickFilters from '@/components/quick-filters/index.vue'
   import type { Condition, BuilderFormState as Form } from '@/types/query'
   import { TsTypeMapping } from '@/utils/date-time'
+
+  const { t } = useI18n()
 
   interface TableField {
     name: string
@@ -220,10 +223,15 @@ QuickFilters(
     { immediate: true }
   )
 
-  const orderOptions = [
-    { label: 'ASC', value: 'ASC' },
-    { label: 'DESC', value: 'DESC' },
-  ]
+  const orderOptions = computed(() => [
+    { label: t('sqlBuilder.asc'), value: 'ASC' },
+    { label: t('sqlBuilder.desc'), value: 'DESC' },
+  ])
+
+  const relationOptions = computed(() => [
+    { label: t('sqlBuilder.and'), value: 'AND' },
+    { label: t('sqlBuilder.or'), value: 'OR' },
+  ])
 
   // Operator mapping based on field data type (similar to log query)
   const operatorMap = {

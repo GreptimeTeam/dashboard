@@ -5,7 +5,7 @@ TimeSelect(
   :button-type="buttonType"
   :button-class="buttonClass"
   :flex-direction="flexDirection"
-  :empty-str="emptyStr"
+  :empty-str="emptyStrComputed"
   :button-size="buttonSize"
   :relative-time-map="relativeTimeMapWithAny"
   :relative-time-options="relativeTimeOptionsWithAny"
@@ -14,8 +14,11 @@ TimeSelect(
 
 <script setup lang="ts">
   import { computed, watch, defineModel } from 'vue'
+  import { useI18n } from 'vue-i18n'
   import { relativeTimeMap, relativeTimeOptions } from '@/views/dashboard/config'
   import TimeSelect from '@/components/time-select/index.vue'
+
+  const { t } = useI18n()
 
   // Props - same as TimeSelect but with defaults for "Any time"
   const props = withDefaults(
@@ -39,18 +42,21 @@ TimeSelect(
   const timeLength = defineModel<number>('timeLength', { default: 0 }) // 0 means "Any time" by default
   const timeRange = defineModel<string[]>('timeRange', { default: () => [] })
 
+  // Computed empty string with i18n
+  const emptyStrComputed = computed(() => props.emptyStr || t('time-select.anyTime'))
+
   // Add "Any time" option to relative time options
   const relativeTimeMapWithAny = computed(() => {
     if (!props.showAnyTime) return relativeTimeMap
     return {
-      '-1': 'Any time',
+      '-1': t('time-select.anyTime'),
       ...relativeTimeMap,
     }
   })
 
   const relativeTimeOptionsWithAny = computed(() => {
     if (!props.showAnyTime) return relativeTimeOptions
-    return [{ value: -1, label: 'Any time' }, ...relativeTimeOptions]
+    return [{ value: -1, label: t('time-select.anyTime') }, ...relativeTimeOptions]
   })
 
   // Read-only computed property: timeRangeValues - unified format
