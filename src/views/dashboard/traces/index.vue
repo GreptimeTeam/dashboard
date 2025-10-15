@@ -53,7 +53,7 @@
     a-card(v-if="queryState.sql || textEditor.textEditorState.sql" :bordered="false")
       template(#title)
         .chart-header
-          span Trace Count Over Time
+          span {{ $t('logsQuery.rowCountOverTime') }}
           a-button(type="text" size="small" @click="handleChartToggle")
             template(#icon)
               icon-down(v-if="chartExpanded")

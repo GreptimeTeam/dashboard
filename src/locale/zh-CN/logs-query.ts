@@ -3,7 +3,7 @@ export default {
   'logsQuery.saveSql': '保存为常用 SQL',
   'logsQuery.savedSql': '常用 SQL',
   'logsQuery.showTables': '所有表格',
-  'logsQuery.results': '结果',
+  'logsQuery.results': '查询结果',
   'logsQuery.hideStatChart': '隐藏图表',
   'logsQuery.showStatChart': '显示图表',
   'logsQuery.live': '实时',

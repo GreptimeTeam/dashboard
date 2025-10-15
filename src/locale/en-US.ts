@@ -17,6 +17,9 @@ export default {
   'common.retry': 'Retry',
   'common.cancel': 'Cancel',
   'common.edit': 'Edit',
+  'common.create': 'Create',
+  'common.copy': 'Copy',
+  'common.insert': 'Insert',
   'common.delete': 'Delete',
   'common.refresh': 'Refresh',
   'common.save': 'Save',
@@ -34,6 +37,9 @@ export default {
   'common.all': 'All',
   'common.pleaseInput': 'Please input...',
   'common.close': 'Close',
+  // Pipeline buttons
+  'pipeline.test': 'Test',
+
   'time-select.custom': 'Custom',
   'logs.copyQuery': 'Copy Query',
   'logs.explainQuery': 'Explain Query',

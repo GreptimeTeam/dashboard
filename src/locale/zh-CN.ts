@@ -17,6 +17,9 @@ export default {
   'common.retry': '重试',
   'common.cancel': '取消',
   'common.edit': '编辑',
+  'common.create': '创建',
+  'common.copy': '复制',
+  'common.insert': '插入',
   'common.delete': '删除',
   'common.refresh': '刷新',
   'common.save': '保存',
@@ -34,6 +37,10 @@ export default {
   'common.all': '全部',
   'common.pleaseInput': '请输入...',
   'common.close': '关闭',
+  // Pipeline buttons
+
+  'pipeline.test': '测试',
+
   'time-select.custom': '自定义',
   'logs.copyQuery': '复制查询语句',
   'logs.explainQuery': '执行计划分析',

@@ -35,13 +35,16 @@ a-dropdown.metric-menu(
 
       a-space.action-row
         a-button.insert-button(size="small" @click="handleInsertLabelWithValue")
-          | Insert
+          | {{ t('common.insert') }}
         a-button.copy-button(size="small" @click="handleCopyLabelWithValue")
-          | Copy
+          | {{ t('common.copy') }}
 </template>
 
 <script setup lang="ts">
   import { ref, watch, onMounted } from 'vue'
+  import { useI18n } from 'vue-i18n'
+
+  const { t } = useI18n()
 
   const props = defineProps<{
     nodeData: {
