@@ -14,7 +14,8 @@ a-tabs.panel-tabs(
         a-button(size="small" @click="toggleFullSize")
           template(#icon)
             svg.icon-16
-              use(href="#zoom")
+              use(v-if="!props.isInFullSizeMode" href="#zoom")
+              use(v-else href="#zoom-out")
       a-popconfirm(
         type="warning"
         cancel-text=""
@@ -141,6 +142,7 @@ a-tabs.panel-tabs(
   const clearResults = () => {
     startKey.value = props.results[0]?.key as number
     clear(props.types)
+    emit('toggleFullSize', false)
   }
 
   const refreshSingleResult = async (result: ResultType) => {
