@@ -6,7 +6,7 @@ const SCREENSHOT_PATH = path.join(process.cwd(), 'e2e-screenshots', 'query-fail.
 const SQL_STATEMENT = 'SELECT 1;'
 
 test.use({
-  baseURL: 'http://localhost:5177',
+  baseURL: 'http://localhost:5173',
   testIdAttribute: 'data-test',
 })
 
