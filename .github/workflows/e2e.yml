@@ -3,13 +3,14 @@ name: E2E Tests
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [main]
+  schedule:
+    - cron: '0 2 * * *' 
   workflow_dispatch:
 
 jobs:
   e2e:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -27,8 +28,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Start stack
-        run: docker compose -f docker-compose.e2e.yml up -d --build
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps
+
+      - name: Start docker-compose stack
+        run: docker compose -f docker-compose.e2e.yml up -d
 
       - name: Wait for dashboard
         run: |
