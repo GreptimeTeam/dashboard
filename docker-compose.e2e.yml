@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  greptimedb:
+    image: greptime/greptimedb:latest
+    ports:
+      - "${GREPTIMEDB_PORT:-4000}:4000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks:
+      - e2e-net
+
+  dashboard:
+    image: greptime/dashboard:latest
+    environment:
+      VITE_API_BASE: "${BACKEND_API_BASE:-http://dashboard-apiserver:8080}"
+    depends_on:
+      dashboard-apiserver:
+        condition: service_healthy
+    ports:
+      - "${DASHBOARD_PORT:-5177}:5173"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5173/dashboard/query"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks:
+      - e2e-net
+
+networks:
+  e2e-net:
+    driver: bridge
+
