@@ -1,31 +1,17 @@
 name: E2E Tests
 
-# Local run example:
-# docker compose -f docker-compose.e2e.yml up -d
-# BACKEND_API_BASE=http://localhost:8080 DASHBOARD_PORT=5177 pnpm exec playwright test tests/e2e/query.real.spec.ts
-
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
   workflow_dispatch:
-    
+
 jobs:
   e2e:
-    name: E2E Tests
     runs-on: ubuntu-latest
-    env:
-      USE_CLOUD_BACKEND: ${{ env.USE_CLOUD_BACKEND }}
-      BACKEND_API_BASE: ${{ env.BACKEND_API_BASE }}
-      DASHBOARD_URL: ${{ env.DASHBOARD_URL }}
-      DASHBOARD_PORT: ${{ env.DASHBOARD_PORT || '5177' }}
-      GREPTIMEDB_PORT: ${{ env.GREPTIMEDB_PORT || '4000' }}
-      BACKEND_PORT: ${{ env.BACKEND_PORT || '8080' }}
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
@@ -41,51 +27,34 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Start docker-compose stack
-        if: env.USE_CLOUD_BACKEND != 'true'
-        run: |
-          docker compose -f docker-compose.e2e.yml up -d
-          docker compose -f docker-compose.e2e.yml ps
+      - name: Start stack
+        run: docker compose -f docker-compose.e2e.yml up -d --build
 
       - name: Wait for dashboard
-        if: env.USE_CLOUD_BACKEND != 'true'
         run: |
           for i in {1..30}; do
-            if curl -fsS "http://localhost:${DASHBOARD_PORT:-5177}/dashboard/query" > /dev/null; then
-              echo "Dashboard is ready"
+            if curl -fsS http://localhost:5173/dashboard/query > /dev/null; then
+              echo "✅ Dashboard ready"
               exit 0
             fi
             echo "Waiting for dashboard (${i}/30)..."
             sleep 5
           done
-          echo "Dashboard did not become ready in time"
           exit 1
 
-      - name: Run Playwright tests (local docker stack)
-        if: env.USE_CLOUD_BACKEND != 'true'
-        env:
-          BACKEND_API_BASE: "http://localhost:${BACKEND_PORT:-8080}"
-          DASHBOARD_URL: "http://localhost:${DASHBOARD_PORT:-5177}"
+      - name: Run Playwright tests
         run: pnpm exec playwright test tests/e2e/query.real.spec.ts
 
-      - name: Run Playwright tests (cloud backend)
-        if: env.USE_CLOUD_BACKEND == 'true'
-        env:
-          BACKEND_API_BASE: ${{ env.BACKEND_API_BASE }}
-          DASHBOARD_URL: ${{ env.DASHBOARD_URL }}
-        run: pnpm exec playwright test tests/e2e/query.real.spec.ts
-
-      - name: Upload Playwright artifacts
+      - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-artifacts
           path: |
             playwright-report
-            test-results
             e2e-screenshots
           if-no-files-found: ignore
 
-      - name: Shutdown docker-compose stack
-        if: always() && env.USE_CLOUD_BACKEND != 'true'
+      - name: Cleanup
+        if: always()
         run: docker compose -f docker-compose.e2e.yml down -v
