@@ -20,6 +20,7 @@ a-layout.new-layout
         DataView(
           v-if="!!results?.length || !!explainResult"
           ref="dataViewRef"
+          data-test="query-result"
           :results="results"
           :types="types"
           :explainResult="explainResult"
