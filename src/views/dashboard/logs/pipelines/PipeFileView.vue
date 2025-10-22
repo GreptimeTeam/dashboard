@@ -9,7 +9,7 @@ a-layout.full-height-layout.pipefile-view(
           .card-title {{ isCreating ? `${t('common.create')} Pipeline` : `${t('common.edit')} Pipeline - ${currFile.name}` }}
           .card-description Pipeline is a mechanism in GreptimeDB for parsing and transforming log data,
             |
-            a(href="https://docs.greptime.com/user-guide/logs/pipeline-config" target="_blank") read more
+            a(href="https://docs.greptime.com/reference/pipeline/pipeline-config" target="_blank") read more
       template(#extra)
         a-space
           a-popconfirm(content="Are you sure you want to delete?" @ok="handleDelete")
