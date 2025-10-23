@@ -12,7 +12,7 @@ a-trigger#time-select(
       svg.icon-16
         use(href="#time")
     div(v-if="isRelative") {{ relativeTimeMap[timeLength] || props.emptyStr }}
-    div(v-else) {{ `${dayjs.unix(timeRange[0]).format('YYYY-MM-DD HH:mm:ss')} - ${dayjs.unix(timeRange[1]).format('YYYY-MM-DD HH:mm:ss')} ` }}
+    div(v-else) {{ absoluteTimeLabel }}
   template(#content)
     a-space.hide
     a-space(
@@ -27,11 +27,9 @@ a-trigger#time-select(
         v-show="rangePickerVisible"
         hide-trigger
         format="YYYY-MM-DD HH:mm:ss"
-        value-format="X"
         position="bl"
-        :model-value="props.timeRange"
+        :model-value="rangePickerModelValue"
         :show-time="true"
-        :disabledDate="(current) => dayjs(current).isAfter(dayjs())"
         :trigger-props="{ 'update-at-scroll': true }"
         :placeholder="[$t('dashboard.startTime'), $t('dashboard.endTime')]"
         @ok="selectTimeRange($event)"
@@ -48,8 +46,15 @@ a-trigger#time-select(
 
 <script lang="ts" setup name="TimeSelect">
   import type { OptionsType } from '@/types/global'
+  import type { PropType } from 'vue'
   import dayjs from 'dayjs'
+  import utc from 'dayjs/plugin/utc'
+  import timezone from 'dayjs/plugin/timezone'
   import { useI18n } from 'vue-i18n'
+  import { useAppStore } from '@/store'
+
+  dayjs.extend(utc)
+  dayjs.extend(timezone)
 
   const { t } = useI18n()
 
@@ -59,8 +64,8 @@ a-trigger#time-select(
       default: 10,
     },
     timeRange: {
-      type: Array<string>,
-      default: [],
+      type: Array as PropType<string[]>,
+      default: () => [],
     },
     flexDirection: {
       type: String,
@@ -71,12 +76,12 @@ a-trigger#time-select(
       default: '',
     },
     buttonType: {
-      type: String,
-      default: 'text',
+      type: String as PropType<'text' | 'dashed' | 'outline' | 'primary' | 'secondary'>,
+      default: 'text' as const,
     },
     buttonSize: {
-      type: String,
-      default: 'medium',
+      type: String as PropType<'medium' | 'small' | 'mini' | 'large'>,
+      default: 'medium' as const,
     },
     relativeTimeOptions: {
       type: Array<OptionsType>,
@@ -100,9 +105,90 @@ a-trigger#time-select(
   const rangePickerVisible = ref(false)
   const visible = ref(false)
 
+  const { userTimezone } = storeToRefs(useAppStore())
+
+  // ±[h]h:mm
+  const offsetRegex = /^([+-])(\d|0\d|1[0-4]):(00|15|30|45)$/
+
+  const dashboardTimezone = computed(() => userTimezone.value?.trim() || dayjs.tz.guess())
+
+  const offsetMinutes = computed(() => {
+    const match = offsetRegex.exec(dashboardTimezone.value)
+    if (!match) {
+      return null
+    }
+    const [, sign, hoursStr, minutesStr] = match
+    const hours = Number(hoursStr)
+    const minutes = Number(minutesStr)
+    const total = hours * 60 + minutes
+    return sign === '-' ? -total : total
+  })
+
+  const toUnixInDashboardTz = (value: Date) => {
+    if (offsetMinutes.value !== null) {
+      return dayjs(value).utcOffset(offsetMinutes.value, true).unix()
+    }
+    return dayjs(value).tz(dashboardTimezone.value, true).unix()
+  }
+
+  const formatUnixInDashboardTz = (unixValue: string | number) => {
+    const unixNumber = Number(unixValue)
+    if (!Number.isFinite(unixNumber)) return ''
+    const base = dayjs.unix(unixNumber)
+    return offsetMinutes.value !== null
+      ? base.utcOffset(offsetMinutes.value).format('YYYY-MM-DD HH:mm:ss')
+      : base.tz(dashboardTimezone.value).format('YYYY-MM-DD HH:mm:ss')
+  }
+
+  const unixToDateInDashboardTz = (unixValue: string | number) => {
+    const unixNumber = Number(unixValue)
+    if (!Number.isFinite(unixNumber)) return null
+    const base = dayjs.unix(unixNumber)
+    return offsetMinutes.value !== null
+      ? base.utcOffset(offsetMinutes.value).toDate()
+      : base.tz(dashboardTimezone.value).toDate()
+  }
+
   const isRelative = computed(() => props.timeLength !== 0 || props.timeRange.length === 0)
-  const selectTimeRange = (range: any) => {
-    emit('update:timeRange', range)
+
+  const sameTimezone = computed(() => {
+    const tzA = dashboardTimezone.value
+    const tzB = dayjs.tz.guess()
+    const offsetA = dayjs.tz(dayjs(), tzA).utcOffset()
+    const offsetB = dayjs.tz(dayjs(), tzB).utcOffset()
+    return offsetA === offsetB
+  })
+
+  const rangePickerModelValue = computed(() => {
+    if (!props.timeRange || props.timeRange.length !== 2) {
+      return undefined
+    }
+    const [start, end] = props.timeRange
+    const startDate = unixToDateInDashboardTz(start)
+    const endDate = unixToDateInDashboardTz(end)
+    if (!startDate || !endDate) {
+      return undefined
+    }
+    return [startDate, endDate]
+  })
+
+  const absoluteTimeLabel = computed(() => {
+    if (!props.timeRange || props.timeRange.length !== 2) return props.emptyStr
+    const [start, end] = props.timeRange
+    const formattedStart = formatUnixInDashboardTz(start)
+    const formattedEnd = formatUnixInDashboardTz(end)
+    if (!formattedStart || !formattedEnd) return props.emptyStr
+
+    return sameTimezone.value
+      ? `${formattedStart} - ${formattedEnd}`
+      : `${formattedStart} - ${formattedEnd} (${dashboardTimezone.value})`
+  })
+
+  const selectTimeRange = (range: [Date, Date]) => {
+    const [startDate, endDate] = range
+    const start = toUnixInDashboardTz(startDate)
+    const end = toUnixInDashboardTz(endDate)
+    emit('update:timeRange', [start.toString(), end.toString()])
     emit('update:timeLength', 0)
     emit('change')
     visible.value = false
