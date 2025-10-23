@@ -64,8 +64,8 @@ a-trigger#time-select(
       default: 10,
     },
     timeRange: {
-      type: Array as PropType<[string, string]>,
-      default: () => ['', ''],
+      type: Array as PropType<string[]>,
+      default: () => [],
     },
     flexDirection: {
       type: String,
