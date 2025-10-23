@@ -107,87 +107,53 @@ a-trigger#time-select(
 
   const { userTimezone } = storeToRefs(useAppStore())
 
-  // ±[h]h:mm
-  const offsetRegex = /^([+-])(\d|0\d|1[0-4]):(00|15|30|45)$/
-
+  const browserOffset = dayjs().utcOffset()
   const dashboardTimezone = computed(() => userTimezone.value?.trim() || dayjs.tz.guess())
+  const dashboardOffset = computed(() => dayjs().tz(dashboardTimezone.value).utcOffset())
+  const offsetDiff = computed(() => dashboardOffset.value - browserOffset)
 
-  const offsetMinutes = computed(() => {
-    const match = offsetRegex.exec(dashboardTimezone.value)
-    if (!match) {
-      return null
+  const toUtcTime = (value: Date) => dayjs(value).subtract(offsetDiff.value, 'minute').unix()
+
+  const toTimezoneTime = (value: string | number) => {
+    const base = dayjs.unix(Number(value))
+    return offsetDiff.value === 0 ? base : base.add(offsetDiff.value, 'minute')
+  }
+
+  const timezoneLabel = computed(() => {
+    const tz = dashboardTimezone.value
+    if (!tz) return ''
+    if (tz.startsWith('+') || tz.startsWith('-')) {
+      return `UTC${tz}`
     }
-    const [, sign, hoursStr, minutesStr] = match
-    const hours = Number(hoursStr)
-    const minutes = Number(minutesStr)
-    const total = hours * 60 + minutes
-    return sign === '-' ? -total : total
+    return tz
   })
-
-  const toUnixInDashboardTz = (value: Date) => {
-    if (offsetMinutes.value !== null) {
-      return dayjs(value).utcOffset(offsetMinutes.value, true).unix()
-    }
-    return dayjs(value).tz(dashboardTimezone.value, true).unix()
-  }
-
-  const formatUnixInDashboardTz = (unixValue: string | number) => {
-    const unixNumber = Number(unixValue)
-    if (!Number.isFinite(unixNumber)) return ''
-    const base = dayjs.unix(unixNumber)
-    return offsetMinutes.value !== null
-      ? base.utcOffset(offsetMinutes.value).format('YYYY-MM-DD HH:mm:ss')
-      : base.tz(dashboardTimezone.value).format('YYYY-MM-DD HH:mm:ss')
-  }
-
-  const unixToDateInDashboardTz = (unixValue: string | number) => {
-    const unixNumber = Number(unixValue)
-    if (!Number.isFinite(unixNumber)) return null
-    const base = dayjs.unix(unixNumber)
-    return offsetMinutes.value !== null
-      ? base.utcOffset(offsetMinutes.value).toDate()
-      : base.tz(dashboardTimezone.value).toDate()
-  }
 
   const isRelative = computed(() => props.timeLength !== 0 || props.timeRange.length === 0)
 
-  const sameTimezone = computed(() => {
-    const tzA = dashboardTimezone.value
-    const tzB = dayjs.tz.guess()
-    const offsetA = dayjs.tz(dayjs(), tzA).utcOffset()
-    const offsetB = dayjs.tz(dayjs(), tzB).utcOffset()
-    return offsetA === offsetB
-  })
+  const sameTimezone = computed(() => offsetDiff.value === 0)
 
   const rangePickerModelValue = computed(() => {
-    if (!props.timeRange || props.timeRange.length !== 2) {
+    if (props.timeRange.length !== 2) {
       return undefined
     }
-    const [start, end] = props.timeRange
-    const startDate = unixToDateInDashboardTz(start)
-    const endDate = unixToDateInDashboardTz(end)
-    if (!startDate || !endDate) {
-      return undefined
-    }
-    return [startDate, endDate]
+    const [startDayjs, endDayjs] = props.timeRange.map(toTimezoneTime)
+    return [startDayjs.toDate(), endDayjs.toDate()]
   })
 
   const absoluteTimeLabel = computed(() => {
-    if (!props.timeRange || props.timeRange.length !== 2) return props.emptyStr
-    const [start, end] = props.timeRange
-    const formattedStart = formatUnixInDashboardTz(start)
-    const formattedEnd = formatUnixInDashboardTz(end)
-    if (!formattedStart || !formattedEnd) return props.emptyStr
+    if (props.timeRange.length !== 2) return props.emptyStr
+    const [startDayjs, endDayjs] = props.timeRange.map(toTimezoneTime)
+    const formattedStart = startDayjs.format('YYYY-MM-DD HH:mm:ss')
+    const formattedEnd = endDayjs.format('YYYY-MM-DD HH:mm:ss')
 
     return sameTimezone.value
       ? `${formattedStart} - ${formattedEnd}`
-      : `${formattedStart} - ${formattedEnd} (${dashboardTimezone.value})`
+      : `${formattedStart} - ${formattedEnd} (${timezoneLabel.value})`
   })
 
-  const selectTimeRange = (range: [Date, Date]) => {
-    const [startDate, endDate] = range
-    const start = toUnixInDashboardTz(startDate)
-    const end = toUnixInDashboardTz(endDate)
+  const selectTimeRange = ([startDate, endDate]: [Date, Date]) => {
+    const start = toUtcTime(startDate)
+    const end = toUtcTime(endDate)
     emit('update:timeRange', [start.toString(), end.toString()])
     emit('update:timeLength', 0)
     emit('change')
