@@ -12,7 +12,10 @@ a-trigger#time-select(
       svg.icon-16
         use(href="#time")
     div(v-if="isRelative") {{ relativeTimeMap[timeLength] || props.emptyStr }}
-    div(v-else) {{ absoluteTimeLabel }}
+    div(v-else)
+      a-space
+        | {{ absoluteTimeLabel }}
+        .timezone {{ timezoneLabel }}
   template(#content)
     a-space.hide
     a-space(
@@ -52,6 +55,7 @@ a-trigger#time-select(
   import timezone from 'dayjs/plugin/timezone'
   import { useI18n } from 'vue-i18n'
   import { useAppStore } from '@/store'
+  import { formatTimezoneLabel, normalizeTimezone } from '@/utils/timezone'
 
   dayjs.extend(utc)
   dayjs.extend(timezone)
@@ -108,8 +112,9 @@ a-trigger#time-select(
   const { userTimezone } = storeToRefs(useAppStore())
 
   const browserOffset = dayjs().utcOffset()
-  const dashboardTimezone = computed(() => userTimezone.value?.trim() || dayjs.tz.guess())
+  const dashboardTimezone = computed(() => userTimezone.value?.trim())
   const dashboardOffset = computed(() => dayjs().tz(dashboardTimezone.value).utcOffset())
+
   const offsetDiff = computed(() => dashboardOffset.value - browserOffset)
 
   const toUtcTime = (value: Date) => dayjs(value).subtract(offsetDiff.value, 'minute').unix()
@@ -119,18 +124,7 @@ a-trigger#time-select(
     return offsetDiff.value === 0 ? base : base.add(offsetDiff.value, 'minute')
   }
 
-  const timezoneLabel = computed(() => {
-    const tz = dashboardTimezone.value
-    if (!tz) return ''
-    if (tz.startsWith('+') || tz.startsWith('-')) {
-      return `UTC${tz}`
-    }
-    return tz
-  })
-
   const isRelative = computed(() => props.timeLength !== 0 || props.timeRange.length === 0)
-
-  const sameTimezone = computed(() => offsetDiff.value === 0)
 
   const rangePickerModelValue = computed(() => {
     if (props.timeRange.length !== 2) {
@@ -146,9 +140,7 @@ a-trigger#time-select(
     const formattedStart = startDayjs.format('YYYY-MM-DD HH:mm:ss')
     const formattedEnd = endDayjs.format('YYYY-MM-DD HH:mm:ss')
 
-    return sameTimezone.value
-      ? `${formattedStart} - ${formattedEnd}`
-      : `${formattedStart} - ${formattedEnd} (${timezoneLabel.value})`
+    return `${formattedStart} - ${formattedEnd}`
   })
 
   const selectTimeRange = ([startDate, endDate]: [Date, Date]) => {
@@ -230,5 +222,11 @@ a-trigger#time-select(
       margin-top: 2px;
       padding-top: 4px;
     }
+  }
+
+  .timezone {
+    color: var(--brand-color);
+    font-size: 12px;
+    font-weight: 600;
   }
 </style>
