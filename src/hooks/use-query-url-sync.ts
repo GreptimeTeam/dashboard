@@ -3,7 +3,6 @@ import { useRoute, useRouter } from 'vue-router'
 const useQueryUrlSync = ({ builderFormState, textEditorState, timeRange, editorType, urlParams = {} as any }) => {
   const route = useRoute()
   const router = useRouter()
-  const hasInitParams = ref(false)
   function initializeFromQuery() {
     const {
       [urlParams.editorType || 'editorType']: queryEditorType,
@@ -27,21 +26,20 @@ const useQueryUrlSync = ({ builderFormState, textEditorState, timeRange, editorT
     }
     if (queryTimeRange && Array.isArray(queryTimeRange)) {
       timeRange.rangeTime.value = queryTimeRange as string[]
+      timeRange.time.value = 0
     }
 
     // Editor SQL
     if (queryEditorSql) {
       textEditorState.sql = decodeURIComponent(queryEditorSql as string)
-      hasInitParams.value = true
     }
 
     // Builder form state
     if (queryBuilderForm) {
       try {
-        Object.assign(builderFormState, JSON.parse(decodeURIComponent(queryBuilderForm as string)))
-        if (builderFormState.table && builderFormState.tsColumn) {
-          hasInitParams.value = true
-        }
+        const paramsObj = JSON.parse(decodeURIComponent(queryBuilderForm as string))
+        delete paramsObj.tsColumn
+        Object.assign(builderFormState, paramsObj)
       } catch (error) {
         console.warn('Failed to parse builder form state from URL:', error)
       }
@@ -78,7 +76,6 @@ const useQueryUrlSync = ({ builderFormState, textEditorState, timeRange, editorT
   return {
     initializeFromQuery,
     updateQueryParams,
-    hasInitParams,
   }
 }
 
