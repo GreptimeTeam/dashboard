@@ -4,6 +4,7 @@ import JSONbigint from 'json-bigint'
 import type { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { Message } from '@arco-design/web-vue'
 import { RecordsType } from '@/store/modules/code-run/types'
+import { getDbTimezone } from '@/utils/timezone'
 
 export interface OutputType {
   affectedrows: number
@@ -52,9 +53,7 @@ axios.interceptors.request.use(
     }
 
     if (isV1) {
-      if (appStore.userTimezone) {
-        config.headers['x-greptime-timezone'] = appStore.userTimezone
-      }
+      config.headers['x-greptime-timezone'] = getDbTimezone(appStore.userTimezone)
       config.transformResponse = [(data) => data]
       return {
         ...config,

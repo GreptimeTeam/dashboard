@@ -94,6 +94,7 @@ a-drawer.settings-drawer(
   import { useAppStore, useDataBaseStore } from '@/store'
   import axios from 'axios'
   import { isTauri } from '@tauri-apps/api/core'
+  import { normalizeTimezone } from '@/utils/timezone'
   import dayjs from 'dayjs'
 
   const MARGIN_BOTTOM = `${38 * 2 + 8}px`
@@ -122,34 +123,27 @@ a-drawer.settings-drawer(
     authHeader: authHeader.value,
   })
 
-  const checkTimezone = (tz: string): boolean => {
-    if (!tz.trim()) {
+  const checkTimezoneInput = (tz: string): boolean => {
+    const trimmed = tz.trim()
+    if (!trimmed) {
       isValidTimezone.value = true
       return true
     }
 
-    // ±[h]h:mm
-    const offsetRegex = /^([+-])(\d|0\d|1[0-4]):(00|15|30|45)$/
-    if (offsetRegex.test(tz)) {
-      isValidTimezone.value = true
-      return true
-    }
+    const normalized = normalizeTimezone(trimmed)
+    const valid = normalized !== 'UTC' || trimmed.toLowerCase() === 'utc'
 
-    try {
-      dayjs().tz(tz)
-      isValidTimezone.value = true
-      return true
-    } catch (e) {
-      isValidTimezone.value = false
-      return false
-    }
+    isValidTimezone.value = valid
+    return valid
   }
-
   const save = async () => {
-    if (!checkTimezone(settingsForm.value.userTimezone)) {
+    if (!checkTimezoneInput(settingsForm.value.userTimezone)) {
       return
     }
-    updateSettings({ userTimezone: settingsForm.value.userTimezone })
+    const trimmed = settingsForm.value.userTimezone.trim()
+    const tz = trimmed ? normalizeTimezone(trimmed) : 'UTC'
+    updateSettings({ userTimezone: tz })
+    settingsForm.value.userTimezone = tz
 
     axios.defaults.baseURL = settingsForm.value.host
     loginLoading.value = true

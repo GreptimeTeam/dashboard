@@ -12,7 +12,10 @@ a-trigger#time-select(
       svg.icon-16
         use(href="#time")
     div(v-if="isRelative") {{ relativeTimeMap[timeLength] || props.emptyStr }}
-    div(v-else) {{ `${dayjs.unix(timeRange[0]).format('YYYY-MM-DD HH:mm:ss')} - ${dayjs.unix(timeRange[1]).format('YYYY-MM-DD HH:mm:ss')} ` }}
+    div(v-else)
+      a-space
+        | {{ absoluteTimeLabel }}
+        .timezone {{ timezoneLabel }}
   template(#content)
     a-space.hide
     a-space(
@@ -27,11 +30,9 @@ a-trigger#time-select(
         v-show="rangePickerVisible"
         hide-trigger
         format="YYYY-MM-DD HH:mm:ss"
-        value-format="X"
         position="bl"
-        :model-value="props.timeRange"
+        :model-value="rangePickerModelValue"
         :show-time="true"
-        :disabledDate="(current) => dayjs(current).isAfter(dayjs())"
         :trigger-props="{ 'update-at-scroll': true }"
         :placeholder="[$t('dashboard.startTime'), $t('dashboard.endTime')]"
         @ok="selectTimeRange($event)"
@@ -48,8 +49,16 @@ a-trigger#time-select(
 
 <script lang="ts" setup name="TimeSelect">
   import type { OptionsType } from '@/types/global'
+  import type { PropType } from 'vue'
   import dayjs from 'dayjs'
+  import utc from 'dayjs/plugin/utc'
+  import timezone from 'dayjs/plugin/timezone'
   import { useI18n } from 'vue-i18n'
+  import { useAppStore } from '@/store'
+  import { formatTimezoneLabel, normalizeTimezone } from '@/utils/timezone'
+
+  dayjs.extend(utc)
+  dayjs.extend(timezone)
 
   const { t } = useI18n()
 
@@ -59,8 +68,8 @@ a-trigger#time-select(
       default: 10,
     },
     timeRange: {
-      type: Array<string>,
-      default: [],
+      type: Array as PropType<string[]>,
+      default: () => [],
     },
     flexDirection: {
       type: String,
@@ -71,12 +80,12 @@ a-trigger#time-select(
       default: '',
     },
     buttonType: {
-      type: String,
-      default: 'text',
+      type: String as PropType<'text' | 'dashed' | 'outline' | 'primary' | 'secondary'>,
+      default: 'text' as const,
     },
     buttonSize: {
-      type: String,
-      default: 'medium',
+      type: String as PropType<'medium' | 'small' | 'mini' | 'large'>,
+      default: 'medium' as const,
     },
     relativeTimeOptions: {
       type: Array<OptionsType>,
@@ -100,9 +109,45 @@ a-trigger#time-select(
   const rangePickerVisible = ref(false)
   const visible = ref(false)
 
+  const { userTimezone } = storeToRefs(useAppStore())
+
+  const browserOffset = dayjs().utcOffset()
+  const dashboardTimezone = computed(() => userTimezone.value?.trim())
+  const dashboardOffset = computed(() => dayjs().tz(dashboardTimezone.value).utcOffset())
+  const timezoneLabel = computed(() => formatTimezoneLabel(dashboardTimezone.value))
+
+  const offsetDiff = computed(() => dashboardOffset.value - browserOffset)
+
+  const toUtcTime = (value: Date) => dayjs(value).subtract(offsetDiff.value, 'minute').unix()
+
+  const toTimezoneTime = (value: string | number) => {
+    const base = dayjs.unix(Number(value))
+    return offsetDiff.value === 0 ? base : base.add(offsetDiff.value, 'minute')
+  }
+
   const isRelative = computed(() => props.timeLength !== 0 || props.timeRange.length === 0)
-  const selectTimeRange = (range: any) => {
-    emit('update:timeRange', range)
+
+  const rangePickerModelValue = computed(() => {
+    if (props.timeRange.length !== 2) {
+      return undefined
+    }
+    const [startDayjs, endDayjs] = props.timeRange.map(toTimezoneTime)
+    return [startDayjs.toDate(), endDayjs.toDate()]
+  })
+
+  const absoluteTimeLabel = computed(() => {
+    if (props.timeRange.length !== 2) return props.emptyStr
+    const [startDayjs, endDayjs] = props.timeRange.map(toTimezoneTime)
+    const formattedStart = startDayjs.format('YYYY-MM-DD HH:mm:ss')
+    const formattedEnd = endDayjs.format('YYYY-MM-DD HH:mm:ss')
+
+    return `${formattedStart} - ${formattedEnd}`
+  })
+
+  const selectTimeRange = ([startDate, endDate]: [Date, Date]) => {
+    const start = toUtcTime(startDate)
+    const end = toUtcTime(endDate)
+    emit('update:timeRange', [start.toString(), end.toString()])
     emit('update:timeLength', 0)
     emit('change')
     visible.value = false
@@ -178,5 +223,11 @@ a-trigger#time-select(
       margin-top: 2px;
       padding-top: 4px;
     }
+  }
+
+  .timezone {
+    color: var(--brand-color);
+    font-size: 12px;
+    font-weight: 600;
   }
 </style>
