@@ -114,6 +114,7 @@ a-trigger#time-select(
   const browserOffset = dayjs().utcOffset()
   const dashboardTimezone = computed(() => userTimezone.value?.trim())
   const dashboardOffset = computed(() => dayjs().tz(dashboardTimezone.value).utcOffset())
+  const timezoneLabel = computed(() => formatTimezoneLabel(dashboardTimezone.value))
 
   const offsetDiff = computed(() => dashboardOffset.value - browserOffset)
 
