@@ -244,11 +244,6 @@
     }
   })
 
-  // Initialize from URL query parameters
-  // onMounted(() => {
-  //   initializeFromQuery()
-  // })
-
   watch(
     canExecuteInitialQuery,
     (canExecute) => {
