@@ -18,7 +18,8 @@
     "type:check": "vue-tsc --noEmit --skipLibCheck",
     "lint-staged": "npx lint-staged",
     "prepare": "husky install",
-    "update:lock": "pnpm i --lockfile-only"
+    "update:lock": "pnpm i --lockfile-only",
+    "test": "vitest run"
   },
   "lint-staged": {
     "*.{js,ts,jsx,tsx}": [
@@ -147,6 +148,7 @@
     "vite-plugin-markdown": "2.2.0-2",
     "vite-plugin-style-import": "2.0.0",
     "vite-svg-loader": "^4.0.0",
+    "vitest": "^4.0.2",
     "vue-tsc": "^1.0.19"
   },
   "engines": {
