@@ -146,7 +146,24 @@ a-drawer.settings-drawer(
     settingsForm.value.userTimezone = tz
 
     axios.defaults.baseURL = settingsForm.value.host
+    const credentialsChanged =
+      host.value !== settingsForm.value.host ||
+      database.value !== settingsForm.value.database ||
+      username.value !== settingsForm.value.username ||
+      password.value !== settingsForm.value.password
+
+    if (!credentialsChanged) {
+      loginStatus.value = 'success'
+      setTimeout(() => {
+        updateSettings({
+          globalSettings: false,
+        })
+      }, 3000)
+      return
+    }
+
     loginLoading.value = true
+
     const res = await login(settingsForm.value)
     if (res) {
       loginStatus.value = 'success'
