@@ -34,7 +34,7 @@ TimeSelect(
       emptyStr: 'Any time',
       buttonSize: 'small',
       showAnyTime: true, // Default to showing "Any time" option
-      flexDirection: 'row-reverse',
+      flexDirection: 'row',
     }
   )
 
