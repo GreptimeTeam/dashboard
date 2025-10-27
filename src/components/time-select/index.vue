@@ -111,12 +111,31 @@ a-trigger#time-select(
 
   const { userTimezone } = storeToRefs(useAppStore())
 
+  const OFFSET_REGEX = /^[+-]\d{2}:\d{2}$/
   const browserOffset = dayjs().utcOffset()
-  const dashboardTimezone = computed(() => userTimezone.value?.trim())
-  const dashboardOffset = computed(() => dayjs().tz(dashboardTimezone.value).utcOffset())
-  const timezoneLabel = computed(() => formatTimezoneLabel(dashboardTimezone.value))
+
+  const parseOffsetMinutes = (offset: string) => {
+    const sign = offset.startsWith('-') ? -1 : 1
+    const [hours, minutes] = offset
+      .slice(1)
+      .split(':')
+      .map((item) => Number(item))
+    return sign * (hours * 60 + minutes)
+  }
+
+  const dashboardOffset = computed(() => {
+    const tz = userTimezone.value
+    if (tz === 'UTC') {
+      return 0
+    }
+    if (OFFSET_REGEX.test(tz)) {
+      return parseOffsetMinutes(tz)
+    }
+    return dayjs().tz(tz).utcOffset()
+  })
 
   const offsetDiff = computed(() => dashboardOffset.value - browserOffset)
+  const timezoneLabel = computed(() => (offsetDiff.value === 0 ? '' : formatTimezoneLabel(userTimezone.value)))
 
   const toUtcTime = (value: Date) => dayjs(value).subtract(offsetDiff.value, 'minute').unix()
 

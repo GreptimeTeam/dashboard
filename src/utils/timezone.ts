@@ -26,10 +26,6 @@ const normalizeOffset = (value: string): string | null => {
   return `${sign}${pad(hours)}:${pad(minutes)}`
 }
 
-// const normalizeIana = (value: string): string | null => {
-//   const zone = dayjs.tz.zone(value)
-//   return zone ? zone.name : null
-// }
 const normalizeIana = (value: string): string | null => {
   try {
     dayjs().tz(value)
@@ -40,14 +36,11 @@ const normalizeIana = (value: string): string | null => {
   }
 }
 
-// Will only return 'browser', 'UTC', '+08:00', 'Asia/Shanghai'
 export function normalizeTimezone(raw: string): string {
   const tz = raw.trim()
   if (!tz) return 'UTC'
 
-  const lower = tz.toLowerCase()
-  if (lower === 'browser') return 'browser'
-  if (lower === 'utc') return 'UTC'
+  if (tz.toLowerCase() === 'utc') return 'UTC'
 
   const offset = normalizeOffset(tz)
   if (offset) return offset
@@ -67,34 +60,22 @@ export function normalizeLegacyTimezone(tz?: string | null): string {
   if (!trimmed) {
     return 'UTC'
   }
+
   return normalizeTimezone(trimmed)
 }
 
 export function formatTimezoneLabel(tz: string): string {
-  const normalized = normalizeTimezone(tz)
-
-  if (normalized === 'browser') {
-    // const offset = dayjs().format('Z')
-    // return offset === '+00:00' ? 'Browser (UTC)' : `Browser (UTC${offset})`
-    return ''
-  }
-
-  if (normalized === 'UTC') {
+  if (tz === 'UTC') {
     return 'UTC'
   }
 
-  if (OFFSET_CANONICAL_REGEX.test(normalized)) {
-    return normalized === '+00:00' ? 'UTC' : `${normalized.slice(0, 3)}`
+  if (OFFSET_CANONICAL_REGEX.test(tz)) {
+    return tz === '+00:00' ? 'UTC' : `${tz.slice(0, 3)}`
   }
 
-  return normalized
+  return tz
 }
 
 export function getDbTimezone(tz: string): string {
-  const normalized = normalizeTimezone(tz)
-  if (normalized === 'browser') {
-    // TODO
-    return dayjs().format('Z')
-  }
-  return normalized
+  return normalizeTimezone(tz)
 }
