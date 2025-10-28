@@ -328,6 +328,12 @@ transform:
   const tableData = ref<Array<any>>([])
   const tableColumns = ref<Array<ColumnType>>([])
 
+  const schemaMapping = {
+    TIMESTAMP_SECOND: 'TimestampSecond',
+    TIMESTAMP_MILLISECOND: 'TimestampMillisecond',
+    TIMESTAMP_MICROSECOND: 'TimestampMicrosecond',
+    TIMESTAMP_NANOSECOND: 'TimestampNanosecond',
+  }
   function handleDebug() {
     debugContent(currFile.content, debugForm.content, selectedContentType.value).then((result) => {
       debugResponse.value = JSON.stringify(result[0], null, 2)
@@ -361,7 +367,7 @@ transform:
       const schemas = schema.map((col) => ({
         name: col.name,
         title: col.name,
-        data_type: col.data_type || 'String',
+        data_type: schemaMapping[col.data_type] || col.data_type || 'String',
         semantic_type: col.column_type,
       }))
 
