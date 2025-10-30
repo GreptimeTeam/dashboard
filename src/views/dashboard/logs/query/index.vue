@@ -155,7 +155,7 @@
   })
 
   const { initializeFromQuery, updateQueryParams } = urlSync
-
+  initializeFromQuery()
   // Local UI state
   const mergeColumn = useStorage('logquery-merge-column', true)
   const showKeys = useStorage('logquery-show-keys', true)
@@ -244,15 +244,10 @@
     }
   })
 
-  // Initialize from URL query parameters
-  onMounted(() => {
-    initializeFromQuery()
-  })
-
   watch(
     canExecuteInitialQuery,
     (canExecute) => {
-      if (canExecute && urlSync.hasInitParams.value) {
+      if (canExecute) {
         nextTick(() => {
           handleQuery()
         })

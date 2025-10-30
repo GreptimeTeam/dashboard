@@ -155,7 +155,7 @@
   }
 
   watch(canExecuteInitialQuery, (canExecute) => {
-    if (canExecute && urlSync.hasInitParams.value) {
+    if (canExecute) {
       handleQuery()
     }
   })
