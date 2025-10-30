@@ -1,0 +1,64 @@
+name: E2E Tests
+
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 2 * * *' 
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps
+
+      - name: Start docker-compose stack
+        run: docker compose -f docker-compose.e2e.yml up -d
+
+      - name: Wait for dashboard
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://localhost:5173/dashboard/query > /dev/null; then
+              echo "✅ Dashboard ready"
+              exit 0
+            fi
+            echo "Waiting for dashboard (${i}/30)..."
+            sleep 5
+          done
+          exit 1
+
+      - name: Run Playwright tests
+        run: pnpm exec playwright test tests/e2e/query.real.spec.ts
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            playwright-report
+            e2e-screenshots
+          if-no-files-found: ignore
+
+      - name: Cleanup
+        if: always()
+        run: docker compose -f docker-compose.e2e.yml down -v
