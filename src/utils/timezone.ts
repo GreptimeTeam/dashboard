@@ -53,7 +53,7 @@ export function normalizeTimezone(raw: string): string {
 
 export function normalizeLegacyTimezone(tz?: string | null): string {
   if (tz === undefined || tz === null) {
-    return 'UTC'
+    return dayjs.tz.guess()
   }
 
   const trimmed = tz.trim()
@@ -69,7 +69,17 @@ export function formatTimezoneLabel(tz: string): string {
     return 'UTC'
   }
 
+  const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  const browserOffset = dayjs().format('Z')
+
+  if (tz === browserZone) {
+    return ''
+  }
+
   if (OFFSET_CANONICAL_REGEX.test(tz)) {
+    if (tz === browserOffset) {
+      return ''
+    }
     return tz === '+00:00' ? 'UTC' : `${tz.slice(0, 3)}`
   }
 

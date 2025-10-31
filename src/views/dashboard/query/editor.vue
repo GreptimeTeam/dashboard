@@ -85,7 +85,6 @@ a-card.editor-card(:bordered="false")
         TimeSelect(
           v-model:time-length="promForm.time"
           v-model:time-range="promForm.range"
-          flex-direction="row-reverse"
           button-class="query-time-button"
           :relative-time-map="queryTimeMap"
           :relative-time-options="queryTimeOptions"

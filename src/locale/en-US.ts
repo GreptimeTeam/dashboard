@@ -55,6 +55,12 @@ export default {
   'time-select.last7Days': 'Last 7 days',
   'time-select.last3Days': 'Last 3 days',
   'time-select.anyTime': 'Any time',
+  'time-select.absoluteRange': 'Absolute time range',
+  'time-select.from': 'From',
+  'time-select.to': 'To',
+  'time-select.applyTimeRange': 'Apply time range',
+  'time-select.recentAbsoluteRange': 'Recent ranges',
+  'time-select.timezone': 'Timezone',
   // Quick Filters
   'quickFilters.title': 'Quick Filters',
   'quickFilters.clickToApplyTitle': 'Click to apply quick filter',

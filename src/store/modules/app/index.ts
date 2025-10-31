@@ -1,7 +1,13 @@
 import { useStorage } from '@vueuse/core'
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
+import timezone from 'dayjs/plugin/timezone'
 import defaultSettings from '@/config/settings.json'
 import editorAPI from '@/api/editor'
 import type { AppState } from './types'
+
+dayjs.extend(utc)
+dayjs.extend(timezone)
 
 const useAppStore = defineStore('app', () => {
   // State
@@ -22,7 +28,7 @@ const useAppStore = defineStore('app', () => {
   const dbId = ref(defaultSettings.dbId)
   const lifetime = ref(defaultSettings.lifetime)
   const menuSelectedKey = ref(defaultSettings.menuSelectedKey)
-  const userTimezone = ref(defaultSettings.userTimezone)
+  const userTimezone = ref(defaultSettings.userTimezone?.trim() || dayjs.tz.guess())
   const hideSidebar = ref(defaultSettings.hideSidebar)
   const authHeader = ref(defaultSettings.authHeader)
 

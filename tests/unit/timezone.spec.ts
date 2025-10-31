@@ -53,17 +53,17 @@ describe('timezone utils', () => {
   })
 
   it('normalizes legacy values', () => {
-    expect(normalizeLegacyTimezone(undefined)).toBe('UTC')
-    expect(normalizeLegacyTimezone(null)).toBe('UTC')
-    expect(normalizeLegacyTimezone('  ')).toBe('UTC')
+    expect(normalizeLegacyTimezone(undefined)).toBe('Asia/Shanghai')
+    expect(normalizeLegacyTimezone(null)).toBe('Asia/Shanghai')
+    expect(normalizeLegacyTimezone(' ')).toBe('UTC')
     expect(normalizeLegacyTimezone('+8:00')).toBe('+08:00')
     expect(normalizeLegacyTimezone('asia/shanghai')).toBe('Asia/Shanghai')
   })
 
   it('formats timezone labels for UI', () => {
     expect(formatTimezoneLabel('UTC')).toBe('UTC')
-    expect(formatTimezoneLabel('+08:00')).toBe('+08')
-    expect(formatTimezoneLabel('Asia/Shanghai')).toBe('Asia/Shanghai')
+    expect(formatTimezoneLabel('+09:00')).toBe('+09')
+    expect(formatTimezoneLabel('Asia/Shanghai')).toBe('')
   })
 
   it('returns db timezone', () => {

@@ -56,6 +56,12 @@ export default {
   'time-select.last7Days': '最近 7 天',
   'time-select.last3Days': '最近 3 天',
   'time-select.anyTime': '任意时间',
+  'time-select.absoluteRange': '绝对时间范围',
+  'time-select.from': '起始',
+  'time-select.to': '结束',
+  'time-select.applyTimeRange': '应用时间范围',
+  'time-select.recentAbsoluteRange': '最近历史',
+  'time-select.timezone': '时区',
   // Quick Filters
   'quickFilters.title': '快速筛选',
   'quickFilters.clickToApplyTitle': '点击应用此快速筛选',
