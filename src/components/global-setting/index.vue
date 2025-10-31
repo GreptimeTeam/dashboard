@@ -144,6 +144,7 @@ a-drawer.settings-drawer(
     const tz = trimmed ? normalizeTimezone(trimmed) : 'UTC'
     updateSettings({ userTimezone: tz })
     settingsForm.value.userTimezone = tz
+    updateConfigStorage({ userTimezone: tz })
 
     axios.defaults.baseURL = settingsForm.value.host
     const credentialsChanged =

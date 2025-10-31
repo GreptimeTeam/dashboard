@@ -69,10 +69,14 @@ a-trigger#time-select(
         .recent-ranges(v-if="recentRangeDisplay.length > 0")
           .title {{ t('time-select.recentAbsoluteRange') }}
           ul
-            li(v-for="item in recentRangeDisplay" :key="item.key" @click="applyFromHistory(item.range)") {{ item.label }}
+            li(
+              v-for="(item, index) in recentRangeDisplay"
+              :key="`${item.key}-${index}`"
+              @click="applyFromHistory(item.range)"
+            ) {{ item.label }}
         .extra
           span {{ t('time-select.timezone') }}
-          .timezone {{ timezoneLabel || userTimezone }}
+          .timezone {{ userTimezone }}
 
       .range-picker-popup(v-if="showRangePicker")
         a-range-picker.range-picker(
@@ -576,12 +580,12 @@ a-trigger#time-select(
 
       li {
         cursor: pointer;
-        padding: 4px 4px;
+        padding: 8px 6px;
         border-radius: 4px;
 
         &:hover {
           background-color: var(--list-hover-color);
-          color: var(--brand-color);
+          color: var(--main-font-color);
         }
       }
     }
@@ -591,7 +595,7 @@ a-trigger#time-select(
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-top: 12px;
+    margin-top: 6px;
     font-size: 12px;
     color: var(--secondary-text-color);
 
