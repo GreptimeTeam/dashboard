@@ -55,7 +55,7 @@ a-trigger#time-select(
   import timezone from 'dayjs/plugin/timezone'
   import { useI18n } from 'vue-i18n'
   import { useAppStore } from '@/store'
-  import { formatTimezoneLabel, normalizeTimezone } from '@/utils/timezone'
+  // Timezone label formatter: 'UTC' stays 'UTC', '+08:00' -> 'UTC+8', '-05:00' -> 'UTC-5'
 
   dayjs.extend(utc)
   dayjs.extend(timezone)
@@ -123,19 +123,29 @@ a-trigger#time-select(
     return sign * (hours * 60 + minutes)
   }
 
+  // With settings now using a select, timezone values are either 'UTC' or
+  // canonical offsets like '+08:00' / '-05:00'. We compute offset minutes
+  // directly from the value; unknown cases fall back to 0 (UTC).
   const dashboardOffset = computed(() => {
     const tz = userTimezone.value
-    if (tz === 'UTC') {
-      return 0
-    }
-    if (OFFSET_REGEX.test(tz)) {
-      return parseOffsetMinutes(tz)
-    }
-    return dayjs().tz(tz).utcOffset()
+    if (!tz || tz === 'UTC') return 0
+    if (OFFSET_REGEX.test(tz)) return parseOffsetMinutes(tz)
+    return 0
   })
 
   const offsetDiff = computed(() => dashboardOffset.value - browserOffset)
-  const timezoneLabel = computed(() => (offsetDiff.value === 0 ? '' : formatTimezoneLabel(userTimezone.value)))
+
+  watchEffect(() => {
+    console.log(offsetDiff.value, 'offsetDiff.value')
+  })
+  const timezoneLabel = computed(() => {
+    const tz = userTimezone.value
+    if (!tz || tz === 'UTC') return 'UTC'
+    // Expect tz like '+08:00' or '-05:00'
+    const sign = tz.startsWith('-') ? '-' : '+'
+    const hours = Number(tz.slice(1, 3))
+    return `UTC${sign}${hours}`
+  })
 
   const toUtcTime = (value: Date) => dayjs(value).subtract(offsetDiff.value, 'minute').unix()
 
@@ -147,11 +157,22 @@ a-trigger#time-select(
   const isRelative = computed(() => props.timeLength !== 0 || props.timeRange.length === 0)
 
   const rangePickerModelValue = computed(() => {
-    if (props.timeRange.length !== 2) {
-      return undefined
+    // Case 1: absolute range provided → convert unix seconds to dashboard-timezone Date
+    if (props.timeRange.length === 2) {
+      const [startDayjs, endDayjs] = props.timeRange.map(toTimezoneTime)
+      return [startDayjs.toDate(), endDayjs.toDate()]
     }
-    const [startDayjs, endDayjs] = props.timeRange.map(toTimezoneTime)
-    return [startDayjs.toDate(), endDayjs.toDate()]
+
+    // Case 2: no absolute range → derive from relative timeLength (minutes)
+    if (props.timeLength > 0) {
+      const nowUnix = Math.floor(Date.now() / 1000)
+      const startUnix = nowUnix - props.timeLength * 60
+      const [startDayjs, endDayjs] = [startUnix, nowUnix].map(toTimezoneTime)
+      return [startDayjs.toDate(), endDayjs.toDate()]
+    }
+
+    // Any-time / no time specified
+    return undefined
   })
 
   const absoluteTimeLabel = computed(() => {
@@ -164,6 +185,7 @@ a-trigger#time-select(
   })
 
   const selectTimeRange = ([startDate, endDate]: [Date, Date]) => {
+    console.log(startDate, endDate, 'startDate, endDate')
     const start = toUtcTime(startDate)
     const end = toUtcTime(endDate)
     emit('update:timeRange', [start.toString(), end.toString()])

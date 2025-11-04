@@ -61,11 +61,11 @@ a-drawer.settings-drawer(
           a-tooltip(content="Used as x-greptime-timezone HTTP header" mini position="tl")
             svg.icon-12
               use(href="#question")
-      a-input(
+      a-select(
         v-model="settingsForm.userTimezone"
-        allow-clear
-        placeholder="±[h]h:mm or timezone name"
-        :error="!isValidTimezone"
+        allow-search
+        :options="timezoneOptions"
+        :trigger-props="{ autoFitPopupMinWidth: true }"
       )
       template(#extra)
         div
@@ -94,7 +94,6 @@ a-drawer.settings-drawer(
   import { useAppStore, useDataBaseStore } from '@/store'
   import axios from 'axios'
   import { isTauri } from '@tauri-apps/api/core'
-  import { normalizeTimezone } from '@/utils/timezone'
   import dayjs from 'dayjs'
 
   const MARGIN_BOTTOM = `${38 * 2 + 8}px`
@@ -124,24 +123,15 @@ a-drawer.settings-drawer(
   })
 
   const checkTimezoneInput = (tz: string): boolean => {
-    const trimmed = tz.trim()
-    if (!trimmed) {
-      isValidTimezone.value = true
-      return true
-    }
-
-    const normalized = normalizeTimezone(trimmed)
-    const valid = normalized !== 'UTC' || trimmed.toLowerCase() === 'utc'
-
-    isValidTimezone.value = valid
-    return valid
+    // With select options, inputs are controlled and always valid
+    isValidTimezone.value = true
+    return true
   }
   const save = async () => {
     if (!checkTimezoneInput(settingsForm.value.userTimezone)) {
       return
     }
-    const trimmed = settingsForm.value.userTimezone.trim()
-    const tz = trimmed ? normalizeTimezone(trimmed) : 'UTC'
+    const tz = (settingsForm.value.userTimezone || 'UTC').trim()
     updateSettings({ userTimezone: tz })
     settingsForm.value.userTimezone = tz
 
@@ -172,6 +162,24 @@ a-drawer.settings-drawer(
   const setVisible = () => {
     updateSettings({ globalSettings: true })
   }
+
+  // Timezone select options: UTC and UTC±HH:MM from -12:00 to +14:00
+  const timezoneOptions = computed(() => {
+    const opts: { label: string; value: string }[] = [{ label: 'UTC', value: 'UTC' }]
+    for (let h = -12; h <= 14; h += 1) {
+      if (h === 0) {
+        // Skip UTC offset zero since we already include 'UTC'
+        // and we prefer users to pick the canonical 'UTC'
+      } else {
+        const sign = h > 0 ? '+' : '-'
+        const abs = Math.abs(h)
+        const label = `UTC${sign}${abs}`
+        const value = `${sign}${abs.toString().padStart(2, '0')}:00`
+        opts.push({ label, value })
+      }
+    }
+    return opts
+  })
 
   watch(globalSettings, () => {
     if (globalSettings.value) {

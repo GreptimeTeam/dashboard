@@ -13,7 +13,6 @@ a-layout
   import { useAppStore } from '@/store'
   import Footer from '@/components/footer/index.vue'
   import useResponsive from '@/hooks/responsive'
-  import { normalizeLegacyTimezone } from '@/utils/timezone'
   import PageLayout from './page-layout.vue'
 
   useResponsive(true)
@@ -22,7 +21,10 @@ a-layout
   const { navbar, footer, userTimezone } = storeToRefs(useAppStore())
 
   onMounted(() => {
-    userTimezone.value = normalizeLegacyTimezone(userTimezone.value)
+    // Ensure userTimezone has a default value if not set
+    if (!userTimezone.value) {
+      userTimezone.value = 'UTC'
+    }
   })
 </script>
 
