@@ -69,7 +69,7 @@ a-card.data-grid(:bordered="false")
 <script lang="ts" setup>
   import { dateTypes, numberTypes } from '@/views/dashboard/config'
   import type { ResultType, SchemaType } from '@/store/modules/code-run/types'
-  import { dateFormatter } from '@/utils'
+  import { useDateTimeFormat } from '@/hooks'
   import { Message } from '@arco-design/web-vue'
   import i18n from '@/locale'
   import { useClipboard } from '@vueuse/core'
@@ -90,6 +90,9 @@ a-card.data-grid(:bordered="false")
   const wrapLines = ref(false)
   const timeColumnWidth = 140
   const toolbarHeight = '26px'
+
+  // Use timezone-aware date formatting
+  const { formatDateTime } = useDateTimeFormat()
 
   const MIN_COLUMN_WIDTHS = {
     timestamp: timeColumnWidth,
@@ -227,7 +230,8 @@ a-card.data-grid(:bordered="false")
     // calculate formatted time data on first access
     if (gridData.value.length && !gridData.value[0][`${dataIndex}${formatSuffix}`]) {
       gridData.value.forEach((row: any) => {
-        row[`${dataIndex}${formatSuffix}`] = dateFormatter(dataType, row[dataIndex])
+        // Use timezone-aware formatting
+        row[`${dataIndex}${formatSuffix}`] = formatDateTime(row[dataIndex], dataType) || row[dataIndex]
       })
     }
   }

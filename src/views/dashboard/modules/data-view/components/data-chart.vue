@@ -58,7 +58,8 @@ a-card(v-if="hasChart" :bordered="false")
   import type { PropType } from 'vue'
   import type { datasetType, ResultType, ChartFormType, SeriesType } from '@/store/modules/code-run/types'
   import useDataChart from '@/hooks/data-chart'
-  import { dateFormatter, groupByToMap } from '@/utils'
+  import { groupByToMap } from '@/utils'
+  import { useDateTimeFormat } from '@/hooks'
   import { chartTypeOptions, updateOptions } from '../../../config'
 
   const props = defineProps({
@@ -130,6 +131,9 @@ a-card(v-if="hasChart" :bordered="false")
     return series
   }
 
+  // Use timezone-aware date formatting
+  const { formatDateTime } = useDateTimeFormat()
+
   const getChartConfig = (yAxisTypes: string[]) => {
     const series: Array<SeriesType> = []
     const legendNames: Array<string> = []
@@ -200,13 +204,13 @@ a-card(v-if="hasChart" :bordered="false")
 
     if (dataType !== 'TimestampMillisecond') {
       xAxis.axisLabel.formatter = (value: number) => {
-        return dateFormatter(dataType, value)
+        return formatDateTime(value, dataType) ?? String(value)
       }
       xAxis.axisPointer = {
         label: {
           formatter: (params: any) => {
             const { value } = params
-            return dateFormatter(dataType, value)
+            return formatDateTime(value, dataType) ?? String(value)
           },
         },
       }
@@ -215,6 +219,20 @@ a-card(v-if="hasChart" :bordered="false")
       }
     } else {
       xAxis.type = 'time'
+      // Format time axis labels and tooltip for TimestampMillisecond
+      xAxis.axisLabel = {
+        formatter: (value: number) => {
+          return formatDateTime(value, 'TimestampMillisecond') ?? String(value)
+        },
+      }
+      xAxis.axisPointer = {
+        label: {
+          formatter: (params: any) => {
+            const { value } = params
+            return formatDateTime(value, 'TimestampMillisecond') ?? String(value)
+          },
+        },
+      }
     }
 
     const legendIconHeight = 14
@@ -271,6 +289,31 @@ a-card(v-if="hasChart" :bordered="false")
       tooltip: {
         trigger: 'axis',
         appendToBody: true,
+        formatter: (params: any) => {
+          if (!params || !Array.isArray(params) || params.length === 0) return ''
+          const param = params[0]
+          const timeValue = param.value[0] || param.axisValue
+
+          // Format time based on data type
+          const timeStr = formatDateTime(timeValue, dataType) ?? String(timeValue)
+
+          let content = `<div style="margin-bottom: 8px; font-weight: 600;">${timeStr}</div>`
+
+          params.forEach((p: any) => {
+            const value = p.value[1] !== undefined ? p.value[1] : p.value
+            if (value === null || value === undefined) return
+
+            content += `
+              <div style="margin: 2px 0;">
+                <span style="display: inline-block; width: 10px; height: 10px; background: ${p.color}; border-radius: 50%; margin-right: 8px;"></span>
+                <span>${p.seriesName}:</span>
+                <span style="float: right; margin-left: 20px;">${value}</span>
+              </div>
+            `
+          })
+
+          return content
+        },
       },
       dataset,
       xAxis,

@@ -16,6 +16,7 @@ VCharts(
   import type { QueryState } from '@/types/query'
   import { replaceTimePlaceholders } from '@/utils/sql'
   import { convertTimestampToMilliseconds } from '@/utils/date-time'
+  import { useDateTimeFormat } from '@/hooks'
 
   interface Props {
     queryState: QueryState
@@ -27,6 +28,9 @@ VCharts(
 
   const data = shallowRef<Array<any>>([])
   const chart = ref()
+
+  // Use timezone-aware date formatting
+  const { formatDateTime } = useDateTimeFormat()
 
   const chartOptions = computed(() => ({
     grid: {
@@ -40,7 +44,8 @@ VCharts(
       axisPointer: { type: 'shadow' },
       formatter: (params: any) => {
         const param = params[0]
-        const time = new Date(param.value[0]).toLocaleString()
+        // Use timezone-aware formatting (assuming timestamp is in milliseconds)
+        const time = formatDateTime(param.value[0], 'TimestampMillisecond') || new Date(param.value[0]).toLocaleString()
         return `${time}<br/>Count: ${param.value[1]}`
       },
     },
@@ -69,6 +74,19 @@ VCharts(
       boundaryGap: false,
       position: 'bottom',
       show: !!data.value.length,
+      axisLabel: {
+        formatter: (value: number) => {
+          return formatDateTime(value, 'TimestampMillisecond') ?? String(value)
+        },
+      },
+      axisPointer: {
+        label: {
+          formatter: (params: any) => {
+            const { value } = params
+            return formatDateTime(value, 'TimestampMillisecond') ?? String(value)
+          },
+        },
+      },
     },
     yAxis: {
       type: 'value',

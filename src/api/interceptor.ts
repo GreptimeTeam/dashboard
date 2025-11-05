@@ -52,8 +52,8 @@ axios.interceptors.request.use(
     }
 
     if (isV1) {
-      // userTimezone now comes from a controlled select: 'UTC' or '+HH:MM'
-      config.headers['x-greptime-timezone'] = appStore.userTimezone || 'UTC'
+      // Use userTimezone directly (or empty string, which GreptimeDB will interpret appropriately)
+      config.headers['x-greptime-timezone'] = appStore.userTimezone
       config.transformResponse = [(data) => data]
       return {
         ...config,

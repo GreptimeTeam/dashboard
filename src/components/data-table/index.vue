@@ -116,7 +116,7 @@ a-dropdown#td-context(
   import { dateTypes } from '@/views/dashboard/config'
   import { convertTimestampToMilliseconds } from '@/utils/date-time'
   import type { ColumnType, TSColumn } from '@/types/query'
-  import { dateFormatter } from '@/utils'
+  import { useDateTimeFormat } from '@/hooks'
 
   interface TableData {
     [key: string]: any
@@ -171,6 +171,9 @@ a-dropdown#td-context(
 
   // Timestamp display state
   const tsViewStr = ref(true) // true for formatted, false for raw timestamp
+
+  // Use timezone-aware date formatting
+  const { formatDateTimeWithMs } = useDateTimeFormat()
 
   // Column mode logic
   const mergeColumn = computed(() => props.columnMode !== 'separate')
@@ -361,9 +364,8 @@ a-dropdown#td-context(
       const column = processedColumns.value.find((col) => col.name === columnName)
       if (!column) return timestamp
 
-      // Use universal conversion function
-      const ms = dateFormatter(column.data_type, timestamp)
-      return dayjs(ms).format('YYYY-MM-DD HH:mm:ss.SSS')
+      // Use timezone-aware formatting with milliseconds
+      return formatDateTimeWithMs(timestamp, column.data_type) || timestamp
     }
 
     // Show raw timestamp number

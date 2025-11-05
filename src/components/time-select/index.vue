@@ -11,11 +11,13 @@ a-trigger#time-select(
     template(#icon)
       svg.icon-16
         use(href="#time")
-    div(v-if="isRelative") {{ relativeTimeMap[timeLength] || props.emptyStr }}
-    div(v-else)
-      a-space
+    div(style="display: flex; align-items: center; gap: 4px; justify-content: ")
+      div(v-if="isRelative") {{ relativeTimeMap[timeLength] || props.emptyStr }}
+        |
+        span.timezone
+      div(v-else)
         | {{ absoluteTimeLabel }}
-        .timezone {{ timezoneLabel }}
+      .timezone {{ timezoneLabel }}
   template(#content)
     a-space.hide
     a-space(
@@ -55,6 +57,7 @@ a-trigger#time-select(
   import timezone from 'dayjs/plugin/timezone'
   import { useI18n } from 'vue-i18n'
   import { useAppStore } from '@/store'
+  import { useDashboardTimezone } from '@/hooks'
   // Timezone label formatter: 'UTC' stays 'UTC', '+08:00' -> 'UTC+8', '-05:00' -> 'UTC-5'
 
   dayjs.extend(utc)
@@ -111,36 +114,17 @@ a-trigger#time-select(
 
   const { userTimezone } = storeToRefs(useAppStore())
 
-  const OFFSET_REGEX = /^[+-]\d{2}:\d{2}$/
-  const browserOffset = dayjs().utcOffset()
-
-  const parseOffsetMinutes = (offset: string) => {
-    const sign = offset.startsWith('-') ? -1 : 1
-    const [hours, minutes] = offset
-      .slice(1)
-      .split(':')
-      .map((item) => Number(item))
-    return sign * (hours * 60 + minutes)
-  }
-
-  // With settings now using a select, timezone values are either 'UTC' or
-  // canonical offsets like '+08:00' / '-05:00'. We compute offset minutes
-  // directly from the value; unknown cases fall back to 0 (UTC).
-  const dashboardOffset = computed(() => {
-    const tz = userTimezone.value
-    if (!tz || tz === 'UTC') return 0
-    if (OFFSET_REGEX.test(tz)) return parseOffsetMinutes(tz)
-    return 0
-  })
-
-  const offsetDiff = computed(() => dashboardOffset.value - browserOffset)
+  const { browserOffset, offsetDiff } = useDashboardTimezone()
 
   watchEffect(() => {
     console.log(offsetDiff.value, 'offsetDiff.value')
   })
   const timezoneLabel = computed(() => {
     const tz = userTimezone.value
-    if (!tz || tz === 'UTC') return 'UTC'
+    if (!tz) {
+      return ''
+    }
+    if (tz === 'UTC') return 'UTC'
     // Expect tz like '+08:00' or '-05:00'
     const sign = tz.startsWith('-') ? '-' : '+'
     const hours = Number(tz.slice(1, 3))
@@ -270,5 +254,6 @@ a-trigger#time-select(
     color: var(--brand-color);
     font-size: 12px;
     font-weight: 600;
+    line-height: 2;
   }
 </style>

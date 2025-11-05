@@ -64,6 +64,7 @@ a-drawer.settings-drawer(
       a-select(
         v-model="settingsForm.userTimezone"
         allow-search
+        allow-clear
         :options="timezoneOptions"
         :trigger-props="{ autoFitPopupMinWidth: true }"
       )
@@ -131,7 +132,8 @@ a-drawer.settings-drawer(
     if (!checkTimezoneInput(settingsForm.value.userTimezone)) {
       return
     }
-    const tz = (settingsForm.value.userTimezone || 'UTC').trim()
+    // Save user's timezone selection
+    const tz = settingsForm.value.userTimezone?.trim() || ''
     updateSettings({ userTimezone: tz })
     settingsForm.value.userTimezone = tz
 
