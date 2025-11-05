@@ -28,10 +28,8 @@ a-layout.new-layout
         a-tab-pane(key="table" title="Table")
           .section-title
             a-space
-              a-date-picker(
+              TimezoneInstantPicker(
                 v-model="instantQueryTime"
-                show-time
-                format="YYYY-MM-DD HH:mm:ss"
                 placeholder="Evaluation time"
                 allow-clear
                 style="width: 200px"
@@ -75,6 +73,7 @@ a-layout.new-layout
   import { useRoute, useRouter } from 'vue-router'
   import { useStorage } from '@vueuse/core'
   import { useSeries } from '@/hooks/use-series'
+  import TimezoneInstantPicker from '@/components/time-select/instant-picker.vue'
   import { Message } from '@arco-design/web-vue'
   import { storeToRefs } from 'pinia'
   import { useAppStore } from '@/store'

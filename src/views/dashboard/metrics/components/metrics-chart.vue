@@ -47,6 +47,7 @@ a-card.metrics-chart(:bordered="false")
   import { useWindowSize } from '@vueuse/core'
   import Chart from '@/components/raw-chart/index.vue'
   import TimeRangeSelect from '@/components/time-range-select/index.vue'
+  import { useDateTimeFormat } from '@/hooks'
 
   import dayjs from 'dayjs'
   import type { EChartsOption } from 'echarts'
@@ -72,6 +73,9 @@ a-card.metrics-chart(:bordered="false")
   } = metricsContext
 
   const { t } = useI18n()
+
+  // Use timezone-aware date formatting
+  const { formatDateTime } = useDateTimeFormat()
 
   const chartRef = ref()
   const localChartType = chartType
@@ -296,9 +300,9 @@ a-card.metrics-chart(:bordered="false")
         enterable: false,
         formatter: (params: any[]) => {
           if (!params || params.length === 0) return ''
-          let content = `<div style="margin-bottom: 8px; font-weight: 600; color: #333;">${dayjs(
-            params[0].value[0]
-          ).format('YYYY-MM-DD HH:mm:ss')}</div>`
+          let content = `<div style="margin-bottom: 8px; font-weight: 600; color: #333;">${
+            formatDateTime(params[0].value[0], 'TimestampMillisecond') ?? ''
+          }</div>`
 
           params.forEach((param) => {
             const {
@@ -374,6 +378,19 @@ a-card.metrics-chart(:bordered="false")
           show: true,
           lineStyle: {
             width: 1,
+          },
+        },
+        axisLabel: {
+          formatter: (value: number) => {
+            return formatDateTime(value, 'TimestampMillisecond') ?? String(value)
+          },
+        },
+        axisPointer: {
+          label: {
+            formatter: (params: any) => {
+              const { value } = params
+              return formatDateTime(value, 'TimestampMillisecond') ?? String(value)
+            },
           },
         },
         splitLine: {

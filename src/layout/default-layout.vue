@@ -9,7 +9,6 @@ a-layout
 </template>
 
 <script lang="ts" setup>
-  import { computed } from 'vue'
   import { useAppStore } from '@/store'
   import Footer from '@/components/footer/index.vue'
   import useResponsive from '@/hooks/responsive'
@@ -18,14 +17,7 @@ a-layout
   useResponsive(true)
   const navbarHeight = `52px`
 
-  const { navbar, footer, userTimezone } = storeToRefs(useAppStore())
-
-  onMounted(() => {
-    // Ensure userTimezone has a default value if not set
-    if (!userTimezone.value) {
-      userTimezone.value = 'UTC'
-    }
-  })
+  const { navbar, footer } = storeToRefs(useAppStore())
 </script>
 
 <style scoped lang="less">
