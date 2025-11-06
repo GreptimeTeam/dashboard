@@ -72,6 +72,23 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
   import { h } from 'vue'
   import { formatMetricName, formatTimeValue, formatMetricValue } from './utils'
 
+  // Props structure:
+  // data: Array of [stage, nodeIndex, plan_json_string] tuples
+  //   - stage: Execution stage number (0, 1, 2, ...)
+  //   - nodeIndex: Physical compute node/server ID that executed this plan (0, 1, 2, ..., 6, ...)
+  //   - plan_json_string: The execution plan tree as a JSON string for this node
+  //
+  // Example:
+  //   [
+  //     [1, 0, '{"name": "CoalesceBatchesExec", ...}'],  // Stage 1, Node 0's plan
+  //     [1, 1, '{"name": "CoalesceBatchesExec", ...}'],  // Stage 1, Node 1's plan
+  //     [1, 2, '{"name": "CoalesceBatchesExec", ...}'],  // Stage 1, Node 2's plan
+  //     ...
+  //   ]
+  //
+  // Note: "node" here refers to a PHYSICAL COMPUTE NODE (server) in a distributed system,
+  // not an operator node in the plan tree. Each physical node executes the same plan structure
+  // but with different metrics (rows processed, time taken, etc.)
   const props = defineProps<{
     data: [number, number, string][]
     index: number
@@ -184,31 +201,35 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     ])
   }
 
+  // Flatten a nested plan tree into a flat array of rows (one per operator)
+  // Recursively traverses the tree and creates a row for each operator
   const flattenPlan = (
     plan: any,
     result: any[] = [],
     depth = 0,
-    path = [],
+    path: string[] = [],
     isLast = true,
     treePrefix = '',
     index = 0
   ): any[] => {
-    // Build the current line's prefix
+    // Build visual prefix for tree display (└─ for last child, ├─ for others)
     let linePrefix = ''
     if (depth > 0) {
       linePrefix = isLast ? `${treePrefix}└─ ` : `${treePrefix}├─ `
     }
 
+    // Build the path array: [root, child1, child2, ...]
     const currentPath = [...path, plan.name]
 
-    // Create a more unique key by including depth, index, and path
+    // Create unique key for this row
     const uniqueKey = `${depth}_${index}_${currentPath.join('/')}`
 
+    // Create row object for this operator
     const row = {
-      key: uniqueKey, // Use the more unique key
+      key: uniqueKey,
       step: `${linePrefix}${plan.name}`,
       path: currentPath,
-      param: plan.param,
+      param: plan.param || '',
       output_rows: plan.output_rows,
       elapsed_compute: plan.elapsed_compute,
       hasAdditionalDetails: Boolean(plan.param || plan.output_rows !== undefined || plan.elapsed_compute !== undefined),
@@ -216,14 +237,15 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
 
     result.push(row)
 
+    // Recursively process children
     if (plan.children && plan.children.length > 0) {
-      // Prepare the prefix for children
+      // Build prefix for children (spaces or │ for vertical lines)
       let childPrefix = ''
       if (depth > 0) {
         childPrefix = isLast ? `${treePrefix}   ` : `${treePrefix}│  `
       }
 
-      // Process children
+      // Process each child
       plan.children.forEach((child: any, childIndex: number) => {
         const isLastChild = childIndex === plan.children.length - 1
         flattenPlan(child, result, depth + 1, currentPath, isLastChild, childPrefix, childIndex)
@@ -233,50 +255,173 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     return result
   }
 
-  const tableData = computed(() => {
-    if (!props.data || props.data.length === 0) return []
+  // Build a map of path -> node for O(1) lookup
+  // Key: path.join('/') (e.g., "CoalesceBatchesExec/FilterExec/ProjectionExec")
+  // Value: the operator node object
+  const buildPathMap = (
+    plan: any,
+    pathMap: Map<string, any> = new Map(),
+    currentPath: string[] = []
+  ): Map<string, any> => {
+    if (!plan) return pathMap
 
-    // Find max node index
+    const path = [...currentPath, plan.name]
+    const pathKey = path.join('/')
+    pathMap.set(pathKey, plan)
 
-    // Use first node's plan structure as template
-    const firstPlan = JSON.parse(props.data[0][2])
-    const flattened = flattenPlan(firstPlan)
+    // Recursively process children
+    if (plan.children && plan.children.length > 0) {
+      plan.children.forEach((child: any) => {
+        buildPathMap(child, pathMap, path)
+      })
+    }
 
-    // Create a map of plans by node index
-    const plansByNode = new Map()
+    return pathMap
+  }
+
+  // Parse plans from props.data and group by physical node index
+  // Only includes plans with the same root operator name as the template plan
+  //
+  // Input: props.data = [[stage, nodeIndex, plan_json_string], ...]
+  // Output: Map<nodeIndex, parsed_plan_object>
+  //
+  // Example:
+  //   Input: [
+  //     [1, 0, '{"name": "CoalesceBatchesExec", ...}'],
+  //     [1, 1, '{"name": "CoalesceBatchesExec", ...}'],
+  //     [1, 5, '{"name": "CoalesceBatchesExec", ...}']
+  //   ]
+  //   Output: Map {
+  //     0 => { name: "CoalesceBatchesExec", children: [...], metrics: {...} },
+  //     1 => { name: "CoalesceBatchesExec", children: [...], metrics: {...} },
+  //     5 => { name: "CoalesceBatchesExec", children: [...], metrics: {...} }
+  //   }
+  const parsePlansByNode = (templatePlan: any): Map<number, any> => {
+    const plansByNode = new Map<number, any>()
+    const rootName = templatePlan?.name
+
     props.data.forEach((row) => {
-      const nodeIndex = row[1]
-      const plan = JSON.parse(row[2])
-      plansByNode.set(nodeIndex, plan)
+      // Destructure: [stage, nodeIndex, plan_json_string]
+      // We ignore stage (index 0) since we're already filtered by stage in explain-tabs
+      const [, nodeIndex, planStr] = row
+
+      if (!planStr || typeof planStr !== 'string' || !planStr.startsWith('{')) {
+        return
+      }
+
+      try {
+        const plan = JSON.parse(planStr)
+        if (plan?.name === rootName) {
+          plansByNode.set(nodeIndex, plan)
+        }
+      } catch {
+        // Ignore invalid JSON (e.g., footer rows)
+      }
     })
 
-    // Add metrics from each node to the flattened structure
-    flattened.forEach((row) => {
-      plansByNode.forEach((nodePlan, nodeIndex) => {
-        let currentNode = nodePlan
-        const { path } = row
+    return plansByNode
+  }
 
-        // Navigate through the path
-        for (let i = 0; i < path.length && currentNode; i += 1) {
-          if (currentNode.name !== path[i]) {
-            currentNode = null
-            break
-          }
-          if (i < path.length - 1) {
-            currentNode = currentNode.children?.find((child: any) => child.name === path[i + 1])
-          }
-        }
+  // Build path maps for all plans (for O(1) lookup instead of tree traversal)
+  // Returns: Map<nodeIndex, pathMap> where pathMap is Map<pathKey, node>
+  const buildPathMapsForAllNodes = (plansByNode: Map<number, any>): Map<number, Map<string, any>> => {
+    const pathMapsByNode = new Map<number, Map<string, any>>()
+    plansByNode.forEach((plan, nodeIndex) => {
+      const pathMap = buildPathMap(plan)
+      pathMapsByNode.set(nodeIndex, pathMap)
+    })
+    return pathMapsByNode
+  }
 
-        if (currentNode) {
+  // Attach metrics from each physical node's plan to the corresponding operator row
+  //
+  // rows: Flattened operator rows (one per operator in the plan tree)
+  // pathMapsByNode: Map of physical node index -> path map (pathKey -> operator node)
+  //
+  // For each operator row, find the matching operator in each physical node's path map
+  // and attach that physical node's metrics to the row as row.node0, row.node1, etc.
+  //
+  // Example:
+  //   row = { step: "FilterExec", path: ["CoalesceBatchesExec", "FilterExec"], ... }
+  //   pathMapsByNode = Map {
+  //     0 => Map { "CoalesceBatchesExec/FilterExec" => {...}, ... },
+  //     1 => Map { "CoalesceBatchesExec/FilterExec" => {...}, ... },
+  //     5 => Map { "CoalesceBatchesExec/FilterExec" => {...}, ... }
+  //   }
+  //
+  //   Result: row.node0 = { output_rows: 100, elapsed_compute: 50, ... }
+  //          row.node1 = { output_rows: 120, elapsed_compute: 60, ... }
+  //          row.node5 = { output_rows: 155616, elapsed_compute: 32, ... }
+  const attachNodeMetrics = (rows: any[], pathMapsByNode: Map<number, Map<string, any>>) => {
+    rows.forEach((row) => {
+      // Convert path array to path key for map lookup
+      const pathKey = row.path.join('/')
+
+      pathMapsByNode.forEach((pathMap, nodeIndex) => {
+        // O(1) lookup instead of tree traversal
+        const operatorNode = pathMap.get(pathKey)
+        if (operatorNode) {
+          // Attach metrics from this physical node's operator to the row
           row[`node${nodeIndex}`] = {
-            ...currentNode.metrics,
-            output_rows: currentNode.output_rows,
-            elapsed_compute: currentNode.elapsed_compute,
+            ...operatorNode.metrics,
+            output_rows: operatorNode.output_rows,
+            elapsed_compute: operatorNode.elapsed_compute,
           }
         }
       })
     })
-    return flattened
+  }
+
+  const tableData = computed(() => {
+    if (!props.data || props.data.length === 0) return []
+
+    // Step 1: Parse template plan to get the operator structure
+    //
+    // Why use props.data[0]?
+    // - All physical nodes with the SAME root operator share the same tree structure
+    // - They only differ in metrics (output_rows, elapsed_compute, etc.)
+    // - We use the first entry as a "template" to define the operator hierarchy
+    // - Any entry with the same root operator would work (we just pick the first one)
+    // - Later, parsePlansByNode() filters to only include plans with matching root name
+    //
+    // Note: If props.data contains multiple different root operators (e.g., both
+    // "CoalesceBatchesExec" and "PromInstantManipulateExec"), only the root operator
+    // from data[0] will be displayed. The others are filtered out in parsePlansByNode().
+    //
+    // templatePlan structure:
+    // {
+    //   name: "CoalesceBatchesExec",
+    //   children: [
+    //     {
+    //       name: "FilterExec",
+    //       children: [
+    //         { name: "ProjectionExec", children: [...] }
+    //       ]
+    //     }
+    //   ]
+    // }
+    const templatePlan = JSON.parse(props.data[0][2])
+
+    // flattenPlan converts the nested tree into a flat array of rows:
+    // Tree → [
+    //   { step: "CoalesceBatchesExec", path: ["CoalesceBatchesExec"], ... },
+    //   { step: "└─ FilterExec", path: ["CoalesceBatchesExec", "FilterExec"], ... },
+    //   { step: "   └─ ProjectionExec", path: ["CoalesceBatchesExec", "FilterExec", "ProjectionExec"], ... },
+    //   ...
+    // ]
+    // Each row represents one operator in the execution plan tree
+    const planRows = flattenPlan(templatePlan)
+
+    // Step 2: Parse all node plans (filtered by same root operator)
+    const plansByNode = parsePlansByNode(templatePlan)
+
+    // Step 3: Build path maps for O(1) lookup (instead of tree traversal)
+    const pathMapsByNode = buildPathMapsForAllNodes(plansByNode)
+
+    // Step 4: Attach metrics from each node to the corresponding plan rows
+    attachNodeMetrics(planRows, pathMapsByNode)
+
+    return planRows
   })
 
   const availableMetrics = computed(() => {
