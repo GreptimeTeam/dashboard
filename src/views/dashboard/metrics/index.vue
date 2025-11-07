@@ -154,7 +154,11 @@ a-layout.new-layout
     }
 
     if (instantTime && typeof instantTime === 'string') {
-      instantQueryTime.value = instantTime
+      // Convert Unix timestamp string to Date
+      const unixTimestamp = parseInt(instantTime, 10)
+      if (!Number.isNaN(unixTimestamp)) {
+        instantQueryTime.value = new Date(unixTimestamp * 1000)
+      }
     }
   }
 
@@ -188,7 +192,9 @@ a-layout.new-layout
     query.tab = activeTab.value
 
     if (instantQueryTime.value && activeTab.value === 'table') {
-      query.instantTime = instantQueryTime.value as unknown as string
+      // Convert Date to Unix timestamp string for URL
+      const unixTimestamp = Math.floor(instantQueryTime.value.getTime() / 1000).toString()
+      query.instantTime = unixTimestamp
     } else {
       delete query.instantTime
     }

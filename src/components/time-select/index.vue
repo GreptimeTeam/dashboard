@@ -112,26 +112,7 @@ a-trigger#time-select(
   const rangePickerVisible = ref(false)
   const visible = ref(false)
 
-  const { userTimezone } = storeToRefs(useAppStore())
-
-  const { browserOffset, offsetDiff } = useDashboardTimezone()
-
-  watchEffect(() => {
-    console.log(offsetDiff.value, 'offsetDiff.value')
-  })
-  const timezoneLabel = computed(() => {
-    const tz = userTimezone.value
-    if (!tz) {
-      return ''
-    }
-    if (tz === 'UTC') return 'UTC'
-    // Expect tz like '+08:00' or '-05:00'
-    const sign = tz.startsWith('-') ? '-' : '+'
-    const hours = Number(tz.slice(1, 3))
-    return `UTC${sign}${hours}`
-  })
-
-  const toUtcTime = (value: Date) => dayjs(value).subtract(offsetDiff.value, 'minute').unix()
+  const { browserOffset, offsetDiff, timezoneLabel, toBrowserTimezoneTimestamp } = useDashboardTimezone()
 
   const toTimezoneTime = (value: string | number) => {
     const base = dayjs.unix(Number(value))
@@ -170,8 +151,8 @@ a-trigger#time-select(
 
   const selectTimeRange = ([startDate, endDate]: [Date, Date]) => {
     console.log(startDate, endDate, 'startDate, endDate')
-    const start = toUtcTime(startDate)
-    const end = toUtcTime(endDate)
+    const start = toBrowserTimezoneTimestamp(startDate)
+    const end = toBrowserTimezoneTimestamp(endDate)
     emit('update:timeRange', [start.toString(), end.toString()])
     emit('update:timeLength', 0)
     emit('change')
