@@ -33,16 +33,36 @@ export function useDashboardTimezone() {
     return browserOffset
   })
 
+  // offsetDiff = dashboardOffset - browserOffset
+  // Used to convert between dashboard timezone time and browser timezone time
+  // When displaying: add offsetDiff to show dashboard timezone time in browser timezone
+  // When converting back: subtract offsetDiff to restore to browser timezone time
   const offsetDiff = computed(() => dashboardOffset.value - browserOffset)
 
-  const toUtcUnix = (value: Date) => dayjs(value).subtract(offsetDiff.value, 'minute').unix()
-  const toTimezoneDate = (value: string | number) => dayjs.unix(Number(value)).add(offsetDiff.value, 'minute').toDate()
+  const toBrowserTimezoneTimestamp = (value: Date) => dayjs(value).subtract(offsetDiff.value, 'minute').unix()
+
+  const toDashboardDate = (value: string | number) => dayjs.unix(Number(value)).add(offsetDiff.value, 'minute').toDate()
+
+  // Timezone label formatter: 'UTC' stays 'UTC', '+08:00' -> 'UTC+8', '-05:00' -> 'UTC-5'
+  const timezoneLabel = computed(() => {
+    const tz = userTimezone.value
+    if (!tz) {
+      // Format browser timezone label
+      return ''
+    }
+    if (tz === 'UTC') return 'UTC'
+    // Expect tz like '+08:00' or '-05:00'
+    const sign = tz.startsWith('-') ? '-' : '+'
+    const hours = Number(tz.slice(1, 3))
+    return `UTC${sign}${hours}`
+  })
 
   return {
     browserOffset,
     dashboardOffset,
     offsetDiff,
-    toUtcUnix,
-    toTimezoneDate,
+    toBrowserTimezoneTimestamp,
+    toDashboardDate,
+    timezoneLabel,
   }
 }
