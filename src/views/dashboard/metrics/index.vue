@@ -32,7 +32,7 @@ a-layout.new-layout
                 v-model="instantQueryTime"
                 placeholder="Evaluation time"
                 allow-clear
-                style="width: 200px"
+                style="width: 210px"
                 size="small"
               )
 
