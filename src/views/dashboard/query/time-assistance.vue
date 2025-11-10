@@ -16,15 +16,7 @@ a-modal.timestamp-assistance-modal(
     a-form-item(label="Step 1")
       a-space
         .action Select time
-        a-date-picker.timestamp(
-          v-model="picked"
-          show-time
-          format="YYYY-MM-DD HH:mm:ss.SSS"
-          value-format="YYYY-MM-DD HH:mm:ss.SSS"
-          style="width: 210px"
-          type="outline"
-          :allow-clear="false"
-        )
+        TimezoneInstantPicker(v-model="picked" style="width: 210px" type="outline")
           template(#prefix)
             svg.icon
               use(href="#time")
@@ -62,15 +54,21 @@ a-modal.timestamp-assistance-modal(
 <script setup lang="ts">
   import dayjs from 'dayjs'
   import { Message } from '@arco-design/web-vue'
+  import TimezoneInstantPicker from '@/components/time-select/instant-picker.vue'
+  import { useDateTimeFormat } from '@/hooks'
 
   interface CMViewLike {
     state: any
     dispatch: any
+    focus?: () => void
   }
   const props = defineProps<{ cm?: CMViewLike }>()
 
+  // Use timezone-aware date formatting
+  const { formatDateTime, formatDateTimeWithMs } = useDateTimeFormat()
+
   const visible = ref(false)
-  const picked = ref<string | undefined>(dayjs().format('YYYY-MM-DD HH:mm:ss.SSS'))
+  const picked = ref<Date | null>(new Date())
   const action = ref<'insert' | 'copy'>('insert')
   const chosen = ref<string>('')
   const microNanoDigits = ref<string>('000000')
@@ -131,7 +129,9 @@ a-modal.timestamp-assistance-modal(
       })
 
       // Focus the editor after insertion
-      view.focus?.()
+      if (typeof view.focus === 'function') {
+        view.focus()
+      }
 
       return true
     } catch (error) {
@@ -177,13 +177,11 @@ a-modal.timestamp-assistance-modal(
 
   // Convert selected time to different timestamp formats
   const timestamp = computed(() => {
-    const pickedStr = picked.value
-    if (!pickedStr) return { s: '0', ms: '0', us: '0', ns: '0' }
+    const pickedDate = picked.value
+    if (!pickedDate) return { s: '0', ms: '0', us: '0', ns: '0' }
 
-    const d = dayjs(pickedStr, 'YYYY-MM-DD HH:mm:ss.SSS', true)
-    if (!d.isValid()) return { s: '0', ms: '0', us: '0', ns: '0' }
-
-    const ms = d.valueOf()
+    // Get milliseconds from Date object
+    const ms = pickedDate.getTime()
     const msStr = ms.toString()
     const microDigits = currentMicroNano.value.slice(0, 3)
     const nanoDigits = currentMicroNano.value.slice(3, 6)
@@ -196,19 +194,33 @@ a-modal.timestamp-assistance-modal(
     }
   })
 
-  // Generate formatted literals with different precisions
-  const formatLiteral = (pickedStr?: string, precision: 's' | 'ms' | 'us' | 'ns' = 'ms'): string => {
-    if (!pickedStr) return ''
+  // Generate formatted literals with different precisions (timezone-aware)
+  const formatLiteral = (pickedDate: Date | null, precision: 's' | 'ms' | 'us' | 'ns' = 'ms'): string => {
+    if (!pickedDate) return ''
 
-    const d = dayjs(pickedStr, 'YYYY-MM-DD HH:mm:ss.SSS', true)
-    if (!d.isValid()) return ''
+    // Convert Date to Unix timestamp (seconds) for formatting
+    const unixSeconds = Math.floor(pickedDate.getTime() / 1000)
 
-    const base = d.format('YYYY-MM-DD HH:mm:ss')
-    const ms = d.format('SSS')
+    // Format with timezone using hook
+    if (precision === 's') {
+      const formatted = formatDateTime(unixSeconds, 'TimestampSecond')
+      return formatted ? `'${formatted}'` : ''
+    }
+
+    // For ms, us, ns: use formatDateTimeWithMs to get base + milliseconds
+    const formattedWithMs = formatDateTimeWithMs(unixSeconds, 'TimestampSecond')
+    if (!formattedWithMs) return ''
+
+    // Extract base (YYYY-MM-DD HH:mm:ss) and milliseconds (SSS)
+    const parts = formattedWithMs.split('.')
+    if (parts.length !== 2) return `'${formattedWithMs}'`
+
+    const base = parts[0] // YYYY-MM-DD HH:mm:ss
+    const ms = parts[1] // SSS
+
     const microDigits = currentMicroNano.value.slice(0, 3)
     const nanoDigits = currentMicroNano.value.slice(3, 6)
 
-    if (precision === 's') return `'${base}'`
     if (precision === 'ms') return `'${base}.${ms}'`
     if (precision === 'us') return `'${base}.${ms}${microDigits}'`
     return `'${base}.${ms}${microDigits}${nanoDigits}'`
@@ -257,7 +269,7 @@ a-modal.timestamp-assistance-modal(
 
   const open = () => {
     visible.value = true
-    picked.value = dayjs().format('YYYY-MM-DD HH:mm:ss.SSS')
+    picked.value = new Date()
     chosen.value = ''
     microNanoDigits.value = '000000'
     formattedMicroNano.value = '000000'
@@ -289,16 +301,7 @@ a-modal.timestamp-assistance-modal(
     .arco-modal-title {
       font-family: 'Gilroy';
     }
-    .arco-picker.timestamp {
-      padding: 0 0 0 10px;
-      width: 100%;
-      .arco-picker-suffix-icon {
-        display: none;
-      }
-      input {
-        font-size: 12px;
-      }
-    }
+
     .arco-input-wrapper.digits {
       width: 110px;
       .arco-input-suffix {
