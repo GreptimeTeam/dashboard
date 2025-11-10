@@ -1,9 +1,13 @@
 <template lang="pug">
 .explain-chart(:id="`explain-chart-stage-${index}`")
   .header
-    .stage-navigation
-      a-radio-group(v-model="localStageIndex" type="button" @change="onStageChange")
-        a-radio(v-for="i in totalStages" :key="i - 1" :value="i - 1") Stage {{ i - 1 }}
+    div(style="display: flex; align-items: center; justify-content: space-between; flex-direction: row")
+      .stage-navigation
+        a-radio-group(v-model="localStageIndex" type="button" @change="onStageChange")
+          a-radio(v-for="i in totalStages" :key="i - 1" :value="i - 1") Stage {{ i - 1 }}
+      .root-plan-selector(v-if="availableRootPlans.length > 1")
+        a-select(v-model="selectedRootPlan" size="mini" style="width: 200px; margin-left: 8px")
+          a-option(v-for="root in availableRootPlans" :key="root" :value="root") {{ root }}
     ChartControls(
       v-model:highlight-type="highlightType"
       v-model:selected-metric="selectedMetric"
@@ -20,7 +24,7 @@
     .chart-container.grab-bing(ref="chartContainer")
       TreeView(
         ref="treeView"
-        :data="data"
+        :data="filteredData"
         :active-node-index="activeNodeIndex"
         :highlight-type="highlightType"
         :selected-metric="selectedMetric"
@@ -76,6 +80,50 @@
   const nodesData = ref([])
   const treeView = ref(null)
   const componentId = computed(() => `explain-chart-stage-${props.index}`)
+  const selectedRootPlan = ref<string>('')
+
+  // Extract available root plan names from props.data
+  const availableRootPlans = computed(() => {
+    if (!props.data || props.data.length === 0) return []
+    const rootNames = new Set<string>()
+    props.data.forEach((row) => {
+      const [, , planStr] = row
+      if (!planStr || typeof planStr !== 'string' || !planStr.startsWith('{')) {
+        return
+      }
+      try {
+        const plan = JSON.parse(planStr)
+        if (plan?.name) {
+          rootNames.add(plan.name)
+        }
+      } catch {
+        // Ignore invalid JSON
+      }
+    })
+    return Array.from(rootNames).sort()
+  })
+
+  // Filter data based on selected root plan
+  const filteredData = computed(() => {
+    if (!props.data || props.data.length === 0) return []
+    if (availableRootPlans.value.length <= 1) {
+      // If only one root plan, return all data
+      return props.data
+    }
+    // Filter by selected root plan (watcher ensures selectedRootPlan is always set)
+    return props.data.filter((row) => {
+      const [, , planStr] = row
+      if (!planStr || typeof planStr !== 'string' || !planStr.startsWith('{')) {
+        return false
+      }
+      try {
+        const plan = JSON.parse(planStr)
+        return plan?.name === selectedRootPlan.value
+      } catch {
+        return false
+      }
+    })
+  })
 
   // Zoom and pan states
   const transform = ref('translate(0,0) scale(1)')
@@ -127,10 +175,10 @@
       }))
   })
 
-  // Get all available nodes from the data
+  // Get all available nodes from the filtered data
   const availableNodes = computed(() => {
-    if (!props.data || props.data.length === 0) return []
-    return [...new Set(props.data.map((row) => row[1]))].sort((a, b) => a - b)
+    if (!filteredData.value || filteredData.value.length === 0) return []
+    return [...new Set(filteredData.value.map((row) => row[1]))].sort((a, b) => a - b)
   })
 
   // Create the zoom behavior
@@ -275,7 +323,7 @@
   // Add this function to your script section
 
   function calculateMaxMetrics() {
-    if (!props.data || props.data.length === 0) return
+    if (!filteredData.value || filteredData.value.length === 0) return
 
     let maxRowsValue = 0
     let maxDurationValue = 0
@@ -307,8 +355,8 @@
       }
     }
 
-    // Process each node's plan data
-    props.data.forEach((row) => {
+    // Process each node's plan data from filtered data
+    filteredData.value.forEach((row) => {
       try {
         const planData = JSON.parse(row[2])
         traverseNode(planData)
@@ -398,31 +446,47 @@
     })
   }
 
-  // Watch handlers for data changes
+  // Initialize selected root plan when available root plans change
+  watch(
+    () => availableRootPlans.value,
+    (newRootPlans) => {
+      if (newRootPlans.length > 0 && !selectedRootPlan.value) {
+        selectedRootPlan.value = newRootPlans[0]
+      }
+    },
+    { immediate: true }
+  )
+
+  // Watch filteredData to update chart when data or root plan changes
+  watch(
+    () => filteredData.value,
+    () => {
+      calculateMaxMetrics()
+      nextTick(() => {
+        if (treeView.value) {
+          treeView.value.renderTree()
+          setTimeout(() => {
+            resetZoom()
+          }, 100)
+        }
+      })
+    },
+    { immediate: true }
+  )
+
+  // Watch props.data to reset state when stage changes (not when root plan changes)
   watch(
     () => props.data,
     (newData, oldData) => {
-      // Only reset if the data content actually changed
+      // Only reset state if the data content actually changed (stage change)
       if (!oldData || !areDataArraysEqual(newData, oldData)) {
         activeNodeIndex.value = 0
         selectedMetric.value = ''
         highlightType.value = 'DURATION'
         metricsExpanded.value = false
-
-        calculateMaxMetrics()
-
-        nextTick(() => {
-          if (treeView.value) {
-            treeView.value.renderTree()
-
-            setTimeout(() => {
-              resetZoom()
-            }, 100)
-          }
-        })
+        // Chart update is handled by filteredData watch
       }
-    },
-    { immediate: true }
+    }
   )
 
   const localStageIndex = ref(props.index)
