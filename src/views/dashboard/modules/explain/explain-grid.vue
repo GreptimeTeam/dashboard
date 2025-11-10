@@ -372,56 +372,79 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     })
   }
 
-  const tableData = computed(() => {
-    if (!props.data || props.data.length === 0) return []
+  // Group props.data by root plan name
+  // Returns: Map<rootName, Array<[stage, nodeIndex, plan_json_string]>>
+  const groupByRootName = (): Map<string, Array<[number, number, string]>> => {
+    const groups = new Map<string, Array<[number, number, string]>>()
 
-    // Step 1: Parse template plan to get the operator structure
-    //
-    // Why use props.data[0]?
-    // - All physical nodes with the SAME root operator share the same tree structure
-    // - They only differ in metrics (output_rows, elapsed_compute, etc.)
-    // - We use the first entry as a "template" to define the operator hierarchy
-    // - Any entry with the same root operator would work (we just pick the first one)
-    // - Later, parsePlansByNode() filters to only include plans with matching root name
-    //
-    // Note: If props.data contains multiple different root operators (e.g., both
-    // "CoalesceBatchesExec" and "PromInstantManipulateExec"), only the root operator
-    // from data[0] will be displayed. The others are filtered out in parsePlansByNode().
-    //
-    // templatePlan structure:
-    // {
-    //   name: "CoalesceBatchesExec",
-    //   children: [
-    //     {
-    //       name: "FilterExec",
-    //       children: [
-    //         { name: "ProjectionExec", children: [...] }
-    //       ]
-    //     }
-    //   ]
-    // }
-    const templatePlan = JSON.parse(props.data[0][2])
+    props.data.forEach((row) => {
+      const [, , planStr] = row
+      if (!planStr || typeof planStr !== 'string' || !planStr.startsWith('{')) {
+        return
+      }
 
-    // flattenPlan converts the nested tree into a flat array of rows:
-    // Tree → [
-    //   { step: "CoalesceBatchesExec", path: ["CoalesceBatchesExec"], ... },
-    //   { step: "└─ FilterExec", path: ["CoalesceBatchesExec", "FilterExec"], ... },
-    //   { step: "   └─ ProjectionExec", path: ["CoalesceBatchesExec", "FilterExec", "ProjectionExec"], ... },
-    //   ...
-    // ]
-    // Each row represents one operator in the execution plan tree
+      try {
+        const plan = JSON.parse(planStr)
+        const rootName = plan?.name
+        if (rootName) {
+          if (!groups.has(rootName)) {
+            groups.set(rootName, [])
+          }
+          const group = groups.get(rootName)
+          if (group) {
+            group.push(row)
+          }
+        }
+      } catch {
+        // Ignore invalid JSON
+      }
+    })
+
+    return groups
+  }
+
+  // Process a single root plan group
+  const processRootPlan = (rootName: string, rootData: Array<[number, number, string]>): any[] => {
+    // Use first entry as template
+    const templatePlan = JSON.parse(rootData[0][2])
     const planRows = flattenPlan(templatePlan)
 
-    // Step 2: Parse all node plans (filtered by same root operator)
-    const plansByNode = parsePlansByNode(templatePlan)
+    // Parse all node plans for this root
+    const plansByNode = new Map<number, any>()
+    rootData.forEach((row) => {
+      const [, nodeIndex, planStr] = row
+      try {
+        const plan = JSON.parse(planStr)
+        if (plan?.name === rootName) {
+          plansByNode.set(nodeIndex, plan)
+        }
+      } catch {
+        // Ignore invalid JSON
+      }
+    })
 
-    // Step 3: Build path maps for O(1) lookup (instead of tree traversal)
+    // Build path maps and attach metrics
     const pathMapsByNode = buildPathMapsForAllNodes(plansByNode)
-
-    // Step 4: Attach metrics from each node to the corresponding plan rows
     attachNodeMetrics(planRows, pathMapsByNode)
 
     return planRows
+  }
+
+  const tableData = computed(() => {
+    if (!props.data || props.data.length === 0) return []
+
+    // Step 1: Group props.data by root plan name
+    // This handles cases where there are multiple root plans (e.g., CoalesceBatchesExec and PromInstantManipulateExec)
+    const rootGroups = groupByRootName()
+
+    // Step 2: Process each root plan group separately
+    const allPlanRows: any[] = []
+    rootGroups.forEach((rootData, rootName) => {
+      const planRows = processRootPlan(rootName, rootData)
+      allPlanRows.push(...planRows)
+    })
+
+    return allPlanRows
   })
 
   const availableMetrics = computed(() => {
