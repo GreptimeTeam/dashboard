@@ -150,7 +150,6 @@ a-trigger#time-select(
   })
 
   const selectTimeRange = ([startDate, endDate]: [Date, Date]) => {
-    console.log(startDate, endDate, 'startDate, endDate')
     const start = toBrowserTimezoneTimestamp(startDate)
     const end = toBrowserTimezoneTimestamp(endDate)
     emit('update:timeRange', [start.toString(), end.toString()])
