@@ -204,7 +204,7 @@ VCharts(
 
         // Convert timestamps using tsColumn multiple
         const tmpData = rows.map((row: any[]) => [
-          convertTimestampToMilliseconds(row[0], props.queryState.tsColumn.data_type),
+          convertTimestampToMilliseconds(row[0], 'TimestampNanosecond'),
           row[1],
         ])
         data.value = tmpData.reverse() // Reverse to show chronological order
