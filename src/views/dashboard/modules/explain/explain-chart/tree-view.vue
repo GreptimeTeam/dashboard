@@ -362,7 +362,7 @@
 
       // Create hierarchy with precomputed node sizes
       const hierarchy = d3.hierarchy(rootData, (d) => d.children || [])
-      hierarchy.each((d) => {
+      hierarchy.each((d: any) => {
         const nodeMetrics = d.data.metrics || {}
         const hasMetrics =
           props.metricsExpanded || (props.selectedMetric && nodeMetrics[props.selectedMetric] !== undefined)
@@ -370,14 +370,15 @@
         const metricsLines = calculateMetricsLines(nodeMetrics, hasMetrics)
         const cardHeight = calculateCardHeight(hasProgressBar, hasMetrics, metricsLines)
 
-        // Set size in node data for layout
+        // Store size and height in node data for reuse
         d.data.size = [CARD_DIMENSIONS.width, cardHeight]
+        d.data.cardHeight = cardHeight
       })
 
       // Create the tree layout
       const treeLayout = flextree({
-        nodeSize: (node) => {
-          if (node.data && node.data.size) {
+        nodeSize: (node: any) => {
+          if (node.data?.size) {
             return [node.data.size[0] + CARD_DIMENSIONS.horizontalPadding, node.data.size[1] + CARD_DIMENSIONS.padding]
           }
           return [
@@ -390,22 +391,8 @@
       // Apply layout
       const layoutRoot = treeLayout(hierarchy)
 
-      // Find boundaries for centering
-      let minX = Infinity
-      let maxX = -Infinity
-      let minY = Infinity
-      let maxY = -Infinity
-      layoutRoot.each((d) => {
-        const nodeWidth = d.data.size ? d.data.size[0] : CARD_DIMENSIONS.width
-        minX = Math.min(minX, d.x - nodeWidth / 2)
-        maxX = Math.max(maxX, d.x + nodeWidth / 2)
-        minY = Math.min(minY, d.y)
-        maxY = Math.max(maxY, d.y + (d.data.size ? d.data.size[1] : CARD_DIMENSIONS.minHeight))
-      })
-
-      // Calculate center offset
-      const centerX = treeWidth / 2
-      const offsetX = centerX - (maxX - minX) / 2 - minX
+      // Simple fixed offset - center the root node horizontally
+      const offsetX = treeWidth / 2 - layoutRoot.x
 
       // Create tree container with offset
       const treeContainer2 = treeGroup
@@ -415,8 +402,6 @@
 
       const rootNodeX = layoutRoot.x + offsetX
       const rootNodeY = layoutRoot.y
-
-      // Calculate the bottom of the node index card
       const cardBottom = 20 + NODE_INDEX_CARD.height
       // Add connection between node index card and tree root
       treeGroup
@@ -453,8 +438,8 @@
         .enter()
         .append('g')
         .attr('class', 'node')
-        .attr('transform', (d) => {
-          const nodeWidth = d.data.size ? d.data.size[0] : CARD_DIMENSIONS.width
+        .attr('transform', (d: any) => {
+          const nodeWidth = d.data.size?.[0] ?? CARD_DIMENSIONS.width
           return `translate(${d.x - nodeWidth / 2},${d.y})`
         })
 
@@ -462,15 +447,7 @@
       nodeElements
         .append('foreignObject')
         .attr('width', CARD_DIMENSIONS.width + 10)
-        .attr('height', (d) => {
-          const nodeMetrics = d.data.metrics || {}
-          const hasMetrics =
-            props.metricsExpanded || (props.selectedMetric && nodeMetrics[props.selectedMetric] !== undefined)
-          const hasProgressBar = props.highlightType !== 'NONE'
-          const metricsLines = calculateMetricsLines(nodeMetrics, hasMetrics)
-          const cardHeight = calculateCardHeight(hasProgressBar, hasMetrics, metricsLines)
-          return cardHeight + 10
-        })
+        .attr('height', (d: any) => (d.data.cardHeight ?? CARD_DIMENSIONS.minHeight) + 10)
         .each(function (d) {
           // Create a div to mount the Vue component
           const container = document.createElement('div')
