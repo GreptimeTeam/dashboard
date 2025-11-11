@@ -100,6 +100,7 @@
   const scale = ref(1)
   const minScale = 0.1
   const maxScale = 3
+  const lastTransform = ref<any>(null)
 
   // Create a line generator function
   const lineGen = computed(() => {
@@ -130,11 +131,12 @@
         g.attr('transform', event.transform)
         transform.value = event.transform
         scale.value = event.transform.k
+        lastTransform.value = event.transform
       })
   })
 
   // Helper functions moved from parent component
-  function applyZoom(svg) {
+  function applyZoom(svg, preservedTransform: any = null) {
     // Set explicit dimensions first
     svg
       .attr('width', treeContainer.value?.clientWidth || 800)
@@ -144,8 +146,15 @@
     // Apply zoom behavior with a reasonable initial scale
     svg.call(zoomListener.value)
 
-    // Set an initial transform with scale 0.7
-    svg.call(zoomListener.value.transform, d3.zoomIdentity.translate(svg.attr('width') / 4, 50).scale(0.7))
+    // Restore preserved transform or set an initial transform
+    if (preservedTransform) {
+      svg.call(zoomListener.value.transform, preservedTransform)
+      lastTransform.value = preservedTransform
+    } else {
+      const initial = d3.zoomIdentity.translate(svg.attr('width') / 4, 50).scale(0.7)
+      svg.call(zoomListener.value.transform, initial)
+      lastTransform.value = initial
+    }
   }
 
   function getSvgAndGroup() {
@@ -330,75 +339,6 @@
     return baseHeight + progressHeight + metricsHeight
   }
 
-  // Update the node size in the hierarchy
-  function updateNodeSize(node, width, height) {
-    // Store the size in the node data
-    if (node) {
-      node.size = [width, height]
-    }
-  }
-
-  // Add these functions to the script section
-
-  function updateTreeLayout() {
-    // Get each tree group
-    const availableNodes = [...nodePositions.value.keys()]
-    availableNodes.forEach((nodeIdx) => {
-      const treeGroup = d3.select(treeContainer.value).select(`svg.${componentId.value} g .tree-group.node-${nodeIdx}`)
-      if (treeGroup.empty()) return
-
-      // Get the tree container
-      const treeContainer2 = treeGroup.select('g:last-of-type')
-      if (treeContainer2.empty()) return
-
-      // Get all nodes
-      const nodes = treeContainer2.selectAll('.node').data()
-      if (!nodes.length) return
-
-      // Re-compute the layout with updated node sizes
-      const rootData = nodes[0]?.data
-      if (!rootData) return
-
-      // Create a new tree layout
-      const treeLayout = flextree({
-        nodeSize: (node) => {
-          if (node.data && node.data.size) {
-            return [node.data.size[0] + CARD_DIMENSIONS.horizontalPadding, node.data.size[1] + CARD_DIMENSIONS.padding]
-          }
-          return [
-            CARD_DIMENSIONS.width + CARD_DIMENSIONS.horizontalPadding,
-            CARD_DIMENSIONS.minHeight + CARD_DIMENSIONS.padding,
-          ]
-        },
-      })
-
-      // Create a hierarchy from the current data
-      const hierarchy = d3.hierarchy(rootData, (d) => d.children || [])
-      const root = treeLayout(hierarchy)
-
-      // Update node positions
-      treeContainer2.selectAll('.node').each(function (d, i) {
-        if (i >= root.descendants().length) return
-
-        const newPos = root.descendants()[i]
-        if (!newPos) return
-
-        const xSize = (newPos as unknown as FlexHierarchyPointNode).xSize || CARD_DIMENSIONS.width
-        d3.select(this).attr('transform', `translate(${newPos.x - xSize / 2},${newPos.y})`)
-      })
-
-      // Update links with the new positions
-      treeContainer2.selectAll('.link').each(function (d, i) {
-        if (i >= root.links().length) return
-
-        const links = root.links()
-        if (links[i]) {
-          d3.select(this).attr('d', lineGen.value(links[i] as unknown as FlexHierarchyPointLink))
-        }
-      })
-    })
-  }
-
   function scrollToNode(nodeIdx) {
     // Emit event to update parent's activeNodeIndex
     emit('update:activeNodeIndex', nodeIdx)
@@ -438,6 +378,9 @@
   function renderTree() {
     if (!treeContainer.value || !props.data || props.data.length === 0) return
 
+    // Preserve current zoom transform from ref
+    const preservedTransform = lastTransform.value || null
+
     // Clear previous content
     treeContainer.value.innerHTML = ''
 
@@ -450,11 +393,15 @@
       .attr('class', `explain-svg ${componentId.value}`)
       .attr('viewBox', `0 0 ${treeContainer.value.clientWidth} ${treeContainer.value.clientHeight}`)
 
-    // Apply zoom behavior safely
-    applyZoom(svg)
+    // Apply zoom behavior safely, preserving previous transform if any
+    applyZoom(svg, preservedTransform)
 
     // Add main group for transformation during zoom/pan
     const mainGroup = svg.append('g').attr('class', componentId.value) // Add class to main group
+    if (preservedTransform) {
+      // Ensure group reflects the preserved transform immediately
+      mainGroup.attr('transform', preservedTransform)
+    }
 
     // Process all node data - we need one tree per node
     nodesData.value = processNodesData(props.data)
@@ -700,82 +647,29 @@
     }
   )
 
-  function updateNodeVisualization() {
-    if (!treeContainer.value) return
-
-    // Update all nodes with current props
-    d3.selectAll(`svg.${componentId.value} g.${componentId.value} .tree-group .node foreignObject`).each(function () {
-      const nodeData = d3.select(this.parentNode).datum()
-      if (!nodeData || !nodeData.data) return
-
-      // Get container div
-      const container = this.querySelector('div')
-      if (!container) return
-
-      // Get node index from tree group
-      const treeGroupElement = this.closest(`.tree-group.${componentId.value}`)
-      if (!treeGroupElement) return
-
-      const nodeIdxMatch = treeGroupElement.className.baseVal.match(/node-(\d+)/)
-      const nodeIndex = nodeIdxMatch ? parseInt(nodeIdxMatch[1], 10) : null
-
-      // Re-render PlanCard with updated props
-      render(
-        h(PlanCard, {
-          nodeData: nodeData.data,
-          highlightType: props.highlightType,
-          maxRows: maxStats.value.maxRows,
-          maxDuration: maxStats.value.maxDuration,
-          selectedMetric: props.selectedMetric,
-          metricsExpanded: props.metricsExpanded,
-          isActive: props.activeNodeIndex === nodeIndex,
-          stageIndex: props.stageIndex,
-        }),
-        container
-      )
-
-      // Calculate new height
-      const hasMetrics =
-        props.metricsExpanded ||
-        (props.selectedMetric && nodeData.data.metrics && nodeData.data.metrics[props.selectedMetric] !== undefined)
-      const hasProgressBar = props.highlightType !== 'NONE'
-      const metricsLines = calculateMetricsLines(nodeData.data.metrics || {}, hasMetrics)
-      const cardHeight = calculateCardHeight(hasProgressBar, hasMetrics, metricsLines)
-
-      // Update the node's size in the hierarchy
-      updateNodeSize(nodeData.data, CARD_DIMENSIONS.width, cardHeight)
-
-      // Update foreignObject height
-      d3.select(this).attr('height', cardHeight + 10)
-    })
-
-    // Update the tree layout
-    updateTreeLayout()
-  }
-
   watch(
     () => props.highlightType,
-    (newValue) => {
+    () => {
       nextTick(() => {
-        updateNodeVisualization()
+        renderTree()
       })
     }
   )
 
   watch(
     () => props.selectedMetric,
-    (newValue) => {
+    () => {
       nextTick(() => {
-        updateNodeVisualization()
+        renderTree()
       })
     }
   )
 
   watch(
     () => props.metricsExpanded,
-    (newValue) => {
+    () => {
       nextTick(() => {
-        updateNodeVisualization()
+        renderTree()
       })
     }
   )
@@ -785,7 +679,6 @@
     zoomIn,
     zoomOut,
     resetZoom,
-    updateTreeLayout,
     renderTree,
   })
 </script>
