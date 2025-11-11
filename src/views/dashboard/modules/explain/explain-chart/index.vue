@@ -49,20 +49,7 @@
 
 <script lang="ts" setup name="ExplainChart">
   import * as d3 from 'd3'
-  import { createVNode, render, h } from 'vue'
-  import { flextree } from 'd3-flextree'
-  import PlanCard from './plan-card.vue'
-  import { CARD_DIMENSIONS, NODE_INDEX_CARD, getProgressColor, formatMetricName } from '../utils'
-
-  interface FlexHierarchyPointNode extends d3.HierarchyPointNode<any> {
-    xSize: number
-    ySize: number
-  }
-
-  interface FlexHierarchyPointLink {
-    source: FlexHierarchyPointNode
-    target: FlexHierarchyPointNode
-  }
+  import { formatMetricName } from '../utils'
 
   const props = defineProps<{
     data: any[] // This is an array of rows from getStages
@@ -126,8 +113,6 @@
   })
 
   // Zoom and pan states
-  const transform = ref('translate(0,0) scale(1)')
-  const scale = ref(1)
   const minScale = 0.1
   const maxScale = 3
 
@@ -137,10 +122,6 @@
   // Track max values for metrics
   const maxRows = ref(0)
   const maxDuration = ref(0)
-
-  // Check if we have rows and duration metrics
-  const hasPlanRows = computed(() => maxRows.value > 0)
-  const hasDurationMetrics = computed(() => maxDuration.value > 0)
 
   const availableMetrics = computed(() => {
     const metricKeys = new Set()
@@ -189,31 +170,8 @@
       .on('zoom', (event) => {
         const g = d3.select(chartContainer.value).select('svg > g')
         g.attr('transform', event.transform)
-        transform.value = event.transform
-        scale.value = event.transform.k
       })
   })
-
-  function applyZoom(svg) {
-    // Set explicit dimensions first
-    svg
-      .attr('width', chartContainer.value?.clientWidth || 800)
-      .attr('height', chartContainer.value?.clientHeight || 600)
-      .attr('viewBox', null)
-
-    // Apply zoom behavior with a reasonable initial scale
-    svg.call(zoomListener.value)
-
-    // Set an initial transform with scale 0.7 instead of 0.1
-    svg.call(zoomListener.value.transform, d3.zoomIdentity.translate(svg.attr('width') / 4, 50).scale(0.7))
-  }
-
-  function getSvgAndGroup() {
-    if (!chartContainer.value) return { svg: null, group: null }
-    const svg = d3.select(chartContainer.value).select('svg')
-    const group = svg.select('g') // Main transform group
-    return { svg, group }
-  }
 
   // Zoom in function
   function zoomIn() {
@@ -225,91 +183,8 @@
     if (treeView.value) treeView.value.zoomOut()
   }
 
-  // Process raw data into node-specific data
-  function processNodesData(data) {
-    const nodeMap = new Map()
-
-    // Group by node
-    data.forEach((row) => {
-      const nodeIdx = row[1]
-      const planData = JSON.parse(row[2])
-      nodeMap.set(nodeIdx, {
-        nodeIndex: nodeIdx,
-        plan: planData,
-      })
-    })
-
-    return Array.from(nodeMap.values())
-  }
-
-  function toHierarchy(plan, nodeIndex) {
-    return {
-      name: plan.name || 'Root',
-      nodeIndex,
-      metrics: {
-        ...(plan.metrics || {}),
-        // Add both camelCase and snake_case for flexibility
-        outputRows: plan.output_rows,
-        output_rows: plan.output_rows,
-        elapsedCompute: plan.elapsed_compute,
-        elapsed_compute: plan.elapsed_compute,
-      },
-      children: (plan.children || []).map((child) => toHierarchy(child, nodeIndex)),
-    }
-  }
-
-  // Helper function to calculate metrics lines
-  function calculateMetricsLines(nodeMetrics, hasMetrics) {
-    if (!metricsExpanded.value || !nodeMetrics) {
-      return hasMetrics ? 1 : 0
-    }
-
-    return Object.keys(nodeMetrics).filter(
-      (k) => !['output_rows', 'elapsed_compute', 'outputRows', 'elapsedCompute'].includes(k)
-    ).length
-  }
-
-  // Helper function to calculate card height
-  function calculateCardHeight(hasProgressBar, hasMetrics, metricsLines) {
-    const baseHeight = CARD_DIMENSIONS.minHeight
-    const progressHeight = hasProgressBar ? CARD_DIMENSIONS.progressBarHeight : 0
-
-    let metricsHeight = 0
-    if (hasMetrics) {
-      if (metricsExpanded.value) {
-        metricsHeight =
-          Math.min(metricsLines * CARD_DIMENSIONS.metricLineHeight, 80) + CARD_DIMENSIONS.expandedBaseHeight
-      } else {
-        metricsHeight = CARD_DIMENSIONS.singleMetricHeight
-      }
-    }
-
-    return baseHeight + progressHeight + metricsHeight
-  }
-
-  // Update the node size in the hierarchy
-  function updateNodeSize(node, width, height) {
-    // Store the size in the node data
-    if (node) {
-      node.size = [width, height]
-    }
-  }
-
   function resetZoom() {
     if (treeView.value) treeView.value.resetZoom()
-  }
-
-  // Add this function to better handle resize events
-  function setContainerDimensions() {
-    if (!chartContainer.value) return
-
-    chartContainer.value.getBoundingClientRect()
-
-    // Also update SVG dimensions
-    const svg = d3.select(chartContainer.value as HTMLDivElement).select('svg')
-    if (!svg.empty()) {
-      svg.attr('width', chartContainer.value.clientWidth).attr('height', chartContainer.value.clientHeight)
-    }
   }
 
   // Call this function in the handleResize function
