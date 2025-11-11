@@ -55,7 +55,7 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
                       span.metric-value {{ formatMetricValue(key, value) }}
                     .metric-progress-bar-wrapper(v-if="isProgressMetric(key)")
                       .metric-progress-bar(
-                        :style="{ width: `${getNodeMetricPercentage(record, nodeIndex, key)}%`, backgroundColor: getNodeProgressBarColor(record, nodeIndex, key) }"
+                        :style="{ width: `${getPercentage(record, nodeIndex, key)}%`, backgroundColor: getNodeProgressBarColor(record, nodeIndex, key) }"
                       )
               template(v-else)
                 .metric(v-if="record[`node${nodeIndex}`] && record[`node${nodeIndex}`][getActiveMetric] !== undefined")
@@ -64,7 +64,7 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
                     span.metric-value {{ formatMetricValue(getActiveMetric, record[`node${nodeIndex}`][getActiveMetric]) }}
                   .metric-progress-bar-wrapper(v-if="isProgressMetric(getActiveMetric)")
                     .metric-progress-bar(
-                      :style="{ width: `${getNodeMetricPercentage(record, nodeIndex, getActiveMetric)}%`, backgroundColor: getNodeProgressBarColor(record, nodeIndex, getActiveMetric) }"
+                      :style="{ width: `${getPercentage(record, nodeIndex, getActiveMetric)}%`, backgroundColor: getNodeProgressBarColor(record, nodeIndex, getActiveMetric) }"
                     )
 </template>
 
@@ -450,7 +450,6 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
   const availableMetrics = computed(() => {
     // Use a Set to track unique metrics across all nodes
     const metricsSet = new Set<string>()
-
     // Process the tableData to extract all available metrics
     tableData.value.forEach((row) => {
       // Check each node
@@ -496,21 +495,32 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     }
   }
 
-  const getNodeProgressPercentage = (record: any, nodeIndex: number, metric: string | null): number => {
+  // Get max value for a metric across all nodes and all operators/rows
+  // This shows relative performance across the entire table
+  const getMaxMetricValue = (metricKey: string): number => {
+    const allValues: number[] = []
+    tableData.value.forEach((row) => {
+      availableNodes.value.forEach((nodeIdx) => {
+        const nodeData = row[`node${nodeIdx}`]
+        if (nodeData && nodeData[metricKey] !== undefined) {
+          allValues.push(nodeData[metricKey])
+        }
+      })
+    })
+    return allValues.length > 0 ? Math.max(...allValues) : 0
+  }
+
+  const getPercentage = (record: any, nodeIndex: number, metric: string | null): number => {
     if (!metric || !record[`node${nodeIndex}`] || record[`node${nodeIndex}`][metric] === undefined) return 0
 
-    // Find max value for this metric across all nodes
-    const maxValue = Math.max(
-      ...tableData.value.filter((row) => row[`node${nodeIndex}`]).map((row) => row[`node${nodeIndex}`][metric] || 0)
-    )
-
+    const maxValue = getMaxMetricValue(metric)
     return maxValue > 0 ? (record[`node${nodeIndex}`][metric] / maxValue) * 100 : 0
   }
 
   const getNodeProgressBarColor = (record: any, nodeIndex: number, metric: string | null): string => {
     if (!metric || !record[`node${nodeIndex}`] || record[`node${nodeIndex}`][metric] === undefined) return '#ccc'
 
-    const percentage = getNodeProgressPercentage(record, nodeIndex, metric)
+    const percentage = getPercentage(record, nodeIndex, metric)
     if (percentage > 75) return '#f56c6c'
     if (percentage > 50) return '#e6a23c'
     return '#67c23a'
@@ -519,21 +529,6 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
   // Helper to determine if a metric should show a progress bar
   const isProgressMetric = (key: string): boolean => {
     return key === 'output_rows' || key === 'elapsed_compute'
-  }
-
-  // Calculate percentage for node metric
-  const getNodeMetricPercentage = (record: any, nodeIndex: number, metricKey: string): number => {
-    if (!record[`node${nodeIndex}`] || record[`node${nodeIndex}`][metricKey] === undefined) return 0
-
-    // Get all values for this metric across all nodes and records
-    const allValues = tableData.value
-      .filter((row) => row[`node${nodeIndex}`] && row[`node${nodeIndex}`][metricKey] !== undefined)
-      .map((row) => row[`node${nodeIndex}`][metricKey])
-
-    const maxValue = Math.max(...allValues, 0)
-    if (maxValue <= 0) return 0
-
-    return (record[`node${nodeIndex}`][metricKey] / maxValue) * 100
   }
 </script>
 
