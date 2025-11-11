@@ -14,8 +14,6 @@
       v-model:metrics-expanded="metricsExpanded"
       :available-nodes="availableNodes"
       :active-node-index="activeNodeIndex"
-      :max-rows="maxRows"
-      :max-duration="maxDuration"
       :available-metrics="availableMetrics"
       :stage-index="index"
       @node-selected="scrollToNode"
@@ -29,8 +27,6 @@
         :highlight-type="highlightType"
         :selected-metric="selectedMetric"
         :metrics-expanded="metricsExpanded"
-        :max-rows="maxRows"
-        :max-duration="maxDuration"
         :stage-index="index"
         @update:active-node-index="updateActiveNode"
         @node-positions-updated="updateNodePositions"
@@ -119,10 +115,6 @@
   // Node positions for scrolling
   const nodePositions = ref<Map<number, number>>(new Map())
 
-  // Track max values for metrics
-  const maxRows = ref(0)
-  const maxDuration = ref(0)
-
   const availableMetrics = computed(() => {
     const metricKeys = new Set()
 
@@ -193,56 +185,6 @@
       // Let the tree view handle resize operations
       nextTick(() => resetZoom())
     }
-  }
-
-  // Add this function to your script section
-
-  function calculateMaxMetrics() {
-    if (!filteredData.value || filteredData.value.length === 0) return
-
-    let maxRowsValue = 0
-    let maxDurationValue = 0
-
-    // Recursive function to traverse the plan tree
-    function traverseNode(node) {
-      // Check for rows metric
-      const outputRows = node.output_rows || node.outputRows || 0
-      maxRowsValue = Math.max(maxRowsValue, outputRows)
-
-      // Check for duration metric
-      const elapsedCompute = node.elapsed_compute || node.elapsedCompute || 0
-      maxDurationValue = Math.max(maxDurationValue, elapsedCompute)
-
-      // Check metrics object if present
-      if (node.metrics) {
-        const { metrics } = node
-        if (metrics.output_rows || metrics.outputRows) {
-          maxRowsValue = Math.max(maxRowsValue, metrics.output_rows || metrics.outputRows)
-        }
-        if (metrics.elapsed_compute || metrics.elapsedCompute) {
-          maxDurationValue = Math.max(maxDurationValue, metrics.elapsed_compute || metrics.elapsedCompute)
-        }
-      }
-
-      // Process children
-      if (node.children && Array.isArray(node.children)) {
-        node.children.forEach(traverseNode)
-      }
-    }
-
-    // Process each node's plan data from filtered data
-    filteredData.value.forEach((row) => {
-      try {
-        const planData = JSON.parse(row[2])
-        traverseNode(planData)
-      } catch (error) {
-        console.error('Error parsing plan data:', error)
-      }
-    })
-
-    // Update reactive refs
-    maxRows.value = maxRowsValue
-    maxDuration.value = maxDurationValue
   }
 
   function scrollToNode(nodeIdx) {
@@ -336,7 +278,6 @@
   watch(
     () => filteredData.value,
     () => {
-      calculateMaxMetrics()
       nextTick(() => {
         if (treeView.value) {
           treeView.value.renderTree()
@@ -380,7 +321,6 @@
   }
 
   onMounted(() => {
-    calculateMaxMetrics()
     window.addEventListener('resize', handleResize)
   })
 

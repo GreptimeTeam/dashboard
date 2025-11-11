@@ -46,14 +46,6 @@
       type: Boolean,
       default: false,
     },
-    maxRows: {
-      type: Number,
-      default: 0,
-    },
-    maxDuration: {
-      type: Number,
-      default: 0,
-    },
   })
 
   // Emits
@@ -64,6 +56,44 @@
   const treeContainer = ref<HTMLDivElement | null>(null)
   const nodePositions = ref<Map<number, number>>(new Map())
   const nodesData = ref([])
+
+  // Single traversal for all max stats (extensible for future metrics)
+  type MaxStats = {
+    maxRows: number
+    maxDuration: number
+  }
+
+  function traverseNodeForMax(node, acc: MaxStats) {
+    const outputRows = node.output_rows ?? node.outputRows ?? 0
+    const elapsedCompute = node.elapsed_compute ?? node.elapsedCompute ?? 0
+    if (typeof outputRows === 'number') acc.maxRows = Math.max(acc.maxRows, outputRows)
+    if (typeof elapsedCompute === 'number') acc.maxDuration = Math.max(acc.maxDuration, elapsedCompute)
+
+    if (node.metrics) {
+      const m = node.metrics
+      const mRows = m.output_rows ?? m.outputRows
+      const mDuration = m.elapsed_compute ?? m.elapsedCompute
+      if (typeof mRows === 'number') acc.maxRows = Math.max(acc.maxRows, mRows)
+      if (typeof mDuration === 'number') acc.maxDuration = Math.max(acc.maxDuration, mDuration)
+    }
+
+    if (node.children && Array.isArray(node.children)) {
+      node.children.forEach((child) => traverseNodeForMax(child, acc))
+    }
+  }
+
+  const maxStats = computed<MaxStats>(() => {
+    const acc: MaxStats = { maxRows: 0, maxDuration: 0 }
+    props.data.forEach((row) => {
+      try {
+        const planData = JSON.parse(row[2])
+        traverseNodeForMax(planData, acc)
+      } catch {
+        // Ignore invalid JSON
+      }
+    })
+    return acc
+  })
 
   // Zoom and pan states
   const transform = ref('translate(0,0) scale(1)')
@@ -621,8 +651,8 @@
             h(PlanCard, {
               nodeData: d.data,
               highlightType: props.highlightType,
-              maxRows: props.maxRows,
-              maxDuration: props.maxDuration,
+              maxRows: maxStats.value.maxRows,
+              maxDuration: maxStats.value.maxDuration,
               selectedMetric: props.selectedMetric,
               metricsExpanded: props.metricsExpanded,
               isActive: props.activeNodeIndex === nodeIndex,
@@ -647,7 +677,9 @@
       setTimeout(renderTree, 100)
     }
   })
-
+  watchEffect(() => {
+    console.log('props.data', props.data)
+  })
   // Watch for prop changes
   watch(() => props.data, renderTree)
   watch(
@@ -692,8 +724,8 @@
         h(PlanCard, {
           nodeData: nodeData.data,
           highlightType: props.highlightType,
-          maxRows: props.maxRows,
-          maxDuration: props.maxDuration,
+          maxRows: maxStats.value.maxRows,
+          maxDuration: maxStats.value.maxDuration,
           selectedMetric: props.selectedMetric,
           metricsExpanded: props.metricsExpanded,
           isActive: props.activeNodeIndex === nodeIndex,
