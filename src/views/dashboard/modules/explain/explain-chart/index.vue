@@ -16,7 +16,6 @@
       :active-node-index="activeNodeIndex"
       :available-metrics="availableMetrics"
       :stage-index="index"
-      @node-selected="scrollToNode"
     )
   .chart-scroll-container
     .chart-container.grab-bing(ref="chartContainer")
@@ -339,6 +338,8 @@
   // Handle active node updates
   function updateActiveNode(nodeIndex) {
     activeNodeIndex.value = nodeIndex
+    // Also perform scrolling/highlighting to mirror direct scroll actions
+    scrollToNode(nodeIndex)
   }
 
   const updateNodesData = (data) => {

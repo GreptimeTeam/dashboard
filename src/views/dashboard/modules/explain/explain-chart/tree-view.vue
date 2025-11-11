@@ -339,41 +339,7 @@
     return baseHeight + progressHeight + metricsHeight
   }
 
-  function scrollToNode(nodeIdx) {
-    // Emit event to update parent's activeNodeIndex
-    emit('update:activeNodeIndex', nodeIdx)
-
-    // Only update what's necessary in the DOM directly
-    d3.selectAll(`.${componentId.value}.tree-group .plan-card`).classed('active-card', false)
-    d3.selectAll(`.${componentId.value}.tree-group`).classed('active-tree', false)
-    d3.selectAll(`.${componentId.value}.tree-group .node-index-rect`).classed('active', false)
-
-    // Add highlight to new node
-    d3.selectAll(`.${componentId.value}.tree-group.node-${nodeIdx} .plan-card`).classed('active-card', true)
-    d3.selectAll(`.${componentId.value}.tree-group.node-${nodeIdx}`).classed('active-tree', true)
-    d3.selectAll(`.${componentId.value}.tree-group.node-${nodeIdx} .node-index-rect`).classed('active', true)
-
-    // Handle scrolling to the node
-    const position = nodePositions.value.get(nodeIdx)
-    if (position !== undefined && treeContainer.value) {
-      const containerRect = treeContainer.value.getBoundingClientRect()
-      const svg = d3.select(treeContainer.value).select('svg').node()
-      const currentTransform = d3.zoomTransform(svg)
-
-      // Calculate the translation needed to center on this node
-      const desiredTransX = containerRect.width / 2 - position * currentTransform.k
-
-      // Apply new transform that preserves vertical position and scale
-      d3.select(treeContainer.value)
-        .select('svg')
-        .transition()
-        .duration(500)
-        .call(
-          zoomListener.value.transform,
-          d3.zoomIdentity.translate(desiredTransX, currentTransform.y).scale(currentTransform.k)
-        )
-    }
-  }
+  // Note: Scrolling and highlighting are handled by parent component.
 
   function renderTree() {
     if (!treeContainer.value || !props.data || props.data.length === 0) return
@@ -474,7 +440,7 @@
 
       // Make card clickable
       nodeIndexCard.style('cursor', 'pointer').on('click', () => {
-        scrollToNode(nodeIndex)
+        emit('update:activeNodeIndex', nodeIndex)
       })
 
       // Create hierarchy with precomputed node sizes
@@ -627,25 +593,7 @@
   watchEffect(() => {
     console.log('props.data', props.data)
   })
-  // Watch for prop changes
   watch(() => props.data, renderTree)
-  watch(
-    () => props.activeNodeIndex,
-    (newValue, oldValue) => {
-      if (newValue !== oldValue && newValue !== null) {
-        nextTick(() => {
-          // Scope the selections to this component only
-          d3.selectAll(`.${componentId.value}.tree-group`).classed('active-tree', false)
-          d3.selectAll(`.${componentId.value}.tree-group .plan-card`).classed('active-card', false)
-          d3.selectAll(`.${componentId.value}.tree-group .node-index-rect`).classed('active', false)
-
-          d3.selectAll(`.${componentId.value}.tree-group.node-${newValue}`).classed('active-tree', true)
-          d3.selectAll(`.${componentId.value}.tree-group.node-${newValue} .plan-card`).classed('active-card', true)
-          d3.selectAll(`.${componentId.value}.tree-group.node-${newValue} .node-index-rect`).classed('active', true)
-        })
-      }
-    }
-  )
 
   watch(
     () => props.highlightType,
