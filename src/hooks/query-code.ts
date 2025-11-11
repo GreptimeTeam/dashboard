@@ -95,7 +95,7 @@ export default function useQueryCode() {
       pushLog(res.log, type)
     }
     if (!res.error && type === 'sql') {
-      const sql = sqlFormatter(code)
+      const sql = code
       const command = parseSqlCommand(sql)
 
       if (command) {
