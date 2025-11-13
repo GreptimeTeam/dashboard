@@ -57,6 +57,9 @@
   const nodePositions = ref<Map<number, number>>(new Map())
   const nodesData = ref([])
   const backgroundMeasureContainer = ref<HTMLDivElement | null>(null)
+  const nodeLabelWidthsMap = ref<Map<number, number>>(new Map())
+  const nodeTreeBoundsMap = ref<Map<number, { minX: number; maxX: number }>>(new Map())
+  const treeOffsetX = ref<number>(0)
 
   // Single traversal for all max stats (extensible for future metrics)
   type MaxStats = {
@@ -318,14 +321,15 @@
     // If no nodes, return early
     if (!nodesData.value.length) return
 
-    // Clear node positions map
+    // Clear node positions and bounds maps
     nodePositions.value.clear()
+    nodeTreeBoundsMap.value.clear()
 
     // Map to store rendered HTML strings and sizes by unique key (nodeIndex + node path)
     const renderedCardsMap = new Map<string, { size: [number, number]; html: string }>()
 
-    // Map to store node label widths by nodeIndex
-    const nodeLabelWidthsMap = new Map<number, number>()
+    // Clear and populate node label widths map
+    nodeLabelWidthsMap.value.clear()
 
     // Measure node label text widths before layout
     const tempSvg = d3
@@ -345,7 +349,7 @@
           .text(labelText)
         const textWidth = (tempText.node() as SVGTextElement)?.getBBox().width || NODE_INDEX_CARD.width
         const padding = 16 // Horizontal padding for the label
-        nodeLabelWidthsMap.set(nodeData.nodeIndex, textWidth + padding)
+        nodeLabelWidthsMap.value.set(nodeData.nodeIndex, textWidth + padding)
         tempText.remove()
       }
     })
@@ -416,7 +420,7 @@
 
         // Node label nodes need special sizing
         if (data.isNodeLabel) {
-          const labelWidth = nodeLabelWidthsMap.get(data.nodeIndex) || NODE_INDEX_CARD.width
+          const labelWidth = nodeLabelWidthsMap.value.get(data.nodeIndex) || NODE_INDEX_CARD.width
           return [labelWidth + CARD_DIMENSIONS.horizontalPadding, NODE_INDEX_CARD.height + CARD_DIMENSIONS.padding]
         }
 
@@ -455,7 +459,7 @@
 
       // For node labels, use their measured width
       if (d.data.isNodeLabel) {
-        const labelWidth = nodeLabelWidthsMap.get(d.data.nodeIndex) || NODE_INDEX_CARD.width
+        const labelWidth = nodeLabelWidthsMap.value.get(d.data.nodeIndex) || NODE_INDEX_CARD.width
         leftEdge = d.x - labelWidth / 2
         rightEdge = d.x + labelWidth / 2
       } else if (d.data.nodeIndex !== undefined && d.data.nodeIndex !== -1) {
@@ -482,16 +486,39 @@
       minX = 0
       maxX = 0
     }
-    const treeCenter = (minX + maxX) / 2
+    // Left-align the tree with 20px padding from the left edge
+    const offsetX = -minX + 20
+    treeOffsetX.value = offsetX
 
-    // Get SVG width and current scale
-    const svgWidth = Number(svg.attr('width')) || treeContainer.value.clientWidth
-    const currentScale = preservedTransform?.k || 1.0
-    const svgCenter = svgWidth / 2
+    // Calculate bounds for each nodeTree (in local coordinate space)
+    layoutRoot.each((d: any) => {
+      const { nodeIndex } = d.data
+      if (d.data.name === 'FakeRoot' || !nodeIndex || nodeIndex === -1) return
+      let leftEdge = d.x
+      let rightEdge = d.x
 
-    // Transform SVG center to tree coordinate space and align tree center to SVG center
-    const svgCenterInTreeSpace = svgCenter / currentScale
-    const offsetX = svgCenterInTreeSpace - treeCenter
+      if (d.data.isNodeLabel) {
+        const labelWidth = nodeLabelWidthsMap.value.get(nodeIndex) || NODE_INDEX_CARD.width
+        leftEdge = d.x - labelWidth / 2
+        rightEdge = d.x + labelWidth / 2
+      } else {
+        const nodePath = getNodePath(d)
+        const key = getNodeKey(nodeIndex, nodePath)
+        const cardData = renderedCardsMap.get(key)
+        const nodeWidth = cardData?.size[0] ?? CARD_DIMENSIONS.width
+        leftEdge = d.x - nodeWidth / 2
+        rightEdge = d.x + nodeWidth / 2
+      }
+
+      // Update bounds for this nodeTree
+      const existing = nodeTreeBoundsMap.value.get(nodeIndex)
+      if (existing) {
+        existing.minX = Math.min(existing.minX, leftEdge)
+        existing.maxX = Math.max(existing.maxX, rightEdge)
+      } else {
+        nodeTreeBoundsMap.value.set(nodeIndex, { minX: leftEdge, maxX: rightEdge })
+      }
+    })
 
     // Create container for the entire tree
     const treeContainerGroup = mainGroup
@@ -564,7 +591,7 @@
         return classes.join(' ')
       })
       .attr('transform', (d: any) => {
-        const labelWidth = nodeLabelWidthsMap.get(d.data.nodeIndex) || NODE_INDEX_CARD.width
+        const labelWidth = nodeLabelWidthsMap.value.get(d.data.nodeIndex) || NODE_INDEX_CARD.width
         return `translate(${d.x - labelWidth / 2},${d.y})`
       })
       .style('cursor', 'pointer')
@@ -583,7 +610,7 @@
     nodeLabelElements
       .append('rect')
       .attr('width', (d: any) => {
-        return nodeLabelWidthsMap.get(d.data.nodeIndex) || NODE_INDEX_CARD.width
+        return nodeLabelWidthsMap.value.get(d.data.nodeIndex) || NODE_INDEX_CARD.width
       })
       .attr('height', NODE_INDEX_CARD.height)
       .attr('rx', 4)
@@ -596,7 +623,7 @@
     nodeLabelElements
       .append('text')
       .attr('x', (d: any) => {
-        const labelWidth = nodeLabelWidthsMap.get(d.data.nodeIndex) || NODE_INDEX_CARD.width
+        const labelWidth = nodeLabelWidthsMap.value.get(d.data.nodeIndex) || NODE_INDEX_CARD.width
         return labelWidth / 2
       })
       .attr('y', NODE_INDEX_CARD.height / 2)
@@ -685,36 +712,19 @@
     emit('nodePositionsUpdated', nodePositions.value)
   }
 
-  // Get node tree bounding rect from DOM by node index
+  // Get node tree bounding rect by node index
+  // Returns coordinates in SVG coordinate space (accounting for tree container group transform)
   function getNodeTreeRect(nodeIndex: number): { minX: number; maxX: number; width: number } | null {
-    if (!treeContainer.value) return null
+    // Get bounds from stored layout data (in local coordinate space)
+    const bounds = nodeTreeBoundsMap.value.get(nodeIndex)
+    if (!bounds) return null
 
-    const svg = d3.select(treeContainer.value).select('svg').node() as SVGSVGElement | null
-    if (!svg) return null
+    // Convert from local coordinate space to SVG coordinate space
+    // The 20px padding is already included in offsetX, so we just add it
+    const minXInSVG = bounds.minX + treeOffsetX.value
+    const maxXInSVG = bounds.maxX + treeOffsetX.value
 
-    const nodeLabel = svg.querySelector(`.node-label-group.node-${nodeIndex}`) as SVGGElement | null
-    const planNodes = Array.from(svg.querySelectorAll(`.node.node-${nodeIndex}`)) as SVGGElement[]
-
-    if (!nodeLabel && planNodes.length === 0) return null
-
-    // Calculate bounding box of entire node tree
-    let minX = Infinity
-    let maxX = -Infinity
-
-    if (nodeLabel) {
-      const bbox = nodeLabel.getBBox()
-      minX = Math.min(minX, bbox.x)
-      maxX = Math.max(maxX, bbox.x + bbox.width)
-    }
-
-    planNodes.forEach((node) => {
-      const bbox = node.getBBox()
-      minX = Math.min(minX, bbox.x)
-      maxX = Math.max(maxX, bbox.x + bbox.width)
-    })
-
-    if (minX === Infinity || maxX === -Infinity) return null
-    return { minX, maxX, width: maxX - minX }
+    return { minX: minXInSVG, maxX: maxXInSVG, width: maxXInSVG - minXInSVG }
   }
 
   // Scroll to a node tree by index
@@ -726,31 +736,25 @@
 
     const currentTransform = d3.zoomTransform(svg)
 
-    // If we have a current active node, scroll by its width (slide effect)
-    if (currentActiveNodeIndex !== null && currentActiveNodeIndex !== undefined) {
-      const currentTreeRect = getNodeTreeRect(currentActiveNodeIndex)
-      if (currentTreeRect && currentTreeRect.width > 0) {
-        // Get node positions to determine scroll direction
-        const currentPos = nodePositions.value.get(currentActiveNodeIndex)
-        const targetPos = nodePositions.value.get(nodeIndex)
+    // Get the target nodeTree's rect from DOM (coordinates are in SVG space)
+    const targetTreeRect = getNodeTreeRect(nodeIndex)
+    if (!targetTreeRect) return
 
-        if (currentPos !== undefined && targetPos !== undefined) {
-          // Determine scroll direction by comparing positions
-          const isNext = targetPos > currentPos
+    // Calculate where the target tree's left edge should be positioned
+    // We want it to appear at 20px from the left edge of the viewport
+    // The gap between nodeTrees (horizontalPadding) is already accounted for in the layout positions
+    const targetLeftInViewport = 20
 
-          // Scroll amount: move by current tree width
-          const scrollAmount = isNext ? -currentTreeRect.width : currentTreeRect.width
-          const scrollAmountInViewport = scrollAmount * currentTransform.k
-          const newX = currentTransform.x + scrollAmountInViewport
+    // targetTreeRect.minX is already in SVG coordinate space
+    // In viewport space: targetLeftInViewport = targetTreeRect.minX * scale + transform.x
+    // Solving for transform.x: transform.x = targetLeftInViewport - targetTreeRect.minX * scale
+    const newX = targetLeftInViewport - targetTreeRect.minX * currentTransform.k
 
-          // Apply smooth scroll
-          ;(d3.select(treeContainer.value).select('svg').transition().duration(500) as any).call(
-            zoomListener.value.transform,
-            d3.zoomIdentity.translate(newX, currentTransform.y).scale(currentTransform.k)
-          )
-        }
-      }
-    }
+    // Apply smooth scroll
+    ;(d3.select(treeContainer.value).select('svg').transition().duration(500) as any).call(
+      zoomListener.value.transform,
+      d3.zoomIdentity.translate(newX, currentTransform.y).scale(currentTransform.k)
+    )
   }
 
   watch(
