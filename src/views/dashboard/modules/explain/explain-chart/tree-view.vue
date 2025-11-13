@@ -289,7 +289,7 @@
 
   async function renderTree() {
     if (!treeContainer.value || !props.data || props.data.length === 0) return
-
+    console.log('renderTree')
     // Preserve current zoom transform from ref
     const preservedTransform = lastTransform.value || null
 
@@ -757,41 +757,15 @@
     )
   }
 
+  // Watch all props that affect tree rendering
   watch(
-    () => props.data,
+    () => [props.data, props.highlightType, props.selectedMetric, props.metricsExpanded],
     () => {
       nextTick(() => {
         renderTree()
       })
     },
     { immediate: true }
-  )
-
-  watch(
-    () => props.highlightType,
-    () => {
-      nextTick(() => {
-        renderTree()
-      })
-    }
-  )
-
-  watch(
-    () => props.selectedMetric,
-    () => {
-      nextTick(() => {
-        renderTree()
-      })
-    }
-  )
-
-  watch(
-    () => props.metricsExpanded,
-    () => {
-      nextTick(() => {
-        renderTree()
-      })
-    }
   )
 
   // Expose methods for parent component
