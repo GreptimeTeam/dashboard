@@ -14,7 +14,6 @@ a-trigger#time-select(
     div(style="display: flex; align-items: center; gap: 4px; justify-content: ")
       div(v-if="isRelative") {{ relativeTimeMap[timeLength] || props.emptyStr }}
         |
-        span.timezone
       div(v-else)
         | {{ absoluteTimeLabel }}
       .timezone {{ timezoneLabel }}
