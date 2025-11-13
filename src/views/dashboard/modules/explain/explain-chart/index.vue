@@ -258,14 +258,8 @@
   watch(
     () => filteredData.value,
     () => {
-      nextTick(() => {
-        if (treeView.value) {
-          treeView.value.renderTree()
-          setTimeout(() => {
-            resetZoom()
-          }, 100)
-        }
-      })
+      activeNodeIndex.value = 0
+      resetZoom()
     },
     { immediate: true }
   )
@@ -276,7 +270,6 @@
     (newData, oldData) => {
       // Only reset state if the data content actually changed (stage change)
       if (!oldData || !areDataArraysEqual(newData, oldData)) {
-        activeNodeIndex.value = 0
         selectedMetric.value = ''
         highlightType.value = 'DURATION'
         metricsExpanded.value = false
