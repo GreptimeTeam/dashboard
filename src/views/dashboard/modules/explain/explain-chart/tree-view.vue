@@ -134,7 +134,8 @@
       lastTransform.value = preservedTransform
     } else {
       // Center the tree vertically with some padding
-      const initial = d3.zoomIdentity.translate(0, 50).scale(0.7)
+      // Default scale is 1.0 (no scaling) - fonts will appear at their set size
+      const initial = d3.zoomIdentity.translate(0, 50).scale(1.0)
       svg.call(zoomListener.value.transform, initial)
       lastTransform.value = initial
     }
@@ -165,8 +166,9 @@
     const { svg } = getSvgAndGroup()
     if (!svg) return
     // Reset to the same initial transform used in applyZoom (centered)
-    const initial = d3.zoomIdentity.translate(0, 50).scale(0.7)
+    const initial = d3.zoomIdentity.translate(0, 50).scale(1.0)
     ;(svg as any).call(zoomListener.value.transform, initial) // eslint-disable-line @typescript-eslint/no-explicit-any
+    lastTransform.value = initial
   }
 
   // Add these functions to the script section
@@ -484,7 +486,7 @@
 
     // Get SVG width and current scale
     const svgWidth = Number(svg.attr('width')) || treeContainer.value.clientWidth
-    const currentScale = preservedTransform?.k || 0.7
+    const currentScale = preservedTransform?.k || 1.0
     const svgCenter = svgWidth / 2
 
     // Transform SVG center to tree coordinate space and align tree center to SVG center
