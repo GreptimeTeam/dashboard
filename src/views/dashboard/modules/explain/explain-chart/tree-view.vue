@@ -57,7 +57,6 @@
   const nodePositions = ref<Map<number, number>>(new Map())
   const nodesData = ref([])
   const backgroundMeasureContainer = ref<HTMLDivElement | null>(null)
-  const nodeLabelWidthsMap = ref<Map<number, number>>(new Map())
   const nodeTreeBoundsMap = ref<Map<number, { minX: number; maxX: number }>>(new Map())
   const treeOffsetX = ref<number>(0)
 
@@ -328,34 +327,7 @@
     // Map to store rendered HTML strings and sizes by unique key (nodeIndex + node path)
     const renderedCardsMap = new Map<string, { size: [number, number]; html: string }>()
 
-    // Clear and populate node label widths map
-    nodeLabelWidthsMap.value.clear()
-
-    // Measure node label text widths before layout
-    const tempSvg = d3
-      .select(document.body)
-      .append('svg')
-      .style('position', 'absolute')
-      .style('visibility', 'hidden')
-      .style('top', '-9999px')
-
-    nodesData.value.forEach((nodeData) => {
-      if (nodeData.nodeIndex !== undefined && !Number.isNaN(nodeData.nodeIndex)) {
-        const labelText = `Node ${nodeData.nodeIndex}`
-        const tempText = tempSvg
-          .append('text')
-          .attr('font-size', NODE_INDEX_CARD.fontSize)
-          .attr('font-weight', 'bold')
-          .text(labelText)
-        const textWidth = (tempText.node() as SVGTextElement)?.getBBox().width || NODE_INDEX_CARD.width
-        const padding = 16 // Horizontal padding for the label
-        nodeLabelWidthsMap.value.set(nodeData.nodeIndex, textWidth + padding)
-        tempText.remove()
-      }
-    })
-
-    tempSvg.remove()
-
+    console.log('nodesData.value', nodesData.value)
     // Build merged tree structure with fake root
     // FakeRoot -> Node Label -> Plan Tree
     const mergedTreeData = {
@@ -420,8 +392,10 @@
 
         // Node label nodes need special sizing
         if (data.isNodeLabel) {
-          const labelWidth = nodeLabelWidthsMap.value.get(data.nodeIndex) || NODE_INDEX_CARD.width
-          return [labelWidth + CARD_DIMENSIONS.horizontalPadding, NODE_INDEX_CARD.height + CARD_DIMENSIONS.padding]
+          return [
+            NODE_INDEX_CARD.width + CARD_DIMENSIONS.horizontalPadding,
+            NODE_INDEX_CARD.height + CARD_DIMENSIONS.padding,
+          ]
         }
 
         // Regular plan nodes - get size from rendered map
@@ -457,11 +431,10 @@
       let leftEdge = d.x
       let rightEdge = d.x
 
-      // For node labels, use their measured width
+      // For node labels, use fixed width
       if (d.data.isNodeLabel) {
-        const labelWidth = nodeLabelWidthsMap.value.get(d.data.nodeIndex) || NODE_INDEX_CARD.width
-        leftEdge = d.x - labelWidth / 2
-        rightEdge = d.x + labelWidth / 2
+        leftEdge = d.x - NODE_INDEX_CARD.width / 2
+        rightEdge = d.x + NODE_INDEX_CARD.width / 2
       } else if (d.data.nodeIndex !== undefined && d.data.nodeIndex !== -1) {
         // For plan nodes, get width from rendered map
         const nodePath = getNodePath(d)
@@ -498,9 +471,8 @@
       let rightEdge = d.x
 
       if (d.data.isNodeLabel) {
-        const labelWidth = nodeLabelWidthsMap.value.get(nodeIndex) || NODE_INDEX_CARD.width
-        leftEdge = d.x - labelWidth / 2
-        rightEdge = d.x + labelWidth / 2
+        leftEdge = d.x - NODE_INDEX_CARD.width / 2
+        rightEdge = d.x + NODE_INDEX_CARD.width / 2
       } else {
         const nodePath = getNodePath(d)
         const key = getNodeKey(nodeIndex, nodePath)
@@ -591,8 +563,7 @@
         return classes.join(' ')
       })
       .attr('transform', (d: any) => {
-        const labelWidth = nodeLabelWidthsMap.value.get(d.data.nodeIndex) || NODE_INDEX_CARD.width
-        return `translate(${d.x - labelWidth / 2},${d.y})`
+        return `translate(${d.x - NODE_INDEX_CARD.width / 2},${d.y})`
       })
       .style('cursor', 'pointer')
       .on('click', (event, d: any) => {
@@ -609,9 +580,7 @@
     // Add rectangle for node label
     nodeLabelElements
       .append('rect')
-      .attr('width', (d: any) => {
-        return nodeLabelWidthsMap.value.get(d.data.nodeIndex) || NODE_INDEX_CARD.width
-      })
+      .attr('width', NODE_INDEX_CARD.width)
       .attr('height', NODE_INDEX_CARD.height)
       .attr('rx', 4)
       .attr('ry', 4)
@@ -622,10 +591,7 @@
     // Add text for node label
     nodeLabelElements
       .append('text')
-      .attr('x', (d: any) => {
-        const labelWidth = nodeLabelWidthsMap.value.get(d.data.nodeIndex) || NODE_INDEX_CARD.width
-        return labelWidth / 2
-      })
+      .attr('x', NODE_INDEX_CARD.width / 2)
       .attr('y', NODE_INDEX_CARD.height / 2)
       .attr('text-anchor', 'middle')
       .attr('dominant-baseline', 'middle')
