@@ -12,7 +12,7 @@ export const CARD_DIMENSIONS = {
 export const NODE_INDEX_CARD = {
   width: 70,
   height: 30,
-  fontSize: 12,
+  fontSize: 13,
 }
 
 export function formatNumber(value) {

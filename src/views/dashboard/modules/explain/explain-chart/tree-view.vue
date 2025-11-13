@@ -213,7 +213,8 @@
       const container = document.createElement('div')
       container.style.position = 'absolute'
       container.style.visibility = 'hidden'
-      container.style.width = `${CARD_DIMENSIONS.width}px`
+      container.style.width = 'auto' // Let cards determine their own width
+      container.style.minWidth = `${CARD_DIMENSIONS.width}px` // Minimum width fallback
       container.style.top = '-9999px'
       container.style.left = '-9999px'
       document.body.appendChild(container)
@@ -222,6 +223,7 @@
 
     // Create a div for this specific card
     const cardContainer = document.createElement('div')
+    cardContainer.style.width = 'auto' // Let card expand based on content
     backgroundMeasureContainer.value.appendChild(cardContainer)
 
     // Render PlanCard in the hidden container
@@ -243,7 +245,7 @@
     return new Promise<{ size: [number, number]; html: string }>((resolve) => {
       nextTick(() => {
         const cardElement = cardContainer.querySelector('.plan-card') as HTMLElement
-        const width = cardElement?.offsetWidth || CARD_DIMENSIONS.width
+        const width = cardElement?.offsetWidth || cardElement?.scrollWidth || CARD_DIMENSIONS.width
         const height = cardElement?.offsetHeight || CARD_DIMENSIONS.minHeight
 
         // Get the innerHTML string from the container
@@ -320,6 +322,34 @@
     // Map to store rendered HTML strings and sizes by unique key (nodeIndex + node path)
     const renderedCardsMap = new Map<string, { size: [number, number]; html: string }>()
 
+    // Map to store node label widths by nodeIndex
+    const nodeLabelWidthsMap = new Map<number, number>()
+
+    // Measure node label text widths before layout
+    const tempSvg = d3
+      .select(document.body)
+      .append('svg')
+      .style('position', 'absolute')
+      .style('visibility', 'hidden')
+      .style('top', '-9999px')
+
+    nodesData.value.forEach((nodeData) => {
+      if (nodeData.nodeIndex !== undefined && !Number.isNaN(nodeData.nodeIndex)) {
+        const labelText = `Node ${nodeData.nodeIndex}`
+        const tempText = tempSvg
+          .append('text')
+          .attr('font-size', NODE_INDEX_CARD.fontSize)
+          .attr('font-weight', 'bold')
+          .text(labelText)
+        const textWidth = (tempText.node() as SVGTextElement)?.getBBox().width || NODE_INDEX_CARD.width
+        const padding = 16 // Horizontal padding for the label
+        nodeLabelWidthsMap.set(nodeData.nodeIndex, textWidth + padding)
+        tempText.remove()
+      }
+    })
+
+    tempSvg.remove()
+
     // Build merged tree structure with fake root
     // FakeRoot -> Node Label -> Plan Tree
     const mergedTreeData = {
@@ -384,10 +414,8 @@
 
         // Node label nodes need special sizing
         if (data.isNodeLabel) {
-          return [
-            NODE_INDEX_CARD.width + CARD_DIMENSIONS.horizontalPadding,
-            NODE_INDEX_CARD.height + CARD_DIMENSIONS.padding,
-          ]
+          const labelWidth = nodeLabelWidthsMap.get(data.nodeIndex) || NODE_INDEX_CARD.width
+          return [labelWidth + CARD_DIMENSIONS.horizontalPadding, NODE_INDEX_CARD.height + CARD_DIMENSIONS.padding]
         }
 
         // Regular plan nodes - get size from rendered map
@@ -423,10 +451,11 @@
       let leftEdge = d.x
       let rightEdge = d.x
 
-      // For node labels, use their width
+      // For node labels, use their measured width
       if (d.data.isNodeLabel) {
-        leftEdge = d.x - NODE_INDEX_CARD.width / 2
-        rightEdge = d.x + NODE_INDEX_CARD.width / 2
+        const labelWidth = nodeLabelWidthsMap.get(d.data.nodeIndex) || NODE_INDEX_CARD.width
+        leftEdge = d.x - labelWidth / 2
+        rightEdge = d.x + labelWidth / 2
       } else if (d.data.nodeIndex !== undefined && d.data.nodeIndex !== -1) {
         // For plan nodes, get width from rendered map
         const nodePath = getNodePath(d)
@@ -533,7 +562,8 @@
         return classes.join(' ')
       })
       .attr('transform', (d: any) => {
-        return `translate(${d.x - NODE_INDEX_CARD.width / 2},${d.y})`
+        const labelWidth = nodeLabelWidthsMap.get(d.data.nodeIndex) || NODE_INDEX_CARD.width
+        return `translate(${d.x - labelWidth / 2},${d.y})`
       })
       .style('cursor', 'pointer')
       .on('click', (event, d: any) => {
@@ -550,7 +580,9 @@
     // Add rectangle for node label
     nodeLabelElements
       .append('rect')
-      .attr('width', NODE_INDEX_CARD.width)
+      .attr('width', (d: any) => {
+        return nodeLabelWidthsMap.get(d.data.nodeIndex) || NODE_INDEX_CARD.width
+      })
       .attr('height', NODE_INDEX_CARD.height)
       .attr('rx', 4)
       .attr('ry', 4)
@@ -561,7 +593,10 @@
     // Add text for node label
     nodeLabelElements
       .append('text')
-      .attr('x', NODE_INDEX_CARD.width / 2)
+      .attr('x', (d: any) => {
+        const labelWidth = nodeLabelWidthsMap.get(d.data.nodeIndex) || NODE_INDEX_CARD.width
+        return labelWidth / 2
+      })
       .attr('y', NODE_INDEX_CARD.height / 2)
       .attr('text-anchor', 'middle')
       .attr('dominant-baseline', 'middle')

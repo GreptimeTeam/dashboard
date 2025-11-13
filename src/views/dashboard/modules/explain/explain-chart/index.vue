@@ -456,7 +456,8 @@
   }
 
   .plan-card {
-    width: 100%;
+    width: auto;
+    min-width: 200px;
     background-color: var(--card-bg-color);
     border: 1px solid var(--border-color);
     border-radius: 4px;
@@ -491,7 +492,7 @@
     }
 
     .metric-label {
-      font-size: 11px;
+      font-size: 13px;
       color: var(--small-font-color);
       margin-bottom: 4px;
       display: flex;
@@ -512,7 +513,7 @@
     }
 
     .plan-metrics {
-      font-size: 12px;
+      font-size: 13px;
       color: var(--small-font-color);
       overflow-y: auto;
       flex: 1;
