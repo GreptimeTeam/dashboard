@@ -11,9 +11,9 @@ a-trigger#time-select(
     template(#icon)
       svg.icon-16
         use(href="#time")
-    div(style="display: flex; align-items: center; gap: 4px; justify-content: ")
+    div(style="display: flex; align-items: center; gap: 4px")
       div(v-if="isRelative") {{ relativeTimeMap[timeLength] || props.emptyStr }}
-        |
+
       div(v-else)
         | {{ absoluteTimeLabel }}
       .timezone {{ timezoneLabel }}
