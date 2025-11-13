@@ -420,7 +420,7 @@
     // Apply layout to get positioned nodes
     const layoutRoot = treeLayout(hierarchy as any) // eslint-disable-line @typescript-eslint/no-explicit-any
 
-    // Calculate tree bounds by iterating all descendant nodes
+    // Calculate tree bounds and nodeTree bounds in a single pass
     // Get leftmost and rightmost edges considering node widths
     let minX = Infinity
     let maxX = -Infinity
@@ -445,11 +445,24 @@
         rightEdge = d.x + nodeWidth / 2
       }
 
+      // Update overall tree bounds
       if (leftEdge < minX) {
         minX = leftEdge
       }
       if (rightEdge > maxX) {
         maxX = rightEdge
+      }
+
+      // Update bounds for each nodeTree (in local coordinate space)
+      const { nodeIndex } = d.data
+      if (nodeIndex !== undefined && nodeIndex !== -1) {
+        const existing = nodeTreeBoundsMap.value.get(nodeIndex)
+        if (existing) {
+          existing.minX = Math.min(existing.minX, leftEdge)
+          existing.maxX = Math.max(existing.maxX, rightEdge)
+        } else {
+          nodeTreeBoundsMap.value.set(nodeIndex, { minX: leftEdge, maxX: rightEdge })
+        }
       }
     })
 
@@ -462,35 +475,6 @@
     // Left-align the tree with 20px padding from the left edge
     const offsetX = -minX + 20
     treeOffsetX.value = offsetX
-
-    // Calculate bounds for each nodeTree (in local coordinate space)
-    layoutRoot.each((d: any) => {
-      const { nodeIndex } = d.data
-      if (d.data.name === 'FakeRoot' || !nodeIndex || nodeIndex === -1) return
-      let leftEdge = d.x
-      let rightEdge = d.x
-
-      if (d.data.isNodeLabel) {
-        leftEdge = d.x - NODE_INDEX_CARD.width / 2
-        rightEdge = d.x + NODE_INDEX_CARD.width / 2
-      } else {
-        const nodePath = getNodePath(d)
-        const key = getNodeKey(nodeIndex, nodePath)
-        const cardData = renderedCardsMap.get(key)
-        const nodeWidth = cardData?.size[0] ?? CARD_DIMENSIONS.width
-        leftEdge = d.x - nodeWidth / 2
-        rightEdge = d.x + nodeWidth / 2
-      }
-
-      // Update bounds for this nodeTree
-      const existing = nodeTreeBoundsMap.value.get(nodeIndex)
-      if (existing) {
-        existing.minX = Math.min(existing.minX, leftEdge)
-        existing.maxX = Math.max(existing.maxX, rightEdge)
-      } else {
-        nodeTreeBoundsMap.value.set(nodeIndex, { minX: leftEdge, maxX: rightEdge })
-      }
-    })
 
     // Create container for the entire tree
     const treeContainerGroup = mainGroup
