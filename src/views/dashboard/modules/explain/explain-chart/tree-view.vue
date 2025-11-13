@@ -648,6 +648,74 @@
     emit('nodePositionsUpdated', nodePositions.value)
   }
 
+  // Get node tree bounding rect from DOM by node index
+  function getNodeTreeRect(nodeIndex: number): { minX: number; maxX: number; width: number } | null {
+    if (!treeContainer.value) return null
+
+    const svg = d3.select(treeContainer.value).select('svg').node() as SVGSVGElement | null
+    if (!svg) return null
+
+    const nodeLabel = svg.querySelector(`.node-label-group.node-${nodeIndex}`) as SVGGElement | null
+    const planNodes = Array.from(svg.querySelectorAll(`.node.node-${nodeIndex}`)) as SVGGElement[]
+
+    if (!nodeLabel && planNodes.length === 0) return null
+
+    // Calculate bounding box of entire node tree
+    let minX = Infinity
+    let maxX = -Infinity
+
+    if (nodeLabel) {
+      const bbox = nodeLabel.getBBox()
+      minX = Math.min(minX, bbox.x)
+      maxX = Math.max(maxX, bbox.x + bbox.width)
+    }
+
+    planNodes.forEach((node) => {
+      const bbox = node.getBBox()
+      minX = Math.min(minX, bbox.x)
+      maxX = Math.max(maxX, bbox.x + bbox.width)
+    })
+
+    if (minX === Infinity || maxX === -Infinity) return null
+    return { minX, maxX, width: maxX - minX }
+  }
+
+  // Scroll to a node tree by index
+  function scrollToNodeTree(nodeIndex: number, currentActiveNodeIndex: number | null = null) {
+    if (!treeContainer.value) return
+
+    const svg = d3.select(treeContainer.value).select('svg').node() as SVGSVGElement | null
+    if (!svg) return
+
+    const currentTransform = d3.zoomTransform(svg)
+
+    // If we have a current active node, scroll by its width (slide effect)
+    if (currentActiveNodeIndex !== null && currentActiveNodeIndex !== undefined) {
+      const currentTreeRect = getNodeTreeRect(currentActiveNodeIndex)
+      if (currentTreeRect && currentTreeRect.width > 0) {
+        // Get node positions to determine scroll direction
+        const currentPos = nodePositions.value.get(currentActiveNodeIndex)
+        const targetPos = nodePositions.value.get(nodeIndex)
+
+        if (currentPos !== undefined && targetPos !== undefined) {
+          // Determine scroll direction by comparing positions
+          const isNext = targetPos > currentPos
+
+          // Scroll amount: move by current tree width
+          const scrollAmount = isNext ? -currentTreeRect.width : currentTreeRect.width
+          const scrollAmountInViewport = scrollAmount * currentTransform.k
+          const newX = currentTransform.x + scrollAmountInViewport
+
+          // Apply smooth scroll
+          ;(d3.select(treeContainer.value).select('svg').transition().duration(500) as any).call(
+            zoomListener.value.transform,
+            d3.zoomIdentity.translate(newX, currentTransform.y).scale(currentTransform.k)
+          )
+        }
+      }
+    }
+  }
+
   watch(
     () => props.data,
     () => {
@@ -691,6 +759,8 @@
     zoomOut,
     resetZoom,
     renderTree,
+    getNodeTreeRect,
+    scrollToNodeTree,
   })
 </script>
 

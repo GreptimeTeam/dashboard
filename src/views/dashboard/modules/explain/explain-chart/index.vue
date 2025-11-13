@@ -203,28 +203,9 @@
     d3.selectAll(`#${componentId.value} .tree-group.node-${nodeIdx}`).classed('active-tree', true)
     d3.selectAll(`#${componentId.value} .tree-group.node-${nodeIdx} .node-index-rect`).classed('active', true)
 
-    // Handle scrolling to the node
-    const position = nodePositions.value.get(nodeIdx)
-    if (position !== undefined && chartContainer.value) {
-      const containerRect = chartContainer.value.getBoundingClientRect()
-      const svg = d3
-        .select(chartContainer.value as HTMLDivElement)
-        .select('svg')
-        .node()
-      const currentTransform = d3.zoomTransform(svg)
-
-      // Calculate the translation needed to center on this node
-      const desiredTransX = containerRect.width / 2 - position * currentTransform.k
-
-      // Apply new transform that preserves vertical position and scale
-      d3.select(chartContainer.value as HTMLDivElement)
-        .select('svg')
-        .transition()
-        .duration(500)
-        .call(
-          zoomListener.value.transform,
-          d3.zoomIdentity.translate(desiredTransX, currentTransform.y).scale(currentTransform.k)
-        )
+    // Handle scrolling to the node using tree-view's method
+    if (treeView.value) {
+      treeView.value.scrollToNodeTree(nodeIdx, previousNodeId)
     }
   }
 
