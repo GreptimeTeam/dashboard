@@ -169,10 +169,7 @@ a-drawer.settings-drawer(
   const timezoneOptions = computed(() => {
     const opts: { label: string; value: string }[] = [{ label: 'UTC', value: 'UTC' }]
     for (let h = -12; h <= 14; h += 1) {
-      if (h === 0) {
-        // Skip UTC offset zero since we already include 'UTC'
-        // and we prefer users to pick the canonical 'UTC'
-      } else {
+      if (h !== 0) {
         const sign = h > 0 ? '+' : '-'
         const abs = Math.abs(h)
         const label = `UTC${sign}${abs}`
