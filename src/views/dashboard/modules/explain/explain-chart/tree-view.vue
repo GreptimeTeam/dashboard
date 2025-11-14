@@ -20,6 +20,15 @@
     target: FlexHierarchyPointNode
   }
 
+  // Type for tree node data
+  interface TreeNodeData {
+    name: string
+    nodeIndex?: number
+    isNodeLabel?: boolean
+    children?: TreeNodeData[]
+    [key: string]: any // Allow additional properties
+  }
+
   // Props definition
   const props = defineProps({
     stageIndex: {
@@ -173,8 +182,6 @@
     lastTransform.value = initial
   }
 
-  // Add these functions to the script section
-
   // Process raw data into node-specific data
   function processNodesData(data) {
     const nodeMap = new Map()
@@ -270,9 +277,9 @@
 
   // Helper to get node path from hierarchy node
   // Filters out fake root and node label names, keeping only plan operator names
-  function getNodePath(node: any): string[] {
+  function getNodePath(node: d3.HierarchyNode<TreeNodeData>): string[] {
     const path: string[] = []
-    let current: any = node
+    let current: d3.HierarchyNode<TreeNodeData> | null = node
     while (current) {
       const name = current.data?.name || ''
       // Skip fake root and node labels - only include actual plan operators
@@ -349,13 +356,13 @@
     }
 
     // Create hierarchy from merged tree first
-    const hierarchy = d3.hierarchy(mergedTreeData, (d) => d.children || [])
+    const hierarchy = d3.hierarchy<TreeNodeData>(mergedTreeData, (d) => d.children || [])
 
     // First pass: Render all plan cards in background and store HTML strings
     // Use hierarchy.descendants() to get all nodes directly
     const allRenderPromises: Promise<void>[] = []
 
-    hierarchy.descendants().forEach((d: any) => {
+    hierarchy.descendants().forEach((d) => {
       const node = d.data
 
       // Skip fake root and node labels - they'll be rendered as SVG elements
@@ -382,7 +389,7 @@
 
     // Create the tree layout with dynamic sizing
     const treeLayout = flextree({
-      nodeSize: (node: any) => {
+      nodeSize: (node: d3.HierarchyNode<TreeNodeData>) => {
         const { data } = node
 
         // Skip fake root - don't calculate size for it
@@ -418,13 +425,13 @@
     })
 
     // Apply layout to get positioned nodes
-    const layoutRoot = treeLayout(hierarchy as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+    const layoutRoot = treeLayout(hierarchy) // eslint-disable-line @typescript-eslint/no-explicit-any
 
     // Calculate tree bounds and nodeTree bounds in a single pass
     // Get leftmost and rightmost edges considering node widths
     let minX = Infinity
     let maxX = -Infinity
-    layoutRoot.each((d: any) => {
+    layoutRoot.each((d) => {
       // Skip fake root when calculating bounds
       if (d.data.name === 'FakeRoot') return
 
