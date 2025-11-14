@@ -591,29 +591,6 @@
       .attr('fill', 'var(--main-font-color)')
       .text((d: any) => d.data.name)
 
-    // Draw custom connection from node label to plan root (curved line)
-    layoutRoot.children?.forEach((nodeLabelNode: any) => {
-      if (nodeLabelNode.data.isNodeLabel) {
-        const labelBottom = nodeLabelNode.y + NODE_INDEX_CARD.height
-        const planRoot = nodeLabelNode.children?.[0]
-        if (planRoot) {
-          const planTop = planRoot.y
-          const midY = (labelBottom + planTop) / 2
-
-          treeContainerGroup
-            .append('path')
-            .attr(
-              'd',
-              `M${nodeLabelNode.x},${labelBottom}C${nodeLabelNode.x},${midY} ${planRoot.x},${midY} ${planRoot.x},${planTop}`
-            )
-            .attr('fill', 'none')
-            .attr('stroke', 'var(--border-color)')
-            .attr('stroke-width', 1)
-            .attr('class', 'node-label-link')
-        }
-      }
-    })
-
     // Render plan nodes (non-label nodes)
     const planNodes = nodesToRender.filter((d: any) => !d.data.isNodeLabel)
 
