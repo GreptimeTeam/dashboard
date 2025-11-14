@@ -28,11 +28,11 @@
         :metrics-expanded="metricsExpanded"
         :stage-index="index"
         @update:active-node-index="updateActiveNode"
-        @node-positions-updated="updateNodePositions"
         @nodes-data-updated="updateNodesData"
+        @svgCreated="handleSvgCreated"
       )
     .controls-wrapper
-      ZoomControls(@zoom-in="zoomIn" @zoom-out="zoomOut" @reset-zoom="resetZoom")
+      ZoomControls(ref="zoomControls" :tree-container="treeContainerRef")
       NavigationArrows(
         v-if="availableNodes.length > 1"
         :available-nodes="availableNodes"
@@ -60,9 +60,21 @@
   const activeNodeIndex = ref<number>(0)
   const highlightType = ref<string>('DURATION') // Highlight type: NONE, ROWS, DURATION
   const nodesData = ref([])
-  const treeView = ref(null)
+  const treeView = ref<{
+    treeContainer: HTMLDivElement | null
+    getNodeTreeRect: (nodeIndex: number) => { minX: number; maxX: number; width: number } | null
+  } | null>(null)
+  const zoomControls = ref<{
+    applyZoom: (svg: any, preservedTransform: any) => void
+    getLastTransform: () => any
+    handleResetZoom: () => void
+    scrollToTransform: (transform: d3.ZoomTransform) => void
+  } | null>(null)
   const componentId = computed(() => `explain-chart-stage-${props.index}`)
   const selectedRootPlan = ref<string>('')
+
+  // Computed property for treeContainer to pass to zoom controls
+  const treeContainerRef = computed(() => treeView.value?.treeContainer || null)
 
   // Extract available root plan names from props.data
   const availableRootPlans = computed(() => {
@@ -107,15 +119,8 @@
     })
   })
 
-  // Zoom and pan states
-  const minScale = 0.1
-  const maxScale = 3
-
-  // Node positions for scrolling
-  const nodePositions = ref<Map<number, number>>(new Map())
-
   const availableMetrics = computed(() => {
-    const metricKeys = new Set()
+    const metricKeys = new Set<string>()
 
     // Process all nodes from all plans to collect unique metric keys
     nodesData.value.forEach(({ plan }) => {
@@ -153,37 +158,40 @@
     return [...new Set(filteredData.value.map((row) => row[1]))].sort((a, b) => a - b)
   })
 
-  // Create the zoom behavior
-  const zoomListener = computed(() => {
-    return d3
-      .zoom()
-      .scaleExtent([minScale, maxScale])
-      .on('zoom', (event) => {
-        const g = d3.select(chartContainer.value).select('svg > g')
-        g.attr('transform', event.transform)
-      })
-  })
-
-  // Zoom in function
-  function zoomIn() {
-    if (treeView.value) treeView.value.zoomIn()
-  }
-
-  // Zoom out function
-  function zoomOut() {
-    if (treeView.value) treeView.value.zoomOut()
-  }
-
-  function resetZoom() {
-    if (treeView.value) treeView.value.resetZoom()
-  }
-
-  // Call this function in the handleResize function
-  function handleResize() {
-    if (treeView.value) {
-      // Let the tree view handle resize operations
-      nextTick(() => resetZoom())
+  // Handle SVG created event from tree-view
+  function handleSvgCreated({ svg }: { svg: any }) {
+    if (zoomControls.value) {
+      // Get preserved transform from zoom controls
+      const preservedTransform = zoomControls.value.getLastTransform()
+      zoomControls.value.applyZoom(svg, preservedTransform)
     }
+  }
+
+  // Calculate and apply scroll transform to navigate to a node tree
+  function scrollToNodeTree(nodeIndex: number) {
+    if (!treeView.value?.treeContainer || !zoomControls.value) return
+
+    const svg = d3.select(treeView.value.treeContainer).select('svg').node() as SVGSVGElement | null
+    if (!svg) return
+
+    const currentTransform = d3.zoomTransform(svg)
+
+    // Get the target nodeTree's rect (coordinates are in SVG space)
+    const targetTreeRect = treeView.value.getNodeTreeRect(nodeIndex)
+    if (!targetTreeRect) return
+
+    // Calculate where the target tree's left edge should be positioned
+    // We want it to appear at 20px from the left edge of the viewport
+    const targetLeftInViewport = 20
+
+    // targetTreeRect.minX is already in SVG coordinate space
+    // In viewport space: targetLeftInViewport = targetTreeRect.minX * scale + transform.x
+    // Solving for transform.x: transform.x = targetLeftInViewport - targetTreeRect.minX * scale
+    const newX = targetLeftInViewport - targetTreeRect.minX * currentTransform.k
+
+    // Apply the transform via zoom-controls
+    const newTransform = d3.zoomIdentity.translate(newX, currentTransform.y).scale(currentTransform.k)
+    zoomControls.value.scrollToTransform(newTransform)
   }
 
   function scrollToNode(nodeIdx) {
@@ -203,10 +211,8 @@
     d3.selectAll(`#${componentId.value} .tree-group.node-${nodeIdx}`).classed('active-tree', true)
     d3.selectAll(`#${componentId.value} .tree-group.node-${nodeIdx} .node-index-rect`).classed('active', true)
 
-    // Handle scrolling to the node using tree-view's method
-    if (treeView.value) {
-      treeView.value.scrollToNodeTree(nodeIdx, previousNodeId)
-    }
+    // Handle scrolling to the node
+    scrollToNodeTree(nodeIdx)
   }
 
   function navigateToPrevNode() {
@@ -259,7 +265,7 @@
     () => filteredData.value,
     () => {
       activeNodeIndex.value = 0
-      resetZoom()
+      zoomControls.value?.handleResetZoom()
     },
     { immediate: true }
   )
@@ -293,21 +299,11 @@
     }
   }
 
-  onMounted(() => {
-    window.addEventListener('resize', handleResize)
-  })
-
   onBeforeUnmount(() => {
-    window.removeEventListener('resize', handleResize)
     if (chartContainer.value) {
       d3.select(chartContainer.value).selectAll('*').on('*', null)
     }
   })
-
-  // Handle node position updates from TreeView
-  function updateNodePositions(positions) {
-    nodePositions.value = positions
-  }
 
   // Handle active node updates
   function updateActiveNode(nodeIndex) {

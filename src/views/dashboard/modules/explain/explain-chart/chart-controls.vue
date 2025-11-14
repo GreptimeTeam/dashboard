@@ -38,7 +38,7 @@
     highlightType: string
     selectedMetric: string
     metricsExpanded: boolean
-    availableMetrics: Array<string>
+    availableMetrics: Array<{ label: string; value: string }>
     stageIndex: number
   }>()
 

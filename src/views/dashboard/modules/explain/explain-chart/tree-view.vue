@@ -58,7 +58,7 @@
   })
 
   // Emits
-  const emit = defineEmits(['update:activeNodeIndex', 'nodePositionsUpdated', 'nodesDataUpdated'])
+  const emit = defineEmits(['update:activeNodeIndex', 'nodePositionsUpdated', 'nodesDataUpdated', 'svgCreated'])
   const componentId = computed(() => `tree-view-stage-${props.stageIndex}`)
 
   // Refs
@@ -106,81 +106,6 @@
     })
     return acc
   })
-
-  // Zoom and pan states
-  const transform = ref('translate(0,0) scale(1)')
-  const scale = ref(1)
-  const minScale = 0.1
-  const maxScale = 3
-  const lastTransform = ref<any>(null)
-
-  // Create the zoom behavior
-  const zoomListener = computed(() => {
-    return d3
-      .zoom()
-      .scaleExtent([minScale, maxScale])
-      .on('zoom', (event) => {
-        const g = d3.select(treeContainer.value).select('svg > g')
-        g.attr('transform', event.transform)
-        transform.value = event.transform
-        scale.value = event.transform.k
-        lastTransform.value = event.transform
-      })
-  })
-
-  // Helper functions moved from parent component
-  function applyZoom(svg, preservedTransform: any = null) {
-    // Set explicit dimensions first
-    svg
-      .attr('width', treeContainer.value?.clientWidth || 800)
-      .attr('height', treeContainer.value?.clientHeight || 600)
-      .attr('viewBox', null)
-
-    // Apply zoom behavior with a reasonable initial scale
-    svg.call(zoomListener.value)
-
-    // Restore preserved transform or set an initial transform
-    if (preservedTransform) {
-      svg.call(zoomListener.value.transform, preservedTransform)
-      lastTransform.value = preservedTransform
-    } else {
-      // Center the tree vertically with some padding
-      // Default scale is 1.0 (no scaling) - fonts will appear at their set size
-      const initial = d3.zoomIdentity.translate(0, 50).scale(1.0)
-      svg.call(zoomListener.value.transform, initial)
-      lastTransform.value = initial
-    }
-  }
-
-  function getSvgAndGroup() {
-    if (!treeContainer.value) return { svg: null, group: null }
-    const svg = d3.select(treeContainer.value).select('svg')
-    const group = svg.select('g') // Main transform group
-    return { svg, group }
-  }
-
-  // Zoom control functions
-  function zoomIn() {
-    const { svg } = getSvgAndGroup()
-    if (!svg) return
-    ;(svg.transition().duration(300) as any).call(zoomListener.value.scaleBy, 1.3) // eslint-disable-line @typescript-eslint/no-explicit-any
-  }
-
-  function zoomOut() {
-    const { svg } = getSvgAndGroup()
-    if (!svg) return
-    ;(svg.transition().duration(300) as any).call(zoomListener.value.scaleBy, 1 / 1.3) // eslint-disable-line @typescript-eslint/no-explicit-any
-  }
-
-  function resetZoom() {
-    if (!treeContainer.value) return
-    const { svg } = getSvgAndGroup()
-    if (!svg) return
-    // Reset to the same initial transform used in applyZoom (centered)
-    const initial = d3.zoomIdentity.translate(0, 50).scale(1.0)
-    ;(svg as any).call(zoomListener.value.transform, initial) // eslint-disable-line @typescript-eslint/no-explicit-any
-    lastTransform.value = initial
-  }
 
   // Process raw data into node-specific data
   function processNodesData(data) {
@@ -296,8 +221,6 @@
   async function renderTree() {
     if (!treeContainer.value || !props.data || props.data.length === 0) return
     console.log('renderTree')
-    // Preserve current zoom transform from ref
-    const preservedTransform = lastTransform.value || null
 
     // Clear previous content
     treeContainer.value.innerHTML = ''
@@ -311,14 +234,12 @@
       .attr('class', `explain-svg ${componentId.value}`)
       .attr('viewBox', `0 0 ${treeContainer.value.clientWidth} ${treeContainer.value.clientHeight}`)
 
-    // Apply zoom behavior safely, preserving previous transform if any
-    applyZoom(svg, preservedTransform)
+    // Emit event for zoom controls to apply zoom behavior
+    // The preservedTransform will be retrieved by the parent/zoom-controls
+    emit('svgCreated', { svg })
 
     // Add main group for transformation during zoom/pan
     const mainGroup = svg.append('g').attr('class', componentId.value)
-    if (preservedTransform) {
-      mainGroup.attr('transform', preservedTransform)
-    }
 
     // Process all node data
     nodesData.value = processNodesData(props.data)
@@ -661,36 +582,6 @@
     return { minX: minXInSVG, maxX: maxXInSVG, width: maxXInSVG - minXInSVG }
   }
 
-  // Scroll to a node tree by index
-  function scrollToNodeTree(nodeIndex: number, currentActiveNodeIndex: number | null = null) {
-    if (!treeContainer.value) return
-
-    const svg = d3.select(treeContainer.value).select('svg').node() as SVGSVGElement | null
-    if (!svg) return
-
-    const currentTransform = d3.zoomTransform(svg)
-
-    // Get the target nodeTree's rect from DOM (coordinates are in SVG space)
-    const targetTreeRect = getNodeTreeRect(nodeIndex)
-    if (!targetTreeRect) return
-
-    // Calculate where the target tree's left edge should be positioned
-    // We want it to appear at 20px from the left edge of the viewport
-    // The gap between nodeTrees (horizontalPadding) is already accounted for in the layout positions
-    const targetLeftInViewport = 20
-
-    // targetTreeRect.minX is already in SVG coordinate space
-    // In viewport space: targetLeftInViewport = targetTreeRect.minX * scale + transform.x
-    // Solving for transform.x: transform.x = targetLeftInViewport - targetTreeRect.minX * scale
-    const newX = targetLeftInViewport - targetTreeRect.minX * currentTransform.k
-
-    // Apply smooth scroll
-    ;(d3.select(treeContainer.value).select('svg').transition().duration(500) as any).call(
-      zoomListener.value.transform,
-      d3.zoomIdentity.translate(newX, currentTransform.y).scale(currentTransform.k)
-    )
-  }
-
   // Watch all props that affect tree rendering
   watch(
     () => [props.data, props.highlightType, props.selectedMetric, props.metricsExpanded],
@@ -702,14 +593,12 @@
     { immediate: true }
   )
 
-  // Expose methods for parent component
+  // Expose methods and treeContainer for parent component
+  // Only exposes position/data methods, no scrolling or transform logic
   defineExpose({
-    zoomIn,
-    zoomOut,
-    resetZoom,
+    treeContainer,
     renderTree,
     getNodeTreeRect,
-    scrollToNodeTree,
   })
 </script>
 
