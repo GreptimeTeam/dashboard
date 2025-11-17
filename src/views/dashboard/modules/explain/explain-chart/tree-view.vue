@@ -407,7 +407,7 @@
     // Create container for the entire tree
     const treeContainerGroup = mainGroup
       .append('g')
-      .attr('transform', `translate(${offsetX}, 0)`)
+      .attr('transform', `translate(${offsetX}, 20)`)
       .style('overflow', 'visible')
 
     // Get all nodes to render (excluding fake root)
