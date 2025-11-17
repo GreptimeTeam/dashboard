@@ -386,14 +386,12 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
       try {
         const plan = JSON.parse(planStr)
         const rootName = plan?.name
-        if (rootName) {
-          if (!groups.has(rootName)) {
-            groups.set(rootName, [])
-          }
-          const group = groups.get(rootName)
-          if (group) {
-            group.push(row)
-          }
+        if (!groups.has(rootName)) {
+          groups.set(rootName, [])
+        }
+        const group = groups.get(rootName)
+        if (group) {
+          group.push(row)
         }
       } catch {
         // Ignore invalid JSON
@@ -432,11 +430,9 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
 
   const tableData = computed(() => {
     if (!props.data || props.data.length === 0) return []
-
     // Step 1: Group props.data by root plan name
     // This handles cases where there are multiple root plans (e.g., CoalesceBatchesExec and PromInstantManipulateExec)
     const rootGroups = groupByRootName()
-
     // Step 2: Process each root plan group separately
     const allPlanRows: any[] = []
     rootGroups.forEach((rootData, rootName) => {
