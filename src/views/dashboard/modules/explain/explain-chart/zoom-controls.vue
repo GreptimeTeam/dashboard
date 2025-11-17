@@ -63,9 +63,9 @@
       svg.call(zoomListener.transform, preservedTransform)
       lastTransform.value = preservedTransform
     } else {
-      // Center the tree vertically with some padding
+      // Initial Y offset matches tree container's Y offset (20px)
       // Default scale is 1.0 (no scaling) - fonts will appear at their set size
-      const initial = d3.zoomIdentity.translate(0, 50).scale(1.0)
+      const initial = d3.zoomIdentity.translate(0, 0).scale(1.0)
       svg.call(zoomListener.transform, initial)
       lastTransform.value = initial
     }
@@ -88,7 +88,7 @@
     const svg = getSvg()
     if (!svg) return
     // Reset to the same initial transform used in applyZoom (centered)
-    const initial = d3.zoomIdentity.translate(0, 50).scale(1.0)
+    const initial = d3.zoomIdentity.translate(0, 0).scale(1.0)
     ;(svg as any).call(zoomListener.transform, initial) // eslint-disable-line @typescript-eslint/no-explicit-any
     lastTransform.value = initial
   }

@@ -220,7 +220,6 @@
 
   async function renderTree() {
     if (!treeContainer.value || !props.data || props.data.length === 0) return
-    console.log('renderTree')
 
     // Clear previous content
     treeContainer.value.innerHTML = ''
@@ -254,8 +253,6 @@
 
     // Map to store rendered HTML strings and sizes by unique key (nodeIndex + node path)
     const renderedCardsMap = new Map<string, { size: [number, number]; html: string }>()
-
-    console.log('nodesData.value', nodesData.value)
     // Build merged tree structure with fake root
     // FakeRoot -> Node Label -> Plan Tree
     const mergedTreeData = {
