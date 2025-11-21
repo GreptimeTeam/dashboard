@@ -55,7 +55,7 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
                       span.metric-value {{ formatMetricValue(key, value) }}
                     .metric-progress-bar-wrapper(v-if="isProgressMetric(key)")
                       .metric-progress-bar(
-                        :style="{ width: `${getNodeMetricPercentage(record, nodeIndex, key)}%`, backgroundColor: getNodeProgressBarColor(record, nodeIndex, key) }"
+                        :style="{ width: `${getPercentage(record, nodeIndex, key)}%`, backgroundColor: getNodeProgressBarColor(record, nodeIndex, key) }"
                       )
               template(v-else)
                 .metric(v-if="record[`node${nodeIndex}`] && record[`node${nodeIndex}`][getActiveMetric] !== undefined")
@@ -64,7 +64,7 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
                     span.metric-value {{ formatMetricValue(getActiveMetric, record[`node${nodeIndex}`][getActiveMetric]) }}
                   .metric-progress-bar-wrapper(v-if="isProgressMetric(getActiveMetric)")
                     .metric-progress-bar(
-                      :style="{ width: `${getNodeMetricPercentage(record, nodeIndex, getActiveMetric)}%`, backgroundColor: getNodeProgressBarColor(record, nodeIndex, getActiveMetric) }"
+                      :style="{ width: `${getPercentage(record, nodeIndex, getActiveMetric)}%`, backgroundColor: getNodeProgressBarColor(record, nodeIndex, getActiveMetric) }"
                     )
 </template>
 
@@ -372,62 +372,80 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     })
   }
 
-  const tableData = computed(() => {
-    if (!props.data || props.data.length === 0) return []
+  // Group props.data by root plan name
+  // Returns: Map<rootName, Array<[stage, nodeIndex, plan_json_string]>>
+  const groupByRootName = (): Map<string, Array<[number, number, string]>> => {
+    const groups = new Map<string, Array<[number, number, string]>>()
 
-    // Step 1: Parse template plan to get the operator structure
-    //
-    // Why use props.data[0]?
-    // - All physical nodes with the SAME root operator share the same tree structure
-    // - They only differ in metrics (output_rows, elapsed_compute, etc.)
-    // - We use the first entry as a "template" to define the operator hierarchy
-    // - Any entry with the same root operator would work (we just pick the first one)
-    // - Later, parsePlansByNode() filters to only include plans with matching root name
-    //
-    // Note: If props.data contains multiple different root operators (e.g., both
-    // "CoalesceBatchesExec" and "PromInstantManipulateExec"), only the root operator
-    // from data[0] will be displayed. The others are filtered out in parsePlansByNode().
-    //
-    // templatePlan structure:
-    // {
-    //   name: "CoalesceBatchesExec",
-    //   children: [
-    //     {
-    //       name: "FilterExec",
-    //       children: [
-    //         { name: "ProjectionExec", children: [...] }
-    //       ]
-    //     }
-    //   ]
-    // }
-    const templatePlan = JSON.parse(props.data[0][2])
+    props.data.forEach((row) => {
+      const [, , planStr] = row
+      if (!planStr || typeof planStr !== 'string' || !planStr.startsWith('{')) {
+        return
+      }
 
-    // flattenPlan converts the nested tree into a flat array of rows:
-    // Tree → [
-    //   { step: "CoalesceBatchesExec", path: ["CoalesceBatchesExec"], ... },
-    //   { step: "└─ FilterExec", path: ["CoalesceBatchesExec", "FilterExec"], ... },
-    //   { step: "   └─ ProjectionExec", path: ["CoalesceBatchesExec", "FilterExec", "ProjectionExec"], ... },
-    //   ...
-    // ]
-    // Each row represents one operator in the execution plan tree
+      try {
+        const plan = JSON.parse(planStr)
+        const rootName = plan?.name
+        if (!groups.has(rootName)) {
+          groups.set(rootName, [])
+        }
+        const group = groups.get(rootName)
+        if (group) {
+          group.push(row)
+        }
+      } catch {
+        // Ignore invalid JSON
+      }
+    })
+
+    return groups
+  }
+
+  // Process a single root plan group
+  const processRootPlan = (rootName: string, rootData: Array<[number, number, string]>): any[] => {
+    // Use first entry as template
+    const templatePlan = JSON.parse(rootData[0][2])
     const planRows = flattenPlan(templatePlan)
 
-    // Step 2: Parse all node plans (filtered by same root operator)
-    const plansByNode = parsePlansByNode(templatePlan)
+    // Parse all node plans for this root
+    const plansByNode = new Map<number, any>()
+    rootData.forEach((row) => {
+      const [, nodeIndex, planStr] = row
+      try {
+        const plan = JSON.parse(planStr)
+        if (plan?.name === rootName) {
+          plansByNode.set(nodeIndex, plan)
+        }
+      } catch {
+        // Ignore invalid JSON
+      }
+    })
 
-    // Step 3: Build path maps for O(1) lookup (instead of tree traversal)
+    // Build path maps and attach metrics
     const pathMapsByNode = buildPathMapsForAllNodes(plansByNode)
-
-    // Step 4: Attach metrics from each node to the corresponding plan rows
     attachNodeMetrics(planRows, pathMapsByNode)
 
     return planRows
+  }
+
+  const tableData = computed(() => {
+    if (!props.data || props.data.length === 0) return []
+    // Step 1: Group props.data by root plan name
+    // This handles cases where there are multiple root plans (e.g., CoalesceBatchesExec and PromInstantManipulateExec)
+    const rootGroups = groupByRootName()
+    // Step 2: Process each root plan group separately
+    const allPlanRows: any[] = []
+    rootGroups.forEach((rootData, rootName) => {
+      const planRows = processRootPlan(rootName, rootData)
+      allPlanRows.push(...planRows)
+    })
+
+    return allPlanRows
   })
 
   const availableMetrics = computed(() => {
     // Use a Set to track unique metrics across all nodes
     const metricsSet = new Set<string>()
-
     // Process the tableData to extract all available metrics
     tableData.value.forEach((row) => {
       // Check each node
@@ -473,21 +491,32 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     }
   }
 
-  const getNodeProgressPercentage = (record: any, nodeIndex: number, metric: string | null): number => {
+  // Get max value for a metric across all nodes and all operators/rows
+  // This shows relative performance across the entire table
+  const getMaxMetricValue = (metricKey: string): number => {
+    const allValues: number[] = []
+    tableData.value.forEach((row) => {
+      availableNodes.value.forEach((nodeIdx) => {
+        const nodeData = row[`node${nodeIdx}`]
+        if (nodeData && nodeData[metricKey] !== undefined) {
+          allValues.push(nodeData[metricKey])
+        }
+      })
+    })
+    return allValues.length > 0 ? Math.max(...allValues) : 0
+  }
+
+  const getPercentage = (record: any, nodeIndex: number, metric: string | null): number => {
     if (!metric || !record[`node${nodeIndex}`] || record[`node${nodeIndex}`][metric] === undefined) return 0
 
-    // Find max value for this metric across all nodes
-    const maxValue = Math.max(
-      ...tableData.value.filter((row) => row[`node${nodeIndex}`]).map((row) => row[`node${nodeIndex}`][metric] || 0)
-    )
-
+    const maxValue = getMaxMetricValue(metric)
     return maxValue > 0 ? (record[`node${nodeIndex}`][metric] / maxValue) * 100 : 0
   }
 
   const getNodeProgressBarColor = (record: any, nodeIndex: number, metric: string | null): string => {
     if (!metric || !record[`node${nodeIndex}`] || record[`node${nodeIndex}`][metric] === undefined) return '#ccc'
 
-    const percentage = getNodeProgressPercentage(record, nodeIndex, metric)
+    const percentage = getPercentage(record, nodeIndex, metric)
     if (percentage > 75) return '#f56c6c'
     if (percentage > 50) return '#e6a23c'
     return '#67c23a'
@@ -496,21 +525,6 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
   // Helper to determine if a metric should show a progress bar
   const isProgressMetric = (key: string): boolean => {
     return key === 'output_rows' || key === 'elapsed_compute'
-  }
-
-  // Calculate percentage for node metric
-  const getNodeMetricPercentage = (record: any, nodeIndex: number, metricKey: string): number => {
-    if (!record[`node${nodeIndex}`] || record[`node${nodeIndex}`][metricKey] === undefined) return 0
-
-    // Get all values for this metric across all nodes and records
-    const allValues = tableData.value
-      .filter((row) => row[`node${nodeIndex}`] && row[`node${nodeIndex}`][metricKey] !== undefined)
-      .map((row) => row[`node${nodeIndex}`][metricKey])
-
-    const maxValue = Math.max(...allValues, 0)
-    if (maxValue <= 0) return 0
-
-    return (record[`node${nodeIndex}`][metricKey] / maxValue) * 100
   }
 </script>
 

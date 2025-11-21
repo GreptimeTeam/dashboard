@@ -20,6 +20,15 @@
     target: FlexHierarchyPointNode
   }
 
+  // Type for tree node data
+  interface TreeNodeData {
+    name: string
+    nodeIndex?: number
+    isNodeLabel?: boolean
+    children?: TreeNodeData[]
+    [key: string]: any // Allow additional properties
+  }
+
   // Props definition
   const props = defineProps({
     stageIndex: {
@@ -46,197 +55,57 @@
       type: Boolean,
       default: false,
     },
-    maxRows: {
-      type: Number,
-      default: 0,
-    },
-    maxDuration: {
-      type: Number,
-      default: 0,
-    },
   })
 
   // Emits
-  const emit = defineEmits(['update:activeNodeIndex', 'nodePositionsUpdated', 'nodesDataUpdated'])
+  const emit = defineEmits(['update:activeNodeIndex', 'nodePositionsUpdated', 'nodesDataUpdated', 'svgCreated'])
   const componentId = computed(() => `tree-view-stage-${props.stageIndex}`)
 
   // Refs
   const treeContainer = ref<HTMLDivElement | null>(null)
   const nodePositions = ref<Map<number, number>>(new Map())
   const nodesData = ref([])
+  const backgroundMeasureContainer = ref<HTMLDivElement | null>(null)
+  const nodeTreeBoundsMap = ref<Map<number, { minX: number; maxX: number }>>(new Map())
+  const treeOffsetX = ref<number>(0)
 
-  // Zoom and pan states
-  const transform = ref('translate(0,0) scale(1)')
-  const scale = ref(1)
-  const minScale = 0.1
-  const maxScale = 3
+  // Single traversal for all max stats (extensible for future metrics)
+  type MaxStats = {
+    maxRows: number
+    maxDuration: number
+  }
 
-  // Create a line generator function
-  const lineGen = computed(() => {
-    return (link: FlexHierarchyPointLink) => {
-      const { source, target } = link
+  function traverseNodeForMax(node, acc: MaxStats) {
+    const outputRows = node.output_rows ?? node.outputRows ?? 0
+    const elapsedCompute = node.elapsed_compute ?? node.elapsedCompute ?? 0
+    if (typeof outputRows === 'number') acc.maxRows = Math.max(acc.maxRows, outputRows)
+    if (typeof elapsedCompute === 'number') acc.maxDuration = Math.max(acc.maxDuration, elapsedCompute)
 
-      // Calculate the bottom of the source node
-      const sourceBottom = source.y + (source.ySize || 40)
-
-      // Calculate a proper curve with enough space
-      const k = Math.max(30, Math.abs(target.y - sourceBottom) / 2)
-
-      // Create the path
-      const path = d3.path()
-      path.moveTo(source.x, sourceBottom)
-      path.bezierCurveTo(source.x, sourceBottom + k, target.x, target.y - k, target.x, target.y)
-      return path.toString()
+    if (node.metrics) {
+      const m = node.metrics
+      const mRows = m.output_rows ?? m.outputRows
+      const mDuration = m.elapsed_compute ?? m.elapsedCompute
+      if (typeof mRows === 'number') acc.maxRows = Math.max(acc.maxRows, mRows)
+      if (typeof mDuration === 'number') acc.maxDuration = Math.max(acc.maxDuration, mDuration)
     }
-  })
 
-  // Create the zoom behavior
-  const zoomListener = computed(() => {
-    return d3
-      .zoom()
-      .scaleExtent([minScale, maxScale])
-      .on('zoom', (event) => {
-        const g = d3.select(treeContainer.value).select('svg > g')
-        g.attr('transform', event.transform)
-        transform.value = event.transform
-        scale.value = event.transform.k
-      })
-  })
-
-  // Helper functions moved from parent component
-  function applyZoom(svg) {
-    // Set explicit dimensions first
-    svg
-      .attr('width', treeContainer.value?.clientWidth || 800)
-      .attr('height', treeContainer.value?.clientHeight || 600)
-      .attr('viewBox', null)
-
-    // Apply zoom behavior with a reasonable initial scale
-    svg.call(zoomListener.value)
-
-    // Set an initial transform with scale 0.7
-    svg.call(zoomListener.value.transform, d3.zoomIdentity.translate(svg.attr('width') / 4, 50).scale(0.7))
+    if (node.children && Array.isArray(node.children)) {
+      node.children.forEach((child) => traverseNodeForMax(child, acc))
+    }
   }
 
-  function getSvgAndGroup() {
-    if (!treeContainer.value) return { svg: null, group: null }
-    const svg = d3.select(treeContainer.value).select('svg')
-    const group = svg.select('g') // Main transform group
-    return { svg, group }
-  }
-
-  // Zoom control functions
-  function zoomIn() {
-    const { svg } = getSvgAndGroup()
-    if (!svg) return
-
-    svg.transition().duration(300).call(zoomListener.value.scaleBy, 1.3)
-  }
-
-  function zoomOut() {
-    const { svg } = getSvgAndGroup()
-    if (!svg) return
-
-    svg
-      .transition()
-      .duration(300)
-      .call(zoomListener.value.scaleBy, 1 / 1.3)
-  }
-
-  function resetZoom() {
-    if (!treeContainer.value) return
-
-    // Get container dimensions
-    const containerWidth = treeContainer.value.clientWidth
-    const containerHeight = treeContainer.value.clientHeight
-
-    // Get SVG selections
-    const { svg, group } = getSvgAndGroup()
-    if (!svg || !group) return
-
-    // Update SVG dimensions
-    svg.attr('width', containerWidth).attr('height', containerHeight)
-
-    // If there's an active node, center on it (existing code)
-
-    try {
-      // Existing code for centering on active node
-      const activeNodeGroup = svg.select(`g .tree-group.node-${props.activeNodeIndex}`)
-      if (!activeNodeGroup.empty()) {
-        const groupNode = activeNodeGroup.node()
-        if (!groupNode) return
-        const groupBBox = groupNode.getBBox()
-
-        // Use minimal padding
-        const padding = 20
-        const scaleX = containerWidth / (groupBBox.width + padding * 2)
-        const scaleY = containerHeight / (groupBBox.height + padding * 2)
-        const newScale = Math.min(scaleX, scaleY, maxScale)
-
-        // Calculate translation to center the tree
-        const tx = containerWidth / 2 - (groupBBox.x + groupBBox.width / 2) * newScale
-        const ty = containerHeight / 2 - (groupBBox.y + groupBBox.height / 2) * newScale
-
-        // Create a proper transform object and apply it
-        const transform2 = d3.zoomIdentity.translate(tx, ty).scale(newScale)
-
-        // Apply transform
-        svg.transition().duration(750).call(zoomListener.value.transform, transform2)
-        return
+  const maxStats = computed<MaxStats>(() => {
+    const acc: MaxStats = { maxRows: 0, maxDuration: 0 }
+    props.data.forEach((row) => {
+      try {
+        const planData = JSON.parse(row[2])
+        traverseNodeForMax(planData, acc)
+      } catch {
+        // Ignore invalid JSON
       }
-    } catch (e) {
-      console.warn('Failed to center on active node, using improved centering', e)
-    }
-
-    // Center and scale all trees
-    try {
-      // Select all tree groups
-      const allTreeGroups = svg.selectAll('g .tree-group')
-      if (!allTreeGroups.empty()) {
-        // Calculate overall bounding box for all trees
-        const totalBBox = { x: Infinity, y: Infinity, width: 0, height: 0, right: 0, bottom: 0 }
-
-        allTreeGroups.each(function () {
-          const groupBBox = this.getBBox()
-          totalBBox.x = Math.min(totalBBox.x, groupBBox.x)
-          totalBBox.y = Math.min(totalBBox.y, groupBBox.y)
-          totalBBox.right = Math.max(totalBBox.right, groupBBox.x + groupBBox.width)
-          totalBBox.bottom = Math.max(totalBBox.bottom, groupBBox.y + groupBBox.height)
-        })
-
-        // Complete the bounding box calculation
-        totalBBox.width = totalBBox.right - totalBBox.x
-        totalBBox.height = totalBBox.bottom - totalBBox.y
-
-        // Add padding for better visualization
-        const padding = 20
-
-        // Calculate scale to fit all trees with padding
-        const scaleX = (containerWidth - padding * 2) / totalBBox.width
-        const scaleY = (containerHeight - padding * 2) / totalBBox.height
-
-        // Use the smaller scale to ensure everything fits
-        const newScale = Math.min(scaleX, scaleY, 1.0) // Cap at 1.0 to avoid too much zoom
-
-        // Calculate translation to center all trees
-        const tx = containerWidth / 2 - (totalBBox.x + totalBBox.width / 2) * newScale
-        const ty = containerHeight / 2 - (totalBBox.y + totalBBox.height / 2) * newScale
-
-        // Create transform and apply it
-        const optimalTransform = d3.zoomIdentity.translate(tx, ty).scale(newScale)
-        svg.transition().duration(750).call(zoomListener.value.transform, optimalTransform)
-        return
-      }
-    } catch (e) {
-      console.warn('Failed to calculate optimal transform, using default', e)
-    }
-
-    // Fallback to a more reasonable default if all else fails
-    const defaultTransform = d3.zoomIdentity.translate(containerWidth / 2, containerHeight / 4).scale(0.7)
-    svg.transition().duration(750).call(zoomListener.value.transform, defaultTransform)
-  }
-
-  // Add these functions to the script section
+    })
+    return acc
+  })
 
   // Process raw data into node-specific data
   function processNodesData(data) {
@@ -259,6 +128,7 @@
     return {
       name: plan.name || 'Root',
       nodeIndex,
+      isNodeLabel: false, // Plan nodes are not node labels
       metrics: {
         ...(plan.metrics || {}),
         // Add both camelCase and snake_case for flexibility
@@ -271,141 +141,84 @@
     }
   }
 
-  // Helper function to calculate metrics lines
-  function calculateMetricsLines(nodeMetrics, hasMetrics) {
-    if (!props.metricsExpanded || !nodeMetrics) {
-      return hasMetrics ? 1 : 0
+  // Render PlanCard in background, get size and HTML string
+  // Returns both size and innerHTML string for reuse in foreignObject
+  function renderCardInBackground(nodeData: any, nodeIndex: number): Promise<{ size: [number, number]; html: string }> {
+    // Create a hidden measurement container (reused for all cards)
+    if (!backgroundMeasureContainer.value) {
+      const container = document.createElement('div')
+      container.style.position = 'absolute'
+      container.style.visibility = 'hidden'
+      container.style.width = 'auto' // Let cards determine their own width
+      container.style.minWidth = `${CARD_DIMENSIONS.width}px` // Minimum width fallback
+      container.style.top = '-9999px'
+      container.style.left = '-9999px'
+      document.body.appendChild(container)
+      backgroundMeasureContainer.value = container
     }
 
-    return Object.keys(nodeMetrics).filter(
-      (k) => !['output_rows', 'elapsed_compute', 'outputRows', 'elapsedCompute'].includes(k)
-    ).length
-  }
+    // Create a div for this specific card
+    const cardContainer = document.createElement('div')
+    cardContainer.style.width = 'auto' // Let card expand based on content
+    backgroundMeasureContainer.value.appendChild(cardContainer)
 
-  // Helper function to calculate card height
-  function calculateCardHeight(hasProgressBar, hasMetrics, metricsLines) {
-    const baseHeight = CARD_DIMENSIONS.minHeight
-    const progressHeight = hasProgressBar ? CARD_DIMENSIONS.progressBarHeight : 0
+    // Render PlanCard in the hidden container
+    render(
+      h(PlanCard, {
+        nodeData,
+        highlightType: props.highlightType,
+        maxRows: maxStats.value.maxRows,
+        maxDuration: maxStats.value.maxDuration,
+        selectedMetric: props.selectedMetric,
+        metricsExpanded: props.metricsExpanded,
+        isActive: props.activeNodeIndex === nodeIndex,
+        stageIndex: props.stageIndex,
+      }),
+      cardContainer
+    )
 
-    let metricsHeight = 0
-    if (hasMetrics) {
-      if (props.metricsExpanded) {
-        metricsHeight =
-          Math.min(metricsLines * CARD_DIMENSIONS.metricLineHeight, 80) + CARD_DIMENSIONS.expandedBaseHeight
-      } else {
-        metricsHeight = CARD_DIMENSIONS.singleMetricHeight
-      }
-    }
+    // Wait for Vue to render, then get size and HTML
+    return new Promise<{ size: [number, number]; html: string }>((resolve) => {
+      nextTick(() => {
+        const cardElement = cardContainer.querySelector('.plan-card') as HTMLElement
+        const width = cardElement?.offsetWidth || cardElement?.scrollWidth || CARD_DIMENSIONS.width
+        const height = cardElement?.offsetHeight || CARD_DIMENSIONS.minHeight
 
-    return baseHeight + progressHeight + metricsHeight
-  }
+        // Get the innerHTML string from the container
+        const html = cardContainer.innerHTML
 
-  // Update the node size in the hierarchy
-  function updateNodeSize(node, width, height) {
-    // Store the size in the node data
-    if (node) {
-      node.size = [width, height]
-    }
-  }
+        // Remove from measurement container
+        backgroundMeasureContainer.value?.removeChild(cardContainer)
 
-  // Add these functions to the script section
-
-  function updateTreeLayout() {
-    // Get each tree group
-    const availableNodes = [...nodePositions.value.keys()]
-    availableNodes.forEach((nodeIdx) => {
-      const treeGroup = d3.select(treeContainer.value).select(`svg.${componentId.value} g .tree-group.node-${nodeIdx}`)
-      if (treeGroup.empty()) return
-
-      // Get the tree container
-      const treeContainer2 = treeGroup.select('g:last-of-type')
-      if (treeContainer2.empty()) return
-
-      // Get all nodes
-      const nodes = treeContainer2.selectAll('.node').data()
-      if (!nodes.length) return
-
-      // Re-compute the layout with updated node sizes
-      const rootData = nodes[0]?.data
-      if (!rootData) return
-
-      // Create a new tree layout
-      const treeLayout = flextree({
-        nodeSize: (node) => {
-          if (node.data && node.data.size) {
-            return [node.data.size[0] + CARD_DIMENSIONS.horizontalPadding, node.data.size[1] + CARD_DIMENSIONS.padding]
-          }
-          return [
-            CARD_DIMENSIONS.width + CARD_DIMENSIONS.horizontalPadding,
-            CARD_DIMENSIONS.minHeight + CARD_DIMENSIONS.padding,
-          ]
-        },
-      })
-
-      // Create a hierarchy from the current data
-      const hierarchy = d3.hierarchy(rootData, (d) => d.children || [])
-      const root = treeLayout(hierarchy)
-
-      // Update node positions
-      treeContainer2.selectAll('.node').each(function (d, i) {
-        if (i >= root.descendants().length) return
-
-        const newPos = root.descendants()[i]
-        if (!newPos) return
-
-        const xSize = (newPos as unknown as FlexHierarchyPointNode).xSize || CARD_DIMENSIONS.width
-        d3.select(this).attr('transform', `translate(${newPos.x - xSize / 2},${newPos.y})`)
-      })
-
-      // Update links with the new positions
-      treeContainer2.selectAll('.link').each(function (d, i) {
-        if (i >= root.links().length) return
-
-        const links = root.links()
-        if (links[i]) {
-          d3.select(this).attr('d', lineGen.value(links[i] as unknown as FlexHierarchyPointLink))
-        }
+        resolve({ size: [width, height], html })
       })
     })
   }
 
-  function scrollToNode(nodeIdx) {
-    // Emit event to update parent's activeNodeIndex
-    emit('update:activeNodeIndex', nodeIdx)
-
-    // Only update what's necessary in the DOM directly
-    d3.selectAll(`.${componentId.value}.tree-group .plan-card`).classed('active-card', false)
-    d3.selectAll(`.${componentId.value}.tree-group`).classed('active-tree', false)
-    d3.selectAll(`.${componentId.value}.tree-group .node-index-rect`).classed('active', false)
-
-    // Add highlight to new node
-    d3.selectAll(`.${componentId.value}.tree-group.node-${nodeIdx} .plan-card`).classed('active-card', true)
-    d3.selectAll(`.${componentId.value}.tree-group.node-${nodeIdx}`).classed('active-tree', true)
-    d3.selectAll(`.${componentId.value}.tree-group.node-${nodeIdx} .node-index-rect`).classed('active', true)
-
-    // Handle scrolling to the node
-    const position = nodePositions.value.get(nodeIdx)
-    if (position !== undefined && treeContainer.value) {
-      const containerRect = treeContainer.value.getBoundingClientRect()
-      const svg = d3.select(treeContainer.value).select('svg').node()
-      const currentTransform = d3.zoomTransform(svg)
-
-      // Calculate the translation needed to center on this node
-      const desiredTransX = containerRect.width / 2 - position * currentTransform.k
-
-      // Apply new transform that preserves vertical position and scale
-      d3.select(treeContainer.value)
-        .select('svg')
-        .transition()
-        .duration(500)
-        .call(
-          zoomListener.value.transform,
-          d3.zoomIdentity.translate(desiredTransX, currentTransform.y).scale(currentTransform.k)
-        )
-    }
+  // Helper to create unique key for a node
+  function getNodeKey(nodeIndex: number, nodePath: string[]): string {
+    return `${nodeIndex}:${nodePath.join('/')}`
   }
 
-  function renderTree() {
+  // Helper to get node path from hierarchy node
+  // Filters out fake root and node label names, keeping only plan operator names
+  function getNodePath(node: d3.HierarchyNode<TreeNodeData>): string[] {
+    const path: string[] = []
+    let current: d3.HierarchyNode<TreeNodeData> | null = node
+    while (current) {
+      const name = current.data?.name || ''
+      // Skip fake root and node labels - only include actual plan operators
+      if (name !== 'FakeRoot' && !current.data?.isNodeLabel) {
+        path.unshift(name)
+      }
+      current = current.parent
+    }
+    return path
+  }
+
+  // Note: Scrolling and highlighting are handled by parent component.
+
+  async function renderTree() {
     if (!treeContainer.value || !props.data || props.data.length === 0) return
 
     // Clear previous content
@@ -420,341 +233,369 @@
       .attr('class', `explain-svg ${componentId.value}`)
       .attr('viewBox', `0 0 ${treeContainer.value.clientWidth} ${treeContainer.value.clientHeight}`)
 
-    // Apply zoom behavior safely
-    applyZoom(svg)
+    // Emit event for zoom controls to apply zoom behavior
+    // The preservedTransform will be retrieved by the parent/zoom-controls
+    emit('svgCreated', { svg })
 
     // Add main group for transformation during zoom/pan
-    const mainGroup = svg.append('g').attr('class', componentId.value) // Add class to main group
+    const mainGroup = svg.append('g').attr('class', componentId.value)
 
-    // Process all node data - we need one tree per node
+    // Process all node data
     nodesData.value = processNodesData(props.data)
-
-    // Add this line to emit the processed data
     emit('nodesDataUpdated', nodesData.value)
 
     // If no nodes, return early
     if (!nodesData.value.length) return
 
-    // Calculate total width based on number of trees
-    const treeWidth = 250 // Smaller width per tree
-    const spacing = 50 // Smaller spacing
-
-    // Clear node positions map
+    // Clear node positions and bounds maps
     nodePositions.value.clear()
+    nodeTreeBoundsMap.value.clear()
 
-    // Render each node's tree
-    nodesData.value.forEach((nodeData, index) => {
-      const { nodeIndex, plan } = nodeData
-
-      // Convert plan data to hierarchy-friendly format
-      const rootData = toHierarchy(plan, nodeIndex)
-
-      // Ensure nodeIndex is valid
-      if (Number.isNaN(nodeIndex)) return
-
-      // Store node position for scrolling
-      const xPosition = index * (treeWidth + spacing) + treeWidth / 2
-      nodePositions.value.set(nodeIndex, xPosition)
-
-      // Create a group for this tree with appropriate class
-      const treeGroup = mainGroup
-        .append('g')
-        .attr(
-          'class',
-          `tree-group node-${nodeIndex} ${componentId.value} ${
-            props.activeNodeIndex === nodeIndex ? 'active-tree' : ''
-          }`
-        )
-        .attr('transform', `translate(${index * (treeWidth + spacing)}, 0)`)
-        .style('overflow', 'visible')
-
-      // Add node index card
-      const nodeIndexCard = treeGroup
-        .append('g')
-        .attr('class', `node-index-card ${props.activeNodeIndex === nodeIndex ? 'active-node-index' : ''}`)
-        .attr('transform', `translate(${treeWidth / 2 - NODE_INDEX_CARD.width / 2}, 20)`) // Centered with new width
-
-      // Card rectangle
-      nodeIndexCard
-        .append('rect')
-        .attr('width', NODE_INDEX_CARD.width)
-        .attr('height', NODE_INDEX_CARD.height)
-        .attr('rx', 4) // Slightly smaller corner radius
-        .attr('ry', 4)
-        .attr('class', props.activeNodeIndex === nodeIndex ? 'node-index-rect active' : 'node-index-rect')
-
-      // Card text
-      nodeIndexCard
-        .append('text')
-        .attr('x', NODE_INDEX_CARD.width / 2)
-        .attr('y', NODE_INDEX_CARD.height / 2)
-        .attr('text-anchor', 'middle')
-        .attr('dominant-baseline', 'middle')
-        .attr('font-size', NODE_INDEX_CARD.fontSize)
-        .attr('font-weight', 'bold')
-        .attr('fill', 'var(--main-font-color)')
-        .text(`Node ${nodeIndex}`)
-
-      // Make card clickable
-      nodeIndexCard.style('cursor', 'pointer').on('click', () => {
-        scrollToNode(nodeIndex)
-      })
-
-      // Create hierarchy with precomputed node sizes
-      const hierarchy = d3.hierarchy(rootData, (d) => d.children || [])
-      hierarchy.each((d) => {
-        const nodeMetrics = d.data.metrics || {}
-        const hasMetrics =
-          props.metricsExpanded || (props.selectedMetric && nodeMetrics[props.selectedMetric] !== undefined)
-        const hasProgressBar = props.highlightType !== 'NONE'
-        const metricsLines = calculateMetricsLines(nodeMetrics, hasMetrics)
-        const cardHeight = calculateCardHeight(hasProgressBar, hasMetrics, metricsLines)
-
-        // Set size in node data for layout
-        d.data.size = [CARD_DIMENSIONS.width, cardHeight]
-      })
-
-      // Create the tree layout
-      const treeLayout = flextree({
-        nodeSize: (node) => {
-          if (node.data && node.data.size) {
-            return [node.data.size[0] + CARD_DIMENSIONS.horizontalPadding, node.data.size[1] + CARD_DIMENSIONS.padding]
+    // Map to store rendered HTML strings and sizes by unique key (nodeIndex + node path)
+    const renderedCardsMap = new Map<string, { size: [number, number]; html: string }>()
+    // Build merged tree structure with fake root
+    // FakeRoot -> Node Label -> Plan Tree
+    const mergedTreeData = {
+      name: 'FakeRoot',
+      nodeIndex: -1,
+      isNodeLabel: false,
+      children: nodesData.value
+        .filter((nodeData) => !Number.isNaN(nodeData.nodeIndex))
+        .map((nodeData) => {
+          const { nodeIndex, plan } = nodeData
+          const planTree = toHierarchy(plan, nodeIndex)
+          return {
+            name: `Node ${nodeIndex}`,
+            nodeIndex,
+            isNodeLabel: true, // Mark as node label
+            children: [planTree], // Plan tree as child of node label
           }
-          return [
-            CARD_DIMENSIONS.width + CARD_DIMENSIONS.horizontalPadding,
-            CARD_DIMENSIONS.minHeight + CARD_DIMENSIONS.padding,
-          ]
-        },
-      })
+        }),
+    }
 
-      // Apply layout
-      const layoutRoot = treeLayout(hierarchy)
+    // Create hierarchy from merged tree first
+    const hierarchy = d3.hierarchy<TreeNodeData>(mergedTreeData, (d) => d.children || [])
 
-      // Find boundaries for centering
-      let minX = Infinity
-      let maxX = -Infinity
-      let minY = Infinity
-      let maxY = -Infinity
-      layoutRoot.each((d) => {
-        const nodeWidth = d.data.size ? d.data.size[0] : CARD_DIMENSIONS.width
-        minX = Math.min(minX, d.x - nodeWidth / 2)
-        maxX = Math.max(maxX, d.x + nodeWidth / 2)
-        minY = Math.min(minY, d.y)
-        maxY = Math.max(maxY, d.y + (d.data.size ? d.data.size[1] : CARD_DIMENSIONS.minHeight))
-      })
+    // First pass: Render all plan cards in background and store HTML strings
+    // Use hierarchy.descendants() to get all nodes directly
+    const allRenderPromises: Promise<void>[] = []
 
-      // Calculate center offset
-      const centerX = treeWidth / 2
-      const offsetX = centerX - (maxX - minX) / 2 - minX
+    hierarchy.descendants().forEach((d) => {
+      const node = d.data
 
-      // Create tree container with offset
-      const treeContainer2 = treeGroup
-        .append('g')
-        .attr('transform', `translate(${offsetX}, 60)`)
-        .style('overflow', 'visible')
+      // Skip fake root and node labels - they'll be rendered as SVG elements
+      if (node.name === 'FakeRoot' || node.isNodeLabel) {
+        return
+      }
 
-      const rootNodeX = layoutRoot.x + offsetX
-      const rootNodeY = layoutRoot.y
-
-      // Calculate the bottom of the node index card
-      const cardBottom = 20 + NODE_INDEX_CARD.height
-      // Add connection between node index card and tree root
-      treeGroup
-        .append('path')
-        .attr(
-          'd',
-          `M${treeWidth / 2},${cardBottom}C${treeWidth / 2},${(cardBottom + rootNodeY + 60) / 2} ${rootNodeX},${
-            (cardBottom + rootNodeY + 60) / 2
-          } ${rootNodeX},${rootNodeY + 60}`
-        )
-        .attr('fill', 'none')
-        .attr('stroke', 'var(--border-color)')
-        .attr('stroke-width', 1)
-        .attr('class', 'node-index-link')
-
-      // Add links between nodes
-      treeContainer2
-        .selectAll('.link')
-        .data(layoutRoot.links())
-        .enter()
-        .append('path')
-        .attr('class', 'link')
-        .attr('fill', 'none')
-        .attr('stroke', 'var(--border-color)')
-        .attr('stroke-width', 2)
-        .attr('stroke-linecap', 'square')
-        .attr('stroke-linejoin', 'round')
-        .attr('d', (d) => lineGen.value(d as unknown as FlexHierarchyPointLink))
-
-      // Add nodes
-      const nodeElements = treeContainer2
-        .selectAll('.node')
-        .data(layoutRoot.descendants())
-        .enter()
-        .append('g')
-        .attr('class', 'node')
-        .attr('transform', (d) => {
-          const nodeWidth = d.data.size ? d.data.size[0] : CARD_DIMENSIONS.width
-          return `translate(${d.x - nodeWidth / 2},${d.y})`
+      // Render all plan nodes that have a valid nodeIndex
+      if (node.nodeIndex !== undefined && node.nodeIndex !== -1) {
+        // Get path from hierarchy node (getNodePath filters out fake root and node labels)
+        const nodePath = getNodePath(d)
+        const key = getNodeKey(node.nodeIndex, nodePath)
+        const promise = renderCardInBackground(node, node.nodeIndex).then(({ size, html }) => {
+          renderedCardsMap.set(key, { size, html })
         })
-
-      // Add node content using foreignObject
-      nodeElements
-        .append('foreignObject')
-        .attr('width', CARD_DIMENSIONS.width + 10)
-        .attr('height', (d) => {
-          const nodeMetrics = d.data.metrics || {}
-          const hasMetrics =
-            props.metricsExpanded || (props.selectedMetric && nodeMetrics[props.selectedMetric] !== undefined)
-          const hasProgressBar = props.highlightType !== 'NONE'
-          const metricsLines = calculateMetricsLines(nodeMetrics, hasMetrics)
-          const cardHeight = calculateCardHeight(hasProgressBar, hasMetrics, metricsLines)
-          return cardHeight + 10
-        })
-        .each(function (d) {
-          // Create a div to mount the Vue component
-          const container = document.createElement('div')
-          this.appendChild(container)
-
-          // Mount the PlanCard component
-          render(
-            h(PlanCard, {
-              nodeData: d.data,
-              highlightType: props.highlightType,
-              maxRows: props.maxRows,
-              maxDuration: props.maxDuration,
-              selectedMetric: props.selectedMetric,
-              metricsExpanded: props.metricsExpanded,
-              isActive: props.activeNodeIndex === nodeIndex,
-              stageIndex: props.stageIndex,
-            }),
-            container
-          )
-        })
-      // (Continue with the tree rendering code)
-
-      // This section should be completed with the rest of the tree rendering logic
+        allRenderPromises.push(promise)
+      }
     })
+
+    // Wait for all cards to render
+    if (allRenderPromises.length > 0) {
+      await Promise.all(allRenderPromises)
+    }
+
+    // Create the tree layout with dynamic sizing
+    const treeLayout = flextree({
+      nodeSize: (node: d3.HierarchyNode<TreeNodeData>) => {
+        const { data } = node
+
+        // Skip fake root - don't calculate size for it
+        if (data.name === 'FakeRoot') {
+          return [0, 0] // No size for fake root
+        }
+
+        // Node label nodes need special sizing
+        if (data.isNodeLabel) {
+          return [
+            NODE_INDEX_CARD.width + CARD_DIMENSIONS.horizontalPadding,
+            NODE_INDEX_CARD.height + CARD_DIMENSIONS.padding,
+          ]
+        }
+
+        // Regular plan nodes - get size from rendered map
+        if (data.nodeIndex !== undefined && data.nodeIndex !== -1) {
+          const nodePath = getNodePath(node)
+          const key = getNodeKey(data.nodeIndex, nodePath)
+          const cardData = renderedCardsMap.get(key)
+
+          if (cardData) {
+            return [cardData.size[0] + CARD_DIMENSIONS.horizontalPadding, cardData.size[1] + CARD_DIMENSIONS.padding]
+          }
+        }
+
+        // Fallback
+        return [
+          CARD_DIMENSIONS.width + CARD_DIMENSIONS.horizontalPadding,
+          CARD_DIMENSIONS.minHeight + CARD_DIMENSIONS.padding,
+        ]
+      },
+    })
+
+    // Apply layout to get positioned nodes
+    const layoutRoot = treeLayout(hierarchy) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+    // Calculate tree bounds and nodeTree bounds in a single pass
+    // Get leftmost and rightmost edges considering node widths
+    let minX = Infinity
+    let maxX = -Infinity
+    layoutRoot.each((d) => {
+      // Skip fake root when calculating bounds
+      if (d.data.name === 'FakeRoot') return
+
+      let leftEdge = d.x
+      let rightEdge = d.x
+
+      // For node labels, use fixed width
+      if (d.data.isNodeLabel) {
+        leftEdge = d.x - NODE_INDEX_CARD.width / 2
+        rightEdge = d.x + NODE_INDEX_CARD.width / 2
+      } else if (d.data.nodeIndex !== undefined && d.data.nodeIndex !== -1) {
+        // For plan nodes, get width from rendered map
+        const nodePath = getNodePath(d)
+        const key = getNodeKey(d.data.nodeIndex, nodePath)
+        const cardData = renderedCardsMap.get(key)
+        const nodeWidth = cardData?.size[0] ?? CARD_DIMENSIONS.width
+        leftEdge = d.x - nodeWidth / 2
+        rightEdge = d.x + nodeWidth / 2
+      }
+
+      // Update overall tree bounds
+      if (leftEdge < minX) {
+        minX = leftEdge
+      }
+      if (rightEdge > maxX) {
+        maxX = rightEdge
+      }
+
+      // Update bounds for each nodeTree (in local coordinate space)
+      const { nodeIndex } = d.data
+      if (nodeIndex !== undefined && nodeIndex !== -1) {
+        const existing = nodeTreeBoundsMap.value.get(nodeIndex)
+        if (existing) {
+          existing.minX = Math.min(existing.minX, leftEdge)
+          existing.maxX = Math.max(existing.maxX, rightEdge)
+        } else {
+          nodeTreeBoundsMap.value.set(nodeIndex, { minX: leftEdge, maxX: rightEdge })
+        }
+      }
+    })
+
+    // Calculate tree center and center it in SVG
+    if (minX === Infinity || maxX === -Infinity) {
+      // Fallback if no nodes found
+      minX = 0
+      maxX = 0
+    }
+    // Left-align the tree with 20px padding from the left edge
+    const offsetX = -minX + 20
+    treeOffsetX.value = offsetX
+
+    // Create container for the entire tree
+    const treeContainerGroup = mainGroup
+      .append('g')
+      .attr('transform', `translate(${offsetX}, 20)`)
+      .style('overflow', 'visible')
+
+    // Get all nodes to render (excluding fake root)
+    const nodesToRender = layoutRoot.descendants().filter((d: any) => d.data.name !== 'FakeRoot')
+
+    // Draw links first (so they appear behind nodes)
+    const links = layoutRoot.links().filter((link: any) => {
+      // Don't draw links from fake root
+      return link.source.data.name !== 'FakeRoot'
+    })
+
+    // Create line generator with access to rendered cards map
+    const createLineGen = (renderedMap: Map<string, { size: [number, number]; html: string }>) => {
+      return (link: FlexHierarchyPointLink) => {
+        const { source, target } = link
+
+        // Get source node size
+        let sourceHeight = 40 // fallback
+        if (source.data) {
+          if (source.data.isNodeLabel) {
+            sourceHeight = NODE_INDEX_CARD.height
+          } else if (source.data.nodeIndex !== undefined && source.data.nodeIndex !== -1) {
+            const nodePath = getNodePath(source)
+            const key = getNodeKey(source.data.nodeIndex, nodePath)
+            const cardData = renderedMap.get(key)
+            sourceHeight = cardData?.size[1] ?? CARD_DIMENSIONS.minHeight
+          }
+        }
+
+        const sourceBottom = source.y + sourceHeight
+        const path = d3.path()
+        path.moveTo(source.x, sourceBottom)
+        path.lineTo(target.x, target.y)
+        return path.toString()
+      }
+    }
+
+    const lineGenWithMap = createLineGen(renderedCardsMap)
+
+    // Draw links
+    treeContainerGroup
+      .selectAll('.link')
+      .data(links)
+      .join('path')
+      .attr('class', 'link')
+      .attr('fill', 'none')
+      .attr('stroke', 'var(--border-color)')
+      .attr('stroke-width', 2)
+      .attr('stroke-linecap', 'square')
+      .attr('stroke-linejoin', 'round')
+      .attr('d', (d) => lineGenWithMap(d as unknown as FlexHierarchyPointLink))
+
+    // Render node labels as simple SVG elements
+    const nodeLabels = nodesToRender.filter((d: any) => d.data.isNodeLabel)
+
+    const nodeLabelElements = treeContainerGroup
+      .selectAll('.node-label-group')
+      .data(nodeLabels)
+      .join('g')
+      .attr('class', (d: any) => {
+        const classes = ['node-label-group', `node-${d.data.nodeIndex}`]
+        if (props.activeNodeIndex === d.data.nodeIndex) {
+          classes.push('active-node-label')
+        }
+        return classes.join(' ')
+      })
+      .attr('transform', (d: any) => {
+        return `translate(${d.x - NODE_INDEX_CARD.width / 2},${d.y})`
+      })
+      .style('cursor', 'pointer')
+      .on('click', (event, d: any) => {
+        emit('update:activeNodeIndex', d.data.nodeIndex)
+      })
+
+    // Store node positions for scrolling (x position of node label)
+    nodeLabels.forEach((d: any) => {
+      if (d.data.nodeIndex !== undefined) {
+        nodePositions.value.set(d.data.nodeIndex, d.x)
+      }
+    })
+
+    // Add rectangle for node label
+    nodeLabelElements
+      .append('rect')
+      .attr('width', NODE_INDEX_CARD.width)
+      .attr('height', NODE_INDEX_CARD.height)
+      .attr('rx', 4)
+      .attr('ry', 4)
+      .attr('class', (d: any) => {
+        return props.activeNodeIndex === d.data.nodeIndex ? 'node-label-rect active' : 'node-label-rect'
+      })
+
+    // Add text for node label
+    nodeLabelElements
+      .append('text')
+      .attr('x', NODE_INDEX_CARD.width / 2)
+      .attr('y', NODE_INDEX_CARD.height / 2)
+      .attr('text-anchor', 'middle')
+      .attr('dominant-baseline', 'middle')
+      .attr('font-size', NODE_INDEX_CARD.fontSize)
+      .attr('font-weight', 'bold')
+      .attr('fill', 'var(--main-font-color)')
+      .text((d: any) => d.data.name)
+
+    // Render plan nodes (non-label nodes)
+    const planNodes = nodesToRender.filter((d: any) => !d.data.isNodeLabel)
+
+    const nodeElements = treeContainerGroup
+      .selectAll('.node')
+      .data(planNodes)
+      .join('g')
+      .attr('class', (d: any) => {
+        return `node node-${d.data.nodeIndex}`
+      })
+      .attr('transform', (d: any) => {
+        const nodePath = getNodePath(d)
+        const key = getNodeKey(d.data.nodeIndex, nodePath)
+        const cardData = renderedCardsMap.get(key)
+        const nodeWidth = cardData?.size[0] ?? CARD_DIMENSIONS.width
+        return `translate(${d.x - nodeWidth / 2},${d.y})`
+      })
+
+    // Add foreignObject with pre-rendered HTML for plan nodes
+    nodeElements
+      .selectAll('foreignObject')
+      .data((d: any) => [d])
+      .join('foreignObject')
+      .attr('width', (d: any) => {
+        const nodePath = getNodePath(d)
+        const key = getNodeKey(d.data.nodeIndex, nodePath)
+        const cardData = renderedCardsMap.get(key)
+        return (cardData?.size[0] ?? CARD_DIMENSIONS.width) + 10
+      })
+      .attr('height', (d: any) => {
+        const nodePath = getNodePath(d)
+        const key = getNodeKey(d.data.nodeIndex, nodePath)
+        const cardData = renderedCardsMap.get(key)
+        return (cardData?.size[1] ?? CARD_DIMENSIONS.minHeight) + 10
+      })
+      .each(function renderCardHTML(d: any) {
+        const nodePath = getNodePath(d)
+        const key = getNodeKey(d.data.nodeIndex, nodePath)
+        const cardData = renderedCardsMap.get(key)
+        if (cardData) {
+          ;(this as SVGForeignObjectElement).innerHTML = cardData.html
+          renderedCardsMap.delete(key)
+        }
+      })
+
+    // Clean up background measurement container
+    if (backgroundMeasureContainer.value) {
+      document.body.removeChild(backgroundMeasureContainer.value)
+      backgroundMeasureContainer.value = null
+    }
 
     // Notify parent about node positions
     emit('nodePositionsUpdated', nodePositions.value)
   }
 
-  // Call renderTree when component mounts
-  onMounted(() => {
-    if (treeContainer.value) {
-      // Short delay to ensure container is properly sized
-      setTimeout(renderTree, 100)
-    }
-  })
+  // Get node tree bounding rect by node index
+  // Returns coordinates in SVG coordinate space (accounting for tree container group transform)
+  function getNodeTreeRect(nodeIndex: number): { minX: number; maxX: number; width: number } | null {
+    // Get bounds from stored layout data (in local coordinate space)
+    const bounds = nodeTreeBoundsMap.value.get(nodeIndex)
+    if (!bounds) return null
 
-  // Watch for prop changes
-  watch(() => props.data, renderTree)
-  watch(
-    () => props.activeNodeIndex,
-    (newValue, oldValue) => {
-      if (newValue !== oldValue && newValue !== null) {
-        nextTick(() => {
-          // Scope the selections to this component only
-          d3.selectAll(`.${componentId.value}.tree-group`).classed('active-tree', false)
-          d3.selectAll(`.${componentId.value}.tree-group .plan-card`).classed('active-card', false)
-          d3.selectAll(`.${componentId.value}.tree-group .node-index-rect`).classed('active', false)
+    // Convert from local coordinate space to SVG coordinate space
+    // The 20px padding is already included in offsetX, so we just add it
+    const minXInSVG = bounds.minX + treeOffsetX.value
+    const maxXInSVG = bounds.maxX + treeOffsetX.value
 
-          d3.selectAll(`.${componentId.value}.tree-group.node-${newValue}`).classed('active-tree', true)
-          d3.selectAll(`.${componentId.value}.tree-group.node-${newValue} .plan-card`).classed('active-card', true)
-          d3.selectAll(`.${componentId.value}.tree-group.node-${newValue} .node-index-rect`).classed('active', true)
-        })
-      }
-    }
-  )
-
-  function updateNodeVisualization() {
-    if (!treeContainer.value) return
-
-    // Update all nodes with current props
-    d3.selectAll(`svg.${componentId.value} g.${componentId.value} .tree-group .node foreignObject`).each(function () {
-      const nodeData = d3.select(this.parentNode).datum()
-      if (!nodeData || !nodeData.data) return
-
-      // Get container div
-      const container = this.querySelector('div')
-      if (!container) return
-
-      // Get node index from tree group
-      const treeGroupElement = this.closest(`.tree-group.${componentId.value}`)
-      if (!treeGroupElement) return
-
-      const nodeIdxMatch = treeGroupElement.className.baseVal.match(/node-(\d+)/)
-      const nodeIndex = nodeIdxMatch ? parseInt(nodeIdxMatch[1], 10) : null
-
-      // Re-render PlanCard with updated props
-      render(
-        h(PlanCard, {
-          nodeData: nodeData.data,
-          highlightType: props.highlightType,
-          maxRows: props.maxRows,
-          maxDuration: props.maxDuration,
-          selectedMetric: props.selectedMetric,
-          metricsExpanded: props.metricsExpanded,
-          isActive: props.activeNodeIndex === nodeIndex,
-          stageIndex: props.stageIndex,
-        }),
-        container
-      )
-
-      // Calculate new height
-      const hasMetrics =
-        props.metricsExpanded ||
-        (props.selectedMetric && nodeData.data.metrics && nodeData.data.metrics[props.selectedMetric] !== undefined)
-      const hasProgressBar = props.highlightType !== 'NONE'
-      const metricsLines = calculateMetricsLines(nodeData.data.metrics || {}, hasMetrics)
-      const cardHeight = calculateCardHeight(hasProgressBar, hasMetrics, metricsLines)
-
-      // Update the node's size in the hierarchy
-      updateNodeSize(nodeData.data, CARD_DIMENSIONS.width, cardHeight)
-
-      // Update foreignObject height
-      d3.select(this).attr('height', cardHeight + 10)
-    })
-
-    // Update the tree layout
-    updateTreeLayout()
+    return { minX: minXInSVG, maxX: maxXInSVG, width: maxXInSVG - minXInSVG }
   }
 
+  // Watch all props that affect tree rendering
   watch(
-    () => props.highlightType,
-    (newValue) => {
+    () => [props.data, props.highlightType, props.selectedMetric, props.metricsExpanded],
+    () => {
       nextTick(() => {
-        updateNodeVisualization()
+        renderTree()
       })
-    }
+    },
+    { immediate: true }
   )
 
-  watch(
-    () => props.selectedMetric,
-    (newValue) => {
-      nextTick(() => {
-        updateNodeVisualization()
-      })
-    }
-  )
-
-  watch(
-    () => props.metricsExpanded,
-    (newValue) => {
-      nextTick(() => {
-        updateNodeVisualization()
-      })
-    }
-  )
-
-  // Expose methods for parent component
+  // Expose methods and treeContainer for parent component
+  // Only exposes position/data methods, no scrolling or transform logic
   defineExpose({
-    zoomIn,
-    zoomOut,
-    resetZoom,
-    updateTreeLayout,
+    treeContainer,
     renderTree,
+    getNodeTreeRect,
   })
 </script>
 
@@ -783,7 +624,7 @@
     }
   }
 
-  :deep(.node-index-rect) {
+  :deep(.node-label-rect) {
     fill: var(--light-brand-color);
     stroke-width: 1px;
 
@@ -792,7 +633,7 @@
     }
   }
 
-  :deep(.node-index-link) {
+  :deep(.node-label-link) {
     stroke-linecap: round;
   }
 
@@ -814,7 +655,7 @@
     overflow: visible !important;
   }
 
-  :deep(.node-index-card) {
+  :deep(.node-label) {
     cursor: pointer;
   }
 

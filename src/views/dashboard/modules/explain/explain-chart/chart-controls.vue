@@ -38,9 +38,7 @@
     highlightType: string
     selectedMetric: string
     metricsExpanded: boolean
-    maxRows: number
-    maxDuration: number
-    availableMetrics: Array<string>
+    availableMetrics: Array<{ label: string; value: string }>
     stageIndex: number
   }>()
 
