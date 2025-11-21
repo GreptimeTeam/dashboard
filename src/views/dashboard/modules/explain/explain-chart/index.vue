@@ -264,7 +264,7 @@
   watch(
     () => filteredData.value,
     () => {
-      activeNodeIndex.value = 0
+      activeNodeIndex.value = availableNodes.value[0] ?? 0
       zoomControls.value?.handleResetZoom()
     },
     { immediate: true }
