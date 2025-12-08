@@ -24,16 +24,12 @@ a-card.table-manager(:bordered="false")
             svg.icon.icon-color
               use(href="#search")
         a-tooltip(
-          :content="$t('dashboard.hideSidebar')"
-          position="tr"
           v-model:popup-visible="tooltipVisible"
+          position="tr"
           mini
+          :content="$t('dashboard.hideSidebar')"
         )
-          a-button(
-            type="secondary"
-            size="mini"
-            @click="toggleSidebar"
-          )
+          a-button(type="secondary" size="mini" @click="toggleSidebar")
             template(#icon)
               svg.icon.icon-color.rotate-270(:class="{ 'rotate-180': hideSidebar }")
                 use(href="#collapse")
@@ -58,12 +54,12 @@ a-card.table-manager(:bordered="false")
           v-model:expanded-keys="expandedKeys"
           size="small"
           action-on-node-click="expand"
-          :ref="(el: refItem) => setRefMap(el, database)"
+          :ref="(el) => setRefMap(el, database)"
           :block-node="true"
           :data="tablesTreeData"
           :load-more="loadMore"
           :animation="false"
-          :virtual-list-props="{threshold:100, buffer:20, height: `calc(100vh - ${collapseHeadersHeight}px - var(--tables-header-height) - var(--footer-height))` }"
+          :virtual-list-props="{ threshold: 100, buffer: 20, height: virtualListHeight }"
         )
           template(#icon="node")
             a-tooltip(v-if="node.node.iconType" :content="node.node.iconType")
@@ -79,7 +75,8 @@ a-card.table-manager(:bordered="false")
                 :database="database"
                 :expandedKeys="expandedKeys"
                 :expandedTablesTree="expandedTablesTree"
-                @expandChildren="expandChildren")
+                @expandChildren="expandChildren"
+              )
             .tree-data(v-else-if="nodeData.dataType")
               .data-title.columns
                 | {{ nodeData.title }}
@@ -92,7 +89,8 @@ a-card.table-manager(:bordered="false")
                   :database="database"
                   :expandedKeys="expandedKeys"
                   :expandedTablesTree="expandedTablesTree"
-                  @expandChildren="expandChildren")
+                  @expandChildren="expandChildren"
+                )
             .detail-row(v-else)
               .count-and-time(v-if="nodeData.title === 'rowAndTime'")
                 a-space(:size="4")
@@ -161,6 +159,8 @@ a-card.table-manager(:bordered="false")
   )
 
   const collapseHeadersHeight = computed(() => props.databaseList.length * 36)
+  const TABLE_NODE_HEIGHT = 32
+  const MIN_VIRTUAL_LIST_HEIGHT = 200
 
   const expandedKeys = ref<number[]>([])
   const tooltipVisible = ref(false)
@@ -204,6 +204,14 @@ a-card.table-manager(:bordered="false")
     return expandedTablesTree.value.filter(
       (item: TableTreeParent) => item.title.toLowerCase().indexOf(tablesSearchKey.value.toLowerCase()) > -1
     )
+  })
+
+  const virtualListHeight = computed(() => {
+    const itemsCount = tablesTreeData.value.length || 0
+    const actualHeight = Math.max(itemsCount * TABLE_NODE_HEIGHT, MIN_VIRTUAL_LIST_HEIGHT)
+    const maxHeight = `calc((100vh - var(--tables-header-height) - var(--footer-height)) / 2)`
+    // Use the smaller between actual content height and the max allowed height
+    return `min(${actualHeight}px, ${maxHeight})`
   })
 
   const expandChildren = (event: Event, nodeData: TableTreeParent, type: 'details' | 'columns') => {
@@ -566,7 +574,6 @@ a-card.table-manager(:bordered="false")
     align-items: center;
     justify-content: center;
     flex-direction: column;
-    height: 50vh;
   }
 
   .arco-dropdown-open {
@@ -627,6 +634,9 @@ a-card.table-manager(:bordered="false")
   }
 
   .arco-collapse.arco-collapse-borderless.databases {
+    max-height: calc(100vh - var(--tables-header-height) - var(--footer-height));
+    overflow-y: auto;
+    overscroll-behavior: contain;
     border-radius: 0;
 
     > .arco-collapse-item-active {
