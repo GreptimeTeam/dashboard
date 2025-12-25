@@ -105,7 +105,7 @@ a-form(
 QuickFilters(
   :fields="fields"
   :form="form"
-  :quick-field-names="props.quickFieldNames"
+  :quick-field-names="quickFieldNames"
   :storage-key="storageKey"
   @apply="applyQuickFilter"
 )
