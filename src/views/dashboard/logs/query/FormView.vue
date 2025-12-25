@@ -2,7 +2,11 @@
 a-descriptions(layout="vertical" bordered :column="1")
   a-descriptions-item(v-for="item of formData")
     template(#label)
-      a-typography-text(copyable type="secondary" :copy-text="String(item.value)")
+      a-typography-text(
+        copyable
+        type="secondary"
+        :copy-text="typeof item.value === 'object' && item.value !== null ? JSON.stringify(item.value) : String(item.value)"
+      )
         | {{ item.title }} : {{ item.type }}
     | {{ item.value }}
 </template>
