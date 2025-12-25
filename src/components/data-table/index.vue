@@ -104,7 +104,7 @@ a-dropdown#td-context(
 ) 
   template(#content)
     a-doption(value="copy") Copy Field Value
-    a-dsubmenu(trigger="hover") Filter
+    a-dsubmenu(v-if="filterOptions.length > 0" trigger="hover") Filter
       template(#content)
         a-doption(v-for="op in filterOptions" :key="op" :value="`filter_${op}`") {{ op }} value
 </template>
@@ -214,8 +214,10 @@ a-dropdown#td-context(
     let max = 0
     let maxName = ''
     Object.keys(row).forEach((k) => {
-      if (String(row[k]).length > max) {
-        max = String(row[k]).length
+      const val = row[k]
+      const strVal = typeof val === 'object' && val !== null ? JSON.stringify(val) : String(val)
+      if (strVal.length > max) {
+        max = strVal.length
         maxName = k
       }
     })
@@ -258,7 +260,9 @@ a-dropdown#td-context(
         }
 
         const totalStrLen = Object.keys(row).reduce((acc, curr) => {
-          acc += String(row[curr]).length
+          const val = row[curr]
+          const strVal = typeof val === 'object' && val !== null ? JSON.stringify(val) : String(val)
+          acc += strVal.length
           return acc
         }, 0)
 
@@ -271,7 +275,9 @@ a-dropdown#td-context(
             if (column.name === props.tsColumn?.name) {
               width = 230
             } else {
-              width = getWidth(String(row[column.name]).length, totalStrLen, tableWidth.value)
+              const val = row[column.name]
+              const strVal = typeof val === 'object' && val !== null ? JSON.stringify(val) : String(val)
+              width = getWidth(strVal.length, totalStrLen, tableWidth.value)
             }
           }
 
@@ -399,7 +405,9 @@ a-dropdown#td-context(
     // Set available filter options based on column type
     const column = props.columns.find((col) => col.name === columnName)
     if (column) {
-      if (isTimeColumn(column)) {
+      if (column.data_type && column.data_type.toLowerCase() === 'json') {
+        filterOptions.value = []
+      } else if (isTimeColumn(column)) {
         filterOptions.value = ['>=', '<=']
       } else {
         filterOptions.value = ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'NOT LIKE']

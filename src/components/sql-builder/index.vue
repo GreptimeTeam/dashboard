@@ -50,12 +50,12 @@ a-form(
               :placeholder="t('sqlBuilder.value')"
               :options="['true', 'false']"
             )
-            a-input.value(
-              v-else
-              v-model="condition.value"
-              style="width: 60px"
-              :placeholder="condition.operator === 'IN' || condition.operator === 'NOT IN' ? t('sqlBuilder.commaValuesHint') : t('sqlBuilder.value')"
-            )
+            .resizable-wrapper(v-else)
+              a-input.value(
+                v-model="condition.value"
+                style="width: 100%"
+                :placeholder="condition.operator === 'IN' || condition.operator === 'NOT IN' ? t('sqlBuilder.commaValuesHint') : t('sqlBuilder.value')"
+              )
           a-button.field-action(@click="() => removeCondition(index)")
             icon-minus(style="cursor: pointer; font-size: 14px")
 
@@ -175,7 +175,7 @@ QuickFilters(
 
   const fields = computed(() => {
     if (!form.table || !tableMap.value[form.table]) return []
-    return tableMap.value[form.table]
+    return tableMap.value[form.table].filter((field) => field.data_type.toLowerCase() !== 'json')
   })
 
   const fieldsOptions = computed(() => {
@@ -509,5 +509,18 @@ QuickFilters(
   }
   .field-action {
     padding: 0 8px;
+  }
+
+  // Resizable wrapper for input
+  .resizable-wrapper {
+    display: inline-block;
+    width: 140px;
+    min-width: 60px;
+    max-width: 600px;
+    resize: horizontal;
+    overflow: hidden;
+    vertical-align: middle;
+    // Ensure the resize handle is visible and usable
+    padding-right: 5px;
   }
 </style>
