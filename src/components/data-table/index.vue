@@ -104,7 +104,7 @@ a-dropdown#td-context(
 ) 
   template(#content)
     a-doption(value="copy") Copy Field Value
-    a-dsubmenu(trigger="hover") Filter
+    a-dsubmenu(v-if="filterOptions.length > 0" trigger="hover") Filter
       template(#content)
         a-doption(v-for="op in filterOptions" :key="op" :value="`filter_${op}`") {{ op }} value
 </template>
@@ -405,7 +405,9 @@ a-dropdown#td-context(
     // Set available filter options based on column type
     const column = props.columns.find((col) => col.name === columnName)
     if (column) {
-      if (isTimeColumn(column)) {
+      if (column.data_type && column.data_type.toLowerCase() === 'json') {
+        filterOptions.value = []
+      } else if (isTimeColumn(column)) {
         filterOptions.value = ['>=', '<=']
       } else {
         filterOptions.value = ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'NOT LIKE']

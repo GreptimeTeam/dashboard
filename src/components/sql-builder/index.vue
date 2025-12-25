@@ -175,7 +175,7 @@ QuickFilters(
 
   const fields = computed(() => {
     if (!form.table || !tableMap.value[form.table]) return []
-    return tableMap.value[form.table]
+    return tableMap.value[form.table].filter((field) => field.data_type.toLowerCase() !== 'json')
   })
 
   const fieldsOptions = computed(() => {
