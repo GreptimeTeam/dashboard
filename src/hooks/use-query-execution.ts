@@ -150,7 +150,7 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
     }
   }
 
-  async function exportToCSV() {
+  async function exportToCSV(limit?: number) {
     let currentQuery = queryState.sql
     // Process $timestart and $timeend in the SQL string
     const currentTimeRanges = timeRange.timeRangeValues.value
@@ -161,6 +161,13 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
     if (!currentQuery || !queryState.table) {
       return
     }
+
+    // Update LIMIT if provided
+    if (limit !== undefined) {
+      const { updateLimitInSql } = await import('@/views/dashboard/logs/query/until')
+      currentQuery = updateLimitInSql(currentQuery, limit)
+    }
+
     try {
       const { default: editorAPI } = await import('@/api/editor')
       const result = await editorAPI.runSQLWithCSV(currentQuery)

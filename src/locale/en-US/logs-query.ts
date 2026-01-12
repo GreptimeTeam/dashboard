@@ -14,8 +14,8 @@ export default {
   'logsQuery.older': 'Older',
   'logsQuery.builder': 'Builder',
   'logsQuery.code': 'Code',
-  'logsQuery.record': 'record',
-  'logsQuery.records': 'records',
+  'logsQuery.record': 'row',
+  'logsQuery.records': 'rows',
   'logsQuery.singleColumn': 'Single Column',
   'logsQuery.showKeys': 'Show Keys',
   'logsQuery.compactMode': 'Compact Mode',
@@ -24,4 +24,6 @@ export default {
   'logsQuery.newFile': 'New File',
   'logsQuery.rowCountOverTime': 'Row Count Over Time',
   'logsQuery.frequencyDistribution': 'Column Frequency Distribution',
+  'logsQuery.exportSql': 'Export SQL',
+  'logsQuery.exportLimit': 'Export Limit',
 }

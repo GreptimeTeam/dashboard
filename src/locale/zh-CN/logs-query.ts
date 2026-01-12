@@ -24,4 +24,6 @@ export default {
   'logsQuery.newFile': '新建文件',
   'logsQuery.rowCountOverTime': '单位时间新增行数',
   'logsQuery.frequencyDistribution': '列值分布',
+  'logsQuery.exportSql': '导出 SQL',
+  'logsQuery.exportLimit': '导出限制',
 }

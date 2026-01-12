@@ -66,12 +66,13 @@
           span.results-header
             span {{ $t('logsQuery.results') }}
             span.results-count(v-if="rows.length > 0 || totalRowCount !== null")
+              |
               | (
               template(v-if="totalRowCount !== null")
-                | {{ rows.length }} / {{ totalRowCount }}
+                | {{ rows.length }}/{{ totalRowCount }}
               template(v-else)
                 | {{ rows.length }}
-              | {{ rows.length === 1 ? $t('logsQuery.record') : $t('logsQuery.records') }}
+              | &nbsp; {{ rows.length === 1 ? $t('logsQuery.record') : $t('logsQuery.records') }}
               | )
           a-checkbox(v-model="mergeColumn" type="button" size="small")
             | {{ $t('logsQuery.singleColumn') }}
@@ -122,6 +123,8 @@
         :displayed-columns="displayedColumns[queryState.table] || []"
         @filter-condition-add="handleFilterConditionAdd"
       )
+
+    ExportModal(v-model:visible="exportModalVisible" :sql="exportSqlText" @confirm="handleExportConfirm")
 </template>
 
 <script setup lang="ts">
@@ -129,8 +132,10 @@
   import { useStorage, useLocalStorage } from '@vueuse/core'
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import SqlTextEditor from '@/components/sql-text-editor/index.vue'
-  import LogTableData from './LogsTable.vue'
+  import { replaceTimePlaceholders } from '@/utils/sql'
   import ChartContainer from './ChartContainer.vue'
+  import ExportModal from './ExportModal.vue'
+  import LogTableData from './LogsTable.vue'
   import Pagination from './Pagination.vue'
 
   const timeRange = useTimeRange()
@@ -188,8 +193,31 @@
       chartContainerRef.value?.triggerCurrentChartQuery()
     })
   }
-  function exportSql() {
-    exportToCSV()
+  // Export modal state
+  const exportModalVisible = ref(false)
+  const exportSqlText = ref('')
+
+  async function exportSql() {
+    if (!queryState.sql || !queryState.table) {
+      return
+    }
+
+    // Get current SQL with time placeholders replaced
+    const currentTimeRanges = timeRange.timeRangeValues.value
+    const currentSql = replaceTimePlaceholders(queryState.sql, currentTimeRanges)
+
+    // Set modal state with SQL (ExportModal will handle formatting and limit extraction)
+    exportSqlText.value = currentSql
+    exportModalVisible.value = true
+  }
+
+  async function handleExportConfirm(limit: number, formattedSql: string) {
+    try {
+      await exportToCSV(limit)
+      exportModalVisible.value = false
+    } catch (error) {
+      console.error('Export failed:', error)
+    }
   }
 
   // Live query logic
