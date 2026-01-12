@@ -65,8 +65,13 @@
         a-space
           span.results-header
             span {{ $t('logsQuery.results') }}
-            span.results-count(v-if="rows.length > 0") 
-              | ({{ rows.length }} {{ rows.length === 1 ? $t('logsQuery.record') : $t('logsQuery.records') }}
+            span.results-count(v-if="rows.length > 0 || totalRowCount !== null")
+              | (
+              template(v-if="totalRowCount !== null")
+                | {{ rows.length }} / {{ totalRowCount }}
+              template(v-else)
+                | {{ rows.length }}
+              | {{ rows.length === 1 ? $t('logsQuery.record') : $t('logsQuery.records') }}
               | )
           a-checkbox(v-model="mergeColumn" type="button" size="small")
             | {{ $t('logsQuery.singleColumn') }}
@@ -144,6 +149,7 @@
     loading: queryLoading,
     columns,
     rows,
+    totalRowCount,
     canExecuteInitialQuery,
   } = useQueryExecution(builder, textEditor, timeRange)
   // 5. URL sync
