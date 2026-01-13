@@ -18,12 +18,11 @@ a-modal(
       a-form-item(:label="$t('logsQuery.exportLimit')")
         a-space(style="width: 100%" fill)
           a-input(
+            v-model.number="limit"
             type="number"
             style="flex: 1"
             placeholder="Enter limit"
-            :model-value="limit"
             :min="1"
-            @update:model-value="handleLimitChange"
           )
           template(v-if="totalCount !== null")
             span(style="color: var(--color-text-3); margin-left: 8px; white-space: nowrap")
@@ -134,13 +133,6 @@ a-modal(
       }
     }
   )
-
-  function handleLimitChange(value: string | number) {
-    const numValue = Number(value)
-    if (!Number.isNaN(numValue) && numValue >= 1) {
-      limit.value = numValue
-    }
-  }
 
   function handleConfirm() {
     const limitValue = Number(limit.value)

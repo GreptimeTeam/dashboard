@@ -127,7 +127,7 @@
     ExportModal(v-model:visible="exportModalVisible" :sql="exportSqlText" @confirm="handleExportConfirm")
 </template>
 
-<script setup lang="ts">
+<script setup lang="ts" name="LogsQuery">
   import { ref, computed, shallowRef, watch, onMounted, toRefs, nextTick } from 'vue'
   import { useStorage, useLocalStorage } from '@vueuse/core'
   import SQLBuilder from '@/components/sql-builder/index.vue'
