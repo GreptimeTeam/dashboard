@@ -28,46 +28,12 @@ jobs:
           username: ${{ secrets.ALICLOUD_USERNAME }}
           password: ${{ secrets.ALICLOUD_PASSWORD }}
 
-      - name: Configure tag
+      - name: Configure tag # If the release tag is v0.1.0, then the image version tag will be 0.1.0.
         shell: bash
         run: |
           commitShortSHA=`echo ${{ github.sha }} | cut -c1-8`
           IMAGE_TAG=$commitShortSHA
           echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
-          
-          # Base tags (always included)
-          DOCKERHUB_BASE="greptime/greptimedb-dashboard:${IMAGE_TAG}"
-          ALICLOUD_BASE="greptime-registry.cn-hangzhou.cr.aliyuncs.com/greptime/greptimedb-dashboard:${IMAGE_TAG}"
-          
-          # Check if triggered by tag push (not manual dispatch)
-          if [[ "${{ github.event_name }}" == "push" ]]; then
-            # Tag release: include latest tag
-            echo "DOCKERHUB_TAGS=greptime/greptimedb-dashboard:latest
-${DOCKERHUB_BASE}" >> $GITHUB_ENV
-            echo "ALICLOUD_TAGS=greptime-registry.cn-hangzhou.cr.aliyuncs.com/greptime/greptimedb-dashboard:latest
-${ALICLOUD_BASE}" >> $GITHUB_ENV
-            IMAGE_TYPE="Release"
-            LATEST_INFO="  - DockerHub: greptime/greptimedb-dashboard:latest
-  - AliCloud: greptime-registry.cn-hangzhou.cr.aliyuncs.com/greptime/greptimedb-dashboard:latest"
-          else
-            # Manual dispatch: test image, no latest tag
-            echo "DOCKERHUB_TAGS=${DOCKERHUB_BASE}" >> $GITHUB_ENV
-            echo "ALICLOUD_TAGS=${ALICLOUD_BASE}" >> $GITHUB_ENV
-            IMAGE_TYPE="Test Image"
-            LATEST_INFO=""
-          fi
-          
-          # Output image information
-          echo "📦 Docker Image Information (${IMAGE_TYPE}):"
-          if [[ -n "$LATEST_INFO" ]]; then
-            echo "$LATEST_INFO"
-          fi
-          echo "  - DockerHub: ${DOCKERHUB_BASE}"
-          echo "  - AliCloud: ${ALICLOUD_BASE}"
-          echo ""
-          echo "🧪 Test the image with:"
-          echo "  docker pull ${DOCKERHUB_BASE}"
-          echo "  docker run -d -p 8080:8080 ${DOCKERHUB_BASE}"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -84,5 +50,7 @@ ${ALICLOUD_BASE}" >> $GITHUB_ENV
           #platforms: linux/amd64,linux/arm64
           platforms: linux/amd64
           tags: |
-            ${{ env.DOCKERHUB_TAGS }}
-            ${{ env.ALICLOUD_TAGS }}
+            greptime/greptimedb-dashboard:latest
+            greptime/greptimedb-dashboard:${{ env.IMAGE_TAG }}
+            greptime-registry.cn-hangzhou.cr.aliyuncs.com/greptime/greptimedb-dashboard:latest
+            greptime-registry.cn-hangzhou.cr.aliyuncs.com/greptime/greptimedb-dashboard:${{ env.IMAGE_TAG }}
