@@ -223,6 +223,21 @@ export function parseLimit(sql: string) {
   return 1000
 }
 
+export function updateLimitInSql(sql: string, newLimit: number): string {
+  const limitMatch = sql.match(/\bLIMIT\s+\d+/i)
+  if (limitMatch) {
+    // Replace existing LIMIT clause
+    return sql.replace(/\bLIMIT\s+\d+/i, `LIMIT ${newLimit}`)
+  }
+  // Add LIMIT clause if it doesn't exist
+  return `${sql.trim()} LIMIT ${newLimit}`
+}
+
+export function removeLimitFromSql(sql: string): string {
+  // Remove LIMIT clause (case-insensitive)
+  return sql.replace(/\bLIMIT\s+\d+\s*/i, '').trim()
+}
+
 export function parseOrderBy(sql: string) {
   const match = sql.match(/ORDER BY\s+\w+\s+(desc|asc)+/i)
   return match ? match[1] : null

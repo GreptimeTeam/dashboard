@@ -22,6 +22,7 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
   const loading = ref(false)
   const columns = shallowRef<ColumnType[]>([])
   const rows = shallowRef<any[]>([])
+  const totalRowCount = ref<number | null>(null)
 
   const hasExecutedInitialQuery = ref(false)
   const canExecuteInitialQuery = computed(() => {
@@ -36,6 +37,42 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
       return builder.builderFormState[prop]
     }
     return textEditor.textEditorState[prop]
+  }
+
+  async function getTotalRowCount() {
+    if (!queryState.table || !queryState.sql) {
+      totalRowCount.value = null
+      return
+    }
+
+    try {
+      const currentTimeRanges = timeRange.timeRangeValues.value
+      const currentSql = replaceTimePlaceholders(queryState.sql, currentTimeRanges)
+
+      // Extract WHERE clause from the original SQL
+      const whereMatch = currentSql.match(/WHERE\s+([\s\S]+?)(?:\s+ORDER\s+BY|\s+LIMIT\s+|\s*$)/i)
+      const whereClause = whereMatch ? `WHERE ${whereMatch[1]}` : ''
+
+      // Build COUNT query
+      const countSql = `SELECT COUNT(*) FROM "${queryState.table}" ${whereClause}`
+
+      const { default: editorAPI } = await import('@/api/editor')
+      const result: any = await editorAPI.runSQL(countSql)
+
+      if (result.output?.[0]?.records) {
+        const { records } = result.output[0]
+        if (records.rows?.[0]?.[0] !== undefined) {
+          totalRowCount.value = Number(records.rows[0][0])
+        } else {
+          totalRowCount.value = null
+        }
+      } else {
+        totalRowCount.value = null
+      }
+    } catch (error) {
+      console.error('Failed to get total row count:', error)
+      totalRowCount.value = null
+    }
   }
 
   async function executeQuery(isNewQuery = true) {
@@ -96,6 +133,12 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
           return record
         })
         rows.value = processedRows
+
+        // Get total row count after successful query
+        if (isNewQuery) {
+          getTotalRowCount()
+        }
+
         return processedRows
       }
       return []
@@ -107,7 +150,7 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
     }
   }
 
-  async function exportToCSV() {
+  async function exportToCSV(limit?: number) {
     let currentQuery = queryState.sql
     // Process $timestart and $timeend in the SQL string
     const currentTimeRanges = timeRange.timeRangeValues.value
@@ -118,6 +161,13 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
     if (!currentQuery || !queryState.table) {
       return
     }
+
+    // Update LIMIT if provided
+    if (limit !== undefined) {
+      const { updateLimitInSql } = await import('@/views/dashboard/logs/query/until')
+      currentQuery = updateLimitInSql(currentQuery, limit)
+    }
+
     try {
       const { default: editorAPI } = await import('@/api/editor')
       const result = await editorAPI.runSQLWithCSV(currentQuery)
@@ -144,6 +194,7 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
     loading,
     columns,
     rows,
+    totalRowCount,
     canExecuteInitialQuery,
   }
 }

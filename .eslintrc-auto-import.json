@@ -95,7 +95,9 @@
     "useCodeRunStore": true,
     "useCssModule": true,
     "useCssVars": true,
+    "useDashboardTimezone": true,
     "useDataBaseStore": true,
+    "useDateTimeFormat": true,
     "useGist": true,
     "useId": true,
     "useIngest": true,
@@ -123,8 +125,6 @@
     "watch": true,
     "watchEffect": true,
     "watchPostEffect": true,
-    "watchSyncEffect": true,
-    "useDateTimeFormat": true,
-    "useDashboardTimezone": true
+    "watchSyncEffect": true
   }
 }
