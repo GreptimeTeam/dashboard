@@ -137,8 +137,9 @@ export function useSqlBuilderHook(options: SqlBuilderHookOptions) {
       }
     }
 
-    // Build SQL
-    let sql = `SELECT * FROM "${form.table}"`
+    // Build SQL with database prefix if database is provided
+    const tableName = form.database ? `"${form.database}"."${form.table}"` : `"${form.table}"`
+    let sql = `SELECT * FROM ${tableName}`
     if (timeConditions.length > 0) {
       sql += ` WHERE ${timeConditions.join(' ')}`
     }

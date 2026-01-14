@@ -6,6 +6,16 @@ a-form(
   auto-label-width
   :model="form"
 )
+  a-form-item(:label="t('sqlBuilder.database')")
+    a-select(
+      v-model="selectedDatabase"
+      style="min-width: 120px; width: auto"
+      :placeholder="t('sqlBuilder.selectDatabase')"
+      :allow-search="true"
+      :trigger-props="{ autoFitPopupMinWidth: true }"
+      :options="filteredDatabaseList"
+      @change="handleDatabaseChange"
+    )
   a-form-item(:label="t('sqlBuilder.table')")
     a-select(
       v-model="form.table"
@@ -133,6 +143,7 @@ QuickFilters(
   interface QuickFilter {
     name: string
     table: string
+    database?: string // Optional database field for quick filters
     conditions: Condition[]
     orderByField: string
     orderBy: string
@@ -155,7 +166,24 @@ QuickFilters(
   const tableMap = ref<{ [key: string]: TableField[] }>({})
 
   // Get current database from app store
-  const { database, tableCatalog, tableSchema } = storeToRefs(useAppStore())
+  const { database, tableCatalog, tableSchema, databaseList } = storeToRefs(useAppStore())
+  const appStore = useAppStore()
+
+  // Selected database for SQL Builder (independent from global database)
+  const selectedDatabase = ref<string>(database.value)
+
+  // Filter out system databases (greptime_private, information_schema)
+  const filteredDatabaseList = computed(() => {
+    return databaseList.value.filter((db) => db !== 'greptime_private' && db !== 'information_schema')
+  })
+
+  // Computed tableCatalog and tableSchema based on selected database
+  const currentTableCatalog = computed(() => {
+    return selectedDatabase.value.split('-').slice(0, -1).join('-') || 'greptime'
+  })
+  const currentTableSchema = computed(() => {
+    return selectedDatabase.value.split('-').slice(-1).join('-')
+  })
 
   // Use localStorage to remember the last selected table
   const storageKey = props.storageKey || 'sql-builder-last-table'
@@ -278,7 +306,7 @@ QuickFilters(
 
   async function fetchTables() {
     try {
-      let sql = `SELECT DISTINCT table_name FROM information_schema.columns WHERE table_catalog = '${tableCatalog.value}' AND table_schema = '${tableSchema.value}'`
+      let sql = `SELECT DISTINCT table_name FROM information_schema.columns WHERE table_catalog = '${currentTableCatalog.value}' AND table_schema = '${currentTableSchema.value}'`
 
       // Add filter if specified (e.g., for traces we want tables with trace_id column)
       if (props.tableFilter) {
@@ -287,7 +315,7 @@ QuickFilters(
 
       sql += ` ORDER BY table_name`
 
-      const result = await editorAPI.runSQL(sql)
+      const result = await editorAPI.runSQL(sql, selectedDatabase.value)
       tables.value = result.output[0].records.rows.map((row: string[]) => row[0])
 
       // Validate and set table from localStorage or default
@@ -306,11 +334,22 @@ QuickFilters(
   async function fetchTableFields(tableName: string) {
     if (!tableName) return
     try {
-      const result = await editorAPI.getTableSchema(tableName)
+      const result = await editorAPI.getTableSchema(tableName, selectedDatabase.value)
       tableMap.value[tableName] = result
     } catch (error) {
       console.error('Failed to fetch table fields:', error)
     }
+  }
+
+  function handleDatabaseChange() {
+    // Update form.database for SQL generation
+    form.database = selectedDatabase.value
+    // Reset form state when database changes
+    form.table = ''
+    tables.value = []
+    tableMap.value = {}
+    // Fetch tables for the new database
+    fetchTables()
   }
 
   function handleTableChange() {
@@ -350,16 +389,36 @@ QuickFilters(
     form.conditions.splice(index, 1)
   }
 
-  // Load saved state on mount
-
-  watch(
-    () => database.value,
-    () => {
-      fetchTables()
-    },
-    {
-      immediate: true,
+  // Initialize database list and selected database on mount
+  onMounted(async () => {
+    // Fetch databases if not already loaded
+    if (databaseList.value.length === 0) {
+      await appStore.fetchDatabases()
     }
+    // Set initial database if not in filtered list
+    if (!filteredDatabaseList.value.includes(selectedDatabase.value)) {
+      selectedDatabase.value = filteredDatabaseList.value[0] || database.value
+    }
+    // Update form.database (fetchTables will be called by watch)
+    form.database = selectedDatabase.value
+  })
+
+  // Watch selectedDatabase changes to update form.database and fetch tables
+  watch(
+    () => selectedDatabase.value,
+    (newDatabase, oldDatabase) => {
+      if (newDatabase) {
+        form.database = newDatabase
+        // Only fetch tables if database actually changed (not during initial setup)
+        if (oldDatabase && oldDatabase !== newDatabase) {
+          form.table = ''
+          tables.value = []
+          tableMap.value = {}
+        }
+        fetchTables()
+      }
+    },
+    { immediate: true }
   )
 
   watch(
@@ -396,7 +455,26 @@ QuickFilters(
   }
 
   // Function to apply a saved quick filter
-  function applyQuickFilter(quickFilter: QuickFilter) {
+  async function applyQuickFilter(quickFilter: QuickFilter) {
+    // Switch to the saved database if different and valid
+    if (quickFilter.database && quickFilter.database !== selectedDatabase.value) {
+      if (filteredDatabaseList.value.includes(quickFilter.database)) {
+        selectedDatabase.value = quickFilter.database
+        form.database = quickFilter.database
+        // Wait for tables to be fetched
+        await new Promise((resolve) => {
+          const unwatch = watch(
+            () => tables.value.length,
+            () => {
+              unwatch()
+              resolve(undefined)
+            },
+            { immediate: true }
+          )
+        })
+      }
+    }
+
     // Switch to the saved table if different
     if (quickFilter.table !== form.table) {
       form.table = quickFilter.table

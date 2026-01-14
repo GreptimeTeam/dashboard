@@ -26,6 +26,7 @@ export interface TextEditorFormState extends BaseState {
 export interface BuilderFormState extends BaseState {
   conditions: Condition[]
   orderByField: string
+  database?: string // Selected database name
 }
 
 export type ColumnType = {
