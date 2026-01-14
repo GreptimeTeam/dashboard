@@ -72,6 +72,7 @@ export default {
   'quickFilters.nameExists': 'A quick filter with this name already exists',
   // SQL Builder
   'sqlBuilder.table': 'Table',
+  'sqlBuilder.database': 'Database',
   'sqlBuilder.selectTable': 'Select table',
   'sqlBuilder.filters': 'Filters',
   'sqlBuilder.field': 'field',
