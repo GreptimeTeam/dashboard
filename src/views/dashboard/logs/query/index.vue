@@ -72,7 +72,7 @@
                 | {{ rows.length }}/{{ totalRowCount }}
               template(v-else)
                 | {{ rows.length }}
-              | &nbsp; {{ rows.length === 1 ? $t('logsQuery.record') : $t('logsQuery.records') }}
+              | &nbsp; {{ $t('logsQuery.rowsInCurrentRange') }}
               | )
           a-checkbox(v-model="mergeColumn" type="button" size="small")
             | {{ $t('logsQuery.singleColumn') }}

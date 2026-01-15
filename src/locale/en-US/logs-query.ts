@@ -28,4 +28,8 @@ export default {
   'logsQuery.exportSqlLabel': 'Export SQL (from query)',
   'logsQuery.exportSqlTip': 'Use the SQL statement of  current query',
   'logsQuery.exportLimit': 'Export Limit',
+  'logsQuery.currentTimeRange': 'Current time range',
+  'logsQuery.rowsInCurrentRange': 'rows in current time range',
+  'logsQuery.clickToQuery': 'Click to query this time range',
+  'logsQuery.timeRangePagination': 'Use time-based pagination to navigate newer or older data.',
 }
