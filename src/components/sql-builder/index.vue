@@ -1,6 +1,6 @@
 <template lang="pug">
 // First row: Database and Table
-a-form(
+a-form.sql-builder-form(
   layout="inline"
   label-align="left"
   size="small"
@@ -256,10 +256,6 @@ a-modal(
     return tableMap.value[form.table].filter((field) => field.data_type.toLowerCase() !== 'json')
   })
 
-  watchEffect(() => {
-    console.log('form.database', form.database, form.table, fields.value)
-  })
-
   const fieldsOptions = computed(() => {
     return fields.value.map((column) => ({
       label: column.name,
@@ -473,9 +469,16 @@ a-modal(
     }
   }
 
+  // Unified form reset function: default values + provided values
+  function resetForm(valuesToSet: Partial<Form> = {}) {
+    const defaultState = JSON.parse(JSON.stringify(props.defaultFormState || {}))
+    // Reset form with default state and provided values
+    Object.assign(form, defaultState, valuesToSet)
+  }
+
   function handleDatabaseChange() {
-    // Reset form state when database changes
-    form.table = ''
+    // Reset form state when database changes, preserve current database
+    resetForm({ database: form.database })
     tables.value = []
     tableMap.value = {}
     // Fetch tables for the new database (will be triggered by watch)
@@ -485,8 +488,8 @@ a-modal(
     // Save the selected table to localStorage
     lastSelectedTable.value = form.table
 
-    // Reset form state for new table with deep clone
-    Object.assign(form, JSON.parse(JSON.stringify(props.defaultFormState || {})), { table: form.table })
+    // Reset form state for new table, preserve current table
+    resetForm({ table: form.table })
   }
 
   // Watch for timeColumns changes - no longer add default time range condition
@@ -537,10 +540,10 @@ a-modal(
       if (newDatabase) {
         // Only fetch tables if database actually changed (not during initial setup)
         if (oldDatabase && oldDatabase !== newDatabase) {
-          form.table = ''
+          // Reset form when database changes, preserve current database
+          resetForm({ database: form.database })
           tables.value = []
           tableMap.value = {}
-          form.orderByField = ''
         }
         fetchTables()
       }
@@ -608,17 +611,27 @@ a-modal(
 
   // Function to apply a saved quick filter
   async function applyQuickFilter(quickFilter: QuickFilter) {
+    // Determine values to set based on quick filter
+    const valuesToSet: Partial<Form> = {}
+
     // Switch to the saved database if different and valid
     if (quickFilter.database && quickFilter.database !== form.database) {
       if (filteredDatabaseList.value.includes(quickFilter.database)) {
-        form.database = quickFilter.database
+        valuesToSet.database = quickFilter.database
       }
+    } else if (form.database) {
+      valuesToSet.database = form.database
     }
 
     // Switch to the saved table if different
     if (quickFilter.table !== form.table) {
-      form.table = quickFilter.table
+      valuesToSet.table = quickFilter.table
+    } else if (form.table) {
+      valuesToSet.table = form.table
     }
+
+    // Reset form with database and table values
+    resetForm(valuesToSet)
 
     // Apply the saved conditions and settings
     form.conditions = [...quickFilter.conditions]
@@ -657,7 +670,7 @@ a-modal(
     width: 90px; // Fixed width for labels (to accommodate "Quick Filters")
     min-width: 90px;
   }
-  :deep(.arco-form-item-label) {
+  .sql-builder-form :deep(.arco-form-item-label) {
     min-width: 70px;
     text-align: right;
   }
