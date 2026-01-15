@@ -25,5 +25,7 @@ export default {
   'logsQuery.rowCountOverTime': 'Row Count Over Time',
   'logsQuery.frequencyDistribution': 'Column Frequency Distribution',
   'logsQuery.exportSql': 'Export SQL',
+  'logsQuery.exportSqlLabel': 'Export SQL (from query)',
+  'logsQuery.exportSqlTip': 'Use the SQL statement of  current query',
   'logsQuery.exportLimit': 'Export Limit',
 }

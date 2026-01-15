@@ -53,8 +53,9 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
       const whereMatch = currentSql.match(/WHERE\s+([\s\S]+?)(?:\s+ORDER\s+BY|\s+LIMIT\s+|\s*$)/i)
       const whereClause = whereMatch ? `WHERE ${whereMatch[1]}` : ''
 
-      // Build COUNT query
-      const countSql = `SELECT COUNT(*) FROM "${queryState.table}" ${whereClause}`
+      // Build COUNT query with database prefix if available
+      const tableName = queryState.database ? `"${queryState.database}"."${queryState.table}"` : `"${queryState.table}"`
+      const countSql = `SELECT COUNT(*) FROM ${tableName} ${whereClause}`
 
       const { default: editorAPI } = await import('@/api/editor')
       const result: any = await editorAPI.runSQL(countSql)
@@ -97,6 +98,7 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
         sql: currentSql,
         tsColumn: getCurrentStateProp('tsColumn'),
         table: getCurrentStateProp('table'),
+        database: getCurrentStateProp('database'),
         timeRangeValues: [...timeRange.timeRangeValues.value],
         time: timeRange.time.value,
         rangeTime: [...timeRange.rangeTime.value],

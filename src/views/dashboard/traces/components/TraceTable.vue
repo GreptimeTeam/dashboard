@@ -188,7 +188,10 @@ a-card(:bordered="false")
     router.push({
       name: 'dashboard-TraceDetail',
       params: { id: traceId },
-      query: { table: props.queryState.table },
+      query: {
+        table: props.queryState.table,
+        ...(props.queryState.database ? { database: props.queryState.database } : {}),
+      },
     })
   }
 </script>

@@ -25,5 +25,7 @@ export default {
   'logsQuery.rowCountOverTime': '单位时间新增行数',
   'logsQuery.frequencyDistribution': '列值分布',
   'logsQuery.exportSql': '导出 SQL',
+  'logsQuery.exportSqlLabel': '导出 SQL (来自查询)',
+  'logsQuery.exportSqlTip': '使用当前查询的 SQL 语句',
   'logsQuery.exportLimit': '导出限制',
 }

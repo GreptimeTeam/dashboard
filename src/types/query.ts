@@ -21,11 +21,13 @@ interface BaseState {
 
 export interface TextEditorFormState extends BaseState {
   sql: string
+  database?: string // Selected database name (optional for text editor)
 }
 
 export interface BuilderFormState extends BaseState {
   conditions: Condition[]
   orderByField: string
+  database?: string // Selected database name
 }
 
 export type ColumnType = {
@@ -42,5 +44,6 @@ export interface QueryState extends BaseState {
   rangeTime: any[]
   sourceState: TextEditorFormState | BuilderFormState
   sql: string
+  database?: string // Selected database name
   generateSql: (queryState: TextEditorFormState | BuilderFormState, timeRange: any[]) => string
 }

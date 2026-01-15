@@ -13,7 +13,13 @@ a-modal(
         | Export
   .export-modal-content
     a-form(layout="vertical")
-      a-form-item(:label="$t('logsQuery.exportSql')")
+      a-form-item
+        template(#label)
+          a-space(:size="4")
+            span {{ $t('logsQuery.exportSqlLabel') }}
+            a-tooltip(mini position="tl" :content="$t('logsQuery.exportSqlTip')")
+              svg.icon-12(style="cursor: pointer; color: var(--color-text-3)")
+                use(href="#question")
         pre.export-sql-display {{ formattedSql }}
       a-form-item(:label="$t('logsQuery.exportLimit')")
         a-space(style="width: 100%" fill)
@@ -61,21 +67,23 @@ a-modal(
     }
 
     try {
-      // Extract table name from SQL
-      const tableMatch = props.sql.match(/FROM\s+"?(\w+)"?/i)
+      // Extract table name from SQL (supports both "table" and "database"."table" formats)
+      const tableMatch = props.sql.match(/FROM\s+("?[\w-]+"?\s*\.\s*)?("?[\w-]+"?)/i)
       if (!tableMatch) {
         totalCount.value = null
         return
       }
-      const [, table] = tableMatch
+      // tableMatch[1] is the database part (with dot), tableMatch[2] is the table name
+      // If tableMatch[1] exists, we have "database"."table" format
+      const tableName = tableMatch[1] ? `${tableMatch[1].trim()}${tableMatch[2]}` : tableMatch[2]
 
       // Extract WHERE clause from the SQL
       const whereMatch = props.sql.match(/WHERE\s+([\s\S]+?)(?:\s+ORDER\s+BY|\s+LIMIT\s+|\s*$)/i)
       const [, whereCondition] = whereMatch || []
       const whereClause = whereCondition ? `WHERE ${whereCondition}` : ''
 
-      // Build COUNT query
-      const countSql = `SELECT COUNT(*) FROM "${table}" ${whereClause}`
+      // Build COUNT query (tableName already includes quotes if present in original SQL)
+      const countSql = `SELECT COUNT(*) FROM ${tableName} ${whereClause}`
 
       const { default: editorAPI } = await import('@/api/editor')
       const result: any = await editorAPI.runSQL(countSql)

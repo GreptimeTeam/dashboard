@@ -158,7 +158,7 @@ VCharts(
   })
 
   const countSql = computed(() => {
-    const { table, sql, tsColumn, timeRangeValues } = props.queryState
+    const { table, sql, tsColumn, timeRangeValues, database } = props.queryState
     if (!table || !sql || !tsColumn?.name) {
       return ''
     }
@@ -170,10 +170,13 @@ VCharts(
 
     const whereClause = whereMatch ? `WHERE ${whereMatch[1]}` : ''
 
+    // Build table name with database prefix if available
+    const tableName = database ? `"${database}"."${table}"` : `"${table}"`
+
     return `SELECT
             date_bin('${intervalSeconds.value} seconds', ${tsColumn.name}) AS time_bucket,
             COUNT(*) AS event_count
-        FROM "${table}"
+        FROM ${tableName}
         ${whereClause}
         GROUP BY time_bucket
         ORDER BY time_bucket DESC

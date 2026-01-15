@@ -84,7 +84,11 @@ VCharts(
     const currentSql = replaceTimePlaceholders(props.queryState.sql, [startTs, endTs])
     const whereClause = getWhereClause(currentSql)
     const condition = whereClause ? `WHERE ${whereClause}` : ''
-    return `SELECT ${props.column} ,count(*) AS c FROM ${props.queryState.table} ${condition} GROUP BY ${props.column} ORDER BY c DESC`
+    // Build table name with database prefix if available
+    const tableName = props.queryState.database
+      ? `"${props.queryState.database}"."${props.queryState.table}"`
+      : `"${props.queryState.table}"`
+    return `SELECT ${props.column} ,count(*) AS c FROM ${tableName} ${condition} GROUP BY ${props.column} ORDER BY c DESC`
   })
 
   function chartQuery() {

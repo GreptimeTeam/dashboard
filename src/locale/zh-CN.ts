@@ -73,6 +73,7 @@ export default {
   'quickFilters.nameExists': '已存在同名的快速筛选',
   // SQL Builder
   'sqlBuilder.table': '表',
+  'sqlBuilder.database': '数据库',
   'sqlBuilder.selectTable': '选择表',
   'sqlBuilder.filters': '筛选条件',
   'sqlBuilder.field': '列',

@@ -1,11 +1,21 @@
 <template lang="pug">
-a-form(
+// First row: Database and Table
+a-form.sql-builder-form(
   layout="inline"
-  label-align="left"
+  label-align="right"
   size="small"
-  auto-label-width
   :model="form"
 )
+  a-form-item(:label="t('sqlBuilder.database')")
+    a-select(
+      v-model="form.database"
+      style="min-width: 120px; width: auto"
+      :placeholder="t('sqlBuilder.selectDatabase')"
+      :allow-search="true"
+      :trigger-props="{ autoFitPopupMinWidth: true }"
+      :options="filteredDatabaseList"
+      @change="handleDatabaseChange"
+    )
   a-form-item(:label="t('sqlBuilder.table')")
     a-select(
       v-model="form.table"
@@ -16,6 +26,14 @@ a-form(
       :options="tables"
       @change="handleTableChange"
     )
+
+// Second row: Filters
+a-form.second-row-form(
+  layout="inline"
+  label-align="right"
+  size="small"
+  :model="form"
+)
   a-form-item(style="margin-right: 12px" :label="t('sqlBuilder.filters')")
     .condition-wrapper
       a-space(v-for="(condition, index) in form.conditions" :key="index")
@@ -62,63 +80,107 @@ a-form(
       a-button.field-action(@click="addCondition")
         icon-plus(style="cursor: pointer; font-size: 14px")
 
-  // More options trigger
-  a-form-item
-    a-trigger(trigger="click" :unmount-on-close="false")
-      a-button.more-toggle(type="text")
-        | {{ t('sqlBuilder.more') }}
-        icon-down(style="font-size: 10px; margin-left: 4px")
-
-      template(#content)
-        .more-popup
-          .more-popup-header
-            h4 {{ t('sqlBuilder.moreOptions') }}
-          .more-popup-content
-            a-form-item(:label="t('sqlBuilder.orderBy')")
-              a-space(size="small")
-                a-input-group.input-group
-                  a-select(
-                    v-model="form.orderByField"
-                    style="width: auto"
-                    allow-search
-                    :placeholder="t('sqlBuilder.selectField')"
-                    :trigger-props="{ autoFitPopupMinWidth: true }"
-                    :options="fieldsOptions"
-                  )
-                  a-select(
-                    v-model="form.orderBy"
-                    style="width: 80px"
-                    :placeholder="t('sqlBuilder.order')"
-                    :options="orderOptions"
-                  )
-            a-form-item(:label="t('sqlBuilder.limit')")
-              a-input-number(
-                v-model="form.limit"
-                style="width: 80px"
-                :placeholder="t('sqlBuilder.limit')"
-                :step="100"
-                :min="1"
-                :max="10000"
-              )
-
-// Quick Filters component
-QuickFilters(
-  :fields="fields"
-  :form="form"
-  :quick-field-names="quickFieldNames"
-  :storage-key="storageKey"
-  @apply="applyQuickFilter"
+// Third row: Order By, Limit, and Quick Filters
+a-form.third-row-form(
+  layout="inline"
+  label-align="right"
+  size="small"
+  :auto-label-width="true"
+  :model="form"
 )
+  // Order By
+  a-form-item(:label="t('sqlBuilder.orderBy')")
+    a-space(size="small")
+      a-input-group.input-group
+        a-select(
+          v-model="form.orderByField"
+          style="width: auto"
+          allow-search
+          :placeholder="t('sqlBuilder.selectField')"
+          :trigger-props="{ autoFitPopupMinWidth: true }"
+          :options="fieldsOptions"
+        )
+        a-select(
+          v-model="form.orderBy"
+          style="width: 80px"
+          :placeholder="t('sqlBuilder.order')"
+          :options="orderOptions"
+        )
+  // Limit
+  a-form-item(:label="t('sqlBuilder.limit')")
+    a-input-number(
+      v-model="form.limit"
+      style="width: 80px"
+      :placeholder="t('sqlBuilder.limit')"
+      :step="100"
+      :min="1"
+      :max="10000"
+    )
+
+  // Quick Filters
+  a-form-item(:label="t('quickFilters.title')")
+    .quick-filters-content
+      div(style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center")
+        a-tag(
+          v-for="quickFilter in savedQuickFilters"
+          :key="quickFilter.name"
+          style="cursor: pointer"
+          :closable="true"
+          @click="onApplyQuickFilter(quickFilter)"
+          @close="removeQuickFilter(quickFilter.name)"
+        )
+          span(:title="t('quickFilters.clickToApplyTitle')") {{ quickFilter.name }}
+        a-tag.quick-fields-save(type="text" style="cursor: pointer" @click="showSaveQuickFilter = true")
+          template(#icon)
+            icon-plus
+          | {{ t('quickFilters.saveCurrentSearch') }}
+
+// Save Quick Filter Modal
+a-modal(
+  v-model:visible="showSaveQuickFilter"
+  :title="t('quickFilters.saveModalTitle')"
+  :width="500"
+  :on-before-ok="saveCurrentAsQuickFilter"
+  @cancel="showSaveQuickFilter = false"
+)
+  a-form(
+    ref="saveQuickFilterFormRef"
+    layout="vertical"
+    :model="saveQuickFilterForm"
+    :rules="saveQuickFilterRules"
+  )
+    a-form-item(field="name" :label="t('quickFilters.name')")
+      a-input(v-model="saveQuickFilterForm.name" maxlength="50" :placeholder="t('quickFilters.namePlaceholder')")
+    a-form-item(field="description" :label="t('quickFilters.description')")
+      a-descriptions(
+        size="small"
+        bordered
+        layout="vertical"
+        style="width: 100%"
+        :column="1"
+      )
+        a-descriptions-item(:label="t('quickFilters.table')")
+          a-tag(color="blue") {{ form.table }}
+        a-descriptions-item(v-if="form.conditions.length > 0" :label="t('quickFilters.conditions')")
+          .conditions-list
+            a-tag(
+              v-for="(condition, index) in form.conditions"
+              :key="index"
+              color="green"
+              style="margin-bottom: 4px; margin-right: 4px"
+            )
+              | {{ condition.field }} {{ condition.operator }} {{ condition.value }}
+        a-descriptions-item(v-else :label="t('quickFilters.conditions')")
+          a-tag(color="gray") {{ t('quickFilters.noConditions') }}
 </template>
 
 <script setup name="SQLBuilder" lang="ts">
-  import { ref, watch, onMounted, computed, readonly, reactive } from 'vue'
+  import { ref, watch, onMounted, computed, reactive, nextTick } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useLocalStorage } from '@vueuse/core'
   import { storeToRefs } from 'pinia'
   import editorAPI from '@/api/editor'
   import { useAppStore } from '@/store'
-  import QuickFilters from '@/components/quick-filters/index.vue'
   import type { Condition, BuilderFormState as Form } from '@/types/query'
   import { TsTypeMapping } from '@/utils/date-time'
 
@@ -133,6 +195,7 @@ QuickFilters(
   interface QuickFilter {
     name: string
     table: string
+    database?: string // Optional database field for quick filters
     conditions: Condition[]
     orderByField: string
     orderBy: string
@@ -155,7 +218,13 @@ QuickFilters(
   const tableMap = ref<{ [key: string]: TableField[] }>({})
 
   // Get current database from app store
-  const { database, tableCatalog, tableSchema } = storeToRefs(useAppStore())
+  const { database, tableCatalog, tableSchema, databaseList } = storeToRefs(useAppStore())
+  const appStore = useAppStore()
+
+  // Filter out system databases (greptime_private, information_schema)
+  const filteredDatabaseList = computed(() => {
+    return databaseList.value.filter((db) => db !== 'greptime_private' && db !== 'information_schema')
+  })
 
   // Use localStorage to remember the last selected table
   const storageKey = props.storageKey || 'sql-builder-last-table'
@@ -163,6 +232,16 @@ QuickFilters(
 
   // Initialize form state as reactive object
   const form = reactive<Form>(props.formState)
+
+  // Computed tableCatalog and tableSchema based on form.database
+  const currentTableCatalog = computed(() => {
+    if (!form.database) return 'greptime'
+    return form.database.split('-').slice(0, -1).join('-') || 'greptime'
+  })
+  const currentTableSchema = computed(() => {
+    if (!form.database) return ''
+    return form.database.split('-').slice(-1).join('-')
+  })
   // Watch form changes and emit updates for v-model
   // just to declare support for model, indeed this watch is not needed
   // watch(
@@ -184,6 +263,84 @@ QuickFilters(
       value: column.name,
     }))
   })
+
+  // Quick Filters logic (after form and fields are defined)
+  const quickFiltersStorageKey = computed(() => `${storageKey}-quick-filters`)
+  const clearedFiltersKey = computed(() => `${storageKey}-filters-cleared`)
+  let savedQuickFilters = useLocalStorage(quickFiltersStorageKey.value, [] as QuickFilter[])
+  const userClearedFilters = useLocalStorage(clearedFiltersKey.value, false)
+
+  const showSaveQuickFilter = ref(false)
+  const saveQuickFilterFormRef = ref()
+  const saveQuickFilterForm = reactive({ name: '' })
+
+  const saveQuickFilterRules = {
+    name: [
+      { required: true, message: t('quickFilters.nameRequired') },
+      { minLength: 2, message: t('quickFilters.nameMin') },
+      { maxLength: 50, message: t('quickFilters.nameMax') },
+      {
+        validator: (value: string, cb: (msg?: string) => void) => {
+          const trimmedName = value.trim().toLowerCase()
+          const existingFilter = savedQuickFilters.value.find((filter) => filter.name.toLowerCase() === trimmedName)
+          if (existingFilter) {
+            cb(t('quickFilters.nameExists'))
+          } else {
+            cb()
+          }
+        },
+      },
+    ],
+  }
+
+  function createDefaultQuickFilters(): QuickFilter[] {
+    if (!props.quickFieldNames || !form.table || !fields.value.length) return []
+    return props.quickFieldNames
+      .filter((fieldName) => fields.value.some((field) => field.name === fieldName))
+      .map((fieldName) => {
+        const field = fields.value.find((f) => f.name === fieldName)
+        const isTimeCol = field?.data_type.toLowerCase().includes('timestamp') || false
+        const defaultOperator = '='
+        return {
+          name: fieldName,
+          table: form.table,
+          database: form.database,
+          conditions: [
+            {
+              field: fieldName,
+              operator: defaultOperator,
+              value: '',
+              isTimeColumn: isTimeCol,
+              relation: 'AND',
+            },
+          ],
+          orderByField: form.orderByField,
+          orderBy: form.orderBy,
+          limit: form.limit,
+          createdAt: Date.now(),
+        }
+      })
+  }
+
+  function initializeQuickFilters() {
+    // Only initialize default filters if user hasn't manually cleared them
+    if (savedQuickFilters.value.length === 0 && !userClearedFilters.value && props.quickFieldNames) {
+      const defaults = createDefaultQuickFilters()
+      if (defaults.length > 0) {
+        savedQuickFilters.value = defaults
+      }
+    }
+  }
+
+  watch(
+    () => [fields.value, form.table],
+    () => {
+      savedQuickFilters = useLocalStorage(quickFiltersStorageKey.value, [] as QuickFilter[])
+      nextTick(() => {
+        initializeQuickFilters()
+      })
+    }
+  )
 
   const timeColumns = computed(() => {
     const tsColumns = fields.value.filter((column) => column.data_type.toLowerCase().indexOf('timestamp') > -1)
@@ -278,7 +435,7 @@ QuickFilters(
 
   async function fetchTables() {
     try {
-      let sql = `SELECT DISTINCT table_name FROM information_schema.columns WHERE table_catalog = '${tableCatalog.value}' AND table_schema = '${tableSchema.value}'`
+      let sql = `SELECT DISTINCT table_name FROM information_schema.columns WHERE table_catalog = '${currentTableCatalog.value}' AND table_schema = '${currentTableSchema.value}'`
 
       // Add filter if specified (e.g., for traces we want tables with trace_id column)
       if (props.tableFilter) {
@@ -287,7 +444,7 @@ QuickFilters(
 
       sql += ` ORDER BY table_name`
 
-      const result = await editorAPI.runSQL(sql)
+      const result = await editorAPI.runSQL(sql, form.database)
       tables.value = result.output[0].records.rows.map((row: string[]) => row[0])
 
       // Validate and set table from localStorage or default
@@ -306,19 +463,34 @@ QuickFilters(
   async function fetchTableFields(tableName: string) {
     if (!tableName) return
     try {
-      const result = await editorAPI.getTableSchema(tableName)
+      const result = await editorAPI.getTableSchema(tableName, form.database)
       tableMap.value[tableName] = result
     } catch (error) {
       console.error('Failed to fetch table fields:', error)
     }
   }
 
+  // Unified form reset function: default values + provided values
+  function resetForm(valuesToSet: Partial<Form> = {}) {
+    const defaultState = JSON.parse(JSON.stringify(props.defaultFormState || {}))
+    // Reset form with default state and provided values
+    Object.assign(form, defaultState, valuesToSet)
+  }
+
+  function handleDatabaseChange() {
+    // Reset form state when database changes, preserve current database
+    resetForm({ database: form.database })
+    tables.value = []
+    tableMap.value = {}
+    // Fetch tables for the new database (will be triggered by watch)
+  }
+
   function handleTableChange() {
     // Save the selected table to localStorage
     lastSelectedTable.value = form.table
 
-    // Reset form state for new table with deep clone
-    Object.assign(form, JSON.parse(JSON.stringify(props.defaultFormState || {})), { table: form.table })
+    // Reset form state for new table, preserve current table
+    resetForm({ table: form.table })
   }
 
   // Watch for timeColumns changes - no longer add default time range condition
@@ -350,16 +522,34 @@ QuickFilters(
     form.conditions.splice(index, 1)
   }
 
-  // Load saved state on mount
-
-  watch(
-    () => database.value,
-    () => {
-      fetchTables()
-    },
-    {
-      immediate: true,
+  // Initialize database list and form.database on mount
+  onMounted(async () => {
+    // Fetch databases if not already loaded
+    if (databaseList.value.length === 0) {
+      await appStore.fetchDatabases()
     }
+    // Initialize form.database if not set or not in filtered list
+    if (!form.database || !filteredDatabaseList.value.includes(form.database)) {
+      form.database = filteredDatabaseList.value[0] || database.value
+    }
+  })
+
+  // Watch form.database changes to fetch tables
+  watch(
+    () => form.database,
+    (newDatabase, oldDatabase) => {
+      if (newDatabase) {
+        // Only fetch tables if database actually changed (not during initial setup)
+        if (oldDatabase && oldDatabase !== newDatabase) {
+          // Reset form when database changes, preserve current database
+          resetForm({ database: form.database })
+          tables.value = []
+          tableMap.value = {}
+        }
+        fetchTables()
+      }
+    },
+    { immediate: true }
   )
 
   watch(
@@ -395,18 +585,75 @@ QuickFilters(
     // SQL will automatically regenerate due to computed property
   }
 
+  async function saveCurrentAsQuickFilter() {
+    await nextTick()
+    return (saveQuickFilterFormRef.value as any).validate().then((errors: any) => {
+      if (errors) return false
+      const newQuickFilter: QuickFilter = {
+        name: saveQuickFilterForm.name.trim(),
+        table: form.table,
+        database: form.database,
+        conditions: [...form.conditions],
+        orderByField: form.orderByField,
+        orderBy: form.orderBy,
+        limit: form.limit,
+        createdAt: Date.now(),
+      }
+      savedQuickFilters.value.push(newQuickFilter)
+
+      // Reset the cleared flag since user is actively using filters
+      userClearedFilters.value = false
+
+      saveQuickFilterForm.name = ''
+      showSaveQuickFilter.value = false
+      return true
+    })
+  }
+
   // Function to apply a saved quick filter
-  function applyQuickFilter(quickFilter: QuickFilter) {
+  async function applyQuickFilter(quickFilter: QuickFilter) {
+    // Determine values to set based on quick filter
+    const valuesToSet: Partial<Form> = {}
+
+    // Switch to the saved database if different and valid
+    if (quickFilter.database && quickFilter.database !== form.database) {
+      if (filteredDatabaseList.value.includes(quickFilter.database)) {
+        valuesToSet.database = quickFilter.database
+      }
+    } else if (form.database) {
+      valuesToSet.database = form.database
+    }
+
     // Switch to the saved table if different
     if (quickFilter.table !== form.table) {
-      form.table = quickFilter.table
+      valuesToSet.table = quickFilter.table
+    } else if (form.table) {
+      valuesToSet.table = form.table
     }
+
+    // Reset form with database and table values
+    resetForm(valuesToSet)
 
     // Apply the saved conditions and settings
     form.conditions = [...quickFilter.conditions]
     form.orderByField = quickFilter.orderByField
     form.orderBy = quickFilter.orderBy as 'DESC' | 'ASC'
     form.limit = quickFilter.limit
+  }
+
+  function onApplyQuickFilter(quickFilter: QuickFilter) {
+    applyQuickFilter(quickFilter)
+  }
+
+  function removeQuickFilter(filterId: string) {
+    const idx = savedQuickFilters.value.findIndex((filter) => filter.name === filterId)
+    if (idx !== -1) {
+      savedQuickFilters.value.splice(idx, 1)
+      // Mark that user has manually cleared filters
+      if (savedQuickFilters.value.length === 0) {
+        userClearedFilters.value = true
+      }
+    }
   }
 
   // Expose methods for external use
@@ -422,6 +669,14 @@ QuickFilters(
   :deep(.arco-form-item-label-col) {
     padding-right: 8px;
   }
+  // First form-item in each row: fixed width 90px
+  .sql-builder-form :deep(.arco-form-item:first-child .arco-form-item-label-col),
+  .second-row-form :deep(.arco-form-item:first-child .arco-form-item-label-col),
+  .third-row-form :deep(.arco-form-item:first-child .arco-form-item-label-col) {
+    width: 90px;
+    min-width: 90px;
+  }
+
   :deep(.arco-form-layout-inline .arco-form-item) {
     margin-bottom: 0;
   }
@@ -509,6 +764,10 @@ QuickFilters(
   }
   .field-action {
     padding: 0 8px;
+  }
+
+  .quick-filters-content {
+    width: 100%;
   }
 
   // Resizable wrapper for input
