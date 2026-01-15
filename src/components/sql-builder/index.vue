@@ -2,7 +2,7 @@
 // First row: Database and Table
 a-form.sql-builder-form(
   layout="inline"
-  label-align="left"
+  label-align="right"
   size="small"
   :model="form"
 )
@@ -30,7 +30,7 @@ a-form.sql-builder-form(
 // Second row: Filters
 a-form.second-row-form(
   layout="inline"
-  label-align="left"
+  label-align="right"
   size="small"
   :model="form"
 )
@@ -83,8 +83,9 @@ a-form.second-row-form(
 // Third row: Order By, Limit, and Quick Filters
 a-form.third-row-form(
   layout="inline"
-  label-align="left"
+  label-align="right"
   size="small"
+  :auto-label-width="true"
   :model="form"
 )
   // Order By
@@ -667,13 +668,15 @@ a-modal(
   }
   :deep(.arco-form-item-label-col) {
     padding-right: 8px;
-    width: 90px; // Fixed width for labels (to accommodate "Quick Filters")
+  }
+  // First form-item in each row: fixed width 90px
+  .sql-builder-form :deep(.arco-form-item:first-child .arco-form-item-label-col),
+  .second-row-form :deep(.arco-form-item:first-child .arco-form-item-label-col),
+  .third-row-form :deep(.arco-form-item:first-child .arco-form-item-label-col) {
+    width: 90px;
     min-width: 90px;
   }
-  .sql-builder-form :deep(.arco-form-item-label) {
-    min-width: 70px;
-    text-align: right;
-  }
+
   :deep(.arco-form-layout-inline .arco-form-item) {
     margin-bottom: 0;
   }
