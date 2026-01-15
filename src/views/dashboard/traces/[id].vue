@@ -126,12 +126,20 @@
     loading.value = true
     try {
       const tableName = (route.query.table as string) || 'spans'
-      const result = await editorAPI.runSQL(`
+      const database = (route.query.database as string) || undefined
+
+      // Build table name with database prefix if available
+      const fullTableName = database ? `"${database}"."${tableName}"` : tableName
+
+      const result = await editorAPI.runSQL(
+        `
         SELECT *
-        FROM ${tableName}
+        FROM ${fullTableName}
         WHERE trace_id = '${route.params.id}'
         ORDER BY timestamp ASC
-      `)
+      `,
+        database
+      )
 
       if (result.output?.[0]?.records) {
         const records = result.output[0].records as unknown as {

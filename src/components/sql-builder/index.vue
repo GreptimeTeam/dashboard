@@ -256,6 +256,10 @@ a-modal(
     return tableMap.value[form.table].filter((field) => field.data_type.toLowerCase() !== 'json')
   })
 
+  watchEffect(() => {
+    console.log('form.database', form.database, form.table, fields.value)
+  })
+
   const fieldsOptions = computed(() => {
     return fields.value.map((column) => ({
       label: column.name,
@@ -536,6 +540,7 @@ a-modal(
           form.table = ''
           tables.value = []
           tableMap.value = {}
+          form.orderByField = ''
         }
         fetchTables()
       }

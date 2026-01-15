@@ -147,11 +147,28 @@ const runSQLWithCSV = (code: string, format?: string): Promise<HttpResponse> => 
 const getTableSchema = (tableName: string, database?: string) => {
   const { tableSchema, tableCatalog } = storeToRefs(useAppStore())
 
+  // Prefer catalog/schema derived from the incoming database (if provided),
+  // and fall back to the global store values otherwise.
+  let effectiveCatalog = tableCatalog.value
+  let effectiveSchema = tableSchema.value
+
+  if (database) {
+    // Database name format is usually "<catalog>-<schema>", e.g. "greptime-public".
+    const parts = database.split('-')
+    if (parts.length > 1) {
+      effectiveCatalog = parts.slice(0, -1).join('-') || effectiveCatalog
+      effectiveSchema = parts[parts.length - 1] || effectiveSchema
+    } else {
+      // If no '-' is present, treat the passed-in value as schema only.
+      effectiveSchema = database
+    }
+  }
+
   return axios
     .post(
       sqlUrl,
       makeSqlData(
-        `SELECT column_name, data_type, semantic_type FROM information_schema.columns WHERE table_name = '${tableName}' AND table_catalog = '${tableCatalog.value}' AND table_schema = '${tableSchema.value}' ORDER BY column_name`
+        `SELECT column_name, data_type, semantic_type FROM information_schema.columns WHERE table_name = '${tableName}' AND table_catalog = '${effectiveCatalog}' AND table_schema = '${effectiveSchema}' ORDER BY column_name`
       ),
       addDatabaseParams(database)
     )
