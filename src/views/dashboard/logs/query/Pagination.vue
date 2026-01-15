@@ -4,18 +4,26 @@ a-space(v-if="pages.length")
     icon-left
     | {{ $t('logsQuery.older') }}
   a-space(style="overflow-x: auto; max-width: 55vw")
-    a-button.btn(
+    a-tooltip(
       v-for="(page, index) in pages"
-      type="text"
-      size="small"
-      :loading="page.loading"
-      :class="{ active: page.start == currPage.start && page.end == currPage.end }"
-      @click="() => loadPage(page.start, page.end, index)"
+      :key="index"
+      position="top"
+      :content="$t('logsQuery.clickToQuery')"
     )
-      | {{ page.label }}
+      a-button.btn(
+        type="text"
+        size="small"
+        :loading="page.loading"
+        :class="{ active: page.start == currPage.start && page.end == currPage.end }"
+        @click="() => loadPage(page.start, page.end, index)"
+      )
+        | {{ page.label }}
   a-button.btn(size="small" :loading="newerLoading" @click="loadNewer")
     | {{ $t('logsQuery.newer') }}
     icon-right
+  a-tooltip(position="top" :content="$t('logsQuery.timeRangePagination')")
+    a-button.btn-hint(type="text" size="small")
+      icon-info-circle
 </template>
 
 <script setup name="Pagination" lang="ts">
@@ -175,8 +183,47 @@ a-space(v-if="pages.length")
 <style scoped lang="less">
   .btn {
     color: var(--color-text-2);
+    transition: all 0.2s ease;
+    &:hover:not(:disabled) {
+      color: var(--brand-color);
+      background-color: var(--color-fill-2);
+    }
   }
   .btn.active {
     color: var(--brand-color);
+    background-color: var(--color-primary-light-1);
+    font-weight: 500;
+    &:hover {
+      background-color: var(--color-primary-light-2);
+    }
+  }
+  .btn-hint {
+    color: var(--color-text-3);
+    cursor: help;
+    transition: color 0.2s ease;
+    &:hover {
+      color: var(--brand-color);
+    }
+  }
+
+  // 时间段按钮组容器样式优化
+  :deep(.arco-space) {
+    gap: 4px;
+  }
+
+  // 时间段按钮样式优化
+  :deep(.arco-btn-text) {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 12px;
+    min-height: 24px;
+    line-height: 1.4;
+  }
+
+  // Older/Newer 按钮样式
+  :deep(.arco-btn-size-small) {
+    padding: 4px 8px;
+    min-height: 24px;
   }
 </style>

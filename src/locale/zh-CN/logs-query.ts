@@ -28,4 +28,8 @@ export default {
   'logsQuery.exportSqlLabel': '导出 SQL (来自查询)',
   'logsQuery.exportSqlTip': '使用当前查询的 SQL 语句',
   'logsQuery.exportLimit': '导出限制',
+  'logsQuery.currentTimeRange': '当前时间段',
+  'logsQuery.rowsInCurrentRange': '条结果（当前时间段）',
+  'logsQuery.clickToQuery': '点击查询此时间段',
+  'logsQuery.timeRangePagination': '使用时间段分页，帮助快速浏览时间相近的数据',
 }
