@@ -13,7 +13,13 @@ a-modal(
         | Export
   .export-modal-content
     a-form(layout="vertical")
-      a-form-item(:label="$t('logsQuery.exportSql')")
+      a-form-item
+        template(#label)
+          a-space(:size="4")
+            span {{ $t('logsQuery.exportSqlLabel') }}
+            a-tooltip(mini position="tl" :content="$t('logsQuery.exportSqlTip')")
+              svg.icon-12(style="cursor: pointer; color: var(--color-text-3)")
+                use(href="#question")
         pre.export-sql-display {{ formattedSql }}
       a-form-item(:label="$t('logsQuery.exportLimit')")
         a-space(style="width: 100%" fill)
