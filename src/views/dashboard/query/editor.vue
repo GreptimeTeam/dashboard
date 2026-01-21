@@ -5,6 +5,7 @@ a-card.editor-card(:bordered="false")
       a-dropdown-button(
         type="primary"
         position="bl"
+        data-test="run-query"
         :disabled="isButtonDisabled || explainQueryRunning"
         @click="runPartQuery()"
       )
@@ -115,17 +116,18 @@ a-card.editor-card(:bordered="false")
   a-resize-box(:directions="['bottom']")
     a-tabs.query-tabs(:default-active-key="'sql'" :active-key="queryType")
       a-tab-pane(key="sql")
-        CodeMirror(
-          v-model="codes.sql"
-          :style="style"
-          :spellcheck="spellcheck"
-          :autofocus="autofocus"
-          :indent-with-tab="indentWithTab"
-          :tabSize="tabSize"
-          :extensions="extensionsForSql"
-          @ready="handleReadySql"
-          @update="codeUpdate('sql')"
-        )
+        div(data-test="sql-input")
+          CodeMirror(
+            v-model="codes.sql"
+            :style="style"
+            :spellcheck="spellcheck"
+            :autofocus="autofocus"
+            :indent-with-tab="indentWithTab"
+            :tabSize="tabSize"
+            :extensions="extensionsForSql"
+            @ready="handleReadySql"
+            @update="codeUpdate('sql')"
+          )
       a-tab-pane(key="promql")
         CodeMirror(
           v-model="codes.promql"
