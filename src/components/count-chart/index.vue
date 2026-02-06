@@ -174,7 +174,7 @@ VCharts(
     const tableName = database ? `"${database}"."${table}"` : `"${table}"`
 
     return `SELECT
-            date_bin('${intervalSeconds.value} seconds', ${tsColumn.name}) AS time_bucket,
+            date_bin('${intervalSeconds.value} seconds', "${tsColumn.name}") AS time_bucket,
             COUNT(*) AS event_count
         FROM ${tableName}
         ${whereClause}

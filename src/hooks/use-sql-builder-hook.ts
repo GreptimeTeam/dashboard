@@ -123,11 +123,11 @@ export function useSqlBuilderHook(options: SqlBuilderHookOptions) {
     if (effectiveTimeRanges && effectiveTimeRanges.length > 0 && effectiveTimestampColumn) {
       let timeCondition = ''
       if (effectiveTimeRanges[0] && !effectiveTimeRanges[1]) {
-        timeCondition = `${effectiveTimestampColumn.name} > $timestart`
+        timeCondition = `"${effectiveTimestampColumn.name}" > $timestart`
       } else if (effectiveTimeRanges[1] && !effectiveTimeRanges[0]) {
-        timeCondition = `${effectiveTimestampColumn.name} < $timeend`
+        timeCondition = `"${effectiveTimestampColumn.name}" < $timeend`
       } else if (effectiveTimeRanges[0] && effectiveTimeRanges[1]) {
-        timeCondition = `${effectiveTimestampColumn.name} <= $timeend AND ${effectiveTimestampColumn.name} >= $timestart`
+        timeCondition = `"${effectiveTimestampColumn.name}" <= $timeend AND "${effectiveTimestampColumn.name}" >= $timestart`
       }
 
       if (timeCondition && timeConditions.length > 0) {
