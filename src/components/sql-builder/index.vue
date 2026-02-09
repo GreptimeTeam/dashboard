@@ -114,7 +114,7 @@ a-form.third-row-form(
       :placeholder="t('sqlBuilder.limit')"
       :step="100"
       :min="1"
-      :max="10000"
+      :max="1000"
     )
 
   // Quick Filters
