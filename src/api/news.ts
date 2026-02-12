@@ -12,7 +12,7 @@ export interface NewsResponse {
 }
 
 const NEWS_CONFIG = {
-  proxyUrl: 'https://proxy-for-blogs-rss-in-dashboard.greptime.workers.dev',
+  proxyUrl: 'https://feed.greptime.cloud/dashboard/feed',
 }
 
 const CACHE_KEY = 'greptime_news_cache'
