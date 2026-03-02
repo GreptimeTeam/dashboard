@@ -153,9 +153,12 @@ a-card.data-grid(:bordered="false")
 
         tempRow.__types[columnName] = type
 
-        // If item is a big number (as string), convert it to Number for table to show
+        // Convert numeric strings to Number only for types that fit in JS safe integer;
+        // Int64/UInt64 must stay as string to preserve precision (JSONbigint storeAsString).
         if (numberTypes.includes(type) && typeof item === 'string') {
-          item = Number(item)
+          if (type !== 'Int64' && type !== 'UInt64' && type !== 'Float64') {
+            item = Number(item)
+          }
         }
         tempRow[columnName] = item
       })
