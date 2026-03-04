@@ -645,6 +645,11 @@ a-card.table-manager(:bordered="false")
       .arco-collapse-item-header {
         background: var(--th-bg-color);
       }
+
+      .arco-collapse-item-header-title {
+        color: var(--brand-color);
+        font-weight: 500;
+      }
     }
 
     .arco-collapse-item-header {
