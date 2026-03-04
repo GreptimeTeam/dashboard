@@ -159,7 +159,7 @@ a-card.table-manager(:bordered="false")
   )
 
   const collapseHeadersHeight = computed(() => props.databaseList.length * 36)
-  const TABLE_NODE_HEIGHT = 32
+  const TABLE_NODE_HEIGHT = 34
   const MIN_VIRTUAL_LIST_HEIGHT = 200
 
   const expandedKeys = ref<number[]>([])
@@ -209,8 +209,10 @@ a-card.table-manager(:bordered="false")
   const virtualListHeight = computed(() => {
     const itemsCount = tablesTreeData.value.length || 0
     const actualHeight = Math.max(itemsCount * TABLE_NODE_HEIGHT, MIN_VIRTUAL_LIST_HEIGHT)
-    const maxHeight = `calc((100vh - var(--tables-header-height) - var(--footer-height)) / 2)`
-    // Use the smaller between actual content height and the max allowed height
+    const COLLAPSE_HEADER_HEIGHT = 36
+    const maxHeight = `calc(100vh - var(--tables-header-height) - var(--footer-height) - ${
+      COLLAPSE_HEADER_HEIGHT * 4
+    }px)`
     return `min(${actualHeight}px, ${maxHeight})`
   })
 
@@ -676,7 +678,7 @@ a-card.table-manager(:bordered="false")
 
     .arco-collapse-item {
       border: none;
-      padding-bottom: 2px;
+      padding-bottom: 0;
     }
   }
 </style>
