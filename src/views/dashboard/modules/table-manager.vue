@@ -14,18 +14,6 @@ a-card.table-manager(:bordered="false")
             use(href="#refresh") 
     a-space
       a-space(align="center" :size="10")
-        .database-selector
-          a-select(
-            v-model="activeDatabase"
-            :data="databaseList"
-            :filterable="true"
-            :allow-search="true"
-            :placeholder="$t('dashboard.searchDatabase')"
-            @change="onDatabaseChange"
-          )
-            template(#prefix)
-              span.database-label Database
-            a-option(v-for="db of databaseList" :key="db" :value="db") {{ db }}
         a-tooltip(
           v-model:popup-visible="tooltipVisible"
           position="tr"
@@ -37,6 +25,20 @@ a-card.table-manager(:bordered="false")
               svg.icon.icon-color.rotate-270(:class="{ 'rotate-180': hideSidebar }")
                 use(href="#collapse")
   a-spin(style="width: 100%" :loading="tablesLoading")
+    .database-selector
+      a-select(
+        v-model="activeDatabase"
+        :data="databaseList"
+        :filterable="true"
+        :allow-search="true"
+        :placeholder="$t('dashboard.searchDatabase')"
+        @change="onDatabaseChange"
+      ) 
+        template(#prefix)
+          span.database-label Database
+        a-option(v-for="db of databaseList" :key="db" :value="db") {{ db }}
+      span.table-total
+        | {{ currentTablesCount }} {{ $t('dashboard.tables') }}
     .table-search
       a-input.search-table(
         v-model="tablesSearchKey"
@@ -47,8 +49,7 @@ a-card.table-manager(:bordered="false")
         template(#prefix)
           svg.icon.icon-color
             use(href="#search")
-      span.table-total
-        | {{ currentTablesCount }} {{ $t('dashboard.tables') }}
+
     a-tree.table-tree(
       v-if="tablesTreeForDatabase[activeDatabase]?.length"
       v-model:expanded-keys="expandedKeys"
@@ -613,19 +614,24 @@ a-card.table-manager(:bordered="false")
       font-weight: normal;
     }
   }
-
-  .table-search {
+  .database-selector {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 8px 16px;
+  }
+  .table-search {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px 16px 16px;
     border-bottom: 1px solid var(--border-color);
+    margin-bottom: 8px;
   }
 
   .arco-input-wrapper.search-table {
     padding: 0 10px;
     font-family: 'Open Sans';
-    width: calc(100% - 8px);
 
     :deep(> .arco-input-prefix) {
       padding-right: 10px;
@@ -641,6 +647,7 @@ a-card.table-manager(:bordered="false")
     font-size: 12px;
     color: var(--third-font-color);
     white-space: nowrap;
+    word-break: keep-all;
   }
 
   .current-database-info {
