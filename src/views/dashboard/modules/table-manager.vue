@@ -35,7 +35,8 @@ a-card.table-manager(:bordered="false")
         @change="onDatabaseChange"
       ) 
         template(#prefix)
-          span.database-label Database
+          span.database-label {{ $t('dashboard.database') }}
+          span.divider |
         a-option(v-for="db of databaseList" :key="db" :value="db") {{ db }}
       span.table-total
         | {{ currentTablesCount }} {{ $t('dashboard.tables') }}
@@ -259,6 +260,9 @@ a-card.table-manager(:bordered="false")
 </script>
 
 <style scoped lang="less">
+  :deep(.arco-select-view-single .arco-select-view-prefix) {
+    padding-right: 0px;
+  }
   .arco-card.table-manager {
     background: var(--card-bg-color);
     border-radius: 10px;
@@ -609,9 +613,14 @@ a-card.table-manager(:bordered="false")
 
   .database-selector {
     .database-label {
-      margin-right: 8px;
+      margin-right: 4px;
       white-space: nowrap;
       font-weight: normal;
+    }
+
+    .divider {
+      margin-right: 4px;
+      color: var(--border-color);
     }
   }
   .database-selector {

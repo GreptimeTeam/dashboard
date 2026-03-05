@@ -83,6 +83,7 @@ export default {
   'dashboard.clearResults': 'Clear results?',
   'dashboard.timeAssistance': 'Time Input Assistance',
   'dashboard.fetchingDatabases': 'Fetching databases...',
+  'dashboard.database': 'Database',
   'metrics.showFullSeriesName': 'Show full series name',
   'dashboard.run': 'Run',
 }
