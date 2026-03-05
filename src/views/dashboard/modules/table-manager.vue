@@ -28,6 +28,7 @@ a-card.table-manager(:bordered="false")
     .database-selector
       a-select(
         v-model="activeDatabase"
+        style="font-weight: 600"
         :data="databaseList"
         :filterable="true"
         :allow-search="true"
@@ -36,7 +37,7 @@ a-card.table-manager(:bordered="false")
       ) 
         template(#prefix)
           span.database-label {{ $t('dashboard.database') }}
-          span.divider |
+          span.divider(style="margin-right: 6px") |
         a-option(v-for="db of databaseList" :key="db" :value="db") {{ db }}
       span.table-total
         | {{ currentTablesCount }} {{ $t('dashboard.tables') }}
@@ -69,9 +70,8 @@ a-card.table-manager(:bordered="false")
             use(:href="ICON_MAP[node.node.iconType]")
       template(#title="nodeData")
         .tree-data(v-if="!nodeData.isLeaf")
-          a-tooltip.data-type(mini :content="nodeData.title")
-            .data-title
-              | {{ nodeData.title }}
+          .data-title(:title="nodeData.title")
+            | {{ nodeData.title }}
           TableMenu(
             :nodeData="nodeData"
             :database="activeDatabase"
@@ -261,6 +261,7 @@ a-card.table-manager(:bordered="false")
 
 <style scoped lang="less">
   :deep(.arco-select-view-single .arco-select-view-prefix) {
+    color: var(--small-font-color);
     padding-right: 0px;
   }
   .arco-card.table-manager {
@@ -506,6 +507,7 @@ a-card.table-manager(:bordered="false")
     padding-left: 0;
     font-size: 13px;
     line-height: 30px;
+    cursor: pointer;
 
     &.columns {
       color: var(--small-font-color);
@@ -610,30 +612,23 @@ a-card.table-manager(:bordered="false")
       justify-content: flex-end;
     }
   }
-
-  .database-selector {
-    .database-label {
-      margin-right: 4px;
-      white-space: nowrap;
-      font-weight: normal;
-    }
-
-    .divider {
-      margin-right: 4px;
-      color: var(--border-color);
-    }
-  }
   .database-selector {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 8px 16px;
+
+    .database-label {
+      margin-right: 8px;
+      white-space: nowrap;
+      font-weight: normal;
+    }
   }
   .table-search {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 16px 16px 16px;
+    padding: 2px 16px 16px 16px;
     border-bottom: 1px solid var(--border-color);
     margin-bottom: 8px;
   }
@@ -657,22 +652,6 @@ a-card.table-manager(:bordered="false")
     color: var(--third-font-color);
     white-space: nowrap;
     word-break: keep-all;
-  }
-
-  .current-database-info {
-    margin-left: auto;
-    padding: 0;
-    font-size: 12px;
-    color: var(--third-font-color);
-
-    .current-db {
-      color: var(--brand-color);
-      font-weight: 500;
-    }
-
-    .tables-count {
-      margin-left: 12px;
-    }
   }
 </style>
 
