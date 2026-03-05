@@ -39,18 +39,20 @@ a-card.table-manager(:bordered="false")
           span.database-label {{ $t('dashboard.database') }}
           span.divider(style="margin-right: 6px") |
         a-option(v-for="db of databaseList" :key="db" :value="db") {{ db }}
-      span.table-total
-        | {{ currentTablesCount }} {{ $t('dashboard.tables') }}
+
     .table-search
-      a-input.search-table(
-        v-model="tablesSearchKey"
-        size="mini"
-        :allow-clear="true"
-        :placeholder="$t('dashboard.input')"
-      )
-        template(#prefix)
-          svg.icon.icon-color
-            use(href="#search")
+      .table-search-left
+        a-input.search-table(
+          v-model="tablesSearchKey"
+          size="mini"
+          :allow-clear="true"
+          :placeholder="$t('dashboard.input')"
+        )
+          template(#prefix)
+            svg.icon.icon-color
+              use(href="#search")
+      span.table-total
+      | {{ currentTablesCount }} {{ $t('dashboard.tables') }}
 
     a-tree.table-tree(
       v-if="tablesTreeForDatabase[activeDatabase]?.length"
