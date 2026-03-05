@@ -42,8 +42,4 @@ a-layout
     overflow-y: hidden;
     transition: padding 0.2s cubic-bezier(0.34, 0.69, 0.1, 1);
   }
-
-  .arco-layout-sider-light.main-sider {
-    box-shadow: 4px 0px 10px 0px rgba(131, 34, 255, 0.08);
-  }
 </style>
