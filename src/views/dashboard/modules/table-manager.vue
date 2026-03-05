@@ -87,14 +87,14 @@ a-card.table-manager(:bordered="false")
           .tree-data
             transition(name="slide-fade")
               .data-type {{ nodeData.dataType }}
-          TableMenu(
-            isColumn
-            :nodeData="nodeData"
-            :database="activeDatabase"
-            :expandedKeys="expandedKeys"
-            :expandedTablesTree="expandedTablesTree"
-            @expandChildren="expandChildren"
-          )
+            TableMenu(
+              isColumn
+              :nodeData="nodeData"
+              :database="activeDatabase"
+              :expandedKeys="expandedKeys"
+              :expandedTablesTree="expandedTablesTree"
+              @expandChildren="expandChildren"
+            )
         .detail-row(v-else)
           .count-and-time(v-if="nodeData.title === 'rowAndTime'")
             a-space(:size="4")
@@ -332,7 +332,6 @@ a-card.table-manager(:bordered="false")
 
     :deep(> .arco-card-header) {
       padding: 10px 6px 10px 15px;
-      height: 52px;
 
       > .arco-card-header-title {
         justify-content: space-between;
