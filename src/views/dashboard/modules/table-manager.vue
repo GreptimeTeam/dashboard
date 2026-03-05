@@ -458,14 +458,6 @@ a-card.table-manager(:bordered="false")
       background: var(--tree-select-brand-color);
     }
 
-    :deep(.arco-tree-node:last-of-type) {
-      border-bottom: 1px solid var(--border-color);
-
-      &.arco-tree-node-is-leaf {
-        padding-bottom: 8px;
-      }
-    }
-
     :deep(.arco-tree-node.arco-tree-node-is-leaf.details) {
       cursor: default;
 

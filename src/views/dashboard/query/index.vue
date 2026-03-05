@@ -172,6 +172,9 @@ a-layout.new-layout
 </script>
 
 <style lang="less" scoped>
+  :deep(.arco-layout-sider-light) {
+    box-shadow: none !important;
+  }
   .new-layout {
     :deep(.layout-space > .arco-space-item:first-of-type) {
       padding-left: 0;
