@@ -1,4 +1,4 @@
-import { ref, type Ref } from 'vue'
+import { reactive } from 'vue'
 import { TextEditorFormState } from '@/types/query'
 import { replaceTimePlaceholders } from '@/utils/sql'
 

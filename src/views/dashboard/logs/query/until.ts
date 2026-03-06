@@ -1,6 +1,7 @@
 import dayjs from 'dayjs'
 import type { SchemaType } from '@/store/modules/code-run/types'
 import type { TSColumn } from '@/types/query'
+import { getTableRefForSql } from '@/utils/sql'
 
 function findWhereClausePosition(sql: string) {
   // Normalize case for easier comparison
@@ -96,12 +97,17 @@ export function addTsCondition(sql: string, column: string, start: number | stri
 export const TableNameReg = /(?<=from|FROM)\s+([^\s;]+)/i
 
 /**
- * Parse table reference after FROM. Returns the raw table reference as-is (e.g. "temp_data"."cpu_metrics"), no conversion.
+ * Parse table reference after FROM and normalize it to a safe, quoted identifier:
+ * - "db"."table" → "db"."table"
+ * - db.table     → "db"."table"
+ * - table        → "table"
  */
 export function parseTable(sql: string) {
   const result = sql.match(TableNameReg)
   if (!result?.[1]) return ''
-  return result[1].trim()
+  const raw = result[1].trim()
+  // Let SQL utils handle proper quoting / escaping for identifiers
+  return getTableRefForSql({ table: raw })
 }
 
 export function parseTimeRange(sql: string, tsColumn: string, multiple: number): string[] | number {

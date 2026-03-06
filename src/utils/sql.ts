@@ -204,21 +204,26 @@ export function replaceTimePlaceholders(sql: string, timeRanges: any[]): string 
 
 /**
  * Table reference for use in SQL (e.g. in FROM clause).
- * Table may already contain schema prefix (e.g. "temp_data"."cpu_metrics") from text mode.
- * If table already looks quoted (starts with " or ` or '), use as-is to avoid double-quoting.
+ * - When database is provided (builder mode), both database and table are quoted safely.
+ * - When only table is provided, it may already contain schema prefix (e.g. "temp_data"."cpu_metrics")
+ *   or be unqualified (e.g. my_schema.my_table). In the latter case each part is safely quoted.
  */
-function tableRefForSql(table: string): string {
+export function getTableRefForSql(state: { table: string; database?: string }): string {
+  const quote = (id: string) => `"${id.replace(/"/g, '""')}"`
+  const { table, database } = state
+
+  if (database) {
+    return `${quote(database)}.${quote(table)}`
+  }
+
+  // Text / free-sql mode: respect fully quoted references
   if (/^["'`]/.test(table)) {
     return table
   }
-  return `"${table}"`
-}
 
-/**
- * From query state (table + optional database), returns the table reference ready for SQL FROM clause.
- * Builder mode: database + table → "database"."table"; text mode: table may already be "schema"."table".
- */
-export function getTableRefForSql(state: { table: string; database?: string }): string {
-  const tableRef = state.database ? `"${state.database}"."${state.table}"` : state.table
-  return tableRefForSql(tableRef)
+  // Quote each identifier segment (schema.table or just table)
+  return table
+    .split('.')
+    .map((part) => quote(part))
+    .join('.')
 }
