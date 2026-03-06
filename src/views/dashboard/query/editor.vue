@@ -1,6 +1,6 @@
 <template lang="pug">
-a-card.editor-card(:bordered="false")
-  a-space.space-between.pb-15
+a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
+  a-space.space-between(style="padding: 10px 0")
     a-space.editor-header(size="medium")
       a-dropdown-button(
         type="primary"
@@ -112,32 +112,34 @@ a-card.editor-card(:bordered="false")
                   a-list-item
                     span.ml-2 {{ $t('dashboard.examples') }}
                     a-typography-text(v-for="item of durationExamples" :key="item" code) {{ item }}
-  a-resize-box(:directions="['bottom']")
+  a-resize-box.editor-resize-box(:directions="['bottom']" :style="{ height: '254px' }")
     a-tabs.query-tabs(:default-active-key="'sql'" :active-key="queryType")
       a-tab-pane(key="sql")
-        CodeMirror(
-          v-model="codes.sql"
-          :style="style"
-          :spellcheck="spellcheck"
-          :autofocus="autofocus"
-          :indent-with-tab="indentWithTab"
-          :tabSize="tabSize"
-          :extensions="extensionsForSql"
-          @ready="handleReadySql"
-          @update="codeUpdate('sql')"
-        )
+        .full-width-height-editor.card-editor
+          CodeMirror(
+            v-model="codes.sql"
+            :style="{ width: '100%', height: '100%' }"
+            :spellcheck="spellcheck"
+            :autofocus="autofocus"
+            :indent-with-tab="indentWithTab"
+            :tabSize="tabSize"
+            :extensions="extensionsForSql"
+            @ready="handleReadySql"
+            @update="codeUpdate('sql')"
+          )
       a-tab-pane(key="promql")
-        CodeMirror(
-          v-model="codes.promql"
-          :style="style"
-          :spellcheck="spellcheck"
-          :autofocus="autofocus"
-          :indent-with-tab="indentWithTab"
-          :tabSize="tabSize"
-          :extensions="extensionsForPromql"
-          @ready="handleReadyPromql"
-          @update="codeUpdate('promql')"
-        )
+        .full-width-height-editor.card-editor
+          CodeMirror(
+            v-model="codes.promql"
+            :style="{ width: '100%', height: '100%' }"
+            :spellcheck="spellcheck"
+            :autofocus="autofocus"
+            :indent-with-tab="indentWithTab"
+            :tabSize="tabSize"
+            :extensions="extensionsForPromql"
+            @ready="handleReadyPromql"
+            @update="codeUpdate('promql')"
+          )
   a-modal(
     v-model:visible="importExplainModalVisible"
     title="Import Explain Result JSON"
@@ -281,10 +283,6 @@ a-card.editor-card(:bordered="false")
   }
   const handleReadyPromql = (payload: any) => {
     promqlView.value = payload.view
-  }
-
-  const style = {
-    height: '250px',
   }
 
   const updateCurrentStatement = (sql: string, cursorPosition: number) => {
@@ -545,15 +543,16 @@ a-card.editor-card(:bordered="false")
     }
   }
 
-  .arco-resizebox {
-    height: 260px;
-  }
   :deep(.arco-resizebox-trigger-icon-wrapper) {
     color: var(--main-font-color);
     font-size: 18px;
   }
   .prom-form {
     padding-left: 8px;
+  }
+
+  .editor-resize-box {
+    padding-bottom: 12px !important;
   }
 
   .explain-disabled {
@@ -583,7 +582,7 @@ a-card.editor-card(:bordered="false")
   }
 
   .arco-btn-group .arco-btn-primary:not(:last-child) {
-    border-right: 0.5px solid white;
+    border-right: 1px solid rgba(255, 255, 255, 0.3);
   }
 
   .import-explain-modal {
