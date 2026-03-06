@@ -93,17 +93,15 @@ export function addTsCondition(sql: string, column: string, start: number | stri
   return `${sql.slice(0, whereIndex - 1)} WHERE ${column} >= ${start} and ${column} < ${end} ${sql.slice(whereIndex)}`
 }
 
-export const TableNameReg = /(?<=from|FROM)\s+([^\s;]+)/
+export const TableNameReg = /(?<=from|FROM)\s+([^\s;]+)/i
+
+/**
+ * Parse table reference after FROM. Returns the raw table reference as-is (e.g. "temp_data"."cpu_metrics"), no conversion.
+ */
 export function parseTable(sql: string) {
   const result = sql.match(TableNameReg)
-  if (result && result.length) {
-    const tableName = result[1].trim()
-    // Remove quotes if they exist
-    const cleanTableName = tableName.replace(/^["'`]|["'`]$/g, '')
-    const arr = cleanTableName.split('.')
-    return arr[arr.length - 1]
-  }
-  return ''
+  if (!result?.[1]) return ''
+  return result[1].trim()
 }
 
 export function parseTimeRange(sql: string, tsColumn: string, multiple: number): string[] | number {

@@ -14,7 +14,7 @@ VCharts(
   import { watchOnce } from '@vueuse/core'
   import editorAPI from '@/api/editor'
   import type { QueryState } from '@/types/query'
-  import { replaceTimePlaceholders } from '@/utils/sql'
+  import { replaceTimePlaceholders, getTableRefForSql } from '@/utils/sql'
   import { getWhereClause } from './until'
 
   interface Props {
@@ -84,10 +84,7 @@ VCharts(
     const currentSql = replaceTimePlaceholders(props.queryState.sql, [startTs, endTs])
     const whereClause = getWhereClause(currentSql)
     const condition = whereClause ? `WHERE ${whereClause}` : ''
-    // Build table name with database prefix if available
-    const tableName = props.queryState.database
-      ? `"${props.queryState.database}"."${props.queryState.table}"`
-      : `"${props.queryState.table}"`
+    const tableName = getTableRefForSql(props.queryState)
     return `SELECT ${props.column} ,count(*) AS c FROM ${tableName} ${condition} GROUP BY ${props.column} ORDER BY c DESC`
   })
 

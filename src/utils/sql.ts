@@ -201,3 +201,24 @@ export function replaceTimePlaceholders(sql: string, timeRanges: any[]): string 
 
   return result
 }
+
+/**
+ * Table reference for use in SQL (e.g. in FROM clause).
+ * Table may already contain schema prefix (e.g. "temp_data"."cpu_metrics") from text mode.
+ * If table already looks quoted (starts with " or ` or '), use as-is to avoid double-quoting.
+ */
+function tableRefForSql(table: string): string {
+  if (/^["'`]/.test(table)) {
+    return table
+  }
+  return `"${table}"`
+}
+
+/**
+ * From query state (table + optional database), returns the table reference ready for SQL FROM clause.
+ * Builder mode: database + table → "database"."table"; text mode: table may already be "schema"."table".
+ */
+export function getTableRefForSql(state: { table: string; database?: string }): string {
+  const tableRef = state.database ? `"${state.database}"."${state.table}"` : state.table
+  return tableRefForSql(tableRef)
+}
