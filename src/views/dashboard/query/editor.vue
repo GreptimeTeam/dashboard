@@ -8,13 +8,12 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
         :disabled="isButtonDisabled || explainQueryRunning"
         @click="runPartQuery()"
       )
-        a-tooltip(position="left" content="Ctrl + Enter")
-          a-popover(position="bl" content-class="code-tooltip" :content="currentStatement")
-            a-space(:size="4")
-              icon-loading(v-if="secondaryCodeRunning" spin)
-              icon-play-arrow(v-else)
-              div {{ $t('dashboard.runQuery') + (queryType === 'sql' && currentQueryNumber ? ' #' + currentQueryNumber : '') }}
-              icon-close-circle-fill.icon-16(v-if="secondaryCodeRunning") 
+        a-popover(position="bl" content-class="code-tooltip" :content="currentStatement")
+          a-space(:size="4")
+            icon-loading(v-if="secondaryCodeRunning" spin)
+            icon-play-arrow(v-else)
+            div {{ $t('dashboard.runQuery') + (queryType === 'sql' && currentQueryNumber ? ' #' + currentQueryNumber : '') }}
+            icon-close-circle-fill.icon-16(v-if="secondaryCodeRunning") 
         template(#icon)
           icon-down
         template(#content)
