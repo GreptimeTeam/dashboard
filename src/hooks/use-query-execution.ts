@@ -1,5 +1,5 @@
 import { ref, reactive, computed, watch, shallowRef } from 'vue'
-import { replaceTimePlaceholders } from '@/utils/sql'
+import { replaceTimePlaceholders, getTableRefForSql } from '@/utils/sql'
 import type { ColumnType, QueryState } from '@/types/query'
 
 const useQueryExecution = (builder, textEditor, timeRange) => {
@@ -53,8 +53,7 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
       const whereMatch = currentSql.match(/WHERE\s+([\s\S]+?)(?:\s+ORDER\s+BY|\s+LIMIT\s+|\s*$)/i)
       const whereClause = whereMatch ? `WHERE ${whereMatch[1]}` : ''
 
-      // Build COUNT query with database prefix if available
-      const tableName = queryState.database ? `"${queryState.database}"."${queryState.table}"` : `"${queryState.table}"`
+      const tableName = getTableRefForSql(queryState)
       const countSql = `SELECT COUNT(*) FROM ${tableName} ${whereClause}`
 
       const { default: editorAPI } = await import('@/api/editor')

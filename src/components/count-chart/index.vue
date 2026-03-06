@@ -14,7 +14,7 @@ VCharts(
   import * as echarts from 'echarts'
   import editorAPI from '@/api/editor'
   import type { QueryState } from '@/types/query'
-  import { replaceTimePlaceholders } from '@/utils/sql'
+  import { replaceTimePlaceholders, getTableRefForSql } from '@/utils/sql'
   import { convertTimestampToMilliseconds } from '@/utils/date-time'
   import { useDateTimeFormat } from '@/hooks'
 
@@ -170,8 +170,7 @@ VCharts(
 
     const whereClause = whereMatch ? `WHERE ${whereMatch[1]}` : ''
 
-    // Build table name with database prefix if available
-    const tableName = database ? `"${database}"."${table}"` : `"${table}"`
+    const tableName = getTableRefForSql({ table, database })
 
     return `SELECT
             date_bin('${intervalSeconds.value} seconds', "${tsColumn.name}") AS time_bucket,

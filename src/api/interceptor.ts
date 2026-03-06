@@ -21,19 +21,22 @@ export interface Auth {
 }
 
 // todo: can we use env and proxy at the same time?
-export const TableNameReg = /(?<=from|FROM)\s+([^\s;]+)/
-export function parseTable(sql: string) {
+export const TableNameReg = /(?<=from|FROM)\s+([^\s;]+)/i
+/**
+ * Parse table reference from SQL after FROM. Returns the raw table reference as-is (e.g. "temp_data"."cpu_metrics"), no conversion.
+ */
+function parseTableFromSql(sql: string): string {
   try {
     sql = decodeURIComponent(sql)
     const result = sql.match(TableNameReg)
-    if (result && result.length) {
-      const arr = result[1].trim().split('.')
-      return arr[arr.length - 1]
-    }
-  } catch (e) {
+    if (!result?.[1]) return ''
+    return result[1].trim()
+  } catch {
     return ''
   }
-  return ''
+}
+export function parseTable(sql: string) {
+  return parseTableFromSql(sql)
 }
 
 axios.interceptors.request.use(

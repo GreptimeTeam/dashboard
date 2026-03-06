@@ -201,3 +201,29 @@ export function replaceTimePlaceholders(sql: string, timeRanges: any[]): string 
 
   return result
 }
+
+/**
+ * Table reference for use in SQL (e.g. in FROM clause).
+ * - When database is provided (builder mode), both database and table are quoted safely.
+ * - When only table is provided, it may already contain schema prefix (e.g. "temp_data"."cpu_metrics")
+ *   or be unqualified (e.g. my_schema.my_table). In the latter case each part is safely quoted.
+ */
+export function getTableRefForSql(state: { table: string; database?: string }): string {
+  const quote = (id: string) => `"${id.replace(/"/g, '""')}"`
+  const { table, database } = state
+
+  if (database) {
+    return `${quote(database)}.${quote(table)}`
+  }
+
+  // Text / free-sql mode: respect fully quoted references
+  if (/^["'`]/.test(table)) {
+    return table
+  }
+
+  // Quote each identifier segment (schema.table or just table)
+  return table
+    .split('.')
+    .map((part) => quote(part))
+    .join('.')
+}
