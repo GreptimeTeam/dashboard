@@ -64,6 +64,9 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
           template(#icon)
             svg.icon-18
               use(href="#time-index")
+      a-tooltip(mini position="right" content="AI SQL demo (local)")
+        a-button(type="secondary" @click="openAiSqlModal")
+          | AI SQL Assistant
       TimeAssistance(ref="tsRef" :cm="currentView")
     .query-select
       a-space(size="medium")
@@ -154,6 +157,17 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
           :auto-size="{ minRows: 10, maxRows: 20 }"
           @paste="onPaste"
         )
+  a-modal(
+    v-model:visible="aiModalVisible"
+    title="Generate SQL with Prompt"
+    :confirm-loading="aiLoading"
+    @ok="handleAiSqlGenerate"
+  )
+    a-textarea(
+      v-model="aiPrompt"
+      :placeholder="'Describe the query you want to generate'"
+      :auto-size="{ minRows: 3, maxRows: 6 }"
+    )
 </template>
 
 <script lang="ts" setup name="Editor">
@@ -207,8 +221,9 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
     step: '30s',
     range: [dayjs().subtract(5, 'minute').unix().toString(), dayjs().unix().toString()],
   })
-  const { runQuery, explainQuery, exportWithFormat } = useQueryCode()
-  const { extensions } = storeToRefs(useDataBaseStore())
+  const { runQuery, explainQuery, exportWithFormat, inputFromNewLineToQueryCode } = useQueryCode()
+  const { extensions, originTablesTree } = storeToRefs(useDataBaseStore())
+  const { database } = storeToRefs(useAppStore())
   const { explainResultKeyCount, explainResult } = storeToRefs(useCodeRunStore())
   const importExplainForm = reactive({
     explainJson: '',
@@ -217,8 +232,90 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
   const currentStatement = ref<string>('')
   const importExplainModalVisible = ref(false)
   const explainQueryRunning = ref(false)
+  const aiModalVisible = ref(false)
+  const aiPrompt = ref('')
+  const aiLoading = ref(false)
 
   const emit = defineEmits(['selectExplainTab'])
+
+  /**
+   * 最小示例：从当前数据库状态构造 schema，并调用本地 ai-sql-service。
+   */
+  const buildAiSchemaPayload = () => {
+    const tables = originTablesTree.value.map((table) => {
+      const columns = table.columns.map((col) => {
+        return {
+          name: col.title,
+          dataType: col.dataType,
+          semanticType: col.iconType,
+        }
+      })
+
+      return {
+        name: table.title,
+        timeIndex: table.timeIndexName && table.timeIndexName !== '%TIMESTAMP%' ? table.timeIndexName : undefined,
+        columns,
+      }
+    })
+
+    return {
+      database: database.value,
+      tables,
+    }
+  }
+
+  const openAiSqlModal = () => {
+    if (queryType.value !== 'sql') {
+      Message.warning('AI SQL demo currently only supports SQL tab')
+      return
+    }
+
+    aiModalVisible.value = true
+  }
+
+  const handleAiSqlGenerate = async () => {
+    if (!aiPrompt.value || !aiPrompt.value.trim()) {
+      Message.warning('Please describe the query you want to generate')
+      return
+    }
+
+    try {
+      aiLoading.value = true
+      const resp = await fetch('http://localhost:8787/ai/generate-sql', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          userPrompt: aiPrompt.value.trim(),
+          schema: buildAiSchemaPayload(),
+        }),
+      })
+
+      if (!resp.ok) {
+        throw new Error(`HTTP ${resp.status}`)
+      }
+
+      const { sql } = (await resp.json()) as { sql?: string }
+      if (!sql) {
+        throw new Error('Empty SQL from AI service')
+      }
+
+      // 先追加提示词注释，再追加可执行 SQL
+      const promptLine = aiPrompt.value.trim().replace(/\s+/g, ' ')
+      const promptComment = `-- ai prompt: ${promptLine}`
+      inputFromNewLineToQueryCode(promptComment, 0)
+      inputFromNewLineToQueryCode(sql, 0)
+      Message.success('AI SQL demo: query appended')
+      aiModalVisible.value = false
+      aiPrompt.value = ''
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      Message.error(`AI SQL demo failed: ${message}`)
+    } finally {
+      aiLoading.value = false
+    }
+  }
 
   const openTimeAssistance = () => {
     if (tsRef.value) {
