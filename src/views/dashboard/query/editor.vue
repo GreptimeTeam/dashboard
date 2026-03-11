@@ -166,6 +166,7 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
   import { sqlFormatter, parseSqlStatements, findStatementAtPosition, promqlFormatter } from '@/utils/sql'
   import { Message } from '@arco-design/web-vue'
   import fileDownload from 'js-file-download'
+  import { useQueryCode } from '@/hooks'
 
   import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '../config'
 

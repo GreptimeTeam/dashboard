@@ -190,12 +190,6 @@ class WebMCP {
         }
       })
       sessionStorage.setItem(this.RESOURCES_STORAGE_KEY, JSON.stringify(resourcesData))
-
-      console.log('Saved items to session storage:', {
-        tools: Object.keys(toolsData).length,
-        prompts: Object.keys(promptsData).length,
-        resources: Object.keys(resourcesData).length,
-      })
     } catch (error) {
       console.error('Error saving items to session storage:', error)
     }
