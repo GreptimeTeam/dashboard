@@ -112,14 +112,37 @@ class WebMCP {
           // Load stored items before connecting
           this._loadStoredItems()
 
-          // Connect using the stored token
-          this.connect(connectionInfo.token)
+          // Connect using the already-parsed channel token without re-processing it
+          this._connectWithExistingToken()
         }
       } catch (error) {
         console.error('Error parsing stored connection info:', error)
         sessionStorage.removeItem(this.SESSION_STORAGE_KEY)
         this._clearStoredItems()
       }
+    }
+  }
+
+  /**
+   * Connect using already-populated currentServer/currentChannel/currentToken
+   * without re-processing or re-registering the token.
+   * @private
+   */
+  _connectWithExistingToken() {
+    if (!this.currentServer || !this.currentChannel || !this.currentToken) {
+      return
+    }
+
+    try {
+      const serverUrl = `${this.currentServer}${this.currentChannel}?token=${this.currentToken}`
+      this._updateStatus('connecting', 'Connecting to channel...')
+      this.socket = new WebSocket(serverUrl)
+      this._setupSocketListeners()
+      this._resetInactivityTimer()
+    } catch (error) {
+      console.error('Auto-reconnect error:', error)
+      this._updateStatus('disconnected', `Error: ${error.message}`)
+      sessionStorage.removeItem(this.SESSION_STORAGE_KEY)
     }
   }
 
