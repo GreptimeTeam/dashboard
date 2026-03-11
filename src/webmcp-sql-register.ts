@@ -292,3 +292,11 @@ const registerWebmcpSql = async () => {
 }
 
 export default registerWebmcpSql
+;(async () => {
+  try {
+    await registerWebmcpSql()
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to register WebMCP SQL tools', error)
+  }
+})()
