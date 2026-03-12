@@ -26,7 +26,8 @@ This page explains how to connect an MCP client (OpenCode / Claude Desktop / etc
 4. Click the **blue WebMCP square** in the bottom-right corner.
 5. Paste the token, then click **Connect**.
 
-![effect](./connect.png)
+![connect](./connect.png)
+![client](./client.png)
 
 ## Notes
 
