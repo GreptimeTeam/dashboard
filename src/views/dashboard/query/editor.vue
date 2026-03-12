@@ -167,6 +167,7 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
   import { Message } from '@arco-design/web-vue'
   import fileDownload from 'js-file-download'
   import { useQueryCode } from '@/hooks'
+  import ensureWebMcpInstance from '@/webmcp-instance'
 
   import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '../config'
 
@@ -436,6 +437,7 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
     )
   })
 
+  // Restore last query editor content (SQL / PromQL) from localStorage
   onMounted(() => {
     const stored = useStorage('queryCode', { sql: '', promql: '', type: 'sql' }).value
     codes.value.sql = stored.sql || ''
@@ -452,6 +454,91 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
         promql: codes.value.promql,
         type: queryType.value,
       })
+    )
+  })
+
+  // --- WebMCP integration: tools that generate/execute SQL and append it into the editor ---
+
+  const normalizeSqlStatement = (sql: string) => {
+    const trimmed = sql.trim().replace(/;+\s*$/, '')
+    return `${trimmed};`
+  }
+
+  const appendSqlFromWebmcp = (sql: string, comment: string) => {
+    const statement = normalizeSqlStatement(sql)
+    const prefix = codes.value.sql.trim() ? '\n\n' : ''
+    codes.value.sql = `${codes.value.sql || ''}${prefix}${comment}\n${statement}`
+  }
+
+  onMounted(async () => {
+    const instance = await ensureWebMcpInstance()
+    if (!instance) return
+
+    instance.registerTool(
+      'runSqlInDashboard',
+      'Execute a SQL statement in the current dashboard database and append it to the editor',
+      {
+        type: 'object',
+        properties: {
+          sql: {
+            type: 'string',
+            description: 'SQL statement to execute in the current dashboard database',
+          },
+          prompt: {
+            type: 'string',
+            description: 'Optional natural language instruction or description that produced this SQL',
+          },
+        },
+        required: ['sql'],
+      },
+      async (args: { sql?: string; prompt?: string }) => {
+        const sql = (args?.sql || '').trim()
+        const prompt = (args?.prompt || '').trim()
+        if (!sql) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({ ok: false, error: 'Missing required parameter: sql' }),
+              },
+            ],
+          }
+        }
+
+        const baseComment = '-- WebMCP SQL'
+        const comment = prompt ? `${baseComment}: ${prompt}` : baseComment
+        appendSqlFromWebmcp(sql, comment)
+
+        try {
+          const result: any = await runQuery(sql, 'sql', false)
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  ok: !result?.error,
+                  sql,
+                  error: result?.error || null,
+                  lastResult: result?.lastResult || null,
+                }),
+              },
+            ],
+          }
+        } catch (error) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  ok: false,
+                  sql,
+                  error: error instanceof Error ? error.message : String(error),
+                }),
+              },
+            ],
+          }
+        }
+      }
     )
   })
 

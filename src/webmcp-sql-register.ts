@@ -199,67 +199,6 @@ const registerWebmcpSql = async () => {
     }
   )
 
-  instance.registerTool(
-    'runSqlInDashboard',
-    'Execute a SQL statement in the current dashboard database and return the last result metadata',
-    {
-      type: 'object',
-      properties: {
-        sql: {
-          type: 'string',
-          description: 'SQL statement to execute in the current dashboard database',
-        },
-      },
-      required: ['sql'],
-    },
-    async (args: { sql?: string }) => {
-      const sql = (args?.sql || '').trim()
-      if (!sql) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify({ ok: false, error: 'Missing required parameter: sql' }),
-            },
-          ],
-        }
-      }
-
-      try {
-        const resp: any = await editorAPI.runSQL(sql)
-        const records = resp?.output?.[0]?.records
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify({
-                ok: true,
-                sql,
-                records,
-              }),
-            },
-          ],
-        }
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error(error)
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify({
-                ok: false,
-                error: 'Failed to execute SQL via editor API',
-                sql,
-                details: toErrorMessage(error),
-              }),
-            },
-          ],
-        }
-      }
-    }
-  )
-
   registered = true
 }
 
