@@ -14,6 +14,7 @@ import '@/api/interceptor'
 import './webmcp-sql-register'
 import './webmcp-metrics-register'
 import './webmcp-pipeline-register'
+import './webmcp-prompts-register'
 
 const app: App = createApp(Apps)
 

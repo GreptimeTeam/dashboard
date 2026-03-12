@@ -7,15 +7,8 @@ import {
   getSeries,
   searchMetricNames,
 } from '@/api/metrics'
+import ensureWebMcpInstance from './webmcp-instance'
 
-// WebMCP is provided globally via a <script> tag in index.html
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-declare const WebMCP: any
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-declare const window: any
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let mcpInstance: any | null = null
 let registered = false
 
 const toErrorMessage = (err: unknown) => {
@@ -34,30 +27,7 @@ const okText = (payload: unknown) => ({
 
 const errText = (payload: Record<string, any>) => okText({ ok: false, ...payload })
 
-const ensureWebMcpInstance = async () => {
-  if (mcpInstance) return mcpInstance
-  if (window?.__webmcp) {
-    mcpInstance = window.__webmcp
-    return mcpInstance
-  }
-  if (typeof WebMCP !== 'function') {
-    // WebMCP script not ready yet; fail quietly
-    return null
-  }
-
-  try {
-    const instance = new WebMCP({ position: 'bottom-right' })
-    window.__webmcp = instance
-    mcpInstance = instance
-    return instance
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.error(e)
-    return null
-  }
-}
-
-const registerMetricsToolsAndPrompts = (instance: any) => {
+const registerMetricsTools = (instance: any) => {
   instance.registerTool(
     'listMetrics',
     'List available metric names in the current dashboard database',
@@ -264,117 +234,6 @@ const registerMetricsToolsAndPrompts = (instance: any) => {
       }
     }
   )
-
-  instance.registerPrompt(
-    'metrics-help',
-    'Guidance for metric queries in GreptimeDB (PromQL, instant/range, and Prometheus-compatible HTTP API)',
-    [],
-    () => {
-      const text = `You are assisting with GreptimeDB metric queries in the dashboard.
-
-Key rules:
-- Metric queries MUST use PromQL.
-- Choose the correct query type:
-  - Instant query: current value at a timestamp (table-like). Use PromQL instant query.
-  - Range query: time series over a window. Use PromQL range query.
-
-GreptimeDB implements Prometheus-compatible HTTP APIs under /v1/prometheus/:
-- Instant queries: /api/v1/query
-- Range queries: /api/v1/query_range
-- Series: /api/v1/series
-- Label names: /api/v1/labels
-- Label values: /api/v1/label/<label_name>/values
-
-When you need metadata:
-- Use listMetrics/searchMetrics to find metric names.
-- Use getMetricLabelNames/getMetricLabelValues to explore labels.
-- Use getSeries to discover concrete series selectors.
-
-When executing:
-- Use queryPromqlInstant for instant.
-- Use queryPromqlRange for range (requires start/end/step in seconds).
-`
-      return {
-        messages: [{ role: 'user', content: { type: 'text', text } }],
-      }
-    }
-  )
-
-  instance.registerPrompt(
-    'metrics-generate-promql',
-    'Generate PromQL for a metric task (compatible with instant and range queries)',
-    [
-      { name: 'task', description: 'User goal described in natural language', required: true },
-      {
-        name: 'mode',
-        description: 'Query mode: "instant" or "range". If omitted, choose the best mode and explain briefly.',
-        required: false,
-      },
-      {
-        name: 'metric_hint',
-        description: 'Optional metric name(s) or partial name to guide selection',
-        required: false,
-      },
-    ],
-    (args: Record<string, any>) => {
-      const task = String(args?.task || '').trim()
-      const mode = String(args?.mode || '').trim()
-      const metricHint = String(args?.metric_hint || '').trim()
-      const parts = [
-        `You are a PromQL expert helping query GreptimeDB metrics in the dashboard.
-
-Requirements:
-- Output ONLY PromQL (no markdown, no explanations in the output).
-- Ensure the query is valid PromQL.
-- If mode is "instant", produce a query suitable for /api/v1/query.
-- If mode is "range", produce a query suitable for /api/v1/query_range.
-- Prefer filters on labels (e.g. instance, job) when relevant.
-
-Task:
-${task}
-`,
-      ]
-      if (mode) parts.push(`Mode:\n${mode}\n`)
-      if (metricHint) parts.push(`Metric hint:\n${metricHint}\n`)
-      const text = parts.join('\n')
-      return { messages: [{ role: 'user', content: { type: 'text', text } }] }
-    }
-  )
-
-  instance.registerPrompt(
-    'metrics-debug-promql',
-    'Debug a PromQL query that errors or returns empty results',
-    [
-      { name: 'promql', description: 'The PromQL query to debug', required: true },
-      { name: 'symptom', description: 'What went wrong (error message or empty result)', required: true },
-    ],
-    (args: Record<string, any>) => {
-      const promql = String(args?.promql || '').trim()
-      const symptom = String(args?.symptom || '').trim()
-      const text = `You are debugging PromQL against GreptimeDB Prometheus-compatible APIs.
-
-Given the query and symptom, propose a step-by-step debugging plan using these tools:
-- listMetrics / searchMetrics
-- getMetricLabelNames / getMetricLabelValues
-- getSeries
-- queryPromqlInstant / queryPromqlRange
-
-Focus on:
-- metric name typos
-- label name/value mismatches
-- incorrect selector shape
-- range vs instant mismatch
-- start/end/step formatting (seconds)
-
-PromQL:
-${promql}
-
-Symptom:
-${symptom}
-`
-      return { messages: [{ role: 'user', content: { type: 'text', text } }] }
-    }
-  )
 }
 
 // Best-effort registration at app startup
@@ -382,6 +241,6 @@ ${symptom}
   if (registered) return
   const instance = await ensureWebMcpInstance()
   if (!instance) return
-  registerMetricsToolsAndPrompts(instance)
+  registerMetricsTools(instance)
   registered = true
 })()

@@ -6,15 +6,8 @@ import {
   debugContent as debugPipelineWithDataApi,
   getPipelineDDL as getPipelineDDLApi,
 } from '@/api/pipeline'
+import ensureWebMcpInstance from './webmcp-instance'
 
-// WebMCP is provided globally via a <script> tag in index.html
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-declare const WebMCP: any
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-declare const window: any
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let mcpInstance: any | null = null
 let registered = false
 
 const toErrorMessage = (err: unknown) => {
@@ -32,27 +25,6 @@ const okText = (payload: unknown) => ({
 })
 
 const errText = (payload: Record<string, any>) => okText({ ok: false, ...payload })
-
-const ensureWebMcpInstance = async () => {
-  if (mcpInstance) return mcpInstance
-  if (window?.__webmcp) {
-    mcpInstance = window.__webmcp
-    return mcpInstance
-  }
-  if (typeof WebMCP !== 'function') {
-    return null
-  }
-  try {
-    const instance = new WebMCP({ position: 'bottom-right' })
-    window.__webmcp = instance
-    mcpInstance = instance
-    return instance
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.error(e)
-    return null
-  }
-}
 
 const registerPipelineTools = (instance: any) => {
   instance.registerTool(

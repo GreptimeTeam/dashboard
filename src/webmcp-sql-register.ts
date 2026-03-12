@@ -1,13 +1,6 @@
 import editorAPI from '@/api/editor'
+import ensureWebMcpInstance from './webmcp-instance'
 
-// WebMCP is provided globally via a <script> tag in index.html
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-declare const WebMCP: any
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-declare const window: any
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let mcpInstance: any | null = null
 let registered = false
 
 const toErrorMessage = (err: unknown) => {
@@ -22,27 +15,6 @@ const toErrorMessage = (err: unknown) => {
 
 const registerWebmcpSql = async () => {
   if (registered) return
-
-  const ensureWebMcpInstance = async () => {
-    if (mcpInstance) return mcpInstance
-    if (window?.__webmcp) {
-      mcpInstance = window.__webmcp
-      return mcpInstance
-    }
-    if (typeof WebMCP !== 'function') return null
-    try {
-      const instance = new WebMCP({
-        position: 'bottom-right',
-      })
-      window.__webmcp = instance
-      mcpInstance = instance
-      return instance
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error(error)
-      return null
-    }
-  }
 
   const instance = await ensureWebMcpInstance()
   if (!instance) return
