@@ -11,6 +11,10 @@ import Apps from './App.vue'
 import '@arco-design/web-vue/dist/arco.css'
 import '@/assets/style/global.less'
 import '@/api/interceptor'
+import './webmcp-sql-register'
+import './webmcp-metrics-register'
+import './webmcp-pipeline-register'
+import './webmcp-prompts-register'
 
 const app: App = createApp(Apps)
 
