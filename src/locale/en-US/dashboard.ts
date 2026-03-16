@@ -9,6 +9,7 @@ export default {
   'dashboard.copied': 'Copied',
   'dashboard.copyToClipboard': 'Copy Query to Clipboard',
   'dashboard.create': 'Create New Script',
+  'dashboard.createDashboard': 'New Dashboard',
   'dashboard.createTable': 'Create table SQL',
   'dashboard.draw': 'Draw',
   'dashboard.end': 'end',

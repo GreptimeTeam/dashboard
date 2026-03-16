@@ -7,6 +7,7 @@ export default {
   'dashboard.clear': '清除',
   'dashboard.copyToClipboard': '复制到剪贴板',
   'dashboard.create': '新建脚本',
+  'dashboard.createDashboard': '新建仪表盘',
   'dashboard.createTable': '创建表 SQL',
   'dashboard.draw': '绘图',
   'dashboard.end': '结束',

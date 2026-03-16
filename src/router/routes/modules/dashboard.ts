@@ -221,6 +221,17 @@ const DASHBOARD: AppRouteRecordRaw = {
       },
     },
     {
+      path: 'perses',
+      component: () => import('@/views/dashboard/perses/index.vue'),
+      name: 'perses',
+      meta: {
+        locale: 'menu.dashboard.perses',
+        requiresAuth: false,
+        icon: 'icon-dashboard',
+        roles: ['admin', 'cloud'],
+      },
+    },
+    {
       path: 'status',
       name: 'status',
       component: () => import('@/views/dashboard/status/index.vue'),

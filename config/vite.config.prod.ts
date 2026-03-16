@@ -37,11 +37,13 @@ export default mergeConfig(
             },
             imports: ['vue', 'pinia', 'vue-router'],
             dirs: ['src/store', 'src/hooks'],
+            exclude: [/src\/perses-dashboard\/react\//, /src\/dashboard-main\.tsx/],
           }),
           Components({
             dts: true,
             dirs: ['src/components', 'src/views'],
             extensions: ['vue', 'arco-design'],
+            exclude: [/src\/perses-dashboard\/react\//, /src\/dashboard-main\.tsx/],
           }),
         ],
       },
