@@ -19,6 +19,7 @@ export default {
   'menu.dashboard.logPipeline': 'Logs Pipeline',
   'menu.dashboard.flow': 'Flow',
   'menu.dashboard.traces': 'Trace 查询',
+  'menu.dashboard.perses': '仪表盘',
   'menu.tour.query': '查看实例的完整数据库、表和元数据列表。在我们的查询编辑器中放置 SQL 和 PromQL 查询。',
   'menu.tour.ingest': '从 Ingest UI 中摄取时间序列数据。',
   'menu.news': '最新资讯',

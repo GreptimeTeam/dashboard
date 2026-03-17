@@ -19,6 +19,7 @@ export default {
   'menu.dashboard.logPipeline': 'Logs Pipelines',
   'menu.dashboard.flow': 'Flow',
   'menu.dashboard.traces': 'Traces Query',
+  'menu.dashboard.perses': 'Dashboard',
   'menu.tour.query':
     'Check full list of tables and their metadata of your instance. Place SQL and PromQL query in our query editor.',
   'menu.tour.ingest': 'Ingest time-series data from the Ingest UI.',

@@ -1,0 +1,36 @@
+html {
+  font-size: 14px;
+}
+
+html,
+body {
+  height: auto !important;
+  min-height: 100vh !important;
+  overflow: auto !important;
+  width: 100% !important;
+  overflow-x: hidden !important;
+  background-color: #fff;
+}
+
+#react-root,
+#react-root > div,
+main,
+[role='main'] {
+  height: auto !important;
+  overflow: visible !important;
+  width: 100% !important;
+}
+
+.MuiStack-root.css-xj9xn4-MuiStack-root {
+  > :nth-child(2) {
+    display: none;
+  }
+}
+
+[data-testid='dashboard-toolbar'] > .MuiBox-root:has([data-testid='variable-list']) {
+  width: auto !important;
+}
+
+[data-testid='dashboard-toolbar'] > .MuiBox-root:nth-child(2) {
+  width: auto !important;
+}
