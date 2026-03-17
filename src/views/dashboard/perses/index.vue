@@ -69,11 +69,12 @@ a-layout.detail-layout.new-layout
 </template>
 
 <script lang="ts" setup name="PersesDashboard">
-  import { computed, onMounted, reactive, ref } from 'vue'
+  import { computed, onMounted, reactive, ref, watch } from 'vue'
   import { useStorage } from '@vueuse/core'
   import { storeToRefs } from 'pinia'
   import { Message } from '@arco-design/web-vue'
   import { IconDelete } from '@arco-design/web-vue/es/icon'
+  import { useRoute, useRouter } from 'vue-router'
   import { useAppStore } from '@/store'
   import PersesDashboardIframe from '@/perses-dashboard/vue/PersesDashboardIframe.vue'
   import type { PersesDashboardFile } from '@/perses-dashboard/react/WorkbenchProvider'
@@ -86,6 +87,9 @@ a-layout.detail-layout.new-layout
   }
 
   const { hideSidebar } = storeToRefs(useAppStore())
+  const route = useRoute()
+  const router = useRouter()
+  const DASHBOARD_QUERY_KEY = 'dashboard'
   const sidebarWidth = useStorage('perses-sidebar-width', 280)
   const searchText = ref('')
   const createModalVisible = ref(false)
@@ -236,12 +240,28 @@ a-layout.detail-layout.new-layout
     })
   }
 
+  const applyQuerySelection = () => {
+    const queryValue = route.query[DASHBOARD_QUERY_KEY]
+    if (!queryValue || !dashboards.value.length) return
+
+    const targetName = Array.isArray(queryValue) ? queryValue[0] : queryValue
+    if (!targetName) return
+
+    const target = dashboards.value.find((item) => item.name === targetName || item.file.filename === targetName)
+    if (target) {
+      selectedId.value = target.id
+    }
+  }
+
   const fetchDashboards = async () => {
     isLoading.value = true
     try {
       const res = await listDashboards()
       const items = normalizeDashboards(res)
       dashboards.value = items
+      if (!selectedId.value) {
+        applyQuerySelection()
+      }
       if (items.length > 0 && !selectedId.value) {
         selectedId.value = items[0].id
       }
@@ -342,6 +362,22 @@ a-layout.detail-layout.new-layout
       Message.error('Failed to save dashboard')
     }
   }
+
+  watch(
+    () => selectedId.value,
+    (id) => {
+      const query = { ...route.query }
+      if (!id) {
+        delete query[DASHBOARD_QUERY_KEY]
+        router.replace({ query })
+        return
+      }
+      const target = dashboards.value.find((item) => item.id === id)
+      if (!target) return
+      query[DASHBOARD_QUERY_KEY] = target.name
+      router.replace({ query })
+    }
+  )
 
   onMounted(() => {
     fetchDashboards()
