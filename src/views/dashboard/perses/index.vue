@@ -346,6 +346,9 @@ a-layout.detail-layout.new-layout
 </script>
 
 <style lang="less" scoped>
+  .new-layout > .layout-content {
+    overflow-y: hidden;
+  }
   .perses-sidebar {
     height: 100%;
   }
