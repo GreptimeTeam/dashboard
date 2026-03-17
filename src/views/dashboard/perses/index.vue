@@ -58,10 +58,10 @@ a-layout.detail-layout.new-layout
       @ok="handleCreateDashboard"
       @cancel="handleCreateModalCancel"
     )
-      a-form(layout="vertical")
-        a-form-item(label="Dashboard Name")
+      a-form(layout="vertical" :model="createForm")
+        a-form-item(label="Dashboard Name" field="name")
           a-input(
-            v-model="newDashboardName"
+            v-model="createForm.name"
             placeholder="dashboard-name"
             allow-clear
             @press-enter="handleCreateDashboard"
@@ -69,7 +69,7 @@ a-layout.detail-layout.new-layout
 </template>
 
 <script lang="ts" setup name="PersesDashboard">
-  import { computed, onMounted, ref } from 'vue'
+  import { computed, onMounted, reactive, ref } from 'vue'
   import { useStorage } from '@vueuse/core'
   import { storeToRefs } from 'pinia'
   import { Message } from '@arco-design/web-vue'
@@ -89,7 +89,9 @@ a-layout.detail-layout.new-layout
   const sidebarWidth = useStorage('perses-sidebar-width', 280)
   const searchText = ref('')
   const createModalVisible = ref(false)
-  const newDashboardName = ref('')
+  const createForm = reactive({
+    name: '',
+  })
   const isCreating = ref(false)
 
   const createEmptyDashboard = (name: string) => {
@@ -251,11 +253,12 @@ a-layout.detail-layout.new-layout
   }
 
   const openCreateModal = () => {
-    newDashboardName.value = ''
+    createForm.name = ''
     createModalVisible.value = true
   }
 
   const handleCreateModalCancel = () => {
+    createForm.name = ''
     createModalVisible.value = false
   }
 
@@ -266,7 +269,7 @@ a-layout.detail-layout.new-layout
 
   const handleCreateDashboard = async () => {
     if (isCreating.value) return
-    const inputName = newDashboardName.value.trim()
+    const inputName = createForm.name.trim()
     const name = inputName || buildDefaultDashboardName()
     const filename = `${name}.json`
     const dashboardJSON = createEmptyDashboard(filename)
@@ -290,7 +293,7 @@ a-layout.detail-layout.new-layout
       dashboards.value = [newItem, ...dashboards.value]
       selectedId.value = newItem.id
       createModalVisible.value = false
-      newDashboardName.value = ''
+      createForm.name = ''
       Message.success('Dashboard created')
     } catch (error) {
       Message.error('Failed to create dashboard')
