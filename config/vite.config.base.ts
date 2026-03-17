@@ -129,6 +129,14 @@ export default defineConfig({
         replacement: 'vue-i18n/dist/vue-i18n.cjs.js', // Resolve the i18n warning issue
       },
       {
+        find: 'hoist-non-react-statics',
+        replacement: resolve(__dirname, '../src/perses-dashboard/vendor/hoist-non-react-statics'),
+      },
+      {
+        find: 'react-is',
+        replacement: resolve(__dirname, '../src/perses-dashboard/vendor/react-is'),
+      },
+      {
         find: 'vue',
         replacement: 'vue/dist/vue.esm-bundler.js', // compile template
       },
