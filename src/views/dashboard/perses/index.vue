@@ -26,7 +26,12 @@ a-layout.detail-layout.new-layout
             )
               .menu-item
                 span.name {{ item.name }}
-                a-tooltip.menu-item-delete(mini position="left" content="Delete")
+                a-tooltip.menu-item-delete(
+                  v-if="item.id === selectedId"
+                  mini
+                  position="left"
+                  content="Delete"
+                )
                   a-popconfirm(
                     content="Are you sure to delete this dashboard?"
                     type="warning"
@@ -57,7 +62,7 @@ a-layout.detail-layout.new-layout
         a-form-item(label="Dashboard Name")
           a-input(
             v-model="newDashboardName"
-            placeholder="perses-dashboard-name"
+            placeholder="dashboard-name"
             allow-clear
             @press-enter="handleCreateDashboard"
           )
@@ -136,6 +141,35 @@ a-layout.detail-layout.new-layout
     return Math.max(minWidth, Math.min(sidebarWidth.value, maxWidth))
   })
 
+  const getDashboardNameFromDefinition = (definition: unknown): string | null => {
+    if (!definition) return null
+    if (typeof definition === 'string') {
+      try {
+        return getDashboardNameFromDefinition(JSON.parse(definition))
+      } catch {
+        return null
+      }
+    }
+    if (typeof definition !== 'object') return null
+    const defObj = definition as any
+    if (typeof defObj?.metadata?.name === 'string') {
+      const name = defObj.metadata.name.trim()
+      return name || null
+    }
+    if (typeof defObj?.spec?.display?.name === 'string') {
+      const name = defObj.spec.display.name.trim()
+      return name || null
+    }
+    if (typeof defObj?.content === 'string') {
+      try {
+        return getDashboardNameFromDefinition(JSON.parse(defObj.content))
+      } catch {
+        return null
+      }
+    }
+    return null
+  }
+
   const normalizeDashboards = (raw: any): DashboardItem[] => {
     const list = raw?.dashboards ?? raw?.items ?? raw?.data ?? raw?.output ?? raw ?? []
     if (!Array.isArray(list)) return []
@@ -177,7 +211,9 @@ a-layout.detail-layout.new-layout
         }
       }
 
-      const name = item.name || item.metadata?.name || definitionObj?.metadata?.name || `dashboard-${index + 1}`
+      const definitionName = getDashboardNameFromDefinition(definitionObj)
+      const name =
+        item.name || item.metadata?.name || definitionName || definitionObj?.metadata?.name || `dashboard-${index + 1}`
       const filename = name.endsWith('.json') ? name : `${name}.json`
       const content =
         item.content || definitionContent || (item.dashboardJSON ? JSON.stringify(item.dashboardJSON) : '')
@@ -225,7 +261,7 @@ a-layout.detail-layout.new-layout
 
   const buildDefaultDashboardName = () => {
     const nextIndex = dashboards.value.length + 1
-    return `perses-dashboard-${nextIndex}`
+    return `dashboard-${nextIndex}`
   }
 
   const handleCreateDashboard = async () => {
@@ -280,11 +316,15 @@ a-layout.detail-layout.new-layout
   const handleSaveDashboard = async (payload: { dashboardJSON: unknown; name: string; commitId?: string }) => {
     const target = dashboards.value.find((item) => item.file.filename === payload.name)
     if (!target) return
-    const name = target.name.endsWith('.json') ? target.name.slice(0, -5) : target.name
+    const definitionName = getDashboardNameFromDefinition(payload.dashboardJSON)
+    const resolvedName = definitionName || target.name
+    const saveName = resolvedName.endsWith('.json') ? resolvedName.slice(0, -5) : resolvedName
     try {
-      await saveDashboard(name, { content: JSON.stringify(payload.dashboardJSON) })
+      await saveDashboard(saveName, { content: JSON.stringify(payload.dashboardJSON) })
+      target.name = resolvedName
       target.file = {
         ...target.file,
+        filename: resolvedName.endsWith('.json') ? resolvedName : `${resolvedName}.json`,
         content: JSON.stringify(payload.dashboardJSON),
         meta: {
           ...(target.file.meta || {}),
@@ -355,22 +395,12 @@ a-layout.detail-layout.new-layout
   }
 
   :deep(.delete-btn) {
-    color: #f53f3f;
     opacity: 0;
     transition: opacity 0.15s ease;
   }
 
   :deep(.arco-menu-item:hover) .delete-btn,
   :deep(.arco-menu-item.arco-menu-selected) .delete-btn {
-    opacity: 1;
-  }
-
-  .menu-item-delete {
-    opacity: 0;
-    transition: opacity 0.15s ease-in-out;
-  }
-
-  .menu-item:hover .menu-item-delete {
     opacity: 1;
   }
 </style>

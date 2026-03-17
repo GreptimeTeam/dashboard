@@ -227,7 +227,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.dashboard.perses',
         requiresAuth: false,
-        icon: 'icon-dashboard',
+        icon: 'visualization',
         roles: ['admin', 'cloud'],
       },
     },
