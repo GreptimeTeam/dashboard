@@ -6,7 +6,7 @@ a-layout.detail-layout.new-layout
         a-space.space-between(fill style="width: 100%")
           | {{ $t('menu.dashboard.perses') }}
           a-button-group
-            a-button(type="text" size="small" @click="handleCreateDashboard")
+            a-button(type="text" size="small" @click="openCreateModal")
               template(#icon)
                 svg.icon-16
                   use(href="#file-add")
@@ -46,6 +46,21 @@ a-layout.detail-layout.new-layout
         .empty-state
           h3 No dashboard selected
           p Select a dashboard from the left or create a new one to continue.
+    a-modal(
+      v-model:visible="createModalVisible"
+      title="New Dashboard"
+      :ok-loading="isCreating"
+      @ok="handleCreateDashboard"
+      @cancel="handleCreateModalCancel"
+    )
+      a-form(layout="vertical")
+        a-form-item(label="Dashboard Name")
+          a-input(
+            v-model="newDashboardName"
+            placeholder="perses-dashboard-name"
+            allow-clear
+            @press-enter="handleCreateDashboard"
+          )
 </template>
 
 <script lang="ts" setup name="PersesDashboard">
@@ -68,6 +83,9 @@ a-layout.detail-layout.new-layout
   const { hideSidebar } = storeToRefs(useAppStore())
   const sidebarWidth = useStorage('perses-sidebar-width', 280)
   const searchText = ref('')
+  const createModalVisible = ref(false)
+  const newDashboardName = ref('')
+  const isCreating = ref(false)
 
   const createEmptyDashboard = (name: string) => {
     const dashboardName = name.split('.')[0] || 'empty-dashboard'
@@ -196,13 +214,29 @@ a-layout.detail-layout.new-layout
     }
   }
 
-  const handleCreateDashboard = async () => {
+  const openCreateModal = () => {
+    newDashboardName.value = ''
+    createModalVisible.value = true
+  }
+
+  const handleCreateModalCancel = () => {
+    createModalVisible.value = false
+  }
+
+  const buildDefaultDashboardName = () => {
     const nextIndex = dashboards.value.length + 1
-    const name = `perses-dashboard-${nextIndex}`
+    return `perses-dashboard-${nextIndex}`
+  }
+
+  const handleCreateDashboard = async () => {
+    if (isCreating.value) return
+    const inputName = newDashboardName.value.trim()
+    const name = inputName || buildDefaultDashboardName()
     const filename = `${name}.json`
     const dashboardJSON = createEmptyDashboard(filename)
     const apiName = name.endsWith('.json') ? name.slice(0, -5) : name
     try {
+      isCreating.value = true
       await saveDashboard(apiName, { content: JSON.stringify(dashboardJSON) })
       const newItem: DashboardItem = {
         id: `remote-${Date.now()}`,
@@ -219,9 +253,13 @@ a-layout.detail-layout.new-layout
       }
       dashboards.value = [newItem, ...dashboards.value]
       selectedId.value = newItem.id
+      createModalVisible.value = false
+      newDashboardName.value = ''
       Message.success('Dashboard created')
     } catch (error) {
       Message.error('Failed to create dashboard')
+    } finally {
+      isCreating.value = false
     }
   }
 
@@ -277,7 +315,6 @@ a-layout.detail-layout.new-layout
   }
 
   .perses-sidebar :deep(.arco-card-body) {
-    height: 100%;
     display: flex;
     flex-direction: column;
   }
