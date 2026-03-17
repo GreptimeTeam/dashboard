@@ -363,7 +363,12 @@ a-layout.detail-layout.new-layout
     flex: 1;
     min-height: 0;
   }
-
+  .perses-content {
+    height: 100%;
+  }
+  .perses-content :deep(.arco-card-body) {
+    height: 100%;
+  }
   .perses-content :deep(.perses-dashboard-iframe) {
     height: 100%;
     min-height: calc(100vh - 160px);
