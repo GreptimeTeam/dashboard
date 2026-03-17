@@ -1,5 +1,5 @@
 import '@/perses-dashboard/react/app.css'
-import React, { useEffect, useState, StrictMode } from 'react'
+import React, { useEffect, useState } from 'react'
 import ReactDOM from 'react-dom/client'
 import { SnackbarProvider } from '@perses-dev/components'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
@@ -73,9 +73,5 @@ function StandaloneApp() {
 const rootElement = document.getElementById('react-root')
 if (rootElement) {
   const root = ReactDOM.createRoot(rootElement)
-  root.render(
-    <StrictMode>
-      <StandaloneApp />
-    </StrictMode>
-  )
+  root.render(<StandaloneApp />)
 }

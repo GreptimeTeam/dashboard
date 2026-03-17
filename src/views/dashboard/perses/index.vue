@@ -215,7 +215,7 @@ a-layout.detail-layout.new-layout
 
       const definitionName = getDashboardNameFromDefinition(definitionObj)
       const name =
-        item.name || item.metadata?.name || definitionName || definitionObj?.metadata?.name || `dashboard-${index + 1}`
+        definitionName || item.name || item.metadata?.name || definitionObj?.metadata?.name || `dashboard-${index + 1}`
       const filename = name.endsWith('.json') ? name : `${name}.json`
       const content =
         item.content || definitionContent || (item.dashboardJSON ? JSON.stringify(item.dashboardJSON) : '')
