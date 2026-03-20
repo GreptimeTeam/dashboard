@@ -85,4 +85,8 @@ export default {
   'dashboard.database': '数据库',
   'metrics.showFullSeriesName': '显示全名',
   'dashboard.run': '查询',
+  'dashboard.perses.emptySidebar': '暂无数据',
+  'dashboard.perses.emptyStateTitle': '基于开源的 Perses 可视化仪表盘',
+  'dashboard.perses.emptyStateDesc': '开放的仪表盘规范。支持 GreptimeDB, Prometheus 及其他数据源',
+  'dashboard.perses.startCreate': '创建仪表盘',
 }

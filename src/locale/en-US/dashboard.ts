@@ -87,4 +87,9 @@ export default {
   'dashboard.database': 'Database',
   'metrics.showFullSeriesName': 'Show full series name',
   'dashboard.run': 'Run',
+  'dashboard.perses.emptySidebar': 'No data',
+  'dashboard.perses.emptyStateTitle': 'Built on Open-source Perses visual dashboards',
+  'dashboard.perses.emptyStateDesc':
+    'An open specification for dashboards. Support GreptimeDB, Prometheus and other data sources',
+  'dashboard.perses.startCreate': 'Create dashboard',
 }
