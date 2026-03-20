@@ -6,6 +6,11 @@ a-layout.detail-layout.new-layout
         a-space.space-between(fill style="width: 100%")
           | {{ $t('menu.dashboard.perses') }}
           a-button-group
+            a-tooltip(mini position="bottom" :content="$t('common.refresh')")
+              a-button(type="text" size="small" @click="handleRefresh")
+                template(#icon)
+                  svg.icon-16
+                    use(href="#refresh")
             a-button(type="text" size="small" @click="openCreateModal")
               template(#icon)
                 svg.icon-16
@@ -267,17 +272,25 @@ a-layout.detail-layout.new-layout
       const res = await listDashboards()
       const items = normalizeDashboards(res)
       dashboards.value = items
-      if (!selectedId.value) {
-        applyQuerySelection()
-      }
-      if (items.length > 0 && !selectedId.value) {
-        selectedId.value = items[0].id
+      const selectedStillExists = !!selectedId.value && items.some((d) => d.id === selectedId.value)
+      if (!selectedStillExists) {
+        selectedId.value = ''
+        if (items.length > 0) {
+          applyQuerySelection()
+          if (!selectedId.value) {
+            selectedId.value = items[0].id
+          }
+        }
       }
     } catch (error) {
       Message.error('Failed to load dashboards')
     } finally {
       isLoading.value = false
     }
+  }
+
+  const handleRefresh = () => {
+    fetchDashboards()
   }
 
   const openCreateModal = () => {
