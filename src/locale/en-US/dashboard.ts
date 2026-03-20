@@ -88,8 +88,10 @@ export default {
   'metrics.showFullSeriesName': 'Show full series name',
   'dashboard.run': 'Run',
   'dashboard.perses.emptySidebar': 'No data',
-  'dashboard.perses.emptyStateTitle': 'Built on Open-source Perses visual dashboards',
+  'dashboard.perses.emptyStateTitle': 'Get started by creating your first dashboard',
   'dashboard.perses.emptyStateDesc':
-    'An open specification for dashboards. Support GreptimeDB, Prometheus and other data sources',
+    'This visualization tool is powered by Perses — an open-source project that uses portable JSON definitions for dashboards. The GreptimeDB data source is already pre-configured, so you can start querying your time-series data right away with PromQL or SQL.',
   'dashboard.perses.startCreate': 'Create dashboard',
+  'dashboard.perses.learnMoreText': 'Learn more about Perses dashboards →',
+  'dashboard.perses.learnMoreUrl': 'https://perses.dev/perses/docs/api/dashboard/',
 }
