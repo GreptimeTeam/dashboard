@@ -12,7 +12,7 @@ a-layout.detail-layout.new-layout
                   use(href="#file-add")
       a-spin(:loading="isLoading")
         a-scrollbar
-          a-empty(v-if="!filteredDashboards.length")
+          a-empty(v-if="!filteredDashboards.length" :description="$t('dashboard.perses.emptySidebar')")
             template(#image)
               svg.icon-32
                 use(href="#empty")
@@ -49,8 +49,16 @@ a-layout.detail-layout.new-layout
         )
       template(v-else)
         .empty-state
-          h3 No dashboard selected
-          p Select a dashboard from the left or create a new one to continue.
+          template(v-if="dashboards.length === 0")
+            h3
+              | {{ $t('dashboard.perses.emptyStateTitle') }}
+            p
+              | {{ $t('dashboard.perses.emptyStateDesc') }}
+            a-button(type="primary" style="margin-top: 16px" @click="openCreateModal")
+              | {{ $t('dashboard.perses.startCreate') }}
+          template(v-else)
+            h3 No dashboard selected
+            p Select a dashboard from the left or create a new one to continue.
     a-modal(
       v-model:visible="createModalVisible"
       title="New Dashboard"
