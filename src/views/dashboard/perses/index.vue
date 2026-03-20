@@ -59,8 +59,16 @@ a-layout.detail-layout.new-layout
               | {{ $t('dashboard.perses.emptyStateTitle') }}
             p
               | {{ $t('dashboard.perses.emptyStateDesc') }}
-            a-button(type="primary" style="margin-top: 16px" @click="openCreateModal")
-              | {{ $t('dashboard.perses.startCreate') }}
+            a-space
+              a-button(type="primary" @click="openCreateModal")
+                | {{ $t('dashboard.perses.startCreate') }}
+              a-button(
+                type="secondary"
+                target="_blank"
+                rel="noopener noreferrer"
+                :href="$t('dashboard.perses.learnMoreUrl')"
+              )
+                | {{ $t('dashboard.perses.learnMoreText') }}
           template(v-else)
             h3 No dashboard selected
             p Select a dashboard from the left or create a new one to continue.
@@ -439,6 +447,34 @@ a-layout.detail-layout.new-layout
 
   .empty-state {
     padding: 24px;
+    max-width: 760px;
+    margin: 0 auto;
+    box-sizing: border-box;
+  }
+
+  .empty-state h3 {
+    margin: 0 0 12px;
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  .empty-state p {
+    margin: 0 0 18px;
+    color: var(--color-text-2);
+    line-height: 1.6;
+  }
+
+  .learn-more {
+    display: inline-block;
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--color-text-2);
+    text-decoration: none;
+  }
+
+  .learn-more:hover {
+    color: var(--color-text-1);
+    text-decoration: underline;
   }
 
   :deep(.arco-menu-vertical .arco-menu-inner) {

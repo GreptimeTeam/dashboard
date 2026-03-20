@@ -86,7 +86,10 @@ export default {
   'metrics.showFullSeriesName': '显示全名',
   'dashboard.run': '查询',
   'dashboard.perses.emptySidebar': '暂无数据',
-  'dashboard.perses.emptyStateTitle': '基于开源的 Perses 可视化仪表盘',
-  'dashboard.perses.emptyStateDesc': '开放的仪表盘规范。支持 GreptimeDB, Prometheus 及其他数据源',
+  'dashboard.perses.emptyStateTitle': '从创建你的第一个仪表盘开始',
+  'dashboard.perses.emptyStateDesc':
+    '这个可视化工具由开源项目 Perses 提供支持，使用可移植的 JSON 定义来描述仪表盘。GreptimeDB 数据源已为你预配置，因此你可以立即使用 PromQL 或 SQL 开始查询时间序列数据。',
   'dashboard.perses.startCreate': '创建仪表盘',
+  'dashboard.perses.learnMoreText': '了解更多 Perses 仪表盘 →',
+  'dashboard.perses.learnMoreUrl': 'https://perses.dev/perses/docs/api/dashboard/',
 }
