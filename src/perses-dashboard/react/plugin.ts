@@ -3,7 +3,7 @@ import * as prometheusPlugin from '@perses-dev/prometheus-plugin'
 import * as statChartPlugin from '@perses-dev/stat-chart-plugin'
 import * as tablePlugin from '@perses-dev/table-plugin'
 import * as timeseriesChartPlugin from '@perses-dev/timeseries-chart-plugin'
-import * as clickhousePlugin from '@perses-dev/clickhouse-plugin'
+import * as greptimedbPlugin from '@perses-dev/greptimedb-plugin'
 import { PluginLoader, PluginModuleResource, dynamicImportPluginLoader } from '@perses-dev/plugin-system'
 
 const bundledPluginLoader: PluginLoader = dynamicImportPluginLoader([
@@ -28,8 +28,8 @@ const bundledPluginLoader: PluginLoader = dynamicImportPluginLoader([
     importPlugin: () => Promise.resolve(timeseriesChartPlugin),
   },
   {
-    resource: clickhousePlugin.getPluginModule() as PluginModuleResource,
-    importPlugin: () => Promise.resolve(clickhousePlugin),
+    resource: greptimedbPlugin.getPluginModule() as PluginModuleResource,
+    importPlugin: () => Promise.resolve(greptimedbPlugin),
   },
 ])
 
