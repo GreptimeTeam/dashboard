@@ -1,4 +1,5 @@
 import * as gaugeChartPlugin from '@perses-dev/gauge-chart-plugin'
+import * as logsTablePlugin from '@perses-dev/logs-table-plugin'
 import * as prometheusPlugin from '@perses-dev/prometheus-plugin'
 import * as statChartPlugin from '@perses-dev/stat-chart-plugin'
 import * as tablePlugin from '@perses-dev/table-plugin'
@@ -14,6 +15,10 @@ const bundledPluginLoader: PluginLoader = dynamicImportPluginLoader([
   {
     resource: gaugeChartPlugin.getPluginModule() as PluginModuleResource,
     importPlugin: () => Promise.resolve(gaugeChartPlugin),
+  },
+  {
+    resource: logsTablePlugin.getPluginModule() as PluginModuleResource,
+    importPlugin: () => Promise.resolve(logsTablePlugin),
   },
   {
     resource: statChartPlugin.getPluginModule() as PluginModuleResource,
