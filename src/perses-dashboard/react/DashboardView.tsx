@@ -6,7 +6,6 @@ import { PluginRegistry, ValidationProvider } from '@perses-dev/plugin-system'
 import { DashboardResource, GlobalDatasourceResource, EphemeralDashboardResource } from '@perses-dev/core'
 import bundledPluginLoader from './plugin'
 import { useWorkbenchContext } from './WorkbenchProvider'
-import './greptime-sql-adapter'
 
 export interface GenericDashboardViewProps {
   dashboardResource: DashboardResource | EphemeralDashboardResource
@@ -45,16 +44,16 @@ export default function HelperDashboardView(props: GenericDashboardViewProps): J
     },
   } as GlobalDatasourceResource
 
-  const greptimeSqlBaseUrl = instance ? `/api/v1/instances/${instance}/greptime/v1/sql` : '/v1/sql'
+  const greptimeSqlBaseUrl = instance ? `/api/v1/instances/${instance}/greptime` : ''
 
-  const createClickHouseDataSource = (name: string) =>
+  const createGreptimeDataSource = (name: string) =>
     ({
       kind: 'GlobalDatasource' as const,
       metadata: { name },
       spec: {
         default: false,
         plugin: {
-          kind: 'ClickHouseDatasource',
+          kind: 'GreptimeDBDatasource',
           spec: {
             directUrl: greptimeSqlBaseUrl,
             proxy: {
@@ -71,11 +70,11 @@ export default function HelperDashboardView(props: GenericDashboardViewProps): J
       },
     } as GlobalDatasourceResource)
 
-  const clickhouseDataSource = createClickHouseDataSource('sql-default')
+  const greptimeDataSource = createGreptimeDataSource('sql-default')
 
   const allDatasources = new Map<string, GlobalDatasourceResource>([
     [prometheusDataSource.metadata.name, prometheusDataSource],
-    [clickhouseDataSource.metadata.name, clickhouseDataSource],
+    [greptimeDataSource.metadata.name, greptimeDataSource],
   ])
 
   const datasourceApi: DatasourceApi = {
@@ -87,8 +86,8 @@ export default function HelperDashboardView(props: GenericDashboardViewProps): J
         const datasource = allDatasources.get(selector.name)
         if (datasource) return Promise.resolve(datasource)
       }
-      if (selector?.kind === 'ClickHouseDatasource') {
-        return Promise.resolve(clickhouseDataSource)
+      if (selector?.kind === 'GreptimeDBDatasource') {
+        return Promise.resolve(greptimeDataSource)
       }
       return Promise.resolve(prometheusDataSource)
     },
@@ -96,7 +95,7 @@ export default function HelperDashboardView(props: GenericDashboardViewProps): J
       return Promise.resolve([])
     },
     listGlobalDatasources() {
-      return Promise.resolve([prometheusDataSource, clickhouseDataSource])
+      return Promise.resolve([prometheusDataSource, greptimeDataSource])
     },
     buildProxyUrl(): string {
       return '/'
@@ -115,7 +114,7 @@ export default function HelperDashboardView(props: GenericDashboardViewProps): J
           pluginLoader={bundledPluginLoader}
           defaultPluginKinds={{
             Panel: 'TimeSeriesChart',
-            TimeSeriesQuery: 'PrometheusTimeSeriesQuery',
+            TimeSeriesQuery: 'GreptimeDBTimeSeriesQuery',
           }}
         >
           <ValidationProvider>
