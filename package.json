@@ -59,7 +59,7 @@
     "@perses-dev/dashboards": "0.53.0-beta.4",
     "@perses-dev/explore": "0.53.1",
     "@perses-dev/gauge-chart-plugin": "0.12.0-beta.0",
-    "@perses-dev/greptimedb-plugin": "https://github.com/user-attachments/files/26701967/perses-dev-greptimedb-plugin-0.1.0-beta.0.tgz",
+    "@perses-dev/greptimedb-plugin": "https://github.com/user-attachments/files/26734176/perses-dev-greptimedb-plugin-0.1.0-beta.0.tgz",
     "@perses-dev/logs-table-plugin": "0.2.0-beta.0",
     "@perses-dev/plugin-system": "0.53.0-beta.4",
     "@perses-dev/prometheus-plugin": "0.57.0-beta.0",
