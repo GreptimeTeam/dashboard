@@ -13,6 +13,7 @@ import { ReactRouter6Adapter } from 'use-query-params/adapters/react-router-6'
 import HelperDashboardView from './DashboardView'
 import { useWorkbenchContext } from './WorkbenchProvider'
 import { DASHBOARD_TOKENS, globalStyles } from './Dashboard.styles'
+import { ensureTraceTableLinks } from '../traceLink'
 
 interface DashboardProps {
   dashboardEditable?: boolean
@@ -270,6 +271,7 @@ export default function Dashboard(props: DashboardProps = {}) {
     async (dashboardJSON: DashboardResource | EphemeralDashboardResource): Promise<boolean> => {
       return new Promise((resolve, reject) => {
         const requestId = `save-${Date.now()}-${Math.random()}`
+        const normalizedDashboardJSON = dashboardJSON
 
         const handleMessage = (event: MessageEvent) => {
           if (event.data.type === 'save-dashboard-response' && event.data.requestId === requestId) {
@@ -290,7 +292,7 @@ export default function Dashboard(props: DashboardProps = {}) {
               type: 'save-dashboard-request',
               requestId,
               data: {
-                dashboardJSON,
+                dashboardJSON: normalizedDashboardJSON,
                 name,
                 commitId: file.meta?.commit?.id || '',
               },
@@ -331,7 +333,7 @@ export default function Dashboard(props: DashboardProps = {}) {
 
   let data: DashboardResource | EphemeralDashboardResource
   try {
-    data = JSON.parse(file.content) || INIT_DATA
+    data = ensureTraceTableLinks(JSON.parse(file.content) || INIT_DATA)
 
     if (data.spec?.panels) {
       Object.values(data.spec.panels).forEach((panel: any) => {
