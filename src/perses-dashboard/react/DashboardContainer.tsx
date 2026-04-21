@@ -13,16 +13,21 @@ import { ReactRouter6Adapter } from 'use-query-params/adapters/react-router-6'
 import HelperDashboardView from './DashboardView'
 import { useWorkbenchContext } from './WorkbenchProvider'
 import { DASHBOARD_TOKENS, globalStyles } from './Dashboard.styles'
+import { ensureTraceTableLinks } from '../traceLink'
 
 interface DashboardProps {
   dashboardEditable?: boolean
+  controlEditableBodyClass?: boolean
 }
 
 export default function Dashboard(props: DashboardProps = {}) {
   const { name, file } = useWorkbenchContext()
   const dashboardEditable = props.dashboardEditable ?? false
+  const controlEditableBodyClass = props.controlEditableBodyClass ?? true
+  const [saveRefreshToken, setSaveRefreshToken] = React.useState(0)
 
   React.useEffect(() => {
+    if (!controlEditableBodyClass) return undefined
     const { body } = document
     if (dashboardEditable) {
       body.classList.add('dashboard-editable')
@@ -32,7 +37,7 @@ export default function Dashboard(props: DashboardProps = {}) {
     return () => {
       body.classList.remove('dashboard-editable')
     }
-  }, [dashboardEditable])
+  }, [dashboardEditable, controlEditableBodyClass])
 
   React.useEffect(() => {
     let patched = false
@@ -270,11 +275,13 @@ export default function Dashboard(props: DashboardProps = {}) {
     async (dashboardJSON: DashboardResource | EphemeralDashboardResource): Promise<boolean> => {
       return new Promise((resolve, reject) => {
         const requestId = `save-${Date.now()}-${Math.random()}`
+        const normalizedDashboardJSON = ensureTraceTableLinks(dashboardJSON)
 
         const handleMessage = (event: MessageEvent) => {
           if (event.data.type === 'save-dashboard-response' && event.data.requestId === requestId) {
             window.removeEventListener('message', handleMessage)
             if (event.data.success) {
+              setSaveRefreshToken((prev) => prev + 1)
               resolve(true)
             } else {
               reject(new Error(event.data.error || 'Save failed'))
@@ -290,7 +297,7 @@ export default function Dashboard(props: DashboardProps = {}) {
               type: 'save-dashboard-request',
               requestId,
               data: {
-                dashboardJSON,
+                dashboardJSON: normalizedDashboardJSON,
                 name,
                 commitId: file.meta?.commit?.id || '',
               },
@@ -331,7 +338,7 @@ export default function Dashboard(props: DashboardProps = {}) {
 
   let data: DashboardResource | EphemeralDashboardResource
   try {
-    data = JSON.parse(file.content) || INIT_DATA
+    data = ensureTraceTableLinks(JSON.parse(file.content) || INIT_DATA)
 
     if (data.spec?.panels) {
       Object.values(data.spec.panels).forEach((panel: any) => {
@@ -365,6 +372,7 @@ export default function Dashboard(props: DashboardProps = {}) {
           <ChartsProvider chartsTheme={chartsTheme}>
             <style>{globalStyles}</style>
             <HelperDashboardView
+              key={`${data.metadata.name}-${saveRefreshToken}`}
               dashboardResource={data}
               onSave={save}
               isReadonly={!dashboardEditable}

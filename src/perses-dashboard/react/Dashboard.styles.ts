@@ -11,7 +11,7 @@ export const DASHBOARD_TOKENS = {
     textMuted: '#64748b',
     divider: '#f1f5f9',
     dividerDark: '#e2e8f0',
-    background: 'oklch(0.99 0 0)',
+    background: '#fcfcfc',
     paper: '#ffffff',
     noData: '#64748b',
   },

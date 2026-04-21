@@ -66,6 +66,8 @@
     "@perses-dev/stat-chart-plugin": "0.12.0-beta.0",
     "@perses-dev/table-plugin": "0.11.0-beta.0",
     "@perses-dev/timeseries-chart-plugin": "0.12.0-beta.0",
+    "@perses-dev/trace-table-plugin": "0.10.0-beta.0",
+    "@perses-dev/tracing-gantt-chart-plugin": "0.12.0-beta.0",
     "@prometheus-io/codemirror-promql": "0.305.0",
     "@tanstack/react-query": "^5.66.7",
     "@tauri-apps/api": "^2.*",

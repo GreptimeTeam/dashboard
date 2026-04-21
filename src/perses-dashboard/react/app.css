@@ -34,3 +34,8 @@ main,
 [data-testid='dashboard-toolbar'] > .MuiBox-root:nth-child(2) {
   width: auto !important;
 }
+
+/* Keep trace side panel visually focused on gantt content only. */
+.trace-gantt-sidepanel [data-testid='dashboard-toolbar'] {
+  display: none !important;
+}
