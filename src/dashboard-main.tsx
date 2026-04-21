@@ -213,6 +213,7 @@ function StandaloneApp() {
             </Routes>
             {traceModalPayload && traceModalFile ? (
               <div
+                className="trace-gantt-sidepanel"
                 style={{
                   position: 'fixed',
                   top: 0,
