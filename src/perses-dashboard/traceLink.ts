@@ -69,6 +69,39 @@ function resolveTraceTargetFromSql(sql?: string): TraceLinkContext {
   return { table, database }
 }
 
+function isTemplateValue(value?: string | null): boolean {
+  if (!value) return false
+  const trimmed = value.trim()
+  return /^\$\{[^}]+\}$/.test(trimmed) || /^%24%7B[^%]+%7D$/i.test(trimmed)
+}
+
+function shouldAutoUpgradeTraceLink(currentTraceLink?: string): boolean {
+  if (!currentTraceLink || currentTraceLink.trim().length === 0) return true
+
+  let url: URL
+  try {
+    url = new URL(currentTraceLink, window.location.origin)
+  } catch {
+    return false
+  }
+
+  const tableParam = url.searchParams.get('table')
+  const databaseParam = url.searchParams.get('database')
+  const modeParam = url.searchParams.get('mode')
+  const viewParam = url.searchParams.get('view')
+  const sourceParam = url.searchParams.get('source')
+
+  const isKnownTraceModalLink =
+    url.pathname === TRACE_MODAL_LINK_PATH ||
+    (modeParam === TRACE_MODAL_MODE && viewParam === TRACE_MODAL_VIEW) ||
+    sourceParam === TRACE_MODAL_SOURCE
+
+  if (!isKnownTraceModalLink) return false
+
+  // Auto-upgrade protocol links that still carry unresolved templates.
+  return isTemplateValue(tableParam) || isTemplateValue(databaseParam)
+}
+
 export function ensureTraceTableLinks<T extends Record<string, any>>(dashboard: T): T {
   if (!dashboard?.spec?.panels) return dashboard
 
@@ -82,18 +115,8 @@ export function ensureTraceTableLinks<T extends Record<string, any>>(dashboard: 
     const resolvedTarget = resolveTraceTargetFromSql(extractSqlFromTraceTablePanel(panel))
     const currentTraceLink = panel?.spec?.plugin?.spec?.links?.trace
     const inferredTraceLink = buildDefaultTraceLink(resolvedTarget)
-    const currentIsPresetDefault =
-      typeof currentTraceLink === 'string' &&
-      (currentTraceLink === buildDefaultTraceLink() ||
-        currentTraceLink === buildDefaultTraceLink({ table: resolvedTarget.table }))
-
-    // Keep user custom links untouched; only inject/upgrade default-generated links.
-    if (
-      typeof currentTraceLink === 'string' &&
-      currentTraceLink.trim().length > 0 &&
-      !currentIsPresetDefault &&
-      currentTraceLink !== inferredTraceLink
-    ) {
+    // Keep user custom links untouched; auto-upgrade only empty/default protocol links.
+    if (!shouldAutoUpgradeTraceLink(currentTraceLink) && currentTraceLink !== inferredTraceLink) {
       return
     }
 

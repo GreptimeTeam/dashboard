@@ -106,6 +106,11 @@ function StandaloneApp() {
   const [traceModalPayload, setTraceModalPayload] = useState<TraceModalPayload | null>(null)
   const [traceModalFile, setTraceModalFile] = useState<PersesDashboardFile | null>(null)
 
+  const isUnresolvedTemplateValue = (value?: string): boolean => {
+    if (!value) return true
+    return /^\$\{[^}]+\}$/.test(value.trim())
+  }
+
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.data && event.data.type === 'update-dashboard') {
@@ -160,6 +165,10 @@ function StandaloneApp() {
       if (payload.mode !== TRACE_MODAL_MODE) return
 
       if (!isTraceModalPayload(normalizedPayload)) return
+
+      // Skip opening side view when table/database variables are still unresolved templates.
+      if (isUnresolvedTemplateValue(normalizedPayload.table)) return
+      if (normalizedPayload.database && isUnresolvedTemplateValue(normalizedPayload.database)) return
 
       event.preventDefault()
       event.stopPropagation()

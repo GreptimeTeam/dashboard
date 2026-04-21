@@ -24,6 +24,7 @@ export default function Dashboard(props: DashboardProps = {}) {
   const { name, file } = useWorkbenchContext()
   const dashboardEditable = props.dashboardEditable ?? false
   const controlEditableBodyClass = props.controlEditableBodyClass ?? true
+  const [saveRefreshToken, setSaveRefreshToken] = React.useState(0)
 
   React.useEffect(() => {
     if (!controlEditableBodyClass) return undefined
@@ -274,12 +275,13 @@ export default function Dashboard(props: DashboardProps = {}) {
     async (dashboardJSON: DashboardResource | EphemeralDashboardResource): Promise<boolean> => {
       return new Promise((resolve, reject) => {
         const requestId = `save-${Date.now()}-${Math.random()}`
-        const normalizedDashboardJSON = dashboardJSON
+        const normalizedDashboardJSON = ensureTraceTableLinks(dashboardJSON)
 
         const handleMessage = (event: MessageEvent) => {
           if (event.data.type === 'save-dashboard-response' && event.data.requestId === requestId) {
             window.removeEventListener('message', handleMessage)
             if (event.data.success) {
+              setSaveRefreshToken((prev) => prev + 1)
               resolve(true)
             } else {
               reject(new Error(event.data.error || 'Save failed'))
@@ -370,6 +372,7 @@ export default function Dashboard(props: DashboardProps = {}) {
           <ChartsProvider chartsTheme={chartsTheme}>
             <style>{globalStyles}</style>
             <HelperDashboardView
+              key={`${data.metadata.name}-${saveRefreshToken}`}
               dashboardResource={data}
               onSave={save}
               isReadonly={!dashboardEditable}
