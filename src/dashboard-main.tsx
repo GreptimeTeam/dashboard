@@ -2,6 +2,7 @@ import '@/perses-dashboard/react/app.css'
 import React, { useEffect, useState } from 'react'
 import ReactDOM from 'react-dom/client'
 import { SnackbarProvider } from '@perses-dev/components'
+import Drawer from '@mui/material/Drawer'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { ReactRouterProvider } from '@perses-dev/plugin-system'
 import Dashboard from '@/perses-dashboard/react/DashboardContainer'
@@ -211,67 +212,69 @@ function StandaloneApp() {
             <Routes>
               <Route path="*" element={<Dashboard dashboardEditable={dashboardData.dashboardEditable} />} />
             </Routes>
-            {traceModalPayload && traceModalFile ? (
-              <div
-                className="trace-gantt-sidepanel"
-                style={{
-                  position: 'fixed',
-                  top: 0,
-                  right: 0,
-                  height: '100vh',
-                  width: 'min(1200px, 78vw)',
-                  minWidth: '720px',
-                  zIndex: 1300,
-                  background: '#fff',
+            <Drawer
+              className="trace-gantt-sidepanel"
+              anchor="right"
+              open={Boolean(traceModalPayload && traceModalFile)}
+              onClose={closeTraceModal}
+              ModalProps={{ keepMounted: true }}
+              PaperProps={{
+                sx: {
+                  width: '80vw',
+                  maxWidth: '100vw',
                   borderLeft: '1px solid #e5e7eb',
                   boxShadow: '-8px 0 24px rgba(0, 0, 0, 0.12)',
                   display: 'flex',
                   flexDirection: 'column',
-                }}
-              >
-                <div
-                  style={{
-                    height: '48px',
-                    borderBottom: '1px solid #f0f0f0',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '0 12px',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    flexShrink: 0,
-                  }}
-                >
-                  <span>{`Trace Gantt - ${modalTraceId}`}</span>
-                  <button
-                    type="button"
-                    onClick={closeTraceModal}
+                },
+              }}
+            >
+              {traceModalPayload && traceModalFile ? (
+                <>
+                  <div
                     style={{
-                      border: 'none',
-                      background: 'transparent',
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      lineHeight: 1,
+                      height: '48px',
+                      borderBottom: '1px solid #f0f0f0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0 12px',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      flexShrink: 0,
                     }}
                   >
-                    ×
-                  </button>
-                </div>
-                <div style={{ flex: 1, minHeight: 0 }}>
-                  <WorkbenchProvider
-                    database={modalDatabase}
-                    username={dashboardData.username || ''}
-                    password={dashboardData.password || ''}
-                    authHeader={dashboardData.authHeader || 'Authorization'}
-                    name={traceModalFile.filename}
-                    file={traceModalFile}
-                    instance={dashboardData.instance || ''}
-                  >
-                    <Dashboard dashboardEditable={false} controlEditableBodyClass={false} />
-                  </WorkbenchProvider>
-                </div>
-              </div>
-            ) : null}
+                    <span>{`Trace Gantt - ${modalTraceId}`}</span>
+                    <button
+                      type="button"
+                      onClick={closeTraceModal}
+                      style={{
+                        border: 'none',
+                        background: 'transparent',
+                        cursor: 'pointer',
+                        fontSize: '16px',
+                        lineHeight: 1,
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div style={{ flex: 1, minHeight: 0 }}>
+                    <WorkbenchProvider
+                      database={modalDatabase}
+                      username={dashboardData.username || ''}
+                      password={dashboardData.password || ''}
+                      authHeader={dashboardData.authHeader || 'Authorization'}
+                      name={traceModalFile.filename}
+                      file={traceModalFile}
+                      instance={dashboardData.instance || ''}
+                    >
+                      <Dashboard dashboardEditable={false} controlEditableBodyClass={false} />
+                    </WorkbenchProvider>
+                  </div>
+                </>
+              ) : null}
+            </Drawer>
           </ReactRouterProvider>
         </BrowserRouter>
       </WorkbenchProvider>
