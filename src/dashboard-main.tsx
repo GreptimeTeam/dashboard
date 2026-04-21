@@ -10,6 +10,7 @@ import {
   TraceModalPayload,
   isTraceModalPayload,
   parseTraceModalPayloadFromHref,
+  TRACE_MODAL_LINK_PATH,
   TRACE_MODAL_MODE,
   TRACE_MODAL_SOURCE,
   TRACE_MODAL_VIEW,
@@ -134,6 +135,16 @@ function StandaloneApp() {
       const href = anchor.getAttribute('href')
       if (!href) return
 
+      let url: URL
+      try {
+        url = new URL(href, window.location.origin)
+      } catch {
+        return
+      }
+
+      // Intercept only our modal protocol path.
+      if (url.pathname !== TRACE_MODAL_LINK_PATH) return
+
       const payload = parseTraceModalPayloadFromHref(href)
       if (!payload?.traceId) return
 
@@ -255,7 +266,7 @@ function StandaloneApp() {
                     file={traceModalFile}
                     instance={dashboardData.instance || ''}
                   >
-                    <Dashboard dashboardEditable={false} />
+                    <Dashboard dashboardEditable={false} controlEditableBodyClass={false} />
                   </WorkbenchProvider>
                 </div>
               </div>

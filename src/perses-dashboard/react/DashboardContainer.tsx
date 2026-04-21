@@ -17,13 +17,16 @@ import { ensureTraceTableLinks } from '../traceLink'
 
 interface DashboardProps {
   dashboardEditable?: boolean
+  controlEditableBodyClass?: boolean
 }
 
 export default function Dashboard(props: DashboardProps = {}) {
   const { name, file } = useWorkbenchContext()
   const dashboardEditable = props.dashboardEditable ?? false
+  const controlEditableBodyClass = props.controlEditableBodyClass ?? true
 
   React.useEffect(() => {
+    if (!controlEditableBodyClass) return undefined
     const { body } = document
     if (dashboardEditable) {
       body.classList.add('dashboard-editable')
@@ -33,7 +36,7 @@ export default function Dashboard(props: DashboardProps = {}) {
     return () => {
       body.classList.remove('dashboard-editable')
     }
-  }, [dashboardEditable])
+  }, [dashboardEditable, controlEditableBodyClass])
 
   React.useEffect(() => {
     let patched = false
