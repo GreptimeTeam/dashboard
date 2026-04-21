@@ -8,6 +8,25 @@ import * as traceTablePlugin from '@perses-dev/trace-table-plugin'
 import * as timeseriesChartPlugin from '@perses-dev/timeseries-chart-plugin'
 import * as greptimedbPlugin from '@perses-dev/greptimedb-plugin'
 import { PluginLoader, PluginModuleResource, dynamicImportPluginLoader } from '@perses-dev/plugin-system'
+import { buildDefaultTraceLink } from '../traceLink'
+
+const patchedTraceTablePlugin = {
+  ...traceTablePlugin,
+  TraceTable: {
+    ...(traceTablePlugin as any).TraceTable,
+    createInitialOptions: () => {
+      const baseOptions = (traceTablePlugin as any).TraceTable?.createInitialOptions?.() || {}
+      const traceLink = buildDefaultTraceLink()
+      return {
+        ...baseOptions,
+        links: {
+          ...(baseOptions.links || {}),
+          trace: baseOptions.links?.trace || traceLink,
+        },
+      }
+    },
+  },
+}
 
 const bundledPluginLoader: PluginLoader = dynamicImportPluginLoader([
   {
@@ -32,7 +51,7 @@ const bundledPluginLoader: PluginLoader = dynamicImportPluginLoader([
   },
   {
     resource: traceTablePlugin.getPluginModule() as PluginModuleResource,
-    importPlugin: () => Promise.resolve(traceTablePlugin),
+    importPlugin: () => Promise.resolve(patchedTraceTablePlugin as any),
   },
   {
     resource: tracingGanttChartPlugin.getPluginModule() as PluginModuleResource,
