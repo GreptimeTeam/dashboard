@@ -1,113 +1,217 @@
 import { useStorage } from '@vueuse/core'
+import axios from 'axios'
+import { isTauri } from '@tauri-apps/api/core'
 import defaultSettings from '@/config/settings.json'
 import editorAPI from '@/api/editor'
-import type { AppState } from './types'
+import type { Ref } from 'vue'
+import type { AppState, ConnectionConfig, StoredConfig, UiConfig } from './types'
 
 const useAppStore = defineStore('app', () => {
-  // State
-  const theme = ref(defaultSettings.theme)
-  const navbar = ref(defaultSettings.navbar)
-  const device = ref(defaultSettings.device)
-  const hideMenu = ref(defaultSettings.hideMenu)
-  const menuCollapse = ref(defaultSettings.menuCollapse)
-  const footer = ref(defaultSettings.footer)
-  const menuWidth = ref(defaultSettings.menuWidth)
-  const globalSettings = ref(defaultSettings.globalSettings)
-  const host = ref(defaultSettings.host)
-  const database = ref(defaultSettings.database)
-  const databaseList = ref<string[]>(defaultSettings.databaseList)
-  const guideModalVisible = ref(defaultSettings.guideModalVisible)
-  const username = ref(defaultSettings.username)
-  const password = ref(defaultSettings.password)
-  const dbId = ref(defaultSettings.dbId)
-  const lifetime = ref(defaultSettings.lifetime)
-  const menuSelectedKey = ref(defaultSettings.menuSelectedKey)
-  const userTimezone = ref(defaultSettings.userTimezone)
-  const hideSidebar = ref(defaultSettings.hideSidebar)
-  const authHeader = ref(defaultSettings.authHeader)
+  // Persistent storage — declared first so state refs can use stored values as defaults
+  const configStorage = useStorage<Partial<StoredConfig>>('config', {}, localStorage)
+  const uiConfigStorage = useStorage<Partial<UiConfig>>('uiConfig', {}, localStorage)
 
-  // Actions
-  const updateSettings = (partial: Partial<AppState>) => {
-    if (partial.theme !== undefined) theme.value = partial.theme
-    if (partial.device !== undefined) device.value = partial.device
-    if (partial.hideMenu !== undefined) hideMenu.value = partial.hideMenu
-    if (partial.host !== undefined) host.value = partial.host
-    if (partial.database !== undefined) database.value = partial.database
-    if (partial.username !== undefined) username.value = partial.username
-    if (partial.password !== undefined) password.value = partial.password
-    if (partial.authHeader !== undefined) authHeader.value = partial.authHeader
-    if (partial.globalSettings !== undefined) globalSettings.value = partial.globalSettings
-    if (partial.databaseList !== undefined) databaseList.value = partial.databaseList
-    if (partial.menuCollapse !== undefined) menuCollapse.value = partial.menuCollapse
-    if (partial.footer !== undefined) footer.value = partial.footer
-    if (partial.menuWidth !== undefined) menuWidth.value = partial.menuWidth
-    if (partial.guideModalVisible !== undefined) guideModalVisible.value = partial.guideModalVisible
-    if (partial.dbId !== undefined) dbId.value = partial.dbId
-    if (partial.lifetime !== undefined) lifetime.value = partial.lifetime
-    if (partial.menuSelectedKey !== undefined) menuSelectedKey.value = partial.menuSelectedKey
-    if (partial.userTimezone !== undefined) userTimezone.value = partial.userTimezone
-    if (partial.hideSidebar !== undefined) hideSidebar.value = partial.hideSidebar
+  // Apply URL-injected config once at startup (e.g. from cloud entry point)
+  const urlParams = new URLSearchParams(window.location.search)
+  const urlInfo = urlParams.get('info')
+  if (urlInfo) {
+    try {
+      const urlConfig = JSON.parse(atob(urlInfo))
+      configStorage.value = { ...configStorage.value, ...urlConfig }
+    } catch {
+      // ignore malformed info param
+    }
+    urlParams.delete('info')
+    const cleanUrl = [window.location.pathname, urlParams.toString()].filter(Boolean).join('?')
+    window.history.replaceState(null, '', cleanUrl)
   }
 
-  const updateConfigStorage = (config?: Partial<AppState>) => {
-    const configToSave = config || {
-      host: host.value,
-      database: database.value,
-      username: username.value,
-      password: password.value,
-      authHeader: authHeader.value,
-      userTimezone: userTimezone.value,
-    }
+  const cfg = configStorage.value
+  const ui = uiConfigStorage.value
 
-    useStorage('config', configToSave, localStorage, {
-      mergeDefaults: (storageValue, defaults) => {
-        return {
-          ...storageValue,
-          ...defaults,
-        }
-      },
+  // Connection state — initialized from localStorage, falling back to defaults
+  const host = ref(cfg.host ?? defaultSettings.host)
+  const database = ref(cfg.database ?? defaultSettings.database)
+  const username = ref(cfg.username ?? defaultSettings.username)
+  const password = ref(cfg.password ?? defaultSettings.password)
+  const authHeader = ref(cfg.authHeader ?? defaultSettings.authHeader)
+  const userTimezone = ref(cfg.userTimezone ?? defaultSettings.userTimezone)
+  const dbId = ref(cfg.dbId ?? defaultSettings.dbId)
+  const lifetime = ref(cfg.lifetime ?? defaultSettings.lifetime)
+  const serviceName = ref(cfg.serviceName ?? '')
+  const regionVendor = ref(cfg.regionVendor ?? '')
+  const regionLocation = ref(cfg.regionLocation ?? '')
+  const regionCountry = ref(cfg.regionCountry ?? '')
+
+  // UI state — initialized from localStorage, falling back to defaults
+  const theme = ref(ui.theme ?? defaultSettings.theme)
+  const navbar = ref(ui.navbar ?? defaultSettings.navbar)
+  const device = ref(ui.device ?? defaultSettings.device)
+  const hideMenu = ref(ui.hideMenu ?? defaultSettings.hideMenu)
+  const menuCollapse = ref(ui.menuCollapse ?? defaultSettings.menuCollapse)
+  const footer = ref(ui.footer ?? defaultSettings.footer)
+  const menuWidth = ref(ui.menuWidth ?? defaultSettings.menuWidth)
+  const menuSelectedKey = ref(ui.menuSelectedKey ?? defaultSettings.menuSelectedKey)
+  const hideSidebar = ref(ui.hideSidebar ?? defaultSettings.hideSidebar)
+
+  // Runtime-only state (not persisted)
+  const globalSettings = ref(defaultSettings.globalSettings)
+  const databaseList = ref<string[]>(defaultSettings.databaseList)
+  const guideModalVisible = ref(defaultSettings.guideModalVisible)
+
+  // Actions
+  const stateRefs = {
+    theme,
+    device,
+    hideMenu,
+    host,
+    database,
+    username,
+    password,
+    authHeader,
+    globalSettings,
+    databaseList,
+    menuCollapse,
+    footer,
+    menuWidth,
+    guideModalVisible,
+    dbId,
+    lifetime,
+    menuSelectedKey,
+    userTimezone,
+    hideSidebar,
+    serviceName,
+    regionVendor,
+    regionLocation,
+    regionCountry,
+  }
+
+  const patchAppState = (partial: Partial<AppState>) => {
+    Object.entries(partial).forEach(([key, value]) => {
+      if (value === undefined) return
+      const target = stateRefs[key as keyof typeof stateRefs] as Ref<unknown> | undefined
+      if (target) target.value = value
     })
   }
 
-  const login = async (form: Partial<AppState>): Promise<boolean> => {
+  const CONNECTION_KEYS = ['host', 'database', 'username', 'password', 'authHeader', 'userTimezone'] as const
+  const CLOUD_KEYS = ['dbId', 'lifetime', 'serviceName', 'regionVendor', 'regionLocation', 'regionCountry'] as const
+  const UI_KEYS = [
+    'theme',
+    'navbar',
+    'hideMenu',
+    'menuCollapse',
+    'footer',
+    'menuWidth',
+    'device',
+    'hideSidebar',
+    'menuSelectedKey',
+  ] as const
+
+  const normalizeConnectionConfig = (config: Partial<StoredConfig>): Partial<StoredConfig> => {
+    const normalized: Partial<StoredConfig> = {}
+    CONNECTION_KEYS.forEach((key) => {
+      if (config[key] !== undefined) normalized[key] = config[key] as any
+    })
+    CLOUD_KEYS.forEach((key) => {
+      if (config[key]) normalized[key] = config[key] as any
+    })
+    if (normalized.authHeader === '') normalized.authHeader = defaultSettings.authHeader
+    if (normalized.userTimezone) normalized.userTimezone = normalized.userTimezone.trim()
+    return normalized
+  }
+
+  const normalizeUiConfig = (config: Partial<UiConfig>): Partial<UiConfig> => {
+    const normalized: Partial<UiConfig> = {}
+    UI_KEYS.forEach((key) => {
+      if (config[key] !== undefined) (normalized as Record<string, unknown>)[key] = config[key]
+    })
+    return normalized
+  }
+
+  watch(
+    host,
+    (val) => {
+      axios.defaults.baseURL = val
+    },
+    { immediate: true }
+  )
+  watch(
+    theme,
+    (val) => {
+      if (val === 'dark') document.body.setAttribute('arco-theme', 'dark')
+      else document.body.removeAttribute('arco-theme')
+    },
+    { immediate: true }
+  )
+
+  const saveConnectionConfig = (config: Partial<StoredConfig>) => {
+    const normalized = normalizeConnectionConfig(config)
+    patchAppState(normalized)
+    configStorage.value = { ...configStorage.value, ...normalized }
+  }
+
+  const saveUiConfig = (config: Partial<UiConfig>) => {
+    uiConfigStorage.value = { ...uiConfigStorage.value, ...normalizeUiConfig(config) }
+  }
+
+  const setConnectionConfig = (config: Partial<StoredConfig>) => {
+    patchAppState(normalizeConnectionConfig(config))
+  }
+
+  const applyUiConfig = (config: Partial<UiConfig>, options: { persist?: boolean } = { persist: true }) => {
+    const normalized = normalizeUiConfig(config)
+    patchAppState(normalized)
+    if (options.persist) saveUiConfig(normalized)
+  }
+
+  const ensureConnectionHost = async () => {
+    if (host.value) return
+
+    const tauriEnv = await isTauri()
+    const inferredHost = tauriEnv
+      ? 'http://localhost:4000'
+      : (() => {
+          const { origin, pathname } = window.location
+          const index = pathname.lastIndexOf('/dashboard')
+          return index !== -1 ? `${origin}${pathname.slice(0, index)}` : `${origin}${pathname}`
+        })()
+
+    saveConnectionConfig({ host: inferredHost })
+  }
+
+  const validateConnection = async () => {
+    await editorAPI.runSQL(`select 1`)
+  }
+
+  const openGlobalSettings = () => {
+    globalSettings.value = true
+  }
+
+  const closeGlobalSettings = () => {
+    globalSettings.value = false
+  }
+
+  const validateAndSaveConnection = async (form: Partial<StoredConfig> = {}): Promise<boolean> => {
     try {
-      updateSettings(form)
-      // check if settings are valid
-      await editorAPI.runSQL(`select 1`)
+      setConnectionConfig(form)
+      await validateConnection()
       const { resetDataStatus } = useUserStore()
       resetDataStatus()
-      // Only update storage if login success
-      updateConfigStorage()
+      saveConnectionConfig(form)
       return true
     } catch (error) {
       const { resetData } = useDataBaseStore()
       resetData()
-      updateSettings({ globalSettings: true })
+      openGlobalSettings()
       return false
     }
   }
 
-  const toggleTheme = (dark: boolean) => {
-    if (dark) {
-      theme.value = 'dark'
-      document.body.setAttribute('arco-theme', 'dark')
-    } else {
-      theme.value = 'light'
-      document.body.removeAttribute('arco-theme')
-    }
-  }
-
-  const toggleDevice = (deviceType: string) => {
-    device.value = deviceType
-  }
-
-  const toggleMenu = (value: boolean) => {
-    hideMenu.value = value
-  }
-
-  const fetchDatabases = async (): Promise<boolean> => {
+  const refreshDatabaseList = async (overrideHost?: string): Promise<boolean> => {
+    const prevBaseURL = axios.defaults.baseURL
+    if (overrideHost) axios.defaults.baseURL = overrideHost
     try {
-      updateConfigStorage({ database: database.value })
       const res: any = await editorAPI.getDatabases()
 
       const databases = res.output[0].records.rows.map((item: string[]) => item[0])
@@ -125,15 +229,18 @@ const useAppStore = defineStore('app', () => {
 
       const { databaseActiveKeys: keys } = storeToRefs(useDataBaseStore())
       keys.value = [database.value]
+      saveConnectionConfig({ database: database.value })
 
       return true
     } catch (error) {
-      // databaseList.value = []
-      // database.value = 'public'
-      globalSettings.value = true
+      openGlobalSettings()
       return false
+    } finally {
+      if (overrideHost) axios.defaults.baseURL = prevBaseURL
     }
   }
+
+  const isDark = computed(() => theme.value === 'dark')
 
   const tableCatalog = computed(() => {
     return database.value.split('-').slice(0, -1).join('-') || 'greptime'
@@ -144,10 +251,9 @@ const useAppStore = defineStore('app', () => {
 
   return {
     // State
-    theme,
+    isDark,
     navbar,
     device,
-    hideMenu,
     host,
     database,
     username,
@@ -158,21 +264,23 @@ const useAppStore = defineStore('app', () => {
     guideModalVisible,
     menuCollapse,
     footer,
-    menuWidth,
     dbId,
     lifetime,
     menuSelectedKey,
     userTimezone,
     hideSidebar,
+    serviceName,
+    regionVendor,
+    regionLocation,
+    regionCountry,
 
     // Actions
-    updateSettings,
-    updateConfigStorage,
-    login,
-    toggleTheme,
-    toggleDevice,
-    toggleMenu,
-    fetchDatabases,
+    applyUiConfig,
+    ensureConnectionHost,
+    validateAndSaveConnection,
+    openGlobalSettings,
+    closeGlobalSettings,
+    refreshDatabaseList,
     tableCatalog,
     tableSchema,
   }

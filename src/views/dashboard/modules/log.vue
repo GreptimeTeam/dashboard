@@ -37,7 +37,6 @@ a-list-item.smaller-divider
 
 <script lang="ts" name="Log" setup>
   const { inputFromNewLineToQueryCode, replaceCode } = useQueryCode()
-  const { updateSettings } = useAppStore()
 
   const props = defineProps({
     log: {

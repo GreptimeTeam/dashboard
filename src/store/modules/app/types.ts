@@ -1,27 +1,48 @@
 import type { RouteRecordNormalized } from 'vue-router'
 
-export interface AppState {
+export interface ConnectionConfig {
+  host: string
+  database: string
+  username: string
+  password: string
+  authHeader: string
+  userTimezone: string
+}
+
+export interface CloudContext {
+  dbId?: string
+  lifetime?: string
+  serviceName?: string
+  regionVendor?: string
+  regionLocation?: string
+  regionCountry?: string
+}
+
+export type StoredConfig = ConnectionConfig & CloudContext
+
+export interface UiConfig {
   theme: string
   navbar: boolean
-  menu: boolean
   hideMenu: boolean
   menuCollapse: boolean
   footer: boolean
   menuWidth: number
-  globalSettings: boolean
   device: string
-  tabBar: boolean
-  host: string
-  database: string
-  databaseList: Array<string>
-  guideModalVisible: boolean
-  username: string
-  password: string
+  hideSidebar: boolean
+  menuSelectedKey: string
+}
+
+export interface AppState extends StoredConfig, UiConfig {
   dbId: string
   lifetime: string
-  menuSelectedKey: string
-  userTimezone: string
-  hideSidebar: boolean
-  authHeader: string
+  serviceName: string
+  regionVendor: string
+  regionLocation: string
+  regionCountry: string
+  menu: boolean
+  globalSettings: boolean
+  tabBar: boolean
+  databaseList: Array<string>
+  guideModalVisible: boolean
   [key: string]: unknown
 }

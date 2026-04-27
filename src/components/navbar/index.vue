@@ -50,8 +50,8 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
 
   const router = useRouter()
   const { t } = useI18n()
-  const { updateSettings } = useAppStore()
-  const { menuSelectedKey, globalSettings, hideSidebar } = storeToRefs(useAppStore())
+  const appStore = useAppStore()
+  const { menuSelectedKey, globalSettings, hideSidebar } = storeToRefs(appStore)
   const { activeTab: ingestTab } = storeToRefs(useIngestStore())
   const { menuTree } = useMenuTree()
   const { newsList, isLoadingNews } = useNews()
@@ -80,7 +80,7 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
   ]
 
   const setVisible = () => {
-    updateSettings({ globalSettings: true })
+    appStore.openGlobalSettings()
   }
 
   const showNews = () => {
@@ -89,9 +89,9 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
 
   const menuClick = (key: string) => {
     if (key === menuSelectedKey.value) {
-      hideSidebar.value = !hideSidebar.value
+      appStore.applyUiConfig({ hideSidebar: !hideSidebar.value })
     } else {
-      hideSidebar.value = false
+      appStore.applyUiConfig({ hideSidebar: false })
     }
     switch (key) {
       case 'ingest':
@@ -109,7 +109,9 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
   }
 
   listenerRouteChange((newRoute) => {
-    menuSelectedKey.value = newRoute.meta.activeMenu || (newRoute.matched[1].name as string)
+    appStore.applyUiConfig({
+      menuSelectedKey: newRoute.meta.activeMenu || (newRoute.matched[1].name as string),
+    })
     if (newRoute.matched[1].name === 'ingest') {
       ingestTab.value = newRoute.matched[3].name as string
     }

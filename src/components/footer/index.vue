@@ -27,21 +27,17 @@ a-layout-footer.footer
 
 <script lang="ts" setup>
   import { getIconUrl } from '@/utils'
-  import { useStorage } from '@vueuse/core'
   import useLocale from '@/hooks/locale'
 
-  const { regionVendor, regionLocation, regionCountry, serviceName }: any = useStorage('config', {}).value
-  const { host } = storeToRefs(useAppStore())
+  const { host, regionVendor, regionLocation, regionCountry, serviceName } = storeToRefs(useAppStore())
   const { role } = storeToRefs(useUserStore())
   const { statusRight } = storeToRefs(useStatusBarStore())
 
-  const region = ref({
-    vendor: regionVendor,
-    location: regionLocation,
-    country: regionCountry,
-  })
-
-  const vendorIcon = getIconUrl(region.value.vendor)
+  const region = computed(() => ({
+    vendor: regionVendor.value,
+    location: regionLocation.value,
+    country: regionCountry.value,
+  }))
 
   const { currentLocale, onChangeLocale } = useLocale()
 

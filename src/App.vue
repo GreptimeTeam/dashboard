@@ -12,7 +12,6 @@
   import zhCN from '@arco-design/web-vue/es/locale/lang/zh-cn'
   import useLocale from '@/hooks/locale'
   import { useUserStore, useAppStore } from '@/store'
-  import { useStorage } from '@vueuse/core'
   import { invoke, isTauri } from '@tauri-apps/api/core'
   import { getCurrentWindow } from '@tauri-apps/api/window'
 
@@ -29,25 +28,12 @@
   })
 
   const { setRole } = useUserStore()
-  const { updateSettings } = useAppStore()
+  const appStore = useAppStore()
 
   const role = import.meta.env.VITE_ROLE || 'admin'
   setRole(role)
-
   if (role === 'playground') {
-    updateSettings({ navbar: false })
-  }
-
-  if (import.meta.env.MODE === 'development' || import.meta.env.MODE === 'production') {
-    // Assuming local greptimeDB is up and running
-    const { username, password, database, host, authHeader }: any = useStorage('config', {}).value
-    updateSettings({
-      username,
-      password,
-      database,
-      host,
-      authHeader,
-    })
+    appStore.applyUiConfig({ navbar: false }, { persist: false })
   }
 
   onMounted(async () => {

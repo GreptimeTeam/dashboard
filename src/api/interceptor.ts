@@ -129,7 +129,7 @@ axios.interceptors.response.use(
 
     if (error.response.status === 401) {
       const appStore = useAppStore()
-      appStore.updateSettings({ globalSettings: true })
+      appStore.openGlobalSettings()
     }
 
     if (isV1) {

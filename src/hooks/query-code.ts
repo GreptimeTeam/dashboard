@@ -101,14 +101,14 @@ export default function useQueryCode() {
       if (command) {
         const { refreshTables, loadMoreColumns } = useSiderTabs()
         const { originTablesTree } = storeToRefs(useDataBaseStore())
-        const { fetchDatabases } = useAppStore()
+        const { refreshDatabaseList } = useAppStore()
 
         const commandType = `${command.action}_${command.object}`
 
         switch (commandType) {
           case 'CREATE_DATABASE':
           case 'DROP_DATABASE':
-            await fetchDatabases()
+            await refreshDatabaseList()
             break
           case 'CREATE_TABLE':
           case 'DROP_TABLE':

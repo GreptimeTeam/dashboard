@@ -93,20 +93,15 @@ a-drawer.settings-drawer(
 <script lang="ts" setup name="GlobalSetting">
   import { useI18n } from 'vue-i18n'
   import { useAppStore, useDataBaseStore } from '@/store'
-  import axios from 'axios'
-  import { isTauri } from '@tauri-apps/api/core'
-  import dayjs from 'dayjs'
 
   const MARGIN_BOTTOM = `${38 * 2 + 8}px`
   const { t } = useI18n()
 
-  const { updateSettings, login, updateConfigStorage, fetchDatabases } = useAppStore()
-  const { checkTables, getScriptsTable } = useDataBaseStore()
+  const appStore = useAppStore()
+  const { checkTables } = useDataBaseStore()
 
-  const { role } = storeToRefs(useUserStore())
-  const { globalSettings, host, database, username, password, databaseList, userTimezone, authHeader } = storeToRefs(
-    useAppStore()
-  )
+  const { globalSettings, host, database, username, password, databaseList, userTimezone, authHeader } =
+    storeToRefs(appStore)
 
   const loginStatus = ref('')
   const loginLoading = ref(false)
@@ -132,28 +127,21 @@ a-drawer.settings-drawer(
     if (!checkTimezoneInput(settingsForm.value.userTimezone)) {
       return
     }
-    // Save user's timezone selection
     const tz = settingsForm.value.userTimezone?.trim() || ''
-    updateSettings({ userTimezone: tz })
     settingsForm.value.userTimezone = tz
 
-    axios.defaults.baseURL = settingsForm.value.host
     loginLoading.value = true
-    const res = await login(settingsForm.value)
+    const res = await appStore.validateAndSaveConnection(settingsForm.value)
     if (res) {
       loginStatus.value = 'success'
+
+      await appStore.refreshDatabaseList()
+      settingsForm.value.databaseList = databaseList.value
+      settingsForm.value.database = database.value
       checkTables()
 
-      const fetchPromise = fetchDatabases()
-
-      fetchPromise.then(() => {
-        settingsForm.value.databaseList = databaseList.value
-      })
-
       setTimeout(() => {
-        updateSettings({
-          globalSettings: false,
-        })
+        appStore.closeGlobalSettings()
       }, 3000)
     } else {
       loginStatus.value = 'fail'
@@ -162,7 +150,7 @@ a-drawer.settings-drawer(
   }
 
   const setVisible = () => {
-    updateSettings({ globalSettings: true })
+    appStore.openGlobalSettings()
   }
 
   // Timezone select options: UTC and UTC±HH:MM from -12:00 to +14:00
@@ -196,28 +184,13 @@ a-drawer.settings-drawer(
   })
 
   onMounted(async () => {
-    if (!host.value) {
-      const tauriEnv = isTauri()
-      if (tauriEnv) {
-        host.value = 'http://localhost:4000'
-      } else {
-        const { origin, pathname } = window.location
-        const index = pathname.lastIndexOf('/dashboard')
-        if (index !== -1) {
-          host.value = `${origin}${pathname.slice(0, index)}`
-        } else {
-          host.value = `${origin}${pathname}`
-        }
-      }
-      updateConfigStorage({ host: host.value })
-    }
-    axios.defaults.baseURL = host.value
-    const res = await fetchDatabases()
+    await appStore.ensureConnectionHost()
+    const res = await appStore.refreshDatabaseList()
     settingsForm.value.databaseList = databaseList.value
     settingsForm.value.database = database.value
 
     if (res) {
-      const loginSuccess = await login({})
+      const loginSuccess = await appStore.validateAndSaveConnection()
       if (loginSuccess) {
         loginStatus.value = 'success'
         checkTables()
@@ -229,9 +202,8 @@ a-drawer.settings-drawer(
 
   const refreshDatabases = async () => {
     databasesLoading.value = true
-    axios.defaults.baseURL = settingsForm.value.host
     try {
-      await fetchDatabases()
+      await appStore.refreshDatabaseList(settingsForm.value.host)
       settingsForm.value.databaseList = databaseList.value
       settingsForm.value.database = database.value
     } finally {
