@@ -291,7 +291,7 @@ a-card.metrics-sidebar(:bordered="false")
   const { hideSidebar } = storeToRefs(appStore)
   const toggleSidebar = () => {
     tooltipVisible.value = false
-    hideSidebar.value = !hideSidebar.value
+    appStore.applyUiConfig({ hideSidebar: !hideSidebar.value })
   }
 </script>
 

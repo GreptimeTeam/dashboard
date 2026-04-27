@@ -526,7 +526,7 @@ a-modal(
   onMounted(async () => {
     // Fetch databases if not already loaded
     if (databaseList.value.length === 0) {
-      await appStore.fetchDatabases()
+      await appStore.refreshDatabaseList()
     }
     // Initialize form.database if not set or not in filtered list
     if (!form.database || !filteredDatabaseList.value.includes(form.database)) {

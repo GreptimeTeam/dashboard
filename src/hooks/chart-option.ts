@@ -1,6 +1,6 @@
 import { computed } from 'vue'
 import { EChartsOption } from 'echarts'
-import { useAppStore } from '@/store'
+import useThemes from './themes'
 
 // for code hints
 // import { SeriesOption } from 'echarts';
@@ -11,10 +11,7 @@ interface optionsFn {
 }
 
 export default function useChartOption(sourceOption: optionsFn) {
-  const appStore = useAppStore()
-  const isDark = computed(() => {
-    return appStore.theme === 'dark'
-  })
+  const { isDark } = useThemes()
 
   const chartOption = computed<EChartsOption>(() => {
     return sourceOption(isDark.value)

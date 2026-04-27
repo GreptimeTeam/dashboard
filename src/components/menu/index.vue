@@ -22,7 +22,7 @@
           return false
         },
         set(value: boolean) {
-          appStore.updateSettings({ menuCollapse: value })
+          appStore.applyUiConfig({ menuCollapse: value })
         },
       })
 
@@ -80,7 +80,7 @@
         }
       }, true)
       const setCollapse = (val: boolean) => {
-        if (appStore.device === 'desktop') appStore.updateSettings({ menuCollapse: val })
+        if (appStore.device === 'desktop') appStore.applyUiConfig({ menuCollapse: val })
       }
 
       const renderSubMenu = () => {

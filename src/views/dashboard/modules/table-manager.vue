@@ -154,7 +154,6 @@ a-card.table-manager(:bordered="false")
   }>()
 
   const appStore = useAppStore()
-  const { fetchDatabases } = appStore
   const { hideSidebar, database } = storeToRefs(appStore)
   const { insertNameToPyCode } = usePythonCode()
   const { tablesSearchKey, tablesTreeRef, refreshTables, loadMore, loadMoreColumns, isRefreshingDetails } =
@@ -203,7 +202,7 @@ a-card.table-manager(:bordered="false")
       databaseActiveKeys.value = [targetDb]
       await refreshTables(targetDb)
     } else {
-      await fetchDatabases()
+      await appStore.refreshDatabaseList()
     }
   }
 
@@ -257,7 +256,7 @@ a-card.table-manager(:bordered="false")
 
   const toggleSidebar = () => {
     tooltipVisible.value = false
-    hideSidebar.value = !hideSidebar.value
+    appStore.applyUiConfig({ hideSidebar: !hideSidebar.value })
   }
 </script>
 
