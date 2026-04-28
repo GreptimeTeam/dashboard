@@ -67,7 +67,8 @@ a-layout.new-layout
   const { s, q, escape } = useMagicKeys()
   const activeElement = useActiveElement()
   const appStore = useAppStore()
-  const { hideSidebar, databaseList } = storeToRefs(useAppStore())
+  const { hideSidebar, databaseList, database } = storeToRefs(useAppStore())
+  const originalDatabase = ref<string | undefined>(undefined)
   const { logs } = storeToRefs(useLogStore())
   const { activeTab, footer } = storeToRefs(useIngestStore())
   const { dataStatusMap } = storeToRefs(useUserStore())
@@ -161,6 +162,7 @@ a-layout.new-layout
   })
 
   onActivated(async () => {
+    originalDatabase.value = database.value
     await appStore.refreshDatabaseList()
     const tourStatus = useStorage('tourStatus', { navbar: false })
     if (!tourStatus.value.navbar) {
@@ -168,6 +170,11 @@ a-layout.new-layout
       globalTour.setSteps(steps)
       globalTour.drive(0)
     }
+  })
+
+  onDeactivated(() => {
+    database.value = originalDatabase.value
+    originalDatabase.value = undefined
   })
 
   // TODO: add more code type in the future if needed
