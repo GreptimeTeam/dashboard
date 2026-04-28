@@ -215,6 +215,7 @@ a-card.table-manager(:bordered="false")
     tablesSearchKey.value = ''
     expandedKeys.value = []
     activeDatabase.value = db
+    database.value = db
     databaseActiveKeys.value = [db]
     if (!tablesTreeForDatabase.value[db]) {
       await refreshTables(db)
