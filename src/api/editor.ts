@@ -95,8 +95,19 @@ const getTableByName = (tableName: string, database?: string) => {
   )
 }
 
-const runSQL = (code: string, database?: string): Promise<HttpResponse> => {
-  return axios.post(sqlUrl, makeSqlData(code), addDatabaseParams(database))
+function runSQL(code: string): Promise<HttpResponse>
+function runSQL(code: string, database: string, config?: AxiosRequestConfig): Promise<HttpResponse>
+function runSQL(code: string, database?: string, config?: AxiosRequestConfig): Promise<HttpResponse> {
+  const baseConfig = addDatabaseParams(database)
+  const mergedConfig = {
+    ...baseConfig,
+    ...config,
+    params: {
+      ...baseConfig.params,
+      ...config?.params,
+    },
+  } as AxiosRequestConfig
+  return axios.post(sqlUrl, makeSqlData(code), mergedConfig)
 }
 
 const checkScriptsTable = () => {
@@ -172,7 +183,7 @@ const getTableSchema = (tableName: string, database?: string) => {
       ),
       addDatabaseParams(database)
     )
-    .then((res) => {
+    .then((res: any) => {
       return res.output[0].records.rows.map((row: string[]) => {
         return {
           name: row[0],

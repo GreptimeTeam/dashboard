@@ -22,6 +22,8 @@ export interface Auth {
 
 // todo: can we use env and proxy at the same time?
 export const TableNameReg = /(?<=from|FROM)\s+([^\s;]+)/i
+const V1_PREFIX = '/v1'
+const V1_INFLUX_PREFIX = '/v1/influxdb'
 /**
  * Parse table reference from SQL after FROM. Returns the raw table reference as-is (e.g. "temp_data"."cpu_metrics"), no conversion.
  */
@@ -39,9 +41,97 @@ export function parseTable(sql: string) {
   return parseTableFromSql(sql)
 }
 
+const isV1Request = (url?: string) => !!url?.startsWith(V1_PREFIX)
+const isInfluxRequest = (url?: string) => !!url?.startsWith(V1_INFLUX_PREFIX)
+
+const getStartTimestamp = (value?: Date | number) => {
+  if (!value) return undefined
+  const start = new Date(value).valueOf()
+  return Number.isNaN(start) ? undefined : start
+}
+
+const formatStartTime = (value?: Date | number) => {
+  const start = getStartTimestamp(value)
+  return start ? new Date(start).toLocaleTimeString() : new Date().toLocaleTimeString()
+}
+
+const getTraceTiming = (value?: Date | number) => {
+  const start = getStartTimestamp(value)
+  const now = Date.now()
+  return {
+    networkTime: start ? now - start : 0,
+    startTime: formatStartTime(value),
+  }
+}
+
+const shouldNotifyError = (config?: AxiosRequestConfig) => {
+  if (isInfluxRequest(config?.url)) return false
+  return !config?.suppressErrorToast
+}
+
+const showErrorMessage = (content: string) => {
+  Message.error({
+    content,
+    duration: 3 * 1000,
+    closable: true,
+    resetOnHover: true,
+  })
+}
+
+const parseV1Data = (payload: unknown) => {
+  if (typeof payload !== 'string') return payload
+  return JSONbigint({ storeAsString: true }).parse(payload)
+}
+
+const buildErrorPayload = (errorMessage: string, traceTimeStart?: Date | number) => {
+  return {
+    error: errorMessage,
+    startTime: formatStartTime(traceTimeStart),
+  }
+}
+
+const handleV1Response = (response: AxiosResponse) => {
+  const isInflux = isInfluxRequest(response.config.url)
+
+  if (isInflux) {
+    if (response.status === 204) {
+      return getTraceTiming(response.config.traceTimeStart)
+    }
+    const message = response.data?.error || 'Error'
+    return Promise.reject(buildErrorPayload(message, response.config.traceTimeStart))
+  }
+
+  if (response.config.params?.format?.includes('csv')) {
+    return response.data || []
+  }
+
+  const data = parseV1Data(response.data) as HttpResponse
+  if (data.code && data.code !== 0) {
+    const message = data.error || 'Error'
+    if (shouldNotifyError(response.config)) {
+      showErrorMessage(message)
+    }
+    return Promise.reject(buildErrorPayload(message, response.config.traceTimeStart))
+  }
+
+  return {
+    ...data,
+    ...getTraceTiming(response.config.traceTimeStart),
+  }
+}
+
+const parseV1ErrorData = (rawData: unknown) => {
+  if (typeof rawData !== 'string') return rawData
+  try {
+    return JSON.parse(rawData)
+  } catch {
+    return rawData
+  }
+}
+
 axios.interceptors.request.use(
   (config: AxiosRequestConfig) => {
-    const isV1 = !!config.url?.startsWith(`/v1`)
+    const isV1 = isV1Request(config.url)
     const appStore = useAppStore()
 
     if (!config.headers) {
@@ -71,91 +161,39 @@ axios.interceptors.request.use(
     return Promise.reject(error)
   }
 )
-const ignoreList = ['pipelines']
 
 axios.interceptors.response.use(
   (response: AxiosResponse) => {
-    const isV1 = !!response.config.url?.startsWith(`/v1`)
-    const isInflux = !!response.config.url?.startsWith(`/v1/influxdb`)
-    if (isInflux) {
-      if (response.status === 204) {
-        return {
-          networkTime: new Date().valueOf() - response.config.traceTimeStart,
-          startTime: new Date(response.config.traceTimeStart).toLocaleTimeString(),
-        }
-      }
-      const errorResponse = {
-        error: response.data.error || 'Error',
-        startTime: new Date(response.config.traceTimeStart).toLocaleTimeString(),
-      }
-      return Promise.reject(errorResponse)
-    }
-    if (isV1) {
-      if (response.config.params?.format?.includes('csv')) {
-        return response.data || []
-      }
-      response.data = JSONbigint({ storeAsString: true }).parse(response.data)
-      const { data } = response
-      if (data.code && data.code !== 0) {
-        // v1 and error
-        const tableName = parseTable(response.config.data)
-        if (ignoreList.indexOf(tableName) === -1) {
-          Message.error({
-            content: data.error || 'Error',
-            duration: 3 * 1000,
-            closable: true,
-            resetOnHover: true,
-          })
-        }
-        const error = {
-          error: data.error || 'Error',
-          startTime: new Date(response.config.traceTimeStart).toLocaleTimeString(),
-        }
-        return Promise.reject(error)
-      }
-      // v1 and success
-      return {
-        ...data,
-        networkTime: new Date().valueOf() - response.config.traceTimeStart,
-        startTime: new Date(response.config.traceTimeStart).toLocaleTimeString(),
-      }
-    }
-    const { data } = response
-    return data
+    if (isV1Request(response.config.url)) return handleV1Response(response)
+    return response.data
   },
 
   (error) => {
-    const isV1 = !!error.config.url?.startsWith(`/v1`)
+    const response = error?.response
+    const config = error?.config
 
-    if (error.response.status === 401) {
+    if (response?.status === 401) {
       const appStore = useAppStore()
       appStore.openGlobalSettings()
     }
 
-    if (isV1) {
-      try {
-        error.response.data = JSON.parse(error.response.data)
-      } catch (e) {
-        //
-      }
+    if (!response) {
+      const message = error?.message || 'Request Error'
+      if (shouldNotifyError(config)) showErrorMessage(message)
+      return Promise.reject(buildErrorPayload(message, config?.traceTimeStart))
     }
 
-    const { data } = error.response
+    if (isV1Request(config?.url)) {
+      response.data = parseV1ErrorData(response.data)
+    }
 
-    const isInflux = !!error.config.url?.startsWith(`/v1/influxdb`)
-    const tableName = parseTable(error.response.config.data)
-    if (!isInflux && ignoreList.indexOf(tableName) === -1) {
-      Message.error({
-        content: data.error || error.message || 'Request Error',
-        duration: 3 * 1000,
-        closable: true,
-        resetOnHover: true,
-      })
+    const data = response.data || {}
+    const message = data.error || error.message || 'Request Error'
+
+    if (shouldNotifyError(config)) {
+      showErrorMessage(message)
     }
-    const errorResponse = {
-      error: data.error || error.message || 'Request Error',
-      startTime: new Date(error.response.config.traceTimeStart).toLocaleTimeString(),
-    }
-    return Promise.reject(errorResponse)
+
+    return Promise.reject(buildErrorPayload(message, response.config?.traceTimeStart))
   }
 )
