@@ -66,6 +66,7 @@ a-layout.new-layout
 
   const { s, q, escape } = useMagicKeys()
   const activeElement = useActiveElement()
+  const appStore = useAppStore()
   const { hideSidebar, databaseList } = storeToRefs(useAppStore())
   const { logs } = storeToRefs(useLogStore())
   const { activeTab, footer } = storeToRefs(useIngestStore())
@@ -160,6 +161,7 @@ a-layout.new-layout
   })
 
   onActivated(async () => {
+    await appStore.refreshDatabaseList()
     const tourStatus = useStorage('tourStatus', { navbar: false })
     if (!tourStatus.value.navbar) {
       const steps = [...navbarSteps]

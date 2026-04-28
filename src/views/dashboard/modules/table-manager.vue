@@ -172,6 +172,11 @@ a-card.table-manager(:bordered="false")
   watch(
     () => props.databaseList,
     (newList) => {
+      if (newList.length === 0) {
+        activeDatabase.value = ''
+        databaseActiveKeys.value = []
+        return
+      }
       if (newList.length > 0 && !activeDatabase.value) {
         const defaultDb = newList.includes(database.value) ? database.value : newList[0]
         activeDatabase.value = defaultDb
