@@ -48,7 +48,9 @@ export function create(pipeFile: PipeFile) {
 
 export function list() {
   return runSQL(
-    `SELECT name,max(created_at) as created_at FROM greptime_private.pipelines group by name order by created_at desc`
+    `SELECT name,max(created_at) as created_at FROM greptime_private.pipelines group by name order by created_at desc`,
+    undefined,
+    { suppressErrorToast: true }
   ).then((result) => {
     return result.output[0].records.rows.map((row: any) => {
       return {
@@ -139,7 +141,7 @@ export function getPipelineDDL(pipelineName: string, tableName: string) {
         db: appStore.database,
       },
     })
-    .then((result) => {
+    .then((result: any) => {
       return result.sql.sql
     })
 }
