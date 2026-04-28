@@ -233,6 +233,7 @@ const useAppStore = defineStore('app', () => {
 
       return true
     } catch (error) {
+      databaseList.value = []
       openGlobalSettings()
       return false
     } finally {
