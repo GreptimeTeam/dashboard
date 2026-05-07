@@ -36,6 +36,30 @@ a-tabs.panel-tabs(
       span {{ `${$t('dashboard.result')} ${Number(result.key) - startKey + 1}` }}
     .result-container
       .result-toolbar(v-if="result.query")
+        .view-switch
+          a-tooltip(mini position="bl" :content="$t('dashboard.table')")
+            a-button(
+              size="mini"
+              type="text"
+              :class="{ active: getResultView(result.key) === 'table' }"
+              @click="setResultView(result.key, 'table')"
+            )
+              svg.icon-16
+                use(href="#table")
+          a-tooltip(
+            v-if="useDataChart(result).hasChart.value"
+            mini
+            position="bl"
+            :content="$t('dashboard.chart')"
+          )
+            a-button(
+              size="mini"
+              type="text"
+              :class="{ active: getResultView(result.key) === 'chart' }"
+              @click="setResultView(result.key, 'chart')"
+            )
+              svg.icon-16
+                use(href="#chart")
         .query-display
           a-popover(
             trigger="click"
@@ -44,6 +68,13 @@ a-tabs.panel-tabs(
             :content="result.query"
           )
             a-typography-text.query-text(code :ellipsis="{ rows: 1, css: true }") {{ result.query }}
+          TextCopyable(
+            size="mini"
+            type="secondary"
+            :data="result.query"
+            :show-data="false"
+            :button-text="false"
+          )
         .toolbar-actions
           a-space(:size="0")
             a-tooltip(mini position="tr" :content="$t('dashboard.rerunQuery')")
@@ -57,30 +88,26 @@ a-tabs.panel-tabs(
                 template(#icon)
                   svg.icon-12
                     use(href="#refresh")
-            TextCopyable(
-              size="mini"
-              type="secondary"
-              :data="result.query"
-              :show-data="false"
-              :button-text="false"
-            )
+            a-checkbox(v-if="getResultView(result.key) === 'table'" v-model="wrapLines" size="small")
+              | {{ $t('dashboard.wrapLines') }}
 
       .result-content
-        a-tabs.data-view-tabs(position="left" type="capsule" :animation="true")
-          a-tab-pane(key="table")
-            template(#title)
-              a-tooltip(mini position="bl" :content="$t('dashboard.table')")
-                a-space.title(direction="vertical" :size="4")
-                  svg.icon-16
-                    use(href="#table")
-            DataGridTable(:key="`table-${result.key}-${result.refreshCount || 0}`" :data="result" :has-header="false")
-          a-tab-pane(v-if="useDataChart(result).hasChart.value" key="chart")
-            template(#title)
-              a-tooltip(mini position="bl" :content="$t('dashboard.chart')")
-                a-space.title(direction="vertical" :size="4")
-                  svg.icon-16
-                    use(href="#chart")
-            DataChart(:key="`chart-${result.key}-${result.refreshCount || 0}`" :data="result" :has-header="false")
+        .table-panel(v-if="getResultView(result.key) === 'table'")
+          PaginatedDataTable(
+            size="mini"
+            :data="tableModelMap[result.key]?.rows || []"
+            :columns="tableModelMap[result.key]?.columns || []"
+            :displayed-columns="tableModelMap[result.key]?.displayedColumns || []"
+            :ts-column="tableModelMap[result.key]?.tsColumn || null"
+            :show-context-menu="false"
+            :wrap-line="wrapLines"
+          )
+        DataChart(
+          v-else-if="useDataChart(result).hasChart.value"
+          :key="`chart-${result.key}-${result.refreshCount || 0}`"
+          :data="result"
+          :has-header="false"
+        )
 </template>
 
 <script lang="ts" name="DataView" setup>
@@ -88,6 +115,8 @@ a-tabs.panel-tabs(
   import useQueryCode from '@/hooks/query-code'
   import { useCodeRunStore } from '@/store'
   import type { ResultType } from '@/store/modules/code-run/types'
+  import { normalizeRecordsToTableModel } from '@/utils/table-normalizer'
+  import type { NormalizedTableModel } from '@/utils/table-normalizer'
   import ExplainTabs from '@/components/explain-tabs/index.vue'
 
   const props = defineProps<{
@@ -104,7 +133,8 @@ a-tabs.panel-tabs(
   const activeTabKey = ref<string | number>()
   const startKey = ref<number>((props.results[0]?.key as number) || 0)
   const refreshingKeys = ref(new Set<string | number>())
-
+  const resultViewMap = ref<Record<string | number, 'table' | 'chart'>>({})
+  const wrapLines = ref(false)
   // Add a method to select specific tab
   const selectTab = (key: number | string) => {
     activeTabKey.value = key
@@ -161,6 +191,21 @@ a-tabs.panel-tabs(
     emit('toggleFullSize', !props.isInFullSizeMode)
   }
 
+  const getResultView = (resultKey: string | number) => {
+    return resultViewMap.value[resultKey] || 'table'
+  }
+
+  const setResultView = (resultKey: string | number, view: 'table' | 'chart') => {
+    resultViewMap.value[resultKey] = view
+  }
+
+  const tableModelMap = computed<Record<string, NormalizedTableModel>>(() => {
+    return props.results.reduce((acc, result) => {
+      acc[String(result.key)] = normalizeRecordsToTableModel(result?.records)
+      return acc
+    }, {} as Record<string, NormalizedTableModel>)
+  })
+
   watch(
     () => ({ ...props }),
     (value, old) => {
@@ -206,10 +251,31 @@ a-tabs.panel-tabs(
     justify-content: space-between;
     border-bottom: 1px solid var(--color-border-2);
     padding: 0 6px;
+    gap: 8px;
+
+    .view-switch {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      gap: 2px;
+
+      .arco-btn {
+        color: var(--small-font-color);
+      }
+
+      .arco-btn.active {
+        color: var(--brand-color);
+        background: var(--color-fill-2);
+      }
+    }
+
     .query-display {
       flex: 1;
-      margin-right: 12px;
+      margin-right: 6px;
       min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
 
       :deep(.arco-typography.query-text) {
         margin: 0;
@@ -226,6 +292,9 @@ a-tabs.panel-tabs(
 
     .toolbar-actions {
       flex-shrink: 0;
+      :deep(.arco-checkbox) {
+        font-size: 11px;
+      }
     }
   }
 
@@ -233,6 +302,18 @@ a-tabs.panel-tabs(
     flex: 1;
     min-height: 0;
     overflow: hidden;
+
+    .table-panel {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+
+      :deep(.data-table-container) {
+        flex: 1;
+        min-height: 0;
+      }
+    }
   }
 
   .arco-tabs.panel-tabs {
@@ -259,61 +340,9 @@ a-tabs.panel-tabs(
         font-size: 11px;
       }
     }
-    :deep(.data-view-tabs) {
-      width: 100%;
+    :deep(.arco-card.data-grid) {
       height: 100%;
-      .arco-tabs-nav-tab:not(.arco-tabs-nav-tab-scroll) {
-        justify-content: flex-start;
-      }
-      .arco-tabs-tab {
-        padding: 8px 4px;
-        .title {
-          align-items: center;
-          .text {
-            writing-mode: sideways-lr;
-          }
-        }
-      }
-      .arco-tabs-nav::before {
-        background-color: transparent;
-      }
-      .arco-tabs-content {
-        height: 100%;
-      }
-
-      > .arco-tabs-content > .arco-tabs-content-list > .arco-tabs-content-item {
-        padding: 0;
-      }
-      .arco-card.data-grid {
-        height: 100%;
-        padding: 2px 8px;
-        > .arco-card-body {
-          height: 100%;
-          > .arco-spin {
-            height: 100%;
-            .arco-table-pagination {
-              margin: 0;
-              .arco-pagination-total {
-                font-size: 11px;
-              }
-              .arco-pagination-item {
-                font-size: 11px;
-              }
-              .arco-pagination-options .arco-select-view-value {
-                font-size: 11px;
-              }
-              .arco-pagination-jumper > span {
-                font-size: 12px;
-              }
-              .arco-input-wrapper .arco-input.arco-input-size-medium {
-                padding-top: 2px;
-                padding-bottom: 1px;
-                font-size: 11px;
-              }
-            }
-          }
-        }
-      }
+      padding: 2px 8px;
     }
   }
 
