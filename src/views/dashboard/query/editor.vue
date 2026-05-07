@@ -166,6 +166,8 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
   import { sqlFormatter, parseSqlStatements, findStatementAtPosition, promqlFormatter } from '@/utils/sql'
   import { Message } from '@arco-design/web-vue'
   import fileDownload from 'js-file-download'
+  import { getExplainResultKeyCount } from '@/services/code-run'
+  import { useQuerySession } from './use-query-session'
 
   import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '../config'
 
@@ -209,7 +211,8 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
   })
   const { runQuery, explainQuery, exportWithFormat } = useQueryCode()
   const { extensions } = storeToRefs(useDataBaseStore())
-  const { explainResultKeyCount, explainResult } = storeToRefs(useCodeRunStore())
+  const explainResultKeyCount = getExplainResultKeyCount()
+  const session = useQuerySession()
   const importExplainForm = reactive({
     explainJson: '',
   })
@@ -217,8 +220,6 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
   const currentStatement = ref<string>('')
   const importExplainModalVisible = ref(false)
   const explainQueryRunning = ref(false)
-
-  const emit = defineEmits(['selectExplainTab'])
 
   const openTimeAssistance = () => {
     if (tsRef.value) {
@@ -250,9 +251,7 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
         executionTime: jsonData.execution_time_ms,
       }
 
-      explainResult.value = newResult
-
-      emit('selectExplainTab')
+      session.setExplainResult(newResult as any)
 
       // Clear the form and close the modal
       importExplainForm.explainJson = ''
@@ -333,7 +332,9 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
     }
     primaryCodeRunning.value = true
     // TODO: add better format tool for code
-    await runQuery(codes.value[queryType.value].trim(), queryType.value, false, promForm)
+    const res = await runQuery(codes.value[queryType.value].trim(), queryType.value, false, promForm)
+    if (res?.results?.length) session.appendResults(res.results)
+    if (res?.log) session.appendLog(res.log)
     primaryCodeRunning.value = false
     // TODO: refresh tables data and when
   }
@@ -350,7 +351,9 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
     }
     secondaryCodeRunning.value = true
 
-    await runQuery(currentStatement.value, queryType.value, false, promForm)
+    const res = await runQuery(currentStatement.value, queryType.value, false, promForm)
+    if (res?.results?.length) session.appendResults(res.results)
+    if (res?.log) session.appendLog(res.log)
     secondaryCodeRunning.value = false
   }
 
@@ -401,8 +404,8 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
         }
 
         const result: any = await explainQuery(explainCommand, 'sql')
-        if (result) {
-          emit('selectExplainTab')
+        if (result?.results?.[0]) {
+          session.setExplainResult(result.results[0])
         }
       } finally {
         explainQueryRunning.value = false

@@ -94,7 +94,6 @@ a-layout-content.main-content
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { basicSetup } from 'codemirror'
   import { json } from '@codemirror/lang-json' // 导入JSON语法支持
-  import type { Log } from '@/store/modules/log/types'
   import { isObject } from '@/utils/is'
 
   const props = defineProps({
@@ -104,9 +103,7 @@ a-layout-content.main-content
     },
   })
 
-  const route = useRoute()
-  const { pushLog } = useLog(route)
-  const { activeTab, footer } = storeToRefs(useIngestStore())
+  const { activeTab } = storeToRefs(useIngestStore())
 
   const file = ref(null)
   const visible = ref(false)
@@ -194,15 +191,7 @@ a-layout-content.main-content
 
     const fileInfo = file.value ? `${file.value.name}(${fileSize.value})` : ''
 
-    let log: Log
     if (isObject(result) && Reflect.has(result, 'error')) {
-      log = {
-        type: props.config.tabKey,
-        codeInfo: fileInfo,
-        message: '',
-        error: result.error,
-        startTime: result.startTime,
-      }
       errorMessage.value = result.error
     } else {
       const codeTooltip =
@@ -210,21 +199,9 @@ a-layout-content.main-content
           ? `${dataFromFile.value.split('\n').slice(0, 10).join('\n')}\n...${remainingLines.value} lines more`
           : dataFromFile.value
 
-      log = {
-        type: props.config.tabKey,
-        codeInfo: fileInfo,
-        codeTooltip,
-        message: 'Data written',
-        startTime: result.startTime,
-        networkTime: result.networkTime,
-      }
-
       resetFile()
       visible.value = false
     }
-
-    pushLog(log, props.config.tabKey)
-    footer.value[activeTab.value] = false
     isProcessLoading.value = false
   }
 

@@ -45,7 +45,7 @@ a-card.log(:bordered="false")
 </template>
 
 <script lang="ts" name="Log" setup>
-  import type { Log } from '@/store/modules/log/types'
+  import type { Log } from '@/types/log'
 
   const props = defineProps({
     logs: {

@@ -43,7 +43,6 @@ a-drawer.ingest(
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { basicSetup } from 'codemirror'
   import { json } from '@codemirror/lang-json'
-  import type { Log } from '@/store/modules/log/types'
 
   const props = defineProps({
     config: {
@@ -52,9 +51,7 @@ a-drawer.ingest(
     },
   })
 
-  const route = useRoute()
-  const { pushLog } = useLog(route)
-  const { activeTab, footer } = storeToRefs(useIngestStore())
+  const { activeTab } = storeToRefs(useIngestStore())
 
   const loading = ref(false)
   const content = ref('')
@@ -85,27 +82,9 @@ a-drawer.ingest(
     loading.value = true
     const result = await props.config.submitHandler(content.value, props.config.params)
 
-    let log: Log
     if (Reflect.has(result, 'error')) {
-      log = {
-        type: props.config.tabKey,
-        codeInfo: '',
-        message: '',
-        error: result.error,
-        startTime: result.startTime,
-      }
-    } else {
-      log = {
-        type: props.config.tabKey,
-        codeInfo: '',
-        message: 'Data written',
-        startTime: result.startTime,
-        networkTime: result.networkTime,
-      }
+      // TODO: show error notification when ingest submit fails
     }
-
-    pushLog(log, props.config.tabKey)
-    footer.value[activeTab.value] = false
     loading.value = false
   }
 </script>

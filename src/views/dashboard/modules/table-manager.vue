@@ -143,7 +143,6 @@ a-card.table-manager(:bordered="false")
 </template>
 
 <script lang="ts" setup name="TableManager">
-  import usePythonCode from '@/hooks/python-code'
   import useSiderTabs from '@/hooks/sider-tabs'
   import type { TableTreeParent, TreeData } from '@/store/modules/database/types'
   import type { OptionsType } from '@/types/global'
@@ -155,7 +154,7 @@ a-card.table-manager(:bordered="false")
 
   const appStore = useAppStore()
   const { hideSidebar, database } = storeToRefs(appStore)
-  const { insertNameToPyCode } = usePythonCode()
+
   const { tablesSearchKey, tablesTreeRef, refreshTables, loadMore, loadMoreColumns, isRefreshingDetails } =
     useSiderTabs()
   const { tablesLoading, totalTablesLoading, tablesTreeForDatabase, databaseActiveKeys } = storeToRefs(

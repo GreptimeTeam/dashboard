@@ -25,13 +25,13 @@ a-tabs.panel-tabs(
       )
         a-button(status="danger" size="small") {{ $t('dashboard.clear') }}
   a-tab-pane(
-    v-if="explainResult"
+    v-if="session.explainResult.value"
     key="explain"
     closable
     :title="`${$t('dashboard.explain')}`"
   )
-    ExplainTabs(:data="explainResult")
-  a-tab-pane(v-for="(result) of results" :key="result.key" closable)
+    ExplainTabs(:data="session.explainResult.value")
+  a-tab-pane(v-for="(result) of session.results.value" :key="result.key" closable)
     template(#title)
       span {{ `${$t('dashboard.result')} ${Number(result.key) - startKey + 1}` }}
     .result-container
@@ -112,26 +112,21 @@ a-tabs.panel-tabs(
 
 <script lang="ts" name="DataView" setup>
   import useDataChart from '@/hooks/data-chart'
-  import useQueryCode from '@/hooks/query-code'
-  import { useCodeRunStore } from '@/store'
   import type { ResultType } from '@/store/modules/code-run/types'
   import { normalizeRecordsToTableModel } from '@/utils/table-normalizer'
   import type { NormalizedTableModel } from '@/utils/table-normalizer'
   import ExplainTabs from '@/components/explain-tabs/index.vue'
+  import { useQuerySession } from '@/views/dashboard/query/use-query-session'
 
   const props = defineProps<{
-    results: ResultType[]
-    types: string[]
-    explainResult?: ResultType
     isInFullSizeMode?: boolean
   }>()
 
-  const emit = defineEmits(['update:explainResult', 'toggleFullSize'])
+  const emit = defineEmits(['toggleFullSize'])
+  const session = useQuerySession()
 
-  const { removeResult, clear } = useCodeRunStore()
-  const { refreshResult } = useQueryCode()
   const activeTabKey = ref<string | number>()
-  const startKey = ref<number>((props.results[0]?.key as number) || 0)
+  const startKey = ref<number>((session.results.value[0]?.key as number) || 0)
   const refreshingKeys = ref(new Set<string | number>())
   const resultViewMap = ref<Record<string | number, 'table' | 'chart'>>({})
   const wrapLines = ref(false)
@@ -146,22 +141,22 @@ a-tabs.panel-tabs(
 
   const deleteTab = async (key: number | string) => {
     if (key === 'explain') {
-      emit('update:explainResult', null)
+      session.setExplainResult(null)
 
       if (activeTabKey.value === 'explain') {
-        const firstResultKey = props.results.length > 0 ? props.results[0].key : undefined
+        const firstResultKey = session.results.value.length > 0 ? session.results.value[0].key : undefined
         activeTabKey.value = firstResultKey
       }
       return
     }
 
-    const index = props.results.findIndex((result) => result.key === key && props.types.includes(result.type))
-    if (props.results.length === 1) {
-      startKey.value = props.results[0].key as number
+    const index = session.results.value.findIndex((result) => result.key === key)
+    if (session.results.value.length === 1) {
+      startKey.value = session.results.value[0].key as number
     }
-    await removeResult(key, props.results[index].type)
+    session.removeResult({ key, type: session.results.value[index].type })
     if (activeTabKey.value === key) {
-      activeTabKey.value = props.results[index]?.key || props.results.slice(-1)[0].key
+      activeTabKey.value = session.results.value[index]?.key || session.results.value.slice(-1)[0].key
     }
   }
 
@@ -170,8 +165,8 @@ a-tabs.panel-tabs(
   }
 
   const clearResults = () => {
-    startKey.value = props.results[0]?.key as number
-    clear(props.types)
+    startKey.value = session.results.value[0]?.key as number
+    session.clearAll()
     emit('toggleFullSize', false)
   }
 
@@ -179,7 +174,7 @@ a-tabs.panel-tabs(
     refreshingKeys.value.add(result.key)
 
     try {
-      await refreshResult(result.key, result.type)
+      await session.refreshSingleResult(result)
     } catch (error: any) {
       console.error(error)
     } finally {
@@ -200,23 +195,23 @@ a-tabs.panel-tabs(
   }
 
   const tableModelMap = computed<Record<string, NormalizedTableModel>>(() => {
-    return props.results.reduce((acc, result) => {
+    return session.results.value.reduce((acc, result) => {
       acc[String(result.key)] = normalizeRecordsToTableModel(result?.records)
       return acc
     }, {} as Record<string, NormalizedTableModel>)
   })
 
   watch(
-    () => ({ ...props }),
-    (value, old) => {
-      if (value.results.length > old.results.length) {
-        activeTabKey.value = props.results.slice(-1)[0].key
+    () => session.results.value.length,
+    (len, oldLen) => {
+      if (len > oldLen) {
+        activeTabKey.value = session.results.value.slice(-1)[0].key
       }
     }
   )
 
   watch(
-    () => props.explainResult,
+    () => session.explainResult.value,
     (newValue, oldValue) => {
       if (newValue && newValue !== oldValue && newValue.key) {
         activeTabKey.value = 'explain'

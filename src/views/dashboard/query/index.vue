@@ -8,25 +8,21 @@ a-layout.new-layout
   )
     a-layout-sider(:width="actualSidebarWidth")
       TableManager(:databaseList="databaseList")
-  a-layout-content.layout-content(:class="{ 'has-panel': !footer[activeTab] }")
+  a-layout-content.layout-content.has-panel
     a-space.layout-space(direction="vertical" fill :size="0")
       a-space.editor-space(
         align="start"
         fill
         direction="vertical"
         :size="0"
-      )
-        Editor(@select-explain-tab="selectExplainTab")
+      ) 
+        Editor
         DataView(
-          v-if="!!results?.length || !!explainResult"
-          ref="dataViewRef"
-          :results="results"
-          :types="types"
-          :explainResult="explainResult"
+          v-if="!!session.results.value?.length || !!session.explainResult.value"
           :is-in-full-size-mode="false"
-          @update:explainResult="(val) => (explainResult = val)"
           @toggle-full-size="handleToggleFullSize"
         )
+        .data-view-placeholder(v-else)
       a-resize-box.panel-resize(
         v-model:height="logsHeight"
         :directions="['top']"
@@ -34,7 +30,7 @@ a-layout.new-layout
       )
         a-tabs.panel-tabs
           a-tab-pane(title="Log" key="log")
-            LogsNew(:logs="queryLogs")
+            LogsNew(:logs="session.queryLogs.value")
 
   a-modal.full-size-modal(
     v-model:visible="isFullSizeMode"
@@ -47,34 +43,31 @@ a-layout.new-layout
     :mask-style="{ backgroundColor: 'transparent', 'pointer-events': 'auto' }"
   )
     DataView.full-size(
-      v-if="!!results?.length || !!explainResult"
-      :results="results"
-      :types="types"
-      :explainResult="explainResult"
+      v-if="!!session.results.value?.length || !!session.explainResult.value"
       :show-full-size-button="false"
       :is-in-full-size-mode="true"
-      @update:explainResult="(val) => (explainResult = val)"
       @toggle-full-size="isFullSizeMode = false"
     )
 </template>
 
-<script lang="ts" setup name="QueryNew">
+<script lang="ts" setup name="query">
   import { useMagicKeys, useActiveElement, useStorage } from '@vueuse/core'
   import { driver } from 'driver.js'
   import 'driver.js/dist/driver.css'
   import { navbarSteps, tableSteps } from '../config'
+  import { provideQuerySession } from './use-query-session'
+
+  defineOptions({
+    name: 'Query',
+  })
 
   const { s, q, escape } = useMagicKeys()
   const activeElement = useActiveElement()
   const appStore = useAppStore()
   const { hideSidebar, databaseList, database } = storeToRefs(useAppStore())
   const originalDatabase = ref<string | undefined>(undefined)
-  const { logs } = storeToRefs(useLogStore())
-  const { activeTab, footer } = storeToRefs(useIngestStore())
-  const { dataStatusMap } = storeToRefs(useUserStore())
-  const { originTablesTree } = storeToRefs(useDataBaseStore())
-  const { queryType, getResultsByType } = useQueryCode()
-  const { explainResult } = storeToRefs(useCodeRunStore())
+  const { queryType } = useQueryCode()
+  const session = provideQuerySession()
   const types = ['sql', 'promql']
   const logsHeight = ref(66)
   const isFullSizeMode = ref(false)
@@ -92,10 +85,6 @@ a-layout.new-layout
     const maxWidth = window.innerWidth * 0.4
     return Math.max(minWidth, Math.min(sidebarWidth.value, maxWidth))
   })
-
-  const results = computed(() => getResultsByType(types))
-  const queryLogs = computed(() => logs.value.filter((log) => types.includes(log.type)))
-  const dataViewRef = ref(null)
 
   watch(s, (v) => {
     if (
@@ -120,18 +109,8 @@ a-layout.new-layout
     }
   })
 
-  const selectExplainTab = () => {
-    if (dataViewRef.value) {
-      dataViewRef.value.selectTab('explain')
-    }
-  }
-
   const handleToggleFullSize = (fullSize: boolean) => {
     isFullSizeMode.value = fullSize
-  }
-
-  const toggleFullSize = () => {
-    isFullSizeMode.value = !isFullSizeMode.value
   }
 
   const globalTour = driver({

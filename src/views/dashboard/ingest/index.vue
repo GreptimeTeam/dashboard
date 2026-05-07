@@ -17,50 +17,26 @@ a-layout.new-layout
             svg.icon
               use(:href="`#${child.meta.icon}`")
             span {{ $t(child.meta.locale) }}
-  a-layout-content.layout-content(:class="{ 'has-panel': !footer[activeTab] }")
+  a-layout-content.layout-content
     a-space.layout-space(direction="vertical" fill :size="0")
       router-view(v-slot="{ Component }")
         keep-alive
           component(:is="Component")
-      a-resize-box.panel-resize(
-        v-if="!footer[activeTab]"
-        :key="activeTab"
-        :directions="['top']"
-        :style="{ 'max-height': '40vh', 'min-height': '74.85px' }"
-      )
-        a-tabs.panel-tabs
-          a-tab-pane(title="Log" key="log")
-            LogsNew(:key="activeTab" :logs="ingestLogs")
-          template(#extra)
-            a-tooltip(content="Hide Panel" position="tr")
-              a-button(type="text" size="mini" @click="footer[activeTab] = true")
-                template(#icon)
-                  svg.icon-12
-                    use(href="#pull-down")
 </template>
 
 <script lang="ts" setup name="Ingest">
   import useMenuTree from '@/components/menu/use-menu-tree'
   import { useStorage } from '@vueuse/core'
-  import type { StatusContentSimple } from '@/store/modules/status-bar'
   import { driver } from 'driver.js'
   import 'driver.js/dist/driver.css'
   import { navbarSteps } from '../config'
-
-  import PanelIcon from './panel-icon.vue'
 
   const router = useRouter()
   const route = useRoute()
   const { menuTree } = useMenuTree()
   const { hideSidebar } = storeToRefs(useAppStore())
-  const { activeTab, footer } = storeToRefs(useIngestStore())
-  const { logs } = storeToRefs(useLogStore())
+  const { activeTab } = storeToRefs(useIngestStore())
   const { dataStatusMap } = storeToRefs(useUserStore())
-  const panelId = ref<number | null>(null)
-
-  const ingestLogs = computed(() => {
-    return logs.value.filter((log) => activeTab.value.includes(log.type))
-  })
 
   const menu = menuTree.value[0].children.filter((item: any) => item.name === 'ingest')[0].children
 
@@ -97,26 +73,11 @@ a-layout.new-layout
   })
 
   onActivated(async () => {
-    const { statusRight } = storeToRefs(useStatusBarStore())
-    const { add } = useStatusBarStore()
-    const statusItem: StatusContentSimple = {
-      icon: shallowRef(PanelIcon),
-      onClick: () => {
-        footer.value[activeTab.value] = !footer.value[activeTab.value]
-      },
-    }
-    panelId.value = add(statusItem, { pos: 'right' })
-
     const tourStatus = useStorage('tourStatus', { navbar: false })
     if (!tourStatus.value.navbar) {
       globalTour.setSteps(navbarSteps)
       globalTour.drive(0)
     }
-  })
-
-  onDeactivated(() => {
-    const { remove } = useStatusBarStore()
-    remove(panelId.value as number)
   })
 </script>
 
@@ -232,15 +193,6 @@ a-layout.new-layout
 
     .ͼ1.cm-editor.cm-focused {
       outline: 0;
-    }
-  }
-
-  .has-panel {
-    :deep(.arco-card.light-editor-card) {
-      .ͼ1.cm-editor {
-        border-bottom: none;
-        border-radius: 4px 4px 0 0;
-      }
     }
   }
 </style>

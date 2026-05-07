@@ -43,7 +43,6 @@ a-card.editor-card.padding-16(:bordered="false")
   import { oneDark } from '@codemirror/theme-one-dark'
   import { python } from '@codemirror/lang-python'
   import usePythonCode from '@/hooks/python-code'
-  import { useCodeRunStore } from '@/store'
 
   export interface Props {
     spellcheck?: boolean
