@@ -2,17 +2,13 @@
 .data-table-container(ref="tableContainer")
   a-table(
     :key="columnMode"
+    v-bind="tablePassThroughProps"
     row-key="__rowIndex"
     :data="processedData"
-    :loading="loading"
     :pagination="false"
     :bordered="false"
     :stripe="false"
     :class="tableClassesDynamic"
-    :scroll="scrollConfig"
-    :size="size"
-    :virtual-list-props="virtualListProps"
-    :row-selection="rowSelection"
   )
     template(#empty)
       a-empty(description="No data")
@@ -87,12 +83,23 @@
                 )
                   use(href="#menu")
               template(v-else)
-                span {{ record[col.name] }}
-                svg.td-config-icon(
-                  v-if="showContextMenu"
-                  @click="(event) => handleContextMenu(record, col.name, event)"
+                .cell-wrapper(
+                  :class="{ 'expandable-cell': isValueExpandable(record[col.name], col) }"
+                  @click="toggleCellExpand(rowIndex, col, record[col.name])"
                 )
-                  use(href="#menu")
+                  .cell-content(:class="{ expanded: isCellExpanded(rowIndex, col.name), 'wrap-lines': wrapLine }")
+                    span {{ record[col.name] }}
+                    svg.td-config-icon(
+                      v-if="showContextMenu"
+                      @click.stop="(event) => handleContextMenu(record, col.name, event)"
+                    )
+                      use(href="#menu")
+                  .cell-copy-button(
+                    v-if="canShowCopyButton(rowIndex, col.name, record[col.name])"
+                    @click.stop="copyCellValue(record[col.name])"
+                  )
+                    svg.icon-14
+                      use(href="#copy-new")
 
 // Context menu
 a-dropdown#td-context(
@@ -110,13 +117,17 @@ a-dropdown#td-context(
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, shallowRef } from 'vue'
+  import { ref, computed, shallowRef, useAttrs } from 'vue'
   import { useElementSize } from '@vueuse/core'
-  import dayjs from 'dayjs'
   import { dateTypes } from '@/views/dashboard/config'
-  import { convertTimestampToMilliseconds } from '@/utils/date-time'
   import type { ColumnType, TSColumn } from '@/types/query'
   import { useDateTimeFormat } from '@/hooks'
+  import { Message } from '@arco-design/web-vue'
+  import i18n from '@/locale'
+
+  defineOptions({
+    inheritAttrs: false,
+  })
 
   interface TableData {
     [key: string]: any
@@ -126,14 +137,9 @@ a-dropdown#td-context(
     // Data
     data: TableData[]
     columns: ColumnType[]
-    loading?: boolean
 
     // Table configuration
-    size?: 'small' | 'mini' | 'medium' | 'large'
     class?: string | object
-    scrollConfig?: object
-    virtualListProps?: object
-    rowSelection?: object
 
     // Column mode handling
     columnMode?: 'separate' | 'merged' | 'merged-with-keys'
@@ -147,25 +153,37 @@ a-dropdown#td-context(
 
     // Table styling options for dynamic classes
     wrapLine?: boolean
-    compact?: boolean
+
+    // Enhanced cell behavior
+    enableCellExpand?: boolean
+    enableCellCopy?: boolean
   }
 
   const props = withDefaults(defineProps<Props>(), {
     data: () => [],
     columns: () => [],
-    loading: false,
-    size: 'medium',
     class: '',
-    scrollConfig: () => ({ y: '100%' }),
-    virtualListProps: undefined,
-    rowSelection: undefined,
     columnMode: 'separate',
     displayedColumns: () => [],
     tsColumn: null,
     showContextMenu: true,
     wrapLine: false,
-    compact: false,
+    enableCellExpand: true,
+    enableCellCopy: true,
   })
+
+  const EXPANDABLE_TEXT_THRESHOLD = 100
+  const attrs = useAttrs()
+  const attrsRecord = attrs as Record<string, any>
+  const tablePassThroughProps = computed(() => {
+    return {
+      loading: false,
+      size: 'medium',
+      scroll: { y: '100%' },
+      ...attrsRecord,
+    }
+  })
+  const hasVirtualListProps = computed(() => !!tablePassThroughProps.value['virtual-list-props'])
 
   const emit = defineEmits(['filterConditionAdd', 'rowSelect'])
 
@@ -185,8 +203,7 @@ a-dropdown#td-context(
       'wrap_table': props.wrapLine,
       'single_column': props.columnMode !== 'separate',
       'multiple_column': props.columnMode === 'separate',
-      'compact': props.compact,
-      'virtual-list-active': !!props.virtualListProps, // Add class when virtual list is active
+      'virtual-list-active': hasVirtualListProps.value, // Add class when virtual list is active
     }
 
     // Merge with any additional classes passed via props
@@ -250,7 +267,7 @@ a-dropdown#td-context(
           : tmpColumns
 
       // Only calculate widths when virtual list is active
-      if (props.virtualListProps) {
+      if (hasVirtualListProps.value) {
         // Virtual list mode: calculate widths based on content
         const row = props.data[0]
         if (!row || !tableWidth.value) {
@@ -383,6 +400,81 @@ a-dropdown#td-context(
       return renderTs(record, column.name)
     }
     return record[column.name]
+  }
+
+  const expandedCells = ref<Record<string, boolean>>({})
+
+  function getCellKey(rowIndex: number, columnName: string) {
+    return `${rowIndex}-${columnName}`
+  }
+
+  function isValueExpandable(value: unknown, column?: ColumnType) {
+    if (!props.enableCellExpand) return false
+    if (value === null || value === undefined) return false
+    if (isTimeColumn(column as ColumnType)) return false
+
+    const dataType = column?.data_type?.toLowerCase()
+    if (dataType) {
+      if (['boolean', 'int', 'integer', 'float', 'double', 'decimal', 'numeric'].includes(dataType)) {
+        return false
+      }
+      if (['json', 'binary', 'interval'].includes(dataType)) {
+        return true
+      }
+    }
+
+    if (typeof value === 'object') return true
+
+    const str = String(value)
+    const isComplexStructure =
+      (str.startsWith('[') && str.endsWith(']')) ||
+      (str.startsWith('{') && str.endsWith('}')) ||
+      /\[[^\]]+\]|\{[^}]+\}/.test(str)
+    return str.length > EXPANDABLE_TEXT_THRESHOLD || str.includes('\n') || isComplexStructure
+  }
+
+  function isCellExpanded(rowIndex: number, columnName: string) {
+    const key = getCellKey(rowIndex, columnName)
+    return props.wrapLine || !!expandedCells.value[key]
+  }
+
+  function canShowCopyButton(rowIndex: number, columnName: string, value: unknown) {
+    if (!props.enableCellCopy) return false
+    if (value === null || value === undefined) return false
+    return isCellExpanded(rowIndex, columnName)
+  }
+
+  function toggleCellExpand(rowIndex: number, column: ColumnType, value: unknown) {
+    if (!isValueExpandable(value, column)) return
+    const key = getCellKey(rowIndex, column.name)
+    expandedCells.value[key] = true
+  }
+
+  function cellTextForCopy(value: unknown) {
+    if (value === null || value === undefined) return ''
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      return String(value)
+    }
+    if (typeof value === 'object') {
+      try {
+        return JSON.stringify(value, null, 2)
+      } catch {
+        return '[Unsupported Object]'
+      }
+    }
+    return String(value)
+  }
+
+  async function copyCellValue(value: unknown) {
+    const text = cellTextForCopy(value)
+    if (!text) return
+
+    try {
+      await navigator.clipboard.writeText(text)
+      Message.success(i18n.global.t('copied'))
+    } catch (error) {
+      console.error('Failed to copy cell value:', error)
+    }
   }
 
   // No pagination or column management - pure table functionality
@@ -519,6 +611,50 @@ a-dropdown#td-context(
   .clickable {
     cursor: pointer;
   }
+  .cell-wrapper {
+    position: relative;
+    width: 100%;
+    cursor: default;
+  }
+  .cell-wrapper.expandable-cell {
+    cursor: pointer;
+  }
+  .cell-content {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    word-break: normal;
+  }
+  .cell-content.expanded,
+  .cell-content.wrap-lines {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .cell-copy-button {
+    position: absolute;
+    bottom: 2px;
+    right: -15px;
+    width: 16px;
+    height: 16px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 3px;
+    z-index: 10;
+    cursor: pointer;
+    transition: all 0.1s ease;
+  }
+  :deep(.arco-table-cell:hover) .cell-copy-button {
+    display: flex;
+  }
+  .cell-copy-button:hover {
+    transform: scale(1.15);
+  }
+  .icon-14 {
+    width: 14px;
+    height: 14px;
+  }
   .builder-type .clickable {
     cursor: pointer;
   }
@@ -578,7 +714,7 @@ a-dropdown#td-context(
       top: 5px;
     }
   }
-  .compact.multiple_column {
+  :deep(.arco-table-size-mini).multiple_column {
     :deep(.arco-table-td-content) {
       padding-right: 12px;
     }
@@ -586,7 +722,7 @@ a-dropdown#td-context(
       top: 4px;
     }
   }
-  .compact .td-config-icon {
+  :deep(.arco-table-size-mini) .td-config-icon {
     width: 9px;
     height: 9px;
   }

@@ -8,7 +8,6 @@
     :loading="false"
     :size="size"
     :wrap-line="wrapLine"
-    :compact="isCompact"
     :virtual-list-props="{ height: virtualListHeight, buffer: 36 }"
     :row-selection="rowSelection"
     :ts-column="tsColumn"
@@ -32,8 +31,8 @@
 </template>
 
 <script setup lang="ts" name="LogTableData">
-  import { ref, computed, watch, shallowRef } from 'vue'
-  import { useElementSize, useLocalStorage } from '@vueuse/core'
+  import { ref, computed } from 'vue'
+  import { useElementSize } from '@vueuse/core'
   import type { ColumnType, TSColumn } from '@/types/query'
   import LogDetail from './LogDetail.vue'
 
@@ -89,9 +88,8 @@
     detailVisible.value = true
   }
 
-  const isCompact = useLocalStorage('logquery-table-compact', false)
   const headerHeight = computed(() => {
-    return isCompact.value ? 25 : 38
+    return props.size === 'mini' ? 25 : 38
   })
 
   // Enhanced virtual list height calculation with debugging

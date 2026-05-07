@@ -73,7 +73,7 @@ a-tabs.panel-tabs(
                 a-space.title(direction="vertical" :size="4")
                   svg.icon-16
                     use(href="#table")
-            DataGrid(:key="`table-${result.key}-${result.refreshCount || 0}`" :data="result" :has-header="false")
+            DataGridTable(:key="`table-${result.key}-${result.refreshCount || 0}`" :data="result" :has-header="false")
           a-tab-pane(v-if="useDataChart(result).hasChart.value" key="chart")
             template(#title)
               a-tooltip(mini position="bl" :content="$t('dashboard.chart')")
