@@ -130,7 +130,7 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: var(--gpt-radius-md) 0;
+    padding: var(--gpt-radius-lg) 0;
   }
 
   .logo {
@@ -138,6 +138,36 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
     height: calc(var(--gpt-size-navbar) / 2);
     color: var(--gpt-brand-300);
     fill: currentColor;
+  }
+
+  :deep(.arco-menu-icon) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  :deep(.arco-menu-collapsed .arco-menu-item.arco-menu-has-icon) {
+    justify-content: center;
+    padding: 8px;
+  }
+
+  :deep(.arco-menu-collapsed .arco-menu-icon) {
+    margin-right: 0;
+  }
+
+  :deep(.arco-menu-collapsed .arco-menu-item-inner) {
+    display: none;
+  }
+
+  :deep(.arco-menu-collapsed .arco-menu-item.arco-menu-selected::before) {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: calc((100% - 20px) / 2);
+    width: 3px;
+    height: 20px;
+    border-radius: 0 var(--gpt-radius-sm) var(--gpt-radius-sm) 0;
+    background: var(--gpt-nav-active-indicator);
   }
 
   .footer {
@@ -170,7 +200,7 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
     }
 
     .footer-separator {
-      align-self: stretch;
+      width: calc(var(--gpt-size-navbar) - var(--gpt-radius-lg) * 2);
       border-top: 1px solid var(--gpt-border-inverse-subtle);
       margin: var(--gpt-radius-sm) 0;
     }
