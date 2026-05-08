@@ -5,14 +5,15 @@ import useQueryCode from '@/hooks/query-code'
 
 export interface QuerySessionState {
   results: Ref<ResultType[]>
-  explainResult: Ref<ResultType | null>
+  explainResults: Ref<ResultType[]>
   queryLogs: Ref<Log[]>
   appendResults: (newResults: ResultType[]) => void
   appendLog: (log: Log) => void
   clearAll: () => void
   removeResult: (payload: { key: number | string; type: string }) => void
+  removeExplainResult: (payload: { key: number | string }) => void
   refreshSingleResult: (result: ResultType) => Promise<void>
-  setExplainResult: (result: ResultType | null) => void
+  appendExplainResult: (result: ResultType) => void
 }
 
 const querySessionKey: InjectionKey<QuerySessionState> = Symbol('query-session')
@@ -20,7 +21,7 @@ const querySessionKey: InjectionKey<QuerySessionState> = Symbol('query-session')
 export function provideQuerySession(): QuerySessionState {
   const { refreshResult } = useQueryCode()
   const results = ref<ResultType[]>([])
-  const explainResult = ref<ResultType | null>(null)
+  const explainResults = ref<ResultType[]>([])
   const queryLogs = ref<Log[]>([])
 
   const appendResults = (newResults: ResultType[]) => {
@@ -34,7 +35,7 @@ export function provideQuerySession(): QuerySessionState {
 
   const clearAll = () => {
     results.value = []
-    explainResult.value = null
+    explainResults.value = []
     queryLogs.value = []
   }
 
@@ -42,29 +43,42 @@ export function provideQuerySession(): QuerySessionState {
     results.value = results.value.filter((item) => item.key !== payload.key || item.type !== payload.type)
   }
 
+  const removeExplainResult = (payload: { key: number | string }) => {
+    explainResults.value = explainResults.value.filter((item) => item.key !== payload.key)
+  }
+
   const refreshSingleResult = async (result: ResultType) => {
     const res = await refreshResult(result)
     if (res?.log) appendLog(res.log)
     if (res?.updatedResult) {
-      const index = results.value.findIndex((item) => item.key === result.key && item.type === result.type)
-      if (index >= 0) results.value[index] = res.updatedResult
+      const indexInResults = results.value.findIndex((item) => item.key === result.key && item.type === result.type)
+      if (indexInResults >= 0) {
+        results.value[indexInResults] = res.updatedResult
+        return
+      }
+
+      const indexInExplain = explainResults.value.findIndex((item) => item.key === result.key)
+      if (indexInExplain >= 0) {
+        explainResults.value[indexInExplain] = res.updatedResult
+      }
     }
   }
 
-  const setExplainResult = (result: ResultType | null) => {
-    explainResult.value = result
+  const appendExplainResult = (result: ResultType) => {
+    explainResults.value.push(result)
   }
 
   const session: QuerySessionState = {
     results,
-    explainResult,
+    explainResults,
     queryLogs,
     appendResults,
     appendLog,
     clearAll,
     removeResult,
+    removeExplainResult,
     refreshSingleResult,
-    setExplainResult,
+    appendExplainResult,
   }
 
   provide(querySessionKey, session)

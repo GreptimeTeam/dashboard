@@ -18,7 +18,7 @@ a-layout.new-layout
       ) 
         Editor
         DataView(
-          v-if="!!session.results.value?.length || !!session.explainResult.value"
+          v-if="!!session.results.value?.length || session.explainResults.value.length > 0"
           :is-in-full-size-mode="false"
           @toggle-full-size="handleToggleFullSize"
         )
@@ -43,7 +43,7 @@ a-layout.new-layout
     :mask-style="{ backgroundColor: 'transparent', 'pointer-events': 'auto' }"
   )
     DataView.full-size(
-      v-if="!!session.results.value?.length || !!session.explainResult.value"
+      v-if="!!session.results.value?.length || session.explainResults.value.length > 0"
       :show-full-size-button="false"
       :is-in-full-size-mode="true"
       @toggle-full-size="isFullSizeMode = false"

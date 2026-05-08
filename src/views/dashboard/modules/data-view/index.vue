@@ -25,12 +25,12 @@ a-tabs.panel-tabs(
       )
         a-button(status="danger" size="small") {{ $t('dashboard.clear') }}
   a-tab-pane(
-    v-if="session.explainResult.value"
-    key="explain"
+    v-for="(explainResult, idx) in session.explainResults.value"
+    :key="explainResult.key"
     closable
-    :title="`${$t('dashboard.explain')}`"
+    :title="`${$t('dashboard.explain')} ${idx + 1}`"
   )
-    ExplainTabs(:data="session.explainResult.value")
+    ExplainTabs(:data="explainResult")
   a-tab-pane(v-for="(result) of session.results.value" :key="result.key" closable)
     template(#title)
       span {{ `${$t('dashboard.result')} ${Number(result.key) - startKey + 1}` }}
@@ -140,17 +140,20 @@ a-tabs.panel-tabs(
   })
 
   const deleteTab = async (key: number | string) => {
-    if (key === 'explain') {
-      session.setExplainResult(null)
-
-      if (activeTabKey.value === 'explain') {
-        const firstResultKey = session.results.value.length > 0 ? session.results.value[0].key : undefined
-        activeTabKey.value = firstResultKey
+    const explainIndex = session.explainResults.value.findIndex((result) => result.key === key)
+    if (explainIndex >= 0) {
+      session.removeExplainResult({ key })
+      if (activeTabKey.value === key) {
+        activeTabKey.value = session.results.value.length
+          ? session.results.value.slice(-1)[0].key
+          : session.explainResults.value.slice(-1)[0]?.key
       }
       return
     }
 
     const index = session.results.value.findIndex((result) => result.key === key)
+    if (index < 0) return
+
     if (session.results.value.length === 1) {
       startKey.value = session.results.value[0].key as number
     }
@@ -211,10 +214,10 @@ a-tabs.panel-tabs(
   )
 
   watch(
-    () => session.explainResult.value,
-    (newValue, oldValue) => {
-      if (newValue && newValue !== oldValue && newValue.key) {
-        activeTabKey.value = 'explain'
+    () => session.explainResults.value.length,
+    (len, oldLen) => {
+      if (len > oldLen && session.explainResults.value.length > 0) {
+        activeTabKey.value = session.explainResults.value.slice(-1)[0].key
       }
     },
     { immediate: true }

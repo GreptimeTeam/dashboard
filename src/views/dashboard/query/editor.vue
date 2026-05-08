@@ -251,7 +251,7 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
         executionTime: jsonData.execution_time_ms,
       }
 
-      session.setExplainResult(newResult as any)
+      session.appendExplainResult(newResult as any)
 
       // Clear the form and close the modal
       importExplainForm.explainJson = ''
@@ -405,7 +405,7 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
 
         const result: any = await explainQuery(explainCommand, 'sql')
         if (result?.results?.[0]) {
-          session.setExplainResult(result.results[0])
+          session.appendExplainResult(result.results[0])
         }
       } finally {
         explainQueryRunning.value = false
