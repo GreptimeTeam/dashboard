@@ -35,7 +35,7 @@ a-layout.navbar
           a-button.menu-button(type="text")
             template(#icon)
               svg.icon
-                use(href="#menu-b6jcfned")
+                use(href="#Icon13")
           template(#content)
             a-doption(v-for="{ label, link } in dropDownLinks")
               a-link(target="_blank" :href="link")
@@ -137,6 +137,7 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
     width: calc(var(--gpt-size-navbar) / 2);
     height: calc(var(--gpt-size-navbar) / 2);
     color: var(--gpt-brand-300);
+    fill: currentColor;
   }
 
   .footer {

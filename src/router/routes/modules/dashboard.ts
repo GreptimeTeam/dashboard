@@ -33,7 +33,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.dashboard.metrics',
         requiresAuth: false,
-        icon: 'Node16',
+        icon: 'metric',
         roles: ['admin', 'cloud'],
         ignoreCache: true,
       },
@@ -59,7 +59,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.dashboard.ingest',
         requiresAuth: false,
-        icon: 'ingest',
+        icon: 'Icon12',
         roles: ['admin', 'cloud'],
       },
       children: [
@@ -158,7 +158,7 @@ const DASHBOARD: AppRouteRecordRaw = {
         ignoreCache: true,
         locale: 'menu.dashboard.logsQuery',
         requiresAuth: false,
-        icon: 'log',
+        icon: 'Icon5',
         roles: ['admin', 'cloud'],
       },
     },
@@ -170,7 +170,7 @@ const DASHBOARD: AppRouteRecordRaw = {
         locale: 'menu.dashboard.logPipeline',
         requiresAuth: false,
         roles: ['admin', 'cloud'],
-        icon: 'configuration',
+        icon: 'Icon6',
         hideInMenu: true,
       },
     },
@@ -182,7 +182,7 @@ const DASHBOARD: AppRouteRecordRaw = {
         locale: 'menu.dashboard.logPipeline',
         requiresAuth: false,
         roles: ['admin', 'cloud'],
-        icon: 'configuration',
+        icon: 'Icon6',
       },
     },
     {
@@ -193,7 +193,7 @@ const DASHBOARD: AppRouteRecordRaw = {
         ignoreCache: false,
         locale: 'menu.dashboard.traces',
         requiresAuth: false,
-        icon: 'traces',
+        icon: 'Icon7',
         roles: ['admin', 'cloud'],
         keepAlive: true,
       },
@@ -216,7 +216,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.dashboard.flow',
         requiresAuth: false,
-        icon: 'streaming',
+        icon: 'Icon8',
         roles: ['admin', 'cloud'],
       },
     },
@@ -227,7 +227,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.dashboard.perses',
         requiresAuth: false,
-        icon: 'visualization',
+        icon: 'Icon9',
         roles: ['admin', 'cloud'],
       },
     },
@@ -238,7 +238,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.dashboard.status',
         requiresAuth: true,
-        icon: 'database-config',
+        icon: 'Icon10',
         roles: ['admin'],
       },
     },
