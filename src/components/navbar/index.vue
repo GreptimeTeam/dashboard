@@ -4,22 +4,26 @@ a-layout.navbar
     svg.logo
       use(href="#logo")
   a-layout-content
-    .new-query
-    .menu
-      a-menu(mode="vertical" collapsed :selected-keys="[menuSelectedKey]")
-        a-menu-item(
-          v-for="(item, index) in menu"
-          :key="item.name"
-          @click.meta="menuClickWithMeta(item.name)"
-          @click.ctrl="menuClickWithMeta(item.name)"
-          @click.exact="menuClick(item.name)"
-        )
-          span {{ $t(item.meta.locale) }}
-          template(#icon)
-            svg.icon-18(:id="`menu-${item.name}`")
-              use(:href="`#${item.meta.icon}`") 
+    a-menu(
+      mode="vertical"
+      theme="dark"
+      collapsed
+      :selected-keys="[menuSelectedKey]"
+    )
+      a-menu-item(
+        v-for="item in menu"
+        :key="item.name"
+        @click.meta="menuClickWithMeta(item.name)"
+        @click.ctrl="menuClickWithMeta(item.name)"
+        @click.exact="menuClick(item.name)"
+      )
+        span {{ $t(item.meta.locale) }}
+        template(#icon)
+          svg.icon-18(:id="`menu-${item.name}`")
+            use(:href="`#${item.meta.icon}`") 
   a-layout-footer
     ul.footer
+      li.footer-separator
       li
         a-tooltip(:content="$t('settings.title')")
           a-button(type="text" :class="{ hover: globalSettings }" @click="setVisible")
@@ -31,7 +35,7 @@ a-layout.navbar
           a-button.menu-button(type="text")
             template(#icon)
               svg.icon
-                use(href="#menu")
+                use(href="#menu-b6jcfned")
           template(#content)
             a-doption(v-for="{ label, link } in dropDownLinks")
               a-link(target="_blank" :href="link")
@@ -51,7 +55,7 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
   const router = useRouter()
   const { t } = useI18n()
   const appStore = useAppStore()
-  const { menuSelectedKey, globalSettings, hideSidebar } = storeToRefs(appStore)
+  const { menuSelectedKey, globalSettings } = storeToRefs(appStore)
   const { activeTab: ingestTab } = storeToRefs(useIngestStore())
   const { menuTree } = useMenuTree()
   const { newsList, isLoadingNews } = useNews()
@@ -119,75 +123,20 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
 <style scoped lang="less">
   .navbar {
     height: 100%;
-    width: 100%;
-    border-right: 1px solid var(--border-color);
+    background: var(--gpt-brand-900);
   }
 
   .logo-space {
-    height: 52px;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: var(--gpt-radius-md) 0;
   }
 
   .logo {
-    height: 32px;
-    width: 32px;
-  }
-
-  .menu {
-    width: 100%;
-
-    .arco-menu {
-      font-size: 14px;
-    }
-
-    .arco-menu-collapsed {
-      width: 100%;
-    }
-    :deep(.arco-menu-vertical .arco-menu-item.arco-menu-has-icon) {
-      margin-bottom: 2px;
-      border-left: 2px solid transparent;
-      border-radius: 0;
-      line-height: 38px;
-      display: flex;
-      justify-content: center;
-      margin-right: 2px;
-    }
-    :deep(.arco-menu-vertical .arco-menu-inner) {
-      padding: 0;
-    }
-
-    :deep(.arco-menu-title) {
-      width: 0;
-    }
-
-    :deep(.arco-menu-light .arco-menu-item) {
-      &:hover {
-        background-color: transparent;
-        .arco-menu-icon {
-          background-color: var(--th-bg-color);
-        }
-      }
-    }
-
-    :deep(.arco-menu-item.arco-menu-has-icon .arco-menu-icon) {
-      margin-right: 0;
-      padding: 10px 13px;
-      border-radius: 4px;
-      color: var(--small-font-color);
-    }
-    :deep(.arco-menu-light .arco-menu-item.arco-menu-selected) {
-      background-color: transparent;
-      color: var(--brand-color);
-      border-left: 2px solid;
-      border-radius: 0;
-      border-color: var(--brand-color);
-      .arco-menu-icon {
-        color: var(--brand-color);
-        background-color: var(--light-brand-color);
-      }
-    }
+    width: calc(var(--gpt-size-navbar) / 2);
+    height: calc(var(--gpt-size-navbar) / 2);
+    color: var(--gpt-brand-300);
   }
 
   .footer {
@@ -196,34 +145,21 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
     flex-direction: column;
     padding: 0;
     margin: 0;
+    gap: var(--gpt-radius-sm);
+    align-items: center;
     .arco-btn-text[type='button'] {
-      color: var(--small-font-color);
-      font-size: 13px;
-      display: flex;
-      border: none;
-      height: 38px;
-      border-radius: 4px;
-      width: 44px;
-      &:not(.arco-btn-only-icon) {
-        padding-left: 86px;
-        justify-content: flex-start;
-      }
+      color: var(--gpt-text-inverse-muted);
     }
     .arco-btn-text[type='button']:hover,
     .arco-btn-text.hover,
     .arco-btn-text.arco-dropdown-open {
-      background: var(--list-hover-color);
+      background: var(--gpt-nav-active-bg);
       :deep(.arco-btn-icon) {
-        color: var(--main-font-color);
+        color: var(--gpt-brand-300);
       }
     }
     :deep(.arco-btn-icon) {
-      color: var(--small-font-color);
-    }
-
-    :deep(.arco-btn-size-medium:not(.arco-btn-only-icon) .arco-btn-icon) {
-      display: flex;
-      width: 16px;
+      color: var(--gpt-text-inverse-muted);
     }
 
     li {
@@ -232,54 +168,10 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
       justify-content: center;
     }
 
-    .arco-link {
-      color: var(--card-bg-color);
-      transition: color 0.25s;
-    }
-    :deep(.arco-link:hover) {
-      background: transparent;
-      color: var(--brand-color);
-    }
-
-    .social-links {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-  }
-
-  .new-query {
-    padding: 15px 18px 4px 18px;
-    .arco-btn {
-      width: 100%;
-      height: 38px;
-      :first-child {
-        font-size: 26px;
-      }
-      font-size: 14px;
-    }
-  }
-
-  .arco-btn-text[type='button'].menu-button {
-    border: none;
-  }
-
-  .arco-btn-text[type='button'].feedback-button {
-    border: none;
-  }
-
-  .buttons-space {
-    border-top: 1px solid var(--border-color);
-    > :first-child {
-      width: 50%;
-    }
-    > :last-child {
-      width: 50%;
-    }
-    .arco-divider-vertical {
-      margin: 0;
-      height: 26px;
-      border-color: var(--border-color);
+    .footer-separator {
+      align-self: stretch;
+      border-top: 1px solid var(--gpt-border-inverse-subtle);
+      margin: var(--gpt-radius-sm) 0;
     }
   }
 </style>

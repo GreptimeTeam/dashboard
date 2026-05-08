@@ -1,6 +1,6 @@
 .new-layout {
   padding: 0;
-  background: var(--card-bg-color);
+  background: var(--gpt-bg-app);
   height: 100%;
 
   > .arco-layout-sider {
@@ -66,10 +66,12 @@
   height: 100%;
 
   > .arco-tabs-nav {
-    height: 28px;
+    height: 37px;
+    background: var(--gpt-bg-surface);
+    border-bottom: 1px solid var(--gpt-border-default);
 
     &:before {
-      background-color: var(--border-color);
+      background-color: transparent;
     }
 
     .arco-tabs-nav-tab {
@@ -77,19 +79,20 @@
 
       .arco-tabs-tab {
         border-radius: 0;
-        font-size: 13px;
+        font-size: 12px;
         height: 100%;
         margin: 0;
-        padding: 0 12px;
+        padding: 0 14px;
+        color: var(--gpt-text-secondary);
 
         &.arco-tabs-tab-active {
-          color: var(--main-font-color);
+          color: var(--gpt-text-primary);
           font-weight: 600;
         }
       }
     }
     .arco-tabs-nav-ink {
-      background: var(--brand-color);
+      background: var(--gpt-brand-900);
     }
   }
 

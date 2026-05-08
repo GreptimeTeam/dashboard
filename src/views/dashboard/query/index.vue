@@ -72,7 +72,7 @@ a-layout.new-layout
   const logsHeight = ref(66)
   const isFullSizeMode = ref(false)
 
-  const sidebarWidth = useStorage('sidebarWidth', 320)
+  const sidebarWidth = useStorage('sidebarWidth', 228)
 
   watch(sidebarWidth, (newWidth) => {
     if (newWidth < 100) {
@@ -81,7 +81,7 @@ a-layout.new-layout
   })
 
   const actualSidebarWidth = computed(() => {
-    const minWidth = 100
+    const minWidth = 180
     const maxWidth = window.innerWidth * 0.4
     return Math.max(minWidth, Math.min(sidebarWidth.value, maxWidth))
   })
@@ -164,6 +164,14 @@ a-layout.new-layout
     box-shadow: none !important;
   }
   .new-layout {
+    background: var(--gpt-bg-app);
+    :deep(> .arco-layout-content.layout-content.has-panel) {
+      background: var(--gpt-bg-app);
+    }
+    :deep(.arco-layout-sider) {
+      border-right: 1px solid var(--gpt-border-strong);
+      background: var(--gpt-bg-panel);
+    }
     :deep(.layout-space > .arco-space-item:first-of-type) {
       padding-left: 0;
     }
@@ -195,6 +203,10 @@ a-layout.new-layout
         font-size: 12px;
       }
     }
+  }
+  :deep(.panel-resize) {
+    border-top: 1px solid var(--gpt-border-default);
+    background: var(--gpt-bg-panel);
   }
 </style>
 

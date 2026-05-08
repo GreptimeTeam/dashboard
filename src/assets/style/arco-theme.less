@@ -1,0 +1,47 @@
+/**
+ * Arco Design theme particles.
+ *
+ * Keep brand/component Less tokens here instead of in Vite config. Vite only
+ * imports this file through modifyVars so Arco's arco.less and on-demand
+ * component style/index.js files are compiled with the same theme.
+ */
+
+@arcoblue-1: #f7f3fc;
+@arcoblue-2: #ede7f8;
+@arcoblue-3: #c4a8f0;
+@arcoblue-4: #8b7ba8;
+@arcoblue-5: #5a4a70;
+@arcoblue-6: #473460;
+@gpt-color-white: #ffffff;
+
+@color-primary-1: #f7f3fc;
+@color-primary-2: #ede7f8;
+@color-primary-3: #c4a8f0;
+@color-primary-4: #8b7ba8;
+@color-primary-5: #5a4a70;
+@color-primary-6: #473460;
+
+@border-radius-small: 4px;
+@border-radius-medium: 6px;
+@border-radius-large: 8px;
+
+@menu-light-color-bg: var(--color-menu-light-bg);
+@menu-light-color-bg-item_hover: var(--color-fill-2);
+@menu-light-color-bg-item_selected: var(--color-fill-2);
+@menu-light-color-item_default: var(--color-text-2);
+@menu-light-color-item_hover: var(--color-text-1);
+@menu-light-color-item_selected: #473460;
+@menu-light-color-icon_default: var(--color-text-3);
+@menu-light-color-icon_hover: var(--color-text-2);
+@menu-light-color-icon_selected: #473460;
+
+@menu-dark-color-bg: @color-primary-6;
+@menu-dark-color-bg-item_default: @menu-dark-color-bg;
+@menu-dark-color-bg-item_hover: fade(@arcoblue-3, 14%);
+@menu-dark-color-bg-item_selected: fade(@arcoblue-3, 18%);
+@menu-dark-color-item_default: fade(@gpt-color-white, 62%);
+@menu-dark-color-item_hover: @gpt-color-white;
+@menu-dark-color-item_selected: @arcoblue-3;
+@menu-dark-color-icon_default: fade(@gpt-color-white, 62%);
+@menu-dark-color-icon_hover: @gpt-color-white;
+@menu-dark-color-icon_selected: @arcoblue-3;

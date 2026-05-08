@@ -542,6 +542,9 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
 <style lang="less" scoped>
   .editor-card {
     width: 100%;
+    background: var(--gpt-bg-panel);
+    border: 1px solid var(--gpt-border-strong);
+    border-radius: var(--gpt-radius-md);
     .editor-header {
       padding-left: 8px;
     }
@@ -554,6 +557,27 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
     :deep(.arco-select-view-single) {
       border-radius: 4px;
     }
+    :deep(.arco-card-body) {
+      padding-top: 8px;
+    }
+  }
+
+  .sidebar-toggle-toolbar {
+    margin-right: 4px;
+  }
+  :deep(.sidebar-toggle-btn.arco-btn-size-small) {
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    border-radius: var(--gpt-radius-sm);
+    border-color: var(--gpt-border-strong);
+    color: var(--gpt-brand-900);
+    background: var(--gpt-bg-panel);
+  }
+  :deep(.sidebar-toggle-btn.arco-btn-size-small:hover) {
+    background: var(--gpt-nav-active-bg);
+    border-color: var(--gpt-brand-300);
+    color: var(--gpt-brand-900);
   }
 
   :deep(.arco-resizebox-trigger-icon-wrapper) {
@@ -572,6 +596,38 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
     > :first-child {
       cursor: not-allowed;
     }
+  }
+
+  :deep(.editor-header .arco-btn-size-small),
+  :deep(.query-select .arco-btn-size-small) {
+    height: 30px;
+    border-radius: var(--gpt-radius-sm);
+  }
+  :deep(.editor-header .arco-btn-primary) {
+    background: var(--gpt-brand-900);
+    border-color: var(--gpt-brand-900);
+    color: var(--gpt-text-inverse);
+  }
+  :deep(.editor-header .arco-btn-primary:hover) {
+    background: #5b456f;
+    border-color: #5b456f;
+  }
+  :deep(.editor-header .arco-btn-outline),
+  :deep(.query-select .arco-btn-outline) {
+    border-color: var(--gpt-border-strong);
+    color: var(--gpt-text-primary);
+    background: var(--gpt-bg-panel);
+  }
+  :deep(.editor-header .arco-btn-outline:hover),
+  :deep(.query-select .arco-btn-outline:hover) {
+    border-color: var(--gpt-brand-600);
+    color: var(--gpt-brand-900);
+    background: var(--gpt-nav-active-bg);
+  }
+
+  :deep(.query-select .arco-select-view) {
+    border-radius: var(--gpt-radius-sm);
+    border-color: var(--gpt-border-strong);
   }
 </style>
 
@@ -592,6 +648,20 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
         }
       }
     }
+  }
+
+  .editor-card .ͼ1.cm-editor {
+    background: var(--gpt-bg-code);
+    color: #ffffff;
+    border: 1px solid rgba(71, 52, 96, 0.2);
+  }
+  .editor-card .ͼ1 .cm-activeLine {
+    background: var(--gpt-bg-code-line);
+  }
+  .editor-card .ͼ1 .cm-gutters {
+    background: #1a1630;
+    color: #8b7ba8;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .arco-btn-group .arco-btn-primary:not(:last-child) {

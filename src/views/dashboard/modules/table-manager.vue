@@ -58,9 +58,9 @@ a-card.table-manager(:bordered="false")
       v-if="tablesTreeForDatabase[activeDatabase]?.length"
       v-model:expanded-keys="expandedKeys"
       size="small"
-      action-on-node-click="expand"
       :ref="(el) => setRefMap(el, activeDatabase)"
       :block-node="true"
+      :indent-size="14"
       :data="tablesTreeData"
       :load-more="loadMore"
       :animation="false"
@@ -271,8 +271,9 @@ a-card.table-manager(:bordered="false")
     padding-right: 0px;
   }
   .arco-card.table-manager {
-    background: var(--card-bg-color);
-    border-radius: 10px;
+    background: var(--gpt-bg-panel);
+    border-radius: 0;
+    border-right: 1px solid var(--gpt-border-strong);
     padding: 0;
     height: 100%;
 
@@ -335,11 +336,16 @@ a-card.table-manager(:bordered="false")
     }
 
     :deep(> .arco-card-header) {
-      padding: 10px 6px 10px 15px;
+      height: 46px;
+      padding: 10px 10px 11px 12px;
+      border-bottom: 1px solid var(--gpt-border-default);
 
       > .arco-card-header-title {
         justify-content: space-between;
         gap: 20px;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--gpt-text-primary);
       }
     }
 
@@ -422,9 +428,9 @@ a-card.table-manager(:bordered="false")
 
   .table-tree {
     :deep(.arco-tree-node) {
-      padding: 0px 0px 0 18px;
-      line-height: 30px;
-      border-radius: 0;
+      padding: 0 0 0 8px;
+      line-height: 36px;
+      border-radius: var(--gpt-radius-md);
 
       .arco-icon-loading {
         color: var(--brand-color);
@@ -434,7 +440,7 @@ a-card.table-manager(:bordered="false")
     }
 
     :deep(.arco-tree-node:hover) {
-      background-color: transparent;
+      background-color: var(--gpt-nav-active-bg);
       .menu-button {
         display: flex;
       }
@@ -442,13 +448,13 @@ a-card.table-manager(:bordered="false")
 
     :deep(.arco-tree-node:not(.arco-tree-node-is-leaf)) {
       &:not(:first-of-type) {
-        border-top: 1px solid var(--border-color);
+        border-top: none;
       }
 
       border-radius: 0;
 
       .arco-tree-node-title {
-        padding: 7px 0;
+        padding: 6px 0;
       }
     }
 
@@ -502,8 +508,8 @@ a-card.table-manager(:bordered="false")
 
   .data-title {
     padding-left: 0;
-    font-size: 13px;
-    line-height: 30px;
+    font-size: 12px;
+    line-height: 36px;
     cursor: pointer;
 
     &.columns {
@@ -546,11 +552,11 @@ a-card.table-manager(:bordered="false")
   }
 
   :deep(.arco-tree-node-switcher) {
-    width: 16px;
+    width: 14px;
   }
 
   :deep(.arco-tree-node-title) {
-    margin-left: 10px;
+    margin-left: 6px;
   }
 
   .title-copy {
@@ -613,20 +619,24 @@ a-card.table-manager(:bordered="false")
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 16px;
+    height: 34px;
+    padding: 8px 12px 9px 12px;
+    border-bottom: 1px solid var(--gpt-border-subtle);
 
     .database-label {
       margin-right: 8px;
       white-space: nowrap;
       font-weight: normal;
+      color: var(--gpt-text-secondary);
+      font-size: 11px;
     }
   }
   .table-search {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 2px 16px 16px 16px;
-    border-bottom: 1px solid var(--border-color);
+    padding: 8px 10px 8px 10px;
+    border-bottom: 1px solid var(--gpt-border-subtle);
     margin-bottom: 8px;
   }
 
@@ -645,10 +655,23 @@ a-card.table-manager(:bordered="false")
 
   .table-total {
     margin-left: 12px;
-    font-size: 12px;
-    color: var(--third-font-color);
+    font-size: 10px;
+    color: var(--gpt-text-muted);
     white-space: nowrap;
     word-break: keep-all;
+  }
+
+  :deep(.search-table) {
+    border: 1px solid var(--gpt-border-strong);
+    border-radius: var(--gpt-radius-sm);
+    background: var(--gpt-bg-app);
+    min-height: 30px;
+  }
+
+  :deep(.arco-btn-size-small.arco-btn-outline) {
+    border-color: var(--gpt-border-strong);
+    color: var(--gpt-text-primary);
+    background: var(--gpt-bg-panel);
   }
 </style>
 

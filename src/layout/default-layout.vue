@@ -1,7 +1,7 @@
 <template lang="pug">
 a-layout
   a-layout.layout-container
-    a-layout-sider.main-sider(v-if="navbar" :width="80")
+    a-layout-sider.main-sider(v-if="navbar" :width="52")
       Navbar
     a-layout-content.layout-content
       PageLayout

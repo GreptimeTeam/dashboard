@@ -247,8 +247,10 @@ a-tabs.panel-tabs(
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 1px solid var(--color-border-2);
-    padding: 0 6px;
+    border-bottom: 1px solid var(--gpt-border-default);
+    background: var(--gpt-table-toolbar-bg);
+    min-height: 39px;
+    padding: 6px 12px 7px 12px;
     gap: 8px;
 
     .view-switch {
@@ -258,12 +260,13 @@ a-tabs.panel-tabs(
       gap: 2px;
 
       .arco-btn {
-        color: var(--small-font-color);
+        color: var(--gpt-text-secondary);
+        border-radius: var(--gpt-radius-sm);
       }
 
       .arco-btn.active {
-        color: var(--brand-color);
-        background: var(--color-fill-2);
+        color: var(--gpt-text-inverse);
+        background: var(--gpt-brand-900);
       }
     }
 
@@ -279,11 +282,12 @@ a-tabs.panel-tabs(
         margin: 0;
         white-space: nowrap;
         code {
-          color: var(--small-font-color);
-          background: var(--color-neutral-2);
-          border-radius: 2px;
+          color: var(--gpt-brand-700);
+          background: transparent;
+          border-radius: 0;
           padding: 4px 8px;
           font-size: 11px;
+          font-family: var(--font-mono);
         }
       }
     }
@@ -335,18 +339,29 @@ a-tabs.panel-tabs(
         }
       }
       .arco-table-size-mini .arco-table-td {
-        font-size: 11px;
+        font-size: 12px;
+      }
+      .arco-table-th {
+        background: var(--gpt-table-head-bg);
+        color: var(--gpt-text-primary);
+        border-bottom: 1px solid var(--gpt-border-default);
+      }
+      .arco-table-td {
+        border-bottom: 1px solid var(--gpt-border-subtle);
+        color: var(--gpt-text-primary);
       }
     }
     :deep(.arco-card.data-grid) {
       height: 100%;
-      padding: 2px 8px;
+      padding: 0;
+      border-radius: 0;
     }
   }
 
   .result-extra {
     .arco-btn {
       height: 26px;
+      border-radius: var(--gpt-radius-sm);
     }
   }
 </style>
