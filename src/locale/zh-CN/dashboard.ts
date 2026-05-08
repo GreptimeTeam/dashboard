@@ -76,6 +76,7 @@ export default {
   'dashboard.exportCSV': '导出结果为 CSV',
   'dashboard.wrapLines': '自动换行',
   'dashboard.hideSidebar': '隐藏侧边栏',
+  'dashboard.showSidebar': '显示侧边栏',
   'dashboard.searchDatabase': '搜索数据库...',
   'dashboard.tables': '张表',
   'dashboard.rerunQuery': '重新执行查询',

@@ -88,9 +88,7 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
   }
 
   const menuClick = (key: string) => {
-    if (key === menuSelectedKey.value) {
-      appStore.applyUiConfig({ hideSidebar: !hideSidebar.value })
-    } else {
+    if (key !== menuSelectedKey.value) {
       appStore.applyUiConfig({ hideSidebar: false })
     }
     switch (key) {

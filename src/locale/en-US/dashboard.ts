@@ -78,6 +78,7 @@ export default {
   'dashboard.exportCSV': 'Export Result as CSV',
   'dashboard.wrapLines': 'Wrap Lines',
   'dashboard.hideSidebar': 'Hide sidebar',
+  'dashboard.showSidebar': 'Show sidebar',
   'dashboard.searchDatabase': 'Search database...',
   'dashboard.tables': 'tables',
   'dashboard.rerunQuery': 'Rerun Query',

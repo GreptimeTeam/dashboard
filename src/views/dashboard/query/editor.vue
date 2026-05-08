@@ -2,6 +2,12 @@
 a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
   a-space.space-between(style="padding: 10px 0")
     a-space.editor-header(size="medium")
+      .sidebar-toggle-toolbar(v-if="hideSidebar")
+        a-tooltip(mini :content="$t('dashboard.showSidebar')")
+          a-button.sidebar-toggle-btn(type="outline" size="small" @click="showSidebar")
+            template(#icon)
+              svg.icon-16.rotate-270.rotate-180
+                use(href="#collapse")
       a-dropdown-button(
         type="primary"
         position="bl"
@@ -185,6 +191,8 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
   })
 
   const tsRef = ref<InstanceType<typeof import('./time-assistance.vue').default> | null>(null)
+  const appStore = useAppStore()
+  const { hideSidebar } = storeToRefs(appStore)
 
   const {
     codes,
@@ -225,6 +233,9 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
     if (tsRef.value) {
       tsRef.value?.open()
     }
+  }
+  const showSidebar = () => {
+    appStore.applyUiConfig({ hideSidebar: false })
   }
   // Show the import explain modal
   const showImportExplainModal = () => {
