@@ -148,11 +148,16 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
 
   :deep(.arco-menu-collapsed .arco-menu-item.arco-menu-has-icon) {
     justify-content: center;
-    padding: 8px;
+    padding: 9px 8px;
   }
 
   :deep(.arco-menu-collapsed .arco-menu-icon) {
     margin-right: 0;
+  }
+
+  :deep(.arco-menu-dark .arco-menu-item.arco-menu-selected .arco-menu-icon),
+  :deep(.arco-menu-dark .arco-menu-item.arco-menu-selected svg) {
+    color: var(--gpt-brand-300);
   }
 
   :deep(.arco-menu-collapsed .arco-menu-item-inner) {
