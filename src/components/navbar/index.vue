@@ -123,7 +123,13 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
 <style scoped lang="less">
   .navbar {
     height: 100%;
+    overflow-y: auto;
     background: var(--gpt-brand-900);
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   .logo-space {

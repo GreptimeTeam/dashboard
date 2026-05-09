@@ -6,7 +6,7 @@ a-layout.new-layout
     :style="{ 'min-width': '100px', 'max-width': '40vw' }"
     :class="hideSidebar ? 'hide-sider' : ''"
   )
-    a-layout-sider(:width="actualSidebarWidth")
+    a-layout-sider(style="height: 100%" :width="actualSidebarWidth")
       TableManager(:databaseList="databaseList")
   a-layout-content.layout-content.has-panel
     a-space.layout-space(direction="vertical" fill :size="0")
@@ -165,11 +165,20 @@ a-layout.new-layout
   }
   .new-layout {
     background: var(--gpt-bg-app);
+    :deep(> .arco-resizebox > .arco-resizebox-trigger-vertical.arco-resizebox-direction-right) {
+      width: 1px;
+      background: var(--gpt-border-strong);
+    }
+
+    :deep(> .arco-resizebox > .arco-resizebox-trigger-vertical.arco-resizebox-direction-right::before),
+    :deep(> .arco-resizebox > .arco-resizebox-trigger-vertical.arco-resizebox-direction-right::after) {
+      display: none;
+    }
+
     :deep(> .arco-layout-content.layout-content.has-panel) {
       background: var(--gpt-bg-app);
     }
     :deep(.arco-layout-sider) {
-      border-right: 1px solid var(--gpt-border-strong);
       background: var(--gpt-bg-panel);
     }
     :deep(.layout-space > .arco-space-item:first-of-type) {

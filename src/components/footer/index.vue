@@ -52,9 +52,10 @@ a-layout-footer.footer
     align-items: center;
     justify-content: space-between;
     height: var(--footer-height);
-
+    background-color: rgb(240, 237, 248);
+    border-top: 1px solid var(--gpt-border-subtle);
     text-align: center;
-    font-size: 13px;
+    font-size: 12px;
     .arco-link {
       display: flex;
     }

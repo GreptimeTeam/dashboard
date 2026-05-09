@@ -3,14 +3,9 @@ a-card.table-manager(:bordered="false")
   template(#title)
     a-space(:size="10")
       | Tables
-      a-button(
-        type="outline"
-        size="small"
-        :loading="totalTablesLoading"
-        @click="refreshTablesTree()"
-      )
+      a-button(size="mini" :loading="totalTablesLoading" @click="refreshTablesTree()")
         template(#icon)
-          svg.icon.brand-color
+          svg.icon-11.brand-color
             use(href="#refresh") 
     a-space
       a-space(align="center" :size="10")
@@ -22,8 +17,8 @@ a-card.table-manager(:bordered="false")
         )
           a-button(type="secondary" size="mini" @click="toggleSidebar")
             template(#icon)
-              svg.icon.icon-color.rotate-270(:class="{ 'rotate-180': hideSidebar }")
-                use(href="#collapse")
+              svg.icon-12.icon-color.rotate-270(:class="{ 'rotate-180': hideSidebar }")
+                use(href="#hide")
   a-spin(style="width: 100%" :loading="tablesLoading")
     .database-selector
       a-select(
@@ -37,7 +32,7 @@ a-card.table-manager(:bordered="false")
       ) 
         template(#prefix)
           span.database-label {{ $t('dashboard.database') }}
-          span.divider(style="margin-right: 6px") |
+          span.divider |
         a-option(v-for="db of databaseList" :key="db" :value="db") {{ db }}
 
     .table-search
@@ -49,10 +44,9 @@ a-card.table-manager(:bordered="false")
           :placeholder="$t('dashboard.input')"
         )
           template(#prefix)
-            svg.icon.icon-color
+            svg.icon-11.icon-color
               use(href="#search")
-      span.table-total
-      | {{ currentTablesCount }} {{ $t('dashboard.tables') }}
+      span.table-total {{ currentTablesCount }} {{ $t('dashboard.tables') }}
 
     a-tree.table-tree(
       v-if="tablesTreeForDatabase[activeDatabase]?.length"
@@ -60,16 +54,16 @@ a-card.table-manager(:bordered="false")
       size="small"
       :ref="(el) => setRefMap(el, activeDatabase)"
       :block-node="true"
-      :indent-size="14"
+      :indent-size="0"
       :data="tablesTreeData"
       :load-more="loadMore"
       :animation="false"
       :virtual-list-props="{ threshold: 100, buffer: 20, height: virtualListHeight }"
     )
       template(#icon="node")
-        a-tooltip(v-if="node.node.iconType" :content="node.node.iconType")
+        a-tooltip(v-if="getNodeIcon(node.node)" :content="node.node.iconType || 'TABLE'")
           svg.icon
-            use(:href="ICON_MAP[node.node.iconType]")
+            use(:href="getNodeIcon(node.node)")
       template(#title="nodeData")
         .tree-data(v-if="!nodeData.isLeaf")
           .data-title(:title="nodeData.title")
@@ -111,7 +105,7 @@ a-card.table-manager(:bordered="false")
                 @click="loadMore(expandedTablesTree[nodeData.parentKey])"
               )
                 template(#icon)
-                  svg.icon.icon-color
+                  svg.icon-11.icon-color
                     use(href="#refresh")
             a-space(:size="4")
               span.time {{ $t('dashboard.minTime') }}
@@ -136,7 +130,7 @@ a-card.table-manager(:bordered="false")
               .right(v-else)
                 a-typography-text.code-space {{ nodeData.info.sql }}
       template(#switcher-icon="nodeData")
-        svg.icon-16.icon-color(v-if="!nodeData.isLeaf")
+        svg.icon-11.icon-color(v-if="!nodeData.isLeaf") 
           use(href="#down")
     EmptyStatus.empty(v-else-if="activeDatabase && !tablesTreeForDatabase[activeDatabase]?.length")
     EmptyStatus.empty(v-else)
@@ -259,6 +253,11 @@ a-card.table-manager(:bordered="false")
     TIMESTAMP: '#time-index',
   }
 
+  const getNodeIcon = (node: { iconType?: string; isLeaf?: boolean }) => {
+    if (node.iconType) return ICON_MAP[node.iconType] || ''
+    return node.isLeaf ? '' : '#table'
+  }
+
   const toggleSidebar = () => {
     tooltipVisible.value = false
     appStore.applyUiConfig({ hideSidebar: !hideSidebar.value })
@@ -266,74 +265,12 @@ a-card.table-manager(:bordered="false")
 </script>
 
 <style scoped lang="less">
-  :deep(.arco-select-view-single .arco-select-view-prefix) {
-    color: var(--small-font-color);
-    padding-right: 0px;
-  }
   .arco-card.table-manager {
     background: var(--gpt-bg-panel);
     border-radius: 0;
     border-right: 1px solid var(--gpt-border-strong);
     padding: 0;
     height: 100%;
-
-    :deep(.arco-tree.table-tree) {
-      .arco-tree-node {
-        border: none;
-        > .arco-tree-node-title {
-          margin-left: 2px;
-        }
-        &:not(.arco-tree-node-is-leaf) {
-          > .arco-tree-node-title {
-            padding: 2px 0;
-          }
-        }
-        &.arco-tree-node-is-leaf.arco-tree-node-is-tail {
-          margin-bottom: 0;
-        }
-      }
-      .icon-16 {
-        height: 14px;
-        width: 14px;
-      }
-      .icon {
-        height: 13px;
-        width: 13px;
-      }
-    }
-    .arco-space.table-buttons {
-      > .arco-space-item:nth-of-type(1) {
-        display: none;
-      }
-      > .arco-space-item:nth-of-type(2) {
-        display: none;
-      }
-      > .arco-space-item:nth-of-type(3) {
-        margin-right: 0;
-        .arco-btn-size-small.arco-btn-only-icon {
-          width: 24px;
-          height: 24px;
-        }
-      }
-    }
-
-    .title-copy {
-      .arco-btn-size-medium.arco-btn-only-icon {
-        width: 24px;
-        height: 24px;
-      }
-      .arco-typography-operation-copy,
-      .arco-typography-operation-copied {
-        display: flex;
-      }
-      &.columns {
-        margin-left: 0;
-      }
-    }
-    .arco-btn-size-small.arco-btn-only-icon {
-      width: 24px;
-      height: 24px;
-    }
 
     :deep(> .arco-card-header) {
       height: 46px;
@@ -387,27 +324,6 @@ a-card.table-manager(:bordered="false")
     opacity: 0;
   }
 
-  :deep(.arco-virtual-list) {
-    padding-right: 2px;
-
-    &::-webkit-scrollbar {
-      width: 8px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background-color: #c9cdd4;
-      border-radius: 6px;
-    }
-
-    &::-webkit-scrollbar-thumb:hover {
-      background-color: #86909c;
-    }
-
-    overflow-y: scroll !important;
-    // Firefox
-    scrollbar-color: #c9cdd4 var(--card-bg-color);
-  }
-
   .arco-typography {
     display: inline-flex;
     white-space: pre-wrap;
@@ -417,16 +333,32 @@ a-card.table-manager(:bordered="false")
     border-radius: 4px;
   }
 
-  .detail {
-    justify-content: flex-start;
-    padding-right: 60px;
-
-    .right {
-      padding-left: 50px;
-    }
-  }
-
   .table-tree {
+    :deep(.arco-virtual-list) {
+      border-right: 0;
+      border-left: 0;
+
+      &::-webkit-scrollbar {
+        width: 8px;
+        background: transparent;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: transparent;
+        border: 0;
+        box-shadow: none;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background-color: #c7c7c7;
+        border-radius: 6px;
+      }
+
+      &::-webkit-scrollbar-thumb:hover {
+        background-color: var(--color-neutral-6);
+      }
+    }
+
     :deep(.arco-tree-node) {
       padding: 0 0 0 8px;
       line-height: 36px;
@@ -438,23 +370,25 @@ a-card.table-manager(:bordered="false")
         width: 18px;
       }
     }
+    :deep(.arco-tree-node[data-level='1']) {
+      margin-left: 24px;
+      position: relative;
+    }
+
+    :deep(.arco-tree-node[data-level='1']::before) {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: -5px;
+      width: 1px;
+      background: var(--gpt-border-strong);
+    }
 
     :deep(.arco-tree-node:hover) {
       background-color: var(--gpt-nav-active-bg);
       .menu-button {
         display: flex;
-      }
-    }
-
-    :deep(.arco-tree-node:not(.arco-tree-node-is-leaf)) {
-      &:not(:first-of-type) {
-        border-top: none;
-      }
-
-      border-radius: 0;
-
-      .arco-tree-node-title {
-        padding: 6px 0;
       }
     }
 
@@ -511,11 +445,7 @@ a-card.table-manager(:bordered="false")
     font-size: 12px;
     line-height: 36px;
     cursor: pointer;
-
-    &.columns {
-      color: var(--small-font-color);
-      padding-left: 8px;
-    }
+    margin-left: 6px;
   }
 
   .create-table {
@@ -546,17 +476,13 @@ a-card.table-manager(:bordered="false")
     }
 
     .icon {
-      width: 14px;
-      height: 14px;
+      width: 11px;
+      height: 11px;
     }
   }
 
   :deep(.arco-tree-node-switcher) {
     width: 14px;
-  }
-
-  :deep(.arco-tree-node-title) {
-    margin-left: 6px;
   }
 
   .title-copy {
@@ -570,11 +496,6 @@ a-card.table-manager(:bordered="false")
       padding: 0;
     }
 
-    :deep(.icon) {
-      width: 16px;
-      height: 16px;
-    }
-
     &.code {
       :deep(.arco-btn-text.arco-btn-only-icon) {
         .icon {
@@ -582,18 +503,6 @@ a-card.table-manager(:bordered="false")
           height: 14px;
         }
       }
-    }
-
-    :deep(.arco-btn-size-medium.arco-btn-only-icon) {
-      width: 28px;
-      height: 28px;
-    }
-  }
-
-  .code-copy {
-    :deep(.icon) {
-      width: 14px;
-      height: 14px;
     }
   }
 
@@ -610,17 +519,11 @@ a-card.table-manager(:bordered="false")
     }
   }
 
-  :deep(.arco-space.search) {
-    .arco-space-item {
-      justify-content: flex-end;
-    }
-  }
   .database-selector {
     display: flex;
     align-items: center;
     justify-content: space-between;
     height: 34px;
-    padding: 8px 12px 9px 12px;
     border-bottom: 1px solid var(--gpt-border-subtle);
 
     .database-label {
@@ -630,19 +533,29 @@ a-card.table-manager(:bordered="false")
       color: var(--gpt-text-secondary);
       font-size: 11px;
     }
+
+    .divider {
+      margin-right: 6px;
+      color: var(--gpt-text-secondary);
+      font-weight: 300;
+      opacity: 0.7;
+      font-size: 11px;
+    }
   }
   .table-search {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
     padding: 8px 10px 8px 10px;
-    border-bottom: 1px solid var(--gpt-border-subtle);
-    margin-bottom: 8px;
+  }
+
+  .table-search-left {
+    width: 100%;
   }
 
   .arco-input-wrapper.search-table {
     padding: 0 10px;
-    font-family: 'Open Sans';
 
     :deep(> .arco-input-prefix) {
       padding-right: 10px;
@@ -654,7 +567,6 @@ a-card.table-manager(:bordered="false")
   }
 
   .table-total {
-    margin-left: 12px;
     font-size: 10px;
     color: var(--gpt-text-muted);
     white-space: nowrap;
@@ -666,12 +578,6 @@ a-card.table-manager(:bordered="false")
     border-radius: var(--gpt-radius-sm);
     background: var(--gpt-bg-app);
     min-height: 30px;
-  }
-
-  :deep(.arco-btn-size-small.arco-btn-outline) {
-    border-color: var(--gpt-border-strong);
-    color: var(--gpt-text-primary);
-    background: var(--gpt-bg-panel);
   }
 </style>
 
