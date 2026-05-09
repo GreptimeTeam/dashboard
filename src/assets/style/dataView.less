@@ -72,6 +72,36 @@
   }
 }
 
+.view-switch {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--gpt-border-strong);
+  border-radius: var(--gpt-radius-sm);
+
+  .arco-btn {
+    color: var(--gpt-text-secondary);
+    border-radius: 0;
+
+    svg {
+      color: currentColor;
+      opacity: 1;
+    }
+
+    &:hover {
+      color: var(--gpt-text-secondary);
+    }
+
+    &.active,
+    &.active:hover {
+      color: var(--gpt-text-inverse);
+      background: var(--gpt-brand-900);
+    }
+  }
+}
+
 .chart-form {
   align-items: center;
 

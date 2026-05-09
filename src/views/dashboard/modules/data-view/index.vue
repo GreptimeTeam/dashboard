@@ -9,7 +9,7 @@ a-tabs.panel-tabs(
   @delete="deleteTab"
 )
   template(#extra)
-    a-space.result-extra(:size="8")
+    a-space.result-extra(style="margin-right: 12px" :size="8")
       a-tooltip(mini :content="props.isInFullSizeMode ? $t('dashboard.exitFullSize') : $t('dashboard.fullSizeMode')")
         a-button(size="small" @click="toggleFullSize")
           template(#icon)
@@ -45,7 +45,7 @@ a-tabs.panel-tabs(
               @click="setResultView(result.key, 'table')"
             )
               svg.icon-16
-                use(href="#table")
+                use(href="#tableview")
           a-tooltip(
             v-if="useDataChart(result).hasChart.value"
             mini
@@ -68,13 +68,7 @@ a-tabs.panel-tabs(
             :content="result.query"
           )
             a-typography-text.query-text(code :ellipsis="{ rows: 1, css: true }") {{ result.query }}
-          TextCopyable(
-            size="mini"
-            type="secondary"
-            :data="result.query"
-            :show-data="false"
-            :button-text="false"
-          )
+
         .toolbar-actions
           a-space(:size="0")
             a-tooltip(mini position="tr" :content="$t('dashboard.rerunQuery')")
@@ -252,35 +246,6 @@ a-tabs.panel-tabs(
     min-height: 39px;
     padding: 6px 12px 7px 12px;
     gap: 8px;
-
-    .view-switch {
-      display: flex;
-      align-items: center;
-      flex-shrink: 0;
-      gap: 0px;
-      border: 1px solid var(--gpt-border-strong);
-      border-radius: var(--gpt-radius-sm);
-
-      .arco-btn {
-        color: var(--gpt-text-secondary);
-        border-radius: var(--gpt-radius-sm);
-      }
-
-      .arco-btn:first-child {
-        border-top-right-radius: 0;
-        border-bottom-right-radius: 0;
-      }
-
-      .arco-btn:nth-child(2) {
-        border-top-left-radius: 0;
-        border-bottom-left-radius: 0;
-      }
-
-      .arco-btn.active {
-        color: var(--gpt-text-inverse);
-        background: var(--gpt-brand-900);
-      }
-    }
 
     .query-display {
       flex: 1;

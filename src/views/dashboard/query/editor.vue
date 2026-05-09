@@ -6,8 +6,8 @@ a-card.editor-card(style="padding: 0 12px" :bordered="false")
         a-tooltip(mini :content="$t('dashboard.showSidebar')")
           a-button.sidebar-toggle-btn(type="outline" size="small" @click="showSidebar")
             template(#icon)
-              svg.icon-16.rotate-270.rotate-180
-                use(href="#collapse")
+              svg.icon-16
+                use(href="#expand")
       a-dropdown-button(
         type="primary"
         position="bl"
@@ -44,6 +44,8 @@ a-card.editor-card(style="padding: 0 12px" :bordered="false")
         )
           a-space(:size="4")
             icon-loading(v-if="explainQueryRunning" spin)
+            svg.icon-16(v-else)
+              use(href="#explain")
             span {{ $t('dashboard.explainQuery') + `${currentQueryNumber ? ' #' + currentQueryNumber : ''} ` }}
             icon-close-circle-fill.icon-16(v-if="explainQueryRunning") 
         template(#icon)
@@ -76,7 +78,8 @@ a-card.editor-card(style="padding: 0 12px" :bordered="false")
         a-tooltip(mini :content="$t('dashboard.format')")
           a-button(type="outline" :disabled="isButtonDisabled" @click="formatSql()")
             template(#icon)
-              icon-code-block.icon-18
+              svg.icon-18
+                use(href="#code")
         a-tooltip(mini :content="$t('dashboard.clearCode')")
           a-button(type="outline" :disabled="isButtonDisabled" @click="clearCode")
             template(#icon)

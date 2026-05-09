@@ -1,57 +1,80 @@
-<template lang="pug">
-a-card(v-if="hasChart" :bordered="false")
-  template(v-if="hasHeader" #title)
-    a-space(size="mini")
-      svg.icon-18
-        use(href="#chart")
-      | {{ $t('dashboard.chart') }}
-  a-spin(style="width: 100%")
-    a-spin(style="width: 100%" :loading="isChartLoading")
-      template(#element)
-        a-space(direction="vertical" :size="30")
-          a-space(:size="10")
-            icon-exclamation-circle-fill.warning-color
-            span.loading-tip {{ $tc('dashboard.chartLoadingTip', seriesCount, { count: seriesCount }) }}
-          a-button(type="primary" @click="showChart")
-            | {{ $t('dashboard.ok') }}
-      Chart(:height="chartHeight" :option="chartOptions" :update-options="updateOptions")
-    a-row
-      a-form.chart-form(layout="inline" :model="chartForm")
-        a-form-item(:label="$t('dashboard.chartType')")
-          a-select(v-model="chartForm.chartType" :trigger-props="triggerProps")
-            a-option(
-              v-for="item of chartTypeOptions"
-              :key="item.key"
-              :value="item.value"
-              :label="item.value"
-            )
-        a-form-item(:label="$t('dashboard.yType')")
-          a-select(
-            v-model="chartForm.selectedYTypes"
-            multiple
-            :placeholder="$t('dashboard.pleaseSelect')"
-            :allow-search="false"
-            :trigger-props="triggerProps"
-          )
-            a-option(v-for="item of yOptions" :value="item" :label="item") {{ item }}
-        a-form-item(:label="$t('dashboard.xType')")
-          a-select(
-            v-model="chartForm.xAxisType"
-            value-key="name"
-            :placeholder="$t('dashboard.pleaseSelect')"
-            :allow-search="false"
-            :trigger-props="triggerProps"
-          )
-            a-option(v-for="item of xOptions" :value="item") {{ item.name }}
-        a-form-item(:label="$t('dashboard.groupBy')")
-          a-select(
-            v-model="chartForm.groupBySelectedTypes"
-            multiple
-            allow-clear
-            :disabled="isGroupByDisabled"
-            :trigger-props="triggerProps"
-          )
-            a-option(v-for="item of groupByOptions" :key="item.index" :value="item.name") {{ item.name }}
+<template>
+  <a-card v-if="hasChart" :bordered="false">
+    <template v-if="hasHeader" #title>
+      <a-space size="mini">
+        <svg class="icon-18">
+          <use href="#chart" />
+        </svg>
+        {{ $t('dashboard.chart') }}
+      </a-space>
+    </template>
+    <a-spin style="width: 100%">
+      <a-spin style="width: 100%" :loading="isChartLoading">
+        <template #element>
+          <a-space direction="vertical" :size="30">
+            <a-space :size="10">
+              <icon-exclamation-circle-fill class="warning-color" />
+              <span class="loading-tip">
+                {{ $tc('dashboard.chartLoadingTip', seriesCount, { count: seriesCount }) }}
+              </span>
+            </a-space>
+            <a-button type="primary" @click="showChart">
+              {{ $t('dashboard.ok') }}
+            </a-button>
+          </a-space>
+        </template>
+        <Chart :height="chartHeight" :option="chartOptions" :update-options="updateOptions" />
+      </a-spin>
+      <a-row class="chart-toolbar">
+        <a-form class="chart-form" layout="inline" :model="chartForm">
+          <a-form-item :label="$t('dashboard.chartType')">
+            <a-select v-model="chartForm.chartType" :trigger-props="triggerProps">
+              <a-option v-for="item of chartTypeOptions" :key="item.key" :value="item.value" :label="item.value" />
+            </a-select>
+          </a-form-item>
+          <a-form-item :label="$t('dashboard.yType')">
+            <a-select
+              v-model="chartForm.selectedYTypes"
+              multiple
+              :placeholder="$t('dashboard.pleaseSelect')"
+              :allow-search="false"
+              :trigger-props="triggerProps"
+            >
+              <a-option v-for="item of yOptions" :key="item" :value="item" :label="item">
+                {{ item }}
+              </a-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item :label="$t('dashboard.xType')">
+            <a-select
+              v-model="chartForm.xAxisType"
+              value-key="name"
+              :placeholder="$t('dashboard.pleaseSelect')"
+              :allow-search="false"
+              :trigger-props="triggerProps"
+            >
+              <a-option v-for="item of xOptions" :key="item.name" :value="item">
+                {{ item.name }}
+              </a-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item :label="$t('dashboard.groupBy')">
+            <a-select
+              v-model="chartForm.groupBySelectedTypes"
+              multiple
+              allow-clear
+              :disabled="isGroupByDisabled"
+              :trigger-props="triggerProps"
+            >
+              <a-option v-for="item of groupByOptions" :key="item.index" :value="item.name">
+                {{ item.name }}
+              </a-option>
+            </a-select>
+          </a-form-item>
+        </a-form>
+      </a-row>
+    </a-spin>
+  </a-card>
 </template>
 
 <script lang="ts" setup>
@@ -389,7 +412,6 @@ a-card(v-if="hasChart" :bordered="false")
 
 <style scoped lang="less">
   .chart-form {
-    margin-top: 12px;
     :deep(.arco-select-view-single) {
       min-width: 180px;
     }
@@ -400,5 +422,10 @@ a-card(v-if="hasChart" :bordered="false")
     .arco-form-item-layout-inline {
       margin-right: 38px;
     }
+  }
+
+  .chart-toolbar {
+    padding: 12px;
+    background: var(--gpt-bg-header);
   }
 </style>

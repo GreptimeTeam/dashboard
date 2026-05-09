@@ -17,7 +17,7 @@ a-card.table-manager(:bordered="false")
         )
           a-button(type="secondary" size="mini" @click="toggleSidebar")
             template(#icon)
-              svg.icon-12.icon-color.rotate-270(:class="{ 'rotate-180': hideSidebar }")
+              svg.icon-12.icon-color(:class="{ 'rotate-180': hideSidebar }")
                 use(href="#hide")
   a-spin(style="width: 100%" :loading="tablesLoading")
     .database-selector

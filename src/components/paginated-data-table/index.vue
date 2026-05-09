@@ -67,6 +67,7 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
+    background: var(--gpt-bg-header);
 
     :deep(.data-table-container) {
       flex: 1;
@@ -80,7 +81,7 @@
     align-items: center;
     padding: 8px 12px;
     border-top: 1px solid var(--gpt-border-default);
-    background: var(--gpt-bg-panel);
+    background: var(--gpt-bg-header);
     min-height: 40px;
     flex-shrink: 0;
 

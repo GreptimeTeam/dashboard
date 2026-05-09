@@ -4,16 +4,16 @@
     .view-switch
       a-tooltip(mini position="bl" :content="$t('dashboard.table')")
         a-button(
-          size="mini"
+          size="small"
           type="text"
           :class="{ active: activeView === 'table' }"
           @click="activeView = 'table'"
         )
           svg.icon-16
-            use(href="#table")
+            use(href="#tableview")
       a-tooltip(mini position="bl" :content="$t('dashboard.chart')")
         a-button(
-          size="mini"
+          size="small"
           type="text"
           :class="{ active: activeView === 'chart' }"
           @click="activeView = 'chart'"
@@ -22,7 +22,7 @@
             use(href="#chart")
       a-tooltip(mini position="bl" :content="$t('dashboard.raw')")
         a-button(
-          size="mini"
+          size="small"
           type="text"
           :class="{ active: activeView === 'raw' }"
           @click="activeView = 'raw'"
@@ -36,13 +36,7 @@
         :content="props.data.query"
       )
         a-typography-text.query-text(code :ellipsis="{ rows: 1, css: true }") {{ props.data.query }}
-      TextCopyable(
-        size="mini"
-        type="secondary"
-        :data="props.data.query"
-        :show-data="false"
-        :button-text="false"
-      )
+
     .toolbar-actions(v-if="activeView === 'raw'")
       a-space(:size="8")
         a-button(size="mini" type="outline" @click="exportJson")
@@ -167,25 +161,9 @@
     align-items: center;
     justify-content: space-between;
     border-bottom: 1px solid var(--color-border-2);
-    padding: 0 6px;
+    padding: 4px 12px;
     gap: 8px;
     min-height: 32px;
-
-    .view-switch {
-      display: flex;
-      align-items: center;
-      flex-shrink: 0;
-      gap: 2px;
-
-      .arco-btn {
-        color: var(--small-font-color);
-      }
-
-      .arco-btn.active {
-        color: var(--brand-color);
-        background: var(--color-fill-2);
-      }
-    }
 
     .toolbar-actions {
       flex-shrink: 0;
