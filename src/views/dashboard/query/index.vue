@@ -188,7 +188,6 @@ a-layout.new-layout
   :deep(.editor-space) {
     padding-top: 0px;
     height: 100%;
-    padding-right: 6px;
     .editor-card .ͼ1.cm-editor {
       border-radius: 4px;
     }
@@ -207,7 +206,6 @@ a-layout.new-layout
       }
     }
     .editor-card {
-      padding-right: 1px;
       .arco-resizebox-trigger-icon-wrapper {
         font-size: 12px;
       }

@@ -1,6 +1,6 @@
 <template lang="pug">
-a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
-  a-space.space-between(style="padding: 10px 0")
+a-card.editor-card(style="padding: 0 12px" :bordered="false")
+  a-space.space-between(style="padding: 8px 0")
     a-space.editor-header(size="medium")
       .sidebar-toggle-toolbar(v-if="hideSidebar")
         a-tooltip(mini :content="$t('dashboard.showSidebar')")
@@ -117,7 +117,8 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
                   a-list-item
                     span.ml-2 {{ $t('dashboard.examples') }}
                     a-typography-text(v-for="item of durationExamples" :key="item" code) {{ item }}
-  a-resize-box.editor-resize-box(:directions="['bottom']" :style="{ height: '254px' }")
+a-resize-box.editor-resize-box.editor-card(:directions="['bottom']" :style="{ height: '266px' }")
+  .editor-resize-content
     a-tabs.query-tabs(:default-active-key="'sql'" :active-key="queryType")
       a-tab-pane(key="sql")
         .full-width-height-editor.card-editor
@@ -145,21 +146,21 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
             @ready="handleReadyPromql"
             @update="codeUpdate('promql')"
           )
-  a-modal(
-    v-model:visible="importExplainModalVisible"
-    title="Import Explain Result JSON"
-    modal-class="import-explain-modal"
-    :width="800"
-    @ok="handleImportExplain"
-  )
-    a-form(layout="vertical" :model="importExplainForm" :auto-label-width="true")
-      a-form-item(field="explainJson" validate-trigger="blur")
-        a-textarea(
-          v-model="importExplainForm.explainJson"
-          :placeholder="placeholder"
-          :auto-size="{ minRows: 10, maxRows: 20 }"
-          @paste="onPaste"
-        )
+a-modal(
+  v-model:visible="importExplainModalVisible"
+  title="Import Explain Result JSON"
+  modal-class="import-explain-modal"
+  :width="800"
+  @ok="handleImportExplain"
+)
+  a-form(layout="vertical" :model="importExplainForm" :auto-label-width="true")
+    a-form-item(field="explainJson" validate-trigger="blur")
+      a-textarea(
+        v-model="importExplainForm.explainJson"
+        :placeholder="placeholder"
+        :auto-size="{ minRows: 10, maxRows: 20 }"
+        @paste="onPaste"
+      )
 </template>
 
 <script lang="ts" setup name="Editor">
@@ -543,11 +544,7 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
   .editor-card {
     width: 100%;
     background: var(--gpt-bg-panel);
-    border: 1px solid var(--gpt-border-strong);
-    border-radius: var(--gpt-radius-md);
-    .editor-header {
-      padding-left: 8px;
-    }
+
     :deep(.ͼo) {
       height: 100%;
     }
@@ -556,9 +553,6 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
     }
     :deep(.arco-select-view-single) {
       border-radius: 4px;
-    }
-    :deep(.arco-card-body) {
-      padding-top: 8px;
     }
   }
 
@@ -589,7 +583,14 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
   }
 
   .editor-resize-box {
-    padding-bottom: 12px !important;
+    background: var(--gpt-bg-panel);
+    overflow: visible;
+  }
+
+  .editor-resize-content {
+    box-sizing: border-box;
+    height: calc(100% - 12px);
+    padding: 0 12px;
   }
 
   .explain-disabled {
@@ -644,7 +645,6 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
         height: 100%;
         .arco-tabs-pane {
           height: 100%;
-          padding-left: 8px;
         }
       }
     }
