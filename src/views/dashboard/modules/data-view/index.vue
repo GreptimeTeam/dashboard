@@ -39,7 +39,7 @@ a-tabs.panel-tabs(
         .view-switch
           a-tooltip(mini position="bl" :content="$t('dashboard.table')")
             a-button(
-              size="mini"
+              size="small"
               type="text"
               :class="{ active: getResultView(result.key) === 'table' }"
               @click="setResultView(result.key, 'table')"
@@ -53,7 +53,7 @@ a-tabs.panel-tabs(
             :content="$t('dashboard.chart')"
           )
             a-button(
-              size="mini"
+              size="small"
               type="text"
               :class="{ active: getResultView(result.key) === 'chart' }"
               @click="setResultView(result.key, 'chart')"
@@ -257,11 +257,23 @@ a-tabs.panel-tabs(
       display: flex;
       align-items: center;
       flex-shrink: 0;
-      gap: 2px;
+      gap: 0px;
+      border: 1px solid var(--gpt-border-strong);
+      border-radius: var(--gpt-radius-sm);
 
       .arco-btn {
         color: var(--gpt-text-secondary);
         border-radius: var(--gpt-radius-sm);
+      }
+
+      .arco-btn:first-child {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+
+      .arco-btn:nth-child(2) {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
       }
 
       .arco-btn.active {

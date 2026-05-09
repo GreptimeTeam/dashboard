@@ -589,8 +589,8 @@ a-modal(
 
   .editor-resize-content {
     box-sizing: border-box;
-    height: calc(100% - 12px);
-    padding: 0 12px;
+    height: 100%;
+    padding: 0 12px 8px 12px;
   }
 
   .explain-disabled {
