@@ -76,7 +76,7 @@
                   placement="top"
                   :content="tsViewStr ? $t('dashboard.showTimestamp') : $t('dashboard.formatTimestamp')"
                 )
-                  span(style="cursor: pointer" @click="changeTsView") {{ renderTs(record, col.name) }}
+                  span.timestamp-cell(style="cursor: pointer" @click="changeTsView") {{ renderTs(record, col.name) }}
                 svg.td-config-icon(
                   v-if="showContextMenu"
                   @click="(event) => handleContextMenu(record, col.name, event)"
@@ -583,10 +583,6 @@ a-dropdown#td-context(
     visibility: visible;
   }
 
-  :deep(.arco-table-th) {
-    background-color: var(--color-fill-2);
-  }
-
   :deep(.arco-table-td) {
     pre {
       margin: 0;
@@ -671,8 +667,23 @@ a-dropdown#td-context(
       text-overflow: ellipsis;
     }
   }
-  :deep(.arco-table-element) {
-    font-family: var(--font-mono);
+
+  :deep(.arco-table-th) {
+    position: relative;
+  }
+
+  :deep(.arco-table-th:not(:last-child)::after) {
+    content: '';
+    position: absolute;
+    top: 8px;
+    right: 0;
+    bottom: 8px;
+    width: 1px;
+    background: var(--gpt-border-strong);
+  }
+
+  .timestamp-cell {
+    color: var(--gpt-accent-ts);
   }
 
   :deep(.arco-table-td),
@@ -684,7 +695,7 @@ a-dropdown#td-context(
     white-space: wrap;
   }
   :deep(.arco-table-size-medium .arco-table-cell) {
-    padding: 7px 10px;
+    padding: 6px 10px;
   }
   .entity-field {
     margin-right: 10px;

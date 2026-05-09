@@ -94,7 +94,7 @@ a-tabs.panel-tabs(
       .result-content
         .table-panel(v-if="getResultView(result.key) === 'table'")
           PaginatedDataTable(
-            size="mini"
+            column-resizable
             :data="tableModelMap[result.key]?.rows || []"
             :columns="tableModelMap[result.key]?.columns || []"
             :displayed-columns="tableModelMap[result.key]?.displayedColumns || []"
