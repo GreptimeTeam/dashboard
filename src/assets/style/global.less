@@ -95,6 +95,46 @@
   --font-mono: 'Google Sans Code', monospace;
 }
 
+.gpt-cell-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  color: var(--gpt-text-primary);
+  font-size: 12px;
+
+  th,
+  td {
+    height: 46px;
+    padding: 0 12px;
+    border-right: 1px solid var(--gpt-border-default);
+    border-bottom: 1px solid var(--gpt-border-default);
+    background: var(--gpt-bg-panel);
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  th {
+    height: 30px;
+    color: var(--gpt-text-muted);
+    background: var(--gpt-bg-header);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  tr > :last-child {
+    border-right: 0;
+  }
+
+  &.gpt-cell-table-hover {
+    tbody tr:hover td {
+      background: var(--list-hover-color);
+    }
+  }
+}
+
 // Override Arco Design primary color token to follow our brand color.
 // Use selectors with equal/higher specificity than Arco's internal rules.
 

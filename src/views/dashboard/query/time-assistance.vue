@@ -2,53 +2,65 @@
 a-modal.timestamp-assistance-modal(
   v-model:visible="visible"
   unmount-on-close
-  :width="600"
+  :width="730"
   :footer="false"
   :mask-closable="true"
 )
   template(#title)
-    a-space
-      svg.icon
-        use(href="#time-index")
-      | {{ $t('dashboard.timeAssistance') }}
-      a-tag.ctrl(size="small" color="blue") Ctrl Shift ;
-  a-form(auto-label-width :model="tsForm")
-    a-form-item(label="Step 1")
-      a-space
-        .action Select time
-        TimezoneInstantPicker(v-model="picked" style="width: 210px" type="outline")
-          template(#prefix)
-            svg.icon
-              use(href="#time")
-    a-form-item(label="Step 2")
-      a-space(direction="vertical")
-        a-space.action(align="center")
-          span.section-subtitle Click a value below to
-          a-radio-group(v-model="action" type="button" size="small")
-            a-radio(value="insert")
-              a-space(size="mini")
+    .time-assistance-title
+      span {{ $t('dashboard.timeAssistance') }}
+      .shortcut
+        kbd Ctrl
+        span +
+        kbd Shift
+        span +
+        kbd ;
+  .time-input-row
+    .time-input-label Date & Time
+    TimezoneInstantPicker.time-picker(v-model="picked" type="outline")
+      template(#prefix)
+        svg.icon
+          use(href="#time")
+    a-button.now-button(type="outline" @click="setNow")
+      template(#icon)
+        icon-refresh
+      | Now
+  table.gpt-cell-table.gpt-cell-table-hover.time-value-table
+    colgroup
+      col.unit-col
+      col.numeric-col
+      col.string-col
+    thead
+      tr
+        th
+        th Numeric Value
+        th String Value
+    tbody
+      tr(v-for="row in timeRows" :key="row.unit")
+        td.unit-cell
+          span.unit-badge {{ row.unit }}
+        td.value-cell.numeric-cell
+          span.value-text {{ row.numeric }}
+          .cell-actions
+            a-button(size="mini" type="secondary" @click="act(row.numeric, 'insert')")
+              template(#icon)
                 icon-edit
-                | {{ insertActionText }}
-            a-radio(value="copy")
-              a-space(size="mini")
+              | {{ insertActionText }}
+            a-button(size="mini" type="secondary" @click="act(row.numeric, 'copy')")
+              template(#icon)
                 icon-copy
-                | Copy
-        a-space.option(direction="vertical" fill :size="8")
-          a-space(
-            v-for="(unit, index) in ['s', 'ms', 'µs', 'ns']"
-            :key="unit"
-            align="center"
-            :size="8"
-          )
-            a-tag.unit(size="small" color="blue") {{ unit }}
-            a-radio-group(
-              v-model="chosen"
-              type="button"
-              size="large"
-              @change="onChoose"
-            )
-              a-radio(:value="timestampOpts[index].value") {{ timestampOpts[index].value }}
-              a-radio(:value="literalOpts[index].value") {{ literalOpts[index].value }}
+              | Copy
+        td.value-cell
+          span.value-text {{ row.literal }}
+          .cell-actions
+            a-button(size="mini" type="secondary" @click="act(row.literal, 'insert')")
+              template(#icon)
+                icon-edit
+              | {{ insertActionText }}
+            a-button(size="mini" type="secondary" @click="act(row.literal, 'copy')")
+              template(#icon)
+                icon-copy
+              | Copy
 </template>
 
 <script setup lang="ts">
@@ -69,17 +81,8 @@ a-modal.timestamp-assistance-modal(
 
   const visible = ref(false)
   const picked = ref<Date | null>(new Date())
-  const action = ref<'insert' | 'copy'>('insert')
-  const chosen = ref<string>('')
   const microNanoDigits = ref<string>('000000')
   const formattedMicroNano = ref<string>('000000')
-  const tsForm = reactive({
-    picked,
-    action,
-    chosen,
-    microNanoDigits,
-    formattedMicroNano,
-  })
 
   // Trigger for forcing reactive updates
   const refreshTrigger = ref(0)
@@ -243,13 +246,21 @@ a-modal.timestamp-assistance-modal(
     { label: formatLiteral(picked.value, 'ns'), value: formatLiteral(picked.value, 'ns'), unit: 'ns' },
   ])
 
-  const act = (text: string) => {
+  const timeRows = computed(() =>
+    timestampOpts.value.map((option, index) => ({
+      unit: option.unit,
+      numeric: option.value,
+      literal: literalOpts.value[index].value,
+    }))
+  )
+
+  const act = (text: string, nextAction: 'insert' | 'copy') => {
     if (!text) {
       console.warn('No text to act on')
       return
     }
 
-    if (action.value === 'insert') {
+    if (nextAction === 'insert') {
       insertToCM(text)
     } else {
       copyText(text)
@@ -258,19 +269,13 @@ a-modal.timestamp-assistance-modal(
     visible.value = false
   }
 
-  const onChoose = () => {
-    const v = chosen.value
-    if (!v) {
-      console.warn('No value chosen')
-      return
-    }
-    act(v)
+  const setNow = () => {
+    picked.value = new Date()
   }
 
   const open = () => {
     visible.value = true
     picked.value = new Date()
-    chosen.value = ''
     microNanoDigits.value = '000000'
     formattedMicroNano.value = '000000'
 
@@ -284,66 +289,152 @@ a-modal.timestamp-assistance-modal(
   defineExpose({ open, close })
 </script>
 
-<style lang="less" scoped>
-  .section-subtitle {
-    font-size: 12px;
-  }
-</style>
-
 <style lang="less">
   .timestamp-assistance-modal {
     .arco-modal {
-      padding-top: 10px;
-      .arco-modal-body {
-        padding: 10px 26px 20px 26px;
-      }
+      overflow: hidden;
+      padding-top: 0;
+      border-radius: var(--gpt-radius-md);
     }
+
+    .arco-modal-header {
+      height: 44px;
+      padding: 0 20px;
+      border-bottom: 1px solid var(--gpt-border-default);
+    }
+
     .arco-modal-title {
+      width: 100%;
+    }
+
+    .arco-modal-body {
+      padding: 0;
+    }
+
+    .time-assistance-title {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: var(--gpt-text-primary);
       font-family: 'Gilroy';
-    }
-
-    .arco-input-wrapper.digits {
-      width: 110px;
-      .arco-input-suffix {
-        font-size: 11px;
-        padding-left: 0;
-      }
-    }
-
-    .arco-tag.ctrl {
+      font-size: 16px;
       font-weight: 600;
     }
-    .action {
-      padding-top: 2px;
+
+    .shortcut {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--gpt-text-muted);
+      font-family: var(--font-family-base);
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .shortcut kbd {
+      min-width: 24px;
+      height: 22px;
+      padding: 0 7px;
+      border: 1px solid var(--gpt-border-strong);
+      border-radius: var(--gpt-radius-sm);
+      background: var(--gpt-bg-header);
+      color: var(--gpt-text-primary);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      line-height: 20px;
+      text-align: center;
+    }
+
+    .time-input-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      height: 66px;
+      padding: 0 22px;
+      border-bottom: 1px solid var(--gpt-border-default);
+      background: var(--gpt-bg-panel);
+    }
+
+    .time-input-label {
+      width: 72px;
+      color: var(--gpt-text-primary);
       font-size: 12px;
-      .arco-radio-button-content {
-        font-size: 12px;
+      font-weight: 600;
+    }
+
+    .time-picker {
+      flex: 1;
+    }
+
+    .now-button {
+      width: 68px;
+    }
+
+    .time-value-table {
+      th:first-child,
+      td:first-child {
+        padding-right: 0;
+        padding-left: 20px;
+      }
+
+      tbody tr:last-child td {
+        border-bottom: 0;
       }
     }
-    .option {
-      padding-left: 4px;
 
-      .arco-tag {
-        width: 26px;
-        text-align: center;
-        display: inline-flex;
-        justify-content: center;
-      }
-      .arco-radio-group-button {
-        background-color: transparent;
-      }
+    .unit-col {
+      width: 52px;
+    }
 
-      .arco-radio-button:hover {
-        color: var(--main-font-color);
-        background-color: var(--list-hover-color);
-      }
+    .numeric-col {
+      width: 344px;
+    }
 
-      .arco-radio-button-content {
-        min-width: 170px;
-        text-align: left;
-        font-family: var(--font-mono);
-        font-size: 12px;
-      }
+    .unit-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 18px;
+      height: 20px;
+      padding: 0 5px;
+      border-radius: var(--gpt-radius-sm);
+      background: #eef1ff;
+      color: #6675ff;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .value-cell {
+      position: relative;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .value-text {
+      color: var(--gpt-text-primary);
+    }
+
+    .cell-actions {
+      position: absolute;
+      top: 50%;
+      right: 12px;
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transform: translateY(-50%);
+      transition: opacity 0.12s ease;
+    }
+
+    .value-cell:hover .cell-actions {
+      opacity: 1;
+    }
+
+    .cell-actions .arco-btn {
+      background: rgba(71, 52, 96, 0.12);
+      color: var(--gpt-text-primary);
     }
   }
 </style>
