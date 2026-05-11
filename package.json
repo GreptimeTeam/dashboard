@@ -127,7 +127,7 @@
     "@arco-plugins/vite-vue": "^1.4.5",
     "@babel/types": "^7.21.4",
     "@commitlint/cli": "^17.4.2",
-    "@commitlint/config-conventional": "^17.6.5",
+    "@commitlint/config-conventional": "^21.0.0",
     "@prettier/plugin-pug": "^2.5.1",
     "@tauri-apps/cli": "^2.2.7",
     "@types/lodash": "^4.14.191",
