@@ -54,7 +54,6 @@ a-card.table-manager(:bordered="false")
       size="small"
       :ref="(el) => setRefMap(el, activeDatabase)"
       :block-node="true"
-      :indent-size="0"
       :data="tablesTreeData"
       :load-more="loadMore"
       :animation="false"
@@ -334,75 +333,6 @@ a-card.table-manager(:bordered="false")
   }
 
   .table-tree {
-    :deep(.arco-virtual-list) {
-      border-right: 0;
-      border-left: 0;
-
-      &::-webkit-scrollbar {
-        width: 8px;
-        background: transparent;
-      }
-
-      &::-webkit-scrollbar-track {
-        background: transparent;
-        border: 0;
-        box-shadow: none;
-      }
-
-      &::-webkit-scrollbar-thumb {
-        background-color: #c7c7c7;
-        border-radius: 6px;
-      }
-
-      &::-webkit-scrollbar-thumb:hover {
-        background-color: var(--color-neutral-6);
-      }
-    }
-
-    :deep(.arco-tree-node) {
-      padding: 0 0 0 8px;
-      line-height: 36px;
-      border-radius: var(--gpt-radius-md);
-
-      .arco-icon-loading {
-        color: var(--brand-color);
-        height: 18px;
-        width: 18px;
-      }
-    }
-    :deep(.arco-tree-node[data-level='1']) {
-      margin-left: 24px;
-      position: relative;
-    }
-
-    :deep(.arco-tree-node[data-level='1']::before) {
-      content: '';
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      left: -5px;
-      width: 1px;
-      background: var(--gpt-border-strong);
-    }
-
-    :deep(.arco-tree-node:hover) {
-      background-color: var(--gpt-nav-active-bg);
-      .menu-button {
-        display: flex;
-      }
-    }
-
-    :deep(.arco-tree-node.arco-tree-node-is-leaf) {
-      .arco-tree-node-title {
-        padding: 0;
-        border-radius: 0;
-      }
-    }
-
-    :deep(.arco-tree-node.arco-tree-node-is-leaf:hover) {
-      background: var(--tree-select-brand-color);
-    }
-
     :deep(.arco-tree-node.arco-tree-node-is-leaf.details) {
       cursor: default;
 
@@ -440,14 +370,6 @@ a-card.table-manager(:bordered="false")
     }
   }
 
-  .data-title {
-    padding-left: 0;
-    font-size: 12px;
-    line-height: 36px;
-    cursor: pointer;
-    margin-left: 6px;
-  }
-
   .create-table {
     flex-direction: column;
   }
@@ -481,10 +403,6 @@ a-card.table-manager(:bordered="false")
     }
   }
 
-  :deep(.arco-tree-node-switcher) {
-    width: 14px;
-  }
-
   .title-copy {
     &.columns {
       margin-left: 6px;
@@ -511,12 +429,6 @@ a-card.table-manager(:bordered="false")
     align-items: center;
     justify-content: center;
     flex-direction: column;
-  }
-
-  .arco-dropdown-open {
-    .icon-color {
-      color: var(--brand-color);
-    }
   }
 
   .database-selector {
@@ -578,36 +490,5 @@ a-card.table-manager(:bordered="false")
     border-radius: var(--gpt-radius-sm);
     background: var(--gpt-bg-app);
     min-height: 30px;
-  }
-</style>
-
-<style lang="less">
-  .quick-select {
-    .arco-dropdown-option {
-      padding: 0;
-    }
-
-    .arco-dropdown .arco-btn-text[type='button'] {
-      border-radius: 0;
-
-      &:hover {
-        background-color: var(--list-hover-color);
-      }
-    }
-
-    &.columns {
-      margin-right: 6px;
-    }
-
-    .arco-btn-text[type='button'] {
-      justify-content: start;
-      width: 100%;
-      color: var(--small-font-color);
-      font-size: 13px;
-    }
-
-    .arco-btn-text[type='button']:hover {
-      background-color: var(--grey-bg-color);
-    }
   }
 </style>

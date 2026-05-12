@@ -161,6 +161,11 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
     margin-right: 0;
   }
 
+  :deep(.arco-menu-dark .arco-menu-item .arco-menu-icon),
+  :deep(.arco-menu-dark .arco-menu-item svg) {
+    color: rgba(255, 255, 255, 0.5);
+  }
+
   :deep(.arco-menu-dark .arco-menu-item.arco-menu-selected .arco-menu-icon),
   :deep(.arco-menu-dark .arco-menu-item.arco-menu-selected svg) {
     color: var(--gpt-brand-300);
@@ -201,7 +206,7 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
       }
     }
     :deep(.arco-btn-icon) {
-      color: var(--gpt-text-inverse-muted);
+      color: rgba(255, 255, 255, 0.5);
     }
 
     li {

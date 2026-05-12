@@ -36,7 +36,7 @@ a-dropdown.tables(trigger="click" position="right")
           :database="database"
         )
     a-doption(v-else)
-      a-dropdown.quick-select(trigger="hover" position="right")
+      a-dropdown.quick-select.tree-quick-select(trigger="hover" position="right")
         a-space(:size="6")
           svg.icon.icon-color
             use(href="#query")

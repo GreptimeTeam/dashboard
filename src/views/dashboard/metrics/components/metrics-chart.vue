@@ -456,6 +456,10 @@ a-card.metrics-chart(:bordered="false")
 
 <style lang="less" scoped>
   .metrics-chart {
+    .section-title {
+      background: var(--gpt-bg-header);
+    }
+
     .empty-state {
       text-align: center;
       padding: 60px 20px;

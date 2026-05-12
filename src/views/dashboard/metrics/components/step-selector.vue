@@ -3,7 +3,7 @@
   a-dropdown(:popup-max-height="false" @select="handleDropdownSelect")
     a-button(
       type="outline"
-      size="small"
+      size="medium"
       style="display: flex; justify-content: space-between; width: 130px"
       :title="'Select step resolution or enter custom value'"
     )
@@ -21,7 +21,7 @@
   a-input(
     v-if="currentSelection === 'custom'"
     v-model="customStepInput"
-    size="small"
+    size="medium"
     placeholder="e.g., 30s, 2m, 1h"
     style="width: 80px"
     title="Enter custom step with time units (s, m, h) or just seconds"

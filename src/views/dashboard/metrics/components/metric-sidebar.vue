@@ -2,98 +2,72 @@
 a-card.metrics-sidebar(:bordered="false")
   template(#title)
     a-space(:size="10")
-      | {{ $t('menu.dashboard.metrics') }}
-      a-button(
-        type="outline"
-        size="small"
-        style="width: 24px; height: 24px"
-        :loading="loading"
-        @click="refreshData"
-      )
+      | Metrics
+      a-button(size="mini" :loading="loading" @click="refreshData")
         template(#icon)
-          svg.icon.brand-color
+          svg.icon-11.brand-color
             use(href="#refresh")
-  template(#extra)
-    a-space
-      a-button(type="text" size="mini" @click="showMetricsExplorer = true")
-        template(#icon)
-          icon-search
-        | Browse
-      a-tooltip(
-        v-model:popup-visible="tooltipVisible"
-        position="tr"
-        mini
-        :content="$t('dashboard.hideSidebar')"
-      )
-        a-button(type="secondary" size="mini" @click="toggleSidebar")
-          template(#icon)
-            svg.icon.icon-color.rotate-270(:class="{ 'rotate-180': hideSidebar }")
-              use(href="#collapse")
 
-  .metrics-section
-    .metric-select-container
-      .metric-select
-        a-select(
-          v-model="selectedMetric"
-          allow-search
+  a-spin(style="width: 100%" :loading="loading")
+    .metric-search
+      .metric-search-left
+        a-input.search-metric(
+          v-model="metricSearchKey"
+          size="mini"
           placeholder="Search metrics..."
-          size="small"
-          allow-clear
-          :options="metricOptions"
-          :loading="loading"
-          @search="onMetricSearch"
+          :allow-clear="true"
         )
-      a-tooltip(:content="`Insert metric: ${selectedMetric}`")
-        a-button.insert-metric-button(
-          v-if="selectedMetric"
-          type="text"
-          size="small"
-          @click="insertSelectedMetric"
-        )
-          template(#icon)
-            icon-plus
-
-    MetricsExplorer(v-model:visible="showMetricsExplorer" @select="selectMetricFromExplorer")
-    MetricMenu(
-      v-if="metricMenuVisible"
-      v-model:popup-visible="metricMenuVisible"
-      :style="{ position: 'fixed', top: `${contextMenuPosition.y}px`, left: `${contextMenuPosition.x}px`, zIndex: 9 }"
-      :nodeData="selectedNodeData"
-      @copyText="$emit('copyText', $event)"
-      @insertText="$emit('insertText', $event)"
-      @loadValues="loadLabelValues"
-    )
+          template(#prefix)
+            svg.icon-11.icon-color
+              use(href="#search")
+      span.metric-total {{ currentMetricCount }} metrics
 
     a-tree.metrics-tree(
+      v-if="metricsTreeData.length"
       size="small"
       action-on-node-click="expand"
       :block-node="true"
       :data="metricsTreeData"
-      :load-more="loadLabelValues"
+      :load-more="loadMore"
       :animation="false"
     )
+      template(#icon="node")
+        a-tooltip(v-if="getNodeIcon(node.node)" :content="node.node.type?.toUpperCase()")
+          svg.icon
+            use(:href="getNodeIcon(node.node)")
       template(#switcher-icon="nodeData")
-        svg.icon-16.icon-color(v-if="!nodeData.isLeaf")
+        svg.icon-11.icon-color(v-if="!nodeData.isLeaf")
           use(href="#down")
       template(#title="nodeData")
         .tree-data
-          .data-title {{ nodeData.title }}
-          a-button.menu-button(type="text" @click="handleContextMenu($event, nodeData)")
-            template(#icon)
-              svg.icon-14.rotate-90
-                use(href="#extra")
+          .data-title(:title="nodeData.title") {{ nodeData.title }}
+          MetricMenu(
+            :nodeData="nodeData"
+            @copyText="$emit('copyText', $event)"
+            @insertText="$emit('insertText', $event)"
+          )
+    EmptyStatus.empty(v-else)
 </template>
 
 <script setup lang="ts">
   import { ref, computed, watch, nextTick, onMounted } from 'vue'
-  import { useLocalStorage, useDebounceFn } from '@vueuse/core'
-  import { IconSearch, IconLoading } from '@arco-design/web-vue/es/icon'
+  import { useDebounceFn } from '@vueuse/core'
   import { getLabelNames, getMetricNames, getLabelValues, searchMetricNames } from '@/api/metrics'
   import { useAppStore } from '@/store'
   import MetricMenu from './metric-menu.vue'
-  import MetricsExplorer from './metrics-explorer.vue'
 
-  const emit = defineEmits<{
+  type MetricTreeNode = {
+    key: string
+    title: string
+    type: 'metric' | 'label' | 'value'
+    metricName: string
+    labelName?: string
+    value?: string
+    isLeaf?: boolean
+    children?: MetricTreeNode[]
+  }
+
+  defineEmits<{
     (e: 'copyText', text: string): void
     (e: 'insertText', text: string): void
   }>()
@@ -101,329 +75,188 @@ a-card.metrics-sidebar(:bordered="false")
   const appStore = useAppStore()
 
   const metrics = ref<Array<{ name: string }>>([])
+  const metricsTreeData = ref<MetricTreeNode[]>([])
+  const metricSearchKey = ref('')
   const loading = ref(false)
-  const currentSearchQuery = ref('')
 
-  const selectedMetric = useLocalStorage<string | null>('metrics-explorer-last-selected', null)
+  const currentMetricCount = computed(() => metricsTreeData.value.length)
 
-  const labels = ref<any[]>([])
-
-  const showMetricsExplorer = ref(false)
-
-  const metricMenuVisible = ref(false)
-  const selectedNodeData = ref<any>(null)
-  const contextMenuPosition = ref({ x: 0, y: 0 })
-  const metricOptions = computed(() => {
-    return metrics.value.map((metric) => ({
-      label: metric.name,
-      value: metric.name,
-    }))
-  })
-
-  const getMetrics = async () => {
-    try {
-      loading.value = true
-      const response = await getMetricNames()
-      if (response.data) {
-        const metricList = response.data.map((name: string) => ({ name }))
-        metrics.value = metricList
-        currentSearchQuery.value = ''
-      }
-    } catch (err: any) {
-      console.error('Error fetching metrics:', err)
-    } finally {
-      loading.value = false
-    }
-  }
-  const fetchLabelsForMetric = async (metricName: string) => {
-    try {
-      const response = await getLabelNames(metricName)
-      if (response && response.data) {
-        labels.value = response.data
-          .filter((name: string) => name !== '__name__')
-          .map((name: string) => ({ name, values: [] }))
-      } else {
-        labels.value = []
-      }
-    } catch (error) {
-      console.error('Error fetching labels:', error)
-      labels.value = []
-    }
-  }
-
-  const debouncedSearch = useDebounceFn(async (query: string) => {
-    if (query.trim()) {
-      try {
-        const safe = query.trim()
-        const regex = `${safe.replace(/"/g, '\\"')}`
-        const resp = await searchMetricNames(regex)
-        const list: string[] = resp.data || []
-        metrics.value = list.map((name: string) => ({ name }))
-      } catch (err: any) {
-        console.error('Error remote searching metrics:', err)
-        metrics.value = []
-      }
-    } else {
-      metrics.value = []
-    }
-  }, 300)
-
-  const onMetricSearch = async (query: string) => {
-    currentSearchQuery.value = query
-    await debouncedSearch(query)
-  }
-
-  const selectMetricFromExplorer = (metricName: string) => {
-    selectedMetric.value = metricName
-    showMetricsExplorer.value = false
-    if (metricName) {
-      fetchLabelsForMetric(metricName)
-    }
-  }
-
-  const refreshData = async () => {
-    if (currentSearchQuery.value.trim()) {
-      try {
-        loading.value = true
-        const safe = currentSearchQuery.value.trim()
-        const regex = `${safe.replace(/"/g, '\\"')}`
-        const resp = await searchMetricNames(regex)
-        if (resp.data) {
-          const metricList = resp.data.map((name: string) => ({ name }))
-          metrics.value = metricList
-        }
-      } catch (err: any) {
-        await getMetrics()
-      } finally {
-        loading.value = false
-      }
-    } else {
-      await getMetrics()
-    }
-  }
-
-  const metricsTreeData = ref<any[]>([])
-  const buildTreeForSelectedMetric = () => {
-    if (!selectedMetric.value) {
-      metricsTreeData.value = []
-      return
-    }
-    metricsTreeData.value = (labels.value || []).map((label) => ({
-      key: `label-${selectedMetric.value}-${label.name}`,
-      title: label.name,
-      type: 'label',
-      metricName: selectedMetric.value,
-      labelName: label.name,
+  const buildMetricsTree = () => {
+    metricsTreeData.value = metrics.value.map((metric) => ({
+      key: `metric-${metric.name}`,
+      title: metric.name,
+      type: 'metric',
+      metricName: metric.name,
       isLeaf: false,
       children: [],
     }))
   }
 
-  watch(labels, (newMetric) => {
-    buildTreeForSelectedMetric()
-  })
+  const getMetrics = async () => {
+    try {
+      loading.value = true
+      const response = await getMetricNames()
+      metrics.value = (response.data || []).map((name: string) => ({ name }))
+      buildMetricsTree()
+    } catch (err) {
+      console.error('Error fetching metrics:', err)
+      metrics.value = []
+      metricsTreeData.value = []
+    } finally {
+      loading.value = false
+    }
+  }
 
-  const loadLabelValues = async (nodeData: any) => {
-    if (nodeData.type === 'label' && !nodeData.children?.length) {
+  const searchMetrics = async (query: string) => {
+    const safe = query.trim()
+    if (!safe) {
+      await getMetrics()
+      return
+    }
+
+    try {
+      loading.value = true
+      const regex = safe.replace(/"/g, '\\"')
+      const response = await searchMetricNames(regex)
+      metrics.value = (response.data || []).map((name: string) => ({ name }))
+      buildMetricsTree()
+    } catch (err) {
+      console.error('Error remote searching metrics:', err)
+      metrics.value = []
+      metricsTreeData.value = []
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const debouncedSearch = useDebounceFn(searchMetrics, 300)
+
+  const refreshData = async () => {
+    await searchMetrics(metricSearchKey.value)
+  }
+
+  const loadMore = async (nodeData: MetricTreeNode) => {
+    if (nodeData.type === 'metric' && !nodeData.children?.length) {
+      try {
+        const response = await getLabelNames(nodeData.metricName)
+        nodeData.children = (response.data || [])
+          .filter((name: string) => name !== '__name__')
+          .map((name: string) => ({
+            key: `label-${nodeData.metricName}-${name}`,
+            title: name,
+            type: 'label',
+            metricName: nodeData.metricName,
+            labelName: name,
+            isLeaf: false,
+            children: [],
+          }))
+        metricsTreeData.value = [...metricsTreeData.value]
+        await nextTick()
+      } catch (err) {
+        console.error(`Error fetching labels for metric ${nodeData.metricName}:`, err)
+      }
+    } else if (nodeData.type === 'label' && nodeData.labelName && !nodeData.children?.length) {
       try {
         const response = await getLabelValues(nodeData.labelName, nodeData.metricName)
-        if (response.data) {
-          const values = response.data
-          nodeData.children = values.map((value: string) => ({
-            key: `value-${nodeData.metricName}-${nodeData.labelName}-${value}`,
-            title: value,
-            type: 'value',
-            metricName: nodeData.metricName,
-            labelName: nodeData.labelName,
-            value,
-            isLeaf: true,
-          }))
-          metricsTreeData.value = [...metricsTreeData.value]
-          await nextTick()
-        }
-      } catch (err: any) {
+        nodeData.children = (response.data || []).map((value: string) => ({
+          key: `value-${nodeData.metricName}-${nodeData.labelName}-${value}`,
+          title: value,
+          type: 'value',
+          metricName: nodeData.metricName,
+          labelName: nodeData.labelName,
+          value,
+          isLeaf: true,
+        }))
+        metricsTreeData.value = [...metricsTreeData.value]
+        await nextTick()
+      } catch (err) {
         console.error(`Error fetching values for label ${nodeData.labelName}:`, err)
       }
     }
   }
 
-  const insertSelectedMetric = () => {
-    if (selectedMetric.value) {
-      emit('insertText', selectedMetric.value)
-    }
-  }
-
-  function handleContextMenu(event: Event, nodeData) {
-    const rect = (event.target as Element).getBoundingClientRect()
-    event.preventDefault()
-    event.stopPropagation()
-    selectedNodeData.value = nodeData
-
-    contextMenuPosition.value = { x: rect.left, y: rect.y }
-    metricMenuVisible.value = true
+  const getNodeIcon = (node: MetricTreeNode) => {
+    if (node.type === 'metric') return '#metric'
+    if (node.type === 'label') return '#primary-key'
+    if (node.type === 'value') return '#value'
+    return ''
   }
 
   onMounted(async () => {
     await getMetrics()
   })
 
+  watch(metricSearchKey, (query) => {
+    debouncedSearch(query)
+  })
+
   watch(
     () => appStore.database,
     () => {
-      getMetrics()
+      refreshData()
     }
   )
-
-  watch(
-    () => selectedMetric.value,
-    (newMetric) => {
-      if (newMetric) {
-        fetchLabelsForMetric(newMetric)
-      } else {
-        labels.value = []
-      }
-    },
-    {
-      immediate: true,
-    }
-  )
-  const tooltipVisible = ref(false)
-  const { hideSidebar } = storeToRefs(appStore)
-  const toggleSidebar = () => {
-    tooltipVisible.value = false
-    appStore.applyUiConfig({ hideSidebar: !hideSidebar.value })
-  }
 </script>
 
 <style scoped lang="less">
-  .metric-select-container {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    margin-bottom: 16px;
-    flex-wrap: nowrap;
-    overflow-x: auto;
+  .metrics-sidebar {
+    height: 100%;
 
-    .insert-metric-button {
-      flex-shrink: 0;
-      flex-grow: 0;
-      width: 28px;
-      height: 28px;
+    :deep(.arco-card-header) {
+      height: 39px;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--gpt-border-default);
+    }
+
+    :deep(.arco-card-body) {
+      height: calc(100% - 39px);
       padding: 0;
-      display: flex;
-      align-items: center;
     }
-    .metric-select {
-      flex-shrink: 1;
-      flex-grow: 0;
-      width: 100%;
-      overflow: hidden;
+
+    :deep(.arco-spin),
+    :deep(.arco-spin-children) {
+      height: 100%;
     }
   }
 
-  .tree-data {
+  .metric-search {
     display: flex;
-    justify-content: space-between;
-    position: relative;
-    align-items: center;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 8px 10px;
   }
-  :deep(.arco-tree-node-title-text) {
+
+  .metric-search-left {
     width: 100%;
   }
 
-  :deep(.arco-tree-node-switcher) {
-    width: 16px;
-  }
-  .metrics-section {
-    height: 100%;
+  .arco-input-wrapper.search-metric {
+    min-height: 30px;
+    padding: 0 10px;
+    border: 1px solid var(--gpt-border-strong);
+    border-radius: var(--gpt-radius-sm);
+    background: var(--gpt-bg-app);
 
-    background: var(--color-bg-container);
-    overflow-y: auto;
-    overflow-x: auto;
-    padding: 0 15px;
-  }
-  :deep(.metrics-tree) {
-    .data-title {
-      color: var(--main-font-color);
-    }
-    .arco-tree-node.arco-tree-node-is-leaf .data-title {
-      color: var(--small-font-color);
-    }
-    .label-count {
-      color: var(--small-font-color);
-    }
-    .arco-tree-node-indent-block {
-      margin-right: 0;
-    }
-    .arco-tree-node-title:hover {
-      background: transparent;
-      .menu-button {
-        visibility: visible;
-      }
-    }
-    .arco-tree-node.arco-tree-node-is-leaf:hover {
-      background: var(--tree-select-brand-color);
-      .menu-button {
-        visibility: visible;
-      }
-    }
-    .arco-tree-node-is-leaf {
-      .arco-tree-node-switcher {
-        width: auto;
-      }
-    }
-    .arco-tree-node {
-      padding: 0 0 0 0;
-      line-height: 30px;
-      border-radius: 0;
-
-      &.arco-tree-node-is-leaf.arco-tree-node-is-tail {
-        margin-bottom: 8px;
-      }
+    :deep(> .arco-input-prefix) {
+      padding-right: 10px;
     }
 
-    .arco-tree-node-title {
-      padding: 0 6px;
-    }
-
-    .arco-tree-node-switcher {
-      width: 16px;
-      margin: 0;
-    }
-
-    .arco-tree-node:not(.arco-tree-node-is-leaf) {
-      border-radius: 0;
-    }
-
-    .arco-tree-node.arco-tree-node-is-leaf .arco-tree-node-title {
-      padding: 0 10px;
-      border-radius: 0;
+    :deep(> .arco-input-suffix) {
+      padding-left: 8px;
     }
   }
-  .metric-menu {
-    position: absolute;
-    right: 4px;
-    top: 50%;
-    transform: translateY(-50%);
+
+  .metric-total {
+    color: var(--gpt-text-muted);
+    font-size: 10px;
+    white-space: nowrap;
   }
 
-  .menu-button {
-    visibility: hidden;
+  .empty {
+    display: flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-
-    .icon-14 {
-      width: 14px;
-      height: 14px;
-    }
-  }
-
-  .metrics-sidebar {
-    :deep(.arco-card-header) {
-      padding: 10px 5px 10px 15px;
-    }
+    height: calc(100% - 68px);
   }
 </style>
