@@ -98,4 +98,14 @@ a-spin(style="width: 100%; height: 100%")
   :deep(.new-layout .arco-layout-sider .arco-card) {
     height: auto;
   }
+
+  .logs-pipelines-layout :deep(.arco-resizebox-trigger-vertical.arco-resizebox-direction-right) {
+    width: 1px;
+    background: var(--gpt-border-strong);
+
+    &::before,
+    &::after {
+      display: none;
+    }
+  }
 </style>
