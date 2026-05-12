@@ -1,7 +1,7 @@
 <template lang="pug">
 a-spin(style="width: 100%; height: 100%")
-  a-layout.detail-layout.new-layout
-    a-layout-sider(:resize-directions="['right']")
+  a-layout.detail-layout.new-layout.logs-pipelines-layout
+    a-layout-sider(:resize-directions="['right']" :width="228")
       a-card.files-card(:bordered="false")
         template(#title)
           a-space.space-between(fill style="width: 100%")
@@ -13,20 +13,22 @@ a-spin(style="width: 100%; height: 100%")
                     svg.icon-16
                       use(href="#file-add")
 
-        a-scrollbar
+        a-scrollbar.gpt-vertical-scrollbar
           a-empty(v-if="!pipelines.length")
             template(#image)
               svg.icon-32
                 use(href="#empty")
-          a-menu(v-model:selected-keys="selectedKeys")
+          a-menu.gpt-sidebar-menu(v-model:selected-keys="selectedKeys")
             a-menu-item(
               v-for="file in pipelines"
               :key="file.name"
               type="text"
               long
-              style="margin-bottom: 0"
             )
-              | {{ file.name }}.yaml
+              .gpt-sidebar-menu-item
+                svg.icon-15
+                  use(href="#document")
+                span.gpt-sidebar-menu-text {{ file.name }}.yaml
     a-layout-content.layout-content
       PipeFileView(
         :key="selectedKeys[0]"
@@ -93,11 +95,7 @@ a-spin(style="width: 100%; height: 100%")
 </script>
 
 <style lang="less" scoped>
-  // var(--main-font-color)
-  :deep(.arco-menu-vertical .arco-menu-inner) {
-    padding: 0;
-  }
-  :deep(.arco-menu-light .arco-menu-item.arco-menu-selected) {
-    color: var(--brand-color);
+  :deep(.new-layout .arco-layout-sider .arco-card) {
+    height: auto;
   }
 </style>

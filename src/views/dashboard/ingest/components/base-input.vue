@@ -16,7 +16,7 @@ a-layout-header
         :config="config"
       )
 a-layout-content.main-content
-  a-card.light-editor-card(:bordered="false")
+  a-card.editor-card.gpt-dark-editor.gpt-square-editor.gpt-dark-editor-card(:bordered="false")
     CodeMirror(
       v-model="content"
       :placeholder="config.placeholder"

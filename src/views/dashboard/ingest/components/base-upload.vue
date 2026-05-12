@@ -217,14 +217,6 @@ a-layout-content.main-content
 </script>
 
 <style lang="less" scoped>
-  .top-bar {
-    display: flex;
-    justify-content: space-between;
-    padding-right: 20px;
-    height: 58px;
-    background: var(--card-bg-color);
-  }
-
   .arco-upload {
     width: 100%;
     padding: 0 105px;

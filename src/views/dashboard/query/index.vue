@@ -177,17 +177,25 @@ a-layout.new-layout
 
     :deep(> .arco-layout-content.layout-content.has-panel) {
       background: var(--gpt-bg-app);
+      height: 100%;
     }
     :deep(.arco-layout-sider) {
       background: var(--gpt-bg-panel);
     }
     :deep(.layout-space > .arco-space-item:first-of-type) {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
       padding-left: 0;
     }
+  }
+  :deep(.layout-space) {
+    height: 100%;
   }
   :deep(.editor-space) {
     padding-top: 0px;
     height: 100%;
+    min-height: 0;
     .editor-card .ͼ1.cm-editor {
       border-radius: 4px;
     }
@@ -202,6 +210,7 @@ a-layout.new-layout
       }
       &:nth-of-type(2) {
         flex: 1;
+        min-height: 0;
         overflow: auto;
       }
     }

@@ -355,16 +355,6 @@ a-layout.new-layout
     height: calc(100vh - 29px);
     background: var(--gpt-bg-app);
 
-    :deep(> .arco-resizebox > .arco-resizebox-trigger-vertical.arco-resizebox-direction-right) {
-      width: 1px;
-      background: var(--gpt-border-strong);
-    }
-
-    :deep(> .arco-resizebox > .arco-resizebox-trigger-vertical.arco-resizebox-direction-right::before),
-    :deep(> .arco-resizebox > .arco-resizebox-trigger-vertical.arco-resizebox-direction-right::after) {
-      display: none;
-    }
-
     :deep(.arco-layout-sider) {
       background: var(--gpt-bg-panel);
     }
@@ -417,7 +407,7 @@ a-layout.new-layout
   }
 
   .query-section {
-    padding: 8px;
+    padding: 6px;
     border-bottom: 1px solid var(--gpt-border-default);
   }
 

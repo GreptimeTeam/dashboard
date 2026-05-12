@@ -1,5 +1,5 @@
 <template lang="pug">
-a-card.metrics-sidebar(:bordered="false")
+a-card.metrics-sidebar.gpt-sidebar-header-card(:bordered="false")
   template(#title)
     a-space(:size="10")
       | Metrics
@@ -202,14 +202,7 @@ a-card.metrics-sidebar(:bordered="false")
   .metrics-sidebar {
     height: 100%;
 
-    :deep(.arco-card-header) {
-      height: 39px;
-      padding: 8px 10px;
-      border-bottom: 1px solid var(--gpt-border-default);
-    }
-
     :deep(.arco-card-body) {
-      height: calc(100% - 39px);
       padding: 0;
     }
 

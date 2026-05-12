@@ -1,7 +1,10 @@
 <template lang="pug">
-a-layout.new-layout
-  a-layout-sider(:resize-directions="['right']" :width="200" :class="hideSidebar ? 'hide-sider' : ''")
-    a-card.sidebar(:title="$t('menu.dashboard.ingest')" :bordered="false")
+a-layout.dashboard-two-column-layout.dashboard-right-fill-layout
+  a-layout-sider(:resize-directions="['right']" :width="228" :class="hideSidebar ? 'hide-sider' : ''")
+    a-card.sidebar.gpt-sidebar-header-card.gpt-vertical-scrollbar(
+      :title="$t('menu.dashboard.ingest')"
+      :bordered="false"
+    )
       a-menu(
         mode="vertical"
         :selected-keys="[activeTab]"
@@ -18,10 +21,9 @@ a-layout.new-layout
               use(:href="`#${child.meta.icon}`")
             span {{ $t(child.meta.locale) }}
   a-layout-content.layout-content
-    a-space.layout-space(direction="vertical" fill :size="0")
-      router-view(v-slot="{ Component }")
-        keep-alive
-          component(:is="Component")
+    router-view(v-slot="{ Component }")
+      keep-alive
+        component(:is="Component")
 </template>
 
 <script lang="ts" setup name="Ingest">
@@ -82,16 +84,7 @@ a-layout.new-layout
 </script>
 
 <style lang="less" scoped>
-  :deep(.layout-space) {
-    height: calc(100% - 18px);
-  }
   :deep(.arco-card.sidebar) {
-    height: 100%;
-    border-radius: 0;
-
-    .arco-card-header {
-      height: 52px;
-    }
     .arco-menu {
       .icon,
       .icon-15 {
@@ -109,7 +102,7 @@ a-layout.new-layout
           line-height: 30px;
           border-radius: 0;
           .arco-menu-icon-suffix {
-            right: 15px;
+            display: none;
           }
           &.arco-menu-selected {
             color: var(--brand-color);
@@ -143,56 +136,6 @@ a-layout.new-layout
           }
         }
       }
-    }
-  }
-
-  :deep(.arco-card.light-editor-card) {
-    height: 100%;
-    border-radius: 4px;
-    padding-right: 0;
-
-    .arco-card-body {
-      height: 100%;
-    }
-
-    .ͼc {
-      color: #0550ae;
-    }
-
-    .ͼo {
-      font-size: 14px;
-
-      .cm-gutters {
-        background-color: var(--grey-bg-color);
-      }
-    }
-
-    .ͼ1 .cm-scroller {
-      border-radius: 4px;
-    }
-
-    .ͼ1 .cm-content {
-      padding: 10px 0 !important;
-      width: calc(100% - 40px);
-      white-space: pre-wrap;
-    }
-
-    .ͼ1 .cm-line {
-      padding: 0 8px;
-      color: var(--main-font-color);
-    }
-
-    .ͼ1 .cm-selectionMatch {
-      background-color: rgba(255, 255, 0, 0.4);
-    }
-
-    .ͼ1.cm-editor {
-      border: 1px solid var(--border-color);
-      border-radius: 4px;
-    }
-
-    .ͼ1.cm-editor.cm-focused {
-      outline: 0;
     }
   }
 </style>

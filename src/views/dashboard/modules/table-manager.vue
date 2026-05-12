@@ -1,5 +1,5 @@
 <template lang="pug">
-a-card.table-manager(:bordered="false")
+a-card.table-manager.gpt-sidebar-header-card(:bordered="false")
   template(#title)
     a-space(:size="10")
       | Tables
@@ -270,20 +270,6 @@ a-card.table-manager(:bordered="false")
     border-right: 1px solid var(--gpt-border-strong);
     padding: 0;
     height: 100%;
-
-    :deep(> .arco-card-header) {
-      height: 46px;
-      padding: 10px 10px 11px 12px;
-      border-bottom: 1px solid var(--gpt-border-default);
-
-      > .arco-card-header-title {
-        justify-content: space-between;
-        gap: 20px;
-        font-size: 13px;
-        font-weight: 700;
-        color: var(--gpt-text-primary);
-      }
-    }
 
     .count-and-time {
       width: 100%;

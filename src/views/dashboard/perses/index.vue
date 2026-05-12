@@ -16,22 +16,23 @@ a-layout.detail-layout.new-layout
                 svg.icon-16
                   use(href="#file-add")
       a-spin(:loading="isLoading")
-        a-scrollbar
+        a-scrollbar.gpt-vertical-scrollbar
           a-empty(v-if="!filteredDashboards.length" :description="$t('dashboard.perses.emptySidebar')")
             template(#image)
               svg.icon-32
                 use(href="#empty")
-          a-menu(v-model:selected-keys="selectedKeys")
+          a-menu.gpt-sidebar-menu(v-model:selected-keys="selectedKeys")
             a-menu-item(
               v-for="item in filteredDashboards"
               :key="item.id"
               type="text"
               long
-              style="margin-bottom: 0"
             )
-              .menu-item
-                span.name {{ item.name }}
-                a-tooltip.menu-item-delete(
+              .gpt-sidebar-menu-item
+                svg.icon-15
+                  use(href="#document")
+                span.gpt-sidebar-menu-text {{ item.name }}
+                a-tooltip.menu-item-delete.gpt-sidebar-menu-action(
                   v-if="item.id === selectedId"
                   mini
                   position="left"
@@ -111,7 +112,7 @@ a-layout.detail-layout.new-layout
   const route = useRoute()
   const router = useRouter()
   const DASHBOARD_QUERY_KEY = 'dashboard'
-  const sidebarWidth = useStorage('perses-sidebar-width', 280)
+  const sidebarWidth = useStorage('perses-sidebar-width', 228)
   const searchText = ref('')
   const createModalVisible = ref(false)
   const createForm = reactive({
@@ -477,34 +478,7 @@ a-layout.detail-layout.new-layout
     text-decoration: underline;
   }
 
-  :deep(.arco-menu-vertical .arco-menu-inner) {
-    padding: 0;
-  }
-
-  :deep(.arco-menu-light .arco-menu-item.arco-menu-selected) {
-    color: var(--brand-color);
-  }
-
-  .menu-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-
-  .menu-item .name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
   :deep(.delete-btn) {
-    opacity: 0;
-    transition: opacity 0.15s ease;
-  }
-
-  :deep(.arco-menu-item:hover) .delete-btn,
-  :deep(.arco-menu-item.arco-menu-selected) .delete-btn {
-    opacity: 1;
+    color: var(--gpt-brand-600);
   }
 </style>

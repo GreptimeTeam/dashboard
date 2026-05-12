@@ -124,7 +124,7 @@ a-resize-box.editor-resize-box.editor-card(:directions="['bottom']" :style="{ he
   .editor-resize-content
     a-tabs.query-tabs(:default-active-key="'sql'" :active-key="queryType")
       a-tab-pane(key="sql")
-        .full-width-height-editor.card-editor
+        .full-width-height-editor.card-editor.gpt-dark-editor
           CodeMirror(
             v-model="codes.sql"
             :style="{ width: '100%', height: '100%' }"
@@ -137,7 +137,7 @@ a-resize-box.editor-resize-box.editor-card(:directions="['bottom']" :style="{ he
             @update="codeUpdate('sql')"
           )
       a-tab-pane(key="promql")
-        .full-width-height-editor.card-editor
+        .full-width-height-editor.card-editor.gpt-dark-editor
           CodeMirror(
             v-model="codes.promql"
             :style="{ width: '100%', height: '100%' }"
@@ -651,20 +651,6 @@ a-modal(
         }
       }
     }
-  }
-
-  .editor-card .ͼ1.cm-editor {
-    background: var(--gpt-bg-code);
-    color: #ffffff;
-    border: 1px solid rgba(71, 52, 96, 0.2);
-  }
-  .editor-card .ͼ1 .cm-activeLine {
-    background: var(--gpt-bg-code-line);
-  }
-  .editor-card .ͼ1 .cm-gutters {
-    background: #1a1630;
-    color: #8b7ba8;
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .arco-btn-group .arco-btn-primary:not(:last-child) {
