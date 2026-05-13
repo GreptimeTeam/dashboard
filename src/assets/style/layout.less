@@ -31,13 +31,108 @@
     border-radius: 0;
   }
 
+  > .arco-resizebox {
+    position: relative;
+    z-index: 2;
+    overflow: visible;
+  }
+
+  > .layout-content {
+    position: relative;
+    z-index: 1;
+  }
+
   .arco-resizebox-trigger-vertical.arco-resizebox-direction-right {
     width: 1px;
     background: var(--gpt-border-strong);
+    overflow: visible;
+    z-index: 3;
 
     &::before,
     &::after {
       display: none;
+    }
+
+    .arco-resizebox-trigger-icon-wrapper {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      z-index: 4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 8px;
+      height: 28px;
+      padding: 0;
+      color: transparent;
+      background: var(--gpt-bg-panel);
+      border: 1px solid var(--gpt-border-strong);
+      border-radius: 4px;
+      box-shadow: 0 1px 4px rgba(71, 52, 96, 0.12);
+      transform: translate(calc(-50% - 3.5px), -50%);
+      cursor: col-resize;
+
+      .arco-resizebox-trigger-icon,
+      svg {
+        display: none;
+      }
+
+      &::after {
+        content: '';
+        display: block;
+        width: 2px;
+        height: 2px;
+        border-radius: 50%;
+        background: var(--gpt-text-muted);
+        box-shadow: 0 -5px 0 var(--gpt-text-muted), 0 5px 0 var(--gpt-text-muted);
+      }
+    }
+  }
+
+  .arco-resizebox-trigger-horizontal.arco-resizebox-direction-bottom {
+    height: 1px;
+    background: var(--gpt-border-strong);
+    overflow: visible;
+    z-index: 3;
+
+    &::before,
+    &::after {
+      display: none;
+    }
+
+    .arco-resizebox-trigger-icon-wrapper {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 8px;
+      padding: 0;
+      color: transparent;
+      background: var(--gpt-bg-panel);
+      border: 1px solid var(--gpt-border-strong);
+      border-radius: 4px;
+      box-shadow: 0 1px 4px rgba(71, 52, 96, 0.12);
+      transform: translate(-50%, -50%);
+      cursor: row-resize;
+
+      .arco-resizebox-trigger-icon,
+      svg {
+        display: none;
+      }
+
+      &::after {
+        content: '';
+        display: block;
+        width: 2px;
+        height: 2px;
+        border-radius: 50%;
+        background: var(--gpt-text-muted);
+        box-shadow: -5px 0 0 var(--gpt-text-muted), 5px 0 0 var(--gpt-text-muted);
+      }
     }
   }
 
