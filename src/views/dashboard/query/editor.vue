@@ -1,12 +1,12 @@
 <template lang="pug">
 a-card.editor-card(style="padding: 0 12px" :bordered="false")
-  a-space.space-between(style="padding: 8px 0")
-    a-space.editor-header(size="medium")
+  .editor-toolbar
+    .editor-toolbar-main
       .sidebar-toggle-toolbar(v-if="hideSidebar")
         a-tooltip(mini :content="$t('dashboard.showSidebar')")
           a-button.sidebar-toggle-btn(type="outline" size="small" @click="showSidebar")
             template(#icon)
-              svg.icon-16
+              svg.icon-15
                 use(href="#expand")
       a-dropdown-button(
         type="primary"
@@ -67,12 +67,51 @@ a-card.editor-card(style="padding: 0 12px" :bordered="false")
             icon-play-arrow(v-else)
             | {{ $t('dashboard.runAll') }}
             icon-close-circle-fill.icon-16(v-if="primaryCodeRunning")
-      a-tooltip(mini position="right" :content="$t('dashboard.timeAssistance')")
+      a-tooltip(
+        v-if="queryType === 'sql'"
+        mini
+        position="right"
+        :content="$t('dashboard.timeAssistance')"
+      )
         a-button(type="secondary" @click="openTimeAssistance")
           template(#icon)
             svg.icon-18
               use(href="#time-index")
-      TimeAssistance(ref="tsRef" :cm="currentView")
+      TimeAssistance(v-if="queryType === 'sql'" ref="tsRef" :cm="currentView")
+      a-form.prom-form(layout="inline" v-show="queryType === 'promql'" :model="promForm")
+        a-space(:size="10")
+          a-form-item(:hide-label="true")
+            TimeSelect(
+              v-model:time-length="promForm.time"
+              v-model:time-range="promForm.range"
+              flex-direction="row-reverse"
+              button-size="medium"
+              :relative-time-map="queryTimeMap"
+              :relative-time-options="queryTimeOptions"
+            )
+          a-form-item(:hide-label="true")
+            a-input(
+              v-model="promForm.step"
+              size="medium"
+              hide-button
+              :style="{ width: '180px' }"
+              :placeholder="$t('dashboard.step')"
+            )
+              template(#prefix) Step
+              template(#suffix)
+                a-popover(trigger="hover")
+                  svg.icon
+                    use(href="#question")
+                  template(#content)
+                    a-list(size="small" :split="false" :bordered="false")
+                      template(#header)
+                        | {{ $t('dashboard.supportedDurations') }}
+                      a-list-item(v-for="item of durations" :key="item")
+                        a-typography-text(code) {{ item.key }}
+                        span.ml-4 {{ item.value }}
+                      a-list-item
+                        span.ml-2 {{ $t('dashboard.examples') }}
+                        a-typography-text(v-for="item of durationExamples" :key="item" code) {{ item }}
     .query-select
       a-space(size="medium")
         a-tooltip(mini :content="$t('dashboard.format')")
@@ -87,39 +126,6 @@ a-card.editor-card(style="padding: 0 12px" :bordered="false")
                 use(href="#clear")
         a-select(v-model="queryType" :trigger-props="{ 'content-class': 'query-select' }")
           a-option(v-for="query of queryOptions" :="query")
-  a-form.space-between.prom-form.mb-15(layout="inline" v-show="queryType === 'promql'" :model="promForm")
-    a-space(:size="10")
-      a-form-item(:hide-label="true")
-        TimeSelect(
-          v-model:time-length="promForm.time"
-          v-model:time-range="promForm.range"
-          flex-direction="row-reverse"
-          button-class="query-time-button"
-          :relative-time-map="queryTimeMap"
-          :relative-time-options="queryTimeOptions"
-        )
-      a-form-item(:hide-label="true")
-        a-input(
-          v-model="promForm.step"
-          hide-button
-          :style="{ width: '180px' }"
-          :placeholder="$t('dashboard.step')"
-        )
-          template(#prefix) Step
-          template(#suffix)
-            a-popover(trigger="hover")
-              svg.icon
-                use(href="#question")
-              template(#content)
-                a-list(size="small" :split="false" :bordered="false")
-                  template(#header)
-                    | {{ $t('dashboard.supportedDurations') }}
-                  a-list-item(v-for="item of durations" :key="item")
-                    a-typography-text(code) {{ item.key }}
-                    span.ml-4 {{ item.value }}
-                  a-list-item
-                    span.ml-2 {{ $t('dashboard.examples') }}
-                    a-typography-text(v-for="item of durationExamples" :key="item" code) {{ item }}
 a-resize-box.editor-resize-box.editor-card(:directions="['bottom']" :style="{ height: '266px' }")
   .editor-resize-content
     a-tabs.query-tabs(:default-active-key="'sql'" :active-key="queryType")
@@ -234,9 +240,10 @@ a-modal(
   const explainQueryRunning = ref(false)
 
   const openTimeAssistance = () => {
-    if (tsRef.value) {
-      tsRef.value?.open()
+    if (queryType.value !== 'sql' || !tsRef.value) {
+      return
     }
+    tsRef.value.open()
   }
   const showSidebar = () => {
     appStore.applyUiConfig({ hideSidebar: false })
@@ -544,50 +551,29 @@ a-modal(
 </script>
 
 <style lang="less" scoped>
-  .editor-card {
-    width: 100%;
-    background: var(--gpt-bg-panel);
-
-    :deep(.ͼo) {
-      height: 100%;
-    }
-    .arco-btn {
-      border-radius: 4px;
-    }
-    :deep(.arco-select-view-single) {
-      border-radius: 4px;
-    }
+  .editor-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
   }
 
-  .sidebar-toggle-toolbar {
-    margin-right: 4px;
-  }
-  :deep(.sidebar-toggle-btn.arco-btn-size-small) {
-    width: 28px;
-    min-width: 28px;
-    height: 28px;
-    border-radius: var(--gpt-radius-sm);
-    border-color: var(--gpt-border-strong);
-    color: var(--gpt-brand-900);
-    background: var(--gpt-bg-panel);
-  }
-  :deep(.sidebar-toggle-btn.arco-btn-size-small:hover) {
-    background: var(--gpt-nav-active-bg);
-    border-color: var(--gpt-brand-300);
-    color: var(--gpt-brand-900);
+  .editor-toolbar-main {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    gap: 8px;
+    min-width: 0;
+    flex-wrap: nowrap;
   }
 
-  :deep(.arco-resizebox-trigger-icon-wrapper) {
-    color: var(--main-font-color);
-    font-size: 18px;
-  }
-  .prom-form {
-    padding-left: 8px;
+  .editor-toolbar-main :deep(.prom-form .arco-form-item) {
+    margin-bottom: 0;
   }
 
-  .editor-resize-box {
-    background: var(--gpt-bg-panel);
-    overflow: visible;
+  .editor-toolbar-main :deep(.prom-form .arco-space) {
+    flex-wrap: nowrap;
   }
 
   .editor-resize-content {
@@ -601,60 +587,28 @@ a-modal(
       cursor: not-allowed;
     }
   }
-
-  :deep(.editor-header .arco-btn-size-small),
-  :deep(.query-select .arco-btn-size-small) {
-    height: 30px;
-    border-radius: var(--gpt-radius-sm);
-  }
-  :deep(.editor-header .arco-btn-primary) {
-    background: var(--gpt-brand-900);
-    border-color: var(--gpt-brand-900);
-    color: var(--gpt-text-inverse);
-  }
-  :deep(.editor-header .arco-btn-primary:hover) {
-    background: #5b456f;
-    border-color: #5b456f;
-  }
-  :deep(.editor-header .arco-btn-outline),
-  :deep(.query-select .arco-btn-outline) {
-    border-color: var(--gpt-border-strong);
-    color: var(--gpt-text-primary);
-    background: var(--gpt-bg-panel);
-  }
-  :deep(.editor-header .arco-btn-outline:hover),
-  :deep(.query-select .arco-btn-outline:hover) {
-    border-color: var(--gpt-brand-600);
-    color: var(--gpt-brand-900);
-    background: var(--gpt-nav-active-bg);
-  }
-
-  :deep(.query-select .arco-select-view) {
-    border-radius: var(--gpt-radius-sm);
-    border-color: var(--gpt-border-strong);
-  }
 </style>
 
 <style lang="less">
   .query-tabs {
     height: 100%;
+
     > .arco-tabs-nav {
       height: 0;
     }
+
     > .arco-tabs-content {
       padding-top: 0;
       height: 100%;
+
       > .arco-tabs-content-list {
         height: 100%;
+
         .arco-tabs-pane {
           height: 100%;
         }
       }
     }
-  }
-
-  .arco-btn-group .arco-btn-primary:not(:last-child) {
-    border-right: 1px solid rgba(255, 255, 255, 0.3);
   }
 
   .import-explain-modal {

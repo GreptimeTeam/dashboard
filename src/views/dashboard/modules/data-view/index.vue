@@ -11,7 +11,7 @@ a-tabs.panel-tabs(
   template(#extra)
     a-space.result-extra(style="margin-right: 12px" :size="8")
       a-tooltip(mini :content="props.isInFullSizeMode ? $t('dashboard.exitFullSize') : $t('dashboard.fullSizeMode')")
-        a-button(size="small" @click="toggleFullSize")
+        a-button(type="text" size="small" @click="toggleFullSize")
           template(#icon)
             svg.icon-16
               use(v-if="!props.isInFullSizeMode" href="#zoom")
@@ -74,8 +74,8 @@ a-tabs.panel-tabs(
             a-tooltip(mini position="tr" :content="$t('dashboard.rerunQuery')")
               a-button(
                 v-if="result.type === 'sql'"
-                type="secondary"
-                size="mini"
+                type="text"
+                size="small"
                 :loading="refreshingKeys.has(result.key)"
                 @click="refreshSingleResult(result)"
               )

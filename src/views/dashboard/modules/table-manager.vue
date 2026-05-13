@@ -18,7 +18,7 @@ a-card.table-manager.gpt-sidebar-header-card(:bordered="false")
           a-button(type="secondary" size="mini" @click="toggleSidebar")
             template(#icon)
               svg.icon-12.icon-color(:class="{ 'rotate-180': hideSidebar }")
-                use(href="#hide")
+                use(href="#shrink")
   a-spin(style="width: 100%" :loading="tablesLoading")
     .database-selector
       a-select(
@@ -423,6 +423,18 @@ a-card.table-manager.gpt-sidebar-header-card(:bordered="false")
     justify-content: space-between;
     height: 34px;
     border-bottom: 1px solid var(--gpt-border-subtle);
+
+    :deep(.arco-select-view-single) {
+      border: none;
+      background: transparent;
+
+      &:hover,
+      &:focus-within,
+      &.arco-select-view-focus {
+        border: none;
+        background: transparent;
+      }
+    }
 
     .database-label {
       margin-right: 8px;
