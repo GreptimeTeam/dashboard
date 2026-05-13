@@ -64,7 +64,7 @@
     "@perses-dev/plugin-system": "0.53.0-beta.4",
     "@perses-dev/prometheus-plugin": "0.57.0-beta.0",
     "@perses-dev/stat-chart-plugin": "0.12.0-beta.0",
-    "@perses-dev/table-plugin": "0.11.0-beta.0",
+    "@perses-dev/table-plugin": "0.11.2",
     "@perses-dev/timeseries-chart-plugin": "0.12.0-beta.0",
     "@perses-dev/trace-table-plugin": "0.10.0-beta.0",
     "@perses-dev/tracing-gantt-chart-plugin": "0.12.0-beta.0",
