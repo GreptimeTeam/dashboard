@@ -91,21 +91,20 @@ a-form.third-row-form(
   // Order By
   a-form-item(:label="t('sqlBuilder.orderBy')")
     a-space(size="small")
-      a-input-group.input-group
-        a-select(
-          v-model="form.orderByField"
-          style="width: auto"
-          allow-search
-          :placeholder="t('sqlBuilder.selectField')"
-          :trigger-props="{ autoFitPopupMinWidth: true }"
-          :options="fieldsOptions"
-        )
-        a-select(
-          v-model="form.orderBy"
-          style="width: 80px"
-          :placeholder="t('sqlBuilder.order')"
-          :options="orderOptions"
-        )
+      a-select(
+        v-model="form.orderByField"
+        style="width: auto"
+        allow-search
+        :placeholder="t('sqlBuilder.selectField')"
+        :trigger-props="{ autoFitPopupMinWidth: true }"
+        :options="fieldsOptions"
+      )
+      a-select(
+        v-model="form.orderBy"
+        style="width: 80px"
+        :placeholder="t('sqlBuilder.order')"
+        :options="orderOptions"
+      )
   // Limit
   a-form-item(:label="t('sqlBuilder.limit')")
     a-input-number(
@@ -130,7 +129,7 @@ a-form.third-row-form(
           @close="removeQuickFilter(quickFilter.name)"
         )
           span(:title="t('quickFilters.clickToApplyTitle')") {{ quickFilter.name }}
-        a-tag.quick-fields-save(type="text" style="cursor: pointer" @click="showSaveQuickFilter = true")
+        a-button.quick-fields-save(size="small" type="outline" @click="showSaveQuickFilter = true")
           template(#icon)
             icon-plus
           | {{ t('quickFilters.saveCurrentSearch') }}
@@ -669,6 +668,14 @@ a-modal(
   :deep(.arco-form-item-label-col) {
     padding-right: 8px;
   }
+
+  .sql-builder-form,
+  .second-row-form,
+  .third-row-form {
+    :deep(.arco-form-item-label) {
+      text-transform: uppercase;
+    }
+  }
   // First form-item in each row: fixed width 90px
   .sql-builder-form :deep(.arco-form-item:first-child .arco-form-item-label-col),
   .second-row-form :deep(.arco-form-item:first-child .arco-form-item-label-col),
@@ -710,10 +717,7 @@ a-modal(
   :deep(.arco-select-view-input) {
     width: 100px;
   }
-  :deep(.arco-btn-secondary[type='button']) {
-    color: var(--color-text-2);
-    background-color: var(--color-secondary);
-  }
+
   :deep(.arco-btn-text[type='button']) {
     color: var(--color-text-2);
   }
@@ -768,6 +772,11 @@ a-modal(
 
   .quick-filters-content {
     width: 100%;
+  }
+
+  .quick-fields-save {
+    border-style: dashed;
+    border-color: rgb(209, 213, 219);
   }
 
   // Resizable wrapper for input

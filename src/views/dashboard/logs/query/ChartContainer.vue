@@ -3,7 +3,7 @@ a-card(:bordered="false")
   template(#title)
     .chart-header
       a-dropdown(size="small" :popup-max-height="false" @select="select")
-        a-button(type="text" style="color: var(--main-font-color)")
+        a-button.chart-menu-trigger(type="text" size="small")
           | {{ menuStr }} &nbsp;
           icon-down
         template(#content)
@@ -19,19 +19,20 @@ a-card(:bordered="false")
           icon-right(v-else)
 
   template(v-if="chartExpanded")
-    CountChart(
-      v-if="currChart == 'count'"
-      ref="countChartRef"
-      :query-state="queryState"
-      @timeRangeUpdate="handleTimeRangeUpdate"
-    )
-    FunnelChart(
-      v-if="currChart == 'frequency'"
-      :key="frequencyField"
-      ref="funnelChartRef"
-      :column="frequencyField"
-      :query-state="queryState"
-    )
+    .chart-content
+      CountChart(
+        v-if="currChart == 'count'"
+        ref="countChartRef"
+        :query-state="queryState"
+        @timeRangeUpdate="handleTimeRangeUpdate"
+      )
+      FunnelChart(
+        v-if="currChart == 'frequency'"
+        :key="frequencyField"
+        ref="funnelChartRef"
+        :column="frequencyField"
+        :query-state="queryState"
+      )
 </template>
 
 <script setup name="ChartContainer" lang="ts">
@@ -131,9 +132,13 @@ a-card(:bordered="false")
   })
 </script>
 
-<style scoped lang="less">
-  :deep(.arco-btn) {
-    font-size: 15px;
-    padding: 0;
+<style lang="less" scoped>
+  .chart-content {
+    padding: 12px 16px 16px;
+  }
+
+  .chart-menu-trigger {
+    color: var(--main-font-color);
+    border: 1px solid rgb(209, 213, 219);
   }
 </style>

@@ -10,15 +10,11 @@
     flex-direction: column;
     overflow: hidden;
   }
-  .arco-table-container {
-  }
   // Content wrapper with padding and gap
   .content-wrapper {
     flex: 1;
-    padding: 0 8px 0 8px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
     overflow: hidden;
     min-height: 0; // Important for flexbox
   }
@@ -64,6 +60,7 @@
     min-height: 48px;
     display: flex;
     align-items: center;
+    border-bottom: 1px solid var(--gpt-border-default);
   }
 
   // Shared arco-card styling
@@ -93,18 +90,8 @@
         }
       }
     }
-
-    .arco-radio-button.arco-radio-checked {
-      color: var(--color-primary);
-    }
-
-    .arco-input-group > * {
-      border-radius: 0;
-    }
   }
-  .arco-radio-button.arco-radio-checked {
-    color: var(--color-primary);
-  }
+
   .arco-card .arco-card-header-title {
     font-weight: normal;
   }

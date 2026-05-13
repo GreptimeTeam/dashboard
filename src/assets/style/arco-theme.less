@@ -14,6 +14,8 @@
 @arcoblue-6: #473460;
 @gpt-color-white: #ffffff;
 @gpt-color-purple-bright: #722ed1;
+@gpt-color-button-border: rgb(55, 65, 81);
+@gpt-color-form-label: rgb(107, 114, 128);
 @gpt-size-navbar: 52px;
 @gpt-size-nav-item: 36px;
 @gpt-spacing-nav-gap: 4px;
@@ -29,12 +31,15 @@
 @color-primary-5: #5a4a70;
 @color-primary-6: #473460;
 
+@gpt-color-border-default: rgba(71, 52, 96, 0.09);
+@color-border: @gpt-color-border-default;
+
 @border-radius-small: 4px;
 @border-radius-medium: 6px;
 @border-radius-large: 8px;
 
 @size-mini: 20px;
-@size-small: 24px;
+@size-small: 28px;
 @btn-font-weight: 600;
 @btn-size-mini-height: @size-mini;
 @btn-size-small-height: @size-small;
@@ -45,9 +50,21 @@
 @btn-size-mini-radius: @border-radius-small;
 @btn-size-small-radius: @border-radius-small;
 
+@btn-primary-color-border: rgba(71, 52, 96, 0.25);
 @btn-secondary-color-bg: transparent;
 @btn-secondary-color-bg_hover: transparent;
+@btn-secondary-color-border: rgb(209, 213, 219);
+@btn-secondary-color-border_hover: @btn-secondary-color-border;
 @btn-secondary-color-text_hover: @gpt-color-purple-bright;
+@btn-outline-color-border: @gpt-color-button-border;
+@btn-dashed-color-border: @gpt-color-button-border;
+
+@form-color-text-label: @gpt-color-form-label;
+
+@input-color-bg: transparent;
+@input-color-border: var(--gpt-border-strong);
+@input-color-border_hover: var(--gpt-border-strong);
+@input-color-border_disabled: var(--gpt-border-subtle);
 
 @table-color-border: var(--gpt-border-subtle);
 @table-border-radius: @border-radius-small;

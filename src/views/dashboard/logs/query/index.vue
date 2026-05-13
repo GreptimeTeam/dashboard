@@ -52,6 +52,8 @@
           @update:sql-info="handleSqlInfoUpdate"
         )
 
+    .gpt-divider-band
+
     ChartContainer(
       ref="chartContainerRef"
       :columns="columns"
@@ -59,6 +61,8 @@
       :query-state="queryState"
       @timeRangeUpdate="handleTimeRangeUpdate"
     )
+
+    .gpt-divider-band
 
     a-card(:bordered="false")
       template(#title)
@@ -293,6 +297,7 @@
 
 <style lang="less">
   @import '@/assets/style/query-layout.less';
+
   .results-count {
     color: var(--color-text-3);
     font-size: 12px;

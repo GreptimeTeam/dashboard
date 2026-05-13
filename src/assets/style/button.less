@@ -2,15 +2,6 @@
   border-radius: 4px;
 }
 
-.arco-btn-primary[type='button'] {
-  color: var(--white-font-color);
-  background-color: var(--brand-color);
-}
-
-.arco-btn-primary[type='button']:hover {
-  background-color: var(--hover-brand-color);
-}
-
 .arco-btn-primary[type='button'].arco-btn-loading {
   background-color: var(--brand-color);
 }
@@ -46,7 +37,7 @@
 .arco-btn-outline[type='button'],
 .arco-btn-outline[type='submit'] {
   color: var(--main-font-color);
-  border: 1px solid var(--border-color);
+  border: 1px solid rgba(71, 52, 96, 0.25);
 }
 
 .arco-btn-outline:hover,
@@ -99,8 +90,25 @@
 }
 
 .arco-radio-group-button {
-  background-color: var(--grey-bg-color);
-  .arco-radio-button.arco-radio-checked {
-    color: var(--brand-color);
+  padding: 0;
+  background-color: #fff;
+  border: 1px solid rgba(71, 52, 96, 0.2);
+
+  .arco-radio-button {
+    margin: 0;
+    border-radius: 0;
   }
+
+  .arco-radio-button:first-of-type {
+    border-radius: 4px 0 0 4px;
+  }
+
+  .arco-radio-button:last-of-type {
+    border-radius: 0 4px 4px 0;
+  }
+}
+
+.arco-radio-button.arco-radio-checked {
+  color: #fff;
+  background-color: rgb(71, 52, 96);
 }

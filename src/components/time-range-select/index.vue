@@ -32,7 +32,7 @@ TimeSelect(
     }>(),
     {
       emptyStr: 'Any time',
-      buttonSize: 'medium',
+      buttonSize: 'small',
       showAnyTime: true, // Default to showing "Any time" option
       flexDirection: 'row-reverse',
     }

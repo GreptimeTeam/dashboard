@@ -5,28 +5,26 @@
   .content-wrapper.query-layout-cards
     a-card(:bordered="false")
       .toolbar
-        a-space
-          a-radio-group(v-model="editorType" type="button")
-            a-radio(value="builder") Builder
-            a-radio(value="text") Code
-          TimeRangeSelect(
-            ref="timeRangeSelectRef"
-            v-model:time-length="time"
-            v-model:time-range="rangeTime"
-            button-type="outline"
-          )
-          a-button(
-            type="primary"
-            size="small"
-            :loading="loading"
-            @click="handleQuery"
-          ) 
-            template(#icon)
-              icon-loading(v-if="loading" spin)
-              icon-play-arrow(v-else)
-            | {{ $t('dashboard.run') }}
-
-        a-space
+        a-radio-group(v-model="editorType" type="button")
+          a-radio(value="builder") {{ $t('logsQuery.builder') }}
+          a-radio(value="text") {{ $t('logsQuery.code') }}
+        TimeRangeSelect(
+          ref="timeRangeSelectRef"
+          v-model:time-length="time"
+          v-model:time-range="rangeTime"
+          button-type="outline"
+        )
+        a-button(
+          type="primary"
+          size="small"
+          :loading="loading"
+          @click="handleQuery"
+        )
+          template(#icon)
+            icon-loading(v-if="loading" spin)
+            icon-play-arrow(v-else)
+          | {{ $t('dashboard.run') }}
+        a-space(style="margin-left: auto")
           a-button(
             type="outline"
             size="small"
@@ -50,6 +48,8 @@
         )
         SqlTextEditor(v-else v-model="textEditor.textEditorState.sql" @update:sql-info="handleSqlInfoUpdate")
 
+    .gpt-divider-band
+
     a-card(v-if="queryState.sql || textEditor.textEditorState.sql" :bordered="false")
       template(#title)
         .chart-header
@@ -59,7 +59,11 @@
               icon-down(v-if="chartExpanded")
               icon-right(v-else)
       template(v-if="chartExpanded")
-        CountChart(ref="countChartRef" :query-state="queryState" @timeRangeUpdate="handleTimeRangeUpdate")
+        .chart-content
+          CountChart(ref="countChartRef" :query-state="queryState" @timeRangeUpdate="handleTimeRangeUpdate")
+
+    .gpt-divider-band
+
     TraceTable(
       :data="allResults"
       :columns="columns"
@@ -168,5 +172,7 @@
 <style lang="less">
   @import '@/assets/style/query-layout.less';
 
-  // No traces-specific styles needed - all moved to shared CSS
+  .chart-content {
+    padding: 12px 16px 16px;
+  }
 </style>

@@ -11,7 +11,9 @@
     :class="tableClassesDynamic"
   )
     template(#empty)
-      a-empty(description="No data")
+      a-empty.data-table-empty(description="No data")
+        template(#image)
+          img.data-table-empty-icon(alt="" :src="tableEmptyIcon")
     template(#loading)
       a-spin(dot)
 
@@ -124,6 +126,7 @@ a-dropdown#td-context(
   import { useDateTimeFormat } from '@/hooks'
   import { Message } from '@arco-design/web-vue'
   import i18n from '@/locale'
+  import tableEmptyIcon from '@/assets/images/table-empty.svg?url'
 
   defineOptions({
     inheritAttrs: false,
@@ -552,6 +555,16 @@ a-dropdown#td-context(
     display: flex;
     justify-content: center;
     align-items: center;
+  }
+
+  :deep(.data-table-empty .arco-empty-description) {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 14px;
+  }
+
+  .data-table-empty-icon {
+    width: 52px;
+    height: 52px;
   }
   // Context menu positioning
   #td-context {
