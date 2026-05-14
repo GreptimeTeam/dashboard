@@ -514,9 +514,6 @@ transform:
     overflow: hidden;
   }
 
-  :deep(.arco-radio-button.arco-radio-checked) {
-    color: var(--color-primary);
-  }
   .card-title-with-description {
     overflow: hidden;
 
