@@ -422,7 +422,7 @@ a-card.table-manager.gpt-sidebar-header-card(:bordered="false")
     align-items: center;
     justify-content: space-between;
     height: 34px;
-    border-bottom: 1px solid var(--gpt-border-subtle);
+    border-bottom: 1px solid var(--gpt-border-default);
 
     :deep(.arco-select-view-single) {
       border: none;
