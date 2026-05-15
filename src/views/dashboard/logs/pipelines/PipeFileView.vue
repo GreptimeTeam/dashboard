@@ -32,19 +32,13 @@ a-layout.full-height-layout.pipefile-view
       :model="currFile"
       :rules="rules"
     )
-      a-form-item(
+      a-form-item.pipeline-form-toolbar-field.pipeline-form-toolbar-field--name(
         v-if="isCreating"
         field="name"
         label="Pipeline name"
-        style="width: 200px; padding: 8px"
       )
         a-input(v-model="currFile.name" placeholder="Pipeline name")
-      a-form-item(
-        v-if="!isCreating"
-        field="version"
-        label="Version"
-        style="padding: 8px"
-      )
+      a-form-item.pipeline-form-toolbar-field(v-if="!isCreating" field="version" label="Version")
         a-space
           | {{ currFile.version }}
 
@@ -628,10 +622,18 @@ transform:
       font-size: 13px;
     }
   }
+  .pipeline-form-toolbar-field {
+    padding: var(--gpt-toolbar-padding);
+
+    &--name {
+      width: 200px;
+    }
+  }
+
   .light-editor-card :deep(.arco-card-header) {
     height: auto;
     min-height: 0;
-    padding: 7px 10px;
+    padding: var(--gpt-toolbar-padding);
     border-bottom: 1px solid var(--gpt-border-default);
     background: var(--gpt-bg-panel);
   }
@@ -679,7 +681,7 @@ transform:
     :deep(.arco-card-body) {
       display: flex;
       gap: 8px;
-      padding: 10px;
+      padding: var(--gpt-toolbar-padding);
     }
   }
 
@@ -695,7 +697,7 @@ transform:
   }
 
   .pipeline-content-item :deep(.arco-form-item-label-col) {
-    padding: 8px;
+    padding: var(--gpt-toolbar-padding);
     background: var(--gpt-bg-header);
   }
 

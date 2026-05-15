@@ -284,7 +284,7 @@
   }
 
   .content-wrapper {
-    padding: 16px 20px;
+    padding: var(--gpt-page-padding-y) var(--gpt-page-padding-x);
   }
 
   .flow-results-card {
@@ -296,7 +296,6 @@
 
     :deep(.arco-card-header) {
       min-height: 44px;
-      padding: 12px 16px;
       background: var(--gpt-bg-panel);
       border-bottom: 1px solid var(--gpt-border-default);
     }

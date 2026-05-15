@@ -173,6 +173,6 @@
   @import '@/assets/style/query-layout.less';
 
   .chart-content {
-    padding: 12px 16px 16px;
+    padding: var(--gpt-section-padding-y) var(--gpt-page-padding-x) var(--gpt-page-padding-x);
   }
 </style>

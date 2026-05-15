@@ -22,7 +22,7 @@
   // Toolbar styling (shared between logs and traces)
   .toolbar {
     flex-shrink: 0;
-    padding: 8px;
+    padding: var(--gpt-toolbar-padding);
     border-bottom: 1px solid var(--color-border);
     display: flex;
     justify-content: space-between;
@@ -33,7 +33,7 @@
   // SQL editor/builder container
   .sql-container {
     flex-shrink: 0;
-    padding: 12px 16px 4px;
+    padding: var(--gpt-section-padding-y) var(--gpt-page-padding-x) var(--gpt-section-padding-y);
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -50,7 +50,7 @@
 
   // Page header styling
   .page-header {
-    padding: 8px 12px;
+    padding: var(--gpt-page-header-padding);
     margin-bottom: 0;
     font-size: 15px;
     font-weight: 800;
@@ -71,7 +71,7 @@
 
       .arco-card-header {
         height: auto;
-        padding: 9px 10px;
+        padding: var(--gpt-toolbar-padding);
       }
 
       // Make the last card (results) expandable

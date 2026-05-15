@@ -425,7 +425,7 @@
   }
 
   .chart-toolbar {
-    padding: 12px;
+    padding: var(--gpt-toolbar-padding);
     background: var(--gpt-bg-header);
   }
 </style>

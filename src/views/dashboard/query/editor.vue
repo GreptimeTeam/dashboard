@@ -1,5 +1,5 @@
 <template lang="pug">
-a-card.editor-card(style="padding: 0 12px" :bordered="false")
+a-card.editor-card.editor-card--inset(:bordered="false")
   .editor-toolbar
     .editor-toolbar-main
       .sidebar-toggle-toolbar(v-if="hideSidebar")
@@ -551,6 +551,10 @@ a-modal(
 </script>
 
 <style lang="less" scoped>
+  .editor-card--inset {
+    padding: 0 var(--gpt-page-padding-x);
+  }
+
   .editor-toolbar {
     display: flex;
     align-items: center;
@@ -579,7 +583,7 @@ a-modal(
   .editor-resize-content {
     box-sizing: border-box;
     height: 100%;
-    padding: 0 12px 8px 12px;
+    padding: 0 var(--gpt-page-padding-x) var(--gpt-section-padding-y);
   }
 
   .explain-disabled {

@@ -434,7 +434,7 @@ a-layout.detail-layout.new-layout
   }
 
   .empty-state {
-    padding: 24px;
+    padding: var(--gpt-page-padding-y) var(--gpt-page-padding-x);
     max-width: 760px;
     margin: 0 auto;
     box-sizing: border-box;

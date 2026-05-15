@@ -303,14 +303,8 @@
     font-size: 12px;
     font-weight: normal;
   }
+
   .toolbar {
-    flex-shrink: 0;
-    padding: 8px;
-    border-bottom: 1px solid var(--color-border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    height: 50px;
     gap: 10px;
   }
 </style>

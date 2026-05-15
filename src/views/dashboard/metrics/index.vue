@@ -357,35 +357,6 @@ a-layout.new-layout
     overflow-y: auto;
   }
 
-  .query-layout {
-    padding: 0;
-
-    .page-header {
-      padding: 16px 24px 8px;
-      font-size: 20px;
-      font-weight: 600;
-      color: var(--color-text-primary);
-      border-bottom: 1px solid var(--color-border);
-      background: var(--color-bg-container);
-    }
-
-    .content-wrapper {
-      padding: 16px 24px;
-    }
-
-    .query-layout-cards {
-      .arco-card {
-        margin-bottom: 16px;
-        border: 1px solid var(--color-border);
-        border-radius: 8px;
-
-        &:last-child {
-          margin-bottom: 0;
-        }
-      }
-    }
-  }
-
   .section-title {
     background: var(--gpt-bg-header);
 
@@ -399,7 +370,7 @@ a-layout.new-layout
   }
 
   .query-section {
-    padding: 6px;
+    padding: var(--gpt-toolbar-padding);
     border-bottom: 1px solid var(--gpt-border-default);
   }
 

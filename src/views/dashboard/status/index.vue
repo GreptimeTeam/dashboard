@@ -112,7 +112,7 @@ a-layout.status-page.new-layout
 <style lang="less" scoped>
   .status-page {
     height: 100%;
-    padding: 16px;
+    padding: var(--gpt-page-padding-y) var(--gpt-page-padding-x);
     background: var(--gpt-bg-app);
   }
 
@@ -133,7 +133,7 @@ a-layout.status-page.new-layout
 
     :deep(.arco-card-header) {
       min-height: 47px;
-      padding: 12px 16px;
+      padding: var(--gpt-toolbar-padding);
       background: var(--gpt-bg-header);
       border-bottom: 1px solid var(--gpt-border-default);
     }

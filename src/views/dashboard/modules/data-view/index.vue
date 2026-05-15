@@ -244,7 +244,7 @@ a-tabs.panel-tabs(
     border-bottom: 1px solid var(--gpt-border-default);
     background: var(--gpt-table-toolbar-bg);
     min-height: 39px;
-    padding: 6px 12px 7px 12px;
+    padding: var(--gpt-toolbar-padding);
     gap: 8px;
 
     .query-display {

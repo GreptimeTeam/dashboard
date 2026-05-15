@@ -196,7 +196,7 @@
   }
 
   .page-header {
-    padding: 8px 12px;
+    padding: var(--gpt-page-header-padding);
     background: var(--card-bg-color);
     border-bottom: 1px solid var(--border-color);
     margin-bottom: 0;

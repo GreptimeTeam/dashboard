@@ -191,7 +191,7 @@ a-layout.new-layout
       > .arco-scrollbar {
         width: 100%;
         > .arco-scrollbar-track-direction-vertical {
-          padding-left: 15px;
+          padding-left: var(--gpt-page-padding-x);
         }
       }
       &:nth-of-type(2) {
@@ -222,7 +222,7 @@ a-layout.new-layout
         width: calc(100vw - var(--navbar-width-collapsed) - 16px);
         border: 1px solid var(--border-color);
         .arco-modal-body {
-          padding: 8px 16px;
+          padding: var(--gpt-toolbar-padding);
           height: calc(100vh - var(--footer-height) - 20px);
         }
       }

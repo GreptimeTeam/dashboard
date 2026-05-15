@@ -161,7 +161,7 @@
     align-items: center;
     justify-content: space-between;
     border-bottom: 1px solid var(--color-border-2);
-    padding: 4px 12px;
+    padding: var(--gpt-toolbar-padding);
     gap: 8px;
     min-height: 32px;
 
@@ -205,7 +205,7 @@
 
   .raw-json-card {
     height: 100%;
-    padding: 8px 12px;
+    padding: var(--gpt-toolbar-padding);
     overflow: auto;
 
     .raw-json {

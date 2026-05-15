@@ -79,7 +79,7 @@
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    padding: 8px 12px;
+    padding: var(--gpt-toolbar-padding);
     border-top: 1px solid var(--gpt-border-default);
     background: var(--gpt-bg-header);
     min-height: 40px;

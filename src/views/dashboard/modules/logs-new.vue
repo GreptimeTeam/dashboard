@@ -102,7 +102,7 @@ a-card.log(:bordered="false")
   }
 
   :deep(.arco-list-small .arco-list-content-wrapper .arco-list-content > .arco-list-item) {
-    padding: 6px 12px;
+    padding: var(--gpt-toolbar-padding);
   }
   :deep(.arco-list-item) {
     border-bottom: 1px solid var(--border-color);
