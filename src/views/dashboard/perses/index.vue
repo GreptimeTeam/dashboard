@@ -1,7 +1,7 @@
 <template lang="pug">
 a-layout.detail-layout.new-layout
   a-layout-sider(:resize-directions="['right']" :width="actualSidebarWidth")
-    a-card.perses-sidebar(:bordered="false")
+    a-card.gpt-page-sidebar(:bordered="false")
       template(#title)
         a-space.space-between(fill style="width: 100%")
           | {{ $t('menu.dashboard.perses') }}
@@ -21,29 +21,29 @@ a-layout.detail-layout.new-layout
             template(#image)
               svg.icon-32
                 use(href="#empty")
-          a-menu.gpt-sidebar-menu(v-model:selected-keys="selectedKeys")
+          a-menu.gpt-sidebar-menu(v-model:selected-keys="selectedKeys" mode="vertical" :collapsed="false")
             a-menu-item(
               v-for="item in filteredDashboards"
               :key="item.id"
               type="text"
               long
             )
-              .gpt-sidebar-menu-item
+              template(#icon)
                 svg.icon-15
                   use(href="#document")
-                span.gpt-sidebar-menu-text {{ item.name }}
-                a-tooltip.menu-item-delete.gpt-sidebar-menu-action(
-                  v-if="item.id === selectedId"
-                  mini
-                  position="left"
-                  content="Delete"
+              span.gpt-sidebar-menu-text {{ item.name }}
+              a-tooltip.menu-item-delete.gpt-sidebar-menu-action(
+                v-if="item.id === selectedId"
+                mini
+                position="left"
+                content="Delete"
+              )
+                a-popconfirm(
+                  content="Are you sure to delete this dashboard?"
+                  type="warning"
+                  @ok="handleDeleteDashboard(item)"
                 )
-                  a-popconfirm(
-                    content="Are you sure to delete this dashboard?"
-                    type="warning"
-                    @ok="handleDeleteDashboard(item)"
-                  )
-                    IconDelete.delete-btn
+                  IconDelete.delete-btn
   a-layout-content.layout-content
     a-card.perses-content(:bordered="false")
       template(v-if="selectedDashboard")
@@ -418,23 +418,10 @@ a-layout.detail-layout.new-layout
   .new-layout > .layout-content {
     overflow-y: hidden;
   }
-  .perses-sidebar {
-    height: 100%;
-  }
-
   .search-input {
     margin-bottom: 12px;
   }
 
-  .perses-sidebar :deep(.arco-card-body) {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .perses-sidebar :deep(.arco-scrollbar) {
-    flex: 1;
-    min-height: 0;
-  }
   .perses-content {
     height: 100%;
   }

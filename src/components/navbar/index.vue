@@ -163,7 +163,7 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
 
   :deep(.arco-menu-dark .arco-menu-item .arco-menu-icon),
   :deep(.arco-menu-dark .arco-menu-item svg) {
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 1);
   }
 
   :deep(.arco-menu-dark .arco-menu-item.arco-menu-selected .arco-menu-icon),

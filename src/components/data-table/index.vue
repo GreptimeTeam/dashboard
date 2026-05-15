@@ -20,7 +20,12 @@
     // Define columns using the straightforward approach
     template(#columns)
       template(v-for="col in processedColumns" :key="col.name")
-        a-table-column(:width="col.width" :data-index="col.name" :title="col.title || col.name")
+        a-table-column(
+          :width="col.width"
+          :ellipsis="true"
+          :data-index="col.name"
+          :title="col.title || col.name"
+        )
           // Custom title slot - allow parent components to override column titles
           template(#title)
             slot(
@@ -178,15 +183,7 @@ a-dropdown#td-context(
   const EXPANDABLE_TEXT_THRESHOLD = 100
   const attrs = useAttrs()
   const attrsRecord = attrs as Record<string, any>
-  const tablePassThroughProps = computed(() => {
-    return {
-      loading: false,
-      size: 'medium',
-      scroll: { y: '100%' },
-      ...attrsRecord,
-    }
-  })
-  const hasVirtualListProps = computed(() => !!tablePassThroughProps.value['virtual-list-props'])
+  const hasVirtualListProps = computed(() => !!attrsRecord['virtual-list-props'])
 
   const emit = defineEmits(['filterConditionAdd', 'rowSelect'])
 
@@ -222,7 +219,7 @@ a-dropdown#td-context(
 
   // Table container ref for width calculation and height calculation
   const tableContainer = ref<HTMLElement>()
-  const { width: tableWidth, height: tableHeight } = useElementSize(tableContainer)
+  const { width: tableWidth } = useElementSize(tableContainer)
 
   // Timestamp utilities
   function isTimeColumn(column: ColumnType) {
@@ -230,21 +227,38 @@ a-dropdown#td-context(
   }
 
   // Width calculation utilities
-  function findMaxLenCol(row: any) {
+  function getColumnWidth(column: ColumnType, sampleValue: unknown) {
+    if (props.tsColumn?.name === column.name || isTimeColumn(column)) {
+      return 230
+    }
+
+    const label = String(column.title || column.name)
+    let sample = ''
+    if (sampleValue !== undefined && sampleValue !== null) {
+      sample = typeof sampleValue === 'object' ? JSON.stringify(sampleValue) : String(sampleValue)
+    }
+
+    const charLen = Math.max(label.length, sample.length)
+    return Math.max(150, Math.min(600, charLen * 8 + 40))
+  }
+
+  function findMaxLenCol(row: TableData) {
     let max = 0
     let maxName = ''
-    Object.keys(row).forEach((k) => {
-      const val = row[k]
-      const strVal = typeof val === 'object' && val !== null ? JSON.stringify(val) : String(val)
-      if (strVal.length > max) {
-        max = strVal.length
-        maxName = k
+
+    Object.keys(row).forEach((key) => {
+      const value = row[key]
+      const strValue = typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value)
+      if (strValue.length > max) {
+        max = strValue.length
+        maxName = key
       }
     })
+
     return maxName
   }
 
-  function getWidth(currLen: number, totalLen: number, containerWidth: number) {
+  function getVirtualListColumnWidth(currLen: number, totalLen: number, containerWidth: number) {
     let width = (Math.floor((currLen / totalLen) * 1000) / 1000) * containerWidth
     width = Math.max(150, width)
     width = Math.min(600, width)
@@ -269,35 +283,30 @@ a-dropdown#td-context(
           ? tmpColumns.filter((c) => props.displayedColumns?.indexOf(c.name) > -1)
           : tmpColumns
 
-      // Only calculate widths when virtual list is active
+      const sampleRow = props.data[0]
+
       if (hasVirtualListProps.value) {
-        // Virtual list mode: calculate widths based on content
-        const row = props.data[0]
-        if (!row || !tableWidth.value) {
-          return tmpColumns.map((column) => ({
-            ...column,
-          }))
+        if (!sampleRow || !tableWidth.value) {
+          return tmpColumns.map((column) => ({ ...column }))
         }
 
-        const totalStrLen = Object.keys(row).reduce((acc, curr) => {
-          const val = row[curr]
-          const strVal = typeof val === 'object' && val !== null ? JSON.stringify(val) : String(val)
-          acc += strVal.length
-          return acc
+        const totalStrLen = Object.keys(sampleRow).reduce((acc, key) => {
+          const value = sampleRow[key]
+          const strValue = typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value)
+          return acc + strValue.length
         }, 0)
-
-        const maxLenName = findMaxLenCol(row)
+        const maxLenName = findMaxLenCol(sampleRow)
 
         return tmpColumns.map((column) => {
-          let width
+          let width: number | undefined
 
-          if (row && column.name !== maxLenName) {
+          if (column.name !== maxLenName) {
             if (column.name === props.tsColumn?.name) {
               width = 230
             } else {
-              const val = row[column.name]
-              const strVal = typeof val === 'object' && val !== null ? JSON.stringify(val) : String(val)
-              width = getWidth(strVal.length, totalStrLen, tableWidth.value)
+              const value = sampleRow[column.name]
+              const strValue = typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value)
+              width = getVirtualListColumnWidth(strValue.length, totalStrLen, tableWidth.value)
             }
           }
 
@@ -308,9 +317,9 @@ a-dropdown#td-context(
         })
       }
 
-      // Non-virtual list mode: let CSS handle all widths
       return tmpColumns.map((column) => ({
         ...column,
+        width: getColumnWidth(column, sampleRow?.[column.name]),
       }))
     }
 
@@ -330,6 +339,35 @@ a-dropdown#td-context(
       data_type: 'merged',
     } as ColumnType)
     return arr
+  })
+
+  const tableHorizontalScrollX = computed(() => {
+    if (mergeColumn.value || hasVirtualListProps.value) {
+      return undefined
+    }
+
+    const total = processedColumns.value.reduce((sum, column) => sum + Number(column.width || 0), 0)
+    return total > 0 ? total : undefined
+  })
+
+  const tablePassThroughProps = computed(() => {
+    const attrsScroll = attrsRecord.scroll
+    const extraScroll = typeof attrsScroll === 'object' && attrsScroll ? attrsScroll : {}
+    const scroll = {
+      y: '100%',
+      ...extraScroll,
+    }
+
+    if (scroll.x === undefined && tableHorizontalScrollX.value !== undefined) {
+      scroll.x = tableHorizontalScrollX.value
+    }
+
+    return {
+      loading: false,
+      size: 'medium',
+      ...attrsRecord,
+      scroll,
+    }
   })
 
   // Data fields for merged mode
@@ -670,11 +708,22 @@ a-dropdown#td-context(
   :deep(.arco-drawer) {
     border: 1px solid var(--color-neutral-3);
   }
-  .multiple_column {
+  .multiple_column.virtual-list-active {
     :deep(.arco-virtual-list > .arco-table-element) {
       width: 100%;
     }
+  }
+
+  .multiple_column:not(.virtual-list-active) {
+    :deep(.arco-virtual-list > .arco-table-element) {
+      width: max-content;
+      min-width: 100%;
+    }
+  }
+
+  .multiple_column {
     width: 100%;
+
     :deep(.arco-table-td-content) {
       overflow: hidden;
       text-overflow: ellipsis;
@@ -683,6 +732,14 @@ a-dropdown#td-context(
 
   :deep(.arco-table-th) {
     position: relative;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  :deep(.arco-table-th-item),
+  :deep(.arco-table-td-content) {
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   :deep(.arco-table-th:not(:last-child)::after) {
@@ -729,8 +786,10 @@ a-dropdown#td-context(
   .multiple_column {
     :deep(.arco-table-td-content) {
       position: relative;
-      width: auto;
+      width: 100%;
       padding-right: 15px;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .td-config-icon {
       position: absolute;

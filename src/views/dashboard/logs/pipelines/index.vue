@@ -2,7 +2,7 @@
 a-spin(style="width: 100%; height: 100%")
   a-layout.detail-layout.new-layout.logs-pipelines-layout
     a-layout-sider(:resize-directions="['right']" :width="228")
-      a-card.files-card(:bordered="false")
+      a-card.gpt-page-sidebar(:bordered="false")
         template(#title)
           a-space.space-between(fill style="width: 100%")
             | {{ $t('menu.dashboard.logPipeline') }}
@@ -18,17 +18,17 @@ a-spin(style="width: 100%; height: 100%")
             template(#image)
               svg.icon-32
                 use(href="#empty")
-          a-menu.gpt-sidebar-menu(v-model:selected-keys="selectedKeys")
+          a-menu.gpt-sidebar-menu(v-model:selected-keys="selectedKeys" mode="vertical" :collapsed="false")
             a-menu-item(
               v-for="file in pipelines"
               :key="file.name"
               type="text"
               long
             )
-              .gpt-sidebar-menu-item
+              template(#icon)
                 svg.icon-15
                   use(href="#document")
-                span.gpt-sidebar-menu-text {{ file.name }}.yaml
+              span.gpt-sidebar-menu-text {{ file.name }}.yaml
     a-layout-content.layout-content
       PipeFileView(
         :key="selectedKeys[0]"
@@ -93,19 +93,3 @@ a-spin(style="width: 100%; height: 100%")
     }
   })
 </script>
-
-<style lang="less" scoped>
-  :deep(.new-layout .arco-layout-sider .arco-card) {
-    height: auto;
-  }
-
-  .logs-pipelines-layout :deep(.arco-resizebox-trigger-vertical.arco-resizebox-direction-right) {
-    width: 1px;
-    background: var(--gpt-border-strong);
-
-    &::before,
-    &::after {
-      display: none;
-    }
-  }
-</style>

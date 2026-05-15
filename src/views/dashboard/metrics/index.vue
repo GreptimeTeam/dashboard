@@ -351,14 +351,6 @@ a-layout.new-layout
   :deep(.arco-layout-sider-light) {
     box-shadow: none !important;
   }
-  .new-layout {
-    height: calc(100vh - 29px);
-    background: var(--gpt-bg-app);
-
-    :deep(.arco-layout-sider) {
-      background: var(--gpt-bg-panel);
-    }
-  }
 
   .layout-content {
     background: var(--color-bg-container);

@@ -1,25 +1,22 @@
 <template lang="pug">
 a-layout.dashboard-two-column-layout.dashboard-right-fill-layout
   a-layout-sider(:resize-directions="['right']" :width="228" :class="hideSidebar ? 'hide-sider' : ''")
-    a-card.sidebar.gpt-sidebar-header-card.gpt-vertical-scrollbar(
-      :title="$t('menu.dashboard.ingest')"
-      :bordered="false"
-    )
-      a-menu(
-        mode="vertical"
-        :selected-keys="[activeTab]"
-        :collapsed="false"
-        :default-open-keys="['influxdb', 'log-ingestion']"
-      )
-        a-sub-menu(v-for="(item, index) in menu" :key="item.name")
-          template(#title)
-            svg.icon-15
-              use(:href="`#${item.meta.icon}`")
-            span {{ $t(item.meta.locale) }}
-          a-menu-item(v-for="child in item.children" :key="child.name" @click="menuClick(item.name, child.name)")
-            svg.icon
-              use(:href="`#${child.meta.icon}`")
-            span {{ $t(child.meta.locale) }}
+    a-card.gpt-page-sidebar(:title="$t('menu.dashboard.ingest')" :bordered="false")
+      a-scrollbar.gpt-vertical-scrollbar
+        a-menu.gpt-sidebar-menu(mode="vertical" :selected-keys="[activeTab]" :collapsed="false")
+          a-menu-item-group.gpt-sidebar-menu-category(v-for="item in menu" :key="item.name")
+            template(#title)
+              span.gpt-sidebar-menu-category-text {{ $t(item.meta.locale) }}
+            a-menu-item(
+              v-for="child in item.children"
+              :key="child.name"
+              long
+              @click="menuClick(item.name, child.name)"
+            )
+              template(#icon)
+                svg.icon
+                  use(:href="`#${child.meta.icon}`")
+              span.gpt-sidebar-menu-text {{ $t(child.meta.locale) }}
   a-layout-content.layout-content
     router-view(v-slot="{ Component }")
       keep-alive
@@ -34,11 +31,9 @@ a-layout.dashboard-two-column-layout.dashboard-right-fill-layout
   import { navbarSteps } from '../config'
 
   const router = useRouter()
-  const route = useRoute()
   const { menuTree } = useMenuTree()
   const { hideSidebar } = storeToRefs(useAppStore())
   const { activeTab } = storeToRefs(useIngestStore())
-  const { dataStatusMap } = storeToRefs(useUserStore())
 
   const menu = menuTree.value[0].children.filter((item: any) => item.name === 'ingest')[0].children
 
@@ -82,60 +77,3 @@ a-layout.dashboard-two-column-layout.dashboard-right-fill-layout
     }
   })
 </script>
-
-<style lang="less" scoped>
-  :deep(.arco-card.sidebar) {
-    .arco-menu {
-      .icon,
-      .icon-15 {
-        margin-right: 6px;
-      }
-      .arco-menu-inner {
-        padding: 0;
-        .arco-menu-inline-header {
-          display: flex;
-          align-items: center;
-          margin: 0;
-          padding: 0 15px;
-          font-size: 13px;
-          height: 30px;
-          line-height: 30px;
-          border-radius: 0;
-          .arco-menu-icon-suffix {
-            display: none;
-          }
-          &.arco-menu-selected {
-            color: var(--brand-color);
-            font-weight: 600;
-            .arco-icon {
-              color: var(--brand-color);
-            }
-          }
-        }
-        .arco-menu-item {
-          margin: 0;
-          padding-left: 35px;
-          height: 28px;
-          line-height: 28px;
-          font-size: 13px;
-          border-radius: 0;
-          &:hover {
-            background-color: var(--th-bg-color);
-          }
-          &.arco-menu-selected {
-            font-weight: 600;
-            background: var(--light-brand-color);
-            color: var(--brand-color);
-          }
-          .arco-menu-indent {
-            width: 0;
-          }
-          .arco-menu-item-inner {
-            display: inline-flex;
-            align-items: center;
-          }
-        }
-      }
-    }
-  }
-</style>

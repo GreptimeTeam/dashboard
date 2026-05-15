@@ -1,5 +1,5 @@
 <template lang="pug">
-a-card.metrics-sidebar.gpt-sidebar-header-card(:bordered="false")
+a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
   template(#title)
     a-space(:size="10")
       | Metrics
@@ -199,19 +199,6 @@ a-card.metrics-sidebar.gpt-sidebar-header-card(:bordered="false")
 </script>
 
 <style scoped lang="less">
-  .metrics-sidebar {
-    height: 100%;
-
-    :deep(.arco-card-body) {
-      padding: 0;
-    }
-
-    :deep(.arco-spin),
-    :deep(.arco-spin-children) {
-      height: 100%;
-    }
-  }
-
   .metric-search {
     display: flex;
     flex-direction: column;

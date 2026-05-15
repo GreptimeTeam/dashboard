@@ -28,6 +28,14 @@
     line-height: 36px;
   }
 
+  .arco-tree-node.arco-tree-node-is-leaf .arco-tree-node-switcher {
+    width: 0;
+    min-width: 0;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+  }
+
   .arco-tree-node[data-level='1'],
   .arco-tree-node[data-level='2'] {
     position: relative;
@@ -100,6 +108,12 @@
     }
   }
 
+  .arco-btn-text:hover,
+  .arco-btn-text[type='button']:hover,
+  .arco-btn-text[type='button'].arco-dropdown-open {
+    background-color: var(--gpt-nav-active-bg);
+  }
+
   .data-title {
     flex: 1;
     min-width: 0;
@@ -112,7 +126,7 @@
 
   .menu-button.arco-dropdown-open {
     display: flex;
-    background: var(--list-hover-color);
+    background: var(--gpt-nav-active-bg);
   }
 
   .arco-dropdown-open .icon-color {

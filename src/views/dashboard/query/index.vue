@@ -164,23 +164,9 @@ a-layout.new-layout
     box-shadow: none !important;
   }
   .new-layout {
-    background: var(--gpt-bg-app);
-    :deep(> .arco-resizebox > .arco-resizebox-trigger-vertical.arco-resizebox-direction-right) {
-      width: 1px;
-      background: var(--gpt-border-strong);
-    }
-
-    :deep(> .arco-resizebox > .arco-resizebox-trigger-vertical.arco-resizebox-direction-right::before),
-    :deep(> .arco-resizebox > .arco-resizebox-trigger-vertical.arco-resizebox-direction-right::after) {
-      display: none;
-    }
-
     :deep(> .arco-layout-content.layout-content.has-panel) {
       background: var(--gpt-bg-app);
       height: 100%;
-    }
-    :deep(.arco-layout-sider) {
-      background: var(--gpt-bg-panel);
     }
     :deep(.layout-space > .arco-space-item:first-of-type) {
       flex: 1;

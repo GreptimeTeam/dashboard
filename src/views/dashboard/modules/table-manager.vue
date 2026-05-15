@@ -1,5 +1,5 @@
 <template lang="pug">
-a-card.table-manager.gpt-sidebar-header-card(:bordered="false")
+a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
   template(#title)
     a-space(:size="10")
       | Tables
@@ -265,11 +265,9 @@ a-card.table-manager.gpt-sidebar-header-card(:bordered="false")
 
 <style scoped lang="less">
   .arco-card.table-manager {
-    background: var(--gpt-bg-panel);
     border-radius: 0;
     border-right: 1px solid var(--gpt-border-strong);
     padding: 0;
-    height: 100%;
 
     .count-and-time {
       width: 100%;
