@@ -278,7 +278,6 @@ a-drawer.settings-drawer(
     }
     .arco-link {
       margin-left: 2px;
-      color: var(--brand-color);
       font-size: 11px;
       padding: 0 2px;
       .arco-link-icon {

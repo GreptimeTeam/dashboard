@@ -456,13 +456,6 @@ a-layout.detail-layout.new-layout
     display: inline-block;
     margin-top: 12px;
     font-size: 12px;
-    color: var(--color-text-2);
-    text-decoration: none;
-  }
-
-  .learn-more:hover {
-    color: var(--color-text-1);
-    text-decoration: underline;
   }
 
   :deep(.delete-btn) {
