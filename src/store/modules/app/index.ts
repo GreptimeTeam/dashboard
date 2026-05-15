@@ -4,7 +4,7 @@ import { isTauri } from '@tauri-apps/api/core'
 import defaultSettings from '@/config/settings.json'
 import editorAPI from '@/api/editor'
 import type { Ref } from 'vue'
-import type { AppState, ConnectionConfig, StoredConfig, UiConfig } from './types'
+import type { AppState, ConnectionConfig, DbConnectionStatus, StoredConfig, UiConfig } from './types'
 
 const useAppStore = defineStore('app', () => {
   // Persistent storage — declared first so state refs can use stored values as defaults
@@ -58,6 +58,7 @@ const useAppStore = defineStore('app', () => {
   const globalSettings = ref(defaultSettings.globalSettings)
   const databaseList = ref<string[]>(defaultSettings.databaseList)
   const guideModalVisible = ref(defaultSettings.guideModalVisible)
+  const dbConnectionStatus = ref<DbConnectionStatus>('unknown')
 
   // Actions
   const stateRefs = {
@@ -181,7 +182,23 @@ const useAppStore = defineStore('app', () => {
   }
 
   const validateConnection = async () => {
-    await editorAPI.runSQL(`select 1`)
+    dbConnectionStatus.value = 'connecting'
+    try {
+      await editorAPI.runSQL(`select 1`)
+      dbConnectionStatus.value = 'connected'
+    } catch (error) {
+      dbConnectionStatus.value = 'disconnected'
+      throw error
+    }
+  }
+
+  const checkDbConnection = async (): Promise<boolean> => {
+    try {
+      await validateConnection()
+      return true
+    } catch {
+      return false
+    }
   }
 
   const openGlobalSettings = () => {
@@ -211,6 +228,7 @@ const useAppStore = defineStore('app', () => {
   const refreshDatabaseList = async (overrideHost?: string): Promise<boolean> => {
     const prevBaseURL = axios.defaults.baseURL
     if (overrideHost) axios.defaults.baseURL = overrideHost
+    dbConnectionStatus.value = 'connecting'
     try {
       const res: any = await editorAPI.getDatabases()
 
@@ -231,9 +249,11 @@ const useAppStore = defineStore('app', () => {
       keys.value = [database.value]
       saveConnectionConfig({ database: database.value })
 
+      dbConnectionStatus.value = 'connected'
       return true
     } catch (error) {
       databaseList.value = []
+      dbConnectionStatus.value = 'disconnected'
       openGlobalSettings()
       return false
     } finally {
@@ -274,11 +294,13 @@ const useAppStore = defineStore('app', () => {
     regionVendor,
     regionLocation,
     regionCountry,
+    dbConnectionStatus,
 
     // Actions
     applyUiConfig,
     ensureConnectionHost,
     validateAndSaveConnection,
+    checkDbConnection,
     openGlobalSettings,
     closeGlobalSettings,
     refreshDatabaseList,

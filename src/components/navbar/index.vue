@@ -35,7 +35,7 @@ a-layout.navbar
           a-button.menu-button(type="text")
             template(#icon)
               svg.icon
-                use(href="#Icon13")
+                use(href="#more")
           template(#content)
             a-doption(v-for="{ label, link } in dropDownLinks")
               a-link(target="_blank" :href="link")

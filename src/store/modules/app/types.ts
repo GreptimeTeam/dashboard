@@ -1,5 +1,7 @@
 import type { RouteRecordNormalized } from 'vue-router'
 
+export type DbConnectionStatus = 'unknown' | 'connecting' | 'connected' | 'disconnected'
+
 export interface ConnectionConfig {
   host: string
   database: string
