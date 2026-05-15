@@ -98,4 +98,11 @@ export default {
   'dashboard.perses.startCreate': 'Create dashboard',
   'dashboard.perses.learnMoreText': 'Learn more about Perses dashboards →',
   'dashboard.perses.learnMoreUrl': 'https://perses.dev/perses/docs/api/dashboard/',
+  'status.buildInformation': 'Build Information',
+  'status.version': 'Version',
+  'status.commit': 'Commit',
+  'status.branch': 'Branch',
+  'status.rustVersion': 'Rust Version',
+  'status.hostname': 'Hostname',
+  'status.unsupported': 'Status is not supported until GreptimeDB v0.3.1',
 }

@@ -96,4 +96,11 @@ export default {
   'dashboard.perses.startCreate': '创建仪表盘',
   'dashboard.perses.learnMoreText': '了解更多 Perses 仪表盘 →',
   'dashboard.perses.learnMoreUrl': 'https://perses.dev/perses/docs/api/dashboard/',
+  'status.buildInformation': '构建信息',
+  'status.version': '版本',
+  'status.commit': '提交',
+  'status.branch': '分支',
+  'status.rustVersion': 'Rust 版本',
+  'status.hostname': '主机名',
+  'status.unsupported': 'GreptimeDB v0.3.1 之前不支持状态接口',
 }
