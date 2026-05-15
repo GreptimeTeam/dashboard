@@ -60,6 +60,20 @@
   .cm-activeLineGutter {
     background: var(--gpt-bg-code-line);
   }
+
+  .cm-cursor,
+  .cm-dropCursor {
+    border-left-color: #fff !important;
+  }
+
+  .cm-content {
+    caret-color: #fff;
+  }
+
+  &.cm-focused .cm-selectionBackground,
+  & .cm-selectionBackground {
+    background: rgba(139, 123, 168, 0.35) !important;
+  }
 }
 
 .gpt-square-editor {
@@ -178,6 +192,18 @@
   .cm-editor {
     border: 1px solid var(--color-border);
     border-radius: 2px;
+  }
+
+  &.gpt-dark-editor .cm-editor,
+  &.gpt-dark-editor .ͼ1.cm-editor {
+    background: var(--gpt-bg-code);
+    color: #ffffff;
+    border: 1px solid rgba(71, 52, 96, 0.2);
+  }
+
+  &.gpt-dark-editor.gpt-square-editor .cm-editor,
+  &.gpt-dark-editor.gpt-square-editor .ͼ1.cm-editor {
+    border-radius: 0;
   }
 }
 
