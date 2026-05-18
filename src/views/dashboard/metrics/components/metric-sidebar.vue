@@ -33,7 +33,7 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
     )
       template(#icon="node")
         a-tooltip(v-if="getNodeIcon(node.node)" :content="node.node.type?.toUpperCase()")
-          svg.icon
+          svg.icon.metric-tree-icon(:class="`metric-tree-icon--${node.node.type}`")
             use(:href="getNodeIcon(node.node)")
       template(#switcher-icon="nodeData")
         svg.icon-11.icon-color(v-if="!nodeData.isLeaf")
@@ -178,7 +178,6 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
   const getNodeIcon = (node: MetricTreeNode) => {
     if (node.type === 'metric') return '#metric'
     if (node.type === 'label') return '#primary-key'
-    if (node.type === 'value') return '#value'
     return ''
   }
 
@@ -238,5 +237,12 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
     align-items: center;
     justify-content: center;
     height: calc(100% - 68px);
+  }
+
+  :deep(.metrics-tree) {
+    .metric-tree-icon--metric {
+      color: var(--gpt-brand-300);
+      fill: currentColor;
+    }
   }
 </style>

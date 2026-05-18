@@ -13,7 +13,7 @@ a-tabs.panel-tabs(
       a-tooltip(mini :content="props.isInFullSizeMode ? $t('dashboard.exitFullSize') : $t('dashboard.fullSizeMode')")
         a-button(type="text" size="small" @click="toggleFullSize")
           template(#icon)
-            svg.icon-16
+            svg.icon
               use(v-if="!props.isInFullSizeMode" href="#zoom")
               use(v-else href="#zoom-out")
       a-popconfirm(

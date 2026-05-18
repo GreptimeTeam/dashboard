@@ -28,6 +28,10 @@
     line-height: 36px;
   }
 
+  .arco-tree-node-indent-block {
+    margin-right: 0;
+  }
+
   .arco-tree-node.arco-tree-node-is-leaf .arco-tree-node-switcher {
     width: 0;
     min-width: 0;
@@ -47,7 +51,7 @@
     position: absolute;
     top: 0;
     bottom: 0;
-    left: 12px;
+    left: 7px;
     width: 1px;
     background: var(--gpt-border-strong);
   }
@@ -131,6 +135,12 @@
 
   .arco-dropdown-open .icon-color {
     color: var(--brand-color);
+  }
+}
+
+.metrics-tree {
+  .arco-tree-node-indent-block {
+    width: 17px;
   }
 }
 
