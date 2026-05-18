@@ -34,11 +34,11 @@ a-layout.navbar
         a-dropdown.menu-dropdown(trigger="hover" position="right" :popup-max-height="false")
           a-button.menu-button(type="text")
             template(#icon)
-              svg.icon
-                use(href="#more")
+              svg.icon-16
+                use(href="#Icon13")
           template(#content)
             a-doption(v-for="{ label, link } in dropDownLinks")
-              a-link(target="_blank" :href="link")
+              a-link.navbar-dropdown-link(target="_blank" :href="link")
                 | {{ label }}
             a-doption.news(@click="showNews")
               | {{ $t('menu.news') }}
@@ -195,18 +195,12 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
     gap: var(--gpt-radius-sm);
     align-items: center;
     .arco-btn-text[type='button'] {
-      color: var(--gpt-text-inverse-muted);
+      color: #fff;
     }
     .arco-btn-text[type='button']:hover,
     .arco-btn-text.hover,
     .arco-btn-text.arco-dropdown-open {
       background: var(--gpt-nav-active-bg);
-      :deep(.arco-btn-icon) {
-        color: var(--gpt-brand-300);
-      }
-    }
-    :deep(.arco-btn-icon) {
-      color: rgba(255, 255, 255, 0.5);
     }
 
     li {
@@ -219,6 +213,18 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
       width: calc(var(--gpt-size-navbar) - var(--gpt-radius-lg) * 2);
       border-top: 1px solid var(--gpt-border-inverse-subtle);
       margin: var(--gpt-radius-sm) 0;
+    }
+  }
+</style>
+
+<style lang="less">
+  a.arco-link.navbar-dropdown-link:not(.arco-btn):not(.arco-menu-item):not(.arco-menu-inline-header) {
+    color: var(--small-font-color);
+
+    &:hover {
+      color: var(--small-font-color);
+      text-decoration: none;
+      background-color: var(--th-bg-color);
     }
   }
 </style>
