@@ -675,7 +675,9 @@ transform:
     padding: 0;
     background: var(--gpt-bg-header);
     border-top: 0;
+    border-right: 0;
     border-bottom: 1px solid var(--gpt-border-default);
+    border-left: 0;
     border-radius: 0;
 
     :deep(.arco-card-body) {
@@ -699,6 +701,7 @@ transform:
   .pipeline-content-item :deep(.arco-form-item-label-col) {
     padding: var(--gpt-toolbar-padding);
     background: var(--gpt-bg-header);
+    border-top: 1px solid var(--gpt-border-default);
   }
 
   .pipeline-content-item :deep(.arco-form-item-wrapper-col) {
