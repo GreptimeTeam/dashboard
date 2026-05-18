@@ -76,26 +76,44 @@
   margin-right: 10px;
 }
 
+/* small：Button / Select / Radio-group 统一 26px（见 global --gpt-control-height-sm） */
+.arco-btn-size-small {
+  height: var(--gpt-control-height-sm);
+}
+
+.arco-btn-size-small.arco-btn-only-icon,
+.arco-btn-size-small.arco-btn-shape-circle {
+  width: var(--gpt-control-height-sm);
+  height: var(--gpt-control-height-sm);
+}
+
+.arco-radio-group-size-small.arco-radio-group-button,
+.arco-radio-group-size-small .arco-radio-button {
+  line-height: var(--gpt-control-height-sm);
+}
+
 .arco-radio-group-button {
   padding: 0;
-  background-color: #fff;
-  border: 1px solid rgba(71, 52, 96, 0.2);
+  background-color: var(--gpt-bg-panel);
+  border: 1px solid var(--gpt-border-strong);
 
   .arco-radio-button {
     margin: 0;
     border-radius: 0;
+    color: var(--gpt-text-secondary);
   }
 
   .arco-radio-button:first-of-type {
-    border-radius: 4px 0 0 4px;
+    border-radius: var(--gpt-radius-sm) 0 0 var(--gpt-radius-sm);
   }
 
   .arco-radio-button:last-of-type {
-    border-radius: 0 4px 4px 0;
+    border-radius: 0 var(--gpt-radius-sm) var(--gpt-radius-sm) 0;
   }
 }
 
 .arco-radio-button.arco-radio-checked {
-  color: #fff;
-  background-color: rgb(71, 52, 96);
+  color: var(--gpt-text-inverse);
+  background-color: var(--gpt-brand-900);
+  border-color: var(--gpt-brand-900);
 }

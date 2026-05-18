@@ -73,17 +73,12 @@
 }
 
 .view-switch {
-  display: flex;
-  align-items: center;
+  display: inline-flex;
   flex-shrink: 0;
-  gap: 0;
-  overflow: hidden;
-  border: 1px solid var(--gpt-border-strong);
-  border-radius: var(--gpt-radius-sm);
 
-  .arco-btn {
+  /* outline + 直连子按钮：使用 Arco btn-group 原生叠边与圆角 */
+  .arco-btn-group .arco-btn-outline {
     color: var(--gpt-text-secondary);
-    border-radius: 0;
 
     svg {
       color: currentColor;
@@ -91,13 +86,16 @@
     }
 
     &:hover {
+      z-index: 2;
       color: var(--gpt-text-secondary);
     }
 
     &.active,
     &.active:hover {
+      z-index: 2;
       color: var(--gpt-text-inverse);
       background: var(--gpt-brand-900);
+      border-color: var(--gpt-brand-900);
     }
   }
 }

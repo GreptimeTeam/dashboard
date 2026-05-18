@@ -1,13 +1,20 @@
+.arco-select-view-hover() {
+  &:hover:not(.arco-select-view-disabled) {
+    background-color: var(--grey-bg-color);
+  }
+}
+
+.arco-select-view-single.arco-select-view-size-small .arco-select-view-value {
+  min-height: var(--gpt-control-height-sm);
+}
+
 .arco-select-view-single {
   padding-right: 8px;
   padding-left: 8px;
   background: transparent;
   border-color: var(--gpt-border-strong);
   border-radius: 4px;
-}
-
-.arco-select-view-single:hover {
-  background-color: var(--grey-bg-color);
+  .arco-select-view-hover();
 }
 
 .arco-select-view-single:focus-within,
@@ -22,6 +29,7 @@
   background: var(--grey-bg-color);
   border: 1px solid transparent;
   border-radius: 4px;
+  .arco-select-view-hover();
 
   .arco-select-view-inner .arco-select-view-tag {
     background: var(--grey-bg-color);
@@ -30,14 +38,18 @@
   }
 }
 
-.arco-select-view-multiple:hover {
-  background-color: var(--grey-bg-color);
-}
-
 .arco-select-view-multiple:focus-within,
 .arco-select-view-multiple.arco-select-view-focus {
   background-color: transparent;
   border-color: var(--hover-brand-color);
+}
+
+/* 工具栏内 select（如 Ingest precision）与页面 select 同一套 hover */
+.gpt-content-toolbar {
+  .arco-select-view-single,
+  .arco-select-view-multiple {
+    .arco-select-view-hover();
+  }
 }
 
 .query-select {

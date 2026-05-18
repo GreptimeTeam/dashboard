@@ -2,26 +2,20 @@
 .chart-controls
   .highlight-controls
     span.control-label Highlight
-    a-radio-group(
-      v-model="localHighlightType"
-      type="button"
-      size="mini"
-      :id="`${inputPrefix}-highlight`"
-    )
+    a-radio-group(v-model="localHighlightType" type="button" :id="`${inputPrefix}-highlight`")
       a-radio(value="NONE") None
       a-radio(value="ROWS") Rows
       a-radio(value="DURATION") Duration
-  a-select(
+  a-select.metric-select(
     v-model="localSelectedMetric"
-    size="mini"
-    style="width: fit-content; margin-left: 16px; margin-right: 8px"
+    size="small"
     placeholder="Select Metric"
     allow-clear
     :id="`${inputPrefix}-metric`"
     :trigger-props="{ autoFitPopupMinWidth: true }"
   )
     a-option(v-for="metric in availableMetrics" :key="metric.value" :value="metric.value") {{ metric.label }}
-  a-button(type="outline" size="mini" @click="onToggleMetricsExpanded")
+  a-button(type="outline" size="small" @click="onToggleMetricsExpanded")
     template(#icon)
       icon-expand(v-if="!metricsExpanded")
       icon-shrink(v-else)
@@ -82,23 +76,24 @@
   .chart-controls {
     display: flex;
     align-items: center;
-    padding: 8px;
+    gap: 16px;
 
     .highlight-controls {
       display: flex;
       align-items: center;
       gap: 8px;
       margin-left: auto;
-      margin-right: 16px;
-
-      .control-label {
-        font-size: 13px;
-        color: var(--small-font-color);
-      }
     }
+  }
 
-    .flex-spacer {
-      flex: 1;
-    }
+  .control-label {
+    flex-shrink: 0;
+    font-size: 13px;
+    color: var(--gpt-text-secondary);
+  }
+
+  .metric-select {
+    width: fit-content;
+    flex-shrink: 0;
   }
 </style>

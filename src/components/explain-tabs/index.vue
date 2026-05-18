@@ -2,28 +2,29 @@
 .explain-container
   .explain-toolbar
     .view-switch
-      a-tooltip(mini position="bl" :content="$t('dashboard.table')")
+      a-button-group
         a-button(
           size="small"
-          type="text"
+          type="outline"
+          :title="$t('dashboard.table')"
           :class="{ active: activeView === 'table' }"
           @click="activeView = 'table'"
         )
           svg.icon-16
             use(href="#tableview")
-      a-tooltip(mini position="bl" :content="$t('dashboard.chart')")
         a-button(
           size="small"
-          type="text"
+          type="outline"
+          :title="$t('dashboard.chart')"
           :class="{ active: activeView === 'chart' }"
           @click="activeView = 'chart'"
         )
           svg.icon-16
             use(href="#chart")
-      a-tooltip(mini position="bl" :content="$t('dashboard.raw')")
         a-button(
           size="small"
-          type="text"
+          type="outline"
+          :title="$t('dashboard.raw')"
           :class="{ active: activeView === 'raw' }"
           @click="activeView = 'raw'"
         )
@@ -182,11 +183,12 @@
         white-space: nowrap;
 
         code {
-          color: var(--small-font-color);
-          background: var(--color-neutral-2);
-          border-radius: 2px;
+          color: var(--gpt-brand-700);
+          background: transparent;
+          border-radius: 0;
           padding: 4px 8px;
           font-size: 11px;
+          font-family: var(--font-mono);
         }
       }
     }
@@ -196,6 +198,11 @@
     flex: 1;
     min-height: 0;
     overflow: hidden;
+    margin: var(--gpt-page-padding-x) var(--gpt-page-padding-y);
+    border: 1px solid var(--gpt-border-default);
+    border-radius: var(--gpt-radius-md);
+    background: var(--gpt-bg-panel);
+    box-shadow: 0 1px 4px rgba(71, 52, 96, 0.06);
 
     > :first-child {
       height: 100%;
@@ -207,6 +214,7 @@
     height: 100%;
     padding: var(--gpt-toolbar-padding);
     overflow: auto;
+    background: var(--gpt-bg-panel);
 
     .raw-json {
       font-size: 12px;

@@ -73,7 +73,7 @@ a-card.editor-card.editor-card--inset(:bordered="false")
         position="right"
         :content="$t('dashboard.timeAssistance')"
       )
-        a-button(type="secondary" @click="openTimeAssistance")
+        a-button(type="outline" @click="openTimeAssistance")
           template(#icon)
             svg.icon-18
               use(href="#time-index")

@@ -533,8 +533,9 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     margin: 16px;
     overflow: hidden;
     padding: 16px 16px;
-    border-radius: 6px;
-    box-shadow: 0 4px 10px 0 var(--border-color);
+    border: 1px solid var(--gpt-border-default);
+    border-radius: var(--gpt-radius-md);
+    background: var(--gpt-bg-panel);
     width: fit-content;
     max-width: 100%;
   }

@@ -47,7 +47,6 @@ a-space.top-bar.gpt-content-toolbar
     }
     :deep(.arco-select-view-single) {
       width: 130px;
-      background: transparent;
       border-color: var(--border-color);
     }
   }

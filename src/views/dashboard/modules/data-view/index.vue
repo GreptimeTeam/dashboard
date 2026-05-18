@@ -37,24 +37,21 @@ a-tabs.panel-tabs(
     .result-container
       .result-toolbar(v-if="result.query")
         .view-switch
-          a-tooltip(mini position="bl" :content="$t('dashboard.table')")
+          a-button-group
             a-button(
               size="small"
-              type="text"
+              type="outline"
+              :title="$t('dashboard.table')"
               :class="{ active: getResultView(result.key) === 'table' }"
               @click="setResultView(result.key, 'table')"
             )
               svg.icon-16
                 use(href="#tableview")
-          a-tooltip(
-            v-if="useDataChart(result).hasChart.value"
-            mini
-            position="bl"
-            :content="$t('dashboard.chart')"
-          )
             a-button(
+              v-if="useDataChart(result).hasChart.value"
               size="small"
-              type="text"
+              type="outline"
+              :title="$t('dashboard.chart')"
               :class="{ active: getResultView(result.key) === 'chart' }"
               @click="setResultView(result.key, 'chart')"
             )
