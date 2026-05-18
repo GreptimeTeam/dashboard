@@ -79,6 +79,16 @@ a-tabs.panel-tabs(
                 template(#icon)
                   svg.icon-12
                     use(href="#refresh")
+            a-tooltip(mini position="tr" :content="$t('dashboard.exportCSV')")
+              a-button(
+                type="text"
+                size="small"
+                :loading="exportingKeys.has(result.key)"
+                @click="exportResultCsv(result)"
+              )
+                template(#icon)
+                  svg.icon-12
+                    use(href="#derive14")
             a-checkbox(v-if="getResultView(result.key) === 'table'" v-model="wrapLines" size="small")
               | {{ $t('dashboard.wrapLines') }}
 
@@ -102,11 +112,14 @@ a-tabs.panel-tabs(
 </template>
 
 <script lang="ts" name="DataView" setup>
+  import { Message } from '@arco-design/web-vue'
+  import fileDownload from 'js-file-download'
   import useDataChart from '@/hooks/data-chart'
-  import type { ResultType } from '@/store/modules/code-run/types'
+  import type { PromForm, ResultType } from '@/store/modules/code-run/types'
   import { normalizeRecordsToTableModel } from '@/utils/table-normalizer'
   import type { NormalizedTableModel } from '@/utils/table-normalizer'
   import ExplainTabs from '@/components/explain-tabs/index.vue'
+  import { runWithFormat } from '@/services/code-run'
   import { useQuerySession } from '@/views/dashboard/query/use-query-session'
 
   const props = defineProps<{
@@ -119,6 +132,7 @@ a-tabs.panel-tabs(
   const activeTabKey = ref<string | number>()
   const startKey = ref<number>((session.results.value[0]?.key as number) || 0)
   const refreshingKeys = ref(new Set<string | number>())
+  const exportingKeys = ref(new Set<string | number>())
   const resultViewMap = ref<Record<string | number, 'table' | 'chart'>>({})
   const wrapLines = ref(false)
   // Add a method to select specific tab
@@ -173,6 +187,22 @@ a-tabs.panel-tabs(
       console.error(error)
     } finally {
       refreshingKeys.value.delete(result.key)
+    }
+  }
+
+  const exportResultCsv = async (result: ResultType) => {
+    if (!result.query?.trim()) return
+
+    exportingKeys.value.add(result.key)
+    try {
+      const res = await runWithFormat(result.query, result.type, {} as PromForm, 'csvWithNames')
+      fileDownload(res as unknown as string, `export_${result.type}_${result.key}_greptimedb.csv`)
+      Message.success('Exported successfully')
+    } catch (error) {
+      console.error(error)
+      Message.error('Failed to export CSV')
+    } finally {
+      exportingKeys.value.delete(result.key)
     }
   }
 

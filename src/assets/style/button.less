@@ -76,6 +76,15 @@
   margin-right: 10px;
 }
 
+/* medium only-icon：Arco 默认固定宽高；outline/dashed 保留横向 padding、宽度自适应 */
+.arco-btn-size-medium.arco-btn-only-icon.arco-btn-outline,
+.arco-btn-size-medium.arco-btn-only-icon.arco-btn-dashed {
+  width: auto;
+  min-width: 0;
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
 /* small：Button / Select / Radio-group 统一 26px（见 global --gpt-control-height-sm） */
 .arco-btn-size-small {
   height: var(--gpt-control-height-sm);

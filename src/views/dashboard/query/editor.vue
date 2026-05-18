@@ -8,10 +8,9 @@ a-card.editor-card.editor-card--inset(:bordered="false")
             template(#icon)
               svg.icon-15
                 use(href="#expand")
-      a-dropdown-button(
+      a-button(
         type="primary"
-        position="bl"
-        :disabled="isButtonDisabled || explainQueryRunning"
+        :disabled="isButtonDisabled || explainQueryRunning || secondaryCodeRunning"
         @click="runPartQuery()"
       )
         a-popover(position="bl" content-class="code-tooltip" :content="currentStatement")
@@ -19,16 +18,7 @@ a-card.editor-card.editor-card--inset(:bordered="false")
             icon-loading(v-if="secondaryCodeRunning" spin)
             icon-play-arrow(v-else)
             div {{ $t('dashboard.runQuery') + (queryType === 'sql' && currentQueryNumber ? ' #' + currentQueryNumber : '') }}
-            icon-close-circle-fill.icon-16(v-if="secondaryCodeRunning") 
-        template(#icon)
-          icon-down
-        template(#content)
-          a-doption(:disabled="secondaryCodeRunning" @click="exportCsv")
-            template(#icon)
-              svg.icon
-                use(href="#export")
-            a-popover(position="rt" content-class="code-tooltip" :content="currentStatement")
-              span {{ $t('dashboard.exportCSV') }}
+            icon-close-circle-fill.icon-16(v-if="secondaryCodeRunning")
       a-dropdown-button(
         type="outline"
         position="bl"
@@ -67,17 +57,6 @@ a-card.editor-card.editor-card--inset(:bordered="false")
             icon-play-arrow(v-else)
             | {{ $t('dashboard.runAll') }}
             icon-close-circle-fill.icon-16(v-if="primaryCodeRunning")
-      a-tooltip(
-        v-if="queryType === 'sql'"
-        mini
-        position="right"
-        :content="$t('dashboard.timeAssistance')"
-      )
-        a-button(type="outline" @click="openTimeAssistance")
-          template(#icon)
-            svg.icon-18
-              use(href="#time-index")
-      TimeAssistance(v-if="queryType === 'sql'" ref="tsRef" :cm="currentView")
       a-form.prom-form(layout="inline" v-show="queryType === 'promql'" :model="promForm")
         a-space(:size="10")
           a-form-item(:hide-label="true")
@@ -113,19 +92,29 @@ a-card.editor-card.editor-card--inset(:bordered="false")
                         span.ml-2 {{ $t('dashboard.examples') }}
                         a-typography-text(v-for="item of durationExamples" :key="item" code) {{ item }}
     .query-select
-      a-space(size="medium")
-        a-tooltip(mini :content="$t('dashboard.format')")
-          a-button(type="outline" :disabled="isButtonDisabled" @click="formatSql()")
-            template(#icon)
-              svg.icon-18
-                use(href="#code")
-        a-tooltip(mini :content="$t('dashboard.clearCode')")
-          a-button(type="outline" :disabled="isButtonDisabled" @click="clearCode")
-            template(#icon)
-              svg.icon-16
-                use(href="#clear")
-        a-select(v-model="queryType" :trigger-props="{ 'content-class': 'query-select' }")
-          a-option(v-for="query of queryOptions" :="query")
+      a-tooltip(
+        v-if="queryType === 'sql'"
+        mini
+        position="left"
+        :content="$t('dashboard.timeAssistance')"
+      )
+        a-button(type="outline" @click="openTimeAssistance")
+          template(#icon)
+            svg.icon-18
+              use(href="#time-index")
+      TimeAssistance(v-if="queryType === 'sql'" ref="tsRef" :cm="currentView")
+      a-tooltip(mini :content="$t('dashboard.format')")
+        a-button(type="outline" :disabled="isButtonDisabled" @click="formatSql()")
+          template(#icon)
+            svg.icon-18
+              use(href="#code")
+      a-tooltip(mini :content="$t('dashboard.clearCode')")
+        a-button(type="outline" :disabled="isButtonDisabled" @click="clearCode")
+          template(#icon)
+            svg.icon-16
+              use(href="#clear")
+      a-select(v-model="queryType" :trigger-props="{ 'content-class': 'query-select' }")
+        a-option(v-for="query of queryOptions" :="query")
 a-resize-box.editor-resize-box.editor-card(:directions="['bottom']" :style="{ height: '266px' }")
   .editor-resize-content
     a-tabs.query-tabs(:default-active-key="'sql'" :active-key="queryType")
@@ -181,7 +170,6 @@ a-modal(
   import { useStorage } from '@vueuse/core'
   import { sqlFormatter, parseSqlStatements, findStatementAtPosition, promqlFormatter } from '@/utils/sql'
   import { Message } from '@arco-design/web-vue'
-  import fileDownload from 'js-file-download'
   import { getExplainResultKeyCount } from '@/services/code-run'
   import { useQuerySession } from './use-query-session'
 
@@ -227,7 +215,7 @@ a-modal(
     step: '30s',
     range: [dayjs().subtract(5, 'minute').unix().toString(), dayjs().unix().toString()],
   })
-  const { runQuery, explainQuery, exportWithFormat } = useQueryCode()
+  const { runQuery, explainQuery } = useQueryCode()
   const { extensions } = storeToRefs(useDataBaseStore())
   const explainResultKeyCount = getExplainResultKeyCount()
   const session = useQuerySession()
@@ -435,20 +423,6 @@ a-modal(
     }
   }
 
-  const exportCsv = async () => {
-    try {
-      secondaryCodeRunning.value = true
-      const res = await exportWithFormat(currentStatement.value, promForm, 'csvWithNames')
-      fileDownload(res, `export_${queryType.value}_greptimedb.csv`)
-      Message.success('Exported successfully')
-    } catch (error) {
-      console.log(error)
-      Message.error(`Failed to export CSV`)
-    } finally {
-      secondaryCodeRunning.value = false
-    }
-  }
-
   window.addEventListener('beforeunload', () => {
     localStorage.setItem(
       'queryCode',
@@ -578,6 +552,13 @@ a-modal(
 
   .editor-toolbar-main :deep(.prom-form .arco-space) {
     flex-wrap: nowrap;
+  }
+
+  .query-select {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
   }
 
   .editor-resize-content {
