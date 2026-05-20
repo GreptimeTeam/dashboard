@@ -145,6 +145,7 @@
   --gpt-bg-code: #1a1630;
   --gpt-bg-code-line: rgba(255, 255, 255, 0.06);
 
+  --gpt-main-purple: #702fed;
   --gpt-brand-900: #473460;
   --gpt-brand-700: #5a4a70;
   --gpt-brand-600: #8b7ba8;
@@ -165,10 +166,10 @@
   --gpt-divider-band-size: 6px;
   --gpt-bg-divider-band: #f0edf5;
 
-  --gpt-link-color: #702fed;
+  --gpt-link-color: var(--gpt-main-purple);
 
-  --gpt-nav-active-bg: rgba(196, 168, 240, 0.18);
-  --gpt-nav-active-indicator: #c4a8f0;
+  --gpt-nav-active-bg: rgba(112, 47, 237, 0.1);
+  --gpt-nav-active-indicator: var(--gpt-main-purple);
   --gpt-table-head-bg: rgba(71, 52, 96, 0.04);
   --gpt-table-toolbar-bg: var(--gpt-bg-header);
 
@@ -188,6 +189,7 @@
   --gpt-radius-lg: 12px;
 
   /* Backward-compatible aliases */
+  --main-purple-color: var(--gpt-main-purple);
   --main-bg-color: var(--gpt-bg-app);
   --list-hover-color: rgba(71, 52, 96, 0.08);
   --th-bg-color: var(--gpt-table-head-bg);
@@ -319,8 +321,9 @@ body {
   font-family: var(--font-family-base) !important;
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
-  --navbar-width: 180px;
+  --navbar-width: 200px;
   --navbar-width-collapsed: 54px;
+  --navbar-current-width: var(--navbar-width);
   --tables-header-height: 158px;
   --tables-layout-padding: 16px;
   --footer-height: 24px;

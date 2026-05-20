@@ -219,7 +219,7 @@ a-layout.new-layout
       .arco-modal {
         pointer-events: auto;
         box-shadow: 0 2px 10px 0 var(--box-shadow-color);
-        width: calc(100vw - var(--navbar-width-collapsed) - 16px);
+        width: calc(100vw - var(--navbar-current-width) - 16px);
         border: 1px solid var(--border-color);
         .arco-modal-body {
           padding: var(--gpt-toolbar-padding);

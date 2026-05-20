@@ -266,7 +266,6 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
 <style scoped lang="less">
   .arco-card.table-manager {
     border-radius: 0;
-    border-right: 1px solid var(--gpt-border-strong);
     padding: 0;
 
     .count-and-time {

@@ -1,7 +1,7 @@
 <template lang="pug">
 a-layout
   a-layout.layout-container
-    a-layout-sider.main-sider(v-if="navbar" :width="54")
+    a-layout-sider.main-sider(v-if="navbar" :width="siderWidth")
       Navbar
     a-layout-content.layout-content
       PageLayout
@@ -15,9 +15,15 @@ a-layout
   import PageLayout from './page-layout.vue'
 
   useResponsive(true)
-  const navbarHeight = `52px`
 
-  const { navbar, footer } = storeToRefs(useAppStore())
+  const { navbar, footer, menuCollapse } = storeToRefs(useAppStore())
+
+  const siderWidth = computed(() => (menuCollapse.value ? 54 : 200))
+
+  watchEffect(() => {
+    const width = menuCollapse.value ? 'var(--navbar-width-collapsed)' : 'var(--navbar-width)'
+    document.documentElement.style.setProperty('--navbar-current-width', width)
+  })
 </script>
 
 <style scoped lang="less">
@@ -38,8 +44,8 @@ a-layout
   }
 
   .layout-content {
-    width: calc(100vw - var(--navbar-width-collapsed));
+    width: calc(100vw - var(--navbar-current-width));
     overflow-y: hidden;
-    transition: padding 0.2s cubic-bezier(0.34, 0.69, 0.1, 1);
+    transition: width 0.2s cubic-bezier(0.34, 0.69, 0.1, 1);
   }
 </style>
