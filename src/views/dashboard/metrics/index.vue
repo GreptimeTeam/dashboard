@@ -77,6 +77,10 @@ a-layout.new-layout
   import PromQLEditor from './components/prom-ql-editor.vue'
   import MetricsChart from './components/metrics-chart.vue'
 
+  defineOptions({
+    name: 'Metrics',
+  })
+
   const route = useRoute()
   const router = useRouter()
   const seriesHook = useSeries()

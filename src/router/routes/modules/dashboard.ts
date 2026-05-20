@@ -207,6 +207,8 @@ const DASHBOARD: AppRouteRecordRaw = {
         roles: ['admin', 'cloud'],
         hideInMenu: true,
         activeMenu: 'trace-query',
+        /** 列表页 KeepAlive；详情每次进入重新拉取，且避免与列表在缓存策略上互相影响 */
+        ignoreCache: true,
       },
     },
     {
