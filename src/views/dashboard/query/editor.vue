@@ -115,7 +115,11 @@ a-card.editor-card.editor-card--inset(:bordered="false")
               use(href="#clear")
       a-select(v-model="queryType" :trigger-props="{ 'content-class': 'query-select' }")
         a-option(v-for="query of queryOptions" :="query")
-a-resize-box.editor-resize-box.editor-card(:directions="['bottom']" :style="{ height: '266px' }")
+a-resize-box.panel-resize(
+  v-model:height="editorHeight"
+  :directions="['bottom']"
+  :style="{ 'min-height': '120px', 'max-height': '60vh' }"
+)
   .editor-resize-content
     a-tabs.query-tabs(:default-active-key="'sql'" :active-key="queryType")
       a-tab-pane(key="sql")
@@ -187,6 +191,8 @@ a-modal(
     indentWithTab: true,
     tabSize: 2,
   })
+
+  const editorHeight = useStorage('queryEditorHeight', 266)
 
   const tsRef = ref<InstanceType<typeof import('./time-assistance.vue').default> | null>(null)
   const appStore = useAppStore()

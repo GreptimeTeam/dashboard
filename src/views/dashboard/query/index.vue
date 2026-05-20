@@ -23,7 +23,7 @@ a-layout.new-layout
           @toggle-full-size="handleToggleFullSize"
         )
         .data-view-placeholder(v-else)
-      a-resize-box.panel-resize(
+      a-resize-box.panel-resize.logs-panel-resize(
         v-model:height="logsHeight"
         :directions="['top']"
         :style="{ 'max-height': '40vh', 'min-height': '66px' }"
@@ -200,15 +200,18 @@ a-layout.new-layout
         overflow: auto;
       }
     }
-    .editor-card {
-      .arco-resizebox-trigger-icon-wrapper {
-        font-size: 12px;
-      }
-    }
   }
+
   :deep(.panel-resize) {
-    border-top: 1px solid var(--gpt-border-default);
     background: var(--gpt-bg-panel);
+  }
+
+  :deep(.editor-space .panel-resize) {
+    border-bottom: 1px solid var(--gpt-border-default);
+  }
+
+  :deep(.panel-resize.logs-panel-resize) {
+    border-top: 1px solid var(--gpt-border-default);
   }
 </style>
 
