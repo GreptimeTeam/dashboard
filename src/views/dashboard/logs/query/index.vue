@@ -5,11 +5,17 @@
   .content-wrapper.query-layout-cards
     a-card(:bordered="false")
       .toolbar
-        a-radio-group(type="button" :model-value="editorType" @update:modelValue="(val) => (editorType = val)")
+        a-radio-group(
+          type="button"
+          size="medium"
+          :model-value="editorType"
+          @update:modelValue="(val) => (editorType = val)"
+        )
           a-radio(value="builder") {{ $t('logsQuery.builder') }}
           a-radio(value="text") {{ $t('logsQuery.code') }}
         TimeRangeSelect(
           button-type="outline"
+          button-size="medium"
           :time-length="time"
           :time-range="rangeTime"
           @update:time-length="(val) => (time = val)"
@@ -17,7 +23,7 @@
         )
         a-button(
           type="primary"
-          size="small"
+          size="medium"
           :loading="queryLoading"
           @click="handleQuery"
         )
@@ -25,12 +31,12 @@
             icon-loading(v-if="queryLoading" spin)
             icon-play-arrow(v-else)
           | {{ $t('dashboard.run') }}
-        a-checkbox(size="small" :model-value="refresh" @update:modelValue="(val) => (refresh = val)")
+        a-checkbox(size="medium" :model-value="refresh" @update:modelValue="(val) => (refresh = val)")
           span(style="color: var(--color-text-2)") {{ $t('logsQuery.live') }}
         a-space(style="margin-left: auto")
           a-button(
             type="outline"
-            size="small"
+            size="medium"
             :disabled="!queryState.table || queryLoading"
             @click="exportSql"
           )

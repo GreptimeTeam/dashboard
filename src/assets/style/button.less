@@ -37,7 +37,7 @@
 .arco-btn-outline[type='button'],
 .arco-btn-outline[type='submit'] {
   color: var(--main-font-color);
-  border: 1px solid rgba(71, 52, 96, 0.25);
+  border: 1px solid var(--gpt-border-strong);
 }
 
 .arco-btn-outline:hover,
@@ -101,6 +101,23 @@
   line-height: var(--gpt-control-height-sm);
 }
 
+/* medium：button 型 Radio-group 总高 32px（含 .arco-radio-group-button 的 1px 外框，用 border-box） */
+.arco-radio-group-size-medium.arco-radio-group-button {
+  height: var(--gpt-control-height-md);
+  min-height: var(--gpt-control-height-md);
+  max-height: var(--gpt-control-height-md);
+  box-sizing: border-box;
+}
+
+.arco-radio-group-size-medium.arco-radio-group-button .arco-radio-button {
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
 .arco-radio-group-button {
   padding: 0;
   background-color: var(--gpt-bg-panel);
@@ -110,6 +127,7 @@
     margin: 0;
     border-radius: 0;
     color: var(--gpt-text-secondary);
+    border-color: var(--gpt-border-strong);
   }
 
   .arco-radio-button:first-of-type {

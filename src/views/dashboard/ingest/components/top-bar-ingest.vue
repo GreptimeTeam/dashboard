@@ -5,7 +5,7 @@ a-space.top-bar.gpt-content-toolbar
     a-button(
       v-if="hasButtons"
       type="primary"
-      size="small"
+      size="medium"
       :loading="loading"
       @click="emitSubmit"
     ) {{ submitLabel }}

@@ -1,7 +1,7 @@
 <template lang="pug">
 BaseInput(:config="config")
   template(#selector="{ config }")
-    a-select(v-model="precision" size="small" :options="precisionOptions")
+    a-select(v-model="precision" size="medium" :options="precisionOptions")
   template(v-slot:extra="{ toggleDoc, docVisible }")
     a-tooltip(
       content="About InfluxDB Line Protocol"
@@ -9,7 +9,7 @@ BaseInput(:config="config")
       trigger="hover"
       mini
     )
-      a-button(type="outline" size="small" @click="toggleDoc")
+      a-button(type="outline" size="medium" @click="toggleDoc")
         template(#icon)
           svg.icon-16.brand-color(v-if="!docVisible")
             use(href="#document")

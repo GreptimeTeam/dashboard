@@ -5,7 +5,7 @@
   .content-wrapper.query-layout-cards
     a-card(:bordered="false")
       .toolbar
-        a-radio-group(v-model="editorType" type="button")
+        a-radio-group(v-model="editorType" type="button" size="medium")
           a-radio(value="builder") {{ $t('logsQuery.builder') }}
           a-radio(value="text") {{ $t('logsQuery.code') }}
         TimeRangeSelect(
@@ -13,10 +13,11 @@
           v-model:time-length="time"
           v-model:time-range="rangeTime"
           button-type="outline"
+          button-size="medium"
         )
         a-button(
           type="primary"
-          size="small"
+          size="medium"
           :loading="loading"
           @click="handleQuery"
         )
@@ -27,7 +28,7 @@
         a-space(style="margin-left: auto")
           a-button(
             type="outline"
-            size="small"
+            size="medium"
             :disabled="!queryState.sql || loading"
             @click="exportSql"
           )
