@@ -303,8 +303,4 @@
     font-size: 12px;
     font-weight: normal;
   }
-
-  .toolbar {
-    gap: 10px;
-  }
 </style>

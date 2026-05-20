@@ -10,7 +10,7 @@
           .tick-label(v-if="index === 3" style="text-align: right") {{ formatDuration(rootSpan?.duration_nano || 0) }}
     template(#resize-trigger)
       .resize-trigger(
-        style="width: 1px; height: calc(100vh - 150px); background-color: var(--color-border); position: absolute; cursor: col-resize; z-index: 1000"
+        style="width: 1px; height: calc(100vh - 120px); background-color: var(--color-border); position: absolute; cursor: col-resize; z-index: 1000"
       )
         icon-drag-dot-vertical(
           style="position: absolute; left: -8px; top: 50%; transform: translateY(-50%); color: var(--color-text-3)"
@@ -231,7 +231,7 @@ a-spin.spin-block(:loading="loading")
   }
 
   .tree-container {
-    height: calc(100vh - 196px);
+    height: calc(100vh - 176px);
     overflow: auto;
     padding: 8px 0;
   }
