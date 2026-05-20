@@ -1,29 +1,12 @@
 <template lang="pug">
-a-card.table-manager(:bordered="false")
+a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
   template(#title)
     a-space(:size="10")
       | Tables
-      a-button(
-        type="outline"
-        size="small"
-        :loading="totalTablesLoading"
-        @click="refreshTablesTree()"
-      )
+      a-button(size="mini" :loading="totalTablesLoading" @click="refreshTablesTree()")
         template(#icon)
-          svg.icon.brand-color
+          svg.icon-11.brand-color
             use(href="#refresh") 
-    a-space
-      a-space(align="center" :size="10")
-        a-tooltip(
-          v-model:popup-visible="tooltipVisible"
-          position="tr"
-          mini
-          :content="$t('dashboard.hideSidebar')"
-        )
-          a-button(type="secondary" size="mini" @click="toggleSidebar")
-            template(#icon)
-              svg.icon.icon-color.rotate-270(:class="{ 'rotate-180': hideSidebar }")
-                use(href="#collapse")
   a-spin(style="width: 100%" :loading="tablesLoading")
     .database-selector
       a-select(
@@ -37,7 +20,7 @@ a-card.table-manager(:bordered="false")
       ) 
         template(#prefix)
           span.database-label {{ $t('dashboard.database') }}
-          span.divider(style="margin-right: 6px") |
+          span.divider |
         a-option(v-for="db of databaseList" :key="db" :value="db") {{ db }}
 
     .table-search
@@ -49,16 +32,14 @@ a-card.table-manager(:bordered="false")
           :placeholder="$t('dashboard.input')"
         )
           template(#prefix)
-            svg.icon.icon-color
+            svg.icon-11.icon-color
               use(href="#search")
-      span.table-total
-      | {{ currentTablesCount }} {{ $t('dashboard.tables') }}
+      span.table-total {{ currentTablesCount }} {{ $t('dashboard.tables') }}
 
     a-tree.table-tree(
       v-if="tablesTreeForDatabase[activeDatabase]?.length"
       v-model:expanded-keys="expandedKeys"
       size="small"
-      action-on-node-click="expand"
       :ref="(el) => setRefMap(el, activeDatabase)"
       :block-node="true"
       :data="tablesTreeData"
@@ -67,9 +48,9 @@ a-card.table-manager(:bordered="false")
       :virtual-list-props="{ threshold: 100, buffer: 20, height: virtualListHeight }"
     )
       template(#icon="node")
-        a-tooltip(v-if="node.node.iconType" :content="node.node.iconType")
+        a-tooltip(v-if="getNodeIcon(node.node)" :content="node.node.iconType || 'TABLE'")
           svg.icon
-            use(:href="ICON_MAP[node.node.iconType]")
+            use(:href="getNodeIcon(node.node)")
       template(#title="nodeData")
         .tree-data(v-if="!nodeData.isLeaf")
           .data-title(:title="nodeData.title")
@@ -111,7 +92,7 @@ a-card.table-manager(:bordered="false")
                 @click="loadMore(expandedTablesTree[nodeData.parentKey])"
               )
                 template(#icon)
-                  svg.icon.icon-color
+                  svg.icon-11.icon-color
                     use(href="#refresh")
             a-space(:size="4")
               span.time {{ $t('dashboard.minTime') }}
@@ -136,14 +117,13 @@ a-card.table-manager(:bordered="false")
               .right(v-else)
                 a-typography-text.code-space {{ nodeData.info.sql }}
       template(#switcher-icon="nodeData")
-        svg.icon-16.icon-color(v-if="!nodeData.isLeaf")
+        svg.icon-11.icon-color(v-if="!nodeData.isLeaf") 
           use(href="#down")
     EmptyStatus.empty(v-else-if="activeDatabase && !tablesTreeForDatabase[activeDatabase]?.length")
     EmptyStatus.empty(v-else)
 </template>
 
 <script lang="ts" setup name="TableManager">
-  import usePythonCode from '@/hooks/python-code'
   import useSiderTabs from '@/hooks/sider-tabs'
   import type { TableTreeParent, TreeData } from '@/store/modules/database/types'
   import type { OptionsType } from '@/types/global'
@@ -154,8 +134,8 @@ a-card.table-manager(:bordered="false")
   }>()
 
   const appStore = useAppStore()
-  const { hideSidebar, database } = storeToRefs(appStore)
-  const { insertNameToPyCode } = usePythonCode()
+  const { database } = storeToRefs(appStore)
+
   const { tablesSearchKey, tablesTreeRef, refreshTables, loadMore, loadMoreColumns, isRefreshingDetails } =
     useSiderTabs()
   const { tablesLoading, totalTablesLoading, tablesTreeForDatabase, databaseActiveKeys } = storeToRefs(
@@ -167,7 +147,6 @@ a-card.table-manager(:bordered="false")
 
   const activeDatabase = ref<string>(database.value || '')
   const expandedKeys = ref<number[]>([])
-  const tooltipVisible = ref(false)
 
   watch(
     () => props.databaseList,
@@ -260,89 +239,16 @@ a-card.table-manager(:bordered="false")
     TIMESTAMP: '#time-index',
   }
 
-  const toggleSidebar = () => {
-    tooltipVisible.value = false
-    appStore.applyUiConfig({ hideSidebar: !hideSidebar.value })
+  const getNodeIcon = (node: { iconType?: string; isLeaf?: boolean }) => {
+    if (node.iconType) return ICON_MAP[node.iconType] || ''
+    return node.isLeaf ? '' : '#table'
   }
 </script>
 
 <style scoped lang="less">
-  :deep(.arco-select-view-single .arco-select-view-prefix) {
-    color: var(--small-font-color);
-    padding-right: 0px;
-  }
   .arco-card.table-manager {
-    background: var(--card-bg-color);
-    border-radius: 10px;
+    border-radius: 0;
     padding: 0;
-    height: 100%;
-
-    :deep(.arco-tree.table-tree) {
-      .arco-tree-node {
-        border: none;
-        > .arco-tree-node-title {
-          margin-left: 2px;
-        }
-        &:not(.arco-tree-node-is-leaf) {
-          > .arco-tree-node-title {
-            padding: 2px 0;
-          }
-        }
-        &.arco-tree-node-is-leaf.arco-tree-node-is-tail {
-          margin-bottom: 0;
-        }
-      }
-      .icon-16 {
-        height: 14px;
-        width: 14px;
-      }
-      .icon {
-        height: 13px;
-        width: 13px;
-      }
-    }
-    .arco-space.table-buttons {
-      > .arco-space-item:nth-of-type(1) {
-        display: none;
-      }
-      > .arco-space-item:nth-of-type(2) {
-        display: none;
-      }
-      > .arco-space-item:nth-of-type(3) {
-        margin-right: 0;
-        .arco-btn-size-small.arco-btn-only-icon {
-          width: 24px;
-          height: 24px;
-        }
-      }
-    }
-
-    .title-copy {
-      .arco-btn-size-medium.arco-btn-only-icon {
-        width: 24px;
-        height: 24px;
-      }
-      .arco-typography-operation-copy,
-      .arco-typography-operation-copied {
-        display: flex;
-      }
-      &.columns {
-        margin-left: 0;
-      }
-    }
-    .arco-btn-size-small.arco-btn-only-icon {
-      width: 24px;
-      height: 24px;
-    }
-
-    :deep(> .arco-card-header) {
-      padding: 10px 6px 10px 15px;
-
-      > .arco-card-header-title {
-        justify-content: space-between;
-        gap: 20px;
-      }
-    }
 
     .count-and-time {
       width: 100%;
@@ -382,27 +288,6 @@ a-card.table-manager(:bordered="false")
     opacity: 0;
   }
 
-  :deep(.arco-virtual-list) {
-    padding-right: 2px;
-
-    &::-webkit-scrollbar {
-      width: 8px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background-color: #c9cdd4;
-      border-radius: 6px;
-    }
-
-    &::-webkit-scrollbar-thumb:hover {
-      background-color: #86909c;
-    }
-
-    overflow-y: scroll !important;
-    // Firefox
-    scrollbar-color: #c9cdd4 var(--card-bg-color);
-  }
-
   .arco-typography {
     display: inline-flex;
     white-space: pre-wrap;
@@ -412,58 +297,7 @@ a-card.table-manager(:bordered="false")
     border-radius: 4px;
   }
 
-  .detail {
-    justify-content: flex-start;
-    padding-right: 60px;
-
-    .right {
-      padding-left: 50px;
-    }
-  }
-
   .table-tree {
-    :deep(.arco-tree-node) {
-      padding: 0px 0px 0 18px;
-      line-height: 30px;
-      border-radius: 0;
-
-      .arco-icon-loading {
-        color: var(--brand-color);
-        height: 18px;
-        width: 18px;
-      }
-    }
-
-    :deep(.arco-tree-node:hover) {
-      background-color: transparent;
-      .menu-button {
-        display: flex;
-      }
-    }
-
-    :deep(.arco-tree-node:not(.arco-tree-node-is-leaf)) {
-      &:not(:first-of-type) {
-        border-top: 1px solid var(--border-color);
-      }
-
-      border-radius: 0;
-
-      .arco-tree-node-title {
-        padding: 7px 0;
-      }
-    }
-
-    :deep(.arco-tree-node.arco-tree-node-is-leaf) {
-      .arco-tree-node-title {
-        padding: 0;
-        border-radius: 0;
-      }
-    }
-
-    :deep(.arco-tree-node.arco-tree-node-is-leaf:hover) {
-      background: var(--tree-select-brand-color);
-    }
-
     :deep(.arco-tree-node.arco-tree-node-is-leaf.details) {
       cursor: default;
 
@@ -501,18 +335,6 @@ a-card.table-manager(:bordered="false")
     }
   }
 
-  .data-title {
-    padding-left: 0;
-    font-size: 13px;
-    line-height: 30px;
-    cursor: pointer;
-
-    &.columns {
-      color: var(--small-font-color);
-      padding-left: 8px;
-    }
-  }
-
   .create-table {
     flex-direction: column;
   }
@@ -541,17 +363,9 @@ a-card.table-manager(:bordered="false")
     }
 
     .icon {
-      width: 14px;
-      height: 14px;
+      width: 11px;
+      height: 11px;
     }
-  }
-
-  :deep(.arco-tree-node-switcher) {
-    width: 16px;
-  }
-
-  :deep(.arco-tree-node-title) {
-    margin-left: 10px;
   }
 
   .title-copy {
@@ -565,11 +379,6 @@ a-card.table-manager(:bordered="false")
       padding: 0;
     }
 
-    :deep(.icon) {
-      width: 16px;
-      height: 16px;
-    }
-
     &.code {
       :deep(.arco-btn-text.arco-btn-only-icon) {
         .icon {
@@ -577,18 +386,6 @@ a-card.table-manager(:bordered="false")
           height: 14px;
         }
       }
-    }
-
-    :deep(.arco-btn-size-medium.arco-btn-only-icon) {
-      width: 28px;
-      height: 28px;
-    }
-  }
-
-  .code-copy {
-    :deep(.icon) {
-      width: 14px;
-      height: 14px;
     }
   }
 
@@ -599,41 +396,55 @@ a-card.table-manager(:bordered="false")
     flex-direction: column;
   }
 
-  .arco-dropdown-open {
-    .icon-color {
-      color: var(--brand-color);
-    }
-  }
-
-  :deep(.arco-space.search) {
-    .arco-space-item {
-      justify-content: flex-end;
-    }
-  }
   .database-selector {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 16px;
+    height: 34px;
+    border-bottom: 1px solid var(--gpt-border-default);
+
+    :deep(.arco-select-view-single) {
+      border: none;
+      background: transparent;
+
+      &:hover,
+      &:focus-within,
+      &.arco-select-view-focus {
+        border: none;
+        background: transparent;
+      }
+    }
 
     .database-label {
       margin-right: 8px;
       white-space: nowrap;
       font-weight: normal;
+      color: var(--gpt-text-secondary);
+      font-size: 11px;
+    }
+
+    .divider {
+      margin-right: 6px;
+      color: var(--gpt-text-secondary);
+      font-weight: 300;
+      opacity: 0.7;
+      font-size: 11px;
     }
   }
   .table-search {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 2px 16px 16px 16px;
-    border-bottom: 1px solid var(--border-color);
-    margin-bottom: 8px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 8px 10px 8px 10px;
+  }
+
+  .table-search-left {
+    width: 100%;
   }
 
   .arco-input-wrapper.search-table {
     padding: 0 10px;
-    font-family: 'Open Sans';
 
     :deep(> .arco-input-prefix) {
       padding-right: 10px;
@@ -645,41 +456,16 @@ a-card.table-manager(:bordered="false")
   }
 
   .table-total {
-    margin-left: 12px;
-    font-size: 12px;
-    color: var(--third-font-color);
+    font-size: 10px;
+    color: var(--gpt-text-muted);
     white-space: nowrap;
     word-break: keep-all;
   }
-</style>
 
-<style lang="less">
-  .quick-select {
-    .arco-dropdown-option {
-      padding: 0;
-    }
-
-    .arco-dropdown .arco-btn-text[type='button'] {
-      border-radius: 0;
-
-      &:hover {
-        background-color: var(--list-hover-color);
-      }
-    }
-
-    &.columns {
-      margin-right: 6px;
-    }
-
-    .arco-btn-text[type='button'] {
-      justify-content: start;
-      width: 100%;
-      color: var(--small-font-color);
-      font-size: 13px;
-    }
-
-    .arco-btn-text[type='button']:hover {
-      background-color: var(--grey-bg-color);
-    }
+  :deep(.search-table) {
+    border: 1px solid var(--gpt-border-strong);
+    border-radius: var(--gpt-radius-sm);
+    background: var(--gpt-bg-app);
+    min-height: 30px;
   }
 </style>

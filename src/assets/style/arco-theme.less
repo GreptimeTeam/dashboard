@@ -1,0 +1,124 @@
+/**
+ * Arco Design theme particles.
+ *
+ * Keep brand/component Less tokens here instead of in Vite config. Vite only
+ * imports this file through modifyVars so Arco's arco.less and on-demand
+ * component style/index.js files are compiled with the same theme.
+ */
+
+@arcoblue-1: #f7f3fc;
+@arcoblue-2: #ede7f8;
+@arcoblue-3: #c4a8f0;
+@arcoblue-4: #8b7ba8;
+@arcoblue-5: #5a4a70;
+@arcoblue-6: #473460;
+@gpt-color-white: #ffffff;
+@gpt-color-purple-bright: #722ed1;
+@gpt-main-purple: #702fed;
+@gpt-color-button-border: rgb(55, 65, 81);
+@gpt-color-form-label: rgb(107, 114, 128);
+@gpt-size-navbar: 54px;
+@gpt-size-nav-item: 36px;
+@gpt-spacing-nav-gap: 4px;
+@gpt-spacing-nav-gutter: 8px;
+@gpt-radius-nav: 12px;
+
+@font-family: Geist, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+@color-primary-1: #f7f3fc;
+@color-primary-2: #ede7f8;
+@color-primary-3: #c4a8f0;
+@color-primary-4: #8b7ba8;
+@color-primary-5: #5a4a70;
+@color-primary-6: #473460;
+
+@gpt-color-border-default: rgba(71, 52, 96, 0.09);
+@color-border: @gpt-color-border-default;
+
+@border-radius-small: 4px;
+@border-radius-medium: 6px;
+@border-radius-large: 8px;
+
+@size-mini: 20px;
+@size-small: 26px;
+@btn-font-weight: 600;
+@btn-size-mini-height: @size-mini;
+@btn-size-small-height: @size-small;
+
+@btn-size-mini-font-size: 12px;
+@btn-size-small-font-size: 12px;
+@btn-size-medium-font-size: 12px;
+@btn-size-mini-radius: @border-radius-small;
+@btn-size-small-radius: @border-radius-small;
+@btn-size-small-padding-horizontal: 12px;
+
+@btn-primary-color-border: rgba(71, 52, 96, 0.25);
+@btn-secondary-color-bg: transparent;
+@btn-secondary-color-bg_hover: transparent;
+@btn-secondary-color-border: rgb(209, 213, 219);
+@btn-secondary-color-border_hover: @btn-secondary-color-border;
+@btn-secondary-color-text_hover: @gpt-color-purple-bright;
+@btn-outline-color-border: @gpt-color-button-border;
+@btn-dashed-color-border: @gpt-color-button-border;
+
+@form-color-text-label: @gpt-color-form-label;
+
+@input-color-bg: transparent;
+@input-color-bg_hover: var(--grey-bg-color);
+@input-color-bg_focus: transparent;
+@input-color-border: var(--gpt-border-strong);
+@input-color-border_hover: var(--gpt-border-strong);
+@input-color-border_focus: var(--hover-brand-color);
+@input-color-border_disabled: var(--gpt-border-subtle);
+@input-color-shadow_focus: transparent;
+@input-size-shadow_focus: 0;
+
+@table-color-border: var(--gpt-border-subtle);
+@table-border-radius: @border-radius-small;
+@table-color-text-header-cell: var(--gpt-text-secondary);
+@table-color-bg-header-cell: var(--gpt-table-head-bg);
+@table-color-bg-header-sorted-cell: var(--gpt-table-head-bg);
+@table-color-bg-header-sorted-cell_hover: var(--gpt-nav-active-bg);
+@table-font-weight-header-text: 600;
+@table-color-text-body-cell: var(--gpt-text-primary);
+@table-color-bg-body-cell: var(--gpt-bg-panel);
+@table-color-bg-body-sorted-cell: var(--gpt-bg-panel);
+@table-color-bg-body-stripe-row: var(--gpt-bg-surface);
+@table-color-bg-body-row_hover: var(--gpt-bg-surface);
+@table-color-bg-body-row_active: var(--gpt-bg-surface);
+@table-color-body-background: var(--gpt-bg-panel);
+
+@menu-border-radius: @gpt-radius-nav;
+@menu-margin-right-item-prefix-icon: 8px;
+@menu-horizontal-margin-right-item-prefix-icon: 8px;
+@menu-item-gap: @gpt-spacing-nav-gap;
+@menu-vertical-item-height: @gpt-size-nav-item;
+@menu-vertical-padding-vertical: @gpt-spacing-nav-gap;
+@menu-vertical-padding-horizontal: @gpt-spacing-nav-gap;
+@menu-vertical-item-padding-horizontal: @gpt-spacing-nav-gap;
+@menu-collapse-width: @gpt-size-navbar;
+@menu-collapse-padding-vertical: @gpt-spacing-nav-gap;
+@menu-collapse-padding-horizontal: @gpt-spacing-nav-gutter;
+
+@menu-light-color-bg: var(--gpt-bg-header);
+@menu-light-color-bg-item_default: transparent;
+@menu-light-color-bg-item_hover: var(--gpt-nav-active-bg);
+@menu-light-color-bg-item_selected: var(--gpt-nav-active-bg);
+@menu-light-color-bg-item_disabled: transparent;
+@menu-light-color-item_default: var(--gpt-text-secondary);
+@menu-light-color-item_hover: var(--gpt-brand-900);
+@menu-light-color-item_selected: var(--gpt-main-purple);
+@menu-light-color-icon_default: var(--gpt-text-secondary);
+@menu-light-color-icon_hover: var(--gpt-brand-900);
+@menu-light-color-icon_selected: var(--gpt-main-purple);
+
+@menu-dark-color-bg: @color-primary-6;
+@menu-dark-color-bg-item_default: @menu-dark-color-bg;
+@menu-dark-color-bg-item_hover: fade(@arcoblue-3, 14%);
+@menu-dark-color-bg-item_selected: fade(@arcoblue-3, 18%);
+@menu-dark-color-item_default: fade(@gpt-color-white, 62%);
+@menu-dark-color-item_hover: @gpt-color-white;
+@menu-dark-color-item_selected: @arcoblue-3;
+@menu-dark-color-icon_default: fade(@gpt-color-white, 62%);
+@menu-dark-color-icon_hover: @gpt-color-white;
+@menu-dark-color-icon_selected: @arcoblue-3;

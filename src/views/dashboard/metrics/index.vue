@@ -6,8 +6,7 @@ a-layout.new-layout
     :style="{ 'min-width': '100px', 'max-width': '40vw' }"
     :class="hideSidebar ? 'hide-sider' : ''"
   )
-    a-layout-sider(style="min-width: 210px" :width="actualSidebarWidth")
-      a-card.metrics-sidebar(:bordered="false")
+    a-layout-sider(style="height: 100%" :width="actualSidebarWidth")
       MetricSidebar(@copyText="handleCopyText" @insertText="handleInsertText")
 
   a-layout-content.layout-content
@@ -21,8 +20,6 @@ a-layout.new-layout
           @query="handleRunQuery"
         )
 
-    .section-divider
-
     a-card(:bordered="false")
       a-tabs(v-model:active-key="activeTab" type="line")
         a-tab-pane(key="table" title="Table")
@@ -33,12 +30,10 @@ a-layout.new-layout
                 placeholder="Evaluation time"
                 allow-clear
                 style="width: 210px"
-                size="small"
               )
 
           .table-section
             a-table(
-              size="small"
               :data="tableData"
               :loading="queryLoading"
               :pagination="false"
@@ -82,6 +77,10 @@ a-layout.new-layout
   import PromQLEditor from './components/prom-ql-editor.vue'
   import MetricsChart from './components/metrics-chart.vue'
 
+  defineOptions({
+    name: 'Metrics',
+  })
+
   const route = useRoute()
   const router = useRouter()
   const seriesHook = useSeries()
@@ -98,7 +97,7 @@ a-layout.new-layout
     instantQueryTime,
   } = seriesHook
 
-  const sidebarWidth = useStorage('metrics-sidebar-width', 320)
+  const sidebarWidth = useStorage('metrics-sidebar-width', 228)
   const activeTab = ref(route.query.tab || 'table')
   const chartType = ref('line')
   const stepSelectionType = ref('medium')
@@ -217,7 +216,7 @@ a-layout.new-layout
 
   // Computed properties
   const actualSidebarWidth = computed(() => {
-    const minWidth = 100
+    const minWidth = 180
     const maxWidth = window.innerWidth * 0.4
     return Math.max(minWidth, Math.min(sidebarWidth.value, maxWidth))
   })
@@ -354,16 +353,7 @@ a-layout.new-layout
 
 <style lang="less" scoped>
   :deep(.arco-layout-sider-light) {
-    box-shadow: none;
-  }
-  .new-layout {
-    height: calc(100vh - 29px);
-    background: #fff;
-  }
-
-  .metrics-sidebar {
-    height: 100%;
-    background: var(--color-bg-container);
+    box-shadow: none !important;
   }
 
   .layout-content {
@@ -371,36 +361,9 @@ a-layout.new-layout
     overflow-y: auto;
   }
 
-  .query-layout {
-    padding: 0;
-
-    .page-header {
-      padding: 16px 24px 8px;
-      font-size: 20px;
-      font-weight: 600;
-      color: var(--color-text-primary);
-      border-bottom: 1px solid var(--color-border);
-      background: var(--color-bg-container);
-    }
-
-    .content-wrapper {
-      padding: 16px 24px;
-    }
-
-    .query-layout-cards {
-      .arco-card {
-        margin-bottom: 16px;
-        border: 1px solid var(--color-border);
-        border-radius: 8px;
-
-        &:last-child {
-          margin-bottom: 0;
-        }
-      }
-    }
-  }
-
   .section-title {
+    background: var(--gpt-bg-header);
+
     .arco-space {
       align-items: center;
     }
@@ -411,7 +374,8 @@ a-layout.new-layout
   }
 
   .query-section {
-    padding: 8px;
+    padding: var(--gpt-toolbar-padding);
+    border-bottom: 1px solid var(--gpt-border-default);
   }
 
   .section-divider {

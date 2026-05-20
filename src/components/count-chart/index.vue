@@ -122,9 +122,10 @@ VCharts(
           left: 'center',
           top: 'middle',
           style: {
-            text: data.value.length ? '' : 'No Chart data',
+            text: data.value.length ? '' : 'No data',
             fill: '#999',
-            fontSize: 18,
+            fontSize: 14,
+            fontFamily: 'Geist Mono, ui-monospace, monospace',
           },
         },
       ],

@@ -9,13 +9,7 @@ a-tabs.panel-tabs(
   @delete="deleteTab"
 )
   template(#extra)
-    a-space.result-extra(:size="8")
-      a-tooltip(mini :content="props.isInFullSizeMode ? $t('dashboard.exitFullSize') : $t('dashboard.fullSizeMode')")
-        a-button(size="small" @click="toggleFullSize")
-          template(#icon)
-            svg.icon-16
-              use(v-if="!props.isInFullSizeMode" href="#zoom")
-              use(v-else href="#zoom-out")
+    a-space.result-extra(style="margin-right: 12px" :size="8")
       a-popconfirm(
         type="warning"
         cancel-text=""
@@ -25,17 +19,38 @@ a-tabs.panel-tabs(
       )
         a-button(status="danger" size="small") {{ $t('dashboard.clear') }}
   a-tab-pane(
-    v-if="explainResult"
-    key="explain"
+    v-for="(explainResult, idx) in session.explainResults.value"
+    :key="explainResult.key"
     closable
-    :title="`${$t('dashboard.explain')}`"
+    :title="`${$t('dashboard.explain')} ${idx + 1}`"
   )
     ExplainTabs(:data="explainResult")
-  a-tab-pane(v-for="(result) of results" :key="result.key" closable)
+  a-tab-pane(v-for="(result) of session.results.value" :key="result.key" closable)
     template(#title)
       span {{ `${$t('dashboard.result')} ${Number(result.key) - startKey + 1}` }}
     .result-container
       .result-toolbar(v-if="result.query")
+        .view-switch
+          a-button-group
+            a-button(
+              size="small"
+              type="outline"
+              :title="$t('dashboard.table')"
+              :class="{ active: getResultView(result.key) === 'table' }"
+              @click="setResultView(result.key, 'table')"
+            )
+              svg.icon-16
+                use(href="#tableview")
+            a-button(
+              v-if="useDataChart(result).hasChart.value"
+              size="small"
+              type="outline"
+              :title="$t('dashboard.chart')"
+              :class="{ active: getResultView(result.key) === 'chart' }"
+              @click="setResultView(result.key, 'chart')"
+            )
+              svg.icon-16
+                use(href="#chart")
         .query-display
           a-popover(
             trigger="click"
@@ -44,67 +59,71 @@ a-tabs.panel-tabs(
             :content="result.query"
           )
             a-typography-text.query-text(code :ellipsis="{ rows: 1, css: true }") {{ result.query }}
+
         .toolbar-actions
           a-space(:size="0")
             a-tooltip(mini position="tr" :content="$t('dashboard.rerunQuery')")
               a-button(
                 v-if="result.type === 'sql'"
-                type="secondary"
-                size="mini"
+                type="text"
+                size="small"
                 :loading="refreshingKeys.has(result.key)"
                 @click="refreshSingleResult(result)"
               )
                 template(#icon)
                   svg.icon-12
                     use(href="#refresh")
-            TextCopyable(
-              size="mini"
-              type="secondary"
-              :data="result.query"
-              :show-data="false"
-              :button-text="false"
-            )
+            a-tooltip(mini position="tr" :content="$t('dashboard.exportCSV')")
+              a-button(
+                type="text"
+                size="small"
+                :loading="exportingKeys.has(result.key)"
+                @click="exportResultCsv(result)"
+              )
+                template(#icon)
+                  svg.icon-12
+                    use(href="#derive14")
+            a-checkbox(v-if="getResultView(result.key) === 'table'" v-model="wrapLines" size="small")
+              | {{ $t('dashboard.wrapLines') }}
 
       .result-content
-        a-tabs.data-view-tabs(position="left" type="capsule" :animation="true")
-          a-tab-pane(key="table")
-            template(#title)
-              a-tooltip(mini position="bl" :content="$t('dashboard.table')")
-                a-space.title(direction="vertical" :size="4")
-                  svg.icon-16
-                    use(href="#table")
-            DataGrid(:key="`table-${result.key}-${result.refreshCount || 0}`" :data="result" :has-header="false")
-          a-tab-pane(v-if="useDataChart(result).hasChart.value" key="chart")
-            template(#title)
-              a-tooltip(mini position="bl" :content="$t('dashboard.chart')")
-                a-space.title(direction="vertical" :size="4")
-                  svg.icon-16
-                    use(href="#chart")
-            DataChart(:key="`chart-${result.key}-${result.refreshCount || 0}`" :data="result" :has-header="false")
+        .table-panel(v-if="getResultView(result.key) === 'table'")
+          PaginatedDataTable(
+            column-resizable
+            :data="tableModelMap[result.key]?.rows || []"
+            :columns="tableModelMap[result.key]?.columns || []"
+            :displayed-columns="tableModelMap[result.key]?.displayedColumns || []"
+            :ts-column="tableModelMap[result.key]?.tsColumn || null"
+            :show-context-menu="false"
+            :wrap-line="wrapLines"
+          )
+        DataChart(
+          v-else-if="useDataChart(result).hasChart.value"
+          :key="`chart-${result.key}-${result.refreshCount || 0}`"
+          :data="result"
+          :has-header="false"
+        )
 </template>
 
 <script lang="ts" name="DataView" setup>
+  import { Message } from '@arco-design/web-vue'
+  import fileDownload from 'js-file-download'
   import useDataChart from '@/hooks/data-chart'
-  import useQueryCode from '@/hooks/query-code'
-  import { useCodeRunStore } from '@/store'
-  import type { ResultType } from '@/store/modules/code-run/types'
+  import type { PromForm, ResultType } from '@/store/modules/code-run/types'
+  import { normalizeRecordsToTableModel } from '@/utils/table-normalizer'
+  import type { NormalizedTableModel } from '@/utils/table-normalizer'
   import ExplainTabs from '@/components/explain-tabs/index.vue'
+  import { runWithFormat } from '@/services/code-run'
+  import { useQuerySession } from '@/views/dashboard/query/use-query-session'
 
-  const props = defineProps<{
-    results: ResultType[]
-    types: string[]
-    explainResult?: ResultType
-    isInFullSizeMode?: boolean
-  }>()
+  const session = useQuerySession()
 
-  const emit = defineEmits(['update:explainResult', 'toggleFullSize'])
-
-  const { removeResult, clear } = useCodeRunStore()
-  const { refreshResult } = useQueryCode()
   const activeTabKey = ref<string | number>()
-  const startKey = ref<number>((props.results[0]?.key as number) || 0)
+  const startKey = ref<number>((session.results.value[0]?.key as number) || 0)
   const refreshingKeys = ref(new Set<string | number>())
-
+  const exportingKeys = ref(new Set<string | number>())
+  const resultViewMap = ref<Record<string | number, 'table' | 'chart'>>({})
+  const wrapLines = ref(false)
   // Add a method to select specific tab
   const selectTab = (key: number | string) => {
     activeTabKey.value = key
@@ -115,23 +134,26 @@ a-tabs.panel-tabs(
   })
 
   const deleteTab = async (key: number | string) => {
-    if (key === 'explain') {
-      emit('update:explainResult', null)
-
-      if (activeTabKey.value === 'explain') {
-        const firstResultKey = props.results.length > 0 ? props.results[0].key : undefined
-        activeTabKey.value = firstResultKey
+    const explainIndex = session.explainResults.value.findIndex((result) => result.key === key)
+    if (explainIndex >= 0) {
+      session.removeExplainResult({ key })
+      if (activeTabKey.value === key) {
+        activeTabKey.value = session.results.value.length
+          ? session.results.value.slice(-1)[0].key
+          : session.explainResults.value.slice(-1)[0]?.key
       }
       return
     }
 
-    const index = props.results.findIndex((result) => result.key === key && props.types.includes(result.type))
-    if (props.results.length === 1) {
-      startKey.value = props.results[0].key as number
+    const index = session.results.value.findIndex((result) => result.key === key)
+    if (index < 0) return
+
+    if (session.results.value.length === 1) {
+      startKey.value = session.results.value[0].key as number
     }
-    await removeResult(key, props.results[index].type)
+    session.removeResult({ key, type: session.results.value[index].type })
     if (activeTabKey.value === key) {
-      activeTabKey.value = props.results[index]?.key || props.results.slice(-1)[0].key
+      activeTabKey.value = session.results.value[index]?.key || session.results.value.slice(-1)[0].key
     }
   }
 
@@ -140,16 +162,15 @@ a-tabs.panel-tabs(
   }
 
   const clearResults = () => {
-    startKey.value = props.results[0]?.key as number
-    clear(props.types)
-    emit('toggleFullSize', false)
+    startKey.value = session.results.value[0]?.key as number
+    session.clearAll()
   }
 
   const refreshSingleResult = async (result: ResultType) => {
     refreshingKeys.value.add(result.key)
 
     try {
-      await refreshResult(result.key, result.type)
+      await session.refreshSingleResult(result)
     } catch (error: any) {
       console.error(error)
     } finally {
@@ -157,24 +178,51 @@ a-tabs.panel-tabs(
     }
   }
 
-  const toggleFullSize = () => {
-    emit('toggleFullSize', !props.isInFullSizeMode)
+  const exportResultCsv = async (result: ResultType) => {
+    if (!result.query?.trim()) return
+
+    exportingKeys.value.add(result.key)
+    try {
+      const res = await runWithFormat(result.query, result.type, {} as PromForm, 'csvWithNames')
+      fileDownload(res as unknown as string, `export_${result.type}_${result.key}_greptimedb.csv`)
+      Message.success('Exported successfully')
+    } catch (error) {
+      console.error(error)
+      Message.error('Failed to export CSV')
+    } finally {
+      exportingKeys.value.delete(result.key)
+    }
   }
 
+  const getResultView = (resultKey: string | number) => {
+    return resultViewMap.value[resultKey] || 'table'
+  }
+
+  const setResultView = (resultKey: string | number, view: 'table' | 'chart') => {
+    resultViewMap.value[resultKey] = view
+  }
+
+  const tableModelMap = computed<Record<string, NormalizedTableModel>>(() => {
+    return session.results.value.reduce((acc, result) => {
+      acc[String(result.key)] = normalizeRecordsToTableModel(result?.records)
+      return acc
+    }, {} as Record<string, NormalizedTableModel>)
+  })
+
   watch(
-    () => ({ ...props }),
-    (value, old) => {
-      if (value.results.length > old.results.length) {
-        activeTabKey.value = props.results.slice(-1)[0].key
+    () => session.results.value.length,
+    (len, oldLen) => {
+      if (len > oldLen) {
+        activeTabKey.value = session.results.value.slice(-1)[0].key
       }
     }
   )
 
   watch(
-    () => props.explainResult,
-    (newValue, oldValue) => {
-      if (newValue && newValue !== oldValue && newValue.key) {
-        activeTabKey.value = 'explain'
+    () => session.explainResults.value.length,
+    (len, oldLen) => {
+      if (len > oldLen && session.explainResults.value.length > 0) {
+        activeTabKey.value = session.explainResults.value.slice(-1)[0].key
       }
     },
     { immediate: true }
@@ -204,28 +252,39 @@ a-tabs.panel-tabs(
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 1px solid var(--color-border-2);
-    padding: 0 6px;
+    border-bottom: 1px solid var(--gpt-border-default);
+    background: var(--gpt-table-toolbar-bg);
+    min-height: 39px;
+    padding: var(--gpt-toolbar-padding);
+    gap: 8px;
+
     .query-display {
       flex: 1;
-      margin-right: 12px;
+      margin-right: 6px;
       min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
 
       :deep(.arco-typography.query-text) {
         margin: 0;
         white-space: nowrap;
         code {
-          color: var(--small-font-color);
-          background: var(--color-neutral-2);
-          border-radius: 2px;
+          color: var(--gpt-brand-700);
+          background: transparent;
+          border-radius: 0;
           padding: 4px 8px;
           font-size: 11px;
+          font-family: var(--font-mono);
         }
       }
     }
 
     .toolbar-actions {
       flex-shrink: 0;
+      :deep(.arco-checkbox) {
+        font-size: 11px;
+      }
     }
   }
 
@@ -233,6 +292,18 @@ a-tabs.panel-tabs(
     flex: 1;
     min-height: 0;
     overflow: hidden;
+
+    .table-panel {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+
+      :deep(.data-table-container) {
+        flex: 1;
+        min-height: 0;
+      }
+    }
   }
 
   .arco-tabs.panel-tabs {
@@ -256,70 +327,29 @@ a-tabs.panel-tabs(
         }
       }
       .arco-table-size-mini .arco-table-td {
-        font-size: 11px;
+        font-size: 12px;
+      }
+      .arco-table-th {
+        background: var(--gpt-table-head-bg);
+        color: var(--gpt-text-primary);
+        border-bottom: 1px solid var(--gpt-border-default);
+      }
+      .arco-table-td {
+        border-bottom: 1px solid var(--gpt-border-subtle);
+        color: var(--gpt-text-primary);
       }
     }
-    :deep(.data-view-tabs) {
-      width: 100%;
+    :deep(.arco-card.data-grid) {
       height: 100%;
-      .arco-tabs-nav-tab:not(.arco-tabs-nav-tab-scroll) {
-        justify-content: flex-start;
-      }
-      .arco-tabs-tab {
-        padding: 8px 4px;
-        .title {
-          align-items: center;
-          .text {
-            writing-mode: sideways-lr;
-          }
-        }
-      }
-      .arco-tabs-nav::before {
-        background-color: transparent;
-      }
-      .arco-tabs-content {
-        height: 100%;
-      }
-
-      > .arco-tabs-content > .arco-tabs-content-list > .arco-tabs-content-item {
-        padding: 0;
-      }
-      .arco-card.data-grid {
-        height: 100%;
-        padding: 2px 8px;
-        > .arco-card-body {
-          height: 100%;
-          > .arco-spin {
-            height: 100%;
-            .arco-table-pagination {
-              margin: 0;
-              .arco-pagination-total {
-                font-size: 11px;
-              }
-              .arco-pagination-item {
-                font-size: 11px;
-              }
-              .arco-pagination-options .arco-select-view-value {
-                font-size: 11px;
-              }
-              .arco-pagination-jumper > span {
-                font-size: 12px;
-              }
-              .arco-input-wrapper .arco-input.arco-input-size-medium {
-                padding-top: 2px;
-                padding-bottom: 1px;
-                font-size: 11px;
-              }
-            }
-          }
-        }
-      }
+      padding: 0;
+      border-radius: 0;
     }
   }
 
   .result-extra {
     .arco-btn {
       height: 26px;
+      border-radius: var(--gpt-radius-sm);
     }
   }
 </style>

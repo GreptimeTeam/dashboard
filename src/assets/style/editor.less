@@ -1,19 +1,4 @@
 .editor-card {
-  .ͼo {
-    background: var(--main-font-color);
-    font-size: 12px;
-
-    .cm-gutters {
-      color: #fdfcff;
-      background-color: transparent;
-      border-right: 1px solid var(--hover-brand-color);
-      opacity: 0.6;
-    }
-
-    .cm-activeLine {
-      background-color: var(--editor-active-line-color);
-    }
-  }
   .ͼ1 .cm-content {
     padding: 10px 0 !important;
     width: calc(100% - 33px);
@@ -24,12 +9,93 @@
     padding: 0 8px;
   }
 
-  .ͼ1.cm-editor {
-    border-radius: 6px;
-  }
-
   .ͼ1.cm-editor.cm-focused {
     outline: 0;
+  }
+}
+
+.gpt-dark-editor {
+  .ͼo {
+    background: var(--gpt-bg-code);
+    font-size: 12px;
+
+    .cm-gutters {
+      background: var(--gpt-bg-code);
+      color: #8b7ba8;
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+    }
+  }
+
+  .cm-editor,
+  .ͼ1.cm-editor {
+    background: var(--gpt-bg-code);
+    color: #ffffff;
+    border: 1px solid rgba(71, 52, 96, 0.2);
+  }
+
+  .cm-editor.cm-focused,
+  .ͼ1.cm-editor.cm-focused {
+    outline: 0;
+  }
+
+  .cm-activeLine,
+  .ͼ1 .cm-activeLine {
+    background: var(--gpt-bg-code-line);
+  }
+
+  .cm-gutters,
+  .ͼ1 .cm-gutters {
+    background: var(--gpt-bg-code);
+    color: #8b7ba8;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .cm-gutter,
+  .cm-lineNumbers,
+  .cm-gutterElement {
+    background: var(--gpt-bg-code);
+    color: #8b7ba8;
+  }
+
+  .cm-activeLineGutter {
+    background: var(--gpt-bg-code-line);
+  }
+
+  .cm-cursor,
+  .cm-dropCursor {
+    border-left-color: #fff !important;
+  }
+
+  .cm-content {
+    caret-color: #fff;
+  }
+
+  &.cm-focused .cm-selectionBackground,
+  & .cm-selectionBackground {
+    background: rgba(139, 123, 168, 0.35) !important;
+  }
+}
+
+// Square corners (no radius). Add to the editor container alongside full-width-height-editor.
+.gpt-square-editor {
+  &.card-editor,
+  &.full-width-height-editor.card-editor {
+    border-radius: 0;
+  }
+
+  .cm-editor,
+  .ͼ1.cm-editor {
+    border-radius: 0;
+  }
+}
+
+.gpt-dark-editor-card {
+  height: 100%;
+  border-radius: 0;
+
+  > .arco-card-body {
+    height: 100%;
+    padding: 0;
   }
 }
 
@@ -78,7 +144,8 @@
   - .full-width-height-editor.output-editor    - Read-only output editors  
   - .full-width-height-editor.card-editor      - Editors inside cards
   - .full-width-height-editor.pipeline-editor  - Main pipeline editors
-  
+  - .gpt-square-editor                         - Square corners on the container
+
   Example usage:
   <div class="full-width-height-editor input-editor card-editor">
     <CodeMirror />
@@ -129,9 +196,52 @@
     }
   }
 
-  .cm-editor {
+  &.card-editor {
+    border-radius: var(--gpt-radius-sm);
+  }
+
+  .cm-editor,
+  .ͼ1.cm-editor {
     border: 1px solid var(--color-border);
-    border-radius: 2px;
+    border-radius: var(--gpt-radius-sm);
+  }
+
+  &.gpt-dark-editor .cm-editor,
+  &.gpt-dark-editor .ͼ1.cm-editor {
+    background: var(--gpt-bg-code);
+    color: #ffffff;
+    border: 1px solid rgba(71, 52, 96, 0.2);
+    border-radius: var(--gpt-radius-sm);
+  }
+
+  &.gpt-square-editor {
+    &.card-editor {
+      border-radius: 0;
+    }
+
+    .cm-editor,
+    .ͼ1.cm-editor {
+      border-radius: 0;
+    }
+  }
+
+  // Query page editor: rounded by default; add gpt-square-editor on the same node for square corners.
+  &.query-editor-surface {
+    border-radius: var(--gpt-radius-sm);
+
+    .cm-editor,
+    .ͼ1.cm-editor {
+      border-radius: var(--gpt-radius-sm);
+    }
+
+    &.gpt-square-editor {
+      border-radius: 0;
+
+      .cm-editor,
+      .ͼ1.cm-editor {
+        border-radius: 0;
+      }
+    }
   }
 }
 

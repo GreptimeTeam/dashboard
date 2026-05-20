@@ -1,85 +1,59 @@
 <template lang="pug">
-a-layout.new-layout
+a-layout.new-layout(:class="{ 'query-layout--focus': focusMode }")
   a-resize-box(
+    v-if="!focusMode"
     v-model:width="sidebarWidth"
     :directions="['right']"
     :style="{ 'min-width': '100px', 'max-width': '40vw' }"
-    :class="hideSidebar ? 'hide-sider' : ''"
   )
-    a-layout-sider(:width="actualSidebarWidth")
+    a-layout-sider(style="height: 100%" :width="actualSidebarWidth")
       TableManager(:databaseList="databaseList")
-  a-layout-content.layout-content(:class="{ 'has-panel': !footer[activeTab] }")
+  a-layout-content.layout-content.has-panel
     a-space.layout-space(direction="vertical" fill :size="0")
       a-space.editor-space(
         align="start"
         fill
         direction="vertical"
         :size="0"
-      )
-        Editor(@select-explain-tab="selectExplainTab")
-        DataView(
-          v-if="!!results?.length || !!explainResult"
-          ref="dataViewRef"
-          :results="results"
-          :types="types"
-          :explainResult="explainResult"
-          :is-in-full-size-mode="false"
-          @update:explainResult="(val) => (explainResult = val)"
-          @toggle-full-size="handleToggleFullSize"
-        )
-      a-resize-box.panel-resize(
+      ) 
+        Editor(:focus-mode="focusMode" @toggle-focus-mode="toggleFocusMode")
+        DataView(v-if="!!session.results.value?.length || session.explainResults.value.length > 0")
+        .data-view-placeholder(v-else)
+      a-resize-box.panel-resize.logs-panel-resize(
+        v-if="!focusMode"
         v-model:height="logsHeight"
         :directions="['top']"
         :style="{ 'max-height': '40vh', 'min-height': '66px' }"
       )
         a-tabs.panel-tabs
           a-tab-pane(title="Log" key="log")
-            LogsNew(:logs="queryLogs")
-
-  a-modal.full-size-modal(
-    v-model:visible="isFullSizeMode"
-    :class="{ 'full-screen': isFullSizeMode }"
-    :align-center="false"
-    :footer="false"
-    :closable="false"
-    :header="false"
-    :esc-to-close="true"
-    :mask-style="{ backgroundColor: 'transparent', 'pointer-events': 'auto' }"
-  )
-    DataView.full-size(
-      v-if="!!results?.length || !!explainResult"
-      :results="results"
-      :types="types"
-      :explainResult="explainResult"
-      :show-full-size-button="false"
-      :is-in-full-size-mode="true"
-      @update:explainResult="(val) => (explainResult = val)"
-      @toggle-full-size="isFullSizeMode = false"
-    )
+            LogsNew(:logs="session.queryLogs.value")
 </template>
 
-<script lang="ts" setup name="QueryNew">
+<script lang="ts" setup name="query">
   import { useMagicKeys, useActiveElement, useStorage } from '@vueuse/core'
   import { driver } from 'driver.js'
   import 'driver.js/dist/driver.css'
-  import { navbarSteps, tableSteps } from '../config'
+  import { navbarSteps } from '../config'
+  import { provideQuerySession } from './use-query-session'
+
+  defineOptions({
+    name: 'Query',
+  })
 
   const { s, q, escape } = useMagicKeys()
   const activeElement = useActiveElement()
   const appStore = useAppStore()
-  const { hideSidebar, databaseList, database } = storeToRefs(useAppStore())
+  const { footer, menuCollapse, databaseList, database } = storeToRefs(useAppStore())
   const originalDatabase = ref<string | undefined>(undefined)
-  const { logs } = storeToRefs(useLogStore())
-  const { activeTab, footer } = storeToRefs(useIngestStore())
-  const { dataStatusMap } = storeToRefs(useUserStore())
-  const { originTablesTree } = storeToRefs(useDataBaseStore())
-  const { queryType, getResultsByType } = useQueryCode()
-  const { explainResult } = storeToRefs(useCodeRunStore())
-  const types = ['sql', 'promql']
+  const { queryType } = useQueryCode()
+  const session = provideQuerySession()
   const logsHeight = ref(66)
-  const isFullSizeMode = ref(false)
+  const focusMode = ref(false)
 
-  const sidebarWidth = useStorage('sidebarWidth', 320)
+  const layoutSnapshot = ref({ footer: true, menuCollapse: false })
+
+  const sidebarWidth = useStorage('sidebarWidth', 228)
 
   watch(sidebarWidth, (newWidth) => {
     if (newWidth < 100) {
@@ -88,14 +62,37 @@ a-layout.new-layout
   })
 
   const actualSidebarWidth = computed(() => {
-    const minWidth = 100
+    const minWidth = 180
     const maxWidth = window.innerWidth * 0.4
     return Math.max(minWidth, Math.min(sidebarWidth.value, maxWidth))
   })
 
-  const results = computed(() => getResultsByType(types))
-  const queryLogs = computed(() => logs.value.filter((log) => types.includes(log.type)))
-  const dataViewRef = ref(null)
+  const enterFocusMode = () => {
+    if (focusMode.value) return
+    layoutSnapshot.value = { footer: footer.value, menuCollapse: menuCollapse.value }
+    appStore.applyUiConfig({ footer: false, menuCollapse: true }, { persist: false })
+    focusMode.value = true
+  }
+
+  const exitFocusMode = () => {
+    if (!focusMode.value) return
+    focusMode.value = false
+    appStore.applyUiConfig(
+      {
+        footer: layoutSnapshot.value.footer,
+        menuCollapse: layoutSnapshot.value.menuCollapse,
+      },
+      { persist: false }
+    )
+  }
+
+  const toggleFocusMode = () => {
+    if (focusMode.value) {
+      exitFocusMode()
+    } else {
+      enterFocusMode()
+    }
+  }
 
   watch(s, (v) => {
     if (
@@ -115,24 +112,10 @@ a-layout.new-layout
   })
 
   watch(escape, (v) => {
-    if (v && isFullSizeMode.value) {
-      isFullSizeMode.value = false
+    if (v && focusMode.value) {
+      exitFocusMode()
     }
   })
-
-  const selectExplainTab = () => {
-    if (dataViewRef.value) {
-      dataViewRef.value.selectTab('explain')
-    }
-  }
-
-  const handleToggleFullSize = (fullSize: boolean) => {
-    isFullSizeMode.value = fullSize
-  }
-
-  const toggleFullSize = () => {
-    isFullSizeMode.value = !isFullSizeMode.value
-  }
 
   const globalTour = driver({
     showProgress: false,
@@ -173,11 +156,14 @@ a-layout.new-layout
   })
 
   onDeactivated(() => {
+    exitFocusMode()
     database.value = originalDatabase.value
     originalDatabase.value = undefined
   })
 
-  // TODO: add more code type in the future if needed
+  onBeforeUnmount(() => {
+    exitFocusMode()
+  })
 </script>
 
 <style lang="less" scoped>
@@ -185,63 +171,70 @@ a-layout.new-layout
     box-shadow: none !important;
   }
   .new-layout {
+    :deep(> .arco-layout-content.layout-content.has-panel) {
+      background: var(--gpt-bg-app);
+      height: 100%;
+    }
     :deep(.layout-space > .arco-space-item:first-of-type) {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
       padding-left: 0;
     }
+  }
+  .new-layout.query-layout--focus {
+    :deep(> .arco-layout-content.layout-content.has-panel) {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+      box-sizing: border-box;
+    }
+    :deep(.layout-space > .arco-space-item:first-of-type) {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+    }
+    :deep(.editor-space) {
+      height: 100%;
+      box-sizing: border-box;
+    }
+    :deep(.editor-space > .arco-space-item) {
+      box-sizing: border-box;
+    }
+  }
+  :deep(.layout-space) {
+    height: 100%;
   }
   :deep(.editor-space) {
     padding-top: 0px;
     height: 100%;
-    padding-right: 6px;
-    .editor-card .ͼ1.cm-editor {
-      border-radius: 4px;
-    }
+    min-height: 0;
     > .arco-space-item {
       width: 100%;
       padding-right: 0;
       > .arco-scrollbar {
         width: 100%;
         > .arco-scrollbar-track-direction-vertical {
-          padding-left: 15px;
+          padding-left: var(--gpt-page-padding-x);
         }
       }
       &:nth-of-type(2) {
         flex: 1;
+        min-height: 0;
         overflow: auto;
       }
     }
-    .editor-card {
-      padding-right: 1px;
-      .arco-resizebox-trigger-icon-wrapper {
-        font-size: 12px;
-      }
-    }
   }
-</style>
 
-<style lang="less">
-  .full-size-modal {
-    .arco-modal-wrapper {
-      overflow: hidden;
-      .arco-modal {
-        pointer-events: auto;
-        box-shadow: 0 2px 10px 0 var(--box-shadow-color);
-        width: calc(100vw - var(--navbar-width-collapsed) - 16px);
-        border: 1px solid var(--border-color);
-        .arco-modal-body {
-          padding: 8px 16px;
-          height: calc(100vh - var(--footer-height) - 20px);
-        }
-      }
-    }
+  :deep(.panel-resize) {
+    background: var(--gpt-bg-panel);
+  }
 
-    &.full-screen {
-      .arco-modal {
-        transform: none !important;
-        position: fixed !important;
-        right: 6px !important;
-        top: 10px !important;
-      }
-    }
+  :deep(.editor-space .panel-resize) {
+    border-bottom: 1px solid var(--gpt-border-default);
+  }
+
+  :deep(.panel-resize.logs-panel-resize) {
+    border-top: 1px solid var(--gpt-border-default);
   }
 </style>

@@ -222,8 +222,8 @@ a-space(v-if="pages.length")
   }
 
   // Older/Newer 按钮样式
-  :deep(.arco-btn-size-small) {
+  :deep(.arco-btn-size-small:not(.arco-btn-only-icon)) {
     padding: 4px 8px;
-    min-height: 24px;
+    min-height: 26px;
   }
 </style>

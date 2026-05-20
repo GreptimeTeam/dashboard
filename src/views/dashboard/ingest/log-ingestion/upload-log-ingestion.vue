@@ -6,7 +6,7 @@ BaseUpload(:config="config")
         span.label Table
         a-select(
           v-model="tableForPipeline"
-          size="small"
+          size="medium"
           allow-search
           :options="tableOptions"
           :loading="tableLoading"
@@ -17,7 +17,7 @@ BaseUpload(:config="config")
         span.label Pipeline
         a-select(
           v-model="pipelineName"
-          size="small"
+          size="medium"
           allow-search
           :options="pipelineOptions"
           :loading="pipelineLoading"
@@ -26,7 +26,7 @@ BaseUpload(:config="config")
         )
       .select-item
         span.label Format
-        a-select(v-model="contentType" size="small" :style="{ width: '110px' }")
+        a-select(v-model="contentType" size="medium" :style="{ width: '110px' }")
           a-option(value="text/plain") Plain Text
           a-option(value="application/json") JSON
           a-option(value="application/x-ndjson") NDJSON
@@ -37,7 +37,7 @@ BaseUpload(:config="config")
         span.label Table
         a-select(
           v-model="tableForPipeline"
-          size="small"
+          size="medium"
           allow-search
           allow-create
           :options="tableOptions"
@@ -47,14 +47,14 @@ BaseUpload(:config="config")
         span.label Pipeline
         a-select(
           v-model="pipelineName"
-          size="small"
+          size="medium"
           allow-search
           :options="pipelineOptions"
           :loading="pipelineLoading"
         )
       .select-item
         span.label Format
-        a-select(v-model="contentType" size="small")
+        a-select(v-model="contentType" size="medium")
           a-option(value="text/plain") Plain Text
           a-option(value="application/json") JSON
           a-option(value="application/x-ndjson") NDJSON

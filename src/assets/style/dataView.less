@@ -72,6 +72,34 @@
   }
 }
 
+.view-switch {
+  display: inline-flex;
+  flex-shrink: 0;
+
+  /* outline + 直连子按钮：使用 Arco btn-group 原生叠边与圆角 */
+  .arco-btn-group .arco-btn-outline {
+    color: var(--gpt-text-secondary);
+
+    svg {
+      color: currentColor;
+      opacity: 1;
+    }
+
+    &:hover {
+      z-index: 2;
+      color: var(--gpt-text-secondary);
+    }
+
+    &.active,
+    &.active:hover {
+      z-index: 2;
+      color: var(--gpt-text-inverse);
+      background: var(--gpt-brand-900);
+      border-color: var(--gpt-brand-900);
+    }
+  }
+}
+
 .chart-form {
   align-items: center;
 

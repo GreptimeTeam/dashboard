@@ -1,3 +1,5 @@
+import { processLogs, writeInfluxDB } from '@/services/code-run'
+
 export interface IngestConfig {
   type: string
   tabKey: string
@@ -12,7 +14,7 @@ export interface IngestConfig {
 }
 
 export default function useIngest() {
-  const codeRunStore = useCodeRunStore()
+  const appStore = useAppStore()
 
   const getPlaceholderByContentType = (contentType: string): string => {
     if (contentType === 'application/json') {
@@ -40,7 +42,7 @@ hello greptime 2024-07-12T16:18:53.048`
     hasDoc: true,
     successMessage: 'Data written successfully',
     submitHandler: async (content: string) => {
-      return codeRunStore.writeInfluxDB(content, precision.value)
+      return writeInfluxDB(content, precision.value)
     },
     get params() {
       return { precision: precision.value }
@@ -54,7 +56,7 @@ hello greptime 2024-07-12T16:18:53.048`
     hasDoc: true,
     successMessage: 'Data written successfully',
     submitHandler: async (content: string) => {
-      return codeRunStore.writeInfluxDB(content, precision.value)
+      return writeInfluxDB(content, precision.value)
     },
     get params() {
       return { precision: precision.value }
@@ -75,7 +77,7 @@ hello greptime 2024-07-12T16:18:53.048`
     hasDoc: false,
     successMessage: 'Data written successfully',
     submitHandler: async (content: string) => {
-      return codeRunStore.processLogs(content, table.value, pipeline.value, contentType.value)
+      return processLogs(content, appStore.database, table.value, pipeline.value, contentType.value)
     },
     get params() {
       return { pipeline: pipeline.value, table: table.value, contentType: contentType.value }
@@ -96,7 +98,7 @@ hello greptime 2024-07-12T16:18:53.048`
     hasDoc: false,
     successMessage: 'Data written successfully',
     submitHandler: async (content: string) => {
-      return codeRunStore.processLogs(content, table.value, pipeline.value, contentType.value)
+      return processLogs(content, appStore.database, table.value, pipeline.value, contentType.value)
     },
     get params() {
       return { pipeline: pipeline.value, table: table.value, contentType: contentType.value }

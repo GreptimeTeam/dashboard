@@ -7,7 +7,6 @@
           v-model:time-length="promForm.time"
           v-model:time-range="promForm.range"
           flex-direction="row-reverse"
-          button-class="query-time-button"
           :range-picker-visible="rangePickerVisible"
           :relative-time-map="queryTimeMap"
           :relative-time-options="queryTimeOptions"
@@ -69,7 +68,7 @@
   import { oneDark } from '@codemirror/theme-one-dark'
   import useDataChart from '@/hooks/data-chart'
   import type { PromForm, ResultType } from '@/store/modules/code-run/types'
-  import type { Log } from '@/store/modules/log/types'
+  import type { Log } from '@/types/log'
   import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '@/views/dashboard/config'
   import i18n from '@/locale'
   import { Message } from '@arco-design/web-vue'

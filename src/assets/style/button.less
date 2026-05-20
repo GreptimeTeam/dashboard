@@ -2,15 +2,6 @@
   border-radius: 4px;
 }
 
-.arco-btn-primary[type='button'] {
-  color: var(--white-font-color);
-  background-color: var(--brand-color);
-}
-
-.arco-btn-primary[type='button']:hover {
-  background-color: var(--hover-brand-color);
-}
-
 .arco-btn-primary[type='button'].arco-btn-loading {
   background-color: var(--brand-color);
 }
@@ -42,23 +33,11 @@
   border-color: transparent;
 }
 
-.arco-btn-text[type='button'] {
-  color: var(--brand-color);
-}
-
-.arco-btn-text[type='button']:hover {
-  color: var(--brand-color);
-  background-color: var(--th-bg-color);
-  &.copy {
-    color: var(--card-bg-color);
-  }
-}
-
 .arco-btn-outline,
 .arco-btn-outline[type='button'],
 .arco-btn-outline[type='submit'] {
   color: var(--main-font-color);
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--gpt-border-strong);
 }
 
 .arco-btn-outline:hover,
@@ -93,26 +72,75 @@
   border: 1px solid transparent;
 }
 
-.arco-btn-text.query-time-button,
-.arco-btn-text.query-time-button:hover {
-  color: var(--small-font-color);
-  background: var(--grey-bg-color);
-  border: 1px solid transparent;
-  padding: 0 10px;
-}
-
-.arco-btn-text.query-time-button:focus-within {
-  background: transparent;
-  border: 1px solid var(--hover-brand-color);
-}
-
 .arco-btn-size-medium:not(.arco-btn-only-icon) .arco-btn-icon {
   margin-right: 10px;
 }
 
+/* medium only-icon：Arco 默认固定宽高；outline/dashed 保留横向 padding、宽度自适应 */
+.arco-btn-size-medium.arco-btn-only-icon.arco-btn-outline,
+.arco-btn-size-medium.arco-btn-only-icon.arco-btn-dashed {
+  width: auto;
+  min-width: 0;
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+/* small：Button / Select / Radio-group 统一 26px（见 global --gpt-control-height-sm） */
+.arco-btn-size-small {
+  height: var(--gpt-control-height-sm);
+}
+
+.arco-btn-size-small.arco-btn-only-icon,
+.arco-btn-size-small.arco-btn-shape-circle {
+  width: var(--gpt-control-height-sm);
+  height: var(--gpt-control-height-sm);
+}
+
+.arco-radio-group-size-small.arco-radio-group-button,
+.arco-radio-group-size-small .arco-radio-button {
+  line-height: var(--gpt-control-height-sm);
+}
+
+/* medium：button 型 Radio-group 总高 32px（含 .arco-radio-group-button 的 1px 外框，用 border-box） */
+.arco-radio-group-size-medium.arco-radio-group-button {
+  height: var(--gpt-control-height-md);
+  min-height: var(--gpt-control-height-md);
+  max-height: var(--gpt-control-height-md);
+  box-sizing: border-box;
+}
+
+.arco-radio-group-size-medium.arco-radio-group-button .arco-radio-button {
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
 .arco-radio-group-button {
-  background-color: var(--grey-bg-color);
-  .arco-radio-button.arco-radio-checked {
-    color: var(--brand-color);
+  padding: 0;
+  background-color: var(--gpt-bg-panel);
+  border: 1px solid var(--gpt-border-strong);
+
+  .arco-radio-button {
+    margin: 0;
+    border-radius: 0;
+    color: var(--gpt-text-secondary);
+    border-color: var(--gpt-border-strong);
   }
+
+  .arco-radio-button:first-of-type {
+    border-radius: var(--gpt-radius-sm) 0 0 var(--gpt-radius-sm);
+  }
+
+  .arco-radio-button:last-of-type {
+    border-radius: 0 var(--gpt-radius-sm) var(--gpt-radius-sm) 0;
+  }
+}
+
+.arco-radio-button.arco-radio-checked {
+  color: var(--gpt-text-inverse);
+  background-color: var(--gpt-brand-900);
+  border-color: var(--gpt-brand-900);
 }

@@ -1,9 +1,7 @@
-import { Log } from '@/store/modules/log/types'
 import { Md5 } from 'ts-md5'
 import { Message } from '@arco-design/web-vue'
 import i18n from '@/locale'
-
-const { saveScript } = useCodeRunStore()
+import { saveScript } from '@/services/code-run'
 
 const pythonCode = ref('')
 const lastSavedCode = ref('')
@@ -21,7 +19,6 @@ const scriptRunning = ref(false)
 const isChanged = computed(() => Md5.hashStr(pythonCode.value) !== Md5.hashStr(lastSavedCode.value))
 
 export default function usePythonCode() {
-  const { pushLog } = useLog()
   const insertNameToPyCode = (name: any) => {
     pythonCode.value =
       pythonCode.value.substring(0, cursorAt.value[0]) + name + pythonCode.value.substring(cursorAt.value[1])
@@ -61,16 +58,11 @@ export default function usePythonCode() {
   }
 
   const save = async (name: string, code: string) => {
-    try {
-      const res = await saveScript(name, code)
-      Message.success({
-        content: i18n.global.t('dashboard.saveSuccess'),
-        duration: 2 * 1000,
-      })
-      pushLog(res, 'python')
-    } catch (err: any) {
-      throw pushLog(JSON.parse(err.message) as Log, 'python')
-    }
+    await saveScript(name, code)
+    Message.success({
+      content: i18n.global.t('dashboard.saveSuccess'),
+      duration: 2 * 1000,
+    })
   }
 
   const isButtonDisabled = computed(() => {

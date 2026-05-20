@@ -64,17 +64,22 @@ a-layout-content.main-content
       a-alert(type="error" show-icon)
         a-typography-text(title="" :ellipsis="{ rows: 1, showTooltip: true }") {{ errorMessage }}
 
-    a-spin(style="width: 100%" :tip="config.readingTip || 'Reading file...'" :loading="isReadingFile")
-      a-card.file-scrollbar(:bordered="false")
-        CodeMirror(
-          v-model="codeInEditor"
-          :style="{ height: '100%' }"
-          :extensions="extensions"
-          :spellcheck="true"
-          :indent-with-tab="true"
-          :tabSize="2"
-          :disabled="true"
-        )
+    a-spin.file-preview-spin(
+      style="width: 100%"
+      :tip="config.readingTip || 'Reading file...'"
+      :loading="isReadingFile"
+    )
+      a-card.file-scrollbar.gpt-dark-editor-card(:bordered="false")
+        .full-width-height-editor.card-editor.gpt-dark-editor.gpt-square-editor
+          CodeMirror(
+            v-model="codeInEditor"
+            :style="{ width: '100%', height: '100%' }"
+            :extensions="extensions"
+            :spellcheck="true"
+            :indent-with-tab="true"
+            :tabSize="2"
+            :disabled="true"
+          )
       span.load(v-if="collapsed && remainingLines")
         a.text ...{{ remainingLines }} lines more
         a.button(type="text" size="mini" @click="loadMore") {{ config.expandText || 'Expand' }}
@@ -93,8 +98,8 @@ a-layout-content.main-content
 <script lang="ts" setup>
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { basicSetup } from 'codemirror'
-  import { json } from '@codemirror/lang-json' // 导入JSON语法支持
-  import type { Log } from '@/store/modules/log/types'
+  import { json } from '@codemirror/lang-json'
+  import { oneDark } from '@codemirror/theme-one-dark'
   import { isObject } from '@/utils/is'
 
   const props = defineProps({
@@ -104,9 +109,7 @@ a-layout-content.main-content
     },
   })
 
-  const route = useRoute()
-  const { pushLog } = useLog(route)
-  const { activeTab, footer } = storeToRefs(useIngestStore())
+  const { activeTab } = storeToRefs(useIngestStore())
 
   const file = ref(null)
   const visible = ref(false)
@@ -194,15 +197,7 @@ a-layout-content.main-content
 
     const fileInfo = file.value ? `${file.value.name}(${fileSize.value})` : ''
 
-    let log: Log
     if (isObject(result) && Reflect.has(result, 'error')) {
-      log = {
-        type: props.config.tabKey,
-        codeInfo: fileInfo,
-        message: '',
-        error: result.error,
-        startTime: result.startTime,
-      }
       errorMessage.value = result.error
     } else {
       const codeTooltip =
@@ -210,21 +205,9 @@ a-layout-content.main-content
           ? `${dataFromFile.value.split('\n').slice(0, 10).join('\n')}\n...${remainingLines.value} lines more`
           : dataFromFile.value
 
-      log = {
-        type: props.config.tabKey,
-        codeInfo: fileInfo,
-        codeTooltip,
-        message: 'Data written',
-        startTime: result.startTime,
-        networkTime: result.networkTime,
-      }
-
       resetFile()
       visible.value = false
     }
-
-    pushLog(log, props.config.tabKey)
-    footer.value[activeTab.value] = false
     isProcessLoading.value = false
   }
 
@@ -232,22 +215,14 @@ a-layout-content.main-content
     const contentType = props.config?.params?.contentType
 
     if (contentType === 'application/json' || contentType === 'application/x-ndjson') {
-      return [basicSetup, json()]
+      return [basicSetup, json(), oneDark]
     }
 
-    return [basicSetup]
+    return [basicSetup, oneDark]
   })
 </script>
 
 <style lang="less" scoped>
-  .top-bar {
-    display: flex;
-    justify-content: space-between;
-    padding-right: 20px;
-    height: 58px;
-    background: var(--card-bg-color);
-  }
-
   .arco-upload {
     width: 100%;
     padding: 0 105px;
@@ -314,17 +289,13 @@ a-layout-content.main-content
 
   :deep(.arco-card.file-scrollbar) {
     max-height: calc(100vh - 200px);
-    overflow: auto;
+    overflow: hidden;
     min-height: 100px;
     border-radius: 0;
+  }
 
-    .ͼ1 .cm-content {
-      width: calc(100% - 40px);
-      white-space: pre-wrap;
-    }
-    .ͼ4 .cm-line {
-      color: var(--main-font-color);
-    }
+  :deep(.file-preview-spin .arco-spin-children) {
+    min-height: 100px;
   }
 
   :deep(.arco-spin-tip) {
@@ -346,8 +317,9 @@ a-layout-content.main-content
       padding: 0 30px 30px 30px;
       .arco-spin {
         margin-top: 15px;
-        border: 1px solid var(--border-color);
-        border-radius: 4px;
+        border: 1px solid var(--gpt-border-strong);
+        border-radius: var(--gpt-radius-sm);
+        overflow: hidden;
       }
       .load {
         padding-left: 6px;

@@ -14,7 +14,7 @@
             | {{ traceId }}
   .content-container
     .cards-row
-      a-card.light-editor-card(title="Trace Timeline" :bordered="false")
+      a-card.trace-timeline-card.light-editor-card(title="Trace Timeline" :bordered="false")
         template(#extra)
           .service-filter
             span.filter-label Services:
@@ -191,12 +191,15 @@
 
 <style lang="less" scoped>
   .trace-detail-container {
+    display: flex;
+    flex-direction: column;
     height: 100%;
+    min-height: 0;
     overflow: hidden;
   }
 
   .page-header {
-    padding: 8px 12px;
+    padding: var(--gpt-page-header-padding);
     background: var(--card-bg-color);
     border-bottom: 1px solid var(--border-color);
     margin-bottom: 0;
@@ -271,11 +274,14 @@
   }
 
   .content-container {
-    padding: 8px;
+    flex: 1;
+    min-height: 0;
+    padding: 0 8px;
     display: flex;
     flex-direction: column;
     gap: 16px;
-    padding-bottom: 16px;
+
+    overflow: hidden;
   }
 
   .cards-row {
@@ -294,6 +300,14 @@
       &:first-child {
         flex: 1.4;
       }
+    }
+
+    :deep(#trace-attributes) {
+      border-left: 1px solid var(--border-color);
+    }
+
+    :deep(.trace-timeline-card .arco-card-header) {
+      border-bottom: none;
     }
   }
 

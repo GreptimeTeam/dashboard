@@ -1,7 +1,7 @@
 <template lang="pug">
 a-layout.detail-layout.new-layout
   a-layout-sider(:resize-directions="['right']" :width="actualSidebarWidth")
-    a-card.perses-sidebar(:bordered="false")
+    a-card.gpt-page-sidebar(:bordered="false")
       template(#title)
         a-space.space-between(fill style="width: 100%")
           | {{ $t('menu.dashboard.perses') }}
@@ -16,33 +16,34 @@ a-layout.detail-layout.new-layout
                 svg.icon-16
                   use(href="#file-add")
       a-spin(:loading="isLoading")
-        a-scrollbar
+        a-scrollbar.gpt-vertical-scrollbar
           a-empty(v-if="!filteredDashboards.length" :description="$t('dashboard.perses.emptySidebar')")
             template(#image)
               svg.icon-32
                 use(href="#empty")
-          a-menu(v-model:selected-keys="selectedKeys")
+          a-menu.gpt-sidebar-menu(v-model:selected-keys="selectedKeys" mode="vertical" :collapsed="false")
             a-menu-item(
               v-for="item in filteredDashboards"
               :key="item.id"
               type="text"
               long
-              style="margin-bottom: 0"
             )
-              .menu-item
-                span.name {{ item.name }}
-                a-tooltip.menu-item-delete(
-                  v-if="item.id === selectedId"
-                  mini
-                  position="left"
-                  content="Delete"
+              template(#icon)
+                svg.icon-15
+                  use(href="#document")
+              span.gpt-sidebar-menu-text {{ item.name }}
+              a-tooltip.menu-item-delete.gpt-sidebar-menu-action(
+                v-if="item.id === selectedId"
+                mini
+                position="left"
+                content="Delete"
+              )
+                a-popconfirm(
+                  content="Are you sure to delete this dashboard?"
+                  type="warning"
+                  @ok="handleDeleteDashboard(item)"
                 )
-                  a-popconfirm(
-                    content="Are you sure to delete this dashboard?"
-                    type="warning"
-                    @ok="handleDeleteDashboard(item)"
-                  )
-                    IconDelete.delete-btn
+                  IconDelete.delete-btn
   a-layout-content.layout-content
     a-card.perses-content(:bordered="false")
       template(v-if="selectedDashboard")
@@ -111,7 +112,7 @@ a-layout.detail-layout.new-layout
   const route = useRoute()
   const router = useRouter()
   const DASHBOARD_QUERY_KEY = 'dashboard'
-  const sidebarWidth = useStorage('perses-sidebar-width', 280)
+  const sidebarWidth = useStorage('perses-sidebar-width', 228)
   const searchText = ref('')
   const createModalVisible = ref(false)
   const createForm = reactive({
@@ -417,23 +418,10 @@ a-layout.detail-layout.new-layout
   .new-layout > .layout-content {
     overflow-y: hidden;
   }
-  .perses-sidebar {
-    height: 100%;
-  }
-
   .search-input {
     margin-bottom: 12px;
   }
 
-  .perses-sidebar :deep(.arco-card-body) {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .perses-sidebar :deep(.arco-scrollbar) {
-    flex: 1;
-    min-height: 0;
-  }
   .perses-content {
     height: 100%;
   }
@@ -446,7 +434,7 @@ a-layout.detail-layout.new-layout
   }
 
   .empty-state {
-    padding: 24px;
+    padding: var(--gpt-page-padding-y) var(--gpt-page-padding-x);
     max-width: 760px;
     margin: 0 auto;
     box-sizing: border-box;
@@ -468,43 +456,9 @@ a-layout.detail-layout.new-layout
     display: inline-block;
     margin-top: 12px;
     font-size: 12px;
-    color: var(--color-text-2);
-    text-decoration: none;
-  }
-
-  .learn-more:hover {
-    color: var(--color-text-1);
-    text-decoration: underline;
-  }
-
-  :deep(.arco-menu-vertical .arco-menu-inner) {
-    padding: 0;
-  }
-
-  :deep(.arco-menu-light .arco-menu-item.arco-menu-selected) {
-    color: var(--brand-color);
-  }
-
-  .menu-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-
-  .menu-item .name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   :deep(.delete-btn) {
-    opacity: 0;
-    transition: opacity 0.15s ease;
-  }
-
-  :deep(.arco-menu-item:hover) .delete-btn,
-  :deep(.arco-menu-item.arco-menu-selected) .delete-btn {
-    opacity: 1;
+    color: var(--gpt-brand-600);
   }
 </style>

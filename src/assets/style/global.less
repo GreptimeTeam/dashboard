@@ -13,35 +13,208 @@
 @import url('./docs.less');
 @import url('./custom-block.less');
 @import url('./tour.less');
-@import url('./new.less');
 
 * {
   box-sizing: border-box;
 }
 
+.arco-checkbox-label {
+  font-weight: 500;
+}
+
+.gpt-vertical-scrollbar,
+.table-tree,
+.metrics-tree,
+.tree-scrollbar {
+  overflow-x: hidden;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: #c7c7c7;
+    border-radius: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-neutral-6);
+  }
+
+  .arco-scrollbar-track-direction-horizontal {
+    display: none;
+  }
+
+  .arco-scrollbar-container {
+    overflow-x: hidden !important;
+  }
+
+  .arco-scrollbar-track-direction-vertical {
+    background: transparent;
+    border-right: 0;
+    border-left: 0;
+  }
+
+  .arco-scrollbar-thumb-direction-vertical .arco-scrollbar-thumb-bar {
+    width: 8px;
+    margin: 0;
+    background-color: #c7c7c7;
+    border-radius: 6px;
+  }
+
+  .arco-scrollbar-thumb-direction-vertical:hover .arco-scrollbar-thumb-bar,
+  .arco-scrollbar-thumb-dragging .arco-scrollbar-thumb-bar {
+    background-color: var(--color-neutral-6);
+  }
+
+  .arco-virtual-list {
+    overflow-x: hidden;
+
+    &::-webkit-scrollbar {
+      width: 8px;
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background-color: #c7c7c7;
+      border-radius: 6px;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+      background-color: var(--color-neutral-6);
+    }
+  }
+}
+
+.arco-card.gpt-vertical-scrollbar > .arco-card-body {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.gpt-content-toolbar {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  height: 47px;
+  padding: var(--gpt-toolbar-padding);
+  background: var(--gpt-bg-panel);
+  border-bottom: 1px solid var(--gpt-border-default);
+}
+
+.gpt-divider-line {
+  flex-shrink: 0;
+  width: 100%;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-top: 1px solid var(--gpt-border-default);
+}
+
+.gpt-divider-band {
+  flex-shrink: 0;
+  width: 100%;
+  height: var(--gpt-divider-band-size);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--gpt-bg-divider-band);
+}
+
 :root {
-  --main-bg-color: rgba(244, 246, 254, 1);
-  --list-hover-color: rgba(231, 230, 233, 1);
-  --th-bg-color: rgba(231, 230, 233, 0.5);
-  --card-bg-color: rgba(255, 255, 255, 1);
+  /* Table Query v2 foundational tokens (from Figma 58:3098) */
+  --font-family-base: Geist, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --gpt-bg-app: #f9f8f7;
+  --gpt-bg-panel: #ffffff;
+  --gpt-bg-surface: #fafafa;
+  --gpt-bg-header: #fafafa;
+  --gpt-bg-code: #1a1630;
+  --gpt-bg-code-line: rgba(255, 255, 255, 0.06);
+
+  --gpt-main-purple: #702fed;
+  --gpt-brand-900: #473460;
+  --gpt-brand-700: #5a4a70;
+  --gpt-brand-600: #8b7ba8;
+  --gpt-brand-300: #c4a8f0;
+
+  --gpt-text-primary: #473460;
+  --gpt-text-secondary: #8b7ba8;
+  --gpt-text-muted: #b0a8c4;
+  --gpt-text-inverse: #ffffff;
+  --gpt-text-inverse-muted: rgba(255, 255, 255, 0.62);
+  --gpt-accent-ts: #00bbb2;
+  --gpt-danger: #ef4444;
+
+  --gpt-border-strong: rgba(71, 52, 96, 0.15);
+  --gpt-border-default: rgba(71, 52, 96, 0.09);
+  --gpt-border-subtle: rgba(71, 52, 96, 0.05);
+  --gpt-border-inverse-subtle: rgba(255, 255, 255, 0.1);
+  --gpt-divider-band-size: 6px;
+  --gpt-bg-divider-band: #f0edf5;
+
+  --gpt-link-color: var(--gpt-main-purple);
+
+  --gpt-nav-active-bg: rgba(112, 47, 237, 0.1);
+  --gpt-nav-active-indicator: var(--gpt-main-purple);
+  --gpt-table-head-bg: rgba(71, 52, 96, 0.04);
+  --gpt-table-toolbar-bg: var(--gpt-bg-header);
+
+  --gpt-page-padding-x: 16px;
+  --gpt-page-padding-y: 16px;
+  --gpt-page-header-padding: 8px var(--gpt-page-padding-x);
+  --gpt-toolbar-padding: 8px var(--gpt-page-padding-x);
+  --gpt-section-padding-y: 8px;
+
+  --gpt-control-height-sm: 26px;
+  --gpt-control-height-md: 32px;
+
+  --gpt-size-navbar: 52px;
+  --gpt-size-table-sidebar: 228px;
+  --gpt-size-toolbar: 38px;
+  --gpt-radius-sm: 4px;
+  --gpt-radius-md: 8px;
+  --gpt-radius-lg: 12px;
+
+  /* Backward-compatible aliases */
+  --main-purple-color: var(--gpt-main-purple);
+  --main-bg-color: var(--gpt-bg-app);
+  --list-hover-color: rgba(71, 52, 96, 0.08);
+  --th-bg-color: var(--gpt-table-head-bg);
+  --card-bg-color: var(--gpt-bg-panel);
   --hover-bg-color: rgba(255, 255, 255, 0.6);
   --white-font-color: rgba(252, 253, 255, 1);
   --tooltip-font-color: rgba(255, 255, 255, 0.8);
-  --navbar-bg-color: linear-gradient(270deg, #1d0e38 0%, #2a115a 100%);
-  --brand-color: rgba(131, 34, 255, 1);
+  --navbar-bg-color: var(--gpt-brand-900);
+  --brand-color: var(--gpt-brand-900);
   --primary-6: var(--brand-color);
-  --hover-brand-color: rgba(163, 118, 255, 1);
-  --light-brand-color: rgba(163, 118, 255, 0.1);
-  --tree-select-brand-color: rgba(163, 118, 255, 0.1);
-  --main-font-color: rgba(23, 12, 44, 1);
-  --small-font-color: rgba(88, 82, 101, 1);
-  --third-font-color: rgba(170, 166, 178, 1);
+  --hover-brand-color: var(--gpt-brand-300);
+  --light-brand-color: var(--gpt-nav-active-bg);
+  --tree-select-brand-color: var(--gpt-nav-active-bg);
+  --main-font-color: var(--gpt-text-primary);
+  --link-color: var(--gpt-link-color);
+
+  --small-font-color: var(--gpt-text-secondary);
+  --third-font-color: var(--gpt-text-muted);
   --tooltip-bg-color: rgba(23, 12, 44, 0.9);
   --hover-font-color: rgba(23, 12, 44, 0.6);
-  --border-color: rgba(209, 206, 213, 1);
-  --box-shadow-color: rgba(209, 206, 213, 0.6);
-  --light-border-color: rgba(23, 12, 44, 0.07);
-  --grey-bg-color: rgba(23, 12, 44, 0.04);
+  --border-color: var(--gpt-border-default);
+  --box-shadow-color: rgba(71, 52, 96, 0.2);
+  --light-border-color: var(--gpt-border-subtle);
+  --grey-bg-color: var(--gpt-table-head-bg);
   --success-color: rgba(32, 195, 123, 1);
   --success-bg-color: rgba(233, 249, 242, 1);
   --warning-color: rgba(220, 174, 40, 1);
@@ -53,6 +226,68 @@
   --editor-active-line-color: rgba(252, 253, 255, 0.14);
   --disabled-color: rgba(223, 223, 223, 1);
   --font-mono: 'Google Sans Code', monospace;
+}
+
+/* 全局文本链接：品牌紫（与 Flow「Learn more」等一致） */
+a:not(.arco-btn):not(.arco-menu-item):not(.arco-menu-inline-header),
+.arco-link {
+  color: var(--gpt-link-color);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  svg {
+    color: currentColor;
+    fill: currentColor;
+  }
+}
+
+.gpt-cell-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  color: var(--gpt-text-primary);
+  font-size: 12px;
+
+  th,
+  td {
+    height: 47px;
+    padding: 0 12px;
+    border-right: 1px solid var(--gpt-border-default);
+    border-bottom: 1px solid var(--gpt-border-default);
+    background: var(--gpt-bg-panel);
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  th {
+    height: 30px;
+    color: var(--gpt-text-muted);
+    background: var(--gpt-bg-header);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  tr > :last-child {
+    border-right: 0;
+  }
+
+  &.gpt-cell-table-hover {
+    tbody tr:hover td {
+      background: var(--list-hover-color);
+    }
+  }
+}
+
+.arco-tree-node-switcher {
+  margin-right: 0;
 }
 
 // Override Arco Design primary color token to follow our brand color.
@@ -68,7 +303,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px;
+  padding: var(--gpt-toolbar-padding);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-bg-container);
   height: 50px;
@@ -84,15 +319,15 @@ body {
   overflow-x: hidden;
   font-weight: 400;
   font-size: 12px;
-  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'noto sans', sans-serif !important;
-  background-color: var(--main-bg-color);
+  font-family: var(--font-family-base) !important;
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
-  --navbar-width: 180px;
-  --navbar-width-collapsed: 80px;
+  --navbar-width: 200px;
+  --navbar-width-collapsed: 54px;
+  --navbar-current-width: var(--navbar-width);
   --tables-header-height: 158px;
   --tables-layout-padding: 16px;
-  --footer-height: 30px;
+  --footer-height: 24px;
   --tables-list-height: calc(
     100vh - var(--tables-header-height) - var(--footer-height) - var(--tables-layout-padding) -
       var(--tables-layout-padding)
@@ -220,12 +455,6 @@ samp {
     padding: 0;
   }
 
-  .arco-card-header {
-    height: 58px;
-    padding: 10px 15px;
-    border-bottom: 0;
-  }
-
   .arco-card-header-title {
     display: flex;
     align-items: center;
@@ -233,7 +462,6 @@ samp {
     font-weight: 800;
     font-size: 15px;
     line-height: 20px;
-    font-family: 'Gilroy';
   }
 
   .arco-card-header-extra {
@@ -246,14 +474,19 @@ samp {
   height: 12px;
 }
 
+.icon-11 {
+  width: 11px;
+  height: 11px;
+}
+
 .icon-13 {
   width: 13px;
   height: 13px;
 }
 
 .icon {
-  width: 14px;
-  height: 14px;
+  width: 11px;
+  height: 11px;
 }
 
 .icon-15 {
@@ -342,31 +575,6 @@ samp {
   .arco-menu-selected-label {
     bottom: -9px;
   }
-}
-
-.arco-input-wrapper {
-  background: var(--grey-bg-color);
-  border-radius: 4px;
-  padding-left: 10px;
-  padding-right: 10px;
-
-  .arco-input[disabled] {
-    -webkit-text-fill-color: var(--hover-font-color);
-  }
-}
-
-.arco-input-wrapper:hover {
-  background: var(--grey-bg-color);
-}
-
-.arco-input-wrapper.arco-input-disabled {
-  background: var(--grey-bg-color);
-}
-
-.arco-input-wrapper:focus-within,
-.arco-input-wrapper.arco-input-focus {
-  background: transparent;
-  border-color: var(--hover-brand-color);
 }
 
 .arco-modal {

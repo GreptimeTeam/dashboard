@@ -9,7 +9,7 @@ import store from './store'
 import i18n from './locale'
 import directive from './directive'
 import Apps from './App.vue'
-import '@arco-design/web-vue/dist/arco.css'
+import '@arco-design/web-vue/dist/arco.less'
 import '@/assets/style/global.less'
 import '@/api/interceptor'
 

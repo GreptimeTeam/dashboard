@@ -1,57 +1,70 @@
 <template lang="pug">
-a-layout.navbar
+a-layout.navbar(:class="{ 'navbar--collapsed': menuCollapse }")
   a-layout-header.logo-space
-    svg.logo
+    .logo-brand(v-if="!menuCollapse")
+      svg.logo
+        use(href="#logo")
+      span.logo-text Greptime
+    svg.logo(v-else)
       use(href="#logo")
-  a-layout-content
-    .new-query
-    .menu
-      a-menu(mode="vertical" collapsed :selected-keys="[menuSelectedKey]")
-        a-menu-item(
-          v-for="(item, index) in menu"
-          :key="item.name"
-          @click.meta="menuClickWithMeta(item.name)"
-          @click.ctrl="menuClickWithMeta(item.name)"
-          @click.exact="menuClick(item.name)"
-        )
-          span {{ $t(item.meta.locale) }}
-          template(#icon)
-            svg.icon-18(:id="`menu-${item.name}`")
-              use(:href="`#${item.meta.icon}`") 
+  a-layout-content.menu-content
+    a-menu.navbar-menu(
+      mode="vertical"
+      theme="light"
+      :collapsed="menuCollapse"
+      :selected-keys="[menuSelectedKey]"
+      @collapse="onMenuCollapse"
+    )
+      a-menu-item(
+        v-for="item in menu"
+        :key="item.name"
+        @click.meta="menuClickWithMeta(item.name)"
+        @click.ctrl="menuClickWithMeta(item.name)"
+        @click.exact="menuClick(item.name)"
+      )
+        span {{ $t(item.meta.locale) }}
+        template(#icon)
+          svg.icon-18(:id="`menu-${item.name}`")
+            use(:href="`#${item.meta.icon}`")
   a-layout-footer
-    ul.footer
-      li
-        a-tooltip(:content="$t('settings.title')")
-          a-button(type="text" :class="{ hover: globalSettings }" @click="setVisible")
-            template(#icon)
-              svg.icon-16
-                use(href="#settings")
-      li
-        a-dropdown.menu-dropdown(trigger="hover" position="right" :popup-max-height="false")
-          a-button.menu-button(type="text")
-            template(#icon)
-              svg.icon
-                use(href="#menu")
-          template(#content)
-            a-doption(v-for="{ label, link } in dropDownLinks")
-              a-link(target="_blank" :href="link")
-                | {{ label }}
-            a-doption.news(@click="showNews")
-              | {{ $t('menu.news') }}
+    ul.footer(:class="{ 'footer--expanded': !menuCollapse }")
+      li.footer-top-divider(v-if="menuCollapse" aria-hidden="true")
+      .footer-row
+        .footer-start
+          a-tooltip(:content="$t('settings.title')")
+            a-button(type="text" :class="{ hover: globalSettings }" @click="setVisible")
+              template(#icon)
+                svg.icon-16
+                  use(href="#settings")
+          a-dropdown.menu-dropdown(trigger="hover" position="right" :popup-max-height="false")
+            a-button.menu-button(type="text")
+              template(#icon)
+                svg.icon-16
+                  use(href="#Icon13")
+            template(#content)
+              a-doption(v-for="{ label, link } in dropDownLinks")
+                a-link.navbar-dropdown-link(target="_blank" :href="link")
+                  | {{ label }}
+              a-doption.news(@click="showNews")
+                | {{ $t('menu.news') }}
+        .footer-end
+          a-tooltip(:content="menuCollapse ? $t('dashboard.showSidebar') : $t('dashboard.hideSidebar')")
+            a-button.footer-collapse-btn(type="text" @click="toggleMenuCollapse")
+              template(#icon)
+                svg.icon-16(:class="{ 'rotate-180': menuCollapse }")
+                  use(href="#shrink")
 NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
 </template>
 
 <script lang="ts" setup name="NavBar">
-  import { useI18n } from 'vue-i18n'
   import { listenerRouteChange } from '@/utils/route-listener'
   import { useNews } from '@/hooks/news'
   import useMenuTree from '../menu/use-menu-tree'
   import NewsModal from './news-modal.vue'
 
   const router = useRouter()
-  const { t } = useI18n()
   const appStore = useAppStore()
-  const { menuSelectedKey, globalSettings, hideSidebar } = storeToRefs(appStore)
+  const { menuSelectedKey, globalSettings, menuCollapse } = storeToRefs(appStore)
   const { activeTab: ingestTab } = storeToRefs(useIngestStore())
   const { menuTree } = useMenuTree()
   const { newsList, isLoadingNews } = useNews()
@@ -87,10 +100,16 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
     newsModal.value.show()
   }
 
+  const toggleMenuCollapse = () => {
+    appStore.applyUiConfig({ menuCollapse: !menuCollapse.value })
+  }
+
+  const onMenuCollapse = (collapsed: boolean) => {
+    appStore.applyUiConfig({ menuCollapse: collapsed })
+  }
+
   const menuClick = (key: string) => {
-    if (key === menuSelectedKey.value) {
-      appStore.applyUiConfig({ hideSidebar: !hideSidebar.value })
-    } else {
+    if (key !== menuSelectedKey.value) {
       appStore.applyUiConfig({ hideSidebar: false })
     }
     switch (key) {
@@ -120,168 +139,249 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
 
 <style scoped lang="less">
   .navbar {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
     height: 100%;
-    width: 100%;
-    border-right: 1px solid var(--border-color);
+    overflow-y: auto;
+    background: var(--gpt-bg-header);
+    border-right: 1px solid var(--gpt-border-default);
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    :deep(.arco-layout-header),
+    :deep(.arco-layout-footer) {
+      flex-shrink: 0;
+    }
+
+    :deep(.arco-layout-content) {
+      flex: 1;
+      min-height: 0;
+    }
   }
 
   .logo-space {
-    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    height: auto;
+    padding: var(--gpt-radius-lg) 8px;
+  }
+
+  .navbar--collapsed .logo-space {
+    justify-content: center;
+    padding: var(--gpt-radius-lg) 0;
+  }
+
+  .logo-brand {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .logo {
+    flex-shrink: 0;
+    width: calc(var(--gpt-size-navbar) / 2);
+    height: calc(var(--gpt-size-navbar) / 2);
+    color: var(--gpt-brand-900);
+    fill: currentColor;
+  }
+
+  .logo-text {
+    overflow: hidden;
+    color: var(--gpt-brand-900);
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .menu-content {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .navbar-menu {
+    background: transparent;
+  }
+
+  :deep(.navbar-menu.arco-menu-light) {
+    background: transparent;
+  }
+
+  :deep(.navbar-menu .arco-menu-inner) {
+    padding: 8px;
+  }
+
+  :deep(.navbar-menu:not(.arco-menu-collapsed) .arco-menu-item) {
+    height: auto;
+    margin: 0 0 4px !important;
+    padding: 8px 12px !important;
+    color: var(--gpt-text-secondary);
+    font-size: 12px;
+    line-height: 20px;
+    border-radius: var(--gpt-radius-sm);
+  }
+
+  :deep(.navbar-menu:not(.arco-menu-collapsed) .arco-menu-item.arco-menu-has-icon) {
+    display: flex;
+    align-items: center;
+  }
+
+  :deep(.navbar-menu .arco-menu-item .arco-menu-icon),
+  :deep(.navbar-menu .arco-menu-item .arco-menu-icon svg) {
+    color: var(--gpt-text-secondary);
+  }
+
+  :deep(.navbar-menu .arco-menu-item:hover) {
+    color: var(--gpt-brand-900);
+    background: var(--gpt-nav-active-bg);
+  }
+
+  :deep(.navbar-menu .arco-menu-item:hover .arco-menu-icon),
+  :deep(.navbar-menu .arco-menu-item:hover .arco-menu-icon svg) {
+    color: var(--gpt-brand-900);
+  }
+
+  :deep(.navbar-menu .arco-menu-item.arco-menu-selected) {
+    color: var(--gpt-main-purple);
+    font-weight: 600;
+    background: var(--gpt-nav-active-bg);
+  }
+
+  :deep(.navbar-menu .arco-menu-item.arco-menu-selected .arco-menu-icon),
+  :deep(.navbar-menu .arco-menu-item.arco-menu-selected .arco-menu-icon svg) {
+    color: var(--gpt-main-purple);
+  }
+
+  :deep(.navbar-menu .arco-menu-item.arco-menu-selected::before) {
+    content: '';
+    position: absolute;
+    top: calc((100% - 20px) / 2);
+    left: 0;
+    width: 3px;
+    height: 20px;
+    border-radius: 0 var(--gpt-radius-sm) var(--gpt-radius-sm) 0;
+    background: var(--gpt-nav-active-indicator);
+  }
+
+  :deep(.arco-menu-icon) {
     display: flex;
     align-items: center;
     justify-content: center;
   }
 
-  .logo {
-    height: 32px;
-    width: 32px;
+  :deep(.navbar-menu.arco-menu-collapsed .arco-menu-inner) {
+    padding: 4px;
   }
 
-  .menu {
-    width: 100%;
+  :deep(.arco-menu-collapsed .arco-menu-item) {
+    margin: 0 0 4px;
+  }
 
-    .arco-menu {
-      font-size: 14px;
-    }
+  :deep(.arco-menu-collapsed .arco-menu-item.arco-menu-has-icon) {
+    justify-content: center;
+    padding: 8px;
+  }
 
-    .arco-menu-collapsed {
-      width: 100%;
-    }
-    :deep(.arco-menu-vertical .arco-menu-item.arco-menu-has-icon) {
-      margin-bottom: 2px;
-      border-left: 2px solid transparent;
-      border-radius: 0;
-      line-height: 38px;
-      display: flex;
-      justify-content: center;
-      margin-right: 2px;
-    }
-    :deep(.arco-menu-vertical .arco-menu-inner) {
-      padding: 0;
-    }
+  :deep(.arco-menu-collapsed .arco-menu-icon) {
+    margin-right: 0;
+  }
 
-    :deep(.arco-menu-title) {
-      width: 0;
-    }
-
-    :deep(.arco-menu-light .arco-menu-item) {
-      &:hover {
-        background-color: transparent;
-        .arco-menu-icon {
-          background-color: var(--th-bg-color);
-        }
-      }
-    }
-
-    :deep(.arco-menu-item.arco-menu-has-icon .arco-menu-icon) {
-      margin-right: 0;
-      padding: 10px 13px;
-      border-radius: 4px;
-      color: var(--small-font-color);
-    }
-    :deep(.arco-menu-light .arco-menu-item.arco-menu-selected) {
-      background-color: transparent;
-      color: var(--brand-color);
-      border-left: 2px solid;
-      border-radius: 0;
-      border-color: var(--brand-color);
-      .arco-menu-icon {
-        color: var(--brand-color);
-        background-color: var(--light-brand-color);
-      }
-    }
+  :deep(.arco-menu-collapsed .arco-menu-item-inner) {
+    display: none;
   }
 
   .footer {
     display: flex;
-    list-style: none;
     flex-direction: column;
-    padding: 0;
+    gap: var(--gpt-radius-sm);
+    align-items: center;
+    padding: 4px 0;
     margin: 0;
-    .arco-btn-text[type='button'] {
-      color: var(--small-font-color);
-      font-size: 13px;
-      display: flex;
-      border: none;
-      height: 38px;
-      border-radius: 4px;
-      width: 44px;
-      &:not(.arco-btn-only-icon) {
-        padding-left: 86px;
-        justify-content: flex-start;
-      }
+    list-style: none;
+
+    &.footer--expanded {
+      padding: 4px 8px;
     }
+
+    .footer-row {
+      display: flex;
+      flex-direction: column;
+      gap: var(--gpt-radius-sm);
+      align-items: center;
+      width: 100%;
+    }
+
+    &.footer--expanded .footer-row {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0;
+    }
+
+    .footer-start,
+    .footer-end {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    &.footer--expanded .footer-start {
+      flex-direction: row;
+    }
+
+    .arco-btn-text[type='button'] {
+      color: var(--gpt-text-secondary);
+    }
+
     .arco-btn-text[type='button']:hover,
     .arco-btn-text.hover,
     .arco-btn-text.arco-dropdown-open {
-      background: var(--list-hover-color);
-      :deep(.arco-btn-icon) {
-        color: var(--main-font-color);
-      }
+      color: var(--gpt-brand-900);
+      background: var(--gpt-nav-active-bg);
     }
-    :deep(.arco-btn-icon) {
+
+    .footer-start svg,
+    .footer-end svg {
+      color: var(--gpt-text-secondary);
+      fill: currentColor;
+    }
+
+    .arco-btn-text[type='button']:hover svg,
+    .arco-btn-text.hover svg,
+    .arco-btn-text.arco-dropdown-open svg {
+      color: var(--gpt-brand-900);
+    }
+  }
+
+  .footer-top-divider {
+    width: calc(var(--gpt-size-navbar) - var(--gpt-radius-lg) * 2);
+    height: 0;
+    margin: var(--gpt-radius-sm) 0;
+    padding: 0;
+    border-top: 1px solid var(--gpt-border-default);
+  }
+
+  .rotate-180 {
+    transform: rotate(180deg);
+  }
+</style>
+
+<style lang="less">
+  a.arco-link.navbar-dropdown-link:not(.arco-btn):not(.arco-menu-item):not(.arco-menu-inline-header) {
+    color: var(--small-font-color);
+
+    &:hover {
       color: var(--small-font-color);
-    }
-
-    :deep(.arco-btn-size-medium:not(.arco-btn-only-icon) .arco-btn-icon) {
-      display: flex;
-      width: 16px;
-    }
-
-    li {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .arco-link {
-      color: var(--card-bg-color);
-      transition: color 0.25s;
-    }
-    :deep(.arco-link:hover) {
-      background: transparent;
-      color: var(--brand-color);
-    }
-
-    .social-links {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-  }
-
-  .new-query {
-    padding: 15px 18px 4px 18px;
-    .arco-btn {
-      width: 100%;
-      height: 38px;
-      :first-child {
-        font-size: 26px;
-      }
-      font-size: 14px;
-    }
-  }
-
-  .arco-btn-text[type='button'].menu-button {
-    border: none;
-  }
-
-  .arco-btn-text[type='button'].feedback-button {
-    border: none;
-  }
-
-  .buttons-space {
-    border-top: 1px solid var(--border-color);
-    > :first-child {
-      width: 50%;
-    }
-    > :last-child {
-      width: 50%;
-    }
-    .arco-divider-vertical {
-      margin: 0;
-      height: 26px;
-      border-color: var(--border-color);
+      text-decoration: none;
+      background-color: var(--th-bg-color);
     }
   }
 </style>

@@ -83,11 +83,11 @@ a-trigger#time-select(
     },
     buttonType: {
       type: String as PropType<'text' | 'dashed' | 'outline' | 'primary' | 'secondary'>,
-      default: 'text' as const,
+      default: 'outline' as const,
     },
     buttonSize: {
       type: String as PropType<'medium' | 'small' | 'mini' | 'large'>,
-      default: 'medium' as const,
+      default: 'small' as const,
     },
     relativeTimeOptions: {
       type: Array<OptionsType>,

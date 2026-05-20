@@ -165,7 +165,9 @@ export default defineConfig({
     preprocessorOptions: {
       less: {
         modifyVars: {
-          hack: `true; @import (reference) "${resolve('src/assets/style/breakpoint.less')}";`,
+          hack: `true; @import (reference) "${resolve(
+            'src/assets/style/breakpoint.less'
+          )}"; @import (reference) "${resolve('src/assets/style/arco-theme.less')}";`,
         },
         javascriptEnabled: true,
       },

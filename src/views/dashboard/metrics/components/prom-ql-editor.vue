@@ -18,7 +18,7 @@
       a-button(
         type="primary"
         size="large"
-        style="height: 40px; border-radius: 0 4px 4px 0"
+        style="height: 34px; border-radius: 0 4px 4px 0"
         :loading="queryLoading"
         @click="handleQuery"
       )
@@ -292,7 +292,7 @@
     display: flex;
     align-items: stretch;
     gap: 0;
-    min-height: 40px;
+    min-height: 34px;
   }
 
   .query-button-container {
@@ -318,7 +318,7 @@
   }
 
   :deep(.cm-editor) {
-    height: 40px;
+    height: 34px;
     overflow: visible;
     width: 100%;
   }
@@ -332,9 +332,9 @@
   }
 
   :deep(.cm-content) {
-    line-height: 40px;
+    line-height: 34px;
     padding: 0 8px;
-    min-height: 40px;
+    min-height: 34px;
     font-family: inherit;
     font-size: inherit;
     font-weight: inherit;

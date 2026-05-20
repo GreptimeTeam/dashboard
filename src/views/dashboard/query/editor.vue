@@ -1,11 +1,10 @@
 <template lang="pug">
-a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
-  a-space.space-between(style="padding: 10px 0")
-    a-space.editor-header(size="medium")
-      a-dropdown-button(
+a-card.editor-card.editor-card--inset(:bordered="false")
+  .editor-toolbar
+    .editor-toolbar-main
+      a-button(
         type="primary"
-        position="bl"
-        :disabled="isButtonDisabled || explainQueryRunning"
+        :disabled="isButtonDisabled || explainQueryRunning || secondaryCodeRunning"
         @click="runPartQuery()"
       )
         a-popover(position="bl" content-class="code-tooltip" :content="currentStatement")
@@ -13,16 +12,7 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
             icon-loading(v-if="secondaryCodeRunning" spin)
             icon-play-arrow(v-else)
             div {{ $t('dashboard.runQuery') + (queryType === 'sql' && currentQueryNumber ? ' #' + currentQueryNumber : '') }}
-            icon-close-circle-fill.icon-16(v-if="secondaryCodeRunning") 
-        template(#icon)
-          icon-down
-        template(#content)
-          a-doption(:disabled="secondaryCodeRunning" @click="exportCsv")
-            template(#icon)
-              svg.icon
-                use(href="#export")
-            a-popover(position="rt" content-class="code-tooltip" :content="currentStatement")
-              span {{ $t('dashboard.exportCSV') }}
+            icon-close-circle-fill.icon-16(v-if="secondaryCodeRunning")
       a-dropdown-button(
         type="outline"
         position="bl"
@@ -38,6 +28,8 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
         )
           a-space(:size="4")
             icon-loading(v-if="explainQueryRunning" spin)
+            svg.icon-16(v-else)
+              use(href="#explain")
             span {{ $t('dashboard.explainQuery') + `${currentQueryNumber ? ' #' + currentQueryNumber : ''} ` }}
             icon-close-circle-fill.icon-16(v-if="explainQueryRunning") 
         template(#icon)
@@ -59,62 +51,76 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
             icon-play-arrow(v-else)
             | {{ $t('dashboard.runAll') }}
             icon-close-circle-fill.icon-16(v-if="primaryCodeRunning")
-      a-tooltip(mini position="right" :content="$t('dashboard.timeAssistance')")
-        a-button(type="secondary" @click="openTimeAssistance")
+      a-form.prom-form(layout="inline" v-show="queryType === 'promql'" :model="promForm")
+        a-space(:size="10")
+          a-form-item(:hide-label="true")
+            TimeSelect(
+              v-model:time-length="promForm.time"
+              v-model:time-range="promForm.range"
+              flex-direction="row-reverse"
+              button-size="medium"
+              :relative-time-map="queryTimeMap"
+              :relative-time-options="queryTimeOptions"
+            )
+          a-form-item(:hide-label="true")
+            a-input(
+              v-model="promForm.step"
+              size="medium"
+              hide-button
+              :style="{ width: '180px' }"
+              :placeholder="$t('dashboard.step')"
+            )
+              template(#prefix) Step
+              template(#suffix)
+                a-popover(trigger="hover")
+                  svg.icon
+                    use(href="#question")
+                  template(#content)
+                    a-list(size="small" :split="false" :bordered="false")
+                      template(#header)
+                        | {{ $t('dashboard.supportedDurations') }}
+                      a-list-item(v-for="item of durations" :key="item")
+                        a-typography-text(code) {{ item.key }}
+                        span.ml-4 {{ item.value }}
+                      a-list-item
+                        span.ml-2 {{ $t('dashboard.examples') }}
+                        a-typography-text(v-for="item of durationExamples" :key="item" code) {{ item }}
+    .query-select
+      a-select.query-type-select(v-model="queryType" :trigger-props="{ 'content-class': 'query-select' }")
+        a-option(v-for="query of queryOptions" :="query")
+      a-tooltip(
+        v-if="queryType === 'sql'"
+        mini
+        position="left"
+        :content="$t('dashboard.timeAssistance')"
+      )
+        a-button(type="outline" @click="openTimeAssistance")
           template(#icon)
             svg.icon-18
               use(href="#time-index")
-      TimeAssistance(ref="tsRef" :cm="currentView")
-    .query-select
-      a-space(size="medium")
-        a-tooltip(mini :content="$t('dashboard.format')")
-          a-button(type="outline" :disabled="isButtonDisabled" @click="formatSql()")
-            template(#icon)
-              icon-code-block.icon-18
-        a-tooltip(mini :content="$t('dashboard.clearCode')")
-          a-button(type="outline" :disabled="isButtonDisabled" @click="clearCode")
-            template(#icon)
-              svg.icon-16
-                use(href="#clear")
-        a-select(v-model="queryType" :trigger-props="{ 'content-class': 'query-select' }")
-          a-option(v-for="query of queryOptions" :="query")
-  a-form.space-between.prom-form.mb-15(layout="inline" v-show="queryType === 'promql'" :model="promForm")
-    a-space(:size="10")
-      a-form-item(:hide-label="true")
-        TimeSelect(
-          v-model:time-length="promForm.time"
-          v-model:time-range="promForm.range"
-          flex-direction="row-reverse"
-          button-class="query-time-button"
-          :relative-time-map="queryTimeMap"
-          :relative-time-options="queryTimeOptions"
-        )
-      a-form-item(:hide-label="true")
-        a-input(
-          v-model="promForm.step"
-          hide-button
-          :style="{ width: '180px' }"
-          :placeholder="$t('dashboard.step')"
-        )
-          template(#prefix) Step
-          template(#suffix)
-            a-popover(trigger="hover")
-              svg.icon
-                use(href="#question")
-              template(#content)
-                a-list(size="small" :split="false" :bordered="false")
-                  template(#header)
-                    | {{ $t('dashboard.supportedDurations') }}
-                  a-list-item(v-for="item of durations" :key="item")
-                    a-typography-text(code) {{ item.key }}
-                    span.ml-4 {{ item.value }}
-                  a-list-item
-                    span.ml-2 {{ $t('dashboard.examples') }}
-                    a-typography-text(v-for="item of durationExamples" :key="item" code) {{ item }}
-  a-resize-box.editor-resize-box(:directions="['bottom']" :style="{ height: '254px' }")
+      TimeAssistance(v-if="queryType === 'sql'" ref="tsRef" :cm="currentView")
+      a-tooltip(mini :content="$t('dashboard.format')")
+        a-button(type="outline" :disabled="isButtonDisabled" @click="formatSql()")
+          template(#icon)
+            svg.icon-18
+              use(href="#code")
+      a-tooltip(mini :content="$t('dashboard.clearCode')")
+        a-button(type="outline" :disabled="isButtonDisabled" @click="clearCode")
+          template(#icon)
+            svg.icon-16
+              use(href="#clear")
+      a-tooltip(mini :content="focusMode ? $t('dashboard.exitFullSize') : $t('dashboard.fullSizeMode')")
+        a-button(type="outline" @click="emit('toggle-focus-mode')")
+          template(#icon)
+            svg.icon-18
+              use(v-if="!focusMode" href="#zoom")
+              use(v-else href="#zoom-out")
+
+a-resize-box.panel-resize(v-model:height="editorHeight" :directions="['bottom']" :style="editorResizeStyle")
+  .editor-resize-content
     a-tabs.query-tabs(:default-active-key="'sql'" :active-key="queryType")
       a-tab-pane(key="sql")
-        .full-width-height-editor.card-editor
+        .full-width-height-editor.gpt-dark-editor.query-editor-surface
           CodeMirror(
             v-model="codes.sql"
             :style="{ width: '100%', height: '100%' }"
@@ -127,7 +133,7 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
             @update="codeUpdate('sql')"
           )
       a-tab-pane(key="promql")
-        .full-width-height-editor.card-editor
+        .full-width-height-editor.gpt-dark-editor.query-editor-surface
           CodeMirror(
             v-model="codes.promql"
             :style="{ width: '100%', height: '100%' }"
@@ -139,21 +145,21 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
             @ready="handleReadyPromql"
             @update="codeUpdate('promql')"
           )
-  a-modal(
-    v-model:visible="importExplainModalVisible"
-    title="Import Explain Result JSON"
-    modal-class="import-explain-modal"
-    :width="800"
-    @ok="handleImportExplain"
-  )
-    a-form(layout="vertical" :model="importExplainForm" :auto-label-width="true")
-      a-form-item(field="explainJson" validate-trigger="blur")
-        a-textarea(
-          v-model="importExplainForm.explainJson"
-          :placeholder="placeholder"
-          :auto-size="{ minRows: 10, maxRows: 20 }"
-          @paste="onPaste"
-        )
+a-modal(
+  v-model:visible="importExplainModalVisible"
+  title="Import Explain Result JSON"
+  modal-class="import-explain-modal"
+  :width="800"
+  @ok="handleImportExplain"
+)
+  a-form(layout="vertical" :model="importExplainForm" :auto-label-width="true")
+    a-form-item(field="explainJson" validate-trigger="blur")
+      a-textarea(
+        v-model="importExplainForm.explainJson"
+        :placeholder="placeholder"
+        :auto-size="{ minRows: 10, maxRows: 20 }"
+        @paste="onPaste"
+      )
 </template>
 
 <script lang="ts" setup name="Editor">
@@ -165,7 +171,8 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
   import { useStorage } from '@vueuse/core'
   import { sqlFormatter, parseSqlStatements, findStatementAtPosition, promqlFormatter } from '@/utils/sql'
   import { Message } from '@arco-design/web-vue'
-  import fileDownload from 'js-file-download'
+  import { getExplainResultKeyCount } from '@/services/code-run'
+  import { useQuerySession } from './use-query-session'
 
   import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '../config'
 
@@ -174,13 +181,24 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
     autofocus?: boolean
     indentWithTab?: boolean
     tabSize?: number
+    focusMode?: boolean
   }
   const props = withDefaults(defineProps<Props>(), {
     spellcheck: true,
     autofocus: true,
     indentWithTab: true,
     tabSize: 2,
+    focusMode: false,
   })
+
+  const emit = defineEmits<{ 'toggle-focus-mode': [] }>()
+
+  const editorHeight = useStorage('queryEditorHeight', 266)
+
+  const editorResizeStyle = computed(() => ({
+    'min-height': '120px',
+    'max-height': props.focusMode ? '55vh' : '60vh',
+  }))
 
   const tsRef = ref<InstanceType<typeof import('./time-assistance.vue').default> | null>(null)
 
@@ -207,9 +225,10 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
     step: '30s',
     range: [dayjs().subtract(5, 'minute').unix().toString(), dayjs().unix().toString()],
   })
-  const { runQuery, explainQuery, exportWithFormat } = useQueryCode()
+  const { runQuery, explainQuery } = useQueryCode()
   const { extensions } = storeToRefs(useDataBaseStore())
-  const { explainResultKeyCount, explainResult } = storeToRefs(useCodeRunStore())
+  const explainResultKeyCount = getExplainResultKeyCount()
+  const session = useQuerySession()
   const importExplainForm = reactive({
     explainJson: '',
   })
@@ -218,12 +237,11 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
   const importExplainModalVisible = ref(false)
   const explainQueryRunning = ref(false)
 
-  const emit = defineEmits(['selectExplainTab'])
-
   const openTimeAssistance = () => {
-    if (tsRef.value) {
-      tsRef.value?.open()
+    if (queryType.value !== 'sql' || !tsRef.value) {
+      return
     }
+    tsRef.value.open()
   }
   // Show the import explain modal
   const showImportExplainModal = () => {
@@ -250,9 +268,7 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
         executionTime: jsonData.execution_time_ms,
       }
 
-      explainResult.value = newResult
-
-      emit('selectExplainTab')
+      session.appendExplainResult(newResult as any)
 
       // Clear the form and close the modal
       importExplainForm.explainJson = ''
@@ -333,7 +349,9 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
     }
     primaryCodeRunning.value = true
     // TODO: add better format tool for code
-    await runQuery(codes.value[queryType.value].trim(), queryType.value, false, promForm)
+    const res = await runQuery(codes.value[queryType.value].trim(), queryType.value, false, promForm)
+    if (res?.results?.length) session.appendResults(res.results)
+    if (res?.log) session.appendLog(res.log)
     primaryCodeRunning.value = false
     // TODO: refresh tables data and when
   }
@@ -350,7 +368,9 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
     }
     secondaryCodeRunning.value = true
 
-    await runQuery(currentStatement.value, queryType.value, false, promForm)
+    const res = await runQuery(currentStatement.value, queryType.value, false, promForm)
+    if (res?.results?.length) session.appendResults(res.results)
+    if (res?.log) session.appendLog(res.log)
     secondaryCodeRunning.value = false
   }
 
@@ -401,26 +421,12 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
         }
 
         const result: any = await explainQuery(explainCommand, 'sql')
-        if (result) {
-          emit('selectExplainTab')
+        if (result?.results?.[0]) {
+          session.appendExplainResult(result.results[0])
         }
       } finally {
         explainQueryRunning.value = false
       }
-    }
-  }
-
-  const exportCsv = async () => {
-    try {
-      secondaryCodeRunning.value = true
-      const res = await exportWithFormat(currentStatement.value, promForm, 'csvWithNames')
-      fileDownload(res, `export_${queryType.value}_greptimedb.csv`)
-      Message.success('Exported successfully')
-    } catch (error) {
-      console.log(error)
-      Message.error(`Failed to export CSV`)
-    } finally {
-      secondaryCodeRunning.value = false
     }
   }
 
@@ -526,32 +532,56 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
 </script>
 
 <style lang="less" scoped>
-  .editor-card {
+  .editor-card--inset {
+    padding: 0 var(--gpt-page-padding-x);
+  }
+
+  .editor-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+  }
+
+  .editor-toolbar-main {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    gap: 8px;
+    min-width: 0;
+    flex-wrap: nowrap;
+  }
+
+  .editor-toolbar-main :deep(.prom-form .arco-form-item) {
+    margin-bottom: 0;
+  }
+
+  .editor-toolbar-main :deep(.prom-form .arco-space) {
+    flex-wrap: nowrap;
+  }
+
+  .query-select {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  .query-type-select {
+    width: 108px;
+    flex-shrink: 0;
+  }
+
+  .query-type-select :deep(.arco-select-view-single) {
     width: 100%;
-    .editor-header {
-      padding-left: 8px;
-    }
-    :deep(.ͼo) {
-      height: 100%;
-    }
-    .arco-btn {
-      border-radius: 4px;
-    }
-    :deep(.arco-select-view-single) {
-      border-radius: 4px;
-    }
   }
 
-  :deep(.arco-resizebox-trigger-icon-wrapper) {
-    color: var(--main-font-color);
-    font-size: 18px;
-  }
-  .prom-form {
-    padding-left: 8px;
-  }
-
-  .editor-resize-box {
-    padding-bottom: 12px !important;
+  .editor-resize-content {
+    box-sizing: border-box;
+    height: 100%;
+    padding: 0 var(--gpt-page-padding-x) var(--gpt-section-padding-y);
   }
 
   .explain-disabled {
@@ -564,24 +594,23 @@ a-card.editor-card(style="padding-bottom: 10px" :bordered="false")
 <style lang="less">
   .query-tabs {
     height: 100%;
+
     > .arco-tabs-nav {
       height: 0;
     }
+
     > .arco-tabs-content {
       padding-top: 0;
       height: 100%;
+
       > .arco-tabs-content-list {
         height: 100%;
+
         .arco-tabs-pane {
           height: 100%;
-          padding-left: 8px;
         }
       }
     }
-  }
-
-  .arco-btn-group .arco-btn-primary:not(:last-child) {
-    border-right: 1px solid rgba(255, 255, 255, 0.3);
   }
 
   .import-explain-modal {

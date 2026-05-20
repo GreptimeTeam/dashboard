@@ -83,6 +83,6 @@ a-layout.layout
   .markdown-container {
     background-color: #fff;
     border-radius: 10px;
-    padding: 10px 20px;
+    padding: var(--gpt-page-padding-y) var(--gpt-page-padding-x);
   }
 </style>

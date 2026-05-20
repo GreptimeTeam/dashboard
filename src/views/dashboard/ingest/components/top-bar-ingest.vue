@@ -1,13 +1,12 @@
 <template lang="pug">
-a-space.top-bar
+a-space.top-bar.gpt-content-toolbar
   a-space(:size="15")
     slot(name="selector")
     a-button(
       v-if="hasButtons"
       type="primary"
-      size="small"
+      size="medium"
       :loading="loading"
-      :disabled="disabled"
       @click="emitSubmit"
     ) {{ submitLabel }}
   slot(name="extra")
@@ -42,20 +41,12 @@ a-space.top-bar
 
 <style lang="less" scoped>
   .top-bar {
-    display: flex;
-    justify-content: space-between;
-    padding-right: 20px;
-    height: 58px;
-    background: var(--card-bg-color);
-    width: 100%;
-
     :deep(.arco-select-view-value) {
       font-size: 13px;
       color: var(--main-font-color);
     }
     :deep(.arco-select-view-single) {
       width: 130px;
-      background: transparent;
       border-color: var(--border-color);
     }
   }

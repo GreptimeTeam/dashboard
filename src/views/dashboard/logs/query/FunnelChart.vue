@@ -32,9 +32,9 @@ VCharts(
   const chartOptions = computed(() => ({
     grid: {
       left: '55px',
-      bottom: '20px',
+      bottom: '28px',
       right: '55px',
-      top: '10px',
+      top: '16px',
     },
     tooltip: {
       trigger: 'axis',
@@ -65,9 +65,10 @@ VCharts(
           left: 'center',
           top: 'middle',
           style: {
-            text: data.value.length ? '' : 'No Chart data',
+            text: data.value.length ? '' : 'No data',
             fill: '#999',
-            fontSize: 18,
+            fontSize: 14,
+            fontFamily: 'Geist Mono, ui-monospace, monospace',
           },
         },
       ],

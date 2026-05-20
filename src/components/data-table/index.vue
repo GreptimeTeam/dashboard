@@ -2,27 +2,30 @@
 .data-table-container(ref="tableContainer")
   a-table(
     :key="columnMode"
+    v-bind="tablePassThroughProps"
     row-key="__rowIndex"
     :data="processedData"
-    :loading="loading"
     :pagination="false"
     :bordered="false"
     :stripe="false"
     :class="tableClassesDynamic"
-    :scroll="scrollConfig"
-    :size="size"
-    :virtual-list-props="virtualListProps"
-    :row-selection="rowSelection"
   )
     template(#empty)
-      a-empty(description="No data")
+      a-empty.data-table-empty(description="No data")
+        template(#image)
+          img.data-table-empty-icon(alt="" :src="tableEmptyIcon")
     template(#loading)
       a-spin(dot)
 
     // Define columns using the straightforward approach
     template(#columns)
       template(v-for="col in processedColumns" :key="col.name")
-        a-table-column(:width="col.width" :data-index="col.name" :title="col.title || col.name")
+        a-table-column(
+          :width="col.width"
+          :ellipsis="true"
+          :data-index="col.name"
+          :title="col.title || col.name"
+        )
           // Custom title slot - allow parent components to override column titles
           template(#title)
             slot(
@@ -80,19 +83,30 @@
                   placement="top"
                   :content="tsViewStr ? $t('dashboard.showTimestamp') : $t('dashboard.formatTimestamp')"
                 )
-                  span(style="cursor: pointer" @click="changeTsView") {{ renderTs(record, col.name) }}
+                  span.timestamp-cell(style="cursor: pointer" @click="changeTsView") {{ renderTs(record, col.name) }}
                 svg.td-config-icon(
                   v-if="showContextMenu"
                   @click="(event) => handleContextMenu(record, col.name, event)"
                 )
                   use(href="#menu")
               template(v-else)
-                span {{ record[col.name] }}
-                svg.td-config-icon(
-                  v-if="showContextMenu"
-                  @click="(event) => handleContextMenu(record, col.name, event)"
+                .cell-wrapper(
+                  :class="{ 'expandable-cell': isValueExpandable(record[col.name], col) }"
+                  @click="toggleCellExpand(rowIndex, col, record[col.name])"
                 )
-                  use(href="#menu")
+                  .cell-content(:class="{ expanded: isCellExpanded(rowIndex, col.name), 'wrap-lines': wrapLine }")
+                    span {{ record[col.name] }}
+                    svg.td-config-icon(
+                      v-if="showContextMenu"
+                      @click.stop="(event) => handleContextMenu(record, col.name, event)"
+                    )
+                      use(href="#menu")
+                  .cell-copy-button(
+                    v-if="canShowCopyButton(rowIndex, col.name, record[col.name])"
+                    @click.stop="copyCellValue(record[col.name])"
+                  )
+                    svg.icon-14
+                      use(href="#copy-new")
 
 // Context menu
 a-dropdown#td-context(
@@ -110,13 +124,18 @@ a-dropdown#td-context(
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, shallowRef } from 'vue'
+  import { ref, computed, shallowRef, useAttrs } from 'vue'
   import { useElementSize } from '@vueuse/core'
-  import dayjs from 'dayjs'
   import { dateTypes } from '@/views/dashboard/config'
-  import { convertTimestampToMilliseconds } from '@/utils/date-time'
   import type { ColumnType, TSColumn } from '@/types/query'
   import { useDateTimeFormat } from '@/hooks'
+  import { Message } from '@arco-design/web-vue'
+  import i18n from '@/locale'
+  import tableEmptyIcon from '@/assets/images/table-empty.svg?url'
+
+  defineOptions({
+    inheritAttrs: false,
+  })
 
   interface TableData {
     [key: string]: any
@@ -126,14 +145,9 @@ a-dropdown#td-context(
     // Data
     data: TableData[]
     columns: ColumnType[]
-    loading?: boolean
 
     // Table configuration
-    size?: 'small' | 'mini' | 'medium' | 'large'
     class?: string | object
-    scrollConfig?: object
-    virtualListProps?: object
-    rowSelection?: object
 
     // Column mode handling
     columnMode?: 'separate' | 'merged' | 'merged-with-keys'
@@ -147,25 +161,29 @@ a-dropdown#td-context(
 
     // Table styling options for dynamic classes
     wrapLine?: boolean
-    compact?: boolean
+
+    // Enhanced cell behavior
+    enableCellExpand?: boolean
+    enableCellCopy?: boolean
   }
 
   const props = withDefaults(defineProps<Props>(), {
     data: () => [],
     columns: () => [],
-    loading: false,
-    size: 'medium',
     class: '',
-    scrollConfig: () => ({ y: '100%' }),
-    virtualListProps: undefined,
-    rowSelection: undefined,
     columnMode: 'separate',
     displayedColumns: () => [],
     tsColumn: null,
     showContextMenu: true,
     wrapLine: false,
-    compact: false,
+    enableCellExpand: true,
+    enableCellCopy: true,
   })
+
+  const EXPANDABLE_TEXT_THRESHOLD = 100
+  const attrs = useAttrs()
+  const attrsRecord = attrs as Record<string, any>
+  const hasVirtualListProps = computed(() => !!attrsRecord['virtual-list-props'])
 
   const emit = defineEmits(['filterConditionAdd', 'rowSelect'])
 
@@ -185,8 +203,7 @@ a-dropdown#td-context(
       'wrap_table': props.wrapLine,
       'single_column': props.columnMode !== 'separate',
       'multiple_column': props.columnMode === 'separate',
-      'compact': props.compact,
-      'virtual-list-active': !!props.virtualListProps, // Add class when virtual list is active
+      'virtual-list-active': hasVirtualListProps.value, // Add class when virtual list is active
     }
 
     // Merge with any additional classes passed via props
@@ -202,7 +219,7 @@ a-dropdown#td-context(
 
   // Table container ref for width calculation and height calculation
   const tableContainer = ref<HTMLElement>()
-  const { width: tableWidth, height: tableHeight } = useElementSize(tableContainer)
+  const { width: tableWidth } = useElementSize(tableContainer)
 
   // Timestamp utilities
   function isTimeColumn(column: ColumnType) {
@@ -210,21 +227,38 @@ a-dropdown#td-context(
   }
 
   // Width calculation utilities
-  function findMaxLenCol(row: any) {
+  function getColumnWidth(column: ColumnType, sampleValue: unknown) {
+    if (props.tsColumn?.name === column.name || isTimeColumn(column)) {
+      return 230
+    }
+
+    const label = String(column.title || column.name)
+    let sample = ''
+    if (sampleValue !== undefined && sampleValue !== null) {
+      sample = typeof sampleValue === 'object' ? JSON.stringify(sampleValue) : String(sampleValue)
+    }
+
+    const charLen = Math.max(label.length, sample.length)
+    return Math.max(150, Math.min(600, charLen * 8 + 40))
+  }
+
+  function findMaxLenCol(row: TableData) {
     let max = 0
     let maxName = ''
-    Object.keys(row).forEach((k) => {
-      const val = row[k]
-      const strVal = typeof val === 'object' && val !== null ? JSON.stringify(val) : String(val)
-      if (strVal.length > max) {
-        max = strVal.length
-        maxName = k
+
+    Object.keys(row).forEach((key) => {
+      const value = row[key]
+      const strValue = typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value)
+      if (strValue.length > max) {
+        max = strValue.length
+        maxName = key
       }
     })
+
     return maxName
   }
 
-  function getWidth(currLen: number, totalLen: number, containerWidth: number) {
+  function getVirtualListColumnWidth(currLen: number, totalLen: number, containerWidth: number) {
     let width = (Math.floor((currLen / totalLen) * 1000) / 1000) * containerWidth
     width = Math.max(150, width)
     width = Math.min(600, width)
@@ -249,35 +283,30 @@ a-dropdown#td-context(
           ? tmpColumns.filter((c) => props.displayedColumns?.indexOf(c.name) > -1)
           : tmpColumns
 
-      // Only calculate widths when virtual list is active
-      if (props.virtualListProps) {
-        // Virtual list mode: calculate widths based on content
-        const row = props.data[0]
-        if (!row || !tableWidth.value) {
-          return tmpColumns.map((column) => ({
-            ...column,
-          }))
+      const sampleRow = props.data[0]
+
+      if (hasVirtualListProps.value) {
+        if (!sampleRow || !tableWidth.value) {
+          return tmpColumns.map((column) => ({ ...column }))
         }
 
-        const totalStrLen = Object.keys(row).reduce((acc, curr) => {
-          const val = row[curr]
-          const strVal = typeof val === 'object' && val !== null ? JSON.stringify(val) : String(val)
-          acc += strVal.length
-          return acc
+        const totalStrLen = Object.keys(sampleRow).reduce((acc, key) => {
+          const value = sampleRow[key]
+          const strValue = typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value)
+          return acc + strValue.length
         }, 0)
-
-        const maxLenName = findMaxLenCol(row)
+        const maxLenName = findMaxLenCol(sampleRow)
 
         return tmpColumns.map((column) => {
-          let width
+          let width: number | undefined
 
-          if (row && column.name !== maxLenName) {
+          if (column.name !== maxLenName) {
             if (column.name === props.tsColumn?.name) {
               width = 230
             } else {
-              const val = row[column.name]
-              const strVal = typeof val === 'object' && val !== null ? JSON.stringify(val) : String(val)
-              width = getWidth(strVal.length, totalStrLen, tableWidth.value)
+              const value = sampleRow[column.name]
+              const strValue = typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value)
+              width = getVirtualListColumnWidth(strValue.length, totalStrLen, tableWidth.value)
             }
           }
 
@@ -288,9 +317,9 @@ a-dropdown#td-context(
         })
       }
 
-      // Non-virtual list mode: let CSS handle all widths
       return tmpColumns.map((column) => ({
         ...column,
+        width: getColumnWidth(column, sampleRow?.[column.name]),
       }))
     }
 
@@ -310,6 +339,35 @@ a-dropdown#td-context(
       data_type: 'merged',
     } as ColumnType)
     return arr
+  })
+
+  const tableHorizontalScrollX = computed(() => {
+    if (mergeColumn.value || hasVirtualListProps.value) {
+      return undefined
+    }
+
+    const total = processedColumns.value.reduce((sum, column) => sum + Number(column.width || 0), 0)
+    return total > 0 ? total : undefined
+  })
+
+  const tablePassThroughProps = computed(() => {
+    const attrsScroll = attrsRecord.scroll
+    const extraScroll = typeof attrsScroll === 'object' && attrsScroll ? attrsScroll : {}
+    const scroll = {
+      y: '100%',
+      ...extraScroll,
+    }
+
+    if (scroll.x === undefined && tableHorizontalScrollX.value !== undefined) {
+      scroll.x = tableHorizontalScrollX.value
+    }
+
+    return {
+      loading: false,
+      size: 'medium',
+      ...attrsRecord,
+      scroll,
+    }
   })
 
   // Data fields for merged mode
@@ -383,6 +441,81 @@ a-dropdown#td-context(
       return renderTs(record, column.name)
     }
     return record[column.name]
+  }
+
+  const expandedCells = ref<Record<string, boolean>>({})
+
+  function getCellKey(rowIndex: number, columnName: string) {
+    return `${rowIndex}-${columnName}`
+  }
+
+  function isValueExpandable(value: unknown, column?: ColumnType) {
+    if (!props.enableCellExpand) return false
+    if (value === null || value === undefined) return false
+    if (isTimeColumn(column as ColumnType)) return false
+
+    const dataType = column?.data_type?.toLowerCase()
+    if (dataType) {
+      if (['boolean', 'int', 'integer', 'float', 'double', 'decimal', 'numeric'].includes(dataType)) {
+        return false
+      }
+      if (['json', 'binary', 'interval'].includes(dataType)) {
+        return true
+      }
+    }
+
+    if (typeof value === 'object') return true
+
+    const str = String(value)
+    const isComplexStructure =
+      (str.startsWith('[') && str.endsWith(']')) ||
+      (str.startsWith('{') && str.endsWith('}')) ||
+      /\[[^\]]+\]|\{[^}]+\}/.test(str)
+    return str.length > EXPANDABLE_TEXT_THRESHOLD || str.includes('\n') || isComplexStructure
+  }
+
+  function isCellExpanded(rowIndex: number, columnName: string) {
+    const key = getCellKey(rowIndex, columnName)
+    return props.wrapLine || !!expandedCells.value[key]
+  }
+
+  function canShowCopyButton(rowIndex: number, columnName: string, value: unknown) {
+    if (!props.enableCellCopy) return false
+    if (value === null || value === undefined) return false
+    return isCellExpanded(rowIndex, columnName)
+  }
+
+  function toggleCellExpand(rowIndex: number, column: ColumnType, value: unknown) {
+    if (!isValueExpandable(value, column)) return
+    const key = getCellKey(rowIndex, column.name)
+    expandedCells.value[key] = true
+  }
+
+  function cellTextForCopy(value: unknown) {
+    if (value === null || value === undefined) return ''
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      return String(value)
+    }
+    if (typeof value === 'object') {
+      try {
+        return JSON.stringify(value, null, 2)
+      } catch {
+        return '[Unsupported Object]'
+      }
+    }
+    return String(value)
+  }
+
+  async function copyCellValue(value: unknown) {
+    const text = cellTextForCopy(value)
+    if (!text) return
+
+    try {
+      await navigator.clipboard.writeText(text)
+      Message.success(i18n.global.t('copied'))
+    } catch (error) {
+      console.error('Failed to copy cell value:', error)
+    }
   }
 
   // No pagination or column management - pure table functionality
@@ -461,6 +594,16 @@ a-dropdown#td-context(
     justify-content: center;
     align-items: center;
   }
+
+  :deep(.data-table-empty .arco-empty-description) {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 14px;
+  }
+
+  .data-table-empty-icon {
+    width: 52px;
+    height: 52px;
+  }
   // Context menu positioning
   #td-context {
     position: absolute;
@@ -491,10 +634,6 @@ a-dropdown#td-context(
     visibility: visible;
   }
 
-  :deep(.arco-table-th) {
-    background-color: var(--color-fill-2);
-  }
-
   :deep(.arco-table-td) {
     pre {
       margin: 0;
@@ -519,24 +658,102 @@ a-dropdown#td-context(
   .clickable {
     cursor: pointer;
   }
+  .cell-wrapper {
+    position: relative;
+    width: 100%;
+    cursor: default;
+  }
+  .cell-wrapper.expandable-cell {
+    cursor: pointer;
+  }
+  .cell-content {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    word-break: normal;
+  }
+  .cell-content.expanded,
+  .cell-content.wrap-lines {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .cell-copy-button {
+    position: absolute;
+    bottom: 2px;
+    right: -15px;
+    width: 16px;
+    height: 16px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 3px;
+    z-index: 10;
+    cursor: pointer;
+    transition: all 0.1s ease;
+  }
+  :deep(.arco-table-cell:hover) .cell-copy-button {
+    display: flex;
+  }
+  .cell-copy-button:hover {
+    transform: scale(1.15);
+  }
+  .icon-14 {
+    width: 14px;
+    height: 14px;
+  }
   .builder-type .clickable {
     cursor: pointer;
   }
   :deep(.arco-drawer) {
     border: 1px solid var(--color-neutral-3);
   }
-  .multiple_column {
+  .multiple_column.virtual-list-active {
     :deep(.arco-virtual-list > .arco-table-element) {
       width: 100%;
     }
+  }
+
+  .multiple_column:not(.virtual-list-active) {
+    :deep(.arco-virtual-list > .arco-table-element) {
+      width: max-content;
+      min-width: 100%;
+    }
+  }
+
+  .multiple_column {
     width: 100%;
+
     :deep(.arco-table-td-content) {
       overflow: hidden;
       text-overflow: ellipsis;
     }
   }
-  :deep(.arco-table-element) {
-    font-family: var(--font-mono);
+
+  :deep(.arco-table-th) {
+    position: relative;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  :deep(.arco-table-th-item),
+  :deep(.arco-table-td-content) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  :deep(.arco-table-th:not(:last-child)::after) {
+    content: '';
+    position: absolute;
+    top: 8px;
+    right: 0;
+    bottom: 8px;
+    width: 1px;
+    background: var(--gpt-border-strong);
+  }
+
+  .timestamp-cell {
+    color: var(--gpt-accent-ts);
   }
 
   :deep(.arco-table-td),
@@ -548,7 +765,7 @@ a-dropdown#td-context(
     white-space: wrap;
   }
   :deep(.arco-table-size-medium .arco-table-cell) {
-    padding: 7px 10px;
+    padding: 6px 10px;
   }
   .entity-field {
     margin-right: 10px;
@@ -569,8 +786,10 @@ a-dropdown#td-context(
   .multiple_column {
     :deep(.arco-table-td-content) {
       position: relative;
-      width: auto;
+      width: 100%;
       padding-right: 15px;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .td-config-icon {
       position: absolute;
@@ -578,7 +797,7 @@ a-dropdown#td-context(
       top: 5px;
     }
   }
-  .compact.multiple_column {
+  :deep(.arco-table-size-mini).multiple_column {
     :deep(.arco-table-td-content) {
       padding-right: 12px;
     }
@@ -586,7 +805,7 @@ a-dropdown#td-context(
       top: 4px;
     }
   }
-  .compact .td-config-icon {
+  :deep(.arco-table-size-mini) .td-config-icon {
     width: 9px;
     height: 9px;
   }

@@ -16,3 +16,357 @@
     }
   }
 }
+
+.dashboard-two-column-layout,
+.new-layout {
+  height: 100%;
+  background: var(--gpt-bg-app);
+
+  > .arco-layout-sider {
+    box-shadow: none;
+    background: var(--gpt-bg-panel);
+  }
+
+  .arco-layout-sider .arco-card {
+    height: 100%;
+    border-radius: 0;
+  }
+
+  /* 各 Dashboard 页左侧栏：菜单列表 / 树形目录等 */
+  .gpt-page-sidebar {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--gpt-bg-panel);
+
+    .arco-card-body {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .arco-scrollbar {
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* Tables / Metrics：带标题栏 + Spin + Tree */
+    &.gpt-sidebar-header-card {
+      > .arco-card-body {
+        padding: 0;
+      }
+
+      > .arco-card-body > .arco-spin {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        min-height: 0;
+        width: 100%;
+      }
+
+      > .arco-card-body > .arco-spin .arco-spin-children {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        min-height: 0;
+        width: 100%;
+      }
+    }
+  }
+
+  > .arco-resizebox {
+    position: relative;
+    z-index: 2;
+    overflow: visible;
+  }
+
+  > .layout-content {
+    position: relative;
+    z-index: 1;
+  }
+
+  .arco-resizebox-trigger-vertical.arco-resizebox-direction-right {
+    width: 1px;
+    background: var(--gpt-border-default);
+    overflow: visible;
+    z-index: 3;
+
+    &::before,
+    &::after {
+      display: none;
+    }
+
+    .arco-resizebox-trigger-icon-wrapper {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      z-index: 4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 8px;
+      height: 28px;
+      padding: 0;
+      color: transparent;
+      background: var(--gpt-bg-panel);
+      border: 1px solid var(--gpt-border-default);
+      border-radius: 4px;
+      box-shadow: 0 1px 4px rgba(71, 52, 96, 0.12);
+      transform: translate(calc(-50% - 3.5px), -50%);
+      cursor: col-resize;
+
+      .arco-resizebox-trigger-icon,
+      svg {
+        display: none;
+      }
+
+      &::after {
+        content: '';
+        display: block;
+        width: 2px;
+        height: 2px;
+        border-radius: 50%;
+        background: var(--gpt-text-muted);
+        box-shadow: 0 -5px 0 var(--gpt-text-muted), 0 5px 0 var(--gpt-text-muted);
+      }
+    }
+  }
+
+  .hide-sider {
+    display: none;
+  }
+
+  > .layout-content {
+    padding: 0;
+  }
+
+  .gpt-sidebar-menu {
+    background: transparent;
+
+    .arco-menu-inner {
+      padding: 8px;
+    }
+
+    .arco-menu-indent {
+      width: 0;
+    }
+
+    /* 一级分类（MenuItemGroup）：非交互，压过 `.arco-menu-light .arco-menu-group-title` */
+    .gpt-sidebar-menu-category .arco-menu-group-title {
+      margin: 0 0 4px;
+      padding: 10px 8px 6px !important;
+      color: var(--gpt-text-primary);
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.35;
+      cursor: default;
+      pointer-events: none;
+      background: transparent !important;
+      border-radius: 0;
+
+      &:hover {
+        background: transparent !important;
+      }
+
+      .gpt-sidebar-menu-category-text {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: inherit;
+      }
+    }
+
+    .arco-menu-item {
+      height: 36px;
+      margin: 0 0 4px;
+      padding: 0 8px !important;
+      color: var(--gpt-text-primary) !important;
+      font-size: 12px;
+      line-height: 36px;
+      border-radius: var(--gpt-radius-sm);
+      background: transparent;
+
+      &:hover {
+        background: var(--gpt-nav-active-bg);
+      }
+
+      &.arco-menu-selected {
+        color: var(--gpt-brand-900) !important;
+        font-weight: 600;
+        background: var(--gpt-nav-active-bg);
+      }
+    }
+
+    /* 使用 #icon 槽位时，与 Arco 默认 item-inner 宽度配合 */
+    .arco-menu-item.arco-menu-has-icon {
+      display: flex !important;
+      flex-direction: row !important;
+      flex-wrap: nowrap !important;
+      align-items: center !important;
+    }
+
+    .arco-menu-item.arco-menu-has-icon .arco-menu-item-inner {
+      display: contents;
+    }
+
+    .arco-menu-item-inner {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      min-width: 0;
+    }
+
+    .arco-menu-item.arco-menu-has-icon .gpt-sidebar-menu-text {
+      flex: 1 1 0%;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .gpt-sidebar-menu-item {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      min-width: 0;
+      gap: 8px;
+    }
+
+    .gpt-sidebar-menu-item svg {
+      flex: 0 0 auto;
+      color: var(--gpt-brand-600);
+    }
+
+    .gpt-sidebar-menu-text {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      font-size: 12px;
+      line-height: 36px;
+      color: inherit;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .arco-menu-item .arco-menu-icon svg {
+      color: var(--gpt-brand-600);
+    }
+
+    .arco-menu-item.arco-menu-selected .arco-menu-icon svg {
+      color: var(--gpt-brand-900);
+    }
+
+    .gpt-sidebar-menu-action {
+      display: none;
+      flex: 0 0 auto;
+    }
+
+    .arco-menu-item:hover .gpt-sidebar-menu-action,
+    .arco-menu-item.arco-menu-selected .gpt-sidebar-menu-action {
+      display: flex;
+    }
+  }
+}
+
+.arco-tabs.panel-tabs {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  > .arco-tabs-nav {
+    height: 37px;
+    background: var(--gpt-bg-surface);
+    border-bottom: 1px solid var(--gpt-border-default);
+
+    &:before {
+      background-color: transparent;
+    }
+
+    .arco-tabs-nav-tab {
+      height: 100%;
+
+      .arco-tabs-tab {
+        height: 100%;
+        margin: 0;
+        padding: 0 var(--gpt-page-padding-x);
+        color: var(--gpt-text-secondary);
+        font-size: 12px;
+        border-radius: 0;
+
+        &.arco-tabs-tab-active {
+          color: var(--gpt-text-primary);
+          font-weight: 600;
+        }
+      }
+    }
+
+    .arco-tabs-nav-ink {
+      background: var(--gpt-brand-900);
+    }
+  }
+
+  .arco-tabs-content {
+    height: calc(100% - 28px);
+    padding: 0;
+
+    > .arco-tabs-content-list {
+      height: 100%;
+
+      > .arco-tabs-content-item {
+        height: 100%;
+        overflow: auto;
+
+        > .arco-tabs-pane {
+          height: 100%;
+        }
+      }
+    }
+  }
+}
+
+.gpt-sidebar-header-card {
+  > .arco-card-header {
+    height: 47px;
+    padding: var(--gpt-page-header-padding);
+    border-bottom: 1px solid var(--gpt-border-default);
+
+    > .arco-card-header-title {
+      gap: 20px;
+      justify-content: space-between;
+      color: var(--gpt-text-primary);
+      font-size: 13px;
+      font-weight: 700;
+    }
+  }
+
+  > .arco-card-body {
+    height: calc(100% - 47px);
+  }
+}
+
+.dashboard-two-column-layout,
+.new-layout {
+  .gpt-page-sidebar.gpt-sidebar-header-card > .arco-card-body {
+    height: auto;
+  }
+}
+
+.dashboard-right-fill-layout {
+  > .layout-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  > .layout-content > .arco-layout-header {
+    flex: 0 0 auto;
+  }
+
+  > .layout-content > .main-content {
+    flex: 1;
+    min-height: 0;
+  }
+}
