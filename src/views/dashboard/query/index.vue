@@ -1,10 +1,10 @@
 <template lang="pug">
-a-layout.new-layout
+a-layout.new-layout(:class="{ 'query-layout--focus': focusMode }")
   a-resize-box(
+    v-if="!focusMode"
     v-model:width="sidebarWidth"
     :directions="['right']"
     :style="{ 'min-width': '100px', 'max-width': '40vw' }"
-    :class="hideSidebar ? 'hide-sider' : ''"
   )
     a-layout-sider(style="height: 100%" :width="actualSidebarWidth")
       TableManager(:databaseList="databaseList")
@@ -16,14 +16,11 @@ a-layout.new-layout
         direction="vertical"
         :size="0"
       ) 
-        Editor
-        DataView(
-          v-if="!!session.results.value?.length || session.explainResults.value.length > 0"
-          :is-in-full-size-mode="false"
-          @toggle-full-size="handleToggleFullSize"
-        )
+        Editor(:focus-mode="focusMode" @toggle-focus-mode="toggleFocusMode")
+        DataView(v-if="!!session.results.value?.length || session.explainResults.value.length > 0")
         .data-view-placeholder(v-else)
       a-resize-box.panel-resize.logs-panel-resize(
+        v-if="!focusMode"
         v-model:height="logsHeight"
         :directions="['top']"
         :style="{ 'max-height': '40vh', 'min-height': '66px' }"
@@ -31,30 +28,13 @@ a-layout.new-layout
         a-tabs.panel-tabs
           a-tab-pane(title="Log" key="log")
             LogsNew(:logs="session.queryLogs.value")
-
-  a-modal.full-size-modal(
-    v-model:visible="isFullSizeMode"
-    :class="{ 'full-screen': isFullSizeMode }"
-    :align-center="false"
-    :footer="false"
-    :closable="false"
-    :header="false"
-    :esc-to-close="true"
-    :mask-style="{ backgroundColor: 'transparent', 'pointer-events': 'auto' }"
-  )
-    DataView.full-size(
-      v-if="!!session.results.value?.length || session.explainResults.value.length > 0"
-      :show-full-size-button="false"
-      :is-in-full-size-mode="true"
-      @toggle-full-size="isFullSizeMode = false"
-    )
 </template>
 
 <script lang="ts" setup name="query">
   import { useMagicKeys, useActiveElement, useStorage } from '@vueuse/core'
   import { driver } from 'driver.js'
   import 'driver.js/dist/driver.css'
-  import { navbarSteps, tableSteps } from '../config'
+  import { navbarSteps } from '../config'
   import { provideQuerySession } from './use-query-session'
 
   defineOptions({
@@ -64,13 +44,14 @@ a-layout.new-layout
   const { s, q, escape } = useMagicKeys()
   const activeElement = useActiveElement()
   const appStore = useAppStore()
-  const { hideSidebar, databaseList, database } = storeToRefs(useAppStore())
+  const { footer, menuCollapse, databaseList, database } = storeToRefs(useAppStore())
   const originalDatabase = ref<string | undefined>(undefined)
   const { queryType } = useQueryCode()
   const session = provideQuerySession()
-  const types = ['sql', 'promql']
   const logsHeight = ref(66)
-  const isFullSizeMode = ref(false)
+  const focusMode = ref(false)
+
+  const layoutSnapshot = ref({ footer: true, menuCollapse: false })
 
   const sidebarWidth = useStorage('sidebarWidth', 228)
 
@@ -85,6 +66,33 @@ a-layout.new-layout
     const maxWidth = window.innerWidth * 0.4
     return Math.max(minWidth, Math.min(sidebarWidth.value, maxWidth))
   })
+
+  const enterFocusMode = () => {
+    if (focusMode.value) return
+    layoutSnapshot.value = { footer: footer.value, menuCollapse: menuCollapse.value }
+    appStore.applyUiConfig({ footer: false, menuCollapse: true }, { persist: false })
+    focusMode.value = true
+  }
+
+  const exitFocusMode = () => {
+    if (!focusMode.value) return
+    focusMode.value = false
+    appStore.applyUiConfig(
+      {
+        footer: layoutSnapshot.value.footer,
+        menuCollapse: layoutSnapshot.value.menuCollapse,
+      },
+      { persist: false }
+    )
+  }
+
+  const toggleFocusMode = () => {
+    if (focusMode.value) {
+      exitFocusMode()
+    } else {
+      enterFocusMode()
+    }
+  }
 
   watch(s, (v) => {
     if (
@@ -104,14 +112,10 @@ a-layout.new-layout
   })
 
   watch(escape, (v) => {
-    if (v && isFullSizeMode.value) {
-      isFullSizeMode.value = false
+    if (v && focusMode.value) {
+      exitFocusMode()
     }
   })
-
-  const handleToggleFullSize = (fullSize: boolean) => {
-    isFullSizeMode.value = fullSize
-  }
 
   const globalTour = driver({
     showProgress: false,
@@ -152,11 +156,14 @@ a-layout.new-layout
   })
 
   onDeactivated(() => {
+    exitFocusMode()
     database.value = originalDatabase.value
     originalDatabase.value = undefined
   })
 
-  // TODO: add more code type in the future if needed
+  onBeforeUnmount(() => {
+    exitFocusMode()
+  })
 </script>
 
 <style lang="less" scoped>
@@ -175,6 +182,26 @@ a-layout.new-layout
       padding-left: 0;
     }
   }
+  .new-layout.query-layout--focus {
+    :deep(> .arco-layout-content.layout-content.has-panel) {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+      box-sizing: border-box;
+    }
+    :deep(.layout-space > .arco-space-item:first-of-type) {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+    }
+    :deep(.editor-space) {
+      height: 100%;
+      box-sizing: border-box;
+    }
+    :deep(.editor-space > .arco-space-item) {
+      box-sizing: border-box;
+    }
+  }
   :deep(.layout-space) {
     height: 100%;
   }
@@ -182,9 +209,6 @@ a-layout.new-layout
     padding-top: 0px;
     height: 100%;
     min-height: 0;
-    .editor-card .ͼ1.cm-editor {
-      border-radius: 4px;
-    }
     > .arco-space-item {
       width: 100%;
       padding-right: 0;
@@ -212,32 +236,5 @@ a-layout.new-layout
 
   :deep(.panel-resize.logs-panel-resize) {
     border-top: 1px solid var(--gpt-border-default);
-  }
-</style>
-
-<style lang="less">
-  .full-size-modal {
-    .arco-modal-wrapper {
-      overflow: hidden;
-      .arco-modal {
-        pointer-events: auto;
-        box-shadow: 0 2px 10px 0 var(--box-shadow-color);
-        width: calc(100vw - var(--navbar-current-width) - 16px);
-        border: 1px solid var(--border-color);
-        .arco-modal-body {
-          padding: var(--gpt-toolbar-padding);
-          height: calc(100vh - var(--footer-height) - 20px);
-        }
-      }
-    }
-
-    &.full-screen {
-      .arco-modal {
-        transform: none !important;
-        position: fixed !important;
-        right: 6px !important;
-        top: 10px !important;
-      }
-    }
   }
 </style>

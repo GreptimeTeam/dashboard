@@ -698,6 +698,12 @@ a-modal(
     display: flex;
   }
 
+  /* .resizable-wrapper 不是 group 的直接子节点选择目标，需手动去掉与左侧 select 接缝处的圆角 */
+  .input-group :deep(.resizable-wrapper .arco-input-wrapper) {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+
   .field {
     width: 150px;
   }

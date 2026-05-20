@@ -7,18 +7,6 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
         template(#icon)
           svg.icon-11.brand-color
             use(href="#refresh") 
-    a-space
-      a-space(align="center" :size="10")
-        a-tooltip(
-          v-model:popup-visible="tooltipVisible"
-          position="tr"
-          mini
-          :content="$t('dashboard.hideSidebar')"
-        )
-          a-button(type="secondary" size="mini" @click="toggleSidebar")
-            template(#icon)
-              svg.icon-12.icon-color(:class="{ 'rotate-180': hideSidebar }")
-                use(href="#shrink")
   a-spin(style="width: 100%" :loading="tablesLoading")
     .database-selector
       a-select(
@@ -146,7 +134,7 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
   }>()
 
   const appStore = useAppStore()
-  const { hideSidebar, database } = storeToRefs(appStore)
+  const { database } = storeToRefs(appStore)
 
   const { tablesSearchKey, tablesTreeRef, refreshTables, loadMore, loadMoreColumns, isRefreshingDetails } =
     useSiderTabs()
@@ -159,7 +147,6 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
 
   const activeDatabase = ref<string>(database.value || '')
   const expandedKeys = ref<number[]>([])
-  const tooltipVisible = ref(false)
 
   watch(
     () => props.databaseList,
@@ -255,11 +242,6 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
   const getNodeIcon = (node: { iconType?: string; isLeaf?: boolean }) => {
     if (node.iconType) return ICON_MAP[node.iconType] || ''
     return node.isLeaf ? '' : '#table'
-  }
-
-  const toggleSidebar = () => {
-    tooltipVisible.value = false
-    appStore.applyUiConfig({ hideSidebar: !hideSidebar.value })
   }
 </script>
 

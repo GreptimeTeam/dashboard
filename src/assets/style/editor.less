@@ -76,7 +76,13 @@
   }
 }
 
+// Square corners (no radius). Add to the editor container alongside full-width-height-editor.
 .gpt-square-editor {
+  &.card-editor,
+  &.full-width-height-editor.card-editor {
+    border-radius: 0;
+  }
+
   .cm-editor,
   .ͼ1.cm-editor {
     border-radius: 0;
@@ -138,7 +144,8 @@
   - .full-width-height-editor.output-editor    - Read-only output editors  
   - .full-width-height-editor.card-editor      - Editors inside cards
   - .full-width-height-editor.pipeline-editor  - Main pipeline editors
-  
+  - .gpt-square-editor                         - Square corners on the container
+
   Example usage:
   <div class="full-width-height-editor input-editor card-editor">
     <CodeMirror />
@@ -189,9 +196,14 @@
     }
   }
 
-  .cm-editor {
+  &.card-editor {
+    border-radius: var(--gpt-radius-sm);
+  }
+
+  .cm-editor,
+  .ͼ1.cm-editor {
     border: 1px solid var(--color-border);
-    border-radius: 2px;
+    border-radius: var(--gpt-radius-sm);
   }
 
   &.gpt-dark-editor .cm-editor,
@@ -199,11 +211,37 @@
     background: var(--gpt-bg-code);
     color: #ffffff;
     border: 1px solid rgba(71, 52, 96, 0.2);
+    border-radius: var(--gpt-radius-sm);
   }
 
-  &.gpt-dark-editor.gpt-square-editor .cm-editor,
-  &.gpt-dark-editor.gpt-square-editor .ͼ1.cm-editor {
-    border-radius: 0;
+  &.gpt-square-editor {
+    &.card-editor {
+      border-radius: 0;
+    }
+
+    .cm-editor,
+    .ͼ1.cm-editor {
+      border-radius: 0;
+    }
+  }
+
+  // Query page editor: rounded by default; add gpt-square-editor on the same node for square corners.
+  &.query-editor-surface {
+    border-radius: var(--gpt-radius-sm);
+
+    .cm-editor,
+    .ͼ1.cm-editor {
+      border-radius: var(--gpt-radius-sm);
+    }
+
+    &.gpt-square-editor {
+      border-radius: 0;
+
+      .cm-editor,
+      .ͼ1.cm-editor {
+        border-radius: 0;
+      }
+    }
   }
 }
 

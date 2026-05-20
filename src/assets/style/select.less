@@ -4,23 +4,20 @@
   }
 }
 
-.arco-select-view-single.arco-select-view-size-small .arco-select-view-value {
+.arco-select-view-single.arco-select-view-size-small:not(.arco-input-group .arco-select-view-single)
+  .arco-select-view-value {
   min-height: var(--gpt-control-height-sm);
 }
 
+// Single select: horizontal padding only (idle/hover/focus 与 Input 共用 arco-theme 里 @input-color-*)
 .arco-select-view-single {
   padding-right: 8px;
   padding-left: 8px;
-  background: transparent;
-  border-color: var(--gpt-border-strong);
-  border-radius: 4px;
-  .arco-select-view-hover();
 }
 
-.arco-select-view-single:focus-within,
-.arco-select-view-single.arco-select-view-focus {
-  background-color: transparent;
-  border-color: var(--hover-brand-color);
+// Standalone：圆角由 @input-border-radius；组内由 Arco input-group 覆盖四角
+.arco-select-view-single:not(.arco-input-group .arco-select-view-single) {
+  border-radius: 4px;
 }
 
 .arco-select-view-multiple {
@@ -28,7 +25,6 @@
   padding-left: 8px;
   background: var(--grey-bg-color);
   border: 1px solid transparent;
-  border-radius: 4px;
   .arco-select-view-hover();
 
   .arco-select-view-inner .arco-select-view-tag {
@@ -42,6 +38,10 @@
 .arco-select-view-multiple.arco-select-view-focus {
   background-color: transparent;
   border-color: var(--hover-brand-color);
+}
+
+.arco-select-view-multiple:not(.arco-input-group .arco-select-view-multiple) {
+  border-radius: 4px;
 }
 
 /* 工具栏内 select（如 Ingest precision）与页面 select 同一套 hover */

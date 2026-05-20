@@ -2,12 +2,6 @@
 a-card.editor-card.editor-card--inset(:bordered="false")
   .editor-toolbar
     .editor-toolbar-main
-      .sidebar-toggle-toolbar(v-if="hideSidebar")
-        a-tooltip(mini :content="$t('dashboard.showSidebar')")
-          a-button.sidebar-toggle-btn(type="outline" size="small" @click="showSidebar")
-            template(#icon)
-              svg.icon-15
-                use(href="#expand")
       a-button(
         type="primary"
         :disabled="isButtonDisabled || explainQueryRunning || secondaryCodeRunning"
@@ -92,6 +86,8 @@ a-card.editor-card.editor-card--inset(:bordered="false")
                         span.ml-2 {{ $t('dashboard.examples') }}
                         a-typography-text(v-for="item of durationExamples" :key="item" code) {{ item }}
     .query-select
+      a-select.query-type-select(v-model="queryType" :trigger-props="{ 'content-class': 'query-select' }")
+        a-option(v-for="query of queryOptions" :="query")
       a-tooltip(
         v-if="queryType === 'sql'"
         mini
@@ -113,17 +109,18 @@ a-card.editor-card.editor-card--inset(:bordered="false")
           template(#icon)
             svg.icon-16
               use(href="#clear")
-      a-select(v-model="queryType" :trigger-props="{ 'content-class': 'query-select' }")
-        a-option(v-for="query of queryOptions" :="query")
-a-resize-box.panel-resize(
-  v-model:height="editorHeight"
-  :directions="['bottom']"
-  :style="{ 'min-height': '120px', 'max-height': '60vh' }"
-)
+      a-tooltip(mini :content="focusMode ? $t('dashboard.exitFullSize') : $t('dashboard.fullSizeMode')")
+        a-button(type="outline" @click="emit('toggle-focus-mode')")
+          template(#icon)
+            svg.icon-18
+              use(v-if="!focusMode" href="#zoom")
+              use(v-else href="#zoom-out")
+
+a-resize-box.panel-resize(v-model:height="editorHeight" :directions="['bottom']" :style="editorResizeStyle")
   .editor-resize-content
     a-tabs.query-tabs(:default-active-key="'sql'" :active-key="queryType")
       a-tab-pane(key="sql")
-        .full-width-height-editor.card-editor.gpt-dark-editor
+        .full-width-height-editor.gpt-dark-editor.query-editor-surface
           CodeMirror(
             v-model="codes.sql"
             :style="{ width: '100%', height: '100%' }"
@@ -136,7 +133,7 @@ a-resize-box.panel-resize(
             @update="codeUpdate('sql')"
           )
       a-tab-pane(key="promql")
-        .full-width-height-editor.card-editor.gpt-dark-editor
+        .full-width-height-editor.gpt-dark-editor.query-editor-surface
           CodeMirror(
             v-model="codes.promql"
             :style="{ width: '100%', height: '100%' }"
@@ -184,19 +181,26 @@ a-modal(
     autofocus?: boolean
     indentWithTab?: boolean
     tabSize?: number
+    focusMode?: boolean
   }
   const props = withDefaults(defineProps<Props>(), {
     spellcheck: true,
     autofocus: true,
     indentWithTab: true,
     tabSize: 2,
+    focusMode: false,
   })
+
+  const emit = defineEmits<{ 'toggle-focus-mode': [] }>()
 
   const editorHeight = useStorage('queryEditorHeight', 266)
 
+  const editorResizeStyle = computed(() => ({
+    'min-height': '120px',
+    'max-height': props.focusMode ? '55vh' : '60vh',
+  }))
+
   const tsRef = ref<InstanceType<typeof import('./time-assistance.vue').default> | null>(null)
-  const appStore = useAppStore()
-  const { hideSidebar } = storeToRefs(appStore)
 
   const {
     codes,
@@ -238,9 +242,6 @@ a-modal(
       return
     }
     tsRef.value.open()
-  }
-  const showSidebar = () => {
-    appStore.applyUiConfig({ hideSidebar: false })
   }
   // Show the import explain modal
   const showImportExplainModal = () => {
@@ -565,6 +566,16 @@ a-modal(
     align-items: center;
     gap: 8px;
     flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  .query-type-select {
+    width: 108px;
+    flex-shrink: 0;
+  }
+
+  .query-type-select :deep(.arco-select-view-single) {
+    width: 100%;
   }
 
   .editor-resize-content {

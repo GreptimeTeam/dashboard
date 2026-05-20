@@ -10,12 +10,6 @@ a-tabs.panel-tabs(
 )
   template(#extra)
     a-space.result-extra(style="margin-right: 12px" :size="8")
-      a-tooltip(mini :content="props.isInFullSizeMode ? $t('dashboard.exitFullSize') : $t('dashboard.fullSizeMode')")
-        a-button(type="text" size="small" @click="toggleFullSize")
-          template(#icon)
-            svg.icon
-              use(v-if="!props.isInFullSizeMode" href="#zoom")
-              use(v-else href="#zoom-out")
       a-popconfirm(
         type="warning"
         cancel-text=""
@@ -122,11 +116,6 @@ a-tabs.panel-tabs(
   import { runWithFormat } from '@/services/code-run'
   import { useQuerySession } from '@/views/dashboard/query/use-query-session'
 
-  const props = defineProps<{
-    isInFullSizeMode?: boolean
-  }>()
-
-  const emit = defineEmits(['toggleFullSize'])
   const session = useQuerySession()
 
   const activeTabKey = ref<string | number>()
@@ -175,7 +164,6 @@ a-tabs.panel-tabs(
   const clearResults = () => {
     startKey.value = session.results.value[0]?.key as number
     session.clearAll()
-    emit('toggleFullSize', false)
   }
 
   const refreshSingleResult = async (result: ResultType) => {
@@ -204,10 +192,6 @@ a-tabs.panel-tabs(
     } finally {
       exportingKeys.value.delete(result.key)
     }
-  }
-
-  const toggleFullSize = () => {
-    emit('toggleFullSize', !props.isInFullSizeMode)
   }
 
   const getResultView = (resultKey: string | number) => {

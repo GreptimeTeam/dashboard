@@ -64,9 +64,14 @@
 @form-color-text-label: @gpt-color-form-label;
 
 @input-color-bg: transparent;
+@input-color-bg_hover: var(--grey-bg-color);
+@input-color-bg_focus: transparent;
 @input-color-border: var(--gpt-border-strong);
 @input-color-border_hover: var(--gpt-border-strong);
+@input-color-border_focus: var(--hover-brand-color);
 @input-color-border_disabled: var(--gpt-border-subtle);
+@input-color-shadow_focus: transparent;
+@input-size-shadow_focus: 0;
 
 @table-color-border: var(--gpt-border-subtle);
 @table-border-radius: @border-radius-small;
@@ -96,8 +101,10 @@
 @menu-collapse-padding-horizontal: @gpt-spacing-nav-gutter;
 
 @menu-light-color-bg: var(--gpt-bg-header);
+@menu-light-color-bg-item_default: transparent;
 @menu-light-color-bg-item_hover: var(--gpt-nav-active-bg);
 @menu-light-color-bg-item_selected: var(--gpt-nav-active-bg);
+@menu-light-color-bg-item_disabled: transparent;
 @menu-light-color-item_default: var(--gpt-text-secondary);
 @menu-light-color-item_hover: var(--gpt-brand-900);
 @menu-light-color-item_selected: var(--gpt-main-purple);

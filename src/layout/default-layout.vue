@@ -1,9 +1,9 @@
 <template lang="pug">
 a-layout
-  a-layout.layout-container
+  a-layout.layout-container(:class="{ 'layout-container--no-footer': !footer }")
     a-layout-sider.main-sider(v-if="navbar" :width="siderWidth")
       Navbar
-    a-layout-content.layout-content
+    a-layout-content.layout-content(:class="{ 'layout-content--full-bleed': !navbar }")
       PageLayout
   Footer(v-if="footer")
 </template>
@@ -21,6 +21,10 @@ a-layout
   const siderWidth = computed(() => (menuCollapse.value ? 54 : 200))
 
   watchEffect(() => {
+    if (!navbar.value) {
+      document.documentElement.style.setProperty('--navbar-current-width', '0px')
+      return
+    }
     const width = menuCollapse.value ? 'var(--navbar-width-collapsed)' : 'var(--navbar-width)'
     document.documentElement.style.setProperty('--navbar-current-width', width)
   })
@@ -31,7 +35,13 @@ a-layout
 
   .layout-container {
     width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
     height: calc(100% - var(--footer-height));
+
+    &.layout-container--no-footer {
+      height: 100%;
+    }
   }
 
   .layout-navbar {
@@ -45,7 +55,13 @@ a-layout
 
   .layout-content {
     width: calc(100vw - var(--navbar-current-width));
+    max-width: 100%;
+    overflow-x: hidden;
     overflow-y: hidden;
     transition: width 0.2s cubic-bezier(0.34, 0.69, 0.1, 1);
+  }
+
+  .layout-content.layout-content--full-bleed {
+    width: 100%;
   }
 </style>
