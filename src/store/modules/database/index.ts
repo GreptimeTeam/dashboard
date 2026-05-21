@@ -1,6 +1,5 @@
 import editorAPI from '@/api/editor'
 import { SEMANTIC_TYPE_MAP } from '@/views/dashboard/config'
-import { oneDark } from '@codemirror/theme-one-dark'
 import { sql } from '@codemirror/lang-sql'
 import { PromQLExtension } from '@prometheus-io/codemirror-promql'
 import { ScriptTreeData, TableDetail, TableTreeChild, TableTreeParent } from './types'
@@ -38,12 +37,12 @@ const useDataBaseStore = defineStore('database', () => {
     sql: any[]
     promql: any[]
   }>({
-    sql: [sql(hints.value.sql), oneDark],
-    promql: [new PromQLExtension().asExtension(), oneDark],
+    sql: [sql(hints.value.sql)],
+    promql: [new PromQLExtension().asExtension()],
   })
 
   watch(hints, () => {
-    extensions.value.sql = [sql(hints.value.sql), oneDark]
+    extensions.value.sql = [sql(hints.value.sql)]
     const promql = new PromQLExtension().setComplete({
       remote: {
         fetchFn: () => Promise.reject(),
@@ -52,7 +51,7 @@ const useDataBaseStore = defineStore('database', () => {
         },
       },
     })
-    extensions.value.promql = [promql.asExtension(), oneDark]
+    extensions.value.promql = [promql.asExtension()]
   })
 
   const getIndexesForColumns = (columnSchemas: SchemaType[]) => {

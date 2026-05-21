@@ -142,16 +142,24 @@
   --gpt-bg-panel: #ffffff;
   --gpt-bg-surface: #fafafa;
   --gpt-bg-header: #fafafa;
-  --gpt-bg-code: #1a1630;
-  --gpt-bg-code-line: rgba(255, 255, 255, 0.06);
+  --gpt-bg-code: var(--gpt-bg-panel);
+  --gpt-bg-code-gutter: var(--gpt-bg-header);
+  --gpt-bg-code-line: rgba(71, 52, 96, 0.04);
+  --gpt-bg-code-selection: rgba(112, 47, 237, 0.15);
 
+  /* 主交互色：按钮、主色控件、链接等 */
   --gpt-main-purple: #702fed;
-  --gpt-brand-900: #473460;
+  /* 主深色：正文、导航底、编辑器描边、侧栏 active 图标/文案等 */
+  --gpt-main-dark: #473460;
+  --gpt-brand-900: var(--gpt-main-dark);
+  --gpt-editor-border: var(--gpt-main-dark);
+  --gpt-editor-line-height: 22px;
+  --gpt-icon-color: var(--gpt-main-dark);
   --gpt-brand-700: #5a4a70;
   --gpt-brand-600: #8b7ba8;
   --gpt-brand-300: #c4a8f0;
 
-  --gpt-text-primary: #473460;
+  --gpt-text-primary: var(--gpt-main-dark);
   --gpt-text-secondary: #8b7ba8;
   --gpt-text-muted: #b0a8c4;
   --gpt-text-inverse: #ffffff;
@@ -191,6 +199,7 @@
 
   /* Backward-compatible aliases */
   --main-purple-color: var(--gpt-main-purple);
+  --main-dark-color: var(--gpt-main-dark);
   --main-bg-color: var(--gpt-bg-app);
   --list-hover-color: rgba(71, 52, 96, 0.08);
   --th-bg-color: var(--gpt-table-head-bg);
@@ -198,10 +207,11 @@
   --hover-bg-color: rgba(255, 255, 255, 0.6);
   --white-font-color: rgba(252, 253, 255, 1);
   --tooltip-font-color: rgba(255, 255, 255, 0.8);
-  --navbar-bg-color: var(--gpt-brand-900);
-  --brand-color: var(--gpt-brand-900);
+  --navbar-bg-color: var(--gpt-main-dark);
+  --brand-color: var(--gpt-main-purple);
   --primary-6: var(--brand-color);
-  --hover-brand-color: var(--gpt-brand-300);
+  --hover-brand-color: var(--gpt-main-purple);
+  --gpt-active-icon-color: var(--gpt-main-dark);
   --light-brand-color: var(--gpt-nav-active-bg);
   --tree-select-brand-color: var(--gpt-nav-active-bg);
   --main-font-color: var(--gpt-text-primary);
@@ -281,7 +291,7 @@ a:not(.arco-btn):not(.arco-menu-item):not(.arco-menu-inline-header),
 
   &.gpt-cell-table-hover {
     tbody tr:hover td {
-      background: var(--list-hover-color);
+      background: var(--gpt-nav-active-bg);
     }
   }
 }
@@ -467,6 +477,19 @@ samp {
   .arco-card-header-extra {
     display: flex;
   }
+}
+
+.icon,
+.icon-11,
+.icon-12,
+.icon-13,
+.icon-15,
+.icon-16,
+.icon-18,
+.icon-20,
+.icon-30,
+.icon-32 {
+  color: var(--gpt-icon-color);
 }
 
 .icon-12 {
@@ -657,11 +680,11 @@ samp {
 }
 
 .brand-color {
-  color: var(--brand-color);
+  color: var(--gpt-icon-color);
 }
 
 .icon-color {
-  color: var(--small-font-color);
+  color: var(--gpt-icon-color);
 }
 
 .arco-spin-icon {

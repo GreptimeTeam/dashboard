@@ -1,7 +1,7 @@
 <template lang="pug">
 .code-editor.editor-card(:bordered="false")
   .code
-    CodeMirror(v-model="code" :disabled="true" :extensions="[oneDark, mapLanguages(lang)()]")
+    CodeMirror(v-model="code" :disabled="true" :extensions="[mapLanguages(lang)()]")
     a-button.copy(type="text" title="Copy Code" @click="copy")
       svg
         use(href="#copy-new")
@@ -11,7 +11,6 @@
   import i18n from '@/locale'
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { Message } from '@arco-design/web-vue'
-  import { oneDark } from '@codemirror/theme-one-dark'
   import mapLanguages from '@/components/markdown-render/components/utils'
 
   // data

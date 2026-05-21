@@ -37,11 +37,7 @@
     .operations(v-if="!disabled")
       a-button(:disabled="runDisabled" :loading="isLoading" @click="runCommand") {{ $t('playground.run') }}
       a-button(v-if="showReset" @click="reset") {{ $t('playground.reset') }}
-    CodeMirror(
-      v-model="code"
-      :extensions="[mapLanguages(lang)(), oneDark, keymap.of(defaultKeymap)]"
-      :disabled="disabled"
-    )
+    CodeMirror(v-model="code" :extensions="[mapLanguages(lang)(), keymap.of(defaultKeymap)]" :disabled="disabled")
     a-button.copy(type="text" title="Copy Code" @click="copy")
       svg
         use(href="#copy-new")
@@ -65,7 +61,6 @@
   import dayjs from 'dayjs'
   import { keymap } from '@codemirror/view'
   import { Codemirror as CodeMirror } from 'vue-codemirror'
-  import { oneDark } from '@codemirror/theme-one-dark'
   import useDataChart from '@/hooks/data-chart'
   import type { PromForm, ResultType } from '@/store/modules/code-run/types'
   import type { Log } from '@/types/log'

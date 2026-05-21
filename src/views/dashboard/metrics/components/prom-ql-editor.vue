@@ -312,15 +312,21 @@
   }
 
   :deep(.cm-editor) {
-    border: 1px solid var(--color-border);
+    height: 34px;
+    overflow: visible;
+    width: 100%;
+    background: #fff;
+    color: var(--color-text-1);
+    border: 1px solid var(--gpt-editor-border);
     border-radius: 4px 0 0 4px;
     transition: all 0.2s ease-in-out;
   }
 
-  :deep(.cm-editor) {
-    height: 34px;
-    overflow: visible;
-    width: 100%;
+  :deep(.cm-editor .cm-content),
+  :deep(.cm-editor .cm-line),
+  :deep(.ͼ1.cm-editor .cm-content),
+  :deep(.ͼ1.cm-editor .cm-line) {
+    line-height: 32px;
   }
 
   :deep(.cm-scroller) {
@@ -332,9 +338,8 @@
   }
 
   :deep(.cm-content) {
-    line-height: 34px;
     padding: 0 8px;
-    min-height: 34px;
+    min-height: 32px;
     font-family: inherit;
     font-size: inherit;
     font-weight: inherit;
@@ -343,8 +348,10 @@
   :deep(.cm-line) {
     padding: 0;
   }
-  :deep(.cm-activeLine) {
-    background-color: transparent;
+
+  :deep(.cm-activeLine),
+  :deep(.ͼ1 .cm-activeLine) {
+    background-color: transparent !important;
   }
 
   :deep(.cm-gutters) {

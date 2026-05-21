@@ -45,7 +45,7 @@ a-layout.full-height-layout.pipefile-view
       a-form-item.pipeline-content-item(field="content" label="Yaml Content")
         template(#help)
           div
-        .full-width-height-editor.pipeline-editor(:class="editorHeightClass")
+        .full-width-height-editor.pipeline-editor.gpt-light-editor.gpt-square-editor(:class="editorHeightClass")
           LangEditor(v-model="currFile.content" style="width: 100%; height: 100%")
   a-layout-content.content-wrapper
     a-card.light-editor-card(title="Input" :bordered="false")
@@ -71,7 +71,7 @@ a-layout.full-height-layout.pipefile-view
 
       a-alert(v-if="ymlError" type="error")
         | {{ ymlError }}
-      .full-width-height-editor.pipeline-side-editor
+      .full-width-height-editor.pipeline-side-editor.gpt-light-editor.gpt-square-editor
         CodeMirror(
           v-model="debugForm.content"
           style="width: 100%; height: 100%"
@@ -127,7 +127,7 @@ a-layout.full-height-layout.pipefile-view
         )
 
       // JSON View
-      .full-width-height-editor.pipeline-side-editor(
+      .full-width-height-editor.pipeline-side-editor.gpt-light-editor.gpt-square-editor(
         v-if="outputViewMode === 'json' && parsedOutputData.records && parsedOutputData.records.rows.length > 0"
       )
         CodeMirror(

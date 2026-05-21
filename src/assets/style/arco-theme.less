@@ -11,7 +11,9 @@
 @arcoblue-3: #c4a8f0;
 @arcoblue-4: #8b7ba8;
 @arcoblue-5: #5a4a70;
-@arcoblue-6: #473460;
+@gpt-main-dark: #473460;
+@gpt-brand-900: @gpt-main-dark;
+@arcoblue-6: @gpt-brand-900;
 @gpt-color-white: #ffffff;
 @gpt-color-purple-bright: #722ed1;
 @gpt-main-purple: #702fed;
@@ -29,8 +31,9 @@
 @color-primary-2: #ede7f8;
 @color-primary-3: #c4a8f0;
 @color-primary-4: #8b7ba8;
-@color-primary-5: #5a4a70;
-@color-primary-6: #473460;
+@color-primary-5: #5c22d4;
+@color-primary-6: @gpt-main-purple;
+@color-primary-7: #5519c4;
 
 @gpt-color-border-default: rgba(71, 52, 96, 0.09);
 @color-border: @gpt-color-border-default;
@@ -52,7 +55,7 @@
 @btn-size-small-radius: @border-radius-small;
 @btn-size-small-padding-horizontal: 12px;
 
-@btn-primary-color-border: rgba(71, 52, 96, 0.25);
+@btn-primary-color-border: rgba(112, 47, 237, 0.25);
 @btn-secondary-color-bg: transparent;
 @btn-secondary-color-bg_hover: transparent;
 @btn-secondary-color-border: rgb(209, 213, 219);
@@ -84,7 +87,7 @@
 @table-color-bg-body-cell: var(--gpt-bg-panel);
 @table-color-bg-body-sorted-cell: var(--gpt-bg-panel);
 @table-color-bg-body-stripe-row: var(--gpt-bg-surface);
-@table-color-bg-body-row_hover: var(--gpt-bg-surface);
+@table-color-bg-body-row_hover: var(--gpt-nav-active-bg);
 @table-color-bg-body-row_active: var(--gpt-bg-surface);
 @table-color-body-background: var(--gpt-bg-panel);
 
@@ -112,7 +115,7 @@
 @menu-light-color-icon_hover: var(--gpt-brand-900);
 @menu-light-color-icon_selected: var(--gpt-main-purple);
 
-@menu-dark-color-bg: @color-primary-6;
+@menu-dark-color-bg: @gpt-brand-900;
 @menu-dark-color-bg-item_default: @menu-dark-color-bg;
 @menu-dark-color-bg-item_hover: fade(@arcoblue-3, 14%);
 @menu-dark-color-bg-item_selected: fade(@arcoblue-3, 18%);

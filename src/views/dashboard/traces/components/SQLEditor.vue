@@ -1,5 +1,5 @@
 <template lang="pug">
-.sql-editor-container
+.sql-editor-container.gpt-light-editor
   CodeMirror(
     :model-value="modelValue"
     :style="{ height: editorHeight }"
@@ -179,8 +179,16 @@
   }
 
   :deep(.cm-editor) {
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
+    border: 1px solid var(--gpt-editor-border);
+    border-radius: var(--gpt-radius-sm);
+    background: var(--gpt-bg-code);
+    color: var(--gpt-text-primary);
+    overflow: hidden;
+  }
+
+  :deep(.cm-gutters) {
+    border-top-left-radius: var(--gpt-radius-sm);
+    border-bottom-left-radius: var(--gpt-radius-sm);
   }
 
   :deep(.cm-editor.cm-focused) {

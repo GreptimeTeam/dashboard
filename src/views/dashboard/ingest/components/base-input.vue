@@ -16,8 +16,8 @@ a-layout-header
         :config="config"
       )
 a-layout-content.main-content
-  a-card.editor-card.gpt-dark-editor-card(:bordered="false")
-    .full-width-height-editor.card-editor.gpt-dark-editor.gpt-square-editor
+  a-card.editor-card.gpt-light-editor-card(:bordered="false")
+    .full-width-height-editor.card-editor.gpt-light-editor.gpt-square-editor
       CodeMirror(
         v-model="content"
         :placeholder="config.placeholder"
@@ -44,7 +44,6 @@ a-drawer.ingest(
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { basicSetup } from 'codemirror'
   import { json } from '@codemirror/lang-json'
-  import { oneDark } from '@codemirror/theme-one-dark'
 
   const props = defineProps({
     config: {
@@ -63,10 +62,10 @@ a-drawer.ingest(
     const contentType = props.config?.params?.contentType
 
     if (contentType === 'application/json' || contentType === 'application/x-ndjson') {
-      return [basicSetup, json(), oneDark]
+      return [basicSetup, json()]
     }
 
-    return [basicSetup, oneDark]
+    return [basicSetup]
   })
 
   const toggleDoc = () => {

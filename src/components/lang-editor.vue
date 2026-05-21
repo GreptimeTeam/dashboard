@@ -1,17 +1,18 @@
 <template lang="pug">
-a-card.light-editor-card(:bordered="false")
-  CodeMirror(
-    :placeholder="props.placeholder"
-    :modelValue="props.modelValue"
-    :extensions="extensions"
-    :style="style"
-    :spellcheck="true"
-    :autofocus="true"
-    :indent-with-tab="true"
-    :tabSize="2"
-    :disabled="disabled"
-    @change="codeUpdate"
-  )
+a-card.light-editor-card.gpt-light-editor-card(:bordered="false")
+  .full-width-height-editor.gpt-light-editor
+    CodeMirror(
+      :placeholder="props.placeholder"
+      :modelValue="props.modelValue"
+      :extensions="extensions"
+      :style="style"
+      :spellcheck="true"
+      :autofocus="true"
+      :indent-with-tab="true"
+      :tabSize="2"
+      :disabled="disabled"
+      @change="codeUpdate"
+    )
 </template>
 
 <script lang="ts" setup name="LangEditor">

@@ -41,16 +41,17 @@ a-drawer(
               | {{ item.label }}
           | {{ item.value }}
     a-tab-pane(key="json" title="JSON View")
-      CodeMirror(
-        :modelValue="jsonView"
-        :extensions="extensions"
-        :style="codeMirrorStyle"
-        :spellcheck="true"
-        :autofocus="true"
-        :indent-with-tab="true"
-        :tabSize="2"
-        :disabled="true"
-      )
+      .gpt-light-editor.span-json-editor
+        CodeMirror(
+          :modelValue="jsonView"
+          :extensions="extensions"
+          :style="codeMirrorStyle"
+          :spellcheck="true"
+          :autofocus="true"
+          :indent-with-tab="true"
+          :tabSize="2"
+          :disabled="true"
+        )
 </template>
 
 <script setup lang="ts">
@@ -232,8 +233,14 @@ a-drawer(
 
   :deep(.cm-editor) {
     height: 100%;
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
+    border: 1px solid var(--gpt-editor-border);
+    border-radius: var(--gpt-radius-sm);
+    overflow: hidden;
+  }
+
+  .span-json-editor :deep(.cm-gutters) {
+    border-top-left-radius: var(--gpt-radius-sm);
+    border-bottom-left-radius: var(--gpt-radius-sm);
   }
 
   :deep(.arco-tabs) {

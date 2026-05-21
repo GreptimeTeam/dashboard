@@ -25,22 +25,22 @@ a-card.editor-card.padding-16(:bordered="false")
             icon-loading(v-if="scriptRunning" spin)
             icon-play-arrow(v-else)
           | {{ $t('dashboard.saveAndRun') }}
-  CodeMirror(
-    v-model="pythonCode"
-    :style="style"
-    :spellcheck="spellcheck"
-    :autofocus="autofocus"
-    :indent-with-tab="indentWithTab"
-    :tabSize="tabSize"
-    :extensions="extensions"
-    @ready="handleReady"
-    @update="codeUpdate"
-  )
+  .gpt-light-editor.script-editor-surface.gpt-square-editor
+    CodeMirror(
+      v-model="pythonCode"
+      :style="style"
+      :spellcheck="spellcheck"
+      :autofocus="autofocus"
+      :indent-with-tab="indentWithTab"
+      :tabSize="tabSize"
+      :extensions="extensions"
+      @ready="handleReady"
+      @update="codeUpdate"
+    )
 </template>
 
 <script lang="ts" name="PyEditor" setup>
   import { Codemirror as CodeMirror } from 'vue-codemirror'
-  import { oneDark } from '@codemirror/theme-one-dark'
   import { python } from '@codemirror/lang-python'
   import usePythonCode from '@/hooks/python-code'
 
@@ -118,7 +118,7 @@ a-card.editor-card.padding-16(:bordered="false")
     height: '250px',
   }
 
-  const extensions = [python(), oneDark]
+  const extensions = [python()]
   const saveCurrentScript = async () => {
     try {
       scriptSaving.value = true

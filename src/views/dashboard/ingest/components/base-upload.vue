@@ -69,8 +69,8 @@ a-layout-content.main-content
       :tip="config.readingTip || 'Reading file...'"
       :loading="isReadingFile"
     )
-      a-card.file-scrollbar.gpt-dark-editor-card(:bordered="false")
-        .full-width-height-editor.card-editor.gpt-dark-editor.gpt-square-editor
+      a-card.file-scrollbar.gpt-light-editor-card(:bordered="false")
+        .full-width-height-editor.card-editor.gpt-light-editor.gpt-square-editor
           CodeMirror(
             v-model="codeInEditor"
             :style="{ width: '100%', height: '100%' }"
@@ -99,7 +99,6 @@ a-layout-content.main-content
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { basicSetup } from 'codemirror'
   import { json } from '@codemirror/lang-json'
-  import { oneDark } from '@codemirror/theme-one-dark'
   import { isObject } from '@/utils/is'
 
   const props = defineProps({
@@ -215,10 +214,10 @@ a-layout-content.main-content
     const contentType = props.config?.params?.contentType
 
     if (contentType === 'application/json' || contentType === 'application/x-ndjson') {
-      return [basicSetup, json(), oneDark]
+      return [basicSetup, json()]
     }
 
-    return [basicSetup, oneDark]
+    return [basicSetup]
   })
 </script>
 

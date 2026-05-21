@@ -120,7 +120,7 @@ a-resize-box.panel-resize(v-model:height="editorHeight" :directions="['bottom']"
   .editor-resize-content
     a-tabs.query-tabs(:default-active-key="'sql'" :active-key="queryType")
       a-tab-pane(key="sql")
-        .full-width-height-editor.gpt-dark-editor.query-editor-surface
+        .full-width-height-editor.gpt-light-editor.query-editor-surface
           CodeMirror(
             v-model="codes.sql"
             :style="{ width: '100%', height: '100%' }"
@@ -133,7 +133,7 @@ a-resize-box.panel-resize(v-model:height="editorHeight" :directions="['bottom']"
             @update="codeUpdate('sql')"
           )
       a-tab-pane(key="promql")
-        .full-width-height-editor.gpt-dark-editor.query-editor-surface
+        .full-width-height-editor.gpt-light-editor.query-editor-surface
           CodeMirror(
             v-model="codes.promql"
             :style="{ width: '100%', height: '100%' }"
