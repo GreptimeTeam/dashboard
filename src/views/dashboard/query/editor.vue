@@ -45,10 +45,10 @@ a-card.editor-card.editor-card--inset(:bordered="false")
         content="Alt + Enter"
         mini
       )
-        a-button(type="outline" :disabled="isButtonDisabled" @click="runQueryAll()")
+        a-button.run-all-btn(type="outline" :disabled="isButtonDisabled" @click="runQueryAll()")
           a-space(:size="4")
             icon-loading(v-if="primaryCodeRunning" spin)
-            icon-play-arrow(v-else)
+            icon-play-arrow-fill.run-all-play-icon(v-else)
             | {{ $t('dashboard.runAll') }}
             icon-close-circle-fill.icon-16(v-if="primaryCodeRunning")
       a-form.prom-form(layout="inline" v-show="queryType === 'promql'" :model="promForm")
@@ -588,6 +588,11 @@ a-modal(
     > :first-child {
       cursor: not-allowed;
     }
+  }
+
+  .run-all-btn .run-all-play-icon {
+    color: var(--gpt-main-dark);
+    font-size: 16px;
   }
 </style>
 
