@@ -1,7 +1,7 @@
 <template lang="pug">
-a-layout.navbar(:class="{ 'navbar--collapsed': menuCollapse }")
+a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
   a-layout-header.logo-space
-    .logo-brand(v-if="!menuCollapse")
+    .logo-brand(v-if="!navbarCollapsed")
       svg.logo
         use(href="#logo")
       span.logo-text Greptime
@@ -11,7 +11,7 @@ a-layout.navbar(:class="{ 'navbar--collapsed': menuCollapse }")
     a-menu.navbar-menu(
       mode="vertical"
       theme="light"
-      :collapsed="menuCollapse"
+      :collapsed="navbarCollapsed"
       :selected-keys="[menuSelectedKey]"
       @collapse="onMenuCollapse"
     )
@@ -27,8 +27,8 @@ a-layout.navbar(:class="{ 'navbar--collapsed': menuCollapse }")
           svg.icon-18(:id="`menu-${item.name}`")
             use(:href="`#${item.meta.icon}`")
   a-layout-footer
-    ul.footer(:class="{ 'footer--expanded': !menuCollapse }")
-      li.footer-top-divider(v-if="menuCollapse" aria-hidden="true")
+    ul.footer(:class="{ 'footer--expanded': !navbarCollapsed }")
+      li.footer-top-divider(v-if="navbarCollapsed" aria-hidden="true")
       .footer-row
         .footer-start
           a-tooltip(:content="$t('settings.title')")
@@ -48,15 +48,20 @@ a-layout.navbar(:class="{ 'navbar--collapsed': menuCollapse }")
               a-doption.news(@click="showNews")
                 | {{ $t('menu.news') }}
         .footer-end
-          a-tooltip(:content="menuCollapse ? $t('dashboard.showSidebar') : $t('dashboard.hideSidebar')")
+          a-tooltip(:content="navbarCollapsed ? $t('dashboard.showSidebar') : $t('dashboard.hideSidebar')")
             a-button.footer-collapse-btn(type="text" @click="toggleMenuCollapse")
               template(#icon)
-                svg.icon-16(:class="{ 'rotate-180': menuCollapse }")
+                svg.icon-16(:class="{ 'rotate-180': navbarCollapsed }")
                   use(href="#shrink")
 NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
 </template>
 
 <script lang="ts" setup name="NavBar">
+  import {
+    queryFocusNavExpanded,
+    useNavbarLayoutCollapsed,
+    useQueryFocusMode,
+  } from '@/composables/use-query-focus-mode'
   import { listenerRouteChange } from '@/utils/route-listener'
   import { useNews } from '@/hooks/news'
   import useMenuTree from '../menu/use-menu-tree'
@@ -65,6 +70,8 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
   const router = useRouter()
   const appStore = useAppStore()
   const { menuSelectedKey, globalSettings, menuCollapse } = storeToRefs(appStore)
+  const queryFocusMode = useQueryFocusMode()
+  const navbarCollapsed = useNavbarLayoutCollapsed()
   const { activeTab: ingestTab } = storeToRefs(useIngestStore())
   const { menuTree } = useMenuTree()
   const { newsList, isLoadingNews } = useNews()
@@ -101,10 +108,18 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
   }
 
   const toggleMenuCollapse = () => {
+    if (queryFocusMode.value) {
+      queryFocusNavExpanded.value = !queryFocusNavExpanded.value
+      return
+    }
     appStore.applyUiConfig({ menuCollapse: !menuCollapse.value })
   }
 
   const onMenuCollapse = (collapsed: boolean) => {
+    if (queryFocusMode.value) {
+      queryFocusNavExpanded.value = !collapsed
+      return
+    }
     appStore.applyUiConfig({ menuCollapse: collapsed })
   }
 

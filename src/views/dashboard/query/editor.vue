@@ -195,10 +195,10 @@ a-modal(
 
   const editorHeight = useStorage('queryEditorHeight', 266)
 
-  const editorResizeStyle = computed(() => ({
+  const editorResizeStyle = {
     'min-height': '120px',
-    'max-height': props.focusMode ? '55vh' : '60vh',
-  }))
+    'max-height': '60vh',
+  }
 
   const tsRef = ref<InstanceType<typeof import('./time-assistance.vue').default> | null>(null)
 
@@ -299,6 +299,17 @@ a-modal(
   const handleReadyPromql = (payload: any) => {
     promqlView.value = payload.view
   }
+
+  const remeasureEditors = () => {
+    nextTick(() => {
+      requestAnimationFrame(() => {
+        sqlView.value?.requestMeasure?.()
+        promqlView.value?.requestMeasure?.()
+      })
+    })
+  }
+
+  watch(() => props.focusMode, remeasureEditors)
 
   const updateCurrentStatement = (sql: string, cursorPosition: number) => {
     if (!sql) {

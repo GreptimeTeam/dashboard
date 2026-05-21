@@ -1,8 +1,8 @@
 <template lang="pug">
 a-layout.new-layout(:class="{ 'query-layout--focus': focusMode }")
   a-resize-box(
-    v-if="!focusMode"
     v-model:width="sidebarWidth"
+    :class="{ 'hide-sider': focusMode }"
     :directions="['right']"
     :style="{ 'min-width': '100px', 'max-width': '40vw' }"
   )
@@ -20,8 +20,8 @@ a-layout.new-layout(:class="{ 'query-layout--focus': focusMode }")
         DataView(v-if="!!session.results.value?.length || session.explainResults.value.length > 0")
         .data-view-placeholder(v-else)
       a-resize-box.panel-resize.logs-panel-resize(
-        v-if="!focusMode"
         v-model:height="logsHeight"
+        :class="{ 'hide-sider': focusMode }"
         :directions="['top']"
         :style="{ 'max-height': '40vh', 'min-height': '66px' }"
       )
@@ -34,6 +34,7 @@ a-layout.new-layout(:class="{ 'query-layout--focus': focusMode }")
   import { useMagicKeys, useActiveElement, useStorage } from '@vueuse/core'
   import { driver } from 'driver.js'
   import 'driver.js/dist/driver.css'
+  import { useQueryFocusMode } from '@/composables/use-query-focus-mode'
   import { navbarSteps } from '../config'
   import { provideQuerySession } from './use-query-session'
 
@@ -44,14 +45,12 @@ a-layout.new-layout(:class="{ 'query-layout--focus': focusMode }")
   const { s, q, escape } = useMagicKeys()
   const activeElement = useActiveElement()
   const appStore = useAppStore()
-  const { footer, menuCollapse, databaseList, database } = storeToRefs(useAppStore())
+  const { databaseList, database } = storeToRefs(useAppStore())
   const originalDatabase = ref<string | undefined>(undefined)
   const { queryType } = useQueryCode()
   const session = provideQuerySession()
   const logsHeight = ref(66)
-  const focusMode = ref(false)
-
-  const layoutSnapshot = ref({ footer: true, menuCollapse: false })
+  const focusMode = useQueryFocusMode()
 
   const sidebarWidth = useStorage('sidebarWidth', 228)
 
@@ -67,31 +66,12 @@ a-layout.new-layout(:class="{ 'query-layout--focus': focusMode }")
     return Math.max(minWidth, Math.min(sidebarWidth.value, maxWidth))
   })
 
-  const enterFocusMode = () => {
-    if (focusMode.value) return
-    layoutSnapshot.value = { footer: footer.value, menuCollapse: menuCollapse.value }
-    appStore.applyUiConfig({ footer: false, menuCollapse: true }, { persist: false })
-    focusMode.value = true
+  const toggleFocusMode = () => {
+    focusMode.value = !focusMode.value
   }
 
   const exitFocusMode = () => {
-    if (!focusMode.value) return
     focusMode.value = false
-    appStore.applyUiConfig(
-      {
-        footer: layoutSnapshot.value.footer,
-        menuCollapse: layoutSnapshot.value.menuCollapse,
-      },
-      { persist: false }
-    )
-  }
-
-  const toggleFocusMode = () => {
-    if (focusMode.value) {
-      exitFocusMode()
-    } else {
-      enterFocusMode()
-    }
   }
 
   watch(s, (v) => {

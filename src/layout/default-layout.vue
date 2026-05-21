@@ -1,14 +1,19 @@
 <template lang="pug">
 a-layout
-  a-layout.layout-container(:class="{ 'layout-container--no-footer': !footer }")
+  a-layout.layout-container(
+    :class="{ 'layout-container--no-footer': !footer || queryFocusMode, 'layout-container--query-focus': queryFocusMode }"
+  )
     a-layout-sider.main-sider(v-if="navbar" :width="siderWidth")
       Navbar
-    a-layout-content.layout-content(:class="{ 'layout-content--full-bleed': !navbar }")
+    a-layout-content.layout-content(
+      :class="{ 'layout-content--full-bleed': !navbar, 'layout-content--query-focus': queryFocusMode }"
+    )
       PageLayout
-  Footer(v-if="footer")
+  Footer(v-show="footer && !queryFocusMode")
 </template>
 
 <script lang="ts" setup>
+  import { useNavbarLayoutCollapsed, useQueryFocusMode } from '@/composables/use-query-focus-mode'
   import { useAppStore } from '@/store'
   import Footer from '@/components/footer/index.vue'
   import useResponsive from '@/hooks/responsive'
@@ -16,16 +21,17 @@ a-layout
 
   useResponsive(true)
 
-  const { navbar, footer, menuCollapse } = storeToRefs(useAppStore())
-
-  const siderWidth = computed(() => (menuCollapse.value ? 54 : 200))
+  const { navbar, footer } = storeToRefs(useAppStore())
+  const queryFocusMode = useQueryFocusMode()
+  const navbarCollapsed = useNavbarLayoutCollapsed()
+  const siderWidth = computed(() => (navbarCollapsed.value ? 54 : 200))
 
   watchEffect(() => {
     if (!navbar.value) {
       document.documentElement.style.setProperty('--navbar-current-width', '0px')
       return
     }
-    const width = menuCollapse.value ? 'var(--navbar-width-collapsed)' : 'var(--navbar-width)'
+    const width = navbarCollapsed.value ? 'var(--navbar-width-collapsed)' : 'var(--navbar-width)'
     document.documentElement.style.setProperty('--navbar-current-width', width)
   })
 </script>
@@ -59,6 +65,11 @@ a-layout
     overflow-x: hidden;
     overflow-y: hidden;
     transition: width 0.2s cubic-bezier(0.34, 0.69, 0.1, 1);
+  }
+
+  .layout-container--query-focus .layout-content,
+  .layout-content.layout-content--query-focus {
+    transition: none;
   }
 
   .layout-content.layout-content--full-bleed {
