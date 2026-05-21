@@ -475,6 +475,10 @@ transform:
   // ===================
   // OUTPUT SECTION
   // ===================
+  .light-editor-card.output {
+    border: 1px solid var(--gpt-border-default);
+  }
+
   .output-header {
     display: flex;
     justify-content: space-between;
@@ -702,6 +706,7 @@ transform:
     padding: var(--gpt-toolbar-padding);
     background: var(--gpt-bg-header);
     border-top: 1px solid var(--gpt-border-default);
+    border-bottom: 1px solid var(--gpt-border-default);
   }
 
   .pipeline-content-item :deep(.arco-form-item-wrapper-col) {
