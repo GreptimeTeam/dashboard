@@ -1,49 +1,56 @@
 <template lang="pug">
-a-layout.detail-layout.new-layout
-  a-layout-sider(:resize-directions="['right']" :width="actualSidebarWidth")
-    a-card.gpt-page-sidebar(:bordered="false")
-      template(#title)
-        a-space.space-between(fill style="width: 100%")
-          | {{ $t('menu.dashboard.perses') }}
-          a-button-group
-            a-tooltip(mini position="bottom" :content="$t('common.refresh')")
-              a-button(type="text" size="small" @click="handleRefresh")
+a-layout.detail-layout.new-layout(:class="{ 'is-sidebar-resizing': isSidebarResizing }")
+  a-resize-box(
+    v-model:width="sidebarWidth"
+    :directions="['right']"
+    :style="{ 'min-width': '160px', 'max-width': '40vw', 'flex-shrink': '0' }"
+    @moving-start="onSidebarResizeStart"
+    @moving-end="onSidebarResizeEnd"
+  )
+    a-layout-sider(style="height: 100%" :width="actualSidebarWidth")
+      a-card.gpt-page-sidebar(:bordered="false")
+        template(#title)
+          a-space.space-between(fill style="width: 100%")
+            | {{ $t('menu.dashboard.perses') }}
+            a-button-group
+              a-tooltip(mini position="bottom" :content="$t('common.refresh')")
+                a-button(type="text" size="small" @click="handleRefresh")
+                  template(#icon)
+                    svg.icon-16
+                      use(href="#refresh")
+              a-button(type="text" size="small" @click="openCreateModal")
                 template(#icon)
                   svg.icon-16
-                    use(href="#refresh")
-            a-button(type="text" size="small" @click="openCreateModal")
-              template(#icon)
-                svg.icon-16
-                  use(href="#file-add")
-      a-spin(:loading="isLoading")
-        a-scrollbar.gpt-vertical-scrollbar
-          a-empty(v-if="!filteredDashboards.length" :description="$t('dashboard.perses.emptySidebar')")
-            template(#image)
-              svg.icon-32
-                use(href="#empty")
-          a-menu.gpt-sidebar-menu(v-model:selected-keys="selectedKeys" mode="vertical" :collapsed="false")
-            a-menu-item(
-              v-for="item in filteredDashboards"
-              :key="item.id"
-              type="text"
-              long
-            )
-              template(#icon)
-                svg.icon-15
-                  use(href="#document")
-              span.gpt-sidebar-menu-text {{ item.name }}
-              a-tooltip.menu-item-delete.gpt-sidebar-menu-action(
-                v-if="item.id === selectedId"
-                mini
-                position="left"
-                content="Delete"
+                    use(href="#file-add")
+        a-spin(:loading="isLoading")
+          a-scrollbar.gpt-vertical-scrollbar
+            a-empty(v-if="!filteredDashboards.length" :description="$t('dashboard.perses.emptySidebar')")
+              template(#image)
+                svg.icon-32
+                  use(href="#empty")
+            a-menu.gpt-sidebar-menu(v-model:selected-keys="selectedKeys" mode="vertical" :collapsed="false")
+              a-menu-item(
+                v-for="item in filteredDashboards"
+                :key="item.id"
+                type="text"
+                long
               )
-                a-popconfirm(
-                  content="Are you sure to delete this dashboard?"
-                  type="warning"
-                  @ok="handleDeleteDashboard(item)"
+                template(#icon)
+                  svg.icon-15
+                    use(href="#document")
+                span.gpt-sidebar-menu-text {{ item.name }}
+                a-tooltip.menu-item-delete.gpt-sidebar-menu-action(
+                  v-if="item.id === selectedId"
+                  mini
+                  position="left"
+                  content="Delete"
                 )
-                  IconDelete.delete-btn
+                  a-popconfirm(
+                    content="Are you sure to delete this dashboard?"
+                    type="warning"
+                    @ok="handleDeleteDashboard(item)"
+                  )
+                    IconDelete.delete-btn
   a-layout-content.layout-content
     a-card.perses-content(:bordered="false")
       template(v-if="selectedDashboard")
@@ -91,7 +98,7 @@ a-layout.detail-layout.new-layout
 </template>
 
 <script lang="ts" setup name="PersesDashboard">
-  import { computed, onMounted, reactive, ref, watch } from 'vue'
+  import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
   import { useStorage } from '@vueuse/core'
   import { storeToRefs } from 'pinia'
   import { Message } from '@arco-design/web-vue'
@@ -112,7 +119,27 @@ a-layout.detail-layout.new-layout
   const route = useRoute()
   const router = useRouter()
   const DASHBOARD_QUERY_KEY = 'dashboard'
-  const sidebarWidth = useStorage('perses-sidebar-width', 228)
+  const sidebarWidthStorage = useStorage('perses-sidebar-width', 228)
+  const isSidebarResizing = ref(false)
+
+  const sidebarWidth = computed({
+    get: () => {
+      const width = Number(sidebarWidthStorage.value)
+      return Number.isFinite(width) ? width : 228
+    },
+    set: (value: number) => {
+      const minWidth = 160
+      const maxWidth = window.innerWidth * 0.4
+      const next = Number(value)
+      sidebarWidthStorage.value = Math.max(minWidth, Math.min(Number.isFinite(next) ? next : 228, maxWidth))
+    },
+  })
+
+  const actualSidebarWidth = computed(() => {
+    const minWidth = 160
+    const maxWidth = window.innerWidth * 0.4
+    return Math.max(minWidth, Math.min(sidebarWidth.value, maxWidth))
+  })
   const searchText = ref('')
   const createModalVisible = ref(false)
   const createForm = reactive({
@@ -163,10 +190,29 @@ a-layout.detail-layout.new-layout
     return dashboards.value.find((item) => item.id === selectedId.value)
   })
 
-  const actualSidebarWidth = computed(() => {
-    const minWidth = 160
-    const maxWidth = window.innerWidth * 0.4
-    return Math.max(minWidth, Math.min(sidebarWidth.value, maxWidth))
+  const clampSidebarWidth = () => {
+    if (sidebarWidth.value < 160) {
+      sidebarWidth.value = 160
+    }
+  }
+
+  watch(sidebarWidthStorage, clampSidebarWidth, { immediate: true })
+
+  const onSidebarResizeEnd = () => {
+    isSidebarResizing.value = false
+    window.removeEventListener('mouseup', onSidebarResizeEnd)
+    window.removeEventListener('blur', onSidebarResizeEnd)
+    clampSidebarWidth()
+  }
+
+  const onSidebarResizeStart = () => {
+    isSidebarResizing.value = true
+    window.addEventListener('mouseup', onSidebarResizeEnd)
+    window.addEventListener('blur', onSidebarResizeEnd)
+  }
+
+  onUnmounted(() => {
+    onSidebarResizeEnd()
   })
 
   const getDashboardNameFromDefinition = (definition: unknown): string | null => {
@@ -415,6 +461,32 @@ a-layout.detail-layout.new-layout
 </script>
 
 <style lang="less" scoped>
+  .new-layout {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    height: 100%;
+    min-height: 0;
+
+    :deep(> .arco-resizebox) {
+      flex: 0 0 auto;
+      height: 100%;
+    }
+
+    > .layout-content {
+      flex: 1 1 0;
+      min-width: 0;
+      min-height: 0;
+      height: 100%;
+    }
+  }
+
+  .new-layout.is-sidebar-resizing > .layout-content,
+  .new-layout.is-sidebar-resizing :deep(.perses-dashboard-iframe) {
+    pointer-events: none;
+    user-select: none;
+  }
+
   .new-layout > .layout-content {
     overflow-y: hidden;
   }
