@@ -96,47 +96,69 @@
   height: var(--gpt-control-height-sm);
 }
 
-.arco-radio-group-size-small.arco-radio-group-button,
-.arco-radio-group-size-small .arco-radio-button {
-  line-height: var(--gpt-control-height-sm);
-}
-
+/* button 型 radio：边框画在每个 .arco-radio-button 上，group 不描边（避免 hover 盖住外框） */
 .arco-radio-group-button {
+  --radio-border: var(--gpt-border-strong);
+  --radio-border-hover: var(--gpt-main-purple);
+  --radio-border-active: var(--brand-color);
+  box-sizing: border-box;
   padding: 0;
+  overflow: hidden;
   background-color: var(--gpt-bg-panel);
   border: none;
-  box-shadow: inset 0 0 0 1px var(--gpt-border-strong);
+  border-radius: var(--gpt-radius-sm);
+  box-shadow: none;
 
   .arco-radio-button {
-    margin: 0;
+    position: relative;
+    z-index: 0;
+    box-sizing: border-box;
+    height: 100%;
+    margin: 0 0 0 -1px;
+    border: 1px solid var(--radio-border);
     border-radius: 0;
     color: var(--gpt-text-secondary);
-    border-color: var(--gpt-border-strong);
-    border-top-width: 0;
-    border-bottom-width: 0;
+    background-color: transparent;
+
+    &::before {
+      display: none;
+    }
+
+    &:first-of-type {
+      margin-left: 0;
+      border-radius: var(--gpt-radius-sm) 0 0 var(--gpt-radius-sm);
+    }
+
+    &:last-of-type {
+      border-radius: 0 var(--gpt-radius-sm) var(--gpt-radius-sm) 0;
+    }
+
+    &:not(.arco-radio-checked):not(.arco-radio-disabled):hover {
+      z-index: 1;
+      border-color: var(--radio-border-hover);
+    }
   }
 
-  .arco-radio-button:first-of-type {
-    border-radius: var(--gpt-radius-sm) 0 0 var(--gpt-radius-sm);
+  .arco-radio-button-content {
+    box-sizing: border-box;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
   }
 
-  .arco-radio-button:last-of-type {
-    border-radius: 0 var(--gpt-radius-sm) var(--gpt-radius-sm) 0;
+  .arco-radio-button.arco-radio-checked {
+    z-index: 2;
+    color: var(--gpt-text-inverse);
+    background-color: var(--brand-color);
+    border-color: var(--radio-border-active);
   }
+}
+
+.arco-radio-group-size-small.arco-radio-group-button {
+  height: var(--gpt-control-height-sm);
 }
 
 .arco-radio-group-size-medium.arco-radio-group-button {
   height: var(--gpt-control-height-md);
-  line-height: var(--gpt-control-height-md);
-
-  .arco-radio-button {
-    height: var(--gpt-control-height-md);
-    line-height: var(--gpt-control-height-md);
-  }
-}
-
-.arco-radio-button.arco-radio-checked {
-  color: var(--gpt-text-inverse);
-  background-color: var(--brand-color);
-  border-color: var(--brand-color);
 }
