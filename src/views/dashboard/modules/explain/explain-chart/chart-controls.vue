@@ -2,7 +2,12 @@
 .chart-controls
   .highlight-controls
     span.control-label Highlight
-    a-radio-group(v-model="localHighlightType" type="button" :id="`${inputPrefix}-highlight`")
+    a-radio-group(
+      v-model="localHighlightType"
+      type="button"
+      size="small"
+      :id="`${inputPrefix}-highlight`"
+    )
       a-radio(value="NONE") None
       a-radio(value="ROWS") Rows
       a-radio(value="DURATION") Duration

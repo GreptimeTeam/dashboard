@@ -1,12 +1,12 @@
 <template lang="pug">
 .zoom-controls
-  a-button(type="text" size="mini" @click="handleZoomIn")
+  a-button(type="text" size="small" @click="handleZoomIn")
     template(#icon)
       IconZoomIn
-  a-button(type="text" size="mini" @click="handleResetZoom")
+  a-button(type="text" size="small" @click="handleResetZoom")
     template(#icon)
       IconRefresh
-  a-button(type="text" size="mini" @click="handleZoomOut")
+  a-button(type="text" size="small" @click="handleZoomOut")
     template(#icon)
       IconZoomOut
 </template>

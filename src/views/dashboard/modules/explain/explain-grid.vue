@@ -5,7 +5,7 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     a-space.header-controls
       a-select(
         v-model="selectedNodes"
-        size="mini"
+        size="small"
         style="min-width: 150px; margin-right: 8px"
         placeholder="Nodes select"
         multiple
@@ -15,7 +15,7 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
       a-space.metric-control(:size="0")
         a-select(
           v-model="selectedMetric"
-          size="mini"
+          size="small"
           style="width: fit-content; margin-right: 8px"
           placeholder="Select Metric"
           allow-clear
@@ -23,13 +23,13 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
           @change="selectMetric"
         )
           a-option(v-for="metric in availableMetrics" :key="metric.value" :value="metric.value") {{ metric.label }}
-        a-button(type="outline" size="mini" @click="toggleMetricsExpanded")
+        a-button(type="outline" size="small" @click="toggleMetricsExpanded")
           template(#icon)
             icon-expand(v-if="!metricsExpanded")
             icon-shrink(v-else)
           | {{ metricsExpanded ? 'Collapse' : 'Expand' }}
   a-table(
-    size="mini"
+    size="small"
     column-resizable
     stripe
     :data="tableData"

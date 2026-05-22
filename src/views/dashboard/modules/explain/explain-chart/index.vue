@@ -3,7 +3,12 @@
   .header
     div(style="display: flex; align-items: center; justify-content: space-between; flex-direction: row")
       .stage-navigation
-        a-radio-group(v-model="localStageIndex" type="button" @change="onStageChange")
+        a-radio-group(
+          v-model="localStageIndex"
+          type="button"
+          size="small"
+          @change="onStageChange"
+        )
           a-radio(v-for="i in totalStages" :key="i - 1" :value="i - 1") Stage {{ i - 1 }}
       .root-plan-selector(v-if="availableRootPlans.length > 1")
         a-select(v-model="selectedRootPlan" size="small" style="width: 200px; margin-left: 8px")
