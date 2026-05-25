@@ -40,24 +40,8 @@
     overflow: hidden;
   }
 
-  .arco-tree-node[data-level='1'],
-  .arco-tree-node[data-level='2'] {
-    position: relative;
-  }
-
-  .arco-tree-node[data-level='1']::before,
-  .arco-tree-node[data-level='2']::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 7px;
-    width: 1px;
-    background: var(--gpt-border-strong);
-  }
-
-  .arco-tree-node[data-level='2'] .arco-tree-node-indent {
-    border-right: 1px solid var(--gpt-border-strong);
+  .arco-tree-node.arco-tree-node-is-leaf .arco-tree-node-title {
+    padding-left: 0;
   }
 
   .arco-tree-node:hover {
@@ -138,11 +122,29 @@
   }
 }
 
-.metrics-tree {
-  .arco-tree-node-indent-block {
-    width: 17px;
+.table-tree {
+  .arco-tree-node[data-level='1'],
+  .arco-tree-node[data-level='2'] {
+    position: relative;
+  }
+
+  .arco-tree-node[data-level='1']::before,
+  .arco-tree-node[data-level='2']::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 7px;
+    width: 1px;
+    background: var(--gpt-border-strong);
+  }
+
+  .arco-tree-node[data-level='2'] .arco-tree-node-indent {
+    border-right: 1px solid var(--gpt-border-strong);
   }
 }
+
+// Metrics：用 Arco show-line，竖线画在各级 indent-block 上（每列对齐该层 switcher）
 
 .arco-tree-node-custom-icon {
   margin: 0 4px;

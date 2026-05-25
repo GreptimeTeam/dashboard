@@ -25,6 +25,7 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
     a-tree.metrics-tree(
       v-if="metricsTreeData.length"
       size="small"
+      show-line
       action-on-node-click="expand"
       :block-node="true"
       :data="metricsTreeData"
