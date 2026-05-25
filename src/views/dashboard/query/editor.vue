@@ -2,55 +2,55 @@
 a-card.editor-card.editor-card--inset(:bordered="false")
   .editor-toolbar
     .editor-toolbar-main
-      a-button(
-        type="primary"
-        :disabled="isButtonDisabled || explainQueryRunning || secondaryCodeRunning"
-        @click="runPartQuery()"
+      QueryToolbarRunButton(
+        ref="runQueryBtnRef"
+        abort-key="run-part"
+        button-type="primary"
+        button-class="run-query-btn query-run-btn--primary"
+        :on-run="executePartQuery"
       )
-        a-popover(position="bl" content-class="code-tooltip" :content="currentStatement")
-          a-space(:size="4")
-            icon-loading(v-if="secondaryCodeRunning" spin)
-            icon-play-arrow(v-else)
-            div {{ $t('dashboard.runQuery') + (queryType === 'sql' && currentQueryNumber ? ' #' + currentQueryNumber : '') }}
-            icon-close-circle-fill.icon-16(v-if="secondaryCodeRunning")
-      a-dropdown-button(
-        type="outline"
-        position="bl"
-        :disabled="explainQueryRunning"
-        :class="{ 'explain-disabled': isButtonDisabled }"
-        @click="explainCurrentStatement"
-      )
-        a-popover(
-          position="bl"
-          content-class="code-tooltip"
-          :content="currentStatement"
-          :disabled="isButtonDisabled"
-        )
-          a-space(:size="4")
-            icon-loading(v-if="explainQueryRunning" spin)
-            svg.icon-16(v-else)
-              use(href="#explain")
-            span {{ $t('dashboard.explainQuery') + `${currentQueryNumber ? ' #' + currentQueryNumber : ''} ` }}
-            icon-close-circle-fill.icon-16(v-if="explainQueryRunning") 
         template(#icon)
-          icon-down
-        template(#content)
-          a-doption(:disabled="explainQueryRunning" @click="showImportExplainModal")
+          icon-play-arrow
+        a-popover(position="bl" content-class="code-tooltip" :content="currentStatement")
+          div {{ $t('dashboard.runQuery') + (queryType === 'sql' && currentQueryNumber ? ' #' + currentQueryNumber : '') }}
+      a-button-group.explain-toolbar-group
+        QueryToolbarRunButton(
+          ref="explainBtnRef"
+          abort-key="explain"
+          button-type="outline"
+          button-class="explain-query-btn query-run-btn--outline"
+          :on-run="executeExplain"
+        )
+          template(#icon)
+            svg.icon-16
+              use(href="#explain")
+          a-popover(position="bl" content-class="code-tooltip" :content="currentStatement")
+            span {{ $t('dashboard.explainQuery') + `${currentQueryNumber ? ' #' + currentQueryNumber : ''} ` }}
+        a-dropdown(position="bl")
+          a-button(type="outline")
             template(#icon)
-              icon-import
-            | {{ $t('dashboard.importExplain') }}
+              icon-down
+          template(#content)
+            a-doption(@click="showImportExplainModal")
+              template(#icon)
+                icon-import
+              | {{ $t('dashboard.importExplain') }}
       a-tooltip(
         v-if="queryType === 'sql'"
         position="br"
         content="Alt + Enter"
         mini
       )
-        a-button.run-all-btn(type="outline" :disabled="isButtonDisabled" @click="runQueryAll()")
-          a-space(:size="4")
-            icon-loading(v-if="primaryCodeRunning" spin)
-            icon-play-arrow-fill.run-all-play-icon(v-else)
-            | {{ $t('dashboard.runAll') }}
-            icon-close-circle-fill.icon-16(v-if="primaryCodeRunning")
+        QueryToolbarRunButton(
+          ref="runAllBtnRef"
+          abort-key="run-all"
+          button-type="outline"
+          button-class="run-all-btn query-run-btn--outline"
+          :on-run="executeRunAll"
+        )
+          template(#icon)
+            icon-play-arrow-fill.run-all-play-icon
+          | {{ $t('dashboard.runAll') }}
       a-form.prom-form(layout="inline" v-show="queryType === 'promql'" :model="promForm")
         a-space(:size="10")
           a-form-item(:hide-label="true")
@@ -171,6 +171,7 @@ a-modal(
   import { useStorage } from '@vueuse/core'
   import { sqlFormatter, parseSqlStatements, findStatementAtPosition, promqlFormatter } from '@/utils/sql'
   import { Message } from '@arco-design/web-vue'
+  import QueryToolbarRunButton from '@/components/query-toolbar-run-button/index.vue'
   import { getExplainResultKeyCount } from '@/services/code-run'
   import { useQuerySession } from './use-query-session'
 
@@ -202,17 +203,8 @@ a-modal(
 
   const tsRef = ref<InstanceType<typeof import('./time-assistance.vue').default> | null>(null)
 
-  const {
-    codes,
-    queryType,
-    cursorAt,
-    queryOptions,
-    primaryCodeRunning,
-    secondaryCodeRunning,
-    sqlView,
-    promqlView,
-    clearCode,
-  } = useQueryCode()
+  const { codes, queryType, cursorAt, queryOptions, sqlView, promqlView, clearCode, runQuery, explainQuery } =
+    useQueryCode()
 
   // Get current active CodeMirror view based on query type
   const currentView = computed(() => {
@@ -225,7 +217,6 @@ a-modal(
     step: '30s',
     range: [dayjs().subtract(5, 'minute').unix().toString(), dayjs().unix().toString()],
   })
-  const { runQuery, explainQuery } = useQueryCode()
   const { extensions } = storeToRefs(useDataBaseStore())
   const explainResultKeyCount = getExplainResultKeyCount()
   const session = useQuerySession()
@@ -235,7 +226,9 @@ a-modal(
   const currentQueryNumber = ref<number>(0)
   const currentStatement = ref<string>('')
   const importExplainModalVisible = ref(false)
-  const explainQueryRunning = ref(false)
+  const runQueryBtnRef = ref<InstanceType<typeof QueryToolbarRunButton> | null>(null)
+  const runAllBtnRef = ref<InstanceType<typeof QueryToolbarRunButton> | null>(null)
+  const explainBtnRef = ref<InstanceType<typeof QueryToolbarRunButton> | null>(null)
 
   const openTimeAssistance = () => {
     if (queryType.value !== 'sql' || !tsRef.value) {
@@ -352,37 +345,18 @@ a-modal(
     }
   }
 
-  const runQueryAll = async () => {
-    if (primaryCodeRunning.value) {
-      primaryCodeRunning.value = false
-      secondaryCodeRunning.value = false
-      return
-    }
-    primaryCodeRunning.value = true
-    // TODO: add better format tool for code
-    const res = await runQuery(codes.value[queryType.value].trim(), queryType.value, false, promForm)
+  const executeRunAll = async () => {
+    const res = await runQuery(codes.value[queryType.value].trim(), queryType.value, false, promForm, 'run-all')
+    if ((res as { cancelled?: boolean })?.cancelled) return
     if (res?.results?.length) session.appendResults(res.results)
     if (res?.log) session.appendLog(res.log)
-    primaryCodeRunning.value = false
-    // TODO: refresh tables data and when
   }
 
-  const isLineButtonDisabled = computed(() => {
-    return currentQueryNumber.value === 0 || isButtonDisabled.value
-  })
-
-  const runPartQuery = async () => {
-    if (secondaryCodeRunning.value) {
-      primaryCodeRunning.value = false
-      secondaryCodeRunning.value = false
-      return
-    }
-    secondaryCodeRunning.value = true
-
-    const res = await runQuery(currentStatement.value, queryType.value, false, promForm)
+  const executePartQuery = async () => {
+    const res = await runQuery(currentStatement.value, queryType.value, false, promForm, 'run-part')
+    if ((res as { cancelled?: boolean })?.cancelled) return
     if (res?.results?.length) session.appendResults(res.results)
     if (res?.log) session.appendLog(res.log)
-    secondaryCodeRunning.value = false
   }
 
   const formatSql = async () => {
@@ -397,47 +371,36 @@ a-modal(
     }
   }
 
-  const explainCurrentStatement = async () => {
-    if (explainQueryRunning.value) {
-      explainQueryRunning.value = false
-      return
+  const executeExplain = async () => {
+    const queryString = currentStatement.value || codes.value[queryType.value]
+    let explainCommand = ''
+
+    if (queryType.value === 'promql') {
+      let start = promForm.range[0]
+      let end = promForm.range[1]
+      if (promForm.time) {
+        const now = dayjs()
+        end = now.unix().toString()
+        start = now.subtract(promForm.time, 'minute').unix().toString()
+      }
+      const rangePrefix = `(${start}, ${end}, '${promForm.step}')`
+      explainCommand = `tql analyze format json ${rangePrefix} ${queryString}`
+    } else if (
+      queryString.trim().toLowerCase().startsWith('tql eval') ||
+      queryString.trim().toLowerCase().startsWith('tql evaluate')
+    ) {
+      const matches = queryString.match(/^tql\s+eval(?:uate)?\s+([\s\S]*)$/i)
+      if (matches && matches[1]) {
+        explainCommand = `tql analyze format json ${matches[1].trim()}`
+      }
+    } else {
+      explainCommand = `explain analyze format json ${queryString}`
     }
 
-    if (!isButtonDisabled.value) {
-      explainQueryRunning.value = true
-      try {
-        const queryString = currentStatement.value || codes.value[queryType.value]
-        let explainCommand = ''
-
-        if (queryType.value === 'promql') {
-          let start = promForm.range[0]
-          let end = promForm.range[1]
-          if (promForm.time) {
-            const now = dayjs()
-            end = now.unix().toString()
-            start = now.subtract(promForm.time, 'minute').unix().toString()
-          }
-          const rangePrefix = `(${start}, ${end}, '${promForm.step}')`
-          explainCommand = `tql analyze format json ${rangePrefix} ${queryString}`
-        } else if (
-          queryString.trim().toLowerCase().startsWith('tql eval') ||
-          queryString.trim().toLowerCase().startsWith('tql evaluate')
-        ) {
-          const matches = queryString.match(/^tql\s+eval(?:uate)?\s+([\s\S]*)$/i)
-          if (matches && matches[1]) {
-            explainCommand = `tql analyze format json ${matches[1].trim()}`
-          }
-        } else {
-          explainCommand = `explain analyze format json ${queryString}`
-        }
-
-        const result: any = await explainQuery(explainCommand, 'sql')
-        if (result?.results?.[0]) {
-          session.appendExplainResult(result.results[0])
-        }
-      } finally {
-        explainQueryRunning.value = false
-      }
+    const result: any = await explainQuery(explainCommand, 'sql')
+    if (result?.cancelled) return
+    if (result?.results?.[0]) {
+      session.appendExplainResult(result.results[0])
     }
   }
 
@@ -481,14 +444,14 @@ a-modal(
     {
       key: `Ctrl-Enter`,
       run: () => {
-        runPartQuery()
+        runQueryBtnRef.value?.run()
         return true
       },
     },
     {
       key: 'Alt-Enter', // Run All
       run: () => {
-        runQueryAll()
+        runAllBtnRef.value?.run()
         return true
       },
     },
@@ -595,13 +558,17 @@ a-modal(
     padding: 0 var(--gpt-page-padding-x) var(--gpt-section-padding-y);
   }
 
-  .explain-disabled {
-    > :first-child {
-      cursor: not-allowed;
-    }
+  .explain-toolbar-group {
+    display: inline-flex;
+    align-items: center;
   }
 
-  .run-all-btn .run-all-play-icon {
+  .explain-toolbar-group :deep(.arco-btn:last-child) {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  :deep(.run-all-btn) .run-all-play-icon {
     color: var(--gpt-main-dark);
     font-size: 16px;
   }

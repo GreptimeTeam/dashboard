@@ -1,6 +1,8 @@
+import axios from 'axios'
 import Message from '@arco-design/web-vue/es/message'
 import i18n from '@/locale'
 import editorAPI from '@/api/editor'
+import type { AxiosRequestConfig } from 'axios'
 import { postPipelineLogs } from '@/api/pipeline'
 import dayjs from 'dayjs'
 import { dateTypes } from '@/views/dashboard/config'
@@ -15,10 +17,23 @@ const resultKeyCount = reactive<{ [key: string]: number }>({})
 const explainResultKeyCount = ref(0)
 const refreshCounter = ref(0)
 
+export type RunCodeAbortKey = 'run-part' | 'run-all' | 'explain'
+
+const abortControllers: Partial<Record<RunCodeAbortKey, AbortController>> = {}
+
+const isRequestCancelled = (error: unknown) =>
+  axios.isCancel(error) || (error instanceof Error && (error.name === 'AbortError' || error.name === 'CanceledError'))
+
+export const cancelRunCode = (key: RunCodeAbortKey) => {
+  abortControllers[key]?.abort()
+  delete abortControllers[key]
+}
+
 const API_MAP: AnyObject = {
-  sql: (code: string, params: PromForm) => editorAPI.runSQL(code),
-  python: editorAPI.runScript,
-  promql: editorAPI.runPromQL,
+  sql: (code: string, _params: PromForm, config?: AxiosRequestConfig) => editorAPI.runSQL(code, undefined, config),
+  python: (code: string, _params: PromForm, config?: AxiosRequestConfig) => editorAPI.runScript(code, config),
+  promql: (code: string, params: PromForm, config?: AxiosRequestConfig) =>
+    editorAPI.runPromQL(code, params, undefined, config),
 }
 
 const CODE_TO_PAGE: { [key: string]: string } = {
@@ -125,13 +140,19 @@ export const runCode = async (
   type: string,
   withoutSave = false,
   params = {} as PromForm,
-  resultType = 'result'
+  resultType = 'result',
+  abortKey: RunCodeAbortKey = 'run-part'
 ) => {
+  cancelRunCode(abortKey)
+  const abortController = new AbortController()
+  abortControllers[abortKey] = abortController
+  const requestConfig = { signal: abortController.signal } as AxiosRequestConfig
+
   try {
     const queries = type === 'sql' ? parseSqlStatements(codeInfo).map((stmt) => stmt.text) : [codeInfo]
     const createdResults: ResultType[] = []
     let oneResult = {} as ResultType
-    const res: HttpResponse = await API_MAP[type](codeInfo, params)
+    const res: HttpResponse = await API_MAP[type](codeInfo, params, requestConfig)
     const resultsInLog: Array<ResultInLog> = []
 
     res.output.forEach((oneRes: OutputType, indexInOutput: number) => {
@@ -162,9 +183,16 @@ export const runCode = async (
     const log = createLogFromResponse(res, codeInfo, type, params, resultsInLog)
     return { log, results: createdResults, lastResult: oneResult }
   } catch (error: any) {
+    if (isRequestCancelled(error)) {
+      return { cancelled: true }
+    }
     const log: Log = { type, codeInfo, ...error }
     if (isObject(error) && Reflect.has(error, 'error')) return { log, error: 'error' }
     return { error: 'error' }
+  } finally {
+    if (abortControllers[abortKey] === abortController) {
+      delete abortControllers[abortKey]
+    }
   }
 }
 

@@ -126,12 +126,36 @@ const saveScript = (name: string, code: string) => {
   return axios.post(scriptUrl, code, makeScriptConfig(name))
 }
 
-const runScript = (name: string) => {
-  return axios.post(runScriptUrl, {}, makeScriptConfig(name))
+const runScript = (name: string, config?: AxiosRequestConfig) => {
+  const baseConfig = makeScriptConfig(name)
+  return axios.post(
+    runScriptUrl,
+    {},
+    {
+      ...baseConfig,
+      ...config,
+      params: {
+        ...baseConfig.params,
+        ...config?.params,
+      },
+    }
+  )
 }
 
-const runPromQL = (code: string, promForm: PromForm, format?: string) => {
-  return axios.post(promURL, {}, makePromParams(code, promForm, format))
+const runPromQL = (code: string, promForm: PromForm, format?: string, config?: AxiosRequestConfig) => {
+  const baseConfig = makePromParams(code, promForm, format)
+  return axios.post(
+    promURL,
+    {},
+    {
+      ...baseConfig,
+      ...config,
+      params: {
+        ...baseConfig.params,
+        ...config?.params,
+      },
+    }
+  )
 }
 
 const writeInfluxDB = (data: string, precision: string) => {

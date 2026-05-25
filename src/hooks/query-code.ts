@@ -2,7 +2,12 @@ import { ResultType, PromForm } from '@/store/modules/code-run/types'
 import { TableTreeParent } from '@/store/modules/database/types'
 import { EditorSelection } from '@codemirror/state'
 import { sqlFormatter } from '@/utils/sql'
-import { runCode, refreshResult as refreshCodeRunResult, runWithFormat } from '@/services/code-run'
+import {
+  runCode,
+  refreshResult as refreshCodeRunResult,
+  runWithFormat,
+  type RunCodeAbortKey,
+} from '@/services/code-run'
 import { stringType } from './types'
 
 import useSiderTabs from './sider-tabs'
@@ -13,8 +18,6 @@ const promqlView = shallowRef()
 const queryType = ref('sql')
 const sqlCode = ''
 const promQLCode = ''
-const primaryCodeRunning = ref(false)
-const secondaryCodeRunning = ref(false)
 const cursorAt = ref<Array<number>>([])
 const queryOptions = [
   {
@@ -85,9 +88,13 @@ export default function useQueryCode() {
     code: string,
     type = queryType.value,
     withoutSave = false,
-    params: PromForm = {} as PromForm
+    params: PromForm = {} as PromForm,
+    abortKey: RunCodeAbortKey = 'run-part'
   ) => {
-    const res = await runCode(code, type, withoutSave, params)
+    const res = await runCode(code, type, withoutSave, params, 'result', abortKey)
+    if ((res as { cancelled?: boolean })?.cancelled) {
+      return res
+    }
     if (!res.error && type === 'sql') {
       const sql = code
       const command = parseSqlCommand(sql)
@@ -127,7 +134,7 @@ export default function useQueryCode() {
   }
 
   const explainQuery = async (code: string, type: string) => {
-    const result = await runCode(code, type, false, {} as PromForm, 'explain')
+    const result = await runCode(code, type, false, {} as PromForm, 'explain', 'explain')
     return result
   }
 
@@ -166,8 +173,6 @@ export default function useQueryCode() {
     cursorAt,
     queryOptions,
     queryType,
-    primaryCodeRunning,
-    secondaryCodeRunning,
     codes,
     clearCode,
     exportWithFormat,
