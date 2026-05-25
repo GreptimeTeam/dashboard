@@ -81,6 +81,7 @@ export default {
   'dashboard.tables': '张表',
   'dashboard.rerunQuery': '重新执行查询',
   'dashboard.clearResults': '清除结果？',
+  'dashboard.queryResultsEmpty': '运行查询后，结果将显示在此处',
   'dashboard.timeAssistance': '时间输入助手',
   'dashboard.fetchingDatabases': '正在获取数据库...',
   'dashboard.database': '数据库',

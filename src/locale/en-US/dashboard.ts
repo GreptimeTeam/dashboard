@@ -83,6 +83,7 @@ export default {
   'dashboard.tables': 'tables',
   'dashboard.rerunQuery': 'Rerun Query',
   'dashboard.clearResults': 'Clear results?',
+  'dashboard.queryResultsEmpty': 'Run a query to see results here',
   'dashboard.timeAssistance': 'Time Input Assistance',
   'dashboard.fetchingDatabases': 'Fetching databases...',
   'dashboard.database': 'Database',

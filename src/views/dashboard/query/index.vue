@@ -17,8 +17,13 @@ a-layout.new-layout(:class="{ 'query-layout--focus': focusMode }")
         :size="0"
       ) 
         Editor(:focus-mode="focusMode" @toggle-focus-mode="toggleFocusMode")
-        DataView(v-if="!!session.results.value?.length || session.explainResults.value.length > 0")
-        .data-view-placeholder(v-else)
+        .query-results-panel
+          DataView(v-if="!!session.results.value?.length || session.explainResults.value.length > 0")
+          .data-view-placeholder(v-else)
+            a-empty(:description="$t('dashboard.queryResultsEmpty')")
+              template(#image)
+                svg.icon-32.query-results-empty-icon
+                  use(href="#tableview")
       a-resize-box.panel-resize.logs-panel-resize(
         v-model:height="logsHeight"
         :class="{ 'hide-sider': focusMode }"
@@ -201,7 +206,9 @@ a-layout.new-layout(:class="{ 'query-layout--focus': focusMode }")
       &:nth-of-type(2) {
         flex: 1;
         min-height: 0;
-        overflow: auto;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
       }
     }
   }
@@ -216,5 +223,47 @@ a-layout.new-layout(:class="{ 'query-layout--focus': focusMode }")
 
   :deep(.panel-resize.logs-panel-resize) {
     border-top: 1px solid var(--gpt-border-default);
+  }
+
+  .query-results-panel {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+
+    :deep(.panel-tabs) {
+      flex: 1;
+      min-height: 0;
+      height: 100%;
+    }
+  }
+
+  .data-view-placeholder {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+
+    :deep(.arco-empty) {
+      padding: 0;
+      background: transparent;
+    }
+
+    :deep(.arco-empty-image) {
+      margin-bottom: 12px;
+    }
+
+    :deep(.arco-empty-description) {
+      color: var(--gpt-text-muted);
+      font-size: 13px;
+    }
+
+    .query-results-empty-icon {
+      color: var(--gpt-text-disabled);
+    }
   }
 </style>
