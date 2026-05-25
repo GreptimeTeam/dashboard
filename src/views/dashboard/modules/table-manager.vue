@@ -306,7 +306,7 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
       }
 
       .detail-row {
-        font-size: 11px;
+        font-size: var(--gpt-font-sm);
         line-height: 18px;
         display: flex;
         justify-content: space-between;
@@ -358,7 +358,7 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
 
     .code-space {
       padding-top: 6px;
-      font-size: 11px;
+      font-size: var(--gpt-font-sm);
     }
 
     .icon {
@@ -419,7 +419,7 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
       white-space: nowrap;
       font-weight: normal;
       color: var(--gpt-text-secondary);
-      font-size: 11px;
+      font-size: var(--gpt-font-sm);
     }
 
     .divider {
@@ -427,7 +427,7 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
       color: var(--gpt-text-secondary);
       font-weight: 300;
       opacity: 0.7;
-      font-size: 11px;
+      font-size: var(--gpt-font-sm);
     }
   }
   .table-search {
@@ -455,7 +455,7 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
   }
 
   .table-total {
-    font-size: 10px;
+    font-size: var(--gpt-font-xs);
     color: var(--gpt-text-muted);
     white-space: nowrap;
     word-break: keep-all;

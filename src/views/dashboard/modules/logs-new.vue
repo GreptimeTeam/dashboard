@@ -65,7 +65,7 @@ a-card.log(:bordered="false")
   }
 
   .start-time {
-    font-size: 11px;
+    font-size: var(--gpt-font-sm);
   }
 
   .tag {
@@ -113,7 +113,7 @@ a-card.log(:bordered="false")
   }
   :deep(.arco-list) {
     border-radius: 0;
-    font-size: 12px;
+    font-size: var(--gpt-font-base);
     color: var(--main-font-color);
   }
 
@@ -154,12 +154,12 @@ a-card.log(:bordered="false")
 <style lang="less">
   .ingest-log-tooltip {
     max-width: 600px;
-    font-size: 13px;
+    font-size: var(--gpt-font-md);
     padding: 6px 10px;
   }
   .arco-popover-popup-content.code-tooltip {
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: var(--gpt-font-md);
     padding: 6px 10px;
     white-space: pre-wrap;
     max-width: 600px;

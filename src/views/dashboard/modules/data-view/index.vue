@@ -274,7 +274,7 @@ a-tabs.panel-tabs(
           background: transparent;
           border-radius: 0;
           padding: 4px 8px;
-          font-size: 11px;
+          font-size: var(--gpt-font-sm);
           font-family: var(--font-mono);
         }
       }
@@ -283,7 +283,7 @@ a-tabs.panel-tabs(
     .toolbar-actions {
       flex-shrink: 0;
       :deep(.arco-checkbox) {
-        font-size: 11px;
+        font-size: var(--gpt-font-sm);
       }
     }
   }
@@ -327,7 +327,7 @@ a-tabs.panel-tabs(
         }
       }
       .arco-table-size-mini .arco-table-td {
-        font-size: 12px;
+        font-size: var(--gpt-font-base);
       }
       .arco-table-th {
         background: var(--gpt-table-head-bg);

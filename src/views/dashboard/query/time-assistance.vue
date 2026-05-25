@@ -328,7 +328,7 @@ a-modal.timestamp-assistance-modal(
       gap: 4px;
       color: var(--gpt-text-muted);
       font-family: var(--font-family-base);
-      font-size: 11px;
+      font-size: var(--gpt-font-sm);
       font-weight: 600;
     }
 
@@ -341,7 +341,7 @@ a-modal.timestamp-assistance-modal(
       background: var(--gpt-bg-header);
       color: var(--gpt-text-primary);
       font-family: var(--font-mono);
-      font-size: 11px;
+      font-size: var(--gpt-font-sm);
       line-height: 20px;
       text-align: center;
     }
@@ -359,7 +359,7 @@ a-modal.timestamp-assistance-modal(
     .time-input-label {
       width: 72px;
       color: var(--gpt-text-primary);
-      font-size: 12px;
+      font-size: var(--gpt-font-base);
       font-weight: 600;
     }
 
@@ -401,14 +401,14 @@ a-modal.timestamp-assistance-modal(
       border-radius: var(--gpt-radius-sm);
       background: #eef1ff;
       color: #6675ff;
-      font-size: 11px;
+      font-size: var(--gpt-font-sm);
       font-weight: 600;
     }
 
     .value-cell {
       position: relative;
       font-family: var(--font-mono);
-      font-size: 12px;
+      font-size: var(--gpt-font-base);
       font-weight: 500;
       white-space: nowrap;
     }

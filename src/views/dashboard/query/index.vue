@@ -258,12 +258,12 @@ a-layout.new-layout(:class="{ 'query-layout--focus': focusMode }")
     }
 
     :deep(.arco-empty-description) {
-      color: var(--gpt-text-muted);
-      font-size: 13px;
+      color: var(--gpt-text-secondary);
+      font-size: var(--gpt-font-base);
     }
 
     .query-results-empty-icon {
-      color: var(--gpt-text-disabled);
+      color: var(--gpt-text-secondary);
     }
   }
 </style>

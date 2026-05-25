@@ -1,77 +1,3 @@
-.result-tabs {
-  .arco-card {
-    padding: 0;
-
-    .arco-card-header {
-      height: 20px;
-      margin-bottom: 8px;
-      padding: 0;
-    }
-  }
-
-  .arco-tabs-nav-type-rounded {
-    .arco-tabs-tab-close-btn {
-      margin-left: 10px;
-      font-size: 14px;
-    }
-
-    .arco-tabs-tab {
-      height: 100%;
-      margin: 0;
-      padding: 11px 16px;
-      color: var(--hover-font-color);
-      font-size: 16px;
-      line-height: 18px;
-      background-color: transparent;
-      border: 0;
-      border-radius: 10px 10px 0 0;
-    }
-
-    .arco-tabs-tab-active {
-      color: var(--brand-color);
-      font-weight: 600;
-      font-size: 18px;
-      background-color: var(--card-bg-color);
-    }
-
-    .arco-tabs-tab::before {
-      position: absolute;
-      right: -30.5px;
-      bottom: 12.5px;
-      z-index: 2;
-      display: inline-block;
-      width: 30px;
-      height: 26px;
-      background: transparent;
-      border-bottom-left-radius: 12px 12px;
-      content: '';
-    }
-
-    .arco-tabs-tab:hover {
-      background-color: var(--hover-bg-color);
-    }
-
-    .arco-tabs-tab-active:hover {
-      color: var(--brand-color);
-      background-color: var(--card-bg-color);
-    }
-  }
-
-  .arco-tabs-content {
-    padding-top: 0;
-
-    .arco-tabs-content-item {
-      padding: 24px 16px;
-      background-color: var(--card-bg-color);
-      border-radius: 10px;
-    }
-
-    .arco-tabs-content-item:first-of-type {
-      border-top-left-radius: 0;
-    }
-  }
-}
-
 .view-switch {
   display: inline-flex;
   flex-shrink: 0;
@@ -118,7 +44,7 @@
     margin-right: 30px;
   }
   .arco-select-view-single.arco-select-view-size-medium .arco-select-view-value {
-    font-size: 13px;
+    font-size: var(--gpt-font-md);
   }
 }
 
@@ -132,7 +58,7 @@
     padding: 0;
     color: var(--third-font-color);
     font-weight: 600;
-    font-size: 13px;
+    font-size: var(--gpt-font-base);
     line-height: 22px;
     border-radius: 4px;
   }
@@ -169,7 +95,7 @@
     .arco-select-view-single.arco-select-view-size-medium .arco-select-view-value {
       min-height: 12px;
       padding: 0;
-      font-size: 12px;
+      font-size: var(--gpt-font-base);
       line-height: 22px;
     }
 
@@ -179,14 +105,14 @@
 
     .arco-select-view-icon svg {
       color: var(--main-font-color);
-      font-size: 10px;
+      font-size: var(--gpt-font-xs);
       opacity: 0.4;
     }
   }
 }
 
 .arco-pagination {
-  font-size: 12px !important;
+  font-size: var(--gpt-font-base) !important;
 }
 
 .select-y {
@@ -199,17 +125,17 @@
 
 .arco-form-item-label-col > .arco-form-item-label {
   color: var(--main-font-color);
-  font-size: 12px;
+  font-size: var(--gpt-font-base);
   opacity: 0.6;
 }
 
 .arco-tag {
   font-weight: 400;
-  font-size: 11px !important;
+  font-size: var(--gpt-font-sm) !important;
 }
 
 .arco-table-size-small .arco-table-cell {
-  font-size: 13px;
+  font-size: var(--gpt-font-base);
   padding: 11px 10px;
 }
 

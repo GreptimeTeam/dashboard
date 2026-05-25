@@ -162,8 +162,16 @@
   --gpt-text-primary: var(--gpt-main-dark);
   --gpt-text-secondary: #8b7ba8;
   --gpt-text-muted: #b0a8c4;
+  --gpt-text-disabled: #b0a8c4;
   --gpt-text-inverse: #ffffff;
   --gpt-text-inverse-muted: rgba(255, 255, 255, 0.62);
+
+  --gpt-font-xs: 10px;
+  --gpt-font-sm: 11px;
+  --gpt-font-base: 12px;
+  --gpt-font-md: 13px;
+
+  --gpt-bg-disabled: var(--gpt-bg-surface);
   --gpt-accent-ts: #00bbb2;
   --gpt-danger: #ef4444;
 
@@ -262,7 +270,7 @@ a:not(.arco-btn):not(.arco-menu-item):not(.arco-menu-inline-header),
   border-spacing: 0;
   table-layout: fixed;
   color: var(--gpt-text-primary);
-  font-size: 12px;
+  font-size: var(--gpt-font-base);
 
   th,
   td {
@@ -279,7 +287,7 @@ a:not(.arco-btn):not(.arco-menu-item):not(.arco-menu-inline-header),
     height: 30px;
     color: var(--gpt-text-muted);
     background: var(--gpt-bg-header);
-    font-size: 11px;
+    font-size: var(--gpt-font-sm);
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -328,7 +336,7 @@ body {
   padding: 0;
   overflow-x: hidden;
   font-weight: 400;
-  font-size: 12px;
+  font-size: var(--gpt-font-base);
   font-family: var(--font-family-base) !important;
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
@@ -402,7 +410,7 @@ samp {
   margin-bottom: -5px;
   padding: 8px;
   color: var(--tooltip-font-color);
-  font-size: 12px;
+  font-size: var(--gpt-font-base);
   background-color: var(--tooltip-bg-color);
   border-radius: 6px;
   &.cell-data-tooltip {
@@ -426,7 +434,7 @@ samp {
         height: 100%;
         padding: 0 15px;
         color: var(--small-font-color);
-        font-size: 13px;
+        font-size: var(--gpt-font-md);
       }
     }
   }
@@ -439,7 +447,7 @@ samp {
       height: 100%;
       padding: 0 15px;
       color: var(--small-font-color);
-      font-size: 13px;
+      font-size: var(--gpt-font-md);
     }
 
     .arco-link:hover {
@@ -561,7 +569,7 @@ samp {
   .arco-select-option {
     padding: 0 8px;
     color: var(--main-font-color);
-    font-size: 13px;
+    font-size: var(--gpt-font-md);
     line-height: 32px;
     text-align: left;
     border-radius: 0;
@@ -575,7 +583,7 @@ samp {
 
     .arco-checkbox {
       padding-left: 0;
-      font-size: 11px;
+      font-size: var(--gpt-font-sm);
 
       .arco-icon-hover {
         width: 12px;
@@ -698,7 +706,7 @@ samp {
 }
 
 .arco-card-size-medium {
-  font-size: 13px;
+  font-size: var(--gpt-font-md);
 }
 
 .arco-tag-icon {
