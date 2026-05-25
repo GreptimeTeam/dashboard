@@ -303,7 +303,6 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
 
       .arco-tree-node-title {
         border: none;
-        margin-left: 10px;
       }
 
       .detail-row {

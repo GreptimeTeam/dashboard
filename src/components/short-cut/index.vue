@@ -1,6 +1,6 @@
 <template lang="pug">
 a-tooltip(position="right" :content="codeInfo.code")
-  a-button(
+  a-button.short-cut-btn(
     type="text"
     size="small"
     :class="{ 'arco-btn-only-icon': label === '' }"
@@ -9,7 +9,7 @@ a-tooltip(position="right" :content="codeInfo.code")
     @mouseenter="hoverQuickSelect(node)"
   ) {{ label }}
     template(v-if="icon" #icon)
-      svg.icon-16.icon-color.query-icon
+      svg.icon-14.icon-color
         use(href="#query")
 </template>
 
@@ -104,3 +104,16 @@ a-tooltip(position="right" :content="codeInfo.code")
     return getCodeAndCursorPos(props.type, props.node, props.parent)
   })
 </script>
+
+<style lang="less" scoped>
+  .short-cut-btn.arco-btn-text[type='button'] {
+    color: var(--main-font-color);
+    font-weight: 400;
+    font-size: 13px;
+
+    :deep(.arco-btn-icon svg),
+    :deep(svg) {
+      color: var(--gpt-icon-color);
+    }
+  }
+</style>

@@ -12,7 +12,7 @@ a-dropdown.tables(trigger="click" position="right")
       @click="(event) => expandChildren(event, nodeData, 'columns')"
     )
       template(#icon)
-        svg.icon
+        svg.icon-14.icon-color
           use(href="#columns")
       | {{ $t('dashboard.columns') }}
     a-tooltip(position="right" :content="$t('dashboard.hints.details')")
@@ -22,7 +22,7 @@ a-dropdown.tables(trigger="click" position="right")
         @click="(event) => expandChildren(event, nodeData, 'details')"
       )
         template(#icon)
-          svg.icon
+          svg.icon-14.icon-color
             use(href="#details")
         | {{ $t('dashboard.details') }}
     a-doption(v-if="!isColumn" click.stop)
@@ -38,7 +38,7 @@ a-dropdown.tables(trigger="click" position="right")
     a-doption(v-else)
       a-dropdown.quick-select.tree-quick-select(trigger="hover" position="right")
         a-space(:size="6")
-          svg.icon.icon-color
+          svg.icon-14.icon-color
             use(href="#query")
           | {{ $t('dashboard.quickSelect') }}
         template(#content)
@@ -53,9 +53,9 @@ a-dropdown.tables(trigger="click" position="right")
     a-tooltip(content="Copy to Clipboard" position="right")
       a-doption(@click="copy(nodeData.title)")
         template(#icon)
-          svg.icon.icon-color(v-if="copied === false")
+          svg.icon-14.icon-color(v-if="copied === false")
             use(href="#copy-new")
-          svg.icon(v-else)
+          svg.icon-14(v-else)
             icon-check.success-color
         | Copy name
 </template>
@@ -130,21 +130,15 @@ a-dropdown.tables(trigger="click" position="right")
     display: flex;
     background: var(--list-hover-color);
   }
-
-  .icon-14 {
-    width: 14px;
-    height: 14px;
-  }
-
-  :deep(.query-icon) {
-    width: 14px;
-    height: 14px;
-  }
 </style>
 
 <style lang="less">
   .tables {
     .arco-dropdown {
+      .arco-dropdown-option {
+        color: var(--main-font-color);
+      }
+
       .arco-dropdown-option {
         &:not(.arco-dropdown-option-disabled, .arco-dropdown-option-has-suffix):hover {
           background-color: var(--list-hover-color);
@@ -152,9 +146,7 @@ a-dropdown.tables(trigger="click" position="right")
         .arco-dropdown-option-content {
           .arco-btn-text[type='button'] {
             padding: 0 16px 0 0;
-            svg {
-              color: var(--small-font-color);
-            }
+            color: var(--main-font-color);
             &:hover {
               background: transparent;
             }
