@@ -1,7 +1,6 @@
 <template lang="pug">
 a-layout-footer.footer
-  a-space(:size="20")
-    img.logo(:src="getIconUrl(`${role === 'cloud' ? 'cloud' : 'logo-text'}`)")
+  a-space.footer-info(:size="20")
     a-space(:size="5")
       svg.service-icon
         use(href="#host")
@@ -18,31 +17,18 @@ a-layout-footer.footer
       .text.uppercase {{ region.vendor }}
       img.icon(:src="getIconUrl(region.country)")
       .text {{ region.location }}
-  .right
-    a-space(:size="10")
-      a-select(
-        v-if="dev"
-        v-model="currentLocale"
-        size="mini"
-        :style="{ width: '112px' }"
-        @change="onChangeLocale"
-      )
-        a-option(value="en-US") English
-        a-option(value="zh-CN") 中文
-      StatusList(:items="statusRight")
+    StatusList(:items="statusRight")
 </template>
 
 <script lang="ts" setup>
   import { useI18n } from 'vue-i18n'
   import { getIconUrl } from '@/utils'
-  import useLocale from '@/hooks/locale'
   import type { DbConnectionStatus } from '@/store/modules/app/types'
 
   const { t } = useI18n()
   const appStore = useAppStore()
   const { host, database, dbConnectionStatus, regionVendor, regionLocation, regionCountry, serviceName } =
     storeToRefs(appStore)
-  const { role } = storeToRefs(useUserStore())
   const { statusRight } = storeToRefs(useStatusBarStore())
 
   const region = computed(() => ({
@@ -60,11 +46,6 @@ a-layout-footer.footer
 
   const dbStatusLabel = computed(() => t(dbStatusLabelMap[dbConnectionStatus.value]))
 
-  const { currentLocale, onChangeLocale } = useLocale()
-
-  // Not yet used in production
-  const dev = import.meta.env.MODE === 'development'
-
   onMounted(async () => {
     await appStore.ensureConnectionHost()
     await appStore.checkDbConnection()
@@ -77,21 +58,24 @@ a-layout-footer.footer
 
 <style lang="less" scoped>
   .footer {
+    flex-shrink: 0;
+    width: 100%;
     padding: 0 15px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     height: var(--footer-height);
-    background-color: rgb(240, 237, 248);
-    border-top: 1px solid var(--gpt-border-subtle);
+    background-color: var(--gpt-bg-divider-band);
+    border-top: 1px solid var(--gpt-border-default);
     text-align: center;
     font-size: 12px;
     .arco-link {
       display: flex;
     }
   }
-  .logo {
-    height: 18px;
+  .footer-info {
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
   .service-name,
   .database-name {

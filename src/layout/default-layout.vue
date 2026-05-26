@@ -1,5 +1,5 @@
 <template lang="pug">
-a-layout
+a-layout.app-layout
   a-layout.layout-container(
     :class="{ 'layout-container--no-footer': !footer || queryFocusMode, 'layout-container--query-focus': queryFocusMode }"
   )
@@ -39,6 +39,11 @@ a-layout
 <style scoped lang="less">
   @nav-size-height: 52px;
 
+  .app-layout {
+    height: 100%;
+    flex-direction: column;
+  }
+
   .layout-container {
     width: 100%;
     max-width: 100%;
@@ -64,6 +69,7 @@ a-layout
     max-width: 100%;
     overflow-x: hidden;
     overflow-y: hidden;
+    border-left: 1px solid var(--gpt-border-default);
     transition: width 0.2s cubic-bezier(0.34, 0.69, 0.1, 1);
   }
 
@@ -74,5 +80,6 @@ a-layout
 
   .layout-content.layout-content--full-bleed {
     width: 100%;
+    border-left: none;
   }
 </style>

@@ -36,6 +36,13 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
               template(#icon)
                 svg.icon-16
                   use(href="#settings")
+          a-dropdown.locale-dropdown(trigger="click" position="right" @select="onLocaleSelect")
+            a-tooltip(:content="localeTooltip")
+              a-button.locale-btn(type="text" :class="{ 'locale-btn--expanded': !navbarCollapsed }")
+                span.locale-label {{ localeLabel }}
+            template(#content)
+              a-doption(value="en-US") English
+              a-doption(value="zh-CN") 中文
           a-dropdown.menu-dropdown(trigger="hover" position="right" :popup-max-height="false")
             a-button.menu-button(type="text")
               template(#icon)
@@ -64,6 +71,7 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
   } from '@/composables/use-query-focus-mode'
   import { listenerRouteChange } from '@/utils/route-listener'
   import { useNews } from '@/hooks/news'
+  import useLocale from '@/hooks/locale'
   import useMenuTree from '../menu/use-menu-tree'
   import NewsModal from './news-modal.vue'
 
@@ -75,6 +83,16 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
   const { activeTab: ingestTab } = storeToRefs(useIngestStore())
   const { menuTree } = useMenuTree()
   const { newsList, isLoadingNews } = useNews()
+  const { currentLocale, onChangeLocale } = useLocale()
+
+  const localeLabel = computed(() => (currentLocale.value === 'zh-CN' ? '中文' : 'EN'))
+  const localeTooltip = computed(() => (currentLocale.value === 'zh-CN' ? 'Language / 中文' : 'Language / English'))
+
+  const onLocaleSelect = (value: string) => {
+    if (value === currentLocale.value) return
+    currentLocale.value = value
+    onChangeLocale()
+  }
   const newsListMutable = computed(() => (newsList.value ? [...newsList.value] : []))
   const newsModal = ref()
 
@@ -160,7 +178,6 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
     height: 100%;
     overflow-y: auto;
     background: var(--gpt-bg-header);
-    border-right: 1px solid var(--gpt-border-default);
     scrollbar-width: none;
 
     &::-webkit-scrollbar {
@@ -350,6 +367,23 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
 
     &.footer--expanded .footer-start {
       flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+    }
+
+    .locale-btn {
+      min-width: 28px;
+      padding: 0 6px;
+    }
+
+    .locale-btn--expanded .locale-label {
+      font-size: 12px;
+    }
+
+    .locale-label {
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1;
     }
 
     .arco-btn-text[type='button'] {
