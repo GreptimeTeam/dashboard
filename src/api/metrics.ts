@@ -4,6 +4,9 @@ import { lib } from 'markdown-it/lib/common/utils'
 
 const prometheusBaseURL = `/v1/prometheus/api/v1`
 
+/** Max metric names returned per list/search request (Prometheus label values API). */
+export const METRIC_NAMES_LIMIT = 500
+
 const addDatabaseParams = () => {
   const appStore = useAppStore()
   return {
@@ -33,7 +36,7 @@ export const getMetricNames = () => {
   const config = addDatabaseParams()
   config.params = {
     ...config.params,
-    limit: 500,
+    limit: METRIC_NAMES_LIMIT,
   }
   return axios.get(`${prometheusBaseURL}/label/__name__/values`, config)
 }
@@ -47,7 +50,7 @@ export const searchMetricNames = (regex: string) => {
   // Prom-compatible: pass match parameter to filter by __name__ regex
   config.params = {
     ...config.params,
-    limit: 500,
+    limit: METRIC_NAMES_LIMIT,
     match: [`{__name__=~".*${regex}.*"}`],
   }
   return axios.get(`${prometheusBaseURL}/label/__name__/values`, config)

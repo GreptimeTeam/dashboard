@@ -1,8 +1,12 @@
 <template lang="pug">
 a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
   template(#title)
-    a-space(:size="10")
-      | Metrics
+    a-space.metric-sidebar-title(fill :size="10")
+      span.metric-sidebar-heading
+        | {{ $t('metrics.sidebar.title') }}
+        a-tooltip(v-if="metricCountTooltip" :content="metricCountTooltip")
+          span.metric-sidebar-count {{ metricCountLabel }}
+        span.metric-sidebar-count(v-else) {{ metricCountLabel }}
       a-button(size="mini" :loading="loading" @click="refreshData")
         template(#icon)
           svg.icon-11.brand-color
@@ -20,8 +24,6 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
           template(#prefix)
             svg.icon-11.icon-color
               use(href="#search")
-      span.metric-total {{ currentMetricCount }} metrics
-
     a-tree.metrics-tree(
       v-if="metricsTreeData.length"
       size="small"
@@ -53,7 +55,8 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
 <script setup lang="ts">
   import { ref, computed, watch, nextTick, onMounted } from 'vue'
   import { useDebounceFn } from '@vueuse/core'
-  import { getLabelNames, getMetricNames, getLabelValues, searchMetricNames } from '@/api/metrics'
+  import { useI18n } from 'vue-i18n'
+  import { getLabelNames, getMetricNames, getLabelValues, METRIC_NAMES_LIMIT, searchMetricNames } from '@/api/metrics'
   import { useAppStore } from '@/store'
   import MetricMenu from './metric-menu.vue'
 
@@ -73,6 +76,7 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
     (e: 'insertText', text: string): void
   }>()
 
+  const { t } = useI18n()
   const appStore = useAppStore()
 
   const metrics = ref<Array<{ name: string }>>([])
@@ -80,7 +84,23 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
   const metricSearchKey = ref('')
   const loading = ref(false)
 
-  const currentMetricCount = computed(() => metricsTreeData.value.length)
+  const displayedMetricCount = computed(() => metrics.value.length)
+  const isMetricSearchActive = computed(() => metricSearchKey.value.trim().length > 0)
+  const isMetricCountCapped = computed(() => displayedMetricCount.value >= METRIC_NAMES_LIMIT)
+
+  const metricCountLabel = computed(() => {
+    const count = displayedMetricCount.value
+    if (isMetricSearchActive.value) {
+      return isMetricCountCapped.value
+        ? t('metrics.sidebar.countMatchesCapped', { count: METRIC_NAMES_LIMIT })
+        : t('metrics.sidebar.countMatches', { count })
+    }
+    return isMetricCountCapped.value
+      ? t('metrics.sidebar.countShownCapped', { count: METRIC_NAMES_LIMIT })
+      : t('metrics.sidebar.countShown', { count })
+  })
+
+  const metricCountTooltip = computed(() => t('metrics.sidebar.countTooltip', { limit: METRIC_NAMES_LIMIT }))
 
   const buildMetricsTree = () => {
     metricsTreeData.value = metrics.value.map((metric) => ({
@@ -227,9 +247,21 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
     }
   }
 
-  .metric-total {
+  .metric-sidebar-title {
+    width: 100%;
+  }
+
+  .metric-sidebar-heading {
+    display: inline-flex;
+    gap: 4px;
+    align-items: baseline;
+    min-width: 0;
+  }
+
+  .metric-sidebar-count {
     color: var(--gpt-text-muted);
-    font-size: 10px;
+    font-size: var(--gpt-font-sm);
+    font-weight: 400;
     white-space: nowrap;
   }
 

@@ -91,6 +91,13 @@ export default {
   'dashboard.dbDisconnected': 'Disconnected',
   'dashboard.dbConnecting': 'Connecting',
   'metrics.showFullSeriesName': 'Show full series name',
+  'metrics.sidebar.title': 'Metrics',
+  'metrics.sidebar.countShown': '({count} shown)',
+  'metrics.sidebar.countShownCapped': '({count}+ shown)',
+  'metrics.sidebar.countMatches': '({count} matches)',
+  'metrics.sidebar.countMatchesCapped': '({count}+ matches)',
+  'metrics.sidebar.countTooltip':
+    'Loaded from the API (up to {limit} names). This is not necessarily the full metric catalog.',
   'dashboard.run': 'Run',
   'dashboard.perses.emptySidebar': 'No data',
   'dashboard.perses.emptyStateTitle': 'Get started by creating your first dashboard',
