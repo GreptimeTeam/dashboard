@@ -80,10 +80,18 @@
                     use(href="#menu")
               template(v-else-if="isTimeColumn(col)")
                 a-tooltip(
+                  v-if="!tsCellDetail"
                   placement="top"
                   :content="tsViewStr ? $t('dashboard.showTimestamp') : $t('dashboard.formatTimestamp')"
                 )
                   span.timestamp-cell(style="cursor: pointer" @click="changeTsView") {{ renderTs(record, col.name) }}
+                template(v-else)
+                  // Only the selected tsColumn triggers detail view in tsCellDetail mode
+                  span.timestamp-cell.ts-cell-detail-link(
+                    v-if="props.tsColumn?.name && col.name === props.tsColumn.name"
+                    @click="handleTsCellClick(record, rowIndex)"
+                  ) {{ renderTs(record, col.name) }}
+                  span.timestamp-cell(v-else) {{ renderTs(record, col.name) }}
                 svg.td-config-icon(
                   v-if="showContextMenu"
                   @click="(event) => handleContextMenu(record, col.name, event)"
@@ -155,6 +163,8 @@ a-dropdown#td-context(
 
     // Timestamp handling
     tsColumn?: TSColumn | null
+    /** When true, clicking the timestamp cell emits tsCellClick instead of toggling format */
+    tsCellDetail?: boolean
 
     // Context menu
     showContextMenu?: boolean
@@ -174,6 +184,7 @@ a-dropdown#td-context(
     columnMode: 'separate',
     displayedColumns: () => [],
     tsColumn: null,
+    tsCellDetail: false,
     showContextMenu: true,
     wrapLine: false,
     enableCellExpand: true,
@@ -185,7 +196,7 @@ a-dropdown#td-context(
   const attrsRecord = attrs as Record<string, any>
   const hasVirtualListProps = computed(() => !!attrsRecord['virtual-list-props'])
 
-  const emit = defineEmits(['filterConditionAdd', 'rowSelect'])
+  const emit = defineEmits(['filterConditionAdd', 'rowSelect', 'tsCellClick'])
 
   // Timestamp display state
   const tsViewStr = ref(true) // true for formatted, false for raw timestamp
@@ -416,6 +427,10 @@ a-dropdown#td-context(
 
   function changeTsView() {
     tsViewStr.value = !tsViewStr.value
+  }
+
+  function handleTsCellClick(record: TableData, rowIndex: number) {
+    emit('tsCellClick', record, rowIndex)
   }
 
   function renderTs(record: any, columnName: string) {
@@ -754,6 +769,16 @@ a-dropdown#td-context(
 
   .timestamp-cell {
     color: var(--gpt-accent-ts);
+  }
+
+  .ts-cell-detail-link {
+    cursor: pointer;
+    color: var(--gpt-accent-ts);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
   }
 
   :deep(.arco-table-td),

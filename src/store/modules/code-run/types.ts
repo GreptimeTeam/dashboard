@@ -1,6 +1,7 @@
 export interface SchemaType {
   name: string
   data_type: string
+  semantic_type?: string
 }
 
 export interface ChartFormType {

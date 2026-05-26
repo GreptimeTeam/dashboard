@@ -1,6 +1,6 @@
 <template lang="pug">
 .paginated-data-table
-  DataTable(v-bind="attrsWithPagedData")
+  DataTable(v-bind="tableAttrs")
     template(v-for="(_, name) in $slots" #[name]="slotProps")
       slot(v-bind="slotProps || {}" :name="name")
   .grid-pagination(v-if="totalRows > 0")
@@ -33,12 +33,17 @@
   const fullData = computed(() => (attrs.data as Record<string, unknown>[]) ?? [])
   const totalRows = computed(() => fullData.value.length)
 
+  const pageStartIndex = computed(() => (currentPage.value - 1) * pageSize.value)
+
   const pagedData = computed(() => {
-    const start = (currentPage.value - 1) * pageSize.value
-    return fullData.value.slice(start, start + pageSize.value)
+    const start = pageStartIndex.value
+    return fullData.value.slice(start, start + pageSize.value).map((row, index) => ({
+      ...row,
+      __globalRowIndex: start + index,
+    }))
   })
 
-  const attrsWithPagedData = computed(
+  const tableAttrs = computed(
     () =>
       ({
         ...attrs,

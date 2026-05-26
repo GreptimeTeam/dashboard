@@ -88,8 +88,9 @@ a-tabs.panel-tabs(
 
       .result-content
         .table-panel(v-if="getResultView(result.key) === 'table'")
-          PaginatedDataTable(
+          QueryResultTable(
             column-resizable
+            :result-key="result.key"
             :data="tableModelMap[result.key]?.rows || []"
             :columns="tableModelMap[result.key]?.columns || []"
             :displayed-columns="tableModelMap[result.key]?.displayedColumns || []"

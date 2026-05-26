@@ -1,26 +1,30 @@
 <template lang="pug">
 a-drawer(
   v-if="currRow"
-  popup-container="#log-table-container"
+  :popup-container="popupContainer"
   :ok-text="$t('common.close')"
   :width="800"
   :visible="props.visible"
-  :mask="false"
+  :mask="true"
+  :mask-closable="true"
+  :esc-to-close="true"
   :hide-cancel="true"
   @ok="handleOk"
   @cancel="handleCancel"
 )
   template(#title)
-    a-space
-      a-button(type="text" :disabled="selectedRowKey === 0" @click="handlePre")
-        icon-arrow-up
-      a-button(type="text" :disabled="selectedRowKey === rows.length - 1" @click="handleNext")
-        icon-arrow-down
-  a-tabs
-    a-tab-pane(key="1" :title="$t('logsQuery.fields')")
-      FormView(:data="viewRow" :columns="columns")
-    a-tab-pane(key="2" :title="$t('logsQuery.json')")
-      JSONView(:jsonStr="JSON.stringify(viewRow, null, 2)")
+    a-space.space-between(fill style="width: 100%")
+      a-space
+        a-button(type="text" :disabled="selectedRowKey === 0" @click="handlePre")
+          icon-arrow-up
+        a-button(type="text" :disabled="selectedRowKey === rows.length - 1" @click="handleNext")
+          icon-arrow-down
+      a-radio-group(v-model="viewMode" type="button" size="small")
+        a-radio(value="fields") {{ $t('logsQuery.fields') }}
+        a-radio(value="json") {{ $t('logsQuery.json') }}
+  FormView(v-if="viewMode === 'fields'" :data="viewRow" :columns="columns")
+  .gpt-light-editor(v-else)
+    JSONView(:jsonStr="JSON.stringify(viewRow, null, 2)")
 </template>
 
 <script setup lang="ts" name="LogDetail">
@@ -28,14 +32,23 @@ a-drawer(
   import JSONView from './JSONView.vue'
   import FormView from './FormView.vue'
 
-  const props = defineProps<{
-    visible: boolean
-    selectedRowKey: number | null
-    currRow: any
-    rows: any[]
-    columns: ColumnType[]
-  }>()
+  const props = withDefaults(
+    defineProps<{
+      visible: boolean
+      selectedRowKey: number | null
+      currRow: any
+      rows: any[]
+      columns: ColumnType[]
+      popupContainer?: string
+    }>(),
+    {
+      popupContainer: '#log-table-container',
+    }
+  )
   const emit = defineEmits(['update:visible', 'update:selectedRowKey'])
+
+  const viewMode = ref<'fields' | 'json'>('fields')
+
   const handleOk = () => {
     emit('update:visible', false)
   }

@@ -13,6 +13,15 @@ function columnNameToDataIndex(columnName: string) {
   return columnName.replace(/\./gi, '-')
 }
 
+/** Same selection rules as sql-builder tsColumn computed */
+function pickTsColumn(columns: ColumnType[]): ColumnType | null {
+  if (!columns.length) return null
+
+  const tsColumns = columns.filter((col) => col.data_type.toLowerCase().includes('timestamp'))
+  const tsIndexColumns = tsColumns.filter((col) => col.semantic_type === 'TIMESTAMP')
+  return tsIndexColumns.length ? tsIndexColumns[0] : tsColumns[0] ?? null
+}
+
 export function normalizeRecordsToTableModel(records?: RecordsType): NormalizedTableModel {
   const columnSchemas = records?.schema?.column_schemas || []
   if (!columnSchemas.length) {
@@ -34,7 +43,7 @@ export function normalizeRecordsToTableModel(records?: RecordsType): NormalizedT
         name: columnNameToDataIndex(column.name),
         title: column.name,
         data_type: column.data_type,
-        semantic_type: '',
+        semantic_type: column.semantic_type ?? '',
       } as ColumnType
     })
     .sort((a, b) => +timeColumnNames.includes(b.title || b.name) - +timeColumnNames.includes(a.title || a.name))
@@ -59,7 +68,7 @@ export function normalizeRecordsToTableModel(records?: RecordsType): NormalizedT
   })
 
   const displayedColumns = columns.map((column) => column.name)
-  const tsColumn = columns.find((column) => dateTypes.includes(column.data_type)) || null
+  const tsColumn = pickTsColumn(columns)
 
   return {
     columns,
