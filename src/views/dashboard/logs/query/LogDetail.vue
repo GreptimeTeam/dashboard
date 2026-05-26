@@ -13,12 +13,14 @@ a-drawer(
   @cancel="handleCancel"
 )
   template(#title)
-    a-space.space-between(fill style="width: 100%")
-      a-space
-        a-button(type="text" :disabled="selectedRowKey === 0" @click="handlePre")
-          icon-arrow-up
-        a-button(type="text" :disabled="selectedRowKey === rows.length - 1" @click="handleNext")
-          icon-arrow-down
+    a-space.log-detail-drawer-title.space-between(fill style="width: 100%")
+      a-button-group.log-detail-nav(size="small")
+        a-button(:disabled="selectedRowKey === 0" @click="handlePre")
+          template(#icon)
+            icon-arrow-up
+        a-button(:disabled="selectedRowKey === rows.length - 1" @click="handleNext")
+          template(#icon)
+            icon-arrow-down
       a-radio-group(v-model="viewMode" type="button" size="small")
         a-radio(value="fields") {{ $t('logsQuery.fields') }}
         a-radio(value="json") {{ $t('logsQuery.json') }}
@@ -71,9 +73,21 @@ a-drawer(
   }
 </script>
 
+<style lang="less" scoped>
+  .log-detail-drawer-title {
+    align-items: center;
+  }
+</style>
+
 <style lang="less">
   // Global styles for drawer since it's rendered in a portal
   #log-table-container .arco-drawer {
     border: 1px solid var(--color-neutral-3) !important;
+  }
+
+  #log-table-container .log-detail-nav.arco-btn-group {
+    .arco-btn {
+      padding: 0 8px;
+    }
   }
 </style>
