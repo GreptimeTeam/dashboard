@@ -98,6 +98,10 @@ export default {
   'metrics.sidebar.countMatchesCapped': '({count}+ matches)',
   'metrics.sidebar.countTooltip':
     'Loaded from the API (up to {limit} names). This is not necessarily the full metric catalog.',
+  'tables.sidebar.title': 'Tables',
+  'tables.sidebar.countTotal': '({count})',
+  'tables.sidebar.countFiltered': '({shown}/{loaded} filtered)',
+  'tables.sidebar.countFilteredTooltip': 'Filters the loaded table list in the browser, not a server-side search.',
   'dashboard.run': 'Run',
   'dashboard.perses.emptySidebar': 'No data',
   'dashboard.perses.emptyStateTitle': 'Get started by creating your first dashboard',

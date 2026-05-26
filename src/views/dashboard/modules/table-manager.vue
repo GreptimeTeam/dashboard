@@ -1,12 +1,16 @@
 <template lang="pug">
 a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
   template(#title)
-    a-space(:size="10")
-      | Tables
+    a-space.table-sidebar-title(fill :size="10")
+      span.table-sidebar-heading
+        | {{ $t('tables.sidebar.title') }}
+        a-tooltip(v-if="tableCountTooltip" :content="tableCountTooltip")
+          span.table-sidebar-count {{ tableCountLabel }}
+        span.table-sidebar-count(v-else) {{ tableCountLabel }}
       a-button(size="mini" :loading="totalTablesLoading" @click="refreshTablesTree()")
         template(#icon)
           svg.icon-11.brand-color
-            use(href="#refresh") 
+            use(href="#refresh")
   a-spin(style="width: 100%" :loading="tablesLoading")
     .database-selector
       a-select(
@@ -34,8 +38,6 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
           template(#prefix)
             svg.icon-11.icon-color
               use(href="#search")
-      span.table-total {{ currentTablesCount }} {{ $t('dashboard.tables') }}
-
     a-tree.table-tree(
       v-if="tablesTreeForDatabase[activeDatabase]?.length"
       v-model:expanded-keys="expandedKeys"
@@ -124,10 +126,13 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
 </template>
 
 <script lang="ts" setup name="TableManager">
+  import { useI18n } from 'vue-i18n'
   import useSiderTabs from '@/hooks/sider-tabs'
   import type { TableTreeParent, TreeData } from '@/store/modules/database/types'
   import type { OptionsType } from '@/types/global'
   import { dateFormatter } from '@/utils'
+
+  const { t } = useI18n()
 
   const props = defineProps<{
     databaseList: string[]
@@ -138,9 +143,8 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
 
   const { tablesSearchKey, tablesTreeRef, refreshTables, loadMore, loadMoreColumns, isRefreshingDetails } =
     useSiderTabs()
-  const { tablesLoading, totalTablesLoading, tablesTreeForDatabase, databaseActiveKeys } = storeToRefs(
-    useDataBaseStore()
-  )
+  const { tablesLoading, totalTablesLoading, tablesTreeForDatabase, tablesTotalByDatabase, databaseActiveKeys } =
+    storeToRefs(useDataBaseStore())
 
   const TABLE_NODE_HEIGHT = 34
   const MIN_VIRTUAL_LIST_HEIGHT = 200
@@ -166,9 +170,42 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
     { immediate: true }
   )
 
-  const currentTablesCount = computed(() => {
-    return tablesTreeForDatabase.value[activeDatabase.value]?.length || 0
+  const expandedTablesTree = computed(() => {
+    return tablesTreeForDatabase.value[activeDatabase.value] || []
   })
+
+  const tablesTreeData = computed(() => {
+    if (!tablesSearchKey.value) return expandedTablesTree.value
+    return expandedTablesTree.value.filter(
+      (item: TableTreeParent) => item.title.toLowerCase().indexOf(tablesSearchKey.value.toLowerCase()) > -1
+    )
+  })
+
+  const tablesTotalCount = computed(() => {
+    const db = activeDatabase.value
+    if (!db) return 0
+    const total = tablesTotalByDatabase.value[db]
+    if (total !== undefined) return total
+    return tablesTreeForDatabase.value[db]?.length ?? 0
+  })
+
+  const loadedTablesCount = computed(() => expandedTablesTree.value.length)
+
+  const filteredTablesCount = computed(() => tablesTreeData.value.length)
+
+  const isTableSearchActive = computed(() => tablesSearchKey.value.trim().length > 0)
+
+  const tableCountLabel = computed(() => {
+    if (isTableSearchActive.value) {
+      return t('tables.sidebar.countFiltered', {
+        shown: filteredTablesCount.value,
+        loaded: loadedTablesCount.value,
+      })
+    }
+    return t('tables.sidebar.countTotal', { count: tablesTotalCount.value })
+  })
+
+  const tableCountTooltip = computed(() => (isTableSearchActive.value ? t('tables.sidebar.countFilteredTooltip') : ''))
 
   const setRefMap = (el: any, db: string) => {
     if (!tablesTreeRef.value) {
@@ -202,17 +239,6 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
       tablesTreeRef.value[db].expandAll(false)
     }
   }
-
-  const expandedTablesTree = computed(() => {
-    return tablesTreeForDatabase.value[activeDatabase.value] || []
-  })
-
-  const tablesTreeData = computed(() => {
-    if (!tablesSearchKey.value) return expandedTablesTree.value
-    return expandedTablesTree.value.filter(
-      (item: TableTreeParent) => item.title.toLowerCase().indexOf(tablesSearchKey.value.toLowerCase()) > -1
-    )
-  })
 
   const virtualListHeight = computed(() => {
     const maxHeight = `calc(100vh - var(--tables-header-height) - var(--footer-height))`
@@ -454,11 +480,22 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
     }
   }
 
-  .table-total {
-    font-size: var(--gpt-font-xs);
+  .table-sidebar-title {
+    width: 100%;
+  }
+
+  .table-sidebar-heading {
+    display: inline-flex;
+    gap: 4px;
+    align-items: baseline;
+    min-width: 0;
+  }
+
+  .table-sidebar-count {
     color: var(--gpt-text-muted);
+    font-size: var(--gpt-font-sm);
+    font-weight: 400;
     white-space: nowrap;
-    word-break: keep-all;
   }
 
   :deep(.search-table) {

@@ -10,6 +10,7 @@ const useDataBaseStore = defineStore('database', () => {
   const tablesData = ref<RecordsType>()
   const scriptsData = ref()
   const tablesTreeForDatabase = ref({} as { [key: string]: TableTreeParent[] })
+  const tablesTotalByDatabase = ref<Record<string, number>>({})
   const originTablesTree = computed(() => {
     return tablesTreeForDatabase.value[database.value] || []
   })
@@ -199,6 +200,7 @@ const useDataBaseStore = defineStore('database', () => {
     tablesTreeForDatabase.value[db] = []
 
     const total = await getTablesCount(db)
+    tablesTotalByDatabase.value = { ...tablesTotalByDatabase.value, [db]: total }
     if (total === 0) {
       tablesLoading.value = false
       totalTablesLoading.value = false
@@ -275,12 +277,18 @@ const useDataBaseStore = defineStore('database', () => {
   }
 
   const resetData = () => {
-    tablesTreeForDatabase.value[database.value] = []
+    const db = database.value
+    tablesTreeForDatabase.value[db] = []
+    if (db) {
+      const { [db]: _removed, ...rest } = tablesTotalByDatabase.value
+      tablesTotalByDatabase.value = rest
+    }
     scriptsData.value = null
   }
 
   return {
     tablesTreeForDatabase,
+    tablesTotalByDatabase,
     originTablesTree,
     originScriptsList,
     tablesLoading,
