@@ -98,6 +98,8 @@ export default {
   'metrics.sidebar.countMatchesCapped': '({count}+ matches)',
   'metrics.sidebar.countTooltip':
     'Loaded from the API (up to {limit} names). This is not necessarily the full metric catalog.',
+  'metrics.sidebar.insert': 'Insert',
+  'metrics.sidebar.copy': 'Copy',
   'tables.sidebar.title': 'Tables',
   'tables.sidebar.countTotal': '({count})',
   'tables.sidebar.countFiltered': '({shown}/{loaded} filtered)',

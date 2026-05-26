@@ -1,20 +1,23 @@
 <template lang="pug">
-a-dropdown.tree-menu-dropdown(trigger="click" position="right")
-  a-button.menu-button(type="text" @click.stop)
+.tree-row-actions(@click.stop)
+  a-button.tree-action-btn(
+    type="text"
+    size="mini"
+    :title="$t('metrics.sidebar.insert')"
+    @click.stop="handleInsert"
+  )
     template(#icon)
-      svg.icon.rotate-90
-        use(href="#extra")
-  template(#content)
-    a-doption(@click.stop="handleInsert")
-      template(#icon)
-        svg.icon.icon-color
-          use(href="#query")
-      | Insert
-    a-doption(@click.stop="handleCopy")
-      template(#icon)
-        svg.icon.icon-color
-          use(href="#copy-new")
-      | Copy
+      svg.icon-14.icon-color
+        use(href="#query")
+  a-button.tree-action-btn(
+    type="text"
+    size="mini"
+    :title="$t('metrics.sidebar.copy')"
+    @click.stop="handleCopy"
+  )
+    template(#icon)
+      svg.icon-14.icon-color
+        use(href="#copy-new")
 </template>
 
 <script setup lang="ts">
@@ -57,3 +60,25 @@ a-dropdown.tree-menu-dropdown(trigger="click" position="right")
     emits('copyText', getNodeExpression())
   }
 </script>
+
+<style lang="less" scoped>
+  .tree-row-actions {
+    flex-shrink: 0;
+    align-items: center;
+  }
+
+  .tree-action-btn {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    color: var(--gpt-text-secondary);
+    background: transparent;
+    border: none;
+    border-radius: var(--gpt-radius-sm);
+
+    &:hover {
+      color: var(--gpt-brand-900);
+      background: rgba(71, 52, 96, 0.08);
+    }
+  }
+</style>

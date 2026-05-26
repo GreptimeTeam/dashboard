@@ -82,7 +82,8 @@
       font-size: var(--gpt-font-base);
     }
 
-    .menu-button {
+    .menu-button,
+    .tree-row-actions {
       display: none;
     }
   }
@@ -91,7 +92,8 @@
     background: var(--gpt-nav-active-bg);
 
     .data-type,
-    .menu-button {
+    .menu-button,
+    .tree-row-actions {
       display: flex;
     }
   }
@@ -110,6 +112,29 @@
     line-height: 36px;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  &.metrics-tree {
+    .tree-data {
+      position: relative;
+
+      &:hover .data-title {
+        padding-right: 48px;
+      }
+
+      .tree-row-actions {
+        position: absolute;
+        top: 0;
+        right: 2px;
+        bottom: 0;
+        align-items: center;
+        gap: 0;
+      }
+
+      .tree-action-btn.arco-btn-text[type='button']:hover {
+        background: rgba(71, 52, 96, 0.08);
+      }
+    }
   }
 
   .menu-button.arco-dropdown-open {
