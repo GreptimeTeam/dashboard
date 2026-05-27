@@ -217,14 +217,6 @@ a-layout.new-layout(:class="{ 'query-layout--focus': focusMode }")
     background: var(--gpt-bg-panel);
   }
 
-  :deep(.editor-space .panel-resize) {
-    border-bottom: 1px solid var(--gpt-border-default);
-  }
-
-  :deep(.panel-resize.logs-panel-resize) {
-    border-top: 1px solid var(--gpt-border-default);
-  }
-
   .query-results-panel {
     flex: 1;
     min-height: 0;
