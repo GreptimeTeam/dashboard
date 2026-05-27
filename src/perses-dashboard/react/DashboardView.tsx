@@ -1,9 +1,14 @@
 import * as React from 'react'
 import { Box } from '@mui/material'
-import { DatasourceApi, OnSaveDashboard, ViewDashboard } from '@perses-dev/dashboards'
+import { OnSaveDashboard, ViewDashboard } from '@perses-dev/dashboards'
 import { ErrorAlert, ErrorBoundary } from '@perses-dev/components'
 import { PluginRegistry, ValidationProvider } from '@perses-dev/plugin-system'
-import { DashboardResource, GlobalDatasourceResource, EphemeralDashboardResource } from '@perses-dev/core'
+import {
+  DashboardResource,
+  DatasourceApi,
+  GlobalDatasourceResource,
+  EphemeralDashboardResource,
+} from '@perses-dev/core'
 import bundledPluginLoader from './plugin'
 import { useWorkbenchContext } from './WorkbenchProvider'
 

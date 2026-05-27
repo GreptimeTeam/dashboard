@@ -461,6 +461,10 @@ a-layout.detail-layout.new-layout(:class="{ 'is-sidebar-resizing': isSidebarResi
 </script>
 
 <style lang="less" scoped>
+  :deep(.arco-layout-sider-light) {
+    box-shadow: none !important;
+  }
+
   .new-layout {
     display: flex;
     flex-direction: row;

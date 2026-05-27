@@ -6,13 +6,13 @@ import {
   DEFAULT_REFRESH_INTERVAL,
 } from '@perses-dev/core'
 import { ChartsProvider, generateChartsTheme, getTheme } from '@perses-dev/components'
-import { createTheme, ThemeProvider } from '@mui/material/styles'
+import { createTheme, ThemeProvider, GlobalStyles } from '@mui/material'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { QueryParamProvider } from 'use-query-params'
 import { ReactRouter6Adapter } from 'use-query-params/adapters/react-router-6'
 import HelperDashboardView from './DashboardView'
 import { useWorkbenchContext } from './WorkbenchProvider'
-import { DASHBOARD_TOKENS, globalStyles } from './Dashboard.styles'
+import DASHBOARD_TOKENS from './Dashboard.styles'
 import { ensureTraceTableLinks } from '../traceLink'
 
 interface DashboardProps {
@@ -168,7 +168,9 @@ export default function Dashboard(props: DashboardProps = {}) {
       mode: 'light',
       primary: { main: DASHBOARD_TOKENS.colors.brand },
       background: {
-        default: DASHBOARD_TOKENS.colors.background,
+        // Use paper (white) for component-level backgrounds (Legend, Dialog, Popover, etc.)
+        // The page/body warm gray (#f9f8f7) is applied separately via GlobalStyles
+        default: DASHBOARD_TOKENS.colors.paper,
         paper: DASHBOARD_TOKENS.colors.paper,
       },
       divider: DASHBOARD_TOKENS.colors.divider,
@@ -185,8 +187,231 @@ export default function Dashboard(props: DashboardProps = {}) {
             boxShadow: DASHBOARD_TOKENS.shadows.soft,
             border: `1px solid ${DASHBOARD_TOKENS.colors.dividerDark}`,
             borderRadius: 4,
-            backgroundColor: DASHBOARD_TOKENS.colors.paper,
+            // backgroundColor intentionally omitted — palette.background.paper already provides white.
+            // Explicitly setting it here would override MuiAppBar's transparent background.
             backgroundImage: 'none',
+          },
+        },
+      },
+      MuiTypography: {
+        styleOverrides: {
+          h3: {
+            'fontFamily': DASHBOARD_TOKENS.fonts.sans,
+            'fontWeight': 600,
+            'letterSpacing': '-0.02em',
+            'fontFeatureSettings': "'tnum' 1",
+            'color': DASHBOARD_TOKENS.colors.textPrimary,
+            'display': 'flex',
+            'alignItems': 'baseline',
+            'justifyContent': 'center',
+            // Inside table cells: compact inline style
+            '.MuiTableCell-root &': {
+              fontSize: '14px',
+              fontWeight: DASHBOARD_TOKENS.fonts.weightMedium,
+              color: 'inherit',
+              lineHeight: 'inherit',
+              letterSpacing: 0,
+              padding: 0,
+              margin: 0,
+            },
+            // Unit/label spans (not bold) next to the stat value
+            '&:not(.MuiTableCell-root *) :not(b):not(strong)': {
+              fontSize: '0.55em',
+              fontWeight: 400,
+              color: DASHBOARD_TOKENS.colors.textSecondary,
+              marginLeft: '4px',
+              letterSpacing: 0,
+            },
+          },
+          h6: {
+            'fontSize': '14px',
+            'fontWeight': 600,
+            'color': DASHBOARD_TOKENS.colors.textSecondary,
+            'marginBottom': '16px',
+            'marginTop': '40px',
+            'display': 'flex',
+            'alignItems': 'center',
+            'textTransform': 'none',
+            'letterSpacing': '-0.01em',
+            // Decorative horizontal rule after the heading text
+            '&::after': {
+              content: '""',
+              flex: 1,
+              height: '1px',
+              background: DASHBOARD_TOKENS.colors.dividerDark,
+              marginLeft: '12px',
+            },
+          },
+          subtitle1: {
+            color: DASHBOARD_TOKENS.colors.textSecondary,
+            fontSize: '13px',
+            fontWeight: 600,
+            letterSpacing: '0.01em',
+            lineHeight: 1.4,
+            minHeight: 'auto',
+            textTransform: 'none',
+          },
+        },
+      },
+      MuiCardContent: {
+        styleOverrides: {
+          root: {
+            'display': 'flex',
+            'flexDirection': 'column',
+            'flex': 1,
+            'overflow': 'hidden',
+            '& > .MuiStack-root': {
+              flex: 1,
+              height: '100%',
+              minHeight: 0,
+              overflow: 'visible',
+            },
+          },
+        },
+      },
+      MuiCardHeader: {
+        styleOverrides: {
+          root: {
+            '& .MuiTypography-root': {
+              color: DASHBOARD_TOKENS.colors.textSecondary,
+              fontSize: '13px',
+              fontWeight: 600,
+              letterSpacing: '0.01em',
+              lineHeight: 1.4,
+              minHeight: 'auto',
+              textTransform: 'none',
+            },
+          },
+        },
+      },
+      MuiTable: {
+        styleOverrides: {
+          root: {
+            borderCollapse: 'separate',
+            backgroundColor: 'transparent',
+          },
+        },
+      },
+      MuiTableCell: {
+        styleOverrides: {
+          root: {
+            // Collapse perses internal stack wrappers inside cells
+            '& .MuiStack-root': {
+              minHeight: 'auto',
+              gap: 0,
+            },
+          },
+        },
+      },
+      MuiListItem: {
+        styleOverrides: {
+          root: {
+            backgroundColor: 'transparent',
+          },
+        },
+      },
+      MuiListItemText: {
+        styleOverrides: {
+          root: {
+            '& .MuiTypography-root': {
+              fontSize: '11px',
+              color: DASHBOARD_TOKENS.colors.textSecondary,
+            },
+          },
+        },
+      },
+      MuiButton: {
+        styleOverrides: {
+          root: {
+            'borderColor': DASHBOARD_TOKENS.colors.dividerDark,
+            'transition': 'all 0.2s ease',
+            '&:hover': {
+              borderColor: DASHBOARD_TOKENS.colors.brandBorder,
+              backgroundColor: DASHBOARD_TOKENS.colors.brandHover,
+              color: DASHBOARD_TOKENS.colors.brand,
+            },
+          },
+        },
+      },
+      MuiIconButton: {
+        styleOverrides: {
+          root: {
+            'transition': 'all 0.2s ease',
+            '&:hover': {
+              backgroundColor: DASHBOARD_TOKENS.colors.brandHover,
+              color: DASHBOARD_TOKENS.colors.brand,
+            },
+          },
+        },
+      },
+      MuiOutlinedInput: {
+        styleOverrides: {
+          root: {
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: DASHBOARD_TOKENS.colors.dividerDark,
+              transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+            },
+            '&:hover:not(.Mui-focused) .MuiOutlinedInput-notchedOutline': {
+              borderColor: DASHBOARD_TOKENS.colors.brandBorder,
+            },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+              borderColor: DASHBOARD_TOKENS.colors.brandBorderFocus,
+              boxShadow: `0 0 0 3px ${DASHBOARD_TOKENS.colors.brandBase}`,
+            },
+            '&.Mui-focused': {
+              backgroundColor: DASHBOARD_TOKENS.colors.brandBase,
+            },
+          },
+        },
+      },
+      MuiInputLabel: {
+        styleOverrides: {
+          root: {
+            '&.Mui-focused': {
+              color: DASHBOARD_TOKENS.colors.brand,
+            },
+          },
+        },
+      },
+      MuiSelect: {
+        styleOverrides: {
+          select: {
+            backgroundColor: 'transparent',
+          },
+        },
+      },
+      MuiChip: {
+        styleOverrides: {
+          root: {
+            'backgroundColor': DASHBOARD_TOKENS.colors.brandHover,
+            'borderRadius': '4px',
+            'height': '24px',
+            // Chips inside AppBar (variable dropdowns) use paper bg
+            '.MuiAppBar-root &': {
+              backgroundColor: DASHBOARD_TOKENS.colors.paper,
+            },
+          },
+          label: {
+            fontFamily: DASHBOARD_TOKENS.fonts.mono,
+            fontSize: '11px',
+          },
+        },
+      },
+      MuiAppBar: {
+        styleOverrides: {
+          root: {
+            'border': 'none',
+            'boxShadow': 'none',
+            // Sticky/fixed appbar gets a subtle frosted-glass effect
+            '&.mui-fixed': {
+              backgroundColor: 'rgba(250, 250, 250, 0.9)',
+              backdropFilter: 'blur(8px)',
+              borderBottom: `1px solid ${DASHBOARD_TOKENS.colors.dividerDark}`,
+            },
+            // Inputs inside AppBar use paper background when focused
+            '& .MuiOutlinedInput-root.Mui-focused, & .MuiInputBase-root:has(.MuiSelect-select:focus)': {
+              backgroundColor: DASHBOARD_TOKENS.colors.paper,
+            },
           },
         },
       },
@@ -204,7 +429,7 @@ export default function Dashboard(props: DashboardProps = {}) {
         left: 'center',
         top: 'center',
         textStyle: {
-          color: '#64748b',
+          color: DASHBOARD_TOKENS.colors.textMuted,
           fontSize: 15,
           fontWeight: 500,
         },
@@ -214,7 +439,7 @@ export default function Dashboard(props: DashboardProps = {}) {
     },
     echartsTheme: {
       textStyle: {
-        color: '#0f172a',
+        color: DASHBOARD_TOKENS.colors.textPrimary,
       },
       grid: {
         borderColor: DASHBOARD_TOKENS.colors.dividerDark,
@@ -370,7 +595,55 @@ export default function Dashboard(props: DashboardProps = {}) {
       <QueryClientProvider client={queryClient}>
         <QueryParamProvider adapter={ReactRouter6Adapter}>
           <ChartsProvider chartsTheme={chartsTheme}>
-            <style>{globalStyles}</style>
+            <GlobalStyles
+              styles={{
+                'html, body, #root, [data-reactroot]': {
+                  backgroundColor: DASHBOARD_TOKENS.colors.background,
+                  margin: 0,
+                },
+                // Dashboard toolbar: hide edit controls by default, show when editable
+                '[data-testid="dashboard-toolbar"]': {
+                  'paddingBottom': '12px',
+                  'borderBottom': `1px solid ${DASHBOARD_TOKENS.colors.dividerDark}`,
+                  'marginBottom': '8px',
+                  '& .MuiButton-root, & .MuiIconButton-root': {
+                    height: '100%',
+                  },
+                  '& > .MuiBox-root:first-child': {
+                    display: 'none',
+                  },
+                },
+                'body.dashboard-editable [data-testid="dashboard-toolbar"] > .MuiBox-root:first-child': {
+                  display: 'flex',
+                },
+                // Panel group header hover
+                '[data-testid="panel-group-header"]': {
+                  'backgroundColor': 'transparent',
+                  'transition': 'background-color 0.2s ease',
+                  'marginBottom': '4px',
+                  'borderRadius': '4px',
+                  '& .MuiTypography-root': {
+                    fontWeight: 600,
+                    color: DASHBOARD_TOKENS.colors.textSecondary,
+                    fontSize: '14px',
+                  },
+                  '&:hover': {
+                    backgroundColor: DASHBOARD_TOKENS.colors.brandHover,
+                  },
+                },
+                // Variable filter bar layout.
+                // The AppBar inside uses color="inherit" + sx={{ backgroundColor: 'inherit' }} from perses,
+                // so sx overrides our styleOverrides. Use a higher-specificity selector (0,2,0) to win.
+                '[data-testid="variable-list"] .MuiAppBar-root': {
+                  backgroundColor: 'transparent',
+                },
+                '[data-testid="variable-list"]': {
+                  display: 'flex',
+                  gap: '12px',
+                  alignItems: 'center',
+                },
+              }}
+            />
             <HelperDashboardView
               key={`${data.metadata.name}-${saveRefreshToken}`}
               dashboardResource={data}
@@ -378,7 +651,7 @@ export default function Dashboard(props: DashboardProps = {}) {
               isReadonly={!dashboardEditable}
               isEditing={false}
               isCreating={false}
-            ></HelperDashboardView>
+            />
           </ChartsProvider>
         </QueryParamProvider>
       </QueryClientProvider>
