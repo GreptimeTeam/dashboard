@@ -42,6 +42,7 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
       v-if="tablesTreeForDatabase[activeDatabase]?.length"
       v-model:expanded-keys="expandedKeys"
       size="small"
+      action-on-node-click="expand"
       :ref="(el) => setRefMap(el, activeDatabase)"
       :block-node="true"
       :data="tablesTreeData"
@@ -324,6 +325,10 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
   }
 
   .table-tree {
+    :deep(.arco-tree-node-icon .icon:has(use[href='#table'])) {
+      color: var(--gpt-accent-ts);
+    }
+
     :deep(.arco-tree-node.arco-tree-node-is-leaf.details) {
       cursor: default;
 

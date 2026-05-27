@@ -291,6 +291,10 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
     color: var(--gpt-main-purple);
   }
 
+  :deep(.navbar-menu .arco-menu-item.arco-menu-selected .arco-menu-icon svg) {
+    filter: drop-shadow(0 0 0 currentColor);
+  }
+
   :deep(.navbar-menu .arco-menu-item.arco-menu-selected::before) {
     content: '';
     position: absolute;

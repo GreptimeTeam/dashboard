@@ -22,7 +22,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.dashboard.query',
         requiresAuth: false,
-        icon: 'query-menu',
+        icon: 'table',
         roles: ['admin', 'cloud'],
       },
     },
@@ -46,7 +46,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.dashboard.tables',
         requiresAuth: false,
-        icon: 'query-menu',
+        icon: 'table',
         roles: ['admin', 'cloud'],
         hideInMenu: true,
       },
@@ -229,7 +229,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.dashboard.perses',
         requiresAuth: false,
-        icon: 'Icon9',
+        icon: 'visualize',
         roles: ['admin', 'cloud'],
       },
     },

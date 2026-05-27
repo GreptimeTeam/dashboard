@@ -42,10 +42,10 @@ a-tabs.panel-tabs(
               svg.icon-16
                 use(href="#tableview")
             a-button(
-              v-if="useDataChart(result).hasChart.value"
               size="small"
               type="outline"
               :title="$t('dashboard.chart')"
+              :disabled="!useDataChart(result).hasChart.value"
               :class="{ active: getResultView(result.key) === 'chart' }"
               @click="setResultView(result.key, 'chart')"
             )
