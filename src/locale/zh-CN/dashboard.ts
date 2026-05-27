@@ -97,6 +97,7 @@ export default {
   'metrics.sidebar.countTooltip': '来自接口返回的列表（最多 {limit} 个），不代表库内全部 metric。',
   'metrics.sidebar.insert': '插入',
   'metrics.sidebar.copy': '复制',
+  'metrics.resultMeta': '序列数：{count}，步长：{step}s',
   'tables.sidebar.title': '数据表',
   'tables.sidebar.countTotal': '（{count} 张表）',
   'tables.sidebar.countFiltered': '（筛选 {shown}/{loaded}）',

@@ -20,13 +20,37 @@ a-layout.new-layout
           @query="handleRunQuery"
         )
 
-    a-card(:bordered="false")
-      a-tabs(v-model:active-key="activeTab" type="line")
-        a-tab-pane(key="table" title="Table")
+    a-card.metrics-result-card(:bordered="false")
+      .metrics-result-toolbar
+        .view-switch
+          a-button-group
+            a-button(
+              size="small"
+              type="outline"
+              :title="$t('dashboard.table')"
+              :class="{ active: activeTab === 'table' }"
+              @click="setActiveTab('table')"
+            )
+              svg.icon-16
+                use(href="#tableview")
+            a-button(
+              size="small"
+              type="outline"
+              :title="$t('dashboard.chart')"
+              :class="{ active: activeTab === 'graph' }"
+              @click="setActiveTab('graph')"
+            )
+              svg.icon-16
+                use(href="#chart")
+          span.series-meta(v-if="activeTab === 'graph' && seriesCount > 0") {{ seriesMetaLabel }}
+
+      .metrics-result-content
+        .metrics-table-view(v-show="activeTab === 'table'")
           .section-title
             a-space
               TimezoneInstantPicker(
                 v-model="instantQueryTime"
+                size="small"
                 placeholder="Evaluation time"
                 allow-clear
                 style="width: 210px"
@@ -56,15 +80,13 @@ a-layout.new-layout
                   template(#cell="{ record }")
                     .values-cell {{ record.values }}
 
-        a-tab-pane(key="graph" title="Graph")
+        .metrics-graph-view(v-show="activeTab === 'graph'")
           MetricsChart
-        template(#extra)
-          .series-count(v-if="seriesCount > 0") 
-            | Result series: {{ seriesCount }} &nbsp;&nbsp; step: {{ currentStep }}s
 </template>
 
 <script setup lang="ts">
   import { ref, computed, onMounted, watch, nextTick, provide } from 'vue'
+  import { useI18n } from 'vue-i18n'
   import { useRoute, useRouter } from 'vue-router'
   import { useStorage } from '@vueuse/core'
   import { useSeries } from '@/hooks/use-series'
@@ -81,6 +103,7 @@ a-layout.new-layout
     name: 'Metrics',
   })
 
+  const { t } = useI18n()
   const route = useRoute()
   const router = useRouter()
   const seriesHook = useSeries()
@@ -270,6 +293,12 @@ a-layout.new-layout
     return tableResults.value?.length || 0
   })
 
+  const seriesMetaLabel = computed(() => t('metrics.resultMeta', { count: seriesCount.value, step: currentStep.value }))
+
+  const setActiveTab = (tab: 'table' | 'graph') => {
+    activeTab.value = tab
+  }
+
   const handleRunQuery = updateQueryParams
 
   const handleTimeRangeUpdate = (newTimeRange: [number, number]) => {
@@ -362,8 +391,6 @@ a-layout.new-layout
   }
 
   .section-title {
-    background: var(--gpt-bg-header);
-
     .arco-space {
       align-items: center;
     }
@@ -375,7 +402,6 @@ a-layout.new-layout
 
   .query-section {
     padding: var(--gpt-toolbar-padding);
-    border-bottom: 1px solid var(--gpt-border-default);
   }
 
   .section-divider {
@@ -397,15 +423,28 @@ a-layout.new-layout
       align-items: center;
     }
   }
-  :deep(.arco-tabs-content) {
+  .metrics-result-toolbar {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--gpt-border-default);
+    min-height: 39px;
+    padding: var(--gpt-toolbar-padding);
     padding-top: 0;
+
+    .view-switch {
+      align-items: center;
+      gap: 10px;
+    }
+
+    .series-meta {
+      color: var(--gpt-text-muted);
+      font-size: var(--gpt-font-sm);
+      white-space: nowrap;
+    }
   }
 
-  .series-count {
-    font-size: 12px;
-    color: var(--color-text-3);
-    font-weight: normal;
-    margin-right: 8px;
+  .metrics-result-content {
+    min-height: 0;
   }
 
   .empty-state {
@@ -413,11 +452,5 @@ a-layout.new-layout
     justify-content: center;
     align-items: center;
     min-height: 200px;
-  }
-  :deep(.arco-tabs-tab-active) {
-    color: var(--brand-color);
-  }
-  :deep(.arco-tabs-nav-ink) {
-    background-color: var(--brand-color);
   }
 </style>

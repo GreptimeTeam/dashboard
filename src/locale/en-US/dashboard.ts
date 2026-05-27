@@ -100,6 +100,7 @@ export default {
     'Loaded from the API (up to {limit} names). This is not necessarily the full metric catalog.',
   'metrics.sidebar.insert': 'Insert',
   'metrics.sidebar.copy': 'Copy',
+  'metrics.resultMeta': 'Result series: {count}  step: {step}s',
   'tables.sidebar.title': 'Tables',
   'tables.sidebar.countTotal': '({count})',
   'tables.sidebar.countFiltered': '({shown}/{loaded} filtered)',

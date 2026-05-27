@@ -8,6 +8,7 @@ a-card.metrics-chart(:bordered="false")
             v-model:time-length="time"
             v-model:time-range="rangeTime"
             button-type="outline"
+            button-size="small"
             :show-any-time="false"
           )
           StepSelector(
@@ -456,8 +457,8 @@ a-card.metrics-chart(:bordered="false")
 
 <style lang="less" scoped>
   .metrics-chart {
-    .section-title {
-      background: var(--gpt-bg-header);
+    :deep(.section-title) {
+      border-bottom: none;
     }
 
     .empty-state {
