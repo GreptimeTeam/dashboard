@@ -97,7 +97,7 @@ a-card.editor-card.editor-card--inset(:bordered="false")
         a-button(type="outline" @click="openTimeAssistance")
           template(#icon)
             svg.icon-18
-              use(href="#time-index")
+              use(href="#time")
       TimeAssistance(v-if="queryType === 'sql'" ref="tsRef" :cm="currentView")
       a-tooltip(mini :content="$t('dashboard.format')")
         a-button(type="outline" :disabled="isButtonDisabled" @click="formatSql()")

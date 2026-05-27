@@ -19,11 +19,27 @@ a-card.metrics-chart(:bordered="false")
 
     a-space(style="margin-left: auto")
       a-checkbox(v-model="showFullSeriesName") {{ t('metrics.showFullSeriesName') }}
-      a-radio-group(v-model="localChartType" type="button" size="small")
-        a-radio(value="line") Lines
-        a-radio(value="bar") Bars
-        a-radio(value="scatter") Points
-        a-radio(value="stacked-line") Stacked Lines
+      a-radio-group.chart-type-toggle(v-model="localChartType" type="button" size="small")
+        a-radio(value="line")
+          span.chart-type-option
+            svg.icon-16
+              use(href="#line")
+            span.chart-type-label Lines
+        a-radio(value="bar")
+          span.chart-type-option
+            svg.icon-16
+              use(href="#bar")
+            span.chart-type-label Bars
+        a-radio(value="scatter")
+          span.chart-type-option
+            svg.icon-16
+              use(href="#point")
+            span.chart-type-label Points
+        a-radio(value="stacked-line")
+          span.chart-type-option
+            svg.icon-16
+              use(href="#stack")
+            span.chart-type-label Stacked Lines
 
   .chart-section(v-if="hasData")
     .chart-container(style="padding: 24px 0")
@@ -456,7 +472,88 @@ a-card.metrics-chart(:bordered="false")
 </script>
 
 <style lang="less" scoped>
+  .chart-type-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1;
+
+    svg {
+      flex-shrink: 0;
+      color: currentColor;
+    }
+  }
+
+  .chart-type-label {
+    font-size: var(--gpt-font-sm);
+    white-space: nowrap;
+  }
+
   .metrics-chart {
+    :deep(.chart-type-toggle.arco-radio-group-button) {
+      box-sizing: border-box;
+      height: var(--gpt-control-height-sm);
+      padding: 0;
+      overflow: visible;
+      background: var(--gpt-bg-panel);
+      border: 1px solid var(--gpt-border-strong);
+      border-radius: var(--gpt-radius-sm);
+      box-shadow: none;
+
+      .arco-radio-button {
+        position: relative;
+        z-index: 0;
+        box-sizing: border-box;
+        height: 100%;
+        margin: 0;
+        border: none;
+        border-radius: var(--gpt-radius-sm);
+        color: var(--gpt-text-secondary);
+        background: transparent;
+
+        &::before {
+          display: none;
+        }
+
+        &:first-of-type,
+        &:last-of-type {
+          border-radius: var(--gpt-radius-sm);
+        }
+
+        &:not(.arco-radio-checked):not(.arco-radio-disabled):hover {
+          z-index: 1;
+          color: var(--gpt-text-primary);
+          background: var(--grey-bg-color);
+        }
+      }
+
+      .arco-radio-button-content {
+        box-sizing: border-box;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        padding: 0 10px;
+      }
+
+      .arco-radio-button.arco-radio-checked {
+        z-index: 2;
+        color: var(--brand-color);
+        background: var(--light-brand-color);
+        border: none;
+
+        &::after {
+          content: '';
+          position: absolute;
+          right: 0px;
+          bottom: 0px;
+          left: 0px;
+          height: 2px;
+          background: var(--brand-color);
+          border-radius: 1px;
+        }
+      }
+    }
+
     :deep(.section-title) {
       border-bottom: none;
     }

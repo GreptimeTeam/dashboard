@@ -1,14 +1,13 @@
 <template lang="pug">
 .step-selector
   a-dropdown(:popup-max-height="false" @select="handleDropdownSelect")
-    a-button(
-      type="outline"
-      size="small"
-      style="display: flex; justify-content: space-between; width: 130px"
-      :title="'Select step resolution or enter custom value'"
-    )
+    a-button.step-selector-trigger(type="outline" size="small" :title="'Select step resolution or enter custom value'")
+      template(#icon)
+        svg.icon-16.icon-color
+          use(href="#step")
       | {{ getCurrentSelectionLabel() }}
-      icon-down
+      template(#suffix)
+        icon-down
     template(#content)
       a-doption(
         v-for="option in stepOptions"
@@ -200,5 +199,11 @@
     display: flex;
     align-items: center;
     gap: 4px;
+  }
+
+  .step-selector-trigger {
+    :deep(.arco-btn-icon) {
+      margin-right: 6px;
+    }
   }
 </style>
