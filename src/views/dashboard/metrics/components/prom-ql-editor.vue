@@ -253,6 +253,22 @@
     editorView.focus()
   }
 
+  const replaceEditorContent = (text: string) => {
+    const singleLineContent = text.replace(/[\r\n]+/g, ' ').trim()
+    if (!editorView) {
+      emit('update:modelValue', singleLineContent)
+      return
+    }
+
+    const docLength = editorView.state.doc.length
+    editorView.dispatch({
+      changes: { from: 0, to: docLength, insert: singleLineContent },
+      selection: { anchor: singleLineContent.length },
+    })
+    editorView.focus()
+    codeUpdate(singleLineContent)
+  }
+
   const focus = () => {
     if (editorView) {
       editorView.focus()
@@ -281,6 +297,7 @@
   })
   defineExpose({
     insertTextAtCursor,
+    replaceEditorContent,
     focus,
     getCursorPosition,
     getText,

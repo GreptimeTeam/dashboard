@@ -94,12 +94,20 @@ a-card.metrics-chart(:bordered="false")
   const { formatDateTime } = useDateTimeFormat()
 
   const METRICS_CHART_COLORS = chartTheme.color as string[]
+  /** Fixed height of the line/bar plot area (excluding legend). */
   const GRAPH_HEIGHT = 400
   const LEGEND_ITEM_HEIGHT = 14
   const LEGEND_ITEM_GAP = 10
+  const LEGEND_LIST_ROW_HEIGHT = LEGEND_ITEM_HEIGHT + 6
+  const LEGEND_LIST_PAGER_HEIGHT = 16
   const LEGEND_ICON_WIDTH = 14
   const LEGEND_CHAR_WIDTH = 6.5
   const LEGEND_TO_GRID_GAP = 16
+  /** Space between legend block and canvas bottom */
+  const LEGEND_BOTTOM_INSET = 12
+  /** Above this count, legend uses a single-column list at the bottom */
+  const LEGEND_LIST_THRESHOLD = 5
+  const LEGEND_LIST_MAX_VISIBLE_ROWS = 8
   const AXIS_LABEL_STYLE = { color: 'rgba(71, 52, 96, 0.45)', fontSize: 11 }
   const SPLIT_LINE_STYLE = { type: 'solid' as const, color: 'rgba(71, 52, 96, 0.06)' }
   const AXIS_LINE_STYLE = { lineStyle: { color: 'rgba(71, 52, 96, 0.12)' } }
@@ -136,10 +144,6 @@ a-card.metrics-chart(:bordered="false")
         return 'line'
     }
   }
-
-  const chartKey = computed(() => {
-    return query.value + step.value
-  })
 
   const handleDataZoom = (event: any) => {
     if (!event.batch || !event.batch[0]) return
@@ -205,6 +209,10 @@ a-card.metrics-chart(:bordered="false")
 
   const showFullSeriesName = ref(false)
 
+  const chartKey = computed(() => {
+    return `${query.value}-${step.value}-${showFullSeriesName.value}`
+  })
+
   const formatChartAxisTime = (value: number): string => {
     const range = timeRange.value as [number, number] | undefined
     if (!range || range.length !== 2) {
@@ -225,21 +233,47 @@ a-card.metrics-chart(:bordered="false")
     return formatDateTime(value, 'TimestampMillisecond', 'HH:mm:ss') ?? ''
   }
 
-  const estimateLegendAreaHeight = (seriesCount: number, avgNameLength: number, containerWidth: number) => {
-    if (seriesCount === 0) return 0
+  const estimateLegendAreaHeight = (
+    count: number,
+    avgNameLength: number,
+    containerWidth: number,
+    listLayout: boolean,
+    listMaxVisibleRows = LEGEND_LIST_MAX_VISIBLE_ROWS
+  ) => {
+    if (count === 0) return 0
+
+    if (listLayout) {
+      const visibleRows = Math.min(count, listMaxVisibleRows)
+      const pagerHeight = count > listMaxVisibleRows ? LEGEND_LIST_PAGER_HEIGHT : 0
+      return visibleRows * LEGEND_LIST_ROW_HEIGHT + pagerHeight + 8 + LEGEND_BOTTOM_INSET
+    }
+
     const maxWidth = Math.max(containerWidth * 0.92 - 24, 240)
     const itemWidth = avgNameLength * LEGEND_CHAR_WIDTH + LEGEND_ICON_WIDTH + LEGEND_ITEM_GAP
     const itemsPerRow = Math.max(1, Math.floor(maxWidth / itemWidth))
-    const rows = Math.ceil(seriesCount / itemsPerRow)
+    const rows = Math.ceil(count / itemsPerRow)
     return rows * LEGEND_ITEM_HEIGHT + Math.max(0, rows - 1) * LEGEND_ITEM_GAP + 8
   }
 
-  const legendAreaHeight = computed(() => {
-    const seriesCount = seriesData.value.length
-    const avgNameLength = showFullSeriesName.value ? 56 : 28
-    return estimateLegendAreaHeight(seriesCount, avgNameLength, chartContainerWidth.value || 900)
-  })
+  const seriesCount = computed(() => seriesData.value.length)
 
+  const useLegendListLayout = computed(() => seriesCount.value >= LEGEND_LIST_THRESHOLD)
+
+  const avgLegendNameLength = computed(() => (showFullSeriesName.value ? 56 : 28))
+
+  const listLegendVisibleRows = computed(() => Math.min(seriesCount.value, LEGEND_LIST_MAX_VISIBLE_ROWS))
+
+  const legendAreaHeight = computed(() =>
+    estimateLegendAreaHeight(
+      seriesCount.value,
+      avgLegendNameLength.value,
+      chartContainerWidth.value || 900,
+      useLegendListLayout.value,
+      LEGEND_LIST_MAX_VISIBLE_ROWS
+    )
+  )
+
+  /** Plot area fixed; legend height is additive below the grid. */
   const chartHeight = computed(() => GRAPH_HEIGHT + legendAreaHeight.value + LEGEND_TO_GRID_GAP)
   const chartOption = computed<EChartsOption>(() => {
     if (!hasData.value) return {}
@@ -263,27 +297,24 @@ a-card.metrics-chart(:bordered="false")
       fullNamesInOrder.push(labelStr ? `${metricName}{${labelStr}}` : metricName)
     })
 
-    // Precompute which label keys actually differ across series
+    // Label keys whose values differ across series (shared labels are hidden in compact mode)
     const differingKeys = (() => {
       const totalSeries = labelMapsInOrder.length
-      // collect union of all label keys across series
+      if (totalSeries <= 1) return new Set<string>()
+
       const allKeys = new Set<string>()
       labelMapsInOrder.forEach((lm) => {
         Object.keys(lm).forEach((k) => allKeys.add(k))
       })
 
       const diff = new Set<string>()
-      // for each key, collect values across all series; treat missing as a distinct sentinel
       allKeys.forEach((key) => {
         const values = new Set<string>()
         labelMapsInOrder.forEach((lm) => {
           const v = lm[key]
           values.add(v === undefined ? '__MISSING__' : String(v))
         })
-        // values.size > 1 means at least 2 series have different values for this key
-        if (totalSeries === 1 || values.size > 1) {
-          diff.add(key)
-        }
+        if (values.size > 1) diff.add(key)
       })
       return diff
     })()
@@ -349,13 +380,63 @@ a-card.metrics-chart(:bordered="false")
     })
 
     const legendNames = series.map((s) => s.name as string)
-    const useLegendScroll = legendNames.length > 14
+    const listLayout = useLegendListLayout.value
+    const listVisibleRows = listLegendVisibleRows.value
     const legendRows = estimateLegendAreaHeight(
       legendNames.length,
-      showFullSeriesName.value ? 56 : 28,
-      chartContainerWidth.value || 900
+      avgLegendNameLength.value,
+      chartContainerWidth.value || 900,
+      listLayout,
+      LEGEND_LIST_MAX_VISIBLE_ROWS
     )
     const gridBottom = legendRows + LEGEND_TO_GRID_GAP
+    const useLegendScroll =
+      (!listLayout && legendNames.length > 14) || (listLayout && legendNames.length > LEGEND_LIST_MAX_VISIBLE_ROWS)
+
+    const legendTextStyle = {
+      fontSize: 11,
+      lineHeight: LEGEND_ITEM_HEIGHT,
+      color: 'rgba(71, 52, 96, 0.65)',
+    }
+
+    const listLegendWidth = Math.min(
+      (chartContainerWidth.value || 900) * 0.92,
+      Math.max(...legendNames.map((name) => name.length * LEGEND_CHAR_WIDTH + LEGEND_ICON_WIDTH + 20), 120)
+    )
+
+    const listLegendBlockHeight =
+      listVisibleRows * LEGEND_LIST_ROW_HEIGHT + (useLegendScroll ? LEGEND_LIST_PAGER_HEIGHT : 0)
+
+    const legendOption = listLayout
+      ? {
+          type: useLegendScroll ? 'scroll' : 'plain',
+          orient: 'vertical',
+          left: 'center',
+          bottom: LEGEND_BOTTOM_INSET,
+          width: listLegendWidth,
+          height: Math.max(listLegendBlockHeight, LEGEND_LIST_ROW_HEIGHT),
+          itemWidth: LEGEND_ICON_WIDTH,
+          itemHeight: LEGEND_ITEM_HEIGHT,
+          itemGap: 6,
+          textStyle: legendTextStyle,
+          ...(useLegendScroll
+            ? {
+                pageIconSize: 10,
+                pageTextStyle: { fontSize: 10, color: 'rgba(71, 52, 96, 0.45)' },
+              }
+            : {}),
+        }
+      : {
+          type: useLegendScroll ? 'scroll' : 'plain',
+          orient: 'horizontal',
+          bottom: 0,
+          left: 'center',
+          width: '92%',
+          itemWidth: LEGEND_ICON_WIDTH,
+          itemHeight: 10,
+          itemGap: LEGEND_ITEM_GAP,
+          textStyle: legendTextStyle,
+        }
 
     return {
       color: METRICS_CHART_COLORS,
@@ -392,14 +473,16 @@ a-card.metrics-chart(:bordered="false")
             const {
               color,
               value: [, value],
-              seriesName,
+              seriesIndex,
             } = param
             if (value === null || value === undefined) return
+
+            const tooltipName = fullNamesInOrder[seriesIndex] ?? param.seriesName
 
             content += `
               <div style="margin: 2px 0; font-size: 12px; line-height: 1.4;">
                 <span style="display: inline-block; width: 8px; height: 8px; background: ${color}; border-radius: 50%; margin-right: 6px;"></span>
-                <span>${seriesName}:</span>
+                <span>${tooltipName}:</span>
                 <span style="float: right; margin-left: 16px; font-variant-numeric: tabular-nums;">${formatMetricValue(
                   Number(value)
                 )}</span>
@@ -410,21 +493,7 @@ a-card.metrics-chart(:bordered="false")
           return content
         },
       },
-      legend: {
-        type: useLegendScroll ? 'scroll' : 'plain',
-        orient: 'horizontal',
-        bottom: 0,
-        left: 'center',
-        width: '92%',
-        itemWidth: LEGEND_ICON_WIDTH,
-        itemHeight: 10,
-        itemGap: LEGEND_ITEM_GAP,
-        textStyle: {
-          fontSize: 11,
-          lineHeight: LEGEND_ITEM_HEIGHT,
-          color: 'rgba(71, 52, 96, 0.65)',
-        },
-      },
+      legend: legendOption,
       grid: {
         left: 0,
         right: 0,
@@ -513,6 +582,33 @@ a-card.metrics-chart(:bordered="false")
   }
 
   .metrics-chart {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+
+    :deep(.arco-card-body) {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      min-height: 0;
+      padding: 0;
+    }
+
+    .section-title {
+      flex: 0 0 auto;
+    }
+
+    .chart-section {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+    }
+
+    .chart-container {
+      flex: 0 0 auto;
+    }
+
     :deep(.chart-type-toggle.arco-radio-group-button) {
       box-sizing: border-box;
       height: var(--gpt-control-height-sm);
@@ -582,7 +678,8 @@ a-card.metrics-chart(:bordered="false")
     }
 
     .chart-container {
-      padding: 8px var(--gpt-page-padding-x) 4px;
+      padding: 8px var(--gpt-page-padding-x) 12px;
+      box-sizing: border-box;
     }
 
     .empty-state {

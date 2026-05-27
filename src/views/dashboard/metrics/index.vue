@@ -325,7 +325,9 @@ a-layout.new-layout
 
   const handleInsertText = (text: string) => {
     if (promqlEditorRef.value) {
-      promqlEditorRef.value.insertTextAtCursor(text)
+      promqlEditorRef.value.replaceEditorContent(text)
+    } else {
+      currentQuery.value = text.replace(/[\r\n]+/g, ' ').trim()
     }
   }
 
@@ -336,7 +338,7 @@ a-layout.new-layout
     })
   })
 
-  watch(activeTab, (newTab) => {
+  watch(activeTab, () => {
     setTimeout(() => {
       updateQueryParams()
     }, 200)
@@ -386,8 +388,31 @@ a-layout.new-layout
   }
 
   .layout-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
     background: var(--color-bg-container);
-    overflow-y: auto;
+  }
+
+  .layout-content > :deep(.arco-card) {
+    flex-shrink: 0;
+  }
+
+  .metrics-result-card {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+
+    :deep(.arco-card-body) {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+    }
   }
 
   .section-title {
@@ -444,7 +469,24 @@ a-layout.new-layout
   }
 
   .metrics-result-content {
+    flex: 1;
     min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .metrics-graph-view {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .metrics-table-view {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
   }
 
   .empty-state {
