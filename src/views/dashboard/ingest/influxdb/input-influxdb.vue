@@ -12,7 +12,7 @@ BaseInput(:config="config")
       a-button(type="outline" size="medium" @click="toggleDoc")
         template(#icon)
           svg.icon-16.brand-color(v-if="!docVisible")
-            use(href="#document")
+            use(href="#details")
           icon-close.icon-16(v-else)
   template(#doc-content)
     .markdown-container.ingest

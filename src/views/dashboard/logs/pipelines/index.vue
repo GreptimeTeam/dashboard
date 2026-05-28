@@ -27,7 +27,7 @@ a-spin(style="width: 100%; height: 100%")
             )
               template(#icon)
                 svg.icon-15
-                  use(href="#document")
+                  use(href="#details")
               span.gpt-sidebar-menu-text {{ file.name }}.yaml
     a-layout-content.layout-content
       PipeFileView(

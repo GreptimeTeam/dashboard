@@ -37,7 +37,7 @@ a-layout.detail-layout.new-layout(:class="{ 'is-sidebar-resizing': isSidebarResi
               )
                 template(#icon)
                   svg.icon-15
-                    use(href="#document")
+                    use(href="#details")
                 span.gpt-sidebar-menu-text {{ item.name }}
                 a-tooltip.menu-item-delete.gpt-sidebar-menu-action(
                   v-if="item.id === selectedId"
