@@ -200,7 +200,7 @@ export default function Dashboard(props: DashboardProps = {}) {
             'fontWeight': 600,
             'letterSpacing': '-0.02em',
             'fontFeatureSettings': "'tnum' 1",
-            'color': DASHBOARD_TOKENS.colors.textPrimary,
+            'color': `${DASHBOARD_TOKENS.colors.textPrimary} !important`,
             'display': 'flex',
             'alignItems': 'baseline',
             'justifyContent': 'center',
@@ -222,6 +222,11 @@ export default function Dashboard(props: DashboardProps = {}) {
               marginLeft: '4px',
               letterSpacing: 0,
             },
+          },
+          h2: {
+            color: `${DASHBOARD_TOKENS.colors.textPrimary} !important`,
+            fontWeight: 600,
+            letterSpacing: '-0.02em',
           },
           h6: {
             'fontSize': '14px',
@@ -421,6 +426,10 @@ export default function Dashboard(props: DashboardProps = {}) {
   const chartsTheme = generateChartsTheme(muiTheme, {
     legend: {
       backgroundColor: 'transparent',
+    },
+    thresholds: {
+      defaultColor: DASHBOARD_TOKENS.colors.normal,
+      palette: [DASHBOARD_TOKENS.colors.warning, DASHBOARD_TOKENS.colors.warning, '#ef4444'],
     },
     noDataOption: {
       title: {

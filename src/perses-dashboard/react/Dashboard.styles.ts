@@ -27,6 +27,10 @@ const DASHBOARD_TOKENS = {
     // --gpt-bg-panel
     paper: '#ffffff',
     noData: '#b0a8c4',
+    // --gpt-accent-ts (normal/healthy)
+    normal: '#00bbb2',
+    // --gpt-color-warning
+    warning: '#FDD254',
   },
   shadows: {
     soft: '0 1px 2px 0 rgba(71, 52, 96, 0.06)',
