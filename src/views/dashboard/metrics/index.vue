@@ -57,28 +57,29 @@ a-layout.new-layout
               )
 
           .table-section
-            a-table(
+            DataTable(
               :data="tableData"
+              :columns="tableColumns"
               :loading="queryLoading"
+              :show-context-menu="false"
+              :enable-cell-expand="false"
+              :enable-cell-copy="false"
               :pagination="false"
-              :scroll="{ x: 800 }"
               :bordered="false"
               :show-header="false"
+              :scroll="{ x: 800 }"
             )
-              template(#columns)
-                a-table-column(title="Series" data-index="series" :width="600")
-                  template(#cell="{ record }")
-                    .series-cell
-                      | {{ record.metricName }}{
-                      template(v-if="record.labels && record.labels.length > 0")
-                        template(v-for="(label, index) in record.labels" :key="index")
-                          strong {{ label.key }}
-                          | ="{{ label.value }}"
-                          span(v-if="index < record.labels.length - 1") ,
-                      | }
-                a-table-column(title="Values" data-index="values" :width="200")
-                  template(#cell="{ record }")
-                    .values-cell {{ record.values }}
+              template(#column-series="{ record }")
+                .series-cell
+                  | {{ record.metricName }}{
+                  template(v-if="record.labels && record.labels.length > 0")
+                    template(v-for="(label, index) in record.labels" :key="index")
+                      strong {{ label.key }}
+                      | ="{{ label.value }}"
+                      span(v-if="index < record.labels.length - 1") ,
+                  | }
+              template(#column-values="{ record }")
+                .values-cell {{ record.values }}
 
         .metrics-graph-view(v-show="activeTab === 'graph'")
           MetricsChart
@@ -94,6 +95,7 @@ a-layout.new-layout
   import { Message } from '@arco-design/web-vue'
   import { storeToRefs } from 'pinia'
   import { useAppStore } from '@/store'
+  import DataTable from '@/components/data-table/index.vue'
   import type { MetricsContext } from './types'
   import MetricSidebar from './components/metric-sidebar.vue'
   import PromQLEditor from './components/prom-ql-editor.vue'
@@ -283,6 +285,11 @@ a-layout.new-layout
 
     return rows
   })
+
+  const tableColumns = [
+    { name: 'series', data_type: 'string', title: 'Series', width: 600 },
+    { name: 'values', data_type: 'string', title: 'Values', width: 200 },
+  ]
 
   const promqlEditorRef = ref()
 
@@ -486,13 +493,12 @@ a-layout.new-layout
   .metrics-table-view {
     flex: 1;
     min-height: 0;
-    overflow: auto;
+    display: flex;
+    flex-direction: column;
   }
 
-  .empty-state {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 200px;
+  .table-section {
+    flex: 1;
+    min-height: 0;
   }
 </style>
