@@ -39,10 +39,16 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
           a-dropdown.locale-dropdown(trigger="click" position="right" @select="onLocaleSelect")
             a-tooltip(:content="localeTooltip")
               a-button.locale-btn(type="text" :class="{ 'locale-btn--expanded': !navbarCollapsed }")
-                span.locale-label {{ localeLabel }}
+                template(#icon)
+                  svg.icon-16
+                    use(href="#Language")
             template(#content)
-              a-doption(value="en-US") English
-              a-doption(value="zh-CN") 中文
+              a-doption(value="en-US")
+                span English
+                span.locale-current(v-if="currentLocale === 'en-US'") ✓
+              a-doption(value="zh-CN")
+                span 中文
+                span.locale-current(v-if="currentLocale === 'zh-CN'") ✓
           a-dropdown.menu-dropdown(trigger="hover" position="right" :popup-max-height="false")
             a-button.menu-button(type="text")
               template(#icon)
@@ -85,7 +91,6 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
   const { newsList, isLoadingNews } = useNews()
   const { currentLocale, onChangeLocale } = useLocale()
 
-  const localeLabel = computed(() => (currentLocale.value === 'zh-CN' ? '中文' : 'EN'))
   const localeTooltip = computed(() => (currentLocale.value === 'zh-CN' ? 'Language / 中文' : 'Language / English'))
 
   const onLocaleSelect = (value: string) => {
@@ -269,6 +274,14 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
   :deep(.navbar-menu .arco-menu-item .arco-menu-icon svg) {
     color: var(--gpt-text-secondary);
   }
+  /* Normalize icon alpha in navbar menu.
+     Some sprite symbols include built-in opacity/stroke-opacity values. */
+  :deep(.navbar-menu .arco-menu-item .arco-menu-icon svg),
+  :deep(.navbar-menu .arco-menu-item .arco-menu-icon svg *) {
+    opacity: 1 !important;
+    fill-opacity: 1 !important;
+    stroke-opacity: 1 !important;
+  }
 
   :deep(.navbar-menu .arco-menu-item:hover) {
     color: var(--gpt-brand-900);
@@ -380,16 +393,6 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
       padding: 0 6px;
     }
 
-    .locale-btn--expanded .locale-label {
-      font-size: 12px;
-    }
-
-    .locale-label {
-      font-size: 11px;
-      font-weight: 600;
-      line-height: 1;
-    }
-
     .arco-btn-text[type='button'] {
       color: var(--gpt-text-secondary);
     }
@@ -403,14 +406,14 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
 
     .footer-start svg,
     .footer-end svg {
-      color: var(--gpt-text-secondary);
+      color: rgb(139, 123, 168);
       fill: currentColor;
     }
 
     .arco-btn-text[type='button']:hover svg,
     .arco-btn-text.hover svg,
     .arco-btn-text.arco-dropdown-open svg {
-      color: var(--gpt-brand-900);
+      color: rgb(139, 123, 168);
     }
   }
 
@@ -425,9 +428,25 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
   .rotate-180 {
     transform: rotate(180deg);
   }
+
+  .locale-current {
+    margin-left: 4px;
+    color: var(--gpt-text-muted);
+    font-size: 11px;
+  }
 </style>
 
 <style lang="less">
+  /* SVG sprite symbols referenced by <use> keep their own opacity attributes.
+     Force symbol internals to full opacity to avoid washed-out navbar icons. */
+  symbol [opacity],
+  symbol [fill-opacity],
+  symbol [stroke-opacity] {
+    opacity: 1 !important;
+    fill-opacity: 1 !important;
+    stroke-opacity: 1 !important;
+  }
+
   a.arco-link.navbar-dropdown-link:not(.arco-btn):not(.arco-menu-item):not(.arco-menu-inline-header) {
     color: var(--small-font-color);
 
