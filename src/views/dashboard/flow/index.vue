@@ -43,16 +43,16 @@
             span.gpt-status-pill__dot
             | {{ record.status }}
           span(v-else) —
-        template(#column-created_time="{ record }")
-          .flow-time-cell
+        template(#column-created_time="{ renderedValue, changeTsView }")
+          .flow-time-cell(@click="changeTsView")
             svg.icon-12.flow-time-icon
               use(href="#time")
-            span {{ record.created_time || '—' }}
-        template(#column-updated_time="{ record }")
-          .flow-time-cell
+            span {{ renderedValue || '—' }}
+        template(#column-updated_time="{ renderedValue, changeTsView }")
+          .flow-time-cell(@click="changeTsView")
             svg.icon-12.flow-time-icon
               use(href="#time")
-            span {{ record.updated_time || '—' }}
+            span {{ renderedValue || '—' }}
         template(#column-operate="{ record }")
           a-space(:size="8")
             a-button(size="small" @click="showEdit(record)") Edit
@@ -263,6 +263,7 @@
     gap: 6px;
     min-width: 0;
     color: var(--gpt-text-primary);
+    cursor: pointer;
   }
 
   .flow-time-icon {
