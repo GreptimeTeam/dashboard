@@ -381,11 +381,16 @@
 
 .gpt-sidebar-header-card {
   > .arco-card-header {
-    height: 47px;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    height: var(--gpt-size-region-bar);
     padding: var(--gpt-page-header-padding);
     border-bottom: 1px solid var(--gpt-border-default);
 
     > .arco-card-header-title {
+      flex: 1;
+      min-width: 0;
       gap: 20px;
       justify-content: space-between;
       color: var(--gpt-text-primary);
@@ -395,7 +400,7 @@
   }
 
   > .arco-card-body {
-    height: calc(100% - 47px);
+    height: calc(100% - var(--gpt-size-region-bar));
   }
 }
 
@@ -415,7 +420,17 @@
   }
 
   > .layout-content > .arco-layout-header {
-    flex: 0 0 auto;
+    flex: 0 0 var(--gpt-size-region-bar);
+    height: var(--gpt-size-region-bar);
+    min-height: var(--gpt-size-region-bar);
+    padding: 0;
+    line-height: normal;
+    background: var(--gpt-bg-panel);
+
+    .gpt-content-toolbar {
+      height: 100%;
+      min-height: 0;
+    }
   }
 
   > .layout-content > .main-content {

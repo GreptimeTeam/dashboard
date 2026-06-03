@@ -1,7 +1,7 @@
 <template lang="pug">
 a-layout.dashboard-two-column-layout.dashboard-right-fill-layout
   a-layout-sider(:resize-directions="['right']" :width="228" :class="hideSidebar ? 'hide-sider' : ''")
-    a-card.gpt-page-sidebar(:title="$t('menu.dashboard.ingest')" :bordered="false")
+    a-card.gpt-page-sidebar.gpt-sidebar-header-card(:title="$t('menu.dashboard.ingest')" :bordered="false")
       a-scrollbar.gpt-vertical-scrollbar
         a-menu.gpt-sidebar-menu(mode="vertical" :selected-keys="[activeTab]" :collapsed="false")
           a-menu-item-group.gpt-sidebar-menu-category(v-for="item in menu" :key="item.name")

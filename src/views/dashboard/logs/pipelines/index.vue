@@ -2,7 +2,7 @@
 a-spin(style="width: 100%; height: 100%")
   a-layout.detail-layout.new-layout.logs-pipelines-layout
     a-layout-sider(:resize-directions="['right']" :width="228")
-      a-card.gpt-page-sidebar(:bordered="false")
+      a-card.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
         template(#title)
           a-space.space-between(fill style="width: 100%")
             | {{ $t('menu.dashboard.logPipeline') }}

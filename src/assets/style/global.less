@@ -203,8 +203,9 @@
 
   --gpt-page-padding-x: 16px;
   --gpt-page-padding-y: 16px;
-  --gpt-page-header-padding: 8px var(--gpt-page-padding-x);
-  --gpt-toolbar-padding: 8px var(--gpt-page-padding-x);
+  --gpt-toolbar-padding-y: 8px;
+  --gpt-page-header-padding: var(--gpt-toolbar-padding-y) var(--gpt-page-padding-x);
+  --gpt-toolbar-padding: var(--gpt-toolbar-padding-y) var(--gpt-page-padding-x);
   --gpt-section-padding-y: 8px;
 
   --gpt-control-height-sm: 26px;
@@ -213,7 +214,8 @@
   --gpt-size-navbar: 52px;
   --gpt-size-table-sidebar: 228px;
   --gpt-size-toolbar: 38px;
-  --gpt-size-region-bar: 47px;
+  /* md control + vertical toolbar padding + bottom border */
+  --gpt-size-region-bar: calc(var(--gpt-control-height-md) + var(--gpt-toolbar-padding-y) * 2 + 1px);
   --gpt-radius-sm: 4px;
   --gpt-radius-md: 8px;
   --gpt-radius-lg: 12px;
@@ -364,7 +366,7 @@ body {
     100vh - var(--tables-header-height) - var(--footer-height) - var(--tables-layout-padding) -
       var(--tables-layout-padding)
   );
-  --layout-header-height: 48px;
+  --layout-header-height: var(--gpt-size-region-bar);
 }
 
 code,

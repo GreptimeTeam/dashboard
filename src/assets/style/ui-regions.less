@@ -24,7 +24,9 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
+  box-sizing: border-box;
   width: 100%;
+  height: var(--gpt-size-region-bar);
   min-height: var(--gpt-size-region-bar);
   padding: var(--gpt-toolbar-padding);
   gap: var(--gpt-gap-md);
@@ -383,10 +385,20 @@
   }
 
   .gpt-query-strip {
+    display: flex;
     flex-shrink: 0;
-    padding: var(--gpt-toolbar-padding);
+    align-items: center;
+    box-sizing: border-box;
+    height: var(--gpt-size-region-bar);
+    min-height: var(--gpt-size-region-bar);
+    padding: 0 var(--gpt-page-padding-x);
     background: var(--gpt-bg-panel);
     border-bottom: 1px solid var(--gpt-border-default);
+
+    > .promql-editor-container {
+      flex: 1;
+      min-width: 0;
+    }
   }
 
   .gpt-query-editor-inset {
