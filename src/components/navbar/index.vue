@@ -270,17 +270,10 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
     align-items: center;
   }
 
-  :deep(.navbar-menu .arco-menu-item .arco-menu-icon),
-  :deep(.navbar-menu .arco-menu-item .arco-menu-icon svg) {
-    color: var(--gpt-text-secondary);
-  }
-  /* Normalize icon alpha in navbar menu.
-     Some sprite symbols include built-in opacity/stroke-opacity values. */
-  :deep(.navbar-menu .arco-menu-item .arco-menu-icon svg),
-  :deep(.navbar-menu .arco-menu-item .arco-menu-icon svg *) {
-    opacity: 1 !important;
-    fill-opacity: 1 !important;
-    stroke-opacity: 1 !important;
+  /* Override global .icon-* { color: --gpt-icon-color } so icons follow menu item state. */
+  :deep(.navbar-menu .arco-menu-item .arco-menu-icon svg.icon-18) {
+    color: currentColor;
+    fill: currentColor;
   }
 
   :deep(.navbar-menu .arco-menu-item:hover) {
@@ -288,24 +281,10 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
     background: var(--gpt-nav-active-bg);
   }
 
-  :deep(.navbar-menu .arco-menu-item:hover .arco-menu-icon),
-  :deep(.navbar-menu .arco-menu-item:hover .arco-menu-icon svg) {
-    color: var(--gpt-brand-900);
-  }
-
   :deep(.navbar-menu .arco-menu-item.arco-menu-selected) {
     color: var(--gpt-main-purple);
     font-weight: 600;
     background: var(--gpt-nav-active-bg);
-  }
-
-  :deep(.navbar-menu .arco-menu-item.arco-menu-selected .arco-menu-icon),
-  :deep(.navbar-menu .arco-menu-item.arco-menu-selected .arco-menu-icon svg) {
-    color: var(--gpt-main-purple);
-  }
-
-  :deep(.navbar-menu .arco-menu-item.arco-menu-selected .arco-menu-icon svg) {
-    filter: drop-shadow(0 0 0 currentColor);
   }
 
   :deep(.navbar-menu .arco-menu-item.arco-menu-selected::before) {
@@ -404,16 +383,15 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
       background: var(--gpt-nav-active-bg);
     }
 
-    .footer-start svg,
-    .footer-end svg {
-      color: rgb(139, 123, 168);
+    .footer-start svg.icon-16,
+    .footer-end svg.icon-16 {
+      color: currentColor;
       fill: currentColor;
     }
 
-    .arco-btn-text[type='button']:hover svg,
-    .arco-btn-text.hover svg,
-    .arco-btn-text.arco-dropdown-open svg {
-      color: rgb(139, 123, 168);
+    /* #Language is solid fill; match settings/Icon13 stroke-opacity (.45). */
+    .footer-start svg.icon-16:has(use[href='#Language']) * {
+      fill-opacity: 0.45;
     }
   }
 
@@ -437,16 +415,6 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
 </style>
 
 <style lang="less">
-  /* SVG sprite symbols referenced by <use> keep their own opacity attributes.
-     Force symbol internals to full opacity to avoid washed-out navbar icons. */
-  symbol [opacity],
-  symbol [fill-opacity],
-  symbol [stroke-opacity] {
-    opacity: 1 !important;
-    fill-opacity: 1 !important;
-    stroke-opacity: 1 !important;
-  }
-
   a.arco-link.navbar-dropdown-link:not(.arco-btn):not(.arco-menu-item):not(.arco-menu-inline-header) {
     color: var(--small-font-color);
 
