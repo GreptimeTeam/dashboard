@@ -166,7 +166,7 @@ a-modal(
     padding: 12px;
     margin: 0;
     border: 1px solid var(--color-border);
-    border-radius: 4px;
+    border-radius: var(--gpt-radius-sm);
     background-color: var(--color-fill-1);
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
     font-size: 13px;

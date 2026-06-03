@@ -251,7 +251,7 @@ a-layout-content.main-content
   .tip {
     font-family: 'Gilroy';
     font-weight: 800;
-    font-size: 16px;
+    font-size: var(--gpt-font-xl);
     color: var(--main-font-color);
     line-height: 28px;
   }
@@ -276,7 +276,7 @@ a-layout-content.main-content
   .error {
     :deep(.arco-alert) {
       padding: 7px 16px;
-      border-radius: 4px;
+      border-radius: var(--gpt-radius-sm);
       background: var(--danger-bg-color);
       .arco-typography {
         color: var(--main-font-color);
@@ -309,7 +309,7 @@ a-layout-content.main-content
       height: auto;
       padding: 15px 30px 0 30px;
       .arco-modal-close-btn {
-        font-size: 16px;
+        font-size: var(--gpt-font-xl);
       }
     }
     .arco-modal-body {

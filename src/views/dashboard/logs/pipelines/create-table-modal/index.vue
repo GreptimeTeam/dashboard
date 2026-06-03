@@ -13,7 +13,7 @@ a-modal(
 
   .create-table-content
     a-space(
-      style="background-color: var(--color-fill-2); padding: 16px; border-radius: 4px; width: 100%; margin-bottom: 16px"
+      style="background-color: var(--color-fill-2); padding: 16px; border-radius: var(--gpt-radius-sm); width: 100%; margin-bottom: 16px"
     )
       span.label Table Name
       a-input(v-model="tableName" placeholder="Enter table name" style="width: 200px; margin-right: 8px")
@@ -31,7 +31,7 @@ a-modal(
           LangEditor(
             v-model="formData.createTableSQL"
             language="sql"
-            style="width: 100%; height: 300px; border: 1px solid var(--color-border); border-radius: 4px; overflow: hidden"
+            style="width: 100%; height: 300px; border: 1px solid var(--color-border); border-radius: var(--gpt-radius-sm); overflow: hidden"
             placeholder="CREATE TABLE SQL"
           )
 </template>

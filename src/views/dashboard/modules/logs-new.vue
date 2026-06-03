@@ -119,7 +119,7 @@ a-card.log(:bordered="false")
 
   .total-time {
     background: var(--th-bg-color);
-    border-radius: 4px;
+    border-radius: var(--gpt-radius-sm);
     padding: 0 4px;
     min-width: max-content;
   }
@@ -142,7 +142,7 @@ a-card.log(:bordered="false")
     .arco-list-item {
       border: none;
       background: var(--danger-bg-color);
-      border-radius: 4px;
+      border-radius: var(--gpt-radius-sm);
     }
   }
 

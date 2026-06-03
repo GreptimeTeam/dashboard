@@ -570,7 +570,7 @@ a-modal(
 
   :deep(.run-all-btn) .run-all-play-icon {
     color: var(--gpt-main-dark);
-    font-size: 16px;
+    font-size: var(--gpt-font-xl);
   }
 </style>
 

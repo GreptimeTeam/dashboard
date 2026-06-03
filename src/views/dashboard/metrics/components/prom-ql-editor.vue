@@ -332,10 +332,10 @@
     height: 34px;
     overflow: visible;
     width: 100%;
-    background: #fff;
+    background: var(--gpt-bg-panel);
     color: var(--color-text-1);
     border: 1px solid var(--gpt-editor-border);
-    border-radius: 4px 0 0 4px;
+    border-radius: var(--gpt-radius-sm) 0 0 var(--gpt-radius-sm);
     transition: all 0.2s ease-in-out;
   }
 
@@ -349,7 +349,7 @@
   :deep(.cm-scroller) {
     overflow: visible;
     font-family: var(--vp-font-family-base);
-    font-size: 14px;
+    font-size: var(--gpt-font-lg);
     font-weight: 400;
     line-height: 1.5;
   }
@@ -387,10 +387,10 @@
     z-index: 1001;
   }
   :deep(.cm-tooltip.cm-tooltip-autocomplete) {
-    background-color: #f8f8f8;
-    border: 1px solid rgba(52, 79, 113, 0.2);
-    border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    background-color: var(--gpt-bg-surface);
+    border: 1px solid var(--gpt-border-default);
+    border-radius: var(--gpt-radius-sm);
+    box-shadow: 0 2px 8px var(--box-shadow-color);
 
     & > ul {
       max-height: 350px;
@@ -404,14 +404,14 @@
     & > ul > li {
       padding: 8px 12px;
       cursor: pointer;
-      border-bottom: 1px solid rgba(52, 79, 113, 0.1);
+      border-bottom: 1px solid var(--gpt-border-subtle);
 
       &:hover {
-        background-color: #ddd;
+        background-color: var(--gpt-bg-header);
       }
 
       &[aria-selected] {
-        background-color: #d6ebff;
+        background-color: var(--gpt-nav-active-bg);
         color: unset;
       }
 
@@ -424,10 +424,10 @@
   }
 
   :deep(.cm-tooltip.cm-completionInfo) {
-    background-color: #d6ebff;
-    border: 1px solid rgba(52, 79, 113, 0.2);
-    border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    background-color: var(--gpt-nav-active-bg);
+    border: 1px solid var(--gpt-border-default);
+    border-radius: var(--gpt-radius-sm);
+    box-shadow: 0 2px 8px var(--box-shadow-color);
     margin-top: -11px;
     padding: 12px;
     font-family: 'Open Sans', 'Lucida Sans Unicode', 'Lucida Grande', sans-serif;
@@ -442,18 +442,18 @@
     line-height: 1;
     margin-right: 10px;
     vertical-align: top;
-    color: #007acc;
+    color: var(--gpt-main-purple);
     opacity: 1;
   }
 
   :deep(.cm-completionMatchedText) {
-    color: #0066bf;
+    color: var(--gpt-brand-700);
     text-decoration: none;
     font-weight: bold;
   }
   :deep(.cm-completionDetail) {
     float: right;
-    color: #999;
+    color: var(--gpt-text-muted);
     font-size: 12px;
   }
 </style>

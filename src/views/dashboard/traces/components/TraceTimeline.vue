@@ -253,7 +253,7 @@ a-spin.spin-block(:loading="loading")
     align-items: center;
     gap: 4px;
     padding: 2px 6px;
-    border-radius: 4px;
+    border-radius: var(--gpt-radius-sm);
     cursor: pointer;
     transition: all 0.2s;
     font-size: 11px;
@@ -333,7 +333,7 @@ a-spin.spin-block(:loading="loading")
       flex: 1;
       position: relative;
       height: 24px;
-      border-radius: 4px;
+      border-radius: var(--gpt-radius-sm);
 
       .time-bar-container {
         position: absolute;
@@ -368,7 +368,7 @@ a-spin.spin-block(:loading="loading")
 
   :deep(.arco-tree-node-content) {
     padding: 4px 8px;
-    border-radius: 4px;
+    border-radius: var(--gpt-radius-sm);
     transition: background-color 0.2s;
 
     &:hover {

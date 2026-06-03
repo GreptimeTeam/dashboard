@@ -238,11 +238,9 @@ a-layout.new-layout(:class="{ 'query-layout--focus': focusMode }")
     display: flex;
     align-items: center;
     justify-content: center;
-    background: transparent;
 
     :deep(.arco-empty) {
       padding: 0;
-      background: transparent;
     }
 
     :deep(.arco-empty-image) {

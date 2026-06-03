@@ -444,7 +444,7 @@ a-layout.new-layout
     position: relative;
   }
   :deep(.arco-table-th) {
-    background-color: #fff;
+    background-color: var(--gpt-bg-panel);
   }
 
   .table-controls {

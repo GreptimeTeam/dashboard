@@ -78,7 +78,7 @@
 
     &:hover {
       color: var(--gpt-brand-900);
-      background: rgba(71, 52, 96, 0.08);
+      background: var(--list-hover-color);
     }
   }
 </style>

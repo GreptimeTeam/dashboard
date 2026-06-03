@@ -214,7 +214,7 @@ a-space(v-if="pages.length")
   // 时间段按钮样式优化
   :deep(.arco-btn-text) {
     padding: 4px 8px;
-    border-radius: 4px;
+    border-radius: var(--gpt-radius-sm);
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
     font-size: 12px;
     min-height: 24px;

@@ -45,7 +45,7 @@
     display: flex;
     gap: 16px;
     background-color: var(--card-bg-color);
-    border-radius: 4px;
+    border-radius: var(--gpt-radius-sm);
     padding: 4px 8px;
     box-shadow: 0 2px 5px var(--box-shadow-color);
 

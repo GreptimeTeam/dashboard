@@ -388,7 +388,7 @@
       bottom: 10px;
       right: 10px;
       background-color: var(--card-bg-color);
-      border-radius: 4px;
+      border-radius: var(--gpt-radius-sm);
       padding: 4px;
       box-shadow: 0 2px 5px var(--box-shadow-color);
       z-index: 10;
@@ -420,7 +420,7 @@
     min-width: 200px;
     background-color: var(--card-bg-color);
     border: 1px solid var(--border-color);
-    border-radius: 4px;
+    border-radius: var(--gpt-radius-sm);
     padding: 8px;
     box-shadow: 0 2px 5px var(--box-shadow-color);
     display: flex;

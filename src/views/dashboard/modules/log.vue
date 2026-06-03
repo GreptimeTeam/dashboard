@@ -78,7 +78,7 @@ a-list-item.smaller-divider
   .popup {
     color: var(--small-font-color);
     border: 0;
-    border-radius: 4px;
+    border-radius: var(--gpt-radius-sm);
     font-size: 12px;
     font-family: var(--font-mono);
     white-space: pre-wrap;
@@ -93,7 +93,7 @@ a-list-item.smaller-divider
 
   .total-time {
     background: var(--th-bg-color);
-    border-radius: 4px;
+    border-radius: var(--gpt-radius-sm);
     padding: 0 4px;
     min-width: max-content;
   }

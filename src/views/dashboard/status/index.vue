@@ -119,8 +119,6 @@ a-layout.status-page.new-layout
   .status-page-content {
     display: flex;
     justify-content: center;
-    padding: 0;
-    background: transparent;
   }
 
   .status-build-card {
@@ -129,17 +127,13 @@ a-layout.status-page.new-layout
     border: 1px solid var(--gpt-border-default);
     border-radius: var(--gpt-radius-md);
     background: var(--gpt-bg-panel);
-    box-shadow: 0 1px 4px rgba(71, 52, 96, 0.06);
+    box-shadow: var(--gpt-shadow-sm);
 
     :deep(.arco-card-header) {
       min-height: 47px;
       padding: var(--gpt-toolbar-padding);
       background: var(--gpt-bg-header);
       border-bottom: 1px solid var(--gpt-border-default);
-    }
-
-    :deep(.arco-card-body) {
-      padding: 0;
     }
 
     :deep(.arco-card-header-title) {

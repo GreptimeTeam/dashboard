@@ -592,7 +592,6 @@ a-card.metrics-chart(:bordered="false")
       flex: 1;
       flex-direction: column;
       min-height: 0;
-      padding: 0;
     }
 
     .section-title {
@@ -610,7 +609,6 @@ a-card.metrics-chart(:bordered="false")
     }
 
     :deep(.chart-type-toggle.arco-radio-group-button) {
-      box-sizing: border-box;
       height: var(--gpt-control-height-sm);
       padding: 0;
       overflow: visible;
@@ -622,13 +620,11 @@ a-card.metrics-chart(:bordered="false")
       .arco-radio-button {
         position: relative;
         z-index: 0;
-        box-sizing: border-box;
         height: 100%;
         margin: 0;
         border: none;
         border-radius: var(--gpt-radius-sm);
         color: var(--gpt-text-secondary);
-        background: transparent;
 
         &::before {
           display: none;
@@ -647,7 +643,6 @@ a-card.metrics-chart(:bordered="false")
       }
 
       .arco-radio-button-content {
-        box-sizing: border-box;
         height: 100%;
         display: flex;
         align-items: center;
@@ -679,7 +674,6 @@ a-card.metrics-chart(:bordered="false")
 
     .chart-container {
       padding: 8px var(--gpt-page-padding-x) 12px;
-      box-sizing: border-box;
     }
 
     .empty-state {
@@ -695,16 +689,6 @@ a-card.metrics-chart(:bordered="false")
       }
     }
 
-    :deep(.echarts-toolbox) {
-      display: none !important;
-      visibility: hidden !important;
-      opacity: 0 !important;
-      pointer-events: none !important;
-    }
-
-    :deep([class*='toolbox']) {
-      display: none !important;
-    }
     :deep(.echarts-toolbox),
     :deep(.ec-toolbox),
     :deep([class*='ec-toolbox']),
@@ -717,9 +701,5 @@ a-card.metrics-chart(:bordered="false")
       height: 0 !important;
       overflow: hidden !important;
     }
-  }
-  .series-count {
-    text-align: center;
-    color: var(--color-text-secondary);
   }
 </style>

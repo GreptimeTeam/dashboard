@@ -662,9 +662,6 @@ a-dropdown#td-context(
   :deep(.arco-table-selection-radio-col) {
     display: none;
   }
-  #log-table-container {
-    position: relative;
-  }
   :deep(.arco-drawer-container) {
     left: auto;
     width: 800px;
@@ -712,10 +709,6 @@ a-dropdown#td-context(
   }
   .cell-copy-button:hover {
     transform: scale(1.15);
-  }
-  .icon-14 {
-    width: 14px;
-    height: 14px;
   }
   .builder-type .clickable {
     cursor: pointer;
@@ -791,22 +784,6 @@ a-dropdown#td-context(
   }
   :deep(.arco-table-size-medium .arco-table-cell) {
     padding: 6px 10px;
-  }
-  .entity-field {
-    margin-right: 10px;
-  }
-
-  #td-context {
-    position: absolute;
-    z-index: 999999;
-  }
-  .td-config-icon {
-    margin-left: 3px;
-    cursor: pointer;
-    visibility: hidden;
-    width: 12px;
-    height: 12px;
-    color: var(--color-primary);
   }
   .multiple_column {
     :deep(.arco-table-td-content) {

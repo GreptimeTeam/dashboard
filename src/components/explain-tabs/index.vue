@@ -202,7 +202,7 @@
     border: 1px solid var(--gpt-border-default);
     border-radius: var(--gpt-radius-md);
     background: var(--gpt-bg-panel);
-    box-shadow: 0 1px 4px rgba(71, 52, 96, 0.06);
+    box-shadow: var(--gpt-shadow-sm);
 
     > :first-child {
       height: 100%;

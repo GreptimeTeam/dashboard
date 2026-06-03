@@ -321,7 +321,7 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
     color: var(--small-font-color);
     background-color: transparent;
     border: 0;
-    border-radius: 4px;
+    border-radius: var(--gpt-radius-sm);
   }
 
   .table-tree {
@@ -382,7 +382,7 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
 
   .right {
     background: var(--th-bg-color);
-    border-radius: 6px;
+    border-radius: var(--gpt-radius-md);
     border: 1px solid var(--border-color);
     padding: 0 0 4px 10px;
     font-family: var(--font-mono);
@@ -499,7 +499,6 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
   .table-sidebar-count {
     color: var(--gpt-text-muted);
     font-size: var(--gpt-font-sm);
-    font-weight: 400;
     white-space: nowrap;
   }
 

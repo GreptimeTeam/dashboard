@@ -76,13 +76,13 @@ a-layout.layout
 
 <style lang="stylus" rel="stylesheet/stylus" scoped>
   .arco-layout-sider {
-    background-color: #fff;
-    border-radius: 10px;
+    background-color: var(--gpt-bg-panel);
+    border-radius: var(--gpt-radius-lg);
   }
 
   .markdown-container {
-    background-color: #fff;
-    border-radius: 10px;
+    background-color: var(--gpt-bg-panel);
+    border-radius: var(--gpt-radius-lg);
     padding: var(--gpt-page-padding-y) var(--gpt-page-padding-x);
   }
 </style>

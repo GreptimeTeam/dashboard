@@ -89,7 +89,7 @@ a-drawer.custom-drawer(
           LangEditor(
             v-model="formData.flow_definition"
             language="sql"
-            style="width: 100%; height: 200px; border: 1px solid var(--color-border); border-radius: 4px; overflow: hidden"
+            style="width: 100%; height: 200px; border: 1px solid var(--color-border); border-radius: var(--gpt-radius-sm); overflow: hidden"
             :placeholder="defaultFlowDefinitionPlaceholder"
           )
 
@@ -102,7 +102,7 @@ a-drawer.custom-drawer(
               LangEditor(
                 v-model="textEditorData.content"
                 language="sql"
-                style="width: 100%; height: 500px; border: 1px solid var(--color-border); border-radius: 4px; overflow: hidden"
+                style="width: 100%; height: 500px; border: 1px solid var(--color-border); border-radius: var(--gpt-radius-sm); overflow: hidden"
                 :placeholder="defaultTextEditorPlaceholder"
               )
 
@@ -136,7 +136,7 @@ a-drawer.custom-drawer(
       LangEditor(
         v-model="createTableSQL"
         language="sql"
-        style="width: 100%; height: 300px; border: 1px solid var(--color-border); border-radius: 4px; overflow: hidden"
+        style="width: 100%; height: 300px; border: 1px solid var(--color-border); border-radius: var(--gpt-radius-sm); overflow: hidden"
         :placeholder="defaultCreateTableSQL"
       )
 </template>

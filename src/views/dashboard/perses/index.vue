@@ -494,9 +494,6 @@ a-layout.detail-layout.new-layout(:class="{ 'is-sidebar-resizing': isSidebarResi
   .new-layout > .layout-content {
     overflow-y: hidden;
   }
-  .search-input {
-    margin-bottom: 12px;
-  }
 
   .perses-content {
     height: 100%;
@@ -513,7 +510,6 @@ a-layout.detail-layout.new-layout(:class="{ 'is-sidebar-resizing': isSidebarResi
     padding: var(--gpt-page-padding-y) var(--gpt-page-padding-x);
     max-width: 760px;
     margin: 0 auto;
-    box-sizing: border-box;
   }
 
   .empty-state h3 {
@@ -526,12 +522,6 @@ a-layout.detail-layout.new-layout(:class="{ 'is-sidebar-resizing': isSidebarResi
     margin: 0 0 18px;
     color: var(--color-text-2);
     line-height: 1.6;
-  }
-
-  .learn-more {
-    display: inline-block;
-    margin-top: 12px;
-    font-size: 12px;
   }
 
   :deep(.delete-btn) {

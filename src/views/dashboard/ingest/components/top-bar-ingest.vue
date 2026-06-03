@@ -57,7 +57,7 @@ a-space.top-bar.gpt-content-toolbar
     .arco-drawer {
       top: 20px;
       border: 1px solid var(--border-color);
-      border-radius: 4px;
+      border-radius: var(--gpt-radius-sm);
       height: calc(100% - 20px - 26px);
       margin-right: 20px;
       box-shadow: 0px 2px 20px 0px var(--box-shadow-color);
@@ -88,7 +88,7 @@ a-space.top-bar.gpt-content-toolbar
       pre {
         margin: 0;
         background: var(--color-code-bg);
-        border-radius: 4px;
+        border-radius: var(--gpt-radius-sm);
         padding: 0 6px;
         color: var(--color-code);
         line-height: 20px;

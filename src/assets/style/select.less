@@ -17,7 +17,7 @@
 
 // Standalone：圆角由 @input-border-radius；组内由 Arco input-group 覆盖四角
 .arco-select-view-single:not(.arco-input-group .arco-select-view-single) {
-  border-radius: 4px;
+  border-radius: var(--gpt-radius-sm);
 }
 
 .arco-select-view-multiple {
@@ -41,7 +41,7 @@
 }
 
 .arco-select-view-multiple:not(.arco-input-group .arco-select-view-multiple) {
-  border-radius: 4px;
+  border-radius: var(--gpt-radius-sm);
 }
 
 /* 工具栏内 select（如 Ingest precision）与页面 select 同一套 hover */
@@ -67,7 +67,7 @@
   padding: 4px 0;
   line-height: 32px;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: var(--gpt-radius-sm);
   box-shadow: 0 1px 10px 0 var(--box-shadow-color);
   .arco-dropdown-option {
     font-size: 13px;

@@ -243,7 +243,7 @@ a-drawer.settings-drawer(
     .arco-drawer {
       height: auto;
       margin-left: 18px;
-      border-radius: 4px;
+      border-radius: var(--gpt-radius-sm);
       box-shadow: 0 4px 10px 0 var(--border-color);
       border: 1px solid var(--border-color);
       .arco-form-item-label-col {

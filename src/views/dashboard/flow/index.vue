@@ -252,7 +252,7 @@
 
   .page-header-subtitle {
     font-family: var(--font-family-base);
-    font-size: 14px;
+    font-size: var(--gpt-font-lg);
     font-weight: 400;
     line-height: 1.4;
     color: var(--gpt-text-secondary);
@@ -273,13 +273,13 @@
     border: none;
     border-radius: var(--gpt-radius-sm);
     background: var(--gpt-brand-900);
-    color: #fff;
+    color: var(--gpt-text-inverse);
     font-size: 12px;
     font-weight: 600;
 
     &:hover {
       opacity: 0.92;
-      color: #fff;
+      color: var(--gpt-text-inverse);
     }
   }
 
@@ -291,7 +291,7 @@
     border: 1px solid var(--gpt-border-default);
     border-radius: var(--gpt-radius-md);
     background: var(--gpt-bg-panel);
-    box-shadow: 0 1px 4px rgba(71, 52, 96, 0.06);
+    box-shadow: var(--gpt-shadow-sm);
     overflow: hidden;
 
     :deep(.arco-card-header) {
@@ -328,7 +328,7 @@
     min-width: 22px;
     height: 20px;
     padding: 0 7px;
-    border-radius: 10px;
+    border-radius: var(--gpt-radius-lg);
     background: var(--gpt-bg-app);
     color: var(--gpt-text-secondary);
     font-size: 11px;

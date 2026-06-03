@@ -318,7 +318,7 @@ a-modal.timestamp-assistance-modal(
       gap: 10px;
       color: var(--gpt-text-primary);
       font-family: 'Gilroy';
-      font-size: 16px;
+      font-size: var(--gpt-font-xl);
       font-weight: 600;
     }
 

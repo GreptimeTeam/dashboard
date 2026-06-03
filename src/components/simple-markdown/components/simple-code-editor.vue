@@ -88,7 +88,7 @@
       right: 10px;
       top: 10px;
       z-index: 1;
-      border-radius: 4px;
+      border-radius: var(--gpt-radius-sm);
       cursor: pointer;
       transition: all 0.3s;
       background-color: var(--vp-c-black-mute);

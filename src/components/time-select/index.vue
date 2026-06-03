@@ -207,7 +207,7 @@ a-trigger#time-select(
     background-color: var(--card-bg-color);
     box-shadow: 0 1px 10px 0 var(--box-shadow-color);
     padding: 4px 0;
-    border-radius: 4px;
+    border-radius: var(--gpt-radius-sm);
     align-items: flex-start;
   }
 

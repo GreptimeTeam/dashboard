@@ -168,7 +168,7 @@ a-modal(
       .metric-item {
         padding: 12px;
         border: 1px solid var(--color-border-light);
-        border-radius: 6px;
+        border-radius: var(--gpt-radius-md);
         margin-bottom: 8px;
         cursor: pointer;
         transition: all 0.2s;

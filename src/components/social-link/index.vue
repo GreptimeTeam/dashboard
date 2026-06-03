@@ -1,5 +1,10 @@
 <template lang="pug">
-a.social-link(:href="link" target="_blank" rel="noopener" v-html="svg")
+a.social-link(
+  target="_blank"
+  rel="noopener"
+  v-html="svg"
+  :href="link"
+)
 </template>
 
 <script lang="ts" setup>
@@ -24,7 +29,7 @@ a.social-link(:href="link" target="_blank" rel="noopener" v-html="svg")
     align-items: center;
     width: 36px;
     height: 36px;
-    color: #fff;
+    color: var(--gpt-text-inverse);
     transition: color 0.5s;
   }
 

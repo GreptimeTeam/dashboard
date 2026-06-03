@@ -247,7 +247,7 @@
           font-size: 13px;
           font-weight: 600;
           padding: 4px 10px;
-          border-radius: 6px;
+          border-radius: var(--gpt-radius-md);
           line-height: 1;
         }
       }

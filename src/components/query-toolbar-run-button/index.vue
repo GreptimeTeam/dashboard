@@ -113,11 +113,11 @@ a-tooltip(mini :content="t('common.stop')" :disabled="!showStop")
     }
 
     .query-run-btn__icon :deep(.arco-icon) {
-      color: #fff;
+      color: var(--gpt-text-inverse);
     }
 
     .query-run-btn__stop .stop-icon {
-      color: #fff;
+      color: var(--gpt-text-inverse);
       font-size: 18px;
     }
   }

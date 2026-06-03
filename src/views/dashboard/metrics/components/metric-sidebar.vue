@@ -254,7 +254,6 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
   .metric-sidebar-count {
     color: var(--gpt-text-muted);
     font-size: var(--gpt-font-sm);
-    font-weight: 400;
     white-space: nowrap;
   }
 
