@@ -61,7 +61,7 @@ Tab pane: `overflow: hidden` on content item (avoid outer scroll stealing from t
 ## Buttons (`button.less`)
 
 - Use `size="small"` (26px) or `size="medium"` (32px) — **no** scoped `:deep(.arco-btn) { height: 24px; padding: 0 4px }`.
-- `gpt-btn-brand-solid` — dark brand-900 CTA (e.g. Flow New Flow).
+- **`type="primary"`** — main purple (`--gpt-main-purple`); hover `--gpt-brand-primary-hover`. Do not use `gpt-btn-brand-solid` (removed).
 - `gpt-btn-toolbar` + optional `gpt-btn-toolbar-mono` — compact toolbar buttons (Logs time pagination).
 
 ## Scoped styles — allowed vs forbidden

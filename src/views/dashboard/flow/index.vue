@@ -13,7 +13,7 @@
           | Learn more
           svg.icon-12
             use(href="#import")
-    a-button.gpt-btn-brand-solid(type="primary" size="medium" @click="showCreate")
+    a-button(type="primary" size="medium" @click="showCreate")
       template(#icon)
         icon-plus
       | New Flow
