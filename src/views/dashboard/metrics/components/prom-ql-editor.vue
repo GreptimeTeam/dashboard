@@ -18,7 +18,7 @@
       a-button(
         type="primary"
         size="large"
-        style="height: 34px; border-radius: 0 4px 4px 0"
+        style="height: var(--gpt-control-height-md); border-radius: 0 var(--gpt-radius-sm) var(--gpt-radius-sm) 0"
         :loading="queryLoading"
         @click="handleQuery"
       )
@@ -309,7 +309,7 @@
     display: flex;
     align-items: stretch;
     gap: 0;
-    min-height: 34px;
+    min-height: var(--gpt-control-height-md);
   }
 
   .query-button-container {
@@ -329,11 +329,11 @@
   }
 
   :deep(.cm-editor) {
-    height: 34px;
+    height: var(--gpt-control-height-md);
     overflow: visible;
     width: 100%;
     background: var(--gpt-bg-panel);
-    color: var(--color-text-1);
+    color: var(--gpt-text-primary);
     border: 1px solid var(--gpt-editor-border);
     border-radius: var(--gpt-radius-sm) 0 0 var(--gpt-radius-sm);
     transition: all 0.2s ease-in-out;
@@ -343,7 +343,7 @@
   :deep(.cm-editor .cm-line),
   :deep(.ͼ1.cm-editor .cm-content),
   :deep(.ͼ1.cm-editor .cm-line) {
-    line-height: 32px;
+    line-height: var(--gpt-control-height-md);
   }
 
   :deep(.cm-scroller) {
@@ -355,7 +355,7 @@
   }
 
   :deep(.cm-content) {
-    padding: 0 8px;
+    padding: 0 var(--gpt-gap-md);
     min-height: 32px;
     font-family: inherit;
     font-size: inherit;
@@ -402,7 +402,7 @@
     }
 
     & > ul > li {
-      padding: 8px 12px;
+      padding: var(--gpt-gap-md) var(--gpt-gap-lg);
       cursor: pointer;
       border-bottom: 1px solid var(--gpt-border-subtle);
 
@@ -429,8 +429,8 @@
     border-radius: var(--gpt-radius-sm);
     box-shadow: 0 2px 8px var(--box-shadow-color);
     margin-top: -11px;
-    padding: 12px;
-    font-family: 'Open Sans', 'Lucida Sans Unicode', 'Lucida Grande', sans-serif;
+    padding: var(--gpt-gap-lg);
+    font-family: var(--font-family-base);
     min-width: 250px;
     max-width: min-content;
     z-index: 1001;
@@ -438,7 +438,7 @@
 
   :deep(.cm-completionIcon) {
     box-sizing: content-box;
-    font-size: 16px;
+    font-size: var(--gpt-font-xl);
     line-height: 1;
     margin-right: 10px;
     vertical-align: top;
@@ -454,6 +454,6 @@
   :deep(.cm-completionDetail) {
     float: right;
     color: var(--gpt-text-muted);
-    font-size: 12px;
+    font-size: var(--gpt-font-base);
   }
 </style>

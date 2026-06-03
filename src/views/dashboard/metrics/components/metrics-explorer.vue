@@ -156,8 +156,8 @@ a-modal(
       margin-bottom: 20px;
 
       .search-info {
-        color: var(--color-text-secondary);
-        font-size: 12px;
+        color: var(--gpt-text-secondary);
+        font-size: var(--gpt-font-base);
       }
     }
 
@@ -167,34 +167,34 @@ a-modal(
 
       .metric-item {
         padding: 12px;
-        border: 1px solid var(--color-border-light);
+        border: 1px solid var(--gpt-border-default);
         border-radius: var(--gpt-radius-md);
         margin-bottom: 8px;
         cursor: pointer;
         transition: all 0.2s;
 
         &:hover {
-          background: var(--color-fill-2);
-          border-color: var(--color-primary-light-1);
+          background: var(--gpt-nav-active-bg);
+          border-color: var(--gpt-brand-600);
         }
 
         .metric-name {
           font-weight: 500;
-          color: var(--color-text-primary);
+          color: var(--gpt-text-primary);
           margin-bottom: 4px;
 
           .highlight {
-            background: var(--color-warning-light-1);
-            color: var(--color-warning);
+            background: var(--light-brand-color);
+            color: var(--brand-color);
             padding: 2px 4px;
-            border-radius: 3px;
+            border-radius: var(--gpt-radius-sm);
             font-weight: 600;
           }
         }
 
         .metric-description {
-          font-size: 12px;
-          color: var(--color-text-secondary);
+          font-size: var(--gpt-font-base);
+          color: var(--gpt-text-secondary);
         }
       }
     }

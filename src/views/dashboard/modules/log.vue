@@ -65,8 +65,8 @@ a-list-item.smaller-divider
 <style lang="less" scoped>
   .code {
     font-family: var(--font-mono);
-    color: var(--main-font-color);
-    font-size: 13px;
+    color: var(--gpt-text-primary);
+    font-size: var(--gpt-font-md);
 
     div {
       text-overflow: ellipsis;
@@ -79,22 +79,22 @@ a-list-item.smaller-divider
     color: var(--small-font-color);
     border: 0;
     border-radius: var(--gpt-radius-sm);
-    font-size: 12px;
+    font-size: var(--gpt-font-base);
     font-family: var(--font-mono);
     white-space: pre-wrap;
   }
 
   .info {
     > :first-child {
-      font-size: 14px;
+      font-size: var(--gpt-font-lg);
     }
-    font-size: 11px;
+    font-size: var(--gpt-font-sm);
   }
 
   .total-time {
     background: var(--th-bg-color);
     border-radius: var(--gpt-radius-sm);
-    padding: 0 4px;
+    padding: 0 var(--gpt-gap-xs);
     min-width: max-content;
   }
 
@@ -105,7 +105,7 @@ a-list-item.smaller-divider
   }
 
   .play {
-    font-size: 16px;
+    font-size: var(--gpt-font-xl);
   }
 
   .arco-btn-text[type='button']:hover {
@@ -117,8 +117,8 @@ a-list-item.smaller-divider
 
 <style lang="less">
   .total-time-popover {
-    font-size: 12px;
-    padding: 4px 10px;
+    font-size: var(--gpt-font-base);
+    padding: var(--gpt-gap-xs) var(--gpt-gap-lg);
     .arco-popover-content {
       color: var(--small-font-color);
     }

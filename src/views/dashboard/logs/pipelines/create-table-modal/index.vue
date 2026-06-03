@@ -12,9 +12,7 @@ a-modal(
       a-button(type="primary" :loading="creating" @click="handleCreate") Create Table
 
   .create-table-content
-    a-space(
-      style="background-color: var(--color-fill-2); padding: 16px; border-radius: var(--gpt-radius-sm); width: 100%; margin-bottom: 16px"
-    )
+    a-space.gpt-form-panel
       span.label Table Name
       a-input(v-model="tableName" placeholder="Enter table name" style="width: 200px; margin-right: 8px")
       a-button(type="outline" :loading="loadingDDL" @click="handleGetDDL") Get CREATE TABLE SQL from Pipeline
@@ -28,10 +26,10 @@ a-modal(
         @submit="handleCreate"
       )
         a-form-item(field="createTableSQL" label="CREATE TABLE SQL" required)
-          LangEditor(
+          LangEditor.gpt-code-editor-frame(
             v-model="formData.createTableSQL"
             language="sql"
-            style="width: 100%; height: 300px; border: 1px solid var(--color-border); border-radius: var(--gpt-radius-sm); overflow: hidden"
+            style="width: 100%; height: 300px"
             placeholder="CREATE TABLE SQL"
           )
 </template>
@@ -117,7 +115,7 @@ a-modal(
   .create-table-content {
     p {
       margin-bottom: 16px;
-      color: var(--color-text-2);
+      color: var(--gpt-text-secondary);
     }
   }
 

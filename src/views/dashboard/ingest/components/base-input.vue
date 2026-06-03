@@ -107,16 +107,16 @@ a-drawer.ingest(
     }
 
     :deep(.arco-drawer-body) {
-      font-size: 14px;
-      color: var(--main-font-color);
-      padding: 24px;
+      font-size: var(--gpt-font-lg);
+      color: var(--gpt-text-primary);
+      padding: var(--gpt-gap-xl);
       display: flex;
       flex-direction: column;
       line-height: 24px;
     }
 
     .markdown-container {
-      margin-bottom: 30px;
+      margin-bottom: var(--gpt-gap-xl);
     }
   }
 </style>

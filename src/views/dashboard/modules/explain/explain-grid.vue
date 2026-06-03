@@ -530,9 +530,9 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
 
 <style lang="less" scoped>
   .explain-grid {
-    margin: 16px;
+    margin: var(--gpt-page-padding-y) var(--gpt-page-padding-x);
     overflow: hidden;
-    padding: 16px 16px;
+    padding: var(--gpt-page-padding-y) var(--gpt-page-padding-x);
     border: 1px solid var(--gpt-border-default);
     border-radius: var(--gpt-radius-md);
     background: var(--gpt-bg-panel);
@@ -546,20 +546,20 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     align-items: center;
     margin-bottom: 8px;
     .stage-index {
-      font-size: 14px;
+      font-size: var(--gpt-font-lg);
       font-weight: 500;
-      margin-right: 10px;
-      margin-left: 10px;
+      margin-right: var(--gpt-gap-lg);
+      margin-left: var(--gpt-gap-lg);
       width: 80px;
-      font-family: 'Gilroy';
+      font-family: var(--font-family-base);
     }
   }
 
   .header-controls {
     display: flex;
     align-items: center;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--light-border-color);
+    padding-bottom: var(--gpt-gap-md);
+    border-bottom: 1px solid var(--gpt-border-default);
   }
 
   .metrics {
@@ -576,17 +576,17 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     .metric-header {
       display: flex;
       justify-content: flex-start;
-      font-size: 12px;
+      font-size: var(--gpt-font-base);
     }
 
     .metric-key {
-      color: var(--color-text-3);
+      color: var(--gpt-text-muted);
       margin-right: 8px;
       flex-shrink: 0;
     }
 
     .metric-value {
-      color: var(--color-text-1);
+      color: var(--gpt-text-primary);
       font-family: var(--font-mono);
       text-overflow: ellipsis;
       overflow: hidden;
@@ -594,7 +594,7 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
 
     .metric-progress-bar-wrapper {
       height: 4px;
-      background-color: var(--th-bg-color);
+      background-color: var(--gpt-table-head-bg);
       border-radius: 2px;
       overflow: hidden;
       margin-top: 2px;
@@ -616,18 +616,18 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     .metric-label {
       display: flex;
       justify-content: space-between;
-      font-size: 12px;
-      margin-bottom: 4px;
+      font-size: var(--gpt-font-base);
+      margin-bottom: var(--gpt-gap-xs);
 
       .metric-value {
         font-family: var(--font-mono);
-        color: var(--color-text-1);
+        color: var(--gpt-text-primary);
       }
     }
 
     .metric-progress-bar-wrapper {
       height: 6px;
-      background-color: var(--color-bg-2);
+      background-color: var(--gpt-bg-surface);
       border-radius: 3px;
       overflow: hidden;
 
@@ -640,9 +640,6 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
 
   :deep(.arco-table-container) {
     overflow-x: auto;
-  }
-  :deep(.arco-table-size-mini .arco-table-cell) {
-    padding: 4px 16px;
   }
 
   :deep(.arco-table-td) {
@@ -658,13 +655,13 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
 
   :deep(.arco-table-td) {
     .expanded-row {
-      padding: 8px 0;
-      background-color: var(--color-bg-1);
+      padding: var(--gpt-gap-md) 0;
+      background-color: var(--gpt-bg-surface);
     }
 
     .expanded-row-details {
-      padding: 0 16px 0 36px; // Extra left padding for tree alignment
-      font-size: 12px;
+      padding: 0 var(--gpt-page-padding-x) 0 36px;
+      font-size: var(--gpt-font-base);
       display: flex;
       flex-direction: column;
       gap: 4px;
@@ -674,12 +671,12 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
       align-items: center;
     }
     .detail-label {
-      color: var(--color-text-3);
-      margin-right: 8px;
+      color: var(--gpt-text-muted);
+      margin-right: var(--gpt-gap-md);
       font-weight: 500;
     }
     .detail-value {
-      color: var(--color-text-1);
+      color: var(--gpt-text-primary);
       font-family: var(--font-mono);
       word-break: normal;
       white-space: pre-line;

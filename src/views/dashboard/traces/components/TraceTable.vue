@@ -11,11 +11,10 @@ a-card(:bordered="false")
   template(#extra)
     a-space
       a-trigger(v-if="columns.length" trigger="click" :unmount-on-close="false")
-        a-button(type="text" style="color: var(--color-text-2)")
-          template(#icon)
-          | {{ $t('logsQuery.columns') }}
+        a-button(type="text")
+          span.gpt-text-secondary {{ $t('logsQuery.columns') }}
         template(#content)
-          a-card(style="padding: 10px; min-width: 200px; max-height: 500px; overflow-y: auto")
+          a-card.gpt-popover-panel.gpt-popover-panel--wide
             .column-controls
               a-space(direction="vertical" size="small")
                 a-space
@@ -205,8 +204,8 @@ a-card(:bordered="false")
   }
 
   .results-count {
-    color: var(--color-text-3);
-    font-size: 12px;
+    color: var(--gpt-text-muted);
+    font-size: var(--gpt-font-base);
     font-weight: normal;
   }
 
@@ -220,6 +219,6 @@ a-card(:bordered="false")
     visibility: hidden;
     width: 12px;
     height: 12px;
-    color: var(--color-primary);
+    color: var(--gpt-main-purple);
   }
 </style>

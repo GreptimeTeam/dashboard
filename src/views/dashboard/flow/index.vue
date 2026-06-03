@@ -1,9 +1,9 @@
 <template lang="pug">
-.query-layout.flow-page.query-container
-  .page-header.flow-page-header
+.query-layout.query-layout--surface.flow-page.query-container
+  .page-header.gpt-page-header.flow-page-header
     .page-header-main
       | Flow
-      span.page-header-subtitle
+      span.page-header-subtitle.gpt-text-page-subtitle
         | Real-time computation of data streams.
         a.flow-page-learn-more(
           href="https://docs.greptime.com/user-guide/flow-computation/overview"
@@ -13,18 +13,17 @@
           | Learn more
           svg.icon-12
             use(href="#import")
-    a-button.flow-new-btn(type="primary" @click="showCreate")
+    a-button.gpt-btn-brand-solid(type="primary" size="medium" @click="showCreate")
       template(#icon)
         icon-plus
       | New Flow
 
   .content-wrapper.query-layout-cards
-    a-card.flow-results-card(:bordered="false")
+    a-card.flow-results-card.gpt-surface-card(:bordered="false")
       template(#title)
-        .flow-results-header
-          span.flow-results-title {{ $t('logsQuery.results') }}
-          span.flow-results-badge(v-if="totalResults > 0") {{ totalResults }}
-      DataTable.flow-table(
+        span.gpt-surface-card__title {{ $t('logsQuery.results') }}
+        span.gpt-surface-card__badge(v-if="totalResults > 0") {{ totalResults }}
+      DataTable.flow-table.gpt-table-page(
         :data="data"
         :columns="columns"
         :loading="loading"
@@ -40,8 +39,8 @@
         template(#column-comment="{ record }")
           span {{ record.comment || '—' }}
         template(#column-status="{ record }")
-          span.flow-status-tag(v-if="record.status" :class="getStatusClass(record.status)")
-            span.flow-status-dot
+          span.gpt-status-pill(v-if="record.status" :class="getStatusClass(record.status)")
+            span.gpt-status-pill__dot
             | {{ record.status }}
           span(v-else) —
         template(#column-created_time="{ record }")
@@ -55,10 +54,10 @@
               use(href="#time")
             span {{ record.updated_time || '—' }}
         template(#column-operate="{ record }")
-          a-space.flow-actions(:size="8")
-            a-button.flow-action-btn(size="small" @click="showEdit(record)") Edit
+          a-space(:size="8")
+            a-button(size="small" @click="showEdit(record)") Edit
             a-popconfirm(content="Confirm deletion?" type="warning" @ok="del(record)")
-              a-button.flow-action-btn(size="small" status="danger") Delete
+              a-button(size="small" status="danger") Delete
 
     FlowDetailModal(
       :key="editData?.flow_id"
@@ -223,22 +222,12 @@
       flex: 0 0 auto;
       overflow: visible;
     }
-
-    &.query-layout-cards .flow-results-card {
-      flex: none;
-      height: auto;
-
-      :deep(.arco-card-body) {
-        flex: none;
-        height: auto;
-        min-height: 0;
-      }
-    }
   }
 
   .flow-page-header {
+    flex-shrink: 0;
     justify-content: space-between;
-    gap: 16px;
+    gap: var(--gpt-gap-lg);
   }
 
   .page-header-main {
@@ -250,119 +239,12 @@
     flex: 1;
   }
 
-  .page-header-subtitle {
-    font-family: var(--font-family-base);
-    font-size: var(--gpt-font-lg);
-    font-weight: 400;
-    line-height: 1.4;
-    color: var(--gpt-text-secondary);
-  }
-
   .flow-page-learn-more {
     display: inline-flex;
     align-items: center;
     gap: 4px;
     margin-left: 8px;
     font-weight: 500;
-  }
-
-  .flow-new-btn {
-    flex-shrink: 0;
-    height: 32px;
-    padding: 0 14px;
-    border: none;
-    border-radius: var(--gpt-radius-sm);
-    background: var(--gpt-brand-900);
-    color: var(--gpt-text-inverse);
-    font-size: 12px;
-    font-weight: 600;
-
-    &:hover {
-      opacity: 0.92;
-      color: var(--gpt-text-inverse);
-    }
-  }
-
-  .content-wrapper {
-    padding: var(--gpt-page-padding-y) var(--gpt-page-padding-x);
-  }
-
-  .flow-results-card {
-    border: 1px solid var(--gpt-border-default);
-    border-radius: var(--gpt-radius-md);
-    background: var(--gpt-bg-panel);
-    box-shadow: var(--gpt-shadow-sm);
-    overflow: hidden;
-
-    :deep(.arco-card-header) {
-      min-height: 44px;
-      background: var(--gpt-bg-panel);
-      border-bottom: 1px solid var(--gpt-border-default);
-    }
-
-    :deep(.arco-card-body) {
-      padding: 0;
-    }
-
-    :deep(.arco-card-header-title) {
-      font-weight: 600;
-    }
-  }
-
-  .flow-results-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .flow-results-title {
-    color: var(--gpt-text-primary);
-    font-size: 13px;
-    font-weight: 700;
-  }
-
-  .flow-results-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 22px;
-    height: 20px;
-    padding: 0 7px;
-    border-radius: var(--gpt-radius-lg);
-    background: var(--gpt-bg-app);
-    color: var(--gpt-text-secondary);
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1;
-  }
-
-  .flow-table {
-    :deep(.data-table-container) {
-      height: auto;
-      overflow: visible;
-    }
-
-    :deep(.arco-table-container),
-    :deep(.arco-table-wrapper),
-    :deep(.arco-table-body) {
-      height: auto !important;
-    }
-
-    :deep(.arco-table-th) {
-      background: var(--gpt-table-head-bg);
-      color: var(--gpt-text-secondary);
-      font-size: 12px;
-      font-weight: 600;
-    }
-
-    :deep(.arco-table-td) {
-      font-size: 12px;
-      color: var(--gpt-text-primary);
-    }
-
-    :deep(.arco-table-tr:hover .arco-table-td) {
-      background: var(--gpt-nav-active-bg);
-    }
   }
 
   .flow-name-cell {
@@ -387,48 +269,5 @@
     flex-shrink: 0;
     color: var(--gpt-text-secondary);
     fill: currentColor;
-  }
-
-  .flow-status-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 2px 10px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 18px;
-    text-transform: capitalize;
-
-    &.is-running {
-      background: rgba(0, 187, 178, 0.12);
-      color: var(--gpt-accent-ts);
-    }
-
-    &.is-error {
-      background: rgba(245, 63, 63, 0.1);
-      color: var(--danger-color, #f53f3f);
-    }
-
-    &.is-default {
-      background: var(--gpt-bg-app);
-      color: var(--gpt-text-secondary);
-    }
-  }
-
-  .flow-status-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: currentColor;
-  }
-
-  .flow-actions {
-    :deep(.flow-action-btn) {
-      height: 24px;
-      padding: 0 4px;
-      font-size: 12px;
-      font-weight: 500;
-    }
   }
 </style>

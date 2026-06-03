@@ -611,8 +611,8 @@ a-dropdown#td-context(
   }
 
   :deep(.data-table-empty .arco-empty-description) {
-    font-family: 'Geist Mono', ui-monospace, monospace;
-    font-size: 14px;
+    font-family: var(--font-mono);
+    font-size: var(--gpt-font-lg);
   }
 
   .data-table-empty-icon {
@@ -632,7 +632,7 @@ a-dropdown#td-context(
     visibility: hidden;
     width: 12px;
     height: 12px;
-    color: var(--color-primary);
+    color: var(--gpt-main-purple);
   }
 
   // Show menu icon on hover when context menu is enabled
@@ -714,7 +714,7 @@ a-dropdown#td-context(
     cursor: pointer;
   }
   :deep(.arco-drawer) {
-    border: 1px solid var(--color-neutral-3);
+    border: 1px solid var(--gpt-border-default);
   }
   .multiple_column.virtual-list-active {
     :deep(.arco-virtual-list > .arco-table-element) {
@@ -781,9 +781,6 @@ a-dropdown#td-context(
   .wrap_table :deep(.arco-table-td),
   .wrap_table :deep(.arco-table-th) {
     white-space: wrap;
-  }
-  :deep(.arco-table-size-medium .arco-table-cell) {
-    padding: 6px 10px;
   }
   .multiple_column {
     :deep(.arco-table-td-content) {

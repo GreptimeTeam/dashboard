@@ -2,11 +2,11 @@
 a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
   template(#title)
     a-space.metric-sidebar-title(fill :size="10")
-      span.metric-sidebar-heading
+      span.gpt-sidebar-heading
         | {{ $t('metrics.sidebar.title') }}
         a-tooltip(v-if="metricCountTooltip" :content="metricCountTooltip")
-          span.metric-sidebar-count {{ metricCountLabel }}
-        span.metric-sidebar-count(v-else) {{ metricCountLabel }}
+          span.gpt-sidebar-count {{ metricCountLabel }}
+        span.gpt-sidebar-count(v-else) {{ metricCountLabel }}
       a-button(size="mini" :loading="loading" @click="refreshData")
         template(#icon)
           svg.icon-11.brand-color
@@ -242,19 +242,6 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
 
   .metric-sidebar-title {
     width: 100%;
-  }
-
-  .metric-sidebar-heading {
-    display: inline-flex;
-    gap: 4px;
-    align-items: baseline;
-    min-width: 0;
-  }
-
-  .metric-sidebar-count {
-    color: var(--gpt-text-muted);
-    font-size: var(--gpt-font-sm);
-    white-space: nowrap;
   }
 
   .empty {

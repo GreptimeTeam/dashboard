@@ -1,6 +1,6 @@
 <template lang="pug">
-.query-layout.trace-query-container.query-container
-  .page-header
+.query-layout.query-layout--stack.trace-query-container.query-container
+  .page-header.gpt-page-header
     | {{ $t('menu.dashboard.traces') }}
   .content-wrapper.query-layout-cards
     a-card(:bordered="false")

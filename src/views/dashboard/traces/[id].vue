@@ -1,6 +1,6 @@
 <template lang="pug">
 .trace-detail-container
-  .page-header
+  .page-header.gpt-page-header
     .header-content
       a-button(type="text" @click="handleBack")
         icon-left
@@ -198,25 +198,23 @@
     overflow: hidden;
   }
 
-  .page-header {
-    padding: var(--gpt-page-header-padding);
-    background: var(--card-bg-color);
-    border-bottom: 1px solid var(--border-color);
-    margin-bottom: 0;
-    min-height: 48px;
+  .page-header.gpt-page-header {
+    justify-content: flex-start;
+
     .header-content {
       display: flex;
       align-items: center;
-      gap: 20px;
+      gap: var(--gpt-gap-xl);
+      width: 100%;
 
       :deep(.arco-btn) {
         display: flex;
         align-items: center;
-        gap: 6px;
-        color: var(--small-font-color);
+        gap: var(--gpt-gap-sm);
+        color: var(--gpt-text-secondary);
 
         &:hover {
-          color: var(--brand-color);
+          color: var(--gpt-main-purple);
         }
       }
     }
@@ -225,28 +223,28 @@
       flex: 1;
       display: flex;
       align-items: center;
-      gap: 24px;
+      gap: var(--gpt-gap-xl);
 
       .trace-title {
         display: flex;
         align-items: center;
-        gap: 16px;
+        gap: var(--gpt-gap-xl);
 
         .operation-name {
-          font-size: 15px;
-          font-weight: 800;
-          color: var(--main-font-color);
-          font-family: 'Gilroy', sans-serif;
+          font-size: var(--gpt-font-xl);
+          font-weight: 700;
+          color: var(--gpt-text-primary);
+          font-family: var(--font-family-base);
           line-height: 1.2;
         }
 
         .span-count {
-          background-color: var(--light-brand-color);
-          color: var(--brand-color);
-          border: 1px solid var(--brand-color);
-          font-size: 13px;
+          background-color: var(--gpt-nav-active-bg);
+          color: var(--gpt-main-purple);
+          border: 1px solid var(--gpt-main-purple);
+          font-size: var(--gpt-font-md);
           font-weight: 600;
-          padding: 4px 10px;
+          padding: var(--gpt-gap-xs) var(--gpt-gap-lg);
           border-radius: var(--gpt-radius-md);
           line-height: 1;
         }
@@ -255,38 +253,27 @@
       .trace-id {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: var(--gpt-gap-lg);
 
         .label {
-          font-size: 13px;
-          color: var(--small-font-color);
+          font-size: var(--gpt-font-md);
+          color: var(--gpt-text-secondary);
           font-weight: 600;
         }
 
         .trace-id-value {
           font-family: var(--font-mono);
-          font-size: 13px;
-          color: var(--main-font-color);
+          font-size: var(--gpt-font-md);
+          color: var(--gpt-text-primary);
           font-weight: 500;
         }
       }
     }
   }
 
-  .content-container {
-    flex: 1;
-    min-height: 0;
-    padding: 0 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-
-    overflow: hidden;
-  }
-
   .cards-row {
     display: flex;
-    gap: 8px;
+    gap: var(--gpt-gap-md);
     flex: 1;
     min-height: 0;
 
@@ -303,7 +290,7 @@
     }
 
     :deep(#trace-attributes) {
-      border-left: 1px solid var(--border-color);
+      border-left: 1px solid var(--gpt-border-default);
     }
 
     :deep(.trace-timeline-card .arco-card-header) {
@@ -314,11 +301,11 @@
   .service-filter {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--gpt-gap-md);
 
     .filter-label {
-      font-size: 12px;
-      color: var(--color-text-2);
+      font-size: var(--gpt-font-base);
+      color: var(--gpt-text-secondary);
       font-weight: 500;
       white-space: nowrap;
     }
@@ -328,12 +315,12 @@
     }
 
     :deep(.arco-select-view-value) {
-      font-size: 12px;
+      font-size: var(--gpt-font-base);
     }
 
     :deep(.arco-tag) {
-      font-size: 11px;
-      padding: 1px 6px;
+      font-size: var(--gpt-font-sm);
+      padding: 1px var(--gpt-gap-sm);
     }
   }
 
@@ -343,7 +330,7 @@
   }
 
   :deep(.arco-card-body) {
-    padding: 0 10px 10px 10px;
+    padding: 0 var(--gpt-gap-lg) var(--gpt-gap-lg);
   }
 
   :deep(.arco-card.light-editor-card) {

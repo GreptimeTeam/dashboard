@@ -36,9 +36,7 @@ a-drawer.custom-drawer(
           | {{ formData.updated_time ? renderTs(formData.updated_time, schemaColumns.find((col) => col.name === 'updated_time')?.data_type) : '-' }}
         a-descriptions-item(label="Last Execution")
           | {{ formData.last_execution_time ? new Date(formData.last_execution_time).toLocaleString() : '-' }}
-    div(
-      style="display: flex; justify-content: space-between; align-items: center; background-color: var(--color-fill-1); padding: 8px 4px; margin-bottom: 16px"
-    )
+    .gpt-drawer-mode-bar
       a-radio-group(v-model="editorMode" type="button" size="small")
         a-radio(value="form") Form
         a-radio(value="text") Raw
@@ -86,10 +84,9 @@ a-drawer.custom-drawer(
           a-input(v-model="formData.comment" placeholder="Enter flow description" :rows="2")
 
         a-form-item(field="flow_definition" label="Flow Select SQL Definition" required)
-          LangEditor(
+          LangEditor.gpt-code-editor-frame.gpt-code-editor-frame--h200(
             v-model="formData.flow_definition"
             language="sql"
-            style="width: 100%; height: 200px; border: 1px solid var(--color-border); border-radius: var(--gpt-radius-sm); overflow: hidden"
             :placeholder="defaultFlowDefinitionPlaceholder"
           )
 
@@ -99,10 +96,9 @@ a-drawer.custom-drawer(
         a-form(layout="vertical" :model="textEditorData")
           a-form-item(field="content" label="Flow Statement")
             a-spin(style="width: 100%" :loading="fetchingFlowSQL")
-              LangEditor(
+              LangEditor.gpt-code-editor-frame.gpt-code-editor-frame--h500(
                 v-model="textEditorData.content"
                 language="sql"
-                style="width: 100%; height: 500px; border: 1px solid var(--color-border); border-radius: var(--gpt-radius-sm); overflow: hidden"
                 :placeholder="defaultTextEditorPlaceholder"
               )
 
@@ -133,10 +129,9 @@ a-drawer.custom-drawer(
     .create-table-content
       p Create a new sink table with SQL. The table will be automatically added to the sink table options.
 
-      LangEditor(
+      LangEditor.gpt-code-editor-frame.gpt-code-editor-frame--h300(
         v-model="createTableSQL"
         language="sql"
-        style="width: 100%; height: 300px; border: 1px solid var(--color-border); border-radius: var(--gpt-radius-sm); overflow: hidden"
         :placeholder="defaultCreateTableSQL"
       )
 </template>
@@ -439,13 +434,13 @@ GROUP BY time_window;`
 
 <style lang="less" scoped>
   :deep(.arco-drawer) {
-    border: 1px solid var(--color-neutral-3) !important;
+    border: 1px solid var(--gpt-border-default) !important;
   }
 
   .create-table-content {
     p {
-      margin-bottom: 16px;
-      color: var(--color-text-2);
+      margin-bottom: var(--gpt-gap-xl);
+      color: var(--gpt-text-secondary);
       line-height: 1.5;
     }
   }

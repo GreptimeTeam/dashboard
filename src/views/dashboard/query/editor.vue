@@ -1,5 +1,5 @@
 <template lang="pug">
-a-card.editor-card.editor-card--inset(:bordered="false")
+a-card.editor-card.editor-card--inset.gpt-query-editor-inset(:bordered="false")
   .editor-toolbar
     .editor-toolbar-main
       QueryToolbarRunButton(
@@ -506,7 +506,7 @@ a-modal(
 </script>
 
 <style lang="less" scoped>
-  .editor-card--inset {
+  .editor-card--inset.gpt-query-editor-inset {
     padding: 0 var(--gpt-page-padding-x);
   }
 

@@ -1,5 +1,5 @@
 <template lang="pug">
-a-layout.detail-layout.new-layout(:class="{ 'is-sidebar-resizing': isSidebarResizing }")
+a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-resizing': isSidebarResizing }")
   a-resize-box(
     v-model:width="sidebarWidth"
     :directions="['right']"

@@ -1,5 +1,5 @@
 <template lang="pug">
-a-layout.new-layout
+a-layout.new-layout.new-layout--workspace
   a-resize-box(
     v-model:width="sidebarWidth"
     :directions="['right']"
@@ -11,7 +11,7 @@ a-layout.new-layout
 
   a-layout-content.layout-content
     a-card(:bordered="false")
-      .query-section
+      .query-section.gpt-query-strip
         PromQLEditor(
           ref="promqlEditorRef"
           v-model="currentQuery"
@@ -20,8 +20,8 @@ a-layout.new-layout
           @query="handleRunQuery"
         )
 
-    a-card.metrics-result-card(:bordered="false")
-      .metrics-result-toolbar
+    a-card.metrics-result-card.gpt-results-pane(:bordered="false")
+      .metrics-result-toolbar.gpt-results-toolbar
         .view-switch
           a-button-group
             a-button(
@@ -42,7 +42,7 @@ a-layout.new-layout
             )
               svg.icon-16
                 use(href="#chart")
-          span.series-meta(v-if="activeTab === 'graph' && seriesCount > 0") {{ seriesMetaLabel }}
+          span.gpt-text-toolbar-meta(v-if="activeTab === 'graph' && seriesCount > 0") {{ seriesMetaLabel }}
 
       .metrics-result-content
         .metrics-table-view(v-show="activeTab === 'table'")
@@ -56,7 +56,7 @@ a-layout.new-layout
                 style="width: 210px"
               )
 
-          .table-section
+          .table-section.gpt-table-panel
             DataTable(
               :data="tableData"
               :columns="tableColumns"
@@ -394,34 +394,6 @@ a-layout.new-layout
     box-shadow: none !important;
   }
 
-  .layout-content {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    min-height: 0;
-    overflow: hidden;
-    background: var(--color-bg-container);
-  }
-
-  .layout-content > :deep(.arco-card) {
-    flex-shrink: 0;
-  }
-
-  .metrics-result-card {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-
-    :deep(.arco-card-body) {
-      flex: 1;
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
-      padding: 0;
-    }
-  }
-
   .section-title {
     .arco-space {
       align-items: center;
@@ -432,47 +404,21 @@ a-layout.new-layout
     }
   }
 
-  .query-section {
-    padding: var(--gpt-toolbar-padding);
-  }
-
-  .section-divider {
-    height: 6px;
-    background: var(--color-neutral-3);
-    border: none;
-    margin: 0;
-    position: relative;
-  }
   :deep(.arco-table-th) {
     background-color: var(--gpt-bg-panel);
   }
 
   .table-controls {
-    margin-bottom: 16px;
-    border-bottom: 1px solid var(--color-border);
+    margin-bottom: var(--gpt-gap-xl);
+    border-bottom: 1px solid var(--gpt-border-default);
 
     .arco-space {
       align-items: center;
     }
   }
-  .metrics-result-toolbar {
-    display: flex;
+  .metrics-result-toolbar .view-switch {
     align-items: center;
-    border-bottom: 1px solid var(--gpt-border-default);
-    min-height: 39px;
-    padding: var(--gpt-toolbar-padding);
-    padding-top: 0;
-
-    .view-switch {
-      align-items: center;
-      gap: 10px;
-    }
-
-    .series-meta {
-      color: var(--gpt-text-muted);
-      font-size: var(--gpt-font-sm);
-      white-space: nowrap;
-    }
+    gap: var(--gpt-gap-md);
   }
 
   .metrics-result-content {

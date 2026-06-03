@@ -1,46 +1,34 @@
-// Shared styles for query layout pages (logs query, traces, etc.)
+// Shared styles for query layout pages (logs query, traces, flow, etc.)
+// Visual variants: --stack (ui-regions.less), --surface (ui-regions.less)
+
 .query-layout {
   display: flex;
   flex-direction: column;
   height: 100%;
-  // Main container layout
+
   .query-container {
     height: calc(100vh - 30px);
     display: flex;
     flex-direction: column;
     overflow: hidden;
   }
-  // Content wrapper with padding and gap
+
   .content-wrapper {
     flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    min-height: 0; // Important for flexbox
+    min-height: 0;
   }
 
-  // Toolbar styling (shared between logs and traces)
-  .toolbar {
-    flex-shrink: 0;
-    padding: var(--gpt-toolbar-padding);
-    border-bottom: 1px solid var(--color-border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    height: 50px;
-    gap: 10px;
-  }
-
-  // SQL editor/builder container
   .sql-container {
     flex-shrink: 0;
-    padding: var(--gpt-section-padding-y) var(--gpt-page-padding-x) var(--gpt-section-padding-y);
+    padding: var(--gpt-section-padding-y) var(--gpt-page-padding-x);
     display: flex;
     flex-direction: column;
     gap: 2px;
   }
 
-  // Chart header layout
   .chart-header {
     display: flex;
     align-items: center;
@@ -49,56 +37,11 @@
     font-weight: normal;
   }
 
-  // Page header styling
-  .page-header {
-    padding: var(--gpt-page-header-padding);
-    margin-bottom: 0;
-    font-size: 15px;
-    font-weight: 800;
-    color: var(--main-font-color);
-    font-family: 'Gilroy', sans-serif;
-    line-height: 1.2;
-    min-height: 48px;
-    display: flex;
-    align-items: center;
-    border-bottom: 1px solid var(--gpt-border-default);
-  }
-
-  // Shared arco-card styling
-  .query-layout-cards {
-    .arco-card {
-      border-radius: 0;
-      border-bottom: none;
-
-      .arco-card-header {
-        height: auto;
-        padding: var(--gpt-toolbar-padding);
-      }
-
-      // Make the last card (results) expandable
-      &:last-child {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        min-height: 0;
-
-        .arco-card-body {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          min-height: 0;
-          padding: 0;
-        }
-      }
-    }
-  }
-
   .arco-card .arco-card-header-title {
     font-weight: normal;
   }
 
-  // Active state styling
   .active {
-    color: var(--color-primary);
+    color: var(--gpt-main-purple);
   }
 }

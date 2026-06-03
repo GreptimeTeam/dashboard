@@ -130,7 +130,7 @@ a-layout.status-page.new-layout
     box-shadow: var(--gpt-shadow-sm);
 
     :deep(.arco-card-header) {
-      min-height: 47px;
+      min-height: var(--gpt-size-region-bar);
       padding: var(--gpt-toolbar-padding);
       background: var(--gpt-bg-header);
       border-bottom: 1px solid var(--gpt-border-default);
@@ -151,7 +151,7 @@ a-layout.status-page.new-layout
     align-items: center;
     gap: 8px;
     color: var(--gpt-text-primary);
-    font-size: 13px;
+    font-size: var(--gpt-font-md);
     font-weight: 700;
     line-height: 1.3;
   }
@@ -171,9 +171,9 @@ a-layout.status-page.new-layout
     display: grid;
     grid-template-columns: 200px minmax(0, 1fr);
     align-items: center;
-    gap: 16px;
+    gap: var(--gpt-gap-xl);
     min-height: 44px;
-    padding: 10px 16px;
+    padding: var(--gpt-gap-lg) var(--gpt-page-padding-x);
     border-bottom: 1px solid var(--gpt-border-default);
 
     &:last-child {
@@ -187,7 +187,7 @@ a-layout.status-page.new-layout
     gap: 8px;
     min-width: 0;
     color: var(--gpt-text-secondary);
-    font-size: 12px;
+    font-size: var(--gpt-font-base);
     font-weight: 500;
     line-height: 1.4;
   }
@@ -201,7 +201,7 @@ a-layout.status-page.new-layout
   .status-info-value {
     min-width: 0;
     color: var(--gpt-text-primary);
-    font-size: 12px;
+    font-size: var(--gpt-font-base);
     font-weight: 600;
     line-height: 1.5;
     word-break: break-all;

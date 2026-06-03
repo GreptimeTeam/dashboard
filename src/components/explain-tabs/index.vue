@@ -1,6 +1,6 @@
 <template lang="pug">
 .explain-container
-  .explain-toolbar
+  .explain-toolbar.gpt-results-toolbar
     .view-switch
       a-button-group
         a-button(
@@ -157,14 +157,12 @@
     min-height: 0;
   }
 
-  .explain-toolbar {
+  .explain-toolbar.gpt-results-toolbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 1px solid var(--color-border-2);
-    padding: var(--gpt-toolbar-padding);
-    gap: 8px;
-    min-height: 32px;
+    border-bottom: 1px solid var(--gpt-border-default);
+    gap: var(--gpt-gap-md);
 
     .toolbar-actions {
       flex-shrink: 0;
@@ -186,8 +184,8 @@
           color: var(--gpt-brand-700);
           background: transparent;
           border-radius: 0;
-          padding: 4px 8px;
-          font-size: 11px;
+          padding: var(--gpt-gap-xs) var(--gpt-gap-md);
+          font-size: var(--gpt-font-sm);
           font-family: var(--font-mono);
         }
       }
@@ -198,7 +196,7 @@
     flex: 1;
     min-height: 0;
     overflow: hidden;
-    margin: var(--gpt-page-padding-x) var(--gpt-page-padding-y);
+    margin: var(--gpt-page-padding-y) var(--gpt-page-padding-x);
     border: 1px solid var(--gpt-border-default);
     border-radius: var(--gpt-radius-md);
     background: var(--gpt-bg-panel);
@@ -217,7 +215,7 @@
     background: var(--gpt-bg-panel);
 
     .raw-json {
-      font-size: 12px;
+      font-size: var(--gpt-font-base);
       margin: 0;
       white-space: pre-wrap;
     }

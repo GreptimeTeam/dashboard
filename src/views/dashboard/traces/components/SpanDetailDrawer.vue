@@ -14,7 +14,7 @@ a-drawer(
     .drawer-title
       span Span Attributes
 
-  .span-header
+  .span-header.gpt-muted-bar
     .span-name
       | {{ span?.span_name }}
     a-typography-text.trace-id-value(copyable :copy-text="span?.span_id")
@@ -146,26 +146,20 @@ a-drawer(
 </script>
 
 <style lang="less" scoped>
-  .span-header {
+  .span-header.gpt-muted-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0;
-    border: 1px solid var(--color-border);
-    margin-bottom: 8px;
-    font-weight: 500;
-    color: var(--color-text-2);
-    background-color: var(--color-fill-2);
 
     .span-name {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: var(--gpt-gap-md);
       flex-shrink: 0;
-      padding: 4px;
+      padding: var(--gpt-gap-xs);
 
       .span-name {
-        font-size: 14px;
+        font-size: var(--gpt-font-lg);
       }
     }
   }
@@ -174,29 +168,29 @@ a-drawer(
     display: flex;
     align-items: left;
     border-top: none;
-    margin: 16px 0;
+    margin: var(--gpt-gap-xl) 0;
 
     .summary-item {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 0 16px;
+      gap: var(--gpt-gap-md);
+      padding: 0 var(--gpt-page-padding-x);
 
       .summary-label {
-        font-size: 12px;
-        color: var(--color-text-3);
+        font-size: var(--gpt-font-base);
+        color: var(--gpt-text-muted);
       }
 
       .summary-value {
-        font-size: 12px;
-        color: var(--color-text-1);
+        font-size: var(--gpt-font-base);
+        color: var(--gpt-text-primary);
       }
     }
 
     .divider {
       width: 1px;
       height: 16px;
-      background-color: var(--color-border);
+      background-color: var(--gpt-border-default);
     }
   }
 
@@ -205,8 +199,8 @@ a-drawer(
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    font-weight: 800;
-    font-size: 15px;
+    font-weight: 700;
+    font-size: var(--gpt-font-xl);
     line-height: 20px;
     height: 58px;
   }
@@ -216,19 +210,19 @@ a-drawer(
     top: 0;
     right: 0;
     bottom: 0;
-    background-color: var(--color-bg-2);
-    border-left: 1px solid var(--color-border);
+    background-color: var(--gpt-bg-panel);
+    border-left: 1px solid var(--gpt-border-default);
     box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
   }
 
   :deep(.arco-drawer-header) {
-    border-bottom: 1px solid var(--color-border);
-    padding: 16px;
+    border-bottom: 1px solid var(--gpt-border-default);
+    padding: var(--gpt-page-padding-x);
     height: 58px;
   }
 
   :deep(.arco-drawer-body) {
-    padding: 10px;
+    padding: var(--gpt-gap-lg);
   }
 
   :deep(.cm-editor) {
@@ -245,7 +239,7 @@ a-drawer(
 
   :deep(.arco-tabs) {
     .arco-tabs-nav {
-      margin-bottom: 16px;
+      margin-bottom: var(--gpt-gap-xl);
     }
 
     .arco-tabs-content {
@@ -256,6 +250,6 @@ a-drawer(
     vertical-align: top;
   }
   :deep(.arco-descriptions-size-medium .arco-descriptions-item-label-block) {
-    font-size: 13px;
+    font-size: var(--gpt-font-md);
   }
 </style>

@@ -10,7 +10,7 @@ a-layout-header
         :docVisible="docVisible"
         :config="config"
       )
-a-layout-content.main-content
+a-layout-content.main-content.gpt-ingest-upload
   a-upload(
     action="/"
     :auto-upload="false"
@@ -222,10 +222,10 @@ a-layout-content.main-content
 </script>
 
 <style lang="less" scoped>
-  .arco-upload {
-    width: 100%;
-    padding: 0 105px;
-    max-width: 960px;
+  .gpt-ingest-upload {
+    .arco-upload {
+      width: 100%;
+    }
   }
 
   .upload-box {
@@ -240,30 +240,30 @@ a-layout-content.main-content
       background: var(--danger-bg-color);
     }
     .arco-btn {
-      font-weight: 800;
-      font-size: 14px;
-      font-family: 'Gilroy';
-      padding: 12px 32px;
-      height: 42px;
+      font-weight: 700;
+      font-size: var(--gpt-font-lg);
+      font-family: var(--font-family-base);
+      padding: var(--gpt-gap-lg) var(--gpt-gap-xl);
+      height: var(--gpt-control-height-md);
     }
   }
 
   .tip {
-    font-family: 'Gilroy';
-    font-weight: 800;
+    font-family: var(--font-family-base);
+    font-weight: 700;
     font-size: var(--gpt-font-xl);
-    color: var(--main-font-color);
+    color: var(--gpt-text-primary);
     line-height: 28px;
   }
 
   .reupload {
     display: flex;
     justify-content: center;
-    padding-bottom: 10px;
+    padding-bottom: var(--gpt-gap-lg);
   }
 
   .file-info {
-    font-size: 13px;
+    font-size: var(--gpt-font-md);
     line-height: 20px;
   }
 
@@ -275,13 +275,13 @@ a-layout-content.main-content
 
   .error {
     :deep(.arco-alert) {
-      padding: 7px 16px;
+      padding: var(--gpt-gap-sm) var(--gpt-page-padding-x);
       border-radius: var(--gpt-radius-sm);
       background: var(--danger-bg-color);
       .arco-typography {
-        color: var(--main-font-color);
+        color: var(--gpt-text-primary);
         margin: 0;
-        font-size: 13px;
+        font-size: var(--gpt-font-md);
       }
     }
   }
@@ -307,22 +307,22 @@ a-layout-content.main-content
     width: 800px;
     .arco-modal-header {
       height: auto;
-      padding: 15px 30px 0 30px;
+      padding: var(--gpt-gap-lg) var(--gpt-page-padding-x) 0;
       .arco-modal-close-btn {
         font-size: var(--gpt-font-xl);
       }
     }
     .arco-modal-body {
-      padding: 0 30px 30px 30px;
+      padding: 0 var(--gpt-page-padding-x) var(--gpt-page-padding-x);
       .arco-spin {
-        margin-top: 15px;
+        margin-top: var(--gpt-gap-lg);
         border: 1px solid var(--gpt-border-strong);
         border-radius: var(--gpt-radius-sm);
         overflow: hidden;
       }
       .load {
-        padding-left: 6px;
-        font-size: 13px;
+        padding-left: var(--gpt-gap-sm);
+        font-size: var(--gpt-font-md);
       }
       .text {
         color: var(--main-font-color);

@@ -1,5 +1,5 @@
 <template lang="pug">
-.timeline-header(style="display: flex; align-items: stretch")
+.timeline-header.gpt-muted-bar
   a-split(v-model:size="spanInfoWidth" :min="200" :max="1000")
     template(#first)
       .span-name Operation Name
@@ -10,10 +10,10 @@
           .tick-label(v-if="index === 3" style="text-align: right") {{ formatDuration(rootSpan?.duration_nano || 0) }}
     template(#resize-trigger)
       .resize-trigger(
-        style="width: 1px; height: calc(100vh - 120px); background-color: var(--color-border); position: absolute; cursor: col-resize; z-index: 1000"
+        style="width: 1px; height: calc(100vh - 120px); background-color: var(--gpt-border-default); position: absolute; cursor: col-resize; z-index: 1000"
       )
         icon-drag-dot-vertical(
-          style="position: absolute; left: -8px; top: 50%; transform: translateY(-50%); color: var(--color-text-3)"
+          style="position: absolute; left: -8px; top: 50%; transform: translateY(-50%); color: var(--gpt-text-muted)"
         )
 a-spin.spin-block(:loading="loading")
   .tree-container
@@ -181,22 +181,16 @@ a-spin.spin-block(:loading="loading")
 </script>
 
 <style lang="less" scoped>
-  .timeline-header {
-    padding: 0;
-    border: 1px solid var(--color-border);
-    margin-bottom: 8px;
-    font-weight: 500;
-    color: var(--color-text-2);
-    background-color: var(--color-fill-2);
+  .timeline-header.gpt-muted-bar {
     display: flex;
     align-items: stretch;
 
     .span-name {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: var(--gpt-gap-md);
       flex-shrink: 0;
-      padding: 8px 8px;
+      padding: var(--gpt-gap-md);
       height: 100%;
     }
   }
@@ -219,13 +213,13 @@ a-spin.spin-block(:loading="loading")
       flex: 1;
       display: flex;
       justify-content: space-between;
-      border-left: 1px solid var(--color-border);
-      padding: 4px 4px;
+      border-left: 1px solid var(--gpt-border-default);
+      padding: var(--gpt-gap-xs);
       align-items: center;
 
       .tick-label {
-        font-size: 12px;
-        color: var(--color-text-3);
+        font-size: var(--gpt-font-base);
+        color: var(--gpt-text-muted);
       }
     }
   }
@@ -233,7 +227,7 @@ a-spin.spin-block(:loading="loading")
   .tree-container {
     height: calc(100vh - 176px);
     overflow: auto;
-    padding: 8px 0;
+    padding: var(--gpt-gap-md) 0;
   }
 
   :deep(.arco-tree) {
@@ -245,42 +239,42 @@ a-spin.spin-block(:loading="loading")
     display: none !important;
   }
   :deep(.arco-tree-node-selected .arco-tree-node-title) {
-    color: var(--color-primary);
-    background-color: var(--color-fill-2);
+    color: var(--gpt-main-purple);
+    background-color: var(--gpt-bg-surface);
   }
   .expand-info {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 2px 6px;
+    gap: var(--gpt-gap-xs);
+    padding: 2px var(--gpt-gap-sm);
     border-radius: var(--gpt-radius-sm);
     cursor: pointer;
     transition: all 0.2s;
-    font-size: 11px;
+    font-size: var(--gpt-font-sm);
     width: 32px;
     height: 28px;
     justify-content: center;
 
     &:hover {
-      border-color: var(--color-primary);
+      border-color: var(--gpt-main-purple);
       opacity: 0.8;
     }
 
     &.expanded {
-      border-color: var(--color-primary);
+      border-color: var(--gpt-main-purple);
       opacity: 0.9;
     }
 
     .expand-icon {
       display: flex;
       align-items: center;
-      font-size: 10px;
+      font-size: var(--gpt-font-xs);
       height: 22px;
     }
 
     .child-count {
       font-weight: bold;
-      font-size: 10px;
+      font-size: var(--gpt-font-xs);
     }
   }
   .leaf-node {
@@ -296,8 +290,8 @@ a-spin.spin-block(:loading="loading")
     }
   }
   .child-count-icon {
-    background-color: var(--color-primary-light-1);
-    color: var(--color-primary);
+    background-color: var(--gpt-nav-active-bg);
+    color: var(--gpt-main-purple);
     border-radius: 50%;
     width: 16px;
     height: 16px;
@@ -355,8 +349,8 @@ a-spin.spin-block(:loading="loading")
           right: 0;
           top: -16px;
           white-space: nowrap;
-          color: var(--color-text-3);
-          font-size: 12px;
+          color: var(--gpt-text-muted);
+          font-size: var(--gpt-font-base);
         }
       }
     }
@@ -367,12 +361,12 @@ a-spin.spin-block(:loading="loading")
   }
 
   :deep(.arco-tree-node-content) {
-    padding: 4px 8px;
+    padding: var(--gpt-gap-xs) var(--gpt-gap-md);
     border-radius: var(--gpt-radius-sm);
     transition: background-color 0.2s;
 
     &:hover {
-      background-color: var(--color-fill-2);
+      background-color: var(--gpt-bg-surface);
     }
   }
 
@@ -389,10 +383,10 @@ a-spin.spin-block(:loading="loading")
 
   .resize-trigger {
     &:hover {
-      background-color: var(--color-primary);
+      background-color: var(--gpt-main-purple);
 
       :deep(.arco-icon) {
-        color: var(--color-primary);
+        color: var(--gpt-main-purple);
       }
     }
   }

@@ -2,11 +2,11 @@
 a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
   template(#title)
     a-space.table-sidebar-title(fill :size="10")
-      span.table-sidebar-heading
+      span.gpt-sidebar-heading
         | {{ $t('tables.sidebar.title') }}
         a-tooltip(v-if="tableCountTooltip" :content="tableCountTooltip")
-          span.table-sidebar-count {{ tableCountLabel }}
-        span.table-sidebar-count(v-else) {{ tableCountLabel }}
+          span.gpt-sidebar-count {{ tableCountLabel }}
+        span.gpt-sidebar-count(v-else) {{ tableCountLabel }}
       a-button(size="mini" :loading="totalTablesLoading" @click="refreshTablesTree()")
         template(#icon)
           svg.icon-11.brand-color
@@ -487,19 +487,6 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
 
   .table-sidebar-title {
     width: 100%;
-  }
-
-  .table-sidebar-heading {
-    display: inline-flex;
-    gap: 4px;
-    align-items: baseline;
-    min-width: 0;
-  }
-
-  .table-sidebar-count {
-    color: var(--gpt-text-muted);
-    font-size: var(--gpt-font-sm);
-    white-space: nowrap;
   }
 
   :deep(.search-table) {

@@ -42,12 +42,12 @@ a-space.top-bar.gpt-content-toolbar
 <style lang="less" scoped>
   .top-bar {
     :deep(.arco-select-view-value) {
-      font-size: 13px;
-      color: var(--main-font-color);
+      font-size: var(--gpt-font-md);
+      color: var(--gpt-text-primary);
     }
     :deep(.arco-select-view-single) {
       width: 130px;
-      border-color: var(--border-color);
+      border-color: var(--gpt-border-default);
     }
   }
 </style>
@@ -70,50 +70,49 @@ a-space.top-bar.gpt-content-toolbar
       }
     }
     .arco-drawer-body {
-      color: var(--color-p-text);
-      font-size: 13px;
-      padding: 0 16px 16px 16px;
+      color: var(--gpt-text-primary);
+      font-size: var(--gpt-font-md);
+      padding: 0 var(--gpt-page-padding-x) var(--gpt-page-padding-x);
       a {
         color: var(--brand-color);
-        font-size: 13px;
-        margin-left: 4px;
+        font-size: var(--gpt-font-md);
+        margin-left: var(--gpt-gap-xs);
       }
     }
 
     .markdown-container.ingest {
-      margin-bottom: 10px;
+      margin-bottom: var(--gpt-gap-md);
       h3 {
-        margin: 0 0 10px;
+        margin: 0 0 var(--gpt-gap-md);
       }
       pre {
         margin: 0;
-        background: var(--color-code-bg);
+        background: var(--gpt-bg-code);
         border-radius: var(--gpt-radius-sm);
-        padding: 0 6px;
-        color: var(--color-code);
+        padding: 0 var(--gpt-gap-sm);
+        color: var(--gpt-text-primary);
         line-height: 20px;
 
         code {
-          font-size: 12px;
+          font-size: var(--gpt-font-base);
           white-space: normal;
-          font-size: 12px;
           line-height: 20px;
         }
       }
       p {
-        margin: 10px 0;
-        font-size: 13px;
+        margin: var(--gpt-gap-md) 0;
+        font-size: var(--gpt-font-md);
       }
       code {
-        font-size: 12px;
+        font-size: var(--gpt-font-base);
       }
 
       ul {
-        margin: 10px 0;
+        margin: var(--gpt-gap-md) 0;
       }
       li {
-        margin: 0px 0;
-        font-size: 13px;
+        margin: 0;
+        font-size: var(--gpt-font-md);
       }
     }
   }

@@ -1,0 +1,95 @@
+---
+description: Greptime dashboard UI tokens, layout regions, tables, and Arco overrides — use when editing Vue/LESS styles
+globs: src/**/*.{vue,less}
+alwaysApply: false
+---
+
+# Dashboard UI style rules
+
+## Core principles
+
+1. Use **design tokens only**: `--gpt-*`, `--font-family-base`, `--font-mono`. Do not add `#hex`, raw `12px`, or legacy `--color-text-*` / `--main-font-color` in new code.
+2. Prefer **global CSS classes** in `ui-regions.less`, `typography.less`, `button.less`, `dataView.less`. Vue scoped styles are for **page semantics only** (column emphasis, chart, pipeline colors).
+3. **No layout Vue wrappers** (`PageHeader.vue`, etc.). Compose modifier classes on existing DOM.
+4. **CSS selector = template class**: if scoped/CSS uses `.foo.gpt-bar`, the template must have `class="foo gpt-bar"`.
+5. Query results use **`QueryResultTable` → `PaginatedDataTable` → `DataTable`**. Do not reintroduce `data-grid.vue` or standalone `a-table` for SQL results.
+
+## Layout modifiers (pick one on page root)
+
+| Modifier | Pages | Table mode |
+|----------|-------|------------|
+| `new-layout new-layout--workspace` | Table Query, Metrics, Perses | Panel: scroll inside table, pagination fixed at bottom |
+| `query-layout query-layout--stack` | Logs Query, Traces | Last card `flex:1`; toolbar via `.toolbar` in `ui-regions.less` |
+| `query-layout query-layout--surface` | Flow | Page scroll; `gpt-table-page` + `scroll.y: undefined` |
+
+Files: `src/assets/style/ui-regions.less`, `src/assets/style/query-layout.less`.
+
+## Region classes (put on template)
+
+- **Header**: `gpt-page-header` on `.page-header` (do not duplicate page-header block in `query-layout.less`).
+- **Toolbars**: `gpt-toolbar` / `gpt-content-toolbar` / `gpt-results-toolbar` (results = gray table toolbar bg).
+- **Query strip** (workspace): `gpt-query-strip`.
+- **Results card** (workspace): `gpt-results-pane` on result `a-card`.
+- **Panel table** (internal scroll): `gpt-table-panel` on flex column container.
+- **Page table** (document scroll): `gpt-table-page` on `DataTable`.
+- **Surface card**: `gpt-surface-card` + `gpt-surface-card__title` / `__badge` in `#title`.
+- **Editors**: `gpt-light-editor`, `gpt-light-editor-card`, `gpt-code-editor-frame` (+ `--h200/300/500`), `gpt-square-editor` when needed.
+- **Misc**: `gpt-divider-band`, `gpt-popover-panel`, `gpt-card-flush-body`, `gpt-status-pill` (+ `is-running` / `is-error` / `is-default`), `gpt-status-pill__dot`.
+
+Typography utilities: `typography.less` — e.g. `gpt-text-page-subtitle`, `gpt-text-secondary`, `gpt-text-muted`, `gpt-text-toolbar-meta`, `gpt-icon-muted`.
+
+## Panel table height chain (Table Query)
+
+```
+.result-container.gpt-table-panel
+  .result-toolbar.gpt-results-toolbar
+  .result-content (flex:1; min-height:0; overflow:hidden)
+    .table-panel → QueryResultTable → .paginated-data-table
+      .data-table-container (flex:1; scroll inside)
+      .grid-pagination (flex-shrink:0; fixed at bottom)
+```
+
+Tab pane: `overflow: hidden` on content item (avoid outer scroll stealing from table). `data-view/index.vue` is the reference.
+
+## Tables & font size
+
+- **`DataTable` default `size`: `medium`** (14px body via Arco). Do not default to `small` for main result tables.
+- `dataView.less` forces **12px** on `.arco-table-size-small` / `mini` cells — use only when density is intentional (compact mode).
+- Logs: `medium` normal, `mini` when compact checkbox on.
+- Flow list: `gpt-table-page`, no virtual fill height.
+
+## Buttons (`button.less`)
+
+- Use `size="small"` (26px) or `size="medium"` (32px) — **no** scoped `:deep(.arco-btn) { height: 24px; padding: 0 4px }`.
+- `gpt-btn-brand-solid` — dark brand-900 CTA (e.g. Flow New Flow).
+- `gpt-btn-toolbar` + optional `gpt-btn-toolbar-mono` — compact toolbar buttons (Logs time pagination).
+
+## Scoped styles — allowed vs forbidden
+
+**OK**: column cells (`.flow-name-cell`), status pills modifiers, page-header `justify-content` on top of `gpt-page-header`, view-switch gap, explain/chart/pipeline-specific UI.
+
+**Avoid**: full toolbar flex/padding/background (use `gpt-results-toolbar`); duplicate title typography; per-page Arco button sizing; compound `.local.gpt-x` without `gpt-x` on element.
+
+## File index
+
+| File | Role |
+|------|------|
+| `global.less` | `:root` tokens |
+| `ui-regions.less` | Regions + layout modifiers |
+| `typography.less` | Text utility classes |
+| `button.less` | Buttons, `gpt-btn-*` |
+| `dataView.less` | Table sizes, pagination, hover |
+| `query-layout.less` | Query page structure |
+| `editor.less` | CodeMirror |
+| `components/data-table/` | Shared table |
+| `components/paginated-data-table/` | Table + bottom pagination |
+| `components/query-result-table/` | Table Query wrapper |
+
+## Pre-commit checklist
+
+- [ ] Correct layout modifier on page root?
+- [ ] `gpt-page-header` / `gpt-results-toolbar` / `gpt-table-panel` on template where CSS expects them?
+- [ ] Panel vs page table class correct?
+- [ ] `DataTable` size appropriate (default medium for results)?
+- [ ] No new hardcoded colors/font sizes?
+- [ ] No revived `data-grid`?

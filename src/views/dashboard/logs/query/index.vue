@@ -1,6 +1,6 @@
 <template lang="pug">
-.query-layout.logs-query-container.query-container
-  .page-header
+.query-layout.query-layout--stack.logs-query-container.query-container
+  .page-header.gpt-page-header
     | {{ $t('menu.dashboard.logsQuery') }}
   .content-wrapper.query-layout-cards
     a-card(:bordered="false")
@@ -32,7 +32,7 @@
             icon-play-arrow(v-else)
           | {{ $t('dashboard.run') }}
         a-checkbox(size="medium" :model-value="refresh" @update:modelValue="(val) => (refresh = val)")
-          span(style="color: var(--color-text-2)") {{ $t('logsQuery.live') }}
+          span.gpt-text-secondary {{ $t('logsQuery.live') }}
         a-space(style="margin-left: auto")
           a-button(
             type="outline"
@@ -106,10 +106,10 @@
             size="small"
             :unmount-on-close="false"
           )
-            a-button(type="text" style="color: var(--color-text-2)")
-              | {{ $t('logsQuery.columns') }}
+            a-button(type="text")
+              span.gpt-text-secondary {{ $t('logsQuery.columns') }}
             template(#content)
-              a-card(style="padding: 10px")
+              a-card.gpt-popover-panel
                 a-checkbox-group(v-model="displayedColumns[queryState.table]" direction="vertical")
                   a-checkbox(v-for="column in columns" :value="column.name")
                     | {{ column.name }}
@@ -305,8 +305,8 @@
   @import '@/assets/style/query-layout.less';
 
   .results-count {
-    color: var(--color-text-3);
-    font-size: 12px;
+    color: var(--gpt-text-muted);
+    font-size: var(--gpt-font-base);
     font-weight: normal;
   }
 </style>

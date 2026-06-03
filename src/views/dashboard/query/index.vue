@@ -1,5 +1,5 @@
 <template lang="pug">
-a-layout.new-layout(:class="{ 'query-layout--focus': focusMode }")
+a-layout.new-layout.new-layout--workspace(:class="{ 'query-layout--focus': focusMode }")
   a-resize-box(
     v-model:width="sidebarWidth"
     :class="{ 'hide-sider': focusMode }"
@@ -157,7 +157,6 @@ a-layout.new-layout(:class="{ 'query-layout--focus': focusMode }")
   }
   .new-layout {
     :deep(> .arco-layout-content.layout-content.has-panel) {
-      background: var(--gpt-bg-app);
       height: 100%;
     }
     :deep(.layout-space > .arco-space-item:first-of-type) {

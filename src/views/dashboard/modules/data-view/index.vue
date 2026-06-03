@@ -28,8 +28,8 @@ a-tabs.panel-tabs(
   a-tab-pane(v-for="(result) of session.results.value" :key="result.key" closable)
     template(#title)
       span {{ `${$t('dashboard.result')} ${Number(result.key) - startKey + 1}` }}
-    .result-container
-      .result-toolbar(v-if="result.query")
+    .result-container.gpt-table-panel
+      .result-toolbar.gpt-results-toolbar(v-if="result.query")
         .view-switch
           a-button-group
             a-button(
@@ -237,28 +237,19 @@ a-tabs.panel-tabs(
       background-color: transparent;
     }
     > .arco-tabs-content > .arco-tabs-content-list > .arco-tabs-content-item {
-      padding: 15px 0;
+      padding: var(--gpt-section-padding-y) 0;
     }
   }
 </style>
 
 <style lang="less" scoped>
-  .result-container {
+  .result-container.gpt-table-panel {
     display: flex;
     flex-direction: column;
     height: 100%;
   }
 
   .result-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid var(--gpt-border-default);
-    background: var(--gpt-table-toolbar-bg);
-    min-height: 39px;
-    padding: var(--gpt-toolbar-padding);
-    gap: 8px;
-
     .query-display {
       flex: 1;
       margin-right: 6px;
@@ -300,9 +291,16 @@ a-tabs.panel-tabs(
       flex-direction: column;
       min-height: 0;
 
+      :deep(.query-result-table-container),
+      :deep(.paginated-data-table),
       :deep(.data-table-container) {
         flex: 1;
         min-height: 0;
+      }
+
+      :deep(.query-result-table-container),
+      :deep(.paginated-data-table) {
+        height: 100%;
       }
     }
   }
@@ -316,6 +314,7 @@ a-tabs.panel-tabs(
     :deep(> .arco-tabs-content) {
       > .arco-tabs-content-list > .arco-tabs-content-item {
         padding: 0;
+        overflow: hidden;
         .arco-tabs-nav-ink {
           background: transparent;
         }
@@ -327,9 +326,6 @@ a-tabs.panel-tabs(
           }
         }
       }
-      .arco-table-size-mini .arco-table-td {
-        font-size: var(--gpt-font-base);
-      }
       .arco-table-th {
         background: var(--gpt-table-head-bg);
         color: var(--gpt-text-primary);
@@ -339,18 +335,6 @@ a-tabs.panel-tabs(
         border-bottom: 1px solid var(--gpt-border-subtle);
         color: var(--gpt-text-primary);
       }
-    }
-    :deep(.arco-card.data-grid) {
-      height: 100%;
-      padding: 0;
-      border-radius: 0;
-    }
-  }
-
-  .result-extra {
-    .arco-btn {
-      height: 26px;
-      border-radius: var(--gpt-radius-sm);
     }
   }
 </style>

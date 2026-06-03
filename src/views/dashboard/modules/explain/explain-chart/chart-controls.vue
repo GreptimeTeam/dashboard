@@ -93,7 +93,7 @@
 
   .control-label {
     flex-shrink: 0;
-    font-size: 13px;
+    font-size: var(--gpt-font-md);
     color: var(--gpt-text-secondary);
   }
 

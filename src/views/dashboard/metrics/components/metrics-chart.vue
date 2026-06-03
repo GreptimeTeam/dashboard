@@ -673,7 +673,7 @@ a-card.metrics-chart(:bordered="false")
     }
 
     .chart-container {
-      padding: 8px var(--gpt-page-padding-x) 12px;
+      padding: var(--gpt-gap-md) var(--gpt-page-padding-x) var(--gpt-gap-lg);
     }
 
     .empty-state {

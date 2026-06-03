@@ -18,7 +18,7 @@ a-modal(
           a-space(:size="4")
             span {{ $t('logsQuery.exportSqlLabel') }}
             a-tooltip(mini position="tl" :content="$t('logsQuery.exportSqlTip')")
-              svg.icon-12(style="cursor: pointer; color: var(--color-text-3)")
+              svg.icon-12.gpt-icon-muted
                 use(href="#question")
         pre.export-sql-display {{ formattedSql }}
       a-form-item(:label="$t('logsQuery.exportLimit')")
@@ -31,10 +31,10 @@ a-modal(
             :min="1"
           )
           template(v-if="totalCount !== null")
-            span(style="color: var(--color-text-3); margin-left: 8px; white-space: nowrap")
+            span.gpt-text-muted.export-limit-meta
               | / {{ totalCount }} {{ $t('logsQuery.records') }}
           template(v-else)
-            span(style="color: var(--color-text-3); margin-left: 8px; white-space: nowrap")
+            span.gpt-text-muted.export-limit-meta
               | {{ $t('logsQuery.records') }}
 </template>
 
@@ -158,20 +158,25 @@ a-modal(
 
 <style lang="less" scoped>
   .export-modal-content {
-    padding: 8px 0;
+    padding: var(--gpt-gap-md) 0;
+  }
+
+  .export-limit-meta {
+    margin-left: var(--gpt-gap-md);
+    white-space: nowrap;
   }
   .export-sql-display {
     width: 100%;
     height: 200px;
-    padding: 12px;
+    padding: var(--gpt-gap-lg);
     margin: 0;
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--gpt-border-default);
     border-radius: var(--gpt-radius-sm);
-    background-color: var(--color-fill-1);
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
-    font-size: 13px;
+    background-color: var(--gpt-bg-surface);
+    font-family: var(--font-mono);
+    font-size: var(--gpt-font-md);
     line-height: 1.6;
-    color: var(--color-text-1);
+    color: var(--gpt-text-primary);
     overflow: auto;
     white-space: pre-wrap;
     word-wrap: break-word;

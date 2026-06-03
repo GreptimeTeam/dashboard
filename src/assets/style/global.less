@@ -8,6 +8,8 @@
 @import url('./log.less');
 @import url('./form.less');
 @import url('./layout.less');
+@import url('./typography.less');
+@import url('./ui-regions.less');
 @import url('./vp-doc.less');
 @import url('./list.less');
 @import url('./docs.less');
@@ -103,16 +105,6 @@
 .arco-card.gpt-vertical-scrollbar > .arco-card-body {
   overflow-x: hidden;
   overflow-y: auto;
-}
-
-.gpt-content-toolbar {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-  height: 47px;
-  padding: var(--gpt-toolbar-padding);
-  background: var(--gpt-bg-panel);
-  border-bottom: 1px solid var(--gpt-border-default);
 }
 
 .gpt-divider-line {
@@ -220,6 +212,7 @@
   --gpt-size-navbar: 52px;
   --gpt-size-table-sidebar: 228px;
   --gpt-size-toolbar: 38px;
+  --gpt-size-region-bar: 47px;
   --gpt-radius-sm: 4px;
   --gpt-radius-md: 8px;
   --gpt-radius-lg: 12px;
@@ -335,15 +328,16 @@ body {
   --primary-6: var(--brand-color);
 }
 
-// Global section title styling
+// Secondary bar inside results (e.g. Metrics evaluation time row)
 .section-title {
   display: flex;
+  flex-shrink: 0;
   justify-content: space-between;
   align-items: center;
+  min-height: var(--gpt-size-region-bar);
   padding: var(--gpt-toolbar-padding);
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-bg-container);
-  height: 50px;
+  border-bottom: 1px solid var(--gpt-border-default);
+  background: var(--gpt-bg-panel);
 }
 
 html,
@@ -760,42 +754,8 @@ samp {
   height: 100vh;
 }
 
-@font-face {
-  font-weight: 400;
-  font-family: 'Open Sans';
-  font-style: normal;
-  src: local('Open Sans'), url('../fonts/OpenSans-Regular.ttf');
-}
-
-@font-face {
-  font-weight: 600;
-  font-family: 'Open Sans';
-  font-style: normal;
-  src: local('Open Sans'), url('../fonts/OpenSans-SemiBold.ttf');
-}
-
-@font-face {
-  font-weight: 800;
-  font-family: 'Open Sans';
-  font-style: normal;
-  src: local('Open Sans'), url('../fonts/OpenSans-ExtraBold.ttf');
-}
-
-@font-face {
-  font-weight: 400;
-  font-family: 'Gilroy';
-  font-style: normal;
-  src: local('Gilroy'), url('../fonts/Gilroy-Regular.otf');
-}
-
-@font-face {
-  font-weight: 800;
-  font-family: 'Gilroy';
-  font-style: normal;
-  src: local('Gilroy'), url('../fonts/Gilroy-ExtraBold.otf');
-}
 .custom-drawer {
   .arco-drawer {
-    border-left: 1px solid var(--color-neutral-3);
+    border-left: 1px solid var(--gpt-border-default);
   }
 }

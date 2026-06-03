@@ -44,7 +44,13 @@
   .results(v-if="hasRecords")
     a-tabs.playground-tabs(:default-active-key="hasChart ? '2' : '1'")
       a-tab-pane(key="1" title="Table")
-        DataGrid(:data="result" :hasHeader="false")
+        PaginatedDataTable(
+          :data="tableModel.rows"
+          :columns="tableModel.columns"
+          :displayed-columns="tableModel.displayedColumns"
+          :ts-column="tableModel.tsColumn"
+          :show-context-menu="false"
+        )
       a-tab-pane(v-if="hasChart" key="2" title="Chart")
         DataChart(:data="result" :hasHeader="false" :defaultChartForm="chartParams ? JSON.parse(chartParams) : {}")
   .logs(v-if="log.type")
@@ -67,6 +73,8 @@
   import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '@/views/dashboard/config'
   import i18n from '@/locale'
   import { Message } from '@arco-design/web-vue'
+  import PaginatedDataTable from '@/components/paginated-data-table/index.vue'
+  import { normalizeRecordsToTableModel } from '@/utils/table-normalizer'
   import mapLanguages from './utils'
 
   // data
@@ -125,6 +133,9 @@
     type: '',
   } as ResultType)
   const log = ref({} as Log)
+
+  const tableModel = computed(() => normalizeRecordsToTableModel(result.value?.records))
+
   // TODO: better reset
   const reset = () => {
     defaultCode = codeFormat(slots?.default?.())

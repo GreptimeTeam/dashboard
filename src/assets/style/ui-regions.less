@@ -1,0 +1,423 @@
+// UI region layout modifiers — DOM structure unchanged; compose modifier classes on page roots.
+
+// --- Shared regions ---
+
+.gpt-page-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  min-height: var(--gpt-size-region-bar);
+  padding: var(--gpt-page-header-padding);
+  margin-bottom: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--gpt-font-xl);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--gpt-text-primary);
+  border-bottom: 1px solid var(--gpt-border-default);
+  background: var(--gpt-bg-panel);
+}
+
+.gpt-toolbar,
+.gpt-content-toolbar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: var(--gpt-size-region-bar);
+  padding: var(--gpt-toolbar-padding);
+  gap: var(--gpt-gap-md);
+  background: var(--gpt-bg-panel);
+  border-bottom: 1px solid var(--gpt-border-default);
+}
+
+.gpt-results-toolbar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--gpt-size-region-bar);
+  padding: var(--gpt-toolbar-padding);
+  gap: var(--gpt-gap-md);
+  background: var(--gpt-table-toolbar-bg);
+  border-bottom: 1px solid var(--gpt-border-default);
+}
+
+.gpt-content-padded {
+  padding: var(--gpt-page-padding-y) var(--gpt-page-padding-x);
+}
+
+.gpt-card-flush-body > .arco-card-body,
+.arco-card.gpt-card-flush-body > .arco-card-body {
+  padding: 0;
+}
+
+// PanelTable: fill flex parent; PageTable: grow with page scroll
+.gpt-table-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  .data-table-container,
+  > .arco-table-container {
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+.gpt-table-page {
+  height: auto;
+  overflow: visible;
+
+  .data-table-container,
+  :deep(.arco-table-container),
+  :deep(.arco-table-wrapper),
+  :deep(.arco-table-body) {
+    height: auto !important;
+  }
+}
+
+// Surface card (Flow)
+.gpt-surface-card {
+  border: 1px solid var(--gpt-border-default);
+  border-radius: var(--gpt-radius-md);
+  background: var(--gpt-bg-panel);
+  box-shadow: var(--gpt-shadow-sm);
+  overflow: hidden;
+
+  > .arco-card-header {
+    min-height: 44px;
+    padding: var(--gpt-toolbar-padding);
+    border-bottom: 1px solid var(--gpt-border-default);
+    background: var(--gpt-bg-panel);
+
+    .arco-card-header-title {
+      display: flex;
+      align-items: center;
+      gap: var(--gpt-gap-md);
+    }
+  }
+
+  > .arco-card-body {
+    padding: 0;
+  }
+}
+
+.gpt-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: var(--gpt-font-sm);
+  font-weight: 600;
+  line-height: 18px;
+  text-transform: capitalize;
+
+  &.is-running {
+    background: rgba(0, 187, 178, 0.12);
+    color: var(--gpt-accent-ts);
+  }
+
+  &.is-error {
+    background: rgba(245, 63, 63, 0.1);
+    color: var(--danger-color, #f53f3f);
+  }
+
+  &.is-default {
+    background: var(--gpt-bg-app);
+    color: var(--gpt-text-secondary);
+  }
+}
+
+.gpt-status-pill__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.gpt-surface-card__title {
+  font-size: var(--gpt-font-md);
+  font-weight: 700;
+  color: var(--gpt-text-primary);
+}
+
+.gpt-surface-card__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  min-height: 20px;
+  padding: 0 var(--gpt-gap-sm);
+  border-radius: var(--gpt-radius-lg);
+  background: var(--gpt-bg-app);
+  color: var(--gpt-text-secondary);
+  font-size: var(--gpt-font-sm);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.gpt-popover-panel {
+  padding: var(--gpt-gap-lg);
+
+  &.arco-card > .arco-card-body {
+    padding: 0;
+  }
+}
+
+.gpt-ingest-upload {
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 var(--gpt-page-padding-x);
+}
+
+.gpt-code-editor-frame {
+  width: 100%;
+
+  &--h200 {
+    height: 200px;
+  }
+
+  &--h300 {
+    height: 300px;
+  }
+
+  &--h500 {
+    height: 500px;
+  }
+}
+
+/* LangEditor 根节点同时带 gpt-code-editor-frame：单一边框画在 card 上，避免 cm-editor 双层边框拐角断线 */
+.gpt-light-editor-card.gpt-code-editor-frame {
+  overflow: hidden;
+  border: 1px solid var(--gpt-editor-border);
+  border-radius: var(--gpt-radius-sm);
+  background: var(--gpt-bg-code);
+  box-shadow: none;
+
+  > .arco-card-body {
+    height: 100%;
+    padding: 0;
+  }
+
+  .full-width-height-editor.gpt-light-editor {
+    height: 100%;
+
+    .cm-editor,
+    .ͼ1.cm-editor {
+      height: 100%;
+      border: none !important;
+      border-radius: 0 !important;
+      overflow: hidden;
+    }
+
+    .cm-gutters,
+    .ͼ1 .cm-gutters,
+    .ͼo .cm-gutters {
+      border-top-left-radius: var(--gpt-radius-sm);
+      border-bottom-left-radius: var(--gpt-radius-sm);
+      border-right: 1px solid var(--gpt-border-default);
+    }
+  }
+}
+
+.gpt-drawer-mode-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--gpt-gap-xl);
+  padding: var(--gpt-gap-md) var(--gpt-gap-xs);
+  background: var(--gpt-bg-surface);
+}
+
+.gpt-popover-panel--wide {
+  min-width: 200px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.trace-detail-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+
+  > .gpt-page-header {
+    flex-shrink: 0;
+  }
+
+  .content-container {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gpt-gap-md);
+    padding: 0 var(--gpt-gap-md);
+    overflow: hidden;
+  }
+}
+
+.gpt-form-panel {
+  width: 100%;
+  padding: var(--gpt-page-padding-y) var(--gpt-page-padding-x);
+  margin-bottom: var(--gpt-gap-xl);
+  border-radius: var(--gpt-radius-sm);
+  background: var(--gpt-bg-surface);
+}
+
+.gpt-muted-bar {
+  display: flex;
+  align-items: stretch;
+  padding: 0;
+  border: 1px solid var(--gpt-border-default);
+  margin-bottom: var(--gpt-gap-md);
+  font-weight: 500;
+  color: var(--gpt-text-secondary);
+  background-color: var(--gpt-bg-surface);
+}
+
+// --- query-layout: stack (Logs Query, Traces) ---
+
+.query-layout.query-layout--stack {
+  .content-wrapper,
+  .query-layout-cards {
+    flex: 1;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .query-layout-cards {
+    .arco-card {
+      border-radius: 0;
+      border-bottom: none;
+      box-shadow: none;
+      background: var(--gpt-bg-panel);
+
+      > .arco-card-body {
+        padding: 0;
+      }
+    }
+
+    .arco-card-header {
+      height: auto;
+      min-height: var(--gpt-size-region-bar);
+      padding: var(--gpt-toolbar-padding);
+      border-bottom: 1px solid var(--gpt-border-default);
+    }
+
+    .arco-card:last-child {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+
+      .arco-card-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        padding: 0;
+      }
+    }
+  }
+
+  .toolbar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--gpt-gap-lg);
+    min-height: var(--gpt-size-region-bar);
+    padding: var(--gpt-toolbar-padding);
+    border-bottom: 1px solid var(--gpt-border-default);
+    background: var(--gpt-bg-panel);
+  }
+}
+
+// --- query-layout: surface (Flow) ---
+
+.query-layout.query-layout--surface {
+  background: var(--gpt-bg-app);
+
+  .content-wrapper {
+    flex: 0 0 auto;
+    padding: var(--gpt-page-padding-y) var(--gpt-page-padding-x);
+    overflow: visible;
+  }
+
+  .query-layout-cards .gpt-surface-card,
+  .query-layout-cards .flow-results-card {
+    flex: none;
+    height: auto;
+
+    .arco-card-body {
+      flex: none;
+      height: auto;
+      min-height: 0;
+    }
+  }
+}
+
+// --- new-layout: workspace (Table Query, Metrics) ---
+
+.new-layout.new-layout--workspace {
+  > .arco-layout-content.layout-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--gpt-bg-app);
+  }
+
+  > .arco-layout-content.layout-content.has-panel {
+    background: var(--gpt-bg-app);
+  }
+
+  .gpt-query-strip {
+    flex-shrink: 0;
+    padding: var(--gpt-toolbar-padding);
+    background: var(--gpt-bg-panel);
+    border-bottom: 1px solid var(--gpt-border-default);
+  }
+
+  .gpt-query-editor-inset {
+    padding-left: var(--gpt-page-padding-x);
+    padding-right: var(--gpt-page-padding-x);
+  }
+
+  .gpt-results-pane,
+  .metrics-result-card.gpt-results-pane {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--gpt-bg-panel);
+
+    > .arco-card-body {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+    }
+  }
+
+  .layout-content > .arco-card.gpt-results-pane,
+  .layout-content > .arco-card.metrics-result-card {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .layout-content > .arco-card:not(.gpt-results-pane):not(.metrics-result-card) {
+    flex-shrink: 0;
+  }
+}

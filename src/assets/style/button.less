@@ -165,3 +165,32 @@
 .arco-radio-group-size-medium.arco-radio-group-button {
   height: var(--gpt-control-height-md);
 }
+
+/* Brand-900 solid CTA (e.g. Flow “New Flow”) */
+.arco-btn.gpt-btn-brand-solid,
+.arco-btn-primary.gpt-btn-brand-solid {
+  border: none;
+  background: var(--gpt-brand-900);
+  color: var(--gpt-text-inverse);
+  font-size: var(--gpt-font-base);
+  font-weight: 600;
+
+  &:hover {
+    opacity: 0.92;
+    color: var(--gpt-text-inverse);
+    background: var(--gpt-brand-900);
+  }
+}
+
+/* Compact toolbar buttons (Logs time-range pagination, etc.) */
+.arco-btn-text.gpt-btn-toolbar,
+.arco-btn-size-small.gpt-btn-toolbar:not(.arco-btn-only-icon) {
+  padding: var(--gpt-gap-xs) var(--gpt-gap-md);
+  border-radius: var(--gpt-radius-sm);
+  min-height: var(--gpt-control-height-sm);
+  line-height: 1.4;
+}
+
+.gpt-btn-toolbar-mono {
+  font-family: var(--font-mono);
+}

@@ -1,6 +1,6 @@
 <template lang="pug">
 a-space(v-if="pages.length")
-  a-button.btn(size="small" :loading="olderLoading" @click="loadOlder")
+  a-button.btn.gpt-btn-toolbar(size="small" :loading="olderLoading" @click="loadOlder")
     icon-left
     | {{ $t('logsQuery.older') }}
   a-space(style="overflow-x: auto; max-width: 55vw")
@@ -10,7 +10,7 @@ a-space(v-if="pages.length")
       position="top"
       :content="$t('logsQuery.clickToQuery')"
     )
-      a-button.btn(
+      a-button.btn.gpt-btn-toolbar.gpt-btn-toolbar-mono(
         type="text"
         size="small"
         :loading="page.loading"
@@ -18,11 +18,11 @@ a-space(v-if="pages.length")
         @click="() => loadPage(page.start, page.end, index)"
       )
         | {{ page.label }}
-  a-button.btn(size="small" :loading="newerLoading" @click="loadNewer")
+  a-button.btn.gpt-btn-toolbar(size="small" :loading="newerLoading" @click="loadNewer")
     | {{ $t('logsQuery.newer') }}
     icon-right
   a-tooltip(position="top" :content="$t('logsQuery.timeRangePagination')")
-    a-button.btn-hint(type="text" size="small")
+    a-button.btn-hint.gpt-btn-toolbar(type="text" size="small")
       icon-info-circle
 </template>
 
@@ -182,23 +182,23 @@ a-space(v-if="pages.length")
 
 <style scoped lang="less">
   .btn {
-    color: var(--color-text-2);
+    color: var(--gpt-text-secondary);
     transition: all 0.2s ease;
     &:hover:not(:disabled) {
-      color: var(--brand-color);
-      background-color: var(--color-fill-2);
+      color: var(--gpt-main-purple);
+      background-color: var(--gpt-bg-surface);
     }
   }
   .btn.active {
-    color: var(--brand-color);
-    background-color: var(--color-primary-light-1);
+    color: var(--gpt-main-purple);
+    background-color: var(--gpt-nav-active-bg);
     font-weight: 500;
     &:hover {
-      background-color: var(--color-primary-light-2);
+      background-color: var(--light-brand-color);
     }
   }
   .btn-hint {
-    color: var(--color-text-3);
+    color: var(--gpt-text-muted);
     cursor: help;
     transition: color 0.2s ease;
     &:hover {
@@ -206,24 +206,7 @@ a-space(v-if="pages.length")
     }
   }
 
-  // 时间段按钮组容器样式优化
   :deep(.arco-space) {
-    gap: 4px;
-  }
-
-  // 时间段按钮样式优化
-  :deep(.arco-btn-text) {
-    padding: 4px 8px;
-    border-radius: var(--gpt-radius-sm);
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    font-size: 12px;
-    min-height: 24px;
-    line-height: 1.4;
-  }
-
-  // Older/Newer 按钮样式
-  :deep(.arco-btn-size-small:not(.arco-btn-only-icon)) {
-    padding: 4px 8px;
-    min-height: 26px;
+    gap: var(--gpt-gap-xs);
   }
 </style>

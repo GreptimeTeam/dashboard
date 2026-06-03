@@ -328,13 +328,13 @@
     flex-direction: column;
     height: calc(100% - 32px);
 
-    padding: 16px 16px;
+    padding: var(--gpt-page-padding-y) var(--gpt-page-padding-x);
 
     .header {
       display: flex;
       justify-content: space-between;
       border-bottom: 1px solid var(--gpt-border-default);
-      padding-bottom: 6px;
+      padding-bottom: var(--gpt-gap-sm);
     }
 
     .stage-navigation {
@@ -442,7 +442,7 @@
     .plan-name {
       font-weight: bold;
       color: var(--main-font-color);
-      font-size: 13px;
+      font-size: var(--gpt-font-md);
     }
 
     .metric-progress-container {
@@ -452,7 +452,7 @@
     }
 
     .metric-label {
-      font-size: 13px;
+      font-size: var(--gpt-font-md);
       color: var(--small-font-color);
       margin-bottom: 4px;
       display: flex;
@@ -473,7 +473,7 @@
     }
 
     .plan-metrics {
-      font-size: 13px;
+      font-size: var(--gpt-font-md);
       color: var(--small-font-color);
       overflow-y: auto;
       flex: 1;

@@ -38,7 +38,7 @@ a-tabs.sider-tabs(v-model:active-key="tabActiveKey" type="rounded" :class="{ 'on
   }
 
   .layout-content {
-    padding: 20px 30px 30px 30px;
+    padding: var(--gpt-page-padding-y) var(--gpt-page-padding-x);
   }
 </style>
 

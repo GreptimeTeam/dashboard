@@ -410,7 +410,7 @@ transform:
   .pipefile-view {
     height: calc(100vh - 24px);
     background: var(--gpt-bg-app);
-    font-size: 13px;
+    font-size: var(--gpt-font-md);
   }
 
   .pipefile-view :deep(.arco-resizebox-trigger-vertical) {
@@ -518,14 +518,14 @@ transform:
     .card-title {
       margin-bottom: 2px;
       color: var(--gpt-text-primary);
-      font-size: 13px;
+      font-size: var(--gpt-font-md);
       font-weight: 700;
       line-height: 18px;
     }
 
     .card-description {
       color: var(--gpt-text-secondary);
-      font-size: 11px;
+      font-size: var(--gpt-font-sm);
       font-weight: normal;
       line-height: 16px;
       overflow: hidden;
@@ -561,7 +561,7 @@ transform:
     justify-content: flex-end;
 
     .legend-title {
-      font-size: 12px;
+      font-size: var(--gpt-font-base);
       font-weight: 600;
       color: var(--color-text-2);
     }
@@ -596,7 +596,7 @@ transform:
       }
 
       .legend-label {
-        font-size: 12px;
+        font-size: var(--gpt-font-base);
         color: var(--color-text-2);
       }
     }
@@ -607,23 +607,23 @@ transform:
       .timestamp {
         background-color: var(--semantic-timestamp-bg);
         color: var(--semantic-timestamp-text);
-        padding: 2px 4px;
+        padding: var(--gpt-gap-xs);
       }
 
       .field {
         background-color: var(--semantic-field-bg);
         color: var(--semantic-field-text);
-        padding: 2px 4px;
+        padding: var(--gpt-gap-xs);
       }
 
       .tag {
         background-color: var(--semantic-tag-bg);
         color: var(--semantic-tag-text);
-        padding: 2px 4px;
+        padding: var(--gpt-gap-xs);
       }
     }
     :deep(.arco-table-size-medium .arco-table-td) {
-      font-size: 13px;
+      font-size: var(--gpt-font-md);
     }
   }
   .pipeline-form-toolbar-field {
