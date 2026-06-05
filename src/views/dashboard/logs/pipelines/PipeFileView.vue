@@ -539,9 +539,9 @@ transform:
 
   // Define semantic type colors as CSS variables at component level
   .pipefile-view {
-    --semantic-field-bg: #f6ffed;
-    --semantic-field-text: #36b174;
-    --semantic-field-legend: #36b174;
+    --semantic-field-bg: rgba(0, 187, 178, 0.15);
+    --semantic-field-text: var(--gpt-accent-ts);
+    --semantic-field-legend: var(--gpt-accent-ts);
 
     --semantic-tag-bg: #fff7e6;
     --semantic-tag-text: #e1b84d;
