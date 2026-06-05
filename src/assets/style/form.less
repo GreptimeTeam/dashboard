@@ -205,10 +205,20 @@
   color: var(--small-font-color);
 }
 
+/* Arco form controls: unified placeholder (--gpt-placeholder-color) */
+.arco-input-wrapper .arco-input::placeholder,
+.arco-input-label .arco-input-label-input::placeholder,
+.arco-textarea::placeholder,
+.arco-picker input::placeholder,
+.arco-picker .arco-picker-input input::placeholder,
+.arco-select-view-single .arco-select-view-input::placeholder,
+.arco-select-view-multiple .arco-select-view-inner .arco-select-view-input::placeholder,
+.arco-input-tag .arco-input-tag-inner .arco-input-tag-input::placeholder {
+  color: var(--gpt-placeholder-color);
+}
+
 .arco-picker {
-  border: 1px solid var(--gpt-border-default);
   border-radius: var(--gpt-radius-sm);
-  background: transparent;
 
   .arco-picker-prefix {
     display: flex;
