@@ -2,48 +2,44 @@
   border-radius: var(--gpt-radius-sm);
 }
 
-/* Primary / main action — main purple (--gpt-main-purple) */
+/* Primary: main-dark fill → hover main-purple */
 .arco-btn-primary,
 .arco-btn-primary[type='button'],
 .arco-btn-primary[type='submit'] {
-  background-color: var(--gpt-main-purple);
-  border-color: var(--gpt-main-purple);
+  background-color: var(--gpt-control-accent);
+  border-color: var(--gpt-control-accent);
   color: var(--gpt-text-inverse);
 
   &:hover {
-    background-color: var(--gpt-brand-primary-hover);
-    border-color: var(--gpt-brand-primary-hover);
+    background-color: var(--gpt-control-accent-hover);
+    border-color: var(--gpt-control-accent-hover);
     color: var(--gpt-text-inverse);
   }
 
   &:active {
-    background-color: var(--gpt-brand-primary-hover);
-    border-color: var(--gpt-brand-primary-hover);
+    background-color: var(--gpt-control-accent-active);
+    border-color: var(--gpt-control-accent-active);
     color: var(--gpt-text-inverse);
   }
 }
 
 .arco-btn-primary[type='button'].arco-btn-loading,
 .arco-btn-primary[type='submit'].arco-btn-loading {
-  background-color: var(--gpt-main-purple);
-  border-color: var(--gpt-main-purple);
+  background-color: var(--gpt-control-accent);
+  border-color: var(--gpt-control-accent);
 }
 
-// .arco-btn-secondary[type='button'] {
-//   color: var(--brand-color);
-//   background-color: var(--light-brand-color);
-// }
+.arco-btn-secondary:not(.arco-btn-status-danger),
+.arco-btn-secondary[type='button']:not(.arco-btn-status-danger),
+.arco-btn-secondary[type='submit']:not(.arco-btn-status-danger) {
+  color: var(--gpt-control-accent);
+  border-color: var(--gpt-border-strong);
 
-// .arco-btn-secondary[type='button'].arco-btn-loading {
-//   color: var(--brand-color);
-//   background-color: var(--light-brand-color);
-// }
-
-// .arco-btn-secondary[type='button']:hover {
-//   color: var(--brand-color);
-//   background-color: var(--light-brand-color);
-//   border: 1px solid var(--brand-color);
-// }
+  &:hover {
+    color: var(--gpt-control-accent-hover);
+    border-color: var(--gpt-control-accent-hover);
+  }
+}
 
 .arco-btn-secondary.arco-btn-status-danger {
   color: var(--danger-color);
@@ -56,10 +52,26 @@
   border-color: transparent;
 }
 
+.arco-btn-text,
+.arco-btn-text[type='button'],
+.arco-btn-text[type='submit'] {
+  color: var(--gpt-control-accent);
+
+  &:hover,
+  &.hover,
+  &.arco-dropdown-open {
+    color: var(--gpt-control-accent-hover);
+    background: var(--gpt-nav-active-bg);
+  }
+}
+
 .arco-btn-outline,
 .arco-btn-outline[type='button'],
-.arco-btn-outline[type='submit'] {
-  color: var(--main-font-color);
+.arco-btn-outline[type='submit'],
+.arco-btn-dashed,
+.arco-btn-dashed[type='button'],
+.arco-btn-dashed[type='submit'] {
+  color: var(--gpt-control-accent);
   border: 1px solid var(--gpt-border-strong);
 }
 
@@ -67,9 +79,12 @@
 .arco-btn-outline[type='button']:hover,
 .arco-btn-outline[type='submit']:hover,
 .arco-btn-outline.arco-btn-loading,
-.arco-btn-outline[type='button'].arco-btn-loading {
-  color: var(--brand-color);
-  border-color: var(--brand-color);
+.arco-btn-outline[type='button'].arco-btn-loading,
+.arco-btn-dashed:hover,
+.arco-btn-dashed[type='button']:hover,
+.arco-btn-dashed[type='submit']:hover {
+  color: var(--gpt-control-accent-hover);
+  border-color: var(--gpt-control-accent-hover);
 }
 
 .arco-btn-primary.arco-btn-disabled,
@@ -89,10 +104,20 @@
 
 .arco-btn-outline.arco-btn-disabled,
 .arco-btn-outline[type='button'].arco-btn-disabled,
-.arco-btn-outline[type='submit'].arco-btn-disabled {
+.arco-btn-outline[type='submit'].arco-btn-disabled,
+.arco-btn-dashed.arco-btn-disabled,
+.arco-btn-dashed[type='button'].arco-btn-disabled,
+.arco-btn-dashed[type='submit'].arco-btn-disabled {
   color: var(--gpt-text-disabled);
   background-color: var(--gpt-bg-disabled);
   border: 1px solid var(--gpt-border-subtle);
+}
+
+.arco-btn-text.arco-btn-disabled,
+.arco-btn-text[type='button'].arco-btn-disabled,
+.arco-btn-text[type='submit'].arco-btn-disabled {
+  color: var(--gpt-text-disabled);
+  background-color: transparent;
 }
 
 .arco-btn-size-medium:not(.arco-btn-only-icon) .arco-btn-icon {
@@ -125,8 +150,8 @@
 /* button 型 radio：边框画在每个 .arco-radio-button 上，group 不描边（避免 hover 盖住外框） */
 .arco-radio-group-button {
   --radio-border: var(--gpt-border-strong);
-  --radio-border-hover: var(--gpt-main-purple);
-  --radio-border-active: var(--brand-color);
+  --radio-border-hover: var(--gpt-control-accent-hover);
+  --radio-border-active: var(--gpt-control-accent);
   box-sizing: border-box;
   padding: 0;
   overflow: hidden;
@@ -162,6 +187,7 @@
     &:not(.arco-radio-checked):not(.arco-radio-disabled):hover {
       z-index: 1;
       border-color: var(--radio-border-hover);
+      color: var(--gpt-control-accent-hover);
     }
   }
 
@@ -176,8 +202,13 @@
   .arco-radio-button.arco-radio-checked {
     z-index: 2;
     color: var(--gpt-text-inverse);
-    background-color: var(--brand-color);
+    background-color: var(--gpt-control-accent);
     border-color: var(--radio-border-active);
+
+    &:hover {
+      background-color: var(--gpt-control-accent-hover);
+      border-color: var(--gpt-control-accent-hover);
+    }
   }
 }
 

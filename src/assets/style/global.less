@@ -196,6 +196,11 @@
 
   --gpt-link-color: var(--gpt-main-purple);
 
+  /* Buttons & form controls: idle main-dark, hover/focus main-purple (not menu/links). */
+  --gpt-control-accent: var(--gpt-main-dark);
+  --gpt-control-accent-hover: var(--gpt-main-purple);
+  --gpt-control-accent-active: var(--gpt-brand-primary-hover);
+
   --gpt-nav-active-bg: rgba(112, 47, 237, 0.1);
   --gpt-nav-active-indicator: var(--gpt-main-purple);
   --gpt-table-head-bg: rgba(71, 52, 96, 0.04);
@@ -572,8 +577,13 @@ samp {
   height: 32px;
 }
 
+.arco-checkbox:not(.arco-checkbox-disabled):hover .arco-checkbox-icon {
+  border-color: var(--gpt-control-accent-hover);
+}
+
 .arco-checkbox-checked .arco-checkbox-icon {
-  background-color: var(--brand-color);
+  background-color: var(--gpt-control-accent-hover);
+  border-color: var(--gpt-control-accent-hover);
 }
 
 .arco-select-dropdown {
@@ -593,8 +603,13 @@ samp {
     .arco-checkbox-icon {
       width: 12px;
       height: 12px;
-      border: 1px solid var(--brand-color);
+      border: 1px solid var(--gpt-control-accent);
       border-radius: 2px;
+    }
+
+    .arco-checkbox-checked .arco-checkbox-icon {
+      border-color: var(--gpt-control-accent-hover);
+      background-color: var(--gpt-control-accent-hover);
     }
 
     .arco-checkbox {
@@ -711,7 +726,7 @@ samp {
 
 .brand-color,
 .icon-color {
-  color: var(--gpt-icon-color);
+  color: var(--gpt-control-accent);
 }
 
 .arco-spin-icon {

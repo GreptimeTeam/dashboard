@@ -58,11 +58,26 @@ Tab pane: `overflow: hidden` on content item (avoid outer scroll stealing from t
 - Logs: `medium` normal, `mini` when compact checkbox on.
 - Flow list: `gpt-table-page`, no virtual fill height.
 
+## Control accent (buttons & forms)
+
+Tokens: `--gpt-control-accent` (main-dark), `--gpt-control-accent-hover` (main-purple), `--gpt-control-accent-active` (pressed).
+
+- **Default** idle borders/text/icons: `--gpt-control-accent`
+- **Hover / focus** on buttons and form controls: `--gpt-control-accent-hover`
+- **Excluded**: nav **menu** (`arco-theme.less` `@menu-light-color-*`), body **links** (`--gpt-link-color`), **view-switch** `.active` (stays `--gpt-brand-900`), **danger** status buttons
+
 ## Buttons (`button.less`)
 
 - Use `size="small"` (26px) or `size="medium"` (32px) — **no** scoped `:deep(.arco-btn) { height: 24px; padding: 0 4px }`.
-- **`type="primary"`** — main purple (`--gpt-main-purple`); hover `--gpt-brand-primary-hover`. Do not use `gpt-btn-brand-solid` (removed).
+- **`type="primary"`** — fill `--gpt-control-accent`; hover `--gpt-control-accent-hover`; active `--gpt-control-accent-active`.
+- **text / outline / dashed / secondary** — text/border accent dark → hover purple; text hover bg `--gpt-nav-active-bg`.
 - `gpt-btn-toolbar` + optional `gpt-btn-toolbar-mono` — compact toolbar buttons (Logs time pagination).
+
+## Form controls (`form.less`, `select.less`, `global.less`)
+
+- Input / Select / Picker: border hover & focus → `--gpt-control-accent-hover`; select suffix icon → accent dark.
+- Checkbox unchecked border accent dark; checked fill/border → accent hover (purple).
+- Switch checked track → `--gpt-control-accent-hover`.
 
 ## Scoped styles — allowed vs forbidden
 
@@ -78,6 +93,8 @@ Tab pane: `overflow: hidden` on content item (avoid outer scroll stealing from t
 | `ui-regions.less` | Regions + layout modifiers |
 | `typography.less` | Text utility classes |
 | `button.less` | Buttons, `gpt-btn-*` |
+| `form.less` / `select.less` | Input, select, picker, checkbox, switch |
+| `arco-theme.less` | Arco compile-time tokens (not menu) |
 | `dataView.less` | Table sizes, pagination, hover |
 | `query-layout.less` | Query page structure |
 | `editor.less` | CodeMirror |
