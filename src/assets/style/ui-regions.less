@@ -34,6 +34,87 @@
   border-bottom: 1px solid var(--gpt-border-default);
 }
 
+// Table Query sidebar: 2×2 header (database label + select, count + search)
+.gpt-table-sidebar-header {
+  --gpt-table-sidebar-label-col-width: 92px;
+
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: var(--gpt-table-sidebar-label-col-width) 1fr;
+  gap: var(--gpt-gap-sm);
+  padding: var(--gpt-gap-md) 10px;
+  border-bottom: 1px solid var(--gpt-border-default);
+
+  &__label,
+  &__meta {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    min-height: 30px;
+    padding: 0 10px;
+    border-radius: var(--gpt-radius-sm);
+    background: var(--grey-bg-color);
+    color: var(--gpt-text-primary);
+    font-size: var(--gpt-font-sm);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__label {
+    font-weight: 400;
+  }
+
+  &__meta {
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__control {
+    display: flex;
+    min-width: 0;
+    min-height: 30px;
+    border-radius: var(--gpt-radius-sm);
+    background: var(--grey-bg-color);
+
+    .arco-select,
+    .arco-input-wrapper {
+      width: 100%;
+    }
+
+    .arco-select-view-single,
+    .arco-input-wrapper {
+      min-height: 30px;
+      padding-right: 10px;
+      padding-left: 10px;
+      border: none;
+      background: transparent;
+
+      &:hover,
+      &:focus-within,
+      &.arco-select-view-focus {
+        border: none;
+        background: transparent;
+      }
+    }
+
+    .arco-select-view-value {
+      font-size: var(--gpt-font-sm);
+      font-weight: 600;
+    }
+
+    .arco-input {
+      font-size: var(--gpt-font-sm);
+    }
+
+    .arco-input-wrapper > .arco-input-suffix {
+      padding-left: var(--gpt-gap-md);
+    }
+  }
+}
+
 .gpt-results-toolbar {
   display: flex;
   flex-shrink: 0;

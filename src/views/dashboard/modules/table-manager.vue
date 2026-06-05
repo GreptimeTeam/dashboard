@@ -1,41 +1,43 @@
 <template lang="pug">
-a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
+a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card.gpt-table-sidebar-card(:bordered="false")
   template(#title)
     a-space.table-sidebar-title(fill :size="10")
-      span.gpt-sidebar-heading
-        | {{ $t('tables.sidebar.title') }}
-        a-tooltip(v-if="tableCountTooltip" :content="tableCountTooltip")
-          span.gpt-sidebar-count {{ tableCountLabel }}
-        span.gpt-sidebar-count(v-else) {{ tableCountLabel }}
-      a-button(size="mini" :loading="totalTablesLoading" @click="refreshTablesTree()")
+      span.gpt-sidebar-heading {{ $t('tables.sidebar.title') }}
+      a-button.table-sidebar-refresh(
+        type="text"
+        size="mini"
+        :loading="totalTablesLoading"
+        @click="refreshTablesTree()"
+      )
         template(#icon)
           svg.icon-11.brand-color
             use(href="#refresh")
   a-spin(style="width: 100%" :loading="tablesLoading")
-    .database-selector
-      a-select(
-        v-model="activeDatabase"
-        style="font-weight: 600"
-        :data="databaseList"
-        :filterable="true"
-        :allow-search="true"
-        :placeholder="$t('dashboard.searchDatabase')"
-        @change="onDatabaseChange"
-      ) 
-        template(#prefix)
-          span.database-label {{ $t('dashboard.database') }}
-          span.divider |
-        a-option(v-for="db of databaseList" :key="db" :value="db") {{ db }}
-
-    .table-search
-      .table-search-left
-        a-input.search-table(
+    .gpt-table-sidebar-header
+      .gpt-table-sidebar-header__label {{ $t('dashboard.database') }}
+      .gpt-table-sidebar-header__control
+        a-select.table-sidebar-db(
+          v-model="activeDatabase"
+          size="mini"
+          :data="databaseList"
+          :filterable="true"
+          :allow-search="true"
+          :placeholder="$t('dashboard.searchDatabase')"
+          @change="onDatabaseChange"
+        )
+          a-option(v-for="db of databaseList" :key="db" :value="db") {{ db }}
+      .gpt-table-sidebar-header__meta
+        a-tooltip(v-if="tableCountTooltip" :content="tableCountTooltip")
+          span {{ tableCountLabel }}
+        span(v-else) {{ tableCountLabel }}
+      .gpt-table-sidebar-header__control
+        a-input.table-sidebar-search(
           v-model="tablesSearchKey"
           size="mini"
           :allow-clear="true"
           :placeholder="$t('dashboard.input')"
         )
-          template(#prefix)
+          template(#suffix)
             svg.icon-11.icon-color
               use(href="#search")
     a-tree.table-tree(
@@ -196,14 +198,13 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
 
   const isTableSearchActive = computed(() => tablesSearchKey.value.trim().length > 0)
 
+  const tableFilterRatio = computed(() => `${filteredTablesCount.value}/${loadedTablesCount.value}`)
+
   const tableCountLabel = computed(() => {
     if (isTableSearchActive.value) {
-      return t('tables.sidebar.countFiltered', {
-        shown: filteredTablesCount.value,
-        loaded: loadedTablesCount.value,
-      })
+      return tableFilterRatio.value
     }
-    return t('tables.sidebar.countTotal', { count: tablesTotalCount.value })
+    return t('tables.sidebar.tableCount', { count: tablesTotalCount.value })
   })
 
   const tableCountTooltip = computed(() => (isTableSearchActive.value ? t('tables.sidebar.countFilteredTooltip') : ''))
@@ -325,6 +326,10 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
   }
 
   .table-tree {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+
     :deep(.arco-tree-node-icon .icon:has(use[href='#table'])) {
       color: var(--gpt-accent-ts);
     }
@@ -426,73 +431,15 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
     flex-direction: column;
   }
 
-  .database-selector {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 34px;
-    border-bottom: 1px solid var(--gpt-border-default);
-
-    :deep(.arco-select-view-single) {
-      border: none;
-      background: transparent;
-
-      &:hover,
-      &:focus-within,
-      &.arco-select-view-focus {
-        border: none;
-        background: transparent;
-      }
-    }
-
-    .database-label {
-      margin-right: 8px;
-      white-space: nowrap;
-      font-weight: normal;
-      color: var(--gpt-text-secondary);
-      font-size: var(--gpt-font-sm);
-    }
-
-    .divider {
-      margin-right: 6px;
-      color: var(--gpt-text-secondary);
-      font-weight: 300;
-      opacity: 0.7;
-      font-size: var(--gpt-font-sm);
-    }
-  }
-  .table-search {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 6px;
-    padding: 8px 10px 8px 10px;
-  }
-
-  .table-search-left {
-    width: 100%;
-  }
-
-  .arco-input-wrapper.search-table {
-    padding: 0 10px;
-
-    :deep(> .arco-input-prefix) {
-      padding-right: 10px;
-    }
-
-    :deep(> .arco-input-suffix) {
-      padding-left: 8px;
-    }
-  }
-
   .table-sidebar-title {
     width: 100%;
   }
 
-  :deep(.search-table) {
-    border: 1px solid var(--gpt-border-strong);
-    border-radius: var(--gpt-radius-sm);
-    background: var(--gpt-bg-app);
-    min-height: 30px;
+  .table-sidebar-refresh.arco-btn-text.arco-btn-only-icon {
+    width: var(--gpt-control-height-sm);
+    height: var(--gpt-control-height-sm);
+    padding: 0;
+    border: none;
+    background: transparent;
   }
 </style>
