@@ -66,7 +66,7 @@ Arco **primary palette**: `@color-primary-6` = main-dark (idle), `@color-primary
 - Nav **menu** — `@menu-light-color-*` / `@menu-dark-color-*`
 - Body **links** — `--gpt-link-color` (purple)
 - **View-switch** `.active` — `--gpt-brand-900`
-- **Button-type radio** — `@radio-button-color-bg_active` = main-dark fill, white text; track `@radio-group-button-color-bg` = `--gpt-radio-group-bg`; checked hover → purple (`button.less`)
+- **Button-type radio** — segmented outer border + transparent idle (`button.less`); selected fill main-dark via `@radio-button-color-bg_active`; checked hover → purple
 - **Danger** status buttons — `button.less`
 
 Alias tokens in `:root`: `--gpt-control-accent` / `--gpt-control-accent-hover` (docs & spin icons only).

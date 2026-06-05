@@ -68,11 +68,14 @@
   height: var(--gpt-control-height-sm);
 }
 
-/* button 型 radio：布局定制；选中色见 arco-theme @radio-button-color-* */
+/* button 型 radio：外边框分段；未选中透明底，选中色见 arco-theme */
 .arco-radio-group-button {
+  --radio-border: var(--gpt-border-strong);
+
   box-sizing: border-box;
   padding: 0;
   overflow: hidden;
+  background-color: transparent;
   border: none;
   border-radius: var(--gpt-radius-sm);
   box-shadow: none;
@@ -83,7 +86,10 @@
     box-sizing: border-box;
     height: 100%;
     margin: 0 0 0 -1px;
+    border: 1px solid var(--radio-border);
     border-radius: 0;
+    color: var(--gpt-text-secondary);
+    background-color: transparent;
 
     &::before {
       display: none;
@@ -100,6 +106,9 @@
 
     &:not(.arco-radio-checked):not(.arco-radio-disabled):hover {
       z-index: 1;
+      border-color: var(--gpt-main-purple);
+      color: var(--gpt-main-purple);
+      background-color: transparent;
     }
   }
 
@@ -113,10 +122,14 @@
 
   .arco-radio-button.arco-radio-checked {
     z-index: 2;
+    color: var(--gpt-text-inverse);
+    background-color: var(--gpt-main-dark);
+    border-color: var(--gpt-main-dark);
 
     &:not(.arco-radio-disabled):hover {
       color: var(--gpt-text-inverse);
       background-color: var(--gpt-main-purple);
+      border-color: var(--gpt-main-purple);
     }
   }
 }
