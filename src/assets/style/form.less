@@ -235,3 +235,20 @@
 .arco-picker-cell-today::after {
   background-color: var(--gpt-main-purple);
 }
+
+/* Input group: Arco syncs separator border-right on focus-within only; match on hover */
+.arco-input-group {
+  > .arco-input-wrapper:not(:last-child),
+  > .arco-input-outer:not(:last-child),
+  > .arco-input-tag:not(:last-child),
+  > .arco-select-view:not(:last-child) {
+    &:hover:not(.arco-select-view-disabled):not(.arco-input-wrapper-disabled) {
+      z-index: 1;
+      border-right-color: var(--gpt-main-dark);
+    }
+
+    &:focus-within {
+      z-index: 1;
+    }
+  }
+}

@@ -74,11 +74,13 @@ a-form.second-row-form(
                 style="width: 100%"
                 :placeholder="condition.operator === 'IN' || condition.operator === 'NOT IN' ? t('sqlBuilder.commaValuesHint') : t('sqlBuilder.value')"
               )
-          a-button.field-action(@click="() => removeCondition(index)")
-            icon-minus(style="cursor: pointer; font-size: 14px")
+          a-button.field-action(type="outline" size="small" @click="() => removeCondition(index)")
+            template(#icon)
+              icon-minus
 
-      a-button.field-action(@click="addCondition")
-        icon-plus(style="cursor: pointer; font-size: 14px")
+      a-button.field-action(type="outline" size="small" @click="addCondition")
+        template(#icon)
+          icon-plus
 
 // Third row: Order By, Limit, and Quick Filters
 a-form.third-row-form(
@@ -772,8 +774,19 @@ a-modal(
     display: inline-block;
     text-align: right;
   }
-  .field-action {
-    padding: 0 8px;
+  /* Hover only: outline 全局是紫边+透明底，filter 行需与 input/select 一致 */
+  .field-action.arco-btn-outline:hover:not(:disabled):not(.arco-btn-disabled) {
+    color: var(--gpt-main-dark);
+    background-color: var(--grey-bg-color);
+    border-color: var(--gpt-main-dark);
+  }
+
+  .input-group > .field-action.arco-btn-outline {
+    margin-left: -1px;
+
+    &:hover:not(:disabled):not(.arco-btn-disabled) {
+      z-index: 1;
+    }
   }
 
   .quick-filters-content {
