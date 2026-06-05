@@ -1,9 +1,8 @@
 /**
  * Arco Design theme particles.
  *
- * Keep brand/component Less tokens here instead of in Vite config. Vite only
- * imports this file through modifyVars so Arco's arco.less and on-demand
- * component style/index.js files are compiled with the same theme.
+ * Primary palette: main-dark (6) idle, main-purple (5/7) hover/active.
+ * Menu nav colors are overridden separately below — do not rely on primary-6 for menus.
  */
 
 @arcoblue-1: #f7f3fc;
@@ -17,6 +16,7 @@
 @gpt-color-white: #ffffff;
 @gpt-color-purple-bright: #722ed1;
 @gpt-main-purple: #702fed;
+@gpt-brand-primary-hover: #5519c4;
 @gpt-color-button-border: rgb(55, 65, 81);
 @gpt-color-form-label: rgb(107, 114, 128);
 @gpt-size-navbar: 54px;
@@ -31,9 +31,9 @@
 @color-primary-2: #ede7f8;
 @color-primary-3: #c4a8f0;
 @color-primary-4: #8b7ba8;
-@color-primary-5: #5c22d4;
+@color-primary-5: @gpt-main-purple;
 @color-primary-6: @gpt-main-dark;
-@color-primary-7: @gpt-main-purple;
+@color-primary-7: @gpt-brand-primary-hover;
 
 @gpt-color-border-default: rgba(71, 52, 96, 0.09);
 @color-border: @gpt-color-border-default;
@@ -55,14 +55,30 @@
 @btn-size-small-radius: @border-radius-small;
 @btn-size-small-padding-horizontal: 12px;
 
-@btn-primary-color-border: rgba(112, 47, 237, 0.25);
+/* Primary button: dark idle → purple hover */
+@btn-primary-color-bg: @color-primary-6;
+@btn-primary-color-bg_hover: @color-primary-5;
+@btn-primary-color-bg_active: @color-primary-7;
+@btn-primary-color-border: @color-primary-6;
+@btn-primary-color-border_hover: @color-primary-5;
+@btn-primary-color-border_active: @color-primary-7;
+
+/* Outline / text: dark idle → purple hover */
+@btn-outline-color-text_hover: @color-primary-5;
+@btn-outline-color-border_hover: @color-primary-5;
+@btn-outline-color-text_active: @color-primary-7;
+@btn-outline-color-border_active: @color-primary-7;
+@btn-outline-color-border: var(--gpt-border-strong);
+
 @btn-secondary-color-bg: transparent;
 @btn-secondary-color-bg_hover: transparent;
 @btn-secondary-color-border: rgb(209, 213, 219);
 @btn-secondary-color-border_hover: @btn-secondary-color-border;
 @btn-secondary-color-text_hover: @gpt-main-purple;
-@btn-outline-color-border: @gpt-color-button-border;
 @btn-dashed-color-border: @gpt-color-button-border;
+
+@btn-text-color-text_hover: @color-primary-5;
+@btn-text-color-bg_hover: var(--gpt-nav-active-bg);
 
 @form-color-text-label: @gpt-color-form-label;
 
@@ -70,11 +86,26 @@
 @input-color-bg_hover: var(--grey-bg-color);
 @input-color-bg_focus: transparent;
 @input-color-border: var(--gpt-border-strong);
-@input-color-border_hover: var(--gpt-control-accent-hover);
-@input-color-border_focus: var(--gpt-control-accent-hover);
+@input-color-border_hover: @gpt-main-dark;
+@input-color-border_focus: @gpt-main-purple;
 @input-color-border_disabled: var(--gpt-border-subtle);
 @input-color-shadow_focus: transparent;
 @input-size-shadow_focus: 0;
+
+/* Checkbox / switch follow primary palette */
+@checkbox-mask-color-bg_checked: @color-primary-6;
+@checkbox-mask-color-border: @gpt-main-dark;
+@checkbox-mask-color-border_hover: @gpt-main-dark;
+
+@switch-color-bg_on: @gpt-main-purple;
+@switch-color-bg_on_hover: @color-primary-7;
+
+/* Button-type radio (builder/code, view toggles): track grey, selected pill main-dark */
+@radio-group-button-color-bg: var(--grey-bg-color);
+@radio-button-color-bg_active: @gpt-main-dark;
+@radio-button-color-text_active: @gpt-color-white;
+@radio-button-color-bg_hover: var(--gpt-nav-active-bg);
+@radio-button-color-text_hover: @gpt-main-purple;
 
 @table-color-border: var(--gpt-border-subtle);
 @table-border-radius: @border-radius-small;
@@ -91,6 +122,7 @@
 @table-color-bg-body-row_active: var(--gpt-bg-surface);
 @table-color-body-background: var(--gpt-bg-panel);
 
+/* Menu: separate from primary-6 — nav uses secondary gray + purple selected */
 @menu-border-radius: @gpt-radius-nav;
 @menu-margin-right-item-prefix-icon: 8px;
 @menu-horizontal-margin-right-item-prefix-icon: 8px;

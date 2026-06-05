@@ -1,46 +1,9 @@
 .arco-btn {
   border-radius: var(--gpt-radius-sm);
+  line-height: 1;
 }
 
-/* Primary: main-dark fill → hover main-purple */
-.arco-btn-primary,
-.arco-btn-primary[type='button'],
-.arco-btn-primary[type='submit'] {
-  background-color: var(--gpt-control-accent);
-  border-color: var(--gpt-control-accent);
-  color: var(--gpt-text-inverse);
-
-  &:hover {
-    background-color: var(--gpt-control-accent-hover);
-    border-color: var(--gpt-control-accent-hover);
-    color: var(--gpt-text-inverse);
-  }
-
-  &:active {
-    background-color: var(--gpt-control-accent-active);
-    border-color: var(--gpt-control-accent-active);
-    color: var(--gpt-text-inverse);
-  }
-}
-
-.arco-btn-primary[type='button'].arco-btn-loading,
-.arco-btn-primary[type='submit'].arco-btn-loading {
-  background-color: var(--gpt-control-accent);
-  border-color: var(--gpt-control-accent);
-}
-
-.arco-btn-secondary:not(.arco-btn-status-danger),
-.arco-btn-secondary[type='button']:not(.arco-btn-status-danger),
-.arco-btn-secondary[type='submit']:not(.arco-btn-status-danger) {
-  color: var(--gpt-control-accent);
-  border-color: var(--gpt-border-strong);
-
-  &:hover {
-    color: var(--gpt-control-accent-hover);
-    border-color: var(--gpt-control-accent-hover);
-  }
-}
-
+/* Danger + disabled: not covered by primary palette */
 .arco-btn-secondary.arco-btn-status-danger {
   color: var(--danger-color);
   background: var(--danger-bg-color);
@@ -52,71 +15,31 @@
   border-color: transparent;
 }
 
-.arco-btn-text,
-.arco-btn-text[type='button'],
-.arco-btn-text[type='submit'] {
-  color: var(--gpt-control-accent);
-
-  &:hover,
-  &.hover,
-  &.arco-dropdown-open {
-    color: var(--gpt-control-accent-hover);
-    background: var(--gpt-nav-active-bg);
-  }
-}
-
-.arco-btn-outline,
-.arco-btn-outline[type='button'],
-.arco-btn-outline[type='submit'],
-.arco-btn-dashed,
-.arco-btn-dashed[type='button'],
-.arco-btn-dashed[type='submit'] {
-  color: var(--gpt-control-accent);
-  border: 1px solid var(--gpt-border-strong);
-}
-
-.arco-btn-outline:hover,
-.arco-btn-outline[type='button']:hover,
-.arco-btn-outline[type='submit']:hover,
-.arco-btn-outline.arco-btn-loading,
-.arco-btn-outline[type='button'].arco-btn-loading,
-.arco-btn-dashed:hover,
-.arco-btn-dashed[type='button']:hover,
-.arco-btn-dashed[type='submit']:hover {
-  color: var(--gpt-control-accent-hover);
-  border-color: var(--gpt-control-accent-hover);
-}
-
 .arco-btn-primary.arco-btn-disabled,
 .arco-btn-primary[type='button'].arco-btn-disabled,
-.arco-btn-primary[type='submit'].arco-btn-disabled {
-  color: var(--gpt-text-disabled);
-  background-color: var(--gpt-bg-disabled);
-}
-
+.arco-btn-primary[type='submit'].arco-btn-disabled,
 .arco-btn-secondary.arco-btn-disabled,
 .arco-btn-secondary[type='button'].arco-btn-disabled,
-.arco-btn-secondary[type='submit'].arco-btn-disabled {
+.arco-btn-secondary[type='submit'].arco-btn-disabled,
+.arco-btn-outline.arco-btn-disabled,
+.arco-btn-outline[type='button'].arco-btn-disabled,
+.arco-btn-outline[type='submit'].arco-btn-disabled,
+.arco-btn-text.arco-btn-disabled,
+.arco-btn-text[type='button'].arco-btn-disabled,
+.arco-btn-text[type='submit'].arco-btn-disabled {
   color: var(--gpt-text-disabled);
   background-color: var(--gpt-bg-disabled);
-  border: 1px solid var(--gpt-border-subtle);
 }
 
 .arco-btn-outline.arco-btn-disabled,
 .arco-btn-outline[type='button'].arco-btn-disabled,
-.arco-btn-outline[type='submit'].arco-btn-disabled,
-.arco-btn-dashed.arco-btn-disabled,
-.arco-btn-dashed[type='button'].arco-btn-disabled,
-.arco-btn-dashed[type='submit'].arco-btn-disabled {
-  color: var(--gpt-text-disabled);
-  background-color: var(--gpt-bg-disabled);
+.arco-btn-outline[type='submit'].arco-btn-disabled {
   border: 1px solid var(--gpt-border-subtle);
 }
 
 .arco-btn-text.arco-btn-disabled,
 .arco-btn-text[type='button'].arco-btn-disabled,
 .arco-btn-text[type='submit'].arco-btn-disabled {
-  color: var(--gpt-text-disabled);
   background-color: transparent;
 }
 
@@ -124,9 +47,7 @@
   margin-right: 10px;
   line-height: 1;
 }
-.arco-btn {
-  line-height: 1;
-}
+
 /* medium only-icon：Arco 默认固定宽高；outline/dashed 保留横向 padding、宽度自适应 */
 .arco-btn-size-medium.arco-btn-only-icon.arco-btn-outline,
 .arco-btn-size-medium.arco-btn-only-icon.arco-btn-dashed {
@@ -147,15 +68,11 @@
   height: var(--gpt-control-height-sm);
 }
 
-/* button 型 radio：边框画在每个 .arco-radio-button 上，group 不描边（避免 hover 盖住外框） */
+/* button 型 radio：布局定制；选中色见 arco-theme @radio-button-color-* */
 .arco-radio-group-button {
-  --radio-border: var(--gpt-border-strong);
-  --radio-border-hover: var(--gpt-control-accent-hover);
-  --radio-border-active: var(--gpt-control-accent);
   box-sizing: border-box;
   padding: 0;
   overflow: hidden;
-  background-color: var(--gpt-bg-panel);
   border: none;
   border-radius: var(--gpt-radius-sm);
   box-shadow: none;
@@ -166,10 +83,7 @@
     box-sizing: border-box;
     height: 100%;
     margin: 0 0 0 -1px;
-    border: 1px solid var(--radio-border);
     border-radius: 0;
-    color: var(--gpt-text-secondary);
-    background-color: transparent;
 
     &::before {
       display: none;
@@ -186,8 +100,6 @@
 
     &:not(.arco-radio-checked):not(.arco-radio-disabled):hover {
       z-index: 1;
-      border-color: var(--radio-border-hover);
-      color: var(--gpt-control-accent-hover);
     }
   }
 
@@ -201,13 +113,10 @@
 
   .arco-radio-button.arco-radio-checked {
     z-index: 2;
-    color: var(--gpt-text-inverse);
-    background-color: var(--gpt-control-accent);
-    border-color: var(--radio-border-active);
 
-    &:hover {
-      background-color: var(--gpt-control-accent-hover);
-      border-color: var(--gpt-control-accent-hover);
+    &:not(.arco-radio-disabled):hover {
+      color: var(--gpt-text-inverse);
+      background-color: var(--gpt-main-purple);
     }
   }
 }

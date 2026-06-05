@@ -196,7 +196,7 @@
 
   --gpt-link-color: var(--gpt-main-purple);
 
-  /* Buttons & form controls: idle main-dark, hover/focus main-purple (not menu/links). */
+  /* Aliases for docs / legacy; Arco components use primary-6/5/7 via arco-theme.less */
   --gpt-control-accent: var(--gpt-main-dark);
   --gpt-control-accent-hover: var(--gpt-main-purple);
   --gpt-control-accent-active: var(--gpt-brand-primary-hover);
@@ -237,7 +237,7 @@
   --tooltip-font-color: rgba(255, 255, 255, 0.8);
   --navbar-bg-color: var(--gpt-main-dark);
   --brand-color: var(--gpt-main-purple);
-  --primary-6: var(--brand-color);
+  --primary-6: var(--gpt-main-dark);
   --hover-brand-color: var(--gpt-main-purple);
   --gpt-active-icon-color: var(--gpt-main-dark);
   --light-brand-color: var(--gpt-nav-active-bg);
@@ -333,7 +333,7 @@ a:not(.arco-btn):not(.arco-menu-item):not(.arco-menu-inline-header),
 
 html,
 body {
-  --primary-6: var(--brand-color);
+  --primary-6: var(--gpt-main-dark);
 }
 
 // Secondary bar inside results (e.g. Metrics evaluation time row)
@@ -577,13 +577,10 @@ samp {
   height: 32px;
 }
 
-.arco-checkbox:not(.arco-checkbox-disabled):hover .arco-checkbox-icon {
-  border-color: var(--gpt-control-accent-hover);
-}
-
-.arco-checkbox-checked .arco-checkbox-icon {
-  background-color: var(--gpt-control-accent-hover);
-  border-color: var(--gpt-control-accent-hover);
+/* Checked checkbox hover → purple (Arco theme only sets idle checked to primary-6). */
+.arco-checkbox-checked:not(.arco-checkbox-disabled):hover .arco-checkbox-icon {
+  background-color: var(--gpt-main-purple);
+  border-color: var(--gpt-main-purple);
 }
 
 .arco-select-dropdown {
@@ -603,13 +600,7 @@ samp {
     .arco-checkbox-icon {
       width: 12px;
       height: 12px;
-      border: 1px solid var(--gpt-control-accent);
       border-radius: 2px;
-    }
-
-    .arco-checkbox-checked .arco-checkbox-icon {
-      border-color: var(--gpt-control-accent-hover);
-      background-color: var(--gpt-control-accent-hover);
     }
 
     .arco-checkbox {

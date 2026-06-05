@@ -58,26 +58,30 @@ Tab pane: `overflow: hidden` on content item (avoid outer scroll stealing from t
 - Logs: `medium` normal, `mini` when compact checkbox on.
 - Flow list: `gpt-table-page`, no virtual fill height.
 
-## Control accent (buttons & forms)
+## Theme-first controls (`arco-theme.less`)
 
-Tokens: `--gpt-control-accent` (main-dark), `--gpt-control-accent-hover` (main-purple), `--gpt-control-accent-active` (pressed).
+Arco **primary palette**: `@color-primary-6` = main-dark (idle), `@color-primary-5` = main-purple (hover). Buttons, inputs, checkbox, switch follow Arco defaults via compile-time tokens — **no** duplicate color rules in `button.less` / `form.less` except danger/disabled.
 
-- **Default** idle borders/text/icons: `--gpt-control-accent`
-- **Hover / focus** on buttons and form controls: `--gpt-control-accent-hover`
-- **Excluded**: nav **menu** (`arco-theme.less` `@menu-light-color-*`), body **links** (`--gpt-link-color`), **view-switch** `.active` (stays `--gpt-brand-900`), **danger** status buttons
+**Exceptions** (not driven by primary-6):
+- Nav **menu** — `@menu-light-color-*` / `@menu-dark-color-*`
+- Body **links** — `--gpt-link-color` (purple)
+- **View-switch** `.active` — `--gpt-brand-900`
+- **Button-type radio** — `@radio-button-color-bg_active` = main-dark fill, white text; track `@radio-group-button-color-bg` = `--grey-bg-color`; checked hover → purple (`button.less`)
+- **Danger** status buttons — `button.less`
+
+Alias tokens in `:root`: `--gpt-control-accent` / `--gpt-control-accent-hover` (docs & spin icons only).
 
 ## Buttons (`button.less`)
 
 - Use `size="small"` (26px) or `size="medium"` (32px) — **no** scoped `:deep(.arco-btn) { height: 24px; padding: 0 4px }`.
-- **`type="primary"`** — fill `--gpt-control-accent`; hover `--gpt-control-accent-hover`; active `--gpt-control-accent-active`.
-- **text / outline / dashed / secondary** — text/border accent dark → hover purple; text hover bg `--gpt-nav-active-bg`.
+- Primary / text / outline / secondary colors: Arco theme tokens (see above).
 - `gpt-btn-toolbar` + optional `gpt-btn-toolbar-mono` — compact toolbar buttons (Logs time pagination).
 
-## Form controls (`form.less`, `select.less`, `global.less`)
+## Form controls
 
-- Input / Select / Picker: border hover & focus → `--gpt-control-accent-hover`; select suffix icon → accent dark.
-- Checkbox unchecked border accent dark; checked fill/border → accent hover (purple).
-- Switch checked track → `--gpt-control-accent-hover`.
+- Input / Select / Picker borders: `@input-color-border_*` in `arco-theme.less`.
+- Checkbox checked hover → purple: one rule in `global.less`.
+- Picker selected cells: `--gpt-main-purple` in `form.less`.
 
 ## Scoped styles — allowed vs forbidden
 
