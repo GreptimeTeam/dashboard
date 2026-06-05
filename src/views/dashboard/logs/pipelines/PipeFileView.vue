@@ -537,21 +537,6 @@ transform:
   // SEMANTIC TYPE STYLES
   // ===================
 
-  // Define semantic type colors as CSS variables at component level
-  .pipefile-view {
-    --semantic-field-bg: rgba(0, 187, 178, 0.15);
-    --semantic-field-text: var(--gpt-accent-ts);
-    --semantic-field-legend: var(--gpt-accent-ts);
-
-    --semantic-tag-bg: #fff7e6;
-    --semantic-tag-text: #e1b84d;
-    --semantic-tag-legend: #e1b84d;
-
-    --semantic-timestamp-bg: #e6f4ff;
-    --semantic-timestamp-text: #417aff;
-    --semantic-timestamp-legend: #417aff;
-  }
-
   .semantic-legend {
     display: flex;
     align-items: center;
@@ -583,15 +568,15 @@ transform:
         border: 1px solid var(--color-border-3);
 
         &.field {
-          background-color: var(--semantic-field-legend);
+          background-color: var(--gpt-semantic-field);
         }
 
         &.tag {
-          background-color: var(--semantic-tag-legend);
+          background-color: var(--gpt-semantic-tag);
         }
 
         &.timestamp {
-          background-color: var(--semantic-timestamp-legend);
+          background-color: var(--gpt-semantic-timestamp);
         }
       }
 
@@ -603,25 +588,6 @@ transform:
   }
 
   .output-table {
-    :deep(.arco-table-th-title) {
-      .timestamp {
-        background-color: var(--semantic-timestamp-bg);
-        color: var(--semantic-timestamp-text);
-        padding: var(--gpt-gap-xs);
-      }
-
-      .field {
-        background-color: var(--semantic-field-bg);
-        color: var(--semantic-field-text);
-        padding: var(--gpt-gap-xs);
-      }
-
-      .tag {
-        background-color: var(--semantic-tag-bg);
-        color: var(--semantic-tag-text);
-        padding: var(--gpt-gap-xs);
-      }
-    }
     :deep(.arco-table-size-medium .arco-table-td) {
       font-size: var(--gpt-font-md);
     }

@@ -41,17 +41,14 @@
                   placement="top"
                   :content="tsViewStr ? $t('dashboard.showTimestamp') : $t('dashboard.formatTimestamp')"
                 )
-                  a-space(
-                    size="mini"
-                    :style="{ cursor: 'pointer' }"
-                    :class="col.semantic_type?.toLowerCase()"
-                    @click="changeTsView"
-                  )
+                  span.gpt-semantic-th(style="cursor: pointer" :class="getSemanticThClass(col)" @click="changeTsView")
                     svg.icon-12
                       use(href="#time-index")
                     | {{ col.name }}
+              template(v-else-if="col.semantic_type")
+                span.gpt-semantic-th(:class="getSemanticThClass(col)") {{ col.title || col.name }}
               template(v-else)
-                span(:class="col.semantic_type?.toLowerCase()") {{ col.title || col.name }}
+                | {{ col.title || col.name }}
           // Custom cell slot - allow parent components to override cell rendering
           template(#cell="{ record, rowIndex }")
             slot(
@@ -235,6 +232,10 @@ a-dropdown#td-context(
   // Timestamp utilities
   function isTimeColumn(column: ColumnType) {
     return dateTypes.indexOf(column.data_type) > -1
+  }
+
+  function getSemanticThClass(column: ColumnType) {
+    return column.semantic_type?.toLowerCase()
   }
 
   // Width calculation utilities

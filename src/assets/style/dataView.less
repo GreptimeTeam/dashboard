@@ -156,3 +156,40 @@
   .arco-table-td:not(.arco-table-col-fixed-left):not(.arco-table-col-fixed-right) {
   background-color: var(--gpt-nav-active-bg);
 }
+
+// Semantic column header pill — fixed height so FIELD / TAG / TIMESTAMP align
+.gpt-semantic-th {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gpt-gap-xs);
+  box-sizing: border-box;
+  height: var(--gpt-semantic-th-height);
+  max-height: var(--gpt-semantic-th-height);
+  padding: 0 var(--gpt-semantic-th-padding-x);
+  font-size: inherit;
+  line-height: 1;
+  border-radius: 2px;
+  vertical-align: middle;
+  white-space: nowrap;
+
+  .icon-12 {
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+  }
+
+  &.field {
+    background-color: var(--gpt-semantic-field-bg);
+    color: var(--gpt-semantic-field);
+  }
+
+  &.tag {
+    background-color: var(--gpt-semantic-tag-bg);
+    color: var(--gpt-semantic-tag);
+  }
+
+  &.timestamp {
+    background-color: var(--gpt-semantic-timestamp-bg);
+    color: var(--gpt-semantic-timestamp);
+  }
+}
