@@ -187,21 +187,13 @@
   :deep(.arco-radio-group-button) {
     background-color: var(--color-fill-2);
   }
-  :deep(.cm-editor) {
-    outline: none;
-    border: none !important;
-    border-radius: 0;
-  }
   .editor {
-    background-color: var(--gpt-bg-code);
-    border-bottom-left-radius: var(--gpt-radius-sm);
-    border-bottom-right-radius: var(--gpt-radius-sm);
-    border: 1px solid var(--gpt-editor-border);
     overflow: hidden;
+    border-radius: var(--gpt-radius-sm);
   }
 
-  .editor :deep(.cm-gutters) {
-    border-top-left-radius: var(--gpt-radius-sm);
-    border-bottom-left-radius: var(--gpt-radius-sm);
+  :deep(.cm-editor),
+  :deep(.ͼ1.cm-editor) {
+    outline: none;
   }
 </style>
