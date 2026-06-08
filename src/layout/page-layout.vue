@@ -1,6 +1,6 @@
 <template lang="pug">
 router-view(v-slot="{ Component }")
-  keep-alive(:exclude="keepAliveExclude")
+  keep-alive(:include="keepAliveInclude")
     component(:is="Component" :database="appStore.database")
 </template>
 
@@ -16,25 +16,19 @@ router-view(v-slot="{ Component }")
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join('')
 
-  /**
-   * 路由名 `toPascalCase` 与 SFC `defineOptions({ name })` 不一致时，在此补充要排除缓存的组件名。
-   * 白名单 include 容易漏配导致整页不缓存（每次进入都 remount）；exclude 更符合 ignoreCache 语义。
-   */
-  const EXCLUDE_NAME_ALIASES: Record<string, string[]> = {
-    'log-query': ['LogsQuery'],
-  }
+  /** 路由名 toPascalCase 与 SFC name 不一致时，在此补充要缓存的组件名 */
+  const INCLUDE_NAME_ALIASES: Record<string, string[]> = {}
 
-  // 不缓存：meta.ignoreCache 为 true 的路由（路由名 + 推导名 + 已知别名）
-  const keepAliveExclude = computed(() => {
-    const excludeSet = new Set<string>()
+  // 仅缓存 meta.keepAlive 为 true 的路由（推导组件名 + 已知别名）
+  const keepAliveInclude = computed(() => {
+    const includeSet = new Set<string>()
     router.getRoutes().forEach((route) => {
-      if (!route.meta?.ignoreCache || !route.name) return
+      if (!route.meta?.keepAlive || !route.name) return
       const routeName = String(route.name)
-      excludeSet.add(routeName)
-      excludeSet.add(toPascalCase(routeName))
-      ;(EXCLUDE_NAME_ALIASES[routeName] || []).forEach((alias) => excludeSet.add(alias))
+      includeSet.add(toPascalCase(routeName))
+      ;(INCLUDE_NAME_ALIASES[routeName] || []).forEach((alias) => includeSet.add(alias))
     })
-    return Array.from(excludeSet)
+    return Array.from(includeSet)
   })
 </script>
 

@@ -24,6 +24,7 @@ const DASHBOARD: AppRouteRecordRaw = {
         requiresAuth: false,
         icon: 'table',
         roles: ['admin', 'cloud'],
+        keepAlive: true,
       },
     },
     {
@@ -104,7 +105,6 @@ const DASHBOARD: AppRouteRecordRaw = {
       component: () => import('@/views/dashboard/traces/index.vue'),
       name: 'trace-query',
       meta: {
-        ignoreCache: false,
         locale: 'menu.dashboard.traces',
         requiresAuth: false,
         icon: 'Icon7',
