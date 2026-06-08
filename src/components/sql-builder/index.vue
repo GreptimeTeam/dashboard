@@ -718,37 +718,37 @@ a-modal(
   }
 
   :deep(.arco-btn-text[type='button']) {
-    color: var(--color-text-2);
+    color: var(--gpt-text-secondary);
   }
 
   .more-toggle {
-    color: var(--color-text-2);
-    font-size: 14px;
+    color: var(--gpt-text-secondary);
+    font-size: var(--gpt-font-lg);
     line-height: 2;
   }
 
   .more-count {
-    color: var(--color-text-3);
+    color: var(--gpt-text-muted);
   }
 
   .more-popup {
-    background: var(--color-bg-1);
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
+    background: var(--gpt-bg-panel);
+    border: 1px solid var(--gpt-border-default);
+    border-radius: var(--gpt-radius-md);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     min-width: 280px;
   }
 
   .more-popup-header {
     padding: 12px 16px;
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--gpt-border-default);
   }
 
   .more-popup-header h4 {
     margin: 0;
-    font-size: 14px;
+    font-size: var(--gpt-font-lg);
     font-weight: 500;
-    color: var(--color-text-1);
+    color: var(--gpt-text-primary);
   }
 
   .more-popup-content {
@@ -767,7 +767,7 @@ a-modal(
 
   .quick-fields-save {
     border-style: dashed;
-    border-color: rgb(209, 213, 219);
+    border-color: var(--gpt-border-strong);
   }
 
   /* value input 作为 group 末项：Arco 管圆角，此处仅宽度可拖 */

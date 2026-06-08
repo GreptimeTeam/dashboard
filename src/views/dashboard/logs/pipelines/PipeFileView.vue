@@ -548,7 +548,7 @@ transform:
     .legend-title {
       font-size: var(--gpt-font-base);
       font-weight: 600;
-      color: var(--color-text-2);
+      color: var(--gpt-text-secondary);
     }
 
     .legend-items {
@@ -582,7 +582,7 @@ transform:
 
       .legend-label {
         font-size: var(--gpt-font-base);
-        color: var(--color-text-2);
+        color: var(--gpt-text-secondary);
       }
     }
   }

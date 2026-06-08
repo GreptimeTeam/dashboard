@@ -121,9 +121,9 @@
 
     :deep(.arco-pagination-item-active),
     :deep(.arco-pagination-item-active:hover) {
-      border-color: var(--brand-color);
+      border-color: var(--gpt-brand-900);
       color: var(--gpt-text-inverse);
-      background: var(--brand-color);
+      background: var(--gpt-brand-900);
     }
 
     :deep(.arco-pagination-jumper-input) {

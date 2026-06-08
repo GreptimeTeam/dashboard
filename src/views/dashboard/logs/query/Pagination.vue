@@ -184,17 +184,9 @@ a-space(v-if="pages.length")
   .btn {
     color: var(--gpt-text-secondary);
     transition: all 0.2s ease;
-    &:hover:not(:disabled) {
+    &:hover:not(:disabled):not(.active) {
       color: var(--gpt-main-purple);
       background-color: var(--gpt-bg-surface);
-    }
-  }
-  .btn.active {
-    color: var(--gpt-main-purple);
-    background-color: var(--gpt-nav-active-bg);
-    font-weight: 500;
-    &:hover {
-      background-color: var(--light-brand-color);
     }
   }
   .btn-hint {
@@ -202,7 +194,7 @@ a-space(v-if="pages.length")
     cursor: help;
     transition: color 0.2s ease;
     &:hover {
-      color: var(--brand-color);
+      color: var(--gpt-link-color);
     }
   }
 

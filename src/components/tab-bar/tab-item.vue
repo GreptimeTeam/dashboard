@@ -157,7 +157,7 @@
 
 <style scoped lang="less">
   .tag-link {
-    color: var(--color-text-2);
+    color: var(--gpt-text-secondary);
     text-decoration: none;
   }
   .link-activated {

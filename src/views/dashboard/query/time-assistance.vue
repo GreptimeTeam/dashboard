@@ -399,8 +399,8 @@ a-modal.timestamp-assistance-modal(
       height: 20px;
       padding: 0 5px;
       border-radius: var(--gpt-radius-sm);
-      background: #eef1ff;
-      color: #6675ff;
+      background: var(--gpt-nav-active-bg);
+      color: var(--gpt-main-purple);
       font-size: var(--gpt-font-sm);
       font-weight: 600;
     }
@@ -433,7 +433,7 @@ a-modal.timestamp-assistance-modal(
     }
 
     .cell-actions .arco-btn {
-      background: rgba(71, 52, 96, 0.12);
+      background: var(--gpt-nav-active-bg);
       color: var(--gpt-text-primary);
     }
   }

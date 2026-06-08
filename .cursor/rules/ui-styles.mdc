@@ -58,30 +58,117 @@ Tab pane: `overflow: hidden` on content item (avoid outer scroll stealing from t
 - Logs: `medium` normal, `mini` when compact checkbox on.
 - Flow list: `gpt-table-page`, no virtual fill height.
 
-## Theme-first controls (`arco-theme.less`)
+## Color system (`global.less` + `arco-theme.less`)
 
-Arco **primary palette**: `@color-primary-6` = main-dark (idle), `@color-primary-5` = main-purple (hover). Buttons, inputs, checkbox, switch follow Arco defaults via compile-time tokens — **no** duplicate color rules in `button.less` / `form.less` except danger/disabled.
+**Source of truth**: define new colors only in `:root` (`global.less`) or Arco compile tokens (`arco-theme.less`). Component/page CSS references tokens — no new `#hex` / `rgb()` in Vue/LESS except chart canvas / vp-doc (see exceptions).
 
-**Exceptions** (not driven by primary-6):
+### Text hierarchy (four tiers — not all main-dark)
+
+| Tier | Token | Hex | Use |
+|------|--------|-----|-----|
+| Primary | `--gpt-text-primary` | `#473460` | Page titles, input/select **values**, table body, outline/text button idle, standard checkbox label |
+| Secondary | `--gpt-text-secondary` | `#8b7ba8` | Toolbar meta, button-radio **idle**, table header, `Live` / `Columns` labels, pagination idle |
+| Label | `--gpt-text-label` | `rgb(107,114,128)` | Form field labels (`.arco-form-item-label` in `dataView.less`; matches `@form-color-text-label`) |
+| Muted | `--gpt-text-muted` | `#b0a8c4` | Row counts, hints, disabled-adjacent meta |
+| Inverse | `--gpt-text-inverse` | `#ffffff` | Text on main-dark / purple filled controls (primary btn, radio/checkbox selected, pagination active) |
+
+**Placeholder**: `--gpt-placeholder-color` (`rgba(71,52,96,0.5)`).
+
+### Interactive color (idle → hover → active/focus)
+
+| Role | Idle | Hover | Active / focus / selected |
+|------|------|-------|---------------------------|
+| Primary button | white on main-dark | white on purple | white on `--gpt-brand-primary-hover` |
+| Outline button | main-dark text+border | purple text+border | deeper purple |
+| Text button | main-dark | purple text + `--gpt-nav-active-bg` | main-dark |
+| Button-type radio | **secondary** text (`button.less`) | purple text | **inverse** on main-dark; hover fill → purple |
+| Input / select value | main-dark | border main-dark | border purple |
+| Checkbox / radio circle | main-dark border | main-dark border | main-dark fill; checked hover → purple (`global.less`) |
+| Pagination page | secondary | `--gpt-brand-900` text + `--gpt-nav-active-bg` | inverse on `--gpt-brand-900` |
+| Links | `--gpt-link-color` (purple) | — | — |
+
+**Purple (`--gpt-main-purple`) is for interaction emphasis**, not default body copy. Do not use for idle toolbar labels unless the control is a link or explicit accent.
+
+### Borders & fills
+
+| Token | Use |
+|-------|-----|
+| `--gpt-border-strong` | Input/select/picker idle border; radio-group outer border |
+| `--gpt-border-default` | Cards, regions, dividers |
+| `--gpt-border-subtle` | Disabled outlines |
+| `--gpt-nav-active-bg` | Row/hover fills, light purple tint |
+| `--gpt-table-head-bg` / `--grey-bg-color` | Table header, sidebar label chips |
+
+Checkbox/radio mask border: **1px** (`@checkbox-mask-border-width` / `@radio-border-width` in `arco-theme.less`).
+
+### Semantic & status (domain only)
+
+| Token | Use |
+|-------|-----|
+| `--gpt-semantic-field` / `tag` / `timestamp` (+ `-bg`) | Column type pills in `DataTable` |
+| `--gpt-accent-ts` | Timestamp accent |
+| `--success-color` / `--warning-color` / `--danger-color` (+ `-bg`) | Status pills, danger buttons |
+| `--gpt-status-pill` modifiers (`ui-regions.less`) | Running / error badges |
+
+Charts (ECharts): may use `rgba(71,52,96,…)` inline in JS — prefer matching `--gpt-text-*` / `--gpt-border-*` values when editing.
+
+### Legacy aliases — do not use in new code
+
+| Legacy | Maps to | Notes |
+|--------|---------|-------|
+| `--main-font-color` | `--gpt-text-primary` | Still in `dataView.less`, tour, explain |
+| `--small-font-color` | `--gpt-text-secondary` | |
+| `--third-font-color` | `--gpt-text-muted` | |
+| `--brand-color` | `--gpt-main-purple` | **CSS variable** = purple |
+| `--hover-brand-color` | `--gpt-main-purple` | No distinct hover shade |
+| `--color-text-1/2/3` | Arco runtime vars | Prefer `--gpt-text-*`; `@color-text-1` overridden to main-dark in theme |
+
+### Class vs variable trap
+
+```less
+.brand-color, .icon-color { color: var(--gpt-control-accent); }  /* class → main-dark */
+:root { --brand-color: var(--gpt-main-purple); }                 /* var  → purple */
+```
+
+- Template `class="brand-color"` on SVG → **main-dark** (correct for idle icons).
+- Scoped `color: var(--brand-color)` → **purple** (often intended for hover/accent only).
+- New code: idle icons → `icon-color` or `--gpt-icon-color`; hover/accent → `--gpt-link-color` or `--gpt-main-purple` explicitly.
+
+### Theme-first controls (`arco-theme.less`)
+
+Arco **primary palette**: `@color-primary-6` = main-dark (idle), `@color-primary-5` = main-purple (hover). Buttons, inputs, checkbox, switch follow compile-time tokens — **no** duplicate color rules in `button.less` / `form.less` except danger/disabled/radio-group/button-toolbar.
+
+**Exceptions** (not driven by primary-6 alone):
 - Nav **menu** — `@menu-light-color-*` / `@menu-dark-color-*`
-- Body **links** — `--gpt-link-color` (purple)
-- **View-switch** `.active` — `--gpt-brand-900`
-- **Button-type radio** — segmented outer border + transparent idle (`button.less`); selected fill main-dark via `@radio-button-color-bg_active`; checked hover → purple
+- Body **links** — `--gpt-link-color`
+- **View-switch** / **pagination active** / **gpt-btn-toolbar.active** — `--gpt-brand-900` fill + inverse text
+- **Button-type radio** — idle secondary in `button.less`; selected main-dark
 - **Danger** status buttons — `button.less`
+- **vp-doc** / **docs.less** — documentation chrome; may keep `--brand-color` for links
 
-Alias tokens in `:root`: `--gpt-control-accent` / `--gpt-control-accent-hover` (docs & spin icons only).
+`--gpt-control-accent` / `--gpt-control-accent-hover`: default icon accent (dark / purple on hover). Used by `.brand-color` class, spin-adjacent patterns; **not** a substitute for text tier tokens.
 
 ## Buttons (`button.less`)
 
 - Use `size="small"` (26px) or `size="medium"` (32px) — **no** scoped `:deep(.arco-btn) { height: 24px; padding: 0 4px }`.
-- Primary / text / outline / secondary colors: Arco theme tokens (see above).
-- `gpt-btn-toolbar` + optional `gpt-btn-toolbar-mono` — compact toolbar buttons (Logs time pagination).
+- Primary / text / outline / secondary colors: Arco theme tokens (see color table above).
+- `gpt-btn-toolbar` + optional `gpt-btn-toolbar-mono` — compact toolbar buttons (Logs time pagination); idle secondary, active main-dark fill.
 
 ## Form controls
 
-- Input / Select / Picker borders: `@input-color-border_*` in `arco-theme.less`.
-- Checkbox checked hover → purple: one rule in `global.less`.
+- Input / Select / Picker: text `@input-color-text` (main-dark); borders `@input-color-border_*`.
+- Checkbox: 1px border; label inherits `@checkbox-color-text` (= text-1); checked hover → purple in `global.less`.
 - Picker selected cells: `--gpt-main-purple` in `form.less`.
+- Prefer `gpt-text-secondary` on toolbar checkbox labels (e.g. Live) when beside primary controls.
+
+## Known color debt (fix when touching file)
+
+| Area | Issue | Target |
+|------|--------|--------|
+| `docs.less` / `vp-doc.less` | `--brand-color` links | OK for docs; don't copy to app UI |
+| Many Vue files | `var(--brand-color)` for non-hover states | Distinguish idle (`--gpt-icon-color`) vs accent (`--gpt-link-color`) |
+| Legacy aliases in older LESS | `--main-font-color`, `--small-font-color`, `--third-font-color` | Migrate to `--gpt-text-*` |
+| `metrics-chart.vue` | hardcoded rgba in ECharts | acceptable; align values to tokens when editing |
 
 ## Scoped styles — allowed vs forbidden
 
@@ -113,4 +200,7 @@ Alias tokens in `:root`: `--gpt-control-accent` / `--gpt-control-accent-hover` (
 - [ ] Panel vs page table class correct?
 - [ ] `DataTable` size appropriate (default medium for results)?
 - [ ] No new hardcoded colors/font sizes?
+- [ ] Text uses correct **tier** (primary / secondary / muted / inverse) — not all main-dark?
+- [ ] Purple only for hover, links, focus, or selected-state emphasis?
+- [ ] No new `--main-font-color` / `--brand-color` / `--color-text-*` in app UI?
 - [ ] No revived `data-grid`?

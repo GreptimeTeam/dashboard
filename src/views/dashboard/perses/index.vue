@@ -520,7 +520,7 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
 
   .empty-state p {
     margin: 0 0 18px;
-    color: var(--color-text-2);
+    color: var(--gpt-text-secondary);
     line-height: 1.6;
   }
 
