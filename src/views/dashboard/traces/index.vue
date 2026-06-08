@@ -74,13 +74,17 @@
     )
 </template>
 
-<script setup name="TraceQuery" lang="ts">
+<script setup lang="ts">
   import { ref, computed, watch, nextTick, onMounted } from 'vue'
   import { useLocalStorage } from '@vueuse/core'
   import { IconCode, IconDown, IconRight, IconDownload } from '@arco-design/web-vue/es/icon'
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import SqlTextEditor from '@/components/sql-text-editor/index.vue'
   import TraceTable from './components/TraceTable.vue'
+
+  defineOptions({
+    name: 'TraceQuery',
+  })
 
   // 1. Time range state
   const timeRange = useTimeRange()
