@@ -192,19 +192,15 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card.gpt-table-sidebar-
     return tablesTreeForDatabase.value[db]?.length ?? 0
   })
 
-  const loadedTablesCount = computed(() => expandedTablesTree.value.length)
-
   const filteredTablesCount = computed(() => tablesTreeData.value.length)
 
   const isTableSearchActive = computed(() => tablesSearchKey.value.trim().length > 0)
 
-  const tableFilterRatio = computed(() => `${filteredTablesCount.value}/${loadedTablesCount.value}`)
-
   const tableCountLabel = computed(() => {
     if (isTableSearchActive.value) {
-      return tableFilterRatio.value
+      return `${filteredTablesCount.value}/${tablesTotalCount.value}`
     }
-    return t('tables.sidebar.tableCount', { count: tablesTotalCount.value })
+    return t('tables.sidebar.countTotal', { count: tablesTotalCount.value })
   })
 
   const tableCountTooltip = computed(() => (isTableSearchActive.value ? t('tables.sidebar.countFilteredTooltip') : ''))
