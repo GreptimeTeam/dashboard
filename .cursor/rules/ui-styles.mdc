@@ -101,6 +101,18 @@ Tab pane: `overflow: hidden` on content item (avoid outer scroll stealing from t
 
 Checkbox/radio mask border: **1px** (`@checkbox-mask-border-width` / `@radio-border-width` in `arco-theme.less`).
 
+### Timestamp columns (global — `dataView.less`)
+
+All query result tables use **`DataTable`**. Do **not** override timestamp cells with page-local colors (`--color-primary-*`, main-dark, purple links).
+
+| Part | Class / prop | Style |
+|------|----------------|-------|
+| Header pill | `.gpt-semantic-th.timestamp` | `--gpt-semantic-timestamp` on `--gpt-semantic-timestamp-bg` |
+| Body (toggle format) | `.timestamp-cell` | `--gpt-accent-ts`; click toggles formatted/raw |
+| Body (open detail) | `tsCellDetail` + `.timestamp-cell.ts-cell-detail-link` | `--gpt-accent-ts`; underline on hover only |
+
+Logs Query and Table Query both use `tsCellDetail` + `@ts-cell-click` for log/detail drawer — same as `query-result-table`.
+
 ### Semantic & status (domain only)
 
 | Token | Use |
@@ -173,6 +185,8 @@ Arco **primary palette**: `@color-primary-6` = main-dark (idle), `@color-primary
 ## Scoped styles — allowed vs forbidden
 
 **OK**: column cells (`.flow-name-cell`), status pills modifiers, page-header `justify-content` on top of `gpt-page-header`, view-switch gap, explain/chart/pipeline-specific UI.
+
+**Forbidden**: custom `#column-{ts}` slots that restyle timestamp text (use `tsCellDetail` / default `timestamp-cell`).
 
 **Avoid**: full toolbar flex/padding/background (use `gpt-results-toolbar`); duplicate title typography; per-page Arco button sizing; compound `.local.gpt-x` without `gpt-x` on element.
 

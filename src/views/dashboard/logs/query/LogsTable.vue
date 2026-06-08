@@ -11,14 +11,13 @@
     :virtual-list-props="{ height: virtualListHeight, buffer: 36 }"
     :row-selection="rowSelection"
     :ts-column="tsColumn"
+    :ts-cell-detail="!!tsColumn"
     :show-context-menu="sqlMode === 'builder'"
     :class="{ builder_type: sqlMode === 'builder' }"
     @filter-condition-add="handleFilterConditionAdd"
     @row-select="$emit('rowSelect', $event)"
+    @ts-cell-click="handleTsClick"
   )
-    // Custom slot for timestamp column 
-    template(v-if="tsColumn" #[`column-${tsColumn.name}`]="{ record, renderedValue, rowIndex }")
-      .clickable-ts(@click="() => handleTsClick(record, rowIndex)") {{ renderedValue }}
 
   LogDetail(
     v-model:visible="detailVisible"
@@ -82,7 +81,7 @@
 
   const detailVisible = ref(false)
 
-  const handleTsClick = (row, rowIndex) => {
+  const handleTsClick = (row: TableData, rowIndex: number) => {
     selectedRowKey.value = rowIndex
     emit('rowSelect', row)
     detailVisible.value = true
@@ -117,16 +116,6 @@
     :deep(.data-table-container) {
       height: 100%;
       flex: 1;
-    }
-  }
-
-  .clickable-ts {
-    cursor: pointer;
-    color: var(--color-primary-6);
-    text-decoration: underline;
-
-    &:hover {
-      color: var(--color-primary-5);
     }
   }
 </style>

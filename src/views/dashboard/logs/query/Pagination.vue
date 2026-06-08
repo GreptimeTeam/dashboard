@@ -181,14 +181,7 @@ a-space(v-if="pages.length")
 </script>
 
 <style scoped lang="less">
-  .btn {
-    color: var(--gpt-text-secondary);
-    transition: all 0.2s ease;
-    &:hover:not(:disabled):not(.active) {
-      color: var(--gpt-main-purple);
-      background-color: var(--gpt-bg-surface);
-    }
-  }
+  /* Pill colors: button.less .gpt-btn-toolbar (same as Table Query a-pagination) */
   .btn-hint {
     color: var(--gpt-text-muted);
     cursor: help;

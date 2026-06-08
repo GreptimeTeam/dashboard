@@ -761,20 +761,6 @@ a-dropdown#td-context(
     background: var(--gpt-border-strong);
   }
 
-  .timestamp-cell {
-    color: var(--gpt-accent-ts);
-  }
-
-  .ts-cell-detail-link {
-    cursor: pointer;
-    color: var(--gpt-accent-ts);
-    text-decoration: none;
-
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-
   :deep(.arco-table-td),
   :deep(.arco-table-th) {
     white-space: nowrap;

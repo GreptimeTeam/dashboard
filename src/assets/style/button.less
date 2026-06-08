@@ -142,24 +142,35 @@
   height: var(--gpt-control-height-md);
 }
 
-/* Compact toolbar buttons (Logs time-range pagination, etc.) */
+/*
+ * Compact toolbar buttons — Logs time-range pagination, etc.
+ * Visual spec matches paginated-data-table .arco-pagination-item (Table Query).
+ */
 .arco-btn-text.gpt-btn-toolbar,
 .arco-btn-size-small.gpt-btn-toolbar:not(.arco-btn-only-icon) {
   padding: var(--gpt-gap-xs) var(--gpt-gap-md);
   border-radius: var(--gpt-radius-sm);
   min-height: var(--gpt-control-height-sm);
   line-height: 1.4;
+  color: var(--gpt-text-secondary);
+  font-weight: 600;
+  background-color: transparent;
+
+  &:hover:not(:disabled):not(.active):not(.arco-btn-disabled) {
+    color: var(--gpt-brand-900);
+    background-color: var(--gpt-nav-active-bg);
+  }
+
+  &.active,
+  &.active:hover {
+    color: var(--gpt-text-inverse);
+    background-color: var(--gpt-brand-900);
+    font-weight: 500;
+  }
 }
 
 .gpt-btn-toolbar-mono {
   font-family: var(--font-mono);
-}
-
-.gpt-btn-toolbar.active,
-.gpt-btn-toolbar.active:hover {
-  color: var(--gpt-text-inverse);
-  background-color: var(--gpt-brand-900);
-  font-weight: 500;
 }
 
 /* outline 图标按钮：与相邻 input/select hover 一致（filter +/- 等） */
