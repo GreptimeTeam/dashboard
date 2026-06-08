@@ -31,8 +31,12 @@
             icon-loading(v-if="queryLoading" spin)
             icon-play-arrow(v-else)
           | {{ $t('dashboard.run') }}
-        a-checkbox(size="medium" :model-value="refresh" @update:modelValue="(val) => (refresh = val)")
-          span.gpt-text-secondary {{ $t('logsQuery.live') }}
+        a-checkbox.gpt-toolbar-checkbox(
+          size="medium"
+          :model-value="refresh"
+          @update:modelValue="(val) => (refresh = val)"
+        )
+          | {{ $t('logsQuery.live') }}
         a-space(style="margin-left: auto")
           a-button(
             type="outline"

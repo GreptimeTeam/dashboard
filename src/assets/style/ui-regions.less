@@ -429,6 +429,12 @@
     padding: var(--gpt-toolbar-padding);
     border-bottom: 1px solid var(--gpt-border-default);
     background: var(--gpt-bg-panel);
+
+    /* Inline checkbox (e.g. Live): match adjacent outline button label */
+    .gpt-toolbar-checkbox .arco-checkbox-label {
+      color: var(--gpt-text-primary);
+      font-weight: var(--gpt-font-weight-control);
+    }
   }
 }
 

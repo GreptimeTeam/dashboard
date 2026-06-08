@@ -36,7 +36,23 @@ Files: `src/assets/style/ui-regions.less`, `src/assets/style/query-layout.less`.
 - **Editors**: `gpt-light-editor`, `gpt-light-editor-card`, `gpt-code-editor-frame` (+ `--h200/300/500`), `gpt-square-editor` when needed.
 - **Misc**: `gpt-divider-band`, `gpt-popover-panel`, `gpt-card-flush-body`, `gpt-status-pill` (+ `is-running` / `is-error` / `is-default`), `gpt-status-pill__dot`.
 
-Typography utilities: `typography.less` — e.g. `gpt-text-page-subtitle`, `gpt-text-secondary`, `gpt-text-muted`, `gpt-text-toolbar-meta`, `gpt-icon-muted`.
+Typography utilities: `typography.less` — e.g. `gpt-text-page-subtitle`, `gpt-text-secondary`, `gpt-text-muted`, `gpt-text-toolbar`, `gpt-text-toolbar-meta`, `gpt-icon-muted`.
+
+## Toolbar typography
+
+Base font in toolbars is **`--gpt-font-base` (12px)**. Weight follows **role**, not location:
+
+| Role | Weight | Color (idle) | Examples |
+|------|--------|----------------|----------|
+| **Control** (peer actions) | **`--gpt-font-weight-control` (600)** | `--gpt-text-primary`, or **secondary** for button-radio idle only | `a-button`, `TimeRangeSelect`, **Live** (`gpt-toolbar-checkbox`), Builder/Code radio |
+| **Plain label** | `--gpt-font-weight-regular` (400) | `--gpt-text-primary` | `gpt-text-toolbar` on non-interactive copy |
+| **Meta / hint** | 600 | `--gpt-text-secondary` or `--gpt-text-muted` | Row counts, `gpt-text-toolbar-meta`, **Columns** text-btn label |
+
+**600 on top toolbar is correct** — all Arco buttons use `@btn-font-weight: 600` (`arco-theme.less`). Inline toolbar checkboxes must match via `gpt-toolbar-checkbox`, not default `.arco-checkbox-label` (500).
+
+Do **not** put `gpt-text-secondary` on peer toolbar toggles (Live, Run neighbors). Secondary is for **unselected** button-radio segments and **meta** text only.
+
+Regions: `.gpt-toolbar`, `.gpt-content-toolbar`, `.query-layout .toolbar` (`ui-regions.less`).
 
 ## Panel table height chain (Table Query)
 
@@ -67,7 +83,7 @@ Tab pane: `overflow: hidden` on content item (avoid outer scroll stealing from t
 | Tier | Token | Hex | Use |
 |------|--------|-----|-----|
 | Primary | `--gpt-text-primary` | `#473460` | Page titles, input/select **values**, table body, outline/text button idle, standard checkbox label |
-| Secondary | `--gpt-text-secondary` | `#8b7ba8` | Toolbar meta, button-radio **idle**, table header, `Live` / `Columns` labels, pagination idle |
+| Secondary | `--gpt-text-secondary` | `#8b7ba8` | Toolbar meta, button-radio **idle**, table header, **Columns** / pagination idle |
 | Label | `--gpt-text-label` | `rgb(107,114,128)` | Form field labels (`.arco-form-item-label` in `dataView.less`; matches `@form-color-text-label`) |
 | Muted | `--gpt-text-muted` | `#b0a8c4` | Row counts, hints, disabled-adjacent meta |
 | Inverse | `--gpt-text-inverse` | `#ffffff` | Text on main-dark / purple filled controls (primary btn, radio/checkbox selected, pagination active) |
@@ -171,7 +187,7 @@ Arco **primary palette**: `@color-primary-6` = main-dark (idle), `@color-primary
 - Input / Select / Picker: text `@input-color-text` (main-dark); borders `@input-color-border_*`.
 - Checkbox: 1px border; label inherits `@checkbox-color-text` (= text-1); checked hover → purple in `global.less`.
 - Picker selected cells: `--gpt-main-purple` in `form.less`.
-- Prefer `gpt-text-secondary` on toolbar checkbox labels (e.g. Live) when beside primary controls.
+- Toolbar inline checkboxes (e.g. Logs **Live**): `gpt-toolbar-checkbox` — primary text + 600, same as outline buttons. Use `gpt-text-secondary` only for meta labels (row counts, **Columns** text button), not peer toolbar toggles.
 
 ## Known color debt (fix when touching file)
 
@@ -215,6 +231,7 @@ Arco **primary palette**: `@color-primary-6` = main-dark (idle), `@color-primary
 - [ ] `DataTable` size appropriate (default medium for results)?
 - [ ] No new hardcoded colors/font sizes?
 - [ ] Text uses correct **tier** (primary / secondary / muted / inverse) — not all main-dark?
+- [ ] Toolbar **controls** at 600; meta at secondary/muted; no `gpt-text-secondary` on peer toggles?
 - [ ] Purple only for hover, links, focus, or selected-state emphasis?
 - [ ] No new `--main-font-color` / `--brand-color` / `--color-text-*` in app UI?
 - [ ] No revived `data-grid`?
