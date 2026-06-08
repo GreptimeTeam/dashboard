@@ -131,6 +131,13 @@
   padding: var(--gpt-page-padding-y) var(--gpt-page-padding-x);
 }
 
+/* input-group 与外侧控件（如 - 按钮）间距；组内紧贴由 Arco input-group 负责 */
+.gpt-input-group-row {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gpt-gap-sm);
+}
+
 .gpt-card-flush-body > .arco-card-body,
 .arco-card.gpt-card-flush-body > .arco-card-body {
   padding: 0;

@@ -154,3 +154,14 @@
 .gpt-btn-toolbar-mono {
   font-family: var(--font-mono);
 }
+
+/* outline 图标按钮：与相邻 input/select hover 一致（filter +/- 等） */
+.arco-btn-outline.gpt-btn-outline-control {
+  flex-shrink: 0;
+
+  &:hover:not(:disabled):not(.arco-btn-disabled) {
+    color: var(--gpt-main-dark);
+    background-color: var(--grey-bg-color);
+    border-color: var(--gpt-main-dark);
+  }
+}

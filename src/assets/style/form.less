@@ -236,7 +236,10 @@
   background-color: var(--gpt-main-purple);
 }
 
-/* Input group: Arco syncs separator border-right on focus-within only; match on hover */
+/*
+ * Arco input-group：focus 时分隔边已内置；hover 未同步 @input-color-border_hover，补分隔边 + 层级。
+ * 圆角 / 相邻由 Arco 处理，子项须为 select、input 等直接子节点（勿包额外 div）。
+ */
 .arco-input-group {
   > .arco-input-wrapper:not(:last-child),
   > .arco-input-outer:not(:last-child),
@@ -246,9 +249,20 @@
       z-index: 1;
       border-right-color: var(--gpt-main-dark);
     }
+  }
+
+  > .arco-input-wrapper:not(:first-child),
+  > .arco-input-outer:not(:first-child),
+  > .arco-input-tag:not(:first-child),
+  > .arco-select-view:not(:first-child) {
+    &:hover:not(.arco-select-view-disabled):not(.arco-input-wrapper-disabled) {
+      z-index: 1;
+      border-left-color: var(--gpt-main-dark);
+    }
 
     &:focus-within {
       z-index: 1;
+      border-left-color: var(--gpt-main-purple);
     }
   }
 }

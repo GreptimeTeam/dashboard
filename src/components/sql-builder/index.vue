@@ -37,48 +37,49 @@ a-form.second-row-form(
   a-form-item(style="margin-right: 12px" :label="t('sqlBuilder.filters')")
     .condition-wrapper
       a-space(v-for="(condition, index) in form.conditions" :key="index")
-        a-input-group.input-group
-          a-select(
-            v-if="index > 0"
-            v-model="condition.relation"
-            style="width: auto"
-            :options="relationOptions"
-          )
-          a-select.field(
-            v-model="condition.field"
-            allow-search
-            style="width: 140px"
-            :placeholder="t('sqlBuilder.field')"
-            :trigger-props="{ autoFitPopupMinWidth: true }"
-            :options="fieldsOptions"
-            @change="() => handleFieldChange(condition)"
-          )
-          a-select.operator(
-            v-model="condition.operator"
-            style="width: auto"
-            :placeholder="t('sqlBuilder.operator')"
-            :trigger-props="{ autoFitPopupMinWidth: true }"
-            :options="getOperators(condition.field)"
-          )
-          template(v-if="condition.operator !== 'Not Exist' && condition.operator !== 'Exist'")
-            a-select.value(
-              v-if="getFieldType(condition.field) === 'Boolean'"
-              v-model.boolean="condition.value"
-              style="width: 60px"
-              :placeholder="t('sqlBuilder.value')"
-              :options="['true', 'false']"
+        .gpt-input-group-row
+          a-input-group
+            a-select(
+              v-if="index > 0"
+              v-model="condition.relation"
+              style="width: auto"
+              :options="relationOptions"
             )
-            .resizable-wrapper(v-else)
-              a-input.value(
+            a-select.field(
+              v-model="condition.field"
+              allow-search
+              style="width: 140px"
+              :placeholder="t('sqlBuilder.field')"
+              :trigger-props="{ autoFitPopupMinWidth: true }"
+              :options="fieldsOptions"
+              @change="() => handleFieldChange(condition)"
+            )
+            a-select.operator(
+              v-model="condition.operator"
+              style="width: auto"
+              :placeholder="t('sqlBuilder.operator')"
+              :trigger-props="{ autoFitPopupMinWidth: true }"
+              :options="getOperators(condition.field)"
+            )
+            template(v-if="condition.operator !== 'Not Exist' && condition.operator !== 'Exist'")
+              a-select.value(
+                v-if="getFieldType(condition.field) === 'Boolean'"
+                v-model.boolean="condition.value"
+                style="width: 60px"
+                :placeholder="t('sqlBuilder.value')"
+                :options="['true', 'false']"
+              )
+              a-input.value.filter-value-input(
+                v-else
                 v-model="condition.value"
                 style="width: 100%"
                 :placeholder="condition.operator === 'IN' || condition.operator === 'NOT IN' ? t('sqlBuilder.commaValuesHint') : t('sqlBuilder.value')"
               )
-          a-button.field-action(type="outline" size="small" @click="() => removeCondition(index)")
+          a-button.gpt-btn-outline-control(type="outline" size="small" @click="() => removeCondition(index)")
             template(#icon)
               icon-minus
 
-      a-button.field-action(type="outline" size="small" @click="addCondition")
+      a-button.gpt-btn-outline-control(type="outline" size="small" @click="addCondition")
         template(#icon)
           icon-plus
 
@@ -696,16 +697,6 @@ a-modal(
     flex-wrap: wrap;
   }
 
-  .input-group {
-    display: flex;
-  }
-
-  /* .resizable-wrapper 不是 group 的直接子节点选择目标，需手动去掉与左侧 select 接缝处的圆角 */
-  .input-group :deep(.resizable-wrapper .arco-input-wrapper) {
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-  }
-
   .field {
     width: 150px;
   }
@@ -764,31 +755,12 @@ a-modal(
     padding: 16px;
   }
 
-  // Fix input group corners in popup to match condition input group
-  .more-popup :deep(.input-group) .arco-select-view {
-    border-radius: 0 !important;
-  }
   .more-popup-content :deep(.arco-form-item-label) {
     min-width: 70px; // or whatever width fits your longest label
     width: 70px;
     display: inline-block;
     text-align: right;
   }
-  /* Hover only: outline 全局是紫边+透明底，filter 行需与 input/select 一致 */
-  .field-action.arco-btn-outline:hover:not(:disabled):not(.arco-btn-disabled) {
-    color: var(--gpt-main-dark);
-    background-color: var(--grey-bg-color);
-    border-color: var(--gpt-main-dark);
-  }
-
-  .input-group > .field-action.arco-btn-outline {
-    margin-left: -1px;
-
-    &:hover:not(:disabled):not(.arco-btn-disabled) {
-      z-index: 1;
-    }
-  }
-
   .quick-filters-content {
     width: 100%;
   }
@@ -798,16 +770,13 @@ a-modal(
     border-color: rgb(209, 213, 219);
   }
 
-  // Resizable wrapper for input
-  .resizable-wrapper {
-    display: inline-block;
+  /* value input 作为 group 末项：Arco 管圆角，此处仅宽度可拖 */
+  .arco-input-group :deep(> .arco-input-outer.filter-value-input),
+  .arco-input-group :deep(> .filter-value-input.arco-input-wrapper) {
     width: 140px;
     min-width: 60px;
     max-width: 600px;
     resize: horizontal;
     overflow: hidden;
-    vertical-align: middle;
-    // Ensure the resize handle is visible and usable
-    padding-right: 5px;
   }
 </style>
