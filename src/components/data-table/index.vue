@@ -1,5 +1,5 @@
 <template lang="pug">
-.data-table-container(ref="tableContainer")
+.data-table-container.gpt-vertical-scrollbar(ref="tableContainer")
   a-table(
     :key="columnMode"
     v-bind="tablePassThroughProps"
@@ -366,7 +366,7 @@ a-dropdown#td-context(
     const attrsScroll = attrsRecord.scroll
     const extraScroll = typeof attrsScroll === 'object' && attrsScroll ? attrsScroll : {}
     const scroll = {
-      y: '100%',
+      ...(hasVirtualListProps.value ? {} : { y: '100%' }),
       ...extraScroll,
     }
 
@@ -603,6 +603,28 @@ a-dropdown#td-context(
     :deep(.arco-table-wrapper) {
       height: 100%;
     }
+
+    // Vertical scrollbar steals ~8px from the body; header stays full width → tiny horizontal
+    // overflow. Root also has .gpt-vertical-scrollbar (global.less descendant rules).
+    :deep(.arco-scrollbar-track-direction-horizontal) {
+      display: none;
+    }
+
+    :deep(.arco-scrollbar-container),
+    :deep(.arco-table-container),
+    :deep(.arco-table-header),
+    :deep(.arco-table-body) {
+      overflow-x: hidden !important;
+    }
+
+    :deep(.arco-virtual-list) {
+      overflow-x: hidden !important;
+      scrollbar-gutter: stable;
+
+      &::-webkit-scrollbar:horizontal {
+        height: 0;
+      }
+    }
   }
 
   :deep(.arco-table-tr-empty .arco-table-td) {
@@ -718,6 +740,10 @@ a-dropdown#td-context(
     border: 1px solid var(--gpt-border-default);
   }
   .multiple_column.virtual-list-active {
+    :deep(.arco-table-wrapper) {
+      overflow-x: hidden;
+    }
+
     :deep(.arco-virtual-list > .arco-table-element) {
       width: 100%;
     }

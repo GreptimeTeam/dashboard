@@ -1,39 +1,26 @@
 <template lang="pug">
-a-space(v-if="pages.length")
-  a-button.btn.gpt-btn-toolbar(size="small" :loading="olderLoading" @click="loadOlder")
-    icon-left
-    | {{ $t('logsQuery.older') }}
-  a-space(style="overflow-x: auto; max-width: 55vw")
-    a-tooltip(
-      v-for="(page, index) in pages"
-      :key="index"
-      position="top"
-      :content="$t('logsQuery.clickToQuery')"
-    )
-      a-button.btn.gpt-btn-toolbar.gpt-btn-toolbar-mono(
-        type="text"
-        size="small"
-        :loading="page.loading"
-        :class="{ active: page.start == currPage.start && page.end == currPage.end }"
-        @click="() => loadPage(page.start, page.end, index)"
-      )
-        | {{ page.label }}
-  a-button.btn.gpt-btn-toolbar(size="small" :loading="newerLoading" @click="loadNewer")
-    | {{ $t('logsQuery.newer') }}
-    icon-right
-  a-tooltip(position="top" :content="$t('logsQuery.timeRangePagination')")
-    a-button.btn-hint.gpt-btn-toolbar(type="text" size="small")
-      icon-info-circle
+LogTimePagination(
+  :pages="pages"
+  :curr-page="currPage"
+  :older-loading="olderLoading"
+  :newer-loading="newerLoading"
+  :left-disabled="leftDisabled"
+  :right-disabled="rightDisabled"
+  :load-older="loadOlder"
+  :load-newer="loadNewer"
+  :load-page="loadPage"
+)
 </template>
 
 <script setup name="Pagination" lang="ts">
-  import { ref, nextTick } from 'vue'
   import editorAPI from '@/api/editor'
-  import type { SchemaType } from '@/store/modules/code-run/types'
-  import type { QueryState, ColumnType } from '@/types/query'
+  import LogTimePagination from '@/components/log-time-pagination/index.vue'
+  import { useLogTimePagination } from '@/hooks/use-log-time-pagination'
+  import type { ColumnType, QueryState } from '@/types/query'
   import { convertTimestampToMilliseconds } from '@/utils/date-time'
   import { replaceTimePlaceholders } from '@/utils/sql'
   import dayjs from 'dayjs'
+  import { computed, toRefs } from 'vue'
   import { toObj } from './until'
 
   const props = defineProps<{
@@ -43,19 +30,27 @@ a-space(v-if="pages.length")
   }>()
 
   const emit = defineEmits(['update:rows'])
+  const { rows, queryState } = toRefs(props)
 
-  const leftDisabled = ref(false)
-  const rightDisabled = ref(false)
-  type PageRange = {
-    label?: string
-    start?: number
-    end?: number
-    loading?: boolean
+  const globalRange = computed(() => {
+    const [start, end] = queryState.value.timeRangeValues
+    if (!queryState.value.tsColumn || (!start && !end)) {
+      return null
+    }
+    return { start: start as string, end: end as string }
+  })
+
+  function toMs(value: number | string) {
+    if (!queryState.value.tsColumn || typeof value === 'string') {
+      return NaN
+    }
+    return convertTimestampToMilliseconds(Number(value), queryState.value.tsColumn.data_type)
   }
-  const pages = ref<Array<PageRange>>([])
-  const currPage = ref<PageRange>()
-  const newerLoading = ref(false)
-  const olderLoading = ref(false)
+
+  function formatDate(value: number | string, dataType: string) {
+    const ms = convertTimestampToMilliseconds(Number(value), dataType)
+    return dayjs(ms).format('HH:mm:ss')
+  }
 
   function queryPage(pageSql: string, reverse = false) {
     return editorAPI.runSQL(pageSql).then((result) => {
@@ -64,134 +59,73 @@ a-space(v-if="pages.length")
       const arr = []
       if (reverse) {
         for (let i = rowsTmp.length - 1; i >= 0; i -= 1) {
-          arr.push(toObj(rowsTmp[i], queryColumns, i, props.queryState.tsColumn))
+          arr.push(toObj(rowsTmp[i], queryColumns, i, queryState.value.tsColumn))
         }
       } else {
         for (let i = 0; i < rowsTmp.length; i += 1) {
-          arr.push(toObj(rowsTmp[i], queryColumns, i, props.queryState.tsColumn))
+          arr.push(toObj(rowsTmp[i], queryColumns, i, queryState.value.tsColumn))
         }
       }
-      emit('update:rows', arr)
+      return arr
     })
   }
 
-  function formatDate(value: number, dataType: string) {
-    const ms = convertTimestampToMilliseconds(value, dataType)
-    return dayjs(ms).format('HH:mm:ss')
+  function paginationOrderBy(intent: 'replay' | 'older' | 'newer') {
+    if (intent === 'older') return 'DESC'
+    if (intent === 'newer') return 'ASC'
+    return queryState.value.sourceState.orderBy || 'DESC'
   }
 
-  function addPage(direction = 'right') {
-    const order = props.queryState.orderBy
-
-    if (!props.rows.length || !props.queryState.tsColumn) {
-      currPage.value = {}
-      return
-    }
-    const tsName = props.queryState.tsColumn?.name as string
-    const first = order === 'ASC' ? props.rows[0] : props.rows[props.rows.length - 1]
-    const last = order === 'ASC' ? props.rows[props.rows.length - 1] : props.rows[0]
-
-    const startLabel = formatDate(first[tsName], props.queryState.tsColumn?.data_type)
-    const endLabel = formatDate(last[tsName], props.queryState.tsColumn?.data_type)
-    const pageTmp = {
-      label: `${startLabel}—${endLabel}`,
-      start: first[tsName],
-      end: last[tsName],
-    }
-    currPage.value = pageTmp
-    if (!pages.value.filter((page) => page.start === pageTmp.start && page.end === pageTmp.end).length) {
-      if (direction === 'right') {
-        pages.value.push(pageTmp)
-      } else {
-        pages.value.unshift(pageTmp)
-      }
-    }
+  function buildPageSql(rangeStart: unknown, rangeEnd: unknown, intent: 'replay' | 'older' | 'newer') {
+    const orderBy = paginationOrderBy(intent)
+    const sql = queryState.value.generateSql(
+      intent === 'replay' ? queryState.value.sourceState : { ...queryState.value.sourceState, orderBy },
+      [rangeStart, rangeEnd]
+    )
+    // SQL WHERE uses `ts <= $timeend`; bump end by 1 unit on replay so the pill's inclusive end is covered.
+    const timeEnd = intent === 'replay' ? Number(rangeEnd) + 1 : rangeEnd
+    return replaceTimePlaceholders(sql, [rangeStart, timeEnd])
   }
 
-  function loadPage(start, end, pageIndex: number) {
-    if (!props.queryState.tsColumn) return
-    pages.value[pageIndex].loading = true
-    const sql = props.queryState.generateSql(props.queryState.sourceState, [start, end])
-    const pageSql = replaceTimePlaceholders(sql, [start, Number(end) + 1])
-    queryPage(pageSql)
-      .then(() => {
-        const index = pages.value.findIndex((page) => page.start === start && page.end === end)
-        currPage.value = pages.value[index]
-      })
-      .finally(() => {
-        pages.value[pageIndex].loading = false
-      })
-  }
-
-  function loadOlder() {
-    if (!props.queryState.tsColumn) {
-      return
-    }
-    olderLoading.value = true
-    const end = pages.value[0].start
-
-    // Use the start from timeRangeValues directly
-    const [startValue] = props.queryState.timeRangeValues
-    const sql = props.queryState.generateSql({ ...props.queryState.sourceState, orderBy: 'DESC' }, [startValue, end])
-
-    const pageSql = replaceTimePlaceholders(sql, [startValue, end])
-    const order = props.queryState.orderBy
-    const reverse = order === 'ASC'
-    queryPage(pageSql, reverse)
-      .then(() => {
-        addPage('left')
-        if (props.rows.length < props.queryState.limit) {
-          leftDisabled.value = true
-        }
-      })
-      .finally(() => {
-        olderLoading.value = false
-      })
-  }
-
-  function loadNewer() {
-    if (!props.queryState.tsColumn) {
-      return
-    }
-    newerLoading.value = true
-    const start = pages.value[pages.value.length - 1].end
-
-    // Use the end from timeRangeValues directly
-    const [, endValue] = props.queryState.timeRangeValues
-    const sql = props.queryState.generateSql({ ...props.queryState.sourceState, orderBy: 'ASC' }, [start, endValue])
-    const pageSql = replaceTimePlaceholders(sql, [start, endValue])
-    const order = props.queryState.orderBy
-    const reverse = order === 'DESC'
-    queryPage(pageSql, reverse)
-      .then(() => {
-        addPage('right')
-        if (props.rows.length < props.queryState.limit) {
-          rightDisabled.value = true
-        }
-      })
-      .finally(() => {
-        newerLoading.value = false
-      })
-  }
-
-  // add page after click uncheck live
-  if (props.rows && props.rows.length > 0) {
-    addPage()
-  }
+  const { pages, currPage, newerLoading, olderLoading, leftDisabled, rightDisabled, loadPage, loadOlder, loadNewer } =
+    useLogTimePagination({
+      rows,
+      limit: computed(() => queryState.value.limit),
+      order: computed(() => queryState.value.orderBy),
+      globalRange,
+      toMs,
+      canLoadOlder(global, oldestBound) {
+        return Boolean(queryState.value.tsColumn && global.start && oldestBound !== undefined)
+      },
+      canLoadNewer(global, newestBound) {
+        return Boolean(queryState.value.tsColumn && global.end && newestBound !== undefined)
+      },
+      onUpdateRows: (nextRows) => {
+        emit('update:rows', nextRows)
+      },
+      handlers: {
+        getPageBounds(pageRows, order) {
+          if (!pageRows.length || !queryState.value.tsColumn) {
+            return null
+          }
+          const tsName = queryState.value.tsColumn.name as string
+          const dataType = queryState.value.tsColumn.data_type
+          const first = order === 'ASC' ? pageRows[0] : pageRows[pageRows.length - 1]
+          const last = order === 'ASC' ? pageRows[pageRows.length - 1] : pageRows[0]
+          return {
+            start: first[tsName],
+            end: last[tsName],
+            label: `${formatDate(first[tsName], dataType)}—${formatDate(last[tsName], dataType)}`,
+          }
+        },
+        fetchRange(range, intent, order, _meta) {
+          if (!queryState.value.tsColumn) {
+            return Promise.resolve([])
+          }
+          const pageSql = buildPageSql(range.start, range.end, intent)
+          const reverse = (intent === 'older' && order === 'ASC') || (intent === 'newer' && order === 'DESC')
+          return queryPage(pageSql, reverse)
+        },
+      },
+    })
 </script>
-
-<style scoped lang="less">
-  /* Pill colors: button.less .gpt-btn-toolbar (same as Table Query a-pagination) */
-  .btn-hint {
-    color: var(--gpt-text-muted);
-    cursor: help;
-    transition: color 0.2s ease;
-    &:hover {
-      color: var(--gpt-link-color);
-    }
-  }
-
-  :deep(.arco-space) {
-    gap: var(--gpt-gap-xs);
-  }
-</style>
