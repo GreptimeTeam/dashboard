@@ -63,7 +63,6 @@ a-layout.new-layout.new-layout--workspace
               :loading="queryLoading"
               :show-context-menu="false"
               :enable-cell-expand="false"
-              :enable-cell-copy="false"
               :pagination="false"
               :bordered="false"
               :show-header="false"

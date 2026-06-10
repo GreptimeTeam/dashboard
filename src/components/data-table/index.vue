@@ -185,7 +185,7 @@ a-dropdown#td-context(
     showContextMenu: true,
     wrapLine: false,
     enableCellExpand: true,
-    enableCellCopy: true,
+    enableCellCopy: false,
   })
 
   const EXPANDABLE_TEXT_THRESHOLD = 100
