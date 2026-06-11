@@ -52,7 +52,7 @@ a-layout.status-page.new-layout
     {
       key: 'rustc_version',
       labelKey: 'status.rustVersion',
-      icon: 'scripts',
+      icon: 'rust',
       mono: true,
       aliases: ['rust_version', 'rustc'],
     },
