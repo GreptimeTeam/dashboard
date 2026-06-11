@@ -84,7 +84,7 @@ Tab pane: `overflow: hidden` on content item (avoid outer scroll stealing from t
 |------|--------|-----|-----|
 | Primary | `--gpt-text-primary` | `#473460` | Page titles, input/select **values**, table body, outline/text button idle, standard checkbox label |
 | Secondary | `--gpt-text-secondary` | `#8b7ba8` | Toolbar meta, button-radio **idle**, table header, **Columns** / pagination idle |
-| Label | `--gpt-text-label` | `rgb(107,114,128)` | Form field labels (`.arco-form-item-label` in `dataView.less`; matches `@form-color-text-label`) |
+| Label | `--gpt-text-label` | `var(--gpt-text-primary)` / `#473460` | Form field labels (`.arco-form-item-label` in `dataView.less`; matches `@form-color-text-label`) |
 | Muted | `--gpt-text-muted` | `#b0a8c4` | Row counts, hints, disabled-adjacent meta |
 | Inverse | `--gpt-text-inverse` | `#ffffff` | Text on main-dark / purple filled controls (primary btn, radio/checkbox selected, pagination active) |
 
