@@ -150,11 +150,26 @@
 
 <style lang="less" scoped>
   .explain-container {
+    --color-text-2: var(--gpt-text-primary);
     width: 100%;
     height: 100%;
     display: flex;
     flex-direction: column;
     min-height: 0;
+
+    :deep(.arco-icon),
+    :deep(.arco-btn-icon .arco-icon) {
+      color: var(--gpt-text-primary);
+      stroke: currentColor;
+    }
+
+    .view-switch :deep(.arco-btn-group .arco-btn-outline:not(.active)) {
+      color: var(--gpt-text-primary);
+
+      &:hover {
+        color: var(--gpt-control-accent-hover);
+      }
+    }
   }
 
   .explain-toolbar.gpt-results-toolbar {
@@ -216,6 +231,7 @@
 
     .raw-json {
       font-size: var(--gpt-font-base);
+      color: var(--gpt-text-primary);
       margin: 0;
       white-space: pre-wrap;
     }

@@ -530,6 +530,7 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
 
 <style lang="less" scoped>
   .explain-grid {
+    --color-text-2: var(--gpt-text-primary);
     margin: var(--gpt-page-padding-y) var(--gpt-page-padding-x);
     overflow: hidden;
     padding: var(--gpt-page-padding-y) var(--gpt-page-padding-x);
@@ -538,6 +539,11 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     background: var(--gpt-bg-panel);
     width: fit-content;
     max-width: 100%;
+
+    :deep(.arco-btn-icon .arco-icon) {
+      color: var(--gpt-text-primary);
+      stroke: currentColor;
+    }
   }
 
   .grid-header {
@@ -548,6 +554,7 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     .stage-index {
       font-size: var(--gpt-font-lg);
       font-weight: 500;
+      color: var(--gpt-text-primary);
       margin-right: var(--gpt-gap-lg);
       margin-left: var(--gpt-gap-lg);
       width: 80px;
@@ -650,6 +657,7 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
   .step-cell {
     white-space: pre; // Preserve whitespace for tree structure
     font-family: var(--font-mono); // Use var(--font-mono) for better tree alignment
+    color: var(--gpt-text-primary);
     align-self: flex-start; // Align at the top
   }
 
@@ -699,5 +707,21 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
   // Add custom class to expandable rows
   :deep(.arco-table-tr[class*='expand']) {
     cursor: pointer;
+  }
+
+  :deep(.arco-table-expand-btn) {
+    color: var(--gpt-text-primary) !important;
+    background-color: transparent !important;
+
+    &:hover {
+      color: var(--gpt-text-primary) !important;
+      background-color: var(--gpt-nav-active-bg) !important;
+    }
+
+    .arco-icon,
+    svg {
+      color: var(--gpt-text-primary) !important;
+      stroke: currentColor;
+    }
   }
 </style>

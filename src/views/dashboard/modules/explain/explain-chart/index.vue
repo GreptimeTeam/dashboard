@@ -445,6 +445,11 @@
       font-size: var(--gpt-font-md);
     }
 
+    .plan-param {
+      color: var(--main-font-color);
+      font-size: var(--gpt-font-md);
+    }
+
     .metric-progress-container {
       margin-bottom: 8px;
       border-bottom: 1px dashed var(--border-color);

@@ -351,6 +351,9 @@ a:not(.arco-btn):not(.arco-menu-item):not(.arco-menu-inline-header),
 html,
 body {
   --primary-6: var(--gpt-main-dark);
+  --color-text-1: var(--gpt-text-primary);
+  /* Arco table expand-btn / card body read text-2 from prebuilt CSS — align with main-dark */
+  --color-text-2: var(--gpt-text-primary);
 }
 
 // Secondary bar inside results (e.g. Metrics evaluation time row)
@@ -509,6 +512,7 @@ samp {
 
   .arco-card-body {
     padding: 0;
+    color: var(--gpt-text-primary);
   }
 
   .arco-card-header-title {

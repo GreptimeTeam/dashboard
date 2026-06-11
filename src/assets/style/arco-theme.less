@@ -37,6 +37,8 @@
 
 /* Default body text: main-dark (replaces Arco neutral-10 / rgb(29, 33, 41)) */
 @color-text-1: @gpt-main-dark;
+/* Card body defaults to Arco color-text-2 (#4E5969); align with header title */
+@card-color-body: @color-text-1;
 
 @gpt-color-border-default: rgba(71, 52, 96, 0.09);
 @color-border: @gpt-color-border-default;
@@ -145,6 +147,10 @@
 @table-color-bg-header-sorted-cell_hover: var(--gpt-nav-active-bg);
 @table-font-weight-header-text: 600;
 @table-color-text-body-cell: var(--gpt-text-primary);
+@table-color-expand-icon: @color-text-1;
+@table-color-expand-icon_hover: @color-text-1;
+@table-color-bg-expand-icon: transparent;
+@table-color-bg-expand-icon_hover: var(--gpt-nav-active-bg);
 @table-color-bg-body-cell: var(--gpt-bg-panel);
 @table-color-bg-body-sorted-cell: var(--gpt-bg-panel);
 @table-color-bg-body-stripe-row: var(--gpt-bg-surface);
