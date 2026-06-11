@@ -7,7 +7,12 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
         a-tooltip(v-if="metricCountTooltip" :content="metricCountTooltip")
           span.gpt-sidebar-count {{ metricCountLabel }}
         span.gpt-sidebar-count(v-else) {{ metricCountLabel }}
-      a-button(size="mini" :loading="loading" @click="refreshData")
+      a-button.metric-sidebar-refresh(
+        type="text"
+        size="mini"
+        :loading="loading"
+        @click="refreshData"
+      )
         template(#icon)
           svg.icon-11.brand-color
             use(href="#refresh")
@@ -242,6 +247,14 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
 
   .metric-sidebar-title {
     width: 100%;
+  }
+
+  .metric-sidebar-refresh.arco-btn-text.arco-btn-only-icon {
+    width: var(--gpt-control-height-sm);
+    height: var(--gpt-control-height-sm);
+    padding: 0;
+    border: none;
+    background: transparent;
   }
 
   .empty {

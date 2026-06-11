@@ -101,6 +101,7 @@
     "useIngest": true,
     "useIngestStore": true,
     "useLink": true,
+    "useLogTimePagination": true,
     "useModel": true,
     "useNews": true,
     "useQueryCode": true,
@@ -121,7 +122,6 @@
     "watch": true,
     "watchEffect": true,
     "watchPostEffect": true,
-    "watchSyncEffect": true,
-    "useLogTimePagination": true
+    "watchSyncEffect": true
   }
 }

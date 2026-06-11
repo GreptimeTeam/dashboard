@@ -4,15 +4,23 @@
  */
 const DASHBOARD_TOKENS = {
   colors: {
-    // --gpt-main-purple
-    brand: '#702fed',
-    // --gpt-nav-active-bg
+    // --gpt-main-dark / --gpt-control-accent
+    controlAccent: '#473460',
+    // --gpt-control-accent-hover / --gpt-main-purple
+    controlAccentHover: '#702fed',
+    // --gpt-control-accent-active / --gpt-brand-primary-hover
+    controlAccentActive: '#5519c4',
+    // --gpt-border-strong
+    controlBorder: 'rgba(71, 52, 96, 0.15)',
+    // --gpt-nav-active-bg — dataView.less .arco-table-hover row/cell hover
+    tableRowHoverBg: 'rgba(112, 47, 237, 0.1)',
+    // Opaque blends on #fff — table tr/td stack alpha; use solids to avoid double tint
+    tableHeadBgSolid: '#f7f7f9', // --gpt-table-head-bg on white
+    tableRowHoverBgSolid: '#f3eaf9', // tableRowHoverBg on white
+    tableCellHoverBgSolid: '#ebe0f7', // deeper hover for expanded/truncated cell
+    // Toolbar / panel hovers (same tint as table row hover)
     brandHover: 'rgba(112, 47, 237, 0.1)',
-    brandActive: 'rgba(112, 47, 237, 0.1)',
     brandBase: 'rgba(112, 47, 237, 0.04)',
-    // @btn-primary-color-border
-    brandBorder: 'rgba(112, 47, 237, 0.25)',
-    brandBorderFocus: 'rgba(112, 47, 237, 0.5)',
     // --gpt-main-dark
     textPrimary: '#473460',
     // --gpt-text-secondary
@@ -26,6 +34,8 @@ const DASHBOARD_TOKENS = {
     background: '#fafafa',
     // --gpt-bg-panel
     paper: '#ffffff',
+    // --gpt-table-head-bg
+    tableHeadBg: 'rgba(71, 52, 96, 0.04)',
     noData: '#b0a8c4',
     // --gpt-accent-ts (normal/healthy)
     normal: '#00bbb2',

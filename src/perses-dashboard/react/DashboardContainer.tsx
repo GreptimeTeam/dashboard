@@ -13,6 +13,8 @@ import { ReactRouter6Adapter } from 'use-query-params/adapters/react-router-6'
 import HelperDashboardView from './DashboardView'
 import { useWorkbenchContext } from './WorkbenchProvider'
 import DASHBOARD_TOKENS from './Dashboard.styles'
+import getPersesDashboardLayoutStyles, { getPersesDashboardComponents } from './theme/persesDashboardTheme'
+import { getGptTablePalette, getPersesTableComponents } from './theme/persesTableTheme'
 import { ensureTraceTableLinks } from '../traceLink'
 
 interface DashboardProps {
@@ -166,7 +168,13 @@ export default function Dashboard(props: DashboardProps = {}) {
     },
     palette: {
       mode: 'light',
-      primary: { main: DASHBOARD_TOKENS.colors.brand },
+      // Match Arco primary palette: main-dark idle, purple hover (arco-theme.less)
+      primary: {
+        main: DASHBOARD_TOKENS.colors.controlAccent,
+        light: DASHBOARD_TOKENS.colors.controlAccentHover,
+        dark: DASHBOARD_TOKENS.colors.controlAccentActive,
+        contrastText: '#ffffff',
+      },
       background: {
         // Use paper (white) for component-level backgrounds (Legend, Dialog, Popover, etc.)
         // The page/body warm gray (#f9f8f7) is applied separately via GlobalStyles
@@ -177,6 +185,9 @@ export default function Dashboard(props: DashboardProps = {}) {
       text: {
         primary: DASHBOARD_TOKENS.colors.textPrimary,
         secondary: DASHBOARD_TOKENS.colors.textSecondary,
+      },
+      gpt: {
+        table: getGptTablePalette(),
       },
     },
     shape: { borderRadius: 4 },
@@ -289,25 +300,8 @@ export default function Dashboard(props: DashboardProps = {}) {
           },
         },
       },
-      MuiTable: {
-        styleOverrides: {
-          root: {
-            borderCollapse: 'separate',
-            backgroundColor: 'transparent',
-          },
-        },
-      },
-      MuiTableCell: {
-        styleOverrides: {
-          root: {
-            // Collapse perses internal stack wrappers inside cells
-            '& .MuiStack-root': {
-              minHeight: 'auto',
-              gap: 0,
-            },
-          },
-        },
-      },
+      ...getPersesDashboardComponents(),
+      ...getPersesTableComponents(),
       MuiListItem: {
         styleOverrides: {
           root: {
@@ -326,14 +320,41 @@ export default function Dashboard(props: DashboardProps = {}) {
         },
       },
       MuiButton: {
+        defaultProps: {
+          disableElevation: true,
+        },
         styleOverrides: {
           root: {
-            'borderColor': DASHBOARD_TOKENS.colors.dividerDark,
-            'transition': 'all 0.2s ease',
+            transition: 'all 0.2s ease',
+            fontWeight: 600,
+          },
+          contained: {
+            'color': '#ffffff',
+            'backgroundColor': DASHBOARD_TOKENS.colors.controlAccent,
+            'border': `1px solid ${DASHBOARD_TOKENS.colors.controlAccent}`,
             '&:hover': {
-              borderColor: DASHBOARD_TOKENS.colors.brandBorder,
+              backgroundColor: DASHBOARD_TOKENS.colors.controlAccentHover,
+              borderColor: DASHBOARD_TOKENS.colors.controlAccentHover,
+            },
+            '&:active': {
+              backgroundColor: DASHBOARD_TOKENS.colors.controlAccentActive,
+              borderColor: DASHBOARD_TOKENS.colors.controlAccentActive,
+            },
+          },
+          outlined: {
+            'color': DASHBOARD_TOKENS.colors.controlAccent,
+            'borderColor': DASHBOARD_TOKENS.colors.controlBorder,
+            '&:hover': {
+              color: DASHBOARD_TOKENS.colors.controlAccentHover,
+              borderColor: DASHBOARD_TOKENS.colors.controlAccentHover,
               backgroundColor: DASHBOARD_TOKENS.colors.brandHover,
-              color: DASHBOARD_TOKENS.colors.brand,
+            },
+          },
+          text: {
+            'color': DASHBOARD_TOKENS.colors.controlAccent,
+            '&:hover': {
+              color: DASHBOARD_TOKENS.colors.controlAccentHover,
+              backgroundColor: DASHBOARD_TOKENS.colors.brandHover,
             },
           },
         },
@@ -341,10 +362,11 @@ export default function Dashboard(props: DashboardProps = {}) {
       MuiIconButton: {
         styleOverrides: {
           root: {
+            'color': DASHBOARD_TOKENS.colors.controlAccent,
             'transition': 'all 0.2s ease',
             '&:hover': {
+              color: DASHBOARD_TOKENS.colors.controlAccentHover,
               backgroundColor: DASHBOARD_TOKENS.colors.brandHover,
-              color: DASHBOARD_TOKENS.colors.brand,
             },
           },
         },
@@ -352,15 +374,16 @@ export default function Dashboard(props: DashboardProps = {}) {
       MuiOutlinedInput: {
         styleOverrides: {
           root: {
+            'color': DASHBOARD_TOKENS.colors.controlAccent,
             '& .MuiOutlinedInput-notchedOutline': {
-              borderColor: DASHBOARD_TOKENS.colors.dividerDark,
+              borderColor: DASHBOARD_TOKENS.colors.controlBorder,
               transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
             },
             '&:hover:not(.Mui-focused) .MuiOutlinedInput-notchedOutline': {
-              borderColor: DASHBOARD_TOKENS.colors.brandBorder,
+              borderColor: DASHBOARD_TOKENS.colors.controlAccent,
             },
             '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-              borderColor: DASHBOARD_TOKENS.colors.brandBorderFocus,
+              borderColor: DASHBOARD_TOKENS.colors.controlAccentHover,
               boxShadow: `0 0 0 3px ${DASHBOARD_TOKENS.colors.brandBase}`,
             },
             '&.Mui-focused': {
@@ -373,7 +396,90 @@ export default function Dashboard(props: DashboardProps = {}) {
         styleOverrides: {
           root: {
             '&.Mui-focused': {
-              color: DASHBOARD_TOKENS.colors.brand,
+              color: DASHBOARD_TOKENS.colors.controlAccentHover,
+            },
+          },
+        },
+      },
+      MuiCheckbox: {
+        styleOverrides: {
+          root: {
+            'color': DASHBOARD_TOKENS.colors.controlAccent,
+            '&:hover': {
+              backgroundColor: DASHBOARD_TOKENS.colors.brandHover,
+            },
+            '&.Mui-checked': {
+              'color': DASHBOARD_TOKENS.colors.controlAccent,
+              '&:hover': {
+                color: DASHBOARD_TOKENS.colors.controlAccentHover,
+              },
+            },
+          },
+        },
+      },
+      MuiRadio: {
+        styleOverrides: {
+          root: {
+            'color': DASHBOARD_TOKENS.colors.controlAccent,
+            '&:hover': {
+              backgroundColor: DASHBOARD_TOKENS.colors.brandHover,
+            },
+            '&.Mui-checked': {
+              'color': DASHBOARD_TOKENS.colors.controlAccent,
+              '&:hover': {
+                color: DASHBOARD_TOKENS.colors.controlAccentHover,
+              },
+            },
+          },
+        },
+      },
+      MuiSwitch: {
+        styleOverrides: {
+          switchBase: {
+            '&.Mui-checked': {
+              'color': DASHBOARD_TOKENS.colors.controlAccentHover,
+              '&:hover': {
+                backgroundColor: DASHBOARD_TOKENS.colors.brandHover,
+              },
+              '& + .MuiSwitch-track': {
+                backgroundColor: DASHBOARD_TOKENS.colors.controlAccentHover,
+                opacity: 1,
+              },
+              '&:hover + .MuiSwitch-track': {
+                backgroundColor: DASHBOARD_TOKENS.colors.controlAccentActive,
+              },
+            },
+          },
+        },
+      },
+      MuiTab: {
+        styleOverrides: {
+          root: {
+            'color': DASHBOARD_TOKENS.colors.textSecondary,
+            'fontWeight': 600,
+            'textTransform': 'none',
+            '&.Mui-selected': {
+              color: DASHBOARD_TOKENS.colors.controlAccent,
+            },
+            '&:hover': {
+              color: DASHBOARD_TOKENS.colors.controlAccentHover,
+            },
+          },
+        },
+      },
+      MuiTabs: {
+        styleOverrides: {
+          indicator: {
+            backgroundColor: DASHBOARD_TOKENS.colors.controlAccentHover,
+          },
+        },
+      },
+      MuiLink: {
+        styleOverrides: {
+          root: {
+            'color': DASHBOARD_TOKENS.colors.controlAccentHover,
+            '&:hover': {
+              color: DASHBOARD_TOKENS.colors.controlAccentActive,
             },
           },
         },
@@ -606,6 +712,7 @@ export default function Dashboard(props: DashboardProps = {}) {
           <ChartsProvider chartsTheme={chartsTheme}>
             <GlobalStyles
               styles={{
+                ...getPersesDashboardLayoutStyles(),
                 'html, body, #root, [data-reactroot]': {
                   backgroundColor: DASHBOARD_TOKENS.colors.background,
                   margin: 0,
