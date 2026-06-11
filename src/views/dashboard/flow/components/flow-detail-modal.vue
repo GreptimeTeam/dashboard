@@ -440,7 +440,6 @@ GROUP BY time_window;`
   .create-table-content {
     p {
       margin-bottom: var(--gpt-gap-xl);
-      color: var(--gpt-text-secondary);
       line-height: 1.5;
     }
   }
