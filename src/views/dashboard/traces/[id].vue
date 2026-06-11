@@ -2,8 +2,9 @@
 .trace-detail-container
   .page-header.gpt-page-header
     .header-content
-      a-button(type="text" @click="handleBack")
-        icon-left
+      a-button.trace-detail-back(type="text" size="small" @click="handleBack")
+        template(#icon)
+          icon-left
       .trace-info
         .trace-title
           span.operation-name {{ rootSpan?.span_name || 'Unknown Operation' }}
@@ -196,17 +197,20 @@
     .header-content {
       display: flex;
       align-items: center;
-      gap: var(--gpt-gap-xl);
+      gap: var(--gpt-gap-xs);
       width: 100%;
 
-      :deep(.arco-btn) {
-        display: flex;
-        align-items: center;
-        gap: var(--gpt-gap-sm);
-        color: var(--gpt-text-secondary);
+      :deep(.trace-detail-back.arco-btn-text.arco-btn-only-icon) {
+        flex-shrink: 0;
+        width: var(--gpt-control-height-sm);
+        height: var(--gpt-control-height-sm);
+        padding: 0;
+        color: var(--gpt-icon-color);
+        background-color: transparent !important;
 
         &:hover {
-          color: var(--gpt-main-purple);
+          color: var(--gpt-main-purple) !important;
+          background-color: transparent !important;
         }
       }
     }
@@ -234,9 +238,9 @@
           background-color: var(--gpt-nav-active-bg);
           color: var(--gpt-main-purple);
           border: 1px solid var(--gpt-main-purple);
-          font-size: var(--gpt-font-md);
+
           font-weight: 600;
-          padding: var(--gpt-gap-xs) var(--gpt-gap-lg);
+          padding: var(--gpt-gap-xs) var(--gpt-gap-sm);
           border-radius: var(--gpt-radius-md);
           line-height: 1;
         }
@@ -249,7 +253,7 @@
 
         .label {
           font-size: var(--gpt-font-md);
-          color: var(--gpt-text-secondary);
+          color: var(--gpt-text-primary);
           font-weight: 600;
         }
 
@@ -297,7 +301,7 @@
 
     .filter-label {
       font-size: var(--gpt-font-base);
-      color: var(--gpt-text-secondary);
+      color: var(--gpt-text-primary);
       font-weight: 500;
       white-space: nowrap;
     }

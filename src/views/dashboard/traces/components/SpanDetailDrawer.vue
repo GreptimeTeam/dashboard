@@ -37,7 +37,7 @@ a-drawer(
       a-descriptions(layout="vertical" bordered :column="2")
         a-descriptions-item(v-for="item of spanInfoData")
           template(#label)
-            a-typography-text(copyable type="secondary" :copy-text="String(item.value)")
+            a-typography-text(copyable :copy-text="String(item.value)")
               | {{ item.label }}
           | {{ item.value }}
     a-tab-pane(key="json" title="JSON View")
@@ -178,7 +178,7 @@ a-drawer(
 
       .summary-label {
         font-size: var(--gpt-font-base);
-        color: var(--gpt-text-muted);
+        color: var(--gpt-text-primary);
       }
 
       .summary-value {
@@ -203,6 +203,7 @@ a-drawer(
     font-size: var(--gpt-font-xl);
     line-height: 20px;
     height: 58px;
+    color: var(--gpt-text-primary);
   }
 
   :deep(.arco-drawer) {

@@ -13,7 +13,7 @@
         style="width: 1px; height: calc(100vh - 120px); background-color: var(--gpt-border-default); position: absolute; cursor: col-resize; z-index: 1000"
       )
         icon-drag-dot-vertical(
-          style="position: absolute; left: -8px; top: 50%; transform: translateY(-50%); color: var(--gpt-text-muted)"
+          style="position: absolute; left: -8px; top: 50%; transform: translateY(-50%); color: var(--gpt-text-primary)"
         )
 a-spin.spin-block(:loading="loading")
   .tree-container
@@ -219,7 +219,7 @@ a-spin.spin-block(:loading="loading")
 
       .tick-label {
         font-size: var(--gpt-font-base);
-        color: var(--gpt-text-muted);
+        color: var(--gpt-text-primary);
       }
     }
   }
@@ -238,9 +238,10 @@ a-spin.spin-block(:loading="loading")
   :deep(.arco-tree-node-switcher) {
     display: none !important;
   }
-  :deep(.arco-tree-node-selected .arco-tree-node-title) {
+  :deep(.arco-tree-node-selected .arco-tree-node-title),
+  :deep(.arco-tree-node-selected .arco-tree-node-title:hover) {
     color: var(--gpt-main-purple);
-    background-color: var(--gpt-bg-surface);
+    background-color: var(--gpt-nav-active-bg) !important;
   }
   .expand-info {
     display: flex;
@@ -349,7 +350,7 @@ a-spin.spin-block(:loading="loading")
           right: 0;
           top: -16px;
           white-space: nowrap;
-          color: var(--gpt-text-muted);
+          color: var(--gpt-text-primary);
           font-size: var(--gpt-font-base);
         }
       }
@@ -366,13 +367,17 @@ a-spin.spin-block(:loading="loading")
     transition: background-color 0.2s;
 
     &:hover {
-      background-color: var(--gpt-bg-surface);
+      background-color: var(--gpt-nav-active-bg);
     }
   }
 
   :deep(.arco-tree-node-title) {
     display: block;
     width: 100%;
+
+    &:hover {
+      background-color: var(--gpt-nav-active-bg) !important;
+    }
   }
 
   .spin-block {
