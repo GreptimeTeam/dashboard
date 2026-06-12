@@ -96,8 +96,7 @@
                   use(href="#menu")
               template(v-else)
                 .cell-wrapper(
-                  :class="{ 'expandable-cell': isValueExpandable(record[col.name], col) }"
-                  @click="toggleCellExpand(rowIndex, col, record[col.name])"
+                  :class="{ 'has-context-menu': showContextMenu, 'has-expand-button': isValueExpandable(record[col.name], col) }"
                 )
                   .cell-content(:class="{ expanded: isCellExpanded(rowIndex, col.name), 'wrap-lines': wrapLine }")
                     span {{ record[col.name] }}
@@ -106,6 +105,12 @@
                       @click.stop="(event) => handleContextMenu(record, col.name, event)"
                     )
                       use(href="#menu")
+                  .cell-expand-button(
+                    v-if="isValueExpandable(record[col.name], col)"
+                    @click.stop="toggleCellExpand(rowIndex, col, record[col.name])"
+                  )
+                    icon-up(v-if="isCellExpanded(rowIndex, col.name)" :size="12")
+                    icon-down(v-else :size="12")
                   .cell-copy-button(
                     v-if="canShowCopyButton(rowIndex, col.name, record[col.name])"
                     @click.stop="copyCellValue(record[col.name])"
@@ -504,7 +509,7 @@ a-dropdown#td-context(
   function toggleCellExpand(rowIndex: number, column: ColumnType, value: unknown) {
     if (!isValueExpandable(value, column)) return
     const key = getCellKey(rowIndex, column.name)
-    expandedCells.value[key] = true
+    expandedCells.value[key] = !expandedCells.value[key]
   }
 
   function cellTextForCopy(value: unknown) {
@@ -759,14 +764,41 @@ a-dropdown#td-context(
     width: 100%;
     cursor: default;
   }
-  .cell-wrapper.expandable-cell {
-    cursor: pointer;
-  }
   .cell-content {
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
     word-break: normal;
+    user-select: text;
+  }
+  .cell-wrapper.has-expand-button .cell-content {
+    padding-right: 14px;
+  }
+  .cell-wrapper.has-expand-button.has-context-menu .cell-content {
+    padding-right: 28px;
+  }
+  .cell-expand-button {
+    position: absolute;
+    right: 0;
+    top: 5px;
+    width: 12px;
+    height: 12px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: var(--gpt-main-purple);
+    z-index: 10;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+  }
+  .cell-wrapper.has-context-menu .cell-expand-button {
+    right: 14px;
+  }
+  :deep(.arco-table-cell:hover) .cell-expand-button {
+    display: flex;
+  }
+  .cell-expand-button:hover {
+    transform: scale(1.15);
   }
   .cell-content.expanded,
   .cell-content.wrap-lines {
