@@ -130,11 +130,15 @@
   font-size: var(--gpt-font-base);
 }
 
-/* Arco descriptions labels default to --color-text-3 (neutral-6) */
+/* Arco descriptions labels; slot content (e.g. a-typography-text) inherits label color */
 .arco-descriptions-item-label,
 .arco-descriptions-item-label-inline,
 .arco-descriptions-item-label-block {
   color: var(--gpt-text-label);
+
+  .arco-typography {
+    color: inherit;
+  }
 }
 
 .arco-tag {
@@ -169,6 +173,13 @@
     svg {
       color: var(--gpt-text-primary) !important;
       stroke: currentColor;
+    }
+  }
+
+  .arco-link {
+    &:hover,
+    &:active {
+      background-color: transparent;
     }
   }
 }
