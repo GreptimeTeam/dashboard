@@ -1,5 +1,5 @@
 <template lang="pug">
-.data-table-container.gpt-vertical-scrollbar(ref="tableContainer")
+.data-table-container(ref="tableContainer")
   a-table(
     :key="columnMode"
     v-bind="tablePassThroughProps"
@@ -363,7 +363,7 @@ a-dropdown#td-context(
   })
 
   const tablePassThroughProps = computed(() => {
-    const attrsScroll = attrsRecord.scroll
+    const { scroll: attrsScroll, ...restAttrs } = attrsRecord
     const extraScroll = typeof attrsScroll === 'object' && attrsScroll ? attrsScroll : {}
     const scroll = {
       ...(hasVirtualListProps.value ? {} : { y: '100%' }),
@@ -377,7 +377,7 @@ a-dropdown#td-context(
     return {
       loading: false,
       size: 'medium',
-      ...attrsRecord,
+      ...restAttrs,
       scroll,
     }
   })
@@ -604,26 +604,87 @@ a-dropdown#td-context(
       height: 100%;
     }
 
-    // Vertical scrollbar steals ~8px from the body; header stays full width → tiny horizontal
-    // overflow. Root also has .gpt-vertical-scrollbar (global.less descendant rules).
-    :deep(.arco-scrollbar-track-direction-horizontal) {
-      display: none;
+    :deep(.arco-scrollbar-track-direction-vertical) {
+      background: transparent;
+      border-right: 0;
+      border-left: 0;
     }
 
-    :deep(.arco-scrollbar-container),
-    :deep(.arco-table-container),
-    :deep(.arco-table-header),
-    :deep(.arco-table-body) {
-      overflow-x: hidden !important;
+    :deep(.arco-scrollbar-thumb-direction-vertical .arco-scrollbar-thumb-bar) {
+      width: 8px;
+      margin: 0;
+      background-color: var(--gpt-scrollbar-thumb-color);
+      border-radius: var(--gpt-scrollbar-thumb-radius);
+    }
+
+    :deep(.arco-scrollbar-thumb-direction-vertical:hover .arco-scrollbar-thumb-bar),
+    :deep(.arco-scrollbar-thumb-dragging .arco-scrollbar-thumb-bar) {
+      background-color: var(--color-neutral-6);
     }
 
     :deep(.arco-virtual-list) {
-      overflow-x: hidden !important;
-      scrollbar-gutter: stable;
-
-      &::-webkit-scrollbar:horizontal {
-        height: 0;
+      &::-webkit-scrollbar {
+        width: 8px;
+        background: transparent;
       }
+
+      &::-webkit-scrollbar-track {
+        background: transparent;
+        border: 0;
+        box-shadow: none;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background-color: var(--gpt-scrollbar-thumb-color);
+        border-radius: var(--gpt-scrollbar-thumb-radius);
+      }
+
+      &::-webkit-scrollbar-thumb:hover {
+        background-color: var(--color-neutral-6);
+      }
+    }
+
+    // Row hover tints all cells; td:hover raises specificity for the active cell only.
+    :deep(
+        .arco-table-hover:not(.arco-table-dragging)
+          .arco-table-tr:not(.arco-table-tr-empty):not(.arco-table-tr-summary):hover
+          .arco-table-td:not(.arco-table-col-fixed-left):not(.arco-table-col-fixed-right)
+      ) {
+      background-color: var(--gpt-table-row-hover-bg);
+    }
+
+    :deep(
+        .arco-table-hover:not(.arco-table-dragging)
+          .arco-table-tr:not(.arco-table-tr-empty):not(.arco-table-tr-summary):hover
+          .arco-table-td:not(.arco-table-col-fixed-left):not(.arco-table-col-fixed-right):hover
+      ) {
+      background-color: var(--gpt-table-cell-hover-bg);
+    }
+
+    :deep(
+        .arco-table-hover:not(.arco-table-dragging)
+          .arco-table-tr:not(.arco-table-tr-empty):not(.arco-table-tr-summary):hover
+          .arco-table-td.arco-table-col-fixed-left::before
+      ),
+    :deep(
+        .arco-table-hover:not(.arco-table-dragging)
+          .arco-table-tr:not(.arco-table-tr-empty):not(.arco-table-tr-summary):hover
+          .arco-table-td.arco-table-col-fixed-right::before
+      ) {
+      background-color: var(--gpt-table-row-hover-bg);
+    }
+
+    :deep(
+        .arco-table-hover:not(.arco-table-dragging)
+          .arco-table-tr:not(.arco-table-tr-empty):not(.arco-table-tr-summary):hover
+          .arco-table-td.arco-table-col-fixed-left:hover::before
+      ),
+    :deep(
+        .arco-table-hover:not(.arco-table-dragging)
+          .arco-table-tr:not(.arco-table-tr-empty):not(.arco-table-tr-summary):hover
+          .arco-table-td.arco-table-col-fixed-right:hover::before
+      ) {
+      background-color: var(--gpt-table-cell-hover-bg);
     }
   }
 
@@ -739,13 +800,33 @@ a-dropdown#td-context(
   :deep(.arco-drawer) {
     border: 1px solid var(--gpt-border-default);
   }
+  // Virtual list: vertical scrollbar narrows body vs header → spurious horizontal overflow.
+  // Hide horizontal scroll here only; normal DataTable keeps scroll.x below.
   .multiple_column.virtual-list-active {
+    :deep(.arco-scrollbar-track-direction-horizontal) {
+      display: none;
+    }
+
+    :deep(.arco-scrollbar-container),
+    :deep(.arco-table-body) {
+      overflow-x: hidden !important;
+    }
+
     :deep(.arco-table-wrapper) {
       overflow-x: hidden;
     }
 
-    :deep(.arco-virtual-list > .arco-table-element) {
-      width: 100%;
+    :deep(.arco-virtual-list) {
+      overflow-x: hidden !important;
+      scrollbar-gutter: stable;
+
+      &::-webkit-scrollbar:horizontal {
+        height: 0;
+      }
+
+      > .arco-table-element {
+        width: 100%;
+      }
     }
   }
 

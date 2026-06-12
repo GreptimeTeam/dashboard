@@ -302,7 +302,6 @@ transform:
   })
 
   const outputViewMode = ref('table')
-  const isOutputEmpty = computed(() => tableData.value.length === 0)
   const parsedOutputData = ref({
     records: {
       rows: [],
@@ -321,6 +320,7 @@ transform:
   // DataTable specific variables
   const tableData = ref<Array<any>>([])
   const tableColumns = ref<Array<ColumnType>>([])
+  const isOutputEmpty = computed(() => tableData.value.length === 0)
 
   const schemaMapping = {
     TIMESTAMP_SECOND: 'TimestampSecond',
