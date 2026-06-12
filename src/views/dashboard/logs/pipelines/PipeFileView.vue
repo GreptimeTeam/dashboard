@@ -108,16 +108,8 @@ a-layout.full-height-layout.pipefile-view
             .legend-color.timestamp
             .legend-label Timestamp
 
-      a-empty(
-        v-if="parsedOutputData.records && parsedOutputData.records.rows.length === 0"
-        style="height: 100%; display: flex; align-items: center; justify-content: center; flex: 1"
-        description="No parsed data. Click Test to see results."
-      )
-
       // Table View
-      .output-table(
-        v-if="outputViewMode === 'table' && parsedOutputData.records && parsedOutputData.records.rows.length > 0"
-      )
+      .output-table(v-if="outputViewMode === 'table'")
         DataTable(
           :data="tableData"
           :columns="tableColumns"
@@ -126,10 +118,13 @@ a-layout.full-height-layout.pipefile-view
           :wrap-line="true"
         )
 
+      .output-empty(v-else-if="isOutputEmpty")
+        a-empty.data-table-empty(description="No data")
+          template(#image)
+            img.data-table-empty-icon(alt="" :src="tableEmptyIcon")
+
       // JSON View
-      .full-width-height-editor.pipeline-side-editor.gpt-light-editor.gpt-square-editor(
-        v-if="outputViewMode === 'json' && parsedOutputData.records && parsedOutputData.records.rows.length > 0"
-      )
+      .full-width-height-editor.pipeline-side-editor.gpt-light-editor.gpt-square-editor(v-else)
         CodeMirror(
           style="width: 100%; height: 100%"
           :model-value="debugResponse"
@@ -156,6 +151,7 @@ a-layout.full-height-layout.pipefile-view
   import type { ColumnType } from '@/types/query'
   import router from '@/router'
   import DataTable from '@/components/data-table/index.vue'
+  import tableEmptyIcon from '@/assets/images/table-empty.svg?url'
   import LangEditor from '@/components/lang-editor.vue'
   import CreateTableModal from './create-table-modal/index.vue'
   import { toObj } from '../query/until'
@@ -306,6 +302,7 @@ transform:
   })
 
   const outputViewMode = ref('table')
+  const isOutputEmpty = computed(() => tableData.value.length === 0)
   const parsedOutputData = ref({
     records: {
       rows: [],
@@ -496,6 +493,24 @@ transform:
   .output-table {
     overflow: auto;
     flex: 1;
+  }
+
+  .output-empty {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    min-height: 120px;
+
+    :deep(.data-table-empty .arco-empty-description) {
+      font-family: var(--font-mono);
+      font-size: var(--gpt-font-lg);
+    }
+
+    .data-table-empty-icon {
+      width: 52px;
+      height: 52px;
+    }
   }
 
   // ===================
