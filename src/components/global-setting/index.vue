@@ -249,9 +249,8 @@ a-drawer.settings-drawer(
       .arco-form-item-label-col {
         margin-bottom: 5px;
         > .arco-form-item-label {
-          color: var(--main-font-color);
+          color: var(--gpt-text-label);
           font-size: 13px;
-          opacity: 1;
         }
       }
       .arco-form-item {
