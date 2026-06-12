@@ -14,7 +14,7 @@ import HelperDashboardView from './DashboardView'
 import { useWorkbenchContext } from './WorkbenchProvider'
 import DASHBOARD_TOKENS from './Dashboard.styles'
 import getPersesDashboardLayoutStyles, { getPersesDashboardComponents } from './theme/persesDashboardTheme'
-import { getGptTablePalette, getPersesTableComponents } from './theme/persesTableTheme'
+import { getGptTablePalette, getPersesTableComponents, getPersesTableGlobalStyles } from './theme/persesTableTheme'
 import { ensureTraceTableLinks } from '../traceLink'
 
 interface DashboardProps {
@@ -217,6 +217,8 @@ export default function Dashboard(props: DashboardProps = {}) {
             'justifyContent': 'center',
             // Inside table cells: compact inline style
             '.MuiTableCell-root &': {
+              display: 'block',
+              textAlign: 'inherit',
               fontSize: '14px',
               fontWeight: DASHBOARD_TOKENS.fonts.weightMedium,
               color: 'inherit',
@@ -713,6 +715,7 @@ export default function Dashboard(props: DashboardProps = {}) {
             <GlobalStyles
               styles={{
                 ...getPersesDashboardLayoutStyles(),
+                ...getPersesTableGlobalStyles(),
                 'html, body, #root, [data-reactroot]': {
                   backgroundColor: DASHBOARD_TOKENS.colors.background,
                   margin: 0,

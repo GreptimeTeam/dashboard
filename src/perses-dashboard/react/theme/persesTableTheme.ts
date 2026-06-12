@@ -15,21 +15,33 @@ export function getGptTablePalette() {
   }
 }
 
-/** Perses TableCell injects #original-cell expand styles via sx — keep in-flow inside the cell. */
-const originalCellInFlow = {
-  position: 'static !important',
+/** Perses compact density uses body2 on #original-cell; StatChart columns use Typography h3 at 14px — align both. */
+const tableBodyCellTypography = {
+  fontSize: '14px !important',
+  lineHeight: '20px !important',
+} as const
+
+/**
+ * Perses hover expands #original-cell with position:absolute + fit-content (show ellipsized text).
+ * Lock in-flow layout on default and hover so centered columns do not shift.
+ */
+const originalCellLayout = {
+  position: 'relative !important',
   top: 'auto !important',
   left: 'auto !important',
+  right: 'auto !important',
   zIndex: 'auto !important',
   width: '100% !important',
   minWidth: '0 !important',
   maxWidth: '100% !important',
+  boxSizing: 'border-box !important',
   whiteSpace: 'nowrap !important',
   overflow: 'hidden !important',
   textOverflow: 'ellipsis !important',
   backgroundColor: 'inherit !important',
   outline: 'none !important',
   boxShadow: 'none !important',
+  ...tableBodyCellTypography,
 } as const
 
 function tableBodyBg(theme: Theme) {
@@ -82,12 +94,15 @@ export function getPersesTableComponents(): Components<Omit<Theme, 'components'>
           return {
             'borderBottom': `1px solid ${table.border}`,
             'borderBottomColor': `${table.border} !important`,
+            // StatChartPanel sets overflowX: auto on Stack; single-value cells don't scroll but still show a gutter.
             '& .MuiStack-root': {
               minHeight: 'auto',
               gap: 0,
+              overflow: 'hidden !important',
             },
-            // Perses: white bg + info.main outline on #original-cell hover
-            '&:hover #original-cell': originalCellInFlow,
+            '& #original-cell': originalCellLayout,
+            '&:hover #original-cell': originalCellLayout,
+            '&:focus-within #original-cell': originalCellLayout,
             // dataView.less: tint td on row hover (not tr)
             '.MuiTableBody-root .MuiTableRow-root:hover > &:not(.MuiTableCell-head):not(:hover)': {
               backgroundColor: `${table.rowHoverBg} !important`,
@@ -149,6 +164,17 @@ export function getPersesTableComponents(): Components<Omit<Theme, 'components'>
           opacity: 0.72,
         }),
       },
+    },
+  }
+}
+
+/** Beat Perses TableCell sx hover (#original-cell position:absolute) when theme injection order loses. */
+export function getPersesTableGlobalStyles(): Record<string, Record<string, unknown>> {
+  return {
+    '.MuiTableCell-root.MuiTableCell-body > #original-cell': originalCellLayout,
+    '.MuiTableCell-root.MuiTableCell-body:hover > #original-cell': originalCellLayout,
+    '.MuiTableCell-root .MuiStack-root': {
+      overflow: 'hidden !important',
     },
   }
 }
