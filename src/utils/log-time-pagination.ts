@@ -2,8 +2,12 @@
 export type LogTimeBound = number | string
 
 export type LogTimeRange = {
-  start: LogTimeBound
-  end: LogTimeBound
+  start?: LogTimeBound
+  end?: LogTimeBound
+}
+
+function isLogTimeBoundDefined(value: LogTimeBound | undefined): value is LogTimeBound {
+  return value !== undefined && value !== null && value !== ''
 }
 
 export type LogTimePaginationIntent = 'replay' | 'older' | 'newer'
@@ -53,6 +57,16 @@ export function resolveOlderPageRange(
   oldestBound: LogTimeBound,
   toMs: (value: LogTimeBound) => number
 ): { valid: boolean; range: LogTimeRange } {
+  if (!isLogTimeBoundDefined(oldestBound)) {
+    return { valid: false, range: { end: oldestBound } }
+  }
+  // No global start (Any time): fetch rows older than the current page cursor.
+  if (!isLogTimeBoundDefined(global.start)) {
+    return {
+      valid: true,
+      range: { end: oldestBound },
+    }
+  }
   const cmp = compareLogTimeBounds(oldestBound, global.start, toMs)
   return {
     valid: Number.isFinite(cmp) && cmp > 0,
@@ -68,6 +82,16 @@ export function resolveNewerPageRange(
   newestBound: LogTimeBound,
   toMs: (value: LogTimeBound) => number
 ): { valid: boolean; range: LogTimeRange } {
+  if (!isLogTimeBoundDefined(newestBound)) {
+    return { valid: false, range: { start: newestBound } }
+  }
+  // No global end (Any time): fetch rows newer than the current page cursor.
+  if (!isLogTimeBoundDefined(global.end)) {
+    return {
+      valid: true,
+      range: { start: newestBound },
+    }
+  }
   const cmp = compareLogTimeBounds(newestBound, global.end, toMs)
   return {
     valid: Number.isFinite(cmp) && cmp < 0,

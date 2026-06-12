@@ -30,6 +30,6 @@ export default {
   'logsQuery.exportLimit': 'Export Limit',
   'logsQuery.currentTimeRange': 'Current time range',
   'logsQuery.rowsInCurrentRange': 'rows in current time range',
-  'logsQuery.clickToQuery': 'Click to query this time range',
+  'logsQuery.clickToQuery': 'Select time range',
   'logsQuery.timeRangePagination': 'Use time-based pagination to navigate newer or older data.',
 }

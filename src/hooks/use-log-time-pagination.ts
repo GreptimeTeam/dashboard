@@ -6,7 +6,7 @@ import {
   type LogTimePaginationIntent,
   type LogTimeRange,
 } from '@/utils/log-time-pagination'
-import { ref, watch, unref, type MaybeRef, type Ref, type WatchSource } from 'vue'
+import { computed, ref, watch, unref, type MaybeRef, type Ref, type WatchSource } from 'vue'
 
 export type LogTimePageRange = {
   label?: string
@@ -197,6 +197,18 @@ export function useLogTimePagination<TRow>(options: UseLogTimePaginationOptions<
     }
   }
 
+  const currPageIndex = computed(() =>
+    pages.value.findIndex((page) => page.start === currPage.value.start && page.end === currPage.value.end)
+  )
+
+  function selectPage(index: number) {
+    const page = pages.value[index]
+    if (!page || page.start === undefined || page.end === undefined) {
+      return
+    }
+    loadPage(page.start, page.end, index)
+  }
+
   function resetPages() {
     pages.value = []
     currPage.value = {}
@@ -223,11 +235,13 @@ export function useLogTimePagination<TRow>(options: UseLogTimePaginationOptions<
   return {
     pages,
     currPage,
+    currPageIndex,
     newerLoading,
     olderLoading,
     leftDisabled,
     rightDisabled,
     loadPage,
+    selectPage,
     loadOlder,
     loadNewer,
     resetPages,

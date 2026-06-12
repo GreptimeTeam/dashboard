@@ -2,13 +2,14 @@
 LogTimePagination(
   :pages="pages"
   :curr-page="currPage"
+  :curr-page-index="currPageIndex"
   :older-loading="olderLoading"
   :newer-loading="newerLoading"
   :left-disabled="leftDisabled"
   :right-disabled="rightDisabled"
   :load-older="loadOlder"
   :load-newer="loadNewer"
-  :load-page="loadPage"
+  :select-page="selectPage"
 )
 </template>
 
@@ -33,11 +34,14 @@ LogTimePagination(
   const { rows, queryState } = toRefs(props)
 
   const globalRange = computed(() => {
-    const [start, end] = queryState.value.timeRangeValues
-    if (!queryState.value.tsColumn || (!start && !end)) {
+    if (!queryState.value.tsColumn) {
       return null
     }
-    return { start: start as string, end: end as string }
+    const [start, end] = queryState.value.timeRangeValues
+    return {
+      start: start || undefined,
+      end: end || undefined,
+    }
   })
 
   function toMs(value: number | string) {
@@ -87,45 +91,55 @@ LogTimePagination(
     return replaceTimePlaceholders(sql, [rangeStart, timeEnd])
   }
 
-  const { pages, currPage, newerLoading, olderLoading, leftDisabled, rightDisabled, loadPage, loadOlder, loadNewer } =
-    useLogTimePagination({
-      rows,
-      limit: computed(() => queryState.value.limit),
-      order: computed(() => queryState.value.orderBy),
-      globalRange,
-      toMs,
-      canLoadOlder(global, oldestBound) {
-        return Boolean(queryState.value.tsColumn && global.start && oldestBound !== undefined)
+  const {
+    pages,
+    currPage,
+    currPageIndex,
+    newerLoading,
+    olderLoading,
+    leftDisabled,
+    rightDisabled,
+    selectPage,
+    loadOlder,
+    loadNewer,
+  } = useLogTimePagination({
+    rows,
+    limit: computed(() => queryState.value.limit),
+    order: computed(() => queryState.value.orderBy),
+    globalRange,
+    toMs,
+    canLoadOlder(_global, oldestBound) {
+      return Boolean(queryState.value.tsColumn && oldestBound !== undefined)
+    },
+    canLoadNewer(_global, newestBound) {
+      return Boolean(queryState.value.tsColumn && newestBound !== undefined)
+    },
+    onUpdateRows: (nextRows) => {
+      emit('update:rows', nextRows)
+    },
+    handlers: {
+      getPageBounds(pageRows, order) {
+        if (!pageRows.length || !queryState.value.tsColumn) {
+          return null
+        }
+        const tsName = queryState.value.tsColumn.name as string
+        const dataType = queryState.value.tsColumn.data_type
+        const first = order === 'ASC' ? pageRows[0] : pageRows[pageRows.length - 1]
+        const last = order === 'ASC' ? pageRows[pageRows.length - 1] : pageRows[0]
+        return {
+          start: first[tsName],
+          end: last[tsName],
+          label: `${formatDate(first[tsName], dataType)}—${formatDate(last[tsName], dataType)}`,
+        }
       },
-      canLoadNewer(global, newestBound) {
-        return Boolean(queryState.value.tsColumn && global.end && newestBound !== undefined)
+      fetchRange(range, intent, order, _meta) {
+        if (!queryState.value.tsColumn) {
+          return Promise.resolve([])
+        }
+        const pageSql = buildPageSql(range.start, range.end, intent)
+        const reverse = (intent === 'older' && order === 'ASC') || (intent === 'newer' && order === 'DESC')
+        return queryPage(pageSql, reverse)
       },
-      onUpdateRows: (nextRows) => {
-        emit('update:rows', nextRows)
-      },
-      handlers: {
-        getPageBounds(pageRows, order) {
-          if (!pageRows.length || !queryState.value.tsColumn) {
-            return null
-          }
-          const tsName = queryState.value.tsColumn.name as string
-          const dataType = queryState.value.tsColumn.data_type
-          const first = order === 'ASC' ? pageRows[0] : pageRows[pageRows.length - 1]
-          const last = order === 'ASC' ? pageRows[pageRows.length - 1] : pageRows[0]
-          return {
-            start: first[tsName],
-            end: last[tsName],
-            label: `${formatDate(first[tsName], dataType)}—${formatDate(last[tsName], dataType)}`,
-          }
-        },
-        fetchRange(range, intent, order, _meta) {
-          if (!queryState.value.tsColumn) {
-            return Promise.resolve([])
-          }
-          const pageSql = buildPageSql(range.start, range.end, intent)
-          const reverse = (intent === 'older' && order === 'ASC') || (intent === 'newer' && order === 'DESC')
-          return queryPage(pageSql, reverse)
-        },
-      },
-    })
+    },
+  })
 </script>
