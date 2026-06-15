@@ -1,5 +1,5 @@
 import { App, createApp } from 'vue'
-import ArcoVue from '@arco-design/web-vue'
+import ArcoVue, { FormItem } from '@arco-design/web-vue'
 import ArcoVueIcon from '@arco-design/web-vue/es/icon'
 import globalComponents from '@/components'
 import { initializeNews } from '@/hooks/news'
@@ -14,6 +14,9 @@ import '@/assets/style/global.less'
 import '@/api/interceptor'
 
 const app: App = createApp(Apps)
+
+// Required * after label text (Arco default: before label)
+FormItem.props.asteriskPosition.default = 'end'
 
 app.config.errorHandler = (err, vm, info) => {
   console.error(err, info)
