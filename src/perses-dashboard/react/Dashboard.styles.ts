@@ -52,6 +52,8 @@ const DASHBOARD_TOKENS = {
     // --font-family-base
     sans: "Geist, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
     weightMedium: 500,
+    // Standalone StatChart: Perses default ≈ 75cqh; use ~50% panel height instead
+    statChartValueFontSize: 'clamp(16px, 50cqh, 40px)',
   },
 }
 

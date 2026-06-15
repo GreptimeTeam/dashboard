@@ -32,5 +32,12 @@ export default function getPersesDashboardLayoutStyles(): Record<string, Record<
     '[data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type:has(.MuiButton-contained)': {
       backgroundColor: `${toolbarTitleRowBg} !important`,
     },
+    // StatChartPanel only — table StatChart columns keep 14px via MuiTypography theme
+    '.MuiCardContent-root': {
+      containerType: 'size',
+    },
+    '.MuiCardContent-root > .MuiStack-root .MuiTypography-h3': {
+      fontSize: `${DASHBOARD_TOKENS.fonts.statChartValueFontSize} !important`,
+    },
   }
 }
