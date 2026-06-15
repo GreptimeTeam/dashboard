@@ -1,8 +1,6 @@
 # Perses Dashboard Reference
 
-**Official guide:** [GreptimeDB + Perses：云原生统一可观测存储与可视化方案](https://greptime.feishu.cn/wiki/XmOcwhsSEiXtAPk6YoUc3j0bnWe)
-
-**Live formats:** [catalog.md](catalog.md) — parsed from `GET http://127.0.0.1:4000/v1/dashboards` (metrics SQL/PromQL, logs, traces).
+**Panel catalog & examples:** [catalog.md](catalog.md) — offline JSON shapes; optional `GET /v1/dashboards` for live names.
 
 ## Observability modalities (live dashboards)
 
@@ -13,7 +11,7 @@
 | Logs | `GreptimeDBLogQuery` via **`LogQuery`** | `LogsTable` | `log` |
 | Traces | `GreptimeDBTraceQuery` via **`TraceQuery`** | `TraceTable`, `TracingGanttChart` | `Traces Demo` |
 
-Tables: `cpu_metrics_30`, `temp_alerts`, `penguins_size` (SQL metrics); `logtest` (logs); `web_trace_demo` (traces).
+Tables: `cpu_metrics_30`, `temp_alerts`, `penguins_size` (SQL metrics); `logtest` (logs); `web_trace_demo` (traces). **Time column names** in SQL (`ts`, `time_window`, `greptime_timestamp`, `timestamp`) are per-table schema results — detect via [Time column detection](#time-column-detection), do not hardcode.
 
 ## SQL vs PromQL decision tree
 
@@ -138,7 +136,7 @@ Use when the user wants **one panel** to paste into the Perses editor (not a ful
 
 ### Paste format (required)
 
-Perses「Add panel → From JSON」接受 **Panel 资源对象**，根节点为：
+Perses **Add panel → From JSON** accepts a **Panel** resource object with root:
 
 ```json
 {
@@ -199,7 +197,7 @@ All templates below are valid **single-panel paste** output unless noted otherwi
 
 ### SQL TimeSeries (simple)
 
-For tables with a clear time column and numeric values.
+For tables with a TIMESTAMP column per [Time column detection](#time-column-detection). Use that column's **name from schema** in `SELECT` / `WHERE` / `ORDER BY`.
 
 ```json
 {
@@ -221,7 +219,6 @@ For tables with a clear time column and numeric values.
           "kind": "GreptimeDBTimeSeriesQuery",
           "spec": {
             "query": "SELECT \"ts\", \"cpu_usage\", \"host\", \"region\" FROM public.\"cpu_metrics_30\" ORDER BY \"ts\" ASC LIMIT 2000;",
-            "timeColumn": "ts",
             "datasource": { "kind": "GreptimeDBDatasource", "name": "sql-default" }
           }
         }
@@ -231,9 +228,11 @@ For tables with a clear time column and numeric values.
 }
 ```
 
-### SQL TimeSeries (RANGE / ALIGN — Feishu doc pattern)
+(`ts` here is the schema-detected TIMESTAMP column on `cpu_metrics_30` — not a universal default.)
 
-For GreptimeDB time-window aggregation with dashboard time picker:
+### SQL TimeSeries (RANGE / ALIGN — see [catalog.md §1d](catalog.md#1d-range--align-sql-test-dashboard))
+
+For GreptimeDB time-window aggregation with dashboard time picker. Use the table's schema-detected TIMESTAMP column in SQL (`time_window` on `temp_alerts`):
 
 ```sql
 SELECT time_window, loc,
@@ -246,14 +245,13 @@ ORDER BY time_window ASC
 LIMIT 2000;
 ```
 
-Panel JSON (set `timeColumn` to the time column):
+Panel JSON:
 
 ```json
 {
   "kind": "GreptimeDBTimeSeriesQuery",
   "spec": {
     "query": "<sql above>",
-    "timeColumn": "time_window",
     "datasource": { "kind": "GreptimeDBDatasource", "name": "sql-default" }
   }
 }
@@ -261,13 +259,53 @@ Panel JSON (set `timeColumn` to the time column):
 
 `${__from}` and `${__to}` are **millisecond timestamps** from the dashboard time picker.
 
+### Timestamp precision (units)
+
+After `describe_table`, read the **unit** from `data_type`, not just the column name. GreptimeDB exposes several timestamp types; Perses chart plugins assume **millisecond-scale** values on the x-axis.
+
+| `data_type` (examples) | Unit | Safe in `TimeSeriesChart` / `Table` via `GreptimeDBTimeSeriesQuery`? |
+|------------------------|------|----------------------------------------------------------------------|
+| `TimestampMillisecond`, `timestamp(3)` | ms | Yes — use column directly (e.g. `ts`, `time_window`, `greptime_timestamp`) |
+| `TimestampSecond` | s | Usually OK; prefer `to_timestamp_millis(col) AS ts` if charts misbehave |
+| `TimestampNanosecond`, `timestamp(9)` | ns | **No** — raw values exceed JS `Number.MAX_SAFE_INTEGER` (~9e15) and can hang or **crash the dashboard** |
+
+**Rules when generating panels:**
+
+1. **Discover unit first** — check `data_type` for `Nanosecond`, `Millisecond`, or `Second`.
+2. **`TimeSeriesChart` + `GreptimeDBTimeSeriesQuery`** — if the time column is nanosecond (common on trace tables such as `web_trace_demo.timestamp`), **project to milliseconds** in `SELECT`:
+   ```sql
+   SELECT to_timestamp_millis(timestamp) AS ts, service_name, count(*) RANGE '5m' AS span_count
+   FROM public.web_trace_demo
+   ALIGN '1m' BY (service_name)
+   ORDER BY ts ASC
+   LIMIT 2000;
+   ```
+   Do **not** pass raw `timestamp` (nanosecond) as the chart time column.
+3. **`Table` + synthetic time** — `to_timestamp_millis(${__to}) AS ts` is already millisecond; keep using it for `GROUP BY` aggregates.
+4. **`TraceTable` / `TracingGanttChart` + `GreptimeDBTraceQuery`** — raw `timestamp` in SQL is OK; trace plugins handle span timestamps. Do **not** switch these to `TimeSeriesQuery`.
+5. **WHERE time filters** — `${__from}` / `${__to}` and `to_timestamp_millis(...)` are **milliseconds**. GreptimeDB compares them to table timestamp columns correctly, but:
+   - If dashboard `duration` is shorter than the data's actual time range (e.g. trace data months in the past), filtered panels return **empty** — not a crash. Prefer omitting `${__from}`/`${__to}` on trace overview panels (see `Traces Demo`) or set a wide `duration` only when the user needs time-scoped stats.
+6. **RANGE / ALIGN** — the time column in the result set must still be millisecond-safe for charts; wrap nanosecond source columns with `to_timestamp_millis(...) AS ts`.
+
+**Known tables:**
+
+| Table | Time column | `data_type` | Chart SQL time expression |
+|-------|-------------|-------------|---------------------------|
+| `cpu_metrics_30` | `ts` | `TimestampMillisecond` | `ts` |
+| `temp_alerts` | `time_window` | `TimestampMillisecond` | `time_window` |
+| `penguins_size` | `greptime_timestamp` | `TimestampMillisecond` | `greptime_timestamp` |
+| `logtest` | `ts` | `TimestampMillisecond` | `ts` |
+| `web_trace_demo` | `timestamp` | `TimestampNanosecond` | `to_timestamp_millis(timestamp) AS ts` for **metrics-style** charts only |
+
+Validate nanosecond → millisecond chart queries with `execute_sql` before delivering.
+
 ### SQL Table
 
 Perses `Table` is a **time-series table**: each row = one series (`timestamp` + `value` + label columns). It does **not** render raw SQL row sets from `metadata.table`.
 
 | Query shape | Table behavior |
 |-------------|----------------|
-| Row table with time column (`SELECT *`, `greptime_timestamp`, etc.) | One row per series; non-time columns become labels |
+| Row table with schema TIMESTAMP column in result (`SELECT *`, etc.) | One row per series; non-time columns become labels |
 | `GROUP BY` aggregate **without** time column | **Broken** — plugin collapses to one scalar series → one row (`timestamp` + `value`) |
 | `GROUP BY` with synthetic time + labels | **Correct** — one row per group; hide `timestamp` via `columnSettings` |
 
@@ -349,7 +387,7 @@ StatChart shows a big number (`calculation: "last-number"`) and optionally a min
 | Query shape | Example | `sparkline` |
 |-------------|---------|-------------|
 | **Scalar** — one row, no time column | `SELECT count(*) FROM public.logtest` | **Do not set** — UI may show the toggle but no line renders |
-| **Time series** — time column + value(s) over range | `go_goroutines`, `SELECT ts, count(*) ... GROUP BY ts` + `timeColumn` | Optional — set `sparkline: {}` if user wants a trend |
+| **Time series** — TIMESTAMP column + value(s) over range | `go_goroutines`, or `SELECT <time_col>, count(*) ... GROUP BY <time_col>` using schema-detected name | Optional — set `sparkline: {}` if user wants a trend |
 
 **Scalar StatChart template** (row counts, error totals, table inventory):
 
@@ -383,13 +421,14 @@ StatChart shows a big number (`calculation: "last-number"`) and optionally a min
 
 Do **not** include `"sparkline": {}` for scalar stats.
 
-**Time-series StatChart** (sparkline allowed) — query must return points across `${__from}`/`${__to}`; SQL needs `timeColumn`:
+**Time-series StatChart** (sparkline allowed) — query must return points across `${__from}`/`${__to}`; include the schema-detected TIMESTAMP column in SQL:
 
 ```json
 "sparkline": {},
-"query": "SELECT date_bin('1s', ts) AS ts, count(*) AS n FROM public.logtest WHERE ts >= to_timestamp_millis(${__from}) AND ts <= to_timestamp_millis(${__to}) GROUP BY ts ORDER BY ts ASC LIMIT 2000;",
-"timeColumn": "ts"
+"query": "SELECT date_bin('1s', ts) AS ts, count(*) AS n FROM public.logtest WHERE ts >= to_timestamp_millis(${__from}) AND ts <= to_timestamp_millis(${__to}) GROUP BY ts ORDER BY ts ASC LIMIT 2000;"
 ```
+
+(`ts` = TIMESTAMP column on `logtest` per schema — substitute your table's detected name.)
 
 ### PromQL Gauge
 
@@ -568,17 +607,54 @@ Environment variables:
 | `GREPTIME_AUTH` | Basic auth token (raw base64 or `user:pass`) |
 | `GREPTIME_DB` | Value for `x-greptime-db-name` header |
 
-## Time column detection heuristics
+## Time column detection
 
-| Column name | Likely role |
+**Do not guess the time column by name** (`ts`, `greptime_timestamp`, `time_window`, etc.). Use the same rules as Greptime Dashboard SQL Builder (`src/components/sql-builder/index.vue`) and `src/utils/table-normalizer.ts`.
+
+### Algorithm (from `describe_table` / `information_schema`)
+
+Given `columns[]` with `name`, `data_type`, `semantic_type`:
+
+```typescript
+const tsColumns = columns.filter((col) =>
+  col.data_type.toLowerCase().includes('timestamp')
+)
+const tsIndexColumns = tsColumns.filter((col) => col.semantic_type === 'TIMESTAMP')
+const timeColumn = tsIndexColumns.length ? tsIndexColumns[0] : tsColumns[0] ?? null
+```
+
+| Step | Rule |
+|------|------|
+| 1 | Candidate if `data_type` contains `timestamp` (case-insensitive), e.g. `TimestampMillisecond`, `timestamp(3)` |
+| 2 | Prefer candidates with `semantic_type === 'TIMESTAMP'` |
+| 3 | Select first preferred column; if none, first timestamp `data_type` column |
+| 4 | No match → treat table as having **no** time column; use MCP / user input — never default to `ts` by name |
+
+Use the selected column `name` in SQL (`WHERE`, `ORDER BY`, `GROUP BY`) and in docs/examples for that table.
+
+### Examples (algorithm output, not name rules)
+
+| Table | Typical selected column | Notes |
+|-------|-------------------------|-------|
+| `cpu_metrics_30` | `ts` | `TIMESTAMP` semantic |
+| `penguins_size` | `greptime_timestamp` | `TIMESTAMP` semantic |
+| `temp_alerts` | `time_window` | `TIMESTAMP` semantic |
+| `web_trace_demo` | `timestamp` | `TimestampNanosecond`; use `to_timestamp_millis(timestamp) AS ts` for metrics-style charts — see [Timestamp precision](#timestamp-precision-units) |
+
+### Perses plugin (query results only)
+
+`@perses-dev/greptimedb-plugin` `findTimeColumnIndex()` also falls back to column **names** (`greptime_timestamp`, `timestamp`, `ts`, `time`) when parsing **SQL result** schemas for charts. That affects rendering only. When **discovering schema** or **writing SQL**, always use `data_type` + `semantic_type` above.
+
+`GreptimeDBTimeSeriesQuery` `timeColumn` in panel JSON is **legacy** (not used at query execution); time column in results is auto-detected by the plugin.
+
+### Other column roles (name hints OK)
+
+| Column pattern | Likely role |
 |-------------|-------------|
-| `ts`, `timestamp`, `time` | Time column |
-| `greptime_timestamp` | Time column (Greptime default) |
-| `time_window` | Time column (RANGE queries) |
 | `trace_id`, `span_id` | Trace identifiers |
 | `message`, `content`, `body` | Log text |
 | Other numeric | Value columns |
-| String/low cardinality | Tag / group-by columns |
+| String / low cardinality | Tag / group-by columns |
 
 ## Repo cross-references
 

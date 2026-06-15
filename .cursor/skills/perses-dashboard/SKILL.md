@@ -14,18 +14,16 @@ description: >-
 
 Generate Perses `Dashboard` or single `Panel` JSON for the GreptimeDB Dashboard app.
 
-**Read first:** [catalog.md](catalog.md) — live formats from `GET /v1/dashboards` (metrics SQL, metrics PromQL, logs, traces).
+**Read first:** [catalog.md](catalog.md) — panel shapes, JSON examples, live dashboard index.
 
-Also: [reference.md](reference.md) (schema), [examples.md](examples.md) (snippets).
+Also: [reference.md](reference.md) (schema, SQL/PromQL rules).
 
 **Output modes:**
 
 | User intent | Output |
 |-------------|--------|
-| dashboard / 大盘 / save to API | Full `Dashboard` JSON |
-| panel / 单个 panel / 新建 panel / paste JSON | Single `Panel` object only (`kind: "Panel"`) |
-
-**Official guide:** [GreptimeDB + Perses 使用文档](https://greptime.feishu.cn/wiki/XmOcwhsSEiXtAPk6YoUc3j0bnWe)
+| dashboard / save to API | Full `Dashboard` JSON |
+| panel / single panel / paste JSON | Single `Panel` object only (`kind: "Panel"`) |
 
 ## Datasource constraint (hard rule)
 
@@ -84,9 +82,9 @@ Identify one of:
 - Multi-modal observability (metrics + logs + traces)
 - **Single panel only** (paste into Perses editor → Add panel → JSON)
 
-Default to **single panel** when the user mentions: panel, 面板, 单个, 新建 panel, JSON 粘贴, add panel.
+Default to **single panel** when the user mentions: panel, single panel, paste JSON, add panel, import panel.
 
-Default to **full dashboard** when the user mentions: dashboard, 大盘, 保存, `/v1/dashboards`.
+Default to **full dashboard** when the user mentions: dashboard, save dashboard, `/v1/dashboards`.
 
 ### 2. Choose data path
 
@@ -109,11 +107,21 @@ execute_sql SELECT * FROM <table> LIMIT 5 → confirm time column, tags, values
 
 Identify:
 
-- **Time column:** `ts`, `greptime_timestamp`, `time_window`, `timestamp`, etc.
+- **Time column:** use schema detection (below) — **not** column-name guessing
+- **Time unit:** read `data_type` for `Nanosecond` vs `Millisecond` — nanosecond columns (e.g. `web_trace_demo.timestamp`) must use `to_timestamp_millis(col) AS ts` in **`TimeSeriesChart` / `Table`** queries or the UI can hang/crash ([reference.md — Timestamp precision](reference.md#timestamp-precision-units))
 - **Value columns:** numeric fields for charts
 - **Tag columns:** dimensions for series grouping (`host`, `loc`, `sensor_id`)
 - **Trace columns:** `trace_id`, `span_id`, `parent_span_id`
 - **Log columns:** `message`, `content`, `body`, `level`
+
+**Time column** (same as SQL Builder — `src/components/sql-builder/index.vue`, `src/utils/table-normalizer.ts`):
+
+1. From `describe_table` columns, keep those where `data_type.toLowerCase().includes('timestamp')`
+2. Prefer `semantic_type === 'TIMESTAMP'`
+3. Pick the first match in that preferred set; else the first timestamp `data_type` column
+4. If none → no time column; do not assume `ts` / `greptime_timestamp` by name
+
+See [reference.md — Time column detection](reference.md#time-column-detection).
 
 **PromQL path:**
 
@@ -137,7 +145,7 @@ Registered plugins in this app: `TimeSeriesChart`, `StatChart`, `GaugeChart`, `T
 
 **StatChart + sparkline:** Only enable `sparkline` when the query returns a **time series** (multiple points over time). For **scalar / single-value** queries (e.g. `SELECT count(*) FROM ...`, `SELECT count(*) FROM ... WHERE ...` with no time column), use StatChart **without** `sparkline` — omit the field entirely. See [reference.md — StatChart](reference.md#statchart-scalar-vs-sparkline).
 
-**Table + GROUP BY:** `Table` renders **one row per time series**, not raw SQL rows. `GROUP BY` without a time column collapses to a single row (`timestamp` + count). Add `to_timestamp_millis(${__to}) AS ts` and put dimensions in non-value columns; hide `timestamp` in `columnSettings`. See [reference.md — SQL Table](reference.md#sql-table).
+**Table + GROUP BY:** `Table` renders **one row per time series**, not raw SQL rows. `GROUP BY` without a TIMESTAMP column in the result collapses to a single row (`timestamp` + count). Add a **synthetic** time expression (e.g. `to_timestamp_millis(${__to}) AS ts`) and put dimensions in non-value columns; hide the synthetic `timestamp` column in `columnSettings`. See [reference.md — SQL Table](reference.md#sql-table).
 
 ### 5. Generate JSON
 
@@ -212,8 +220,8 @@ Or equivalent `curl` (see [reference.md](reference.md)). Only save when explicit
 
 ```
 Input: public.cpu_metrics_30
-→ describe_table + sample
-→ ts=time, cpu_usage=value, host/region=tags
+→ describe_table → pick TIMESTAMP column from schema (e.g. `ts` on this table)
+→ numeric columns = values; string/low-cardinality = tags
 → TimeSeriesChart with GreptimeDBTimeSeriesQuery
 ```
 
@@ -223,7 +231,7 @@ Input: public.cpu_metrics_30
 Input: "node exporter style CPU/memory monitoring"
 → PromQL path
 → query_range for node_* metrics
-→ Gauge + Stat + TimeSeries panels (see Node Exporter in examples.md)
+→ Gauge + Stat + TimeSeries panels (see [catalog.md §2](catalog.md#2-metrics--promql-prometheustimeseriesquery))
 → Use promql-default; simplify label filters if env-specific labels missing
 ```
 
@@ -232,8 +240,8 @@ Input: "node exporter style CPU/memory monitoring"
 ```
 Input: "temperature trend by location from temp_alerts"
 → SQL path with RANGE/ALIGN
-→ WHERE time_window >= to_timestamp_millis(${__from}) AND ...
-→ See Feishu doc SQL pattern in reference.md
+→ describe_table → use schema TIMESTAMP column in WHERE (e.g. `time_window` on temp_alerts)
+→ See [catalog.md §1d](catalog.md#1d-range--align-sql-test-dashboard) (RANGE/ALIGN SQL)
 ```
 
 ### Mode D — Unified observability
@@ -243,23 +251,36 @@ Input: "dashboard with CPU metrics, logs, and traces"
 → PromQL for metrics panels
 → GreptimeDBLogQuery for logs
 → GreptimeDBTraceQuery for traces
+→ Trace **metrics-style** charts (span rate, etc.): GreptimeDBTimeSeriesQuery with to_timestamp_millis(timestamp) AS ts — never raw nanosecond timestamp in TimeSeriesChart
 → Combine in one Grid layout
+```
+
+### Mode F — Traces dashboard
+
+```
+Input: "trace dashboard" / public.web_trace_demo
+→ describe_table → timestamp is TimestampNanosecond
+→ TraceTable / TracingGanttChart: GreptimeDBTraceQuery (raw timestamp OK)
+→ StatChart / Table / TimeSeriesChart on same table: GreptimeDBTimeSeriesQuery; chart time column must be millisecond (to_timestamp_millis)
+→ Follow Traces Demo for TraceTable shape; avoid ${__from}/${__to} on overview unless data is within dashboard duration
 ```
 
 ### Mode E — Single panel (JSON paste)
 
 ```
-Input: "生成一个 cpu_metrics_30 的折线图 panel" / "单个 PromQL CPU gauge panel"
+Input: "line chart panel for cpu_metrics_30" / "single PromQL CPU gauge panel"
 → Same discovery as Mode A/B/C but output Panel object only
 → kind: "Panel" at root; no metadata, layouts, or panel ID map
 → User pastes into Perses editor when adding a panel
 ```
 
-Example output shape — see [examples.md §9](examples.md#9-single-panel-paste-ready).
+Example output shape — see [catalog.md §6](catalog.md#6-single-panel-paste-ready).
 
 ## SQL conventions
 
-- Time filter: `WHERE col >= to_timestamp_millis(${__from}) AND col <= to_timestamp_millis(${__to})`
+- **Time column:** always from schema detection ([reference.md](reference.md#time-column-detection)); use that column name in SQL
+- **Timestamp unit:** check `data_type` — for `TimestampNanosecond`, use `to_timestamp_millis(<time_col>) AS ts` in `GreptimeDBTimeSeriesQuery` results; keep raw column only in `GreptimeDBTraceQuery` ([reference.md — Timestamp precision](reference.md#timestamp-precision-units))
+- Time filter: `WHERE <time_col> >= to_timestamp_millis(${__from}) AND <time_col> <= to_timestamp_millis(${__to})` (`${__from}`/`${__to}` are **milliseconds**)
 - Aggregation: `max(val) RANGE '1m' FILL LINEAR`, `ALIGN '30s' BY (tag_col)`
 - Always `LIMIT 2000` (or 100 for tables)
 - Quote identifiers: `public."table_name"`, `"column_name"`
@@ -272,8 +293,7 @@ Example output shape — see [examples.md §9](examples.md#9-single-panel-paste-
 
 ## Additional resources
 
-- [catalog.md](catalog.md) — live dashboards: metrics (SQL/PromQL), logs, traces
-- [reference.md](reference.md) — schema, templates, API save format
-- [examples.md](examples.md) — condensed snippets
+- [catalog.md](catalog.md) — panel shapes, JSON examples, dashboard index
+- [reference.md](reference.md) — schema, templates, SQL/PromQL split, API save format
 - Perses API: https://perses.dev/perses/docs/api/dashboard/
 - Grafana migration: https://perses.dev/perses/docs/migration/
