@@ -13,6 +13,16 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
           a-space.space-between(fill style="width: 100%")
             | {{ $t('menu.dashboard.perses') }}
             a-button-group
+              a-tooltip(
+                v-if="skillAlertDismissed"
+                mini
+                position="bottom"
+                :content="$t('dashboard.perses.skill.showEntry')"
+              )
+                a-button(type="text" size="small" @click="showSkillAlert")
+                  template(#icon)
+                    svg.icon-16
+                      use(href="#question")
               a-tooltip(mini position="bottom" :content="$t('common.refresh')")
                 a-button(type="text" size="small" @click="handleRefresh")
                   template(#icon)
@@ -51,6 +61,28 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
                     @ok="handleDeleteDashboard(item)"
                   )
                     IconDelete.delete-btn
+            .perses-skill-alert-wrap(v-if="!skillAlertDismissed")
+              a-alert.perses-skill-alert(
+                type="info"
+                closable
+                :show-icon="false"
+                @close="dismissSkillAlert"
+              )
+                template(#title)
+                  span {{ $t('dashboard.perses.skill.title') }}
+                .perses-skill-alert__desc {{ $t('dashboard.perses.skill.desc') }}
+                .perses-skill-alert__install
+                  span.perses-skill-alert__label {{ $t('dashboard.perses.skill.installLabel') }}
+                  a-typography-text.perses-skill-alert__command(
+                    copyable
+                    :copy-text="$t('dashboard.perses.skill.installCommand')"
+                  ) {{ $t('dashboard.perses.skill.installCommand') }}
+                .perses-skill-alert__link
+                  a-link(target="_blank" rel="noopener noreferrer" :href="$t('dashboard.perses.skill.installUrl')")
+                    | {{ $t('dashboard.perses.skill.installLinkText') }}
+            .perses-skill-entry-wrap(v-else)
+              a-link.perses-skill-entry(href="#" @click.prevent="showSkillAlert")
+                | {{ $t('dashboard.perses.skill.showEntry') }}
   a-layout-content.layout-content
     a-card.perses-content(:bordered="false")
       template(v-if="selectedDashboard")
@@ -120,7 +152,16 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
   const router = useRouter()
   const DASHBOARD_QUERY_KEY = 'dashboard'
   const sidebarWidthStorage = useStorage('perses-sidebar-width', 228)
+  const skillAlertDismissed = useStorage('perses-skill-alert-dismissed', false)
   const isSidebarResizing = ref(false)
+
+  const dismissSkillAlert = () => {
+    skillAlertDismissed.value = true
+  }
+
+  const showSkillAlert = () => {
+    skillAlertDismissed.value = false
+  }
 
   const sidebarWidth = computed({
     get: () => {
@@ -526,5 +567,89 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
 
   :deep(.delete-btn) {
     color: var(--gpt-brand-600);
+  }
+
+  .perses-skill-alert-wrap {
+    box-sizing: border-box;
+    padding: 12px 12px 0;
+  }
+
+  .perses-skill-entry-wrap {
+    box-sizing: border-box;
+    padding: 12px 12px 0;
+  }
+
+  .perses-skill-entry {
+    display: block;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .perses-skill-alert {
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    padding-right: 32px !important;
+    font-size: 12px;
+    line-height: 1.5;
+
+    :deep(.arco-alert-body) {
+      flex: 1;
+      min-width: 0;
+    }
+
+    :deep(.arco-alert-content) {
+      min-width: 0;
+    }
+
+    :deep(.arco-alert-title) {
+      margin-bottom: 4px;
+      padding-right: 8px;
+    }
+
+    :deep(.arco-alert-close-btn) {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      margin-left: 0;
+    }
+  }
+
+  .perses-skill-alert__desc {
+    margin-bottom: 8px;
+    color: var(--gpt-text-secondary);
+  }
+
+  .perses-skill-alert__install {
+    margin-bottom: 8px;
+  }
+
+  .perses-skill-alert__label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 500;
+    color: var(--gpt-text-label);
+  }
+
+  .perses-skill-alert__command {
+    display: block;
+    max-width: 100%;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+
+    :deep(.arco-typography) {
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  .perses-skill-alert__link {
+    margin-top: 4px;
+
+    :deep(.arco-link) {
+      font-size: 12px;
+    }
   }
 </style>

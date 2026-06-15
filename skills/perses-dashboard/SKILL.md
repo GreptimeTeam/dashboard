@@ -8,6 +8,8 @@ description: >-
   panel output is a paste-ready Panel object with kind Panel. Datasources are
   limited to promql-default (Prometheus) and sql-default (GreptimeDB) only.
   Reference GET /v1/dashboards for live metrics (SQL/PromQL), logs, and traces formats.
+license: Apache-2.0
+compatibility: Agent Skills hosts (Cursor, Claude Code, GitHub Copilot, Codex, Gemini CLI, etc.); GreptimeDB Dashboard with Perses; optional user-greptimedb MCP
 ---
 
 # Perses Dashboard Generator
@@ -206,7 +208,7 @@ Fix errors before output.
 **If user asks to save dashboard:** Run:
 
 ```bash
-.cursor/skills/perses-dashboard/scripts/save-dashboard.sh \
+skills/perses-dashboard/scripts/save-dashboard.sh \
   --name <dashboard-name> \
   --file /path/to/dashboard.json \
   [--host http://127.0.0.1:4000]

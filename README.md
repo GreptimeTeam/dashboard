@@ -52,6 +52,10 @@ With the desktop version of the Dashboard app, you can run it independently, con
 - Run `pnpm install` for dependencies
 - Run `pnpm run dev` and visit the URL in output
 
+## Agent Skills
+
+Cursor and other AI agents can install skills from this repo to generate Perses dashboards. See [skills/README.md](skills/README.md) for `perses-dashboard` install instructions (`npx skills add GreptimeTeam/dashboard -s perses-dashboard`).
+
 ## Screenshot
 
 ### Query - Result

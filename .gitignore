@@ -1,4 +1,5 @@
 node_modules
+ai-sql-service/
 dist
 dist-ssr
 *.local
@@ -7,6 +8,7 @@ auto-imports.d.ts
 
 # editor and IDE paraphernalia
 .idea
+.cursor/skills
 
 # macOS
 .DS_Store
