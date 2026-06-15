@@ -1,0 +1,590 @@
+# Perses Dashboard Reference
+
+**Official guide:** [GreptimeDB + Perses：云原生统一可观测存储与可视化方案](https://greptime.feishu.cn/wiki/XmOcwhsSEiXtAPk6YoUc3j0bnWe)
+
+**Live formats:** [catalog.md](catalog.md) — parsed from `GET http://127.0.0.1:4000/v1/dashboards` (metrics SQL/PromQL, logs, traces).
+
+## Observability modalities (live dashboards)
+
+| Modality | Query | Panel types | Live dashboard |
+|----------|-------|-------------|----------------|
+| Metrics (SQL) | `GreptimeDBTimeSeriesQuery` via `TimeSeriesQuery` | `TimeSeriesChart`, `StatChart`, `Table` | `GreptimeDB Perses Demo`, `test` |
+| Metrics (PromQL) | `PrometheusTimeSeriesQuery` via `TimeSeriesQuery` | `TimeSeriesChart`, `GaugeChart`, `StatChart` | `Node Exporter`, `test` |
+| Logs | `GreptimeDBLogQuery` via **`LogQuery`** | `LogsTable` | `log` |
+| Traces | `GreptimeDBTraceQuery` via **`TraceQuery`** | `TraceTable`, `TracingGanttChart` | `Traces Demo` |
+
+Tables: `cpu_metrics_30`, `temp_alerts`, `penguins_size` (SQL metrics); `logtest` (logs); `web_trace_demo` (traces).
+
+## SQL vs PromQL decision tree
+
+```
+User request
+├── Data is Prometheus metric (node_*, custom counter/histogram)
+│   └── PromQL path
+│       ├── Datasource: promql-default (PrometheusDatasource)
+│       └── Query: PrometheusTimeSeriesQuery
+├── Data is GreptimeDB table (SQL)
+│   ├── Time series with tags → GreptimeDBTimeSeriesQuery + TimeSeriesChart
+│   ├── Tabular / wide data → GreptimeDBTimeSeriesQuery + Table
+│   ├── Logs (message/content columns) → GreptimeDBLogQuery + LogsTable
+│   └── Traces (trace_id/span_id) → GreptimeDBTraceQuery + TraceTable/TracingGanttChart
+└── User has Grafana JSON
+    └── percli migrate -f grafana.json --online
+        └── Replace datasource with promql-default or sql-default only
+```
+
+**Never** emit Loki/Tempo/Elasticsearch or other third-party datasource plugins.
+
+**Rule of thumb (from Greptime docs):**
+
+- **Metrics → PromQL** — cloud-native dashboards, node_exporter, existing Prometheus habits
+- **Logs / Traces / advanced GreptimeDB aggregation → SQL** — RANGE, ALIGN, FILL, joins
+
+## Dashboard top-level structure
+
+```json
+{
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "my-dashboard",
+    "project": "default",
+    "version": 0
+  },
+  "spec": {
+    "display": { "name": "My Dashboard" },
+    "duration": "1h",
+    "refreshInterval": "30s",
+    "variables": [],
+    "layouts": [],
+    "panels": {},
+    "datasources": {}
+  }
+}
+```
+
+| Field | Notes |
+|-------|-------|
+| `metadata.name` | Dashboard ID; used in save API |
+| `metadata.project` | Always `"default"` in Greptime Dashboard |
+| `spec.duration` | Default time range: `1h`, `6h`, `24h`, etc. |
+| `spec.variables` | ListVariable, TextVariable, etc. |
+| `spec.layouts` | Array of Grid layouts |
+| `spec.panels` | Map of panel ID → Panel object |
+| `spec.datasources` | Leave `{}`; app injects `sql-default` and `promql-default` at runtime |
+
+## Layout (24-column Grid)
+
+```json
+{
+  "kind": "Grid",
+  "spec": {
+    "display": { "title": "Panel Group", "collapse": { "open": true } },
+    "items": [
+      {
+        "x": 0,
+        "y": 0,
+        "width": 24,
+        "height": 10,
+        "content": { "$ref": "#/spec/panels/<panelId>" }
+      }
+    ]
+  }
+}
+```
+
+- Grid width = **24 columns**
+- Stack vertically: next panel `y` = previous `y` + previous `height`
+- Typical heights: Gauge/Stat 6–8, TimeSeries 10–12, Table 19–27, Trace Gantt 30
+
+## Datasource plugins (only two allowed)
+
+Greptime Dashboard registers **exactly two** datasource plugins at runtime (`DashboardView.tsx`). Generated JSON must use only these — no exceptions.
+
+| Name | Plugin `kind` | Allowed query plugins | Data |
+|------|---------------|----------------------|------|
+| `promql-default` | `PrometheusDatasource` | `PrometheusTimeSeriesQuery` | PromQL metrics |
+| `sql-default` | `GreptimeDBDatasource` | `GreptimeDBTimeSeriesQuery`, `GreptimeDBLogQuery`, `GreptimeDBTraceQuery` | SQL (metrics tables, logs, traces, RANGE/ALIGN) |
+
+**Forbidden datasource plugins:** Loki, Tempo, Elasticsearch, InfluxDB, ClickHouse, custom HTTP, Grafana `${ds}` variables, or any `kind` other than `PrometheusDatasource` / `GreptimeDBDatasource`.
+
+**Forbidden datasource names:** anything other than `promql-default` or `sql-default`.
+
+In panel queries, reference by kind + name:
+
+```json
+"datasource": { "kind": "GreptimeDBDatasource", "name": "sql-default" }
+```
+
+```json
+"datasource": { "kind": "PrometheusDatasource", "name": "promql-default" }
+```
+
+Leave `spec.datasources: {}` on dashboards — URLs and auth are injected at runtime; never inline datasource config in generated JSON.
+
+### Query wrapper + plugin + datasource
+
+| `queries[].kind` | Query plugin `kind` | Datasource | Example table / query |
+|------------------|---------------------|------------|------------------------|
+| `TimeSeriesQuery` | `GreptimeDBTimeSeriesQuery` | `sql-default` | `SELECT ... FROM public.cpu_metrics_30` |
+| `TimeSeriesQuery` | `PrometheusTimeSeriesQuery` | `promql-default` | `go_gc_duration_seconds`, `node_cpu_seconds_total` |
+| `LogQuery` | `GreptimeDBLogQuery` | `sql-default` | `SELECT ... FROM public.logtest` |
+| `TraceQuery` | `GreptimeDBTraceQuery` | `sql-default` | `SELECT * FROM public.web_trace_demo` |
+
+Do not use `TimeSeriesQuery` for logs or traces. Do not pair GreptimeDB query plugins with `promql-default`.
+
+## Single panel output
+
+Use when the user wants **one panel** to paste into the Perses editor (not a full dashboard).
+
+### Paste format (required)
+
+Perses「Add panel → From JSON」接受 **Panel 资源对象**，根节点为：
+
+```json
+{
+  "kind": "Panel",
+  "spec": {
+    "display": { "name": "Panel Title" },
+    "plugin": { "kind": "<ChartPlugin>", "spec": {} },
+    "queries": [ ... ]
+  }
+}
+```
+
+**Do not** output for single-panel requests:
+
+- `kind: "Dashboard"` wrapper
+- `spec.panels` map (`{ "<id>": { ... } }`)
+- `spec.layouts` / Grid items
+- `metadata`
+
+### UI workflow
+
+1. Open dashboard in **edit mode**
+2. **Add panel** → **From JSON** (import panel from JSON)
+3. Paste the Panel object
+4. Adjust position/size in the grid if needed
+
+### Suggested grid sizes (informational only)
+
+Tell the user optionally; do not include in pasted JSON:
+
+| Plugin | Typical width × height |
+|--------|------------------------|
+| `GaugeChart` / `StatChart` | 6×6 to 8×8 |
+| `TimeSeriesChart` | 24×10 to 24×12 |
+| `Table` / `LogsTable` | 24×19 to 24×27 |
+| `TracingGanttChart` | 24×30 |
+
+### Optional: manual merge bundle
+
+Only provide when user explicitly asks how to merge into dashboard JSON by hand:
+
+```json
+{
+  "panelId": "a8f3c2e1b9044d6a9f7e2c1d0b5a4e32",
+  "panel": { "kind": "Panel", "spec": { ... } },
+  "layoutItem": {
+    "x": 0, "y": 0, "width": 24, "height": 10,
+    "content": { "$ref": "#/spec/panels/a8f3c2e1b9044d6a9f7e2c1d0b5a4e32" }
+  }
+}
+```
+
+Merge: add `panel` under `spec.panels[panelId]`, append `layoutItem` to `spec.layouts[0].spec.items`.
+
+## Panel templates
+
+All templates below are valid **single-panel paste** output unless noted otherwise.
+
+### SQL TimeSeries (simple)
+
+For tables with a clear time column and numeric values.
+
+```json
+{
+  "kind": "Panel",
+  "spec": {
+    "display": { "name": "CPU Usage (SQL)" },
+    "plugin": {
+      "kind": "TimeSeriesChart",
+      "spec": {
+        "legend": { "position": "bottom", "mode": "list" },
+        "yAxis": { "format": { "unit": "decimal" }, "label": "cpu_usage" },
+        "visual": { "display": "line", "connectNulls": false }
+      }
+    },
+    "queries": [{
+      "kind": "TimeSeriesQuery",
+      "spec": {
+        "plugin": {
+          "kind": "GreptimeDBTimeSeriesQuery",
+          "spec": {
+            "query": "SELECT \"ts\", \"cpu_usage\", \"host\", \"region\" FROM public.\"cpu_metrics_30\" ORDER BY \"ts\" ASC LIMIT 2000;",
+            "timeColumn": "ts",
+            "datasource": { "kind": "GreptimeDBDatasource", "name": "sql-default" }
+          }
+        }
+      }
+    }]
+  }
+}
+```
+
+### SQL TimeSeries (RANGE / ALIGN — Feishu doc pattern)
+
+For GreptimeDB time-window aggregation with dashboard time picker:
+
+```sql
+SELECT time_window, loc,
+  max(max_temp) RANGE '1m' FILL LINEAR AS max_temp
+FROM public.temp_alerts
+WHERE time_window >= to_timestamp_millis(${__from})
+  AND time_window <= to_timestamp_millis(${__to})
+ALIGN '30s' BY (loc)
+ORDER BY time_window ASC
+LIMIT 2000;
+```
+
+Panel JSON (set `timeColumn` to the time column):
+
+```json
+{
+  "kind": "GreptimeDBTimeSeriesQuery",
+  "spec": {
+    "query": "<sql above>",
+    "timeColumn": "time_window",
+    "datasource": { "kind": "GreptimeDBDatasource", "name": "sql-default" }
+  }
+}
+```
+
+`${__from}` and `${__to}` are **millisecond timestamps** from the dashboard time picker.
+
+### SQL Table
+
+Perses `Table` is a **time-series table**: each row = one series (`timestamp` + `value` + label columns). It does **not** render raw SQL row sets from `metadata.table`.
+
+| Query shape | Table behavior |
+|-------------|----------------|
+| Row table with time column (`SELECT *`, `greptime_timestamp`, etc.) | One row per series; non-time columns become labels |
+| `GROUP BY` aggregate **without** time column | **Broken** — plugin collapses to one scalar series → one row (`timestamp` + `value`) |
+| `GROUP BY` with synthetic time + labels | **Correct** — one row per group; hide `timestamp` via `columnSettings` |
+
+**Row table** (works out of the box):
+
+```json
+{
+  "kind": "Panel",
+  "spec": {
+    "display": { "name": "Data Table" },
+    "plugin": { "kind": "Table", "spec": { "density": "standard", "enableFiltering": true } },
+    "queries": [{
+      "kind": "TimeSeriesQuery",
+      "spec": {
+        "plugin": {
+          "kind": "GreptimeDBTimeSeriesQuery",
+          "spec": {
+            "query": "SELECT * FROM public.\"penguins_size\" ORDER BY \"greptime_timestamp\" DESC LIMIT 100;",
+            "datasource": { "kind": "GreptimeDBDatasource", "name": "sql-default" }
+          }
+        }
+      }
+    }]
+  }
+}
+```
+
+**Aggregate / GROUP BY** (add constant time column; dimension columns become labels):
+
+```sql
+SELECT to_timestamp_millis(${__to}) AS ts,
+       service_name,
+       count(*) AS span_count
+FROM public.web_trace_demo
+GROUP BY service_name
+ORDER BY span_count DESC
+LIMIT 20;
+```
+
+```json
+{
+  "kind": "Panel",
+  "spec": {
+    "display": { "name": "Spans by Service" },
+    "plugin": {
+      "kind": "Table",
+      "spec": {
+        "density": "standard",
+        "enableFiltering": true,
+        "columnSettings": [
+          { "name": "service_name", "header": "Service", "enableSorting": true },
+          { "name": "value", "header": "Span Count", "enableSorting": true, "sort": "desc" },
+          { "name": "timestamp", "hide": true }
+        ]
+      }
+    },
+    "queries": [{
+      "kind": "TimeSeriesQuery",
+      "spec": {
+        "plugin": {
+          "kind": "GreptimeDBTimeSeriesQuery",
+          "spec": {
+            "query": "<sql above>",
+            "datasource": { "kind": "GreptimeDBDatasource", "name": "sql-default" }
+          }
+        }
+      }
+    }]
+  }
+}
+```
+
+For category rankings without a table, `TimeSeriesChart` with `"visual": { "display": "bar" }` is often clearer.
+
+### StatChart: scalar vs sparkline
+
+StatChart shows a big number (`calculation: "last-number"`) and optionally a mini trend (`sparkline`).
+
+| Query shape | Example | `sparkline` |
+|-------------|---------|-------------|
+| **Scalar** — one row, no time column | `SELECT count(*) FROM public.logtest` | **Do not set** — UI may show the toggle but no line renders |
+| **Time series** — time column + value(s) over range | `go_goroutines`, `SELECT ts, count(*) ... GROUP BY ts` + `timeColumn` | Optional — set `sparkline: {}` if user wants a trend |
+
+**Scalar StatChart template** (row counts, error totals, table inventory):
+
+```json
+{
+  "kind": "Panel",
+  "spec": {
+    "display": { "name": "Log Lines" },
+    "plugin": {
+      "kind": "StatChart",
+      "spec": {
+        "calculation": "last-number",
+        "format": { "unit": "decimal", "decimalPlaces": 0 }
+      }
+    },
+    "queries": [{
+      "kind": "TimeSeriesQuery",
+      "spec": {
+        "plugin": {
+          "kind": "GreptimeDBTimeSeriesQuery",
+          "spec": {
+            "query": "SELECT count(*) FROM public.logtest",
+            "datasource": { "kind": "GreptimeDBDatasource", "name": "sql-default" }
+          }
+        }
+      }
+    }]
+  }
+}
+```
+
+Do **not** include `"sparkline": {}` for scalar stats.
+
+**Time-series StatChart** (sparkline allowed) — query must return points across `${__from}`/`${__to}`; SQL needs `timeColumn`:
+
+```json
+"sparkline": {},
+"query": "SELECT date_bin('1s', ts) AS ts, count(*) AS n FROM public.logtest WHERE ts >= to_timestamp_millis(${__from}) AND ts <= to_timestamp_millis(${__to}) GROUP BY ts ORDER BY ts ASC LIMIT 2000;",
+"timeColumn": "ts"
+```
+
+### PromQL Gauge
+
+```json
+{
+  "kind": "Panel",
+  "spec": {
+    "display": { "name": "CPU Busy" },
+    "plugin": {
+      "kind": "GaugeChart",
+      "spec": {
+        "calculation": "last-number",
+        "format": { "unit": "percent" },
+        "max": 100,
+        "thresholds": {
+          "steps": [
+            { "color": "rgba(237, 129, 40, 0.89)", "value": 85 },
+            { "color": "rgba(245, 54, 54, 0.9)", "value": 95 }
+          ]
+        }
+      }
+    },
+    "queries": [{
+      "kind": "TimeSeriesQuery",
+      "spec": {
+        "plugin": {
+          "kind": "PrometheusTimeSeriesQuery",
+          "spec": {
+            "datasource": { "kind": "PrometheusDatasource", "name": "promql-default" },
+            "query": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)"
+          }
+        }
+      }
+    }]
+  }
+}
+```
+
+### PromQL TimeSeries
+
+```json
+{
+  "kind": "PrometheusTimeSeriesQuery",
+  "spec": {
+    "datasource": { "kind": "PrometheusDatasource", "name": "promql-default" },
+    "query": "sum by (mode) (rate(node_cpu_seconds_total[5m]))"
+  }
+}
+```
+
+### Logs panel
+
+```json
+{
+  "kind": "Panel",
+  "spec": {
+    "display": { "name": "Logs" },
+    "plugin": { "kind": "LogsTable", "spec": { "showTime": true, "allowWrap": true, "enableDetails": true } },
+    "queries": [{
+      "kind": "LogQuery",
+      "spec": {
+        "plugin": {
+          "kind": "GreptimeDBLogQuery",
+          "spec": {
+            "query": "SELECT ts, message, content FROM public.logtest ORDER BY ts DESC LIMIT 500;",
+            "datasource": { "kind": "GreptimeDBDatasource", "name": "sql-default" }
+          }
+        }
+      }
+    }]
+  }
+}
+```
+
+### Trace Gantt
+
+```json
+{
+  "kind": "Panel",
+  "spec": {
+    "display": { "name": "Trace <trace_id>" },
+    "plugin": { "kind": "TracingGanttChart", "spec": {} },
+    "queries": [{
+      "kind": "TraceQuery",
+      "spec": {
+        "plugin": {
+          "kind": "GreptimeDBTraceQuery",
+          "spec": {
+            "datasource": { "kind": "GreptimeDBDatasource", "name": "sql-default" },
+            "query": "SELECT * FROM \"spans\" WHERE trace_id = '<trace_id>' ORDER BY timestamp ASC"
+          }
+        }
+      }
+    }]
+  }
+}
+```
+
+## Building a complete dashboard
+
+Helper pattern for agents:
+
+1. Generate unique panel IDs (32-char hex)
+2. Build `panels` map
+3. Build `layouts[0].spec.items` with `$ref` to each panel
+4. Set `metadata.name` and `spec.display.name` to user-provided name
+
+Empty dashboard skeleton:
+
+```json
+{
+  "kind": "Dashboard",
+  "metadata": { "name": "empty-dashboard", "project": "default", "version": 0 },
+  "spec": {
+    "display": { "name": "empty-dashboard" },
+    "duration": "1h",
+    "refreshInterval": "30s",
+    "variables": [],
+    "layouts": [],
+    "panels": {},
+    "datasources": {}
+  }
+}
+```
+
+## Grafana migration
+
+When user provides Grafana JSON:
+
+```bash
+percli migrate -f grafana-dashboard.json --online -o json > perses-dashboard.json
+```
+
+- Migration is best-effort; review datasource and variable mappings
+- Replace **all** Grafana datasource variables (`${ds}`, `DS_PROMETHEUS`, etc.) with `promql-default` / `PrometheusDatasource` (metrics) or `sql-default` / `GreptimeDBDatasource` (SQL) — no other plugins exist in this app
+- Local reference: `Node Exporter` dashboard at `GET /v1/dashboards`
+- Docs: https://perses.dev/perses/docs/migration/
+
+## Save API
+
+Greptime Dashboard stores Perses JSON via:
+
+```http
+POST /v1/dashboards/{name}
+Content-Type: application/json
+
+{ "content": "<stringified Dashboard JSON object>" }
+```
+
+**Important:** `content` is a JSON **string** of the dashboard object. The list API returns `definition.content` with extra escaping — that is storage format, not the POST body shape.
+
+List response shape:
+
+```json
+{
+  "dashboards": [
+    { "name": "my-dashboard", "definition": "{\"content\":\"...\"}" }
+  ]
+}
+```
+
+### Save script
+
+```bash
+.cursor/skills/perses-dashboard/scripts/save-dashboard.sh \
+  --name my-dashboard \
+  --file dashboard.json \
+  --host http://127.0.0.1:4000
+```
+
+Environment variables:
+
+| Variable | Purpose |
+|----------|---------|
+| `GREPTIME_HOST` | Default API host (overridden by `--host`) |
+| `GREPTIME_AUTH` | Basic auth token (raw base64 or `user:pass`) |
+| `GREPTIME_DB` | Value for `x-greptime-db-name` header |
+
+## Time column detection heuristics
+
+| Column name | Likely role |
+|-------------|-------------|
+| `ts`, `timestamp`, `time` | Time column |
+| `greptime_timestamp` | Time column (Greptime default) |
+| `time_window` | Time column (RANGE queries) |
+| `trace_id`, `span_id` | Trace identifiers |
+| `message`, `content`, `body` | Log text |
+| Other numeric | Value columns |
+| String/low cardinality | Tag / group-by columns |
+
+## Repo cross-references
+
+- Empty dashboard: `src/views/dashboard/perses/index.vue` → `createEmptyDashboard()`
+- Trace Gantt builder: `src/dashboard-main.tsx` → `buildTraceGanttFile()`
+- API client: `src/api/dashboards.ts`
+- Plugins: `src/perses-dashboard/react/plugin.ts`
+- PromQL examples: `src/views/dashboard/playground/docs/host-metrics-promql.md`
+- RANGE/ALIGN SQL: `src/views/dashboard/playground/docs/getting-started.md`
