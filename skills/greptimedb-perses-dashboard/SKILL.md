@@ -1,5 +1,5 @@
 ---
-name: perses-dashboard
+name: greptimedb-perses-dashboard
 description: >-
   Generate Perses dashboards or single panels for GreptimeDB. Use when the user
   asks to create, generate, or scaffold a Perses dashboard or panel from table
@@ -241,7 +241,7 @@ Fix errors before output. Replace `${__from}`/`${__to}` with literal millis when
 **If user asks to save dashboard:** Run:
 
 ```bash
-skills/perses-dashboard/scripts/save-dashboard.sh \
+skills/greptimedb-perses-dashboard/scripts/save-dashboard.sh \
   --name <dashboard-name> \
   --file /path/to/dashboard.json \
   [--host "${GREPTIME_HOST:-http://127.0.0.1:4000}"]

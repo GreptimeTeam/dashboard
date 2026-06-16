@@ -669,7 +669,7 @@ List response shape:
 ### Save script
 
 ```bash
-skills/perses-dashboard/scripts/save-dashboard.sh \
+skills/greptimedb-perses-dashboard/scripts/save-dashboard.sh \
   --name my-dashboard \
   --file dashboard.json \
   --host http://127.0.0.1:4000
