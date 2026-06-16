@@ -110,9 +110,8 @@ export default {
   'dashboard.perses.learnMoreText': '了解更多 Perses 仪表盘 →',
   'dashboard.perses.learnMoreUrl': 'https://perses.dev/perses/docs/api/dashboard/',
   'dashboard.perses.skill.title': 'Agent Skill',
-  'dashboard.perses.skill.desc': '在 AI 编程助手中，用自然语言生成 Perses 仪表盘与 Panel JSON。',
-  'dashboard.perses.skill.installLabel': '安装',
-  'dashboard.perses.skill.installCommand': 'npx skills add GreptimeTeam/dashboard -s greptimedb-perses-dashboard',
+  'dashboard.perses.skill.desc':
+    '在 AI 编程助手中，用自然语言生成 Perses 仪表盘与 Panel JSON。将 skill 目录复制到你的 agent 即可使用。',
   'dashboard.perses.skill.installUrl': 'https://github.com/GreptimeTeam/dashboard/blob/main/skills/README.md',
   'dashboard.perses.skill.installLinkText': '安装指南',
   'dashboard.perses.skill.showEntry': 'Agent Skill 安装指南',

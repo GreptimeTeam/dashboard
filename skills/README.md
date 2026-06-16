@@ -10,28 +10,22 @@ This repository ships [Agent Skills](https://agentskills.io) for AI coding assis
 
 ## Install `greptimedb-perses-dashboard`
 
-### skills CLI (recommended)
+Copy the [greptimedb-perses-dashboard](./greptimedb-perses-dashboard/) directory into your agent's skills folder:
 
-```bash
-npx skills add GreptimeTeam/dashboard -s greptimedb-perses-dashboard -y
-```
-
-Add `-a cursor` (or another agent name) to target a specific host.
-
-### Manual install
-
-Copy [skills/greptimedb-perses-dashboard](./greptimedb-perses-dashboard/) into your agent’s skills directory:
-
-| Agent host | Path |
-|------------|------|
-| Cursor | `.cursor/skills/greptimedb-perses-dashboard/` |
-| Claude Code | `.claude/skills/greptimedb-perses-dashboard/` |
-| GitHub Copilot / VS Code | `.github/skills/greptimedb-perses-dashboard/` |
+| Agent | Skills directory |
+|-------|------------------|
+| Cursor | `.cursor/skills/greptimedb-perses-dashboard/` — see [Cursor Skills](https://cursor.com/docs/context/skills) |
+| Claude Code | `.claude/skills/greptimedb-perses-dashboard/` — see [Claude Code skills](https://code.claude.com/docs/en/skills) |
+| GitHub Copilot / VS Code | `.github/skills/greptimedb-perses-dashboard/` — see [VS Code agent skills](https://code.visualstudio.com/docs/copilot/customization/agent-skills) |
 | Codex / generic | `.agents/skills/greptimedb-perses-dashboard/` |
+
+From a clone of this repository:
 
 ```bash
 cp -r skills/greptimedb-perses-dashboard .cursor/skills/
 ```
+
+Adjust the target path for your agent.
 
 ## Usage
 
@@ -44,4 +38,4 @@ The agent loads `greptimedb-perses-dashboard` when the task matches the skill de
 
 ## In-app guide
 
-Open **Dashboard → Visualization** in GreptimeDB Dashboard; use the sidebar **Install** link for the install guide.
+Open **Dashboard → Visualization** in GreptimeDB Dashboard; use the sidebar link for the install guide.

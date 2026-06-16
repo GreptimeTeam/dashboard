@@ -114,9 +114,7 @@ export default {
   'dashboard.perses.learnMoreUrl': 'https://perses.dev/perses/docs/api/dashboard/',
   'dashboard.perses.skill.title': 'Agent Skill',
   'dashboard.perses.skill.desc':
-    'Generate Perses dashboard and panel JSON with your AI assistant using natural language.',
-  'dashboard.perses.skill.installLabel': 'Install',
-  'dashboard.perses.skill.installCommand': 'npx skills add GreptimeTeam/dashboard -s greptimedb-perses-dashboard',
+    'Generate Perses dashboard and panel JSON with your AI assistant using natural language. Copy the skill directory into your agent to get started.',
   'dashboard.perses.skill.installUrl': 'https://github.com/GreptimeTeam/dashboard/blob/main/skills/README.md',
   'dashboard.perses.skill.installLinkText': 'Install guide',
   'dashboard.perses.skill.showEntry': 'Agent Skill install guide',

@@ -71,12 +71,6 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
                 template(#title)
                   span {{ $t('dashboard.perses.skill.title') }}
                 .perses-skill-alert__desc {{ $t('dashboard.perses.skill.desc') }}
-                .perses-skill-alert__install
-                  span.perses-skill-alert__label {{ $t('dashboard.perses.skill.installLabel') }}
-                  a-typography-text.perses-skill-alert__command(
-                    copyable
-                    :copy-text="$t('dashboard.perses.skill.installCommand')"
-                  ) {{ $t('dashboard.perses.skill.installCommand') }}
                 .perses-skill-alert__link
                   a-link(target="_blank" rel="noopener noreferrer" :href="$t('dashboard.perses.skill.installUrl')")
                     | {{ $t('dashboard.perses.skill.installLinkText') }}
@@ -618,31 +612,6 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
   .perses-skill-alert__desc {
     margin-bottom: 8px;
     color: var(--gpt-text-secondary);
-  }
-
-  .perses-skill-alert__install {
-    margin-bottom: 8px;
-  }
-
-  .perses-skill-alert__label {
-    display: block;
-    margin-bottom: 4px;
-    font-weight: 500;
-    color: var(--gpt-text-label);
-  }
-
-  .perses-skill-alert__command {
-    display: block;
-    max-width: 100%;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    line-height: 1.4;
-    overflow-wrap: anywhere;
-
-    :deep(.arco-typography) {
-      max-width: 100%;
-      overflow-wrap: anywhere;
-    }
   }
 
   .perses-skill-alert__link {
