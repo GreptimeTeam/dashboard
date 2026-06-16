@@ -9,7 +9,7 @@ description: >-
   limited to promql-default (Prometheus) and sql-default (GreptimeDB) only.
   Reference GET /v1/dashboards for live metrics (SQL/PromQL), logs, and traces formats.
 license: Apache-2.0
-compatibility: Agent Skills hosts (Cursor, Claude Code, GitHub Copilot, Codex, Gemini CLI, etc.); GreptimeDB Dashboard with Perses; optional user-greptimedb MCP
+compatibility: Any Agent Skills or MCP-capable host (Cursor, Claude Desktop/Code, GitHub Copilot, Codex, Gemini CLI, custom agents, etc.); GreptimeDB Dashboard with Perses; data via GreptimeDB MCP server or HTTP API
 ---
 
 # Perses Dashboard Generator
@@ -40,12 +40,71 @@ Forbidden: Loki, Tempo, Elasticsearch, InfluxDB, `${ds}`, Grafana datasource var
 
 When migrating Grafana JSON, **replace** all datasource references with `promql-default` or `sql-default`.
 
+## Data access (required)
+
+Before generating panels, discover **real** table/column names and dry-run queries. Use **either** path below — not both unless cross-checking.
+
+| Path | When to use | Host / connection |
+|------|-------------|-------------------|
+| **GreptimeDB MCP server** | Any agent with [MCP](https://modelcontextprotocol.io) enabled | Host/auth in the agent’s MCP server config; call `health_check` to verify |
+| **HTTP API** | No MCP, shell/curl, CI, scripted agents | Resolve `GREPTIME_HOST` (see [reference.md — HTTP host](reference.md#http-api-host-and-auth)) |
+
+Do **not** invent table/column names without discovery.
+
+### MCP (GreptimeDB MCP server)
+
+The GreptimeDB MCP server is **agent-agnostic** — any host that implements the [Model Context Protocol](https://modelcontextprotocol.io) can use it (Cursor, Claude Desktop, Claude Code, VS Code Copilot, Codex, Gemini CLI, custom runners, etc.). The server name in config may vary (e.g. `user-greptimedb`, `greptimedb`); tool names below are what the server exposes.
+
+| Tool | When to use |
+|------|-------------|
+| `health_check` | Confirm MCP can reach GreptimeDB before discovery |
+| `describe_table` | Column names, `data_type`, `semantic_type` |
+| `execute_sql` | Sample rows, dry-run SQL panel queries |
+| `query_range` | Validate PromQL metrics exist and return data |
+| `explain_query` | Debug slow or failing SQL |
+
+MCP host/auth is **not** passed per tool call — it is set once in the agent’s MCP config (stdio command, env vars, or remote URL). If `health_check` fails, fix that MCP server entry or fall back to HTTP.
+
+### HTTP (no MCP)
+
+Same operations via GreptimeDB HTTP API on `{host}`:
+
+| Need | Endpoint | Example |
+|------|----------|---------|
+| Probe connection | `POST {host}/v1/sql` | `SELECT 1` |
+| List dashboards (templates) | `GET {host}/v1/dashboards` | — |
+| Table schema | `POST {host}/v1/sql` | `DESCRIBE TABLE public.my_table` or `information_schema.columns` |
+| Run SQL | `POST {host}/v1/sql` | Panel query with literals instead of `${__from}` |
+| PromQL range | `GET {host}/v1/prometheus/api/v1/query_range` | `query`, `start`, `end`, `step` |
+| Save dashboard | `POST {host}/v1/dashboards/{name}` | `save-dashboard.sh` |
+
+**Confirm `host` (HTTP only)** — resolve in order, stop when a probe succeeds:
+
+1. **User-provided** URL (e.g. `https://greptime.example.com`, `http://127.0.0.1:4000`)
+2. **`GREPTIME_HOST`** environment variable
+3. **Local default:** `http://127.0.0.1:4000` (GreptimeDB HTTP API; matches `config/vite.config.base.ts` dev proxy target)
+4. **Same origin as Dashboard UI** — if the user runs Greptime Dashboard in dev, frontend `/v1/*` is proxied to `127.0.0.1:4000`; direct curl still targets that backend unless deployed otherwise
+
+Probe (replace host and auth as needed):
+
+```bash
+HOST="${GREPTIME_HOST:-http://127.0.0.1:4000}"
+curl -sS -o /dev/null -w "%{http_code}" -X POST "$HOST/v1/sql" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data-urlencode "sql=SELECT 1"
+# Expect HTTP 200
+```
+
+Auth headers for HTTP: `GREPTIME_AUTH` (Basic), `GREPTIME_DB` (`x-greptime-db-name`) — same as [save-dashboard.sh](scripts/save-dashboard.sh). Full curl patterns: [reference.md — HTTP API](reference.md#http-api-host-and-auth).
+
+If discovery and HTTP both fail, use offline [catalog.md](catalog.md) shapes only and tell the user which host/MCP setting is missing.
+
 ## Live reference API
 
 Fetch existing dashboards before generating (match real query/panel shapes):
 
 ```bash
-curl -s http://127.0.0.1:4000/v1/dashboards
+curl -s "${GREPTIME_HOST:-http://127.0.0.1:4000}/v1/dashboards"
 ```
 
 | User asks for | Copy patterns from dashboard |
@@ -57,19 +116,6 @@ curl -s http://127.0.0.1:4000/v1/dashboards
 | Mixed observability | `GreptimeDB Perses Demo` + `log` + `Traces Demo` |
 
 See [catalog.md](catalog.md) for parsed panel JSON per modality.
-
-## Prerequisites
-
-Use the **`user-greptimedb`** MCP server for data discovery and query validation:
-
-| Tool | When to use |
-|------|-------------|
-| `describe_table` | Get column names and types for a table |
-| `execute_sql` | Sample rows, dry-run SQL panel queries |
-| `query_range` | Validate PromQL metrics exist and return data |
-| `explain_query` | Debug slow or failing SQL |
-
-Do **not** invent table/column names without MCP discovery.
 
 ## Workflow
 
@@ -98,14 +144,9 @@ Follow the Greptime + Perses guide:
 | GreptimeDB tables, logs, traces, RANGE/ALIGN | **SQL** | `sql-default` | `GreptimeDBTimeSeriesQuery` / `GreptimeDBLogQuery` / `GreptimeDBTraceQuery` |
 | Grafana JSON provided | **Migrate first** | Map to `promql-default` after migration | — |
 
-### 3. Discover data (MCP required)
+### 3. Discover data (MCP or HTTP)
 
-**SQL path:**
-
-```
-describe_table → table schema
-execute_sql SELECT * FROM <table> LIMIT 5 → confirm time column, tags, values
-```
+**SQL path** — MCP: `describe_table` + `execute_sql … LIMIT 5`. HTTP: `DESCRIBE TABLE` / `information_schema` + `POST /v1/sql`.
 
 Identify:
 
@@ -125,12 +166,7 @@ Identify:
 
 See [reference.md — Time column detection](reference.md#time-column-detection).
 
-**PromQL path:**
-
-```
-query_range or execute_sql against /v1/prometheus labels
-→ confirm metric names (e.g. node_cpu_seconds_total)
-```
+**PromQL path** — MCP: `query_range`. HTTP: `GET /v1/prometheus/api/v1/query_range` (or labels API).
 
 ### 4. Select panel type
 
@@ -192,12 +228,9 @@ Use helpers from [reference.md](reference.md) to build panels and layouts.
 
 ### 6. Validate queries
 
-Before delivering, dry-run **every** panel query:
+Before delivering, dry-run **every** panel query (MCP `execute_sql` / `query_range`, or HTTP equivalents on resolved `GREPTIME_HOST`):
 
-- SQL panels → `execute_sql` with the same query (replace `${__from}`/`${__to}` with reasonable millis if needed)
-- PromQL panels → `query_range`
-
-Fix errors before output.
+Fix errors before output. Replace `${__from}`/`${__to}` with literal millis when dry-running SQL.
 
 ### 7. Deliver
 
@@ -211,7 +244,7 @@ Fix errors before output.
 skills/perses-dashboard/scripts/save-dashboard.sh \
   --name <dashboard-name> \
   --file /path/to/dashboard.json \
-  [--host http://127.0.0.1:4000]
+  [--host "${GREPTIME_HOST:-http://127.0.0.1:4000}"]
 ```
 
 Or equivalent `curl` (see [reference.md](reference.md)). Only save when explicitly requested.

@@ -1,6 +1,6 @@
 # Live Dashboard Catalog & Examples
 
-Offline panel shapes and copy-paste JSON. When available, cross-check with `GET http://127.0.0.1:4000/v1/dashboards`.
+Offline panel shapes and copy-paste JSON. When available, cross-check with `GET {GREPTIME_HOST}/v1/dashboards` (default host: `http://127.0.0.1:4000`).
 
 **Datasource rule:** Only `promql-default` and `sql-default`. Never `${ds}` in new generated JSON.
 

@@ -567,6 +567,82 @@ percli migrate -f grafana-dashboard.json --online -o json > perses-dashboard.jso
 - Local reference: `Node Exporter` dashboard at `GET /v1/dashboards`
 - Docs: https://perses.dev/perses/docs/migration/
 
+## HTTP API (host and auth)
+
+Use when the **GreptimeDB MCP server** is unavailable. All paths are relative to `{host}` (no trailing slash). Agents **with** MCP should prefer MCP tools; HTTP is the portable fallback for any environment.
+
+### HTTP API host and auth
+
+**Resolve `{host}`** (first success wins):
+
+| Priority | Source | Typical value |
+|----------|--------|---------------|
+| 1 | User states GreptimeDB / Dashboard API URL | `https://greptime.prod.example.com` |
+| 2 | `GREPTIME_HOST` env var | `http://127.0.0.1:4000` |
+| 3 | Local dev default | `http://127.0.0.1:4000` |
+
+Greptime Dashboard dev server proxies `/v1/*` to `127.0.0.1:4000` (`config/vite.config.base.ts`). The UI origin (e.g. `http://localhost:5173`) is **not** the SQL API — curl/scripts should target the GreptimeDB HTTP backend (`{host}` above).
+
+**Verify connection** before schema discovery:
+
+```bash
+HOST="${GREPTIME_HOST:-http://127.0.0.1:4000}"
+curl -sS "$HOST/v1/sql" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data-urlencode "sql=SELECT 1"
+```
+
+Optional auth (same as save script):
+
+```bash
+# user:password → Basic base64
+export GREPTIME_AUTH='admin:admin'
+export GREPTIME_DB='public'   # optional → x-greptime-db-name header
+
+AUTH_HEADER=$(printf '%s' "$GREPTIME_AUTH" | base64 | tr -d '\n')
+curl -sS "$HOST/v1/sql" \
+  -H "Authorization: Basic $AUTH_HEADER" \
+  -H "x-greptime-db-name: $GREPTIME_DB" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data-urlencode "sql=SELECT 1"
+```
+
+### MCP ↔ HTTP mapping
+
+| MCP tool | HTTP equivalent |
+|----------|-----------------|
+| `health_check` | `POST {host}/v1/sql` with `SELECT 1` |
+| `describe_table` | `POST {host}/v1/sql` with `DESCRIBE TABLE schema.table` |
+| `execute_sql` | `POST {host}/v1/sql` — body: `sql=<query>` (`application/x-www-form-urlencoded`) |
+| `query_range` | `GET {host}/v1/prometheus/api/v1/query_range?query=...&start=...&end=...&step=...` |
+| `explain_query` | `POST {host}/v1/sql` with `EXPLAIN <query>` |
+
+**Schema via SQL** (when `DESCRIBE` is unavailable):
+
+```sql
+SELECT column_name, data_type, semantic_type
+FROM information_schema.columns
+WHERE table_schema = 'public' AND table_name = 'cpu_metrics_30'
+ORDER BY ordinal_position;
+```
+
+**List tables:**
+
+```sql
+SELECT table_schema, table_name
+FROM information_schema.tables
+WHERE table_schema NOT IN ('information_schema', 'pg_catalog')
+ORDER BY table_schema, table_name;
+```
+
+### Dashboard list (templates)
+
+```bash
+curl -sS "${GREPTIME_HOST:-http://127.0.0.1:4000}/v1/dashboards"
+```
+
+If empty, use offline [catalog.md](catalog.md).
+
 ## Save API
 
 Greptime Dashboard stores Perses JSON via:
