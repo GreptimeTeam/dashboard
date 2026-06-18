@@ -286,13 +286,6 @@ a-modal(
     return false
   })
 
-  const handleReadySql = (payload: any) => {
-    sqlView.value = payload.view
-  }
-  const handleReadyPromql = (payload: any) => {
-    promqlView.value = payload.view
-  }
-
   const remeasureEditors = () => {
     nextTick(() => {
       requestAnimationFrame(() => {
@@ -345,6 +338,15 @@ a-modal(
     }
   }
 
+  const handleReadySql = (payload: any) => {
+    sqlView.value = payload.view
+    codeUpdate('sql')
+  }
+  const handleReadyPromql = (payload: any) => {
+    promqlView.value = payload.view
+    codeUpdate('promql')
+  }
+
   const executeRunAll = async () => {
     const res = await runQuery(codes.value[queryType.value].trim(), queryType.value, false, promForm, 'run-all')
     if ((res as { cancelled?: boolean })?.cancelled) return
@@ -352,8 +354,21 @@ a-modal(
     if (res?.log) session.appendLog(res.log)
   }
 
+  const resolveStatementToRun = () => {
+    if (queryType.value === 'promql') {
+      return currentStatement.value || codes.value.promql
+    }
+    const view = sqlView.value
+    if (view) {
+      const statements = parseSqlStatements(view.state.doc.toString())
+      const result = findStatementAtPosition(statements, view.state.selection.main.from)
+      if (result) return result.statement.text
+    }
+    return currentStatement.value
+  }
+
   const executePartQuery = async () => {
-    const res = await runQuery(currentStatement.value, queryType.value, false, promForm, 'run-part')
+    const res = await runQuery(resolveStatementToRun(), queryType.value, false, promForm, 'run-part')
     if ((res as { cancelled?: boolean })?.cancelled) return
     if (res?.results?.length) session.appendResults(res.results)
     if (res?.log) session.appendLog(res.log)

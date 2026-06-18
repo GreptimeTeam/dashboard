@@ -84,6 +84,8 @@ export const findStatementAtPosition = (
   statements: { text: string; start: number; end: number }[],
   position: number
 ) => {
+  if (statements.length === 0) return null
+
   // Check if cursor is exactly after a semicolon
   if (position > 0) {
     for (let i = 0; i < statements.length; i += 1) {
@@ -97,6 +99,13 @@ export const findStatementAtPosition = (
   const statement = statements.find((stmt) => position >= stmt.start && position <= stmt.end)
   if (statement) {
     return { statement, index: statements.indexOf(statement) }
+  }
+
+  // Cursor in trailing whitespace after a statement (e.g. on empty lines below `;`)
+  for (let i = statements.length - 1; i >= 0; i -= 1) {
+    if (position > statements[i].start) {
+      return { statement: statements[i], index: i }
+    }
   }
 
   return null
