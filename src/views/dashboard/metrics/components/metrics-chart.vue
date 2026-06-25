@@ -97,17 +97,11 @@ a-card.metrics-chart(:bordered="false")
   /** Fixed height of the line/bar plot area (excluding legend). */
   const GRAPH_HEIGHT = 400
   const LEGEND_ITEM_HEIGHT = 14
-  const LEGEND_ITEM_GAP = 10
   const LEGEND_LIST_ROW_HEIGHT = LEGEND_ITEM_HEIGHT + 6
-  const LEGEND_LIST_PAGER_HEIGHT = 16
   const LEGEND_ICON_WIDTH = 14
-  const LEGEND_CHAR_WIDTH = 6.5
   const LEGEND_TO_GRID_GAP = 16
   /** Space between legend block and canvas bottom */
   const LEGEND_BOTTOM_INSET = 12
-  /** Above this count, legend uses a single-column list at the bottom */
-  const LEGEND_LIST_THRESHOLD = 5
-  const LEGEND_LIST_MAX_VISIBLE_ROWS = 8
   const AXIS_LABEL_STYLE = { color: 'rgba(71, 52, 96, 0.45)', fontSize: 11 }
   const SPLIT_LINE_STYLE = { type: 'solid' as const, color: 'rgba(71, 52, 96, 0.06)' }
   const AXIS_LINE_STYLE = { lineStyle: { color: 'rgba(71, 52, 96, 0.12)' } }
@@ -233,45 +227,14 @@ a-card.metrics-chart(:bordered="false")
     return formatDateTime(value, 'TimestampMillisecond', 'HH:mm:ss') ?? ''
   }
 
-  const estimateLegendAreaHeight = (
-    count: number,
-    avgNameLength: number,
-    containerWidth: number,
-    listLayout: boolean,
-    listMaxVisibleRows = LEGEND_LIST_MAX_VISIBLE_ROWS
-  ) => {
+  const estimateLegendAreaHeight = (count: number) => {
     if (count === 0) return 0
-
-    if (listLayout) {
-      const visibleRows = Math.min(count, listMaxVisibleRows)
-      const pagerHeight = count > listMaxVisibleRows ? LEGEND_LIST_PAGER_HEIGHT : 0
-      return visibleRows * LEGEND_LIST_ROW_HEIGHT + pagerHeight + 8 + LEGEND_BOTTOM_INSET
-    }
-
-    const maxWidth = Math.max(containerWidth * 0.92 - 24, 240)
-    const itemWidth = avgNameLength * LEGEND_CHAR_WIDTH + LEGEND_ICON_WIDTH + LEGEND_ITEM_GAP
-    const itemsPerRow = Math.max(1, Math.floor(maxWidth / itemWidth))
-    const rows = Math.ceil(count / itemsPerRow)
-    return rows * LEGEND_ITEM_HEIGHT + Math.max(0, rows - 1) * LEGEND_ITEM_GAP + 8
+    return count * LEGEND_LIST_ROW_HEIGHT + 8 + LEGEND_BOTTOM_INSET
   }
 
   const seriesCount = computed(() => seriesData.value.length)
 
-  const useLegendListLayout = computed(() => seriesCount.value >= LEGEND_LIST_THRESHOLD)
-
-  const avgLegendNameLength = computed(() => (showFullSeriesName.value ? 56 : 28))
-
-  const listLegendVisibleRows = computed(() => Math.min(seriesCount.value, LEGEND_LIST_MAX_VISIBLE_ROWS))
-
-  const legendAreaHeight = computed(() =>
-    estimateLegendAreaHeight(
-      seriesCount.value,
-      avgLegendNameLength.value,
-      chartContainerWidth.value || 900,
-      useLegendListLayout.value,
-      LEGEND_LIST_MAX_VISIBLE_ROWS
-    )
-  )
+  const legendAreaHeight = computed(() => estimateLegendAreaHeight(seriesCount.value))
 
   /** Plot area fixed; legend height is additive below the grid. */
   const chartHeight = computed(() => GRAPH_HEIGHT + legendAreaHeight.value + LEGEND_TO_GRID_GAP)
@@ -380,18 +343,7 @@ a-card.metrics-chart(:bordered="false")
     })
 
     const legendNames = series.map((s) => s.name as string)
-    const listLayout = useLegendListLayout.value
-    const listVisibleRows = listLegendVisibleRows.value
-    const legendRows = estimateLegendAreaHeight(
-      legendNames.length,
-      avgLegendNameLength.value,
-      chartContainerWidth.value || 900,
-      listLayout,
-      LEGEND_LIST_MAX_VISIBLE_ROWS
-    )
-    const gridBottom = legendRows + LEGEND_TO_GRID_GAP
-    const useLegendScroll =
-      (!listLayout && legendNames.length > 14) || (listLayout && legendNames.length > LEGEND_LIST_MAX_VISIBLE_ROWS)
+    const gridBottom = legendAreaHeight.value + LEGEND_TO_GRID_GAP
 
     const legendTextStyle = {
       fontSize: 11,
@@ -399,44 +351,21 @@ a-card.metrics-chart(:bordered="false")
       color: 'rgba(71, 52, 96, 0.65)',
     }
 
-    const listLegendWidth = Math.min(
-      (chartContainerWidth.value || 900) * 0.92,
-      Math.max(...legendNames.map((name) => name.length * LEGEND_CHAR_WIDTH + LEGEND_ICON_WIDTH + 20), 120)
-    )
-
-    const listLegendBlockHeight =
-      listVisibleRows * LEGEND_LIST_ROW_HEIGHT + (useLegendScroll ? LEGEND_LIST_PAGER_HEIGHT : 0)
-
-    const legendOption = listLayout
-      ? {
-          type: useLegendScroll ? 'scroll' : 'plain',
-          orient: 'vertical',
-          left: 'center',
-          bottom: LEGEND_BOTTOM_INSET,
-          width: listLegendWidth,
-          height: Math.max(listLegendBlockHeight, LEGEND_LIST_ROW_HEIGHT),
-          itemWidth: LEGEND_ICON_WIDTH,
-          itemHeight: LEGEND_ITEM_HEIGHT,
-          itemGap: 6,
-          textStyle: legendTextStyle,
-          ...(useLegendScroll
-            ? {
-                pageIconSize: 10,
-                pageTextStyle: { fontSize: 10, color: 'rgba(71, 52, 96, 0.45)' },
-              }
-            : {}),
-        }
-      : {
-          type: useLegendScroll ? 'scroll' : 'plain',
-          orient: 'horizontal',
-          bottom: 0,
-          left: 'center',
-          width: '92%',
-          itemWidth: LEGEND_ICON_WIDTH,
-          itemHeight: 10,
-          itemGap: LEGEND_ITEM_GAP,
-          textStyle: legendTextStyle,
-        }
+    const legendOption = {
+      type: 'plain',
+      orient: 'vertical',
+      left: 'center',
+      bottom: LEGEND_BOTTOM_INSET,
+      width: Math.min(
+        (chartContainerWidth.value || 900) * 0.92,
+        Math.max(...legendNames.map((name) => name.length * 6.5 + LEGEND_ICON_WIDTH + 20), 120)
+      ),
+      height: Math.max(legendAreaHeight.value - LEGEND_BOTTOM_INSET - 8, LEGEND_LIST_ROW_HEIGHT),
+      itemWidth: LEGEND_ICON_WIDTH,
+      itemHeight: LEGEND_ITEM_HEIGHT,
+      itemGap: 6,
+      textStyle: legendTextStyle,
+    }
 
     return {
       color: METRICS_CHART_COLORS,
