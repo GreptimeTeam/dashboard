@@ -60,7 +60,7 @@ a-card.metrics-chart(:bordered="false")
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, watch, inject } from 'vue'
+  import { ref, computed, watch, watchEffect, inject, nextTick } from 'vue'
   import { useElementSize } from '@vueuse/core'
   import Chart from '@/components/raw-chart/index.vue'
   import TimeRangeSelect from '@/components/time-range-select/index.vue'
@@ -202,6 +202,8 @@ a-card.metrics-chart(:bordered="false")
   })
 
   const showFullSeriesName = ref(false)
+  /** When set, only this series is shown (solo mode). Disables legend-hover dimming. */
+  const soloSeriesName = ref<string | null>(null)
 
   const chartKey = computed(() => {
     return `${query.value}-${step.value}-${showFullSeriesName.value}`
@@ -238,6 +240,37 @@ a-card.metrics-chart(:bordered="false")
 
   /** Plot area fixed; legend height is additive below the grid. */
   const chartHeight = computed(() => GRAPH_HEIGHT + legendAreaHeight.value + LEGEND_TO_GRID_GAP)
+
+  // Attach legendselectchanged event to implement solo mode:
+  // clicking a legend item shows only that series and hides all others.
+  // The actual selection state is driven by `selected` map in chartOption (recomputed when soloSeriesName changes).
+  // While in solo mode, legend-hover dimming is disabled via emphasis.focus in chartOption.
+  watchEffect(() => {
+    if (!hasData.value) return
+    nextTick(() => {
+      const chartComponent = chartRef.value
+      if (!chartComponent) return
+      const instance = chartComponent.getInstance()
+      if (!instance) return
+
+      const handler = (params: any) => {
+        const { name } = params
+        console.log('[legend] click name:', name, 'soloSeriesName:', soloSeriesName.value)
+        if (name === soloSeriesName.value) {
+          console.log('[legend] restore all')
+          soloSeriesName.value = null
+        } else {
+          console.log('[legend] solo mode')
+          soloSeriesName.value = name
+        }
+      }
+
+      instance.off('legendselectchanged', handler)
+      instance.on('legendselectchanged', handler)
+      console.log('[legend] handler attached')
+    })
+  })
+
   const chartOption = computed<EChartsOption>(() => {
     if (!hasData.value) return {}
     // Option: control whether to display full series name or compact unique-label name
@@ -328,7 +361,7 @@ a-card.metrics-chart(:bordered="false")
                 width: 2,
               },
         emphasis: {
-          focus: 'series',
+          focus: soloSeriesName.value ? 'none' : 'series',
           lineStyle: {
             width: 2.5,
           },
@@ -365,6 +398,9 @@ a-card.metrics-chart(:bordered="false")
       itemHeight: LEGEND_ITEM_HEIGHT,
       itemGap: 6,
       textStyle: legendTextStyle,
+      selected: soloSeriesName.value
+        ? Object.fromEntries(legendNames.map((n) => [n, n === soloSeriesName.value]))
+        : undefined,
     }
 
     return {
