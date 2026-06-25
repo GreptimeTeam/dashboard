@@ -60,7 +60,7 @@ a-card.metrics-chart(:bordered="false")
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, watch, watchEffect, inject, nextTick } from 'vue'
+  import { ref, computed, watch, inject, nextTick } from 'vue'
   import { useElementSize } from '@vueuse/core'
   import Chart from '@/components/raw-chart/index.vue'
   import TimeRangeSelect from '@/components/time-range-select/index.vue'
@@ -209,6 +209,12 @@ a-card.metrics-chart(:bordered="false")
     return `${query.value}-${step.value}-${showFullSeriesName.value}`
   })
 
+  // Reset solo mode whenever series names are recomputed (query/step/showFullSeriesName change),
+  // otherwise the stale soloSeriesName no longer matches any legend name and hides everything.
+  watch(chartKey, () => {
+    soloSeriesName.value = null
+  })
+
   const formatChartAxisTime = (value: number): string => {
     const range = timeRange.value as [number, number] | undefined
     if (!range || range.length !== 2) {
@@ -245,31 +251,37 @@ a-card.metrics-chart(:bordered="false")
   // clicking a legend item shows only that series and hides all others.
   // The actual selection state is driven by `selected` map in chartOption (recomputed when soloSeriesName changes).
   // While in solo mode, legend-hover dimming is disabled via emphasis.focus in chartOption.
-  watchEffect(() => {
-    if (!hasData.value) return
-    nextTick(() => {
-      const chartComponent = chartRef.value
-      if (!chartComponent) return
-      const instance = chartComponent.getInstance()
-      if (!instance) return
+  // Attach legendselectchanged event to implement solo mode:
+  // clicking a legend item shows only that series and hides all others.
+  // The actual selection state is driven by `selected` map in chartOption (recomputed when soloSeriesName changes).
+  // While in solo mode, legend-hover dimming is disabled via emphasis.focus in chartOption.
+  // Watch chartKey so the handler is re-attached when the chart is recreated
+  // (e.g., when toggling showFullSeriesName, which changes :key on the Chart component).
+  watch(
+    [hasData, chartKey],
+    () => {
+      if (!hasData.value) return
+      nextTick(() => {
+        const chartComponent = chartRef.value
+        if (!chartComponent) return
+        const instance = chartComponent.getInstance()
+        if (!instance) return
 
-      const handler = (params: any) => {
-        const { name } = params
-        console.log('[legend] click name:', name, 'soloSeriesName:', soloSeriesName.value)
-        if (name === soloSeriesName.value) {
-          console.log('[legend] restore all')
-          soloSeriesName.value = null
-        } else {
-          console.log('[legend] solo mode')
-          soloSeriesName.value = name
+        const handler = (params: any) => {
+          const { name } = params
+          if (name === soloSeriesName.value) {
+            soloSeriesName.value = null
+          } else {
+            soloSeriesName.value = name
+          }
         }
-      }
 
-      instance.off('legendselectchanged', handler)
-      instance.on('legendselectchanged', handler)
-      console.log('[legend] handler attached')
-    })
-  })
+        instance.off('legendselectchanged', handler)
+        instance.on('legendselectchanged', handler)
+      })
+    },
+    { immediate: true }
+  )
 
   const chartOption = computed<EChartsOption>(() => {
     if (!hasData.value) return {}
