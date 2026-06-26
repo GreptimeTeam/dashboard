@@ -13,36 +13,43 @@ You can try out our Dashboard in one of the following ways: (1) using GreptimeDB
 - Visit `http://localhost:4000/dashboard`
 
 ### With Docker
-⭐We recommend using docker-compose to setup both greptimedb and dashboard.
-1. Use the `curl` command to get the `docker-compose` configuration file
-```
-curl -O https://raw.githubusercontent.com/greptimeteam/dashboard/main/docker/docker-compose.yml
-```
-> Tips: If you encounter network-related problems, you can download the `docker-compose.yml` file manually or simply copy and paste the [contents](https://github.com/GreptimeTeam/dashboard/blob/main/docker/docker-compose.yml) into an empty `yml` file on your machine or server, based on what you need.
-2. Launching the application
-```
-docker compose up
-```
-3. Open your browser and visit `http://localhost:8080/dashboard/`
-- Follow [getting started](https://docs.greptime.com/getting-started/quick-start#create-tables) to create your table and insert some data
-- Run a `SELECT` query and check the result as table or chart
 
-We recommend using `docker-compose` to setup both greptimedb and
-dashboard.
+We recommend using docker-compose to setup both GreptimeDB and Dashboard.
 
 ```
 curl -O https://raw.githubusercontent.com/greptimeteam/dashboard/main/docker/docker-compose.yml
 docker compose up
 ```
 
-Open you browser and visit `http://localhost:8080/dashboard/`
-
-- Follow [getting started](https://docs.greptime.com/getting-started/quick-start/mysql#try-out-basic-sql-operations) to create your table and insert some data
-- Run a `SELECT` query and check the result as table or chart -->
+Open your browser and visit `http://localhost:8080/dashboard/`
 
 ### Dashboard Desktop App
+
 With the desktop version of the Dashboard app, you can run it independently, connecting to a local or remote `GreptimeDB` instance.
+
 - Download the Dashboard App from [release page](https://github.com/GreptimeTeam/dashboard/releases)
+
+## Features
+
+- **Table Query** — Query GreptimeDB with table and chart visualization, supports EXPLAIN for query plan analysis
+- **Metrics Query** — Query metrics using PromQL with chart visualization
+- **Logs Query** — Query and analyze log data with search, filtering, and export
+- **Log Pipelines** — Manage log parsing pipelines
+- **Traces** — Query and visualize distributed traces with timeline and span details
+- **Data Ingestion** — Ingest data via InfluxDB Line Protocol 
+- **Flow** — Manage flow tasks
+- **Visualization** — Perses-powered dashboards and panels for custom visualization
+
+## Screenshot
+
+### Query - Table Result
+![Table Query](tablequery.png 'Table Query')
+
+### Metrics - Chart
+![Metrics Chart](metricchart.png 'Metrics Chart')
+
+### Logs - Query
+![Logs Query](logsquery.png 'Logs Query')
 
 ## Development Setup
 
@@ -56,14 +63,6 @@ With the desktop version of the Dashboard app, you can run it independently, con
 
 Cursor and other AI agents can use skills from this repo to generate Perses dashboards. See [skills/README.md](skills/README.md) for the `greptimedb-perses-dashboard` skill directory and install instructions.
 
-## Screenshot
-
-### Query - Result
-![Dashboard Screenshot](screenshot1.png 'Dashboard Screenshot')
-
-### Query - Explain
-![Dashboard Screenshot](screenshot2.png 'Dashboard Screenshot')
-
 ## Contributing
 
 - Please refer to [contribution guidelines](https://github.com/GreptimeTeam/greptimedb/blob/75dcf2467b022d4378f904efe5aae5027298986e/CONTRIBUTING.md) for more information.
@@ -71,6 +70,4 @@ Cursor and other AI agents can use skills from this repo to generate Perses dash
 
 ## License
 
-This project is open source under [Apache 2.0 license][1]
-
-[1]: LICENSE
+This project is open source under [Apache 2.0 license](LICENSE)
