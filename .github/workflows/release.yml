@@ -167,7 +167,7 @@ jobs:
         run: |
           cd src/servers/dashboard/
           echo ${{ github.ref_name }} > VERSION
-      - uses: peter-evans/create-pull-request@v4
+      - uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.PR_ACTION }}
           commit-message: 'feat: update dashboard to ${{ github.ref_name }}'
