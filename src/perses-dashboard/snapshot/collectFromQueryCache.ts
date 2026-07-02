@@ -1,6 +1,50 @@
+/**
+ * Snapshot export: read panel query results from Perses global TanStack Query cache.
+ *
+ * ## Why matching instead of panelId lookup
+ *
+ * Perses does not expose `getPanelData(panelId)`. Each panel's `DataQueriesProvider` runs
+ * queries into a **shared** cache keyed by query definition + time range + variables — not
+ * by panelId. See `@perses-dev/plugin-system` `time-series-queries.js` / `log-queries.js`:
+ *
+ *   ['query', category, definition, timeRange, variablesValueKey, ...]
+ *
+ * `GridItemContent` also strips queries before caching (`{ kind: plugin.kind, spec: plugin.spec }`
+ * then re-wrapped in `DataQueriesProvider`), so dashboard JSON `queryDef` objects rarely match
+ * cache key[2] by reference. We therefore match by JSON or plugin fingerprint.
+ *
+ * ## Matching pipeline (per panel query)
+ *
+ * 1. Iterate `dashboard.spec.panels` by `panelId` (output is keyed by panelId; lookup is not).
+ * 2. Map plugin kind → cache category (`GreptimeDBTimeSeriesQuery` → `TimeSeriesQuery`, etc.).
+ * 3. Scan all cache entries where `queryKey[0] === 'query'` and `queryKey[1] === category`.
+ * 4. Keep only `status === 'success'` with `data !== undefined`.
+ * 5. Pick best match in order (first tier with hits wins):
+ *    a. **Reference** — `queryKey[2] === queryDef` (same object; rare across dashboard vs runtime).
+ *    b. **JSON** — `JSON.stringify(queryKey[2]) === JSON.stringify(queryDef)`.
+ *    c. **Fingerprint** — inner plugin `{ kind, spec }` with `datasource` stripped from spec.
+ * 6. If multiple entries match a tier, take the one with latest `dataUpdatedAt`.
+ *
+ * ## Not enforced during match (known limitations)
+ *
+ * - Active dashboard time range is **not** required to match `queryKey[3]` (used only for snapshot
+ *   `timeRange` inference and debug `matchesActiveTimeRange`).
+ * - Variable values in `queryKey[4+]` are **not** compared to current dashboard variables.
+ * - Panels that never scrolled into view have `queryOptions.enabled: inView === false` → no cache →
+ *   `not_loaded`.
+ * - Two panels with identical queries share one cache entry; both match the same data.
+ *
+ * ## Data transform at export vs view
+ *
+ * Matched cache `data` is stored as `normalized` in the snapshot JSON. TimeSeries/Prometheus
+ * queries run through `sanitizeTimeSeriesDataForSnapshot` here so persisted series timestamps are
+ * canonical ms numbers (JSON-safe). Log/Trace are stored as-is from cache. On snapshot **view**,
+ * `snapshotEmbedStore` + `reviveNormalizedQueryData` revive Dates and normalize all kinds again
+ * after JSON parse — that is the primary transform path; export-time TimeSeries sanitize is an
+ * optional canonicalization layer, not required for correctness if view revive always runs.
+ */
 import type { Query, QueryClient } from '@tanstack/react-query'
-import type { DashboardResource } from '@perses-dev/core'
-import type { TimeSeriesData } from '@perses-dev/core'
+import type { DashboardResource, TimeSeriesData } from '@perses-dev/core'
 import {
   LIVE_QUERY_KINDS,
   type PanelQueryResult,
@@ -16,12 +60,14 @@ import {
   type SnapshotTimeRange,
 } from './resolveSnapshotTimeRange'
 
+/** Perses cache categories we scan (`queryKey[1]`). */
 const SNAPSHOT_QUERY_CATEGORIES: SnapshotQueryCategory[] = ['TimeSeriesQuery', 'LogQuery', 'TraceQuery']
 
 function stableStringify(value: unknown): string {
   return JSON.stringify(value)
 }
 
+/** Strip datasource from plugin spec so dashboard vs runtime cache keys can still fingerprint-match. */
 function normalizePluginSpec(spec: Record<string, unknown> | undefined): Record<string, unknown> {
   if (!spec) {
     return {}
@@ -31,6 +77,11 @@ function normalizePluginSpec(spec: Record<string, unknown> | undefined): Record<
   return next
 }
 
+/**
+ * Unwrap Perses query definition shapes:
+ * - Dashboard / cache wrapped: `{ kind: 'TimeSeriesQuery', spec: { plugin: { kind, spec } } }`
+ * - GridItemContent stripped: `{ kind: '<PluginQueryKind>', spec: { query, ... } }`
+ */
 function extractPlugin(definition: unknown): { kind?: string; spec?: Record<string, unknown> } | undefined {
   const def = definition as {
     kind?: string
@@ -48,6 +99,7 @@ function extractPlugin(definition: unknown): { kind?: string; spec?: Record<stri
   return undefined
 }
 
+/** Fingerprint for tier-3 matching: `JSON.stringify({ kind, spec })` with datasource removed. */
 function getInnerPluginFingerprint(definition: unknown): string {
   const plugin = extractPlugin(definition)
   if (!plugin?.kind) {
@@ -71,10 +123,12 @@ function getQueryPreview(definition: unknown): string | undefined {
   return typeof candidate === 'string' ? candidate.slice(0, 120) : undefined
 }
 
+/** Only successful queries with materialized data are eligible for snapshot export. */
 function hasUsableCacheData(query: Query): boolean {
   return query.state.status === 'success' && query.state.data !== undefined
 }
 
+/** All Perses query cache rows for one category (`TimeSeriesQuery` | `LogQuery` | `TraceQuery`). */
 function getQueryCacheEntries(queryClient: QueryClient, category: SnapshotQueryCategory) {
   return queryClient
     .getQueryCache()
@@ -85,6 +139,7 @@ function getQueryCacheEntries(queryClient: QueryClient, category: SnapshotQueryC
     })
 }
 
+/** When several cache rows match the same tier, prefer the most recently updated result. */
 function pickBestMatchingQuery(queries: Query[]): Query | undefined {
   return queries.reduce<Query | undefined>((best, query) => {
     if (!best) {
@@ -94,23 +149,30 @@ function pickBestMatchingQuery(queries: Query[]): Query | undefined {
   }, undefined)
 }
 
+/**
+ * Three-tier cache match for one dashboard `queryDef` within a single category bucket.
+ * See file header for full rules and limitations.
+ */
 function pickCachedQueryFromQueries(queries: Query[], definition: unknown): Query | undefined {
   const usable = queries.filter(hasUsableCacheData)
   if (usable.length === 0) {
     return undefined
   }
 
+  // Tier 1: same definition object reference (uncommon between dashboard spec and runtime cache).
   const byReference = pickBestMatchingQuery(usable.filter((query) => query.queryKey[2] === definition))
   if (byReference) {
     return byReference
   }
 
+  // Tier 2: deep structural equality via JSON (handles wrapper shape differences if identical).
   const targetJson = stableStringify(definition)
   const byJson = pickBestMatchingQuery(usable.filter((query) => stableStringify(query.queryKey[2]) === targetJson))
   if (byJson) {
     return byJson
   }
 
+  // Tier 3: plugin kind + spec fingerprint (ignores datasource and outer TimeSeriesQuery wrapper).
   const fingerprint = getInnerPluginFingerprint(definition)
   if (!fingerprint) {
     return undefined
@@ -125,6 +187,7 @@ interface CachedQueryMatch {
   updatedAt: number
 }
 
+/** Resolve one panel query to cache data + optional time range from `queryKey[3]`. */
 function findCachedQueryMatch(
   queryClient: QueryClient,
   definition: unknown,
@@ -213,6 +276,11 @@ function buildCollectDebugInfo(
   }
 }
 
+/**
+ * Export-time normalization before JSON persistence.
+ * TimeSeries only: canonicalize point timestamps to ms. Log/Trace pass through; view-time
+ * `reviveNormalizedQueryData` handles revival for all kinds after parse.
+ */
 function sanitizeCachedData(cached: unknown, queryKind: string): PanelQueryResult['normalized'] {
   if (queryKind.includes('TimeSeries') || queryKind.includes('Prometheus')) {
     return sanitizeTimeSeriesDataForSnapshot(cached as TimeSeriesData)
@@ -226,6 +294,10 @@ export interface CollectPanelDataResult {
   debug: SnapshotCollectDebugInfo
 }
 
+/**
+ * Walk every panel in dashboard spec, match each live query to global Perses cache, and build
+ * `panelData[panelId][queryIndex]`. Skipped entries record `not_loaded` / `query_error` / etc.
+ */
 export function collectPanelDataFromQueryCache(
   queryClient: QueryClient,
   dashboard: DashboardResource

@@ -1,3 +1,14 @@
+/**
+ * Snapshot data shape helpers — two phases:
+ *
+ * - **Export** (`collectFromQueryCache` → `sanitizeTimeSeriesDataForSnapshot`): optional
+ *   TimeSeries canonicalization so persisted JSON has stable ms timestamps.
+ * - **View** (`snapshotEmbedStore` → `reviveNormalizedQueryData`): required after JSON parse;
+ *   restores `Date` fields and normalizes timestamps for TimeSeries, Log, and Trace.
+ *
+ * Cache data from live Perses is already plugin-normalized (`TimeSeriesData`, etc.). We do not
+ * re-run plugin `getTimeSeriesData` transforms here — only JSON-safe revival.
+ */
 import type { TimeSeriesData, TraceData } from '@perses-dev/core'
 import type { LogQueryResult } from '@perses-dev/plugin-system'
 import type { NormalizedQueryData } from './types'
@@ -84,6 +95,7 @@ export function reviveTraceData(data: TraceData): TraceData {
   }
 }
 
+/** Export-only: same revival as view, applied at write time for TimeSeries persistence. */
 export function sanitizeTimeSeriesDataForSnapshot(data: TimeSeriesData): TimeSeriesData {
   return reviveTimeSeriesData({
     stepMs: data.stepMs,
