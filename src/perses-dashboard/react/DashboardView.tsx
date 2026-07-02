@@ -11,19 +11,32 @@ import {
 } from '@perses-dev/core'
 import bundledPluginLoader from './plugin'
 import { useWorkbenchContext } from './WorkbenchProvider'
+import { prepareSnapshotViewDashboard } from '../snapshot/prepareSnapshotViewDashboard'
+import SnapshotViewDashboard from './SnapshotViewDashboard'
 
 export interface GenericDashboardViewProps {
   dashboardResource: DashboardResource | EphemeralDashboardResource
   onSave?: OnSaveDashboard
   onDiscard?: (entity: DashboardResource) => void
   isReadonly: boolean
+  isSnapshotMode?: boolean
   isEditing: boolean
   isCreating?: boolean
 }
 
 export default function HelperDashboardView(props: GenericDashboardViewProps): JSX.Element {
-  const { onSave, onDiscard, isReadonly, isEditing, isCreating, dashboardResource } = props
+  const { onSave, onDiscard, isReadonly, isSnapshotMode = false, isEditing, isCreating, dashboardResource } = props
   const { database, username, password, authHeader, instance } = useWorkbenchContext()
+
+  const viewDashboardResource = React.useMemo(() => {
+    if (!isSnapshotMode) {
+      return dashboardResource
+    }
+    if (dashboardResource.kind === 'EphemeralDashboard') {
+      return prepareSnapshotViewDashboard(dashboardResource)
+    }
+    return prepareSnapshotViewDashboard(dashboardResource)
+  }, [dashboardResource, isSnapshotMode])
 
   const prometheusDirectUrl = instance ? `/api/v1/instances/${instance}/metrics/prometheus` : '/v1/prometheus'
 
@@ -107,6 +120,23 @@ export default function HelperDashboardView(props: GenericDashboardViewProps): J
     },
   }
 
+  const viewDashboardProps = {
+    key: viewDashboardResource.metadata.name,
+    dashboardResource: viewDashboardResource,
+    datasourceApi,
+    emptyDashboardProps: {
+      additionalText: 'In order to save this dashboard, you need to add at least one panel!',
+    },
+    onSave,
+    onDiscard,
+    isInitialVariableSticky: true as const,
+    isReadonly,
+    isEditing,
+    isCreating,
+    isVariableEnabled: true,
+    isDatasourceEnabled: !isSnapshotMode,
+  }
+
   return (
     <Box
       component="main"
@@ -124,22 +154,11 @@ export default function HelperDashboardView(props: GenericDashboardViewProps): J
         >
           <ValidationProvider>
             <ErrorBoundary FallbackComponent={ErrorAlert}>
-              <ViewDashboard
-                key={dashboardResource.metadata.name}
-                dashboardResource={dashboardResource}
-                datasourceApi={datasourceApi}
-                emptyDashboardProps={{
-                  additionalText: 'In order to save this dashboard, you need to add at least one panel!',
-                }}
-                onSave={onSave}
-                onDiscard={onDiscard}
-                isInitialVariableSticky={true}
-                isReadonly={isReadonly}
-                isEditing={isEditing}
-                isCreating={isCreating}
-                isVariableEnabled={true}
-                isDatasourceEnabled={true}
-              />
+              {isSnapshotMode ? (
+                <SnapshotViewDashboard {...viewDashboardProps} />
+              ) : (
+                <ViewDashboard {...viewDashboardProps} />
+              )}
             </ErrorBoundary>
           </ValidationProvider>
         </PluginRegistry>

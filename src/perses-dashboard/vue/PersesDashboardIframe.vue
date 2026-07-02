@@ -4,11 +4,26 @@ iframe.perses-dashboard-iframe(ref="dashboardIframe" :src="iframeSrc" @load="onI
 
 <script lang="ts" setup name="PersesDashboardIframe">
   import type { PersesDashboardFile } from '@/perses-dashboard/react/WorkbenchProvider'
+  import { useAppStore } from '@/store'
 
   interface SavePayload {
     dashboardJSON: unknown
     name: string
     commitId?: string
+  }
+
+  interface CreateSnapshotResult {
+    dashboard: unknown
+    skipped: Array<{
+      panelId: string
+      panelName?: string
+      queryIndex: number
+      queryKind: string
+      reason?: string
+      error?: string
+    }>
+    debug?: unknown
+    snapshotData?: unknown
   }
 
   interface Props {
@@ -173,6 +188,52 @@ iframe.perses-dashboard-iframe(ref="dashboardIframe" :src="iframeSrc" @load="onI
     }
   }
 
+  const requestCreateSnapshot = (snapshotName?: string): Promise<CreateSnapshotResult> => {
+    return new Promise((resolve, reject) => {
+      if (!dashboardIframe.value?.contentWindow) {
+        reject(new Error('Dashboard iframe is not ready'))
+        return
+      }
+
+      const requestId = `snapshot-${Date.now()}-${Math.random()}`
+      let timeout: number | undefined
+
+      const handleResponse = (event: MessageEvent) => {
+        if (event.source !== dashboardIframe.value?.contentWindow) return
+        if (event.data?.type !== 'create-snapshot-response' || event.data?.requestId !== requestId) return
+
+        window.clearTimeout(timeout)
+        window.removeEventListener('message', handleResponse)
+
+        if (event.data.success) {
+          resolve({
+            dashboard: event.data.dashboard,
+            skipped: event.data.skipped ?? [],
+            debug: event.data.debug,
+            snapshotData: event.data.snapshotData,
+          })
+        } else {
+          reject(new Error(event.data.error || 'Failed to create snapshot'))
+        }
+      }
+
+      timeout = window.setTimeout(() => {
+        window.removeEventListener('message', handleResponse)
+        reject(new Error('Create snapshot request timeout'))
+      }, 60000)
+
+      window.addEventListener('message', handleResponse)
+      dashboardIframe.value.contentWindow.postMessage(
+        {
+          type: 'create-snapshot-request',
+          requestId,
+          snapshotName,
+        },
+        '*'
+      )
+    })
+  }
+
   onMounted(() => {
     window.addEventListener('message', handleMessage)
   })
@@ -187,6 +248,7 @@ iframe.perses-dashboard-iframe(ref="dashboardIframe" :src="iframeSrc" @load="onI
 
   defineExpose({
     sendDashboardData,
+    requestCreateSnapshot,
   })
 </script>
 

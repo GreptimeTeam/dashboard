@@ -34,33 +34,75 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
                     use(href="#file-add")
         a-spin(:loading="isLoading")
           a-scrollbar.gpt-vertical-scrollbar
-            a-empty(v-if="!filteredDashboards.length" :description="$t('dashboard.perses.emptySidebar')")
+            a-empty(v-if="!hasSidebarDashboards" :description="$t('dashboard.perses.emptySidebar')")
               template(#image)
                 svg.icon-32
                   use(href="#empty")
             a-menu.gpt-sidebar-menu(v-model:selected-keys="selectedKeys" mode="vertical" :collapsed="false")
-              a-menu-item(
-                v-for="item in filteredDashboards"
-                :key="item.id"
-                type="text"
-                long
-              )
-                template(#icon)
-                  svg.icon-15
-                    use(href="#details")
-                span.gpt-sidebar-menu-text {{ item.name }}
-                a-tooltip.menu-item-delete.gpt-sidebar-menu-action(
-                  v-if="item.id === selectedId"
-                  mini
-                  position="left"
-                  content="Delete"
+              a-menu-item-group.gpt-sidebar-menu-category(v-if="groupedSidebarDashboards.live.length")
+                template(#title)
+                  span.gpt-sidebar-menu-category-text {{ $t('dashboard.perses.category.dashboard') }}
+                a-menu-item(
+                  v-for="item in groupedSidebarDashboards.live"
+                  :key="item.id"
+                  type="text"
+                  long
                 )
-                  a-popconfirm(
-                    content="Are you sure to delete this dashboard?"
-                    type="warning"
-                    @ok="handleDeleteDashboard(item)"
+                  template(#icon)
+                    svg.icon-15
+                      use(href="#details")
+                  span.gpt-sidebar-menu-text {{ item.name }}
+                  a-tooltip.menu-item-snapshot.gpt-sidebar-menu-action(
+                    v-if="item.id === selectedId"
+                    mini
+                    position="left"
+                    :content="$t('dashboard.perses.saveSnapshot')"
+                  ) 
+                    IconClockCircle.delete-btn(@click.stop="openSnapshotModal")
+                  a-tooltip.menu-item-delete.gpt-sidebar-menu-action(
+                    v-if="item.id === selectedId"
+                    mini
+                    position="left"
+                    content="Delete"
                   )
-                    IconDelete.delete-btn
+                    a-popconfirm(
+                      content="Are you sure to delete this dashboard?"
+                      type="warning"
+                      @ok="handleDeleteDashboard(item)"
+                    )
+                      IconDelete.delete-btn
+              a-menu-item-group.gpt-sidebar-menu-category(v-if="groupedSidebarDashboards.snapshots.length")
+                template(#title)
+                  span.gpt-sidebar-menu-category-text {{ $t('dashboard.perses.category.snapshot') }}
+                a-menu-item(
+                  v-for="item in groupedSidebarDashboards.snapshots"
+                  :key="item.id"
+                  type="text"
+                  long
+                )
+                  template(#icon)
+                    svg.icon-15
+                      use(href="#details")
+                  span.gpt-sidebar-menu-text {{ item.name }}
+                  a-tooltip.menu-item-export.gpt-sidebar-menu-action(
+                    v-if="item.id === selectedId"
+                    mini
+                    position="left"
+                    :content="$t('dashboard.perses.exportSnapshot')"
+                  )
+                    IconDownload.delete-btn(@click.stop="handleExportSnapshot(item)")
+                  a-tooltip.menu-item-delete.gpt-sidebar-menu-action(
+                    v-if="item.id === selectedId"
+                    mini
+                    position="left"
+                    content="Delete"
+                  ) 
+                    a-popconfirm(
+                      content="Are you sure to delete this dashboard?"
+                      type="warning"
+                      @ok="handleDeleteDashboard(item)"
+                    )
+                      IconDelete.delete-btn
             .perses-skill-alert-wrap(v-if="!skillAlertDismissed")
               a-alert.perses-skill-alert(
                 type="info"
@@ -81,9 +123,10 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
     a-card.perses-content(:bordered="false")
       template(v-if="selectedDashboard")
         PersesDashboardIframe(
+          ref="persesIframeRef"
           :name="selectedDashboard.file.filename"
           :file="selectedDashboard.file"
-          :dashboard-editable="true"
+          :dashboard-editable="!isSelectedSnapshot"
           :on-save="handleSaveDashboard"
         )
       template(v-else)
@@ -108,18 +151,71 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
             p Select a dashboard from the left or create a new one to continue.
     a-modal(
       v-model:visible="createModalVisible"
-      title="New Dashboard"
+      :title="$t('dashboard.perses.createModalTitle')"
       :ok-loading="isCreating"
       @ok="handleCreateDashboard"
       @cancel="handleCreateModalCancel"
     )
       a-form(layout="vertical" :model="createForm")
-        a-form-item(label="Dashboard Name" field="name")
+        a-form-item(field="mode")
+          a-radio-group(v-model="createForm.mode" type="button")
+            a-radio(value="blank") {{ $t('dashboard.perses.createModeBlank') }}
+            a-radio(value="import") {{ $t('dashboard.perses.createModeImport') }}
+        a-form-item(field="name" :label="$t('dashboard.perses.createNameLabel')")
           a-input(
             v-model="createForm.name"
-            placeholder="dashboard-name"
             allow-clear
+            :placeholder="$t('dashboard.perses.createNamePlaceholder')"
             @press-enter="handleCreateDashboard"
+          )
+        template(v-if="createForm.mode === 'import'")
+          a-form-item(field="json" :label="$t('dashboard.perses.importJsonLabel')")
+            a-textarea(
+              v-model="createForm.json"
+              :placeholder="$t('dashboard.perses.importJsonPlaceholder')"
+              :auto-size="{ minRows: 8, maxRows: 16 }"
+            )
+          a-form-item
+            a-upload(
+              accept=".json,application/json"
+              :show-file-list="false"
+              :auto-upload="false"
+              @before-upload="handleImportFileBeforeUpload"
+            )
+              template(#upload-button)
+                a-button(type="outline") {{ $t('dashboard.perses.importUpload') }}
+          a-alert(v-if="importPreview?.ok" type="info" style="margin-bottom: 8px")
+            | {{ $t('dashboard.perses.importSummary', importSummaryParams) }}
+          a-alert(
+            v-for="(warning, index) in importPreviewWarnings"
+            :key="`import-warning-${index}`"
+            type="warning"
+            style="margin-bottom: 8px"
+          )
+            | {{ warning }}
+          a-alert(
+            v-for="(error, index) in importPreviewErrors"
+            :key="`import-error-${index}`"
+            type="error"
+            style="margin-bottom: 8px"
+          )
+            | {{ error }}
+    a-modal(
+      v-model:visible="snapshotModalVisible"
+      :title="$t('dashboard.perses.snapshotModalTitle')"
+      :ok-loading="isSavingSnapshot"
+      @ok="handleSaveSnapshotDashboard"
+      @cancel="handleSnapshotModalCancel"
+    )
+      a-alert(type="warning" style="margin-bottom: 16px")
+        | {{ $t('dashboard.perses.snapshotModalHint') }}
+      a-form(layout="vertical" :model="snapshotForm")
+        a-form-item(field="name" :label="$t('dashboard.perses.snapshotNameLabel')")
+          a-input(
+            v-model="snapshotForm.name"
+            allow-clear
+            :placeholder="$t('dashboard.perses.snapshotNamePlaceholder')"
+            @press-enter="handleSaveSnapshotDashboard"
           )
 </template>
 
@@ -128,12 +224,25 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
   import { useStorage } from '@vueuse/core'
   import { storeToRefs } from 'pinia'
   import { Message } from '@arco-design/web-vue'
-  import { IconDelete } from '@arco-design/web-vue/es/icon'
+  import { IconClockCircle, IconDelete, IconDownload } from '@arco-design/web-vue/es/icon'
   import { useRoute, useRouter } from 'vue-router'
   import { useAppStore } from '@/store'
   import PersesDashboardIframe from '@/perses-dashboard/vue/PersesDashboardIframe.vue'
   import type { PersesDashboardFile } from '@/perses-dashboard/react/WorkbenchProvider'
+  import {
+    getDashboardCategoryFromContent,
+    DASHBOARD_CATEGORY_SNAPSHOT,
+    annotateDashboardCategory,
+    isSnapshotDashboardContent,
+  } from '@/perses-dashboard/snapshot/isSnapshotDashboardContent'
+  import {
+    parseDashboardImport,
+    type ImportParseErrorCode,
+    type ImportParseWarningCode,
+  } from '@/perses-dashboard/snapshot/parseDashboardImport'
+  import downloadDashboardJson from '@/perses-dashboard/snapshot/exportSnapshotJson'
   import { deleteDashboard, listDashboards, saveDashboard } from '@/api/dashboards'
+  import { useI18n } from 'vue-i18n'
 
   type DashboardItem = {
     id: string
@@ -142,6 +251,7 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
   }
 
   const { hideSidebar } = storeToRefs(useAppStore())
+  const { t } = useI18n()
   const route = useRoute()
   const router = useRouter()
   const DASHBOARD_QUERY_KEY = 'dashboard'
@@ -178,9 +288,17 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
   const searchText = ref('')
   const createModalVisible = ref(false)
   const createForm = reactive({
+    mode: 'blank' as 'blank' | 'import',
+    name: '',
+    json: '',
+  })
+  const snapshotForm = reactive({
     name: '',
   })
   const isCreating = ref(false)
+  const isSavingSnapshot = ref(false)
+  const snapshotModalVisible = ref(false)
+  const persesIframeRef = ref<InstanceType<typeof PersesDashboardIframe> | null>(null)
 
   const createEmptyDashboard = (name: string) => {
     const dashboardName = name.split('.')[0] || 'empty-dashboard'
@@ -215,40 +333,42 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
     },
   })
 
-  const filteredDashboards = computed(() => {
+  const groupedSidebarDashboards = computed(() => {
     const keyword = searchText.value.trim().toLowerCase()
-    if (!keyword) return dashboards.value
-    return dashboards.value.filter((item) => item.name.toLowerCase().includes(keyword))
+    const match = (item: DashboardItem) => !keyword || item.name.toLowerCase().includes(keyword)
+    const live: DashboardItem[] = []
+    const snapshots: DashboardItem[] = []
+
+    dashboards.value.forEach((item) => {
+      if (!match(item)) return
+      if (getDashboardCategoryFromContent(item.file.content) === DASHBOARD_CATEGORY_SNAPSHOT) {
+        snapshots.push(item)
+      } else {
+        live.push(item)
+      }
+    })
+
+    return { live, snapshots }
+  })
+
+  const hasSidebarDashboards = computed(() => {
+    const { live, snapshots } = groupedSidebarDashboards.value
+    return live.length > 0 || snapshots.length > 0
   })
 
   const selectedDashboard = computed(() => {
     return dashboards.value.find((item) => item.id === selectedId.value)
   })
 
-  const clampSidebarWidth = () => {
-    if (sidebarWidth.value < 160) {
-      sidebarWidth.value = 160
-    }
-  }
-
-  watch(sidebarWidthStorage, clampSidebarWidth, { immediate: true })
-
-  const onSidebarResizeEnd = () => {
-    isSidebarResizing.value = false
-    window.removeEventListener('mouseup', onSidebarResizeEnd)
-    window.removeEventListener('blur', onSidebarResizeEnd)
-    clampSidebarWidth()
-  }
-
-  const onSidebarResizeStart = () => {
-    isSidebarResizing.value = true
-    window.addEventListener('mouseup', onSidebarResizeEnd)
-    window.addEventListener('blur', onSidebarResizeEnd)
-  }
-
-  onUnmounted(() => {
-    onSidebarResizeEnd()
+  const isSelectedSnapshot = computed(() => {
+    return isSnapshotDashboardContent(selectedDashboard.value?.file?.content)
   })
+
+  const buildDefaultSnapshotName = (sourceName: string) => {
+    const base = sourceName.endsWith('.json') ? sourceName.slice(0, -5) : sourceName
+    const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+    return `${base}-snapshot-${stamp}`
+  }
 
   const getDashboardNameFromDefinition = (definition: unknown): string | null => {
     if (!definition) return null
@@ -278,6 +398,109 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
     }
     return null
   }
+
+  const persistDashboard = async (dashboardJSON: Record<string, unknown>, saveName: string) => {
+    const filename = saveName.endsWith('.json') ? saveName : `${saveName}.json`
+    const apiName = saveName.endsWith('.json') ? saveName.slice(0, -5) : saveName
+    await saveDashboard(apiName, { content: JSON.stringify(dashboardJSON) })
+    const newItem: DashboardItem = {
+      id: `remote-${Date.now()}`,
+      name: saveName,
+      file: {
+        filename,
+        content: JSON.stringify(dashboardJSON),
+        meta: {
+          commit: {
+            id: 'remote',
+          },
+        },
+      },
+    }
+    dashboards.value = [newItem, ...dashboards.value]
+    selectedId.value = newItem.id
+    return newItem
+  }
+
+  const openSnapshotModal = () => {
+    if (!selectedDashboard.value || isSelectedSnapshot.value) return
+    snapshotForm.name = buildDefaultSnapshotName(selectedDashboard.value.name)
+    snapshotModalVisible.value = true
+  }
+
+  const handleSnapshotModalCancel = () => {
+    snapshotForm.name = ''
+    snapshotModalVisible.value = false
+  }
+
+  const handleSaveSnapshotDashboard = async () => {
+    if (!selectedDashboard.value || isSavingSnapshot.value) return
+    if (!persesIframeRef.value?.requestCreateSnapshot) {
+      Message.error(t('dashboard.perses.snapshotCreateFailed'))
+      return
+    }
+
+    try {
+      isSavingSnapshot.value = true
+      const result = await persesIframeRef.value.requestCreateSnapshot(snapshotForm.name.trim())
+      const dashboardJSON = result.dashboard as Record<string, any>
+
+      // eslint-disable-next-line no-console
+      console.group('[snapshot-export] parent received snapshot')
+      // eslint-disable-next-line no-console
+      console.log('snapshot data JSON:', JSON.stringify(dashboardJSON?.spec?.snapshot, null, 2))
+      // eslint-disable-next-line no-console
+      console.log('skipped:', result.skipped)
+      // eslint-disable-next-line no-console
+      console.log('debug:', (result as { debug?: unknown }).debug)
+      // eslint-disable-next-line no-console
+      console.groupEnd()
+      const definitionName =
+        getDashboardNameFromDefinition(dashboardJSON) ||
+        snapshotForm.name.trim() ||
+        buildDefaultSnapshotName(selectedDashboard.value.name)
+      const saveName = definitionName.endsWith('.json') ? definitionName.slice(0, -5) : definitionName
+
+      await persistDashboard(dashboardJSON, saveName)
+      snapshotModalVisible.value = false
+      snapshotForm.name = ''
+
+      const skippedCount = result.skipped?.length ?? 0
+      if (skippedCount > 0) {
+        Message.warning(t('dashboard.perses.snapshotSavedWithSkipped', { count: skippedCount }))
+      } else {
+        Message.success(t('dashboard.perses.snapshotSaved'))
+      }
+    } catch (error) {
+      Message.error(t('dashboard.perses.snapshotCreateFailed'))
+    } finally {
+      isSavingSnapshot.value = false
+    }
+  }
+
+  const clampSidebarWidth = () => {
+    if (sidebarWidth.value < 160) {
+      sidebarWidth.value = 160
+    }
+  }
+
+  watch(sidebarWidthStorage, clampSidebarWidth, { immediate: true })
+
+  const onSidebarResizeEnd = () => {
+    isSidebarResizing.value = false
+    window.removeEventListener('mouseup', onSidebarResizeEnd)
+    window.removeEventListener('blur', onSidebarResizeEnd)
+    clampSidebarWidth()
+  }
+
+  const onSidebarResizeStart = () => {
+    isSidebarResizing.value = true
+    window.addEventListener('mouseup', onSidebarResizeEnd)
+    window.addEventListener('blur', onSidebarResizeEnd)
+  }
+
+  onUnmounted(() => {
+    onSidebarResizeEnd()
+  })
 
   const normalizeDashboards = (raw: any): DashboardItem[] => {
     const list = raw?.dashboards ?? raw?.items ?? raw?.data ?? raw?.output ?? raw ?? []
@@ -383,53 +606,152 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
     fetchDashboards()
   }
 
-  const openCreateModal = () => {
-    createForm.name = ''
-    createModalVisible.value = true
-  }
-
-  const handleCreateModalCancel = () => {
-    createForm.name = ''
-    createModalVisible.value = false
-  }
-
   const buildDefaultDashboardName = () => {
     const nextIndex = dashboards.value.length + 1
     return `dashboard-${nextIndex}`
   }
 
+  const mapImportError = (code: ImportParseErrorCode) => {
+    const keyMap: Record<ImportParseErrorCode, string> = {
+      invalid_json: 'dashboard.perses.importErrorInvalidJson',
+      invalid_kind: 'dashboard.perses.importErrorInvalidKind',
+      missing_spec: 'dashboard.perses.importErrorMissingSpec',
+      missing_name: 'dashboard.perses.importErrorMissingName',
+      embedded_without_snapshot: 'dashboard.perses.importErrorEmbeddedWithoutSnapshot',
+    }
+    return t(keyMap[code])
+  }
+
+  const mapImportWarning = (code: ImportParseWarningCode) => {
+    const keyMap: Record<ImportParseWarningCode, string> = {
+      empty_panel_data: 'dashboard.perses.importWarningEmptyPanelData',
+      skipped_panel_data: 'dashboard.perses.importWarningSkippedPanelData',
+    }
+    return t(keyMap[code])
+  }
+
+  const importPreview = computed(() => {
+    if (createForm.mode !== 'import' || !createForm.json.trim()) {
+      return null
+    }
+    return parseDashboardImport(createForm.json, {
+      nameOverride: createForm.name,
+      defaultName: buildDefaultDashboardName(),
+    })
+  })
+
+  const importPreviewErrors = computed(() => {
+    const preview = importPreview.value
+    if (!preview || preview.ok !== false) return []
+    return preview.errors.map((code) => mapImportError(code))
+  })
+
+  const importPreviewWarnings = computed(() => {
+    if (!importPreview.value?.ok) return []
+    return importPreview.value.warnings.map((code) => mapImportWarning(code))
+  })
+
+  const importSummaryParams = computed(() => {
+    if (!importPreview.value?.ok) {
+      return { type: '', count: 0 }
+    }
+    const typeKey =
+      importPreview.value.category === DASHBOARD_CATEGORY_SNAPSHOT
+        ? 'dashboard.perses.importTypeSnapshot'
+        : 'dashboard.perses.importTypeDashboard'
+    return {
+      type: t(typeKey),
+      count: importPreview.value.panelCount,
+    }
+  })
+
+  const resetCreateForm = () => {
+    createForm.mode = 'blank'
+    createForm.name = ''
+    createForm.json = ''
+  }
+
+  const handleImportFileBeforeUpload = (file: File) => {
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      createForm.json = String(event.target?.result ?? '')
+    }
+    reader.readAsText(file)
+    return false
+  }
+
+  const openCreateModal = () => {
+    resetCreateForm()
+    createModalVisible.value = true
+  }
+
+  const handleCreateModalCancel = () => {
+    resetCreateForm()
+    createModalVisible.value = false
+  }
+
   const handleCreateDashboard = async () => {
     if (isCreating.value) return
+
+    if (createForm.mode === 'import') {
+      if (!createForm.json.trim()) {
+        Message.error(t('dashboard.perses.importErrorInvalidJson'))
+        return
+      }
+
+      const parsed = parseDashboardImport(createForm.json, {
+        nameOverride: createForm.name,
+        defaultName: buildDefaultDashboardName(),
+      })
+
+      if (parsed.ok === false) {
+        Message.error(parsed.errors.map((code) => mapImportError(code)).join('; '))
+        return
+      }
+
+      const saveName =
+        getDashboardNameFromDefinition(parsed.dashboard) || createForm.name.trim() || buildDefaultDashboardName()
+
+      try {
+        isCreating.value = true
+        await persistDashboard(parsed.dashboard as unknown as Record<string, unknown>, saveName)
+        createModalVisible.value = false
+        resetCreateForm()
+        if (parsed.category === DASHBOARD_CATEGORY_SNAPSHOT) {
+          Message.success(t('dashboard.perses.snapshotSaved'))
+        } else {
+          Message.success(t('dashboard.perses.dashboardImported'))
+        }
+      } catch (error) {
+        Message.error(t('dashboard.perses.importFailed'))
+      } finally {
+        isCreating.value = false
+      }
+      return
+    }
+
     const inputName = createForm.name.trim()
     const name = inputName || buildDefaultDashboardName()
-    const filename = `${name}.json`
-    const dashboardJSON = createEmptyDashboard(filename)
-    const apiName = name.endsWith('.json') ? name.slice(0, -5) : name
+    const dashboardJSON = createEmptyDashboard(name)
     try {
       isCreating.value = true
-      await saveDashboard(apiName, { content: JSON.stringify(dashboardJSON) })
-      const newItem: DashboardItem = {
-        id: `remote-${Date.now()}`,
-        name,
-        file: {
-          filename,
-          content: JSON.stringify(dashboardJSON),
-          meta: {
-            commit: {
-              id: 'remote',
-            },
-          },
-        },
-      }
-      dashboards.value = [newItem, ...dashboards.value]
-      selectedId.value = newItem.id
+      await persistDashboard(dashboardJSON, name)
       createModalVisible.value = false
-      createForm.name = ''
-      Message.success('Dashboard created')
+      resetCreateForm()
+      Message.success(t('dashboard.perses.dashboardCreated'))
     } catch (error) {
-      Message.error('Failed to create dashboard')
+      Message.error(t('dashboard.perses.createFailed'))
     } finally {
       isCreating.value = false
+    }
+  }
+
+  const handleExportSnapshot = (item: DashboardItem) => {
+    try {
+      downloadDashboardJson(item.file.content, item.name)
+      Message.success(t('dashboard.perses.snapshotExported'))
+    } catch {
+      Message.error(t('dashboard.perses.snapshotExportFailed'))
     }
   }
 
@@ -450,16 +772,25 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
   const handleSaveDashboard = async (payload: { dashboardJSON: unknown; name: string; commitId?: string }) => {
     const target = dashboards.value.find((item) => item.file.filename === payload.name)
     if (!target) return
-    const definitionName = getDashboardNameFromDefinition(payload.dashboardJSON)
+
+    const wasLiveBefore = !isSnapshotDashboardContent(target.file.content)
+    let dashboardJSON = payload.dashboardJSON as Record<string, unknown>
+    const isSnapshot = isSnapshotDashboardContent(JSON.stringify(dashboardJSON))
+
+    if (isSnapshot) {
+      dashboardJSON = annotateDashboardCategory(dashboardJSON, DASHBOARD_CATEGORY_SNAPSHOT) as Record<string, unknown>
+    }
+
+    const definitionName = getDashboardNameFromDefinition(dashboardJSON)
     const resolvedName = definitionName || target.name
     const saveName = resolvedName.endsWith('.json') ? resolvedName.slice(0, -5) : resolvedName
     try {
-      await saveDashboard(saveName, { content: JSON.stringify(payload.dashboardJSON) })
+      await saveDashboard(saveName, { content: JSON.stringify(dashboardJSON) })
       target.name = resolvedName
       target.file = {
         ...target.file,
         filename: resolvedName.endsWith('.json') ? resolvedName : `${resolvedName}.json`,
-        content: JSON.stringify(payload.dashboardJSON),
+        content: JSON.stringify(dashboardJSON),
         meta: {
           ...(target.file.meta || {}),
           commit: {
@@ -468,7 +799,14 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
           },
         },
       }
-      Message.success('Dashboard saved')
+      if (isSnapshot) {
+        if (wasLiveBefore) {
+          Message.warning(t('dashboard.perses.saveAsSnapshotHint'))
+        }
+        Message.success(t('dashboard.perses.snapshotSaved'))
+      } else {
+        Message.success(t('dashboard.perses.dashboardSaved'))
+      }
     } catch (error) {
       Message.error('Failed to save dashboard')
     }

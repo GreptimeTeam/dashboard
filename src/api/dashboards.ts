@@ -4,6 +4,8 @@ export interface DashboardItem {
   name: string
   content?: string
   updatedAt?: string
+  /** Category is stored inside dashboard JSON (`metadata.annotations`), not as a separate API field. */
+  category?: 'dashboard' | 'snapshot'
 }
 
 export function listDashboards() {

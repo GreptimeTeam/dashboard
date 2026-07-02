@@ -12,6 +12,10 @@ import { QueryParamProvider } from 'use-query-params'
 import { ReactRouter6Adapter } from 'use-query-params/adapters/react-router-6'
 import HelperDashboardView from './DashboardView'
 import { useWorkbenchContext } from './WorkbenchProvider'
+import { SnapshotProvider } from './SnapshotContext'
+import SnapshotBridge from './SnapshotBridge'
+import { isSnapshotDashboard, getSnapshotEmbed } from '../snapshot/isSnapshotDashboard'
+import { normalizeSnapshotTimeRange } from '../snapshot/resolveSnapshotTimeRange'
 import DASHBOARD_TOKENS from './Dashboard.styles'
 import getPersesDashboardLayoutStyles, { getPersesDashboardComponents } from './theme/persesDashboardTheme'
 import { getGptTablePalette, getPersesTableComponents, getPersesTableGlobalStyles } from './theme/persesTableTheme'
@@ -604,14 +608,16 @@ export default function Dashboard(props: DashboardProps = {}) {
     },
   } as any)
 
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        refetchOnWindowFocus: false,
-        retry: 0,
+  const queryClient = React.useRef(
+    new QueryClient({
+      defaultOptions: {
+        queries: {
+          refetchOnWindowFocus: false,
+          retry: 0,
+        },
       },
-    },
-  })
+    })
+  ).current
 
   const save = React.useCallback(
     async (dashboardJSON: DashboardResource | EphemeralDashboardResource): Promise<boolean> => {
@@ -659,120 +665,176 @@ export default function Dashboard(props: DashboardProps = {}) {
     [name, file]
   )
 
-  const INIT_DATA: DashboardResource = {
-    kind: 'Dashboard',
-    metadata: {
-      name: name.split('.')[0],
-      project: 'default',
-      version: 0,
-    },
-    spec: {
-      display: {
+  const INIT_DATA: DashboardResource = React.useMemo(
+    () => ({
+      kind: 'Dashboard',
+      metadata: {
         name: name.split('.')[0],
+        project: 'default',
+        version: 0,
       },
-      duration: DEFAULT_DASHBOARD_DURATION,
-      refreshInterval: DEFAULT_REFRESH_INTERVAL,
-      variables: [],
-      layouts: [],
-      panels: {},
-    },
-  }
+      spec: {
+        display: {
+          name: name.split('.')[0],
+        },
+        duration: DEFAULT_DASHBOARD_DURATION,
+        refreshInterval: DEFAULT_REFRESH_INTERVAL,
+        variables: [],
+        layouts: [],
+        panels: {},
+      },
+    }),
+    [name]
+  )
 
-  let data: DashboardResource | EphemeralDashboardResource
-  try {
-    data = ensureTraceTableLinks(JSON.parse(file.content) || INIT_DATA)
+  const parsedDashboard = React.useMemo(() => {
+    try {
+      const data = ensureTraceTableLinks(JSON.parse(file.content) || INIT_DATA)
 
-    if (data.spec?.panels) {
-      Object.values(data.spec.panels).forEach((panel: any) => {
-        if (panel.spec?.plugin?.kind === 'TimeSeriesChart') {
-          if (panel.spec?.yAxis?.format?.unit === 'percent-decimal' && panel.spec?.yAxis?.max === undefined) {
-            if (!panel.spec.yAxis) {
-              panel.spec.yAxis = {}
+      if (data.spec?.panels) {
+        Object.values(data.spec.panels).forEach((panel: any) => {
+          if (panel.spec?.plugin?.kind === 'TimeSeriesChart') {
+            if (panel.spec?.yAxis?.format?.unit === 'percent-decimal' && panel.spec?.yAxis?.max === undefined) {
+              if (!panel.spec.yAxis) {
+                panel.spec.yAxis = {}
+              }
+              panel.spec.yAxis.max = 1
             }
-            panel.spec.yAxis.max = 1
-          }
 
-          if (panel.spec?.thresholds && (!panel.spec.thresholds.steps || panel.spec.thresholds.steps.length === 0)) {
-            delete panel.spec.thresholds
+            if (panel.spec?.thresholds && (!panel.spec.thresholds.steps || panel.spec.thresholds.steps.length === 0)) {
+              delete panel.spec.thresholds
+            }
           }
-        }
-      })
+        })
+      }
+
+      return { data, error: null as Error | null }
+    } catch (error) {
+      return {
+        data: null,
+        error: error instanceof Error ? error : new Error(String(error)),
+      }
     }
-  } catch (error) {
+  }, [INIT_DATA, file.content])
+
+  const snapshotMode = isSnapshotDashboard(parsedDashboard.data ?? undefined)
+  const snapshotEmbed = getSnapshotEmbed(parsedDashboard.data ?? undefined)
+  const snapshotFrozenRange = normalizeSnapshotTimeRange(snapshotEmbed?.timeRange)
+  const snapshotTimeRangeKey = snapshotFrozenRange ? `${snapshotFrozenRange.from}-${snapshotFrozenRange.to}` : ''
+
+  React.useEffect(() => {
+    if (!controlEditableBodyClass) return undefined
+    const { body } = document
+    if (snapshotMode) {
+      body.classList.add('dashboard-snapshot-mode')
+    } else {
+      body.classList.remove('dashboard-snapshot-mode')
+    }
+    return () => {
+      body.classList.remove('dashboard-snapshot-mode')
+    }
+  }, [snapshotMode, controlEditableBodyClass])
+
+  if (parsedDashboard.error || !parsedDashboard.data) {
     return (
       <div style={{ padding: '20px', color: 'red' }}>
         <h3>Error parsing dashboard JSON</h3>
-        <pre>{String(error)}</pre>
+        <pre>{String(parsedDashboard.error)}</pre>
       </div>
     )
   }
 
+  const { data } = parsedDashboard
+
+  const effectiveReadonly = !dashboardEditable || snapshotMode
+  const sourceDashboardName = name.split('.')[0]
+
   return (
     <ThemeProvider theme={muiTheme}>
       <QueryClientProvider client={queryClient}>
-        <QueryParamProvider adapter={ReactRouter6Adapter}>
-          <ChartsProvider chartsTheme={chartsTheme}>
-            <GlobalStyles
-              styles={{
-                ...getPersesDashboardLayoutStyles(),
-                ...getPersesTableGlobalStyles(),
-                'html, body, #root, [data-reactroot]': {
-                  backgroundColor: DASHBOARD_TOKENS.colors.background,
-                  margin: 0,
-                },
-                // Dashboard toolbar: hide edit controls by default, show when editable
-                '[data-testid="dashboard-toolbar"]': {
-                  'paddingBottom': '12px',
-                  'borderBottom': `1px solid ${DASHBOARD_TOKENS.colors.dividerDark}`,
-                  'marginBottom': '8px',
-                  '& .MuiButton-root, & .MuiIconButton-root': {
-                    height: '100%',
+        <SnapshotProvider dashboard={data}>
+          <SnapshotBridge queryClient={queryClient} dashboard={data} sourceDashboardName={sourceDashboardName} />
+          <QueryParamProvider adapter={ReactRouter6Adapter}>
+            <ChartsProvider chartsTheme={chartsTheme}>
+              <GlobalStyles
+                styles={{
+                  ...getPersesDashboardLayoutStyles(),
+                  ...getPersesTableGlobalStyles(),
+                  'html, body, #root, [data-reactroot]': {
+                    backgroundColor: DASHBOARD_TOKENS.colors.background,
+                    margin: 0,
                   },
-                  '& > .MuiBox-root:first-child': {
+                  // Dashboard toolbar: hide edit controls by default, show when editable
+                  '[data-testid="dashboard-toolbar"]': {
+                    'paddingBottom': '12px',
+                    'borderBottom': `1px solid ${DASHBOARD_TOKENS.colors.dividerDark}`,
+                    'marginBottom': '8px',
+                    '& .MuiButton-root, & .MuiIconButton-root': {
+                      height: '100%',
+                    },
+                    '& > .MuiBox-root:first-child': {
+                      display: 'none',
+                    },
+                  },
+                  'body.dashboard-editable [data-testid="dashboard-toolbar"] > .MuiBox-root:first-child': {
+                    display: 'flex',
+                  },
+                  // Panel group header hover
+                  '[data-testid="panel-group-header"]': {
+                    'backgroundColor': 'transparent',
+                    'transition': 'background-color 0.2s ease',
+                    'marginBottom': '4px',
+                    'borderRadius': '4px',
+                    '& .MuiTypography-root': {
+                      fontWeight: 600,
+                      color: DASHBOARD_TOKENS.colors.textSecondary,
+                      fontSize: '14px',
+                    },
+                    '&:hover': {
+                      backgroundColor: DASHBOARD_TOKENS.colors.brandHover,
+                    },
+                  },
+                  // Variable filter bar layout.
+                  // The AppBar inside uses color="inherit" + sx={{ backgroundColor: 'inherit' }} from perses,
+                  // so sx overrides our styleOverrides. Use a higher-specificity selector (0,2,0) to win.
+                  '[data-testid="variable-list"] .MuiAppBar-root': {
+                    backgroundColor: 'transparent',
+                  },
+                  // Live dashboards: Perses pins the variable bar with position:fixed on window scroll.
+                  '[data-testid="variable-list"] .MuiAppBar-root.mui-fixed': {
+                    zIndex: 1100,
+                    backgroundColor: 'rgba(250, 250, 250, 0.95)',
+                    backdropFilter: 'blur(8px)',
+                    borderBottom: `1px solid ${DASHBOARD_TOKENS.colors.dividerDark}`,
+                  },
+                  '[data-testid="variable-list"]': {
+                    display: 'flex',
+                    gap: '12px',
+                    alignItems: 'center',
+                  },
+                  'body.dashboard-snapshot-mode [data-testid="dashboard-toolbar"] button[aria-label="Refresh"]': {
                     display: 'none',
                   },
-                },
-                'body.dashboard-editable [data-testid="dashboard-toolbar"] > .MuiBox-root:first-child': {
-                  display: 'flex',
-                },
-                // Panel group header hover
-                '[data-testid="panel-group-header"]': {
-                  'backgroundColor': 'transparent',
-                  'transition': 'background-color 0.2s ease',
-                  'marginBottom': '4px',
-                  'borderRadius': '4px',
-                  '& .MuiTypography-root': {
-                    fontWeight: 600,
-                    color: DASHBOARD_TOKENS.colors.textSecondary,
-                    fontSize: '14px',
-                  },
-                  '&:hover': {
-                    backgroundColor: DASHBOARD_TOKENS.colors.brandHover,
-                  },
-                },
-                // Variable filter bar layout.
-                // The AppBar inside uses color="inherit" + sx={{ backgroundColor: 'inherit' }} from perses,
-                // so sx overrides our styleOverrides. Use a higher-specificity selector (0,2,0) to win.
-                '[data-testid="variable-list"] .MuiAppBar-root': {
-                  backgroundColor: 'transparent',
-                },
-                '[data-testid="variable-list"]': {
-                  display: 'flex',
-                  gap: '12px',
-                  alignItems: 'center',
-                },
-              }}
-            />
-            <HelperDashboardView
-              key={`${data.metadata.name}-${saveRefreshToken}`}
-              dashboardResource={data}
-              onSave={save}
-              isReadonly={!dashboardEditable}
-              isEditing={false}
-              isCreating={false}
-            />
-          </ChartsProvider>
-        </QueryParamProvider>
+                  // Snapshot: show frozen time range but disable changing it; keep download/view-json enabled
+                  'body.dashboard-snapshot-mode [data-testid="dashboard-toolbar"] > .MuiBox-root:nth-of-type(2) > .MuiStack-root > .MuiStack-root > :first-child':
+                    {
+                      pointerEvents: 'none',
+                      opacity: 0.85,
+                    },
+                }}
+              />
+              <HelperDashboardView
+                key={`${data.metadata.name}-${saveRefreshToken}-${snapshotTimeRangeKey}`}
+                dashboardResource={data}
+                onSave={snapshotMode ? undefined : save}
+                isReadonly={effectiveReadonly}
+                isSnapshotMode={snapshotMode}
+                isEditing={false}
+                isCreating={false}
+              />
+            </ChartsProvider>
+          </QueryParamProvider>
+        </SnapshotProvider>
       </QueryClientProvider>
     </ThemeProvider>
   )
