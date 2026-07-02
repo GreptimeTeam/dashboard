@@ -122,6 +122,11 @@ export default {
   'dashboard.perses.snapshotModalTitle': 'Save as Snapshot Dashboard',
   'dashboard.perses.snapshotModalHint':
     'Snapshot includes only panel data already loaded on screen. Wait for the dashboard to finish loading and expand collapsed panels before saving.',
+  'dashboard.perses.snapshotExportModeLabel': 'Export as',
+  'dashboard.perses.snapshotExportModeSave': 'Save to dashboards',
+  'dashboard.perses.snapshotExportModeDownload': 'Download JSON file',
+  'dashboard.perses.snapshotModalOkSave': 'Save',
+  'dashboard.perses.snapshotModalOkDownload': 'Download',
   'dashboard.perses.snapshotNameLabel': 'Snapshot dashboard name',
   'dashboard.perses.snapshotNamePlaceholder': 'my-dashboard-snapshot-20250630',
   'dashboard.perses.snapshotSaved': 'Snapshot dashboard saved',
@@ -129,6 +134,8 @@ export default {
   'dashboard.perses.snapshotCreateFailed': 'Failed to create snapshot dashboard',
   'dashboard.perses.exportSnapshot': 'Export Snapshot JSON',
   'dashboard.perses.snapshotExported': 'Snapshot JSON downloaded',
+  'dashboard.perses.snapshotExportedWithSkipped':
+    'Snapshot JSON downloaded; {count} panel queries were skipped (not loaded or unsupported)',
   'dashboard.perses.snapshotExportFailed': 'Failed to export snapshot JSON',
   'dashboard.perses.category.dashboard': 'Dashboards',
   'dashboard.perses.category.snapshot': 'Snapshots',

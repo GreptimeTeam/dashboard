@@ -119,6 +119,11 @@ export default {
   'dashboard.perses.snapshotModalTitle': '另存为 Snapshot Dashboard',
   'dashboard.perses.snapshotModalHint':
     '快照仅包含当前屏幕上已加载的 panel 数据。请先等待 dashboard 加载完成，并展开需要保存的折叠 panel。',
+  'dashboard.perses.snapshotExportModeLabel': '导出方式',
+  'dashboard.perses.snapshotExportModeSave': '保存到仪表盘',
+  'dashboard.perses.snapshotExportModeDownload': '下载 JSON 文件',
+  'dashboard.perses.snapshotModalOkSave': '保存',
+  'dashboard.perses.snapshotModalOkDownload': '下载',
   'dashboard.perses.snapshotNameLabel': 'Snapshot 仪表盘名称',
   'dashboard.perses.snapshotNamePlaceholder': 'my-dashboard-snapshot-20250630',
   'dashboard.perses.snapshotSaved': 'Snapshot 仪表盘已保存',
@@ -126,6 +131,8 @@ export default {
   'dashboard.perses.snapshotCreateFailed': '创建 Snapshot 仪表盘失败',
   'dashboard.perses.exportSnapshot': '导出 Snapshot JSON',
   'dashboard.perses.snapshotExported': 'Snapshot JSON 已下载',
+  'dashboard.perses.snapshotExportedWithSkipped':
+    'Snapshot JSON 已下载，有 {count} 条 panel 查询被跳过（未加载或不支持）',
   'dashboard.perses.snapshotExportFailed': '导出 Snapshot JSON 失败',
   'dashboard.perses.category.dashboard': '仪表盘',
   'dashboard.perses.category.snapshot': 'Snapshot',

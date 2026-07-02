@@ -203,19 +203,24 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
     a-modal(
       v-model:visible="snapshotModalVisible"
       :title="$t('dashboard.perses.snapshotModalTitle')"
+      :ok-text="snapshotForm.mode === 'save' ? $t('dashboard.perses.snapshotModalOkSave') : $t('dashboard.perses.snapshotModalOkDownload')"
       :ok-loading="isSavingSnapshot"
-      @ok="handleSaveSnapshotDashboard"
+      @ok="handleSnapshotModalConfirm"
       @cancel="handleSnapshotModalCancel"
     )
       a-alert(type="warning" style="margin-bottom: 16px")
         | {{ $t('dashboard.perses.snapshotModalHint') }}
       a-form(layout="vertical" :model="snapshotForm")
+        a-form-item(field="mode" :label="$t('dashboard.perses.snapshotExportModeLabel')")
+          a-radio-group(v-model="snapshotForm.mode" type="button")
+            a-radio(value="save") {{ $t('dashboard.perses.snapshotExportModeSave') }}
+            a-radio(value="download") {{ $t('dashboard.perses.snapshotExportModeDownload') }}
         a-form-item(field="name" :label="$t('dashboard.perses.snapshotNameLabel')")
           a-input(
             v-model="snapshotForm.name"
             allow-clear
             :placeholder="$t('dashboard.perses.snapshotNamePlaceholder')"
-            @press-enter="handleSaveSnapshotDashboard"
+            @press-enter="handleSnapshotModalConfirm"
           )
 </template>
 
@@ -294,6 +299,7 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
   })
   const snapshotForm = reactive({
     name: '',
+    mode: 'save' as 'save' | 'download',
   })
   const isCreating = ref(false)
   const isSavingSnapshot = ref(false)
@@ -424,15 +430,17 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
   const openSnapshotModal = () => {
     if (!selectedDashboard.value || isSelectedSnapshot.value) return
     snapshotForm.name = buildDefaultSnapshotName(selectedDashboard.value.name)
+    snapshotForm.mode = 'save'
     snapshotModalVisible.value = true
   }
 
   const handleSnapshotModalCancel = () => {
     snapshotForm.name = ''
+    snapshotForm.mode = 'save'
     snapshotModalVisible.value = false
   }
 
-  const handleSaveSnapshotDashboard = async () => {
+  const handleSnapshotModalConfirm = async () => {
     if (!selectedDashboard.value || isSavingSnapshot.value) return
     if (!persesIframeRef.value?.requestCreateSnapshot) {
       Message.error(t('dashboard.perses.snapshotCreateFailed'))
@@ -454,24 +462,43 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
       console.log('debug:', (result as { debug?: unknown }).debug)
       // eslint-disable-next-line no-console
       console.groupEnd()
+
       const definitionName =
         getDashboardNameFromDefinition(dashboardJSON) ||
         snapshotForm.name.trim() ||
         buildDefaultSnapshotName(selectedDashboard.value.name)
       const saveName = definitionName.endsWith('.json') ? definitionName.slice(0, -5) : definitionName
+      const skippedCount = result.skipped?.length ?? 0
+
+      if (snapshotForm.mode === 'download') {
+        downloadDashboardJson(JSON.stringify(dashboardJSON), saveName)
+        snapshotModalVisible.value = false
+        snapshotForm.name = ''
+        snapshotForm.mode = 'save'
+        if (skippedCount > 0) {
+          Message.warning(t('dashboard.perses.snapshotExportedWithSkipped', { count: skippedCount }))
+        } else {
+          Message.success(t('dashboard.perses.snapshotExported'))
+        }
+        return
+      }
 
       await persistDashboard(dashboardJSON, saveName)
       snapshotModalVisible.value = false
       snapshotForm.name = ''
+      snapshotForm.mode = 'save'
 
-      const skippedCount = result.skipped?.length ?? 0
       if (skippedCount > 0) {
         Message.warning(t('dashboard.perses.snapshotSavedWithSkipped', { count: skippedCount }))
       } else {
         Message.success(t('dashboard.perses.snapshotSaved'))
       }
     } catch (error) {
-      Message.error(t('dashboard.perses.snapshotCreateFailed'))
+      Message.error(
+        snapshotForm.mode === 'download'
+          ? t('dashboard.perses.snapshotExportFailed')
+          : t('dashboard.perses.snapshotCreateFailed')
+      )
     } finally {
       isSavingSnapshot.value = false
     }
