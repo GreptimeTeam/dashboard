@@ -287,6 +287,11 @@
       white-space: nowrap;
     }
 
+    .arco-menu-item.arco-menu-has-icon .gpt-sidebar-menu-row {
+      flex: 1 1 0%;
+      min-width: 0;
+    }
+
     .gpt-sidebar-menu-item {
       display: flex;
       align-items: center;
@@ -300,6 +305,15 @@
       color: var(--gpt-brand-600);
     }
 
+    .gpt-sidebar-menu-row {
+      display: flex;
+      flex: 1;
+      align-items: center;
+      justify-content: space-between;
+      min-width: 0;
+      gap: 4px;
+    }
+
     .gpt-sidebar-menu-text {
       flex: 1;
       min-width: 0;
@@ -311,23 +325,34 @@
       white-space: nowrap;
     }
 
+    .gpt-sidebar-menu-row .menu-button {
+      display: inline-flex;
+      flex: 0 0 auto;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .gpt-sidebar-menu-actions {
+      display: flex;
+      flex: 0 0 auto;
+      align-items: center;
+    }
+
+    .arco-menu-item:hover .gpt-sidebar-menu-row .menu-button,
+    .arco-menu-item.arco-menu-selected .gpt-sidebar-menu-row .menu-button,
+    .gpt-sidebar-menu-row .menu-button.arco-dropdown-open {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
     .arco-menu-item .arco-menu-icon svg {
       color: var(--gpt-brand-600);
     }
 
     .arco-menu-item.arco-menu-selected .arco-menu-icon svg {
       color: var(--gpt-active-icon-color);
-    }
-
-    .gpt-sidebar-menu-action {
-      display: none;
-      flex: 0 0 auto;
-      align-items: center;
-    }
-
-    .arco-menu-item:hover .gpt-sidebar-menu-action,
-    .arco-menu-item.arco-menu-selected .gpt-sidebar-menu-action {
-      display: flex;
     }
   }
 }

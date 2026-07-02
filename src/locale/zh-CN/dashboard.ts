@@ -115,7 +115,7 @@ export default {
   'dashboard.perses.skill.installUrl': 'https://github.com/GreptimeTeam/dashboard/blob/main/skills/README.md',
   'dashboard.perses.skill.installLinkText': '安装指南',
   'dashboard.perses.skill.showEntry': 'Agent Skill 安装指南',
-  'dashboard.perses.saveSnapshot': '另存为 Snapshot Dashboard',
+  'dashboard.perses.saveSnapshot': '另存为 Snapshot',
   'dashboard.perses.snapshotModalTitle': '另存为 Snapshot Dashboard',
   'dashboard.perses.snapshotModalHint':
     '快照仅包含当前屏幕上已加载的 panel 数据。请先等待 dashboard 加载完成，并展开需要保存的折叠 panel。',
@@ -130,6 +130,10 @@ export default {
   'dashboard.perses.snapshotSavedWithSkipped': '有 {count} 条 panel 查询被跳过（未加载或不支持）',
   'dashboard.perses.snapshotCreateFailed': '创建 Snapshot 仪表盘失败',
   'dashboard.perses.exportSnapshot': '导出 Snapshot JSON',
+  'dashboard.perses.menuDelete': '删除',
+  'dashboard.perses.deleteConfirm': '确定要删除该仪表盘吗？',
+  'dashboard.perses.deleteConfirmWithName': '确定要删除仪表盘「{name}」吗？',
+  'dashboard.perses.menuSelectDashboardFirst': '请先选中该仪表盘',
   'dashboard.perses.snapshotExported': 'Snapshot JSON 已下载',
   'dashboard.perses.snapshotExportedWithSkipped':
     'Snapshot JSON 已下载，有 {count} 条 panel 查询被跳过（未加载或不支持）',

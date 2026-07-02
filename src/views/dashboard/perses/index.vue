@@ -11,7 +11,13 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
       a-card.gpt-page-sidebar(:bordered="false")
         template(#title)
           a-space.space-between(fill style="width: 100%")
-            | {{ $t('menu.dashboard.perses') }}
+            a-space(:size="4")
+              span {{ $t('menu.dashboard.perses') }}
+              a-tooltip(mini position="bottom" :content="$t('common.refresh')")
+                a-button(type="text" size="small" @click="handleRefresh")
+                  template(#icon)
+                    svg.icon-16
+                      use(href="#refresh")
             a-button-group
               a-tooltip(
                 v-if="skillAlertDismissed"
@@ -23,11 +29,6 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
                   template(#icon)
                     svg.icon-16
                       use(href="#question")
-              a-tooltip(mini position="bottom" :content="$t('common.refresh')")
-                a-button(type="text" size="small" @click="handleRefresh")
-                  template(#icon)
-                    svg.icon-16
-                      use(href="#refresh")
               a-button(type="text" size="small" @click="openCreateModal")
                 template(#icon)
                   svg.icon-16
@@ -51,26 +52,17 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
                   template(#icon)
                     svg.icon-15
                       use(href="#details")
-                  span.gpt-sidebar-menu-text {{ item.name }}
-                  a-tooltip.menu-item-snapshot.gpt-sidebar-menu-action(
-                    v-if="item.id === selectedId"
-                    mini
-                    position="left"
-                    :content="$t('dashboard.perses.saveSnapshot')"
-                  ) 
-                    IconClockCircle.delete-btn(@click.stop="openSnapshotModal")
-                  a-tooltip.menu-item-delete.gpt-sidebar-menu-action(
-                    v-if="item.id === selectedId"
-                    mini
-                    position="left"
-                    content="Delete"
-                  )
-                    a-popconfirm(
-                      content="Are you sure to delete this dashboard?"
-                      type="warning"
-                      @ok="handleDeleteDashboard(item)"
-                    )
-                      IconDelete.delete-btn
+                  .gpt-sidebar-menu-row
+                    span.gpt-sidebar-menu-text {{ item.name }}
+                    .gpt-sidebar-menu-actions(@click.stop)
+                      DashboardSidebarMenu(
+                        kind="live"
+                        :is-selected="item.id === selectedId"
+                        :dashboard-name="item.name"
+                        @saveSnapshot="openSnapshotSaveModal(item)"
+                        @exportSnapshotJson="handleExportSnapshotJsonFromLive(item)"
+                        @delete="handleDeleteDashboard(item)"
+                      )
               a-menu-item-group.gpt-sidebar-menu-category(v-if="groupedSidebarDashboards.snapshots.length")
                 template(#title)
                   span.gpt-sidebar-menu-category-text {{ $t('dashboard.perses.category.snapshot') }}
@@ -83,26 +75,16 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
                   template(#icon)
                     svg.icon-15
                       use(href="#details")
-                  span.gpt-sidebar-menu-text {{ item.name }}
-                  a-tooltip.menu-item-export.gpt-sidebar-menu-action(
-                    v-if="item.id === selectedId"
-                    mini
-                    position="left"
-                    :content="$t('dashboard.perses.exportSnapshot')"
-                  )
-                    IconDownload.delete-btn(@click.stop="handleExportSnapshot(item)")
-                  a-tooltip.menu-item-delete.gpt-sidebar-menu-action(
-                    v-if="item.id === selectedId"
-                    mini
-                    position="left"
-                    content="Delete"
-                  ) 
-                    a-popconfirm(
-                      content="Are you sure to delete this dashboard?"
-                      type="warning"
-                      @ok="handleDeleteDashboard(item)"
-                    )
-                      IconDelete.delete-btn
+                  .gpt-sidebar-menu-row
+                    span.gpt-sidebar-menu-text {{ item.name }}
+                    .gpt-sidebar-menu-actions(@click.stop)
+                      DashboardSidebarMenu(
+                        kind="snapshot"
+                        :is-selected="item.id === selectedId"
+                        :dashboard-name="item.name"
+                        @exportSnapshotJson="handleExportSnapshot(item)"
+                        @delete="handleDeleteDashboard(item)"
+                      )
             .perses-skill-alert-wrap(v-if="!skillAlertDismissed")
               a-alert.perses-skill-alert(
                 type="info"
@@ -203,7 +185,7 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
     a-modal(
       v-model:visible="snapshotModalVisible"
       :title="$t('dashboard.perses.snapshotModalTitle')"
-      :ok-text="snapshotForm.mode === 'save' ? $t('dashboard.perses.snapshotModalOkSave') : $t('dashboard.perses.snapshotModalOkDownload')"
+      :ok-text="$t('dashboard.perses.snapshotModalOkSave')"
       :ok-loading="isSavingSnapshot"
       @ok="handleSnapshotModalConfirm"
       @cancel="handleSnapshotModalCancel"
@@ -211,10 +193,6 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
       a-alert(type="warning" style="margin-bottom: 16px")
         | {{ $t('dashboard.perses.snapshotModalHint') }}
       a-form(layout="vertical" :model="snapshotForm")
-        a-form-item(field="mode" :label="$t('dashboard.perses.snapshotExportModeLabel')")
-          a-radio-group(v-model="snapshotForm.mode" type="button")
-            a-radio(value="save") {{ $t('dashboard.perses.snapshotExportModeSave') }}
-            a-radio(value="download") {{ $t('dashboard.perses.snapshotExportModeDownload') }}
         a-form-item(field="name" :label="$t('dashboard.perses.snapshotNameLabel')")
           a-input(
             v-model="snapshotForm.name"
@@ -229,7 +207,6 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
   import { useStorage } from '@vueuse/core'
   import { storeToRefs } from 'pinia'
   import { Message } from '@arco-design/web-vue'
-  import { IconClockCircle, IconDelete, IconDownload } from '@arco-design/web-vue/es/icon'
   import { useRoute, useRouter } from 'vue-router'
   import { useAppStore } from '@/store'
   import PersesDashboardIframe from '@/perses-dashboard/vue/PersesDashboardIframe.vue'
@@ -248,6 +225,7 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
   import downloadDashboardJson from '@/perses-dashboard/snapshot/exportSnapshotJson'
   import { deleteDashboard, listDashboards, saveDashboard } from '@/api/dashboards'
   import { useI18n } from 'vue-i18n'
+  import DashboardSidebarMenu from './components/DashboardSidebarMenu.vue'
 
   type DashboardItem = {
     id: string
@@ -299,7 +277,6 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
   })
   const snapshotForm = reactive({
     name: '',
-    mode: 'save' as 'save' | 'download',
   })
   const isCreating = ref(false)
   const isSavingSnapshot = ref(false)
@@ -427,21 +404,25 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
     return newItem
   }
 
-  const openSnapshotModal = () => {
-    if (!selectedDashboard.value || isSelectedSnapshot.value) return
-    snapshotForm.name = buildDefaultSnapshotName(selectedDashboard.value.name)
-    snapshotForm.mode = 'save'
+  const resolveSnapshotSaveName = (dashboardJSON: Record<string, unknown>, fallbackName: string) => {
+    const definitionName = getDashboardNameFromDefinition(dashboardJSON) || fallbackName
+    return definitionName.endsWith('.json') ? definitionName.slice(0, -5) : definitionName
+  }
+
+  const openSnapshotSaveModal = (item: DashboardItem) => {
+    if (item.id !== selectedId.value || isSnapshotDashboardContent(item.file.content)) return
+    snapshotForm.name = buildDefaultSnapshotName(item.name)
     snapshotModalVisible.value = true
   }
 
   const handleSnapshotModalCancel = () => {
     snapshotForm.name = ''
-    snapshotForm.mode = 'save'
     snapshotModalVisible.value = false
   }
 
   const handleSnapshotModalConfirm = async () => {
-    if (!selectedDashboard.value || isSavingSnapshot.value) return
+    const item = selectedDashboard.value
+    if (!item || isSavingSnapshot.value) return
     if (!persesIframeRef.value?.requestCreateSnapshot) {
       Message.error(t('dashboard.perses.snapshotCreateFailed'))
       return
@@ -463,42 +444,52 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
       // eslint-disable-next-line no-console
       console.groupEnd()
 
-      const definitionName =
-        getDashboardNameFromDefinition(dashboardJSON) ||
-        snapshotForm.name.trim() ||
-        buildDefaultSnapshotName(selectedDashboard.value.name)
-      const saveName = definitionName.endsWith('.json') ? definitionName.slice(0, -5) : definitionName
+      const saveName = resolveSnapshotSaveName(
+        dashboardJSON,
+        snapshotForm.name.trim() || buildDefaultSnapshotName(item.name)
+      )
       const skippedCount = result.skipped?.length ?? 0
-
-      if (snapshotForm.mode === 'download') {
-        downloadDashboardJson(JSON.stringify(dashboardJSON), saveName)
-        snapshotModalVisible.value = false
-        snapshotForm.name = ''
-        snapshotForm.mode = 'save'
-        if (skippedCount > 0) {
-          Message.warning(t('dashboard.perses.snapshotExportedWithSkipped', { count: skippedCount }))
-        } else {
-          Message.success(t('dashboard.perses.snapshotExported'))
-        }
-        return
-      }
 
       await persistDashboard(dashboardJSON, saveName)
       snapshotModalVisible.value = false
       snapshotForm.name = ''
-      snapshotForm.mode = 'save'
 
       if (skippedCount > 0) {
         Message.warning(t('dashboard.perses.snapshotSavedWithSkipped', { count: skippedCount }))
       } else {
         Message.success(t('dashboard.perses.snapshotSaved'))
       }
-    } catch (error) {
-      Message.error(
-        snapshotForm.mode === 'download'
-          ? t('dashboard.perses.snapshotExportFailed')
-          : t('dashboard.perses.snapshotCreateFailed')
-      )
+    } catch {
+      Message.error(t('dashboard.perses.snapshotCreateFailed'))
+    } finally {
+      isSavingSnapshot.value = false
+    }
+  }
+
+  const handleExportSnapshotJsonFromLive = async (item: DashboardItem) => {
+    if (item.id !== selectedId.value) return
+    if (!persesIframeRef.value?.requestCreateSnapshot) {
+      Message.error(t('dashboard.perses.snapshotExportFailed'))
+      return
+    }
+
+    try {
+      isSavingSnapshot.value = true
+      const defaultName = buildDefaultSnapshotName(item.name)
+      const result = await persesIframeRef.value.requestCreateSnapshot(defaultName)
+      const dashboardJSON = result.dashboard as Record<string, unknown>
+      const saveName = resolveSnapshotSaveName(dashboardJSON, defaultName)
+      const skippedCount = result.skipped?.length ?? 0
+
+      downloadDashboardJson(JSON.stringify(dashboardJSON), saveName)
+
+      if (skippedCount > 0) {
+        Message.warning(t('dashboard.perses.snapshotExportedWithSkipped', { count: skippedCount }))
+      } else {
+        Message.success(t('dashboard.perses.snapshotExported'))
+      }
+    } catch {
+      Message.error(t('dashboard.perses.snapshotExportFailed'))
     } finally {
       isSavingSnapshot.value = false
     }
@@ -926,6 +917,10 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
 
   :deep(.delete-btn) {
     color: var(--gpt-brand-600);
+  }
+
+  :deep(.gpt-sidebar-menu-row .rotate-90) {
+    transform: rotate(90deg);
   }
 
   .perses-skill-alert-wrap {

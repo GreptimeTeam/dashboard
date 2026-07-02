@@ -118,7 +118,7 @@ export default {
   'dashboard.perses.skill.installUrl': 'https://github.com/GreptimeTeam/dashboard/blob/main/skills/README.md',
   'dashboard.perses.skill.installLinkText': 'Install guide',
   'dashboard.perses.skill.showEntry': 'Agent Skill install guide',
-  'dashboard.perses.saveSnapshot': 'Save as Snapshot Dashboard',
+  'dashboard.perses.saveSnapshot': 'Save as Snapshot',
   'dashboard.perses.snapshotModalTitle': 'Save as Snapshot Dashboard',
   'dashboard.perses.snapshotModalHint':
     'Snapshot includes only panel data already loaded on screen. Wait for the dashboard to finish loading and expand collapsed panels before saving.',
@@ -133,6 +133,10 @@ export default {
   'dashboard.perses.snapshotSavedWithSkipped': '{count} panel queries were skipped (not loaded or unsupported)',
   'dashboard.perses.snapshotCreateFailed': 'Failed to create snapshot dashboard',
   'dashboard.perses.exportSnapshot': 'Export Snapshot JSON',
+  'dashboard.perses.menuDelete': 'Delete',
+  'dashboard.perses.deleteConfirm': 'Are you sure you want to delete this dashboard?',
+  'dashboard.perses.deleteConfirmWithName': 'Are you sure you want to delete dashboard "{name}"?',
+  'dashboard.perses.menuSelectDashboardFirst': 'Select this dashboard first',
   'dashboard.perses.snapshotExported': 'Snapshot JSON downloaded',
   'dashboard.perses.snapshotExportedWithSkipped':
     'Snapshot JSON downloaded; {count} panel queries were skipped (not loaded or unsupported)',
