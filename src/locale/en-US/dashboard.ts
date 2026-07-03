@@ -121,7 +121,7 @@ export default {
   'dashboard.perses.saveSnapshot': 'Save as Snapshot',
   'dashboard.perses.snapshotModalTitle': 'Save as Snapshot Dashboard',
   'dashboard.perses.snapshotModalHint':
-    'Snapshot includes only panel data already loaded on screen. Wait for the dashboard to finish loading and expand collapsed panels before saving.',
+    'Snapshot includes only panel data already loaded on screen. expand the panel to save the data.',
   'dashboard.perses.snapshotExportModeLabel': 'Export as',
   'dashboard.perses.snapshotExportModeSave': 'Save to dashboards',
   'dashboard.perses.snapshotExportModeDownload': 'Download JSON file',
@@ -145,7 +145,7 @@ export default {
   'dashboard.perses.category.snapshot': 'Snapshots',
   'dashboard.perses.createModalTitle': 'New Dashboard',
   'dashboard.perses.createModeBlank': 'Blank dashboard',
-  'dashboard.perses.createModeImport': 'Import JSON',
+  'dashboard.perses.createModeImport': 'From JSON',
   'dashboard.perses.createNameLabel': 'Dashboard name',
   'dashboard.perses.createNamePlaceholder': 'dashboard-name',
   'dashboard.perses.importJsonLabel': 'Dashboard JSON',

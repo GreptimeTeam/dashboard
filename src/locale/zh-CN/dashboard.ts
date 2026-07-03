@@ -142,7 +142,7 @@ export default {
   'dashboard.perses.category.snapshot': 'Snapshot',
   'dashboard.perses.createModalTitle': '新建仪表盘',
   'dashboard.perses.createModeBlank': '空白仪表盘',
-  'dashboard.perses.createModeImport': '导入 JSON',
+  'dashboard.perses.createModeImport': '从 JSON 创建',
   'dashboard.perses.createNameLabel': '仪表盘名称',
   'dashboard.perses.createNamePlaceholder': 'dashboard-name',
   'dashboard.perses.importJsonLabel': '仪表盘 JSON',
