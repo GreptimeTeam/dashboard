@@ -798,48 +798,8 @@ a-dropdown#td-context(
       }
     }
 
-    // Row hover tints all cells; td:hover raises specificity for the active cell only.
-    :deep(
-        .arco-table-hover:not(.arco-table-dragging)
-          .arco-table-tr:not(.arco-table-tr-empty):not(.arco-table-tr-summary):hover
-          .arco-table-td:not(.arco-table-col-fixed-left):not(.arco-table-col-fixed-right)
-      ) {
-      background-color: var(--gpt-table-row-hover-bg);
-    }
-
-    :deep(
-        .arco-table-hover:not(.arco-table-dragging)
-          .arco-table-tr:not(.arco-table-tr-empty):not(.arco-table-tr-summary):hover
-          .arco-table-td:not(.arco-table-col-fixed-left):not(.arco-table-col-fixed-right):hover
-      ) {
-      background-color: var(--gpt-table-cell-hover-bg);
-    }
-
-    :deep(
-        .arco-table-hover:not(.arco-table-dragging)
-          .arco-table-tr:not(.arco-table-tr-empty):not(.arco-table-tr-summary):hover
-          .arco-table-td.arco-table-col-fixed-left::before
-      ),
-    :deep(
-        .arco-table-hover:not(.arco-table-dragging)
-          .arco-table-tr:not(.arco-table-tr-empty):not(.arco-table-tr-summary):hover
-          .arco-table-td.arco-table-col-fixed-right::before
-      ) {
-      background-color: var(--gpt-table-row-hover-bg);
-    }
-
-    :deep(
-        .arco-table-hover:not(.arco-table-dragging)
-          .arco-table-tr:not(.arco-table-tr-empty):not(.arco-table-tr-summary):hover
-          .arco-table-td.arco-table-col-fixed-left:hover::before
-      ),
-    :deep(
-        .arco-table-hover:not(.arco-table-dragging)
-          .arco-table-tr:not(.arco-table-tr-empty):not(.arco-table-tr-summary):hover
-          .arco-table-td.arco-table-col-fixed-right:hover::before
-      ) {
-      background-color: var(--gpt-table-cell-hover-bg);
-    }
+    // Row hover background is provided by Arco Table's built-in hoverable styles
+    // via the theme variable --gpt-table-row-hover-bg; no override needed here.
   }
 
   :deep(.arco-table-tr-empty .arco-table-td) {
