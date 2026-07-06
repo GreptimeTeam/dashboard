@@ -380,10 +380,6 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-
-    .star-marketing-card {
-      margin: 0 4px;
-    }
   }
 
   .navbar--collapsed .support-section {
