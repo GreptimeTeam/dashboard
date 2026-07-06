@@ -1,34 +1,48 @@
 <template lang="pug">
-a-layout.status-page.new-layout
-  a-layout-content.status-page-content
-    a-spin(:loading="loading")
-      a-card.status-build-card(v-if="displayRows.length" :bordered="true")
-        template(#title)
-          .status-card-title
-            svg.icon-15.status-card-title-icon
-              use(href="#cluster")
-            span {{ t('status.buildInformation') }}
-        template(#extra)
-          a-space(:size="8")
-            a-button(
-              type="text"
-              size="small"
-              :loading="loading"
-              @click="refreshStatus"
-            )
-              template(#icon)
-                svg.icon-16
-                  use(href="#refresh")
-              | {{ t('common.refresh') }}
-            TextCopyable(copyTooltip="Copy to Clipboard" :data="statusJson" :showData="false")
-        .status-info-list
-          .status-info-row(v-for="row in displayRows" :key="row.key")
-            .status-info-label
-              svg.icon-15.status-info-icon
-                use(:href="`#${row.icon}`")
-              span {{ row.label }}
-            .status-info-value(:class="{ 'is-mono': row.mono }") {{ row.value }}
-      EmptyStatus(v-else :data="t('status.unsupported')")
+.query-layout.query-layout--surface.status-page.query-container
+  .page-header.gpt-page-header.status-page-header
+    .page-header-main
+      | {{ $t('menu.dashboard.status') }}
+      span.page-header-subtitle.gpt-text-page-subtitle
+        | {{ $t('status.subtitle') }}
+        a.status-page-learn-more(
+          href="https://docs.greptime.com/user-guide/deployments-administration/monitoring/check-db-status/"
+          target="_blank"
+          rel="noopener noreferrer"
+        )
+          | Learn more
+          svg.icon-12
+            use(href="#import")
+  .content-wrapper.query-layout-cards
+    .status-content-center
+      a-spin(:loading="loading")
+        a-card.status-build-card.gpt-surface-card(v-if="displayRows.length" :bordered="false")
+          template(#title)
+            .status-card-title
+              svg.icon-15.status-card-title-icon
+                use(href="#cluster")
+              span.gpt-surface-card__title {{ t('status.buildInformation') }}
+          template(#extra)
+            a-space(:size="8")
+              a-button(
+                type="text"
+                size="small"
+                :loading="loading"
+                @click="refreshStatus"
+              )
+                template(#icon)
+                  svg.icon-16
+                    use(href="#refresh")
+                | {{ t('common.refresh') }}
+              TextCopyable(copyTooltip="Copy to Clipboard" :data="statusJson" :showData="false")
+          .status-info-list
+            .status-info-row(v-for="row in displayRows" :key="row.key")
+              .status-info-label
+                svg.icon-15.status-info-icon
+                  use(:href="`#${row.icon}`")
+                span {{ row.label }}
+              .status-info-value(:class="{ 'is-mono': row.mono }") {{ row.value }}
+        EmptyStatus(v-else :data="t('status.unsupported')")
 </template>
 
 <script lang="ts" setup name="Status">
@@ -109,51 +123,75 @@ a-layout.status-page.new-layout
   })
 </script>
 
+<style lang="less">
+  @import '@/assets/style/query-layout.less';
+</style>
+
 <style lang="less" scoped>
   .status-page {
-    height: 100%;
-    padding: var(--gpt-page-padding-y) var(--gpt-page-padding-x);
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
     background: var(--gpt-bg-app);
+
+    &.query-container {
+      height: auto;
+      min-height: calc(100vh - var(--footer-height));
+      overflow: visible;
+    }
+
+    .content-wrapper {
+      flex: 0 0 auto;
+      align-items: center;
+      width: 100%;
+      overflow: visible;
+    }
   }
 
-  .status-page-content {
+  .status-content-center {
+    flex-shrink: 0;
+    width: 850px;
+    max-width: 100%;
+    margin-inline: auto;
+
+    :deep(.arco-spin) {
+      display: block;
+      width: 100%;
+    }
+  }
+
+  .status-page-header {
+    flex-shrink: 0;
+    justify-content: space-between;
+    gap: var(--gpt-gap-lg);
+  }
+
+  .page-header-main {
     display: flex;
-    justify-content: center;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 12px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .status-page-learn-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+    font-weight: 500;
   }
 
   .status-build-card {
     width: 850px;
     max-width: 100%;
-    border: 1px solid var(--gpt-border-default);
-    border-radius: var(--gpt-radius-md);
-    background: var(--gpt-bg-panel);
-    box-shadow: var(--gpt-shadow-sm);
-
-    :deep(.arco-card-header) {
-      min-height: var(--gpt-size-region-bar);
-      padding: var(--gpt-toolbar-padding);
-      background: var(--gpt-bg-header);
-      border-bottom: 1px solid var(--gpt-border-default);
-    }
-
-    :deep(.arco-card-header-title) {
-      flex: 1;
-      min-width: 0;
-    }
-
-    :deep(.arco-card-header-extra) {
-      flex-shrink: 0;
-    }
   }
 
   .status-card-title {
     display: flex;
     align-items: center;
     gap: 8px;
-    color: var(--gpt-text-primary);
-    font-size: var(--gpt-font-md);
-    font-weight: 700;
-    line-height: 1.3;
   }
 
   .status-card-title-icon {

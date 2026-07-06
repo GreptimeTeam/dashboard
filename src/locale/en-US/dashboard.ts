@@ -169,6 +169,7 @@ export default {
   'dashboard.perses.createFailed': 'Failed to create dashboard',
   'dashboard.perses.saveAsSnapshotHint':
     'Saved as snapshot dashboard. Use Import JSON next time to import snapshots directly.',
+  'status.subtitle': 'Server version, build details, and deployment information.',
   'status.buildInformation': 'Build Information',
   'status.version': 'Version',
   'status.commit': 'Commit',
