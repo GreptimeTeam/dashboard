@@ -5,6 +5,7 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
       svg.logo
         use(href="#logo")
       span.logo-text Greptime
+      span.version-badge(v-if="greptimeVersion") {{ greptimeVersion }}
     svg.logo(v-else)
       use(href="#logo")
   a-layout-content.menu-content
@@ -26,6 +27,20 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
         template(#icon)
           svg.icon-18(:id="`menu-${item.name}`")
             use(:href="`#${item.meta.icon}`")
+    .support-divider(v-if="showSupportSection")
+    .support-section(v-if="showSupportSection")
+      a-dropdown.support-dropdown(trigger="hover" position="right" :popup-max-height="false")
+        .support-trigger
+          svg.icon-18
+            use(href="#community")
+          span.support-label {{ $t('menu.support') }}
+        template(#content)
+          a-doption(v-for="{ label, link } in supportLinks")
+            a-link.navbar-dropdown-link(target="_blank" :href="link")
+              | {{ label }}
+          a-doption.news(@click="showNews")
+            | {{ $t('menu.news') }}
+      StarMarketingCard.star-marketing-card(v-if="!starCardClosed && !navbarCollapsed" @close="starCardClosed = true")
   a-layout-footer
     ul.footer(:class="{ 'footer--expanded': !navbarCollapsed }")
       li.footer-top-divider(v-if="navbarCollapsed" aria-hidden="true")
@@ -49,17 +64,6 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
               a-doption(value="zh-CN")
                 span 中文
                 span.locale-current(v-if="currentLocale === 'zh-CN'") ✓
-          a-dropdown.menu-dropdown(trigger="hover" position="right" :popup-max-height="false")
-            a-button.menu-button(type="text")
-              template(#icon)
-                svg.icon-16
-                  use(href="#Icon13")
-            template(#content)
-              a-doption(v-for="{ label, link } in dropDownLinks")
-                a-link.navbar-dropdown-link(target="_blank" :href="link")
-                  | {{ label }}
-              a-doption.news(@click="showNews")
-                | {{ $t('menu.news') }}
         .footer-end
           a-tooltip(:content="navbarCollapsed ? $t('dashboard.showSidebar') : $t('dashboard.hideSidebar')")
             a-button.footer-collapse-btn(type="text" @click="toggleMenuCollapse")
@@ -70,6 +74,7 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
 </template>
 
 <script lang="ts" setup name="NavBar">
+  import { useStorage } from '@vueuse/core'
   import {
     queryFocusNavExpanded,
     useNavbarLayoutCollapsed,
@@ -78,8 +83,10 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
   import { listenerRouteChange } from '@/utils/route-listener'
   import { useNews } from '@/hooks/news'
   import useLocale from '@/hooks/locale'
+  import useGreptimeVersion from '@/composables/use-greptime-version'
   import useMenuTree from '../menu/use-menu-tree'
   import NewsModal from './news-modal.vue'
+  import StarMarketingCard from './star-marketing-card.vue'
 
   const router = useRouter()
   const appStore = useAppStore()
@@ -90,6 +97,7 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
   const { menuTree } = useMenuTree()
   const { newsList, isLoadingNews } = useNews()
   const { currentLocale, onChangeLocale } = useLocale()
+  const { version: greptimeVersion } = useGreptimeVersion()
 
   const localeTooltip = computed(() => (currentLocale.value === 'zh-CN' ? 'Language / 中文' : 'Language / English'))
 
@@ -100,10 +108,12 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
   }
   const newsListMutable = computed(() => (newsList.value ? [...newsList.value] : []))
   const newsModal = ref()
+  const starCardClosed = useStorage('starMarketingCardClosed', false)
+  const showSupportSection = import.meta.env.VITE_APP_NAME !== 'enterprise'
 
   const menu = menuTree.value[0].children
 
-  const dropDownLinks = [
+  const supportLinks = [
     {
       link: 'https://greptime.com/',
       label: 'Home',
@@ -238,6 +248,18 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
     white-space: nowrap;
   }
 
+  .version-badge {
+    flex-shrink: 0;
+    padding: 2px 6px;
+    color: var(--gpt-text-secondary);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.2;
+    border: 1px solid var(--gpt-border-default);
+    border-radius: var(--gpt-radius-sm);
+    background: var(--gpt-bg-panel);
+  }
+
   .menu-content {
     overflow-x: hidden;
     overflow-y: auto;
@@ -323,6 +345,69 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
 
   :deep(.arco-menu-collapsed .arco-menu-item-inner) {
     display: none;
+  }
+
+  .support-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+
+    .support-dropdown {
+      width: 100%;
+    }
+
+    .support-trigger {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 4px;
+      padding: 8px 12px;
+      color: @menu-light-color-item_default;
+      font-size: 12px;
+      line-height: 20px;
+      border-radius: var(--gpt-radius-sm);
+      cursor: pointer;
+
+      &:hover {
+        color: @menu-light-color-item_hover;
+        background: @menu-light-color-bg-item_hover;
+      }
+    }
+
+    .support-label {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .star-marketing-card {
+      margin: 0 4px;
+    }
+  }
+
+  .navbar--collapsed .support-section {
+    padding: 4px;
+
+    .support-trigger {
+      justify-content: center;
+      margin: 0;
+      padding: 8px;
+    }
+
+    .support-label {
+      display: none;
+    }
+  }
+
+  .support-divider {
+    height: 0;
+    margin: 8px 12px;
+    border-top: 1px solid var(--gpt-border-default);
+  }
+
+  .navbar--collapsed .support-divider {
+    margin: 8px;
   }
 
   .footer {
