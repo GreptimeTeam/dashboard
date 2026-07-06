@@ -12,6 +12,9 @@ import { QueryParamProvider } from 'use-query-params'
 import { ReactRouter6Adapter } from 'use-query-params/adapters/react-router-6'
 import HelperDashboardView from './DashboardView'
 import { useWorkbenchContext } from './WorkbenchProvider'
+import SnapshotBridge from './SnapshotBridge'
+import { SnapshotDashboardShell, getSnapshotViewRemountKey } from './SnapshotViewDashboard'
+import { isSnapshotDashboard } from '../snapshot/isSnapshotDashboard'
 import DASHBOARD_TOKENS from './Dashboard.styles'
 import getPersesDashboardLayoutStyles, { getPersesDashboardComponents } from './theme/persesDashboardTheme'
 import { getGptTablePalette, getPersesTableComponents, getPersesTableGlobalStyles } from './theme/persesTableTheme'
@@ -604,14 +607,16 @@ export default function Dashboard(props: DashboardProps = {}) {
     },
   } as any)
 
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        refetchOnWindowFocus: false,
-        retry: 0,
+  const queryClient = React.useRef(
+    new QueryClient({
+      defaultOptions: {
+        queries: {
+          refetchOnWindowFocus: false,
+          retry: 0,
+        },
       },
-    },
-  })
+    })
+  ).current
 
   const save = React.useCallback(
     async (dashboardJSON: DashboardResource | EphemeralDashboardResource): Promise<boolean> => {
@@ -659,57 +664,95 @@ export default function Dashboard(props: DashboardProps = {}) {
     [name, file]
   )
 
-  const INIT_DATA: DashboardResource = {
-    kind: 'Dashboard',
-    metadata: {
-      name: name.split('.')[0],
-      project: 'default',
-      version: 0,
-    },
-    spec: {
-      display: {
+  const INIT_DATA: DashboardResource = React.useMemo(
+    () => ({
+      kind: 'Dashboard',
+      metadata: {
         name: name.split('.')[0],
+        project: 'default',
+        version: 0,
       },
-      duration: DEFAULT_DASHBOARD_DURATION,
-      refreshInterval: DEFAULT_REFRESH_INTERVAL,
-      variables: [],
-      layouts: [],
-      panels: {},
-    },
-  }
+      spec: {
+        display: {
+          name: name.split('.')[0],
+        },
+        duration: DEFAULT_DASHBOARD_DURATION,
+        refreshInterval: DEFAULT_REFRESH_INTERVAL,
+        variables: [],
+        layouts: [],
+        panels: {},
+      },
+    }),
+    [name]
+  )
 
-  let data: DashboardResource | EphemeralDashboardResource
-  try {
-    data = ensureTraceTableLinks(JSON.parse(file.content) || INIT_DATA)
+  const parsedDashboard = React.useMemo(() => {
+    try {
+      const data = ensureTraceTableLinks(JSON.parse(file.content) || INIT_DATA)
 
-    if (data.spec?.panels) {
-      Object.values(data.spec.panels).forEach((panel: any) => {
-        if (panel.spec?.plugin?.kind === 'TimeSeriesChart') {
-          if (panel.spec?.yAxis?.format?.unit === 'percent-decimal' && panel.spec?.yAxis?.max === undefined) {
-            if (!panel.spec.yAxis) {
-              panel.spec.yAxis = {}
+      if (data.spec?.panels) {
+        Object.values(data.spec.panels).forEach((panel: any) => {
+          if (panel.spec?.plugin?.kind === 'TimeSeriesChart') {
+            if (panel.spec?.yAxis?.format?.unit === 'percent-decimal' && panel.spec?.yAxis?.max === undefined) {
+              if (!panel.spec.yAxis) {
+                panel.spec.yAxis = {}
+              }
+              panel.spec.yAxis.max = 1
             }
-            panel.spec.yAxis.max = 1
-          }
 
-          if (panel.spec?.thresholds && (!panel.spec.thresholds.steps || panel.spec.thresholds.steps.length === 0)) {
-            delete panel.spec.thresholds
+            if (panel.spec?.thresholds && (!panel.spec.thresholds.steps || panel.spec.thresholds.steps.length === 0)) {
+              delete panel.spec.thresholds
+            }
           }
-        }
-      })
+        })
+      }
+
+      return { data, error: null as Error | null }
+    } catch (error) {
+      return {
+        data: null,
+        error: error instanceof Error ? error : new Error(String(error)),
+      }
     }
-  } catch (error) {
+  }, [INIT_DATA, file.content])
+
+  const snapshotMode = isSnapshotDashboard(parsedDashboard.data ?? undefined)
+
+  if (parsedDashboard.error || !parsedDashboard.data) {
     return (
       <div style={{ padding: '20px', color: 'red' }}>
         <h3>Error parsing dashboard JSON</h3>
-        <pre>{String(error)}</pre>
+        <pre>{String(parsedDashboard.error)}</pre>
       </div>
     )
   }
 
+  const { data } = parsedDashboard
+
+  const effectiveReadonly = !dashboardEditable || snapshotMode
+  const sourceDashboardName = name.split('.')[0]
+  const dashboardViewKey = snapshotMode
+    ? getSnapshotViewRemountKey(data, saveRefreshToken)
+    : `${data.metadata.name}-${saveRefreshToken}`
+
+  const dashboardView = (
+    <HelperDashboardView
+      key={dashboardViewKey}
+      dashboardResource={data}
+      onSave={snapshotMode ? undefined : save}
+      isReadonly={effectiveReadonly}
+      isSnapshotMode={snapshotMode}
+      isEditing={false}
+      isCreating={false}
+    />
+  )
+
   return (
     <ThemeProvider theme={muiTheme}>
       <QueryClientProvider client={queryClient}>
+        {!snapshotMode && (
+          <SnapshotBridge queryClient={queryClient} dashboard={data} sourceDashboardName={sourceDashboardName} />
+        )}
         <QueryParamProvider adapter={ReactRouter6Adapter}>
           <ChartsProvider chartsTheme={chartsTheme}>
             <GlobalStyles
@@ -756,6 +799,12 @@ export default function Dashboard(props: DashboardProps = {}) {
                 '[data-testid="variable-list"] .MuiAppBar-root': {
                   backgroundColor: 'transparent',
                 },
+                '[data-testid="variable-list"] .MuiAppBar-root.mui-fixed': {
+                  zIndex: 1100,
+                  backgroundColor: 'rgba(250, 250, 250, 0.95)',
+                  backdropFilter: 'blur(8px)',
+                  borderBottom: `1px solid ${DASHBOARD_TOKENS.colors.dividerDark}`,
+                },
                 '[data-testid="variable-list"]': {
                   display: 'flex',
                   gap: '12px',
@@ -763,14 +812,11 @@ export default function Dashboard(props: DashboardProps = {}) {
                 },
               }}
             />
-            <HelperDashboardView
-              key={`${data.metadata.name}-${saveRefreshToken}`}
-              dashboardResource={data}
-              onSave={save}
-              isReadonly={!dashboardEditable}
-              isEditing={false}
-              isCreating={false}
-            />
+            {snapshotMode ? (
+              <SnapshotDashboardShell dashboard={data}>{dashboardView}</SnapshotDashboardShell>
+            ) : (
+              dashboardView
+            )}
           </ChartsProvider>
         </QueryParamProvider>
       </QueryClientProvider>

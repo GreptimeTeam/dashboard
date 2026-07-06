@@ -9,6 +9,18 @@ import * as timeseriesChartPlugin from '@perses-dev/timeseries-chart-plugin'
 import * as greptimedbPlugin from '@perses-dev/greptimedb-plugin'
 import { PluginLoader, PluginModuleResource, dynamicImportPluginLoader } from '@perses-dev/plugin-system'
 import { buildDefaultTraceLink } from '../traceLink'
+import {
+  EmbeddedSnapshotLogQuery,
+  EmbeddedSnapshotTimeSeriesQuery,
+  EmbeddedSnapshotTraceQuery,
+  getEmbeddedSnapshotPluginModule,
+} from '../snapshot/plugins/embeddedSnapshotPlugins'
+
+const embeddedSnapshotPluginModule = {
+  EmbeddedSnapshotTimeSeriesQuery,
+  EmbeddedSnapshotLogQuery,
+  EmbeddedSnapshotTraceQuery,
+}
 
 const patchedTraceTablePlugin = {
   ...traceTablePlugin,
@@ -64,6 +76,10 @@ const bundledPluginLoader: PluginLoader = dynamicImportPluginLoader([
   {
     resource: greptimedbPlugin.getPluginModule() as PluginModuleResource,
     importPlugin: () => Promise.resolve(greptimedbPlugin),
+  },
+  {
+    resource: getEmbeddedSnapshotPluginModule() as PluginModuleResource,
+    importPlugin: () => Promise.resolve(embeddedSnapshotPluginModule),
   },
 ])
 
