@@ -25,4 +25,7 @@ export default {
   'menu.tour.ingest': '从 Ingest UI 中摄取时间序列数据。',
   'menu.news': '最新资讯',
   'menu.feedback': '发送反馈',
+  'menu.support': '支持',
+  'menu.starBanner.description': '帮助我们壮大开源项目！',
+  'menu.starBanner.button': '立即 Star →',
 }

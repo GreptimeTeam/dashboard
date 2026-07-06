@@ -25,4 +25,7 @@ export default {
   'menu.tour.ingest': 'Ingest time-series data from the Ingest UI.',
   'menu.news': 'Latest News',
   'menu.feedback': 'Send Feedback',
+  'menu.support': 'Support',
+  'menu.starBanner.description': 'Help us grow the open-source project!',
+  'menu.starBanner.button': 'Star now →',
 }
