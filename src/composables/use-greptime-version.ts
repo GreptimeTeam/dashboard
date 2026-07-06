@@ -1,5 +1,11 @@
 import { getStatus } from '@/api/status'
 
+export function formatGreptimeVersion(raw: string): string {
+  const value = raw.trim()
+  if (!value || value === '—') return value
+  return /^v/i.test(value) ? value : `v${value}`
+}
+
 export default function useGreptimeVersion() {
   const version = ref('')
   const loading = ref(false)
@@ -10,7 +16,7 @@ export default function useGreptimeVersion() {
     try {
       const data = (await getStatus()) as Record<string, unknown> | null
       const rawVersion = data?.version ?? data?.Version
-      version.value = rawVersion ? String(rawVersion).trim() : ''
+      version.value = rawVersion ? formatGreptimeVersion(String(rawVersion)) : ''
     } catch (error) {
       console.warn('Failed to fetch GreptimeDB version:', error)
       version.value = ''

@@ -48,6 +48,7 @@
 <script lang="ts" setup name="Status">
   import { useI18n } from 'vue-i18n'
   import { getStatus } from '@/api/status'
+  import { formatGreptimeVersion } from '@/composables/use-greptime-version'
 
   type StatusRecord = Record<string, unknown>
 
@@ -97,13 +98,16 @@
   const displayRows = computed(() => {
     const data = statusData.value
     if (!data) return []
-    return STATUS_ROW_DEFS.map((def) => ({
-      key: def.key,
-      icon: def.icon,
-      mono: def.mono,
-      label: t(def.labelKey),
-      value: pickStatusValue(data, def),
-    }))
+    return STATUS_ROW_DEFS.map((def) => {
+      const rawValue = pickStatusValue(data, def)
+      return {
+        key: def.key,
+        icon: def.icon,
+        mono: def.mono,
+        label: t(def.labelKey),
+        value: def.key === 'version' ? formatGreptimeVersion(rawValue) : rawValue,
+      }
+    })
   })
 
   const refreshStatus = async () => {
