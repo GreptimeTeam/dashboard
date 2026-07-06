@@ -134,7 +134,7 @@ a-dropdown#td-context(
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, shallowRef, useAttrs } from 'vue'
+  import { ref, computed, shallowRef, useAttrs, watch } from 'vue'
   import { useElementSize } from '@vueuse/core'
   import { dateTypes } from '@/views/dashboard/config'
   import type { ColumnType, TSColumn } from '@/types/query'
@@ -239,35 +239,77 @@ a-dropdown#td-context(
     return dateTypes.indexOf(column.data_type) > -1
   }
 
-  function getSemanticThClass(column: ColumnType) {
-    return column.semantic_type?.toLowerCase()
+  // Column width calculation rules:
+  //
+  // Both virtual-list and non-virtual-list modes SHARE the content measurement:
+  //   - Sample up to MAX_CONTENT_SAMPLE_ROWS rows per column.
+  //   - Use the maximum stringified cell length as the column's content weight.
+  //
+  // They DIFFER in how weights are turned into pixel widths:
+  //   - Non-virtual-list: each column gets a base width derived from
+  //     max(label.length, contentMaxLen) * 8 + 40 (clamped 150~600). The primary
+  //     timestamp column stays fixed at 230px. Remaining columns are scaled up
+  //     together to fill the container width. Horizontal scrolling is allowed
+  //     when the total width exceeds the container.
+  //   - Virtual-list: widths are distributed proportionally by content weight so
+  //     the total exactly matches the container width. Horizontal scrolling is
+  //     intentionally disabled (overflow-x: hidden) to keep the sticky header
+  //     and virtual body aligned; the vertical scrollbar already narrows the
+  //     body area, so a separate horizontal scrollbar would cause misalignment.
+  //
+  // We do NOT fully unify the distribution strategy because estimating the
+  // exact scrollbar width across platforms/macOS overlay scrollbars is fragile.
+  const MAX_CONTENT_SAMPLE_ROWS = 100
+
+  function getCellString(value: unknown): string {
+    if (value === null || value === undefined) return ''
+    if (typeof value === 'object') return JSON.stringify(value)
+    return String(value)
   }
 
-  // Width calculation utilities
-  function getColumnWidth(column: ColumnType, sampleValue: unknown) {
+  function getColumnContentMaxLength(columnName: string, rows: TableData[], limit = MAX_CONTENT_SAMPLE_ROWS): number {
+    let max = 0
+    const count = Math.min(rows.length, limit)
+    for (let i = 0; i < count; i += 1) {
+      const str = getCellString(rows[i]?.[columnName])
+      if (str.length > max) {
+        max = str.length
+      }
+    }
+    return max
+  }
+
+  function getColumnContentLengths(
+    columns: ColumnType[],
+    rows: TableData[],
+    limit = MAX_CONTENT_SAMPLE_ROWS
+  ): Record<string, number> {
+    const lengths: Record<string, number> = {}
+    columns.forEach((column) => {
+      lengths[column.name] = getColumnContentMaxLength(column.name, rows, limit)
+    })
+    return lengths
+  }
+
+  function getColumnWidth(column: ColumnType, rows: TableData[]) {
     if (props.tsColumn?.name === column.name || isTimeColumn(column)) {
       return 230
     }
 
     const label = String(column.title || column.name)
-    let sample = ''
-    if (sampleValue !== undefined && sampleValue !== null) {
-      sample = typeof sampleValue === 'object' ? JSON.stringify(sampleValue) : String(sampleValue)
-    }
-
-    const charLen = Math.max(label.length, sample.length)
+    const contentMaxLen = getColumnContentMaxLength(column.name, rows)
+    const charLen = Math.max(label.length, contentMaxLen)
     return Math.max(150, Math.min(600, charLen * 8 + 40))
   }
 
-  function findMaxLenCol(row: TableData) {
+  function findMaxLenCol(columns: ColumnType[], rows: TableData[]): string {
+    const lengths = getColumnContentLengths(columns, rows)
     let max = 0
     let maxName = ''
 
-    Object.keys(row).forEach((key) => {
-      const value = row[key]
-      const strValue = typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value)
-      if (strValue.length > max) {
-        max = strValue.length
+    Object.keys(lengths).forEach((key) => {
+      if (lengths[key] > max) {
+        max = lengths[key]
         maxName = key
       }
     })
@@ -282,48 +324,155 @@ a-dropdown#td-context(
     return width
   }
 
+  // Column width state management
+  const columnWidths = ref<Record<string, number>>({})
+  const prevContainerWidth = ref<number>(0)
+  const lastCalculatedColumnsKey = ref<string>('')
+
+  // Visible columns (without width) for width calculation
+  const visibleColumns = computed<ColumnType[]>(() => {
+    if (mergeColumn.value) {
+      return []
+    }
+
+    let tmpColumns = props.columns.slice()
+    if (props.tsColumn) {
+      tmpColumns = tmpColumns.filter((c) => c.name !== props.tsColumn.name)
+      tmpColumns.unshift({
+        name: props.tsColumn.name,
+        data_type: props.tsColumn.data_type || 'timestamp',
+        title: props.tsColumn.name,
+      } as ColumnType)
+    }
+
+    return props.displayedColumns.length > 0
+      ? tmpColumns.filter((c) => props.displayedColumns.indexOf(c.name) > -1)
+      : tmpColumns
+  })
+
+  function getColumnsKey(columns: ColumnType[]): string {
+    return columns.map((c) => c.name).join(',')
+  }
+
+  // Non-virtual-list width distribution: compute a base width for every column
+  // (timestamp fixed at 230px), then scale non-timestamp columns up so the sum
+  // matches the container width. This guarantees the table fills the container
+  // horizontally while still allowing horizontal scrolling if the user later
+  // resizes a column wider.
+  function calculateColumnWidths(
+    columns: ColumnType[],
+    rows: TableData[],
+    containerWidth: number
+  ): Record<string, number> {
+    const widths: Record<string, number> = {}
+    let fixedColumnName: string | null = null
+
+    columns.forEach((column) => {
+      widths[column.name] = getColumnWidth(column, rows)
+      // Keep the primary timestamp column at its base width initially;
+      // scale the remaining columns to fill the container.
+      if (props.tsColumn?.name === column.name) {
+        fixedColumnName = column.name
+      }
+    })
+
+    const total = Object.values(widths).reduce((sum, width) => sum + width, 0)
+
+    if (containerWidth > 0 && total < containerWidth) {
+      if (fixedColumnName) {
+        const fixedWidth = widths[fixedColumnName]
+        const remaining = containerWidth - fixedWidth
+        const othersTotal = total - fixedWidth
+
+        if (othersTotal > 0 && remaining > 0) {
+          const scale = remaining / othersTotal
+          Object.keys(widths).forEach((key) => {
+            if (key !== fixedColumnName) {
+              widths[key] = Math.max(100, Math.round(widths[key] * scale))
+            }
+          })
+        }
+      } else {
+        const scale = containerWidth / total
+        Object.keys(widths).forEach((key) => {
+          widths[key] = Math.max(100, Math.round(widths[key] * scale))
+        })
+      }
+    }
+
+    return widths
+  }
+
+  // When the container is resized, keep the relative proportions between
+  // columns by scaling all current widths by the same factor.
+  function scaleColumnWidths(
+    widths: Record<string, number>,
+    prevWidth: number,
+    newWidth: number
+  ): Record<string, number> {
+    if (prevWidth <= 0 || newWidth <= 0 || prevWidth === newWidth) {
+      return { ...widths }
+    }
+
+    const scale = newWidth / prevWidth
+    const scaled: Record<string, number> = {}
+
+    Object.keys(widths).forEach((key) => {
+      scaled[key] = Math.max(100, Math.round(widths[key] * scale))
+    })
+
+    return scaled
+  }
+
+  watch(
+    [visibleColumns, tableWidth],
+    ([columns, width]) => {
+      if (width <= 0 || columns.length === 0) {
+        prevContainerWidth.value = width
+        return
+      }
+
+      const key = getColumnsKey(columns)
+      if (key !== lastCalculatedColumnsKey.value) {
+        columnWidths.value = calculateColumnWidths(columns, props.data, width)
+        lastCalculatedColumnsKey.value = key
+      } else if (width !== prevContainerWidth.value && prevContainerWidth.value > 0) {
+        columnWidths.value = scaleColumnWidths(columnWidths.value, prevContainerWidth.value, width)
+      }
+
+      prevContainerWidth.value = width
+    },
+    { immediate: true }
+  )
+
+  function getSemanticThClass(column: ColumnType) {
+    return column.semantic_type?.toLowerCase()
+  }
+
   // Computed columns based on mode
   const processedColumns = computed(() => {
     if (!mergeColumn.value) {
-      // Separate mode: filter and arrange columns
-      let tmpColumns = props.columns.slice()
-      if (props.tsColumn) {
-        tmpColumns = tmpColumns.filter((c) => c.name !== props.tsColumn.name)
-        tmpColumns.unshift({
-          name: props.tsColumn.name,
-          data_type: props.tsColumn.data_type || 'timestamp',
-          title: props.tsColumn.name,
-        } as ColumnType)
-      }
-      tmpColumns =
-        props.displayedColumns.length > 0
-          ? tmpColumns.filter((c) => props.displayedColumns?.indexOf(c.name) > -1)
-          : tmpColumns
-
-      const sampleRow = props.data[0]
-
+      // Separate mode: use visible columns with managed widths
       if (hasVirtualListProps.value) {
-        if (!sampleRow || !tableWidth.value) {
-          return tmpColumns.map((column) => ({ ...column }))
+        // Virtual list uses proportional distribution based on sampled content
+        // lengths. It intentionally does not allow horizontal scrolling, so the
+        // layout is handled together with the CSS that hides overflow-x.
+        if (!tableWidth.value || visibleColumns.value.length === 0) {
+          return visibleColumns.value.map((column) => ({ ...column }))
         }
 
-        const totalStrLen = Object.keys(sampleRow).reduce((acc, key) => {
-          const value = sampleRow[key]
-          const strValue = typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value)
-          return acc + strValue.length
-        }, 0)
-        const maxLenName = findMaxLenCol(sampleRow)
+        const contentLengths = getColumnContentLengths(visibleColumns.value, props.data)
+        const totalContentLen = Object.values(contentLengths).reduce((acc, len) => acc + len, 0)
+        const maxLenName = findMaxLenCol(visibleColumns.value, props.data)
 
-        return tmpColumns.map((column) => {
+        return visibleColumns.value.map((column) => {
           let width: number | undefined
 
           if (column.name !== maxLenName) {
             if (column.name === props.tsColumn?.name) {
               width = 230
             } else {
-              const value = sampleRow[column.name]
-              const strValue = typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value)
-              width = getVirtualListColumnWidth(strValue.length, totalStrLen, tableWidth.value)
+              width = getVirtualListColumnWidth(contentLengths[column.name] || 0, totalContentLen, tableWidth.value)
             }
           }
 
@@ -334,9 +483,9 @@ a-dropdown#td-context(
         })
       }
 
-      return tmpColumns.map((column) => ({
+      return visibleColumns.value.map((column) => ({
         ...column,
-        width: getColumnWidth(column, sampleRow?.[column.name]),
+        width: columnWidths.value[column.name] ?? getColumnWidth(column, props.data),
       }))
     }
 
@@ -347,7 +496,7 @@ a-dropdown#td-context(
         name: props.tsColumn.name,
         title: props.tsColumn.name,
         data_type: props.tsColumn.data_type || 'timestamp',
-        width: 220,
+        width: columnWidths.value[props.tsColumn.name] ?? 220,
       } as ColumnType)
     }
     arr.push({
@@ -649,48 +798,8 @@ a-dropdown#td-context(
       }
     }
 
-    // Row hover tints all cells; td:hover raises specificity for the active cell only.
-    :deep(
-        .arco-table-hover:not(.arco-table-dragging)
-          .arco-table-tr:not(.arco-table-tr-empty):not(.arco-table-tr-summary):hover
-          .arco-table-td:not(.arco-table-col-fixed-left):not(.arco-table-col-fixed-right)
-      ) {
-      background-color: var(--gpt-table-row-hover-bg);
-    }
-
-    :deep(
-        .arco-table-hover:not(.arco-table-dragging)
-          .arco-table-tr:not(.arco-table-tr-empty):not(.arco-table-tr-summary):hover
-          .arco-table-td:not(.arco-table-col-fixed-left):not(.arco-table-col-fixed-right):hover
-      ) {
-      background-color: var(--gpt-table-cell-hover-bg);
-    }
-
-    :deep(
-        .arco-table-hover:not(.arco-table-dragging)
-          .arco-table-tr:not(.arco-table-tr-empty):not(.arco-table-tr-summary):hover
-          .arco-table-td.arco-table-col-fixed-left::before
-      ),
-    :deep(
-        .arco-table-hover:not(.arco-table-dragging)
-          .arco-table-tr:not(.arco-table-tr-empty):not(.arco-table-tr-summary):hover
-          .arco-table-td.arco-table-col-fixed-right::before
-      ) {
-      background-color: var(--gpt-table-row-hover-bg);
-    }
-
-    :deep(
-        .arco-table-hover:not(.arco-table-dragging)
-          .arco-table-tr:not(.arco-table-tr-empty):not(.arco-table-tr-summary):hover
-          .arco-table-td.arco-table-col-fixed-left:hover::before
-      ),
-    :deep(
-        .arco-table-hover:not(.arco-table-dragging)
-          .arco-table-tr:not(.arco-table-tr-empty):not(.arco-table-tr-summary):hover
-          .arco-table-td.arco-table-col-fixed-right:hover::before
-      ) {
-      background-color: var(--gpt-table-cell-hover-bg);
-    }
+    // Row hover background is provided by Arco Table's built-in hoverable styles
+    // via the theme variable --gpt-table-row-hover-bg; no override needed here.
   }
 
   :deep(.arco-table-tr-empty .arco-table-td) {
@@ -832,8 +941,23 @@ a-dropdown#td-context(
   :deep(.arco-drawer) {
     border: 1px solid var(--gpt-border-default);
   }
-  // Virtual list: vertical scrollbar narrows body vs header → spurious horizontal overflow.
-  // Hide horizontal scroll here only; normal DataTable keeps scroll.x below.
+  // Table layout differences between virtual-list and non-virtual-list:
+  //
+  // Non-virtual-list: the table element must always be at least as wide as the
+  // container (min-width: 100%). When columns are resized wider than the
+  // container, Arco's scroll.x makes the table grow and a horizontal scrollbar
+  // appears. This is desired for the query-result table.
+  //
+  // Virtual-list: horizontal scrolling is intentionally disabled because the
+  // vertical scrollbar already narrows the body area; a horizontal scrollbar
+  // would cause the sticky header and virtual body to misalign. The column
+  // widths are distributed proportionally so the table stays at 100% container
+  // width and overflow-x is hidden. See the column-width rules above for how
+  // content weights are computed.
+  .multiple_column:not(.virtual-list-active) :deep(.arco-table-element) {
+    min-width: 100% !important;
+  }
+
   .multiple_column.virtual-list-active {
     :deep(.arco-scrollbar-track-direction-horizontal) {
       display: none;
@@ -859,13 +983,6 @@ a-dropdown#td-context(
       > .arco-table-element {
         width: 100%;
       }
-    }
-  }
-
-  .multiple_column:not(.virtual-list-active) {
-    :deep(.arco-virtual-list > .arco-table-element) {
-      width: max-content;
-      min-width: 100%;
     }
   }
 
