@@ -8,6 +8,7 @@
     :pagination="false"
     :bordered="false"
     :stripe="false"
+    :row-class="getRowClass"
     :class="tableClassesDynamic"
   )
     template(#empty)
@@ -215,6 +216,9 @@ a-dropdown#td-context(
 
     // Enhanced cell behavior
     enableCellCopy?: boolean
+
+    /** Global or page-local row index to highlight when detail drawer is open */
+    activeRowKey?: number | null
   }
 
   const props = withDefaults(defineProps<Props>(), {
@@ -228,6 +232,7 @@ a-dropdown#td-context(
     showContextMenu: true,
     wrapLine: false,
     enableCellCopy: false,
+    activeRowKey: null,
   })
 
   const attrs = useAttrs()
@@ -737,6 +742,20 @@ a-dropdown#td-context(
   // even if the mouse has moved onto the dropdown itself.
   const activeContextMenuKey = ref<string | null>(null)
 
+  function getRowIndex(record: TableData) {
+    if (typeof record.__globalRowIndex === 'number') {
+      return record.__globalRowIndex
+    }
+    return record.__rowIndex ?? 0
+  }
+
+  function getRowClass(record: TableData) {
+    if (props.activeRowKey === null || props.activeRowKey === undefined) {
+      return ''
+    }
+    return getRowIndex(record) === props.activeRowKey ? 'data-table-row-active' : ''
+  }
+
   function getCellKey(record: TableData, columnName: string) {
     return `${record.__rowIndex ?? 0}-${columnName}`
   }
@@ -881,6 +900,14 @@ a-dropdown#td-context(
 
     // Row hover background is provided by Arco Table's built-in hoverable styles
     // via the theme variable --gpt-table-row-hover-bg; no override needed here.
+
+    :deep(.data-table-row-active td) {
+      background-color: var(--gpt-nav-active-bg) !important;
+    }
+
+    :deep(.data-table-row-active td:first-child) {
+      box-shadow: inset 3px 0 0 var(--gpt-nav-active-indicator);
+    }
   }
 
   :deep(.arco-table-tr-empty .arco-table-td) {

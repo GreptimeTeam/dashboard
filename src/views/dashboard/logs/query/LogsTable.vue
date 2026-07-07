@@ -13,6 +13,7 @@
     :selected-keys="exportSelectedKeys"
     :ts-column="tsColumn"
     :ts-cell-detail="tsCellDetail"
+    :active-row-key="detailVisible ? selectedRowKey : null"
     :show-context-menu="sqlMode === 'builder'"
     :class="{ builder_type: sqlMode === 'builder' }"
     @filter-condition-add="handleFilterConditionAdd"
