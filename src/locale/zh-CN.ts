@@ -37,6 +37,7 @@ export default {
   'common.all': '全部',
   'common.pleaseInput': '请输入...',
   'common.close': '关闭',
+  'common.inspectValue': '查看完整内容',
   // Pipeline buttons
 
   'pipeline.test': '测试',

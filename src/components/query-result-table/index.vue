@@ -1,6 +1,6 @@
 <template lang="pug">
 .query-result-table-container(ref="tableContainer" :id="containerId")
-  PaginatedDataTable(v-bind="paginatedTableAttrs" @ts-cell-click="handleTsClick")
+  PaginatedDataTable(v-bind="paginatedTableAttrs" @ts-cell-click="handleTsClick" @row-select="handleRowSelect")
 
   LogDetail(
     v-model:visible="detailVisible"
@@ -48,6 +48,13 @@
   })
 
   const handleTsClick = (record: Record<string, unknown>) => {
+    const rowIndex = record.__globalRowIndex
+    if (typeof rowIndex !== 'number') return
+    selectedRowKey.value = rowIndex
+    detailVisible.value = true
+  }
+
+  const handleRowSelect = (record: Record<string, unknown>) => {
     const rowIndex = record.__globalRowIndex
     if (typeof rowIndex !== 'number') return
     selectedRowKey.value = rowIndex

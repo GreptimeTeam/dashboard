@@ -76,7 +76,7 @@ export default {
   'dashboard.raw': 'Raw',
   'dashboard.importExplain': 'Import Result JSON',
   'dashboard.exportCSV': 'Export Result as CSV',
-  'dashboard.wrapLines': 'Wrap Lines',
+  'dashboard.wrapLines': 'Wrap text',
   'dashboard.hideSidebar': 'Hide sidebar',
   'dashboard.showSidebar': 'Show sidebar',
   'dashboard.searchDatabase': 'Search database...',

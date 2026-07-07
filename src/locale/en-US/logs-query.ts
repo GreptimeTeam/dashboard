@@ -8,7 +8,7 @@ export default {
   'logsQuery.showStatChart': 'Show chart',
   'logsQuery.live': 'Live',
   'logsQuery.columns': 'Columns',
-  'logsQuery.wrapLines': 'Wrap lines',
+  'logsQuery.wrapLines': 'Wrap text',
   'logsQuery.nodata': 'No Data',
   'logsQuery.newer': 'Newer',
   'logsQuery.older': 'Older',
