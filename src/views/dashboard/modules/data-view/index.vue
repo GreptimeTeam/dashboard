@@ -83,6 +83,13 @@ a-tabs.panel-tabs(
                 template(#icon)
                   svg.icon-12
                     use(href="#derive14")
+            a-checkbox(
+              v-if="getResultView(result.key) === 'table'"
+              v-model="compactRows"
+              type="button"
+              size="small"
+            )
+              | {{ $t('dashboard.compactRows') }}
             a-checkbox(v-if="getResultView(result.key) === 'table'" v-model="wrapLines" size="small")
               | {{ $t('dashboard.wrapLines') }}
 
@@ -97,6 +104,7 @@ a-tabs.panel-tabs(
             :ts-column="tableModelMap[result.key]?.tsColumn || null"
             :show-context-menu="false"
             :wrap-line="wrapLines"
+            :size="tableSize"
           )
         DataChart(
           v-else-if="useDataChart(result).hasChart.value"
@@ -108,6 +116,7 @@ a-tabs.panel-tabs(
 
 <script lang="ts" name="DataView" setup>
   import { Message } from '@arco-design/web-vue'
+  import { useStorage } from '@vueuse/core'
   import fileDownload from 'js-file-download'
   import useDataChart from '@/hooks/data-chart'
   import type { PromForm, ResultType } from '@/store/modules/code-run/types'
@@ -124,6 +133,8 @@ a-tabs.panel-tabs(
   const refreshingKeys = ref(new Set<string | number>())
   const exportingKeys = ref(new Set<string | number>())
   const resultViewMap = ref<Record<string | number, 'table' | 'chart'>>({})
+  const compactRows = useStorage('query-table-compact-rows', false)
+  const tableSize = computed(() => (compactRows.value ? 'mini' : 'medium'))
   const wrapLines = ref(false)
   // Add a method to select specific tab
   const selectTab = (key: number | string) => {

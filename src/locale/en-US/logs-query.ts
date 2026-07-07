@@ -18,7 +18,7 @@ export default {
   'logsQuery.records': 'rows',
   'logsQuery.singleColumn': 'Single Column',
   'logsQuery.showKeys': 'Show Keys',
-  'logsQuery.compactMode': 'Compact Mode',
+  'logsQuery.compactRows': 'Compact rows',
   'logsQuery.fields': 'Fields',
   'logsQuery.json': 'JSON',
   'logsQuery.newFile': 'New File',
