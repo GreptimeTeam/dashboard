@@ -25,6 +25,15 @@
     inheritAttrs: false,
   })
 
+  const props = withDefaults(
+    defineProps<{
+      activeRowKey?: number | null
+    }>(),
+    {
+      activeRowKey: null,
+    }
+  )
+
   const attrs = useAttrs()
 
   const currentPage = ref(1)
@@ -48,9 +57,23 @@
       ({
         ...attrs,
         data: pagedData.value,
+        activeRowKey: props.activeRowKey,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any)
   )
+
+  function syncPageToActiveRow(key: number | null | undefined) {
+    if (key === null || key === undefined || key < 0 || totalRows.value === 0) {
+      return
+    }
+
+    const targetPage = Math.floor(key / pageSize.value) + 1
+    const maxPage = Math.max(1, Math.ceil(totalRows.value / pageSize.value))
+
+    if (targetPage >= 1 && targetPage <= maxPage && targetPage !== currentPage.value) {
+      currentPage.value = targetPage
+    }
+  }
 
   const handlePageChange = (page: number) => {
     currentPage.value = page
@@ -63,6 +86,17 @@
 
   watch(fullData, () => {
     currentPage.value = 1
+  })
+
+  watch(
+    () => props.activeRowKey,
+    (key) => {
+      syncPageToActiveRow(key)
+    }
+  )
+
+  watch(pageSize, () => {
+    syncPageToActiveRow(props.activeRowKey)
   })
 </script>
 

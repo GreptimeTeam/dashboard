@@ -1,6 +1,11 @@
 <template lang="pug">
 .query-result-table-container(ref="tableContainer" :id="containerId")
-  PaginatedDataTable(v-bind="paginatedTableAttrs" @ts-cell-click="handleTsClick" @row-select="handleRowSelect")
+  PaginatedDataTable(
+    v-bind="paginatedTableAttrs"
+    :active-row-key="detailVisible ? selectedRowKey : null"
+    @ts-cell-click="handleTsClick"
+    @row-select="handleRowSelect"
+  )
 
   LogDetail(
     v-model:visible="detailVisible"
