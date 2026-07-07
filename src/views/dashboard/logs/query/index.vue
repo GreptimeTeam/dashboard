@@ -97,8 +97,8 @@
             size="small"
           )
             | {{ $t('logsQuery.showKeys') }}
-          a-checkbox(v-model="compact" type="button" size="small")
-            | {{ $t('logsQuery.compactMode') }}
+          a-checkbox(v-model="compactRows" type="button" size="small")
+            | {{ $t('logsQuery.compactRows') }}
           a-checkbox(v-model="wrap" size="small")
             span {{ $t('logsQuery.wrapLines') }}
 
@@ -255,8 +255,15 @@
     }
   })
 
-  const compact = useStorage('logquery-table-compact', false)
-  const size = computed(() => (compact.value ? 'mini' : 'medium'))
+  const compactRows = useStorage('query-table-compact-rows', false)
+  const size = computed(() => (compactRows.value ? 'mini' : 'medium'))
+
+  onMounted(() => {
+    if (localStorage.getItem('logquery-table-compact') === 'true' && !compactRows.value) {
+      compactRows.value = true
+      localStorage.removeItem('logquery-table-compact')
+    }
+  })
   const wrap = ref(false)
 
   // Chart/row logic

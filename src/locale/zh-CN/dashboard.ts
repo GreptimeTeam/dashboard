@@ -75,6 +75,7 @@ export default {
   'dashboard.importExplain': '导入结果 JSON',
   'dashboard.exportCSV': '导出结果为 CSV',
   'dashboard.wrapLines': '自动换行',
+  'dashboard.compactRows': '紧凑行高',
   'dashboard.hideSidebar': '隐藏侧边栏',
   'dashboard.showSidebar': '显示侧边栏',
   'dashboard.searchDatabase': '搜索数据库...',
