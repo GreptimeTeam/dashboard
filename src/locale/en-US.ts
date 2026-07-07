@@ -37,6 +37,7 @@ export default {
   'common.all': 'All',
   'common.pleaseInput': 'Please input...',
   'common.close': 'Close',
+  'common.inspectValue': 'Inspect value',
   // Pipeline buttons
   'pipeline.test': 'Test',
 

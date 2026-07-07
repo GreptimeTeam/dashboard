@@ -70,11 +70,26 @@
                   span(v-if="showKeys" style="color: var(--gpt-text-muted)")
                     | {{ field[0] }}:
                   | {{ field[1] }}
-                  svg.td-config-icon(
-                    v-if="showContextMenu"
-                    @click="(event) => handleContextMenu(record, field[0], event)"
-                  )
-                    use(href="#menu")
+                  span.cell-actions-inline(v-if="(!props.wrapLine && isCellExpandable(field[1])) || showContextMenu")
+                    a-popover(
+                      v-if="!props.wrapLine && isCellExpandable(field[1])"
+                      trigger="click"
+                      position="top"
+                      :popup-visible="isExpandActive(record, field[0])"
+                      @popupVisibleChange="(visible) => handleExpandVisibleChange(getCellExpandKey(record, field[0]), visible)"
+                    )
+                      template(#content)
+                        .cell-popover-content {{ getCellString(field[1]) }}
+                      span.cell-action-icon(:class="{ active: isExpandActive(record, field[0]) }" @click.stop)
+                        icon-up(v-if="isExpandActive(record, field[0])" :size="12")
+                        icon-down(v-else :size="12")
+                    span.cell-action-icon(
+                      v-if="showContextMenu"
+                      :class="{ active: isContextMenuActive(record, field[0]) }"
+                      @click="(event) => handleContextMenu(record, field[0], event)"
+                    )
+                      svg.icon-12
+                        use(href="#menu")
               template(v-else-if="isTimeColumn(col)")
                 a-tooltip(
                   v-if="!tsCellDetail"
@@ -89,30 +104,39 @@
                     @click="handleTsCellClick(record, rowIndex)"
                   ) {{ renderTs(record, col.name) }}
                   span.timestamp-cell(v-else) {{ renderTs(record, col.name) }}
-                svg.td-config-icon(
-                  v-if="showContextMenu"
-                  @click="(event) => handleContextMenu(record, col.name, event)"
-                )
-                  use(href="#menu")
+                span.cell-actions-inline(v-if="showContextMenu")
+                  span.cell-action-icon(
+                    :class="{ active: isContextMenuActive(record, col.name) }"
+                    @click="(event) => handleContextMenu(record, col.name, event)"
+                  )
+                    svg.icon-12
+                      use(href="#menu")
               template(v-else)
-                .cell-wrapper(
-                  :class="{ 'has-context-menu': showContextMenu, 'has-expand-button': isValueExpandable(record[col.name], col) }"
-                )
-                  .cell-content(:class="{ expanded: isCellExpanded(rowIndex, col.name), 'wrap-lines': wrapLine }")
+                .cell-wrapper
+                  .cell-content(:class="getCellContentClass(record[col.name])")
                     span {{ record[col.name] }}
-                    svg.td-config-icon(
+                  .cell-actions(v-if="showContextMenu || (!props.wrapLine && isCellExpandable(record[col.name]))")
+                    a-popover(
+                      v-if="!props.wrapLine && isCellExpandable(record[col.name])"
+                      trigger="click"
+                      position="top"
+                      :popup-visible="isExpandActive(record, col.name)"
+                      @popupVisibleChange="(visible) => handleExpandVisibleChange(getCellExpandKey(record, col.name), visible)"
+                    )
+                      template(#content)
+                        .cell-popover-content {{ getCellString(record[col.name]) }}
+                      span.cell-action-icon(:class="{ active: isExpandActive(record, col.name) }" @click.stop)
+                        icon-up(v-if="isExpandActive(record, col.name)" :size="12")
+                        icon-down(v-else :size="12")
+                    span.cell-action-icon(
                       v-if="showContextMenu"
+                      :class="{ active: isContextMenuActive(record, col.name) }"
                       @click.stop="(event) => handleContextMenu(record, col.name, event)"
                     )
-                      use(href="#menu")
-                  .cell-expand-button(
-                    v-if="isValueExpandable(record[col.name], col)"
-                    @click.stop="toggleCellExpand(rowIndex, col, record[col.name])"
-                  )
-                    icon-up(v-if="isCellExpanded(rowIndex, col.name)" :size="12")
-                    icon-down(v-else :size="12")
+                      svg.icon-12
+                        use(href="#menu")
                   .cell-copy-button(
-                    v-if="canShowCopyButton(rowIndex, col.name, record[col.name])"
+                    v-if="canShowCopyButton(record[col.name])"
                     @click.stop="copyCellValue(record[col.name])"
                   )
                     svg.icon-14
@@ -122,19 +146,31 @@
 a-dropdown#td-context(
   v-model:popup-visible="contextMenuVisible"
   trigger="contextMenu"
-  :style="{ position: 'fixed', top: `${contextMenuPosition.y}px`, left: `${contextMenuPosition.x}px`, zIndex: 9999 }"
+  :style="{ position: 'fixed', top: `${contextMenuPosition?.y ?? 0}px`, left: `${contextMenuPosition?.x ?? 0}px`, zIndex: 9999 }"
   @clickoutside="hideContextMenu"
+  @popupVisibleChange="(visible) => { if (!visible) hideContextMenu() }"
   @select="handleMenuClick"
 ) 
   template(#content)
     a-doption(value="copy") Copy Field Value
+    a-doption(v-if="!wrapLine && showContextMenu && hasRowDetailListener" value="inspect") {{ $t('common.inspectValue') }}
     a-dsubmenu(v-if="filterOptions.length > 0" trigger="hover") Filter
       template(#content)
         a-doption(v-for="op in filterOptions" :key="op" :value="`filter_${op}`") {{ op }} value
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, shallowRef, useAttrs, watch } from 'vue'
+  import {
+    ref,
+    computed,
+    getCurrentInstance,
+    nextTick,
+    onBeforeUnmount,
+    onMounted,
+    shallowRef,
+    useAttrs,
+    watch,
+  } from 'vue'
   import { useElementSize } from '@vueuse/core'
   import { dateTypes } from '@/views/dashboard/config'
   import type { ColumnType, TSColumn } from '@/types/query'
@@ -175,7 +211,6 @@ a-dropdown#td-context(
     wrapLine?: boolean
 
     // Enhanced cell behavior
-    enableCellExpand?: boolean
     enableCellCopy?: boolean
   }
 
@@ -189,14 +224,15 @@ a-dropdown#td-context(
     tsCellDetail: false,
     showContextMenu: true,
     wrapLine: false,
-    enableCellExpand: true,
     enableCellCopy: false,
   })
 
-  const EXPANDABLE_TEXT_THRESHOLD = 100
   const attrs = useAttrs()
   const attrsRecord = attrs as Record<string, any>
   const hasVirtualListProps = computed(() => !!attrsRecord['virtual-list-props'])
+  // Detect whether the parent has bound a @row-select listener.
+  // Declared emits are filtered out of attrs, so we read the raw vnode props.
+  const hasRowDetailListener = computed(() => !!getCurrentInstance()?.vnode.props?.onRowSelect)
 
   const emit = defineEmits(['filterConditionAdd', 'rowSelect', 'tsCellClick'])
 
@@ -265,6 +301,31 @@ a-dropdown#td-context(
     if (value === null || value === undefined) return ''
     if (typeof value === 'object') return JSON.stringify(value)
     return String(value)
+  }
+
+  // Cell expand popover helpers (Grafana-style):
+  // - Short multi-word text wraps vertically in the popover.
+  // - Long text is fully shown in the popover to avoid extremely tall rows.
+  const EXPAND_POPOVER_MAX_LENGTH = 140
+
+  function isExpandPopoverWrapText(value: unknown) {
+    const str = getCellString(value)
+    return str.length > 0 && str.length <= EXPAND_POPOVER_MAX_LENGTH && /\s/.test(str)
+  }
+
+  function isExpandPopoverOverflowText(value: unknown) {
+    return getCellString(value).length > EXPAND_POPOVER_MAX_LENGTH
+  }
+
+  function getCellContentClass(value: unknown) {
+    if (props.wrapLine) {
+      return { 'wrap-lines': true }
+    }
+    return {}
+  }
+
+  function isCellExpandable(value: unknown) {
+    return !props.wrapLine && (isExpandPopoverWrapText(value) || isExpandPopoverOverflowText(value))
   }
 
   function getColumnContentMaxLength(columnName: string, rows: TableData[], limit = MAX_CONTENT_SAMPLE_ROWS): number {
@@ -613,52 +674,8 @@ a-dropdown#td-context(
     return record[column.name]
   }
 
-  const expandedCells = ref<Record<string, boolean>>({})
-
-  function getCellKey(rowIndex: number, columnName: string) {
-    return `${rowIndex}-${columnName}`
-  }
-
-  function isValueExpandable(value: unknown, column?: ColumnType) {
-    if (!props.enableCellExpand) return false
-    if (value === null || value === undefined) return false
-    if (isTimeColumn(column as ColumnType)) return false
-
-    const dataType = column?.data_type?.toLowerCase()
-    if (dataType) {
-      if (['boolean', 'int', 'integer', 'float', 'double', 'decimal', 'numeric'].includes(dataType)) {
-        return false
-      }
-      if (['json', 'binary', 'interval'].includes(dataType)) {
-        return true
-      }
-    }
-
-    if (typeof value === 'object') return true
-
-    const str = String(value)
-    const isComplexStructure =
-      (str.startsWith('[') && str.endsWith(']')) ||
-      (str.startsWith('{') && str.endsWith('}')) ||
-      /\[[^\]]+\]|\{[^}]+\}/.test(str)
-    return str.length > EXPANDABLE_TEXT_THRESHOLD || str.includes('\n') || isComplexStructure
-  }
-
-  function isCellExpanded(rowIndex: number, columnName: string) {
-    const key = getCellKey(rowIndex, columnName)
-    return props.wrapLine || !!expandedCells.value[key]
-  }
-
-  function canShowCopyButton(rowIndex: number, columnName: string, value: unknown) {
-    if (!props.enableCellCopy) return false
-    if (value === null || value === undefined) return false
-    return isCellExpanded(rowIndex, columnName)
-  }
-
-  function toggleCellExpand(rowIndex: number, column: ColumnType, value: unknown) {
-    if (!isValueExpandable(value, column)) return
-    const key = getCellKey(rowIndex, column.name)
-    expandedCells.value[key] = !expandedCells.value[key]
+  function canShowCopyButton(value: unknown) {
+    return props.enableCellCopy && value !== null && value !== undefined
   }
 
   function cellTextForCopy(value: unknown) {
@@ -696,6 +713,49 @@ a-dropdown#td-context(
   const filterOptions = shallowRef([])
   const triggerCell = ref()
 
+  // Virtual-list cell expand popover state (single open at a time)
+  const expandedPopoverKey = ref<string | null>(null)
+
+  // Keep the context-menu trigger icon visible while its dropdown is open,
+  // even if the mouse has moved onto the dropdown itself.
+  const activeContextMenuKey = ref<string | null>(null)
+
+  function getCellKey(record: TableData, columnName: string) {
+    return `${record.__rowIndex ?? 0}-${columnName}`
+  }
+
+  function getCellExpandKey(record: TableData, columnName: string) {
+    return getCellKey(record, columnName)
+  }
+
+  function isContextMenuActive(record: TableData, columnName: string) {
+    return activeContextMenuKey.value === getCellKey(record, columnName)
+  }
+
+  function isExpandActive(record: TableData, columnName: string) {
+    return expandedPopoverKey.value === getCellExpandKey(record, columnName)
+  }
+
+  function handleExpandVisibleChange(key: string, visible: boolean) {
+    expandedPopoverKey.value = visible ? key : null
+  }
+
+  // Close the cell expand popover on any internal scroll so it doesn't float
+  // away from its trigger row.
+  function closeExpandPopover() {
+    expandedPopoverKey.value = null
+  }
+
+  onMounted(() => {
+    nextTick(() => {
+      tableContainer.value?.addEventListener('scroll', closeExpandPopover, { passive: true, capture: true })
+    })
+  })
+
+  onBeforeUnmount(() => {
+    tableContainer.value?.removeEventListener('scroll', closeExpandPopover, { capture: true })
+  })
+
   function handleContextMenu(record: TableData, columnName: string, event: Event) {
     if (!props.showContextMenu) {
       return
@@ -703,6 +763,7 @@ a-dropdown#td-context(
 
     const rect = (event.target as Element).getBoundingClientRect()
     triggerCell.value = [record, columnName]
+    activeContextMenuKey.value = getCellKey(record, columnName)
     event.preventDefault()
 
     // Set available filter options based on column type
@@ -717,12 +778,13 @@ a-dropdown#td-context(
       }
     }
 
-    contextMenuPosition.value = { x: rect.left, y: rect.y }
+    contextMenuPosition.value = { x: rect.left, y: rect.bottom }
     contextMenuVisible.value = true
   }
 
   function hideContextMenu() {
     contextMenuVisible.value = false
+    activeContextMenuKey.value = null
   }
 
   async function handleMenuClick(value: string | number | Record<string, any>) {
@@ -739,6 +801,8 @@ a-dropdown#td-context(
       } catch (error) {
         console.error('Failed to copy to clipboard:', error)
       }
+    } else if (action === 'inspect') {
+      emit('rowSelect', record, record.__rowIndex ?? 0)
     } else if (action.startsWith('filter')) {
       const operator = action.split('_')[1]
       emit('filterConditionAdd', { columnName, operator, value: record[columnName] })
@@ -823,28 +887,61 @@ a-dropdown#td-context(
     z-index: 999999;
   }
 
-  // Menu icon styling
-  .td-config-icon {
-    margin-left: 3px;
-    cursor: pointer;
-    visibility: hidden;
-    width: 12px;
-    height: 12px;
+  // Cell action icons (context menu + expand) — shared base
+  .cell-action-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
     color: var(--gpt-main-purple);
+    background: var(--color-bg-2);
+    border-radius: 3px;
+    box-shadow: 0 0 2px 2px var(--color-bg-2);
+    cursor: pointer;
+    transition: transform 0.1s ease, background-color 0.1s ease, color 0.1s ease, box-shadow 0.1s ease;
+
+    svg {
+      color: currentColor;
+    }
+
+    &:hover,
+    &.active {
+      transform: scale(1.15);
+      box-shadow: 0 0 2px 2px var(--color-bg-2), inset 0 0 0 1px var(--gpt-main-purple);
+    }
   }
 
-  // Show menu icon on hover when context menu is enabled
-  :deep(.arco-table-cell:hover .cell-content .td-config-icon) {
-    visibility: visible;
+  // Absolute-positioned action group (regular cells)
+  .cell-actions {
+    position: absolute;
+    right: 2px;
+    top: 4px;
+    display: none;
+    align-items: center;
+    gap: 6px;
+    z-index: 10;
   }
 
-  // Merged column styling
-  .entity-field {
-    margin-right: 10px;
+  :deep(.arco-table-cell:hover) .cell-actions,
+  .cell-actions:has(.cell-action-icon.active) {
+    display: flex;
   }
 
-  .entity-field:hover .td-config-icon {
-    visibility: visible;
+  // Inline action group (merged column + timestamp cells)
+  .cell-actions-inline {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+
+  :deep(.arco-table-cell:hover) .cell-actions-inline,
+  .entity-field:hover .cell-actions-inline,
+  .cell-actions-inline:has(.cell-action-icon.active) {
+    display: inline-flex;
   }
 
   :deep(.arco-table-td) {
@@ -871,6 +968,7 @@ a-dropdown#td-context(
   .cell-wrapper {
     position: relative;
     width: 100%;
+    height: 100%;
     cursor: default;
   }
   .cell-content {
@@ -880,36 +978,27 @@ a-dropdown#td-context(
     word-break: normal;
     user-select: text;
   }
-  .cell-wrapper.has-expand-button .cell-content {
-    padding-right: 14px;
+  // Show cell action buttons on hover. The popover itself is body-mounted and
+  // closed on scroll, so table overflow rules do not clip it.
+  :deep(.arco-table-td:hover) {
+    overflow: visible;
   }
-  .cell-wrapper.has-expand-button.has-context-menu .cell-content {
-    padding-right: 28px;
+
+  :deep(.arco-table-td:hover .arco-table-td-content) {
+    overflow: visible;
   }
-  .cell-expand-button {
-    position: absolute;
-    right: 0;
-    top: 5px;
-    width: 12px;
-    height: 12px;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    color: var(--gpt-main-purple);
-    z-index: 10;
-    cursor: pointer;
-    transition: transform 0.1s ease;
+
+  // Merged column styling
+  .entity-field {
+    margin-right: 10px;
   }
-  .cell-wrapper.has-context-menu .cell-expand-button {
-    right: 14px;
+
+  .cell-popover-content {
+    max-width: 600px;
+    white-space: pre-wrap;
+    word-break: break-word;
   }
-  :deep(.arco-table-cell:hover) .cell-expand-button {
-    display: flex;
-  }
-  .cell-expand-button:hover {
-    transform: scale(1.15);
-  }
-  .cell-content.expanded,
+
   .cell-content.wrap-lines {
     white-space: pre-wrap;
     word-break: break-word;
@@ -988,11 +1077,6 @@ a-dropdown#td-context(
 
   .multiple_column {
     width: 100%;
-
-    :deep(.arco-table-td-content) {
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
   }
 
   :deep(.arco-table-th) {
@@ -1030,37 +1114,27 @@ a-dropdown#td-context(
       position: relative;
       width: 100%;
       padding-right: 15px;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
-    .td-config-icon {
-      position: absolute;
-      right: 0;
-      top: 5px;
+
+    :deep(.arco-table-td-content:has(.cell-actions)) {
+      padding-right: 40px;
     }
   }
   :deep(.arco-table-size-mini).multiple_column {
     :deep(.arco-table-td-content) {
       padding-right: 12px;
     }
-    .td-config-icon {
-      top: 4px;
+
+    :deep(.arco-table-td-content:has(.cell-actions)) {
+      padding-right: 36px;
+    }
+
+    .cell-actions {
+      top: 3px;
     }
   }
-  :deep(.arco-table-size-mini) .td-config-icon {
-    width: 9px;
-    height: 9px;
-  }
-  .multiple_column :deep(.arco-table-cell:hover) .td-config-icon {
-    visibility: visible;
-  }
-  .single_column .entity-field:hover .td-config-icon {
-    visibility: visible;
-  }
-  .builder-type.multiple_column :deep(.arco-table-cell:hover) .td-config-icon {
-    visibility: visible;
-  }
-  .builder-type.single_column .entity-field:hover .td-config-icon {
-    visibility: visible;
+  :deep(.arco-table-size-mini) .cell-action-icon {
+    width: 12px;
+    height: 12px;
   }
 </style>
