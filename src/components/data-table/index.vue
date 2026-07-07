@@ -66,51 +66,54 @@
               // Default cell rendering (fallback when no custom slot provided)
               template(v-if="col.name === 'Merged_Column' && mergeColumn")
                 // Special rendering for merged column
-                span.entity-field(v-for="field in record.Merged_Column" :key="field[0]")
-                  span(v-if="showKeys" style="color: var(--gpt-text-muted)")
-                    | {{ field[0] }}:
-                  | {{ field[1] }}
-                  span.cell-actions-inline(v-if="(!props.wrapLine && isCellExpandable(field[1])) || showContextMenu")
+                .cell-wrapper(:class="{ 'has-merged-expand': !props.wrapLine && isMergedRowExpandable(record) }")
+                  .merged-cell-content(:class="getCellContentClass(null)")
+                    span.entity-field(v-for="field in record.Merged_Column" :key="field[0]")
+                      span(v-if="showKeys" style="color: var(--gpt-text-muted)")
+                        | {{ field[0] }}:
+                      | {{ field[1] }}
+                      .field-actions(v-if="showContextMenu")
+                        span.cell-action-icon(
+                          :class="{ active: isContextMenuActive(record, field[0]) }"
+                          @click.stop="(event) => handleContextMenu(record, field[0], event)"
+                        )
+                          svg.icon-12
+                            use(href="#menu")
+                  .cell-actions(v-if="!props.wrapLine && isMergedRowExpandable(record)")
                     a-popover(
-                      v-if="!props.wrapLine && isCellExpandable(field[1])"
                       trigger="click"
                       position="top"
-                      :popup-visible="isExpandActive(record, field[0])"
-                      @popupVisibleChange="(visible) => handleExpandVisibleChange(getCellExpandKey(record, field[0]), visible)"
+                      :popup-visible="isExpandActive(record, 'Merged_Column')"
+                      @popupVisibleChange="(visible) => handleExpandVisibleChange(getCellExpandKey(record, 'Merged_Column'), visible)"
                     )
                       template(#content)
-                        .cell-popover-content {{ getCellString(field[1]) }}
-                      span.cell-action-icon(:class="{ active: isExpandActive(record, field[0]) }" @click.stop)
-                        icon-up(v-if="isExpandActive(record, field[0])" :size="12")
+                        .cell-popover-content {{ getMergedRowString(record) }}
+                      span.cell-action-icon(:class="{ active: isExpandActive(record, 'Merged_Column') }" @click.stop)
+                        icon-up(v-if="isExpandActive(record, 'Merged_Column')" :size="12")
                         icon-down(v-else :size="12")
+              template(v-else-if="isTimeColumn(col)")
+                .cell-wrapper
+                  .cell-content.timestamp-cell-content
+                    a-tooltip(
+                      v-if="!tsCellDetail"
+                      placement="top"
+                      :content="tsViewStr ? $t('dashboard.showTimestamp') : $t('dashboard.formatTimestamp')"
+                    )
+                      span.timestamp-cell(style="cursor: pointer" @click="changeTsView") {{ renderTs(record, col.name) }}
+                    template(v-else)
+                      // Only the selected tsColumn triggers detail view in tsCellDetail mode
+                      span.timestamp-cell.ts-cell-detail-link(
+                        v-if="props.tsColumn?.name && col.name === props.tsColumn.name"
+                        @click="handleTsCellClick(record, rowIndex)"
+                      ) {{ renderTs(record, col.name) }}
+                      span.timestamp-cell(v-else) {{ renderTs(record, col.name) }}
+                  .cell-actions(v-if="showContextMenu")
                     span.cell-action-icon(
-                      v-if="showContextMenu"
-                      :class="{ active: isContextMenuActive(record, field[0]) }"
-                      @click="(event) => handleContextMenu(record, field[0], event)"
+                      :class="{ active: isContextMenuActive(record, col.name) }"
+                      @click.stop="(event) => handleContextMenu(record, col.name, event)"
                     )
                       svg.icon-12
                         use(href="#menu")
-              template(v-else-if="isTimeColumn(col)")
-                a-tooltip(
-                  v-if="!tsCellDetail"
-                  placement="top"
-                  :content="tsViewStr ? $t('dashboard.showTimestamp') : $t('dashboard.formatTimestamp')"
-                )
-                  span.timestamp-cell(style="cursor: pointer" @click="changeTsView") {{ renderTs(record, col.name) }}
-                template(v-else)
-                  // Only the selected tsColumn triggers detail view in tsCellDetail mode
-                  span.timestamp-cell.ts-cell-detail-link(
-                    v-if="props.tsColumn?.name && col.name === props.tsColumn.name"
-                    @click="handleTsCellClick(record, rowIndex)"
-                  ) {{ renderTs(record, col.name) }}
-                  span.timestamp-cell(v-else) {{ renderTs(record, col.name) }}
-                span.cell-actions-inline(v-if="showContextMenu")
-                  span.cell-action-icon(
-                    :class="{ active: isContextMenuActive(record, col.name) }"
-                    @click="(event) => handleContextMenu(record, col.name, event)"
-                  )
-                    svg.icon-12
-                      use(href="#menu")
               template(v-else)
                 .cell-wrapper
                   .cell-content(:class="getCellContentClass(record[col.name])")
@@ -326,6 +329,20 @@ a-dropdown#td-context(
 
   function isCellExpandable(value: unknown) {
     return !props.wrapLine && (isExpandPopoverWrapText(value) || isExpandPopoverOverflowText(value))
+  }
+
+  function getMergedRowString(record: TableData) {
+    const fields = record.Merged_Column as [string, unknown][] | undefined
+    if (!fields?.length) {
+      return ''
+    }
+    return fields
+      .map(([key, value]) => (showKeys.value ? `${key}: ${getCellString(value)}` : getCellString(value)))
+      .join(' ')
+  }
+
+  function isMergedRowExpandable(record: TableData) {
+    return isCellExpandable(getMergedRowString(record))
   }
 
   function getColumnContentMaxLength(columnName: string, rows: TableData[], limit = MAX_CONTENT_SAMPLE_ROWS): number {
@@ -925,23 +942,26 @@ a-dropdown#td-context(
   }
 
   :deep(.arco-table-cell:hover) .cell-actions,
+  :deep(.arco-table-td:hover) .cell-actions,
+  .cell-wrapper:hover > .cell-actions,
   .cell-actions:has(.cell-action-icon.active) {
     display: flex;
   }
 
-  // Inline action group (merged column + timestamp cells)
-  .cell-actions-inline {
+  // Per-field context menu in merged column
+  .field-actions {
+    position: absolute;
+    right: 0;
+    top: 50%;
     display: none;
     align-items: center;
-    gap: 6px;
-    margin-left: 4px;
-    vertical-align: middle;
+    transform: translateY(-50%);
+    z-index: 11;
   }
 
-  :deep(.arco-table-cell:hover) .cell-actions-inline,
-  .entity-field:hover .cell-actions-inline,
-  .cell-actions-inline:has(.cell-action-icon.active) {
-    display: inline-flex;
+  .entity-field:hover .field-actions,
+  .field-actions:has(.cell-action-icon.active) {
+    display: flex;
   }
 
   :deep(.arco-table-td) {
@@ -969,6 +989,7 @@ a-dropdown#td-context(
     position: relative;
     width: 100%;
     height: 100%;
+    min-width: 0;
     cursor: default;
   }
   .cell-content {
@@ -977,6 +998,16 @@ a-dropdown#td-context(
     overflow: hidden;
     word-break: normal;
     user-select: text;
+  }
+
+  .timestamp-cell-content {
+    overflow: visible;
+    text-overflow: unset;
+  }
+
+  :deep(.arco-table-td-content:has(.timestamp-cell-content)) {
+    overflow: visible;
+    text-overflow: unset;
   }
   // Show cell action buttons on hover. The popover itself is body-mounted and
   // closed on scroll, so table overflow rules do not clip it.
@@ -989,8 +1020,41 @@ a-dropdown#td-context(
   }
 
   // Merged column styling
+  .merged-cell-content {
+    display: flex;
+    flex-flow: row nowrap;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    user-select: text;
+  }
+
+  .cell-wrapper.has-merged-expand .merged-cell-content {
+    padding-right: 18px;
+  }
+
   .entity-field {
+    position: relative;
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    max-width: 100%;
+    min-width: 0;
     margin-right: 10px;
+    white-space: nowrap;
+  }
+
+  .merged-cell-content.wrap-lines {
+    display: block;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .merged-cell-content.wrap-lines .entity-field {
+    white-space: inherit;
+    word-break: inherit;
   }
 
   .cell-popover-content {
@@ -1003,6 +1067,7 @@ a-dropdown#td-context(
     white-space: pre-wrap;
     word-break: break-word;
   }
+
   .cell-copy-button {
     position: absolute;
     bottom: 2px;
@@ -1047,7 +1112,8 @@ a-dropdown#td-context(
     min-width: 100% !important;
   }
 
-  .multiple_column.virtual-list-active {
+  .multiple_column.virtual-list-active,
+  .single_column.virtual-list-active {
     :deep(.arco-scrollbar-track-direction-horizontal) {
       display: none;
     }
@@ -1071,11 +1137,13 @@ a-dropdown#td-context(
 
       > .arco-table-element {
         width: 100%;
+        table-layout: fixed;
       }
     }
   }
 
-  .multiple_column {
+  .multiple_column,
+  .single_column {
     width: 100%;
   }
 
@@ -1109,7 +1177,8 @@ a-dropdown#td-context(
   .wrap_table :deep(.arco-table-th) {
     white-space: wrap;
   }
-  .multiple_column {
+  .multiple_column,
+  .single_column {
     :deep(.arco-table-td-content) {
       position: relative;
       width: 100%;
@@ -1117,16 +1186,33 @@ a-dropdown#td-context(
     }
 
     :deep(.arco-table-td-content:has(.cell-actions)) {
+      padding-right: 20px;
+    }
+
+    :deep(.arco-table-td-content:has(.cell-actions .cell-action-icon + .cell-action-icon)) {
       padding-right: 40px;
     }
+
+    :deep(.arco-table-td-content:has(.has-merged-expand)) {
+      padding-right: 15px;
+    }
   }
-  :deep(.arco-table-size-mini).multiple_column {
+  :deep(.arco-table-size-mini).multiple_column,
+  :deep(.arco-table-size-mini).single_column {
     :deep(.arco-table-td-content) {
       padding-right: 12px;
     }
 
     :deep(.arco-table-td-content:has(.cell-actions)) {
+      padding-right: 18px;
+    }
+
+    :deep(.arco-table-td-content:has(.cell-actions .cell-action-icon + .cell-action-icon)) {
       padding-right: 36px;
+    }
+
+    :deep(.arco-table-td-content:has(.has-merged-expand)) {
+      padding-right: 12px;
     }
 
     .cell-actions {
