@@ -117,8 +117,8 @@ importers:
         specifier: 0.53.1
         version: 0.53.1(j3zj3rnf3zj4ypnpyryuhhnuym)
       '@perses-dev/prometheus-plugin':
-        specifier: 0.53.1
-        version: 0.53.1(zh773d6h6rwmksast22thd762e)
+        specifier: 0.57.1
+        version: 0.57.1(zh773d6h6rwmksast22thd762e)
       '@perses-dev/stat-chart-plugin':
         specifier: 0.12.1
         version: 0.12.1(@emotion/react@11.14.0(@types/react@18.3.28)(react@18.3.1))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@18.3.28)(react@18.3.1))(@types/react@18.3.28)(react@18.3.1))(@hookform/resolvers@4.1.3(react-hook-form@7.71.2(react@18.3.1)))(@perses-dev/components@0.53.1(j6z42mbiwccbaprd6rlzvg5cje))(@perses-dev/core@0.53.1)(@perses-dev/plugin-system@0.53.1(j3zj3rnf3zj4ypnpyryuhhnuym))(date-fns-tz@3.2.0(date-fns@4.1.0))(date-fns@4.1.0)(echarts@5.6.0)(immer@10.2.0)(lodash@4.17.21)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(use-resize-observer@9.1.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1))
@@ -1686,17 +1686,17 @@ packages:
       react: ^17.0.2 || ^18.0.0
       react-dom: ^17.0.2 || ^18.0.0
 
-  '@perses-dev/prometheus-plugin@0.53.1':
-    resolution: {integrity: sha512-TChx4KCGk3tYIkWuXzYC16Pv05mYKdX2sqvxbMGXoSMlOehkj+dlelaxsc82EU+tlmzRqbGC8Q8M9X33F5N3jA==}
+  '@perses-dev/prometheus-plugin@0.57.1':
+    resolution: {integrity: sha512-PWh+RjUytpvH3D8Bp8lsqSn1nxGYGD0mjkdfB7EU5CLyMbUPzHdk04TkoyCGLu7agVpS6m1omn7pM1+PpfBNdA==}
     peerDependencies:
       '@emotion/react': ^11.7.1
       '@emotion/styled': ^11.6.0
       '@hookform/resolvers': ^3.2.0
-      '@perses-dev/components': ^0.52.0-beta.5
-      '@perses-dev/core': ^0.52.0-beta.5
-      '@perses-dev/dashboards': ^0.52.0-beta.5
-      '@perses-dev/explore': ^0.52.0-beta.5
-      '@perses-dev/plugin-system': ^0.52.0-beta.5
+      '@perses-dev/components': ^0.53.1
+      '@perses-dev/core': ^0.53.0
+      '@perses-dev/dashboards': ^0.53.1
+      '@perses-dev/explore': ^0.53.1
+      '@perses-dev/plugin-system': ^0.53.1
       '@tanstack/react-query': ^4.39.1
       date-fns: ^4.1.0
       date-fns-tz: ^3.2.0
@@ -8224,7 +8224,7 @@ snapshots:
       - vue-tsc
       - webpack
 
-  '@perses-dev/prometheus-plugin@0.53.1(zh773d6h6rwmksast22thd762e)':
+  '@perses-dev/prometheus-plugin@0.57.1(zh773d6h6rwmksast22thd762e)':
     dependencies:
       '@emotion/react': 11.14.0(@types/react@18.3.28)(react@18.3.1)
       '@emotion/styled': 11.14.1(@emotion/react@11.14.0(@types/react@18.3.28)(react@18.3.1))(@types/react@18.3.28)(react@18.3.1)
