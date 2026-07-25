@@ -9,6 +9,7 @@ auto-imports.d.ts
 # editor and IDE paraphernalia
 .idea
 .cursor/skills
+AGENTS.md
 
 # macOS
 .DS_Store
