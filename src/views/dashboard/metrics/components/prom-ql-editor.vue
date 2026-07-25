@@ -108,6 +108,23 @@
     return requestUrl
   }
 
+  // PromQL client passes Fetch Headers; axios must get a plain object or Firefox
+  // throws "Invalid header name" on GET (headers.get is treated as method config).
+  const toPlainHeaders = (headers: any): Record<string, string> => {
+    if (!headers) return {}
+    if (typeof Headers !== 'undefined' && headers instanceof Headers) {
+      return Object.fromEntries(headers.entries())
+    }
+    if (typeof headers.entries === 'function') {
+      try {
+        return Object.fromEntries(headers.entries())
+      } catch {
+        // fall through
+      }
+    }
+    return { ...headers }
+  }
+
   const myHTTPClient = async (resource: any, options: any = {}): Promise<Response> => {
     const requestUrl = normalizeUrl(resource)
 
@@ -119,7 +136,7 @@
       const { method = 'GET', headers = {}, params, body } = options
       const config: any = {
         method,
-        headers,
+        headers: toPlainHeaders(headers),
         params: {
           db: appStore.database,
         },
