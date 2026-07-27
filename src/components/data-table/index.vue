@@ -1079,7 +1079,7 @@ a-dropdown#td-context(
   // Absolute-positioned action group (regular cells)
   .cell-actions {
     position: absolute;
-    right: 2px;
+    right: -15px;
     top: 4px;
     display: none;
     align-items: center;
