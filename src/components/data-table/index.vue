@@ -71,20 +71,14 @@
             )
               // Default cell rendering (fallback when no custom slot provided)
               template(v-if="col.name === 'Merged_Column' && mergeColumn")
-                // Special rendering for merged column
+                // Special rendering for merged column (no per-field context icons)
                 .cell-wrapper(:class="{ 'has-merged-expand': !props.wrapLine && isMergedRowExpandable(record) }")
                   .merged-cell-content(:class="getCellContentClass(null)")
                     span.entity-field(v-for="field in record.Merged_Column" :key="field[0]")
-                      span(v-if="showKeys" style="color: var(--gpt-text-muted)")
-                        | {{ field[0] }}:
-                      | {{ field[1] }}
-                      .field-actions(v-if="showContextMenu")
-                        span.cell-action-icon(
-                          :class="{ active: isContextMenuActive(record, field[0]) }"
-                          @click.stop="(event) => handleContextMenu(record, field[0], event)"
-                        )
-                          svg.icon-12
-                            use(href="#menu")
+                      span.entity-field-text
+                        span(v-if="showKeys" style="color: var(--gpt-text-muted)")
+                          | {{ field[0] }}:
+                        | {{ field[1] }}
                   .cell-actions(v-if="!props.wrapLine && isMergedRowExpandable(record)")
                     a-popover(
                       trigger="click"
@@ -113,7 +107,7 @@
                         @click="handleTsCellClick(record, rowIndex)"
                       ) {{ renderTs(record, col.name) }}
                       span.timestamp-cell(v-else) {{ renderTs(record, col.name) }}
-                  .cell-actions(v-if="showContextMenu")
+                  .cell-actions(v-if="showContextMenu && !mergeColumn")
                     span.cell-action-icon(
                       :class="{ active: isContextMenuActive(record, col.name) }"
                       @click.stop="(event) => handleContextMenu(record, col.name, event)"
@@ -1099,22 +1093,6 @@ a-dropdown#td-context(
     display: flex;
   }
 
-  // Per-field context menu in merged column
-  .field-actions {
-    position: absolute;
-    right: 0;
-    top: 50%;
-    display: none;
-    align-items: center;
-    transform: translateY(-50%);
-    z-index: 11;
-  }
-
-  .entity-field:hover .field-actions,
-  .field-actions:has(.cell-action-icon.active) {
-    display: flex;
-  }
-
   :deep(.arco-table-td) {
     pre {
       margin: 0;
@@ -1170,14 +1148,14 @@ a-dropdown#td-context(
     overflow: visible;
   }
 
-  // Merged column styling
+  // Merged / single-column: whole Data line ellipsis when overflowing.
   .merged-cell-content {
-    display: flex;
-    flex-flow: row nowrap;
-    align-items: center;
+    display: block;
     width: 100%;
+    max-width: 100%;
     min-width: 0;
     overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
     user-select: text;
   }
@@ -1187,23 +1165,24 @@ a-dropdown#td-context(
   }
 
   .entity-field {
-    position: relative;
-    display: inline-flex;
-    flex: 0 0 auto;
-    align-items: center;
-    max-width: 100%;
-    min-width: 0;
+    display: inline;
     margin-right: 10px;
     white-space: nowrap;
   }
 
+  .entity-field-text {
+    white-space: nowrap;
+  }
+
   .merged-cell-content.wrap-lines {
-    display: block;
+    overflow: visible;
+    text-overflow: unset;
     white-space: pre-wrap;
     word-break: break-word;
   }
 
-  .merged-cell-content.wrap-lines .entity-field {
+  .merged-cell-content.wrap-lines .entity-field,
+  .merged-cell-content.wrap-lines .entity-field-text {
     white-space: inherit;
     word-break: inherit;
   }
@@ -1319,6 +1298,11 @@ a-dropdown#td-context(
   .multiple_column,
   .single_column {
     width: 100%;
+
+    :deep(.arco-table-td .arco-table-td-content) {
+      max-width: 100%;
+      min-width: 0;
+    }
   }
 
   :deep(.arco-table-th) {
@@ -1357,10 +1341,6 @@ a-dropdown#td-context(
     :deep(.arco-table-td-content) {
       position: relative;
       width: 100%;
-    }
-
-    :deep(.arco-table-td-content:has(.cell-actions .cell-action-icon + .cell-action-icon)) {
-      padding-right: 40px;
     }
 
     :deep(.arco-table-td-content:has(.has-merged-expand)) {
