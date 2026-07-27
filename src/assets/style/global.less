@@ -222,7 +222,8 @@
   --gpt-table-row-hover-bg: rgba(112, 47, 237, 0.08);
   --gpt-radio-group-bg: rgba(71, 52, 96, 0.08);
   --gpt-nav-active-indicator: var(--gpt-main-purple);
-  --gpt-table-head-bg: rgba(71, 52, 96, 0.04);
+  /* Opaque equivalent of rgba(71, 52, 96, 0.04) over white — sticky headers must not show through */
+  --gpt-table-head-bg: #eeecf0;
   --gpt-table-toolbar-bg: var(--gpt-bg-header);
 
   --gpt-page-padding-x: 16px;

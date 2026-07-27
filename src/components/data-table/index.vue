@@ -1,5 +1,9 @@
 <template lang="pug">
-.data-table-container(ref="tableContainer")
+.data-table-container(
+  ref="tableContainer"
+  :class="containerClasses"
+  :style="lockedTableWidthPx ? { '--data-table-locked-width': lockedTableWidthPx + 'px' } : undefined"
+)
   a-table(
     :key="columnMode"
     v-bind="tablePassThroughProps"
@@ -10,6 +14,7 @@
     :stripe="false"
     :row-class="getRowClass"
     :class="tableClassesDynamic"
+    @column-resize="onColumnResize"
   )
     template(#empty)
       a-empty.data-table-empty(description="No data")
@@ -22,7 +27,7 @@
     template(#columns)
       template(v-for="col in processedColumns" :key="col.name")
         a-table-column(
-          :width="col.width"
+          :width="col.width || undefined"
           :ellipsis="true"
           :data-index="col.name"
           :title="col.title || col.name"
@@ -238,6 +243,8 @@ a-dropdown#td-context(
   const attrs = useAttrs()
   const attrsRecord = attrs as Record<string, any>
   const hasVirtualListProps = computed(() => !!attrsRecord['virtual-list-props'])
+  // Non-virtual: one table + container scroll + sticky th (true natural column widths).
+  const useStickySingleTable = computed(() => !hasVirtualListProps.value)
   // Detect whether the parent has bound a @row-select listener.
   // Declared emits are filtered out of attrs, so we read the raw vnode props.
   const hasRowDetailListener = computed(() => !!getCurrentInstance()?.vnode.props?.onRowSelect)
@@ -253,6 +260,17 @@ a-dropdown#td-context(
   // Column mode logic
   const mergeColumn = computed(() => props.columnMode !== 'separate')
   const showKeys = computed(() => props.columnMode === 'merged-with-keys')
+
+  const COLUMN_MAX_WIDTH = 600
+  const columnWidths = ref<Record<string, number>>({})
+  const widthsLocked = ref(false)
+  let lockWidthsTimer: ReturnType<typeof setTimeout> | null = null
+
+  const containerClasses = computed(() => ({
+    'sticky-scroll': useStickySingleTable.value,
+    'natural-column-widths': useStickySingleTable.value && !widthsLocked.value,
+    'widths-locked': useStickySingleTable.value && widthsLocked.value,
+  }))
 
   // Dynamic table classes computation
   const tableClassesDynamic = computed(() => {
@@ -285,24 +303,17 @@ a-dropdown#td-context(
 
   // Column width calculation rules:
   //
-  // Both virtual-list and non-virtual-list modes SHARE the content measurement:
-  //   - Sample up to MAX_CONTENT_SAMPLE_ROWS rows per column.
-  //   - Use the maximum stringified cell length as the column's content weight.
+  // Non-virtual-list (ordinary / query result table):
+  //   - Render without widths (table-layout: auto) so columns size to real content
+  //     (compact mini size naturally measures narrower).
+  //   - After paint, measure th/first-row td, lock px widths (cap 600).
+  //   - Do NOT stretch to fill the container; min-width:100% covers underfill.
+  //   - Horizontal scroll on the container when locked total exceeds viewport.
   //
-  // They DIFFER in how weights are turned into pixel widths:
-  //   - Non-virtual-list: each column gets a base width derived from
-  //     max(label.length, contentMaxLen) * 8 + 40 (clamped 150~600). The primary
-  //     timestamp column stays fixed at 230px. Remaining columns are scaled up
-  //     together to fill the container width. Horizontal scrolling is allowed
-  //     when the total width exceeds the container.
-  //   - Virtual-list: widths are distributed proportionally by content weight so
-  //     the total exactly matches the container width. Horizontal scrolling is
-  //     intentionally disabled (overflow-x: hidden) to keep the sticky header
-  //     and virtual body aligned; the vertical scrollbar already narrows the
-  //     body area, so a separate horizontal scrollbar would cause misalignment.
-  //
-  // We do NOT fully unify the distribution strategy because estimating the
-  // exact scrollbar width across platforms/macOS overlay scrollbars is fragile.
+  // Virtual-list:
+  //   - Sample up to MAX_CONTENT_SAMPLE_ROWS rows per column for content weight.
+  //   - Distribute widths proportionally to fill the container; hide overflow-x
+  //     to keep sticky header and virtual body aligned.
   const MAX_CONTENT_SAMPLE_ROWS = 100
 
   function getCellString(value: unknown): string {
@@ -374,17 +385,6 @@ a-dropdown#td-context(
     return lengths
   }
 
-  function getColumnWidth(column: ColumnType, rows: TableData[]) {
-    if (props.tsColumn?.name === column.name || isTimeColumn(column)) {
-      return 230
-    }
-
-    const label = String(column.title || column.name)
-    const contentMaxLen = getColumnContentMaxLength(column.name, rows)
-    const charLen = Math.max(label.length, contentMaxLen)
-    return Math.max(150, Math.min(600, charLen * 8 + 40))
-  }
-
   function findMaxLenCol(columns: ColumnType[], rows: TableData[]): string {
     const lengths = getColumnContentLengths(columns, rows)
     let max = 0
@@ -401,16 +401,11 @@ a-dropdown#td-context(
   }
 
   function getVirtualListColumnWidth(currLen: number, totalLen: number, containerWidth: number) {
-    let width = (Math.floor((currLen / totalLen) * 1000) / 1000) * containerWidth
+    let width = (Math.floor((currLen / Math.max(totalLen, 1)) * 1000) / 1000) * containerWidth
     width = Math.max(150, width)
-    width = Math.min(600, width)
+    width = Math.min(COLUMN_MAX_WIDTH, width)
     return width
   }
-
-  // Column width state management
-  const columnWidths = ref<Record<string, number>>({})
-  const prevContainerWidth = ref<number>(0)
-  const lastCalculatedColumnsKey = ref<string>('')
 
   // Visible columns (without width) for width calculation
   const visibleColumns = computed<ColumnType[]>(() => {
@@ -433,109 +428,191 @@ a-dropdown#td-context(
       : tmpColumns
   })
 
-  function getColumnsKey(columns: ColumnType[]): string {
-    return columns.map((c) => c.name).join(',')
+  const columnsKey = computed(() => visibleColumns.value.map((c) => c.name).join(','))
+  const tableSizeAttr = computed(() => String(attrsRecord.size || 'medium'))
+
+  // Re-measure natural widths when columns / wrap / compact size / mode change.
+  const layoutResetKey = computed(() => {
+    if (!useStickySingleTable.value) return ''
+    if (mergeColumn.value) {
+      return `merged|${props.tsColumn?.name || ''}|${props.wrapLine}|${tableSizeAttr.value}`
+    }
+    return `${columnsKey.value}|${props.wrapLine}|${tableSizeAttr.value}`
+  })
+
+  function columnsForWidthLock(): ColumnType[] {
+    if (mergeColumn.value) {
+      const arr: ColumnType[] = []
+      if (props.tsColumn) {
+        arr.push({
+          name: props.tsColumn.name,
+          title: props.tsColumn.name,
+          data_type: props.tsColumn.data_type || 'timestamp',
+        } as ColumnType)
+      }
+      arr.push({
+        name: 'Merged_Column',
+        title: 'Data',
+        data_type: 'merged',
+      } as ColumnType)
+      return arr
+    }
+    return visibleColumns.value
   }
 
-  // Non-virtual-list width distribution: compute a base width for every column
-  // (timestamp fixed at 230px), then scale non-timestamp columns up so the sum
-  // matches the container width. This guarantees the table fills the container
-  // horizontally while still allowing horizontal scrolling if the user later
-  // resizes a column wider.
-  function calculateColumnWidths(
-    columns: ColumnType[],
-    rows: TableData[],
-    containerWidth: number
-  ): Record<string, number> {
-    const widths: Record<string, number> = {}
-    let fixedColumnName: string | null = null
-
-    columns.forEach((column) => {
-      widths[column.name] = getColumnWidth(column, rows)
-      // Keep the primary timestamp column at its base width initially;
-      // scale the remaining columns to fill the container.
-      if (props.tsColumn?.name === column.name) {
-        fixedColumnName = column.name
-      }
-    })
-
-    const total = Object.values(widths).reduce((sum, width) => sum + width, 0)
-
-    if (containerWidth > 0 && total < containerWidth) {
-      if (fixedColumnName) {
-        const fixedWidth = widths[fixedColumnName]
-        const remaining = containerWidth - fixedWidth
-        const othersTotal = total - fixedWidth
-
-        if (othersTotal > 0 && remaining > 0) {
-          const scale = remaining / othersTotal
-          Object.keys(widths).forEach((key) => {
-            if (key !== fixedColumnName) {
-              widths[key] = Math.max(100, Math.round(widths[key] * scale))
-            }
-          })
-        }
-      } else {
-        const scale = containerWidth / total
-        Object.keys(widths).forEach((key) => {
-          widths[key] = Math.max(100, Math.round(widths[key] * scale))
-        })
-      }
-    }
-
-    return widths
+  function getCellPaddingX(el: Element): number {
+    const style = window.getComputedStyle(el)
+    return (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0)
   }
 
-  // When the container is resized, keep the relative proportions between
-  // columns by scaling all current widths by the same factor.
-  function scaleColumnWidths(
-    widths: Record<string, number>,
-    prevWidth: number,
-    newWidth: number
-  ): Record<string, number> {
-    if (prevWidth <= 0 || newWidth <= 0 || prevWidth === newWidth) {
-      return { ...widths }
+  function measureCellNaturalWidth(el: HTMLElement): number {
+    const layoutW = el.getBoundingClientRect().width
+    const inner =
+      (el.querySelector(
+        '.arco-table-th-item-title, .arco-table-th-item, .cell-content, .timestamp-cell, .merged-cell-content, .arco-table-cell, .arco-table-td-content'
+      ) as HTMLElement | null) || el
+    const contentW = Math.max(inner.scrollWidth, inner.offsetWidth) + getCellPaddingX(el)
+    // ceil + buffer: Arco col sets width=min=max; 1px short triggers header ellipsis.
+    return Math.ceil(Math.max(layoutW, contentW)) + 4
+  }
+
+  function measureVisibleColumnWidths(columns: ColumnType[]): Record<string, number> | null {
+    const root = tableContainer.value
+    if (!root || columns.length === 0) {
+      return null
     }
 
-    const scale = newWidth / prevWidth
-    const scaled: Record<string, number> = {}
+    const table = root.querySelector('.arco-table-element')
+    if (!table) {
+      return null
+    }
 
-    Object.keys(widths).forEach((key) => {
-      scaled[key] = Math.max(100, Math.round(widths[key] * scale))
+    const isDataCell = (el: Element) => {
+      if (
+        el.classList.contains('arco-table-operation') ||
+        el.classList.contains('arco-table-selection-col') ||
+        el.classList.contains('arco-table-expand-col')
+      ) {
+        return false
+      }
+      return window.getComputedStyle(el).display !== 'none'
+    }
+
+    const headerCells = Array.from(table.querySelectorAll('thead tr:first-child > th')).filter(
+      isDataCell
+    ) as HTMLElement[]
+
+    if (headerCells.length < columns.length) {
+      return null
+    }
+
+    const firstRow = table.querySelector('tbody tr:not(.arco-table-tr-empty)')
+    const bodyCells = firstRow ? (Array.from(firstRow.children).filter(isDataCell) as HTMLElement[]) : []
+
+    const measured: Record<string, number> = {}
+    columns.forEach((column, index) => {
+      let width = measureCellNaturalWidth(headerCells[index])
+      if (bodyCells[index]) {
+        width = Math.max(width, measureCellNaturalWidth(bodyCells[index]))
+      }
+      measured[column.name] = Math.min(COLUMN_MAX_WIDTH, Math.max(40, width))
     })
+    return measured
+  }
 
-    return scaled
+  function clearLockWidthsSchedule() {
+    if (lockWidthsTimer != null) {
+      clearTimeout(lockWidthsTimer)
+      lockWidthsTimer = null
+    }
+  }
+
+  function lockMeasuredColumnWidths() {
+    if (!useStickySingleTable.value) {
+      return
+    }
+    const columns = columnsForWidthLock()
+    if (columns.length === 0) {
+      widthsLocked.value = false
+      return
+    }
+
+    const measured = measureVisibleColumnWidths(columns)
+    if (!measured) {
+      return
+    }
+    columnWidths.value = measured
+    widthsLocked.value = true
+  }
+
+  function scheduleLockWidthsAfterRender() {
+    if (!useStickySingleTable.value) {
+      return
+    }
+    clearLockWidthsSchedule()
+    columnWidths.value = {}
+    widthsLocked.value = false
+    nextTick(() => {
+      lockWidthsTimer = setTimeout(() => {
+        lockWidthsTimer = null
+        lockMeasuredColumnWidths()
+      }, 50)
+    })
   }
 
   watch(
-    [visibleColumns, tableWidth],
-    ([columns, width]) => {
-      if (width <= 0 || columns.length === 0) {
-        prevContainerWidth.value = width
+    layoutResetKey,
+    (key) => {
+      if (!key) {
+        clearLockWidthsSchedule()
+        columnWidths.value = {}
+        widthsLocked.value = false
         return
       }
-
-      const key = getColumnsKey(columns)
-      if (key !== lastCalculatedColumnsKey.value) {
-        columnWidths.value = calculateColumnWidths(columns, props.data, width)
-        lastCalculatedColumnsKey.value = key
-      } else if (width !== prevContainerWidth.value && prevContainerWidth.value > 0) {
-        columnWidths.value = scaleColumnWidths(columnWidths.value, prevContainerWidth.value, width)
-      }
-
-      prevContainerWidth.value = width
+      scheduleLockWidthsAfterRender()
     },
     { immediate: true }
   )
+
+  // Re-measure once data first arrives (empty → rows) so body cells are included.
+  watch(
+    () => (useStickySingleTable.value ? props.data.length > 0 : false),
+    (hasData, hadData) => {
+      if (hasData && !hadData && layoutResetKey.value) {
+        scheduleLockWidthsAfterRender()
+      }
+    }
+  )
+
+  const lockedTableWidthPx = computed(() => {
+    if (!useStickySingleTable.value || !widthsLocked.value) {
+      return undefined
+    }
+    const total = Object.values(columnWidths.value).reduce((sum, width) => sum + width, 0)
+    return total > 0 ? total : undefined
+  })
+
+  function onColumnResize(dataIndex: string, width: number) {
+    if (!useStickySingleTable.value || !dataIndex || !(width > 0)) {
+      return
+    }
+    columnWidths.value = {
+      ...columnWidths.value,
+      [dataIndex]: Math.round(width),
+    }
+    widthsLocked.value = true
+  }
 
   function getSemanticThClass(column: ColumnType) {
     return column.semantic_type?.toLowerCase()
   }
 
+  type TableColumn = ColumnType & { width?: number }
+
   // Computed columns based on mode
-  const processedColumns = computed(() => {
+  const processedColumns = computed((): TableColumn[] => {
     if (!mergeColumn.value) {
-      // Separate mode: use visible columns with managed widths
+      // Separate mode
       if (hasVirtualListProps.value) {
         // Virtual list uses proportional distribution based on sampled content
         // lengths. It intentionally does not allow horizontal scrolling, so the
@@ -566,56 +643,63 @@ a-dropdown#td-context(
         })
       }
 
-      return visibleColumns.value.map((column) => ({
-        ...column,
-        width: columnWidths.value[column.name] ?? getColumnWidth(column, props.data),
-      }))
+      // Non-virtual: natural widths until lock; then measured snapshot.
+      return visibleColumns.value.map((column) => {
+        const { width: _omit, ...rest } = column as TableColumn
+        const locked = columnWidths.value[column.name]
+        return locked !== undefined ? { ...rest, width: locked } : rest
+      })
     }
 
-    // Merged mode: create timestamp + merged column
-    const arr = []
+    // Merged / single-column: timestamp fixed in virtual-list; Data takes the rest.
+    // Non-virtual: natural measure then lock (columnWidths).
+    const arr: TableColumn[] = []
     if (props.tsColumn) {
+      const locked = columnWidths.value[props.tsColumn.name]
+      let width: number | undefined
+      if (hasVirtualListProps.value) {
+        width = 230
+      } else if (locked !== undefined) {
+        width = locked
+      }
       arr.push({
         name: props.tsColumn.name,
         title: props.tsColumn.name,
         data_type: props.tsColumn.data_type || 'timestamp',
-        width: columnWidths.value[props.tsColumn.name] ?? 220,
-      } as ColumnType)
+        ...(width !== undefined ? { width } : {}),
+      })
     }
+    const mergedLocked = columnWidths.value.Merged_Column
     arr.push({
       name: 'Merged_Column',
       title: 'Data',
       data_type: 'merged',
-    } as ColumnType)
+      ...(!hasVirtualListProps.value && mergedLocked !== undefined ? { width: mergedLocked } : {}),
+    })
     return arr
-  })
-
-  const tableHorizontalScrollX = computed(() => {
-    if (mergeColumn.value || hasVirtualListProps.value) {
-      return undefined
-    }
-
-    const total = processedColumns.value.reduce((sum, column) => sum + Number(column.width || 0), 0)
-    return total > 0 ? total : undefined
   })
 
   const tablePassThroughProps = computed(() => {
     const { scroll: attrsScroll, ...restAttrs } = attrsRecord
-    const extraScroll = typeof attrsScroll === 'object' && attrsScroll ? attrsScroll : {}
-    const scroll = {
-      ...(hasVirtualListProps.value ? {} : { y: '100%' }),
-      ...extraScroll,
+
+    if (hasVirtualListProps.value) {
+      const extraScroll = typeof attrsScroll === 'object' && attrsScroll ? attrsScroll : {}
+      return {
+        loading: false,
+        size: 'medium',
+        ...restAttrs,
+        scroll: {
+          ...extraScroll,
+        },
+      }
     }
 
-    if (scroll.x === undefined && tableHorizontalScrollX.value !== undefined) {
-      scroll.x = tableHorizontalScrollX.value
-    }
-
+    // Non-virtual: single table, container scrolls; no Arco scroll / custom scrollbar.
     return {
       loading: false,
       size: 'medium',
       ...restAttrs,
-      scroll,
+      scrollbar: false,
     }
   })
 
@@ -789,6 +873,7 @@ a-dropdown#td-context(
   })
 
   onBeforeUnmount(() => {
+    clearLockWidthsSchedule()
     tableContainer.value?.removeEventListener('scroll', closeExpandPopover, { capture: true })
   })
 
@@ -851,7 +936,47 @@ a-dropdown#td-context(
   // Data table container - full height layout with fixed header
   .data-table-container {
     height: 100%; // Always fill parent height
-    overflow: hidden; // Prevent container overflow
+    overflow: hidden; // Prevent container overflow (virtual-list / default)
+
+    // Non-virtual: single table scrolls here; sticky th pins header.
+    &.sticky-scroll {
+      overflow: auto;
+
+      :deep(.arco-table-wrapper),
+      :deep(.arco-table-container),
+      :deep(.arco-table-content),
+      :deep(.arco-table-content-scroll),
+      :deep(.arco-table-body) {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+      }
+
+      :deep(.arco-scrollbar),
+      :deep(.arco-scrollbar-track) {
+        display: none;
+      }
+
+      :deep(.arco-table-th) {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background-color: var(--gpt-table-head-bg) !important;
+        background-clip: padding-box;
+        overflow: visible;
+      }
+
+      :deep(.arco-table-th .arco-table-cell),
+      :deep(.arco-table-th .arco-table-th-item) {
+        background-color: var(--gpt-table-head-bg);
+      }
+
+      :deep(.arco-table-column-handle) {
+        z-index: 11;
+        width: 10px;
+        right: -5px;
+      }
+    }
 
     // Table wrapper height management
     :deep(.arco-table-wrapper) {
@@ -910,10 +1035,9 @@ a-dropdown#td-context(
     }
   }
 
+  // Empty state: do not flex the td — breaks colspan centering.
   :deep(.arco-table-tr-empty .arco-table-td) {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    text-align: center;
   }
 
   :deep(.data-table-empty .arco-empty-description) {
@@ -1122,23 +1246,46 @@ a-dropdown#td-context(
   :deep(.arco-drawer) {
     border: 1px solid var(--gpt-border-default);
   }
-  // Table layout differences between virtual-list and non-virtual-list:
-  //
-  // Non-virtual-list: the table element must always be at least as wide as the
-  // container (min-width: 100%). When columns are resized wider than the
-  // container, Arco's scroll.x makes the table grow and a horizontal scrollbar
-  // appears. This is desired for the query-result table.
-  //
-  // Virtual-list: horizontal scrolling is intentionally disabled because the
-  // vertical scrollbar already narrows the body area; a horizontal scrollbar
-  // would cause the sticky header and virtual body to misalign. The column
-  // widths are distributed proportionally so the table stays at 100% container
-  // width and overflow-x is hidden. See the column-width rules above for how
-  // content weights are computed.
-  .multiple_column:not(.virtual-list-active) :deep(.arco-table-element) {
-    min-width: 100% !important;
+
+  // Non-virtual natural widths (until lock): content-sized, max 600, fill when narrow.
+  // Disable ellipsis while measuring — overflow:hidden lets auto columns shrink below
+  // text intrinsic width; locking that shrunk width truncates headers.
+  .data-table-container.natural-column-widths {
+    :deep(.arco-table-element) {
+      table-layout: auto !important;
+      width: max-content !important;
+      min-width: 100%;
+    }
+
+    :deep(.arco-table-th),
+    :deep(.arco-table-tr:not(.arco-table-tr-empty) .arco-table-td) {
+      max-width: 600px;
+    }
+
+    :deep(.arco-table-th),
+    :deep(.arco-table-tr:not(.arco-table-tr-empty) .arco-table-td),
+    :deep(.arco-table-th-item),
+    :deep(.arco-table-th-item-title),
+    :deep(.arco-table-td-content),
+    :deep(.cell-content),
+    :deep(.merged-cell-content) {
+      overflow: visible !important;
+      text-overflow: clip !important;
+    }
   }
 
+  // After lock: fixed layout + explicit table width so Arco col resize is visible.
+  .data-table-container.widths-locked {
+    :deep(.arco-table-element) {
+      table-layout: fixed !important;
+      width: var(--data-table-locked-width, max-content) !important;
+      min-width: 100%;
+    }
+  }
+
+  // Virtual-list: horizontal scrolling is intentionally disabled because the
+  // vertical scrollbar already narrows the body area; a horizontal scrollbar
+  // would cause the sticky header and virtual body to misalign.
   .multiple_column.virtual-list-active,
   .single_column.virtual-list-active {
     :deep(.arco-scrollbar-track-direction-horizontal) {
@@ -1176,7 +1323,8 @@ a-dropdown#td-context(
 
   :deep(.arco-table-th) {
     position: relative;
-    overflow: hidden;
+    // Must be visible: Arco resize handle sits at right:-4px.
+    overflow: visible;
     text-overflow: ellipsis;
   }
 
@@ -1209,11 +1357,6 @@ a-dropdown#td-context(
     :deep(.arco-table-td-content) {
       position: relative;
       width: 100%;
-      padding-right: 15px;
-    }
-
-    :deep(.arco-table-td-content:has(.cell-actions)) {
-      padding-right: 20px;
     }
 
     :deep(.arco-table-td-content:has(.cell-actions .cell-action-icon + .cell-action-icon)) {
