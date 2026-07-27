@@ -256,6 +256,7 @@ a-dropdown#td-context(
   const showKeys = computed(() => props.columnMode === 'merged-with-keys')
 
   const COLUMN_MAX_WIDTH = 600
+  const TIME_COLUMN_FIXED_WIDTH = 200
   const columnWidths = ref<Record<string, number>>({})
   const widthsLocked = ref(false)
   let lockWidthsTimer: ReturnType<typeof setTimeout> | null = null
@@ -624,7 +625,7 @@ a-dropdown#td-context(
 
           if (column.name !== maxLenName) {
             if (column.name === props.tsColumn?.name) {
-              width = 230
+              width = TIME_COLUMN_FIXED_WIDTH
             } else {
               width = getVirtualListColumnWidth(contentLengths[column.name] || 0, totalContentLen, tableWidth.value)
             }
@@ -652,7 +653,7 @@ a-dropdown#td-context(
       const locked = columnWidths.value[props.tsColumn.name]
       let width: number | undefined
       if (hasVirtualListProps.value) {
-        width = 230
+        width = TIME_COLUMN_FIXED_WIDTH
       } else if (locked !== undefined) {
         width = locked
       }
