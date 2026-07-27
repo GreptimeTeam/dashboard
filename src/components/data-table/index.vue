@@ -255,7 +255,9 @@ a-dropdown#td-context(
   const mergeColumn = computed(() => props.columnMode !== 'separate')
   const showKeys = computed(() => props.columnMode === 'merged-with-keys')
 
+  // Cap for a single column after measure / proportional assign.
   const COLUMN_MAX_WIDTH = 600
+  // Virtual-list (and virtual merged mode): primary timestamp column fixed px.
   const TIME_COLUMN_FIXED_WIDTH = 200
   const columnWidths = ref<Record<string, number>>({})
   const widthsLocked = ref(false)
@@ -273,7 +275,7 @@ a-dropdown#td-context(
       'wrap_table': props.wrapLine,
       'single_column': props.columnMode !== 'separate',
       'multiple_column': props.columnMode === 'separate',
-      'virtual-list-active': hasVirtualListProps.value, // Add class when virtual list is active
+      'virtual-list-active': hasVirtualListProps.value,
     }
 
     // Merge with any additional classes passed via props
@@ -296,19 +298,28 @@ a-dropdown#td-context(
     return dateTypes.indexOf(column.data_type) > -1
   }
 
-  // Column width calculation rules:
+  // ---------------------------------------------------------------------------
+  // Table layout / column-width conclusions (keep in sync with CSS below)
   //
-  // Non-virtual-list (ordinary / query result table):
-  //   - Render without widths (table-layout: auto) so columns size to real content
-  //     (compact mini size naturally measures narrower).
-  //   - After paint, measure th/first-row td, lock px widths (cap 600).
-  //   - Do NOT stretch to fill the container; min-width:100% covers underfill.
-  //   - Horizontal scroll on the container when locked total exceeds viewport.
+  // Ordinary mode (no virtual-list-props) — natural widths:
+  //   - Single table + container scroll + sticky th (useStickySingleTable).
+  //   - Phase 1 (.natural-column-widths): no column :width; table-layout:auto;
+  //     size to header/body content (cap 600px). min-width:100% only when the
+  //     table would be narrower than the container.
+  //   - Phase 2 (.widths-locked): measure DOM → lock explicit px on each column;
+  //     table-layout:fixed. Total may exceed viewport → horizontal scroll on
+  //     .data-table-container. Do NOT scale columns up just to fill the screen.
+  //   - Merged / single-column: same measure+lock for ts + Merged_Column (Data).
   //
-  // Virtual-list:
-  //   - Sample up to MAX_CONTENT_SAMPLE_ROWS rows per column for content weight.
-  //   - Distribute widths proportionally to fill the container; hide overflow-x
-  //     to keep sticky header and virtual body aligned.
+  // Virtual-list mode (logs etc.) — fit screen, never wider than container:
+  //   - No horizontal scroll (overflow-x hidden) so header and virtual body stay
+  //     aligned; column widths must sum to ~container width.
+  //   - Separate: sample content length (MAX_CONTENT_SAMPLE_ROWS); longest column
+  //     omits explicit width (flex leftover); others get proportional width with
+  //     min 150 / max COLUMN_MAX_WIDTH; primary ts column = TIME_COLUMN_FIXED_WIDTH.
+  //   - Merged: ts = TIME_COLUMN_FIXED_WIDTH; Data (Merged_Column) takes the rest.
+  //   - Arco column-resizable is unsupported with virtual-list — do not enable.
+  // ---------------------------------------------------------------------------
   const MAX_CONTENT_SAMPLE_ROWS = 100
 
   function getCellString(value: unknown): string {
@@ -604,14 +615,12 @@ a-dropdown#td-context(
 
   type TableColumn = ColumnType & { width?: number }
 
-  // Computed columns based on mode
+  // Assign column :width per layout conclusions above.
   const processedColumns = computed((): TableColumn[] => {
     if (!mergeColumn.value) {
       // Separate mode
       if (hasVirtualListProps.value) {
-        // Virtual list uses proportional distribution based on sampled content
-        // lengths. It intentionally does not allow horizontal scrolling, so the
-        // layout is handled together with the CSS that hides overflow-x.
+        // Fit container: proportional widths; longest column has no width (flex).
         if (!tableWidth.value || visibleColumns.value.length === 0) {
           return visibleColumns.value.map((column) => ({ ...column }))
         }
@@ -638,7 +647,7 @@ a-dropdown#td-context(
         })
       }
 
-      // Non-virtual: natural widths until lock; then measured snapshot.
+      // Ordinary: omit width until lock; then measured natural px snapshot.
       return visibleColumns.value.map((column) => {
         const { width: _omit, ...rest } = column as TableColumn
         const locked = columnWidths.value[column.name]
@@ -646,8 +655,7 @@ a-dropdown#td-context(
       })
     }
 
-    // Merged / single-column: timestamp fixed in virtual-list; Data takes the rest.
-    // Non-virtual: natural measure then lock (columnWidths).
+    // Merged: virtual → fixed ts + flexible Data; ordinary → measure+lock.
     const arr: TableColumn[] = []
     if (props.tsColumn) {
       const locked = columnWidths.value[props.tsColumn.name]
@@ -1227,9 +1235,9 @@ a-dropdown#td-context(
     border: 1px solid var(--gpt-border-default);
   }
 
-  // Non-virtual natural widths (until lock): content-sized, max 600, fill when narrow.
-  // Disable ellipsis while measuring — overflow:hidden lets auto columns shrink below
-  // text intrinsic width; locking that shrunk width truncates headers.
+  // Ordinary natural phase: content-sized columns (max 600); min-width 100% if narrow.
+  // Disable ellipsis while measuring — overflow:hidden would shrink below intrinsic
+  // text width and locking that would truncate headers.
   .data-table-container.natural-column-widths {
     :deep(.arco-table-element) {
       table-layout: auto !important;
@@ -1263,9 +1271,8 @@ a-dropdown#td-context(
     }
   }
 
-  // Virtual-list: horizontal scrolling is intentionally disabled because the
-  // vertical scrollbar already narrows the body area; a horizontal scrollbar
-  // would cause the sticky header and virtual body to misalign.
+  // Virtual-list: keep table ≤ container (no overflow-x). Horizontal scroll would
+  // misalign sticky header vs virtual body; widths must fit the screen.
   .multiple_column.virtual-list-active,
   .single_column.virtual-list-active {
     :deep(.arco-scrollbar-track-direction-horizontal) {
