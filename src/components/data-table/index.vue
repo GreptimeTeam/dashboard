@@ -357,7 +357,9 @@ a-dropdown#td-context(
   //     aligned; column widths must sum to ~container width.
   //   - Separate: sample content length (MAX_CONTENT_SAMPLE_ROWS); longest column
   //     omits explicit width (flex leftover); others get proportional width with
-  //     min 150 / max COLUMN_MAX_WIDTH; primary ts column = TIME_COLUMN_FIXED_WIDTH.
+  //     min 150 / max COLUMN_MAX_WIDTH; every timestamp column (primary + other
+  //     time cols) uses TIME_COLUMN_FIXED_WIDTH. Time cells use ellipsis under
+  //     .virtual-list-active (overflow:visible would bleed into neighbors).
   //   - Merged: ts = TIME_COLUMN_FIXED_WIDTH; Data (Merged_Column) takes the rest.
   //   - Arco column-resizable is unsupported with virtual-list — do not enable.
   // ---------------------------------------------------------------------------
@@ -709,7 +711,10 @@ a-dropdown#td-context(
             let width: number | undefined
 
             if (column.name !== maxLenName) {
-              if (column.name === props.tsColumn?.name) {
+              // All timestamp columns need ~200px for formatted datetime; only the
+              // primary tsColumn used to get a fixed width, so secondary time cols
+              // (e.g. `timestamp`) often got min 150 and spilled without ellipsis.
+              if (column.name === props.tsColumn?.name || isTimeColumn(column)) {
                 width = TIME_COLUMN_FIXED_WIDTH
               } else {
                 width = getVirtualListColumnWidth(contentLengths[column.name] || 0, totalContentLen, tableWidth.value)
@@ -1245,6 +1250,8 @@ a-dropdown#td-context(
     user-select: text;
   }
 
+  // Ordinary mode: time cells may stay visible when columns are naturally wide.
+  // Virtual-list overrides below — overflow:visible there bleeds into neighbors.
   .timestamp-cell-content {
     overflow: visible;
     text-overflow: unset;
@@ -1254,6 +1261,39 @@ a-dropdown#td-context(
     overflow: visible;
     text-overflow: unset;
   }
+
+  // Virtual-list packs columns tightly; clip secondary (and primary) time cells.
+  // Keep clipping on hover too — global td:hover overflow:visible would otherwise
+  // let formatted timestamps spill into the next column.
+  .virtual-list-active {
+    .timestamp-cell-content {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .timestamp-cell {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    :deep(.arco-table-td-content:has(.timestamp-cell-content)) {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    :deep(.arco-table-td:hover:has(.timestamp-cell-content)),
+    :deep(.arco-table-td:hover .arco-table-td-content:has(.timestamp-cell-content)) {
+      overflow: hidden;
+    }
+  }
+
   // Show cell action buttons on hover. The popover itself is body-mounted and
   // closed on scroll, so table overflow rules do not clip it.
   :deep(.arco-table-td:hover) {
