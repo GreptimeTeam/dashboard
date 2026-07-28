@@ -7,7 +7,6 @@ export default {
   'menu.dashboard.tables': '数据表',
   'menu.dashboard.scripts': '脚本',
   'menu.dashboard.deployment': '部署',
-  'menu.dashboard.status': '状态',
   'menu.dashboard.ingest': '写入',
   'menu.dashboard.influxdb': 'InfluxDB Line Protocol',
   'menu.dashboard.write': '写入',

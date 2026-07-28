@@ -7,7 +7,6 @@ export default {
   'menu.dashboard.tables': 'Tables',
   'menu.dashboard.scripts': 'Scripts',
   'menu.dashboard.deployment': 'Deployment',
-  'menu.dashboard.status': 'Status',
   'menu.dashboard.ingest': 'Ingest',
   'menu.dashboard.influxdb': 'InfluxDB Line Protocol',
   'menu.dashboard.write': 'Write',
