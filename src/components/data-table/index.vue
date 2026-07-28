@@ -25,12 +25,14 @@
 
     // Define columns using the straightforward approach
     template(#columns)
-      template(v-for="col in processedColumns" :key="col.name")
+      template(v-for="(col, colIndex) in processedColumns" :key="col.name")
         a-table-column(
           :width="col.width || undefined"
           :ellipsis="true"
           :data-index="col.name"
           :title="col.title || col.name"
+          :cell-class="col.cellClass"
+          :header-cell-class="col.cellClass"
         )
           // Custom title slot - allow parent components to override column titles
           template(#title)
@@ -661,7 +663,26 @@ a-dropdown#td-context(
     return column.semantic_type?.toLowerCase()
   }
 
-  type TableColumn = ColumnType & { width?: number }
+  type TableColumn = ColumnType & { width?: number; cellClass?: string }
+
+  // Tag first/last columns with edge classes so CSS can give them wider
+  // padding for alignment with surrounding panels. Using Arco's cellClass /
+  // headerCellClass props (not CSS :first-child/:last-child) because Arco
+  // renders hidden operation/selection columns before the data columns,
+  // making :first-child match the wrong element.
+  function withEdgeCellClass(columns: TableColumn[]): TableColumn[] {
+    if (columns.length === 0) return columns
+    return columns.map((col, index) => ({
+      ...col,
+      cellClass: [
+        col.cellClass,
+        index === 0 ? 'cell-edge-left' : '',
+        index === columns.length - 1 ? 'cell-edge-right' : '',
+      ]
+        .filter(Boolean)
+        .join(' '),
+    }))
+  }
 
   // Assign column :width per layout conclusions above.
   const processedColumns = computed((): TableColumn[] => {
@@ -676,37 +697,41 @@ a-dropdown#td-context(
         // because off-screen rows are not mounted. See the constraint block
         // near `hasVirtualListProps` for the full rationale.
         if (!tableWidth.value || visibleColumns.value.length === 0) {
-          return visibleColumns.value.map((column) => ({ ...column }))
+          return withEdgeCellClass(visibleColumns.value.map((column) => ({ ...column })))
         }
 
         const contentLengths = getColumnContentLengths(visibleColumns.value, props.data)
         const totalContentLen = Object.values(contentLengths).reduce((acc, len) => acc + len, 0)
         const maxLenName = findMaxLenCol(visibleColumns.value, props.data)
 
-        return visibleColumns.value.map((column) => {
-          let width: number | undefined
+        return withEdgeCellClass(
+          visibleColumns.value.map((column) => {
+            let width: number | undefined
 
-          if (column.name !== maxLenName) {
-            if (column.name === props.tsColumn?.name) {
-              width = TIME_COLUMN_FIXED_WIDTH
-            } else {
-              width = getVirtualListColumnWidth(contentLengths[column.name] || 0, totalContentLen, tableWidth.value)
+            if (column.name !== maxLenName) {
+              if (column.name === props.tsColumn?.name) {
+                width = TIME_COLUMN_FIXED_WIDTH
+              } else {
+                width = getVirtualListColumnWidth(contentLengths[column.name] || 0, totalContentLen, tableWidth.value)
+              }
             }
-          }
 
-          return {
-            ...column,
-            width,
-          }
-        })
+            return {
+              ...column,
+              width,
+            }
+          })
+        )
       }
 
       // Ordinary: omit width until lock; then measured natural px snapshot.
-      return visibleColumns.value.map((column) => {
-        const { width: _omit, ...rest } = column as TableColumn
-        const locked = columnWidths.value[column.name]
-        return locked !== undefined ? { ...rest, width: locked } : rest
-      })
+      return withEdgeCellClass(
+        visibleColumns.value.map((column) => {
+          const { width: _omit, ...rest } = column as TableColumn
+          const locked = columnWidths.value[column.name]
+          return locked !== undefined ? { ...rest, width: locked } : rest
+        })
+      )
     }
 
     // Merged: virtual → fixed ts + flexible Data; ordinary → measure+lock.
@@ -733,7 +758,7 @@ a-dropdown#td-context(
       data_type: 'merged',
       ...(!hasVirtualListProps.value && mergedLocked !== undefined ? { width: mergedLocked } : {}),
     })
-    return arr
+    return withEdgeCellClass(arr)
   })
 
   const tablePassThroughProps = computed(() => {
@@ -998,6 +1023,10 @@ a-dropdown#td-context(
     // Cell horizontal padding — tuned via CSS variables in one place.
     // Inner cells use --gpt-cell-px; first/last columns use --gpt-cell-edge-px
     // so the table edges stay aligned with surrounding panels.
+    // Edge classes are applied via Arco's cellClass/headerCellClass props
+    // (see withEdgeCellClass) because :first-child/:last-child would match
+    // Arco's hidden operation/selection columns instead of the first/last
+    // data column.
     --gpt-cell-px: 10px;
     --gpt-cell-edge-px: 16px;
 
@@ -1005,12 +1034,10 @@ a-dropdown#td-context(
       padding-left: var(--gpt-cell-px);
       padding-right: var(--gpt-cell-px);
     }
-    :deep(.arco-table-td:first-child .arco-table-cell),
-    :deep(.arco-table-th:first-child .arco-table-cell) {
+    :deep(.cell-edge-left .arco-table-cell) {
       padding-left: var(--gpt-cell-edge-px);
     }
-    :deep(.arco-table-td:last-child .arco-table-cell),
-    :deep(.arco-table-th:last-child .arco-table-cell) {
+    :deep(.cell-edge-right .arco-table-cell) {
       padding-right: var(--gpt-cell-edge-px);
     }
 
