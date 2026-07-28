@@ -60,7 +60,31 @@ const bundledPluginLoader: PluginLoader = dynamicImportPluginLoader([
         ],
       },
     } as PluginModuleResource,
-    importPlugin: () => import('@perses-dev/greptimedb-plugin'),
+    // BarChart/PieChart/StatChart read `formattedName` (not `name`). Without this fallback,
+    // duplicate empty category labels collapse to a single bar/slice.
+    importPlugin: async () => {
+      const plugin = await import('@perses-dev/greptimedb-plugin')
+      const original = (plugin as any).GreptimeDBTimeSeriesQuery
+      if (!original?.getTimeSeriesData) {
+        return plugin
+      }
+      return {
+        ...plugin,
+        GreptimeDBTimeSeriesQuery: {
+          ...original,
+          getTimeSeriesData: async (spec: unknown, context: unknown) => {
+            const data = await original.getTimeSeriesData(spec, context)
+            return {
+              ...data,
+              series: (data?.series ?? []).map((series: { name?: string; formattedName?: string }) => ({
+                ...series,
+                formattedName: series.formattedName ?? series.name,
+              })),
+            }
+          },
+        },
+      }
+    },
   },
 
   // === Panel Plugins (existing) ===

@@ -69,6 +69,8 @@ export function reviveTimeSeriesData(data: TimeSeriesData): TimeSeriesData {
       : undefined,
     series: (data.series ?? []).map((series) => ({
       ...series,
+      // BarChart/PieChart use formattedName; GreptimeDB series often only set name.
+      formattedName: series.formattedName ?? series.name,
       values: (series.values ?? []).map(([timestamp, value]) => [normalizeUnixMs(timestamp), value]),
     })),
   }
