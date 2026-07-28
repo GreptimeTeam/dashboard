@@ -1249,10 +1249,6 @@ a-dropdown#td-context(
     user-select: text;
   }
 
-  .cell-wrapper.has-merged-expand .merged-cell-content {
-    padding-right: 18px;
-  }
-
   .entity-field {
     display: inline;
     margin-right: 10px;
