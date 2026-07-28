@@ -239,6 +239,36 @@ a-dropdown#td-context(
   const hasVirtualListProps = computed(() => !!attrsRecord['virtual-list-props'])
   // Non-virtual: one table + container scroll + sticky th (true natural column widths).
   const useStickySingleTable = computed(() => !hasVirtualListProps.value)
+
+  // ── Virtual-list mode constraints (Arco virtual-list-props) ──────────────
+  // Arco's virtual list uses a FIXED row height for all rows. Unlike
+  // react-window's VariableSizeList (used by Grafana's logs panel), it does
+  // NOT support per-row variable heights. This imposes two hard constraints
+  // on the entire table layout:
+  //
+  // 1. Fixed row height → cells must NOT wrap or grow vertically.
+  //    `.cell-content` defaults to `white-space: nowrap` so that multi-line
+  //    content (e.g. log messages with \n) is collapsed to a single line.
+  //    Otherwise a `pre-wrap` cell would expand its row beyond the fixed
+  //    height, causing scroll jitter / row overlap in the virtual scroller.
+  //    Users can opt into wrapping via the `wrapLine` prop, but this is only
+  //    safe when the parent is NOT using virtual-list-props (or accepts the
+  //    visual artifacts).
+  //
+  // 2. Column widths must be known BEFORE render (Arco positions cells via
+  //    absolute offsets). `table-layout: auto` does not work — the browser
+  //    cannot measure natural widths of off-screen rows. So column widths are
+  //    estimated from data (char-count heuristic) rather than measured from
+  //    the DOM as in the non-virtual path. The sum of column widths must stay
+  //    within the virtual list's clientWidth to avoid a phantom horizontal
+  //    scrollbar; see `availableTableWidth` and the buffer logic below.
+  //
+  // To support true variable-height log rows (multi-line, wrapped), the
+  // virtual list implementation itself would need to be replaced with one
+  // that supports per-row sizing (e.g. react-window VariableSizeList with
+  // canvas-based height estimation + ResizeObserver correction, as Grafana
+  // does). That is a larger architectural change outside the scope of this
+  // component.
   // Detect whether the parent has bound a @row-select listener.
   // Declared emits are filtered out of attrs, so we read the raw vnode props.
   const hasRowDetailListener = computed(() => !!getCurrentInstance()?.vnode.props?.onRowSelect)
@@ -291,6 +321,15 @@ a-dropdown#td-context(
 
   // Table container ref for width calculation and height calculation
   const tableContainer = ref<HTMLElement>()
+  // tableWidth is the container border-box width. In virtual-list mode the
+  // real rendering area is smaller: .arco-virtual-list reserves space for the
+  // vertical scrollbar / scrollbar-gutter (overflow:auto + scrollbar-gutter:
+  // stable). Column widths are distributed against tableWidth, so if the sum
+  // equals tableWidth the table is wider than the actual client area by the
+  // scrollbar amount → a phantom horizontal scrollbar appears. This is an
+  // inherent limitation of Arco's fixed-height virtual list: widths must be
+  // pre-computed (no table-layout:auto), and the container width we measure
+  // from the outside does not match the inner available width exactly.
   const { width: tableWidth } = useElementSize(tableContainer)
 
   // Timestamp utilities
@@ -406,6 +445,15 @@ a-dropdown#td-context(
     return maxName
   }
 
+  // Virtual-list column width: proportional allocation by content char-length.
+  // Unlike the non-virtual path (which measures real DOM pixel widths after
+  // render), the virtual list requires widths BEFORE render (Arco positions
+  // cells via absolute offsets; table-layout:auto cannot measure off-screen
+  // rows). So we estimate from data — a char-count heuristic, not DOM
+  // measurement. The sum of allocated widths targets `containerWidth`
+  // (tableWidth), but the actual available width is smaller (scrollbar/gutter),
+  // so the longest column is left without a width (flex) to absorb the
+  // difference and avoid exceeding the viewport.
   function getVirtualListColumnWidth(currLen: number, totalLen: number, containerWidth: number) {
     let width = (Math.floor((currLen / Math.max(totalLen, 1)) * 1000) / 1000) * containerWidth
     width = Math.max(150, width)
@@ -620,7 +668,13 @@ a-dropdown#td-context(
     if (!mergeColumn.value) {
       // Separate mode
       if (hasVirtualListProps.value) {
-        // Fit container: proportional widths; longest column has no width (flex).
+        // Virtual-list: Arco requires fixed row height + pre-computed column
+        // widths. We distribute widths proportionally by content length and
+        // leave the longest column without a width (flex) so it absorbs the
+        // scrollbar/gutter gap. This is a compromise — the non-virtual path
+        // measures true DOM widths and locks them, but that is impossible here
+        // because off-screen rows are not mounted. See the constraint block
+        // near `hasVirtualListProps` for the full rationale.
         if (!tableWidth.value || visibleColumns.value.length === 0) {
           return visibleColumns.value.map((column) => ({ ...column }))
         }
@@ -1131,6 +1185,13 @@ a-dropdown#td-context(
     cursor: default;
   }
   .cell-content {
+    // nowrap is REQUIRED by the virtual-list fixed-row-height constraint
+    // (see the block comment near `hasVirtualListProps`). Multi-line content
+    // (e.g. log messages containing \n) is collapsed to a single line here;
+    // users view the full content via the expand popover (pre-wrap). The
+    // `wrap-lines` class (applied when props.wrapLine is true) switches to
+    // `pre-wrap` to show newlines inline — but this is only safe in
+    // non-virtual mode where row height is not fixed by the scroller.
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
