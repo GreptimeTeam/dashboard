@@ -120,8 +120,8 @@ export default function HelperDashboardView(props: GenericDashboardViewProps): J
     },
   }
 
+  const dashboardKey = viewDashboardResource.metadata.name
   const viewDashboardProps = {
-    key: viewDashboardResource.metadata.name,
     dashboardResource: viewDashboardResource,
     datasourceApi,
     emptyDashboardProps: {
@@ -155,9 +155,9 @@ export default function HelperDashboardView(props: GenericDashboardViewProps): J
           <ValidationProvider>
             <ErrorBoundary FallbackComponent={ErrorAlert}>
               {isSnapshotMode ? (
-                <SnapshotViewDashboard {...viewDashboardProps} />
+                <SnapshotViewDashboard key={dashboardKey} {...viewDashboardProps} />
               ) : (
-                <ViewDashboard {...viewDashboardProps} />
+                <ViewDashboard key={dashboardKey} {...viewDashboardProps} />
               )}
             </ErrorBoundary>
           </ValidationProvider>
