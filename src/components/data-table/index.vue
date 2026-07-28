@@ -995,6 +995,25 @@ a-dropdown#td-context(
     height: 100%; // Always fill parent height
     overflow: hidden; // Prevent container overflow (virtual-list / default)
 
+    // Cell horizontal padding — tuned via CSS variables in one place.
+    // Inner cells use --gpt-cell-px; first/last columns use --gpt-cell-edge-px
+    // so the table edges stay aligned with surrounding panels.
+    --gpt-cell-px: 10px;
+    --gpt-cell-edge-px: 16px;
+
+    :deep(.arco-table-cell) {
+      padding-left: var(--gpt-cell-px);
+      padding-right: var(--gpt-cell-px);
+    }
+    :deep(.arco-table-td:first-child .arco-table-cell),
+    :deep(.arco-table-th:first-child .arco-table-cell) {
+      padding-left: var(--gpt-cell-edge-px);
+    }
+    :deep(.arco-table-td:last-child .arco-table-cell),
+    :deep(.arco-table-th:last-child .arco-table-cell) {
+      padding-right: var(--gpt-cell-edge-px);
+    }
+
     // Non-virtual: single table scrolls here; sticky th pins header.
     &.sticky-scroll {
       overflow: auto;
@@ -1405,6 +1424,7 @@ a-dropdown#td-context(
   .wrap_table :deep(.arco-table-th) {
     white-space: wrap;
   }
+
   .multiple_column,
   .single_column {
     :deep(.arco-table-td-content) {
