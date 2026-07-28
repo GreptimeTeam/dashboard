@@ -5,7 +5,7 @@
   :style="lockedTableWidthPx ? { '--data-table-locked-width': lockedTableWidthPx + 'px' } : undefined"
 )
   a-table(
-    :key="columnMode"
+    :key="tableRenderKey"
     v-bind="tablePassThroughProps"
     row-key="__rowIndex"
     :data="processedData"
@@ -465,6 +465,44 @@ a-dropdown#td-context(
     return width
   }
 
+  /**
+   * Build explicit px widths for virtual-list separate mode.
+   * Returns null when container width is not ready yet (caller must not remount
+   * with missing widths — Arco virtual-list ignores later :width updates).
+   */
+  function buildVirtualListColumnWidths(
+    columns: ColumnType[],
+    rows: TableData[],
+    containerWidth: number
+  ): Record<string, number | undefined> | null {
+    if (!containerWidth || columns.length === 0) {
+      return null
+    }
+
+    const contentLengths = getColumnContentLengths(columns, rows)
+    const totalContentLen = Object.values(contentLengths).reduce((acc, len) => acc + len, 0)
+    const maxLenName = findMaxLenCol(columns, rows)
+    const widths: Record<string, number | undefined> = {}
+
+    columns.forEach((column) => {
+      if (column.name === maxLenName) {
+        widths[column.name] = undefined
+        return
+      }
+      if (column.name === props.tsColumn?.name || isTimeColumn(column)) {
+        widths[column.name] = TIME_COLUMN_FIXED_WIDTH
+      } else {
+        widths[column.name] = getVirtualListColumnWidth(
+          contentLengths[column.name] || 0,
+          totalContentLen,
+          containerWidth
+        )
+      }
+    })
+
+    return widths
+  }
+
   // Visible columns (without width) for width calculation
   const visibleColumns = computed<ColumnType[]>(() => {
     if (mergeColumn.value) {
@@ -488,6 +526,48 @@ a-dropdown#td-context(
 
   const columnsKey = computed(() => visibleColumns.value.map((c) => c.name).join(','))
   const tableSizeAttr = computed(() => String(attrsRecord.size || 'medium'))
+
+  // Virtual-list: widths must be ready BEFORE a-table mounts. Store them in a ref
+  // and only bump remount key after a successful recalculation for the new columnsKey.
+  const virtualColumnWidths = ref<Record<string, number | undefined>>({})
+  const virtualWidthsReadyForKey = ref('')
+  const virtualRemountEpoch = ref(0)
+
+  function recalculateVirtualColumnWidths() {
+    if (!hasVirtualListProps.value || mergeColumn.value) {
+      return
+    }
+
+    const key = columnsKey.value
+    const widths = buildVirtualListColumnWidths(visibleColumns.value, props.data, tableWidth.value)
+    if (!widths) {
+      return
+    }
+
+    virtualColumnWidths.value = widths
+    const keyChanged = virtualWidthsReadyForKey.value !== key
+    virtualWidthsReadyForKey.value = key
+    if (keyChanged) {
+      virtualRemountEpoch.value += 1
+    }
+  }
+
+  watch(
+    [columnsKey, tableWidth, () => props.data, () => props.displayedColumns, mergeColumn],
+    () => {
+      recalculateVirtualColumnWidths()
+    },
+    { immediate: true, deep: true }
+  )
+
+  // Ordinary: remount only on columnMode (measure/lock handles width via layoutResetKey).
+  // Virtual-list: remount when visible columns change AND widths for that set are ready
+  // (epoch bumps only after recalculateVirtualColumnWidths succeeds).
+  const tableRenderKey = computed(() =>
+    hasVirtualListProps.value
+      ? `${props.columnMode}|${virtualWidthsReadyForKey.value}|e${virtualRemountEpoch.value}`
+      : props.columnMode
+  )
 
   // Re-measure natural widths when columns / wrap / compact size / mode change.
   const layoutResetKey = computed(() => {
@@ -691,40 +771,16 @@ a-dropdown#td-context(
     if (!mergeColumn.value) {
       // Separate mode
       if (hasVirtualListProps.value) {
-        // Virtual-list: Arco requires fixed row height + pre-computed column
-        // widths. We distribute widths proportionally by content length and
-        // leave the longest column without a width (flex) so it absorbs the
-        // scrollbar/gutter gap. This is a compromise — the non-virtual path
-        // measures true DOM widths and locks them, but that is impossible here
-        // because off-screen rows are not mounted. See the constraint block
-        // near `hasVirtualListProps` for the full rationale.
-        if (!tableWidth.value || visibleColumns.value.length === 0) {
-          return withEdgeCellClass(visibleColumns.value.map((column) => ({ ...column })))
-        }
-
-        const contentLengths = getColumnContentLengths(visibleColumns.value, props.data)
-        const totalContentLen = Object.values(contentLengths).reduce((acc, len) => acc + len, 0)
-        const maxLenName = findMaxLenCol(visibleColumns.value, props.data)
-
+        // Prefer widths from recalculateVirtualColumnWidths (ready before remount).
+        const ready = virtualWidthsReadyForKey.value === columnsKey.value
+        const stored = virtualColumnWidths.value
         return withEdgeCellClass(
           visibleColumns.value.map((column) => {
-            let width: number | undefined
-
-            if (column.name !== maxLenName) {
-              // All timestamp columns need ~200px for formatted datetime; only the
-              // primary tsColumn used to get a fixed width, so secondary time cols
-              // (e.g. `timestamp`) often got min 150 and spilled without ellipsis.
-              if (column.name === props.tsColumn?.name || isTimeColumn(column)) {
-                width = TIME_COLUMN_FIXED_WIDTH
-              } else {
-                width = getVirtualListColumnWidth(contentLengths[column.name] || 0, totalContentLen, tableWidth.value)
-              }
+            if (ready && Object.prototype.hasOwnProperty.call(stored, column.name)) {
+              const width = stored[column.name]
+              return width !== undefined ? { ...column, width } : { ...column }
             }
-
-            return {
-              ...column,
-              width,
-            }
+            return { ...column }
           })
         )
       }
