@@ -235,17 +235,6 @@ const DASHBOARD: AppRouteRecordRaw = {
         roles: ['admin', 'cloud'],
       },
     },
-    {
-      path: 'status',
-      name: 'status',
-      component: () => import('@/views/dashboard/status/index.vue'),
-      meta: {
-        locale: 'menu.dashboard.status',
-        requiresAuth: true,
-        icon: 'Icon10',
-        roles: ['admin'],
-      },
-    },
   ],
 }
 

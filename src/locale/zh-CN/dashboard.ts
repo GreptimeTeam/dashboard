@@ -166,12 +166,4 @@ export default {
   'dashboard.perses.dashboardSaved': '仪表盘已保存',
   'dashboard.perses.createFailed': '创建仪表盘失败',
   'dashboard.perses.saveAsSnapshotHint': '已保存为 snapshot 仪表盘。下次请使用「导入 JSON」直接导入 snapshot。',
-  'status.subtitle': '服务器版本、构建详情和部署信息。',
-  'status.buildInformation': '构建信息',
-  'status.version': '版本',
-  'status.commit': '提交',
-  'status.branch': '分支',
-  'status.rustVersion': 'Rust 版本',
-  'status.hostname': '主机名',
-  'status.unsupported': 'GreptimeDB v0.3.1 之前不支持状态接口',
 }
