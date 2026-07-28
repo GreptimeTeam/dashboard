@@ -111,6 +111,11 @@
   background-color: transparent;
 }
 
+// Override Arco inline z-index:inherit when drawer uses popup-container (position:absolute).
+.arco-drawer-container {
+  z-index: 100 !important;
+}
+
 .prom-form {
   .arco-form-item-layout-inline {
     margin-right: 0;

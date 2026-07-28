@@ -126,7 +126,7 @@
             @update:rows="handlePaginationRowsUpdate"
           )
       LogTableData(
-        :key="queryState.table"
+        :key="`${queryState.table}-${columnModeKey}-${displayedColumnsKey}`"
         :wrap-line="wrap"
         :size="size"
         :data="rows"
@@ -185,6 +185,11 @@
   const mergeColumn = useStorage('logquery-merge-column', true)
   const showKeys = useStorage('logquery-show-keys', true)
   const displayedColumns = useStorage('logquery-table-column-visible', {})
+  const displayedColumnsKey = computed(() => (displayedColumns.value[queryState.table] || []).join(','))
+  const columnModeKey = computed(() => {
+    if (!mergeColumn.value) return 'separate'
+    return showKeys.value ? 'merged-with-keys' : 'merged'
+  })
 
   const chartContainerRef = ref()
   const paginationKey = ref(0)
