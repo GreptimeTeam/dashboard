@@ -239,6 +239,19 @@ a-dropdown#td-context(
   const attrs = useAttrs()
   const attrsRecord = attrs as Record<string, any>
   const hasVirtualListProps = computed(() => !!attrsRecord['virtual-list-props'])
+  const columnResizableEnabled = computed(() => {
+    if (!Object.prototype.hasOwnProperty.call(attrsRecord, 'column-resizable')) {
+      return false
+    }
+    const raw = attrsRecord['column-resizable']
+    if (raw === '' || raw === true || raw === undefined) {
+      return true
+    }
+    if (raw === false || raw === 'false') {
+      return false
+    }
+    return Boolean(raw)
+  })
   // Non-virtual: one table + container scroll + sticky th (true natural column widths).
   const useStickySingleTable = computed(() => !hasVirtualListProps.value)
 
@@ -297,8 +310,8 @@ a-dropdown#td-context(
 
   const containerClasses = computed(() => ({
     'sticky-scroll': useStickySingleTable.value,
-    'natural-column-widths': useStickySingleTable.value && !widthsLocked.value,
-    'widths-locked': useStickySingleTable.value && widthsLocked.value,
+    'natural-column-widths': useStickySingleTable.value && columnResizableEnabled.value && !widthsLocked.value,
+    'widths-locked': useStickySingleTable.value && columnResizableEnabled.value && widthsLocked.value,
   }))
 
   // Dynamic table classes computation
@@ -666,7 +679,7 @@ a-dropdown#td-context(
   }
 
   function lockMeasuredColumnWidths() {
-    if (!useStickySingleTable.value) {
+    if (!useStickySingleTable.value || !columnResizableEnabled.value) {
       return
     }
     const columns = columnsForWidthLock()
@@ -684,7 +697,9 @@ a-dropdown#td-context(
   }
 
   function scheduleLockWidthsAfterRender() {
-    if (!useStickySingleTable.value) {
+    if (!useStickySingleTable.value || !columnResizableEnabled.value) {
+      columnWidths.value = {}
+      widthsLocked.value = false
       return
     }
     clearLockWidthsSchedule()
@@ -707,6 +722,12 @@ a-dropdown#td-context(
         widthsLocked.value = false
         return
       }
+      if (!columnResizableEnabled.value) {
+        clearLockWidthsSchedule()
+        columnWidths.value = {}
+        widthsLocked.value = false
+        return
+      }
       scheduleLockWidthsAfterRender()
     },
     { immediate: true }
@@ -716,6 +737,7 @@ a-dropdown#td-context(
   watch(
     () => (useStickySingleTable.value ? props.data.length > 0 : false),
     (hasData, hadData) => {
+      if (!columnResizableEnabled.value) return
       if (hasData && !hadData && layoutResetKey.value) {
         scheduleLockWidthsAfterRender()
       }
@@ -731,7 +753,7 @@ a-dropdown#td-context(
   })
 
   function onColumnResize(dataIndex: string, width: number) {
-    if (!useStickySingleTable.value || !dataIndex || !(width > 0)) {
+    if (!useStickySingleTable.value || !columnResizableEnabled.value || !dataIndex || !(width > 0)) {
       return
     }
     columnWidths.value = {
