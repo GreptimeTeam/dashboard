@@ -128,7 +128,7 @@
             @update:rows="handlePaginationRowsUpdate"
           )
       LogTableData(
-        :key="`${queryState.table}-${columnModeKey}-${displayedColumnsKey}`"
+        :key="`${queryState.table}-${columnModeKey}`"
         :wrap-line="wrap"
         :size="size"
         :data="rows"
@@ -145,7 +145,7 @@
 </template>
 
 <script setup lang="ts" name="LogsQuery">
-  import { ref, computed, shallowRef, watch, onMounted, toRefs, nextTick } from 'vue'
+  import { ref, computed, watch, onMounted, toRefs, nextTick } from 'vue'
   import { useStorage, useLocalStorage } from '@vueuse/core'
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import SqlTextEditor from '@/components/sql-text-editor/index.vue'
@@ -188,7 +188,6 @@
   const mergeColumn = useStorage('logquery-merge-column', true)
   const showKeys = useStorage('logquery-show-keys', true)
   const displayedColumns = useStorage('logquery-table-column-visible', {})
-  const displayedColumnsKey = computed(() => (displayedColumns.value[queryState.table] || []).join(','))
   const columnModeKey = computed(() => {
     if (!mergeColumn.value) return 'separate'
     return showKeys.value ? 'merged-with-keys' : 'merged'

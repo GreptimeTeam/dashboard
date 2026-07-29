@@ -564,8 +564,9 @@ a-dropdown#td-context(
   const columnsKey = computed(() => visibleColumns.value.map((c) => c.name).join(','))
   const tableSizeAttr = computed(() => String(attrsRecord.size || 'medium'))
 
-  // Virtual-list: widths must be ready BEFORE a-table mounts. Store them in a ref
-  // and only bump remount key after a successful recalculation for the new columnsKey.
+  // Virtual-list: widths must be ready BEFORE a-table mounts.
+  // Arco virtual-list ignores later :width updates and can misalign header/body when
+  // columns change without remount. Remount on columnsKey change.
   const virtualColumnWidths = ref<Record<string, number | undefined>>({})
   const virtualWidthsReadyForKey = ref('')
   const virtualRemountEpoch = ref(0)
@@ -595,26 +596,25 @@ a-dropdown#td-context(
 
     const keyChanged = virtualWidthsReadyForKey.value !== key
     virtualWidthsReadyForKey.value = key
+    // Remount whenever visible columns change so header/body stay aligned.
+    // (Arco virtual-list does not reliably apply later :width / column set updates.)
     if (keyChanged) {
       virtualRemountEpoch.value += 1
     }
   }
 
   watch(
-    [columnsKey, tableWidth, () => props.data, () => props.displayedColumns, mergeColumn],
+    [columnsKey, tableWidth, () => props.data, mergeColumn],
     () => {
       recalculateVirtualColumnWidths()
     },
-    { immediate: true, deep: true }
+    { immediate: true }
   )
 
   // Ordinary: remount only on columnMode (measure/lock handles width via layoutResetKey).
-  // Virtual-list: remount when visible columns change AND widths for that set are ready
-  // (epoch bumps only after recalculateVirtualColumnWidths succeeds).
+  // Virtual-list: remount when epoch bumps (first width-ready or columnsKey change).
   const tableRenderKey = computed(() =>
-    hasVirtualListProps.value
-      ? `${props.columnMode}|${virtualWidthsReadyForKey.value}|e${virtualRemountEpoch.value}`
-      : props.columnMode
+    hasVirtualListProps.value ? `${props.columnMode}|e${virtualRemountEpoch.value}` : props.columnMode
   )
 
   // Re-measure natural widths when columns / wrap / compact size / mode change.
