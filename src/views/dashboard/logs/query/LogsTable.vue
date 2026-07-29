@@ -20,6 +20,7 @@
     @row-select="$emit('rowSelect', $event)"
     @ts-cell-click="handleTsClick"
     @update:selected-keys="handleSelectedKeysUpdate"
+    @virtualColumnsClipped="(visible) => $emit('virtualColumnsClipped', visible)"
   )
     template(v-if="$slots['column-level']" #column-level="slotProps")
       slot(name="column-level" v-bind="slotProps")
@@ -73,7 +74,7 @@
     }
   )
 
-  const emit = defineEmits(['filterConditionAdd', 'rowSelect', 'updateSelectedKeys'])
+  const emit = defineEmits(['filterConditionAdd', 'rowSelect', 'updateSelectedKeys', 'virtualColumnsClipped'])
 
   const selectedRowKey = ref<number | null>(null)
   const selectedRecord = computed(() => {

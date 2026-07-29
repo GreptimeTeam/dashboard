@@ -32,4 +32,5 @@ export default {
   'logsQuery.rowsInCurrentRange': '条结果（当前时间段）',
   'logsQuery.clickToQuery': '选择时间段',
   'logsQuery.timeRangePagination': '使用时间段分页，帮助快速浏览时间相近的数据',
+  'logsQuery.virtualColumnsHint': '列较多，可在右侧精简显示列',
 }

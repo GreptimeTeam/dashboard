@@ -32,4 +32,5 @@ export default {
   'logsQuery.rowsInCurrentRange': 'rows in current time range',
   'logsQuery.clickToQuery': 'Select time range',
   'logsQuery.timeRangePagination': 'Use time-based pagination to navigate newer or older data.',
+  'logsQuery.virtualColumnsHint': 'Too many columns, refine visible columns on the right',
 }
