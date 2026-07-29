@@ -6,6 +6,7 @@
     :column-mode="columnMode"
     :displayed-columns="displayedColumns"
     :loading="loading"
+    :show-virtual-columns-clipped-hint="false"
     :size="size"
     :wrap-line="wrapLine"
     :virtual-list-props="{ height: virtualListHeight, buffer: 36 }"
@@ -20,6 +21,7 @@
     @row-select="$emit('rowSelect', $event)"
     @ts-cell-click="handleTsClick"
     @update:selected-keys="handleSelectedKeysUpdate"
+    @virtualColumnsClipped="(visible) => $emit('virtualColumnsClipped', visible)"
   )
     template(v-if="$slots['column-level']" #column-level="slotProps")
       slot(name="column-level" v-bind="slotProps")
@@ -73,7 +75,7 @@
     }
   )
 
-  const emit = defineEmits(['filterConditionAdd', 'rowSelect', 'updateSelectedKeys'])
+  const emit = defineEmits(['filterConditionAdd', 'rowSelect', 'updateSelectedKeys', 'virtualColumnsClipped'])
 
   const selectedRowKey = ref<number | null>(null)
   const selectedRecord = computed(() => {

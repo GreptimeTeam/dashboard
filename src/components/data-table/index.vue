@@ -4,6 +4,12 @@
   :class="containerClasses"
   :style="lockedTableWidthPx ? { '--data-table-locked-width': lockedTableWidthPx + 'px' } : undefined"
 )
+  // Virtual-list: when columns are too many, some may be clipped (we keep overflow-x hidden).
+  // We show a light guiding hint instead of silently hiding columns.
+  .virtual-columns-clipped-hint(
+    v-if="virtualColumnClippedHintVisible && hasVirtualListProps && props.showVirtualColumnsClippedHint"
+  )
+    | 列过多导致部分列被隐藏。请减少展示列（列筛选）以查看更多。
   a-table(
     :key="tableRenderKey"
     v-bind="tablePassThroughProps"
@@ -220,6 +226,12 @@ a-dropdown#td-context(
 
     /** Global or page-local row index to highlight when detail drawer is open */
     activeRowKey?: number | null
+
+    /**
+     * Whether to show the internal virtual-list "columns clipped" hint.
+     * Parent components can render a better positioned hint next to their column settings UI.
+     */
+    showVirtualColumnsClippedHint?: boolean
   }
 
   const props = withDefaults(defineProps<Props>(), {
@@ -234,6 +246,7 @@ a-dropdown#td-context(
     wrapLine: false,
     enableCellCopy: false,
     activeRowKey: null,
+    showVirtualColumnsClippedHint: true,
   })
 
   const attrs = useAttrs()
@@ -288,7 +301,7 @@ a-dropdown#td-context(
   // Declared emits are filtered out of attrs, so we read the raw vnode props.
   const hasRowDetailListener = computed(() => !!getCurrentInstance()?.vnode.props?.onRowSelect)
 
-  const emit = defineEmits(['filterConditionAdd', 'rowSelect', 'tsCellClick'])
+  const emit = defineEmits(['filterConditionAdd', 'rowSelect', 'tsCellClick', 'virtualColumnsClipped'])
 
   // Timestamp display state
   const tsViewStr = ref(true) // true for formatted, false for raw timestamp
@@ -374,7 +387,7 @@ a-dropdown#td-context(
   //     aligned; column widths must sum to ~container width.
   //   - Separate: sample content length (MAX_CONTENT_SAMPLE_ROWS); longest column
   //     omits explicit width (flex leftover); others get proportional width with
-  //     min 150 / max COLUMN_MAX_WIDTH; every timestamp column (primary + other
+  //     min 130 / max COLUMN_MAX_WIDTH; every timestamp column (primary + other
   //     time cols) uses TIME_COLUMN_FIXED_WIDTH. Time cells use ellipsis under
   //     .virtual-list-active (overflow:visible would bleed into neighbors).
   //   - Merged: ts = TIME_COLUMN_FIXED_WIDTH; Data (Merged_Column) takes the rest.
@@ -475,12 +488,18 @@ a-dropdown#td-context(
   // (tableWidth), but the actual available width is smaller (scrollbar/gutter),
   // so the longest column is left without a width (flex) to absorb the
   // difference and avoid exceeding the viewport.
-  function getVirtualListColumnWidth(currLen: number, totalLen: number, containerWidth: number) {
+  function getVirtualListColumnWidth(currLen: number, totalLen: number, containerWidth: number, minWidth: number) {
     let width = (Math.floor((currLen / Math.max(totalLen, 1)) * 1000) / 1000) * containerWidth
-    width = Math.max(150, width)
+    width = Math.max(minWidth, width)
     width = Math.min(COLUMN_MAX_WIDTH, width)
     return width
   }
+
+  // Keep the original virtual-list distribution strategy:
+  // - the longest column is width=undefined and takes remaining space,
+  // - other columns are explicit widths from content ratios.
+  // Only lower the minimum width so more columns can fit in narrow viewports.
+  const VIRTUAL_COLUMN_MIN_WIDTH = 130
 
   /**
    * Build explicit px widths for virtual-list separate mode.
@@ -512,7 +531,8 @@ a-dropdown#td-context(
         widths[column.name] = getVirtualListColumnWidth(
           contentLengths[column.name] || 0,
           totalContentLen,
-          containerWidth
+          containerWidth,
+          VIRTUAL_COLUMN_MIN_WIDTH
         )
       }
     })
@@ -549,9 +569,14 @@ a-dropdown#td-context(
   const virtualColumnWidths = ref<Record<string, number | undefined>>({})
   const virtualWidthsReadyForKey = ref('')
   const virtualRemountEpoch = ref(0)
+  const virtualColumnClippedHintVisible = ref(false)
 
   function recalculateVirtualColumnWidths() {
     if (!hasVirtualListProps.value || mergeColumn.value) {
+      // In merged mode (or non-virtual mode) we don't calculate virtual widths,
+      // so proactively clear the hint state to avoid stale values.
+      virtualColumnClippedHintVisible.value = false
+      emit('virtualColumnsClipped', false)
       return
     }
 
@@ -562,6 +587,12 @@ a-dropdown#td-context(
     }
 
     virtualColumnWidths.value = widths
+    // If the explicit widths already exceed the container, Arco will clip columns
+    // because we force overflow-x hidden in virtual mode. Show a guiding hint.
+    const explicitSum = Object.values(widths).reduce((sum, w) => sum + (typeof w === 'number' ? w : 0), 0)
+    virtualColumnClippedHintVisible.value = explicitSum > tableWidth.value + 1
+    emit('virtualColumnsClipped', virtualColumnClippedHintVisible.value)
+
     const keyChanged = virtualWidthsReadyForKey.value !== key
     virtualWidthsReadyForKey.value = key
     if (keyChanged) {
@@ -1104,6 +1135,7 @@ a-dropdown#td-context(
 <style lang="less" scoped>
   // Data table container - full height layout with fixed header
   .data-table-container {
+    position: relative;
     height: 100%; // Always fill parent height
     overflow: hidden; // Prevent container overflow (virtual-list / default)
 
@@ -1223,6 +1255,22 @@ a-dropdown#td-context(
     :deep(.data-table-row-active td:first-child) {
       box-shadow: inset 3px 0 0 var(--gpt-nav-active-indicator);
     }
+  }
+
+  .virtual-columns-clipped-hint {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    z-index: 30;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: var(--gpt-bg-panel);
+    border: 1px solid var(--gpt-border-subtle);
+    color: var(--gpt-text-muted);
+    font-size: var(--gpt-font-sm);
+    line-height: 1.2;
+    pointer-events: none;
+    white-space: nowrap;
   }
 
   // Empty state: do not flex the td — breaks colspan centering.
