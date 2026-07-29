@@ -308,9 +308,11 @@ a-dropdown#td-context(
   const widthsLocked = ref(false)
   let lockWidthsTimer: ReturnType<typeof setTimeout> | null = null
 
+  // Ordinary: always size by content (.natural-column-widths).
+  // Measure+lock (.widths-locked) only when column-resizable is on.
   const containerClasses = computed(() => ({
     'sticky-scroll': useStickySingleTable.value,
-    'natural-column-widths': useStickySingleTable.value && columnResizableEnabled.value && !widthsLocked.value,
+    'natural-column-widths': useStickySingleTable.value && !widthsLocked.value,
     'widths-locked': useStickySingleTable.value && columnResizableEnabled.value && widthsLocked.value,
   }))
 
@@ -357,13 +359,15 @@ a-dropdown#td-context(
   //
   // Ordinary mode (no virtual-list-props) — natural widths:
   //   - Single table + container scroll + sticky th (useStickySingleTable).
-  //   - Phase 1 (.natural-column-widths): no column :width; table-layout:auto;
+  //   - Always (.natural-column-widths): no column :width; table-layout:auto;
   //     size to header/body content (cap 600px). min-width:100% only when the
-  //     table would be narrower than the container.
-  //   - Phase 2 (.widths-locked): measure DOM → lock explicit px on each column;
-  //     table-layout:fixed. Total may exceed viewport → horizontal scroll on
-  //     .data-table-container. Do NOT scale columns up just to fill the screen.
-  //   - Merged / single-column: same measure+lock for ts + Merged_Column (Data).
+  //     table would be narrower than the container. Trace / flow etc. stay here.
+  //   - Only with column-resizable (.widths-locked): measure DOM → lock explicit
+  //     px; table-layout:fixed so Arco resize handles work. Total may exceed
+  //     viewport → horizontal scroll on .data-table-container. Do NOT scale
+  //     columns up just to fill the screen.
+  //   - Merged / single-column: same natural (and optional measure+lock) for
+  //     ts + Merged_Column (Data).
   //
   // Virtual-list mode (logs etc.) — fit screen, never wider than container:
   //   - No horizontal scroll (overflow-x hidden) so header and virtual body stay
@@ -1456,9 +1460,10 @@ a-dropdown#td-context(
     border: 1px solid var(--gpt-border-default);
   }
 
-  // Ordinary natural phase: content-sized columns (max 600); min-width 100% if narrow.
-  // Disable ellipsis while measuring — overflow:hidden would shrink below intrinsic
-  // text width and locking that would truncate headers.
+  // Ordinary: content-sized columns (max 600); min-width 100% if narrow.
+  // Without column-resizable this stays permanently (no lock). With resize,
+  // disable ellipsis while measuring — overflow:hidden would shrink below
+  // intrinsic text width and locking that would truncate headers.
   .data-table-container.natural-column-widths {
     :deep(.arco-table-element) {
       table-layout: auto !important;
