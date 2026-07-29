@@ -6,7 +6,6 @@
     :column-mode="columnMode"
     :displayed-columns="displayedColumns"
     :loading="loading"
-    :show-virtual-columns-clipped-hint="false"
     :size="size"
     :wrap-line="wrapLine"
     :virtual-list-props="{ height: virtualListHeight, buffer: 36 }"
