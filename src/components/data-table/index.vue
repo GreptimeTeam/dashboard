@@ -300,7 +300,7 @@ a-dropdown#td-context(
   const mergeColumn = computed(() => props.columnMode !== 'separate')
   const showKeys = computed(() => props.columnMode === 'merged-with-keys')
 
-  // Cap for a single column after measure / proportional assign.
+  // Cap for a single column after measure / virtual natural estimate.
   const COLUMN_MAX_WIDTH = 600
   // Virtual-list (and virtual merged mode): primary timestamp column fixed px.
   const TIME_COLUMN_FIXED_WIDTH = 200
@@ -369,18 +369,20 @@ a-dropdown#td-context(
   //   - Merged / single-column: same natural (and optional measure+lock) for
   //     ts + Merged_Column (Data).
   //
-  // Virtual-list mode (logs etc.) — fit screen, never wider than container:
+  // Virtual-list mode (logs etc.) — same natural-width intent as ordinary, but
+  // estimated from text (Arco virtual-list cannot measure off-screen rows):
   //   - No horizontal scroll (overflow-x hidden) so header and virtual body stay
-  //     aligned; column widths must sum to ~container width.
-  //   - Separate: sample content length (MAX_CONTENT_SAMPLE_ROWS); longest column
-  //     omits explicit width (flex leftover); others get proportional width with
-  //     min 130 / max COLUMN_MAX_WIDTH; every timestamp column (primary + other
-  //     time cols) uses TIME_COLUMN_FIXED_WIDTH. Time cells use ellipsis under
-  //     .virtual-list-active (overflow:visible would bleed into neighbors).
+  //     aligned. If estimated total exceeds the container, columns clip (hint).
+  //   - Separate: per column max(header, sampled cell text) → px estimate, cap
+  //     COLUMN_MAX_WIDTH; longest column omits width (absorbs leftover, like
+  //     ordinary min-width:100%); timestamp columns use TIME_COLUMN_FIXED_WIDTH.
   //   - Merged: ts = TIME_COLUMN_FIXED_WIDTH; Data (Merged_Column) takes the rest.
   //   - Arco column-resizable is unsupported with virtual-list — do not enable.
   // ---------------------------------------------------------------------------
   const MAX_CONTENT_SAMPLE_ROWS = 100
+  // Rough table font advance + th/td horizontal padding (char heuristic, not DOM).
+  const VIRTUAL_CHAR_WIDTH_PX = 8
+  const VIRTUAL_CELL_PADDING_X = 32
 
   function getCellString(value: unknown): string {
     if (value === null || value === undefined) return ''
@@ -439,20 +441,29 @@ a-dropdown#td-context(
     return max
   }
 
-  function getColumnContentLengths(
+  function getColumnHeaderText(column: ColumnType): string {
+    return String(column.title ?? column.name ?? '')
+  }
+
+  /** Natural-width char length: max(header, sampled cell text), same idea as DOM measure. */
+  function getColumnNaturalCharLength(column: ColumnType, rows: TableData[], limit = MAX_CONTENT_SAMPLE_ROWS): number {
+    return Math.max(getColumnHeaderText(column).length, getColumnContentMaxLength(column.name, rows, limit))
+  }
+
+  function getColumnNaturalCharLengths(
     columns: ColumnType[],
     rows: TableData[],
     limit = MAX_CONTENT_SAMPLE_ROWS
   ): Record<string, number> {
     const lengths: Record<string, number> = {}
     columns.forEach((column) => {
-      lengths[column.name] = getColumnContentMaxLength(column.name, rows, limit)
+      lengths[column.name] = getColumnNaturalCharLength(column, rows, limit)
     })
     return lengths
   }
 
   function findMaxLenCol(columns: ColumnType[], rows: TableData[]): string {
-    const lengths = getColumnContentLengths(columns, rows)
+    const lengths = getColumnNaturalCharLengths(columns, rows)
     let max = 0
     let maxName = ''
 
@@ -466,27 +477,12 @@ a-dropdown#td-context(
     return maxName
   }
 
-  // Virtual-list column width: proportional allocation by content char-length.
-  // Unlike the non-virtual path (which measures real DOM pixel widths after
-  // render), the virtual list requires widths BEFORE render (Arco positions
-  // cells via absolute offsets; table-layout:auto cannot measure off-screen
-  // rows). So we estimate from data — a char-count heuristic, not DOM
-  // measurement. The sum of allocated widths targets `containerWidth`
-  // (tableWidth), but the actual available width is smaller (scrollbar/gutter),
-  // so the longest column is left without a width (flex) to absorb the
-  // difference and avoid exceeding the viewport.
-  function getVirtualListColumnWidth(currLen: number, totalLen: number, containerWidth: number, minWidth: number) {
-    let width = (Math.floor((currLen / Math.max(totalLen, 1)) * 1000) / 1000) * containerWidth
-    width = Math.max(minWidth, width)
-    width = Math.min(COLUMN_MAX_WIDTH, width)
-    return width
+  // Virtual-list: estimate natural px from text (cannot measure off-screen rows).
+  // Longest column is left without width so leftover space is absorbed (ordinary
+  // min-width:100%), instead of scaling every column up to fill the container.
+  function estimateVirtualNaturalWidthPx(charLen: number): number {
+    return Math.min(COLUMN_MAX_WIDTH, Math.ceil(charLen * VIRTUAL_CHAR_WIDTH_PX + VIRTUAL_CELL_PADDING_X))
   }
-
-  // Keep the original virtual-list distribution strategy:
-  // - the longest column is width=undefined and takes remaining space,
-  // - other columns are explicit widths from content ratios.
-  // Only lower the minimum width so more columns can fit in narrow viewports.
-  const VIRTUAL_COLUMN_MIN_WIDTH = 130
 
   /**
    * Build explicit px widths for virtual-list separate mode.
@@ -502,8 +498,7 @@ a-dropdown#td-context(
       return null
     }
 
-    const contentLengths = getColumnContentLengths(columns, rows)
-    const totalContentLen = Object.values(contentLengths).reduce((acc, len) => acc + len, 0)
+    const naturalLengths = getColumnNaturalCharLengths(columns, rows)
     const maxLenName = findMaxLenCol(columns, rows)
     const widths: Record<string, number | undefined> = {}
 
@@ -515,12 +510,7 @@ a-dropdown#td-context(
       if (column.name === props.tsColumn?.name || isTimeColumn(column)) {
         widths[column.name] = TIME_COLUMN_FIXED_WIDTH
       } else {
-        widths[column.name] = getVirtualListColumnWidth(
-          contentLengths[column.name] || 0,
-          totalContentLen,
-          containerWidth,
-          VIRTUAL_COLUMN_MIN_WIDTH
-        )
+        widths[column.name] = estimateVirtualNaturalWidthPx(naturalLengths[column.name] || 0)
       }
     })
 
@@ -1392,6 +1382,24 @@ a-dropdown#td-context(
     :deep(.arco-table-td:hover:has(.timestamp-cell-content)),
     :deep(.arco-table-td:hover .arco-table-td-content:has(.timestamp-cell-content)) {
       overflow: hidden;
+    }
+
+    // Keep action icons inside the cell (right:-15px bleeds into the next column).
+    // Vertically center so empty cells don't look sunk relative to the row.
+    .cell-wrapper {
+      display: flex;
+      align-items: center;
+    }
+
+    .cell-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .cell-actions {
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
     }
   }
 
