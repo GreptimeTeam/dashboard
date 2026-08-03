@@ -9,6 +9,7 @@
     :size="size"
     :wrap-line="wrapLine"
     :virtual-list-props="{ height: virtualListHeight, buffer: 36 }"
+    :column-resizable="columnMode === 'separate'"
     :row-selection="activeRowSelection"
     :selected-keys="exportSelectedKeys"
     :ts-column="tsColumn"
