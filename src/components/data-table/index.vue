@@ -377,7 +377,9 @@ a-dropdown#td-context(
   //     COLUMN_MAX_WIDTH; longest column omits width (absorbs leftover, like
   //     ordinary min-width:100%); timestamp columns use TIME_COLUMN_FIXED_WIDTH.
   //   - Merged: ts = TIME_COLUMN_FIXED_WIDTH; Data (Merged_Column) takes the rest.
-  //   - Arco column-resizable is unsupported with virtual-list — do not enable.
+  //   - column-resizable: Arco does not sync virtual body during drag; we apply the
+  //     final width on pointerup and remount so header/body stay aligned. Total
+  //     still clipped to the container (no horizontal scroll).
   // ---------------------------------------------------------------------------
   const MAX_CONTENT_SAMPLE_ROWS = 100
   // Rough table font advance + th/td horizontal padding (char heuristic, not DOM).
@@ -543,11 +545,16 @@ a-dropdown#td-context(
 
   // Virtual-list: widths must be ready BEFORE a-table mounts.
   // Arco virtual-list ignores later :width updates and can misalign header/body when
-  // columns change without remount. Remount on columnsKey change.
+  // columns change without remount. Remount on columnsKey / estimated-width change.
   const virtualColumnWidths = ref<Record<string, number | undefined>>({})
   const virtualWidthsReadyForKey = ref('')
   const virtualRemountEpoch = ref(0)
   const virtualColumnClippedHintVisible = ref(false)
+  // User-resized widths (virtual separate mode). Survive re-query; cleared when
+  // the visible column set changes.
+  const virtualWidthOverrides = ref<Record<string, number>>({})
+  let virtualResizePending: { dataIndex: string; width: number } | null = null
+  let virtualResizeListening = false
 
   function areVirtualWidthsEqual(
     a: Record<string, number | undefined>,
@@ -561,6 +568,42 @@ a-dropdown#td-context(
     return keysA.every((key) => a[key] === b[key])
   }
 
+  function updateVirtualClippedHint(widths: Record<string, number | undefined>) {
+    const explicitSum = Object.values(widths).reduce((sum, w) => sum + (typeof w === 'number' ? w : 0), 0)
+    virtualColumnClippedHintVisible.value = explicitSum > tableWidth.value + 1
+    emit('virtualColumnsClipped', virtualColumnClippedHintVisible.value)
+  }
+
+  function applyVirtualWidthOverrides(widths: Record<string, number | undefined>) {
+    const overrides = virtualWidthOverrides.value
+    Object.keys(overrides).forEach((name) => {
+      if (visibleColumns.value.some((column) => column.name === name)) {
+        widths[name] = overrides[name]
+      }
+    })
+  }
+
+  function commitVirtualColumnResize() {
+    virtualResizeListening = false
+    const pending = virtualResizePending
+    virtualResizePending = null
+    if (!pending || !hasVirtualListProps.value || mergeColumn.value) {
+      return
+    }
+
+    virtualWidthOverrides.value = {
+      ...virtualWidthOverrides.value,
+      [pending.dataIndex]: pending.width,
+    }
+    virtualColumnWidths.value = {
+      ...virtualColumnWidths.value,
+      [pending.dataIndex]: pending.width,
+    }
+    updateVirtualClippedHint(virtualColumnWidths.value)
+    // Remount after drag ends — remounting mid-drag cancels Arco's resize handle.
+    virtualRemountEpoch.value += 1
+  }
+
   function recalculateVirtualColumnWidths() {
     if (!hasVirtualListProps.value || mergeColumn.value) {
       // In merged mode (or non-virtual mode) we don't calculate virtual widths,
@@ -571,20 +614,22 @@ a-dropdown#td-context(
     }
 
     const key = columnsKey.value
+    const keyChanged = virtualWidthsReadyForKey.value !== key
+    if (keyChanged) {
+      virtualWidthOverrides.value = {}
+    }
+
     const widths = buildVirtualListColumnWidths(visibleColumns.value, props.data, tableWidth.value)
     if (!widths) {
       return
     }
 
-    const keyChanged = virtualWidthsReadyForKey.value !== key
+    applyVirtualWidthOverrides(widths)
+
     const widthsChanged = !areVirtualWidthsEqual(virtualColumnWidths.value, widths)
 
     virtualColumnWidths.value = widths
-    // If the explicit widths already exceed the container, Arco will clip columns
-    // because we force overflow-x hidden in virtual mode. Show a guiding hint.
-    const explicitSum = Object.values(widths).reduce((sum, w) => sum + (typeof w === 'number' ? w : 0), 0)
-    virtualColumnClippedHintVisible.value = explicitSum > tableWidth.value + 1
-    emit('virtualColumnsClipped', virtualColumnClippedHintVisible.value)
+    updateVirtualClippedHint(widths)
 
     virtualWidthsReadyForKey.value = key
     // Arco virtual-list ignores later :width updates — remount when columns or
@@ -779,7 +824,25 @@ a-dropdown#td-context(
   })
 
   function onColumnResize(dataIndex: string, width: number) {
-    if (!useStickySingleTable.value || !columnResizableEnabled.value || !dataIndex || !(width > 0)) {
+    if (!columnResizableEnabled.value || !dataIndex || !(width > 0)) {
+      return
+    }
+
+    // Virtual-list: Arco only updates the header during drag. Record the latest
+    // width and remount on pointerup so body columns catch up.
+    if (hasVirtualListProps.value) {
+      if (mergeColumn.value) {
+        return
+      }
+      virtualResizePending = { dataIndex, width: Math.round(width) }
+      if (!virtualResizeListening) {
+        virtualResizeListening = true
+        window.addEventListener('pointerup', commitVirtualColumnResize, { once: true })
+      }
+      return
+    }
+
+    if (!useStickySingleTable.value) {
       return
     }
     columnWidths.value = {
@@ -1066,6 +1129,11 @@ a-dropdown#td-context(
   onBeforeUnmount(() => {
     clearLockWidthsSchedule()
     tableContainer.value?.removeEventListener('scroll', closeExpandPopover, { capture: true })
+    if (virtualResizeListening) {
+      window.removeEventListener('pointerup', commitVirtualColumnResize)
+      virtualResizeListening = false
+      virtualResizePending = null
+    }
   })
 
   function handleContextMenu(record: TableData, columnName: string, event: Event) {
