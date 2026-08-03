@@ -549,6 +549,18 @@ a-dropdown#td-context(
   const virtualRemountEpoch = ref(0)
   const virtualColumnClippedHintVisible = ref(false)
 
+  function areVirtualWidthsEqual(
+    a: Record<string, number | undefined>,
+    b: Record<string, number | undefined>
+  ): boolean {
+    const keysA = Object.keys(a)
+    const keysB = Object.keys(b)
+    if (keysA.length !== keysB.length) {
+      return false
+    }
+    return keysA.every((key) => a[key] === b[key])
+  }
+
   function recalculateVirtualColumnWidths() {
     if (!hasVirtualListProps.value || mergeColumn.value) {
       // In merged mode (or non-virtual mode) we don't calculate virtual widths,
@@ -564,6 +576,9 @@ a-dropdown#td-context(
       return
     }
 
+    const keyChanged = virtualWidthsReadyForKey.value !== key
+    const widthsChanged = !areVirtualWidthsEqual(virtualColumnWidths.value, widths)
+
     virtualColumnWidths.value = widths
     // If the explicit widths already exceed the container, Arco will clip columns
     // because we force overflow-x hidden in virtual mode. Show a guiding hint.
@@ -571,11 +586,10 @@ a-dropdown#td-context(
     virtualColumnClippedHintVisible.value = explicitSum > tableWidth.value + 1
     emit('virtualColumnsClipped', virtualColumnClippedHintVisible.value)
 
-    const keyChanged = virtualWidthsReadyForKey.value !== key
     virtualWidthsReadyForKey.value = key
-    // Remount whenever visible columns change so header/body stay aligned.
-    // (Arco virtual-list does not reliably apply later :width / column set updates.)
-    if (keyChanged) {
+    // Arco virtual-list ignores later :width updates — remount when columns or
+    // estimated widths change (e.g. re-query with same columns, different content).
+    if (keyChanged || widthsChanged) {
       virtualRemountEpoch.value += 1
     }
   }
