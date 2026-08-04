@@ -66,7 +66,6 @@ a-layout.new-layout.new-layout--workspace
               :pagination="false"
               :bordered="false"
               :show-header="false"
-              :scroll="{ x: 800 }"
             )
               template(#column-series="{ record }")
                 .series-cell
@@ -286,8 +285,8 @@ a-layout.new-layout.new-layout--workspace
   })
 
   const tableColumns = [
-    { name: 'series', data_type: 'string', title: 'Series', width: 600 },
-    { name: 'values', data_type: 'string', title: 'Values', width: 200 },
+    { name: 'series', data_type: 'string', title: 'Series' },
+    { name: 'values', data_type: 'string', title: 'Values' },
   ]
 
   const promqlEditorRef = ref()
@@ -445,5 +444,12 @@ a-layout.new-layout.new-layout--workspace
   .table-section {
     flex: 1;
     min-height: 0;
+  }
+
+  .series-cell,
+  .values-cell {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 </style>
