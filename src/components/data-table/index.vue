@@ -76,7 +76,7 @@
                 // Special rendering for merged column (no per-field context icons)
                 .cell-wrapper
                   a-popover(
-                    v-if="!props.wrapLine && isCellOverflowExpandable(record, 'Merged_Column')"
+                    v-if="!props.wrapLine && isMergedRowExpandable(record)"
                     trigger="click"
                     position="top"
                     :popup-visible="isExpandActive(record, 'Merged_Column')"
@@ -87,18 +87,13 @@
                     .merged-cell-content.cell-content--expandable(
                       :class="getCellContentClass(null)"
                       :title="$t('common.inspectValue')"
-                      @mouseenter="(e) => onCellContentMouseEnter(e, record, 'Merged_Column')"
                     )
                       span.entity-field(v-for="field in record.Merged_Column" :key="field[0]")
                         span.entity-field-text
                           span(v-if="showKeys" style="color: var(--gpt-text-muted)")
                             | {{ field[0] }}:
                           | {{ field[1] }}
-                  .merged-cell-content(
-                    v-else
-                    :class="getCellContentClass(null)"
-                    @mouseenter="(e) => onCellContentMouseEnter(e, record, 'Merged_Column')"
-                  )
+                  .merged-cell-content(v-else :class="getCellContentClass(null)")
                     span.entity-field(v-for="field in record.Merged_Column" :key="field[0]")
                       span.entity-field-text
                         span(v-if="showKeys" style="color: var(--gpt-text-muted)")
@@ -127,7 +122,7 @@
               template(v-else)
                 .cell-wrapper
                   a-popover(
-                    v-if="!props.wrapLine && isCellOverflowExpandable(record, col.name)"
+                    v-if="!props.wrapLine && isCellExpandable(record[col.name])"
                     trigger="click"
                     position="top"
                     :popup-visible="isExpandActive(record, col.name)"
@@ -138,14 +133,9 @@
                     .cell-content.cell-content--expandable(
                       :class="getCellContentClass(record[col.name])"
                       :title="$t('common.inspectValue')"
-                      @mouseenter="(e) => onCellContentMouseEnter(e, record, col.name)"
                     )
                       span {{ record[col.name] }}
-                  .cell-content(
-                    v-else
-                    :class="getCellContentClass(record[col.name])"
-                    @mouseenter="(e) => onCellContentMouseEnter(e, record, col.name)"
-                  )
+                  .cell-content(v-else :class="getCellContentClass(record[col.name])")
                     span {{ record[col.name] }}
                   .cell-actions(v-if="showContextMenu")
                     span.cell-action-icon(@click.stop="(event) => handleContextMenu(record, col.name, event)")
@@ -396,10 +386,9 @@ a-dropdown#td-context(
     return getCellKey(record, columnName)
   }
 
-  // Cell expand: decide on hover via real truncation (scrollWidth > clientWidth),
-  // not string heuristics (which wrongly flagged short values like "BASE TABLE").
-  const CELL_OVERFLOW_TOLERANCE_PX = 1
-  const overflowExpandKeys = ref<Set<string>>(new Set())
+  // Cell expand: unified char-length heuristic (same for separate + merged).
+  // Expand when text is longer than EXPAND_POPOVER_MAX_LENGTH.
+  const EXPAND_POPOVER_MAX_LENGTH = 140
 
   function getCellContentClass(value: unknown) {
     if (props.wrapLine) {
@@ -418,38 +407,12 @@ a-dropdown#td-context(
       .join(' ')
   }
 
-  function isCellOverflowExpandable(record: TableData, columnName: string) {
-    return !props.wrapLine && overflowExpandKeys.value.has(getCellExpandKey(record, columnName))
+  function isCellExpandable(value: unknown) {
+    return !props.wrapLine && getCellString(value).length > EXPAND_POPOVER_MAX_LENGTH
   }
 
-  function onCellContentMouseEnter(event: Event, record: TableData, columnName: string) {
-    if (props.wrapLine) {
-      return
-    }
-    const el = event.currentTarget as HTMLElement | null
-    if (!el) {
-      return
-    }
-    const key = getCellExpandKey(record, columnName)
-    const overflowing = el.scrollWidth > el.clientWidth + CELL_OVERFLOW_TOLERANCE_PX
-    const currently = overflowExpandKeys.value.has(key)
-    if (overflowing === currently) {
-      return
-    }
-    const next = new Set(overflowExpandKeys.value)
-    if (overflowing) {
-      next.add(key)
-    } else {
-      next.delete(key)
-    }
-    overflowExpandKeys.value = next
-  }
-
-  function clearOverflowExpandKeys() {
-    if (overflowExpandKeys.value.size === 0) {
-      return
-    }
-    overflowExpandKeys.value = new Set()
+  function isMergedRowExpandable(record: TableData) {
+    return isCellExpandable(getMergedRowString(record))
   }
 
   function getColumnContentMaxLength(columnName: string, rows: TableData[], limit = MAX_CONTENT_SAMPLE_ROWS): number {
@@ -1116,10 +1079,6 @@ a-dropdown#td-context(
   }
 
   function handleExpandVisibleChange(key: string, visible: boolean) {
-    if (visible && !overflowExpandKeys.value.has(key)) {
-      expandedPopoverKey.value = null
-      return
-    }
     expandedPopoverKey.value = visible ? key : null
   }
 
@@ -1128,11 +1087,6 @@ a-dropdown#td-context(
   function closeExpandPopover() {
     expandedPopoverKey.value = null
   }
-
-  watch([columnsKey, () => props.wrapLine, tableWidth], () => {
-    clearOverflowExpandKeys()
-    closeExpandPopover()
-  })
 
   onMounted(() => {
     nextTick(() => {
