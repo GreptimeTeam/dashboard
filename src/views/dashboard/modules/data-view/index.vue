@@ -340,7 +340,6 @@ a-tabs.panel-tabs(
       .arco-table-th {
         background: var(--gpt-table-head-bg);
         color: var(--gpt-text-primary);
-        border-bottom: 1px solid var(--gpt-border-default);
       }
       .arco-table-td {
         border-bottom: 1px solid var(--gpt-border-subtle);
