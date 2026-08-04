@@ -77,7 +77,7 @@
                 // Special rendering for merged column (no per-field context icons)
                 .cell-wrapper
                   a-popover(
-                    v-if="!props.wrapLine && isMergedRowExpandable(record)"
+                    v-if="!props.wrapLine && isColumnExpandable('Merged_Column')"
                     trigger="click"
                     position="top"
                     :popup-visible="isExpandActive(record, 'Merged_Column')"
@@ -123,7 +123,7 @@
               template(v-else)
                 .cell-wrapper
                   a-popover(
-                    v-if="!props.wrapLine && isCellExpandable(record[col.name])"
+                    v-if="!props.wrapLine && isColumnExpandable(col.name)"
                     trigger="click"
                     position="top"
                     :popup-visible="isExpandActive(record, col.name)"
@@ -292,8 +292,10 @@ a-dropdown#td-context(
   const COLUMN_MAX_WIDTH = 600
   // Virtual-list (and virtual merged mode): primary timestamp column fixed px.
   const TIME_COLUMN_FIXED_WIDTH = 200
-  // Ordinary: uncapped measured naturals. displayColumnWidths applies fitColumnWidths.
+  // Ordinary: uncapped measured naturals (for fit + expand). Resize may update
+  // columnWidths for fit intent; measuredNaturalWidths stays for expand compare.
   const columnWidths = ref<Record<string, number>>({})
+  const measuredNaturalWidths = ref<Record<string, number>>({})
   const widthsLocked = ref(false)
   let lockWidthsTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -369,6 +371,13 @@ a-dropdown#td-context(
   //
   // Merged / single-column: same pipeline (ts + Merged_Column; Data is last).
   //
+  // ## Cell expand (ordinary + virtual)
+  //
+  // Column-level only: if measured/estimated natural width > fitted/assigned
+  // width (+ epsilon), every cell in that column gets the expand popover.
+  // No per-cell char-length heuristic — aligns with ellipsis at column grain.
+  // wrapLine disables expand; time columns never use expand popover.
+  //
   // ## Virtual-list (logs etc.)
   //
   // Cannot measure off-screen rows. Estimate px from sampled text
@@ -382,6 +391,8 @@ a-dropdown#td-context(
   const VIRTUAL_CHAR_WIDTH_PX = 8
   const VIRTUAL_CELL_PADDING_X = 32
   const MEASURE_SAMPLE_ROWS = 30
+  /** natural > fitted + epsilon → column shows ellipsis → expand popup */
+  const EXPAND_WIDTH_EPSILON = 1
 
   function getCellString(value: unknown): string {
     if (value === null || value === undefined) return ''
@@ -396,10 +407,6 @@ a-dropdown#td-context(
   function getCellExpandKey(record: TableData, columnName: string) {
     return getCellKey(record, columnName)
   }
-
-  // Cell expand: unified char-length heuristic (same for separate + merged).
-  // Expand when text is longer than EXPAND_POPOVER_MAX_LENGTH.
-  const EXPAND_POPOVER_MAX_LENGTH = 140
 
   function getCellContentClass(value: unknown) {
     if (props.wrapLine) {
@@ -416,14 +423,6 @@ a-dropdown#td-context(
     return fields
       .map(([key, value]) => (showKeys.value ? `${key}: ${getCellString(value)}` : getCellString(value)))
       .join(' ')
-  }
-
-  function isCellExpandable(value: unknown) {
-    return !props.wrapLine && getCellString(value).length > EXPAND_POPOVER_MAX_LENGTH
-  }
-
-  function isMergedRowExpandable(record: TableData) {
-    return isCellExpandable(getMergedRowString(record))
   }
 
   function getColumnContentMaxLength(columnName: string, rows: TableData[], limit = MAX_CONTENT_SAMPLE_ROWS): number {
@@ -479,6 +478,11 @@ a-dropdown#td-context(
   // on the rightmost long column (virtual-list cannot leave empty table chrome).
   function estimateVirtualNaturalWidthPx(charLen: number): number {
     return Math.min(COLUMN_MAX_WIDTH, Math.ceil(charLen * VIRTUAL_CHAR_WIDTH_PX + VIRTUAL_CELL_PADDING_X))
+  }
+
+  /** Uncapped virtual estimate — used for expand (natural > fitted). */
+  function estimateVirtualNaturalWidthPxUncapped(charLen: number): number {
+    return Math.ceil(charLen * VIRTUAL_CHAR_WIDTH_PX + VIRTUAL_CELL_PADDING_X)
   }
 
   /**
@@ -818,6 +822,7 @@ a-dropdown#td-context(
     if (!measured) {
       return
     }
+    measuredNaturalWidths.value = measured
     columnWidths.value = measured
     widthsLocked.value = true
   }
@@ -832,11 +837,13 @@ a-dropdown#td-context(
   function scheduleLockWidthsAfterRender() {
     if (!useStickySingleTable.value) {
       columnWidths.value = {}
+      measuredNaturalWidths.value = {}
       widthsLocked.value = false
       return
     }
     clearLockWidthsSchedule()
     columnWidths.value = {}
+    measuredNaturalWidths.value = {}
     widthsLocked.value = false
     nextTick(() => {
       lockWidthsTimer = setTimeout(() => {
@@ -852,6 +859,7 @@ a-dropdown#td-context(
       if (!key) {
         clearLockWidthsSchedule()
         columnWidths.value = {}
+        measuredNaturalWidths.value = {}
         widthsLocked.value = false
         return
       }
@@ -877,6 +885,93 @@ a-dropdown#td-context(
     }
     return fitColumnWidths(columnWidths.value, columnsForWidthLock(), tableWidth.value)
   })
+
+  function isVirtualColumnExpandable(columnName: string): boolean {
+    if (mergeColumn.value) {
+      // Merged Data column: expandable when estimated content needs more than leftover after ts.
+      if (columnName !== 'Merged_Column') {
+        return false
+      }
+      const tsW = props.tsColumn ? TIME_COLUMN_FIXED_WIDTH : 0
+      const available = Math.max(0, tableWidth.value - tsW)
+      let maxLen = 4
+      const fields =
+        props.displayedColumns.length > 0
+          ? props.displayedColumns.filter((name) => name !== props.tsColumn?.name)
+          : props.columns.map((c) => c.name).filter((name) => name !== props.tsColumn?.name)
+      const sample = props.data.slice(0, MAX_CONTENT_SAMPLE_ROWS)
+      sample.forEach((row) => {
+        const str = fields
+          .map((key) => (showKeys.value ? `${key}: ${getCellString(row[key])}` : getCellString(row[key])))
+          .join(' ')
+        if (str.length > maxLen) maxLen = str.length
+      })
+      const natural = estimateVirtualNaturalWidthPxUncapped(maxLen)
+      return natural > available + EXPAND_WIDTH_EPSILON
+    }
+
+    const ready = virtualWidthsReadyForKey.value === columnsKey.value
+    if (!ready) {
+      return false
+    }
+
+    const columns = visibleColumns.value
+    const naturalLengths = getColumnNaturalCharLengths(columns, props.data)
+    const natural = estimateVirtualNaturalWidthPxUncapped(naturalLengths[columnName] || 0)
+    const assigned = virtualColumnWidths.value[columnName]
+    const override = virtualWidthOverrides.value[columnName]
+
+    if (typeof override === 'number') {
+      return natural > override + EXPAND_WIDTH_EPSILON
+    }
+    if (typeof assigned === 'number') {
+      return natural > assigned + EXPAND_WIDTH_EPSILON
+    }
+    // Flexible column (no :width): compare natural to leftover container space.
+    const othersSum = columns.reduce((sum, column) => {
+      if (column.name === columnName) return sum
+      const w = virtualWidthOverrides.value[column.name] ?? virtualColumnWidths.value[column.name]
+      return sum + (typeof w === 'number' ? w : 0)
+    }, 0)
+    const available = Math.max(0, tableWidth.value - othersSum)
+    return natural > available + EXPAND_WIDTH_EPSILON
+  }
+
+  /**
+   * Column expandable when natural content width exceeds fitted/assigned width.
+   * Whole column gets expand popup (no per-cell char heuristic).
+   */
+  function isColumnExpandable(columnName: string): boolean {
+    if (props.wrapLine) {
+      return false
+    }
+
+    // Time columns: format toggle / detail — never expand-popover
+    const colMeta =
+      columnsForWidthLock().find((c) => c.name === columnName) ||
+      visibleColumns.value.find((c) => c.name === columnName) ||
+      props.columns.find((c) => c.name === columnName)
+    if (colMeta && isTimeColumn(colMeta)) {
+      return false
+    }
+    if (props.tsColumn?.name === columnName) {
+      return false
+    }
+
+    if (hasVirtualListProps.value) {
+      return isVirtualColumnExpandable(columnName)
+    }
+
+    if (!widthsLocked.value) {
+      return false
+    }
+    const natural = measuredNaturalWidths.value[columnName]
+    const fitted = displayColumnWidths.value[columnName]
+    if (!(natural > 0) || !(fitted > 0)) {
+      return false
+    }
+    return natural > fitted + EXPAND_WIDTH_EPSILON
+  }
 
   const lockedTableWidthPx = computed(() => {
     if (!useStickySingleTable.value || !widthsLocked.value) {
