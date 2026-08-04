@@ -344,25 +344,25 @@ a-dropdown#td-context(
   // ---------------------------------------------------------------------------
   // Table layout / column-width conclusions (keep in sync with CSS below)
   //
-  // Ordinary mode (no virtual-list-props) — natural widths:
+  // Ordinary mode (no virtual-list-props) — one rule: natural column widths +
+  // leftover to the last column; table always min-width 100%.
   //   - Single table + container scroll + sticky th (useStickySingleTable).
   //   - Always (.natural-column-widths): no column :width; table-layout:auto;
-  //     size to header/body content (cap 600px). min-width:100% only when the
-  //     table would be narrower than the container. Trace / flow etc. stay here.
+  //     width/min-width 100%. Non-last columns shrink-wrap to content (cap 600);
+  //     last column (.cell-edge-right) absorbs remaining space.
   //   - Only with column-resizable (.widths-locked): measure DOM → lock explicit
-  //     px; table-layout:fixed so Arco resize handles work. Total may exceed
-  //     viewport → horizontal scroll on .data-table-container. Do NOT scale
-  //     columns up just to fill the screen.
-  //   - Merged / single-column: same natural (and optional measure+lock) for
-  //     ts + Merged_Column (Data).
+  //     px on every column, then grow the last column so total ≥ container
+  //     (same absorb rule). table-layout:fixed for Arco resize handles.
+  //     Total may exceed viewport → horizontal scroll on .data-table-container.
+  //   - Merged / single-column: same rule (Data / sole column is last → absorbs).
   //
   // Virtual-list mode (logs etc.) — same natural-width intent as ordinary, but
   // estimated from text (Arco virtual-list cannot measure off-screen rows):
   //   - No horizontal scroll (overflow-x hidden) so header and virtual body stay
   //     aligned. If estimated total exceeds the container, columns clip (hint).
   //   - Separate: per column max(header, sampled cell text) → px estimate, cap
-  //     COLUMN_MAX_WIDTH; longest column omits width (absorbs leftover, like
-  //     ordinary min-width:100%); timestamp columns use TIME_COLUMN_FIXED_WIDTH.
+  //     COLUMN_MAX_WIDTH; longest column omits width (absorbs leftover);
+  //     timestamp columns use TIME_COLUMN_FIXED_WIDTH.
   //   - Merged: ts = TIME_COLUMN_FIXED_WIDTH; Data (Merged_Column) takes the rest.
   //   - column-resizable: Arco does not sync virtual body during drag; we apply the
   //     final width on pointerup and remount so header/body stay aligned. Total
@@ -465,8 +465,8 @@ a-dropdown#td-context(
   }
 
   // Virtual-list: estimate natural px from text (cannot measure off-screen rows).
-  // Longest column is left without width so leftover space is absorbed (ordinary
-  // min-width:100%), instead of scaling every column up to fill the container.
+  // Longest column is left without width so leftover container space is absorbed
+  // on the rightmost long column (virtual-list cannot leave empty table chrome).
   function estimateVirtualNaturalWidthPx(charLen: number): number {
     return Math.min(COLUMN_MAX_WIDTH, Math.ceil(charLen * VIRTUAL_CHAR_WIDTH_PX + VIRTUAL_CELL_PADDING_X))
   }
@@ -727,13 +727,6 @@ a-dropdown#td-context(
     return measured
   }
 
-  function clearLockWidthsSchedule() {
-    if (lockWidthsTimer != null) {
-      clearTimeout(lockWidthsTimer)
-      lockWidthsTimer = null
-    }
-  }
-
   function lockMeasuredColumnWidths() {
     if (!useStickySingleTable.value || !columnResizableEnabled.value) {
       return
@@ -748,8 +741,37 @@ a-dropdown#td-context(
     if (!measured) {
       return
     }
+    // Store natural / user base widths; leftover absorb is applied in displayColumnWidths.
     columnWidths.value = measured
     widthsLocked.value = true
+  }
+
+  /** Grow the last column so widths fill the container (leftover → last). */
+  function applyLastColumnAbsorb(
+    widths: Record<string, number>,
+    columns: ColumnType[],
+    containerW: number
+  ): Record<string, number> {
+    if (columns.length === 0) {
+      return widths
+    }
+    const lastName = columns[columns.length - 1].name
+    const othersSum = columns.slice(0, -1).reduce((sum, column) => sum + (widths[column.name] || 0), 0)
+    const lastNatural = widths[lastName] || 0
+    if (!(containerW > 0)) {
+      return widths
+    }
+    return {
+      ...widths,
+      [lastName]: Math.max(lastNatural, Math.floor(containerW - othersSum)),
+    }
+  }
+
+  function clearLockWidthsSchedule() {
+    if (lockWidthsTimer != null) {
+      clearTimeout(lockWidthsTimer)
+      lockWidthsTimer = null
+    }
   }
 
   function scheduleLockWidthsAfterRender() {
@@ -800,12 +822,23 @@ a-dropdown#td-context(
     }
   )
 
+  // Natural / resized base widths + leftover absorbed into the last column.
+  const displayColumnWidths = computed(() => {
+    if (!widthsLocked.value) {
+      return columnWidths.value
+    }
+    return applyLastColumnAbsorb(columnWidths.value, columnsForWidthLock(), tableWidth.value)
+  })
+
   const lockedTableWidthPx = computed(() => {
     if (!useStickySingleTable.value || !widthsLocked.value) {
       return undefined
     }
-    const total = Object.values(columnWidths.value).reduce((sum, width) => sum + width, 0)
-    return total > 0 ? total : undefined
+    const total = Object.values(displayColumnWidths.value).reduce((sum, width) => sum + width, 0)
+    if (!(total > 0)) {
+      return undefined
+    }
+    return Math.max(total, Math.floor(tableWidth.value) || total)
   })
 
   function onColumnResize(dataIndex: string, width: number) {
@@ -881,11 +914,11 @@ a-dropdown#td-context(
         )
       }
 
-      // Ordinary: omit width until lock; then measured natural px snapshot.
+      // Ordinary: omit width until lock; then measured natural px + last absorbs leftover.
       return withEdgeCellClass(
         visibleColumns.value.map((column) => {
           const { width: _omit, ...rest } = column as TableColumn
-          const locked = columnWidths.value[column.name]
+          const locked = displayColumnWidths.value[column.name]
           return locked !== undefined ? { ...rest, width: locked } : rest
         })
       )
@@ -894,7 +927,7 @@ a-dropdown#td-context(
     // Merged: virtual → fixed ts + flexible Data; ordinary → measure+lock.
     const arr: TableColumn[] = []
     if (props.tsColumn) {
-      const locked = columnWidths.value[props.tsColumn.name]
+      const locked = displayColumnWidths.value[props.tsColumn.name]
       let width: number | undefined
       if (hasVirtualListProps.value) {
         width = TIME_COLUMN_FIXED_WIDTH
@@ -908,7 +941,7 @@ a-dropdown#td-context(
         ...(width !== undefined ? { width } : {}),
       })
     }
-    const mergedLocked = columnWidths.value.Merged_Column
+    const mergedLocked = displayColumnWidths.value.Merged_Column
     arr.push({
       name: 'Merged_Column',
       title: 'Data',
@@ -1561,20 +1594,30 @@ a-dropdown#td-context(
     border: 1px solid var(--gpt-border-default);
   }
 
-  // Ordinary: content-sized columns (max 600); min-width 100% if narrow.
+  // Ordinary: natural column widths; table min 100%; leftover → last column.
+  // Non-last: width:1% + nowrap shrink-wraps to content (cap 600). Last
+  // (.cell-edge-right) has no max-width so it absorbs the rest.
   // Without column-resizable this stays permanently (no lock). With resize,
   // disable ellipsis while measuring — overflow:hidden would shrink below
   // intrinsic text width and locking that would truncate headers.
   .data-table-container.natural-column-widths {
     :deep(.arco-table-element) {
       table-layout: auto !important;
-      width: max-content !important;
-      min-width: 100%;
+      width: 100% !important;
+      min-width: 100% !important;
     }
 
-    :deep(.arco-table-th),
-    :deep(.arco-table-tr:not(.arco-table-tr-empty) .arco-table-td) {
+    :deep(.arco-table-th:not(.cell-edge-right)),
+    :deep(.arco-table-tr:not(.arco-table-tr-empty) .arco-table-td:not(.cell-edge-right)) {
+      width: 1%;
       max-width: 600px;
+      white-space: nowrap;
+    }
+
+    :deep(.arco-table-th.cell-edge-right),
+    :deep(.arco-table-tr:not(.arco-table-tr-empty) .arco-table-td.cell-edge-right) {
+      width: auto;
+      max-width: none;
     }
 
     :deep(.arco-table-th),
@@ -1589,12 +1632,13 @@ a-dropdown#td-context(
     }
   }
 
-  // After lock: fixed layout + explicit table width so Arco col resize is visible.
+  // After lock: fixed layout + explicit widths (last already grown to absorb).
+  // Table width is max(sum, container) via --data-table-locked-width.
   .data-table-container.widths-locked {
     :deep(.arco-table-element) {
       table-layout: fixed !important;
-      width: var(--data-table-locked-width, max-content) !important;
-      min-width: 100%;
+      width: var(--data-table-locked-width, 100%) !important;
+      min-width: 100% !important;
     }
   }
 
