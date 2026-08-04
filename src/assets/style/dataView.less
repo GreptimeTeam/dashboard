@@ -190,8 +190,11 @@
   align-items: center;
   gap: var(--gpt-gap-xs);
   box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
   height: var(--gpt-semantic-th-height);
   max-height: var(--gpt-semantic-th-height);
+  overflow: hidden;
   font-size: inherit;
   line-height: 1;
   border-radius: 2px;
@@ -202,6 +205,13 @@
     flex-shrink: 0;
     width: 12px;
     height: 12px;
+  }
+
+  .gpt-semantic-th-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &.field {
