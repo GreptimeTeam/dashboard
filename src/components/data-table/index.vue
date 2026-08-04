@@ -1222,6 +1222,10 @@ a-dropdown#td-context(
     // Non-virtual: single table scrolls here; sticky th pins header.
     &.sticky-scroll {
       overflow: auto;
+      // Reserve vertical scrollbar space up front so adding rows (V-scrollbar
+      // appearing) does not shrink the content box and create a phantom
+      // horizontal scrollbar against the locked column-width sum.
+      scrollbar-gutter: stable;
 
       :deep(.arco-table-wrapper),
       :deep(.arco-table-container),
