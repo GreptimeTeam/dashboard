@@ -1880,7 +1880,7 @@ a-dropdown#td-context(
     }
 
     .cell-actions {
-      top: 3px;
+      top: 9px;
     }
   }
   :deep(.arco-table-size-mini) .cell-action-icon {
