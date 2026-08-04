@@ -86,8 +86,6 @@ a-card.editor-card.editor-card--inset.gpt-query-editor-inset(:bordered="false")
                         span.ml-2 {{ $t('dashboard.examples') }}
                         a-typography-text(v-for="item of durationExamples" :key="item" code) {{ item }}
     .query-select
-      a-select.query-type-select(v-model="queryType" :trigger-props="{ 'content-class': 'query-select' }")
-        a-option(v-for="query of queryOptions" :="query")
       a-tooltip(
         v-if="queryType === 'sql'"
         mini
@@ -109,6 +107,8 @@ a-card.editor-card.editor-card--inset.gpt-query-editor-inset(:bordered="false")
           template(#icon)
             svg.icon-16
               use(href="#clear")
+      a-select.query-type-select(v-model="queryType" :trigger-props="{ 'content-class': 'query-select' }")
+        a-option(v-for="query of queryOptions" :="query")
 
 a-resize-box.panel-resize(v-model:height="editorHeight" :directions="['bottom']" :style="editorResizeStyle")
   .editor-resize-content
