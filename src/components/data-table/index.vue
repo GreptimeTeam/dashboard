@@ -52,9 +52,10 @@
                   span.gpt-semantic-th(style="cursor: pointer" :class="getSemanticThClass(col)" @click="changeTsView")
                     svg.icon-12
                       use(href="#time-index")
-                    | {{ col.name }}
+                    span.gpt-semantic-th-text {{ col.name }}
               template(v-else-if="col.semantic_type")
-                span.gpt-semantic-th(:class="getSemanticThClass(col)") {{ col.title || col.name }}
+                span.gpt-semantic-th(:class="getSemanticThClass(col)")
+                  span.gpt-semantic-th-text {{ col.title || col.name }}
               template(v-else)
                 | {{ col.title || col.name }}
           // Custom cell slot - allow parent components to override cell rendering
@@ -1404,49 +1405,47 @@ a-dropdown#td-context(
     cursor: pointer;
   }
 
-  // Ordinary mode: time cells may stay visible when columns are naturally wide.
-  // Virtual-list overrides below — overflow:visible there bleeds into neighbors.
-  .timestamp-cell-content {
-    overflow: visible;
-    text-overflow: unset;
-  }
-
-  :deep(.arco-table-td-content:has(.timestamp-cell-content)) {
-    overflow: visible;
-    text-overflow: unset;
-  }
-
-  // Virtual-list packs columns tightly; clip secondary (and primary) time cells.
+  // Time cells: ellipsis when column is narrower than the formatted timestamp.
   // Keep clipping on hover too — global td:hover overflow:visible would otherwise
   // let formatted timestamps spill into the next column.
-  .virtual-list-active {
-    .timestamp-cell-content {
+  .timestamp-cell-content {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    // a-tooltip wraps the value; constrain so ellipsis applies on the span.
+    :deep(.arco-trigger),
+    > span {
       display: block;
-      width: 100%;
       max-width: 100%;
       min-width: 0;
       overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
     }
+  }
 
-    .timestamp-cell {
-      display: block;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+  .timestamp-cell {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
-    :deep(.arco-table-td-content:has(.timestamp-cell-content)) {
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+  :deep(.arco-table-td-content:has(.timestamp-cell-content)) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
-    :deep(.arco-table-td:hover:has(.timestamp-cell-content)),
-    :deep(.arco-table-td:hover .arco-table-td-content:has(.timestamp-cell-content)) {
-      overflow: hidden;
-    }
+  :deep(.arco-table-td:hover:has(.timestamp-cell-content)),
+  :deep(.arco-table-td:hover .arco-table-td-content:has(.timestamp-cell-content)) {
+    overflow: hidden;
+  }
 
+  // Virtual-list packs columns tightly; keep action icons inside the cell.
+  .virtual-list-active {
     // Keep action icons inside the cell (right:-15px bleeds into the next column).
     // Vertically center so empty cells don't look sunk relative to the row.
     .cell-wrapper {
@@ -1652,6 +1651,20 @@ a-dropdown#td-context(
   :deep(.arco-table-td-content) {
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  // Time / semantic headers: tooltip + pill must shrink so label can ellipsis.
+  :deep(.arco-table-th-item-title) {
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  :deep(.arco-table-th-item-title > .arco-trigger) {
+    display: block;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
   }
 
   :deep(.arco-table-th:not(:last-child)::after) {
