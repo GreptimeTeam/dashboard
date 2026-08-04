@@ -75,11 +75,7 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
 
 <script lang="ts" setup name="NavBar">
   import { useStorage } from '@vueuse/core'
-  import {
-    queryFocusNavExpanded,
-    useNavbarLayoutCollapsed,
-    useQueryFocusMode,
-  } from '@/composables/use-query-focus-mode'
+  import { useNavbarLayoutCollapsed } from '@/composables/use-query-focus-mode'
   import { listenerRouteChange } from '@/utils/route-listener'
   import { useNews } from '@/hooks/news'
   import useLocale from '@/hooks/locale'
@@ -91,7 +87,6 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
   const router = useRouter()
   const appStore = useAppStore()
   const { menuSelectedKey, globalSettings, menuCollapse } = storeToRefs(appStore)
-  const queryFocusMode = useQueryFocusMode()
   const navbarCollapsed = useNavbarLayoutCollapsed()
   const { activeTab: ingestTab } = storeToRefs(useIngestStore())
   const { menuTree } = useMenuTree()
@@ -141,18 +136,10 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
   }
 
   const toggleMenuCollapse = () => {
-    if (queryFocusMode.value) {
-      queryFocusNavExpanded.value = !queryFocusNavExpanded.value
-      return
-    }
     appStore.applyUiConfig({ menuCollapse: !menuCollapse.value })
   }
 
   const onMenuCollapse = (collapsed: boolean) => {
-    if (queryFocusMode.value) {
-      queryFocusNavExpanded.value = !collapsed
-      return
-    }
     appStore.applyUiConfig({ menuCollapse: collapsed })
   }
 
