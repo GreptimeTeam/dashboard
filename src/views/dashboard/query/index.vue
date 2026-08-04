@@ -16,9 +16,14 @@ a-layout.new-layout.new-layout--workspace(:class="{ 'query-layout--focus': focus
         direction="vertical"
         :size="0"
       ) 
-        Editor(:focus-mode="focusMode" @toggle-focus-mode="toggleFocusMode")
+        .editor-block(v-show="!focusMode")
+          Editor(:focus-mode="focusMode")
         .query-results-panel
-          DataView(v-if="!!session.results.value?.length || session.explainResults.value.length > 0")
+          DataView(
+            v-if="!!session.results.value?.length || session.explainResults.value.length > 0"
+            :focus-mode="focusMode"
+            @toggle-focus-mode="toggleFocusMode"
+          )
           .data-view-placeholder(v-else)
             a-empty(:description="$t('dashboard.queryResultsEmpty')")
               template(#image)
@@ -26,7 +31,7 @@ a-layout.new-layout.new-layout--workspace(:class="{ 'query-layout--focus': focus
                   use(href="#tableview")
       a-resize-box.panel-resize.logs-panel-resize(
         v-model:height="logsHeight"
-        :class="{ 'hide-sider': focusMode }"
+        v-show="!focusMode"
         :directions="['top']"
         :style="{ 'max-height': '40vh', 'min-height': '66px' }"
       )
@@ -98,6 +103,11 @@ a-layout.new-layout.new-layout--workspace(:class="{ 'query-layout--focus': focus
 
   watch(escape, (v) => {
     if (v && focusMode.value) {
+      exitFocusMode()
+    }
+  })
+  watch([() => session.results.value.length, () => session.explainResults.value.length], ([resultLen, explainLen]) => {
+    if (focusMode.value && resultLen + explainLen === 0) {
       exitFocusMode()
     }
   })
@@ -176,14 +186,10 @@ a-layout.new-layout.new-layout--workspace(:class="{ 'query-layout--focus': focus
     :deep(.layout-space > .arco-space-item:first-of-type) {
       flex: 1;
       min-height: 0;
-      overflow: auto;
+      overflow: hidden;
     }
-    :deep(.editor-space) {
-      height: 100%;
-      box-sizing: border-box;
-    }
-    :deep(.editor-space > .arco-space-item) {
-      box-sizing: border-box;
+    :deep(.editor-space > .arco-space-item:first-of-type) {
+      display: none !important;
     }
   }
   :deep(.layout-space) {
@@ -210,6 +216,10 @@ a-layout.new-layout.new-layout--workspace(:class="{ 'query-layout--focus': focus
         flex-direction: column;
       }
     }
+  }
+
+  .editor-block {
+    width: 100%;
   }
 
   :deep(.panel-resize) {

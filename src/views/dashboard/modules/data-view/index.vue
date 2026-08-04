@@ -18,6 +18,12 @@ a-tabs.panel-tabs(
         @ok="clearResults"
       )
         a-button(status="danger" size="small") {{ $t('dashboard.clear') }}
+      a-tooltip(mini :content="focusMode ? $t('dashboard.exitFullSize') : $t('dashboard.fullSizeMode')")
+        a-button(type="outline" size="small" @click="emit('toggle-focus-mode')")
+          template(#icon)
+            svg.icon-16
+              use(v-if="!focusMode" href="#zoom")
+              use(v-else href="#zoom-out")
   a-tab-pane(
     v-for="(explainResult, idx) in session.explainResults.value"
     :key="explainResult.key"
@@ -126,6 +132,16 @@ a-tabs.panel-tabs(
   import { runWithFormat } from '@/services/code-run'
   import { useQuerySession } from '@/views/dashboard/query/use-query-session'
 
+  const props = withDefaults(
+    defineProps<{
+      focusMode?: boolean
+    }>(),
+    {
+      focusMode: false,
+    }
+  )
+  const focusMode = computed(() => props.focusMode)
+  const emit = defineEmits<{ 'toggle-focus-mode': [] }>()
   const session = useQuerySession()
 
   const activeTabKey = ref<string | number>()
