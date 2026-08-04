@@ -74,25 +74,36 @@
               // Default cell rendering (fallback when no custom slot provided)
               template(v-if="col.name === 'Merged_Column' && mergeColumn")
                 // Special rendering for merged column (no per-field context icons)
-                .cell-wrapper(:class="{ 'has-merged-expand': !props.wrapLine && isMergedRowExpandable(record) }")
-                  .merged-cell-content(:class="getCellContentClass(null)")
+                .cell-wrapper
+                  a-popover(
+                    v-if="!props.wrapLine && isCellOverflowExpandable(record, 'Merged_Column')"
+                    trigger="click"
+                    position="top"
+                    :popup-visible="isExpandActive(record, 'Merged_Column')"
+                    @popupVisibleChange="(visible) => handleExpandVisibleChange(getCellExpandKey(record, 'Merged_Column'), visible)"
+                  )
+                    template(#content)
+                      .cell-popover-content {{ getMergedRowString(record) }}
+                    .merged-cell-content.cell-content--expandable(
+                      :class="getCellContentClass(null)"
+                      :title="$t('common.inspectValue')"
+                      @mouseenter="(e) => onCellContentMouseEnter(e, record, 'Merged_Column')"
+                    )
+                      span.entity-field(v-for="field in record.Merged_Column" :key="field[0]")
+                        span.entity-field-text
+                          span(v-if="showKeys" style="color: var(--gpt-text-muted)")
+                            | {{ field[0] }}:
+                          | {{ field[1] }}
+                  .merged-cell-content(
+                    v-else
+                    :class="getCellContentClass(null)"
+                    @mouseenter="(e) => onCellContentMouseEnter(e, record, 'Merged_Column')"
+                  )
                     span.entity-field(v-for="field in record.Merged_Column" :key="field[0]")
                       span.entity-field-text
                         span(v-if="showKeys" style="color: var(--gpt-text-muted)")
                           | {{ field[0] }}:
                         | {{ field[1] }}
-                  .cell-actions(v-if="!props.wrapLine && isMergedRowExpandable(record)")
-                    a-popover(
-                      trigger="click"
-                      position="top"
-                      :popup-visible="isExpandActive(record, 'Merged_Column')"
-                      @popupVisibleChange="(visible) => handleExpandVisibleChange(getCellExpandKey(record, 'Merged_Column'), visible)"
-                    )
-                      template(#content)
-                        .cell-popover-content {{ getMergedRowString(record) }}
-                      span.cell-action-icon(:class="{ active: isExpandActive(record, 'Merged_Column') }" @click.stop)
-                        icon-up(v-if="isExpandActive(record, 'Merged_Column')" :size="12")
-                        icon-down(v-else :size="12")
               template(v-else-if="isTimeColumn(col)")
                 .cell-wrapper
                   .cell-content.timestamp-cell-content
@@ -110,34 +121,34 @@
                       ) {{ renderTs(record, col.name) }}
                       span.timestamp-cell(v-else) {{ renderTs(record, col.name) }}
                   .cell-actions(v-if="showContextMenu && !mergeColumn")
-                    span.cell-action-icon(
-                      :class="{ active: isContextMenuActive(record, col.name) }"
-                      @click.stop="(event) => handleContextMenu(record, col.name, event)"
-                    )
+                    span.cell-action-icon(@click.stop="(event) => handleContextMenu(record, col.name, event)")
                       svg.icon-12
                         use(href="#menu")
               template(v-else)
                 .cell-wrapper
-                  .cell-content(:class="getCellContentClass(record[col.name])")
+                  a-popover(
+                    v-if="!props.wrapLine && isCellOverflowExpandable(record, col.name)"
+                    trigger="click"
+                    position="top"
+                    :popup-visible="isExpandActive(record, col.name)"
+                    @popupVisibleChange="(visible) => handleExpandVisibleChange(getCellExpandKey(record, col.name), visible)"
+                  )
+                    template(#content)
+                      .cell-popover-content {{ getCellString(record[col.name]) }}
+                    .cell-content.cell-content--expandable(
+                      :class="getCellContentClass(record[col.name])"
+                      :title="$t('common.inspectValue')"
+                      @mouseenter="(e) => onCellContentMouseEnter(e, record, col.name)"
+                    )
+                      span {{ record[col.name] }}
+                  .cell-content(
+                    v-else
+                    :class="getCellContentClass(record[col.name])"
+                    @mouseenter="(e) => onCellContentMouseEnter(e, record, col.name)"
+                  )
                     span {{ record[col.name] }}
-                  .cell-actions(v-if="showContextMenu || (!props.wrapLine && isCellExpandable(record[col.name]))")
-                    a-popover(
-                      v-if="!props.wrapLine && isCellExpandable(record[col.name])"
-                      trigger="click"
-                      position="top"
-                      :popup-visible="isExpandActive(record, col.name)"
-                      @popupVisibleChange="(visible) => handleExpandVisibleChange(getCellExpandKey(record, col.name), visible)"
-                    )
-                      template(#content)
-                        .cell-popover-content {{ getCellString(record[col.name]) }}
-                      span.cell-action-icon(:class="{ active: isExpandActive(record, col.name) }" @click.stop)
-                        icon-up(v-if="isExpandActive(record, col.name)" :size="12")
-                        icon-down(v-else :size="12")
-                    span.cell-action-icon(
-                      v-if="showContextMenu"
-                      :class="{ active: isContextMenuActive(record, col.name) }"
-                      @click.stop="(event) => handleContextMenu(record, col.name, event)"
-                    )
+                  .cell-actions(v-if="showContextMenu")
+                    span.cell-action-icon(@click.stop="(event) => handleContextMenu(record, col.name, event)")
                       svg.icon-12
                         use(href="#menu")
                   .cell-copy-button(
@@ -158,24 +169,13 @@ a-dropdown#td-context(
 ) 
   template(#content)
     a-doption(value="copy") Copy Field Value
-    a-doption(v-if="!wrapLine && showContextMenu && hasRowDetailListener" value="inspect") {{ $t('common.inspectValue') }}
     a-dsubmenu(v-if="filterOptions.length > 0" trigger="hover") Filter
       template(#content)
         a-doption(v-for="op in filterOptions" :key="op" :value="`filter_${op}`") {{ op }} value
 </template>
 
 <script setup lang="ts">
-  import {
-    ref,
-    computed,
-    getCurrentInstance,
-    nextTick,
-    onBeforeUnmount,
-    onMounted,
-    shallowRef,
-    useAttrs,
-    watch,
-  } from 'vue'
+  import { ref, computed, nextTick, onBeforeUnmount, onMounted, shallowRef, useAttrs, watch } from 'vue'
   import { useElementSize } from '@vueuse/core'
   import { dateTypes } from '@/views/dashboard/config'
   import type { ColumnType, TSColumn } from '@/types/query'
@@ -284,10 +284,6 @@ a-dropdown#td-context(
   // canvas-based height estimation + ResizeObserver correction, as Grafana
   // does). That is a larger architectural change outside the scope of this
   // component.
-  // Detect whether the parent has bound a @row-select listener.
-  // Declared emits are filtered out of attrs, so we read the raw vnode props.
-  const hasRowDetailListener = computed(() => !!getCurrentInstance()?.vnode.props?.onRowSelect)
-
   const emit = defineEmits(['filterConditionAdd', 'rowSelect', 'tsCellClick', 'virtualColumnsClipped'])
 
   // Timestamp display state
@@ -392,29 +388,24 @@ a-dropdown#td-context(
     return String(value)
   }
 
-  // Cell expand popover helpers (Grafana-style):
-  // - Short multi-word text wraps vertically in the popover.
-  // - Long text is fully shown in the popover to avoid extremely tall rows.
-  const EXPAND_POPOVER_MAX_LENGTH = 140
-
-  function isExpandPopoverWrapText(value: unknown) {
-    const str = getCellString(value)
-    return str.length > 0 && str.length <= EXPAND_POPOVER_MAX_LENGTH && /\s/.test(str)
+  function getCellKey(record: TableData, columnName: string) {
+    return `${record.__rowIndex ?? 0}-${columnName}`
   }
 
-  function isExpandPopoverOverflowText(value: unknown) {
-    return getCellString(value).length > EXPAND_POPOVER_MAX_LENGTH
+  function getCellExpandKey(record: TableData, columnName: string) {
+    return getCellKey(record, columnName)
   }
+
+  // Cell expand: decide on hover via real truncation (scrollWidth > clientWidth),
+  // not string heuristics (which wrongly flagged short values like "BASE TABLE").
+  const CELL_OVERFLOW_TOLERANCE_PX = 1
+  const overflowExpandKeys = ref<Set<string>>(new Set())
 
   function getCellContentClass(value: unknown) {
     if (props.wrapLine) {
       return { 'wrap-lines': true }
     }
     return {}
-  }
-
-  function isCellExpandable(value: unknown) {
-    return !props.wrapLine && (isExpandPopoverWrapText(value) || isExpandPopoverOverflowText(value))
   }
 
   function getMergedRowString(record: TableData) {
@@ -427,8 +418,38 @@ a-dropdown#td-context(
       .join(' ')
   }
 
-  function isMergedRowExpandable(record: TableData) {
-    return isCellExpandable(getMergedRowString(record))
+  function isCellOverflowExpandable(record: TableData, columnName: string) {
+    return !props.wrapLine && overflowExpandKeys.value.has(getCellExpandKey(record, columnName))
+  }
+
+  function onCellContentMouseEnter(event: Event, record: TableData, columnName: string) {
+    if (props.wrapLine) {
+      return
+    }
+    const el = event.currentTarget as HTMLElement | null
+    if (!el) {
+      return
+    }
+    const key = getCellExpandKey(record, columnName)
+    const overflowing = el.scrollWidth > el.clientWidth + CELL_OVERFLOW_TOLERANCE_PX
+    const currently = overflowExpandKeys.value.has(key)
+    if (overflowing === currently) {
+      return
+    }
+    const next = new Set(overflowExpandKeys.value)
+    if (overflowing) {
+      next.add(key)
+    } else {
+      next.delete(key)
+    }
+    overflowExpandKeys.value = next
+  }
+
+  function clearOverflowExpandKeys() {
+    if (overflowExpandKeys.value.size === 0) {
+      return
+    }
+    overflowExpandKeys.value = new Set()
   }
 
   function getColumnContentMaxLength(columnName: string, rows: TableData[], limit = MAX_CONTENT_SAMPLE_ROWS): number {
@@ -1076,10 +1097,6 @@ a-dropdown#td-context(
   // Virtual-list cell expand popover state (single open at a time)
   const expandedPopoverKey = ref<string | null>(null)
 
-  // Keep the context-menu trigger icon visible while its dropdown is open,
-  // even if the mouse has moved onto the dropdown itself.
-  const activeContextMenuKey = ref<string | null>(null)
-
   function getRowIndex(record: TableData) {
     if (typeof record.__globalRowIndex === 'number') {
       return record.__globalRowIndex
@@ -1094,23 +1111,15 @@ a-dropdown#td-context(
     return getRowIndex(record) === props.activeRowKey ? 'data-table-row-active' : ''
   }
 
-  function getCellKey(record: TableData, columnName: string) {
-    return `${record.__rowIndex ?? 0}-${columnName}`
-  }
-
-  function getCellExpandKey(record: TableData, columnName: string) {
-    return getCellKey(record, columnName)
-  }
-
-  function isContextMenuActive(record: TableData, columnName: string) {
-    return activeContextMenuKey.value === getCellKey(record, columnName)
-  }
-
   function isExpandActive(record: TableData, columnName: string) {
     return expandedPopoverKey.value === getCellExpandKey(record, columnName)
   }
 
   function handleExpandVisibleChange(key: string, visible: boolean) {
+    if (visible && !overflowExpandKeys.value.has(key)) {
+      expandedPopoverKey.value = null
+      return
+    }
     expandedPopoverKey.value = visible ? key : null
   }
 
@@ -1119,6 +1128,11 @@ a-dropdown#td-context(
   function closeExpandPopover() {
     expandedPopoverKey.value = null
   }
+
+  watch([columnsKey, () => props.wrapLine, tableWidth], () => {
+    clearOverflowExpandKeys()
+    closeExpandPopover()
+  })
 
   onMounted(() => {
     nextTick(() => {
@@ -1143,7 +1157,6 @@ a-dropdown#td-context(
 
     const rect = (event.target as Element).getBoundingClientRect()
     triggerCell.value = [record, columnName]
-    activeContextMenuKey.value = getCellKey(record, columnName)
     event.preventDefault()
 
     // Set available filter options based on column type
@@ -1164,7 +1177,6 @@ a-dropdown#td-context(
 
   function hideContextMenu() {
     contextMenuVisible.value = false
-    activeContextMenuKey.value = null
   }
 
   async function handleMenuClick(value: string | number | Record<string, any>) {
@@ -1181,8 +1193,6 @@ a-dropdown#td-context(
       } catch (error) {
         console.error('Failed to copy to clipboard:', error)
       }
-    } else if (action === 'inspect') {
-      emit('rowSelect', record, record.__rowIndex ?? 0)
     } else if (action.startsWith('filter')) {
       const operator = action.split('_')[1]
       emit('filterConditionAdd', { columnName, operator, value: record[columnName] })
@@ -1340,7 +1350,7 @@ a-dropdown#td-context(
     z-index: 999999;
   }
 
-  // Cell action icons (context menu + expand) — shared base
+  // Cell action icons (context menu) — shared base
   .cell-action-icon {
     display: inline-flex;
     align-items: center;
@@ -1366,7 +1376,7 @@ a-dropdown#td-context(
     }
   }
 
-  // Absolute-positioned action group (regular cells)
+  // Absolute-positioned action group (context menu)
   .cell-actions {
     position: absolute;
     right: -15px;
@@ -1379,8 +1389,7 @@ a-dropdown#td-context(
 
   :deep(.arco-table-cell:hover) .cell-actions,
   :deep(.arco-table-td:hover) .cell-actions,
-  .cell-wrapper:hover > .cell-actions,
-  .cell-actions:has(.cell-action-icon.active) {
+  .cell-wrapper:hover > .cell-actions {
     display: flex;
   }
 
@@ -1411,6 +1420,15 @@ a-dropdown#td-context(
     height: 100%;
     min-width: 0;
     cursor: default;
+
+    // a-popover wraps the trigger; keep truncated content full-width.
+    > .arco-trigger,
+    > span {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+    }
   }
   .cell-content {
     // nowrap is REQUIRED by the virtual-list fixed-row-height constraint
@@ -1425,6 +1443,11 @@ a-dropdown#td-context(
     overflow: hidden;
     word-break: normal;
     user-select: text;
+  }
+
+  // Truncated cells: click content to expand. Native title provides hover hint.
+  .cell-content--expandable {
+    cursor: pointer;
   }
 
   // Ordinary mode: time cells may stay visible when columns are naturally wide.
@@ -1475,6 +1498,12 @@ a-dropdown#td-context(
     .cell-wrapper {
       display: flex;
       align-items: center;
+
+      > .arco-trigger,
+      > span {
+        flex: 1;
+        min-width: 0;
+      }
     }
 
     .cell-content {
@@ -1509,6 +1538,10 @@ a-dropdown#td-context(
     text-overflow: ellipsis;
     white-space: nowrap;
     user-select: text;
+
+    &.cell-content--expandable {
+      cursor: pointer;
+    }
   }
 
   .entity-field {
@@ -1536,6 +1569,8 @@ a-dropdown#td-context(
 
   .cell-popover-content {
     max-width: 600px;
+    max-height: min(40vh, 320px);
+    overflow: auto;
     white-space: pre-wrap;
     word-break: break-word;
   }
@@ -1690,10 +1725,6 @@ a-dropdown#td-context(
       position: relative;
       width: 100%;
     }
-
-    :deep(.arco-table-td-content:has(.has-merged-expand)) {
-      padding-right: 15px;
-    }
   }
   :deep(.arco-table-size-mini).multiple_column,
   :deep(.arco-table-size-mini).single_column {
@@ -1703,14 +1734,6 @@ a-dropdown#td-context(
 
     :deep(.arco-table-td-content:has(.cell-actions)) {
       padding-right: 18px;
-    }
-
-    :deep(.arco-table-td-content:has(.cell-actions .cell-action-icon + .cell-action-icon)) {
-      padding-right: 36px;
-    }
-
-    :deep(.arco-table-td-content:has(.has-merged-expand)) {
-      padding-right: 12px;
     }
 
     .cell-actions {
