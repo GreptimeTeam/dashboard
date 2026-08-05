@@ -210,7 +210,7 @@ a-modal(
   // Props for form state and configuration
   const props = defineProps<{
     formState: Form | null
-    tableFilter?: string // Optional filter for which tables to show (e.g., 'trace_id' for traces)
+    tableFilter?: string | string[] // Optional column(s) tables must have (e.g. 'trace_id' or ['trace_id', 'parent_span_id'])
     storageKey?: string // Optional storage key for localStorage (e.g., 'logs-query-table', 'traces-query-table')
     quickFieldNames?: string[] // Array of field names for quick condition buttons
     defaultFormState?: Form
@@ -437,13 +437,13 @@ a-modal(
 
   async function fetchTables() {
     try {
+      const columns = [props.tableFilter ?? []].flat().filter(Boolean)
       let sql = `SELECT DISTINCT table_name FROM information_schema.columns WHERE table_catalog = '${currentTableCatalog.value}' AND table_schema = '${currentTableSchema.value}'`
-
-      // Add filter if specified (e.g., for traces we want tables with trace_id column)
-      if (props.tableFilter) {
-        sql += ` AND column_name = '${props.tableFilter}'`
+      if (columns.length) {
+        sql += ` AND column_name IN (${columns
+          .map((c) => `'${c}'`)
+          .join(', ')}) GROUP BY table_name HAVING COUNT(DISTINCT column_name) = ${columns.length}`
       }
-
       sql += ` ORDER BY table_name`
 
       const result = await editorAPI.runSQL(sql, form.database)
