@@ -19,7 +19,9 @@
     "lint-staged": "npx lint-staged",
     "prepare": "husky install",
     "update:lock": "pnpm i --lockfile-only",
-    "test": "vitest run"
+    "test": "vitest run",
+    "smoke:release": "playwright test -c playwright.release.config.ts",
+    "smoke:release:build": "pnpm run build && pnpm run smoke:release"
   },
   "lint-staged": {
     "*.{js,ts,jsx,tsx}": [
@@ -135,6 +137,7 @@
     "@babel/types": "^7.21.4",
     "@commitlint/cli": "^17.4.2",
     "@commitlint/config-conventional": "^17.6.5",
+    "@playwright/test": "^1.62.1",
     "@prettier/plugin-pug": "^2.5.1",
     "@tauri-apps/cli": "^2.2.7",
     "@types/lodash": "^4.14.191",

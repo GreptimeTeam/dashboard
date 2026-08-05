@@ -41,8 +41,8 @@
         SQLBuilder(
           v-if="editorType === 'builder'"
           ref="sqlBuilderRef"
-          table-filter="trace_id"
           storage-key="traces-query-table"
+          :table-filter="['trace_id', 'parent_span_id']"
           :form-state="builderFormState"
           :quick-field-names="['trace_id', 'service_name']"
           :default-form-state="defaultFormState"

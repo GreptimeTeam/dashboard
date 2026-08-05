@@ -13,3 +13,8 @@ AGENTS.md
 
 # macOS
 .DS_Store
+
+# playwright smoke artifacts
+artifacts/
+playwright-report/
+test-results/
