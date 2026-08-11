@@ -7,7 +7,7 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
           use(href="#logo")
         .logo-text
           span.logo-text-title GreptimeDB
-          span.logo-text-suffix OpenSource
+          span.logo-text-suffix {{ editionLabel }}
       svg.logo(v-else)
         use(href="#logo")
     a-tooltip(position="right" :disabled="!greptimeCommit")
@@ -110,7 +110,9 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
   const newsListMutable = computed(() => (newsList.value ? [...newsList.value] : []))
   const newsModal = ref()
   const starCardClosed = useStorage('starMarketingCardClosed', false)
-  const showSupportSection = import.meta.env.VITE_APP_NAME !== 'enterprise'
+  const isEnterprise = import.meta.env.VITE_APP_NAME === 'enterprise'
+  const editionLabel = isEnterprise ? 'Enterprise' : 'OpenSource'
+  const showSupportSection = !isEnterprise
 
   const menu = menuTree.value[0].children
 
