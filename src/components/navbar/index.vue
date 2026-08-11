@@ -1,13 +1,19 @@
 <template lang="pug">
 a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
   a-layout-header.logo-space
-    .logo-brand(v-if="!navbarCollapsed")
-      svg.logo
+    .logo-main
+      .logo-brand(v-if="!navbarCollapsed")
+        svg.logo
+          use(href="#logo")
+        .logo-text
+          span.logo-text-title GreptimeDB
+          span.logo-text-suffix {{ editionLabel }}
+      svg.logo(v-else)
         use(href="#logo")
-      span.logo-text Greptime
-      span.version-badge(v-if="greptimeVersion") {{ greptimeVersion }}
-    svg.logo(v-else)
-      use(href="#logo")
+    a-tooltip(position="right" :disabled="!greptimeCommit")
+      span.version-badge(v-if="!navbarCollapsed && greptimeVersion") {{ greptimeVersion }}
+      template(#content)
+        .version-tooltip Commit: {{ greptimeCommit }}
   a-layout-content.menu-content
     a-menu.navbar-menu(
       mode="vertical"
@@ -92,7 +98,7 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
   const { menuTree } = useMenuTree()
   const { newsList, isLoadingNews } = useNews()
   const { currentLocale, onChangeLocale } = useLocale()
-  const { version: greptimeVersion } = useGreptimeVersion()
+  const { version: greptimeVersion, commit: greptimeCommit } = useGreptimeVersion()
 
   const localeTooltip = computed(() => (currentLocale.value === 'zh-CN' ? 'Language / 中文' : 'Language / English'))
 
@@ -104,7 +110,9 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
   const newsListMutable = computed(() => (newsList.value ? [...newsList.value] : []))
   const newsModal = ref()
   const starCardClosed = useStorage('starMarketingCardClosed', false)
-  const showSupportSection = import.meta.env.VITE_APP_NAME !== 'enterprise'
+  const isEnterprise = import.meta.env.VITE_APP_NAME === 'enterprise'
+  const editionLabel = isEnterprise ? 'Enterprise' : 'OpenSource'
+  const showSupportSection = !isEnterprise
 
   const menu = menuTree.value[0].children
 
@@ -199,10 +207,15 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
 
   .logo-space {
     display: flex;
+    gap: 8px;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: space-between;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
     height: auto;
     padding: var(--gpt-radius-lg) 8px;
+    overflow: hidden;
   }
 
   .navbar--collapsed .logo-space {
@@ -210,11 +223,19 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
     padding: var(--gpt-radius-lg) 0;
   }
 
+  .logo-main {
+    flex: 0 0 auto;
+  }
+
   .logo-brand {
     display: flex;
-    gap: 8px;
+    gap: 4px;
     align-items: center;
-    min-width: 0;
+    flex-shrink: 0;
+  }
+
+  .version-tooltip {
+    line-height: 1.4;
   }
 
   .logo {
@@ -226,22 +247,43 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
   }
 
   .logo-text {
-    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .logo-text-title {
+    flex-shrink: 0;
     color: var(--gpt-brand-900);
     font-weight: 600;
     font-size: 14px;
-    line-height: 1.2;
-    text-overflow: ellipsis;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .logo-text-suffix {
+    flex-shrink: 0;
+    color: var(--gpt-brand-900);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
     white-space: nowrap;
   }
 
   .version-badge {
-    flex-shrink: 0;
-    padding: 2px 6px;
+    flex: 0 1 auto;
+    box-sizing: border-box;
+    min-width: 0;
+    padding: 2px 4px;
+    overflow: hidden;
     color: var(--gpt-text-secondary);
     font-size: 10px;
     font-weight: 600;
     line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     border: 1px solid var(--gpt-border-default);
     border-radius: var(--gpt-radius-sm);
     background: var(--gpt-bg-panel);

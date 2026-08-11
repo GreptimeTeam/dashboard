@@ -6,29 +6,59 @@ export function formatGreptimeVersion(raw: string): string {
   return /^v/i.test(value) ? value : `v${value}`
 }
 
-export default function useGreptimeVersion() {
-  const version = ref('')
-  const loading = ref(false)
+type BuildInfo = {
+  version: string
+  commit: string
+}
 
-  const parseVersionFromSqlResult = (data: unknown): string => {
-    const rows = (data as any)?.output?.[0]?.records?.rows
-    if (!Array.isArray(rows) || rows.length === 0) return ''
-    const firstRow = rows[0]
-    if (!Array.isArray(firstRow) || firstRow.length === 0) return ''
-    const raw = firstRow[0]
-    return raw === null || raw === undefined ? '' : String(raw)
+function cellToString(value: unknown): string {
+  if (value === null || value === undefined) return ''
+  return String(value).trim()
+}
+
+export function parseBuildInfoFromSqlResult(data: unknown): BuildInfo {
+  const records = (data as any)?.output?.[0]?.records
+  const schemas = records?.schema?.column_schemas
+  const rows = records?.rows
+  if (!Array.isArray(rows) || rows.length === 0 || !Array.isArray(rows[0])) {
+    return { version: '', commit: '' }
   }
 
+  const row = rows[0] as unknown[]
+  const getByName = (name: string): string => {
+    if (!Array.isArray(schemas)) return ''
+    const index = schemas.findIndex((col: { name?: string }) => col?.name === name)
+    if (index < 0) return ''
+    return cellToString(row[index])
+  }
+
+  const pkgVersion = getByName('pkg_version')
+  const commitShort = getByName('git_commit_short')
+  const commitFull = getByName('git_commit')
+
+  return {
+    version: pkgVersion ? formatGreptimeVersion(pkgVersion) : '',
+    commit: commitShort || commitFull,
+  }
+}
+
+export default function useGreptimeVersion() {
+  const version = ref('')
+  const commit = ref('')
+  const loading = ref(false)
+
   const fetchVersion = async () => {
-    if (version.value || loading.value) return
+    if (version.value || commit.value || loading.value) return
     loading.value = true
     try {
-      const data = await editorApi.runSQL('select version()')
-      const rawVersion = parseVersionFromSqlResult(data)
-      version.value = rawVersion ? formatGreptimeVersion(rawVersion) : ''
+      const data = await editorApi.runSQL('select * from information_schema.build_info')
+      const buildInfo = parseBuildInfoFromSqlResult(data)
+      version.value = buildInfo.version
+      commit.value = buildInfo.commit
     } catch (error) {
-      console.warn('Failed to fetch GreptimeDB version:', error)
+      console.warn('Failed to fetch GreptimeDB build info:', error)
       version.value = ''
+      commit.value = ''
     } finally {
       loading.value = false
     }
@@ -40,6 +70,7 @@ export default function useGreptimeVersion() {
 
   return {
     version,
+    commit,
     loading,
     fetchVersion,
   }
