@@ -175,6 +175,19 @@
     modalVisible.value = true
   }
 
+  // Deep-link: ?create=1 opens create modal
+  const route = useRoute()
+  watch(
+    () => route.query.create,
+    (val) => {
+      if (val === '1') {
+        showCreate()
+        useRouter().replace({ query: { ...route.query, create: undefined } })
+      }
+    },
+    { immediate: true }
+  )
+
   function showEdit(record) {
     isEdit.value = true
     editData.value = record

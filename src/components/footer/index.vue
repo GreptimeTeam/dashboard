@@ -1,5 +1,6 @@
 <template lang="pug">
 a-layout-footer.footer
+  span.footer-search-hint(:title="`Press ${modKey}+K to open command palette`") {{ modKey }}+K
   a-space.footer-info(:size="20")
     a-space(:size="5")
       svg.service-icon
@@ -26,6 +27,9 @@ a-layout-footer.footer
   import type { DbConnectionStatus } from '@/store/modules/app/types'
 
   const { t } = useI18n()
+  const isMac = navigator.platform.toUpperCase().includes('MAC')
+  const modKey = isMac ? '⌘' : 'Ctrl'
+
   const appStore = useAppStore()
   const { host, database, dbConnectionStatus, regionVendor, regionLocation, regionCountry, serviceName } =
     storeToRefs(appStore)
@@ -63,7 +67,7 @@ a-layout-footer.footer
     padding: 0 15px;
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: space-between;
     height: var(--footer-height);
     background-color: var(--gpt-bg-divider-band);
     border-top: 1px solid var(--gpt-border-default);
@@ -131,6 +135,9 @@ a-layout-footer.footer
     &.is-unknown {
       color: var(--gpt-text-secondary);
     }
+  }
+  .footer-search-hint {
+    color: var(--gpt-text-muted);
   }
   .region {
     .icon {

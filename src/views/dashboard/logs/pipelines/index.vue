@@ -56,7 +56,7 @@ a-spin(style="width: 100%; height: 100%")
 
   /* global BigInt */
 
-  const handleList = () => {
+  const handleList = () =>
     list().then((result) => {
       pipelines.value = result
       if (!pipelines.value.length) {
@@ -68,7 +68,6 @@ a-spin(style="width: 100%; height: 100%")
         }
       }
     })
-  }
 
   const handleDel = () => {
     selectedKeys.value = []
@@ -76,7 +75,12 @@ a-spin(style="width: 100%; height: 100%")
   }
 
   onMounted(() => {
-    handleList()
+    handleList().then(() => {
+      if (route.query.create === '1') {
+        clickNewFile()
+        router.replace({ query: { ...route.query, create: undefined } })
+      }
+    })
   })
 
   watch(selectedKeys, (newVal) => {

@@ -77,10 +77,11 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
                 svg.icon-16(:class="{ 'rotate-180': navbarCollapsed }")
                   use(href="#shrink")
 NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
+CommandPalette(ref="commandPaletteRef")
 </template>
 
 <script lang="ts" setup name="NavBar">
-  import { useStorage } from '@vueuse/core'
+  import { useEventListener, useStorage } from '@vueuse/core'
   import { useNavbarLayoutCollapsed } from '@/composables/use-query-focus-mode'
   import { listenerRouteChange } from '@/utils/route-listener'
   import { useNews } from '@/hooks/news'
@@ -89,6 +90,7 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
   import useMenuTree from '../menu/use-menu-tree'
   import NewsModal from './news-modal.vue'
   import StarMarketingCard from './star-marketing-card.vue'
+  import CommandPalette from '../command-palette/index.vue'
 
   const router = useRouter()
   const appStore = useAppStore()
@@ -169,6 +171,44 @@ NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
     const url = router.resolve({ name: key })
     window.open(url.fullPath, '_blank')
   }
+
+  const commandPaletteRef = ref<InstanceType<typeof CommandPalette>>()
+
+  const onGlobalKeydown = (e: KeyboardEvent) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault()
+      commandPaletteRef.value?.open()
+    }
+  }
+
+  useEventListener(window, 'keydown', onGlobalKeydown)
+
+  const route = useRoute()
+
+  // Deep-link: ?settings=1 opens settings drawer
+  watch(
+    () => route.query.settings,
+    (val) => {
+      if (val === '1') {
+        appStore.openGlobalSettings()
+        router.replace({ query: { ...route.query, settings: undefined } })
+      }
+    },
+    { immediate: true }
+  )
+
+  // Deep-link: ?locale=xx switches locale
+  watch(
+    () => route.query.locale,
+    (val) => {
+      if (val && typeof val === 'string' && val !== currentLocale.value) {
+        currentLocale.value = val
+        onChangeLocale()
+        router.replace({ query: { ...route.query, locale: undefined } })
+      }
+    },
+    { immediate: true }
+  )
 
   listenerRouteChange((newRoute) => {
     appStore.applyUiConfig({

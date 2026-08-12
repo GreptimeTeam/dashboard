@@ -352,6 +352,9 @@ a-dropdown#td-context(
   // Principle: always size by natural content width; table stays ≥ 100% wide.
   //
   // Pipeline (all ordinary tables, with or without column-resizable):
+  //   0. Empty (no rows): do not lock — keep width:100% under .natural-column-widths
+  //      so the empty tip is centered; measuring a stretched auto table would inflate
+  //      naturals and create a phantom H-scrollbar. Lock when rows first arrive.
   //   1. Measure — render with .natural-column-widths (table width:max-content,
   //      overflow visible) and read each column’s scrollWidth from header + up to
   //      MEASURE_SAMPLE_ROWS body cells. Store uncapped naturals in columnWidths.
@@ -815,6 +818,17 @@ a-dropdown#td-context(
     const columns = columnsForWidthLock()
     if (columns.length === 0) {
       widthsLocked.value = false
+      return
+    }
+
+    // Empty: stay on .natural-column-widths with width:100% (empty-tip centering).
+    // Measuring against that stretched auto table makes offsetWidth ≈ allocated
+    // column width; +4px/col then locks a sum slightly over the container →
+    // phantom H-scrollbar on sticky-scroll. Real measure+lock runs when rows arrive.
+    if (props.data.length === 0) {
+      widthsLocked.value = false
+      columnWidths.value = {}
+      measuredNaturalWidths.value = {}
       return
     }
 
@@ -1748,6 +1762,12 @@ a-dropdown#td-context(
       table-layout: auto !important;
       width: max-content !important;
       min-width: 0 !important;
+    }
+
+    // Empty tip centers in the card only when the table spans the container;
+    // max-content would shrink-wrap to header text and look left-biased.
+    :deep(.arco-table-element:has(.arco-table-tr-empty)) {
+      width: 100% !important;
     }
 
     :deep(.arco-table-th),

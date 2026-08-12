@@ -703,6 +703,18 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
     createModalVisible.value = true
   }
 
+  // Deep-link: ?create=1 opens create modal
+  watch(
+    () => route.query.create,
+    (val) => {
+      if (val === '1') {
+        openCreateModal()
+        useRouter().replace({ query: { ...route.query, create: undefined } })
+      }
+    },
+    { immediate: true }
+  )
+
   const handleCreateModalCancel = () => {
     resetCreateForm()
     createModalVisible.value = false
