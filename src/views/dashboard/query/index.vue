@@ -42,10 +42,7 @@ a-layout.new-layout.new-layout--workspace(:class="{ 'query-layout--focus': focus
 
 <script lang="ts" setup name="query">
   import { useMagicKeys, useActiveElement, useStorage } from '@vueuse/core'
-  import { driver } from 'driver.js'
-  import 'driver.js/dist/driver.css'
   import { useQueryFocusMode } from '@/composables/use-query-focus-mode'
-  import { navbarSteps } from '../config'
   import { provideQuerySession } from './use-query-session'
 
   defineOptions({
@@ -112,42 +109,9 @@ a-layout.new-layout.new-layout--workspace(:class="{ 'query-layout--focus': focus
     }
   })
 
-  const globalTour = driver({
-    showProgress: false,
-    allowClose: false,
-    disableActiveInteraction: true,
-    overlayOpacity: 0.4,
-    showButtons: ['next', 'close'],
-    stagePadding: 7,
-    stageRadius: 4,
-    popoverClass: 'global',
-    popoverOffset: 10,
-    steps: [],
-
-    onCloseClick: () => {
-      const tourStatus = useStorage('tourStatus', { navbar: false })
-      tourStatus.value.navbar = true
-      globalTour.destroy()
-    },
-    onNextClick: () => {
-      const tourStatus = useStorage('tourStatus', { navbar: false })
-      tourStatus.value.navbar = true
-      globalTour.moveNext()
-      if (!globalTour.getActiveStep()) {
-        globalTour.destroy()
-      }
-    },
-  })
-
   onActivated(async () => {
     originalDatabase.value = database.value
     await appStore.refreshDatabaseList()
-    const tourStatus = useStorage('tourStatus', { navbar: false })
-    if (!tourStatus.value.navbar) {
-      const steps = [...navbarSteps]
-      globalTour.setSteps(steps)
-      globalTour.drive(0)
-    }
   })
 
   onDeactivated(() => {

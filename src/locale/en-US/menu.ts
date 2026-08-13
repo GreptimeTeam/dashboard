@@ -19,9 +19,6 @@ export default {
   'menu.dashboard.flow': 'Flow',
   'menu.dashboard.traces': 'Traces Query',
   'menu.dashboard.perses': 'Visualization',
-  'menu.tour.query':
-    'Browse databases and tables and query table data with SQL. The editor also has a PromQL tab (Greptime APIs); use Metrics Query for the main PromQL workflow.',
-  'menu.tour.ingest': 'Ingest time-series data from the Ingest UI.',
   'menu.news': 'Latest News',
   'menu.feedback': 'Send Feedback',
   'menu.support': 'Support',

@@ -5,7 +5,7 @@ a-trigger#time-select(
   :position="flexDirection === 'row' ? 'br' : 'bl'"
   :update-at-scroll="true"
   :popup-offset="4"
-  :click-outside-to-close="guideStep === 'stopTour' || guideStep === ''"
+  :click-outside-to-close="true"
 )
   a-button(:type="buttonType" :class="buttonClass" :size="buttonSize")
     template(#icon)
@@ -97,16 +97,12 @@ a-trigger#time-select(
       type: Object as PropType<{ [key: number]: string }>,
       default: () => ({}),
     },
-    guideStep: {
-      type: String,
-      default: '',
-    },
     emptyStr: {
       type: String,
       default: '',
     },
   })
-  const emit = defineEmits(['update:timeLength', 'update:timeRange', 'change', 'updateTourStep'])
+  const emit = defineEmits(['update:timeLength', 'update:timeRange', 'change'])
 
   const rangePickerVisible = ref(false)
   const visible = ref(false)
@@ -166,16 +162,6 @@ a-trigger#time-select(
     visible.value = false
     rangePickerVisible.value = false
   }
-
-  watchEffect(() => {
-    if (props.guideStep === 'openTimeSelectStep') {
-      visible.value = true
-      emit('updateTourStep')
-    } else if (props.guideStep === 'stopTour') {
-      visible.value = false
-      emit('change')
-    }
-  })
 
   function isSingleTimeSelected(value: any) {
     if (props.timeRange.length > 0) {
