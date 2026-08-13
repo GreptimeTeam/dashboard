@@ -25,10 +25,6 @@ a-layout.dashboard-two-column-layout.dashboard-right-fill-layout
 
 <script lang="ts" setup name="Ingest">
   import useMenuTree from '@/components/menu/use-menu-tree'
-  import { useStorage } from '@vueuse/core'
-  import { driver } from 'driver.js'
-  import 'driver.js/dist/driver.css'
-  import { navbarSteps } from '../config'
 
   const router = useRouter()
   const { menuTree } = useMenuTree()
@@ -40,40 +36,4 @@ a-layout.dashboard-two-column-layout.dashboard-right-fill-layout
   const menuClick = (parent: string, child: string) => {
     router.push({ name: child })
   }
-
-  const globalTour = driver({
-    showProgress: false,
-    allowClose: false,
-    disableActiveInteraction: true,
-    overlayOpacity: 0.4,
-    showButtons: ['next', 'close'],
-    stagePadding: 7,
-    stageRadius: 4,
-    popoverClass: 'global',
-    popoverOffset: 10,
-    steps: [],
-
-    onCloseClick: () => {
-      const tourStatus = useStorage('tourStatus', { navbar: false })
-      tourStatus.value.navbar = true
-      globalTour.destroy()
-    },
-
-    onNextClick: () => {
-      const tourStatus = useStorage('tourStatus', { navbar: false })
-      tourStatus.value.navbar = true
-      globalTour.moveNext()
-      if (!globalTour.getActiveStep()) {
-        globalTour.destroy()
-      }
-    },
-  })
-
-  onActivated(async () => {
-    const tourStatus = useStorage('tourStatus', { navbar: false })
-    if (!tourStatus.value.navbar) {
-      globalTour.setSteps(navbarSteps)
-      globalTour.drive(0)
-    }
-  })
 </script>

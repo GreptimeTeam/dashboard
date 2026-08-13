@@ -19,9 +19,6 @@ export default {
   'menu.dashboard.flow': 'Flow',
   'menu.dashboard.traces': 'Traces 查询',
   'menu.dashboard.perses': '可视化',
-  'menu.tour.query':
-    '浏览数据库与表，使用 SQL 查询表数据。编辑器内可切换 PromQL（Greptime 接口）；常规 PromQL 请用「Metrics 查询」。',
-  'menu.tour.ingest': '从 Ingest UI 中摄取时间序列数据。',
   'menu.news': '最新资讯',
   'menu.feedback': '发送反馈',
   'menu.support': '支持',
