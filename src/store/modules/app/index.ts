@@ -130,12 +130,13 @@ const useAppStore = defineStore('app', () => {
     return normalized
   }
 
+  // Sync flush so Save & Test uses the new host immediately (default watch is async).
   watch(
     host,
     (val) => {
       axios.defaults.baseURL = val
     },
-    { immediate: true }
+    { immediate: true, flush: 'sync' }
   )
   watch(
     theme,
