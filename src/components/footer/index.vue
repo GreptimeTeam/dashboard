@@ -54,10 +54,6 @@ a-layout-footer.footer
     await appStore.ensureConnectionHost()
     await appStore.checkDbConnection()
   })
-
-  watch([host, database], () => {
-    appStore.checkDbConnection()
-  })
 </script>
 
 <style lang="less" scoped>
