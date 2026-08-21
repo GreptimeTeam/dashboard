@@ -12,6 +12,8 @@ import {
 import bundledPluginLoader from './plugin'
 import { useWorkbenchContext } from './WorkbenchProvider'
 import { prepareSnapshotViewDashboard } from '../snapshot/prepareSnapshotViewDashboard'
+import SnapshotBridge from './SnapshotBridge'
+import LiveExportRuntimeCapture from './LiveExportRuntimeCapture'
 import SnapshotViewDashboard from './SnapshotViewDashboard'
 
 export interface GenericDashboardViewProps {
@@ -26,7 +28,8 @@ export interface GenericDashboardViewProps {
 
 export default function HelperDashboardView(props: GenericDashboardViewProps): JSX.Element {
   const { onSave, onDiscard, isReadonly, isSnapshotMode = false, isEditing, isCreating, dashboardResource } = props
-  const { database, username, password, authHeader, instance } = useWorkbenchContext()
+  const { database, username, password, authHeader, instance, name } = useWorkbenchContext()
+  const sourceDashboardName = name.split('.')[0]
 
   const viewDashboardResource = React.useMemo(() => {
     if (!isSnapshotMode) {
@@ -64,10 +67,10 @@ export default function HelperDashboardView(props: GenericDashboardViewProps): J
 
   const greptimeSqlBaseUrl = instance ? `/api/v1/instances/${instance}/greptime` : ''
 
-  const createGreptimeDataSource = (name: string) =>
+  const createGreptimeDataSource = (datasourceName: string) =>
     ({
       kind: 'GlobalDatasource' as const,
-      metadata: { name },
+      metadata: { name: datasourceName },
       spec: {
         default: false,
         plugin: {
@@ -135,7 +138,12 @@ export default function HelperDashboardView(props: GenericDashboardViewProps): J
     isCreating,
     isVariableEnabled: true,
     isDatasourceEnabled: !isSnapshotMode,
-  }
+    ...(!isSnapshotMode
+      ? {
+          dashboardTitleComponent: <LiveExportRuntimeCapture dashboardName={viewDashboardResource.metadata.name} />,
+        }
+      : {}),
+  } as unknown as import('@perses-dev/dashboards').ViewDashboardProps
 
   return (
     <Box
@@ -154,6 +162,13 @@ export default function HelperDashboardView(props: GenericDashboardViewProps): J
         >
           <ValidationProvider>
             <ErrorBoundary FallbackComponent={ErrorAlert}>
+              {!isSnapshotMode && dashboardResource.kind === 'Dashboard' && (
+                <SnapshotBridge
+                  dashboard={dashboardResource}
+                  sourceDashboardName={sourceDashboardName}
+                  datasourceApi={datasourceApi}
+                />
+              )}
               {isSnapshotMode ? (
                 <SnapshotViewDashboard key={dashboardKey} {...viewDashboardProps} />
               ) : (
