@@ -2,8 +2,7 @@
  * Fill `not_loaded` snapshot panel queries by calling Perses query plugins directly.
  * Does not mount/render panels — only fetches query results into panelData.
  */
-import type { DashboardResource } from '@perses-dev/core'
-import type { AbsoluteTimeRange } from '@perses-dev/spec'
+import type { AbsoluteTimeRange, DashboardResource } from '@perses-dev/core'
 import type { DatasourceStore, VariableStateMap } from '@perses-dev/plugin-system'
 import { sanitizeTimeSeriesDataForSnapshot } from './reviveSnapshotPanelData'
 import { LIVE_QUERY_KINDS, QUERY_KIND_TO_CATEGORY, type PanelQueryResult, type SnapshotQueryCategory } from './types'
@@ -14,10 +13,11 @@ export interface PrefetchQueryContext {
   /** Fresh variable state for wait-for-ready; defaults to `variableState`. */
   getVariableState?: () => VariableStateMap
   datasourceStore: DatasourceStore
-  getPlugin: (args: { kind: 'TimeSeriesQuery' | 'LogQuery' | 'TraceQuery'; name: string }) => Promise<{
+  getPlugin: (args: { kind: 'TimeSeriesQuery' | 'LogQuery' | 'TraceQuery' | 'Datasource'; name: string }) => Promise<{
     getTimeSeriesData?: (spec: never, ctx: unknown, signal?: AbortSignal) => Promise<unknown>
     getLogData?: (spec: never, ctx: unknown, signal?: AbortSignal) => Promise<unknown>
     getTraceData?: (spec: never, ctx: unknown, signal?: AbortSignal) => Promise<unknown>
+    createClient?: (spec: unknown, options: { proxyUrl: string }) => unknown
   }>
   /** Max concurrent plugin fetches. Default 6. */
   concurrency?: number
