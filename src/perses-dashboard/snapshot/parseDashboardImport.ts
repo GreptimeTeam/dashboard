@@ -287,9 +287,9 @@ export function parseDashboardImport(raw: string, options: ParseDashboardImportO
     return { ok: false, errors: ['missing_name'] }
   }
 
-  let dashboard = applyDashboardName(parsed as DashboardResource, resolvedName)
+  let dashboard = applyDashboardName(parsed as unknown as DashboardResource, resolvedName)
   const category = importableSnapshot ? DASHBOARD_CATEGORY_SNAPSHOT : DASHBOARD_CATEGORY_DASHBOARD
-  dashboard = annotateDashboardCategory(dashboard, category) as DashboardResource
+  dashboard = annotateDashboardCategory(dashboard, category)
 
   const warnings = importableSnapshot ? collectSnapshotWarnings(dashboard as SnapshotDashboardResource) : []
 

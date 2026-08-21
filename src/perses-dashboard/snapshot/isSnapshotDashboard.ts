@@ -2,7 +2,7 @@ import type { DashboardResource, EphemeralDashboardResource } from '@perses-dev/
 import type { SnapshotDashboardResource, SnapshotEmbed } from './types'
 import { SNAPSHOT_VERSION } from './types'
 
-type DashboardLike = DashboardResource | EphemeralDashboardResource
+type DashboardLike = DashboardResource | EphemeralDashboardResource | { kind?: string; spec?: unknown }
 
 export type { DashboardLike }
 
