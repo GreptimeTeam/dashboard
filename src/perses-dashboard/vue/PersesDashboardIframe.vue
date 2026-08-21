@@ -220,7 +220,7 @@ iframe.perses-dashboard-iframe(ref="dashboardIframe" :src="iframeSrc" @load="onI
       timeout = window.setTimeout(() => {
         window.removeEventListener('message', handleResponse)
         reject(new Error('Create snapshot request timeout'))
-      }, 60000)
+      }, 120000)
 
       window.addEventListener('message', handleResponse)
       dashboardIframe.value.contentWindow.postMessage(

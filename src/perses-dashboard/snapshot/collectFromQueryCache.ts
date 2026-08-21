@@ -31,7 +31,7 @@
  *   `timeRange` inference and debug `matchesActiveTimeRange`).
  * - Variable values in `queryKey[4+]` are **not** compared to current dashboard variables.
  * - Panels that never scrolled into view have `queryOptions.enabled: inView === false` → no cache →
- *   `not_loaded`.
+ *   `not_loaded` (export path fills these via `fillNotLoadedPanelQueries` without rendering).
  * - Two panels with identical queries share one cache entry; both match the same data.
  *
  * ## Data transform at export vs view

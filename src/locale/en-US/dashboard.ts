@@ -122,7 +122,7 @@ export default {
   'dashboard.perses.saveSnapshot': 'Save as Snapshot',
   'dashboard.perses.snapshotModalTitle': 'Save as Snapshot Dashboard',
   'dashboard.perses.snapshotModalHint':
-    'Snapshot includes only panel data already loaded on screen. expand the panel to save the data.',
+    'Export captures all panel queries for the current time range and variables. Off-screen panels are fetched without rendering; this may take a moment on large dashboards.',
   'dashboard.perses.snapshotExportModeLabel': 'Export as',
   'dashboard.perses.snapshotExportModeSave': 'Save to dashboards',
   'dashboard.perses.snapshotExportModeDownload': 'Download JSON file',

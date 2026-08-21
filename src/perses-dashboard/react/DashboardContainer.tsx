@@ -12,7 +12,6 @@ import { QueryParamProvider } from 'use-query-params'
 import { ReactRouter6Adapter } from 'use-query-params/adapters/react-router-6'
 import HelperDashboardView from './DashboardView'
 import { useWorkbenchContext } from './WorkbenchProvider'
-import SnapshotBridge from './SnapshotBridge'
 import { SnapshotDashboardShell, getSnapshotViewRemountKey } from './SnapshotViewDashboard'
 import { isSnapshotDashboard } from '../snapshot/isSnapshotDashboard'
 import DASHBOARD_TOKENS from './Dashboard.styles'
@@ -730,7 +729,6 @@ export default function Dashboard(props: DashboardProps = {}) {
   const { data } = parsedDashboard
 
   const effectiveReadonly = !dashboardEditable || snapshotMode
-  const sourceDashboardName = name.split('.')[0]
   const dashboardViewKey = snapshotMode
     ? getSnapshotViewRemountKey(data, saveRefreshToken)
     : `${data.metadata.name}-${saveRefreshToken}`
@@ -750,9 +748,6 @@ export default function Dashboard(props: DashboardProps = {}) {
   return (
     <ThemeProvider theme={muiTheme}>
       <QueryClientProvider client={queryClient}>
-        {!snapshotMode && (
-          <SnapshotBridge queryClient={queryClient} dashboard={data} sourceDashboardName={sourceDashboardName} />
-        )}
         <QueryParamProvider adapter={ReactRouter6Adapter}>
           <ChartsProvider chartsTheme={chartsTheme}>
             <GlobalStyles

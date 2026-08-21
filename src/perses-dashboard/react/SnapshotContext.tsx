@@ -2,7 +2,7 @@ import * as React from 'react'
 import type { DashboardResource } from '@perses-dev/core'
 import type { SnapshotEmbed } from '../snapshot/types'
 import { getSnapshotEmbed } from '../snapshot/isSnapshotDashboard'
-import { setActiveSnapshotEmbed } from '../snapshot/plugins/snapshotEmbedStore'
+import { getActiveSnapshotEmbed, setActiveSnapshotEmbed } from '../snapshot/plugins/snapshotEmbedStore'
 
 type SnapshotContextValue = {
   snapshot: SnapshotEmbed | undefined
@@ -17,6 +17,11 @@ const SnapshotContext = React.createContext<SnapshotContextValue>({
 export function SnapshotProvider({ dashboard, children }: { dashboard: DashboardResource; children: React.ReactNode }) {
   const snapshot = getSnapshotEmbed(dashboard)
   const isSnapshotMode = snapshot !== undefined
+
+  // Set before children render so first panel queries see embedded data (staleTime: Infinity).
+  if (getActiveSnapshotEmbed() !== snapshot) {
+    setActiveSnapshotEmbed(snapshot)
+  }
 
   React.useEffect(() => {
     setActiveSnapshotEmbed(snapshot)

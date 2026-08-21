@@ -119,7 +119,7 @@ export default {
   'dashboard.perses.saveSnapshot': '另存为 Snapshot',
   'dashboard.perses.snapshotModalTitle': '另存为 Snapshot Dashboard',
   'dashboard.perses.snapshotModalHint':
-    '快照仅包含当前屏幕上已加载的 panel 数据。请先等待 dashboard 加载完成，并展开需要保存的折叠 panel。',
+    '导出将按当前时间范围与变量拉取全部 panel 查询数据。未进入视窗的 panel 会在后台查询（不渲染图表），大型仪表盘可能稍慢。',
   'dashboard.perses.snapshotExportModeLabel': '导出方式',
   'dashboard.perses.snapshotExportModeSave': '保存到仪表盘',
   'dashboard.perses.snapshotExportModeDownload': '下载 JSON 文件',
