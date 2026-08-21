@@ -1,19 +1,22 @@
 /**
  * Build PrefetchQueryContext only at snapshot-export time (no live dashboard providers).
  */
-import type { DashboardResource, DatasourceApi } from '@perses-dev/core'
-import { toAbsoluteTimeRange } from '@perses-dev/core'
-import type { AbsoluteTimeRange, DatasourceSelector, DatasourceSpec, DurationString } from '@perses-dev/spec'
-import { isDurationString } from '@perses-dev/spec'
+import type {
+  AbsoluteTimeRange,
+  DashboardResource,
+  DatasourceApi,
+  DatasourceSelector,
+  DatasourceSpec,
+  DurationString,
+} from '@perses-dev/core'
+import { isDurationString, toAbsoluteTimeRange } from '@perses-dev/core'
 import type { DatasourceStore, VariableStateMap } from '@perses-dev/plugin-system'
+import { adaptRegistryGetPlugin } from './adaptRegistryGetPlugin'
 import type { PrefetchQueryContext } from './prefetchMissingPanelQueries'
 import resolveSnapshotVariables from './resolveSnapshotVariables'
 import { resolveTimeRangeFromUrl, type SnapshotTimeRange } from './resolveSnapshotTimeRange'
 
-type GetPlugin = PrefetchQueryContext['getPlugin'] &
-  ((args: { kind: 'Datasource'; name: string }) => Promise<{
-    createClient?: (spec: unknown, options: { proxyUrl: string }) => unknown
-  }>)
+type GetPlugin = ReturnType<typeof adaptRegistryGetPlugin>
 
 export interface BuildExportPrefetchContextOptions {
   dashboard: DashboardResource
@@ -149,7 +152,6 @@ export function createExportDatasourceStore(options: {
       const { spec } = await findDatasource(selector)
       return spec
     },
-    getDatasourceSpecSync: (selector) => specCache.get(cacheKey(selector)),
     getDatasourceClient: async <Client>(selector: DatasourceSelector): Promise<Client> => {
       const { kind } = selector
       const [{ spec, proxyUrl }, plugin] = await Promise.all([
@@ -184,6 +186,6 @@ export function buildExportPrefetchContext(options: BuildExportPrefetchContextOp
     variableState,
     getVariableState: () => variableState,
     datasourceStore,
-    getPlugin: options.getPlugin as PrefetchQueryContext['getPlugin'],
+    getPlugin: options.getPlugin,
   }
 }

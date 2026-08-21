@@ -1,4 +1,4 @@
-import type { AbsoluteTimeRange } from '@perses-dev/spec'
+import type { AbsoluteTimeRange } from '@perses-dev/core'
 import type { DatasourceStore, VariableStateMap } from '@perses-dev/plugin-system'
 import type { PrefetchQueryContext } from './prefetchMissingPanelQueries'
 

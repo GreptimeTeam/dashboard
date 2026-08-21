@@ -73,10 +73,15 @@ export async function buildSnapshotDashboard(
   const collected = collectPanelDataFromQueryCache(queryClient, dashboard)
   const { panelData, debug } = collected
   let { timeRange } = collected
+  let prefetchFilled = 0
 
   if (options.prefetchContext) {
     const ctx = options.prefetchContext
-    await fillNotLoadedPanelQueries(dashboard, panelData, ctx)
+    debug.notLoadedCount = Object.values(panelData).reduce(
+      (sum, results) => sum + results.filter((r) => r.skipped && r.reason === 'not_loaded').length,
+      0
+    )
+    prefetchFilled = await fillNotLoadedPanelQueries(dashboard, panelData, ctx)
 
     const { absoluteTimeRange } = ctx
     timeRange = {
@@ -133,5 +138,6 @@ export async function buildSnapshotDashboard(
     dashboard: annotateDashboardCategory(snapshotDashboard, DASHBOARD_CATEGORY_SNAPSHOT) as SnapshotDashboardResource,
     skipped,
     debug,
+    prefetchFilled,
   }
 }

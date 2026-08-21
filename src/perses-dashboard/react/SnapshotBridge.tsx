@@ -2,6 +2,7 @@ import * as React from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { DashboardResource, DatasourceApi } from '@perses-dev/core'
 import { usePluginRegistry, type VariableStateMap } from '@perses-dev/plugin-system'
+import { adaptRegistryGetPlugin } from '../snapshot/adaptRegistryGetPlugin'
 import { buildSnapshotDashboard } from '../snapshot/buildSnapshotDashboard'
 import { buildExportPrefetchContext } from '../snapshot/buildExportPrefetchContext'
 import { getLiveExportRuntime, resolvePrefetchContext } from '../snapshot/liveExportRuntimeStore'
@@ -51,7 +52,7 @@ export default function SnapshotBridge({ dashboard, sourceDashboardName, datasou
       const { requestId, snapshotName } = event.data
 
       try {
-        const getPluginFn = getPluginRef.current as never
+        const getPluginFn = adaptRegistryGetPlugin(getPluginRef.current)
         const fallback = buildExportPrefetchContext({
           dashboard: dashboardRef.current,
           datasourceApi: datasourceApiRef.current,
@@ -73,10 +74,17 @@ export default function SnapshotBridge({ dashboard, sourceDashboardName, datasou
         })
 
         const snapshotData = result.dashboard.spec?.snapshot
+        const notLoadedBefore = result.debug?.notLoadedCount
         // eslint-disable-next-line no-console
         console.group('[snapshot-export] save snapshot dashboard')
         // eslint-disable-next-line no-console
         console.log('used live runtime:', Boolean(getLiveExportRuntime()))
+        // eslint-disable-next-line no-console
+        console.log('getPlugin arity:', getPluginRef.current.length, '(2=0.53, 1=0.54+)')
+        // eslint-disable-next-line no-console
+        console.log('prefetch filled:', result.prefetchFilled ?? 0)
+        // eslint-disable-next-line no-console
+        console.log('not_loaded before fill:', notLoadedBefore)
         // eslint-disable-next-line no-console
         console.log('snapshot variables:', variables)
         // eslint-disable-next-line no-console
