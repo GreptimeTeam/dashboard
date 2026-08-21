@@ -40,10 +40,7 @@ export function isSnapshotDashboardContent(content: string | undefined): boolean
   return getDashboardCategoryFromContent(content) === DASHBOARD_CATEGORY_SNAPSHOT
 }
 
-export function annotateDashboardCategory<T extends Record<string, unknown>>(
-  dashboard: T,
-  category: DashboardCategory
-): T {
+export function annotateDashboardCategory<T extends object>(dashboard: T, category: DashboardCategory): T {
   const next = { ...dashboard } as T & {
     metadata?: { annotations?: Record<string, string> }
   }
@@ -54,6 +51,6 @@ export function annotateDashboardCategory<T extends Record<string, unknown>>(
       [DASHBOARD_CATEGORY_ANNOTATION]: category,
     },
   }
-  next.metadata = metadata as T['metadata']
+  next.metadata = metadata as T extends { metadata: infer M } ? M : typeof metadata
   return next
 }
