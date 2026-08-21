@@ -1,5 +1,5 @@
 import { resolve } from 'path'
-import { defineConfig, type Plugin } from 'vite'
+import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
 import react from '@vitejs/plugin-react'
@@ -39,25 +39,6 @@ const tsxTransformer = () => ({
   },
 })
 
-/** @perses-dev/logs-table-plugin@0.3.0 ships LogRow imports for ./ansiColors.css but omits the file. */
-function stubPersesLogsAnsiColors(): Plugin {
-  const stub = resolve(__dirname, '../src/perses-dashboard/vendor/logs-table-ansiColors.css')
-  return {
-    name: 'stub-perses-logs-ansi-colors',
-    enforce: 'pre',
-    resolveId(id, importer) {
-      if (!id.includes('ansiColors.css')) return null
-      if (importer && importer.includes('@perses-dev/logs-table-plugin')) {
-        return stub
-      }
-      if (id === './ansiColors.css' || id.endsWith('/ansiColors.css')) {
-        return stub
-      }
-      return null
-    },
-  }
-}
-
 const useDevMode = true
 export default defineConfig({
   clearScreen: false,
@@ -87,7 +68,6 @@ export default defineConfig({
     },
   },
   plugins: [
-    stubPersesLogsAnsiColors(),
     tsxTransformer(),
     vue(),
     vueJsx(),

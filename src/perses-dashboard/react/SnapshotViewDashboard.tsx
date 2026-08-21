@@ -71,7 +71,6 @@ export default function SnapshotViewDashboard(props: ViewDashboardProps): JSX.El
     emptyDashboardProps,
     isReadonly,
     isVariableEnabled,
-    isAnnotationEnabled,
     isDatasourceEnabled,
     isEditing,
     isCreating,
@@ -158,7 +157,6 @@ export default function SnapshotViewDashboard(props: ViewDashboardProps): JSX.El
                   emptyDashboardProps={emptyDashboardProps}
                   isReadonly={isReadonly}
                   isVariableEnabled={isVariableEnabled}
-                  isAnnotationEnabled={isAnnotationEnabled}
                   isDatasourceEnabled={isDatasourceEnabled}
                   isCreating={isCreating}
                   isInitialVariableSticky={isInitialVariableSticky}

@@ -63,7 +63,6 @@ export interface EmbeddedSnapshotQuerySpec {
   panelId: string
   queryIndex: number
   originalPlugin?: SnapshotOriginalPlugin
-  [key: string]: unknown
 }
 
 export interface SkippedPanelInfo {

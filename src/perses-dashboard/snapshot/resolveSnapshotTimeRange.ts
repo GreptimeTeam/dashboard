@@ -1,7 +1,6 @@
 import type { Query, QueryClient } from '@tanstack/react-query'
 import type { DashboardResource } from '@perses-dev/core'
-import { toAbsoluteTimeRange } from '@perses-dev/core'
-import { isDurationString, type DurationString } from '@perses-dev/spec'
+import { isDurationString, toAbsoluteTimeRange } from '@perses-dev/core'
 
 export interface SnapshotTimeRange {
   from: number
@@ -96,7 +95,7 @@ export function resolveTimeRangeFromUrl(
   }
 
   if (isDurationString(startParam)) {
-    const absolute = toAbsoluteTimeRange({ pastDuration: startParam as DurationString })
+    const absolute = toAbsoluteTimeRange({ pastDuration: startParam })
     return {
       from: absolute.start.getTime(),
       to: absolute.end.getTime(),
@@ -110,7 +109,7 @@ export function resolveTimeRangeFromUrl(
   }
 
   if (from != null && isDurationString(defaultDuration)) {
-    const absolute = toAbsoluteTimeRange({ pastDuration: defaultDuration as DurationString })
+    const absolute = toAbsoluteTimeRange({ pastDuration: defaultDuration })
     return {
       from,
       to: absolute.end.getTime(),
