@@ -40,20 +40,33 @@ const tsxTransformer = () => ({
 })
 
 /** @perses-dev/logs-table-plugin@0.3.0 ships LogRow imports for ./ansiColors.css but omits the file. */
+const persesLogsAnsiColorsStub = resolve(__dirname, '../src/perses-dashboard/vendor/logs-table-ansiColors.css')
+
 function stubPersesLogsAnsiColors(): Plugin {
-  const stub = resolve(__dirname, '../src/perses-dashboard/vendor/logs-table-ansiColors.css')
   return {
     name: 'stub-perses-logs-ansi-colors',
     enforce: 'pre',
     resolveId(id, importer) {
       if (!id.includes('ansiColors.css')) return null
       if (importer && importer.includes('@perses-dev/logs-table-plugin')) {
-        return stub
+        return persesLogsAnsiColorsStub
       }
       if (id === './ansiColors.css' || id.endsWith('/ansiColors.css')) {
-        return stub
+        return persesLogsAnsiColorsStub
       }
       return null
+    },
+  }
+}
+
+/** esbuild (optimizeDeps) does not run Vite resolveId; mirror the stub there. */
+function stubPersesLogsAnsiColorsEsbuild() {
+  return {
+    name: 'stub-perses-logs-ansi-colors-esbuild',
+    setup(build: { onResolve: (opts: { filter: RegExp }, cb: () => { path: string }) => void }) {
+      build.onResolve({ filter: /ansiColors\.css$/ }, () => ({
+        path: persesLogsAnsiColorsStub,
+      }))
     },
   }
 }
@@ -171,6 +184,7 @@ export default defineConfig({
     ],
     esbuildOptions: {
       target: 'esnext',
+      plugins: [stubPersesLogsAnsiColorsEsbuild()],
     },
   },
   css: {
