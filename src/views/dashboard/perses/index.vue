@@ -109,7 +109,9 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
           :name="selectedDashboard.file.filename"
           :file="selectedDashboard.file"
           :dashboard-editable="!isSelectedSnapshot"
+          :toolbar-labels="persesToolbarLabels"
           :on-save="handleSaveDashboard"
+          @toolbar-action="handlePersesToolbarAction"
         )
       template(v-else)
         .empty-state
@@ -347,6 +349,11 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
     return isSnapshotDashboardContent(selectedDashboard.value?.file?.content)
   })
 
+  const persesToolbarLabels = computed(() => ({
+    saveSnapshot: t('dashboard.perses.saveSnapshot'),
+    exportSnapshot: t('dashboard.perses.exportSnapshot'),
+  }))
+
   const buildDefaultSnapshotName = (sourceName: string) => {
     const base = sourceName.endsWith('.json') ? sourceName.slice(0, -5) : sourceName
     const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '')
@@ -493,6 +500,16 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
     } finally {
       isSavingSnapshot.value = false
     }
+  }
+
+  const handlePersesToolbarAction = (action: 'saveSnapshot' | 'exportSnapshotJson') => {
+    const item = selectedDashboard.value
+    if (!item || isSelectedSnapshot.value) return
+    if (action === 'saveSnapshot') {
+      openSnapshotSaveModal(item)
+      return
+    }
+    handleExportSnapshotJsonFromLive(item)
   }
 
   const clampSidebarWidth = () => {

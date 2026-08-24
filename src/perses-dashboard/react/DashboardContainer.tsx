@@ -11,6 +11,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { QueryParamProvider } from 'use-query-params'
 import { ReactRouter6Adapter } from 'use-query-params/adapters/react-router-6'
 import HelperDashboardView from './DashboardView'
+import type { DashboardToolbarLabels } from './DashboardTitleToolbar'
 import { useWorkbenchContext } from './WorkbenchProvider'
 import { SnapshotDashboardShell, getSnapshotViewRemountKey } from './SnapshotViewDashboard'
 import { isSnapshotDashboard } from '../snapshot/isSnapshotDashboard'
@@ -22,6 +23,7 @@ import { ensureTraceTableLinks } from '../traceLink'
 interface DashboardProps {
   dashboardEditable?: boolean
   controlEditableBodyClass?: boolean
+  toolbarLabels?: DashboardToolbarLabels
 }
 
 export default function Dashboard(props: DashboardProps = {}) {
@@ -662,6 +664,7 @@ export default function Dashboard(props: DashboardProps = {}) {
       isSnapshotMode={snapshotMode}
       isEditing={false}
       isCreating={false}
+      toolbarLabels={snapshotMode ? undefined : props.toolbarLabels}
     />
   )
 
@@ -678,7 +681,7 @@ export default function Dashboard(props: DashboardProps = {}) {
                   backgroundColor: DASHBOARD_TOKENS.colors.background,
                   margin: 0,
                 },
-                // Dashboard toolbar: hide edit controls by default, show when editable
+                // Dashboard toolbar: show title row with snapshot actions; hide Perses Edit unless editable
                 '[data-testid="dashboard-toolbar"]': {
                   'paddingBottom': '12px',
                   'borderBottom': `1px solid ${DASHBOARD_TOKENS.colors.dividerDark}`,
@@ -686,13 +689,22 @@ export default function Dashboard(props: DashboardProps = {}) {
                   '& .MuiButton-root, & .MuiIconButton-root': {
                     height: '100%',
                   },
-                  '& > .MuiBox-root:first-of-type': {
-                    display: 'none',
-                  },
                 },
-                'body.dashboard-editable [data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type': {
+                'body:not(.dashboard-snapshot-mode) [data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type': {
                   display: 'flex',
                 },
+                'body:not(.dashboard-snapshot-mode) [data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type:has(.gpt-dashboard-toolbar-actions) > .MuiStack-root:empty':
+                  {
+                    display: 'none',
+                  },
+                'body:not(.dashboard-editable):not(.dashboard-snapshot-mode) [data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type > .MuiStack-root:last-of-type':
+                  {
+                    display: 'none',
+                  },
+                'body.dashboard-editable:not(.dashboard-snapshot-mode) [data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type:has(.gpt-dashboard-toolbar-actions) > .MuiStack-root:last-of-type':
+                  {
+                    marginLeft: '0 !important',
+                  },
                 // Panel group header hover
                 '[data-testid="panel-group-header"]': {
                   'backgroundColor': 'transparent',

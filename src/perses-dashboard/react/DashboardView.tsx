@@ -14,7 +14,7 @@ import bundledPluginLoader from './plugin'
 import { useWorkbenchContext } from './WorkbenchProvider'
 import { prepareSnapshotViewDashboard } from '../snapshot/prepareSnapshotViewDashboard'
 import SnapshotBridge from './SnapshotBridge'
-import LiveExportRuntimeCapture from './LiveExportRuntimeCapture'
+import DashboardTitleToolbar, { type DashboardToolbarLabels } from './DashboardTitleToolbar'
 import SnapshotViewDashboard from './SnapshotViewDashboard'
 
 export interface GenericDashboardViewProps {
@@ -25,10 +25,20 @@ export interface GenericDashboardViewProps {
   isSnapshotMode?: boolean
   isEditing: boolean
   isCreating?: boolean
+  toolbarLabels?: DashboardToolbarLabels
 }
 
 export default function HelperDashboardView(props: GenericDashboardViewProps): JSX.Element {
-  const { onSave, onDiscard, isReadonly, isSnapshotMode = false, isEditing, isCreating, dashboardResource } = props
+  const {
+    onSave,
+    onDiscard,
+    isReadonly,
+    isSnapshotMode = false,
+    isEditing,
+    isCreating,
+    dashboardResource,
+    toolbarLabels,
+  } = props
   const { database, username, password, authHeader, instance, name } = useWorkbenchContext()
   const sourceDashboardName = name.split('.')[0]
 
@@ -140,9 +150,11 @@ export default function HelperDashboardView(props: GenericDashboardViewProps): J
     isVariableEnabled: true,
     isAnnotationEnabled: false,
     isDatasourceEnabled: !isSnapshotMode,
-    ...(!isSnapshotMode
+    ...(!isSnapshotMode && toolbarLabels
       ? {
-          dashboardTitleComponent: <LiveExportRuntimeCapture dashboardName={viewDashboardResource.metadata.name} />,
+          dashboardTitleComponent: (
+            <DashboardTitleToolbar dashboardName={viewDashboardResource.metadata.name} labels={toolbarLabels} />
+          ),
         }
       : {}),
   } as unknown as import('@perses-dev/dashboards').ViewDashboardProps

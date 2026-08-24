@@ -219,7 +219,15 @@ function StandaloneApp() {
         <BrowserRouter>
           <ReactRouterProvider>
             <Routes>
-              <Route path="*" element={<Dashboard dashboardEditable={dashboardData.dashboardEditable} />} />
+              <Route
+                path="*"
+                element={
+                  <Dashboard
+                    dashboardEditable={dashboardData.dashboardEditable}
+                    toolbarLabels={dashboardData.toolbarLabels}
+                  />
+                }
+              />
             </Routes>
             <Drawer
               className="trace-gantt-sidepanel"
