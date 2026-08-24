@@ -75,25 +75,6 @@ export default function SnapshotBridge({ dashboard, sourceDashboardName, datasou
 
         const snapshotData = result.dashboard.spec?.snapshot
         const notLoadedBefore = result.debug?.notLoadedCount
-        // eslint-disable-next-line no-console
-        console.group('[snapshot-export] save snapshot dashboard')
-        // eslint-disable-next-line no-console
-        console.log('used live runtime:', Boolean(getLiveExportRuntime()))
-        // eslint-disable-next-line no-console
-        console.log('getPlugin arity:', getPluginRef.current.length, '(2=0.53, 1=0.54+)')
-        // eslint-disable-next-line no-console
-        console.log('prefetch filled:', result.prefetchFilled ?? 0)
-        // eslint-disable-next-line no-console
-        console.log('not_loaded before fill:', notLoadedBefore)
-        // eslint-disable-next-line no-console
-        console.log('snapshot variables:', variables)
-        // eslint-disable-next-line no-console
-        console.log('skipped panels:', result.skipped)
-        // eslint-disable-next-line no-console
-        console.log('cache debug:', result.debug)
-        // eslint-disable-next-line no-console
-        console.groupEnd()
-
         window.parent.postMessage(
           {
             type: 'create-snapshot-response',

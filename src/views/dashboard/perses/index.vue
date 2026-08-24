@@ -440,17 +440,6 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
       const result = await persesIframeRef.value.requestCreateSnapshot(snapshotForm.name.trim())
       const dashboardJSON = result.dashboard as Record<string, any>
 
-      // eslint-disable-next-line no-console
-      console.group('[snapshot-export] parent received snapshot')
-      // eslint-disable-next-line no-console
-      console.log('snapshot data JSON:', JSON.stringify(dashboardJSON?.spec?.snapshot, null, 2))
-      // eslint-disable-next-line no-console
-      console.log('skipped:', result.skipped)
-      // eslint-disable-next-line no-console
-      console.log('debug:', (result as { debug?: unknown }).debug)
-      // eslint-disable-next-line no-console
-      console.groupEnd()
-
       const saveName = resolveSnapshotSaveName(
         dashboardJSON,
         snapshotForm.name.trim() || buildDefaultSnapshotName(item.name)
