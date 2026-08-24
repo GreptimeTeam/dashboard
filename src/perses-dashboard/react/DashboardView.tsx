@@ -9,6 +9,7 @@ import {
   GlobalDatasourceResource,
   EphemeralDashboardResource,
 } from '@perses-dev/core'
+import type { DashboardSpec } from '@perses-dev/spec'
 import bundledPluginLoader from './plugin'
 import { useWorkbenchContext } from './WorkbenchProvider'
 import { prepareSnapshotViewDashboard } from '../snapshot/prepareSnapshotViewDashboard'
@@ -17,7 +18,7 @@ import SnapshotViewDashboard from './SnapshotViewDashboard'
 export interface GenericDashboardViewProps {
   dashboardResource: DashboardResource | EphemeralDashboardResource
   onSave?: OnSaveDashboard
-  onDiscard?: (entity: DashboardResource) => void
+  onDiscard?: (name: string, spec: DashboardSpec) => void
   isReadonly: boolean
   isSnapshotMode?: boolean
   isEditing: boolean
@@ -134,8 +135,9 @@ export default function HelperDashboardView(props: GenericDashboardViewProps): J
     isEditing,
     isCreating,
     isVariableEnabled: true,
+    isAnnotationEnabled: false,
     isDatasourceEnabled: !isSnapshotMode,
-  }
+  } as unknown as import('@perses-dev/dashboards').ViewDashboardProps
 
   return (
     <Box

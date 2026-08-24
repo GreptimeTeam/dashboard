@@ -1,0 +1,99 @@
+/* Stub for missing @perses-dev/logs-table-plugin@0.3.0 ansiColors.css (packaging bug).
+ * Classes match ansi_up with use_classes=true. */
+.ansi-black-fg {
+  color: #4d4d4d;
+}
+.ansi-red-fg {
+  color: #c41d1d;
+}
+.ansi-green-fg {
+  color: #2b7a2b;
+}
+.ansi-yellow-fg {
+  color: #a67c00;
+}
+.ansi-blue-fg {
+  color: #1a5fb4;
+}
+.ansi-magenta-fg {
+  color: #813d9c;
+}
+.ansi-cyan-fg {
+  color: #0b7a7a;
+}
+.ansi-white-fg {
+  color: #6e6e6e;
+}
+.ansi-bright-black-fg {
+  color: #5c5c5c;
+}
+.ansi-bright-red-fg {
+  color: #e01b24;
+}
+.ansi-bright-green-fg {
+  color: #33d17a;
+}
+.ansi-bright-yellow-fg {
+  color: #f5c211;
+}
+.ansi-bright-blue-fg {
+  color: #3584e4;
+}
+.ansi-bright-magenta-fg {
+  color: #c061cb;
+}
+.ansi-bright-cyan-fg {
+  color: #33c7c7;
+}
+.ansi-bright-white-fg {
+  color: #1e1e1e;
+}
+
+.ansi-black-bg {
+  background-color: #4d4d4d;
+}
+.ansi-red-bg {
+  background-color: #c41d1d;
+}
+.ansi-green-bg {
+  background-color: #2b7a2b;
+}
+.ansi-yellow-bg {
+  background-color: #a67c00;
+}
+.ansi-blue-bg {
+  background-color: #1a5fb4;
+}
+.ansi-magenta-bg {
+  background-color: #813d9c;
+}
+.ansi-cyan-bg {
+  background-color: #0b7a7a;
+}
+.ansi-white-bg {
+  background-color: #e8e8e8;
+}
+.ansi-bright-black-bg {
+  background-color: #5c5c5c;
+}
+.ansi-bright-red-bg {
+  background-color: #e01b24;
+}
+.ansi-bright-green-bg {
+  background-color: #33d17a;
+}
+.ansi-bright-yellow-bg {
+  background-color: #f5c211;
+}
+.ansi-bright-blue-bg {
+  background-color: #3584e4;
+}
+.ansi-bright-magenta-bg {
+  background-color: #c061cb;
+}
+.ansi-bright-cyan-bg {
+  background-color: #33c7c7;
+}
+.ansi-bright-white-bg {
+  background-color: #f5f5f5;
+}
