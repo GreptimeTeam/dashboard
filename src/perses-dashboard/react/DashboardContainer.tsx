@@ -686,11 +686,11 @@ export default function Dashboard(props: DashboardProps = {}) {
                   '& .MuiButton-root, & .MuiIconButton-root': {
                     height: '100%',
                   },
-                  '& > .MuiBox-root:first-child': {
+                  '& > .MuiBox-root:first-of-type': {
                     display: 'none',
                   },
                 },
-                'body.dashboard-editable [data-testid="dashboard-toolbar"] > .MuiBox-root:first-child': {
+                'body.dashboard-editable [data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type': {
                   display: 'flex',
                 },
                 // Panel group header hover
