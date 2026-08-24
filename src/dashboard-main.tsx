@@ -105,7 +105,6 @@ function StandaloneApp() {
   const [dashboardData, setDashboardData] = useState<any>(null)
   const [traceModalPayload, setTraceModalPayload] = useState<TraceModalPayload | null>(null)
   const [traceModalFile, setTraceModalFile] = useState<PersesDashboardFile | null>(null)
-
   const isUnresolvedTemplateValue = (value?: string): boolean => {
     if (!value) return true
     return /^\$\{[^}]+\}$/.test(value.trim())

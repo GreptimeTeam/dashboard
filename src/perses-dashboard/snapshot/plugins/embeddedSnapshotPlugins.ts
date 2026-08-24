@@ -10,6 +10,9 @@ const EMPTY_LOG_DATA: LogQueryResult = {
   timeRange: { start: new Date(0), end: new Date(0) },
 }
 
+/** Embedded data does not interpolate variables — keep query keys stable when builtins load. */
+const EMPTY_VARIABLE_DEPENDENCIES = () => ({ variables: [] as string[] })
+
 export const EmbeddedSnapshotTimeSeriesQuery = {
   getTimeSeriesData: async (spec: { panelId: string; queryIndex: number }): Promise<TimeSeriesData> => {
     try {
@@ -21,6 +24,7 @@ export const EmbeddedSnapshotTimeSeriesQuery = {
       return EMPTY_TIME_SERIES
     }
   },
+  dependsOn: EMPTY_VARIABLE_DEPENDENCIES,
   OptionsEditorComponent: createEmbeddedSnapshotQueryEditor('TimeSeriesQuery'),
   createInitialOptions: () => ({ panelId: '', queryIndex: 0 }),
 }
@@ -30,6 +34,7 @@ export const EmbeddedSnapshotLogQuery = {
     const data = getSnapshotPanelData(spec)
     return (data as LogQueryResult | undefined) ?? EMPTY_LOG_DATA
   },
+  dependsOn: EMPTY_VARIABLE_DEPENDENCIES,
   OptionsEditorComponent: createEmbeddedSnapshotQueryEditor('LogQuery'),
   createInitialOptions: () => ({ panelId: '', queryIndex: 0 }),
 }
@@ -39,6 +44,7 @@ export const EmbeddedSnapshotTraceQuery = {
     const data = getSnapshotPanelData(spec)
     return (data as TraceData | undefined) ?? EMPTY_TRACE_DATA
   },
+  dependsOn: EMPTY_VARIABLE_DEPENDENCIES,
   OptionsEditorComponent: createEmbeddedSnapshotQueryEditor('TraceQuery'),
   createInitialOptions: () => ({ panelId: '', queryIndex: 0 }),
 }
