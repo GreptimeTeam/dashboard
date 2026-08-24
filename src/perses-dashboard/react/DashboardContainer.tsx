@@ -681,7 +681,8 @@ export default function Dashboard(props: DashboardProps = {}) {
                   backgroundColor: DASHBOARD_TOKENS.colors.background,
                   margin: 0,
                 },
-                // Dashboard toolbar: show title row with snapshot actions; hide Perses Edit unless editable
+                // Title row is always visible. Readonly / dashboard-editable only
+                // toggles Perses Edit — not the title or snapshot actions.
                 '[data-testid="dashboard-toolbar"]': {
                   'paddingBottom': '12px',
                   'borderBottom': `1px solid ${DASHBOARD_TOKENS.colors.dividerDark}`,
@@ -689,19 +690,23 @@ export default function Dashboard(props: DashboardProps = {}) {
                   '& .MuiButton-root, & .MuiIconButton-root': {
                     height: '100%',
                   },
+                  '& > .MuiBox-root:first-of-type': {
+                    display: 'flex',
+                  },
                 },
-                'body:not(.dashboard-snapshot-mode) [data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type': {
-                  display: 'flex',
-                },
-                'body:not(.dashboard-snapshot-mode) [data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type:has(.gpt-dashboard-toolbar-actions) > .MuiStack-root:empty':
+                '[data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type:has(.gpt-dashboard-toolbar-actions) > .MuiStack-root:empty':
                   {
                     display: 'none',
                   },
-                'body:not(.dashboard-editable):not(.dashboard-snapshot-mode) [data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type > .MuiStack-root:last-of-type':
+                'body:not(.dashboard-editable) [data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type button:has(.MuiButton-startIcon)':
                   {
                     display: 'none',
                   },
-                'body.dashboard-editable:not(.dashboard-snapshot-mode) [data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type:has(.gpt-dashboard-toolbar-actions) > .MuiStack-root:last-of-type':
+                'body:not(.dashboard-editable) [data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type > .MuiStack-root:has(button:has(.MuiButton-startIcon))':
+                  {
+                    display: 'none',
+                  },
+                'body.dashboard-editable [data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type:has(.gpt-dashboard-toolbar-actions) > .MuiStack-root:last-of-type':
                   {
                     marginLeft: '0 !important',
                   },
