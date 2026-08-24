@@ -7,9 +7,9 @@ import type {
   DatasourceApi,
   DatasourceSelector,
   DatasourceSpec,
-  DurationString,
 } from '@perses-dev/core'
-import { isDurationString, toAbsoluteTimeRange } from '@perses-dev/core'
+import { toAbsoluteTimeRange } from '@perses-dev/core'
+import { isDurationString, type DurationString } from '@perses-dev/spec'
 import type { DatasourceStore, VariableStateMap } from '@perses-dev/plugin-system'
 import { adaptRegistryGetPlugin } from './adaptRegistryGetPlugin'
 import type { PrefetchQueryContext } from './prefetchMissingPanelQueries'
