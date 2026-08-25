@@ -24,35 +24,18 @@
         span.gpt-surface-card__title {{ $t('logsQuery.results') }}
         span.gpt-surface-card__badge(v-if="totalResults > 0") {{ totalResults }}
       DataTable.flow-table.gpt-table-page(
+        leftover-strategy="proportional"
         :data="data"
         :columns="columns"
         :loading="loading"
         :show-context-menu="false"
         :scroll="flowTableScroll"
       )
-        template(#column-flow_name="{ record }")
-          span.flow-name-cell {{ record.flow_name }}
-        template(#column-sink_table_name="{ record }")
-          span.flow-sink-cell {{ record.sink_table_name || '—' }}
-        template(#column-source_table_names="{ record }")
-          span {{ record.source_table_names || '—' }}
-        template(#column-comment="{ record }")
-          span {{ record.comment || '—' }}
         template(#column-status="{ record }")
           span.gpt-status-pill(v-if="record.status" :class="getStatusClass(record.status)")
             span.gpt-status-pill__dot
             | {{ record.status }}
           span(v-else) —
-        template(#column-created_time="{ renderedValue, changeTsView }")
-          .flow-time-cell(@click="changeTsView")
-            svg.icon-12.flow-time-icon
-              use(href="#time")
-            span {{ renderedValue || '—' }}
-        template(#column-updated_time="{ renderedValue, changeTsView }")
-          .flow-time-cell(@click="changeTsView")
-            svg.icon-12.flow-time-icon
-              use(href="#time")
-            span {{ renderedValue || '—' }}
         template(#column-operate="{ record }")
           a-space(:size="8")
             a-button(size="small" @click="showEdit(record)") Edit
@@ -131,7 +114,17 @@
         const allColumns = [...schemaColumns.value, operateColumn]
 
         columns.value = displayedColumns
-          .map((columnName) => allColumns.find((col) => col.name === columnName))
+          .map((columnName) => {
+            const col = allColumns.find((c) => c.name === columnName)
+            if (!col) return null
+            if (columnName === 'flow_name') {
+              return { ...col, cellClass: 'flow-name-cell' }
+            }
+            if (columnName === 'sink_table_name') {
+              return { ...col, cellClass: 'flow-sink-cell' }
+            }
+            return col
+          })
           .filter(Boolean) as ColumnType[]
 
         data.value = result.output[0].records.rows.map((row, index) => {
@@ -260,28 +253,17 @@
     font-weight: 500;
   }
 
-  .flow-name-cell {
-    font-weight: 700;
-    color: var(--gpt-text-primary);
-  }
+  .flow-table {
+    :deep(.flow-name-cell .cell-content),
+    :deep(.flow-name-cell .arco-table-td-content) {
+      font-weight: 700;
+      color: var(--gpt-text-primary);
+    }
 
-  .flow-sink-cell {
-    color: var(--gpt-brand-600);
-    font-weight: 600;
-  }
-
-  .flow-time-cell {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
-    color: var(--gpt-text-primary);
-    cursor: pointer;
-  }
-
-  .flow-time-icon {
-    flex-shrink: 0;
-    color: var(--gpt-text-secondary);
-    fill: currentColor;
+    :deep(.flow-sink-cell .cell-content),
+    :deep(.flow-sink-cell .arco-table-td-content) {
+      color: var(--gpt-brand-600);
+      font-weight: 600;
+    }
   }
 </style>
