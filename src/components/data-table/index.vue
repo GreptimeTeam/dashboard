@@ -211,6 +211,14 @@ a-dropdown#td-context(
 
     /** Global or page-local row index to highlight when detail drawer is open */
     activeRowKey?: number | null
+
+    /**
+     * How to distribute leftover width after soft-cap + restore-toward-natural
+     * when the fitted sum is still below the container (ordinary tables only).
+     * - last-column (default): give all leftover to the last column
+     * - proportional: share leftover across all columns by current width ratio
+     */
+    leftoverStrategy?: 'last-column' | 'proportional'
   }
 
   const props = withDefaults(defineProps<Props>(), {
@@ -225,6 +233,7 @@ a-dropdown#td-context(
     wrapLine: false,
     enableCellCopy: false,
     activeRowKey: null,
+    leftoverStrategy: 'last-column',
   })
 
   const attrs = useAttrs()
@@ -365,7 +374,10 @@ a-dropdown#td-context(
   //        b. If sum < container: give leftover first to columns still below their
   //           true natural width (proportional to deficit) — so a long metrics
   //           series column can grow past 600 when space exists.
-  //        c. Any remainder → last column (table fills ≥ 100%).
+  //        c. Any remainder (leftoverStrategy, ordinary tables only):
+  //           - last-column (default): → last column (other cells stay compact).
+  //           - proportional: share across all columns by current width ratio;
+  //             floor each share, rounding remainder on the last column.
   //        d. If soft-capped sum still > container → keep those widths; table
   //           width = max(sum, container) → horizontal scroll on the container.
   //
@@ -753,13 +765,14 @@ a-dropdown#td-context(
   }
 
   /**
-   * Ordinary fit: soft-cap → restore toward natural for capped cols → last takes rest.
-   * See “Column width rules” above.
+   * Ordinary fit: soft-cap → restore toward natural for capped cols → leftover.
+   * leftoverStrategy: last-column (default) | proportional. See “Column width rules”.
    */
   function fitColumnWidths(
     naturals: Record<string, number>,
     columns: ColumnType[],
-    containerW: number
+    containerW: number,
+    strategy: 'last-column' | 'proportional' = 'last-column'
   ): Record<string, number> {
     if (columns.length === 0) {
       return naturals
@@ -802,10 +815,29 @@ a-dropdown#td-context(
       }
     }
 
-    // Any remainder → last column (table stays ≥ 100%).
+    // Any remainder → fill table to ≥ 100% per leftoverStrategy.
     if (leftover > 0) {
-      const lastName = columns[columns.length - 1].name
-      widths[lastName] = (widths[lastName] || 0) + leftover
+      if (strategy === 'proportional') {
+        const total = sum()
+        if (total > 0) {
+          let allocated = 0
+          columns.forEach((column, index) => {
+            if (index === columns.length - 1) {
+              widths[column.name] = (widths[column.name] || 0) + (leftover - allocated)
+              return
+            }
+            const share = Math.floor(((widths[column.name] || 0) / total) * leftover)
+            widths[column.name] = (widths[column.name] || 0) + share
+            allocated += share
+          })
+        } else {
+          const lastName = columns[columns.length - 1].name
+          widths[lastName] = (widths[lastName] || 0) + leftover
+        }
+      } else {
+        const lastName = columns[columns.length - 1].name
+        widths[lastName] = (widths[lastName] || 0) + leftover
+      }
     }
 
     return widths
@@ -897,7 +929,7 @@ a-dropdown#td-context(
     if (!widthsLocked.value) {
       return columnWidths.value
     }
-    return fitColumnWidths(columnWidths.value, columnsForWidthLock(), tableWidth.value)
+    return fitColumnWidths(columnWidths.value, columnsForWidthLock(), tableWidth.value, props.leftoverStrategy)
   })
 
   function isVirtualColumnExpandable(columnName: string): boolean {
