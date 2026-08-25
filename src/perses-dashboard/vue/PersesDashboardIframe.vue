@@ -35,6 +35,10 @@ iframe.perses-dashboard-iframe(ref="dashboardIframe" :src="iframeSrc" @load="onI
     password?: string
     authHeader?: string
     instance?: string
+    toolbarLabels?: {
+      saveSnapshot: string
+      exportSnapshot: string
+    }
     onSave?: (payload: SavePayload) => Promise<void>
   }
 
@@ -45,8 +49,13 @@ iframe.perses-dashboard-iframe(ref="dashboardIframe" :src="iframeSrc" @load="onI
     password: undefined,
     authHeader: undefined,
     instance: undefined,
+    toolbarLabels: undefined,
     onSave: undefined,
   })
+
+  const emit = defineEmits<{
+    toolbarAction: [action: 'saveSnapshot' | 'exportSnapshotJson']
+  }>()
 
   const appStore = useAppStore()
 
@@ -98,6 +107,7 @@ iframe.perses-dashboard-iframe(ref="dashboardIframe" :src="iframeSrc" @load="onI
           file: fileData,
           instance: props.instance ?? '',
           dashboardEditable: props.dashboardEditable,
+          toolbarLabels: props.toolbarLabels,
         })
       )
 
@@ -129,6 +139,7 @@ iframe.perses-dashboard-iframe(ref="dashboardIframe" :src="iframeSrc" @load="onI
       () => props.password,
       () => props.authHeader,
       () => props.instance,
+      () => props.toolbarLabels,
     ],
     () => {
       sendDashboardData()
@@ -140,6 +151,15 @@ iframe.perses-dashboard-iframe(ref="dashboardIframe" :src="iframeSrc" @load="onI
     if (event.data.type === 'dashboard-iframe-ready') {
       if (event.source === dashboardIframe.value?.contentWindow) {
         sendDashboardData()
+      }
+      return
+    }
+
+    if (event.data.type === 'perses-toolbar-action') {
+      if (event.source !== dashboardIframe.value?.contentWindow) return
+      const { action } = event.data
+      if (action === 'saveSnapshot' || action === 'exportSnapshotJson') {
+        emit('toolbarAction', action)
       }
       return
     }
@@ -220,7 +240,7 @@ iframe.perses-dashboard-iframe(ref="dashboardIframe" :src="iframeSrc" @load="onI
       timeout = window.setTimeout(() => {
         window.removeEventListener('message', handleResponse)
         reject(new Error('Create snapshot request timeout'))
-      }, 60000)
+      }, 120000)
 
       window.addEventListener('message', handleResponse)
       dashboardIframe.value.contentWindow.postMessage(

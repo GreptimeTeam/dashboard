@@ -8,6 +8,10 @@ import Components from 'unplugin-vue-components/vite'
 import AutoImport from 'unplugin-auto-import/vite'
 import { createHtmlPlugin } from 'vite-plugin-html'
 import { transformSync } from 'esbuild'
+import {
+  patchEchartsTooltipGetSize,
+  patchEchartsTooltipGetSizeEsbuild,
+} from '../src/perses-dashboard/vendor/patchEchartsTooltip'
 
 const tsxTransformer = () => ({
   name: 'tsx-transformer',
@@ -100,6 +104,7 @@ export default defineConfig({
     },
   },
   plugins: [
+    patchEchartsTooltipGetSize(),
     stubPersesLogsAnsiColors(),
     tsxTransformer(),
     vue(),
@@ -184,7 +189,7 @@ export default defineConfig({
     ],
     esbuildOptions: {
       target: 'esnext',
-      plugins: [stubPersesLogsAnsiColorsEsbuild()],
+      plugins: [stubPersesLogsAnsiColorsEsbuild(), patchEchartsTooltipGetSizeEsbuild()],
     },
   },
   css: {

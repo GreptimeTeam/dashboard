@@ -11,8 +11,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { QueryParamProvider } from 'use-query-params'
 import { ReactRouter6Adapter } from 'use-query-params/adapters/react-router-6'
 import HelperDashboardView from './DashboardView'
+import type { DashboardToolbarLabels } from './DashboardTitleToolbar'
 import { useWorkbenchContext } from './WorkbenchProvider'
-import SnapshotBridge from './SnapshotBridge'
 import { SnapshotDashboardShell, getSnapshotViewRemountKey } from './SnapshotViewDashboard'
 import { isSnapshotDashboard } from '../snapshot/isSnapshotDashboard'
 import DASHBOARD_TOKENS from './Dashboard.styles'
@@ -23,6 +23,7 @@ import { ensureTraceTableLinks } from '../traceLink'
 interface DashboardProps {
   dashboardEditable?: boolean
   controlEditableBodyClass?: boolean
+  toolbarLabels?: DashboardToolbarLabels
 }
 
 export default function Dashboard(props: DashboardProps = {}) {
@@ -43,86 +44,6 @@ export default function Dashboard(props: DashboardProps = {}) {
       body.classList.remove('dashboard-editable')
     }
   }, [dashboardEditable, controlEditableBodyClass])
-
-  React.useEffect(() => {
-    let patched = false
-
-    const patchEChartsTooltip = (): boolean => {
-      if (patched) return true
-
-      try {
-        const { echarts } = window as any
-        if (!echarts) return false
-
-        let TooltipHTMLContent: any = null
-        const { component, extensions } = echarts as any
-        const { TooltipHTMLContent: directTooltip } = echarts
-        if (directTooltip) {
-          TooltipHTMLContent = directTooltip
-        } else {
-          const { tooltip: componentTooltip } = component || {}
-          const { TooltipHTMLContent: componentTooltipHTML } = componentTooltip || {}
-          if (componentTooltipHTML) {
-            TooltipHTMLContent = componentTooltipHTML
-          } else {
-            const { tooltip: extensionsTooltip } = extensions || {}
-            const { TooltipHTMLContent: extensionsTooltipHTML } = extensionsTooltip || {}
-            if (extensionsTooltipHTML) {
-              TooltipHTMLContent = extensionsTooltipHTML
-            }
-          }
-        }
-
-        if (TooltipHTMLContent && !(TooltipHTMLContent.prototype as any).__patched) {
-          const { getSize: originalGetSize } = TooltipHTMLContent.prototype
-
-          if (typeof originalGetSize === 'function') {
-            TooltipHTMLContent.prototype.getSize = function getSize(...args: any[]) {
-              if (!this._container || !this._container.parentNode) {
-                return { width: 0, height: 0 }
-              }
-
-              try {
-                const { offsetWidth, offsetHeight } = this._container
-                if (offsetWidth === undefined || offsetHeight === undefined) {
-                  return { width: 0, height: 0 }
-                }
-
-                return originalGetSize.apply(this, args)
-              } catch {
-                return { width: 0, height: 0 }
-              }
-            }
-            ;(TooltipHTMLContent.prototype as any).__patched = true
-            patched = true
-            return true
-          }
-        }
-      } catch {
-        // ignore
-      }
-
-      return false
-    }
-
-    if (patchEChartsTooltip()) {
-      return undefined
-    }
-
-    let retryCount = 0
-    const maxRetries = 20
-
-    const retryInterval = setInterval(() => {
-      retryCount += 1
-      if (patchEChartsTooltip() || retryCount >= maxRetries) {
-        clearInterval(retryInterval)
-      }
-    }, 100)
-
-    return (): void => {
-      clearInterval(retryInterval)
-    }
-  }, [])
 
   React.useEffect(() => {
     const { error: originalConsoleError } = console
@@ -730,7 +651,6 @@ export default function Dashboard(props: DashboardProps = {}) {
   const { data } = parsedDashboard
 
   const effectiveReadonly = !dashboardEditable || snapshotMode
-  const sourceDashboardName = name.split('.')[0]
   const dashboardViewKey = snapshotMode
     ? getSnapshotViewRemountKey(data, saveRefreshToken)
     : `${data.metadata.name}-${saveRefreshToken}`
@@ -744,15 +664,13 @@ export default function Dashboard(props: DashboardProps = {}) {
       isSnapshotMode={snapshotMode}
       isEditing={false}
       isCreating={false}
+      toolbarLabels={snapshotMode ? undefined : props.toolbarLabels}
     />
   )
 
   return (
     <ThemeProvider theme={muiTheme}>
       <QueryClientProvider client={queryClient}>
-        {!snapshotMode && (
-          <SnapshotBridge queryClient={queryClient} dashboard={data} sourceDashboardName={sourceDashboardName} />
-        )}
         <QueryParamProvider adapter={ReactRouter6Adapter}>
           <ChartsProvider chartsTheme={chartsTheme}>
             <GlobalStyles
@@ -763,7 +681,8 @@ export default function Dashboard(props: DashboardProps = {}) {
                   backgroundColor: DASHBOARD_TOKENS.colors.background,
                   margin: 0,
                 },
-                // Dashboard toolbar: hide edit controls by default, show when editable
+                // Title row is always visible. Readonly / dashboard-editable only
+                // toggles Perses Edit — not the title or snapshot actions.
                 '[data-testid="dashboard-toolbar"]': {
                   'paddingBottom': '12px',
                   'borderBottom': `1px solid ${DASHBOARD_TOKENS.colors.dividerDark}`,
@@ -771,13 +690,26 @@ export default function Dashboard(props: DashboardProps = {}) {
                   '& .MuiButton-root, & .MuiIconButton-root': {
                     height: '100%',
                   },
-                  '& > .MuiBox-root:first-child': {
-                    display: 'none',
+                  '& > .MuiBox-root:first-of-type': {
+                    display: 'flex',
                   },
                 },
-                'body.dashboard-editable [data-testid="dashboard-toolbar"] > .MuiBox-root:first-child': {
-                  display: 'flex',
-                },
+                '[data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type:has(.gpt-dashboard-toolbar-actions) > .MuiStack-root:empty':
+                  {
+                    display: 'none',
+                  },
+                'body:not(.dashboard-editable) [data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type button:has(.MuiButton-startIcon)':
+                  {
+                    display: 'none',
+                  },
+                'body:not(.dashboard-editable) [data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type > .MuiStack-root:has(button:has(.MuiButton-startIcon))':
+                  {
+                    display: 'none',
+                  },
+                'body.dashboard-editable [data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type:has(.gpt-dashboard-toolbar-actions) > .MuiStack-root:last-of-type':
+                  {
+                    marginLeft: '0 !important',
+                  },
                 // Panel group header hover
                 '[data-testid="panel-group-header"]': {
                   'backgroundColor': 'transparent',

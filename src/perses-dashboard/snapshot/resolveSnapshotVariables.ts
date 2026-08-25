@@ -1,4 +1,5 @@
 import type { DashboardResource } from '@perses-dev/core'
+import { isInternalVariableName } from './prepareSnapshotViewDashboard'
 
 const VARIABLE_QUERY_PREFIX = 'var-'
 
@@ -25,7 +26,7 @@ export default function resolveSnapshotVariables(
       return
     }
     const name = key.slice(VARIABLE_QUERY_PREFIX.length)
-    if (!name) {
+    if (!name || isInternalVariableName(name)) {
       return
     }
     result[name] = decodeVariableParam(value)
@@ -34,7 +35,7 @@ export default function resolveSnapshotVariables(
   const variables = dashboard.spec?.variables ?? []
   variables.forEach((def) => {
     const { name } = def.spec
-    if (result[name] !== undefined) {
+    if (isInternalVariableName(name) || result[name] !== undefined) {
       return
     }
     if (def.kind === 'TextVariable') {

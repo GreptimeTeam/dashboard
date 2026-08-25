@@ -20,7 +20,7 @@ export function getSnapshotGlobalStyles(): Record<string, Record<string, unknown
     'body.dashboard-snapshot-mode [data-testid="dashboard-toolbar"] button[aria-label="Refresh"]': {
       display: 'none',
     },
-    'body.dashboard-snapshot-mode [data-testid="dashboard-toolbar"] > .MuiBox-root:nth-of-type(2) > .MuiStack-root > .MuiStack-root > :first-child':
+    'body.dashboard-snapshot-mode [data-testid="dashboard-toolbar"] > .MuiBox-root:nth-of-type(2) > .MuiStack-root > .MuiStack-root > :first-of-type':
       {
         pointerEvents: 'none',
         opacity: 0.85,

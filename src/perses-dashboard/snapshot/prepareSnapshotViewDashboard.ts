@@ -55,6 +55,11 @@ function freezeVariable(
   }
 }
 
+/** Grafana / Perses internal builtins — never surface as snapshot filters. */
+export function isInternalVariableName(name: string): boolean {
+  return name.startsWith('__')
+}
+
 /**
  * Grafana snapshots strip live query/variable plugins. For view, replace dynamic
  * variable plugins (e.g. PrometheusLabelValuesVariable) with static definitions
@@ -65,12 +70,13 @@ export function buildFrozenVariables(
   saved: Record<string, string | string[]>
 ): VariableDefinition[] {
   const frozen = originalVars
+    .filter((def) => !isInternalVariableName(def.spec.name))
     .map((def) => freezeVariable(def, saved[def.spec.name]))
     .filter((def): def is TextVariableDefinition => def !== undefined)
 
   const knownNames = new Set(originalVars.map((def) => def.spec.name))
   Object.entries(saved).forEach(([name, value]) => {
-    if (knownNames.has(name)) return
+    if (knownNames.has(name) || isInternalVariableName(name)) return
     const synthetic = freezeVariable(
       {
         kind: 'TextVariable',

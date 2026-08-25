@@ -2,6 +2,7 @@ import type { QueryClient } from '@tanstack/react-query'
 import type { DashboardResource } from '@perses-dev/core'
 import { collectPanelDataFromQueryCache } from './collectFromQueryCache'
 import { annotateDashboardCategory, DASHBOARD_CATEGORY_SNAPSHOT } from './dashboardCategory'
+import { fillNotLoadedPanelQueries, type PrefetchQueryContext } from './prefetchMissingPanelQueries'
 import resolveSnapshotVariables from './resolveSnapshotVariables'
 import {
   type EmbeddedSnapshotQuerySpec,
@@ -17,6 +18,8 @@ export interface BuildSnapshotOptions {
   sourceDashboard?: string
   snapshotName?: string
   variables?: Record<string, string | string[]>
+  /** When set, not_loaded queries are fetched via plugins (no panel render). */
+  prefetchContext?: PrefetchQueryContext
 }
 
 function cloneOriginalPlugin(plugin: unknown): SnapshotOriginalPlugin | undefined {
@@ -62,12 +65,31 @@ function prepareSnapshotDashboard(dashboard: DashboardResource): SnapshotDashboa
   return prepared
 }
 
-export function buildSnapshotDashboard(
+export async function buildSnapshotDashboard(
   queryClient: QueryClient,
   dashboard: DashboardResource,
   options: BuildSnapshotOptions = {}
-): BuildSnapshotResult {
-  const { panelData, timeRange, debug } = collectPanelDataFromQueryCache(queryClient, dashboard)
+): Promise<BuildSnapshotResult> {
+  const collected = collectPanelDataFromQueryCache(queryClient, dashboard)
+  const { panelData, debug } = collected
+  let { timeRange } = collected
+  let prefetchFilled = 0
+
+  if (options.prefetchContext) {
+    const ctx = options.prefetchContext
+    debug.notLoadedCount = Object.values(panelData).reduce(
+      (sum, results) => sum + results.filter((r) => r.skipped && r.reason === 'not_loaded').length,
+      0
+    )
+    prefetchFilled = await fillNotLoadedPanelQueries(dashboard, panelData, ctx)
+
+    const { absoluteTimeRange } = ctx
+    timeRange = {
+      from: absoluteTimeRange.start.getTime(),
+      to: absoluteTimeRange.end.getTime(),
+    }
+  }
+
   const skipped: SkippedPanelInfo[] = []
 
   const panels = dashboard.spec?.panels ?? {}
@@ -116,5 +138,6 @@ export function buildSnapshotDashboard(
     dashboard: annotateDashboardCategory(snapshotDashboard, DASHBOARD_CATEGORY_SNAPSHOT) as SnapshotDashboardResource,
     skipped,
     debug,
+    prefetchFilled,
   }
 }

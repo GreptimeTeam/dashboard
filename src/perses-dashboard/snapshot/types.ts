@@ -78,6 +78,8 @@ export interface SkippedPanelInfo {
 export interface SnapshotCollectDebugInfo {
   totalCacheQueries: number
   activeTimeRange: { from: number; to: number }
+  /** Count of panel queries marked not_loaded before export prefetch. */
+  notLoadedCount?: number
   persesQueryEntries: Array<{
     category: string
     status: string
@@ -106,4 +108,6 @@ export interface BuildSnapshotResult {
   dashboard: SnapshotDashboardResource
   skipped: SkippedPanelInfo[]
   debug?: SnapshotCollectDebugInfo
+  /** How many `not_loaded` queries were actively fetched during export. */
+  prefetchFilled?: number
 }
