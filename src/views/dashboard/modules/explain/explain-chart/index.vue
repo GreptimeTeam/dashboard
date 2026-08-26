@@ -1,18 +1,22 @@
 <template lang="pug">
 .explain-chart(:id="`explain-chart-stage-${index}`")
-  .header
-    div(style="display: flex; align-items: center; justify-content: space-between; flex-direction: row")
-      .stage-navigation
-        a-radio-group(
-          v-model="localStageIndex"
-          type="button"
-          size="small"
-          @change="onStageChange"
-        )
-          a-radio(v-for="i in totalStages" :key="i - 1" :value="i - 1") Stage {{ i - 1 }}
-      .root-plan-selector(v-if="availableRootPlans.length > 1")
-        a-select(v-model="selectedRootPlan" size="small" style="width: 200px; margin-left: 8px")
-          a-option(v-for="root in availableRootPlans" :key="root" :value="root") {{ root }}
+  .chart-sidebar
+    .sidebar-section
+      .sidebar-label Stage
+      a-radio-group.stage-radio(
+        type="button"
+        size="small"
+        :class="{ 'stage-radio--vertical': totalStages > 2 }"
+        :direction="totalStages <= 2 ? 'horizontal' : 'vertical'"
+        :model-value="activeStageIndex"
+        @change="onStageChange"
+      )
+        a-radio(v-for="i in totalStages" :key="i - 1" :value="i - 1") {{ totalStages <= 2 ? i - 1 : `Stage ${i - 1}` }}
+    .sidebar-section(v-if="availableRootPlans.length > 1")
+      .sidebar-label Root Plan
+      a-select(v-model="selectedRootPlan" size="small" style="width: 100%")
+        a-option(v-for="root in availableRootPlans" :key="root" :value="root") {{ root }}
+    .sidebar-divider
     ChartControls(
       v-model:highlight-type="highlightType"
       v-model:selected-metric="selectedMetric"
@@ -22,29 +26,30 @@
       :available-metrics="availableMetrics"
       :stage-index="index"
     )
-  .chart-scroll-container
-    .chart-container.grab-bing(ref="chartContainer")
-      TreeView(
-        ref="treeView"
-        :data="filteredData"
-        :active-node-index="activeNodeIndex"
-        :highlight-type="highlightType"
-        :selected-metric="selectedMetric"
-        :metrics-expanded="metricsExpanded"
-        :stage-index="index"
-        @update:active-node-index="updateActiveNode"
-        @nodes-data-updated="updateNodesData"
-        @svgCreated="handleSvgCreated"
-      )
-    .controls-wrapper
-      ZoomControls(ref="zoomControls" :tree-container="treeContainerRef")
-      NavigationArrows(
-        v-if="availableNodes.length > 1"
-        :available-nodes="availableNodes"
-        :active-node-index="activeNodeIndex"
-        @prev="navigateToPrevNode"
-        @next="navigateToNextNode"
-      )
+  .chart-main
+    .chart-scroll-container
+      .chart-container.grab-bing(ref="chartContainer")
+        TreeView(
+          ref="treeView"
+          :data="filteredData"
+          :active-node-index="activeNodeIndex"
+          :highlight-type="highlightType"
+          :selected-metric="selectedMetric"
+          :metrics-expanded="metricsExpanded"
+          :stage-index="index"
+          @update:active-node-index="updateActiveNode"
+          @nodes-data-updated="updateNodesData"
+          @svgCreated="handleSvgCreated"
+        )
+      .controls-wrapper
+        ZoomControls(ref="zoomControls" :tree-container="treeContainerRef")
+        NavigationArrows(
+          v-if="availableNodes.length > 1"
+          :available-nodes="availableNodes"
+          :active-node-index="activeNodeIndex"
+          @prev="navigateToPrevNode"
+          @next="navigateToNextNode"
+        )
 </template>
 
 <script lang="ts" setup name="ExplainChart">
@@ -55,6 +60,9 @@
     data: any[] // This is an array of rows from getStages
     index: number
     totalStages: number // Add this prop to know total number of stages
+    // Global selected stage — shared across kept-alive chart panes so the
+    // radio stays in sync when switching without remounting.
+    activeStageIndex: number
   }>()
 
   const emit = defineEmits(['changeStage'])
@@ -200,23 +208,21 @@
   }
 
   function scrollToNode(nodeIdx) {
+    const root = `#${componentId.value}`
     const previousNodeId = activeNodeIndex.value
     activeNodeIndex.value = nodeIdx
 
-    // Only update what's necessary in the DOM directly
-    if (previousNodeId !== null) {
-      // Remove highlight from previous node - scoped to this component
-      d3.selectAll(`#${componentId.value} .tree-group.node-${previousNodeId} .plan-card`).classed('active-card', false)
-      d3.selectAll(`#${componentId.value} .tree-group.node-${previousNodeId}`).classed('active-tree', false)
-      d3.selectAll(`#${componentId.value} .tree-group.node-${previousNodeId} .node-index-rect`).classed('active', false)
+    // foreignObject card HTML is static until re-render — toggle active classes in DOM.
+    if (previousNodeId !== null && previousNodeId !== nodeIdx) {
+      d3.selectAll(`${root} .node.node-${previousNodeId} .plan-card`).classed('active-card', false)
+      d3.selectAll(`${root} .node-label-group.node-${previousNodeId} .node-label-rect`).classed('active', false)
+      d3.selectAll(`${root} .node-label-group.node-${previousNodeId}`).classed('active-node-label', false)
     }
 
-    // Add highlight to new node - scoped to this component
-    d3.selectAll(`#${componentId.value} .tree-group.node-${nodeIdx} .plan-card`).classed('active-card', true)
-    d3.selectAll(`#${componentId.value} .tree-group.node-${nodeIdx}`).classed('active-tree', true)
-    d3.selectAll(`#${componentId.value} .tree-group.node-${nodeIdx} .node-index-rect`).classed('active', true)
+    d3.selectAll(`${root} .node.node-${nodeIdx} .plan-card`).classed('active-card', true)
+    d3.selectAll(`${root} .node-label-group.node-${nodeIdx} .node-label-rect`).classed('active', true)
+    d3.selectAll(`${root} .node-label-group.node-${nodeIdx}`).classed('active-node-label', true)
 
-    // Handle scrolling to the node
     scrollToNodeTree(nodeIdx)
   }
 
@@ -274,7 +280,9 @@
   )
 
   // Live metrics refresh rebuilds the tree but must keep pan/zoom and controls.
-  // Only reset camera / highlight when topology changes (stage or root plan).
+  // Only reset camera / highlight when this stage's plan topology changes
+  // (e.g. root plan switch). Stage tabs keep separate chart instances, so
+  // switching stages no longer remounts or resets this state.
   watch(
     () => filteredData.value,
     (newData, oldData) => {
@@ -294,15 +302,6 @@
       metricsExpanded.value = false
     },
     { immediate: true }
-  )
-
-  const localStageIndex = ref(props.index)
-
-  watch(
-    () => props.index,
-    (newIndex) => {
-      localStageIndex.value = newIndex
-    }
   )
 
   function onStageChange(newStageIndex) {
@@ -332,22 +331,98 @@
 <style lang="less">
   .explain-chart {
     display: flex;
-    flex-direction: column;
-    height: calc(100% - 32px);
+    flex-direction: row;
+    align-items: stretch;
+    height: 100%;
+    min-height: 0;
+    padding: 0;
 
-    padding: var(--gpt-page-padding-y) var(--gpt-page-padding-x);
-
-    .header {
+    .chart-sidebar {
+      flex: 0 0 168px;
+      width: 168px;
       display: flex;
-      justify-content: space-between;
-      border-bottom: 1px solid var(--gpt-border-default);
-      padding-bottom: var(--gpt-gap-sm);
+      flex-direction: column;
+      gap: var(--gpt-gap-md);
+      padding: var(--gpt-gap-md);
+      border-right: 1px solid var(--gpt-border-default);
+      background: var(--gpt-bg-surface, var(--gpt-bg-panel));
+      overflow-y: auto;
+      overflow-x: hidden;
     }
 
-    .stage-navigation {
+    .sidebar-section {
       display: flex;
-      justify-content: center;
-      align-items: center;
+      flex-direction: column;
+      gap: var(--gpt-gap-xs);
+    }
+
+    .sidebar-label {
+      font-size: var(--gpt-font-sm);
+      font-weight: 500;
+      color: var(--gpt-text-secondary);
+      line-height: 1.2;
+    }
+
+    .sidebar-divider {
+      height: 1px;
+      background: var(--gpt-border-default);
+      margin: var(--gpt-gap-xs) 0;
+    }
+
+    .stage-radio.arco-radio-group-button {
+      width: 100%;
+
+      .arco-radio-button {
+        flex: 1;
+        justify-content: center;
+      }
+
+      .arco-radio-button-content {
+        width: 100%;
+        justify-content: center;
+        padding: 0 8px;
+      }
+
+      // >2 stages: stack vertically (override global single-row height clip)
+      &.stage-radio--vertical {
+        display: flex;
+        flex-direction: column;
+        height: auto !important;
+        overflow: visible;
+
+        .arco-radio-button {
+          width: 100%;
+          height: var(--gpt-control-height-sm);
+          margin: -1px 0 0;
+          justify-content: flex-start;
+
+          &:first-of-type {
+            margin-top: 0;
+            border-radius: var(--gpt-radius-sm) var(--gpt-radius-sm) 0 0;
+          }
+
+          &:last-of-type {
+            border-radius: 0 0 var(--gpt-radius-sm) var(--gpt-radius-sm);
+          }
+
+          &:only-of-type {
+            border-radius: var(--gpt-radius-sm);
+          }
+        }
+
+        .arco-radio-button-content {
+          justify-content: flex-start;
+        }
+      }
+    }
+
+    .chart-main {
+      flex: 1;
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      position: relative;
     }
 
     .controls-wrapper {
@@ -358,10 +433,10 @@
       display: flex;
       justify-content: center;
       z-index: 10;
-      pointer-events: none; // Allow clicking through wrapper to SVG
+      pointer-events: none;
 
       > * {
-        pointer-events: auto; // Re-enable pointer events for children
+        pointer-events: auto;
       }
     }
 
@@ -369,6 +444,7 @@
       flex: 1;
       position: relative;
       overflow: hidden;
+      min-height: 0;
     }
 
     .chart-container {
@@ -413,7 +489,7 @@
 
     .zoom-controls,
     .navigation-arrows {
-      pointer-events: auto; // Re-enable pointer events for controls
+      pointer-events: auto;
     }
   }
 

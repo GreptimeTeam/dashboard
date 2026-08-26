@@ -1,9 +1,10 @@
 <template lang="pug">
 .chart-controls
-  .highlight-controls
+  .control-group
     span.control-label Highlight
-    a-radio-group(
+    a-radio-group.highlight-radio(
       v-model="localHighlightType"
+      direction="vertical"
       type="button"
       size="small"
       :id="`${inputPrefix}-highlight`"
@@ -11,16 +12,23 @@
       a-radio(value="NONE") None
       a-radio(value="ROWS") Rows
       a-radio(value="DURATION") Duration
-  a-select.metric-select(
-    v-model="localSelectedMetric"
+  .control-group
+    span.control-label Metric
+    a-select.metric-select(
+      v-model="localSelectedMetric"
+      size="small"
+      placeholder="Select"
+      allow-clear
+      :id="`${inputPrefix}-metric`"
+      :trigger-props="{ autoFitPopupMinWidth: true }"
+    )
+      a-option(v-for="metric in availableMetrics" :key="metric.value" :value="metric.value") {{ metric.label }}
+  a-button.expand-btn(
+    type="outline"
     size="small"
-    placeholder="Select Metric"
-    allow-clear
-    :id="`${inputPrefix}-metric`"
-    :trigger-props="{ autoFitPopupMinWidth: true }"
+    long
+    @click="onToggleMetricsExpanded"
   )
-    a-option(v-for="metric in availableMetrics" :key="metric.value" :value="metric.value") {{ metric.label }}
-  a-button(type="outline" size="small" @click="onToggleMetricsExpanded")
     template(#icon)
       icon-expand(v-if="!metricsExpanded")
       icon-shrink(v-else)
@@ -68,10 +76,6 @@
   watch(localHighlightType, (val) => emit('update:highlightType', val))
   watch(localSelectedMetric, (val) => emit('update:selectedMetric', val))
 
-  const onNodeSelect = (nodeIndex: number) => {
-    emit('nodeSelected', nodeIndex)
-  }
-
   const onToggleMetricsExpanded = () => {
     emit('update:metricsExpanded', !props.metricsExpanded)
   }
@@ -80,25 +84,62 @@
 <style lang="less" scoped>
   .chart-controls {
     display: flex;
-    align-items: center;
-    gap: 16px;
+    flex-direction: column;
+    gap: var(--gpt-gap-md);
+  }
 
-    .highlight-controls {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-left: auto;
-    }
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gpt-gap-xs);
   }
 
   .control-label {
     flex-shrink: 0;
-    font-size: var(--gpt-font-md);
+    font-size: var(--gpt-font-sm);
+    font-weight: 500;
     color: var(--gpt-text-secondary);
+    line-height: 1.2;
+  }
+
+  .highlight-radio {
+    width: 100%;
+
+    :deep(&.arco-radio-group-button) {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: auto !important;
+      overflow: visible;
+    }
+
+    :deep(.arco-radio-button) {
+      width: 100%;
+      height: var(--gpt-control-height-sm);
+      margin: -1px 0 0;
+      justify-content: flex-start;
+
+      &:first-of-type {
+        margin-top: 0;
+        border-radius: var(--gpt-radius-sm) var(--gpt-radius-sm) 0 0;
+      }
+
+      &:last-of-type {
+        border-radius: 0 0 var(--gpt-radius-sm) var(--gpt-radius-sm);
+      }
+    }
+
+    :deep(.arco-radio-button-content) {
+      width: 100%;
+      justify-content: flex-start;
+    }
   }
 
   .metric-select {
-    width: fit-content;
-    flex-shrink: 0;
+    width: 100%;
+  }
+
+  .expand-btn {
+    width: 100%;
   }
 </style>

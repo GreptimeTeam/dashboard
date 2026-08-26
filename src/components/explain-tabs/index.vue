@@ -65,13 +65,16 @@
         :data="stage"
         :index="index"
       )
-    ExplainChart(
-      v-else-if="activeView === 'chart'"
-      :data="stages[activeStageIndex]"
-      :index="activeStageIndex"
-      :total-stages="stages.length"
-      @change-stage="activeStageIndex = $event"
-    )
+    .explain-charts(v-else-if="activeView === 'chart'")
+      template(v-for="(stage, index) in stages" :key="`chart-stage-${index}`")
+        .explain-chart-pane(v-if="mountedChartStages.includes(index)" :class="{ active: activeStageIndex === index }")
+          ExplainChart(
+            :data="stage"
+            :index="index"
+            :active-stage-index="activeStageIndex"
+            :total-stages="stages.length"
+            @change-stage="activeStageIndex = $event"
+          )
     .raw-json-card(v-else)
       pre.raw-json {{ formattedRawJson }}
 </template>
@@ -90,6 +93,15 @@
 
   const activeView = ref<'table' | 'chart' | 'raw'>('table')
   const activeStageIndex = ref(1)
+  // Keep each stage chart mounted after first visit so stage switches preserve
+  // pan/zoom, highlight, expand, and scroll instead of remounting.
+  const mountedChartStages = ref<number[]>([])
+
+  const ensureChartStageMounted = (index: number) => {
+    if (!mountedChartStages.value.includes(index)) {
+      mountedChartStages.value = [...mountedChartStages.value, index]
+    }
+  }
 
   // Process stages from explain result data
   const getStages = (result: ResultType) => {
@@ -150,8 +162,21 @@
     () => {
       activeStageIndex.value = 1
       activeView.value = 'table'
+      mountedChartStages.value = []
     }
   )
+
+  watch(activeView, (view) => {
+    if (view === 'chart') {
+      ensureChartStageMounted(activeStageIndex.value)
+    }
+  })
+
+  watch(activeStageIndex, (index) => {
+    if (activeView.value === 'chart') {
+      ensureChartStageMounted(index)
+    }
+  })
 </script>
 
 <style lang="less" scoped>
@@ -246,6 +271,26 @@
       :deep(.explain-grid) {
         flex: 1 1 0;
         height: 100%;
+      }
+    }
+
+    .explain-charts {
+      position: relative;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .explain-chart-pane {
+      position: absolute;
+      inset: 0;
+      visibility: hidden;
+      pointer-events: none;
+      z-index: 0;
+
+      &.active {
+        visibility: visible;
+        pointer-events: auto;
+        z-index: 1;
       }
     }
   }
