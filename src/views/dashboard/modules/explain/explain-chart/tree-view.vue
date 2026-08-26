@@ -68,6 +68,8 @@
   const backgroundMeasureContainer = ref<HTMLDivElement | null>(null)
   const nodeTreeBoundsMap = ref<Map<number, { minX: number; maxX: number }>>(new Map())
   const treeOffsetX = ref<number>(0)
+  const lastStructureFingerprint = ref('')
+  let renderGeneration = 0
 
   // Single traversal for all max stats (extensible for future metrics)
   type MaxStats = {
@@ -216,10 +218,84 @@
     return path
   }
 
+  function findNodeByPath(root: TreeNodeData | null | undefined, path: string[]): TreeNodeData | null {
+    if (!root || !path.length) return null
+    if (root.name !== path[0]) return null
+    if (path.length === 1) return root
+    const children = root.children || []
+    for (let i = 0; i < children.length; i += 1) {
+      const found = findNodeByPath(children[i], path.slice(1))
+      if (found) return found
+    }
+    return null
+  }
+
+  function getPlanNameTree(plan: any): any {
+    return {
+      name: plan?.name,
+      children: Array.isArray(plan?.children) ? plan.children.map(getPlanNameTree) : [],
+    }
+  }
+
+  function getStructureFingerprint(data: any[]): string {
+    if (!data?.length) return ''
+    return data
+      .map((row) => {
+        try {
+          return `${row[0]}:${row[1]}:${JSON.stringify(getPlanNameTree(JSON.parse(row[2])))}`
+        } catch {
+          return `${row[0]}:${row[1]}`
+        }
+      })
+      .join('|')
+  }
+
   // Note: Scrolling and highlighting are handled by parent component.
+
+  async function updateMetricsInPlace() {
+    if (!treeContainer.value) return
+    const svg = d3.select(treeContainer.value).select<SVGSVGElement>('svg')
+    // First paint / topology changes go through renderTree().
+    if (svg.empty()) return
+
+    renderGeneration += 1
+    const generation = renderGeneration
+    nodesData.value = processNodesData(props.data)
+    emit('nodesDataUpdated', nodesData.value)
+
+    const hierarchyByNode = new Map(
+      (nodesData.value as any[]).map((nodeData) => [nodeData.nodeIndex, toHierarchy(nodeData.plan, nodeData.nodeIndex)])
+    )
+
+    const jobs: Promise<void>[] = []
+    svg.selectAll<SVGGElement, any>('g.node').each(function updateNodeCard(d) {
+      const nodePath = getNodePath(d)
+      const root = hierarchyByNode.get(d.data.nodeIndex)
+      const updated = findNodeByPath(root, nodePath)
+      if (!updated) return
+
+      Object.assign(d.data, updated)
+      d.data.metrics = updated.metrics
+
+      const foreignObject = d3.select(this).select<SVGForeignObjectElement>('foreignObject')
+      jobs.push(
+        renderCardInBackground(d.data, d.data.nodeIndex).then(({ html, size }) => {
+          if (generation !== renderGeneration) return
+          if (foreignObject.empty()) return
+          foreignObject.attr('width', size[0] + 10).attr('height', size[1] + 10)
+          const node = foreignObject.node()
+          if (node) node.innerHTML = html
+        })
+      )
+    })
+
+    await Promise.all(jobs)
+  }
 
   async function renderTree() {
     if (!treeContainer.value || !props.data || props.data.length === 0) return
+    renderGeneration += 1
+    const generation = renderGeneration
 
     // Clear previous content
     treeContainer.value.innerHTML = ''
@@ -233,12 +309,9 @@
       .attr('class', `explain-svg ${componentId.value}`)
       .attr('viewBox', `0 0 ${treeContainer.value.clientWidth} ${treeContainer.value.clientHeight}`)
 
-    // Emit event for zoom controls to apply zoom behavior
-    // The preservedTransform will be retrieved by the parent/zoom-controls
-    emit('svgCreated', { svg })
-
-    // Add main group for transformation during zoom/pan
+    // Zoom target group must exist before applyZoom, otherwise preserved pan/zoom is lost.
     const mainGroup = svg.append('g').attr('class', componentId.value)
+    emit('svgCreated', { svg })
 
     // Process all node data
     nodesData.value = processNodesData(props.data)
@@ -304,6 +377,7 @@
     if (allRenderPromises.length > 0) {
       await Promise.all(allRenderPromises)
     }
+    if (generation !== renderGeneration) return
 
     // Create the tree layout with dynamic sizing
     const treeLayout = flextree({
@@ -579,15 +653,31 @@
     return { minX: minXInSVG, maxX: maxXInSVG, width: maxXInSVG - minXInSVG }
   }
 
-  // Watch all props that affect tree rendering
+  // Live metrics: keep layout + pan/zoom, only refresh card HTML.
+  // Topology / first paint: full renderTree.
   watch(
-    () => [props.data, props.highlightType, props.selectedMetric, props.metricsExpanded],
-    () => {
-      nextTick(() => {
-        renderTree()
-      })
+    () => props.data,
+    async (newData) => {
+      await nextTick()
+      const fingerprint = getStructureFingerprint(newData as any[])
+      const hasSvg = Boolean(treeContainer.value?.querySelector('svg'))
+      if (!hasSvg || fingerprint !== lastStructureFingerprint.value) {
+        lastStructureFingerprint.value = fingerprint
+        await renderTree()
+        return
+      }
+      await updateMetricsInPlace()
     },
     { immediate: true }
+  )
+
+  watch(
+    () => [props.highlightType, props.selectedMetric, props.metricsExpanded],
+    async () => {
+      if (!treeContainer.value?.querySelector('svg')) return
+      await nextTick()
+      await updateMetricsInPlace()
+    }
   )
 
   // Expose methods and treeContainer for parent component

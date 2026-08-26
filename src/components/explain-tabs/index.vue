@@ -30,6 +30,10 @@
         )
           | RAW
     .query-display(v-if="props.data?.query")
+      a-tag(v-if="props.data.streaming" size="small" color="arcoblue")
+        icon-loading(spin)
+        span {{ $t('dashboard.explainLiveRunning') }}
+        span(v-if="props.data.executionTime != null") {{ ` · ${props.data.executionTime}ms` }}
       a-popover(
         trigger="click"
         position="bl"
@@ -53,7 +57,8 @@
         )
 
   .explain-content
-    a-space(v-if="activeView === 'table'" direction="vertical" :size="0")
+    a-empty(v-if="props.data.streaming && !stages.length" :description="$t('dashboard.explainLiveWaiting')")
+    a-space(v-else-if="activeView === 'table'" direction="vertical" :size="0")
       ExplainGrid(
         v-for="(stage, index) in stages"
         :key="index"
@@ -117,6 +122,7 @@
         },
       ],
       execution_time_ms: result.executionTime,
+      streaming: result.streaming || undefined,
     }
   }
 
@@ -138,9 +144,9 @@
     }
   }
 
-  // Reset stage index when data changes
+  // Only reset view when switching to a different explain result tab, not on live metrics ticks
   watch(
-    () => props.data,
+    () => props.data?.key,
     () => {
       activeStageIndex.value = 1
       activeView.value = 'table'
@@ -190,6 +196,13 @@
       display: flex;
       align-items: center;
       gap: 6px;
+
+      :deep(.arco-tag) {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        flex-shrink: 0;
+      }
 
       :deep(.arco-typography.query-text) {
         margin: 0;

@@ -238,19 +238,27 @@
     }
   }
 
-  const areDataArraysEqual = (newData, oldData) => {
+  const getPlanNameTree = (planStr: string) => {
+    try {
+      const walk = (node: any): { name?: string; children: any[] } => ({
+        name: node?.name,
+        children: Array.isArray(node?.children) ? node.children.map(walk) : [],
+      })
+      return JSON.stringify(walk(JSON.parse(planStr)))
+    } catch {
+      return typeof planStr === 'string' ? planStr : ''
+    }
+  }
+
+  // Same stage/node/operator topology (ignore live metric value changes).
+  const isSamePlanStructure = (newData: any[], oldData: any[]) => {
     if (!newData || !oldData) return newData === oldData
     if (newData.length !== oldData.length) return false
-
     return newData.every((newRow, index) => {
       const oldRow = oldData[index]
-      if (newRow[0] !== oldRow[0] || newRow[1] !== oldRow[1]) return false
-
-      try {
-        return JSON.stringify(JSON.parse(newRow[2])) === JSON.stringify(JSON.parse(oldRow[2]))
-      } catch (e) {
-        return newRow[2] === oldRow[2]
-      }
+      return (
+        newRow[0] === oldRow[0] && newRow[1] === oldRow[1] && getPlanNameTree(newRow[2]) === getPlanNameTree(oldRow[2])
+      )
     })
   }
 
@@ -265,28 +273,27 @@
     { immediate: true }
   )
 
-  // Watch filteredData to update chart when data or root plan changes
+  // Live metrics refresh rebuilds the tree but must keep pan/zoom and controls.
+  // Only reset camera / highlight when topology changes (stage or root plan).
   watch(
     () => filteredData.value,
-    () => {
-      activeNodeIndex.value = availableNodes.value[0] ?? 0
-      zoomControls.value?.handleResetZoom()
+    (newData, oldData) => {
+      const nodes = availableNodes.value
+      if (!nodes.includes(activeNodeIndex.value)) {
+        activeNodeIndex.value = nodes[0] ?? 0
+      }
+
+      const structureChanged = !oldData || !isSamePlanStructure(newData, oldData)
+      if (!structureChanged) return
+
+      if (oldData) {
+        zoomControls.value?.handleResetZoom()
+      }
+      selectedMetric.value = ''
+      highlightType.value = 'DURATION'
+      metricsExpanded.value = false
     },
     { immediate: true }
-  )
-
-  // Watch props.data to reset state when stage changes (not when root plan changes)
-  watch(
-    () => props.data,
-    (newData, oldData) => {
-      // Only reset state if the data content actually changed (stage change)
-      if (!oldData || !areDataArraysEqual(newData, oldData)) {
-        selectedMetric.value = ''
-        highlightType.value = 'DURATION'
-        metricsExpanded.value = false
-        // Chart update is handled by filteredData watch
-      }
-    }
   )
 
   const localStageIndex = ref(props.index)
