@@ -671,12 +671,15 @@
     { immediate: true }
   )
 
+  // Highlight / expand / metric selection change card height — must re-layout.
+  // updateMetricsInPlace only refreshes HTML size on foreignObject and leaves
+  // flextree y-positions stale, which causes gaps or overlaps between cards.
   watch(
     () => [props.highlightType, props.selectedMetric, props.metricsExpanded],
     async () => {
       if (!treeContainer.value?.querySelector('svg')) return
       await nextTick()
-      await updateMetricsInPlace()
+      await renderTree()
     }
   )
 
