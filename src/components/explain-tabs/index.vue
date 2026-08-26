@@ -58,7 +58,7 @@
 
   .explain-content
     a-empty(v-if="props.data.streaming && !stages.length" :description="$t('dashboard.explainLiveWaiting')")
-    a-space(v-else-if="activeView === 'table'" direction="vertical" :size="0")
+    .explain-stages(v-else-if="activeView === 'table'")
       ExplainGrid(
         v-for="(stage, index) in stages"
         :key="index"
@@ -233,6 +233,20 @@
     > :first-child {
       height: 100%;
       overflow: auto;
+    }
+
+    .explain-stages {
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      gap: var(--gpt-gap-md);
+      padding: var(--gpt-gap-md);
+      overflow: hidden;
+
+      :deep(.explain-grid) {
+        flex: 1 1 0;
+        height: 100%;
+      }
     }
   }
 

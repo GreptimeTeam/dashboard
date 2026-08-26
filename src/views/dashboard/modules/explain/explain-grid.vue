@@ -531,14 +531,15 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
 <style lang="less" scoped>
   .explain-grid {
     --color-text-2: var(--gpt-text-primary);
-    margin: var(--gpt-page-padding-y) var(--gpt-page-padding-x);
-    overflow: hidden;
+    overflow: auto;
     padding: var(--gpt-page-padding-y) var(--gpt-page-padding-x);
     border: 1px solid var(--gpt-border-default);
     border-radius: var(--gpt-radius-md);
     background: var(--gpt-bg-panel);
-    width: fit-content;
+    width: 100%;
+    min-width: 0;
     max-width: 100%;
+    box-sizing: border-box;
 
     :deep(.arco-btn-icon .arco-icon) {
       color: var(--gpt-text-primary);
@@ -550,6 +551,8 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     display: flex;
     justify-content: flex-start;
     align-items: center;
+    flex-wrap: wrap;
+    gap: var(--gpt-gap-md);
     margin-bottom: 8px;
     .stage-index {
       font-size: var(--gpt-font-lg);
