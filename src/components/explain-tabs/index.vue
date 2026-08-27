@@ -58,25 +58,35 @@
 
   .explain-content
     a-empty(v-if="props.data.streaming && !stages.length" :description="$t('dashboard.explainLiveWaiting')")
-    .explain-stages(v-else-if="activeView === 'table'")
-      ExplainGrid(
-        v-for="(stage, index) in stages"
-        :key="index"
-        :data="stage"
-        :index="index"
+    .explain-views(v-else)
+      .explain-view-pane.explain-stages(
+        v-if="mountedViews.includes('table')"
+        :class="{ active: activeView === 'table' }"
       )
-    .explain-charts(v-else-if="activeView === 'chart'")
-      template(v-for="(stage, index) in stages" :key="`chart-stage-${index}`")
-        .explain-chart-pane(v-if="mountedChartStages.includes(index)" :class="{ active: activeStageIndex === index }")
-          ExplainChart(
-            :data="stage"
-            :index="index"
-            :active-stage-index="activeStageIndex"
-            :total-stages="stages.length"
-            @change-stage="activeStageIndex = $event"
+        ExplainGrid(
+          v-for="(stage, index) in stages"
+          :key="index"
+          :data="stage"
+          :index="index"
+        )
+      .explain-view-pane.explain-charts(
+        v-if="mountedViews.includes('chart')"
+        :class="{ active: activeView === 'chart' }"
+      )
+        template(v-for="(stage, index) in stages" :key="`chart-stage-${index}`")
+          .explain-chart-pane(
+            v-if="mountedChartStages.includes(index)"
+            :class="{ active: activeStageIndex === index }"
           )
-    .raw-json-card(v-else)
-      pre.raw-json {{ formattedRawJson }}
+            ExplainChart(
+              :data="stage"
+              :index="index"
+              :active-stage-index="activeStageIndex"
+              :total-stages="stages.length"
+              @change-stage="activeStageIndex = $event"
+            )
+      .explain-view-pane.raw-json-card(v-if="mountedViews.includes('raw')" :class="{ active: activeView === 'raw' }")
+        pre.raw-json {{ formattedRawJson }}
 </template>
 
 <script lang="ts" setup>
@@ -93,6 +103,9 @@
 
   const activeView = ref<'table' | 'chart' | 'raw'>('table')
   const activeStageIndex = ref(1)
+  // Keep visited views mounted so table↔chart switches preserve UI state
+  // (metric selection, expand, pan/zoom, scroll) instead of remounting.
+  const mountedViews = ref<Array<'table' | 'chart' | 'raw'>>(['table'])
   // Keep each stage chart mounted after first visit so stage switches preserve
   // pan/zoom, highlight, expand, and scroll instead of remounting.
   const mountedChartStages = ref<number[]>([])
@@ -100,6 +113,12 @@
   const ensureChartStageMounted = (index: number) => {
     if (!mountedChartStages.value.includes(index)) {
       mountedChartStages.value = [...mountedChartStages.value, index]
+    }
+  }
+
+  const ensureViewMounted = (view: 'table' | 'chart' | 'raw') => {
+    if (!mountedViews.value.includes(view)) {
+      mountedViews.value = [...mountedViews.value, view]
     }
   }
 
@@ -162,15 +181,21 @@
     () => {
       activeStageIndex.value = 1
       activeView.value = 'table'
+      mountedViews.value = ['table']
       mountedChartStages.value = []
     }
   )
 
-  watch(activeView, (view) => {
-    if (view === 'chart') {
-      ensureChartStageMounted(activeStageIndex.value)
-    }
-  })
+  watch(
+    activeView,
+    (view) => {
+      ensureViewMounted(view)
+      if (view === 'chart') {
+        ensureChartStageMounted(activeStageIndex.value)
+      }
+    },
+    { immediate: true }
+  )
 
   watch(activeStageIndex, (index) => {
     if (activeView.value === 'chart') {
@@ -260,6 +285,26 @@
       overflow: auto;
     }
 
+    .explain-views {
+      position: relative;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .explain-view-pane {
+      position: absolute;
+      inset: 0;
+      visibility: hidden;
+      pointer-events: none;
+      z-index: 0;
+
+      &.active {
+        visibility: visible;
+        pointer-events: auto;
+        z-index: 1;
+      }
+    }
+
     .explain-stages {
       display: flex;
       flex-direction: row;
@@ -275,8 +320,6 @@
     }
 
     .explain-charts {
-      position: relative;
-      height: 100%;
       overflow: hidden;
     }
 

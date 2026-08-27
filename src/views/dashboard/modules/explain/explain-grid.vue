@@ -2,7 +2,7 @@
 a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
   .grid-header
     .stage-index Stage {{ props.index }}
-    a-space.header-controls
+    a-space.header-controls(align="center")
       a-select(
         v-model="selectedNodes"
         size="small"
@@ -12,7 +12,7 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
         allow-clear
       )
         a-option(v-for="nodeId in availableNodes" :key="nodeId" :value="nodeId") Node {{ nodeId }}
-      a-space.metric-control(:size="0")
+      a-space.metric-control(align="center" :size="0")
         a-select(
           v-model="selectedMetric"
           size="small"
@@ -554,13 +554,19 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
     flex-wrap: wrap;
     gap: var(--gpt-gap-md);
     margin-bottom: 8px;
+    padding-bottom: var(--gpt-gap-md);
+    border-bottom: 1px solid var(--gpt-border-default);
+
     .stage-index {
+      display: flex;
+      align-items: center;
       font-size: var(--gpt-font-lg);
       font-weight: 500;
       color: var(--gpt-text-primary);
       margin-right: var(--gpt-gap-lg);
       margin-left: var(--gpt-gap-lg);
       width: 80px;
+      line-height: var(--gpt-control-height-sm);
       font-family: var(--font-family-base);
     }
   }
@@ -568,8 +574,6 @@ a-card.explain-grid(:bordered="false" :class="`explain-grid-${props.index}`")
   .header-controls {
     display: flex;
     align-items: center;
-    padding-bottom: var(--gpt-gap-md);
-    border-bottom: 1px solid var(--gpt-border-default);
   }
 
   .metrics {
