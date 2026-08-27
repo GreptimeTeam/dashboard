@@ -21,7 +21,8 @@
     "update:lock": "pnpm i --lockfile-only",
     "test": "vitest run",
     "smoke:release": "playwright test -c playwright.release.config.ts",
-    "smoke:release:build": "pnpm run build && pnpm run smoke:release"
+    "smoke:release:build": "pnpm run build && pnpm run smoke:release",
+    "smoke:release:tag": "bash scripts/verify-release.sh"
   },
   "lint-staged": {
     "*.{js,ts,jsx,tsx}": [
