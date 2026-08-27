@@ -10,10 +10,12 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
           span.logo-text-suffix {{ editionLabel }}
       svg.logo(v-else)
         use(href="#logo")
-    a-tooltip(position="right" :disabled="!greptimeCommit")
+    a-tooltip(position="right" :disabled="!greptimeCommit && !greptimeVersion")
       span.version-badge(v-if="!navbarCollapsed && greptimeVersion") {{ greptimeVersion }}
       template(#content)
-        .version-tooltip Commit: {{ greptimeCommit }}
+        .version-tooltip
+          div Version: {{ greptimeVersion }}
+          div Commit: {{ greptimeCommit }}
   a-layout-content.menu-content
     a-menu.navbar-menu(
       mode="vertical"
