@@ -102,13 +102,19 @@
   }>()
 
   const activeView = ref<'table' | 'chart' | 'raw'>('table')
-  const activeStageIndex = ref(1)
+  // Prefer DN (stage 1) when present; otherwise stage 0 so Chart always mounts.
+  const activeStageIndex = ref(0)
   // Keep visited views mounted so table↔chart switches preserve UI state
   // (metric selection, expand, pan/zoom, scroll) instead of remounting.
   const mountedViews = ref<Array<'table' | 'chart' | 'raw'>>(['table'])
   // Keep each stage chart mounted after first visit so stage switches preserve
   // pan/zoom, highlight, expand, and scroll instead of remounting.
   const mountedChartStages = ref<number[]>([])
+
+  const preferredStageIndex = (stageCount: number) => {
+    if (stageCount <= 0) return 0
+    return stageCount > 1 ? 1 : 0
+  }
 
   const ensureChartStageMounted = (index: number) => {
     if (!mountedChartStages.value.includes(index)) {
@@ -179,10 +185,21 @@
   watch(
     () => props.data?.key,
     () => {
-      activeStageIndex.value = 1
+      activeStageIndex.value = preferredStageIndex(stages.value.length)
       activeView.value = 'table'
       mountedViews.value = ['table']
       mountedChartStages.value = []
+    }
+  )
+
+  // Clamp / prefer DN once stages arrive (stream may fill rows after the tab mounts).
+  watch(
+    () => stages.value.length,
+    (count, prev) => {
+      if (count <= 0) return
+      if (activeStageIndex.value >= count || prev === 0) {
+        activeStageIndex.value = preferredStageIndex(count)
+      }
     }
   )
 
