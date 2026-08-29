@@ -29,6 +29,31 @@ export const cancelRunCode = (key: RunCodeAbortKey) => {
   delete abortControllers[key]
 }
 
+/** Register an AbortController for an existing abort key (e.g. Live explain SSE). */
+export const registerAbortController = (key: RunCodeAbortKey, controller: AbortController) => {
+  cancelRunCode(key)
+  abortControllers[key] = controller
+}
+
+export const clearAbortController = (key: RunCodeAbortKey, controller?: AbortController) => {
+  if (!controller || abortControllers[key] === controller) {
+    delete abortControllers[key]
+  }
+}
+
+export const createExplainResultKey = () => {
+  explainResultKeyCount.value += 1
+  return `explain-${explainResultKeyCount.value}`
+}
+
+export const EXPLAIN_RECORDS_SCHEMA = {
+  column_schemas: [
+    { name: 'stage', data_type: 'UInt32' },
+    { name: 'node', data_type: 'UInt32' },
+    { name: 'plan', data_type: 'String' },
+  ],
+}
+
 const API_MAP: AnyObject = {
   sql: (code: string, _params: PromForm, config?: AxiosRequestConfig) => editorAPI.runSQL(code, undefined, config),
   python: (code: string, _params: PromForm, config?: AxiosRequestConfig) => editorAPI.runScript(code, config),
