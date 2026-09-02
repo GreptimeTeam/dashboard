@@ -18,6 +18,7 @@ export default {
   'menu.dashboard.logPipeline': 'Logs Pipelines',
   'menu.dashboard.flow': 'Flow',
   'menu.dashboard.traces': 'Traces Query',
+  'menu.dashboard.drilldown': 'Drilldown',
   'menu.dashboard.perses': 'Visualization',
   'menu.news': 'Latest News',
   'menu.feedback': 'Send Feedback',

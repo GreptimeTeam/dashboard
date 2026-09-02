@@ -225,6 +225,18 @@ const DASHBOARD: AppRouteRecordRaw = {
       },
     },
     {
+      path: 'drilldown',
+      name: 'drilldown',
+      component: () => import('@/views/dashboard/drilldown/index.vue'),
+      meta: {
+        locale: 'menu.dashboard.drilldown',
+        requiresAuth: false,
+        icon: 'metric',
+        roles: ['admin', 'cloud'],
+        ignoreCache: true,
+      },
+    },
+    {
       path: 'perses',
       component: () => import('@/views/dashboard/perses/index.vue'),
       name: 'perses',

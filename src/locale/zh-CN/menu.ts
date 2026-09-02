@@ -18,6 +18,7 @@ export default {
   'menu.dashboard.logPipeline': 'Logs Pipeline',
   'menu.dashboard.flow': 'Flow',
   'menu.dashboard.traces': 'Traces 查询',
+  'menu.dashboard.drilldown': 'Drilldown',
   'menu.dashboard.perses': '可视化',
   'menu.news': '最新资讯',
   'menu.feedback': '发送反馈',

@@ -4,6 +4,7 @@ import playground from './zh-CN/playground'
 import settings from './zh-CN/settings'
 import logsQuery from './zh-CN/logs-query'
 import flow from './zh-CN/flow'
+import drilldown from './zh-CN/drilldown'
 
 export default {
   'copy': '复制',
@@ -97,4 +98,5 @@ export default {
   ...settings,
   ...logsQuery,
   ...flow,
+  ...drilldown,
 }
