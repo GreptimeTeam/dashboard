@@ -10,7 +10,7 @@
 | 决策 | 内容 |
 |------|------|
 | **产品** | 对标 Grafana Metrics + Logs + Traces Drilldown 的 **queryless** 关联观测 |
-| **代号 / 路由** | Explore；`/dashboard/explore`（**一条新路由**） |
+| **代号 / 路由** | Explore（产品代号）；**已上线** `/dashboard/drilldown`；规划别名 `/dashboard/explore` 尚未启用 |
 | **与 logs-query** | **不同产品**。logs-query = Logs Explore（SQL Builder），**不改造**；Drilldown 仅作「Open in SQL Explore」高级出口 |
 | **与 Perses** | **解耦**。Explore 独立 Vue 产品；Perses = 固化看板 + Phase 2+ 深链 |
 | **与 Grafana 差异** | **单 Context 同屏刷新** M/L/T，不做三个独立 App 互跳 |
@@ -103,11 +103,17 @@ Grafana Metrics Drilldown 侧栏「Group by labels」依赖：
 
 | 规则 | 内容 |
 |------|------|
-| **顶栏 UI** | sql-builder 式横向 `field \| op \| value` 行；**Metrics value 手输**（不做 cross-metric Prom value API 补全） |
-| **Logs value 辅助** | `logsTable` + fieldMap 配置后，顶栏 value 可用 SQL `SELECT DISTINCT` |
+| **顶栏 UI** | **Grafana 式 combobox**：单边框内 pill + 单行 `<input>`；分阶段 suggest（label → operator → value）；Backspace 回退（value → operator → label；空 label 删最后一 pill）；提交后 **不**自动重开 suggest |
+| **实现** | [`drilldown-filter-combobox.vue`](../../../src/views/dashboard/drilldown/components/drilldown-filter-combobox.vue) + [`filter-bar.vue`](../../../src/views/dashboard/drilldown/components/filter-bar.vue) |
+| **Metrics label** | Prom `GET /labels`；无 `__name__` 于 filters 时**不传** `match[]`（Greptime 会 400） |
+| **Metrics value** | **手输**；无 cross-metric Prom value API |
+| **Logs value 辅助** | `logsTable` + fieldMap 命中列名时，SQL `SELECT DISTINCT`；schema 在 `logsTable` 变更时缓存 |
+| **编辑已有 filter** | label 只读；operator / value 可改 |
 | **Add to filter 主路径** | Breakdown label/value panel 卡 → `ctx.filters` |
 | **R-BRK-1** | Breakdown label 卡仅 1 个 value 时仍显示 **Add to filter**（Greptime 偏离 Grafana 藏 Select） |
 | **Related logs** | `timeRange` + `filters.length > 0` + `logsTable` + fieldMap SQL；**不看 metric 名** |
+
+实现进度见 [implementation-status.md](./implementation-status.md)。
 
 ---
 
@@ -115,7 +121,7 @@ Grafana Metrics Drilldown 侧栏「Group by labels」依赖：
 
 | Phase | 范围 | 布局是否阻塞 |
 |-------|------|--------------|
-| **0** | Context、URL、resolve 表、settings、metrics 列表壳、adapters 骨架 | **否** |
+| **0** | Context、URL、resolve 表、metrics 列表壳、filter combobox、adapters 部分 | **进行中**（见 [implementation-status](./implementation-status.md)）；settings UI ⬜ |
 | **1** | L1/L2/L3 联动、三信号同屏刷新（布局定稿后接 UI） | 部分 |
 | **2+** | Breakdown 完整 UI、Related、Bookmarks、Perses 深链、RED | 否 |
 
@@ -154,7 +160,7 @@ Grafana Metrics Drilldown 侧栏「Group by labels」依赖：
 
 | 共用 | 分离 |
 |------|------|
-| Context、filters[]、filter-bar、timeRange 全刷新 | Prom 目录 vs SQL volume |
+| Context、filters[]、Grafana filter combobox、timeRange 全刷新 | Prom 目录 vs SQL volume |
 | Add to filters、focusTraceId、deep-links | Select 三义（M）vs service 卡（L） |
 | lazy 网格、breakdown volume 图、Bookmarks | inferPromQL vs 日志 SELECT / field 发现 |
 

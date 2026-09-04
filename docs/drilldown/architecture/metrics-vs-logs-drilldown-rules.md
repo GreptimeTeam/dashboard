@@ -45,8 +45,8 @@ type DrilldownContext = {
 | **R-FLT-3** | chip 上 × 删除单条；Reset 清空 filters（可保留 Logs 的 primaryGroupBy，产品可配置） |
 | **R-FLT-4** | Metrics：`__name__` 仅用于 **缩窄指标列表**，**不**写入 PromQL matcher（Grafana #235） |
 | **R-FLT-5** | Logs/Metrics 跨信号：同一 filter chip → Prom `match[]` **与** SQL WHERE **并行生效** |
-| **R-FLT-6** | 顶栏 filter：**Metrics value 手输**；Greptime 不支持无 match 的 `/label/{k}/values` |
-| **R-FLT-7** | Logs：`logsTable` 配置后顶栏 value 可用 SQL `DISTINCT` 辅助 |
+| **R-FLT-6** | 顶栏 filter UI：**Grafana combobox**（pill + 分阶段 suggest）；Metrics value **手输** |
+| **R-FLT-7** | Logs：`logsTable` 配置后顶栏 value 可用 SQL `DISTINCT`；label keys 走 Prom `/labels`（无 `__name__` 时不传 match） |
 | **R-BRK-1** | Breakdown label 卡 `series===1`（仅 1 个 value）仍提供 **Add to filter**（Greptime 偏离 Grafana） |
 
 **公共模块**：`src/observability/context.ts`（filters CRUD）、`src/observability/filters.ts`（`addFilter` / `removeFilter` / `filtersToPromMatch` / `filtersToSqlWhere`）
@@ -137,7 +137,8 @@ type DrilldownContext = {
 | 规则 | 内容 |
 |------|------|
 | **M-SEL-1** | 主图区 **无** Select；用「Select new metric」换指标 |
-| **M-SEL-2** | label 卡：仅 1 条 series → **隐藏** Select |
+| **M-SEL-2** | label 卡：仅 1 条 series → **隐藏** Select（Grafana 规格） |
+| **M-SEL-2′** | **已实现偏离**：Greptime 按 **R-BRK-1** 显示 Add to filter，不隐藏 |
 | **M-SEL-3** | value 卡：数据点 < 2 / `<unspecified>` / binary ratio → **无** Add to filters |
 
 ### 2.4 单指标详情
@@ -253,32 +254,43 @@ type DrilldownContext = {
 
 ## 五、公共实现清单（建议模块）
 
-```text
-src/observability/
-├── context.ts                 # R-CTX-*：store + URL sync
-├── filters.ts                 # R-FLT-*：add/remove/toProm/toSql
-├── field-map.ts               # chip key ↔ 列名 / label 名
-├── drilldown-settings.ts      # 持久化 + 各信号配置
-├── table-semantics.ts         # signal_type、metric.type
-├── resolve-table.ts           # resolveLogsTable / resolveTracesTable
-├── deep-links.ts              # R-EXIT-*
-├── breakdown/
-│   ├── types.ts               # BreakdownDimension, ChartMode: 'count'|'avg'
-│   ├── volume-chart.ts        # 统一「各 value 的 volume 时序」props
-│   └── cardinality-guard.ts   # max series / distinct 阈值
-├── actions/
-│   ├── drilldown-action.ts    # enum: SelectMetric | SelectDimension | AddToFilters | FocusTrace
-│   └── apply-action.ts        # 写 Context + 触发 refresh
-└── adapters/
-    ├── metrics.ts             # M-* 规则
-    ├── logs.ts                # L-* 规则
-    └── traces.ts
+> **2026-09-02**：下列「实际路径」以仓库为准；完整状态见 [implementation-status.md](../summaries/implementation-status.md)。
 
-src/views/dashboard/explore/
-├── use-drilldown-context.ts   # provide/inject
-├── filter-bar.vue             # chips + add label UI（M/L 共用）
-├── breakdown-grid.vue         # Labels/Fields/Metric labels 共用网格 + lazy
-└── ...
+```text
+src/observability/                          # 状态见 implementation-status
+├── context.ts                 # ✅ R-CTX-*：store + provide/inject
+├── filters.ts                 # ✅ R-FLT-*：add/remove/toProm/toSql + Greptime match 守卫
+├── types.ts                   # ✅ FilterOp, FieldMap, SidebarFilters
+├── use-drilldown-url-sync.ts  # ✅
+├── use-drilldown-filter-options.ts  # ✅
+├── use-drilldown-logs-init.ts       # ✅
+├── use-metrics-catalog.ts           # ✅
+├── logs/resolve-table.ts      # ✅ resolveLogsTable / default fieldMap
+├── metrics/
+│   ├── catalog.ts             # ✅ pool + prefix/suffix/groupBy 逻辑
+│   ├── breakdown.ts           # ✅ labels/values；⬜ inferPromQL stub
+│   ├── prefix-tree.ts / suffix-tree.ts / recent.ts  # ✅
+├── table-semantics.ts         # ⬜
+├── drilldown-settings.ts      # ⬜
+├── deep-links.ts              # ⬜
+└── adapters/
+    ├── metrics.ts             # ✅ pool / match
+    ├── logs.ts                # ✅ related logs；⬜ volume
+    ├── filter-options.ts      # ✅ Prom keys + SQL DISTINCT
+    └── traces.ts              # ⬜
+
+src/views/dashboard/drilldown/   # 路由 /dashboard/drilldown
+├── index.vue                  # ✅
+├── components/
+│   ├── top-bar.vue            # ✅
+│   ├── filter-bar.vue         # ✅
+│   ├── drilldown-filter-combobox.vue  # ✅ Grafana combobox（非 sql-builder 行）
+│   └── drilldown-filter-pill.vue      # ✅
+└── metrics/
+    ├── metrics-sidebar.vue    # ✅ prefix/suffix
+    ├── metric-name-list.vue   # ✅ 文字网格（⬜ sparkline）
+    ├── metric-detail.vue      # ✅ Breakdown + Related logs（⬜ 主图）
+    └── breakdown-grid.vue     # ✅ Add to filter
 ```
 
 ### 5.1 最值得复用的 5 块
@@ -286,10 +298,10 @@ src/views/dashboard/explore/
 | # | 模块 | 服务的规则 | Metrics | Logs |
 |---|------|-----------|---------|------|
 | 1 | **Context + filters.ts** | R-CTX, R-FLT | match[] | SQL WHERE |
-| 2 | **filter-bar.vue** | R-FLT-1~3 | ✓ | ✓ |
-| 3 | **breakdown volume 图** | Count/Avg 语义 | label/value 卡 | Labels/Fields 卡 |
-| 4 | **useLazyPanelQuery** | R-HOME-2 | sparkline | service 卡 |
-| 5 | **deep-links.ts** | R-EXIT | metrics URL | logs-query URL |
+| 2 | **filter combobox**（[`drilldown-filter-combobox.vue`](../../../src/views/dashboard/drilldown/components/drilldown-filter-combobox.vue)） | R-FLT-1~7 | ✅ | ✅（Logs DISTINCT 待 Settings） |
+| 3 | **breakdown volume 图** | Count/Avg 语义 | ⬜ 列表卡 only | ⬜ |
+| 4 | **useLazyPanelQuery** | R-HOME-2 | ⬜ sparkline | ⬜ service 卡 |
+| 5 | **deep-links.ts** | R-EXIT | ⬜ | ⬜ |
 
 ### 5.2 不应强行统一的块
 

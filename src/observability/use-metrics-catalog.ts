@@ -1,6 +1,12 @@
 import { computed, ref, watch, type Ref } from 'vue'
 import { buildMatchSelector, fetchMetricNamesPool } from './adapters/metrics'
-import { applySidebarFilters, groupMetricNames, sortMetricNames, type MetricsSortOption } from './metrics/catalog'
+import {
+  applySidebarFilters,
+  groupMetricNames,
+  matchesSearch,
+  sortMetricNames,
+  type MetricsSortOption,
+} from './metrics/catalog'
 import { computeMetricPrefixGroups } from './metrics/prefix-tree'
 import { computeMetricSuffixGroups } from './metrics/suffix-tree'
 import { getRecentMetrics } from './metrics/recent'
@@ -45,8 +51,10 @@ export default function useMetricsCatalog(ctx: DrilldownContext, search: Ref<str
     { deep: true, immediate: true }
   )
 
-  const prefixGroups = computed(() => computeMetricPrefixGroups(poolNames.value))
-  const suffixGroups = computed(() => computeMetricSuffixGroups(poolNames.value))
+  const catalogNamesForTree = computed(() => poolNames.value.filter((name) => matchesSearch(name, search.value)))
+
+  const prefixGroups = computed(() => computeMetricPrefixGroups(catalogNamesForTree.value))
+  const suffixGroups = computed(() => computeMetricSuffixGroups(catalogNamesForTree.value))
 
   const filteredNames = computed(() => applySidebarFilters(poolNames.value, ctx.sidebarFilters.value, search.value))
 
@@ -61,7 +69,7 @@ export default function useMetricsCatalog(ctx: DrilldownContext, search: Ref<str
     poolCount: computed(() => poolNames.value.length),
     filteredCount: computed(() => sortedNames.value.length),
     prefixGroups,
-    metricNames: computed(() => poolNames.value),
+    metricNames: catalogNamesForTree,
     suffixGroups,
     groups,
     flatNames: sortedNames,

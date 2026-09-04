@@ -28,7 +28,7 @@
 
   .filter-label {
     font-size: 12px;
-    color: var(--color-text-2);
+    color: var(--gpt-text-secondary);
     line-height: 1;
     white-space: nowrap;
   }

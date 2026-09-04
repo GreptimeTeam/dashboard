@@ -24,7 +24,7 @@
       .filter-combobox__editor
         span.filter-combobox__segment.filter-combobox__key(
           v-if="showKeyPrefix"
-          :class="{ 'is-readonly': isEditing }"
+          :class="{ 'is-readonly': isEditing && stage !== 'key' }"
           @mousedown.prevent="handleKeyPrefixClick"
         ) {{ draftKey }}
         span.filter-combobox__segment.filter-combobox__op(v-if="showOpPrefix" @mousedown.prevent="handleOpPrefixClick") {{ draftOp }}
@@ -120,6 +120,9 @@
   const sqlField = computed(() => isSqlFieldKey(activeFieldKey.value))
 
   const showKeyPrefix = computed(() => {
+    if (isEditing.value && stage.value === 'key') {
+      return false
+    }
     if (isEditing.value) {
       return true
     }
@@ -437,7 +440,66 @@
     resetWip()
   }, 120)
 
+  const retreatToOperator = () => {
+    draftValue.value = ''
+    stage.value = 'operator'
+    syncInputForStage()
+    deferIgnoreBlur()
+    focusInput()
+    openSuggest()
+  }
+
+  const retreatToKey = () => {
+    stage.value = 'key'
+    inputValue.value = draftKey.value
+    draftKey.value = ''
+    draftOp.value = '='
+    deferIgnoreBlur()
+    focusInput()
+    openSuggest()
+  }
+
+  const handleBackspaceInput = (event: KeyboardEvent) => {
+    if (event.key !== 'Backspace' || inputValue.value !== '') {
+      return
+    }
+
+    event.preventDefault()
+
+    if (stage.value === 'value') {
+      retreatToOperator()
+      return
+    }
+
+    if (stage.value === 'operator') {
+      retreatToKey()
+      return
+    }
+
+    if (isEditing.value && editingIndex.value !== null) {
+      removeFilterAt(editingIndex.value)
+      prepareWipForNextFilter()
+      return
+    }
+
+    if (filters.value.length > 0) {
+      removeFilterAt(filters.value.length - 1)
+      deferIgnoreBlur()
+      focusInput()
+      openSuggest()
+      return
+    }
+
+    resetWip()
+  }
+
   const handleInputKeydown = (event: KeyboardEvent) => {
+    if (event.key === 'Backspace') {
+      handleBackspaceInput(event)
+      if (event.defaultPrevented) {
+        return
+      }
+    }
     if (event.key === 'ArrowDown') {
       event.preventDefault()
       if (!suggestOptions.value.length) {

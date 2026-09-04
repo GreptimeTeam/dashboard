@@ -6,10 +6,12 @@ import {
   type DrilldownFilter,
   type DrilldownFieldMap,
   type DrilldownSidebarFilters,
+  type DrilldownSignal,
 } from './types'
 import { addFilter as mergeFilter } from './filters'
 
 export interface DrilldownContext {
+  signal: Ref<DrilldownSignal>
   filters: Ref<DrilldownFilter[]>
   sidebarFilters: Ref<DrilldownSidebarFilters>
   metric: Ref<string | undefined>
@@ -23,15 +25,19 @@ export interface DrilldownContext {
   resetTimeRange: () => void
   refreshKey: Ref<number>
   triggerRefresh: () => void
+  setSignal: (signal: DrilldownSignal) => void
   setFilters: (filters: DrilldownFilter[]) => void
   setSidebarFilters: (filters: DrilldownSidebarFilters) => void
   appendFilter: (filter: DrilldownFilter) => void
 }
 
+export const DRILLDOWN_DEFAULT_TIME_MINUTES = 30
+
 export const DRILLDOWN_CONTEXT_KEY: InjectionKey<DrilldownContext> = Symbol('drilldownContext')
 
 export function useDrilldownContextProvider(): DrilldownContext {
-  const timeRangeHook = useTimeRange({ time: 15 })
+  const timeRangeHook = useTimeRange({ time: DRILLDOWN_DEFAULT_TIME_MINUTES })
+  const signal = ref<DrilldownSignal>('metrics')
   const filters = ref<DrilldownFilter[]>([])
   const sidebarFilters = ref<DrilldownSidebarFilters>({ ...DEFAULT_SIDEBAR_FILTERS })
   const metric = ref<string | undefined>()
@@ -43,6 +49,13 @@ export function useDrilldownContextProvider(): DrilldownContext {
 
   const triggerRefresh = () => {
     refreshKey.value += 1
+  }
+
+  const setSignal = (next: DrilldownSignal) => {
+    if (next !== 'metrics') {
+      metric.value = undefined
+    }
+    signal.value = next
   }
 
   const setFilters = (next: DrilldownFilter[]) => {
@@ -58,6 +71,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
   }
 
   const context: DrilldownContext = {
+    signal,
     filters,
     sidebarFilters,
     metric,
@@ -71,6 +85,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
     resetTimeRange: timeRangeHook.reset,
     refreshKey,
     triggerRefresh,
+    setSignal,
     setFilters,
     setSidebarFilters,
     appendFilter,

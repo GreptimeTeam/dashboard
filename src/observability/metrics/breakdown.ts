@@ -82,10 +82,4 @@ export async function fetchBreakdownLabelValues(
   }
 }
 
-export function inferPromQL(metric: string, matchers?: string): string {
-  const escapedMetric = metric.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-  if (!matchers?.trim()) {
-    return `avg(${escapedMetric})`
-  }
-  return `avg(${escapedMetric}{${matchers}})`
-}
+export { inferMetricKind, inferPromQL, type MetricKind } from './infer-promql'

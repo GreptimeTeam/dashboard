@@ -62,38 +62,45 @@
     }
   })
 
-  onMounted(() => {
-    if (chartContainer.value && props.options) {
-      chartInstance = echarts.init(chartContainer.value)
-      chartInstance.setOption(props.options, {
-        notMerge: true,
-        lazyUpdate: true,
-      })
-      nextTick(() => {
-        chartInstance?.dispatchAction({
-          type: 'takeGlobalCursor',
-          key: 'dataZoomSelect',
-          dataZoomSelectActive: true,
-        })
-      })
-      // Add event listeners
-      chartInstance.on('datazoom', (event) => {
-        emit('datazoom', event)
-      })
-      // Ensure wheel scroll bubbles to page
-      attachWheelPassthrough()
+  const initChartIfNeeded = () => {
+    if (!chartContainer.value || !props.options || chartInstance || isUnmounting.value) {
+      return
     }
+    chartInstance = echarts.init(chartContainer.value)
+    chartInstance.setOption(props.options, {
+      notMerge: true,
+      lazyUpdate: true,
+    })
+    nextTick(() => {
+      chartInstance?.dispatchAction({
+        type: 'takeGlobalCursor',
+        key: 'dataZoomSelect',
+        dataZoomSelectActive: true,
+      })
+    })
+    chartInstance.on('datazoom', (event) => {
+      emit('datazoom', event)
+    })
+    attachWheelPassthrough()
+  }
+
+  onMounted(() => {
+    initChartIfNeeded()
   })
 
   // Watch for options changes - run after DOM patch to avoid key change conflicts
   watch(
     () => props.options,
     (newOptions) => {
-      // Skip if instance gone or unmounting due to key change
-      if (!chartInstance || !chartContainer.value || isUnmounting.value) return
+      if (!chartContainer.value || isUnmounting.value || !newOptions) return
+
+      if (!chartInstance) {
+        initChartIfNeeded()
+        return
+      }
 
       nextTick(() => {
-        chartInstance.setOption(newOptions, {
+        chartInstance?.setOption(newOptions, {
           notMerge: true,
           lazyUpdate: true,
         })

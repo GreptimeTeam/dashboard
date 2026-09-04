@@ -1,3 +1,5 @@
+export type DrilldownSignal = 'metrics' | 'logs' | 'traces'
+
 export type DrilldownFilterOp = '=' | '!=' | '=~' | '!~'
 
 export interface DrilldownFilter {
