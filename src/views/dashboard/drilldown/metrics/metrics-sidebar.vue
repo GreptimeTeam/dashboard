@@ -144,7 +144,7 @@
 
   .sidebar-search {
     flex-shrink: 0;
-    margin-bottom: 8px;
+    margin-bottom: var(--gpt-gap-md);
 
     :deep(.arco-input-wrapper) {
       width: 100%;

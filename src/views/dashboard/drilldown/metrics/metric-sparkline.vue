@@ -166,6 +166,8 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
+    // Sit tight under the chart x-axis (grid bottom is only ~2px inside ECharts).
+    margin-top: 4px;
   }
 
   .query-legend {

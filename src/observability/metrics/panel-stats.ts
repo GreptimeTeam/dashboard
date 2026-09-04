@@ -1,4 +1,5 @@
 import type { MetricKind } from './infer-promql'
+import { formatMetricUnitValue, resolveMetricPanelUnit } from './metric-units'
 
 export interface SparklineStats {
   last: number | null
@@ -44,59 +45,48 @@ export function computeSparklineStats(points: Array<[number, number | null]>): S
   }
 }
 
+/**
+ * Whether the catalog query wraps the metric in `rate()` (counter → `sum(rate(...))`).
+ * Matches Grafana `getTimeseriesQueryRunnerParams` `isRateQuery`.
+ */
+export function isMetricRateQuery(kind: MetricKind): boolean {
+  return kind === 'counter'
+}
+
+/** @deprecated Prefer resolveMetricPanelUnit(metricName, isRate). Kept for call sites without a name. */
 export function metricKindAxisUnit(kind: MetricKind): string {
-  switch (kind) {
-    case 'counter':
-      return '/s'
-    default:
-      return ''
-  }
+  return isMetricRateQuery(kind) ? 'c/s' : ''
 }
 
-function trimCompactSuffix(label: string): string {
-  return label.replace(/(\.\d*?)0+([kM])$/, '$1$2').replace(/\.([kM])$/, '$1')
-}
-
-function formatCompactNumber(value: number, options?: { forAxis?: boolean }): string {
-  const abs = Math.abs(value)
-  if (abs === 0) {
-    return '0'
-  }
-  if (abs >= 1_000_000) {
-    return trimCompactSuffix(`${(value / 1_000_000).toPrecision(3)}M`)
-  }
-  if (abs >= 1_000) {
-    return trimCompactSuffix(`${(value / 1_000).toPrecision(3)}k`)
-  }
-  if (abs >= 1) {
-    if (Number.isInteger(value)) {
-      return options?.forAxis ? String(value) : value.toLocaleString()
-    }
-    return String(Number(value.toPrecision(4)))
-  }
-  return value.toExponential(2)
-}
-
-/** Compact numeric label for panel stats / tables (no metric-kind unit). */
+/** Compact numeric label for panel stats / tables (no metric unit). */
 export function formatMetricPanelValue(value: number | null | undefined): string {
   if (value === null || value === undefined || !Number.isFinite(value)) {
     return '—'
   }
-  return formatCompactNumber(value)
+  return formatMetricUnitValue(value, 'none')
 }
 
-/** Y-axis / tooltip formatter: compact number + kind unit (e.g. counter → `/s`). */
+/**
+ * Y-axis / tooltip formatter.
+ *
+ * Grafana timeseries:
+ *   unit = isRateQuery ? getPerSecondRateUnit(name) : getUnit(name)
+ * e.g. counter → `cps` (`0.3 c/s`), `*_bytes_total` → `Bps`, gauge `*_seconds` → `s`.
+ */
 export function formatMetricAxisValue(
   value: number | null | undefined,
-  options?: { kind?: MetricKind; forAxis?: boolean }
+  options?: { kind?: MetricKind; metricName?: string; forAxis?: boolean }
 ): string {
   if (value === null || value === undefined || !Number.isFinite(value)) {
     return '—'
   }
   const kind = options?.kind ?? 'unknown'
-  const formatted = formatCompactNumber(value, { forAxis: options?.forAxis })
-  const unit = metricKindAxisUnit(kind)
-  return unit ? `${formatted}${unit}` : formatted
+  const isRate = isMetricRateQuery(kind)
+  let unit = isRate ? 'cps' : 'none'
+  if (options?.metricName) {
+    unit = resolveMetricPanelUnit(options.metricName, isRate)
+  }
+  return formatMetricUnitValue(value, unit)
 }
 
 export function metricKindLabelKey(kind: MetricKind): string {

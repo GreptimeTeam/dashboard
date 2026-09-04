@@ -113,15 +113,16 @@
   .metric-groups {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    // Section rhythm between prefix groups — one step above card gap.
+    gap: var(--gpt-gap-lg);
   }
 
   .group-header {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
-    padding-bottom: 6px;
+    gap: var(--gpt-gap-md);
+    margin-bottom: var(--gpt-gap-md);
+    padding-bottom: var(--gpt-gap-sm);
     border-bottom: 1px solid var(--color-border-2);
   }
 
@@ -139,7 +140,8 @@
   .metric-cards {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
+    // Grafana MetricsList SceneCSSGridLayout default: rowGap/columnGap = spacing(1) → 8px.
+    gap: var(--gpt-gap-md);
 
     @media (max-width: 1400px) {
       grid-template-columns: repeat(3, minmax(0, 1fr));

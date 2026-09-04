@@ -125,7 +125,7 @@ export default function useMetricSparkline(
         }
         chartOption.value = buildHeatmapOption(heatmap, name, { timeRange: [start, end] })
         const colorBounds = resolveHeatmapColorBounds(heatmap.cells)
-        heatmapLegend.value = formatHeatmapLegendLabels(colorBounds.minValue, colorBounds.maxValue)
+        heatmapLegend.value = formatHeatmapLegendLabels(colorBounds.minValue, colorBounds.maxValue, name)
         return
       }
 
@@ -140,6 +140,7 @@ export default function useMetricSparkline(
 
       chartOption.value = buildSparklineOption(points, {
         metricKind: metricKind.value,
+        metricName: name,
         timeRange: [start, end],
         color: seriesColor.value,
       })

@@ -1,6 +1,7 @@
 import type { EChartsOption } from 'echarts'
 import formatTimeAxisLabel, { calculateTimeAxisTicks } from '@/utils/chart-time-axis'
 import type { MetricKind } from './infer-promql'
+import { formatMetricUnitValue, getUnit } from './metric-units'
 import { formatMetricAxisValue } from './panel-stats'
 import getSeriesColorByIndex, { SERIES_FILL_OPACITY } from './series-colors'
 
@@ -101,22 +102,6 @@ function formatHeatmapYMinLabel(buckets: string[]): string {
   return hasFractional ? '0.0' : '0'
 }
 
-function formatHeatmapRateValue(value: number): string {
-  if (!Number.isFinite(value) || value <= 0) {
-    return '0'
-  }
-  if (value < 0.01) {
-    return value.toExponential(2)
-  }
-  if (value < 10) {
-    return Number(value.toPrecision(3)).toString()
-  }
-  if (value < 1000) {
-    return String(Math.round(value))
-  }
-  return `${(value / 1000).toFixed(1)}k`
-}
-
 /** Grafana default `filterValues.le` — hide true zeros / float noise. */
 const HEATMAP_FILTER_VALUES_LE = 1e-9
 
@@ -179,14 +164,16 @@ export function resolveHeatmapColorBounds(cells: Array<[number, number, number]>
   return { minValue, maxValue }
 }
 
-/** Grafana color legend: Auto(min) … Auto(max) of visible cell values. */
+/** Grafana color legend: Auto(min) … Auto(max) with panel unit from `getUnit(metricName)`. */
 export function formatHeatmapLegendLabels(
   minValue: number,
-  maxValue: number
+  maxValue: number,
+  metricName?: string
 ): { low: string; mid: string; high: string } {
-  const low = `${formatHeatmapRateValue(minValue)}/s`
-  const high = `${formatHeatmapRateValue(maxValue)}/s`
-  const mid = `${formatHeatmapRateValue((minValue + maxValue) / 2)}/s`
+  const unit = getUnit(metricName ?? '')
+  const low = formatMetricUnitValue(minValue, unit)
+  const high = formatMetricUnitValue(maxValue, unit)
+  const mid = formatMetricUnitValue((minValue + maxValue) / 2, unit)
   return { low, mid, high }
 }
 
@@ -270,8 +257,12 @@ const AXIS_LABEL_COLOR = 'rgba(71, 52, 96, 0.45)'
 const AXIS_LINE_COLOR = 'rgba(71, 52, 96, 0.12)'
 const GRID_LINE_COLOR = 'rgba(71, 52, 96, 0.06)'
 
-/** Shared panel chart grid — timeseries & heatmap. */
-const PANEL_GRID = { left: 4, right: 8, top: 6, bottom: 22, containLabel: true }
+/**
+ * Shared panel chart grid — timeseries & heatmap.
+ * With `containLabel: true`, `bottom` is padding *below* axis labels (not label height).
+ * Keep it small so x-axis sits close to the panel footer legend.
+ */
+const PANEL_GRID = { left: 4, right: 8, top: 6, bottom: 2, containLabel: true }
 
 export interface PanelChartAxisOptions {
   plotWidthPx?: number
@@ -363,8 +354,8 @@ export function sparklineSeriesColor(kind: MetricKind): string {
 
 export { getSeriesColorByIndex }
 
-function formatSparklineAxisValue(value: number, kind: MetricKind): string {
-  return formatMetricAxisValue(value, { kind, forAxis: true })
+function formatSparklineAxisValue(value: number, kind: MetricKind, metricName?: string): string {
+  return formatMetricAxisValue(value, { kind, metricName, forAxis: true })
 }
 
 /** Grafana Spectral-like gradient (low → high intensity). */
@@ -382,10 +373,11 @@ const HEATMAP_COLORS = [
 
 export function buildHeatmapOption(
   data: HistogramHeatmapData,
-  _metricName?: string,
+  metricName?: string,
   options?: PanelChartAxisOptions
 ): EChartsOption {
   const { times, buckets, cells } = data
+  const valueUnit = getUnit(metricName ?? '')
 
   const { startMs, endMs, spanMs } = resolvePanelTimeWindow(
     times[0] ?? 0,
@@ -424,8 +416,8 @@ export function buildHeatmapOption(
 
   return {
     animation: false,
-    // Tighter bottom: x labels only — no extra band between cells and the axis line.
-    grid: { ...PANEL_GRID, bottom: 18, top: 4 },
+    // Heatmap: compact under the plot (legend sits in DOM below the chart).
+    grid: { ...PANEL_GRID, bottom: 2, top: 4 },
     tooltip: {
       trigger: 'item',
       confine: true,
@@ -444,7 +436,7 @@ export function buildHeatmapOption(
         const upper = yAxisLabels[yIndex] ?? ''
         const lower = yIndex > 0 ? yAxisLabels[yIndex - 1] ?? yMinLabel : yMinLabel
         const range = upper === '+Inf' ? `> ${lower}` : `${lower} – ${upper}`
-        return `${time}<br/>${range}<br/>${formatHeatmapRateValue(rate)}/s`
+        return `${time}<br/>${range}<br/>${formatMetricUnitValue(rate, valueUnit)}`
       },
     },
     xAxis: {
@@ -514,10 +506,11 @@ export function buildHeatmapOption(
 
 export function buildSparklineOption(
   points: Array<[number, number | null]>,
-  options?: PanelChartAxisOptions & { color?: string; metricKind?: MetricKind }
+  options?: PanelChartAxisOptions & { color?: string; metricKind?: MetricKind; metricName?: string }
 ): EChartsOption {
   const color = options?.color ?? sparklineSeriesColor(options?.metricKind ?? 'unknown')
   const metricKind = options?.metricKind ?? 'unknown'
+  const metricName = options?.metricName
   const data = points.map(([timestamp, value]) => [timestamp * 1000, value])
   const { startMs, endMs, spanMs } = resolvePanelTimeWindow(
     points[0]?.[0] ?? 0,
@@ -552,7 +545,7 @@ export function buildSparklineOption(
           return ''
         }
         const time = formatTimeAxisLabel(Number(timeValue), spanMs, tickIntervalMs)
-        const formatted = formatSparklineAxisValue(Number(value), metricKind)
+        const formatted = formatSparklineAxisValue(Number(value), metricKind, metricName)
         return `${time}<br/><span style="color:${color}">●</span> ${formatted}`
       },
     },
@@ -596,7 +589,7 @@ export function buildSparklineOption(
       },
       axisLabel: {
         ...buildSharedAxisLabelStyle(),
-        formatter: (value: number) => formatSparklineAxisValue(Number(value), metricKind),
+        formatter: (value: number) => formatSparklineAxisValue(Number(value), metricKind, metricName),
       },
       splitLine: {
         show: true,
