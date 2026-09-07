@@ -15,7 +15,7 @@ a-layout.new-layout.new-layout--workspace
         PromQLEditor(
           ref="promqlEditorRef"
           v-model="currentQuery"
-          placeholder="Enter PromQL query"
+          placeholder="Enter PromQL query (Shift+Enter for newlines)"
           :query-loading="queryLoading"
           @query="handleRunQuery"
         )
@@ -332,7 +332,7 @@ a-layout.new-layout.new-layout--workspace
     if (promqlEditorRef.value) {
       promqlEditorRef.value.replaceEditorContent(text)
     } else {
-      currentQuery.value = text.replace(/[\r\n]+/g, ' ').trim()
+      currentQuery.value = text
     }
   }
 
