@@ -185,6 +185,7 @@ a-modal(
   import { useAppStore } from '@/store'
   import type { Condition, BuilderFormState as Form } from '@/types/query'
   import { TsTypeMapping } from '@/utils/date-time'
+  import { isJsonDataType } from '@/utils/json-display'
 
   const { t } = useI18n()
 
@@ -256,7 +257,7 @@ a-modal(
 
   const fields = computed(() => {
     if (!form.table || !tableMap.value[form.table]) return []
-    return tableMap.value[form.table].filter((field) => field.data_type.toLowerCase() !== 'json')
+    return tableMap.value[form.table].filter((field) => !isJsonDataType(field.data_type))
   })
 
   const fieldsOptions = computed(() => {

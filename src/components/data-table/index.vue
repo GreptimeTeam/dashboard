@@ -40,8 +40,11 @@
               :name="`title-${col.name}`"
               :column="col"
               :is-time-column="isTimeColumn(col)"
+              :is-json-column="isJsonColumn(col)"
               :ts-view-str="tsViewStr"
               :change-ts-view="changeTsView"
+              :hide-json-nulls="isHideJsonNulls(col.name)"
+              :toggle-hide-json-nulls="() => toggleHideJsonNulls(col.name)"
             )
               // Default title rendering (fallback when no custom title slot provided)
               template(v-if="isTimeColumn(col)")
@@ -53,6 +56,24 @@
                     svg.icon-12
                       use(href="#time-index")
                     span.gpt-semantic-th-text {{ col.name }}
+              template(v-else-if="isJsonColumn(col)")
+                span.gpt-semantic-th.json-column-th(:class="getSemanticThClass(col)")
+                  span.gpt-semantic-th-text {{ col.title || col.name }}
+                  a-dropdown(
+                    trigger="click"
+                    position="bl"
+                    update-at-scroll
+                    :popup-max-height="false"
+                    @select="(value) => handleJsonColumnMenuSelect(col.name, value)"
+                  )
+                    span.json-column-th-action(:title="$t('dashboard.jsonColumnActions')" @click.stop)
+                      svg.icon-12
+                        use(href="#down")
+                    template(#content)
+                      a-doption(value="toggle-hide-nulls")
+                        .json-column-menu-item
+                          span {{ $t('dashboard.hideJsonNulls') }}
+                          span.json-column-menu-check(v-if="isHideJsonNulls(col.name)") ✓
               template(v-else-if="col.semantic_type")
                 span.gpt-semantic-th(:class="getSemanticThClass(col)")
                   span.gpt-semantic-th-text {{ col.title || col.name }}
@@ -66,11 +87,13 @@
               :row-index="rowIndex"
               :column="col"
               :is-time-column="isTimeColumn(col)"
+              :is-json-column="isJsonColumn(col)"
               :rendered-value="getRenderedValue(record, col)"
               :show-context-menu="showContextMenu"
               :handle-context-menu="handleContextMenu"
               :ts-view-str="tsViewStr"
               :change-ts-view="changeTsView"
+              :hide-json-nulls="isHideJsonNulls(col.name)"
             )
               // Default cell rendering (fallback when no custom slot provided)
               template(v-if="col.name === 'Merged_Column' && mergeColumn")
@@ -93,13 +116,13 @@
                         span.entity-field-text
                           span(v-if="showKeys" style="color: var(--gpt-text-muted)")
                             | {{ field[0] }}:
-                          | {{ field[1] }}
+                          | {{ getCellString(field[1], resolveColumn(field[0])) }}
                   .merged-cell-content(v-else :class="getCellContentClass(null)")
                     span.entity-field(v-for="field in record.Merged_Column" :key="field[0]")
                       span.entity-field-text
                         span(v-if="showKeys" style="color: var(--gpt-text-muted)")
                           | {{ field[0] }}:
-                        | {{ field[1] }}
+                        | {{ getCellString(field[1], resolveColumn(field[0])) }}
               template(v-else-if="isTimeColumn(col)")
                 .cell-wrapper
                   .cell-content.timestamp-cell-content
@@ -130,21 +153,21 @@
                     @popupVisibleChange="(visible) => handleExpandVisibleChange(getCellExpandKey(record, col.name), visible)"
                   )
                     template(#content)
-                      .cell-popover-content {{ getCellString(record[col.name]) }}
+                      .cell-popover-content {{ getCellString(record[col.name], col) }}
                     .cell-content.cell-content--expandable(
                       :class="getCellContentClass(record[col.name])"
                       :title="$t('common.inspectValue')"
                     )
-                      span {{ record[col.name] }}
+                      span {{ getCellString(record[col.name], col) }}
                   .cell-content(v-else :class="getCellContentClass(record[col.name])")
-                    span {{ record[col.name] }}
+                    span {{ getCellString(record[col.name], col) }}
                   .cell-actions(v-if="showContextMenu")
                     span.cell-action-icon(@click.stop="(event) => handleContextMenu(record, col.name, event)")
                       svg.icon-12
                         use(href="#menu")
                   .cell-copy-button(
                     v-if="canShowCopyButton(record[col.name])"
-                    @click.stop="copyCellValue(record[col.name])"
+                    @click.stop="copyCellValue(record[col.name], col)"
                   )
                     svg.icon-14
                       use(href="#copy-new")
@@ -174,6 +197,7 @@ a-dropdown#td-context(
   import { Message } from '@arco-design/web-vue'
   import i18n from '@/locale'
   import tableEmptyIcon from '@/assets/images/table-empty.svg?url'
+  import { isJsonDataType, stringifyJsonForDisplay } from '@/utils/json-display'
 
   defineOptions({
     inheritAttrs: false,
@@ -353,6 +377,31 @@ a-dropdown#td-context(
     return dateTypes.indexOf(column.data_type) > -1
   }
 
+  function isJsonColumn(column: ColumnType) {
+    return isJsonDataType(column.data_type)
+  }
+
+  /** Per-column preference; missing key defaults to true (hide null keys). */
+  const hideJsonNullsByColumn = ref<Record<string, boolean>>({})
+
+  function isHideJsonNulls(columnName: string): boolean {
+    return hideJsonNullsByColumn.value[columnName] !== false
+  }
+
+  function toggleHideJsonNulls(columnName: string) {
+    const next = !isHideJsonNulls(columnName)
+    hideJsonNullsByColumn.value = {
+      ...hideJsonNullsByColumn.value,
+      [columnName]: next,
+    }
+  }
+
+  function handleJsonColumnMenuSelect(columnName: string, value: string | number | Record<string, any>) {
+    if (String(value) === 'toggle-hide-nulls') {
+      toggleHideJsonNulls(columnName)
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Column width rules (keep JS + CSS in sync)
   //
@@ -409,10 +458,21 @@ a-dropdown#td-context(
   /** natural > fitted + epsilon → column shows ellipsis → expand popup */
   const EXPAND_WIDTH_EPSILON = 1
 
-  function getCellString(value: unknown): string {
+  function getCellString(value: unknown, column?: ColumnType | null): string {
     if (value === null || value === undefined) return ''
+    if (column && isJsonColumn(column)) {
+      return stringifyJsonForDisplay(value, { hideNulls: isHideJsonNulls(column.name) })
+    }
     if (typeof value === 'object') return JSON.stringify(value)
     return String(value)
+  }
+
+  function resolveColumn(columnOrName?: ColumnType | string | null): ColumnType | undefined {
+    if (!columnOrName) return undefined
+    if (typeof columnOrName === 'string') {
+      return props.columns.find((col) => col.name === columnOrName)
+    }
+    return columnOrName
   }
 
   function getCellKey(record: TableData, columnName: string) {
@@ -436,15 +496,19 @@ a-dropdown#td-context(
       return ''
     }
     return fields
-      .map(([key, value]) => (showKeys.value ? `${key}: ${getCellString(value)}` : getCellString(value)))
+      .map(([key, value]) => {
+        const text = getCellString(value, resolveColumn(key))
+        return showKeys.value ? `${key}: ${text}` : text
+      })
       .join(' ')
   }
 
   function getColumnContentMaxLength(columnName: string, rows: TableData[], limit = MAX_CONTENT_SAMPLE_ROWS): number {
     let max = 0
     const count = Math.min(rows.length, limit)
+    const column = resolveColumn(columnName)
     for (let i = 0; i < count; i += 1) {
-      const str = getCellString(rows[i]?.[columnName])
+      const str = getCellString(rows[i]?.[columnName], column)
       if (str.length > max) {
         max = str.length
       }
@@ -948,7 +1012,10 @@ a-dropdown#td-context(
       const sample = props.data.slice(0, MAX_CONTENT_SAMPLE_ROWS)
       sample.forEach((row) => {
         const str = fields
-          .map((key) => (showKeys.value ? `${key}: ${getCellString(row[key])}` : getCellString(row[key])))
+          .map((key) => {
+            const text = getCellString(row[key], resolveColumn(key))
+            return showKeys.value ? `${key}: ${text}` : text
+          })
           .join(' ')
         if (str.length > maxLen) maxLen = str.length
       })
@@ -1238,6 +1305,9 @@ a-dropdown#td-context(
     if (isTimeColumn(column)) {
       return renderTs(record, column.name)
     }
+    if (isJsonColumn(column)) {
+      return getCellString(record[column.name], column)
+    }
     return record[column.name]
   }
 
@@ -1245,8 +1315,14 @@ a-dropdown#td-context(
     return props.enableCellCopy && value !== null && value !== undefined
   }
 
-  function cellTextForCopy(value: unknown) {
+  function cellTextForCopy(value: unknown, column?: ColumnType | null) {
     if (value === null || value === undefined) return ''
+    if (column && isJsonColumn(column)) {
+      return stringifyJsonForDisplay(value, {
+        hideNulls: isHideJsonNulls(column.name),
+        pretty: true,
+      })
+    }
     if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
       return String(value)
     }
@@ -1260,8 +1336,8 @@ a-dropdown#td-context(
     return String(value)
   }
 
-  async function copyCellValue(value: unknown) {
-    const text = cellTextForCopy(value)
+  async function copyCellValue(value: unknown, column?: ColumnType | null) {
+    const text = cellTextForCopy(value, column)
     if (!text) return
 
     try {
@@ -1339,7 +1415,7 @@ a-dropdown#td-context(
     // Set available filter options based on column type
     const column = props.columns.find((col) => col.name === columnName)
     if (column) {
-      if (column.data_type && column.data_type.toLowerCase() === 'json') {
+      if (column.data_type && isJsonDataType(column.data_type)) {
         filterOptions.value = []
       } else if (isTimeColumn(column)) {
         filterOptions.value = ['>=', '<=']
@@ -1365,8 +1441,9 @@ a-dropdown#td-context(
 
     if (action === 'copy') {
       try {
-        await navigator.clipboard.writeText(record[columnName])
-        console.log('Copied to clipboard:', record[columnName])
+        const column = resolveColumn(columnName)
+        const text = cellTextForCopy(record[columnName], column)
+        await navigator.clipboard.writeText(text)
       } catch (error) {
         console.error('Failed to copy to clipboard:', error)
       }
@@ -1754,6 +1831,44 @@ a-dropdown#td-context(
     word-break: break-word;
   }
 
+  .json-column-th {
+    // Keep label + action on one row inside virtual-list header (narrow cols).
+    max-width: 100%;
+  }
+
+  .json-column-th-action {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    margin-left: 2px;
+    border-radius: 2px;
+    cursor: pointer;
+    color: var(--gpt-text-muted, var(--color-text-3));
+    opacity: 0.75;
+
+    &:hover {
+      opacity: 1;
+      background: var(--color-fill-2);
+      color: var(--color-text-1);
+    }
+  }
+
+  .json-column-menu-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 140px;
+  }
+
+  .json-column-menu-check {
+    margin-left: auto;
+    color: var(--gpt-accent, var(--color-primary));
+    font-weight: 600;
+  }
+
   .cell-content.wrap-lines {
     white-space: pre-wrap;
     word-break: break-word;
@@ -1893,6 +2008,16 @@ a-dropdown#td-context(
     max-width: 100%;
     min-width: 0;
     overflow: hidden;
+  }
+
+  // JSON column action is a nested dropdown; keep the action button visible
+  // and let the menu render outside the clipped header (virtual-list / logs).
+  :deep(.arco-table-th-item-title:has(.json-column-th)) {
+    overflow: visible;
+  }
+
+  :deep(.arco-table-th-item:has(.json-column-th)) {
+    overflow: visible;
   }
 
   :deep(.arco-table-th:not(:last-child)::after) {
