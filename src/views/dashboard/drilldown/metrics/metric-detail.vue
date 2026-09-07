@@ -3,7 +3,6 @@
   .metric-detail-header
     a-button(type="text" size="small" @click="handleBack")
       | {{ t('drilldown.metricDetail.back') }}
-    h3.metric-title {{ metric }}
   a-tabs(default-active-key="breakdown")
     a-tab-pane(key="breakdown" :title="t('drilldown.metricDetail.breakdownTab')")
       BreakdownGrid(:metric="metric")
@@ -17,7 +16,7 @@
   import BreakdownGrid from './breakdown-grid.vue'
   import RelatedLogsPanel from './related-logs-panel.vue'
 
-  const props = defineProps<{
+  defineProps<{
     metric: string
   }>()
 
@@ -44,12 +43,5 @@
     align-items: center;
     gap: 12px;
     margin-bottom: 12px;
-  }
-
-  .metric-title {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--color-text-1);
   }
 </style>

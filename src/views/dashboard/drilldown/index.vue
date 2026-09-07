@@ -6,6 +6,7 @@
 
     .drilldown-body.new-layout.new-layout--workspace(v-if="signal === 'metrics'")
       a-resize-box(
+        v-if="!selectedMetric"
         v-model:width="sidebarWidth"
         :directions="['right']"
         :style="{ 'min-width': '100px', 'max-width': '40vw' }"
