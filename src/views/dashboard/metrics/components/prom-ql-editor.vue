@@ -1,7 +1,6 @@
 <template lang="pug">
 .promql-editor-container
-  CodeMirror(
-    style="height: 100%"
+  CodeMirror.promql-codemirror(
     :placeholder="placeholder"
     :modelValue="props.modelValue"
     :extensions="extensions"
@@ -14,11 +13,10 @@
     @ready="onEditorReady"
   )
   .query-button-container
-    a-tooltip(content="Ctrl + Enter" position="right")
-      a-button(
+    a-tooltip(content="Enter" position="right")
+      a-button.query-run-button(
         type="primary"
         size="large"
-        style="height: var(--gpt-control-height-md); border-radius: 0 var(--gpt-radius-sm) var(--gpt-radius-sm) 0"
         :loading="queryLoading"
         @click="handleQuery"
       )
@@ -209,15 +207,22 @@
       .asExtension()
   }
 
-  const singleLineKeymap = Prec.highest(
+  // Match Prometheus UI: Enter runs query, Shift-Enter inserts newline, long lines wrap.
+  const queryKeymap = Prec.highest(
     keymap.of([
       {
         key: 'Enter',
-        run: () => true,
+        run: () => {
+          handleQuery()
+          return true
+        },
       },
       {
         key: 'Shift-Enter',
-        run: () => true,
+        run: (view) => {
+          view.dispatch(view.state.replaceSelection('\n'))
+          return true
+        },
       },
       {
         key: 'Ctrl-Enter',
@@ -229,6 +234,7 @@
       {
         key: 'Cmd-Enter',
         run: () => {
+          handleQuery()
           return true
         },
       },
@@ -236,7 +242,7 @@
   )
 
   const extensions = computed(() => {
-    const exts = [basicSetup, singleLineKeymap]
+    const exts = [basicSetup, EditorView.lineWrapping, queryKeymap]
 
     if (promqlExtension.value) {
       exts.push(promqlExtension.value)
@@ -246,8 +252,7 @@
   })
 
   const codeUpdate = (content: string) => {
-    const singleLineContent = content.replace(/[\r\n]+/g, ' ').trim()
-    emit('update:modelValue', singleLineContent)
+    emit('update:modelValue', content)
   }
 
   const onEditorReady = (payload: any) => {
@@ -271,19 +276,18 @@
   }
 
   const replaceEditorContent = (text: string) => {
-    const singleLineContent = text.replace(/[\r\n]+/g, ' ').trim()
     if (!editorView) {
-      emit('update:modelValue', singleLineContent)
+      emit('update:modelValue', text)
       return
     }
 
     const docLength = editorView.state.doc.length
     editorView.dispatch({
-      changes: { from: 0, to: docLength, insert: singleLineContent },
-      selection: { anchor: singleLineContent.length },
+      changes: { from: 0, to: docLength, insert: text },
+      selection: { anchor: text.length },
     })
     editorView.focus()
-    codeUpdate(singleLineContent)
+    codeUpdate(text)
   }
 
   const focus = () => {
@@ -326,13 +330,33 @@
     display: flex;
     align-items: stretch;
     gap: 0;
+    min-width: 0;
+    width: 100%;
     min-height: var(--gpt-control-height-md);
+  }
+
+  .promql-codemirror {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
   }
 
   .query-button-container {
     display: flex;
-    align-items: center;
+    align-items: stretch;
     flex-shrink: 0;
+
+    :deep(> span) {
+      display: flex;
+      align-items: stretch;
+      height: 100%;
+    }
+  }
+
+  .query-run-button {
+    height: 100%;
+    min-height: var(--gpt-control-height-md);
+    border-radius: 0 var(--gpt-radius-sm) var(--gpt-radius-sm) 0;
   }
 
   :deep(.arco-card.light-editor-card) {
@@ -346,25 +370,29 @@
   }
 
   :deep(.cm-editor) {
-    height: var(--gpt-control-height-md);
-    overflow: visible;
+    min-height: var(--gpt-control-height-md);
+    height: auto;
+    max-height: 160px;
+    overflow: hidden;
     width: 100%;
+    min-width: 0;
     background: var(--gpt-bg-panel);
     color: var(--gpt-text-primary);
     border: 1px solid var(--gpt-editor-border);
     border-radius: var(--gpt-radius-sm) 0 0 var(--gpt-radius-sm);
-    transition: all 0.2s ease-in-out;
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
   }
 
   :deep(.cm-editor .cm-content),
   :deep(.cm-editor .cm-line),
   :deep(.ͼ1.cm-editor .cm-content),
   :deep(.ͼ1.cm-editor .cm-line) {
-    line-height: var(--gpt-control-height-md);
+    line-height: 20px;
   }
 
   :deep(.cm-scroller) {
-    overflow: visible;
+    overflow-x: hidden;
+    overflow-y: auto;
     font-family: var(--vp-font-family-base);
     font-size: var(--gpt-font-lg);
     font-weight: 400;
@@ -372,8 +400,9 @@
   }
 
   :deep(.cm-content) {
-    padding: 0 var(--gpt-gap-md);
-    min-height: 32px;
+    padding: 6px var(--gpt-gap-md);
+    min-height: var(--gpt-control-height-md);
+    box-sizing: border-box;
     font-family: inherit;
     font-size: inherit;
     font-weight: inherit;
