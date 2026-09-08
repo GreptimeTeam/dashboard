@@ -15,6 +15,16 @@ export const SPARKLINE_MAX_DATA_POINTS = 30
 export const HEATMAP_MAX_DATA_POINTS = 15
 
 /**
+ * Detail main chart density — Grafana `QUERY_RESOLUTION.HIGH`.
+ * @see metrics-drilldown MetricGraphScene `queryOptions.resolution: HIGH`
+ * @see getTimeseriesQueryRunnerParams / getHeatmapQueryRunnerParams:
+ *   HIGH → maxDataPoints 500, MEDIUM (list default) → 250
+ *
+ * Catalog mini charts intentionally stay coarser (`SPARKLINE_MAX_DATA_POINTS` / `HEATMAP_MAX_DATA_POINTS`).
+ */
+export const MAIN_CHART_MAX_DATA_POINTS = 500
+
+/**
  * Grafana {@link roundInterval} — snap query interval to human-friendly buckets.
  * @see grafana/packages/grafana-data/src/datetime/rangeutil.ts
  */

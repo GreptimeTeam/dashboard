@@ -12,6 +12,12 @@ export interface SparklineStats {
 export const METRIC_PANEL_HEIGHT = 220
 export const METRIC_PANEL_CHART_HEIGHT = 168
 
+/** Grafana Metrics Drilldown `PANEL_HEIGHT.XL` — detail main graph. */
+export const MAIN_CHART_HEIGHT = 280
+
+/** Fallback plot width before ResizeObserver (full-bleed drawer). */
+export const MAIN_CHART_FALLBACK_PLOT_WIDTH_PX = 960
+
 export function computeSparklineStats(points: Array<[number, number | null]>): SparklineStats {
   const values = points.map(([, value]) => value).filter((value): value is number => value !== null)
 

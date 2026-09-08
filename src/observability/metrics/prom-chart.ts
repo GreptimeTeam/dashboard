@@ -1,5 +1,9 @@
 import type { EChartsOption } from 'echarts'
-import formatTimeAxisLabel, { calculateTimeAxisTicks } from '@/utils/chart-time-axis'
+import formatTimeAxisLabel, {
+  calculateTimeAxisTicks,
+  calculateYAxisSplitNumber,
+  CATALOG_Y_AXIS_SPLIT_NUMBER,
+} from '@/utils/chart-time-axis'
 import type { MetricKind } from './infer-promql'
 import { formatMetricUnitValue, getUnit } from './metric-units'
 import { formatMetricAxisValue } from './panel-stats'
@@ -265,9 +269,25 @@ const GRID_LINE_COLOR = 'rgba(71, 52, 96, 0.06)'
 const PANEL_GRID = { left: 4, right: 8, top: 6, bottom: 2, containLabel: true }
 
 export interface PanelChartAxisOptions {
+  /** Plot width for x-axis tick density (Grafana: derived from panel CSS width). */
   plotWidthPx?: number
+  /** Plot height for y-axis split density (main chart); catalog omits → fixed splitNumber. */
+  plotHeightPx?: number
   /** Query window [startSec, endSec] — axis spans this even if samples start later. */
   timeRange?: [number, number]
+}
+
+/**
+ * Series draw style — mirrors Grafana timeseries `GraphFieldConfig` subset used by metrics-drilldown.
+ * @see grafana-ui defaultGraphConfig + metrics-drilldown `buildTimeseriesPanel` (fillOpacity: 9)
+ */
+export interface PanelChartSeriesStyleOptions {
+  /**
+   * Grafana `showPoints`: Auto | Always | Never.
+   * - catalog: Auto (sparse mini → may show dots)
+   * - main HIGH/500pts: Never (Auto would hide anyway; ECharts auto still paints dots)
+   */
+  showPoints?: 'auto' | 'always' | 'never'
 }
 
 function resolvePanelTimeWindow(
@@ -506,11 +526,13 @@ export function buildHeatmapOption(
 
 export function buildSparklineOption(
   points: Array<[number, number | null]>,
-  options?: PanelChartAxisOptions & { color?: string; metricKind?: MetricKind; metricName?: string }
+  options?: PanelChartAxisOptions &
+    PanelChartSeriesStyleOptions & { color?: string; metricKind?: MetricKind; metricName?: string }
 ): EChartsOption {
   const color = options?.color ?? sparklineSeriesColor(options?.metricKind ?? 'unknown')
   const metricKind = options?.metricKind ?? 'unknown'
   const metricName = options?.metricName
+  const showPoints = options?.showPoints ?? 'auto'
   const data = points.map(([timestamp, value]) => [timestamp * 1000, value])
   const { startMs, endMs, spanMs } = resolvePanelTimeWindow(
     points[0]?.[0] ?? 0,
@@ -518,6 +540,15 @@ export function buildSparklineOption(
     options?.timeRange
   )
   const { intervalMs: tickIntervalMs, ticks: timeTicks } = calculateTimeAxisTicks(startMs, endMs, options?.plotWidthPx)
+
+  let symbolOption: { showSymbol: boolean | 'auto'; symbol: string; symbolSize?: number }
+  if (showPoints === 'never') {
+    symbolOption = { showSymbol: false, symbol: 'none' }
+  } else if (showPoints === 'always') {
+    symbolOption = { showSymbol: true, symbol: 'circle', symbolSize: 4 }
+  } else {
+    symbolOption = { showSymbol: 'auto', symbol: 'circle', symbolSize: 4 }
+  }
 
   return {
     animation: false,
@@ -580,7 +611,8 @@ export function buildSparklineOption(
       type: 'value',
       show: true,
       scale: true,
-      splitNumber: 3,
+      splitNumber:
+        options?.plotHeightPx != null ? calculateYAxisSplitNumber(options.plotHeightPx) : CATALOG_Y_AXIS_SPLIT_NUMBER,
       axisLine: {
         show: false,
       },
@@ -602,10 +634,10 @@ export function buildSparklineOption(
       {
         type: 'line',
         data,
+        // Grafana: lineInterpolation Linear
         smooth: false,
-        showSymbol: 'auto',
-        symbol: 'circle',
-        symbolSize: 4,
+        ...symbolOption,
+        // Grafana: lineWidth 1
         lineStyle: {
           width: 1,
           color,
@@ -615,11 +647,12 @@ export function buildSparklineOption(
           borderColor: color,
           borderWidth: 1,
         },
-        // Grafana timeseries fillOpacity: 9
+        // Grafana metrics-drilldown: fillOpacity 9
         areaStyle: {
           color,
           opacity: SERIES_FILL_OPACITY,
         },
+        // Grafana: spanNulls false
         connectNulls: false,
         markLine: buildVerticalTickMarkLine(timeTicks.map((timestamp) => ({ xAxis: timestamp }))),
       },

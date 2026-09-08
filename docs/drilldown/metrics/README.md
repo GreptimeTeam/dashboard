@@ -35,9 +35,40 @@
 | Match / pool | [`adapters/metrics.ts`](../../../src/observability/adapters/metrics.ts) | ✅ |
 | inferPromQL | [`metrics/infer-promql.ts`](../../../src/observability/metrics/infer-promql.ts) | ✅ 名启发式；⬜ `table_semantics` |
 | 类型语义 | `table-semantics.ts` | ⬜ 未建 |
+| 主图 vs mini 采样 | [`sparkline-step.ts`](../../../src/observability/metrics/sparkline-step.ts) | ✅ 主图 `MAIN_CHART_MAX_DATA_POINTS=500`（Grafana HIGH）；目录 mini `30` / heatmap `15`（Grafana list MEDIUM=250，我们更粗） |
+| 主图轴密度 | [`use-metric-main-chart.ts`](../../../src/observability/use-metric-main-chart.ts) + [`chart-time-axis.ts`](../../../src/utils/chart-time-axis.ts) | ✅ 主图按实测宽高传 `plotWidthPx` / `plotHeightPx`；高度 `MAIN_CHART_HEIGHT=280`（Grafana XL）；目录仍默认 280 宽 + `splitNumber: 3` |
+| 主图系列样式 | [`prom-chart.ts`](../../../src/observability/metrics/prom-chart.ts) `buildSparklineOption` | ✅ 见下方「主图显示规则对照」 |
 | 高级出口 | [`src/views/dashboard/metrics/`](../../../src/views/dashboard/metrics/) | ⬜ 深链未接 |
 
 **路由**：`/dashboard/drilldown`（菜单名 Drilldown）。
+
+---
+
+## 主图显示规则对照（Grafana MetricGraphScene）
+
+来源：`metrics-drilldown` `buildTimeseriesPanel` + Grafana core `defaultGraphConfig` / uPlot `showPoints: Auto`。
+
+| 规则 | Grafana 主图 | Greptime 主图 | 状态 |
+|------|--------------|---------------|------|
+| 高度 | `PANEL_HEIGHT.XL` = 280（min；max 40%） | `MAIN_CHART_HEIGHT` = 280 | ✅ |
+| 采样 | `QUERY_RESOLUTION.HIGH` → maxDataPoints **500** | `MAIN_CHART_MAX_DATA_POINTS` = 500 | ✅ |
+| 线宽 | `lineWidth: 1` | `lineStyle.width: 1` | ✅ |
+| 插值 | `lineInterpolation: Linear` | `smooth: false` | ✅ |
+| 填充 | drilldown 覆盖 `fillOpacity: 9`（9%） | `SERIES_FILL_OPACITY = 0.09` | ✅ |
+| 渐变 | `gradientMode: None` | 纯色 area | ✅ |
+| 点 | 默认 `showPoints: Auto`（密度高时不画；uPlot 内置） | 主图显式 `showPoints: 'never'`（ECharts `auto` 仍会露点） | ✅ |
+| 空洞 | `spanNulls: false`；缺样本由 query 省略 | `connectNulls: false` + `breakSparklineGaps` 插 null | ✅ |
+| 色板 | classic palette index 0（单系列 fixed） | `getSeriesColorByIndex(0)` | ✅ |
+| 单位 | `getUnit` / rate → per-second | `formatMetricAxisValue` / `getUnit` | ✅ |
+| Legend | `showLegend: true`, placement **bottom** | 底部 query legend（PromQL 名 + 色块） | ≈ |
+| Tooltip | 默认 single；groupBy 为 multi+desc | axis 单系列 tooltip | ≈ |
+| X/Y 轴密度 | uPlot 按 plot CSS 宽高 | `plotWidthPx` / `plotHeightPx` → tick / splitNumber | ✅ |
+| 多系列 / Configure | avg/sum/min-max/percentiles presets；groupBy 最多 20 条 | 仍单聚合线；Configure / percentiles ⬜ | ⬜ |
+| Crosshair sync | `CursorSync` Crosshair | 无 | ⬜ |
+| 极值 NaN 重试 | `extremeValueFilterBehavior` | 无 | ⬜ |
+| Heatmap | Spectral scheme、filter 空/零 bucket | Spectral-like + 相对阈值 | ≈ |
+
+目录 mini：采样更粗（30）、高度 168、`showPoints: Auto`（可露点）、轴默认 280 宽 / `splitNumber: 3`。
 
 ---
 
@@ -76,4 +107,5 @@
 ## Grafana 参考
 
 - [Metrics Drilldown 文档](https://grafana.com/docs/grafana/latest/visualizations/simplified-exploration/metrics/)
-- [metrics-drilldown 源码](https://github.com/grafana/metrics-drilldown)
+- [metrics-drilldown 源码](https://github.com/grafana/metrics-drilldown) — 本机：`/tmp/metrics-drilldown`（见 [../README.md](../README.md)「Grafana 上游源码」）
+- filter / time 共享规则：[../plans/03-grafana-drilldown-research.plan.md](../plans/03-grafana-drilldown-research.plan.md)

@@ -58,6 +58,17 @@
 
 Logs/Traces 的 Grafana 调研摘要见 [plans/03-grafana-drilldown-research.plan.md](./plans/03-grafana-drilldown-research.plan.md)。
 
+### Grafana 上游源码（对照用）
+
+| 仓库 | GitHub | 本机路径（AI 曾下载） |
+|------|--------|------------------------|
+| Metrics Drilldown | https://github.com/grafana/metrics-drilldown | `/tmp/metrics-drilldown`（=`/private/tmp/metrics-drilldown`） |
+| Logs Drilldown | https://github.com/grafana/logs-drilldown | （未下载；可 `git clone` 到同目录） |
+| Traces Drilldown | https://github.com/grafana/traces-drilldown | （未下载） |
+
+- Metrics 本地仓可能为 **sparse checkout**；读未检出文件用：`cd /tmp/metrics-drilldown && git show HEAD:src/...`
+- filter / timeRange 跨信号规则摘要见 [plans/03-grafana-drilldown-research.plan.md](./plans/03-grafana-drilldown-research.plan.md)「源码地址与共享规则」
+
 ### E. 架构与边界决策（Reference + Active）
 
 | 文件 | 说明 | 状态 |

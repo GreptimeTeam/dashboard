@@ -12,12 +12,6 @@
           :aria-current="signal === item.value ? 'page' : undefined"
           @click="setSignal(item.value)"
         ) {{ item.label }}
-    button.metric-title(
-      v-if="selectedMetric"
-      type="button"
-      :title="selectedMetric"
-      @click="clearMetric"
-    ) {{ selectedMetric }}
   .shared-context
     DrilldownFilterBar
     a-space
@@ -48,7 +42,7 @@
   import DrilldownFilterBar from './filter-bar.vue'
 
   const { t } = useI18n()
-  const { signal, metric, time, rangeTime, triggerRefresh, setSignal } = useDrilldownContext()
+  const { signal, time, rangeTime, triggerRefresh, setSignal } = useDrilldownContext()
 
   const signalItems = computed(() => [
     { value: 'metrics' as DrilldownSignal, label: t('drilldown.signals.metrics') },
@@ -56,20 +50,16 @@
     { value: 'traces' as DrilldownSignal, label: t('drilldown.signals.traces') },
   ])
 
-  const selectedMetric = computed(() => (signal.value === 'metrics' ? metric.value : undefined))
-
-  const clearMetric = () => {
-    metric.value = undefined
-  }
-
   const handleRefresh = () => {
     triggerRefresh()
   }
 </script>
 
 <style scoped lang="less">
-  .drilldown-top-bar {
-    align-items: center;
+  // Beat `.query-layout.query-layout--stack .toolbar { align-items: center }`
+  // so links stretch and the ink can be anchored to the toolbar border.
+  .toolbar.drilldown-top-bar {
+    align-items: stretch;
     flex-wrap: wrap;
     height: auto;
     min-height: var(--gpt-size-region-bar);
@@ -78,21 +68,23 @@
 
   .page-identity {
     display: flex;
-    flex-direction: column;
     flex-shrink: 0;
-    gap: 2px;
+    align-self: stretch;
+    align-items: stretch;
     min-width: 0;
   }
 
   .title-row {
     display: flex;
-    align-items: baseline;
+    align-items: stretch;
     gap: 20px;
     min-width: 0;
   }
 
   .page-title {
+    display: inline-flex;
     flex-shrink: 0;
+    align-items: center;
     font-family: var(--font-family-base);
     font-size: var(--gpt-font-xl);
     font-weight: 700;
@@ -103,15 +95,17 @@
 
   .signal-text-nav {
     display: inline-flex;
-    align-items: baseline;
+    align-items: stretch;
     gap: 14px;
     min-width: 0;
   }
 
   .signal-link {
-    padding: 0 0 2px;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    padding: 0;
     border: 0;
-    border-bottom: 2px solid transparent;
     background: transparent;
     font-family: var(--font-family-base);
     font-size: 14px;
@@ -129,29 +123,18 @@
   .signal-link.active {
     font-weight: 600;
     color: var(--color-primary, var(--color-text-1));
-    border-bottom-color: var(--color-primary, var(--color-text-1));
   }
 
-  .metric-title {
-    display: block;
-    max-width: min(48vw, 480px);
-    padding: 0;
-    overflow: hidden;
-    border: 0;
-    background: transparent;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-    font-size: 12px;
-    font-weight: 500;
-    line-height: 1.25;
-    color: var(--color-text-2);
-    text-align: left;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    cursor: pointer;
-  }
-
-  .metric-title:hover {
-    color: var(--color-text-1);
+  // Stretched link bottom = toolbar content edge; drop through padding + border
+  // so the 2px ink sits on the toolbar bottom border.
+  .signal-link.active::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: calc(-1 * var(--gpt-toolbar-padding-y) - 1px);
+    left: 0;
+    height: 2px;
+    background: var(--color-primary, var(--color-text-1));
   }
 
   .shared-context {

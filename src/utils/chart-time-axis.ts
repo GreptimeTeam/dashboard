@@ -50,6 +50,25 @@ export const TIME_AXIS_TICK_VALUE_GAP_PX = 18
 /** Typical sparkline plot width after y-axis (4-col card). */
 export const SPARKLINE_AXIS_PLOT_WIDTH_PX = 280
 
+/**
+ * Min CSS px between y-axis value labels (Grafana uPlot-style spacing).
+ * Catalog cards keep a fixed splitNumber; main chart derives from plot height.
+ */
+export const Y_AXIS_MIN_TICK_SPACE_PX = 28
+
+/** Catalog timeseries default — not height-derived (compact cards). */
+export const CATALOG_Y_AXIS_SPLIT_NUMBER = 3
+
+/**
+ * ECharts `splitNumber` from plot height: more room → denser y labels.
+ * Caps at 10; floor at 2.
+ */
+export function calculateYAxisSplitNumber(plotHeightPx: number): number {
+  const height = Math.max(1, plotHeightPx)
+  const maxLabels = Math.max(2, Math.floor(height / Y_AXIS_MIN_TICK_SPACE_PX))
+  return Math.min(10, Math.max(2, maxLabels - 1))
+}
+
 export interface TimeAxisTicks {
   intervalMs: number
   ticks: number[]

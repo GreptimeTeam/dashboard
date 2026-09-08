@@ -6,7 +6,6 @@
 
     .drilldown-body.new-layout.new-layout--workspace(v-if="signal === 'metrics'")
       a-resize-box(
-        v-if="!selectedMetric"
         v-model:width="sidebarWidth"
         :directions="['right']"
         :style="{ 'min-width': '100px', 'max-width': '40vw' }"
@@ -27,14 +26,30 @@
 
       a-layout-content.layout-content
         a-card.drilldown-main-pane.gpt-results-pane(:bordered="false")
-          MetricDetail(v-if="selectedMetric" :metric="selectedMetric")
-          .drilldown-home-main(v-else)
+          .drilldown-home-main
             MetricChartList(
               :loading="loading"
               :error="error"
               :truncated="truncated"
               :groups="groups"
             )
+
+      a-drawer.metric-detail-drawer(
+        popup-container=".drilldown-body"
+        placement="right"
+        width="100%"
+        :visible="drawerVisible"
+        :footer="false"
+        :mask="false"
+        :esc-to-close="true"
+        :unmount-on-close="true"
+        @cancel="closeDrawer"
+        @update:visible="onDrawerVisible"
+      )
+        template(#title)
+          .drawer-title
+            span.drawer-metric-name(:title="selectedMetric") {{ selectedMetric }}
+        MetricDetail(v-if="selectedMetric" :metric="selectedMetric")
 
     .drilldown-signal-placeholder(v-else)
       a-empty(:description="placeholderDescription")
@@ -71,6 +86,17 @@
 
   const { signal } = ctx
   const selectedMetric = computed(() => ctx.metric.value)
+  const drawerVisible = computed(() => Boolean(selectedMetric.value))
+
+  const closeDrawer = () => {
+    ctx.metric.value = undefined
+  }
+
+  const onDrawerVisible = (visible: boolean) => {
+    if (!visible) {
+      closeDrawer()
+    }
+  }
 
   const placeholderDescription = computed(() => {
     if (signal.value === 'logs') {
@@ -121,6 +147,7 @@
   }
 
   .drilldown-body.new-layout {
+    position: relative;
     display: flex;
     flex: 1 1 0%;
     flex-direction: row;
@@ -216,5 +243,41 @@
     justify-content: center;
     min-height: 0;
     background: var(--gpt-bg-app);
+  }
+
+  .drawer-title {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .drawer-metric-name {
+    display: block;
+    max-width: min(56vw, 520px);
+    overflow: hidden;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--color-text-1);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :deep(.metric-detail-drawer.arco-drawer) {
+    .arco-drawer-body {
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      overflow: hidden;
+    }
+  }
+</style>
+
+<style lang="less">
+  // Full-bleed over list/sidebar; Topbar stays outside popup-container.
+  // Border matches LogDetail drawer edge treatment.
+  .drilldown-body .arco-drawer {
+    border: 1px solid var(--color-neutral-3) !important;
   }
 </style>

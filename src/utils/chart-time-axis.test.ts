@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import formatTimeAxisLabel, {
   SPARKLINE_AXIS_PLOT_WIDTH_PX,
   calculateTimeAxisTicks,
+  calculateYAxisSplitNumber,
   generateTimeAxisTicks,
   pickTimeAxisIntervalMs,
 } from './chart-time-axis'
@@ -11,6 +12,13 @@ describe('chart-time-axis', () => {
     const rangeMs = 30 * 60 * 1000
     const intervalMs = pickTimeAxisIntervalMs(rangeMs, SPARKLINE_AXIS_PLOT_WIDTH_PX)
     expect(intervalMs).toBe(5 * 60 * 1000)
+  })
+
+  it('places denser x ticks when plot is wider (main chart)', () => {
+    const rangeMs = 30 * 60 * 1000
+    const catalog = pickTimeAxisIntervalMs(rangeMs, SPARKLINE_AXIS_PLOT_WIDTH_PX)
+    const main = pickTimeAxisIntervalMs(rangeMs, 960)
+    expect(main).toBeLessThanOrEqual(catalog)
   })
 
   it('places the first tick at the axis start and omits the clipped end tick', () => {
@@ -40,5 +48,11 @@ describe('chart-time-axis', () => {
     expect(intervalMs).toBe(5 * 60 * 1000)
     expect(ticks.length).toBeGreaterThanOrEqual(5)
     expect(ticks.length).toBeLessThanOrEqual(7)
+  })
+
+  it('derives denser y splitNumber for taller main chart', () => {
+    expect(calculateYAxisSplitNumber(168)).toBeLessThan(calculateYAxisSplitNumber(280))
+    expect(calculateYAxisSplitNumber(280)).toBeGreaterThanOrEqual(5)
+    expect(calculateYAxisSplitNumber(280)).toBeLessThanOrEqual(10)
   })
 })

@@ -25,6 +25,42 @@ isProject: false
 
 # Grafana Drilldown 机制与 Greptime 对照
 
+## 源码地址与共享规则（2026-09-07）
+
+### 仓库路径
+
+| App | GitHub | 本机 |
+|-----|--------|------|
+| **Metrics Drilldown** | https://github.com/grafana/metrics-drilldown | `/tmp/metrics-drilldown`（=`/private/tmp/metrics-drilldown`，AI 下载；可能 sparse） |
+| **Logs Drilldown** | https://github.com/grafana/logs-drilldown | 未下载；需要时 clone 到 `/tmp/logs-drilldown` |
+| **Traces Drilldown** | https://github.com/grafana/traces-drilldown | 未下载 |
+
+本机 Metrics 关键文件示例：
+
+```bash
+cd /tmp/metrics-drilldown
+git show HEAD:src/AppDataTrail/DataTrail.tsx
+git show HEAD:src/MetricScene/RelatedLogs/OpenInLogsDrilldownButton.tsx
+git show HEAD:src/MetricScene/RelatedLogs/RelatedLogsOrchestrator.ts
+git show HEAD:src/Integrations/logs/labelsCrossReference.ts
+```
+
+### filter / timeRange 是否跨 M·L·T 共享？
+
+**否（App 间不常驻共享）；是（单个 App 内共享）。**
+
+| 范围 | 行为 |
+|------|------|
+| Metrics App 内 | 一个 `DataTrail`：`$timeRange` + `VAR_FILTERS`；目录 / 详情 / Related logs Tab 共用 |
+| Logs / Traces App | 各自独立 `SceneTimeRange` + `AdHocFiltersVariable` |
+| 跨 App | 「Open in Logs Drilldown」经 plugin extension 拷贝 `timeRange` + `targets`（LogQL）快照；打开后互不影响 |
+
+扩展点 id：`grafana-metricsdrilldown-app/open-in-logs-drilldown/v1`（`OpenInLogsDrilldownButton.tsx`）。
+
+**Greptime 差异**：单页 Correlation Context，Topbar 的 time/filter 对 Metrics/Logs/Traces **信号切换也常驻共享**（比 Grafana 三 App 更强）。
+
+---
+
 ## 一、Grafana 如何初始加载
 
 ### Metrics Drilldown
