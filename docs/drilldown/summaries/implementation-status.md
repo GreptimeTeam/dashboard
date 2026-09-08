@@ -76,10 +76,12 @@
 | Add to filter | label/value cards | ✅；**R-BRK-1**：label 仅 1 value 时仍 Add to filter |
 | Related logs 预览 | [`related-logs-panel.vue`](../../../src/views/dashboard/drilldown/metrics/related-logs-panel.vue) | ✅ COUNT + 预览表；需 filters + logsTable |
 | 主图 + query_range | [`use-metric-main-chart.ts`](../../../src/observability/use-metric-main-chart.ts) | ✅ Configure / Explore / percentiles / brush-pan |
-| inferPromQL | [`infer-promql.ts`](../../../src/observability/metrics/infer-promql.ts) + [`resolve-metric-kind.ts`](../../../src/observability/resolve-metric-kind.ts) | ✅ 名启发式 + declared `table_semantics` |
-| table_semantics | [`table-semantics.ts`](../../../src/observability/table-semantics.ts) | ✅ |
+| inferPromQL / meta | [`infer-promql.ts`](../../../src/observability/metrics/infer-promql.ts) + [`resolve-metric-meta.ts`](../../../src/observability/resolve-metric-meta.ts) | ✅ 见 [semantics.md](../semantics.md) |
+| table_semantics | [`table-semantics.ts`](../../../src/observability/table-semantics.ts) | ✅；UCUM → [`metric-units.ts`](../../../src/observability/metrics/metric-units.ts) |
 | Related metrics Tab | — | ⬜ |
 | Open in metrics-query | [`deep-links.ts`](../../../src/observability/deep-links.ts) | ✅ Explore |
+
+说明：三信号语义统一见 [semantics.md](../semantics.md)。
 
 ### Logs 适配（部分，无 Logs 首页）
 

@@ -33,8 +33,8 @@
 | Breakdown | [`metrics/breakdown-grid.vue`](../../../src/views/dashboard/drilldown/metrics/breakdown-grid.vue) | ✅ label/value mini `query_range`（lazy + queue） |
 | Prom API | [`src/api/metrics.ts`](../../../src/api/metrics.ts) | ✅ |
 | Match / pool | [`adapters/metrics.ts`](../../../src/observability/adapters/metrics.ts) | ✅ |
-| inferPromQL | [`metrics/infer-promql.ts`](../../../src/observability/metrics/infer-promql.ts) + [`resolve-metric-meta.ts`](../../../src/observability/resolve-metric-meta.ts) | ✅ declared type/unit/temporality + 名启发式 |
-| 类型语义 | [`table-semantics.ts`](../../../src/observability/table-semantics.ts) | ✅ `metric.type` / `unit` / `temporality` / `original_name` |
+| inferPromQL | [`metrics/infer-promql.ts`](../../../src/observability/metrics/infer-promql.ts) + [`resolve-metric-meta.ts`](../../../src/observability/resolve-metric-meta.ts) | ✅ 见 [semantics.md](../semantics.md) |
+| 类型语义 | [`table-semantics.ts`](../../../src/observability/table-semantics.ts) | ✅ 统一说明 → [semantics.md](../semantics.md) |
 | 主图 vs mini 采样 | [`sparkline-step.ts`](../../../src/observability/metrics/sparkline-step.ts) | ✅ 主图 `MAIN_CHART_MAX_DATA_POINTS=500`（Grafana HIGH）；目录 mini `30` / heatmap `15`（Grafana list MEDIUM=250，我们更粗） |
 | 主图轴密度 | [`use-metric-main-chart.ts`](../../../src/observability/use-metric-main-chart.ts) + [`chart-time-axis.ts`](../../../src/utils/chart-time-axis.ts) | ✅ 主图按实测宽高传 `plotWidthPx` / `plotHeightPx`；高度 `MAIN_CHART_HEIGHT=280`（Grafana XL）；目录仍默认 280 宽 + `splitNumber: 3` |
 | 主图系列样式 | [`prom-chart.ts`](../../../src/observability/metrics/prom-chart.ts) `buildSparklineOption` / `buildMainTimeseriesOption` | ✅ 见下方「主图显示规则对照」 |
@@ -43,9 +43,12 @@
 
 **路由**：`/dashboard/drilldown`（菜单名 Drilldown）。
 
+**语义（type / unit / temporality / 选表 / fieldMap）**：见统一文档 [../semantics.md](../semantics.md)。
+
 ---
 
 ## 主图显示规则对照（Grafana MetricGraphScene）
+
 
 来源：`metrics-drilldown` `buildTimeseriesPanel` + Grafana core `defaultGraphConfig` / uPlot `showPoints: Auto`。
 
@@ -60,7 +63,7 @@
 | 点 | 默认 `showPoints: Auto`（密度高时不画；uPlot 内置） | 主图显式 `showPoints: 'never'`（ECharts `auto` 仍会露点） | ✅ |
 | 空洞 | `spanNulls: false`；缺样本由 query 省略 | `connectNulls: false` + `breakSparklineGaps` 插 null | ✅ |
 | 色板 | classic palette index 0（单系列 fixed） | `getSeriesColorByIndex(0)` | ✅ |
-| 单位 | `getUnit` / rate → per-second | `formatMetricAxisValue` / `getUnit` | ✅ |
+| 单位 | `getUnit` / rate → per-second | `formatMetricAxisValue`：declared UCUM **优先**，否则名字启发；rate 时 per-second | ✅ |
 | Legend | `showLegend: true`, placement **bottom** | 底部 query legend（PromQL 名 + 色块） | ≈ |
 | Tooltip | 默认 single；groupBy 为 multi+desc | axis 单系列 tooltip | ≈ |
 | X/Y 轴密度 | uPlot 按 plot CSS 宽高 | `plotWidthPx` / `plotHeightPx` → tick / splitNumber | ✅ |
@@ -97,6 +100,7 @@
 10. `inferPromQL` + 主图 `query_range` — **已完成**（含 Configure / Explore / percentiles / brush）
 11. Breakdown mini 时序图 — **已完成**（label group-by + value 卡；tabs 全宽 `panel-tabs`）
 12. ~~Open in metrics-query~~ — **已完成**
+13. Metric 语义 — **已完成**（[semantics.md](../semantics.md)）
 
 ### Phase 2
 

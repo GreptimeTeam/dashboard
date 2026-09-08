@@ -39,12 +39,10 @@
 
 ### 语义层（表 / 指标发现）
 
-优先级：
+优先级：`table_semantics` → 列 `semantic_type` → 名字启发 → 用户设置。  
+三信号「能拿什么 / 从哪拿」见 **[semantics.md](../semantics.md)**（唯一语义说明文档）。
 
-1. `information_schema.table_semantics`（`signal_type`、`semantic_options.metric.type`）
-2. `information_schema.columns.semantic_type` / `column_comment`
-3. 列名 / 指标名启发式
-4. 用户在 drilldown-settings 中覆盖
+Metrics：declared type/unit/temporality/original_name 已用；目录列表仍走 Prom `__name__`（语义只补元数据）。
 
 ### 三信号取数原则
 
@@ -72,14 +70,15 @@
 
 | 主题 | 结论 |
 |------|------|
-| **inferPromQL** | `table_semantics.metric.type` → 名启发式 → counter=`sum(rate)`，gauge=`avg`，histogram=`sum(rate(...)) by (le)` |
-| **heatmap / percentiles** | 仅 **histogram** 类型；classic=`*_bucket`；主图可切 heatmap ↔ percentiles |
+| **inferPromQL** | 见 [semantics.md](../semantics.md)：declared → 名启发；delta 不加 `rate`；UCUM 单位优先 |
+| **heatmap / percentiles** | 仅 **histogram** 类型（declared 或名启发）；classic 常用 `*_bucket` 表；主图可切 heatmap ↔ percentiles |
 | **Select** | 三义：选 metric / 选 label / Add to filters（value）；Breakdown 有隐藏规则 |
 | **Related metrics** | 全量列表 + **Levenshtein 排序**；非默认 prefix 过滤 |
 | **Related logs** | filters → Loki selector（Grafana）；Greptime = fieldMap SQL |
 | **Configure panel** | 仅主图 + Group-by 内 metric 卡；**不**含 Breakdown（`groupBy` panel 被排除） |
 | **metric 名与 logs** | 一般**无关**；例外为 Loki recording rule 名（Greptime 不对标） |
 | **Group by labels（侧栏）** | **Phase 0 不做**。Greptime Prom API 无法像 Grafana 一次拉全量 label values；UI 已移除 Group by 控件 |
+| **存量 Prom 无语义** | 见 [semantics.md](../semantics.md)：旧 RW 表常无语义行 → 名启发或 `ALTER TABLE` |
 
 ### Greptime Prom API 能力缺口（Group by labels 阻塞项）
 

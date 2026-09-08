@@ -145,7 +145,7 @@ type DrilldownContext = {
 
 | 规则 | 内容 |
 |------|------|
-| **M-DET-1** | `inferPromQL`：table_semantics.metric.type → 启发式 → counter=`sum(rate)`，gauge=`avg`，histogram=`sum(rate(...)) by (le)` |
+| **M-DET-1** | `inferPromQL`：见 [semantics.md](../semantics.md)（declared type/unit/temporality → 名启发；delta 不加 rate；UCUM 优先） |
 | **M-DET-2** | heatmap / percentiles **仅 histogram**；Configure panel **不含** Breakdown groupBy 面板 |
 | **M-DET-3** | matchers = Context filters（**不含** `__name__`） |
 

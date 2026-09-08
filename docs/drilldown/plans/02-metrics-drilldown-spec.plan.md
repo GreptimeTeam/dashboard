@@ -141,15 +141,15 @@ GET /v1/prometheus/api/v1/label/__name__/values
 | C5  | **Open in Explore**     | 跳转带 PromQL                      | 深链现有 [metrics-query](src/views/dashboard/metrics/) URL `?promql=...`   | 可做                         |
 | C6  | **Copy URL / Bookmark** | 分享状态                           | URL sync：time、filters、metric、breakdown label                           | 部分 URL sync 已有，需扩展   |
 
-**Auto PromQL 类型判定（Greptime 无 `/metadata`）**：
+**Auto PromQL 类型判定（Greptime 无 `/metadata`）**：完整语义见 [semantics.md](../semantics.md)。
 
 | 优先级 | 来源                                        | 用法                                                         |
 | ------ | ------------------------------------------- | ------------------------------------------------------------ |
-| 1      | `information_schema.table_semantics` 同名表 | `semantic_options.metric.type` + `metadata_quality=declared` |
-| 2      | 兄弟表 `_bucket`/`_sum`/`_count`            | histogram / summary 族                                       |
+| 1      | `information_schema.table_semantics` 同名表 | declared：`metric.type` / `unit` / `temporality` / `original_name` |
+| 2      | 兄弟表 `_bucket`/`_sum`/`_count`            | histogram / summary 族（产品侧家族折叠仍 ⬜；当前按单表名解析） |
 | 3      | 名称启发式                                  | `_bucket`→histogram；`_total`/`*_count`→counter；默认 gauge  |
 
-| metric.type            | 默认 PromQL                                      | 图      |
+| metric.type            | 默认 PromQL（cumulative）                        | 图      |
 | ---------------------- | ------------------------------------------------ | ------- |
 | counter                | `sum(rate(<name>{matchers}[5m]))`                | 折线    |
 | gauge / updown_counter | `avg(<name>{matchers})`                          | 折线    |
@@ -157,7 +157,7 @@ GET /v1/prometheus/api/v1/label/__name__/values
 | summary                | `avg(<name>{matchers}) by (quantile)`            | 多线    |
 | unknown                | `avg(<name>{matchers})`                          | 折线    |
 
-`matchers` = Context label filters（**不含** `__name__=`）。
+`matchers` = Context label filters（**不含** `__name__=`）。delta + counter/histogram：不加 `rate()`。
 
 ---
 

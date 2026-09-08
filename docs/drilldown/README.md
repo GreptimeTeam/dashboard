@@ -4,9 +4,11 @@
 
 > **产品代号**：Explore（内部） / Drilldown  
 > **当前路由**：`/dashboard/drilldown`（规划别名 `/dashboard/explore` 尚未启用）  
-> **最后整理**：2026-09-02
+> **最后整理**：2026-09-08
 
 **实现进度（以代码为准）**：[summaries/implementation-status.md](./summaries/implementation-status.md)
+
+语义（Metrics / Logs / Traces：能拿什么、从哪拿）：[semantics.md](./semantics.md)
 
 ---
 
@@ -16,6 +18,7 @@
 |------|------|------|
 | 0 | [summaries/implementation-status.md](./summaries/implementation-status.md) | **当前实现** vs 规划差距（开发对照） |
 | 1 | [summaries/confirmed-decisions.md](./summaries/confirmed-decisions.md) | **已确认**产品边界、技术方向、不做项 |
+| 1b | [semantics.md](./semantics.md) | 三信号语义：能拿什么 / 从哪拿 |
 | 2 | [plans/01-product-explore-master.plan.md](./plans/01-product-explore-master.plan.md) | 产品 Master：Context、语义层、三信号、Phase |
 | 3 | [plans/02-metrics-drilldown-spec.plan.md](./plans/02-metrics-drilldown-spec.plan.md) | Metrics 功能清单 + Greptime 取数 + UI 规则 |
 | 4 | [plans/06-logs-drilldown-spec.plan.md](./plans/06-logs-drilldown-spec.plan.md) | Logs 功能清单 + SQL 取数 + fieldMap |
@@ -42,7 +45,8 @@
 | 文件 | 说明 | 状态 |
 |------|------|------|
 | [plans/02-metrics-drilldown-spec.plan.md](./plans/02-metrics-drilldown-spec.plan.md) | 功能 A–F、inferPromQL、Select/Related/Configure 规则 | **Active** |
-| [metrics/README.md](./metrics/README.md) | Metrics 文档索引与 Greptime 模块落点 | **Active** |
+| [metrics/README.md](./metrics/README.md) | Metrics 文档索引、Greptime 模块落点 | **Active** |
+| [semantics.md](./semantics.md) | 三信号语义：table_semantics / 名字启发 / fieldMap | **Active** |
 
 ### C. Logs Drilldown（Active）
 

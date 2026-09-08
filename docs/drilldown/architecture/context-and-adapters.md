@@ -1,6 +1,6 @@
 # Context 与 Adapters 架构摘要
 
-> 完整 Context 字段与语义层见 [product master](../plans/01-product-explore-master.plan.md)。  
+> 完整 Context 字段见 [product master](../plans/01-product-explore-master.plan.md)；语义见 [semantics.md](../semantics.md)。  
 > Grafana 对照见 [grafana research](../plans/03-grafana-drilldown-research.plan.md)。  
 > **实现状态**：[implementation-status.md](../summaries/implementation-status.md)
 
