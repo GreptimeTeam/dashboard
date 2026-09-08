@@ -25,6 +25,11 @@ export const HEATMAP_MAX_DATA_POINTS = 15
 export const MAIN_CHART_MAX_DATA_POINTS = 500
 
 /**
+ * Breakdown mini panels — between catalog (30) and Grafana list MEDIUM (250).
+ */
+export const BREAKDOWN_MAX_DATA_POINTS = 60
+
+/**
  * Grafana {@link roundInterval} — snap query interval to human-friendly buckets.
  * @see grafana/packages/grafana-data/src/datetime/rangeutil.ts
  */

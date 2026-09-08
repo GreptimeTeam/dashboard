@@ -18,18 +18,26 @@
       )
         | {{ t('drilldown.breakdown.selectLabel') }}
   .card-body
+    BreakdownMiniChart(
+      mode="groupBy"
+      :metric="metric"
+      :label-key="labelKey"
+      :scroll-root="scrollRoot"
+    )
     span.card-meta {{ values.length }} {{ t('drilldown.breakdown.values') }}
 </template>
 
 <script setup lang="ts">
-  import { computed, onMounted, ref } from 'vue'
+  import { computed, onMounted, ref, type Ref } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useDrilldownContext } from '@/observability/context'
   import { fetchBreakdownLabelValues } from '@/observability/metrics/breakdown'
+  import BreakdownMiniChart from './breakdown-mini-chart.vue'
 
   const props = defineProps<{
     metric: string
     labelKey: string
+    scrollRoot: Ref<HTMLElement | null | undefined>
   }>()
 
   defineEmits<{
@@ -67,6 +75,9 @@
 
 <style scoped lang="less">
   .breakdown-label-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     border: 1px solid var(--color-border-2);
     border-radius: 8px;
     padding: 12px;
@@ -78,13 +89,19 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    margin-bottom: 8px;
   }
 
   .card-title {
     font-size: 13px;
     font-weight: 600;
     color: var(--color-text-1);
+  }
+
+  .card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
   }
 
   .card-meta {

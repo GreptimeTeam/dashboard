@@ -5,9 +5,9 @@ import { executePromQLRange } from '@/api/metrics'
 import { useAppStore } from '@/store'
 import type { DrilldownContext } from './context'
 import { filtersForPromMatch } from './filters'
+import resolveMetricKind from './resolve-metric-kind'
 import {
   inferPromQL,
-  inferMetricKind,
   inferPanelType,
   inferPromQLLegendLabel,
   type MetricKind,
@@ -50,26 +50,11 @@ export default function useMetricSparkline(
   const heatmapLegend = ref<{ low: string; mid: string; high: string } | null>(null)
   const metricKind = ref<MetricKind>('unknown')
   const seriesCount = ref(0)
+  const promqlQuery = ref('')
+  const legendLabel = ref('')
   let requestVersion = 0
 
   const { isDark } = storeToRefs(useAppStore())
-
-  const promqlQuery = computed(() => {
-    const name = metricName.value.trim()
-    if (!name) {
-      return ''
-    }
-    const matchers = buildMatchersFromFilters(ctx)
-    return inferPromQL(name, matchers)
-  })
-
-  const legendLabel = computed(() => {
-    const name = metricName.value.trim()
-    if (!name) {
-      return ''
-    }
-    return inferPromQLLegendLabel(name)
-  })
 
   // Grafana MetricsList: fixedColorIndex from list position → classic palette[index % 8]
   const seriesColor = computed(() => getSeriesColorByIndex(colorIndex.value, isDark.value))
@@ -87,13 +72,12 @@ export default function useMetricSparkline(
       chartOption.value = null
       seriesCount.value = 0
       heatmapLegend.value = null
+      promqlQuery.value = ''
+      legendLabel.value = ''
       error.value = null
       loading.value = false
       return
     }
-
-    metricKind.value = inferMetricKind(name)
-    panelType.value = inferPanelType(name)
 
     const version = requestVersion + 1
     requestVersion = version
@@ -101,7 +85,18 @@ export default function useMetricSparkline(
     error.value = null
 
     try {
-      const query = promqlQuery.value
+      const kind = await resolveMetricKind(name)
+      if (version !== requestVersion) {
+        return
+      }
+
+      metricKind.value = kind
+      panelType.value = inferPanelType(name, kind)
+      const matchers = buildMatchersFromFilters(ctx)
+      const query = inferPromQL(name, matchers, kind)
+      promqlQuery.value = query
+      legendLabel.value = inferPromQLLegendLabel(name, kind)
+
       const [start, end] = unixRange
       // Heatmaps need fewer X buckets so cells stay horizontal bricks in short catalog cards.
       const step = calculateSparklineQueryStep(unixRange, {

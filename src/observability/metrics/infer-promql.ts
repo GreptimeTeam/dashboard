@@ -35,8 +35,9 @@ export function inferMetricKind(name: string): MetricKind {
   return 'unknown'
 }
 
-export function inferPanelType(name: string): MetricPanelType {
-  return inferMetricKind(name) === 'histogram' ? 'heatmap' : 'timeseries'
+export function inferPanelType(name: string, kind?: MetricKind): MetricPanelType {
+  const resolved = kind ?? inferMetricKind(name)
+  return resolved === 'histogram' ? 'heatmap' : 'timeseries'
 }
 
 function histogramMetricName(name: string): string {
@@ -46,12 +47,12 @@ function histogramMetricName(name: string): string {
   return `${name}_bucket`
 }
 
-export function inferPromQL(metric: string, matchers?: string): string {
+export function inferPromQL(metric: string, matchers?: string, kind?: MetricKind): string {
   const escaped = escapePromMetric(metric)
   const selector = matchers?.trim() ? `{${matchers}}` : ''
-  const kind = inferMetricKind(metric)
+  const resolved = kind ?? inferMetricKind(metric)
 
-  switch (kind) {
+  switch (resolved) {
     case 'counter':
       return `sum(rate(${escaped}${selector}[${RATE_WINDOW}]))`
     case 'histogram': {
@@ -68,9 +69,9 @@ export function inferPromQL(metric: string, matchers?: string): string {
 }
 
 /** Grafana-style legend label (e.g. `sum(rate)`, `avg`). */
-export function inferPromQLLegendLabel(metric: string): string {
-  const kind = inferMetricKind(metric)
-  switch (kind) {
+export function inferPromQLLegendLabel(metric: string, kind?: MetricKind): string {
+  const resolved = kind ?? inferMetricKind(metric)
+  switch (resolved) {
     case 'counter':
     case 'histogram':
       return 'sum(rate)'

@@ -5,7 +5,8 @@ import { executePromQLRange } from '@/api/metrics'
 import { useAppStore } from '@/store'
 import type { DrilldownContext } from './context'
 import { filtersForPromMatch } from './filters'
-import { inferMetricKind, type MetricKind } from './metrics/infer-promql'
+import resolveMetricKind from './resolve-metric-kind'
+import { type MetricKind } from './metrics/infer-promql'
 import useMainChartPrefs from './metrics/main-chart-config'
 import buildMainChartQueries from './metrics/main-chart-queries'
 import {
@@ -89,16 +90,8 @@ export default function useMetricMainChart(
 
   const matchers = computed(() => buildMatchersFromFilters(ctx))
 
-  const queryPlan = computed(() => {
-    const name = metricName.value.trim()
-    if (!name) {
-      return { panel: 'timeseries' as const, queries: [] }
-    }
-    return buildMainChartQueries(name, matchers.value, prefs.value)
-  })
-
   /** First query expr — Open in PromQL / heatmap title. */
-  const promqlQuery = computed(() => queryPlan.value.queries[0]?.expr ?? '')
+  const promqlQuery = ref('')
 
   const legendLabel = computed(() => legendItems.value[0]?.label ?? '')
 
@@ -151,6 +144,7 @@ export default function useMetricMainChart(
     seriesCount.value = 0
     heatmapLegend.value = null
     legendItems.value = []
+    promqlQuery.value = ''
   }
 
   const load = async () => {
@@ -170,23 +164,30 @@ export default function useMetricMainChart(
       return
     }
 
-    const plan = queryPlan.value
-    if (!plan.queries.length) {
-      clearChart()
-      error.value = null
-      loading.value = false
-      return
-    }
-
-    metricKind.value = inferMetricKind(name)
-    panelType.value = plan.panel
-
     const version = requestVersion + 1
     requestVersion = version
     loading.value = true
     error.value = null
 
     try {
+      const kind = await resolveMetricKind(name)
+      if (version !== requestVersion) {
+        return
+      }
+
+      metricKind.value = kind
+      const plan = buildMainChartQueries(name, matchers.value, prefs.value, kind)
+      promqlQuery.value = plan.queries[0]?.expr ?? ''
+
+      if (!plan.queries.length) {
+        clearChart()
+        error.value = null
+        loading.value = false
+        return
+      }
+
+      panelType.value = plan.panel
+
       const [start, end] = unixRange
       const step = calculateSparklineQueryStep(unixRange, {
         maxDataPoints: MAIN_CHART_MAX_DATA_POINTS,
@@ -320,7 +321,6 @@ export default function useMetricMainChart(
     legendItems,
     seriesColor,
     isEmpty,
-    queryPlan,
     prefs,
   }
 }

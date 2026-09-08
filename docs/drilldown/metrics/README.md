@@ -30,11 +30,11 @@
 | 侧栏 prefix/suffix | [`metrics/metrics-sidebar.vue`](../../../src/views/dashboard/drilldown/metrics/metrics-sidebar.vue) | ✅ |
 | 首页列表 | [`metrics/metric-chart-list.vue`](../../../src/views/dashboard/drilldown/metrics/metric-chart-list.vue) | ✅ lazy sparkline 卡片网格 |
 | 目录数据 | [`use-metrics-catalog.ts`](../../../src/observability/use-metrics-catalog.ts) | ✅ |
-| Breakdown | [`metrics/breakdown-grid.vue`](../../../src/views/dashboard/drilldown/metrics/breakdown-grid.vue) | ✅ 列表卡，无 mini 图 |
+| Breakdown | [`metrics/breakdown-grid.vue`](../../../src/views/dashboard/drilldown/metrics/breakdown-grid.vue) | ✅ label/value mini `query_range`（lazy + queue） |
 | Prom API | [`src/api/metrics.ts`](../../../src/api/metrics.ts) | ✅ |
 | Match / pool | [`adapters/metrics.ts`](../../../src/observability/adapters/metrics.ts) | ✅ |
-| inferPromQL | [`metrics/infer-promql.ts`](../../../src/observability/metrics/infer-promql.ts) | ✅ 名启发式；⬜ `table_semantics` |
-| 类型语义 | `table-semantics.ts` | ⬜ 未建 |
+| inferPromQL | [`metrics/infer-promql.ts`](../../../src/observability/metrics/infer-promql.ts) + [`resolve-metric-kind.ts`](../../../src/observability/resolve-metric-kind.ts) | ✅ 名启发式 + declared `table_semantics` |
+| 类型语义 | [`table-semantics.ts`](../../../src/observability/table-semantics.ts) | ✅ metric.type / metadata_quality |
 | 主图 vs mini 采样 | [`sparkline-step.ts`](../../../src/observability/metrics/sparkline-step.ts) | ✅ 主图 `MAIN_CHART_MAX_DATA_POINTS=500`（Grafana HIGH）；目录 mini `30` / heatmap `15`（Grafana list MEDIUM=250，我们更粗） |
 | 主图轴密度 | [`use-metric-main-chart.ts`](../../../src/observability/use-metric-main-chart.ts) + [`chart-time-axis.ts`](../../../src/utils/chart-time-axis.ts) | ✅ 主图按实测宽高传 `plotWidthPx` / `plotHeightPx`；高度 `MAIN_CHART_HEIGHT=280`（Grafana XL）；目录仍默认 280 宽 + `splitNumber: 3` |
 | 主图系列样式 | [`prom-chart.ts`](../../../src/observability/metrics/prom-chart.ts) `buildSparklineOption` / `buildMainTimeseriesOption` | ✅ 见下方「主图显示规则对照」 |
@@ -95,7 +95,7 @@
 ### 待做（详情 / MVP 闭环）
 
 10. `inferPromQL` + 主图 `query_range` — **已完成**（含 Configure / Explore / percentiles / brush）
-11. Breakdown mini 时序图
+11. Breakdown mini 时序图 — **已完成**（label group-by + value 卡；tabs 全宽 `panel-tabs`）
 12. ~~Open in metrics-query~~ — **已完成**
 
 ### Phase 2

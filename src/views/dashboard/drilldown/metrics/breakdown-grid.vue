@@ -10,8 +10,10 @@
         BreakdownValueCard(
           v-for="value in selectedValues"
           :key="value"
+          :metric="metric"
           :label-key="selectedLabel"
           :value="value"
+          :scroll-root="scrollRoot"
         )
       a-empty(v-if="!selectedValues.length" :description="t('drilldown.breakdown.noValues')")
     template(v-else)
@@ -21,13 +23,14 @@
           :key="labelKey"
           :metric="metric"
           :label-key="labelKey"
+          :scroll-root="scrollRoot"
           @select="openLabel(labelKey)"
         )
       a-empty(v-if="!labelKeys.length && !loading" :description="t('drilldown.breakdown.noLabels')")
 </template>
 
 <script setup lang="ts">
-  import { onMounted, ref, watch } from 'vue'
+  import { onMounted, ref, watch, type Ref } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useDrilldownContext } from '@/observability/context'
   import { fetchBreakdownLabelKeys, fetchBreakdownLabelValues } from '@/observability/metrics/breakdown'
@@ -36,6 +39,7 @@
 
   const props = defineProps<{
     metric: string
+    scrollRoot: Ref<HTMLElement | null | undefined>
   }>()
 
   const { t } = useI18n()
@@ -88,7 +92,7 @@
   .breakdown-labels-grid,
   .breakdown-values-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 12px;
   }
 

@@ -1,6 +1,6 @@
 # Drilldown 实现状态（以代码为准）
 
-> **最后更新**：2026-09-02  
+> **最后更新**：2026-09-08  
 > **路由**：`/dashboard/drilldown`（产品代号仍为 Explore / Drilldown；规划文档中的 `/dashboard/explore` 尚未启用）  
 > **代码根目录**：[`src/views/dashboard/drilldown/`](../../../src/views/dashboard/drilldown/) · [`src/observability/`](../../../src/observability/)
 
@@ -8,7 +8,7 @@
 
 ## 总览
 
-当前为 **Metrics Drilldown MVP 进行中**：单页 Context、顶栏 filter、Metrics 目录首页、选中 metric 后的 Breakdown + Related logs。**尚无** Logs/Traces 首页同屏、主 PromQL 图。
+当前为 **Metrics Drilldown MVP 进行中**：单页 Context、顶栏 filter、Metrics 目录首页、选中 metric 后的主图 + Breakdown mini 图 + Related logs。**尚无** Logs/Traces 首页同屏。
 
 ```text
 /dashboard/drilldown
@@ -16,7 +16,7 @@
 ├── 侧栏：Filter metrics — Prefix / Suffix 树
 └── 主区
     ├── 未选 metric → 搜索 + Sort + 计数 + 指标卡片网格（lazy sparkline + Select）
-    └── 已选 metric → Breakdown Tab + Related logs Tab（无主图）
+    └── 已选 metric → 主图 + full-bleed tabs（Breakdown mini / Related logs / …）
 ```
 
 ---
@@ -70,14 +70,16 @@
 
 | 能力 | 路径 | 状态 |
 |------|------|------|
-| 详情壳 | [`metric-detail.vue`](../../../src/views/dashboard/drilldown/metrics/metric-detail.vue) | ✅ Breakdown + Related logs tabs |
+| 详情壳 | [`metric-detail.vue`](../../../src/views/dashboard/drilldown/metrics/metric-detail.vue) | ✅ 主图 + full-bleed `panel-tabs`（Breakdown / Related logs / …） |
 | Breakdown labels/values | [`breakdown-grid.vue`](../../../src/views/dashboard/drilldown/metrics/breakdown-grid.vue) | ✅ Prom API + match 含 `__name__` |
+| Breakdown mini 图 | [`breakdown-mini-chart.vue`](../../../src/views/dashboard/drilldown/metrics/breakdown-mini-chart.vue) + [`breakdown-queries.ts`](../../../src/observability/metrics/breakdown-queries.ts) | ✅ label `by (L)` + value matcher；lazy + queue |
 | Add to filter | label/value cards | ✅；**R-BRK-1**：label 仅 1 value 时仍 Add to filter |
 | Related logs 预览 | [`related-logs-panel.vue`](../../../src/views/dashboard/drilldown/metrics/related-logs-panel.vue) | ✅ COUNT + 预览表；需 filters + logsTable |
-| 主图 + query_range | — | ⬜ |
-| inferPromQL（名启发式） | [`metrics/infer-promql.ts`](../../../src/observability/metrics/infer-promql.ts) | ✅ counter→rate、gauge→avg；⬜ `table_semantics` |
+| 主图 + query_range | [`use-metric-main-chart.ts`](../../../src/observability/use-metric-main-chart.ts) | ✅ Configure / Explore / percentiles / brush-pan |
+| inferPromQL | [`infer-promql.ts`](../../../src/observability/metrics/infer-promql.ts) + [`resolve-metric-kind.ts`](../../../src/observability/resolve-metric-kind.ts) | ✅ 名启发式 + declared `table_semantics` |
+| table_semantics | [`table-semantics.ts`](../../../src/observability/table-semantics.ts) | ✅ |
 | Related metrics Tab | — | ⬜ |
-| Open in PromQL | — | ⬜ |
+| Open in metrics-query | [`deep-links.ts`](../../../src/observability/deep-links.ts) | ✅ Explore |
 
 ### Logs 适配（部分，无 Logs 首页）
 
@@ -109,11 +111,11 @@
 
 ### Metrics 详情 / MVP 闭环
 
-4. **table-semantics.ts** + inferPromQL `table_semantics` 层
-5. **主时序图**（`query_range`）
-6. Breakdown **mini 时序图**（非仅 value 列表）
+4. ~~table-semantics + infer~~ — **已完成**
+5. ~~主时序图~~ — **已完成**
+6. ~~Breakdown mini 时序图~~ — **已完成**
 7. **Related metrics**（Levenshtein）
-8. **Open in metrics-query** 深链
+8. ~~Open in metrics-query~~ — **已完成**
 
 ### Phase 0 / 产品级
 

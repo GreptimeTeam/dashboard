@@ -37,19 +37,20 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, toRef } from 'vue'
+  import { computed, ref, toRef, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRouter } from 'vue-router'
   import { IconDown } from '@arco-design/web-vue/es/icon'
   import { useDrilldownContext } from '@/observability/context'
   import { buildMetricsQueryLocation } from '@/observability/deep-links'
   import { filtersForPromMatch } from '@/observability/filters'
-  import { inferMetricKind } from '@/observability/metrics/infer-promql'
+  import { inferMetricKind, type MetricKind } from '@/observability/metrics/infer-promql'
   import useMainChartPrefs, {
     configureOptionsForKind,
     type TimeseriesAgg,
   } from '@/observability/metrics/main-chart-config'
   import buildMainChartQueries from '@/observability/metrics/main-chart-queries'
+  import resolveMetricKind from '@/observability/resolve-metric-kind'
 
   const props = defineProps<{
     metric: string
@@ -61,7 +62,14 @@
   const metricName = toRef(props, 'metric')
   const { prefs, setAgg, setVariant } = useMainChartPrefs(metricName)
 
-  const kind = computed(() => inferMetricKind(props.metric))
+  const kind = ref<MetricKind>(inferMetricKind(props.metric))
+  watch(
+    () => props.metric,
+    async (name) => {
+      kind.value = await resolveMetricKind(name)
+    },
+    { immediate: true }
+  )
   const isHistogram = computed(() => kind.value === 'histogram')
   const configureOptions = computed(() => configureOptionsForKind(kind.value))
 
@@ -86,7 +94,7 @@
       ([key, value]) => `${key}="${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
     )
     const matcherStr = parts.length ? parts.join(',') : undefined
-    return buildMainChartQueries(name, matcherStr, prefs.value).queries[0]?.expr ?? ''
+    return buildMainChartQueries(name, matcherStr, prefs.value, kind.value).queries[0]?.expr ?? ''
   })
 
   const isConfigureActive = (option: { key: string; agg?: TimeseriesAgg }) => {

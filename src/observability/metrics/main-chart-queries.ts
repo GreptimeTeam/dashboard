@@ -1,4 +1,4 @@
-import { inferMetricKind, isHistogramMetricName } from './infer-promql'
+import { inferMetricKind, isHistogramMetricName, type MetricKind } from './infer-promql'
 import type { ResolvedMainChartPrefs } from './main-chart-config'
 
 const RATE_WINDOW = '5m'
@@ -35,18 +35,19 @@ function withRate(escapedMetric: string, selector: string): string {
 
 /**
  * Build main-chart PromQL from Configure / variant prefs.
- * Still name-heuristic (no table_semantics) — same family as `inferPromQL`.
+ * Pass resolved `kind` from `resolveMetricKind` when available (table_semantics).
  */
 export default function buildMainChartQueries(
   metric: string,
   matchers: string | undefined,
-  prefs: ResolvedMainChartPrefs
+  prefs: ResolvedMainChartPrefs,
+  kind?: MetricKind
 ): MainChartQueryPlan {
-  const kind = inferMetricKind(metric)
+  const resolvedKind = kind ?? inferMetricKind(metric)
   const escaped = escapePromMetric(metric)
   const selector = selectorSuffix(matchers)
 
-  if (kind === 'histogram' || isHistogramMetricName(metric)) {
+  if (resolvedKind === 'histogram' || isHistogramMetricName(metric)) {
     const bucket = escapePromMetric(histogramBucketName(metric))
     const rateByLe = `sum(${withRate(bucket, selector)}) by (le)`
 
@@ -66,7 +67,7 @@ export default function buildMainChartQueries(
     }
   }
 
-  const isCounter = kind === 'counter'
+  const isCounter = resolvedKind === 'counter'
   const inner = isCounter ? withRate(escaped, selector) : `${escaped}${selector}`
 
   if (prefs.agg === 'min_max') {
