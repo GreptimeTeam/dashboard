@@ -5,7 +5,7 @@ import { executePromQLRange } from '@/api/metrics'
 import { useAppStore } from '@/store'
 import type { DrilldownContext } from './context'
 import { filtersForPromMatch } from './filters'
-import resolveMetricKind from './resolve-metric-kind'
+import resolveMetricMeta from './resolve-metric-meta'
 import {
   inferPromQL,
   inferPanelType,
@@ -13,6 +13,8 @@ import {
   type MetricKind,
   type MetricPanelType,
 } from './metrics/infer-promql'
+import { isMetricRateQuery } from './metrics/panel-stats'
+import { resolveMetricPanelUnit } from './metrics/metric-units'
 import {
   aggregateHistogramToHeatmap,
   aggregateSeriesToPoints,
@@ -85,17 +87,19 @@ export default function useMetricSparkline(
     error.value = null
 
     try {
-      const kind = await resolveMetricKind(name)
+      const meta = await resolveMetricMeta(name)
       if (version !== requestVersion) {
         return
       }
 
+      const { kind, semanticUnit, temporality } = meta
       metricKind.value = kind
       panelType.value = inferPanelType(name, kind)
       const matchers = buildMatchersFromFilters(ctx)
-      const query = inferPromQL(name, matchers, kind)
+      const query = inferPromQL(name, matchers, { kind, temporality })
       promqlQuery.value = query
-      legendLabel.value = inferPromQLLegendLabel(name, kind)
+      legendLabel.value = inferPromQLLegendLabel(name, { kind, temporality })
+      const panelUnit = resolveMetricPanelUnit(name, isMetricRateQuery(kind, temporality), { semanticUnit })
 
       const [start, end] = unixRange
       // Heatmaps need fewer X buckets so cells stay horizontal bricks in short catalog cards.
@@ -119,9 +123,13 @@ export default function useMetricSparkline(
           heatmapLegend.value = null
           return
         }
-        chartOption.value = buildHeatmapOption(heatmap, name, { timeRange: [start, end] })
+        chartOption.value = buildHeatmapOption(heatmap, name, {
+          timeRange: [start, end],
+          semanticUnit,
+          panelUnit: resolveMetricPanelUnit(name, false, { semanticUnit }),
+        })
         const colorBounds = resolveHeatmapColorBounds(heatmap.cells)
-        heatmapLegend.value = formatHeatmapLegendLabels(colorBounds.minValue, colorBounds.maxValue, name)
+        heatmapLegend.value = formatHeatmapLegendLabels(colorBounds.minValue, colorBounds.maxValue, name, semanticUnit)
         return
       }
 
@@ -138,6 +146,8 @@ export default function useMetricSparkline(
       chartOption.value = buildSparklineOption(points, {
         metricKind: metricKind.value,
         metricName: name,
+        semanticUnit,
+        panelUnit,
         timeRange: [start, end],
         color: seriesColor.value,
       })

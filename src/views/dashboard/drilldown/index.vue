@@ -48,7 +48,9 @@
       )
         template(#title)
           .drawer-title
-            span.drawer-metric-name(:title="selectedMetric") {{ selectedMetric }}
+            .drawer-title-text
+              span.drawer-metric-name(:title="selectedMetric") {{ selectedMetric }}
+              span.drawer-metric-original(v-if="metricOriginalName" :title="metricOriginalName") {{ metricOriginalName }}
             MetricDetailActions(v-if="selectedMetric" :metric="selectedMetric")
         MetricDetail(v-if="selectedMetric" :metric="selectedMetric")
 
@@ -57,7 +59,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, ref } from 'vue'
+  import { computed, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRoute, useRouter } from 'vue-router'
   import { useStorage } from '@vueuse/core'
@@ -65,6 +67,7 @@
   import { useAppStore } from '@/store'
   import { useDrilldownContextProvider } from '@/observability/context'
   import type { MetricsSortOption } from '@/observability/metrics/catalog'
+  import resolveMetricMeta from '@/observability/resolve-metric-meta'
   import useDrilldownUrlSync from '@/observability/use-drilldown-url-sync'
   import useMetricsCatalog from '@/observability/use-metrics-catalog'
   import useDrilldownLogsInit from '@/observability/use-drilldown-logs-init'
@@ -89,6 +92,22 @@
   const { signal } = ctx
   const selectedMetric = computed(() => ctx.metric.value)
   const drawerVisible = computed(() => Boolean(selectedMetric.value))
+  const metricOriginalName = ref<string | null>(null)
+
+  watch(
+    selectedMetric,
+    async (name) => {
+      if (!name) {
+        metricOriginalName.value = null
+        return
+      }
+      const meta = await resolveMetricMeta(name)
+      if (ctx.metric.value === name) {
+        metricOriginalName.value = meta.originalName
+      }
+    },
+    { immediate: true }
+  )
 
   const closeDrawer = () => {
     ctx.metric.value = undefined
@@ -256,9 +275,16 @@
     gap: 12px;
   }
 
+  .drawer-title-text {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
   .drawer-metric-name {
     display: block;
-    flex: 1 1 auto;
     min-width: 0;
     overflow: hidden;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
@@ -266,6 +292,17 @@
     font-weight: 600;
     line-height: 1.3;
     color: var(--color-text-1);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .drawer-metric-original {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 11px;
+    line-height: 1.2;
+    color: var(--color-text-3);
     text-overflow: ellipsis;
     white-space: nowrap;
   }

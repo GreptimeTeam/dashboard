@@ -1,4 +1,10 @@
-import { inferMetricKind, isHistogramMetricName, type MetricKind } from './infer-promql'
+import {
+  inferMetricKind,
+  isHistogramMetricName,
+  shouldApplyRate,
+  type MetricKind,
+  type MetricTemporality,
+} from './infer-promql'
 import type { ResolvedMainChartPrefs } from './main-chart-config'
 
 const RATE_WINDOW = '5m'
@@ -33,29 +39,36 @@ function withRate(escapedMetric: string, selector: string): string {
   return `rate(${escapedMetric}${selector}[${RATE_WINDOW}])`
 }
 
+function counterInner(escaped: string, selector: string, useRate: boolean): string {
+  return useRate ? withRate(escaped, selector) : `${escaped}${selector}`
+}
+
 /**
  * Build main-chart PromQL from Configure / variant prefs.
- * Pass resolved `kind` from `resolveMetricKind` when available (table_semantics).
+ * Pass resolved `kind` / `temporality` from `resolveMetricMeta` when available.
  */
 export default function buildMainChartQueries(
   metric: string,
   matchers: string | undefined,
   prefs: ResolvedMainChartPrefs,
-  kind?: MetricKind
+  kind?: MetricKind,
+  temporality?: MetricTemporality | null
 ): MainChartQueryPlan {
   const resolvedKind = kind ?? inferMetricKind(metric)
   const escaped = escapePromMetric(metric)
   const selector = selectorSuffix(matchers)
+  const useRate = shouldApplyRate(resolvedKind, temporality)
 
   if (resolvedKind === 'histogram' || isHistogramMetricName(metric)) {
     const bucket = escapePromMetric(histogramBucketName(metric))
-    const rateByLe = `sum(${withRate(bucket, selector)}) by (le)`
+    const byLe = useRate ? `sum(${withRate(bucket, selector)}) by (le)` : `sum(${bucket}${selector}) by (le)`
+    const histLegend = useRate ? 'sum(rate)' : 'sum'
 
     if (prefs.variant === 'percentiles') {
       return {
         panel: 'timeseries',
         queries: prefs.percentiles.map((p) => ({
-          expr: `histogram_quantile(${(p / 100).toFixed(2)}, ${rateByLe})`,
+          expr: `histogram_quantile(${(p / 100).toFixed(2)}, ${byLe})`,
           legend: `p${p}`,
         })),
       }
@@ -63,42 +76,51 @@ export default function buildMainChartQueries(
 
     return {
       panel: 'heatmap',
-      queries: [{ expr: rateByLe, legend: 'sum(rate)' }],
+      queries: [{ expr: byLe, legend: histLegend }],
     }
   }
 
   const isCounter = resolvedKind === 'counter'
-  const inner = isCounter ? withRate(escaped, selector) : `${escaped}${selector}`
+  const inner = isCounter ? counterInner(escaped, selector, useRate) : `${escaped}${selector}`
+  const rateSuffix = isCounter && useRate ? '(rate)' : ''
 
   if (prefs.agg === 'min_max') {
     return {
       panel: 'timeseries',
       queries: [
-        { expr: `min(${inner})`, legend: isCounter ? 'min(rate)' : 'min' },
-        { expr: `max(${inner})`, legend: isCounter ? 'max(rate)' : 'max' },
+        { expr: `min(${inner})`, legend: isCounter ? `min${rateSuffix}` : 'min' },
+        { expr: `max(${inner})`, legend: isCounter ? `max${rateSuffix}` : 'max' },
       ],
     }
   }
 
   if (prefs.agg === 'sum') {
+    let sumLegend = 'sum'
+    if (isCounter && useRate) {
+      sumLegend = 'sum(rate)'
+    }
     return {
       panel: 'timeseries',
       queries: [
         {
           expr: isCounter ? `sum(${inner})` : `sum(${escaped}${selector})`,
-          legend: isCounter ? 'sum(rate)' : 'sum',
+          legend: sumLegend,
         },
       ],
     }
   }
 
   // avg (default for gauge / unknown / summary)
+  let avgLegend = 'avg'
+  if (isCounter && useRate) {
+    avgLegend = 'avg(rate)'
+  }
   return {
     panel: 'timeseries',
     queries: [
       {
         expr: isCounter ? `avg(${inner})` : `avg(${escaped}${selector})`,
-        legend: isCounter ? 'avg(rate)' : 'avg',
+        legend: avgLegend,
       },
     ],
   }

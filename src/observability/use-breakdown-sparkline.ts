@@ -6,8 +6,10 @@ import { useAppStore } from '@/store'
 import type { DrilldownContext } from './context'
 import { filtersForPromMatch } from './filters'
 import { buildBreakdownGroupByExpr, buildBreakdownValueExpr } from './metrics/breakdown-queries'
-import resolveMetricKind from './resolve-metric-kind'
+import resolveMetricMeta from './resolve-metric-meta'
 import { type MetricKind } from './metrics/infer-promql'
+import { isMetricRateQuery, BREAKDOWN_CHART_HEIGHT } from './metrics/panel-stats'
+import { resolveMetricPanelUnit } from './metrics/metric-units'
 import {
   aggregateSeriesToPoints,
   buildMainTimeseriesOption,
@@ -15,7 +17,6 @@ import {
   parsePromMatrix,
   type PromMatrixSeries,
 } from './metrics/prom-chart'
-import { BREAKDOWN_CHART_HEIGHT } from './metrics/panel-stats'
 import getSeriesColorByIndex from './metrics/series-colors'
 import breakSparklineGaps from './metrics/sparkline-gaps'
 import enqueueSparklineQuery from './metrics/sparkline-query-queue'
@@ -119,17 +120,20 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
     error.value = null
 
     try {
-      const kind = await resolveMetricKind(name)
+      const meta = await resolveMetricMeta(name)
       if (version !== requestVersion) {
         return
       }
+      const { kind, semanticUnit, temporality } = meta
       metricKind.value = kind
+      const panelUnit = resolveMetricPanelUnit(name, isMetricRateQuery(kind, temporality), { semanticUnit })
 
       const matchers = buildMatchersFromFilters(ctx)
+      const queryOpts = { kind, temporality }
       const query =
         options.mode.value === 'groupBy'
-          ? buildBreakdownGroupByExpr(name, labelKey, matchers, kind)
-          : buildBreakdownValueExpr(name, labelKey, valueRef.value, matchers, kind)
+          ? buildBreakdownGroupByExpr(name, labelKey, matchers, queryOpts)
+          : buildBreakdownValueExpr(name, labelKey, valueRef.value, matchers, queryOpts)
       promqlQuery.value = query
 
       const [start, end] = unixRange
@@ -178,6 +182,8 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
         chartOption.value = buildMainTimeseriesOption(seriesList, {
           metricKind: kind,
           metricName: name,
+          semanticUnit,
+          panelUnit,
           timeRange,
           plotHeightPx: BREAKDOWN_CHART_HEIGHT,
           showPoints: 'auto',
@@ -194,6 +200,8 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
       chartOption.value = buildSparklineOption(points, {
         metricKind: kind,
         metricName: name,
+        semanticUnit,
+        panelUnit,
         timeRange,
         plotHeightPx: BREAKDOWN_CHART_HEIGHT,
         color: getSeriesColorByIndex(0, isDark.value),

@@ -2,10 +2,32 @@ export type MetricKind = 'counter' | 'gauge' | 'updown_counter' | 'histogram' | 
 
 export type MetricPanelType = 'timeseries' | 'heatmap'
 
+/** Mirrors Greptime `metric.temporality` (declared). */
+export type MetricTemporality = 'cumulative' | 'delta' | 'mixed' | 'unknown' | string
+
 const RATE_WINDOW = '5m'
+
+export interface InferPromQLOptions {
+  kind?: MetricKind
+  temporality?: MetricTemporality | null
+}
 
 function escapePromMetric(metric: string): string {
   return metric.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+}
+
+/**
+ * Whether PromQL should wrap the series in `rate()`.
+ * Delta instruments already represent interval increments — skip rate.
+ */
+export function shouldApplyRate(kind: MetricKind, temporality?: MetricTemporality | null): boolean {
+  if (kind !== 'counter' && kind !== 'histogram') {
+    return false
+  }
+  if (temporality === 'delta') {
+    return false
+  }
+  return true
 }
 
 /** Classic Prometheus histogram: base name, _bucket, or duration *_seconds family. */
@@ -47,17 +69,21 @@ function histogramMetricName(name: string): string {
   return `${name}_bucket`
 }
 
-export function inferPromQL(metric: string, matchers?: string, kind?: MetricKind): string {
+export function inferPromQL(metric: string, matchers?: string, options?: InferPromQLOptions | MetricKind): string {
+  const opts: InferPromQLOptions = typeof options === 'string' || options === undefined ? { kind: options } : options
   const escaped = escapePromMetric(metric)
   const selector = matchers?.trim() ? `{${matchers}}` : ''
-  const resolved = kind ?? inferMetricKind(metric)
+  const resolved = opts.kind ?? inferMetricKind(metric)
+  const useRate = shouldApplyRate(resolved, opts.temporality)
 
   switch (resolved) {
     case 'counter':
-      return `sum(rate(${escaped}${selector}[${RATE_WINDOW}]))`
+      return useRate ? `sum(rate(${escaped}${selector}[${RATE_WINDOW}]))` : `sum(${escaped}${selector})`
     case 'histogram': {
       const bucketName = escapePromMetric(histogramMetricName(metric))
-      return `sum(rate(${bucketName}${selector}[${RATE_WINDOW}])) by (le)`
+      return useRate
+        ? `sum(rate(${bucketName}${selector}[${RATE_WINDOW}])) by (le)`
+        : `sum(${bucketName}${selector}) by (le)`
     }
     case 'summary':
     case 'gauge':
@@ -69,12 +95,14 @@ export function inferPromQL(metric: string, matchers?: string, kind?: MetricKind
 }
 
 /** Grafana-style legend label (e.g. `sum(rate)`, `avg`). */
-export function inferPromQLLegendLabel(metric: string, kind?: MetricKind): string {
-  const resolved = kind ?? inferMetricKind(metric)
+export function inferPromQLLegendLabel(metric: string, options?: InferPromQLOptions | MetricKind): string {
+  const opts: InferPromQLOptions = typeof options === 'string' || options === undefined ? { kind: options } : options
+  const resolved = opts.kind ?? inferMetricKind(metric)
+  const useRate = shouldApplyRate(resolved, opts.temporality)
   switch (resolved) {
     case 'counter':
     case 'histogram':
-      return 'sum(rate)'
+      return useRate ? 'sum(rate)' : 'sum'
     case 'summary':
     case 'gauge':
     case 'updown_counter':

@@ -39,6 +39,7 @@ describe('infer-promql', () => {
 
     await expect(resolveMetricKind('odd_gauge_total')).resolves.toBe('gauge')
     expect(inferPromQL('odd_gauge_total', undefined, 'gauge')).toBe('avg(odd_gauge_total)')
+    expect(inferPromQL('odd_gauge_total', undefined, { kind: 'gauge' })).toBe('avg(odd_gauge_total)')
   })
 
   it('falls back to heuristic when semantics missing', async () => {

@@ -1,4 +1,5 @@
-import type { MetricKind } from './infer-promql'
+import type { MetricKind, MetricTemporality } from './infer-promql'
+import { shouldApplyRate } from './infer-promql'
 import { formatMetricUnitValue, resolveMetricPanelUnit } from './metric-units'
 
 export interface SparklineStats {
@@ -55,11 +56,11 @@ export function computeSparklineStats(points: Array<[number, number | null]>): S
 }
 
 /**
- * Whether the catalog query wraps the metric in `rate()` (counter → `sum(rate(...))`).
- * Matches Grafana `getTimeseriesQueryRunnerParams` `isRateQuery`.
+ * Whether the catalog/detail timeseries wraps the metric in `rate()` for unit formatting.
+ * Heatmap / histogram quantiles use non-rate units even though the inner expr may use rate.
  */
-export function isMetricRateQuery(kind: MetricKind): boolean {
-  return kind === 'counter'
+export function isMetricRateQuery(kind: MetricKind, temporality?: MetricTemporality | null): boolean {
+  return kind === 'counter' && shouldApplyRate(kind, temporality)
 }
 
 /** @deprecated Prefer resolveMetricPanelUnit(metricName, isRate). Kept for call sites without a name. */
@@ -80,20 +81,32 @@ export function formatMetricPanelValue(value: number | null | undefined): string
  *
  * Grafana timeseries:
  *   unit = isRateQuery ? getPerSecondRateUnit(name) : getUnit(name)
- * e.g. counter → `cps` (`0.3 c/s`), `*_bytes_total` → `Bps`, gauge `*_seconds` → `s`.
+ * Declared `metric.unit` (UCUM) wins when provided via `semanticUnit`.
  */
 export function formatMetricAxisValue(
   value: number | null | undefined,
-  options?: { kind?: MetricKind; metricName?: string; forAxis?: boolean }
+  options?: {
+    kind?: MetricKind
+    metricName?: string
+    semanticUnit?: string | null
+    panelUnit?: string | null
+    temporality?: MetricTemporality | null
+    forAxis?: boolean
+  }
 ): string {
   if (value === null || value === undefined || !Number.isFinite(value)) {
     return '—'
   }
+  if (options?.panelUnit) {
+    return formatMetricUnitValue(value, options.panelUnit)
+  }
   const kind = options?.kind ?? 'unknown'
-  const isRate = isMetricRateQuery(kind)
+  const isRate = isMetricRateQuery(kind, options?.temporality)
   let unit = isRate ? 'cps' : 'none'
   if (options?.metricName) {
-    unit = resolveMetricPanelUnit(options.metricName, isRate)
+    unit = resolveMetricPanelUnit(options.metricName, isRate, { semanticUnit: options.semanticUnit })
+  } else if (options?.semanticUnit) {
+    unit = resolveMetricPanelUnit('', isRate, { semanticUnit: options.semanticUnit })
   }
   return formatMetricUnitValue(value, unit)
 }

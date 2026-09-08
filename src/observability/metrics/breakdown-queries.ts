@@ -1,5 +1,5 @@
-import type { MetricKind } from './infer-promql'
-import { inferMetricKind } from './infer-promql'
+import type { MetricKind, MetricTemporality } from './infer-promql'
+import { inferMetricKind, shouldApplyRate } from './infer-promql'
 
 const RATE_WINDOW = '5m'
 
@@ -38,17 +38,23 @@ function withRate(escapedMetric: string, selector: string): string {
   return `rate(${escapedMetric}${selector}[${RATE_WINDOW}])`
 }
 
-function innerExpr(metric: string, matchers: string | undefined, kind: MetricKind): string {
+function innerExpr(
+  metric: string,
+  matchers: string | undefined,
+  kind: MetricKind,
+  temporality?: MetricTemporality | null
+): string {
   const escaped = escapePromMetric(metric)
   const selector = selectorSuffix(matchers)
+  const useRate = shouldApplyRate(kind, temporality)
 
   if (kind === 'histogram') {
     const sumName = escapePromMetric(histogramSumMetricName(metric))
-    return withRate(sumName, selector)
+    return useRate ? withRate(sumName, selector) : `${sumName}${selector}`
   }
 
   if (kind === 'counter') {
-    return withRate(escaped, selector)
+    return useRate ? withRate(escaped, selector) : `${escaped}${selector}`
   }
 
   return `${escaped}${selector}`
@@ -62,6 +68,11 @@ function aggregateOuter(inner: string, kind: MetricKind, groupByLabel?: string):
   return `avg(${inner})${byClause}`
 }
 
+export interface BreakdownQueryOptions {
+  kind?: MetricKind
+  temporality?: MetricTemporality | null
+}
+
 /**
  * Label-overview Breakdown: one multi-series query grouped by label.
  * Configure excluded — type defaults only (counter→sum(rate), gauge→avg, hist→sum(_sum rate)).
@@ -70,10 +81,12 @@ export function buildBreakdownGroupByExpr(
   metric: string,
   labelKey: string,
   matchers?: string,
-  kind?: MetricKind
+  kindOrOptions?: MetricKind | BreakdownQueryOptions
 ): string {
-  const resolved = kind ?? inferMetricKind(metric)
-  const inner = innerExpr(metric, matchers, resolved)
+  const options: BreakdownQueryOptions =
+    typeof kindOrOptions === 'string' || kindOrOptions === undefined ? { kind: kindOrOptions } : kindOrOptions
+  const resolved = options.kind ?? inferMetricKind(metric)
+  const inner = innerExpr(metric, matchers, resolved, options.temporality)
   return aggregateOuter(inner, resolved, labelKey)
 }
 
@@ -85,12 +98,14 @@ export function buildBreakdownValueExpr(
   labelKey: string,
   value: string,
   matchers?: string,
-  kind?: MetricKind
+  kindOrOptions?: MetricKind | BreakdownQueryOptions
 ): string {
-  const resolved = kind ?? inferMetricKind(metric)
+  const options: BreakdownQueryOptions =
+    typeof kindOrOptions === 'string' || kindOrOptions === undefined ? { kind: kindOrOptions } : kindOrOptions
+  const resolved = options.kind ?? inferMetricKind(metric)
   const valueMatcher = `${labelKey.trim()}="${escapePromLabelValue(value)}"`
   const merged = mergeMatchers(matchers, valueMatcher)
-  const inner = innerExpr(metric, merged, resolved)
+  const inner = innerExpr(metric, merged, resolved, options.temporality)
   return aggregateOuter(inner, resolved)
 }
 

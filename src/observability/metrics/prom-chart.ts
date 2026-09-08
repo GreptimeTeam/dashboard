@@ -6,7 +6,7 @@ import formatTimeAxisLabel, {
   CATALOG_Y_AXIS_SPLIT_NUMBER,
 } from '@/utils/chart-time-axis'
 import type { MetricKind } from './infer-promql'
-import { formatMetricUnitValue, getUnit } from './metric-units'
+import { formatMetricUnitValue, resolveMetricPanelUnit } from './metric-units'
 import { formatMetricAxisValue } from './panel-stats'
 import getSeriesColorByIndex, { SERIES_FILL_OPACITY } from './series-colors'
 
@@ -169,13 +169,14 @@ export function resolveHeatmapColorBounds(cells: Array<[number, number, number]>
   return { minValue, maxValue }
 }
 
-/** Grafana color legend: Auto(min) … Auto(max) with panel unit from `getUnit(metricName)`. */
+/** Grafana color legend: Auto(min) … Auto(max) with panel unit from semantics or name. */
 export function formatHeatmapLegendLabels(
   minValue: number,
   maxValue: number,
-  metricName?: string
+  metricName?: string,
+  semanticUnit?: string | null
 ): { low: string; mid: string; high: string } {
-  const unit = getUnit(metricName ?? '')
+  const unit = resolveMetricPanelUnit(metricName ?? '', false, { semanticUnit })
   const low = formatMetricUnitValue(minValue, unit)
   const high = formatMetricUnitValue(maxValue, unit)
   const mid = formatMetricUnitValue((minValue + maxValue) / 2, unit)
@@ -351,8 +352,14 @@ export function sparklineSeriesColor(kind: MetricKind): string {
 
 export { getSeriesColorByIndex }
 
-function formatSparklineAxisValue(value: number, kind: MetricKind, metricName?: string): string {
-  return formatMetricAxisValue(value, { kind, metricName, forAxis: true })
+function formatSparklineAxisValue(
+  value: number,
+  kind: MetricKind,
+  metricName?: string,
+  panelUnit?: string,
+  semanticUnit?: string | null
+): string {
+  return formatMetricAxisValue(value, { kind, metricName, panelUnit, semanticUnit, forAxis: true })
 }
 
 /** Grafana Spectral-like gradient (low → high intensity). */
@@ -371,10 +378,11 @@ const HEATMAP_COLORS = [
 export function buildHeatmapOption(
   data: HistogramHeatmapData,
   metricName?: string,
-  options?: PanelChartAxisOptions
+  options?: PanelChartAxisOptions & { semanticUnit?: string | null; panelUnit?: string }
 ): EChartsOption {
   const { times, buckets, cells } = data
-  const valueUnit = getUnit(metricName ?? '')
+  const valueUnit =
+    options?.panelUnit ?? resolveMetricPanelUnit(metricName ?? '', false, { semanticUnit: options?.semanticUnit })
 
   const { startMs, endMs, spanMs } = resolvePanelTimeWindow(
     times[0] ?? 0,
@@ -512,11 +520,19 @@ export function buildHeatmapOption(
 export function buildSparklineOption(
   points: Array<[number, number | null]>,
   options?: PanelChartAxisOptions &
-    PanelChartSeriesStyleOptions & { color?: string; metricKind?: MetricKind; metricName?: string }
+    PanelChartSeriesStyleOptions & {
+      color?: string
+      metricKind?: MetricKind
+      metricName?: string
+      semanticUnit?: string | null
+      panelUnit?: string
+    }
 ): EChartsOption {
   const color = options?.color ?? sparklineSeriesColor(options?.metricKind ?? 'unknown')
   const metricKind = options?.metricKind ?? 'unknown'
   const metricName = options?.metricName
+  const semanticUnit = options?.semanticUnit
+  const panelUnit = options?.panelUnit
   const showPoints = options?.showPoints ?? 'auto'
   const data = points.map(([timestamp, value]) => [timestamp * 1000, value])
   const { startMs, endMs, spanMs } = resolvePanelTimeWindow(
@@ -561,7 +577,7 @@ export function buildSparklineOption(
           return ''
         }
         const time = formatTimeAxisLabel(Number(timeValue), spanMs, tickIntervalMs)
-        const formatted = formatSparklineAxisValue(Number(value), metricKind, metricName)
+        const formatted = formatSparklineAxisValue(Number(value), metricKind, metricName, panelUnit, semanticUnit)
         return `${time}<br/><span style="color:${color}">●</span> ${formatted}`
       },
     },
@@ -606,7 +622,8 @@ export function buildSparklineOption(
       },
       axisLabel: {
         ...buildSharedAxisLabelStyle(),
-        formatter: (value: number) => formatSparklineAxisValue(Number(value), metricKind, metricName),
+        formatter: (value: number) =>
+          formatSparklineAxisValue(Number(value), metricKind, metricName, panelUnit, semanticUnit),
       },
       splitLine: {
         show: true,
@@ -662,10 +679,14 @@ export function buildMainTimeseriesOption(
     PanelChartSeriesStyleOptions & {
       metricKind?: MetricKind
       metricName?: string
+      semanticUnit?: string | null
+      panelUnit?: string
     }
 ): EChartsOption {
   const metricKind = options?.metricKind ?? 'unknown'
   const metricName = options?.metricName
+  const semanticUnit = options?.semanticUnit
+  const panelUnit = options?.panelUnit
   const showPoints = options?.showPoints ?? 'never'
   const firstPoints = seriesList[0]?.points ?? []
 
@@ -721,7 +742,7 @@ export function buildMainTimeseriesOption(
               return null
             }
             const color = item.color ?? '#999'
-            const formatted = formatSparklineAxisValue(Number(value), metricKind, metricName)
+            const formatted = formatSparklineAxisValue(Number(value), metricKind, metricName, panelUnit, semanticUnit)
             const label = item.seriesName ? `${item.seriesName}: ` : ''
             return `<span style="color:${color}">●</span> ${label}${formatted}`
           })
@@ -773,7 +794,8 @@ export function buildMainTimeseriesOption(
       },
       axisLabel: {
         ...buildSharedAxisLabelStyle(),
-        formatter: (value: number) => formatSparklineAxisValue(Number(value), metricKind, metricName),
+        formatter: (value: number) =>
+          formatSparklineAxisValue(Number(value), metricKind, metricName, panelUnit, semanticUnit),
       },
       splitLine: {
         show: true,

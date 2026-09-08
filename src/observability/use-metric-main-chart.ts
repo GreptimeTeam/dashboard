@@ -5,10 +5,12 @@ import { executePromQLRange } from '@/api/metrics'
 import { useAppStore } from '@/store'
 import type { DrilldownContext } from './context'
 import { filtersForPromMatch } from './filters'
-import resolveMetricKind from './resolve-metric-kind'
-import { type MetricKind } from './metrics/infer-promql'
+import resolveMetricMeta from './resolve-metric-meta'
+import { type MetricKind, type MetricTemporality } from './metrics/infer-promql'
 import useMainChartPrefs from './metrics/main-chart-config'
 import buildMainChartQueries from './metrics/main-chart-queries'
+import { isMetricRateQuery, MAIN_CHART_FALLBACK_PLOT_WIDTH_PX, MAIN_CHART_HEIGHT } from './metrics/panel-stats'
+import { resolveMetricPanelUnit } from './metrics/metric-units'
 import {
   aggregateHistogramToHeatmap,
   aggregateSeriesToPoints,
@@ -20,7 +22,6 @@ import {
   type HistogramHeatmapData,
   type PanelChartAxisOptions,
 } from './metrics/prom-chart'
-import { MAIN_CHART_FALLBACK_PLOT_WIDTH_PX, MAIN_CHART_HEIGHT } from './metrics/panel-stats'
 import getSeriesColorByIndex from './metrics/series-colors'
 import breakSparklineGaps from './metrics/sparkline-gaps'
 import { calculateSparklineQueryStep, MAIN_CHART_MAX_DATA_POINTS } from './metrics/sparkline-step'
@@ -80,6 +81,9 @@ export default function useMetricMainChart(
   const panelType = ref<MainChartPanelType>('timeseries')
   const heatmapLegend = ref<{ low: string; mid: string; high: string } | null>(null)
   const metricKind = ref<MetricKind>('unknown')
+  const semanticUnit = ref<string | null>(null)
+  const temporality = ref<MetricTemporality | null>(null)
+  const originalName = ref<string | null>(null)
   const seriesCount = ref(0)
   const legendItems = ref<MainChartLegendItem[]>([])
   const cached = ref<CachedMainChart | null>(null)
@@ -119,7 +123,11 @@ export default function useMetricMainChart(
     const axis = resolveAxisOptions(data.timeRange)
 
     if (data.kind === 'heatmap') {
-      chartOption.value = buildHeatmapOption(data.heatmap, data.name, axis)
+      chartOption.value = buildHeatmapOption(data.heatmap, data.name, {
+        ...axis,
+        semanticUnit: semanticUnit.value,
+        panelUnit: resolveMetricPanelUnit(data.name, false, { semanticUnit: semanticUnit.value }),
+      })
       return
     }
 
@@ -133,6 +141,10 @@ export default function useMetricMainChart(
         ...axis,
         metricKind: metricKind.value,
         metricName: data.name,
+        semanticUnit: semanticUnit.value,
+        panelUnit: resolveMetricPanelUnit(data.name, isMetricRateQuery(metricKind.value, temporality.value), {
+          semanticUnit: semanticUnit.value,
+        }),
         showPoints: 'never',
       }
     )
@@ -145,6 +157,9 @@ export default function useMetricMainChart(
     heatmapLegend.value = null
     legendItems.value = []
     promqlQuery.value = ''
+    semanticUnit.value = null
+    temporality.value = null
+    originalName.value = null
   }
 
   const load = async () => {
@@ -170,13 +185,16 @@ export default function useMetricMainChart(
     error.value = null
 
     try {
-      const kind = await resolveMetricKind(name)
+      const meta = await resolveMetricMeta(name)
       if (version !== requestVersion) {
         return
       }
 
-      metricKind.value = kind
-      const plan = buildMainChartQueries(name, matchers.value, prefs.value, kind)
+      metricKind.value = meta.kind
+      semanticUnit.value = meta.semanticUnit
+      temporality.value = meta.temporality
+      originalName.value = meta.originalName
+      const plan = buildMainChartQueries(name, matchers.value, prefs.value, meta.kind, meta.temporality)
       promqlQuery.value = plan.queries[0]?.expr ?? ''
 
       if (!plan.queries.length) {
@@ -233,7 +251,12 @@ export default function useMetricMainChart(
           },
         ]
         const colorBounds = resolveHeatmapColorBounds(heatmap.cells)
-        heatmapLegend.value = formatHeatmapLegendLabels(colorBounds.minValue, colorBounds.maxValue, name)
+        heatmapLegend.value = formatHeatmapLegendLabels(
+          colorBounds.minValue,
+          colorBounds.maxValue,
+          name,
+          semanticUnit.value
+        )
         applyCachedOption()
         return
       }
@@ -315,6 +338,7 @@ export default function useMetricMainChart(
     panelType,
     heatmapLegend,
     metricKind,
+    originalName,
     seriesCount,
     promqlQuery,
     legendLabel,

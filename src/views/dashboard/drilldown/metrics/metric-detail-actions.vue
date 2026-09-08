@@ -44,13 +44,13 @@
   import { useDrilldownContext } from '@/observability/context'
   import { buildMetricsQueryLocation } from '@/observability/deep-links'
   import { filtersForPromMatch } from '@/observability/filters'
-  import { inferMetricKind, type MetricKind } from '@/observability/metrics/infer-promql'
+  import { inferMetricKind, type MetricKind, type MetricTemporality } from '@/observability/metrics/infer-promql'
   import useMainChartPrefs, {
     configureOptionsForKind,
     type TimeseriesAgg,
   } from '@/observability/metrics/main-chart-config'
   import buildMainChartQueries from '@/observability/metrics/main-chart-queries'
-  import resolveMetricKind from '@/observability/resolve-metric-kind'
+  import resolveMetricMeta from '@/observability/resolve-metric-meta'
 
   const props = defineProps<{
     metric: string
@@ -63,10 +63,13 @@
   const { prefs, setAgg, setVariant } = useMainChartPrefs(metricName)
 
   const kind = ref<MetricKind>(inferMetricKind(props.metric))
+  const temporality = ref<MetricTemporality | null>(null)
   watch(
     () => props.metric,
     async (name) => {
-      kind.value = await resolveMetricKind(name)
+      const meta = await resolveMetricMeta(name)
+      kind.value = meta.kind
+      temporality.value = meta.temporality
     },
     { immediate: true }
   )
@@ -94,7 +97,7 @@
       ([key, value]) => `${key}="${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
     )
     const matcherStr = parts.length ? parts.join(',') : undefined
-    return buildMainChartQueries(name, matcherStr, prefs.value, kind.value).queries[0]?.expr ?? ''
+    return buildMainChartQueries(name, matcherStr, prefs.value, kind.value, temporality.value).queries[0]?.expr ?? ''
   })
 
   const isConfigureActive = (option: { key: string; agg?: TimeseriesAgg }) => {

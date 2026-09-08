@@ -3,10 +3,19 @@ import type { MetricKind } from './metrics/infer-promql'
 
 export type MetadataQuality = 'declared' | 'inferred' | 'unknown' | string
 
+/** Greptime `metric.temporality` values. */
+export type MetricTemporality = 'cumulative' | 'delta' | 'mixed' | 'unknown' | string
+
 export interface MetricTableSemantics {
   tableName: string
   metadataQuality: MetadataQuality
+  signalType?: string
+  source?: string
   metricType?: string
+  /** UCUM unit from `metric.unit` (e.g. `s`, `By`, `{request}`). */
+  metricUnit?: string
+  metricTemporality?: MetricTemporality
+  metricOriginalName?: string
 }
 
 const cache = new Map<string, MetricTableSemantics | null>()
@@ -36,6 +45,15 @@ function parseSemanticOptions(raw: unknown): Record<string, unknown> {
   return {}
 }
 
+function optionString(options: Record<string, unknown>, key: string): string | undefined {
+  const value = options[key]
+  if (typeof value !== 'string') {
+    return undefined
+  }
+  const trimmed = value.trim()
+  return trimmed || undefined
+}
+
 function rowToSemantics(row: unknown[], schemas: Array<{ name: string }>): MetricTableSemantics | null {
   const indexOf = (name: string) => schemas.findIndex((schema) => schema.name === name)
   const tableNameIndex = indexOf('table_name')
@@ -49,15 +67,20 @@ function rowToSemantics(row: unknown[], schemas: Array<{ name: string }>): Metri
 
   const qualityIndex = indexOf('metadata_quality')
   const optionsIndex = indexOf('semantic_options')
+  const signalIndex = indexOf('signal_type')
+  const sourceIndex = indexOf('source')
   const metadataQuality = qualityIndex >= 0 ? String(row[qualityIndex] ?? 'unknown') : 'unknown'
   const options = parseSemanticOptions(optionsIndex >= 0 ? row[optionsIndex] : undefined)
-  const metricTypeRaw = options['metric.type']
-  const metricType = typeof metricTypeRaw === 'string' ? metricTypeRaw.trim() : undefined
 
   return {
     tableName,
     metadataQuality,
-    metricType: metricType || undefined,
+    signalType: signalIndex >= 0 ? String(row[signalIndex] ?? '').trim() || undefined : undefined,
+    source: sourceIndex >= 0 ? String(row[sourceIndex] ?? '').trim() || undefined : undefined,
+    metricType: optionString(options, 'metric.type'),
+    metricUnit: optionString(options, 'metric.unit'),
+    metricTemporality: optionString(options, 'metric.temporality'),
+    metricOriginalName: optionString(options, 'metric.original_name'),
   }
 }
 
@@ -82,6 +105,7 @@ export function mapDeclaredMetricType(metricType: string | undefined): MetricKin
     case 'histogram':
     case 'exponentialhistogram':
     case 'exponential_histogram':
+    case 'gauge_histogram':
       return 'histogram'
     case 'summary':
       return 'summary'
@@ -98,6 +122,28 @@ export function declaredMetricKindFromSemantics(semantics: MetricTableSemantics 
   return mapDeclaredMetricType(semantics.metricType)
 }
 
+/** Declared UCUM unit — null when missing or non-declared. */
+export function declaredMetricUnitFromSemantics(semantics: MetricTableSemantics | null): string | null {
+  if (!semantics || semantics.metadataQuality !== 'declared' || !semantics.metricUnit) {
+    return null
+  }
+  return semantics.metricUnit
+}
+
+/** Declared temporality — null when missing or non-declared. */
+export function declaredTemporalityFromSemantics(semantics: MetricTableSemantics | null): MetricTemporality | null {
+  if (!semantics || semantics.metadataQuality !== 'declared' || !semantics.metricTemporality) {
+    return null
+  }
+  return semantics.metricTemporality
+}
+
+/**
+ * Whether PromQL should wrap the series in `rate()`.
+ * Prefer importing from infer-promql; re-exported for convenience.
+ */
+export { shouldApplyRate } from './metrics/infer-promql'
+
 async function fetchMetricTableSemantics(tableName: string): Promise<MetricTableSemantics | null> {
   const trimmed = tableName.trim()
   if (!trimmed) {
@@ -106,7 +152,7 @@ async function fetchMetricTableSemantics(tableName: string): Promise<MetricTable
 
   try {
     const response = await editorApi.runSQL(
-      `SELECT table_name, metadata_quality, semantic_options FROM information_schema.table_semantics WHERE table_name = '${escapeSqlLiteral(
+      `SELECT table_name, signal_type, source, metadata_quality, semantic_options FROM information_schema.table_semantics WHERE table_name = '${escapeSqlLiteral(
         trimmed
       )}' LIMIT 1`
     )

@@ -38,6 +38,11 @@ describe('getUnit / getPerSecondRateUnit', () => {
     expect(resolveMetricPanelUnit('http_requests_total', true)).toBe('cps')
     expect(resolveMetricPanelUnit('go_memstats_alloc_bytes', false)).toBe('bytes')
   })
+
+  it('formats ucum annotated units', () => {
+    expect(formatMetricUnitValue(12, 'ucum:request')).toBe('12 request')
+    expect(formatMetricUnitValue(0.5, 'ucum:request/s')).toBe('0.5 request/s')
+  })
 })
 
 describe('formatMetricUnitValue', () => {

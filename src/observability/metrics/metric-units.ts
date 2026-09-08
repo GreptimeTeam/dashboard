@@ -83,10 +83,87 @@ export function getPerSecondRateUnit(metricName: string): string {
 }
 
 /**
+ * Map Greptime / OTLP UCUM `metric.unit` onto Grafana-style panel unit ids.
+ * Annotated units (`{request}`) become `ucum:…` for suffix formatting.
+ */
+export function mapUcumToPanelUnit(ucum: string | null | undefined, isRateQuery: boolean): string | null {
+  if (!ucum) {
+    return null
+  }
+  const raw = ucum.trim()
+  if (!raw) {
+    return null
+  }
+
+  if (raw.startsWith('{') && raw.endsWith('}') && raw.length > 2) {
+    const label = raw.slice(1, -1)
+    return isRateQuery ? `ucum:${label}/s` : `ucum:${label}`
+  }
+
+  const lower = raw.toLowerCase()
+  switch (lower) {
+    case 's':
+    case 'sec':
+    case 'second':
+    case 'seconds':
+      return isRateQuery ? DEFAULT_UNIT : 's'
+    case 'ms':
+    case 'msec':
+      return isRateQuery ? DEFAULT_UNIT : 'ms'
+    case 'by':
+    case 'b':
+    case 'byte':
+    case 'bytes':
+      return isRateQuery ? RATE_BYTES_PER_SECOND : UNIT_BYTES
+    case '1':
+      // Dimensionless ratio (often 0–1) — Grafana percentunit for gauges.
+      return isRateQuery ? DEFAULT_UNIT : 'percentunit'
+    case '%':
+    case 'percent':
+      return 'percent'
+    case 'hz':
+    case 'hertz':
+      return isRateQuery ? DEFAULT_UNIT : 'hertz'
+    case 'j':
+    case 'joule':
+    case 'joules':
+      return isRateQuery ? 'watt' : 'joule'
+    case 'w':
+    case 'watt':
+    case 'watts':
+      return isRateQuery ? DEFAULT_RATE_UNIT : 'watt'
+    case 'v':
+    case 'volt':
+    case 'volts':
+      return isRateQuery ? DEFAULT_RATE_UNIT : 'volt'
+    case 'a':
+    case 'amp':
+    case 'amperes':
+      return isRateQuery ? DEFAULT_RATE_UNIT : 'amp'
+    case 'cel':
+    case 'celsius':
+      return isRateQuery ? DEFAULT_RATE_UNIT : 'celsius'
+    default:
+      // Unknown UCUM — still surface as a suffix rather than dropping it.
+      return `ucum:${raw}`
+  }
+}
+
+/**
  * Timeseries: `isRateQuery ? getPerSecondRateUnit : getUnit`.
  * Heatmap (Grafana): always `getUnit` — cell values still use this panel unit.
+ *
+ * When `semanticUnit` is a declared UCUM string, it wins over name heuristics.
  */
-export function resolveMetricPanelUnit(metricName: string, isRateQuery: boolean): string {
+export function resolveMetricPanelUnit(
+  metricName: string,
+  isRateQuery: boolean,
+  options?: { semanticUnit?: string | null }
+): string {
+  const fromSemantics = mapUcumToPanelUnit(options?.semanticUnit, isRateQuery)
+  if (fromSemantics) {
+    return fromSemantics
+  }
   return isRateQuery ? getPerSecondRateUnit(metricName) : getUnit(metricName)
 }
 
@@ -246,6 +323,11 @@ export function formatMetricUnitValue(value: number, unit: string): string {
     return '—'
   }
 
+  if (unit.startsWith('ucum:')) {
+    const label = unit.slice('ucum:'.length) || 'units'
+    return `${formatNone(value)} ${label}`
+  }
+
   switch (unit) {
     case 'cps':
       return formatSimpleCount(value, 'c/s')
@@ -264,6 +346,8 @@ export function formatMetricUnitValue(value: number, unit: string): string {
       )
     case 's':
       return formatSeconds(value)
+    case 'ms':
+      return formatSeconds(value / 1000)
     case 'percent':
       return formatPercent(value)
     case 'percentunit':
