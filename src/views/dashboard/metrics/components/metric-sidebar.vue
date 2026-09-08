@@ -163,7 +163,7 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
   const loadMore = async (nodeData: MetricTreeNode) => {
     if (nodeData.type === 'metric' && !nodeData.children?.length) {
       try {
-        const response = await getLabelNames(nodeData.metricName)
+        const response = await getLabelNames({ match: nodeData.metricName })
         nodeData.children = (response.data || [])
           .filter((name: string) => name !== '__name__')
           .map((name: string) => ({
@@ -182,7 +182,7 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
       }
     } else if (nodeData.type === 'label' && nodeData.labelName && !nodeData.children?.length) {
       try {
-        const response = await getLabelValues(nodeData.labelName, nodeData.metricName)
+        const response = await getLabelValues(nodeData.labelName, { match: nodeData.metricName })
         nodeData.children = (response.data || []).map((value: string) => ({
           key: `value-${nodeData.metricName}-${nodeData.labelName}-${value}`,
           title: value,

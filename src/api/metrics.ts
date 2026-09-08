@@ -1,11 +1,17 @@
 import axios, { AxiosRequestConfig } from 'axios'
 import { useAppStore } from '@/store'
-import { lib } from 'markdown-it/lib/common/utils'
 
 const prometheusBaseURL = `/v1/prometheus/api/v1`
 
 /** Max metric names returned per list/search request (Prometheus label values API). */
-export const METRIC_NAMES_LIMIT = 500
+export const METRIC_NAMES_LIMIT = 40000
+
+export interface MetricNamesOptions {
+  start?: string
+  end?: string
+  match?: string[]
+  limit?: number
+}
 
 const addDatabaseParams = () => {
   const appStore = useAppStore()
@@ -14,6 +20,11 @@ const addDatabaseParams = () => {
       db: appStore.database,
     },
   } as AxiosRequestConfig
+}
+
+const isEmptyPromSelector = (selector: string): boolean => {
+  const trimmed = selector.trim()
+  return !trimmed || trimmed === '{}'
 }
 
 /** Normalize a match input to a Prometheus series selector */
@@ -32,11 +43,15 @@ const toSeriesSelector = (m: string): string => {
  * Get all metric names
  * @returns Promise with array of metric names
  */
-export const getMetricNames = () => {
+export const getMetricNames = (options?: MetricNamesOptions) => {
   const config = addDatabaseParams()
+  const match = options?.match?.filter((selector) => !isEmptyPromSelector(selector))
   config.params = {
     ...config.params,
-    limit: METRIC_NAMES_LIMIT,
+    limit: options?.limit ?? METRIC_NAMES_LIMIT,
+    ...(options?.start && { start: options.start }),
+    ...(options?.end && { end: options.end }),
+    ...(match?.length && { match }),
   }
   return axios.get(`${prometheusBaseURL}/label/__name__/values`, config)
 }
@@ -56,15 +71,27 @@ export const searchMetricNames = (regex: string) => {
   return axios.get(`${prometheusBaseURL}/label/__name__/values`, config)
 }
 
+export interface LabelQueryOptions {
+  match?: string
+  start?: string
+  end?: string
+}
+
 /**
  * Get all label names (attributes) for metrics
- * @param match - Metric selector(s) or metric name(s). Will be normalized to match[] selectors
+ * @param options - Optional match selector and time range
  * @returns Promise with array of label names
  */
-export const getLabelNames = (match?: string) => {
+export const getLabelNames = (options?: LabelQueryOptions) => {
   const config = addDatabaseParams()
-  if (match) {
-    config.params.match = [toSeriesSelector(match)]
+  if (options?.match) {
+    config.params.match = [toSeriesSelector(options.match)]
+  }
+  if (options?.start) {
+    config.params.start = options.start
+  }
+  if (options?.end) {
+    config.params.end = options.end
   }
   return axios.get(`${prometheusBaseURL}/labels`, config)
 }
@@ -72,13 +99,19 @@ export const getLabelNames = (match?: string) => {
 /**
  * Get all values for a specific label
  * @param labelName - The label name to get values for
- * @param match - Metric selector(s) or metric name(s). Will be normalized to match[] selectors
+ * @param options - Match selector (required on Greptime) and optional time range
  * @returns Promise with array of label values
  */
-export const getLabelValues = (labelName: string, match?: string) => {
+export const getLabelValues = (labelName: string, options?: LabelQueryOptions) => {
   const config = addDatabaseParams()
-  if (match) {
-    config.params.match = [toSeriesSelector(match)]
+  if (options?.match) {
+    config.params.match = [toSeriesSelector(options.match)]
+  }
+  if (options?.start) {
+    config.params.start = options.start
+  }
+  if (options?.end) {
+    config.params.end = options.end
   }
   return axios.get(`${prometheusBaseURL}/label/${labelName}/values`, config)
 }
@@ -90,11 +123,12 @@ export const getLabelValues = (labelName: string, match?: string) => {
  * @param end - End timestamp
  * @returns Promise with series data
  */
-export const getSeries = (match: string, start?: string, end?: string) => {
+export const getSeries = (match: string | string[], start?: string, end?: string) => {
   const config = addDatabaseParams()
+  const matchList = Array.isArray(match) ? match : [match]
   config.params = {
     ...config.params,
-    match,
+    match: matchList,
     ...(start && { start }),
     ...(end && { end }),
   }

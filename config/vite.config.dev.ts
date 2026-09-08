@@ -10,6 +10,10 @@ export default mergeConfig(
         cache: false,
         include: ['src/**/*.ts', 'src/**/*.tsx', 'src/**/*.vue'],
         exclude: ['node_modules'],
+        // Default failOnError:true aborts transform on lint errors → broken HMR / white screen
+        // until the next save. Keep reporting errors without blocking the dev server.
+        failOnError: false,
+        failOnWarning: false,
       }),
     ],
   },

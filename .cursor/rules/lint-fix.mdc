@@ -1,0 +1,26 @@
+---
+description: Always run and fix ESLint/Prettier before finishing code changes
+alwaysApply: true
+---
+
+# Lint and Format
+
+After editing code, **run lint yourself and fix all issues** before considering the task done.
+
+## Workflow
+
+1. Run ESLint on changed files:
+   ```bash
+   npx eslint --fix <changed-files>
+   ```
+2. Re-run without `--fix` to confirm zero errors:
+   ```bash
+   npx eslint --no-fix <changed-files>
+   ```
+3. Fix remaining issues manually (this repo has no `npm run lint` script).
+
+## Project conventions
+
+- Single-export modules (composables, hooks): use **default export** (`import/prefer-default-export`), e.g. `use-drilldown-url-sync.ts`, `use-metrics-catalog.ts`.
+- Pre-commit uses **prettier** via lint-staged; match existing formatting.
+- Do not skip lint fixes or leave warnings for the user to clean up.

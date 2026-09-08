@@ -114,7 +114,7 @@ a-trigger#time-select(
     return offsetDiff.value === 0 ? base : base.add(offsetDiff.value, 'minute')
   }
 
-  const isRelative = computed(() => props.timeLength !== 0 || props.timeRange.length === 0)
+  const isRelative = computed(() => props.timeLength > 0 && props.timeRange.length !== 2)
 
   const rangePickerModelValue = computed(() => {
     // Case 1: absolute range provided → convert unix seconds to dashboard-timezone Date
