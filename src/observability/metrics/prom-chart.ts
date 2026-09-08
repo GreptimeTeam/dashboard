@@ -2,6 +2,7 @@ import type { EChartsOption } from 'echarts'
 import formatTimeAxisLabel, {
   calculateTimeAxisTicks,
   calculateYAxisSplitNumber,
+  mapTimeTicksToCategoryIndexes,
   CATALOG_Y_AXIS_SPLIT_NUMBER,
 } from '@/utils/chart-time-axis'
 import type { MetricKind } from './infer-promql'
@@ -334,30 +335,6 @@ function buildVerticalTickMarkLine(data: Array<{ xAxis: number | string }>) {
   }
 }
 
-/** Map shared time ticks onto nearest sample indexes (heatmap category axis). */
-function resolveTickCategoryIndexes(timesSec: number[], ticksMs: number[]): number[] {
-  if (!timesSec.length || !ticksMs.length) {
-    return []
-  }
-
-  const indexes: number[] = []
-  ticksMs.forEach((tickMs) => {
-    let bestIndex = 0
-    let bestDist = Number.POSITIVE_INFINITY
-    timesSec.forEach((sec, index) => {
-      const dist = Math.abs(sec * 1000 - tickMs)
-      if (dist < bestDist) {
-        bestDist = dist
-        bestIndex = index
-      }
-    })
-    if (!indexes.includes(bestIndex)) {
-      indexes.push(bestIndex)
-    }
-  })
-  return indexes
-}
-
 /** @deprecated Prefer getSeriesColorByIndex — Grafana colors by list index, not metric kind. */
 export function sparklineSeriesColor(kind: MetricKind): string {
   // Keep a stable fallback for callers without a list index (maps kind → palette slot).
@@ -405,8 +382,8 @@ export function buildHeatmapOption(
     options?.timeRange
   )
   const { intervalMs: tickIntervalMs, ticks: timeTicks } = calculateTimeAxisTicks(startMs, endMs, options?.plotWidthPx)
-  const tickIndexes = resolveTickCategoryIndexes(times, timeTicks)
-  const tickIndexSet = new Set(tickIndexes)
+  const tickLabelByIndex = mapTimeTicksToCategoryIndexes(times.length, timeTicks, startMs, endMs)
+  const tickIndexes = [...tickLabelByIndex.keys()].sort((a, b) => a - b)
   const categoryTimesMs = times.map((sec) => sec * 1000)
 
   // Grafana classic PromQL `le` heatmap: one equal-height row per bucket (not an empty
@@ -469,8 +446,16 @@ export function buildHeatmapOption(
       },
       axisTick: { show: false },
       axisLabel: {
-        ...buildSharedTimeAxisLabelOption(spanMs, tickIntervalMs),
-        interval: (index: number) => tickIndexSet.has(index),
+        ...buildSharedAxisLabelStyle(),
+        // Same tick set / format as timeseries; do not force min/max extras (duplicates).
+        hideOverlap: false,
+        showMinLabel: false,
+        showMaxLabel: false,
+        interval: (index: number) => tickLabelByIndex.has(index),
+        formatter: (_value: number | string, index: number) => {
+          const tickMs = tickLabelByIndex.get(index)
+          return tickMs != null ? formatTimeAxisLabel(tickMs, spanMs, tickIntervalMs) : ''
+        },
         margin: 4,
       },
       splitLine: { show: false },
@@ -658,4 +643,172 @@ export function buildSparklineOption(
       },
     ],
   }
+}
+
+export interface MainTimeseriesSeriesInput {
+  points: Array<[number, number | null]>
+  color: string
+  name: string
+}
+
+/**
+ * Detail main chart timeseries (single or multi-series).
+ * Grafana HIGH panel: no points, fillOpacity 9.
+ * Time zoom/pan is handled outside ECharts (Grafana-style drag), not toolbox brush.
+ */
+export function buildMainTimeseriesOption(
+  seriesList: MainTimeseriesSeriesInput[],
+  options?: PanelChartAxisOptions &
+    PanelChartSeriesStyleOptions & {
+      metricKind?: MetricKind
+      metricName?: string
+    }
+): EChartsOption {
+  const metricKind = options?.metricKind ?? 'unknown'
+  const metricName = options?.metricName
+  const showPoints = options?.showPoints ?? 'never'
+  const firstPoints = seriesList[0]?.points ?? []
+
+  const { startMs, endMs, spanMs } = resolvePanelTimeWindow(
+    firstPoints[0]?.[0] ?? 0,
+    firstPoints[firstPoints.length - 1]?.[0] ?? 0,
+    options?.timeRange
+  )
+  const { intervalMs: tickIntervalMs, ticks: timeTicks } = calculateTimeAxisTicks(startMs, endMs, options?.plotWidthPx)
+
+  let symbolOption: { showSymbol: boolean | 'auto'; symbol: string; symbolSize?: number }
+  if (showPoints === 'never') {
+    symbolOption = { showSymbol: false, symbol: 'none' }
+  } else if (showPoints === 'always') {
+    symbolOption = { showSymbol: true, symbol: 'circle', symbolSize: 4 }
+  } else {
+    symbolOption = { showSymbol: 'auto', symbol: 'circle', symbolSize: 4 }
+  }
+
+  const option: EChartsOption = {
+    animation: false,
+    grid: { ...PANEL_GRID },
+    tooltip: {
+      trigger: 'axis',
+      confine: true,
+      appendToBody: true,
+      borderWidth: 0,
+      padding: [6, 8],
+      textStyle: { fontSize: 11 },
+      axisPointer: {
+        type: 'line',
+        lineStyle: {
+          color: 'rgba(112, 47, 237, 0.35)',
+          type: 'dashed',
+        },
+      },
+      formatter: (params: unknown) => {
+        const items = (Array.isArray(params) ? params : [params]) as Array<{
+          seriesName?: string
+          color?: string
+          value?: [number, number | null]
+          axisValue?: number
+        }>
+        const timeValue = items[0]?.value?.[0] ?? items[0]?.axisValue
+        if (timeValue === undefined) {
+          return ''
+        }
+        const time = formatTimeAxisLabel(Number(timeValue), spanMs, tickIntervalMs)
+        const lines = items
+          .map((item) => {
+            const value = item.value?.[1]
+            if (value === null || value === undefined) {
+              return null
+            }
+            const color = item.color ?? '#999'
+            const formatted = formatSparklineAxisValue(Number(value), metricKind, metricName)
+            const label = item.seriesName ? `${item.seriesName}: ` : ''
+            return `<span style="color:${color}">●</span> ${label}${formatted}`
+          })
+          .filter(Boolean)
+        if (!lines.length) {
+          return ''
+        }
+        return `${time}<br/>${lines.join('<br/>')}`
+      },
+    },
+    xAxis: {
+      type: 'time',
+      show: true,
+      boundaryGap: false,
+      min: startMs,
+      max: endMs,
+      minInterval: tickIntervalMs,
+      maxInterval: tickIntervalMs,
+      interval: tickIntervalMs,
+      axisLine: {
+        show: true,
+        lineStyle: {
+          color: AXIS_LINE_COLOR,
+        },
+      },
+      axisTick: {
+        show: false,
+        customValues: timeTicks,
+      },
+      axisLabel: {
+        ...buildSharedTimeAxisLabelOption(spanMs, tickIntervalMs),
+        customValues: timeTicks,
+      },
+      splitLine: {
+        show: false,
+      },
+    },
+    yAxis: {
+      type: 'value',
+      show: true,
+      scale: true,
+      splitNumber:
+        options?.plotHeightPx != null ? calculateYAxisSplitNumber(options.plotHeightPx) : CATALOG_Y_AXIS_SPLIT_NUMBER,
+      axisLine: {
+        show: false,
+      },
+      axisTick: {
+        show: false,
+      },
+      axisLabel: {
+        ...buildSharedAxisLabelStyle(),
+        formatter: (value: number) => formatSparklineAxisValue(Number(value), metricKind, metricName),
+      },
+      splitLine: {
+        show: true,
+        lineStyle: {
+          color: GRID_LINE_COLOR,
+        },
+      },
+    },
+    series: seriesList.map((item, index) => {
+      const data = item.points.map(([timestamp, value]) => [timestamp * 1000, value])
+      return {
+        type: 'line' as const,
+        name: item.name,
+        data,
+        smooth: false,
+        ...symbolOption,
+        lineStyle: {
+          width: 1,
+          color: item.color,
+        },
+        itemStyle: {
+          color: item.color,
+          borderColor: item.color,
+          borderWidth: 1,
+        },
+        areaStyle: {
+          color: item.color,
+          opacity: SERIES_FILL_OPACITY,
+        },
+        connectNulls: false,
+        markLine:
+          index === 0 ? buildVerticalTickMarkLine(timeTicks.map((timestamp) => ({ xAxis: timestamp }))) : undefined,
+      }
+    }),
+  }
+
+  return option
 }

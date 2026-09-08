@@ -143,6 +143,39 @@ export function calculateTimeAxisTicks(
 }
 
 /**
+ * Map line-chart time ticks onto heatmap category indexes.
+ *
+ * ECharts cartesian heatmap requires two category axes (cannot use `type: 'time'`),
+ * so labels sit at indexes linearly spanning the query window — same tick timestamps
+ * as timeseries `customValues`.
+ */
+export function mapTimeTicksToCategoryIndexes(
+  categoryCount: number,
+  ticksMs: number[],
+  startMs: number,
+  endMs: number
+): Map<number, number> {
+  const labelByIndex = new Map<number, number>()
+  if (categoryCount <= 0 || !ticksMs.length) {
+    return labelByIndex
+  }
+
+  const span = Math.max(1, endMs - startMs)
+  const lastIndex = Math.max(0, categoryCount - 1)
+
+  ticksMs.forEach((tickMs) => {
+    const ratio = (tickMs - startMs) / span
+    const index = Math.max(0, Math.min(lastIndex, Math.round(ratio * lastIndex)))
+    // First tick wins on collision so formatted labels stay unique.
+    if (!labelByIndex.has(index)) {
+      labelByIndex.set(index, tickMs)
+    }
+  })
+
+  return labelByIndex
+}
+
+/**
  * Grafana `formatTime` — format depends on found tick increment (+ range for day-scale).
  * @see grafana-ui UPlotAxisBuilder.formatTime
  */

@@ -5,19 +5,14 @@ import { executePromQLRange } from '@/api/metrics'
 import { useAppStore } from '@/store'
 import type { DrilldownContext } from './context'
 import { filtersForPromMatch } from './filters'
-import {
-  inferPromQL,
-  inferMetricKind,
-  inferPanelType,
-  inferPromQLLegendLabel,
-  type MetricKind,
-  type MetricPanelType,
-} from './metrics/infer-promql'
+import { inferMetricKind, type MetricKind } from './metrics/infer-promql'
+import useMainChartPrefs from './metrics/main-chart-config'
+import buildMainChartQueries from './metrics/main-chart-queries'
 import {
   aggregateHistogramToHeatmap,
   aggregateSeriesToPoints,
   buildHeatmapOption,
-  buildSparklineOption,
+  buildMainTimeseriesOption,
   formatHeatmapLegendLabels,
   parsePromMatrix,
   resolveHeatmapColorBounds,
@@ -44,10 +39,18 @@ export interface MetricMainChartPlotSize {
   height: number
 }
 
+export type MainChartPanelType = 'timeseries' | 'heatmap'
+
+export interface MainChartLegendItem {
+  label: string
+  color: string
+  expr: string
+}
+
 type CachedMainChart =
   | {
       kind: 'timeseries'
-      points: Array<[number, number | null]>
+      series: Array<{ points: Array<[number, number | null]>; legend: string; expr: string }>
       timeRange: [number, number]
       name: string
     }
@@ -56,14 +59,14 @@ type CachedMainChart =
       heatmap: HistogramHeatmapData
       timeRange: [number, number]
       name: string
+      expr: string
     }
 
 /**
  * Eager detail main chart (Grafana MetricGraphScene):
- * - Same PromQL as catalog (`inferPromQL`) but QUERY_RESOLUTION.HIGH (500 points)
- * - Axis tick density from measured plot size (Grafana uPlot-style), not catalog 280×168
- * - No IntersectionObserver / sparkline query queue
- * - Catalog mini uses SPARKLINE_MAX_DATA_POINTS=30 / HEATMAP=15
+ * - Configure / variant prefs → PromQL (HIGH 500 points)
+ * - Axis tick density from measured plot size
+ * - Brush dataZoom writes back via caller
  */
 export default function useMetricMainChart(
   ctx: DrilldownContext,
@@ -73,31 +76,31 @@ export default function useMetricMainChart(
   const loading = ref(false)
   const error = ref<string | null>(null)
   const chartOption = ref<EChartsOption | null>(null)
-  const panelType = ref<MetricPanelType>('timeseries')
+  const panelType = ref<MainChartPanelType>('timeseries')
   const heatmapLegend = ref<{ low: string; mid: string; high: string } | null>(null)
   const metricKind = ref<MetricKind>('unknown')
   const seriesCount = ref(0)
+  const legendItems = ref<MainChartLegendItem[]>([])
   const cached = ref<CachedMainChart | null>(null)
   let requestVersion = 0
 
   const { isDark } = storeToRefs(useAppStore())
+  const { prefs } = useMainChartPrefs(metricName)
 
-  const promqlQuery = computed(() => {
+  const matchers = computed(() => buildMatchersFromFilters(ctx))
+
+  const queryPlan = computed(() => {
     const name = metricName.value.trim()
     if (!name) {
-      return ''
+      return { panel: 'timeseries' as const, queries: [] }
     }
-    const matchers = buildMatchersFromFilters(ctx)
-    return inferPromQL(name, matchers)
+    return buildMainChartQueries(name, matchers.value, prefs.value)
   })
 
-  const legendLabel = computed(() => {
-    const name = metricName.value.trim()
-    if (!name) {
-      return ''
-    }
-    return inferPromQLLegendLabel(name)
-  })
+  /** First query expr — Open in PromQL / heatmap title. */
+  const promqlQuery = computed(() => queryPlan.value.queries[0]?.expr ?? '')
+
+  const legendLabel = computed(() => legendItems.value[0]?.label ?? '')
 
   const seriesColor = computed(() => getSeriesColorByIndex(0, isDark.value))
 
@@ -127,14 +130,19 @@ export default function useMetricMainChart(
       return
     }
 
-    chartOption.value = buildSparklineOption(data.points, {
-      ...axis,
-      metricKind: metricKind.value,
-      metricName: data.name,
-      color: seriesColor.value,
-      // Grafana main HIGH density: Auto hides points; ECharts auto still shows → Never
-      showPoints: 'never',
-    })
+    chartOption.value = buildMainTimeseriesOption(
+      data.series.map((item, index) => ({
+        points: item.points,
+        name: item.legend,
+        color: getSeriesColorByIndex(index, isDark.value),
+      })),
+      {
+        ...axis,
+        metricKind: metricKind.value,
+        metricName: data.name,
+        showPoints: 'never',
+      }
+    )
   }
 
   const clearChart = () => {
@@ -142,6 +150,7 @@ export default function useMetricMainChart(
     chartOption.value = null
     seriesCount.value = 0
     heatmapLegend.value = null
+    legendItems.value = []
   }
 
   const load = async () => {
@@ -161,8 +170,16 @@ export default function useMetricMainChart(
       return
     }
 
+    const plan = queryPlan.value
+    if (!plan.queries.length) {
+      clearChart()
+      error.value = null
+      loading.value = false
+      return
+    }
+
     metricKind.value = inferMetricKind(name)
-    panelType.value = inferPanelType(name)
+    panelType.value = plan.panel
 
     const version = requestVersion + 1
     requestVersion = version
@@ -170,29 +187,50 @@ export default function useMetricMainChart(
     error.value = null
 
     try {
-      const query = promqlQuery.value
       const [start, end] = unixRange
       const step = calculateSparklineQueryStep(unixRange, {
         maxDataPoints: MAIN_CHART_MAX_DATA_POINTS,
       })
+      const stepSeconds = Number(step)
+      const timeRange: [number, number] = [start, end]
 
-      const response = await executePromQLRange(query, String(start), String(end), step)
+      // Keep chart mounted: shift axis to the committed window immediately (Grafana pan/zoom).
+      // Series stay until the new query_range returns — empty regions show until refetch.
+      if (cached.value) {
+        cached.value = { ...cached.value, timeRange }
+        applyCachedOption()
+      }
+
+      const responses = await Promise.all(
+        plan.queries.map((query) => executePromQLRange(query.expr, String(start), String(end), step))
+      )
 
       if (version !== requestVersion) {
         return
       }
 
-      const series = parsePromMatrix(response.data?.result)
-      seriesCount.value = series.length
-      const timeRange: [number, number] = [start, end]
-
-      if (panelType.value === 'heatmap') {
+      if (plan.panel === 'heatmap') {
+        const series = parsePromMatrix(responses[0]?.data?.result)
+        seriesCount.value = series.length
         const heatmap = aggregateHistogramToHeatmap(series)
         if (!heatmap.cells.length) {
           clearChart()
           return
         }
-        cached.value = { kind: 'heatmap', heatmap, timeRange, name }
+        cached.value = {
+          kind: 'heatmap',
+          heatmap,
+          timeRange,
+          name,
+          expr: plan.queries[0].expr,
+        }
+        legendItems.value = [
+          {
+            label: plan.queries[0].legend,
+            color: getSeriesColorByIndex(0, isDark.value),
+            expr: plan.queries[0].expr,
+          },
+        ]
         const colorBounds = resolveHeatmapColorBounds(heatmap.cells)
         heatmapLegend.value = formatHeatmapLegendLabels(colorBounds.minValue, colorBounds.maxValue, name)
         applyCachedOption()
@@ -201,15 +239,31 @@ export default function useMetricMainChart(
 
       heatmapLegend.value = null
 
-      const stepSeconds = Number(step)
-      const points = breakSparklineGaps(aggregateSeriesToPoints(series), stepSeconds)
+      const builtSeries: Array<{ points: Array<[number, number | null]>; legend: string; expr: string }> = []
+      let totalRawSeries = 0
 
-      if (!points.length) {
+      plan.queries.forEach((query, index) => {
+        const series = parsePromMatrix(responses[index]?.data?.result)
+        totalRawSeries += series.length
+        const points = breakSparklineGaps(aggregateSeriesToPoints(series), stepSeconds)
+        if (points.length) {
+          builtSeries.push({ points, legend: query.legend, expr: query.expr })
+        }
+      })
+
+      seriesCount.value = totalRawSeries
+
+      if (!builtSeries.length) {
         clearChart()
         return
       }
 
-      cached.value = { kind: 'timeseries', points, timeRange, name }
+      cached.value = { kind: 'timeseries', series: builtSeries, timeRange, name }
+      legendItems.value = builtSeries.map((item, index) => ({
+        label: item.legend,
+        color: getSeriesColorByIndex(index, isDark.value),
+        expr: item.expr,
+      }))
       applyCachedOption()
     } catch (err) {
       if (version !== requestVersion) {
@@ -234,6 +288,9 @@ export default function useMetricMainChart(
       ctx.rangeTime.value[1],
       ctx.refreshKey.value,
       isDark.value,
+      prefs.value.variant,
+      prefs.value.agg,
+      prefs.value.percentiles.join(','),
     ],
     () => {
       load()
@@ -241,7 +298,6 @@ export default function useMetricMainChart(
     { deep: true, immediate: true }
   )
 
-  // Rebuild axes from cache on resize — no refetch.
   watch(
     () => [plotSize?.value.width ?? 0, plotSize?.value.height ?? 0] as const,
     () => {
@@ -261,7 +317,10 @@ export default function useMetricMainChart(
     seriesCount,
     promqlQuery,
     legendLabel,
+    legendItems,
     seriesColor,
     isEmpty,
+    queryPlan,
+    prefs,
   }
 }

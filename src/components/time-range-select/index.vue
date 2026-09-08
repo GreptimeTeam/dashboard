@@ -74,7 +74,7 @@ TimeSelect(
 
   // Read-only computed property: timeRangeValues - unified format
 
-  const isRelativeTime = computed(() => timeLength.value > 0)
+  const isRelativeTime = computed(() => timeLength.value > 0 && timeRange.value.length !== 2)
   const isAbsoluteTime = computed(() => timeRange.value.length === 2)
 
   // Expose everything for external access

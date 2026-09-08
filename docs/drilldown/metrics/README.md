@@ -37,8 +37,9 @@
 | 类型语义 | `table-semantics.ts` | ⬜ 未建 |
 | 主图 vs mini 采样 | [`sparkline-step.ts`](../../../src/observability/metrics/sparkline-step.ts) | ✅ 主图 `MAIN_CHART_MAX_DATA_POINTS=500`（Grafana HIGH）；目录 mini `30` / heatmap `15`（Grafana list MEDIUM=250，我们更粗） |
 | 主图轴密度 | [`use-metric-main-chart.ts`](../../../src/observability/use-metric-main-chart.ts) + [`chart-time-axis.ts`](../../../src/utils/chart-time-axis.ts) | ✅ 主图按实测宽高传 `plotWidthPx` / `plotHeightPx`；高度 `MAIN_CHART_HEIGHT=280`（Grafana XL）；目录仍默认 280 宽 + `splitNumber: 3` |
-| 主图系列样式 | [`prom-chart.ts`](../../../src/observability/metrics/prom-chart.ts) `buildSparklineOption` | ✅ 见下方「主图显示规则对照」 |
-| 高级出口 | [`src/views/dashboard/metrics/`](../../../src/views/dashboard/metrics/) | ⬜ 深链未接 |
+| 主图系列样式 | [`prom-chart.ts`](../../../src/observability/metrics/prom-chart.ts) `buildSparklineOption` / `buildMainTimeseriesOption` | ✅ 见下方「主图显示规则对照」 |
+| 主图操作栏 | [`metric-detail-actions.vue`](../../../src/views/dashboard/drilldown/metrics/metric-detail-actions.vue) | ✅ 标题行右侧：Configure（caret）/ Explore / heatmap↔percentiles；brush→时间；偏好 localStorage |
+| 高级出口 | [`src/views/dashboard/metrics/`](../../../src/views/dashboard/metrics/) | ✅ Explore → `/dashboard/metrics-query`（[`deep-links.ts`](../../../src/observability/deep-links.ts)） |
 
 **路由**：`/dashboard/drilldown`（菜单名 Drilldown）。
 
@@ -63,10 +64,12 @@
 | Legend | `showLegend: true`, placement **bottom** | 底部 query legend（PromQL 名 + 色块） | ≈ |
 | Tooltip | 默认 single；groupBy 为 multi+desc | axis 单系列 tooltip | ≈ |
 | X/Y 轴密度 | uPlot 按 plot CSS 宽高 | `plotWidthPx` / `plotHeightPx` → tick / splitNumber | ✅ |
-| 多系列 / Configure | avg/sum/min-max/percentiles presets；groupBy 最多 20 条 | 仍单聚合线；Configure / percentiles ⬜ | ⬜ |
+| 多系列 / Configure | avg/sum/min-max/percentiles presets；groupBy 最多 20 条 | Configure：avg/sum/min_max；histogram heatmap↔percentiles（P99/90/50）；无 groupBy | ≈ |
 | Crosshair sync | `CursorSync` Crosshair | 无 | ⬜ |
 | 极值 NaN 重试 | `extremeValueFilterBehavior` | 无 | ⬜ |
 | Heatmap | Spectral scheme、filter 空/零 bucket | Spectral-like + 相对阈值 | ≈ |
+| Open in Explore | panel menu Explore | Explore → metrics-query | ✅ |
+| Brush → time | VizPanel 拖选 zoom / 双击 zoom-out / X 轴拖平移 | [`raw-chart`](../../../src/components/raw-chart/) `timeInteraction`：底部 x 轴热区 pan + 图内 drag zoom；松手 emit `timeRangeChange` → `ctx.rangeTime` | ✅ |
 
 目录 mini：采样更粗（30）、高度 168、`showPoints: Auto`（可露点）、轴默认 280 宽 / `splitNumber: 3`。
 
@@ -91,9 +94,9 @@
 
 ### 待做（详情 / MVP 闭环）
 
-10. `inferPromQL` + 主图 `query_range`
+10. `inferPromQL` + 主图 `query_range` — **已完成**（含 Configure / Explore / percentiles / brush）
 11. Breakdown mini 时序图
-12. Open in metrics-query
+12. ~~Open in metrics-query~~ — **已完成**
 
 ### Phase 2
 

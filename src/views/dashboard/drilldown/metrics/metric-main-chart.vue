@@ -1,15 +1,26 @@
 <template lang="pug">
 .metric-main-chart
   .panel-frame(ref="chartContainerRef")
-    a-spin.panel-loading(v-if="loading" :loading="true")
-    .panel-state.panel-error(v-else-if="error") {{ t('drilldown.metricDetail.chartError') }}
+    a-spin.panel-loading(v-if="loading && !chartOption" :loading="true")
+    .panel-state.panel-error(v-else-if="error && !chartOption") {{ t('drilldown.metricDetail.chartError') }}
     .panel-state(v-else-if="isEmpty") {{ t('drilldown.metricDetail.chartNoData') }}
     .panel-chart(
-      v-else-if="showChart"
+      v-else-if="chartOption"
       :class="{ 'panel-chart-heatmap': isHeatmap }"
       :title="isHeatmap ? promqlQuery : undefined"
     )
-      Chart(:key="chartRenderKey" :height="chartHeight" :options="chartOption")
+      Chart(
+        :key="chartRenderKey"
+        ref="chartRef"
+        :height="chartHeight"
+        :options="chartOption"
+        :brush-select="false"
+        :time-interaction="!isHeatmap"
+        :time-window-ms="timeWindowMs"
+        @time-range-change="onTimeRangeChange"
+      )
+      .panel-refresh-mask(v-if="loading")
+        a-spin(:loading="true")
   .panel-heatmap-legend(v-if="isHeatmap && heatmapLegend")
     span.scale-label.scale-low {{ heatmapLegend.low }}
     .scale-track
@@ -17,10 +28,12 @@
       span.scale-label.scale-mid {{ heatmapLegend.mid }}
     span.scale-label.scale-high {{ heatmapLegend.high }}
   .panel-footer(v-if="showQueryLegend")
-    .query-legend(:title="promqlQuery")
-      span.legend-swatch(:style="{ background: seriesColor }")
-      span.legend-name {{ legendLabel }}
-    span.series-count(v-if="seriesCount > 1") {{ t('drilldown.main.seriesCount', { count: seriesCount }) }}
+    .query-legends
+      .query-legend(v-for="item in legendItems" :key="item.label + item.expr" :title="item.expr")
+        span.legend-swatch(:style="{ background: item.color }")
+        span.legend-name {{ item.label }}
+    span.series-count(v-if="seriesCount > 1 && legendItems.length <= 1")
+      | {{ t('drilldown.main.seriesCount', { count: seriesCount }) }}
 </template>
 
 <script setup lang="ts">
@@ -41,6 +54,7 @@
   const metricName = toRef(props, 'metric')
 
   const chartContainerRef = ref<HTMLElement | null>(null)
+  const chartRef = ref<{ getInstance?: () => unknown } | null>(null)
   const { width: chartWidth } = useElementSize(chartContainerRef)
   const plotSize = computed(() => ({
     width: chartWidth.value,
@@ -55,16 +69,35 @@
     heatmapLegend,
     seriesCount,
     promqlQuery,
-    legendLabel,
-    seriesColor,
+    legendItems,
     isEmpty,
+    prefs,
   } = useMetricMainChart(ctx, metricName, plotSize)
 
   const chartHeight = `${MAIN_CHART_HEIGHT}px`
   const isHeatmap = computed(() => panelType.value === 'heatmap')
-  const showQueryLegend = computed(() => Boolean(legendLabel.value) && !isHeatmap.value)
-  const showChart = computed(() => Boolean(chartOption.value) && !loading.value && !error.value)
-  const chartRenderKey = computed(() => `${props.metric}:${panelType.value}:${promqlQuery.value}`)
+  const showQueryLegend = computed(() => legendItems.value.length > 0 && !isHeatmap.value)
+  const chartRenderKey = computed(
+    () => `${props.metric}:${panelType.value}:${prefs.value.agg}:${prefs.value.variant}:${promqlQuery.value}`
+  )
+
+  const timeWindowMs = computed(() => {
+    const range = ctx.unixTimeRange()
+    if (range.length !== 2) {
+      return null
+    }
+    return { fromMs: range[0] * 1000, toMs: range[1] * 1000 }
+  })
+
+  /** raw-chart emits unix seconds after Grafana-style pan/zoom commit. */
+  const onTimeRangeChange = ([startSec, endSec]: [number, number]) => {
+    if (!(endSec > startSec)) {
+      return
+    }
+    ctx.rangeTime.value = [String(startSec), String(endSec)]
+    ctx.time.value = 0
+    ctx.triggerRefresh()
+  }
 </script>
 
 <style scoped lang="less">
@@ -100,10 +133,22 @@
   }
 
   .panel-chart {
+    position: relative;
     flex-shrink: 0;
     overflow: hidden;
     border-radius: 6px;
     background: var(--gpt-bg-panel);
+  }
+
+  .panel-refresh-mask {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    background: color-mix(in srgb, var(--gpt-bg-panel) 55%, transparent);
   }
 
   .panel-heatmap-legend {
@@ -162,32 +207,38 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    margin-top: 6px;
+    min-height: 22px;
+    margin-top: 4px;
+    padding: 0 2px;
+  }
+
+  .query-legends {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    min-width: 0;
   }
 
   .query-legend {
     display: inline-flex;
-    flex: 1;
     align-items: center;
     gap: 6px;
     min-width: 0;
-    overflow: hidden;
-    font-size: 11px;
-    line-height: 1.2;
-    color: var(--color-text-2);
-    cursor: default;
+    max-width: 100%;
   }
 
   .legend-swatch {
     flex-shrink: 0;
-    width: 12px;
+    width: 10px;
     height: 3px;
     border-radius: 1px;
   }
 
   .legend-name {
     overflow: hidden;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.2;
+    color: var(--color-text-2);
     text-overflow: ellipsis;
     white-space: nowrap;
   }

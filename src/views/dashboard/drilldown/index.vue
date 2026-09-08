@@ -49,6 +49,7 @@
         template(#title)
           .drawer-title
             span.drawer-metric-name(:title="selectedMetric") {{ selectedMetric }}
+            MetricDetailActions(v-if="selectedMetric" :metric="selectedMetric")
         MetricDetail(v-if="selectedMetric" :metric="selectedMetric")
 
     .drilldown-signal-placeholder(v-else)
@@ -71,6 +72,7 @@
   import MetricsSidebar from './metrics/metrics-sidebar.vue'
   import MetricChartList from './metrics/metric-chart-list.vue'
   import MetricDetail from './metrics/metric-detail.vue'
+  import MetricDetailActions from './metrics/metric-detail-actions.vue'
 
   defineOptions({
     name: 'Drilldown',
@@ -124,8 +126,8 @@
   // Explicit viewport height on the page root. Do not rely on nested percentage
   // height through app-layout — that chain is 0 on hard refresh.
   .drilldown-page.query-container {
-    height: calc(100vh - 30px);
-    max-height: calc(100vh - 30px);
+    height: calc(100vh - 24px);
+    max-height: calc(100vh - 24px);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -248,12 +250,16 @@
   .drawer-title {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    width: 100%;
     min-width: 0;
+    gap: 12px;
   }
 
   .drawer-metric-name {
     display: block;
-    max-width: min(56vw, 520px);
+    flex: 1 1 auto;
+    min-width: 0;
     overflow: hidden;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
     font-size: 13px;
@@ -265,6 +271,14 @@
   }
 
   :deep(.metric-detail-drawer.arco-drawer) {
+    .arco-drawer-header {
+      .arco-drawer-title {
+        flex: 1;
+        min-width: 0;
+        margin-right: 0;
+      }
+    }
+
     .arco-drawer-body {
       display: flex;
       flex-direction: column;
@@ -276,8 +290,43 @@
 
 <style lang="less">
   // Full-bleed over list/sidebar; Topbar stays outside popup-container.
-  // Border matches LogDetail drawer edge treatment.
+  // No drawer border — avoids double edge with the list pane card.
   .drilldown-body .arco-drawer {
-    border: 1px solid var(--color-neutral-3) !important;
+    border: none !important;
+  }
+
+  // Title slot must stretch so actions sit at the far right (before close).
+  .drilldown-body .metric-detail-drawer .arco-drawer-header {
+    .arco-drawer-title {
+      flex: 1 1 auto;
+      min-width: 0;
+      margin-right: 0;
+    }
+
+    // More gap from Explore + clearer close affordance (default is 8px / 12px).
+    .arco-drawer-close-btn {
+      display: inline-flex;
+      flex-shrink: 0;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      margin-left: 16px;
+      color: var(--color-text-2);
+      font-size: 16px;
+      line-height: 1;
+      border-radius: var(--border-radius-small, 4px);
+      cursor: pointer;
+
+      &:hover {
+        color: var(--color-text-1);
+        background-color: var(--color-fill-2);
+      }
+
+      .arco-icon,
+      .arco-icon-hover {
+        font-size: 16px;
+      }
+    }
   }
 </style>

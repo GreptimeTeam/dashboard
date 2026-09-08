@@ -4,6 +4,7 @@ import formatTimeAxisLabel, {
   calculateTimeAxisTicks,
   calculateYAxisSplitNumber,
   generateTimeAxisTicks,
+  mapTimeTicksToCategoryIndexes,
   pickTimeAxisIntervalMs,
 } from './chart-time-axis'
 
@@ -54,5 +55,23 @@ describe('chart-time-axis', () => {
     expect(calculateYAxisSplitNumber(168)).toBeLessThan(calculateYAxisSplitNumber(280))
     expect(calculateYAxisSplitNumber(280)).toBeGreaterThanOrEqual(5)
     expect(calculateYAxisSplitNumber(280)).toBeLessThanOrEqual(10)
+  })
+
+  it('maps heatmap category labels evenly like timeseries customValues', () => {
+    const start = 1_000_000
+    const end = start + 60_000
+    const ticks = [start, start + 20_000, start + 40_000]
+    const labels = mapTimeTicksToCategoryIndexes(7, ticks, start, end)
+
+    expect([...labels.keys()].sort((a, b) => a - b)).toEqual([0, 2, 4])
+    expect(labels.get(0)).toBe(start)
+    expect(labels.get(2)).toBe(start + 20_000)
+    expect(labels.get(4)).toBe(start + 40_000)
+  })
+
+  it('keeps unique heatmap label indexes when ticks collide after rounding', () => {
+    const labels = mapTimeTicksToCategoryIndexes(2, [0, 10, 20], 0, 1000)
+    expect(labels.size).toBeLessThanOrEqual(2)
+    expect(labels.has(0)).toBe(true)
   })
 })
