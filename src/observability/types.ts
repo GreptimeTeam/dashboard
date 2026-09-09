@@ -1,5 +1,14 @@
 export type DrilldownSignal = 'metrics' | 'logs' | 'traces'
 
+/** Metric detail drawer tabs (URL `tab`, omit default `breakdown`). */
+export type MetricDetailTab = 'breakdown' | 'related-logs' | 'related-metrics' | 'query-results'
+
+export const METRIC_DETAIL_TABS: MetricDetailTab[] = ['breakdown', 'related-logs', 'related-metrics', 'query-results']
+
+export function isMetricDetailTab(value: unknown): value is MetricDetailTab {
+  return typeof value === 'string' && METRIC_DETAIL_TABS.includes(value as MetricDetailTab)
+}
+
 export type DrilldownFilterOp = '=' | '!=' | '=~' | '!~'
 
 export interface DrilldownFilter {

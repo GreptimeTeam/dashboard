@@ -2,7 +2,7 @@ import { watch } from 'vue'
 import type { RouteLocationNormalizedLoaded, Router } from 'vue-router'
 import { isDrilldownFilterOp } from './filters'
 import { DRILLDOWN_DEFAULT_TIME_MINUTES, type DrilldownContext } from './context'
-import type { DrilldownFilter, DrilldownSignal } from './types'
+import { isMetricDetailTab, type DrilldownFilter, type DrilldownSignal } from './types'
 
 const DRILLDOWN_SIGNALS: DrilldownSignal[] = ['metrics', 'logs', 'traces']
 
@@ -70,7 +70,7 @@ export default function useDrilldownUrlSync(
 
   const initializeFromQuery = () => {
     syncingFromUrl = true
-    const { timeLength, timeRange, filters, prefixes, suffixes, metric, logsTable, signal } = route.query
+    const { timeLength, timeRange, filters, prefixes, suffixes, metric, logsTable, signal, tab } = route.query
 
     ctx.setSignal(parseSignal(signal))
 
@@ -103,6 +103,12 @@ export default function useDrilldownUrlSync(
       ctx.metric.value = metric
     } else {
       ctx.metric.value = undefined
+    }
+
+    if (ctx.metric.value && isMetricDetailTab(tab)) {
+      ctx.setDetailTab(tab)
+    } else {
+      ctx.setDetailTab('breakdown')
     }
 
     if (typeof logsTable === 'string' && logsTable.trim()) {
@@ -150,6 +156,10 @@ export default function useDrilldownUrlSync(
 
     if (ctx.metric.value) {
       query.metric = ctx.metric.value
+      // Default breakdown stays out of the URL to keep links short.
+      if (ctx.detailTab.value !== 'breakdown') {
+        query.tab = ctx.detailTab.value
+      }
     }
 
     if (ctx.logsTable.value) {
@@ -178,6 +188,7 @@ export default function useDrilldownUrlSync(
       ctx.sidebarFilters.value,
       ctx.signal.value,
       ctx.metric.value,
+      ctx.detailTab.value,
       ctx.logsTable.value,
     ],
     () => {

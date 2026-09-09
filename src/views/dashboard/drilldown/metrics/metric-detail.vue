@@ -3,7 +3,7 @@
   .metric-detail-main
     MetricMainChart(:metric="metric" @update:result="mainChartResult = $event")
 
-  a-tabs.metric-detail-tabs.panel-tabs(v-model:active-key="activeTab" lazy-load default-active-key="breakdown")
+  a-tabs.metric-detail-tabs.panel-tabs(v-model:active-key="activeTab" lazy-load)
     a-tab-pane(key="breakdown" :title="t('drilldown.metricDetail.breakdownTab')")
       BreakdownGrid(:metric="metric" :scroll-root="detailScrollRef")
     a-tab-pane(key="related-logs" destroy-on-hide :title="t('drilldown.metricDetail.relatedLogsTab')")
@@ -21,8 +21,10 @@
 </template>
 
 <script setup lang="ts">
-  import { ref } from 'vue'
+  import { computed, ref } from 'vue'
   import { useI18n } from 'vue-i18n'
+  import { useDrilldownContext } from '@/observability/context'
+  import { isMetricDetailTab } from '@/observability/types'
   import BreakdownGrid from './breakdown-grid.vue'
   import MetricMainChart, { type MetricMainChartResult } from './metric-main-chart.vue'
   import QueryResultsPanel from './query-results-panel.vue'
@@ -38,9 +40,18 @@
   }>()
 
   const { t } = useI18n()
+  const { detailTab, setDetailTab } = useDrilldownContext()
   const detailScrollRef = ref<HTMLElement | null>(null)
-  const activeTab = ref('breakdown')
   const mainChartResult = ref<MetricMainChartResult | null>(null)
+
+  const activeTab = computed({
+    get: () => detailTab.value,
+    set: (key: string | number) => {
+      if (isMetricDetailTab(key)) {
+        setDetailTab(key)
+      }
+    },
+  })
 </script>
 
 <style scoped lang="less">

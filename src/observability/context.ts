@@ -7,6 +7,7 @@ import {
   type DrilldownFieldMap,
   type DrilldownSidebarFilters,
   type DrilldownSignal,
+  type MetricDetailTab,
 } from './types'
 import { addFilter as mergeFilter } from './filters'
 
@@ -15,6 +16,8 @@ export interface DrilldownContext {
   filters: Ref<DrilldownFilter[]>
   sidebarFilters: Ref<DrilldownSidebarFilters>
   metric: Ref<string | undefined>
+  /** Active tab inside metric detail (synced to URL `tab`). */
+  detailTab: Ref<MetricDetailTab>
   focusTraceId: Ref<string | undefined>
   logsTable: Ref<string | undefined>
   tracesTable: Ref<string | undefined>
@@ -29,6 +32,7 @@ export interface DrilldownContext {
   setFilters: (filters: DrilldownFilter[]) => void
   setSidebarFilters: (filters: DrilldownSidebarFilters) => void
   appendFilter: (filter: DrilldownFilter) => void
+  setDetailTab: (tab: MetricDetailTab) => void
 }
 
 export const DRILLDOWN_DEFAULT_TIME_MINUTES = 30
@@ -41,6 +45,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
   const filters = ref<DrilldownFilter[]>([])
   const sidebarFilters = ref<DrilldownSidebarFilters>({ ...DEFAULT_SIDEBAR_FILTERS })
   const metric = ref<string | undefined>()
+  const detailTab = ref<MetricDetailTab>('breakdown')
   const focusTraceId = ref<string | undefined>()
   const logsTable = ref<string | undefined>()
   const tracesTable = ref<string | undefined>()
@@ -70,11 +75,16 @@ export function useDrilldownContextProvider(): DrilldownContext {
     setFilters(mergeFilter(filters.value, filter))
   }
 
+  const setDetailTab = (tab: MetricDetailTab) => {
+    detailTab.value = tab
+  }
+
   const context: DrilldownContext = {
     signal,
     filters,
     sidebarFilters,
     metric,
+    detailTab,
     focusTraceId,
     logsTable,
     tracesTable,
@@ -89,6 +99,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
     setFilters,
     setSidebarFilters,
     appendFilter,
+    setDetailTab,
   }
 
   provide(DRILLDOWN_CONTEXT_KEY, context)
