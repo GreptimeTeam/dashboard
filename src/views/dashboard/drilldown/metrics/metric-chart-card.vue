@@ -11,9 +11,8 @@
 </template>
 
 <script setup lang="ts">
-  import { computed } from 'vue'
+  import { computed, type MaybeRefOrGetter } from 'vue'
   import { useI18n } from 'vue-i18n'
-  import type { Ref } from 'vue'
   import { useDrilldownContext } from '@/observability/context'
   import { inferMetricKind } from '@/observability/metrics/infer-promql'
   import { metricKindLabelKey, METRIC_PANEL_HEIGHT } from '@/observability/metrics/panel-stats'
@@ -25,7 +24,7 @@
   const props = withDefaults(
     defineProps<{
       metricName: string
-      scrollRoot: Ref<HTMLElement | null | undefined>
+      scrollRoot: MaybeRefOrGetter<HTMLElement | null | undefined>
       /** Grafana MetricsList fixedColorIndex (classic palette index % 8). */
       colorIndex?: number
     }>(),

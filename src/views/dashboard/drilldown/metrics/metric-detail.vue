@@ -3,14 +3,20 @@
   .metric-detail-main
     MetricMainChart(:metric="metric")
 
-  a-tabs.metric-detail-tabs.panel-tabs(default-active-key="breakdown")
+  a-tabs.metric-detail-tabs.panel-tabs(v-model:active-key="activeTab" lazy-load default-active-key="breakdown")
     a-tab-pane(key="breakdown" :title="t('drilldown.metricDetail.breakdownTab')")
       BreakdownGrid(:metric="metric" :scroll-root="detailScrollRef")
-    a-tab-pane(key="related-logs" :title="t('drilldown.metricDetail.relatedLogsTab')")
+    a-tab-pane(key="related-logs" destroy-on-hide :title="t('drilldown.metricDetail.relatedLogsTab')")
       RelatedLogsPanel
-    a-tab-pane(key="related-metrics" :title="t('drilldown.metricDetail.relatedMetricsTab')")
-      a-empty(:description="t('drilldown.metricDetail.comingSoon')")
-    a-tab-pane(key="query-results" :title="t('drilldown.metricDetail.queryResultsTab')")
+    a-tab-pane(key="related-metrics" destroy-on-hide :title="t('drilldown.metricDetail.relatedMetricsTab')")
+      RelatedMetricsPanel(
+        :metric="metric"
+        :pool-names="poolNames"
+        :loading="poolLoading"
+        :error="poolError"
+        :truncated="poolTruncated"
+      )
+    a-tab-pane(key="query-results" destroy-on-hide :title="t('drilldown.metricDetail.queryResultsTab')")
       a-empty(:description="t('drilldown.metricDetail.comingSoon')")
 </template>
 
@@ -20,13 +26,19 @@
   import BreakdownGrid from './breakdown-grid.vue'
   import MetricMainChart from './metric-main-chart.vue'
   import RelatedLogsPanel from './related-logs-panel.vue'
+  import RelatedMetricsPanel from './related-metrics-panel.vue'
 
   defineProps<{
     metric: string
+    poolNames: string[]
+    poolLoading: boolean
+    poolError: string | null
+    poolTruncated: boolean
   }>()
 
   const { t } = useI18n()
   const detailScrollRef = ref<HTMLElement | null>(null)
+  const activeTab = ref('breakdown')
 </script>
 
 <style scoped lang="less">
@@ -49,11 +61,13 @@
     min-height: 0;
   }
 
+  // No horizontal padding — panel-tabs nav (Breakdown title bar) stays edge-to-edge.
   .metric-detail-tabs :deep(.arco-tabs-content) {
-    padding: 0 16px 16px;
+    padding: 0;
   }
 
+  // Keep pane as the scrollport so height:100% children (Related list) get a real bound.
   .metric-detail-tabs :deep(.arco-tabs-content-item) {
-    overflow: visible;
+    overflow: auto;
   }
 </style>

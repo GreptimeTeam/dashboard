@@ -13,8 +13,12 @@ async function resolveLogsTimeColumn(tableName: string): Promise<string | undefi
   }
 }
 
+/** True when at least one filter maps to a column on the bound logs table. */
 export function canShowRelatedLogs(ctx: DrilldownContext): boolean {
-  return ctx.filters.value.length > 0 && Boolean(ctx.logsTable.value)
+  if (!ctx.logsTable.value) {
+    return false
+  }
+  return filtersToSqlWhere(ctx.filters.value, ctx.fieldMap.value.logs).length > 0
 }
 
 export async function buildLogsWhere(ctx: DrilldownContext): Promise<string> {
@@ -24,6 +28,11 @@ export async function buildLogsWhere(ctx: DrilldownContext): Promise<string> {
   }
 
   const whereParts = filtersToSqlWhere(ctx.filters.value, ctx.fieldMap.value.logs)
+  // Label filters must map via fieldMap; time alone is not enough to correlate.
+  if (!whereParts.length) {
+    return ''
+  }
+
   const unixRange = ctx.unixTimeRange()
 
   if (unixRange.length === 2) {
@@ -32,10 +41,6 @@ export async function buildLogsWhere(ctx: DrilldownContext): Promise<string> {
       whereParts.push(`"${timeColumn}" >= FROM_UNIXTIME(${unixRange[0]})`)
       whereParts.push(`"${timeColumn}" <= FROM_UNIXTIME(${unixRange[1]})`)
     }
-  }
-
-  if (!whereParts.length) {
-    return ''
   }
 
   return whereParts.join(' AND ')

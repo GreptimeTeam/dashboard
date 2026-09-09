@@ -96,7 +96,7 @@
 
 <style scoped lang="less">
   .related-logs-panel {
-    padding: 8px 0;
+    padding: 8px 16px 16px;
   }
 
   .related-logs-meta {

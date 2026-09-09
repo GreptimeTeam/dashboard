@@ -1,7 +1,7 @@
 import editorApi from '@/api/editor'
 import { getLabelNames, getLabelValues } from '@/api/metrics'
-import { buildPromMatchSelector, isGreptimePromMatchSelector } from '../filters'
 import type { DrilldownContext } from '../context'
+import { buildPromMatchSelector, isGreptimePromMatchSelector, resolveFieldMapColumn } from '../filters'
 import type { DrilldownFilter } from '../types'
 
 const INTERNAL_LABEL_PREFIX = '__'
@@ -41,10 +41,6 @@ function filterOptions(keys: string[], search: string): string[] {
     return keys
   }
   return keys.filter((key) => key.toLowerCase().includes(query))
-}
-
-function resolveSqlColumn(fieldKey: string, fieldMap: Record<string, string>): string {
-  return fieldMap[fieldKey] ?? fieldKey
 }
 
 function reverseFieldMap(fieldMap: Record<string, string>): Map<string, string> {
@@ -134,7 +130,11 @@ export async function fetchSqlFieldValues(ctx: DrilldownContext, fieldKey: strin
     return []
   }
 
-  const columnName = resolveSqlColumn(trimmedKey, ctx.fieldMap.value.logs)
+  const columnName = resolveFieldMapColumn(trimmedKey, ctx.fieldMap.value.logs)
+  if (!columnName) {
+    return []
+  }
+
   const unixRange = ctx.unixTimeRange()
   const whereParts = [`"${columnName}" IS NOT NULL`]
 
@@ -155,7 +155,10 @@ export async function fetchSqlFieldValues(ctx: DrilldownContext, fieldKey: strin
     if (filter.key === trimmedKey || filter.op !== '=') {
       return
     }
-    const sqlColumn = resolveSqlColumn(filter.key, ctx.fieldMap.value.logs)
+    const sqlColumn = resolveFieldMapColumn(filter.key, ctx.fieldMap.value.logs)
+    if (!sqlColumn) {
+      return
+    }
     whereParts.push(`"${sqlColumn}" = '${filter.value.replace(/'/g, "''")}'`)
   })
 
@@ -182,13 +185,13 @@ export async function fetchFilterKeyOptions(ctx: DrilldownContext, search = ''):
   return filterOptions([...new Set([...promKeys, ...sqlKeys])], search)
 }
 
-/** Top-bar value assist: SQL DISTINCT only when logsTable is configured. */
+/** Top-bar value assist: SQL DISTINCT only when logsTable is configured and field maps. */
 export async function fetchFilterValueOptions(
   ctx: DrilldownContext,
   fieldKey: string,
   search = ''
 ): Promise<{ values: string[]; sqlAssist: boolean }> {
-  if (!ctx.logsTable.value) {
+  if (!ctx.logsTable.value || !resolveFieldMapColumn(fieldKey, ctx.fieldMap.value.logs)) {
     return { values: [], sqlAssist: false }
   }
 

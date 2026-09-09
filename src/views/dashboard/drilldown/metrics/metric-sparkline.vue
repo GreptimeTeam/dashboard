@@ -1,6 +1,6 @@
 <template lang="pug">
 .metric-sparkline(ref="targetRef")
-  a-spin.panel-loading(v-if="loading" :loading="true")
+  a-spin.panel-loading(v-if="loading || !hasBeenVisible" :loading="true")
   .panel-state.panel-error(v-else-if="error") {{ t('drilldown.main.sparklineError') }}
   .panel-state(v-else-if="isEmpty") {{ t('drilldown.main.sparklineNoData') }}
   .panel-chart(
@@ -23,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, toRef, type Ref } from 'vue'
+  import { computed, toRef, type MaybeRefOrGetter } from 'vue'
   import { useI18n } from 'vue-i18n'
   import Chart from '@/components/raw-chart/index.vue'
   import { useDrilldownContext } from '@/observability/context'
@@ -33,7 +33,7 @@
 
   const props = defineProps<{
     metricName: string
-    scrollRoot: Ref<HTMLElement | null | undefined>
+    scrollRoot: MaybeRefOrGetter<HTMLElement | null | undefined>
     /** Grafana MetricsList fixedColorIndex (classic palette index % 8). */
     colorIndex?: number
   }>()

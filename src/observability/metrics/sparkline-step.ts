@@ -1,11 +1,12 @@
 /**
- * Fixed maxDataPoints for metrics catalog mini panels.
- * Chosen so Last 30m → ~1m step via Grafana `roundInterval` (30m / 30 = 60s).
+ * Metrics catalog / Related metrics mini panels.
+ * Align with Grafana metrics-drilldown list `QUERY_RESOLUTION.MEDIUM = 250`
+ * (→ ~5s for 30m, ~5m for 24h). A coarser budget (e.g. 30) makes 24h → 1h step,
+ * which can return empty on Greptime when samples only cover a short burst.
  *
- * Note: Grafana metrics-drilldown list panels use QUERY_RESOLUTION.MEDIUM = 250
- * (→ 5s for 30m). Catalog sparklines intentionally use a coarser fixed budget.
+ * @see metrics-drilldown MetricsList / getTimeseriesQueryRunnerParams MEDIUM
  */
-export const SPARKLINE_MAX_DATA_POINTS = 30
+export const SPARKLINE_MAX_DATA_POINTS = 250
 
 /**
  * Heatmap catalog panels use fewer X buckets so cells stay wider than tall

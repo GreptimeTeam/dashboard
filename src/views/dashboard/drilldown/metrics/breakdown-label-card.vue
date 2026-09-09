@@ -1,7 +1,9 @@
 <template lang="pug">
 .breakdown-label-card
   .card-header
-    span.card-title {{ labelKey }}
+    .card-title-row(:title="labelKey")
+      span.card-title {{ labelKey }}
+      span.card-meta {{ values.length }} {{ t('drilldown.breakdown.values') }}
     a-space(size="small")
       a-button(
         v-if="singleValue"
@@ -24,20 +26,22 @@
       :label-key="labelKey"
       :scroll-root="scrollRoot"
     )
-    span.card-meta {{ values.length }} {{ t('drilldown.breakdown.values') }}
 </template>
 
 <script setup lang="ts">
-  import { computed, onMounted, ref, type Ref } from 'vue'
+  import { computed, onMounted, ref, watch, type MaybeRefOrGetter } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useDrilldownContext } from '@/observability/context'
   import { fetchBreakdownLabelValues } from '@/observability/metrics/breakdown'
+  import { METRIC_PANEL_HEIGHT } from '@/observability/metrics/panel-stats'
   import BreakdownMiniChart from './breakdown-mini-chart.vue'
+
+  const panelHeightPx = `${METRIC_PANEL_HEIGHT}px`
 
   const props = defineProps<{
     metric: string
     labelKey: string
-    scrollRoot: Ref<HTMLElement | null | undefined>
+    scrollRoot: MaybeRefOrGetter<HTMLElement | null | undefined>
   }>()
 
   defineEmits<{
@@ -71,6 +75,14 @@
   onMounted(() => {
     loadValues()
   })
+
+  watch(
+    () => [ctx.filters.value, ctx.time.value, ctx.rangeTime.value[0], ctx.rangeTime.value[1], ctx.refreshKey.value],
+    () => {
+      loadValues()
+    },
+    { deep: true }
+  )
 </script>
 
 <style scoped lang="less">
@@ -78,34 +90,54 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    min-height: v-bind(panelHeightPx);
+    padding: 12px 12px 10px;
     border: 1px solid var(--color-border-2);
     border-radius: 8px;
-    padding: 12px;
     background: var(--color-bg-2);
   }
 
   .card-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 8px;
+    min-width: 0;
+  }
+
+  .card-title-row {
+    display: flex;
+    flex: 1;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    overflow: hidden;
   }
 
   .card-title {
+    flex: 0 1 auto;
+    overflow: hidden;
     font-size: 13px;
     font-weight: 600;
+    line-height: 1.35;
     color: var(--color-text-1);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .card-meta {
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.35;
+    color: var(--color-text-3);
+    white-space: nowrap;
   }
 
   .card-body {
     display: flex;
+    flex: 1;
     flex-direction: column;
-    gap: 6px;
-    min-width: 0;
-  }
-
-  .card-meta {
-    font-size: 12px;
-    color: var(--color-text-3);
+    min-height: 0;
   }
 </style>

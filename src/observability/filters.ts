@@ -87,7 +87,17 @@ function escapeSqlString(value: string): string {
   return value.replace(/'/g, "''")
 }
 
-/** SQL WHERE fragments from equality filters (chip key → column via fieldMap). */
+/**
+ * Chip key → logs/traces column via fieldMap only.
+ * Unmapped Prom-only labels (e.g. `instance` on a table without that column) are skipped —
+ * never fall back to the raw key (that produces invalid SQL).
+ */
+export function resolveFieldMapColumn(chipKey: string, fieldMap: Record<string, string>): string | undefined {
+  const mapped = fieldMap[chipKey.trim()]?.trim()
+  return mapped || undefined
+}
+
+/** SQL WHERE fragments from equality filters that have a fieldMap column. */
 export function filtersToSqlWhere(
   filters: DrilldownFilter[],
   fieldMap: Record<string, string>,
@@ -99,7 +109,10 @@ export function filtersToSqlWhere(
     if (filter.key === options?.excludeKey || filter.op !== '=') {
       return
     }
-    const column = fieldMap[filter.key] ?? filter.key
+    const column = resolveFieldMapColumn(filter.key, fieldMap)
+    if (!column) {
+      return
+    }
     parts.push(`"${column}" = '${escapeSqlString(filter.value)}'`)
   })
 

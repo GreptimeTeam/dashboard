@@ -25,7 +25,8 @@ export default function useMetricsCatalog(ctx: DrilldownContext, search: Ref<str
       const unixRange = ctx.unixTimeRange()
       const start = unixRange.length === 2 ? String(unixRange[0]) : undefined
       const end = unixRange.length === 2 ? String(unixRange[1]) : undefined
-      const selector = buildMatchSelector(ctx.filters.value, ctx.metric.value)
+      // Do not pin __name__ to ctx.metric — catalog / Related need the full filter pool.
+      const selector = buildMatchSelector(ctx.filters.value)
       const result = await fetchMetricNamesPool({
         start,
         end,
@@ -66,6 +67,7 @@ export default function useMetricsCatalog(ctx: DrilldownContext, search: Ref<str
     loading,
     error,
     truncated,
+    poolNames: computed(() => poolNames.value),
     poolCount: computed(() => poolNames.value.length),
     filteredCount: computed(() => sortedNames.value.length),
     prefixGroups,

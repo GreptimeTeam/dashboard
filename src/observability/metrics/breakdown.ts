@@ -59,10 +59,10 @@ export async function fetchBreakdownLabelValues(
     return []
   }
 
-  const match = buildPromMatchSelector(ctx.filters.value, {
-    excludeKey: trimmedKey,
-    metric,
-  })
+  // Keep all filters (including this label if already filtered). Grafana derives
+  // value panels from the filtered query — do not excludeKey here or Add-to-filter
+  // still lists values outside the current filter scope.
+  const match = buildPromMatchSelector(ctx.filters.value, { metric })
 
   if (!match) {
     return []

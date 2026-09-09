@@ -395,7 +395,8 @@
   }
 
   .arco-tabs-content {
-    height: calc(100% - 28px);
+    // Match nav height (37px); previous 28px left a ~9px gap / overflow mismatch.
+    height: calc(100% - 37px);
     padding: 0;
 
     > .arco-tabs-content-list {

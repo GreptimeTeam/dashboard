@@ -14,8 +14,8 @@ describe('sparkline-step', () => {
     expect(roundInterval(60000)).toBe(60000)
   })
 
-  it('uses fixed maxDataPoints for catalog sparklines', () => {
-    expect(SPARKLINE_MAX_DATA_POINTS).toBe(30)
+  it('uses Grafana MEDIUM maxDataPoints for catalog sparklines', () => {
+    expect(SPARKLINE_MAX_DATA_POINTS).toBe(250)
   })
 
   it('uses fewer maxDataPoints for catalog heatmaps (wider cells)', () => {
@@ -26,15 +26,15 @@ describe('sparkline-step', () => {
     expect(calculateSparklineQueryStep([0, 30 * 60], { maxDataPoints: HEATMAP_MAX_DATA_POINTS })).toBe('120')
   })
 
-  it('uses 1m step for 30m range (fixed maxDataPoints=30)', () => {
+  it('uses 5s step for 30m range (MEDIUM maxDataPoints=250)', () => {
     const rangeMs = 30 * 60 * 1000
     const intervalMs = calculateSparklineIntervalMs(rangeMs)
 
-    expect(intervalMs).toBe(60_000)
-    expect(calculateSparklineQueryStep([0, 30 * 60])).toBe('60')
+    expect(intervalMs).toBe(5000)
+    expect(calculateSparklineQueryStep([0, 30 * 60])).toBe('5')
 
     const points = estimateSparklinePointCount(rangeMs, intervalMs)
-    expect(points).toBe(31)
+    expect(points).toBe(361)
   })
 
   it('matches Grafana calculateInterval with fixed maxDataPoints=250 (MEDIUM / list)', () => {
@@ -56,7 +56,9 @@ describe('sparkline-step', () => {
   })
 
   it('scales step with longer ranges', () => {
-    // 6h / 30 = 720s → roundInterval → 600s (10m)
-    expect(calculateSparklineQueryStep([0, 6 * 60 * 60])).toBe('600')
+    // 24h / 250 → ~5m (not 1h — avoids empty results on short sample bursts)
+    expect(calculateSparklineQueryStep([0, 24 * 60 * 60])).toBe('300')
+    // 6h / 250 ≈ 86.4s → roundInterval → 60s
+    expect(calculateSparklineQueryStep([0, 6 * 60 * 60])).toBe('60')
   })
 })

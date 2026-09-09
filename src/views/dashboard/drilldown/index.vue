@@ -52,7 +52,14 @@
               span.drawer-metric-name(:title="selectedMetric") {{ selectedMetric }}
               span.drawer-metric-original(v-if="metricOriginalName" :title="metricOriginalName") {{ metricOriginalName }}
             MetricDetailActions(v-if="selectedMetric" :metric="selectedMetric")
-        MetricDetail(v-if="selectedMetric" :metric="selectedMetric")
+        MetricDetail(
+          v-if="selectedMetric"
+          :metric="selectedMetric"
+          :pool-names="poolNames"
+          :pool-loading="loading"
+          :pool-error="error"
+          :pool-truncated="truncated"
+        )
 
     .drilldown-signal-placeholder(v-else)
       a-empty(:description="placeholderDescription")
@@ -128,8 +135,18 @@
 
   const search = ref('')
   const sort = ref<MetricsSortOption>('default')
-  const { prefixGroups, suffixGroups, metricNames, truncated, loading, error, groups, poolCount, filteredCount } =
-    useMetricsCatalog(ctx, search, sort)
+  const {
+    prefixGroups,
+    suffixGroups,
+    metricNames,
+    truncated,
+    loading,
+    error,
+    groups,
+    poolNames,
+    poolCount,
+    filteredCount,
+  } = useMetricsCatalog(ctx, search, sort)
 
   const sidebarWidth = useStorage('drilldown-sidebar-width', 228)
   const { hideSidebar } = storeToRefs(useAppStore())
@@ -278,13 +295,14 @@
   .drawer-title-text {
     display: flex;
     flex: 1 1 auto;
-    flex-direction: column;
-    gap: 2px;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
     min-width: 0;
   }
 
   .drawer-metric-name {
-    display: block;
+    flex: 0 1 auto;
     min-width: 0;
     overflow: hidden;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
@@ -297,43 +315,37 @@
   }
 
   .drawer-metric-original {
-    display: block;
+    flex: 0 1 auto;
     min-width: 0;
     overflow: hidden;
     font-size: 11px;
-    line-height: 1.2;
+    line-height: 1.3;
     color: var(--color-text-3);
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  :deep(.metric-detail-drawer.arco-drawer) {
-    .arco-drawer-header {
-      .arco-drawer-title {
-        flex: 1;
-        min-width: 0;
-        margin-right: 0;
-      }
-    }
-
-    .arco-drawer-body {
-      display: flex;
-      flex-direction: column;
-      padding: 0;
-      overflow: hidden;
-    }
   }
 </style>
 
 <style lang="less">
   // Full-bleed over list/sidebar; Topbar stays outside popup-container.
-  // No drawer border — avoids double edge with the list pane card.
+  // Unscoped: drawer teleports into .drilldown-body, so scoped :deep misses it.
   .drilldown-body .arco-drawer {
     border: none !important;
   }
 
-  // Title slot must stretch so actions sit at the far right (before close).
+  .drilldown-body .metric-detail-drawer .arco-drawer-body {
+    display: flex;
+    flex-direction: column;
+    padding: 0 !important;
+    overflow: hidden;
+  }
+
+  // Header chrome band — distinguishes detail mode without a full drawer border.
   .drilldown-body .metric-detail-drawer .arco-drawer-header {
+    background: var(--gpt-bg-header);
+    border-bottom: 1px solid var(--color-border-2);
+
+    // Title slot must stretch so actions sit at the far right (before close).
     .arco-drawer-title {
       flex: 1 1 auto;
       min-width: 0;

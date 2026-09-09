@@ -13,8 +13,8 @@ export interface SparklineStats {
 export const METRIC_PANEL_HEIGHT = 220
 export const METRIC_PANEL_CHART_HEIGHT = 168
 
-/** Breakdown mini chart plot height (Grafana XS–M range). */
-export const BREAKDOWN_CHART_HEIGHT = 112
+/** Breakdown mini chart — same plot height as catalog list sparklines. */
+export const BREAKDOWN_CHART_HEIGHT = METRIC_PANEL_CHART_HEIGHT
 
 /** Grafana Metrics Drilldown `PANEL_HEIGHT.XL` — detail main graph. */
 export const MAIN_CHART_HEIGHT = 280

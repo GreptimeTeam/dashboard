@@ -1,7 +1,7 @@
 <template lang="pug">
-.metric-chart-list
+.metric-chart-list(:class="{ 'metric-chart-list--external-scroll': useExternalScroll }")
   a-spin.spin-wrap(:loading="loading")
-    .metric-chart-scroll(ref="scrollRootRef")
+    .metric-chart-scroll(ref="internalScrollRootRef")
       a-alert(
         v-if="error"
         type="error"
@@ -15,9 +15,9 @@
         :title="t('drilldown.main.truncatedTitle')"
         :description="t('drilldown.main.truncatedDescription', { limit: metricLimit })"
       )
-      a-empty(v-if="!loading && !error && !groups.length" :description="t('drilldown.main.emptyDescription')")
+      a-empty(v-if="!loading && !error && !groups.length" :description="resolvedEmptyDescription")
       .metric-groups(v-else)
-        section.metric-group(v-for="group in groups" :key="group.key")
+        section.metric-group(v-for="group in visibleGroups" :key="group.key")
           .group-header(v-if="group.label")
             span.group-title {{ group.label }}
             span.group-count {{ group.names.length }}
@@ -26,16 +26,18 @@
               v-for="name in group.names"
               :key="name"
               :metric-name="name"
-              :scroll-root="scrollRoot"
+              :scroll-root="effectiveScrollRoot"
               :color-index="colorIndexByName.get(name) ?? 0"
             )
+        .batch-sentinel(ref="sentinelRef" v-show="hasMore")
 </template>
 
 <script setup lang="ts">
-  import { computed, ref } from 'vue'
+  import { computed, isRef, ref, type Ref } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { METRIC_NAMES_LIMIT } from '@/api/metrics'
   import type { MetricGroup } from '@/observability/metrics/catalog'
+  import useScrollBatchReveal from '@/observability/use-scroll-batch-reveal'
   import MetricChartCard from './metric-chart-card.vue'
 
   const props = defineProps<{
@@ -43,15 +45,58 @@
     error: string | null
     truncated: boolean
     groups: MetricGroup[]
+    /** When set, list does not scroll itself; IntersectionObserver uses this root. */
+    scrollRoot?: Ref<HTMLElement | null | undefined> | HTMLElement | null
+    emptyDescription?: string
+    batchSize?: number
   }>()
 
   const { t } = useI18n()
 
   const metricLimit = METRIC_NAMES_LIMIT
-  const scrollRootRef = ref<HTMLElement | null>(null)
-  const scrollRoot = scrollRootRef
+  const internalScrollRootRef = ref<HTMLElement | null>(null)
+  const useExternalScroll = computed(() => props.scrollRoot !== undefined)
 
-  // Grafana MetricsList: each card gets fixedColorIndex from list order.
+  // Template may unwrap Ref props; accept Ref or element and always expose a computed root.
+  const effectiveScrollRoot = computed(() => {
+    if (props.scrollRoot !== undefined) {
+      return isRef(props.scrollRoot) ? props.scrollRoot.value : props.scrollRoot
+    }
+    return internalScrollRootRef.value
+  })
+
+  const resolvedEmptyDescription = computed(() => props.emptyDescription ?? t('drilldown.main.emptyDescription'))
+
+  const flatNames = computed(() => props.groups.flatMap((group) => group.names))
+  const totalCount = computed(() => flatNames.value.length)
+  const resetKey = computed(() => flatNames.value.join('\0'))
+
+  const { visibleCount, sentinelRef, hasMore } = useScrollBatchReveal(totalCount, effectiveScrollRoot, {
+    batchSize: props.batchSize,
+    resetKey,
+  })
+
+  const visibleGroups = computed((): MetricGroup[] => {
+    let remaining = visibleCount.value
+    return props.groups.reduce<MetricGroup[]>((result, group) => {
+      if (remaining <= 0) {
+        return result
+      }
+      if (group.names.length <= remaining) {
+        remaining -= group.names.length
+        result.push(group)
+        return result
+      }
+      result.push({
+        ...group,
+        names: group.names.slice(0, remaining),
+      })
+      remaining = 0
+      return result
+    }, [])
+  })
+
+  // Grafana MetricsList: each card gets fixedColorIndex from full list order.
   const colorIndexByName = computed(() => {
     const map = new Map<string, number>()
     let index = 0
@@ -82,6 +127,34 @@
       min-height: 0;
       height: 100%;
       overflow: hidden;
+    }
+  }
+
+  .metric-chart-list--external-scroll {
+    height: auto;
+    overflow: visible;
+
+    :deep(> .arco-spin) {
+      height: auto;
+      overflow: visible;
+    }
+
+    .spin-wrap {
+      height: auto;
+      overflow: visible;
+
+      :deep(.arco-spin-children) {
+        height: auto;
+        overflow: visible;
+      }
+    }
+
+    .metric-chart-scroll {
+      overflow: visible;
+      height: auto;
+      flex: none;
+      padding: 0;
+      background: transparent;
     }
   }
 
@@ -154,5 +227,10 @@
     @media (max-width: 640px) {
       grid-template-columns: minmax(0, 1fr);
     }
+  }
+
+  .batch-sentinel {
+    width: 100%;
+    height: 1px;
   }
 </style>

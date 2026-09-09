@@ -5,9 +5,10 @@ import { executePromQLRange } from '@/api/metrics'
 import { useAppStore } from '@/store'
 import type { DrilldownContext } from './context'
 import { filtersForPromMatch } from './filters'
-import { buildBreakdownGroupByExpr, buildBreakdownValueExpr } from './metrics/breakdown-queries'
+import { buildBreakdownGroupByExpr, buildBreakdownValueExprs } from './metrics/breakdown-queries'
 import resolveMetricMeta from './resolve-metric-meta'
 import { type MetricKind } from './metrics/infer-promql'
+import useMainChartPrefs from './metrics/main-chart-config'
 import { isMetricRateQuery, BREAKDOWN_CHART_HEIGHT } from './metrics/panel-stats'
 import { resolveMetricPanelUnit } from './metrics/metric-units'
 import {
@@ -26,6 +27,11 @@ const BREAKDOWN_GROUP_SERIES_CAP = 8
 
 export type BreakdownSparklineMode = 'groupBy' | 'value'
 
+export interface BreakdownSeriesLegend {
+  name: string
+  color: string
+}
+
 export interface UseBreakdownSparklineOptions {
   metric: Ref<string>
   labelKey: Ref<string>
@@ -39,8 +45,8 @@ function escapePromLabelValue(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
 }
 
-function buildMatchersFromFilters(ctx: DrilldownContext): string | undefined {
-  const matchers = filtersForPromMatch(ctx.filters.value)
+function buildMatchersFromFilters(ctx: DrilldownContext, excludeKey?: string): string | undefined {
+  const matchers = filtersForPromMatch(ctx.filters.value, { excludeKey })
   const parts = Object.entries(matchers).map(([key, value]) => `${key}="${escapePromLabelValue(value)}"`)
   return parts.length ? parts.join(',') : undefined
 }
@@ -83,12 +89,24 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
   const metricKind = ref<MetricKind>('unknown')
   const seriesCount = ref(0)
   const promqlQuery = ref('')
+  const seriesLegends = ref<BreakdownSeriesLegend[]>([])
+  const legendLabel = ref('')
   let requestVersion = 0
 
   const { isDark } = storeToRefs(useAppStore())
   const valueRef = options.value ?? ref('')
+  const { prefs } = useMainChartPrefs(options.metric)
+  const seriesColor = computed(() => seriesLegends.value[0]?.color ?? getSeriesColorByIndex(0, isDark.value))
 
   const isEmpty = computed(() => !loading.value && !error.value && !chartOption.value)
+
+  const clearChart = () => {
+    chartOption.value = null
+    seriesCount.value = 0
+    seriesLegends.value = []
+    legendLabel.value = ''
+    promqlQuery.value = ''
+  }
 
   const load = async () => {
     const name = options.metric.value.trim()
@@ -98,17 +116,13 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
     }
 
     if (options.mode.value === 'value' && !valueRef.value) {
-      chartOption.value = null
-      seriesCount.value = 0
-      promqlQuery.value = ''
+      clearChart()
       return
     }
 
     const unixRange = ctx.unixTimeRange()
     if (unixRange.length !== 2) {
-      chartOption.value = null
-      seriesCount.value = 0
-      promqlQuery.value = ''
+      clearChart()
       error.value = null
       loading.value = false
       return
@@ -128,37 +142,40 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
       metricKind.value = kind
       const panelUnit = resolveMetricPanelUnit(name, isMetricRateQuery(kind, temporality), { semanticUnit })
 
-      const matchers = buildMatchersFromFilters(ctx)
-      const queryOpts = { kind, temporality }
-      const query =
+      const matchers =
         options.mode.value === 'groupBy'
-          ? buildBreakdownGroupByExpr(name, labelKey, matchers, queryOpts)
-          : buildBreakdownValueExpr(name, labelKey, valueRef.value, matchers, queryOpts)
-      promqlQuery.value = query
+          ? buildMatchersFromFilters(ctx)
+          : // Value card supplies label="value"; drop any existing matcher for the same key
+            // so filters + card value never produce contradictory duplicate labels.
+            buildMatchersFromFilters(ctx, labelKey)
+      const queryOpts = { kind, temporality, agg: prefs.value.agg }
 
       const [start, end] = unixRange
       const step = calculateSparklineQueryStep(unixRange, {
         maxDataPoints: BREAKDOWN_MAX_DATA_POINTS,
       })
       const stepSeconds = Number(step)
-
-      const response = await enqueueSparklineQuery(() => executePromQLRange(query, String(start), String(end), step))
-
-      if (version !== requestVersion) {
-        return
-      }
-
-      const series = parsePromMatrix(response.data?.result)
-      seriesCount.value = series.length
-
-      if (!series.length) {
-        chartOption.value = null
-        return
-      }
-
       const timeRange: [number, number] = [start, end]
 
       if (options.mode.value === 'groupBy') {
+        const query = buildBreakdownGroupByExpr(name, labelKey, matchers, queryOpts)
+        promqlQuery.value = query
+        const response = await enqueueSparklineQuery(() => executePromQLRange(query, String(start), String(end), step))
+
+        if (version !== requestVersion) {
+          return
+        }
+
+        const series = parsePromMatrix(response.data?.result)
+        seriesCount.value = series.length
+
+        if (!series.length) {
+          chartOption.value = null
+          seriesLegends.value = []
+          legendLabel.value = ''
+          return
+        }
+
         const selected = pickGroupSeries(series)
         const seriesList = selected
           .map((item, index) => {
@@ -176,9 +193,14 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
 
         if (!seriesList.length) {
           chartOption.value = null
+          seriesLegends.value = []
+          legendLabel.value = ''
           return
         }
 
+        // Grafana label panels: legend shows series names (label values).
+        seriesLegends.value = seriesList.map((item) => ({ name: item.name, color: item.color }))
+        legendLabel.value = ''
         chartOption.value = buildMainTimeseriesOption(seriesList, {
           metricKind: kind,
           metricName: name,
@@ -191,28 +213,75 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
         return
       }
 
-      const points = seriesToPoints(series, stepSeconds)
-      if (!points.length) {
-        chartOption.value = null
+      const valueQueries = buildBreakdownValueExprs(name, labelKey, valueRef.value, matchers, queryOpts)
+      promqlQuery.value = valueQueries.map((item) => item.expr).join('\n')
+
+      const responses = await Promise.all(
+        valueQueries.map((item) =>
+          enqueueSparklineQuery(() => executePromQLRange(item.expr, String(start), String(end), step))
+        )
+      )
+
+      if (version !== requestVersion) {
         return
       }
 
-      chartOption.value = buildSparklineOption(points, {
+      const seriesList = valueQueries
+        .map((item, index) => {
+          const series = parsePromMatrix(responses[index]?.data?.result)
+          const points = seriesToPoints(series, stepSeconds)
+          if (!points.length) {
+            return null
+          }
+          return {
+            points,
+            name: item.legend,
+            color: getSeriesColorByIndex(index, isDark.value),
+          }
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null)
+
+      seriesCount.value = seriesList.length
+
+      if (!seriesList.length) {
+        chartOption.value = null
+        seriesLegends.value = []
+        legendLabel.value = ''
+        return
+      }
+
+      // Grafana value panels: legend shows agg function (avg / sum(rate) / min+max).
+      seriesLegends.value = seriesList.map((item) => ({ name: item.name, color: item.color }))
+      legendLabel.value = seriesList[0]?.name ?? ''
+
+      if (seriesList.length === 1) {
+        chartOption.value = buildSparklineOption(seriesList[0].points, {
+          metricKind: kind,
+          metricName: name,
+          semanticUnit,
+          panelUnit,
+          timeRange,
+          plotHeightPx: BREAKDOWN_CHART_HEIGHT,
+          color: seriesList[0].color,
+        })
+        return
+      }
+
+      chartOption.value = buildMainTimeseriesOption(seriesList, {
         metricKind: kind,
         metricName: name,
         semanticUnit,
         panelUnit,
         timeRange,
         plotHeightPx: BREAKDOWN_CHART_HEIGHT,
-        color: getSeriesColorByIndex(0, isDark.value),
+        showPoints: 'auto',
       })
     } catch (err) {
       if (version !== requestVersion) {
         return
       }
       console.error(`Failed to load breakdown sparkline for ${name}:`, err)
-      chartOption.value = null
-      seriesCount.value = 0
+      clearChart()
       error.value = err instanceof Error ? err.message : 'Failed to load chart'
     } finally {
       if (version === requestVersion) {
@@ -228,6 +297,7 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
       options.labelKey.value,
       options.mode.value,
       valueRef.value,
+      prefs.value.agg,
       ctx.filters.value,
       ctx.time.value,
       ctx.rangeTime.value[0],
@@ -251,6 +321,9 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
     metricKind,
     seriesCount,
     promqlQuery,
+    seriesColor,
+    legendLabel,
+    seriesLegends,
     isEmpty,
   }
 }

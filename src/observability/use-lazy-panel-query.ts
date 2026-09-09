@@ -1,7 +1,7 @@
-import { ref, type Ref } from 'vue'
+import { ref, type MaybeRefOrGetter } from 'vue'
 import { useIntersectionObserver } from '@vueuse/core'
 
-export default function useLazyPanelQuery(root: Ref<HTMLElement | null | undefined>) {
+export default function useLazyPanelQuery(root: MaybeRefOrGetter<HTMLElement | null | undefined>) {
   const targetRef = ref<HTMLElement | null>(null)
   const isVisible = ref(false)
   const hasBeenVisible = ref(false)
