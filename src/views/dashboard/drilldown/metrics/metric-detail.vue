@@ -1,7 +1,7 @@
 <template lang="pug">
 .metric-detail(ref="detailScrollRef")
   .metric-detail-main
-    MetricMainChart(:metric="metric")
+    MetricMainChart(:metric="metric" @update:result="mainChartResult = $event")
 
   a-tabs.metric-detail-tabs.panel-tabs(v-model:active-key="activeTab" lazy-load default-active-key="breakdown")
     a-tab-pane(key="breakdown" :title="t('drilldown.metricDetail.breakdownTab')")
@@ -17,14 +17,15 @@
         :truncated="poolTruncated"
       )
     a-tab-pane(key="query-results" destroy-on-hide :title="t('drilldown.metricDetail.queryResultsTab')")
-      a-empty(:description="t('drilldown.metricDetail.comingSoon')")
+      QueryResultsPanel(:result="mainChartResult")
 </template>
 
 <script setup lang="ts">
   import { ref } from 'vue'
   import { useI18n } from 'vue-i18n'
   import BreakdownGrid from './breakdown-grid.vue'
-  import MetricMainChart from './metric-main-chart.vue'
+  import MetricMainChart, { type MetricMainChartResult } from './metric-main-chart.vue'
+  import QueryResultsPanel from './query-results-panel.vue'
   import RelatedLogsPanel from './related-logs-panel.vue'
   import RelatedMetricsPanel from './related-metrics-panel.vue'
 
@@ -39,6 +40,7 @@
   const { t } = useI18n()
   const detailScrollRef = ref<HTMLElement | null>(null)
   const activeTab = ref('breakdown')
+  const mainChartResult = ref<MetricMainChartResult | null>(null)
 </script>
 
 <style scoped lang="less">

@@ -37,16 +37,31 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, ref, toRef } from 'vue'
+  import { computed, ref, toRef, watch } from 'vue'
   import { useElementSize } from '@vueuse/core'
   import { useI18n } from 'vue-i18n'
   import Chart from '@/components/raw-chart/index.vue'
   import { useDrilldownContext } from '@/observability/context'
   import { MAIN_CHART_HEIGHT } from '@/observability/metrics/panel-stats'
-  import useMetricMainChart from '@/observability/use-metric-main-chart'
+  import useMetricMainChart, {
+    type CachedMainChart,
+    type MainChartPanelType,
+  } from '@/observability/use-metric-main-chart'
+
+  export interface MetricMainChartResult {
+    cached: CachedMainChart | null
+    loading: boolean
+    error: string | null
+    panelType: MainChartPanelType
+    promqlQuery: string
+  }
 
   const props = defineProps<{
     metric: string
+  }>()
+
+  const emit = defineEmits<{
+    (e: 'update:result', value: MetricMainChartResult): void
   }>()
 
   const { t } = useI18n()
@@ -72,7 +87,22 @@
     legendItems,
     isEmpty,
     prefs,
+    cached,
   } = useMetricMainChart(ctx, metricName, plotSize)
+
+  watch(
+    [cached, loading, error, panelType, promqlQuery],
+    () => {
+      emit('update:result', {
+        cached: cached.value,
+        loading: loading.value,
+        error: error.value,
+        panelType: panelType.value,
+        promqlQuery: promqlQuery.value,
+      })
+    },
+    { immediate: true, deep: true }
+  )
 
   const chartHeight = `${MAIN_CHART_HEIGHT}px`
   const isHeatmap = computed(() => panelType.value === 'heatmap')

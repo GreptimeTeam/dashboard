@@ -21,6 +21,7 @@ import {
   resolveHeatmapColorBounds,
   type HistogramHeatmapData,
   type PanelChartAxisOptions,
+  type PromMatrixSeries,
 } from './metrics/prom-chart'
 import getSeriesColorByIndex from './metrics/series-colors'
 import breakSparklineGaps from './metrics/sparkline-gaps'
@@ -49,16 +50,23 @@ export interface MainChartLegendItem {
   expr: string
 }
 
-type CachedMainChart =
+export type CachedMainChart =
   | {
       kind: 'timeseries'
+      /** Aggregated lines for the chart (one per Configure legend). */
       series: Array<{ points: Array<[number, number | null]>; legend: string; expr: string }>
+      /**
+       * Unaggregated Prom matrix series for Query results.
+       * One table row per Prom series (label set), optionally grouped by query legend.
+       */
+      rawByQuery: Array<{ legend: string; expr: string; series: PromMatrixSeries[] }>
       timeRange: [number, number]
       name: string
     }
   | {
       kind: 'heatmap'
       heatmap: HistogramHeatmapData
+      rawSeries: PromMatrixSeries[]
       timeRange: [number, number]
       name: string
       expr: string
@@ -239,6 +247,7 @@ export default function useMetricMainChart(
         cached.value = {
           kind: 'heatmap',
           heatmap,
+          rawSeries: series,
           timeRange,
           name,
           expr: plan.queries[0].expr,
@@ -264,11 +273,13 @@ export default function useMetricMainChart(
       heatmapLegend.value = null
 
       const builtSeries: Array<{ points: Array<[number, number | null]>; legend: string; expr: string }> = []
+      const rawByQuery: Array<{ legend: string; expr: string; series: PromMatrixSeries[] }> = []
       let totalRawSeries = 0
 
       plan.queries.forEach((query, index) => {
         const series = parsePromMatrix(responses[index]?.data?.result)
         totalRawSeries += series.length
+        rawByQuery.push({ legend: query.legend, expr: query.expr, series })
         const points = breakSparklineGaps(aggregateSeriesToPoints(series), stepSeconds)
         if (points.length) {
           builtSeries.push({ points, legend: query.legend, expr: query.expr })
@@ -282,7 +293,7 @@ export default function useMetricMainChart(
         return
       }
 
-      cached.value = { kind: 'timeseries', series: builtSeries, timeRange, name }
+      cached.value = { kind: 'timeseries', series: builtSeries, rawByQuery, timeRange, name }
       legendItems.value = builtSeries.map((item, index) => ({
         label: item.legend,
         color: getSeriesColorByIndex(index, isDark.value),
@@ -346,5 +357,6 @@ export default function useMetricMainChart(
     seriesColor,
     isEmpty,
     prefs,
+    cached,
   }
 }
