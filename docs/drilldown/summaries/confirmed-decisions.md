@@ -104,9 +104,12 @@ Grafana Metrics Drilldown 侧栏「Group by labels」依赖：
 |------|------|
 | **顶栏 UI** | **Grafana 式 combobox**：单边框内 pill + 单行 `<input>`；分阶段 suggest（label → operator → value）；Backspace 回退（value → operator → label；空 label 删最后一 pill）；提交后 **不**自动重开 suggest |
 | **实现** | [`drilldown-filter-combobox.vue`](../../../src/views/dashboard/drilldown/components/drilldown-filter-combobox.vue) + [`filter-bar.vue`](../../../src/views/dashboard/drilldown/components/filter-bar.vue) |
+| **Suggest 路由** | **按 `ctx.signal`**，不合并 Prom∪SQL。切信号清缓存并重拉。[`filter-options.ts`](../../../src/observability/adapters/filter-options.ts) |
 | **Metrics label** | Prom `GET /labels`；无 `__name__` 于 filters 时**不传** `match[]`（Greptime 会 400） |
-| **Metrics value** | **手输**；无 cross-metric Prom value API |
-| **Logs value 辅助** | `logsTable` + fieldMap 命中列名时，SQL `SELECT DISTINCT`；schema 在 `logsTable` 变更时缓存 |
+| **Metrics value** | **手输**；无 cross-metric Prom value API（value 阶段不展开 SQL suggest） |
+| **Logs label keys** | 与 Labels Tab 相同：`discoverLabelColumns` + `fieldMap` + `labelInclude` / `labelExclude`（[`drilldown-settings`](../../../src/observability/drilldown-settings.ts)）；**仅 label**，不含 Fields Tab / JSON body |
+| **Logs value 辅助** | 映射列上 SQL `SELECT DISTINCT`（time + 已有 `=` filters）；`logsTable` / fieldMap / settings 变更时刷新 |
+| **范围** | 顶栏 = **label value（L2）**；`trace_id` → L3 `focusTraceId`；Fields 不进顶栏主 suggest |
 | **编辑已有 filter** | label 只读；operator / value 可改 |
 | **Add to filter 主路径** | Breakdown label/value panel 卡 → `ctx.filters` |
 | **R-BRK-1** | Breakdown label 卡仅 1 个 value 时仍显示 **Add to filter**（Greptime 偏离 Grafana 藏 Select） |

@@ -77,7 +77,7 @@
 
   const { t } = useI18n()
   const ctx = useDrilldownContext()
-  const { filters, setFilters, appendFilter, metric, logsTable, time, rangeTime, refreshKey } = ctx
+  const { filters, setFilters, appendFilter, metric, logsTable, signal, time, rangeTime, refreshKey } = ctx
   const { keysLoading, valuesLoading, keyOptions, isSqlFieldKey, loadKeys, loadValues, getValueOptions } =
     useDrilldownFilterOptions(ctx)
 
@@ -567,7 +567,15 @@
   })
 
   watch(
-    () => [metric.value, logsTable.value, time.value, rangeTime.value[0], rangeTime.value[1], refreshKey.value],
+    () => [
+      signal.value,
+      metric.value,
+      logsTable.value,
+      time.value,
+      rangeTime.value[0],
+      rangeTime.value[1],
+      refreshKey.value,
+    ],
     () => {
       loadKeys()
     }
@@ -581,12 +589,14 @@
 <style scoped lang="less">
   .filter-combobox {
     display: inline-flex;
+    box-sizing: border-box;
+    align-items: center;
     width: max-content;
     max-width: 100%;
-    min-width: 120px;
-    min-height: 32px;
-    padding: 2px 8px;
-    border: 1px solid var(--border-color);
+    min-width: 200px;
+    min-height: var(--gpt-control-height-md);
+    padding: 0 8px;
+    border: 1px solid var(--gpt-main-dark);
     border-radius: var(--gpt-radius-sm);
     background: var(--color-bg-2);
     cursor: text;
@@ -594,11 +604,11 @@
     transition: border-color 0.15s;
 
     &:hover {
-      border-color: var(--color-border-3);
+      border-color: var(--gpt-main-dark);
     }
 
     &.is-focused {
-      border-color: rgb(var(--primary-6));
+      border-color: var(--gpt-main-dark);
     }
   }
 
@@ -609,7 +619,7 @@
     gap: 4px;
     width: max-content;
     max-width: 100%;
-    min-height: 28px;
+    min-height: calc(var(--gpt-control-height-md) - 2px);
   }
 
   .filter-combobox__editor-wrap {
@@ -621,7 +631,8 @@
   .filter-combobox__editor {
     display: inline-flex;
     align-items: center;
-    min-height: 28px;
+    height: calc(var(--gpt-control-height-md) - 2px);
+    min-height: 0;
     min-width: 0;
     gap: 2px;
   }
@@ -629,7 +640,7 @@
   .filter-combobox__segment {
     padding: 0 2px;
     font-size: 12px;
-    line-height: 28px;
+    line-height: calc(var(--gpt-control-height-md) - 2px);
     white-space: nowrap;
     cursor: pointer;
     color: var(--color-text-2);
@@ -654,21 +665,21 @@
 
   .filter-combobox__input {
     flex: 0 1 auto;
-    width: 90px;
-    min-width: 90px;
-    height: 28px;
+    width: 120px;
+    min-width: 120px;
+    height: calc(var(--gpt-control-height-md) - 2px);
     margin: 0;
     padding: 0;
     border: none;
     outline: none;
     background: transparent;
     font-size: 12px;
-    line-height: 28px;
+    line-height: calc(var(--gpt-control-height-md) - 2px);
     color: var(--color-text-1);
 
     @supports (field-sizing: content) {
       width: auto;
-      min-width: 90px;
+      min-width: 120px;
       field-sizing: content;
     }
 
@@ -682,8 +693,8 @@
   }
 
   .filter-suggest-panel {
-    min-width: 160px;
-    max-width: 320px;
+    min-width: max(220px, 100%);
+    max-width: 420px;
     max-height: 240px;
     overflow-y: auto;
     padding: 4px;
@@ -701,9 +712,10 @@
   }
 
   .filter-suggest-empty {
-    padding: 6px 8px;
+    padding: 8px 10px;
     font-size: 12px;
-    color: var(--color-text-3);
+    line-height: 1.4;
+    color: var(--color-text-2);
   }
 
   .filter-suggest-option {

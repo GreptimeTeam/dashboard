@@ -38,8 +38,8 @@
     align-items: center;
     max-width: 280px;
     height: 22px;
-    margin: 1px 0;
-    border: 1px solid var(--color-border-2);
+    margin: 0;
+    border: 1px solid var(--color-border-3);
     border-radius: var(--gpt-radius-sm);
     background: var(--color-fill-2);
     font-size: 12px;

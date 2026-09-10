@@ -1,8 +1,10 @@
 import editorApi from '@/api/editor'
 import { getLabelNames, getLabelValues } from '@/api/metrics'
 import type { DrilldownContext } from '../context'
+import { loadDrilldownSettings } from '../drilldown-settings'
 import { buildPromMatchSelector, isGreptimePromMatchSelector, resolveFieldMapColumn } from '../filters'
-import type { DrilldownFilter } from '../types'
+import { discoverLabelColumns, resolveLogsTimeColumn, type SchemaColumn } from '../logs/field-map'
+import type { DrilldownFilter, DrilldownSignal } from '../types'
 
 const INTERNAL_LABEL_PREFIX = '__'
 const SQL_VALUE_LIMIT = 200
@@ -43,14 +45,59 @@ function filterOptions(keys: string[], search: string): string[] {
   return keys.filter((key) => key.toLowerCase().includes(query))
 }
 
-function reverseFieldMap(fieldMap: Record<string, string>): Map<string, string> {
-  const reversed = new Map<string, string>()
-  Object.entries(fieldMap).forEach(([chipKey, columnName]) => {
-    if (columnName) {
-      reversed.set(columnName, chipKey)
-    }
-  })
-  return reversed
+function activeSignal(ctx: DrilldownContext): DrilldownSignal {
+  return ctx.signal.value
+}
+
+function sqlTableForSignal(ctx: DrilldownContext, signal: DrilldownSignal): string | undefined {
+  if (signal === 'logs') {
+    return ctx.logsTable.value || undefined
+  }
+  if (signal === 'traces') {
+    return ctx.tracesTable.value || undefined
+  }
+  return undefined
+}
+
+function fieldMapForSignal(ctx: DrilldownContext, signal: DrilldownSignal): Record<string, string> {
+  if (signal === 'traces') {
+    return ctx.fieldMap.value.traces
+  }
+  return ctx.fieldMap.value.logs
+}
+
+/**
+ * Label keys for logs/traces top-bar suggest.
+ * Same discovery as Labels Tab: discoverLabelColumns + drilldown-settings include/exclude.
+ */
+export async function fetchSqlLabelKeys(
+  ctx: DrilldownContext,
+  signal: 'logs' | 'traces' = 'logs',
+  search = ''
+): Promise<string[]> {
+  const tableName = sqlTableForSignal(ctx, signal)
+  if (!tableName) {
+    return []
+  }
+
+  try {
+    const columns = (await editorApi.getTableSchema(tableName)) as SchemaColumn[]
+    const fieldMap = fieldMapForSignal(ctx, signal)
+    const settings = signal === 'logs' ? loadDrilldownSettings().logs : undefined
+    const keys = discoverLabelColumns(columns, fieldMap, {
+      include: settings?.labelInclude,
+      exclude: settings?.labelExclude,
+    })
+    return filterOptions(filterLabelKeys(keys), search)
+  } catch (error) {
+    console.error(`Failed to load ${signal} label keys:`, error)
+    return []
+  }
+}
+
+/** @deprecated Use fetchSqlLabelKeys — top-bar is label-only, not all TAG|FIELD. */
+export async function fetchSqlFieldKeys(ctx: DrilldownContext, search = ''): Promise<string[]> {
+  return fetchSqlLabelKeys(ctx, 'logs', search)
 }
 
 export async function fetchPromLabelKeys(ctx: DrilldownContext, search = ''): Promise<string[]> {
@@ -103,34 +150,38 @@ export async function fetchPromLabelValues(
   }
 }
 
-export async function fetchSqlFieldKeys(ctx: DrilldownContext, search = ''): Promise<string[]> {
-  const tableName = ctx.logsTable.value
-  if (!tableName) {
-    return []
+function resolveSqlSuggestColumn(
+  chipKey: string,
+  fieldMap: Record<string, string>,
+  labelKeys: string[]
+): string | undefined {
+  const mapped = resolveFieldMapColumn(chipKey, fieldMap)
+  if (mapped) {
+    return mapped
   }
-
-  try {
-    const columns = await editorApi.getTableSchema(tableName)
-    const reversed = reverseFieldMap(ctx.fieldMap.value.logs)
-    const keys = columns
-      .filter((column) => column.semantic_type === 'TAG' || column.semantic_type === 'FIELD')
-      .map((column) => reversed.get(column.name) ?? column.name)
-
-    return filterOptions(filterLabelKeys(keys), search)
-  } catch (error) {
-    console.error('Failed to load SQL field keys:', error)
-    return []
+  // Labels Tab uses physical column names as chip keys.
+  if (labelKeys.includes(chipKey)) {
+    return chipKey
   }
+  return undefined
 }
 
-export async function fetchSqlFieldValues(ctx: DrilldownContext, fieldKey: string, search = ''): Promise<string[]> {
-  const tableName = ctx.logsTable.value
+export async function fetchSqlLabelValues(
+  ctx: DrilldownContext,
+  fieldKey: string,
+  options?: { signal?: 'logs' | 'traces'; search?: string; labelKeys?: string[] }
+): Promise<string[]> {
+  const signal = options?.signal ?? 'logs'
+  const search = options?.search ?? ''
+  const tableName = sqlTableForSignal(ctx, signal)
   const trimmedKey = fieldKey.trim()
   if (!tableName || !trimmedKey) {
     return []
   }
 
-  const columnName = resolveFieldMapColumn(trimmedKey, ctx.fieldMap.value.logs)
+  const fieldMap = fieldMapForSignal(ctx, signal)
+  const labelKeys = options?.labelKeys ?? (await fetchSqlLabelKeys(ctx, signal, ''))
+  const columnName = resolveSqlSuggestColumn(trimmedKey, fieldMap, labelKeys)
   if (!columnName) {
     return []
   }
@@ -139,15 +190,23 @@ export async function fetchSqlFieldValues(ctx: DrilldownContext, fieldKey: strin
   const whereParts = [`"${columnName}" IS NOT NULL`]
 
   if (unixRange.length === 2) {
-    try {
-      const columns = await editorApi.getTableSchema(tableName)
-      const timeColumn = columns.find((column) => column.semantic_type === 'TIMESTAMP')?.name
-      if (timeColumn) {
-        whereParts.push(`"${timeColumn}" >= FROM_UNIXTIME(${unixRange[0]})`)
-        whereParts.push(`"${timeColumn}" <= FROM_UNIXTIME(${unixRange[1]})`)
+    let timeColumn: string | undefined
+    if (signal === 'logs') {
+      timeColumn = resolveLogsTimeColumn(fieldMap)
+    } else {
+      timeColumn = fieldMap.time
+      if (!timeColumn) {
+        try {
+          const columns = await editorApi.getTableSchema(tableName)
+          timeColumn = columns.find((column) => column.semantic_type === 'TIMESTAMP')?.name
+        } catch {
+          // Time narrowing is best-effort for value suggestions.
+        }
       }
-    } catch {
-      // Time narrowing is best-effort for value suggestions.
+    }
+    if (timeColumn) {
+      whereParts.push(`"${timeColumn}" >= FROM_UNIXTIME(${unixRange[0]})`)
+      whereParts.push(`"${timeColumn}" <= FROM_UNIXTIME(${unixRange[1]})`)
     }
   }
 
@@ -155,7 +214,7 @@ export async function fetchSqlFieldValues(ctx: DrilldownContext, fieldKey: strin
     if (filter.key === trimmedKey || filter.op !== '=') {
       return
     }
-    const sqlColumn = resolveFieldMapColumn(filter.key, ctx.fieldMap.value.logs)
+    const sqlColumn = resolveSqlSuggestColumn(filter.key, fieldMap, labelKeys)
     if (!sqlColumn) {
       return
     }
@@ -175,26 +234,59 @@ export async function fetchSqlFieldValues(ctx: DrilldownContext, fieldKey: strin
     const values = rows.map((row) => (Array.isArray(row) ? String(row[0] ?? '') : '')).filter(Boolean)
     return filterOptions([...new Set(values)], search)
   } catch (error) {
-    console.error(`Failed to load SQL field values for ${trimmedKey}:`, error)
+    console.error(`Failed to load SQL label values for ${trimmedKey}:`, error)
     return []
   }
 }
 
-export async function fetchFilterKeyOptions(ctx: DrilldownContext, search = ''): Promise<string[]> {
-  const [promKeys, sqlKeys] = await Promise.all([fetchPromLabelKeys(ctx, search), fetchSqlFieldKeys(ctx, search)])
-  return filterOptions([...new Set([...promKeys, ...sqlKeys])], search)
+/** @deprecated Use fetchSqlLabelValues */
+export async function fetchSqlFieldValues(ctx: DrilldownContext, fieldKey: string, search = ''): Promise<string[]> {
+  return fetchSqlLabelValues(ctx, fieldKey, { signal: 'logs', search })
 }
 
-/** Top-bar value assist: SQL DISTINCT only when logsTable is configured and field maps. */
+/** Top-bar key suggest: routed by active signal (no Prom∪SQL merge). */
+export async function fetchFilterKeyOptions(ctx: DrilldownContext, search = ''): Promise<string[]> {
+  const signal = activeSignal(ctx)
+  if (signal === 'metrics') {
+    return fetchPromLabelKeys(ctx, search)
+  }
+  if (signal === 'traces') {
+    return fetchSqlLabelKeys(ctx, 'traces', search)
+  }
+  return fetchSqlLabelKeys(ctx, 'logs', search)
+}
+
+/** Top-bar value assist: SQL DISTINCT on logs/traces labels; metrics stay manual. */
 export async function fetchFilterValueOptions(
   ctx: DrilldownContext,
   fieldKey: string,
-  search = ''
+  options?: { search?: string; labelKeys?: string[] }
 ): Promise<{ values: string[]; sqlAssist: boolean }> {
-  if (!ctx.logsTable.value || !resolveFieldMapColumn(fieldKey, ctx.fieldMap.value.logs)) {
+  const search = options?.search ?? ''
+  const signal = activeSignal(ctx)
+  if (signal === 'metrics') {
     return { values: [], sqlAssist: false }
   }
 
-  const sqlValues = await fetchSqlFieldValues(ctx, fieldKey, search)
+  const sqlSignal = signal === 'traces' ? 'traces' : 'logs'
+  const keys = options?.labelKeys ?? (await fetchSqlLabelKeys(ctx, sqlSignal, ''))
+  const column = resolveSqlSuggestColumn(fieldKey.trim(), fieldMapForSignal(ctx, sqlSignal), keys)
+  if (!column) {
+    return { values: [], sqlAssist: false }
+  }
+
+  const sqlValues = await fetchSqlLabelValues(ctx, fieldKey, {
+    signal: sqlSignal,
+    search,
+    labelKeys: keys,
+  })
   return { values: sqlValues, sqlAssist: sqlValues.length > 0 }
+}
+
+export function canSuggestFilterValues(
+  fieldKey: string,
+  fieldMap: Record<string, string>,
+  labelKeys: string[]
+): boolean {
+  return Boolean(resolveSqlSuggestColumn(fieldKey.trim(), fieldMap, labelKeys))
 }

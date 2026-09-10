@@ -46,7 +46,8 @@ type DrilldownContext = {
 | **R-FLT-4** | Metrics：`__name__` 仅用于 **缩窄指标列表**，**不**写入 PromQL matcher（Grafana #235） |
 | **R-FLT-5** | Logs/Metrics 跨信号：同一 filter chip → Prom `match[]` **与** SQL WHERE **并行生效** |
 | **R-FLT-6** | 顶栏 filter UI：**Grafana combobox**（pill + 分阶段 suggest）；Metrics value **手输** |
-| **R-FLT-7** | Logs：`logsTable` 配置后顶栏 value 可用 SQL `DISTINCT`；label keys 走 Prom `/labels`（无 `__name__` 时不传 match） |
+| **R-FLT-7** | Suggest **按 `ctx.signal`**：Metrics → Prom `/labels`；Logs/Traces → `discoverLabelColumns` + settings（label only）。Logs value → SQL `DISTINCT`；切信号清缓存 |
+| **R-FLT-8** | 顶栏只做 **label value（L2）**，不进 Fields Tab；Logs keys 尊重 `labelInclude` / `labelExclude` / `fieldMap` |
 | **R-BRK-1** | Breakdown label 卡 `series===1`（仅 1 个 value）仍提供 **Add to filter**（Greptime 偏离 Grafana） |
 
 **公共模块**：`src/observability/context.ts`（filters CRUD）、`src/observability/filters.ts`（`addFilter` / `removeFilter` / `filtersToPromMatch` / `filtersToSqlWhere`）

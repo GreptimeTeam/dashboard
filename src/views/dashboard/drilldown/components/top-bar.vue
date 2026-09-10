@@ -145,5 +145,9 @@
     gap: var(--gpt-gap-md);
     min-width: 0;
     margin-left: auto;
+
+    > .arco-space {
+      flex-shrink: 0;
+    }
   }
 </style>

@@ -1,47 +1,57 @@
 import { ref, watch } from 'vue'
-import { fetchPromLabelKeys, fetchSqlFieldKeys, fetchSqlFieldValues } from './adapters/filter-options'
+import {
+  canSuggestFilterValues,
+  fetchFilterKeyOptions,
+  fetchFilterValueOptions,
+  fetchSqlLabelKeys,
+} from './adapters/filter-options'
 import type { DrilldownContext } from './context'
-
-function filterBySearch(keys: string[], search: string): string[] {
-  const query = search.trim().toLowerCase()
-  if (!query) {
-    return keys
-  }
-  return keys.filter((key) => key.toLowerCase().includes(query))
-}
+import { loadDrilldownSettings } from './drilldown-settings'
 
 export default function useDrilldownFilterOptions(ctx: DrilldownContext) {
   const keysLoading = ref(false)
   const valuesLoading = ref(false)
   const keyOptions = ref<string[]>([])
-  const sqlFieldKeys = ref<string[]>([])
+  /** Cached label keys for the active SQL signal (logs/traces). Empty on metrics. */
+  const labelKeys = ref<string[]>([])
   const valueOptionsByKey = ref<Record<string, string[]>>({})
 
-  const refreshSqlFieldKeys = async () => {
-    if (!ctx.logsTable.value) {
-      sqlFieldKeys.value = []
+  const clearSuggestCache = () => {
+    keyOptions.value = []
+    labelKeys.value = []
+    valueOptionsByKey.value = {}
+  }
+
+  const refreshLabelKeys = async () => {
+    const signal = ctx.signal.value
+    if (signal === 'metrics') {
+      labelKeys.value = []
       return
     }
-    sqlFieldKeys.value = await fetchSqlFieldKeys(ctx, '')
+    const sqlSignal = signal === 'traces' ? 'traces' : 'logs'
+    labelKeys.value = await fetchSqlLabelKeys(ctx, sqlSignal, '')
   }
 
   const loadKeys = async (search = '') => {
     keysLoading.value = true
     try {
-      const promKeys = await fetchPromLabelKeys(ctx, search)
-      const sqlKeys = filterBySearch(sqlFieldKeys.value, search)
-      keyOptions.value = [...new Set([...promKeys, ...sqlKeys])].sort((left, right) => left.localeCompare(right))
+      keyOptions.value = await fetchFilterKeyOptions(ctx, search)
     } finally {
       keysLoading.value = false
     }
   }
 
+  const fieldMapForActiveSql = () => {
+    return ctx.signal.value === 'traces' ? ctx.fieldMap.value.traces : ctx.fieldMap.value.logs
+  }
+
+  /** True when top-bar can offer value DISTINCT (logs/traces label keys only). */
   const isSqlFieldKey = (fieldKey: string): boolean => {
     const trimmed = fieldKey.trim()
-    if (!trimmed || !ctx.logsTable.value) {
+    if (!trimmed || ctx.signal.value === 'metrics') {
       return false
     }
-    return sqlFieldKeys.value.includes(trimmed)
+    return canSuggestFilterValues(trimmed, fieldMapForActiveSql(), labelKeys.value)
   }
 
   const loadValues = async (fieldKey: string, search = '') => {
@@ -53,7 +63,10 @@ export default function useDrilldownFilterOptions(ctx: DrilldownContext) {
 
     valuesLoading.value = true
     try {
-      const values = await fetchSqlFieldValues(ctx, trimmedKey, search)
+      const { values } = await fetchFilterValueOptions(ctx, trimmedKey, {
+        search,
+        labelKeys: labelKeys.value,
+      })
       valueOptionsByKey.value = { ...valueOptionsByKey.value, [trimmedKey]: values }
     } finally {
       valuesLoading.value = false
@@ -65,9 +78,31 @@ export default function useDrilldownFilterOptions(ctx: DrilldownContext) {
   }
 
   watch(
-    () => [ctx.logsTable.value, ctx.fieldMap.value.logs] as const,
-    () => {
-      refreshSqlFieldKeys()
+    () => ctx.signal.value,
+    async () => {
+      clearSuggestCache()
+      await refreshLabelKeys()
+      await loadKeys()
+    }
+  )
+
+  watch(
+    () =>
+      [
+        ctx.logsTable.value,
+        ctx.tracesTable.value,
+        ctx.fieldMap.value.logs,
+        ctx.fieldMap.value.traces,
+        // Re-read settings when table/map changes (include/exclude live in localStorage).
+        loadDrilldownSettings().logs.labelInclude?.join('\0'),
+        loadDrilldownSettings().logs.labelExclude?.join('\0'),
+      ] as const,
+    async () => {
+      if (ctx.signal.value === 'metrics') {
+        return
+      }
+      await refreshLabelKeys()
+      valueOptionsByKey.value = {}
     },
     { deep: true, immediate: true }
   )
@@ -76,11 +111,14 @@ export default function useDrilldownFilterOptions(ctx: DrilldownContext) {
     keysLoading,
     valuesLoading,
     keyOptions,
-    sqlFieldKeys,
+    labelKeys,
+    /** @deprecated alias — prefer checking labelKeys / isSqlFieldKey */
+    sqlFieldKeys: labelKeys,
     isSqlFieldKey,
     loadKeys,
     loadValues,
     getValueOptions,
-    refreshSqlFieldKeys,
+    refreshLabelKeys,
+    refreshSqlFieldKeys: refreshLabelKeys,
   }
 }

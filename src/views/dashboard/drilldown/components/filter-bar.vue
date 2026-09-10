@@ -19,16 +19,19 @@
 <style scoped lang="less">
   .drilldown-filter-bar {
     display: inline-flex;
+    flex: 0 1 auto;
     flex-wrap: wrap;
     align-items: center;
     gap: 8px 12px;
     min-width: 0;
-    max-width: 100%;
+    max-width: min(480px, 100%);
   }
 
   .filter-label {
+    flex-shrink: 0;
     font-size: 12px;
-    color: var(--gpt-text-secondary);
+    font-weight: 600;
+    color: var(--gpt-text-primary, var(--color-text-1));
     line-height: 1;
     white-space: nowrap;
   }
