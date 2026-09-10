@@ -142,9 +142,11 @@ Grafana Metrics Drilldown 侧栏「Group by labels」依赖：
 |------|------|
 | **表发现** | `resolveLogsTable()`：URL/settings → `signal_type=log` → 列启发式；**不读** logs-query localStorage |
 | **fieldMap** | time/body/severity/traceId/service + `primaryGroupBy`；settings 可覆盖 |
-| **首页 volume** | SQL `date_bin` + `GROUP BY primaryGroupBy`（对标 Loki index/volume） |
-| **Select service** | 写入 Context `filters`（非独立路由） |
-| **Labels breakdown** | TAG 列 `GROUP BY` + Add to filters；Phase 2 |
+| **两个主视图** | **列表** = 按 label value 分组的日志列表（Labels Tab / panels）；**详细** = volume 主图 + 单张 logs 表（全部匹配行） |
+| **总 volume 主图** | **仅详细视图**；列表视图**不**放总主图（面板内 per-value minichart 除外） |
+| **首页 volume / service 卡** | SQL `date_bin` + `GROUP BY primaryGroupBy`（对标 Loki index/volume；实现上可收敛进列表/详细，见 logs spec） |
+| **Select service** | 写入 Context `filters`（非独立路由）→ 进入详细视图 |
+| **Labels breakdown** | TAG/string FIELD 列 `GROUP BY` + Add to filters；列表视图主路径 |
 | **trace_id** | → `focusTraceId`（L3） |
 | **Related logs（来自 Metrics）** | 需 `filters.length > 0` + fieldMap SQL |
 | **Select 模型** | 以 Add filter 为主；无 Metrics 式 Select 三义 |

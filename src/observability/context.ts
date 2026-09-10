@@ -7,6 +7,8 @@ import {
   type DrilldownFieldMap,
   type DrilldownSidebarFilters,
   type DrilldownSignal,
+  type LogsDetailTab,
+  type LogsView,
   type MetricDetailTab,
 } from './types'
 import { addFilter as mergeFilter } from './filters'
@@ -22,6 +24,12 @@ export interface DrilldownContext {
   logsTable: Ref<string | undefined>
   tracesTable: Ref<string | undefined>
   fieldMap: Ref<DrilldownFieldMap>
+  /** Logs overview vs detail shell (URL `logsView`). */
+  logsView: Ref<LogsView>
+  /** Active tab inside logs detail (URL `logsTab`). */
+  logsTab: Ref<LogsDetailTab>
+  /** primaryGroupBy value opened in logs detail (for close → remove filter). */
+  logsSelectedGroup: Ref<string | undefined>
   time: Ref<number>
   rangeTime: Ref<string[]>
   unixTimeRange: () => number[]
@@ -33,6 +41,10 @@ export interface DrilldownContext {
   setSidebarFilters: (filters: DrilldownSidebarFilters) => void
   appendFilter: (filter: DrilldownFilter) => void
   setDetailTab: (tab: MetricDetailTab) => void
+  setLogsView: (view: LogsView) => void
+  setLogsTab: (tab: LogsDetailTab) => void
+  openLogsDetail: (groupValue: string) => void
+  closeLogsDetail: () => void
 }
 
 export const DRILLDOWN_DEFAULT_TIME_MINUTES = 30
@@ -50,6 +62,9 @@ export function useDrilldownContextProvider(): DrilldownContext {
   const logsTable = ref<string | undefined>()
   const tracesTable = ref<string | undefined>()
   const fieldMap = ref({ ...DEFAULT_FIELD_MAP })
+  const logsView = ref<LogsView>('overview')
+  const logsTab = ref<LogsDetailTab>('labels')
+  const logsSelectedGroup = ref<string | undefined>()
   const refreshKey = ref(0)
 
   const triggerRefresh = () => {
@@ -59,6 +74,10 @@ export function useDrilldownContextProvider(): DrilldownContext {
   const setSignal = (next: DrilldownSignal) => {
     if (next !== 'metrics') {
       metric.value = undefined
+    }
+    if (next !== 'logs') {
+      logsView.value = 'overview'
+      logsSelectedGroup.value = undefined
     }
     signal.value = next
   }
@@ -79,6 +98,35 @@ export function useDrilldownContextProvider(): DrilldownContext {
     detailTab.value = tab
   }
 
+  const setLogsView = (view: LogsView) => {
+    logsView.value = view
+  }
+
+  const setLogsTab = (tab: LogsDetailTab) => {
+    logsTab.value = tab
+  }
+
+  const openLogsDetail = (groupValue: string) => {
+    logsSelectedGroup.value = groupValue
+    logsView.value = 'detail'
+    if (logsTab.value !== 'labels') {
+      logsTab.value = 'labels'
+    }
+  }
+
+  const closeLogsDetail = () => {
+    const group = logsSelectedGroup.value
+    const groupCol = fieldMap.value.logs.primaryGroupBy
+    const serviceChip = fieldMap.value.logs.service
+    if (group !== undefined && groupCol) {
+      const chipKeys = new Set([groupCol, serviceChip, 'service', 'primaryGroupBy'].filter(Boolean) as string[])
+      filters.value = filters.value.filter((f) => !(f.op === '=' && f.value === group && chipKeys.has(f.key)))
+    }
+    logsSelectedGroup.value = undefined
+    logsView.value = 'overview'
+    logsTab.value = 'labels'
+  }
+
   const context: DrilldownContext = {
     signal,
     filters,
@@ -89,6 +137,9 @@ export function useDrilldownContextProvider(): DrilldownContext {
     logsTable,
     tracesTable,
     fieldMap,
+    logsView,
+    logsTab,
+    logsSelectedGroup,
     time: timeRangeHook.time,
     rangeTime: timeRangeHook.rangeTime,
     unixTimeRange: timeRangeHook.unixTimeRange,
@@ -100,6 +151,10 @@ export function useDrilldownContextProvider(): DrilldownContext {
     setSidebarFilters,
     appendFilter,
     setDetailTab,
+    setLogsView,
+    setLogsTab,
+    openLogsDetail,
+    closeLogsDetail,
   }
 
   provide(DRILLDOWN_CONTEXT_KEY, context)

@@ -61,6 +61,30 @@
           :pool-truncated="truncated"
         )
 
+    .drilldown-body.new-layout.new-layout--workspace.drilldown-body--logs(v-else-if="signal === 'logs'")
+      a-layout-content.layout-content
+        a-card.drilldown-main-pane.gpt-results-pane(:bordered="false")
+          .drilldown-home-main
+            LogsOverview
+
+      a-drawer.metric-detail-drawer.logs-detail-drawer(
+        popup-container=".drilldown-body--logs"
+        placement="right"
+        width="100%"
+        :visible="logsDrawerVisible"
+        :footer="false"
+        :mask="false"
+        :esc-to-close="true"
+        :unmount-on-close="true"
+        @cancel="closeLogsDrawer"
+        @update:visible="onLogsDrawerVisible"
+      )
+        template(#title)
+          .drawer-title
+            .drawer-title-text
+              span.drawer-metric-name(:title="logsDetailTitle") {{ logsDetailTitle }}
+        LogsDetail(v-if="logsDrawerVisible")
+
     .drilldown-signal-placeholder(v-else)
       a-empty(:description="placeholderDescription")
 </template>
@@ -83,6 +107,8 @@
   import MetricChartList from './metrics/metric-chart-list.vue'
   import MetricDetail from './metrics/metric-detail.vue'
   import MetricDetailActions from './metrics/metric-detail-actions.vue'
+  import LogsOverview from './logs/logs-overview.vue'
+  import LogsDetail from './logs/logs-detail.vue'
 
   defineOptions({
     name: 'Drilldown',
@@ -99,6 +125,14 @@
   const { signal } = ctx
   const selectedMetric = computed(() => ctx.metric.value)
   const drawerVisible = computed(() => Boolean(selectedMetric.value))
+  const logsDrawerVisible = computed(() => ctx.logsView.value === 'detail')
+  const logsDetailTitle = computed(() => {
+    const group = ctx.logsSelectedGroup.value
+    if (!group) {
+      return t('drilldown.logs.allLogs')
+    }
+    return group
+  })
   const metricOriginalName = ref<string | null>(null)
 
   watch(
@@ -126,12 +160,17 @@
     }
   }
 
-  const placeholderDescription = computed(() => {
-    if (signal.value === 'logs') {
-      return t('drilldown.signals.logsPlaceholder')
+  const closeLogsDrawer = () => {
+    ctx.closeLogsDetail()
+  }
+
+  const onLogsDrawerVisible = (visible: boolean) => {
+    if (!visible) {
+      closeLogsDrawer()
     }
-    return t('drilldown.signals.tracesPlaceholder')
-  })
+  }
+
+  const placeholderDescription = computed(() => t('drilldown.signals.tracesPlaceholder'))
 
   const search = ref('')
   const sort = ref<MetricsSortOption>('default')

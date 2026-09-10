@@ -62,6 +62,22 @@ resolveLogsTable + fieldMap
 
 **核心差异**：Greptime **无 Loki stream / index/volume API**；必须先绑定 **一张 SQL 表** + **fieldMap**，用 `GROUP BY` + `date_bin` 替代 Loki volume。
 
+### 两个主视图（已确认）
+
+Logs Drilldown 只有两类主视图（`logsView`），职责不要混：
+
+| 视图 | Context | UI | 本质 |
+|------|---------|-----|------|
+| **列表视图**（label breakdown） | `logsView=overview`（默认） | Labels Tab：按所选 label 开多个 tab；每个 **label value** 一块（左日志表预览 + 右 volume 小图） | **按 label value 分组** 的日志列表；用于浏览/对比各 value |
+| **日志详细视图** | `logsView=detail`（选 group / Add filter 进入） | **上方 volume 主图** + **下方单张 logs 表**（满足当前 filters + 时间窗的全部匹配行） | **未按 value 拆面板**；查满足条件的所有日志，一张表展示 |
+
+**禁止**：列表视图顶部再放「总 volume 主图」——主图只属于详细视图。列表页各 value 面板内的 **minichart** 保留（per-value 时序，不是总主图）。
+
+组件对应：
+
+- 列表：`logs-overview.vue` → `labels-tab.vue` → `label-value-panel.vue`
+- 详细：`logs-detail` / drawer 内 `logs-main-view.vue`（`showVolume` + LogsTable）
+
 ---
 
 ## 功能总表（Grafana → Greptime 取数）
@@ -139,7 +155,9 @@ type DrilldownSettings = {
 | B6 | **Time picker** | 改时间重拉 volume | Context `timeRange` → SQL WHERE on time 列 | logs-query 已有 TimeRangeSelect |
 | B7 | **Refresh / Live** | 自动刷新；query streaming | MVP：debounce 重查；可选 3s poll（复用 logs-query Live）；**无** Loki shard streaming | logs-query 有 3s Live |
 | B8 | **Break down by label**（较新） | 首页可按任意 indexed label 分组，不限 service | `primaryGroupBy` 可配置为任意 **TAG 列**（settings 或 Phase 1 UI 切换） | 无 |
-| B9 | **总 volume 时序** | Overview 顶部总日志量曲线 | `date_bin + COUNT(*)` 无 group（复用 [count-chart](src/components/count-chart/index.vue)） | count-chart **已有** |
+| B9 | **总 volume 时序** | **仅日志详细视图**顶部主图；**不**出现在列表（Labels）视图 | `date_bin + COUNT(*)`（复用 volume minichart / count-chart） | 详细视图有；列表页已去掉总主图 |
+
+> **校正（2026-03）**：早期 B9 写「Overview 顶部总日志量曲线」——已废止。列表视图 = label value 分组列表；总 volume 主图只在详细视图。
 
 #### Greptime SQL：首页 volume（对标 index/volume）
 
@@ -201,7 +219,9 @@ LIMIT 100
 
 ---
 
-### C. Service 详情 / 日志主视图
+### C. 日志详细视图（volume 主图 + 单表）
+
+> 与 **列表视图**（§两个主视图）对照：详细视图展示满足 Context filters 的**全部匹配日志**（一张表），顶部为总 volume 主图；不再在此页用 label value 拆多面板。
 
 | # | Grafana 功能 | 用户看到什么 | Greptime 取数 | 现状 / 缺口 |
 |---|--------------|--------------|---------------|-------------|

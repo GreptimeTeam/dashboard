@@ -219,6 +219,12 @@ a-dropdown#td-context(
      * - proportional: share leftover across all columns by current width ratio
      */
     leftoverStrategy?: 'last-column' | 'proportional'
+
+    /**
+     * Merged + virtual only: allow table wider than container (H-scroll).
+     * Intended for no-header drilldown logs; default keeps overflow-x hidden.
+     */
+    allowVirtualHScroll?: boolean
   }
 
   const props = withDefaults(defineProps<Props>(), {
@@ -234,11 +240,15 @@ a-dropdown#td-context(
     enableCellCopy: false,
     activeRowKey: null,
     leftoverStrategy: 'last-column',
+    allowVirtualHScroll: false,
   })
 
   const attrs = useAttrs()
   const attrsRecord = attrs as Record<string, any>
-  const hasVirtualListProps = computed(() => !!attrsRecord['virtual-list-props'])
+  const resolvedVirtualListProps = computed(() => {
+    return attrsRecord['virtual-list-props'] ?? attrsRecord.virtualListProps ?? null
+  })
+  const hasVirtualListProps = computed(() => Boolean(resolvedVirtualListProps.value))
   const columnResizableEnabled = computed(() => {
     if (!Object.prototype.hasOwnProperty.call(attrsRecord, 'column-resizable')) {
       return false
@@ -301,6 +311,12 @@ a-dropdown#td-context(
   const COLUMN_MAX_WIDTH = 600
   // Virtual-list (and virtual merged mode): primary timestamp column fixed px.
   const TIME_COLUMN_FIXED_WIDTH = 200
+  /** Reserve vertical scrollbar so short-row fill does not create a phantom H-bar. */
+  const V_SCROLLBAR_RESERVE_PX = 8
+  /** Soft cap for merged H-scroll natural width (extreme lines use expand popover). */
+  const MERGED_HSCROLL_CAP_PX = 2400
+  /** Arco radio/checkbox operation column — DataTable CSS hides it (display:none). */
+  const SELECTION_COL_WIDTH_PX = 0
   // Ordinary: uncapped measured naturals (for fit + expand). Resize may update
   // columnWidths for fit intent; measuredNaturalWidths stays for expand compare.
   const columnWidths = ref<Record<string, number>>({})
@@ -308,11 +324,21 @@ a-dropdown#td-context(
   const widthsLocked = ref(false)
   let lockWidthsTimer: ReturnType<typeof setTimeout> | null = null
 
+  const hasRowSelection = computed(() => {
+    const raw = attrsRecord['row-selection'] ?? attrsRecord.rowSelection
+    return raw != null && raw !== false
+  })
+
+  const useMergedVirtualHScroll = computed(
+    () => props.allowVirtualHScroll && mergeColumn.value && hasVirtualListProps.value
+  )
+
   // Ordinary: measuring (content-sized) → locked (explicit px + fit).
   const containerClasses = computed(() => ({
     'sticky-scroll': useStickySingleTable.value,
     'natural-column-widths': useStickySingleTable.value && !widthsLocked.value,
     'widths-locked': useStickySingleTable.value && widthsLocked.value,
+    'allow-virtual-hscroll': useMergedVirtualHScroll.value,
   }))
 
   // Dynamic table classes computation
@@ -322,6 +348,7 @@ a-dropdown#td-context(
       'single_column': props.columnMode !== 'separate',
       'multiple_column': props.columnMode === 'separate',
       'virtual-list-active': hasVirtualListProps.value,
+      'allow-virtual-hscroll': useMergedVirtualHScroll.value,
     }
 
     // Merge with any additional classes passed via props
@@ -500,6 +527,37 @@ a-dropdown#td-context(
     return Math.ceil(charLen * VIRTUAL_CHAR_WIDTH_PX + VIRTUAL_CELL_PADDING_X)
   }
 
+  function getMergedSampleMaxCharLen(rows: TableData[], limit = MAX_CONTENT_SAMPLE_ROWS): number {
+    let maxLen = 4
+    const fields =
+      props.displayedColumns.length > 0
+        ? props.displayedColumns.filter((name) => name !== props.tsColumn?.name)
+        : props.columns.map((c) => c.name).filter((name) => name !== props.tsColumn?.name)
+    const sample = rows.slice(0, limit)
+    sample.forEach((row) => {
+      const str = fields
+        .map((key) => (showKeys.value ? `${key}: ${getCellString(row[key])}` : getCellString(row[key])))
+        .join(' ')
+      if (str.length > maxLen) maxLen = str.length
+    })
+    return maxLen
+  }
+
+  /**
+   * Merged virtual H-scroll: Data column width = max(available, capped natural).
+   * available deducts ts + selection + vertical scrollbar reserve (no phantom H-bar on short rows).
+   */
+  const mergedVirtualHScrollWidth = computed((): number | null => {
+    if (!useMergedVirtualHScroll.value || !tableWidth.value) {
+      return null
+    }
+    const tsW = props.tsColumn ? TIME_COLUMN_FIXED_WIDTH : 0
+    const selectionW = hasRowSelection.value ? SELECTION_COL_WIDTH_PX : 0
+    const available = Math.max(0, tableWidth.value - tsW - selectionW - V_SCROLLBAR_RESERVE_PX)
+    const natural = estimateVirtualNaturalWidthPxUncapped(getMergedSampleMaxCharLen(props.data))
+    return Math.max(available, Math.min(natural, MERGED_HSCROLL_CAP_PX))
+  })
+
   /**
    * Build explicit px widths for virtual-list separate mode.
    * Returns null when container width is not ready yet (caller must not remount
@@ -544,7 +602,7 @@ a-dropdown#td-context(
       tmpColumns = tmpColumns.filter((c) => c.name !== props.tsColumn.name)
       tmpColumns.unshift({
         name: props.tsColumn.name,
-        data_type: props.tsColumn.data_type || 'timestamp',
+        data_type: props.tsColumn.data_type || 'TimestampMillisecond',
         title: props.tsColumn.name,
       } as ColumnType)
     }
@@ -663,9 +721,25 @@ a-dropdown#td-context(
 
   // Ordinary: remount only on columnMode (measure/lock handles width via layoutResetKey).
   // Virtual-list: remount when epoch bumps (first width-ready or columnsKey change).
-  const tableRenderKey = computed(() =>
-    hasVirtualListProps.value ? `${props.columnMode}|e${virtualRemountEpoch.value}` : props.columnMode
-  )
+  const tableRenderKey = computed(() => {
+    if (!hasVirtualListProps.value) {
+      return props.columnMode
+    }
+    // Bucket width so tiny ResizeObserver noise does not remount VL (kills scroll pos / load-more).
+    const mergedW =
+      mergedVirtualHScrollWidth.value ??
+      (mergeColumn.value && tableWidth.value > 0
+        ? Math.max(
+            80,
+            tableWidth.value -
+              (props.tsColumn ? TIME_COLUMN_FIXED_WIDTH : 0) -
+              (hasRowSelection.value ? SELECTION_COL_WIDTH_PX : 0) -
+              V_SCROLLBAR_RESERVE_PX
+          )
+        : 0)
+    const mergedBucket = mergedW ? Math.round(mergedW / 40) : 0
+    return `${props.columnMode}|e${virtualRemountEpoch.value}|m${mergedBucket}`
+  })
 
   // Re-measure natural widths when columns / wrap / compact size / mode change.
   const layoutResetKey = computed(() => {
@@ -683,7 +757,7 @@ a-dropdown#td-context(
         arr.push({
           name: props.tsColumn.name,
           title: props.tsColumn.name,
-          data_type: props.tsColumn.data_type || 'timestamp',
+          data_type: props.tsColumn.data_type || 'TimestampMillisecond',
         } as ColumnType)
       }
       arr.push({
@@ -939,20 +1013,10 @@ a-dropdown#td-context(
         return false
       }
       const tsW = props.tsColumn ? TIME_COLUMN_FIXED_WIDTH : 0
-      const available = Math.max(0, tableWidth.value - tsW)
-      let maxLen = 4
-      const fields =
-        props.displayedColumns.length > 0
-          ? props.displayedColumns.filter((name) => name !== props.tsColumn?.name)
-          : props.columns.map((c) => c.name).filter((name) => name !== props.tsColumn?.name)
-      const sample = props.data.slice(0, MAX_CONTENT_SAMPLE_ROWS)
-      sample.forEach((row) => {
-        const str = fields
-          .map((key) => (showKeys.value ? `${key}: ${getCellString(row[key])}` : getCellString(row[key])))
-          .join(' ')
-        if (str.length > maxLen) maxLen = str.length
-      })
-      const natural = estimateVirtualNaturalWidthPxUncapped(maxLen)
+      const selectionW = hasRowSelection.value ? SELECTION_COL_WIDTH_PX : 0
+      const reserve = useMergedVirtualHScroll.value ? V_SCROLLBAR_RESERVE_PX : 0
+      const available = Math.max(0, tableWidth.value - tsW - selectionW - reserve)
+      const natural = estimateVirtualNaturalWidthPxUncapped(getMergedSampleMaxCharLen(props.data))
       return natural > available + EXPAND_WIDTH_EPSILON
     }
 
@@ -1113,7 +1177,8 @@ a-dropdown#td-context(
       )
     }
 
-    // Merged: virtual → fixed ts + flexible Data; ordinary → measure+lock.
+    // Merged: virtual → fixed ts + explicit Data width (leftover); ordinary → measure+lock.
+    // Always set Merged px in virtual mode so Arco does not stretch the time column.
     const arr: TableColumn[] = []
     if (props.tsColumn) {
       const locked = displayColumnWidths.value[props.tsColumn.name]
@@ -1126,22 +1191,40 @@ a-dropdown#td-context(
       arr.push({
         name: props.tsColumn.name,
         title: props.tsColumn.name,
-        data_type: props.tsColumn.data_type || 'timestamp',
+        data_type: props.tsColumn.data_type || 'TimestampMillisecond',
         ...(width !== undefined ? { width } : {}),
       })
     }
     const mergedLocked = displayColumnWidths.value.Merged_Column
+    const hScrollMergedW = mergedVirtualHScrollWidth.value
+    let mergedWidth: number | undefined
+    if (hasVirtualListProps.value) {
+      if (hScrollMergedW != null) {
+        mergedWidth = hScrollMergedW
+      } else if (tableWidth.value > 0) {
+        const tsW = props.tsColumn ? TIME_COLUMN_FIXED_WIDTH : 0
+        const selectionW = hasRowSelection.value ? SELECTION_COL_WIDTH_PX : 0
+        mergedWidth = Math.max(80, tableWidth.value - tsW - selectionW - V_SCROLLBAR_RESERVE_PX)
+      }
+    } else if (mergedLocked !== undefined) {
+      mergedWidth = mergedLocked
+    }
     arr.push({
       name: 'Merged_Column',
       title: 'Data',
       data_type: 'merged',
-      ...(!hasVirtualListProps.value && mergedLocked !== undefined ? { width: mergedLocked } : {}),
+      ...(mergedWidth !== undefined ? { width: mergedWidth } : {}),
     })
     return withEdgeCellClass(arr)
   })
 
   const tablePassThroughProps = computed(() => {
-    const { scroll: attrsScroll, ...restAttrs } = attrsRecord
+    const {
+      'scroll': attrsScroll,
+      'virtual-list-props': _vlKebab,
+      'virtualListProps': _vlCamel,
+      ...restAttrs
+    } = attrsRecord
 
     if (hasVirtualListProps.value) {
       const extraScroll = typeof attrsScroll === 'object' && attrsScroll ? attrsScroll : {}
@@ -1149,6 +1232,8 @@ a-dropdown#td-context(
         loading: false,
         size: 'medium',
         ...restAttrs,
+        // Always pass camelCase so a-table receives VirtualList props reliably.
+        virtualListProps: resolvedVirtualListProps.value,
         scroll: {
           ...extraScroll,
         },
@@ -1828,8 +1913,9 @@ a-dropdown#td-context(
 
   // Virtual-list: keep table ≤ container (no overflow-x). Horizontal scroll would
   // misalign sticky header vs virtual body; widths must fit the screen.
+  // Exception: `.allow-virtual-hscroll` (merged + no-header drilldown) — see below.
   .multiple_column.virtual-list-active,
-  .single_column.virtual-list-active {
+  .single_column.virtual-list-active:not(.allow-virtual-hscroll) {
     :deep(.arco-scrollbar-track-direction-horizontal) {
       display: none;
     }
@@ -1855,6 +1941,34 @@ a-dropdown#td-context(
         width: 100%;
         table-layout: fixed;
       }
+    }
+  }
+
+  // Merged virtual H-scroll (drilldown): allow VL overflow-x; table width from column sum.
+  .single_column.virtual-list-active.allow-virtual-hscroll {
+    :deep(.arco-table-wrapper) {
+      overflow-x: hidden;
+    }
+
+    :deep(.arco-virtual-list) {
+      overflow-x: auto !important;
+      overflow-y: auto !important;
+      scrollbar-gutter: auto;
+
+      > .arco-table-element {
+        width: max-content;
+        min-width: 100%;
+        table-layout: fixed;
+      }
+    }
+
+    :deep(.arco-table-td .arco-table-td-content) {
+      max-width: none;
+    }
+
+    :deep(.merged-cell-content) {
+      max-width: none;
+      width: max-content;
     }
   }
 

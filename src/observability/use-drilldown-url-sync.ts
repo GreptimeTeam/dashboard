@@ -2,7 +2,7 @@ import { watch } from 'vue'
 import type { RouteLocationNormalizedLoaded, Router } from 'vue-router'
 import { isDrilldownFilterOp } from './filters'
 import { DRILLDOWN_DEFAULT_TIME_MINUTES, type DrilldownContext } from './context'
-import { isMetricDetailTab, type DrilldownFilter, type DrilldownSignal } from './types'
+import { isLogsDetailTab, isLogsView, isMetricDetailTab, type DrilldownFilter, type DrilldownSignal } from './types'
 
 const DRILLDOWN_SIGNALS: DrilldownSignal[] = ['metrics', 'logs', 'traces']
 
@@ -70,7 +70,8 @@ export default function useDrilldownUrlSync(
 
   const initializeFromQuery = () => {
     syncingFromUrl = true
-    const { timeLength, timeRange, filters, prefixes, suffixes, metric, logsTable, signal, tab } = route.query
+    const { timeLength, timeRange, filters, prefixes, suffixes, metric, logsTable, signal, tab, logsView, logsTab } =
+      route.query
 
     ctx.setSignal(parseSignal(signal))
 
@@ -115,6 +116,29 @@ export default function useDrilldownUrlSync(
       ctx.logsTable.value = logsTable.trim()
     } else if (!ctx.logsTable.value) {
       ctx.logsTable.value = undefined
+    }
+
+    if (ctx.signal.value === 'logs' && isLogsView(logsView)) {
+      ctx.setLogsView(logsView)
+    } else {
+      ctx.setLogsView('overview')
+    }
+
+    if (ctx.signal.value === 'logs' && isLogsDetailTab(logsTab)) {
+      ctx.setLogsTab(logsTab === 'logs' ? 'labels' : logsTab)
+    } else {
+      ctx.setLogsTab('labels')
+    }
+
+    // Restore selected group from primaryGroupBy filter when opening detail from URL.
+    if (ctx.logsView.value === 'detail') {
+      const groupCol = ctx.fieldMap.value.logs.primaryGroupBy
+      const serviceChip = ctx.fieldMap.value.logs.service
+      const chipKeys = new Set([groupCol, serviceChip, 'service'].filter(Boolean) as string[])
+      const match = ctx.filters.value.find((f) => f.op === '=' && chipKeys.has(f.key))
+      ctx.logsSelectedGroup.value = match?.value
+    } else {
+      ctx.logsSelectedGroup.value = undefined
     }
 
     normalizeTimeRange(ctx)
@@ -166,6 +190,15 @@ export default function useDrilldownUrlSync(
       query.logsTable = ctx.logsTable.value
     }
 
+    if (ctx.signal.value === 'logs') {
+      if (ctx.logsView.value === 'detail') {
+        query.logsView = 'detail'
+      }
+      if (ctx.logsTab.value !== 'labels') {
+        query.logsTab = ctx.logsTab.value
+      }
+    }
+
     router.replace({ query })
   }
 
@@ -190,6 +223,8 @@ export default function useDrilldownUrlSync(
       ctx.metric.value,
       ctx.detailTab.value,
       ctx.logsTable.value,
+      ctx.logsView.value,
+      ctx.logsTab.value,
     ],
     () => {
       updateQueryParams()

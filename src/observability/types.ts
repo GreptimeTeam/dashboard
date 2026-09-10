@@ -9,6 +9,25 @@ export function isMetricDetailTab(value: unknown): value is MetricDetailTab {
   return typeof value === 'string' && METRIC_DETAIL_TABS.includes(value as MetricDetailTab)
 }
 
+/** Logs detail drawer section tabs (URL `logsTab`, omit default `labels`). */
+export type LogsDetailTab = 'labels' | 'fields' | 'logs'
+
+export const LOGS_DETAIL_TABS: LogsDetailTab[] = ['labels', 'fields']
+
+export function isLogsDetailTab(value: unknown): value is LogsDetailTab {
+  // Legacy `logs` URL value maps to labels section (main logs live above tabs).
+  if (value === 'logs') {
+    return true
+  }
+  return typeof value === 'string' && LOGS_DETAIL_TABS.includes(value as 'labels' | 'fields')
+}
+
+export type LogsView = 'overview' | 'detail'
+
+export function isLogsView(value: unknown): value is LogsView {
+  return value === 'overview' || value === 'detail'
+}
+
 export type DrilldownFilterOp = '=' | '!=' | '=~' | '!~'
 
 export interface DrilldownFilter {
