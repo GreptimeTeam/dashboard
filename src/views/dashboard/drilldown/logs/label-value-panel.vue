@@ -4,7 +4,12 @@
     .panel-title(:title="titleText")
       span.panel-title-text {{ titleText }}
       span.panel-count {{ countLabel }}
-    a-button(type="outline" size="mini" @click="addToFilter") {{ t('drilldown.filters.addToFilter') }}
+    a-button(
+      type="outline"
+      size="mini"
+      :class="{ 'is-included': isIncluded }"
+      @click="toggleInclude"
+    ) {{ includeLabel }}
 
   .panel-body
     .panel-logs-col
@@ -42,6 +47,9 @@
   import { useI18n } from 'vue-i18n'
   import LogsTable from '@/views/dashboard/logs/query/LogsTable.vue'
   import { useDrilldownContext } from '@/observability/context'
+  import { loadDrilldownSettings } from '@/observability/drilldown-settings'
+  import { filterIncludesValue } from '@/observability/filters'
+  import { chipKeyForLogsTableFilter } from '@/observability/logs/field-map'
   import useDrilldownLogsTable from '@/observability/use-drilldown-logs-table'
   import type { DrilldownFilterOp } from '@/observability/types'
   import LogsVolumeMiniChart from './logs-volume-mini-chart.vue'
@@ -69,8 +77,12 @@
 
   const titleText = computed(() => `${props.labelCol}="${props.labelValue}"`)
   const countLabel = computed(() => t('drilldown.logs.valueCount', { count: props.logCount }))
+  const isIncluded = computed(() => filterIncludesValue(ctx.filters.value, props.labelCol, props.labelValue))
+  const includeLabel = computed(() =>
+    isIncluded.value ? t('drilldown.filters.included') : t('drilldown.filters.addToFilter')
+  )
 
-  function addToFilter() {
+  function toggleInclude() {
     if (!props.labelCol) {
       return
     }
@@ -80,7 +92,7 @@
         logs: { ...ctx.fieldMap.value.logs, [props.labelCol]: props.labelCol },
       }
     }
-    ctx.appendFilter({ key: props.labelCol, op: '=', value: props.labelValue })
+    ctx.toggleFilterValue({ key: props.labelCol, op: '=', value: props.labelValue })
   }
 
   function mapOperator(operator: string): DrilldownFilterOp {
@@ -91,13 +103,20 @@
   function onFilterConditionAdd(event: { columnName: string; operator: string; value: unknown }) {
     const value = event.value == null ? '' : String(event.value)
     if (!value) return
-    if (!ctx.fieldMap.value.logs[event.columnName]) {
+    const settings = loadDrilldownSettings().logs
+    const chipKey = chipKeyForLogsTableFilter(event.columnName, tableColumns.value, ctx.fieldMap.value.logs, {
+      labelInclude: settings.labelInclude,
+      labelExclude: settings.labelExclude,
+      fieldInclude: settings.fieldInclude,
+      fieldExclude: settings.fieldExclude,
+    })
+    if (chipKey !== 'severity' && !ctx.fieldMap.value.logs[chipKey]) {
       ctx.fieldMap.value = {
         ...ctx.fieldMap.value,
-        logs: { ...ctx.fieldMap.value.logs, [event.columnName]: event.columnName },
+        logs: { ...ctx.fieldMap.value.logs, [chipKey]: event.columnName },
       }
     }
-    ctx.appendFilter({ key: event.columnName, op: mapOperator(event.operator), value })
+    ctx.appendFilter({ key: chipKey, op: mapOperator(event.operator), value })
   }
 
   onMounted(load)
@@ -109,7 +128,10 @@
       ctx.time.value,
       ctx.rangeTime.value[0],
       ctx.rangeTime.value[1],
-      ctx.filters.value,
+      ctx.logsView.value,
+      ctx.fieldMap.value.logs.time,
+      // Detail applies filters to panel preview; overview compose ignores them in SQL.
+      ctx.logsView.value === 'detail' ? ctx.filters.value : null,
     ],
     load,
     { deep: true }
@@ -157,6 +179,11 @@
     flex-shrink: 0;
     font-size: 12px;
     color: var(--color-text-3);
+  }
+
+  .is-included {
+    color: var(--gpt-main-dark);
+    border-color: var(--gpt-main-dark);
   }
 
   .panel-body {

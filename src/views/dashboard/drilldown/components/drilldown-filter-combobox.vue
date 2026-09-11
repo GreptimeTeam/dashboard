@@ -1,5 +1,8 @@
 <template lang="pug">
-.filter-combobox(:class="{ 'is-focused': focused }" @mousedown="handleBoxMouseDown")
+.filter-combobox(
+  :class="{ 'is-focused': focused, 'filter-combobox--fields': suggestMode === 'fields' }"
+  @mousedown="handleBoxMouseDown"
+)
   .filter-combobox__row
     DrilldownFilterPill(
       v-for="item in visibleFilterItems"
@@ -64,7 +67,7 @@
     normalizeCommittedFilters,
     removeFilter as removeFilterFromList,
   } from '@/observability/filters'
-  import useDrilldownFilterOptions from '@/observability/use-drilldown-filter-options'
+  import useDrilldownFilterOptions, { type FilterSuggestMode } from '@/observability/use-drilldown-filter-options'
   import type { DrilldownFilter, DrilldownFilterOp } from '@/observability/types'
   import DrilldownFilterPill from './drilldown-filter-pill.vue'
 
@@ -75,11 +78,27 @@
     value: string
   }
 
+  const props = withDefaults(
+    defineProps<{
+      /** `fields` = logs detail field filter (FIELD-key suggest only). */
+      suggestMode?: FilterSuggestMode
+    }>(),
+    { suggestMode: 'default' }
+  )
+
   const { t } = useI18n()
   const ctx = useDrilldownContext()
   const { filters, setFilters, appendFilter, metric, logsTable, signal, time, rangeTime, refreshKey } = ctx
-  const { keysLoading, valuesLoading, keyOptions, isSqlFieldKey, loadKeys, loadValues, getValueOptions } =
-    useDrilldownFilterOptions(ctx)
+  const {
+    keysLoading,
+    valuesLoading,
+    keyOptions,
+    isSqlFieldKey,
+    isVisibleFilterKey,
+    loadKeys,
+    loadValues,
+    getValueOptions,
+  } = useDrilldownFilterOptions(ctx, { suggestMode: props.suggestMode })
 
   const focused = ref(false)
   const dropdownOpen = ref(false)
@@ -96,8 +115,14 @@
   const isEditing = computed(() => editingIndex.value !== null)
 
   const labels = computed(() => ({
-    wipPlaceholder: t('drilldown.filters.wipPlaceholder'),
-    keyPlaceholder: t('drilldown.filters.fieldPlaceholder'),
+    wipPlaceholder:
+      props.suggestMode === 'fields'
+        ? t('drilldown.logs.fieldFilterPlaceholder')
+        : t('drilldown.filters.wipPlaceholder'),
+    keyPlaceholder:
+      props.suggestMode === 'fields'
+        ? t('drilldown.logs.fieldKeyPlaceholder')
+        : t('drilldown.filters.fieldPlaceholder'),
     operatorPlaceholder: t('drilldown.filters.operatorPlaceholder'),
     valuePlaceholder: t('drilldown.filters.valuePlaceholder'),
     noSuggestions: t('drilldown.filters.noSuggestions'),
@@ -193,7 +218,9 @@
   })
 
   const visibleFilterItems = computed(() =>
-    filters.value.map((filter, index) => ({ filter, index })).filter((item) => editingIndex.value !== item.index)
+    filters.value
+      .map((filter, index) => ({ filter, index }))
+      .filter((item) => editingIndex.value !== item.index && isVisibleFilterKey(item.filter.key))
   )
 
   const filterChipKey = (filter: DrilldownFilter, index: number) =>
@@ -291,6 +318,12 @@
     const value = draftValue.value.trim()
     if (!key || !value) {
       return
+    }
+    if (props.suggestMode === 'fields' && !ctx.fieldMap.value.logs[key]) {
+      ctx.fieldMap.value = {
+        ...ctx.fieldMap.value,
+        logs: { ...ctx.fieldMap.value.logs, [key]: key },
+      }
     }
     const filter: DrilldownFilter = { key, op: draftOp.value, value }
     if (isEditing.value && editingIndex.value !== null) {
@@ -609,6 +642,19 @@
 
     &.is-focused {
       border-color: var(--gpt-main-dark);
+    }
+
+    // Detail Fields filter: quiet border — only top-bar label filter uses main-dark emphasis.
+    &--fields {
+      border-color: var(--color-border-2);
+
+      &:hover {
+        border-color: var(--color-border-3);
+      }
+
+      &.is-focused {
+        border-color: rgb(var(--primary-6));
+      }
     }
   }
 

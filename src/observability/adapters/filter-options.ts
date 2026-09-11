@@ -3,7 +3,16 @@ import { getLabelNames, getLabelValues } from '@/api/metrics'
 import type { DrilldownContext } from '../context'
 import { loadDrilldownSettings } from '../drilldown-settings'
 import { buildPromMatchSelector, isGreptimePromMatchSelector, resolveFieldMapColumn } from '../filters'
-import { discoverLabelColumns, resolveLogsTimeColumn, type SchemaColumn } from '../logs/field-map'
+import {
+  discoverFieldColumns,
+  discoverLabelColumns,
+  listJsonAttributeColumns,
+  parseJsonFieldChipKey,
+  resolveLogsTimeColumn,
+  sampleJsonAttributeFieldKeys,
+  sqlJsonGetStringExpr,
+  type SchemaColumn,
+} from '../logs/field-map'
 import type { DrilldownFilter, DrilldownSignal } from '../types'
 
 const INTERNAL_LABEL_PREFIX = '__'
@@ -95,8 +104,36 @@ export async function fetchSqlLabelKeys(
   }
 }
 
-/** @deprecated Use fetchSqlLabelKeys — top-bar is label-only, not all TAG|FIELD. */
+/**
+ * Field keys for logs top-bar suggest (Fields L1 scalars + L2 JSON attribute keys).
+ * Same discovery as Fields Tab: discoverFieldColumns + JSON sampling + settings.
+ */
 export async function fetchSqlFieldKeys(ctx: DrilldownContext, search = ''): Promise<string[]> {
+  const tableName = sqlTableForSignal(ctx, 'logs')
+  if (!tableName) {
+    return []
+  }
+
+  try {
+    const columns = (await editorApi.getTableSchema(tableName)) as SchemaColumn[]
+    const fieldMap = fieldMapForSignal(ctx, 'logs')
+    const settings = loadDrilldownSettings().logs
+    const l1 = discoverFieldColumns(columns, fieldMap, {
+      include: settings?.fieldInclude,
+      exclude: settings?.fieldExclude,
+      labelInclude: settings?.labelInclude,
+      labelExclude: settings?.labelExclude,
+    })
+    const l2 = await sampleJsonAttributeFieldKeys(tableName, listJsonAttributeColumns(columns))
+    return filterOptions(filterLabelKeys([...l1, ...l2]), search)
+  } catch (error) {
+    console.error('Failed to load logs field keys:', error)
+    return []
+  }
+}
+
+/** Logs top-bar keys: label dims (TAG + string FIELD). Field filter is detail-toolbar only. */
+export async function fetchLogsFilterKeyOptions(ctx: DrilldownContext, search = ''): Promise<string[]> {
   return fetchSqlLabelKeys(ctx, 'logs', search)
 }
 
@@ -153,17 +190,54 @@ export async function fetchPromLabelValues(
 function resolveSqlSuggestColumn(
   chipKey: string,
   fieldMap: Record<string, string>,
-  labelKeys: string[]
+  labelKeys: string[],
+  jsonColumns: string[] = []
 ): string | undefined {
+  if (parseJsonFieldChipKey(chipKey, jsonColumns)) {
+    // Sentinel: callers use parseJsonFieldChipKey for the real SQL expression.
+    return chipKey
+  }
   const mapped = resolveFieldMapColumn(chipKey, fieldMap)
   if (mapped) {
     return mapped
   }
-  // Labels Tab uses physical column names as chip keys.
+  // Labels / Fields tabs use physical column names (or L2 chips) as chip keys.
   if (labelKeys.includes(chipKey)) {
     return chipKey
   }
   return undefined
+}
+
+function sqlValueSelectExpr(
+  chipKey: string,
+  columnName: string,
+  jsonColumns: string[] = []
+): { selectExpr: string; nullCheck: string } {
+  const jsonChip = parseJsonFieldChipKey(chipKey, jsonColumns)
+  if (jsonChip) {
+    const expr = sqlJsonGetStringExpr(jsonChip.column, jsonChip.path)
+    return { selectExpr: expr, nullCheck: `${expr} IS NOT NULL` }
+  }
+  return { selectExpr: `"${columnName}"`, nullCheck: `"${columnName}" IS NOT NULL` }
+}
+
+function sqlFilterEqualsClause(
+  filterKey: string,
+  filterValue: string,
+  fieldMap: Record<string, string>,
+  labelKeys: string[],
+  jsonColumns: string[] = []
+): string | undefined {
+  const jsonChip = parseJsonFieldChipKey(filterKey, jsonColumns)
+  if (jsonChip) {
+    const expr = sqlJsonGetStringExpr(jsonChip.column, jsonChip.path)
+    return `${expr} = '${filterValue.replace(/'/g, "''")}'`
+  }
+  const mapped = resolveFieldMapColumn(filterKey, fieldMap) || (labelKeys.includes(filterKey) ? filterKey : undefined)
+  if (!mapped) {
+    return undefined
+  }
+  return `"${mapped}" = '${filterValue.replace(/'/g, "''")}'`
 }
 
 export async function fetchSqlLabelValues(
@@ -181,13 +255,22 @@ export async function fetchSqlLabelValues(
 
   const fieldMap = fieldMapForSignal(ctx, signal)
   const labelKeys = options?.labelKeys ?? (await fetchSqlLabelKeys(ctx, signal, ''))
-  const columnName = resolveSqlSuggestColumn(trimmedKey, fieldMap, labelKeys)
+  let jsonColumns: string[] = []
+  try {
+    const columns = (await editorApi.getTableSchema(tableName)) as SchemaColumn[]
+    jsonColumns = listJsonAttributeColumns(columns)
+  } catch {
+    // JSON column list is best-effort for value suggestions.
+  }
+
+  const columnName = resolveSqlSuggestColumn(trimmedKey, fieldMap, labelKeys, jsonColumns)
   if (!columnName) {
     return []
   }
 
+  const { selectExpr, nullCheck } = sqlValueSelectExpr(trimmedKey, columnName, jsonColumns)
   const unixRange = ctx.unixTimeRange()
-  const whereParts = [`"${columnName}" IS NOT NULL`]
+  const whereParts = [nullCheck]
 
   if (unixRange.length === 2) {
     let timeColumn: string | undefined
@@ -214,14 +297,13 @@ export async function fetchSqlLabelValues(
     if (filter.key === trimmedKey || filter.op !== '=') {
       return
     }
-    const sqlColumn = resolveSqlSuggestColumn(filter.key, fieldMap, labelKeys)
-    if (!sqlColumn) {
-      return
+    const clause = sqlFilterEqualsClause(filter.key, filter.value, fieldMap, labelKeys, jsonColumns)
+    if (clause) {
+      whereParts.push(clause)
     }
-    whereParts.push(`"${sqlColumn}" = '${filter.value.replace(/'/g, "''")}'`)
   })
 
-  const query = `SELECT DISTINCT "${columnName}" FROM "${tableName}" WHERE ${whereParts.join(
+  const query = `SELECT DISTINCT ${selectExpr} FROM "${tableName}" WHERE ${whereParts.join(
     ' AND '
   )} LIMIT ${SQL_VALUE_LIMIT}`
 
@@ -253,10 +335,10 @@ export async function fetchFilterKeyOptions(ctx: DrilldownContext, search = ''):
   if (signal === 'traces') {
     return fetchSqlLabelKeys(ctx, 'traces', search)
   }
-  return fetchSqlLabelKeys(ctx, 'logs', search)
+  return fetchLogsFilterKeyOptions(ctx, search)
 }
 
-/** Top-bar value assist: SQL DISTINCT on logs/traces labels; metrics stay manual. */
+/** Top-bar value assist: SQL DISTINCT on logs/traces label+field keys; metrics stay manual. */
 export async function fetchFilterValueOptions(
   ctx: DrilldownContext,
   fieldKey: string,
@@ -269,7 +351,9 @@ export async function fetchFilterValueOptions(
   }
 
   const sqlSignal = signal === 'traces' ? 'traces' : 'logs'
-  const keys = options?.labelKeys ?? (await fetchSqlLabelKeys(ctx, sqlSignal, ''))
+  const keys =
+    options?.labelKeys ??
+    (sqlSignal === 'logs' ? await fetchLogsFilterKeyOptions(ctx, '') : await fetchSqlLabelKeys(ctx, sqlSignal, ''))
   const column = resolveSqlSuggestColumn(fieldKey.trim(), fieldMapForSignal(ctx, sqlSignal), keys)
   if (!column) {
     return { values: [], sqlAssist: false }
@@ -288,5 +372,9 @@ export function canSuggestFilterValues(
   fieldMap: Record<string, string>,
   labelKeys: string[]
 ): boolean {
-  return Boolean(resolveSqlSuggestColumn(fieldKey.trim(), fieldMap, labelKeys))
+  const trimmed = fieldKey.trim()
+  if (parseJsonFieldChipKey(trimmed)) {
+    return true
+  }
+  return Boolean(resolveSqlSuggestColumn(trimmed, fieldMap, labelKeys))
 }

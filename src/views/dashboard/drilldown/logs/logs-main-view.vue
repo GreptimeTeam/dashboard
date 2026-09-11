@@ -2,20 +2,69 @@
 .logs-main-view
   .logs-main-volume(v-if="showVolume")
     LogsVolumeMiniChart(:lazy="false" :color-index="0")
+
+  .logs-results-toolbar
+    .logs-results-toolbar-left
+      span.results-header
+        span {{ t('drilldown.logs.logsSectionTitle') }}
+        span.results-count(v-if="tableData.length")
+          |
+          | (
+          | {{ tableData.length }}
+          | &nbsp; {{ t('logsQuery.rowsInCurrentRange') }}
+          | )
+      a-checkbox(v-model="mergeColumn" type="button" size="small")
+        | {{ t('logsQuery.singleColumn') }}
+      a-checkbox(
+        v-if="mergeColumn"
+        v-model="showKeys"
+        type="button"
+        size="small"
+      )
+        | {{ t('logsQuery.showKeys') }}
+      a-checkbox(v-model="compactRows" type="button" size="small")
+        | {{ t('logsQuery.compactRows') }}
+      a-checkbox(v-model="wrap" size="small")
+        span {{ t('logsQuery.wrapLines') }}
+
+    .logs-results-toolbar-right
+      .logs-virtual-columns-clipped-hint(v-if="showVirtualColumnsClippedHint && tableColumns.length")
+        | {{ t('logsQuery.virtualColumnsHint') }}
+      a-trigger(
+        v-if="tableColumns.length"
+        trigger="click"
+        size="small"
+        :unmount-on-close="false"
+      )
+        a-button(type="text")
+          span.gpt-text-secondary {{ t('logsQuery.columns') }}
+        template(#content)
+          a-card.gpt-popover-panel
+            a-checkbox-group(
+              v-if="logsTableName"
+              v-model="displayedColumnsByTable[logsTableName]"
+              direction="vertical"
+            )
+              a-checkbox(v-for="column in tableColumns" :key="column.name" :value="column.name")
+                | {{ column.name }}
+
   a-spin.logs-main-table(:loading="loading" :class="{ 'logs-main-table--fill': fillHeight }")
     LogsTable(
       v-if="tableColumns.length"
+      :key="`${logsTableName}-${columnModeKey}`"
       sql-mode="builder"
-      column-mode="merged-with-keys"
-      size="small"
-      :show-header="false"
+      detail-popup-container=".drilldown-body--logs"
+      :column-mode="columnMode"
+      :size="size"
+      :show-header="true"
       :data="tableData"
       :columns="tableColumns"
       :ts-column="tsColumn"
-      :displayed-columns="displayedColumns"
-      :wrap-line="false"
+      :displayed-columns="visibleColumns"
+      :wrap-line="wrap"
       @filterConditionAdd="onFilterConditionAdd"
       @reach-end="loadMore"
+      @virtualColumnsClipped="handleVirtualColumnsClipped"
     )
     a-empty(v-else-if="!loading" :description="t('drilldown.logs.noLogRows')")
   .logs-load-more(v-if="loadingMore")
@@ -24,11 +73,14 @@
 </template>
 
 <script setup lang="ts">
-  import { onMounted, watch } from 'vue'
+  import { computed, onMounted, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import LogsTable from '@/views/dashboard/logs/query/LogsTable.vue'
   import { useDrilldownContext } from '@/observability/context'
+  import { loadDrilldownSettings } from '@/observability/drilldown-settings'
+  import { chipKeyForLogsTableFilter } from '@/observability/logs/field-map'
   import useDrilldownLogsTable from '@/observability/use-drilldown-logs-table'
+  import useLogsTablePrefs from '@/observability/use-logs-table-prefs'
   import type { DrilldownFilterOp } from '@/observability/types'
   import LogsVolumeMiniChart from './logs-volume-mini-chart.vue'
 
@@ -36,7 +88,7 @@
     defineProps<{
       /** When false, only render the log table (parent already shows volume). */
       showVolume?: boolean
-      /** Stretch table area on overview homepage. */
+      /** Stretch table area to fill remaining tab height. */
       fillHeight?: boolean
     }>(),
     {
@@ -48,8 +100,28 @@
   const { t } = useI18n()
   const ctx = useDrilldownContext()
 
-  const { loading, loadingMore, tableColumns, tableData, tsColumn, displayedColumns, load, loadMore } =
-    useDrilldownLogsTable(ctx)
+  const {
+    mergeColumn,
+    showKeys,
+    displayedColumnsByTable,
+    compactRows,
+    wrap,
+    size,
+    columnMode,
+    columnModeKey,
+    displayedColumnsFor,
+    ensureDisplayedColumns,
+  } = useLogsTablePrefs()
+
+  const { loading, loadingMore, tableColumns, tableData, tsColumn, load, loadMore } = useDrilldownLogsTable(ctx)
+
+  const logsTableName = computed(() => ctx.logsTable.value || '')
+  const visibleColumns = computed(() => displayedColumnsFor(logsTableName.value))
+
+  const showVirtualColumnsClippedHint = ref(false)
+  function handleVirtualColumnsClipped(visible: boolean) {
+    showVirtualColumnsClippedHint.value = visible
+  }
 
   const mapOperator = (operator: string): DrilldownFilterOp => {
     if (operator === '!=' || operator === '=~' || operator === '!~') {
@@ -63,14 +135,32 @@
     if (!value) {
       return
     }
-    if (!ctx.fieldMap.value.logs[event.columnName]) {
+    const settings = loadDrilldownSettings().logs
+    const chipKey = chipKeyForLogsTableFilter(event.columnName, tableColumns.value, ctx.fieldMap.value.logs, {
+      labelInclude: settings.labelInclude,
+      labelExclude: settings.labelExclude,
+      fieldInclude: settings.fieldInclude,
+      fieldExclude: settings.fieldExclude,
+    })
+    if (chipKey !== 'severity' && !ctx.fieldMap.value.logs[chipKey]) {
       ctx.fieldMap.value = {
         ...ctx.fieldMap.value,
-        logs: { ...ctx.fieldMap.value.logs, [event.columnName]: event.columnName },
+        logs: { ...ctx.fieldMap.value.logs, [chipKey]: event.columnName },
       }
     }
-    ctx.appendFilter({ key: event.columnName, op: mapOperator(event.operator), value })
+    ctx.appendFilter({ key: chipKey, op: mapOperator(event.operator), value })
   }
+
+  watch(
+    tableColumns,
+    (cols) => {
+      ensureDisplayedColumns(
+        logsTableName.value,
+        cols.map((column) => column.name)
+      )
+    },
+    { deep: true }
+  )
 
   onMounted(load)
   watch(
@@ -82,6 +172,8 @@
       ctx.rangeTime.value[1],
       ctx.filters.value,
       ctx.logsTable.value,
+      // URL detail can mount before fieldMap.time is inferred.
+      ctx.fieldMap.value.logs.time,
     ],
     load,
     { deep: true }
@@ -93,25 +185,88 @@
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
-    gap: 12px;
+    gap: 0;
+    height: 100%;
     min-height: 0;
   }
 
   .logs-main-volume {
     flex-shrink: 0;
+    margin-bottom: 12px;
     padding: 10px 12px;
     border: 1px solid var(--color-border-2);
     border-radius: 8px;
     background: var(--color-bg-2);
   }
 
+  .logs-results-toolbar {
+    display: flex;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 12px;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--color-border-2);
+    background: var(--gpt-table-toolbar-bg, var(--color-bg-2));
+  }
+
+  .logs-results-toolbar-left,
+  .logs-results-toolbar-right {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    min-width: 0;
+  }
+
+  .results-header {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-1);
+    white-space: nowrap;
+  }
+
+  .results-count {
+    color: var(--gpt-text-muted, var(--color-text-3));
+    font-size: 12px;
+    font-weight: normal;
+  }
+
+  .logs-virtual-columns-clipped-hint {
+    position: relative;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: var(--warning-bg-color);
+    border: 1px solid var(--warning-color);
+    color: var(--warning-color);
+    font-size: var(--gpt-font-sm, 12px);
+    line-height: 1.2;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
   .logs-main-table {
+    display: flex;
     flex: 0 1 auto;
+    flex-direction: column;
     min-height: 0;
     overflow: hidden;
 
     &--fill {
       flex: 1 1 0%;
+      height: 100%;
+    }
+
+    :deep(.arco-spin-children) {
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      min-height: 0;
+      height: 100%;
     }
 
     :deep(#log-table-container) {

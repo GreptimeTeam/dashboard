@@ -34,6 +34,8 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
     }
     ctx.logsTable.value = tableName
     restoreLogsDetailSelection()
+    // Detail may have mounted from URL before fieldMap was ready — reload panels.
+    ctx.triggerRefresh()
   }
 
   const initializeLogsContext = async () => {
@@ -45,6 +47,8 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
         logs: await buildLogsFieldMap(ctx.logsTable.value, settings.fieldMap),
       }
       restoreLogsDetailSelection()
+      // URL restore opens detail before this finishes; bump so table/chart reload.
+      ctx.triggerRefresh()
       return
     }
 

@@ -36,6 +36,19 @@ export default function useDrilldownLogsTable(
   }
 
   async function load() {
+    if (!ctx.logsTable.value) {
+      tableColumns.value = []
+      tableData.value = []
+      tsColumn.value = null
+      hasMore.value = false
+      return
+    }
+    // Refresh / URL detail opens before buildLogsFieldMap finishes — wait for roles.
+    if (!ctx.fieldMap.value.logs.time) {
+      loading.value = true
+      return
+    }
+
     loading.value = true
     loadingMore.value = false
     try {

@@ -43,7 +43,7 @@
   import { IconDown } from '@arco-design/web-vue/es/icon'
   import { useDrilldownContext } from '@/observability/context'
   import { buildMetricsQueryLocation } from '@/observability/deep-links'
-  import { filtersForPromMatch } from '@/observability/filters'
+  import { buildPromMatchersString } from '@/observability/filters'
   import { inferMetricKind, type MetricKind, type MetricTemporality } from '@/observability/metrics/infer-promql'
   import useMainChartPrefs, {
     configureOptionsForKind,
@@ -92,11 +92,7 @@
     if (!name) {
       return ''
     }
-    const matchers = filtersForPromMatch(ctx.filters.value)
-    const parts = Object.entries(matchers).map(
-      ([key, value]) => `${key}="${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
-    )
-    const matcherStr = parts.length ? parts.join(',') : undefined
+    const matcherStr = buildPromMatchersString(ctx.filters.value)
     return buildMainChartQueries(name, matcherStr, prefs.value, kind.value, temporality.value).queries[0]?.expr ?? ''
   })
 

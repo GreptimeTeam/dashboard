@@ -11,7 +11,7 @@ import {
   type LogsView,
   type MetricDetailTab,
 } from './types'
-import { addFilter as mergeFilter } from './filters'
+import { addFilter as mergeFilter, toggleIncludeFilter } from './filters'
 
 export interface DrilldownContext {
   signal: Ref<DrilldownSignal>
@@ -40,10 +40,12 @@ export interface DrilldownContext {
   setFilters: (filters: DrilldownFilter[]) => void
   setSidebarFilters: (filters: DrilldownSidebarFilters) => void
   appendFilter: (filter: DrilldownFilter) => void
+  /** Include/exclude toggle for the same label value (OR-merge / remove). */
+  toggleFilterValue: (filter: DrilldownFilter) => void
   setDetailTab: (tab: MetricDetailTab) => void
   setLogsView: (view: LogsView) => void
   setLogsTab: (tab: LogsDetailTab) => void
-  openLogsDetail: (groupValue: string) => void
+  openLogsDetail: (groupValue?: string) => void
   closeLogsDetail: () => void
 }
 
@@ -63,7 +65,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
   const tracesTable = ref<string | undefined>()
   const fieldMap = ref({ ...DEFAULT_FIELD_MAP })
   const logsView = ref<LogsView>('overview')
-  const logsTab = ref<LogsDetailTab>('labels')
+  const logsTab = ref<LogsDetailTab>('logs')
   const logsSelectedGroup = ref<string | undefined>()
   const refreshKey = ref(0)
 
@@ -94,6 +96,10 @@ export function useDrilldownContextProvider(): DrilldownContext {
     setFilters(mergeFilter(filters.value, filter))
   }
 
+  const toggleFilterValue = (filter: DrilldownFilter) => {
+    setFilters(toggleIncludeFilter(filters.value, filter))
+  }
+
   const setDetailTab = (tab: MetricDetailTab) => {
     detailTab.value = tab
   }
@@ -106,25 +112,19 @@ export function useDrilldownContextProvider(): DrilldownContext {
     logsTab.value = tab
   }
 
-  const openLogsDetail = (groupValue: string) => {
+  const openLogsDetail = (groupValue?: string) => {
     logsSelectedGroup.value = groupValue
     logsView.value = 'detail'
-    if (logsTab.value !== 'labels') {
-      logsTab.value = 'labels'
+    if (logsTab.value !== 'logs') {
+      logsTab.value = 'logs'
     }
   }
 
+  /** Back to overview catalog; keep filters chips for compose. */
   const closeLogsDetail = () => {
-    const group = logsSelectedGroup.value
-    const groupCol = fieldMap.value.logs.primaryGroupBy
-    const serviceChip = fieldMap.value.logs.service
-    if (group !== undefined && groupCol) {
-      const chipKeys = new Set([groupCol, serviceChip, 'service', 'primaryGroupBy'].filter(Boolean) as string[])
-      filters.value = filters.value.filter((f) => !(f.op === '=' && f.value === group && chipKeys.has(f.key)))
-    }
     logsSelectedGroup.value = undefined
     logsView.value = 'overview'
-    logsTab.value = 'labels'
+    logsTab.value = 'logs'
   }
 
   const context: DrilldownContext = {
@@ -150,6 +150,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
     setFilters,
     setSidebarFilters,
     appendFilter,
+    toggleFilterValue,
     setDetailTab,
     setLogsView,
     setLogsTab,

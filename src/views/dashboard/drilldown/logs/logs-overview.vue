@@ -14,6 +14,8 @@
         a-option(v-for="name in tableOptions" :key="name" :value="name") {{ name }}
       a-button(type="text" size="small" @click="settingsVisible = true")
         | {{ t('drilldown.logs.settingsButton') }}
+    .toolbar-right(v-if="logsTable")
+      a-button(type="primary" size="medium" @click="showLogs") {{ t('drilldown.logs.showLogs') }}
 
   a-alert(
     v-if="!logsTable"
@@ -67,6 +69,10 @@
 
   const onSettingsSaved = () => {
     ctx.triggerRefresh()
+  }
+
+  const showLogs = () => {
+    ctx.openLogsDetail()
   }
 
   const onTableChange = async (table: string) => {
@@ -129,6 +135,14 @@
     align-items: center;
     gap: 8px;
     min-width: 0;
+  }
+
+  .toolbar-right {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
   }
 
   .toolbar-label {

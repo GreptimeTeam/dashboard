@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia'
 import { executePromQLRange } from '@/api/metrics'
 import { useAppStore } from '@/store'
 import type { DrilldownContext } from './context'
-import { filtersForPromMatch } from './filters'
+import { buildPromMatchersString } from './filters'
 import { buildBreakdownGroupByExpr, buildBreakdownValueExprs } from './metrics/breakdown-queries'
 import resolveMetricMeta from './resolve-metric-meta'
 import { type MetricKind } from './metrics/infer-promql'
@@ -41,14 +41,8 @@ export interface UseBreakdownSparklineOptions {
   enabled: Ref<boolean>
 }
 
-function escapePromLabelValue(value: string): string {
-  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-}
-
 function buildMatchersFromFilters(ctx: DrilldownContext, excludeKey?: string): string | undefined {
-  const matchers = filtersForPromMatch(ctx.filters.value, { excludeKey })
-  const parts = Object.entries(matchers).map(([key, value]) => `${key}="${escapePromLabelValue(value)}"`)
-  return parts.length ? parts.join(',') : undefined
+  return buildPromMatchersString(ctx.filters.value, { excludeKey })
 }
 
 function seriesLastAbs(series: PromMatrixSeries): number {

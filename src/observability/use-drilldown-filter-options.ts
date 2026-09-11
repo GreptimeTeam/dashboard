@@ -3,16 +3,24 @@ import {
   canSuggestFilterValues,
   fetchFilterKeyOptions,
   fetchFilterValueOptions,
+  fetchLogsFilterKeyOptions,
+  fetchSqlFieldKeys,
   fetchSqlLabelKeys,
 } from './adapters/filter-options'
 import type { DrilldownContext } from './context'
 import { loadDrilldownSettings } from './drilldown-settings'
 
-export default function useDrilldownFilterOptions(ctx: DrilldownContext) {
+export type FilterSuggestMode = 'default' | 'fields'
+
+export default function useDrilldownFilterOptions(
+  ctx: DrilldownContext,
+  options?: { suggestMode?: FilterSuggestMode }
+) {
+  const suggestMode = options?.suggestMode ?? 'default'
   const keysLoading = ref(false)
   const valuesLoading = ref(false)
   const keyOptions = ref<string[]>([])
-  /** Cached label keys for the active SQL signal (logs/traces). Empty on metrics. */
+  /** Cached suggest keys for the active SQL signal. Empty on metrics. */
   const labelKeys = ref<string[]>([])
   const valueOptionsByKey = ref<Record<string, string[]>>({})
 
@@ -22,20 +30,37 @@ export default function useDrilldownFilterOptions(ctx: DrilldownContext) {
     valueOptionsByKey.value = {}
   }
 
+  const loadSuggestKeys = async (search = '') => {
+    if (suggestMode === 'fields') {
+      const keys = await fetchSqlFieldKeys(ctx, search)
+      // Level filter owns severity — keep it out of the field combobox.
+      const severityCol = ctx.fieldMap.value.logs.severity
+      return keys.filter((key) => key !== 'severity' && key !== severityCol)
+    }
+    return fetchFilterKeyOptions(ctx, search)
+  }
+
   const refreshLabelKeys = async () => {
     const signal = ctx.signal.value
+    if (suggestMode === 'fields') {
+      labelKeys.value = signal === 'logs' ? await loadSuggestKeys('') : []
+      return
+    }
     if (signal === 'metrics') {
       labelKeys.value = []
       return
     }
-    const sqlSignal = signal === 'traces' ? 'traces' : 'logs'
-    labelKeys.value = await fetchSqlLabelKeys(ctx, sqlSignal, '')
+    if (signal === 'logs') {
+      labelKeys.value = await fetchLogsFilterKeyOptions(ctx, '')
+      return
+    }
+    labelKeys.value = await fetchSqlLabelKeys(ctx, 'traces', '')
   }
 
   const loadKeys = async (search = '') => {
     keysLoading.value = true
     try {
-      keyOptions.value = await fetchFilterKeyOptions(ctx, search)
+      keyOptions.value = await loadSuggestKeys(search)
     } finally {
       keysLoading.value = false
     }
@@ -45,10 +70,16 @@ export default function useDrilldownFilterOptions(ctx: DrilldownContext) {
     return ctx.signal.value === 'traces' ? ctx.fieldMap.value.traces : ctx.fieldMap.value.logs
   }
 
-  /** True when top-bar can offer value DISTINCT (logs/traces label keys only). */
+  /** True when combobox can offer value DISTINCT. */
   const isSqlFieldKey = (fieldKey: string): boolean => {
     const trimmed = fieldKey.trim()
-    if (!trimmed || ctx.signal.value === 'metrics') {
+    if (!trimmed) {
+      return false
+    }
+    if (suggestMode === 'fields') {
+      return canSuggestFilterValues(trimmed, fieldMapForActiveSql(), labelKeys.value)
+    }
+    if (ctx.signal.value === 'metrics') {
       return false
     }
     return canSuggestFilterValues(trimmed, fieldMapForActiveSql(), labelKeys.value)
@@ -77,6 +108,45 @@ export default function useDrilldownFilterOptions(ctx: DrilldownContext) {
     return valueOptionsByKey.value[fieldKey.trim()] ?? []
   }
 
+  /**
+   * Whether a committed chip belongs in this combobox.
+   * Logs topbar (default): Labels only. Logs fields mode: Fields only. Level never.
+   */
+  const isVisibleFilterKey = (key: string): boolean => {
+    const trimmed = key.trim()
+    if (!trimmed) {
+      return false
+    }
+
+    if (ctx.signal.value === 'logs') {
+      const fieldMap = ctx.fieldMap.value.logs
+      const severityCol = fieldMap.severity
+      if (trimmed === 'severity' || (severityCol && trimmed === severityCol)) {
+        return false
+      }
+
+      if (suggestMode === 'fields') {
+        // Only field-discovered keys; wait until suggest keys are loaded.
+        return labelKeys.value.includes(trimmed)
+      }
+
+      // Topbar: label chips only (service aliases + discovered labels).
+      if (trimmed === 'service' || trimmed === 'primaryGroupBy') {
+        return true
+      }
+      if (labelKeys.value.includes(trimmed)) {
+        return true
+      }
+      const mapped = fieldMap[trimmed]
+      return Boolean(mapped && labelKeys.value.includes(mapped))
+    }
+
+    if (suggestMode !== 'fields') {
+      return true
+    }
+    return labelKeys.value.includes(trimmed)
+  }
+
   watch(
     () => ctx.signal.value,
     async () => {
@@ -93,12 +163,13 @@ export default function useDrilldownFilterOptions(ctx: DrilldownContext) {
         ctx.tracesTable.value,
         ctx.fieldMap.value.logs,
         ctx.fieldMap.value.traces,
-        // Re-read settings when table/map changes (include/exclude live in localStorage).
         loadDrilldownSettings().logs.labelInclude?.join('\0'),
         loadDrilldownSettings().logs.labelExclude?.join('\0'),
+        loadDrilldownSettings().logs.fieldInclude?.join('\0'),
+        loadDrilldownSettings().logs.fieldExclude?.join('\0'),
       ] as const,
     async () => {
-      if (ctx.signal.value === 'metrics') {
+      if (suggestMode !== 'fields' && ctx.signal.value === 'metrics') {
         return
       }
       await refreshLabelKeys()
@@ -115,6 +186,7 @@ export default function useDrilldownFilterOptions(ctx: DrilldownContext) {
     /** @deprecated alias — prefer checking labelKeys / isSqlFieldKey */
     sqlFieldKeys: labelKeys,
     isSqlFieldKey,
+    isVisibleFilterKey,
     loadKeys,
     loadValues,
     getValueOptions,

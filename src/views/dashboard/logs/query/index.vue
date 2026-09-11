@@ -135,7 +135,7 @@
         :columns="columns"
         :sql-mode="queryState.editorType"
         :ts-column="queryState.tsColumn"
-        :column-mode="mergeColumn && showKeys ? 'merged-with-keys' : mergeColumn ? 'merged' : 'separate'"
+        :column-mode="columnMode"
         :displayed-columns="displayedColumns[queryState.table] || []"
         @filter-condition-add="handleFilterConditionAdd"
         @virtualColumnsClipped="handleVirtualColumnsClipped"
@@ -145,11 +145,11 @@
 </template>
 
 <script setup lang="ts" name="LogsQuery">
-  import { ref, computed, watch, onMounted, toRefs, nextTick } from 'vue'
-  import { useStorage, useLocalStorage } from '@vueuse/core'
+  import { ref, watch, nextTick } from 'vue'
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import SqlTextEditor from '@/components/sql-text-editor/index.vue'
   import { replaceTimePlaceholders } from '@/utils/sql'
+  import useLogsTablePrefs from '@/observability/use-logs-table-prefs'
   import ChartContainer from './ChartContainer.vue'
   import ExportModal from './ExportModal.vue'
   import LogTableData from './LogsTable.vue'
@@ -184,14 +184,18 @@
 
   const { initializeFromQuery, updateQueryParams } = urlSync
   initializeFromQuery()
-  // Local UI state
-  const mergeColumn = useStorage('logquery-merge-column', true)
-  const showKeys = useStorage('logquery-show-keys', true)
-  const displayedColumns = useStorage('logquery-table-column-visible', {})
-  const columnModeKey = computed(() => {
-    if (!mergeColumn.value) return 'separate'
-    return showKeys.value ? 'merged-with-keys' : 'merged'
-  })
+  // Local UI state — shared with drilldown logs detail table.
+  const {
+    mergeColumn,
+    showKeys,
+    displayedColumnsByTable: displayedColumns,
+    compactRows,
+    wrap,
+    size,
+    columnMode,
+    columnModeKey,
+    ensureDisplayedColumns,
+  } = useLogsTablePrefs()
 
   const chartContainerRef = ref()
   const paginationKey = ref(0)
@@ -262,17 +266,6 @@
     }
   })
 
-  const compactRows = useStorage('query-table-compact-rows', false)
-  const size = computed(() => (compactRows.value ? 'mini' : 'medium'))
-
-  onMounted(() => {
-    if (localStorage.getItem('logquery-table-compact') === 'true' && !compactRows.value) {
-      compactRows.value = true
-      localStorage.removeItem('logquery-table-compact')
-    }
-  })
-  const wrap = ref(false)
-
   // Virtual-list: when columns are too many, Arco may clip some of them silently.
   // We show a guiding hint next to the columns display button.
   const showVirtualColumnsClippedHint = ref(false)
@@ -308,9 +301,10 @@
     if (!columns.value.length) {
       return
     }
-    if (!displayedColumns.value[queryState.table] || !displayedColumns.value[queryState.table].length) {
-      displayedColumns.value[queryState.table] = columns.value.map((c) => c.name)
-    }
+    ensureDisplayedColumns(
+      queryState.table,
+      columns.value.map((c) => c.name)
+    )
   })
 
   watch(

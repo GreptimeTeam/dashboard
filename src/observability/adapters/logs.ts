@@ -6,8 +6,11 @@ import { loadDrilldownSettings } from '../drilldown-settings'
 import { filtersToSqlWhere } from '../filters'
 import {
   defaultLogSelectColumns,
+  discoverFieldColumns,
   discoverLabelColumns,
+  listJsonAttributeColumns,
   resolveLogsTimeColumn,
+  sampleJsonAttributeFieldKeys,
   type SchemaColumn,
 } from '../logs/field-map'
 import { escapeSqlString, quoteIdent } from '../logs/query-state'
@@ -92,12 +95,19 @@ async function resolveLogsTimeColumnFallback(
 }
 
 /**
- * Time + Context filters WHERE for Logs Drilldown (filters optional).
- * Unlike Related logs, time alone is enough for overview volume.
+ * Time + Context filters WHERE for Logs Drilldown.
+ * On overview (`logsView=overview`), label filters are skipped so candidate panels stay visible (compose mode).
+ * Detail applies full filters. Pass `includeLabelFilters` to override.
  */
 export async function buildLogsContextWhere(
   ctx: DrilldownContext,
-  options?: { extraEquals?: Array<{ column: string; value: string }> }
+  options?: {
+    extraEquals?: Array<{ column: string; value: string }>
+    /** Default: true on detail, false on overview. */
+    includeLabelFilters?: boolean
+    /** Skip this chip key when applying filters (e.g. severity picker). */
+    excludeFilterKey?: string
+  }
 ): Promise<string> {
   const tableName = ctx.logsTable.value
   if (!tableName) {
@@ -116,7 +126,16 @@ export async function buildLogsContextWhere(
     }
   }
 
-  whereParts.push(...filtersToSqlWhere(ctx.filters.value, fieldMap))
+  const includeLabelFilters = options?.includeLabelFilters ?? ctx.logsView.value === 'detail'
+  if (includeLabelFilters) {
+    const columns = await loadSchema(tableName)
+    whereParts.push(
+      ...filtersToSqlWhere(ctx.filters.value, fieldMap, {
+        excludeKey: options?.excludeFilterKey,
+        jsonColumns: listJsonAttributeColumns(columns),
+      })
+    )
+  }
 
   options?.extraEquals?.forEach(({ column, value }) => {
     whereParts.push(`${quoteIdent(column)} = '${escapeSqlString(value)}'`)
@@ -140,7 +159,10 @@ export async function buildLogsWhere(ctx: DrilldownContext): Promise<string> {
     return ''
   }
 
-  const whereParts = filtersToSqlWhere(ctx.filters.value, ctx.fieldMap.value.logs)
+  const columns = await loadSchema(tableName)
+  const whereParts = filtersToSqlWhere(ctx.filters.value, ctx.fieldMap.value.logs, {
+    jsonColumns: listJsonAttributeColumns(columns),
+  })
   if (!whereParts.length) {
     return ''
   }
@@ -266,6 +288,24 @@ export async function listLabelKeys(ctx: DrilldownContext): Promise<string[]> {
   })
 }
 
+/** Fields Tab keys — L1 non-label scalars + L2 JSON attribute keys. */
+export async function listFieldKeys(ctx: DrilldownContext): Promise<string[]> {
+  const tableName = ctx.logsTable.value
+  if (!tableName) {
+    return []
+  }
+  const columns = await loadSchema(tableName)
+  const settings = loadDrilldownSettings().logs
+  const l1 = discoverFieldColumns(columns, ctx.fieldMap.value.logs, {
+    include: settings.fieldInclude,
+    exclude: settings.fieldExclude,
+    labelInclude: settings.labelInclude,
+    labelExclude: settings.labelExclude,
+  })
+  const l2 = await sampleJsonAttributeFieldKeys(tableName, listJsonAttributeColumns(columns))
+  return [...new Set([...l1, ...l2])].sort((a, b) => a.localeCompare(b))
+}
+
 export type LabelValueRow = {
   value: string
   count: number
@@ -274,9 +314,10 @@ export type LabelValueRow = {
 export async function fetchLabelValues(
   ctx: DrilldownContext,
   labelCol: string,
-  limit = LABEL_VALUES_LIMIT
+  options?: { limit?: number; excludeFilterKey?: string }
 ): Promise<LabelValueRow[]> {
   const tableName = ctx.logsTable.value
+  const limit = options?.limit ?? LABEL_VALUES_LIMIT
   if (!tableName || !labelCol) {
     return []
   }
@@ -284,7 +325,9 @@ export async function fetchLabelValues(
     return []
   }
 
-  const where = await buildLogsContextWhere(ctx)
+  const where = await buildLogsContextWhere(ctx, {
+    excludeFilterKey: options?.excludeFilterKey,
+  })
   if (!where) {
     return []
   }
@@ -309,6 +352,17 @@ LIMIT ${limit}`
     console.error('Failed to fetch label values:', error)
     return []
   }
+}
+
+/** Distinct severity/level values for the detail-page level filter. */
+export async function fetchSeverityLevels(ctx: DrilldownContext): Promise<LabelValueRow[]> {
+  const severityCol = ctx.fieldMap.value.logs.severity
+  if (!severityCol) {
+    return []
+  }
+  return fetchLabelValues(ctx, severityCol, {
+    excludeFilterKey: 'severity',
+  })
 }
 
 export async function buildLogsWhereForValue(ctx: DrilldownContext, labelCol: string, value: string): Promise<string> {

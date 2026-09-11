@@ -16,6 +16,10 @@ export interface LogsDrilldownSettings {
   labelInclude?: string[]
   /** TAG columns hidden from Labels picker (default includes trace_id). */
   labelExclude?: string[]
+  /** FIELD columns always offered in Fields picker. */
+  fieldInclude?: string[]
+  /** FIELD columns hidden from Fields picker. */
+  fieldExclude?: string[]
 }
 
 export interface DrilldownSettings {
@@ -57,6 +61,12 @@ export function loadDrilldownSettings(database?: string): DrilldownSettings {
           : undefined,
         labelExclude: Array.isArray(logs.labelExclude)
           ? logs.labelExclude.filter((item: unknown) => typeof item === 'string')
+          : undefined,
+        fieldInclude: Array.isArray(logs.fieldInclude)
+          ? logs.fieldInclude.filter((item: unknown) => typeof item === 'string')
+          : undefined,
+        fieldExclude: Array.isArray(logs.fieldExclude)
+          ? logs.fieldExclude.filter((item: unknown) => typeof item === 'string')
           : undefined,
       },
     }

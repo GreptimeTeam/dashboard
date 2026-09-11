@@ -222,12 +222,13 @@
     }
   )
 
+  // Overview compose: Include / add-to-filter only updates chips — do not re-query
+  // label value panels when filters change (SQL already ignores label filters here).
   watch(
-    () => [ctx.time.value, ctx.rangeTime.value[0], ctx.rangeTime.value[1], ctx.filters.value],
+    () => [ctx.time.value, ctx.rangeTime.value[0], ctx.rangeTime.value[1]] as const,
     () => {
       openLabelList.value.forEach((label) => loadValuesFor(label))
-    },
-    { deep: true }
+    }
   )
 </script>
 

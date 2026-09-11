@@ -26,12 +26,15 @@
       labelCol?: string
       labelValue?: string
       colorIndex?: number
+      /** Chart plot height in px (detail main chart uses MAIN_CHART_HEIGHT). */
+      height?: number
       /** When false, load immediately (e.g. overview total volume). */
       lazy?: boolean
       scrollRoot?: MaybeRefOrGetter<HTMLElement | null | undefined>
     }>(),
     {
       colorIndex: 0,
+      height: BREAKDOWN_CHART_HEIGHT,
       lazy: true,
     }
   )
@@ -49,7 +52,7 @@
   const isEmpty = ref(false)
   let requestVersion = 0
 
-  const chartHeight = `${BREAKDOWN_CHART_HEIGHT}px`
+  const chartHeight = computed(() => `${props.height}px`)
   const showChart = computed(() => Boolean(chartOption.value) && !loading.value && !error.value)
   const chartRenderKey = computed(
     () =>
@@ -104,19 +107,25 @@
   }
 
   watch(
-    () => [
-      ready.value,
-      props.labelCol,
-      props.labelValue,
-      props.colorIndex,
-      ctx.logsTable.value,
-      ctx.refreshKey.value,
-      ctx.time.value,
-      ctx.rangeTime.value[0],
-      ctx.rangeTime.value[1],
-      ctx.filters.value,
-      isDark.value,
-    ],
+    () => {
+      const base: unknown[] = [
+        ready.value,
+        props.labelCol,
+        props.labelValue,
+        props.colorIndex,
+        ctx.logsTable.value,
+        ctx.refreshKey.value,
+        ctx.time.value,
+        ctx.rangeTime.value[0],
+        ctx.rangeTime.value[1],
+        ctx.logsView.value,
+        isDark.value,
+      ]
+      if (ctx.logsView.value === 'detail') {
+        base.push(ctx.filters.value)
+      }
+      return base
+    },
     () => {
       load()
     },

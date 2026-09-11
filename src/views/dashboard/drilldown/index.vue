@@ -80,9 +80,9 @@
         @update:visible="onLogsDrawerVisible"
       )
         template(#title)
-          .drawer-title
-            .drawer-title-text
-              span.drawer-metric-name(:title="logsDetailTitle") {{ logsDetailTitle }}
+          .drawer-title.logs-detail-toolbar
+            LevelFilter
+            FieldFilter
         LogsDetail(v-if="logsDrawerVisible")
 
     .drilldown-signal-placeholder(v-else)
@@ -109,6 +109,8 @@
   import MetricDetailActions from './metrics/metric-detail-actions.vue'
   import LogsOverview from './logs/logs-overview.vue'
   import LogsDetail from './logs/logs-detail.vue'
+  import LevelFilter from './logs/level-filter.vue'
+  import FieldFilter from './logs/field-filter.vue'
 
   defineOptions({
     name: 'Drilldown',
@@ -126,13 +128,6 @@
   const selectedMetric = computed(() => ctx.metric.value)
   const drawerVisible = computed(() => Boolean(selectedMetric.value))
   const logsDrawerVisible = computed(() => ctx.logsView.value === 'detail')
-  const logsDetailTitle = computed(() => {
-    const group = ctx.logsSelectedGroup.value
-    if (!group) {
-      return t('drilldown.logs.allLogs')
-    }
-    return group
-  })
   const metricOriginalName = ref<string | null>(null)
 
   watch(
@@ -329,6 +324,12 @@
     width: 100%;
     min-width: 0;
     gap: 12px;
+  }
+
+  .logs-detail-toolbar {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 12px 20px;
   }
 
   .drawer-title-text {

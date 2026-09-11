@@ -34,6 +34,7 @@
     :curr-row="selectedRecord"
     :rows="data"
     :columns="columns"
+    :popup-container="detailPopupContainer"
     @update:selected-row-key="selectedRowKey = $event"
   )
 </template>
@@ -64,6 +65,8 @@
       virtual?: boolean
       showHeader?: boolean
       allowMergedVirtualHScroll?: boolean
+      /** LogDetail drawer mount target (nested drawers need a non-clipped ancestor). */
+      detailPopupContainer?: string
     }>(),
     {
       wrapLine: false,
@@ -80,6 +83,7 @@
       virtual: true,
       showHeader: true,
       allowMergedVirtualHScroll: false,
+      detailPopupContainer: '#log-table-container',
     }
   )
 
@@ -194,7 +198,8 @@
 
   const handleTsClick = (row: TableData, rowIndex: number) => {
     if (props.exportRowSelection) return
-    selectedRowKey.value = rowIndex
+    const key = typeof row.__rowIndex === 'number' ? row.__rowIndex : rowIndex
+    selectedRowKey.value = key
     emit('rowSelect', row)
     detailVisible.value = true
   }

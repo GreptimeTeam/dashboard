@@ -32,9 +32,10 @@ type DrilldownContext = {
 |------|------|
 | **R-CTX-1** | 顶栏 timeRange + filters 为 **三信号唯一输入**；任一变更 → 订阅 adapter **debounce 重查** |
 | **R-CTX-2** | URL ↔ Context **双向同步**（分享、刷新可恢复） |
-| **R-CTX-3** | filters 多条件 **AND**；op 支持 `=` / `!=` / `=~` / `!~` |
+| **R-CTX-3** | filters：**异 key AND**；**同 key 多值 OR**（合并为 `=~` / SQL `IN`）；op 支持 `=` / `!=` / `=~` / `!~` |
 | **R-CTX-4** | chip 展示用 **统一 key**（如 `service`）；各 adapter 经 **fieldMap** 映射到物理列 / Prom label |
 | **R-CTX-5** | `focusTraceId` 变更 → Traces Gantt + Logs 可选按 trace 过滤；**不**自动改 filters（除非用户点 trace_id） |
+| **R-CTX-6** | Logs **overview** = 目录编排（候选 panel **忽略** label filters）；**detail** = 全量应用 filters 并自动重查；Show logs 在 logs 页内 |
 
 ### 1.2 Filter 栈（Add to filters）
 

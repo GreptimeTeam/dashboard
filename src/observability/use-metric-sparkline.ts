@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia'
 import { executePromQLRange } from '@/api/metrics'
 import { useAppStore } from '@/store'
 import type { DrilldownContext } from './context'
-import { filtersForPromMatch } from './filters'
+import { buildPromMatchersString } from './filters'
 import resolveMetricMeta from './resolve-metric-meta'
 import {
   inferPromQL,
@@ -29,14 +29,8 @@ import breakSparklineGaps from './metrics/sparkline-gaps'
 import enqueueSparklineQuery from './metrics/sparkline-query-queue'
 import { calculateSparklineQueryStep, HEATMAP_MAX_DATA_POINTS } from './metrics/sparkline-step'
 
-function escapePromLabelValue(value: string): string {
-  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-}
-
 function buildMatchersFromFilters(ctx: DrilldownContext): string | undefined {
-  const matchers = filtersForPromMatch(ctx.filters.value)
-  const parts = Object.entries(matchers).map(([key, value]) => `${key}="${escapePromLabelValue(value)}"`)
-  return parts.length ? parts.join(',') : undefined
+  return buildPromMatchersString(ctx.filters.value)
 }
 
 export default function useMetricSparkline(

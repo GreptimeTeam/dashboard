@@ -125,9 +125,9 @@ export default function useDrilldownUrlSync(
     }
 
     if (ctx.signal.value === 'logs' && isLogsDetailTab(logsTab)) {
-      ctx.setLogsTab(logsTab === 'logs' ? 'labels' : logsTab)
+      ctx.setLogsTab(logsTab)
     } else {
-      ctx.setLogsTab('labels')
+      ctx.setLogsTab('logs')
     }
 
     // Restore selected group from primaryGroupBy filter when opening detail from URL.
@@ -194,7 +194,8 @@ export default function useDrilldownUrlSync(
       if (ctx.logsView.value === 'detail') {
         query.logsView = 'detail'
       }
-      if (ctx.logsTab.value !== 'labels') {
+      // Default logs tab stays out of the URL to keep links short.
+      if (ctx.logsTab.value !== 'logs') {
         query.logsTab = ctx.logsTab.value
       }
     }

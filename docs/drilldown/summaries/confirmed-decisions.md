@@ -107,11 +107,13 @@ Grafana Metrics Drilldown 侧栏「Group by labels」依赖：
 | **Suggest 路由** | **按 `ctx.signal`**，不合并 Prom∪SQL。切信号清缓存并重拉。[`filter-options.ts`](../../../src/observability/adapters/filter-options.ts) |
 | **Metrics label** | Prom `GET /labels`；无 `__name__` 于 filters 时**不传** `match[]`（Greptime 会 400） |
 | **Metrics value** | **手输**；无 cross-metric Prom value API（value 阶段不展开 SQL suggest） |
-| **Logs label keys** | 与 Labels Tab 相同：`discoverLabelColumns` + `fieldMap` + `labelInclude` / `labelExclude`（[`drilldown-settings`](../../../src/observability/drilldown-settings.ts)）；**仅 label**，不含 Fields Tab / JSON body |
-| **Logs value 辅助** | 映射列上 SQL `SELECT DISTINCT`（time + 已有 `=` filters）；`logsTable` / fieldMap / settings 变更时刷新 |
-| **范围** | 顶栏 = **label value（L2）**；`trace_id` → L3 `focusTraceId`；Fields 不进顶栏主 suggest |
+| **Logs label keys** | 与 Labels Tab 相同：`discoverLabelColumns` + `fieldMap` + `labelInclude` / `labelExclude`；**仅 label**，不含 Fields Tab |
+| **同 key 多值** | Include 合并为 **OR**（chip `=~"a\|b"` / Prom `=~` / SQL `IN`）；**异 key** 仍 **AND** |
+| **Logs overview** | **目录编排**：候选 panel **不按** label filters 收缩（仅 time+表）；Include 只更新 chips；**Show logs**（overview 页内）进详情 |
+| **Logs detail** | **应用查询**：全量 filters + 自动重查；Back 回 overview **保留** chips |
+| **Logs value 辅助** | 映射列上 SQL `SELECT DISTINCT`；顶栏 suggest 仍按 signal |
 | **编辑已有 filter** | label 只读；operator / value 可改 |
-| **Add to filter 主路径** | Breakdown label/value panel 卡 → `ctx.filters` |
+| **Add to filter 主路径** | Breakdown / Labels value → `ctx.filters`（同 key OR 合并） |
 | **R-BRK-1** | Breakdown label 卡仅 1 个 value 时仍显示 **Add to filter**（Greptime 偏离 Grafana 藏 Select） |
 | **Related logs** | `timeRange` + `filters.length > 0` + `logsTable` + fieldMap SQL；**不看 metric 名** |
 
@@ -148,11 +150,12 @@ Grafana Metrics Drilldown 侧栏「Group by labels」依赖：
 | **两个主视图** | **列表** = 按 label value 分组的日志列表（Labels Tab / panels）；**详细** = volume 主图 + 单张 logs 表（全部匹配行） |
 | **总 volume 主图** | **仅详细视图**；列表视图**不**放总主图（面板内 per-value minichart 除外） |
 | **首页 volume / service 卡** | SQL `date_bin` + `GROUP BY primaryGroupBy`（对标 Loki index/volume；实现上可收敛进列表/详细，见 logs spec） |
-| **Select service** | 写入 Context `filters`（非独立路由）→ 进入详细视图 |
+| **Select service** | **Select** → 写 filter + 进详细视图；列表 **Include** 只更新 chips（同 key OR），不换页 |
+| **进详情** | Overview 页内 **Show logs**（应用当前 filters）或 Select；不进共享 topbar |
 | **Labels breakdown** | TAG/string FIELD 列 `GROUP BY` + Add to filters；列表视图主路径 |
 | **trace_id** | → `focusTraceId`（L3） |
 | **Related logs（来自 Metrics）** | 需 `filters.length > 0` + fieldMap SQL |
-| **Select 模型** | 以 Add filter 为主；无 Metrics 式 Select 三义 |
+| **Select 模型** | Include 与 Select 分离；无 Metrics 式 Select 三义 |
 | **Breakdown 图** | Count = 各 value 条数时序；Avg = 数值列均值 |
 | **不做** | Loki/LogQL、patterns API、recording rule 反查 |
 

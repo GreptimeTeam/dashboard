@@ -61,6 +61,7 @@ FROM information_schema.table_semantics;
 | 列角色 TAG / FIELD / TIMESTAMP | `information_schema.columns`（或 DESC）的 **`semantic_type`** |
 | service / body / trace_id 等映射 | ① **OTel 常见列名**（`service_name`、`body`/`severity_text`、`trace_id`…）② Context **fieldMap**（settings 可覆盖） |
 | source / pipeline | `table_semantics`（可选加强） |
+| **产品 Label vs Field** | **不等于** Greptime `semantic_type=FIELD`。Labels = TAG + fieldMap 维度角色 + 列名白名单 + `labelInclude`（禁止凡 String 即 Label）。Fields = 非 Label 标量 + JSON attributes 内 key（L2 采样）+ `fieldInclude`。实现：[`logs/field-map.ts`](../../src/observability/logs/field-map.ts) |
 
 Related logs（从 Metrics）：不看 metric 名；要 `filters` + `logsTable` + fieldMap → SQL。
 
