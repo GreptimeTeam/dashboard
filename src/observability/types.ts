@@ -18,6 +18,15 @@ export function isLogsDetailTab(value: unknown): value is LogsDetailTab {
   return typeof value === 'string' && LOGS_DETAIL_TABS.includes(value as LogsDetailTab)
 }
 
+/** Traces home panel tabs (URL `tracesTab`, omit default `breakdown`). */
+export type TracesHomeTab = 'breakdown' | 'traces'
+
+export const TRACES_HOME_TABS: TracesHomeTab[] = ['breakdown', 'traces']
+
+export function isTracesHomeTab(value: unknown): value is TracesHomeTab {
+  return typeof value === 'string' && TRACES_HOME_TABS.includes(value as TracesHomeTab)
+}
+
 export type LogsView = 'overview' | 'detail'
 
 export function isLogsView(value: unknown): value is LogsView {

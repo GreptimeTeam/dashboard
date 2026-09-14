@@ -21,10 +21,11 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, ref } from 'vue'
+  import { ref } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useDrilldownContext } from '@/observability/context'
   import { isMetricDetailTab } from '@/observability/types'
+  import useDrilldownPanelTab from '@/observability/use-drilldown-panel-tab'
   import BreakdownGrid from './breakdown-grid.vue'
   import MetricMainChart, { type MetricMainChartResult } from './metric-main-chart.vue'
   import QueryResultsPanel from './query-results-panel.vue'
@@ -44,13 +45,10 @@
   const detailScrollRef = ref<HTMLElement | null>(null)
   const mainChartResult = ref<MetricMainChartResult | null>(null)
 
-  const activeTab = computed({
-    get: () => detailTab.value,
-    set: (key: string | number) => {
-      if (isMetricDetailTab(key)) {
-        setDetailTab(key)
-      }
-    },
+  const activeTab = useDrilldownPanelTab({
+    tab: detailTab,
+    setTab: setDetailTab,
+    isTab: isMetricDetailTab,
   })
 </script>
 

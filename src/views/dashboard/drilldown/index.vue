@@ -85,8 +85,30 @@
             FieldFilter
         LogsDetail(v-if="logsDrawerVisible")
 
-    .drilldown-signal-placeholder(v-else)
-      a-empty(:description="placeholderDescription")
+    .drilldown-body.new-layout.new-layout--workspace.drilldown-body--traces(v-else-if="signal === 'traces'")
+      a-layout-content.layout-content
+        a-card.drilldown-main-pane.gpt-results-pane(:bordered="false")
+          .drilldown-home-main
+            TracesHome
+
+      a-drawer.metric-detail-drawer.traces-gantt-drawer(
+        popup-container=".drilldown-body--traces"
+        placement="right"
+        width="100%"
+        :visible="tracesGanttVisible"
+        :footer="false"
+        :mask="false"
+        :esc-to-close="true"
+        :unmount-on-close="true"
+        @cancel="closeTracesGanttDrawer"
+        @update:visible="onTracesGanttDrawerVisible"
+      )
+        template(#title)
+          .drawer-title
+            .drawer-title-text
+              span.drawer-metric-name(:title="focusTraceIdLabel") {{ focusTraceIdLabel }}
+              span.drawer-metric-original {{ t('drilldown.traces.ganttDrawerTitle') }}
+        TracesGantt(v-if="tracesGanttVisible")
 </template>
 
 <script setup lang="ts">
@@ -102,6 +124,7 @@
   import useDrilldownUrlSync from '@/observability/use-drilldown-url-sync'
   import useMetricsCatalog from '@/observability/use-metrics-catalog'
   import useDrilldownLogsInit from '@/observability/use-drilldown-logs-init'
+  import useDrilldownTracesInit from '@/observability/use-drilldown-traces-init'
   import DrilldownTopBar from './components/top-bar.vue'
   import MetricsSidebar from './metrics/metrics-sidebar.vue'
   import MetricChartList from './metrics/metric-chart-list.vue'
@@ -111,6 +134,8 @@
   import LogsDetail from './logs/logs-detail.vue'
   import LevelFilter from './logs/level-filter.vue'
   import FieldFilter from './logs/field-filter.vue'
+  import TracesHome from './traces/traces-home.vue'
+  import TracesGantt from './traces/traces-gantt.vue'
 
   defineOptions({
     name: 'Drilldown',
@@ -123,11 +148,14 @@
   const urlSync = useDrilldownUrlSync(ctx, route, router)
   urlSync.initializeFromQuery()
   useDrilldownLogsInit(ctx)
+  useDrilldownTracesInit(ctx)
 
   const { signal } = ctx
   const selectedMetric = computed(() => ctx.metric.value)
   const drawerVisible = computed(() => Boolean(selectedMetric.value))
   const logsDrawerVisible = computed(() => ctx.logsView.value === 'detail')
+  const tracesGanttVisible = computed(() => Boolean(ctx.focusTraceId.value))
+  const focusTraceIdLabel = computed(() => ctx.focusTraceId.value || '')
   const metricOriginalName = ref<string | null>(null)
 
   watch(
@@ -165,7 +193,15 @@
     }
   }
 
-  const placeholderDescription = computed(() => t('drilldown.signals.tracesPlaceholder'))
+  const closeTracesGanttDrawer = () => {
+    ctx.closeTraceGantt()
+  }
+
+  const onTracesGanttDrawerVisible = (visible: boolean) => {
+    if (!visible) {
+      closeTracesGanttDrawer()
+    }
+  }
 
   const search = ref('')
   const sort = ref<MetricsSortOption>('default')

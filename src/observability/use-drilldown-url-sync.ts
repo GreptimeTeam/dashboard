@@ -2,7 +2,18 @@ import { watch } from 'vue'
 import type { RouteLocationNormalizedLoaded, Router } from 'vue-router'
 import { isDrilldownFilterOp } from './filters'
 import { DRILLDOWN_DEFAULT_TIME_MINUTES, type DrilldownContext } from './context'
-import { isLogsDetailTab, isLogsView, isMetricDetailTab, type DrilldownFilter, type DrilldownSignal } from './types'
+import { readUrlTab, urlTabWatchSources, writeUrlTab, type DrilldownUrlTabSpec } from './drilldown-url-tabs'
+import {
+  isLogsDetailTab,
+  isLogsView,
+  isMetricDetailTab,
+  isTracesHomeTab,
+  type DrilldownFilter,
+  type DrilldownSignal,
+  type LogsDetailTab,
+  type MetricDetailTab,
+  type TracesHomeTab,
+} from './types'
 
 const DRILLDOWN_SIGNALS: DrilldownSignal[] = ['metrics', 'logs', 'traces']
 
@@ -61,17 +72,61 @@ function normalizeTimeRange(ctx: DrilldownContext) {
   }
 }
 
+/** Panel tabs that sync through URL (default omitted). */
+function buildUrlTabSpecs(ctx: DrilldownContext): DrilldownUrlTabSpec[] {
+  const metricTab: DrilldownUrlTabSpec<MetricDetailTab> = {
+    queryKey: 'tab',
+    defaultTab: 'breakdown',
+    isTab: isMetricDetailTab,
+    get: () => ctx.detailTab.value,
+    set: (tab) => ctx.setDetailTab(tab),
+    active: () => Boolean(ctx.metric.value),
+  }
+  const logsTab: DrilldownUrlTabSpec<LogsDetailTab> = {
+    queryKey: 'logsTab',
+    defaultTab: 'logs',
+    isTab: isLogsDetailTab,
+    get: () => ctx.logsTab.value,
+    set: (tab) => ctx.setLogsTab(tab),
+    active: () => ctx.signal.value === 'logs',
+  }
+  const tracesTab: DrilldownUrlTabSpec<TracesHomeTab> = {
+    queryKey: 'tracesTab',
+    defaultTab: 'breakdown',
+    isTab: isTracesHomeTab,
+    get: () => ctx.tracesTab.value,
+    set: (tab) => ctx.setTracesTab(tab),
+    active: () => ctx.signal.value === 'traces',
+  }
+  return [metricTab, logsTab, tracesTab]
+}
+
 export default function useDrilldownUrlSync(
   ctx: DrilldownContext,
   route: RouteLocationNormalizedLoaded,
   router: Router
 ) {
   let syncingFromUrl = false
+  const tabSpecs = buildUrlTabSpecs(ctx)
 
   const initializeFromQuery = () => {
     syncingFromUrl = true
-    const { timeLength, timeRange, filters, prefixes, suffixes, metric, logsTable, signal, tab, logsView, logsTab } =
-      route.query
+    const {
+      timeLength,
+      timeRange,
+      filters,
+      prefixes,
+      suffixes,
+      metric,
+      logsTable,
+      tracesTable,
+      focusTraceId,
+      signal,
+      tab,
+      logsView,
+      logsTab,
+      tracesTab,
+    } = route.query
 
     ctx.setSignal(parseSignal(signal))
 
@@ -106,16 +161,22 @@ export default function useDrilldownUrlSync(
       ctx.metric.value = undefined
     }
 
-    if (ctx.metric.value && isMetricDetailTab(tab)) {
-      ctx.setDetailTab(tab)
-    } else {
-      ctx.setDetailTab('breakdown')
-    }
-
     if (typeof logsTable === 'string' && logsTable.trim()) {
       ctx.logsTable.value = logsTable.trim()
     } else if (!ctx.logsTable.value) {
       ctx.logsTable.value = undefined
+    }
+
+    if (typeof tracesTable === 'string' && tracesTable.trim()) {
+      ctx.tracesTable.value = tracesTable.trim()
+    } else if (!ctx.tracesTable.value) {
+      ctx.tracesTable.value = undefined
+    }
+
+    if (ctx.signal.value === 'traces' && typeof focusTraceId === 'string' && focusTraceId.trim()) {
+      ctx.focusTraceId.value = focusTraceId.trim()
+    } else if (ctx.signal.value !== 'traces') {
+      ctx.focusTraceId.value = undefined
     }
 
     if (ctx.signal.value === 'logs' && isLogsView(logsView)) {
@@ -124,11 +185,14 @@ export default function useDrilldownUrlSync(
       ctx.setLogsView('overview')
     }
 
-    if (ctx.signal.value === 'logs' && isLogsDetailTab(logsTab)) {
-      ctx.setLogsTab(logsTab)
-    } else {
-      ctx.setLogsTab('logs')
+    const tabRawByKey: Record<string, unknown> = {
+      tab,
+      logsTab,
+      tracesTab,
     }
+    tabSpecs.forEach((spec) => {
+      readUrlTab(spec, tabRawByKey[spec.queryKey])
+    })
 
     // Restore selected group from primaryGroupBy filter when opening detail from URL.
     if (ctx.logsView.value === 'detail') {
@@ -180,25 +244,27 @@ export default function useDrilldownUrlSync(
 
     if (ctx.metric.value) {
       query.metric = ctx.metric.value
-      // Default breakdown stays out of the URL to keep links short.
-      if (ctx.detailTab.value !== 'breakdown') {
-        query.tab = ctx.detailTab.value
-      }
     }
 
     if (ctx.logsTable.value) {
       query.logsTable = ctx.logsTable.value
     }
 
-    if (ctx.signal.value === 'logs') {
-      if (ctx.logsView.value === 'detail') {
-        query.logsView = 'detail'
-      }
-      // Default logs tab stays out of the URL to keep links short.
-      if (ctx.logsTab.value !== 'logs') {
-        query.logsTab = ctx.logsTab.value
-      }
+    if (ctx.tracesTable.value) {
+      query.tracesTable = ctx.tracesTable.value
     }
+
+    if (ctx.signal.value === 'traces' && ctx.focusTraceId.value) {
+      query.focusTraceId = ctx.focusTraceId.value
+    }
+
+    if (ctx.signal.value === 'logs' && ctx.logsView.value === 'detail') {
+      query.logsView = 'detail'
+    }
+
+    tabSpecs.forEach((spec) => {
+      writeUrlTab(query, spec)
+    })
 
     router.replace({ query })
   }
@@ -222,10 +288,11 @@ export default function useDrilldownUrlSync(
       ctx.sidebarFilters.value,
       ctx.signal.value,
       ctx.metric.value,
-      ctx.detailTab.value,
       ctx.logsTable.value,
       ctx.logsView.value,
-      ctx.logsTab.value,
+      ctx.tracesTable.value,
+      ctx.focusTraceId.value,
+      ...urlTabWatchSources(tabSpecs),
     ],
     () => {
       updateQueryParams()

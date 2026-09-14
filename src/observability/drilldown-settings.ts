@@ -22,8 +22,13 @@ export interface LogsDrilldownSettings {
   fieldExclude?: string[]
 }
 
+export interface TracesDrilldownSettings {
+  table?: string
+}
+
 export interface DrilldownSettings {
   logs: LogsDrilldownSettings
+  traces: TracesDrilldownSettings
 }
 
 const STORAGE_PREFIX = 'drilldown-settings'
@@ -37,7 +42,7 @@ function currentDatabase(): string {
 }
 
 function emptySettings(): DrilldownSettings {
-  return { logs: {} }
+  return { logs: {}, traces: {} }
 }
 
 export function loadDrilldownSettings(database?: string): DrilldownSettings {
@@ -52,6 +57,7 @@ export function loadDrilldownSettings(database?: string): DrilldownSettings {
       return emptySettings()
     }
     const logs = parsed.logs && typeof parsed.logs === 'object' ? parsed.logs : {}
+    const traces = parsed.traces && typeof parsed.traces === 'object' ? parsed.traces : {}
     return {
       logs: {
         table: typeof logs.table === 'string' ? logs.table : undefined,
@@ -68,6 +74,9 @@ export function loadDrilldownSettings(database?: string): DrilldownSettings {
         fieldExclude: Array.isArray(logs.fieldExclude)
           ? logs.fieldExclude.filter((item: unknown) => typeof item === 'string')
           : undefined,
+      },
+      traces: {
+        table: typeof traces.table === 'string' ? traces.table : undefined,
       },
     }
   } catch {
@@ -107,6 +116,23 @@ export function updateLogsDrilldownSettings(
       fieldMap: Object.prototype.hasOwnProperty.call(patch, 'fieldMap')
         ? compactFieldMap(patch.fieldMap)
         : current.logs.fieldMap,
+    },
+    traces: { ...current.traces },
+  }
+  saveDrilldownSettings(next, database)
+  return next
+}
+
+export function updateTracesDrilldownSettings(
+  patch: Partial<TracesDrilldownSettings>,
+  database?: string
+): DrilldownSettings {
+  const current = loadDrilldownSettings(database)
+  const next: DrilldownSettings = {
+    logs: { ...current.logs },
+    traces: {
+      ...current.traces,
+      ...patch,
     },
   }
   saveDrilldownSettings(next, database)

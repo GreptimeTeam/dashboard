@@ -42,9 +42,9 @@
           v-if="editorType === 'builder'"
           ref="sqlBuilderRef"
           storage-key="traces-query-table"
-          :table-filter="['trace_id', 'parent_span_id']"
+          :tables-provider="listTraceTablesForBuilder"
           :form-state="builderFormState"
-          :quick-field-names="['trace_id', 'service_name']"
+          :quick-field-names="['service_name', 'span_name', 'span_status_code', 'span_kind', 'trace_id']"
           :default-form-state="defaultFormState"
         )
         SqlTextEditor(v-else v-model="textEditor.textEditorState.sql" @update:sql-info="handleSqlInfoUpdate")
@@ -80,6 +80,7 @@
   import { IconCode, IconDown, IconRight, IconDownload } from '@arco-design/web-vue/es/icon'
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import SqlTextEditor from '@/components/sql-text-editor/index.vue'
+  import { listTracesTables } from '@/observability/traces/resolve-table'
   import TraceTable from './components/TraceTable.vue'
 
   defineOptions({
@@ -117,6 +118,10 @@
   const { initializeFromQuery, updateQueryParams } = urlSync
 
   const allResults = ref([])
+
+  async function listTraceTablesForBuilder() {
+    return listTracesTables()
+  }
   const chartExpanded = useLocalStorage('trace-chart-expanded', true)
   const countChartRef = ref()
   const sqlBuilderRef = ref()

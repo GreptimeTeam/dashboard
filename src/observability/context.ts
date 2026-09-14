@@ -10,6 +10,7 @@ import {
   type LogsDetailTab,
   type LogsView,
   type MetricDetailTab,
+  type TracesHomeTab,
 } from './types'
 import { addFilter as mergeFilter, toggleIncludeFilter } from './filters'
 
@@ -28,6 +29,8 @@ export interface DrilldownContext {
   logsView: Ref<LogsView>
   /** Active tab inside logs detail (URL `logsTab`). */
   logsTab: Ref<LogsDetailTab>
+  /** Active tab on traces home (URL `tracesTab`). */
+  tracesTab: Ref<TracesHomeTab>
   /** primaryGroupBy value opened in logs detail (for close → remove filter). */
   logsSelectedGroup: Ref<string | undefined>
   time: Ref<number>
@@ -45,13 +48,19 @@ export interface DrilldownContext {
   setDetailTab: (tab: MetricDetailTab) => void
   setLogsView: (view: LogsView) => void
   setLogsTab: (tab: LogsDetailTab) => void
+  setTracesTab: (tab: TracesHomeTab) => void
   openLogsDetail: (groupValue?: string) => void
   closeLogsDetail: () => void
+  openTraceGantt: (traceId: string) => void
+  closeTraceGantt: () => void
 }
 
 export const DRILLDOWN_DEFAULT_TIME_MINUTES = 30
 
-export const DRILLDOWN_CONTEXT_KEY: InjectionKey<DrilldownContext> = Symbol('drilldownContext')
+// Symbol.for so the key survives HMR module re-evaluation (plain Symbol() breaks inject → white screen).
+export const DRILLDOWN_CONTEXT_KEY: InjectionKey<DrilldownContext> = Symbol.for(
+  'greptime.drilldownContext'
+) as InjectionKey<DrilldownContext>
 
 export function useDrilldownContextProvider(): DrilldownContext {
   const timeRangeHook = useTimeRange({ time: DRILLDOWN_DEFAULT_TIME_MINUTES })
@@ -66,6 +75,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
   const fieldMap = ref({ ...DEFAULT_FIELD_MAP })
   const logsView = ref<LogsView>('overview')
   const logsTab = ref<LogsDetailTab>('logs')
+  const tracesTab = ref<TracesHomeTab>('breakdown')
   const logsSelectedGroup = ref<string | undefined>()
   const refreshKey = ref(0)
 
@@ -80,6 +90,10 @@ export function useDrilldownContextProvider(): DrilldownContext {
     if (next !== 'logs') {
       logsView.value = 'overview'
       logsSelectedGroup.value = undefined
+    }
+    if (next !== 'traces') {
+      focusTraceId.value = undefined
+      tracesTab.value = 'breakdown'
     }
     signal.value = next
   }
@@ -112,6 +126,10 @@ export function useDrilldownContextProvider(): DrilldownContext {
     logsTab.value = tab
   }
 
+  const setTracesTab = (tab: TracesHomeTab) => {
+    tracesTab.value = tab
+  }
+
   const openLogsDetail = (groupValue?: string) => {
     logsSelectedGroup.value = groupValue
     logsView.value = 'detail'
@@ -127,6 +145,19 @@ export function useDrilldownContextProvider(): DrilldownContext {
     logsTab.value = 'logs'
   }
 
+  const openTraceGantt = (traceId: string) => {
+    const trimmed = traceId.trim()
+    if (!trimmed) {
+      return
+    }
+    focusTraceId.value = trimmed
+  }
+
+  /** Back to traces home; keep filter chips. */
+  const closeTraceGantt = () => {
+    focusTraceId.value = undefined
+  }
+
   const context: DrilldownContext = {
     signal,
     filters,
@@ -139,6 +170,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
     fieldMap,
     logsView,
     logsTab,
+    tracesTab,
     logsSelectedGroup,
     time: timeRangeHook.time,
     rangeTime: timeRangeHook.rangeTime,
@@ -154,8 +186,11 @@ export function useDrilldownContextProvider(): DrilldownContext {
     setDetailTab,
     setLogsView,
     setLogsTab,
+    setTracesTab,
     openLogsDetail,
     closeLogsDetail,
+    openTraceGantt,
+    closeTraceGantt,
   }
 
   provide(DRILLDOWN_CONTEXT_KEY, context)

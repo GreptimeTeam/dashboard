@@ -211,6 +211,8 @@ a-modal(
   const props = defineProps<{
     formState: Form | null
     tableFilter?: string | string[] // Optional column(s) tables must have (e.g. 'trace_id' or ['trace_id', 'parent_span_id'])
+    /** Optional async table list; when set, overrides tableFilter discovery. */
+    tablesProvider?: () => Promise<string[]>
     storageKey?: string // Optional storage key for localStorage (e.g., 'logs-query-table', 'traces-query-table')
     quickFieldNames?: string[] // Array of field names for quick condition buttons
     defaultFormState?: Form
@@ -437,17 +439,21 @@ a-modal(
 
   async function fetchTables() {
     try {
-      const columns = [props.tableFilter ?? []].flat().filter(Boolean)
-      let sql = `SELECT DISTINCT table_name FROM information_schema.columns WHERE table_catalog = '${currentTableCatalog.value}' AND table_schema = '${currentTableSchema.value}'`
-      if (columns.length) {
-        sql += ` AND column_name IN (${columns
-          .map((c) => `'${c}'`)
-          .join(', ')}) GROUP BY table_name HAVING COUNT(DISTINCT column_name) = ${columns.length}`
-      }
-      sql += ` ORDER BY table_name`
+      if (props.tablesProvider) {
+        tables.value = await props.tablesProvider()
+      } else {
+        const columns = [props.tableFilter ?? []].flat().filter(Boolean)
+        let sql = `SELECT DISTINCT table_name FROM information_schema.columns WHERE table_catalog = '${currentTableCatalog.value}' AND table_schema = '${currentTableSchema.value}'`
+        if (columns.length) {
+          sql += ` AND column_name IN (${columns
+            .map((c) => `'${c}'`)
+            .join(', ')}) GROUP BY table_name HAVING COUNT(DISTINCT column_name) = ${columns.length}`
+        }
+        sql += ` ORDER BY table_name`
 
-      const result = await editorAPI.runSQL(sql, form.database)
-      tables.value = result.output[0].records.rows.map((row: string[]) => row[0])
+        const result = await editorAPI.runSQL(sql, form.database)
+        tables.value = result.output[0].records.rows.map((row: string[]) => row[0])
+      }
 
       // Validate and set table from localStorage or default
       if (lastSelectedTable.value && tables.value.includes(lastSelectedTable.value)) {

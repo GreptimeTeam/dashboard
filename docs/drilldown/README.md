@@ -54,11 +54,11 @@
 |------|------|------|
 | [plans/06-logs-drilldown-spec.plan.md](./plans/06-logs-drilldown-spec.plan.md) | 功能 A–G、resolveLogsTable、SQL volume、Labels、跨信号 | **Active** |
 
-### D. Traces Drilldown（Pending — 待独立 spec）
+### D. Traces Drilldown（MVP）
 
 | 信号 | 现状 | 下一步 |
 |------|------|--------|
-| **Traces** | Master plan §Traces 行为 | 新建 `plans/07-traces-drilldown-spec.plan.md` |
+| **Traces** | Master plan §Traces 行为 | [plans/07-traces-drilldown-spec.plan.md](./plans/07-traces-drilldown-spec.plan.md) |
 
 Logs/Traces 的 Grafana 调研摘要见 [plans/03-grafana-drilldown-research.plan.md](./plans/03-grafana-drilldown-research.plan.md)。
 
@@ -109,7 +109,7 @@ Logs/Traces 的 Grafana 调研摘要见 [plans/03-grafana-drilldown-research.pla
 
 - Explore **首屏布局**（三联同屏 vs Logs 分层首页 vs 混合）
 - Greptime Prom API **capability 脚本入库**（核心约束已写入 [confirmed-decisions](./summaries/confirmed-decisions.md)）
-- **Traces** 独立 spec 文档（结构与 Metrics / Logs spec 对齐）
+- **Traces** RED triptych（Phase A，`date_bin`）已接；Breakdown 卡网格为 Phase B
 - Feishu 内部需求文档（需用户粘贴或导出）
 
 ---
@@ -139,5 +139,5 @@ docs/drilldown/
 ├── plans/01-product-explore-master    ← Master
 ├── plans/02-metrics-drilldown-spec    ← Metrics
 ├── plans/06-logs-drilldown-spec       ← Logs（已有）
-└── plans/07-traces-drilldown-spec     ← 待写
+└── plans/07-traces-drilldown-spec     ← MVP spec
 ```

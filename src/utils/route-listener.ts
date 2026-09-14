@@ -6,7 +6,8 @@ import type { RouteLocationNormalized } from 'vue-router'
 
 const emitter = mitt()
 
-const key = Symbol('ROUTE_CHANGE')
+// Symbol.for so emit/listen stay paired if this module is re-evaluated under HMR.
+const key = Symbol.for('greptime.ROUTE_CHANGE')
 
 let latestRoute: RouteLocationNormalized
 

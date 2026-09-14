@@ -1,8 +1,9 @@
 <template lang="pug">
 a-drawer(
-  popup-container="#trace-attributes"
+  v-if="variant === 'drawer'"
   placement="right"
   width="100%"
+  :popup-container="popupContainer"
   :visible="modelValue"
   :footer="false"
   :mask="false"
@@ -13,65 +14,123 @@ a-drawer(
   template(#title)
     .drawer-title
       span Span Attributes
+  .span-attributes-content
+    .span-header.gpt-muted-bar
+      .span-name {{ span?.span_name }}
+      a-typography-text.trace-id-value(copyable :copy-text="span?.span_id") {{ span?.span_id }}
+    .summary-container
+      .summary-item
+        span.summary-label Service
+        span.summary-value {{ span?.service_name }}
+      .divider
+      .summary-item
+        span.summary-label Duration
+        span.summary-value {{ formatDuration(span?.duration_nano) }}
+      .divider
+      .summary-item
+        span.summary-label StartTime
+        span.summary-value {{ formatStartTime(span?.timestamp) }}
+    a-tabs(v-model:active-key="viewMode")
+      a-tab-pane(key="table" title="Table View")
+        a-descriptions(layout="vertical" bordered :column="2")
+          a-descriptions-item(v-for="item of spanInfoData" :key="item.label")
+            template(#label)
+              a-typography-text(copyable :copy-text="String(item.value)") {{ item.label }}
+            | {{ item.value }}
+      a-tab-pane(key="json" title="JSON View")
+        .gpt-light-editor.span-json-editor
+          CodeMirror(
+            :model-value="jsonView"
+            :extensions="extensions"
+            :style="codeMirrorStyle"
+            :spellcheck="true"
+            :autofocus="false"
+            :indent-with-tab="true"
+            :tab-size="2"
+            :disabled="true"
+          )
 
-  .span-header.gpt-muted-bar
-    .span-name
-      | {{ span?.span_name }}
-    a-typography-text.trace-id-value(copyable :copy-text="span?.span_id")
-      | {{ span?.span_id }}
-  .summary-container
-    .summary-item
-      span.summary-label Service
-      span.summary-value {{ span?.service_name }}
-    .divider
-    .summary-item
-      span.summary-label Duration
-      span.summary-value {{ formatDuration(span?.duration_nano) }}
-    .divider
-    .summary-item
-      span.summary-label StartTime
-      span.summary-value {{ dayjs(span?.timestamp / 1000000).format('YYYY-MM-DD HH:mm:ss.SSS') }}
-
-  a-tabs(v-model:active-key="viewMode")
-    a-tab-pane(key="table" title="Table View")
-      a-descriptions(layout="vertical" bordered :column="2")
-        a-descriptions-item(v-for="item of spanInfoData")
-          template(#label)
-            a-typography-text(copyable :copy-text="String(item.value)")
-              | {{ item.label }}
-          | {{ item.value }}
-    a-tab-pane(key="json" title="JSON View")
-      .gpt-light-editor.span-json-editor
-        CodeMirror(
-          :modelValue="jsonView"
-          :extensions="extensions"
-          :style="codeMirrorStyle"
-          :spellcheck="true"
-          :autofocus="true"
-          :indent-with-tab="true"
-          :tabSize="2"
-          :disabled="true"
-        )
+.span-attributes-panel(v-else-if="modelValue && span")
+  .panel-header
+    span.panel-title Span Attributes
+    a-button(type="text" size="mini" @click="updateVisible(false)")
+      template(#icon)
+        icon-close
+  .span-attributes-content.panel-body
+    .span-header.gpt-muted-bar
+      .span-name {{ span?.span_name }}
+      a-typography-text.trace-id-value(copyable :copy-text="span?.span_id") {{ span?.span_id }}
+    .summary-container
+      .summary-item
+        span.summary-label Service
+        span.summary-value {{ span?.service_name }}
+      .divider
+      .summary-item
+        span.summary-label Duration
+        span.summary-value {{ formatDuration(span?.duration_nano) }}
+      .divider
+      .summary-item
+        span.summary-label StartTime
+        span.summary-value {{ formatStartTime(span?.timestamp) }}
+    a-tabs(v-model:active-key="viewMode")
+      a-tab-pane(key="table" title="Table View")
+        a-descriptions(layout="vertical" bordered :column="1")
+          a-descriptions-item(v-for="item of spanInfoData" :key="item.label")
+            template(#label)
+              a-typography-text(copyable :copy-text="String(item.value)") {{ item.label }}
+            | {{ item.value }}
+      a-tab-pane(key="json" title="JSON View")
+        .gpt-light-editor.span-json-editor
+          CodeMirror(
+            :model-value="jsonView"
+            :extensions="extensions"
+            :style="panelCodeMirrorStyle"
+            :spellcheck="true"
+            :autofocus="false"
+            :indent-with-tab="true"
+            :tab-size="2"
+            :disabled="true"
+          )
 </template>
 
 <script setup lang="ts">
-  import { ref, computed } from 'vue'
+  import { computed, ref } from 'vue'
   import dayjs from 'dayjs'
   import { json } from '@codemirror/lang-json'
   import { EditorView } from '@codemirror/view'
   import { Codemirror as CodeMirror } from 'vue-codemirror'
+  import { IconClose } from '@arco-design/web-vue/es/icon'
   import { formatDuration } from '../utils'
   import type { Span } from '../utils'
 
-  const props = defineProps<{
-    modelValue: boolean
-    span: Span | null
-  }>()
+  const props = withDefaults(
+    defineProps<{
+      modelValue: boolean
+      span: Span | null
+      /** Host for the attributes side drawer (standalone trace page). */
+      popupContainer?: string
+      /** `drawer` = absolute drawer into host; `panel` = inline side pane (drilldown). */
+      variant?: 'drawer' | 'panel'
+    }>(),
+    {
+      popupContainer: '#trace-attributes',
+      variant: 'drawer',
+    }
+  )
 
-  const emit = defineEmits(['update:modelValue'])
+  const emit = defineEmits<{
+    'update:modelValue': [value: boolean]
+  }>()
 
   function updateVisible(value: boolean) {
     emit('update:modelValue', value)
+  }
+
+  function formatStartTime(timestamp: number | undefined) {
+    if (timestamp == null) {
+      return ''
+    }
+    return dayjs(timestamp / 1000000).format('YYYY-MM-DD HH:mm:ss.SSS')
   }
 
   const viewMode = ref('table')
@@ -80,14 +139,18 @@ a-drawer(
     height: 'calc(100vh - 300px)',
     fontSize: '14px',
   }
+  const panelCodeMirrorStyle = {
+    height: '100%',
+    minHeight: '240px',
+    fontSize: '13px',
+  }
 
   const spanInfoData = computed(() => {
     if (!props.span) return []
 
     const { span } = props
-    const result = []
+    const result: Array<{ label: string; value: string }> = []
 
-    // Add all span properties except _level and attributes
     Object.entries(span).forEach(([key, value]) => {
       if (
         key !== '_level' &&
@@ -97,9 +160,9 @@ a-drawer(
         !key.startsWith('span_attributes.') &&
         !key.startsWith('resource_attributes.')
       ) {
-        let formattedValue = value
+        let formattedValue: string
         if (key === 'timestamp' || key === 'timestamp_end') {
-          formattedValue = dayjs(value / 1000000).format('YYYY-MM-DD HH:mm:ss.SSS')
+          formattedValue = dayjs(Number(value) / 1000000).format('YYYY-MM-DD HH:mm:ss.SSS')
         } else if (typeof value === 'object') {
           formattedValue = JSON.stringify(value, null, 2)
         } else {
@@ -107,15 +170,12 @@ a-drawer(
         }
 
         result.push({
-          label: key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+          label: key.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()),
           value: formattedValue,
         })
       }
     })
-
-    const mergedAttributes = ['span_attributes.', 'resource_attributes.']
-
-    mergedAttributes.forEach((prefix) => {
+    ;['span_attributes.', 'resource_attributes.'].forEach((prefix) => {
       const obj = Object.entries(span)
         .filter(([key]) => key.startsWith(prefix))
         .reduce((acc, [key, value]) => {
@@ -124,7 +184,7 @@ a-drawer(
             acc[cleanKey] = value
           }
           return acc
-        }, {} as Record<string, any>)
+        }, {} as Record<string, unknown>)
 
       if (Object.keys(obj).length > 0) {
         result.push({
@@ -139,35 +199,64 @@ a-drawer(
 
   const jsonView = computed(() => {
     if (!props.span) return ''
-    const { span } = props
-    const { key, title, _level, children, ...rest } = span
+    const { key, title, _level, children, ...rest } = props.span
     return JSON.stringify(rest, null, 2)
   })
 </script>
 
 <style lang="less" scoped>
+  .span-attributes-panel {
+    display: flex;
+    flex: 1 1 0%;
+    flex-direction: column;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--gpt-bg-panel);
+  }
+
+  .panel-header {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    height: 48px;
+    padding: 0 12px 0 16px;
+    border-bottom: 1px solid var(--gpt-border-default);
+  }
+
+  .panel-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--gpt-text-primary);
+  }
+
+  .panel-body {
+    flex: 1 1 0%;
+    min-height: 0;
+    padding: 12px 16px 16px;
+    overflow: auto;
+  }
+
   .span-header.gpt-muted-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 8px;
 
     .span-name {
-      display: flex;
-      align-items: center;
-      gap: var(--gpt-gap-md);
       flex-shrink: 0;
       padding: var(--gpt-gap-xs);
-
-      .span-name {
-        font-size: var(--gpt-font-lg);
-      }
+      font-size: var(--gpt-font-lg);
     }
   }
 
   .summary-container {
     display: flex;
-    align-items: left;
-    border-top: none;
+    flex-wrap: wrap;
+    align-items: center;
     margin: var(--gpt-gap-xl) 0;
 
     .summary-item {
@@ -176,11 +265,7 @@ a-drawer(
       gap: var(--gpt-gap-md);
       padding: 0 var(--gpt-page-padding-x);
 
-      .summary-label {
-        font-size: var(--gpt-font-base);
-        color: var(--gpt-text-primary);
-      }
-
+      .summary-label,
       .summary-value {
         font-size: var(--gpt-font-base);
         color: var(--gpt-text-primary);
@@ -199,10 +284,10 @@ a-drawer(
     align-items: center;
     justify-content: space-between;
     width: 100%;
+    height: 58px;
     font-weight: 700;
     font-size: var(--gpt-font-xl);
     line-height: 20px;
-    height: 58px;
     color: var(--gpt-text-primary);
   }
 
@@ -217,9 +302,9 @@ a-drawer(
   }
 
   :deep(.arco-drawer-header) {
-    border-bottom: 1px solid var(--gpt-border-default);
-    padding: var(--gpt-page-padding-x);
     height: 58px;
+    padding: var(--gpt-page-padding-x);
+    border-bottom: 1px solid var(--gpt-border-default);
   }
 
   :deep(.arco-drawer-body) {
@@ -247,9 +332,11 @@ a-drawer(
       padding: 0;
     }
   }
+
   :deep(.arco-descriptions-item-value) {
     vertical-align: top;
   }
+
   :deep(.arco-descriptions-size-medium .arco-descriptions-item-label-block) {
     font-size: var(--gpt-font-md);
   }

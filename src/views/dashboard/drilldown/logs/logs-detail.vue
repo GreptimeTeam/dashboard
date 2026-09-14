@@ -25,12 +25,13 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, ref } from 'vue'
+  import { ref } from 'vue'
   import { useI18n } from 'vue-i18n'
   import IconDown from '@arco-design/web-vue/es/icon/icon-down'
   import { useDrilldownContext } from '@/observability/context'
   import { BREAKDOWN_CHART_HEIGHT } from '@/observability/metrics/panel-stats'
   import { isLogsDetailTab } from '@/observability/types'
+  import useDrilldownPanelTab from '@/observability/use-drilldown-panel-tab'
   import LogsMainView from './logs-main-view.vue'
   import LogsVolumeMiniChart from './logs-volume-mini-chart.vue'
 
@@ -41,13 +42,10 @@
   const mainChartHeight = BREAKDOWN_CHART_HEIGHT
   const chartExpanded = ref(true)
 
-  const activeTab = computed({
-    get: () => logsTab.value,
-    set: (key: string | number) => {
-      if (isLogsDetailTab(key)) {
-        setLogsTab(key)
-      }
-    },
+  const activeTab = useDrilldownPanelTab({
+    tab: logsTab,
+    setTab: setLogsTab,
+    isTab: isLogsDetailTab,
   })
 </script>
 

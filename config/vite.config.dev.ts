@@ -1,21 +1,19 @@
 import { mergeConfig } from 'vite'
-import eslint from 'vite-plugin-eslint'
 import baseConfig from './vite.config.base'
 
+// Do not put vite-plugin-eslint (or any sync linter) in the Vite transform pipeline.
+// On save, half-written / parse-failing files make ESLint reject → this.error() aborts
+// the module transform → HMR leaves a white screen until the next successful save.
+// Lint via IDE / `npx eslint` / CI instead.
 export default mergeConfig(
   {
     mode: 'development',
-    plugins: [
-      eslint({
-        cache: false,
-        include: ['src/**/*.ts', 'src/**/*.tsx', 'src/**/*.vue'],
-        exclude: ['node_modules'],
-        // Default failOnError:true aborts transform on lint errors → broken HMR / white screen
-        // until the next save. Keep reporting errors without blocking the dev server.
-        failOnError: false,
-        failOnWarning: false,
-      }),
-    ],
+    server: {
+      // Clearer signal when a module fails to hot-reload
+      hmr: {
+        overlay: true,
+      },
+    },
   },
   baseConfig
 )

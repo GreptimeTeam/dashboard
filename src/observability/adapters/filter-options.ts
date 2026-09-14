@@ -13,6 +13,7 @@ import {
   sqlJsonGetStringExpr,
   type SchemaColumn,
 } from '../logs/field-map'
+import { discoverTraceLabelColumns } from '../traces/field-map'
 import type { DrilldownFilter, DrilldownSignal } from '../types'
 
 const INTERNAL_LABEL_PREFIX = '__'
@@ -91,8 +92,12 @@ export async function fetchSqlLabelKeys(
 
   try {
     const columns = (await editorApi.getTableSchema(tableName)) as SchemaColumn[]
+    if (signal === 'traces') {
+      const keys = discoverTraceLabelColumns(columns)
+      return filterOptions(filterLabelKeys(keys), search)
+    }
     const fieldMap = fieldMapForSignal(ctx, signal)
-    const settings = signal === 'logs' ? loadDrilldownSettings().logs : undefined
+    const settings = loadDrilldownSettings().logs
     const keys = discoverLabelColumns(columns, fieldMap, {
       include: settings?.labelInclude,
       exclude: settings?.labelExclude,

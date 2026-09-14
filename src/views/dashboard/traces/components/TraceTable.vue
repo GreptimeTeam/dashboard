@@ -84,9 +84,14 @@ a-card(:bordered="false")
       type: Object as PropType<QueryState>,
       default: () => ({}),
     },
+    /** When true, emit `traceClick` only — do not route to TraceDetail. */
+    embedMode: {
+      type: Boolean,
+      default: false,
+    },
   })
 
-  const emit = defineEmits(['filterConditionAdd'])
+  const emit = defineEmits(['filterConditionAdd', 'traceClick'])
   const router = useRouter()
 
   // Default columns to show for traces (when no selection is made)
@@ -184,6 +189,10 @@ a-card(:bordered="false")
 
   // Handle trace ID link click
   function handleTraceClick(traceId: string) {
+    emit('traceClick', traceId)
+    if (props.embedMode) {
+      return
+    }
     router.push({
       name: 'dashboard-TraceDetail',
       params: { id: traceId },
