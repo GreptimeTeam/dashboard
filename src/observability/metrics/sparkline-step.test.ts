@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   SPARKLINE_MAX_DATA_POINTS,
+  SPARKLINE_MAX_INTERVAL_MS,
   HEATMAP_MAX_DATA_POINTS,
   calculateSparklineIntervalMs,
   calculateSparklineQueryStep,
@@ -14,8 +15,9 @@ describe('sparkline-step', () => {
     expect(roundInterval(60000)).toBe(60000)
   })
 
-  it('uses Grafana MEDIUM maxDataPoints for catalog sparklines', () => {
-    expect(SPARKLINE_MAX_DATA_POINTS).toBe(250)
+  it('uses coarser maxDataPoints for catalog sparklines', () => {
+    expect(SPARKLINE_MAX_DATA_POINTS).toBe(30)
+    expect(SPARKLINE_MAX_INTERVAL_MS).toBe(300_000)
   })
 
   it('uses fewer maxDataPoints for catalog heatmaps (wider cells)', () => {
@@ -26,15 +28,15 @@ describe('sparkline-step', () => {
     expect(calculateSparklineQueryStep([0, 30 * 60], { maxDataPoints: HEATMAP_MAX_DATA_POINTS })).toBe('120')
   })
 
-  it('uses 5s step for 30m range (MEDIUM maxDataPoints=250)', () => {
+  it('uses 60s step for 30m range (catalog maxDataPoints=30)', () => {
     const rangeMs = 30 * 60 * 1000
     const intervalMs = calculateSparklineIntervalMs(rangeMs)
 
-    expect(intervalMs).toBe(5000)
-    expect(calculateSparklineQueryStep([0, 30 * 60])).toBe('5')
+    expect(intervalMs).toBe(60_000)
+    expect(calculateSparklineQueryStep([0, 30 * 60])).toBe('60')
 
     const points = estimateSparklinePointCount(rangeMs, intervalMs)
-    expect(points).toBe(361)
+    expect(points).toBe(31)
   })
 
   it('matches Grafana calculateInterval with fixed maxDataPoints=250 (MEDIUM / list)', () => {
@@ -55,10 +57,10 @@ describe('sparkline-step', () => {
     expect(calculateSparklineIntervalMs(rangeMs, { minIntervalMs: 120_000 })).toBe(120_000)
   })
 
-  it('scales step with longer ranges', () => {
-    // 24h / 250 → ~5m (not 1h — avoids empty results on short sample bursts)
+  it('caps catalog step at 5m for long ranges', () => {
+    // 24h / 30 → roundInterval 1h, but catalog ceiling keeps 5m (sparse-burst safe)
     expect(calculateSparklineQueryStep([0, 24 * 60 * 60])).toBe('300')
-    // 6h / 250 ≈ 86.4s → roundInterval → 60s
-    expect(calculateSparklineQueryStep([0, 6 * 60 * 60])).toBe('60')
+    // 1h / 30 = 2m — under ceiling, no cap
+    expect(calculateSparklineQueryStep([0, 60 * 60])).toBe('120')
   })
 })

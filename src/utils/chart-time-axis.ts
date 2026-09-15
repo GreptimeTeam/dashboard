@@ -145,32 +145,39 @@ export function calculateTimeAxisTicks(
 /**
  * Map line-chart time ticks onto heatmap category indexes.
  *
- * ECharts cartesian heatmap requires two category axes (cannot use `type: 'time'`),
- * so labels sit at indexes linearly spanning the query window — same tick timestamps
- * as timeseries `customValues`.
+ * ECharts cartesian heatmap cannot use `type: 'time'`, so we place the **same**
+ * tick timestamps as timeseries on **uniformly spaced** category indexes:
+ *   index_i = floor(i * categoryCount / tickCount)  for i in 0..tickCount-1
+ *
+ * That keeps 30m → 6 labels evenly spaced (no collision-drop, no bumping).
+ * `startMs` / `endMs` are unused (kept for call-site compatibility).
  */
 export function mapTimeTicksToCategoryIndexes(
   categoryCount: number,
   ticksMs: number[],
-  startMs: number,
-  endMs: number
+  _startMs: number,
+  _endMs: number
 ): Map<number, number> {
   const labelByIndex = new Map<number, number>()
   if (categoryCount <= 0 || !ticksMs.length) {
     return labelByIndex
   }
 
-  const span = Math.max(1, endMs - startMs)
-  const lastIndex = Math.max(0, categoryCount - 1)
+  const tickCount = ticksMs.length
 
-  ticksMs.forEach((tickMs) => {
-    const ratio = (tickMs - startMs) / span
-    const index = Math.max(0, Math.min(lastIndex, Math.round(ratio * lastIndex)))
-    // First tick wins on collision so formatted labels stay unique.
-    if (!labelByIndex.has(index)) {
-      labelByIndex.set(index, tickMs)
+  if (categoryCount >= tickCount) {
+    for (let i = 0; i < tickCount; i += 1) {
+      const index = Math.floor((i * categoryCount) / tickCount)
+      labelByIndex.set(index, ticksMs[i])
     }
-  })
+    return labelByIndex
+  }
+
+  // Scarce columns: one label per category, pick uniformly spaced ticks.
+  for (let i = 0; i < categoryCount; i += 1) {
+    const tickIndex = Math.floor((i * tickCount) / categoryCount)
+    labelByIndex.set(i, ticksMs[tickIndex])
+  }
 
   return labelByIndex
 }

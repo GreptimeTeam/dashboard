@@ -1,12 +1,15 @@
 /**
  * Metrics catalog / Related metrics mini panels.
- * Align with Grafana metrics-drilldown list `QUERY_RESOLUTION.MEDIUM = 250`
- * (→ ~5s for 30m, ~5m for 24h). A coarser budget (e.g. 30) makes 24h → 1h step,
- * which can return empty on Greptime when samples only cover a short burst.
+ * Fixed budget so Last 30m → ~1m step (`30m / 30 = 60s` via Grafana `roundInterval`).
+ * Coarser than Grafana list MEDIUM (250 → ~5s for 30m) — mini cards only need a shape preview.
  *
- * @see metrics-drilldown MetricsList / getTimeseriesQueryRunnerParams MEDIUM
+ * Long ranges: without a step ceiling, 24h / 30 → 1h and Greptime can return empty when
+ * samples only cover a short burst. Cap via {@link SPARKLINE_MAX_INTERVAL_MS}.
  */
-export const SPARKLINE_MAX_DATA_POINTS = 250
+export const SPARKLINE_MAX_DATA_POINTS = 30
+
+/** Max query step for catalog sparklines (5m). Keeps 24h denser than pure maxDataPoints=30. */
+export const SPARKLINE_MAX_INTERVAL_MS = 300_000
 
 /**
  * Heatmap catalog panels use fewer X buckets so cells stay wider than tall
@@ -103,16 +106,25 @@ export interface SparklineStepOptions {
   maxDataPoints?: number
   /** Grafana datasource / panel min step (ms). Default 1ms — no artificial floor. */
   minIntervalMs?: number
+  /**
+   * Upper bound on step (ms). Catalog default {@link SPARKLINE_MAX_INTERVAL_MS}.
+   * Pass `0` / omit with explicit `undefined` override only when callers set their own budget
+   * (main chart / breakdown pass `maxDataPoints` and should not inherit the catalog ceiling).
+   */
+  maxIntervalMs?: number
 }
 
 /**
- * Grafana `calculateInterval`: `roundInterval(timeRange / maxDataPoints)`, optional min-interval floor.
+ * Grafana `calculateInterval`: `roundInterval(timeRange / maxDataPoints)`, optional min/max interval.
  *
  * @see grafana/packages/grafana-data/src/datetime/rangeutil.ts#calculateInterval
  */
 export function calculateSparklineIntervalMs(rangeMs: number, options?: SparklineStepOptions): number {
   const maxDataPoints = options?.maxDataPoints ?? SPARKLINE_MAX_DATA_POINTS
   const minIntervalMs = options?.minIntervalMs ?? 1
+  // Only apply catalog max-step when using the catalog maxDataPoints default.
+  const maxIntervalMs =
+    options?.maxIntervalMs ?? (options?.maxDataPoints === undefined ? SPARKLINE_MAX_INTERVAL_MS : undefined)
 
   if (rangeMs <= 0) {
     return minIntervalMs
@@ -122,6 +134,10 @@ export function calculateSparklineIntervalMs(rangeMs: number, options?: Sparklin
 
   if (minIntervalMs > intervalMs) {
     intervalMs = minIntervalMs
+  }
+
+  if (maxIntervalMs !== undefined && maxIntervalMs > 0 && intervalMs > maxIntervalMs) {
+    intervalMs = maxIntervalMs
   }
 
   return intervalMs

@@ -8,7 +8,15 @@
     :class="{ 'panel-chart-heatmap': isHeatmap }"
     :title="isHeatmap ? promqlQuery : undefined"
   )
-    Chart(:key="chartRenderKey" :height="chartHeight" :options="chartOption")
+    Chart(
+      :key="chartRenderKey"
+      :height="chartHeight"
+      :options="chartOption"
+      :brush-select="false"
+      :time-interaction="!isHeatmap"
+      :time-window-ms="timeWindowMs"
+      @time-range-change="onTimeRangeChange"
+    )
   .panel-heatmap-legend(v-if="isHeatmap && heatmapLegend")
     span.scale-label.scale-low {{ heatmapLegend.low }}
     .scale-track
@@ -67,6 +75,24 @@
   const chartRenderKey = computed(
     () => `${props.metricName}:${panelType.value}:${promqlQuery.value}:${props.colorIndex ?? 0}`
   )
+
+  const timeWindowMs = computed(() => {
+    const range = ctx.unixTimeRange()
+    if (range.length !== 2) {
+      return null
+    }
+    return { fromMs: range[0] * 1000, toMs: range[1] * 1000 }
+  })
+
+  /** Match main chart: plot drag zoom + x-axis pan → absolute TopBar time. */
+  const onTimeRangeChange = ([startSec, endSec]: [number, number]) => {
+    if (!(endSec > startSec)) {
+      return
+    }
+    ctx.rangeTime.value = [String(startSec), String(endSec)]
+    ctx.time.value = 0
+    ctx.triggerRefresh()
+  }
 </script>
 
 <style scoped lang="less">

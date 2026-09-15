@@ -457,6 +457,7 @@ export function buildHeatmapOption(
     },
     xAxis: {
       type: 'category',
+      show: true,
       data: categoryTimesMs,
       boundaryGap: true,
       axisLine: {
@@ -465,11 +466,11 @@ export function buildHeatmapOption(
       },
       axisTick: { show: false },
       axisLabel: {
-        ...buildSharedAxisLabelStyle(),
-        // Same tick set / format as timeseries; do not force min/max extras (duplicates).
-        hideOverlap: false,
-        showMinLabel: false,
-        showMaxLabel: false,
+        // Same format as timeseries; category indexes are uniformly spaced.
+        // showMaxLabel must stay true: uniform placement can land on the last
+        // category (N===tickCount), and false would hide that label → K-1 ticks.
+        ...buildSharedTimeAxisLabelOption(spanMs, tickIntervalMs),
+        showMaxLabel: true,
         interval: (index: number) => tickLabelByIndex.has(index),
         formatter: (_value: number | string, index: number) => {
           const tickMs = tickLabelByIndex.get(index)

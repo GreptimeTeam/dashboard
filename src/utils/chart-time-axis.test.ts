@@ -57,10 +57,11 @@ describe('chart-time-axis', () => {
     expect(calculateYAxisSplitNumber(280)).toBeLessThanOrEqual(10)
   })
 
-  it('maps heatmap category labels evenly like timeseries customValues', () => {
+  it('maps heatmap category labels on uniformly spaced indexes', () => {
     const start = 1_000_000
     const end = start + 60_000
     const ticks = [start, start + 20_000, start + 40_000]
+    // floor(i * 7 / 3) → 0, 2, 4
     const labels = mapTimeTicksToCategoryIndexes(7, ticks, start, end)
 
     expect([...labels.keys()].sort((a, b) => a - b)).toEqual([0, 2, 4])
@@ -69,9 +70,25 @@ describe('chart-time-axis', () => {
     expect(labels.get(4)).toBe(start + 40_000)
   })
 
-  it('keeps unique heatmap label indexes when ticks collide after rounding', () => {
+  it('places all 30m ticks on uniform category slots (including last column)', () => {
+    const start = 0
+    const end = 30 * 60 * 1000
+    const ticks = [0, 5, 10, 15, 20, 25].map((minute) => minute * 60 * 1000)
+
+    const labels = mapTimeTicksToCategoryIndexes(6, ticks, start, end)
+    expect([...labels.keys()].sort((a, b) => a - b)).toEqual([0, 1, 2, 3, 4, 5])
+    expect([...labels.values()]).toEqual(ticks)
+
+    const wide = mapTimeTicksToCategoryIndexes(15, ticks, start, end)
+    // floor(i * 15 / 6) → 0, 2, 5, 7, 10, 12 — equal step in index space
+    expect([...wide.keys()].sort((a, b) => a - b)).toEqual([0, 2, 5, 7, 10, 12])
+    expect(wide.size).toBe(6)
+  })
+
+  it('uses one label per category when columns are scarcer than ticks', () => {
     const labels = mapTimeTicksToCategoryIndexes(2, [0, 10, 20], 0, 1000)
-    expect(labels.size).toBeLessThanOrEqual(2)
+    expect(labels.size).toBe(2)
     expect(labels.has(0)).toBe(true)
+    expect(labels.has(1)).toBe(true)
   })
 })
