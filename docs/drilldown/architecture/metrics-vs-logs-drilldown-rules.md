@@ -134,7 +134,7 @@ type DrilldownContext = {
 |------|------|------|
 | **Select** | 指标网格 / Related | `ctx.metric = name` → inferPromQL + 主图 |
 | **Select** | Breakdown **label** 卡 | 进入该 label 的 **value 列表** |
-| **Add to filters** | Breakdown **value** 卡 | `filters += { label, '=', value }` |
+| **Add to filters** | Breakdown **value** 卡 | `filters += { label, '=', value }`；随后 **回到 label 列表**（与 Grafana 对齐，便于继续选下一个 label） |
 
 | 规则 | 内容 |
 |------|------|

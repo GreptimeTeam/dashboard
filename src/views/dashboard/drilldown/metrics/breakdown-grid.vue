@@ -109,21 +109,27 @@
     loadLabels()
   })
 
+  // Grafana: Add to filter / filter stack change → leave value view, show all labels again
+  // so the user can pick the next label to drill.
   watch(
-    () => [ctx.filters.value, ctx.time.value, ctx.rangeTime.value[0], ctx.rangeTime.value[1], ctx.refreshKey.value],
+    () => ctx.filters.value,
+    () => {
+      backToAllLabels()
+      loadLabels()
+    },
+    { deep: true }
+  )
+
+  watch(
+    () => [ctx.time.value, ctx.rangeTime.value[0], ctx.rangeTime.value[1], ctx.refreshKey.value],
     () => {
       const keepLabel = groupBySelection.value !== ALL_LABELS ? groupBySelection.value : undefined
-      selectedLabel.value = undefined
-      selectedValues.value = []
       loadLabels().then(() => {
         if (keepLabel && labelKeys.value.includes(keepLabel)) {
           openLabel(keepLabel)
-        } else {
-          groupBySelection.value = ALL_LABELS
         }
       })
-    },
-    { deep: true }
+    }
   )
 </script>
 
