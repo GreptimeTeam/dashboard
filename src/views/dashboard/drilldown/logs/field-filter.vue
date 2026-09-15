@@ -19,7 +19,7 @@
     align-items: center;
     gap: var(--gpt-gap-md);
     min-width: 0;
-    max-width: min(520px, 100%);
+    max-width: 100%;
   }
 
   .field-filter-label {

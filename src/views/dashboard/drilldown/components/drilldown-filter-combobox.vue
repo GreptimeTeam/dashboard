@@ -624,6 +624,7 @@
     display: inline-flex;
     box-sizing: border-box;
     align-items: center;
+    flex: 0 1 auto;
     width: max-content;
     max-width: 100%;
     min-width: 200px;

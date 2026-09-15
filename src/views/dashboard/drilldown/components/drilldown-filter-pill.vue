@@ -36,12 +36,12 @@
   .filter-pill {
     display: inline-flex;
     align-items: center;
-    max-width: 280px;
+    max-width: min(420px, 100%);
     height: 22px;
     margin: 0;
-    border: 1px solid var(--color-border-3);
+    border: 1px solid var(--color-border-2);
     border-radius: var(--gpt-radius-sm);
-    background: var(--color-fill-2);
+    background: var(--color-fill-1);
     font-size: var(--gpt-font-base);
     line-height: 1;
     vertical-align: middle;
@@ -83,7 +83,7 @@
   }
 
   .filter-pill__value {
-    max-width: 120px;
+    max-width: 240px;
     overflow: hidden;
     text-overflow: ellipsis;
   }
