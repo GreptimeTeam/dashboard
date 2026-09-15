@@ -4,6 +4,7 @@ import {
   buildPromMatchersString,
   filterIncludesValue,
   filtersToSqlWhere,
+  hasLogsMappedFilters,
   resolveFieldMapColumn,
   toggleIncludeFilter,
 } from './filters'
@@ -36,6 +37,12 @@ describe('filters fieldMap SQL mapping', () => {
 
   it('filtersToSqlWhere returns empty when nothing maps', () => {
     expect(filtersToSqlWhere([{ key: 'instance', op: '=', value: 'i-2' }], fieldMap)).toEqual([])
+  })
+
+  it('hasLogsMappedFilters requires table and mappable filters', () => {
+    expect(hasLogsMappedFilters([{ key: 'service', op: '=', value: 'checkout' }], fieldMap)).toBe(false)
+    expect(hasLogsMappedFilters([{ key: 'service', op: '=', value: 'checkout' }], fieldMap, 'otel_logs')).toBe(true)
+    expect(hasLogsMappedFilters([{ key: 'instance', op: '=', value: 'i-2' }], fieldMap, 'otel_logs')).toBe(false)
   })
 
   it('filtersToSqlWhere ORs same-key multi-value as IN', () => {

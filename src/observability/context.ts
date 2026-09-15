@@ -12,7 +12,7 @@ import {
   type MetricDetailTab,
   type TracesHomeTab,
 } from './types'
-import { addFilter as mergeFilter, toggleIncludeFilter } from './filters'
+import { addFilter as mergeFilter, hasLogsMappedFilters, toggleIncludeFilter } from './filters'
 
 export interface DrilldownContext {
   signal: Ref<DrilldownSignal>
@@ -83,17 +83,46 @@ export function useDrilldownContextProvider(): DrilldownContext {
     refreshKey.value += 1
   }
 
+  const openLogsDetail = (groupValue?: string) => {
+    logsSelectedGroup.value = groupValue
+    logsView.value = 'detail'
+    if (logsTab.value !== 'logs') {
+      logsTab.value = 'logs'
+    }
+  }
+
+  /** Back to overview catalog; keep filters chips for compose. */
+  const closeLogsDetail = () => {
+    logsSelectedGroup.value = undefined
+    logsView.value = 'overview'
+    logsTab.value = 'logs'
+  }
+
+  const resolveLogsDetailGroupFromFilters = (): string | undefined => {
+    const logsMap = fieldMap.value.logs
+    const chipKeys = new Set([logsMap.primaryGroupBy, logsMap.service, 'service'].filter(Boolean) as string[])
+    const match = filters.value.find((f) => f.op === '=' && chipKeys.has(f.key))
+    return match?.value
+  }
+
   const setSignal = (next: DrilldownSignal) => {
     if (next !== 'metrics') {
       metric.value = undefined
     }
-    if (next !== 'logs') {
-      logsView.value = 'overview'
-      logsSelectedGroup.value = undefined
-    }
     if (next !== 'traces') {
       focusTraceId.value = undefined
       tracesTab.value = 'breakdown'
+    }
+    if (next === 'logs') {
+      if (hasLogsMappedFilters(filters.value, fieldMap.value.logs, logsTable.value)) {
+        openLogsDetail(resolveLogsDetailGroupFromFilters())
+      } else {
+        logsView.value = 'overview'
+        logsSelectedGroup.value = undefined
+      }
+    } else {
+      logsView.value = 'overview'
+      logsSelectedGroup.value = undefined
     }
     signal.value = next
   }
@@ -128,21 +157,6 @@ export function useDrilldownContextProvider(): DrilldownContext {
 
   const setTracesTab = (tab: TracesHomeTab) => {
     tracesTab.value = tab
-  }
-
-  const openLogsDetail = (groupValue?: string) => {
-    logsSelectedGroup.value = groupValue
-    logsView.value = 'detail'
-    if (logsTab.value !== 'logs') {
-      logsTab.value = 'logs'
-    }
-  }
-
-  /** Back to overview catalog; keep filters chips for compose. */
-  const closeLogsDetail = () => {
-    logsSelectedGroup.value = undefined
-    logsView.value = 'overview'
-    logsTab.value = 'logs'
   }
 
   const openTraceGantt = (traceId: string) => {

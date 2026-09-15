@@ -337,6 +337,18 @@ export function filtersToSqlWhere(
   return parts
 }
 
+/** True when a logs table is bound and at least one filter maps via logs fieldMap. */
+export function hasLogsMappedFilters(
+  filters: DrilldownFilter[],
+  logsFieldMap: Record<string, string>,
+  logsTable?: string | null
+): boolean {
+  if (!logsTable) {
+    return false
+  }
+  return filtersToSqlWhere(filters, logsFieldMap).length > 0
+}
+
 export function normalizeCommittedFilters(rows: DrilldownFilter[]): DrilldownFilter[] {
   let result: DrilldownFilter[] = []
   rows.forEach((row) => {
