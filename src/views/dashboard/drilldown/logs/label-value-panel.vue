@@ -111,7 +111,8 @@
       fieldInclude: settings.fieldInclude,
       fieldExclude: settings.fieldExclude,
     })
-    if (chipKey !== 'severity' && !ctx.fieldMap.value.logs[chipKey]) {
+    const severityCol = ctx.fieldMap.value.logs.severity
+    if (chipKey !== severityCol && !ctx.fieldMap.value.logs[chipKey]) {
       ctx.fieldMap.value = {
         ...ctx.fieldMap.value,
         logs: { ...ctx.fieldMap.value.logs, [chipKey]: event.columnName },

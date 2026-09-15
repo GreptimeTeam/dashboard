@@ -380,7 +380,7 @@ export function classifyLogsFilterKey(
   return 'field'
 }
 
-/** Filter chip key when adding from a table cell (Level → `severity`). */
+/** Filter chip key when adding from a table cell (Level → physical severity column). */
 export function chipKeyForLogsTableFilter(
   columnName: string,
   columns: SchemaColumn[],
@@ -393,7 +393,7 @@ export function chipKeyForLogsTableFilter(
   }
 ): string {
   if (classifyLogsFilterKey(columnName, columns, fieldMap, options) === 'level') {
-    return 'severity'
+    return (fieldMap.severity || columnName).trim()
   }
   return columnName.trim()
 }

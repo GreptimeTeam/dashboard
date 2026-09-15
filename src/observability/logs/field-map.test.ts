@@ -164,8 +164,8 @@ describe('classifyLogsFilterKey', () => {
     expect(classifyLogsFilterKey('log_attributes.gen_ai.system', columns, fieldMap)).toBe('field')
   })
 
-  it('maps severity table columns to severity chip key', () => {
-    expect(chipKeyForLogsTableFilter('level', columns, fieldMap)).toBe('severity')
+  it('maps severity table columns to physical column chip key', () => {
+    expect(chipKeyForLogsTableFilter('level', columns, fieldMap)).toBe('level')
     expect(chipKeyForLogsTableFilter('pod', columns, fieldMap)).toBe('pod')
     expect(chipKeyForLogsTableFilter('body', columns, fieldMap)).toBe('body')
   })

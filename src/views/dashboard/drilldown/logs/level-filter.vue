@@ -25,14 +25,13 @@
   import { fetchSeverityLevels, type LabelValueRow } from '@/observability/adapters/logs'
   import { addFilter, splitFilterOrValues } from '@/observability/filters'
 
-  const SEVERITY_CHIP_KEY = 'severity'
-
   const { t } = useI18n()
   const ctx = useDrilldownContext()
 
   const loading = ref(false)
   const levels = ref<LabelValueRow[]>([])
 
+  /** Physical severity column from settings (e.g. `level`); also the shared filter chip key. */
   const severityColumn = computed(() => ctx.fieldMap.value.logs.severity || undefined)
 
   function countTitle(row: LabelValueRow) {
@@ -42,17 +41,19 @@
   function ensureSeverityMapped() {
     const col = severityColumn.value
     if (!col) return
-    if (ctx.fieldMap.value.logs[SEVERITY_CHIP_KEY] === col) return
+    if (ctx.fieldMap.value.logs.severity === col) return
     ctx.fieldMap.value = {
       ...ctx.fieldMap.value,
-      logs: { ...ctx.fieldMap.value.logs, [SEVERITY_CHIP_KEY]: col },
+      logs: { ...ctx.fieldMap.value.logs, severity: col },
     }
   }
 
   const selectedLevels = computed({
     get(): string[] {
+      const col = severityColumn.value
+      if (!col) return []
       const severityFilter = ctx.filters.value.find(
-        (filter) => filter.key === SEVERITY_CHIP_KEY && (filter.op === '=' || filter.op === '=~')
+        (filter) => filter.key === col && (filter.op === '=' || filter.op === '=~')
       )
       if (!severityFilter) {
         return []
@@ -60,11 +61,13 @@
       return splitFilterOrValues(severityFilter)
     },
     set(values: string[] | undefined) {
+      const col = severityColumn.value
+      if (!col) return
       ensureSeverityMapped()
       const nextValues = [...new Set((values ?? []).map((value) => value.trim()).filter(Boolean))]
-      let next = ctx.filters.value.filter((filter) => filter.key !== SEVERITY_CHIP_KEY)
+      let next = ctx.filters.value.filter((filter) => filter.key !== col)
       nextValues.forEach((value) => {
-        next = addFilter(next, { key: SEVERITY_CHIP_KEY, op: '=', value })
+        next = addFilter(next, { key: col, op: '=', value })
       })
       ctx.setFilters(next)
     },
@@ -96,7 +99,7 @@
         ctx.rangeTime.value[1],
         // Reload when non-severity filters change so counts stay useful.
         ctx.filters.value
-          .filter((filter) => filter.key !== SEVERITY_CHIP_KEY)
+          .filter((filter) => filter.key !== severityColumn.value)
           .map((filter) => `${filter.key}${filter.op}${filter.value}`)
           .join('\0'),
       ] as const,

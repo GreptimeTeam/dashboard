@@ -296,7 +296,7 @@ export async function fetchSeverityLevels(ctx: DrilldownContext): Promise<LabelV
     return []
   }
   return fetchLabelValues(ctx, severityCol, {
-    excludeFilterKey: 'severity',
+    excludeFilterKey: severityCol,
   })
 }
 
