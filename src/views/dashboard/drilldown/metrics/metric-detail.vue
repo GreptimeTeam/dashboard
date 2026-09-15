@@ -64,7 +64,7 @@
 
   .metric-detail-main {
     flex-shrink: 0;
-    padding: 12px 16px 12px;
+    padding: var(--gpt-gap-lg) var(--gpt-page-padding-x) var(--gpt-gap-lg);
   }
 
   .metric-detail-tabs {

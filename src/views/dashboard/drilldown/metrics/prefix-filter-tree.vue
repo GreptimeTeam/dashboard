@@ -180,8 +180,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 8px;
-    font-size: 12px;
+    margin-bottom: var(--gpt-gap-md);
+    font-size: var(--gpt-font-base);
     color: var(--color-text-3);
   }
 
@@ -195,7 +195,7 @@
   .prefix-filter-row {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--gpt-gap-xs);
     min-height: 28px;
 
     &--child {
@@ -221,11 +221,11 @@
   }
 
   .prefix-filter-label {
-    margin-right: 4px;
+    margin-right: var(--gpt-gap-xs);
   }
 
   .prefix-filter-count-badge {
     color: var(--color-text-3);
-    font-size: 12px;
+    font-size: var(--gpt-font-base);
   }
 </style>

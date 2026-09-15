@@ -22,15 +22,15 @@
     flex: 0 1 auto;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px 12px;
+    gap: var(--gpt-gap-md) var(--gpt-gap-lg);
     min-width: 0;
     max-width: min(480px, 100%);
   }
 
   .filter-label {
     flex-shrink: 0;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: var(--gpt-font-base);
+    font-weight: var(--gpt-font-weight-control);
     color: var(--gpt-text-primary, var(--color-text-1));
     line-height: 1;
     white-space: nowrap;

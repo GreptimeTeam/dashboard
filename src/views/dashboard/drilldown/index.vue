@@ -232,8 +232,8 @@
   // Explicit viewport height on the page root. Do not rely on nested percentage
   // height through app-layout — that chain is 0 on hard refresh.
   .drilldown-page.query-container {
-    height: calc(100vh - 24px);
-    max-height: calc(100vh - 24px);
+    height: calc(100vh - var(--gpt-gap-3xl));
+    max-height: calc(100vh - var(--gpt-gap-3xl));
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -359,13 +359,13 @@
     justify-content: space-between;
     width: 100%;
     min-width: 0;
-    gap: 12px;
+    gap: var(--gpt-gap-lg);
   }
 
   .logs-detail-toolbar {
     justify-content: flex-start;
     flex-wrap: wrap;
-    gap: 12px 20px;
+    gap: var(--gpt-gap-lg) var(--gpt-gap-2xl);
   }
 
   .drawer-title-text {
@@ -373,7 +373,7 @@
     flex: 1 1 auto;
     flex-direction: row;
     align-items: baseline;
-    gap: 8px;
+    gap: var(--gpt-gap-md);
     min-width: 0;
   }
 
@@ -382,8 +382,8 @@
     min-width: 0;
     overflow: hidden;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-    font-size: 13px;
-    font-weight: 600;
+    font-size: var(--gpt-font-md);
+    font-weight: var(--gpt-font-weight-control);
     line-height: 1.3;
     color: var(--color-text-1);
     text-overflow: ellipsis;
@@ -394,7 +394,7 @@
     flex: 0 1 auto;
     min-width: 0;
     overflow: hidden;
-    font-size: 11px;
+    font-size: var(--gpt-font-sm);
     line-height: 1.3;
     color: var(--color-text-3);
     text-overflow: ellipsis;
@@ -436,11 +436,11 @@
       justify-content: center;
       width: 28px;
       height: 28px;
-      margin-left: 16px;
+      margin-left: var(--gpt-page-padding-x);
       color: var(--color-text-2);
-      font-size: 16px;
+      font-size: var(--gpt-font-xl);
       line-height: 1;
-      border-radius: var(--border-radius-small, 4px);
+      border-radius: var(--gpt-radius-sm);
       cursor: pointer;
 
       &:hover {
@@ -450,7 +450,7 @@
 
       .arco-icon,
       .arco-icon-hover {
-        font-size: 16px;
+        font-size: var(--gpt-font-xl);
       }
     }
   }

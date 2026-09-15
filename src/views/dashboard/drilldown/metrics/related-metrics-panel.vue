@@ -98,20 +98,20 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 12px;
+    gap: var(--gpt-gap-lg);
     flex-shrink: 0;
-    padding: 10px 16px;
+    padding: var(--gpt-gap-md) var(--gpt-page-padding-x);
     border-bottom: 1px solid var(--color-border-2);
   }
 
   .view-by {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--gpt-gap-md);
   }
 
   .control-label {
-    font-size: 13px;
+    font-size: var(--gpt-font-md);
     color: var(--color-text-2);
     white-space: nowrap;
   }

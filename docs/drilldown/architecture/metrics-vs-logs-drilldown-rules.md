@@ -49,7 +49,7 @@ type DrilldownContext = {
 | **R-FLT-6** | 顶栏 filter UI：**Grafana combobox**（pill + 分阶段 suggest）；Metrics value **手输** |
 | **R-FLT-7** | Suggest **按 `ctx.signal`**：Metrics → Prom `/labels`；Logs/Traces → `discoverLabelColumns` + settings（label only）。Logs value → SQL `DISTINCT`；切信号清缓存 |
 | **R-FLT-8** | 顶栏只做 **label value（L2）**，不进 Fields Tab；Logs keys 尊重 `labelInclude` / `labelExclude` / `fieldMap` |
-| **R-BRK-1** | Breakdown label 卡 `series===1`（仅 1 个 value）仍提供 **Add to filter**（Greptime 偏离 Grafana） |
+| **R-BRK-1** | Breakdown label 卡 `series===1`（仅 1 个 value）→ **无** Select / **无** Add to filter（与 Grafana 对齐；Add to filter 仅在 value 卡） |
 
 **公共模块**：`src/observability/context.ts`（filters CRUD）、`src/observability/filters.ts`（`addFilter` / `removeFilter` / `filtersToPromMatch` / `filtersToSqlWhere`）
 
@@ -139,8 +139,7 @@ type DrilldownContext = {
 | 规则 | 内容 |
 |------|------|
 | **M-SEL-1** | 主图区 **无** Select；用「Select new metric」换指标 |
-| **M-SEL-2** | label 卡：仅 1 条 series → **隐藏** Select（Grafana 规格） |
-| **M-SEL-2′** | **已实现偏离**：Greptime 按 **R-BRK-1** 显示 Add to filter，不隐藏 |
+| **M-SEL-2** | label 卡：仅 1 条 series → **隐藏** Select（与 Grafana 对齐；见 **R-BRK-1**） |
 | **M-SEL-3** | value 卡：数据点 < 2 / `<unspecified>` / binary ratio → **无** Add to filters |
 
 ### 2.4 单指标详情

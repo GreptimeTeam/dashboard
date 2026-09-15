@@ -192,10 +192,10 @@
 
   .logs-main-volume {
     flex-shrink: 0;
-    margin-bottom: 12px;
-    padding: 10px 12px;
+    margin-bottom: var(--gpt-gap-lg);
+    padding: var(--gpt-gap-md) var(--gpt-gap-lg);
     border: 1px solid var(--color-border-2);
-    border-radius: 8px;
+    border-radius: var(--gpt-radius-md);
     background: var(--color-bg-2);
   }
 
@@ -205,8 +205,8 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 8px 12px;
-    padding: 8px 16px;
+    gap: var(--gpt-gap-md) var(--gpt-gap-lg);
+    padding: var(--gpt-gap-md) var(--gpt-page-padding-x);
     border-bottom: 1px solid var(--color-border-2);
     background: var(--gpt-table-toolbar-bg, var(--color-bg-2));
   }
@@ -216,34 +216,34 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px 12px;
+    gap: var(--gpt-gap-md) var(--gpt-gap-lg);
     min-width: 0;
   }
 
   .results-header {
     display: inline-flex;
     align-items: baseline;
-    gap: 4px;
-    font-size: 13px;
-    font-weight: 600;
+    gap: var(--gpt-gap-xs);
+    font-size: var(--gpt-font-md);
+    font-weight: var(--gpt-font-weight-control);
     color: var(--color-text-1);
     white-space: nowrap;
   }
 
   .results-count {
     color: var(--gpt-text-muted, var(--color-text-3));
-    font-size: 12px;
+    font-size: var(--gpt-font-base);
     font-weight: normal;
   }
 
   .logs-virtual-columns-clipped-hint {
     position: relative;
-    padding: 4px 8px;
-    border-radius: 4px;
+    padding: var(--gpt-gap-xs) var(--gpt-gap-md);
+    border-radius: var(--gpt-radius-sm);
     background: var(--warning-bg-color);
     border: 1px solid var(--warning-color);
     color: var(--warning-color);
-    font-size: var(--gpt-font-sm, 12px);
+    font-size: var(--gpt-font-base);
     line-height: 1.2;
     white-space: nowrap;
     pointer-events: none;
@@ -280,8 +280,8 @@
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    font-size: 12px;
+    gap: var(--gpt-gap-md);
+    font-size: var(--gpt-font-base);
     color: var(--color-text-3);
   }
 </style>

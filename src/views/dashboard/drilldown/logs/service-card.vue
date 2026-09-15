@@ -62,11 +62,11 @@
   .service-card {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--gpt-gap-md);
     min-height: 72px;
-    padding: 12px;
+    padding: var(--gpt-gap-lg);
     border: 1px solid var(--color-border-2);
-    border-radius: 8px;
+    border-radius: var(--gpt-radius-md);
     background: var(--color-bg-2);
   }
 
@@ -74,7 +74,7 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 8px;
+    gap: var(--gpt-gap-md);
     min-width: 0;
   }
 
@@ -82,15 +82,15 @@
     display: flex;
     flex: 1;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--gpt-gap-xs);
     min-width: 0;
     overflow: hidden;
   }
 
   .card-title {
     overflow: hidden;
-    font-size: 13px;
-    font-weight: 600;
+    font-size: var(--gpt-font-md);
+    font-weight: var(--gpt-font-weight-control);
     line-height: 1.35;
     color: var(--color-text-1);
     text-overflow: ellipsis;
@@ -98,7 +98,7 @@
   }
 
   .card-count {
-    font-size: 12px;
+    font-size: var(--gpt-font-base);
     color: var(--color-text-3);
   }
 

@@ -110,14 +110,14 @@
     flex: 0 0 auto;
     flex-wrap: nowrap;
     align-items: center;
-    gap: 8px;
+    gap: var(--gpt-gap-md);
     min-width: 0;
   }
 
   .level-filter-label {
     flex-shrink: 0;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: var(--gpt-font-base);
+    font-weight: var(--gpt-font-weight-control);
     color: var(--gpt-text-primary, var(--color-text-1));
     line-height: 1;
     white-space: nowrap;
@@ -137,12 +137,12 @@
     }
 
     :deep(.arco-select-view-multiple) {
-      padding-left: 8px;
-      padding-right: 8px;
+      padding-left: var(--gpt-gap-md);
+      padding-right: var(--gpt-gap-md);
     }
 
     :deep(.arco-select-view-input) {
-      font-size: 12px;
+      font-size: var(--gpt-font-base);
     }
   }
 </style>

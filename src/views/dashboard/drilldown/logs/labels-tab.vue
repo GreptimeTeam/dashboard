@@ -266,12 +266,12 @@
     display: flex;
     flex-shrink: 0;
     align-items: center;
-    margin-left: 8px;
-    margin-right: 12px;
+    margin-left: var(--gpt-gap-md);
+    margin-right: var(--gpt-gap-lg);
   }
 
   .add-label-caret {
-    margin-left: 4px;
+    margin-left: var(--gpt-gap-xs);
   }
 
   .labels-empty {
@@ -280,7 +280,7 @@
     align-items: center;
     justify-content: center;
     min-height: 160px;
-    padding: 24px;
+    padding: var(--gpt-gap-3xl);
   }
 
   .labels-panel-tabs :deep(.arco-tabs-content) {

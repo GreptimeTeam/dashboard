@@ -78,8 +78,8 @@
 
   .panel-state {
     border: 1px dashed var(--color-border-2);
-    border-radius: 6px;
-    font-size: 12px;
+    border-radius: var(--gpt-radius-md);
+    font-size: var(--gpt-font-base);
     color: var(--color-text-3);
   }
 
@@ -90,7 +90,7 @@
   .panel-chart {
     flex-shrink: 0;
     overflow: hidden;
-    border-radius: 6px;
+    border-radius: var(--gpt-radius-md);
     background: var(--gpt-bg-panel);
   }
 
@@ -98,15 +98,15 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    margin-top: 4px;
+    gap: var(--gpt-gap-md);
+    margin-top: var(--gpt-gap-xs);
   }
 
   .query-legend-list {
     display: flex;
     flex: 1;
     flex-wrap: wrap;
-    gap: 6px 10px;
+    gap: var(--gpt-gap-sm) var(--gpt-gap-md);
     min-width: 0;
     overflow: hidden;
   }
@@ -114,10 +114,10 @@
   .query-legend {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--gpt-gap-sm);
     max-width: 100%;
     overflow: hidden;
-    font-size: 11px;
+    font-size: var(--gpt-font-sm);
     line-height: 1.2;
     color: var(--color-text-2);
     cursor: default;
@@ -127,7 +127,7 @@
     flex-shrink: 0;
     width: 12px;
     height: 3px;
-    border-radius: 1px;
+    border-radius: var(--gpt-radius-xs);
   }
 
   .legend-name {
@@ -139,7 +139,7 @@
 
   .series-count {
     flex-shrink: 0;
-    font-size: 11px;
+    font-size: var(--gpt-font-sm);
     color: var(--color-text-3);
   }
 </style>

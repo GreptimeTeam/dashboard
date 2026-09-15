@@ -179,7 +179,7 @@
     flex: 1 1 0;
     min-height: 0;
     overflow: auto;
-    padding: 12px 16px 16px;
+    padding: var(--gpt-gap-lg) var(--gpt-page-padding-x) var(--gpt-page-padding-x);
     background: var(--gpt-bg-app);
   }
 
@@ -200,13 +200,13 @@
   }
 
   .group-title {
-    font-size: 13px;
-    font-weight: 600;
+    font-size: var(--gpt-font-md);
+    font-weight: var(--gpt-font-weight-control);
     color: var(--color-text-1);
   }
 
   .group-count {
-    font-size: 12px;
+    font-size: var(--gpt-font-base);
     color: var(--color-text-3);
   }
 

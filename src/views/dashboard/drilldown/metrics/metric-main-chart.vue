@@ -153,8 +153,8 @@
 
   .panel-state {
     border: 1px dashed var(--color-border-2);
-    border-radius: 6px;
-    font-size: 12px;
+    border-radius: var(--gpt-radius-md);
+    font-size: var(--gpt-font-base);
     color: var(--color-text-3);
   }
 
@@ -166,7 +166,7 @@
     position: relative;
     flex-shrink: 0;
     overflow: hidden;
-    border-radius: 6px;
+    border-radius: var(--gpt-radius-md);
     background: var(--gpt-bg-panel);
   }
 
@@ -185,10 +185,10 @@
     display: grid;
     grid-template-columns: auto minmax(72px, 1fr) auto;
     align-items: center;
-    gap: 6px;
+    gap: var(--gpt-gap-sm);
     width: min(100%, 320px);
-    margin-top: 4px;
-    margin-bottom: 2px;
+    margin-top: var(--gpt-gap-xs);
+    margin-bottom: var(--gpt-gap-2xs);
     min-height: 22px;
   }
 
@@ -201,7 +201,7 @@
   .scale-gradient {
     width: 100%;
     height: 100%;
-    border-radius: 2px;
+    border-radius: var(--gpt-radius-xs);
     background: linear-gradient(
       90deg,
       #5e4fa2 0%,
@@ -218,7 +218,7 @@
 
   .scale-label {
     flex-shrink: 0;
-    font-size: 10px;
+    font-size: var(--gpt-font-xs);
     line-height: 1;
     color: var(--color-text-3);
     white-space: nowrap;
@@ -227,32 +227,32 @@
   .scale-mid {
     position: absolute;
     left: 50%;
-    top: calc(100% + 2px);
+    top: calc(100% + var(--gpt-gap-2xs));
     transform: translateX(-50%);
-    font-size: 9px;
+    font-size: var(--gpt-font-2xs);
   }
 
   .panel-footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: var(--gpt-gap-md);
     min-height: 22px;
-    margin-top: 4px;
-    padding: 0 2px;
+    margin-top: var(--gpt-gap-xs);
+    padding: 0 var(--gpt-gap-2xs);
   }
 
   .query-legends {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: var(--gpt-gap-md);
     min-width: 0;
   }
 
   .query-legend {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--gpt-gap-sm);
     min-width: 0;
     max-width: 100%;
   }
@@ -261,12 +261,12 @@
     flex-shrink: 0;
     width: 10px;
     height: 3px;
-    border-radius: 1px;
+    border-radius: var(--gpt-radius-xs);
   }
 
   .legend-name {
     overflow: hidden;
-    font-size: 12px;
+    font-size: var(--gpt-font-base);
     line-height: 1.2;
     color: var(--color-text-2);
     text-overflow: ellipsis;
@@ -275,7 +275,7 @@
 
   .series-count {
     flex-shrink: 0;
-    font-size: 11px;
+    font-size: var(--gpt-font-sm);
     color: var(--color-text-3);
   }
 </style>

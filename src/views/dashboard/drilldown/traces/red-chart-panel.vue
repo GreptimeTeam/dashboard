@@ -158,9 +158,9 @@
     flex-direction: column;
     min-width: 0;
     min-height: 0;
-    padding: 10px 12px;
+    padding: var(--gpt-gap-md) var(--gpt-gap-lg);
     border: 1px solid var(--color-border-2);
-    border-radius: 8px;
+    border-radius: var(--gpt-radius-md);
     background: var(--color-bg-2);
     cursor: pointer;
     transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
@@ -171,8 +171,8 @@
   }
 
   .red-chart-panel:focus-visible {
-    outline: 2px solid var(--color-primary, var(--brand-color));
-    outline-offset: 2px;
+    outline: var(--gpt-gap-2xs) solid var(--color-primary, var(--brand-color));
+    outline-offset: var(--gpt-gap-2xs);
   }
 
   .red-chart-panel.selected {
@@ -185,13 +185,13 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 8px;
+    gap: var(--gpt-gap-md);
+    margin-bottom: var(--gpt-gap-md);
   }
 
   .red-chart-panel-title {
-    font-size: 13px;
-    font-weight: 600;
+    font-size: var(--gpt-font-md);
+    font-weight: var(--gpt-font-weight-control);
     color: var(--color-text-1);
   }
 
@@ -200,7 +200,7 @@
   }
 
   .red-chart-panel-hint {
-    font-size: 11px;
+    font-size: var(--gpt-font-sm);
     color: var(--color-text-3);
   }
 
@@ -215,8 +215,8 @@
 
   .panel-state {
     border: 1px dashed var(--color-border-2);
-    border-radius: 6px;
-    font-size: 12px;
+    border-radius: var(--gpt-radius-md);
+    font-size: var(--gpt-font-base);
     color: var(--color-text-3);
   }
 
@@ -227,7 +227,7 @@
   .panel-chart {
     flex-shrink: 0;
     overflow: hidden;
-    border-radius: 6px;
+    border-radius: var(--gpt-radius-md);
     background: var(--gpt-bg-panel);
   }
 </style>

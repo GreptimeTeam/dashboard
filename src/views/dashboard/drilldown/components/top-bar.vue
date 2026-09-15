@@ -77,7 +77,7 @@
   .title-row {
     display: flex;
     align-items: stretch;
-    gap: 20px;
+    gap: var(--gpt-gap-2xl);
     min-width: 0;
   }
 
@@ -87,7 +87,7 @@
     align-items: center;
     font-family: var(--font-family-base);
     font-size: var(--gpt-font-xl);
-    font-weight: 700;
+    font-weight: var(--gpt-font-weight-bold);
     line-height: 1.2;
     color: var(--gpt-text-primary, var(--color-text-1));
     white-space: nowrap;
@@ -96,7 +96,7 @@
   .signal-text-nav {
     display: inline-flex;
     align-items: stretch;
-    gap: 14px;
+    gap: var(--gpt-gap-xl);
     min-width: 0;
   }
 
@@ -108,8 +108,8 @@
     border: 0;
     background: transparent;
     font-family: var(--font-family-base);
-    font-size: 14px;
-    font-weight: 500;
+    font-size: var(--gpt-font-lg);
+    font-weight: var(--gpt-font-weight-medium);
     line-height: 1.2;
     color: var(--color-text-3);
     white-space: nowrap;
@@ -121,7 +121,7 @@
   }
 
   .signal-link.active {
-    font-weight: 600;
+    font-weight: var(--gpt-font-weight-control);
     color: var(--color-primary, var(--color-text-1));
   }
 
@@ -133,7 +133,7 @@
     right: 0;
     bottom: calc(-1 * var(--gpt-toolbar-padding-y) - 1px);
     left: 0;
-    height: 2px;
+    height: var(--gpt-gap-2xs);
     background: var(--color-primary, var(--color-text-1));
   }
 

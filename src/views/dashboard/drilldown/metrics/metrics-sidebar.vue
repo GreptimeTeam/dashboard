@@ -105,15 +105,15 @@
     flex-direction: column;
     height: 100%;
     min-height: 0;
-    padding: 12px;
+    padding: var(--gpt-gap-lg);
     overflow: hidden;
   }
 
   .sidebar-title {
     flex-shrink: 0;
-    margin: 0 0 12px;
+    margin: 0 0 var(--gpt-gap-lg);
     font-size: var(--gpt-font-md);
-    font-weight: 700;
+    font-weight: var(--gpt-font-weight-bold);
     line-height: 1.2;
     color: var(--gpt-text-primary);
   }
@@ -138,7 +138,7 @@
   .sidebar-divider {
     flex-shrink: 0;
     height: 1px;
-    margin: 12px 0;
+    margin: var(--gpt-gap-lg) 0;
     background: var(--gpt-border-default);
   }
 
@@ -161,7 +161,7 @@
 
   .sidebar-section-label {
     flex-shrink: 0;
-    margin-bottom: 8px;
+    margin-bottom: var(--gpt-gap-md);
     font-size: var(--gpt-font-sm);
     line-height: 1;
     color: var(--gpt-text-secondary);
@@ -172,7 +172,7 @@
     display: flex;
     flex-shrink: 0;
     width: 100%;
-    margin-bottom: 12px;
+    margin-bottom: var(--gpt-gap-lg);
 
     :deep(.arco-radio-button) {
       flex: 1;

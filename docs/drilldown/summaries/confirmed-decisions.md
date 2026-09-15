@@ -114,7 +114,7 @@ Grafana Metrics Drilldown 侧栏「Group by labels」依赖：
 | **Logs value 辅助** | 映射列上 SQL `SELECT DISTINCT`；顶栏 suggest 仍按 signal |
 | **编辑已有 filter** | label 只读；operator / value 可改 |
 | **Add to filter 主路径** | Breakdown / Labels value → `ctx.filters`（同 key OR 合并） |
-| **R-BRK-1** | Breakdown label 卡仅 1 个 value 时仍显示 **Add to filter**（Greptime 偏离 Grafana 藏 Select） |
+| **R-BRK-1** | Breakdown label 卡仅 1 个 value 时 **无** Select / **无** Add to filter（与 Grafana 对齐） |
 | **Related logs** | `timeRange` + `filters.length > 0` + `logsTable` + fieldMap SQL；**不看 metric 名** |
 
 实现进度见 [implementation-status.md](./implementation-status.md)。

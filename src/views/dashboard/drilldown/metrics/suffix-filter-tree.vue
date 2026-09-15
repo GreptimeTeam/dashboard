@@ -86,8 +86,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 8px;
-    font-size: 12px;
+    margin-bottom: var(--gpt-gap-md);
+    font-size: var(--gpt-font-base);
     color: var(--color-text-3);
   }
 
@@ -104,11 +104,11 @@
   }
 
   .suffix-filter-label {
-    margin-right: 4px;
+    margin-right: var(--gpt-gap-xs);
   }
 
   .suffix-filter-count-badge {
     color: var(--color-text-3);
-    font-size: 12px;
+    font-size: var(--gpt-font-base);
   }
 </style>

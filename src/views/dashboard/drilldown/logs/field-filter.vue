@@ -17,15 +17,15 @@
     flex: 1 1 auto;
     flex-wrap: nowrap;
     align-items: center;
-    gap: 8px;
+    gap: var(--gpt-gap-md);
     min-width: 0;
     max-width: min(520px, 100%);
   }
 
   .field-filter-label {
     flex-shrink: 0;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: var(--gpt-font-base);
+    font-weight: var(--gpt-font-weight-control);
     color: var(--gpt-text-primary, var(--color-text-1));
     line-height: 1;
     white-space: nowrap;

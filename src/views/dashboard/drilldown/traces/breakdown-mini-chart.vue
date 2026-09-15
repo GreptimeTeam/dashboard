@@ -157,8 +157,8 @@
 
   .panel-state {
     border: 1px dashed var(--color-border-2);
-    border-radius: 6px;
-    font-size: 12px;
+    border-radius: var(--gpt-radius-md);
+    font-size: var(--gpt-font-base);
     color: var(--color-text-3);
   }
 
@@ -169,7 +169,7 @@
   .panel-chart {
     flex-shrink: 0;
     overflow: hidden;
-    border-radius: 6px;
+    border-radius: var(--gpt-radius-md);
     background: var(--gpt-bg-panel);
   }
 </style>

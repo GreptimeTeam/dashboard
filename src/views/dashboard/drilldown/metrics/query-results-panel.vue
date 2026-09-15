@@ -67,7 +67,7 @@
     flex-direction: column;
     height: 100%;
     min-height: 0;
-    padding: 8px 0;
+    padding: var(--gpt-gap-md) 0;
   }
 
   .query-results-table {

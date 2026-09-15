@@ -42,7 +42,7 @@
     border: 1px solid var(--color-border-3);
     border-radius: var(--gpt-radius-sm);
     background: var(--color-fill-2);
-    font-size: 12px;
+    font-size: var(--gpt-font-base);
     line-height: 1;
     vertical-align: middle;
     flex-shrink: 0;
@@ -62,14 +62,14 @@
   }
 
   .filter-pill__segment {
-    padding: 0 5px;
+    padding: 0 var(--gpt-gap-xs);
     line-height: 20px;
     white-space: nowrap;
   }
 
   .filter-pill__key {
     color: var(--color-text-1);
-    font-weight: 600;
+    font-weight: var(--gpt-font-weight-control);
   }
 
   .filter-pill__op,

@@ -133,15 +133,15 @@
     flex-wrap: nowrap;
     align-items: center;
     justify-content: flex-end;
-    gap: 8px;
+    gap: var(--gpt-gap-md);
     margin-left: auto;
-    padding-left: 12px;
+    padding-left: var(--gpt-gap-lg);
   }
 
   .configure-trigger {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--gpt-gap-xs);
   }
 
   .configure-label {
@@ -150,11 +150,11 @@
 
   .configure-caret {
     flex-shrink: 0;
-    font-size: 12px;
+    font-size: var(--gpt-font-base);
   }
 
   :deep(.arco-dropdown-option.is-active) {
     color: rgb(var(--primary-6));
-    font-weight: 600;
+    font-weight: var(--gpt-font-weight-control);
   }
 </style>

@@ -162,22 +162,22 @@
     display: flex;
     flex: 1 1 auto;
     align-items: baseline;
-    gap: 8px;
+    gap: var(--gpt-gap-md);
     min-width: 0;
   }
 
   .panel-title-text {
     overflow: hidden;
     font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
-    font-size: var(--gpt-font-sm, 13px);
-    font-weight: 600;
+    font-size: var(--gpt-font-md);
+    font-weight: var(--gpt-font-weight-control);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .panel-count {
     flex-shrink: 0;
-    font-size: 12px;
+    font-size: var(--gpt-font-base);
     color: var(--color-text-3);
   }
 
@@ -253,11 +253,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 4px 0;
+    gap: var(--gpt-gap-md);
+    padding: var(--gpt-gap-xs) 0;
     pointer-events: none;
     background: linear-gradient(transparent, var(--gpt-bg-panel) 40%);
-    font-size: 12px;
+    font-size: var(--gpt-font-base);
     color: var(--color-text-3);
   }
 

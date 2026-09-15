@@ -97,10 +97,10 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: var(--gpt-gap-md);
     width: 100%;
     height: 36px;
-    padding: 0 16px;
+    padding: 0 var(--gpt-page-padding-x);
     border: 0;
     background: var(--gpt-table-toolbar-bg, var(--color-fill-1));
     cursor: pointer;
@@ -112,15 +112,15 @@
   }
 
   .logs-tab-chart-title {
-    font-size: 13px;
-    font-weight: 600;
+    font-size: var(--gpt-font-md);
+    font-weight: var(--gpt-font-weight-control);
     line-height: 1;
   }
 
   .logs-tab-chart-caret {
     flex-shrink: 0;
     color: var(--color-text-3);
-    font-size: 12px;
+    font-size: var(--gpt-font-base);
     transition: transform 0.15s ease;
 
     &.is-collapsed {
@@ -139,7 +139,7 @@
   }
 
   .logs-tab-chart-body :deep(.panel-state) {
-    margin: 0 16px 10px;
+    margin: 0 var(--gpt-page-padding-x) var(--gpt-gap-md);
   }
 
   .logs-tab-table {
@@ -161,6 +161,6 @@
     align-items: center;
     justify-content: center;
     min-height: 200px;
-    padding: 24px;
+    padding: var(--gpt-gap-3xl);
   }
 </style>

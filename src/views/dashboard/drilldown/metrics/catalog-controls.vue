@@ -84,7 +84,7 @@
     max-width: 100%;
 
     :deep(.arco-select-view) {
-      padding: 0 4px;
+      padding: 0 var(--gpt-gap-xs);
       background: transparent;
       border: none;
       box-shadow: none;

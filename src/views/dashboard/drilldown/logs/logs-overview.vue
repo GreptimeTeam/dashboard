@@ -124,8 +124,8 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: var(--gpt-toolbar-padding, 8px 16px);
+    gap: var(--gpt-gap-lg);
+    padding: var(--gpt-toolbar-padding);
     border-bottom: 1px solid var(--gpt-border-default);
     background: var(--gpt-table-toolbar-bg, var(--color-bg-2));
   }
@@ -133,7 +133,7 @@
   .toolbar-left {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--gpt-gap-md);
     min-width: 0;
   }
 
@@ -141,13 +141,13 @@
     display: flex;
     flex-shrink: 0;
     align-items: center;
-    gap: 8px;
+    gap: var(--gpt-gap-md);
     margin-left: auto;
   }
 
   .toolbar-label {
     flex-shrink: 0;
-    font-size: 12px;
+    font-size: var(--gpt-font-base);
     color: var(--color-text-3);
   }
 
@@ -168,6 +168,6 @@
   }
 
   :deep(.arco-alert) {
-    margin: 12px 16px;
+    margin: var(--gpt-gap-lg) var(--gpt-page-padding-x);
   }
 </style>

@@ -88,8 +88,8 @@
 
   .panel-state {
     border: 1px dashed var(--color-border-2);
-    border-radius: 6px;
-    font-size: 12px;
+    border-radius: var(--gpt-radius-md);
+    font-size: var(--gpt-font-base);
     color: var(--color-text-3);
   }
 
@@ -100,7 +100,7 @@
   .panel-chart {
     flex-shrink: 0;
     overflow: hidden;
-    border-radius: 6px;
+    border-radius: var(--gpt-radius-md);
     background: var(--gpt-bg-panel);
   }
 
@@ -113,11 +113,11 @@
     display: grid;
     grid-template-columns: auto minmax(72px, 1fr) auto;
     align-items: center;
-    gap: 6px;
+    gap: var(--gpt-gap-sm);
     width: min(100%, 280px);
-    margin-top: 2px;
+    margin-top: var(--gpt-gap-2xs);
     // Room for the mid label under the track (Auto min … mid … Auto max).
-    margin-bottom: 2px;
+    margin-bottom: var(--gpt-gap-2xs);
     min-height: 22px;
   }
 
@@ -130,7 +130,7 @@
   .scale-gradient {
     width: 100%;
     height: 100%;
-    border-radius: 2px;
+    border-radius: var(--gpt-radius-xs);
     background: linear-gradient(
       90deg,
       #5e4fa2 0%,
@@ -147,7 +147,7 @@
 
   .scale-label {
     flex-shrink: 0;
-    font-size: 10px;
+    font-size: var(--gpt-font-xs);
     line-height: 1;
     color: var(--color-text-3);
     white-space: nowrap;
@@ -156,28 +156,28 @@
   .scale-mid {
     position: absolute;
     left: 50%;
-    top: calc(100% + 2px);
+    top: calc(100% + var(--gpt-gap-2xs));
     transform: translateX(-50%);
-    font-size: 9px;
+    font-size: var(--gpt-font-2xs);
   }
 
   .panel-footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: var(--gpt-gap-md);
     // Sit tight under the chart x-axis (grid bottom is only ~2px inside ECharts).
-    margin-top: 4px;
+    margin-top: var(--gpt-gap-xs);
   }
 
   .query-legend {
     display: inline-flex;
     flex: 1;
     align-items: center;
-    gap: 6px;
+    gap: var(--gpt-gap-sm);
     min-width: 0;
     overflow: hidden;
-    font-size: 11px;
+    font-size: var(--gpt-font-sm);
     line-height: 1.2;
     color: var(--color-text-2);
     cursor: default;
@@ -187,7 +187,7 @@
     flex-shrink: 0;
     width: 12px;
     height: 3px;
-    border-radius: 1px;
+    border-radius: var(--gpt-radius-xs);
   }
 
   .legend-name {
@@ -199,7 +199,7 @@
 
   .series-count {
     flex-shrink: 0;
-    font-size: 11px;
+    font-size: var(--gpt-font-sm);
     color: var(--color-text-3);
   }
 </style>

@@ -254,8 +254,8 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: var(--gpt-toolbar-padding, 8px 16px);
+    gap: var(--gpt-gap-lg);
+    padding: var(--gpt-toolbar-padding);
     border-bottom: 1px solid var(--gpt-border-default);
     background: var(--gpt-table-toolbar-bg, var(--color-bg-2));
   }
@@ -263,7 +263,7 @@
   .toolbar-left {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--gpt-gap-md);
     min-width: 0;
   }
 
@@ -271,13 +271,13 @@
     display: flex;
     flex-shrink: 0;
     align-items: center;
-    gap: 8px;
+    gap: var(--gpt-gap-md);
     margin-left: auto;
   }
 
   .toolbar-label {
     flex-shrink: 0;
-    font-size: 12px;
+    font-size: var(--gpt-font-base);
     color: var(--color-text-3);
   }
 
@@ -291,13 +291,13 @@
   }
 
   .trace-id-prefix {
-    font-size: 11px;
-    font-weight: 600;
+    font-size: var(--gpt-font-sm);
+    font-weight: var(--gpt-font-weight-control);
     color: var(--color-text-3);
   }
 
   :deep(.arco-alert) {
-    margin: 12px 16px;
+    margin: var(--gpt-gap-lg) var(--gpt-page-padding-x);
   }
 
   .traces-home-body {
@@ -310,14 +310,14 @@
 
   .traces-red-main {
     flex-shrink: 0;
-    padding: 12px 16px;
+    padding: var(--gpt-gap-lg) var(--gpt-page-padding-x);
     border-bottom: 1px solid var(--gpt-border-default);
   }
 
   .red-triptych {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
+    gap: var(--gpt-gap-lg);
   }
 
   @media (max-width: 900px) {
@@ -364,7 +364,7 @@
     }
 
     :deep(> .arco-card-header) {
-      padding: 8px 16px;
+      padding: var(--gpt-gap-md) var(--gpt-page-padding-x);
       border-bottom: 1px solid var(--gpt-border-default);
       background: var(--gpt-table-toolbar-bg, var(--color-bg-2));
     }

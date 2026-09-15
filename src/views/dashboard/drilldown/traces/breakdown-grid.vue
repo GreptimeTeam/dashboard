@@ -162,27 +162,27 @@
 
 <style scoped lang="less">
   .traces-breakdown-grid {
-    padding: 0 0 16px;
+    padding: 0 0 var(--gpt-page-padding-x);
   }
 
   .breakdown-toolbar {
     display: flex;
     flex-wrap: wrap;
     align-items: flex-end;
-    gap: 16px;
-    padding: 12px 16px 0;
+    gap: var(--gpt-gap-xl);
+    padding: var(--gpt-gap-lg) var(--gpt-page-padding-x) 0;
   }
 
   .breakdown-scope,
   .breakdown-by-label {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--gpt-gap-xs);
   }
 
   .toolbar-label {
-    font-size: 12px;
-    font-weight: 500;
+    font-size: var(--gpt-font-base);
+    font-weight: var(--gpt-font-weight-medium);
     color: var(--color-text-2);
   }
 
@@ -190,7 +190,7 @@
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--gpt-gap-md);
-    padding: 12px 16px;
+    padding: var(--gpt-gap-lg) var(--gpt-page-padding-x);
   }
 
   @media (max-width: 1400px) {

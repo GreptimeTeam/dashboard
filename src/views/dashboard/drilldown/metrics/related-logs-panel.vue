@@ -96,20 +96,20 @@
 
 <style scoped lang="less">
   .related-logs-panel {
-    padding: 8px 16px 16px;
+    padding: var(--gpt-gap-md) var(--gpt-page-padding-x) var(--gpt-page-padding-x);
   }
 
   .related-logs-meta {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 12px;
-    font-size: 13px;
+    gap: var(--gpt-gap-lg);
+    margin-bottom: var(--gpt-gap-lg);
+    font-size: var(--gpt-font-md);
     color: var(--color-text-2);
   }
 
   .table-name {
     color: var(--color-text-3);
-    font-size: 12px;
+    font-size: var(--gpt-font-base);
   }
 </style>

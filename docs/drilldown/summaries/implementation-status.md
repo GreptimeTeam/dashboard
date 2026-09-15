@@ -73,7 +73,7 @@
 | 详情壳 | [`metric-detail.vue`](../../../src/views/dashboard/drilldown/metrics/metric-detail.vue) | ✅ 主图 + full-bleed `panel-tabs`（Breakdown / Related logs / …） |
 | Breakdown labels/values | [`breakdown-grid.vue`](../../../src/views/dashboard/drilldown/metrics/breakdown-grid.vue) | ✅ Prom API + match 含 `__name__` |
 | Breakdown mini 图 | [`breakdown-mini-chart.vue`](../../../src/views/dashboard/drilldown/metrics/breakdown-mini-chart.vue) + [`breakdown-queries.ts`](../../../src/observability/metrics/breakdown-queries.ts) | ✅ label `by (L)` + value matcher；lazy + queue |
-| Add to filter | label/value cards | ✅；**R-BRK-1**：label 仅 1 value 时仍 Add to filter |
+| Add to filter | value cards | ✅；**R-BRK-1**：label 仅 1 value 时无 Select / 无 Add to filter |
 | Related logs 预览 | [`related-logs-panel.vue`](../../../src/views/dashboard/drilldown/metrics/related-logs-panel.vue) | ✅ COUNT + 预览表；需 filters + logsTable |
 | 主图 + query_range | [`use-metric-main-chart.ts`](../../../src/observability/use-metric-main-chart.ts) | ✅ Configure / Explore / percentiles / brush-pan |
 | inferPromQL / meta | [`infer-promql.ts`](../../../src/observability/metrics/infer-promql.ts) + [`resolve-metric-meta.ts`](../../../src/observability/resolve-metric-meta.ts) | ✅ 见 [semantics.md](../semantics.md) |

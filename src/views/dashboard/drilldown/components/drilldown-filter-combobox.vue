@@ -628,7 +628,7 @@
     max-width: 100%;
     min-width: 200px;
     min-height: var(--gpt-control-height-md);
-    padding: 0 8px;
+    padding: 0 var(--gpt-gap-md);
     border: 1px solid var(--gpt-main-dark);
     border-radius: var(--gpt-radius-sm);
     background: var(--color-bg-2);
@@ -662,7 +662,7 @@
     display: inline-flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 4px;
+    gap: var(--gpt-gap-xs);
     width: max-content;
     max-width: 100%;
     min-height: calc(var(--gpt-control-height-md) - 2px);
@@ -680,12 +680,12 @@
     height: calc(var(--gpt-control-height-md) - 2px);
     min-height: 0;
     min-width: 0;
-    gap: 2px;
+    gap: var(--gpt-gap-2xs);
   }
 
   .filter-combobox__segment {
-    padding: 0 2px;
-    font-size: 12px;
+    padding: 0 var(--gpt-gap-2xs);
+    font-size: var(--gpt-font-base);
     line-height: calc(var(--gpt-control-height-md) - 2px);
     white-space: nowrap;
     cursor: pointer;
@@ -698,7 +698,7 @@
 
   .filter-combobox__key {
     color: var(--color-text-1);
-    font-weight: 600;
+    font-weight: var(--gpt-font-weight-control);
 
     &.is-readonly {
       cursor: default;
@@ -719,7 +719,7 @@
     border: none;
     outline: none;
     background: transparent;
-    font-size: 12px;
+    font-size: var(--gpt-font-base);
     line-height: calc(var(--gpt-control-height-md) - 2px);
     color: var(--color-text-1);
 
@@ -743,7 +743,7 @@
     max-width: 420px;
     max-height: 240px;
     overflow-y: auto;
-    padding: 4px;
+    padding: var(--gpt-gap-xs);
     border: 1px solid var(--color-border-2);
     border-radius: var(--gpt-radius-sm);
     background: var(--color-bg-popup);
@@ -754,12 +754,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 8px;
+    padding: var(--gpt-gap-md);
   }
 
   .filter-suggest-empty {
-    padding: 8px 10px;
-    font-size: 12px;
+    padding: var(--gpt-gap-md) var(--gpt-gap-md);
+    font-size: var(--gpt-font-base);
     line-height: 1.4;
     color: var(--color-text-2);
   }
@@ -767,12 +767,12 @@
   .filter-suggest-option {
     display: block;
     width: 100%;
-    padding: 6px 8px;
+    padding: var(--gpt-gap-sm) var(--gpt-gap-md);
     border: none;
     border-radius: var(--gpt-radius-sm);
     background: transparent;
     color: var(--color-text-1);
-    font-size: 12px;
+    font-size: var(--gpt-font-base);
     line-height: 1.4;
     text-align: left;
     cursor: pointer;
