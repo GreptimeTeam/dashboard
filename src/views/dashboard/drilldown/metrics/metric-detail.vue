@@ -9,13 +9,7 @@
     a-tab-pane(key="related-logs" destroy-on-hide :title="t('drilldown.metricDetail.relatedLogsTab')")
       RelatedLogsPanel
     a-tab-pane(key="related-metrics" destroy-on-hide :title="t('drilldown.metricDetail.relatedMetricsTab')")
-      RelatedMetricsPanel(
-        :metric="metric"
-        :pool-names="poolNames"
-        :loading="poolLoading"
-        :error="poolError"
-        :truncated="poolTruncated"
-      )
+      RelatedMetricsPanel(:metric="metric")
     a-tab-pane(key="query-results" destroy-on-hide :title="t('drilldown.metricDetail.queryResultsTab')")
       QueryResultsPanel(:result="mainChartResult")
 </template>
@@ -34,10 +28,6 @@
 
   defineProps<{
     metric: string
-    poolNames: string[]
-    poolLoading: boolean
-    poolError: string | null
-    poolTruncated: boolean
   }>()
 
   const { t } = useI18n()

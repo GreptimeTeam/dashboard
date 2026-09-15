@@ -120,7 +120,7 @@
   }
 
   async function loadValuesFor(label: string) {
-    if (!label) return
+    if (!label || ctx.logsView.value === 'detail') return
     // Drop stale in-flight queries after table switch (openLabels already cleared).
     if (!openLabelList.value.includes(label) && !labelKeys.value.includes(label)) {
       return
@@ -153,6 +153,9 @@
   }
 
   async function loadKeys() {
+    if (ctx.logsView.value === 'detail') {
+      return
+    }
     loadingKeys.value = true
     try {
       const keys = await listLabelKeys(ctx)
@@ -215,8 +218,11 @@
   )
 
   watch(
-    () => [ctx.logsTable.value, ctx.refreshKey.value] as const,
+    () => [ctx.logsTable.value, ctx.refreshKey.value, ctx.logsView.value] as const,
     async () => {
+      if (ctx.logsView.value === 'detail') {
+        return
+      }
       await loadKeys()
       await Promise.all(openLabelList.value.map((label) => loadValuesFor(label)))
     }
@@ -225,8 +231,11 @@
   // Overview compose: Include / add-to-filter only updates chips — do not re-query
   // label value panels when filters change (SQL already ignores label filters here).
   watch(
-    () => [ctx.time.value, ctx.rangeTime.value[0], ctx.rangeTime.value[1]] as const,
+    () => [ctx.time.value, ctx.rangeTime.value[0], ctx.rangeTime.value[1], ctx.logsView.value] as const,
     () => {
+      if (ctx.logsView.value === 'detail') {
+        return
+      }
       openLabelList.value.forEach((label) => loadValuesFor(label))
     }
   )

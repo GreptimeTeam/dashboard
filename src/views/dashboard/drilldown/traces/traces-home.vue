@@ -64,7 +64,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, onMounted, ref, watch } from 'vue'
+  import { computed, onActivated, onDeactivated, onMounted, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { storeToRefs } from 'pinia'
   import { useAppStore } from '@/store'
@@ -81,6 +81,10 @@
   import RedChartPanel from './red-chart-panel.vue'
   import BreakdownGrid from './breakdown-grid.vue'
 
+  defineOptions({
+    name: 'TracesHome',
+  })
+
   const { t } = useI18n()
   const ctx = useDrilldownContext()
   const { database } = storeToRefs(useAppStore())
@@ -93,6 +97,8 @@
   const tracesTable = ref(ctx.tracesTable.value)
   const traceIdDraft = ref('')
   const selectedRedMetric = ref<RedMetric>('rate')
+  const overviewActive = ref(true)
+  let pausedDepsKey = ''
 
   const activeTab = useDrilldownPanelTab({
     tab: ctx.tracesTab,
@@ -124,6 +130,17 @@
     database: database.value,
   }))
 
+  const depsKey = () =>
+    JSON.stringify([
+      ctx.refreshKey.value,
+      ctx.filters.value,
+      ctx.time.value,
+      ctx.rangeTime.value[0],
+      ctx.rangeTime.value[1],
+      ctx.tracesTable.value,
+      selectedRedMetric.value,
+    ])
+
   watch(
     () => ctx.tracesTable.value,
     (value) => {
@@ -145,6 +162,9 @@
   )
 
   const loadTables = async () => {
+    if (!overviewActive.value) {
+      return
+    }
     loadingTables.value = true
     try {
       const current = ctx.tracesTable.value
@@ -155,6 +175,9 @@
   }
 
   const loadRows = async () => {
+    if (!overviewActive.value || ctx.focusTraceId.value) {
+      return
+    }
     if (!ctx.tracesTable.value) {
       rows.value = []
       columns.value = []
@@ -225,6 +248,7 @@
       ctx.rangeTime.value,
       ctx.tracesTable.value,
       selectedRedMetric.value,
+      ctx.focusTraceId.value,
     ],
     () => {
       loadRows()
@@ -235,6 +259,21 @@
   onMounted(async () => {
     await loadTables()
     await loadRows()
+  })
+
+  onDeactivated(() => {
+    overviewActive.value = false
+    pausedDepsKey = depsKey()
+  })
+
+  onActivated(() => {
+    overviewActive.value = true
+    if (pausedDepsKey && pausedDepsKey !== depsKey()) {
+      loadTables()
+      loadRows()
+      ctx.triggerRefresh()
+    }
+    pausedDepsKey = ''
   })
 </script>
 

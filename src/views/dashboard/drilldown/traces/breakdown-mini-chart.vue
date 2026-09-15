@@ -61,6 +61,9 @@
   )
 
   async function load() {
+    if (ctx.focusTraceId.value) {
+      return
+    }
     if (!ready.value || !ctx.tracesTable.value || !props.attrKey || !props.attrValue) {
       return
     }
@@ -129,9 +132,13 @@
       ctx.rangeTime.value[0],
       ctx.rangeTime.value[1],
       ctx.filters.value,
+      ctx.focusTraceId.value,
       isDark.value,
     ],
     () => {
+      if (ctx.focusTraceId.value) {
+        return
+      }
       load()
     },
     { deep: true, immediate: true }

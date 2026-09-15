@@ -5,34 +5,9 @@
       DrilldownTopBar
 
     .drilldown-body.new-layout.new-layout--workspace(v-if="signal === 'metrics'")
-      a-resize-box(
-        v-model:width="sidebarWidth"
-        :directions="['right']"
-        :style="{ 'min-width': '100px', 'max-width': '40vw' }"
-        :class="hideSidebar ? 'hide-sider' : ''"
-      )
-        a-layout-sider(style="height: 100%" :width="actualSidebarWidth")
-          a-card.gpt-page-sidebar.drilldown-sidebar-card(:bordered="false")
-            MetricsSidebar(
-              v-model:search="search"
-              v-model:sort="sort"
-              :prefix-groups="prefixGroups"
-              :suffix-groups="suffixGroups"
-              :metric-names="metricNames"
-              :loading="loading"
-              :pool-count="poolCount"
-              :filtered-count="filteredCount"
-            )
-
-      a-layout-content.layout-content
-        a-card.drilldown-main-pane.gpt-results-pane(:bordered="false")
-          .drilldown-home-main
-            MetricChartList(
-              :loading="loading"
-              :error="error"
-              :truncated="truncated"
-              :groups="groups"
-            )
+      keep-alive
+        MetricsOverview(v-if="!drawerVisible")
+      .drilldown-detail-shell(v-if="drawerVisible")
 
       a-drawer.metric-detail-drawer(
         popup-container=".drilldown-body"
@@ -52,20 +27,15 @@
               span.drawer-metric-name(:title="selectedMetric") {{ selectedMetric }}
               span.drawer-metric-original(v-if="metricOriginalName" :title="metricOriginalName") {{ metricOriginalName }}
             MetricDetailActions(v-if="selectedMetric" :metric="selectedMetric")
-        MetricDetail(
-          v-if="selectedMetric"
-          :metric="selectedMetric"
-          :pool-names="poolNames"
-          :pool-loading="loading"
-          :pool-error="error"
-          :pool-truncated="truncated"
-        )
+        MetricDetail(v-if="selectedMetric" :metric="selectedMetric")
 
     .drilldown-body.new-layout.new-layout--workspace.drilldown-body--logs(v-else-if="signal === 'logs'")
-      a-layout-content.layout-content
+      a-layout-content.layout-content(v-show="!logsDrawerVisible")
         a-card.drilldown-main-pane.gpt-results-pane(:bordered="false")
           .drilldown-home-main
-            LogsOverview
+            keep-alive
+              LogsOverview(v-if="!logsDrawerVisible")
+      .drilldown-detail-shell(v-if="logsDrawerVisible")
 
       a-drawer.metric-detail-drawer.logs-detail-drawer(
         popup-container=".drilldown-body--logs"
@@ -86,10 +56,12 @@
         LogsDetail(v-if="logsDrawerVisible")
 
     .drilldown-body.new-layout.new-layout--workspace.drilldown-body--traces(v-else-if="signal === 'traces'")
-      a-layout-content.layout-content
+      a-layout-content.layout-content(v-show="!tracesGanttVisible")
         a-card.drilldown-main-pane.gpt-results-pane(:bordered="false")
           .drilldown-home-main
-            TracesHome
+            keep-alive
+              TracesHome(v-if="!tracesGanttVisible")
+      .drilldown-detail-shell(v-if="tracesGanttVisible")
 
       a-drawer.metric-detail-drawer.traces-gantt-drawer(
         popup-container=".drilldown-body--traces"
@@ -115,19 +87,13 @@
   import { computed, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRoute, useRouter } from 'vue-router'
-  import { useStorage } from '@vueuse/core'
-  import { storeToRefs } from 'pinia'
-  import { useAppStore } from '@/store'
   import { useDrilldownContextProvider } from '@/observability/context'
-  import type { MetricsSortOption } from '@/observability/metrics/catalog'
   import resolveMetricMeta from '@/observability/resolve-metric-meta'
   import useDrilldownUrlSync from '@/observability/use-drilldown-url-sync'
-  import useMetricsCatalog from '@/observability/use-metrics-catalog'
   import useDrilldownLogsInit from '@/observability/use-drilldown-logs-init'
   import useDrilldownTracesInit from '@/observability/use-drilldown-traces-init'
   import DrilldownTopBar from './components/top-bar.vue'
-  import MetricsSidebar from './metrics/metrics-sidebar.vue'
-  import MetricChartList from './metrics/metric-chart-list.vue'
+  import MetricsOverview from './metrics/metrics-overview.vue'
   import MetricDetail from './metrics/metric-detail.vue'
   import MetricDetailActions from './metrics/metric-detail-actions.vue'
   import LogsOverview from './logs/logs-overview.vue'
@@ -202,30 +168,6 @@
       closeTracesGanttDrawer()
     }
   }
-
-  const search = ref('')
-  const sort = ref<MetricsSortOption>('default')
-  const {
-    prefixGroups,
-    suffixGroups,
-    metricNames,
-    truncated,
-    loading,
-    error,
-    groups,
-    poolNames,
-    poolCount,
-    filteredCount,
-  } = useMetricsCatalog(ctx, search, sort)
-
-  const sidebarWidth = useStorage('drilldown-sidebar-width', 228)
-  const { hideSidebar } = storeToRefs(useAppStore())
-
-  const actualSidebarWidth = computed(() => {
-    const minWidth = 180
-    const maxWidth = window.innerWidth * 0.4
-    return Math.max(minWidth, Math.min(sidebarWidth.value, maxWidth))
-  })
 </script>
 
 <style scoped lang="less">
@@ -342,6 +284,14 @@
     flex-direction: column;
     min-height: 0;
     overflow: hidden;
+  }
+
+  // Keeps popup-container sized when overview is unmounted for the detail virtual route.
+  .drilldown-detail-shell {
+    flex: 1 1 0%;
+    align-self: stretch;
+    min-width: 0;
+    min-height: 0;
   }
 
   .drilldown-signal-placeholder {

@@ -1,7 +1,8 @@
-import { watch } from 'vue'
-import type { RouteLocationNormalizedLoaded, Router } from 'vue-router'
+import { nextTick, watch } from 'vue'
+import type { LocationQuery, RouteLocationNormalizedLoaded, Router } from 'vue-router'
 import { isDrilldownFilterOp } from './filters'
 import { DRILLDOWN_DEFAULT_TIME_MINUTES, type DrilldownContext } from './context'
+import { drilldownQueriesEqual, shouldPushDrilldownHistory } from './drilldown-url-history'
 import { readUrlTab, urlTabWatchSources, writeUrlTab, type DrilldownUrlTabSpec } from './drilldown-url-tabs'
 import {
   isLogsDetailTab,
@@ -107,9 +108,10 @@ export default function useDrilldownUrlSync(
   router: Router
 ) {
   let syncingFromUrl = false
+  let writingToUrl = false
   const tabSpecs = buildUrlTabSpecs(ctx)
 
-  const initializeFromQuery = () => {
+  const applyQueryToContext = (query: LocationQuery = route.query) => {
     syncingFromUrl = true
     const {
       timeLength,
@@ -126,7 +128,7 @@ export default function useDrilldownUrlSync(
       logsView,
       logsTab,
       tracesTab,
-    } = route.query
+    } = query
 
     ctx.setSignal(parseSignal(signal))
 
@@ -175,7 +177,7 @@ export default function useDrilldownUrlSync(
 
     if (ctx.signal.value === 'traces' && typeof focusTraceId === 'string' && focusTraceId.trim()) {
       ctx.focusTraceId.value = focusTraceId.trim()
-    } else if (ctx.signal.value !== 'traces') {
+    } else {
       ctx.focusTraceId.value = undefined
     }
 
@@ -207,14 +209,17 @@ export default function useDrilldownUrlSync(
 
     normalizeTimeRange(ctx)
 
-    syncingFromUrl = false
+    // Keep the flag through the flush of Context watchers scheduled by this apply.
+    nextTick(() => {
+      syncingFromUrl = false
+    })
   }
 
-  const updateQueryParams = () => {
-    if (syncingFromUrl) {
-      return
-    }
+  const initializeFromQuery = () => {
+    applyQueryToContext(route.query)
+  }
 
+  const buildQueryFromContext = (): Record<string, string | string[]> => {
     const query: Record<string, string | string[]> = {}
 
     if (ctx.rangeTime.value.length === 2) {
@@ -266,7 +271,25 @@ export default function useDrilldownUrlSync(
       writeUrlTab(query, spec)
     })
 
-    router.replace({ query })
+    return query
+  }
+
+  const updateQueryParams = () => {
+    if (syncingFromUrl || writingToUrl) {
+      return
+    }
+
+    const query = buildQueryFromContext()
+    if (drilldownQueriesEqual(route.query as Record<string, unknown>, query)) {
+      return
+    }
+
+    const usePush = shouldPushDrilldownHistory(route.query as Record<string, unknown>, query)
+    writingToUrl = true
+    const navigate = usePush ? router.push({ query }) : router.replace({ query })
+    Promise.resolve(navigate).finally(() => {
+      writingToUrl = false
+    })
   }
 
   watch(
@@ -300,8 +323,19 @@ export default function useDrilldownUrlSync(
     { deep: true }
   )
 
+  watch(
+    () => route.query,
+    () => {
+      if (syncingFromUrl || writingToUrl) {
+        return
+      }
+      applyQueryToContext(route.query)
+    }
+  )
+
   return {
     initializeFromQuery,
+    applyQueryToContext,
     updateQueryParams,
   }
 }

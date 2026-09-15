@@ -1,4 +1,4 @@
-import { computed, ref, watch, type Ref } from 'vue'
+import { computed, ref, toValue, watch, type MaybeRefOrGetter, type Ref } from 'vue'
 import { buildMatchSelector, fetchMetricNamesPool } from './adapters/metrics'
 import {
   applySidebarFilters,
@@ -13,13 +13,22 @@ import { getRecentMetrics } from './metrics/recent'
 import { ensureMetricSemanticsLoaded } from './table-semantics'
 import type { DrilldownContext } from './context'
 
-export default function useMetricsCatalog(ctx: DrilldownContext, search: Ref<string>, sort: Ref<MetricsSortOption>) {
+export default function useMetricsCatalog(
+  ctx: DrilldownContext,
+  search: Ref<string>,
+  sort: Ref<MetricsSortOption>,
+  options?: { enabled?: MaybeRefOrGetter<boolean> }
+) {
   const loading = ref(false)
   const error = ref<string | null>(null)
   const poolNames = ref<string[]>([])
   const truncated = ref(false)
+  const enabled = computed(() => (options?.enabled === undefined ? true : Boolean(toValue(options.enabled))))
 
   const loadPool = async () => {
+    if (!enabled.value) {
+      return
+    }
     loading.value = true
     error.value = null
     try {
@@ -48,8 +57,18 @@ export default function useMetricsCatalog(ctx: DrilldownContext, search: Ref<str
   }
 
   watch(
-    () => [ctx.filters.value, ctx.time.value, ctx.rangeTime.value[0], ctx.rangeTime.value[1], ctx.refreshKey.value],
+    () => [
+      enabled.value,
+      ctx.filters.value,
+      ctx.time.value,
+      ctx.rangeTime.value[0],
+      ctx.rangeTime.value[1],
+      ctx.refreshKey.value,
+    ],
     () => {
+      if (!enabled.value) {
+        return
+      }
       loadPool()
     },
     { deep: true, immediate: true }

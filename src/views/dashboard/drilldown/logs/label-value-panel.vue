@@ -39,6 +39,7 @@
         :label-value="labelValue"
         :color-index="colorIndex"
         :scroll-root="scrollRoot"
+        :enabled="ctx.logsView.value !== 'detail'"
       )
 </template>
 
@@ -119,7 +120,12 @@
     ctx.appendFilter({ key: chipKey, op: mapOperator(event.operator), value })
   }
 
-  onMounted(load)
+  onMounted(() => {
+    if (ctx.logsView.value === 'detail') {
+      return
+    }
+    load()
+  })
   watch(
     () => [
       props.labelCol,
@@ -133,7 +139,12 @@
       // Detail applies filters to panel preview; overview compose ignores them in SQL.
       ctx.logsView.value === 'detail' ? ctx.filters.value : null,
     ],
-    load,
+    () => {
+      if (ctx.logsView.value === 'detail') {
+        return
+      }
+      load()
+    },
     { deep: true }
   )
 </script>

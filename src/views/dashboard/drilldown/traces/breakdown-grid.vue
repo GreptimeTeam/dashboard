@@ -88,6 +88,9 @@
   }
 
   const loadAttributes = async () => {
+    if (ctx.focusTraceId.value) {
+      return
+    }
     const tableName = ctx.tracesTable.value
     if (!tableName) {
       allAttrs.value = []
@@ -111,6 +114,9 @@
   }
 
   const loadValues = async () => {
+    if (ctx.focusTraceId.value) {
+      return
+    }
     if (!ctx.tracesTable.value || !groupByColumn.value) {
       values.value = []
       return
@@ -138,6 +144,9 @@
   watch(
     () => ctx.tracesTable.value,
     async () => {
+      if (ctx.focusTraceId.value) {
+        return
+      }
       await loadAttributes()
       await loadValues()
     }
@@ -152,8 +161,12 @@
       ctx.rangeTime.value[0],
       ctx.rangeTime.value[1],
       ctx.refreshKey.value,
+      ctx.focusTraceId.value,
     ],
     () => {
+      if (ctx.focusTraceId.value) {
+        return
+      }
       loadValues()
     },
     { deep: true }

@@ -31,11 +31,14 @@
       /** When false, load immediately (e.g. overview total volume). */
       lazy?: boolean
       scrollRoot?: MaybeRefOrGetter<HTMLElement | null | undefined>
+      /** When false, skip fetch (e.g. overview panel cached under detail route). */
+      enabled?: boolean
     }>(),
     {
       colorIndex: 0,
       height: BREAKDOWN_CHART_HEIGHT,
       lazy: true,
+      enabled: true,
     }
   )
 
@@ -63,7 +66,7 @@
   const seriesColor = computed(() => getSeriesColorByIndex(props.colorIndex, isDark.value))
 
   async function load() {
-    if (!ready.value || !ctx.logsTable.value) {
+    if (!props.enabled || !ready.value || !ctx.logsTable.value) {
       return
     }
     requestVersion += 1
@@ -109,6 +112,7 @@
   watch(
     () => {
       const base: unknown[] = [
+        props.enabled,
         ready.value,
         props.labelCol,
         props.labelValue,
@@ -127,6 +131,9 @@
       return base
     },
     () => {
+      if (!props.enabled) {
+        return
+      }
       load()
     },
     { deep: true, immediate: true }

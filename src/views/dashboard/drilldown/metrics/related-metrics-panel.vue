@@ -20,9 +20,9 @@
 
   .related-metrics-list
     MetricChartList(
-      :loading="loading"
-      :error="error"
-      :truncated="truncated"
+      :loading="poolLoading"
+      :error="poolError"
+      :truncated="poolTruncated"
       :groups="groups"
       :empty-description="t('drilldown.relatedMetrics.emptyDescription')"
     )
@@ -31,26 +31,34 @@
 <script setup lang="ts">
   import { computed, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
-  import { matchesSearch, type MetricGroup } from '@/observability/metrics/catalog'
+  import { useDrilldownContext } from '@/observability/context'
+  import { matchesSearch, type MetricGroup, type MetricsSortOption } from '@/observability/metrics/catalog'
   import { computeMetricPrefixGroups, matchesPrefix } from '@/observability/metrics/prefix-tree'
   import { sortRelatedMetrics } from '@/observability/metrics/sort-related-metrics'
+  import useMetricsCatalog from '@/observability/use-metrics-catalog'
   import MetricChartList from './metric-chart-list.vue'
 
   const VIEW_BY_ALL = 'all'
 
   const props = defineProps<{
     metric: string
-    poolNames: string[]
-    loading: boolean
-    error: string | null
-    truncated: boolean
   }>()
 
   const { t } = useI18n()
+  const ctx = useDrilldownContext()
   const viewByPrefix = ref(VIEW_BY_ALL)
   const search = ref('')
+  // Catalog composable requires search/sort refs; Related filters client-side from the full pool.
+  const catalogSearch = ref('')
+  const catalogSort = ref<MetricsSortOption>('default')
+  const {
+    poolNames,
+    loading: poolLoading,
+    error: poolError,
+    truncated: poolTruncated,
+  } = useMetricsCatalog(ctx, catalogSearch, catalogSort)
 
-  const prefixOptions = computed(() => computeMetricPrefixGroups(props.poolNames))
+  const prefixOptions = computed(() => computeMetricPrefixGroups(poolNames.value))
 
   watch(prefixOptions, (options) => {
     if (viewByPrefix.value === VIEW_BY_ALL) {
@@ -63,7 +71,7 @@
 
   const filteredSortedNames = computed(() => {
     const prefix = viewByPrefix.value
-    const filtered = props.poolNames.filter((name) => {
+    const filtered = poolNames.value.filter((name) => {
       if (prefix !== VIEW_BY_ALL && !matchesPrefix(name, prefix)) {
         return false
       }

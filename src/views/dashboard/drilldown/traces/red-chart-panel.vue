@@ -67,6 +67,9 @@
   )
 
   async function load() {
+    if (ctx.focusTraceId.value) {
+      return
+    }
     if (!ctx.tracesTable.value) {
       chartOption.value = null
       isEmpty.value = true
@@ -142,9 +145,13 @@
       ctx.rangeTime.value[0],
       ctx.rangeTime.value[1],
       ctx.filters.value,
+      ctx.focusTraceId.value,
       isDark.value,
     ],
     () => {
+      if (ctx.focusTraceId.value) {
+        return
+      }
       load()
     },
     { deep: true, immediate: true }

@@ -35,7 +35,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, nextTick, onMounted, ref } from 'vue'
+  import { computed, nextTick, onActivated, onDeactivated, onMounted, ref } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { storeToRefs } from 'pinia'
   import { useAppStore } from '@/store'
@@ -47,6 +47,10 @@
   import LabelsTab from './labels-tab.vue'
   import LogsSettingsModal from './logs-settings-modal.vue'
 
+  defineOptions({
+    name: 'LogsOverview',
+  })
+
   const { t } = useI18n()
   const ctx = useDrilldownContext()
   const { database } = storeToRefs(useAppStore())
@@ -54,10 +58,25 @@
   const settingsVisible = ref(false)
   const loadingTables = ref(false)
   const tableOptions = ref<string[]>([])
+  const overviewActive = ref(true)
+  let pausedDepsKey = ''
 
   const logsTable = computed(() => ctx.logsTable.value)
 
+  const depsKey = () =>
+    JSON.stringify([
+      ctx.refreshKey.value,
+      ctx.logsTable.value,
+      ctx.time.value,
+      ctx.rangeTime.value[0],
+      ctx.rangeTime.value[1],
+      ctx.filters.value,
+    ])
+
   const loadTables = async () => {
+    if (!overviewActive.value) {
+      return
+    }
     loadingTables.value = true
     try {
       const current = ctx.logsTable.value
@@ -104,6 +123,20 @@
 
   onMounted(async () => {
     await loadTables()
+  })
+
+  onDeactivated(() => {
+    overviewActive.value = false
+    pausedDepsKey = depsKey()
+  })
+
+  onActivated(() => {
+    overviewActive.value = true
+    if (pausedDepsKey && pausedDepsKey !== depsKey()) {
+      loadTables()
+      ctx.triggerRefresh()
+    }
+    pausedDepsKey = ''
   })
 </script>
 
