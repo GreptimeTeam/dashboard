@@ -1,9 +1,13 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import editorApi from '@/api/editor'
 import {
+  clearMetricTableSemanticsCache,
   declaredMetricKindFromSemantics,
   declaredMetricUnitFromSemantics,
   declaredTemporalityFromSemantics,
+  ensureMetricSemanticsLoaded,
+  getMetricTableSemantics,
   mapDeclaredMetricType,
   type MetricTableSemantics,
 } from './table-semantics'
@@ -16,7 +20,35 @@ vi.mock('@/api/editor', () => ({
   },
 }))
 
+const runSQL = vi.mocked(editorApi.runSQL)
+
+const SEMANTICS_SCHEMAS = [
+  { name: 'table_name' },
+  { name: 'signal_type' },
+  { name: 'source' },
+  { name: 'metadata_quality' },
+  { name: 'semantic_options' },
+]
+
+function sqlResult(rows: unknown[][]) {
+  return {
+    output: [
+      {
+        records: {
+          schema: { column_schemas: SEMANTICS_SCHEMAS },
+          rows,
+        },
+      },
+    ],
+  }
+}
+
 describe('table-semantics', () => {
+  beforeEach(() => {
+    clearMetricTableSemanticsCache()
+    runSQL.mockReset()
+  })
+
   it('maps declared OTLP metric.type strings', () => {
     expect(mapDeclaredMetricType('counter')).toBe('counter')
     expect(mapDeclaredMetricType('histogram')).toBe('histogram')
@@ -45,6 +77,49 @@ describe('table-semantics', () => {
     expect(declaredMetricKindFromSemantics(inferred)).toBeNull()
     expect(declaredMetricUnitFromSemantics(inferred)).toBeNull()
     expect(declaredTemporalityFromSemantics(null)).toBeNull()
+  })
+
+  it('ensureMetricSemanticsLoaded caches core fields; get never issues LIMIT 1', async () => {
+    runSQL.mockResolvedValueOnce(
+      sqlResult([
+        [
+          'http_requests_total',
+          'metric',
+          'otlp',
+          'declared',
+          { 'metric.type': 'counter', 'metric.unit': '{request}', 'metric.temporality': 'cumulative' },
+        ],
+      ]) as never
+    )
+
+    const [hit, miss] = await Promise.all([
+      getMetricTableSemantics('http_requests_total'),
+      getMetricTableSemantics('no_such_metric'),
+    ])
+    expect(runSQL).toHaveBeenCalledTimes(1)
+    expect(String(runSQL.mock.calls[0][0])).toContain("signal_type = 'metric'")
+    expect(String(runSQL.mock.calls[0][0])).not.toContain('LIMIT 1')
+
+    expect(hit).toMatchObject({
+      tableName: 'http_requests_total',
+      metadataQuality: 'declared',
+      metricType: 'counter',
+      metricUnit: '{request}',
+      metricTemporality: 'cumulative',
+    })
+    expect(miss).toBeNull()
+
+    await ensureMetricSemanticsLoaded()
+    expect(runSQL).toHaveBeenCalledTimes(1)
+  })
+
+  it('treats full-load failure as empty semantics (no per-name fallback)', async () => {
+    runSQL.mockRejectedValueOnce(new Error('view missing'))
+    expect(await getMetricTableSemantics('solo_metric')).toBeNull()
+    expect(runSQL).toHaveBeenCalledTimes(1)
+
+    expect(await getMetricTableSemantics('solo_metric')).toBeNull()
+    expect(runSQL).toHaveBeenCalledTimes(1)
   })
 })
 

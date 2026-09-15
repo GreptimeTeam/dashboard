@@ -19,11 +19,13 @@ export interface MetricTableSemantics {
 }
 
 const cache = new Map<string, MetricTableSemantics | null>()
-const inflight = new Map<string, Promise<MetricTableSemantics | null>>()
 
-function escapeSqlLiteral(value: string): string {
-  return value.replace(/'/g, "''")
-}
+/** After full load finishes (ok or fail), missing names are known absences — no per-name SQL. */
+let metricSemanticsFullyLoaded = false
+let inflightAll: Promise<void> | null = null
+
+const METRIC_SEMANTICS_SELECT =
+  'SELECT table_name, signal_type, source, metadata_quality, semantic_options FROM information_schema.table_semantics'
 
 function parseSemanticOptions(raw: unknown): Record<string, unknown> {
   if (raw == null) {
@@ -144,33 +146,56 @@ export function declaredTemporalityFromSemantics(semantics: MetricTableSemantics
  */
 export { shouldApplyRate } from './metrics/infer-promql'
 
-async function fetchMetricTableSemantics(tableName: string): Promise<MetricTableSemantics | null> {
-  const trimmed = tableName.trim()
-  if (!trimmed) {
-    return null
-  }
-
-  try {
-    const response = await editorApi.runSQL(
-      `SELECT table_name, signal_type, source, metadata_quality, semantic_options FROM information_schema.table_semantics WHERE table_name = '${escapeSqlLiteral(
-        trimmed
-      )}' LIMIT 1`
-    )
-    const records = response?.output?.[0]?.records
-    const schemas = records?.schema?.column_schemas ?? []
-    const rows = records?.rows
-    if (!Array.isArray(rows) || !rows.length) {
-      return null
+function ingestSemanticsRows(rows: unknown[], schemas: Array<{ name: string }>): void {
+  rows.forEach((row) => {
+    if (!Array.isArray(row)) {
+      return
     }
-    return rowToSemantics(rows[0], schemas)
-  } catch {
-    // table_semantics may be unavailable on older deployments.
-    return null
-  }
+    const semantics = rowToSemantics(row, schemas)
+    if (semantics?.tableName) {
+      // Core fields only — rowToSemantics already drops raw semantic_options JSON.
+      cache.set(semantics.tableName, semantics)
+    }
+  })
 }
 
 /**
- * Look up metric table semantics (cached). Soft-fails when the view is missing.
+ * One-shot load of all metric rows from `table_semantics`.
+ * Success or failure both mark the load complete — no per-name LIMIT 1 fallback
+ * (older DBs without the view simply have no declared semantics).
+ */
+export async function ensureMetricSemanticsLoaded(): Promise<void> {
+  if (metricSemanticsFullyLoaded) {
+    return
+  }
+  if (inflightAll) {
+    await inflightAll
+    return
+  }
+
+  inflightAll = (async () => {
+    try {
+      const response = await editorApi.runSQL(`${METRIC_SEMANTICS_SELECT} WHERE signal_type = 'metric'`)
+      const records = response?.output?.[0]?.records
+      const schemas = records?.schema?.column_schemas ?? []
+      const rows = records?.rows
+      if (Array.isArray(rows)) {
+        ingestSemanticsRows(rows, schemas)
+      }
+    } catch {
+      // View missing / query failed — treat as empty semantics catalog.
+    } finally {
+      metricSemanticsFullyLoaded = true
+      inflightAll = null
+    }
+  })()
+
+  await inflightAll
+}
+
+/**
+ * Look up metric table semantics from the in-memory dump only.
+ * Always waits for {@link ensureMetricSemanticsLoaded}; never issues per-name SQL.
  */
 export async function getMetricTableSemantics(metricName: string): Promise<MetricTableSemantics | null> {
   const key = metricName.trim()
@@ -182,24 +207,15 @@ export async function getMetricTableSemantics(metricName: string): Promise<Metri
     return cache.get(key) ?? null
   }
 
-  const pending = inflight.get(key)
-  if (pending) {
-    return pending
-  }
-
-  const request = fetchMetricTableSemantics(key).then((result) => {
-    cache.set(key, result)
-    inflight.delete(key)
-    return result
-  })
-  inflight.set(key, request)
-  return request
+  await ensureMetricSemanticsLoaded()
+  return cache.get(key) ?? null
 }
 
 /** Test helper — clear in-memory cache between cases. */
 export function clearMetricTableSemanticsCache(): void {
   cache.clear()
-  inflight.clear()
+  metricSemanticsFullyLoaded = false
+  inflightAll = null
 }
 
 export default getMetricTableSemantics

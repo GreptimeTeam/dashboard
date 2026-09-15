@@ -10,6 +10,7 @@ import {
 import { computeMetricPrefixGroups } from './metrics/prefix-tree'
 import { computeMetricSuffixGroups } from './metrics/suffix-tree'
 import { getRecentMetrics } from './metrics/recent'
+import { ensureMetricSemanticsLoaded } from './table-semantics'
 import type { DrilldownContext } from './context'
 
 export default function useMetricsCatalog(ctx: DrilldownContext, search: Ref<string>, sort: Ref<MetricsSortOption>) {
@@ -34,6 +35,8 @@ export default function useMetricsCatalog(ctx: DrilldownContext, search: Ref<str
       })
       poolNames.value = result.names
       truncated.value = result.truncated
+      // Drilldown: start full semantics dump early; getMetricTableSemantics awaits the same load.
+      ensureMetricSemanticsLoaded().catch(() => undefined)
     } catch (err) {
       console.error('Failed to load metric catalog:', err)
       poolNames.value = []
