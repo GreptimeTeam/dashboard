@@ -11,7 +11,12 @@
         span.logs-tab-chart-title {{ t('drilldown.logs.volumeChartTitle') }}
         icon-down.logs-tab-chart-caret(:class="{ 'is-collapsed': !chartExpanded }")
       .logs-tab-chart-body(v-show="chartExpanded")
-        LogsVolumeMiniChart(sync-severity-filter :lazy="false" :height="mainChartHeight")
+        LogsVolumeMiniChart(
+          sync-severity-filter
+          legend="bottom"
+          :lazy="false"
+          :height="mainChartHeight"
+        )
     .logs-tab-table
       LogsMainView(:show-volume="false" :fill-height="true")
   DetailLabels(v-if="logsTab === 'labels'")
@@ -100,17 +105,20 @@
   }
 
   .logs-tab-chart-body {
-    padding: 0;
+    padding: var(--gpt-gap-md) var(--gpt-page-padding-x) var(--gpt-gap-lg);
   }
 
-  // Full-bleed volume plot — no inset card radius.
+  .logs-tab-chart-body :deep(.logs-volume-mini-chart) {
+    gap: var(--gpt-gap-md);
+  }
+
   .logs-tab-chart-body :deep(.panel-chart),
   .logs-tab-chart-body :deep(.panel-state) {
-    border-radius: 0;
+    border-radius: var(--gpt-radius-md);
   }
 
-  .logs-tab-chart-body :deep(.panel-state) {
-    margin: 0 var(--gpt-page-padding-x) var(--gpt-gap-md);
+  .logs-tab-chart-body :deep(.panel-footer) {
+    margin-top: 0;
   }
 
   .logs-tab-table {
