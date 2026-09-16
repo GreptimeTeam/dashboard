@@ -110,7 +110,7 @@
     columnMode,
     columnModeKey,
     displayedColumnsFor,
-    ensureDisplayedColumns,
+    revealOfferedColumns,
   } = useLogsTablePrefs()
 
   const { loading, loadingMore, tableColumns, tableData, tsColumn, load, loadMore } = useDrilldownLogsTable(ctx)
@@ -155,7 +155,7 @@
   watch(
     tableColumns,
     (cols) => {
-      ensureDisplayedColumns(
+      revealOfferedColumns(
         logsTableName.value,
         cols.map((column) => column.name)
       )

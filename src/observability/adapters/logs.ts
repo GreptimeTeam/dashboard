@@ -5,7 +5,6 @@ import type { DrilldownContext } from '../context'
 import { loadDrilldownSettings } from '../drilldown-settings'
 import { filtersToSqlWhere } from '../filters'
 import {
-  defaultLogSelectColumns,
   discoverFieldColumns,
   discoverLabelColumns,
   discoverLogsContainsColumns,
@@ -364,14 +363,8 @@ export async function fetchLogsRows(
     return empty
   }
 
-  const selectCols = defaultLogSelectColumns(fieldMap).filter(Boolean)
-  if (!selectCols.length) {
-    return empty
-  }
-  // Drop role columns that disappeared after a table switch (defensive).
   const schema = await loadSchema(tableName)
-  const schemaNames = new Set(schema.map((column) => column.name))
-  const safeSelectCols = selectCols.filter((name) => schemaNames.has(name))
+  const safeSelectCols = schema.map((column) => column.name).filter(Boolean)
   if (!safeSelectCols.length) {
     return empty
   }

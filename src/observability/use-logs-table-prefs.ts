@@ -11,6 +11,8 @@ export default function useLogsTablePrefs() {
   const mergeColumn = useStorage('logquery-merge-column', true)
   const showKeys = useStorage('logquery-show-keys', true)
   const displayedColumnsByTable = useStorage<Record<string, string[]>>('logquery-table-column-visible', {})
+  /** Columns already offered on this table. New query columns are shown; user hides stay hidden. */
+  const offeredColumnsByTable = useStorage<Record<string, string[]>>('logquery-table-column-offered', {})
   const compactRows = useStorage('query-table-compact-rows', false)
   /** Wrap is session-only in logquery — keep the same behavior. */
   const wrap = ref(false)
@@ -47,6 +49,32 @@ export default function useLogsTablePrefs() {
     }
   }
 
+  /**
+   * Drilldown queries every schema column. Show a column the first time this table offers it.
+   * Hides made after that stay hidden. Log query uses `ensureDisplayedColumns` instead.
+   */
+  function revealOfferedColumns(tableName: string | undefined, columnNames: string[]) {
+    if (!tableName || !columnNames.length) {
+      return
+    }
+    const offered = new Set(offeredColumnsByTable.value[tableName] || [])
+    const visible = new Set(displayedColumnsByTable.value[tableName] || [])
+    const firstOffer = offered.size === 0
+    columnNames.forEach((name) => {
+      if (firstOffer || !offered.has(name)) {
+        visible.add(name)
+      }
+    })
+    offeredColumnsByTable.value = {
+      ...offeredColumnsByTable.value,
+      [tableName]: [...columnNames],
+    }
+    displayedColumnsByTable.value = {
+      ...displayedColumnsByTable.value,
+      [tableName]: [...visible],
+    }
+  }
+
   onMounted(() => {
     if (localStorage.getItem('logquery-table-compact') === 'true' && !compactRows.value) {
       compactRows.value = true
@@ -65,5 +93,6 @@ export default function useLogsTablePrefs() {
     columnModeKey,
     displayedColumnsFor,
     ensureDisplayedColumns,
+    revealOfferedColumns,
   }
 }

@@ -511,14 +511,3 @@ export async function sampleJsonAttributeFieldKeys(
 export function resolveLogsTimeColumn(fieldMap: Record<string, string>): string | undefined {
   return fieldMap.time || undefined
 }
-
-export function defaultLogSelectColumns(fieldMap: Record<string, string>): string[] {
-  const cols = [
-    fieldMap.time,
-    fieldMap.severity,
-    fieldMap.body,
-    fieldMap.trace_id || fieldMap.traceId,
-    fieldMap.primaryGroupBy,
-  ]
-  return [...new Set(cols.filter(Boolean) as string[])]
-}
