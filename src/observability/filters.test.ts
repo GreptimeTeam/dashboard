@@ -59,6 +59,16 @@ describe('filters fieldMap SQL mapping', () => {
     expect(parts).toEqual([`json_get_string("log_attributes", '$."gen_ai.system"') = 'openai'`])
   })
 
+  it('filtersToSqlWhere treats unknown severity as null or empty', () => {
+    expect(
+      filtersToSqlWhere([{ key: 'level', op: '=', value: 'unknown' }], { level: 'level', severity: 'level' })
+    ).toEqual([`("level" IS NULL OR "level" = '')`])
+    const mixed = addFilter([{ key: 'level', op: '=', value: 'error' }], { key: 'level', op: '=', value: 'unknown' })
+    expect(filtersToSqlWhere(mixed, { level: 'level', severity: 'level' })).toEqual([
+      `("level" = 'error' OR ("level" IS NULL OR "level" = ''))`,
+    ])
+  })
+
   it('filtersToSqlWhere uses knownJsonColumns for custom Json containers', () => {
     const parts = filtersToSqlWhere([{ key: 'payload.region', op: '=', value: 'us' }], fieldMap, {
       jsonColumns: ['payload'],

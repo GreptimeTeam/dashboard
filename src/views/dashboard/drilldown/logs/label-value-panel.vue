@@ -35,16 +35,16 @@
 
     .panel-chart-col
       LogsVolumeMiniChart(
+        v-model:selected-levels="selectedLevels"
         :label-col="labelCol"
         :label-value="labelValue"
-        :color-index="colorIndex"
         :scroll-root="scrollRoot"
         :enabled="ctx.logsView.value !== 'detail'"
       )
 </template>
 
 <script setup lang="ts">
-  import { computed, onMounted, toRef, watch } from 'vue'
+  import { computed, onMounted, ref, toRef, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import LogsTable from '@/views/dashboard/logs/query/LogsTable.vue'
   import { useDrilldownContext } from '@/observability/context'
@@ -60,7 +60,6 @@
     labelCol: { type: String, required: true },
     labelValue: { type: String, required: true },
     logCount: { type: Number, required: true },
-    colorIndex: { type: Number, default: 0 },
     // HTMLElement | Ref | getter — forwarded to IntersectionObserver root
     scrollRoot: { type: [Object, Function], default: undefined },
   })
@@ -69,11 +68,13 @@
   const ctx = useDrilldownContext()
   const labelColRef = toRef(props, 'labelCol')
   const labelValueRef = toRef(props, 'labelValue')
+  const selectedLevels = ref<string[]>([])
 
   const { loading, loadingMore, tableColumns, tableData, tsColumn, displayedColumns, load, loadMore } =
     useDrilldownLogsTable(ctx, {
       labelCol: labelColRef,
       labelValue: labelValueRef,
+      levels: selectedLevels,
     })
 
   const titleText = computed(() => `${props.labelCol}="${props.labelValue}"`)
@@ -137,6 +138,7 @@
       ctx.rangeTime.value[1],
       ctx.logsView.value,
       ctx.fieldMap.value.logs.time,
+      selectedLevels.value,
       // Detail applies filters to panel preview; overview compose ignores them in SQL.
       ctx.logsView.value === 'detail' ? ctx.filters.value : null,
     ],
@@ -275,12 +277,13 @@
 
   .panel-chart-col {
     display: flex;
-    flex: 0 0 36%;
+    flex: 0 0 42%;
     flex-direction: column;
-    min-width: 180px;
-    max-width: 320px;
+    min-width: 280px;
+    max-width: 420px;
     min-height: 0;
     height: 100%;
+    padding: var(--gpt-gap-lg);
     border-left: 1px solid var(--gpt-border-default);
 
     :deep(.logs-volume-mini-chart) {

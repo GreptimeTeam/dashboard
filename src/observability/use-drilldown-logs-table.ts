@@ -13,6 +13,8 @@ export default function useDrilldownLogsTable(
   options: {
     labelCol?: Ref<string | undefined>
     labelValue?: Ref<string | undefined>
+    /** Panel-local legend selection. Empty shows every level. */
+    levels?: Ref<string[]>
     pageSize?: number
   } = {}
 ) {
@@ -55,6 +57,7 @@ export default function useDrilldownLogsTable(
       const rows = await fetchLogsRows(ctx, {
         labelCol: options.labelCol?.value,
         value: options.labelValue?.value,
+        levels: options.levels?.value,
         limit: pageSize,
       })
       tableColumns.value = rows.columns
@@ -86,6 +89,7 @@ export default function useDrilldownLogsTable(
       const rows = await fetchLogsRows(ctx, {
         labelCol: options.labelCol?.value,
         value: options.labelValue?.value,
+        levels: options.levels?.value,
         limit: pageSize,
         beforeTs,
         keyOffset: tableData.value.length,

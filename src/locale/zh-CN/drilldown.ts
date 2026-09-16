@@ -144,6 +144,8 @@ export default {
   'drilldown.logs.volumeChartTitle': '日志量',
   'drilldown.logs.volumeChartExpand': '展开日志量图表',
   'drilldown.logs.volumeChartCollapse': '收起日志量图表',
+  'drilldown.logs.legendName': '名称',
+  'drilldown.logs.legendTotal': '合计',
 
   'drilldown.traces.tableLabel': 'Traces 表',
   'drilldown.traces.tablePlaceholder': '选择 Traces 表',

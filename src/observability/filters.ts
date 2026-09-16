@@ -1,4 +1,6 @@
 import { parseJsonFieldChipKey, sqlJsonGetStringExpr } from './logs/json-field-keys'
+import { UNKNOWN_LOG_LEVEL, normalizeLogLevelName } from './logs/level-color'
+import { buildSeverityLevelsPredicate, isSeverityFilterColumn } from './logs/level-visibility'
 import type { DrilldownFilter, DrilldownFilterOp } from './types'
 
 const FILTER_OPS: DrilldownFilterOp[] = ['=', '!=', '=~', '!~']
@@ -328,7 +330,14 @@ export function filtersToSqlWhere(
     if (!column) {
       return
     }
-    const predicate = sqlPredicateForFilter(filter, column)
+    const values = splitFilterOrValues(filter)
+    const severityUnknown =
+      isSeverityFilterColumn(column, fieldMap) &&
+      (filter.op === '=' || filter.op === '=~') &&
+      values.some((value) => normalizeLogLevelName(value) === UNKNOWN_LOG_LEVEL)
+    const predicate = severityUnknown
+      ? buildSeverityLevelsPredicate(column, values)
+      : sqlPredicateForFilter(filter, column)
     if (predicate) {
       parts.push(predicate)
     }

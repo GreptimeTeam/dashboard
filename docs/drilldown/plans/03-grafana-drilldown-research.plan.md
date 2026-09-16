@@ -31,18 +31,36 @@ isProject: false
 
 | App | GitHub | 本机 |
 |-----|--------|------|
-| **Metrics Drilldown** | https://github.com/grafana/metrics-drilldown | `/tmp/metrics-drilldown`（=`/private/tmp/metrics-drilldown`，AI 下载；可能 sparse） |
-| **Logs Drilldown** | https://github.com/grafana/logs-drilldown | 未下载；需要时 clone 到 `/tmp/logs-drilldown` |
-| **Traces Drilldown** | https://github.com/grafana/traces-drilldown | 未下载 |
+| **Metrics Drilldown** | https://github.com/grafana/metrics-drilldown | `/tmp/metrics-drilldown`（=`/private/tmp/metrics-drilldown`，2026-09-16 shallow clone，`190d5bf`） |
+| **Logs Drilldown** | https://github.com/grafana/logs-drilldown | `/tmp/logs-drilldown`（=`/private/tmp/logs-drilldown`，2026-09-16 shallow clone，`b6c02f7`） |
+| **Traces Drilldown** | https://github.com/grafana/traces-drilldown | `/tmp/traces-drilldown`（=`/private/tmp/traces-drilldown`，2026-09-16 shallow clone，`7abaf3f`） |
+
+本机 Logs 关键文件示例：
+
+```bash
+cd /tmp/logs-drilldown
+# 每个 label value 的堆叠柱：sum by (detected_level) (count_over_time(...[$__auto]))
+src/Components/ServiceSelectionScene/ServiceSelectionScene.tsx
+src/services/panel.ts          # setLevelColorOverrides
+src/services/levels.ts         # LEVEL_COLORS
+src/services/labels.ts         # buildLabelsQuery
+```
 
 本机 Metrics 关键文件示例：
 
 ```bash
 cd /tmp/metrics-drilldown
-git show HEAD:src/AppDataTrail/DataTrail.tsx
-git show HEAD:src/MetricScene/RelatedLogs/OpenInLogsDrilldownButton.tsx
-git show HEAD:src/MetricScene/RelatedLogs/RelatedLogsOrchestrator.ts
-git show HEAD:src/Integrations/logs/labelsCrossReference.ts
+src/AppDataTrail/DataTrail.tsx
+src/MetricScene/RelatedLogs/OpenInLogsDrilldownButton.tsx
+src/MetricScene/RelatedLogs/RelatedLogsOrchestrator.ts
+src/Integrations/logs/labelsCrossReference.ts
+```
+
+本机 Traces 关键目录：
+
+```bash
+cd /tmp/traces-drilldown
+src/pages/Explore
 ```
 
 ### filter / timeRange 是否跨 M·L·T 共享？

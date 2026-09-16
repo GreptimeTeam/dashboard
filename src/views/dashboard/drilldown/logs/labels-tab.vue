@@ -41,12 +41,11 @@
             a-empty(v-if="!hasValues(label)" :description="t('drilldown.logs.noLabelValues')")
             .value-panels(v-else)
               LabelValuePanel(
-                v-for="(row, index) in valuesFor(label)"
+                v-for="row in valuesFor(label)"
                 :key="`${label}:${row.value}`"
                 :label-col="label"
                 :label-value="String(row.value)"
                 :log-count="Number(row.count) || 0"
-                :color-index="index"
                 :scroll-root="paneScrollRoot"
               )
 

@@ -114,5 +114,5 @@
 ## Grafana 参考
 
 - [Metrics Drilldown 文档](https://grafana.com/docs/grafana/latest/visualizations/simplified-exploration/metrics/)
-- [metrics-drilldown 源码](https://github.com/grafana/metrics-drilldown) — 本机：`/tmp/metrics-drilldown`（见 [../README.md](../README.md)「Grafana 上游源码」）
+- [metrics-drilldown 源码](https://github.com/grafana/metrics-drilldown) — 本机：`/tmp/metrics-drilldown`（shallow clone `190d5bf`，见 [../README.md](../README.md)「Grafana 上游源码」）
 - filter / time 共享规则：[../plans/03-grafana-drilldown-research.plan.md](../plans/03-grafana-drilldown-research.plan.md)

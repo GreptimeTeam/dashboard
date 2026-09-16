@@ -1,7 +1,7 @@
 <template lang="pug">
 .logs-main-view
   .logs-main-volume(v-if="showVolume")
-    LogsVolumeMiniChart(:lazy="false" :color-index="0")
+    LogsVolumeMiniChart(sync-severity-filter :lazy="false")
 
   .logs-results-toolbar
     .logs-results-toolbar-left

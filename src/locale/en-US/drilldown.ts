@@ -146,6 +146,8 @@ export default {
   'drilldown.logs.volumeChartTitle': 'Log volume',
   'drilldown.logs.volumeChartExpand': 'Expand log volume chart',
   'drilldown.logs.volumeChartCollapse': 'Collapse log volume chart',
+  'drilldown.logs.legendName': 'Name',
+  'drilldown.logs.legendTotal': 'Total',
 
   'drilldown.traces.tableLabel': 'Traces table',
   'drilldown.traces.tablePlaceholder': 'Select a traces table',

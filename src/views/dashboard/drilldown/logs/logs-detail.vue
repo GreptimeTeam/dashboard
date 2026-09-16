@@ -13,7 +13,7 @@
             span.logs-tab-chart-title {{ t('drilldown.logs.volumeChartTitle') }}
             icon-down.logs-tab-chart-caret(:class="{ 'is-collapsed': !chartExpanded }")
           .logs-tab-chart-body(v-show="chartExpanded")
-            LogsVolumeMiniChart(:lazy="false" :color-index="0" :height="mainChartHeight")
+            LogsVolumeMiniChart(sync-severity-filter :lazy="false" :height="mainChartHeight")
         .logs-tab-table
           LogsMainView(:show-volume="false" :fill-height="true")
     a-tab-pane(key="labels" destroy-on-hide :title="t('drilldown.logs.labelsTab')")

@@ -60,9 +60,11 @@ a-card.metrics-chart(:bordered="false")
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, watch, inject, nextTick } from 'vue'
+  import { ref, computed, inject, watch } from 'vue'
   import { useElementSize } from '@vueuse/core'
   import Chart from '@/components/raw-chart/index.vue'
+  import { legendSoloSelected } from '@/components/raw-chart/legend-solo'
+  import useChartLegendSolo from '@/components/raw-chart/use-chart-legend-solo'
   import TimeRangeSelect from '@/components/time-range-select/index.vue'
   import chartTheme from '@/components/chart/chartTheme.json'
   import { useDateTimeFormat } from '@/hooks'
@@ -202,17 +204,17 @@ a-card.metrics-chart(:bordered="false")
   })
 
   const showFullSeriesName = ref(false)
-  /** When set, only this series is shown (solo mode). Disables legend-hover dimming. */
-  const soloSeriesName = ref<string | null>(null)
 
   const chartKey = computed(() => {
     return `${query.value}-${step.value}-${showFullSeriesName.value}`
   })
 
-  // Reset solo mode whenever series names are recomputed (query/step/showFullSeriesName change),
-  // otherwise the stale soloSeriesName no longer matches any legend name and hides everything.
-  watch(chartKey, () => {
-    soloSeriesName.value = null
+  // Click a legend item to show only that series; click it again to show all.
+  // Selection stays in chartOption (`legend.selected`) so notMerge setOption does not wipe it.
+  const { soloSeriesName } = useChartLegendSolo({
+    getChart: () => chartRef.value,
+    enabled: () => hasData.value,
+    resetKey: () => chartKey.value,
   })
 
   const formatChartAxisTime = (value: number): string => {
@@ -246,42 +248,6 @@ a-card.metrics-chart(:bordered="false")
 
   /** Plot area fixed; legend height is additive below the grid. */
   const chartHeight = computed(() => GRAPH_HEIGHT + legendAreaHeight.value + LEGEND_TO_GRID_GAP)
-
-  // Attach legendselectchanged event to implement solo mode:
-  // clicking a legend item shows only that series and hides all others.
-  // The actual selection state is driven by `selected` map in chartOption (recomputed when soloSeriesName changes).
-  // While in solo mode, legend-hover dimming is disabled via emphasis.focus in chartOption.
-  // Attach legendselectchanged event to implement solo mode:
-  // clicking a legend item shows only that series and hides all others.
-  // The actual selection state is driven by `selected` map in chartOption (recomputed when soloSeriesName changes).
-  // While in solo mode, legend-hover dimming is disabled via emphasis.focus in chartOption.
-  // Watch chartKey so the handler is re-attached when the chart is recreated
-  // (e.g., when toggling showFullSeriesName, which changes :key on the Chart component).
-  watch(
-    [hasData, chartKey],
-    () => {
-      if (!hasData.value) return
-      nextTick(() => {
-        const chartComponent = chartRef.value
-        if (!chartComponent) return
-        const instance = chartComponent.getInstance()
-        if (!instance) return
-
-        const handler = (params: any) => {
-          const { name } = params
-          if (name === soloSeriesName.value) {
-            soloSeriesName.value = null
-          } else {
-            soloSeriesName.value = name
-          }
-        }
-
-        instance.off('legendselectchanged', handler)
-        instance.on('legendselectchanged', handler)
-      })
-    },
-    { immediate: true }
-  )
 
   const chartOption = computed<EChartsOption>(() => {
     if (!hasData.value) return {}
@@ -410,9 +376,7 @@ a-card.metrics-chart(:bordered="false")
       itemHeight: LEGEND_ITEM_HEIGHT,
       itemGap: 6,
       textStyle: legendTextStyle,
-      selected: soloSeriesName.value
-        ? Object.fromEntries(legendNames.map((n) => [n, n === soloSeriesName.value]))
-        : undefined,
+      selected: legendSoloSelected(legendNames, soloSeriesName.value),
     }
 
     return {

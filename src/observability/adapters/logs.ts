@@ -13,31 +13,28 @@ import {
   sampleJsonAttributeFieldKeys,
   type SchemaColumn,
 } from '../logs/field-map'
+import { normalizeLogLevelName, UNKNOWN_LOG_LEVEL } from '../logs/level-color'
+import { buildSeverityLevelsPredicate } from '../logs/level-visibility'
 import { escapeSqlString, quoteIdent } from '../logs/query-state'
+import { pivotLogVolumeRows, type LogVolumeSeries } from '../logs/volume-series'
+import { grafanaAutoIntervalSeconds } from '../logs/volume-step'
 
 const LABEL_VALUES_LIMIT = 20
 const LOGS_ROWS_LIMIT = 100
 
-function volumeIntervalSeconds(ctx: DrilldownContext): number {
-  if (ctx.time.value > 0) {
-    const minutes = ctx.time.value
-    if (minutes <= 60) return 60
-    if (minutes <= 720) return 300
-    if (minutes <= 1440) return 900
-    return 3600
-  }
-  if (ctx.rangeTime.value.length === 2) {
-    const start = Number(ctx.rangeTime.value[0])
-    const end = Number(ctx.rangeTime.value[1])
+function volumeRangeMs(ctx: DrilldownContext): number {
+  const unixRange = ctx.unixTimeRange()
+  if (unixRange.length === 2) {
+    const start = Number(unixRange[0])
+    const end = Number(unixRange[1])
     if (Number.isFinite(start) && Number.isFinite(end) && end > start) {
-      const diffMinutes = (end - start) / 60
-      if (diffMinutes <= 60) return 60
-      if (diffMinutes <= 720) return 300
-      if (diffMinutes <= 1440) return 900
-      return 3600
+      return (end - start) * 1000
     }
   }
-  return 60
+  if (ctx.time.value > 0) {
+    return ctx.time.value * 60 * 1000
+  }
+  return 30 * 60 * 1000
 }
 
 function bucketToUnixSeconds(raw: unknown): number | null {
@@ -331,6 +328,11 @@ export async function fetchLogsRows(
     beforeTs?: unknown
     /** Offset for unique row keys when appending pages. */
     keyOffset?: number
+    /**
+     * Panel-local severity selection (overview legend click).
+     * Empty means no extra predicate. Detail uses context filters instead.
+     */
+    levels?: string[]
   }
 ): Promise<LogsRowsResult> {
   const tableName = ctx.logsTable.value
@@ -367,6 +369,13 @@ export async function fetchLogsRows(
   const keyOffset = options?.keyOffset ?? 0
 
   const whereParts = [where]
+  const severityCol = fieldMap.severity
+  if (options?.levels?.length && severityCol && (await tableHasColumn(tableName, severityCol))) {
+    const levelPredicate = buildSeverityLevelsPredicate(severityCol, options.levels)
+    if (levelPredicate) {
+      whereParts.push(levelPredicate)
+    }
+  }
   if (timeCol && options?.beforeTs !== undefined && options.beforeTs !== null && options.beforeTs !== '') {
     const cursor = options.beforeTs
     const literal =
@@ -422,13 +431,13 @@ LIMIT ${limit}`
 }
 
 /**
- * Volume timeseries for drilldown mini charts: `[unixSec, count]` ascending.
- * Uses the same date_bin step rules as CountChart, without that component's UI.
+ * Volume bars for drilldown: stacked `COUNT(*)` per `$__auto` bucket, grouped by severity.
+ * Step matches Grafana `count_over_time([$__auto])` (plot width, not a fixed 1m bin).
  */
 export async function fetchLogVolumeTimeseries(
   ctx: DrilldownContext,
-  options?: { labelCol?: string; value?: string; limit?: number }
-): Promise<Array<[number, number]>> {
+  options?: { labelCol?: string; value?: string; plotWidthPx?: number }
+): Promise<LogVolumeSeries[]> {
   const tableName = ctx.logsTable.value
   const fieldMap = ctx.fieldMap.value.logs
   const timeColumn = await resolveLogsTimeColumnFallback(tableName || '', fieldMap)
@@ -439,23 +448,30 @@ export async function fetchLogVolumeTimeseries(
     return []
   }
 
+  const severityCol = fieldMap.severity || ''
+  const breakdownIsSeverity = Boolean(severityCol && options?.labelCol === severityCol)
+  const groupByLevel = Boolean(severityCol) && !breakdownIsSeverity && (await tableHasColumn(tableName, severityCol))
   const extraEquals =
     options?.labelCol && options.value !== undefined ? [{ column: options.labelCol, value: options.value }] : undefined
-  const where = await buildLogsContextWhere(ctx, { extraEquals })
+  // Keep every level in the legend. Severity selection hides series and filters the sibling table.
+  const where = await buildLogsContextWhere(ctx, {
+    extraEquals,
+    excludeFilterKey: severityCol || undefined,
+  })
   if (!where) {
     return []
   }
 
-  const interval = volumeIntervalSeconds(ctx)
-  const limit = options?.limit ?? 200
+  const interval = grafanaAutoIntervalSeconds(volumeRangeMs(ctx), options?.plotWidthPx ?? 0)
+  const levelSelect = groupByLevel ? `,\n  ${quoteIdent(severityCol)} AS log_level` : ''
+  const levelGroup = groupByLevel ? ', log_level' : ''
   const sql = `SELECT
-  date_bin('${interval} seconds', ${quoteIdent(timeColumn)}) AS time_bucket,
+  date_bin('${interval} seconds', ${quoteIdent(timeColumn)}) AS time_bucket${levelSelect},
   COUNT(*) AS event_count
 FROM ${quoteIdent(tableName)}
 WHERE ${where}
-GROUP BY time_bucket
-ORDER BY time_bucket ASC
-LIMIT ${limit}`
+GROUP BY time_bucket${levelGroup}
+ORDER BY time_bucket ASC`
 
   try {
     const response = await editorApi.runSQL(sql)
@@ -463,15 +479,22 @@ LIMIT ${limit}`
     if (!Array.isArray(rows)) {
       return []
     }
-    return rows
-      .map((row): [number, number] | null => {
+    const parsed = rows
+      .map((row): { unix: number; level: string | null; count: number } | null => {
         const unix = bucketToUnixSeconds(row?.[0])
         if (unix == null) {
           return null
         }
-        return [unix, Number(row?.[1]) || 0]
+        let level: string | null = null
+        if (groupByLevel) {
+          level = row?.[1] == null ? null : String(row[1])
+        }
+        const countIndex = groupByLevel ? 2 : 1
+        return { unix, level, count: Number(row?.[countIndex]) || 0 }
       })
-      .filter((point): point is [number, number] => point != null)
+      .filter((row): row is { unix: number; level: string | null; count: number } => row != null)
+    const singleSeriesName = breakdownIsSeverity ? normalizeLogLevelName(options?.value) : UNKNOWN_LOG_LEVEL
+    return pivotLogVolumeRows(parsed, { groupByLevel, singleSeriesName })
   } catch (error) {
     console.error('Failed to fetch log volume timeseries:', error)
     return []
