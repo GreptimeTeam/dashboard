@@ -14,6 +14,7 @@
         ) {{ item.label }}
   .shared-context
     DrilldownFilterBar
+    LevelFilter(v-if="signal === 'logs'")
     a-space
       TimeRangeSelect(
         v-model:time-length="time"
@@ -39,6 +40,7 @@
   import TimeRangeSelect from '@/components/time-range-select/index.vue'
   import { useDrilldownContext } from '@/observability/context'
   import type { DrilldownSignal } from '@/observability/types'
+  import LevelFilter from '../logs/level-filter.vue'
   import DrilldownFilterBar from './filter-bar.vue'
 
   const { t } = useI18n()

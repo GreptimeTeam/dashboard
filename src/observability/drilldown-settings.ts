@@ -12,13 +12,13 @@ export interface LogsFieldMapSettings {
 export interface LogsDrilldownSettings {
   table?: string
   fieldMap?: LogsFieldMapSettings
-  /** TAG columns always offered in Labels picker. */
+  /** Columns always offered in Add label. */
   labelInclude?: string[]
-  /** TAG columns hidden from Labels picker (default includes trace_id). */
+  /** Columns hidden from Add label. */
   labelExclude?: string[]
-  /** FIELD columns always offered in Fields picker. */
+  /** Kept so old configs still load. Not a user-facing Field picker. */
   fieldInclude?: string[]
-  /** FIELD columns hidden from Fields picker. */
+  /** Kept so old configs still load. Not a user-facing Field picker. */
   fieldExclude?: string[]
 }
 

@@ -1,27 +1,23 @@
 <template lang="pug">
 .logs-detail(ref="detailScrollRef")
-  a-tabs.logs-detail-tabs.panel-tabs(v-model:active-key="activeTab" lazy-load)
-    a-tab-pane(key="logs" :title="t('drilldown.logs.logsTab')")
-      .logs-tab-pane
-        .logs-tab-chart
-          button.logs-tab-chart-header(
-            type="button"
-            :aria-expanded="chartExpanded"
-            :aria-label="chartExpanded ? t('drilldown.logs.volumeChartCollapse') : t('drilldown.logs.volumeChartExpand')"
-            @click="chartExpanded = !chartExpanded"
-          )
-            span.logs-tab-chart-title {{ t('drilldown.logs.volumeChartTitle') }}
-            icon-down.logs-tab-chart-caret(:class="{ 'is-collapsed': !chartExpanded }")
-          .logs-tab-chart-body(v-show="chartExpanded")
-            LogsVolumeMiniChart(sync-severity-filter :lazy="false" :height="mainChartHeight")
-        .logs-tab-table
-          LogsMainView(:show-volume="false" :fill-height="true")
-    a-tab-pane(key="labels" destroy-on-hide :title="t('drilldown.logs.labelsTab')")
-      .tab-placeholder
-        a-empty(:description="t('drilldown.logs.comingSoon')")
-    a-tab-pane(key="fields" destroy-on-hide :title="t('drilldown.logs.fieldsTab')")
-      .tab-placeholder
-        a-empty(:description="t('drilldown.logs.comingSoon')")
+  .logs-tab-pane(v-show="logsTab === 'logs'")
+    .logs-tab-chart
+      button.logs-tab-chart-header(
+        type="button"
+        :aria-expanded="chartExpanded"
+        :aria-label="chartExpanded ? t('drilldown.logs.volumeChartCollapse') : t('drilldown.logs.volumeChartExpand')"
+        @click="chartExpanded = !chartExpanded"
+      )
+        span.logs-tab-chart-title {{ t('drilldown.logs.volumeChartTitle') }}
+        icon-down.logs-tab-chart-caret(:class="{ 'is-collapsed': !chartExpanded }")
+      .logs-tab-chart-body(v-show="chartExpanded")
+        LogsVolumeMiniChart(sync-severity-filter :lazy="false" :height="mainChartHeight")
+    .logs-tab-table
+      LogsMainView(:show-volume="false" :fill-height="true")
+  .tab-placeholder(v-if="logsTab === 'labels'")
+    a-empty(:description="t('drilldown.logs.comingSoon')")
+  .tab-placeholder(v-if="logsTab === 'fields'")
+    a-empty(:description="t('drilldown.logs.comingSoon')")
 </template>
 
 <script setup lang="ts">
@@ -30,23 +26,15 @@
   import IconDown from '@arco-design/web-vue/es/icon/icon-down'
   import { useDrilldownContext } from '@/observability/context'
   import { BREAKDOWN_CHART_HEIGHT } from '@/observability/metrics/panel-stats'
-  import { isLogsDetailTab } from '@/observability/types'
-  import useDrilldownPanelTab from '@/observability/use-drilldown-panel-tab'
   import LogsMainView from './logs-main-view.vue'
   import LogsVolumeMiniChart from './logs-volume-mini-chart.vue'
 
   const { t } = useI18n()
-  const { logsTab, setLogsTab } = useDrilldownContext()
+  const { logsTab } = useDrilldownContext()
   const detailScrollRef = ref<HTMLElement | null>(null)
   /** Shorter than metrics MAIN_CHART_HEIGHT — volume over logs table. */
   const mainChartHeight = BREAKDOWN_CHART_HEIGHT
   const chartExpanded = ref(true)
-
-  const activeTab = useDrilldownPanelTab({
-    tab: logsTab,
-    setTab: setLogsTab,
-    isTab: isLogsDetailTab,
-  })
 </script>
 
 <style scoped lang="less">
@@ -56,21 +44,6 @@
     flex: 1;
     height: 100%;
     min-height: 0;
-    overflow: auto;
-  }
-
-  .logs-detail-tabs {
-    flex: 1;
-    min-height: 0;
-  }
-
-  // No horizontal padding — panel-tabs nav stays edge-to-edge.
-  .logs-detail-tabs :deep(.arco-tabs-content) {
-    padding: 0;
-  }
-
-  // Keep pane as the scrollport so height:100% children get a real bound.
-  .logs-detail-tabs :deep(.arco-tabs-content-item) {
     overflow: auto;
   }
 

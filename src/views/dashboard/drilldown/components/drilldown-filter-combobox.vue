@@ -1,8 +1,5 @@
 <template lang="pug">
-.filter-combobox(
-  :class="{ 'is-focused': focused, 'filter-combobox--fields': suggestMode === 'fields' }"
-  @mousedown="handleBoxMouseDown"
-)
+.filter-combobox(:class="{ 'is-focused': focused }" @mousedown="handleBoxMouseDown")
   .filter-combobox__row
     DrilldownFilterPill(
       v-for="item in visibleFilterItems"
@@ -67,8 +64,9 @@
     normalizeCommittedFilters,
     removeFilter as removeFilterFromList,
   } from '@/observability/filters'
-  import useDrilldownFilterOptions, { type FilterSuggestMode } from '@/observability/use-drilldown-filter-options'
+  import { isLogsBodyFilterKey } from '@/observability/logs/field-map'
   import type { DrilldownFilter, DrilldownFilterOp } from '@/observability/types'
+  import useDrilldownFilterOptions, { type FilterSuggestMode } from '@/observability/use-drilldown-filter-options'
   import DrilldownFilterPill from './drilldown-filter-pill.vue'
 
   type InputStage = 'key' | 'operator' | 'value'
@@ -114,15 +112,13 @@
 
   const isEditing = computed(() => editingIndex.value !== null)
 
+  const sqlSignal = computed(() => signal.value === 'logs' || signal.value === 'traces')
+
   const labels = computed(() => ({
-    wipPlaceholder:
-      props.suggestMode === 'fields'
-        ? t('drilldown.logs.fieldFilterPlaceholder')
-        : t('drilldown.filters.wipPlaceholder'),
-    keyPlaceholder:
-      props.suggestMode === 'fields'
-        ? t('drilldown.logs.fieldKeyPlaceholder')
-        : t('drilldown.filters.fieldPlaceholder'),
+    wipPlaceholder: sqlSignal.value ? t('drilldown.filters.wipPlaceholderKey') : t('drilldown.filters.wipPlaceholder'),
+    keyPlaceholder: sqlSignal.value
+      ? t('drilldown.filters.fieldPlaceholderKey')
+      : t('drilldown.filters.fieldPlaceholder'),
     operatorPlaceholder: t('drilldown.filters.operatorPlaceholder'),
     valuePlaceholder: t('drilldown.filters.valuePlaceholder'),
     noSuggestions: t('drilldown.filters.noSuggestions'),
@@ -354,9 +350,17 @@
     openSuggest()
   }
 
+  const defaultOpForKey = (key: string): DrilldownFilterOp => {
+    if (signal.value === 'logs' && isLogsBodyFilterKey(key, ctx.fieldMap.value.logs)) {
+      return '=~'
+    }
+    return '='
+  }
+
   const selectSuggestOption = (option: SuggestOption) => {
     if (stage.value === 'key') {
       draftKey.value = option.value
+      draftOp.value = defaultOpForKey(option.value)
       advanceToOperator()
       return
     }
@@ -379,6 +383,7 @@
         return false
       }
       draftKey.value = trimmed
+      draftOp.value = defaultOpForKey(trimmed)
       advanceToOperator()
       return true
     }
@@ -643,19 +648,6 @@
 
     &.is-focused {
       border-color: var(--gpt-main-dark);
-    }
-
-    // Detail Fields filter: quiet border — only top-bar label filter uses main-dark emphasis.
-    &--fields {
-      border-color: var(--color-border-2);
-
-      &:hover {
-        border-color: var(--color-border-3);
-      }
-
-      &.is-focused {
-        border-color: rgb(var(--primary-6));
-      }
     }
   }
 

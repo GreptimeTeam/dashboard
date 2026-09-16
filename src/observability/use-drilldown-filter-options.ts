@@ -110,7 +110,7 @@ export default function useDrilldownFilterOptions(
 
   /**
    * Whether a committed chip belongs in this combobox.
-   * Logs topbar (default): Labels only. Logs fields mode: Fields only. Level never.
+   * Logs: every filter key except severity (Level select owns that). Level never.
    */
   const isVisibleFilterKey = (key: string): boolean => {
     const trimmed = key.trim()
@@ -130,7 +130,7 @@ export default function useDrilldownFilterOptions(
         return labelKeys.value.includes(trimmed)
       }
 
-      // Topbar: label chips only (service aliases + discovered labels).
+      // Topbar: suggested keys, plus service aliases that resolve onto those keys.
       if (trimmed === 'service' || trimmed === 'primaryGroupBy') {
         return true
       }

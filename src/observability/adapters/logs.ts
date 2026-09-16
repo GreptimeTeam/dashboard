@@ -220,7 +220,7 @@ export async function listLabelKeys(ctx: DrilldownContext): Promise<string[]> {
   })
 }
 
-/** Fields Tab keys — L1 non-label scalars + L2 JSON attribute keys. */
+/** Non-groupable remainder plus JSON attribute keys. Not a user-facing Fields picker. */
 export async function listFieldKeys(ctx: DrilldownContext): Promise<string[]> {
   const tableName = ctx.logsTable.value
   if (!tableName) {

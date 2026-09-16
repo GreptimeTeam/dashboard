@@ -107,7 +107,7 @@ Grafana Metrics Drilldown 侧栏「Group by labels」依赖：
 | **Suggest 路由** | **按 `ctx.signal`**，不合并 Prom∪SQL。切信号清缓存并重拉。[`filter-options.ts`](../../../src/observability/adapters/filter-options.ts) |
 | **Metrics label** | Prom `GET /labels`；无 `__name__` 于 filters 时**不传** `match[]`（Greptime 会 400） |
 | **Metrics value** | **手输**；无 cross-metric Prom value API（value 阶段不展开 SQL suggest） |
-| **Logs label keys** | 与 Labels Tab 相同：`discoverLabelColumns` + `fieldMap` + `labelInclude` / `labelExclude`；**仅 label**，不含 Fields Tab |
+| **Logs filter keys** | 顶栏一个 Filter：可分组列（`discoverLabelColumns`）+ `fieldMap.body`。排除只看 fieldMap 角色和 JSON 容器，加上 settings `labelInclude` / `labelExclude`。没有单独的 Fields 输入框 |
 | **同 key 多值** | Include 合并为 **OR**（chip `=~"a\|b"` / Prom `=~` / SQL `IN`）；**异 key** 仍 **AND** |
 | **Logs overview** | **目录编排**：候选 panel **不按** label filters 收缩（仅 time+表）；Include 只更新 chips；**Show logs**（overview 页内）进详情 |
 | **Logs detail** | **应用查询**：全量 filters + 自动重查；Back 回 overview **保留** chips |

@@ -69,6 +69,18 @@ describe('filters fieldMap SQL mapping', () => {
     ])
   })
 
+  it('filtersToSqlWhere contains-matches the resolved body column on =~', () => {
+    expect(filtersToSqlWhere([{ key: 'body', op: '=~', value: 'timeout' }], { body: 'message' })).toEqual([
+      `"message" LIKE '%timeout%' ESCAPE '\\'`,
+    ])
+    expect(
+      filtersToSqlWhere([{ key: 'note', op: '=~', value: 'timeout' }], { note: 'message', body: 'payload_text' })
+    ).toEqual([`"message" ~ 'timeout'`])
+    expect(filtersToSqlWhere([{ key: 'body', op: '=', value: 'exact' }], { body: 'message' })).toEqual([
+      `"message" = 'exact'`,
+    ])
+  })
+
   it('filtersToSqlWhere uses knownJsonColumns for custom Json containers', () => {
     const parts = filtersToSqlWhere([{ key: 'payload.region', op: '=', value: 'us' }], fieldMap, {
       jsonColumns: ['payload'],

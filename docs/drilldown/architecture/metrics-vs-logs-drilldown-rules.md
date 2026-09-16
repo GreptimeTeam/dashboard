@@ -47,8 +47,8 @@ type DrilldownContext = {
 | **R-FLT-4** | Metrics：`__name__` 仅用于 **缩窄指标列表**，**不**写入 PromQL matcher（Grafana #235） |
 | **R-FLT-5** | Logs/Metrics 跨信号：同一 filter chip → Prom `match[]` **与** SQL WHERE **并行生效** |
 | **R-FLT-6** | 顶栏 filter UI：**Grafana combobox**（pill + 分阶段 suggest）；Metrics value **手输** |
-| **R-FLT-7** | Suggest **按 `ctx.signal`**：Metrics → Prom `/labels`；Logs/Traces → `discoverLabelColumns` + settings（label only）。Logs value → SQL `DISTINCT`；切信号清缓存 |
-| **R-FLT-8** | 顶栏只做 **label value（L2）**，不进 Fields Tab；Logs keys 尊重 `labelInclude` / `labelExclude` / `fieldMap` |
+| **R-FLT-7** | Suggest **按 `ctx.signal`**：Metrics → Prom `/labels`，placeholder `+ label = value`；Logs/Traces → SQL 列，placeholder `+ key = value`。Logs keys = 可分组列 + `fieldMap.body`。可分组列 value → SQL `DISTINCT`；`fieldMap.body` 的 `=~` 是包含匹配且不 DISTINCT |
+| **R-FLT-8** | Logs 只有顶栏一个 Filter，不再有 Fields 输入框。Level 不进筛选框。keys 尊重 `labelInclude` / `labelExclude` 和 fieldMap 角色（`body` / `time` / `severity`），不按列名白名单 |
 | **R-BRK-1** | Breakdown label 卡 `series===1`（仅 1 个 value）→ **无** Select / **无** Add to filter（与 Grafana 对齐；Add to filter 仅在 value 卡） |
 
 **公共模块**：`src/observability/context.ts`（filters CRUD）、`src/observability/filters.ts`（`addFilter` / `removeFilter` / `filtersToPromMatch` / `filtersToSqlWhere`）
@@ -194,13 +194,13 @@ type DrilldownContext = {
 
 | 概念 | Greptime 来源 | Tab |
 |------|---------------|-----|
-| **Labels** | `semantic_type=TAG` + settings | Labels Tab |
-| **Fields** | 标量 FIELD 列 + JSON keys + body 解析 | Fields Tab |
+| **Add label** | 可分组字符串/TAG 列，排除 `fieldMap.body` / `time` / `severity` 和 JSON 容器 | Labels Tab（名字仍是 Add label，不是第二个筛选器） |
+| **筛选** | 可分组列 + `fieldMap.body`（包含匹配） | 顶栏一个 Filter |
 
 | 规则 | 内容 |
 |------|------|
-| **L-LBL-1** | Labels breakdown：`GROUP BY` TAG 列 + volume 图（Count 模式） |
-| **L-FLD-1** | Fields 发现：L0 settings → L1 schema 标量 → L2 JSON 采样 → L3 body 解析 |
+| **L-LBL-1** | Add label breakdown：可分组字符串/TAG 列 `GROUP BY` + volume 图（Count 模式） |
+| **L-FLD-1** | 详情 Fields tab 仍是 coming soon，不是 Loki detected fields，也不是第二个筛选器。`fieldInclude` / `fieldExclude` 只为旧配置保留 |
 | **L-FLD-2** | 字符串 field 图 = **各 value 的 COUNT 时序**；数值 field = **AVG 时序** |
 | **L-FLD-3** | 高基数（distinct > 500 或 trace_id 类）→ 隐藏 value breakdown |
 

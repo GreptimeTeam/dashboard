@@ -126,7 +126,7 @@
     white-space: nowrap;
   }
 
-  // Match Fields combobox: medium control height + same width floor.
+  // Match top-bar controls: medium height + fixed width so the bar does not jump.
   .level-filter-select {
     width: 200px;
     min-width: 200px;

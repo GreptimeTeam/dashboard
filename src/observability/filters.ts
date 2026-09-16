@@ -28,6 +28,21 @@ function escapeSqlString(value: string): string {
   return value.replace(/'/g, "''")
 }
 
+function escapeSqlLike(value: string): string {
+  return escapeSqlString(value).replace(/[%_\\]/g, '\\$&')
+}
+
+function sqlContainsPredicate(left: string, values: string[], negate: boolean): string {
+  const clauses = values.map((value) => {
+    const pattern = `%${escapeSqlLike(value)}%`
+    return negate ? `${left} NOT LIKE '${pattern}' ESCAPE '\\'` : `${left} LIKE '${pattern}' ESCAPE '\\'`
+  })
+  if (clauses.length === 1) {
+    return clauses[0]
+  }
+  return `(${clauses.join(negate ? ' AND ' : ' OR ')})`
+}
+
 /** Split a filter value into OR alternatives (`=` single; `=~` / `!~` on `|`). */
 export function splitFilterOrValues(filter: DrilldownFilter): string[] {
   if (filter.op === '=~' || filter.op === '!~') {
@@ -331,13 +346,20 @@ export function filtersToSqlWhere(
       return
     }
     const values = splitFilterOrValues(filter)
+    const bodyContains = column === fieldMap.body?.trim() && (filter.op === '=~' || filter.op === '!~')
     const severityUnknown =
+      !bodyContains &&
       isSeverityFilterColumn(column, fieldMap) &&
       (filter.op === '=' || filter.op === '=~') &&
       values.some((value) => normalizeLogLevelName(value) === UNKNOWN_LOG_LEVEL)
-    const predicate = severityUnknown
-      ? buildSeverityLevelsPredicate(column, values)
-      : sqlPredicateForFilter(filter, column)
+    let predicate: string | undefined
+    if (bodyContains) {
+      predicate = sqlContainsPredicate(`"${column}"`, values, filter.op === '!~')
+    } else if (severityUnknown) {
+      predicate = buildSeverityLevelsPredicate(column, values)
+    } else {
+      predicate = sqlPredicateForFilter(filter, column)
+    }
     if (predicate) {
       parts.push(predicate)
     }

@@ -144,51 +144,6 @@ export async function buildLogsFieldMap(
   return applySettingsOverrides(map, settings, columnNames)
 }
 
-/** Default columns excluded from Labels / Fields L1 (IDs, JSON containers, schema URLs). */
-export const DEFAULT_LABEL_EXCLUDE = [
-  'trace_id',
-  'span_id',
-  'trace_flags',
-  'log_attributes',
-  'resource_attributes',
-  'scope_attributes',
-  'logattributes',
-  'resourceattributes',
-  'scope_schema_url',
-  'resource_schema_url',
-]
-
-/**
- * Dimension-name whitelist for product Labels when columns are FIELD (not TAG).
- * Exact names; matching is case-insensitive. Prefix rules live in isLabelWhitelistName.
- */
-export const DEFAULT_LABEL_WHITELIST = [
-  'host',
-  'hostname',
-  'pod',
-  'pod_name',
-  'env',
-  'environment',
-  'cluster',
-  'namespace',
-  'ns',
-  'region',
-  'zone',
-  'node',
-  'container',
-  'container_name',
-  'deployment',
-  'deployment_name',
-  'level',
-  'severity',
-  'severity_text',
-  'service',
-  'service_name',
-  'scope_name',
-  'job',
-  'instance',
-]
-
 const JSON_ATTR_SAMPLE_LIMIT = 50
 
 function isStringLikeType(dataType: string | undefined): boolean {
@@ -217,48 +172,35 @@ function isJsonDataType(dataType: string | undefined): boolean {
   return (dataType || '').toLowerCase().includes('json')
 }
 
-/** Product Label dimension by name whitelist (exact + service/severity/k8s_/host prefixes). */
-export function isLabelWhitelistName(name: string): boolean {
-  const lower = name.toLowerCase()
-  if (DEFAULT_LABEL_WHITELIST.some((item) => item.toLowerCase() === lower)) {
-    return true
-  }
-  if (lower.startsWith('service')) return true
-  if (lower.startsWith('severity')) return true
-  if (lower.startsWith('k8s_')) return true
-  if (lower.startsWith('host')) return true
-  return false
+function addLabelExcludeSet(fieldMap: Record<string, string>, extraExclude?: string[]): Set<string> {
+  return new Set([...(extraExclude ?? []), fieldMap.time, fieldMap.body, fieldMap.severity].filter(Boolean) as string[])
 }
 
-function labelExcludeSet(fieldMap: Record<string, string>, extraExclude?: string[]): Set<string> {
-  return new Set(
-    [
-      ...DEFAULT_LABEL_EXCLUDE,
-      ...BODY_CANDIDATES,
-      ...(extraExclude ?? []),
-      fieldMap.time,
-      fieldMap.body,
-      fieldMap.trace_id,
-      fieldMap.traceId,
-      // Level filter owns severity — not a Label chip/suggest key.
-      fieldMap.severity,
-    ].filter(Boolean) as string[]
-  )
+/** True when the chip key resolves to `fieldMap.body` (role or physical name), not a hardcoded column name. */
+export function isLogsBodyFilterKey(key: string, fieldMap: Record<string, string>): boolean {
+  const body = fieldMap.body?.trim()
+  const trimmed = key.trim()
+  if (!body || !trimmed) {
+    return false
+  }
+  if (trimmed === body) {
+    return true
+  }
+  return fieldMap[trimmed]?.trim() === body
 }
 
 /**
- * Label / breakdown columns for Labels Tab + top-bar label filter.
- *
- * Product Labels ≠ Greptime FIELD and ≠ “every String column”.
- * Include: TAG + fieldMap dimension roles + dimension-name whitelist + labelInclude.
- * Exclude: time / body / traceId / severity (Level) / JSON containers.
+ * Add label columns: groupable strings (TAG or string-like), plus settings include.
+ * Exclude only resolved roles (`body` / `time` / `severity`) and JSON containers.
+ * Membership is not decided by column-name whitelist or prefix.
  */
 export function discoverLabelColumns(
   columns: SchemaColumn[],
   fieldMap: Record<string, string>,
   options?: { include?: string[]; exclude?: string[] }
 ): string[] {
-  const exclude = labelExcludeSet(fieldMap, options?.exclude)
+  const exclude = addLabelExcludeSet(fieldMap, options?.exclude)
+  const columnNames = new Set(columns.map((column) => column.name))
 
   const fromSchema = columns
     .filter((column) => {
@@ -266,28 +208,40 @@ export function discoverLabelColumns(
       if (column.semantic_type === 'TIMESTAMP') return false
       if (isJsonAttributeContainerName(column.name) || isJsonDataType(column.data_type)) return false
       if (column.semantic_type === 'TAG') return true
-      // FIELD / unknown: only whitelist names — never “all strings”.
-      if (column.semantic_type === 'FIELD' || !column.semantic_type) {
-        return isLabelWhitelistName(column.name)
-      }
-      return false
+      return isStringLikeType(column.data_type)
     })
     .map((column) => column.name)
 
-  // service / primaryGroupBy are Labels; severity is Level (excluded above).
   const roleKeys = [fieldMap.primaryGroupBy, fieldMap.service].filter(
-    (name): name is string => Boolean(name) && !exclude.has(name)
+    (name): name is string => Boolean(name) && columnNames.has(name) && !exclude.has(name)
   )
-  const include = (options?.include ?? []).filter((name) => name && !exclude.has(name))
+  const include = (options?.include ?? []).filter((name) => name && columnNames.has(name) && !exclude.has(name))
   const merged = new Set<string>([...fromSchema, ...roleKeys, ...include])
 
   return [...merged].sort((a, b) => a.localeCompare(b))
 }
 
 /**
- * Fields L1 — non-label scalars + fieldMap time/body/traceId (non-enumerable but filterable).
- * JSON containers stay out; L2 attribute keys come from sampleJsonAttributeFieldKeys.
- * Severity stays out (Level owns it).
+ * Top-bar filter keys: Add label columns, plus the body column (contains match, no DISTINCT).
+ * Severity stays out (Level select).
+ */
+export function discoverLogsFilterKeyColumns(
+  columns: SchemaColumn[],
+  fieldMap: Record<string, string>,
+  options?: { include?: string[]; exclude?: string[] }
+): string[] {
+  const keys = new Set(discoverLabelColumns(columns, fieldMap, options))
+  const body = fieldMap.body?.trim()
+  const columnNames = new Set(columns.map((column) => column.name))
+  if (body && columnNames.has(body) && body !== fieldMap.severity?.trim()) {
+    keys.add(body)
+  }
+  return [...keys].sort((a, b) => a.localeCompare(b))
+}
+
+/**
+ * Non-groupable remainder used by implementation (body contains, JSON attribute chips).
+ * Not a user-facing Fields list. Severity stays out (Level owns it).
  */
 export function discoverFieldColumns(
   columns: SchemaColumn[],
@@ -334,8 +288,9 @@ export function discoverFieldColumns(
 export type LogsFilterBucket = 'label' | 'field' | 'level'
 
 /**
- * Classify a filter chip key / table column into Label, Field, or Level.
- * time / body / traceId are Field (non-enumerable but filterable). No “neither”.
+ * Classify a filter chip key / table column.
+ * `field` is an implementation bucket (body, time, JSON attribute keys), not a Fields input.
+ * Level is `fieldMap.severity`. Groupable strings are `label`.
  */
 export function classifyLogsFilterKey(
   key: string,

@@ -6,6 +6,8 @@ import { buildPromMatchSelector, isGreptimePromMatchSelector, resolveFieldMapCol
 import {
   discoverFieldColumns,
   discoverLabelColumns,
+  discoverLogsFilterKeyColumns,
+  isLogsBodyFilterKey,
   listJsonAttributeColumns,
   parseJsonFieldChipKey,
   resolveLogsTimeColumn,
@@ -110,8 +112,7 @@ export async function fetchSqlLabelKeys(
 }
 
 /**
- * Field keys for logs top-bar suggest (Fields L1 scalars + L2 JSON attribute keys).
- * Same discovery as Fields Tab: discoverFieldColumns + JSON sampling + settings.
+ * Non-groupable columns plus JSON attribute keys. Kept for old fieldInclude/fieldExclude configs.
  */
 export async function fetchSqlFieldKeys(ctx: DrilldownContext, search = ''): Promise<string[]> {
   const tableName = sqlTableForSignal(ctx, 'logs')
@@ -137,9 +138,26 @@ export async function fetchSqlFieldKeys(ctx: DrilldownContext, search = ''): Pro
   }
 }
 
-/** Logs top-bar keys: label dims (TAG + string FIELD). Field filter is detail-toolbar only. */
+/** Logs top-bar keys: groupable columns plus `fieldMap.body`. Severity stays on the Level select. */
 export async function fetchLogsFilterKeyOptions(ctx: DrilldownContext, search = ''): Promise<string[]> {
-  return fetchSqlLabelKeys(ctx, 'logs', search)
+  const tableName = sqlTableForSignal(ctx, 'logs')
+  if (!tableName) {
+    return []
+  }
+
+  try {
+    const columns = (await editorApi.getTableSchema(tableName)) as SchemaColumn[]
+    const fieldMap = fieldMapForSignal(ctx, 'logs')
+    const settings = loadDrilldownSettings().logs
+    const keys = discoverLogsFilterKeyColumns(columns, fieldMap, {
+      include: settings?.labelInclude,
+      exclude: settings?.labelExclude,
+    })
+    return filterOptions(filterLabelKeys(keys), search)
+  } catch (error) {
+    console.error('Failed to load logs filter keys:', error)
+    return []
+  }
 }
 
 export async function fetchPromLabelKeys(ctx: DrilldownContext, search = ''): Promise<string[]> {
@@ -259,6 +277,9 @@ export async function fetchSqlLabelValues(
   }
 
   const fieldMap = fieldMapForSignal(ctx, signal)
+  if (signal === 'logs' && isLogsBodyFilterKey(trimmedKey, fieldMap)) {
+    return []
+  }
   const labelKeys = options?.labelKeys ?? (await fetchSqlLabelKeys(ctx, signal, ''))
   let jsonColumns: string[] = []
   try {
@@ -378,6 +399,9 @@ export function canSuggestFilterValues(
   labelKeys: string[]
 ): boolean {
   const trimmed = fieldKey.trim()
+  if (isLogsBodyFilterKey(trimmed, fieldMap)) {
+    return false
+  }
   if (parseJsonFieldChipKey(trimmed)) {
     return true
   }

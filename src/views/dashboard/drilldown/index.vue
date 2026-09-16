@@ -50,9 +50,16 @@
         @update:visible="onLogsDrawerVisible"
       )
         template(#title)
-          .drawer-title.logs-detail-toolbar
-            LevelFilter
-            FieldFilter
+          nav.logs-drawer-tabs(role="tablist" aria-label="Logs detail")
+            button.logs-drawer-tab(
+              v-for="item in logsDetailTabs"
+              :key="item.value"
+              type="button"
+              role="tab"
+              :class="{ active: logsTab === item.value }"
+              :aria-selected="logsTab === item.value"
+              @click="setLogsTab(item.value)"
+            ) {{ item.label }}
         LogsDetail(v-if="logsDrawerVisible")
 
     .drilldown-body.new-layout.new-layout--workspace.drilldown-body--traces(v-else-if="signal === 'traces'")
@@ -88,6 +95,7 @@
   import { useI18n } from 'vue-i18n'
   import { useRoute, useRouter } from 'vue-router'
   import { useDrilldownContextProvider } from '@/observability/context'
+  import { LOGS_DETAIL_TABS } from '@/observability/types'
   import resolveMetricMeta from '@/observability/resolve-metric-meta'
   import useDrilldownUrlSync from '@/observability/use-drilldown-url-sync'
   import useDrilldownLogsInit from '@/observability/use-drilldown-logs-init'
@@ -98,8 +106,6 @@
   import MetricDetailActions from './metrics/metric-detail-actions.vue'
   import LogsOverview from './logs/logs-overview.vue'
   import LogsDetail from './logs/logs-detail.vue'
-  import LevelFilter from './logs/level-filter.vue'
-  import FieldFilter from './logs/field-filter.vue'
   import TracesHome from './traces/traces-home.vue'
   import TracesGantt from './traces/traces-gantt.vue'
 
@@ -116,7 +122,18 @@
   useDrilldownLogsInit(ctx)
   useDrilldownTracesInit(ctx)
 
-  const { signal } = ctx
+  const { signal, logsTab, setLogsTab } = ctx
+  const logsDetailTabLabels = {
+    logs: 'drilldown.logs.logsTab',
+    labels: 'drilldown.logs.labelsTab',
+    fields: 'drilldown.logs.fieldsTab',
+  } as const
+  const logsDetailTabs = computed(() =>
+    LOGS_DETAIL_TABS.map((value) => ({
+      value,
+      label: t(logsDetailTabLabels[value]),
+    }))
+  )
   const selectedMetric = computed(() => ctx.metric.value)
   const drawerVisible = computed(() => Boolean(selectedMetric.value))
   const logsDrawerVisible = computed(() => ctx.logsView.value === 'detail')
@@ -312,10 +329,41 @@
     gap: var(--gpt-gap-lg);
   }
 
-  .logs-detail-toolbar {
-    justify-content: flex-start;
-    flex-wrap: wrap;
-    gap: var(--gpt-gap-lg) var(--gpt-gap-2xl);
+  .logs-drawer-tabs {
+    display: flex;
+    align-items: stretch;
+    height: 100%;
+    min-width: 0;
+  }
+
+  .logs-drawer-tab {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    height: 100%;
+    padding: 0 var(--gpt-page-padding-x);
+    border: 0;
+    background: transparent;
+    color: var(--gpt-text-secondary);
+    font-family: inherit;
+    font-size: var(--gpt-font-base);
+    line-height: 1;
+    cursor: pointer;
+
+    &.active {
+      color: var(--brand-color);
+      font-weight: 600;
+    }
+
+    &.active::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      height: 2px;
+      background: var(--brand-color);
+    }
   }
 
   .drawer-title-text {
@@ -402,6 +450,23 @@
       .arco-icon-hover {
         font-size: var(--gpt-font-xl);
       }
+    }
+  }
+
+  // Logs detail: the tab row is the header; close sits on that same line.
+  .drilldown-body .logs-detail-drawer .arco-drawer-header {
+    align-items: stretch;
+    height: 37px;
+    padding: 0 var(--gpt-gap-md) 0 0;
+
+    .arco-drawer-title {
+      display: flex;
+      align-items: stretch;
+      height: 100%;
+    }
+
+    .arco-drawer-close-btn {
+      align-self: center;
     }
   }
 </style>

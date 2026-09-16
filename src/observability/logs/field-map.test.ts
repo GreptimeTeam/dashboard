@@ -5,6 +5,8 @@ import {
   classifyLogsFilterKey,
   discoverFieldColumns,
   discoverLabelColumns,
+  discoverLogsFilterKeyColumns,
+  isLogsBodyFilterKey,
   listJsonAttributeColumns,
   parseJsonFieldChipKey,
   sampleJsonAttributeFieldKeys,
@@ -20,7 +22,7 @@ vi.mock('@/api/editor', () => ({
 }))
 
 describe('discoverLabelColumns', () => {
-  it('includes whitelist FIELD dimensions and excludes non-whitelist strings', () => {
+  it('includes string columns and excludes only resolved body/time roles', () => {
     const columns: SchemaColumn[] = [
       { name: 'timestamp', data_type: 'TimestampMillisecond', semantic_type: 'TIMESTAMP' },
       { name: 'message', data_type: 'String', semantic_type: 'FIELD' },
@@ -37,10 +39,10 @@ describe('discoverLabelColumns', () => {
         time: 'timestamp',
         body: 'message',
       })
-    ).toEqual(['cluster', 'level', 'pod'])
+    ).toEqual(['cluster', 'file', 'level', 'pod', 'trace_id'])
   })
 
-  it('keeps TAG columns and settings include; does not treat all strings as labels', () => {
+  it('keeps TAG columns and other strings; settings include cannot revive an excluded role', () => {
     const columns: SchemaColumn[] = [
       { name: 'ts', data_type: 'TimestampNanosecond', semantic_type: 'TIMESTAMP' },
       { name: 'client', data_type: 'String', semantic_type: 'TAG' },
@@ -51,6 +53,26 @@ describe('discoverLabelColumns', () => {
     expect(
       discoverLabelColumns(columns, { time: 'ts', body: 'body', primaryGroupBy: 'client' }, { include: ['country'] })
     ).toEqual(['client', 'country'])
+  })
+
+  it('excludes the configured body column, not a hardcoded body name', () => {
+    const columns: SchemaColumn[] = [
+      { name: 'ts', data_type: 'TimestampNanosecond', semantic_type: 'TIMESTAMP' },
+      { name: 'message', data_type: 'String', semantic_type: 'FIELD' },
+      { name: 'payload_text', data_type: 'String', semantic_type: 'FIELD' },
+      { name: 'ip', data_type: 'String', semantic_type: 'FIELD' },
+      { name: 'extra', data_type: 'Json', semantic_type: 'FIELD' },
+    ]
+
+    expect(discoverLabelColumns(columns, { time: 'ts', body: 'payload_text' })).toEqual(['ip', 'message'])
+    expect(discoverLogsFilterKeyColumns(columns, { time: 'ts', body: 'payload_text' })).toEqual([
+      'ip',
+      'message',
+      'payload_text',
+    ])
+    expect(isLogsBodyFilterKey('body', { body: 'payload_text' })).toBe(true)
+    expect(isLogsBodyFilterKey('message', { body: 'payload_text', message: 'message' })).toBe(false)
+    expect(isLogsBodyFilterKey('payload_text', { body: 'payload_text', payload_text: 'payload_text' })).toBe(true)
   })
 
   it('never includes JSON attribute containers', () => {
@@ -99,7 +121,7 @@ describe('discoverFieldColumns', () => {
         service: 'service_name',
         traceId: 'trace_id',
       })
-    ).toEqual(['file', 'line_no', 'message', 'timestamp', 'trace_id'])
+    ).toEqual(['line_no', 'message', 'timestamp'])
   })
 
   it('does not overlap with discoverLabelColumns', () => {
@@ -122,8 +144,8 @@ describe('discoverFieldColumns', () => {
 
     const labels = discoverLabelColumns(columns, fieldMap)
     const fields = discoverFieldColumns(columns, fieldMap)
-    expect(labels).toEqual(['pod', 'service_name'])
-    expect(fields).toEqual(['body', 'file', 'line_no', 'ts'])
+    expect(labels).toEqual(['file', 'pod', 'service_name'])
+    expect(fields).toEqual(['body', 'line_no', 'ts'])
     expect(labels.filter((key) => fields.includes(key))).toEqual([])
   })
 })
@@ -156,8 +178,8 @@ describe('classifyLogsFilterKey', () => {
     expect(classifyLogsFilterKey('severity', columns, fieldMap)).toBe('level')
     expect(classifyLogsFilterKey('ts', columns, fieldMap)).toBe('field')
     expect(classifyLogsFilterKey('body', columns, fieldMap)).toBe('field')
-    expect(classifyLogsFilterKey('trace_id', columns, fieldMap)).toBe('field')
-    expect(classifyLogsFilterKey('file', columns, fieldMap)).toBe('field')
+    expect(classifyLogsFilterKey('trace_id', columns, fieldMap)).toBe('label')
+    expect(classifyLogsFilterKey('file', columns, fieldMap)).toBe('label')
   })
 
   it('maps JSON attribute chips to field', () => {
