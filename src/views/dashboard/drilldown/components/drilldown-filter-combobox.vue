@@ -64,7 +64,6 @@
     normalizeCommittedFilters,
     removeFilter as removeFilterFromList,
   } from '@/observability/filters'
-  import { isLogsBodyFilterKey } from '@/observability/logs/field-map'
   import type { DrilldownFilter, DrilldownFilterOp } from '@/observability/types'
   import useDrilldownFilterOptions, { type FilterSuggestMode } from '@/observability/use-drilldown-filter-options'
   import DrilldownFilterPill from './drilldown-filter-pill.vue'
@@ -91,6 +90,7 @@
     keysLoading,
     valuesLoading,
     keyOptions,
+    isContainsFilterKey,
     isSqlFieldKey,
     isVisibleFilterKey,
     loadKeys,
@@ -351,7 +351,7 @@
   }
 
   const defaultOpForKey = (key: string): DrilldownFilterOp => {
-    if (signal.value === 'logs' && isLogsBodyFilterKey(key, ctx.fieldMap.value.logs)) {
+    if (signal.value === 'logs' && isContainsFilterKey(key)) {
       return '=~'
     }
     return '='

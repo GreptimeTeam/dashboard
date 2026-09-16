@@ -321,7 +321,7 @@ function sqlPredicateForFilter(
 export function filtersToSqlWhere(
   filters: DrilldownFilter[],
   fieldMap: Record<string, string>,
-  options?: { excludeKey?: string; jsonColumns?: string[] }
+  options?: { excludeKey?: string; jsonColumns?: string[]; containsColumns?: string[] }
 ): string[] {
   const parts: string[] = []
   const jsonColumns = options?.jsonColumns ?? []
@@ -346,7 +346,10 @@ export function filtersToSqlWhere(
       return
     }
     const values = splitFilterOrValues(filter)
-    const bodyContains = column === fieldMap.body?.trim() && (filter.op === '=~' || filter.op === '!~')
+    const containsColumns = options?.containsColumns ?? []
+    const bodyContains =
+      (filter.op === '=~' || filter.op === '!~') &&
+      (column === fieldMap.body?.trim() || containsColumns.includes(column) || containsColumns.includes(filter.key))
     const severityUnknown =
       !bodyContains &&
       isSeverityFilterColumn(column, fieldMap) &&

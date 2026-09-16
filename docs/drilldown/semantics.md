@@ -61,7 +61,7 @@ FROM information_schema.table_semantics;
 | 列角色 TAG / FIELD / TIMESTAMP | `information_schema.columns`（或 DESC）的 **`semantic_type`** |
 | service / body / trace_id 等映射 | ① **OTel 常见列名**（`service_name`、`body`/`severity_text`、`trace_id`…）② Context **fieldMap**（settings 可覆盖） |
 | source / pipeline | `table_semantics`（可选加强） |
-| **筛选 vs Add label** | 不让用户区分 Label 和 Field。两边都是 SQL `WHERE`。筛选键 = 可分组字符串列 + `fieldMap.body`（`=~` 为包含匹配，不做 DISTINCT）。Add label = 可分组列（TAG 或字符串），包含 `fieldMap.severity`，只排除 `fieldMap.body` / `time` 和 JSON 容器，不按列名白名单。Level 仍是 `fieldMap.severity`，单独 select，不进顶栏筛选键。实现：[`logs/field-map.ts`](../../src/observability/logs/field-map.ts) |
+| **筛选 vs Add label** | 不让用户区分 Label 和 Field。两边都是 SQL `WHERE`。Add label 只认判定集合：`semantic_type=TAG`、`fieldMap.severity` / `service` / `primaryGroupBy`、`labelInclude`、以及 Loki 默认的 OTEL resource index-label 列名（点换成下划线，例如 `service_name`、`k8s_pod_name`）。`labelExclude` 优先。其余字符串列（如 `err`）不是 label。筛选键 = 这些 label（不含 severity）+ 非 label 字符串列。非 label 字符串列的 `=~` 是包含匹配，不做 DISTINCT。Level 仍是 `fieldMap.severity`，单独 select，不进顶栏筛选键。实现：[`logs/field-map.ts`](../../src/observability/logs/field-map.ts) |
 
 Related logs（从 Metrics）：不看 metric 名；要 `filters` + `logsTable` + fieldMap → SQL。
 

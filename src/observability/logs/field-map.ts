@@ -15,6 +15,33 @@ export type SchemaColumn = {
   semantic_type?: string
 }
 
+/**
+ * Loki's default OTLP resource attributes stored as index labels.
+ * Dots are underscores. Log attributes and scope attributes are not in this set.
+ * https://grafana.com/docs/loki/latest/send-data/otel/
+ */
+export const OTEL_LOG_INDEX_LABELS = [
+  'cloud_availability_zone',
+  'cloud_region',
+  'container_name',
+  'deployment_environment_name',
+  'k8s_cluster_name',
+  'k8s_container_name',
+  'k8s_cronjob_name',
+  'k8s_daemonset_name',
+  'k8s_deployment_name',
+  'k8s_job_name',
+  'k8s_namespace_name',
+  'k8s_pod_name',
+  'k8s_replicaset_name',
+  'k8s_statefulset_name',
+  'service_instance_id',
+  'service_name',
+  'service_namespace',
+] as const
+
+const OTEL_LOG_INDEX_LABEL_SET = new Set<string>(OTEL_LOG_INDEX_LABELS)
+
 const TIME_CANDIDATES = ['timestamp', 'ts', 'time', 'greptime_timestamp']
 const BODY_CANDIDATES = ['body', 'message', 'content', 'log_body']
 const SEVERITY_CANDIDATES = ['severity_text', 'severity', 'level']
@@ -189,10 +216,30 @@ export function isLogsBodyFilterKey(key: string, fieldMap: Record<string, string
   return fieldMap[trimmed]?.trim() === body
 }
 
+function isExcludedLabelColumn(column: SchemaColumn, exclude: Set<string>): boolean {
+  if (exclude.has(column.name)) return true
+  if (column.semantic_type === 'TIMESTAMP') return true
+  return isJsonAttributeContainerName(column.name) || isJsonDataType(column.data_type)
+}
+
+function isDeclaredLabelColumn(column: SchemaColumn, fieldMap: Record<string, string>, include: Set<string>): boolean {
+  if (column.semantic_type === 'TAG') return true
+  if (OTEL_LOG_INDEX_LABEL_SET.has(column.name)) return true
+  if (
+    column.name === fieldMap.severity ||
+    column.name === fieldMap.service ||
+    column.name === fieldMap.primaryGroupBy
+  ) {
+    return true
+  }
+  return include.has(column.name)
+}
+
 /**
- * Add label columns: groupable strings (TAG or string-like), plus settings include.
- * Includes the severity column (`fieldMap.severity`). Exclude only `body` / `time` and JSON containers.
- * Membership is not decided by column-name whitelist or prefix.
+ * Add label columns. A string column is a label only when the table or the OTEL/Loki
+ * index-label set says so: TAG, `severity` / `service` / `primaryGroupBy`, settings include,
+ * or a Loki default resource index-label name. Other strings (for example `err`) are not labels.
+ * Exclude `body` / `time`, JSON containers, and `labelExclude` (exclude wins over include).
  */
 export function discoverLabelColumns(
   columns: SchemaColumn[],
@@ -200,45 +247,81 @@ export function discoverLabelColumns(
   options?: { include?: string[]; exclude?: string[] }
 ): string[] {
   const exclude = addLabelExcludeSet(fieldMap, options?.exclude)
-  const columnNames = new Set(columns.map((column) => column.name))
+  const include = new Set((options?.include ?? []).filter(Boolean))
 
-  const fromSchema = columns
+  return columns
     .filter((column) => {
-      if (exclude.has(column.name)) return false
-      if (column.semantic_type === 'TIMESTAMP') return false
-      if (isJsonAttributeContainerName(column.name) || isJsonDataType(column.data_type)) return false
+      if (isExcludedLabelColumn(column, exclude)) return false
+      if (!isDeclaredLabelColumn(column, fieldMap, include)) return false
       if (column.semantic_type === 'TAG') return true
       return isStringLikeType(column.data_type)
     })
     .map((column) => column.name)
-
-  const roleKeys = [fieldMap.primaryGroupBy, fieldMap.service].filter(
-    (name): name is string => Boolean(name) && columnNames.has(name) && !exclude.has(name)
-  )
-  const include = (options?.include ?? []).filter((name) => name && columnNames.has(name) && !exclude.has(name))
-  const merged = new Set<string>([...fromSchema, ...roleKeys, ...include])
-
-  return [...merged].sort((a, b) => a.localeCompare(b))
+    .sort((a, b) => a.localeCompare(b))
 }
 
 /**
- * Top-bar filter keys: Add label columns, plus the body column (contains match, no DISTINCT).
- * Severity is a label, but the Level select owns that filter, so it is not a filter key.
+ * String columns that are not labels. Top-bar `=~` / `!~` on these is contains (`LIKE`), with no DISTINCT.
+ * Includes `fieldMap.body`. Severity stays a label, so it is not here.
+ */
+export function discoverLogsContainsColumns(
+  columns: SchemaColumn[],
+  fieldMap: Record<string, string>,
+  options?: { include?: string[]; exclude?: string[] }
+): string[] {
+  const labels = new Set(discoverLabelColumns(columns, fieldMap, options))
+  const severity = fieldMap.severity?.trim()
+  const time = fieldMap.time?.trim()
+
+  return columns
+    .filter((column) => {
+      if (labels.has(column.name)) return false
+      if (severity && column.name === severity) return false
+      if (time && column.name === time) return false
+      if (column.semantic_type === 'TIMESTAMP') return false
+      if (isJsonAttributeContainerName(column.name) || isJsonDataType(column.data_type)) return false
+      return isStringLikeType(column.data_type)
+    })
+    .map((column) => column.name)
+    .sort((a, b) => a.localeCompare(b))
+}
+
+/** True when `=~` / `!~` on this chip is a contains match (body role or a non-label string column). */
+export function isLogsContainsFilterKey(
+  key: string,
+  fieldMap: Record<string, string>,
+  containsColumns: string[] = []
+): boolean {
+  if (isLogsBodyFilterKey(key, fieldMap)) {
+    return true
+  }
+  const trimmed = key.trim()
+  if (!trimmed) {
+    return false
+  }
+  if (containsColumns.includes(trimmed)) {
+    return true
+  }
+  const mapped = fieldMap[trimmed]?.trim()
+  return Boolean(mapped && containsColumns.includes(mapped))
+}
+
+/**
+ * Top-bar filter keys: label columns except severity, plus contains columns (non-label strings, including body).
+ * Severity stays on the Level select.
  */
 export function discoverLogsFilterKeyColumns(
   columns: SchemaColumn[],
   fieldMap: Record<string, string>,
   options?: { include?: string[]; exclude?: string[] }
 ): string[] {
-  const keys = new Set(discoverLabelColumns(columns, fieldMap, options))
+  const keys = new Set([
+    ...discoverLabelColumns(columns, fieldMap, options),
+    ...discoverLogsContainsColumns(columns, fieldMap, options),
+  ])
   const severity = fieldMap.severity?.trim()
   if (severity) {
     keys.delete(severity)
-  }
-  const body = fieldMap.body?.trim()
-  const columnNames = new Set(columns.map((column) => column.name))
-  if (body && columnNames.has(body) && body !== severity) {
-    keys.add(body)
   }
   return [...keys].sort((a, b) => a.localeCompare(b))
 }
@@ -294,7 +377,7 @@ export type LogsFilterBucket = 'label' | 'field' | 'level'
 /**
  * Classify a filter chip key / table column.
  * `field` is an implementation bucket (body, time, JSON attribute keys), not a Fields input.
- * Level is `fieldMap.severity`. Groupable strings are `label`.
+ * Level is `fieldMap.severity`. Labels are the declared set (TAG, roles, settings include, OTEL index labels).
  */
 export function classifyLogsFilterKey(
   key: string,

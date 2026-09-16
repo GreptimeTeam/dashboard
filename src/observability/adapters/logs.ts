@@ -8,6 +8,7 @@ import {
   defaultLogSelectColumns,
   discoverFieldColumns,
   discoverLabelColumns,
+  discoverLogsContainsColumns,
   listJsonAttributeColumns,
   resolveLogsTimeColumn,
   sampleJsonAttributeFieldKeys,
@@ -125,10 +126,15 @@ export async function buildLogsContextWhere(
   const includeLabelFilters = options?.includeLabelFilters ?? ctx.logsView.value === 'detail'
   if (includeLabelFilters) {
     const columns = await loadSchema(tableName)
+    const settings = loadDrilldownSettings().logs
     whereParts.push(
       ...filtersToSqlWhere(ctx.filters.value, fieldMap, {
         excludeKey: options?.excludeFilterKey,
         jsonColumns: listJsonAttributeColumns(columns),
+        containsColumns: discoverLogsContainsColumns(columns, fieldMap, {
+          include: settings.labelInclude,
+          exclude: settings.labelExclude,
+        }),
       })
     )
   }
@@ -148,8 +154,14 @@ export async function buildLogsWhere(ctx: DrilldownContext): Promise<string> {
   }
 
   const columns = await loadSchema(tableName)
-  const whereParts = filtersToSqlWhere(ctx.filters.value, ctx.fieldMap.value.logs, {
+  const fieldMap = ctx.fieldMap.value.logs
+  const settings = loadDrilldownSettings().logs
+  const whereParts = filtersToSqlWhere(ctx.filters.value, fieldMap, {
     jsonColumns: listJsonAttributeColumns(columns),
+    containsColumns: discoverLogsContainsColumns(columns, fieldMap, {
+      include: settings.labelInclude,
+      exclude: settings.labelExclude,
+    }),
   })
   if (!whereParts.length) {
     return ''

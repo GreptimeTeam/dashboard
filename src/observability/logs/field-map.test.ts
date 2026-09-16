@@ -5,8 +5,10 @@ import {
   classifyLogsFilterKey,
   discoverFieldColumns,
   discoverLabelColumns,
+  discoverLogsContainsColumns,
   discoverLogsFilterKeyColumns,
   isLogsBodyFilterKey,
+  isLogsContainsFilterKey,
   listJsonAttributeColumns,
   parseJsonFieldChipKey,
   sampleJsonAttributeFieldKeys,
@@ -22,7 +24,7 @@ vi.mock('@/api/editor', () => ({
 }))
 
 describe('discoverLabelColumns', () => {
-  it('includes string columns and excludes only resolved body/time roles', () => {
+  it('does not treat arbitrary string columns as labels', () => {
     const columns: SchemaColumn[] = [
       { name: 'timestamp', data_type: 'TimestampMillisecond', semantic_type: 'TIMESTAMP' },
       { name: 'message', data_type: 'String', semantic_type: 'FIELD' },
@@ -39,7 +41,13 @@ describe('discoverLabelColumns', () => {
         time: 'timestamp',
         body: 'message',
       })
-    ).toEqual(['cluster', 'file', 'level', 'pod', 'trace_id'])
+    ).toEqual([])
+    expect(
+      discoverLogsFilterKeyColumns(columns, {
+        time: 'timestamp',
+        body: 'message',
+      })
+    ).toEqual(['cluster', 'file', 'level', 'message', 'pod', 'trace_id'])
   })
 
   it('keeps TAG columns and other strings; settings include cannot revive an excluded role', () => {
@@ -64,7 +72,7 @@ describe('discoverLabelColumns', () => {
       { name: 'extra', data_type: 'Json', semantic_type: 'FIELD' },
     ]
 
-    expect(discoverLabelColumns(columns, { time: 'ts', body: 'payload_text' })).toEqual(['ip', 'message'])
+    expect(discoverLabelColumns(columns, { time: 'ts', body: 'payload_text' })).toEqual([])
     expect(discoverLogsFilterKeyColumns(columns, { time: 'ts', body: 'payload_text' })).toEqual([
       'ip',
       'message',
@@ -96,11 +104,45 @@ describe('discoverLabelColumns', () => {
       { name: 'pod', data_type: 'String', semantic_type: 'FIELD' },
     ]
 
-    expect(discoverLabelColumns(columns, { time: 'ts', body: 'body', severity: 'level' })).toEqual(['level', 'pod'])
+    expect(discoverLabelColumns(columns, { time: 'ts', body: 'body', severity: 'level' })).toEqual(['level'])
+    expect(discoverLogsContainsColumns(columns, { time: 'ts', body: 'body', severity: 'level' })).toEqual([
+      'body',
+      'pod',
+    ])
     expect(discoverLogsFilterKeyColumns(columns, { time: 'ts', body: 'body', severity: 'level' })).toEqual([
       'body',
       'pod',
     ])
+  })
+
+  it('keeps an OTEL index-label column even when it is a FIELD, and sends err to contains', () => {
+    const columns: SchemaColumn[] = [
+      { name: 'ts', data_type: 'TimestampNanosecond', semantic_type: 'TIMESTAMP' },
+      { name: 'body', data_type: 'String', semantic_type: 'FIELD' },
+      { name: 'k8s_pod_name', data_type: 'String', semantic_type: 'FIELD' },
+      { name: 'err', data_type: 'String', semantic_type: 'FIELD' },
+    ]
+    const fieldMap = { time: 'ts', body: 'body' }
+
+    expect(discoverLabelColumns(columns, fieldMap)).toEqual(['k8s_pod_name'])
+    expect(discoverLogsContainsColumns(columns, fieldMap)).toEqual(['body', 'err'])
+    expect(isLogsContainsFilterKey('err', fieldMap, ['body', 'err'])).toBe(true)
+    expect(isLogsContainsFilterKey('k8s_pod_name', fieldMap, ['body', 'err'])).toBe(false)
+  })
+
+  it('lets labelExclude beat an OTEL index-label name, and labelInclude promote err', () => {
+    const columns: SchemaColumn[] = [
+      { name: 'ts', data_type: 'TimestampNanosecond', semantic_type: 'TIMESTAMP' },
+      { name: 'k8s_pod_name', data_type: 'String', semantic_type: 'FIELD' },
+      { name: 'err', data_type: 'String', semantic_type: 'FIELD' },
+    ]
+
+    expect(discoverLabelColumns(columns, { time: 'ts' }, { exclude: ['k8s_pod_name'], include: ['err'] })).toEqual([
+      'err',
+    ])
+    expect(
+      discoverLogsContainsColumns(columns, { time: 'ts' }, { exclude: ['k8s_pod_name'], include: ['err'] })
+    ).toEqual(['k8s_pod_name'])
   })
 })
 
@@ -125,7 +167,7 @@ describe('discoverFieldColumns', () => {
         service: 'service_name',
         traceId: 'trace_id',
       })
-    ).toEqual(['line_no', 'message', 'timestamp'])
+    ).toEqual(['file', 'line_no', 'message', 'timestamp', 'trace_id'])
   })
 
   it('does not overlap with discoverLabelColumns', () => {
@@ -148,8 +190,8 @@ describe('discoverFieldColumns', () => {
 
     const labels = discoverLabelColumns(columns, fieldMap)
     const fields = discoverFieldColumns(columns, fieldMap)
-    expect(labels).toEqual(['file', 'level', 'pod', 'service_name'])
-    expect(fields).toEqual(['body', 'line_no', 'ts'])
+    expect(labels).toEqual(['level', 'service_name'])
+    expect(fields).toEqual(['body', 'file', 'line_no', 'pod', 'ts'])
     expect(labels.filter((key) => fields.includes(key))).toEqual([])
   })
 })
@@ -162,6 +204,7 @@ describe('classifyLogsFilterKey', () => {
     { name: 'service_name', data_type: 'String', semantic_type: 'TAG' },
     { name: 'pod', data_type: 'String', semantic_type: 'FIELD' },
     { name: 'file', data_type: 'String', semantic_type: 'FIELD' },
+    { name: 'k8s_namespace_name', data_type: 'String', semantic_type: 'FIELD' },
     { name: 'trace_id', data_type: 'String', semantic_type: 'FIELD' },
     { name: 'log_attributes', data_type: 'Json', semantic_type: 'FIELD' },
   ]
@@ -177,13 +220,14 @@ describe('classifyLogsFilterKey', () => {
   it('maps settings roles to label / field / level', () => {
     expect(classifyLogsFilterKey('service_name', columns, fieldMap)).toBe('label')
     expect(classifyLogsFilterKey('service', columns, fieldMap)).toBe('label')
-    expect(classifyLogsFilterKey('pod', columns, fieldMap)).toBe('label')
+    expect(classifyLogsFilterKey('pod', columns, fieldMap)).toBe('field')
     expect(classifyLogsFilterKey('level', columns, fieldMap)).toBe('level')
     expect(classifyLogsFilterKey('severity', columns, fieldMap)).toBe('level')
     expect(classifyLogsFilterKey('ts', columns, fieldMap)).toBe('field')
     expect(classifyLogsFilterKey('body', columns, fieldMap)).toBe('field')
-    expect(classifyLogsFilterKey('trace_id', columns, fieldMap)).toBe('label')
-    expect(classifyLogsFilterKey('file', columns, fieldMap)).toBe('label')
+    expect(classifyLogsFilterKey('trace_id', columns, fieldMap)).toBe('field')
+    expect(classifyLogsFilterKey('file', columns, fieldMap)).toBe('field')
+    expect(classifyLogsFilterKey('k8s_namespace_name', columns, fieldMap)).toBe('label')
   })
 
   it('maps JSON attribute chips to field', () => {

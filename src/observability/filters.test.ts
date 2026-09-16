@@ -79,6 +79,15 @@ describe('filters fieldMap SQL mapping', () => {
     expect(filtersToSqlWhere([{ key: 'body', op: '=', value: 'exact' }], { body: 'message' })).toEqual([
       `"message" = 'exact'`,
     ])
+    expect(
+      filtersToSqlWhere(
+        [{ key: 'err', op: '=~', value: 'timeout' }],
+        { err: 'err', body: 'body' },
+        {
+          containsColumns: ['err', 'body'],
+        }
+      )
+    ).toEqual([`"err" LIKE '%timeout%' ESCAPE '\\'`])
   })
 
   it('filtersToSqlWhere uses knownJsonColumns for custom Json containers', () => {

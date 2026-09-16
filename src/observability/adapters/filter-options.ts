@@ -6,8 +6,9 @@ import { buildPromMatchSelector, isGreptimePromMatchSelector, resolveFieldMapCol
 import {
   discoverFieldColumns,
   discoverLabelColumns,
+  discoverLogsContainsColumns,
   discoverLogsFilterKeyColumns,
-  isLogsBodyFilterKey,
+  isLogsContainsFilterKey,
   listJsonAttributeColumns,
   parseJsonFieldChipKey,
   resolveLogsTimeColumn,
@@ -138,7 +139,32 @@ export async function fetchSqlFieldKeys(ctx: DrilldownContext, search = ''): Pro
   }
 }
 
-/** Logs top-bar keys: groupable columns plus `fieldMap.body`. Severity stays on the Level select. */
+function logsLabelOptions(fieldMapSettings?: { labelInclude?: string[]; labelExclude?: string[] }) {
+  return {
+    include: fieldMapSettings?.labelInclude,
+    exclude: fieldMapSettings?.labelExclude,
+  }
+}
+
+/** Non-label string columns. `=~` is contains and value suggest stays empty. */
+export async function fetchLogsContainsKeyOptions(ctx: DrilldownContext): Promise<string[]> {
+  const tableName = sqlTableForSignal(ctx, 'logs')
+  if (!tableName) {
+    return []
+  }
+
+  try {
+    const columns = (await editorApi.getTableSchema(tableName)) as SchemaColumn[]
+    const fieldMap = fieldMapForSignal(ctx, 'logs')
+    const settings = loadDrilldownSettings().logs
+    return discoverLogsContainsColumns(columns, fieldMap, logsLabelOptions(settings))
+  } catch (error) {
+    console.error('Failed to load logs contains keys:', error)
+    return []
+  }
+}
+
+/** Logs top-bar keys: labels except severity, plus contains columns. Severity stays on the Level select. */
 export async function fetchLogsFilterKeyOptions(ctx: DrilldownContext, search = ''): Promise<string[]> {
   const tableName = sqlTableForSignal(ctx, 'logs')
   if (!tableName) {
@@ -277,16 +303,21 @@ export async function fetchSqlLabelValues(
   }
 
   const fieldMap = fieldMapForSignal(ctx, signal)
-  if (signal === 'logs' && isLogsBodyFilterKey(trimmedKey, fieldMap)) {
-    return []
-  }
   const labelKeys = options?.labelKeys ?? (await fetchSqlLabelKeys(ctx, signal, ''))
   let jsonColumns: string[] = []
+  let columns: SchemaColumn[] = []
   try {
-    const columns = (await editorApi.getTableSchema(tableName)) as SchemaColumn[]
+    columns = (await editorApi.getTableSchema(tableName)) as SchemaColumn[]
     jsonColumns = listJsonAttributeColumns(columns)
   } catch {
     // JSON column list is best-effort for value suggestions.
+  }
+  if (signal === 'logs') {
+    const settings = loadDrilldownSettings().logs
+    const containsColumns = discoverLogsContainsColumns(columns, fieldMap, logsLabelOptions(settings))
+    if (isLogsContainsFilterKey(trimmedKey, fieldMap, containsColumns)) {
+      return []
+    }
   }
 
   const columnName = resolveSqlSuggestColumn(trimmedKey, fieldMap, labelKeys, jsonColumns)
@@ -305,12 +336,7 @@ export async function fetchSqlLabelValues(
     } else {
       timeColumn = fieldMap.time
       if (!timeColumn) {
-        try {
-          const columns = await editorApi.getTableSchema(tableName)
-          timeColumn = columns.find((column) => column.semantic_type === 'TIMESTAMP')?.name
-        } catch {
-          // Time narrowing is best-effort for value suggestions.
-        }
+        timeColumn = columns.find((column) => column.semantic_type === 'TIMESTAMP')?.name
       }
     }
     if (timeColumn) {
@@ -396,10 +422,11 @@ export async function fetchFilterValueOptions(
 export function canSuggestFilterValues(
   fieldKey: string,
   fieldMap: Record<string, string>,
-  labelKeys: string[]
+  labelKeys: string[],
+  containsKeys: string[] = []
 ): boolean {
   const trimmed = fieldKey.trim()
-  if (isLogsBodyFilterKey(trimmed, fieldMap)) {
+  if (isLogsContainsFilterKey(trimmed, fieldMap, containsKeys)) {
     return false
   }
   if (parseJsonFieldChipKey(trimmed)) {

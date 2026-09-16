@@ -3,12 +3,14 @@ import {
   canSuggestFilterValues,
   fetchFilterKeyOptions,
   fetchFilterValueOptions,
+  fetchLogsContainsKeyOptions,
   fetchLogsFilterKeyOptions,
   fetchSqlFieldKeys,
   fetchSqlLabelKeys,
 } from './adapters/filter-options'
 import type { DrilldownContext } from './context'
 import { loadDrilldownSettings } from './drilldown-settings'
+import { isLogsContainsFilterKey } from './logs/field-map'
 
 export type FilterSuggestMode = 'default' | 'fields'
 
@@ -22,11 +24,13 @@ export default function useDrilldownFilterOptions(
   const keyOptions = ref<string[]>([])
   /** Cached suggest keys for the active SQL signal. Empty on metrics. */
   const labelKeys = ref<string[]>([])
+  const containsKeys = ref<string[]>([])
   const valueOptionsByKey = ref<Record<string, string[]>>({})
 
   const clearSuggestCache = () => {
     keyOptions.value = []
     labelKeys.value = []
+    containsKeys.value = []
     valueOptionsByKey.value = {}
   }
 
@@ -44,16 +48,20 @@ export default function useDrilldownFilterOptions(
     const signal = ctx.signal.value
     if (suggestMode === 'fields') {
       labelKeys.value = signal === 'logs' ? await loadSuggestKeys('') : []
+      containsKeys.value = signal === 'logs' ? await fetchLogsContainsKeyOptions(ctx) : []
       return
     }
     if (signal === 'metrics') {
       labelKeys.value = []
+      containsKeys.value = []
       return
     }
     if (signal === 'logs') {
       labelKeys.value = await fetchLogsFilterKeyOptions(ctx, '')
+      containsKeys.value = await fetchLogsContainsKeyOptions(ctx)
       return
     }
+    containsKeys.value = []
     labelKeys.value = await fetchSqlLabelKeys(ctx, 'traces', '')
   }
 
@@ -77,12 +85,12 @@ export default function useDrilldownFilterOptions(
       return false
     }
     if (suggestMode === 'fields') {
-      return canSuggestFilterValues(trimmed, fieldMapForActiveSql(), labelKeys.value)
+      return canSuggestFilterValues(trimmed, fieldMapForActiveSql(), labelKeys.value, containsKeys.value)
     }
     if (ctx.signal.value === 'metrics') {
       return false
     }
-    return canSuggestFilterValues(trimmed, fieldMapForActiveSql(), labelKeys.value)
+    return canSuggestFilterValues(trimmed, fieldMapForActiveSql(), labelKeys.value, containsKeys.value)
   }
 
   const loadValues = async (fieldKey: string, search = '') => {
@@ -183,6 +191,9 @@ export default function useDrilldownFilterOptions(
     valuesLoading,
     keyOptions,
     labelKeys,
+    containsKeys,
+    isContainsFilterKey: (fieldKey: string) =>
+      isLogsContainsFilterKey(fieldKey, fieldMapForActiveSql(), containsKeys.value),
     /** @deprecated alias — prefer checking labelKeys / isSqlFieldKey */
     sqlFieldKeys: labelKeys,
     isSqlFieldKey,
