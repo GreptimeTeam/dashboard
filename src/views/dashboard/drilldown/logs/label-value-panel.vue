@@ -4,12 +4,14 @@
     .panel-title(:title="titleText")
       span.panel-title-text {{ titleText }}
       span.panel-count {{ countLabel }}
-    a-button(
-      type="outline"
-      size="mini"
-      :class="{ 'is-included': isIncluded }"
-      @click="toggleInclude"
-    ) {{ includeLabel }}
+    .panel-actions
+      a-button(type="primary" size="mini" @click="openDetail") {{ t('drilldown.logs.showLogs') }}
+      a-button(
+        type="outline"
+        size="mini"
+        :class="{ 'is-included': isIncluded }"
+        @click="toggleInclude"
+      ) {{ includeLabel }}
 
   .panel-body
     .panel-logs-col
@@ -49,7 +51,7 @@
   import LogsTable from '@/views/dashboard/logs/query/LogsTable.vue'
   import { useDrilldownContext } from '@/observability/context'
   import { loadDrilldownSettings } from '@/observability/drilldown-settings'
-  import { filterIncludesValue } from '@/observability/filters'
+  import { addFilter, filterIncludesValue } from '@/observability/filters'
   import { chipKeyForLogsTableFilter } from '@/observability/logs/field-map'
   import useDrilldownLogsTable from '@/observability/use-drilldown-logs-table'
   import type { DrilldownFilterOp } from '@/observability/types'
@@ -84,16 +86,52 @@
     isIncluded.value ? t('drilldown.filters.included') : t('drilldown.filters.addToFilter')
   )
 
+  function ensureColumnMapped(column: string) {
+    if (!column || ctx.fieldMap.value.logs[column]) {
+      return
+    }
+    ctx.fieldMap.value = {
+      ...ctx.fieldMap.value,
+      logs: { ...ctx.fieldMap.value.logs, [column]: column },
+    }
+  }
+
+  function applySelectedLevels() {
+    const levels = selectedLevels.value
+    if (!levels.length) {
+      return
+    }
+    const column = ctx.fieldMap.value.logs.severity
+    if (!column) {
+      return
+    }
+    ensureColumnMapped(column)
+    let next = ctx.filters.value.filter((filter) => filter.key !== column && filter.key !== 'severity')
+    levels.forEach((value) => {
+      next = addFilter(next, { key: column, op: '=', value })
+    })
+    ctx.setFilters(next)
+  }
+
+  function openDetail() {
+    if (!props.labelCol) {
+      return
+    }
+    ensureColumnMapped(props.labelCol)
+    if (!isIncluded.value) {
+      ctx.toggleFilterValue({ key: props.labelCol, op: '=', value: props.labelValue })
+    }
+    applySelectedLevels()
+    const logsMap = ctx.fieldMap.value.logs
+    const groupKeys = new Set([logsMap.primaryGroupBy, logsMap.service, 'service'].filter(Boolean))
+    ctx.openLogsDetail(groupKeys.has(props.labelCol) ? props.labelValue : undefined)
+  }
+
   function toggleInclude() {
     if (!props.labelCol) {
       return
     }
-    if (!ctx.fieldMap.value.logs[props.labelCol]) {
-      ctx.fieldMap.value = {
-        ...ctx.fieldMap.value,
-        logs: { ...ctx.fieldMap.value.logs, [props.labelCol]: props.labelCol },
-      }
-    }
+    ensureColumnMapped(props.labelCol)
     ctx.toggleFilterValue({ key: props.labelCol, op: '=', value: props.labelValue })
   }
 
@@ -193,6 +231,13 @@
     flex-shrink: 0;
     font-size: var(--gpt-font-base);
     color: var(--color-text-3);
+  }
+
+  .panel-actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--gpt-gap-md);
   }
 
   .is-included {
