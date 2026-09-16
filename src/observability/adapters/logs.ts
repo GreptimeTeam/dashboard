@@ -16,7 +16,7 @@ import {
 import { normalizeLogLevelName, UNKNOWN_LOG_LEVEL } from '../logs/level-color'
 import { buildSeverityLevelsPredicate } from '../logs/level-visibility'
 import { escapeSqlString, quoteIdent } from '../logs/query-state'
-import { pivotLogVolumeRows, type LogVolumeSeries } from '../logs/volume-series'
+import { pivotLogVolumeByName, pivotLogVolumeRows, type LogVolumeSeries } from '../logs/volume-series'
 import { grafanaAutoIntervalSeconds } from '../logs/volume-step'
 
 const LABEL_VALUES_LIMIT = 20
@@ -497,6 +497,73 @@ ORDER BY time_bucket ASC`
     return pivotLogVolumeRows(parsed, { groupByLevel, singleSeriesName })
   } catch (error) {
     console.error('Failed to fetch log volume timeseries:', error)
+    return []
+  }
+}
+
+/**
+ * Volume for one Add label column: `COUNT(*)` per `$__auto` bucket, stacked by that column's top values.
+ * Does not split by severity. Top values come from `fetchLabelValues` (count in the current where, limit 20).
+ */
+export async function fetchLogVolumeByColumn(
+  ctx: DrilldownContext,
+  options: { column: string; plotWidthPx?: number }
+): Promise<LogVolumeSeries[]> {
+  const column = options.column.trim()
+  const tableName = ctx.logsTable.value
+  const fieldMap = ctx.fieldMap.value.logs
+  const timeColumn = await resolveLogsTimeColumnFallback(tableName || '', fieldMap)
+  if (!tableName || !timeColumn || !column) {
+    return []
+  }
+  if (!(await tableHasColumn(tableName, column))) {
+    return []
+  }
+
+  const values = await fetchLabelValues(ctx, column)
+  if (!values.length) {
+    return []
+  }
+
+  const where = await buildLogsContextWhere(ctx)
+  if (!where) {
+    return []
+  }
+
+  const inList = values.map((row) => `'${escapeSqlString(row.value)}'`).join(', ')
+  const interval = grafanaAutoIntervalSeconds(volumeRangeMs(ctx), options.plotWidthPx ?? 0)
+  const quoted = quoteIdent(column)
+  const sql = `SELECT
+  date_bin('${interval} seconds', ${quoteIdent(timeColumn)}) AS time_bucket,
+  ${quoted} AS series,
+  COUNT(*) AS event_count
+FROM ${quoteIdent(tableName)}
+WHERE ${where} AND ${quoted} IS NOT NULL AND ${quoted} IN (${inList})
+GROUP BY time_bucket, series
+ORDER BY time_bucket ASC`
+
+  try {
+    const response = await editorApi.runSQL(sql)
+    const rows = response?.output?.[0]?.records?.rows
+    if (!Array.isArray(rows)) {
+      return []
+    }
+    const parsed = rows
+      .map((row): { unix: number; name: string; count: number } | null => {
+        const unix = bucketToUnixSeconds(row?.[0])
+        if (unix == null) {
+          return null
+        }
+        return {
+          unix,
+          name: row?.[1] == null ? '' : String(row[1]),
+          count: Number(row?.[2]) || 0,
+        }
+      })
+      .filter((row): row is { unix: number; name: string; count: number } => row != null)
+    return pivotLogVolumeByName(parsed)
+  } catch (error) {
+    console.error('Failed to fetch column log volume:', error)
     return []
   }
 }

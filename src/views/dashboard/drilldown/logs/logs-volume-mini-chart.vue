@@ -1,5 +1,5 @@
 <template lang="pug">
-.logs-volume-mini-chart(ref="targetRef")
+.logs-volume-mini-chart(ref="targetRef" :class="{ 'is-legend-bottom': legend === 'bottom' }")
   a-spin.panel-loading(v-if="loading || !ready" :loading="true")
   .panel-state.panel-error(v-else-if="error") {{ t('drilldown.main.sparklineError') }}
   .panel-state(v-else-if="isEmpty") {{ t('drilldown.main.sparklineNoData') }}
@@ -14,7 +14,7 @@
         :time-window-ms="timeWindowMs"
         @time-range-change="onTimeRangeChange"
       )
-    .volume-legend(v-if="legendRows.length")
+    .volume-legend(v-if="legendRows.length && legend !== 'bottom'")
       .legend-header
         span {{ t('drilldown.logs.legendName') }}
         span.legend-total {{ t('drilldown.logs.legendTotal') }}
@@ -28,6 +28,18 @@
         span.legend-swatch(:style="{ background: row.color }")
         span.legend-name(:title="row.name") {{ row.name }}
         span.legend-total {{ row.total }}
+  .panel-footer(v-if="legend === 'bottom' && showChart && legendRows.length")
+    .query-legend-list
+      button.query-legend(
+        v-for="row in legendRows"
+        :key="row.name"
+        type="button"
+        :class="{ 'is-hidden': isLevelHidden(row.name) }"
+        :title="row.name"
+        @click="onLegendClick(row.name)"
+      )
+        span.legend-swatch(:style="{ background: row.color }")
+        span.legend-name {{ row.name }}
 </template>
 
 <script setup lang="ts">
@@ -39,9 +51,10 @@
   import { toggleLegendSolo } from '@/components/raw-chart/legend-solo'
   import { useAppStore } from '@/store'
   import { useDrilldownContext } from '@/observability/context'
-  import { fetchLogVolumeTimeseries } from '@/observability/adapters/logs'
+  import { fetchLogVolumeByColumn, fetchLogVolumeTimeseries } from '@/observability/adapters/logs'
   import { addFilter, splitFilterOrValues } from '@/observability/filters'
   import { formatLogCountShort, logLevelColor, normalizeLogLevelName } from '@/observability/logs/level-color'
+  import getSeriesColorByIndex from '@/observability/metrics/series-colors'
   import buildLogVolumeBarsOption from '@/observability/logs/volume-bars'
   import { LOG_VOLUME_FALLBACK_WIDTH_PX, LOG_VOLUME_LEGEND_WIDTH_PX } from '@/observability/logs/volume-step'
   import type { LogVolumeSeries } from '@/observability/logs/volume-series'
@@ -63,6 +76,9 @@
       selectedLevels?: string[]
       /** Detail: write the shared severity filter so the logs table and level dropdown stay in sync. */
       syncSeverityFilter?: boolean
+      /** `column` stacks the column's top values. Default stacks severity. */
+      breakdown?: 'severity' | 'column'
+      legend?: 'side' | 'bottom'
     }>(),
     {
       height: BREAKDOWN_CHART_HEIGHT,
@@ -70,6 +86,8 @@
       enabled: true,
       selectedLevels: () => [],
       syncSeverityFilter: false,
+      breakdown: 'severity',
+      legend: 'side',
     }
   )
 
@@ -88,6 +106,7 @@
   const error = ref<string | null>(null)
   const chartOption = ref<EChartsOption | null>(null)
   const seriesList = ref<LogVolumeSeries[]>([])
+  const columnSolo = ref<string | null>(null)
   const isEmpty = ref(false)
   const containerWidth = ref(0)
   const plotWidth = ref(0)
@@ -120,19 +139,30 @@
     if (containerWidth.value <= 0) {
       return LOG_VOLUME_FALLBACK_WIDTH_PX
     }
+    if (props.legend === 'bottom') {
+      return containerWidth.value
+    }
     return Math.max(80, containerWidth.value - LOG_VOLUME_LEGEND_WIDTH_PX)
   })
   const widthBucket = computed(() => Math.round(plotWidthPx.value / 16) * 16)
   const chartRenderKey = computed(
     () =>
-      `${props.labelCol ?? ''}:${props.labelValue ?? ''}:${ctx.refreshKey.value}:${
+      `${props.breakdown}:${props.labelCol ?? ''}:${props.labelValue ?? ''}:${ctx.refreshKey.value}:${
         ctx.time.value
       }:${ctx.rangeTime.value.join(',')}:${widthBucket.value}`
   )
+  function seriesColor(name: string): string {
+    if (props.breakdown !== 'column') {
+      return logLevelColor(name, isDark.value)
+    }
+    const index = seriesList.value.findIndex((series) => series.name === name)
+    return getSeriesColorByIndex(Math.max(0, index), isDark.value)
+  }
+
   const legendRows = computed(() =>
     [...seriesList.value].reverse().map((series) => ({
       name: series.name,
-      color: logLevelColor(series.name, isDark.value),
+      color: seriesColor(series.name),
       total: formatLogCountShort(series.points.reduce((sum, point) => sum + point[1], 0)),
     }))
   )
@@ -152,22 +182,26 @@
 
   const activeLevels = computed(() => (props.syncSeverityFilter ? levelsFromFilters() : props.selectedLevels))
 
-  function isLevelHidden(name: string): boolean {
+  function isSeriesSelected(name: string): boolean {
+    if (props.breakdown === 'column') {
+      return !columnSolo.value || columnSolo.value === name
+    }
     if (!activeLevels.value.length) {
-      return false
+      return true
     }
     const selected = new Set(activeLevels.value.map(normalizeLogLevelName))
-    return !selected.has(normalizeLogLevelName(name))
+    return selected.has(normalizeLogLevelName(name))
+  }
+
+  function isLevelHidden(name: string): boolean {
+    return !isSeriesSelected(name)
   }
 
   function paint() {
     if (!seriesList.value.length) {
       return
     }
-    const selected = new Set(activeLevels.value.map(normalizeLogLevelName))
-    const matched = selected.size
-      ? seriesList.value.filter((series) => selected.has(normalizeLogLevelName(series.name)))
-      : seriesList.value
+    const matched = seriesList.value.filter((series) => isSeriesSelected(series.name))
     const plotted = matched.length
       ? matched
       : seriesList.value.map((series) => ({
@@ -180,6 +214,7 @@
       timeRange: unixRange.length === 2 ? [unixRange[0], unixRange[1]] : undefined,
       plotWidthPx: plotWidthPx.value,
       plotHeightPx: props.height,
+      colorFor: props.breakdown === 'column' ? (name) => seriesColor(name) : undefined,
     })
   }
 
@@ -204,6 +239,11 @@
 
   function onLegendClick(name: string) {
     if (!seriesList.value.length) {
+      return
+    }
+    if (props.breakdown === 'column') {
+      columnSolo.value = toggleLegendSolo(columnSolo.value, name)
+      paint()
       return
     }
     const current = activeLevels.value.length === 1 ? activeLevels.value[0] : null
@@ -236,11 +276,17 @@
     loading.value = true
     error.value = null
     try {
-      const series = await fetchLogVolumeTimeseries(ctx, {
-        labelCol: props.labelCol,
-        value: props.labelValue,
-        plotWidthPx: widthBucket.value,
-      })
+      const series =
+        props.breakdown === 'column' && props.labelCol
+          ? await fetchLogVolumeByColumn(ctx, {
+              column: props.labelCol,
+              plotWidthPx: widthBucket.value,
+            })
+          : await fetchLogVolumeTimeseries(ctx, {
+              labelCol: props.labelCol,
+              value: props.labelValue,
+              plotWidthPx: widthBucket.value,
+            })
       if (version !== requestVersion) {
         return
       }
@@ -305,6 +351,7 @@
       const base: unknown[] = [
         props.enabled,
         ready.value,
+        props.breakdown,
         props.labelCol,
         props.labelValue,
         widthBucket.value,
@@ -319,7 +366,11 @@
       ]
       if (ctx.logsView.value === 'detail') {
         const column = ctx.fieldMap.value.logs.severity
-        base.push(ctx.filters.value.filter((filter) => filter.key !== column && filter.key !== 'severity'))
+        const filters =
+          props.breakdown === 'column'
+            ? ctx.filters.value
+            : ctx.filters.value.filter((filter) => filter.key !== column && filter.key !== 'severity')
+        base.push(filters)
       }
       return base
     },
@@ -381,6 +432,60 @@
     flex: 1 1 auto;
     min-width: 0;
     min-height: 0;
+  }
+
+  .logs-volume-mini-chart.is-legend-bottom .panel-chart {
+    flex: 0 0 auto;
+    overflow: hidden;
+    border-radius: var(--gpt-radius-md);
+    background: var(--gpt-bg-panel);
+  }
+
+  .panel-footer {
+    display: flex;
+    align-items: center;
+    margin-top: var(--gpt-gap-xs);
+  }
+
+  .query-legend-list {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    gap: var(--gpt-gap-sm) var(--gpt-gap-md);
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .query-legend {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--gpt-gap-sm);
+    max-width: 100%;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    background: transparent;
+    font-size: var(--gpt-font-sm);
+    line-height: 1.2;
+    color: var(--color-text-2);
+    cursor: pointer;
+
+    &.is-hidden {
+      opacity: 0.35;
+    }
+  }
+
+  .query-legend .legend-swatch {
+    width: 12px;
+    height: 3px;
+    border-radius: var(--gpt-radius-xs);
+  }
+
+  .query-legend .legend-name {
+    overflow: hidden;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .volume-legend {

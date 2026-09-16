@@ -14,10 +14,7 @@
         LogsVolumeMiniChart(sync-severity-filter :lazy="false" :height="mainChartHeight")
     .logs-tab-table
       LogsMainView(:show-volume="false" :fill-height="true")
-  .tab-placeholder(v-if="logsTab === 'labels'")
-    a-empty(:description="t('drilldown.logs.comingSoon')")
-  .tab-placeholder(v-if="logsTab === 'fields'")
-    a-empty(:description="t('drilldown.logs.comingSoon')")
+  DetailLabels(v-if="logsTab === 'labels'")
 </template>
 
 <script setup lang="ts">
@@ -26,6 +23,7 @@
   import IconDown from '@arco-design/web-vue/es/icon/icon-down'
   import { useDrilldownContext } from '@/observability/context'
   import { BREAKDOWN_CHART_HEIGHT } from '@/observability/metrics/panel-stats'
+  import DetailLabels from './detail-labels.vue'
   import LogsMainView from './logs-main-view.vue'
   import LogsVolumeMiniChart from './logs-volume-mini-chart.vue'
 
@@ -127,13 +125,5 @@
     :deep(.arco-table-container) {
       border-radius: 0;
     }
-  }
-
-  .tab-placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 200px;
-    padding: var(--gpt-gap-3xl);
   }
 </style>

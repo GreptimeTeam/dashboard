@@ -10,9 +10,9 @@ export function isMetricDetailTab(value: unknown): value is MetricDetailTab {
 }
 
 /** Logs detail drawer section tabs (URL `logsTab`, omit default `logs`). */
-export type LogsDetailTab = 'logs' | 'labels' | 'fields'
+export type LogsDetailTab = 'logs' | 'labels'
 
-export const LOGS_DETAIL_TABS: LogsDetailTab[] = ['logs', 'labels', 'fields']
+export const LOGS_DETAIL_TABS: LogsDetailTab[] = ['logs', 'labels']
 
 export function isLogsDetailTab(value: unknown): value is LogsDetailTab {
   return typeof value === 'string' && LOGS_DETAIL_TABS.includes(value as LogsDetailTab)

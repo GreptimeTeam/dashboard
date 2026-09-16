@@ -173,7 +173,7 @@ function isJsonDataType(dataType: string | undefined): boolean {
 }
 
 function addLabelExcludeSet(fieldMap: Record<string, string>, extraExclude?: string[]): Set<string> {
-  return new Set([...(extraExclude ?? []), fieldMap.time, fieldMap.body, fieldMap.severity].filter(Boolean) as string[])
+  return new Set([...(extraExclude ?? []), fieldMap.time, fieldMap.body].filter(Boolean) as string[])
 }
 
 /** True when the chip key resolves to `fieldMap.body` (role or physical name), not a hardcoded column name. */
@@ -191,7 +191,7 @@ export function isLogsBodyFilterKey(key: string, fieldMap: Record<string, string
 
 /**
  * Add label columns: groupable strings (TAG or string-like), plus settings include.
- * Exclude only resolved roles (`body` / `time` / `severity`) and JSON containers.
+ * Includes the severity column (`fieldMap.severity`). Exclude only `body` / `time` and JSON containers.
  * Membership is not decided by column-name whitelist or prefix.
  */
 export function discoverLabelColumns(
@@ -223,7 +223,7 @@ export function discoverLabelColumns(
 
 /**
  * Top-bar filter keys: Add label columns, plus the body column (contains match, no DISTINCT).
- * Severity stays out (Level select).
+ * Severity is a label, but the Level select owns that filter, so it is not a filter key.
  */
 export function discoverLogsFilterKeyColumns(
   columns: SchemaColumn[],
@@ -231,9 +231,13 @@ export function discoverLogsFilterKeyColumns(
   options?: { include?: string[]; exclude?: string[] }
 ): string[] {
   const keys = new Set(discoverLabelColumns(columns, fieldMap, options))
+  const severity = fieldMap.severity?.trim()
+  if (severity) {
+    keys.delete(severity)
+  }
   const body = fieldMap.body?.trim()
   const columnNames = new Set(columns.map((column) => column.name))
-  if (body && columnNames.has(body) && body !== fieldMap.severity?.trim()) {
+  if (body && columnNames.has(body) && body !== severity) {
     keys.add(body)
   }
   return [...keys].sort((a, b) => a.localeCompare(b))
@@ -241,7 +245,7 @@ export function discoverLogsFilterKeyColumns(
 
 /**
  * Non-groupable remainder used by implementation (body contains, JSON attribute chips).
- * Not a user-facing Fields list. Severity stays out (Level owns it).
+ * Not a user-facing Fields list. Severity is a label, so it stays out of this remainder.
  */
 export function discoverFieldColumns(
   columns: SchemaColumn[],

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { pivotLogVolumeRows } from './volume-series'
+import { pivotLogVolumeByName, pivotLogVolumeRows } from './volume-series'
 
 describe('pivotLogVolumeRows', () => {
   it('stacks levels with unknown at the bottom and error above info', () => {
@@ -19,6 +19,19 @@ describe('pivotLogVolumeRows', () => {
     ])
     expect(series[1].points).toEqual([
       [10, 5],
+      [20, 1],
+    ])
+  })
+
+  it('stacks arbitrary names with the largest total on top', () => {
+    const series = pivotLogVolumeByName([
+      { unix: 10, name: 'checkout', count: 2 },
+      { unix: 10, name: 'payments', count: 8 },
+      { unix: 20, name: 'checkout', count: 1 },
+    ])
+    expect(series.map((item) => item.name)).toEqual(['checkout', 'payments'])
+    expect(series[0].points).toEqual([
+      [10, 2],
       [20, 1],
     ])
   })

@@ -126,7 +126,6 @@ export default {
   'drilldown.logs.logsSectionTitle': '日志',
   'drilldown.logs.logsTab': 'Logs',
   'drilldown.logs.labelsTab': 'Labels',
-  'drilldown.logs.fieldsTab': 'Fields',
   'drilldown.logs.comingSoon': '即将推出',
   'drilldown.logs.addLabel': '添加 label',
   'drilldown.logs.addField': '添加 field',

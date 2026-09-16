@@ -126,7 +126,6 @@
   const logsDetailTabLabels = {
     logs: 'drilldown.logs.logsTab',
     labels: 'drilldown.logs.labelsTab',
-    fields: 'drilldown.logs.fieldsTab',
   } as const
   const logsDetailTabs = computed(() =>
     LOGS_DETAIL_TABS.map((value) => ({

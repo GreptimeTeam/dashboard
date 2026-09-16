@@ -194,7 +194,7 @@ type DrilldownContext = {
 
 | 概念 | Greptime 来源 | Tab |
 |------|---------------|-----|
-| **Add label** | 可分组字符串/TAG 列，排除 `fieldMap.body` / `time` / `severity` 和 JSON 容器 | Labels Tab（名字仍是 Add label，不是第二个筛选器） |
+| **Add label** | 可分组字符串/TAG 列，包含 `fieldMap.severity`，排除 `fieldMap.body` / `time` 和 JSON 容器 | Labels Tab（名字仍是 Add label，不是第二个筛选器） |
 | **筛选** | 可分组列 + `fieldMap.body`（包含匹配） | 顶栏一个 Filter |
 
 | 规则 | 内容 |

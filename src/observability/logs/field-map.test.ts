@@ -88,7 +88,7 @@ describe('discoverLabelColumns', () => {
     ])
   })
 
-  it('excludes severity role column from Labels (Level owns it)', () => {
+  it('includes the severity role column as a label, but not as a filter key', () => {
     const columns: SchemaColumn[] = [
       { name: 'ts', data_type: 'TimestampNanosecond', semantic_type: 'TIMESTAMP' },
       { name: 'body', data_type: 'String', semantic_type: 'FIELD' },
@@ -96,7 +96,11 @@ describe('discoverLabelColumns', () => {
       { name: 'pod', data_type: 'String', semantic_type: 'FIELD' },
     ]
 
-    expect(discoverLabelColumns(columns, { time: 'ts', body: 'body', severity: 'level' })).toEqual(['pod'])
+    expect(discoverLabelColumns(columns, { time: 'ts', body: 'body', severity: 'level' })).toEqual(['level', 'pod'])
+    expect(discoverLogsFilterKeyColumns(columns, { time: 'ts', body: 'body', severity: 'level' })).toEqual([
+      'body',
+      'pod',
+    ])
   })
 })
 
@@ -144,7 +148,7 @@ describe('discoverFieldColumns', () => {
 
     const labels = discoverLabelColumns(columns, fieldMap)
     const fields = discoverFieldColumns(columns, fieldMap)
-    expect(labels).toEqual(['file', 'pod', 'service_name'])
+    expect(labels).toEqual(['file', 'level', 'pod', 'service_name'])
     expect(fields).toEqual(['body', 'line_no', 'ts'])
     expect(labels.filter((key) => fields.includes(key))).toEqual([])
   })

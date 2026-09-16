@@ -128,7 +128,6 @@ export default {
   'drilldown.logs.logsSectionTitle': 'Logs',
   'drilldown.logs.logsTab': 'Logs',
   'drilldown.logs.labelsTab': 'Labels',
-  'drilldown.logs.fieldsTab': 'Fields',
   'drilldown.logs.comingSoon': 'Coming soon',
   'drilldown.logs.addLabel': 'Add label',
   'drilldown.logs.addField': 'Add field',

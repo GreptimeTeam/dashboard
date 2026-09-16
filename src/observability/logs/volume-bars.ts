@@ -59,6 +59,8 @@ export default function buildLogVolumeBarsOption(
     timeRange?: [number, number]
     plotWidthPx?: number
     plotHeightPx?: number
+    /** Defaults to level colors. Column breakdown passes a stable non-level palette. */
+    colorFor?: (name: string, index: number) => string
   }
 ): EChartsOption {
   const first = seriesList[0]?.points ?? []
@@ -161,7 +163,11 @@ export default function buildLogVolumeBarsOption(
       barMaxWidth: barWidth,
       barWidth,
       data: series.points.map(([unix, count]) => [unix * 1000, count]),
-      itemStyle: { color: logLevelColor(series.name, options.isDark) },
+      itemStyle: {
+        color: options.colorFor
+          ? options.colorFor(series.name, seriesList.indexOf(series))
+          : logLevelColor(series.name, options.isDark),
+      },
     })),
   }
 }
