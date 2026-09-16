@@ -175,8 +175,9 @@ export default function useDrilldownUrlSync(
       ctx.tracesTable.value = undefined
     }
 
-    if (ctx.signal.value === 'traces' && typeof focusTraceId === 'string' && focusTraceId.trim()) {
-      ctx.focusTraceId.value = focusTraceId.trim()
+    const traceIdFromUrl = typeof focusTraceId === 'string' ? focusTraceId.trim() : ''
+    if (traceIdFromUrl && (ctx.signal.value === 'traces' || ctx.signal.value === 'logs')) {
+      ctx.focusTraceId.value = traceIdFromUrl
     } else {
       ctx.focusTraceId.value = undefined
     }
@@ -259,7 +260,7 @@ export default function useDrilldownUrlSync(
       query.tracesTable = ctx.tracesTable.value
     }
 
-    if (ctx.signal.value === 'traces' && ctx.focusTraceId.value) {
+    if ((ctx.signal.value === 'traces' || ctx.signal.value === 'logs') && ctx.focusTraceId.value) {
       query.focusTraceId = ctx.focusTraceId.value
     }
 

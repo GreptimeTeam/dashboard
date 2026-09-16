@@ -93,13 +93,27 @@
                         span.entity-field-text
                           span(v-if="showKeys" style="color: var(--gpt-text-muted)")
                             | {{ field[0] }}:
-                          | {{ field[1] }}
+                          button.cell-link(
+                            v-if="isLinkColumn(field[0], field[1])"
+                            type="button"
+                            :title="linkColumnTitle"
+                            @click.stop="handleColumnLinkClick(field[0], field[1], record)"
+                          ) {{ field[1] }}
+                          template(v-else)
+                            | {{ field[1] }}
                   .merged-cell-content(v-else :class="getCellContentClass(null)")
                     span.entity-field(v-for="field in record.Merged_Column" :key="field[0]")
                       span.entity-field-text
                         span(v-if="showKeys" style="color: var(--gpt-text-muted)")
                           | {{ field[0] }}:
-                        | {{ field[1] }}
+                        button.cell-link(
+                          v-if="isLinkColumn(field[0], field[1])"
+                          type="button"
+                          :title="linkColumnTitle"
+                          @click.stop="handleColumnLinkClick(field[0], field[1], record)"
+                        ) {{ field[1] }}
+                        template(v-else)
+                          | {{ field[1] }}
               template(v-else-if="isTimeColumn(col)")
                 .cell-wrapper
                   .cell-content.timestamp-cell-content
@@ -135,9 +149,21 @@
                       :class="getCellContentClass(record[col.name])"
                       :title="$t('common.inspectValue')"
                     )
-                      span {{ record[col.name] }}
+                      button.cell-link(
+                        v-if="isLinkColumn(col.name, record[col.name])"
+                        type="button"
+                        :title="linkColumnTitle"
+                        @click.stop="handleColumnLinkClick(col.name, record[col.name], record)"
+                      ) {{ record[col.name] }}
+                      span(v-else) {{ record[col.name] }}
                   .cell-content(v-else :class="getCellContentClass(record[col.name])")
-                    span {{ record[col.name] }}
+                    button.cell-link(
+                      v-if="isLinkColumn(col.name, record[col.name])"
+                      type="button"
+                      :title="linkColumnTitle"
+                      @click.stop="handleColumnLinkClick(col.name, record[col.name], record)"
+                    ) {{ record[col.name] }}
+                    span(v-else) {{ record[col.name] }}
                   .cell-actions(v-if="showContextMenu")
                     span.cell-action-icon(@click.stop="(event) => handleContextMenu(record, col.name, event)")
                       svg.icon-12
@@ -225,6 +251,10 @@ a-dropdown#td-context(
      * Intended for no-header drilldown logs; default keeps overflow-x hidden.
      */
     allowVirtualHScroll?: boolean
+
+    /** Column whose non-empty values render as a link and emit columnLinkClick. */
+    linkColumn?: string
+    linkColumnTitle?: string
   }
 
   const props = withDefaults(defineProps<Props>(), {
@@ -241,6 +271,8 @@ a-dropdown#td-context(
     activeRowKey: null,
     leftoverStrategy: 'last-column',
     allowVirtualHScroll: false,
+    linkColumn: '',
+    linkColumnTitle: '',
   })
 
   const attrs = useAttrs()
@@ -294,7 +326,13 @@ a-dropdown#td-context(
   // canvas-based height estimation + ResizeObserver correction, as Grafana
   // does). That is a larger architectural change outside the scope of this
   // component.
-  const emit = defineEmits(['filterConditionAdd', 'rowSelect', 'tsCellClick', 'virtualColumnsClipped'])
+  const emit = defineEmits([
+    'filterConditionAdd',
+    'rowSelect',
+    'tsCellClick',
+    'virtualColumnsClipped',
+    'columnLinkClick',
+  ])
 
   // Timestamp display state
   const tsViewStr = ref(true) // true for formatted, false for raw timestamp
@@ -1301,6 +1339,21 @@ a-dropdown#td-context(
     emit('tsCellClick', record, rowIndex)
   }
 
+  function isLinkColumn(columnName: string, value: unknown) {
+    if (!props.linkColumn || columnName !== props.linkColumn || value == null) {
+      return false
+    }
+    return String(value).trim() !== ''
+  }
+
+  function handleColumnLinkClick(columnName: string, value: unknown, record: TableData) {
+    const text = value == null ? '' : String(value).trim()
+    if (!text) {
+      return
+    }
+    emit('columnLinkClick', columnName, text, record)
+  }
+
   function renderTs(record: any, columnName: string) {
     const timestamp = record[columnName]
 
@@ -1816,6 +1869,25 @@ a-dropdown#td-context(
 
   .entity-field-text {
     white-space: nowrap;
+  }
+
+  .cell-link {
+    display: inline;
+    max-width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--brand-color);
+    font: inherit;
+    line-height: inherit;
+    text-align: inherit;
+    text-decoration: none;
+    cursor: pointer;
+    vertical-align: baseline;
+
+    &:hover {
+      text-decoration: underline;
+    }
   }
 
   .merged-cell-content.wrap-lines {

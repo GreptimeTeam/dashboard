@@ -62,6 +62,25 @@
             ) {{ item.label }}
         LogsDetail(v-if="logsDrawerVisible")
 
+      a-drawer.metric-detail-drawer.traces-gantt-drawer(
+        popup-container=".drilldown-body--logs"
+        placement="right"
+        width="100%"
+        :visible="tracesGanttVisible"
+        :footer="false"
+        :mask="false"
+        :esc-to-close="true"
+        :unmount-on-close="true"
+        @cancel="closeTracesGanttDrawer"
+        @update:visible="onTracesGanttDrawerVisible"
+      )
+        template(#title)
+          .drawer-title
+            .drawer-title-text
+              span.drawer-metric-name(:title="focusTraceIdLabel") {{ focusTraceIdLabel }}
+              span.drawer-metric-original {{ t('drilldown.traces.ganttDrawerTitle') }}
+        TracesGantt(v-if="tracesGanttVisible")
+
     .drilldown-body.new-layout.new-layout--workspace.drilldown-body--traces(v-else-if="signal === 'traces'")
       a-layout-content.layout-content(v-show="!tracesGanttVisible")
         a-card.drilldown-main-pane.gpt-results-pane(:bordered="false")
@@ -450,6 +469,11 @@
         font-size: var(--gpt-font-xl);
       }
     }
+  }
+
+  // Above logs detail when both drawers are open (trace click from the detail table).
+  .drilldown-body .traces-gantt-drawer {
+    z-index: 1002;
   }
 
   // Logs detail: the tab row is the header; close sits on that same line.

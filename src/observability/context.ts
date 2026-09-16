@@ -110,8 +110,11 @@ export function useDrilldownContextProvider(): DrilldownContext {
       metric.value = undefined
     }
     if (next !== 'traces') {
-      focusTraceId.value = undefined
       tracesTab.value = 'breakdown'
+    }
+    // Trace drawer lives on logs and traces. Keep it when staying on logs or opening traces.
+    if (next === 'metrics' || (next !== signal.value && next !== 'traces')) {
+      focusTraceId.value = undefined
     }
     if (next === 'logs') {
       if (hasLogsMappedFilters(filters.value, fieldMap.value.logs, logsTable.value)) {

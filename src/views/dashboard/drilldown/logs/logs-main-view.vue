@@ -62,6 +62,8 @@
       :ts-column="tsColumn"
       :displayed-columns="visibleColumns"
       :wrap-line="wrap"
+      :trace-id-column="traceIdColumn"
+      @trace-click="openTrace"
       @filterConditionAdd="onFilterConditionAdd"
       @reach-end="loadMore"
       @virtualColumnsClipped="handleVirtualColumnsClipped"
@@ -117,6 +119,11 @@
 
   const logsTableName = computed(() => ctx.logsTable.value || '')
   const visibleColumns = computed(() => displayedColumnsFor(logsTableName.value))
+  const traceIdColumn = computed(() => ctx.fieldMap.value.logs.traceId || ctx.fieldMap.value.logs.trace_id || '')
+
+  const openTrace = (traceId: string) => {
+    ctx.openTraceGantt(String(traceId || ''))
+  }
 
   const showVirtualColumnsClippedHint = ref(false)
   function handleVirtualColumnsClipped(visible: boolean) {

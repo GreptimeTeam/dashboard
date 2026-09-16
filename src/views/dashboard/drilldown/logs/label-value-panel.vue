@@ -27,6 +27,8 @@
           :ts-column="tsColumn"
           :displayed-columns="displayedColumns"
           :wrap-line="false"
+          :trace-id-column="traceIdColumn"
+          @trace-click="openTrace"
           @filterConditionAdd="onFilterConditionAdd"
           @reach-end="loadMore"
         )
@@ -68,6 +70,11 @@
 
   const { t } = useI18n()
   const ctx = useDrilldownContext()
+  const traceIdColumn = computed(() => ctx.fieldMap.value.logs.traceId || ctx.fieldMap.value.logs.trace_id || '')
+
+  const openTrace = (traceId: string) => {
+    ctx.openTraceGantt(String(traceId || ''))
+  }
   const labelColRef = toRef(props, 'labelCol')
   const labelValueRef = toRef(props, 'labelValue')
   const selectedLevels = ref<string[]>([])

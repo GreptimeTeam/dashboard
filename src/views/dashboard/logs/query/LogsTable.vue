@@ -18,10 +18,13 @@
     :show-context-menu="sqlMode === 'builder'"
     :show-header="arcoShowHeader"
     :allow-virtual-h-scroll="allowMergedVirtualHScroll"
+    :link-column="traceIdColumn"
+    :link-column-title="traceLinkTitle"
     :class="dataTableClass"
     @filter-condition-add="handleFilterConditionAdd"
     @row-select="$emit('rowSelect', $event)"
     @ts-cell-click="handleTsClick"
+    @column-link-click="handleTraceClick"
     @update:selected-keys="handleSelectedKeysUpdate"
     @virtualColumnsClipped="(visible) => $emit('virtualColumnsClipped', visible)"
   )
@@ -41,6 +44,7 @@
 
 <script setup lang="ts" name="LogTableData">
   import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
+  import { useI18n } from 'vue-i18n'
   import { useElementSize } from '@vueuse/core'
   import type { ColumnType, TSColumn } from '@/types/query'
   import LogDetail from './LogDetail.vue'
@@ -67,6 +71,8 @@
       allowMergedVirtualHScroll?: boolean
       /** LogDetail drawer mount target (nested drawers need a non-clipped ancestor). */
       detailPopupContainer?: string
+      /** When set, this column's values are links that emit traceClick. */
+      traceIdColumn?: string
     }>(),
     {
       wrapLine: false,
@@ -84,6 +90,7 @@
       showHeader: true,
       allowMergedVirtualHScroll: false,
       detailPopupContainer: '#log-table-container',
+      traceIdColumn: '',
     }
   )
 
@@ -93,7 +100,11 @@
     'updateSelectedKeys',
     'virtualColumnsClipped',
     'reachEnd',
+    'traceClick',
   ])
+
+  const { t } = useI18n()
+  const traceLinkTitle = computed(() => (props.traceIdColumn ? t('drilldown.logs.openTrace') : ''))
 
   const selectedRowKey = ref<number | null>(null)
   const selectedRecord = computed(() => props.data[selectedRowKey.value])
@@ -195,6 +206,13 @@
       },
     }
   })
+
+  const handleTraceClick = (_columnName: string, value: string) => {
+    if (!value) {
+      return
+    }
+    emit('traceClick', value)
+  }
 
   const handleTsClick = (row: TableData, rowIndex: number) => {
     if (props.exportRowSelection) return

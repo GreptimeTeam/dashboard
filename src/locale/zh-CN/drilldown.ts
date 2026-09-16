@@ -113,6 +113,7 @@ export default {
   'drilldown.logs.fieldService': 'Service 列（Label）',
   'drilldown.logs.fieldPrimaryGroupBy': '分组列（Label）',
   'drilldown.logs.fieldTraceId': 'Trace ID 列（Field）',
+  'drilldown.logs.openTrace': '打开 Trace',
   'drilldown.logs.searchServices': '搜索 service',
   'drilldown.logs.noTableTitle': '未绑定日志表',
   'drilldown.logs.noTableDescription': '请在设置中选择日志表并映射语义列。Drilldown 不会读取 logs-query 的表偏好。',

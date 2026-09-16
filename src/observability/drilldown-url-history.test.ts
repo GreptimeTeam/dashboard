@@ -24,6 +24,7 @@ describe('shouldPushDrilldownHistory', () => {
     expect(shouldPushDrilldownHistory({ timeLength: '30' }, { timeLength: '30', metric: 'up' })).toBe(true)
     expect(shouldPushDrilldownHistory({ signal: 'logs' }, { signal: 'logs', logsView: 'detail' })).toBe(true)
     expect(shouldPushDrilldownHistory({ signal: 'traces' }, { signal: 'traces', focusTraceId: 't1' })).toBe(true)
+    expect(shouldPushDrilldownHistory({ signal: 'logs' }, { signal: 'logs', focusTraceId: 't1' })).toBe(true)
   })
 
   it('does not push when switching detail identity', () => {

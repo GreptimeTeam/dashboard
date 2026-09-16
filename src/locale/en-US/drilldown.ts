@@ -114,6 +114,7 @@ export default {
   'drilldown.logs.fieldService': 'Service column (Label)',
   'drilldown.logs.fieldPrimaryGroupBy': 'Group by column (Label)',
   'drilldown.logs.fieldTraceId': 'Trace ID column (Field)',
+  'drilldown.logs.openTrace': 'Open trace',
   'drilldown.logs.searchServices': 'Search services',
   'drilldown.logs.noTableTitle': 'No logs table bound',
   'drilldown.logs.noTableDescription':
