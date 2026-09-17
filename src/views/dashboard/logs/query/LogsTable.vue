@@ -114,7 +114,15 @@
   const selectedRecord = computed(() => props.data[selectedRowKey.value])
 
   const tableContainer = ref<HTMLElement | null>(null)
-  const { height } = useElementSize(tableContainer)
+  const { height: measuredHeight } = useElementSize(tableContainer)
+  /** Keep the last real height so a hidden tab (0×0) does not drop virtual-list mode. */
+  const stableHeight = ref(0)
+  watch(measuredHeight, (next) => {
+    if (next > 0) {
+      stableHeight.value = next
+    }
+  })
+  const height = computed(() => stableHeight.value || measuredHeight.value)
 
   const detailRowSelection = ref({
     type: 'radio' as const,
@@ -258,6 +266,9 @@
   watch(
     () => [height.value, virtualListHeight.value],
     () => {
+      if (measuredHeight.value <= 0) {
+        return
+      }
       reachEndArmed = true
       nextTick(() => checkCurrentScrollRoot())
     }

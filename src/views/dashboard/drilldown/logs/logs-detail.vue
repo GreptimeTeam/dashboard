@@ -1,6 +1,10 @@
 <template lang="pug">
 .logs-detail(ref="detailScrollRef")
-  .logs-tab-pane(v-show="logsTab === 'logs'")
+  .logs-tab-pane(
+    :class="{ 'is-hidden': logsTab !== 'logs' }"
+    :inert="logsTab !== 'logs'"
+    :aria-hidden="logsTab !== 'logs'"
+  )
     .logs-tab-chart
       button.logs-tab-chart-header(
         type="button"
@@ -45,21 +49,36 @@
 
 <style scoped lang="less">
   .logs-detail {
+    position: relative;
     display: flex;
     flex-direction: column;
     flex: 1;
     height: 100%;
     min-height: 0;
-    overflow: auto;
+    overflow: hidden;
   }
 
+  // Stay sized while the Labels tab is open so the virtual list is not torn down.
+  // The drawer unmounts this pane only when detail closes.
   .logs-tab-pane {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
     display: flex;
-    flex: 1 1 auto;
     flex-direction: column;
     min-height: 0;
     padding: 0;
     overflow: hidden;
+
+    &.is-hidden {
+      visibility: hidden;
+      pointer-events: none;
+    }
+  }
+
+  .logs-detail :deep(.detail-labels) {
+    position: relative;
+    z-index: 1;
   }
 
   .logs-tab-chart {

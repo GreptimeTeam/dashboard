@@ -147,11 +147,18 @@
     return Math.max(80, containerWidth.value - LOG_VOLUME_LEGEND_WIDTH_PX)
   })
   const widthBucket = computed(() => Math.round(plotWidthPx.value / 16) * 16)
+  /** Ignore a 0×0 hidden pane so the chart key and query stay on the last real width. */
+  const stableWidthBucket = ref(0)
+  watch(widthBucket, (next) => {
+    if (next > 0 && (plotWidth.value > 0 || containerWidth.value > 0)) {
+      stableWidthBucket.value = next
+    }
+  })
   const chartRenderKey = computed(
     () =>
       `${props.breakdown}:${props.labelCol ?? ''}:${props.labelValue ?? ''}:${ctx.refreshKey.value}:${
         ctx.time.value
-      }:${ctx.rangeTime.value.join(',')}:${widthBucket.value}`
+      }:${ctx.rangeTime.value.join(',')}:${stableWidthBucket.value}`
   )
   function seriesColor(name: string): string {
     if (props.breakdown !== 'column') {
@@ -278,16 +285,18 @@
     loading.value = true
     error.value = null
     try {
+      const plotWidthForQuery =
+        plotWidth.value > 0 || containerWidth.value > 0 ? widthBucket.value : stableWidthBucket.value
       const series =
         props.breakdown === 'column' && props.labelCol
           ? await fetchLogVolumeByColumn(ctx, {
               column: props.labelCol,
-              plotWidthPx: widthBucket.value,
+              plotWidthPx: plotWidthForQuery,
             })
           : await fetchLogVolumeTimeseries(ctx, {
               labelCol: props.labelCol,
               value: props.labelValue,
-              plotWidthPx: widthBucket.value,
+              plotWidthPx: plotWidthForQuery,
               extraWhere: props.extraWhere,
             })
       if (version !== requestVersion) {
@@ -357,7 +366,7 @@
         props.breakdown,
         props.labelCol,
         props.labelValue,
-        widthBucket.value,
+        stableWidthBucket.value,
         ctx.logsTable.value,
         ctx.refreshKey.value,
         ctx.time.value,
@@ -379,7 +388,7 @@
       return base
     },
     () => {
-      if (!props.enabled) {
+      if (!props.enabled || stableWidthBucket.value <= 0) {
         return
       }
       load()

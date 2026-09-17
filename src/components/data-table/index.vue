@@ -412,6 +412,14 @@ a-dropdown#td-context(
   // pre-computed (no table-layout:auto), and the container width we measure
   // from the outside does not match the inner available width exactly.
   const { width: tableWidth } = useElementSize(tableContainer)
+  /** Last non-zero width. A hidden tab reports 0 and must not remount the virtual list. */
+  const stableTableWidth = ref(0)
+  watch(tableWidth, (next) => {
+    if (next > 0) {
+      stableTableWidth.value = next
+    }
+  })
+  const layoutTableWidth = computed(() => (tableWidth.value > 0 ? tableWidth.value : stableTableWidth.value))
 
   // Timestamp utilities
   function isTimeColumn(column: ColumnType) {
@@ -722,6 +730,10 @@ a-dropdown#td-context(
       emit('virtualColumnsClipped', false)
       return
     }
+    // Hidden pane (display size 0) must not drop widths or bump the remount epoch.
+    if (!tableWidth.value) {
+      return
+    }
 
     const key = columnsKey.value
     const keyChanged = virtualWidthsReadyForKey.value !== key
@@ -766,10 +778,10 @@ a-dropdown#td-context(
     // Bucket width so tiny ResizeObserver noise does not remount VL (kills scroll pos / load-more).
     const mergedW =
       mergedVirtualHScrollWidth.value ??
-      (mergeColumn.value && tableWidth.value > 0
+      (mergeColumn.value && layoutTableWidth.value > 0
         ? Math.max(
             80,
-            tableWidth.value -
+            layoutTableWidth.value -
               (props.tsColumn ? TIME_COLUMN_FIXED_WIDTH : 0) -
               (hasRowSelection.value ? SELECTION_COL_WIDTH_PX : 0) -
               V_SCROLLBAR_RESERVE_PX
