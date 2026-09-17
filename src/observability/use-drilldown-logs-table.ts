@@ -1,4 +1,4 @@
-import { computed, ref, type Ref } from 'vue'
+import { computed, isRef, ref, type MaybeRef, type Ref } from 'vue'
 import type { DrilldownContext } from '@/observability/context'
 import { fetchLogsRows } from '@/observability/adapters/logs'
 import type { ColumnType, TSColumn } from '@/types/query'
@@ -16,9 +16,22 @@ export default function useDrilldownLogsTable(
     /** Panel-local legend selection. Empty shows every level. */
     levels?: Ref<string[]>
     pageSize?: number
+    /** When false, one fetch only (overview preview). */
+    infinite?: boolean
+    /** Restrict SELECT columns. Empty or unset means the full schema. */
+    columns?: MaybeRef<string[] | undefined>
   } = {}
 ) {
   const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE
+  const infinite = options.infinite !== false
+
+  function resolveColumns(): string[] | undefined {
+    const raw = options.columns
+    if (raw == null) {
+      return undefined
+    }
+    return isRef(raw) ? raw.value : raw
+  }
   const loading = ref(false)
   const loadingMore = ref(false)
   const tableColumns = ref<ColumnType[]>([])
@@ -59,11 +72,12 @@ export default function useDrilldownLogsTable(
         value: options.labelValue?.value,
         levels: options.levels?.value,
         limit: pageSize,
+        columns: resolveColumns(),
       })
       tableColumns.value = rows.columns
       tableData.value = rows.data
       tsColumn.value = rows.tsColumn
-      hasMore.value = rows.hasMore
+      hasMore.value = infinite && rows.hasMore
     } catch (error) {
       console.error('Failed to load drilldown logs', error)
       tableColumns.value = []
@@ -76,7 +90,7 @@ export default function useDrilldownLogsTable(
   }
 
   async function loadMore() {
-    if (loading.value || loadingMore.value || !hasMore.value) {
+    if (!infinite || loading.value || loadingMore.value || !hasMore.value) {
       return
     }
     const beforeTs = oldestTs()
@@ -93,6 +107,7 @@ export default function useDrilldownLogsTable(
         limit: pageSize,
         beforeTs,
         keyOffset: tableData.value.length,
+        columns: resolveColumns(),
       })
       if (rows.columns.length) {
         tableColumns.value = rows.columns

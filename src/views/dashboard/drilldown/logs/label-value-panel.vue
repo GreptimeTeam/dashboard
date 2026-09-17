@@ -1,5 +1,5 @@
 <template lang="pug">
-.label-value-panel
+.label-value-panel(ref="targetRef")
   .panel-header
     .panel-title(:title="titleText")
       span.panel-title-text {{ titleText }}
@@ -30,12 +30,8 @@
           :trace-id-column="traceIdColumn"
           @trace-click="openTrace"
           @filterConditionAdd="onFilterConditionAdd"
-          @reach-end="loadMore"
         )
         a-empty(v-else-if="!loading" :description="t('drilldown.logs.noLogRows')")
-      .logs-load-more(v-if="loadingMore")
-        a-spin(:size="14")
-        span {{ t('drilldown.logs.loadingMore') }}
 
     .panel-chart-col
       LogsVolumeMiniChart(
@@ -48,14 +44,16 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, onMounted, ref, toRef, watch } from 'vue'
+  import { computed, ref, toRef, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import LogsTable from '@/views/dashboard/logs/query/LogsTable.vue'
+  import { OVERVIEW_PREVIEW_LIMIT, overviewPreviewColumns } from '@/observability/adapters/logs'
   import { useDrilldownContext } from '@/observability/context'
   import { loadDrilldownSettings } from '@/observability/drilldown-settings'
   import { addFilter, filterIncludesValue } from '@/observability/filters'
   import { chipKeyForLogsTableFilter } from '@/observability/logs/field-map'
   import useDrilldownLogsTable from '@/observability/use-drilldown-logs-table'
+  import useLazyPanelQuery from '@/observability/use-lazy-panel-query'
   import type { DrilldownFilterOp } from '@/observability/types'
   import LogsVolumeMiniChart from './logs-volume-mini-chart.vue'
 
@@ -78,13 +76,17 @@
   const labelColRef = toRef(props, 'labelCol')
   const labelValueRef = toRef(props, 'labelValue')
   const selectedLevels = ref<string[]>([])
+  const previewColumns = computed(() => overviewPreviewColumns(ctx.fieldMap.value.logs))
+  const { targetRef, hasBeenVisible } = useLazyPanelQuery(props.scrollRoot ?? (() => null))
 
-  const { loading, loadingMore, tableColumns, tableData, tsColumn, displayedColumns, load, loadMore } =
-    useDrilldownLogsTable(ctx, {
-      labelCol: labelColRef,
-      labelValue: labelValueRef,
-      levels: selectedLevels,
-    })
+  const { loading, tableColumns, tableData, tsColumn, displayedColumns, load } = useDrilldownLogsTable(ctx, {
+    labelCol: labelColRef,
+    labelValue: labelValueRef,
+    levels: selectedLevels,
+    pageSize: OVERVIEW_PREVIEW_LIMIT,
+    infinite: false,
+    columns: previewColumns,
+  })
 
   const titleText = computed(() => `${props.labelCol}="${props.labelValue}"`)
   const countLabel = computed(() => t('drilldown.logs.valueCount', { count: props.logCount }))
@@ -167,11 +169,17 @@
     ctx.appendFilter({ key: chipKey, op: mapOperator(event.operator), value })
   }
 
-  onMounted(() => {
-    if (ctx.logsView.value === 'detail') {
+  function reloadPreview() {
+    if (ctx.logsView.value === 'detail' || !hasBeenVisible.value) {
       return
     }
     load()
+  }
+
+  watch(hasBeenVisible, (visible) => {
+    if (visible) {
+      reloadPreview()
+    }
   })
   watch(
     () => [
@@ -187,12 +195,7 @@
       // Detail applies filters to panel preview; overview compose ignores them in SQL.
       ctx.logsView.value === 'detail' ? ctx.filters.value : null,
     ],
-    () => {
-      if (ctx.logsView.value === 'detail') {
-        return
-      }
-      load()
-    },
+    reloadPreview,
     { deep: true }
   )
 </script>
@@ -308,23 +311,6 @@
       min-height: 0;
       height: 100%;
     }
-  }
-
-  .logs-load-more {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    z-index: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--gpt-gap-md);
-    padding: var(--gpt-gap-xs) 0;
-    pointer-events: none;
-    background: linear-gradient(transparent, var(--gpt-bg-panel) 40%);
-    font-size: var(--gpt-font-base);
-    color: var(--color-text-3);
   }
 
   .panel-chart-col {

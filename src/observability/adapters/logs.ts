@@ -21,6 +21,31 @@ import { grafanaAutoIntervalSeconds } from '../logs/volume-step'
 
 const LABEL_VALUES_LIMIT = 20
 const LOGS_ROWS_LIMIT = 100
+/** Grafana service-selection preview (`maxLines: 100`). Not a page size. */
+export const OVERVIEW_PREVIEW_LIMIT = 100
+
+/** Overview cards show a short field set, not every schema column. */
+export function overviewPreviewColumns(fieldMap: Record<string, string>): string[] {
+  return [
+    ...new Set(
+      [fieldMap.time, fieldMap.severity, fieldMap.body, fieldMap.traceId, fieldMap.trace_id].filter(
+        (name): name is string => Boolean(name)
+      )
+    ),
+  ]
+}
+
+function selectLogColumns(schemaNames: string[], requested: string[] | undefined, timeCol?: string): string[] {
+  const available = new Set(schemaNames)
+  if (!requested?.length) {
+    return schemaNames.filter(Boolean)
+  }
+  const picked = [...new Set(requested.filter((name) => available.has(name)))]
+  if (timeCol && available.has(timeCol) && !picked.includes(timeCol)) {
+    picked.unshift(timeCol)
+  }
+  return picked.length ? picked : schemaNames.filter(Boolean)
+}
 
 function volumeRangeMs(ctx: DrilldownContext): number {
   const unixRange = ctx.unixTimeRange()
@@ -344,6 +369,8 @@ export async function fetchLogsRows(
      * Empty means no extra predicate. Detail uses context filters instead.
      */
     levels?: string[]
+    /** When set, SELECT only these columns (missing names are dropped). Empty falls back to the full schema. */
+    columns?: string[]
   }
 ): Promise<LogsRowsResult> {
   const tableName = ctx.logsTable.value
@@ -364,12 +391,12 @@ export async function fetchLogsRows(
   }
 
   const schema = await loadSchema(tableName)
-  const safeSelectCols = schema.map((column) => column.name).filter(Boolean)
+  const schemaNames = schema.map((column) => column.name).filter(Boolean)
+  const timeCol = resolveLogsTimeColumn(fieldMap)
+  const safeSelectCols = selectLogColumns(schemaNames, options?.columns, timeCol)
   if (!safeSelectCols.length) {
     return empty
   }
-
-  const timeCol = resolveLogsTimeColumn(fieldMap)
   const limit = options?.limit ?? LOGS_ROWS_LIMIT
   const keyOffset = options?.keyOffset ?? 0
 
