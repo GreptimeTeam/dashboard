@@ -4,6 +4,7 @@
  */
 
 import { escapeSqlString, quoteIdent } from '../logs/query-state'
+import { calculateSparklineIntervalMs } from '../metrics/sparkline-step'
 
 export type RedMetric = 'rate' | 'errors' | 'duration'
 
@@ -11,6 +12,9 @@ export type RedMetric = 'rate' | 'errors' | 'duration'
 export const TRACE_ERROR_STATUS_VALUES = ['STATUS_CODE_ERROR', 'ERROR', 'error'] as const
 
 const TIMESERIES_LIMIT = 200
+
+/** Grafana traces breakdown `maxDataPoints: 64` — one point budget per card, not a row LIMIT. */
+export const BREAKDOWN_SERIES_MAX_POINTS = 64
 
 export function volumeIntervalSecondsFromRange(timeMinutes: number, rangeUnix: number[]): number {
   if (timeMinutes > 0) {
@@ -315,6 +319,68 @@ export interface BuildBreakdownValuesSqlInput {
 }
 
 const BREAKDOWN_VALUES_LIMIT = 48
+
+/**
+ * Bucket width for the grouped breakdown query. Same window for every card,
+ * about {@link BREAKDOWN_SERIES_MAX_POINTS} buckets, so one query stays bounded.
+ */
+export function breakdownSeriesIntervalSeconds(rangeUnix: number[]): number {
+  if (rangeUnix.length !== 2 || !(rangeUnix[1] > rangeUnix[0])) {
+    return 60
+  }
+  const rangeMs = (rangeUnix[1] - rangeUnix[0]) * 1000
+  const intervalMs = calculateSparklineIntervalMs(rangeMs, { maxDataPoints: BREAKDOWN_SERIES_MAX_POINTS })
+  return Math.max(1, Math.floor(intervalMs / 1000))
+}
+
+export interface BuildBreakdownSeriesSqlInput {
+  tableName: string
+  where: string
+  timeColumn: string
+  groupByColumn: string
+  statusColumn: string
+  durationColumn: string
+  metric: RedMetric
+  intervalSeconds: number
+  values: string[]
+}
+
+/**
+ * One grouped timeseries for the listed breakdown cards (Grafana `by(attr)`).
+ * No global LIMIT — the list is already capped, and the step caps buckets per card.
+ */
+export function buildBreakdownSeriesSql(input: BuildBreakdownSeriesSqlInput): string {
+  const metricExpr = buildRedMetricExpr(
+    input.metric,
+    { status: input.statusColumn, duration: input.durationColumn },
+    input.intervalSeconds
+  )
+  const groupCol = quoteIdent(input.groupByColumn)
+  const inList = input.values.map((value) => `'${escapeSqlString(value)}'`).join(', ')
+  return `SELECT
+  date_bin('${input.intervalSeconds} seconds', ${quoteIdent(input.timeColumn)}) AS time_bucket,
+  ${groupCol} AS attr_value,
+  ${metricExpr} AS metric_value
+FROM ${quoteIdent(input.tableName)}
+WHERE ${input.where}
+  AND ${groupCol} IN (${inList})
+GROUP BY time_bucket, ${groupCol}
+ORDER BY ${groupCol}, time_bucket`
+}
+
+/** Shared Y extent for non-negative breakdown cards. Zero-only data keeps a 0–1 axis. */
+export function sharedBreakdownYAxis(series: Array<Array<[number, number]>>): { yMin: number; yMax: number } {
+  const max = series.reduce((peak, points) => {
+    const seriesPeak = points.reduce((inner, [, value]) => {
+      if (Number.isFinite(value) && value > inner) {
+        return value
+      }
+      return inner
+    }, 0)
+    return seriesPeak > peak ? seriesPeak : peak
+  }, 0)
+  return { yMin: 0, yMax: max > 0 ? max : 1 }
+}
 
 export function buildBreakdownValuesSql(input: BuildBreakdownValuesSqlInput): string {
   const limit = input.limit ?? BREAKDOWN_VALUES_LIMIT

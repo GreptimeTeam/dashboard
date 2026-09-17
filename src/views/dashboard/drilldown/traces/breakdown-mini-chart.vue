@@ -1,7 +1,6 @@
 <template lang="pug">
 .traces-breakdown-mini-chart(ref="targetRef")
-  a-spin.panel-loading(v-if="loading || !ready" :loading="true")
-  .panel-state.panel-error(v-else-if="error") {{ t('drilldown.traces.redChartError') }}
+  a-spin.panel-loading(v-if="!ready" :loading="true")
   .panel-state(v-else-if="isEmpty") {{ t('drilldown.traces.redChartNoData') }}
   .panel-chart(v-else-if="showChart")
     Chart(:key="chartRenderKey" :height="chartHeight" :options="chartOption")
@@ -15,7 +14,7 @@
   import Chart from '@/components/raw-chart/index.vue'
   import { useAppStore } from '@/store'
   import { useDrilldownContext } from '@/observability/context'
-  import { fetchRedTimeseries, type RedMetric } from '@/observability/adapters/traces'
+  import type { RedMetric } from '@/observability/adapters/traces'
   import { BREAKDOWN_CHART_HEIGHT } from '@/observability/metrics/panel-stats'
   import { buildBarSparklineOption, buildSparklineOption } from '@/observability/metrics/prom-chart'
   import { redMetricBarColor, redMetricPanelUnit } from '@/observability/traces/red-queries'
@@ -26,6 +25,9 @@
       redMetric: RedMetric
       attrKey: string
       attrValue: string
+      points: Array<[number, number]>
+      yMin: number
+      yMax: number
       colorIndex?: number
       height?: number
       lazy?: boolean
@@ -45,14 +47,11 @@
   const { targetRef, hasBeenVisible } = useLazyPanelQuery(props.scrollRoot ?? (() => null))
   const ready = computed(() => !props.lazy || hasBeenVisible.value)
 
-  const loading = ref(false)
-  const error = ref<string | null>(null)
   const chartOption = ref<EChartsOption | null>(null)
   const isEmpty = ref(false)
-  let requestVersion = 0
 
   const chartHeight = computed(() => `${props.height}px`)
-  const showChart = computed(() => Boolean(chartOption.value) && !loading.value && !error.value)
+  const showChart = computed(() => Boolean(chartOption.value) && ready.value)
   const chartRenderKey = computed(
     () =>
       `${props.redMetric}:${props.attrKey}:${props.attrValue}:${ctx.refreshKey.value}:${
@@ -60,86 +59,50 @@
       }:${ctx.rangeTime.value.join(',')}`
   )
 
-  async function load() {
-    if (ctx.focusTraceId.value) {
-      return
-    }
-    if (!ready.value || !ctx.tracesTable.value || !props.attrKey || !props.attrValue) {
-      return
-    }
-    requestVersion += 1
-    const version = requestVersion
-    loading.value = true
-    error.value = null
-    try {
-      const points = await fetchRedTimeseries(ctx, props.redMetric, {
-        extraEquals: [{ column: props.attrKey, value: props.attrValue }],
-      })
-      if (version !== requestVersion) {
-        return
-      }
-      if (!points.length) {
-        chartOption.value = null
-        isEmpty.value = true
-        return
-      }
-      isEmpty.value = false
-      const unixRange = ctx.unixTimeRange()
-      const timeRange = unixRange.length === 2 ? ([unixRange[0], unixRange[1]] as [number, number]) : undefined
-      const panelUnit = redMetricPanelUnit(props.redMetric)
-
-      // Breakdown cards: Rate/Errors match RED bars; Duration stays AVG timeseries (Grafana Breakdown ≠ heatmap).
-      if (props.redMetric === 'duration') {
-        chartOption.value = buildSparklineOption(points, {
-          color: isDark.value ? '#FF9830' : '#FF780A',
-          metricKind: 'gauge',
-          panelUnit,
-          timeRange,
-          showPoints: 'never',
-        })
-      } else {
-        chartOption.value = buildBarSparklineOption(points, {
-          color: redMetricBarColor(props.redMetric, isDark.value),
-          panelUnit,
-          timeRange,
-        })
-      }
-    } catch (err) {
-      if (version !== requestVersion) {
-        return
-      }
-      console.error('Failed to load traces breakdown mini chart', err)
-      error.value = 'error'
+  function render() {
+    if (!ready.value || !props.points.length) {
       chartOption.value = null
-      isEmpty.value = false
-    } finally {
-      if (version === requestVersion) {
-        loading.value = false
-      }
+      isEmpty.value = ready.value
+      return
     }
+    isEmpty.value = false
+    const unixRange = ctx.unixTimeRange()
+    const timeRange = unixRange.length === 2 ? ([unixRange[0], unixRange[1]] as [number, number]) : undefined
+    const panelUnit = redMetricPanelUnit(props.redMetric)
+    const axis = { yMin: props.yMin, yMax: props.yMax, timeRange }
+
+    // Rate/Errors stay bars; Duration stays AVG timeseries (Grafana Breakdown ≠ heatmap).
+    if (props.redMetric === 'duration') {
+      chartOption.value = buildSparklineOption(props.points, {
+        color: isDark.value ? '#FF9830' : '#FF780A',
+        metricKind: 'gauge',
+        panelUnit,
+        showPoints: 'never',
+        ...axis,
+      })
+      return
+    }
+    chartOption.value = buildBarSparklineOption(props.points, {
+      color: redMetricBarColor(props.redMetric, isDark.value),
+      panelUnit,
+      ...axis,
+    })
   }
 
   watch(
     () => [
       ready.value,
       props.redMetric,
-      props.attrKey,
-      props.attrValue,
-      props.colorIndex,
-      ctx.tracesTable.value,
-      ctx.refreshKey.value,
+      props.points,
+      props.yMin,
+      props.yMax,
       ctx.time.value,
       ctx.rangeTime.value[0],
       ctx.rangeTime.value[1],
-      ctx.filters.value,
-      ctx.focusTraceId.value,
       isDark.value,
     ],
     () => {
-      if (ctx.focusTraceId.value) {
-        return
-      }
-      load()
+      render()
     },
     { deep: true, immediate: true }
   )

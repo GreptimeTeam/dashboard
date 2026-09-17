@@ -27,6 +27,9 @@
         :red-metric="redMetric"
         :attr-key="groupByColumn"
         :attr-value="item.value"
+        :points="seriesByValue[item.value] || []"
+        :y-min="yAxis.yMin"
+        :y-max="yAxis.yMax"
         :color-index="index"
         :scroll-root="scrollRoot"
       )
@@ -38,7 +41,12 @@
   import { useI18n } from 'vue-i18n'
   import editorApi from '@/api/editor'
   import { useDrilldownContext } from '@/observability/context'
-  import { fetchBreakdownAttrValues, type BreakdownAttrValue, type RedMetric } from '@/observability/adapters/traces'
+  import {
+    fetchBreakdownAttrValues,
+    fetchBreakdownSeries,
+    type BreakdownAttrValue,
+    type RedMetric,
+  } from '@/observability/adapters/traces'
   import {
     discoverTraceBreakdownAttributes,
     filterBreakdownAttributesByScope,
@@ -64,6 +72,8 @@
   const loadingAttrs = ref(false)
   const loading = ref(false)
   const values = ref<BreakdownAttrValue[]>([])
+  const seriesByValue = ref<Record<string, Array<[number, number]>>>({})
+  const yAxis = ref({ yMin: 0, yMax: 1 })
 
   const scopedAttrs = computed(() => filterBreakdownAttributesByScope(allAttrs.value, scope.value))
 
@@ -119,11 +129,22 @@
     }
     if (!ctx.tracesTable.value || !groupByColumn.value) {
       values.value = []
+      seriesByValue.value = {}
+      yAxis.value = { yMin: 0, yMax: 1 }
       return
     }
     loading.value = true
     try {
-      values.value = await fetchBreakdownAttrValues(ctx, props.redMetric, groupByColumn.value)
+      const nextValues = await fetchBreakdownAttrValues(ctx, props.redMetric, groupByColumn.value)
+      const series = await fetchBreakdownSeries(
+        ctx,
+        props.redMetric,
+        groupByColumn.value,
+        nextValues.map((item) => item.value)
+      )
+      values.value = nextValues
+      seriesByValue.value = series.series
+      yAxis.value = series.yAxis
     } finally {
       loading.value = false
     }

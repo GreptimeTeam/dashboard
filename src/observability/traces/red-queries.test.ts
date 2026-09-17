@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   aggregateDurationHeatmapRows,
   bucketToUnixSeconds,
+  breakdownSeriesIntervalSeconds,
+  buildBreakdownSeriesSql,
   buildBreakdownValuesSql,
+  sharedBreakdownYAxis,
   buildDurationHeatmapSql,
   buildRedTimeseriesSql,
   buildRootListOrderAndExtraWhere,
@@ -125,6 +128,43 @@ describe('traces red-queries', () => {
     expect(volumeIntervalSecondsFromRange(30, [])).toBe(60)
     expect(volumeIntervalSecondsFromRange(120, [])).toBe(300)
     expect(volumeIntervalSecondsFromRange(2000, [])).toBe(3600)
+  })
+
+  it('builds one grouped breakdown series for the listed values', () => {
+    const sql = buildBreakdownSeriesSql({
+      tableName: 'opentelemetry_traces',
+      where: '"parent_span_id" IS NULL',
+      timeColumn: 'timestamp',
+      groupByColumn: 'service_name',
+      statusColumn: 'span_status_code',
+      durationColumn: 'duration_nano',
+      metric: 'rate',
+      intervalSeconds: 60,
+      values: ['frontend', "o'brien"],
+    })
+    expect(sql).toContain('date_bin(\'60 seconds\', "timestamp")')
+    expect(sql).toContain("\"service_name\" IN ('frontend', 'o''brien')")
+    expect(sql).toContain('COUNT(*) * 1.0 / 60')
+    expect(sql).toContain('GROUP BY time_bucket, "service_name"')
+    expect(sql).not.toContain('LIMIT')
+  })
+
+  it('shares a non-negative Y axis from plotted peaks', () => {
+    expect(
+      sharedBreakdownYAxis([
+        [
+          [1, 2],
+          [2, 4],
+        ],
+        [[1, 9]],
+      ])
+    ).toEqual({ yMin: 0, yMax: 9 })
+    expect(sharedBreakdownYAxis([[[1, 0]]])).toEqual({ yMin: 0, yMax: 1 })
+  })
+
+  it('sizes breakdown buckets from the window, not a fixed 60s step', () => {
+    expect(breakdownSeriesIntervalSeconds([0, 60])).toBeGreaterThanOrEqual(1)
+    expect(breakdownSeriesIntervalSeconds([0, 24 * 3600])).toBeGreaterThan(60)
   })
 
   it('builds breakdown values ranked by RED', () => {

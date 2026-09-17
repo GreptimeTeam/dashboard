@@ -15,6 +15,9 @@
       :red-metric="redMetric"
       :attr-key="attrKey"
       :attr-value="attrValue"
+      :points="points"
+      :y-min="yMin"
+      :y-max="yMax"
       :color-index="colorIndex"
       :scroll-root="scrollRoot"
     )
@@ -34,6 +37,9 @@
     redMetric: RedMetric
     attrKey: string
     attrValue: string
+    points: Array<[number, number]>
+    yMin: number
+    yMax: number
     colorIndex?: number
     scrollRoot?: MaybeRefOrGetter<HTMLElement | null | undefined>
   }>()

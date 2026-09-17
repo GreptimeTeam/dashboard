@@ -7,11 +7,14 @@ import { escapeSqlString, quoteIdent } from '../logs/query-state'
 import { buildDefaultTracesFieldMap } from '../traces/field-map'
 import {
   bucketToUnixSeconds,
+  breakdownSeriesIntervalSeconds,
+  buildBreakdownSeriesSql,
   buildBreakdownValuesSql,
   buildDurationHeatmapSql,
   buildRedTimeseriesSql,
   buildRootListOrderAndExtraWhere,
   aggregateDurationHeatmapRows,
+  sharedBreakdownYAxis,
   volumeIntervalSecondsFromRange,
   type RedMetric,
 } from '../traces/red-queries'
@@ -286,6 +289,66 @@ export async function fetchDurationHeatmap(
 export interface BreakdownAttrValue {
   value: string
   metricValue: number
+}
+
+export interface BreakdownSeriesResult {
+  series: Record<string, Array<[number, number]>>
+  yAxis: { yMin: number; yMax: number }
+}
+
+/** One grouped timeseries for the listed breakdown cards. Cards do not query themselves. */
+export async function fetchBreakdownSeries(
+  ctx: DrilldownContext,
+  metric: RedMetric,
+  groupByColumn: string,
+  values: string[]
+): Promise<BreakdownSeriesResult> {
+  const empty: BreakdownSeriesResult = { series: {}, yAxis: { yMin: 0, yMax: 1 } }
+  const tableName = ctx.tracesTable.value
+  const listed = values.filter(Boolean)
+  if (!tableName || !groupByColumn || !listed.length) {
+    return empty
+  }
+  const where = buildTracesContextWhere(ctx, { rootOnly: true })
+  const unixRange = ctx.unixTimeRange()
+  if (!where || unixRange.length !== 2) {
+    return empty
+  }
+  const intervalSeconds = breakdownSeriesIntervalSeconds(unixRange)
+  const sql = buildBreakdownSeriesSql({
+    tableName,
+    where,
+    timeColumn: timeColumn(ctx),
+    groupByColumn,
+    statusColumn: statusColumn(ctx),
+    durationColumn: durationColumn(ctx),
+    metric,
+    intervalSeconds,
+    values: listed,
+  })
+  try {
+    const response = await editorApi.runSQL(sql)
+    const rows = response?.output?.[0]?.records?.rows
+    if (!Array.isArray(rows)) {
+      return empty
+    }
+    const series: Record<string, Array<[number, number]>> = {}
+    rows.forEach((row) => {
+      const unix = bucketToUnixSeconds(row?.[0])
+      const attr = row?.[1] == null ? '' : String(row[1])
+      const value = Number(row?.[2])
+      if (unix == null || !attr || !Number.isFinite(value)) {
+        return
+      }
+      const points = series[attr] ?? []
+      points.push([unix, value])
+      series[attr] = points
+    })
+    return { series, yAxis: sharedBreakdownYAxis(Object.values(series)) }
+  } catch (error) {
+    console.error('Failed to fetch traces breakdown series:', error)
+    return empty
+  }
 }
 
 /** Top attribute values ranked by current RED aggregate (Phase B). */

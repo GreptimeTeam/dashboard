@@ -306,6 +306,9 @@ export interface PanelChartAxisOptions {
   plotHeightPx?: number
   /** Query window [startSec, endSec] — axis spans this even if samples start later. */
   timeRange?: [number, number]
+  /** Pin Y extent so sibling cards share a scale. Omitted charts keep their own auto range. */
+  yMin?: number
+  yMax?: number
 }
 
 /**
@@ -664,7 +667,9 @@ export function buildSparklineOption(
     yAxis: {
       type: 'value',
       show: true,
-      scale: true,
+      scale: options?.yMin == null && options?.yMax == null,
+      min: options?.yMin,
+      max: options?.yMax,
       splitNumber:
         options?.plotHeightPx != null ? calculateYAxisSplitNumber(options.plotHeightPx) : CATALOG_Y_AXIS_SPLIT_NUMBER,
       axisLine: {
@@ -790,7 +795,8 @@ export function buildBarSparklineOption(
       type: 'value',
       show: true,
       scale: false,
-      min: 0,
+      min: options?.yMin ?? 0,
+      max: options?.yMax,
       splitNumber:
         options?.plotHeightPx != null ? calculateYAxisSplitNumber(options.plotHeightPx) : CATALOG_Y_AXIS_SPLIT_NUMBER,
       axisLine: {
