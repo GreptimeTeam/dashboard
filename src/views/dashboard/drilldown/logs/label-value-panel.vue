@@ -124,14 +124,18 @@
     ctx.setFilters(next)
   }
 
+  function replaceLabelFilter(key: string, value: string) {
+    const next = ctx.filters.value.filter((filter) => filter.key !== key)
+    ctx.setFilters([...next, { key, op: '=', value }])
+  }
+
   function openDetail() {
     if (!props.labelCol) {
       return
     }
     ensureColumnMapped(props.labelCol)
-    if (!isIncluded.value) {
-      ctx.toggleFilterValue({ key: props.labelCol, op: '=', value: props.labelValue })
-    }
+    // Query logs narrows to this value. Same-key chips are replaced, not OR-merged.
+    replaceLabelFilter(props.labelCol, props.labelValue)
     applySelectedLevels()
     const logsMap = ctx.fieldMap.value.logs
     const groupKeys = new Set([logsMap.primaryGroupBy, logsMap.service, 'service'].filter(Boolean))
