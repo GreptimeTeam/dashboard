@@ -22,6 +22,8 @@ import getSeriesColorByIndex from './metrics/series-colors'
 import breakSparklineGaps from './metrics/sparkline-gaps'
 import enqueueSparklineQuery from './metrics/sparkline-query-queue'
 import { BREAKDOWN_MAX_DATA_POINTS, calculateSparklineQueryStep } from './metrics/sparkline-step'
+import type { BreakdownYAxisRange } from './metrics/breakdown-y-axis'
+import type { BreakdownYAxisSync } from './use-breakdown-y-axis-sync'
 
 const BREAKDOWN_GROUP_SERIES_CAP = 8
 
@@ -39,6 +41,8 @@ export interface UseBreakdownSparklineOptions {
   /** Required when mode === 'value'. */
   value?: Ref<string>
   enabled: Ref<boolean>
+  /** Grafana syncYAxis — sibling cards share one extent as their queries return. */
+  yAxisSync?: BreakdownYAxisSync | null
 }
 
 function buildMatchersFromFilters(ctx: DrilldownContext, excludeKey?: string): string | undefined {
@@ -94,7 +98,71 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
 
   const isEmpty = computed(() => !loading.value && !error.value && !chartOption.value)
 
+  interface PaintedSeries {
+    points: Array<[number, number | null]>
+    name: string
+    color: string
+  }
+
+  let painted: PaintedSeries[] = []
+  let paintPanelUnit = ''
+  let paintSemanticUnit: string | null = null
+  let paintTimeRange: [number, number] | undefined
+  let paintMetricName = ''
+
+  const paint = (range: BreakdownYAxisRange | null) => {
+    if (!painted.length) {
+      return
+    }
+    const axis = range ? { yMin: range.min, yMax: range.max } : {}
+    const shared = {
+      metricKind: metricKind.value,
+      metricName: paintMetricName,
+      semanticUnit: paintSemanticUnit,
+      panelUnit: paintPanelUnit,
+      timeRange: paintTimeRange,
+      plotHeightPx: BREAKDOWN_CHART_HEIGHT,
+      ...axis,
+    }
+    if (options.mode.value === 'value' && painted.length === 1) {
+      chartOption.value = buildSparklineOption(painted[0].points, {
+        ...shared,
+        color: painted[0].color,
+      })
+      return
+    }
+    chartOption.value = buildMainTimeseriesOption(painted, {
+      ...shared,
+      showPoints: 'auto',
+    })
+  }
+
+  const publish = (seriesList: PaintedSeries[], seenGeneration: number) => {
+    painted = seriesList
+    const sync = options.yAxisSync
+    if (!sync) {
+      paint(null)
+      return
+    }
+    if (seenGeneration !== sync.stamp()) {
+      return
+    }
+    const values = seriesList.flatMap((item) => item.points.map((point) => point[1]))
+    paint(sync.report(values, seenGeneration))
+  }
+
+  if (options.yAxisSync) {
+    watch(options.yAxisSync.epoch, () => {
+      const range = options.yAxisSync?.range.value
+      if (!range) {
+        return
+      }
+      paint(range)
+    })
+  }
+
   const clearChart = () => {
+    painted = []
     chartOption.value = null
     seriesCount.value = 0
     seriesLegends.value = []
@@ -124,6 +192,7 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
 
     const version = requestVersion + 1
     requestVersion = version
+    const seenGeneration = options.yAxisSync?.stamp() ?? 0
     loading.value = true
     error.value = null
 
@@ -135,6 +204,9 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
       const { kind, semanticUnit, temporality } = meta
       metricKind.value = kind
       const panelUnit = resolveMetricPanelUnit(name, isMetricRateQuery(kind, temporality), { semanticUnit })
+      paintMetricName = name
+      paintSemanticUnit = semanticUnit
+      paintPanelUnit = panelUnit
 
       const matchers =
         options.mode.value === 'groupBy'
@@ -150,6 +222,7 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
       })
       const stepSeconds = Number(step)
       const timeRange: [number, number] = [start, end]
+      paintTimeRange = timeRange
 
       if (options.mode.value === 'groupBy') {
         const query = buildBreakdownGroupByExpr(name, labelKey, matchers, queryOpts)
@@ -164,6 +237,7 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
         seriesCount.value = series.length
 
         if (!series.length) {
+          painted = []
           chartOption.value = null
           seriesLegends.value = []
           legendLabel.value = ''
@@ -186,6 +260,7 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
           .filter((item): item is NonNullable<typeof item> => item !== null)
 
         if (!seriesList.length) {
+          painted = []
           chartOption.value = null
           seriesLegends.value = []
           legendLabel.value = ''
@@ -195,15 +270,7 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
         // Grafana label panels: legend shows series names (label values).
         seriesLegends.value = seriesList.map((item) => ({ name: item.name, color: item.color }))
         legendLabel.value = ''
-        chartOption.value = buildMainTimeseriesOption(seriesList, {
-          metricKind: kind,
-          metricName: name,
-          semanticUnit,
-          panelUnit,
-          timeRange,
-          plotHeightPx: BREAKDOWN_CHART_HEIGHT,
-          showPoints: 'auto',
-        })
+        publish(seriesList, seenGeneration)
         return
       }
 
@@ -238,6 +305,7 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
       seriesCount.value = seriesList.length
 
       if (!seriesList.length) {
+        painted = []
         chartOption.value = null
         seriesLegends.value = []
         legendLabel.value = ''
@@ -247,29 +315,7 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
       // Grafana value panels: legend shows agg function (avg / sum(rate) / min+max).
       seriesLegends.value = seriesList.map((item) => ({ name: item.name, color: item.color }))
       legendLabel.value = seriesList[0]?.name ?? ''
-
-      if (seriesList.length === 1) {
-        chartOption.value = buildSparklineOption(seriesList[0].points, {
-          metricKind: kind,
-          metricName: name,
-          semanticUnit,
-          panelUnit,
-          timeRange,
-          plotHeightPx: BREAKDOWN_CHART_HEIGHT,
-          color: seriesList[0].color,
-        })
-        return
-      }
-
-      chartOption.value = buildMainTimeseriesOption(seriesList, {
-        metricKind: kind,
-        metricName: name,
-        semanticUnit,
-        panelUnit,
-        timeRange,
-        plotHeightPx: BREAKDOWN_CHART_HEIGHT,
-        showPoints: 'auto',
-      })
+      publish(seriesList, seenGeneration)
     } catch (err) {
       if (version !== requestVersion) {
         return

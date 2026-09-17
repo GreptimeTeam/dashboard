@@ -33,6 +33,7 @@
   import { useDrilldownContext } from '@/observability/context'
   import { BREAKDOWN_CHART_HEIGHT } from '@/observability/metrics/panel-stats'
   import useBreakdownSparkline, { type BreakdownSparklineMode } from '@/observability/use-breakdown-sparkline'
+  import { useBreakdownYAxisSync } from '@/observability/use-breakdown-y-axis-sync'
   import useLazyPanelQuery from '@/observability/use-lazy-panel-query'
 
   const props = defineProps<{
@@ -51,12 +52,14 @@
   const value = toRef(props, 'value')
   const { targetRef, hasBeenVisible } = useLazyPanelQuery(props.scrollRoot)
 
+  const yAxisSync = useBreakdownYAxisSync()
   const { loading, error, chartOption, promqlQuery, seriesCount, seriesLegends, isEmpty } = useBreakdownSparkline(ctx, {
     metric,
     labelKey,
     mode,
     value,
     enabled: hasBeenVisible,
+    yAxisSync,
   })
 
   const chartHeight = `${BREAKDOWN_CHART_HEIGHT}px`

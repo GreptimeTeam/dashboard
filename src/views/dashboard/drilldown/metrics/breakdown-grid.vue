@@ -41,10 +41,12 @@
 </template>
 
 <script setup lang="ts">
-  import { onMounted, ref, watch, type MaybeRefOrGetter } from 'vue'
+  import { onMounted, ref, toRef, watch, type MaybeRefOrGetter } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useDrilldownContext } from '@/observability/context'
   import { fetchBreakdownLabelKeys, fetchBreakdownLabelValues } from '@/observability/metrics/breakdown'
+  import useMainChartPrefs from '@/observability/metrics/main-chart-config'
+  import { provideBreakdownYAxisSync } from '@/observability/use-breakdown-y-axis-sync'
   import BreakdownLabelCard from './breakdown-label-card.vue'
   import BreakdownValueCard from './breakdown-value-card.vue'
 
@@ -57,6 +59,8 @@
 
   const { t } = useI18n()
   const ctx = useDrilldownContext()
+  const yAxisSync = provideBreakdownYAxisSync()
+  const { prefs } = useMainChartPrefs(toRef(props, 'metric'))
 
   const loading = ref(false)
   const labelKeys = ref<string[]>([])
@@ -116,6 +120,23 @@
     () => {
       backToAllLabels()
       loadLabels()
+    },
+    { deep: true }
+  )
+
+  watch(
+    () => [
+      props.metric,
+      selectedLabel.value,
+      prefs.value.agg,
+      ctx.filters.value,
+      ctx.time.value,
+      ctx.rangeTime.value[0],
+      ctx.rangeTime.value[1],
+      ctx.refreshKey.value,
+    ],
+    () => {
+      yAxisSync.reset()
     },
     { deep: true }
   )

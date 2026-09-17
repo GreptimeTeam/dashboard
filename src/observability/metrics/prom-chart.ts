@@ -951,7 +951,9 @@ export function buildMainTimeseriesOption(
     yAxis: {
       type: 'value',
       show: true,
-      scale: true,
+      scale: options?.yMin == null && options?.yMax == null,
+      min: options?.yMin,
+      max: options?.yMax,
       splitNumber:
         options?.plotHeightPx != null ? calculateYAxisSplitNumber(options.plotHeightPx) : CATALOG_Y_AXIS_SPLIT_NUMBER,
       axisLine: {
