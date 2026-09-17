@@ -2,50 +2,72 @@
 .logs-detail-filters(v-if="visible")
   .filter-item(v-if="columns.body && logsTab === 'logs'")
     span.filter-label {{ columns.body }}
-    a-select.filter-op(size="small" :model-value="logsBodyOp" @change="onBodyOpChange")
+    a-select.filter-op(size="small" :model-value="bodyOpDraft" @change="onBodyOpChange")
       a-option(v-for="op in bodyOps" :key="op" :value="op") {{ op }}
     a-input.filter-value(
       v-if="bodyNeedsValue"
       v-model="bodyDraft"
       size="small"
       allow-clear
-      @blur="commitBody"
-      @press-enter="commitBody"
+      @press-enter="runQuery"
       @clear="clearBody"
     )
   .filter-item(v-if="columns.service")
     span.filter-label {{ columns.service }}
     a-select.filter-op.filter-op--short(size="small" :model-value="serviceOp" @change="onServiceOpChange")
       a-option(v-for="op in serviceOps" :key="op.value" :value="op.value") {{ op.label }}
+    a-select.filter-value(
+      v-if="serviceUsesSuggest"
+      size="small"
+      allow-search
+      allow-clear
+      :model-value="serviceDraft"
+      :loading="serviceSuggestLoading"
+      @change="onServiceSuggestChange"
+    )
+      a-option(
+        v-for="row in serviceSuggestions"
+        :key="row.value"
+        :value="row.value"
+        :title="suggestionTitle(row)"
+      ) {{ row.value }}
     a-input.filter-value(
+      v-else
       v-model="serviceDraft"
       size="small"
       allow-clear
       @focus="serviceEditing = true"
-      @blur="commitService"
-      @press-enter="commitService"
+      @press-enter="runQuery"
       @clear="clearService"
     )
   LevelFilter(v-if="columns.severity" :column="columns.severity" :label="columns.severity")
+  a-button.filter-query(type="primary" size="small" @click="runQuery") {{ t('drilldown.logs.runQuery') }}
 </template>
 
 <script setup lang="ts">
   import { computed, ref, watch } from 'vue'
+  import { useI18n } from 'vue-i18n'
   import { useDrilldownContext } from '@/observability/context'
+  import { fetchLabelValues, type LabelValueRow } from '@/observability/adapters/logs'
   import { DRILLDOWN_FILTER_OP_OPTIONS } from '@/observability/filters'
-  import { LOGS_BODY_OPS, isLogsBodyOp, logsBodyOpNeedsValue } from '@/observability/logs/body-search'
+  import { LOGS_BODY_OPS, isLogsBodyOp, logsBodyOpNeedsValue, type LogsBodyOp } from '@/observability/logs/body-search'
   import type { DrilldownFilterOp } from '@/observability/types'
   import LevelFilter from './level-filter.vue'
 
+  const { t } = useI18n()
   const ctx = useDrilldownContext()
   const { logsTab, logsBodyOp, logsBodyValue } = ctx
 
   const bodyOps = LOGS_BODY_OPS
   const serviceOps = DRILLDOWN_FILTER_OP_OPTIONS
   const bodyDraft = ref('')
+  const bodyOpDraft = ref<LogsBodyOp>(logsBodyOp.value)
   const serviceDraft = ref('')
   const serviceOp = ref<DrilldownFilterOp>('=')
   const serviceEditing = ref(false)
+  const serviceSuggestions = ref<LabelValueRow[]>([])
+  const serviceSuggestLoading = ref(false)
+  const SCOPE_SUGGEST_LIMIT = 200
 
   const columns = computed(() => {
     const { logs } = ctx.fieldMap.value
@@ -57,7 +79,8 @@
     }
   })
 
-  const bodyNeedsValue = computed(() => logsBodyOpNeedsValue(logsBodyOp.value))
+  const bodyNeedsValue = computed(() => logsBodyOpNeedsValue(bodyOpDraft.value))
+  const serviceUsesSuggest = computed(() => columns.value.service === 'scope_name')
 
   const visible = computed(
     () =>
@@ -67,6 +90,29 @@
 
   function isFilterOp(value: unknown): value is DrilldownFilterOp {
     return serviceOps.some((op) => op.value === value)
+  }
+
+  function suggestionTitle(row: LabelValueRow) {
+    return t('drilldown.logs.valueCount', { count: row.count })
+  }
+
+  async function loadServiceSuggestions() {
+    const column = columns.value.service
+    if (column !== 'scope_name' || !ctx.logsTable.value) {
+      serviceSuggestions.value = []
+      return
+    }
+    serviceSuggestLoading.value = true
+    try {
+      serviceSuggestions.value = (
+        (await fetchLabelValues(ctx, column, {
+          limit: SCOPE_SUGGEST_LIMIT,
+          excludeFilterKey: column,
+        })) ?? []
+      ).filter((row) => row.value.trim())
+    } finally {
+      serviceSuggestLoading.value = false
+    }
   }
 
   function syncServiceFromFilters() {
@@ -85,6 +131,28 @@
   })
 
   watch(
+    () =>
+      [
+        serviceUsesSuggest.value,
+        ctx.logsTable.value,
+        ctx.refreshKey.value,
+        ctx.time.value,
+        ctx.rangeTime.value[0],
+        ctx.rangeTime.value[1],
+        ctx.filters.value
+          .filter((filter) => filter.key !== columns.value.service)
+          .map((filter) => `${filter.key}${filter.op}${filter.value}`)
+          .join('\0'),
+      ] as const,
+    loadServiceSuggestions,
+    { immediate: true }
+  )
+
+  watch(logsBodyOp, (op) => {
+    bodyOpDraft.value = op
+  })
+
+  watch(
     logsBodyValue,
     (value) => {
       bodyDraft.value = value
@@ -93,22 +161,19 @@
   )
 
   function commitBody() {
-    logsBodyValue.value = bodyDraft.value.trim()
+    const op = bodyOpDraft.value
+    logsBodyOp.value = op
+    logsBodyValue.value = logsBodyOpNeedsValue(op) ? bodyDraft.value.trim() : ''
     bodyDraft.value = logsBodyValue.value
-  }
-
-  function clearBody() {
-    bodyDraft.value = ''
-    commitBody()
   }
 
   function onBodyOpChange(value: string | number | Record<string, unknown> | undefined) {
     if (!isLogsBodyOp(value)) {
       return
     }
-    logsBodyOp.value = value
-    if (!logsBodyOpNeedsValue(logsBodyOp.value)) {
-      logsBodyValue.value = ''
+    bodyOpDraft.value = value
+    if (!logsBodyOpNeedsValue(value)) {
+      bodyDraft.value = ''
     }
   }
 
@@ -139,9 +204,25 @@
     ctx.setFilters(next)
   }
 
+  function runQuery() {
+    commitBody()
+    commitService()
+    ctx.triggerRefresh()
+  }
+
+  function clearBody() {
+    bodyDraft.value = ''
+    runQuery()
+  }
+
   function clearService() {
     serviceDraft.value = ''
-    commitService()
+    runQuery()
+  }
+
+  function onServiceSuggestChange(value: string | number | Record<string, unknown> | undefined) {
+    serviceDraft.value = value == null || typeof value === 'object' ? '' : String(value)
+    runQuery()
   }
 
   function onServiceOpChange(value: string | number | Record<string, unknown> | undefined) {
@@ -149,9 +230,6 @@
       return
     }
     serviceOp.value = value
-    if (serviceDraft.value.trim()) {
-      commitService()
-    }
   }
 </script>
 
@@ -208,5 +286,10 @@
   .filter-value {
     width: 180px;
     min-width: 140px;
+  }
+
+  .filter-query {
+    flex-shrink: 0;
+    height: var(--gpt-control-height-sm);
   }
 </style>

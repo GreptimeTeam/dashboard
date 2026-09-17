@@ -137,6 +137,7 @@ export default {
   'drilldown.logs.noFieldValues': '当前范围内该 field 无 value',
   'drilldown.logs.levelFilter': 'Levels',
   'drilldown.logs.levelAll': '全部',
+  'drilldown.logs.runQuery': '查询',
   'drilldown.logs.valueCount': '{count} 条日志',
   'drilldown.logs.loadingMore': '加载更多…',
   'drilldown.logs.chartWaiting': '滚入视口后加载图表',

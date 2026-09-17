@@ -139,6 +139,7 @@ export default {
   'drilldown.logs.noFieldValues': 'No values for this field in the current range',
   'drilldown.logs.levelFilter': 'Levels',
   'drilldown.logs.levelAll': 'All',
+  'drilldown.logs.runQuery': 'Query',
   'drilldown.logs.valueCount': '{count} logs',
   'drilldown.logs.loadingMore': 'Loading more…',
   'drilldown.logs.chartWaiting': 'Scroll to load chart',
