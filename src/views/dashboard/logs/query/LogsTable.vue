@@ -10,7 +10,7 @@
     :wrap-line="wrapLine"
     :virtual-list-props="virtualListPropsBinding"
     :column-resizable="columnMode === 'separate' && virtual"
-    :row-selection="activeRowSelection"
+    :row-selection="rowSelection"
     :selected-keys="exportSelectedKeys"
     :ts-column="tsColumn"
     :ts-cell-detail="tsCellDetail"
@@ -32,6 +32,7 @@
       slot(name="column-level" v-bind="slotProps")
 
   LogDetail(
+    v-if="rowDetail"
     v-model:visible="detailVisible"
     :selected-row-key="selectedRowKey"
     :curr-row="selectedRecord"
@@ -73,6 +74,8 @@
       detailPopupContainer?: string
       /** When set, this column's values are links that emit traceClick. */
       traceIdColumn?: string
+      /** Timestamp click opens the row detail drawer. Off for overview previews. */
+      rowDetail?: boolean
     }>(),
     {
       wrapLine: false,
@@ -91,6 +94,7 @@
       allowMergedVirtualHScroll: false,
       detailPopupContainer: '#log-table-container',
       traceIdColumn: '',
+      rowDetail: true,
     }
   )
 
@@ -119,7 +123,8 @@
   })
 
   const activeRowSelection = computed(() => props.exportRowSelection ?? detailRowSelection.value)
-  const tsCellDetail = computed(() => !!props.tsColumn && !props.exportRowSelection)
+  const rowSelection = computed(() => (props.rowDetail ? activeRowSelection.value : props.exportRowSelection))
+  const tsCellDetail = computed(() => props.rowDetail && !!props.tsColumn && !props.exportRowSelection)
   const exportSelectedKeys = computed(() => (props.exportRowSelection ? props.selectedKeys : undefined))
   const detailVisible = ref(false)
 
@@ -215,7 +220,7 @@
   }
 
   const handleTsClick = (row: TableData, rowIndex: number) => {
-    if (props.exportRowSelection) return
+    if (!props.rowDetail || props.exportRowSelection) return
     const key = typeof row.__rowIndex === 'number' ? row.__rowIndex : rowIndex
     selectedRowKey.value = key
     emit('rowSelect', row)

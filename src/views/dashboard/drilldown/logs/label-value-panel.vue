@@ -22,6 +22,7 @@
           column-mode="merged-with-keys"
           size="mini"
           :virtual="false"
+          :row-detail="false"
           :show-header="false"
           :data="tableData"
           :columns="tableColumns"
