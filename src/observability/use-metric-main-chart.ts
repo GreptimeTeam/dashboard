@@ -127,6 +127,7 @@ export default function useMetricMainChart(
     if (data.kind === 'heatmap') {
       chartOption.value = buildHeatmapOption(data.heatmap, data.name, {
         ...axis,
+        stepSeconds: Number(calculateSparklineQueryStep(data.timeRange, { maxDataPoints: MAIN_CHART_MAX_DATA_POINTS })),
         semanticUnit: semanticUnit.value,
         panelUnit: resolveMetricPanelUnit(data.name, false, { semanticUnit: semanticUnit.value }),
       })

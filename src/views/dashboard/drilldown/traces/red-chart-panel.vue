@@ -32,7 +32,12 @@
   import { useDrilldownContext } from '@/observability/context'
   import { fetchDurationHeatmap, fetchRedTimeseries, type RedMetric } from '@/observability/adapters/traces'
   import { buildBarSparklineOption, buildHeatmapOption } from '@/observability/metrics/prom-chart'
-  import { redMetricBarColor, redMetricChartKind, redMetricPanelUnit } from '@/observability/traces/red-queries'
+  import {
+    redMetricBarColor,
+    redMetricChartKind,
+    redMetricPanelUnit,
+    volumeIntervalSecondsFromRange,
+  } from '@/observability/traces/red-queries'
 
   const props = defineProps<{
     metric: RedMetric
@@ -99,6 +104,7 @@
           panelUnit: 'none',
           yUnit: 's',
           timeRange,
+          stepSeconds: volumeIntervalSecondsFromRange(ctx.time.value, ctx.rangeTime.value),
           plotHeightPx: chartHeightPx.value,
         })
         return

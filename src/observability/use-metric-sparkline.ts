@@ -119,6 +119,7 @@ export default function useMetricSparkline(
         }
         chartOption.value = buildHeatmapOption(heatmap, name, {
           timeRange: [start, end],
+          stepSeconds: Number(step),
           semanticUnit,
           panelUnit: resolveMetricPanelUnit(name, false, { semanticUnit }),
         })

@@ -8,6 +8,7 @@ import formatTimeAxisLabel, {
 import type { MetricKind } from './infer-promql'
 import { formatMetricUnitValue, resolveMetricPanelUnit } from './metric-units'
 import { formatMetricAxisValue } from './panel-stats'
+import expandHeatmapTimeGrid from './heatmap-time-grid'
 import getSeriesColorByIndex, { SERIES_FILL_OPACITY } from './series-colors'
 
 export interface PromMatrixSeries {
@@ -391,7 +392,10 @@ export function buildHeatmapOption(
     yUnit?: 's'
   }
 ): EChartsOption {
-  const { times, buckets, cells } = data
+  const expanded = expandHeatmapTimeGrid(data.times, data.cells, options?.timeRange, options?.stepSeconds)
+  const { times } = expanded
+  const { buckets } = data
+  const { cells } = expanded
   const valueUnit =
     options?.panelUnit ?? resolveMetricPanelUnit(metricName ?? '', false, { semanticUnit: options?.semanticUnit })
 
