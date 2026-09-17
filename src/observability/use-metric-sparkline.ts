@@ -14,7 +14,7 @@ import {
   type MetricPanelType,
 } from './metrics/infer-promql'
 import { isMetricRateQuery } from './metrics/panel-stats'
-import { resolveMetricPanelUnit } from './metrics/metric-units'
+import { resolveHistogramCellUnit, resolveMetricPanelUnit } from './metrics/metric-units'
 import {
   aggregateHistogramToHeatmap,
   aggregateSeriesToPoints,
@@ -121,10 +121,14 @@ export default function useMetricSparkline(
           timeRange: [start, end],
           stepSeconds: Number(step),
           semanticUnit,
-          panelUnit: resolveMetricPanelUnit(name, false, { semanticUnit }),
+          relativeHide: true,
         })
-        const colorBounds = resolveHeatmapColorBounds(heatmap.cells)
-        heatmapLegend.value = formatHeatmapLegendLabels(colorBounds.minValue, colorBounds.maxValue, name, semanticUnit)
+        const colorBounds = resolveHeatmapColorBounds(heatmap.cells, { relativeHide: true })
+        heatmapLegend.value = formatHeatmapLegendLabels(
+          colorBounds.minValue,
+          colorBounds.maxValue,
+          resolveHistogramCellUnit(name, semanticUnit)
+        )
         return
       }
 

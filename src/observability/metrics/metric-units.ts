@@ -151,8 +151,9 @@ export function mapUcumToPanelUnit(ucum: string | null | undefined, isRateQuery:
 
 /**
  * Timeseries: `isRateQuery ? getPerSecondRateUnit : getUnit`.
- * Heatmap (Grafana): always `getUnit` — cell values still use this panel unit.
- *
+ * Heatmap color scale: Grafana metrics-drilldown `buildHeatmapPanel` does
+ * `.setUnit(getUnit(metric.name))` and leaves `cellValues.unit` unset, so the
+ * value field keeps this panel unit — not a rate (`cps` / `Bps`).
  * When `semanticUnit` is a declared UCUM string, it wins over name heuristics.
  */
 export function resolveMetricPanelUnit(
@@ -165,6 +166,38 @@ export function resolveMetricPanelUnit(
     return fromSemantics
   }
   return isRateQuery ? getPerSecondRateUnit(metricName) : getUnit(metricName)
+}
+
+const HISTOGRAM_NAME_SUFFIXES = ['_bucket', '_sum', '_count'] as const
+
+/** `http_request_duration_seconds_bucket` → base name so `seconds` / `bytes` is visible. */
+export function histogramBaseName(metric: string): string {
+  const lower = metric.toLowerCase()
+  const suffix = HISTOGRAM_NAME_SUFFIXES.find((item) => lower.endsWith(item))
+  return suffix ? metric.slice(0, -suffix.length) : metric
+}
+
+/**
+ * Heatmap Y `le` bounds. Declared UCUM wins; otherwise the unit token on the name
+ * after stripping `_bucket` / `_sum` / `_count`.
+ * Grafana leaves `yAxis.unit` unset (raw `le`) unless the panel sets it; this is
+ * the observation unit, not a rate.
+ */
+export function resolveHistogramBoundUnit(metricName: string, semanticUnit?: string | null): string {
+  return resolveMetricPanelUnit(histogramBaseName(metricName), false, { semanticUnit })
+}
+
+/**
+ * Color scale and tooltip cell value.
+ *
+ * Matches Grafana metrics-drilldown: panel unit is `getUnit(metric.name)` with
+ * `isRateQuery` false. Last 1–2 name tokens are scanned as-is, so
+ * `duration_seconds_bucket` → `s` and `bytes_bucket` → `bytes`, while
+ * `bytes_rate_bucket` stays `none` (`rate` sits between `bytes` and `bucket`).
+ * Not `getPerSecondRateUnit` — the legend is not `c/s` or `Bps`.
+ */
+export function resolveHistogramCellUnit(metricName: string, semanticUnit?: string | null): string {
+  return resolveMetricPanelUnit(metricName, false, { semanticUnit })
 }
 
 function clamp(n: number, min: number, max: number): number {

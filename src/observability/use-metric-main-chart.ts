@@ -10,7 +10,7 @@ import { type MetricKind, type MetricTemporality } from './metrics/infer-promql'
 import useMainChartPrefs from './metrics/main-chart-config'
 import buildMainChartQueries from './metrics/main-chart-queries'
 import { isMetricRateQuery, MAIN_CHART_FALLBACK_PLOT_WIDTH_PX, MAIN_CHART_HEIGHT } from './metrics/panel-stats'
-import { resolveMetricPanelUnit } from './metrics/metric-units'
+import { resolveHistogramCellUnit, resolveMetricPanelUnit } from './metrics/metric-units'
 import {
   aggregateHistogramToHeatmap,
   aggregateSeriesToPoints,
@@ -129,7 +129,6 @@ export default function useMetricMainChart(
         ...axis,
         stepSeconds: Number(calculateSparklineQueryStep(data.timeRange, { maxDataPoints: MAIN_CHART_MAX_DATA_POINTS })),
         semanticUnit: semanticUnit.value,
-        panelUnit: resolveMetricPanelUnit(data.name, false, { semanticUnit: semanticUnit.value }),
       })
       return
     }
@@ -258,8 +257,7 @@ export default function useMetricMainChart(
         heatmapLegend.value = formatHeatmapLegendLabels(
           colorBounds.minValue,
           colorBounds.maxValue,
-          name,
-          semanticUnit.value
+          resolveHistogramCellUnit(name, semanticUnit.value)
         )
         applyCachedOption()
         return

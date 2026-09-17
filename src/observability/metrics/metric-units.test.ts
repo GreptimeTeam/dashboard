@@ -4,6 +4,9 @@ import {
   getPerSecondRateUnit,
   getUnit,
   getUnitFromMetric,
+  histogramBaseName,
+  resolveHistogramBoundUnit,
+  resolveHistogramCellUnit,
   resolveMetricPanelUnit,
 } from './metric-units'
 
@@ -65,5 +68,29 @@ describe('formatMetricUnitValue', () => {
   it('formats seconds durations', () => {
     expect(formatMetricUnitValue(0.3, 's')).toBe('300 ms')
     expect(formatMetricUnitValue(2, 's')).toBe('2 s')
+  })
+})
+
+describe('histogram heatmap units', () => {
+  it('strips histogram suffixes so the observation unit is visible', () => {
+    expect(histogramBaseName('opendal_operation_bytes_rate_bucket')).toBe('opendal_operation_bytes_rate')
+    expect(histogramBaseName('http_request_duration_seconds_sum')).toBe('http_request_duration_seconds')
+    expect(resolveHistogramBoundUnit('opendal_operation_bytes_rate_bucket')).toBe('bytes')
+    expect(resolveHistogramBoundUnit('http_request_duration_seconds_bucket')).toBe('s')
+    expect(formatMetricUnitValue(8192, 'bytes')).toBe('8 KiB')
+    expect(formatMetricUnitValue(2147483648, 'bytes')).toBe('2 GiB')
+  })
+
+  it('lets declared UCUM win for Y bounds', () => {
+    expect(resolveHistogramBoundUnit('opendal_operation_bytes_rate_bucket', 's')).toBe('s')
+  })
+
+  it('color legend uses Grafana panel unit, not a rate', () => {
+    expect(resolveHistogramCellUnit('http_request_duration_seconds_bucket')).toBe('s')
+    expect(resolveHistogramCellUnit('http_request_size_bytes_bucket')).toBe('bytes')
+    // Grafana getUnit scans the last two tokens; `rate` hides `bytes`.
+    expect(resolveHistogramCellUnit('opendal_operation_bytes_rate_bucket')).toBe('none')
+    expect(resolveHistogramCellUnit('http_request_duration_seconds_bucket')).not.toBe('cps')
+    expect(resolveHistogramCellUnit('opendal_operation_bytes_rate_bucket', 'By')).toBe('bytes')
   })
 })

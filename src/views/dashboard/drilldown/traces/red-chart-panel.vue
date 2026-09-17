@@ -101,7 +101,7 @@
         isEmpty.value = false
         chartOption.value = buildHeatmapOption(heatmap, undefined, {
           // Cell magnitude = span count; Y axis = duration seconds.
-          panelUnit: 'none',
+          cellUnit: 'none',
           yUnit: 's',
           timeRange,
           stepSeconds: volumeIntervalSecondsFromRange(ctx.time.value, ctx.rangeTime.value),

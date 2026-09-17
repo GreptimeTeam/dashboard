@@ -6,7 +6,7 @@ import formatTimeAxisLabel, {
   CATALOG_Y_AXIS_SPLIT_NUMBER,
 } from '@/utils/chart-time-axis'
 import type { MetricKind } from './infer-promql'
-import { formatMetricUnitValue, resolveMetricPanelUnit } from './metric-units'
+import { formatMetricUnitValue, resolveHistogramBoundUnit, resolveHistogramCellUnit } from './metric-units'
 import { formatMetricAxisValue } from './panel-stats'
 import expandHeatmapTimeGrid from './heatmap-time-grid'
 import getSeriesColorByIndex, { SERIES_FILL_OPACITY } from './series-colors'
@@ -80,7 +80,7 @@ function parseLeSortValue(le: string): number {
   return Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY
 }
 
-function formatBucketLabel(le: string, yUnit?: string): string {
+function formatBucketLabel(le: string, boundUnit?: string): string {
   if (le === '+Inf') {
     return '+Inf'
   }
@@ -88,8 +88,8 @@ function formatBucketLabel(le: string, yUnit?: string): string {
   if (!Number.isFinite(parsed)) {
     return le
   }
-  if (yUnit === 's') {
-    return formatMetricUnitValue(parsed, 's')
+  if (boundUnit && boundUnit !== 'none') {
+    return formatMetricUnitValue(parsed, boundUnit)
   }
   if (parsed === 0) {
     return '0'
@@ -103,9 +103,9 @@ function formatBucketLabel(le: string, yUnit?: string): string {
 }
 
 /** Grafana `yMinDisplay` for `le` layout — `"0.0"` when buckets are fractional, else `"0"`. */
-function formatHeatmapYMinLabel(buckets: string[], yUnit?: string): string {
-  if (yUnit === 's') {
-    return formatMetricUnitValue(0, 's')
+function formatHeatmapYMinLabel(buckets: string[], boundUnit?: string): string {
+  if (boundUnit && boundUnit !== 'none') {
+    return formatMetricUnitValue(0, boundUnit)
   }
   const hasFractional = buckets.some((le) => {
     const parsed = parseFloat(le)
@@ -139,31 +139,45 @@ function heatmapColorMagnitude(value: number, minValue: number, maxValue: number
   return Math.max(0, Math.min(1, (value - minValue) / (maxValue - minValue)))
 }
 
-function heatmapHideLe(maxValue: number): number {
+function heatmapHideLe(maxValue: number, relativeHide: boolean): number {
+  if (!relativeHide) {
+    return HEATMAP_FILTER_VALUES_LE
+  }
   return Math.max(HEATMAP_FILTER_VALUES_LE, maxValue * HEATMAP_RELATIVE_HIDE_RATIO)
 }
 
+export interface HeatmapCellFilterOptions {
+  /** Catalog only. Main chart uses Grafana's absolute `1e-9` floor. */
+  relativeHide?: boolean
+}
+
 /**
- * Cells to paint after Grafana hideLE (+ catalog relative floor).
+ * Cells to paint after Grafana hideLE (+ optional catalog relative floor).
  * Y-axis still uses the full `le` list — empty rows stay blank.
  */
-export function selectVisibleHeatmapCells(cells: Array<[number, number, number]>): Array<[number, number, number]> {
+export function selectVisibleHeatmapCells(
+  cells: Array<[number, number, number]>,
+  options?: HeatmapCellFilterOptions
+): Array<[number, number, number]> {
   let maxValue = 0
   cells.forEach(([, , value]) => {
     if (value > maxValue) {
       maxValue = value
     }
   })
-  const hideLe = heatmapHideLe(maxValue)
+  const hideLe = heatmapHideLe(maxValue, Boolean(options?.relativeHide))
   return cells.filter(([, , value]) => value > hideLe)
 }
 
 /** Visible color scale bounds (Auto min / Auto max of painted cells). */
-export function resolveHeatmapColorBounds(cells: Array<[number, number, number]>): {
+export function resolveHeatmapColorBounds(
+  cells: Array<[number, number, number]>,
+  options?: HeatmapCellFilterOptions
+): {
   minValue: number
   maxValue: number
 } {
-  const visible = selectVisibleHeatmapCells(cells)
+  const visible = selectVisibleHeatmapCells(cells, options)
   if (!visible.length) {
     return { minValue: 0, maxValue: 0 }
   }
@@ -176,14 +190,22 @@ export function resolveHeatmapColorBounds(cells: Array<[number, number, number]>
   return { minValue, maxValue }
 }
 
-/** Grafana color legend: Auto(min) … Auto(max) with panel unit from semantics or name. */
+/** Grafana color legend: Auto(min) … Auto(max) with the panel unit (`getUnit`, not a rate). */
+
+/**
+ * Grafana heatmap tooltip (single): time, then the count field display name, then Bucket.
+ * Default field name is `Value` when `rowsFrame.value` is unset.
+ * @see grafana HeatmapTooltip `getFieldDisplayName(countField)` + `label: 'Bucket'`
+ */
+export function formatHeatmapTooltip(input: { time: string; bucket: string; value: string; color?: string }): string {
+  const swatch = input.color ? `<span style="color:${input.color}">●</span> ` : ''
+  return `${input.time}<br/>${swatch}Value: ${input.value}<br/>Bucket: ${input.bucket}`
+}
 export function formatHeatmapLegendLabels(
   minValue: number,
   maxValue: number,
-  metricName?: string,
-  semanticUnit?: string | null
+  unit = 'none'
 ): { low: string; mid: string; high: string } {
-  const unit = resolveMetricPanelUnit(metricName ?? '', false, { semanticUnit })
   const low = formatMetricUnitValue(minValue, unit)
   const high = formatMetricUnitValue(maxValue, unit)
   const mid = formatMetricUnitValue((minValue + maxValue) / 2, unit)
@@ -387,17 +409,26 @@ export function buildHeatmapOption(
   metricName?: string,
   options?: PanelChartAxisOptions & {
     semanticUnit?: string | null
+    /**
+     * Color scale / tooltip. Grafana leaves `cellValues.unit` unset and uses the panel
+     * unit from `.setUnit(getUnit(name))` — not a rate. Trace counts pass `none`.
+     */
+    cellUnit?: string
+    /** @deprecated Prefer `cellUnit`. Still honored so existing call sites keep cell formatting. */
     panelUnit?: string
-    /** Format Y bucket labels as duration (`s` → ms/s/min). Used by Trace RED Duration. */
+    /** Override Y `le` unit. Trace RED Duration passes `s`. */
     yUnit?: 's'
+    /** Catalog sparkline only — hide cells below 1% of max. */
+    relativeHide?: boolean
   }
 ): EChartsOption {
   const expanded = expandHeatmapTimeGrid(data.times, data.cells, options?.timeRange, options?.stepSeconds)
   const { times } = expanded
   const { buckets } = data
   const { cells } = expanded
+  const boundUnit = options?.yUnit === 's' ? 's' : resolveHistogramBoundUnit(metricName ?? '', options?.semanticUnit)
   const valueUnit =
-    options?.panelUnit ?? resolveMetricPanelUnit(metricName ?? '', false, { semanticUnit: options?.semanticUnit })
+    options?.cellUnit ?? options?.panelUnit ?? resolveHistogramCellUnit(metricName ?? '', options?.semanticUnit)
 
   const { startMs, endMs, spanMs } = resolvePanelTimeWindow(
     times[0] ?? 0,
@@ -413,9 +444,9 @@ export function buildHeatmapOption(
   // synthetic category for yMinDisplay — that tick is a label only in Grafana, and an
   // ECharts category would leave ~1 cell of blank above the x-axis).
   // @see metrics-drilldown buildHeatmapPanel + grafana rowsToCellsHeatmap / heatmapPathsDense
-  const yMinLabel = formatHeatmapYMinLabel(buckets, options?.yUnit)
-  const yAxisLabels = buckets.map((le) => formatBucketLabel(le, options?.yUnit))
-  const significantCells = selectVisibleHeatmapCells(cells)
+  const yMinLabel = formatHeatmapYMinLabel(buckets, boundUnit)
+  const yAxisLabels = buckets.map((le) => formatBucketLabel(le, boundUnit))
+  const significantCells = selectVisibleHeatmapCells(cells, { relativeHide: options?.relativeHide })
 
   let colorMin = Number.POSITIVE_INFINITY
   let colorMax = 0
@@ -446,7 +477,7 @@ export function buildHeatmapOption(
       padding: [6, 8],
       textStyle: { fontSize: 11 },
       formatter: (params: unknown) => {
-        const item = params as { data?: [number, number, number, number] }
+        const item = params as { data?: [number, number, number, number]; color?: string }
         const tuple = item.data
         if (!tuple) {
           return ''
@@ -455,8 +486,14 @@ export function buildHeatmapOption(
         const time = formatTimeAxisLabel(categoryTimesMs[timeIndex] ?? 0, spanMs, tickIntervalMs)
         const upper = yAxisLabels[yIndex] ?? ''
         const lower = yIndex > 0 ? yAxisLabels[yIndex - 1] ?? yMinLabel : yMinLabel
-        const range = upper === '+Inf' ? `> ${lower}` : `${lower} – ${upper}`
-        return `${time}<br/>${range}<br/>${formatMetricUnitValue(rate, valueUnit)}`
+        const bucket = upper === '+Inf' ? `> ${lower}` : `${lower} – ${upper}`
+        const { color } = item
+        return formatHeatmapTooltip({
+          time,
+          bucket,
+          value: formatMetricUnitValue(rate, valueUnit),
+          color,
+        })
       },
     },
     xAxis: {
