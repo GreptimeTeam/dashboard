@@ -2,8 +2,7 @@ import editorApi from '@/api/editor'
 import { loadDrilldownSettings } from '../drilldown-settings'
 import { buildLogsFieldMap } from './field-map'
 
-const LOG_TABLE_HEURISTICS = [/log/i, /otel_logs/i, /greptime_log/i, /opentelemetry_logs/i]
-const KNOWN_OTLP_LOG_TABLES = ['opentelemetry_logs', 'genai_conversations']
+const LOG_TABLE_HEURISTICS = [/log/i]
 
 function tableNamesFromRecords(records: {
   rows?: string[][]
@@ -37,10 +36,6 @@ function pickLogTableFromNames(names: string[]): string | undefined {
   if (names.length === 1) {
     return names[0]
   }
-  const known = names.find((name) => KNOWN_OTLP_LOG_TABLES.includes(name))
-  if (known) {
-    return known
-  }
   const heuristic = names.find((name) => LOG_TABLE_HEURISTICS.some((pattern) => pattern.test(name)))
   return heuristic ?? names[0]
 }
@@ -60,9 +55,7 @@ async function listHeuristicLogTables(): Promise<string[]> {
   try {
     const tables = await editorApi.getTables(500, 0)
     const names = tableNamesFromRecords(tables?.output?.[0]?.records)
-    const known = names.filter((name) => KNOWN_OTLP_LOG_TABLES.includes(name))
-    const heuristic = names.filter((name) => LOG_TABLE_HEURISTICS.some((pattern) => pattern.test(name)))
-    return uniquePreserveOrder([...known, ...heuristic])
+    return names.filter((name) => LOG_TABLE_HEURISTICS.some((pattern) => pattern.test(name)))
   } catch (error) {
     console.error('Failed to list heuristic log tables:', error)
     return []
@@ -70,7 +63,7 @@ async function listHeuristicLogTables(): Promise<string[]> {
 }
 
 /** Discover candidate logs tables.
- * Always merges: table_semantics(signal_type=log) ∪ name heuristics ∪ known OTLP names.
+ * Merges table_semantics(signal_type=log) with names containing "log".
  * Previously returned *only* semantics when any row existed, which hid non-standard tables.
  */
 export async function listLogTables(options?: { include?: string[] }): Promise<string[]> {
