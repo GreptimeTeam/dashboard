@@ -16,9 +16,10 @@
           legend="bottom"
           :lazy="false"
           :height="mainChartHeight"
+          :extra-where="bodyWhere"
         )
     .logs-tab-table
-      LogsMainView(:show-volume="false" :fill-height="true")
+      LogsMainView(:show-volume="false" :fill-height="true" :extra-where="bodyWhere")
   DetailLabels(v-if="logsTab === 'labels'")
 </template>
 
@@ -28,12 +29,14 @@
   import IconDown from '@arco-design/web-vue/es/icon/icon-down'
   import { useDrilldownContext } from '@/observability/context'
   import { BREAKDOWN_CHART_HEIGHT } from '@/observability/metrics/panel-stats'
+  import useLogsBodyPredicate from '@/observability/use-logs-body-predicate'
   import DetailLabels from './detail-labels.vue'
   import LogsMainView from './logs-main-view.vue'
   import LogsVolumeMiniChart from './logs-volume-mini-chart.vue'
 
   const { t } = useI18n()
   const { logsTab } = useDrilldownContext()
+  const bodyWhere = useLogsBodyPredicate()
   const detailScrollRef = ref<HTMLElement | null>(null)
   /** Shorter than metrics MAIN_CHART_HEIGHT — volume over logs table. */
   const mainChartHeight = BREAKDOWN_CHART_HEIGHT
@@ -52,8 +55,8 @@
 
   .logs-tab-pane {
     display: flex;
+    flex: 1 1 auto;
     flex-direction: column;
-    height: 100%;
     min-height: 0;
     padding: 0;
     overflow: hidden;

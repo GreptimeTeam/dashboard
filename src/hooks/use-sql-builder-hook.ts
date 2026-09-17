@@ -68,6 +68,10 @@ export function useSqlBuilderHook(options: SqlBuilderHookOptions) {
         return `"${field}" LIKE '%${escapeSqlString(String(value))}%'`
       case 'NOT LIKE':
         return `"${field}" NOT LIKE '%${escapeSqlString(String(value))}%'`
+      case 'MATCH':
+        return `"${field}" @@ '${escapeSqlString(String(value))}'`
+      case 'NOT MATCH':
+        return `NOT "${field}" @@ '${escapeSqlString(String(value))}'`
       case 'IN': {
         const inVal = (value as string)
           .split(',')

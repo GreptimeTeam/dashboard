@@ -1,8 +1,9 @@
 <template lang="pug">
 .level-filter(v-if="severityColumn")
-  span.level-filter-label {{ t('drilldown.logs.levelFilter') }}
+  span.level-filter-label {{ labelText }}
   a-select.level-filter-select(
     v-model="selectedLevels"
+    size="small"
     multiple
     allow-clear
     allow-search
@@ -25,14 +26,22 @@
   import { fetchSeverityLevels, type LabelValueRow } from '@/observability/adapters/logs'
   import { addFilter, splitFilterOrValues } from '@/observability/filters'
 
+  const props = defineProps<{
+    /** Physical severity column from field settings. Hidden when unset. */
+    column?: string
+    /** Visible label. Defaults to the column name. */
+    label?: string
+  }>()
+
   const { t } = useI18n()
   const ctx = useDrilldownContext()
 
   const loading = ref(false)
   const levels = ref<LabelValueRow[]>([])
 
-  /** Physical severity column from settings (e.g. `level`); also the shared filter chip key. */
-  const severityColumn = computed(() => ctx.fieldMap.value.logs.severity || undefined)
+  /** Physical severity column; also the shared filter chip key. */
+  const severityColumn = computed(() => props.column?.trim() || undefined)
+  const labelText = computed(() => props.label?.trim() || severityColumn.value || '')
 
   function countTitle(row: LabelValueRow) {
     return t('drilldown.logs.valueCount', { count: row.count })
@@ -41,10 +50,11 @@
   function ensureSeverityMapped() {
     const col = severityColumn.value
     if (!col) return
-    if (ctx.fieldMap.value.logs.severity === col) return
+    const { logs } = ctx.fieldMap.value
+    if (logs.severity === col && logs[col] === col) return
     ctx.fieldMap.value = {
       ...ctx.fieldMap.value,
-      logs: { ...ctx.fieldMap.value.logs, severity: col },
+      logs: { ...logs, severity: col, [col]: col },
     }
   }
 
@@ -86,7 +96,14 @@
     }
   }
 
-  onMounted(loadLevels)
+  watch(severityColumn, () => {
+    ensureSeverityMapped()
+  })
+
+  onMounted(() => {
+    ensureSeverityMapped()
+    loadLevels()
+  })
 
   watch(
     () =>
@@ -126,20 +143,22 @@
     white-space: nowrap;
   }
 
-  // Match top-bar controls: medium height + fixed width so the bar does not jump.
+  // One step below the top-bar filter (32px): shared small control height.
   .level-filter-select {
-    width: 200px;
-    min-width: 200px;
+    width: 180px;
+    min-width: 180px;
 
     :deep(.arco-select-view-single),
     :deep(.arco-select-view-multiple) {
       box-sizing: border-box;
-      min-height: var(--gpt-control-height-md);
+      min-height: var(--gpt-control-height-sm);
+      height: var(--gpt-control-height-sm);
       padding-top: 0;
       padding-bottom: 0;
     }
 
     :deep(.arco-select-view-multiple) {
+      height: auto;
       padding-left: var(--gpt-gap-md);
       padding-right: var(--gpt-gap-md);
     }

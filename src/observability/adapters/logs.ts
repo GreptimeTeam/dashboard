@@ -120,6 +120,14 @@ async function resolveLogsTimeColumnFallback(
  * On overview (`logsView=overview`), label filters are skipped so candidate panels stay visible (compose mode).
  * Detail applies full filters. Pass `includeLabelFilters` to override.
  */
+function appendExtraWhere(where: string, extra?: string): string {
+  const clause = extra?.trim()
+  if (!clause) {
+    return where
+  }
+  return where ? `${where} AND (${clause})` : clause
+}
+
 export async function buildLogsContextWhere(
   ctx: DrilldownContext,
   options?: {
@@ -371,6 +379,8 @@ export async function fetchLogsRows(
     levels?: string[]
     /** When set, SELECT only these columns (missing names are dropped). Empty falls back to the full schema. */
     columns?: string[]
+    /** Extra AND clause (logs-tab body search). Must not be a shared context filter. */
+    extraWhere?: string
   }
 ): Promise<LogsRowsResult> {
   const tableName = ctx.logsTable.value
@@ -385,7 +395,7 @@ export async function fetchLogsRows(
   }
   const extraEquals =
     options?.labelCol && options.value !== undefined ? [{ column: options.labelCol, value: options.value }] : undefined
-  const where = await buildLogsContextWhere(ctx, { extraEquals })
+  const where = appendExtraWhere(await buildLogsContextWhere(ctx, { extraEquals }), options?.extraWhere)
   if (!where) {
     return empty
   }
@@ -468,7 +478,7 @@ LIMIT ${limit}`
  */
 export async function fetchLogVolumeTimeseries(
   ctx: DrilldownContext,
-  options?: { labelCol?: string; value?: string; plotWidthPx?: number }
+  options?: { labelCol?: string; value?: string; plotWidthPx?: number; extraWhere?: string }
 ): Promise<LogVolumeSeries[]> {
   const tableName = ctx.logsTable.value
   const fieldMap = ctx.fieldMap.value.logs
@@ -486,10 +496,13 @@ export async function fetchLogVolumeTimeseries(
   const extraEquals =
     options?.labelCol && options.value !== undefined ? [{ column: options.labelCol, value: options.value }] : undefined
   // Keep every level in the legend. Severity selection hides series and filters the sibling table.
-  const where = await buildLogsContextWhere(ctx, {
-    extraEquals,
-    excludeFilterKey: severityCol || undefined,
-  })
+  const where = appendExtraWhere(
+    await buildLogsContextWhere(ctx, {
+      extraEquals,
+      excludeFilterKey: severityCol || undefined,
+    }),
+    options?.extraWhere
+  )
   if (!where) {
     return []
   }

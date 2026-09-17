@@ -20,6 +20,8 @@ export default function useDrilldownLogsTable(
     infinite?: boolean
     /** Restrict SELECT columns. Empty or unset means the full schema. */
     columns?: MaybeRef<string[] | undefined>
+    /** Extra AND clause applied to this table only. */
+    extraWhere?: MaybeRef<string | undefined>
   } = {}
 ) {
   const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE
@@ -27,6 +29,14 @@ export default function useDrilldownLogsTable(
 
   function resolveColumns(): string[] | undefined {
     const raw = options.columns
+    if (raw == null) {
+      return undefined
+    }
+    return isRef(raw) ? raw.value : raw
+  }
+
+  function resolveExtraWhere(): string | undefined {
+    const raw = options.extraWhere
     if (raw == null) {
       return undefined
     }
@@ -73,6 +83,7 @@ export default function useDrilldownLogsTable(
         levels: options.levels?.value,
         limit: pageSize,
         columns: resolveColumns(),
+        extraWhere: resolveExtraWhere(),
       })
       tableColumns.value = rows.columns
       tableData.value = rows.data
@@ -108,6 +119,7 @@ export default function useDrilldownLogsTable(
         beforeTs,
         keyOffset: tableData.value.length,
         columns: resolveColumns(),
+        extraWhere: resolveExtraWhere(),
       })
       if (rows.columns.length) {
         tableColumns.value = rows.columns

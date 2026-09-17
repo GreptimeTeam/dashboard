@@ -1,5 +1,6 @@
 import { inject, provide, ref, type InjectionKey, type Ref } from 'vue'
 import useTimeRange from '@/hooks/use-time-range'
+import { DEFAULT_LOGS_BODY_OP, type LogsBodyOp } from './logs/body-search'
 import {
   DEFAULT_FIELD_MAP,
   DEFAULT_SIDEBAR_FILTERS,
@@ -29,6 +30,9 @@ export interface DrilldownContext {
   logsView: Ref<LogsView>
   /** Active tab inside logs detail (URL `logsTab`). */
   logsTab: Ref<LogsDetailTab>
+  /** Logs-tab body search. Not a shared drilldown filter. */
+  logsBodyOp: Ref<LogsBodyOp>
+  logsBodyValue: Ref<string>
   /** Active tab on traces home (URL `tracesTab`). */
   tracesTab: Ref<TracesHomeTab>
   /** primaryGroupBy value opened in logs detail (for close → remove filter). */
@@ -75,6 +79,8 @@ export function useDrilldownContextProvider(): DrilldownContext {
   const fieldMap = ref({ ...DEFAULT_FIELD_MAP })
   const logsView = ref<LogsView>('overview')
   const logsTab = ref<LogsDetailTab>('logs')
+  const logsBodyOp = ref<LogsBodyOp>(DEFAULT_LOGS_BODY_OP)
+  const logsBodyValue = ref('')
   const tracesTab = ref<TracesHomeTab>('breakdown')
   const logsSelectedGroup = ref<string | undefined>()
   const refreshKey = ref(0)
@@ -91,11 +97,17 @@ export function useDrilldownContextProvider(): DrilldownContext {
     }
   }
 
+  const clearLogsBodySearch = () => {
+    logsBodyOp.value = DEFAULT_LOGS_BODY_OP
+    logsBodyValue.value = ''
+  }
+
   /** Back to overview catalog; keep filters chips for compose. */
   const closeLogsDetail = () => {
     logsSelectedGroup.value = undefined
     logsView.value = 'overview'
     logsTab.value = 'logs'
+    clearLogsBodySearch()
   }
 
   const resolveLogsDetailGroupFromFilters = (): string | undefined => {
@@ -122,10 +134,12 @@ export function useDrilldownContextProvider(): DrilldownContext {
       } else {
         logsView.value = 'overview'
         logsSelectedGroup.value = undefined
+        clearLogsBodySearch()
       }
     } else {
       logsView.value = 'overview'
       logsSelectedGroup.value = undefined
+      clearLogsBodySearch()
     }
     signal.value = next
   }
@@ -187,6 +201,8 @@ export function useDrilldownContextProvider(): DrilldownContext {
     fieldMap,
     logsView,
     logsTab,
+    logsBodyOp,
+    logsBodyValue,
     tracesTab,
     logsSelectedGroup,
     time: timeRangeHook.time,

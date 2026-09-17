@@ -79,6 +79,8 @@
       /** `column` stacks the column's top values. Default stacks severity. */
       breakdown?: 'severity' | 'column'
       legend?: 'side' | 'bottom'
+      /** Extra AND clause (logs-tab body search). Not applied on overview. */
+      extraWhere?: string
     }>(),
     {
       height: BREAKDOWN_CHART_HEIGHT,
@@ -286,6 +288,7 @@
               labelCol: props.labelCol,
               value: props.labelValue,
               plotWidthPx: widthBucket.value,
+              extraWhere: props.extraWhere,
             })
       if (version !== requestVersion) {
         return
@@ -362,6 +365,7 @@
         ctx.rangeTime.value[1],
         ctx.logsView.value,
         ctx.fieldMap.value.logs.severity,
+        props.extraWhere,
         isDark.value,
       ]
       if (ctx.logsView.value === 'detail') {

@@ -50,16 +50,18 @@
         @update:visible="onLogsDrawerVisible"
       )
         template(#title)
-          nav.logs-drawer-tabs(role="tablist" aria-label="Logs detail")
-            button.logs-drawer-tab(
-              v-for="item in logsDetailTabs"
-              :key="item.value"
-              type="button"
-              role="tab"
-              :class="{ active: logsTab === item.value }"
-              :aria-selected="logsTab === item.value"
-              @click="setLogsTab(item.value)"
-            ) {{ item.label }}
+          .logs-drawer-heading
+            LogsDetailFilters
+            nav.logs-drawer-tabs(role="tablist" aria-label="Logs detail")
+              button.logs-drawer-tab(
+                v-for="item in logsDetailTabs"
+                :key="item.value"
+                type="button"
+                role="tab"
+                :class="{ active: logsTab === item.value }"
+                :aria-selected="logsTab === item.value"
+                @click="setLogsTab(item.value)"
+              ) {{ item.label }}
         LogsDetail(v-if="logsDrawerVisible")
 
       a-drawer.metric-detail-drawer.traces-gantt-drawer(
@@ -125,6 +127,7 @@
   import MetricDetailActions from './metrics/metric-detail-actions.vue'
   import LogsOverview from './logs/logs-overview.vue'
   import LogsDetail from './logs/logs-detail.vue'
+  import LogsDetailFilters from './logs/logs-detail-filters.vue'
   import TracesHome from './traces/traces-home.vue'
   import TracesGantt from './traces/traces-gantt.vue'
 
@@ -347,10 +350,18 @@
     gap: var(--gpt-gap-lg);
   }
 
+  .logs-drawer-heading {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+  }
+
   .logs-drawer-tabs {
     display: flex;
+    flex-shrink: 0;
     align-items: stretch;
-    height: 100%;
+    height: 37px;
     min-width: 0;
   }
 
@@ -478,18 +489,22 @@
 
   // Logs detail: the tab row is the header; close sits on that same line.
   .drilldown-body .logs-detail-drawer .arco-drawer-header {
-    align-items: stretch;
-    height: 37px;
+    align-items: flex-end;
+    height: auto;
+    min-height: 37px;
     padding: 0 var(--gpt-gap-md) 0 0;
 
     .arco-drawer-title {
       display: flex;
+      flex-direction: column;
       align-items: stretch;
-      height: 100%;
+      height: auto;
+      overflow: visible;
     }
 
     .arco-drawer-close-btn {
-      align-self: center;
+      align-self: flex-end;
+      margin-bottom: 4px;
     }
   }
 </style>

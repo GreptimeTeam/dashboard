@@ -92,10 +92,13 @@
       showVolume?: boolean
       /** Stretch table area to fill remaining tab height. */
       fillHeight?: boolean
+      /** Logs-tab body predicate. Not applied on the Labels tab. */
+      extraWhere?: string
     }>(),
     {
       showVolume: true,
       fillHeight: false,
+      extraWhere: '',
     }
   )
 
@@ -115,7 +118,9 @@
     revealOfferedColumns,
   } = useLogsTablePrefs()
 
-  const { loading, loadingMore, tableColumns, tableData, tsColumn, load, loadMore } = useDrilldownLogsTable(ctx)
+  const { loading, loadingMore, tableColumns, tableData, tsColumn, load, loadMore } = useDrilldownLogsTable(ctx, {
+    extraWhere: computed(() => props.extraWhere),
+  })
 
   const logsTableName = computed(() => ctx.logsTable.value || '')
   const visibleColumns = computed(() => displayedColumnsFor(logsTableName.value))
@@ -180,6 +185,7 @@
       ctx.rangeTime.value[1],
       ctx.filters.value,
       ctx.logsTable.value,
+      props.extraWhere,
       // URL detail can mount before fieldMap.time is inferred.
       ctx.fieldMap.value.logs.time,
     ],

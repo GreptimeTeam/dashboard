@@ -1,5 +1,6 @@
 import { nextTick, watch } from 'vue'
 import type { LocationQuery, RouteLocationNormalizedLoaded, Router } from 'vue-router'
+import { isLogsBodyOp, logsBodyOpNeedsValue, DEFAULT_LOGS_BODY_OP } from './logs/body-search'
 import { isDrilldownFilterOp } from './filters'
 import { DRILLDOWN_DEFAULT_TIME_MINUTES, type DrilldownContext } from './context'
 import { drilldownQueriesEqual, shouldPushDrilldownHistory } from './drilldown-url-history'
@@ -128,6 +129,8 @@ export default function useDrilldownUrlSync(
       logsView,
       logsTab,
       tracesTab,
+      body,
+      bodyOp,
     } = query
 
     ctx.setSignal(parseSignal(signal))
@@ -208,6 +211,15 @@ export default function useDrilldownUrlSync(
       ctx.logsSelectedGroup.value = undefined
     }
 
+    if (ctx.signal.value === 'logs' && ctx.logsView.value === 'detail') {
+      const opRaw = typeof bodyOp === 'string' ? bodyOp : ''
+      ctx.logsBodyOp.value = isLogsBodyOp(opRaw) ? opRaw : DEFAULT_LOGS_BODY_OP
+      ctx.logsBodyValue.value = typeof body === 'string' ? body : ''
+    } else {
+      ctx.logsBodyOp.value = DEFAULT_LOGS_BODY_OP
+      ctx.logsBodyValue.value = ''
+    }
+
     normalizeTimeRange(ctx)
 
     // Keep the flag through the flush of Context watchers scheduled by this apply.
@@ -266,6 +278,14 @@ export default function useDrilldownUrlSync(
 
     if (ctx.signal.value === 'logs' && ctx.logsView.value === 'detail') {
       query.logsView = 'detail'
+      const bodyValue = ctx.logsBodyValue.value.trim()
+      const bodyActive = Boolean(bodyValue) || !logsBodyOpNeedsValue(ctx.logsBodyOp.value)
+      if (bodyActive) {
+        query.bodyOp = ctx.logsBodyOp.value
+        if (bodyValue) {
+          query.body = bodyValue
+        }
+      }
     }
 
     tabSpecs.forEach((spec) => {
@@ -314,6 +334,8 @@ export default function useDrilldownUrlSync(
       ctx.metric.value,
       ctx.logsTable.value,
       ctx.logsView.value,
+      ctx.logsBodyOp.value,
+      ctx.logsBodyValue.value,
       ctx.tracesTable.value,
       ctx.focusTraceId.value,
       ...urlTabWatchSources(tabSpecs),
