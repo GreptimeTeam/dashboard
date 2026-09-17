@@ -54,10 +54,10 @@
           .logs-drawer-heading
             .logs-drawer-crumb
               DrawerBreadcrumb(:items="logsDetailCrumbs")
-            .logs-drawer-toolbar
-              LogsDetailFilters
               button.logs-drawer-close(type="button" :aria-label="t('common.close')" @click="closeLogsDrawer")
                 icon-close
+            .logs-drawer-toolbar
+              LogsDetailFilters
             nav.logs-drawer-tabs(role="tablist" aria-label="Logs detail")
               button.logs-drawer-tab(
                 v-for="item in logsDetailTabs"
@@ -442,6 +442,8 @@
   .logs-drawer-crumb {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    gap: var(--gpt-gap-sm);
     box-sizing: border-box;
     min-width: 0;
     min-height: calc(var(--gpt-control-height-sm) + var(--gpt-gap-sm));
@@ -467,16 +469,15 @@
     min-height: calc(var(--gpt-control-height-sm) + var(--gpt-gap-sm) * 2);
   }
 
-  .logs-drawer-toolbar :deep(.logs-detail-filters) {
-    box-sizing: border-box;
-    width: 100%;
-    padding-right: calc(28px + var(--gpt-page-padding-x) + var(--gpt-gap-sm));
-  }
-
-  .logs-drawer-close {
+  .logs-drawer-toolbar > .logs-drawer-close {
     position: absolute;
     top: var(--gpt-gap-sm);
     right: var(--gpt-gap-md);
+  }
+
+  .logs-drawer-close {
+    position: static;
+    flex-shrink: 0;
     z-index: 1;
     display: inline-flex;
     align-items: center;
