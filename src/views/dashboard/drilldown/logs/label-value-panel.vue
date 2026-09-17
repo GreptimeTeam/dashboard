@@ -21,6 +21,7 @@
           sql-mode="builder"
           column-mode="merged-with-keys"
           size="mini"
+          :virtual="false"
           :show-header="false"
           :data="tableData"
           :columns="tableColumns"
