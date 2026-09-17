@@ -24,7 +24,7 @@
         template(#title)
           .drawer-title
             .drawer-title-text
-              span.drawer-metric-name(:title="selectedMetric") {{ selectedMetric }}
+              DrawerBreadcrumb(:items="metricsCrumbs")
               span.drawer-metric-original(v-if="metricOriginalName" :title="metricOriginalName") {{ metricOriginalName }}
             MetricDetailActions(v-if="selectedMetric" :metric="selectedMetric")
         MetricDetail(v-if="selectedMetric" :metric="selectedMetric")
@@ -52,6 +52,8 @@
       )
         template(#title)
           .logs-drawer-heading
+            .logs-drawer-crumb
+              DrawerBreadcrumb(:items="logsDetailCrumbs")
             .logs-drawer-toolbar
               LogsDetailFilters
               button.logs-drawer-close(type="button" :aria-label="t('common.close')" @click="closeLogsDrawer")
@@ -83,7 +85,7 @@
         template(#title)
           .drawer-title
             .drawer-title-text
-              span.drawer-metric-name(:title="focusTraceIdLabel") {{ focusTraceIdLabel }}
+              DrawerBreadcrumb(:items="logsGanttCrumbs")
               span.drawer-metric-original {{ t('drilldown.traces.ganttDrawerTitle') }}
         TracesGantt(v-if="tracesGanttVisible")
 
@@ -157,6 +159,7 @@
   import useDrilldownUrlSync from '@/observability/use-drilldown-url-sync'
   import useDrilldownLogsInit from '@/observability/use-drilldown-logs-init'
   import useDrilldownTracesInit from '@/observability/use-drilldown-traces-init'
+  import DrawerBreadcrumb from './components/drawer-breadcrumb.vue'
   import DrilldownTopBar from './components/top-bar.vue'
   import MetricsOverview from './metrics/metrics-overview.vue'
   import MetricDetail from './metrics/metric-detail.vue'
@@ -249,6 +252,36 @@
   const closeTracesGanttDrawer = () => {
     ctx.closeTraceGantt()
   }
+
+  const closeLogsToOverview = () => {
+    closeTracesGanttDrawer()
+    if (logsDrawerVisible.value) {
+      closeLogsDrawer()
+    }
+  }
+
+  const logsDetailLabel = computed(
+    () => ctx.logsSelectedGroup.value || ctx.logsTable.value || t('drilldown.logs.logsSectionTitle')
+  )
+
+  const metricsCrumbs = computed(() => [
+    { label: t('drilldown.nav.overview'), onSelect: closeDrawer },
+    { label: selectedMetric.value || '', mono: true },
+  ])
+
+  const logsDetailCrumbs = computed(() => [
+    { label: t('drilldown.nav.overview'), onSelect: closeLogsDrawer },
+    { label: logsDetailLabel.value },
+  ])
+
+  const logsGanttCrumbs = computed(() => {
+    const overview = { label: t('drilldown.nav.overview'), onSelect: closeLogsToOverview }
+    const current = { label: focusTraceIdLabel.value, mono: true }
+    if (!logsDrawerVisible.value) {
+      return [overview, current]
+    }
+    return [overview, { label: logsDetailLabel.value, onSelect: closeTracesGanttDrawer }, current]
+  })
 
   const onTracesGanttDrawerVisible = (visible: boolean) => {
     if (!visible) {
@@ -404,6 +437,16 @@
     flex-direction: column;
     width: 100%;
     min-width: 0;
+  }
+
+  .logs-drawer-crumb {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    min-width: 0;
+    min-height: calc(var(--gpt-control-height-sm) + var(--gpt-gap-sm));
+    padding: var(--gpt-gap-sm) var(--gpt-page-padding-x);
+    border-bottom: 1px solid var(--color-border-2);
   }
 
   .logs-drawer-trace {

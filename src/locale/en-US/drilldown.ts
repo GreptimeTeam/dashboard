@@ -1,5 +1,7 @@
 export default {
   'drilldown.pageTitle': 'Drilldown',
+  'drilldown.nav.overview': 'Overview',
+  'drilldown.nav.breadcrumb': 'Breadcrumb',
   'drilldown.signals.metrics': 'Metrics',
   'drilldown.signals.logs': 'Logs',
   'drilldown.signals.traces': 'Traces',

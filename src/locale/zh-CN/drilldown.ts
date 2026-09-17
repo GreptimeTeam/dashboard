@@ -1,5 +1,7 @@
 export default {
   'drilldown.pageTitle': 'Drilldown',
+  'drilldown.nav.overview': '概览',
+  'drilldown.nav.breadcrumb': '面包屑',
   'drilldown.signals.metrics': 'Metrics',
   'drilldown.signals.logs': 'Logs',
   'drilldown.signals.traces': 'Traces',
