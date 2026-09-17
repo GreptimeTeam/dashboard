@@ -40,7 +40,7 @@
   import { storeToRefs } from 'pinia'
   import { useAppStore } from '@/store'
   import { useDrilldownContext } from '@/observability/context'
-  import { loadDrilldownSettings, saveDrilldownSettings } from '@/observability/drilldown-settings'
+  import { loadDrilldownSettings } from '@/observability/drilldown-settings'
   import { resolveFieldMapColumn } from '@/observability/filters'
   import { buildLogsFieldMap } from '@/observability/logs/field-map'
   import { listLogTables } from '@/observability/logs/resolve-table'
@@ -101,12 +101,10 @@
     if (!tableOptions.value.includes(table)) {
       tableOptions.value = [...tableOptions.value, table]
     }
-    // Infer fields for the new table before updating ctx (same-tick apply).
-    const nextLogsFieldMap = await buildLogsFieldMap(table)
-    const settings = loadDrilldownSettings(database.value)
-    settings.logs.table = table
-    settings.logs.fieldMap = undefined
-    saveDrilldownSettings(settings, database.value)
+    // Session view only. Saved default stays in field settings.
+    const settings = loadDrilldownSettings(database.value).logs
+    const savedFieldMap = settings.table === table ? settings.fieldMap : undefined
+    const nextLogsFieldMap = await buildLogsFieldMap(table, savedFieldMap)
     // Drop filters that no longer map onto the new table columns.
     ctx.filters.value = ctx.filters.value.filter((filter) =>
       Boolean(resolveFieldMapColumn(filter.key, nextLogsFieldMap))

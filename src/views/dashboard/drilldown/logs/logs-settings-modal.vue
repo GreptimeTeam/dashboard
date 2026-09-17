@@ -142,15 +142,15 @@ a-modal(
     loadingTables.value = true
     try {
       const settings = loadDrilldownSettings(database.value).logs
-      const current = ctx.logsTable.value || settings.table
-      tableOptions.value = await listLogTables({ include: current ? [current] : [] })
-      form.table = current || tableOptions.value[0] || ''
-      form.time = settings.fieldMap?.time || ctx.fieldMap.value.logs.time
-      form.body = settings.fieldMap?.body || ctx.fieldMap.value.logs.body
-      form.severity = settings.fieldMap?.severity || ctx.fieldMap.value.logs.severity
-      form.service = settings.fieldMap?.service || ctx.fieldMap.value.logs.service
-      form.primaryGroupBy = settings.fieldMap?.primaryGroupBy || ctx.fieldMap.value.logs.primaryGroupBy
-      form.traceId = settings.fieldMap?.traceId || ctx.fieldMap.value.logs.traceId
+      const savedTable = settings.table?.trim() || ''
+      tableOptions.value = await listLogTables({ include: savedTable ? [savedTable] : [] })
+      form.table = savedTable
+      form.time = settings.fieldMap?.time
+      form.body = settings.fieldMap?.body
+      form.severity = settings.fieldMap?.severity
+      form.service = settings.fieldMap?.service
+      form.primaryGroupBy = settings.fieldMap?.primaryGroupBy
+      form.traceId = settings.fieldMap?.traceId
       await loadColumns(form.table)
     } finally {
       loadingTables.value = false

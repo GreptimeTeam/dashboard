@@ -41,6 +41,12 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
   const initializeLogsContext = async () => {
     const settings = loadDrilldownSettings(database.value).logs
 
+    const settingsTable = settings.table?.trim()
+    if (settingsTable) {
+      await applyTableAndFieldMap(settingsTable)
+      return
+    }
+
     if (ctx.logsTable.value) {
       ctx.fieldMap.value = {
         ...ctx.fieldMap.value,
@@ -52,7 +58,7 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
       return
     }
 
-    const tableName = await resolveLogsTable({ settingsTable: settings.table })
+    const tableName = await resolveLogsTable()
     if (!tableName) {
       return
     }
