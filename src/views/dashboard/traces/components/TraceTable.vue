@@ -50,7 +50,13 @@ a-card(:bordered="false")
     @filter-condition-add="$emit('filterConditionAdd', $event)"
   )
     template(#column-trace_id="{ record, showContextMenu, handleContextMenu }")
-      a-link(@click="handleTraceClick(record.trace_id)") {{ record.trace_id }}
+      span.trace-id-actions
+        a-link(@click="handleTraceClick(record.trace_id)") {{ record.trace_id }}
+        a-dropdown(v-if="showLogsTraceMenu" trigger="click" @select="() => openLogsTrace(record.trace_id)")
+          button.trace-id-logs-trigger(type="button" :aria-label="$t('drilldown.traces.openLogs')" @click.stop)
+            icon-down
+          template(#content)
+            a-doption(value="logs") {{ $t('drilldown.traces.openLogs') }}
       svg.td-config-icon(v-if="showContextMenu" @click="(event) => handleContextMenu(record, 'trace_id', event)")
         use(href="#menu")
 </template>
@@ -59,7 +65,7 @@ a-card(:bordered="false")
   import { computed, ref, watch } from 'vue'
   import { useLocalStorage } from '@vueuse/core'
   import { useRouter } from 'vue-router'
-  import { IconSettings } from '@arco-design/web-vue/es/icon'
+  import { IconDown, IconSettings } from '@arco-design/web-vue/es/icon'
   import type { PropType } from 'vue'
   import type { ColumnType, QueryState } from '@/types/query'
 
@@ -89,9 +95,14 @@ a-card(:bordered="false")
       type: Boolean,
       default: false,
     },
+    /** Embed mode only. Shows a logs action when the resolved logs schema has a trace id column. */
+    logsTraceEnabled: {
+      type: Boolean,
+      default: false,
+    },
   })
 
-  const emit = defineEmits(['filterConditionAdd', 'traceClick'])
+  const emit = defineEmits(['filterConditionAdd', 'traceClick', 'logsTraceClick'])
   const router = useRouter()
 
   // Default columns to show for traces (when no selection is made)
@@ -187,7 +198,13 @@ a-card(:bordered="false")
     }
   )
 
+  const showLogsTraceMenu = computed(() => props.embedMode && props.logsTraceEnabled)
+
   // Handle trace ID link click
+  function openLogsTrace(traceId: string) {
+    emit('logsTraceClick', traceId)
+  }
+
   function handleTraceClick(traceId: string) {
     emit('traceClick', traceId)
     if (props.embedMode) {
@@ -220,6 +237,34 @@ a-card(:bordered="false")
 
   .column-controls {
     min-width: 200px;
+  }
+
+  .trace-id-actions {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  .trace-id-logs-trigger {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--gpt-radius-sm);
+    background: transparent;
+    color: var(--color-text-3);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--color-text-1);
+      background: var(--color-fill-2);
+    }
   }
 
   .td-config-icon {

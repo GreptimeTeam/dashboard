@@ -186,6 +186,7 @@ export default {
   'drilldown.traces.traceIdSearchPlaceholder': '粘贴 Trace ID 后回车',
   'drilldown.traces.traceIdLabel': 'Trace ID：',
   'drilldown.traces.ganttDrawerTitle': 'Trace 时间线',
+  'drilldown.traces.openLogs': '查看日志',
   'drilldown.traces.back': '返回',
   'drilldown.traces.unknownOperation': '未知操作',
   'drilldown.traces.servicesFilter': 'Services：',

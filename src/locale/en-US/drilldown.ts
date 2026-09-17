@@ -188,6 +188,7 @@ export default {
   'drilldown.traces.traceIdSearchPlaceholder': 'Paste Trace ID and press Enter',
   'drilldown.traces.traceIdLabel': 'Trace ID:',
   'drilldown.traces.ganttDrawerTitle': 'Trace timeline',
+  'drilldown.traces.openLogs': 'View logs',
   'drilldown.traces.back': 'Back',
   'drilldown.traces.unknownOperation': 'Unknown operation',
   'drilldown.traces.servicesFilter': 'Services:',

@@ -43,6 +43,7 @@ export default function useDrilldownTracesInit(ctx: DrilldownContext) {
   watch(database, () => {
     ctx.tracesTable.value = undefined
     ctx.focusTraceId.value = undefined
+    ctx.logsTraceId.value = undefined
     ctx.fieldMap.value = {
       ...ctx.fieldMap.value,
       traces: {},

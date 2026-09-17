@@ -54,11 +54,13 @@
         .traces-tab-pane
           TraceTable.traces-embed-table(
             embed-mode
+            :logs-trace-enabled="logsTraceEnabled"
             :data="rows"
             :columns="columns"
             :loading="loading"
             :query-state="tableQueryState"
             @trace-click="openTrace"
+            @logs-trace-click="openLogsForTrace"
             @filter-condition-add="onFilterConditionAdd"
           )
 </template>
@@ -215,6 +217,12 @@
 
   const openTrace = (traceId: string) => {
     ctx.openTraceGantt(String(traceId || ''))
+  }
+
+  const logsTraceEnabled = computed(() => Boolean(ctx.fieldMap.value.logs.traceId))
+
+  const openLogsForTrace = (traceId: string) => {
+    ctx.openLogsForTrace(String(traceId || ''))
   }
 
   const submitTraceId = () => {

@@ -57,6 +57,10 @@ export interface DrilldownContext {
   closeLogsDetail: () => void
   openTraceGantt: (traceId: string) => void
   closeTraceGantt: () => void
+  /** Trace id whose logs drawer is stacked on the traces page. Not a shared filter. */
+  logsTraceId: Ref<string | undefined>
+  openLogsForTrace: (traceId: string) => void
+  closeLogsForTrace: () => void
 }
 
 export const DRILLDOWN_DEFAULT_TIME_MINUTES = 30
@@ -74,6 +78,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
   const metric = ref<string | undefined>()
   const detailTab = ref<MetricDetailTab>('breakdown')
   const focusTraceId = ref<string | undefined>()
+  const logsTraceId = ref<string | undefined>()
   const logsTable = ref<string | undefined>()
   const tracesTable = ref<string | undefined>()
   const fieldMap = ref({ ...DEFAULT_FIELD_MAP })
@@ -123,6 +128,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
     }
     if (next !== 'traces') {
       tracesTab.value = 'breakdown'
+      logsTraceId.value = undefined
     }
     // Trace drawer lives on logs and traces. Keep it when staying on logs or opening traces.
     if (next === 'metrics' || (next !== signal.value && next !== 'traces')) {
@@ -189,6 +195,22 @@ export function useDrilldownContextProvider(): DrilldownContext {
     focusTraceId.value = undefined
   }
 
+  const openLogsForTrace = (traceId: string) => {
+    const trimmed = traceId.trim()
+    if (!trimmed) {
+      return
+    }
+    logsTraceId.value = trimmed
+    if (logsTab.value !== 'logs') {
+      logsTab.value = 'logs'
+    }
+  }
+
+  /** Back to traces home; keep filter chips and any open Gantt. */
+  const closeLogsForTrace = () => {
+    logsTraceId.value = undefined
+  }
+
   const context: DrilldownContext = {
     signal,
     filters,
@@ -224,6 +246,9 @@ export function useDrilldownContextProvider(): DrilldownContext {
     closeLogsDetail,
     openTraceGantt,
     closeTraceGantt,
+    logsTraceId,
+    openLogsForTrace,
+    closeLogsForTrace,
   }
 
   provide(DRILLDOWN_CONTEXT_KEY, context)

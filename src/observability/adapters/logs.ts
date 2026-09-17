@@ -155,7 +155,8 @@ export async function buildLogsContextWhere(
     }
   }
 
-  const includeLabelFilters = options?.includeLabelFilters ?? ctx.logsView.value === 'detail'
+  const tracesLogsDrawer = ctx.signal.value === 'traces' && Boolean(ctx.logsTraceId.value?.trim())
+  const includeLabelFilters = options?.includeLabelFilters ?? (ctx.logsView.value === 'detail' || tracesLogsDrawer)
   if (includeLabelFilters) {
     const columns = await loadSchema(tableName)
     const settings = loadDrilldownSettings().logs
@@ -174,6 +175,12 @@ export async function buildLogsContextWhere(
   options?.extraEquals?.forEach(({ column, value }) => {
     whereParts.push(`${quoteIdent(column)} = '${escapeSqlString(value)}'`)
   })
+
+  const logsTraceId = ctx.logsTraceId.value?.trim()
+  const logsTraceColumn = fieldMap.traceId || fieldMap.trace_id
+  if (ctx.signal.value === 'traces' && logsTraceId && logsTraceColumn) {
+    whereParts.push(`${quoteIdent(logsTraceColumn)} = '${escapeSqlString(logsTraceId)}'`)
+  }
 
   return whereParts.join(' AND ')
 }

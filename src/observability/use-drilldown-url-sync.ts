@@ -124,6 +124,7 @@ export default function useDrilldownUrlSync(
       logsTable,
       tracesTable,
       focusTraceId,
+      logsTraceId,
       signal,
       tab,
       logsView,
@@ -183,6 +184,13 @@ export default function useDrilldownUrlSync(
       ctx.focusTraceId.value = traceIdFromUrl
     } else {
       ctx.focusTraceId.value = undefined
+    }
+
+    const logsTraceFromUrl = typeof logsTraceId === 'string' ? logsTraceId.trim() : ''
+    if (logsTraceFromUrl && ctx.signal.value === 'traces') {
+      ctx.logsTraceId.value = logsTraceFromUrl
+    } else {
+      ctx.logsTraceId.value = undefined
     }
 
     if (ctx.signal.value === 'logs' && isLogsView(logsView)) {
@@ -276,6 +284,10 @@ export default function useDrilldownUrlSync(
       query.focusTraceId = ctx.focusTraceId.value
     }
 
+    if (ctx.signal.value === 'traces' && ctx.logsTraceId.value) {
+      query.logsTraceId = ctx.logsTraceId.value
+    }
+
     if (ctx.signal.value === 'logs' && ctx.logsView.value === 'detail') {
       query.logsView = 'detail'
       const bodyValue = ctx.logsBodyValue.value.trim()
@@ -338,6 +350,7 @@ export default function useDrilldownUrlSync(
       ctx.logsBodyValue.value,
       ctx.tracesTable.value,
       ctx.focusTraceId.value,
+      ctx.logsTraceId.value,
       ...urlTabWatchSources(tabSpecs),
     ],
     () => {

@@ -44,6 +44,7 @@
         :visible="logsDrawerVisible"
         :footer="false"
         :mask="false"
+        :closable="false"
         :esc-to-close="true"
         :unmount-on-close="true"
         @cancel="closeLogsDrawer"
@@ -51,7 +52,10 @@
       )
         template(#title)
           .logs-drawer-heading
-            LogsDetailFilters
+            .logs-drawer-toolbar
+              LogsDetailFilters
+              button.logs-drawer-close(type="button" :aria-label="t('common.close')" @click="closeLogsDrawer")
+                icon-close
             nav.logs-drawer-tabs(role="tablist" aria-label="Logs detail")
               button.logs-drawer-tab(
                 v-for="item in logsDetailTabs"
@@ -84,12 +88,44 @@
         TracesGantt(v-if="tracesGanttVisible")
 
     .drilldown-body.new-layout.new-layout--workspace.drilldown-body--traces(v-else-if="signal === 'traces'")
-      a-layout-content.layout-content(v-show="!tracesGanttVisible")
+      a-layout-content.layout-content(v-show="!tracesHomeHidden")
         a-card.drilldown-main-pane.gpt-results-pane(:bordered="false")
           .drilldown-home-main
             keep-alive
-              TracesHome(v-if="!tracesGanttVisible")
-      .drilldown-detail-shell(v-if="tracesGanttVisible")
+              TracesHome(v-if="!tracesHomeHidden")
+      .drilldown-detail-shell(v-if="tracesHomeHidden")
+
+      a-drawer.metric-detail-drawer.logs-detail-drawer(
+        popup-container=".drilldown-body--traces"
+        placement="right"
+        width="100%"
+        :visible="logsFromTraceVisible"
+        :footer="false"
+        :mask="false"
+        :closable="false"
+        :esc-to-close="true"
+        :unmount-on-close="true"
+        @cancel="closeLogsForTraceDrawer"
+        @update:visible="onLogsForTraceDrawerVisible"
+      )
+        template(#title)
+          .logs-drawer-heading
+            .logs-drawer-toolbar
+              .logs-drawer-trace
+                span.drawer-metric-name(:title="logsTraceIdLabel") {{ logsTraceIdLabel }}
+              button.logs-drawer-close(type="button" :aria-label="t('common.close')" @click="closeLogsForTraceDrawer")
+                icon-close
+            nav.logs-drawer-tabs(role="tablist" aria-label="Logs detail")
+              button.logs-drawer-tab(
+                v-for="item in logsDetailTabs"
+                :key="item.value"
+                type="button"
+                role="tab"
+                :class="{ active: logsTab === item.value }"
+                :aria-selected="logsTab === item.value"
+                @click="setLogsTab(item.value)"
+              ) {{ item.label }}
+        LogsDetail(v-if="logsFromTraceVisible")
 
       a-drawer.metric-detail-drawer.traces-gantt-drawer(
         popup-container=".drilldown-body--traces"
@@ -158,8 +194,11 @@
   const selectedMetric = computed(() => ctx.metric.value)
   const drawerVisible = computed(() => Boolean(selectedMetric.value))
   const logsDrawerVisible = computed(() => ctx.logsView.value === 'detail')
+  const logsFromTraceVisible = computed(() => Boolean(ctx.logsTraceId.value))
   const tracesGanttVisible = computed(() => Boolean(ctx.focusTraceId.value))
+  const tracesHomeHidden = computed(() => tracesGanttVisible.value || logsFromTraceVisible.value)
   const focusTraceIdLabel = computed(() => ctx.focusTraceId.value || '')
+  const logsTraceIdLabel = computed(() => ctx.logsTraceId.value || '')
   const metricOriginalName = ref<string | null>(null)
 
   watch(
@@ -194,6 +233,16 @@
   const onLogsDrawerVisible = (visible: boolean) => {
     if (!visible) {
       closeLogsDrawer()
+    }
+  }
+
+  const closeLogsForTraceDrawer = () => {
+    ctx.closeLogsForTrace()
+  }
+
+  const onLogsForTraceDrawerVisible = (visible: boolean) => {
+    if (!visible) {
+      closeLogsForTraceDrawer()
     }
   }
 
@@ -357,6 +406,55 @@
     min-width: 0;
   }
 
+  .logs-drawer-trace {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: calc(var(--gpt-control-height-sm) + var(--gpt-gap-sm) * 2);
+    padding: var(--gpt-gap-sm) var(--gpt-page-padding-x);
+    padding-right: calc(28px + var(--gpt-page-padding-x) + var(--gpt-gap-sm));
+    border-bottom: 1px solid var(--color-border-2);
+  }
+
+  .logs-drawer-toolbar {
+    position: relative;
+    width: 100%;
+    min-height: calc(var(--gpt-control-height-sm) + var(--gpt-gap-sm) * 2);
+  }
+
+  .logs-drawer-toolbar :deep(.logs-detail-filters) {
+    box-sizing: border-box;
+    width: 100%;
+    padding-right: calc(28px + var(--gpt-page-padding-x) + var(--gpt-gap-sm));
+  }
+
+  .logs-drawer-close {
+    position: absolute;
+    top: var(--gpt-gap-sm);
+    right: var(--gpt-gap-md);
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--gpt-radius-sm);
+    background: transparent;
+    color: var(--color-text-2);
+    font-size: var(--gpt-font-xl);
+    line-height: 1;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--color-text-1);
+      background-color: var(--color-fill-2);
+    }
+  }
+
   .logs-drawer-tabs {
     display: flex;
     flex-shrink: 0;
@@ -487,24 +585,21 @@
     z-index: 1002;
   }
 
-  // Logs detail: the tab row is the header; close sits on that same line.
+  // Logs detail: close lives in the heading so the filter rule spans the full header.
   .drilldown-body .logs-detail-drawer .arco-drawer-header {
-    align-items: flex-end;
+    align-items: stretch;
     height: auto;
     min-height: 37px;
-    padding: 0 var(--gpt-gap-md) 0 0;
+    padding: 0;
 
     .arco-drawer-title {
       display: flex;
+      flex: 1 1 auto;
       flex-direction: column;
       align-items: stretch;
+      width: 100%;
       height: auto;
       overflow: visible;
-    }
-
-    .arco-drawer-close-btn {
-      align-self: flex-end;
-      margin-bottom: 4px;
     }
   }
 </style>

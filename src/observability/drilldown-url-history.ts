@@ -28,6 +28,10 @@ export function drilldownDetailIdentity(query: Record<string, unknown>): string 
   if (query.logsView === 'detail') {
     return 'logs:detail'
   }
+  const { logsTraceId } = query
+  if (typeof logsTraceId === 'string' && logsTraceId.trim()) {
+    return `logsTrace:${logsTraceId.trim()}`
+  }
   const { focusTraceId } = query
   if (typeof focusTraceId === 'string' && focusTraceId.trim()) {
     return `trace:${focusTraceId.trim()}`
