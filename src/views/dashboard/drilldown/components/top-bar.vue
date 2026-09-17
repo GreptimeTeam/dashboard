@@ -3,7 +3,7 @@
   .page-identity
     .title-row
       span.page-title {{ t('drilldown.pageTitle') }}
-      nav.signal-text-nav(aria-label="Drilldown signal")
+      nav.signal-text-nav(aria-label="Signal Explorer")
         button.signal-link(
           v-for="item in signalItems"
           :key="item.value"

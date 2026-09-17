@@ -226,7 +226,20 @@ const DASHBOARD: AppRouteRecordRaw = {
     },
     {
       path: 'drilldown',
-      name: 'drilldown',
+      redirect: (to) => ({
+        path: '/dashboard/explore',
+        query: to.query,
+        hash: to.hash,
+      }),
+      component: () => import('@/views/dashboard/drilldown/index.vue'),
+      meta: {
+        hideInMenu: true,
+        requiresAuth: false,
+      },
+    },
+    {
+      path: 'explore',
+      name: 'explore',
       component: () => import('@/views/dashboard/drilldown/index.vue'),
       meta: {
         locale: 'menu.dashboard.drilldown',
