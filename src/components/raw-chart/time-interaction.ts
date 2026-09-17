@@ -52,29 +52,86 @@ export function toUnixTimeRangeSeconds(range: ChartTimeRangeMs): [number, number
   return [start, end]
 }
 
-export function readAxisWindowMs(chart: ECharts): ChartTimeRangeMs | null {
+type XAxisOption = {
+  type?: string
+  min?: number
+  max?: number
+  data?: unknown[]
+}
+
+function readPrimaryXAxis(chart: ECharts): XAxisOption | null {
   try {
-    const option = chart.getOption() as {
-      xAxis?: Array<{ min?: number; max?: number }> | { min?: number; max?: number }
-    }
+    const option = chart.getOption() as { xAxis?: XAxisOption[] | XAxisOption }
     const axis = Array.isArray(option.xAxis) ? option.xAxis[0] : option.xAxis
-    const fromMs = Number(axis?.min)
-    const toMs = Number(axis?.max)
-    if (Number.isFinite(fromMs) && Number.isFinite(toMs) && toMs > fromMs) {
-      return { fromMs, toMs }
-    }
+    return axis ?? null
   } catch {
-    // ignore
+    return null
+  }
+}
+
+/** Cartesian heatmap uses `type: 'category'` (timestamps as labels), not `type: 'time'`. */
+export function isCategoryXAxis(chart: ECharts): boolean {
+  return readPrimaryXAxis(chart)?.type === 'category'
+}
+
+export function readCategoryCount(chart: ECharts): number {
+  const data = readPrimaryXAxis(chart)?.data
+  return Array.isArray(data) ? data.length : 0
+}
+
+export function readAxisWindowMs(chart: ECharts): ChartTimeRangeMs | null {
+  const axis = readPrimaryXAxis(chart)
+  // Category min/max are ranks (heatmap), not timestamps.
+  if (!axis || axis.type === 'category') {
+    return null
+  }
+  const fromMs = Number(axis.min)
+  const toMs = Number(axis.max)
+  if (Number.isFinite(fromMs) && Number.isFinite(toMs) && toMs > fromMs) {
+    return { fromMs, toMs }
   }
   return null
 }
 
-export function getGridRect(chart: ECharts): { x: number; y: number; width: number; height: number } | null {
-  const window = readAxisWindowMs(chart)
-  if (!window) {
+/**
+ * Map a plot pixel onto an authoritative time window.
+ * Category axes (heatmap) cannot use `convertFromPixel` — that returns a rank, not a timestamp.
+ * The plot width is the current query window (same model as x-axis pan).
+ */
+export function plotPixelToTimeMs(
+  pixelX: number,
+  gridX: number,
+  plotWidthPx: number,
+  window: ChartTimeRangeMs
+): number | null {
+  if (!(plotWidthPx > 0) || !(window.toMs > window.fromMs)) {
     return null
   }
+  const ratio = (pixelX - gridX) / plotWidthPx
+  return window.fromMs + ratio * (window.toMs - window.fromMs)
+}
 
+/**
+ * Shift a category axis so cells follow the drag (content moves with the pointer).
+ * One full plot width == `categoryCount` bands (`boundaryGap: true`).
+ * Drag right (+dx) → lower indexes, cells move right, earlier time appears on the left.
+ */
+export function computeCategoryPanExtent(
+  categoryCount: number,
+  dragDxPx: number,
+  plotWidthPx: number
+): { min: number; max: number } | null {
+  if (!(categoryCount > 1) || !(plotWidthPx > 0) || dragDxPx === 0) {
+    return null
+  }
+  const shift = (dragDxPx / plotWidthPx) * categoryCount
+  return {
+    min: -shift,
+    max: categoryCount - 1 - shift,
+  }
+}
+
+function readGridRectFromModel(chart: ECharts): { x: number; y: number; width: number; height: number } | null {
   try {
     const model = chart.getModel() as {
       getComponent?: (
@@ -88,6 +145,19 @@ export function getGridRect(chart: ECharts): { x: number; y: number; width: numb
     }
   } catch {
     // fall through
+  }
+  return null
+}
+
+export function getGridRect(chart: ECharts): { x: number; y: number; width: number; height: number } | null {
+  const fromModel = readGridRectFromModel(chart)
+  if (fromModel) {
+    return fromModel
+  }
+
+  const window = readAxisWindowMs(chart)
+  if (!window) {
+    return null
   }
 
   try {
@@ -187,6 +257,77 @@ export function previewAxisWindow(chart: ECharts, fromMs: number, toMs: number) 
   )
 }
 
+function previewCategoryExtent(chart: ECharts, extent: { min: number; max: number }) {
+  chart.setOption(
+    {
+      xAxis: {
+        min: extent.min,
+        max: extent.max,
+      },
+    },
+    false
+  )
+}
+
+function restoreCategoryExtent(chart: ECharts) {
+  const count = readCategoryCount(chart)
+  if (!(count > 0)) {
+    return
+  }
+  previewCategoryExtent(chart, { min: 0, max: count - 1 })
+}
+
+function categorySampleWindow(chart: ECharts): ChartTimeRangeMs | null {
+  const data = readPrimaryXAxis(chart)?.data
+  if (!Array.isArray(data) || data.length < 2) {
+    return null
+  }
+  const fromMs = Number(data[0])
+  const toMs = Number(data[data.length - 1])
+  if (!Number.isFinite(fromMs) || !Number.isFinite(toMs) || !(toMs > fromMs)) {
+    return null
+  }
+  return { fromMs, toMs }
+}
+
+function resolveZoomRangeMs(
+  chart: ECharts,
+  leftPx: number,
+  rightPx: number,
+  midY: number,
+  gridX: number,
+  plotWidthPx: number,
+  window: ChartTimeRangeMs | null
+): ChartTimeRangeMs | null {
+  if (!isCategoryXAxis(chart)) {
+    const fromMs = pixelToTimeMs(chart, leftPx, midY)
+    const toMs = pixelToTimeMs(chart, rightPx, midY)
+    if (fromMs == null || toMs == null || !(toMs > fromMs)) {
+      return null
+    }
+    return { fromMs, toMs }
+  }
+
+  const source = window && window.toMs > window.fromMs ? window : categorySampleWindow(chart)
+  if (!source) {
+    return null
+  }
+  const fromMs = plotPixelToTimeMs(leftPx, gridX, plotWidthPx, source)
+  const toMs = plotPixelToTimeMs(rightPx, gridX, plotWidthPx, source)
+  if (fromMs == null || toMs == null || !(toMs > fromMs)) {
+    return null
+  }
+  return { fromMs, toMs }
+}
+
+function hideTip(chart: ECharts) {
+  try {
+    chart.dispatchAction({ type: 'hideTip' })
+  } catch {
+    // chart may be disposed
+  }
+}
+
 export interface TimeInteractionHandlers {
   /** Authoritative query window (ms). Prefer over reading axis option. */
   getTimeWindowMs: () => ChartTimeRangeMs | null
@@ -278,6 +419,8 @@ export function attachTimeInteraction(chart: ECharts, handlers: TimeInteractionH
       const dx = moveEvent.clientX - startClientX
       const localX = localXFromClient(moveEvent.clientX)
 
+      hideTip(chart)
+
       if (mode === 'zoom') {
         const clamped = Math.min(gridX + plotWidthPx, Math.max(gridX, localX))
         drawZoomGraphic(chart, gridY, gridHeight, startLocalX, clamped)
@@ -286,9 +429,17 @@ export function attachTimeInteraction(chart: ECharts, handlers: TimeInteractionH
 
       if (mode === 'pan' && panOrigin) {
         const next = computePanRange(panOrigin.fromMs, panOrigin.toMs, dx, plotWidthPx)
-        if (next) {
-          previewAxisWindow(chart, next.fromMs, next.toMs)
+        if (!next) {
+          return
         }
+        if (isCategoryXAxis(chart)) {
+          const extent = computeCategoryPanExtent(readCategoryCount(chart), dx, plotWidthPx)
+          if (extent) {
+            previewCategoryExtent(chart, extent)
+          }
+          return
+        }
+        previewAxisWindow(chart, next.fromMs, next.toMs)
       }
     }
 
@@ -312,7 +463,9 @@ export function attachTimeInteraction(chart: ECharts, handlers: TimeInteractionH
       }
 
       const abort = (restore?: ChartTimeRangeMs) => {
-        if (restore) {
+        if (isCategoryXAxis(chart)) {
+          restoreCategoryExtent(chart)
+        } else if (restore) {
           previewAxisWindow(chart, restore.fromMs, restore.toMs)
         }
         setLock(false)
@@ -325,13 +478,12 @@ export function attachTimeInteraction(chart: ECharts, handlers: TimeInteractionH
         }
         const left = Math.min(startLocalX, localX)
         const right = Math.max(startLocalX, localX)
-        const fromMs = pixelToTimeMs(chart, left, midY)
-        const toMs = pixelToTimeMs(chart, right, midY)
-        if (fromMs == null || toMs == null || !(toMs > fromMs)) {
+        const range = resolveZoomRangeMs(chart, left, right, midY, gridX, width, handlers.getTimeWindowMs())
+        if (!range) {
           abort()
           return
         }
-        commit({ fromMs, toMs })
+        commit(range)
         return
       }
 

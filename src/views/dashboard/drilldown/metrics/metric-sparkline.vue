@@ -10,10 +10,10 @@
   )
     Chart(
       :key="chartRenderKey"
+      time-interaction
       :height="chartHeight"
       :options="chartOption"
       :brush-select="false"
-      :time-interaction="!isHeatmap"
       :time-window-ms="timeWindowMs"
       @time-range-change="onTimeRangeChange"
     )
