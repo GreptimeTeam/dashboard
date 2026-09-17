@@ -101,7 +101,7 @@
     if (!tableOptions.value.includes(table)) {
       tableOptions.value = [...tableOptions.value, table]
     }
-    // Session view only. Saved default stays in field settings.
+    // Session view only. Roles come from saved field settings, never from name guessing.
     const settings = loadDrilldownSettings(database.value).logs
     const savedFieldMap = settings.table === table ? settings.fieldMap : undefined
     const nextLogsFieldMap = await buildLogsFieldMap(table, savedFieldMap)

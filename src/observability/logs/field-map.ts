@@ -42,39 +42,54 @@ export const OTEL_LOG_INDEX_LABELS = [
 
 const OTEL_LOG_INDEX_LABEL_SET = new Set<string>(OTEL_LOG_INDEX_LABELS)
 
-const TIME_CANDIDATES = ['timestamp', 'ts', 'time', 'greptime_timestamp']
-const BODY_CANDIDATES = ['body', 'message', 'content', 'log_body']
-const SEVERITY_CANDIDATES = ['severity_text', 'severity', 'level']
-const SERVICE_CANDIDATES = ['service_name', 'service', 'scope_name']
-const TRACE_CANDIDATES = ['trace_id']
-
 function pickFirst(columnNames: Set<string>, candidates: string[]): string | undefined {
   return candidates.find((name) => columnNames.has(name))
 }
 
-function pickTimestampColumn(columns: SchemaColumn[]): string | undefined {
-  const bySemantic = columns.find((column) => column.semantic_type === 'TIMESTAMP')?.name
-  if (bySemantic) {
-    return bySemantic
+/** Greptime OTLP logs columns. No name heuristics — missing columns stay unset. */
+const OTEL_LOG_TIME = ['timestamp']
+const OTEL_LOG_BODY = ['body']
+const OTEL_LOG_SEVERITY = ['severity_text']
+const OTEL_LOG_SERVICE = ['service_name']
+const OTEL_LOG_TRACE = ['trace_id']
+
+/**
+ * Settings defaults from the OTEL logs model only.
+ * `scope_name` is instrumentation scope, not service, so it is not used here.
+ */
+export function otelLogsFieldDefaultsFromColumns(columns: SchemaColumn[]): LogsFieldMapSettings {
+  const columnNames = new Set(columns.map((column) => column.name))
+  const service = pickFirst(columnNames, OTEL_LOG_SERVICE)
+  return {
+    time: pickFirst(columnNames, OTEL_LOG_TIME),
+    body: pickFirst(columnNames, OTEL_LOG_BODY),
+    severity: pickFirst(columnNames, OTEL_LOG_SEVERITY),
+    service,
+    primaryGroupBy: service,
+    traceId: pickFirst(columnNames, OTEL_LOG_TRACE),
   }
-  const names = new Set(columns.map((column) => column.name))
-  return pickFirst(names, TIME_CANDIDATES)
 }
 
 /**
- * Heuristic field roles from table schema only (no saved overrides).
- * Missing roles stay undefined — callers should clear the form field.
+ * Settings form values: keep a saved column only if it still exists, otherwise the OTEL default.
+ * No OTEL match and no valid saved column → undefined.
  */
-export function inferLogsFieldDefaultsFromColumns(columns: SchemaColumn[]): LogsFieldMapSettings {
+export function resolveLogsSettingsFieldDefaults(
+  columns: SchemaColumn[],
+  saved?: LogsFieldMapSettings
+): LogsFieldMapSettings {
+  const defaults = otelLogsFieldDefaultsFromColumns(columns)
   const columnNames = new Set(columns.map((column) => column.name))
-  const service = pickFirst(columnNames, SERVICE_CANDIDATES)
+  const keepSaved = (value: string | undefined, fallback: string | undefined) =>
+    value && columnNames.has(value) ? value : fallback
+
   return {
-    time: pickTimestampColumn(columns),
-    body: pickFirst(columnNames, BODY_CANDIDATES),
-    severity: pickFirst(columnNames, SEVERITY_CANDIDATES),
-    service,
-    primaryGroupBy: service || pickFirst(columnNames, SERVICE_CANDIDATES),
-    traceId: pickFirst(columnNames, TRACE_CANDIDATES),
+    time: keepSaved(saved?.time, defaults.time),
+    body: keepSaved(saved?.body, defaults.body),
+    severity: keepSaved(saved?.severity, defaults.severity),
+    service: keepSaved(saved?.service, defaults.service),
+    primaryGroupBy: keepSaved(saved?.primaryGroupBy, defaults.primaryGroupBy),
+    traceId: keepSaved(saved?.traceId, defaults.traceId),
   }
 }
 
@@ -103,9 +118,54 @@ function applySettingsOverrides(
   return next
 }
 
+function applyRoleColumns(
+  map: Record<string, string>,
+  settings: LogsFieldMapSettings | undefined,
+  columnNames: Set<string>
+): Record<string, string> {
+  const timeCol = settings?.time
+  if (timeCol && columnNames.has(timeCol)) {
+    map.time = timeCol
+  }
+
+  const bodyCol = settings?.body
+  if (bodyCol && columnNames.has(bodyCol)) {
+    map.body = bodyCol
+  }
+
+  const severityCol = settings?.severity
+  if (severityCol && columnNames.has(severityCol)) {
+    map.severity = severityCol
+  }
+
+  const traceCol = settings?.traceId
+  if (traceCol && columnNames.has(traceCol)) {
+    map.traceId = traceCol
+    map.trace_id = traceCol
+  }
+
+  const serviceCol = settings?.service
+  if (serviceCol && columnNames.has(serviceCol)) {
+    map.service = serviceCol
+    if (serviceCol === 'service_name' && !map.job) {
+      map.job = serviceCol
+    }
+  }
+
+  const primaryGroupBy = settings?.primaryGroupBy
+  if (primaryGroupBy && columnNames.has(primaryGroupBy)) {
+    map.primaryGroupBy = primaryGroupBy
+    if (!map[primaryGroupBy]) {
+      map[primaryGroupBy] = primaryGroupBy
+    }
+  }
+
+  return applySettingsOverrides(map, settings, columnNames)
+}
+
 /**
- * Build Context fieldMap.logs: chip key → physical column.
- * Settings overrides win; then OTEL/heuristic roles; TAG/FIELD identity maps.
+ * Build Context fieldMap.logs from field settings only.
+ * Unset roles stay unset — callers seed OTEL defaults into settings before this.
  */
 export async function buildLogsFieldMap(
   tableName: string,
@@ -129,46 +189,7 @@ export async function buildLogsFieldMap(
     }
   })
 
-  const inferred = inferLogsFieldDefaultsFromColumns(columns)
-  const timeCol = settings?.time || inferred.time
-  if (timeCol && columnNames.has(timeCol)) {
-    map.time = timeCol
-  }
-
-  const bodyCol = settings?.body || inferred.body
-  if (bodyCol && columnNames.has(bodyCol)) {
-    map.body = bodyCol
-  }
-
-  const severityCol = settings?.severity || inferred.severity
-  if (severityCol && columnNames.has(severityCol)) {
-    map.severity = severityCol
-  }
-
-  const traceCol = settings?.traceId || inferred.traceId
-  if (traceCol && columnNames.has(traceCol)) {
-    map.traceId = traceCol
-    map.trace_id = traceCol
-  }
-
-  const serviceCol = settings?.service || inferred.service
-  if (serviceCol && columnNames.has(serviceCol)) {
-    map.service = serviceCol
-    // Prom ↔ logs chip aliases used by Related logs / filter combobox.
-    if (serviceCol === 'service_name' && !map.job) {
-      map.job = columnNames.has('scope_name') ? 'scope_name' : serviceCol
-    }
-  }
-
-  const primaryGroupBy = settings?.primaryGroupBy || inferred.primaryGroupBy
-  if (primaryGroupBy && columnNames.has(primaryGroupBy)) {
-    map.primaryGroupBy = primaryGroupBy
-    if (!map[primaryGroupBy]) {
-      map[primaryGroupBy] = primaryGroupBy
-    }
-  }
-
-  return applySettingsOverrides(map, settings, columnNames)
+  return applyRoleColumns(map, settings, columnNames)
 }
 
 const JSON_ATTR_SAMPLE_LIMIT = 50

@@ -10,7 +10,10 @@ import {
   isLogsBodyFilterKey,
   isLogsContainsFilterKey,
   listJsonAttributeColumns,
+  buildLogsFieldMap,
+  otelLogsFieldDefaultsFromColumns,
   parseJsonFieldChipKey,
+  resolveLogsSettingsFieldDefaults,
   sampleJsonAttributeFieldKeys,
   sqlJsonGetStringExpr,
   type SchemaColumn,
@@ -22,6 +25,87 @@ vi.mock('@/api/editor', () => ({
     runSQL: vi.fn(),
   },
 }))
+
+describe('otelLogsFieldDefaultsFromColumns', () => {
+  it('fills only matching OTEL columns and leaves the rest empty', () => {
+    const columns: SchemaColumn[] = [
+      { name: 'timestamp', data_type: 'TimestampNanosecond', semantic_type: 'TIMESTAMP' },
+      { name: 'body', data_type: 'String', semantic_type: 'FIELD' },
+      { name: 'severity_text', data_type: 'String', semantic_type: 'FIELD' },
+      { name: 'scope_name', data_type: 'String', semantic_type: 'TAG' },
+      { name: 'trace_id', data_type: 'String', semantic_type: 'FIELD' },
+    ]
+
+    expect(otelLogsFieldDefaultsFromColumns(columns)).toEqual({
+      time: 'timestamp',
+      body: 'body',
+      severity: 'severity_text',
+      service: undefined,
+      primaryGroupBy: undefined,
+      traceId: 'trace_id',
+    })
+  })
+
+  it('does not fall back to message, level, or scope_name', () => {
+    const columns: SchemaColumn[] = [
+      { name: 'ts', data_type: 'TimestampMillisecond', semantic_type: 'TIMESTAMP' },
+      { name: 'message', data_type: 'String', semantic_type: 'FIELD' },
+      { name: 'level', data_type: 'String', semantic_type: 'FIELD' },
+      { name: 'scope_name', data_type: 'String', semantic_type: 'TAG' },
+    ]
+
+    expect(otelLogsFieldDefaultsFromColumns(columns)).toEqual({
+      time: undefined,
+      body: undefined,
+      severity: undefined,
+      service: undefined,
+      primaryGroupBy: undefined,
+      traceId: undefined,
+    })
+  })
+
+  it('keeps a saved column when it still exists, otherwise uses the OTEL default', () => {
+    const columns: SchemaColumn[] = [
+      { name: 'timestamp', data_type: 'TimestampNanosecond', semantic_type: 'TIMESTAMP' },
+      { name: 'body', data_type: 'String', semantic_type: 'FIELD' },
+      { name: 'message', data_type: 'String', semantic_type: 'FIELD' },
+      { name: 'service_name', data_type: 'String', semantic_type: 'TAG' },
+    ]
+
+    expect(
+      resolveLogsSettingsFieldDefaults(columns, {
+        body: 'message',
+        time: 'missing_ts',
+      })
+    ).toEqual({
+      time: 'timestamp',
+      body: 'message',
+      severity: undefined,
+      service: 'service_name',
+      primaryGroupBy: 'service_name',
+      traceId: undefined,
+    })
+  })
+})
+
+describe('buildLogsFieldMap', () => {
+  it('does not guess service when field settings omit it', async () => {
+    vi.mocked(editorApi.getTableSchema).mockResolvedValue([
+      { name: 'timestamp', data_type: 'TimestampNanosecond', semantic_type: 'TIMESTAMP' },
+      { name: 'body', data_type: 'String', semantic_type: 'FIELD' },
+      { name: 'scope_name', data_type: 'String', semantic_type: 'TAG' },
+    ])
+
+    const map = await buildLogsFieldMap('opentelemetry_logs', {
+      time: 'timestamp',
+      body: 'body',
+    })
+
+    expect(map.service).toBeUndefined()
+    expect(map.time).toBe('timestamp')
+    expect(map.body).toBe('body')
+  })
+})
 
 describe('discoverLabelColumns', () => {
   it('does not treat arbitrary string columns as labels', () => {

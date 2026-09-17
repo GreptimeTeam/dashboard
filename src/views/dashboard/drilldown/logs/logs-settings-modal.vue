@@ -77,11 +77,15 @@ a-modal(
   import editorApi from '@/api/editor'
   import { useAppStore } from '@/store'
   import { useDrilldownContext } from '@/observability/context'
-  import { loadDrilldownSettings, updateLogsDrilldownSettings } from '@/observability/drilldown-settings'
+  import {
+    loadDrilldownSettings,
+    updateLogsDrilldownSettings,
+    type LogsFieldMapSettings,
+  } from '@/observability/drilldown-settings'
   import { resolveFieldMapColumn } from '@/observability/filters'
   import {
     buildLogsFieldMap,
-    inferLogsFieldDefaultsFromColumns,
+    resolveLogsSettingsFieldDefaults,
     type SchemaColumn,
   } from '@/observability/logs/field-map'
   import { listLogTables } from '@/observability/logs/resolve-table'
@@ -113,8 +117,8 @@ a-modal(
     traceId: undefined as string | undefined,
   })
 
-  const applyFieldDefaults = (columns: SchemaColumn[]) => {
-    const defaults = inferLogsFieldDefaultsFromColumns(columns)
+  const applyFieldDefaults = (columns: SchemaColumn[], saved?: LogsFieldMapSettings) => {
+    const defaults = resolveLogsSettingsFieldDefaults(columns, saved)
     form.time = defaults.time
     form.body = defaults.body
     form.severity = defaults.severity
@@ -145,13 +149,19 @@ a-modal(
       const savedTable = settings.table?.trim() || ''
       tableOptions.value = await listLogTables({ include: savedTable ? [savedTable] : [] })
       form.table = savedTable
-      form.time = settings.fieldMap?.time
-      form.body = settings.fieldMap?.body
-      form.severity = settings.fieldMap?.severity
-      form.service = settings.fieldMap?.service
-      form.primaryGroupBy = settings.fieldMap?.primaryGroupBy
-      form.traceId = settings.fieldMap?.traceId
-      await loadColumns(form.table)
+      const columns = await loadColumns(form.table)
+      if (settings.fieldMap) {
+        const names = new Set(columns.map((column) => column.name))
+        const savedColumn = (value?: string) => (value && names.has(value) ? value : undefined)
+        form.time = savedColumn(settings.fieldMap.time)
+        form.body = savedColumn(settings.fieldMap.body)
+        form.severity = savedColumn(settings.fieldMap.severity)
+        form.service = savedColumn(settings.fieldMap.service)
+        form.primaryGroupBy = savedColumn(settings.fieldMap.primaryGroupBy)
+        form.traceId = savedColumn(settings.fieldMap.traceId)
+      } else {
+        applyFieldDefaults(columns)
+      }
     } finally {
       loadingTables.value = false
     }

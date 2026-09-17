@@ -1,8 +1,9 @@
 import { onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAppStore } from '@/store'
-import { loadDrilldownSettings } from '@/observability/drilldown-settings'
-import { buildLogsFieldMap } from '@/observability/logs/field-map'
+import editorApi from '@/api/editor'
+import { loadDrilldownSettings, updateLogsDrilldownSettings } from '@/observability/drilldown-settings'
+import { buildLogsFieldMap, otelLogsFieldDefaultsFromColumns } from '@/observability/logs/field-map'
 import { resolveLogsTable } from '@/observability/logs/resolve-table'
 import type { DrilldownContext } from '../context'
 
@@ -25,9 +26,24 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
     }
   }
 
+  const seedFieldSettings = async (tableName: string) => {
+    const current = loadDrilldownSettings(database.value).logs
+    if (current.fieldMap) {
+      return current.fieldMap
+    }
+    try {
+      const columns = await editorApi.getTableSchema(tableName)
+      updateLogsDrilldownSettings({ fieldMap: otelLogsFieldDefaultsFromColumns(columns) }, database.value)
+    } catch (error) {
+      console.error(`Failed to seed logs field settings for ${tableName}:`, error)
+      return undefined
+    }
+    return loadDrilldownSettings(database.value).logs.fieldMap
+  }
+
   const applyTableAndFieldMap = async (tableName: string) => {
-    const settings = loadDrilldownSettings(database.value).logs
-    const nextLogsFieldMap = await buildLogsFieldMap(tableName, settings.fieldMap)
+    const fieldMap = await seedFieldSettings(tableName)
+    const nextLogsFieldMap = await buildLogsFieldMap(tableName, fieldMap)
     ctx.fieldMap.value = {
       ...ctx.fieldMap.value,
       logs: nextLogsFieldMap,
@@ -48,9 +64,10 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
     }
 
     if (ctx.logsTable.value) {
+      const fieldMap = await seedFieldSettings(ctx.logsTable.value)
       ctx.fieldMap.value = {
         ...ctx.fieldMap.value,
-        logs: await buildLogsFieldMap(ctx.logsTable.value, settings.fieldMap),
+        logs: await buildLogsFieldMap(ctx.logsTable.value, fieldMap),
       }
       restoreLogsDetailSelection()
       // URL restore opens detail before this finishes; bump so table/chart reload.
