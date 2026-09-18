@@ -341,7 +341,7 @@ function buildSharedAxisLabelStyle() {
   }
 }
 
-/** Time-axis label rules shared by timeseries (time axis) and heatmap (category). */
+/** Time-axis label rules shared by timeseries (time) and heatmap (category). */
 function buildSharedTimeAxisLabelOption(spanMs: number, tickIntervalMs: number) {
   return {
     ...buildSharedAxisLabelStyle(),
@@ -447,6 +447,9 @@ export function buildHeatmapOption(
   // synthetic category for yMinDisplay — that tick is a label only in Grafana, and an
   // ECharts category would leave ~1 cell of blank above the x-axis).
   // @see metrics-drilldown buildHeatmapPanel + grafana rowsToCellsHeatmap / heatmapPathsDense
+  //
+  // ECharts heatmap cells require category x (not time). Pan previews shift category
+  // min/max; Grafana uPlot can `setScale` because its heatmap is a true time scale.
   const yMinLabel = formatHeatmapYMinLabel(buckets, boundUnit)
   const yAxisLabels = buckets.map((le) => formatBucketLabel(le, boundUnit))
   const significantCells = selectVisibleHeatmapCells(cells, { relativeHide: options?.relativeHide })

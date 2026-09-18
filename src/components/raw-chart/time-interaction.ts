@@ -118,7 +118,7 @@ function readPrimaryXAxis(chart: ECharts): XAxisOption | null {
   }
 }
 
-/** Cartesian heatmap uses `type: 'category'` (timestamps as labels), not `type: 'time'`. */
+/** True when x is category (ECharts heatmap — cells require category, not time). */
 export function isCategoryXAxis(chart: ECharts): boolean {
   return readPrimaryXAxis(chart)?.type === 'category'
 }
@@ -130,7 +130,7 @@ export function readCategoryCount(chart: ECharts): number {
 
 export function readAxisWindowMs(chart: ECharts): ChartTimeRangeMs | null {
   const axis = readPrimaryXAxis(chart)
-  // Category min/max are ranks (heatmap), not timestamps.
+  // Category min/max are ranks, not timestamps.
   if (!axis || axis.type === 'category') {
     return null
   }
@@ -144,8 +144,7 @@ export function readAxisWindowMs(chart: ECharts): ChartTimeRangeMs | null {
 
 /**
  * Map a plot pixel onto an authoritative time window.
- * Category axes (heatmap) cannot use `convertFromPixel` — that returns a rank, not a timestamp.
- * The plot width is the current query window (same model as x-axis pan).
+ * Category axes cannot use `convertFromPixel` — that returns a rank, not a timestamp.
  */
 export function plotPixelToTimeMs(
   pixelX: number,
@@ -161,9 +160,9 @@ export function plotPixelToTimeMs(
 }
 
 /**
- * Shift a category axis so cells follow the drag (content moves with the pointer).
- * One full plot width == `categoryCount` bands (`boundaryGap: true`).
- * Drag right (+dx) → lower indexes, cells move right, earlier time appears on the left.
+ * Shift a category axis so cells follow the drag (ECharts heatmap).
+ * Grafana heatmap pans a real time scale via `u.setScale`; ECharts heatmap cannot —
+ * it only renders cells on category x, so preview shifts category min/max instead.
  */
 export function computeCategoryPanExtent(
   categoryCount: number,
@@ -204,36 +203,66 @@ export function getGridRect(chart: ECharts): { x: number; y: number; width: numb
     return fromModel
   }
 
+  // Time axis: convert window corners.
   const window = readAxisWindowMs(chart)
-  if (!window) {
-    return null
+  if (window) {
+    try {
+      const yModel = (
+        chart.getModel() as {
+          getComponent?: (name: string, index: number) => { axis?: { scale?: { getExtent?: () => number[] } } }
+        }
+      ).getComponent?.('yAxis', 0)
+      const yExtent = yModel?.axis?.scale?.getExtent?.()
+      const y0 = yExtent?.[0] ?? 0
+      const y1 = yExtent?.[1] ?? 1
+      const topLeft = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [window.fromMs, y1])
+      const bottomRight = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [window.toMs, y0])
+      if (topLeft && bottomRight) {
+        const x = Math.min(topLeft[0], bottomRight[0])
+        const y = Math.min(topLeft[1], bottomRight[1])
+        const width = Math.abs(bottomRight[0] - topLeft[0])
+        const height = Math.abs(bottomRight[1] - topLeft[1])
+        if (width > 0 && height > 0) {
+          return { x, y, width, height }
+        }
+      }
+    } catch {
+      // fall through
+    }
   }
 
-  try {
-    const yModel = (
-      chart.getModel() as {
-        getComponent?: (name: string, index: number) => { axis?: { scale?: { getExtent?: () => number[] } } }
+  // Category axis (heatmap): convert first/last category indexes.
+  const categoryCount = readCategoryCount(chart)
+  if (categoryCount > 1) {
+    try {
+      const yCount = (() => {
+        try {
+          const option = chart.getOption() as { yAxis?: { data?: unknown[] } | Array<{ data?: unknown[] }> }
+          const yAxis = Array.isArray(option.yAxis) ? option.yAxis[0] : option.yAxis
+          return Array.isArray(yAxis?.data) ? yAxis.data.length : 0
+        } catch {
+          return 0
+        }
+      })()
+      const y0 = 0
+      const y1 = Math.max(0, yCount - 1)
+      const topLeft = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [0, y1])
+      const bottomRight = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [categoryCount - 1, y0])
+      if (topLeft && bottomRight) {
+        const x = Math.min(topLeft[0], bottomRight[0])
+        const y = Math.min(topLeft[1], bottomRight[1])
+        const width = Math.abs(bottomRight[0] - topLeft[0])
+        const height = Math.abs(bottomRight[1] - topLeft[1])
+        if (width > 0 && height > 0) {
+          return { x, y, width, height }
+        }
       }
-    ).getComponent?.('yAxis', 0)
-    const yExtent = yModel?.axis?.scale?.getExtent?.()
-    const y0 = yExtent?.[0] ?? 0
-    const y1 = yExtent?.[1] ?? 1
-    const topLeft = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [window.fromMs, y1])
-    const bottomRight = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [window.toMs, y0])
-    if (!topLeft || !bottomRight) {
+    } catch {
       return null
     }
-    const x = Math.min(topLeft[0], bottomRight[0])
-    const y = Math.min(topLeft[1], bottomRight[1])
-    const width = Math.abs(bottomRight[0] - topLeft[0])
-    const height = Math.abs(bottomRight[1] - topLeft[1])
-    if (!(width > 0) || !(height > 0)) {
-      return null
-    }
-    return { x, y, width, height }
-  } catch {
-    return null
   }
+
+  return null
 }
 
 function pixelToTimeMs(chart: ECharts, pixelX: number, pixelY: number): number | null {
@@ -295,11 +324,12 @@ function drawZoomGraphic(chart: ECharts, gridY: number, gridHeight: number, left
 }
 
 /**
- * Preview a panned time window. Pass `phaseMs` (pan-start from) so tick labels slide
- * horizontally and only newly visible edges are filled — not rebuilt from scratch.
+ * Preview a panned time window (Grafana `u.setScale('x', {min,max})`).
+ * Locks the plot rect so ECharts `containLabel` cannot reflow the chart while labels slide.
  */
 export function previewAxisWindow(chart: ECharts, fromMs: number, toMs: number, phaseMs?: number) {
-  const plotWidthPx = getGridRect(chart)?.width ?? SPARKLINE_AXIS_PLOT_WIDTH_PX
+  const plotRect = getGridRect(chart)
+  const plotWidthPx = plotRect?.width ?? SPARKLINE_AXIS_PLOT_WIDTH_PX
   const axis = readPrimaryXAxis(chart)
   const existingInterval = Number(axis && 'interval' in axis ? axis.interval : Number.NaN)
   const {
@@ -314,6 +344,19 @@ export function previewAxisWindow(chart: ECharts, fromMs: number, toMs: number, 
   })
   chart.setOption(
     {
+      // Grafana keeps a fixed plot bbox during pan; ECharts containLabel would otherwise
+      // remasure labels every frame and shift the whole chart (often upward).
+      ...(plotRect
+        ? {
+            grid: {
+              containLabel: false,
+              left: plotRect.x,
+              top: plotRect.y,
+              width: plotRect.width,
+              height: plotRect.height,
+            },
+          }
+        : {}),
       xAxis,
     },
     false
@@ -321,8 +364,21 @@ export function previewAxisWindow(chart: ECharts, fromMs: number, toMs: number, 
 }
 
 function previewCategoryExtent(chart: ECharts, extent: { min: number; max: number }) {
+  const plotRect = getGridRect(chart)
   chart.setOption(
     {
+      // Same containLabel lock as time-axis pan — otherwise remasure jumps the plot.
+      ...(plotRect
+        ? {
+            grid: {
+              containLabel: false,
+              left: plotRect.x,
+              top: plotRect.y,
+              width: plotRect.width,
+              height: plotRect.height,
+            },
+          }
+        : {}),
       xAxis: {
         min: extent.min,
         max: extent.max,
@@ -407,7 +463,13 @@ type DragMode = 'zoom' | 'pan'
  * Grafana-style plot zoom + x-axis pan.
  * Uses document pointer listeners so release outside the canvas still commits.
  */
-export function attachTimeInteraction(chart: ECharts, handlers: TimeInteractionHandlers): () => void {
+export function attachTimeInteraction(
+  chart: ECharts,
+  handlers: TimeInteractionHandlers
+): {
+  destroy: () => void
+  onAxisPointerDown: (e: PointerEvent) => void
+} {
   const dom = chart.getDom()
 
   let mode: DragMode | null = null
@@ -495,6 +557,7 @@ export function attachTimeInteraction(chart: ECharts, handlers: TimeInteractionH
         if (!next) {
           return
         }
+        // ECharts heatmap is category-x only; Grafana-style setScale is timeseries path.
         if (isCategoryXAxis(chart)) {
           const extent = computeCategoryPanExtent(readCategoryCount(chart), dx, plotWidthPx)
           if (extent) {
@@ -502,7 +565,6 @@ export function attachTimeInteraction(chart: ECharts, handlers: TimeInteractionH
           }
           return
         }
-        // Phase = pan-start from: labels keep absolute times and slide with min/max.
         previewAxisWindow(chart, next.fromMs, next.toMs, panOrigin.fromMs)
       }
     }
@@ -522,7 +584,6 @@ export function attachTimeInteraction(chart: ECharts, handlers: TimeInteractionH
 
       const commit = (range: ChartTimeRangeMs) => {
         handlers.onTimeRangeMs(range)
-        // Keep lock until host applies new options; unlock on next frame as fallback.
         requestAnimationFrame(() => setLock(false))
       }
 
