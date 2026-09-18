@@ -1,4 +1,5 @@
 import editorApi from '@/api/editor'
+import useTableSchemaStore from '@/store/modules/table-schema'
 import type { LogsFieldMapSettings } from '../drilldown-settings'
 import { isJsonAttributeContainerName, parseJsonFieldChipKey } from './json-field-keys'
 
@@ -175,7 +176,7 @@ export async function buildLogsFieldMap(
   let columns: SchemaColumn[] = []
 
   try {
-    columns = await editorApi.getTableSchema(tableName)
+    columns = await useTableSchemaStore().ensureTableSchema(tableName)
   } catch (error) {
     console.error(`Failed to load schema for ${tableName}:`, error)
     return applySettingsOverrides(map, settings)

@@ -10,6 +10,7 @@
     :loading="loading"
     :max-tag-count="2"
     :placeholder="t('drilldown.logs.levelAll')"
+    @popup-visible-change="onPopupVisibleChange"
   )
     a-option(
       v-for="row in levels"
@@ -20,7 +21,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, onMounted, ref, watch } from 'vue'
+  import { computed, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useDrilldownContext } from '@/observability/context'
   import { fetchSeverityLevels, type LabelValueRow } from '@/observability/adapters/logs'
@@ -96,31 +97,19 @@
     }
   }
 
-  watch(severityColumn, () => {
-    ensureSeverityMapped()
-  })
-
-  onMounted(() => {
-    ensureSeverityMapped()
-    loadLevels()
-  })
+  function onPopupVisibleChange(visible: boolean) {
+    if (visible) {
+      loadLevels()
+    }
+  }
 
   watch(
-    () =>
-      [
-        severityColumn.value,
-        ctx.logsTable.value,
-        ctx.refreshKey.value,
-        ctx.time.value,
-        ctx.rangeTime.value[0],
-        ctx.rangeTime.value[1],
-        // Reload when non-severity filters change so counts stay useful.
-        ctx.filters.value
-          .filter((filter) => filter.key !== severityColumn.value)
-          .map((filter) => `${filter.key}${filter.op}${filter.value}`)
-          .join('\0'),
-      ] as const,
-    loadLevels
+    severityColumn,
+    () => {
+      ensureSeverityMapped()
+      levels.value = []
+    },
+    { immediate: true }
   )
 </script>
 

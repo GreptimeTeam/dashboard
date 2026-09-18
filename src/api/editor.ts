@@ -2,6 +2,7 @@ import axios, { AxiosRequestConfig, AxiosRequestHeaders } from 'axios'
 import dayjs from 'dayjs'
 import qs from 'qs'
 import { PromForm } from '@/store/modules/code-run/types'
+import requestTableSchema from '@/api/table-schema-fetch'
 import { calculateRange } from '@/utils/date-time'
 import { HttpResponse } from './interceptor'
 
@@ -177,45 +178,30 @@ const runSQLWithCSV = (code: string, format?: string): Promise<HttpResponse> => 
 }
 
 /**
- * Fetches the schema (column_name, data_type, semantic_type) for a given table.
+ * Typed table schema (column_name, data_type, semantic_type).
+ * Drilldown paths should prefer useTableSchemaStore().ensureTableSchema for session cache.
  */
 const getTableSchema = (tableName: string, database?: string) => {
-  const { tableSchema, tableCatalog } = storeToRefs(useAppStore())
-
-  // Prefer catalog/schema derived from the incoming database (if provided),
-  // and fall back to the global store values otherwise.
-  let effectiveCatalog = tableCatalog.value
-  let effectiveSchema = tableSchema.value
+  const appStore = useAppStore()
+  const { tableSchema, tableCatalog } = storeToRefs(appStore)
+  let catalog = tableCatalog.value
+  let schema = tableSchema.value
 
   if (database) {
-    // Database name format is usually "<catalog>-<schema>", e.g. "greptime-public".
     const parts = database.split('-')
     if (parts.length > 1) {
-      effectiveCatalog = parts.slice(0, -1).join('-') || effectiveCatalog
-      effectiveSchema = parts[parts.length - 1] || effectiveSchema
+      catalog = parts.slice(0, -1).join('-') || catalog
+      schema = parts[parts.length - 1] || schema
     } else {
-      // If no '-' is present, treat the passed-in value as schema only.
-      effectiveSchema = database
+      schema = database
     }
   }
 
-  return axios
-    .post(
-      sqlUrl,
-      makeSqlData(
-        `SELECT column_name, data_type, semantic_type FROM information_schema.columns WHERE table_name = '${tableName}' AND table_catalog = '${effectiveCatalog}' AND table_schema = '${effectiveSchema}' ORDER BY column_name`
-      ),
-      addDatabaseParams(database)
-    )
-    .then((res: any) => {
-      return res.output[0].records.rows.map((row: string[]) => {
-        return {
-          name: row[0],
-          data_type: row[1],
-          semantic_type: row[2],
-        }
-      })
-    })
+  return requestTableSchema(tableName, {
+    catalog,
+    schema,
+    db: database || appStore.database,
+  })
 }
 
 export default {

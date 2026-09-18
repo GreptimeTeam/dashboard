@@ -54,7 +54,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, onMounted, reactive, ref, watch } from 'vue'
+  import { computed, reactive, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { IconDown } from '@arco-design/web-vue/es/icon'
   import { useDrilldownContext } from '@/observability/context'
@@ -148,7 +148,7 @@
     if (!next) return
     openLabels.value = [next]
     activeLabel.value = next
-    loadValuesFor(next)
+    // Values load is owned by reloadOverviewLabels — avoid a duplicate fetchLabelValues here.
   }
 
   async function loadKeys() {
@@ -175,6 +175,21 @@
     }
   }
 
+  /** Coalesce overlapping mount / refresh / time triggers into one keys+values pass. */
+  let overviewReloadSeq = 0
+  async function reloadOverviewLabels() {
+    if (ctx.logsView.value === 'detail') {
+      return
+    }
+    overviewReloadSeq += 1
+    const seq = overviewReloadSeq
+    await loadKeys()
+    if (seq !== overviewReloadSeq) {
+      return
+    }
+    await Promise.all(openLabelList.value.map((label) => loadValuesFor(label)))
+  }
+
   function addLabel(key: string) {
     if (!key || openLabelList.value.includes(key)) return
     openLabels.value = [...openLabelList.value, key]
@@ -186,6 +201,10 @@
     const label = String(key ?? '')
     if (!label || !openLabelList.value.includes(label)) return
     activeLabel.value = label
+    // Skip if this tab already has values (programmatic default-open must not re-fetch).
+    if (Array.isArray(valuesByLabel[label])) {
+      return
+    }
     loadValuesFor(label)
   }
 
@@ -197,13 +216,11 @@
     delete loadingValues[label]
     if (activeLabel.value === label) {
       activeLabel.value = openLabels.value[0]
-      if (activeLabel.value) loadValuesFor(activeLabel.value)
+      if (activeLabel.value && !Array.isArray(valuesByLabel[activeLabel.value])) {
+        loadValuesFor(activeLabel.value)
+      }
     }
   }
-
-  onMounted(() => {
-    loadKeys()
-  })
 
   // Drop old label panes synchronously before refreshKey watchers fire SQL with stale cols.
   watch(
@@ -216,27 +233,22 @@
     { flush: 'sync' }
   )
 
+  // Single path for overview label values (top-N per open label, e.g. scope_name LIMIT 20).
+  // Merges former onMounted + refreshKey + time watchers that each called fetchLabelValues.
   watch(
-    () => [ctx.logsTable.value, ctx.refreshKey.value, ctx.logsView.value] as const,
-    async () => {
-      if (ctx.logsView.value === 'detail') {
-        return
-      }
-      await loadKeys()
-      await Promise.all(openLabelList.value.map((label) => loadValuesFor(label)))
-    }
-  )
-
-  // Overview compose: Include / add-to-filter only updates chips — do not re-query
-  // label value panels when filters change (SQL already ignores label filters here).
-  watch(
-    () => [ctx.time.value, ctx.rangeTime.value[0], ctx.rangeTime.value[1], ctx.logsView.value] as const,
+    () =>
+      [
+        ctx.logsTable.value,
+        ctx.refreshKey.value,
+        ctx.logsView.value,
+        ctx.time.value,
+        ctx.rangeTime.value[0],
+        ctx.rangeTime.value[1],
+      ] as const,
     () => {
-      if (ctx.logsView.value === 'detail') {
-        return
-      }
-      openLabelList.value.forEach((label) => loadValuesFor(label))
-    }
+      reloadOverviewLabels()
+    },
+    { immediate: true }
   )
 </script>
 

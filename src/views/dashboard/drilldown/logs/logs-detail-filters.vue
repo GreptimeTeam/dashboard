@@ -23,6 +23,7 @@
       allow-clear
       :model-value="serviceDraft"
       :loading="serviceSuggestLoading"
+      @popup-visible-change="onServicePopupVisible"
       @change="onServiceSuggestChange"
     )
       a-option(
@@ -125,28 +126,17 @@
     serviceOp.value = match && isFilterOp(match.op) ? match.op : serviceOp.value
   }
 
+  watch(
+    () => columns.value.service,
+    () => {
+      serviceSuggestions.value = []
+    }
+  )
+
   watch(() => [columns.value.service, ctx.filters.value] as const, syncServiceFromFilters, {
     immediate: true,
     deep: true,
   })
-
-  watch(
-    () =>
-      [
-        serviceUsesSuggest.value,
-        ctx.logsTable.value,
-        ctx.refreshKey.value,
-        ctx.time.value,
-        ctx.rangeTime.value[0],
-        ctx.rangeTime.value[1],
-        ctx.filters.value
-          .filter((filter) => filter.key !== columns.value.service)
-          .map((filter) => `${filter.key}${filter.op}${filter.value}`)
-          .join('\0'),
-      ] as const,
-    loadServiceSuggestions,
-    { immediate: true }
-  )
 
   watch(logsBodyOp, (op) => {
     bodyOpDraft.value = op
@@ -218,6 +208,12 @@
   function clearService() {
     serviceDraft.value = ''
     runQuery()
+  }
+
+  function onServicePopupVisible(popupVisible: boolean) {
+    if (popupVisible) {
+      loadServiceSuggestions()
+    }
   }
 
   function onServiceSuggestChange(value: string | number | Record<string, unknown> | undefined) {

@@ -1,4 +1,5 @@
 import editorApi from '@/api/editor'
+import useTableSchemaStore from '@/store/modules/table-schema'
 import { getLabelNames, getLabelValues } from '@/api/metrics'
 import type { DrilldownContext } from '../context'
 import { loadDrilldownSettings } from '../drilldown-settings'
@@ -94,7 +95,7 @@ export async function fetchSqlLabelKeys(
   }
 
   try {
-    const columns = (await editorApi.getTableSchema(tableName)) as SchemaColumn[]
+    const columns = (await useTableSchemaStore().ensureTableSchema(tableName)) as SchemaColumn[]
     if (signal === 'traces') {
       const keys = discoverTraceLabelColumns(columns)
       return filterOptions(filterLabelKeys(keys), search)
@@ -122,7 +123,7 @@ export async function fetchSqlFieldKeys(ctx: DrilldownContext, search = ''): Pro
   }
 
   try {
-    const columns = (await editorApi.getTableSchema(tableName)) as SchemaColumn[]
+    const columns = (await useTableSchemaStore().ensureTableSchema(tableName)) as SchemaColumn[]
     const fieldMap = fieldMapForSignal(ctx, 'logs')
     const settings = loadDrilldownSettings().logs
     const l1 = discoverFieldColumns(columns, fieldMap, {
@@ -154,7 +155,7 @@ export async function fetchLogsContainsKeyOptions(ctx: DrilldownContext): Promis
   }
 
   try {
-    const columns = (await editorApi.getTableSchema(tableName)) as SchemaColumn[]
+    const columns = (await useTableSchemaStore().ensureTableSchema(tableName)) as SchemaColumn[]
     const fieldMap = fieldMapForSignal(ctx, 'logs')
     const settings = loadDrilldownSettings().logs
     return discoverLogsContainsColumns(columns, fieldMap, logsLabelOptions(settings))
@@ -172,7 +173,7 @@ export async function fetchLogsFilterKeyOptions(ctx: DrilldownContext, search = 
   }
 
   try {
-    const columns = (await editorApi.getTableSchema(tableName)) as SchemaColumn[]
+    const columns = (await useTableSchemaStore().ensureTableSchema(tableName)) as SchemaColumn[]
     const fieldMap = fieldMapForSignal(ctx, 'logs')
     const settings = loadDrilldownSettings().logs
     const keys = discoverLogsFilterKeyColumns(columns, fieldMap, {
@@ -307,7 +308,7 @@ export async function fetchSqlLabelValues(
   let jsonColumns: string[] = []
   let columns: SchemaColumn[] = []
   try {
-    columns = (await editorApi.getTableSchema(tableName)) as SchemaColumn[]
+    columns = (await useTableSchemaStore().ensureTableSchema(tableName)) as SchemaColumn[]
     jsonColumns = listJsonAttributeColumns(columns)
   } catch {
     // JSON column list is best-effort for value suggestions.

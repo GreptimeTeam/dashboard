@@ -1,14 +1,15 @@
 import { onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAppStore } from '@/store'
-import editorApi from '@/api/editor'
 import { loadDrilldownSettings, updateLogsDrilldownSettings } from '@/observability/drilldown-settings'
 import { buildLogsFieldMap, otelLogsFieldDefaultsFromColumns } from '@/observability/logs/field-map'
 import { resolveLogsTable } from '@/observability/logs/resolve-table'
+import useTableSchemaStore from '@/store/modules/table-schema'
 import type { DrilldownContext } from '../context'
 
 export default function useDrilldownLogsInit(ctx: DrilldownContext) {
   const { database } = storeToRefs(useAppStore())
+  const tableSchemaStore = useTableSchemaStore()
 
   const restoreLogsDetailSelection = () => {
     if (ctx.logsView.value !== 'detail') {
@@ -32,7 +33,7 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
       return current.fieldMap
     }
     try {
-      const columns = await editorApi.getTableSchema(tableName)
+      const columns = await tableSchemaStore.ensureTableSchema(tableName)
       updateLogsDrilldownSettings({ fieldMap: otelLogsFieldDefaultsFromColumns(columns) }, database.value)
     } catch (error) {
       console.error(`Failed to seed logs field settings for ${tableName}:`, error)

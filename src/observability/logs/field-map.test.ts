@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import editorApi from '@/api/editor'
+import useTableSchemaStore from '@/store/modules/table-schema'
 import {
   chipKeyForLogsTableFilter,
   classifyLogsFilterKey,
@@ -25,6 +26,21 @@ vi.mock('@/api/editor', () => ({
     runSQL: vi.fn(),
   },
 }))
+
+vi.mock('@/store/modules/table-schema', () => ({
+  default: vi.fn(() => ({
+    ensureTableSchema: vi.fn(),
+  })),
+}))
+
+const ensureTableSchema = vi.fn()
+
+beforeEach(() => {
+  ensureTableSchema.mockReset()
+  vi.mocked(useTableSchemaStore).mockReturnValue({
+    ensureTableSchema,
+  } as any)
+})
 
 describe('otelLogsFieldDefaultsFromColumns', () => {
   it('fills only matching OTEL columns and leaves the rest empty', () => {
@@ -90,7 +106,7 @@ describe('otelLogsFieldDefaultsFromColumns', () => {
 
 describe('buildLogsFieldMap', () => {
   it('does not guess service when field settings omit it', async () => {
-    vi.mocked(editorApi.getTableSchema).mockResolvedValue([
+    ensureTableSchema.mockResolvedValue([
       { name: 'timestamp', data_type: 'TimestampNanosecond', semantic_type: 'TIMESTAMP' },
       { name: 'body', data_type: 'String', semantic_type: 'FIELD' },
       { name: 'scope_name', data_type: 'String', semantic_type: 'TAG' },

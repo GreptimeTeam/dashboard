@@ -1,6 +1,7 @@
 import editorApi from '@/api/editor'
 import type { ColumnType, TSColumn } from '@/types/query'
 import { TsTypeMapping } from '@/utils/date-time'
+import useTableSchemaStore from '@/store/modules/table-schema'
 import type { DrilldownContext } from '../context'
 import { loadDrilldownSettings } from '../drilldown-settings'
 import { filtersToSqlWhere } from '../filters'
@@ -89,30 +90,25 @@ function bucketToUnixSeconds(raw: unknown): number | null {
 
 async function loadSchema(tableName: string): Promise<SchemaColumn[]> {
   try {
-    return await editorApi.getTableSchema(tableName)
+    return await useTableSchemaStore().ensureTableSchema(tableName)
   } catch {
     return []
   }
 }
 
-async function tableHasColumn(tableName: string, columnName: string): Promise<boolean> {
-  if (!tableName || !columnName) {
+function schemaHasColumn(columns: SchemaColumn[], columnName: string): boolean {
+  if (!columnName) {
     return false
   }
-  const columns = await loadSchema(tableName)
   return columns.some((column) => column.name === columnName)
 }
 
-async function resolveLogsTimeColumnFallback(
-  tableName: string,
-  fieldMap: Record<string, string>
-): Promise<string | undefined> {
+function resolveLogsTimeColumnFallback(fieldMap: Record<string, string>, columns?: SchemaColumn[]): string | undefined {
   const fromMap = resolveLogsTimeColumn(fieldMap)
   if (fromMap) {
     return fromMap
   }
-  const columns = await loadSchema(tableName)
-  return columns.find((column) => column.semantic_type === 'TIMESTAMP')?.name
+  return columns?.find((column) => column.semantic_type === 'TIMESTAMP')?.name
 }
 
 /**
@@ -136,6 +132,8 @@ export async function buildLogsContextWhere(
     includeLabelFilters?: boolean
     /** Skip this chip key when applying filters (e.g. severity picker). */
     excludeFilterKey?: string
+    /** Preloaded schema — skips an extra loadSchema inside this helper. */
+    columns?: SchemaColumn[]
   }
 ): Promise<string> {
   const tableName = ctx.logsTable.value
@@ -146,19 +144,20 @@ export async function buildLogsContextWhere(
   const fieldMap = ctx.fieldMap.value.logs
   const whereParts: string[] = []
   const unixRange = ctx.unixTimeRange()
+  const tracesLogsDrawer = ctx.signal.value === 'traces' && Boolean(ctx.logsTraceId.value?.trim())
+  const includeLabelFilters = options?.includeLabelFilters ?? (ctx.logsView.value === 'detail' || tracesLogsDrawer)
+  const needsColumns = includeLabelFilters || (unixRange.length === 2 && !resolveLogsTimeColumn(fieldMap))
+  const columns = needsColumns ? options?.columns ?? (await loadSchema(tableName)) : options?.columns
 
   if (unixRange.length === 2) {
-    const timeColumn = await resolveLogsTimeColumnFallback(tableName, fieldMap)
+    const timeColumn = resolveLogsTimeColumnFallback(fieldMap, columns)
     if (timeColumn) {
       whereParts.push(`${quoteIdent(timeColumn)} >= FROM_UNIXTIME(${unixRange[0]})`)
       whereParts.push(`${quoteIdent(timeColumn)} <= FROM_UNIXTIME(${unixRange[1]})`)
     }
   }
 
-  const tracesLogsDrawer = ctx.signal.value === 'traces' && Boolean(ctx.logsTraceId.value?.trim())
-  const includeLabelFilters = options?.includeLabelFilters ?? (ctx.logsView.value === 'detail' || tracesLogsDrawer)
-  if (includeLabelFilters) {
-    const columns = await loadSchema(tableName)
+  if (includeLabelFilters && columns) {
     const settings = loadDrilldownSettings().logs
     whereParts.push(
       ...filtersToSqlWhere(ctx.filters.value, fieldMap, {
@@ -304,12 +303,14 @@ export async function fetchLabelValues(
   if (!tableName || !labelCol) {
     return []
   }
-  if (!(await tableHasColumn(tableName, labelCol))) {
+  const schema = await loadSchema(tableName)
+  if (!schemaHasColumn(schema, labelCol)) {
     return []
   }
 
   const where = await buildLogsContextWhere(ctx, {
     excludeFilterKey: options?.excludeFilterKey,
+    columns: schema,
   })
   if (!where) {
     return []
@@ -397,17 +398,20 @@ export async function fetchLogsRows(
   }
 
   const fieldMap = ctx.fieldMap.value.logs
-  if (options?.labelCol && !(await tableHasColumn(tableName, options.labelCol))) {
+  const schema = await loadSchema(tableName)
+  if (options?.labelCol && !schemaHasColumn(schema, options.labelCol)) {
     return empty
   }
   const extraEquals =
     options?.labelCol && options.value !== undefined ? [{ column: options.labelCol, value: options.value }] : undefined
-  const where = appendExtraWhere(await buildLogsContextWhere(ctx, { extraEquals }), options?.extraWhere)
+  const where = appendExtraWhere(
+    await buildLogsContextWhere(ctx, { extraEquals, columns: schema }),
+    options?.extraWhere
+  )
   if (!where) {
     return empty
   }
 
-  const schema = await loadSchema(tableName)
   const schemaNames = schema.map((column) => column.name).filter(Boolean)
   const timeCol = resolveLogsTimeColumn(fieldMap)
   const safeSelectCols = selectLogColumns(schemaNames, options?.columns, timeCol)
@@ -419,7 +423,7 @@ export async function fetchLogsRows(
 
   const whereParts = [where]
   const severityCol = fieldMap.severity
-  if (options?.levels?.length && severityCol && (await tableHasColumn(tableName, severityCol))) {
+  if (options?.levels?.length && severityCol && schemaHasColumn(schema, severityCol)) {
     const levelPredicate = buildSeverityLevelsPredicate(severityCol, options.levels)
     if (levelPredicate) {
       whereParts.push(levelPredicate)
@@ -489,17 +493,21 @@ export async function fetchLogVolumeTimeseries(
 ): Promise<LogVolumeSeries[]> {
   const tableName = ctx.logsTable.value
   const fieldMap = ctx.fieldMap.value.logs
-  const timeColumn = await resolveLogsTimeColumnFallback(tableName || '', fieldMap)
-  if (!tableName || !timeColumn) {
+  if (!tableName) {
     return []
   }
-  if (options?.labelCol && !(await tableHasColumn(tableName, options.labelCol))) {
+  const schema = await loadSchema(tableName)
+  const timeColumn = resolveLogsTimeColumnFallback(fieldMap, schema)
+  if (!timeColumn) {
+    return []
+  }
+  if (options?.labelCol && !schemaHasColumn(schema, options.labelCol)) {
     return []
   }
 
   const severityCol = fieldMap.severity || ''
   const breakdownIsSeverity = Boolean(severityCol && options?.labelCol === severityCol)
-  const groupByLevel = Boolean(severityCol) && !breakdownIsSeverity && (await tableHasColumn(tableName, severityCol))
+  const groupByLevel = Boolean(severityCol) && !breakdownIsSeverity && schemaHasColumn(schema, severityCol)
   const extraEquals =
     options?.labelCol && options.value !== undefined ? [{ column: options.labelCol, value: options.value }] : undefined
   // Keep every level in the legend. Severity selection hides series and filters the sibling table.
@@ -507,6 +515,7 @@ export async function fetchLogVolumeTimeseries(
     await buildLogsContextWhere(ctx, {
       extraEquals,
       excludeFilterKey: severityCol || undefined,
+      columns: schema,
     }),
     options?.extraWhere
   )
@@ -564,11 +573,12 @@ export async function fetchLogVolumeByColumn(
   const column = options.column.trim()
   const tableName = ctx.logsTable.value
   const fieldMap = ctx.fieldMap.value.logs
-  const timeColumn = await resolveLogsTimeColumnFallback(tableName || '', fieldMap)
-  if (!tableName || !timeColumn || !column) {
+  if (!tableName || !column) {
     return []
   }
-  if (!(await tableHasColumn(tableName, column))) {
+  const schema = await loadSchema(tableName)
+  const timeColumn = resolveLogsTimeColumnFallback(fieldMap, schema)
+  if (!timeColumn || !schemaHasColumn(schema, column)) {
     return []
   }
 
@@ -577,7 +587,7 @@ export async function fetchLogVolumeByColumn(
     return []
   }
 
-  const where = await buildLogsContextWhere(ctx)
+  const where = await buildLogsContextWhere(ctx, { columns: schema })
   if (!where) {
     return []
   }
