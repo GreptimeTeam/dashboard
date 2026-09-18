@@ -13,7 +13,7 @@
   a-spin.panel-loading(v-if="loading" :loading="true")
   .panel-state.panel-error(v-else-if="error") {{ t('drilldown.traces.redChartError') }}
   .panel-state(v-else-if="isEmpty") {{ t('drilldown.traces.redChartNoData') }}
-  .panel-chart(v-else-if="showChart" @click.stop)
+  .panel-chart(v-else-if="showChart")
     Chart(
       :key="chartRenderKey"
       :height="chartHeight"
