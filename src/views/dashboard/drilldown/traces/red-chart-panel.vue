@@ -13,12 +13,15 @@
   a-spin.panel-loading(v-if="loading" :loading="true")
   .panel-state.panel-error(v-else-if="error") {{ t('drilldown.traces.redChartError') }}
   .panel-state(v-else-if="isEmpty") {{ t('drilldown.traces.redChartNoData') }}
-  .panel-chart(v-else-if="showChart")
+  .panel-chart(v-else-if="showChart" @click.stop)
     Chart(
       :key="chartRenderKey"
       :height="chartHeight"
       :options="chartOption"
-      :time-interaction="false"
+      :brush-select="false"
+      :time-interaction="true"
+      :time-window-ms="timeWindowMs"
+      @time-range-change="onTimeRangeChange"
     )
 </template>
 
@@ -70,6 +73,23 @@
         ctx.time.value
       }:${ctx.rangeTime.value.join(',')}:${ctx.tracesTable.value}`
   )
+
+  const timeWindowMs = computed(() => {
+    const range = ctx.unixTimeRange()
+    if (range.length !== 2) {
+      return null
+    }
+    return { fromMs: range[0] * 1000, toMs: range[1] * 1000 }
+  })
+
+  const onTimeRangeChange = ([startSec, endSec]: [number, number]) => {
+    if (!(endSec > startSec)) {
+      return
+    }
+    ctx.rangeTime.value = [String(startSec), String(endSec)]
+    ctx.time.value = 0
+    ctx.triggerRefresh()
+  }
 
   async function load() {
     if (ctx.focusTraceId.value) {

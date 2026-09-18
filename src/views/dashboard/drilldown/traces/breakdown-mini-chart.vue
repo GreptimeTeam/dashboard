@@ -3,7 +3,15 @@
   a-spin.panel-loading(v-if="!ready" :loading="true")
   .panel-state(v-else-if="isEmpty") {{ t('drilldown.traces.redChartNoData') }}
   .panel-chart(v-else-if="showChart")
-    Chart(:key="chartRenderKey" :height="chartHeight" :options="chartOption")
+    Chart(
+      :key="chartRenderKey"
+      :height="chartHeight"
+      :options="chartOption"
+      :brush-select="false"
+      :time-interaction="true"
+      :time-window-ms="timeWindowMs"
+      @time-range-change="onTimeRangeChange"
+    )
 </template>
 
 <script setup lang="ts">
@@ -58,6 +66,23 @@
         ctx.time.value
       }:${ctx.rangeTime.value.join(',')}`
   )
+
+  const timeWindowMs = computed(() => {
+    const range = ctx.unixTimeRange()
+    if (range.length !== 2) {
+      return null
+    }
+    return { fromMs: range[0] * 1000, toMs: range[1] * 1000 }
+  })
+
+  const onTimeRangeChange = ([startSec, endSec]: [number, number]) => {
+    if (!(endSec > startSec)) {
+      return
+    }
+    ctx.rangeTime.value = [String(startSec), String(endSec)]
+    ctx.time.value = 0
+    ctx.triggerRefresh()
+  }
 
   function render() {
     if (!ready.value || !props.points.length) {
