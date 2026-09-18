@@ -117,6 +117,7 @@ export function discoverTraceBreakdownAttributes(columns: SchemaColumnLike[]): T
   return result
 }
 
+/** Filter discovered attributes by Resource / Span (dropdown grouping / tests). */
 export function filterBreakdownAttributesByScope(
   attrs: TraceBreakdownAttribute[],
   scope: TraceAttrScope | 'all'

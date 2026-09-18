@@ -1,12 +1,6 @@
 <template lang="pug">
 .traces-breakdown-grid
   .breakdown-toolbar
-    .breakdown-scope
-      span.toolbar-label {{ t('drilldown.traces.breakdownScope') }}
-      a-radio-group(v-model="scope" type="button" size="small")
-        a-radio(value="all") {{ t('drilldown.traces.breakdownScopeAll') }}
-        a-radio(value="resource") {{ t('drilldown.traces.breakdownScopeResource') }}
-        a-radio(value="span") {{ t('drilldown.traces.breakdownScopeSpan') }}
     .breakdown-by-label
       span.toolbar-label {{ t('drilldown.traces.breakdownByAttr') }}
       a-select(
@@ -17,7 +11,10 @@
         :placeholder="t('drilldown.traces.breakdownByAttrPlaceholder')"
         :loading="loadingAttrs"
       )
-        a-option(v-for="attr in scopedAttrs" :key="attr.column" :value="attr.column") {{ attr.label }}
+        a-optgroup(:label="t('drilldown.traces.breakdownAttrGroupResource')")
+          a-option(v-for="attr in resourceAttrs" :key="attr.column" :value="attr.column") {{ attr.label }}
+        a-optgroup(:label="t('drilldown.traces.breakdownAttrGroupSpan')")
+          a-option(v-for="attr in spanAttrs" :key="attr.column" :value="attr.column") {{ attr.label }}
 
   a-spin(style="width: 100%" :loading="loading")
     .breakdown-values-grid
@@ -49,14 +46,10 @@
   } from '@/observability/adapters/traces'
   import {
     discoverTraceBreakdownAttributes,
-    filterBreakdownAttributesByScope,
     mergeTracesFieldMapColumns,
-    type TraceAttrScope,
     type TraceBreakdownAttribute,
   } from '@/observability/traces/field-map'
   import BreakdownValueCard from './breakdown-value-card.vue'
-
-  type ScopeFilter = TraceAttrScope | 'all'
 
   const props = defineProps<{
     redMetric: RedMetric
@@ -66,7 +59,6 @@
   const { t } = useI18n()
   const ctx = useDrilldownContext()
 
-  const scope = ref<ScopeFilter>('all')
   const allAttrs = ref<TraceBreakdownAttribute[]>([])
   const groupByColumn = ref('service_name')
   const loadingAttrs = ref(false)
@@ -75,7 +67,8 @@
   const seriesByValue = ref<Record<string, Array<[number, number]>>>({})
   const yAxis = ref({ yMin: 0, yMax: 1 })
 
-  const scopedAttrs = computed(() => filterBreakdownAttributesByScope(allAttrs.value, scope.value))
+  const resourceAttrs = computed(() => allAttrs.value.filter((attr) => attr.scope === 'resource'))
+  const spanAttrs = computed(() => allAttrs.value.filter((attr) => attr.scope === 'span'))
 
   const preferDefaultColumn = (attrs: TraceBreakdownAttribute[]): string => {
     const service = attrs.find((attr) => attr.column === 'service_name')
@@ -111,9 +104,8 @@
       const columns = await editorApi.getTableSchema(tableName)
       allAttrs.value = discoverTraceBreakdownAttributes(columns || [])
       syncFieldMap(allAttrs.value)
-      const available = filterBreakdownAttributesByScope(allAttrs.value, scope.value)
-      if (!available.some((attr) => attr.column === groupByColumn.value)) {
-        groupByColumn.value = preferDefaultColumn(available.length ? available : allAttrs.value)
+      if (!allAttrs.value.some((attr) => attr.column === groupByColumn.value)) {
+        groupByColumn.value = preferDefaultColumn(allAttrs.value)
       }
     } catch (error) {
       console.error('Failed to load traces breakdown attributes:', error)
@@ -153,13 +145,6 @@
   onMounted(async () => {
     await loadAttributes()
     await loadValues()
-  })
-
-  watch(scope, () => {
-    const available = scopedAttrs.value
-    if (!available.some((attr) => attr.column === groupByColumn.value)) {
-      groupByColumn.value = preferDefaultColumn(available)
-    }
   })
 
   watch(
@@ -207,7 +192,6 @@
     padding: var(--gpt-gap-lg) var(--gpt-page-padding-x) 0;
   }
 
-  .breakdown-scope,
   .breakdown-by-label {
     display: flex;
     flex-direction: column;
