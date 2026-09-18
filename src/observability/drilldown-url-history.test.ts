@@ -33,23 +33,31 @@ describe('shouldPushDrilldownHistory', () => {
     expect(shouldPushDrilldownHistory({ signal: 'traces' }, { signal: 'traces', logsTraceId: 't1' })).toBe(true)
   })
 
-  it('does not push when switching detail identity', () => {
-    expect(shouldPushDrilldownHistory({ metric: 'a' }, { metric: 'b' })).toBe(false)
+  it('pushes when switching detail identity or closing detail', () => {
+    expect(shouldPushDrilldownHistory({ metric: 'a' }, { metric: 'b' })).toBe(true)
     expect(
       shouldPushDrilldownHistory({ signal: 'traces', focusTraceId: 't1' }, { signal: 'traces', focusTraceId: 't2' })
-    ).toBe(false)
+    ).toBe(true)
     expect(
       shouldPushDrilldownHistory(
         { signal: 'traces', logsTraceId: 't1' },
         { signal: 'traces', logsTraceId: 't1', focusTraceId: 't1' }
       )
-    ).toBe(false)
+    ).toBe(true)
+    expect(shouldPushDrilldownHistory({ metric: 'up' }, { timeLength: '30' })).toBe(true)
   })
 
-  it('does not push when closing detail or changing non-detail keys', () => {
-    expect(shouldPushDrilldownHistory({ metric: 'up' }, { timeLength: '30' })).toBe(false)
-    expect(shouldPushDrilldownHistory({ metric: 'up' }, { metric: 'up', timeLength: '60' })).toBe(false)
-    expect(shouldPushDrilldownHistory({ timeLength: '30' }, { timeLength: '60' })).toBe(false)
+  it('pushes query-parameter-only changes', () => {
+    expect(shouldPushDrilldownHistory({ metric: 'up' }, { metric: 'up', timeLength: '60' })).toBe(true)
+    expect(shouldPushDrilldownHistory({ timeLength: '30' }, { timeLength: '60' })).toBe(true)
+    expect(shouldPushDrilldownHistory({ signal: 'metrics' }, { signal: 'logs' })).toBe(true)
+  })
+
+  it('does not push when the query is unchanged', () => {
+    expect(shouldPushDrilldownHistory({ metric: 'up', timeLength: '30' }, { metric: 'up', timeLength: '30' })).toBe(
+      false
+    )
+    expect(shouldPushDrilldownHistory({ metric: 'up' }, { metric: 'up', tab: '' })).toBe(false)
   })
 })
 

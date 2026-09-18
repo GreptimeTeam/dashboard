@@ -40,14 +40,13 @@ export function drilldownDetailIdentity(query: Record<string, unknown>): string 
 }
 
 /**
- * Push only when entering detail from overview.
- * In-detail switches and closing use replace so Back/close stay predictable.
+ * Any meaningful drilldown query change creates a history entry
+ * (including query-parameter-only updates) so Back restores prior state.
+ * Callers already skip navigation when {@link drilldownQueriesEqual} is true.
  */
 export function shouldPushDrilldownHistory(
   prevQuery: Record<string, unknown>,
   nextQuery: Record<string, unknown>
 ): boolean {
-  const prevId = drilldownDetailIdentity(prevQuery)
-  const nextId = drilldownDetailIdentity(nextQuery)
-  return !prevId && Boolean(nextId)
+  return !drilldownQueriesEqual(prevQuery, nextQuery)
 }
