@@ -23,8 +23,12 @@
   .sidebar-section.sidebar-name-filters
     span.sidebar-section-label {{ t('drilldown.sidebar.nameFilters') }}
     a-radio-group.filter-mode-switch(v-model="filterMode" type="button" size="small")
-      a-radio(value="prefix") {{ t('drilldown.sidebar.prefix') }}
-      a-radio(value="suffix") {{ t('drilldown.sidebar.suffix') }}
+      a-radio(value="prefix")
+        span.filter-mode-label {{ t('drilldown.sidebar.prefix') }}
+        span.filter-mode-count(v-if="prefixModel.length") {{ prefixModel.length }}
+      a-radio(value="suffix")
+        span.filter-mode-label {{ t('drilldown.sidebar.suffix') }}
+        span.filter-mode-count(v-if="suffixModel.length") {{ suffixModel.length }}
 
     .sidebar-tree
       PrefixFilterTree(
@@ -178,5 +182,31 @@
       flex: 1;
       text-align: center;
     }
+
+    :deep(.arco-radio-button-content) {
+      display: inline-flex;
+      gap: var(--gpt-gap-sm);
+      align-items: center;
+      justify-content: center;
+    }
+
+    :deep(.arco-radio-checked) .filter-mode-count {
+      color: var(--gpt-main-dark);
+      background: var(--gpt-text-inverse);
+    }
+  }
+
+  .filter-mode-count {
+    display: inline-flex;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    font-size: var(--gpt-font-xs);
+    font-weight: var(--gpt-font-weight-medium);
+    line-height: 16px;
+    color: var(--gpt-text-inverse);
+    background: var(--gpt-main-purple);
+    border-radius: var(--gpt-radius-md);
+    justify-content: center;
   }
 </style>
