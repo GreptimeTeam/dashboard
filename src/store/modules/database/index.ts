@@ -208,7 +208,7 @@ const useDataBaseStore = defineStore('database', () => {
     }
 
     // TODO: limit?
-    const pageSize = 300
+    const pageSize = 2000
     const maxPage = Math.ceil(total / pageSize)
 
     for (let page = 1; page <= maxPage; page += 1) {
