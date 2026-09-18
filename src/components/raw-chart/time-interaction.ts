@@ -1,4 +1,9 @@
 import type { ECharts } from 'echarts'
+import formatTimeAxisLabel, {
+  generateAlignedTimeAxisTicks,
+  pickTimeAxisIntervalMs,
+  SPARKLINE_AXIS_PLOT_WIDTH_PX,
+} from '../../utils/chart-time-axis'
 
 /** Grafana ZoomPlugin `MIN_ZOOM_DIST` — ignore thinner selections. */
 export const GRAFANA_MIN_ZOOM_DIST_PX = 5
@@ -9,6 +14,48 @@ export const GRAFANA_MIN_PAN_DIST_PX = 5
 const ZOOM_SELECT_GRAPHIC_ID = 'raw-chart-zoom-select'
 
 export type ChartTimeRangeMs = { fromMs: number; toMs: number }
+
+export type PanPreviewTimeAxisOptions = {
+  /** Plot width for tick density. */
+  plotWidthPx?: number
+  /**
+   * Tick phase anchor (usually pan-start `fromMs`).
+   * Keeps absolute tick times stable so labels slide with the axis instead of
+   * regenerating values in place (Grafana x-axis drag).
+   */
+  phaseMs?: number
+  /** Lock interval to the pre-pan axis when provided. */
+  intervalMs?: number
+}
+
+/**
+ * Pan-preview time axis: shift `min`/`max`, extend `customValues` on the origin phase grid.
+ * Existing labels keep the same timestamps (horizontal slide); new edges get filled ticks.
+ */
+export function buildPanPreviewTimeAxis(fromMs: number, toMs: number, options: PanPreviewTimeAxisOptions = {}) {
+  const plotWidthPx = options.plotWidthPx ?? SPARKLINE_AXIS_PLOT_WIDTH_PX
+  const spanMs = Math.max(0, toMs - fromMs)
+  const intervalMs = options.intervalMs ?? pickTimeAxisIntervalMs(spanMs, plotWidthPx)
+  const phaseMs = options.phaseMs ?? fromMs
+  const ticks = generateAlignedTimeAxisTicks(fromMs, toMs, intervalMs, phaseMs)
+  return {
+    min: fromMs,
+    max: toMs,
+    minInterval: intervalMs,
+    maxInterval: intervalMs,
+    interval: intervalMs,
+    axisTick: {
+      customValues: ticks,
+    },
+    axisLabel: {
+      customValues: ticks,
+      formatter: (value: number | string) => formatTimeAxisLabel(Number(value), spanMs, intervalMs),
+    },
+    ticks,
+    intervalMs,
+    phaseMs,
+  }
+}
 
 export function isModifierBlockedZoom(event: MouseEvent | PointerEvent | null | undefined): boolean {
   return Boolean(event && (event.ctrlKey || event.metaKey))
@@ -56,7 +103,9 @@ type XAxisOption = {
   type?: string
   min?: number
   max?: number
+  interval?: number
   data?: unknown[]
+  axisLabel?: { customValues?: number[] }
 }
 
 function readPrimaryXAxis(chart: ECharts): XAxisOption | null {
@@ -245,13 +294,27 @@ function drawZoomGraphic(chart: ECharts, gridY: number, gridHeight: number, left
   )
 }
 
-export function previewAxisWindow(chart: ECharts, fromMs: number, toMs: number) {
+/**
+ * Preview a panned time window. Pass `phaseMs` (pan-start from) so tick labels slide
+ * horizontally and only newly visible edges are filled — not rebuilt from scratch.
+ */
+export function previewAxisWindow(chart: ECharts, fromMs: number, toMs: number, phaseMs?: number) {
+  const plotWidthPx = getGridRect(chart)?.width ?? SPARKLINE_AXIS_PLOT_WIDTH_PX
+  const axis = readPrimaryXAxis(chart)
+  const existingInterval = Number(axis && 'interval' in axis ? axis.interval : Number.NaN)
+  const {
+    ticks: _ticks,
+    intervalMs: _intervalMs,
+    phaseMs: _phaseMs,
+    ...xAxis
+  } = buildPanPreviewTimeAxis(fromMs, toMs, {
+    plotWidthPx,
+    phaseMs: phaseMs ?? fromMs,
+    intervalMs: Number.isFinite(existingInterval) && existingInterval > 0 ? existingInterval : undefined,
+  })
   chart.setOption(
     {
-      xAxis: {
-        min: fromMs,
-        max: toMs,
-      },
+      xAxis,
     },
     false
   )
@@ -439,7 +502,8 @@ export function attachTimeInteraction(chart: ECharts, handlers: TimeInteractionH
           }
           return
         }
-        previewAxisWindow(chart, next.fromMs, next.toMs)
+        // Phase = pan-start from: labels keep absolute times and slide with min/max.
+        previewAxisWindow(chart, next.fromMs, next.toMs, panOrigin.fromMs)
       }
     }
 
@@ -466,7 +530,7 @@ export function attachTimeInteraction(chart: ECharts, handlers: TimeInteractionH
         if (isCategoryXAxis(chart)) {
           restoreCategoryExtent(chart)
         } else if (restore) {
-          previewAxisWindow(chart, restore.fromMs, restore.toMs)
+          previewAxisWindow(chart, restore.fromMs, restore.toMs, restore.fromMs)
         }
         setLock(false)
       }

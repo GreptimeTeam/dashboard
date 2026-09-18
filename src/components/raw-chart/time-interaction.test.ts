@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   GRAFANA_MIN_PAN_DIST_PX,
   GRAFANA_MIN_ZOOM_DIST_PX,
+  buildPanPreviewTimeAxis,
   computeCategoryPanExtent,
   computePanRange,
   computeZoomOutRange,
@@ -46,5 +47,36 @@ describe('raw-chart time-interaction (Grafana rules)', () => {
   it('shifts heatmap category extent so cells follow an x-axis drag', () => {
     expect(computeCategoryPanExtent(10, 50, 100)).toEqual({ min: -5, max: 4 })
     expect(computeCategoryPanExtent(10, 0, 100)).toBeNull()
+  })
+
+  it('keeps absolute tick times while panning so labels slide, and fills the new edge', () => {
+    const originFrom = 1_000_000
+    const originTo = 1_600_000
+    const intervalMs = 100_000
+    const origin = buildPanPreviewTimeAxis(originFrom, originTo, {
+      plotWidthPx: 400,
+      phaseMs: originFrom,
+      intervalMs,
+    })
+    const pannedFrom = 750_000
+    const pannedTo = 1_350_000
+    const panned = buildPanPreviewTimeAxis(pannedFrom, pannedTo, {
+      plotWidthPx: 400,
+      phaseMs: originFrom,
+      intervalMs,
+    })
+
+    expect(panned.min).toBe(pannedFrom)
+    expect(panned.max).toBe(pannedTo)
+    expect(origin.ticks).toEqual([1_000_000, 1_100_000, 1_200_000, 1_300_000, 1_400_000, 1_500_000])
+
+    // Overlapping ticks keep the same absolute timestamps (slide, don't jump).
+    const stillVisible = origin.ticks.filter((tick) => tick >= pannedFrom && tick < pannedTo)
+    expect(stillVisible).toEqual([1_000_000, 1_100_000, 1_200_000, 1_300_000])
+    expect(stillVisible.every((tick) => panned.ticks.includes(tick))).toBe(true)
+
+    // Newly exposed earlier window gets phase-aligned ticks (not rebuilt from pannedFrom).
+    expect(panned.ticks).toEqual([800_000, 900_000, 1_000_000, 1_100_000, 1_200_000, 1_300_000])
+    expect(panned.ticks[0]).not.toBe(pannedFrom)
   })
 })

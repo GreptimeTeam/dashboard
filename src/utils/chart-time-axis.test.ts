@@ -3,6 +3,7 @@ import formatTimeAxisLabel, {
   SPARKLINE_AXIS_PLOT_WIDTH_PX,
   calculateTimeAxisTicks,
   calculateYAxisSplitNumber,
+  generateAlignedTimeAxisTicks,
   generateTimeAxisTicks,
   mapTimeTicksToCategoryIndexes,
   pickTimeAxisIntervalMs,
@@ -30,6 +31,20 @@ describe('chart-time-axis', () => {
     expect(ticks).toHaveLength(6)
     expect(ticks[ticks.length - 1]).toBe(start + 25 * 60 * 1000)
     expect(ticks.every((t, i) => i === 0 || t - ticks[i - 1] === 5 * 60 * 1000)).toBe(true)
+  })
+
+  it('extends ticks on a fixed phase so pan fills new edges without jumping labels', () => {
+    const phase = 1_000_000
+    const interval = 100_000
+    const origin = generateAlignedTimeAxisTicks(phase, phase + 600_000, interval, phase)
+    const panned = generateAlignedTimeAxisTicks(phase - 300_000, phase + 300_000, interval, phase)
+
+    expect(origin[0]).toBe(phase)
+    expect(panned.filter((tick) => origin.includes(tick))).toEqual(
+      origin.filter((tick) => tick >= phase - 300_000 && tick < phase + 300_000)
+    )
+    expect(panned[0]).toBe(phase - 300_000)
+    expect(panned).toContain(phase - 200_000)
   })
 
   it('formats 30m / 5m ticks as HH:mm', () => {

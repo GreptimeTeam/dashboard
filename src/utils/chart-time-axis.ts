@@ -131,6 +131,40 @@ export function generateTimeAxisTicks(startMs: number, endMs: number, intervalMs
   return Array.from({ length: count }, (_, index) => startMs + index * intervalMs)
 }
 
+/**
+ * Ticks on a fixed phase grid (`phaseMs + k * intervalMs`) that fall in `[fromMs, toMs)`.
+ * Used while panning so existing labels keep absolute times and slide with the axis
+ * (Grafana x-axis drag), instead of regenerating from the new window start.
+ */
+export function generateAlignedTimeAxisTicks(
+  fromMs: number,
+  toMs: number,
+  intervalMs: number,
+  phaseMs: number
+): number[] {
+  if (!(toMs > fromMs) || !(intervalMs > 0) || !Number.isFinite(phaseMs)) {
+    return []
+  }
+
+  let k = Math.ceil((fromMs - phaseMs) / intervalMs)
+  let tick = phaseMs + k * intervalMs
+  // Float safety: back up one step if we landed slightly below fromMs.
+  if (tick < fromMs - 1e-6) {
+    k += 1
+    tick = phaseMs + k * intervalMs
+  }
+
+  const ticks: number[] = []
+  while (tick < toMs) {
+    if (tick >= fromMs) {
+      ticks.push(tick)
+    }
+    k += 1
+    tick = phaseMs + k * intervalMs
+  }
+  return ticks
+}
+
 export function calculateTimeAxisTicks(
   startMs: number,
   endMs: number,
