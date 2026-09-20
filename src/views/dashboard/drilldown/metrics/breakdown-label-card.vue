@@ -12,6 +12,13 @@
         @click="$emit('select')"
       )
         | {{ t('drilldown.breakdown.selectLabel') }}
+      a-button(
+        v-else-if="canAddSingleValue"
+        type="outline"
+        size="mini"
+        @click="addSingleValueToFilter"
+      )
+        | {{ t('drilldown.filters.addToFilter') }}
   .card-body
     BreakdownMiniChart(
       mode="groupBy"
@@ -22,7 +29,7 @@
 </template>
 
 <script setup lang="ts">
-  import { onMounted, ref, watch, type MaybeRefOrGetter } from 'vue'
+  import { computed, onMounted, ref, watch, type MaybeRefOrGetter } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useDrilldownContext } from '@/observability/context'
   import { fetchBreakdownLabelValues } from '@/observability/metrics/breakdown'
@@ -45,6 +52,21 @@
   const ctx = useDrilldownContext()
   const values = ref<string[]>([])
   const loading = ref(false)
+
+  /**
+   * A label with exactly one value has no value view to expand into, so the filter
+   * action lives on the card itself (the value view owns it when there are several).
+   */
+  const singleValue = computed(() => (values.value.length === 1 ? values.value[0] : undefined))
+  const canAddSingleValue = computed(() => Boolean(singleValue.value) && singleValue.value !== '<unspecified>')
+
+  const addSingleValueToFilter = () => {
+    const value = singleValue.value
+    if (!value || value === '<unspecified>') {
+      return
+    }
+    ctx.appendFilter({ key: props.labelKey, op: '=', value })
+  }
 
   const loadValues = async () => {
     loading.value = true
