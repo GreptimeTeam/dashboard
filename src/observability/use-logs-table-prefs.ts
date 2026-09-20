@@ -4,16 +4,21 @@ import { useStorage } from '@vueuse/core'
 export type LogsTableColumnMode = 'separate' | 'merged' | 'merged-with-keys'
 
 /**
- * Shared LogsTable display prefs (logquery results + drilldown detail).
- * Storage keys match historical logquery keys so preferences stay in sync.
+ * LogsTable display prefs.
+ *
+ * Defaults to the historical logquery keys so the log query page keeps its preferences.
+ * Other surfaces (the drilldown logs table) pass their own `storagePrefix` to stay
+ * independent — a legacy "single column" choice must not collapse the drilldown table to
+ * its timestamp column.
  */
-export default function useLogsTablePrefs() {
-  const mergeColumn = useStorage('logquery-merge-column', true)
-  const showKeys = useStorage('logquery-show-keys', true)
-  const displayedColumnsByTable = useStorage<Record<string, string[]>>('logquery-table-column-visible', {})
+export default function useLogsTablePrefs(options?: { storagePrefix?: string; defaultMergeColumn?: boolean }) {
+  const prefix = options?.storagePrefix ?? 'logquery'
+  const mergeColumn = useStorage(`${prefix}-merge-column`, options?.defaultMergeColumn ?? true)
+  const showKeys = useStorage(`${prefix}-show-keys`, true)
+  const displayedColumnsByTable = useStorage<Record<string, string[]>>(`${prefix}-table-column-visible`, {})
   /** Columns already offered on this table. New query columns are shown; user hides stay hidden. */
-  const offeredColumnsByTable = useStorage<Record<string, string[]>>('logquery-table-column-offered', {})
-  const compactRows = useStorage('query-table-compact-rows', false)
+  const offeredColumnsByTable = useStorage<Record<string, string[]>>(`${prefix}-table-column-offered`, {})
+  const compactRows = useStorage(`${prefix}-compact-rows`, false)
   /** Wrap is session-only in logquery — keep the same behavior. */
   const wrap = ref(false)
 
@@ -76,6 +81,9 @@ export default function useLogsTablePrefs() {
   }
 
   onMounted(() => {
+    if (prefix !== 'logquery') {
+      return
+    }
     if (localStorage.getItem('logquery-table-compact') === 'true' && !compactRows.value) {
       compactRows.value = true
       localStorage.removeItem('logquery-table-compact')

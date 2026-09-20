@@ -221,7 +221,12 @@
     ctx.openTraceGantt(String(traceId || ''))
   }
 
-  const logsTraceEnabled = computed(() => Boolean(ctx.fieldMap.value.logs.traceId))
+  // Roles resolve from settings + the runtime map (see resolveLogsRoles), so the "open logs"
+  // affordance shows even while the logs field map is still being built.
+  const logsTraceEnabled = computed(() => {
+    const roles = resolveLogsRoles(ctx)
+    return Boolean(roles.traceId || roles.trace_id)
+  })
 
   const openLogsForTrace = (traceId: string) => {
     ctx.openLogsForTrace(String(traceId || ''))

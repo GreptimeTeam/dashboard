@@ -19,6 +19,7 @@ import { buildSeverityLevelsPredicate } from '../logs/level-visibility'
 import { escapeSqlString, quoteIdent } from '../logs/query-state'
 import { pivotLogVolumeByName, pivotLogVolumeRows, type LogVolumeSeries } from '../logs/volume-series'
 import { grafanaAutoIntervalSeconds } from '../logs/volume-step'
+import resolveLogsRoles from '../logs/resolved-roles'
 
 const LABEL_VALUES_LIMIT = 20
 const LOGS_ROWS_LIMIT = 100
@@ -177,7 +178,10 @@ export async function buildLogsContextWhere(
   })
 
   const logsTraceId = ctx.logsTraceId.value?.trim()
-  const logsTraceColumn = fieldMap.traceId || fieldMap.trace_id
+  // Same role source the traces page uses to show the affordance: settings fill roles the
+  // runtime map has not resolved, so the jump filters as soon as it is offered.
+  const traceRoles = resolveLogsRoles(ctx)
+  const logsTraceColumn = traceRoles.traceId || traceRoles.trace_id
   if (ctx.signal.value === 'traces' && logsTraceId && logsTraceColumn) {
     whereParts.push(`${quoteIdent(logsTraceColumn)} = '${escapeSqlString(logsTraceId)}'`)
   }

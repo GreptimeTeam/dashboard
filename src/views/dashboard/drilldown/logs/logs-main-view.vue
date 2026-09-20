@@ -77,6 +77,7 @@
   import { useDrilldownContext } from '@/observability/context'
   import { loadDrilldownSettings } from '@/observability/drilldown-settings'
   import { chipKeyForLogsTableFilter } from '@/observability/logs/field-map'
+  import resolveLogsRoles from '@/observability/logs/resolved-roles'
   import useDrilldownLogsTable from '@/observability/use-drilldown-logs-table'
   import useLogsTablePrefs from '@/observability/use-logs-table-prefs'
   import type { DrilldownFilterOp } from '@/observability/types'
@@ -101,6 +102,8 @@
   const { t } = useI18n()
   const ctx = useDrilldownContext()
 
+  // Drilldown keeps its own display prefs: the legacy log query page's "single column"
+  // choice must not collapse this table to its timestamp column.
   const {
     mergeColumn,
     showKeys,
@@ -112,7 +115,7 @@
     columnModeKey,
     displayedColumnsFor,
     revealOfferedColumns,
-  } = useLogsTablePrefs()
+  } = useLogsTablePrefs({ storagePrefix: 'drilldown-logs', defaultMergeColumn: false })
 
   const { loading, loadingMore, tableColumns, tableData, tsColumn, hasMore, load, loadMore } = useDrilldownLogsTable(
     ctx,
@@ -123,7 +126,15 @@
 
   const logsTableName = computed(() => ctx.logsTable.value || '')
   const visibleColumns = computed(() => displayedColumnsFor(logsTableName.value))
-  const traceIdColumn = computed(() => ctx.fieldMap.value.logs.traceId || ctx.fieldMap.value.logs.trace_id || '')
+  // Settings fill roles the runtime map has not resolved yet (see resolveLogsRoles).
+  const traceIdColumn = computed(() => {
+    const roles = resolveLogsRoles(ctx)
+    return typeof roles.traceId === 'string' && roles.traceId.trim()
+      ? roles.traceId
+      : typeof roles.trace_id === 'string' && roles.trace_id.trim()
+      ? roles.trace_id
+      : ''
+  })
 
   const openTrace = (traceId: string) => {
     ctx.openTraceGantt(String(traceId || ''))

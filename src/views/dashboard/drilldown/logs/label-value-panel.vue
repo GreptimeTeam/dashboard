@@ -52,6 +52,7 @@
   import { OVERVIEW_PREVIEW_LIMIT, overviewPreviewColumns } from '@/observability/adapters/logs'
   import { useDrilldownContext } from '@/observability/context'
   import { loadDrilldownSettings } from '@/observability/drilldown-settings'
+  import resolveLogsRoles from '@/observability/logs/resolved-roles'
   import { addFilter, filterIncludesValue } from '@/observability/filters'
   import { chipKeyForLogsTableFilter } from '@/observability/logs/field-map'
   import useDrilldownLogsTable from '@/observability/use-drilldown-logs-table'
@@ -70,7 +71,10 @@
 
   const { t } = useI18n()
   const ctx = useDrilldownContext()
-  const traceIdColumn = computed(() => ctx.fieldMap.value.logs.traceId || ctx.fieldMap.value.logs.trace_id || '')
+  // Roles come from settings + the runtime map (see resolveLogsRoles) — the runtime map is
+  // built asynchronously and may lack a role the settings already name.
+  const logsRoles = computed(() => resolveLogsRoles(ctx))
+  const traceIdColumn = computed(() => logsRoles.value.traceId || logsRoles.value.trace_id || '')
 
   const openTrace = (traceId: string) => {
     ctx.openTraceGantt(String(traceId || ''))
@@ -78,7 +82,7 @@
   const labelColRef = toRef(props, 'labelCol')
   const labelValueRef = toRef(props, 'labelValue')
   const selectedLevels = ref<string[]>([])
-  const previewColumns = computed(() => overviewPreviewColumns(ctx.fieldMap.value.logs))
+  const previewColumns = computed(() => overviewPreviewColumns(logsRoles.value))
   const { targetRef, hasBeenVisible } = useLazyPanelQuery(props.scrollRoot ?? (() => null))
 
   const { loading, tableColumns, tableData, tsColumn, displayedColumns, load } = useDrilldownLogsTable(ctx, {

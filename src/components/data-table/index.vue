@@ -1301,10 +1301,14 @@ a-dropdown#td-context(
 
   // Data fields for merged mode
   const dataFields = computed(() => {
+    // An empty displayed-columns list means "no preference yet", not "show nothing" — the
+    // width estimator below reads it the same way. Without this the merged cell renders
+    // empty and the table looks like it only has its timestamp column.
+    const names = props.displayedColumns.length ? props.displayedColumns : props.columns.map((column) => column.name)
     if (!props.tsColumn) {
-      return props.displayedColumns
+      return names
     }
-    return props.displayedColumns.filter((field) => field !== props.tsColumn.name)
+    return names.filter((field) => field !== props.tsColumn.name)
   })
 
   // Helper function for getting entry fields in merged mode
