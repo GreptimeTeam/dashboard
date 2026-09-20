@@ -1,5 +1,6 @@
 import { ref, reactive, computed, watch, shallowRef } from 'vue'
 import { replaceTimePlaceholders, getTableRefForSql } from '@/utils/sql'
+import { normalizeLogTimeBoundToMs } from '@/utils/log-time-cursor'
 import type { ColumnType, QueryState } from '@/types/query'
 
 const useQueryExecution = (builder, textEditor, timeRange) => {
@@ -20,11 +21,28 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
     },
   })
   const loading = ref(false)
+  const loadingMore = ref(false)
+  /** More rows can be fetched by scrolling (keyset-style time window). */
+  const hasMore = ref(false)
   const columns = shallowRef<ColumnType[]>([])
   const rows = shallowRef<any[]>([])
   const totalRowCount = ref<number | null>(null)
 
   const hasExecutedInitialQuery = ref(false)
+
+  /** Page size actually used by the SQL (text mode may set LIMIT inline). */
+  function resolvePageSize(): number {
+    const match = /limit\s+(\d+)\s*;?\s*$/i.exec((queryState.sql || '').trim())
+    if (match) {
+      const fromSql = Number(match[1])
+      if (fromSql > 0) {
+        return fromSql
+      }
+    }
+    const fromState = Number(queryState.limit)
+    return fromState > 0 ? fromState : 0
+  }
+
   const canExecuteInitialQuery = computed(() => {
     if (editorType.value === 'builder') {
       return builder.builderFormState.table && builder.builderFormState.tsColumn && !hasExecutedInitialQuery.value
@@ -134,6 +152,9 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
           return record
         })
         rows.value = processedRows
+        const pageSize = resolvePageSize()
+        hasMore.value = processedRows.length > 0 && (!pageSize || processedRows.length >= pageSize)
+        loadingMore.value = false
 
         // Get total row count after successful query
         if (isNewQuery) {
@@ -148,6 +169,95 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
       throw error
     } finally {
       loading.value = false
+    }
+  }
+
+  /** Cursor value as a SQL literal (bare when numeric, quoted otherwise). */
+  function toSqlTimeLiteral(value: unknown): string {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return String(value)
+    }
+    const text = String(value ?? '')
+    if (/^\d+(\.\d+)?$/.test(text)) {
+      return text
+    }
+    return `'${text.replace(/'/g, "''")}'`
+  }
+
+  function isBeyondCursor(value: unknown, cursorMs: number, older: boolean): boolean {
+    const valueMs = normalizeLogTimeBoundToMs(value)
+    if (!Number.isFinite(valueMs)) {
+      return false
+    }
+    return older ? valueMs < cursorMs : valueMs > cursorMs
+  }
+
+  /**
+   * Scroll loading: query the next time window by moving the range bound to the
+   * row at the end of the list (keyset cursor), then append what is new.
+   * Works for both directions: DESC keeps loading older rows, ASC newer ones.
+   */
+  async function loadMore() {
+    if (loading.value || loadingMore.value || !hasMore.value || !queryState.sql) {
+      return
+    }
+    const tsName = queryState.tsColumn?.name
+    if (!tsName || !rows.value.length) {
+      hasMore.value = false
+      return
+    }
+    const older = (queryState.orderBy || 'DESC') === 'DESC'
+    const cursor = older ? rows.value[rows.value.length - 1]?.[tsName] : rows.value[0]?.[tsName]
+    const cursorMs = normalizeLogTimeBoundToMs(cursor)
+    if (!Number.isFinite(cursorMs)) {
+      hasMore.value = false
+      return
+    }
+
+    const [globalStart, globalEnd] = queryState.timeRangeValues
+    const cursorLiteral = toSqlTimeLiteral(cursor)
+    const range = older ? [globalStart, cursorLiteral] : [cursorLiteral, globalEnd]
+
+    let pageSql = ''
+    try {
+      pageSql = replaceTimePlaceholders(queryState.generateSql(queryState.sourceState, range), range)
+    } catch (error) {
+      console.error('Failed to build load-more SQL:', error)
+      hasMore.value = false
+      return
+    }
+    // Text queries without $timestart/$timeend cannot be narrowed — stop instead of
+    // re-fetching the same rows forever.
+    if (!pageSql || pageSql === queryState.sql) {
+      hasMore.value = false
+      return
+    }
+
+    loadingMore.value = true
+    try {
+      const { default: editorAPI } = await import('@/api/editor')
+      const result = await editorAPI.runSQL(pageSql)
+      const records = result?.output?.[0]?.records
+      const names: string[] = (records?.schema?.column_schemas ?? []).map((col: { name: string }) => col.name)
+      const pageRows: Array<Record<string, unknown>> = (records?.rows ?? []).map((row: unknown[]) => {
+        const record: Record<string, unknown> = {}
+        names.forEach((name, index) => {
+          record[name] = row[index]
+        })
+        return record
+      })
+      // The window end is inclusive: drop the cursor row (already displayed).
+      const appended = pageRows.filter((row) => isBeyondCursor(row[tsName], cursorMs, older))
+      if (appended.length) {
+        rows.value = [...rows.value, ...appended]
+      }
+      const limit = resolvePageSize()
+      // Full window means there may be more rows further out; a stalled append stops.
+      hasMore.value = appended.length > 0 && (!limit || pageRows.length >= limit)
+    } catch (error) {
+      console.error('Failed to load more rows:', error)
+    } finally {
+      loadingMore.value = false
     }
   }
 
@@ -190,9 +300,12 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
   return {
     editorType,
     executeQuery,
+    loadMore,
     exportToCSV,
     queryState,
     loading,
+    loadingMore,
+    hasMore,
     columns,
     rows,
     totalRowCount,

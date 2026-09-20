@@ -22,6 +22,21 @@
     @scroll="onScroll"
     @cell-click="onCellClick"
   )
+  // Load-more affordance (Grafana-like footer): appears once the user reaches the
+  // end of the loaded rows. Clicking it or scrolling on both load the next page.
+  .logs-vxe-load-more(
+    v-if="showLoadMoreBar"
+    role="button"
+    :class="{ 'is-loading': loadingMore }"
+    :style="{ bottom: `${scrollXOffset}px` }"
+    :aria-busy="loadingMore ? 'true' : 'false'"
+    @click="onLoadMoreClick"
+  )
+    a-spin(v-if="loadingMore" :size="14")
+    svg.logs-vxe-load-more__icon(v-else)
+      use(href="#down")
+    span.logs-vxe-load-more__text
+      | {{ loadingMore ? t('drilldown.logs.loadingMore') : t('logsQuery.loadMoreHint') }}
   a-dropdown#logs-vxe-td-context(
     v-model:popup-visible="contextMenuVisible"
     trigger="contextMenu"
@@ -38,7 +53,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, h, nextTick, ref, shallowRef, watch } from 'vue'
+  import { computed, h, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useElementSize } from '@vueuse/core'
   import { Tooltip } from '@arco-design/web-vue'
@@ -112,6 +127,10 @@
       wrapLine?: boolean
       /** Builder mode: show per-cell filter/copy menu (separate only). */
       showContextMenu?: boolean
+      /** More rows can be fetched: enables the load-more footer + auto load. */
+      hasMore?: boolean
+      /** A load-more request is in flight. */
+      loadingMore?: boolean
     }>(),
     {
       data: () => [],
@@ -128,6 +147,8 @@
       height: 0,
       wrapLine: false,
       showContextMenu: false,
+      hasMore: false,
+      loadingMore: false,
     }
   )
 
@@ -710,6 +731,69 @@
   }
 
   let reachEndArmed = true
+  /** True while the viewport sits at the end of the loaded rows. */
+  const nearEnd = ref(false)
+  /** VXE horizontal scrollbar height — keeps the footer from covering it. */
+  const scrollXOffset = ref(0)
+  /** Last wheel offset reported by VXE (virtual scrolling keeps it internally). */
+  let lastScrollTop = 0
+  /**
+   * Distance from the bottom where the footer hint shows up (the list is almost
+   * exhausted — Grafana only reveals its footer row at the end of the list).
+   */
+  const NEAR_END_PX = 120
+  /**
+   * Distance from the bottom that auto-loads the next page. Kept at "the end is
+   * actually reached" so a casual scroll never triggers a fetch — scrolling down
+   * must bring the last row fully into view (or the footer must be clicked).
+   */
+  const AUTO_LOAD_PX = 8
+  /** Scrolling this far back up re-arms the auto-load for the next bottom hit. */
+  const REARM_PX = 120
+  /**
+   * Auto-load only counts as deliberate when a wheel/touch gesture drove the
+   * scroll into the end zone. Dragging the scrollbar across the last stretch does
+   * not trigger a fetch (Grafana keeps that last bit non-committing) — the footer
+   * is there to click instead.
+   */
+  const SCROLL_INTENT_MS = 400
+  let lastScrollIntentAt = 0
+
+  function markScrollIntent() {
+    lastScrollIntentAt = Date.now()
+  }
+
+  const showLoadMoreBar = computed(() => props.hasMore && (props.loadingMore || nearEnd.value))
+
+  function syncScrollXOffset() {
+    const el = rootEl.value?.querySelector('.vxe-table--scroll-x-virtual') as HTMLElement | null
+    scrollXOffset.value = el ? el.offsetHeight : 0
+  }
+
+  /** Total content height in px (fixed row height, or averaged when wrapping). */
+  function estimateContentHeight(): number {
+    if (!props.wrapLine || !props.data.length) {
+      return props.data.length * rowHeight.value
+    }
+    const rowEls = rootEl.value?.querySelectorAll('.vxe-body--row')
+    if (!rowEls?.length) {
+      return props.data.length * rowHeight.value
+    }
+    let total = 0
+    rowEls.forEach((el) => {
+      total += (el as HTMLElement).offsetHeight
+    })
+    return (total / rowEls.length) * props.data.length
+  }
+
+  function requestLoadMore() {
+    // Parents own the "is there more" decision; only avoid stacking requests.
+    if (props.loadingMore) {
+      return
+    }
+    reachEndArmed = false
+    emit('reachEnd')
+  }
 
   function onScroll(params: { isY?: boolean; scrollTop?: number; scrollHeight?: number; bodyHeight?: number }) {
     const { isY, scrollTop, scrollHeight, bodyHeight } = params
@@ -717,22 +801,83 @@
       return
     }
     const remaining = scrollHeight - scrollTop - bodyHeight
-    if (remaining <= 64) {
-      if (reachEndArmed) {
-        reachEndArmed = false
-        emit('reachEnd')
+    lastScrollTop = scrollTop
+    nearEnd.value = remaining <= NEAR_END_PX
+    if (remaining <= AUTO_LOAD_PX) {
+      syncScrollXOffset()
+      const deliberate = Date.now() - lastScrollIntentAt <= SCROLL_INTENT_MS
+      if (reachEndArmed && deliberate) {
+        requestLoadMore()
       }
-    } else if (remaining > 120) {
+    } else if (remaining > REARM_PX) {
       reachEndArmed = true
     }
+  }
+
+  function onLoadMoreClick() {
+    requestLoadMore()
+  }
+
+  /**
+   * Recompute the end state from real geometry. A page that does not fill the
+   * viewport has nothing to scroll, so the footer shows up right away and the user
+   * clicks it to continue. Auto-loading stays tied to real scroll events, which
+   * keeps repeated appends from feeding themselves.
+   */
+  function checkViewportFilled() {
+    nextTick(() => {
+      if (!props.hasMore) {
+        nearEnd.value = false
+        return
+      }
+      const bodyEl = rootEl.value?.querySelector('.vxe-table--body-wrapper') as HTMLElement | null
+      if (!bodyEl) {
+        return
+      }
+      syncScrollXOffset()
+      // VXE virtual scrolling keeps the wheel offset internally, so the wrapper's
+      // scrollHeight stays at the viewport height — estimate the content height.
+      const remaining = estimateContentHeight() - lastScrollTop - bodyEl.clientHeight
+      nearEnd.value = remaining <= NEAR_END_PX
+    })
   }
 
   watch(
     () => props.data.length,
     () => {
-      reachEndArmed = true
+      checkViewportFilled()
     }
   )
+
+  watch(
+    () => [props.hasMore, props.loadingMore] as const,
+    () => {
+      if (!props.hasMore) {
+        nearEnd.value = false
+      }
+      checkViewportFilled()
+    },
+    { immediate: true }
+  )
+
+  onMounted(() => {
+    checkViewportFilled()
+    rootEl.value?.addEventListener('wheel', markScrollIntent, { passive: true })
+    rootEl.value?.addEventListener('touchmove', markScrollIntent, { passive: true })
+  })
+
+  onBeforeUnmount(() => {
+    rootEl.value?.removeEventListener('wheel', markScrollIntent)
+    rootEl.value?.removeEventListener('touchmove', markScrollIntent)
+  })
+
+  // The scrollbar only exists once the grid is laid out — re-measure when the
+  // footer appears so it never covers the horizontal scrollbar.
+  watch(showLoadMoreBar, (visible) => {
+    if (visible) {
+      nextTick(syncScrollXOffset)
+    }
+  })
 
   watch(
     () =>
@@ -895,6 +1040,49 @@
 
     :deep(.logs-vxe-merged-key) {
       color: var(--gpt-text-muted);
+    }
+
+    // Load-more footer (Grafana-style): a slim row pinned to the bottom of the
+    // viewport, above VXE's horizontal scrollbar.
+    .logs-vxe-load-more {
+      position: absolute;
+      right: 0;
+      left: 0;
+      // Above VXE's scrollbars (z-index 7) so the footer stays clickable.
+      z-index: 8;
+      display: flex;
+      gap: var(--gpt-gap-xs, 4px);
+      align-items: center;
+      justify-content: center;
+      height: 26px;
+      font-size: var(--gpt-font-base, 12px);
+      color: var(--gpt-link-color, #702fed);
+      background: var(--gpt-bg-panel, #fff);
+      border-top: 1px solid var(--gpt-border-subtle, rgba(71, 52, 96, 0.05));
+      cursor: pointer;
+      user-select: none;
+
+      // Opaque hover: the tint is composited over the panel color so the rows
+      // behind the footer never bleed through.
+      &:hover {
+        background: linear-gradient(var(--gpt-nav-active-bg), var(--gpt-nav-active-bg)), var(--gpt-bg-panel, #fff);
+      }
+
+      &.is-loading {
+        color: var(--gpt-text-secondary, #8b7ba8);
+        cursor: default;
+      }
+
+      &.is-loading:hover {
+        background: var(--gpt-bg-panel, #fff);
+      }
+    }
+
+    .logs-vxe-load-more__icon {
+      width: 12px;
+      height: 12px;
+      color: currentColor;
+      fill: currentColor;
     }
 
     :deep(.logs-vxe-cell-action) {

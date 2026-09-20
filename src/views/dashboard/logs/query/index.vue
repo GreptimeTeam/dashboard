@@ -117,25 +117,20 @@
                 a-checkbox-group(v-model="displayedColumns[queryState.table]" direction="vertical")
                   a-checkbox(v-for="column in columns" :value="column.name")
                     | {{ column.name }}
-          Pagination(
-            v-if="!refresh && editorType === 'builder' && builderFormState.tsColumn"
-            :key="paginationKey"
-            :rows="rows"
-            :columns="columns"
-            :query-state="queryState"
-            @update:rows="handlePaginationRowsUpdate"
-          )
       LogTableData(
         :key="`${queryState.table}-${columnModeKey}`"
         :wrap-line="wrap"
         :size="size"
         :data="rows"
         :columns="columns"
+        :has-more="hasMore"
+        :loading-more="loadingMore"
         :sql-mode="queryState.editorType"
         :ts-column="queryState.tsColumn"
         :column-mode="columnMode"
         :displayed-columns="displayedColumns[queryState.table] || []"
         @filter-condition-add="handleFilterConditionAdd"
+        @reach-end="loadMore"
       )
 
     ExportModal(v-model:visible="exportModalVisible" :sql="exportSqlText" @confirm="handleExportConfirm")
@@ -150,7 +145,6 @@
   import ChartContainer from './ChartContainer.vue'
   import ExportModal from './ExportModal.vue'
   import LogTableData from './LogsTable.vue'
-  import Pagination from './Pagination.vue'
 
   const timeRange = useTimeRange()
   const { rangeTime, time, timeRangeValues } = timeRange
@@ -163,9 +157,12 @@
   const {
     editorType,
     executeQuery,
+    loadMore,
     exportToCSV,
     queryState,
     loading: queryLoading,
+    loadingMore,
+    hasMore,
     columns,
     rows,
     totalRowCount,
@@ -195,10 +192,6 @@
   } = useLogsTablePrefs()
 
   const chartContainerRef = ref()
-  const paginationKey = ref(0)
-  const refreshPagination = () => {
-    paginationKey.value += 1
-  }
   const refresh = ref(false)
   function handleQuery(newQuery: boolean | MouseEvent = true) {
     // If called from click event, newQuery will be a MouseEvent, so default to true
@@ -207,7 +200,6 @@
     executeQuery(isNewQuery).then(() => {
       if (isNewQuery) {
         updateQueryParams()
-        refreshPagination()
       }
     })
 
@@ -267,9 +259,7 @@
   function handleTimeRangeUpdate(newTimeRange) {
     time.value = 0 // Switch to custom mode
     rangeTime.value = newTimeRange
-    executeQuery().then(() => {
-      refreshPagination()
-    })
+    executeQuery()
     nextTick(() => {
       chartContainerRef.value?.triggerCurrentChartQuery()
     })
@@ -277,10 +267,6 @@
 
   function handleFilterConditionAdd({ columnName, operator, value }) {
     addFilterCondition(columnName, operator, value)
-  }
-
-  function handlePaginationRowsUpdate(newRows) {
-    rows.value = newRows
   }
 
   function handleSqlInfoUpdate(sqlInfo) {

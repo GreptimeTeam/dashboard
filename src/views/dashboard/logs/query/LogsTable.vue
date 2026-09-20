@@ -9,6 +9,8 @@
     :ts-cell-detail="tsCellDetail"
     :column-mode="columnMode"
     :loading="loading"
+    :has-more="hasMore"
+    :loading-more="loadingMore"
     :size="size"
     :show-header="showHeader"
     :wrap-line="wrapLine"
@@ -88,6 +90,10 @@
       columnMode: 'separate' | 'merged' | 'merged-with-keys'
       displayedColumns: string[]
       loading?: boolean
+      /** More rows can be fetched by scrolling (footer affordance + auto load). */
+      hasMore?: boolean
+      /** A load-more request is in flight. */
+      loadingMore?: boolean
       exportRowSelection?: Record<string, unknown>
       selectedKeys?: number[]
       virtual?: boolean
@@ -110,6 +116,8 @@
       columnMode: 'separate',
       displayedColumns: () => [],
       loading: false,
+      hasMore: false,
+      loadingMore: false,
       exportRowSelection: undefined,
       selectedKeys: () => [],
       virtual: true,

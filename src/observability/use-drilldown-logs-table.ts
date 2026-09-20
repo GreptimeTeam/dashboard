@@ -3,7 +3,8 @@ import type { DrilldownContext } from '@/observability/context'
 import { fetchLogsRows } from '@/observability/adapters/logs'
 import type { ColumnType, TSColumn } from '@/types/query'
 
-const DEFAULT_PAGE_SIZE = 50
+/** Rows fetched per page — matches the Grafana logs line limit (1000). */
+const DEFAULT_PAGE_SIZE = 1000
 
 /**
  * Drilldown logs table data: initial fetch + keyset append for infinite scroll.

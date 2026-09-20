@@ -60,15 +60,14 @@
       :ts-column="tsColumn"
       :displayed-columns="visibleColumns"
       :wrap-line="wrap"
+      :has-more="hasMore"
+      :loading-more="loadingMore"
       :trace-id-column="traceIdColumn"
       @trace-click="openTrace"
       @filterConditionAdd="onFilterConditionAdd"
       @reach-end="loadMore"
     )
     a-empty(v-else-if="!loading" :description="t('drilldown.logs.noLogRows')")
-  .logs-load-more(v-if="loadingMore")
-    a-spin(:size="14")
-    span {{ t('drilldown.logs.loadingMore') }}
 </template>
 
 <script setup lang="ts">
@@ -115,9 +114,12 @@
     revealOfferedColumns,
   } = useLogsTablePrefs()
 
-  const { loading, loadingMore, tableColumns, tableData, tsColumn, load, loadMore } = useDrilldownLogsTable(ctx, {
-    extraWhere: computed(() => props.extraWhere),
-  })
+  const { loading, loadingMore, tableColumns, tableData, tsColumn, hasMore, load, loadMore } = useDrilldownLogsTable(
+    ctx,
+    {
+      extraWhere: computed(() => props.extraWhere),
+    }
+  )
 
   const logsTableName = computed(() => ctx.logsTable.value || '')
   const visibleColumns = computed(() => displayedColumnsFor(logsTableName.value))
@@ -266,15 +268,5 @@
       height: 100%;
       max-height: none;
     }
-  }
-
-  .logs-load-more {
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    gap: var(--gpt-gap-md);
-    font-size: var(--gpt-font-base);
-    color: var(--color-text-3);
   }
 </style>
