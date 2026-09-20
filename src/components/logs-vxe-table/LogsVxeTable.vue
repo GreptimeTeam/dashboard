@@ -91,8 +91,6 @@
   type VxeGridInstance = {
     recalculate?: (refull?: boolean) => Promise<void> | void
     recalcRowHeight?: (rowOrId: unknown) => Promise<void> | void
-    getColumns?: () => { field?: string; renderWidth?: number; visible?: boolean }[]
-    getColumnWidth?: (field: string) => number
   }
 
   const props = withDefaults(
@@ -138,7 +136,6 @@
     (e: 'tsCellClick', row: TableData, rowIndex: number): void
     (e: 'columnLinkClick', columnName: string, value: string): void
     (e: 'filterConditionAdd', payload: { columnName: string; operator: string; value: unknown }): void
-    (e: 'virtualColumnsClipped', visible: boolean): void
   }>()
 
   const { formatDateTimeWithMs } = useDateTimeFormat()
@@ -308,8 +305,13 @@
     }
   }
 
+  /** Time columns have no filter/copy menu (legacy Arco parity). */
+  function isTimeField(field: string): boolean {
+    return props.tsColumn?.name === field || isTimeColumn(props.columns.find((c) => c.name === field))
+  }
+
   function openContextMenu(row: TableData, columnName: string, event: MouseEvent) {
-    if (!showFilterMenu.value) {
+    if (!showFilterMenu.value || isTimeField(columnName)) {
       return
     }
     const original = getOriginalRow(row)
@@ -318,14 +320,9 @@
     event.stopPropagation()
 
     const column = props.columns.find((col) => col.name === columnName)
-    if (column) {
-      if (column.data_type && column.data_type.toLowerCase() === 'json') {
-        filterOptions.value = []
-      } else if (isTimeColumn(column) || props.tsColumn?.name === columnName) {
-        filterOptions.value = ['>=', '<=']
-      } else {
-        filterOptions.value = ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'NOT LIKE']
-      }
+    // Time columns never reach here (no menu); JSON columns only offer copy.
+    if (column?.data_type && column.data_type.toLowerCase() === 'json') {
+      filterOptions.value = []
     } else {
       filterOptions.value = ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'NOT LIKE']
     }
@@ -364,7 +361,7 @@
   }
 
   function renderActionIcon(row: TableData, field: string) {
-    if (!showFilterMenu.value) {
+    if (!showFilterMenu.value || isTimeField(field)) {
       return null
     }
     return h(
@@ -431,33 +428,6 @@
     return h('div', { class: 'logs-vxe-cell-inner logs-vxe-merged-cell' }, nodes)
   }
 
-  function updateClippedHint() {
-    if (props.columnMode !== 'separate') {
-      emit('virtualColumnsClipped', false)
-      return
-    }
-    const api = resolveGridApi()
-    const containerW = rootEl.value?.clientWidth || measuredWidth.value
-    if (!api || !(containerW > 0)) {
-      return
-    }
-
-    let total = 0
-    if (typeof api.getColumns === 'function') {
-      const seen = new Set<string>()
-      ;(api.getColumns() || []).forEach((col) => {
-        if (!col?.field || col.visible === false || seen.has(col.field)) {
-          return
-        }
-        seen.add(col.field)
-        const w = typeof api.getColumnWidth === 'function' ? api.getColumnWidth(col.field) : col.renderWidth || 0
-        total += w > 0 ? w : col.renderWidth || 0
-      })
-    }
-
-    emit('virtualColumnsClipped', total > containerW + 1)
-  }
-
   function recalculateColumnWidths() {
     nextTick(async () => {
       const api = resolveGridApi()
@@ -469,7 +439,6 @@
         const sample = props.data.slice(0, Math.min(props.data.length, 100))
         await Promise.resolve(api.recalcRowHeight(sample))
       }
-      updateClippedHint()
     })
   }
 
@@ -910,7 +879,8 @@
 
     :deep(.logs-vxe-link),
     :deep(.logs-vxe-link-col .logs-vxe-link) {
-      color: var(--color-primary-6, #165dff);
+      // Links share the timestamp accent (legacy logs table link color).
+      color: var(--gpt-accent-ts);
       cursor: pointer;
       background: none;
       border: none;

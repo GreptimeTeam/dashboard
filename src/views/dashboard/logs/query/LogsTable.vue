@@ -20,7 +20,6 @@
     @ts-cell-click="handleTsClick"
     @column-link-click="handleTraceClick"
     @filter-condition-add="handleFilterConditionAdd"
-    @virtual-columns-clipped="(visible) => $emit('virtualColumnsClipped', visible)"
   )
   DataTable(
     v-else
@@ -49,7 +48,6 @@
     @ts-cell-click="handleTsClick"
     @column-link-click="handleTraceClick"
     @update:selected-keys="handleSelectedKeysUpdate"
-    @virtualColumnsClipped="(visible) => $emit('virtualColumnsClipped', visible)"
   )
     template(v-if="$slots['column-level']" #column-level="slotProps")
       slot(name="column-level" v-bind="slotProps")
@@ -123,14 +121,7 @@
     }
   )
 
-  const emit = defineEmits([
-    'filterConditionAdd',
-    'rowSelect',
-    'updateSelectedKeys',
-    'virtualColumnsClipped',
-    'reachEnd',
-    'traceClick',
-  ])
+  const emit = defineEmits(['filterConditionAdd', 'rowSelect', 'updateSelectedKeys', 'reachEnd', 'traceClick'])
 
   const { t } = useI18n()
   const traceLinkTitle = computed(() => (props.traceIdColumn ? t('drilldown.logs.openTrace') : ''))

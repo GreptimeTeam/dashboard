@@ -28,8 +28,6 @@
         span {{ t('logsQuery.wrapLines') }}
 
     .logs-results-toolbar-right
-      .logs-virtual-columns-clipped-hint(v-if="showVirtualColumnsClippedHint && tableColumns.length")
-        | {{ t('logsQuery.virtualColumnsHint') }}
       a-trigger(
         v-if="tableColumns.length"
         trigger="click"
@@ -66,7 +64,6 @@
       @trace-click="openTrace"
       @filterConditionAdd="onFilterConditionAdd"
       @reach-end="loadMore"
-      @virtualColumnsClipped="handleVirtualColumnsClipped"
     )
     a-empty(v-else-if="!loading" :description="t('drilldown.logs.noLogRows')")
   .logs-load-more(v-if="loadingMore")
@@ -128,11 +125,6 @@
 
   const openTrace = (traceId: string) => {
     ctx.openTraceGantt(String(traceId || ''))
-  }
-
-  const showVirtualColumnsClippedHint = ref(false)
-  function handleVirtualColumnsClipped(visible: boolean) {
-    showVirtualColumnsClippedHint.value = visible
   }
 
   const mapOperator = (operator: string): DrilldownFilterOp => {
@@ -248,19 +240,6 @@
     color: var(--gpt-text-muted, var(--color-text-3));
     font-size: var(--gpt-font-base);
     font-weight: normal;
-  }
-
-  .logs-virtual-columns-clipped-hint {
-    position: relative;
-    padding: var(--gpt-gap-xs) var(--gpt-gap-md);
-    border-radius: var(--gpt-radius-sm);
-    background: var(--warning-bg-color);
-    border: 1px solid var(--warning-color);
-    color: var(--warning-color);
-    font-size: var(--gpt-font-base);
-    line-height: 1.2;
-    white-space: nowrap;
-    pointer-events: none;
   }
 
   .logs-main-table {

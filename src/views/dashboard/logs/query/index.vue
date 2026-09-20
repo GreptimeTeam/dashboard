@@ -104,8 +104,6 @@
 
       template(#extra)
         a-space
-          .logs-virtual-columns-clipped-hint(v-if="showVirtualColumnsClippedHint && columns && columns.length")
-            | {{ $t('logsQuery.virtualColumnsHint') }}
           a-trigger(
             v-if="columns && columns.length"
             trigger="click"
@@ -138,7 +136,6 @@
         :column-mode="columnMode"
         :displayed-columns="displayedColumns[queryState.table] || []"
         @filter-condition-add="handleFilterConditionAdd"
-        @virtualColumnsClipped="handleVirtualColumnsClipped"
       )
 
     ExportModal(v-model:visible="exportModalVisible" :sql="exportSqlText" @confirm="handleExportConfirm")
@@ -266,13 +263,6 @@
     }
   })
 
-  // Virtual-list: when columns are too many, Arco may clip some of them silently.
-  // We show a guiding hint next to the columns display button.
-  const showVirtualColumnsClippedHint = ref(false)
-  function handleVirtualColumnsClipped(visible: boolean) {
-    showVirtualColumnsClippedHint.value = visible
-  }
-
   // Chart/row logic
   function handleTimeRangeUpdate(newTimeRange) {
     time.value = 0 // Switch to custom mode
@@ -327,40 +317,5 @@
     color: var(--gpt-text-muted);
     font-size: var(--gpt-font-base);
     font-weight: normal;
-  }
-
-  .logs-virtual-columns-clipped-hint {
-    position: relative;
-    padding: 4px 8px;
-    border-radius: 4px;
-    background: var(--warning-bg-color);
-    border: 1px solid var(--warning-color);
-    color: var(--warning-color);
-    font-size: var(--gpt-font-sm);
-    line-height: 1.2;
-    white-space: nowrap;
-    pointer-events: none;
-  }
-
-  .logs-virtual-columns-clipped-hint::before {
-    content: '';
-    position: absolute;
-    right: -7px;
-    top: 50%;
-    transform: translateY(-50%);
-    border-top: 7px solid transparent;
-    border-bottom: 7px solid transparent;
-    border-left: 7px solid var(--warning-color);
-  }
-
-  .logs-virtual-columns-clipped-hint::after {
-    content: '';
-    position: absolute;
-    right: -6px;
-    top: 50%;
-    transform: translateY(-50%);
-    border-top: 6px solid transparent;
-    border-bottom: 6px solid transparent;
-    border-left: 6px solid var(--warning-bg-color);
   }
 </style>
