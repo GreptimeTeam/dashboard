@@ -198,7 +198,19 @@ export async function buildLogsFieldMap(
     }
   })
 
-  return applyRoleColumns(map, settings, columnNames)
+  const withRoles = applyRoleColumns(map, settings, columnNames)
+
+  // The table's SQL needs a time role. A partial/absent saved map (or a seed that failed
+  // before this table was bound) must not leave it empty, or the logs table spins without
+  // ever issuing a request while charts keep working off their own time-column fallback.
+  if (!withRoles.time) {
+    const timeDefault = otelLogsFieldDefaultsFromColumns(columns, { serviceColumn: settings?.service }).time
+    if (timeDefault) {
+      withRoles.time = timeDefault
+    }
+  }
+
+  return withRoles
 }
 
 const JSON_ATTR_SAMPLE_LIMIT = 50

@@ -1,6 +1,7 @@
-import { computed, isRef, ref, type MaybeRef, type Ref } from 'vue'
+import { computed, isRef, ref, watch, type MaybeRef, type Ref } from 'vue'
 import type { DrilldownContext } from '@/observability/context'
 import { fetchLogsRows } from '@/observability/adapters/logs'
+import { loadDrilldownSettings } from '@/observability/drilldown-settings'
 import type { ColumnType, TSColumn } from '@/types/query'
 
 /** Rows fetched per page — matches the Grafana logs line limit (1000). */
@@ -52,6 +53,57 @@ export default function useDrilldownLogsTable(
 
   const displayedColumns = computed(() => tableColumns.value.map((column) => column.name))
 
+  /**
+   * The table cannot build its SQL before the logs field map resolves the time role.
+   * Waiting here (instead of leaving `loading` true and returning) keeps a table that
+   * mounted mid-restore — e.g. jumping traces → logs detail with a filter — from spinning
+   * forever with no request in flight.
+   */
+  function waitForTimeRole(timeoutMs = 1500): Promise<void> {
+    if (ctx.fieldMap.value.logs.time) {
+      return Promise.resolve()
+    }
+    return new Promise((resolve) => {
+      const stop = watch(
+        () => ctx.fieldMap.value.logs.time,
+        (value) => {
+          if (!value) {
+            return
+          }
+          stop()
+          clearTimeout(timer)
+          resolve()
+        }
+      )
+      const timer = setTimeout(() => {
+        stop()
+        if (!ctx.fieldMap.value.logs.time) {
+          console.warn('Logs field map did not resolve a time column; loading table anyway.')
+        }
+        resolve()
+      }, timeoutMs)
+    })
+  }
+
+  /**
+   * The context field map is built asynchronously (schema fetch + settings). When it has not
+   * landed yet, the saved settings already know the time column — priming it from there lets
+   * the first request go out immediately instead of waiting for the rebuild.
+   */
+  function primeTimeRoleFromSettings(): void {
+    if (ctx.fieldMap.value.logs.time) {
+      return
+    }
+    const saved = loadDrilldownSettings().logs.fieldMap?.time?.trim()
+    if (!saved) {
+      return
+    }
+    ctx.fieldMap.value = {
+      ...ctx.fieldMap.value,
+      logs: { ...ctx.fieldMap.value.logs, time: saved },
+    }
+  }
+
   function oldestTs(): unknown | undefined {
     const name = tsColumn.value?.name
     if (!name || !tableData.value.length) {
@@ -71,8 +123,19 @@ export default function useDrilldownLogsTable(
     }
     // Refresh / URL detail opens before buildLogsFieldMap finishes — wait for roles.
     if (!ctx.fieldMap.value.logs.time) {
+      primeTimeRoleFromSettings()
+    }
+    if (!ctx.fieldMap.value.logs.time) {
       loading.value = true
-      return
+      await waitForTimeRole()
+      if (!ctx.logsTable.value) {
+        tableColumns.value = []
+        tableData.value = []
+        tsColumn.value = null
+        hasMore.value = false
+        loading.value = false
+        return
+      }
     }
 
     loading.value = true
