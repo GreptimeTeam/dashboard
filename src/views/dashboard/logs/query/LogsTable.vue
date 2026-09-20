@@ -6,18 +6,21 @@
     :columns="columns"
     :displayed-columns="displayedColumns"
     :ts-column="tsColumn"
+    :ts-cell-detail="tsCellDetail"
     :column-mode="columnMode"
     :loading="loading"
     :size="size"
     :show-header="showHeader"
     :wrap-line="wrapLine"
+    :show-context-menu="sqlMode === 'builder'"
     :active-row-key="detailVisible ? selectedRowKey : null"
     :link-column="traceIdColumn"
     :class="dataTableClass"
     @reach-end="emit('reachEnd')"
     @ts-cell-click="handleTsClick"
-    @row-click="handleRowClick"
     @column-link-click="handleTraceClick"
+    @filter-condition-add="handleFilterConditionAdd"
+    @virtual-columns-clipped="(visible) => $emit('virtualColumnsClipped', visible)"
   )
   DataTable(
     v-else
@@ -261,12 +264,6 @@
     selectedRowKey.value = key
     emit('rowSelect', row)
     detailVisible.value = true
-  }
-
-  const handleRowClick = (row: TableData, rowIndex: number) => {
-    if (!props.rowDetail || props.exportRowSelection) return
-    // Non-ts click: still open detail for VXE path (filter menu deferred).
-    handleTsClick(row, rowIndex)
   }
 
   const handleFilterConditionAdd = (event) => {
