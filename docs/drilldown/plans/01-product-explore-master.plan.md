@@ -302,7 +302,7 @@ search: cpu
 | `__name__/values` 无参 | 421 个 metric 名 |
 | + `start`/`end`（15m） | 仍 421（可能全库有历史或时间过滤未生效） |
 | + `match[]={job=~".+"}` | **未收窄**，仍返回同类列表 |
-| `/metadata` | 不可用（404） |
+| `/metadata` | **可用**（实测 GET 200，返回按语义层推导的 type/unit；POST 是 405） |
 | `group by (__name__)` instant | 语法报错 |
 
 → **实现时必须先对 Greptime Prom API 做 capability 探测**；`match[]` 不可靠则 fallback **`/series` 去重** 或 **客户端 prefix/suffix + 全量名后再 filter**。
@@ -337,7 +337,7 @@ search: cpu
 | histogram | heatmap：`sum(rate(<name>_bucket{matchers}[5m])) by (le)` |
 | summary | `avg(<name>{matchers})` 或 quantile 列 |
 
-Greptime **无** `/api/v1/metadata`；OTLP metric 用 **`table_semantics`** 补类型（本实例 8 张 OTLP metric 表有 `declared` type；421 Prom RW 指标无 semantics，靠启发式）。
+Greptime **有** `/v1/prometheus/api/v1/metadata`（handler `http/prometheus.rs:279`），且它本身读语义层；但 dashboard 现阶段没用它，OTLP metric 一律用 **`table_semantics`** 补类型（本实例 8 张 OTLP metric 表有 `declared` type；421 Prom RW 指标无 semantics，靠启发式）。两者的取舍与已知差异见 [semantics.md](../semantics.md)。
 
 #### Phase 3 — Breakdown（label 维度）
 
@@ -1100,4 +1100,3 @@ flowchart TB
 | Traces 自动查 | traces 页有 | 接入 Context |
 | trace_id 联动 | 仅 traces 列表→详情页跳转 | 同页 Gantt + Logs 过滤 |
 | Loki volume | 无 | SQL `GROUP BY` 替代 |
-

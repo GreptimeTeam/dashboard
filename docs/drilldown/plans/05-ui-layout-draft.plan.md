@@ -74,7 +74,7 @@ Explore 内 Logs 区（无论占全屏还是一角）都依赖同一条规则：
 校验通过后绑定 **field map**（`body`/`severity_text`/`trace_id`/`service_name` 等）。  
 **不读** `logs-query` 的 localStorage。
 
-Traces 表：沿用现有逻辑（`trace_id` + `parent_span_id` 列发现）；Metrics：Prom API + 类型启发式 / `table_semantics`（无 `/metadata` 时）。
+Traces 表：沿用现有逻辑（`trace_id` + `parent_span_id` 列发现）；Metrics：Prom API + 类型启发式 / `table_semantics`（另可用 Prom `/metadata`，见 [semantics.md](../semantics.md)）。
 
 ### Logs 区行为（Grafana Logs Drilldown 语义，落在 Explore 里）
 

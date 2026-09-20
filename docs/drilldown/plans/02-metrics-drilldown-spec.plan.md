@@ -141,7 +141,7 @@ GET /v1/prometheus/api/v1/label/__name__/values
 | C5  | **Open in Explore**     | 跳转带 PromQL                      | 深链现有 [metrics-query](src/views/dashboard/metrics/) URL `?promql=...`   | 可做                         |
 | C6  | **Copy URL / Bookmark** | 分享状态                           | URL sync：time、filters、metric、breakdown label                           | 部分 URL sync 已有，需扩展   |
 
-**Auto PromQL 类型判定（Greptime 无 `/metadata`）**：完整语义见 [semantics.md](../semantics.md)。
+**Auto PromQL 类型判定（`table_semantics` 优先；Greptime 另有 `/metadata`，见 [semantics.md](../semantics.md)）**：完整语义见 [semantics.md](../semantics.md)。
 
 | 优先级 | 来源                                        | 用法                                                         |
 | ------ | ------------------------------------------- | ------------------------------------------------------------ |

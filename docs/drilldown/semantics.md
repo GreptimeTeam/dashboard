@@ -1,6 +1,7 @@
 # Drilldown 语义信息
 
-> Greptime 无 Prometheus `/metadata`；语义主入口是 [`information_schema.table_semantics`](https://docs.greptime.cn/nightly/user-guide/semantic-layer/table-semantics/)。  
+> Greptime **有** Prometheus `/v1/prometheus/api/v1/metadata`（route `src/servers/src/http.rs:1351`、handler `http/prometheus.rs:279`），并且它本身就读语义层（`prometheus_metadata_from_table`，`prometheus.rs:2179`）。语义主入口仍取 [`information_schema.table_semantics`](https://docs.greptime.cn/nightly/user-guide/semantic-layer/table-semantics/)，理由改成"覆盖更全"（log/trace、`original_name`、signal/source/pipeline、不受逻辑表限制），不是"没有 `/metadata`"。  
+> **注意**：type/unit/temporality → 是否加 `rate()` 这条策略，服务端 metadata 与 dashboard `shouldApplyRate` 各有一份实现，已知差异见下。  
 > **原则**：语义目录优先 → 各信号约定 / 名字启发 → 用户设置兜底。
 
 ---
@@ -24,7 +25,7 @@ FROM information_schema.table_semantics;
 ```
 
 - `semantic_options`：JSON（已去 `greptime.semantic.` 前缀）
-- `metadata_quality`：Metrics 仅 **`declared`** 采信 type/unit/temporality/original_name；`inferred` 不用来决定 `rate`
+- `metadata_quality`：**只描述 `metric.type`**（协议声明 → `declared`，名字后缀猜 → `inferred`，冲突 collapse → `unknown`）。Metrics 仅 `declared` 采信 type；unit / temporality / original_name 没有"猜"的写入路径，存在即可用（`inferred` 也照用）
 - `entity_declarations`：实体关联（跨信号）— **产品尚未读**
 
 代码：[`table-semantics.ts`](../../src/observability/table-semantics.ts)、[`resolve-metric-meta.ts`](../../src/observability/resolve-metric-meta.ts)（Metrics）、[`logs/resolve-table.ts`](../../src/observability/logs/resolve-table.ts)（Logs 选表）。
@@ -47,9 +48,21 @@ FROM information_schema.table_semantics;
 
 **默认画法（declared type 或名启发）**：counter→`sum(rate)` 折线；gauge/updown→`avg` 折线；histogram→`sum(rate(..._bucket)) by (le)` heatmap（可切 percentiles）。用户仍可 Configure。
 
-**注意**：存量 Prom RW 表常无语义行；histogram 常拆 `_bucket`/`_sum`/`_count`，仅 `_bucket` 的 type=histogram 走 heatmap。
+**注意**：存量 Prom RW 表常**只有** signal/source/quality（本实例 480 条 `inferred`、`semantic_options` 为 NULL），type/unit 靠名字启发式；histogram 常拆 `_bucket`/`_sum`/`_count`，仅 `_bucket` 的 type=histogram 走 heatmap。native（OTLP exponential）与 gauge histogram 没有 `_bucket`/`le` 矩阵，走"暂不支持"占位且**不发查询**。
 
 **已用 / 未用**：type·unit·temporality·original_name ✅；`source` UI、按 original_name 搜索、quality 提示、`entity_declarations` ⬜。
+
+### Prometheus `/metadata`（另一条入口，dashboard 目前未用）
+
+`GET /v1/prometheus/api/v1/metadata`，按 `current_schema` 取表并走 `check_query_permission`。它已经实现了 dashboard 在本地重算的那套判定：
+
+- `updown_counter → gauge`、`gauge_histogram → gaugehistogram`、`mixed → unknown`
+- counter/histogram 且 `temporality=delta|mixed` → `unknown`（**与 dashboard 的差异点**：`shouldApplyRate` 只特判 `delta`，`mixed` 仍会加 `rate()`）
+- 无 type 但有 native histogram 列 → `histogram`；UCUM → OpenMetrics unit
+
+**覆盖范围**：要求 `LOGICAL_TABLE_METADATA_KEY`，即 metric-engine 逻辑表。本实例 `public` 有 1226 张 `engine=metric`、64 张 `mito`，OTLP demo 指标（如 `gen_ai_*`）也落在 metric engine 里，所以实测**能**查到它们；纯 mito 表不在其中。
+
+**局限**：不返回 `original_name`；unit 被转回 OpenMetrics 词并丢掉 annotation——实测 `gen_ai_client_token_usage_count` 返回 `unit: ""`（`{token}` 丢失），`gen_ai_client_operation_duration_seconds_bucket` 返回 `unit: "seconds"`（UCUM `s` 被改写）。
 
 ---
 
