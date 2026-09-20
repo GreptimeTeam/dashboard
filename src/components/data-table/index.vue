@@ -1889,7 +1889,8 @@ a-dropdown#td-context(
     padding: 0;
     border: 0;
     background: transparent;
-    color: var(--brand-color);
+    // Links share the timestamp accent (same as `.timestamp-cell`).
+    color: var(--gpt-accent-ts);
     font: inherit;
     line-height: inherit;
     text-align: inherit;
