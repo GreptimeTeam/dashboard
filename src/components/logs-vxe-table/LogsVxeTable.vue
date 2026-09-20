@@ -3,7 +3,7 @@
   component(
     :key="wrapLine ? 'wrap' : 'nowrap'"
     ref="gridRef"
-    border
+    border="inner"
     fit
     size="mini"
     :is="VxeGrid"
@@ -681,12 +681,18 @@
     const cols: Record<string, unknown>[] = []
     const tsName = props.tsColumn?.name
     const merge = props.columnMode !== 'separate'
+    /** Legacy DataTable pads the first/last column wider (cell-edge-left/right). */
+    const edgeClass = (index: number, total: number) =>
+      [index === 0 ? 'logs-vxe-edge-left' : '', index === total - 1 ? 'logs-vxe-edge-right' : '']
+        .filter(Boolean)
+        .join(' ')
 
     if (merge) {
       if (tsName) {
         cols.push(
           contentColumn(tsName, tsName, {
-            className: getTimeColumnClassNames(true, true),
+            className: [getTimeColumnClassNames(true, true), 'logs-vxe-edge-left'].filter(Boolean).join(' '),
+            headerClassName: 'logs-vxe-edge-left',
             width: TIME_COLUMN_FIXED_WIDTH,
             slots: { default: renderSeparateCell, header: () => renderTsHeader(tsName) },
           })
@@ -695,20 +701,25 @@
       cols.push(
         contentColumn('__merged_message', 'message', {
           minWidth: 'auto',
+          className: 'logs-vxe-edge-right',
+          headerClassName: 'logs-vxe-edge-right',
           slots: { default: renderMergedCell },
         })
       )
       return cols
     }
 
-    getSeparateFields().forEach((item) => {
+    const fields = getSeparateFields()
+    fields.forEach((item, index) => {
       const classNames = [getTimeColumnClassNames(item.isTs, item.isTime), item.isLink ? 'logs-vxe-link-col' : '']
         .filter(Boolean)
         .join(' ')
+      const edge = edgeClass(index, fields.length)
       const rule = columnWidthRules.value[item.field] || {}
       cols.push(
         contentColumn(item.field, item.title, {
-          ...(classNames ? { className: classNames } : {}),
+          className: [classNames, edge].filter(Boolean).join(' '),
+          ...(edge ? { headerClassName: edge } : {}),
           ...rule,
           slots: {
             default: renderSeparateCell,
@@ -827,7 +838,12 @@
       --vxe-ui-table-header-font-weight: 600;
       --vxe-ui-table-row-hover-background-color: var(--color-fill-1, #f7f8fa);
       --vxe-ui-font-color: var(--color-text-1, #1d2129);
-      --vxe-ui-table-border-color: var(--color-border-2, #e5e6eb);
+      // Row separator — legacy Arco used @table-color-border (= --gpt-border-subtle).
+      --vxe-ui-table-border-color: var(--gpt-border-subtle, rgba(71, 52, 96, 0.05));
+      // Column resize drag guide (line + width tip) — legacy Arco drew the
+      // resizing border with @table-color-border_resizing (= @color-primary-6 →
+      // --gpt-main-dark), not VXE's default blue.
+      --vxe-ui-table-resizable-drag-line-color: var(--gpt-main-dark, #473460);
       font-size: 12px;
     }
 
@@ -872,6 +888,24 @@
 
     :deep(.logs-vxe-ts-th) {
       cursor: pointer;
+      // Icon + accent text only — no pill background.
+      background-color: transparent;
+    }
+
+    // Cell horizontal padding — parity with legacy DataTable
+    // (`--gpt-cell-px: 10px`, `--gpt-cell-edge-px: 16px` on first/last column).
+    :deep(.vxe-body--column > .vxe-cell),
+    :deep(.vxe-header--column > .vxe-cell) {
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+
+    :deep(.logs-vxe-edge-left > .vxe-cell) {
+      padding-left: 16px;
+    }
+
+    :deep(.logs-vxe-edge-right > .vxe-cell) {
+      padding-right: 16px;
     }
 
     :deep(.logs-vxe-link),
