@@ -197,6 +197,9 @@ importers:
       '@vueuse/core':
         specifier: ^10.1.0
         version: 10.11.1(vue@3.5.20(typescript@5.9.2))
+      '@vxe-ui/core':
+        specifier: ^4.4.22
+        version: 4.4.22(vue@3.5.20(typescript@5.9.2))
       arco-design-pro-vue:
         specifier: ^2.7.2
         version: 2.7.3
@@ -320,6 +323,12 @@ importers:
       vue-router:
         specifier: ^4.0.14
         version: 4.5.1(vue@3.5.20(typescript@5.9.2))
+      vxe-table:
+        specifier: ^4.21.0
+        version: 4.21.10
+      xe-utils:
+        specifier: ^4.0.14
+        version: 4.0.14
     devDependencies:
       '@arco-plugins/vite-vue':
         specifier: ^1.4.5
@@ -2898,6 +2907,11 @@ packages:
   '@vueuse/shared@10.11.1':
     resolution: {integrity: sha512-LHpC8711VFZlDaYUXEBbFBCQ7GS3dVU9mjOhhMhXP6txTV4EhYQg/KGnQuvt/sPAtoUKq7VVUnL6mVtFoL42sA==}
 
+  '@vxe-ui/core@4.4.22':
+    resolution: {integrity: sha512-fxF0QIh15b1G8uVUDgh8Au5QgJ3qR02RAqUyJl8BStoTHM9/1dA2qo3vwwZfnxe04hB4HYIDH1jc/8NsQvX0og==}
+    peerDependencies:
+      vue: ^3.2.0
+
   JSONStream@1.3.5:
     resolution: {integrity: sha512-E+iruNOY8VV9s4JEbe1aNEm6MiszPRr/UfcHMz0TQh1BXSxHK+ASV1R6W4HpjBhSeS+54PIsAMCBmwD06LLsqQ==}
     hasBin: true
@@ -3656,6 +3670,9 @@ packages:
 
   dom-serializer@2.0.0:
     resolution: {integrity: sha512-wIkAryiqt/nV5EQKqQpo3SToSOV9J0DnbJqwK7Wv/Trc92zIAYZ4FlMu+JPFW1DfGFt81ZTCGgDEabffXeLyJg==}
+
+  dom-zindex@1.0.7:
+    resolution: {integrity: sha512-cKU/h8v8IPBgdZOTPbPmq3Ib+Ac5C+kKoh9I4LbGR9BM3GwbmB16KYWKJcj5M2BavnA66EbgYzxYDLd1IytnlQ==}
 
   domelementtype@2.3.0:
     resolution: {integrity: sha512-OLETBj6w0OsagBwdXnPdN0cnMfF9opN69co+7ZrbfPGrdpPVNBUj02spi6B1N7wChLQiPn4CSH/zJvXw56gmHw==}
@@ -6332,6 +6349,9 @@ packages:
       typescript:
         optional: true
 
+  vxe-table@4.21.10:
+    resolution: {integrity: sha512-9O4Yi/gbafmW/x8qrhG8ZTCUrgGYFK6w3draMH+nsxkKjQhlhYgFvFmcJKOfL6+7VuDvMdQp8JXPi38MxdSb5Q==}
+
   w3c-keyname@2.2.8:
     resolution: {integrity: sha512-dpojBhNsCNN7T82Tm7k26A6G9ML3NkhDsnw9n/eoxSRlVBB4CEtIQ/KTCLI2Fwf3ataSXRhYFkQi3SlnFwPvPQ==}
 
@@ -6402,6 +6422,9 @@ packages:
         optional: true
       utf-8-validate:
         optional: true
+
+  xe-utils@4.0.14:
+    resolution: {integrity: sha512-mz3wd+bLwopmJym8/jxDwpuDqAGU6/ygwzc0pCbKz3Wyy9tKpIxTO3lk7ZkwCJgPVb7NYRX6H9qrpSkktGp6fA==}
 
   xml-name-validator@4.0.0:
     resolution: {integrity: sha512-ICP2e+jsHvAj2E2lIHxa5tjXRlKDJo4IdvPvCXbXQGdzSfmSpNVyIKMvoZHjDY9DP0zV17iI85o90vRFXNccRw==}
@@ -9374,6 +9397,12 @@ snapshots:
       - '@vue/composition-api'
       - vue
 
+  '@vxe-ui/core@4.4.22(vue@3.5.20(typescript@5.9.2))':
+    dependencies:
+      dom-zindex: 1.0.7
+      vue: 3.5.20(typescript@5.9.2)
+      xe-utils: 4.0.14
+
   JSONStream@1.3.5:
     dependencies:
       jsonparse: 1.3.1
@@ -10165,6 +10194,8 @@ snapshots:
       domelementtype: 2.3.0
       domhandler: 5.0.3
       entities: 4.5.0
+
+  dom-zindex@1.0.7: {}
 
   domelementtype@2.3.0: {}
 
@@ -13148,6 +13179,8 @@ snapshots:
     optionalDependencies:
       typescript: 5.9.2
 
+  vxe-table@4.21.10: {}
+
   w3c-keyname@2.2.8: {}
 
   webpack-virtual-modules@0.6.2: {}
@@ -13235,6 +13268,8 @@ snapshots:
       signal-exit: 3.0.7
 
   ws@8.21.0: {}
+
+  xe-utils@4.0.14: {}
 
   xml-name-validator@4.0.0: {}
 

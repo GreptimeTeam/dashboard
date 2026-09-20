@@ -79,6 +79,17 @@ const DASHBOARD: AppRouteRecordRaw = {
       },
     },
     {
+      path: 'logs-vxe-poc',
+      name: 'logs-vxe-poc',
+      component: () => import('@/views/dashboard/logs/query/vxe-poc.vue'),
+      meta: {
+        ignoreCache: true,
+        requiresAuth: false,
+        hideInMenu: true,
+        roles: ['admin', 'cloud'],
+      },
+    },
+    {
       path: 'log-pipeline',
       redirect: '/dashboard/logs-pipelines',
       component: () => import('@/views/dashboard/logs/pipelines/index.vue'),

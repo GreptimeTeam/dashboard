@@ -1,6 +1,26 @@
 <template lang="pug">
-#log-table-container(ref="tableContainer" :class="{ 'hide-table-header': !showHeader }")
+#log-table-container(ref="tableContainer" :class="{ 'hide-table-header': !showHeader && !useVxe }")
+  LogsVxeTable(
+    v-if="useVxe"
+    :data="data"
+    :columns="columns"
+    :displayed-columns="displayedColumns"
+    :ts-column="tsColumn"
+    :column-mode="columnMode"
+    :loading="loading"
+    :size="size"
+    :show-header="showHeader"
+    :wrap-line="wrapLine"
+    :active-row-key="detailVisible ? selectedRowKey : null"
+    :link-column="traceIdColumn"
+    :class="dataTableClass"
+    @reach-end="emit('reachEnd')"
+    @ts-cell-click="handleTsClick"
+    @row-click="handleRowClick"
+    @column-link-click="handleTraceClick"
+  )
   DataTable(
+    v-else
     :data="data"
     :columns="columns"
     :column-mode="columnMode"
@@ -44,11 +64,13 @@
 </template>
 
 <script setup lang="ts" name="LogTableData">
-  import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
+  import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount, defineAsyncComponent } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useElementSize } from '@vueuse/core'
   import type { ColumnType, TSColumn } from '@/types/query'
   import LogDetail from './LogDetail.vue'
+
+  const LogsVxeTable = defineAsyncComponent(() => import('@/components/logs-vxe-table/LogsVxeTable.vue'))
 
   interface TableData {
     [key: string]: any
@@ -109,6 +131,12 @@
 
   const { t } = useI18n()
   const traceLinkTitle = computed(() => (props.traceIdColumn ? t('drilldown.logs.openTrace') : ''))
+
+  /**
+   * Virtual logs path uses VXE (perf + horizontal scroll).
+   * Export checkbox selection and non-virtual preview stay on Arco DataTable.
+   */
+  const useVxe = computed(() => props.virtual && !props.exportRowSelection)
 
   const selectedRowKey = ref<number | null>(null)
   const selectedRecord = computed(() => props.data[selectedRowKey.value])
@@ -235,6 +263,12 @@
     detailVisible.value = true
   }
 
+  const handleRowClick = (row: TableData, rowIndex: number) => {
+    if (!props.rowDetail || props.exportRowSelection) return
+    // Non-ts click: still open detail for VXE path (filter menu deferred).
+    handleTsClick(row, rowIndex)
+  }
+
   const handleFilterConditionAdd = (event) => {
     emit('filterConditionAdd', event)
   }
@@ -246,6 +280,9 @@
   }
 
   onMounted(() => {
+    if (useVxe.value) {
+      return
+    }
     tableContainer.value?.addEventListener('scroll', onScrollCapture, { passive: true, capture: true })
     nextTick(() => checkCurrentScrollRoot())
   })
@@ -258,6 +295,9 @@
   watch(
     () => props.data.length,
     () => {
+      if (useVxe.value) {
+        return
+      }
       reachEndArmed = true
       nextTick(() => checkCurrentScrollRoot())
     }
@@ -266,7 +306,7 @@
   watch(
     () => [height.value, virtualListHeight.value],
     () => {
-      if (measuredHeight.value <= 0) {
+      if (useVxe.value || measuredHeight.value <= 0) {
         return
       }
       reachEndArmed = true
@@ -281,9 +321,11 @@
     display: flex;
     flex-direction: column;
 
-    :deep(.data-table-container) {
+    :deep(.data-table-container),
+    :deep(.logs-vxe-table) {
       height: 100%;
       flex: 1;
+      min-height: 0;
     }
   }
 
