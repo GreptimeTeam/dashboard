@@ -2,6 +2,7 @@
 .metric-sparkline(ref="targetRef")
   a-spin.panel-loading(v-if="loading || !hasBeenVisible" :loading="true")
   .panel-state.panel-error(v-else-if="error") {{ t('drilldown.main.sparklineError') }}
+  .panel-state(v-else-if="unsupported") {{ t('drilldown.main.sparklineUnsupported') }}
   .panel-state(v-else-if="isEmpty") {{ t('drilldown.main.sparklineNoData') }}
   .panel-chart(
     v-else-if="showChart"
@@ -62,6 +63,7 @@
     legendLabel,
     seriesColor,
     isEmpty,
+    unsupported,
   } = useMetricSparkline(ctx, metricName, hasBeenVisible, colorIndex)
 
   const chartHeight = `${METRIC_PANEL_CHART_HEIGHT}px`

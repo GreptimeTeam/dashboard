@@ -11,7 +11,7 @@
     a-radio(value="percentiles") {{ t('drilldown.metricDetail.percentiles') }}
 
   a-dropdown(
-    v-if="!isHistogram"
+    v-if="!isHistogram && configureOptions.length"
     trigger="click"
     position="br"
     :popup-max-height="280"

@@ -20,6 +20,11 @@ vi.mock('@/api/editor', () => ({
   },
 }))
 
+// Keeps the pinia-backed current-database helper out of the module graph.
+vi.mock('./current-database', () => ({
+  currentDatabase: () => 'public',
+}))
+
 const runSQL = vi.mocked(editorApi.runSQL)
 
 const SEMANTICS_SCHEMAS = [

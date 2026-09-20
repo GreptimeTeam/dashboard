@@ -226,6 +226,21 @@ export async function getMetricTableSemantics(metricName: string): Promise<Metri
   return semantics.get(key) ?? null
 }
 
+/**
+ * Whether the current database's dump has a row for `tableName`.
+ * Answers "does this table exist in the semantic layer" without a second query —
+ * used to tell a classic histogram's `_bucket` companion from a native one.
+ */
+export async function hasSemanticsTable(tableName: string): Promise<boolean> {
+  const key = tableName.trim()
+  if (!key) {
+    return false
+  }
+
+  const semantics = await semanticsFor(currentDatabase())
+  return semantics.has(key)
+}
+
 /** Test helper — drop the cached dump (and its database binding) between cases. */
 export function clearMetricTableSemanticsCache(): void {
   loadedDatabase = null

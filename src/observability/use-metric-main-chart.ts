@@ -89,6 +89,7 @@ export default function useMetricMainChart(
   const seriesCount = ref(0)
   const legendItems = ref<MainChartLegendItem[]>([])
   const cached = ref<CachedMainChart | null>(null)
+  const unsupported = ref(false)
   let requestVersion = 0
 
   const { isDark } = storeToRefs(useAppStore())
@@ -166,6 +167,7 @@ export default function useMetricMainChart(
 
   const load = async () => {
     const name = metricName.value.trim()
+    unsupported.value = false
     if (!name) {
       clearChart()
       error.value = null
@@ -193,9 +195,20 @@ export default function useMetricMainChart(
       }
 
       metricKind.value = meta.kind
+
+      if (meta.kind === 'native_histogram') {
+        // Native (OTLP exponential) histograms have no `_bucket` / `le` matrix to query.
+        clearChart()
+        panelType.value = 'timeseries'
+        unsupported.value = true
+        error.value = null
+        return
+      }
+
       semanticUnit.value = meta.semanticUnit
       temporality.value = meta.temporality
       originalName.value = meta.originalName
+
       const plan = buildMainChartQueries(name, matchers.value, prefs.value, meta.kind, meta.temporality)
       promqlQuery.value = plan.queries[0]?.expr ?? ''
 
@@ -349,6 +362,7 @@ export default function useMetricMainChart(
     legendItems,
     seriesColor,
     isEmpty,
+    unsupported,
     prefs,
     cached,
   }

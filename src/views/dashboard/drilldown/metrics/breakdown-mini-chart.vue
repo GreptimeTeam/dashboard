@@ -2,6 +2,7 @@
 .breakdown-mini-chart(ref="targetRef")
   a-spin.panel-loading(v-if="loading" :loading="true")
   .panel-state.panel-error(v-else-if="error") {{ t('drilldown.main.sparklineError') }}
+  .panel-state(v-else-if="unsupported") {{ t('drilldown.main.sparklineUnsupported') }}
   .panel-state(v-else-if="isEmpty") {{ t('drilldown.main.sparklineNoData') }}
   .panel-chart(v-else-if="showChart")
     Chart(
@@ -53,14 +54,15 @@
   const { targetRef, hasBeenVisible } = useLazyPanelQuery(props.scrollRoot)
 
   const yAxisSync = useBreakdownYAxisSync()
-  const { loading, error, chartOption, promqlQuery, seriesCount, seriesLegends, isEmpty } = useBreakdownSparkline(ctx, {
-    metric,
-    labelKey,
-    mode,
-    value,
-    enabled: hasBeenVisible,
-    yAxisSync,
-  })
+  const { loading, error, chartOption, promqlQuery, seriesCount, seriesLegends, isEmpty, unsupported } =
+    useBreakdownSparkline(ctx, {
+      metric,
+      labelKey,
+      mode,
+      value,
+      enabled: hasBeenVisible,
+      yAxisSync,
+    })
 
   const chartHeight = `${BREAKDOWN_CHART_HEIGHT}px`
   const showChart = computed(() => Boolean(chartOption.value) && !loading.value && !error.value)

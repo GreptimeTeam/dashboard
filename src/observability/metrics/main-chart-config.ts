@@ -62,7 +62,8 @@ export function configureOptionsForKind(
   kind: MetricKind
 ): Array<{ key: string; agg?: TimeseriesAgg; variant?: MainChartVariant }> {
   // Histogram uses the Heatmap / Percentiles radio group — no Configure dropdown.
-  if (kind === 'histogram') {
+  // Native histograms expose neither, so they get no Configure options either.
+  if (kind === 'histogram' || kind === 'native_histogram') {
     return []
   }
   if (kind === 'counter') {

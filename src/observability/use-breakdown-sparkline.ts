@@ -89,6 +89,7 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
   const promqlQuery = ref('')
   const seriesLegends = ref<BreakdownSeriesLegend[]>([])
   const legendLabel = ref('')
+  const unsupported = ref(false)
   let requestVersion = 0
 
   const { isDark } = storeToRefs(useAppStore())
@@ -173,6 +174,7 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
   const load = async () => {
     const name = options.metric.value.trim()
     const labelKey = options.labelKey.value.trim()
+    unsupported.value = false
     if (!options.enabled.value || !name || !labelKey) {
       return
     }
@@ -203,6 +205,15 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
       }
       const { kind, semanticUnit, temporality } = meta
       metricKind.value = kind
+
+      if (kind === 'native_histogram') {
+        // Native (OTLP exponential) histograms have no `_bucket` / `le` matrix to query.
+        clearChart()
+        unsupported.value = true
+        error.value = null
+        return
+      }
+
       const panelUnit = resolveMetricPanelUnit(name, isMetricRateQuery(kind, temporality), { semanticUnit })
       paintMetricName = name
       paintSemanticUnit = semanticUnit
@@ -365,5 +376,6 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
     legendLabel,
     seriesLegends,
     isEmpty,
+    unsupported,
   }
 }

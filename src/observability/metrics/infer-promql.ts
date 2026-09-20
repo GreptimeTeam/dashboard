@@ -1,4 +1,12 @@
-export type MetricKind = 'counter' | 'gauge' | 'updown_counter' | 'histogram' | 'summary' | 'unknown'
+export type MetricKind =
+  | 'counter'
+  | 'gauge'
+  | 'updown_counter'
+  | 'histogram'
+  /** OTLP exponential histogram: native value column, no `_bucket` / `le` to chart. */
+  | 'native_histogram'
+  | 'summary'
+  | 'unknown'
 
 export type MetricPanelType = 'timeseries' | 'heatmap'
 
@@ -85,6 +93,9 @@ export function inferPromQL(metric: string, matchers?: string, options?: InferPr
         ? `sum(rate(${bucketName}${selector}[${RATE_WINDOW}])) by (le)`
         : `sum(${bucketName}${selector}) by (le)`
     }
+    // Defensive: native histograms are never charted, so no query is built.
+    case 'native_histogram':
+      return ''
     case 'summary':
     case 'gauge':
     case 'updown_counter':
@@ -103,6 +114,8 @@ export function inferPromQLLegendLabel(metric: string, options?: InferPromQLOpti
     case 'counter':
     case 'histogram':
       return useRate ? 'sum(rate)' : 'sum'
+    case 'native_histogram':
+      return ''
     case 'summary':
     case 'gauge':
     case 'updown_counter':

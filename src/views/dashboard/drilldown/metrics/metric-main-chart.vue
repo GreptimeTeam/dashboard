@@ -3,6 +3,7 @@
   .panel-frame(ref="chartContainerRef")
     a-spin.panel-loading(v-if="loading && !chartOption" :loading="true")
     .panel-state.panel-error(v-else-if="error && !chartOption") {{ t('drilldown.metricDetail.chartError') }}
+    .panel-state(v-else-if="unsupported") {{ t('drilldown.metricDetail.chartNativeHistogramUnsupported') }}
     .panel-state(v-else-if="isEmpty") {{ t('drilldown.metricDetail.chartNoData') }}
     .panel-chart(
       v-else-if="chartOption"
@@ -86,6 +87,7 @@
     promqlQuery,
     legendItems,
     isEmpty,
+    unsupported,
     prefs,
     cached,
   } = useMetricMainChart(ctx, metricName, plotSize)

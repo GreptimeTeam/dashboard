@@ -9,6 +9,10 @@ vi.mock('@/api/editor', () => ({
   },
 }))
 
+vi.mock('../current-database', () => ({
+  currentDatabase: () => 'public',
+}))
+
 describe('infer-promql', () => {
   beforeEach(async () => {
     clearMetricTableSemanticsCache()

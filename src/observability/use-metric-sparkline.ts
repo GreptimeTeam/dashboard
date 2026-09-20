@@ -48,6 +48,7 @@ export default function useMetricSparkline(
   const seriesCount = ref(0)
   const promqlQuery = ref('')
   const legendLabel = ref('')
+  const unsupported = ref(false)
   let requestVersion = 0
 
   const { isDark } = storeToRefs(useAppStore())
@@ -59,6 +60,7 @@ export default function useMetricSparkline(
 
   const load = async () => {
     const name = metricName.value.trim()
+    unsupported.value = false
     if (!enabled.value || !name) {
       return
     }
@@ -88,6 +90,19 @@ export default function useMetricSparkline(
 
       const { kind, semanticUnit, temporality } = meta
       metricKind.value = kind
+
+      if (kind === 'native_histogram') {
+        // Native (OTLP exponential) histograms have no `_bucket` / `le` matrix to query.
+        chartOption.value = null
+        panelType.value = 'timeseries'
+        seriesCount.value = 0
+        heatmapLegend.value = null
+        promqlQuery.value = ''
+        legendLabel.value = ''
+        unsupported.value = true
+        return
+      }
+
       panelType.value = inferPanelType(name, kind)
       const matchers = buildMatchersFromFilters(ctx)
       const query = inferPromQL(name, matchers, { kind, temporality })
@@ -199,5 +214,6 @@ export default function useMetricSparkline(
     legendLabel,
     seriesColor,
     isEmpty,
+    unsupported,
   }
 }
