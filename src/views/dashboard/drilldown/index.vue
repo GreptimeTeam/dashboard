@@ -56,7 +56,7 @@
               DrawerBreadcrumb(:items="logsDetailCrumbs")
               button.logs-drawer-close(type="button" :aria-label="t('common.close')" @click="closeLogsDrawer")
                 icon-close
-            .logs-drawer-toolbar
+            .logs-drawer-toolbar.logs-drawer-toolbar--filters
               LogsDetailFilters
             nav.logs-drawer-tabs(role="tablist" aria-label="Logs detail")
               button.logs-drawer-tab(
@@ -467,6 +467,12 @@
     position: relative;
     width: 100%;
     min-height: calc(var(--gpt-control-height-sm) + var(--gpt-gap-sm) * 2);
+  }
+
+  /* The filters bar hides itself while the logs field map is still resolving; without this
+     the wrapper would keep a control row of empty height. */
+  .logs-drawer-toolbar--filters {
+    min-height: 0;
   }
 
   .logs-drawer-toolbar > .logs-drawer-close {

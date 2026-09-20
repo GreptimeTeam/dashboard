@@ -200,15 +200,17 @@ export async function buildLogsFieldMap(
 
   const withRoles = applyRoleColumns(map, settings, columnNames)
 
-  // The table's SQL needs a time role. A partial/absent saved map (or a seed that failed
-  // before this table was bound) must not leave it empty, or the logs table spins without
-  // ever issuing a request while charts keep working off their own time-column fallback.
-  if (!withRoles.time) {
-    const timeDefault = otelLogsFieldDefaultsFromColumns(columns, { serviceColumn: settings?.service }).time
-    if (timeDefault) {
-      withRoles.time = timeDefault
+  // A partial/stale saved map — or a seed that never ran for this table — must not leave
+  // roles empty: without `time` the table spins without issuing a request, and without
+  // `body`/`severity` the detail filter row has nothing to render. Fall back to what the
+  // table's columns can supply on their own (OTel log model).
+  const defaults = otelLogsFieldDefaultsFromColumns(columns, { serviceColumn: settings?.service })
+  ;(['time', 'body', 'severity', 'traceId', 'service', 'primaryGroupBy'] as const).forEach((role) => {
+    const fallback = defaults[role]
+    if (fallback && !withRoles[role]) {
+      withRoles[role] = fallback
     }
-  }
+  })
 
   return withRoles
 }

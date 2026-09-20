@@ -50,6 +50,7 @@
   import { useI18n } from 'vue-i18n'
   import { useDrilldownContext } from '@/observability/context'
   import { fetchLabelValues, type LabelValueRow } from '@/observability/adapters/logs'
+  import { loadDrilldownSettings } from '@/observability/drilldown-settings'
   import { DRILLDOWN_FILTER_OP_OPTIONS } from '@/observability/filters'
   import { LOGS_BODY_OPS, isLogsBodyOp, logsBodyOpNeedsValue, type LogsBodyOp } from '@/observability/logs/body-search'
   import type { DrilldownFilterOp } from '@/observability/types'
@@ -72,11 +73,15 @@
 
   const columns = computed(() => {
     const { logs } = ctx.fieldMap.value
+    // The context map is built asynchronously; the saved settings already name these roles,
+    // so the row renders immediately instead of appearing only after the rebuild.
+    const saved = loadDrilldownSettings().logs.fieldMap
     const column = (value?: string) => value?.trim() || undefined
+    const role = (value?: string, fallback?: string) => column(value) ?? column(fallback)
     return {
-      body: column(logs.body),
-      service: column(logs.service),
-      severity: column(logs.severity),
+      body: role(logs.body, saved?.body),
+      service: role(logs.service, saved?.service),
+      severity: role(logs.severity, saved?.severity),
     }
   })
 
