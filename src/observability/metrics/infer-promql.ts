@@ -5,8 +5,15 @@ export type MetricKind =
   | 'histogram'
   /** OTLP exponential histogram: native value column, no `_bucket` / `le` to chart. */
   | 'native_histogram'
+  /** Prometheus gauge histogram: buckets are not cumulative, so a heatmap is meaningless. */
+  | 'gauge_histogram'
   | 'summary'
   | 'unknown'
+
+/** Histogram kinds with no classic `_bucket` + `le` matrix to build a panel from. */
+export function isUnsupportedHistogramKind(kind: MetricKind): boolean {
+  return kind === 'native_histogram' || kind === 'gauge_histogram'
+}
 
 export type MetricPanelType = 'timeseries' | 'heatmap'
 
@@ -93,8 +100,9 @@ export function inferPromQL(metric: string, matchers?: string, options?: InferPr
         ? `sum(rate(${bucketName}${selector}[${RATE_WINDOW}])) by (le)`
         : `sum(${bucketName}${selector}) by (le)`
     }
-    // Defensive: native histograms are never charted, so no query is built.
+    // Defensive: unsupported histogram kinds are never charted, so no query is built.
     case 'native_histogram':
+    case 'gauge_histogram':
       return ''
     case 'summary':
     case 'gauge':
@@ -115,6 +123,7 @@ export function inferPromQLLegendLabel(metric: string, options?: InferPromQLOpti
     case 'histogram':
       return useRate ? 'sum(rate)' : 'sum'
     case 'native_histogram':
+    case 'gauge_histogram':
       return ''
     case 'summary':
     case 'gauge':

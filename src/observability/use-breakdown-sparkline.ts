@@ -7,7 +7,7 @@ import type { DrilldownContext } from './context'
 import { buildPromMatchersString } from './filters'
 import { buildBreakdownGroupByExpr, buildBreakdownValueExprs } from './metrics/breakdown-queries'
 import resolveMetricMeta from './resolve-metric-meta'
-import { type MetricKind } from './metrics/infer-promql'
+import { isUnsupportedHistogramKind, type MetricKind } from './metrics/infer-promql'
 import useMainChartPrefs from './metrics/main-chart-config'
 import { isMetricRateQuery, BREAKDOWN_CHART_HEIGHT } from './metrics/panel-stats'
 import { resolveMetricPanelUnit } from './metrics/metric-units'
@@ -206,8 +206,8 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
       const { kind, semanticUnit, temporality } = meta
       metricKind.value = kind
 
-      if (kind === 'native_histogram') {
-        // Native (OTLP exponential) histograms have no `_bucket` / `le` matrix to query.
+      if (isUnsupportedHistogramKind(kind)) {
+        // No `_bucket` / `le` matrix to query — never fabricate a query for these.
         clearChart()
         unsupported.value = true
         error.value = null

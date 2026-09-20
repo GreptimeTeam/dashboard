@@ -44,8 +44,9 @@ export default function useMetricsCatalog(
       })
       poolNames.value = result.names
       truncated.value = result.truncated
-      // Drilldown: start full semantics dump early; getMetricTableSemantics awaits the same load.
-      ensureMetricSemanticsLoaded().catch(() => undefined)
+      // Drilldown: keep the semantics dump in step with the metric list, so tables created
+      // during the session pick up their declarations on the next refresh (throttled inside).
+      ensureMetricSemanticsLoaded({ refresh: true }).catch(() => undefined)
     } catch (err) {
       console.error('Failed to load metric catalog:', err)
       poolNames.value = []

@@ -6,7 +6,7 @@ import { useAppStore } from '@/store'
 import type { DrilldownContext } from './context'
 import { buildPromMatchersString } from './filters'
 import resolveMetricMeta from './resolve-metric-meta'
-import { type MetricKind, type MetricTemporality } from './metrics/infer-promql'
+import { isUnsupportedHistogramKind, type MetricKind, type MetricTemporality } from './metrics/infer-promql'
 import useMainChartPrefs from './metrics/main-chart-config'
 import buildMainChartQueries from './metrics/main-chart-queries'
 import { isMetricRateQuery, MAIN_CHART_FALLBACK_PLOT_WIDTH_PX, MAIN_CHART_HEIGHT } from './metrics/panel-stats'
@@ -196,8 +196,8 @@ export default function useMetricMainChart(
 
       metricKind.value = meta.kind
 
-      if (meta.kind === 'native_histogram') {
-        // Native (OTLP exponential) histograms have no `_bucket` / `le` matrix to query.
+      if (isUnsupportedHistogramKind(meta.kind)) {
+        // No `_bucket` / `le` matrix to query — never fabricate a query for these.
         clearChart()
         panelType.value = 'timeseries'
         unsupported.value = true

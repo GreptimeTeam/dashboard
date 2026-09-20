@@ -1,6 +1,6 @@
 import { computed, type Ref } from 'vue'
 import { useStorage } from '@vueuse/core'
-import { inferMetricKind, type MetricKind } from './infer-promql'
+import { inferMetricKind, isUnsupportedHistogramKind, type MetricKind } from './infer-promql'
 
 /** Grafana-like main panel visualization mode. */
 export type MainChartVariant = 'timeseries' | 'heatmap' | 'percentiles'
@@ -62,8 +62,8 @@ export function configureOptionsForKind(
   kind: MetricKind
 ): Array<{ key: string; agg?: TimeseriesAgg; variant?: MainChartVariant }> {
   // Histogram uses the Heatmap / Percentiles radio group — no Configure dropdown.
-  // Native histograms expose neither, so they get no Configure options either.
-  if (kind === 'histogram' || kind === 'native_histogram') {
+  // Unsupported histogram kinds expose neither, so they get no Configure options either.
+  if (kind === 'histogram' || isUnsupportedHistogramKind(kind)) {
     return []
   }
   if (kind === 'counter') {

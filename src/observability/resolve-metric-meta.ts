@@ -20,15 +20,8 @@ export interface ResolvedMetricMeta {
   semantics: MetricTableSemantics | null
 }
 
-/** Greptime `metric.type` strings that can only mean a native (exponential) histogram. */
-const NATIVE_HISTOGRAM_METRIC_TYPES = new Set(['exponentialhistogram', 'exponential_histogram'])
-
 /** Series suffixes that a histogram family emits alongside its `_bucket` series. */
 const HISTOGRAM_COMPANION_SUFFIXES = ['_sum', '_count']
-
-function normalizeMetricType(metricType: string | undefined): string {
-  return (metricType ?? '').trim().toLowerCase().replace(/-/g, '_')
-}
 
 /**
  * Prometheus remote-write 2.0 metadata describes a whole family, and writers such as
@@ -71,9 +64,6 @@ async function resolveSemanticUnit(name: string, declaredUnit: string | null): P
  * matrix — charting it as classic would query a table that does not exist.
  */
 async function isNativeHistogram(name: string, semantics: MetricTableSemantics | null): Promise<boolean> {
-  if (NATIVE_HISTOGRAM_METRIC_TYPES.has(normalizeMetricType(semantics?.metricType))) {
-    return true
-  }
   // `_bucket` is itself the classic histogram table, never a native one.
   if (name.endsWith('_bucket')) {
     return false
@@ -118,7 +108,8 @@ export default async function resolveMetricMeta(name: string): Promise<ResolvedM
     kind: await resolveMetricKind(trimmed, semantics),
     semanticUnit: await resolveSemanticUnit(trimmed, declaredMetricUnitFromSemantics(semantics)),
     temporality: declaredTemporalityFromSemantics(semantics),
-    originalName: semantics?.metadataQuality === 'declared' ? semantics.metricOriginalName ?? null : null,
+    // `metadata_quality` describes `metric.type` only; original_name is never guessed.
+    originalName: semantics?.metricOriginalName ?? null,
     source: semantics?.source ?? null,
     metadataQuality: semantics?.metadataQuality ?? null,
     semantics,

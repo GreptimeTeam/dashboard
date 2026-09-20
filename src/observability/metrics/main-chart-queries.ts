@@ -1,6 +1,7 @@
 import {
   inferMetricKind,
   isHistogramMetricName,
+  isUnsupportedHistogramKind,
   shouldApplyRate,
   type MetricKind,
   type MetricTemporality,
@@ -59,10 +60,10 @@ export default function buildMainChartQueries(
   const selector = selectorSuffix(matchers)
   const useRate = shouldApplyRate(resolvedKind, temporality)
 
-  // Native (OTLP exponential) histograms have no `_bucket` table and no `le`
-  // matrix, so there is nothing to chart. Checked first: the name heuristic
-  // below would otherwise treat `x_seconds` as a classic histogram.
-  if (resolvedKind === 'native_histogram') {
+  // Native / gauge histograms have no `_bucket` table and no `le` matrix, so there is
+  // nothing to chart. Checked first: the name heuristic below would otherwise treat
+  // `x_seconds` as a classic histogram.
+  if (isUnsupportedHistogramKind(resolvedKind)) {
     return { panel: 'timeseries', queries: [] }
   }
 

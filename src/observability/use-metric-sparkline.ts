@@ -10,6 +10,7 @@ import {
   inferPromQL,
   inferPanelType,
   inferPromQLLegendLabel,
+  isUnsupportedHistogramKind,
   type MetricKind,
   type MetricPanelType,
 } from './metrics/infer-promql'
@@ -91,8 +92,8 @@ export default function useMetricSparkline(
       const { kind, semanticUnit, temporality } = meta
       metricKind.value = kind
 
-      if (kind === 'native_histogram') {
-        // Native (OTLP exponential) histograms have no `_bucket` / `le` matrix to query.
+      if (isUnsupportedHistogramKind(kind)) {
+        // No `_bucket` / `le` matrix to query — never fabricate a query for these.
         chartOption.value = null
         panelType.value = 'timeseries'
         seriesCount.value = 0
