@@ -1,4 +1,5 @@
 import editorApi from '@/api/editor'
+import { currentDatabase } from './current-database'
 import type { MetricKind } from './metrics/infer-promql'
 
 export type MetadataQuality = 'declared' | 'inferred' | 'unknown' | string
@@ -18,14 +19,28 @@ export interface MetricTableSemantics {
   metricOriginalName?: string
 }
 
-const cache = new Map<string, MetricTableSemantics | null>()
-
-/** After full load finishes (ok or fail), missing names are known absences — no per-name SQL. */
-let metricSemanticsFullyLoaded = false
-let inflightAll: Promise<void> | null = null
-
 const METRIC_SEMANTICS_SELECT =
   'SELECT table_name, signal_type, source, metadata_quality, semantic_options FROM information_schema.table_semantics'
+
+/**
+ * One dump per database, shared by concurrent callers.
+ *
+ * `loadedDatabase` is the database `dump` belongs to; a different current database
+ * starts a fresh dump, so switching schemas can neither leak another schema's
+ * declarations nor hide the new schema's own. A failed dump is cached as an empty
+ * map for that database — older deployments without the view cost one query, not
+ * one per lookup.
+ */
+let loadedDatabase: string | null = null
+let dump: Promise<Map<string, MetricTableSemantics>> | null = null
+
+/**
+ * `information_schema.table_semantics` covers every schema of the current catalog,
+ * so the schema filter is what keeps two same-named tables from colliding.
+ */
+function metricSemanticsSQL(database: string): string {
+  return `${METRIC_SEMANTICS_SELECT} WHERE signal_type = 'metric' AND table_schema = '${database}'`
+}
 
 function parseSemanticOptions(raw: unknown): Record<string, unknown> {
   if (raw == null) {
@@ -146,7 +161,11 @@ export function declaredTemporalityFromSemantics(semantics: MetricTableSemantics
  */
 export { shouldApplyRate } from './metrics/infer-promql'
 
-function ingestSemanticsRows(rows: unknown[], schemas: Array<{ name: string }>): void {
+function ingestSemanticsRows(
+  rows: unknown[],
+  schemas: Array<{ name: string }>,
+  target: Map<string, MetricTableSemantics>
+): void {
   rows.forEach((row) => {
     if (!Array.isArray(row)) {
       return
@@ -154,48 +173,48 @@ function ingestSemanticsRows(rows: unknown[], schemas: Array<{ name: string }>):
     const semantics = rowToSemantics(row, schemas)
     if (semantics?.tableName) {
       // Core fields only — rowToSemantics already drops raw semantic_options JSON.
-      cache.set(semantics.tableName, semantics)
+      target.set(semantics.tableName, semantics)
     }
   })
 }
 
-/**
- * One-shot load of all metric rows from `table_semantics`.
- * Success or failure both mark the load complete — no per-name LIMIT 1 fallback
- * (older DBs without the view simply have no declared semantics).
- */
-export async function ensureMetricSemanticsLoaded(): Promise<void> {
-  if (metricSemanticsFullyLoaded) {
-    return
-  }
-  if (inflightAll) {
-    await inflightAll
-    return
-  }
-
-  inflightAll = (async () => {
-    try {
-      const response = await editorApi.runSQL(`${METRIC_SEMANTICS_SELECT} WHERE signal_type = 'metric'`)
-      const records = response?.output?.[0]?.records
-      const schemas = records?.schema?.column_schemas ?? []
-      const rows = records?.rows
-      if (Array.isArray(rows)) {
-        ingestSemanticsRows(rows, schemas)
-      }
-    } catch {
-      // View missing / query failed — treat as empty semantics catalog.
-    } finally {
-      metricSemanticsFullyLoaded = true
-      inflightAll = null
+async function fetchMetricSemantics(database: string): Promise<Map<string, MetricTableSemantics>> {
+  const byTableName = new Map<string, MetricTableSemantics>()
+  try {
+    const response = await editorApi.runSQL(metricSemanticsSQL(database))
+    const records = response?.output?.[0]?.records
+    const schemas = records?.schema?.column_schemas ?? []
+    const rows = records?.rows
+    if (Array.isArray(rows)) {
+      ingestSemanticsRows(rows, schemas, byTableName)
     }
-  })()
+  } catch {
+    // View missing / query failed — treat as empty semantics catalog.
+  }
+  return byTableName
+}
 
-  await inflightAll
+/** The dump for `database`, reusing the loaded/in-flight one and swapping on db change. */
+function semanticsFor(database: string): Promise<Map<string, MetricTableSemantics>> {
+  if (!dump || loadedDatabase !== database) {
+    loadedDatabase = database
+    dump = fetchMetricSemantics(database)
+  }
+  return dump
 }
 
 /**
- * Look up metric table semantics from the in-memory dump only.
- * Always waits for {@link ensureMetricSemanticsLoaded}; never issues per-name SQL.
+ * Load all metric rows from `table_semantics` for the current database.
+ * Success or failure both settle the dump — no per-name LIMIT 1 fallback
+ * (older DBs without the view simply have no declared semantics).
+ */
+export async function ensureMetricSemanticsLoaded(): Promise<void> {
+  await semanticsFor(currentDatabase())
+}
+
+/**
+ * Look up metric table semantics from the in-memory dump of the current database.
+ * Always waits for the dump; never issues per-name SQL.
  */
 export async function getMetricTableSemantics(metricName: string): Promise<MetricTableSemantics | null> {
   const key = metricName.trim()
@@ -203,19 +222,14 @@ export async function getMetricTableSemantics(metricName: string): Promise<Metri
     return null
   }
 
-  if (cache.has(key)) {
-    return cache.get(key) ?? null
-  }
-
-  await ensureMetricSemanticsLoaded()
-  return cache.get(key) ?? null
+  const semantics = await semanticsFor(currentDatabase())
+  return semantics.get(key) ?? null
 }
 
-/** Test helper — clear in-memory cache between cases. */
+/** Test helper — drop the cached dump (and its database binding) between cases. */
 export function clearMetricTableSemanticsCache(): void {
-  cache.clear()
-  metricSemanticsFullyLoaded = false
-  inflightAll = null
+  loadedDatabase = null
+  dump = null
 }
 
 export default getMetricTableSemantics

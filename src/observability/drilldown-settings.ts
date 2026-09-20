@@ -1,4 +1,4 @@
-import { useAppStore } from '@/store'
+import { currentDatabase } from './current-database'
 
 export interface LogsFieldMapSettings {
   time?: string
@@ -35,10 +35,6 @@ const STORAGE_PREFIX = 'drilldown-settings'
 
 function storageKey(database: string): string {
   return `${STORAGE_PREFIX}:${database}`
-}
-
-function currentDatabase(): string {
-  return useAppStore().database || 'public'
 }
 
 function emptySettings(): DrilldownSettings {

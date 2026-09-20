@@ -1,4 +1,5 @@
 import editorApi from '@/api/editor'
+import { currentDatabase } from '../current-database'
 import { loadDrilldownSettings } from '../drilldown-settings'
 import { buildLogsFieldMap } from './field-map'
 
@@ -42,8 +43,10 @@ function pickLogTableFromNames(names: string[]): string | undefined {
 
 async function listSemanticsLogTables(): Promise<string[]> {
   try {
+    // `table_schema` is required: information_schema spans every schema of the current
+    // catalog, and without it a same-named log table from another schema can win.
     const semantics = await editorApi.runSQL(
-      `SELECT table_name FROM information_schema.table_semantics WHERE signal_type = 'log' LIMIT 100`
+      `SELECT table_name FROM information_schema.table_semantics WHERE signal_type = 'log' AND table_schema = '${currentDatabase()}' ORDER BY table_name LIMIT 100`
     )
     return tableNamesFromRecords(semantics?.output?.[0]?.records)
   } catch {

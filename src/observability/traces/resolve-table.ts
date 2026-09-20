@@ -1,4 +1,5 @@
 import editorApi from '@/api/editor'
+import { currentDatabase } from '../current-database'
 import { loadDrilldownSettings } from '../drilldown-settings'
 import {
   KNOWN_OTLP_TRACE_TABLE,
@@ -34,8 +35,9 @@ function uniquePreserveOrder(names: string[]): string[] {
 
 async function listSemanticsTraceTables(): Promise<Array<{ tableName: string; pipeline?: string }>> {
   try {
+    // Scoped + ordered: information_schema spans every schema of the current catalog.
     const semantics = await editorApi.runSQL(
-      `SELECT table_name, pipeline FROM information_schema.table_semantics WHERE signal_type = 'trace' LIMIT 100`
+      `SELECT table_name, pipeline FROM information_schema.table_semantics WHERE signal_type = 'trace' AND table_schema = '${currentDatabase()}' ORDER BY table_name LIMIT 100`
     )
     const records = semantics?.output?.[0]?.records
     const schemas = records?.schema?.column_schemas ?? []
@@ -57,9 +59,12 @@ async function listSemanticsTraceTables(): Promise<Array<{ tableName: string; pi
 
 async function listColumnModelTraceTables(): Promise<string[]> {
   try {
+    // Without the schema filter the GROUP BY unions columns from same-named tables in
+    // different schemas, so a name can pass HAVING although no single table has all five.
     const sql = `SELECT table_name
 FROM information_schema.columns
-WHERE column_name IN ('trace_id', 'parent_span_id', 'timestamp', 'span_name', 'service_name')
+WHERE table_schema = '${currentDatabase()}'
+  AND column_name IN ('trace_id', 'parent_span_id', 'timestamp', 'span_name', 'service_name')
 GROUP BY table_name
 HAVING COUNT(DISTINCT column_name) = 5
 ORDER BY table_name
