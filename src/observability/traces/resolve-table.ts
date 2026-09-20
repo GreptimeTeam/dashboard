@@ -1,6 +1,7 @@
 import editorApi from '@/api/editor'
 import { currentDatabase } from '../current-database'
 import { loadDrilldownSettings } from '../drilldown-settings'
+import { TRACE_MODEL_REQUIRED_COLUMNS } from './model'
 import {
   KNOWN_OTLP_TRACE_TABLE,
   tableHasRequiredTraceColumns,
@@ -61,12 +62,13 @@ async function listColumnModelTraceTables(): Promise<string[]> {
   try {
     // Without the schema filter the GROUP BY unions columns from same-named tables in
     // different schemas, so a name can pass HAVING although no single table has all five.
+    const modelColumns = TRACE_MODEL_REQUIRED_COLUMNS.map((name) => `'${name}'`).join(', ')
     const sql = `SELECT table_name
 FROM information_schema.columns
 WHERE table_schema = '${currentDatabase()}'
-  AND column_name IN ('trace_id', 'parent_span_id', 'timestamp', 'span_name', 'service_name')
+  AND column_name IN (${modelColumns})
 GROUP BY table_name
-HAVING COUNT(DISTINCT column_name) = 5
+HAVING COUNT(DISTINCT column_name) = ${TRACE_MODEL_REQUIRED_COLUMNS.length}
 ORDER BY table_name
 LIMIT 200`
     const result = await editorApi.runSQL(sql)

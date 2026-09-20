@@ -1,3 +1,5 @@
+import { TRACE_MODEL_BONUS_COLUMNS, TRACE_MODEL_REQUIRED_COLUMNS, TRACE_MODEL_SERVICE_COLUMN } from './model'
+
 /**
  * greptime_trace_v1 / OTel-shaped field map and top-bar label keys.
  * Product Labels for traces ≠ Greptime TAG-only (only service_name is TAG on v1).
@@ -8,10 +10,10 @@ export const TRACE_LABEL_KEYS = ['service_name', 'span_name', 'span_status_code'
 export type TraceLabelKey = (typeof TRACE_LABEL_KEYS)[number]
 
 /** Minimum columns to treat a table as a usable trace model. */
-export const TRACE_REQUIRED_COLUMNS = ['trace_id', 'parent_span_id', 'timestamp', 'span_name', 'service_name'] as const
+export const TRACE_REQUIRED_COLUMNS = TRACE_MODEL_REQUIRED_COLUMNS
 
 /** Extra columns that mark a fuller greptime_trace_v1 layout. */
-export const TRACE_BONUS_COLUMNS = ['duration_nano', 'span_id', 'span_status_code', 'span_kind'] as const
+export const TRACE_BONUS_COLUMNS = TRACE_MODEL_BONUS_COLUMNS
 
 const KNOWN_DEFAULT_TABLE = 'opentelemetry_traces'
 
@@ -142,8 +144,14 @@ export function mergeTracesFieldMapColumns(
   return next
 }
 
+export interface TracesFieldMapOptions {
+  /** Service identity column when the bound table declares a different one. */
+  serviceColumn?: string
+}
+
 /** Fixed roles for greptime_trace_v1 (identity map for filter chips). */
-export function buildDefaultTracesFieldMap(): Record<string, string> {
+export function buildDefaultTracesFieldMap(options?: TracesFieldMapOptions): Record<string, string> {
+  const service = options?.serviceColumn?.trim() || TRACE_MODEL_SERVICE_COLUMN
   return {
     time: 'timestamp',
     timeEnd: 'timestamp_end',
@@ -151,12 +159,12 @@ export function buildDefaultTracesFieldMap(): Record<string, string> {
     traceId: 'trace_id',
     spanId: 'span_id',
     parentSpanId: 'parent_span_id',
-    service: 'service_name',
+    service,
     spanName: 'span_name',
     status: 'span_status_code',
     kind: 'span_kind',
     // Identity entries so top-bar chips resolve via resolveFieldMapColumn.
-    service_name: 'service_name',
+    service_name: service,
     span_name: 'span_name',
     span_status_code: 'span_status_code',
     span_kind: 'span_kind',

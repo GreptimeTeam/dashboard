@@ -7,10 +7,12 @@ import {
   declaredMetricUnitFromSemantics,
   declaredTemporalityFromSemantics,
   ensureMetricSemanticsLoaded,
+  getTableEntityDeclarations,
   getMetricTableSemantics,
   mapDeclaredMetricType,
   type MetricTableSemantics,
 } from './table-semantics'
+import resolveEntityIdentity from './entities'
 import { mapUcumToPanelUnit, resolveMetricPanelUnit } from './metrics/metric-units'
 import { inferPromQL, shouldApplyRate } from './metrics/infer-promql'
 
@@ -33,6 +35,7 @@ const SEMANTICS_SCHEMAS = [
   { name: 'source' },
   { name: 'metadata_quality' },
   { name: 'semantic_options' },
+  { name: 'entity_declarations' },
 ]
 
 function sqlResult(rows: unknown[][]) {
@@ -114,7 +117,10 @@ describe('table-semantics', () => {
       getMetricTableSemantics('no_such_metric'),
     ])
     expect(runSQL).toHaveBeenCalledTimes(1)
-    expect(String(runSQL.mock.calls[0][0])).toContain("signal_type = 'metric'")
+    // The dump is deliberately not filtered by signal_type: entity declarations live
+    // outside metric rows, so it is scoped by schema only.
+    expect(String(runSQL.mock.calls[0][0])).toContain('entity_declarations')
+    expect(String(runSQL.mock.calls[0][0])).toContain("table_schema = 'public'")
     expect(String(runSQL.mock.calls[0][0])).not.toContain('LIMIT 1')
 
     expect(hit).toMatchObject({
@@ -137,6 +143,90 @@ describe('table-semantics', () => {
 
     expect(await getMetricTableSemantics('solo_metric')).toBeNull()
     expect(runSQL).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('entity identities', () => {
+  const SERVICE_DECLARATION = JSON.stringify([
+    {
+      entity_type: 'service',
+      origin: 'convention',
+      id: ['service_name'],
+      id_qualifier: 'resource_attributes.service.namespace',
+    },
+  ])
+
+  beforeEach(() => {
+    clearMetricTableSemanticsCache()
+    runSQL.mockReset()
+  })
+
+  it('prefers declarations and places paths against the table columns', async () => {
+    runSQL.mockResolvedValueOnce(
+      sqlResult([['opentelemetry_traces', 'trace', 'opentelemetry', null, null, SERVICE_DECLARATION]]) as never
+    )
+
+    await expect(
+      resolveEntityIdentity('opentelemetry_traces', 'service', [
+        { name: 'service_name' },
+        { name: 'resource_attributes.service.namespace' },
+      ])
+    ).resolves.toEqual({
+      entityType: 'service',
+      origin: 'declaration',
+      id: [{ column: 'service_name' }],
+      idQualifier: { column: 'resource_attributes.service.namespace' },
+    })
+  })
+
+  it('reads nested paths out of a JSON container column', async () => {
+    runSQL.mockResolvedValueOnce(
+      sqlResult([
+        [
+          'opentelemetry_logs',
+          'log',
+          'opentelemetry',
+          null,
+          null,
+          JSON.stringify([{ entity_type: 'service', origin: 'convention', id: ['resource_attributes.service.name'] }]),
+        ],
+      ]) as never
+    )
+
+    const identity = await resolveEntityIdentity('opentelemetry_logs', 'service', [
+      { name: 'resource_attributes', data_type: 'json' },
+    ])
+    expect(identity?.id).toEqual([{ column: 'resource_attributes', jsonKey: 'service.name' }])
+  })
+
+  it('falls back to the trace model shape, and to null without either', async () => {
+    runSQL.mockResolvedValueOnce(
+      sqlResult([['opentelemetry_traces', 'trace', 'opentelemetry', null, null, null]]) as never
+    )
+    const traceColumns = ['trace_id', 'parent_span_id', 'timestamp', 'span_name', 'service_name'].map((name) => ({
+      name,
+    }))
+
+    await expect(resolveEntityIdentity('opentelemetry_traces', 'service', traceColumns)).resolves.toEqual({
+      entityType: 'service',
+      origin: 'model',
+      id: [{ column: 'service_name' }],
+    })
+    await expect(resolveEntityIdentity('opentelemetry_traces', 'container', traceColumns)).resolves.toBeNull()
+  })
+
+  it('exposes declarations for tables that carry no other semantics', async () => {
+    runSQL.mockResolvedValueOnce(sqlResult([['web_trace_demo', null, null, null, null, SERVICE_DECLARATION]]) as never)
+
+    await expect(getTableEntityDeclarations('web_trace_demo')).resolves.toEqual([
+      {
+        entityType: 'service',
+        origin: 'convention',
+        id: ['service_name'],
+        idQualifier: 'resource_attributes.service.namespace',
+        supersededBy: undefined,
+      },
+    ])
   })
 })
 

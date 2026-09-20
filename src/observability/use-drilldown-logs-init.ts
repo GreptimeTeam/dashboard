@@ -4,6 +4,7 @@ import { useAppStore } from '@/store'
 import { loadDrilldownSettings, updateLogsDrilldownSettings } from '@/observability/drilldown-settings'
 import { buildLogsFieldMap, otelLogsFieldDefaultsFromColumns } from '@/observability/logs/field-map'
 import { resolveLogsTable } from '@/observability/logs/resolve-table'
+import resolveEntityIdentity from '@/observability/entities'
 import useTableSchemaStore from '@/store/modules/table-schema'
 import type { DrilldownContext } from '../context'
 
@@ -34,7 +35,14 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
     }
     try {
       const columns = await tableSchemaStore.ensureTableSchema(tableName)
-      updateLogsDrilldownSettings({ fieldMap: otelLogsFieldDefaultsFromColumns(columns) }, database.value)
+      const identity = await resolveEntityIdentity(tableName, 'service', columns)
+      const primary = identity?.id[0]
+      // Chip-style identities need role-level JSON handling; only flat columns apply here.
+      const serviceColumn = primary && !primary.jsonKey ? primary.column : undefined
+      updateLogsDrilldownSettings(
+        { fieldMap: otelLogsFieldDefaultsFromColumns(columns, { serviceColumn }) },
+        database.value
+      )
     } catch (error) {
       console.error(`Failed to seed logs field settings for ${tableName}:`, error)
       return undefined

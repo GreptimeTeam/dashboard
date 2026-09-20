@@ -102,15 +102,22 @@ export interface RootSpanRow {
   [key: string]: unknown
 }
 
-const LIST_SELECT = [
-  'timestamp',
-  'trace_id',
-  'service_name',
-  'span_name',
-  'duration_nano',
-  'span_status_code',
-  'span_kind',
-]
+/**
+ * Canonical alias → physical column. Rows and table columns keep the canonical keys,
+ * so readers do not care which column the table actually stores the role in.
+ */
+function rootSpanSelectColumns(ctx: DrilldownContext): Array<{ alias: string; column: string }> {
+  const map = fieldMap(ctx)
+  return [
+    { alias: 'timestamp', column: timeColumn(ctx) },
+    { alias: 'trace_id', column: map.traceId || map.trace_id || 'trace_id' },
+    { alias: 'service_name', column: map.service || map.service_name || 'service_name' },
+    { alias: 'span_name', column: map.spanName || map.span_name || 'span_name' },
+    { alias: 'duration_nano', column: durationColumn(ctx) },
+    { alias: 'span_status_code', column: statusColumn(ctx) },
+    { alias: 'span_kind', column: map.kind || map.span_kind || 'span_kind' },
+  ]
+}
 
 function recordsToObjects(records: {
   schema?: { column_schemas?: Array<{ name: string }> }
@@ -171,7 +178,9 @@ export async function fetchRootSpanList(
   const where = [baseWhere, ...extraWhere].join(' AND ')
 
   const limit = options?.limit ?? ROOT_SPAN_LIMIT
-  const selectCols = LIST_SELECT.map((name) => quoteIdent(name)).join(', ')
+  const selectCols = rootSpanSelectColumns(ctx)
+    .map(({ alias, column }) => `${quoteIdent(column)} AS ${quoteIdent(alias)}`)
+    .join(', ')
   const sql = `SELECT ${selectCols}
 FROM ${quoteIdent(tableName)}
 WHERE ${where}

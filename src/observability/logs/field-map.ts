@@ -57,10 +57,18 @@ const OTEL_LOG_TRACE = ['trace_id']
 /**
  * Settings defaults from the OTEL logs model only.
  * `scope_name` is instrumentation scope, not service, so it is not used here.
+ *
+ * `serviceColumn` is the declared service identity when the table has one; it must be a
+ * real column (chip-style identities are not plumbed through the logs roles yet).
  */
-export function otelLogsFieldDefaultsFromColumns(columns: SchemaColumn[]): LogsFieldMapSettings {
+export function otelLogsFieldDefaultsFromColumns(
+  columns: SchemaColumn[],
+  options?: { serviceColumn?: string }
+): LogsFieldMapSettings {
   const columnNames = new Set(columns.map((column) => column.name))
-  const service = pickFirst(columnNames, OTEL_LOG_SERVICE)
+  const declaredService = options?.serviceColumn?.trim()
+  const service =
+    declaredService && columnNames.has(declaredService) ? declaredService : pickFirst(columnNames, OTEL_LOG_SERVICE)
   return {
     time: pickFirst(columnNames, OTEL_LOG_TIME),
     body: pickFirst(columnNames, OTEL_LOG_BODY),

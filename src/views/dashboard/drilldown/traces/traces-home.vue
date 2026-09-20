@@ -75,6 +75,7 @@
   import { fetchRootSpanList, type RedMetric, type RootSpanRow } from '@/observability/adapters/traces'
   import { isDrilldownFilterOp, resolveFieldMapColumn } from '@/observability/filters'
   import { buildDefaultTracesFieldMap } from '@/observability/traces/field-map'
+  import resolveTracesServiceColumn from '@/observability/traces/service-column'
   import { listTracesTables } from '@/observability/traces/resolve-table'
   import type { ColumnType, QueryState } from '@/types/query'
   import { isTracesHomeTab } from '@/observability/types'
@@ -202,7 +203,8 @@
     if (!tableOptions.value.includes(table)) {
       tableOptions.value = [...tableOptions.value, table]
     }
-    const nextMap = buildDefaultTracesFieldMap()
+    // Declared service identity wins over the v1 model column when the table has one.
+    const nextMap = buildDefaultTracesFieldMap({ serviceColumn: await resolveTracesServiceColumn(table) })
     const settings = loadDrilldownSettings(database.value)
     settings.traces = { ...(settings.traces || {}), table }
     saveDrilldownSettings(settings, database.value)

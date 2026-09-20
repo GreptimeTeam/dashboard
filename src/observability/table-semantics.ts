@@ -17,10 +17,25 @@ export interface MetricTableSemantics {
   metricUnit?: string
   metricTemporality?: MetricTemporality
   metricOriginalName?: string
+  /** Convention/option-derived identities declared for this table. */
+  entityDeclarations?: EntityDeclaration[]
 }
 
-const METRIC_SEMANTICS_SELECT =
-  'SELECT table_name, signal_type, source, metadata_quality, semantic_options FROM information_schema.table_semantics'
+/**
+ * One entity a table stands for — `service`, `service.instance`, `container`, …
+ * `id` entries are column paths: either a flat column name (`service_name`) or a
+ * nested path (`resource_attributes.service.instance.id`).
+ */
+export interface EntityDeclaration {
+  entityType: string
+  origin?: string
+  id: string[]
+  idQualifier?: string
+  supersededBy?: string
+}
+
+const SEMANTICS_SELECT =
+  'SELECT table_name, signal_type, source, metadata_quality, semantic_options, entity_declarations FROM information_schema.table_semantics'
 
 /** Minimum spacing between refresh-triggered dump reads (see `ensureMetricSemanticsLoaded`). */
 const REFRESH_INTERVAL_MS = 10_000
@@ -45,9 +60,13 @@ let loadToken = 0
 /**
  * `information_schema.table_semantics` covers every schema of the current catalog,
  * so the schema filter is what keeps two same-named tables from colliding.
+ *
+ * Deliberately no `signal_type` filter: entity declarations live outside metric rows
+ * (on a real instance 812 metric rows carry none, while 5 null-signal and 1 trace row
+ * do), and every lookup is by table name anyway.
  */
-function metricSemanticsSQL(database: string): string {
-  return `${METRIC_SEMANTICS_SELECT} WHERE signal_type = 'metric' AND table_schema = '${database}'`
+function semanticsSQL(database: string): string {
+  return `${SEMANTICS_SELECT} WHERE table_schema = '${database}'`
 }
 
 function parseSemanticOptions(raw: unknown): Record<string, unknown> {
@@ -79,6 +98,57 @@ function optionString(options: Record<string, unknown>, key: string): string | u
   return trimmed || undefined
 }
 
+function optionalString(value: unknown): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined
+  }
+  const trimmed = value.trim()
+  return trimmed || undefined
+}
+
+/**
+ * `entity_declarations` is a JSON array; entries whose `id` is missing or empty are
+ * dropped rather than surfaced as an identity with no columns.
+ */
+function parseEntityDeclarations(raw: unknown): EntityDeclaration[] | undefined {
+  if (raw == null) {
+    return undefined
+  }
+  let parsed: unknown = raw
+  if (typeof raw === 'string') {
+    try {
+      parsed = JSON.parse(raw)
+    } catch {
+      return undefined
+    }
+  }
+  if (!Array.isArray(parsed)) {
+    return undefined
+  }
+
+  const declarations: EntityDeclaration[] = []
+  parsed.forEach((entry) => {
+    if (!entry || typeof entry !== 'object') {
+      return
+    }
+    const record = entry as Record<string, unknown>
+    const id = (Array.isArray(record.id) ? record.id : [record.id]).map(optionalString).filter(Boolean) as string[]
+    const entityType = optionalString(record.entity_type)
+    if (!entityType || !id.length) {
+      return
+    }
+    declarations.push({
+      entityType,
+      origin: optionalString(record.origin),
+      id,
+      idQualifier: optionalString(record.id_qualifier),
+      supersededBy: optionalString(record.superseded_by),
+    })
+  })
+
+  return declarations.length ? declarations : undefined
+}
+
 function rowToSemantics(row: unknown[], schemas: Array<{ name: string }>): MetricTableSemantics | null {
   const indexOf = (name: string) => schemas.findIndex((schema) => schema.name === name)
   const tableNameIndex = indexOf('table_name')
@@ -94,6 +164,7 @@ function rowToSemantics(row: unknown[], schemas: Array<{ name: string }>): Metri
   const optionsIndex = indexOf('semantic_options')
   const signalIndex = indexOf('signal_type')
   const sourceIndex = indexOf('source')
+  const declarationsIndex = indexOf('entity_declarations')
   const metadataQuality = qualityIndex >= 0 ? String(row[qualityIndex] ?? 'unknown') : 'unknown'
   const options = parseSemanticOptions(optionsIndex >= 0 ? row[optionsIndex] : undefined)
 
@@ -106,6 +177,7 @@ function rowToSemantics(row: unknown[], schemas: Array<{ name: string }>): Metri
     metricUnit: optionString(options, 'metric.unit'),
     metricTemporality: optionString(options, 'metric.temporality'),
     metricOriginalName: optionString(options, 'metric.original_name'),
+    entityDeclarations: declarationsIndex >= 0 ? parseEntityDeclarations(row[declarationsIndex]) : undefined,
   }
 }
 
@@ -207,11 +279,11 @@ function isMissingSemanticsView(error: unknown): boolean {
   return /table not found/i.test(message) && message.includes('table_semantics')
 }
 
-async function fetchMetricSemantics(database: string): Promise<Map<string, MetricTableSemantics>> {
+async function fetchTableSemantics(database: string): Promise<Map<string, MetricTableSemantics>> {
   const byTableName = new Map<string, MetricTableSemantics>()
   try {
     // The view is optional (older deployments) — never surface its absence as a toast.
-    const response = await editorApi.runSQL(metricSemanticsSQL(database), undefined, { suppressErrorToast: true })
+    const response = await editorApi.runSQL(semanticsSQL(database), undefined, { suppressErrorToast: true })
     const records = response?.output?.[0]?.records
     const schemas = records?.schema?.column_schemas ?? []
     const rows = records?.rows
@@ -251,7 +323,7 @@ function semanticsFor(database: string, refresh = false): Promise<Map<string, Me
     missingView = false
     inFlight = true
     const token = (loadToken += 1)
-    dump = fetchMetricSemantics(database).then((result) => {
+    dump = fetchTableSemantics(database).then((result) => {
       if (token === loadToken) {
         inFlight = false
       }
@@ -272,7 +344,7 @@ export async function ensureMetricSemanticsLoaded(options?: { refresh?: boolean 
 }
 
 /**
- * Look up metric table semantics from the in-memory dump of the current database.
+ * Look up a table's semantic row from the in-memory dump of the current database.
  * Always waits for the dump; never issues per-name SQL.
  */
 export async function getMetricTableSemantics(metricName: string): Promise<MetricTableSemantics | null> {
@@ -298,6 +370,15 @@ export async function hasSemanticsTable(tableName: string): Promise<boolean> {
 
   const semantics = await semanticsFor(currentDatabase())
   return semantics.has(key)
+}
+
+/**
+ * Entity identities declared for `tableName` — empty when the table declares none.
+ * Shares the metric dump, so reading declarations costs no extra query.
+ */
+export async function getTableEntityDeclarations(tableName: string): Promise<EntityDeclaration[]> {
+  const semantics = await getMetricTableSemantics(tableName)
+  return semantics?.entityDeclarations ?? []
 }
 
 /** Test helper — drop the cached dump (and its database binding) between cases. */
