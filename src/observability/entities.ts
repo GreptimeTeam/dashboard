@@ -1,4 +1,5 @@
-import { getTableEntityDeclarations, type EntityDeclaration } from './table-semantics'
+import { conventionEntityKeys, type EntitySignal } from './entity-keys'
+import { getMetricTableSemantics, getTableEntityDeclarations, type EntityDeclaration } from './table-semantics'
 import { TRACE_MODEL_SERVICE_COLUMN, isTraceModel } from './traces/model'
 
 /**
@@ -105,4 +106,68 @@ export default async function resolveEntityIdentity(
   }
 
   return null
+}
+
+/** Filter key form of an identity column: a flat column, or a JSON attribute chip. */
+export function entityColumnFilterKey(reference: EntityColumnRef): string {
+  return reference.jsonKey ? `${reference.column}.${reference.jsonKey}` : reference.column
+}
+
+/** First candidate the table actually has, placed as a flat column or a JSON container. */
+function firstPresent(candidates: string[], columns?: ReadonlySet<string>): EntityColumnRef | undefined {
+  if (!candidates.length) {
+    return undefined
+  }
+  if (!columns?.size) {
+    return { column: candidates[0] }
+  }
+  const match =
+    candidates.find((candidate) => columns.has(candidate)) ??
+    // A chip candidate counts as present when its container column exists.
+    candidates.find((candidate) => {
+      const dot = candidate.indexOf('.')
+      return dot > 0 && columns.has(candidate.slice(0, dot))
+    }) ??
+    candidates[0]
+  return toColumnRef(match, columns)
+}
+
+/**
+ * Where `entityKey` lives on `tableName`, with a fixed priority:
+ *
+ * 1. the table's `entity_declarations` (semantics — wins over every assumption);
+ * 2. the `greptime_trace_v1` model shape (`service_name`), which the server guarantees;
+ * 3. the ingestion source's convention (`opentelemetry` / `prometheus`), narrowed by
+ *    which of its candidate columns the table actually has;
+ * 4. nothing — `custom`/unknown sources and tables matching no convention get no entity,
+ *    so the caller keeps its own behaviour instead of guessing a column.
+ */
+export async function resolveEntityFilterRef(
+  tableName: string,
+  entityKey: string,
+  options?: { signal?: EntitySignal; columns?: ReadonlyArray<EntitySchemaColumn> }
+): Promise<EntityColumnRef | undefined> {
+  const name = tableName.trim()
+  if (!name) {
+    return undefined
+  }
+
+  const columns = options?.columns?.length ? new Set(options.columns.map((column) => column.name)) : undefined
+  const identity = await resolveEntityIdentity(name, entityKey, options?.columns)
+  if (identity?.id[0]) {
+    return identity.id[0]
+  }
+
+  const source = (await getMetricTableSemantics(name))?.source
+  return firstPresent(conventionEntityKeys(options?.signal ?? 'metrics', entityKey, source), columns)
+}
+
+/** Filter key form of {@link resolveEntityFilterRef}. */
+export async function resolveEntityFilterKey(
+  tableName: string,
+  entityKey: string,
+  options?: { signal?: EntitySignal; columns?: ReadonlyArray<EntitySchemaColumn> }
+): Promise<string | undefined> {
+  const reference = await resolveEntityFilterRef(tableName, entityKey, options)
+  return reference ? entityColumnFilterKey(reference) : undefined
 }

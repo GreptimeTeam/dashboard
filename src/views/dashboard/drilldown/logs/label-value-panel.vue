@@ -138,7 +138,9 @@
     replaceLabelFilter(props.labelCol, props.labelValue)
     applySelectedLevels()
     const logsMap = ctx.fieldMap.value.logs
-    const groupKeys = new Set([logsMap.primaryGroupBy, logsMap.service, 'service'].filter(Boolean))
+    const groupKeys = new Set(
+      [logsMap.primaryGroupBy, logsMap.service, ctx.entityFilterKeys.value.logs?.service, 'service'].filter(Boolean)
+    )
     ctx.openLogsDetail(groupKeys.has(props.labelCol) ? props.labelValue : undefined)
   }
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { normalizeEntityFilters } from './entity-keys'
 import {
   addFilter,
   buildPromMatchersString,
@@ -148,5 +149,65 @@ describe('same-key OR merge', () => {
       value: 'worker',
     })
     expect(buildPromMatchersString(filters)).toBe('job=~"api|worker"')
+  })
+
+  it('maps the canonical service entity onto the metrics label', () => {
+    // `service` is the shared entity key; metrics carries the bare service in
+    // `service_name` (`job` is namespace-qualified, so its value would not match).
+    expect(buildPromMatchersString([{ key: 'service', op: '=', value: 'checkout' }])).toBe('service_name="checkout"')
+    // A lone physical alias is left alone: a metric table may carry service_name without job.
+    expect(buildPromMatchersString([{ key: 'service_name', op: '=', value: 'checkout' }])).toBe(
+      'service_name="checkout"'
+    )
+  })
+
+  it('collapses alias duplicates of the same entity instead of ANDing two labels', () => {
+    expect(
+      buildPromMatchersString([
+        { key: 'service_name', op: '=', value: 'checkout' },
+        { key: 'job', op: '=', value: 'checkout' },
+      ])
+    ).toBe('service_name="checkout"')
+  })
+})
+
+describe('entity filter keys across signals', () => {
+  it('re-keys a service filter into the target signal vocabulary', () => {
+    const metricsFilter = [{ key: 'job', op: '=' as const, value: 'checkout' }]
+    // logs/traces resolve the entity through their field map role, not the physical name.
+    expect(normalizeEntityFilters(metricsFilter, 'logs')).toEqual([{ key: 'service', op: '=', value: 'checkout' }])
+    expect(normalizeEntityFilters(metricsFilter, 'traces')).toEqual([{ key: 'service', op: '=', value: 'checkout' }])
+
+    const logsFilter = [{ key: 'service', op: '=' as const, value: 'checkout' }]
+    expect(normalizeEntityFilters(logsFilter, 'metrics')).toEqual([{ key: 'service_name', op: '=', value: 'checkout' }])
+    // Idempotent.
+    expect(normalizeEntityFilters(normalizeEntityFilters(logsFilter, 'metrics'), 'metrics')).toEqual([
+      { key: 'service_name', op: '=', value: 'checkout' },
+    ])
+  })
+
+  it('leaves non-entity filters untouched', () => {
+    const filters = [
+      { key: 'span_name', op: '=' as const, value: 'GET /cart' },
+      { key: 'severity_text', op: '!=' as const, value: 'DEBUG' },
+    ]
+    expect(normalizeEntityFilters(filters, 'logs')).toEqual(filters)
+  })
+
+  it('prefers the key resolved from the bound table over the signal default', () => {
+    // logs binds a table whose service lives in resource_attributes JSON, so the metric
+    // filter re-keys to a chip instead of the `service` role (filters support chips).
+    expect(
+      normalizeEntityFilters(
+        [{ key: 'service_name', op: '=', value: 'frontend' }],
+        'logs',
+        () => 'resource_attributes.service.name'
+      )
+    ).toEqual([{ key: 'resource_attributes.service.name', op: '=', value: 'frontend' }])
+
+    // Without a resolved key the fallback still applies.
+    expect(normalizeEntityFilters([{ key: 'service_name', op: '=', value: 'frontend' }], 'logs')).toEqual([
+      { key: 'service', op: '=', value: 'frontend' },
+    ])
   })
 })

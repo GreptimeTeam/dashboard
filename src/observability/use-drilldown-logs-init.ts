@@ -4,9 +4,10 @@ import { useAppStore } from '@/store'
 import { loadDrilldownSettings, updateLogsDrilldownSettings } from '@/observability/drilldown-settings'
 import { buildLogsFieldMap, otelLogsFieldDefaultsFromColumns } from '@/observability/logs/field-map'
 import { resolveLogsTable } from '@/observability/logs/resolve-table'
-import resolveEntityIdentity from '@/observability/entities'
+import { entityColumnFilterKey, resolveEntityFilterRef } from '@/observability/entities'
+import { normalizeEntityFilters } from '@/observability/entity-keys'
 import useTableSchemaStore from '@/store/modules/table-schema'
-import type { DrilldownContext } from '../context'
+import type { DrilldownContext } from './context'
 
 export default function useDrilldownLogsInit(ctx: DrilldownContext) {
   const { database } = storeToRefs(useAppStore())
@@ -21,7 +22,11 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
     }
     const groupCol = ctx.fieldMap.value.logs.primaryGroupBy
     const serviceChip = ctx.fieldMap.value.logs.service
-    const chipKeys = new Set([groupCol, serviceChip, 'service', 'primaryGroupBy'].filter(Boolean) as string[])
+    const chipKeys = new Set(
+      [groupCol, serviceChip, ctx.entityFilterKeys.value.logs?.service, 'service', 'primaryGroupBy'].filter(
+        Boolean
+      ) as string[]
+    )
     const match = ctx.filters.value.find((f) => f.op === '=' && chipKeys.has(f.key))
     if (match) {
       ctx.logsSelectedGroup.value = match.value
@@ -35,10 +40,9 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
     }
     try {
       const columns = await tableSchemaStore.ensureTableSchema(tableName)
-      const identity = await resolveEntityIdentity(tableName, 'service', columns)
-      const primary = identity?.id[0]
+      const reference = await resolveEntityFilterRef(tableName, 'service', { signal: 'logs', columns })
       // Chip-style identities need role-level JSON handling; only flat columns apply here.
-      const serviceColumn = primary && !primary.jsonKey ? primary.column : undefined
+      const serviceColumn = reference && !reference.jsonKey ? reference.column : undefined
       updateLogsDrilldownSettings(
         { fieldMap: otelLogsFieldDefaultsFromColumns(columns, { serviceColumn }) },
         database.value
@@ -50,6 +54,27 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
     return loadDrilldownSettings(database.value).logs.fieldMap
   }
 
+  /**
+   * Publish the bounded table's service identity for cross-signal filters. The key may
+   * be a JSON chip (`resource_attributes.service.name`) — filters support chips even
+   * though the logs *roles* do not yet.
+   */
+  const publishEntityFilterKey = async (tableName: string) => {
+    try {
+      const columns = await tableSchemaStore.ensureTableSchema(tableName)
+      const reference = await resolveEntityFilterRef(tableName, 'service', { signal: 'logs', columns })
+      ctx.setEntityFilterKey('logs', 'service', reference ? entityColumnFilterKey(reference) : undefined)
+      // A signal switch that happened before this table was bound could only fall back to
+      // the `service` role; re-encode now that the real key (possibly a JSON chip) is known.
+      ctx.setFilters(
+        normalizeEntityFilters(ctx.filters.value, 'logs', (entity) => ctx.entityFilterKeys.value.logs?.[entity])
+      )
+    } catch (error) {
+      console.error(`Failed to resolve the service filter key for ${tableName}:`, error)
+      ctx.setEntityFilterKey('logs', 'service', undefined)
+    }
+  }
+
   const applyTableAndFieldMap = async (tableName: string) => {
     const fieldMap = await seedFieldSettings(tableName)
     const nextLogsFieldMap = await buildLogsFieldMap(tableName, fieldMap)
@@ -58,6 +83,7 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
       logs: nextLogsFieldMap,
     }
     ctx.logsTable.value = tableName
+    await publishEntityFilterKey(tableName)
     restoreLogsDetailSelection()
     // Detail may have mounted from URL before fieldMap was ready — reload panels.
     ctx.triggerRefresh()
@@ -73,11 +99,13 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
     }
 
     if (ctx.logsTable.value) {
-      const fieldMap = await seedFieldSettings(ctx.logsTable.value)
+      const tableName = ctx.logsTable.value
+      const fieldMap = await seedFieldSettings(tableName)
       ctx.fieldMap.value = {
         ...ctx.fieldMap.value,
-        logs: await buildLogsFieldMap(ctx.logsTable.value, fieldMap),
+        logs: await buildLogsFieldMap(tableName, fieldMap),
       }
+      await publishEntityFilterKey(tableName)
       restoreLogsDetailSelection()
       // URL restore opens detail before this finishes; bump so table/chart reload.
       ctx.triggerRefresh()
@@ -98,6 +126,7 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
 
   watch(database, () => {
     ctx.logsTable.value = undefined
+    ctx.setEntityFilterKey('logs', 'service', undefined)
     ctx.fieldMap.value = {
       ...ctx.fieldMap.value,
       logs: {},

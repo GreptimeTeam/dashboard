@@ -10,6 +10,7 @@ import {
 } from './adapters/filter-options'
 import type { DrilldownContext } from './context'
 import { loadDrilldownSettings } from './drilldown-settings'
+import { parseJsonFieldChipKey } from './logs/json-field-keys'
 import { isLogsContainsFilterKey } from './logs/field-map'
 
 export type FilterSuggestMode = 'default' | 'fields'
@@ -132,6 +133,11 @@ export default function useDrilldownFilterOptions(
       if (trimmed === 'severity' || (severityCol && trimmed === severityCol)) {
         return false
       }
+      // JSON attribute chips (e.g. `resource_attributes.service.name`) are valid filters
+      // even though they are not physical columns — keep them visible.
+      if (parseJsonFieldChipKey(trimmed)) {
+        return true
+      }
 
       if (suggestMode === 'fields') {
         // Only field-discovered keys; wait until suggest keys are loaded.
@@ -149,6 +155,9 @@ export default function useDrilldownFilterOptions(
       return Boolean(mapped && labelKeys.value.includes(mapped))
     }
 
+    if (parseJsonFieldChipKey(trimmed)) {
+      return true
+    }
     if (suggestMode !== 'fields') {
       return true
     }

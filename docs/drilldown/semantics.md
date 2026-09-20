@@ -24,11 +24,56 @@ SELECT table_name, signal_type, source, source_version, pipeline,
 FROM information_schema.table_semantics;
 ```
 
-- `semantic_options`：JSON（已去 `greptime.semantic.` 前缀）
+- `semantic_options`：JSON（已去 `greptime.semantic.` 前缀）；被提升为列的键（`signal_type` / `source` / `pipeline` / `metadata_quality`）不在这里面
 - `metadata_quality`：**只描述 `metric.type`**（协议声明 → `declared`，名字后缀猜 → `inferred`，冲突 collapse → `unknown`）。Metrics 仅 `declared` 采信 type；unit / temporality / original_name 没有"猜"的写入路径，存在即可用（`inferred` 也照用）
-- `entity_declarations`：实体关联（跨信号）— **产品尚未读**
+- `entity_declarations`：实体身份声明，由服务端按 conventions 推导（**不需要用户配置任何 option**）；已在用（身份列解析，见下）
 
 代码：[`table-semantics.ts`](../../src/observability/table-semantics.ts)、[`resolve-metric-meta.ts`](../../src/observability/resolve-metric-meta.ts)（Metrics）、[`logs/resolve-table.ts`](../../src/observability/logs/resolve-table.ts)（Logs 选表）。
+
+### `table_semantics` 列参考（本实例实测）
+
+视图性质：**一行 = 一张带语义的表**（`public` 1291 张表 → 820 行），**catalog 级作用域**（不按 `table_schema` 过滤会跨库串数据）。产出方有三类：用户手写 option、OTLP/Prometheus 摄入路径自动打标、服务端 conventions 推导（`entity_declarations`）。
+
+| 列 | 类型 | 作用 | 常见值（实测） | 消费方 |
+| --- | --- | --- | --- | --- |
+| `table_catalog` | String | 所属 catalog | `greptime` | 未直接用（information_schema 在当前 catalog 内解析） |
+| `table_schema` | String | 所属库 | `public`（其余库基本无语义行） | **作用域过滤** |
+| `table_name` | String | 表名 | 820 行 | 查表主键 |
+| `table_id` | UInt32 | 引擎内部表 id | 各不相同 | 未用 |
+| `signal_type` | String | 信号类型：`trace` / `log` / `metric` / `event` / `unknown` | metric 812、log 2、trace 1、**null 5** | Logs / Traces 选表；Metrics 不靠它 |
+| `source` | String | 接入生态：`opentelemetry` / `prometheus` / `influxdb` / `opentsdb` / `elasticsearch` / `loki` / `custom` / `mixed` / `unknown` | prometheus 480、opentelemetry 329、custom 6、null 5 | type 可信度基调；**约定兜底选物理列**（OTLP/Prom → `job`） |
+| `source_version` | String | 写入方版本 | Prometheus 行是 `1.0`，其余 null | 未用 |
+| `pipeline` | String | 写入 pipeline / 数据模型（open-value） | `greptime_trace_v1`（1 行）；vocabulary 另有 `greptime_metric_v1` | Traces 候选表打分（+50） |
+| `metadata_quality` | String | **只描述 `metric.type`**：`declared` / `inferred` / `unknown` | declared 332、inferred 480、null 8（含全部 log/trace 行） | 只决定 type 是否采信 |
+| `semantic_options` | String(JSON) | 其余语义键 | Metrics：`{"metric.type":"counter","metric.unit":"By","metric.temporality":"cumulative","metric.original_name":"…"}`；Traces：`{"trace.conventions":"https://opentelemetry.io/schemas/1.30.0"}`；Logs：null | Metric 的 type/unit/temporality/original_name |
+| `entity_declarations` | String(JSON) | 实体身份：`entity_type` / `origin` / `id` / `id_qualifier`（另有 `superseded_by` / `descriptive` / `scope` 字段） | 仅 6 行：5 张无 signal 的 `web_trace_demo*` + `opentelemetry_traces` | 身份列解析、跨信号关联 |
+
+`id` 是**列路径**（扁平列名或 `resource_attributes.*` 点路径），`id_qualifier` 表示身份还需限定列：
+
+```json
+[{"entity_type":"container","origin":"convention","id":["resource_attributes.container.id"]},
+ {"entity_type":"service","origin":"convention","id":["service_name"],
+  "id_qualifier":"resource_attributes.service.namespace"},
+ {"entity_type":"service.instance","origin":"convention",
+  "id":["service_name","resource_attributes.service.instance.id"],
+  "id_qualifier":"resource_attributes.service.namespace"}]
+```
+
+三信号取值形态：
+
+| 信号 | 典型取值 | 备注 |
+| --- | --- | --- |
+| Metrics | `signal_type=metric`；`source=opentelemetry/prometheus/custom`；`metadata_quality` + `semantic_options` 齐全 | **`entity_declarations` 0/812** → 身份只能靠 `source` 约定兜底 |
+| Logs | `signal_type=log`、`source=opentelemetry`，**其余列全 null** | 只解决"哪张是日志表"；身份在 `resource_attributes` JSON（实测 `$."service.name"`） |
+| Traces | `signal_type=trace`、`pipeline=greptime_trace_v1`、`semantic_options.trace.conventions`、**带实体声明** | `metadata_quality` 为 null——它是 metrics 概念 |
+
+踩坑清单：
+
+1. **`signal_type` 可以为 null**（本实例 5 张 `web_trace_demo*` 有实体声明却没有信号类型）→ 只按 `signal_type` 过滤会漏表。
+2. **`metadata_quality` 只管 `metric.type`**，不是整行可信度。
+3. **被提升为列的键不在 `semantic_options` 里**。
+4. **声明与指标语义来自不同产出方**：带声明的 6 行里 5 行连 `source` 都没有；反之 812 行 metric 全无声明。
+5. **不用 `table_schema` 过滤就会跨库**（catalog 级视图）。
 
 ---
 
@@ -38,7 +83,7 @@ FROM information_schema.table_semantics;
 |------|------|
 | 是 metric、接入来源 | `table_semantics`：`signal_type`、`source` |
 | 可信度 | `metadata_quality` |
-| 类型 counter / gauge / histogram / … | `semantic_options["metric.type"]`（declared） |
+| 类型 counter / gauge / histogram / … | `semantic_options["metric.type"]`（declared）；取值对齐 DB 白名单，`mixed`/`unknown` → 显式 unknown（不猜、不加 rate），`info`/`stateset` → gauge，`gauge_histogram` 与 native histogram → "暂不支持"占位 |
 | 单位 UCUM（`s`、`By`、`{request}`…） | `semantic_options["metric.unit"]` → 轴/tooltip；rate 时传播（如 `By`→`Bps`） |
 | cumulative / delta | `semantic_options["metric.temporality"]`；`delta` 不加 `rate()` |
 | OTel 原名 | `semantic_options["metric.original_name"]`（抽屉副标题） |
@@ -50,7 +95,7 @@ FROM information_schema.table_semantics;
 
 **注意**：存量 Prom RW 表常**只有** signal/source/quality（本实例 480 条 `inferred`、`semantic_options` 为 NULL），type/unit 靠名字启发式；histogram 常拆 `_bucket`/`_sum`/`_count`，仅 `_bucket` 的 type=histogram 走 heatmap。native（OTLP exponential）与 gauge histogram 没有 `_bucket`/`le` 矩阵，走"暂不支持"占位且**不发查询**。
 
-**已用 / 未用**：type·unit·temporality·original_name ✅；`source` UI、按 original_name 搜索、quality 提示、`entity_declarations` ⬜。
+**已用 / 未用**：type·unit·temporality·original_name·`entity_declarations`（身份列）✅；`source` UI、按 original_name 搜索、quality 提示、semantic graph ⬜。另外两条修正规则：`_sum`/`_count` 结尾的 declared histogram → 按 counter（RW2 family metadata 会误标整族）；声明 histogram 但同库无 `${name}_bucket` 伴生 → native，不发查询。
 
 ### Prometheus `/metadata`（另一条入口，dashboard 目前未用）
 
@@ -92,10 +137,27 @@ Related logs（从 Metrics）：不看 metric 名；要 `filters` + `logsTable` 
 
 ---
 
-## 跨信号（未做完）
+## 跨信号（部分实现）
 
 携带 **实体身份 + 作用域 + 时间**，各信号独立查，不做原始行 JOIN。  
-实体键可来自 `entity_declarations` / semantic graph，或今日的 filters（如 `service_name`）+ `trace_id`。
+
+**关联键（实测）**：
+
+| 关联 | 键 | 粒度 |
+|------|----|------|
+| logs ↔ traces | `trace_id`（两边都有） | **行级**，已实现双向跳转 |
+| metrics ↔ traces | 服务身份：metrics `service_name`/`job` ↔ traces `service_name` | 服务级 + 时间窗 |
+| metrics ↔ logs | metrics `job` ↔ logs `resource_attributes['service.name']` | 服务级 + 时间窗，需要一次名字翻译 |
+
+**统一 filter（三信号共用一份 `ctx.filters`）**：
+
+- 实体 key → 各信号物理 key 的解析：`entities.ts` 的 `resolveEntityFilterRef`（**声明 → v1 trace 模型 → source 约定**，都没有就不给实体）；
+- 别名词汇与 source 约定：`entity-keys.ts`（`service` / `job` / `service_name` / `resource_attributes.service.name` 视为同一实体，重复 filter 会归并成一条）；
+- 切信号时按目标信号重新编码（`context.setSignal`），所以"指标 → 该服务日志/调用链"不需要单独入口。
+
+**实测量级**：`job` 覆盖 1144 张表、`service_name` 258 张，两者同值时 0 条不等 → metrics 侧优先 `job`；缺 `job` 的 6 张表全是 trace 表。
+
+**仍缺**：logs 的 chip 型身份（需要角色级 JSON 打通）、metrics 侧按表 materialize、`idQualifier`（`service.namespace`）参与过滤、映射不到时置灰而非静默丢。
 
 ---
 
@@ -103,6 +165,7 @@ Related logs（从 Metrics）：不看 metric 名；要 `filters` + `logsTable` 
 
 | 信号 | 主要路径 |
 |------|----------|
+| 共用 | `table-semantics.ts`（db 作用域 dump：失败分类 + 10s 节流刷新）、`entities.ts`（实体定位链）、`entity-keys.ts`（别名词汇 + source 约定 + filter 归一化） |
 | Metrics | `resolve-metric-meta.ts`、`infer-promql.ts`、`metric-units.ts`、主图 / sparkline / Breakdown hooks |
-| Logs | `logs/resolve-table.ts`、`buildDefaultLogsFieldMap`、drilldown Related logs |
-| Traces | 现有 traces 页按标准列；Drilldown Traces 首页仍 ⬜ |
+| Logs | `logs/resolve-table.ts`、`logs/field-map.ts`、`use-drilldown-logs-init.ts` |
+| Traces | `traces/model.ts`（v1 模型常量）、`traces/resolve-table.ts`、`traces/field-map.ts`、`traces/service-column.ts` |

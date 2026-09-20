@@ -11,8 +11,12 @@ export default function useDrilldownTracesInit(ctx: DrilldownContext) {
   const { database } = storeToRefs(useAppStore())
 
   /** Declared service identity when the table has one; the v1 model column otherwise. */
-  const tracesFieldMapFor = async (tableName: string) =>
-    buildDefaultTracesFieldMap({ serviceColumn: await resolveTracesServiceColumn(tableName) })
+  const tracesFieldMapFor = async (tableName: string) => {
+    const serviceColumn = await resolveTracesServiceColumn(tableName)
+    // Publish it so a service filter set on another signal lands on this table's column.
+    ctx.setEntityFilterKey('traces', 'service', serviceColumn)
+    return buildDefaultTracesFieldMap({ serviceColumn })
+  }
 
   const applyTableAndFieldMap = async (tableName: string) => {
     ctx.fieldMap.value = {
@@ -48,6 +52,7 @@ export default function useDrilldownTracesInit(ctx: DrilldownContext) {
 
   watch(database, () => {
     ctx.tracesTable.value = undefined
+    ctx.setEntityFilterKey('traces', 'service', undefined)
     ctx.focusTraceId.value = undefined
     ctx.logsTraceId.value = undefined
     ctx.fieldMap.value = {

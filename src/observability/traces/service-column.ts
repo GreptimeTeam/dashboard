@@ -1,13 +1,13 @@
 import useTableSchemaStore from '@/store/modules/table-schema'
-import resolveEntityIdentity from '../entities'
+import { resolveEntityFilterRef } from '../entities'
 
 /**
- * Service identity column for a trace table: the declared identity first, then the
- * `greptime_trace_v1` model shape.
+ * Service identity column for a trace table: the declared identity, then the
+ * `greptime_trace_v1` model shape, then the source convention.
  *
- * Returns undefined when neither applies, so callers keep their own default. Chip-style
- * identities (a declaration pointing into a JSON container) are skipped — the trace
- * field map addresses physical columns only.
+ * Returns undefined when none applies, so callers keep their own default. Chip-style
+ * identities (a declaration pointing into a JSON container) are skipped — the trace field
+ * map addresses physical columns only.
  */
 export default async function resolveTracesServiceColumn(tableName: string): Promise<string | undefined> {
   const name = tableName.trim()
@@ -17,9 +17,8 @@ export default async function resolveTracesServiceColumn(tableName: string): Pro
 
   try {
     const columns = await useTableSchemaStore().ensureTableSchema(name)
-    const identity = await resolveEntityIdentity(name, 'service', columns)
-    const primary = identity?.id[0]
-    return primary && !primary.jsonKey ? primary.column : undefined
+    const reference = await resolveEntityFilterRef(name, 'service', { signal: 'traces', columns })
+    return reference && !reference.jsonKey ? reference.column : undefined
   } catch (error) {
     console.error(`Failed to resolve the service column for ${name}:`, error)
     return undefined

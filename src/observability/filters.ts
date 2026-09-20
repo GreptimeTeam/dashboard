@@ -1,6 +1,7 @@
 import { parseJsonFieldChipKey, sqlJsonGetStringExpr } from './logs/json-field-keys'
 import { UNKNOWN_LOG_LEVEL, normalizeLogLevelName } from './logs/level-color'
 import { buildSeverityLevelsPredicate, isSeverityFilterColumn } from './logs/level-visibility'
+import { normalizeEntityFilters } from './entity-keys'
 import type { DrilldownFilter, DrilldownFilterOp } from './types'
 
 const FILTER_OPS: DrilldownFilterOp[] = ['=', '!=', '=~', '!~']
@@ -184,6 +185,10 @@ export type PromMatcherPart = {
 /**
  * Prom matchers from filters. Same-key include values already merged to `=` / `=~`.
  * `__name__` chip is skipped (catalog-only); optional metric override adds `__name__=`.
+ *
+ * Prom matchers are the metrics signal's vocabulary, so entity filters are normalized
+ * first: a canonical `service` chip becomes the metric label (`job`), and alias
+ * duplicates collapse instead of ANDing two labels.
  */
 export function filtersToPromMatcherParts(
   filters: DrilldownFilter[],
@@ -191,7 +196,7 @@ export function filtersToPromMatcherParts(
 ): PromMatcherPart[] {
   const parts: PromMatcherPart[] = []
 
-  filters.forEach((filter) => {
+  normalizeEntityFilters(filters, 'metrics').forEach((filter) => {
     if (filter.key === '__name__' || filter.key === options?.excludeKey) {
       return
     }

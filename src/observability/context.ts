@@ -1,5 +1,6 @@
 import { inject, provide, ref, type InjectionKey, type Ref } from 'vue'
 import useTimeRange from '@/hooks/use-time-range'
+import { normalizeEntityFilters } from './entity-keys'
 import { DEFAULT_LOGS_BODY_OP, type LogsBodyOp } from './logs/body-search'
 import {
   DEFAULT_FIELD_MAP,
@@ -26,6 +27,12 @@ export interface DrilldownContext {
   logsTable: Ref<string | undefined>
   tracesTable: Ref<string | undefined>
   fieldMap: Ref<DrilldownFieldMap>
+  /**
+   * Physical filter key each signal resolved for an entity on its bound table
+   * (e.g. logs → `resource_attributes.service.name`, traces → `service_name`).
+   * Lets one shared filter carry across signals; empty when nothing resolved.
+   */
+  entityFilterKeys: Ref<Partial<Record<DrilldownSignal, Record<string, string>>>>
   /** Logs overview vs detail shell (URL `logsView`). */
   logsView: Ref<LogsView>
   /** Active tab inside logs detail (URL `logsTab`). */
@@ -44,6 +51,7 @@ export interface DrilldownContext {
   refreshKey: Ref<number>
   triggerRefresh: () => void
   setSignal: (signal: DrilldownSignal) => void
+  setEntityFilterKey: (signal: DrilldownSignal, entityKey: string, key: string | undefined) => void
   setFilters: (filters: DrilldownFilter[]) => void
   setSidebarFilters: (filters: DrilldownSidebarFilters) => void
   appendFilter: (filter: DrilldownFilter) => void
@@ -79,6 +87,17 @@ export function useDrilldownContextProvider(): DrilldownContext {
   const detailTab = ref<MetricDetailTab>('breakdown')
   const focusTraceId = ref<string | undefined>()
   const logsTraceId = ref<string | undefined>()
+  const entityFilterKeys = ref<Partial<Record<DrilldownSignal, Record<string, string>>>>({})
+
+  const setEntityFilterKey = (signalName: DrilldownSignal, entityKey: string, key: string | undefined) => {
+    const perSignal = { ...(entityFilterKeys.value[signalName] ?? {}) }
+    if (key) {
+      perSignal[entityKey] = key
+    } else {
+      delete perSignal[entityKey]
+    }
+    entityFilterKeys.value = { ...entityFilterKeys.value, [signalName]: perSignal }
+  }
   const logsTable = ref<string | undefined>()
   const tracesTable = ref<string | undefined>()
   const fieldMap = ref({ ...DEFAULT_FIELD_MAP })
@@ -117,12 +136,22 @@ export function useDrilldownContextProvider(): DrilldownContext {
 
   const resolveLogsDetailGroupFromFilters = (): string | undefined => {
     const logsMap = fieldMap.value.logs
-    const chipKeys = new Set([logsMap.primaryGroupBy, logsMap.service, 'service'].filter(Boolean) as string[])
+    // The service filter may arrive as a JSON chip (logs identity lives in
+    // `resource_attributes`), so include the key resolved from the bound table.
+    const chipKeys = new Set(
+      [logsMap.primaryGroupBy, logsMap.service, entityFilterKeys.value.logs?.service, 'service'].filter(
+        Boolean
+      ) as string[]
+    )
     const match = filters.value.find((f) => f.op === '=' && chipKeys.has(f.key))
     return match?.value
   }
 
   const setSignal = (next: DrilldownSignal) => {
+    // One shared filter list: re-key entity filters into the target signal's vocabulary.
+    // The bound table's resolved key wins (logs may need a JSON chip, traces a column);
+    // without one we fall back to the signal's convention.
+    filters.value = normalizeEntityFilters(filters.value, next, (entity) => entityFilterKeys.value[next]?.[entity])
     if (next !== 'metrics') {
       metric.value = undefined
     }
@@ -234,6 +263,8 @@ export function useDrilldownContextProvider(): DrilldownContext {
     refreshKey,
     triggerRefresh,
     setSignal,
+    entityFilterKeys,
+    setEntityFilterKey,
     setFilters,
     setSidebarFilters,
     appendFilter,
