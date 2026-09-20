@@ -64,6 +64,10 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
       const columns = await tableSchemaStore.ensureTableSchema(tableName)
       const reference = await resolveEntityFilterRef(tableName, 'service', { signal: 'logs', columns })
       ctx.setEntityFilterKey('logs', 'service', reference ? entityColumnFilterKey(reference) : undefined)
+      ctx.setSignalColumns(
+        'logs',
+        columns.map((column) => column.name)
+      )
       // A signal switch that happened before this table was bound could only fall back to
       // the `service` role; re-encode now that the real key (possibly a JSON chip) is known.
       ctx.setFilters(
@@ -127,6 +131,7 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
   watch(database, () => {
     ctx.logsTable.value = undefined
     ctx.setEntityFilterKey('logs', 'service', undefined)
+    ctx.setSignalColumns('logs', undefined)
     ctx.fieldMap.value = {
       ...ctx.fieldMap.value,
       logs: {},

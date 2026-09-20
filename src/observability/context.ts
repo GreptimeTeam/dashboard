@@ -33,6 +33,12 @@ export interface DrilldownContext {
    * Lets one shared filter carry across signals; empty when nothing resolved.
    */
   entityFilterKeys: Ref<Partial<Record<DrilldownSignal, Record<string, string>>>>
+  /**
+   * Physical columns of the bound table per signal. Decides whether a filter applies to the
+   * current signal (so carried-over conditions can be shown as not applied) and lets dotted
+   * attribute columns resolve as columns instead of JSON chips.
+   */
+  signalColumns: Ref<Partial<Record<DrilldownSignal, string[]>>>
   /** Logs overview vs detail shell (URL `logsView`). */
   logsView: Ref<LogsView>
   /** Active tab inside logs detail (URL `logsTab`). */
@@ -52,6 +58,7 @@ export interface DrilldownContext {
   triggerRefresh: () => void
   setSignal: (signal: DrilldownSignal) => void
   setEntityFilterKey: (signal: DrilldownSignal, entityKey: string, key: string | undefined) => void
+  setSignalColumns: (signal: DrilldownSignal, columns: string[] | undefined) => void
   setFilters: (filters: DrilldownFilter[]) => void
   setSidebarFilters: (filters: DrilldownSidebarFilters) => void
   appendFilter: (filter: DrilldownFilter) => void
@@ -88,6 +95,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
   const focusTraceId = ref<string | undefined>()
   const logsTraceId = ref<string | undefined>()
   const entityFilterKeys = ref<Partial<Record<DrilldownSignal, Record<string, string>>>>({})
+  const signalColumns = ref<Partial<Record<DrilldownSignal, string[]>>>({})
 
   const setEntityFilterKey = (signalName: DrilldownSignal, entityKey: string, key: string | undefined) => {
     const perSignal = { ...(entityFilterKeys.value[signalName] ?? {}) }
@@ -97,6 +105,10 @@ export function useDrilldownContextProvider(): DrilldownContext {
       delete perSignal[entityKey]
     }
     entityFilterKeys.value = { ...entityFilterKeys.value, [signalName]: perSignal }
+  }
+
+  const setSignalColumns = (signalName: DrilldownSignal, columns: string[] | undefined) => {
+    signalColumns.value = { ...signalColumns.value, [signalName]: columns?.length ? columns : undefined }
   }
   const logsTable = ref<string | undefined>()
   const tracesTable = ref<string | undefined>()
@@ -265,6 +277,8 @@ export function useDrilldownContextProvider(): DrilldownContext {
     setSignal,
     entityFilterKeys,
     setEntityFilterKey,
+    signalColumns,
+    setSignalColumns,
     setFilters,
     setSidebarFilters,
     appendFilter,

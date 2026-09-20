@@ -154,6 +154,7 @@ Related logs（从 Metrics）：不看 metric 名；要 `filters` + `logsTable` 
 - 实体 key → 各信号物理 key 的解析：`entities.ts` 的 `resolveEntityFilterRef`（**声明 → v1 trace 模型 → source 约定**，都没有就不给实体）；
 - 别名词汇与 source 约定：`entity-keys.ts`（`service` / `job` / `service_name` / `resource_attributes.service.name` 视为同一实体，重复 filter 会归并成一条）；
 - 切信号时按目标信号重新编码（`context.setSignal`），所以"指标 → 该服务日志/调用链"不需要单独入口。
+- **不适用的条件不显示也不参与查询，但不销毁**：`filterAppliesToSignal`（`filters.ts`）按当前信号绑定表的列判断；命名了本表没有的列（例如 metrics 的 `container_name` 带到 traces）时，该 chip 从当前信号隐藏、查询里跳过，切回支持它的信号又出现。绑定表之前不做判断，避免闪烁。
 
 **实测量级**：`job` 覆盖 1144 张表、`service_name` 258 张，两者同值时 0 条不等 → metrics 侧优先 `job`；缺 `job` 的 6 张表全是 trace 表。
 

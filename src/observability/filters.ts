@@ -2,7 +2,7 @@ import { parseJsonFieldChipKey, sqlJsonGetStringExpr } from './logs/json-field-k
 import { UNKNOWN_LOG_LEVEL, normalizeLogLevelName } from './logs/level-color'
 import { buildSeverityLevelsPredicate, isSeverityFilterColumn } from './logs/level-visibility'
 import { normalizeEntityFilters } from './entity-keys'
-import type { DrilldownFilter, DrilldownFilterOp } from './types'
+import type { DrilldownFilter, DrilldownFilterOp, DrilldownSignal } from './types'
 
 const FILTER_OPS: DrilldownFilterOp[] = ['=', '!=', '=~', '!~']
 
@@ -322,11 +322,19 @@ function sqlPredicateForFilter(
   return undefined
 }
 
-/** SQL WHERE fragments from filters that have a fieldMap column or JSON attribute chip. */
+/**
+ * SQL WHERE fragments from filters that name a real column, a fieldMap column, or a JSON
+ * attribute chip.
+ *
+ * `columns` (the bound table's physical columns) disambiguates dotted keys: trace tables
+ * flatten attributes into `resource_attributes.*` / `span_attributes.*` **columns**, so an
+ * exact column match must win over the JSON chip reading — that reading would target a
+ * container column those tables do not have.
+ */
 export function filtersToSqlWhere(
   filters: DrilldownFilter[],
   fieldMap: Record<string, string>,
-  options?: { excludeKey?: string; jsonColumns?: string[]; containsColumns?: string[] }
+  options?: { excludeKey?: string; jsonColumns?: string[]; containsColumns?: string[]; columns?: string[] }
 ): string[] {
   const parts: string[] = []
   const jsonColumns = options?.jsonColumns ?? []
@@ -336,17 +344,20 @@ export function filtersToSqlWhere(
       return
     }
 
-    const jsonChip = parseJsonFieldChipKey(filter.key, jsonColumns)
-    if (jsonChip) {
-      const expr = sqlJsonGetStringExpr(jsonChip.column, jsonChip.path)
-      const jsonPredicate = sqlPredicateForFilter(filter, expr, { isExpr: true })
-      if (jsonPredicate) {
-        parts.push(jsonPredicate)
+    const physical = options?.columns?.includes(filter.key) ? filter.key : undefined
+    if (!physical) {
+      const jsonChip = parseJsonFieldChipKey(filter.key, jsonColumns)
+      if (jsonChip) {
+        const expr = sqlJsonGetStringExpr(jsonChip.column, jsonChip.path)
+        const jsonPredicate = sqlPredicateForFilter(filter, expr, { isExpr: true })
+        if (jsonPredicate) {
+          parts.push(jsonPredicate)
+        }
+        return
       }
-      return
     }
 
-    const column = resolveFieldMapColumn(filter.key, fieldMap)
+    const column = physical ?? resolveFieldMapColumn(filter.key, fieldMap)
     if (!column) {
       return
     }
@@ -374,6 +385,45 @@ export function filtersToSqlWhere(
   })
 
   return parts
+}
+
+/**
+ * Whether a shared filter can be applied to `signal`'s bound table.
+ *
+ * Filters are shared across signals, so a condition set on metrics (e.g. `container_name`)
+ * may name a column another signal's table does not have. Such a filter is dropped from that
+ * signal's view and queries — but it is *not* removed from the shared state, so switching
+ * back to a signal that supports it brings it back.
+ *
+ * Metrics always pass: labels live per metric table, so there is nothing single to validate
+ * against. Logs/traces pass when the key is a column of the bound table, a JSON attribute
+ * chip inside one of its containers, or a fieldMap role. Until a table is bound (`columns`
+ * unknown) everything passes, so nothing disappears while the table is still resolving.
+ */
+export function filterAppliesToSignal(
+  filter: DrilldownFilter,
+  signal: DrilldownSignal,
+  options?: { fieldMap?: Record<string, string>; columns?: string[]; jsonColumns?: string[] }
+): boolean {
+  const key = filter.key.trim()
+  if (!key) {
+    return false
+  }
+  if (signal === 'metrics') {
+    return true
+  }
+  const columns = options?.columns
+  if (!columns?.length) {
+    return true
+  }
+  if (columns.includes(key)) {
+    return true
+  }
+  const jsonChip = parseJsonFieldChipKey(key, options?.jsonColumns ?? [])
+  if (jsonChip && columns.includes(jsonChip.column)) {
+    return true
+  }
+  return Boolean(options?.fieldMap && resolveFieldMapColumn(key, options.fieldMap))
 }
 
 /** True when a logs table is bound and at least one filter maps via logs fieldMap. */

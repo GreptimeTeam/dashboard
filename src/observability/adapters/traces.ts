@@ -77,7 +77,9 @@ export function buildTracesContextWhere(
     whereParts.push(`${quoteIdent(parentColumn(ctx))} IS NULL`)
   }
 
-  whereParts.push(...filtersToSqlWhere(ctx.filters.value, map))
+  whereParts.push(
+    ...filtersToSqlWhere(ctx.filters.value, map, { columns: ctx.signalColumns.value.traces })
+  )
 
   options?.extraEquals?.forEach(({ column, value }) => {
     whereParts.push(`${quoteIdent(column)} = '${escapeSqlString(value)}'`)
@@ -178,9 +180,14 @@ export async function fetchRootSpanList(
   const where = [baseWhere, ...extraWhere].join(' AND ')
 
   const limit = options?.limit ?? ROOT_SPAN_LIMIT
-  const selectCols = rootSpanSelectColumns(ctx)
-    .map(({ alias, column }) => `${quoteIdent(column)} AS ${quoteIdent(alias)}`)
-    .join(', ')
+  // Whole row: the list's Columns picker must be able to show every column of the table,
+  // not only the roles this view maps. Role aliases are added on top when the field map
+  // points a role at a different column, so the canonical keys stay readable.
+  const roleAliases = rootSpanSelectColumns(ctx).filter(({ alias, column }) => alias !== column)
+  const selectCols = [
+    '*',
+    ...roleAliases.map(({ alias, column }) => `${quoteIdent(column)} AS ${quoteIdent(alias)}`),
+  ].join(', ')
   const sql = `SELECT ${selectCols}
 FROM ${quoteIdent(tableName)}
 WHERE ${where}

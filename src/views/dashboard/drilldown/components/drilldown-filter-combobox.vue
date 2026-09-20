@@ -93,6 +93,7 @@
     isContainsFilterKey,
     isSqlFieldKey,
     isVisibleFilterKey,
+    isFilterApplicable,
     loadKeys,
     loadValues,
     getValueOptions,
@@ -216,7 +217,14 @@
   const visibleFilterItems = computed(() =>
     filters.value
       .map((filter, index) => ({ filter, index }))
-      .filter((item) => editingIndex.value !== item.index && isVisibleFilterKey(item.filter.key))
+      .filter(
+        (item) =>
+          editingIndex.value !== item.index &&
+          isVisibleFilterKey(item.filter.key) &&
+          // Not applicable to this signal's table: hidden here, kept in the shared state so
+          // switching back to a signal that supports it shows it again.
+          isFilterApplicable(item.filter.key)
+      )
   )
 
   const filterChipKey = (filter: DrilldownFilter, index: number) =>

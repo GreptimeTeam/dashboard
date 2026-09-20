@@ -5,16 +5,25 @@ import { loadDrilldownSettings } from '@/observability/drilldown-settings'
 import { buildDefaultTracesFieldMap } from '@/observability/traces/field-map'
 import { resolveTracesTable } from '@/observability/traces/resolve-table'
 import resolveTracesServiceColumn from '@/observability/traces/service-column'
+import useTableSchemaStore from '@/store/modules/table-schema'
 import type { DrilldownContext } from './context'
 
 export default function useDrilldownTracesInit(ctx: DrilldownContext) {
   const { database } = storeToRefs(useAppStore())
+  const tableSchemaStore = useTableSchemaStore()
 
   /** Declared service identity when the table has one; the v1 model column otherwise. */
   const tracesFieldMapFor = async (tableName: string) => {
     const serviceColumn = await resolveTracesServiceColumn(tableName)
     // Publish it so a service filter set on another signal lands on this table's column.
     ctx.setEntityFilterKey('traces', 'service', serviceColumn)
+    try {
+      const columns = await tableSchemaStore.ensureTableSchema(tableName)
+      ctx.setSignalColumns('traces', columns.map((column) => column.name))
+    } catch (error) {
+      console.error(`Failed to load columns for ${tableName}:`, error)
+      ctx.setSignalColumns('traces', undefined)
+    }
     return buildDefaultTracesFieldMap({ serviceColumn })
   }
 
@@ -53,6 +62,7 @@ export default function useDrilldownTracesInit(ctx: DrilldownContext) {
   watch(database, () => {
     ctx.tracesTable.value = undefined
     ctx.setEntityFilterKey('traces', 'service', undefined)
+    ctx.setSignalColumns('traces', undefined)
     ctx.focusTraceId.value = undefined
     ctx.logsTraceId.value = undefined
     ctx.fieldMap.value = {

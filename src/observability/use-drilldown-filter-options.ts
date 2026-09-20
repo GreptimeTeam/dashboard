@@ -10,6 +10,7 @@ import {
 } from './adapters/filter-options'
 import type { DrilldownContext } from './context'
 import { loadDrilldownSettings } from './drilldown-settings'
+import { filterAppliesToSignal } from './filters'
 import { parseJsonFieldChipKey } from './logs/json-field-keys'
 import { isLogsContainsFilterKey } from './logs/field-map'
 
@@ -173,6 +174,18 @@ export default function useDrilldownFilterOptions(
     }
   )
 
+  /**
+   * Whether a committed filter applies to the current signal's bound table. Filters are
+   * shared, so one carried over from metrics may name a column this table lacks; it is then
+   * hidden from this signal's bar (and its queries) but stays in the shared state, so
+   * switching back to a signal that supports it brings it back.
+   */
+  const isFilterApplicable = (key: string): boolean =>
+    filterAppliesToSignal({ key, op: '=', value: '' }, ctx.signal.value, {
+      fieldMap: fieldMapForActiveSql(),
+      columns: ctx.signalColumns.value[ctx.signal.value],
+    })
+
   watch(
     () =>
       [
@@ -207,6 +220,7 @@ export default function useDrilldownFilterOptions(
     sqlFieldKeys: labelKeys,
     isSqlFieldKey,
     isVisibleFilterKey,
+    isFilterApplicable,
     loadKeys,
     loadValues,
     getValueOptions,

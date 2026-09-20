@@ -162,6 +162,7 @@ export async function buildLogsContextWhere(
     whereParts.push(
       ...filtersToSqlWhere(ctx.filters.value, fieldMap, {
         excludeKey: options?.excludeFilterKey,
+        columns: columns.map((column) => column.name),
         jsonColumns: listJsonAttributeColumns(columns),
         containsColumns: discoverLogsContainsColumns(columns, fieldMap, {
           include: settings.labelInclude,
@@ -195,6 +196,7 @@ export async function buildLogsWhere(ctx: DrilldownContext): Promise<string> {
   const fieldMap = ctx.fieldMap.value.logs
   const settings = loadDrilldownSettings().logs
   const whereParts = filtersToSqlWhere(ctx.filters.value, fieldMap, {
+    columns: columns.map((column) => column.name),
     jsonColumns: listJsonAttributeColumns(columns),
     containsColumns: discoverLogsContainsColumns(columns, fieldMap, {
       include: settings.labelInclude,

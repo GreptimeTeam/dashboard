@@ -3,6 +3,7 @@ import { normalizeEntityFilters } from './entity-keys'
 import {
   addFilter,
   buildPromMatchersString,
+  filterAppliesToSignal,
   filterIncludesValue,
   filtersToSqlWhere,
   hasLogsMappedFilters,
@@ -209,5 +210,43 @@ describe('entity filter keys across signals', () => {
     expect(normalizeEntityFilters([{ key: 'service_name', op: '=', value: 'frontend' }], 'logs')).toEqual([
       { key: 'service', op: '=', value: 'frontend' },
     ])
+  })
+})
+
+describe('filterAppliesToSignal', () => {
+  const filter = (key: string) => ({ key, op: '=' as const, value: 'v' })
+
+  it('always applies on metrics (labels are per metric table)', () => {
+    expect(filterAppliesToSignal(filter('container_name'), 'metrics')).toBe(true)
+  })
+
+  it('keeps everything until the signal table is bound', () => {
+    expect(filterAppliesToSignal(filter('container_name'), 'traces')).toBe(true)
+    expect(filterAppliesToSignal(filter('container_name'), 'traces', { columns: [] })).toBe(true)
+  })
+
+  it('drops keys the bound table does not have', () => {
+    // `container_name` is a metric label; the trace table has no such column.
+    expect(filterAppliesToSignal(filter('container_name'), 'traces', { columns: ['trace_id', 'service_name'] })).toBe(
+      false
+    )
+    expect(filterAppliesToSignal(filter('trace_id'), 'traces', { columns: ['trace_id'] })).toBe(true)
+    // Flattened attribute columns are real columns on trace tables.
+    expect(
+      filterAppliesToSignal(filter('resource_attributes.container.id'), 'traces', {
+        columns: ['resource_attributes.container.id'],
+      })
+    ).toBe(true)
+  })
+
+  it('accepts a JSON attribute chip when its container column exists', () => {
+    expect(
+      filterAppliesToSignal(filter('resource_attributes.service.name'), 'logs', {
+        columns: ['resource_attributes', 'timestamp'],
+      })
+    ).toBe(true)
+    expect(filterAppliesToSignal(filter('log_attributes.http.status_code'), 'logs', { columns: ['timestamp'] })).toBe(
+      false
+    )
   })
 })
