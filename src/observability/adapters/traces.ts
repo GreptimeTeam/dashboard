@@ -78,7 +78,12 @@ export function buildTracesContextWhere(
   }
 
   whereParts.push(
-    ...filtersToSqlWhere(ctx.filters.value, map, { columns: ctx.signalColumns.value.traces })
+    ...filtersToSqlWhere(ctx.filters.value, map, {
+      columns: ctx.signalColumns.value.traces,
+      // Attribute columns are typed (bigint / boolean / …): literals must render accordingly,
+      // e.g. `"x" > 1000000000` and `"flag" = TRUE` instead of quoted strings.
+      typeOf: (column) => ctx.signalColumnTypes.value.traces?.[column],
+    })
   )
 
   options?.extraEquals?.forEach(({ column, value }) => {

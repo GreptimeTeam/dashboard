@@ -181,6 +181,33 @@ export function discoverTraceLabelColumns(columns: SchemaColumnLike[]): string[]
   return TRACE_LABEL_KEYS.filter((key) => names.has(key))
 }
 
+/**
+ * Top-bar filter keys for a traces table: every business field a user can filter on —
+ * intrinsic span/resource columns plus the flattened `resource_attributes.*` /
+ * `span_attributes.*` attributes, and `duration_nano` (numeric comparisons).
+ *
+ * Identity/payload/time columns stay out: `trace_id` / `span_id` / `parent_span_id` have
+ * dedicated entry points (Trace ID search, Gantt), and `span_events` / `span_links` /
+ * `trace_state` are not useful predicates.
+ */
+export function discoverTraceFilterKeys(
+  columns: SchemaColumnLike[],
+  options?: { exclude?: readonly string[] }
+): string[] {
+  const exclude = new Set(options?.exclude ?? [])
+  const keys = new Set<string>()
+  discoverTraceBreakdownAttributes(columns).forEach((attr) => {
+    if (!exclude.has(attr.column)) {
+      keys.add(attr.column)
+    }
+  })
+  const names = new Set(columns.map((column) => column.name))
+  if (names.has('duration_nano') && !exclude.has('duration_nano')) {
+    keys.add('duration_nano')
+  }
+  return [...keys].sort((a, b) => a.localeCompare(b))
+}
+
 export function tableHasRequiredTraceColumns(columnNames: string[]): boolean {
   const set = new Set(columnNames)
   return TRACE_REQUIRED_COLUMNS.every((name) => set.has(name))

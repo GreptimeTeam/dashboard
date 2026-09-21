@@ -77,6 +77,7 @@
   import { buildDefaultTracesFieldMap } from '@/observability/traces/field-map'
   import resolveTracesServiceColumn from '@/observability/traces/service-column'
   import { listTracesTables } from '@/observability/traces/resolve-table'
+  import resolveLogsRoles from '@/observability/logs/resolved-roles'
   import type { ColumnType, QueryState } from '@/types/query'
   import { isTracesHomeTab } from '@/observability/types'
   import useDrilldownPanelTab from '@/observability/use-drilldown-panel-tab'

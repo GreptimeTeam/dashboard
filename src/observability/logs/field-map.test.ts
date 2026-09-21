@@ -6,6 +6,7 @@ import {
   classifyLogsFilterKey,
   discoverFieldColumns,
   discoverLabelColumns,
+  discoverLogFilterKeys,
   discoverLogsContainsColumns,
   discoverLogsFilterKeyColumns,
   isLogsBodyFilterKey,
@@ -338,6 +339,69 @@ describe('classifyLogsFilterKey', () => {
     expect(chipKeyForLogsTableFilter('level', columns, fieldMap)).toBe('level')
     expect(chipKeyForLogsTableFilter('pod', columns, fieldMap)).toBe('pod')
     expect(chipKeyForLogsTableFilter('body', columns, fieldMap)).toBe('body')
+  })
+})
+
+describe('top-bar filter keys (long tail pool)', () => {
+  const columns: SchemaColumn[] = [
+    { name: 'timestamp', data_type: 'TimestampNanosecond', semantic_type: 'TIMESTAMP' },
+    { name: 'body', data_type: 'String', semantic_type: 'FIELD' },
+    { name: 'severity_text', data_type: 'String', semantic_type: 'FIELD' },
+    { name: 'severity_number', data_type: 'Int32', semantic_type: 'FIELD' },
+    { name: 'trace_flags', data_type: 'Int32', semantic_type: 'FIELD' },
+    { name: 'trace_id', data_type: 'String', semantic_type: 'FIELD' },
+    { name: 'scope_name', data_type: 'String', semantic_type: 'TAG' },
+    { name: 'resource_attributes', data_type: 'Json', semantic_type: 'FIELD' },
+    { name: 'log_attributes', data_type: 'Json', semantic_type: 'FIELD' },
+  ]
+  const fieldMap = {
+    time: 'timestamp',
+    body: 'body',
+    severity: 'severity_text',
+    service: 'resource_attributes.service.name',
+    primaryGroupBy: 'resource_attributes.service.name',
+    traceId: 'trace_id',
+  }
+
+  beforeEach(() => {
+    vi.mocked(editorApi.runSQL).mockReset()
+    vi.mocked(editorApi.runSQL).mockResolvedValue({
+      output: [{ records: { rows: [[{ 'service.name': 'cart', 'http.route': '/api' }]] } }],
+    } as never)
+  })
+
+  it('offers business columns and every sampled attribute chip', async () => {
+    const keys = await discoverLogFilterKeys('opentelemetry_logs', columns, fieldMap, {
+      serviceKey: 'resource_attributes.service.name',
+    })
+
+    expect(keys).toContain('severity_number')
+    expect(keys).toContain('trace_flags')
+    expect(keys).toContain('trace_id')
+    expect(keys).toContain('scope_name')
+    expect(keys).toContain('log_attributes.http.route')
+
+    // Dedicated entry points (time / body / level / service) and JSON containers stay out.
+    expect(keys).not.toContain('timestamp')
+    expect(keys).not.toContain('body')
+    expect(keys).not.toContain('severity_text')
+    expect(keys).not.toContain('resource_attributes.service.name')
+    expect(keys).not.toContain('resource_attributes')
+    expect(keys).not.toContain('log_attributes')
+  })
+
+  it('excludes a flat service column when the entity key is that column', async () => {
+    const flatColumns: SchemaColumn[] = [
+      ...columns,
+      { name: 'service_name', data_type: 'String', semantic_type: 'TAG' },
+    ]
+    const keys = await discoverLogFilterKeys(
+      'logs_flat',
+      flatColumns,
+      { ...fieldMap, service: 'service_name' },
+      { serviceKey: 'service_name' }
+    )
+    expect(keys).not.toContain('service_name')
   })
 })
 

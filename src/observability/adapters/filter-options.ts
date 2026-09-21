@@ -3,7 +3,7 @@ import useTableSchemaStore from '@/store/modules/table-schema'
 import { getLabelNames, getLabelValues } from '@/api/metrics'
 import type { DrilldownContext } from '../context'
 import { loadDrilldownSettings } from '../drilldown-settings'
-import { buildPromMatchSelector, isGreptimePromMatchSelector, resolveFieldMapColumn } from '../filters'
+import { buildPromMatchSelector, isGreptimePromMatchSelector, resolveFieldMapColumn, sqlValueLiteral } from '../filters'
 import {
   discoverFieldColumns,
   discoverLabelColumns,
@@ -20,7 +20,7 @@ import {
   sqlJsonGetStringExpr,
   type SchemaColumn,
 } from '../logs/field-map'
-import { discoverTraceLabelColumns } from '../traces/field-map'
+import { discoverTraceFilterKeys } from '../traces/field-map'
 import type { DrilldownFilter, DrilldownSignal } from '../types'
 
 const INTERNAL_LABEL_PREFIX = '__'
@@ -100,7 +100,9 @@ export async function fetchSqlLabelKeys(
   try {
     const columns = (await useTableSchemaStore().ensureTableSchema(tableName)) as SchemaColumn[]
     if (signal === 'traces') {
-      const keys = discoverTraceLabelColumns(columns)
+      // Traces expose every business field as a top-bar filter key (intrinsic + flattened
+      // resource/span attributes + duration), not the v1 label subset.
+      const keys = discoverTraceFilterKeys(columns)
       return filterOptions(filterLabelKeys(keys), search)
     }
     const fieldMap = fieldMapForSignal(ctx, signal)
@@ -186,7 +188,9 @@ export async function fetchLogsFilterKeyOptions(ctx: DrilldownContext, search = 
     const keys = await discoverLogFilterKeys(tableName, columns, fieldMap, {
       include: settings?.labelInclude,
       exclude: settings?.labelExclude,
-      identityChip: ctx.entityFilterKeys.value.logs?.service,
+      // Service keeps its own entry point (detail row / cross-signal chip), so it is not
+      // offered again from the generic suggestion list.
+      serviceKey: ctx.entityFilterKeys.value.logs?.service,
     })
     return filterOptions(filterLabelKeys(keys), search)
   } catch (error) {
@@ -249,8 +253,14 @@ function resolveSqlSuggestColumn(
   chipKey: string,
   fieldMap: Record<string, string>,
   labelKeys: string[],
-  jsonColumns: string[] = []
+  jsonColumns: string[] = [],
+  columns: string[] = []
 ): string | undefined {
+  // Flattened attribute columns look like chips (`span_attributes.http.status_code`) but are
+  // real columns on trace tables — the physical reading must win.
+  if (columns.includes(chipKey)) {
+    return chipKey
+  }
   if (parseJsonFieldChipKey(chipKey, jsonColumns)) {
     // Sentinel: callers use parseJsonFieldChipKey for the real SQL expression.
     return chipKey
@@ -269,12 +279,15 @@ function resolveSqlSuggestColumn(
 function sqlValueSelectExpr(
   chipKey: string,
   columnName: string,
-  jsonColumns: string[] = []
+  jsonColumns: string[] = [],
+  columns: string[] = []
 ): { selectExpr: string; nullCheck: string } {
-  const jsonChip = parseJsonFieldChipKey(chipKey, jsonColumns)
-  if (jsonChip) {
-    const expr = sqlJsonGetStringExpr(jsonChip.column, jsonChip.path)
-    return { selectExpr: expr, nullCheck: `${expr} IS NOT NULL` }
+  if (!columns.includes(columnName)) {
+    const jsonChip = parseJsonFieldChipKey(chipKey, jsonColumns)
+    if (jsonChip) {
+      const expr = sqlJsonGetStringExpr(jsonChip.column, jsonChip.path)
+      return { selectExpr: expr, nullCheck: `${expr} IS NOT NULL` }
+    }
   }
   return { selectExpr: `"${columnName}"`, nullCheck: `"${columnName}" IS NOT NULL` }
 }
@@ -284,18 +297,27 @@ function sqlFilterEqualsClause(
   filterValue: string,
   fieldMap: Record<string, string>,
   labelKeys: string[],
-  jsonColumns: string[] = []
+  jsonColumns: string[],
+  columns: string[],
+  dataType?: string
 ): string | undefined {
-  const jsonChip = parseJsonFieldChipKey(filterKey, jsonColumns)
-  if (jsonChip) {
-    const expr = sqlJsonGetStringExpr(jsonChip.column, jsonChip.path)
-    return `${expr} = '${filterValue.replace(/'/g, "''")}'`
+  if (!columns.includes(filterKey)) {
+    const jsonChip = parseJsonFieldChipKey(filterKey, jsonColumns)
+    if (jsonChip) {
+      const expr = sqlJsonGetStringExpr(jsonChip.column, jsonChip.path)
+      return `${expr} = '${filterValue.replace(/'/g, "''")}'`
+    }
   }
   const mapped = resolveFieldMapColumn(filterKey, fieldMap) || (labelKeys.includes(filterKey) ? filterKey : undefined)
   if (!mapped) {
     return undefined
   }
-  return `"${mapped}" = '${filterValue.replace(/'/g, "''")}'`
+  // Typed columns need typed literals: `"flag" = 'true'` fails planning (Boolean = Utf8).
+  const literal = sqlValueLiteral(dataType, filterValue)
+  if (!literal) {
+    return undefined
+  }
+  return `"${mapped}" = ${literal}`
 }
 
 export async function fetchSqlLabelValues(
@@ -329,12 +351,14 @@ export async function fetchSqlLabelValues(
     }
   }
 
-  const columnName = resolveSqlSuggestColumn(trimmedKey, fieldMap, labelKeys, jsonColumns)
+  const columnNames = columns.map((column) => column.name)
+  const columnTypes = new Map(columns.map((column) => [column.name, column.data_type || '']))
+  const columnName = resolveSqlSuggestColumn(trimmedKey, fieldMap, labelKeys, jsonColumns, columnNames)
   if (!columnName) {
     return []
   }
 
-  const { selectExpr, nullCheck } = sqlValueSelectExpr(trimmedKey, columnName, jsonColumns)
+  const { selectExpr, nullCheck } = sqlValueSelectExpr(trimmedKey, columnName, jsonColumns, columnNames)
   const unixRange = ctx.unixTimeRange()
   const whereParts = [nullCheck]
 
@@ -358,7 +382,15 @@ export async function fetchSqlLabelValues(
     if (filter.key === trimmedKey || filter.op !== '=') {
       return
     }
-    const clause = sqlFilterEqualsClause(filter.key, filter.value, fieldMap, labelKeys, jsonColumns)
+    const clause = sqlFilterEqualsClause(
+      filter.key,
+      filter.value,
+      fieldMap,
+      labelKeys,
+      jsonColumns,
+      columnNames,
+      columnTypes.get(filter.key)
+    )
     if (clause) {
       whereParts.push(clause)
     }

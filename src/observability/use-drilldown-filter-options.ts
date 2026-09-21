@@ -145,8 +145,10 @@ export default function useDrilldownFilterOptions(
         return labelKeys.value.includes(trimmed)
       }
 
-      // Topbar: suggested keys, plus service aliases that resolve onto those keys.
-      if (trimmed === 'service' || trimmed === 'primaryGroupBy') {
+      // Topbar: suggested keys, plus the keys that own a dedicated entry point (service
+      // aliases, body role). Those are no longer offered as suggestions, but a filter carried
+      // in a URL must stay visible instead of silently filtering without any pill.
+      if (trimmed === 'service' || trimmed === 'primaryGroupBy' || trimmed === fieldMap.body) {
         return true
       }
       if (labelKeys.value.includes(trimmed)) {

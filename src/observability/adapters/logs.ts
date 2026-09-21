@@ -172,6 +172,8 @@ export async function buildLogsContextWhere(
         excludeKey: options?.excludeFilterKey,
         columns: columns.map((column) => column.name),
         jsonColumns: listJsonAttributeColumns(columns),
+        // Attribute columns are typed (int / boolean / …): comparisons need typed literals.
+        typeOf: (column) => ctx.signalColumnTypes.value.logs?.[column],
         containsColumns: discoverLogsContainsColumns(columns, fieldMap, {
           include: settings.labelInclude,
           exclude: settings.labelExclude,
@@ -210,6 +212,7 @@ export async function buildLogsWhere(ctx: DrilldownContext): Promise<string> {
   const whereParts = filtersToSqlWhere(ctx.filters.value, fieldMap, {
     columns: columns.map((column) => column.name),
     jsonColumns: listJsonAttributeColumns(columns),
+    typeOf: (column) => ctx.signalColumnTypes.value.logs?.[column],
     containsColumns: discoverLogsContainsColumns(columns, fieldMap, {
       include: settings.labelInclude,
       exclude: settings.labelExclude,

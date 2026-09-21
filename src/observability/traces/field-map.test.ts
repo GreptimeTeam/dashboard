@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildDefaultTracesFieldMap,
   discoverTraceBreakdownAttributes,
+  discoverTraceFilterKeys,
   discoverTraceLabelColumns,
   filterBreakdownAttributesByScope,
   mergeTracesFieldMapColumns,
@@ -26,6 +27,29 @@ describe('traces field-map', () => {
         { name: 'span_attributes.http.method' },
       ])
     ).toEqual(['service_name', 'span_name'])
+  })
+
+  it('exposes every business field as a top-bar filter key', () => {
+    const keys = discoverTraceFilterKeys([
+      { name: 'service_name', data_type: 'String' },
+      { name: 'span_name', data_type: 'String' },
+      { name: 'span_kind', data_type: 'String' },
+      { name: 'duration_nano', data_type: 'UInt64' },
+      { name: 'resource_attributes.deployment.environment', data_type: 'String' },
+      { name: 'span_attributes.http.status_code', data_type: 'UInt64' },
+      { name: 'trace_id', data_type: 'String' },
+      { name: 'span_id', data_type: 'String' },
+      { name: 'span_events', data_type: 'Json' },
+    ])
+
+    expect(keys).toContain('span_attributes.http.status_code')
+    expect(keys).toContain('resource_attributes.deployment.environment')
+    expect(keys).toContain('duration_nano')
+    expect(keys).toContain('span_name')
+    // Identity / payload columns have their own entry points.
+    expect(keys).not.toContain('trace_id')
+    expect(keys).not.toContain('span_id')
+    expect(keys).not.toContain('span_events')
   })
 
   it('discovers Resource and Span breakdown attributes like Grafana', () => {

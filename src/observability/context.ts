@@ -39,6 +39,11 @@ export interface DrilldownContext {
    * attribute columns resolve as columns instead of JSON chips.
    */
   signalColumns: Ref<Partial<Record<DrilldownSignal, string[]>>>
+  /**
+   * `data_type` per physical column of the bound table, keyed by signal. Typed filter
+   * literals (numeric comparisons, TRUE/FALSE) need it; empty until the table is bound.
+   */
+  signalColumnTypes: Ref<Partial<Record<DrilldownSignal, Record<string, string>>>>
   /** Logs overview vs detail shell (URL `logsView`). */
   logsView: Ref<LogsView>
   /** Active tab inside logs detail (URL `logsTab`). */
@@ -59,6 +64,7 @@ export interface DrilldownContext {
   setSignal: (signal: DrilldownSignal) => void
   setEntityFilterKey: (signal: DrilldownSignal, entityKey: string, key: string | undefined) => void
   setSignalColumns: (signal: DrilldownSignal, columns: string[] | undefined) => void
+  setSignalColumnTypes: (signal: DrilldownSignal, types: Record<string, string> | undefined) => void
   setFilters: (filters: DrilldownFilter[]) => void
   setSidebarFilters: (filters: DrilldownSidebarFilters) => void
   appendFilter: (filter: DrilldownFilter) => void
@@ -96,6 +102,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
   const logsTraceId = ref<string | undefined>()
   const entityFilterKeys = ref<Partial<Record<DrilldownSignal, Record<string, string>>>>({})
   const signalColumns = ref<Partial<Record<DrilldownSignal, string[]>>>({})
+  const signalColumnTypes = ref<Partial<Record<DrilldownSignal, Record<string, string>>>>({})
 
   const setEntityFilterKey = (signalName: DrilldownSignal, entityKey: string, key: string | undefined) => {
     const perSignal = { ...(entityFilterKeys.value[signalName] ?? {}) }
@@ -109,6 +116,12 @@ export function useDrilldownContextProvider(): DrilldownContext {
 
   const setSignalColumns = (signalName: DrilldownSignal, columns: string[] | undefined) => {
     signalColumns.value = { ...signalColumns.value, [signalName]: columns?.length ? columns : undefined }
+  }
+  const setSignalColumnTypes = (signalName: DrilldownSignal, types: Record<string, string> | undefined) => {
+    signalColumnTypes.value = {
+      ...signalColumnTypes.value,
+      [signalName]: types && Object.keys(types).length ? types : undefined,
+    }
   }
   const logsTable = ref<string | undefined>()
   const tracesTable = ref<string | undefined>()
@@ -279,6 +292,8 @@ export function useDrilldownContextProvider(): DrilldownContext {
     setEntityFilterKey,
     signalColumns,
     setSignalColumns,
+    signalColumnTypes,
+    setSignalColumnTypes,
     setFilters,
     setSidebarFilters,
     appendFilter,

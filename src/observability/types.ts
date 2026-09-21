@@ -33,7 +33,8 @@ export function isLogsView(value: unknown): value is LogsView {
   return value === 'overview' || value === 'detail'
 }
 
-export type DrilldownFilterOp = '=' | '!=' | '=~' | '!~'
+/** Comparison ops are only offered for numeric columns (`filterOpsForType`). */
+export type DrilldownFilterOp = '=' | '!=' | '=~' | '!~' | '>' | '>=' | '<' | '<='
 
 export interface DrilldownFilter {
   key: string

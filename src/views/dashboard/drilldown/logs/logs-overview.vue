@@ -14,8 +14,6 @@
         a-option(v-for="name in tableOptions" :key="name" :value="name") {{ name }}
       a-button(type="text" size="small" @click="settingsVisible = true")
         | {{ t('drilldown.logs.settingsButton') }}
-    .toolbar-right(v-if="logsTable")
-      a-button(type="primary" size="medium" @click="showLogs") {{ t('drilldown.logs.showLogs') }}
 
   a-alert(
     v-if="!logsTable"
@@ -90,10 +88,6 @@
     ctx.triggerRefresh()
   }
 
-  const showLogs = () => {
-    ctx.openLogsDetail()
-  }
-
   const onTableChange = async (table: string) => {
     if (!table || table === ctx.logsTable.value) {
       return
@@ -166,14 +160,6 @@
     align-items: center;
     gap: var(--gpt-gap-md);
     min-width: 0;
-  }
-
-  .toolbar-right {
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    gap: var(--gpt-gap-md);
-    margin-left: auto;
   }
 
   .toolbar-label {

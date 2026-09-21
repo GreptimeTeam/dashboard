@@ -91,6 +91,11 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
         'logs',
         columns.map((column) => column.name)
       )
+      // Typed filter literals (numeric comparisons, TRUE/FALSE) read these data types.
+      ctx.setSignalColumnTypes(
+        'logs',
+        Object.fromEntries(columns.map((column) => [column.name, column.data_type || '']))
+      )
       // A signal switch that happened before this table was bound could only fall back to
       // the `service` role; re-encode now that the real key (possibly a JSON chip) is known.
       ctx.setFilters(
@@ -99,6 +104,7 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
     } catch (error) {
       console.error(`Failed to resolve the service filter key for ${tableName}:`, error)
       ctx.setEntityFilterKey('logs', 'service', undefined)
+      ctx.setSignalColumnTypes('logs', undefined)
     }
   }
 
@@ -155,6 +161,7 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
     ctx.logsTable.value = undefined
     ctx.setEntityFilterKey('logs', 'service', undefined)
     ctx.setSignalColumns('logs', undefined)
+    ctx.setSignalColumnTypes('logs', undefined)
     ctx.fieldMap.value = {
       ...ctx.fieldMap.value,
       logs: {},

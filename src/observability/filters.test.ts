@@ -3,13 +3,69 @@ import { normalizeEntityFilters } from './entity-keys'
 import {
   addFilter,
   buildPromMatchersString,
+  filterOpsForType,
   filterAppliesToSignal,
   filterIncludesValue,
   filtersToSqlWhere,
   hasLogsMappedFilters,
+  isValidFilterValue,
+  normalizeFilterOp,
   resolveFieldMapColumn,
   toggleIncludeFilter,
 } from './filters'
+
+describe('typed filter literals (traces attribute columns)', () => {
+  const typeOf = (column: string) => ({ duration: 'UInt64', flags: 'Boolean', code: 'UInt32', name: 'String' }[column])
+  const fieldMap = { duration: 'duration', flags: 'flags', code: 'code', name: 'name' }
+
+  it('offers comparison ops for numbers, =/!= for booleans, regex ops for strings', () => {
+    expect(filterOpsForType('UInt64')).toEqual(['=', '!=', '>', '>=', '<', '<='])
+    expect(filterOpsForType('Boolean')).toEqual(['=', '!='])
+    expect(filterOpsForType('String')).toEqual(['=', '!=', '=~', '!~'])
+    expect(filterOpsForType(undefined)).toEqual(['=', '!=', '=~', '!~'])
+    expect(normalizeFilterOp('String', '>')).toBe('=')
+    expect(normalizeFilterOp('UInt64', '>')).toBe('>')
+  })
+
+  it('validates numeric and boolean inputs', () => {
+    expect(isValidFilterValue('UInt64', '1000000000')).toBe(true)
+    expect(isValidFilterValue('UInt64', '1s')).toBe(false)
+    expect(isValidFilterValue('Boolean', 'true')).toBe(true)
+    expect(isValidFilterValue('Boolean', 'TRUE')).toBe(true)
+    expect(isValidFilterValue('Boolean', 'yes')).toBe(false)
+    expect(isValidFilterValue('String', 'anything')).toBe(true)
+  })
+
+  it('renders unquoted numeric / TRUE-FALSE literals and drops invalid ones', () => {
+    expect(
+      filtersToSqlWhere(
+        [
+          { key: 'duration', op: '>', value: '1000000000' },
+          { key: 'flags', op: '=', value: 'true' },
+          { key: 'code', op: '=', value: '200' },
+        ],
+        fieldMap,
+        { typeOf }
+      )
+    ).toEqual([`"duration" > 1000000000`, `"flags" = TRUE`, `"code" = 200`])
+
+    // A comparison or a non-numeric value on a numeric column never becomes broken SQL.
+    expect(filtersToSqlWhere([{ key: 'code', op: '>', value: 'abc' }], fieldMap, { typeOf })).toEqual([])
+    expect(filtersToSqlWhere([{ key: 'name', op: '>', value: 'abc' }], fieldMap, { typeOf })).toEqual([])
+    // Booleans reject the quoted-string reading GreptimeDB fails to plan (Boolean = Utf8).
+    expect(filtersToSqlWhere([{ key: 'flags', op: '=', value: 'yes' }], fieldMap, { typeOf })).toEqual([])
+  })
+
+  it('keeps string rendering unchanged when no type is known', () => {
+    expect(filtersToSqlWhere([{ key: 'name', op: '=', value: 'abc' }], fieldMap)).toEqual([`"name" = 'abc'`])
+  })
+
+  it('keeps logs contains semantics: body =~ becomes LIKE on the physical column', () => {
+    expect(
+      filtersToSqlWhere([{ key: 'body', op: '=~', value: 'GET /api' }], { body: 'body' }, { containsColumns: ['body'] })
+    ).toEqual([`"body" LIKE '%GET /api%' ESCAPE '\\'`])
+  })
+})
 
 describe('filters fieldMap SQL mapping', () => {
   const fieldMap = {

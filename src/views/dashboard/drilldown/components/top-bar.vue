@@ -14,6 +14,12 @@
         ) {{ item.label }}
   .shared-context
     DrilldownFilterBar
+    a-button.logs-query-trigger(
+      v-if="showLogsQuery"
+      type="primary"
+      size="medium"
+      @click="() => openLogsDetail()"
+    ) {{ t('drilldown.logs.showLogs') }}
     a-space
       TimeRangeSelect(
         v-model:time-length="time"
@@ -42,13 +48,22 @@
   import DrilldownFilterBar from './filter-bar.vue'
 
   const { t } = useI18n()
-  const { signal, time, rangeTime, triggerRefresh, setSignal } = useDrilldownContext()
+  const { signal, time, rangeTime, triggerRefresh, setSignal, logsView, logsTable, openLogsDetail } =
+    useDrilldownContext()
 
   const signalItems = computed(() => [
     { value: 'metrics' as DrilldownSignal, label: t('drilldown.signals.metrics') },
     { value: 'logs' as DrilldownSignal, label: t('drilldown.signals.logs') },
     { value: 'traces' as DrilldownSignal, label: t('drilldown.signals.traces') },
   ])
+
+  /**
+   * Manual query trigger for the logs overview only: the top bar shows it next to the
+   * Filter, and the detail view queries automatically (refreshKey / time / filters).
+   */
+  const showLogsQuery = computed(
+    () => signal.value === 'logs' && logsView.value === 'overview' && Boolean(logsTable.value)
+  )
 
   const handleRefresh = () => {
     triggerRefresh()

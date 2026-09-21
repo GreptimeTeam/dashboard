@@ -19,10 +19,19 @@ export default function useDrilldownTracesInit(ctx: DrilldownContext) {
     ctx.setEntityFilterKey('traces', 'service', serviceColumn)
     try {
       const columns = await tableSchemaStore.ensureTableSchema(tableName)
-      ctx.setSignalColumns('traces', columns.map((column) => column.name))
+      ctx.setSignalColumns(
+        'traces',
+        columns.map((column) => column.name)
+      )
+      // Typed filter literals (numeric comparisons, TRUE/FALSE) read these data types.
+      ctx.setSignalColumnTypes(
+        'traces',
+        Object.fromEntries(columns.map((column) => [column.name, column.data_type || '']))
+      )
     } catch (error) {
       console.error(`Failed to load columns for ${tableName}:`, error)
       ctx.setSignalColumns('traces', undefined)
+      ctx.setSignalColumnTypes('traces', undefined)
     }
     return buildDefaultTracesFieldMap({ serviceColumn })
   }
@@ -63,6 +72,7 @@ export default function useDrilldownTracesInit(ctx: DrilldownContext) {
     ctx.tracesTable.value = undefined
     ctx.setEntityFilterKey('traces', 'service', undefined)
     ctx.setSignalColumns('traces', undefined)
+    ctx.setSignalColumnTypes('traces', undefined)
     ctx.focusTraceId.value = undefined
     ctx.logsTraceId.value = undefined
     ctx.fieldMap.value = {

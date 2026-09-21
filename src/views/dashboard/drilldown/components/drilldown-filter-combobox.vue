@@ -61,6 +61,9 @@
   import { useDrilldownContext } from '@/observability/context'
   import {
     DRILLDOWN_FILTER_OP_OPTIONS,
+    filterOpsForType,
+    isValidFilterValue,
+    normalizeFilterOp,
     normalizeCommittedFilters,
     removeFilter as removeFilterFromList,
   } from '@/observability/filters'
@@ -125,18 +128,23 @@
     noSuggestions: t('drilldown.filters.noSuggestions'),
   }))
 
-  const operatorOptions = computed<SuggestOption[]>(() =>
-    DRILLDOWN_FILTER_OP_OPTIONS.map((option) => ({
-      label: option.label,
-      value: option.value,
-    }))
-  )
-
   const activeFieldKey = computed(() => {
     if (isEditing.value && editingIndex.value !== null) {
       return filters.value[editingIndex.value]?.key ?? ''
     }
     return draftKey.value
+  })
+
+  /** Column data type of the key being edited — drives which operators are offered. */
+  const activeColumnType = computed(() => ctx.signalColumnTypes.value[signal.value]?.[activeFieldKey.value.trim()])
+
+  // Comparison operators are numeric-only, booleans get =/!=; strings keep =/!=/=~/!~.
+  const operatorOptions = computed<SuggestOption[]>(() => {
+    const allowed = new Set(filterOpsForType(activeColumnType.value))
+    return DRILLDOWN_FILTER_OP_OPTIONS.filter((option) => allowed.has(option.value)).map((option) => ({
+      label: option.label,
+      value: option.value,
+    }))
   })
 
   const sqlField = computed(() => isSqlFieldKey(activeFieldKey.value))
@@ -323,13 +331,20 @@
     if (!key || !value) {
       return
     }
+    // Numeric/boolean columns only accept renderable values; an operator that does not apply
+    // to the column type (e.g. carried in a URL) falls back to `=`.
+    const dataType = ctx.signalColumnTypes.value[signal.value]?.[key]
+    if (!isValidFilterValue(dataType, value)) {
+      return
+    }
+    const op = normalizeFilterOp(dataType, draftOp.value)
     if (props.suggestMode === 'fields' && !ctx.fieldMap.value.logs[key]) {
       ctx.fieldMap.value = {
         ...ctx.fieldMap.value,
         logs: { ...ctx.fieldMap.value.logs, [key]: key },
       }
     }
-    const filter: DrilldownFilter = { key, op: draftOp.value, value }
+    const filter: DrilldownFilter = { key, op, value }
     if (isEditing.value && editingIndex.value !== null) {
       const updated = filters.value.map((item, itemIndex) => (itemIndex === editingIndex.value ? filter : item))
       setFilters(normalizeCommittedFilters(updated))

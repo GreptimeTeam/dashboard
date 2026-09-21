@@ -636,22 +636,52 @@ export async function discoverLogLabelKeys(
   return [...keys].filter((key) => !exclude.has(key)).sort((a, b) => a.localeCompare(b))
 }
 
-/** Top-bar key list: label keys (columns + OTLP resource chips) plus contains columns. */
+/**
+ * Top-bar key list: the *long tail* of the bound table.
+ *
+ * All physical columns except the ones that already own a dedicated entry point —
+ * time (time picker), `body` (detail body search row), `severity` (Level select), the service
+ * entity key (Service row), TIMESTAMP columns (never a useful predicate) and the JSON
+ * containers themselves — plus every sampled JSON attribute chip (`log_attributes.*` /
+ * `scope_attributes.*` / `resource_attributes.*`).
+ */
 export async function discoverLogFilterKeys(
   tableName: string,
   columns: SchemaColumn[],
   fieldMap: Record<string, string>,
-  options?: { include?: string[]; exclude?: string[]; identityChip?: string }
+  options?: { include?: string[]; exclude?: string[]; serviceKey?: string }
 ): Promise<string[]> {
-  const keys = new Set([
-    ...(await discoverLogLabelKeys(tableName, columns, fieldMap, options)),
-    ...discoverLogsContainsColumns(columns, fieldMap, options),
-  ])
-  const severity = fieldMap.severity?.trim()
-  if (severity) {
-    keys.delete(severity)
+  const serviceKey = options?.serviceKey?.trim()
+  const exclude = new Set(
+    [
+      ...(options?.exclude ?? []),
+      fieldMap.time?.trim(),
+      fieldMap.body?.trim(),
+      fieldMap.severity?.trim(),
+      serviceKey,
+      ...columns.filter((column) => column.semantic_type === 'TIMESTAMP').map((column) => column.name),
+      ...listJsonAttributeColumns(columns),
+    ].filter(Boolean) as string[]
+  )
+
+  const keys = new Set<string>()
+  columns.forEach((column) => {
+    if (!exclude.has(column.name)) {
+      keys.add(column.name)
+    }
+  })
+
+  const jsonColumns = listJsonAttributeColumns(columns)
+  if (tableName && jsonColumns.length) {
+    const sampled = await sampleJsonAttributeFieldKeys(tableName, jsonColumns)
+    sampled.forEach((chip) => {
+      if (!exclude.has(chip) && chip !== serviceKey) {
+        keys.add(chip)
+      }
+    })
   }
-  return [...keys].sort((a, b) => a.localeCompare(b))
+
+  return [...keys].filter((key) => !exclude.has(key)).sort((a, b) => a.localeCompare(b))
 }
 
 export function resolveLogsTimeColumn(fieldMap: Record<string, string>): string | undefined {

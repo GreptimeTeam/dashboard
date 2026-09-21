@@ -4,10 +4,103 @@ import { buildSeverityLevelsPredicate, isSeverityFilterColumn } from './logs/lev
 import { normalizeEntityFilters } from './entity-keys'
 import type { DrilldownFilter, DrilldownFilterOp, DrilldownSignal } from './types'
 
-const FILTER_OPS: DrilldownFilterOp[] = ['=', '!=', '=~', '!~']
+/** Numeric literal guard; the value is rendered verbatim so bigint precision survives. */
+const NUMERIC_LITERAL = /^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$/
+
+/** GreptimeDB boolean needs TRUE/FALSE — `= 'true'` fails planning with Boolean = Utf8. */
+function booleanLiteral(value: string): 'TRUE' | 'FALSE' | undefined {
+  const normalized = value.trim().toLowerCase()
+  if (normalized === 'true' || normalized === '1') {
+    return 'TRUE'
+  }
+  if (normalized === 'false' || normalized === '0') {
+    return 'FALSE'
+  }
+  return undefined
+}
+
+function escapeSqlString(value: string): string {
+  return value.replace(/'/g, "''")
+}
+
+const FILTER_OPS: DrilldownFilterOp[] = ['=', '!=', '=~', '!~', '>', '>=', '<', '<=']
+
+/** Comparison ops need a numeric column; `filterOpsForType` decides what the UI offers. */
+const NUMERIC_FILTER_OPS: DrilldownFilterOp[] = ['=', '!=', '>', '>=', '<', '<=']
+const STRING_FILTER_OPS: DrilldownFilterOp[] = ['=', '!=', '=~', '!~']
+const BOOLEAN_FILTER_OPS: DrilldownFilterOp[] = ['=', '!=']
 
 const INCLUDE_OPS: DrilldownFilterOp[] = ['=', '=~']
 const EXCLUDE_OPS: DrilldownFilterOp[] = ['!=', '!~']
+
+type ColumnValueKind = 'string' | 'number' | 'boolean'
+
+/** Physical/logical column type (GreptimeDB `data_type` or schema semantic type) → value kind. */
+export function columnValueKind(dataType: string | undefined): ColumnValueKind {
+  const type = (dataType || '').toLowerCase()
+  if (!type) {
+    return 'string'
+  }
+  if (type.includes('bool')) {
+    return 'boolean'
+  }
+  if (
+    type.includes('int') ||
+    type.includes('uint') ||
+    type.includes('float') ||
+    type.includes('double') ||
+    type.includes('decimal') ||
+    type.includes('number')
+  ) {
+    return 'number'
+  }
+  return 'string'
+}
+
+/** Operators the combobox offers for a key of `dataType` (unknown types behave like strings). */
+export function filterOpsForType(dataType: string | undefined): DrilldownFilterOp[] {
+  const kind = columnValueKind(dataType)
+  if (kind === 'number') {
+    return NUMERIC_FILTER_OPS
+  }
+  if (kind === 'boolean') {
+    return BOOLEAN_FILTER_OPS
+  }
+  return STRING_FILTER_OPS
+}
+
+/** Fall back to `=` when an operator does not apply to the column type (e.g. from a URL). */
+export function normalizeFilterOp(dataType: string | undefined, op: DrilldownFilterOp): DrilldownFilterOp {
+  return filterOpsForType(dataType).includes(op) ? op : '='
+}
+
+/** True when `value` can be rendered for `dataType` — numeric/boolean inputs are validated. */
+export function isValidFilterValue(dataType: string | undefined, value: string): boolean {
+  const kind = columnValueKind(dataType)
+  if (kind === 'number') {
+    return NUMERIC_LITERAL.test(value.trim())
+  }
+  if (kind === 'boolean') {
+    return booleanLiteral(value) !== undefined
+  }
+  return Boolean(value.trim())
+}
+
+/**
+ * Single SQL literal for `dataType`; undefined when the value cannot be rendered.
+ * Numbers stay unquoted (bigint precision preserved), booleans become TRUE/FALSE.
+ */
+export function sqlValueLiteral(dataType: string | undefined, value: string): string | undefined {
+  const kind = columnValueKind(dataType)
+  if (kind === 'number') {
+    const trimmed = value.trim()
+    return NUMERIC_LITERAL.test(trimmed) ? trimmed : undefined
+  }
+  if (kind === 'boolean') {
+    return booleanLiteral(value)
+  }
+  return `'${escapeSqlString(value)}'`
+}
 
 export function isDrilldownFilterOp(value: string): value is DrilldownFilterOp {
   return FILTER_OPS.includes(value as DrilldownFilterOp)
@@ -23,10 +116,6 @@ function escapePromRegexValue(value: string): string {
 
 function escapePromLabelValue(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-}
-
-function escapeSqlString(value: string): string {
-  return value.replace(/'/g, "''")
 }
 
 function escapeSqlLike(value: string): string {
@@ -176,9 +265,16 @@ export function formatFilterChip(filter: DrilldownFilter): string {
   return `${filter.key}${filter.op}"${filter.value}"`
 }
 
+/** PromQL label matchers — comparison ops (`>`, `<=`, …) do not exist there. */
+export type PromMatcherOp = '=' | '!=' | '=~' | '!~'
+
+function isPromMatcherOp(op: DrilldownFilterOp): op is PromMatcherOp {
+  return STRING_FILTER_OPS.includes(op)
+}
+
 export type PromMatcherPart = {
   key: string
-  op: '=' | '!=' | '=~' | '!~'
+  op: PromMatcherOp
   value: string
 }
 
@@ -200,7 +296,7 @@ export function filtersToPromMatcherParts(
     if (filter.key === '__name__' || filter.key === options?.excludeKey) {
       return
     }
-    if (!FILTER_OPS.includes(filter.op)) {
+    if (!isPromMatcherOp(filter.op)) {
       return
     }
     parts.push({ key: filter.key, op: filter.op, value: filter.value })
@@ -262,6 +358,10 @@ export const DRILLDOWN_FILTER_OP_OPTIONS: Array<{ label: string; value: Drilldow
   { label: '!=', value: '!=' },
   { label: '=~', value: '=~' },
   { label: '!~', value: '!~' },
+  { label: '>', value: '>' },
+  { label: '>=', value: '>=' },
+  { label: '<', value: '<' },
+  { label: '<=', value: '<=' },
 ]
 
 /**
@@ -277,7 +377,7 @@ export function resolveFieldMapColumn(chipKey: string, fieldMap: Record<string, 
 function sqlPredicateForFilter(
   filter: DrilldownFilter,
   columnOrExpr: string,
-  options?: { isExpr?: boolean }
+  options?: { isExpr?: boolean; dataType?: string }
 ): string | undefined {
   const values = splitFilterOrValues(filter)
   if (!values.length) {
@@ -285,16 +385,36 @@ function sqlPredicateForFilter(
   }
 
   const left = options?.isExpr ? columnOrExpr : `"${columnOrExpr}"`
+  // JSON chips always read as strings; physical columns carry their own type.
+  const kind: ColumnValueKind = options?.isExpr ? 'string' : columnValueKind(options?.dataType)
+  const literal = (value: string): string | undefined =>
+    options?.isExpr ? `'${escapeSqlString(value)}'` : sqlValueLiteral(options?.dataType, value)
+
+  // Comparison ops need a numeric column and a single value; anything else is dropped
+  // rather than emitted as SQL GreptimeDB would reject (e.g. Boolean = Utf8).
+  if (filter.op === '>' || filter.op === '>=' || filter.op === '<' || filter.op === '<=') {
+    if (kind !== 'number' || values.length !== 1) {
+      return undefined
+    }
+    const right = literal(values[0])
+    return right ? `${left} ${filter.op} ${right}` : undefined
+  }
 
   if (filter.op === '=') {
-    if (values.length === 1) {
-      return `${left} = '${escapeSqlString(values[0])}'`
+    const list = values.map(literal)
+    if (list.some((item) => item === undefined)) {
+      return undefined
     }
-    const list = values.map((value) => `'${escapeSqlString(value)}'`).join(', ')
+    if (values.length === 1) {
+      return `${left} = ${list[0]}`
+    }
     return `${left} IN (${list})`
   }
 
   if (filter.op === '=~') {
+    if (kind !== 'string') {
+      return undefined
+    }
     // Multi-value include merge → IN; single =~ stays regex.
     if (values.length > 1) {
       const list = values.map((value) => `'${escapeSqlString(value)}'`).join(', ')
@@ -304,14 +424,20 @@ function sqlPredicateForFilter(
   }
 
   if (filter.op === '!=') {
-    if (values.length === 1) {
-      return `${left} != '${escapeSqlString(values[0])}'`
+    const list = values.map(literal)
+    if (list.some((item) => item === undefined)) {
+      return undefined
     }
-    const list = values.map((value) => `'${escapeSqlString(value)}'`).join(', ')
+    if (values.length === 1) {
+      return `${left} != ${list[0]}`
+    }
     return `${left} NOT IN (${list})`
   }
 
   if (filter.op === '!~') {
+    if (kind !== 'string') {
+      return undefined
+    }
     if (values.length > 1) {
       const list = values.map((value) => `'${escapeSqlString(value)}'`).join(', ')
       return `${left} NOT IN (${list})`
@@ -334,7 +460,14 @@ function sqlPredicateForFilter(
 export function filtersToSqlWhere(
   filters: DrilldownFilter[],
   fieldMap: Record<string, string>,
-  options?: { excludeKey?: string; jsonColumns?: string[]; containsColumns?: string[]; columns?: string[] }
+  options?: {
+    excludeKey?: string
+    jsonColumns?: string[]
+    containsColumns?: string[]
+    columns?: string[]
+    /** Column data types — needed for typed literal rendering (traces attribute columns). */
+    typeOf?: (column: string) => string | undefined
+  }
 ): string[] {
   const parts: string[] = []
   const jsonColumns = options?.jsonColumns ?? []
@@ -377,7 +510,7 @@ export function filtersToSqlWhere(
     } else if (severityUnknown) {
       predicate = buildSeverityLevelsPredicate(column, values)
     } else {
-      predicate = sqlPredicateForFilter(filter, column)
+      predicate = sqlPredicateForFilter(filter, column, { dataType: options?.typeOf?.(column) })
     }
     if (predicate) {
       parts.push(predicate)

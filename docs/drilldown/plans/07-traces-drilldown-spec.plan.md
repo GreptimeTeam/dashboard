@@ -11,9 +11,11 @@
 
 ## Filters (MVP)
 
-1. **Shared topbar**: label chips only (`service_name`, `span_name`, `span_status_code`, `span_kind`) + time + refresh. Do **not** put Trace-ID UI in the global topbar.
-2. **Traces home toolbar**: table select (left) + **Trace ID quick search** (right) → `focusTraceId`.
-3. No Settings modal (field map is fixed greptime_trace_v1; table pick is enough).
+1. **单行 topbar filter**：traces 下 key 池 = 全表业务字段 —— intrinsic（`service_name` / `span_name` / `span_kind` / `span_status_code` / `span_status_message` / `scope_*`）+ 扁平属性列（`resource_attributes.*` / `span_attributes.*`）+ `duration_nano`；`trace_id` / `span_id` / `parent_span_id` / 时间列 / `span_events` / `span_links` / `trace_state` 除外（Trace ID 有自己的入口）。实现：`discoverTraceFilterKeys`（`traces/field-map.ts`）+ `fetchSqlLabelKeys(ctx,'traces')`。
+2. **算子按列类型**：字符串 `= != =~ !~`；数值（int/uint/float/double/decimal）`= != > >= < <=`，字面量不加引号；boolean `= !=` 渲染 `TRUE`/`FALSE`（Greptime 对 boolean 用 `'true'` 会 planning 报错）。规则集中在 `filters.ts`（`filterOpsForType` / `isValidFilterValue` / `sqlValueLiteral`），traces 查询经 `buildTracesContextWhere` 传 `typeOf`（列类型由 traces init 发布到 `ctx.signalColumnTypes`）。
+3. **跨信号**：条件写进共享 `filters` 列表并进 URL `filters` 参数；切到 logs/metrics 时目标表没有的 key 由 `filterAppliesToSignal` 隐藏且不进查询（状态保留，切回可用）。
+4. **Traces home toolbar**：table select（左）+ **Trace ID quick search**（右）→ `focusTraceId`；Grafana 式 Attributes 侧栏（All/Resource/Span 分组 + 收藏）留待后续迭代。
+5. No Settings modal (field map is fixed greptime_trace_v1; table pick is enough).
 
 ## Table discovery
 
