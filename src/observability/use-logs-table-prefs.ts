@@ -110,16 +110,22 @@ export default function useLogsTablePrefs(options?: {
   }
 
   /**
-   * Drilldown queries every schema column. Show a column the first time this table offers it.
-   * Hides made after that stay hidden. Log query uses `ensureDisplayedColumns` instead.
+   * Drilldown queries every schema column and defaults to multi-column mode: every column is
+   * visible until the user hides one, and hides survive reloads. A column appears the first time
+   * this table offers it. Log query uses `ensureDisplayedColumns` instead.
+   *
+   * A stored list with fewer than two usable columns counts as "nothing stored": earlier builds
+   * seeded `['timestamp']` from a partial schema load (that is the one-column table), which is a
+   * broken write rather than a preference. Names the schema no longer has are dropped.
    */
   function revealOfferedColumns(tableName: string | undefined, columnNames: string[]) {
     if (!tableName || !columnNames.length) {
       return
     }
     const offered = new Set(offeredColumnsByTable.value[tableName] || [])
-    const visible = new Set(displayedColumnsByTable.value[tableName] || [])
-    const firstOffer = offered.size === 0
+    const stored = (displayedColumnsByTable.value[tableName] || []).filter((name) => columnNames.includes(name))
+    const visible = new Set(stored.length > 1 ? stored : [])
+    const firstOffer = offered.size === 0 || stored.length <= 1
     columnNames.forEach((name) => {
       if (firstOffer || !offered.has(name)) {
         visible.add(name)
