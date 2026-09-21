@@ -1,7 +1,11 @@
 import { onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAppStore } from '@/store'
-import { loadDrilldownSettings, updateLogsDrilldownSettings } from '@/observability/drilldown-settings'
+import {
+  loadDrilldownSettings,
+  updateLogsDrilldownSettings,
+  type LogsFieldMapSettings,
+} from '@/observability/drilldown-settings'
 import { buildLogsFieldMap, otelLogsFieldDefaultsFromColumns } from '@/observability/logs/field-map'
 import { resolveLogsTable } from '@/observability/logs/resolve-table'
 import { entityColumnFilterKey, resolveEntityFilterRef } from '@/observability/entities'
@@ -33,25 +37,44 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
     }
   }
 
+  const FIELD_ROLES = ['time', 'body', 'severity', 'service', 'primaryGroupBy', 'traceId'] as const
+
+  /** Order-independent identity of a field map, used to skip redundant writes. */
+  const fieldMapKey = (map?: LogsFieldMapSettings) =>
+    FIELD_ROLES.map((role) => `${role}=${map?.[role] ?? ''}`).join('|')
+
+  /**
+   * Field settings for the bound table, filled in on entering logs — not when the settings
+   * modal opens, so the modal (and every role consumer) already has values.
+   *
+   * Semantics seed the defaults: the OTEL logs model for time/body/severity/traceId, and the
+   * entity resolution for service — a real column or the JSON chip
+   * (`resource_attributes.service.name`). Saved values win; only gaps are filled, so a role
+   * the user configured is never overwritten. The bound table is persisted too, because the
+   * modal hydrates its column list from it.
+   */
   const seedFieldSettings = async (tableName: string) => {
     const current = loadDrilldownSettings(database.value).logs
-    if (current.fieldMap) {
-      return current.fieldMap
-    }
     try {
       const columns = await tableSchemaStore.ensureTableSchema(tableName)
       const reference = await resolveEntityFilterRef(tableName, 'service', { signal: 'logs', columns })
-      // Chip-style identities need role-level JSON handling; only flat columns apply here.
-      const serviceColumn = reference && !reference.jsonKey ? reference.column : undefined
-      updateLogsDrilldownSettings(
-        { fieldMap: otelLogsFieldDefaultsFromColumns(columns, { serviceColumn }) },
-        database.value
-      )
+      const serviceColumn = reference ? entityColumnFilterKey(reference) : undefined
+      const next: LogsFieldMapSettings = {
+        ...otelLogsFieldDefaultsFromColumns(columns, { serviceColumn }),
+        ...(current.fieldMap ?? {}),
+      }
+      if (!next.primaryGroupBy && next.service) {
+        next.primaryGroupBy = next.service
+      }
+
+      if (current.table?.trim() !== tableName || fieldMapKey(current.fieldMap) !== fieldMapKey(next)) {
+        updateLogsDrilldownSettings({ table: tableName, fieldMap: next }, database.value)
+      }
+      return next
     } catch (error) {
       console.error(`Failed to seed logs field settings for ${tableName}:`, error)
-      return undefined
+      return current.fieldMap
     }
-    return loadDrilldownSettings(database.value).logs.fieldMap
   }
 
   /**

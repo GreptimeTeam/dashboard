@@ -7,8 +7,11 @@ import { buildPromMatchSelector, isGreptimePromMatchSelector, resolveFieldMapCol
 import {
   discoverFieldColumns,
   discoverLabelColumns,
+  discoverLogFilterKeys,
+  discoverLogLabelKeys,
   discoverLogsContainsColumns,
   discoverLogsFilterKeyColumns,
+  isOtelResourceLabelChip,
   isLogsContainsFilterKey,
   listJsonAttributeColumns,
   parseJsonFieldChipKey,
@@ -102,9 +105,10 @@ export async function fetchSqlLabelKeys(
     }
     const fieldMap = fieldMapForSignal(ctx, signal)
     const settings = loadDrilldownSettings().logs
-    const keys = discoverLabelColumns(columns, fieldMap, {
+    const keys = await discoverLogLabelKeys(tableName, columns, fieldMap, {
       include: settings?.labelInclude,
       exclude: settings?.labelExclude,
+      identityChip: ctx.entityFilterKeys.value.logs?.service,
     })
     return filterOptions(filterLabelKeys(keys), search)
   } catch (error) {
@@ -132,7 +136,10 @@ export async function fetchSqlFieldKeys(ctx: DrilldownContext, search = ''): Pro
       labelInclude: settings?.labelInclude,
       labelExclude: settings?.labelExclude,
     })
-    const l2 = await sampleJsonAttributeFieldKeys(tableName, listJsonAttributeColumns(columns))
+    const jsonColumns = listJsonAttributeColumns(columns)
+    const l2 = (await sampleJsonAttributeFieldKeys(tableName, jsonColumns)).filter(
+      (key) => !isOtelResourceLabelChip(key, jsonColumns)
+    )
     return filterOptions(filterLabelKeys([...l1, ...l2]), search)
   } catch (error) {
     console.error('Failed to load logs field keys:', error)
@@ -176,9 +183,10 @@ export async function fetchLogsFilterKeyOptions(ctx: DrilldownContext, search = 
     const columns = (await useTableSchemaStore().ensureTableSchema(tableName)) as SchemaColumn[]
     const fieldMap = fieldMapForSignal(ctx, 'logs')
     const settings = loadDrilldownSettings().logs
-    const keys = discoverLogsFilterKeyColumns(columns, fieldMap, {
+    const keys = await discoverLogFilterKeys(tableName, columns, fieldMap, {
       include: settings?.labelInclude,
       exclude: settings?.labelExclude,
+      identityChip: ctx.entityFilterKeys.value.logs?.service,
     })
     return filterOptions(filterLabelKeys(keys), search)
   } catch (error) {

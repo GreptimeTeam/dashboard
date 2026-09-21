@@ -51,7 +51,7 @@ a-modal(
         allow-clear
         :placeholder="t('drilldown.logs.columnPlaceholder')"
       )
-        a-option(v-for="name in columnNames" :key="name" :value="name") {{ name }}
+        a-option(v-for="name in serviceColumnOptions" :key="name" :value="name") {{ name }}
     a-form-item(:label="t('drilldown.logs.fieldPrimaryGroupBy')")
       a-select(
         v-model="form.primaryGroupBy"
@@ -59,7 +59,7 @@ a-modal(
         allow-clear
         :placeholder="t('drilldown.logs.columnPlaceholder')"
       )
-        a-option(v-for="name in columnNames" :key="name" :value="name") {{ name }}
+        a-option(v-for="name in serviceColumnOptions" :key="name" :value="name") {{ name }}
     a-form-item(:label="t('drilldown.logs.fieldTraceId')")
       a-select(
         v-model="form.traceId"
@@ -71,7 +71,7 @@ a-modal(
 </template>
 
 <script setup lang="ts">
-  import { reactive, ref, watch, nextTick } from 'vue'
+  import { computed, reactive, ref, watch, nextTick } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { storeToRefs } from 'pinia'
   import editorApi from '@/api/editor'
@@ -83,6 +83,7 @@ a-modal(
     type LogsFieldMapSettings,
   } from '@/observability/drilldown-settings'
   import { resolveFieldMapColumn } from '@/observability/filters'
+  import { entityColumnFilterKey, resolveEntityFilterRef } from '@/observability/entities'
   import {
     buildLogsFieldMap,
     resolveLogsSettingsFieldDefaults,
@@ -117,8 +118,30 @@ a-modal(
     traceId: undefined as string | undefined,
   })
 
-  const applyFieldDefaults = (columns: SchemaColumn[], saved?: LogsFieldMapSettings) => {
-    const defaults = resolveLogsSettingsFieldDefaults(columns, saved)
+  /**
+   * Service / primary group by accept a JSON chip (`resource_attributes.service.name`) next
+   * to real columns — that is the shape semantics produce for OTLP logs, so the current
+   * value has to stay selectable or saving would wipe it.
+   */
+  const serviceColumnOptions = computed(() => {
+    const names = [...columnNames.value]
+    const extra = [form.service, form.primaryGroupBy].filter(
+      (value): value is string => Boolean(value) && !names.includes(value as string)
+    )
+    return [...names, ...new Set(extra)]
+  })
+
+  /**
+   * Field values for `table`: semantics first (time/body/severity/traceId from the OTEL logs
+   * model, service from the entity resolution), saved values winning where still valid.
+   */
+  const applyFieldDefaults = async (table: string, columns: SchemaColumn[], saved?: LogsFieldMapSettings) => {
+    let serviceColumn: string | undefined
+    if (table && columns.length) {
+      const reference = await resolveEntityFilterRef(table, 'service', { signal: 'logs', columns })
+      serviceColumn = reference ? entityColumnFilterKey(reference) : undefined
+    }
+    const defaults = resolveLogsSettingsFieldDefaults(columns, saved, { serviceColumn })
     form.time = defaults.time
     form.body = defaults.body
     form.severity = defaults.severity
@@ -146,22 +169,13 @@ a-modal(
     loadingTables.value = true
     try {
       const settings = loadDrilldownSettings(database.value).logs
-      const savedTable = settings.table?.trim() || ''
+      // Older seeds stored only a field map; fall back to the bound table so the column list
+      // (and with it every saved value) still hydrates.
+      const savedTable = settings.table?.trim() || ctx.logsTable.value || ''
       tableOptions.value = await listLogTables({ include: savedTable ? [savedTable] : [] })
       form.table = savedTable
       const columns = await loadColumns(form.table)
-      if (settings.fieldMap) {
-        const names = new Set(columns.map((column) => column.name))
-        const savedColumn = (value?: string) => (value && names.has(value) ? value : undefined)
-        form.time = savedColumn(settings.fieldMap.time)
-        form.body = savedColumn(settings.fieldMap.body)
-        form.severity = savedColumn(settings.fieldMap.severity)
-        form.service = savedColumn(settings.fieldMap.service)
-        form.primaryGroupBy = savedColumn(settings.fieldMap.primaryGroupBy)
-        form.traceId = savedColumn(settings.fieldMap.traceId)
-      } else {
-        applyFieldDefaults(columns)
-      }
+      await applyFieldDefaults(form.table, columns, settings.fieldMap)
     } finally {
       loadingTables.value = false
     }
@@ -169,7 +183,7 @@ a-modal(
 
   const onTableChange = async (table: string) => {
     const columns = await loadColumns(table)
-    applyFieldDefaults(columns)
+    await applyFieldDefaults(table, columns)
   }
 
   watch(

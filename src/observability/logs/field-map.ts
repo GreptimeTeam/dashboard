@@ -43,6 +43,29 @@ export const OTEL_LOG_INDEX_LABELS = [
 
 const OTEL_LOG_INDEX_LABEL_SET = new Set<string>(OTEL_LOG_INDEX_LABELS)
 
+/** OTLP resource attribute key (`service.name`) → OTel/Loki index-label name (`service_name`). */
+export function otelResourceLabelName(path: string): string {
+  return path.trim().replace(/\./g, '_').toLowerCase()
+}
+
+/**
+ * True when a chip names an OTLP *resource* attribute that OTel/Loki promote to a label.
+ *
+ * Resource attributes are the logs identity surface (`service.name`, `k8s.pod.name`, …) — the
+ * same names the flat-column path recognizes through {@link OTEL_LOG_INDEX_LABELS}. Log and
+ * scope attributes stay fields.
+ */
+export function isOtelResourceLabelChip(chipKey: string, jsonColumns: string[] = []): boolean {
+  const chip = parseJsonFieldChipKey(chipKey.trim(), jsonColumns)
+  if (!chip) {
+    return false
+  }
+  if (!/resource/i.test(chip.column)) {
+    return false
+  }
+  return OTEL_LOG_INDEX_LABEL_SET.has(otelResourceLabelName(chip.path))
+}
+
 function pickFirst(columnNames: Set<string>, candidates: string[]): string | undefined {
   return candidates.find((name) => columnNames.has(name))
 }
@@ -55,11 +78,28 @@ const OTEL_LOG_SERVICE = ['service_name']
 const OTEL_LOG_TRACE = ['trace_id']
 
 /**
+ * A role value is a real column, or a JSON attribute chip (`container.key`) whose container
+ * column exists — the shape entity resolution produces when the identity lives inside a
+ * JSON column (`resource_attributes.service.name`). Role-to-SQL helpers expand chips.
+ */
+export function isLogsRoleValue(value: string | undefined, columnNames: ReadonlySet<string>): boolean {
+  const name = value?.trim()
+  if (!name) {
+    return false
+  }
+  if (columnNames.has(name)) {
+    return true
+  }
+  const chip = parseJsonFieldChipKey(name, [...columnNames])
+  return Boolean(chip && columnNames.has(chip.column))
+}
+
+/**
  * Settings defaults from the OTEL logs model only.
  * `scope_name` is instrumentation scope, not service, so it is not used here.
  *
- * `serviceColumn` is the declared service identity when the table has one; it must be a
- * real column (chip-style identities are not plumbed through the logs roles yet).
+ * `serviceColumn` is the semantic service identity when the table has one: a real column,
+ * or a JSON chip when the logs resource attributes keep it inside a JSON column.
  */
 export function otelLogsFieldDefaultsFromColumns(
   columns: SchemaColumn[],
@@ -67,8 +107,9 @@ export function otelLogsFieldDefaultsFromColumns(
 ): LogsFieldMapSettings {
   const columnNames = new Set(columns.map((column) => column.name))
   const declaredService = options?.serviceColumn?.trim()
-  const service =
-    declaredService && columnNames.has(declaredService) ? declaredService : pickFirst(columnNames, OTEL_LOG_SERVICE)
+  const service = isLogsRoleValue(declaredService, columnNames)
+    ? declaredService
+    : pickFirst(columnNames, OTEL_LOG_SERVICE)
   return {
     time: pickFirst(columnNames, OTEL_LOG_TIME),
     body: pickFirst(columnNames, OTEL_LOG_BODY),
@@ -85,19 +126,22 @@ export function otelLogsFieldDefaultsFromColumns(
  */
 export function resolveLogsSettingsFieldDefaults(
   columns: SchemaColumn[],
-  saved?: LogsFieldMapSettings
+  saved?: LogsFieldMapSettings,
+  options?: { serviceColumn?: string }
 ): LogsFieldMapSettings {
-  const defaults = otelLogsFieldDefaultsFromColumns(columns)
+  const defaults = otelLogsFieldDefaultsFromColumns(columns, options)
   const columnNames = new Set(columns.map((column) => column.name))
   const keepSaved = (value: string | undefined, fallback: string | undefined) =>
     value && columnNames.has(value) ? value : fallback
+  const keepSavedRole = (value: string | undefined, fallback: string | undefined) =>
+    isLogsRoleValue(value, columnNames) ? value?.trim() : fallback
 
   return {
     time: keepSaved(saved?.time, defaults.time),
     body: keepSaved(saved?.body, defaults.body),
     severity: keepSaved(saved?.severity, defaults.severity),
-    service: keepSaved(saved?.service, defaults.service),
-    primaryGroupBy: keepSaved(saved?.primaryGroupBy, defaults.primaryGroupBy),
+    service: keepSavedRole(saved?.service, defaults.service),
+    primaryGroupBy: keepSavedRole(saved?.primaryGroupBy, defaults.primaryGroupBy),
     traceId: keepSaved(saved?.traceId, defaults.traceId),
   }
 }
@@ -111,6 +155,8 @@ function applySettingsOverrides(
     return map
   }
   const allowed = (name?: string) => Boolean(name && (!columnNames || columnNames.has(name)))
+  // Service / primary group may name a JSON chip; its container column is the requirement.
+  const allowedRole = (name?: string) => Boolean(name && (!columnNames || isLogsRoleValue(name, columnNames)))
   const next = { ...map }
   if (allowed(settings.time)) next.time = settings.time as string
   if (allowed(settings.body)) next.body = settings.body as string
@@ -119,10 +165,14 @@ function applySettingsOverrides(
     next.traceId = settings.traceId as string
     next.trace_id = settings.traceId as string
   }
-  if (allowed(settings.service)) next.service = settings.service as string
-  if (allowed(settings.primaryGroupBy)) {
-    next.primaryGroupBy = settings.primaryGroupBy as string
-    next[settings.primaryGroupBy as string] = settings.primaryGroupBy as string
+  if (allowedRole(settings.service)) next.service = (settings.service as string).trim()
+  if (allowedRole(settings.primaryGroupBy)) {
+    const primaryGroupBy = (settings.primaryGroupBy as string).trim()
+    next.primaryGroupBy = primaryGroupBy
+    // Chips are not columns: never self-map one, or column resolution would quote it as SQL.
+    if (!columnNames || columnNames.has(primaryGroupBy)) {
+      next[primaryGroupBy] = primaryGroupBy
+    }
   }
   return next
 }
@@ -154,7 +204,7 @@ function applyRoleColumns(
   }
 
   const serviceCol = settings?.service
-  if (serviceCol && columnNames.has(serviceCol)) {
+  if (serviceCol && isLogsRoleValue(serviceCol, columnNames)) {
     map.service = serviceCol
     if (serviceCol === 'service_name' && !map.job) {
       map.job = serviceCol
@@ -162,9 +212,9 @@ function applyRoleColumns(
   }
 
   const primaryGroupBy = settings?.primaryGroupBy
-  if (primaryGroupBy && columnNames.has(primaryGroupBy)) {
+  if (primaryGroupBy && isLogsRoleValue(primaryGroupBy, columnNames)) {
     map.primaryGroupBy = primaryGroupBy
-    if (!map[primaryGroupBy]) {
+    if (columnNames.has(primaryGroupBy) && !map[primaryGroupBy]) {
       map[primaryGroupBy] = primaryGroupBy
     }
   }
@@ -241,6 +291,14 @@ function isNumericLikeType(dataType: string | undefined): boolean {
 
 function isJsonDataType(dataType: string | undefined): boolean {
   return (dataType || '').toLowerCase().includes('json')
+}
+
+/** JSON / attributes container columns eligible for L2 key sampling. */
+export function listJsonAttributeColumns(columns: SchemaColumn[]): string[] {
+  return columns
+    .filter((column) => isJsonAttributeContainerName(column.name) || isJsonDataType(column.data_type))
+    .map((column) => column.name)
+    .sort((a, b) => a.localeCompare(b))
 }
 
 function addLabelExcludeSet(fieldMap: Record<string, string>, extraExclude?: string[]): Set<string> {
@@ -440,7 +498,9 @@ export function classifyLogsFilterKey(
   }
 
   if (parseJsonFieldChipKey(trimmed)) {
-    return 'field'
+    // OTLP resource attributes are labels (`resource_attributes.service.name`); the rest of
+    // the JSON attribute chips stay fields.
+    return isOtelResourceLabelChip(trimmed, listJsonAttributeColumns(columns)) ? 'label' : 'field'
   }
 
   if (trimmed === 'severity' || (fieldMap.severity && trimmed === fieldMap.severity)) {
@@ -482,14 +542,6 @@ export function chipKeyForLogsTableFilter(
     return (fieldMap.severity || columnName).trim()
   }
   return columnName.trim()
-}
-
-/** JSON / attributes container columns eligible for L2 key sampling. */
-export function listJsonAttributeColumns(columns: SchemaColumn[]): string[] {
-  return columns
-    .filter((column) => isJsonAttributeContainerName(column.name) || isJsonDataType(column.data_type))
-    .map((column) => column.name)
-    .sort((a, b) => a.localeCompare(b))
 }
 
 /**
@@ -549,6 +601,56 @@ export async function sampleJsonAttributeFieldKeys(
     })
   )
 
+  return [...keys].sort((a, b) => a.localeCompare(b))
+}
+
+/**
+ * Label keys for the Labels tab / Add label: declared columns plus the OTLP resource
+ * attribute chips (`resource_attributes.service.name`, `resource_attributes.k8s.pod.name`, …).
+ *
+ * Resource attributes are the identity surface of logs, so they are labels; `identityChip` is
+ * the service identity semantics resolved for this table and stays a label even when the JSON
+ * sampling below happens to miss it.
+ */
+export async function discoverLogLabelKeys(
+  tableName: string,
+  columns: SchemaColumn[],
+  fieldMap: Record<string, string>,
+  options?: { include?: string[]; exclude?: string[]; identityChip?: string }
+): Promise<string[]> {
+  const exclude = new Set((options?.exclude ?? []).filter(Boolean) as string[])
+  const keys = new Set(discoverLabelColumns(columns, fieldMap, options))
+  const identity = options?.identityChip?.trim()
+  if (identity) {
+    keys.add(identity)
+  }
+  const jsonColumns = listJsonAttributeColumns(columns)
+  if (tableName && jsonColumns.length) {
+    const sampled = await sampleJsonAttributeFieldKeys(tableName, jsonColumns)
+    sampled.forEach((chip) => {
+      if (isOtelResourceLabelChip(chip, jsonColumns)) {
+        keys.add(chip)
+      }
+    })
+  }
+  return [...keys].filter((key) => !exclude.has(key)).sort((a, b) => a.localeCompare(b))
+}
+
+/** Top-bar key list: label keys (columns + OTLP resource chips) plus contains columns. */
+export async function discoverLogFilterKeys(
+  tableName: string,
+  columns: SchemaColumn[],
+  fieldMap: Record<string, string>,
+  options?: { include?: string[]; exclude?: string[]; identityChip?: string }
+): Promise<string[]> {
+  const keys = new Set([
+    ...(await discoverLogLabelKeys(tableName, columns, fieldMap, options)),
+    ...discoverLogsContainsColumns(columns, fieldMap, options),
+  ])
+  const severity = fieldMap.severity?.trim()
+  if (severity) {
+    keys.delete(severity)
+  }
   return [...keys].sort((a, b) => a.localeCompare(b))
 }
 

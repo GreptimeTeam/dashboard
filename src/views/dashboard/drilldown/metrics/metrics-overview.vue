@@ -32,7 +32,6 @@
 
 <script setup lang="ts">
   import { computed, ref } from 'vue'
-  import { useStorage } from '@vueuse/core'
   import { storeToRefs } from 'pinia'
   import { useAppStore } from '@/store'
   import { useDrilldownContext } from '@/observability/context'
@@ -53,7 +52,8 @@
       enabled: () => !ctx.metric.value,
     })
 
-  const sidebarWidth = useStorage('drilldown-sidebar-width', 228)
+  /** Session-scoped: the catalog sidebar width is a transient view tweak, not a saved pref. */
+  const sidebarWidth = ref(228)
   const { hideSidebar } = storeToRefs(useAppStore())
 
   const actualSidebarWidth = computed(() => {

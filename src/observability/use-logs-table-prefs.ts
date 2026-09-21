@@ -1,25 +1,80 @@
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, type Ref } from 'vue'
 import { useStorage } from '@vueuse/core'
 
 export type LogsTableColumnMode = 'separate' | 'merged' | 'merged-with-keys'
 
+interface LogsTablePrefsState {
+  mergeColumn: Ref<boolean>
+  showKeys: Ref<boolean>
+  displayedColumnsByTable: Ref<Record<string, string[]>>
+  offeredColumnsByTable: Ref<Record<string, string[]>>
+  compactRows: Ref<boolean>
+}
+
 /**
  * LogsTable display prefs.
  *
- * Defaults to the historical logquery keys so the log query page keeps its preferences.
- * Other surfaces (the drilldown logs table) pass their own `storagePrefix` to stay
- * independent — a legacy "single column" choice must not collapse the drilldown table to
- * its timestamp column.
+ * Single column / show keys / compact rows are transient view tweaks and stay session-only
+ * (module state keyed by `storagePrefix`), so the log query page (`logquery`) and the
+ * drilldown logs table (`drilldown-logs`) no longer leak into each other through
+ * localStorage.
+ *
+ * Column visibility is the exception: it is opt-in persistent (`persistColumns`), because
+ * re-hiding a long column list after every reload is much worse than a stale choice.
  */
-export default function useLogsTablePrefs(options?: { storagePrefix?: string; defaultMergeColumn?: boolean }) {
+const stateByPrefix = new Map<string, LogsTablePrefsState>()
+
+function stateFor(prefix: string, defaultMergeColumn: boolean): LogsTablePrefsState {
+  const existing = stateByPrefix.get(prefix)
+  if (existing) {
+    return existing
+  }
+  const next: LogsTablePrefsState = {
+    mergeColumn: ref(defaultMergeColumn),
+    showKeys: ref(true),
+    displayedColumnsByTable: ref({}),
+    /** Columns already offered on this table. New query columns are shown; user hides stay hidden. */
+    offeredColumnsByTable: ref({}),
+    compactRows: ref(false),
+  }
+  stateByPrefix.set(prefix, next)
+  return next
+}
+
+interface LogsTableColumnState {
+  displayedColumnsByTable: Ref<Record<string, string[]>>
+  offeredColumnsByTable: Ref<Record<string, string[]>>
+}
+
+const columnStateByPrefix = new Map<string, LogsTableColumnState>()
+
+function columnStateFor(prefix: string): LogsTableColumnState {
+  const existing = columnStateByPrefix.get(prefix)
+  if (existing) {
+    return existing
+  }
+  const next: LogsTableColumnState = {
+    displayedColumnsByTable: useStorage<Record<string, string[]>>(`${prefix}-table-column-visible`, {}),
+    /** Columns already offered on this table. New query columns are shown; user hides stay hidden. */
+    offeredColumnsByTable: useStorage<Record<string, string[]>>(`${prefix}-table-column-offered`, {}),
+  }
+  columnStateByPrefix.set(prefix, next)
+  return next
+}
+
+export default function useLogsTablePrefs(options?: {
+  storagePrefix?: string
+  defaultMergeColumn?: boolean
+  /** Persist column visibility (and the "already offered" bookkeeping it needs) across visits. */
+  persistColumns?: boolean
+}) {
   const prefix = options?.storagePrefix ?? 'logquery'
-  const mergeColumn = useStorage(`${prefix}-merge-column`, options?.defaultMergeColumn ?? true)
-  const showKeys = useStorage(`${prefix}-show-keys`, true)
-  const displayedColumnsByTable = useStorage<Record<string, string[]>>(`${prefix}-table-column-visible`, {})
-  /** Columns already offered on this table. New query columns are shown; user hides stay hidden. */
-  const offeredColumnsByTable = useStorage<Record<string, string[]>>(`${prefix}-table-column-offered`, {})
-  const compactRows = useStorage(`${prefix}-compact-rows`, false)
-  /** Wrap is session-only in logquery — keep the same behavior. */
+  const session = stateFor(prefix, options?.defaultMergeColumn ?? true)
+  const { mergeColumn, showKeys, compactRows } = session
+  // The two column maps travel together: without `offeredColumnsByTable` the "first offer
+  // reveals every column" rule would resurrect columns the user hid in an earlier visit.
+  const { displayedColumnsByTable, offeredColumnsByTable } = options?.persistColumns ? columnStateFor(prefix) : session
+  /** Wrap is session-only — keep the same behavior. */
   const wrap = ref(false)
 
   const size = computed<'mini' | 'medium'>(() => (compactRows.value ? 'mini' : 'medium'))
@@ -79,16 +134,6 @@ export default function useLogsTablePrefs(options?: { storagePrefix?: string; de
       [tableName]: [...visible],
     }
   }
-
-  onMounted(() => {
-    if (prefix !== 'logquery') {
-      return
-    }
-    if (localStorage.getItem('logquery-table-compact') === 'true' && !compactRows.value) {
-      compactRows.value = true
-      localStorage.removeItem('logquery-table-compact')
-    }
-  })
 
   return {
     mergeColumn,

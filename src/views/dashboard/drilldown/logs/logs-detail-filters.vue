@@ -69,7 +69,7 @@
   const serviceEditing = ref(false)
   const serviceSuggestions = ref<LabelValueRow[]>([])
   const serviceSuggestLoading = ref(false)
-  const SCOPE_SUGGEST_LIMIT = 200
+  const SERVICE_SUGGEST_LIMIT = 200
 
   const columns = computed(() => {
     // Settings fill roles the runtime map has not resolved (see resolveLogsRoles), so the row
@@ -84,7 +84,8 @@
   })
 
   const bodyNeedsValue = computed(() => logsBodyOpNeedsValue(bodyOpDraft.value))
-  const serviceUsesSuggest = computed(() => columns.value.service === 'scope_name')
+  /** Any resolved service role (column or JSON chip) can offer values. */
+  const serviceUsesSuggest = computed(() => Boolean(columns.value.service))
 
   const visible = computed(
     () =>
@@ -102,7 +103,7 @@
 
   async function loadServiceSuggestions() {
     const column = columns.value.service
-    if (column !== 'scope_name' || !ctx.logsTable.value) {
+    if (!column || !ctx.logsTable.value) {
       serviceSuggestions.value = []
       return
     }
@@ -110,7 +111,7 @@
     try {
       serviceSuggestions.value = (
         (await fetchLabelValues(ctx, column, {
-          limit: SCOPE_SUGGEST_LIMIT,
+          limit: SERVICE_SUGGEST_LIMIT,
           excludeFilterKey: column,
         })) ?? []
       ).filter((row) => row.value.trim())

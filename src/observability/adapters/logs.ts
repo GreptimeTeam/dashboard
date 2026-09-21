@@ -8,7 +8,10 @@ import { filtersToSqlWhere } from '../filters'
 import {
   discoverFieldColumns,
   discoverLabelColumns,
+  discoverLogLabelKeys,
   discoverLogsContainsColumns,
+  isOtelResourceLabelChip,
+  isLogsRoleValue,
   listJsonAttributeColumns,
   resolveLogsTimeColumn,
   sampleJsonAttributeFieldKeys,
@@ -16,7 +19,7 @@ import {
 } from '../logs/field-map'
 import { normalizeLogLevelName, UNKNOWN_LOG_LEVEL } from '../logs/level-color'
 import { buildSeverityLevelsPredicate } from '../logs/level-visibility'
-import { escapeSqlString, quoteIdent } from '../logs/query-state'
+import { escapeSqlString, logsColumnExpr, quoteIdent } from '../logs/query-state'
 import { pivotLogVolumeByName, pivotLogVolumeRows, type LogVolumeSeries } from '../logs/volume-series'
 import { grafanaAutoIntervalSeconds } from '../logs/volume-step'
 import resolveLogsRoles from '../logs/resolved-roles'
@@ -147,7 +150,11 @@ export async function buildLogsContextWhere(
   const unixRange = ctx.unixTimeRange()
   const tracesLogsDrawer = ctx.signal.value === 'traces' && Boolean(ctx.logsTraceId.value?.trim())
   const includeLabelFilters = options?.includeLabelFilters ?? (ctx.logsView.value === 'detail' || tracesLogsDrawer)
-  const needsColumns = includeLabelFilters || (unixRange.length === 2 && !resolveLogsTimeColumn(fieldMap))
+  const needsColumns =
+    includeLabelFilters ||
+    (unixRange.length === 2 && !resolveLogsTimeColumn(fieldMap)) ||
+    // Panel/row predicates may name a JSON chip label — the schema resolves its container.
+    Boolean(options?.extraEquals?.length)
   const columns = needsColumns ? options?.columns ?? (await loadSchema(tableName)) : options?.columns
 
   if (unixRange.length === 2) {
@@ -173,8 +180,9 @@ export async function buildLogsContextWhere(
     )
   }
 
+  const columnNames = columns?.map((column) => column.name) ?? []
   options?.extraEquals?.forEach(({ column, value }) => {
-    whereParts.push(`${quoteIdent(column)} = '${escapeSqlString(value)}'`)
+    whereParts.push(`${logsColumnExpr(column, columnNames)} = '${escapeSqlString(value)}'`)
   })
 
   const logsTraceId = ctx.logsTraceId.value?.trim()
@@ -231,18 +239,25 @@ export type ServiceVolumeRow = {
 /** GROUP BY primaryGroupBy — used when a real group column exists (no fake All-logs card). */
 export async function fetchServiceVolumes(ctx: DrilldownContext, limit = 200): Promise<ServiceVolumeRow[]> {
   const tableName = ctx.logsTable.value
-  const groupCol = ctx.fieldMap.value.logs.primaryGroupBy
+  const groupCol = (ctx.fieldMap.value.logs.primaryGroupBy ?? '').trim()
   if (!tableName || !groupCol) {
     return []
   }
 
-  const where = await buildLogsContextWhere(ctx)
+  const columns = await loadSchema(tableName)
+  const columnNames = columns.map((column) => column.name)
+  if (!isLogsRoleValue(groupCol, new Set(columnNames))) {
+    return []
+  }
+  const groupExpr = logsColumnExpr(groupCol, columnNames)
+
+  const where = await buildLogsContextWhere(ctx, { columns })
   if (!where) {
     return []
   }
 
   try {
-    const sql = `SELECT ${quoteIdent(groupCol)} AS group_key, COUNT(*) AS cnt
+    const sql = `SELECT ${groupExpr} AS group_key, COUNT(*) AS cnt
 FROM ${quoteIdent(tableName)}
 WHERE ${where}
 GROUP BY group_key
@@ -270,9 +285,11 @@ export async function listLabelKeys(ctx: DrilldownContext): Promise<string[]> {
   }
   const columns = await loadSchema(tableName)
   const settings = loadDrilldownSettings().logs
-  return discoverLabelColumns(columns, ctx.fieldMap.value.logs, {
+  return discoverLogLabelKeys(tableName, columns, ctx.fieldMap.value.logs, {
     include: settings.labelInclude,
     exclude: settings.labelExclude,
+    // The semantic service identity is a label even when JSON sampling misses it.
+    identityChip: ctx.entityFilterKeys.value.logs?.service,
   })
 }
 
@@ -290,7 +307,10 @@ export async function listFieldKeys(ctx: DrilldownContext): Promise<string[]> {
     labelInclude: settings.labelInclude,
     labelExclude: settings.labelExclude,
   })
-  const l2 = await sampleJsonAttributeFieldKeys(tableName, listJsonAttributeColumns(columns))
+  const jsonColumns = listJsonAttributeColumns(columns)
+  const l2 = (await sampleJsonAttributeFieldKeys(tableName, jsonColumns)).filter(
+    (key) => !isOtelResourceLabelChip(key, jsonColumns)
+  )
   return [...new Set([...l1, ...l2])].sort((a, b) => a.localeCompare(b))
 }
 
@@ -310,9 +330,12 @@ export async function fetchLabelValues(
     return []
   }
   const schema = await loadSchema(tableName)
-  if (!schemaHasColumn(schema, labelCol)) {
+  const columnNames = schema.map((column) => column.name)
+  // Labels may be JSON chips (`resource_attributes.service.name`) — same shape as a role.
+  if (!isLogsRoleValue(labelCol, new Set(columnNames))) {
     return []
   }
+  const labelExpr = logsColumnExpr(labelCol, columnNames)
 
   const where = await buildLogsContextWhere(ctx, {
     excludeFilterKey: options?.excludeFilterKey,
@@ -323,9 +346,9 @@ export async function fetchLabelValues(
   }
 
   try {
-    const sql = `SELECT ${quoteIdent(labelCol)} AS value, COUNT(*) AS cnt
+    const sql = `SELECT ${labelExpr} AS value, COUNT(*) AS cnt
 FROM ${quoteIdent(tableName)}
-WHERE ${where} AND ${quoteIdent(labelCol)} IS NOT NULL
+WHERE ${where} AND ${labelExpr} IS NOT NULL
 GROUP BY value
 ORDER BY cnt DESC
 LIMIT ${limit}`
@@ -405,7 +428,8 @@ export async function fetchLogsRows(
 
   const fieldMap = ctx.fieldMap.value.logs
   const schema = await loadSchema(tableName)
-  if (options?.labelCol && !schemaHasColumn(schema, options.labelCol)) {
+  // The panel label may be a JSON chip (`resource_attributes.service.name`), not a column.
+  if (options?.labelCol && !isLogsRoleValue(options.labelCol, new Set(schema.map((column) => column.name)))) {
     return empty
   }
   const extraEquals =
@@ -507,7 +531,8 @@ export async function fetchLogVolumeTimeseries(
   if (!timeColumn) {
     return []
   }
-  if (options?.labelCol && !schemaHasColumn(schema, options.labelCol)) {
+  // Breakdown/labels may be JSON chips (`resource_attributes.service.name`), not just columns.
+  if (options?.labelCol && !isLogsRoleValue(options.labelCol, new Set(schema.map((column) => column.name)))) {
     return []
   }
 
@@ -584,7 +609,8 @@ export async function fetchLogVolumeByColumn(
   }
   const schema = await loadSchema(tableName)
   const timeColumn = resolveLogsTimeColumnFallback(fieldMap, schema)
-  if (!timeColumn || !schemaHasColumn(schema, column)) {
+  const columnNames = schema.map((item) => item.name)
+  if (!timeColumn || !isLogsRoleValue(column, new Set(columnNames))) {
     return []
   }
 
@@ -600,7 +626,7 @@ export async function fetchLogVolumeByColumn(
 
   const inList = values.map((row) => `'${escapeSqlString(row.value)}'`).join(', ')
   const interval = grafanaAutoIntervalSeconds(volumeRangeMs(ctx), options.plotWidthPx ?? 0)
-  const quoted = quoteIdent(column)
+  const quoted = logsColumnExpr(column, columnNames)
   const sql = `SELECT
   date_bin('${interval} seconds', ${quoteIdent(timeColumn)}) AS time_bucket,
   ${quoted} AS series,

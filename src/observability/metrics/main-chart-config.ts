@@ -1,5 +1,4 @@
-import { computed, type Ref } from 'vue'
-import { useStorage } from '@vueuse/core'
+import { computed, ref, type Ref } from 'vue'
 import { inferMetricKind, isUnsupportedHistogramKind, type MetricKind } from './infer-promql'
 
 /** Grafana-like main panel visualization mode. */
@@ -20,8 +19,17 @@ export interface ResolvedMainChartPrefs {
   percentiles: number[]
 }
 
-const STORAGE_KEY = 'greptime-drilldown-main-chart-prefs'
 export const DEFAULT_PERCENTILES = [99, 90, 50] as const
+
+/**
+ * Per-metric Configure / variant prefs for the current session only.
+ *
+ * Module-level so every consumer of {@link useMainChartPrefs} (title actions, main chart,
+ * breakdown cards) shares one store, but deliberately *not* persisted: these are transient
+ * view tweaks, and a remembered heatmap/percentiles choice from a previous visit is more
+ * confusing than useful.
+ */
+const sessionPrefs = ref<Record<string, MainChartMetricPrefs>>({})
 
 export function defaultPrefsForMetric(metric: string): ResolvedMainChartPrefs {
   const kind = inferMetricKind(metric)
@@ -79,12 +87,9 @@ export function configureOptionsForKind(
   ]
 }
 
-/**
- * Per-metric main-chart Configure / variant prefs (localStorage).
- * Shared by title actions and useMetricMainChart.
- */
+/** Per-metric main-chart Configure / variant prefs (session-scoped, not persisted). */
 export default function useMainChartPrefs(metricName: Ref<string>) {
-  const allPrefs = useStorage<Record<string, MainChartMetricPrefs>>(STORAGE_KEY, {})
+  const allPrefs = sessionPrefs
 
   const prefs = computed(() => resolvePrefsForMetric(metricName.value.trim(), allPrefs.value[metricName.value.trim()]))
 

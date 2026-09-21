@@ -103,7 +103,8 @@
   const ctx = useDrilldownContext()
 
   // Drilldown keeps its own display prefs: the legacy log query page's "single column"
-  // choice must not collapse this table to its timestamp column.
+  // choice must not collapse this table to its timestamp column. Column visibility is
+  // persisted — this table offers every schema column, so hiding is worth remembering.
   const {
     mergeColumn,
     showKeys,
@@ -115,7 +116,7 @@
     columnModeKey,
     displayedColumnsFor,
     revealOfferedColumns,
-  } = useLogsTablePrefs({ storagePrefix: 'drilldown-logs', defaultMergeColumn: false })
+  } = useLogsTablePrefs({ storagePrefix: 'drilldown-logs', defaultMergeColumn: false, persistColumns: true })
 
   const { loading, loadingMore, tableColumns, tableData, tsColumn, hasMore, load, loadMore } = useDrilldownLogsTable(
     ctx,
@@ -129,11 +130,10 @@
   // Settings fill roles the runtime map has not resolved yet (see resolveLogsRoles).
   const traceIdColumn = computed(() => {
     const roles = resolveLogsRoles(ctx)
-    return typeof roles.traceId === 'string' && roles.traceId.trim()
-      ? roles.traceId
-      : typeof roles.trace_id === 'string' && roles.trace_id.trim()
-      ? roles.trace_id
-      : ''
+    const column = [roles.traceId, roles.trace_id].find(
+      (value): value is string => typeof value === 'string' && Boolean(value.trim())
+    )
+    return column ?? ''
   })
 
   const openTrace = (traceId: string) => {
