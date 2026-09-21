@@ -24,7 +24,6 @@
       .filter-combobox__editor
         span.filter-combobox__segment.filter-combobox__key(
           v-if="showKeyPrefix"
-          :class="{ 'is-readonly': isEditing && stage !== 'key' }"
           @mousedown.prevent="handleKeyPrefixClick"
         ) {{ draftKey }}
         span.filter-combobox__segment.filter-combobox__op(v-if="showOpPrefix" @mousedown.prevent="handleOpPrefixClick") {{ draftOp }}
@@ -110,6 +109,8 @@
   const draftOp = ref<DrilldownFilterOp>('=')
   const draftValue = ref('')
   const inputValue = ref('')
+  /** Operator has been committed (value stage reached) — drives whole-segment Backspace. */
+  const operatorChosen = ref(false)
   const activeSuggestIndex = ref(0)
   const ignoreBlurUntil = ref(0)
   const inputRef = ref<HTMLInputElement | null>(null)
@@ -150,16 +151,20 @@
   const sqlField = computed(() => isSqlFieldKey(activeFieldKey.value))
 
   const showKeyPrefix = computed(() => {
-    if (isEditing.value && stage.value === 'key') {
-      return false
-    }
-    if (isEditing.value) {
-      return true
-    }
-    return stage.value === 'operator' || stage.value === 'value'
+    // A committed key is always its own sub-pill chip — in both the new-filter draft and
+    // editing — so Backspace at the key stage deletes the whole key/pill, never switching
+    // it back to letter-by-letter text editing.
+    return Boolean(draftKey.value)
   })
 
-  const showOpPrefix = computed(() => stage.value === 'value')
+  const showOpPrefix = computed(() => {
+    // Editing keeps the operator as its own sub-pill chip too (value + operator stages), so
+    // Backspace at the operator stage deletes it wholesale instead of hiding it.
+    if (isEditing.value) {
+      return stage.value === 'value' || stage.value === 'operator'
+    }
+    return stage.value === 'value'
+  })
 
   const stagePlaceholder = computed(() => {
     if (stage.value === 'key') {
@@ -260,6 +265,7 @@
     if (isEditing.value) {
       return
     }
+    operatorChosen.value = false
     stage.value = 'key'
     draftKey.value = ''
     draftOp.value = '='
@@ -276,6 +282,7 @@
 
   const prepareWipForNextFilter = async () => {
     editingIndex.value = null
+    operatorChosen.value = false
     stage.value = 'key'
     draftKey.value = ''
     draftOp.value = '='
@@ -303,6 +310,7 @@
       return
     }
     editingIndex.value = index
+    operatorChosen.value = true
     draftKey.value = filter.key
     draftOp.value = filter.op
     draftValue.value = filter.value
@@ -355,6 +363,7 @@
   }
 
   const advanceToOperator = () => {
+    operatorChosen.value = false
     stage.value = 'operator'
     syncInputForStage()
     deferIgnoreBlur()
@@ -363,6 +372,7 @@
   }
 
   const advanceToValue = () => {
+    operatorChosen.value = true
     stage.value = 'value'
     syncInputForStage()
     if (sqlField.value) {
@@ -434,11 +444,10 @@
   }
 
   const handleKeyPrefixClick = () => {
-    if (isEditing.value) {
-      return
-    }
     stage.value = 'key'
     inputValue.value = draftKey.value
+    // Clicking the key chip re-opens it as editable text (chip hides while editing).
+    draftKey.value = ''
     deferIgnoreBlur()
     focusInput()
     openSuggest()
@@ -501,20 +510,13 @@
     resetWip()
   }, 120)
 
-  const retreatToOperator = () => {
-    draftValue.value = ''
-    stage.value = 'operator'
-    syncInputForStage()
-    deferIgnoreBlur()
-    focusInput()
-    openSuggest()
-  }
-
   const retreatToKey = () => {
+    operatorChosen.value = false
     stage.value = 'key'
-    inputValue.value = draftKey.value
-    draftKey.value = ''
     draftOp.value = '='
+    // Keep the key as a sub-pill chip (input stays empty) in both flows, so the next
+    // Backspace deletes the whole key/pill instead of switching to letter-by-letter text.
+    inputValue.value = ''
     deferIgnoreBlur()
     focusInput()
     openSuggest()
@@ -528,18 +530,44 @@
     event.preventDefault()
 
     if (stage.value === 'value') {
-      retreatToOperator()
+      // A pill is key | operator | value sub-pills, each deleted with one Backspace. When
+      // the value input is empty, the next Backspace deletes the whole operator (not just
+      // an intermediate "operator stage") so operator then key each take exactly one press.
+      retreatToKey()
       return
     }
 
     if (stage.value === 'operator') {
-      retreatToKey()
+      if (operatorChosen.value) {
+        retreatToKey()
+      } else {
+        // Just committed the key, operator not chosen yet — one Backspace deletes the
+        // whole key directly instead of first retreating to the key stage.
+        draftKey.value = ''
+        draftOp.value = '='
+        stage.value = 'key'
+        inputValue.value = ''
+        deferIgnoreBlur()
+        focusInput()
+        openSuggest()
+      }
       return
     }
 
     if (isEditing.value && editingIndex.value !== null) {
       removeFilterAt(editingIndex.value)
       prepareWipForNextFilter()
+      return
+    }
+
+    // New-filter draft with a committed key chip: Backspace deletes the whole key, back to
+    // an empty key stage (a filter needs a key, so there is nothing before it to retreat to).
+    if (stage.value === 'key' && draftKey.value) {
+      draftKey.value = ''
+      draftOp.value = '='
+      deferIgnoreBlur()
+      focusInput()
+      openSuggest()
       return
     }
 
@@ -715,14 +743,6 @@
   .filter-combobox__key {
     color: var(--color-text-1);
     font-weight: var(--gpt-font-weight-control);
-
-    &.is-readonly {
-      cursor: default;
-
-      &:hover {
-        color: var(--color-text-1);
-      }
-    }
   }
 
   .filter-combobox__input {
