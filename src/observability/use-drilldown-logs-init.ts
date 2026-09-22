@@ -10,8 +10,17 @@ import { buildLogsFieldMap, otelLogsFieldDefaultsFromColumns } from '@/observabi
 import { resolveLogsTable } from '@/observability/logs/resolve-table'
 import { entityColumnFilterKey, resolveEntityFilterRef } from '@/observability/entities'
 import { normalizeEntityFilters } from '@/observability/entity-keys'
+import type { DrilldownFilter } from '@/observability/types'
 import useTableSchemaStore from '@/store/modules/table-schema'
 import type { DrilldownContext } from './context'
+
+/** Order-independent identity so no-op normalize does not retick filter watchers. */
+function filtersFingerprint(filters: DrilldownFilter[]): string {
+  return [...filters]
+    .map((filter) => `${filter.key}\0${filter.op}\0${filter.value}`)
+    .sort()
+    .join('\n')
+}
 
 export default function useDrilldownLogsInit(ctx: DrilldownContext) {
   const { database } = storeToRefs(useAppStore())
@@ -98,13 +107,25 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
       )
       // A signal switch that happened before this table was bound could only fall back to
       // the `service` role; re-encode now that the real key (possibly a JSON chip) is known.
-      ctx.setFilters(
-        normalizeEntityFilters(ctx.filters.value, 'logs', (entity) => ctx.entityFilterKeys.value.logs?.[entity])
+      const nextFilters = normalizeEntityFilters(
+        ctx.filters.value,
+        'logs',
+        (entity) => ctx.entityFilterKeys.value.logs?.[entity]
       )
+      if (filtersFingerprint(nextFilters) !== filtersFingerprint(ctx.filters.value)) {
+        ctx.setFilters(nextFilters)
+      }
     } catch (error) {
       console.error(`Failed to resolve the service filter key for ${tableName}:`, error)
       ctx.setEntityFilterKey('logs', 'service', undefined)
       ctx.setSignalColumnTypes('logs', undefined)
+    }
+  }
+
+  /** Only bump shared refresh when logs panels are active — avoid re-querying metrics cards. */
+  const refreshLogsPanelsIfActive = () => {
+    if (ctx.signal.value === 'logs') {
+      ctx.triggerRefresh()
     }
   }
 
@@ -119,7 +140,7 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
     await publishEntityFilterKey(tableName)
     restoreLogsDetailSelection()
     // Detail may have mounted from URL before fieldMap was ready — reload panels.
-    ctx.triggerRefresh()
+    refreshLogsPanelsIfActive()
   }
 
   const initializeLogsContext = async () => {
@@ -141,7 +162,7 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
       await publishEntityFilterKey(tableName)
       restoreLogsDetailSelection()
       // URL restore opens detail before this finishes; bump so table/chart reload.
-      ctx.triggerRefresh()
+      refreshLogsPanelsIfActive()
       return
     }
 
