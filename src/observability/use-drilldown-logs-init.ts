@@ -77,11 +77,6 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
   }
 
   /**
-   * Publish the bounded table's service identity for cross-signal filters. The key may
-   * be a JSON chip (`resource_attributes.service.name`) — filters support chips even
-   * though the logs *roles* do not yet.
-   */
-  /**
    * Publish the bound table's service identity for cross-signal filters. The key may
    * be a JSON chip (`resource_attributes.service.name`) — filters support chips even
    * though the logs *roles* do not yet.
@@ -95,6 +90,13 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
     )
   }
 
+  /** Only bump shared refresh when logs panels are active — avoid re-querying metrics cards. */
+  const refreshLogsPanelsIfActive = () => {
+    if (ctx.signal.value === 'logs') {
+      ctx.triggerRefresh()
+    }
+  }
+
   const applyTableAndFieldMap = async (tableName: string) => {
     const fieldMap = await seedFieldSettings(tableName)
     const nextLogsFieldMap = await buildLogsFieldMap(tableName, fieldMap)
@@ -106,7 +108,7 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
     await publishEntityFilterKey(tableName)
     restoreLogsDetailSelection()
     // Detail may have mounted from URL before fieldMap was ready — reload panels.
-    ctx.triggerRefresh()
+    refreshLogsPanelsIfActive()
   }
 
   const initializeLogsContext = async () => {
@@ -128,7 +130,7 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
       await publishEntityFilterKey(tableName)
       restoreLogsDetailSelection()
       // URL restore opens detail before this finishes; bump so table/chart reload.
-      ctx.triggerRefresh()
+      refreshLogsPanelsIfActive()
       return
     }
 

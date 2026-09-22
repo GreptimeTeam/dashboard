@@ -1,6 +1,12 @@
 import { ref, reactive, computed, watch, shallowRef } from 'vue'
 import { replaceTimePlaceholders, getTableRefForSql } from '@/utils/sql'
 import { normalizeLogTimeBoundToMs } from '@/utils/log-time-cursor'
+import {
+  buildKeysetIsoSqlRange,
+  freezeUnixTimeRange,
+  isCursorInsideFrozenWindow,
+  type FrozenUnixRange,
+} from '@/utils/log-keyset-window'
 import type { ColumnType, QueryState } from '@/types/query'
 
 const useQueryExecution = (builder, textEditor, timeRange) => {
@@ -12,6 +18,7 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
     timeRangeValues: [],
     time: 10,
     rangeTime: [],
+    frozenUnixRange: null,
     limit: 1000,
     orderBy: 'DESC',
     sourceState: builder.builderFormState,
@@ -108,6 +115,14 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
       columns.value = []
       rows.value = []
     }
+    // Freeze absolute bounds once per Run/refresh so loadMore never re-evaluates
+    // relative `now() - Interval` and never mutates toolbar time.
+    const frozen = freezeUnixTimeRange({
+      time: timeRange.time.value,
+      rangeTime: timeRange.rangeTime.value,
+    })
+    queryState.frozenUnixRange = frozen
+
     if (isNewQuery) {
       // Update queryState directly since it's reactive
       Object.assign(queryState, {
@@ -119,6 +134,7 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
         timeRangeValues: [...timeRange.timeRangeValues.value],
         time: timeRange.time.value,
         rangeTime: [...timeRange.rangeTime.value],
+        frozenUnixRange: frozen,
         sourceState: {
           ...(editorType.value === 'builder' ? builder.builderFormState : textEditor.textEditorState),
         },
@@ -193,9 +209,9 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
   }
 
   /**
-   * Scroll loading: query the next time window by moving the range bound to the
-   * row at the end of the list (keyset cursor), then append what is new.
-   * Works for both directions: DESC keeps loading older rows, ASC newer ones.
+   * Scroll loading: keyset older/newer pages without rewriting toolbar time.
+   * Relative Run windows use absolute ISO bounds so `now()` does not drift.
+   * Anytime (no frozen window) still keysets on the cursor with 1970 / now() defaults.
    */
   async function loadMore() {
     if (loading.value || loadingMore.value || !hasMore.value || !queryState.sql) {
@@ -206,7 +222,9 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
       hasMore.value = false
       return
     }
+    const frozen = queryState.frozenUnixRange as FrozenUnixRange | null | undefined
     const older = (queryState.orderBy || 'DESC') === 'DESC'
+    const direction = older ? 'older' : 'newer'
     const cursor = older ? rows.value[rows.value.length - 1]?.[tsName] : rows.value[0]?.[tsName]
     const cursorMs = normalizeLogTimeBoundToMs(cursor)
     if (!Number.isFinite(cursorMs)) {
@@ -214,9 +232,11 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
       return
     }
 
-    const [globalStart, globalEnd] = queryState.timeRangeValues
-    const cursorLiteral = toSqlTimeLiteral(cursor)
-    const range = older ? [globalStart, cursorLiteral] : [cursorLiteral, globalEnd]
+    const range = buildKeysetIsoSqlRange(frozen, cursor, direction, toSqlTimeLiteral(cursor))
+    if (!range) {
+      hasMore.value = false
+      return
+    }
 
     let pageSql = ''
     try {
@@ -252,8 +272,11 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
         rows.value = [...rows.value, ...appended]
       }
       const limit = resolvePageSize()
-      // Full window means there may be more rows further out; a stalled append stops.
-      hasMore.value = appended.length > 0 && (!limit || pageRows.length >= limit)
+      const tip = appended.length ? appended[appended.length - 1]?.[tsName] : cursor
+      // Anytime has no frozen edge; bounded windows stop at the toolbar start/end.
+      const stillInside = !frozen || isCursorInsideFrozenWindow(tip, frozen, direction)
+      // Full page means there may be more rows further out; a stalled append stops.
+      hasMore.value = stillInside && appended.length > 0 && (!limit || pageRows.length >= limit)
     } catch (error) {
       console.error('Failed to load more rows:', error)
     } finally {

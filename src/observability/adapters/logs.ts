@@ -138,6 +138,11 @@ export async function buildLogsContextWhere(
     excludeFilterKey?: string
     /** Preloaded schema — skips an extra loadSchema inside this helper. */
     columns?: SchemaColumn[]
+    /**
+     * Absolute unix-seconds window. When set, preferred over live
+     * `ctx.unixTimeRange()` so scroll loadMore does not drift.
+     */
+    unixRange?: readonly [number, number] | number[] | null
   }
 ): Promise<string> {
   const tableName = ctx.logsTable.value
@@ -147,7 +152,11 @@ export async function buildLogsContextWhere(
 
   const fieldMap = ctx.fieldMap.value.logs
   const whereParts: string[] = []
-  const unixRange = ctx.unixTimeRange()
+  const liveRange = ctx.unixTimeRange()
+  const unixRange =
+    options?.unixRange != null && options.unixRange.length === 2
+      ? [Number(options.unixRange[0]), Number(options.unixRange[1])]
+      : liveRange
   const tracesLogsDrawer = ctx.signal.value === 'traces' && Boolean(ctx.logsTraceId.value?.trim())
   const includeLabelFilters = options?.includeLabelFilters ?? (ctx.logsView.value === 'detail' || tracesLogsDrawer)
   const needsColumns =
@@ -421,6 +430,11 @@ export async function fetchLogsRows(
     columns?: string[]
     /** Extra AND clause (logs-tab body search). Must not be a shared context filter. */
     extraWhere?: string
+    /**
+     * Frozen absolute unix-seconds window for this table fetch / loadMore.
+     * Prefer over live toolbar range so scroll pages stay inside Search bounds.
+     */
+    unixRange?: readonly [number, number] | number[] | null
   }
 ): Promise<LogsRowsResult> {
   const tableName = ctx.logsTable.value
@@ -438,7 +452,7 @@ export async function fetchLogsRows(
   const extraEquals =
     options?.labelCol && options.value !== undefined ? [{ column: options.labelCol, value: options.value }] : undefined
   const where = appendExtraWhere(
-    await buildLogsContextWhere(ctx, { extraEquals, columns: schema }),
+    await buildLogsContextWhere(ctx, { extraEquals, columns: schema, unixRange: options?.unixRange }),
     options?.extraWhere
   )
   if (!where) {

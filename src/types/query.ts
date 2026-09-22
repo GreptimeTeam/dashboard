@@ -42,6 +42,11 @@ export interface QueryState extends BaseState {
   timeRangeValues: any[]
   time: number
   rangeTime: any[]
+  /**
+   * Absolute unix-seconds window frozen at Run. Scroll loadMore must keyset
+   * inside this window and must not rewrite toolbar time.
+   */
+  frozenUnixRange?: readonly [number, number] | null
   sourceState: TextEditorFormState | BuilderFormState
   sql: string
   database?: string // Selected database name

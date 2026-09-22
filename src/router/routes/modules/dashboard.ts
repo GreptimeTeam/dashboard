@@ -255,7 +255,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.dashboard.drilldown',
         requiresAuth: false,
-        icon: 'metric',
+        icon: 'chart',
         roles: ['admin', 'cloud'],
         ignoreCache: true,
       },
