@@ -36,13 +36,20 @@ export default function useDrilldownTracesInit(ctx: DrilldownContext) {
     return buildDefaultTracesFieldMap({ serviceColumn })
   }
 
+  /** Only bump shared refresh when traces panels are active — avoid re-querying metrics cards. */
+  const refreshTracesPanelsIfActive = () => {
+    if (ctx.signal.value === 'traces') {
+      ctx.triggerRefresh()
+    }
+  }
+
   const applyTableAndFieldMap = async (tableName: string) => {
     ctx.fieldMap.value = {
       ...ctx.fieldMap.value,
       traces: await tracesFieldMapFor(tableName),
     }
     ctx.tracesTable.value = tableName
-    ctx.triggerRefresh()
+    refreshTracesPanelsIfActive()
   }
 
   const initializeTracesContext = async () => {
@@ -52,7 +59,7 @@ export default function useDrilldownTracesInit(ctx: DrilldownContext) {
         ...ctx.fieldMap.value,
         traces: await tracesFieldMapFor(tableName),
       }
-      ctx.triggerRefresh()
+      refreshTracesPanelsIfActive()
       return
     }
 
