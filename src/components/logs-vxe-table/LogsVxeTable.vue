@@ -129,7 +129,11 @@
       wrapLine?: boolean
       /** Builder mode: show per-cell filter/copy menu (separate only). */
       showContextMenu?: boolean
-      /** More rows can be fetched: enables the load-more footer + auto load. */
+      /**
+       * More rows can be fetched: enables the load-more footer + auto load.
+       * Parents must freeze the Search/Run time window and keyset inside it on
+       * `reachEnd` — never rewrite toolbar time from scroll (see log-keyset-window).
+       */
       hasMore?: boolean
       /** A load-more request is in flight. */
       loadingMore?: boolean

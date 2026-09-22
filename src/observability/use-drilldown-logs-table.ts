@@ -3,12 +3,15 @@ import type { DrilldownContext } from '@/observability/context'
 import { fetchLogsRows } from '@/observability/adapters/logs'
 import { loadDrilldownSettings } from '@/observability/drilldown-settings'
 import type { ColumnType, TSColumn } from '@/types/query'
+import { isCursorInsideFrozenWindow, type FrozenUnixRange } from '@/utils/log-keyset-window'
 
 /** Rows fetched per page — matches the Grafana logs line limit (1000). */
 const DEFAULT_PAGE_SIZE = 1000
 
 /**
  * Drilldown logs table data: initial fetch + keyset append for infinite scroll.
+ * Time window is frozen on `load()`; `loadMore` keysets inside that window only
+ * and never rewrites toolbar time.
  */
 export default function useDrilldownLogsTable(
   ctx: DrilldownContext,
@@ -50,6 +53,8 @@ export default function useDrilldownLogsTable(
   const tableData = ref<Array<Record<string, unknown>>>([])
   const tsColumn = ref<TSColumn | null>(null)
   const hasMore = ref(false)
+  /** Absolute unix window from the last `load()` — shared by every loadMore page. */
+  const frozenUnixRange = ref<FrozenUnixRange | null>(null)
 
   const displayedColumns = computed(() => tableColumns.value.map((column) => column.name))
 
@@ -64,6 +69,7 @@ export default function useDrilldownLogsTable(
       return Promise.resolve()
     }
     return new Promise((resolve) => {
+      let timer: ReturnType<typeof setTimeout>
       const stop = watch(
         () => ctx.fieldMap.value.logs.time,
         (value) => {
@@ -75,7 +81,7 @@ export default function useDrilldownLogsTable(
           resolve()
         }
       )
-      const timer = setTimeout(() => {
+      timer = setTimeout(() => {
         stop()
         if (!ctx.fieldMap.value.logs.time) {
           console.warn('Logs field map did not resolve a time column; loading table anyway.')
@@ -113,12 +119,26 @@ export default function useDrilldownLogsTable(
     return last?.[name]
   }
 
+  function snapshotUnixRange(): FrozenUnixRange | null {
+    const live = ctx.unixTimeRange()
+    if (live.length !== 2) {
+      return null
+    }
+    const start = Number(live[0])
+    const end = Number(live[1])
+    if (!Number.isFinite(start) || !Number.isFinite(end)) {
+      return null
+    }
+    return [start, end]
+  }
+
   async function load() {
     if (!ctx.logsTable.value) {
       tableColumns.value = []
       tableData.value = []
       tsColumn.value = null
       hasMore.value = false
+      frozenUnixRange.value = null
       return
     }
     // Refresh / URL detail opens before buildLogsFieldMap finishes — wait for roles.
@@ -134,12 +154,15 @@ export default function useDrilldownLogsTable(
         tsColumn.value = null
         hasMore.value = false
         loading.value = false
+        frozenUnixRange.value = null
         return
       }
     }
 
     loading.value = true
     loadingMore.value = false
+    const window = snapshotUnixRange()
+    frozenUnixRange.value = window
     try {
       const rows = await fetchLogsRows(ctx, {
         labelCol: options.labelCol?.value,
@@ -148,6 +171,7 @@ export default function useDrilldownLogsTable(
         limit: pageSize,
         columns: resolveColumns(),
         extraWhere: resolveExtraWhere(),
+        unixRange: window,
       })
       tableColumns.value = rows.columns
       tableData.value = rows.data
@@ -173,6 +197,11 @@ export default function useDrilldownLogsTable(
       hasMore.value = false
       return
     }
+    const window = frozenUnixRange.value
+    if (window && !isCursorInsideFrozenWindow(beforeTs, window, 'older')) {
+      hasMore.value = false
+      return
+    }
     loadingMore.value = true
     try {
       const rows = await fetchLogsRows(ctx, {
@@ -184,6 +213,7 @@ export default function useDrilldownLogsTable(
         keyOffset: tableData.value.length,
         columns: resolveColumns(),
         extraWhere: resolveExtraWhere(),
+        unixRange: window,
       })
       if (rows.columns.length) {
         tableColumns.value = rows.columns
@@ -192,7 +222,9 @@ export default function useDrilldownLogsTable(
         tsColumn.value = rows.tsColumn
       }
       tableData.value = [...tableData.value, ...rows.data]
-      hasMore.value = rows.hasMore
+      const tip = rows.data.length ? oldestTs() : beforeTs
+      const stillInside = !window || isCursorInsideFrozenWindow(tip, window, 'older')
+      hasMore.value = stillInside && rows.hasMore
     } catch (error) {
       console.error('Failed to load more drilldown logs', error)
     } finally {

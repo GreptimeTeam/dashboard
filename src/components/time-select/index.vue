@@ -3,7 +3,7 @@ a-trigger#time-select(
   v-model:popup-visible="visible"
   trigger="click"
   :position="flexDirection === 'row' ? 'br' : 'bl'"
-  :update-at-scroll="true"
+  :update-at-scroll="updateAtScroll"
   :popup-offset="4"
   :click-outside-to-close="true"
 )
@@ -34,7 +34,7 @@ a-trigger#time-select(
         position="bl"
         :model-value="rangePickerModelValue"
         :show-time="true"
-        :trigger-props="{ 'update-at-scroll': true }"
+        :trigger-props="{ 'update-at-scroll': updateAtScroll }"
         :placeholder="[$t('dashboard.startTime'), $t('dashboard.endTime')]"
         @ok="selectTimeRange($event)"
       )
@@ -100,6 +100,14 @@ a-trigger#time-select(
     emptyStr: {
       type: String,
       default: '',
+    },
+    /**
+     * Reposition popup on scroll. Keep false near nested scroll surfaces
+     * (e.g. logs virtual table) — scroll can otherwise disturb the picker.
+     */
+    updateAtScroll: {
+      type: Boolean,
+      default: false,
     },
   })
   const emit = defineEmits(['update:timeLength', 'update:timeRange', 'change'])
