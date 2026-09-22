@@ -22,6 +22,8 @@
     @scroll="onScroll"
     @cell-click="onCellClick"
   )
+    template(#empty)
+      span.logs-vxe-empty {{ t('logsQuery.nodata') }}
   // Load-more affordance (Grafana-like footer): appears once the user reaches the
   // end of the loaded rows. Clicking it or scrolling on both load the next page.
   .logs-vxe-load-more(

@@ -53,12 +53,15 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card.gpt-table-sidebar-
       :virtual-list-props="{ threshold: 100, buffer: 20, height: virtualListHeight }"
     )
       template(#icon="node")
-        a-tooltip(v-if="getNodeIcon(node.node)" :content="node.node.iconType || 'TABLE'")
-          svg.icon
+        a-tooltip(v-if="getNodeIcon(node.node)" :content="getTableIconTooltip(node.node)")
+          svg.icon(:class="getTableIconClass(node.node)")
             use(:href="getNodeIcon(node.node)")
       template(#title="nodeData")
         .tree-data(v-if="!nodeData.isLeaf")
-          .data-title(:title="nodeData.title")
+          a-tooltip(v-if="getTableNameTooltip(nodeData)" :content="getTableNameTooltip(nodeData)")
+            .data-title
+              | {{ nodeData.title }}
+          .data-title(v-else :title="nodeData.title")
             | {{ nodeData.title }}
           TableMenu(
             :nodeData="nodeData"
@@ -267,6 +270,36 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card.gpt-table-sidebar-
     if (node.iconType) return ICON_MAP[node.iconType] || ''
     return node.isLeaf ? '' : '#table'
   }
+
+  const getTableIconClass = (node: { isLogicalTable?: boolean; isPhysicalMetricTable?: boolean }) => {
+    if (node.isLogicalTable) return 'table-icon-logical'
+    if (node.isPhysicalMetricTable) return 'table-icon-physical-metric'
+    return ''
+  }
+
+  const getTableIconTooltip = (node: {
+    iconType?: string
+    isLogicalTable?: boolean
+    isPhysicalMetricTable?: boolean
+  }) => {
+    if (node.iconType) return node.iconType
+    if (node.isLogicalTable) return t('tables.sidebar.logicalTableLabel')
+    if (node.isPhysicalMetricTable) return t('tables.sidebar.physicalTableLabel')
+    return 'TABLE'
+  }
+
+  const getTableNameTooltip = (node: TableTreeParent) => {
+    if (node.isLogicalTable) {
+      return t('tables.sidebar.logicalTableTooltip', {
+        name: node.title,
+        physical: node.physicalTableName || '-',
+      })
+    }
+    if (node.isPhysicalMetricTable) {
+      return t('tables.sidebar.physicalTableTooltip', { name: node.title })
+    }
+    return ''
+  }
 </script>
 
 <style scoped lang="less">
@@ -328,6 +361,14 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card.gpt-table-sidebar-
 
     :deep(.arco-tree-node-icon .icon:has(use[href='#table'])) {
       color: var(--gpt-accent-ts);
+    }
+
+    :deep(.arco-tree-node-icon .icon:has(use[href='#table']).table-icon-logical) {
+      color: var(--gpt-main-purple);
+    }
+
+    :deep(.arco-tree-node-icon .icon:has(use[href='#table']).table-icon-physical-metric) {
+      color: var(--gpt-text-secondary);
     }
 
     :deep(.arco-tree-node.arco-tree-node-is-leaf.details) {

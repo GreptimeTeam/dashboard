@@ -3,6 +3,7 @@ import { SEMANTIC_TYPE_MAP } from '@/views/dashboard/config'
 import { sql } from '@codemirror/lang-sql'
 import { PromQLExtension } from '@prometheus-io/codemirror-promql'
 import { ScriptTreeData, TableDetail, TableTreeChild, TableTreeParent } from './types'
+import { resolveMetricTableMeta } from './table-meta'
 import { RecordsType, SchemaType } from '../code-run/types'
 
 const useDataBaseStore = defineStore('database', () => {
@@ -82,7 +83,15 @@ const useDataBaseStore = defineStore('database', () => {
       return schema.name === 'table_type'
     })
 
-    return { tableNameIndex, tableTypeIndex }
+    const engineIndex = columnSchemas.findIndex((schema: SchemaType) => {
+      return schema.name === 'engine'
+    })
+
+    const createOptionsIndex = columnSchemas.findIndex((schema: SchemaType) => {
+      return schema.name === 'create_options'
+    })
+
+    return { tableNameIndex, tableTypeIndex, engineIndex, createOptionsIndex }
   }
 
   const generateTreeChildren = (nodeData: TableTreeParent, rows: string[][], indexes: { [key: string]: number }) => {
@@ -118,8 +127,10 @@ const useDataBaseStore = defineStore('database', () => {
     let key = tablesTreeForDatabase.value[db].length
     if (tempTablesData) {
       const schemas: SchemaType[] = tempTablesData.schema?.column_schemas || []
-      const { tableNameIndex, tableTypeIndex } = getIndexesForTables(schemas)
+      const { tableNameIndex, tableTypeIndex, engineIndex, createOptionsIndex } = getIndexesForTables(schemas)
       tempTablesData.rows.forEach((item: Array<string>) => {
+        const engine = item[engineIndex]
+        const metricTableMeta = resolveMetricTableMeta(engine, item[createOptionsIndex])
         const node: TableTreeParent = {
           title: item[tableNameIndex],
           key,
@@ -130,6 +141,10 @@ const useDataBaseStore = defineStore('database', () => {
           childrenType: 'columns',
           isLeaf: false,
           tableType: item[tableTypeIndex],
+          engine,
+          isLogicalTable: metricTableMeta.isLogicalTable,
+          isPhysicalMetricTable: metricTableMeta.isPhysicalMetricTable,
+          physicalTableName: metricTableMeta.physicalTableName,
         }
         tablesTreeForDatabase.value[db].push(node)
         key += 1
