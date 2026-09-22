@@ -1,7 +1,18 @@
 import editorApi from '@/api/editor'
 import useTableSchemaStore from '@/store/modules/table-schema'
 import type { LogsFieldMapSettings } from '../drilldown-settings'
+import {
+  OTEL_LOG_INDEX_LABELS,
+  isOtelResourceLabelChip,
+  OTEL_LOG_BODY,
+  OTEL_LOG_SEVERITY,
+  OTEL_LOG_SERVICE,
+  OTEL_LOG_TIME,
+  OTEL_LOG_TRACE,
+} from '../semantics/otlp'
 import { isJsonAttributeContainerName, parseJsonFieldChipKey } from './json-field-keys'
+
+const OTEL_LOG_INDEX_LABEL_SET = new Set<string>(OTEL_LOG_INDEX_LABELS)
 
 export {
   isJsonAttributeContainerName,
@@ -16,66 +27,9 @@ export type SchemaColumn = {
   semantic_type?: string
 }
 
-/**
- * Loki's default OTLP resource attributes stored as index labels.
- * Dots are underscores. Log attributes and scope attributes are not in this set.
- * https://grafana.com/docs/loki/latest/send-data/otel/
- */
-export const OTEL_LOG_INDEX_LABELS = [
-  'cloud_availability_zone',
-  'cloud_region',
-  'container_name',
-  'deployment_environment_name',
-  'k8s_cluster_name',
-  'k8s_container_name',
-  'k8s_cronjob_name',
-  'k8s_daemonset_name',
-  'k8s_deployment_name',
-  'k8s_job_name',
-  'k8s_namespace_name',
-  'k8s_pod_name',
-  'k8s_replicaset_name',
-  'k8s_statefulset_name',
-  'service_instance_id',
-  'service_name',
-  'service_namespace',
-] as const
-
-const OTEL_LOG_INDEX_LABEL_SET = new Set<string>(OTEL_LOG_INDEX_LABELS)
-
-/** OTLP resource attribute key (`service.name`) → OTel/Loki index-label name (`service_name`). */
-export function otelResourceLabelName(path: string): string {
-  return path.trim().replace(/\./g, '_').toLowerCase()
-}
-
-/**
- * True when a chip names an OTLP *resource* attribute that OTel/Loki promote to a label.
- *
- * Resource attributes are the logs identity surface (`service.name`, `k8s.pod.name`, …) — the
- * same names the flat-column path recognizes through {@link OTEL_LOG_INDEX_LABELS}. Log and
- * scope attributes stay fields.
- */
-export function isOtelResourceLabelChip(chipKey: string, jsonColumns: string[] = []): boolean {
-  const chip = parseJsonFieldChipKey(chipKey.trim(), jsonColumns)
-  if (!chip) {
-    return false
-  }
-  if (!/resource/i.test(chip.column)) {
-    return false
-  }
-  return OTEL_LOG_INDEX_LABEL_SET.has(otelResourceLabelName(chip.path))
-}
-
 function pickFirst(columnNames: Set<string>, candidates: string[]): string | undefined {
   return candidates.find((name) => columnNames.has(name))
 }
-
-/** Greptime OTLP logs columns. No name heuristics — missing columns stay unset. */
-const OTEL_LOG_TIME = ['timestamp']
-const OTEL_LOG_BODY = ['body']
-const OTEL_LOG_SEVERITY = ['severity_text']
-const OTEL_LOG_SERVICE = ['service_name']
-const OTEL_LOG_TRACE = ['trace_id']
 
 /**
  * A role value is a real column, or a JSON attribute chip (`container.key`) whose container

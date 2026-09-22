@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { clearMetricTableSemanticsCache } from '../table-semantics'
-import resolveMetricKind from '../resolve-metric-kind'
-import { inferMetricKind, inferPromQL } from './infer-promql'
+import { clearSemanticsCache, inferMetricKind, resolveMetricMeta } from '../semantics'
+import { inferPromQL } from './infer-promql'
 
 vi.mock('@/api/editor', () => ({
   default: {
@@ -15,7 +14,7 @@ vi.mock('../current-database', () => ({
 
 describe('infer-promql', () => {
   beforeEach(async () => {
-    clearMetricTableSemanticsCache()
+    clearSemanticsCache()
     const editorApi = (await import('@/api/editor')).default
     vi.mocked(editorApi.runSQL).mockReset()
   })
@@ -41,7 +40,7 @@ describe('infer-promql', () => {
       ],
     } as never)
 
-    await expect(resolveMetricKind('odd_gauge_total')).resolves.toBe('gauge')
+    await expect(resolveMetricMeta('odd_gauge_total')).resolves.toMatchObject({ kind: 'gauge' })
     expect(inferPromQL('odd_gauge_total', undefined, 'gauge')).toBe('avg(odd_gauge_total)')
     expect(inferPromQL('odd_gauge_total', undefined, { kind: 'gauge' })).toBe('avg(odd_gauge_total)')
   })
@@ -50,6 +49,6 @@ describe('infer-promql', () => {
     const editorApi = (await import('@/api/editor')).default
     vi.mocked(editorApi.runSQL).mockRejectedValue(new Error('no view'))
 
-    await expect(resolveMetricKind('http_requests_total')).resolves.toBe('counter')
+    await expect(resolveMetricMeta('http_requests_total')).resolves.toMatchObject({ kind: 'counter' })
   })
 })

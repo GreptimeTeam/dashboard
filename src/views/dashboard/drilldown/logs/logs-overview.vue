@@ -41,7 +41,8 @@
   import { loadDrilldownSettings } from '@/observability/drilldown-settings'
   import { resolveFieldMapColumn } from '@/observability/filters'
   import { buildLogsFieldMap } from '@/observability/logs/field-map'
-  import { listLogTables } from '@/observability/logs/resolve-table'
+  import { bindSignalTable } from '@/observability/bind-signal-table'
+  import { listSignalTables } from '@/observability/semantics'
   import LabelsTab from './labels-tab.vue'
   import LogsSettingsModal from './logs-settings-modal.vue'
 
@@ -78,7 +79,7 @@
     loadingTables.value = true
     try {
       const current = ctx.logsTable.value
-      tableOptions.value = await listLogTables({ include: current ? [current] : [] })
+      tableOptions.value = await listSignalTables('logs', { include: current ? [current] : [] })
     } finally {
       loadingTables.value = false
     }
@@ -108,6 +109,8 @@
       logs: nextLogsFieldMap,
     }
     ctx.logsTable.value = table
+    // Refresh entity/column context for cross-signal filters on the newly bound table.
+    await bindSignalTable(ctx, 'logs', table)
     // Let labels-tab sync-clear old panes before refresh fires per-panel SQL.
     await nextTick()
     ctx.triggerRefresh()

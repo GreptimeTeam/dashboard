@@ -81,5 +81,3 @@ export async function fetchBreakdownLabelValues(
     return []
   }
 }
-
-export { inferMetricKind, inferPromQL, type MetricKind } from './infer-promql'

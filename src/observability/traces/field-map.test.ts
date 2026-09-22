@@ -7,8 +7,8 @@ import {
   filterBreakdownAttributesByScope,
   mergeTracesFieldMapColumns,
   tableHasRequiredTraceColumns,
-  traceModelScore,
 } from './field-map'
+import { traceModelScore } from '../semantics/otlp'
 
 describe('traces field-map', () => {
   it('builds identity map for filter chips', () => {

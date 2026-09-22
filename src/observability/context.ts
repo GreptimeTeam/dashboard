@@ -1,6 +1,6 @@
 import { inject, provide, ref, type InjectionKey, type Ref } from 'vue'
 import useTimeRange from '@/hooks/use-time-range'
-import { normalizeEntityFilters } from './entity-keys'
+import { logsServiceFilterCandidateKeys, normalizeEntityFilters } from './semantics'
 import { DEFAULT_LOGS_BODY_OP, type LogsBodyOp } from './logs/body-search'
 import {
   DEFAULT_FIELD_MAP,
@@ -160,14 +160,9 @@ export function useDrilldownContextProvider(): DrilldownContext {
   }
 
   const resolveLogsDetailGroupFromFilters = (): string | undefined => {
-    const logsMap = fieldMap.value.logs
     // The service filter may arrive as a JSON chip (logs identity lives in
     // `resource_attributes`), so include the key resolved from the bound table.
-    const chipKeys = new Set(
-      [logsMap.primaryGroupBy, logsMap.service, entityFilterKeys.value.logs?.service, 'service'].filter(
-        Boolean
-      ) as string[]
-    )
+    const chipKeys = logsServiceFilterCandidateKeys(fieldMap.value.logs, entityFilterKeys.value.logs?.service)
     const match = filters.value.find((f) => f.op === '=' && chipKeys.has(f.key))
     return match?.value
   }

@@ -5,15 +5,15 @@ import { executePromQLRange } from '@/api/metrics'
 import { useAppStore } from '@/store'
 import type { DrilldownContext } from './context'
 import { buildPromMatchersString } from './filters'
-import resolveMetricMeta from './resolve-metric-meta'
+import { resolveMetricMeta } from './semantics'
 import {
   inferPromQL,
   inferPanelType,
   inferPromQLLegendLabel,
   isUnsupportedHistogramKind,
-  type MetricKind,
   type MetricPanelType,
 } from './metrics/infer-promql'
+import type { MetricKind } from './semantics/types'
 import { isMetricRateQuery } from './metrics/panel-stats'
 import { resolveHistogramCellUnit, resolveMetricPanelUnit } from './metrics/metric-units'
 import {

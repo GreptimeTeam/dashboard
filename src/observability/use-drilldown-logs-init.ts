@@ -7,9 +7,14 @@ import {
   type LogsFieldMapSettings,
 } from '@/observability/drilldown-settings'
 import { buildLogsFieldMap, otelLogsFieldDefaultsFromColumns } from '@/observability/logs/field-map'
-import { resolveLogsTable } from '@/observability/logs/resolve-table'
-import { entityColumnFilterKey, resolveEntityFilterRef } from '@/observability/entities'
-import { normalizeEntityFilters } from '@/observability/entity-keys'
+import { bindSignalTable } from '@/observability/bind-signal-table'
+import {
+  resolveEntityFilterRef,
+  logsServiceFilterCandidateKeys,
+  normalizeEntityFilters,
+  resolveSignalTable,
+  entityColumnFilterKey,
+} from '@/observability/semantics'
 import useTableSchemaStore from '@/store/modules/table-schema'
 import type { DrilldownContext } from './context'
 
@@ -24,13 +29,7 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
     if (ctx.logsSelectedGroup.value) {
       return
     }
-    const groupCol = ctx.fieldMap.value.logs.primaryGroupBy
-    const serviceChip = ctx.fieldMap.value.logs.service
-    const chipKeys = new Set(
-      [groupCol, serviceChip, ctx.entityFilterKeys.value.logs?.service, 'service', 'primaryGroupBy'].filter(
-        Boolean
-      ) as string[]
-    )
+    const chipKeys = logsServiceFilterCandidateKeys(ctx.fieldMap.value.logs, ctx.entityFilterKeys.value.logs?.service)
     const match = ctx.filters.value.find((f) => f.op === '=' && chipKeys.has(f.key))
     if (match) {
       ctx.logsSelectedGroup.value = match.value
@@ -82,30 +81,18 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
    * be a JSON chip (`resource_attributes.service.name`) — filters support chips even
    * though the logs *roles* do not yet.
    */
+  /**
+   * Publish the bound table's service identity for cross-signal filters. The key may
+   * be a JSON chip (`resource_attributes.service.name`) — filters support chips even
+   * though the logs *roles* do not yet.
+   */
   const publishEntityFilterKey = async (tableName: string) => {
-    try {
-      const columns = await tableSchemaStore.ensureTableSchema(tableName)
-      const reference = await resolveEntityFilterRef(tableName, 'service', { signal: 'logs', columns })
-      ctx.setEntityFilterKey('logs', 'service', reference ? entityColumnFilterKey(reference) : undefined)
-      ctx.setSignalColumns(
-        'logs',
-        columns.map((column) => column.name)
-      )
-      // Typed filter literals (numeric comparisons, TRUE/FALSE) read these data types.
-      ctx.setSignalColumnTypes(
-        'logs',
-        Object.fromEntries(columns.map((column) => [column.name, column.data_type || '']))
-      )
-      // A signal switch that happened before this table was bound could only fall back to
-      // the `service` role; re-encode now that the real key (possibly a JSON chip) is known.
-      ctx.setFilters(
-        normalizeEntityFilters(ctx.filters.value, 'logs', (entity) => ctx.entityFilterKeys.value.logs?.[entity])
-      )
-    } catch (error) {
-      console.error(`Failed to resolve the service filter key for ${tableName}:`, error)
-      ctx.setEntityFilterKey('logs', 'service', undefined)
-      ctx.setSignalColumnTypes('logs', undefined)
-    }
+    await bindSignalTable(ctx, 'logs', tableName)
+    // A signal switch that happened before this table was bound could only fall back to
+    // the `service` role; re-encode now that the real key (possibly a JSON chip) is known.
+    ctx.setFilters(
+      normalizeEntityFilters(ctx.filters.value, 'logs', (entity) => ctx.entityFilterKeys.value.logs?.[entity])
+    )
   }
 
   const applyTableAndFieldMap = async (tableName: string) => {
@@ -145,7 +132,7 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
       return
     }
 
-    const tableName = await resolveLogsTable()
+    const tableName = await resolveSignalTable('logs', { settingsTable: settings.table })
     if (!tableName) {
       return
     }

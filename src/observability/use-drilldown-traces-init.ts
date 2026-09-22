@@ -3,37 +3,20 @@ import { storeToRefs } from 'pinia'
 import { useAppStore } from '@/store'
 import { loadDrilldownSettings } from '@/observability/drilldown-settings'
 import { buildDefaultTracesFieldMap } from '@/observability/traces/field-map'
-import { resolveTracesTable } from '@/observability/traces/resolve-table'
-import resolveTracesServiceColumn from '@/observability/traces/service-column'
-import useTableSchemaStore from '@/store/modules/table-schema'
+import { bindSignalTable } from '@/observability/bind-signal-table'
+import { physicalServiceColumn, resolveSignalTable } from '@/observability/semantics'
 import type { DrilldownContext } from './context'
 
 export default function useDrilldownTracesInit(ctx: DrilldownContext) {
   const { database } = storeToRefs(useAppStore())
-  const tableSchemaStore = useTableSchemaStore()
 
-  /** Declared service identity when the table has one; the v1 model column otherwise. */
+  /**
+   * Declared service identity when the table has one; the v1 model column otherwise.
+   * Binding also publishes the entity key and physical columns for cross-signal filters.
+   */
   const tracesFieldMapFor = async (tableName: string) => {
-    const serviceColumn = await resolveTracesServiceColumn(tableName)
-    // Publish it so a service filter set on another signal lands on this table's column.
-    ctx.setEntityFilterKey('traces', 'service', serviceColumn)
-    try {
-      const columns = await tableSchemaStore.ensureTableSchema(tableName)
-      ctx.setSignalColumns(
-        'traces',
-        columns.map((column) => column.name)
-      )
-      // Typed filter literals (numeric comparisons, TRUE/FALSE) read these data types.
-      ctx.setSignalColumnTypes(
-        'traces',
-        Object.fromEntries(columns.map((column) => [column.name, column.data_type || '']))
-      )
-    } catch (error) {
-      console.error(`Failed to load columns for ${tableName}:`, error)
-      ctx.setSignalColumns('traces', undefined)
-      ctx.setSignalColumnTypes('traces', undefined)
-    }
-    return buildDefaultTracesFieldMap({ serviceColumn })
+    const { serviceRef } = await bindSignalTable(ctx, 'traces', tableName)
+    return buildDefaultTracesFieldMap({ serviceColumn: physicalServiceColumn(serviceRef) })
   }
 
   const applyTableAndFieldMap = async (tableName: string) => {
@@ -57,7 +40,7 @@ export default function useDrilldownTracesInit(ctx: DrilldownContext) {
     }
 
     const settings = loadDrilldownSettings(database.value).traces
-    const tableName = await resolveTracesTable({ settingsTable: settings?.table })
+    const tableName = await resolveSignalTable('traces', { settingsTable: settings?.table })
     if (!tableName) {
       return
     }

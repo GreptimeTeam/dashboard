@@ -155,7 +155,7 @@
   import { useRoute, useRouter } from 'vue-router'
   import { useDrilldownContextProvider } from '@/observability/context'
   import { LOGS_DETAIL_TABS } from '@/observability/types'
-  import resolveMetricMeta from '@/observability/resolve-metric-meta'
+  import { resolveMetricMeta } from '@/observability/semantics'
   import useDrilldownUrlSync from '@/observability/use-drilldown-url-sync'
   import useDrilldownLogsInit from '@/observability/use-drilldown-logs-init'
   import useDrilldownTracesInit from '@/observability/use-drilldown-traces-init'

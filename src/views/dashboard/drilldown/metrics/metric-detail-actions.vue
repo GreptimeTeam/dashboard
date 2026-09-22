@@ -44,13 +44,17 @@
   import { useDrilldownContext } from '@/observability/context'
   import { buildMetricsQueryLocation } from '@/observability/deep-links'
   import { buildPromMatchersString } from '@/observability/filters'
-  import { inferMetricKind, type MetricKind, type MetricTemporality } from '@/observability/metrics/infer-promql'
+  import {
+    inferMetricKind,
+    resolveMetricMeta,
+    type MetricKind,
+    type MetricTemporality,
+  } from '@/observability/semantics'
   import useMainChartPrefs, {
     configureOptionsForKind,
     type TimeseriesAgg,
   } from '@/observability/metrics/main-chart-config'
   import buildMainChartQueries from '@/observability/metrics/main-chart-queries'
-  import resolveMetricMeta from '@/observability/resolve-metric-meta'
 
   const props = defineProps<{
     metric: string

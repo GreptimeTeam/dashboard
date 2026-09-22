@@ -1,7 +1,7 @@
 import { parseJsonFieldChipKey, sqlJsonGetStringExpr } from './logs/json-field-keys'
 import { UNKNOWN_LOG_LEVEL, normalizeLogLevelName } from './logs/level-color'
 import { buildSeverityLevelsPredicate, isSeverityFilterColumn } from './logs/level-visibility'
-import { normalizeEntityFilters } from './entity-keys'
+import { normalizeEntityFilters } from './semantics/otlp'
 import type { DrilldownFilter, DrilldownFilterOp, DrilldownSignal } from './types'
 
 /** Numeric literal guard; the value is rendered verbatim so bigint precision survives. */
@@ -309,20 +309,6 @@ export function filtersToPromMatcherParts(
   return parts
 }
 
-/** @deprecated Prefer filtersToPromMatcherParts / buildPromMatchersString — equality-only map. */
-export function filtersForPromMatch(
-  filters: DrilldownFilter[],
-  options?: { excludeKey?: string; metric?: string }
-): Record<string, string> {
-  const matchers: Record<string, string> = {}
-  filtersToPromMatcherParts(filters, options).forEach((part) => {
-    if (part.op === '=' || part.op === '=~') {
-      matchers[part.key] = part.value
-    }
-  })
-  return matchers
-}
-
 /** PromQL / match[] matcher fragment list: `job=~"a|b"`, `env="prod"`. */
 export function buildPromMatchersString(
   filters: DrilldownFilter[],
@@ -341,11 +327,6 @@ export function buildPromMatchSelector(
 ): string | undefined {
   const inner = buildPromMatchersString(filters, options)
   return inner ? `{${inner}}` : undefined
-}
-
-/** @deprecated Use filtersForPromMatch / buildPromMatchersString */
-export function filtersToPromMatch(filters: DrilldownFilter[]): Record<string, string> {
-  return filtersForPromMatch(filters)
 }
 
 /** Greptime requires `__name__` in Prom API `match[]`; selectors without it must not be sent. */

@@ -10,13 +10,13 @@ import {
   discoverLabelColumns,
   discoverLogLabelKeys,
   discoverLogsContainsColumns,
-  isOtelResourceLabelChip,
   isLogsRoleValue,
   listJsonAttributeColumns,
   resolveLogsTimeColumn,
   sampleJsonAttributeFieldKeys,
   type SchemaColumn,
 } from '../logs/field-map'
+import { isOtelResourceLabelChip } from '../semantics'
 import { normalizeLogLevelName, UNKNOWN_LOG_LEVEL } from '../logs/level-color'
 import { buildSeverityLevelsPredicate } from '../logs/level-visibility'
 import { escapeSqlString, logsColumnExpr, quoteIdent } from '../logs/query-state'

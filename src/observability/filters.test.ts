@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeEntityFilters } from './entity-keys'
+import { normalizeEntityFilters } from './semantics/otlp'
 import {
   addFilter,
   buildPromMatchersString,

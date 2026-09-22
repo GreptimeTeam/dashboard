@@ -80,7 +80,7 @@
   import { IconCode, IconDown, IconRight, IconDownload } from '@arco-design/web-vue/es/icon'
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import SqlTextEditor from '@/components/sql-text-editor/index.vue'
-  import { listTracesTables } from '@/observability/traces/resolve-table'
+  import { listSignalTables } from '@/observability/semantics'
   import TraceTable from './components/TraceTable.vue'
 
   defineOptions({
@@ -120,7 +120,7 @@
   const allResults = ref([])
 
   async function listTraceTablesForBuilder() {
-    return listTracesTables()
+    return listSignalTables('traces')
   }
   const chartExpanded = useLocalStorage('trace-chart-expanded', true)
   const countChartRef = ref()

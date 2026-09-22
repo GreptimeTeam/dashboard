@@ -55,6 +55,7 @@
   import resolveLogsRoles from '@/observability/logs/resolved-roles'
   import { addFilter, filterIncludesValue } from '@/observability/filters'
   import { chipKeyForLogsTableFilter } from '@/observability/logs/field-map'
+  import { logsServiceFilterCandidateKeys } from '@/observability/semantics'
   import useDrilldownLogsTable from '@/observability/use-drilldown-logs-table'
   import useLazyPanelQuery from '@/observability/use-lazy-panel-query'
   import type { DrilldownFilterOp } from '@/observability/types'
@@ -141,10 +142,7 @@
     // Query logs narrows to this value. Same-key chips are replaced, not OR-merged.
     replaceLabelFilter(props.labelCol, props.labelValue)
     applySelectedLevels()
-    const logsMap = ctx.fieldMap.value.logs
-    const groupKeys = new Set(
-      [logsMap.primaryGroupBy, logsMap.service, ctx.entityFilterKeys.value.logs?.service, 'service'].filter(Boolean)
-    )
+    const groupKeys = logsServiceFilterCandidateKeys(ctx.fieldMap.value.logs, ctx.entityFilterKeys.value.logs?.service)
     ctx.openLogsDetail(groupKeys.has(props.labelCol) ? props.labelValue : undefined)
   }
 

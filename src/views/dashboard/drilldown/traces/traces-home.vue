@@ -75,8 +75,8 @@
   import { fetchRootSpanList, type RedMetric, type RootSpanRow } from '@/observability/adapters/traces'
   import { isDrilldownFilterOp, resolveFieldMapColumn } from '@/observability/filters'
   import { buildDefaultTracesFieldMap } from '@/observability/traces/field-map'
-  import resolveTracesServiceColumn from '@/observability/traces/service-column'
-  import { listTracesTables } from '@/observability/traces/resolve-table'
+  import { bindSignalTable } from '@/observability/bind-signal-table'
+  import { listSignalTables, physicalServiceColumn } from '@/observability/semantics'
   import resolveLogsRoles from '@/observability/logs/resolved-roles'
   import type { ColumnType, QueryState } from '@/types/query'
   import { isTracesHomeTab } from '@/observability/types'
@@ -172,7 +172,7 @@
     loadingTables.value = true
     try {
       const current = ctx.tracesTable.value
-      tableOptions.value = await listTracesTables({ include: current ? [current] : [] })
+      tableOptions.value = await listSignalTables('traces', { include: current ? [current] : [] })
     } finally {
       loadingTables.value = false
     }
@@ -205,7 +205,10 @@
       tableOptions.value = [...tableOptions.value, table]
     }
     // Declared service identity wins over the v1 model column when the table has one.
-    const nextMap = buildDefaultTracesFieldMap({ serviceColumn: await resolveTracesServiceColumn(table) })
+    // Declared service identity wins over the v1 model column when the table has one;
+    // binding also refreshes entity/column context for cross-signal filters.
+    const { serviceRef } = await bindSignalTable(ctx, 'traces', table)
+    const nextMap = buildDefaultTracesFieldMap({ serviceColumn: physicalServiceColumn(serviceRef) })
     const settings = loadDrilldownSettings(database.value)
     settings.traces = { ...(settings.traces || {}), table }
     saveDrilldownSettings(settings, database.value)

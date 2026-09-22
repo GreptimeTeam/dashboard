@@ -1,14 +1,5 @@
-export type MetricKind =
-  | 'counter'
-  | 'gauge'
-  | 'updown_counter'
-  | 'histogram'
-  /** OTLP exponential histogram: native value column, no `_bucket` / `le` to chart. */
-  | 'native_histogram'
-  /** Prometheus gauge histogram: buckets are not cumulative, so a heatmap is meaningless. */
-  | 'gauge_histogram'
-  | 'summary'
-  | 'unknown'
+import { inferMetricKind } from '../semantics/heuristics'
+import type { MetricKind, MetricTemporality } from '../semantics/types'
 
 /** Histogram kinds with no classic `_bucket` + `le` matrix to build a panel from. */
 export function isUnsupportedHistogramKind(kind: MetricKind): boolean {
@@ -16,9 +7,6 @@ export function isUnsupportedHistogramKind(kind: MetricKind): boolean {
 }
 
 export type MetricPanelType = 'timeseries' | 'heatmap'
-
-/** Mirrors Greptime `metric.temporality` (declared). */
-export type MetricTemporality = 'cumulative' | 'delta' | 'mixed' | 'unknown' | string
 
 const RATE_WINDOW = '5m'
 
@@ -43,33 +31,6 @@ export function shouldApplyRate(kind: MetricKind, temporality?: MetricTemporalit
     return false
   }
   return true
-}
-
-/** Classic Prometheus histogram: base name, _bucket, or duration *_seconds family. */
-export function isHistogramMetricName(name: string): boolean {
-  if (name.endsWith('_bucket')) {
-    return true
-  }
-  if (name.endsWith('_seconds_sum') || name.endsWith('_seconds_count')) {
-    return false
-  }
-  if (name.endsWith('_seconds')) {
-    return true
-  }
-  return false
-}
-
-export function inferMetricKind(name: string): MetricKind {
-  if (isHistogramMetricName(name)) {
-    return 'histogram'
-  }
-  if (name.endsWith('_total') || name.endsWith('_count')) {
-    return 'counter'
-  }
-  if (name.includes('quantile')) {
-    return 'summary'
-  }
-  return 'unknown'
 }
 
 export function inferPanelType(name: string, kind?: MetricKind): MetricPanelType {

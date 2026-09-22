@@ -2,19 +2,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import editorApi from '@/api/editor'
 import {
-  clearMetricTableSemanticsCache,
+  clearSemanticsCache,
   declaredMetricKindFromSemantics,
   declaredMetricUnitFromSemantics,
   declaredTemporalityFromSemantics,
-  ensureMetricSemanticsLoaded,
+  ensureSemanticsLoaded,
   getTableEntityDeclarations,
-  getMetricTableSemantics,
+  getTableSemantics,
   mapDeclaredMetricType,
-  type MetricTableSemantics,
-} from './table-semantics'
-import resolveEntityIdentity from './entities'
-import { mapUcumToPanelUnit, resolveMetricPanelUnit } from './metrics/metric-units'
-import { inferPromQL, shouldApplyRate } from './metrics/infer-promql'
+} from './source'
+import { resolveEntityIdentity } from './resolve'
+import type { MetricTableSemantics } from './types'
+import { mapUcumToPanelUnit, resolveMetricPanelUnit } from '../metrics/metric-units'
+import { inferPromQL, shouldApplyRate } from '../metrics/infer-promql'
 
 vi.mock('@/api/editor', () => ({
   default: {
@@ -23,7 +23,7 @@ vi.mock('@/api/editor', () => ({
 }))
 
 // Keeps the pinia-backed current-database helper out of the module graph.
-vi.mock('./current-database', () => ({
+vi.mock('../current-database', () => ({
   currentDatabase: () => 'public',
 }))
 
@@ -51,9 +51,9 @@ function sqlResult(rows: unknown[][]) {
   }
 }
 
-describe('table-semantics', () => {
+describe('semantics/source', () => {
   beforeEach(() => {
-    clearMetricTableSemanticsCache()
+    clearSemanticsCache()
     runSQL.mockReset()
   })
 
@@ -113,8 +113,8 @@ describe('table-semantics', () => {
     )
 
     const [hit, miss] = await Promise.all([
-      getMetricTableSemantics('http_requests_total'),
-      getMetricTableSemantics('no_such_metric'),
+      getTableSemantics('http_requests_total'),
+      getTableSemantics('no_such_metric'),
     ])
     expect(runSQL).toHaveBeenCalledTimes(1)
     // The dump is deliberately not filtered by signal_type: entity declarations live
@@ -132,17 +132,19 @@ describe('table-semantics', () => {
     })
     expect(miss).toBeNull()
 
-    await ensureMetricSemanticsLoaded()
+    await ensureSemanticsLoaded()
     expect(runSQL).toHaveBeenCalledTimes(1)
   })
 
-  it('treats full-load failure as empty semantics (no per-name fallback)', async () => {
-    runSQL.mockRejectedValueOnce(new Error('view missing'))
-    expect(await getMetricTableSemantics('solo_metric')).toBeNull()
+  it('treats transient load failure as empty semantics and retries on the next access', async () => {
+    runSQL.mockRejectedValueOnce(new Error('network blip'))
+    expect(await getTableSemantics('solo_metric')).toBeNull()
     expect(runSQL).toHaveBeenCalledTimes(1)
 
-    expect(await getMetricTableSemantics('solo_metric')).toBeNull()
-    expect(runSQL).toHaveBeenCalledTimes(1)
+    // Transient failures do not settle the dump — the next lookup retries the read.
+    runSQL.mockResolvedValueOnce({ output: [{ records: { schema: { column_schemas: [{ name: 'table_name' }] }, rows: [] } }] } as never)
+    expect(await getTableSemantics('solo_metric')).toBeNull()
+    expect(runSQL).toHaveBeenCalledTimes(2)
   })
 })
 
@@ -157,7 +159,7 @@ describe('entity identities', () => {
   ])
 
   beforeEach(() => {
-    clearMetricTableSemanticsCache()
+    clearSemanticsCache()
     runSQL.mockReset()
   })
 

@@ -14,7 +14,7 @@
   import { computed, type MaybeRefOrGetter } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useDrilldownContext } from '@/observability/context'
-  import { inferMetricKind } from '@/observability/metrics/infer-promql'
+  import { inferMetricKind } from '@/observability/semantics'
   import { metricKindLabelKey, METRIC_PANEL_HEIGHT } from '@/observability/metrics/panel-stats'
   import { rememberRecentMetric } from '@/observability/metrics/recent'
   import MetricSparkline from './metric-sparkline.vue'

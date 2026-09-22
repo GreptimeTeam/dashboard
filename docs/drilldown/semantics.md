@@ -28,7 +28,7 @@ FROM information_schema.table_semantics;
 - `metadata_quality`：**只描述 `metric.type`**（协议声明 → `declared`，名字后缀猜 → `inferred`，冲突 collapse → `unknown`）。Metrics 仅 `declared` 采信 type；unit / temporality / original_name 没有"猜"的写入路径，存在即可用（`inferred` 也照用）
 - `entity_declarations`：实体身份声明，由服务端按 conventions 推导（**不需要用户配置任何 option**）；已在用（身份列解析，见下）
 
-代码：[`table-semantics.ts`](../../src/observability/table-semantics.ts)、[`resolve-metric-meta.ts`](../../src/observability/resolve-metric-meta.ts)（Metrics）、[`logs/resolve-table.ts`](../../src/observability/logs/resolve-table.ts)（Logs 选表）。
+代码：[`semantics/source.ts`](../../src/observability/semantics/source.ts)（①）、[`semantics/otlp.ts`](../../src/observability/semantics/otlp.ts)（②）、[`semantics/heuristics.ts`](../../src/observability/semantics/heuristics.ts)（③）、[`semantics/resolve.ts`](../../src/observability/semantics/resolve.ts)（分信号出口）。
 
 ### `table_semantics` 列参考（本实例实测）
 
@@ -151,8 +151,8 @@ Related logs（从 Metrics）：不看 metric 名；要 `filters` + `logsTable` 
 
 **统一 filter（三信号共用一份 `ctx.filters`）**：
 
-- 实体 key → 各信号物理 key 的解析：`entities.ts` 的 `resolveEntityFilterRef`（**声明 → v1 trace 模型 → source 约定**，都没有就不给实体）；
-- 别名词汇与 source 约定：`entity-keys.ts`（`service` / `job` / `service_name` / `resource_attributes.service.name` 视为同一实体，重复 filter 会归并成一条）；
+- 实体 key → 各信号物理 key 的解析：`semantics/resolve.ts` 的 `resolveEntityFilterRef`（**声明 → v1 trace 模型 → source 约定**，都没有就不给实体）；
+- 别名词汇与 source 约定：`semantics/otlp.ts`（`service` / `job` / `service_name` / `resource_attributes.service.name` 视为同一实体，重复 filter 会归并成一条）；
 - 切信号时按目标信号重新编码（`context.setSignal`），所以"指标 → 该服务日志/调用链"不需要单独入口。
 - **不适用的条件不显示也不参与查询，但不销毁**：`filterAppliesToSignal`（`filters.ts`）按当前信号绑定表的列判断；命名了本表没有的列（例如 metrics 的 `container_name` 带到 traces）时，该 chip 从当前信号隐藏、查询里跳过，切回支持它的信号又出现。绑定表之前不做判断，避免闪烁。
 
@@ -164,9 +164,16 @@ Related logs（从 Metrics）：不看 metric 名；要 `filters` + `logsTable` 
 
 ## 实现落点（代码）
 
-| 信号 | 主要路径 |
+语义读取集中在 [`src/observability/semantics/`](../../src/observability/semantics/)，按三层组织；`index.ts` 是唯一对外出口，`bind-signal-table.ts` 是统一的信号表绑定编排。
+
+| 层 / 信号 | 主要路径 |
 |------|----------|
-| 共用 | `table-semantics.ts`（db 作用域 dump：失败分类 + 10s 节流刷新）、`entities.ts`（实体定位链）、`entity-keys.ts`（别名词汇 + source 约定 + filter 归一化） |
-| Metrics | `resolve-metric-meta.ts`、`infer-promql.ts`、`metric-units.ts`、主图 / sparkline / Breakdown hooks |
-| Logs | `logs/resolve-table.ts`、`logs/field-map.ts`、`use-drilldown-logs-init.ts` |
-| Traces | `traces/model.ts`（v1 模型常量）、`traces/resolve-table.ts`、`traces/field-map.ts`、`traces/service-column.ts` |
+| ① table_semantic 层 | `semantics/source.ts`（唯一 SQL + 按库 dump + 派生索引 byName/bySignal/bucketTables） |
+| ② OTLP 层 | `semantics/otlp.ts`（trace v1 模型与打分、OTEL logs 模型列、Loki index-label 集、实体词汇 + source 约定 + filter 归一化） |
+| ③ 猜测层 | `semantics/heuristics.ts`（metric 名启发式；表名/列模型 SQL 在 `resolve.ts` 内私有） |
+| 分信号出口 | `semantics/resolve.ts`（`resolveMetricMeta` / `resolveSignalTable`+`listSignalTables` / 实体定位链 / `logsServiceFilterCandidateKeys`） |
+| Metrics | `semantics/resolve.ts`、`infer-promql.ts`、`metric-units.ts`、主图 / sparkline / Breakdown hooks |
+| Logs | `logs/field-map.ts`、`use-drilldown-logs-init.ts`、`bind-signal-table.ts` |
+| Traces | `semantics/otlp.ts`（模型常量）、`traces/field-map.ts`、`use-drilldown-traces-init.ts`、`bind-signal-table.ts` |
+
+**缓存策略（最简）**：dump 按库加载一次，仅切换数据库时重读；视图缺失的库永久记住；瞬时失败不落缓存、下次访问自动重试。无时间节流、无 refresh 参数——会话中途新建的表降级为名字启发式，换库或整页刷新后恢复。

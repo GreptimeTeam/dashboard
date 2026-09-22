@@ -11,7 +11,6 @@ import {
   discoverLogLabelKeys,
   discoverLogsContainsColumns,
   discoverLogsFilterKeyColumns,
-  isOtelResourceLabelChip,
   isLogsContainsFilterKey,
   listJsonAttributeColumns,
   parseJsonFieldChipKey,
@@ -20,6 +19,7 @@ import {
   sqlJsonGetStringExpr,
   type SchemaColumn,
 } from '../logs/field-map'
+import { isOtelResourceLabelChip } from '../semantics'
 import { discoverTraceFilterKeys } from '../traces/field-map'
 import type { DrilldownFilter, DrilldownSignal } from '../types'
 

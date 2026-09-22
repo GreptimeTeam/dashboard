@@ -10,7 +10,7 @@ import {
 import { computeMetricPrefixGroups } from './metrics/prefix-tree'
 import { computeMetricSuffixGroups } from './metrics/suffix-tree'
 import { getRecentMetrics } from './metrics/recent'
-import { ensureMetricSemanticsLoaded } from './table-semantics'
+import { ensureSemanticsLoaded } from './semantics'
 import type { DrilldownContext } from './context'
 
 export default function useMetricsCatalog(
@@ -44,9 +44,9 @@ export default function useMetricsCatalog(
       })
       poolNames.value = result.names
       truncated.value = result.truncated
-      // Drilldown: keep the semantics dump in step with the metric list, so tables created
-      // during the session pick up their declarations on the next refresh (throttled inside).
-      ensureMetricSemanticsLoaded({ refresh: true }).catch(() => undefined)
+      // First catalog load fills the semantic dump; it is reused until the database
+      // switches (see semantics/source.ts).
+      ensureSemanticsLoaded().catch(() => undefined)
     } catch (err) {
       console.error('Failed to load metric catalog:', err)
       poolNames.value = []

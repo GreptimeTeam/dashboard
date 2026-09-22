@@ -5,7 +5,7 @@ import formatTimeAxisLabel, {
   mapTimeTicksToCategoryIndexes,
   CATALOG_Y_AXIS_SPLIT_NUMBER,
 } from '@/utils/chart-time-axis'
-import type { MetricKind } from './infer-promql'
+import type { MetricKind } from '../semantics/types'
 import { formatMetricUnitValue, resolveHistogramBoundUnit, resolveHistogramCellUnit } from './metric-units'
 import { formatMetricAxisValue } from './panel-stats'
 import expandHeatmapTimeGrid from './heatmap-time-grid'

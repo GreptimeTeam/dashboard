@@ -83,13 +83,12 @@ a-modal(
     type LogsFieldMapSettings,
   } from '@/observability/drilldown-settings'
   import { resolveFieldMapColumn } from '@/observability/filters'
-  import { entityColumnFilterKey, resolveEntityFilterRef } from '@/observability/entities'
+  import { entityColumnFilterKey, listSignalTables, resolveEntityFilterRef } from '@/observability/semantics'
   import {
     buildLogsFieldMap,
     resolveLogsSettingsFieldDefaults,
     type SchemaColumn,
   } from '@/observability/logs/field-map'
-  import { listLogTables } from '@/observability/logs/resolve-table'
 
   const props = defineProps<{
     visible: boolean
@@ -172,7 +171,7 @@ a-modal(
       // Older seeds stored only a field map; fall back to the bound table so the column list
       // (and with it every saved value) still hydrates.
       const savedTable = settings.table?.trim() || ctx.logsTable.value || ''
-      tableOptions.value = await listLogTables({ include: savedTable ? [savedTable] : [] })
+      tableOptions.value = await listSignalTables('logs', { include: savedTable ? [savedTable] : [] })
       form.table = savedTable
       const columns = await loadColumns(form.table)
       await applyFieldDefaults(form.table, columns, settings.fieldMap)

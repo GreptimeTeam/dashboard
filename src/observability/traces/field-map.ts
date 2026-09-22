@@ -1,4 +1,4 @@
-import { TRACE_MODEL_BONUS_COLUMNS, TRACE_MODEL_REQUIRED_COLUMNS, TRACE_MODEL_SERVICE_COLUMN } from './model'
+import { isTraceModel, TRACE_MODEL_SERVICE_COLUMN } from '../semantics/otlp'
 
 /**
  * greptime_trace_v1 / OTel-shaped field map and top-bar label keys.
@@ -8,14 +8,6 @@ import { TRACE_MODEL_BONUS_COLUMNS, TRACE_MODEL_REQUIRED_COLUMNS, TRACE_MODEL_SE
 export const TRACE_LABEL_KEYS = ['service_name', 'span_name', 'span_status_code', 'span_kind'] as const
 
 export type TraceLabelKey = (typeof TRACE_LABEL_KEYS)[number]
-
-/** Minimum columns to treat a table as a usable trace model. */
-export const TRACE_REQUIRED_COLUMNS = TRACE_MODEL_REQUIRED_COLUMNS
-
-/** Extra columns that mark a fuller greptime_trace_v1 layout. */
-export const TRACE_BONUS_COLUMNS = TRACE_MODEL_BONUS_COLUMNS
-
-const KNOWN_DEFAULT_TABLE = 'opentelemetry_traces'
 
 const RESOURCE_ATTR_PREFIX = 'resource_attributes.'
 const SPAN_ATTR_PREFIX = 'span_attributes.'
@@ -209,28 +201,5 @@ export function discoverTraceFilterKeys(
 }
 
 export function tableHasRequiredTraceColumns(columnNames: string[]): boolean {
-  const set = new Set(columnNames)
-  return TRACE_REQUIRED_COLUMNS.every((name) => set.has(name))
+  return isTraceModel(new Set(columnNames))
 }
-
-export function traceModelScore(columnNames: string[], options?: { pipeline?: string; tableName?: string }): number {
-  const set = new Set(columnNames)
-  let score = 0
-  if (TRACE_REQUIRED_COLUMNS.every((name) => set.has(name))) {
-    score += 100
-  }
-  TRACE_BONUS_COLUMNS.forEach((name) => {
-    if (set.has(name)) {
-      score += 10
-    }
-  })
-  if (options?.pipeline === 'greptime_trace_v1') {
-    score += 50
-  }
-  if (options?.tableName === KNOWN_DEFAULT_TABLE) {
-    score += 20
-  }
-  return score
-}
-
-export { KNOWN_DEFAULT_TABLE as KNOWN_OTLP_TRACE_TABLE }
