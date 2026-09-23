@@ -2,11 +2,7 @@
 a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
   template(#title)
     a-space.metric-sidebar-title(fill :size="10")
-      span.gpt-sidebar-heading
-        | {{ $t('metrics.sidebar.title') }}
-        a-tooltip(v-if="metricCountTooltip" :content="metricCountTooltip")
-          span.gpt-sidebar-count {{ metricCountLabel }}
-        span.gpt-sidebar-count(v-else) {{ metricCountLabel }}
+      span.gpt-sidebar-heading {{ $t('metrics.sidebar.title') }}
       a-button.metric-sidebar-refresh(
         type="text"
         size="mini"
@@ -18,24 +14,30 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
             use(href="#refresh")
 
   a-spin(style="width: 100%" :loading="loading")
-    .metric-search
-      a-select.metric-db-select(
-        v-model="metricsDatabase"
-        size="mini"
-        allow-search
-        :options="databaseOptions"
-        :placeholder="$t('dashboard.database')"
-        :aria-label="$t('dashboard.database')"
-        @popup-visible-change="onDatabasePopup"
-      )
-      .metric-search-left
+    .gpt-table-sidebar-header
+      .gpt-table-sidebar-header__label {{ $t('dashboard.database') }}
+      .gpt-table-sidebar-header__control
+        a-select.metric-db-select(
+          v-model="metricsDatabase"
+          size="mini"
+          allow-search
+          :options="databaseOptions"
+          :placeholder="$t('dashboard.database')"
+          :aria-label="$t('dashboard.database')"
+          @popup-visible-change="onDatabasePopup"
+        )
+      .gpt-table-sidebar-header__meta
+        a-tooltip(v-if="metricCountTooltip" :content="metricCountTooltip")
+          span {{ metricCountLabel }}
+        span(v-else) {{ metricCountLabel }}
+      .gpt-table-sidebar-header__control
         a-input.search-metric(
           v-model="metricSearchKey"
           size="mini"
           placeholder="Search metrics..."
           :allow-clear="true"
         )
-          template(#prefix)
+          template(#suffix)
             svg.icon-11.icon-color
               use(href="#search")
     a-tree.metrics-tree(
@@ -251,42 +253,6 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
 </script>
 
 <style scoped lang="less">
-  .metric-search {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 6px;
-    padding: 8px 10px;
-  }
-
-  /* The a-select root never inherits this component's scope id, and arco renders the
-     select + view classes on one element, so pin both controls through the scoped
-     .metric-search anchor — root-scoped selectors silently never match. Arco's own mini
-     input math (negative padding dropped at 20px) cannot match select heights either. */
-  .metric-search :deep(.metric-db-select),
-  .metric-search :deep(.arco-input-wrapper.search-metric) {
-    box-sizing: border-box;
-    width: 100%;
-    height: var(--gpt-control-height-sm);
-    min-height: var(--gpt-control-height-sm);
-    padding: 0 10px;
-    border: 1px solid var(--gpt-border-strong);
-    border-radius: var(--gpt-radius-sm);
-    background: var(--gpt-bg-app);
-  }
-
-  .metric-search :deep(.arco-input-wrapper.search-metric > .arco-input-prefix) {
-    padding-right: 10px;
-  }
-
-  .metric-search :deep(.arco-input-wrapper.search-metric > .arco-input-suffix) {
-    padding-left: 8px;
-  }
-
-  .metric-search-left {
-    width: 100%;
-  }
-
   .metric-sidebar-title {
     width: 100%;
   }
@@ -303,6 +269,6 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
     display: flex;
     align-items: center;
     justify-content: center;
-    height: calc(100% - 68px);
+    height: calc(100% - 84px);
   }
 </style>
