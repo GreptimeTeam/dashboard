@@ -10,19 +10,14 @@
   .red-chart-panel-header
     span.red-chart-panel-title {{ title }}
     span.red-chart-panel-hint(v-if="selected") {{ t('drilldown.traces.redSelected') }}
-  a-spin.panel-loading(v-if="loading" :loading="true")
-  .panel-state.panel-error(v-else-if="error") {{ t('drilldown.traces.redChartError') }}
-  .panel-state(v-else-if="isEmpty") {{ t('drilldown.traces.redChartNoData') }}
-  .panel-chart(v-else-if="showChart")
-    Chart(
-      :key="chartRenderKey"
-      :height="chartHeight"
-      :options="chartOption"
-      :brush-select="false"
-      :time-interaction="true"
-      :time-window-ms="timeWindowMs"
-      @time-range-change="onTimeRangeChange"
-    )
+  DrilldownChartPanel(
+    :option="chartOption"
+    :height="chartHeightPx"
+    :loading="loading"
+    :error="error ? t('drilldown.traces.redChartError') : null"
+    :empty-message="isEmpty ? t('drilldown.traces.redChartNoData') : null"
+    :render-key="chartRenderKey"
+  )
 </template>
 
 <script setup lang="ts">
@@ -30,7 +25,6 @@
   import type { EChartsOption } from 'echarts'
   import { storeToRefs } from 'pinia'
   import { useI18n } from 'vue-i18n'
-  import Chart from '@/components/raw-chart/index.vue'
   import { useAppStore } from '@/store'
   import { useDrilldownContext } from '@/observability/context'
   import { fetchDurationHeatmap, fetchRedTimeseries, type RedMetric } from '@/observability/adapters/traces'
@@ -41,6 +35,7 @@
     redMetricPanelUnit,
     volumeIntervalSecondsFromRange,
   } from '@/observability/traces/red-queries'
+  import DrilldownChartPanel from '../components/drilldown-chart-panel.vue'
 
   const props = defineProps<{
     metric: RedMetric
@@ -65,31 +60,12 @@
   let requestVersion = 0
 
   const chartHeightPx = computed(() => props.height ?? 140)
-  const chartHeight = computed(() => `${chartHeightPx.value}px`)
-  const showChart = computed(() => Boolean(chartOption.value) && !loading.value && !error.value)
   const chartRenderKey = computed(
     () =>
       `${props.metric}:${redMetricChartKind(props.metric)}:${ctx.refreshKey.value}:${
         ctx.time.value
       }:${ctx.rangeTime.value.join(',')}:${ctx.tracesTable.value}`
   )
-
-  const timeWindowMs = computed(() => {
-    const range = ctx.unixTimeRange()
-    if (range.length !== 2) {
-      return null
-    }
-    return { fromMs: range[0] * 1000, toMs: range[1] * 1000 }
-  })
-
-  const onTimeRangeChange = ([startSec, endSec]: [number, number]) => {
-    if (!(endSec > startSec)) {
-      return
-    }
-    ctx.rangeTime.value = [String(startSec), String(endSec)]
-    ctx.time.value = 0
-    ctx.triggerRefresh()
-  }
 
   async function load() {
     if (ctx.focusTraceId.value) {
@@ -100,6 +76,7 @@
       isEmpty.value = true
       return
     }
+
     requestVersion += 1
     const version = requestVersion
     loading.value = true
@@ -118,9 +95,9 @@
           isEmpty.value = true
           return
         }
+
         isEmpty.value = false
         chartOption.value = buildHeatmapOption(heatmap, undefined, {
-          // Cell magnitude = span count; Y axis = duration seconds.
           cellUnit: 'none',
           yUnit: 's',
           timeRange,
@@ -139,6 +116,7 @@
         isEmpty.value = true
         return
       }
+
       isEmpty.value = false
       chartOption.value = buildBarSparklineOption(points, {
         color: redMetricBarColor(props.metric, isDark.value),
@@ -163,21 +141,16 @@
 
   watch(
     () => [
-      props.metric,
-      props.colorIndex,
-      ctx.tracesTable.value,
       ctx.refreshKey.value,
+      ctx.filters.value,
       ctx.time.value,
       ctx.rangeTime.value[0],
       ctx.rangeTime.value[1],
-      ctx.filters.value,
-      ctx.focusTraceId.value,
+      ctx.tracesTable.value,
+      props.metric,
       isDark.value,
     ],
     () => {
-      if (ctx.focusTraceId.value) {
-        return
-      }
       load()
     },
     { deep: true, immediate: true }
@@ -192,26 +165,25 @@
     min-width: 0;
     min-height: 0;
     padding: var(--gpt-gap-md) var(--gpt-gap-lg);
-    border: 1px solid var(--color-border-2);
+    border: 1px solid var(--gpt-border-default);
     border-radius: var(--gpt-radius-md);
-    background: var(--color-bg-2);
+    background: var(--gpt-bg-panel);
     cursor: pointer;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-  }
 
-  .red-chart-panel:hover {
-    border-color: var(--color-border-3);
-  }
+    &:hover {
+      border-color: var(--gpt-border-strong);
+    }
 
-  .red-chart-panel:focus-visible {
-    outline: var(--gpt-gap-2xs) solid var(--color-primary, var(--brand-color));
-    outline-offset: var(--gpt-gap-2xs);
-  }
+    &:focus-visible {
+      outline: var(--gpt-gap-2xs) solid var(--gpt-main-purple);
+      outline-offset: var(--gpt-gap-2xs);
+    }
 
-  .red-chart-panel.selected {
-    border-color: var(--color-primary, var(--brand-color));
-    background: var(--color-fill-1);
-    box-shadow: inset 0 0 0 1px var(--color-primary, var(--brand-color));
+    &.selected {
+      border-color: var(--gpt-main-purple);
+      background: var(--gpt-bg-code-line);
+      box-shadow: inset 0 0 0 1px var(--gpt-main-purple);
+    }
   }
 
   .red-chart-panel-header {
@@ -223,44 +195,23 @@
   }
 
   .red-chart-panel-title {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--gpt-text-primary);
     font-size: var(--gpt-font-md);
     font-weight: var(--gpt-font-weight-control);
-    color: var(--color-text-1);
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .red-chart-panel.selected .red-chart-panel-title {
-    color: var(--color-primary, var(--brand-color));
+    color: var(--gpt-main-purple);
   }
 
   .red-chart-panel-hint {
-    font-size: var(--gpt-font-sm);
-    color: var(--color-text-3);
-  }
-
-  .panel-loading,
-  .panel-state {
-    display: flex;
-    flex: 1;
-    align-items: center;
-    justify-content: center;
-    min-height: v-bind(chartHeight);
-  }
-
-  .panel-state {
-    border: 1px dashed var(--color-border-2);
-    border-radius: var(--gpt-radius-md);
-    font-size: var(--gpt-font-base);
-    color: var(--color-text-3);
-  }
-
-  .panel-error {
-    color: rgb(var(--danger-6));
-  }
-
-  .panel-chart {
     flex-shrink: 0;
-    overflow: hidden;
-    border-radius: var(--gpt-radius-md);
-    background: var(--gpt-bg-panel);
+    color: var(--gpt-text-secondary);
+    font-size: var(--gpt-font-sm);
   }
 </style>

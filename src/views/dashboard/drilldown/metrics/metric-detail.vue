@@ -5,7 +5,7 @@
 
   a-tabs.metric-detail-tabs.panel-tabs(v-model:active-key="activeTab" lazy-load)
     a-tab-pane(key="breakdown" :title="t('drilldown.metricDetail.breakdownTab')")
-      BreakdownGrid(:metric="metric" :scroll-root="detailScrollRef")
+      MetricsBreakdownGrid(:metric="metric" :scroll-root="detailScrollRef")
     a-tab-pane(key="related-metrics" destroy-on-hide :title="t('drilldown.metricDetail.relatedMetricsTab')")
       RelatedMetricsPanel(:metric="metric")
     a-tab-pane(key="query-results" destroy-on-hide :title="t('drilldown.metricDetail.queryResultsTab')")
@@ -18,7 +18,7 @@
   import { useDrilldownContext } from '@/observability/context'
   import { isMetricDetailTab } from '@/observability/types'
   import useDrilldownPanelTab from '@/observability/use-drilldown-panel-tab'
-  import BreakdownGrid from './breakdown-grid.vue'
+  import MetricsBreakdownGrid from './metrics-breakdown-grid.vue'
   import MetricMainChart, { type MetricMainChartResult } from './metric-main-chart.vue'
   import QueryResultsPanel from './query-results-panel.vue'
   import RelatedMetricsPanel from './related-metrics-panel.vue'

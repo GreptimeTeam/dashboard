@@ -17,8 +17,8 @@
           a-option(v-for="attr in spanAttrs" :key="attr.column" :value="attr.column") {{ attr.label }}
 
   a-spin(style="width: 100%" :loading="loading")
-    .breakdown-values-grid
-      BreakdownValueCard(
+    .drilldown-grid.traces-breakdown-grid__values
+      TracesBreakdownPanel(
         v-for="(item, index) in values"
         :key="`${groupByColumn}:${item.value}`"
         :red-metric="redMetric"
@@ -49,7 +49,7 @@
     mergeTracesFieldMapColumns,
     type TraceBreakdownAttribute,
   } from '@/observability/traces/field-map'
-  import BreakdownValueCard from './breakdown-value-card.vue'
+  import TracesBreakdownPanel from './traces-breakdown-panel.vue'
 
   const props = defineProps<{
     redMetric: RedMetric
@@ -198,34 +198,13 @@
     gap: var(--gpt-gap-xs);
   }
 
-  .toolbar-label {
+  .breakdown-toolbar .toolbar-label {
     font-size: var(--gpt-font-base);
     font-weight: var(--gpt-font-weight-medium);
     color: var(--color-text-2);
   }
 
-  .breakdown-values-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: var(--gpt-gap-md);
-    padding: var(--gpt-gap-lg) var(--gpt-page-padding-x);
-  }
-
-  @media (max-width: 1400px) {
-    .breakdown-values-grid {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-  }
-
-  @media (max-width: 1024px) {
-    .breakdown-values-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-
-  @media (max-width: 640px) {
-    .breakdown-values-grid {
-      grid-template-columns: 1fr;
-    }
+  .traces-breakdown-grid__values {
+    padding-bottom: 0;
   }
 </style>

@@ -1,53 +1,46 @@
 <template lang="pug">
 .metric-main-chart
-  .panel-frame(ref="chartContainerRef")
-    a-spin.panel-loading(v-if="loading && !chartOption" :loading="true")
-    .panel-state.panel-error(v-else-if="error && !chartOption") {{ t('drilldown.metricDetail.chartError') }}
-    .panel-state(v-else-if="unsupported") {{ t('drilldown.metricDetail.chartHistogramUnsupported') }}
-    .panel-state(v-else-if="isEmpty") {{ t('drilldown.metricDetail.chartNoData') }}
-    .panel-chart(
-      v-else-if="chartOption"
-      :class="{ 'panel-chart-heatmap': isHeatmap }"
-      :title="isHeatmap ? promqlQuery : undefined"
+  .metric-main-chart__frame(ref="chartContainerRef")
+    DrilldownChartPanel(
+      :option="chartOption"
+      :height="MAIN_CHART_HEIGHT"
+      :loading="loading"
+      :error="error ? t('drilldown.metricDetail.chartError') : null"
+      :unsupported-message="unsupported ? t('drilldown.metricDetail.chartHistogramUnsupported') : null"
+      :empty-message="isEmpty ? t('drilldown.metricDetail.chartNoData') : null"
+      :render-key="chartRenderKey"
+      :keep-chart-while-loading="true"
+      :chart-title="isHeatmap ? promqlQuery : undefined"
+      :chart-class="{ 'metric-main-chart__chart--heatmap': isHeatmap }"
+      :show-footer="Boolean((isHeatmap && heatmapLegend) || showQueryLegend)"
     )
-      Chart(
-        :key="chartRenderKey"
-        ref="chartRef"
-        time-interaction
-        :height="chartHeight"
-        :options="chartOption"
-        :brush-select="false"
-        :time-window-ms="timeWindowMs"
-        @time-range-change="onTimeRangeChange"
-      )
-      .panel-refresh-mask(v-if="loading")
-        a-spin(:loading="true")
-  .panel-heatmap-legend(v-if="isHeatmap && heatmapLegend")
-    span.scale-label.scale-low {{ heatmapLegend.low }}
-    .scale-track
-      .scale-gradient
-      span.scale-label.scale-mid {{ heatmapLegend.mid }}
-    span.scale-label.scale-high {{ heatmapLegend.high }}
-  .panel-footer(v-if="showQueryLegend")
-    .query-legends
-      .query-legend(v-for="item in legendItems" :key="item.label + item.expr" :title="item.expr")
-        span.legend-swatch(:style="{ background: item.color }")
-        span.legend-name {{ item.label }}
-    span.series-count(v-if="seriesCount > 1 && legendItems.length <= 1")
-      | {{ t('drilldown.main.seriesCount', { count: seriesCount }) }}
+      template(#footer)
+        .metric-main-chart__heatmap-legend(v-if="isHeatmap && heatmapLegend")
+          span.metric-main-chart__scale-label.metric-main-chart__scale-label--low {{ heatmapLegend.low }}
+          .metric-main-chart__scale-track
+            .metric-main-chart__scale-gradient
+            span.metric-main-chart__scale-label.metric-main-chart__scale-label--mid {{ heatmapLegend.mid }}
+          span.metric-main-chart__scale-label.metric-main-chart__scale-label--high {{ heatmapLegend.high }}
+        .metric-main-chart__legend-row(v-else-if="showQueryLegend")
+          .metric-main-chart__legends
+            .drilldown-query-legend(v-for="item in legendItems" :key="item.label + item.expr" :title="item.expr")
+              span.drilldown-legend-swatch(:style="{ background: item.color }")
+              span.drilldown-legend-name {{ item.label }}
+          span.drilldown-series-count(v-if="seriesCount > 1 && legendItems.length <= 1")
+            | {{ t('drilldown.main.seriesCount', { count: seriesCount }) }}
 </template>
 
 <script setup lang="ts">
   import { computed, ref, toRef, watch } from 'vue'
   import { useElementSize } from '@vueuse/core'
   import { useI18n } from 'vue-i18n'
-  import Chart from '@/components/raw-chart/index.vue'
   import { useDrilldownContext } from '@/observability/context'
   import { MAIN_CHART_HEIGHT } from '@/observability/metrics/panel-stats'
   import useMetricMainChart, {
     type CachedMainChart,
     type MainChartPanelType,
   } from '@/observability/use-metric-main-chart'
+  import DrilldownChartPanel from '../components/drilldown-chart-panel.vue'
 
   export interface MetricMainChartResult {
     cached: CachedMainChart | null
@@ -68,9 +61,7 @@
   const { t } = useI18n()
   const ctx = useDrilldownContext()
   const metricName = toRef(props, 'metric')
-
   const chartContainerRef = ref<HTMLElement | null>(null)
-  const chartRef = ref<{ getInstance?: () => unknown } | null>(null)
   const { width: chartWidth } = useElementSize(chartContainerRef)
   const plotSize = computed(() => ({
     width: chartWidth.value,
@@ -106,30 +97,11 @@
     { immediate: true, deep: true }
   )
 
-  const chartHeight = `${MAIN_CHART_HEIGHT}px`
   const isHeatmap = computed(() => panelType.value === 'heatmap')
   const showQueryLegend = computed(() => legendItems.value.length > 0 && !isHeatmap.value)
   const chartRenderKey = computed(
     () => `${props.metric}:${panelType.value}:${prefs.value.agg}:${prefs.value.variant}:${promqlQuery.value}`
   )
-
-  const timeWindowMs = computed(() => {
-    const range = ctx.unixTimeRange()
-    if (range.length !== 2) {
-      return null
-    }
-    return { fromMs: range[0] * 1000, toMs: range[1] * 1000 }
-  })
-
-  /** raw-chart emits unix seconds after Grafana-style pan/zoom commit. */
-  const onTimeRangeChange = ([startSec, endSec]: [number, number]) => {
-    if (!(endSec > startSec)) {
-      return
-    }
-    ctx.rangeTime.value = [String(startSec), String(endSec)]
-    ctx.time.value = 0
-    ctx.triggerRefresh()
-  }
 </script>
 
 <style scoped lang="less">
@@ -140,67 +112,33 @@
     min-height: 0;
   }
 
-  .panel-frame {
+  .metric-main-chart__frame {
     width: 100%;
-    min-height: 280px; // MAIN_CHART_HEIGHT (Grafana PANEL_HEIGHT.XL)
-  }
-
-  .panel-loading,
-  .panel-state {
-    display: flex;
-    align-items: center;
-    justify-content: center;
     min-height: 280px;
   }
 
-  .panel-state {
-    border: 1px dashed var(--color-border-2);
-    border-radius: var(--gpt-radius-md);
-    font-size: var(--gpt-font-base);
-    color: var(--color-text-3);
-  }
-
-  .panel-error {
-    color: rgb(var(--danger-6));
-  }
-
-  .panel-chart {
-    position: relative;
-    flex-shrink: 0;
-    overflow: hidden;
-    border-radius: var(--gpt-radius-md);
+  .metric-main-chart__chart--heatmap {
     background: var(--gpt-bg-panel);
   }
 
-  .panel-refresh-mask {
-    position: absolute;
-    inset: 0;
-    z-index: 2;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none;
-    background: color-mix(in srgb, var(--gpt-bg-panel) 55%, transparent);
-  }
-
-  .panel-heatmap-legend {
+  .metric-main-chart__heatmap-legend {
     display: grid;
     grid-template-columns: auto minmax(72px, 1fr) auto;
     align-items: center;
     gap: var(--gpt-gap-sm);
     width: min(100%, 320px);
+    min-height: 22px;
     margin-top: var(--gpt-gap-xs);
     margin-bottom: var(--gpt-gap-2xs);
-    min-height: 22px;
   }
 
-  .scale-track {
+  .metric-main-chart__scale-track {
     position: relative;
     min-width: 0;
     height: 10px;
   }
 
-  .scale-gradient {
+  .metric-main-chart__scale-gradient {
     width: 100%;
     height: 100%;
     border-radius: var(--gpt-radius-xs);
@@ -218,66 +156,31 @@
     );
   }
 
-  .scale-label {
+  .metric-main-chart__scale-label {
     flex-shrink: 0;
+    color: var(--gpt-text-secondary);
     font-size: var(--gpt-font-xs);
     line-height: 1;
-    color: var(--color-text-3);
     white-space: nowrap;
   }
 
-  .scale-mid {
+  .metric-main-chart__scale-label--mid {
     position: absolute;
-    left: 50%;
     top: calc(100% + var(--gpt-gap-2xs));
+    left: 50%;
     transform: translateX(-50%);
     font-size: var(--gpt-font-2xs);
   }
 
-  .panel-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--gpt-gap-md);
+  .metric-main-chart__legend-row {
     min-height: 22px;
-    margin-top: var(--gpt-gap-xs);
     padding: 0 var(--gpt-gap-2xs);
   }
 
-  .query-legends {
+  .metric-main-chart__legends {
     display: flex;
     flex-wrap: wrap;
     gap: var(--gpt-gap-md);
     min-width: 0;
-  }
-
-  .query-legend {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--gpt-gap-sm);
-    min-width: 0;
-    max-width: 100%;
-  }
-
-  .legend-swatch {
-    flex-shrink: 0;
-    width: 10px;
-    height: 3px;
-    border-radius: var(--gpt-radius-xs);
-  }
-
-  .legend-name {
-    overflow: hidden;
-    font-size: var(--gpt-font-base);
-    line-height: 1.2;
-    color: var(--color-text-2);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .series-count {
-    flex-shrink: 0;
-    font-size: var(--gpt-font-sm);
-    color: var(--color-text-3);
   }
 </style>

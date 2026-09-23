@@ -1,45 +1,43 @@
 <template lang="pug">
 .logs-volume-mini-chart(ref="targetRef" :class="{ 'is-legend-bottom': legend === 'bottom' }")
-  a-spin.panel-loading(v-if="loading || !ready" :loading="true")
-  .panel-state.panel-error(v-else-if="error") {{ t('drilldown.main.sparklineError') }}
-  .panel-state(v-else-if="isEmpty") {{ t('drilldown.main.sparklineNoData') }}
-  .panel-chart(v-else-if="showChart")
-    .volume-plot(ref="plotRef")
-      Chart(
-        :key="chartRenderKey"
-        time-interaction
-        :height="chartHeight"
-        :options="chartOption"
-        :brush-select="false"
-        :time-window-ms="timeWindowMs"
-        @time-range-change="onTimeRangeChange"
-      )
-    .volume-legend(v-if="legendRows.length && legend !== 'bottom'")
-      .legend-header
-        span {{ t('drilldown.logs.legendName') }}
-        span.legend-total {{ t('drilldown.logs.legendTotal') }}
-      button.legend-row(
-        v-for="row in legendRows"
-        :key="row.name"
-        type="button"
-        :class="{ 'is-hidden': isLevelHidden(row.name) }"
-        @click="onLegendClick(row.name)"
-      )
-        span.legend-swatch(:style="{ background: row.color }")
-        span.legend-name(:title="row.name") {{ row.name }}
-        span.legend-total {{ row.total }}
-  .panel-footer(v-if="legend === 'bottom' && showChart && legendRows.length")
-    .query-legend-list
-      button.query-legend(
-        v-for="row in legendRows"
-        :key="row.name"
-        type="button"
-        :class="{ 'is-hidden': isLevelHidden(row.name) }"
-        :title="row.name"
-        @click="onLegendClick(row.name)"
-      )
-        span.legend-swatch(:style="{ background: row.color }")
-        span.legend-name {{ row.name }}
+  DrilldownChartPanel(
+    ref="chartPanelRef"
+    :option="chartOption"
+    :height="height"
+    :loading="loading || !ready"
+    :error="error ? t('drilldown.main.sparklineError') : null"
+    :empty-message="isEmpty ? t('drilldown.main.sparklineNoData') : null"
+    :render-key="chartRenderKey"
+    :chart-class="{ 'logs-volume-mini-chart__chart--bottom': legend === 'bottom' }"
+    :show-footer="legend === 'bottom' && legendRows.length > 0"
+  )
+    template(#aside)
+      .volume-legend(v-if="legendRows.length && legend !== 'bottom'")
+        .legend-header
+          span {{ t('drilldown.logs.legendName') }}
+          span.legend-total {{ t('drilldown.logs.legendTotal') }}
+        button.legend-row(
+          v-for="row in legendRows"
+          :key="row.name"
+          type="button"
+          :class="{ 'is-hidden': isLevelHidden(row.name) }"
+          @click="onLegendClick(row.name)"
+        )
+          span.legend-swatch(:style="{ background: row.color }")
+          span.legend-name(:title="row.name") {{ row.name }}
+          span.legend-total {{ row.total }}
+    template(#footer)
+      .drilldown-query-legend-list(v-if="legend === 'bottom' && legendRows.length")
+        button.drilldown-query-legend.logs-volume-mini-chart__legend-button(
+          v-for="row in legendRows"
+          :key="row.name"
+          type="button"
+          :class="{ 'is-hidden': isLevelHidden(row.name) }"
+          :title="row.name"
+          @click="onLegendClick(row.name)"
+        )
+          span.legend-swatch(:style="{ background: row.color }")
+          span.legend-name {{ row.name }}
 </template>
 
 <script setup lang="ts">
@@ -47,7 +45,6 @@
   import type { EChartsOption } from 'echarts'
   import { storeToRefs } from 'pinia'
   import { useI18n } from 'vue-i18n'
-  import Chart from '@/components/raw-chart/index.vue'
   import { toggleLegendSolo } from '@/components/raw-chart/legend-solo'
   import { useAppStore } from '@/store'
   import { useDrilldownContext } from '@/observability/context'
@@ -60,6 +57,7 @@
   import type { LogVolumeSeries } from '@/observability/logs/volume-series'
   import { BREAKDOWN_CHART_HEIGHT } from '@/observability/metrics/panel-stats'
   import useLazyPanelQuery from '@/observability/use-lazy-panel-query'
+  import DrilldownChartPanel from '../components/drilldown-chart-panel.vue'
 
   const props = withDefaults(
     defineProps<{
@@ -112,27 +110,10 @@
   const isEmpty = ref(false)
   const containerWidth = ref(0)
   const plotWidth = ref(0)
-  const plotRef = ref<HTMLElement | null>(null)
+  const chartPanelRef = ref<InstanceType<typeof DrilldownChartPanel> | null>(null)
   let requestVersion = 0
   let resizeObserver: ResizeObserver | null = null
 
-  const chartHeight = computed(() => `${props.height}px`)
-  const timeWindowMs = computed(() => {
-    const range = ctx.unixTimeRange()
-    if (range.length !== 2) {
-      return null
-    }
-    return { fromMs: range[0] * 1000, toMs: range[1] * 1000 }
-  })
-
-  function onTimeRangeChange([startSec, endSec]: [number, number]) {
-    if (!(endSec > startSec)) {
-      return
-    }
-    ctx.rangeTime.value = [String(startSec), String(endSec)]
-    ctx.time.value = 0
-    ctx.triggerRefresh()
-  }
   const showChart = computed(() => Boolean(chartOption.value) && !loading.value && !error.value)
   const plotWidthPx = computed(() => {
     if (plotWidth.value > 0) {
@@ -270,7 +251,7 @@
     if (width > 0) {
       containerWidth.value = width
     }
-    const plot = plotRef.value?.clientWidth ?? 0
+    const plot = chartPanelRef.value?.plotRef?.clientWidth ?? 0
     if (plot > 0) {
       plotWidth.value = plot
     }
@@ -342,8 +323,8 @@
       return
     }
     nextTick(() => {
-      if (plotRef.value && resizeObserver) {
-        resizeObserver.observe(plotRef.value)
+      if (chartPanelRef.value?.plotRef && resizeObserver) {
+        resizeObserver.observe(chartPanelRef.value.plotRef)
       }
       measureWidth()
       paint()
@@ -412,27 +393,7 @@
     min-height: 0;
   }
 
-  .panel-loading,
-  .panel-state {
-    display: flex;
-    flex: 1;
-    align-items: center;
-    justify-content: center;
-    min-height: v-bind(chartHeight);
-  }
-
-  .panel-state {
-    border: 1px dashed var(--color-border-2);
-    border-radius: var(--gpt-radius-md);
-    font-size: var(--gpt-font-base);
-    color: var(--color-text-3);
-  }
-
-  .panel-error {
-    color: rgb(var(--danger-6));
-  }
-
-  .panel-chart {
+  .logs-volume-mini-chart :deep(.drilldown-chart-panel__chart) {
     display: flex;
     flex: 1;
     gap: var(--gpt-gap-md);
@@ -441,35 +402,20 @@
     background: transparent;
   }
 
-  .volume-plot {
+  .logs-volume-mini-chart :deep(.chart-wrap) {
     flex: 1 1 auto;
     min-width: 0;
     min-height: 0;
   }
 
-  .logs-volume-mini-chart.is-legend-bottom .panel-chart {
+  .logs-volume-mini-chart.is-legend-bottom :deep(.logs-volume-mini-chart__chart--bottom) {
     flex: 0 0 auto;
     overflow: hidden;
     border-radius: var(--gpt-radius-md);
     background: var(--gpt-bg-panel);
   }
 
-  .panel-footer {
-    display: flex;
-    align-items: center;
-    margin-top: var(--gpt-gap-xs);
-  }
-
-  .query-legend-list {
-    display: flex;
-    flex: 1;
-    flex-wrap: wrap;
-    gap: var(--gpt-gap-sm) var(--gpt-gap-md);
-    min-width: 0;
-    overflow: hidden;
-  }
-
-  .query-legend {
+  .logs-volume-mini-chart__legend-button {
     display: inline-flex;
     align-items: center;
     gap: var(--gpt-gap-sm);
@@ -480,7 +426,7 @@
     background: transparent;
     font-size: var(--gpt-font-sm);
     line-height: 1.2;
-    color: var(--color-text-2);
+    color: var(--gpt-text-secondary);
     cursor: pointer;
 
     &.is-hidden {
@@ -488,13 +434,13 @@
     }
   }
 
-  .query-legend .legend-swatch {
+  .logs-volume-mini-chart__legend-button .legend-swatch {
     width: 12px;
     height: 3px;
     border-radius: var(--gpt-radius-xs);
   }
 
-  .query-legend .legend-name {
+  .logs-volume-mini-chart__legend-button .legend-name {
     overflow: hidden;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
     text-overflow: ellipsis;

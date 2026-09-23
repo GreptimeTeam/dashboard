@@ -3,17 +3,17 @@
   .page-identity
     .title-row
       span.page-title {{ t('drilldown.pageTitle') }}
-      nav.signal-text-nav(aria-label="Signal Explorer")
-        button.signal-link(
-          v-for="item in signalItems"
-          :key="item.value"
-          type="button"
-          :class="{ active: signal === item.value }"
-          :aria-current="signal === item.value ? 'page' : undefined"
-          @click="setSignal(item.value)"
-        ) {{ item.label }}
+      SignalTabNav(
+        mode="navigation"
+        aria-label="Signal Explorer"
+        :items="signalItems"
+        :model-value="signal"
+        @update:model-value="onSignalSelect"
+      )
   .shared-context
-    DrilldownFilterBar
+    .drilldown-filter-bar
+      span.filter-label {{ t('drilldown.filters.title') }}
+      DrilldownFilterCombobox
     a-button.logs-query-trigger(
       v-if="showLogsQuery"
       type="primary"
@@ -45,7 +45,8 @@
   import TimeRangeSelect from '@/components/time-range-select/index.vue'
   import { useDrilldownContext } from '@/observability/context'
   import type { DrilldownSignal } from '@/observability/types'
-  import DrilldownFilterBar from './filter-bar.vue'
+  import DrilldownFilterCombobox from './drilldown-filter-combobox.vue'
+  import SignalTabNav from './signal-tab-nav.vue'
 
   const { t } = useI18n()
   const { signal, time, rangeTime, triggerRefresh, setSignal, logsView, logsTable, openLogsDetail } =
@@ -67,6 +68,12 @@
 
   const handleRefresh = () => {
     triggerRefresh()
+  }
+
+  const onSignalSelect = (value: string) => {
+    if (signalItems.value.some((item) => item.value === value)) {
+      setSignal(value as DrilldownSignal)
+    }
   }
 </script>
 
@@ -108,50 +115,6 @@
     white-space: nowrap;
   }
 
-  .signal-text-nav {
-    display: inline-flex;
-    align-items: stretch;
-    gap: var(--gpt-gap-xl);
-    min-width: 0;
-  }
-
-  .signal-link {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    font-family: var(--font-family-base);
-    font-size: var(--gpt-font-lg);
-    font-weight: var(--gpt-font-weight-medium);
-    line-height: 1.2;
-    color: var(--color-text-3);
-    white-space: nowrap;
-    cursor: pointer;
-  }
-
-  .signal-link:hover {
-    color: var(--color-text-2);
-  }
-
-  .signal-link.active {
-    font-weight: var(--gpt-font-weight-control);
-    color: var(--color-primary, var(--color-text-1));
-  }
-
-  // Stretched link bottom = toolbar content edge; drop through padding + border
-  // so the 2px ink sits on the toolbar bottom border.
-  .signal-link.active::after {
-    content: '';
-    position: absolute;
-    right: 0;
-    bottom: calc(-1 * var(--gpt-toolbar-padding-y) - 1px);
-    left: 0;
-    height: var(--gpt-gap-2xs);
-    background: var(--color-primary, var(--color-text-1));
-  }
-
   .shared-context {
     display: flex;
     flex: 1 1 auto;
@@ -164,5 +127,25 @@
     > .arco-space {
       flex-shrink: 0;
     }
+  }
+
+  .drilldown-filter-bar {
+    display: inline-flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--gpt-gap-md) var(--gpt-gap-lg);
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .filter-label {
+    flex-shrink: 0;
+    color: var(--gpt-text-primary);
+    font-size: var(--gpt-font-base);
+    font-weight: var(--gpt-font-weight-control);
+    line-height: 1;
+    white-space: nowrap;
   }
 </style>

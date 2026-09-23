@@ -1,72 +1,75 @@
 <template lang="pug">
-.traces-home
-  .traces-home-toolbar
-    .toolbar-left
-      span.toolbar-label {{ t('drilldown.traces.tableLabel') }}
-      a-select.table-select(
-        allow-search
-        allow-create
-        :model-value="tracesTable"
-        :placeholder="t('drilldown.traces.tablePlaceholder')"
-        :loading="loadingTables"
-        @change="onTableChange"
-      )
-        a-option(v-for="name in tableOptions" :key="name" :value="name") {{ name }}
-    .toolbar-right
-      a-input.trace-id-input(
-        v-model="traceIdDraft"
-        allow-clear
-        size="medium"
-        :placeholder="t('drilldown.traces.traceIdSearchPlaceholder')"
-        @press-enter="submitTraceId"
-        @clear="clearTraceId"
-      )
-        template(#prefix)
-          span.trace-id-prefix TID
+a-layout-content.layout-content
+  a-card.drilldown-main-pane.gpt-results-pane(:bordered="false")
+    .drilldown-home-main
+      .traces-home
+        .drilldown-toolbar.traces-home-toolbar
+          .drilldown-toolbar__left
+            span.drilldown-toolbar__label {{ t('drilldown.traces.tableLabel') }}
+            a-select.drilldown-table-select(
+              allow-search
+              allow-create
+              :model-value="tracesTable"
+              :placeholder="t('drilldown.traces.tablePlaceholder')"
+              :loading="loadingTables"
+              @change="onTableChange"
+            )
+              a-option(v-for="name in tableOptions" :key="name" :value="name") {{ name }}
+          .drilldown-toolbar__right
+            a-input.trace-id-input(
+              v-model="traceIdDraft"
+              allow-clear
+              size="medium"
+              :placeholder="t('drilldown.traces.traceIdSearchPlaceholder')"
+              @press-enter="submitTraceId"
+              @clear="clearTraceId"
+            )
+              template(#prefix)
+                span.trace-id-prefix TID
 
-  a-alert(
-    v-if="!tracesTable"
-    type="warning"
-    show-icon
-    :title="t('drilldown.traces.noTableTitle')"
-    :description="t('drilldown.traces.noTableDescription')"
-  )
-
-  .traces-home-body(v-else)
-    .traces-red-main
-      .red-triptych
-        RedChartPanel(
-          v-for="item in redMetricItems"
-          :key="item.key"
-          :metric="item.key"
-          :title="item.label"
-          :selected="selectedRedMetric === item.key"
-          :color-index="item.colorIndex"
-          :height="140"
-          @select="selectedRedMetric = item.key"
+        a-alert(
+          v-if="!tracesTable"
+          type="warning"
+          show-icon
+          :title="t('drilldown.traces.noTableTitle')"
+          :description="t('drilldown.traces.noTableDescription')"
         )
 
-    a-tabs.traces-home-tabs.panel-tabs(v-model:active-key="activeTab" lazy-load)
-      a-tab-pane(key="breakdown" :title="t('drilldown.traces.breakdownTab')")
-        .breakdown-tab-pane
-          BreakdownGrid(:red-metric="selectedRedMetric")
-      a-tab-pane(key="traces" :title="tracesTabTitle")
-        .traces-tab-pane
-          TraceTable.traces-embed-table(
-            embed-mode
-            :logs-trace-enabled="logsTraceEnabled"
-            :data="rows"
-            :columns="columns"
-            :loading="loading"
-            :query-state="tableQueryState"
-            @trace-click="openTrace"
-            @logs-trace-click="openLogsForTrace"
-            @filter-condition-add="onFilterConditionAdd"
-          )
+        .traces-home-body(v-else)
+          .traces-red-main
+            .red-triptych
+              RedChartPanel(
+                v-for="item in redMetricItems"
+                :key="item.key"
+                :metric="item.key"
+                :title="item.label"
+                :selected="selectedRedMetric === item.key"
+                :color-index="item.colorIndex"
+                :height="140"
+                @select="selectedRedMetric = item.key"
+              )
+
+          a-tabs.traces-home-tabs.panel-tabs(v-model:active-key="activeTab" lazy-load)
+            a-tab-pane(key="breakdown" :title="t('drilldown.traces.breakdownTab')")
+              .breakdown-tab-pane
+                TracesBreakdownGrid(:red-metric="selectedRedMetric")
+            a-tab-pane(key="traces" :title="tracesTabTitle")
+              .traces-tab-pane
+                TraceTable.traces-embed-table(
+                  embed-mode
+                  :logs-trace-enabled="logsTraceEnabled"
+                  :data="rows"
+                  :columns="columns"
+                  :loading="loading"
+                  :query-state="tableQueryState"
+                  @trace-click="openTrace"
+                  @logs-trace-click="openLogsForTrace"
+                  @filter-condition-add="onFilterConditionAdd"
+                )
 </template>
 
 <script setup lang="ts">
-  import { computed, onActivated, onDeactivated, onMounted, ref, watch } from 'vue'
+  import { computed, onMounted, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { storeToRefs } from 'pinia'
   import { useAppStore } from '@/store'
@@ -76,14 +79,16 @@
   import { isDrilldownFilterOp, resolveFieldMapColumn } from '@/observability/filters'
   import { buildDefaultTracesFieldMap } from '@/observability/traces/field-map'
   import { bindSignalTable } from '@/observability/bind-signal-table'
-  import { listSignalTables, physicalServiceColumn } from '@/observability/semantics'
+  import { physicalServiceColumn } from '@/observability/semantics'
   import resolveLogsRoles from '@/observability/logs/resolved-roles'
   import type { ColumnType, QueryState } from '@/types/query'
   import { isTracesHomeTab } from '@/observability/types'
+  import useDrilldownKeepAlive from '@/observability/use-drilldown-keep-alive'
   import useDrilldownPanelTab from '@/observability/use-drilldown-panel-tab'
+  import useSignalTableOptions from '@/observability/use-signal-table-options'
   import TraceTable from '@/views/dashboard/traces/components/TraceTable.vue'
   import RedChartPanel from './red-chart-panel.vue'
-  import BreakdownGrid from './breakdown-grid.vue'
+  import TracesBreakdownGrid from './traces-breakdown-grid.vue'
 
   defineOptions({
     name: 'TracesHome',
@@ -93,17 +98,12 @@
   const ctx = useDrilldownContext()
   const { database } = storeToRefs(useAppStore())
 
-  const loadingTables = ref(false)
-  const tableOptions = ref<string[]>([])
   const loading = ref(false)
   const rows = ref<RootSpanRow[]>([])
   const columns = ref<ColumnType[]>([])
   const tracesTable = ref(ctx.tracesTable.value)
   const traceIdDraft = ref('')
   const selectedRedMetric = ref<RedMetric>('rate')
-  const overviewActive = ref(true)
-  let pausedDepsKey = ''
-
   const activeTab = useDrilldownPanelTab({
     tab: ctx.tracesTab,
     setTab: ctx.setTracesTab,
@@ -114,6 +114,21 @@
     { key: 'errors' as RedMetric, label: t('drilldown.traces.redErrors'), colorIndex: 4 },
     { key: 'duration' as RedMetric, label: t('drilldown.traces.redDuration'), colorIndex: 3 },
   ])
+
+  const depsKey = () =>
+    JSON.stringify([
+      ctx.refreshKey.value,
+      ctx.filters.value,
+      ctx.time.value,
+      ctx.rangeTime.value[0],
+      ctx.rangeTime.value[1],
+      ctx.tracesTable.value,
+      selectedRedMetric.value,
+    ])
+
+  const keepAlive = useDrilldownKeepAlive({ deps: depsKey })
+  const { isActive: overviewActive } = keepAlive
+  const { tableOptions, loadingTables, loadTables } = useSignalTableOptions('traces', overviewActive)
 
   const tracesTabTitle = computed(() => {
     if (selectedRedMetric.value === 'errors') {
@@ -133,17 +148,6 @@
     editorType: 'builder',
     database: database.value,
   }))
-
-  const depsKey = () =>
-    JSON.stringify([
-      ctx.refreshKey.value,
-      ctx.filters.value,
-      ctx.time.value,
-      ctx.rangeTime.value[0],
-      ctx.rangeTime.value[1],
-      ctx.tracesTable.value,
-      selectedRedMetric.value,
-    ])
 
   watch(
     () => ctx.tracesTable.value,
@@ -165,19 +169,6 @@
     { immediate: true }
   )
 
-  const loadTables = async () => {
-    if (!overviewActive.value) {
-      return
-    }
-    loadingTables.value = true
-    try {
-      const current = ctx.tracesTable.value
-      tableOptions.value = await listSignalTables('traces', { include: current ? [current] : [] })
-    } finally {
-      loadingTables.value = false
-    }
-  }
-
   const loadRows = async () => {
     if (!overviewActive.value || ctx.focusTraceId.value) {
       return
@@ -196,6 +187,12 @@
       loading.value = false
     }
   }
+
+  keepAlive.setResume(() => {
+    loadTables()
+    loadRows()
+    ctx.triggerRefresh()
+  })
 
   const onTableChange = async (table: string) => {
     if (!table || table === ctx.tracesTable.value) {
@@ -279,21 +276,6 @@
     await loadTables()
     await loadRows()
   })
-
-  onDeactivated(() => {
-    overviewActive.value = false
-    pausedDepsKey = depsKey()
-  })
-
-  onActivated(() => {
-    overviewActive.value = true
-    if (pausedDepsKey && pausedDepsKey !== depsKey()) {
-      loadTables()
-      loadRows()
-      ctx.triggerRefresh()
-    }
-    pausedDepsKey = ''
-  })
 </script>
 
 <style scoped lang="less">
@@ -304,43 +286,6 @@
     gap: 0;
     min-height: 0;
     overflow: hidden;
-  }
-
-  .traces-home-toolbar {
-    display: flex;
-    flex-shrink: 0;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--gpt-gap-lg);
-    padding: var(--gpt-toolbar-padding);
-    border-bottom: 1px solid var(--gpt-border-default);
-    background: var(--gpt-table-toolbar-bg, var(--color-bg-2));
-  }
-
-  .toolbar-left {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--gpt-gap-md);
-    min-width: 0;
-  }
-
-  .toolbar-right {
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    gap: var(--gpt-gap-md);
-    margin-left: auto;
-  }
-
-  .toolbar-label {
-    flex-shrink: 0;
-    font-size: var(--gpt-font-base);
-    color: var(--color-text-3);
-  }
-
-  .table-select {
-    width: 240px;
   }
 
   .trace-id-input {

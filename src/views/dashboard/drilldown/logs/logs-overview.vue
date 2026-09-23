@@ -1,39 +1,42 @@
 <template lang="pug">
-.logs-overview
-  .logs-overview-toolbar
-    .toolbar-left
-      span.toolbar-label {{ t('drilldown.logs.tableLabel') }}
-      a-select.table-select(
-        allow-search
-        allow-create
-        :model-value="logsTable"
-        :placeholder="t('drilldown.logs.tablePlaceholder')"
-        :loading="loadingTables"
-        @change="onTableChange"
-      )
-        a-option(v-for="name in tableOptions" :key="name" :value="name") {{ name }}
-      a-button(type="text" size="small" @click="settingsVisible = true")
-        | {{ t('drilldown.logs.settingsButton') }}
+a-layout-content.layout-content
+  a-card.drilldown-main-pane.gpt-results-pane(:bordered="false")
+    .drilldown-home-main
+      .logs-overview
+        .drilldown-toolbar.logs-overview-toolbar
+          .drilldown-toolbar__left
+            span.drilldown-toolbar__label {{ t('drilldown.logs.tableLabel') }}
+            a-select.drilldown-table-select(
+              allow-search
+              allow-create
+              :model-value="logsTable"
+              :placeholder="t('drilldown.logs.tablePlaceholder')"
+              :loading="loadingTables"
+              @change="onTableChange"
+            )
+              a-option(v-for="name in tableOptions" :key="name" :value="name") {{ name }}
+            a-button(type="text" size="small" @click="settingsVisible = true")
+              | {{ t('drilldown.logs.settingsButton') }}
 
-  a-alert(
-    v-if="!logsTable"
-    type="warning"
-    show-icon
-    :title="t('drilldown.logs.noTableTitle')"
-    :description="t('drilldown.logs.noTableDescription')"
-  )
-    template(#action)
-      a-button(type="primary" size="small" @click="settingsVisible = true")
-        | {{ t('drilldown.logs.settingsButton') }}
+        a-alert(
+          v-if="!logsTable"
+          type="warning"
+          show-icon
+          :title="t('drilldown.logs.noTableTitle')"
+          :description="t('drilldown.logs.noTableDescription')"
+        )
+          template(#action)
+            a-button(type="primary" size="small" @click="settingsVisible = true")
+              | {{ t('drilldown.logs.settingsButton') }}
 
-  .logs-overview-labels(v-else)
-    LabelsTab(:auto-open-default="true")
+        .logs-overview-labels(v-else)
+          LabelsTab(:auto-open-default="true")
 
-  LogsSettingsModal(v-model:visible="settingsVisible" @saved="onSettingsSaved")
+        LogsSettingsModal(v-model:visible="settingsVisible" @saved="onSettingsSaved")
 </template>
 
 <script setup lang="ts">
-  import { computed, nextTick, onActivated, onDeactivated, onMounted, ref } from 'vue'
+  import { computed, nextTick, onMounted, ref } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { storeToRefs } from 'pinia'
   import { useAppStore } from '@/store'
@@ -42,7 +45,8 @@
   import { resolveFieldMapColumn } from '@/observability/filters'
   import { buildLogsFieldMap } from '@/observability/logs/field-map'
   import { bindSignalTable } from '@/observability/bind-signal-table'
-  import { listSignalTables } from '@/observability/semantics'
+  import useDrilldownKeepAlive from '@/observability/use-drilldown-keep-alive'
+  import useSignalTableOptions from '@/observability/use-signal-table-options'
   import LabelsTab from './labels-tab.vue'
   import LogsSettingsModal from './logs-settings-modal.vue'
 
@@ -55,11 +59,6 @@
   const { database } = storeToRefs(useAppStore())
 
   const settingsVisible = ref(false)
-  const loadingTables = ref(false)
-  const tableOptions = ref<string[]>([])
-  const overviewActive = ref(true)
-  let pausedDepsKey = ''
-
   const logsTable = computed(() => ctx.logsTable.value)
 
   const depsKey = () =>
@@ -72,18 +71,13 @@
       ctx.filters.value,
     ])
 
-  const loadTables = async () => {
-    if (!overviewActive.value) {
-      return
-    }
-    loadingTables.value = true
-    try {
-      const current = ctx.logsTable.value
-      tableOptions.value = await listSignalTables('logs', { include: current ? [current] : [] })
-    } finally {
-      loadingTables.value = false
-    }
-  }
+  const keepAlive = useDrilldownKeepAlive({ deps: depsKey })
+  const { isActive: overviewActive } = keepAlive
+  const { tableOptions, loadingTables, loadTables } = useSignalTableOptions('logs', overviewActive)
+  keepAlive.setResume(() => {
+    loadTables()
+    ctx.triggerRefresh()
+  })
 
   const onSettingsSaved = () => {
     ctx.triggerRefresh()
@@ -119,20 +113,6 @@
   onMounted(async () => {
     await loadTables()
   })
-
-  onDeactivated(() => {
-    overviewActive.value = false
-    pausedDepsKey = depsKey()
-  })
-
-  onActivated(() => {
-    overviewActive.value = true
-    if (pausedDepsKey && pausedDepsKey !== depsKey()) {
-      loadTables()
-      ctx.triggerRefresh()
-    }
-    pausedDepsKey = ''
-  })
 </script>
 
 <style scoped lang="less">
@@ -144,35 +124,6 @@
     min-height: 0;
     padding: 0;
     overflow: hidden;
-  }
-
-  .logs-overview-toolbar {
-    display: flex;
-    flex-shrink: 0;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--gpt-gap-lg);
-    padding: var(--gpt-toolbar-padding);
-    border-bottom: 1px solid var(--gpt-border-default);
-    background: var(--gpt-table-toolbar-bg, var(--color-bg-2));
-  }
-
-  .toolbar-left {
-    display: flex;
-    align-items: center;
-    gap: var(--gpt-gap-md);
-    min-width: 0;
-  }
-
-  .toolbar-label {
-    flex-shrink: 0;
-    font-size: var(--gpt-font-base);
-    color: var(--color-text-3);
-  }
-
-  .table-select {
-    width: 240px;
   }
 
   .logs-overview-labels {

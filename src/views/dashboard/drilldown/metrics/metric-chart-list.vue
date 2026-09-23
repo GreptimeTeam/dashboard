@@ -21,8 +21,8 @@
           .group-header(v-if="group.label")
             span.group-title {{ group.label }}
             span.group-count {{ group.names.length }}
-          .metric-cards
-            MetricChartCard(
+          .metric-cards.drilldown-grid.drilldown-grid--flush
+            MetricCatalogCard(
               v-for="name in group.names"
               :key="name"
               :metric-name="name"
@@ -38,7 +38,7 @@
   import { METRIC_NAMES_LIMIT } from '@/api/metrics'
   import type { MetricGroup } from '@/observability/metrics/catalog'
   import useScrollBatchReveal from '@/observability/use-scroll-batch-reveal'
-  import MetricChartCard from './metric-chart-card.vue'
+  import MetricCatalogCard from './metric-catalog-card.vue'
 
   const props = defineProps<{
     loading: boolean
@@ -208,25 +208,6 @@
   .group-count {
     font-size: var(--gpt-font-base);
     color: var(--color-text-3);
-  }
-
-  .metric-cards {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    // Grafana MetricsList SceneCSSGridLayout default: rowGap/columnGap = spacing(1) → 8px.
-    gap: var(--gpt-gap-md);
-
-    @media (max-width: 1400px) {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    @media (max-width: 1024px) {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    @media (max-width: 640px) {
-      grid-template-columns: minmax(0, 1fr);
-    }
   }
 
   .batch-sentinel {

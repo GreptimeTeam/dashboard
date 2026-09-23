@@ -1,5 +1,5 @@
 <template lang="pug">
-.breakdown-grid
+.metrics-breakdown-grid
   .breakdown-toolbar
     .breakdown-by-label
       span.toolbar-label {{ t('drilldown.breakdown.byLabel') }}
@@ -17,10 +17,11 @@
 
   a-spin(style="width: 100%" :loading="loading")
     template(v-if="selectedLabel")
-      .breakdown-values-grid
-        BreakdownValueCard(
+      .drilldown-grid.metrics-breakdown-grid__values
+        MetricsBreakdownPanel(
           v-for="value in selectedValues"
           :key="value"
+          mode="value"
           :metric="metric"
           :label-key="selectedLabel"
           :value="value"
@@ -28,10 +29,11 @@
         )
       a-empty(v-if="!selectedValues.length" :description="t('drilldown.breakdown.noValues')")
     template(v-else)
-      .breakdown-labels-grid
-        BreakdownLabelCard(
+      .drilldown-grid.metrics-breakdown-grid__labels
+        MetricsBreakdownPanel(
           v-for="labelKey in labelKeys"
           :key="labelKey"
+          mode="label"
           :metric="metric"
           :label-key="labelKey"
           :scroll-root="scrollRoot"
@@ -47,8 +49,7 @@
   import { fetchBreakdownLabelKeys, fetchBreakdownLabelValues } from '@/observability/metrics/breakdown'
   import useMainChartPrefs from '@/observability/metrics/main-chart-config'
   import { provideBreakdownYAxisSync } from '@/observability/use-breakdown-y-axis-sync'
-  import BreakdownLabelCard from './breakdown-label-card.vue'
-  import BreakdownValueCard from './breakdown-value-card.vue'
+  import MetricsBreakdownPanel from './metrics-breakdown-panel.vue'
 
   const ALL_LABELS = '__all__'
 
@@ -155,7 +156,7 @@
 </script>
 
 <style scoped lang="less">
-  .breakdown-grid {
+  .metrics-breakdown-grid {
     padding: 0 0 var(--gpt-page-padding-x);
   }
 
@@ -173,29 +174,9 @@
     gap: var(--gpt-gap-xs);
   }
 
-  .toolbar-label {
+  .breakdown-toolbar .toolbar-label {
     font-size: var(--gpt-font-base);
     font-weight: var(--gpt-font-weight-medium);
     color: var(--color-text-2);
-  }
-
-  .breakdown-labels-grid,
-  .breakdown-values-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: var(--gpt-gap-md);
-    padding: var(--gpt-gap-lg) var(--gpt-page-padding-x) 0;
-
-    @media (max-width: 1400px) {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    @media (max-width: 1024px) {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    @media (max-width: 640px) {
-      grid-template-columns: minmax(0, 1fr);
-    }
   }
 </style>
