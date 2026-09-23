@@ -335,8 +335,6 @@ export function logsServiceFilterCandidateKeys(
   )
 }
 
-const LOG_TABLE_HEURISTICS = [/log/i]
-
 function tableNamesFromRecords(records: {
   rows?: string[][]
   schema?: { column_schemas?: Array<{ name: string }> }
@@ -362,14 +360,13 @@ function uniquePreserveOrder(names: string[]): string[] {
   return result
 }
 
-/** Log table names guessed from table names containing "log". */
-async function listHeuristicLogTables(database?: string): Promise<string[]> {
+/** All user tables in the database (no name heuristics). */
+async function listAllTables(database?: string): Promise<string[]> {
   try {
     const tables = (await editorApi.getTables(500, 0, database)) as { output?: Array<{ records?: unknown }> }
-    const names = tableNamesFromRecords(tables?.output?.[0]?.records as never)
-    return names.filter((name) => LOG_TABLE_HEURISTICS.some((pattern) => pattern.test(name)))
+    return tableNamesFromRecords(tables?.output?.[0]?.records as never)
   } catch (error) {
-    console.error('Failed to list heuristic log tables:', error)
+    console.error('Failed to list tables:', error)
     return []
   }
 }
@@ -414,20 +411,10 @@ async function loadTableColumnNames(tableName: string, database?: string): Promi
 // Signal table selection
 // ---------------------------------------------------------------------------
 
-function pickLogTableFromNames(names: string[]): string | undefined {
-  if (!names.length) {
-    return undefined
-  }
-  if (names.length === 1) {
-    return names[0]
-  }
-  const heuristic = names.find((name) => LOG_TABLE_HEURISTICS.some((pattern) => pattern.test(name)))
-  return heuristic ?? names[0]
-}
-
 /**
  * Discover candidate logs tables.
- * Merges table_semantics(signal_type=log) with names containing "log".
+ * Prefer table_semantics(signal_type=log) first, then every other table in the
+ * database (no table-name heuristics).
  */
 export async function listSignalTables(
   signal: 'logs',
@@ -449,12 +436,17 @@ export async function listSignalTables(
 ): Promise<string[]> {
   const database = options?.database
   if (signal === 'logs') {
-    const [fromSemantics, fromHeuristic] = await Promise.all([
+    const [fromSemantics, allTables] = await Promise.all([
       listBySignal('log', database),
-      listHeuristicLogTables(database),
+      listAllTables(database),
     ])
     const extras = (options?.include ?? []).filter(Boolean)
-    return uniquePreserveOrder([...fromSemantics.map((row) => row.tableName), ...fromHeuristic, ...extras])
+    // Semantics first (priority), then remaining tables — no name guessing.
+    return uniquePreserveOrder([
+      ...fromSemantics.map((row) => row.tableName),
+      ...allTables,
+      ...extras,
+    ])
   }
 
   const fromSemantics = await listBySignal('trace', database)
@@ -503,7 +495,7 @@ export async function listSignalTables(
 
 /**
  * Resolve the bound logs table.
- * Priority: explicit override → settings → semantics → heuristics.
+ * Priority: explicit override → settings → listSignalTables first hit.
  */
 export async function resolveSignalTable(
   signal: 'logs',
@@ -530,17 +522,6 @@ export async function resolveSignalTable(
     return options.settingsTable.trim()
   }
 
-  const database = options?.database
-  if (signal === 'logs') {
-    const fromSemantics = await listBySignal('log', database)
-    const picked = pickLogTableFromNames(fromSemantics.map((row) => row.tableName))
-    if (picked) {
-      return picked
-    }
-    const heuristic = await listHeuristicLogTables(database)
-    return pickLogTableFromNames(heuristic)
-  }
-
-  const listed = await listSignalTables('traces', { database })
+  const listed = await listSignalTables(signal, { database: options?.database })
   return listed[0]
 }
