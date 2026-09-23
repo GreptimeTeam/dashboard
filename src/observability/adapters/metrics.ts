@@ -38,7 +38,7 @@ export async function fetchMetricNamesPool(
     if (!selector) {
       throw error
     }
-    const response = await getSeries(selector, options.start, options.end)
+    const response = await getSeries(selector, options.start, options.end, options.database)
     const names = uniqueMetricNamesFromSeries(response.data)
     return {
       names,

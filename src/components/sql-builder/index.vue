@@ -183,6 +183,7 @@ a-modal(
   import { storeToRefs } from 'pinia'
   import editorAPI from '@/api/editor'
   import { useAppStore } from '@/store'
+  import { getSignalDatabase, setSignalDatabase } from '@/observability/signal-database'
   import type { Condition, BuilderFormState as Form } from '@/types/query'
   import { TsTypeMapping } from '@/utils/date-time'
 
@@ -214,6 +215,8 @@ a-modal(
     /** Optional async table list; when set, overrides tableFilter discovery. */
     tablesProvider?: () => Promise<string[]>
     storageKey?: string // Optional storage key for localStorage (e.g., 'logs-query-table', 'traces-query-table')
+    /** When set, form.database reads/writes the shared signal-db preference. */
+    signalDatabaseKind?: 'logs' | 'traces'
     quickFieldNames?: string[] // Array of field names for quick condition buttons
     defaultFormState?: Form
   }>()
@@ -501,6 +504,9 @@ a-modal(
   }
 
   function handleDatabaseChange() {
+    if (props.signalDatabaseKind && form.database) {
+      setSignalDatabase(props.signalDatabaseKind, form.database)
+    }
     // Reset form state when database changes, preserve current database
     resetForm({ database: form.database })
     tables.value = []
@@ -551,9 +557,16 @@ a-modal(
     if (databaseList.value.length === 0) {
       await appStore.refreshDatabaseList()
     }
+    // Prefer shared signal-db when this builder is for logs/traces Query.
+    if (props.signalDatabaseKind) {
+      form.database = getSignalDatabase(props.signalDatabaseKind)
+    }
     // Initialize form.database if not set or not in filtered list
     if (!form.database || !filteredDatabaseList.value.includes(form.database)) {
       form.database = filteredDatabaseList.value[0] || database.value
+    }
+    if (props.signalDatabaseKind && form.database) {
+      setSignalDatabase(props.signalDatabaseKind, form.database)
     }
   })
 
@@ -562,6 +575,9 @@ a-modal(
     () => form.database,
     (newDatabase, oldDatabase) => {
       if (newDatabase) {
+        if (props.signalDatabaseKind) {
+          setSignalDatabase(props.signalDatabaseKind, newDatabase)
+        }
         // Only fetch tables if database actually changed (not during initial setup)
         if (oldDatabase && oldDatabase !== newDatabase) {
           // Reset form when database changes, preserve current database

@@ -11,13 +11,15 @@ export interface MetricNamesOptions {
   end?: string
   match?: string[]
   limit?: number
+  /** Override connection DB; defaults to the global app store database. */
+  database?: string
 }
 
-const addDatabaseParams = () => {
+const addDatabaseParams = (database?: string) => {
   const appStore = useAppStore()
   return {
     params: {
-      db: appStore.database,
+      db: database || appStore.database,
     },
   } as AxiosRequestConfig
 }
@@ -44,7 +46,7 @@ const toSeriesSelector = (m: string): string => {
  * @returns Promise with array of metric names
  */
 export const getMetricNames = (options?: MetricNamesOptions) => {
-  const config = addDatabaseParams()
+  const config = addDatabaseParams(options?.database)
   const match = options?.match?.filter((selector) => !isEmptyPromSelector(selector))
   config.params = {
     ...config.params,
@@ -60,8 +62,8 @@ export const getMetricNames = (options?: MetricNamesOptions) => {
  * Search metric names remotely using a regex-based match
  * @param regex - Regex body for metric name (without leading/trailing /)
  */
-export const searchMetricNames = (regex: string) => {
-  const config = addDatabaseParams()
+export const searchMetricNames = (regex: string, database?: string) => {
+  const config = addDatabaseParams(database)
   // Prom-compatible: pass match parameter to filter by __name__ regex
   config.params = {
     ...config.params,
@@ -75,6 +77,8 @@ export interface LabelQueryOptions {
   match?: string
   start?: string
   end?: string
+  /** Override connection DB; defaults to the global app store database. */
+  database?: string
 }
 
 /**
@@ -83,7 +87,7 @@ export interface LabelQueryOptions {
  * @returns Promise with array of label names
  */
 export const getLabelNames = (options?: LabelQueryOptions) => {
-  const config = addDatabaseParams()
+  const config = addDatabaseParams(options?.database)
   if (options?.match) {
     config.params.match = [toSeriesSelector(options.match)]
   }
@@ -103,7 +107,7 @@ export const getLabelNames = (options?: LabelQueryOptions) => {
  * @returns Promise with array of label values
  */
 export const getLabelValues = (labelName: string, options?: LabelQueryOptions) => {
-  const config = addDatabaseParams()
+  const config = addDatabaseParams(options?.database)
   if (options?.match) {
     config.params.match = [toSeriesSelector(options.match)]
   }
@@ -121,10 +125,11 @@ export const getLabelValues = (labelName: string, options?: LabelQueryOptions) =
  * @param match - Metric selector
  * @param start - Start timestamp
  * @param end - End timestamp
+ * @param database - Optional DB override
  * @returns Promise with series data
  */
-export const getSeries = (match: string | string[], start?: string, end?: string) => {
-  const config = addDatabaseParams()
+export const getSeries = (match: string | string[], start?: string, end?: string, database?: string) => {
+  const config = addDatabaseParams(database)
   const matchList = Array.isArray(match) ? match : [match]
   config.params = {
     ...config.params,
@@ -139,10 +144,11 @@ export const getSeries = (match: string | string[], start?: string, end?: string
  * Execute a PromQL query
  * @param query - PromQL query string
  * @param time - Query time (Unix timestamp)
+ * @param database - Optional DB override
  * @returns Promise with query results
  */
-export const executePromQL = (query: string, time?: string) => {
-  const config = addDatabaseParams()
+export const executePromQL = (query: string, time?: string, database?: string) => {
+  const config = addDatabaseParams(database)
   config.params = {
     ...config.params,
     query,
@@ -157,10 +163,11 @@ export const executePromQL = (query: string, time?: string) => {
  * @param start - Start timestamp
  * @param end - End timestamp
  * @param step - Query step
+ * @param database - Optional DB override
  * @returns Promise with range query results
  */
-export const executePromQLRange = (query: string, start: string, end: string, step: string) => {
-  const config = addDatabaseParams()
+export const executePromQLRange = (query: string, start: string, end: string, step: string, database?: string) => {
+  const config = addDatabaseParams(database)
   config.params = {
     ...config.params,
     query,

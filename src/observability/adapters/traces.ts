@@ -200,7 +200,7 @@ ORDER BY ${orderBy}
 LIMIT ${limit}`
 
   try {
-    const response = await editorApi.runSQL(sql)
+    const response = await editorApi.runSQL(sql, ctx.tracesDatabase.value)
     const records = response?.output?.[0]?.records
     return {
       rows: recordsToObjects(records),
@@ -237,7 +237,7 @@ export async function fetchRedTimeseries(
     intervalSeconds,
   })
   try {
-    const response = await editorApi.runSQL(sql)
+    const response = await editorApi.runSQL(sql, ctx.tracesDatabase.value)
     const rows = response?.output?.[0]?.records?.rows
     if (!Array.isArray(rows)) {
       return []
@@ -280,7 +280,7 @@ export async function fetchDurationHeatmap(
     intervalSeconds,
   })
   try {
-    const response = await editorApi.runSQL(sql)
+    const response = await editorApi.runSQL(sql, ctx.tracesDatabase.value)
     const rows = response?.output?.[0]?.records?.rows
     if (!Array.isArray(rows)) {
       return null
@@ -348,7 +348,7 @@ export async function fetchBreakdownSeries(
     values: listed,
   })
   try {
-    const response = await editorApi.runSQL(sql)
+    const response = await editorApi.runSQL(sql, ctx.tracesDatabase.value)
     const rows = response?.output?.[0]?.records?.rows
     if (!Array.isArray(rows)) {
       return empty
@@ -397,7 +397,7 @@ export async function fetchBreakdownAttrValues(
     limit: options?.limit,
   })
   try {
-    const response = await editorApi.runSQL(sql)
+    const response = await editorApi.runSQL(sql, ctx.tracesDatabase.value)
     const rows = response?.output?.[0]?.records?.rows
     if (!Array.isArray(rows)) {
       return []
@@ -433,7 +433,7 @@ WHERE ${quoteIdent(idCol)} = '${escapeSqlString(traceId.trim())}'
 ORDER BY ${quoteIdent(tsCol)} ASC`
 
   try {
-    const response = await editorApi.runSQL(sql)
+    const response = await editorApi.runSQL(sql, ctx.tracesDatabase.value)
     const records = response?.output?.[0]?.records
     if (!records) {
       return []

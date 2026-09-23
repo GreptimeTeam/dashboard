@@ -1,6 +1,4 @@
 import { onMounted, watch } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useAppStore } from '@/store'
 import { loadDrilldownSettings } from '@/observability/drilldown-settings'
 import { buildDefaultTracesFieldMap } from '@/observability/traces/field-map'
 import { bindSignalTable } from '@/observability/bind-signal-table'
@@ -8,8 +6,6 @@ import { physicalServiceColumn, resolveSignalTable } from '@/observability/seman
 import type { DrilldownContext } from './context'
 
 export default function useDrilldownTracesInit(ctx: DrilldownContext) {
-  const { database } = storeToRefs(useAppStore())
-
   /**
    * Declared service identity when the table has one; the v1 model column otherwise.
    * Binding also publishes the entity key and physical columns for cross-signal filters.
@@ -36,6 +32,7 @@ export default function useDrilldownTracesInit(ctx: DrilldownContext) {
   }
 
   const initializeTracesContext = async () => {
+    const database = ctx.tracesDatabase.value
     if (ctx.tracesTable.value) {
       const tableName = ctx.tracesTable.value
       ctx.fieldMap.value = {
@@ -46,19 +43,18 @@ export default function useDrilldownTracesInit(ctx: DrilldownContext) {
       return
     }
 
-    const settings = loadDrilldownSettings(database.value).traces
-    const tableName = await resolveSignalTable('traces', { settingsTable: settings?.table })
+    const settings = loadDrilldownSettings(database).traces
+    const tableName = await resolveSignalTable('traces', {
+      settingsTable: settings?.table,
+      database,
+    })
     if (!tableName) {
       return
     }
     applyTableAndFieldMap(tableName)
   }
 
-  onMounted(() => {
-    initializeTracesContext()
-  })
-
-  watch(database, () => {
+  const resetTracesBinding = () => {
     ctx.tracesTable.value = undefined
     ctx.setEntityFilterKey('traces', 'service', undefined)
     ctx.setSignalColumns('traces', undefined)
@@ -69,8 +65,19 @@ export default function useDrilldownTracesInit(ctx: DrilldownContext) {
       ...ctx.fieldMap.value,
       traces: {},
     }
+  }
+
+  onMounted(() => {
     initializeTracesContext()
   })
+
+  watch(
+    () => ctx.tracesDatabase.value,
+    () => {
+      resetTracesBinding()
+      initializeTracesContext()
+    }
+  )
 
   return {
     initializeTracesContext,

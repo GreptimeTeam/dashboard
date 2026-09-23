@@ -190,7 +190,7 @@ export default function useMetricMainChart(
     error.value = null
 
     try {
-      const meta = await resolveMetricMeta(name)
+      const meta = await resolveMetricMeta(name, ctx.metricsDatabase.value)
       if (version !== requestVersion) {
         return
       }
@@ -237,7 +237,9 @@ export default function useMetricMainChart(
       }
 
       const responses = await Promise.all(
-        plan.queries.map((query) => executePromQLRange(query.expr, String(start), String(end), step))
+        plan.queries.map((query) =>
+          executePromQLRange(query.expr, String(start), String(end), step, ctx.metricsDatabase.value)
+        )
       )
 
       if (version !== requestVersion) {

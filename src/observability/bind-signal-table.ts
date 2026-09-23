@@ -27,11 +27,12 @@ export async function bindSignalTable(
     return { columns: [] }
   }
 
+  const database = ctx.databaseFor(signal)
   try {
-    const columns = (await useTableSchemaStore().ensureTableSchema(name)) as BoundSignalTable['columns']
+    const columns = (await useTableSchemaStore().ensureTableSchema(name, database)) as BoundSignalTable['columns']
     let serviceRef: EntityColumnRef | undefined
     try {
-      serviceRef = await resolveEntityFilterRef(name, 'service', { signal, columns })
+      serviceRef = await resolveEntityFilterRef(name, 'service', { signal, columns, database })
     } catch (error) {
       console.error(`Failed to resolve the service filter key for ${name}:`, error)
     }

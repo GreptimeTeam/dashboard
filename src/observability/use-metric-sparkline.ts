@@ -84,7 +84,7 @@ export default function useMetricSparkline(
     error.value = null
 
     try {
-      const meta = await resolveMetricMeta(name)
+      const meta = await resolveMetricMeta(name, ctx.metricsDatabase.value)
       if (version !== requestVersion) {
         return
       }
@@ -117,7 +117,9 @@ export default function useMetricSparkline(
         maxDataPoints: panelType.value === 'heatmap' ? HEATMAP_MAX_DATA_POINTS : undefined,
       })
 
-      const response = await enqueueSparklineQuery(() => executePromQLRange(query, String(start), String(end), step))
+      const response = await enqueueSparklineQuery(() =>
+        executePromQLRange(query, String(start), String(end), step, ctx.metricsDatabase.value)
+      )
 
       if (version !== requestVersion) {
         return

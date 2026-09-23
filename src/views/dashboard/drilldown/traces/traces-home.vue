@@ -5,6 +5,8 @@ a-layout-content.layout-content
       .traces-home
         .drilldown-toolbar.traces-home-toolbar
           .drilldown-toolbar__left
+            span.drilldown-toolbar__label {{ t('dashboard.database') }}
+            SignalDatabaseSelect(v-model="tracesDatabase")
             span.drilldown-toolbar__label {{ t('drilldown.traces.tableLabel') }}
             a-select.drilldown-table-select(
               allow-search
@@ -71,8 +73,6 @@ a-layout-content.layout-content
 <script setup lang="ts">
   import { computed, onMounted, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
-  import { storeToRefs } from 'pinia'
-  import { useAppStore } from '@/store'
   import { useDrilldownContext } from '@/observability/context'
   import { loadDrilldownSettings, saveDrilldownSettings } from '@/observability/drilldown-settings'
   import { fetchRootSpanList, type RedMetric, type RootSpanRow } from '@/observability/adapters/traces'
@@ -87,6 +87,7 @@ a-layout-content.layout-content
   import useDrilldownPanelTab from '@/observability/use-drilldown-panel-tab'
   import useSignalTableOptions from '@/observability/use-signal-table-options'
   import TraceTable from '@/views/dashboard/traces/components/TraceTable.vue'
+  import SignalDatabaseSelect from '../components/signal-database-select.vue'
   import RedChartPanel from './red-chart-panel.vue'
   import TracesBreakdownGrid from './traces-breakdown-grid.vue'
 
@@ -96,7 +97,7 @@ a-layout-content.layout-content
 
   const { t } = useI18n()
   const ctx = useDrilldownContext()
-  const { database } = storeToRefs(useAppStore())
+  const { tracesDatabase } = ctx
 
   const loading = ref(false)
   const rows = ref<RootSpanRow[]>([])
@@ -146,7 +147,7 @@ a-layout-content.layout-content
     limit: 100,
     tsColumn: { name: 'timestamp', data_type: 'TimestampNanosecond' },
     editorType: 'builder',
-    database: database.value,
+    database: ctx.tracesDatabase.value,
   }))
 
   watch(
@@ -155,6 +156,12 @@ a-layout-content.layout-content
       tracesTable.value = value
     }
   )
+
+  watch(tracesDatabase, () => {
+    if (overviewActive.value) {
+      loadTables()
+    }
+  })
 
   watch(
     () => ctx.focusTraceId.value,
@@ -206,9 +213,9 @@ a-layout-content.layout-content
     // binding also refreshes entity/column context for cross-signal filters.
     const { serviceRef } = await bindSignalTable(ctx, 'traces', table)
     const nextMap = buildDefaultTracesFieldMap({ serviceColumn: physicalServiceColumn(serviceRef) })
-    const settings = loadDrilldownSettings(database.value)
+    const settings = loadDrilldownSettings(ctx.tracesDatabase.value)
     settings.traces = { ...(settings.traces || {}), table }
-    saveDrilldownSettings(settings, database.value)
+    saveDrilldownSettings(settings, ctx.tracesDatabase.value)
     ctx.filters.value = ctx.filters.value.filter((filter) => Boolean(resolveFieldMapColumn(filter.key, nextMap)))
     ctx.fieldMap.value = {
       ...ctx.fieldMap.value,

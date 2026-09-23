@@ -1,6 +1,4 @@
 import { onMounted, watch } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useAppStore } from '@/store'
 import {
   loadDrilldownSettings,
   updateLogsDrilldownSettings,
@@ -19,7 +17,6 @@ import useTableSchemaStore from '@/store/modules/table-schema'
 import type { DrilldownContext } from './context'
 
 export default function useDrilldownLogsInit(ctx: DrilldownContext) {
-  const { database } = storeToRefs(useAppStore())
   const tableSchemaStore = useTableSchemaStore()
 
   const restoreLogsDetailSelection = () => {
@@ -53,10 +50,15 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
    * modal hydrates its column list from it.
    */
   const seedFieldSettings = async (tableName: string) => {
-    const current = loadDrilldownSettings(database.value).logs
+    const database = ctx.logsDatabase.value
+    const current = loadDrilldownSettings(database).logs
     try {
-      const columns = await tableSchemaStore.ensureTableSchema(tableName)
-      const reference = await resolveEntityFilterRef(tableName, 'service', { signal: 'logs', columns })
+      const columns = await tableSchemaStore.ensureTableSchema(tableName, database)
+      const reference = await resolveEntityFilterRef(tableName, 'service', {
+        signal: 'logs',
+        columns,
+        database,
+      })
       const serviceColumn = reference ? entityColumnFilterKey(reference) : undefined
       const next: LogsFieldMapSettings = {
         ...otelLogsFieldDefaultsFromColumns(columns, { serviceColumn }),
@@ -67,7 +69,7 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
       }
 
       if (current.table?.trim() !== tableName || fieldMapKey(current.fieldMap) !== fieldMapKey(next)) {
-        updateLogsDrilldownSettings({ table: tableName, fieldMap: next }, database.value)
+        updateLogsDrilldownSettings({ table: tableName, fieldMap: next }, database)
       }
       return next
     } catch (error) {
@@ -98,8 +100,9 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
   }
 
   const applyTableAndFieldMap = async (tableName: string) => {
+    const database = ctx.logsDatabase.value
     const fieldMap = await seedFieldSettings(tableName)
-    const nextLogsFieldMap = await buildLogsFieldMap(tableName, fieldMap)
+    const nextLogsFieldMap = await buildLogsFieldMap(tableName, fieldMap, database)
     ctx.fieldMap.value = {
       ...ctx.fieldMap.value,
       logs: nextLogsFieldMap,
@@ -112,7 +115,8 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
   }
 
   const initializeLogsContext = async () => {
-    const settings = loadDrilldownSettings(database.value).logs
+    const database = ctx.logsDatabase.value
+    const settings = loadDrilldownSettings(database).logs
 
     const settingsTable = settings.table?.trim()
     if (settingsTable) {
@@ -125,7 +129,7 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
       const fieldMap = await seedFieldSettings(tableName)
       ctx.fieldMap.value = {
         ...ctx.fieldMap.value,
-        logs: await buildLogsFieldMap(tableName, fieldMap),
+        logs: await buildLogsFieldMap(tableName, fieldMap, database),
       }
       await publishEntityFilterKey(tableName)
       restoreLogsDetailSelection()
@@ -134,7 +138,10 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
       return
     }
 
-    const tableName = await resolveSignalTable('logs', { settingsTable: settings.table })
+    const tableName = await resolveSignalTable('logs', {
+      settingsTable: settings.table,
+      database,
+    })
     if (!tableName) {
       return
     }
@@ -142,11 +149,7 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
     await applyTableAndFieldMap(tableName)
   }
 
-  onMounted(() => {
-    initializeLogsContext()
-  })
-
-  watch(database, () => {
+  const resetLogsBinding = () => {
     ctx.logsTable.value = undefined
     ctx.setEntityFilterKey('logs', 'service', undefined)
     ctx.setSignalColumns('logs', undefined)
@@ -155,8 +158,19 @@ export default function useDrilldownLogsInit(ctx: DrilldownContext) {
       ...ctx.fieldMap.value,
       logs: {},
     }
+  }
+
+  onMounted(() => {
     initializeLogsContext()
   })
+
+  watch(
+    () => ctx.logsDatabase.value,
+    () => {
+      resetLogsBinding()
+      initializeLogsContext()
+    }
+  )
 
   return {
     initializeLogsContext,

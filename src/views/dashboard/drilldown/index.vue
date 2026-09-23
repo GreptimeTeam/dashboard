@@ -150,7 +150,7 @@
         metricOriginalName.value = null
         return
       }
-      const meta = await resolveMetricMeta(name)
+      const meta = await resolveMetricMeta(name, ctx.metricsDatabase.value)
       if (ctx.metric.value === name) {
         metricOriginalName.value = meta.originalName
       }

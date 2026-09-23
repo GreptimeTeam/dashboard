@@ -42,6 +42,7 @@
           v-if="editorType === 'builder'"
           ref="sqlBuilderRef"
           storage-key="traces-query-table"
+          signal-database-kind="traces"
           :tables-provider="listTraceTablesForBuilder"
           :form-state="builderFormState"
           :quick-field-names="['service_name', 'span_name', 'span_status_code', 'span_kind', 'trace_id']"

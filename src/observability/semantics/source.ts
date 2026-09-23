@@ -14,8 +14,7 @@ export interface SemanticsDump {
   bucketTables: Set<string>
 }
 
-let settledDump: SemanticsDump | null = null
-let loadedDatabase: string | null = null
+let settledDumps = new Map<string, SemanticsDump>()
 /** Databases confirmed to have no `table_semantics` view — never queried again. */
 const missingViews = new Set<string>()
 let inFlight: { database: string; promise: Promise<SemanticsDump> } | null = null
@@ -181,12 +180,15 @@ function buildDump(rows: unknown[], schemas: Array<{ name: string }>): Semantics
  * on the message the SQL API returns: `Failed to plan SQL: Table not found: …`.
  */
 function isMissingSemanticsView(error: unknown): boolean {
-  const message =
-    error && typeof error === 'object' && 'error' in error
-      ? String((error as { error?: unknown }).error ?? '')
-      : error instanceof Error
-      ? error.message
-      : String(error ?? '')
+  let message = ''
+  if (error && typeof error === 'object' && 'error' in error) {
+    message = String((error as { error?: unknown }).error ?? '')
+  } else if (error instanceof Error) {
+    const { message: errorMessage } = error
+    message = errorMessage
+  } else {
+    message = String(error ?? '')
+  }
   return /table not found/i.test(message) && message.includes('table_semantics')
 }
 
@@ -195,7 +197,7 @@ type FetchStatus = 'ok' | 'missing' | 'transient'
 async function fetchDump(database: string): Promise<{ status: FetchStatus; dump: SemanticsDump }> {
   try {
     // The view is optional (older deployments) — never surface its absence as a toast.
-    const response = await editorApi.runSQL(semanticsSQL(database), undefined, { suppressErrorToast: true })
+    const response = await editorApi.runSQL(semanticsSQL(database), database, { suppressErrorToast: true })
     const records = response?.output?.[0]?.records
     const schemas = records?.schema?.column_schemas ?? []
     const rows = records?.rows
@@ -212,15 +214,14 @@ async function fetchDump(database: string): Promise<{ status: FetchStatus; dump:
 }
 
 /**
- * The dump for `database`. Minimal policy: load once per database, reload only on
- * database switch; a missing view is remembered forever; a transient failure is not
- * settled, so the next access retries. The in-flight guard keeps concurrent callers
- * on one request without letting a late response from an abandoned database switch
- * settle over the newer one.
+ * The dump for `database`. Minimal policy: load once per database; a missing view is
+ * remembered forever; a transient failure is not settled, so the next access retries.
+ * Concurrent callers for the same database share one in-flight request.
  */
 function semanticsFor(database: string): Promise<SemanticsDump> {
-  if (settledDump && loadedDatabase === database) {
-    return Promise.resolve(settledDump)
+  const settled = settledDumps.get(database)
+  if (settled) {
+    return Promise.resolve(settled)
   }
   if (missingViews.has(database)) {
     return Promise.resolve(emptyDump())
@@ -234,8 +235,7 @@ function semanticsFor(database: string): Promise<SemanticsDump> {
       if (result.status === 'missing') {
         missingViews.add(database)
       }
-      settledDump = result.dump
-      loadedDatabase = database
+      settledDumps.set(database, result.dump)
     }
     if (inFlight?.promise === promise) {
       inFlight = null
@@ -247,51 +247,54 @@ function semanticsFor(database: string): Promise<SemanticsDump> {
 }
 
 /**
- * Load the semantic dump for the current database. One read per database switch;
- * repeated calls reuse the settled dump and issue no SQL.
+ * Load the semantic dump for a database (defaults to the global connection DB).
+ * Repeated calls for the same database reuse the settled dump.
  */
-export async function ensureSemanticsLoaded(): Promise<void> {
-  await semanticsFor(currentDatabase())
+export async function ensureSemanticsLoaded(database?: string): Promise<void> {
+  await semanticsFor(database ?? currentDatabase())
 }
 
-/** The dump of the current database — internal to the semantics layer. */
-export function semanticsDump(): Promise<SemanticsDump> {
-  return semanticsFor(currentDatabase())
+/** The dump for a database — internal to the semantics layer. */
+export function semanticsDump(database?: string): Promise<SemanticsDump> {
+  return semanticsFor(database ?? currentDatabase())
 }
 
-/** Look up a table's semantic row from the in-memory dump of the current database. */
-export async function getTableSemantics(tableName: string): Promise<MetricTableSemantics | null> {
+/** Look up a table's semantic row from the dump of the given (or current) database. */
+export async function getTableSemantics(tableName: string, database?: string): Promise<MetricTableSemantics | null> {
   const key = tableName.trim()
   if (!key) {
     return null
   }
-  const dump = await semanticsDump()
+  const dump = await semanticsDump(database)
   return dump.byName.get(key) ?? null
 }
 
 /**
- * Whether the current database's dump has a row for `tableName`.
+ * Whether the database's dump has a row for `tableName`.
  * Answers "does this table exist in the semantic layer" without a second query —
  * used to tell a classic histogram's `_bucket` companion from a native one.
  */
-export async function hasSemanticsTable(tableName: string): Promise<boolean> {
+export async function hasSemanticsTable(tableName: string, database?: string): Promise<boolean> {
   const key = tableName.trim()
   if (!key) {
     return false
   }
-  const dump = await semanticsDump()
+  const dump = await semanticsDump(database)
   return dump.byName.has(key)
 }
 
 /** Entity identities declared for `tableName` — empty when the table declares none. */
-export async function getTableEntityDeclarations(tableName: string): Promise<EntityDeclaration[]> {
-  const semantics = await getTableSemantics(tableName)
+export async function getTableEntityDeclarations(tableName: string, database?: string): Promise<EntityDeclaration[]> {
+  const semantics = await getTableSemantics(tableName, database)
   return semantics?.entityDeclarations ?? []
 }
 
 /** Semantic rows for a signal ('log' | 'trace' | 'metric'), sorted by table name. */
-export async function listBySignal(signal: string): Promise<Array<{ tableName: string; pipeline?: string }>> {
-  const dump = await semanticsDump()
+export async function listBySignal(
+  signal: string,
+  database?: string
+): Promise<Array<{ tableName: string; pipeline?: string }>> {
+  const dump = await semanticsDump(database)
   return [...(dump.bySignal.get(signal) ?? [])].sort((left, right) => left.tableName.localeCompare(right.tableName))
 }
 
@@ -355,10 +358,9 @@ export function declaredTemporalityFromSemantics(semantics: MetricTableSemantics
   return semantics?.metricTemporality ?? null
 }
 
-/** Test helper — drop the cached dump (and its database binding) between cases. */
+/** Test helper — drop cached dumps (and missing-view markers) between cases. */
 export function clearSemanticsCache(): void {
-  settledDump = null
-  loadedDatabase = null
+  settledDumps = new Map()
   missingViews.clear()
   inFlight = null
 }

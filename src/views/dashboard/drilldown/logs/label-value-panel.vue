@@ -162,7 +162,7 @@
   function onFilterConditionAdd(event: { columnName: string; operator: string; value: unknown }) {
     const value = event.value == null ? '' : String(event.value)
     if (!value) return
-    const settings = loadDrilldownSettings().logs
+    const settings = loadDrilldownSettings(ctx.logsDatabase.value).logs
     const chipKey = chipKeyForLogsTableFilter(event.columnName, tableColumns.value, ctx.fieldMap.value.logs, {
       labelInclude: settings.labelInclude,
       labelExclude: settings.labelExclude,

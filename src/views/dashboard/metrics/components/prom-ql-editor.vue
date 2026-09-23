@@ -33,7 +33,7 @@
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { basicSetup } from 'codemirror'
   import { PromQLExtension } from '@prometheus-io/codemirror-promql'
-  import { useAppStore } from '@/store'
+  import { useSignalDatabase } from '@/observability/signal-database'
   import axios from 'axios'
   import { keymap, EditorView } from '@codemirror/view'
   import { Prec } from '@codemirror/state'
@@ -51,7 +51,7 @@
     (e: 'query'): void
   }>()
 
-  const appStore = useAppStore()
+  const metricsDatabase = useSignalDatabase('metrics')
   let editorView: any = null
 
   const prometheusBaseURL = '/v1/prometheus/api/v1'
@@ -138,7 +138,7 @@
         method,
         headers: toPlainHeaders(headers),
         params: {
-          db: appStore.database,
+          db: metricsDatabase.value,
         },
       }
 
@@ -302,12 +302,9 @@
     return editorView.state.doc.toString()
   }
 
-  watch(
-    () => appStore.database,
-    () => {
-      initializePromQLExtension()
-    }
-  )
+  watch(metricsDatabase, () => {
+    initializePromQLExtension()
+  })
 
   onMounted(() => {
     initializePromQLExtension()

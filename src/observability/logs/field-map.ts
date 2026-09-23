@@ -182,13 +182,14 @@ function applyRoleColumns(
  */
 export async function buildLogsFieldMap(
   tableName: string,
-  settings?: LogsFieldMapSettings
+  settings?: LogsFieldMapSettings,
+  database?: string
 ): Promise<Record<string, string>> {
   const map: Record<string, string> = {}
   let columns: SchemaColumn[] = []
 
   try {
-    columns = await useTableSchemaStore().ensureTableSchema(tableName)
+    columns = await useTableSchemaStore().ensureTableSchema(tableName, database)
   } catch (error) {
     console.error(`Failed to load schema for ${tableName}:`, error)
     return applySettingsOverrides(map, settings)
@@ -505,7 +506,7 @@ export function chipKeyForLogsTableFilter(
 export async function sampleJsonAttributeFieldKeys(
   tableName: string,
   jsonColumns: string[],
-  options?: { limit?: number }
+  options?: { limit?: number; database?: string }
 ): Promise<string[]> {
   if (!tableName || !jsonColumns.length) {
     return []
@@ -518,7 +519,7 @@ export async function sampleJsonAttributeFieldKeys(
     jsonColumns.map(async (col) => {
       try {
         const sql = `SELECT "${col}" FROM "${tableName}" WHERE "${col}" IS NOT NULL LIMIT ${limit}`
-        const response = await editorApi.runSQL(sql)
+        const response = await editorApi.runSQL(sql, options?.database)
         const rows = response?.output?.[0]?.records?.rows
         if (!Array.isArray(rows)) {
           return
@@ -570,7 +571,7 @@ export async function discoverLogLabelKeys(
   tableName: string,
   columns: SchemaColumn[],
   fieldMap: Record<string, string>,
-  options?: { include?: string[]; exclude?: string[]; identityChip?: string }
+  options?: { include?: string[]; exclude?: string[]; identityChip?: string; database?: string }
 ): Promise<string[]> {
   const exclude = new Set((options?.exclude ?? []).filter(Boolean) as string[])
   const keys = new Set(discoverLabelColumns(columns, fieldMap, options))
@@ -580,7 +581,9 @@ export async function discoverLogLabelKeys(
   }
   const jsonColumns = listJsonAttributeColumns(columns)
   if (tableName && jsonColumns.length) {
-    const sampled = await sampleJsonAttributeFieldKeys(tableName, jsonColumns)
+    const sampled = await sampleJsonAttributeFieldKeys(tableName, jsonColumns, {
+      database: options?.database,
+    })
     sampled.forEach((chip) => {
       if (isOtelResourceLabelChip(chip, jsonColumns)) {
         keys.add(chip)
@@ -603,7 +606,7 @@ export async function discoverLogFilterKeys(
   tableName: string,
   columns: SchemaColumn[],
   fieldMap: Record<string, string>,
-  options?: { include?: string[]; exclude?: string[]; serviceKey?: string }
+  options?: { include?: string[]; exclude?: string[]; serviceKey?: string; database?: string }
 ): Promise<string[]> {
   const serviceKey = options?.serviceKey?.trim()
   const exclude = new Set(
@@ -627,7 +630,9 @@ export async function discoverLogFilterKeys(
 
   const jsonColumns = listJsonAttributeColumns(columns)
   if (tableName && jsonColumns.length) {
-    const sampled = await sampleJsonAttributeFieldKeys(tableName, jsonColumns)
+    const sampled = await sampleJsonAttributeFieldKeys(tableName, jsonColumns, {
+      database: options?.database,
+    })
     sampled.forEach((chip) => {
       if (!exclude.has(chip) && chip !== serviceKey) {
         keys.add(chip)

@@ -53,6 +53,7 @@
           v-if="editorType === 'builder'"
           ref="sqlBuilderRef"
           storage-key="logs-query-table"
+          signal-database-kind="logs"
           :form-state="builderFormState"
           :default-form-state="defaultFormState"
         )

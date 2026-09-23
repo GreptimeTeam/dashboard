@@ -152,7 +152,7 @@
     if (!value) {
       return
     }
-    const settings = loadDrilldownSettings().logs
+    const settings = loadDrilldownSettings(ctx.logsDatabase.value).logs
     const chipKey = chipKeyForLogsTableFilter(event.columnName, tableColumns.value, ctx.fieldMap.value.logs, {
       labelInclude: settings.labelInclude,
       labelExclude: settings.labelExclude,

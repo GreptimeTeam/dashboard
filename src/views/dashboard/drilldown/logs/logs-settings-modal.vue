@@ -73,9 +73,7 @@ a-modal(
 <script setup lang="ts">
   import { computed, reactive, ref, watch, nextTick } from 'vue'
   import { useI18n } from 'vue-i18n'
-  import { storeToRefs } from 'pinia'
   import editorApi from '@/api/editor'
-  import { useAppStore } from '@/store'
   import { useDrilldownContext } from '@/observability/context'
   import {
     loadDrilldownSettings,
@@ -101,8 +99,6 @@ a-modal(
 
   const { t } = useI18n()
   const ctx = useDrilldownContext()
-  const { database } = storeToRefs(useAppStore())
-
   const loadingTables = ref(false)
   const tableOptions = ref<string[]>([])
   const columnNames = ref<string[]>([])
@@ -137,7 +133,11 @@ a-modal(
   const applyFieldDefaults = async (table: string, columns: SchemaColumn[], saved?: LogsFieldMapSettings) => {
     let serviceColumn: string | undefined
     if (table && columns.length) {
-      const reference = await resolveEntityFilterRef(table, 'service', { signal: 'logs', columns })
+      const reference = await resolveEntityFilterRef(table, 'service', {
+        signal: 'logs',
+        columns,
+        database: ctx.logsDatabase.value,
+      })
       serviceColumn = reference ? entityColumnFilterKey(reference) : undefined
     }
     const defaults = resolveLogsSettingsFieldDefaults(columns, saved, { serviceColumn })
@@ -155,7 +155,7 @@ a-modal(
       return []
     }
     try {
-      const columns = await editorApi.getTableSchema(table)
+      const columns = await editorApi.getTableSchema(table, ctx.logsDatabase.value)
       columnNames.value = columns.map((c) => c.name)
       return columns
     } catch {
@@ -167,11 +167,14 @@ a-modal(
   const hydrate = async () => {
     loadingTables.value = true
     try {
-      const settings = loadDrilldownSettings(database.value).logs
+      const settings = loadDrilldownSettings(ctx.logsDatabase.value).logs
       // Older seeds stored only a field map; fall back to the bound table so the column list
       // (and with it every saved value) still hydrates.
       const savedTable = settings.table?.trim() || ctx.logsTable.value || ''
-      tableOptions.value = await listSignalTables('logs', { include: savedTable ? [savedTable] : [] })
+      tableOptions.value = await listSignalTables('logs', {
+        include: savedTable ? [savedTable] : [],
+        database: ctx.logsDatabase.value,
+      })
       form.table = savedTable
       const columns = await loadColumns(form.table)
       await applyFieldDefaults(form.table, columns, settings.fieldMap)
@@ -216,7 +219,7 @@ a-modal(
         table: form.table,
         fieldMap,
       },
-      database.value
+      ctx.logsDatabase.value
     )
 
     ctx.fieldMap.value = {

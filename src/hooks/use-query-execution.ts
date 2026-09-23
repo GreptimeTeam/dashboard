@@ -82,7 +82,8 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
       const countSql = `SELECT COUNT(*) FROM ${tableName} ${whereClause}`
 
       const { default: editorAPI } = await import('@/api/editor')
-      const result: any = await editorAPI.runSQL(countSql)
+      const database = getCurrentStateProp('database') as string | undefined
+      const result: any = await editorAPI.runSQL(countSql, database)
 
       if (result.output?.[0]?.records) {
         const { records } = result.output[0]
@@ -151,7 +152,8 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
     loading.value = true
     try {
       const { default: editorAPI } = await import('@/api/editor')
-      const result = await editorAPI.runSQL(currentSql)
+      const database = getCurrentStateProp('database') as string | undefined
+      const result = await editorAPI.runSQL(currentSql, database)
       if (result.output?.[0]?.records) {
         const { records } = result.output[0]
         columns.value = records.schema.column_schemas.map((col: any) => ({
@@ -256,7 +258,8 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
     loadingMore.value = true
     try {
       const { default: editorAPI } = await import('@/api/editor')
-      const result = await editorAPI.runSQL(pageSql)
+      const database = getCurrentStateProp('database') as string | undefined
+      const result = await editorAPI.runSQL(pageSql, database)
       const records = result?.output?.[0]?.records
       const names: string[] = (records?.schema?.column_schemas ?? []).map((col: { name: string }) => col.name)
       const pageRows: Array<Record<string, unknown>> = (records?.rows ?? []).map((row: unknown[]) => {

@@ -37,16 +37,18 @@ export default function useMetricsCatalog(
       const end = unixRange.length === 2 ? String(unixRange[1]) : undefined
       // Do not pin __name__ to ctx.metric — catalog / Related need the full filter pool.
       const selector = buildMatchSelector(ctx.filters.value)
+      const database = ctx.metricsDatabase.value
       const result = await fetchMetricNamesPool({
         start,
         end,
+        database,
         ...(selector ? { match: [selector] } : {}),
       })
       poolNames.value = result.names
       truncated.value = result.truncated
       // First catalog load fills the semantic dump; it is reused until the database
       // switches (see semantics/source.ts).
-      ensureSemanticsLoaded().catch(() => undefined)
+      ensureSemanticsLoaded(database).catch(() => undefined)
     } catch (err) {
       console.error('Failed to load metric catalog:', err)
       poolNames.value = []
@@ -65,6 +67,7 @@ export default function useMetricsCatalog(
       ctx.rangeTime.value[0],
       ctx.rangeTime.value[1],
       ctx.refreshKey.value,
+      ctx.metricsDatabase.value,
     ],
     () => {
       if (!enabled.value) {

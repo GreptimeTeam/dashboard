@@ -8,8 +8,8 @@
 import { ref, computed, watch } from 'vue'
 // import { useStorage } from '@vueuse/core'
 import { executePromQL, executePromQLRange } from '@/api/metrics'
-import { useAppStore } from '@/store'
 import useTimeRange from '@/hooks/use-time-range'
+import { useSignalDatabase } from '@/observability/signal-database'
 
 export interface SeriesQueryResult {
   status: string
@@ -28,7 +28,7 @@ export interface SeriesRangeResult {
 }
 
 export function useSeries() {
-  const appStore = useAppStore()
+  const metricsDatabase = useSignalDatabase('metrics')
 
   // Reactive state
   const queryLoading = ref(false)
@@ -61,7 +61,7 @@ export function useSeries() {
     const queryTime = timestamp || instantQueryTime.value || new Date()
     const unixTimestamp = Math.floor(queryTime.getTime() / 1000).toString()
 
-    const response = await executePromQL(query, unixTimestamp)
+    const response = await executePromQL(query, unixTimestamp, metricsDatabase.value)
 
     instantQueryResult.value = response.data.result
     return response.data
@@ -81,7 +81,8 @@ export function useSeries() {
         query,
         (startTime || 0).toString(),
         (endTime || 0).toString(),
-        (stepValue || 1).toString() // Convert number to string for API call
+        (stepValue || 1).toString(), // Convert number to string for API call
+        metricsDatabase.value
       )
 
       rangeQueryResult.value = response.data.result

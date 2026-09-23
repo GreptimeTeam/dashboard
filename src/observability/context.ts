@@ -2,6 +2,7 @@ import { inject, provide, ref, type InjectionKey, type Ref } from 'vue'
 import useTimeRange from '@/hooks/use-time-range'
 import { logsServiceFilterCandidateKeys, normalizeEntityFilters } from './semantics'
 import { DEFAULT_LOGS_BODY_OP, type LogsBodyOp } from './logs/body-search'
+import { useSignalDatabase } from './signal-database'
 import {
   DEFAULT_FIELD_MAP,
   DEFAULT_SIDEBAR_FILTERS,
@@ -18,6 +19,12 @@ import { addFilter as mergeFilter, hasLogsMappedFilters, toggleIncludeFilter } f
 
 export interface DrilldownContext {
   signal: Ref<DrilldownSignal>
+  /** Per-signal connection DB (shared with classic Query pages via signal-db prefs). */
+  metricsDatabase: Ref<string>
+  logsDatabase: Ref<string>
+  tracesDatabase: Ref<string>
+  /** DB for a signal — adapters and init use this for `?db=`. */
+  databaseFor: (signal: DrilldownSignal) => string
   filters: Ref<DrilldownFilter[]>
   sidebarFilters: Ref<DrilldownSidebarFilters>
   metric: Ref<string | undefined>
@@ -94,6 +101,18 @@ export const DRILLDOWN_CONTEXT_KEY: InjectionKey<DrilldownContext> = Symbol.for(
 export function useDrilldownContextProvider(): DrilldownContext {
   const timeRangeHook = useTimeRange({ time: DRILLDOWN_DEFAULT_TIME_MINUTES })
   const signal = ref<DrilldownSignal>('metrics')
+  const metricsDatabase = useSignalDatabase('metrics')
+  const logsDatabase = useSignalDatabase('logs')
+  const tracesDatabase = useSignalDatabase('traces')
+  const databaseFor = (signalName: DrilldownSignal): string => {
+    if (signalName === 'metrics') {
+      return metricsDatabase.value
+    }
+    if (signalName === 'logs') {
+      return logsDatabase.value
+    }
+    return tracesDatabase.value
+  }
   const filters = ref<DrilldownFilter[]>([])
   const sidebarFilters = ref<DrilldownSidebarFilters>({ ...DEFAULT_SIDEBAR_FILTERS })
   const metric = ref<string | undefined>()
@@ -262,6 +281,10 @@ export function useDrilldownContextProvider(): DrilldownContext {
 
   const context: DrilldownContext = {
     signal,
+    metricsDatabase,
+    logsDatabase,
+    tracesDatabase,
+    databaseFor,
     filters,
     sidebarFilters,
     metric,

@@ -41,6 +41,7 @@ export async function fetchBreakdownLabelKeys(ctx: DrilldownContext, metric: str
     const response = await getLabelNames({
       match: selector,
       ...time,
+      database: ctx.metricsDatabase.value,
     })
     return filterLabelKeys(asStringArray(response))
   } catch (error) {
@@ -74,6 +75,7 @@ export async function fetchBreakdownLabelValues(
     const response = await getLabelValues(trimmedKey, {
       match,
       ...time,
+      database: ctx.metricsDatabase.value,
     })
     return asStringArray(response)
   } catch (error) {

@@ -1,6 +1,9 @@
 <template lang="pug">
 .metrics-sidebar
   h2.sidebar-title {{ t('drilldown.sidebar.title') }}
+  .sidebar-db
+    span.sidebar-section-label {{ t('dashboard.database') }}
+    SignalDatabaseSelect.sidebar-db-select(v-model="metricsDatabase" size="small" block)
 
   .sidebar-section.sidebar-catalog
     span.sidebar-section-label {{ t('drilldown.sidebar.catalog') }}
@@ -53,6 +56,7 @@
   import type { MetricsSortOption } from '@/observability/metrics/catalog'
   import type { PrefixGroup } from '@/observability/metrics/prefix-tree'
   import type { SuffixGroup } from '@/observability/metrics/suffix-tree'
+  import SignalDatabaseSelect from '../components/signal-database-select.vue'
   import MetricsCatalogControls from './catalog-controls.vue'
   import PrefixFilterTree from './prefix-filter-tree.vue'
   import SuffixFilterTree from './suffix-filter-tree.vue'
@@ -81,7 +85,7 @@
   const { t } = useI18n()
   const searchModel = defineModel<string>('search', { default: '' })
   const sortModel = defineModel<MetricsSortOption>('sort', { default: 'default' })
-  const { sidebarFilters, setSidebarFilters } = useDrilldownContext()
+  const { sidebarFilters, setSidebarFilters, metricsDatabase } = useDrilldownContext()
   const filterMode = ref<CatalogFilterMode>('prefix')
 
   const updateSidebar = (patch: Partial<typeof sidebarFilters.value>) => {
@@ -115,11 +119,20 @@
 
   .sidebar-title {
     flex-shrink: 0;
-    margin: 0 0 var(--gpt-gap-lg);
+    margin: 0 0 var(--gpt-gap-md);
     font-size: var(--gpt-font-md);
     font-weight: var(--gpt-font-weight-bold);
     line-height: 1.2;
     color: var(--gpt-text-primary);
+  }
+
+  .sidebar-db {
+    flex-shrink: 0;
+    margin-bottom: var(--gpt-gap-lg);
+  }
+
+  .sidebar-db-select {
+    width: 100%;
   }
 
   .sidebar-section {

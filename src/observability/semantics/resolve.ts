@@ -1,3 +1,4 @@
+import editorApi from '@/api/editor'
 import {
   conventionEntityKeys,
   isTraceModel,
@@ -15,7 +16,6 @@ import {
   listBySignal,
   semanticsDump,
 } from './source'
-import editorApi from '@/api/editor'
 import { currentDatabase } from '../current-database'
 import { inferMetricKind } from './heuristics'
 import type {
@@ -72,12 +72,16 @@ function histogramCountBaseName(name: string): string | null {
  * Dropped only for real histogram companions: a standalone counter such as
  * `dotnet_assembly_count` has no `dotnet_assembly_bucket` and keeps its declared unit.
  */
-async function resolveSemanticUnit(name: string, declaredUnit: string | null): Promise<string | null> {
+async function resolveSemanticUnit(
+  name: string,
+  declaredUnit: string | null,
+  database?: string
+): Promise<string | null> {
   const base = histogramCountBaseName(name)
   if (!declaredUnit || !base) {
     return declaredUnit
   }
-  const dump = await semanticsDump()
+  const dump = await semanticsDump(database)
   return dump.bucketTables.has(`${base}_bucket`) ? null : declaredUnit
 }
 
@@ -87,16 +91,20 @@ async function resolveSemanticUnit(name: string, declaredUnit: string | null): P
  * own table as a native histogram value with no `_bucket` sibling and no `le`
  * matrix — charting it as classic would query a table that does not exist.
  */
-async function isNativeHistogram(name: string): Promise<boolean> {
+async function isNativeHistogram(name: string, database?: string): Promise<boolean> {
   // `_bucket` is itself the classic histogram table, never a native one.
   if (name.endsWith('_bucket')) {
     return false
   }
-  const dump = await semanticsDump()
+  const dump = await semanticsDump(database)
   return !dump.bucketTables.has(`${name}_bucket`)
 }
 
-async function resolveMetricKind(name: string, semantics: MetricTableSemantics | null): Promise<MetricKind> {
+async function resolveMetricKind(
+  name: string,
+  semantics: MetricTableSemantics | null,
+  database?: string
+): Promise<MetricKind> {
   const declaredKind = declaredMetricKindFromSemantics(semantics)
   if (declaredKind === 'histogram') {
     // Checked first: a remote-write `_sum`/`_count` table has no `_bucket` companion
@@ -104,22 +112,21 @@ async function resolveMetricKind(name: string, semantics: MetricTableSemantics |
     if (isHistogramCompanionSeries(name)) {
       return 'counter'
     }
-    if (await isNativeHistogram(name)) {
+    if (await isNativeHistogram(name, database)) {
       return 'native_histogram'
     }
   }
   return declaredKind ?? inferMetricKind(name)
 }
 
-/** Memo for {@link resolveMetricMeta}, invalidated whenever the dump reloads. */
-const metricMetaMemo = new Map<string, ResolvedMetricMeta>()
-let metricMemoGeneration = -1
+/** Memo for {@link resolveMetricMeta}, keyed by database + name. */
+const metricMetaMemo = new Map<string, { generation: number; meta: ResolvedMetricMeta }>()
 
 /**
  * Resolve kind + declared unit/temporality/original_name for charting & UI.
  * Layer order: declared semantics (+ companion/native corrections) → name heuristic.
  */
-export async function resolveMetricMeta(name: string): Promise<ResolvedMetricMeta> {
+export async function resolveMetricMeta(name: string, database?: string): Promise<ResolvedMetricMeta> {
   const trimmed = name.trim()
   if (!trimmed) {
     return {
@@ -133,20 +140,17 @@ export async function resolveMetricMeta(name: string): Promise<ResolvedMetricMet
     }
   }
 
-  const dump = await semanticsDump()
-  if (metricMemoGeneration !== dump.generation) {
-    metricMetaMemo.clear()
-    metricMemoGeneration = dump.generation
-  }
-  const memoized = metricMetaMemo.get(trimmed)
-  if (memoized) {
-    return memoized
+  const dump = await semanticsDump(database)
+  const memoKey = `${database ?? ''}\0${trimmed}`
+  const memoized = metricMetaMemo.get(memoKey)
+  if (memoized && memoized.generation === dump.generation) {
+    return memoized.meta
   }
 
   const semantics = dump.byName.get(trimmed) ?? null
   const meta: ResolvedMetricMeta = {
-    kind: await resolveMetricKind(trimmed, semantics),
-    semanticUnit: await resolveSemanticUnit(trimmed, declaredMetricUnitFromSemantics(semantics)),
+    kind: await resolveMetricKind(trimmed, semantics, database),
+    semanticUnit: await resolveSemanticUnit(trimmed, declaredMetricUnitFromSemantics(semantics), database),
     temporality: declaredTemporalityFromSemantics(semantics),
     // `metadata_quality` describes `metric.type` only; original_name is never guessed.
     originalName: semantics?.metricOriginalName ?? null,
@@ -154,7 +158,7 @@ export async function resolveMetricMeta(name: string): Promise<ResolvedMetricMet
     metadataQuality: semantics?.metadataQuality ?? null,
     semantics,
   }
-  metricMetaMemo.set(trimmed, meta)
+  metricMetaMemo.set(memoKey, { generation: dump.generation, meta })
   return meta
 }
 
@@ -210,7 +214,8 @@ function toResolvedIdentity(declaration: EntityDeclaration, columns?: ReadonlySe
 export async function resolveEntityIdentity(
   tableName: string,
   entityType: string,
-  columns?: ReadonlyArray<EntitySchemaColumn>
+  columns?: ReadonlyArray<EntitySchemaColumn>,
+  database?: string
 ): Promise<ResolvedEntityIdentity | null> {
   const name = tableName.trim()
   if (!name) {
@@ -218,7 +223,7 @@ export async function resolveEntityIdentity(
   }
 
   const columnNames = columns?.length ? new Set(columns.map((column) => column.name)) : undefined
-  const declarations = await getTableEntityDeclarations(name)
+  const declarations = await getTableEntityDeclarations(name, database)
   const declaration = declarations.find((entry) => entry.entityType === entityType)
   if (declaration) {
     return toResolvedIdentity(declaration, columnNames)
@@ -273,7 +278,11 @@ function firstPresent(candidates: string[], columns?: ReadonlySet<string>): Enti
 export async function resolveEntityFilterRef(
   tableName: string,
   entityKey: string,
-  options?: { signal?: import('./types').EntitySignal; columns?: ReadonlyArray<EntitySchemaColumn> }
+  options?: {
+    signal?: import('./types').EntitySignal
+    columns?: ReadonlyArray<EntitySchemaColumn>
+    database?: string
+  }
 ): Promise<EntityColumnRef | undefined> {
   const name = tableName.trim()
   if (!name) {
@@ -281,12 +290,12 @@ export async function resolveEntityFilterRef(
   }
 
   const columns = options?.columns?.length ? new Set(options.columns.map((column) => column.name)) : undefined
-  const identity = await resolveEntityIdentity(name, entityKey, options?.columns)
+  const identity = await resolveEntityIdentity(name, entityKey, options?.columns, options?.database)
   if (identity?.id[0]) {
     return identity.id[0]
   }
 
-  const source = (await getTableSemantics(name))?.source
+  const source = (await getTableSemantics(name, options?.database))?.source
   return firstPresent(conventionEntityKeys(options?.signal ?? 'metrics', entityKey, source), columns)
 }
 
@@ -294,7 +303,11 @@ export async function resolveEntityFilterRef(
 export async function resolveEntityFilterKey(
   tableName: string,
   entityKey: string,
-  options?: { signal?: import('./types').EntitySignal; columns?: ReadonlyArray<EntitySchemaColumn> }
+  options?: {
+    signal?: import('./types').EntitySignal
+    columns?: ReadonlyArray<EntitySchemaColumn>
+    database?: string
+  }
 ): Promise<string | undefined> {
   const reference = await resolveEntityFilterRef(tableName, entityKey, options)
   return reference ? entityColumnFilterKey(reference) : undefined
@@ -350,9 +363,9 @@ function uniquePreserveOrder(names: string[]): string[] {
 }
 
 /** Log table names guessed from table names containing "log". */
-async function listHeuristicLogTables(): Promise<string[]> {
+async function listHeuristicLogTables(database?: string): Promise<string[]> {
   try {
-    const tables = (await editorApi.getTables(500, 0)) as { output?: Array<{ records?: unknown }> }
+    const tables = (await editorApi.getTables(500, 0, database)) as { output?: Array<{ records?: unknown }> }
     const names = tableNamesFromRecords(tables?.output?.[0]?.records as never)
     return names.filter((name) => LOG_TABLE_HEURISTICS.some((pattern) => pattern.test(name)))
   } catch (error) {
@@ -365,20 +378,21 @@ async function listHeuristicLogTables(): Promise<string[]> {
  * Trace table candidates guessed from the column model: tables whose columns cover the
  * full greptime_trace_v1 required set.
  */
-async function listColumnModelTraceTables(requiredColumns: readonly string[]): Promise<string[]> {
+async function listColumnModelTraceTables(requiredColumns: readonly string[], database?: string): Promise<string[]> {
   try {
     // Without the schema filter the GROUP BY unions columns from same-named tables in
     // different schemas, so a name can pass HAVING although no single table has all five.
+    const db = database ?? currentDatabase()
     const modelColumns = requiredColumns.map((name) => `'${name}'`).join(', ')
     const sql = `SELECT table_name
 FROM information_schema.columns
-WHERE table_schema = '${currentDatabase()}'
+WHERE table_schema = '${db}'
   AND column_name IN (${modelColumns})
 GROUP BY table_name
 HAVING COUNT(DISTINCT column_name) = ${requiredColumns.length}
 ORDER BY table_name
 LIMIT 200`
-    const result = (await editorApi.runSQL(sql)) as { output?: Array<{ records?: never }> }
+    const result = (await editorApi.runSQL(sql, db)) as { output?: Array<{ records?: never }> }
     return tableNamesFromRecords(result?.output?.[0]?.records)
   } catch (error) {
     console.error('Failed to list column-model trace tables:', error)
@@ -387,9 +401,9 @@ LIMIT 200`
 }
 
 /** Column names of one table, used by trace-model scoring. Empty on failure. */
-async function loadTableColumnNames(tableName: string): Promise<string[]> {
+async function loadTableColumnNames(tableName: string, database?: string): Promise<string[]> {
   try {
-    const columns = (await editorApi.getTableSchema(tableName)) as Array<{ name: string }>
+    const columns = (await editorApi.getTableSchema(tableName, database)) as Array<{ name: string }>
     return columns.map((column) => column.name)
   } catch {
     return []
@@ -417,7 +431,7 @@ function pickLogTableFromNames(names: string[]): string | undefined {
  */
 export async function listSignalTables(
   signal: 'logs',
-  options?: { include?: string[] }
+  options?: { include?: string[]; database?: string }
 ): Promise<string[]>
 
 /**
@@ -426,22 +440,26 @@ export async function listSignalTables(
  */
 export async function listSignalTables(
   signal: 'traces',
-  options?: { include?: string[] }
+  options?: { include?: string[]; database?: string }
 ): Promise<string[]>
 
 export async function listSignalTables(
   signal: 'logs' | 'traces',
-  options?: { include?: string[] }
+  options?: { include?: string[]; database?: string }
 ): Promise<string[]> {
+  const database = options?.database
   if (signal === 'logs') {
-    const [fromSemantics, fromHeuristic] = await Promise.all([listBySignal('log'), listHeuristicLogTables()])
+    const [fromSemantics, fromHeuristic] = await Promise.all([
+      listBySignal('log', database),
+      listHeuristicLogTables(database),
+    ])
     const extras = (options?.include ?? []).filter(Boolean)
     return uniquePreserveOrder([...fromSemantics.map((row) => row.tableName), ...fromHeuristic, ...extras])
   }
 
-  const fromSemantics = await listBySignal('trace')
+  const fromSemantics = await listBySignal('trace', database)
   const pipelineByTable = new Map(fromSemantics.map((row) => [row.tableName, row.pipeline]))
-  const fromColumns = await listColumnModelTraceTables(TRACE_MODEL_REQUIRED_COLUMNS)
+  const fromColumns = await listColumnModelTraceTables(TRACE_MODEL_REQUIRED_COLUMNS, database)
   const candidates = uniquePreserveOrder([
     ...fromSemantics.map((row) => row.tableName),
     ...fromColumns,
@@ -452,7 +470,7 @@ export async function listSignalTables(
   const scored: Array<{ name: string; score: number }> = []
   await Promise.all(
     candidates.map(async (name) => {
-      const columnNames = await loadTableColumnNames(name)
+      const columnNames = await loadTableColumnNames(name, database)
       if (!columnNames.length) {
         // Keep semantics-only names even if schema fetch fails (settings / allow-create).
         if (pipelineByTable.has(name) || options?.include?.includes(name)) {
@@ -489,7 +507,7 @@ export async function listSignalTables(
  */
 export async function resolveSignalTable(
   signal: 'logs',
-  options?: { preferred?: string; settingsTable?: string }
+  options?: { preferred?: string; settingsTable?: string; database?: string }
 ): Promise<string | undefined>
 
 /**
@@ -498,12 +516,12 @@ export async function resolveSignalTable(
  */
 export async function resolveSignalTable(
   signal: 'traces',
-  options?: { preferred?: string; settingsTable?: string }
+  options?: { preferred?: string; settingsTable?: string; database?: string }
 ): Promise<string | undefined>
 
 export async function resolveSignalTable(
   signal: 'logs' | 'traces',
-  options?: { preferred?: string; settingsTable?: string }
+  options?: { preferred?: string; settingsTable?: string; database?: string }
 ): Promise<string | undefined> {
   if (options?.preferred?.trim()) {
     return options.preferred.trim()
@@ -512,16 +530,17 @@ export async function resolveSignalTable(
     return options.settingsTable.trim()
   }
 
+  const database = options?.database
   if (signal === 'logs') {
-    const fromSemantics = await listBySignal('log')
+    const fromSemantics = await listBySignal('log', database)
     const picked = pickLogTableFromNames(fromSemantics.map((row) => row.tableName))
     if (picked) {
       return picked
     }
-    const heuristic = await listHeuristicLogTables()
+    const heuristic = await listHeuristicLogTables(database)
     return pickLogTableFromNames(heuristic)
   }
 
-  const listed = await listSignalTables('traces')
+  const listed = await listSignalTables('traces', { database })
   return listed[0]
 }

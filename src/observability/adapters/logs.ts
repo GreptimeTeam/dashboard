@@ -92,9 +92,9 @@ function bucketToUnixSeconds(raw: unknown): number | null {
   return Math.floor(num)
 }
 
-async function loadSchema(tableName: string): Promise<SchemaColumn[]> {
+async function loadSchema(tableName: string, database?: string): Promise<SchemaColumn[]> {
   try {
-    return await useTableSchemaStore().ensureTableSchema(tableName)
+    return await useTableSchemaStore().ensureTableSchema(tableName, database)
   } catch {
     return []
   }
@@ -164,7 +164,9 @@ export async function buildLogsContextWhere(
     (unixRange.length === 2 && !resolveLogsTimeColumn(fieldMap)) ||
     // Panel/row predicates may name a JSON chip label — the schema resolves its container.
     Boolean(options?.extraEquals?.length)
-  const columns = needsColumns ? options?.columns ?? (await loadSchema(tableName)) : options?.columns
+  const columns = needsColumns
+    ? options?.columns ?? (await loadSchema(tableName, ctx.logsDatabase.value))
+    : options?.columns
 
   if (unixRange.length === 2) {
     const timeColumn = resolveLogsTimeColumnFallback(fieldMap, columns)
@@ -175,7 +177,7 @@ export async function buildLogsContextWhere(
   }
 
   if (includeLabelFilters && columns) {
-    const settings = loadDrilldownSettings().logs
+    const settings = loadDrilldownSettings(ctx.logsDatabase.value).logs
     whereParts.push(
       ...filtersToSqlWhere(ctx.filters.value, fieldMap, {
         excludeKey: options?.excludeFilterKey,
@@ -215,9 +217,9 @@ export async function buildLogsWhere(ctx: DrilldownContext): Promise<string> {
     return ''
   }
 
-  const columns = await loadSchema(tableName)
+  const columns = await loadSchema(tableName, ctx.logsDatabase.value)
   const fieldMap = ctx.fieldMap.value.logs
-  const settings = loadDrilldownSettings().logs
+  const settings = loadDrilldownSettings(ctx.logsDatabase.value).logs
   const whereParts = filtersToSqlWhere(ctx.filters.value, fieldMap, {
     columns: columns.map((column) => column.name),
     jsonColumns: listJsonAttributeColumns(columns),
@@ -256,7 +258,7 @@ export async function fetchServiceVolumes(ctx: DrilldownContext, limit = 200): P
     return []
   }
 
-  const columns = await loadSchema(tableName)
+  const columns = await loadSchema(tableName, ctx.logsDatabase.value)
   const columnNames = columns.map((column) => column.name)
   if (!isLogsRoleValue(groupCol, new Set(columnNames))) {
     return []
@@ -275,7 +277,7 @@ WHERE ${where}
 GROUP BY group_key
 ORDER BY cnt DESC
 LIMIT ${limit}`
-    const response = await editorApi.runSQL(sql)
+    const response = await editorApi.runSQL(sql, ctx.logsDatabase.value)
     const rows = response?.output?.[0]?.records?.rows
     if (!Array.isArray(rows)) {
       return []
@@ -295,13 +297,14 @@ export async function listLabelKeys(ctx: DrilldownContext): Promise<string[]> {
   if (!tableName) {
     return []
   }
-  const columns = await loadSchema(tableName)
-  const settings = loadDrilldownSettings().logs
+  const columns = await loadSchema(tableName, ctx.logsDatabase.value)
+  const settings = loadDrilldownSettings(ctx.logsDatabase.value).logs
   return discoverLogLabelKeys(tableName, columns, ctx.fieldMap.value.logs, {
     include: settings.labelInclude,
     exclude: settings.labelExclude,
     // The semantic service identity is a label even when JSON sampling misses it.
     identityChip: ctx.entityFilterKeys.value.logs?.service,
+    database: ctx.logsDatabase.value,
   })
 }
 
@@ -311,8 +314,8 @@ export async function listFieldKeys(ctx: DrilldownContext): Promise<string[]> {
   if (!tableName) {
     return []
   }
-  const columns = await loadSchema(tableName)
-  const settings = loadDrilldownSettings().logs
+  const columns = await loadSchema(tableName, ctx.logsDatabase.value)
+  const settings = loadDrilldownSettings(ctx.logsDatabase.value).logs
   const l1 = discoverFieldColumns(columns, ctx.fieldMap.value.logs, {
     include: settings.fieldInclude,
     exclude: settings.fieldExclude,
@@ -320,7 +323,7 @@ export async function listFieldKeys(ctx: DrilldownContext): Promise<string[]> {
     labelExclude: settings.labelExclude,
   })
   const jsonColumns = listJsonAttributeColumns(columns)
-  const l2 = (await sampleJsonAttributeFieldKeys(tableName, jsonColumns)).filter(
+  const l2 = (await sampleJsonAttributeFieldKeys(tableName, jsonColumns, { database: ctx.logsDatabase.value })).filter(
     (key) => !isOtelResourceLabelChip(key, jsonColumns)
   )
   return [...new Set([...l1, ...l2])].sort((a, b) => a.localeCompare(b))
@@ -341,7 +344,7 @@ export async function fetchLabelValues(
   if (!tableName || !labelCol) {
     return []
   }
-  const schema = await loadSchema(tableName)
+  const schema = await loadSchema(tableName, ctx.logsDatabase.value)
   const columnNames = schema.map((column) => column.name)
   // Labels may be JSON chips (`resource_attributes.service.name`) — same shape as a role.
   if (!isLogsRoleValue(labelCol, new Set(columnNames))) {
@@ -364,7 +367,7 @@ WHERE ${where} AND ${labelExpr} IS NOT NULL
 GROUP BY value
 ORDER BY cnt DESC
 LIMIT ${limit}`
-    const response = await editorApi.runSQL(sql)
+    const response = await editorApi.runSQL(sql, ctx.logsDatabase.value)
     const rows = response?.output?.[0]?.records?.rows
     if (!Array.isArray(rows)) {
       return []
@@ -444,7 +447,7 @@ export async function fetchLogsRows(
   }
 
   const fieldMap = ctx.fieldMap.value.logs
-  const schema = await loadSchema(tableName)
+  const schema = await loadSchema(tableName, ctx.logsDatabase.value)
   // The panel label may be a JSON chip (`resource_attributes.service.name`), not a column.
   if (options?.labelCol && !isLogsRoleValue(options.labelCol, new Set(schema.map((column) => column.name)))) {
     return empty
@@ -493,7 +496,7 @@ FROM ${quoteIdent(tableName)}
 WHERE ${whereParts.join(' AND ')}
 ${order}
 LIMIT ${limit}`
-    const response = await editorApi.runSQL(sql)
+    const response = await editorApi.runSQL(sql, ctx.logsDatabase.value)
     const records = response?.output?.[0]?.records
     const schemas = records?.schema?.column_schemas ?? []
     const rows = records?.rows ?? []
@@ -543,7 +546,7 @@ export async function fetchLogVolumeTimeseries(
   if (!tableName) {
     return []
   }
-  const schema = await loadSchema(tableName)
+  const schema = await loadSchema(tableName, ctx.logsDatabase.value)
   const timeColumn = resolveLogsTimeColumnFallback(fieldMap, schema)
   if (!timeColumn) {
     return []
@@ -583,7 +586,7 @@ GROUP BY time_bucket${levelGroup}
 ORDER BY time_bucket ASC`
 
   try {
-    const response = await editorApi.runSQL(sql)
+    const response = await editorApi.runSQL(sql, ctx.logsDatabase.value)
     const rows = response?.output?.[0]?.records?.rows
     if (!Array.isArray(rows)) {
       return []
@@ -624,7 +627,7 @@ export async function fetchLogVolumeByColumn(
   if (!tableName || !column) {
     return []
   }
-  const schema = await loadSchema(tableName)
+  const schema = await loadSchema(tableName, ctx.logsDatabase.value)
   const timeColumn = resolveLogsTimeColumnFallback(fieldMap, schema)
   const columnNames = schema.map((item) => item.name)
   if (!timeColumn || !isLogsRoleValue(column, new Set(columnNames))) {
@@ -654,7 +657,7 @@ GROUP BY time_bucket, series
 ORDER BY time_bucket ASC`
 
   try {
-    const response = await editorApi.runSQL(sql)
+    const response = await editorApi.runSQL(sql, ctx.logsDatabase.value)
     const rows = response?.output?.[0]?.records?.rows
     if (!Array.isArray(rows)) {
       return []

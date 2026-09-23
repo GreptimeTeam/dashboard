@@ -200,7 +200,7 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
     error.value = null
 
     try {
-      const meta = await resolveMetricMeta(name)
+      const meta = await resolveMetricMeta(name, ctx.metricsDatabase.value)
       if (version !== requestVersion) {
         return
       }
@@ -239,7 +239,9 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
       if (options.mode.value === 'groupBy') {
         const query = buildBreakdownGroupByExpr(name, labelKey, matchers, queryOpts)
         promqlQuery.value = query
-        const response = await enqueueSparklineQuery(() => executePromQLRange(query, String(start), String(end), step))
+        const response = await enqueueSparklineQuery(() =>
+          executePromQLRange(query, String(start), String(end), step, ctx.metricsDatabase.value)
+        )
 
         if (version !== requestVersion) {
           return
@@ -291,7 +293,9 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
 
       const responses = await Promise.all(
         valueQueries.map((item) =>
-          enqueueSparklineQuery(() => executePromQLRange(item.expr, String(start), String(end), step))
+          enqueueSparklineQuery(() =>
+            executePromQLRange(item.expr, String(start), String(end), step, ctx.metricsDatabase.value)
+          )
         )
       )
 

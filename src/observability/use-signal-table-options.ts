@@ -19,7 +19,10 @@ export default function useSignalTableOptions(
     loadingTables.value = true
     try {
       const current = signal === 'logs' ? ctx.logsTable.value : ctx.tracesTable.value
-      tableOptions.value = await listSignalTables(signal, { include: current ? [current] : [] })
+      tableOptions.value = await listSignalTables(signal, {
+        include: current ? [current] : [],
+        database: ctx.databaseFor(signal),
+      })
     } finally {
       loadingTables.value = false
     }

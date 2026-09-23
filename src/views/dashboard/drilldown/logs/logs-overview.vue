@@ -5,6 +5,8 @@ a-layout-content.layout-content
       .logs-overview
         .drilldown-toolbar.logs-overview-toolbar
           .drilldown-toolbar__left
+            span.drilldown-toolbar__label {{ t('dashboard.database') }}
+            SignalDatabaseSelect(v-model="logsDatabase")
             span.drilldown-toolbar__label {{ t('drilldown.logs.tableLabel') }}
             a-select.drilldown-table-select(
               allow-search
@@ -36,10 +38,8 @@ a-layout-content.layout-content
 </template>
 
 <script setup lang="ts">
-  import { computed, nextTick, onMounted, ref } from 'vue'
+  import { computed, nextTick, onMounted, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
-  import { storeToRefs } from 'pinia'
-  import { useAppStore } from '@/store'
   import { useDrilldownContext } from '@/observability/context'
   import { loadDrilldownSettings } from '@/observability/drilldown-settings'
   import { resolveFieldMapColumn } from '@/observability/filters'
@@ -47,6 +47,7 @@ a-layout-content.layout-content
   import { bindSignalTable } from '@/observability/bind-signal-table'
   import useDrilldownKeepAlive from '@/observability/use-drilldown-keep-alive'
   import useSignalTableOptions from '@/observability/use-signal-table-options'
+  import SignalDatabaseSelect from '../components/signal-database-select.vue'
   import LabelsTab from './labels-tab.vue'
   import LogsSettingsModal from './logs-settings-modal.vue'
 
@@ -56,8 +57,7 @@ a-layout-content.layout-content
 
   const { t } = useI18n()
   const ctx = useDrilldownContext()
-  const { database } = storeToRefs(useAppStore())
-
+  const { logsDatabase } = ctx
   const settingsVisible = ref(false)
   const logsTable = computed(() => ctx.logsTable.value)
 
@@ -79,6 +79,12 @@ a-layout-content.layout-content
     ctx.triggerRefresh()
   })
 
+  watch(logsDatabase, () => {
+    if (overviewActive.value) {
+      loadTables()
+    }
+  })
+
   const onSettingsSaved = () => {
     ctx.triggerRefresh()
   }
@@ -91,9 +97,9 @@ a-layout-content.layout-content
       tableOptions.value = [...tableOptions.value, table]
     }
     // Session view only. Roles come from saved field settings, never from name guessing.
-    const settings = loadDrilldownSettings(database.value).logs
+    const settings = loadDrilldownSettings(ctx.logsDatabase.value).logs
     const savedFieldMap = settings.table === table ? settings.fieldMap : undefined
-    const nextLogsFieldMap = await buildLogsFieldMap(table, savedFieldMap)
+    const nextLogsFieldMap = await buildLogsFieldMap(table, savedFieldMap, ctx.logsDatabase.value)
     // Drop filters that no longer map onto the new table columns.
     ctx.filters.value = ctx.filters.value.filter((filter) =>
       Boolean(resolveFieldMapColumn(filter.key, nextLogsFieldMap))

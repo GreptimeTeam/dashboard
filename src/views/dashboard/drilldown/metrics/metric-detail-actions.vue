@@ -71,7 +71,7 @@
   watch(
     () => props.metric,
     async (name) => {
-      const meta = await resolveMetricMeta(name)
+      const meta = await resolveMetricMeta(name, ctx.metricsDatabase.value)
       kind.value = meta.kind
       temporality.value = meta.temporality
     },
