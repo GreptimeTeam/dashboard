@@ -2,7 +2,7 @@
 .traces-breakdown-grid
   .breakdown-toolbar
     .breakdown-by-label
-      span.toolbar-label {{ t('drilldown.traces.breakdownByAttr') }}
+      span.drilldown-control-label {{ t('drilldown.traces.breakdownByAttr') }}
       a-select(
         v-model="groupByColumn"
         allow-search
@@ -196,12 +196,6 @@
     display: flex;
     flex-direction: column;
     gap: var(--gpt-gap-xs);
-  }
-
-  .breakdown-toolbar .toolbar-label {
-    font-size: var(--gpt-font-base);
-    font-weight: var(--gpt-font-weight-medium);
-    color: var(--color-text-2);
   }
 
   .traces-breakdown-grid__values {

@@ -88,7 +88,7 @@
     justify-content: space-between;
     margin-bottom: var(--gpt-gap-md);
     font-size: var(--gpt-font-base);
-    color: var(--color-text-3);
+    color: var(--gpt-text-muted);
   }
 
   .suffix-filter-options {
@@ -108,7 +108,7 @@
   }
 
   .suffix-filter-count-badge {
-    color: var(--color-text-3);
+    color: var(--gpt-text-muted);
     font-size: var(--gpt-font-base);
   }
 </style>

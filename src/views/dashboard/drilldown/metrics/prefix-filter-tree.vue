@@ -182,7 +182,7 @@
     justify-content: space-between;
     margin-bottom: var(--gpt-gap-md);
     font-size: var(--gpt-font-base);
-    color: var(--color-text-3);
+    color: var(--gpt-text-muted);
   }
 
   .prefix-filter-list,
@@ -212,11 +212,11 @@
     padding: 0;
     border: none;
     background: transparent;
-    color: var(--color-text-2);
+    color: var(--gpt-text-secondary);
     cursor: pointer;
 
     &:hover {
-      color: var(--color-text-1);
+      color: var(--gpt-text-primary);
     }
   }
 
@@ -225,7 +225,7 @@
   }
 
   .prefix-filter-count-badge {
-    color: var(--color-text-3);
+    color: var(--gpt-text-muted);
     font-size: var(--gpt-font-base);
   }
 </style>

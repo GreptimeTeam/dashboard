@@ -12,7 +12,7 @@
       )
   .shared-context
     .drilldown-filter-bar
-      span.filter-label {{ t('drilldown.filters.title') }}
+      span.drilldown-field-label {{ t('drilldown.filters.title') }}
       DrilldownFilterCombobox
     a-button.logs-query-trigger(
       v-if="showLogsQuery"
@@ -111,7 +111,7 @@
     font-size: var(--gpt-font-xl);
     font-weight: var(--gpt-font-weight-bold);
     line-height: 1.2;
-    color: var(--gpt-text-primary, var(--color-text-1));
+    color: var(--gpt-text-primary);
     white-space: nowrap;
   }
 
@@ -138,14 +138,5 @@
     gap: var(--gpt-gap-md) var(--gpt-gap-lg);
     min-width: 0;
     max-width: 100%;
-  }
-
-  .filter-label {
-    flex-shrink: 0;
-    color: var(--gpt-text-primary);
-    font-size: var(--gpt-font-base);
-    font-weight: var(--gpt-font-weight-control);
-    line-height: 1;
-    white-space: nowrap;
   }
 </style>

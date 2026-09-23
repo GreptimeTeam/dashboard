@@ -85,9 +85,9 @@
     flex-shrink: 0;
     margin: 0;
     border: 0;
-    border-bottom: 1px solid var(--color-border-2);
+    border-bottom: 1px solid var(--gpt-border-default);
     border-radius: 0;
-    background: var(--color-bg-2);
+    background: var(--gpt-bg-panel);
     overflow: hidden;
   }
 
@@ -100,12 +100,12 @@
     height: 36px;
     padding: 0 var(--gpt-page-padding-x);
     border: 0;
-    background: var(--gpt-table-toolbar-bg, var(--color-fill-1));
+    background: var(--gpt-table-toolbar-bg);
     cursor: pointer;
-    color: var(--color-text-1);
+    color: var(--gpt-text-primary);
 
     &:hover {
-      background: var(--color-fill-2);
+      background: var(--gpt-nav-active-bg);
     }
   }
 
@@ -117,7 +117,7 @@
 
   .logs-tab-chart-caret {
     flex-shrink: 0;
-    color: var(--color-text-3);
+    color: var(--gpt-text-muted);
     font-size: var(--gpt-font-base);
     transition: transform 0.15s ease;
 

@@ -23,8 +23,8 @@
           :class="{ 'is-hidden': isLevelHidden(row.name) }"
           @click="onLegendClick(row.name)"
         )
-          span.legend-swatch(:style="{ background: row.color }")
-          span.legend-name(:title="row.name") {{ row.name }}
+          span.drilldown-legend-swatch(:style="{ background: row.color }")
+          span.drilldown-legend-name(:title="row.name") {{ row.name }}
           span.legend-total {{ row.total }}
     template(#footer)
       .drilldown-query-legend-list(v-if="legend === 'bottom' && legendRows.length")
@@ -36,8 +36,8 @@
           :title="row.name"
           @click="onLegendClick(row.name)"
         )
-          span.legend-swatch(:style="{ background: row.color }")
-          span.legend-name {{ row.name }}
+          span.drilldown-legend-swatch(:style="{ background: row.color }")
+          span.drilldown-legend-name {{ row.name }}
 </template>
 
 <script setup lang="ts">
@@ -434,19 +434,6 @@
     }
   }
 
-  .logs-volume-mini-chart__legend-button .legend-swatch {
-    width: 12px;
-    height: 3px;
-    border-radius: var(--gpt-radius-xs);
-  }
-
-  .logs-volume-mini-chart__legend-button .legend-name {
-    overflow: hidden;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
   .volume-legend {
     display: flex;
     flex: 0 0 112px;
@@ -454,15 +441,15 @@
     gap: 2px;
     min-width: 0;
     padding-top: 4px;
-    font-size: 11px;
+    font-size: var(--gpt-font-sm);
     line-height: 16px;
-    color: var(--color-text-2);
+    color: var(--gpt-text-secondary);
   }
 
   .legend-header,
   .legend-row {
     display: grid;
-    grid-template-columns: 10px minmax(0, 1fr) auto;
+    grid-template-columns: 12px minmax(0, 1fr) auto;
     column-gap: 6px;
     align-items: center;
   }
@@ -486,28 +473,16 @@
   .legend-header {
     grid-template-columns: 1fr auto;
     margin-bottom: 2px;
-    color: var(--color-text-3);
+    color: var(--gpt-text-muted);
     font-weight: var(--gpt-font-weight-control);
 
     .legend-total {
-      color: var(--color-text-3);
+      color: var(--gpt-text-muted);
     }
-  }
-
-  .legend-swatch {
-    width: 10px;
-    height: 3px;
-    border-radius: 1px;
-  }
-
-  .legend-name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .legend-total {
     font-variant-numeric: tabular-nums;
-    color: var(--color-text-1);
+    color: var(--gpt-text-primary);
   }
 </style>

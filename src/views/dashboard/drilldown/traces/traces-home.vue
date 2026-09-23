@@ -303,10 +303,12 @@ a-layout-content.layout-content
   .trace-id-prefix {
     font-size: var(--gpt-font-sm);
     font-weight: var(--gpt-font-weight-control);
-    color: var(--color-text-3);
+    color: var(--gpt-text-muted);
   }
 
   :deep(.arco-alert) {
+    width: fit-content;
+    max-width: calc(100% - var(--gpt-page-padding-x) * 2);
     margin: var(--gpt-gap-lg) var(--gpt-page-padding-x);
   }
 
@@ -376,7 +378,7 @@ a-layout-content.layout-content
     :deep(> .arco-card-header) {
       padding: var(--gpt-gap-md) var(--gpt-page-padding-x);
       border-bottom: 1px solid var(--gpt-border-default);
-      background: var(--gpt-table-toolbar-bg, var(--color-bg-2));
+      background: var(--gpt-table-toolbar-bg);
     }
   }
 </style>

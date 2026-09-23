@@ -2,7 +2,7 @@
 .related-metrics-panel
   .related-metrics-controls
     .view-by
-      span.control-label {{ t('drilldown.relatedMetrics.viewBy') }}
+      span.drilldown-control-label {{ t('drilldown.relatedMetrics.viewBy') }}
       a-select(
         v-model="viewByPrefix"
         size="small"
@@ -109,19 +109,13 @@
     gap: var(--gpt-gap-lg);
     flex-shrink: 0;
     padding: var(--gpt-gap-md) var(--gpt-page-padding-x);
-    border-bottom: 1px solid var(--color-border-2);
+    border-bottom: 1px solid var(--gpt-border-default);
   }
 
   .view-by {
     display: flex;
     align-items: center;
     gap: var(--gpt-gap-md);
-  }
-
-  .control-label {
-    font-size: var(--gpt-font-md);
-    color: var(--color-text-2);
-    white-space: nowrap;
   }
 
   .search {

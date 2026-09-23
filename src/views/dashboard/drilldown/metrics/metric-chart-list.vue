@@ -196,18 +196,18 @@
     gap: var(--gpt-gap-md);
     margin-bottom: var(--gpt-gap-md);
     padding-bottom: var(--gpt-gap-sm);
-    border-bottom: 1px solid var(--color-border-2);
+    border-bottom: 1px solid var(--gpt-border-default);
   }
 
   .group-title {
     font-size: var(--gpt-font-md);
     font-weight: var(--gpt-font-weight-control);
-    color: var(--color-text-1);
+    color: var(--gpt-text-primary);
   }
 
   .group-count {
     font-size: var(--gpt-font-base);
-    color: var(--color-text-3);
+    color: var(--gpt-text-muted);
   }
 
   .batch-sentinel {

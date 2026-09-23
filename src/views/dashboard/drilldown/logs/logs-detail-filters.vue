@@ -1,7 +1,7 @@
 <template lang="pug">
 .logs-detail-filters(v-if="visible")
   .filter-item(v-if="columns.body && logsTab === 'logs'")
-    span.filter-label {{ columns.body }}
+    span.drilldown-field-label {{ columns.body }}
     a-select.filter-op(size="small" :model-value="bodyOpDraft" @change="onBodyOpChange")
       a-option(v-for="op in bodyOps" :key="op" :value="op") {{ op }}
     a-input.filter-value(
@@ -13,7 +13,7 @@
       @clear="clearBody"
     )
   .filter-item(v-if="columns.service")
-    span.filter-label {{ columns.service }}
+    span.drilldown-field-label {{ columns.service }}
     a-select.filter-op.filter-op--short(size="small" :model-value="serviceOp" @change="onServiceOpChange")
       a-option(v-for="op in serviceOps" :key="op.value" :value="op.value") {{ op.label }}
     a-select.filter-value(
@@ -242,7 +242,7 @@
     gap: var(--gpt-gap-md);
     min-height: 0;
     padding: var(--gpt-gap-sm) var(--gpt-page-padding-x);
-    border-bottom: 1px solid var(--color-border-2);
+    border-bottom: 1px solid var(--gpt-border-default);
     background: transparent;
   }
 
@@ -252,15 +252,6 @@
     align-items: center;
     gap: var(--gpt-gap-md);
     min-width: 0;
-  }
-
-  .filter-label {
-    flex-shrink: 0;
-    font-size: var(--gpt-font-base);
-    font-weight: var(--gpt-font-weight-control);
-    color: var(--gpt-text-primary, var(--color-text-1));
-    line-height: 1;
-    white-space: nowrap;
   }
 
   .filter-op,

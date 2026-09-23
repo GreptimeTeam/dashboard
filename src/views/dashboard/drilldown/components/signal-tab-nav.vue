@@ -71,11 +71,11 @@ nav.signal-tab-nav.signal-tab-nav--tabs(v-else role="tablist" :aria-label="ariaL
     line-height: 1.2;
 
     &:hover {
-      color: var(--gpt-text-primary);
+      color: var(--gpt-main-purple);
     }
 
     &.is-active {
-      color: var(--gpt-text-primary);
+      color: var(--gpt-main-purple);
       font-weight: var(--gpt-font-weight-control);
     }
 
@@ -86,7 +86,7 @@ nav.signal-tab-nav.signal-tab-nav--tabs(v-else role="tablist" :aria-label="ariaL
       left: 0;
       height: var(--gpt-gap-2xs);
       content: '';
-      background: var(--gpt-text-primary);
+      background: var(--gpt-main-purple);
     }
   }
 

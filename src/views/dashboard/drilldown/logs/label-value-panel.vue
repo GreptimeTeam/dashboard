@@ -240,7 +240,7 @@
 
   .panel-title-text {
     overflow: hidden;
-    font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
+    font-family: var(--font-mono);
     font-size: var(--gpt-font-md);
     font-weight: var(--gpt-font-weight-control);
     text-overflow: ellipsis;
@@ -250,7 +250,7 @@
   .panel-count {
     flex-shrink: 0;
     font-size: var(--gpt-font-base);
-    color: var(--color-text-3);
+    color: var(--gpt-text-muted);
   }
 
   .panel-actions {

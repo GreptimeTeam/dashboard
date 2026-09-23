@@ -144,7 +144,11 @@ a-layout-content.layout-content
     }
   }
 
+  /* Hug content so the action button sits next to the message instead of the far edge.
+     max-width must subtract the alert's own margins — % bases do not include them. */
   :deep(.arco-alert) {
+    width: fit-content;
+    max-width: calc(100% - var(--gpt-page-padding-x) * 2);
     margin: var(--gpt-gap-lg) var(--gpt-page-padding-x);
   }
 </style>

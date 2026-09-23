@@ -158,7 +158,7 @@
   }
 
   :deep(.arco-dropdown-option.is-active) {
-    color: rgb(var(--primary-6));
+    color: var(--gpt-main-purple);
     font-weight: var(--gpt-font-weight-control);
   }
 </style>

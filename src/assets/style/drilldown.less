@@ -197,6 +197,75 @@
   width: 240px;
 }
 
+// Inline control label (e.g. `Filter:`, field names beside a control).
+.drilldown-field-label {
+  flex-shrink: 0;
+  color: var(--gpt-text-primary);
+  font-size: var(--gpt-font-base);
+  font-weight: var(--gpt-font-weight-control);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+// Stacked control label above a select / search input.
+.drilldown-control-label {
+  color: var(--gpt-text-secondary);
+  font-size: var(--gpt-font-base);
+  font-weight: var(--gpt-font-weight-medium);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+// Shared color-scale legend under heatmap charts.
+.drilldown-heatmap-legend {
+  display: grid;
+  grid-template-columns: auto minmax(72px, 1fr) auto;
+  align-items: center;
+  gap: var(--gpt-gap-sm);
+  width: min(100%, 320px);
+  min-height: 22px;
+}
+
+.drilldown-heatmap-legend__track {
+  position: relative;
+  min-width: 0;
+  height: 10px;
+}
+
+.drilldown-heatmap-legend__gradient {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--gpt-radius-xs);
+  background: linear-gradient(
+    90deg,
+    #5e4fa2 0%,
+    #3288bd 12%,
+    #66c2a5 25%,
+    #abdda4 37%,
+    #fee08b 50%,
+    #fdae61 62%,
+    #f46d43 75%,
+    #d53e4f 87%,
+    #9e0142 100%
+  );
+}
+
+.drilldown-heatmap-legend__label {
+  flex-shrink: 0;
+  color: var(--gpt-text-secondary);
+  font-size: var(--gpt-font-xs);
+  line-height: 1;
+  white-space: nowrap;
+
+  &--mid {
+    position: absolute;
+    top: calc(100% + var(--gpt-gap-2xs));
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: var(--gpt-font-2xs);
+  }
+}
+
 .drilldown-query-legend-list {
   display: flex;
   flex: 1;
@@ -347,7 +416,6 @@
 
 .drilldown-drawer__breadcrumb {
   display: flex;
-  flex: 1 1 auto;
   min-width: 0;
 
   .arco-breadcrumb {

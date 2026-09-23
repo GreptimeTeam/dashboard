@@ -39,9 +39,9 @@
     max-width: min(420px, 100%);
     height: 22px;
     margin: 0;
-    border: 1px solid var(--color-border-2);
+    border: 1px solid var(--gpt-border-default);
     border-radius: var(--gpt-radius-sm);
-    background: var(--color-fill-1);
+    background: var(--gpt-bg-surface);
     font-size: var(--gpt-font-base);
     line-height: 1;
     vertical-align: middle;
@@ -67,19 +67,23 @@
     white-space: nowrap;
   }
 
+  .filter-pill__key,
+  .filter-pill__value {
+    color: var(--gpt-text-primary);
+  }
+
   .filter-pill__key {
-    color: var(--color-text-1);
     font-weight: var(--gpt-font-weight-control);
   }
 
-  .filter-pill__op,
-  .filter-pill__value {
-    color: var(--color-text-2);
+  .filter-pill__op {
+    color: var(--gpt-text-secondary);
+  }
 
-    &:hover {
-      background: var(--color-fill-3);
-      color: rgb(var(--primary-6));
-    }
+  .filter-pill__op:hover,
+  .filter-pill__value:hover {
+    background: var(--gpt-nav-active-bg);
+    color: var(--gpt-main-purple);
   }
 
   .filter-pill__value {
@@ -98,12 +102,12 @@
     padding: 0;
     border: none;
     background: transparent;
-    color: var(--color-text-3);
+    color: var(--gpt-text-muted);
     cursor: pointer;
 
     &:hover {
-      color: var(--color-text-1);
-      background: var(--color-fill-3);
+      color: var(--gpt-text-primary);
+      background: var(--gpt-nav-active-bg);
     }
   }
 </style>

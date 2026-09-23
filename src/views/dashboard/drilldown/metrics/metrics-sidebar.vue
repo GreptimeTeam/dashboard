@@ -111,6 +111,7 @@
   .metrics-sidebar {
     display: flex;
     flex-direction: column;
+    gap: var(--gpt-gap-lg);
     height: 100%;
     min-height: 0;
     padding: var(--gpt-gap-lg);
@@ -119,7 +120,7 @@
 
   .sidebar-title {
     flex-shrink: 0;
-    margin: 0 0 var(--gpt-gap-md);
+    margin: 0;
     font-size: var(--gpt-font-md);
     font-weight: var(--gpt-font-weight-bold);
     line-height: 1.2;
@@ -127,8 +128,10 @@
   }
 
   .sidebar-db {
+    display: flex;
     flex-shrink: 0;
-    margin-bottom: var(--gpt-gap-lg);
+    flex-direction: column;
+    gap: var(--gpt-gap-sm);
   }
 
   .sidebar-db-select {
@@ -138,6 +141,7 @@
   .sidebar-section {
     display: flex;
     flex-direction: column;
+    gap: var(--gpt-gap-sm);
     min-height: 0;
   }
 
@@ -146,22 +150,19 @@
   }
 
   .sidebar-name-filters {
-    display: flex;
     flex: 1;
-    flex-direction: column;
     min-height: 0;
   }
 
   .sidebar-divider {
     flex-shrink: 0;
     height: 1px;
-    margin: var(--gpt-gap-lg) 0;
+    margin: 0;
     background: var(--gpt-border-default);
   }
 
   .sidebar-search {
     flex-shrink: 0;
-    margin-bottom: var(--gpt-gap-md);
 
     :deep(.arco-input-wrapper) {
       width: 100%;
@@ -178,10 +179,9 @@
 
   .sidebar-section-label {
     flex-shrink: 0;
-    margin-bottom: var(--gpt-gap-md);
     font-size: var(--gpt-font-sm);
     line-height: 1;
-    color: var(--gpt-text-secondary);
+    color: var(--gpt-text-muted);
     white-space: nowrap;
   }
 

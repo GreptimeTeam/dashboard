@@ -51,22 +51,28 @@
 <style scoped lang="less">
   .metrics-catalog-controls {
     display: flex;
-    flex-direction: column;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: space-between;
     gap: var(--gpt-gap-sm);
     width: 100%;
   }
 
   .catalog-count {
+    min-width: 0;
+    overflow: hidden;
     font-size: var(--gpt-font-sm);
     line-height: 1.4;
     color: var(--gpt-text-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   // Secondary control — not a full-width field twin of search.
   .sort-row {
     display: flex;
+    flex-shrink: 0;
     align-items: center;
-    justify-content: flex-start;
     gap: var(--gpt-gap-xs);
     min-width: 0;
   }
@@ -94,7 +100,7 @@
 
     :deep(.arco-select-view:hover),
     :deep(.arco-select-view-focus) {
-      background: var(--color-fill-2);
+      background: var(--gpt-nav-active-bg);
     }
 
     :deep(.arco-select-view-value) {

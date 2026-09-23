@@ -259,28 +259,32 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
     padding: 8px 10px;
   }
 
-  .metric-db-select {
+  /* The a-select root never inherits this component's scope id, and arco renders the
+     select + view classes on one element, so pin both controls through the scoped
+     .metric-search anchor — root-scoped selectors silently never match. Arco's own mini
+     input math (negative padding dropped at 20px) cannot match select heights either. */
+  .metric-search :deep(.metric-db-select),
+  .metric-search :deep(.arco-input-wrapper.search-metric) {
+    box-sizing: border-box;
     width: 100%;
-  }
-
-  .metric-search-left {
-    width: 100%;
-  }
-
-  .arco-input-wrapper.search-metric {
-    min-height: 30px;
+    height: var(--gpt-control-height-sm);
+    min-height: var(--gpt-control-height-sm);
     padding: 0 10px;
     border: 1px solid var(--gpt-border-strong);
     border-radius: var(--gpt-radius-sm);
     background: var(--gpt-bg-app);
+  }
 
-    :deep(> .arco-input-prefix) {
-      padding-right: 10px;
-    }
+  .metric-search :deep(.arco-input-wrapper.search-metric > .arco-input-prefix) {
+    padding-right: 10px;
+  }
 
-    :deep(> .arco-input-suffix) {
-      padding-left: 8px;
-    }
+  .metric-search :deep(.arco-input-wrapper.search-metric > .arco-input-suffix) {
+    padding-left: 8px;
+  }
+
+  .metric-search-left {
+    width: 100%;
   }
 
   .metric-sidebar-title {

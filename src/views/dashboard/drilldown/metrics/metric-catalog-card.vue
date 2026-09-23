@@ -16,16 +16,15 @@ article.metric-catalog-card.drilldown-card(ref="targetRef")
       :empty-message="isEmpty ? t('drilldown.main.sparklineNoData') : null"
       :render-key="chartRenderKey"
       :chart-title="isHeatmap ? promqlQuery : undefined"
-      :chart-class="{ 'metric-catalog-card__chart--heatmap': isHeatmap }"
       :show-footer="Boolean((isHeatmap && heatmapLegend) || legendLabel)"
     )
       template(#footer)
-        .metric-catalog-card__heatmap-legend(v-if="isHeatmap && heatmapLegend")
-          span.metric-catalog-card__scale-label.metric-catalog-card__scale-label--low {{ heatmapLegend.low }}
-          .metric-catalog-card__scale-track
-            .metric-catalog-card__scale-gradient
-            span.metric-catalog-card__scale-label.metric-catalog-card__scale-label--mid {{ heatmapLegend.mid }}
-          span.metric-catalog-card__scale-label.metric-catalog-card__scale-label--high {{ heatmapLegend.high }}
+        .drilldown-heatmap-legend(v-if="isHeatmap && heatmapLegend")
+          span.drilldown-heatmap-legend__label {{ heatmapLegend.low }}
+          .drilldown-heatmap-legend__track
+            .drilldown-heatmap-legend__gradient
+            span.drilldown-heatmap-legend__label.drilldown-heatmap-legend__label--mid {{ heatmapLegend.mid }}
+          span.drilldown-heatmap-legend__label {{ heatmapLegend.high }}
         .metric-catalog-card__legend(v-else-if="legendLabel")
           .drilldown-query-legend(:title="promqlQuery")
             span.drilldown-legend-swatch(:style="{ background: seriesColor }")
@@ -97,61 +96,6 @@ article.metric-catalog-card.drilldown-card(ref="targetRef")
 <style scoped lang="less">
   .metric-catalog-card {
     min-height: v-bind(panelHeightPx);
-  }
-
-  .metric-catalog-card__chart--heatmap {
-    background: var(--gpt-bg-panel);
-  }
-
-  .metric-catalog-card__heatmap-legend {
-    display: grid;
-    grid-template-columns: auto minmax(72px, 1fr) auto;
-    align-items: center;
-    gap: var(--gpt-gap-sm);
-    width: min(100%, 280px);
-    min-height: 22px;
-    margin-top: var(--gpt-gap-2xs);
-    margin-bottom: var(--gpt-gap-2xs);
-  }
-
-  .metric-catalog-card__scale-track {
-    position: relative;
-    min-width: 0;
-    height: 10px;
-  }
-
-  .metric-catalog-card__scale-gradient {
-    width: 100%;
-    height: 100%;
-    border-radius: var(--gpt-radius-xs);
-    background: linear-gradient(
-      90deg,
-      #5e4fa2 0%,
-      #3288bd 12%,
-      #66c2a5 25%,
-      #abdda4 37%,
-      #fee08b 50%,
-      #fdae61 62%,
-      #f46d43 75%,
-      #d53e4f 87%,
-      #9e0142 100%
-    );
-  }
-
-  .metric-catalog-card__scale-label {
-    flex-shrink: 0;
-    color: var(--gpt-text-secondary);
-    font-size: var(--gpt-font-xs);
-    line-height: 1;
-    white-space: nowrap;
-  }
-
-  .metric-catalog-card__scale-label--mid {
-    position: absolute;
-    top: calc(100% + var(--gpt-gap-2xs));
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: var(--gpt-font-2xs);
   }
 
   .metric-catalog-card__legend {

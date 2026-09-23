@@ -1,6 +1,6 @@
 <template lang="pug">
 .level-filter(v-if="severityColumn")
-  span.level-filter-label {{ labelText }}
+  span.drilldown-field-label {{ labelText }}
   a-select.level-filter-select(
     v-model="selectedLevels"
     size="small"
@@ -121,15 +121,6 @@
     align-items: center;
     gap: var(--gpt-gap-md);
     min-width: 0;
-  }
-
-  .level-filter-label {
-    flex-shrink: 0;
-    font-size: var(--gpt-font-base);
-    font-weight: var(--gpt-font-weight-control);
-    color: var(--gpt-text-primary, var(--color-text-1));
-    line-height: 1;
-    white-space: nowrap;
   }
 
   // One step below the top-bar filter (32px): shared small control height.

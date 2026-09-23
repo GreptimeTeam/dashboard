@@ -686,20 +686,12 @@
     min-width: 200px;
     min-height: var(--gpt-control-height-md);
     padding: 0 var(--gpt-gap-md);
-    border: 1px solid var(--gpt-main-dark);
+    border: 1px solid var(--gpt-editor-border);
     border-radius: var(--gpt-radius-sm);
-    background: var(--color-bg-2);
+    background: var(--gpt-bg-panel);
     cursor: text;
     vertical-align: middle;
     transition: border-color 0.15s;
-
-    &:hover {
-      border-color: var(--gpt-main-dark);
-    }
-
-    &.is-focused {
-      border-color: var(--gpt-main-dark);
-    }
   }
 
   .filter-combobox__row {
@@ -733,15 +725,15 @@
     line-height: calc(var(--gpt-control-height-md) - 2px);
     white-space: nowrap;
     cursor: pointer;
-    color: var(--color-text-2);
+    color: var(--gpt-text-secondary);
 
     &:hover {
-      color: rgb(var(--primary-6));
+      color: var(--gpt-main-purple);
     }
   }
 
   .filter-combobox__key {
-    color: var(--color-text-1);
+    color: var(--gpt-text-primary);
     font-weight: var(--gpt-font-weight-control);
   }
 
@@ -757,7 +749,7 @@
     background: transparent;
     font-size: var(--gpt-font-base);
     line-height: calc(var(--gpt-control-height-md) - 2px);
-    color: var(--color-text-1);
+    color: var(--gpt-text-primary);
 
     @supports (field-sizing: content) {
       width: auto;
@@ -780,10 +772,10 @@
     max-height: 240px;
     overflow-y: auto;
     padding: var(--gpt-gap-xs);
-    border: 1px solid var(--color-border-2);
+    border: 1px solid var(--gpt-border-default);
     border-radius: var(--gpt-radius-sm);
-    background: var(--color-bg-popup);
-    box-shadow: 0 4px 10px rgb(0 0 0 / 10%);
+    background: var(--gpt-bg-panel);
+    box-shadow: var(--gpt-shadow-sm);
   }
 
   .filter-suggest-loading {
@@ -797,7 +789,7 @@
     padding: var(--gpt-gap-md) var(--gpt-gap-md);
     font-size: var(--gpt-font-base);
     line-height: 1.4;
-    color: var(--color-text-2);
+    color: var(--gpt-text-secondary);
   }
 
   .filter-suggest-option {
@@ -807,7 +799,7 @@
     border: none;
     border-radius: var(--gpt-radius-sm);
     background: transparent;
-    color: var(--color-text-1);
+    color: var(--gpt-text-primary);
     font-size: var(--gpt-font-base);
     line-height: 1.4;
     text-align: left;
@@ -815,8 +807,8 @@
 
     &:hover,
     &.is-active {
-      background: var(--color-fill-2);
-      color: rgb(var(--primary-6));
+      background: var(--gpt-nav-active-bg);
+      color: var(--gpt-main-purple);
     }
   }
 </style>

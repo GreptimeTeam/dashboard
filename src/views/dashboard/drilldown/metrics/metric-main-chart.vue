@@ -11,16 +11,15 @@
       :render-key="chartRenderKey"
       :keep-chart-while-loading="true"
       :chart-title="isHeatmap ? promqlQuery : undefined"
-      :chart-class="{ 'metric-main-chart__chart--heatmap': isHeatmap }"
       :show-footer="Boolean((isHeatmap && heatmapLegend) || showQueryLegend)"
     )
       template(#footer)
-        .metric-main-chart__heatmap-legend(v-if="isHeatmap && heatmapLegend")
-          span.metric-main-chart__scale-label.metric-main-chart__scale-label--low {{ heatmapLegend.low }}
-          .metric-main-chart__scale-track
-            .metric-main-chart__scale-gradient
-            span.metric-main-chart__scale-label.metric-main-chart__scale-label--mid {{ heatmapLegend.mid }}
-          span.metric-main-chart__scale-label.metric-main-chart__scale-label--high {{ heatmapLegend.high }}
+        .drilldown-heatmap-legend(v-if="isHeatmap && heatmapLegend")
+          span.drilldown-heatmap-legend__label {{ heatmapLegend.low }}
+          .drilldown-heatmap-legend__track
+            .drilldown-heatmap-legend__gradient
+            span.drilldown-heatmap-legend__label.drilldown-heatmap-legend__label--mid {{ heatmapLegend.mid }}
+          span.drilldown-heatmap-legend__label {{ heatmapLegend.high }}
         .metric-main-chart__legend-row(v-else-if="showQueryLegend")
           .metric-main-chart__legends
             .drilldown-query-legend(v-for="item in legendItems" :key="item.label + item.expr" :title="item.expr")
@@ -115,61 +114,6 @@
   .metric-main-chart__frame {
     width: 100%;
     min-height: 280px;
-  }
-
-  .metric-main-chart__chart--heatmap {
-    background: var(--gpt-bg-panel);
-  }
-
-  .metric-main-chart__heatmap-legend {
-    display: grid;
-    grid-template-columns: auto minmax(72px, 1fr) auto;
-    align-items: center;
-    gap: var(--gpt-gap-sm);
-    width: min(100%, 320px);
-    min-height: 22px;
-    margin-top: var(--gpt-gap-xs);
-    margin-bottom: var(--gpt-gap-2xs);
-  }
-
-  .metric-main-chart__scale-track {
-    position: relative;
-    min-width: 0;
-    height: 10px;
-  }
-
-  .metric-main-chart__scale-gradient {
-    width: 100%;
-    height: 100%;
-    border-radius: var(--gpt-radius-xs);
-    background: linear-gradient(
-      90deg,
-      #5e4fa2 0%,
-      #3288bd 12%,
-      #66c2a5 25%,
-      #abdda4 37%,
-      #fee08b 50%,
-      #fdae61 62%,
-      #f46d43 75%,
-      #d53e4f 87%,
-      #9e0142 100%
-    );
-  }
-
-  .metric-main-chart__scale-label {
-    flex-shrink: 0;
-    color: var(--gpt-text-secondary);
-    font-size: var(--gpt-font-xs);
-    line-height: 1;
-    white-space: nowrap;
-  }
-
-  .metric-main-chart__scale-label--mid {
-    position: absolute;
-    top: calc(100% + var(--gpt-gap-2xs));
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: var(--gpt-font-2xs);
   }
 
   .metric-main-chart__legend-row {

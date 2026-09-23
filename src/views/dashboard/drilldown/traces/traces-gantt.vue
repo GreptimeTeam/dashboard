@@ -5,7 +5,7 @@
       span.operation-name {{ rootSpan?.span_name || t('drilldown.traces.unknownOperation') }}
       a-tag.span-count {{ spans.length }} span{{ spans.length === 1 ? '' : 's' }}
     .service-filter
-      span.filter-label {{ t('drilldown.traces.servicesFilter') }}
+      span.drilldown-field-label {{ t('drilldown.traces.servicesFilter') }}
       a-select(
         v-model="selectedServices"
         multiple
@@ -141,7 +141,7 @@
     gap: var(--gpt-gap-md) var(--gpt-gap-xl);
     padding: var(--gpt-gap-md) var(--gpt-page-padding-x);
     border-bottom: 1px solid var(--gpt-border-default);
-    background: var(--gpt-table-toolbar-bg, var(--color-bg-2));
+    background: var(--gpt-table-toolbar-bg);
   }
 
   .trace-summary {
@@ -155,18 +155,13 @@
   .operation-name {
     font-size: var(--gpt-font-lg);
     font-weight: var(--gpt-font-weight-control);
-    color: var(--color-text-1);
+    color: var(--gpt-text-primary);
   }
 
   .service-filter {
     display: flex;
     gap: var(--gpt-gap-md);
     align-items: center;
-  }
-
-  .filter-label {
-    font-size: var(--gpt-font-base);
-    color: var(--color-text-2);
   }
 
   .gantt-spin {
