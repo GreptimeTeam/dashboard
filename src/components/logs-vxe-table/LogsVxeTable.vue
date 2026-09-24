@@ -14,7 +14,6 @@
     :loading="loading"
     :row-config="rowConfig"
     :column-config="columnConfig"
-    :tooltip-config="tooltipConfig"
     :virtual-y-config="virtualYConfig"
     :virtual-x-config="virtualXConfig"
     :show-header="showHeader"
@@ -39,6 +38,18 @@
       use(href="#down")
     span.logs-vxe-load-more__text
       | {{ loadingMore ? t('drilldown.logs.loadingMore') : t('logsQuery.loadMoreHint') }}
+  a-popover(
+    v-model:popup-visible="cellDetailVisible"
+    trigger="click"
+    position="top"
+    popup-container="body"
+    content-class="logs-vxe-cell-detail-popover"
+  )
+    .logs-vxe-cell-detail-anchor(aria-hidden="true" :style="cellDetailAnchorStyle")
+    template(#content)
+      .logs-vxe-cell-detail
+        .logs-vxe-cell-detail__title {{ cellDetail?.title }}
+        pre.logs-vxe-cell-detail__content {{ cellDetail?.content }}
   a-dropdown#logs-vxe-td-context(
     v-model:popup-visible="contextMenuVisible"
     trigger="contextMenu"
@@ -59,22 +70,11 @@
   import { useI18n } from 'vue-i18n'
   import { useElementSize } from '@vueuse/core'
   import { Tooltip } from '@arco-design/web-vue'
-  import { VxeGrid, VxeUI } from 'vxe-table'
+  import { VxeGrid } from 'vxe-table'
   import 'vxe-table/lib/style.css'
   import type { ColumnType, TSColumn } from '@/types/query'
   import { dateTypes } from '@/views/dashboard/config'
   import { useDateTimeFormat } from '@/hooks'
-
-  // show-overflow=true defaults to tooltip mode and requires vxe-tooltip (vxe-pc-ui).
-  // Prefer native title tooltips so we do not pull in the full UI kit.
-  VxeUI.setConfig({
-    table: {
-      showOverflow: 'title',
-      tooltipConfig: {
-        mode: 'title',
-      },
-    },
-  })
 
   // ---------------------------------------------------------------------------
   // Column widths (parity with the legacy DataTable virtual mode)
@@ -183,6 +183,22 @@
   const filterOptions = shallowRef<string[]>([])
   const triggerCell = ref<[TableData, string] | null>(null)
 
+  // ---------------------------------------------------------------------------
+  // Cell detail popup
+  //
+  // Every non-empty normal cell can show its raw value. Opening is delayed for
+  // one click and suppressed for drags/selections, so selecting or double-click
+  // selecting text never fights with the popup.
+  // ---------------------------------------------------------------------------
+  const CELL_DETAIL_OPEN_DELAY_MS = 200
+  const CELL_DETAIL_DRAG_THRESHOLD_PX = 4
+  const cellDetail = ref<{ title: string; content: string } | null>(null)
+  const cellDetailVisible = ref(false)
+  const cellDetailAnchorStyle = ref<Record<string, string>>({ display: 'none' })
+  let cellDetailOpenTimer: ReturnType<typeof setTimeout> | null = null
+  let cellDetailPointerStart: { x: number; y: number; hadSelection: boolean } | null = null
+  let detailHoverCell: HTMLElement | null = null
+
   /** true = formatted timestamp, false = raw value (legacy `tsViewStr`). */
   const tsViewStr = ref(true)
 
@@ -196,8 +212,8 @@
   /** Prefer measured px; fall back to 100% so first paint is not blank. */
   const gridHeight = computed(() => (tableHeight.value > 0 ? tableHeight.value : '100%'))
 
-  /** false = allow wrap + dynamic row height; 'title' = single-line truncate. */
-  const tableShowOverflow = computed(() => (props.wrapLine ? false : 'title'))
+  /** false = allow wrap + dynamic row height; 'ellipsis' = truncate without a native title. */
+  const tableShowOverflow = computed(() => (props.wrapLine ? false : 'ellipsis'))
 
   const rowHeight = computed(() => {
     switch (props.size) {
@@ -387,6 +403,130 @@
     emit('columnLinkClick', columnName, text)
   }
 
+  function hasTextSelection() {
+    const selection = window.getSelection()
+    return Boolean(selection && !selection.isCollapsed && selection.toString().trim())
+  }
+
+  function cancelCellDetailOpen() {
+    if (cellDetailOpenTimer != null) {
+      clearTimeout(cellDetailOpenTimer)
+      cellDetailOpenTimer = null
+    }
+  }
+
+  function closeCellDetail() {
+    cancelCellDetailOpen()
+    cellDetailVisible.value = false
+  }
+
+  function onDetailKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+      closeCellDetail()
+    }
+  }
+
+  function onDetailPointerDown(event: PointerEvent) {
+    cancelCellDetailOpen()
+    if (cellDetailVisible.value) {
+      closeCellDetail()
+    }
+    cellDetailPointerStart =
+      event.button === 0 ? { x: event.clientX, y: event.clientY, hadSelection: hasTextSelection() } : null
+  }
+
+  function clearDetailHoverCell() {
+    detailHoverCell?.classList.remove('logs-vxe-detail-cell--overflow')
+    detailHoverCell = null
+  }
+
+  /**
+   * Affordance is based on the cell's real overflow state, measured only while
+   * the user hovers it. This avoids the pressure of showing a click cursor on
+   * every cell, and avoids estimating text width while rendering columns.
+   */
+  function isDetailContentOverflowing(cell: HTMLElement) {
+    const targets = [
+      cell.querySelector('.logs-vxe-cell-text'),
+      cell.querySelector('.logs-vxe-merged-cell'),
+      cell.querySelector('.vxe-cell'),
+    ]
+    return targets.some((target) => {
+      if (!(target instanceof HTMLElement)) {
+        return false
+      }
+      return target.scrollWidth - target.clientWidth > 1 || target.scrollHeight - target.clientHeight > 1
+    })
+  }
+
+  function updateDetailHoverCell(event: Event) {
+    const target = event.target as Element | null
+    const cell = target?.closest<HTMLElement>('.vxe-body--column.logs-vxe-detail-cell') || null
+    if (cell === detailHoverCell) {
+      return
+    }
+
+    clearDetailHoverCell()
+    detailHoverCell = cell
+    cell?.classList.toggle('logs-vxe-detail-cell--overflow', isDetailContentOverflowing(cell))
+  }
+
+  function isDetailCellTarget(event: MouseEvent | undefined) {
+    const target = event?.target as Element | null
+    return Boolean(target?.closest('button, a, .logs-vxe-cell-action'))
+  }
+
+  function isPlainDetailClick(event: MouseEvent | undefined) {
+    if (!event || event.button !== 0 || event.detail > 1 || !cellDetailPointerStart) {
+      return false
+    }
+    if (cellDetailPointerStart.hadSelection || hasTextSelection()) {
+      return false
+    }
+    const movedX = event.clientX - cellDetailPointerStart.x
+    const movedY = event.clientY - cellDetailPointerStart.y
+    return Math.hypot(movedX, movedY) <= CELL_DETAIL_DRAG_THRESHOLD_PX
+  }
+
+  function setCellDetailAnchor(cell: Element) {
+    const rect = cell.getBoundingClientRect()
+    cellDetailAnchorStyle.value = {
+      position: 'fixed',
+      display: 'block',
+      left: `${rect.left}px`,
+      top: `${rect.top}px`,
+      width: `${Math.max(rect.width, 1)}px`,
+      height: `${Math.max(rect.height, 1)}px`,
+    }
+  }
+
+  function openCellDetail(row: TableData, field: string, event?: MouseEvent) {
+    const merge = props.columnMode !== 'separate'
+    const cell = (event?.target as Element | null)?.closest('.vxe-body--column')
+    const content = merge ? String(row.__merged_message || '') : getCellString(row[field])
+    if (!cell || !content) {
+      return
+    }
+
+    setCellDetailAnchor(cell)
+    cellDetail.value = {
+      title: merge ? 'message' : field,
+      content,
+    }
+    cellDetailVisible.value = true
+  }
+
+  function scheduleCellDetail(row: TableData, field: string, event?: MouseEvent) {
+    cancelCellDetailOpen()
+    if (!isPlainDetailClick(event)) {
+      return
+    }
+    cellDetailOpenTimer = setTimeout(() => {
+      cellDetailOpenTimer = null
+      openCellDetail(row, field, event)
+    }, CELL_DETAIL_OPEN_DELAY_MS)
+  }
+
   function renderActionIcon(row: TableData, field: string) {
     if (!showFilterMenu.value || isTimeField(field)) {
       return null
@@ -469,10 +609,6 @@
     })
   }
 
-  const tooltipConfig = {
-    mode: 'title' as const,
-  }
-
   const virtualYConfig = computed(() => ({
     enabled: true,
     gt: 0,
@@ -536,7 +672,7 @@
     return {
       field,
       title,
-      showOverflow: props.wrapLine ? false : 'title',
+      showOverflow: props.wrapLine ? false : 'ellipsis',
       ...extra,
     }
   }
@@ -697,7 +833,7 @@
       cols.push(
         contentColumn('__merged_message', 'message', {
           minWidth: 'auto',
-          className: 'logs-vxe-edge-right',
+          className: ['logs-vxe-detail-cell', 'logs-vxe-edge-right'].join(' '),
           headerClassName: 'logs-vxe-edge-right',
           slots: { default: renderMergedCell },
         })
@@ -707,7 +843,11 @@
 
     const fields = getSeparateFields()
     fields.forEach((item, index) => {
-      const classNames = [getTimeColumnClassNames(item.isTs, item.isTime), item.isLink ? 'logs-vxe-link-col' : '']
+      const classNames = [
+        getTimeColumnClassNames(item.isTs, item.isTime),
+        item.isLink ? 'logs-vxe-link-col' : '',
+        !item.isTs && !item.isTime && !item.isLink ? 'logs-vxe-detail-cell' : '',
+      ]
         .filter(Boolean)
         .join(' ')
       const edge = edgeClass(index, fields.length)
@@ -802,6 +942,8 @@
   }
 
   function onScroll(params: { isY?: boolean; scrollTop?: number; scrollHeight?: number; bodyHeight?: number }) {
+    closeCellDetail()
+    clearDetailHoverCell()
     const { isY, scrollTop, scrollHeight, bodyHeight } = params
     if (!isY || scrollTop == null || scrollHeight == null || bodyHeight == null) {
       return
@@ -868,13 +1010,23 @@
 
   onMounted(() => {
     checkViewportFilled()
+    rootEl.value?.addEventListener('pointerdown', onDetailPointerDown)
+    rootEl.value?.addEventListener('mouseover', updateDetailHoverCell)
+    rootEl.value?.addEventListener('mouseleave', clearDetailHoverCell)
     rootEl.value?.addEventListener('wheel', markScrollIntent, { passive: true })
     rootEl.value?.addEventListener('touchmove', markScrollIntent, { passive: true })
+    window.addEventListener('keydown', onDetailKeydown)
   })
 
   onBeforeUnmount(() => {
+    clearDetailHoverCell()
+    rootEl.value?.removeEventListener('pointerdown', onDetailPointerDown)
+    rootEl.value?.removeEventListener('mouseover', updateDetailHoverCell)
+    rootEl.value?.removeEventListener('mouseleave', clearDetailHoverCell)
     rootEl.value?.removeEventListener('wheel', markScrollIntent)
     rootEl.value?.removeEventListener('touchmove', markScrollIntent)
+    window.removeEventListener('keydown', onDetailKeydown)
+    closeCellDetail()
   })
 
   // The scrollbar only exists once the grid is laid out — re-measure when the
@@ -918,7 +1070,16 @@
     { immediate: true }
   )
 
-  function onCellClick({ row, column }: { row: TableData; column: { field?: string } }) {
+  watch(
+    () =>
+      [props.data, props.data.length, props.columns, props.displayedColumns, props.columnMode, props.tsColumn] as const,
+    () => {
+      closeCellDetail()
+      clearDetailHoverCell()
+    }
+  )
+
+  function onCellClick({ row, column, $event }: { row: TableData; column: { field?: string }; $event?: MouseEvent }) {
     const rowIndex = typeof row.__rowIndex === 'number' ? row.__rowIndex : -1
     const original = getOriginalRow(row)
     const field = column?.field
@@ -933,8 +1094,20 @@
     // Secondary time columns only toggle the format (legacy changeTsView parity).
     if (field && isTimeColumn(props.columns.find((c) => c.name === field))) {
       changeTsView()
+      return
     }
-    // Other cells: no row detail (parity with Arco). Links handled in slot click.
+    if (isDetailCellTarget($event)) {
+      return
+    }
+    if (props.columnMode === 'separate') {
+      if (field && !isTimeField(field) && field !== props.linkColumn && row[field]) {
+        scheduleCellDetail(row, field, $event)
+      }
+      return
+    }
+    if (field === '__merged_message' && row.__merged_message) {
+      scheduleCellDetail(row, field, $event)
+    }
   }
 </script>
 
@@ -978,6 +1151,26 @@
       min-width: 0;
       width: 100%;
       gap: 4px;
+    }
+
+    :deep(.vxe-body--column.logs-vxe-detail-cell) {
+      cursor: default;
+    }
+
+    :deep(.vxe-body--column.logs-vxe-detail-cell--overflow) {
+      cursor: pointer;
+
+      &:hover {
+        box-shadow: inset 0 0 0 1px var(--color-primary-light-2, #bedaff);
+      }
+    }
+
+    .logs-vxe-cell-detail-anchor {
+      position: fixed;
+      z-index: -1;
+      margin: 0;
+      opacity: 0;
+      pointer-events: none;
     }
 
     :deep(.logs-vxe-cell-text) {
@@ -1121,6 +1314,40 @@
         text-overflow: clip;
         overflow: visible;
       }
+    }
+  }
+</style>
+
+<style lang="less">
+  .logs-vxe-cell-detail-popover {
+    max-width: 600px;
+    padding: 10px;
+
+    .logs-vxe-cell-detail {
+      display: flex;
+      min-width: 220px;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .logs-vxe-cell-detail__title {
+      color: var(--color-text-2, #4e5969);
+      font-size: 12px;
+      font-weight: 600;
+      word-break: break-word;
+    }
+
+    .logs-vxe-cell-detail__content {
+      max-height: 40vh;
+      margin: 0;
+      overflow: auto;
+      color: var(--color-text-1, #1d2129);
+      font-family: inherit;
+      font-size: 12px;
+      line-height: 1.5;
+      user-select: text;
+      white-space: pre-wrap;
+      word-break: break-word;
     }
   }
 </style>
