@@ -178,7 +178,7 @@
 .drilldown-toolbar__right {
   display: flex;
   align-items: center;
-  gap: var(--gpt-gap-md);
+  gap: var(--gpt-gap-lg);
   min-width: 0;
 }
 
@@ -187,14 +187,41 @@
   margin-left: auto;
 }
 
+// label 与其控件一组（6px 紧贴）；组间由 __left/__right 的 12px gap 分隔。
+.drilldown-toolbar__group {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--gpt-gap-sm);
+}
+
 .drilldown-toolbar__label {
   flex-shrink: 0;
+  overflow: hidden;
   color: var(--gpt-text-secondary);
   font-size: var(--gpt-font-base);
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .drilldown-table-select {
   width: 240px;
+}
+
+/*
+ * a-select 根节点是 fragment（trigger span + Teleport），Vue 不会把 SFC scoped 的
+ * data-v 属性落到 trigger span 上，scoped 宽度规则永远不命中 —— 宽度类必须放全局
+ * （与 .drilldown-table-select 同理）。固定宽度保证 focus/搜索输入替换不改变外框。
+ */
+.signal-database-select {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 160px;
+}
+
+.signal-database-select--block {
+  width: 100%;
 }
 
 // Inline control label (e.g. `Filter:`, field names beside a control).

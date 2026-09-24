@@ -5,18 +5,20 @@ a-layout-content.layout-content
       .traces-home
         .drilldown-toolbar.traces-home-toolbar
           .drilldown-toolbar__left
-            span.drilldown-toolbar__label {{ t('dashboard.database') }}
-            SignalDatabaseSelect(v-model="tracesDatabase")
-            span.drilldown-toolbar__label {{ t('drilldown.traces.tableLabel') }}
-            a-select.drilldown-table-select(
-              allow-search
-              allow-create
-              :model-value="tracesTable"
-              :placeholder="t('drilldown.traces.tablePlaceholder')"
-              :loading="loadingTables"
-              @change="onTableChange"
-            )
-              a-option(v-for="name in tableOptions" :key="name" :value="name") {{ name }}
+            span.drilldown-toolbar__group
+              span.drilldown-toolbar__label {{ t('dashboard.database') }}
+              SignalDatabaseSelect(v-model="tracesDatabase")
+            span.drilldown-toolbar__group
+              span.drilldown-toolbar__label {{ t('drilldown.traces.tableLabel') }}
+              a-select.drilldown-table-select(
+                allow-search
+                allow-create
+                :model-value="tracesTable"
+                :placeholder="t('drilldown.traces.tablePlaceholder')"
+                :loading="loadingTables"
+                @change="onTableChange"
+              )
+                a-option(v-for="name in tableOptions" :key="name" :value="name") {{ name }}
           .drilldown-toolbar__right
             a-input.trace-id-input(
               v-model="traceIdDraft"

@@ -67,16 +67,3 @@ a-select.signal-database-select(
     }
   })
 </script>
-
-<style scoped lang="less">
-  .signal-database-select {
-    flex-shrink: 0;
-    min-width: 120px;
-    width: 150px;
-    max-width: 100%;
-  }
-
-  .signal-database-select--block {
-    width: 100%;
-  }
-</style>

@@ -5,18 +5,20 @@ a-layout-content.layout-content
       .logs-overview
         .drilldown-toolbar.logs-overview-toolbar
           .drilldown-toolbar__left
-            span.drilldown-toolbar__label {{ t('dashboard.database') }}
-            SignalDatabaseSelect(v-model="logsDatabase")
-            span.drilldown-toolbar__label {{ t('drilldown.logs.tableLabel') }}
-            a-select.drilldown-table-select(
-              allow-search
-              allow-create
-              :model-value="logsTable"
-              :placeholder="t('drilldown.logs.tablePlaceholder')"
-              :loading="loadingTables"
-              @change="onTableChange"
-            )
-              a-option(v-for="name in tableOptions" :key="name" :value="name") {{ name }}
+            span.drilldown-toolbar__group
+              span.drilldown-toolbar__label {{ t('dashboard.database') }}
+              SignalDatabaseSelect(v-model="logsDatabase")
+            span.drilldown-toolbar__group
+              span.drilldown-toolbar__label {{ t('drilldown.logs.tableLabel') }}
+              a-select.drilldown-table-select(
+                allow-search
+                allow-create
+                :model-value="logsTable"
+                :placeholder="t('drilldown.logs.tablePlaceholder')"
+                :loading="loadingTables"
+                @change="onTableChange"
+              )
+                a-option(v-for="name in tableOptions" :key="name" :value="name") {{ name }}
             a-button(type="text" size="small" @click="settingsVisible = true")
               | {{ t('drilldown.logs.settingsButton') }}
 
