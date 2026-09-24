@@ -5,6 +5,7 @@ import formatTimeAxisLabel, {
   mapTimeTicksToCategoryIndexes,
   CATALOG_Y_AXIS_SPLIT_NUMBER,
 } from '@/utils/chart-time-axis'
+import type { RawChartCategoryTimeTicks } from '@/components/raw-chart/time-interaction'
 import type { MetricKind } from '../semantics/types'
 import { formatMetricUnitValue, resolveHistogramBoundUnit, resolveHistogramCellUnit } from './metric-units'
 import { formatMetricAxisValue } from './panel-stats'
@@ -442,6 +443,18 @@ export function buildHeatmapOption(
   const tickLabelByIndex = mapTimeTicksToCategoryIndexes(times.length, timeTicks, startMs, endMs)
   const tickIndexes = [...tickLabelByIndex.keys()].sort((a, b) => a - b)
   const categoryTimesMs = times.map((sec) => sec * 1000)
+  // Key label times by the raw category value (timestamp ms), not the index: the
+  // category-axis label formatter receives an extent-relative index (tickValue -
+  // scaleExtent[0]), so index-keyed lookups go blank once the pan preview shifts
+  // category min/max. Category values stay stable, letting labels slide with the
+  // cells while keeping their absolute tick times (Grafana x-axis drag rules).
+  const tickLabelByCategoryValue = new Map<number, number>()
+  tickLabelByIndex.forEach((tickMs, index) => {
+    const categoryValue = categoryTimesMs[index]
+    if (categoryValue != null) {
+      tickLabelByCategoryValue.set(categoryValue, tickMs)
+    }
+  })
 
   // Grafana classic PromQL `le` heatmap: one equal-height row per bucket (not an empty
   // synthetic category for yMinDisplay — that tick is a label only in Grafana, and an
@@ -470,6 +483,19 @@ export function buildHeatmapOption(
     heatmapColorMagnitude(value, colorMin, colorMax),
     value,
   ])
+
+  // Static category-axis label handlers, also published via `rawChartTimeTicks`
+  // (components/raw-chart/time-interaction) so the x-axis pan preview can slide
+  // labels on the phase grid, fill the exposed edge, and restore them on abort.
+  const staticAxisLabel = {
+    interval: (index: number) => tickLabelByIndex.has(index),
+    // First arg is the raw category value (timestamp ms) — stable across pan
+    // extent shifts, unlike the second (extent-relative) index argument.
+    formatter: (value: unknown) => {
+      const tickMs = tickLabelByCategoryValue.get(Number(value))
+      return tickMs != null ? formatTimeAxisLabel(tickMs, spanMs, tickIntervalMs) : ''
+    },
+  }
 
   return {
     animation: false,
@@ -518,15 +544,21 @@ export function buildHeatmapOption(
         // category (N===tickCount), and false would hide that label → K-1 ticks.
         ...buildSharedTimeAxisLabelOption(spanMs, tickIntervalMs),
         showMaxLabel: true,
-        interval: (index: number) => tickLabelByIndex.has(index),
-        formatter: (_value: number | string, index: number) => {
-          const tickMs = tickLabelByIndex.get(index)
-          return tickMs != null ? formatTimeAxisLabel(tickMs, spanMs, tickIntervalMs) : ''
-        },
+        interval: staticAxisLabel.interval,
+        formatter: staticAxisLabel.formatter,
         margin: 4,
       },
       splitLine: { show: false },
-    },
+      // Read back by the raw-chart pan preview (time-interaction): lets an x-axis
+      // drag slide labels on the phase grid, complete the exposed edge with
+      // continuation ticks, and restore the static labels on abort.
+      rawChartTimeTicks: {
+        intervalMs: tickIntervalMs,
+        phaseMs: startMs,
+        spanMs,
+        staticAxisLabel,
+      } satisfies RawChartCategoryTimeTicks,
+    } as NonNullable<EChartsOption['xAxis']>,
     yAxis: {
       type: 'category',
       // Full le set, ScaleDirection.Up: low at bottom → max / +Inf at top.

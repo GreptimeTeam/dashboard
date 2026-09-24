@@ -49,6 +49,17 @@ describe('raw-chart time-interaction (Grafana rules)', () => {
     expect(computeCategoryPanExtent(10, 0, 100)).toBeNull()
   })
 
+  it('snaps heatmap pan extents to whole bands with a constant span', () => {
+    // ECharts parses category min/max as integer ranks (scale.parse → Math.round);
+    // fractional windows would round inconsistently and resize the bands.
+    expect(computeCategoryPanExtent(21, 4.3 * 40, 840)).toEqual({ min: -4, max: 16 })
+    expect(computeCategoryPanExtent(21, -0.4 * 40, 840)).toEqual({ min: 0, max: 20 })
+    expect(computeCategoryPanExtent(21, -3 * 40, 840)).toEqual({ min: 3, max: 23 })
+    // Span stays count - 1 in every direction, so band width is constant while panning.
+    const extent = computeCategoryPanExtent(21, 2.9 * 40, 840)!
+    expect(extent.max - extent.min).toBe(20)
+  })
+
   it('keeps absolute tick times while panning so labels slide, and fills the new edge', () => {
     const originFrom = 1_000_000
     const originTo = 1_600_000

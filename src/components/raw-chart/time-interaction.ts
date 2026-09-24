@@ -106,6 +106,8 @@ type XAxisOption = {
   interval?: number
   data?: unknown[]
   axisLabel?: { customValues?: number[] }
+  /** Set by `buildHeatmapOption` — lets the pan preview slide/complete time labels. */
+  rawChartTimeTicks?: RawChartCategoryTimeTicks
 }
 
 function readPrimaryXAxis(chart: ECharts): XAxisOption | null {
@@ -163,6 +165,9 @@ export function plotPixelToTimeMs(
  * Shift a category axis so cells follow the drag (ECharts heatmap).
  * Grafana heatmap pans a real time scale via `u.setScale`; ECharts heatmap cannot —
  * it only renders cells on category x, so preview shifts category min/max instead.
+ * ECharts parses category min/max as integer ranks (`scale.parse` → `Math.round`),
+ * so the window is snapped to whole bands with the span kept at `count - 1`:
+ * cells keep their size and slide band-by-band in the drag direction.
  */
 export function computeCategoryPanExtent(
   categoryCount: number,
@@ -173,9 +178,10 @@ export function computeCategoryPanExtent(
     return null
   }
   const shift = (dragDxPx / plotWidthPx) * categoryCount
+  const min = Math.round(-shift)
   return {
-    min: -shift,
-    max: categoryCount - 1 - shift,
+    min,
+    max: min + categoryCount - 1,
   }
 }
 
@@ -363,8 +369,77 @@ export function previewAxisWindow(chart: ECharts, fromMs: number, toMs: number, 
   )
 }
 
+/**
+ * Category-axis time-tick metadata (set by `buildHeatmapOption`).
+ * The pan preview reuses the static tick grid (`phaseMs + k * intervalMs`) so
+ * label times keep their absolute values and slide with the drag — the same
+ * rules as the timeseries time-axis pan — and fills the exposed edge with
+ * continuation ticks instead of leaving it blank.
+ */
+export interface RawChartCategoryTimeTicks {
+  /** Locked tick interval (ms) from the pre-drag axis. */
+  intervalMs: number
+  /** Phase anchor (pre-drag window start) keeping tick times absolute. */
+  phaseMs: number
+  /** Pre-drag window span (ms) — drives day-scale label formats. */
+  spanMs: number
+  /** Rest-state label handlers, re-applied when a drag aborts. */
+  staticAxisLabel: {
+    interval: (index: number) => boolean
+    formatter: (value: unknown, index: number) => string
+  }
+}
+
+export interface CategoryPanLabelHandlers {
+  interval: (index: number) => boolean
+  formatter: (value: unknown, index: number) => string
+}
+
+/**
+ * Time labels for a panned category axis (ECharts heatmap x drag).
+ * Category labels can only render on band positions, so ticks from the phase
+ * grid map onto the uniform band grid (`bandMs[0] + rank * stepMs`): existing
+ * labels keep their times, and the leading edge exposed by the drag (e.g. the
+ * left side when dragging right) is filled with continuation ticks.
+ */
+export function buildPanPreviewCategoryLabels(
+  bandTimesMs: number[],
+  extent: { min: number; max: number },
+  ticks: RawChartCategoryTimeTicks
+): CategoryPanLabelHandlers | null {
+  const firstBandMs = Number(bandTimesMs[0])
+  const stepMs = bandTimesMs.length >= 2 ? Number(bandTimesMs[1]) - Number(bandTimesMs[0]) : Number.NaN
+  if (!Number.isFinite(firstBandMs) || !(stepMs > 0) || !(ticks.intervalMs > 0)) {
+    return null
+  }
+  // Time window covered by the shifted extent (uniform bands, boundaryGap halves aside).
+  const fromMs = firstBandMs + extent.min * stepMs
+  const toMs = firstBandMs + (extent.max + 1) * stepMs
+  const labelByRank = new Map<number, number>()
+  generateAlignedTimeAxisTicks(fromMs, toMs, ticks.intervalMs, ticks.phaseMs).forEach((tickMs) => {
+    const rank = Math.round((tickMs - firstBandMs) / stepMs)
+    // One label per band; when the tick grid is denser than the bands keep the first tick.
+    if (!labelByRank.has(rank)) {
+      labelByRank.set(rank, tickMs)
+    }
+  })
+  return {
+    // `interval` receives the absolute band rank.
+    interval: (index: number) => labelByRank.has(index),
+    // `formatter` receives an extent-relative index (tickValue - scaleExtent[0]).
+    formatter: (_value: unknown, index: number) => {
+      const tickMs = labelByRank.get(index + extent.min)
+      return tickMs != null ? formatTimeAxisLabel(tickMs, ticks.spanMs, ticks.intervalMs) : ''
+    },
+  }
+}
+
 function previewCategoryExtent(chart: ECharts, extent: { min: number; max: number }) {
   const plotRect = getGridRect(chart)
+  const axis = readPrimaryXAxis(chart)
+  const bandTimesMs = Array.isArray(axis?.data) ? axis.data.map(Number) : []
+  const meta = axis?.rawChartTimeTicks
+  const labels = meta ? buildPanPreviewCategoryLabels(bandTimesMs, extent, meta) : null
   chart.setOption(
     {
       // Same containLabel lock as time-axis pan — otherwise remasure jumps the plot.
@@ -382,6 +457,8 @@ function previewCategoryExtent(chart: ECharts, extent: { min: number; max: numbe
       xAxis: {
         min: extent.min,
         max: extent.max,
+        // Slide labels with the drag and complete the exposed edge on the phase grid.
+        ...(labels ? { axisLabel: labels } : {}),
       },
     },
     false
@@ -393,7 +470,30 @@ function restoreCategoryExtent(chart: ECharts) {
   if (!(count > 0)) {
     return
   }
-  previewCategoryExtent(chart, { min: 0, max: count - 1 })
+  const meta = readPrimaryXAxis(chart)?.rawChartTimeTicks
+  const plotRect = getGridRect(chart)
+  chart.setOption(
+    {
+      ...(plotRect
+        ? {
+            grid: {
+              containLabel: false,
+              left: plotRect.x,
+              top: plotRect.y,
+              width: plotRect.width,
+              height: plotRect.height,
+            },
+          }
+        : {}),
+      xAxis: {
+        min: 0,
+        max: count - 1,
+        // Drop the pan label handlers so the rest-state labels render again.
+        ...(meta ? { axisLabel: meta.staticAxisLabel } : {}),
+      },
+    },
+    false
+  )
 }
 
 function categorySampleWindow(chart: ECharts): ChartTimeRangeMs | null {
