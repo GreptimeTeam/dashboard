@@ -13,6 +13,7 @@ import { loadDrilldownSettings } from './drilldown-settings'
 import { filterAppliesToSignal } from './filters'
 import { parseJsonFieldChipKey } from './logs/json-field-keys'
 import { isLogsContainsFilterKey } from './logs/field-map'
+import resolveLogsRoles from './logs/resolved-roles'
 
 export type FilterSuggestMode = 'default' | 'fields'
 
@@ -120,7 +121,8 @@ export default function useDrilldownFilterOptions(
 
   /**
    * Whether a committed chip belongs in this combobox.
-   * Logs: every filter key except severity (Level select owns that). Level never.
+   * Logs: every filter key except severity (Level select owns it) and the resolved service
+   * role (the logs service select owns it).
    */
   const isVisibleFilterKey = (key: string): boolean => {
     const trimmed = key.trim()
@@ -132,6 +134,14 @@ export default function useDrilldownFilterOptions(
       const fieldMap = ctx.fieldMap.value.logs
       const severityCol = fieldMap.severity
       if (trimmed === 'severity' || (severityCol && trimmed === severityCol)) {
+        return false
+      }
+      // The logs service select (detail toolbar) owns the service role display: it edits the
+      // same shared filter, so the resolved key (a JSON chip like
+      // `resource_attributes.service.name`, or a physical column) is not repeated here.
+      // The canonical `service` alias stays visible — the select only syncs the resolved key.
+      const serviceCol = resolveLogsRoles(ctx).service
+      if (serviceCol && trimmed === serviceCol) {
         return false
       }
       // JSON attribute chips (e.g. `resource_attributes.service.name`) are valid filters
