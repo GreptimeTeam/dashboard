@@ -1,29 +1,24 @@
 <template lang="pug">
 .metrics-sidebar
   h2.sidebar-title {{ t('drilldown.sidebar.title') }}
-  .sidebar-db
-    span.sidebar-section-label {{ t('dashboard.database') }}
-    SignalDatabaseSelect.sidebar-db-select(v-model="metricsDatabase" size="small" block)
-
-  .sidebar-section.sidebar-catalog
-    span.sidebar-section-label {{ t('drilldown.sidebar.catalog') }}
-    .sidebar-search
-      a-input-search(
+  .gpt-table-sidebar-header
+    .gpt-table-sidebar-header__label {{ t('dashboard.database') }}
+    .gpt-table-sidebar-header__control
+      SignalDatabaseSelect(v-model="metricsDatabase" size="mini" block)
+    .gpt-table-sidebar-header__meta(:title="catalogCountLabel") {{ catalogCountLabel }}
+    .gpt-table-sidebar-header__control
+      a-input.search-input(
         v-model="searchModel"
-        size="small"
+        size="mini"
         allow-clear
         :placeholder="t('drilldown.main.searchPlaceholder')"
       )
-    MetricsCatalogControls(
-      v-model:sort="sortModel"
-      :loading="loading"
-      :pool-count="poolCount"
-      :filtered-count="filteredCount"
-    )
+        template(#suffix)
+          svg.icon-11.icon-color
+            use(href="#search")
+  MetricsCatalogControls(v-model:sort="sortModel")
 
-  .sidebar-divider
-
-  .sidebar-section.sidebar-name-filters
+  .sidebar-name-filters
     span.sidebar-section-label {{ t('drilldown.sidebar.nameFilters') }}
     a-radio-group.filter-mode-switch(v-model="filterMode" type="button" size="small")
       a-radio(value="prefix")
@@ -63,7 +58,7 @@
 
   type CatalogFilterMode = 'prefix' | 'suffix'
 
-  withDefaults(
+  const props = withDefaults(
     defineProps<{
       prefixGroups?: PrefixGroup[]
       suffixGroups?: SuffixGroup[]
@@ -88,6 +83,20 @@
   const { sidebarFilters, setSidebarFilters, metricsDatabase } = useDrilldownContext()
   const filterMode = ref<CatalogFilterMode>('prefix')
 
+  /** Header meta chip: loading / filtered / total, mirroring the table sidebar count. */
+  const catalogCountLabel = computed(() => {
+    if (props.loading) {
+      return t('drilldown.sidebar.loadingCount')
+    }
+    if (props.filteredCount !== props.poolCount) {
+      return t('drilldown.sidebar.filteredCount', {
+        filtered: props.filteredCount,
+        total: props.poolCount,
+      })
+    }
+    return t('drilldown.sidebar.totalCount', { count: props.poolCount })
+  })
+
   const updateSidebar = (patch: Partial<typeof sidebarFilters.value>) => {
     setSidebarFilters({
       ...sidebarFilters.value,
@@ -108,65 +117,39 @@
 </script>
 
 <style scoped lang="less">
+  /* Full-bleed like table / metrics-query sidebars: no container padding — the
+     gpt-table-sidebar-header brings its own inset + border, zones below re-inset. */
   .metrics-sidebar {
     display: flex;
     flex-direction: column;
-    gap: var(--gpt-gap-lg);
     height: 100%;
     min-height: 0;
-    padding: var(--gpt-gap-lg);
     overflow: hidden;
+  }
+
+  /* Narrower sidebar than the table one: slim label column keeps controls usable. */
+  .metrics-sidebar .gpt-table-sidebar-header {
+    --gpt-table-sidebar-label-col-width: 90px;
   }
 
   .sidebar-title {
     flex-shrink: 0;
     margin: 0;
+    padding: var(--gpt-gap-md) 10px;
     font-size: var(--gpt-font-md);
     font-weight: var(--gpt-font-weight-bold);
     line-height: 1.2;
     color: var(--gpt-text-primary);
   }
 
-  .sidebar-db {
-    display: flex;
-    flex-shrink: 0;
-    flex-direction: column;
-    gap: var(--gpt-gap-sm);
-  }
-
-  .sidebar-db-select {
-    width: 100%;
-  }
-
-  .sidebar-section {
-    display: flex;
-    flex-direction: column;
-    gap: var(--gpt-gap-sm);
-    min-height: 0;
-  }
-
-  .sidebar-catalog {
-    flex-shrink: 0;
-  }
-
   .sidebar-name-filters {
+    display: flex;
     flex: 1;
+    flex-direction: column;
+    gap: var(--gpt-gap-md);
     min-height: 0;
-  }
-
-  .sidebar-divider {
-    flex-shrink: 0;
-    height: 1px;
-    margin: 0;
-    background: var(--gpt-border-default);
-  }
-
-  .sidebar-search {
-    flex-shrink: 0;
-
-    :deep(.arco-input-wrapper) {
-      width: 100%;
-    }
+    padding: var(--gpt-gap-md) 10px;
+    overflow: hidden;
   }
 
   .sidebar-tree {
@@ -189,7 +172,6 @@
     display: flex;
     flex-shrink: 0;
     width: 100%;
-    margin-bottom: var(--gpt-gap-lg);
 
     :deep(.arco-radio-button) {
       flex: 1;

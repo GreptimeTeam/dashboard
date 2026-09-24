@@ -1,17 +1,13 @@
 <template lang="pug">
-.metrics-catalog-controls
-  span.catalog-count(v-if="loading") {{ t('drilldown.sidebar.loadingCount') }}
-  span.catalog-count(v-else-if="showFilteredCount") {{ t('drilldown.sidebar.filteredCount', { filtered: filteredCount, total: poolCount }) }}
-  span.catalog-count(v-else) {{ t('drilldown.sidebar.totalCount', { count: poolCount }) }}
-  .sort-row
-    span.sort-label {{ t('drilldown.main.sortLabel') }}
-    a-select.sort-select(
-      v-model="sortModel"
-      size="mini"
-      :bordered="false"
-      :options="sortOptions"
-      :trigger-props="{ autoFitPopupMinWidth: true }"
-    )
+.metrics-catalog-sort
+  span.sort-label {{ t('drilldown.main.sortLabel') }}
+  a-select.sort-select(
+    v-model="sortModel"
+    size="mini"
+    :bordered="false"
+    :options="sortOptions"
+    :trigger-props="{ autoFitPopupMinWidth: true }"
+  )
 </template>
 
 <script setup lang="ts">
@@ -20,19 +16,6 @@
   import type { MetricsSortOption } from '@/observability/metrics/catalog'
 
   const sortModel = defineModel<MetricsSortOption>('sort', { default: 'default' })
-
-  const props = withDefaults(
-    defineProps<{
-      loading?: boolean
-      poolCount?: number
-      filteredCount?: number
-    }>(),
-    {
-      loading: false,
-      poolCount: 0,
-      filteredCount: 0,
-    }
-  )
 
   const { t } = useI18n()
 
@@ -44,37 +27,17 @@
     { label: t('drilldown.main.sortAsc'), value: 'asc' },
     { label: t('drilldown.main.sortDesc'), value: 'desc' },
   ])
-
-  const showFilteredCount = computed(() => props.filteredCount !== props.poolCount)
 </script>
 
 <style scoped lang="less">
-  .metrics-catalog-controls {
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--gpt-gap-sm);
-    width: 100%;
-  }
-
-  .catalog-count {
-    min-width: 0;
-    overflow: hidden;
-    font-size: var(--gpt-font-sm);
-    line-height: 1.4;
-    color: var(--gpt-text-muted);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  // Secondary control — not a full-width field twin of search.
-  .sort-row {
+  /* Sits right under the sidebar header; its border-bottom replaces the old divider. */
+  .metrics-catalog-sort {
     display: flex;
     flex-shrink: 0;
     align-items: center;
     gap: var(--gpt-gap-xs);
-    min-width: 0;
+    padding: var(--gpt-gap-sm) 10px;
+    border-bottom: 1px solid var(--gpt-border-default);
   }
 
   .sort-label {
@@ -84,6 +47,7 @@
     color: var(--gpt-text-muted);
   }
 
+  // Secondary control — not a full-width field twin of search.
   .sort-select {
     flex: 0 1 auto;
     min-width: 0;

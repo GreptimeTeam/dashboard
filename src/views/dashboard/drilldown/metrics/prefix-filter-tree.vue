@@ -177,10 +177,15 @@
   }
 
   .prefix-filter-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: var(--gpt-gap-md);
+    /* Pad (not margin) so the background also masks rows scrolling beneath the gap. */
+    padding-bottom: var(--gpt-gap-md);
+    background: var(--gpt-bg-panel);
     font-size: var(--gpt-font-base);
     color: var(--gpt-text-muted);
   }

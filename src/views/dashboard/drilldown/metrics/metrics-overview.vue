@@ -3,7 +3,7 @@
   a-resize-box(
     v-model:width="sidebarWidth"
     :directions="['right']"
-    :style="{ 'min-width': '100px', 'max-width': '40vw' }"
+    :style="{ 'min-width': '220px', 'max-width': '40vw' }"
     :class="hideSidebar ? 'hide-sider' : ''"
   )
     a-layout-sider(style="height: 100%" :width="actualSidebarWidth")
@@ -53,11 +53,12 @@
     })
 
   /** Session-scoped: the catalog sidebar width is a transient view tweak, not a saved pref. */
-  const sidebarWidth = ref(228)
+  const sidebarWidth = ref(270)
   const { hideSidebar } = storeToRefs(useAppStore())
 
   const actualSidebarWidth = computed(() => {
-    const minWidth = 180
+    // Header grid (label col + control) stays usable at this floor.
+    const minWidth = 220
     const maxWidth = window.innerWidth * 0.4
     return Math.max(minWidth, Math.min(sidebarWidth.value, maxWidth))
   })
