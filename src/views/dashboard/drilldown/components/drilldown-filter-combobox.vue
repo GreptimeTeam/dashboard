@@ -805,10 +805,15 @@
     text-align: left;
     cursor: pointer;
 
-    &:hover,
+    &:hover {
+      background: var(--list-hover-color);
+    }
+
+    // 与全局 select 下拉一致（global.less .arco-select-dropdown）：中性 tint 底色、
+    // 文字保持主色；键盘 active 项加 semibold。紫色文字仅用于导航/选中 chip。
     &.is-active {
-      background: var(--gpt-nav-active-bg);
-      color: var(--gpt-main-purple);
+      background: var(--list-hover-color);
+      font-weight: var(--gpt-font-weight-control);
     }
   }
 </style>
