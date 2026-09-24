@@ -34,6 +34,8 @@ export interface ResultType {
   executionTime?: number
   query?: string
   refreshCount?: number
+  /** True while an analyze/stream SSE explain is in progress */
+  streaming?: boolean
 }
 
 export interface SeriesType {

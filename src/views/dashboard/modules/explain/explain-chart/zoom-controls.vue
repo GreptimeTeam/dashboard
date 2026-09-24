@@ -31,7 +31,7 @@
     .scaleExtent([minScale, maxScale])
     .on('zoom', (event) => {
       if (!props.treeContainer) return
-      const g = d3.select(props.treeContainer).select('svg > g')
+      const g = d3.select(props.treeContainer).select('svg > g.zoom-root')
       g.attr('transform', event.transform.toString())
       lastTransform.value = event.transform
     })
