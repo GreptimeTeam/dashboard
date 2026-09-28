@@ -51,7 +51,7 @@ a-card(:bordered="false")
   )
     template(#column-trace_id="{ record, showContextMenu, handleContextMenu }")
       span.trace-id-actions
-        a-link(@click="handleTraceClick(record.trace_id)") {{ record.trace_id }}
+        button.trace-id-link(type="button" @click="handleTraceClick(record.trace_id)") {{ record.trace_id }}
         a-dropdown(
           v-if="showLogsTraceMenu"
           trigger="click"
@@ -249,6 +249,26 @@ a-card(:bordered="false")
     max-width: 100%;
     min-width: 0;
     gap: 2px;
+  }
+
+  // Match the time column accent (global `.timestamp-cell`, dataView.less) —
+  // a-link's Arco link color broke the table's unified cell colors.
+  .trace-id-link {
+    max-width: 100%;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    background: transparent;
+    color: var(--gpt-accent-ts);
+    font: inherit;
+    text-align: inherit;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
   }
 
   .trace-id-logs-trigger {
