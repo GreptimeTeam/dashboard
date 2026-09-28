@@ -204,7 +204,10 @@
     return [overview, { label: logsDetailLabel.value, onSelect: closeTracesGanttDrawer }, current]
   })
 
-  const tracesGanttCrumbs = computed(() => [{ label: focusTraceIdLabel.value, mono: true }])
+  const tracesGanttCrumbs = computed(() => [
+    { label: t('drilldown.nav.overview'), onSelect: closeTracesGanttDrawer },
+    { label: focusTraceIdLabel.value, mono: true },
+  ])
 
   const onLogsTabSelect = (value: string) => {
     if (isLogsDetailTab(value)) {

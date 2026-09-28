@@ -23,6 +23,7 @@
           :loading="loading"
           :span-tree="spanTree"
           :root-span="rootSpan"
+          :selected-span-id="selectedSpan?.span_id || undefined"
           @span-select="handleSpanSelect"
         )
       .gantt-attributes-pane(v-if="spanDrawerVisible && selectedSpan")
@@ -137,6 +138,11 @@
     try {
       spans.value = await fetchTraceSpans(ctx, id)
       await resolveTargetLabels()
+      const root = rootSpan.value
+      if (root) {
+        selectedSpan.value = root
+        spanDrawerVisible.value = true
+      }
     } finally {
       loading.value = false
     }
@@ -245,6 +251,23 @@
     min-height: 0;
     padding: var(--gpt-gap-lg) var(--gpt-page-padding-x) var(--gpt-page-padding-x);
     overflow: auto;
+
+    // TraceTimeline 内部按独立 trace 详情页的整页视口写死高度（100vh 基准），
+    // 在分栏 pane 里会凭空撑出滚动条：这里改为跟随 pane 实际剩余高度，
+    // 超长 span 列表由 .tree-container 自身滚动。
+    :deep(.spin-block) {
+      flex: 1 1 0%;
+      min-height: 0;
+      height: auto;
+    }
+
+    :deep(.arco-spin-children) {
+      height: 100%;
+    }
+
+    :deep(.tree-container) {
+      height: 100%;
+    }
   }
 
   .gantt-attributes-pane {
