@@ -448,10 +448,18 @@ export function filtersToSqlWhere(
     columns?: string[]
     /** Column data types — needed for typed literal rendering (traces attribute columns). */
     typeOf?: (column: string) => string | undefined
+    /**
+     * When `columns` is undefined (schema bind not yet complete), still allow JSON-chip
+     * parsing. Set `false` on signals whose tables flatten attributes into physical
+     * dotted columns — without the column list, the chip reading would produce invalid SQL.
+     */
+    jsonChipWithoutColumns?: boolean
   }
 ): string[] {
   const parts: string[] = []
   const jsonColumns = options?.jsonColumns ?? []
+  const columnsKnown = options?.columns !== undefined
+  const allowJsonChip = columnsKnown || options?.jsonChipWithoutColumns !== false
 
   filters.forEach((filter) => {
     if (filter.key === options?.excludeKey) {
@@ -459,9 +467,12 @@ export function filtersToSqlWhere(
     }
 
     const physical = options?.columns?.includes(filter.key) ? filter.key : undefined
-    if (!physical) {
+    if (!physical && allowJsonChip) {
       const jsonChip = parseJsonFieldChipKey(filter.key, jsonColumns)
-      if (jsonChip) {
+      // With a known column list the chip reading requires its container column to exist:
+      // flattened model tables store attributes as dotted columns and have no container,
+      // where this reading would emit SQL for a column the table does not have.
+      if (jsonChip && (!columnsKnown || options.columns.includes(jsonChip.column))) {
         const expr = sqlJsonGetStringExpr(jsonChip.column, jsonChip.path)
         const jsonPredicate = sqlPredicateForFilter(filter, expr, { isExpr: true })
         if (jsonPredicate) {

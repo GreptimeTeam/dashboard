@@ -52,7 +52,11 @@ a-card(:bordered="false")
     template(#column-trace_id="{ record, showContextMenu, handleContextMenu }")
       span.trace-id-actions
         a-link(@click="handleTraceClick(record.trace_id)") {{ record.trace_id }}
-        a-dropdown(v-if="showLogsTraceMenu" trigger="click" @select="() => openLogsTrace(record.trace_id)")
+        a-dropdown(
+          v-if="showLogsTraceMenu"
+          trigger="click"
+          @select="() => openLogsTrace(record.trace_id, record.service_name)"
+        )
           button.trace-id-logs-trigger(type="button" :aria-label="$t('drilldown.traces.openLogs')" @click.stop)
             icon-down
           template(#content)
@@ -201,8 +205,8 @@ a-card(:bordered="false")
   const showLogsTraceMenu = computed(() => props.embedMode && props.logsTraceEnabled)
 
   // Handle trace ID link click
-  function openLogsTrace(traceId: string) {
-    emit('logsTraceClick', traceId)
+  function openLogsTrace(traceId: string, service?: string) {
+    emit('logsTraceClick', { traceId, service })
   }
 
   function handleTraceClick(traceId: string) {

@@ -59,6 +59,16 @@
       .drilldown-detail-shell(v-if="tracesHomeHidden")
       DrilldownDrawer(
         popup-container=".drilldown-body--traces"
+        variant="stacked"
+        :visible="tracesGanttVisible"
+        :breadcrumbs="tracesGanttCrumbs"
+        :subtitle="t('drilldown.traces.ganttDrawerTitle')"
+        @close="closeTracesGanttDrawer"
+      )
+        TracesGantt(v-if="tracesGanttVisible")
+
+      DrilldownDrawer(
+        popup-container=".drilldown-body--traces"
         variant="logs"
         :visible="logsFromTraceVisible"
         :closable="false"
@@ -74,16 +84,6 @@
             @update:model-value="onLogsTabSelect"
           )
         LogsDetail(v-if="logsFromTraceVisible")
-
-      DrilldownDrawer(
-        popup-container=".drilldown-body--traces"
-        variant="stacked"
-        :visible="tracesGanttVisible"
-        :breadcrumbs="tracesGanttCrumbs"
-        :subtitle="t('drilldown.traces.ganttDrawerTitle')"
-        @close="closeTracesGanttDrawer"
-      )
-        TracesGantt(v-if="tracesGanttVisible")
 </template>
 
 <script setup lang="ts">

@@ -105,6 +105,7 @@ export default {
   'drilldown.main.metricKindSummary': 'Summary',
   'drilldown.main.metricKindUpdown': 'Up/Down',
   'drilldown.logs.tableLabel': '日志表',
+  'drilldown.logs.databaseLabel': '日志数据库',
   'drilldown.logs.tablePlaceholder': '选择日志表',
   'drilldown.logs.settingsButton': '字段设置',
   'drilldown.logs.settingsTitle': 'Signal Explorer 日志设置',
@@ -195,4 +196,14 @@ export default {
   'drilldown.traces.servicesFilter': 'Services：',
   'drilldown.traces.servicesPlaceholder': '按 service 过滤',
   'drilldown.traces.ganttEmpty': '未找到该 Trace ID 的 Span',
+  'drilldown.traces.logsSettingsTitle': '配置 Trace 日志关联',
+  'drilldown.traces.logsSettingsShortTitle': 'Trace 日志',
+  'drilldown.traces.logsSettingsDescription': '为每个 service 配置其日志所在的日志数据库和数据表。',
+  'drilldown.traces.logsSettingsModelHint': 'Trace 关联使用标准日志模型的 trace_id。字段角色仍由 Logs 设置管理。',
+  'drilldown.traces.logsSettingsService': 'Service',
+  'drilldown.traces.logsSettingsServicePlaceholder': '选择或输入 service',
+  'drilldown.traces.logsSettingsAdd': '添加映射',
+  'drilldown.traces.logsSettingsRemove': '移除',
+  'drilldown.traces.nonModelTableHint':
+    '未找到 trace_id 列。该表仍可在 Logs 设置中使用，但 Trace 关联可能查询不到数据。',
 }

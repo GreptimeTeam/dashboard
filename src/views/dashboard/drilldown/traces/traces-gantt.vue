@@ -26,7 +26,14 @@
           @span-select="handleSpanSelect"
         )
       .gantt-attributes-pane(v-if="spanDrawerVisible && selectedSpan")
-        SpanDetailDrawer(v-model="spanDrawerVisible" variant="panel" :span="selectedSpan")
+        SpanDetailDrawer(
+          v-model="spanDrawerVisible"
+          variant="panel"
+          :span="selectedSpan"
+          :logs-trace-enabled="logsTraceEnabled"
+          :logs-target-label="selectedSpanTargetLabel"
+          @view-logs="openSpanLogs"
+        )
     a-empty(v-else-if="!loading" :description="t('drilldown.traces.ganttEmpty')")
 </template>
 
@@ -34,10 +41,13 @@
   import { computed, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useDrilldownContext } from '@/observability/context'
+  import { loadDrilldownSettings } from '@/observability/drilldown-settings'
   import { fetchTraceSpans } from '@/observability/adapters/traces'
   import TraceTimeline from '@/views/dashboard/traces/components/TraceTimeline.vue'
   import SpanDetailDrawer from '@/views/dashboard/traces/components/SpanDetailDrawer.vue'
   import { buildSpanTree, type Span } from '@/views/dashboard/traces/utils'
+  import resolveLogsRoles from '@/observability/logs/resolved-roles'
+  import { resolveTraceLogsTarget } from '@/observability/traces/logs-association'
 
   const { t } = useI18n()
   const ctx = useDrilldownContext()
@@ -79,23 +89,6 @@
 
   const rootSpan = computed(() => spans.value.find((span) => !span.parent_span_id) || spans.value[0] || null)
 
-  const load = async () => {
-    const id = ctx.focusTraceId.value
-    if (!id || !ctx.tracesTable.value) {
-      spans.value = []
-      return
-    }
-    loading.value = true
-    selectedSpan.value = null
-    spanDrawerVisible.value = false
-    selectedServices.value = []
-    try {
-      spans.value = await fetchTraceSpans(ctx, id)
-    } finally {
-      loading.value = false
-    }
-  }
-
   const handleSpanSelect = (spanId: string | number, node?: Span) => {
     const id = String(spanId ?? '')
     const fromList =
@@ -108,6 +101,47 @@
     }
   }
 
+  watch(uniqueServices, (services) => {
+    selectedServices.value = selectedServices.value.filter((service) => services.includes(service))
+  })
+
+  const serviceTargetLabels = ref<Record<string, string>>({})
+
+  const resolveTargetLabels = async () => {
+    const services = uniqueServices.value
+    const targets = await Promise.all(services.map((service) => resolveTraceLogsTarget(ctx, service)))
+    const labels: Record<string, string> = {}
+    services.forEach((service, index) => {
+      const target = targets[index]
+      if (target) {
+        labels[service] = `${target.database}.${target.table}`
+      }
+    })
+    serviceTargetLabels.value = labels
+  }
+
+  const selectedSpanTargetLabel = computed(() =>
+    selectedSpan.value ? serviceTargetLabels.value[selectedSpan.value.service_name] || '' : ''
+  )
+
+  const load = async () => {
+    const id = ctx.focusTraceId.value
+    if (!id || !ctx.tracesTable.value) {
+      spans.value = []
+      return
+    }
+    loading.value = true
+    selectedSpan.value = null
+    spanDrawerVisible.value = false
+    selectedServices.value = []
+    try {
+      spans.value = await fetchTraceSpans(ctx, id)
+      await resolveTargetLabels()
+    } finally {
+      loading.value = false
+    }
+  }
+
   watch(
     () => [ctx.focusTraceId.value, ctx.tracesTable.value, ctx.refreshKey.value],
     () => {
@@ -116,9 +150,23 @@
     { immediate: true }
   )
 
-  watch(uniqueServices, (services) => {
-    selectedServices.value = selectedServices.value.filter((service) => services.includes(service))
+  const logsTraceEnabled = computed(() => {
+    const roles = resolveLogsRoles(ctx)
+    const hasOriginalAssociation = Boolean(roles.traceId || roles.trace_id)
+    const mappings = loadDrilldownSettings(ctx.tracesDatabase.value).traces.traceLogsMappings ?? []
+    return hasOriginalAssociation || mappings.length > 0 || Boolean(ctx.logsTable.value)
   })
+
+  const openSpanLogs = async (span: Span) => {
+    const traceId = String(span.trace_id || ctx.focusTraceId.value || '')
+    if (!traceId) {
+      return
+    }
+    const service = span.service_name || ''
+    const target = await resolveTraceLogsTarget(ctx, service)
+    const enhancedTarget = target && target.source !== 'current' ? target : undefined
+    ctx.openLogsForTrace(traceId, enhancedTarget)
+  }
 </script>
 
 <style scoped lang="less">

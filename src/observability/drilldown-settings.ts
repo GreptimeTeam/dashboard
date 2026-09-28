@@ -22,8 +22,16 @@ export interface LogsDrilldownSettings {
   fieldExclude?: string[]
 }
 
+export interface TraceLogsMapping {
+  service: string
+  database: string
+  table: string
+}
+
 export interface TracesDrilldownSettings {
   table?: string
+  /** Service-scoped target used by Trace → Logs. Field roles stay owned by Logs settings. */
+  traceLogsMappings?: TraceLogsMapping[]
 }
 
 export interface DrilldownSettings {
@@ -35,6 +43,25 @@ const STORAGE_PREFIX = 'drilldown-settings'
 
 function storageKey(database: string): string {
   return `${STORAGE_PREFIX}:${database}`
+}
+
+function parseTraceLogsMappings(raw: unknown): TraceLogsMapping[] | undefined {
+  if (!Array.isArray(raw)) {
+    return undefined
+  }
+  const mappings = raw
+    .map((item): TraceLogsMapping | null => {
+      if (!item || typeof item !== 'object') {
+        return null
+      }
+      const record = item as Record<string, unknown>
+      const service = typeof record.service === 'string' ? record.service.trim() : ''
+      const database = typeof record.database === 'string' ? record.database.trim() : ''
+      const table = typeof record.table === 'string' ? record.table.trim() : ''
+      return service && database && table ? { service, database, table } : null
+    })
+    .filter((item): item is TraceLogsMapping => item !== null)
+  return mappings.length ? mappings : undefined
 }
 
 function emptySettings(): DrilldownSettings {
@@ -73,6 +100,7 @@ export function loadDrilldownSettings(database?: string): DrilldownSettings {
       },
       traces: {
         table: typeof traces.table === 'string' ? traces.table : undefined,
+        traceLogsMappings: parseTraceLogsMappings(traces.traceLogsMappings),
       },
     }
   } catch {
@@ -129,6 +157,9 @@ export function updateTracesDrilldownSettings(
     traces: {
       ...current.traces,
       ...patch,
+      traceLogsMappings: Object.prototype.hasOwnProperty.call(patch, 'traceLogsMappings')
+        ? parseTraceLogsMappings(patch.traceLogsMappings)
+        : current.traces.traceLogsMappings,
     },
   }
   saveDrilldownSettings(next, database)

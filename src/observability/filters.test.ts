@@ -117,6 +117,32 @@ describe('filters fieldMap SQL mapping', () => {
     expect(parts).toEqual([`json_get_string("log_attributes", '$."gen_ai.system"') = 'openai'`])
   })
 
+  it('filtersToSqlWhere skips a JSON chip whose container is missing from known columns', () => {
+    // Flattened model tables have no `resource_attributes` container column; emitting the
+    // chip read would produce SQL the server rejects (No field named resource_attributes).
+    expect(
+      filtersToSqlWhere([{ key: 'resource_attributes.service.name', op: '=', value: 'frontend-proxy' }], fieldMap, {
+        columns: ['service_name', 'timestamp'],
+      })
+    ).toEqual([])
+  })
+
+  it('filtersToSqlWhere keeps a JSON chip whose container exists in known columns', () => {
+    expect(
+      filtersToSqlWhere([{ key: 'resource_attributes.service.name', op: '=', value: 'frontend-proxy' }], fieldMap, {
+        columns: ['resource_attributes', 'timestamp'],
+      })
+    ).toEqual([`json_get_string("resource_attributes", '$."service.name"') = 'frontend-proxy'`])
+  })
+
+  it('filtersToSqlWhere honors jsonChipWithoutColumns before the schema bind', () => {
+    expect(
+      filtersToSqlWhere([{ key: 'resource_attributes.service.name', op: '=', value: 'frontend-proxy' }], fieldMap, {
+        jsonChipWithoutColumns: false,
+      })
+    ).toEqual([])
+  })
+
   it('filtersToSqlWhere treats unknown severity as null or empty', () => {
     expect(
       filtersToSqlWhere([{ key: 'level', op: '=', value: 'unknown' }], { level: 'level', severity: 'level' })

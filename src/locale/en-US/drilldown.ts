@@ -106,6 +106,7 @@ export default {
   'drilldown.main.metricKindSummary': 'Summary',
   'drilldown.main.metricKindUpdown': 'Up/Down',
   'drilldown.logs.tableLabel': 'Logs table',
+  'drilldown.logs.databaseLabel': 'Logs database',
   'drilldown.logs.tablePlaceholder': 'Select a logs table',
   'drilldown.logs.settingsButton': 'Field settings',
   'drilldown.logs.settingsTitle': 'Signal Explorer logs settings',
@@ -196,4 +197,15 @@ export default {
   'drilldown.traces.servicesFilter': 'Services:',
   'drilldown.traces.servicesPlaceholder': 'Filter services',
   'drilldown.traces.ganttEmpty': 'No spans found for this Trace ID',
+  'drilldown.traces.logsSettingsTitle': 'Configure trace logs',
+  'drilldown.traces.logsSettingsShortTitle': 'Trace logs',
+  'drilldown.traces.logsSettingsDescription': 'Map each service to the logs database and table that contain its logs.',
+  'drilldown.traces.logsSettingsModelHint':
+    'Trace uses the standard logs trace_id model. Field roles remain controlled by Logs settings.',
+  'drilldown.traces.logsSettingsService': 'Service',
+  'drilldown.traces.logsSettingsServicePlaceholder': 'Select or enter service',
+  'drilldown.traces.logsSettingsAdd': 'Add mapping',
+  'drilldown.traces.logsSettingsRemove': 'Remove',
+  'drilldown.traces.nonModelTableHint':
+    'No trace_id column was found. The table can still be used in Logs settings, but trace association may return no rows.',
 }

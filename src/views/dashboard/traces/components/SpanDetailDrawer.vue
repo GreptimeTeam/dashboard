@@ -16,8 +16,12 @@ a-drawer(
       span Span Attributes
   .span-attributes-content
     .span-header.gpt-muted-bar
-      .span-name {{ span?.span_name }}
-      a-typography-text.trace-id-value(copyable :copy-text="span?.span_id") {{ span?.span_id }}
+      .span-header-main
+        .span-name {{ span?.span_name }}
+        a-typography-text.trace-id-value(copyable :copy-text="span?.span_id") {{ span?.span_id }}
+      a-button.panel-view-logs(v-if="logsTraceEnabled" size="mini" @click="$emit('viewLogs', span)")
+        span.panel-view-logs-target(v-if="logsTargetLabel" :title="logsTargetLabel") {{ logsTargetLabel }}
+        | {{ t('drilldown.traces.openLogs') }}
     .summary-container
       .summary-item
         span.summary-label Service
@@ -52,14 +56,19 @@ a-drawer(
 
 .span-attributes-panel(v-else-if="modelValue && span")
   .panel-header
-    span.panel-title Span Attributes
+    .panel-header-main
+      span.panel-title Span Attributes
+      a-button.panel-view-logs(v-if="logsTraceEnabled" size="mini" @click="$emit('viewLogs', span)")
+        span.panel-view-logs-target(v-if="logsTargetLabel" :title="logsTargetLabel") {{ logsTargetLabel }}
+        | {{ t('drilldown.traces.openLogs') }}
     a-button(type="text" size="mini" @click="updateVisible(false)")
       template(#icon)
         icon-close
   .span-attributes-content.panel-body
     .span-header.gpt-muted-bar
-      .span-name {{ span?.span_name }}
-      a-typography-text.trace-id-value(copyable :copy-text="span?.span_id") {{ span?.span_id }}
+      .span-header-main
+        .span-name {{ span?.span_name }}
+        a-typography-text.trace-id-value(copyable :copy-text="span?.span_id") {{ span?.span_id }}
     .summary-container
       .summary-item
         span.summary-label Service
@@ -100,8 +109,11 @@ a-drawer(
   import { EditorView } from '@codemirror/view'
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { IconClose } from '@arco-design/web-vue/es/icon'
+  import { useI18n } from 'vue-i18n'
   import { formatDuration } from '../utils'
   import type { Span } from '../utils'
+
+  const { t } = useI18n()
 
   const props = withDefaults(
     defineProps<{
@@ -111,15 +123,22 @@ a-drawer(
       popupContainer?: string
       /** `drawer` = absolute drawer into host; `panel` = inline side pane (drilldown). */
       variant?: 'drawer' | 'panel'
+      /** Whether the trace → logs association is available (logs table bound or roles resolved). */
+      logsTraceEnabled?: boolean
+      /** Resolved `database.table` shown next to the View logs action. */
+      logsTargetLabel?: string
     }>(),
     {
       popupContainer: '#trace-attributes',
       variant: 'drawer',
+      logsTraceEnabled: false,
+      logsTargetLabel: '',
     }
   )
 
   const emit = defineEmits<{
     'update:modelValue': [value: boolean]
+    'viewLogs': [span: Span]
   }>()
 
   function updateVisible(value: boolean) {
@@ -227,6 +246,13 @@ a-drawer(
     border-bottom: 1px solid var(--gpt-border-default);
   }
 
+  .panel-header-main {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: var(--gpt-gap-sm);
+  }
+
   .panel-title {
     font-size: 14px;
     font-weight: 700;
@@ -240,11 +266,33 @@ a-drawer(
     overflow: auto;
   }
 
+  .panel-view-logs {
+    flex-shrink: 0;
+    gap: var(--gpt-gap-xs);
+  }
+
+  .panel-view-logs-target {
+    overflow: hidden;
+    max-width: 160px;
+    color: var(--gpt-text-secondary);
+    font-family: var(--font-mono, monospace);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .span-header.gpt-muted-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
+
+    .span-header-main {
+      display: flex;
+      flex: 1 1 auto;
+      min-width: 0;
+      align-items: center;
+      gap: var(--gpt-gap-sm);
+    }
 
     .span-name {
       flex-shrink: 0;

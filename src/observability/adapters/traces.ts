@@ -80,6 +80,11 @@ export function buildTracesContextWhere(
   whereParts.push(
     ...filtersToSqlWhere(ctx.filters.value, map, {
       columns: ctx.signalColumns.value.traces,
+      // Trace tables flatten attributes into physical dotted columns. Before the schema
+      // bind completes, JSON-chip guessing would misread `resource_attributes.service.name`
+      // as a `json_get_string("resource_attributes", …)` path — SQL the server rejects.
+      // Skip the chip read; the bind triggers a refresh with the real column list.
+      jsonChipWithoutColumns: false,
       // Attribute columns are typed (bigint / boolean / …): literals must render accordingly,
       // e.g. `"x" > 1000000000` and `"flag" = TRUE` instead of quoted strings.
       typeOf: (column) => ctx.signalColumnTypes.value.traces?.[column],

@@ -87,7 +87,7 @@ export interface DrilldownContext {
   closeTraceGantt: () => void
   /** Trace id whose logs drawer is stacked on the traces page. Not a shared filter. */
   logsTraceId: Ref<string | undefined>
-  openLogsForTrace: (traceId: string) => void
+  openLogsForTrace: (traceId: string, target?: { database?: string; table?: string }) => void
   closeLogsForTrace: () => void
 }
 
@@ -119,6 +119,9 @@ export function useDrilldownContextProvider(): DrilldownContext {
   const detailTab = ref<MetricDetailTab>('breakdown')
   const focusTraceId = ref<string | undefined>()
   const logsTraceId = ref<string | undefined>()
+  /** Saved logs binding — restored when the trace logs drawer closes. */
+  let savedLogsDatabase: string | undefined
+  let savedLogsTable: string | undefined
   const entityFilterKeys = ref<Partial<Record<DrilldownSignal, Record<string, string>>>>({})
   const signalColumns = ref<Partial<Record<DrilldownSignal, string[]>>>({})
   const signalColumnTypes = ref<Partial<Record<DrilldownSignal, Record<string, string>>>>({})
@@ -263,10 +266,22 @@ export function useDrilldownContextProvider(): DrilldownContext {
     focusTraceId.value = undefined
   }
 
-  const openLogsForTrace = (traceId: string) => {
+  const openLogsForTrace = (traceId: string, target?: { database?: string; table?: string }) => {
     const trimmed = traceId.trim()
     if (!trimmed) {
       return
+    }
+    const database = target?.database?.trim()
+    const table = target?.table?.trim()
+    if (database && table && (database !== logsDatabase.value || table !== logsTable.value)) {
+      // Temporarily point the Logs page at the service-mapped table. The original binding
+      // is restored on close, so the Logs page is unaffected for other navigation.
+      if (!logsTraceId.value) {
+        savedLogsDatabase = logsDatabase.value
+        savedLogsTable = logsTable.value
+      }
+      logsDatabase.value = database
+      logsTable.value = table
     }
     logsTraceId.value = trimmed
     if (logsTab.value !== 'logs') {
@@ -277,6 +292,12 @@ export function useDrilldownContextProvider(): DrilldownContext {
   /** Back to traces home; keep filter chips and any open Gantt. */
   const closeLogsForTrace = () => {
     logsTraceId.value = undefined
+    if (savedLogsTable !== undefined || savedLogsDatabase !== undefined) {
+      logsDatabase.value = savedLogsDatabase
+      logsTable.value = savedLogsTable
+      savedLogsDatabase = undefined
+      savedLogsTable = undefined
+    }
   }
 
   const context: DrilldownContext = {

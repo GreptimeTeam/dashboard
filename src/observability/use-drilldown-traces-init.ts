@@ -2,7 +2,7 @@ import { onMounted, watch } from 'vue'
 import { loadDrilldownSettings } from '@/observability/drilldown-settings'
 import { buildDefaultTracesFieldMap } from '@/observability/traces/field-map'
 import { bindSignalTable } from '@/observability/bind-signal-table'
-import { physicalServiceColumn, resolveSignalTable } from '@/observability/semantics'
+import { normalizeEntityFilters, physicalServiceColumn, resolveSignalTable } from '@/observability/semantics'
 import type { DrilldownContext } from './context'
 
 export default function useDrilldownTracesInit(ctx: DrilldownContext) {
@@ -12,6 +12,11 @@ export default function useDrilldownTracesInit(ctx: DrilldownContext) {
    */
   const tracesFieldMapFor = async (tableName: string) => {
     const { serviceRef } = await bindSignalTable(ctx, 'traces', tableName)
+    // A URL restore that happened before this table was bound kept the shared filter's
+    // raw key (e.g. a logs chip); re-encode now that the real key is known.
+    ctx.setFilters(
+      normalizeEntityFilters(ctx.filters.value, 'traces', (entity) => ctx.entityFilterKeys.value.traces?.[entity])
+    )
     return buildDefaultTracesFieldMap({ serviceColumn: physicalServiceColumn(serviceRef) })
   }
 

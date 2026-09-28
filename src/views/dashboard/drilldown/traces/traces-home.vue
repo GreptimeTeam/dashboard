@@ -20,6 +20,10 @@ a-layout-content.layout-content
               )
                 a-option(v-for="name in tableOptions" :key="name" :value="name") {{ name }}
           .drilldown-toolbar__right
+            a-button.trace-logs-settings-trigger(size="small" @click="traceLogsSettingsVisible = true")
+              template(#icon)
+                icon-settings
+              | {{ t('drilldown.traces.logsSettingsShortTitle') }}
             a-input.trace-id-input(
               v-model="traceIdDraft"
               allow-clear
@@ -70,6 +74,11 @@ a-layout-content.layout-content
                   @logs-trace-click="openLogsForTrace"
                   @filter-condition-add="onFilterConditionAdd"
                 )
+  TraceLogsSettingsModal(
+    v-model:visible="traceLogsSettingsVisible"
+    :services="uniqueRootServices"
+    @saved="traceLogsMappingsVersion++"
+  )
 </template>
 
 <script setup lang="ts">
@@ -83,12 +92,15 @@ a-layout-content.layout-content
   import { bindSignalTable } from '@/observability/bind-signal-table'
   import { physicalServiceColumn } from '@/observability/semantics'
   import resolveLogsRoles from '@/observability/logs/resolved-roles'
+  import { resolveTraceLogsTarget } from '@/observability/traces/logs-association'
   import type { ColumnType, QueryState } from '@/types/query'
   import { isTracesHomeTab } from '@/observability/types'
   import useDrilldownKeepAlive from '@/observability/use-drilldown-keep-alive'
   import useDrilldownPanelTab from '@/observability/use-drilldown-panel-tab'
   import useSignalTableOptions from '@/observability/use-signal-table-options'
+  import { IconSettings } from '@arco-design/web-vue/es/icon'
   import TraceTable from '@/views/dashboard/traces/components/TraceTable.vue'
+  import TraceLogsSettingsModal from './trace-logs-settings-modal.vue'
   import SignalDatabaseSelect from '../components/signal-database-select.vue'
   import RedChartPanel from './red-chart-panel.vue'
   import TracesBreakdownGrid from './traces-breakdown-grid.vue'
@@ -107,6 +119,8 @@ a-layout-content.layout-content
   const tracesTable = ref(ctx.tracesTable.value)
   const traceIdDraft = ref('')
   const selectedRedMetric = ref<RedMetric>('rate')
+  const traceLogsSettingsVisible = ref(false)
+  const traceLogsMappingsVersion = ref(0)
   const activeTab = useDrilldownPanelTab({
     tab: ctx.tracesTab,
     setTab: ctx.setTracesTab,
@@ -117,7 +131,9 @@ a-layout-content.layout-content
     { key: 'errors' as RedMetric, label: t('drilldown.traces.redErrors'), colorIndex: 4 },
     { key: 'duration' as RedMetric, label: t('drilldown.traces.redDuration'), colorIndex: 3 },
   ])
-
+  const uniqueRootServices = computed(() =>
+    [...new Set(rows.value.map((row) => row.service_name).filter(Boolean))].sort()
+  )
   const depsKey = () =>
     JSON.stringify([
       ctx.refreshKey.value,
@@ -187,6 +203,12 @@ a-layout-content.layout-content
       columns.value = []
       return
     }
+    // Schema bind is async: without it, dotted filter keys (`resource_attributes.service.name`)
+    // would be misread as JSON-chip paths instead of the flattened physical columns
+    // trace tables actually use, producing SQL the server rejects.
+    if (!ctx.signalColumns.value.traces?.length) {
+      return
+    }
     loading.value = true
     try {
       const result = await fetchRootSpanList(ctx, { redMetric: selectedRedMetric.value })
@@ -235,11 +257,18 @@ a-layout-content.layout-content
   // affordance shows even while the logs field map is still being built.
   const logsTraceEnabled = computed(() => {
     const roles = resolveLogsRoles(ctx)
-    return Boolean(roles.traceId || roles.trace_id)
+    const hasOriginalAssociation = Boolean(roles.traceId || roles.trace_id)
+    const mappings = loadDrilldownSettings(ctx.tracesDatabase.value).traces.traceLogsMappings ?? []
+    void traceLogsMappingsVersion.value // eslint-disable-line no-void -- track settings version
+    return hasOriginalAssociation || mappings.length > 0 || Boolean(ctx.logsTable.value)
   })
 
-  const openLogsForTrace = (traceId: string) => {
-    ctx.openLogsForTrace(String(traceId || ''))
+  const openLogsForTrace = async (payload: string | { traceId: string; service?: string }) => {
+    const traceId = typeof payload === 'string' ? payload : payload?.traceId
+    const service = typeof payload === 'string' ? '' : payload?.service || ''
+    const target = await resolveTraceLogsTarget(ctx, service)
+    const enhancedTarget = target && target.source !== 'current' ? target : undefined
+    ctx.openLogsForTrace(String(traceId || ''), enhancedTarget)
   }
 
   const submitTraceId = () => {
