@@ -43,3 +43,43 @@ export default async function requestTableSchema(
     semantic_type: row[2],
   }))
 }
+
+function escapeSqlLiteral(value: string): string {
+  return value.replace(/'/g, "''")
+}
+
+/**
+ * Batched schema fetch: one information_schema.columns query for many tables, grouped
+ * by table name client-side. Tables absent from the result are absent from the object.
+ */
+export async function requestTableSchemas(
+  tables: string[],
+  scope: TableSchemaScope
+): Promise<Record<string, TableSchemaColumn[]>> {
+  if (!tables.length) {
+    return {}
+  }
+  const nameList = tables.map((table) => `'${escapeSqlLiteral(table)}'`).join(', ')
+  const res: any = await axios.post(
+    sqlUrl,
+    makeSqlData(
+      `SELECT table_name, column_name, data_type, semantic_type FROM information_schema.columns WHERE table_catalog = '${escapeSqlLiteral(
+        scope.catalog
+      )}' AND table_schema = '${escapeSqlLiteral(
+        scope.schema
+      )}' AND table_name IN (${nameList}) ORDER BY table_name, column_name`
+    ),
+    addDatabaseParams(scope.db)
+  )
+  const rows: string[][] = res.output[0].records.rows ?? []
+  const byTable: Record<string, TableSchemaColumn[]> = {}
+  rows.forEach((row) => {
+    const [table, name, dataType, semanticType] = row
+    if (!table) {
+      return
+    }
+    byTable[table] = byTable[table] ?? []
+    byTable[table].push({ name, data_type: dataType, semantic_type: semanticType })
+  })
+  return byTable
+}

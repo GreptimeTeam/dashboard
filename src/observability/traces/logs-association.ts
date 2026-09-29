@@ -128,14 +128,25 @@ async function loadLogsCandidates(ctx: DrilldownContext): Promise<LogsCandidate[
     database,
   })
 
+  // Declared non-log tables (metrics, the traces table itself) are rejected without
+  // fetching their schema.
+  const withSemantics = await Promise.all(
+    tables.map(async (table) => ({ table, semantics: await getTableSemantics(table, database) }))
+  )
+  const survivors = withSemantics
+    .filter(({ semantics }) => !semantics?.signalType || semantics.signalType === 'log')
+    .map(({ table }) => table)
+
+  // One batched information_schema.columns query covers every survivor — the per-table
+  // ensureTableSchema calls below are cache hits instead of one query each.
+  if (survivors.length) {
+    await useTableSchemaStore()
+      .ensureTableSchemas(survivors, database)
+      .catch(() => undefined)
+  }
+
   const candidates = await Promise.all(
-    tables.map(async (table): Promise<LogsCandidate | undefined> => {
-      // Declared non-log tables (metrics, the traces table itself) are rejected without
-      // even fetching their schema.
-      const semantics = await getTableSemantics(table, database)
-      if (semantics?.signalType && semantics.signalType !== 'log') {
-        return undefined
-      }
+    survivors.map(async (table): Promise<LogsCandidate | undefined> => {
       let columns: SchemaColumn[]
       try {
         columns = await useTableSchemaStore().ensureTableSchema(table, database)

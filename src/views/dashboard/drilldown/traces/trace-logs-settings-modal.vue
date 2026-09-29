@@ -122,9 +122,18 @@ a-modal.trace-logs-settings(
       // the unified trace-side rule (logs evidence + trace_id), deliberately more
       // flexible than the probe: a service identity is NOT required here, so non-OTel
       // tables can be mapped manually. Declared logs float to the top.
+      const withSemantics = await Promise.all(
+        tables.map(async (table) => ({ table, semantics: await getTableSemantics(table, database) }))
+      )
+      const survivors = withSemantics
+        .filter(({ semantics }) => !semantics?.signalType || semantics.signalType === 'log')
+        .map(({ table }) => table)
+      if (survivors.length) {
+        await tableSchemaStore.ensureTableSchemas(survivors, database).catch(() => undefined)
+      }
       const qualified = await Promise.all(
         tables.map(async (table) => {
-          const semantics = await getTableSemantics(table, database)
+          const semantics = withSemantics.find((item) => item.table === table)?.semantics
           if (semantics?.signalType && semantics.signalType !== 'log') {
             return undefined
           }

@@ -13,9 +13,12 @@ vi.mock('@/api/editor', () => ({
   },
 }))
 
+const ensureTableSchema = vi.fn()
+
 vi.mock('@/store/modules/table-schema', () => ({
   default: vi.fn(() => ({
-    ensureTableSchema: vi.fn(),
+    ensureTableSchema,
+    ensureTableSchemas: vi.fn(async () => ({})),
   })),
 }))
 
@@ -30,7 +33,6 @@ vi.mock('../drilldown-settings', () => ({
   updateTracesDrilldownSettings,
 }))
 
-const ensureTableSchema = vi.fn()
 const runSQL = vi.mocked(editorApi.runSQL)
 const listTables = vi.mocked(listSignalTables)
 const resolveServiceRef = vi.mocked(resolveEntityFilterRef)
@@ -110,6 +112,7 @@ beforeEach(() => {
   getSemantics.mockResolvedValue(undefined)
   vi.mocked(useTableSchemaStore).mockReturnValue({
     ensureTableSchema,
+    ensureTableSchemas: vi.fn(async () => ({})),
   } as any)
 })
 

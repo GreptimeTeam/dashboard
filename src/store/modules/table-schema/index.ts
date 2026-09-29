@@ -1,6 +1,10 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { watch } from 'vue'
-import requestTableSchema, { type TableSchemaColumn, type TableSchemaScope } from '@/api/table-schema-fetch'
+import requestTableSchema, {
+  requestTableSchemas,
+  type TableSchemaColumn,
+  type TableSchemaScope,
+} from '@/api/table-schema-fetch'
 import useAppStore from '../app'
 
 export type { TableSchemaColumn }
@@ -86,6 +90,39 @@ const useTableSchemaStore = defineStore('tableSchema', () => {
     return request
   }
 
+  /**
+   * Batched ensure: one information_schema.columns query covers every missing table;
+   * results land in the same cache, so per-table ensureTableSchema calls afterwards
+   * are cache hits instead of one query each.
+   */
+  const ensureTableSchemas = async (
+    tables: string[],
+    database?: string
+  ): Promise<Record<string, TableSchemaColumn[]>> => {
+    const unique = [...new Set(tables.filter(Boolean))]
+    if (!unique.length) {
+      return {}
+    }
+    const missing = unique.filter((table) => {
+      const key = schemaCacheKey(table, database)
+      return !columnsByKey.value[key] && !inflightByKey.has(key)
+    })
+    if (missing.length) {
+      const scope = resolveTableSchemaScope(database)
+      const byTable = await requestTableSchemas(missing, scope)
+      const next = { ...columnsByKey.value }
+      missing.forEach((table) => {
+        next[schemaCacheKey(table, database)] = byTable[table] ?? []
+      })
+      columnsByKey.value = next
+    }
+    const result: Record<string, TableSchemaColumn[]> = {}
+    unique.forEach((table) => {
+      result[table] = columnsByKey.value[schemaCacheKey(table, database)] ?? []
+    })
+    return result
+  }
+
   watch(
     () => useAppStore().database,
     () => {
@@ -96,6 +133,7 @@ const useTableSchemaStore = defineStore('tableSchema', () => {
   return {
     columnsByKey,
     ensureTableSchema,
+    ensureTableSchemas,
     clearTableSchema,
   }
 })
