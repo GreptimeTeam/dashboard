@@ -3,19 +3,36 @@ import type { ColumnType } from '@/types/query'
 import { TsTypeMapping } from '@/utils/date-time'
 import useTableSchemaStore from '@/store/modules/table-schema'
 import type { DrilldownContext } from '../context'
-import { loadDrilldownSettings, type TraceLogsMapping } from '../drilldown-settings'
+import { loadDrilldownSettings, updateTracesDrilldownSettings } from '../drilldown-settings'
 import { buildLogsFieldMap, type SchemaColumn } from '../logs/field-map'
 import { escapeSqlString, quoteIdent } from '../logs/query-state'
-import { listSignalTables } from '../semantics'
+import { sqlJsonGetStringExpr } from '../logs/json-field-keys'
+import { getTableSemantics, listSignalTables, resolveEntityFilterRef } from '../semantics'
+import { isTraceModel } from '../semantics/otlp'
+import type { EntityColumnRef } from '../semantics/types'
 import type { LogsRowsResult } from '../adapters/logs'
 
-export type TraceLogsSource = 'explicit' | 'service' | 'current'
+/**
+ * Where a trace's logs live: `manual` = user-authored mapping, `auto` = learned from the
+ * service probe, `current` = the Logs page bound table (compatibility fallback — opening
+ * it must not rebind the Logs page).
+ */
+export type TraceLogsTargetSource = 'manual' | 'auto' | 'current'
 
 export interface TraceLogsTarget {
   service: string
   database: string
   table: string
-  source: TraceLogsSource
+  source: TraceLogsTargetSource
+}
+
+export interface TraceLogsResolution {
+  /** Resolved target per requested service; includes `current` fallbacks, excludes ambiguous. */
+  targets: Record<string, TraceLogsTarget>
+  /** Services whose probe matched several tables — left for the user to decide in settings. */
+  ambiguous: Record<string, string[]>
+  /** True when several qualified logs tables compete and mappings carry routing value. */
+  multiTable: boolean
 }
 
 export interface TraceLogsQueryResult extends LogsRowsResult {
@@ -27,67 +44,270 @@ function normalizeName(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
 }
 
-function targetFromMapping(mapping: TraceLogsMapping): TraceLogsTarget {
-  return { ...mapping, source: 'explicit' }
+/** A candidate logs table that can be probed: qualified by schema, with its service identity SQL. */
+interface LogsCandidate {
+  database: string
+  table: string
+  identityExpr: string
+  timeColumn?: string
 }
 
-function isSameTarget(left: TraceLogsTarget, right: TraceLogsTarget): boolean {
-  return left.database === right.database && left.table === right.table
+/** Column names that positively hint a table carries log payloads. */
+const LOGS_PAYLOAD_HINT_COLUMNS = ['body', 'message', 'msg', 'log', 'content', 'text']
+
+/**
+ * Shared probe-candidate qualification — the one rule set for "which tables can take
+ * part in trace → logs association": declared as `log` (or, undeclared, carrying a
+ * log-payload column), not trace-model shaped, filterable by trace (`trace_id`), with
+ * a resolvable service identity. Both the routing probe and the settings picker use it.
+ */
+export interface TraceLogsTableQualification {
+  /**
+   * SQL left-hand for the service identity probe. Absent when the table has no
+   * resolvable service identity — such tables still support manual mapping (row-level
+   * filtering only needs trace_id) but cannot be auto-probed.
+   */
+  identityExpr?: string
+  timeColumn?: string
 }
 
 /**
- * Resolve service-scoped targets without changing the Logs page binding.
- * Explicit mappings win; same-name tables are the lightweight OTel-friendly match;
- * the current Logs binding is the compatibility fallback.
+ * Unified trace-side qualification for "which tables can take part in trace → logs
+ * association": declared as `log` (or, undeclared, carrying a log-payload column), not
+ * trace-model shaped, and filterable by trace (`trace_id`). A resolvable service identity
+ * is optional — required only by the auto probe, never by manual mapping, so non-OTel
+ * tables with a trace_id stay usable.
  */
-export async function resolveTraceLogsTargets(
+export async function qualifyTraceLogsTable(
+  table: string,
+  columns: SchemaColumn[],
+  database: string
+): Promise<TraceLogsTableQualification | undefined> {
+  const names = new Set(columns.map((column) => column.name))
+  if (isTraceModel(names)) {
+    return undefined
+  }
+  const semantics = await getTableSemantics(table, database)
+  if (semantics?.signalType && semantics.signalType !== 'log') {
+    return undefined
+  }
+  // Positive logs evidence: a declared logs table qualifies outright; an undeclared
+  // table must carry a log-payload column — span-shaped tables (trace_id plus a
+  // service identity alone) must not become association targets.
+  const declaredLog = semantics?.signalType === 'log'
+  if (!declaredLog && !LOGS_PAYLOAD_HINT_COLUMNS.some((column) => names.has(column))) {
+    return undefined
+  }
+  if (!names.has('trace_id')) {
+    return undefined
+  }
+  let ref: EntityColumnRef | undefined
+  try {
+    ref = await resolveEntityFilterRef(table, 'service', { signal: 'logs', columns, database })
+  } catch {
+    ref = undefined
+  }
+  let identityExpr: string | undefined
+  if (ref && names.has(ref.column)) {
+    identityExpr = ref.jsonKey ? sqlJsonGetStringExpr(ref.column, ref.jsonKey) : quoteIdent(ref.column)
+  }
+  return {
+    identityExpr,
+    timeColumn: names.has('timestamp') ? 'timestamp' : undefined,
+  }
+}
+
+/**
+ * Qualified candidates for the trace → logs routing, reusing the Logs domain's own
+ * discovery (`listSignalTables`) and identity resolution (`resolveEntityFilterRef`).
+ */
+async function loadLogsCandidates(ctx: DrilldownContext): Promise<LogsCandidate[]> {
+  const database = ctx.logsDatabase.value
+  const tables = await listSignalTables('logs', {
+    include: ctx.logsTable.value ? [ctx.logsTable.value] : [],
+    database,
+  })
+
+  const candidates = await Promise.all(
+    tables.map(async (table): Promise<LogsCandidate | undefined> => {
+      // Declared non-log tables (metrics, the traces table itself) are rejected without
+      // even fetching their schema.
+      const semantics = await getTableSemantics(table, database)
+      if (semantics?.signalType && semantics.signalType !== 'log') {
+        return undefined
+      }
+      let columns: SchemaColumn[]
+      try {
+        columns = await useTableSchemaStore().ensureTableSchema(table, database)
+      } catch {
+        return undefined
+      }
+      const qualified = await qualifyTraceLogsTable(table, columns, database)
+      // Auto-probing routes by service identity — tables without one can only be
+      // mapped manually in settings, they never become probe targets.
+      if (!qualified?.identityExpr) {
+        return undefined
+      }
+      return { database, table, identityExpr: qualified.identityExpr, timeColumn: qualified.timeColumn }
+    })
+  )
+  return candidates.filter((candidate): candidate is LogsCandidate => candidate !== undefined)
+}
+
+/** Data evidence: the table contains this service's logs inside the current time window. */
+async function probeLogsCandidate(ctx: DrilldownContext, candidate: LogsCandidate, service: string): Promise<boolean> {
+  const whereParts = [`${candidate.identityExpr} = '${escapeSqlString(service)}'`]
+  const unixRange = ctx.unixTimeRange()
+  if (candidate.timeColumn && unixRange.length === 2) {
+    whereParts.push(`${quoteIdent(candidate.timeColumn)} >= FROM_UNIXTIME(${unixRange[0]})`)
+    whereParts.push(`${quoteIdent(candidate.timeColumn)} <= FROM_UNIXTIME(${unixRange[1]})`)
+  }
+  const sql = `SELECT 1 FROM ${quoteIdent(candidate.table)} WHERE ${whereParts.join(' AND ')} LIMIT 1`
+  try {
+    const response = await editorApi.runSQL(sql, candidate.database)
+    return (response?.output?.[0]?.records?.rows?.length ?? 0) > 0
+  } catch (error) {
+    console.error(`Failed to probe logs table ${candidate.database}.${candidate.table} for ${service}:`, error)
+    return false
+  }
+}
+
+/**
+ * Persist a probe hit as an auto mapping so later resolutions skip the probe. Manual
+ * entries are never touched, and tombstoned services are never re-learned.
+ */
+function learnTraceLogsMapping(ctx: DrilldownContext, service: string, table: string): void {
+  const database = ctx.logsDatabase.value
+  const settings = loadDrilldownSettings(ctx.tracesDatabase.value)
+  const mappings = settings.traces.traceLogsMappings ?? []
+  if (mappings.some((item) => item.service === service)) {
+    return
+  }
+  if ((settings.traces.ignoredServiceKeys ?? []).includes(service)) {
+    return
+  }
+  updateTracesDrilldownSettings(
+    { traceLogsMappings: [...mappings, { service, database, table, source: 'auto' }] },
+    ctx.tracesDatabase.value
+  )
+}
+
+/**
+ * Resolve service-scoped logs targets for a trace view.
+ *
+ * Mappings exist only to disambiguate **multiple** logs tables. Routing keys are
+ * data-carried identities (service value + time window), never trace_id: manual settings
+ * win, then learned entries, then the service probe over qualified candidates, then the
+ * Logs page bound table as the visible fallback. A probe that matches several tables is
+ * left ambiguous for the user — the system never guesses.
+ */
+export async function resolveTraceLogsForServices(
   ctx: DrilldownContext,
   services: Array<string | undefined>
-): Promise<TraceLogsTarget[]> {
-  const requestedServices = [...new Set(services.map(normalizeName).filter(Boolean))]
-  const settings = loadDrilldownSettings(ctx.tracesDatabase.value)
-  const explicitMappings = settings.traces.traceLogsMappings ?? []
-  const targets: TraceLogsTarget[] = []
+): Promise<TraceLogsResolution> {
+  const requested = [...new Set(services.map(normalizeName).filter(Boolean))]
+  const resolution: TraceLogsResolution = { targets: {}, ambiguous: {}, multiTable: false }
+  if (!requested.length) {
+    return resolution
+  }
 
-  requestedServices.forEach((service) => {
-    const mapping = explicitMappings.find((item) => item.service === service)
+  const settings = loadDrilldownSettings(ctx.tracesDatabase.value)
+  let activeMappings = settings.traces.traceLogsMappings ?? []
+  // Auto entries learned under a different Logs database are stale — drop them.
+  activeMappings = activeMappings.filter((item) => item.source !== 'auto' || item.database === ctx.logsDatabase.value)
+  let pending = requested.filter((service) => !activeMappings.some((item) => item.service === service))
+
+  // Mappings only carry information when several logs tables compete. With a single
+  // qualified table (or none), every mapping that resolves to it is a no-op equivalent
+  // to the Logs page binding — drop it regardless of where it came from, so the settings
+  // stay clean and the Logs field settings decide.
+  const needsCandidates = pending.length > 0 || activeMappings.some((item) => item.database === ctx.logsDatabase.value)
+  let candidates: LogsCandidate[] = []
+  let multiTable = false
+  if (needsCandidates) {
+    candidates = await loadLogsCandidates(ctx)
+    multiTable = candidates.length > 1
+    if (!multiTable) {
+      const onlyTable = candidates.length === 1 ? candidates[0].table : undefined
+      activeMappings = activeMappings.filter((item) => {
+        if (item.source === 'auto') {
+          return false
+        }
+        return !(onlyTable && item.database === ctx.logsDatabase.value && item.table === onlyTable)
+      })
+      pending = pending.filter((service) => !activeMappings.some((item) => item.service === service))
+    }
+  }
+  if (activeMappings.length !== (settings.traces.traceLogsMappings?.length ?? 0)) {
+    updateTracesDrilldownSettings(
+      { traceLogsMappings: activeMappings.length ? activeMappings : [] },
+      ctx.tracesDatabase.value
+    )
+  }
+
+  requested.forEach((service) => {
+    const mapping = activeMappings.find((item) => item.service === service)
     if (mapping) {
-      targets.push(targetFromMapping(mapping))
+      resolution.targets[service] = {
+        service,
+        database: mapping.database,
+        table: mapping.table,
+        source: mapping.source === 'auto' ? 'auto' : 'manual',
+      }
     }
   })
 
-  const unmatchedServices = requestedServices.filter((service) => !targets.some((target) => target.service === service))
-  if (unmatchedServices.length) {
-    const logsTables = await listSignalTables('logs', {
-      include: ctx.logsTable.value ? [ctx.logsTable.value] : [],
-      database: ctx.logsDatabase.value,
-    })
-    unmatchedServices.forEach((service) => {
-      if (logsTables.includes(service)) {
-        targets.push({ service, database: ctx.logsDatabase.value, table: service, source: 'service' })
+  if (multiTable && pending.length) {
+    const probed = await Promise.all(
+      pending.map(async (service) => {
+        const hitTables = (
+          await Promise.all(
+            candidates.map(async (candidate) =>
+              (await probeLogsCandidate(ctx, candidate, service)) ? candidate.table : undefined
+            )
+          )
+        ).filter((table): table is string => table !== undefined)
+        return { service, hitTables }
+      })
+    )
+    probed.forEach(({ service, hitTables }) => {
+      if (hitTables.length === 1) {
+        learnTraceLogsMapping(ctx, service, hitTables[0])
+        resolution.targets[service] = {
+          service,
+          database: ctx.logsDatabase.value,
+          table: hitTables[0],
+          source: 'auto',
+        }
+      } else if (hitTables.length > 1) {
+        resolution.ambiguous[service] = hitTables
       }
     })
   }
 
-  if (!targets.length && ctx.logsTable.value) {
-    targets.push({
-      service: requestedServices[0] || '',
-      database: ctx.logsDatabase.value,
-      table: ctx.logsTable.value,
-      source: 'current',
+  const fallbackTable = ctx.logsTable.value
+  if (fallbackTable) {
+    requested.forEach((service) => {
+      if (!resolution.targets[service] && !resolution.ambiguous[service]) {
+        resolution.targets[service] = {
+          service,
+          database: ctx.logsDatabase.value,
+          table: fallbackTable,
+          source: 'current',
+        }
+      }
     })
   }
-
-  // The same table can match several services (or be configured twice). Keep one opening target.
-  return targets.filter((target, index) => targets.findIndex((item) => isSameTarget(item, target)) === index)
+  resolution.multiTable = multiTable
+  return resolution
 }
 
 export async function resolveTraceLogsTarget(
   ctx: DrilldownContext,
   service?: string
 ): Promise<TraceLogsTarget | undefined> {
-  const [target] = await resolveTraceLogsTargets(ctx, [service])
-  return target
+  const { targets } = await resolveTraceLogsForServices(ctx, [service])
+  return service ? targets[normalizeName(service)] : undefined
 }
 
 function normalizeTsDataType(raw?: string): string | undefined {

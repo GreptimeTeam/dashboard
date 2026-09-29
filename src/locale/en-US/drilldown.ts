@@ -192,6 +192,8 @@ export default {
   'drilldown.traces.traceIdLabel': 'Trace ID:',
   'drilldown.traces.ganttDrawerTitle': 'Trace timeline',
   'drilldown.traces.openLogs': 'View logs',
+  'drilldown.traces.logsMappingAmbiguous': 'Multiple possible log tables — pick one in settings',
+  'drilldown.traces.logsMappingFallbackHint': 'Services without a mapping use the Logs page bound table ({table}).',
   'drilldown.traces.back': 'Back',
   'drilldown.traces.unknownOperation': 'Unknown operation',
   'drilldown.traces.servicesFilter': 'Services:',
@@ -200,12 +202,7 @@ export default {
   'drilldown.traces.logsSettingsTitle': 'Configure trace logs',
   'drilldown.traces.logsSettingsShortTitle': 'Trace logs',
   'drilldown.traces.logsSettingsDescription': 'Map each service to the logs database and table that contain its logs.',
-  'drilldown.traces.logsSettingsModelHint':
-    'Trace uses the standard logs trace_id model. Field roles remain controlled by Logs settings.',
   'drilldown.traces.logsSettingsService': 'Service',
-  'drilldown.traces.logsSettingsServicePlaceholder': 'Select or enter service',
-  'drilldown.traces.logsSettingsAdd': 'Add mapping',
-  'drilldown.traces.logsSettingsRemove': 'Remove',
   'drilldown.traces.nonModelTableHint':
     'No trace_id column was found. The table can still be used in Logs settings, but trace association may return no rows.',
 }

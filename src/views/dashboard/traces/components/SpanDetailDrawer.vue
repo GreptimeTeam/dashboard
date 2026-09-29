@@ -20,8 +20,8 @@ a-drawer(
         .span-name {{ span?.span_name }}
         a-typography-text.trace-id-value(copyable :copy-text="span?.span_id") {{ span?.span_id }}
       a-button.panel-view-logs(v-if="logsTraceEnabled" size="mini" @click="$emit('viewLogs', span)")
+        span {{ t('drilldown.traces.openLogs') }}
         span.panel-view-logs-target(v-if="logsTargetLabel" :title="logsTargetLabel") {{ logsTargetLabel }}
-        | {{ t('drilldown.traces.openLogs') }}
     .summary-container
       .summary-item
         span.summary-label Service
@@ -59,8 +59,8 @@ a-drawer(
     .panel-header-main
       span.panel-title Span Attributes
       a-button.panel-view-logs(v-if="logsTraceEnabled" size="mini" @click="$emit('viewLogs', span)")
+        span {{ t('drilldown.traces.openLogs') }}
         span.panel-view-logs-target(v-if="logsTargetLabel" :title="logsTargetLabel") {{ logsTargetLabel }}
-        | {{ t('drilldown.traces.openLogs') }}
     a-button(type="text" size="mini" @click="updateVisible(false)")
       template(#icon)
         icon-close
@@ -268,14 +268,15 @@ a-drawer(
 
   .panel-view-logs {
     flex-shrink: 0;
-    gap: var(--gpt-gap-xs);
+    gap: 8px;
   }
 
   .panel-view-logs-target {
     overflow: hidden;
     max-width: 160px;
-    color: var(--gpt-text-secondary);
+    color: var(--gpt-text-muted);
     font-family: var(--font-mono, monospace);
+    font-size: var(--gpt-font-sm);
     text-overflow: ellipsis;
     white-space: nowrap;
   }

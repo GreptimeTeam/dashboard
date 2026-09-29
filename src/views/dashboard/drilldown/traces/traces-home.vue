@@ -66,17 +66,22 @@ a-layout-content.layout-content
                 TraceTable.traces-embed-table(
                   embed-mode
                   :logs-trace-enabled="logsTraceEnabled"
+                  :logs-targets="logsTargets"
+                  :logs-ambiguous="logsAmbiguous"
                   :data="rows"
                   :columns="columns"
                   :loading="loading"
                   :query-state="tableQueryState"
                   @trace-click="openTrace"
                   @logs-trace-click="openLogsForTrace"
+                  @open-logs-settings="traceLogsSettingsVisible = true"
                   @filter-condition-add="onFilterConditionAdd"
                 )
   TraceLogsSettingsModal(
     v-model:visible="traceLogsSettingsVisible"
-    :services="uniqueRootServices"
+    :targets="logsTargets"
+    :ambiguous="logsAmbiguous"
+    :multi-table="logsMultiTable"
     @saved="traceLogsMappingsVersion++"
   )
 </template>
@@ -86,13 +91,18 @@ a-layout-content.layout-content
   import { useI18n } from 'vue-i18n'
   import { useDrilldownContext } from '@/observability/context'
   import { loadDrilldownSettings, saveDrilldownSettings } from '@/observability/drilldown-settings'
-  import { fetchRootSpanList, type RedMetric, type RootSpanRow } from '@/observability/adapters/traces'
+  import {
+    fetchRootSpanList,
+    fetchTraceServices,
+    type RedMetric,
+    type RootSpanRow,
+  } from '@/observability/adapters/traces'
   import { isDrilldownFilterOp, resolveFieldMapColumn } from '@/observability/filters'
   import { buildDefaultTracesFieldMap } from '@/observability/traces/field-map'
   import { bindSignalTable } from '@/observability/bind-signal-table'
   import { physicalServiceColumn } from '@/observability/semantics'
   import resolveLogsRoles from '@/observability/logs/resolved-roles'
-  import { resolveTraceLogsTarget } from '@/observability/traces/logs-association'
+  import { resolveTraceLogsForServices, type TraceLogsTarget } from '@/observability/traces/logs-association'
   import type { ColumnType, QueryState } from '@/types/query'
   import { isTracesHomeTab } from '@/observability/types'
   import useDrilldownKeepAlive from '@/observability/use-drilldown-keep-alive'
@@ -116,6 +126,10 @@ a-layout-content.layout-content
   const loading = ref(false)
   const rows = ref<RootSpanRow[]>([])
   const columns = ref<ColumnType[]>([])
+  /** Pre-resolved trace → logs routing per service; filled after rows load, consumed at click. */
+  const logsTargets = ref<Record<string, TraceLogsTarget>>({})
+  const logsAmbiguous = ref<Record<string, string[]>>({})
+  const logsMultiTable = ref(false)
   const tracesTable = ref(ctx.tracesTable.value)
   const traceIdDraft = ref('')
   const selectedRedMetric = ref<RedMetric>('rate')
@@ -131,9 +145,6 @@ a-layout-content.layout-content
     { key: 'errors' as RedMetric, label: t('drilldown.traces.redErrors'), colorIndex: 4 },
     { key: 'duration' as RedMetric, label: t('drilldown.traces.redDuration'), colorIndex: 3 },
   ])
-  const uniqueRootServices = computed(() =>
-    [...new Set(rows.value.map((row) => row.service_name).filter(Boolean))].sort()
-  )
   const depsKey = () =>
     JSON.stringify([
       ctx.refreshKey.value,
@@ -148,6 +159,20 @@ a-layout-content.layout-content
   const keepAlive = useDrilldownKeepAlive({ deps: depsKey })
   const { isActive: overviewActive } = keepAlive
   const { tableOptions, loadingTables, loadTables } = useSignalTableOptions('traces', overviewActive)
+
+  /**
+   * Route every service once per table load; the click itself is a memory lookup. The
+   * service universe is the whole current time window (one DISTINCT query), not just the
+   * loaded page — so auto mappings show up in settings for every service at once.
+   */
+  const resolveServiceTargets = async () => {
+    const pageServices = rows.value.map((row) => row.service_name).filter(Boolean)
+    const windowServices = await fetchTraceServices(ctx)
+    const resolution = await resolveTraceLogsForServices(ctx, [...windowServices, ...pageServices])
+    logsTargets.value = resolution.targets
+    logsAmbiguous.value = resolution.ambiguous
+    logsMultiTable.value = resolution.multiTable
+  }
 
   const tracesTabTitle = computed(() => {
     if (selectedRedMetric.value === 'errors') {
@@ -214,6 +239,7 @@ a-layout-content.layout-content
       const result = await fetchRootSpanList(ctx, { redMetric: selectedRedMetric.value })
       rows.value = result.rows
       columns.value = result.columns
+      await resolveServiceTargets()
     } finally {
       loading.value = false
     }
@@ -263,11 +289,14 @@ a-layout-content.layout-content
     return hasOriginalAssociation || mappings.length > 0 || Boolean(ctx.logsTable.value)
   })
 
-  const openLogsForTrace = async (payload: string | { traceId: string; service?: string }) => {
+  const openLogsForTrace = (payload: string | { traceId: string; service?: string }) => {
     const traceId = typeof payload === 'string' ? payload : payload?.traceId
     const service = typeof payload === 'string' ? '' : payload?.service || ''
-    const target = await resolveTraceLogsTarget(ctx, service)
-    const enhancedTarget = target && target.source !== 'current' ? target : undefined
+    // Pre-resolved at table load (resolveServiceTargets); ambiguous/unknown services fall
+    // back to the Logs page binding, with the ambiguity surfaced in the menu.
+    const target = service ? logsTargets.value[service] : undefined
+    const enhancedTarget =
+      target && target.source !== 'current' ? { database: target.database, table: target.table } : undefined
     ctx.openLogsForTrace(String(traceId || ''), enhancedTarget)
   }
 

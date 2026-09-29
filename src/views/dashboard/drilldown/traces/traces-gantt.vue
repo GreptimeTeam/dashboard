@@ -48,7 +48,7 @@
   import SpanDetailDrawer from '@/views/dashboard/traces/components/SpanDetailDrawer.vue'
   import { buildSpanTree, type Span } from '@/views/dashboard/traces/utils'
   import resolveLogsRoles from '@/observability/logs/resolved-roles'
-  import { resolveTraceLogsTarget } from '@/observability/traces/logs-association'
+  import { resolveTraceLogsForServices, type TraceLogsResolution } from '@/observability/traces/logs-association'
 
   const { t } = useI18n()
   const ctx = useDrilldownContext()
@@ -106,14 +106,16 @@
     selectedServices.value = selectedServices.value.filter((service) => services.includes(service))
   })
 
+  const logsResolution = ref<TraceLogsResolution>({ targets: {}, ambiguous: {} })
   const serviceTargetLabels = ref<Record<string, string>>({})
 
+  /** Route every distinct service once per gantt load; the click itself is a memory lookup. */
   const resolveTargetLabels = async () => {
-    const services = uniqueServices.value
-    const targets = await Promise.all(services.map((service) => resolveTraceLogsTarget(ctx, service)))
+    const resolution = await resolveTraceLogsForServices(ctx, uniqueServices.value)
+    logsResolution.value = resolution
     const labels: Record<string, string> = {}
-    services.forEach((service, index) => {
-      const target = targets[index]
+    uniqueServices.value.forEach((service) => {
+      const target = resolution.targets[service]
       if (target) {
         labels[service] = `${target.database}.${target.table}`
       }
@@ -163,14 +165,16 @@
     return hasOriginalAssociation || mappings.length > 0 || Boolean(ctx.logsTable.value)
   })
 
-  const openSpanLogs = async (span: Span) => {
+  const openSpanLogs = (span: Span) => {
     const traceId = String(span.trace_id || ctx.focusTraceId.value || '')
     if (!traceId) {
       return
     }
-    const service = span.service_name || ''
-    const target = await resolveTraceLogsTarget(ctx, service)
-    const enhancedTarget = target && target.source !== 'current' ? target : undefined
+    // Pre-resolved at gantt load (resolveTargetLabels); unknown services fall back to the
+    // Logs page binding.
+    const target = span.service_name ? logsResolution.value.targets[span.service_name] : undefined
+    const enhancedTarget =
+      target && target.source !== 'current' ? { database: target.database, table: target.table } : undefined
     ctx.openLogsForTrace(traceId, enhancedTarget)
   }
 </script>

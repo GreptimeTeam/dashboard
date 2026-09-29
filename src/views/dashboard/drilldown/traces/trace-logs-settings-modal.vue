@@ -13,52 +13,44 @@ a-modal.trace-logs-settings(
   p.trace-logs-settings__intro
     | {{ t('drilldown.traces.logsSettingsDescription') }}
 
-  a-alert.trace-logs-settings__hint(type="info" show-icon)
-    | {{ t('drilldown.traces.logsSettingsModelHint') }}
+  p.trace-logs-settings__fallback(v-if="fallbackTable")
+    | {{ t('drilldown.traces.logsMappingFallbackHint', { table: fallbackTable }) }}
 
-  a-form(layout="vertical" @submit.prevent)
+  a-form.trace-logs-settings__form(
+    v-if="mappings.length"
+    layout="horizontal"
+    :auto-label-width="true"
+    @submit.prevent
+  )
     .trace-logs-settings__row(v-for="(mapping, index) in mappings" :key="index")
-      a-form-item(:label="t('drilldown.traces.logsSettingsService')")
-        a-select.trace-logs-settings__input(
-          v-model="mapping.service"
-          allow-search
-          allow-create
-          :placeholder="t('drilldown.traces.logsSettingsServicePlaceholder')"
-        )
-          a-option(v-for="service in serviceOptions" :key="service" :value="service") {{ service }}
+      .trace-logs-settings__service-line
+        span.trace-logs-settings__service-label {{ t('drilldown.traces.logsSettingsService') }}
+        span.trace-logs-settings__service {{ mapping.service }}
 
-      a-form-item(:label="t('drilldown.logs.databaseLabel')")
-        a-select.trace-logs-settings__input(
-          v-model="mapping.database"
-          allow-search
-          :options="databaseOptions"
-          :placeholder="t('dashboard.database')"
-          @popup-visible-change="onDatabasePopup"
-          @change="onDatabaseChange(index)"
-        )
+      .trace-logs-settings__pair
+        a-form-item(:label="t('drilldown.logs.databaseLabel')")
+          a-select.trace-logs-settings__input(
+            v-model="mapping.database"
+            allow-search
+            :options="databaseOptions"
+            :placeholder="t('dashboard.database')"
+            @popup-visible-change="onDatabasePopup"
+            @change="onDatabaseChange(index)"
+          )
 
-      a-form-item(:label="t('drilldown.logs.tableLabel')")
-        a-select.trace-logs-settings__input(
-          v-model="mapping.table"
-          allow-search
-          allow-create
-          :loading="loadingTables[index]"
-          :placeholder="t('drilldown.logs.tablePlaceholder')"
-          @change="onTableChange(index)"
-        )
-          a-option(v-for="table in tableOptions[index]" :key="table" :value="table") {{ table }}
-
-      a-button.trace-logs-settings__remove(
-        type="text"
-        status="danger"
-        size="small"
-        @click="removeMapping(index)"
-      ) {{ t('drilldown.traces.logsSettingsRemove') }}
+        a-form-item(:label="t('drilldown.logs.tableLabel')")
+          a-select.trace-logs-settings__input(
+            v-model="mapping.table"
+            allow-search
+            allow-clear
+            :loading="loadingTables[index]"
+            :placeholder="t('drilldown.logs.tablePlaceholder')"
+            @change="onTableChange(index)"
+          )
+            a-option(v-for="table in tableOptions[index]" :key="table" :value="table") {{ table }}
 
       a-alert.trace-logs-settings__warning(v-if="nonModelTables[index]" type="warning" show-icon)
         | {{ t('drilldown.traces.nonModelTableHint') }}
-
-  a-button.trace-logs-settings__add(type="dashed" long @click="addMapping") {{ t('drilldown.traces.logsSettingsAdd') }}
 </template>
 
 <script setup lang="ts">
@@ -72,12 +64,17 @@ a-modal.trace-logs-settings(
     updateTracesDrilldownSettings,
     type TraceLogsMapping,
   } from '@/observability/drilldown-settings'
-  import { listSignalTables } from '@/observability/semantics'
+  import { getTableSemantics, listSignalTables } from '@/observability/semantics'
+  import { qualifyTraceLogsTable, type TraceLogsTarget } from '@/observability/traces/logs-association'
   import useTableSchemaStore from '@/store/modules/table-schema'
 
   const props = defineProps<{
     visible: boolean
-    services?: string[]
+    /** Auto-extracted routing results from the traces view (probe/learned/fallback). */
+    targets?: Record<string, TraceLogsTarget>
+    ambiguous?: Record<string, string[]>
+    /** True when several qualified logs tables compete — rows are shown and editable. */
+    multiTable?: boolean
   }>()
 
   const emit = defineEmits<{
@@ -92,9 +89,13 @@ a-modal.trace-logs-settings(
   const tableSchemaStore = useTableSchemaStore()
 
   const mappings = ref<TraceLogsMapping[]>([])
+  /** Snapshot at hydrate time — detects user edits (edited rows are promoted to manual). */
+  const hydratedSnapshot = ref<TraceLogsMapping[]>([])
   const tableOptions = ref<Record<number, string[]>>({})
   const loadingTables = ref<Record<number, boolean>>({})
   const nonModelTables = ref<Record<number, boolean>>({})
+
+  const fallbackTable = computed(() => ctx.logsTable.value)
 
   const databaseOptions = computed(() => {
     const current = ctx.logsDatabase.value
@@ -104,7 +105,6 @@ a-modal.trace-logs-settings(
     }
     return names.map((name) => ({ label: name, value: name }))
   })
-  const serviceOptions = computed(() => [...new Set(props.services ?? [])].filter(Boolean).sort())
 
   async function loadTableOptions(index: number) {
     const database = mappings.value[index]?.database || ctx.logsDatabase.value
@@ -114,10 +114,37 @@ a-modal.trace-logs-settings(
     }
     loadingTables.value[index] = true
     try {
-      tableOptions.value[index] = await listSignalTables('logs', {
+      const tables = await listSignalTables('logs', {
         database,
         include: mappings.value[index]?.table ? [mappings.value[index].table] : [],
       })
+      // The picker lists every table that can take part in trace → logs association —
+      // the unified trace-side rule (logs evidence + trace_id), deliberately more
+      // flexible than the probe: a service identity is NOT required here, so non-OTel
+      // tables can be mapped manually. Declared logs float to the top.
+      const qualified = await Promise.all(
+        tables.map(async (table) => {
+          const semantics = await getTableSemantics(table, database)
+          if (semantics?.signalType && semantics.signalType !== 'log') {
+            return undefined
+          }
+          let columns
+          try {
+            columns = await tableSchemaStore.ensureTableSchema(table, database)
+          } catch {
+            return undefined
+          }
+          const match = await qualifyTraceLogsTable(table, columns, database)
+          if (!match) {
+            return undefined
+          }
+          return { table, declared: semantics?.signalType === 'log' }
+        })
+      )
+      tableOptions.value[index] = qualified
+        .filter((item): item is { table: string; declared: boolean } => item !== undefined)
+        .sort((a, b) => Number(b.declared) - Number(a.declared))
+        .map((item) => item.table)
     } catch (error) {
       console.error('Failed to load trace logs table options', error)
       tableOptions.value[index] = []
@@ -143,29 +170,34 @@ a-modal.trace-logs-settings(
 
   function hydrate() {
     const saved = loadDrilldownSettings(ctx.tracesDatabase.value).traces.traceLogsMappings ?? []
-    mappings.value = saved.map((mapping) => ({ ...mapping }))
+    hydratedSnapshot.value = saved.map((mapping) => ({ ...mapping }))
     tableOptions.value = {}
     loadingTables.value = {}
     nonModelTables.value = {}
+    if (!props.multiTable) {
+      // 单表：映射没有路由价值，无行可编辑，关联按 Logs 页绑定表 / fields 解析走。
+      mappings.value = []
+      return
+    }
+    // 多表：行 = 自动提取的 service 全集，探测/学习结果作为初始值预填；
+    // 歧义或未命中的 service 留空，由用户指定。
+    const services = [
+      ...new Set([...Object.keys(props.targets ?? {}), ...saved.map((mapping) => mapping.service)]),
+    ].sort()
+    mappings.value = services.map((service): TraceLogsMapping => {
+      const stored = saved.find((item) => item.service === service)
+      if (stored) {
+        return { ...stored }
+      }
+      const target = props.targets?.[service]
+      if (target && target.source !== 'current') {
+        return { service, database: target.database, table: target.table, source: 'auto' }
+      }
+      return { service, database: ctx.logsDatabase.value, table: '', source: 'auto' }
+    })
     mappings.value.forEach((_, index) => {
       loadTableOptions(index)
     })
-  }
-
-  function addMapping() {
-    const used = new Set(mappings.value.map((mapping) => mapping.service))
-    const service = (props.services ?? []).find((item) => item && !used.has(item)) || ''
-    mappings.value.push({
-      service,
-      database: ctx.logsDatabase.value,
-      table: '',
-    })
-    const index = mappings.value.length - 1
-    loadTableOptions(index)
-  }
-
-  function removeMapping(index: number) {
-    mappings.value.splice(index, 1)
   }
 
   function onDatabaseChange(index: number) {
@@ -191,11 +223,17 @@ a-modal.trace-logs-settings(
 
   function save() {
     const next = mappings.value
-      .map((mapping) => ({
-        service: mapping.service.trim(),
-        database: mapping.database.trim(),
-        table: mapping.table.trim(),
-      }))
+      .map((mapping): TraceLogsMapping => {
+        const service = mapping.service.trim()
+        const database = mapping.database.trim()
+        const table = mapping.table.trim()
+        // Edited rows become user-authored; untouched auto rows stay auto.
+        const original = hydratedSnapshot.value.find((item) => item.service === service)
+        const edited =
+          !original || original.service !== service || original.database !== database || original.table !== table
+        const source = edited ? 'manual' : original?.source ?? 'manual'
+        return { service, database, table, source }
+      })
       .filter((mapping, index, all) => {
         return (
           mapping.service &&
@@ -204,14 +242,26 @@ a-modal.trace-logs-settings(
           all.findIndex((item) => item.service === mapping.service) === index
         )
       })
-    updateTracesDrilldownSettings({ traceLogsMappings: next }, ctx.tracesDatabase.value)
+    // Deleted auto entries are tombstoned so the probe does not re-learn them.
+    const ignored = new Set(loadDrilldownSettings(ctx.tracesDatabase.value).traces.ignoredServiceKeys ?? [])
+    hydratedSnapshot.value.forEach((item) => {
+      if (item.source === 'auto' && !next.some((mapping) => mapping.service === item.service)) {
+        ignored.add(item.service)
+      }
+    })
+    updateTracesDrilldownSettings(
+      { traceLogsMappings: next, ignoredServiceKeys: [...ignored] },
+      ctx.tracesDatabase.value
+    )
     emit('saved', next)
     emit('update:visible', false)
   }
 
+  // Re-hydrate while the modal is open: the routing results (targets / multiTable)
+  // arrive asynchronously after page load, and mapping rows must appear once they land.
   watch(
-    () => props.visible,
-    (visible) => {
+    () => [props.visible, props.multiTable, props.targets, props.ambiguous],
+    ([visible]) => {
       if (visible) {
         hydrate()
       }
@@ -222,23 +272,46 @@ a-modal.trace-logs-settings(
 
 <style scoped lang="less">
   .trace-logs-settings__intro {
-    margin-bottom: var(--gpt-gap-md);
+    margin-bottom: 0;
     color: var(--gpt-text-secondary);
-  }
-
-  .trace-logs-settings__hint {
-    margin-bottom: var(--gpt-gap-lg);
+    margin-top: 0;
   }
 
   .trace-logs-settings__row {
-    display: grid;
-    grid-template-columns: minmax(140px, 1fr) minmax(140px, 1fr) minmax(180px, 1.2fr) auto;
+    display: flex;
+    flex-direction: column;
     gap: var(--gpt-gap-sm);
-    align-items: end;
     margin-bottom: var(--gpt-gap-sm);
     padding: var(--gpt-gap-sm);
     border: 1px solid var(--gpt-border-default);
     border-radius: var(--gpt-radius-md);
+  }
+
+  .trace-logs-settings__service-line {
+    display: flex;
+    min-width: 0;
+    align-items: baseline;
+    gap: var(--gpt-gap-sm);
+  }
+
+  .trace-logs-settings__service-label {
+    flex-shrink: 0;
+    color: var(--gpt-text-secondary);
+    font-size: var(--gpt-font-sm);
+  }
+
+  .trace-logs-settings__service {
+    overflow: hidden;
+    color: var(--gpt-text-primary);
+    font-family: var(--font-mono, monospace);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .trace-logs-settings__pair {
+    display: grid;
+    grid-template-columns: minmax(140px, 1fr) minmax(180px, 1.4fr);
+    gap: var(--gpt-gap-sm);
   }
 
   .trace-logs-settings__row :deep(.arco-form-item) {
@@ -255,5 +328,17 @@ a-modal.trace-logs-settings(
 
   .trace-logs-settings__add {
     margin-top: var(--gpt-gap-md);
+  }
+
+  .trace-logs-settings__fallback {
+    margin: 0 0 var(--gpt-gap-md);
+    color: var(--gpt-text-secondary);
+  }
+
+  // 映射行可能很多：表单区限高内部滚动，标题/说明/添加按钮保持可见。
+  // 直接用 slot 内容上的类名（与 __intro 同机制），scoped 必然命中。
+  .trace-logs-settings__form {
+    max-height: 60vh;
+    overflow-y: auto;
   }
 </style>

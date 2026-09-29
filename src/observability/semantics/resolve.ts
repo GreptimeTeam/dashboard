@@ -260,8 +260,12 @@ function firstPresent(candidates: string[], columns?: ReadonlySet<string>): Enti
     candidates.find((candidate) => {
       const dot = candidate.indexOf('.')
       return dot > 0 && columns.has(candidate.slice(0, dot))
-    }) ??
-    candidates[0]
+    })
+  if (!match) {
+    // The schema is known and none of the candidates exists: a guessed column would only
+    // produce SQL the server rejects ("No field named …") — report no identity instead.
+    return undefined
+  }
   return toColumnRef(match, columns)
 }
 

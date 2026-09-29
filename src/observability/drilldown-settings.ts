@@ -26,12 +26,16 @@ export interface TraceLogsMapping {
   service: string
   database: string
   table: string
+  /** `manual` = user-authored; `auto` = learned from the service probe. Absent = manual (legacy). */
+  source?: 'manual' | 'auto'
 }
 
 export interface TracesDrilldownSettings {
   table?: string
   /** Service-scoped target used by Trace → Logs. Field roles stay owned by Logs settings. */
   traceLogsMappings?: TraceLogsMapping[]
+  /** Services whose auto-learned mapping the user deleted — never learned again. */
+  ignoredServiceKeys?: string[]
 }
 
 export interface DrilldownSettings {
@@ -58,10 +62,25 @@ function parseTraceLogsMappings(raw: unknown): TraceLogsMapping[] | undefined {
       const service = typeof record.service === 'string' ? record.service.trim() : ''
       const database = typeof record.database === 'string' ? record.database.trim() : ''
       const table = typeof record.table === 'string' ? record.table.trim() : ''
-      return service && database && table ? { service, database, table } : null
+      const source = record.source === 'auto' || record.source === 'manual' ? record.source : undefined
+      return service && database && table ? { service, database, table, source } : null
     })
     .filter((item): item is TraceLogsMapping => item !== null)
   return mappings.length ? mappings : undefined
+}
+
+function parseIgnoredServiceKeys(raw: unknown): string[] | undefined {
+  if (!Array.isArray(raw)) {
+    return undefined
+  }
+  const keys = [
+    ...new Set(
+      raw
+        .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+        .map((item) => item.trim())
+    ),
+  ]
+  return keys.length ? keys : undefined
 }
 
 function emptySettings(): DrilldownSettings {
@@ -101,6 +120,7 @@ export function loadDrilldownSettings(database?: string): DrilldownSettings {
       traces: {
         table: typeof traces.table === 'string' ? traces.table : undefined,
         traceLogsMappings: parseTraceLogsMappings(traces.traceLogsMappings),
+        ignoredServiceKeys: parseIgnoredServiceKeys(traces.ignoredServiceKeys),
       },
     }
   } catch {
@@ -160,6 +180,9 @@ export function updateTracesDrilldownSettings(
       traceLogsMappings: Object.prototype.hasOwnProperty.call(patch, 'traceLogsMappings')
         ? parseTraceLogsMappings(patch.traceLogsMappings)
         : current.traces.traceLogsMappings,
+      ignoredServiceKeys: Object.prototype.hasOwnProperty.call(patch, 'ignoredServiceKeys')
+        ? parseIgnoredServiceKeys(patch.ignoredServiceKeys)
+        : current.traces.ignoredServiceKeys,
     },
   }
   saveDrilldownSettings(next, database)

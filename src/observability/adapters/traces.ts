@@ -454,3 +454,38 @@ ORDER BY ${quoteIdent(tsCol)} ASC`
     return []
   }
 }
+
+/**
+ * Every service seen in the current time window — the routing key universe for
+ * trace → logs auto-association, wider than one page of root spans.
+ */
+export async function fetchTraceServices(ctx: DrilldownContext, options?: { limit?: number }): Promise<string[]> {
+  const tableName = ctx.tracesTable.value
+  if (!tableName) {
+    return []
+  }
+
+  const serviceCol = fieldMap(ctx).service || 'service_name'
+  const tsCol = timeColumn(ctx)
+  const unixRange = ctx.unixTimeRange()
+  const where =
+    unixRange.length === 2
+      ? `WHERE ${quoteIdent(tsCol)} >= FROM_UNIXTIME(${unixRange[0]}) AND ${quoteIdent(tsCol)} <= FROM_UNIXTIME(${
+          unixRange[1]
+        })`
+      : ''
+  const sql = `SELECT DISTINCT ${quoteIdent(serviceCol)}
+FROM ${quoteIdent(tableName)}
+${where}
+ORDER BY 1
+LIMIT ${options?.limit ?? 200}`
+
+  try {
+    const response = await editorApi.runSQL(sql, ctx.tracesDatabase.value)
+    const rows = response?.output?.[0]?.records?.rows ?? []
+    return rows.map((row) => String(row?.[0] ?? '').trim()).filter(Boolean)
+  } catch (error) {
+    console.error('Failed to fetch trace services:', error)
+    return []
+  }
+}

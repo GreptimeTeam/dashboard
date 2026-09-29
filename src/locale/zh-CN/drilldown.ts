@@ -191,6 +191,8 @@ export default {
   'drilldown.traces.traceIdLabel': 'Trace ID：',
   'drilldown.traces.ganttDrawerTitle': 'Trace 时间线',
   'drilldown.traces.openLogs': '查看日志',
+  'drilldown.traces.logsMappingAmbiguous': '发现多张可能关联的日志表，请在设置中指定',
+  'drilldown.traces.logsMappingFallbackHint': '未配置映射的 service 将使用 Logs 页当前绑定表（{table}）。',
   'drilldown.traces.back': '返回',
   'drilldown.traces.unknownOperation': '未知操作',
   'drilldown.traces.servicesFilter': 'Services：',
@@ -199,11 +201,7 @@ export default {
   'drilldown.traces.logsSettingsTitle': '配置 Trace 日志关联',
   'drilldown.traces.logsSettingsShortTitle': 'Trace 日志',
   'drilldown.traces.logsSettingsDescription': '为每个 service 配置其日志所在的日志数据库和数据表。',
-  'drilldown.traces.logsSettingsModelHint': 'Trace 关联使用标准日志模型的 trace_id。字段角色仍由 Logs 设置管理。',
   'drilldown.traces.logsSettingsService': 'Service',
-  'drilldown.traces.logsSettingsServicePlaceholder': '选择或输入 service',
-  'drilldown.traces.logsSettingsAdd': '添加映射',
-  'drilldown.traces.logsSettingsRemove': '移除',
   'drilldown.traces.nonModelTableHint':
     '未找到 trace_id 列。该表仍可在 Logs 设置中使用，但 Trace 关联可能查询不到数据。',
 }
