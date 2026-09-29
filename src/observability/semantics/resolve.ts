@@ -371,8 +371,8 @@ function uniquePreserveOrder(names: string[]): string[] {
  */
 async function listAllTables(database?: string): Promise<string[]> {
   const db = database ?? currentDatabase()
-  const { useDataBaseStore } = await import('@/store/modules/database')
-  return useDataBaseStore().getTableNames(db)
+  const storeModule = await import('@/store/modules/database')
+  return storeModule.default().getTableNames(db)
 }
 
 /**

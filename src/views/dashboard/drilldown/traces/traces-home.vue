@@ -77,13 +77,7 @@ a-layout-content.layout-content
                   @open-logs-settings="traceLogsSettingsVisible = true"
                   @filter-condition-add="onFilterConditionAdd"
                 )
-  TraceLogsSettingsModal(
-    v-model:visible="traceLogsSettingsVisible"
-    :targets="logsTargets"
-    :ambiguous="logsAmbiguous"
-    :multi-table="logsMultiTable"
-    @saved="traceLogsMappingsVersion++"
-  )
+  TraceLogsSettingsModal(v-model:visible="traceLogsSettingsVisible" @saved="traceLogsMappingsVersion++")
 </template>
 
 <script setup lang="ts">

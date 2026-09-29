@@ -65,16 +65,16 @@ a-modal.trace-logs-settings(
     type TraceLogsMapping,
   } from '@/observability/drilldown-settings'
   import { getTableSemantics, listSignalTables } from '@/observability/semantics'
-  import { qualifyTraceLogsTable, type TraceLogsTarget } from '@/observability/traces/logs-association'
+  import {
+    qualifyTraceLogsTable,
+    resolveTraceLogsForServices,
+    type TraceLogsTarget,
+  } from '@/observability/traces/logs-association'
+  import { fetchTraceServices } from '@/observability/adapters/traces'
   import useTableSchemaStore from '@/store/modules/table-schema'
 
   const props = defineProps<{
     visible: boolean
-    /** Auto-extracted routing results from the traces view (probe/learned/fallback). */
-    targets?: Record<string, TraceLogsTarget>
-    ambiguous?: Record<string, string[]>
-    /** True when several qualified logs tables compete — rows are shown and editable. */
-    multiTable?: boolean
   }>()
 
   const emit = defineEmits<{
@@ -94,6 +94,8 @@ a-modal.trace-logs-settings(
   const tableOptions = ref<Record<number, string[]>>({})
   const loadingTables = ref<Record<number, boolean>>({})
   const nonModelTables = ref<Record<number, boolean>>({})
+  const multiTable = ref(false)
+  const hydrating = ref(false)
 
   const fallbackTable = computed(() => ctx.logsTable.value)
 
@@ -177,28 +179,38 @@ a-modal.trace-logs-settings(
     }
   }
 
-  function hydrate() {
+  /**
+   * Self-sufficient hydration: the modal resolves its own routing (service universe +
+   * probe/learned/fallback) on open. Schema batches, table lists and probe results are
+   * all session-cached, so the cost is negligible — and no props race can hide rows.
+   */
+  async function hydrate() {
     const saved = loadDrilldownSettings(ctx.tracesDatabase.value).traces.traceLogsMappings ?? []
     hydratedSnapshot.value = saved.map((mapping) => ({ ...mapping }))
     tableOptions.value = {}
     loadingTables.value = {}
     nonModelTables.value = {}
-    if (!props.multiTable) {
+
+    const services = await fetchTraceServices(ctx)
+    const resolution = await resolveTraceLogsForServices(ctx, services)
+    multiTable.value = resolution.multiTable
+
+    if (!resolution.multiTable) {
       // 单表：映射没有路由价值，无行可编辑，关联按 Logs 页绑定表 / fields 解析走。
       mappings.value = []
       return
     }
     // 多表：行 = 自动提取的 service 全集，探测/学习结果作为初始值预填；
-    // 歧义或未命中的 service 留空，由用户指定。
-    const services = [
-      ...new Set([...Object.keys(props.targets ?? {}), ...saved.map((mapping) => mapping.service)]),
+    // 歧义（不在 targets）或兜底命中的 service 留空，由用户指定。
+    const allServices = [
+      ...new Set([...services, ...Object.keys(resolution.targets), ...saved.map((mapping) => mapping.service)]),
     ].sort()
-    mappings.value = services.map((service): TraceLogsMapping => {
+    mappings.value = allServices.map((service): TraceLogsMapping => {
       const stored = saved.find((item) => item.service === service)
       if (stored) {
         return { ...stored }
       }
-      const target = props.targets?.[service]
+      const target = resolution.targets[service]
       if (target && target.source !== 'current') {
         return { service, database: target.database, table: target.table, source: 'auto' }
       }
@@ -266,13 +278,15 @@ a-modal.trace-logs-settings(
     emit('update:visible', false)
   }
 
-  // Re-hydrate while the modal is open: the routing results (targets / multiTable)
-  // arrive asynchronously after page load, and mapping rows must appear once they land.
+  // Self-sufficient: re-run the (cached) routing on every open — no props race.
   watch(
-    () => [props.visible, props.multiTable, props.targets, props.ambiguous],
-    ([visible]) => {
-      if (visible) {
-        hydrate()
+    () => props.visible,
+    (visible) => {
+      if (visible && !hydrating.value) {
+        hydrating.value = true
+        hydrate().finally(() => {
+          hydrating.value = false
+        })
       }
     },
     { immediate: true }

@@ -1,7 +1,15 @@
+import { defineStore, storeToRefs } from 'pinia'
+import { computed, ref, watch } from 'vue'
 import editorAPI from '@/api/editor'
+import requestTableSchema, {
+  requestTableSchemas,
+  type TableSchemaColumn,
+  type TableSchemaScope,
+} from '@/api/table-schema-fetch'
 import { SEMANTIC_TYPE_MAP } from '@/views/dashboard/config'
 import { sql } from '@codemirror/lang-sql'
 import { PromQLExtension } from '@prometheus-io/codemirror-promql'
+import useAppStore from '../app'
 import { ScriptTreeData, TableDetail, TableTreeChild, TableTreeParent } from './types'
 import { resolveMetricTableMeta } from './table-meta'
 import { RecordsType, SchemaType } from '../code-run/types'
@@ -301,13 +309,32 @@ const useDataBaseStore = defineStore('database', () => {
     scriptsData.value = null
   }
 
-  /** Plain table names for one database (from the cached tree; fetches when missing). */
+  /**
+   * Plain table names for one database (from the cached tree; fetches when missing).
+   * Concurrent callers share one fetch — getTables resets the tree before refilling,
+   * so parallel invocations would otherwise wipe each other's results mid-flight.
+   */
+  const tableNamesInflight = new Map<string, Promise<string[]>>()
   async function getTableNames(specifiedDB?: string): Promise<string[]> {
     const db = specifiedDB || database.value
-    if (!tablesTreeForDatabase.value[db]?.length) {
-      await getTables(db)
+    const existing = tablesTreeForDatabase.value[db]
+    if (existing?.length) {
+      return existing.map((node) => node.title).filter(Boolean)
     }
-    return (tablesTreeForDatabase.value[db] || []).map((node) => node.title).filter(Boolean)
+    const inflight = tableNamesInflight.get(db)
+    if (inflight) {
+      return inflight
+    }
+    const request = (async () => {
+      await getTables(db)
+      return (tablesTreeForDatabase.value[db] || []).map((node) => node.title).filter(Boolean)
+    })()
+    tableNamesInflight.set(db, request)
+    try {
+      return await request
+    } finally {
+      tableNamesInflight.delete(db)
+    }
   }
 
   return {
