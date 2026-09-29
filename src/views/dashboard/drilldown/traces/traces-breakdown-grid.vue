@@ -34,9 +34,9 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, onMounted, ref, watch, type MaybeRefOrGetter } from 'vue'
+  import { computed, ref, watch, type MaybeRefOrGetter } from 'vue'
   import { useI18n } from 'vue-i18n'
-  import editorApi from '@/api/editor'
+  import useTableSchemaStore from '@/store/modules/table-schema'
   import { useDrilldownContext } from '@/observability/context'
   import {
     fetchBreakdownAttrValues,
@@ -90,7 +90,9 @@
     }
   }
 
-  const loadAttributes = async () => {
+  let attrsRequestId = 0
+
+  const loadAttributes = async (): Promise<void> => {
     if (ctx.focusTraceId.value) {
       return
     }
@@ -99,9 +101,15 @@
       allAttrs.value = []
       return
     }
+    attrsRequestId += 1
+    const requestId = attrsRequestId
     loadingAttrs.value = true
     try {
-      const columns = await editorApi.getTableSchema(tableName)
+      // Session-cached store read — the bind path already fetched these columns once.
+      const columns = await useTableSchemaStore().ensureTableSchema(tableName, ctx.databaseFor('traces'))
+      if (requestId !== attrsRequestId) {
+        return
+      }
       allAttrs.value = discoverTraceBreakdownAttributes(columns || [])
       syncFieldMap(allAttrs.value)
       if (!allAttrs.value.some((attr) => attr.column === groupByColumn.value)) {
@@ -109,13 +117,27 @@
       }
     } catch (error) {
       console.error('Failed to load traces breakdown attributes:', error)
-      allAttrs.value = []
+      if (requestId === attrsRequestId) {
+        allAttrs.value = []
+      }
     } finally {
-      loadingAttrs.value = false
+      if (requestId === attrsRequestId) {
+        loadingAttrs.value = false
+      }
     }
   }
 
-  const loadValues = async () => {
+  /**
+   * Single reactive pipelines: one watch per data slice owns when it loads — mounted,
+   * table changes and dep waves are all just input changes. Readiness waves (focus
+   * toggling) change inputs but not the query, so an identical parameter signature
+   * skips (refreshKey is part of the signature — manual refresh always re-fetches),
+   * and rapid parameter changes drop stale responses.
+   */
+  let lastValuesKey = ''
+  let valuesRequestId = 0
+
+  const loadValues = async (): Promise<void> => {
     if (ctx.focusTraceId.value) {
       return
     }
@@ -123,8 +145,24 @@
       values.value = []
       seriesByValue.value = {}
       yAxis.value = { yMin: 0, yMax: 1 }
+      lastValuesKey = ''
       return
     }
+    const key = JSON.stringify([
+      ctx.tracesDatabase.value,
+      ctx.tracesTable.value,
+      ctx.rangeTime.value[0],
+      ctx.rangeTime.value[1],
+      (ctx.filters.value || []).map((filter) => [filter.key, filter.op, filter.value]),
+      props.redMetric,
+      groupByColumn.value,
+      ctx.refreshKey.value,
+    ])
+    if (key === lastValuesKey) {
+      return
+    }
+    valuesRequestId += 1
+    const requestId = valuesRequestId
     loading.value = true
     try {
       const nextValues = await fetchBreakdownAttrValues(ctx, props.redMetric, groupByColumn.value)
@@ -134,32 +172,35 @@
         groupByColumn.value,
         nextValues.map((item) => item.value)
       )
+      if (requestId !== valuesRequestId) {
+        return
+      }
+      lastValuesKey = key
       values.value = nextValues
       seriesByValue.value = series.series
       yAxis.value = series.yAxis
     } finally {
-      loading.value = false
+      if (requestId === valuesRequestId) {
+        loading.value = false
+      }
     }
   }
 
-  onMounted(async () => {
-    await loadAttributes()
-    await loadValues()
-  })
-
+  // 属性管线：只跟表走。
   watch(
-    () => ctx.tracesTable.value,
-    async () => {
-      if (ctx.focusTraceId.value) {
-        return
-      }
-      await loadAttributes()
-      await loadValues()
-    }
+    () => [ctx.focusTraceId.value, ctx.tracesTable.value],
+    () => {
+      loadAttributes()
+    },
+    { immediate: true }
   )
 
+  // 数值管线：跟随全部输入（含 refreshKey 的手动刷新）。
   watch(
     () => [
+      ctx.focusTraceId.value,
+      ctx.tracesDatabase.value,
+      ctx.tracesTable.value,
       props.redMetric,
       groupByColumn.value,
       ctx.filters.value,
@@ -167,15 +208,11 @@
       ctx.rangeTime.value[0],
       ctx.rangeTime.value[1],
       ctx.refreshKey.value,
-      ctx.focusTraceId.value,
     ],
     () => {
-      if (ctx.focusTraceId.value) {
-        return
-      }
       loadValues()
     },
-    { deep: true }
+    { immediate: true, deep: true }
   )
 </script>
 

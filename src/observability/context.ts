@@ -15,7 +15,7 @@ import {
   type MetricDetailTab,
   type TracesHomeTab,
 } from './types'
-import { addFilter as mergeFilter, hasLogsMappedFilters, toggleIncludeFilter } from './filters'
+import { addFilter as mergeFilter, filterKey, hasLogsMappedFilters, toggleIncludeFilter } from './filters'
 
 export interface DrilldownContext {
   signal: Ref<DrilldownSignal>
@@ -222,6 +222,14 @@ export function useDrilldownContextProvider(): DrilldownContext {
   }
 
   const setFilters = (next: DrilldownFilter[]) => {
+    // Normalize/encode passes rebuild the array — a content-identical result must not
+    // re-trigger the deep filters watchers (they would re-run identical queries).
+    if (
+      filters.value.length === next.length &&
+      filters.value.every((filter, index) => filterKey(filter) === filterKey(next[index]))
+    ) {
+      return
+    }
     filters.value = next
   }
 

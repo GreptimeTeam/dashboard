@@ -213,13 +213,24 @@ a-layout-content.layout-content
     { immediate: true }
   )
 
-  const loadRows = async () => {
+  /**
+   * Single reactive pipeline: one watch over every input owns when rows load — mounted,
+   * keep-alive resume (refreshKey bump) and dep waves are all just input changes. Two
+   * guards keep it to one query per actual parameter set: readiness waves (columns
+   * binding, focus toggling) change inputs but not the query, so an identical
+   * parameter signature skips; rapid parameter changes drop stale responses.
+   */
+  let lastRowsKey = ''
+  let rowsRequestId = 0
+
+  const loadRows = async (): Promise<void> => {
     if (!overviewActive.value || ctx.focusTraceId.value) {
       return
     }
     if (!ctx.tracesTable.value) {
       rows.value = []
       columns.value = []
+      lastRowsKey = ''
       return
     }
     // Schema bind is async: without it, dotted filter keys (`resource_attributes.service.name`)
@@ -228,20 +239,39 @@ a-layout-content.layout-content
     if (!ctx.signalColumns.value.traces?.length) {
       return
     }
+    const key = JSON.stringify([
+      ctx.tracesDatabase.value,
+      ctx.tracesTable.value,
+      ctx.rangeTime.value[0],
+      ctx.rangeTime.value[1],
+      (ctx.filters.value || []).map((filter) => [filter.key, filter.op, filter.value]),
+      selectedRedMetric.value,
+      ctx.refreshKey.value,
+    ])
+    if (key === lastRowsKey) {
+      return
+    }
+    rowsRequestId += 1
+    const requestId = rowsRequestId
     loading.value = true
     try {
       const result = await fetchRootSpanList(ctx, { redMetric: selectedRedMetric.value })
+      if (requestId !== rowsRequestId) {
+        return
+      }
+      lastRowsKey = key
       rows.value = result.rows
       columns.value = result.columns
       await resolveServiceTargets()
     } finally {
-      loading.value = false
+      if (requestId === rowsRequestId) {
+        loading.value = false
+      }
     }
   }
 
   keepAlive.setResume(() => {
     loadTables()
-    loadRows()
     ctx.triggerRefresh()
   })
 
@@ -317,25 +347,30 @@ a-layout-content.layout-content
     ctx.appendFilter({ key, op, value })
   }
 
+  // 唯一的行加载管线：输入（含 refreshKey 的手动刷新）变化即重跑，immediate 覆盖首载。
   watch(
     () => [
-      ctx.refreshKey.value,
-      ctx.filters.value,
-      ctx.time.value,
-      ctx.rangeTime.value,
-      ctx.tracesTable.value,
-      selectedRedMetric.value,
+      overviewActive.value,
       ctx.focusTraceId.value,
+      ctx.tracesDatabase.value,
+      ctx.tracesTable.value,
+      // 绑定完成后 signalColumns 才就绪——loadRows 的守卫依赖它，就绪时补跑一次。
+      ctx.signalColumns.value.traces?.length ?? 0,
+      ctx.time.value,
+      ctx.rangeTime.value[0],
+      ctx.rangeTime.value[1],
+      ctx.filters.value,
+      selectedRedMetric.value,
+      ctx.refreshKey.value,
     ],
     () => {
       loadRows()
     },
-    { deep: true }
+    { immediate: true, deep: true }
   )
 
   onMounted(async () => {
     await loadTables()
-    await loadRows()
   })
 </script>
 

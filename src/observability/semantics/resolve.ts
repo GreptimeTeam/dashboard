@@ -1,4 +1,3 @@
-import editorApi from '@/api/editor'
 import {
   conventionEntityKeys,
   isTraceModel,
@@ -338,18 +337,6 @@ export function logsServiceFilterCandidateKeys(
   )
 }
 
-function tableNamesFromRecords(records: {
-  rows?: string[][]
-  schema?: { column_schemas?: Array<{ name: string }> }
-}): string[] {
-  const schemas = records?.schema?.column_schemas ?? []
-  const tableNameIndex = schemas.findIndex((schema) => schema.name === 'table_name')
-  if (tableNameIndex < 0 || !Array.isArray(records?.rows)) {
-    return []
-  }
-  return records.rows.map((row) => String(row[tableNameIndex] ?? '')).filter(Boolean)
-}
-
 function uniquePreserveOrder(names: string[]): string[] {
   const seen = new Set<string>()
   const result: string[] = []
@@ -373,42 +360,6 @@ async function listAllTables(database?: string): Promise<string[]> {
   const db = database ?? currentDatabase()
   const storeModule = await import('@/store/modules/database')
   return storeModule.default().getTableNames(db)
-}
-
-/**
- * Trace table candidates guessed from the column model: tables whose columns cover the
- * full greptime_trace_v1 required set.
- */
-async function listColumnModelTraceTables(requiredColumns: readonly string[], database?: string): Promise<string[]> {
-  try {
-    // Without the schema filter the GROUP BY unions columns from same-named tables in
-    // different schemas, so a name can pass HAVING although no single table has all five.
-    const db = database ?? currentDatabase()
-    const modelColumns = requiredColumns.map((name) => `'${name}'`).join(', ')
-    const sql = `SELECT table_name
-FROM information_schema.columns
-WHERE table_schema = '${db}'
-  AND column_name IN (${modelColumns})
-GROUP BY table_name
-HAVING COUNT(DISTINCT column_name) = ${requiredColumns.length}
-ORDER BY table_name
-LIMIT 200`
-    const result = (await editorApi.runSQL(sql, db)) as { output?: Array<{ records?: never }> }
-    return tableNamesFromRecords(result?.output?.[0]?.records)
-  } catch (error) {
-    console.error('Failed to list column-model trace tables:', error)
-    return []
-  }
-}
-
-/** Column names of one table, used by trace-model scoring. Empty on failure. */
-async function loadTableColumnNames(tableName: string, database?: string): Promise<string[]> {
-  try {
-    const columns = (await editorApi.getTableSchema(tableName, database)) as Array<{ name: string }>
-    return columns.map((column) => column.name)
-  } catch {
-    return []
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -450,8 +401,11 @@ export async function listSignalTables(
   const pipelineByTable = new Map(fromSemantics.map((row) => [row.tableName, row.pipeline]))
   // 候选列扫描放宽为“含 trace_id 即可”：自定义 trace 表可能缺少 greptime_trace_v1 的
   // 其他必需列（parent_span_id / span_name …），但只要能按 trace_id 过滤就值得列出；
-  // 模型齐全的表靠打分排到前面。
-  const fromColumns = await listColumnModelTraceTables(['trace_id'], database)
+  // 模型齐全的表靠打分排到前面。扫描走 table-schema store 的预筛（GROUP BY 一次查询，
+  // 会话缓存），与 logs 候选的预筛共用。
+  const { default: useTableSchemaStore } = await import('@/store/modules/table-schema')
+  const tableSchemaStore = useTableSchemaStore()
+  const fromColumns = [...(await tableSchemaStore.tablesHavingColumn('trace_id', database))]
   const candidates = uniquePreserveOrder([
     ...fromSemantics.map((row) => row.tableName),
     ...fromColumns,
@@ -459,10 +413,19 @@ export async function listSignalTables(
     KNOWN_OTLP_TRACE_TABLE,
   ])
 
+  // 批量拉取候选表 schema（一次 information_schema.columns 查询），与 logs 候选共用
+  // table-schema store 的缓存——两边重叠的表不会重复请求。
+  await tableSchemaStore.ensureTableSchemas(candidates, database).catch(() => undefined)
+
   const scored: Array<{ name: string; score: number }> = []
   await Promise.all(
     candidates.map(async (name) => {
-      const columnNames = await loadTableColumnNames(name, database)
+      let columnNames: string[] = []
+      try {
+        columnNames = (await tableSchemaStore.ensureTableSchema(name, database)).map((column) => column.name)
+      } catch {
+        columnNames = []
+      }
       if (!columnNames.length) {
         // Keep semantics-only names even if schema fetch fails (settings / allow-create).
         if (pipelineByTable.has(name) || options?.include?.includes(name)) {

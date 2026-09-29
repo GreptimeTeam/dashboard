@@ -1,7 +1,8 @@
 import { defineStore, storeToRefs } from 'pinia'
-import { watch } from 'vue'
+import { ref, watch } from 'vue'
 import requestTableSchema, {
   requestTableSchemas,
+  requestTablesHavingColumn,
   type TableSchemaColumn,
   type TableSchemaScope,
 } from '@/api/table-schema-fetch'
@@ -43,11 +44,14 @@ const useTableSchemaStore = defineStore('tableSchema', () => {
   const columnsByKey = ref<Record<string, TableSchemaColumn[]>>({})
   /** In-flight ensure promises — concurrent callers share one request. */
   const inflightByKey = new Map<string, Promise<TableSchemaColumn[]>>()
+  /** Session-cached column pre-filter scans (`db\0catalog\0schema\0column` → tables). */
+  const tablesByColumn = new Map<string, Promise<Set<string>>>()
 
   const clearTableSchema = (tableName?: string, database?: string) => {
     if (!tableName) {
       columnsByKey.value = {}
       inflightByKey.clear()
+      tablesByColumn.clear()
       return
     }
     const key = schemaCacheKey(tableName, database)
@@ -109,18 +113,61 @@ const useTableSchemaStore = defineStore('tableSchema', () => {
     })
     if (missing.length) {
       const scope = resolveTableSchemaScope(database)
-      const byTable = await requestTableSchemas(missing, scope)
-      const next = { ...columnsByKey.value }
+      const request = requestTableSchemas(missing, scope)
+        .then((byTable) => {
+          const next = { ...columnsByKey.value }
+          missing.forEach((table) => {
+            next[schemaCacheKey(table, database)] = byTable[table] ?? []
+          })
+          columnsByKey.value = next
+          missing.forEach((table) => inflightByKey.delete(schemaCacheKey(table, database)))
+          return byTable
+        })
+        .catch((error) => {
+          missing.forEach((table) => inflightByKey.delete(schemaCacheKey(table, database)))
+          throw error
+        })
+      // Register the batch promise as each missing table's in-flight, so concurrent
+      // per-table ensureTableSchema calls join it instead of duplicating the request.
       missing.forEach((table) => {
-        next[schemaCacheKey(table, database)] = byTable[table] ?? []
+        const key = schemaCacheKey(table, database)
+        inflightByKey.set(
+          key,
+          request.then(() => columnsByKey.value[key] ?? [])
+        )
       })
-      columnsByKey.value = next
     }
     const result: Record<string, TableSchemaColumn[]> = {}
     unique.forEach((table) => {
       result[table] = columnsByKey.value[schemaCacheKey(table, database)] ?? []
     })
     return result
+  }
+
+  /**
+   * Tables in `database` carrying `column` — one GROUP BY query, session-cached and
+   * shared in-flight. Fails soft with an empty set: callers treat "unknown" as
+   * "unfiltered" and keep their candidate list.
+   */
+  const tablesHavingColumn = (column: string, database?: string): Promise<Set<string>> => {
+    const { catalog, schema, db } = resolveTableSchemaScope(database)
+    const key = `${db}\0${catalog}\0${schema}\0${column}`
+    const cached = tablesByColumn.get(key)
+    if (cached) {
+      return cached
+    }
+    if (tablesByColumn.size > 50) {
+      tablesByColumn.clear()
+    }
+    const request = requestTablesHavingColumn(column, { catalog, schema, db })
+      .then((tables) => new Set(tables))
+      .catch((error) => {
+        console.error(`Failed to list tables having column "${column}":`, error)
+        tablesByColumn.delete(key)
+        return new Set<string>()
+      })
+    tablesByColumn.set(key, request)
+    return request
   }
 
   watch(
@@ -134,6 +181,7 @@ const useTableSchemaStore = defineStore('tableSchema', () => {
     columnsByKey,
     ensureTableSchema,
     ensureTableSchemas,
+    tablesHavingColumn,
     clearTableSchema,
   }
 })

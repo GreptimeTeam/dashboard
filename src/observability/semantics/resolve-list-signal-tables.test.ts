@@ -1,12 +1,30 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import editorApi from '@/api/editor'
 import { listSignalTables } from './resolve'
+
+const MODEL_COLUMNS = [
+  { name: 'timestamp' },
+  { name: 'trace_id' },
+  { name: 'parent_span_id' },
+  { name: 'span_name' },
+  { name: 'service_name' },
+  { name: 'duration_nano' },
+]
+
+function schemaFor(table: string): Array<{ name: string }> {
+  if (table === 'opentelemetry_traces') {
+    return MODEL_COLUMNS
+  }
+  if (table === 'partial_traces') {
+    return [{ name: 'timestamp' }, { name: 'trace_id' }]
+  }
+  return [{ name: 'value' }]
+}
+
+const tablesHavingColumn = vi.fn(async () => new Set<string>())
 
 vi.mock('@/api/editor', () => ({
   default: {
     runSQL: vi.fn(),
-    getTables: vi.fn(),
-    getTableSchema: vi.fn(),
   },
 }))
 
@@ -21,50 +39,22 @@ vi.mock('./source', () => ({
   semanticsDump: vi.fn(async () => undefined),
 }))
 
-const runSQL = vi.mocked(editorApi.runSQL)
-const getTables = vi.mocked(editorApi.getTables)
-const getTableSchema = vi.mocked(editorApi.getTableSchema)
-
-function sqlTablesResult(names: string[]) {
-  return {
-    output: [
-      {
-        records: {
-          schema: { column_schemas: [{ name: 'table_name' }] },
-          rows: names.map((name) => [name]),
-        },
-      },
-    ],
-  }
-}
-
-const MODEL_COLUMNS = [
-  { name: 'timestamp' },
-  { name: 'trace_id' },
-  { name: 'parent_span_id' },
-  { name: 'span_name' },
-  { name: 'service_name' },
-  { name: 'duration_nano' },
-]
+vi.mock('@/store/modules/table-schema', () => ({
+  default: vi.fn(() => ({
+    ensureTableSchemas: vi.fn(async () => ({})),
+    ensureTableSchema: vi.fn(async (table: string) => schemaFor(table)),
+    tablesHavingColumn,
+  })),
+}))
 
 beforeEach(() => {
-  runSQL.mockReset()
-  getTables.mockReset()
-  getTableSchema.mockReset()
+  tablesHavingColumn.mockReset()
+  tablesHavingColumn.mockImplementation(async () => new Set<string>())
 })
 
 describe('listSignalTables(traces) qualification', () => {
   it('keeps partial trace tables (trace_id only) but ranks the full model first', async () => {
-    runSQL.mockResolvedValue(sqlTablesResult(['opentelemetry_traces', 'partial_traces']))
-    getTableSchema.mockImplementation(async (table: string) => {
-      if (table === 'opentelemetry_traces') {
-        return MODEL_COLUMNS
-      }
-      if (table === 'partial_traces') {
-        return [{ name: 'timestamp' }, { name: 'trace_id' }]
-      }
-      return []
-    })
+    tablesHavingColumn.mockImplementation(async () => new Set(['opentelemetry_traces', 'partial_traces']))
 
     const tables = await listSignalTables('traces', { database: 'public' })
 
@@ -74,16 +64,7 @@ describe('listSignalTables(traces) qualification', () => {
   })
 
   it('excludes tables without trace_id even when they come from include', async () => {
-    runSQL.mockResolvedValue(sqlTablesResult(['partial_traces']))
-    getTableSchema.mockImplementation(async (table: string) => {
-      if (table === 'opentelemetry_traces') {
-        return MODEL_COLUMNS
-      }
-      if (table === 'partial_traces') {
-        return [{ name: 'timestamp' }, { name: 'trace_id' }]
-      }
-      return [{ name: 'value' }]
-    })
+    tablesHavingColumn.mockImplementation(async () => new Set(['partial_traces']))
 
     const tables = await listSignalTables('traces', {
       database: 'public',

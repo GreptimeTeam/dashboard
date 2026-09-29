@@ -456,8 +456,19 @@ ORDER BY ${quoteIdent(tsCol)} ASC`
 }
 
 /**
+ * Session cache of the service universe, keyed by database, table, column, time
+ * window and limit: resolveServiceTargets re-runs on every table load and the
+ * settings modal re-runs it on open — without the cache each pass would repeat the
+ * DISTINCT scan. A page refresh clears the map; a failed fetch evicts its key.
+ */
+const traceServicesCache = new Map<string, Promise<string[]>>()
+
+const TRACE_SERVICES_CACHE_LIMIT = 50
+
+/**
  * Every service seen in the current time window — the routing key universe for
- * trace → logs auto-association, wider than one page of root spans.
+ * trace → logs auto-association, wider than one page of root spans. Results are
+ * cached for the session per (database, table, window).
  */
 export async function fetchTraceServices(ctx: DrilldownContext, options?: { limit?: number }): Promise<string[]> {
   const tableName = ctx.tracesTable.value
@@ -468,6 +479,17 @@ export async function fetchTraceServices(ctx: DrilldownContext, options?: { limi
   const serviceCol = fieldMap(ctx).service || 'service_name'
   const tsCol = timeColumn(ctx)
   const unixRange = ctx.unixTimeRange()
+  const windowKey = unixRange.length === 2 ? `${unixRange[0]}-${unixRange[1]}` : 'all'
+  const limit = options?.limit ?? 200
+  const cacheKey = `${ctx.tracesDatabase.value}\0${tableName}\0${serviceCol}\0${windowKey}\0${limit}`
+  const cached = traceServicesCache.get(cacheKey)
+  if (cached) {
+    return cached
+  }
+  if (traceServicesCache.size > TRACE_SERVICES_CACHE_LIMIT) {
+    traceServicesCache.clear()
+  }
+
   const where =
     unixRange.length === 2
       ? `WHERE ${quoteIdent(tsCol)} >= FROM_UNIXTIME(${unixRange[0]}) AND ${quoteIdent(tsCol)} <= FROM_UNIXTIME(${
@@ -478,14 +500,19 @@ export async function fetchTraceServices(ctx: DrilldownContext, options?: { limi
 FROM ${quoteIdent(tableName)}
 ${where}
 ORDER BY 1
-LIMIT ${options?.limit ?? 200}`
+LIMIT ${limit}`
 
-  try {
-    const response = await editorApi.runSQL(sql, ctx.tracesDatabase.value)
-    const rows = response?.output?.[0]?.records?.rows ?? []
-    return rows.map((row) => String(row?.[0] ?? '').trim()).filter(Boolean)
-  } catch (error) {
-    console.error('Failed to fetch trace services:', error)
-    return []
-  }
+  const request = editorApi
+    .runSQL(sql, ctx.tracesDatabase.value)
+    .then((response) => {
+      const rows = response?.output?.[0]?.records?.rows ?? []
+      return rows.map((row) => String(row?.[0] ?? '').trim()).filter(Boolean)
+    })
+    .catch((error) => {
+      console.error('Failed to fetch trace services:', error)
+      traceServicesCache.delete(cacheKey)
+      return []
+    })
+  traceServicesCache.set(cacheKey, request)
+  return request
 }

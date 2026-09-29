@@ -83,3 +83,24 @@ export async function requestTableSchemas(
   })
   return byTable
 }
+
+/**
+ * Tables in the scope carrying `column` — the cheap signal pre-filter. Only
+ * trace_id-bearing tables can join trace → logs association, so candidate schema
+ * fetches shrink to a handful instead of every undeclared table in the database.
+ */
+export async function requestTablesHavingColumn(column: string, scope: TableSchemaScope): Promise<string[]> {
+  const res: any = await axios.post(
+    sqlUrl,
+    makeSqlData(
+      `SELECT table_name FROM information_schema.columns WHERE table_catalog = '${escapeSqlLiteral(
+        scope.catalog
+      )}' AND table_schema = '${escapeSqlLiteral(scope.schema)}' AND column_name = '${escapeSqlLiteral(
+        column
+      )}' GROUP BY table_name ORDER BY table_name LIMIT 500`
+    ),
+    addDatabaseParams(scope.db)
+  )
+  const rows: string[][] = res.output[0].records.rows ?? []
+  return rows.map((row) => String(row[0] ?? '')).filter(Boolean)
+}

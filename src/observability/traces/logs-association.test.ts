@@ -2,7 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import editorApi from '@/api/editor'
 import useTableSchemaStore from '@/store/modules/table-schema'
 import { getTableSemantics, listSignalTables, resolveEntityFilterRef } from '../semantics'
-import { fetchTraceLogsRows, qualifyTraceLogsTable, resolveTraceLogsForServices } from './logs-association'
+import {
+  fetchTraceLogsRows,
+  qualifyTraceLogsTable,
+  resetTraceLogsProbeCache,
+  resolveTraceLogsForServices,
+} from './logs-association'
 
 const loadDrilldownSettings = vi.hoisted(() => vi.fn())
 const updateTracesDrilldownSettings = vi.hoisted(() => vi.fn())
@@ -14,11 +19,14 @@ vi.mock('@/api/editor', () => ({
 }))
 
 const ensureTableSchema = vi.fn()
+const ensureTableSchemas = vi.fn()
+const tablesHavingColumn = vi.fn()
 
 vi.mock('@/store/modules/table-schema', () => ({
   default: vi.fn(() => ({
     ensureTableSchema,
-    ensureTableSchemas: vi.fn(async () => ({})),
+    ensureTableSchemas,
+    tablesHavingColumn,
   })),
 }))
 
@@ -86,13 +94,13 @@ function mockQualifiedTables(tables: string[]) {
   )
 }
 
-/** runSQL hit helper: a probe "hits" when the SQL targets the given table. */
-function mockProbeHits(hits: string[]) {
-  runSQL.mockImplementation(async (sql: string) => ({
+/** runSQL hit helper: the batched probe returns one (table, service) evidence row per hit. */
+function mockProbeHits(rows: Array<[string, string]>) {
+  runSQL.mockImplementation(async () => ({
     output: [
       {
         records: {
-          rows: hits.some((table) => sql.includes(`FROM "${table}"`)) ? [['1']] : [],
+          rows: rows.map(([table, service]) => [table, service]),
         },
       },
     ],
@@ -100,7 +108,10 @@ function mockProbeHits(hits: string[]) {
 }
 
 beforeEach(() => {
+  resetTraceLogsProbeCache()
   ensureTableSchema.mockReset()
+  ensureTableSchemas.mockReset().mockImplementation(async () => ({}))
+  tablesHavingColumn.mockReset().mockImplementation(async () => new Set<string>())
   runSQL.mockReset()
   listTables.mockReset()
   resolveServiceRef.mockReset()
@@ -112,7 +123,8 @@ beforeEach(() => {
   getSemantics.mockResolvedValue(undefined)
   vi.mocked(useTableSchemaStore).mockReturnValue({
     ensureTableSchema,
-    ensureTableSchemas: vi.fn(async () => ({})),
+    ensureTableSchemas,
+    tablesHavingColumn,
   } as any)
 })
 
@@ -227,7 +239,7 @@ describe('trace logs routing', () => {
 
   it('probes qualified candidates by service value inside the trace window', async () => {
     mockQualifiedTables(['otel_logs', 'legacy_logs'])
-    mockProbeHits(['legacy_logs'])
+    mockProbeHits([['legacy_logs', 'checkout']])
 
     const resolution = await resolveTraceLogsForServices(createContext(), ['checkout'])
 
@@ -237,10 +249,12 @@ describe('trace logs routing', () => {
       table: 'legacy_logs',
       source: 'auto',
     })
-    const probeSql = runSQL.mock.calls.find((call) => String(call[0]).includes('FROM "legacy_logs"'))?.[0] as string
-    expect(probeSql).toContain(`"service_name" = 'checkout'`)
+    // All candidates × services are answered by ONE batched UNION ALL request.
+    expect(runSQL).toHaveBeenCalledTimes(1)
+    const probeSql = String(runSQL.mock.calls[0]?.[0])
+    expect(probeSql).toContain('UNION ALL')
+    expect(probeSql).toContain(`"service_name" IN ('checkout')`)
     expect(probeSql).toContain('FROM_UNIXTIME(100)')
-    expect(probeSql).toContain('LIMIT 1')
     expect(updateTracesDrilldownSettings).toHaveBeenCalledWith(
       expect.objectContaining({
         traceLogsMappings: [{ service: 'checkout', database: 'logs_db', table: 'legacy_logs', source: 'auto' }],
@@ -249,9 +263,41 @@ describe('trace logs routing', () => {
     )
   })
 
+  it('probes every pending service in the same single request', async () => {
+    mockQualifiedTables(['otel_logs', 'legacy_logs'])
+    mockProbeHits([
+      ['otel_logs', 'checkout'],
+      ['legacy_logs', 'cart'],
+    ])
+
+    const resolution = await resolveTraceLogsForServices(createContext(), ['checkout', 'cart'])
+
+    expect(resolution.targets.checkout).toMatchObject({ table: 'otel_logs', source: 'auto' })
+    expect(resolution.targets.cart).toMatchObject({ table: 'legacy_logs', source: 'auto' })
+    expect(runSQL).toHaveBeenCalledTimes(1)
+    expect(String(runSQL.mock.calls[0]?.[0])).toContain(`"service_name" IN ('checkout', 'cart')`)
+  })
+
+  it('reuses session probe verdicts instead of re-probing on every resolution', async () => {
+    mockQualifiedTables(['otel_logs', 'legacy_logs'])
+    mockProbeHits([['legacy_logs', 'checkout']])
+
+    const first = await resolveTraceLogsForServices(createContext(), ['checkout'])
+    // Second resolution (gantt load, settings open, loadRows re-run) reuses the
+    // cached verdicts — zero extra requests.
+    const second = await resolveTraceLogsForServices(createContext(), ['checkout'])
+
+    expect(first.targets.checkout).toMatchObject({ table: 'legacy_logs', source: 'auto' })
+    expect(second.targets.checkout).toMatchObject({ table: 'legacy_logs', source: 'auto' })
+    expect(runSQL).toHaveBeenCalledTimes(1)
+  })
+
   it('marks multi-table hits ambiguous and never guesses or learns', async () => {
     mockQualifiedTables(['otel_logs', 'legacy_logs'])
-    mockProbeHits(['otel_logs', 'legacy_logs'])
+    mockProbeHits([
+      ['otel_logs', 'checkout'],
+      ['legacy_logs', 'checkout'],
+    ])
 
     const resolution = await resolveTraceLogsForServices(createContext(), ['checkout'])
 
@@ -262,7 +308,7 @@ describe('trace logs routing', () => {
 
   it('never re-learns a tombstoned service', async () => {
     mockQualifiedTables(['otel_logs', 'legacy_logs'])
-    mockProbeHits(['otel_logs'])
+    mockProbeHits([['otel_logs', 'checkout']])
     loadDrilldownSettings.mockReturnValue({ logs: {}, traces: { ignoredServiceKeys: ['checkout'] } })
 
     const resolution = await resolveTraceLogsForServices(createContext(), ['checkout'])
@@ -270,6 +316,19 @@ describe('trace logs routing', () => {
     // The probe still resolves this click, but the hit is not persisted.
     expect(resolution.targets.checkout).toMatchObject({ table: 'otel_logs', source: 'auto' })
     expect(updateTracesDrilldownSettings).not.toHaveBeenCalled()
+  })
+
+  it('pre-filters the schema batch to tables carrying trace_id', async () => {
+    listTables.mockResolvedValue(['otel_logs', 'go_gc_heap_allocs_bytes_total'])
+    tablesHavingColumn.mockImplementation(async () => new Set(['otel_logs']))
+    ensureTableSchema.mockResolvedValue(OTelLogsColumns)
+
+    await resolveTraceLogsForServices(createContext(), ['checkout'])
+
+    // The undeclared metrics table never reaches a schema fetch — only the
+    // trace_id-bearing table does.
+    expect(ensureTableSchemas).toHaveBeenCalledWith(['otel_logs'], 'logs_db')
+    expect(ensureTableSchema).not.toHaveBeenCalledWith('go_gc_heap_allocs_bytes_total', 'logs_db')
   })
 
   it('falls back to the current Logs binding when nothing qualifies or matches', async () => {

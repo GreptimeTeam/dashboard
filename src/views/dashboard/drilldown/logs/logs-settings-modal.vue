@@ -73,7 +73,7 @@ a-modal(
 <script setup lang="ts">
   import { computed, reactive, ref, watch, nextTick } from 'vue'
   import { useI18n } from 'vue-i18n'
-  import editorApi from '@/api/editor'
+  import useTableSchemaStore from '@/store/modules/table-schema'
   import { useDrilldownContext } from '@/observability/context'
   import {
     loadDrilldownSettings,
@@ -155,7 +155,8 @@ a-modal(
       return []
     }
     try {
-      const columns = await editorApi.getTableSchema(table, ctx.logsDatabase.value)
+      // Session-cached store read — shares the bind path's fetch instead of re-querying.
+      const columns = await useTableSchemaStore().ensureTableSchema(table, ctx.logsDatabase.value)
       columnNames.value = columns.map((c) => c.name)
       return columns
     } catch {
