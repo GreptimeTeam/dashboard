@@ -363,15 +363,16 @@ function uniquePreserveOrder(names: string[]): string[] {
   return result
 }
 
-/** All user tables in the database (no name heuristics). */
+/**
+ * All user tables in the database (no name heuristics) — served from the global
+ * database store's per-db table tree (paginated and cached there, refreshed on page
+ * reload or sidebar refresh). Imported lazily: the classic store drags in the query
+ * workbench dependency graph, which must not leak into this module's importers.
+ */
 async function listAllTables(database?: string): Promise<string[]> {
-  try {
-    const tables = (await editorApi.getTables(500, 0, database)) as { output?: Array<{ records?: unknown }> }
-    return tableNamesFromRecords(tables?.output?.[0]?.records as never)
-  } catch (error) {
-    console.error('Failed to list tables:', error)
-    return []
-  }
+  const db = database ?? currentDatabase()
+  const { useDataBaseStore } = await import('@/store/modules/database')
+  return useDataBaseStore().getTableNames(db)
 }
 
 /**

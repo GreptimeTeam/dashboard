@@ -301,6 +301,15 @@ const useDataBaseStore = defineStore('database', () => {
     scriptsData.value = null
   }
 
+  /** Plain table names for one database (from the cached tree; fetches when missing). */
+  async function getTableNames(specifiedDB?: string): Promise<string[]> {
+    const db = specifiedDB || database.value
+    if (!tablesTreeForDatabase.value[db]?.length) {
+      await getTables(db)
+    }
+    return (tablesTreeForDatabase.value[db] || []).map((node) => node.title).filter(Boolean)
+  }
+
   return {
     tablesTreeForDatabase,
     tablesTotalByDatabase,
@@ -316,6 +325,7 @@ const useDataBaseStore = defineStore('database', () => {
     databaseActiveKeys,
     getTables,
     checkTables,
+    getTableNames,
     addChildren,
     getTableByName,
     getScriptsTable,
