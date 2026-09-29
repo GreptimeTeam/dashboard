@@ -53,6 +53,24 @@
       )
         TracesGantt(v-if="tracesGanttVisible")
 
+      DrilldownDrawer(
+        popup-container=".drilldown-body--logs"
+        variant="logs"
+        :visible="logsFromTraceVisible"
+        :closable="false"
+        :title="logsTraceIdLabel"
+        @close="closeLogsForTraceDrawer"
+      )
+        template(#tabs)
+          SignalTabNav(
+            mode="tabs"
+            aria-label="Logs detail"
+            :items="logsDetailTabs"
+            :model-value="logsTab"
+            @update:model-value="onLogsTabSelect"
+          )
+        LogsDetail(v-if="logsFromTraceVisible")
+
     .drilldown-body.new-layout.new-layout--workspace.drilldown-body--traces(v-else-if="signal === 'traces'")
       keep-alive
         TracesHome(v-if="!tracesHomeHidden")

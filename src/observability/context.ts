@@ -291,12 +291,18 @@ export function useDrilldownContextProvider(): DrilldownContext {
 
   /** Back to traces home; keep filter chips and any open Gantt. */
   const closeLogsForTrace = () => {
+    const hadTraceDrawer = Boolean(logsTraceId.value)
     logsTraceId.value = undefined
     if (savedLogsTable !== undefined || savedLogsDatabase !== undefined) {
       logsDatabase.value = savedLogsDatabase
       logsTable.value = savedLogsTable
       savedLogsDatabase = undefined
       savedLogsTable = undefined
+    }
+    // On the logs signal an underlying LogsDetail may sit below the trace drawer —
+    // refresh it so the trace filter is lifted immediately.
+    if (hadTraceDrawer && signal.value === 'logs') {
+      refreshKey.value += 1
     }
   }
 

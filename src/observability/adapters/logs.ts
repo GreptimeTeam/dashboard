@@ -157,7 +157,9 @@ export async function buildLogsContextWhere(
     options?.unixRange != null && options.unixRange.length === 2
       ? [Number(options.unixRange[0]), Number(options.unixRange[1])]
       : liveRange
-  const tracesLogsDrawer = ctx.signal.value === 'traces' && Boolean(ctx.logsTraceId.value?.trim())
+  // The trace-id drawer is driven by logsTraceId alone: it exists on the traces signal
+  // (stacked over the gantt) and on the logs signal (opened from the gantt's View logs).
+  const tracesLogsDrawer = Boolean(ctx.logsTraceId.value?.trim())
   const includeLabelFilters = options?.includeLabelFilters ?? (ctx.logsView.value === 'detail' || tracesLogsDrawer)
   const needsColumns =
     includeLabelFilters ||
@@ -200,10 +202,12 @@ export async function buildLogsContextWhere(
 
   const logsTraceId = ctx.logsTraceId.value?.trim()
   // Same role source the traces page uses to show the affordance: settings fill roles the
-  // runtime map has not resolved, so the jump filters as soon as it is offered.
+  // runtime map has not resolved, so the jump filters as soon as it is offered. The filter
+  // applies on any signal — logsTraceId is set only by the View logs flow and cleared on
+  // drawer close / signal switch.
   const traceRoles = resolveLogsRoles(ctx)
   const logsTraceColumn = traceRoles.traceId || traceRoles.trace_id
-  if (ctx.signal.value === 'traces' && logsTraceId && logsTraceColumn) {
+  if (logsTraceId && logsTraceColumn) {
     whereParts.push(`${quoteIdent(logsTraceColumn)} = '${escapeSqlString(logsTraceId)}'`)
   }
 
