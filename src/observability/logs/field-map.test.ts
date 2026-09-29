@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import editorApi from '@/api/editor'
 import useTableSchemaStore from '@/store/modules/table-schema'
 import {
   chipKeyForLogsTableFilter,
@@ -16,7 +15,6 @@ import {
   otelLogsFieldDefaultsFromColumns,
   parseJsonFieldChipKey,
   resolveLogsSettingsFieldDefaults,
-  sampleJsonAttributeFieldKeys,
   sqlJsonGetStringExpr,
   type SchemaColumn,
 } from './field-map'
@@ -363,14 +361,7 @@ describe('top-bar filter keys (long tail pool)', () => {
     traceId: 'trace_id',
   }
 
-  beforeEach(() => {
-    vi.mocked(editorApi.runSQL).mockReset()
-    vi.mocked(editorApi.runSQL).mockResolvedValue({
-      output: [{ records: { rows: [[{ 'service.name': 'cart', 'http.route': '/api' }]] } }],
-    } as never)
-  })
-
-  it('offers business columns and every sampled attribute chip', async () => {
+  it('offers business columns without sampled attribute chips', async () => {
     const keys = await discoverLogFilterKeys('opentelemetry_logs', columns, fieldMap, {
       serviceKey: 'resource_attributes.service.name',
     })
@@ -379,12 +370,13 @@ describe('top-bar filter keys (long tail pool)', () => {
     expect(keys).toContain('trace_flags')
     expect(keys).toContain('trace_id')
     expect(keys).toContain('scope_name')
-    expect(keys).toContain('log_attributes.http.route')
 
-    // Dedicated entry points (time / body / level / service) and JSON containers stay out.
+    // Dedicated entry points (time / body / level / service) and JSON containers stay out;
+    // JSON attribute chips are no longer enumerated (no sampling).
     expect(keys).not.toContain('timestamp')
     expect(keys).not.toContain('body')
     expect(keys).not.toContain('severity_text')
+    expect(keys).not.toContain('log_attributes.http.route')
     expect(keys).not.toContain('resource_attributes.service.name')
     expect(keys).not.toContain('resource_attributes')
     expect(keys).not.toContain('log_attributes')
@@ -406,10 +398,6 @@ describe('top-bar filter keys (long tail pool)', () => {
 })
 
 describe('JSON attribute field keys', () => {
-  beforeEach(() => {
-    vi.mocked(editorApi.runSQL).mockReset()
-  })
-
   it('lists JSON container columns by name and data_type', () => {
     const columns: SchemaColumn[] = [
       { name: 'body', data_type: 'String', semantic_type: 'FIELD' },
@@ -435,20 +423,5 @@ describe('JSON attribute field keys', () => {
     expect(sqlJsonGetStringExpr('log_attributes', 'gen_ai.system')).toBe(
       `json_get_string("log_attributes", '$."gen_ai.system"')`
     )
-  })
-
-  it('samples top-level JSON keys into chip keys', async () => {
-    vi.mocked(editorApi.runSQL).mockResolvedValue({
-      output: [
-        {
-          records: {
-            rows: [[{ 'gen_ai.system': 'openai', 'model': 'gpt' }], ['{"region":"us"}']],
-          },
-        },
-      ],
-    } as never)
-
-    const keys = await sampleJsonAttributeFieldKeys('genai_conversations', ['log_attributes'])
-    expect(keys).toEqual(['log_attributes.gen_ai.system', 'log_attributes.model', 'log_attributes.region'])
   })
 })

@@ -13,10 +13,8 @@ import {
   isLogsRoleValue,
   listJsonAttributeColumns,
   resolveLogsTimeColumn,
-  sampleJsonAttributeFieldKeys,
   type SchemaColumn,
 } from '../logs/field-map'
-import { isOtelResourceLabelChip } from '../semantics'
 import { normalizeLogLevelName, UNKNOWN_LOG_LEVEL } from '../logs/level-color'
 import { buildSeverityLevelsPredicate } from '../logs/level-visibility'
 import { escapeSqlString, logsColumnExpr, quoteIdent } from '../logs/query-state'
@@ -312,7 +310,7 @@ export async function listLabelKeys(ctx: DrilldownContext): Promise<string[]> {
   })
 }
 
-/** Non-groupable remainder plus JSON attribute keys. Not a user-facing Fields picker. */
+/** Non-groupable remainder. Not a user-facing Fields picker. */
 export async function listFieldKeys(ctx: DrilldownContext): Promise<string[]> {
   const tableName = ctx.logsTable.value
   if (!tableName) {
@@ -326,11 +324,7 @@ export async function listFieldKeys(ctx: DrilldownContext): Promise<string[]> {
     labelInclude: settings.labelInclude,
     labelExclude: settings.labelExclude,
   })
-  const jsonColumns = listJsonAttributeColumns(columns)
-  const l2 = (await sampleJsonAttributeFieldKeys(tableName, jsonColumns, { database: ctx.logsDatabase.value })).filter(
-    (key) => !isOtelResourceLabelChip(key, jsonColumns)
-  )
-  return [...new Set([...l1, ...l2])].sort((a, b) => a.localeCompare(b))
+  return [...new Set(l1)].sort((a, b) => a.localeCompare(b))
 }
 
 export type LabelValueRow = {

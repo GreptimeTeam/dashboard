@@ -15,11 +15,9 @@ import {
   listJsonAttributeColumns,
   parseJsonFieldChipKey,
   resolveLogsTimeColumn,
-  sampleJsonAttributeFieldKeys,
   sqlJsonGetStringExpr,
   type SchemaColumn,
 } from '../logs/field-map'
-import { isOtelResourceLabelChip } from '../semantics'
 import { discoverTraceFilterKeys } from '../traces/field-map'
 import type { DrilldownFilter, DrilldownSignal } from '../types'
 
@@ -142,11 +140,7 @@ export async function fetchSqlFieldKeys(ctx: DrilldownContext, search = ''): Pro
       labelInclude: settings?.labelInclude,
       labelExclude: settings?.labelExclude,
     })
-    const jsonColumns = listJsonAttributeColumns(columns)
-    const l2 = (
-      await sampleJsonAttributeFieldKeys(tableName, jsonColumns, { database: ctx.logsDatabase.value })
-    ).filter((key) => !isOtelResourceLabelChip(key, jsonColumns))
-    return filterOptions(filterLabelKeys([...l1, ...l2]), search)
+    return filterOptions(filterLabelKeys(l1), search)
   } catch (error) {
     console.error('Failed to load logs field keys:', error)
     return []

@@ -1,4 +1,3 @@
-import editorApi from '@/api/editor'
 import useTableSchemaStore from '@/store/modules/table-schema'
 import type { LogsFieldMapSettings } from '../drilldown-settings'
 import {
@@ -219,8 +218,6 @@ export async function buildLogsFieldMap(
 
   return withRoles
 }
-
-const JSON_ATTR_SAMPLE_LIMIT = 50
 
 function isStringLikeType(dataType: string | undefined): boolean {
   const dt = (dataType || '').toLowerCase()
@@ -500,72 +497,11 @@ export function chipKeyForLogsTableFilter(
 }
 
 /**
- * Sample rows from JSON attribute columns and collect top-level keys as Field chip keys
- * (`{column}.{key}`). Client-side parse — Greptime has no reliable json_object_keys.
- */
-export async function sampleJsonAttributeFieldKeys(
-  tableName: string,
-  jsonColumns: string[],
-  options?: { limit?: number; database?: string }
-): Promise<string[]> {
-  if (!tableName || !jsonColumns.length) {
-    return []
-  }
-
-  const limit = options?.limit ?? JSON_ATTR_SAMPLE_LIMIT
-  const keys = new Set<string>()
-
-  await Promise.all(
-    jsonColumns.map(async (col) => {
-      try {
-        const sql = `SELECT "${col}" FROM "${tableName}" WHERE "${col}" IS NOT NULL LIMIT ${limit}`
-        const response = await editorApi.runSQL(sql, options?.database)
-        const rows = response?.output?.[0]?.records?.rows
-        if (!Array.isArray(rows)) {
-          return
-        }
-        rows.forEach((row: unknown) => {
-          const raw = Array.isArray(row) ? row[0] : null
-          if (raw == null) {
-            return
-          }
-          let obj: unknown
-          if (typeof raw === 'string') {
-            try {
-              obj = JSON.parse(raw)
-            } catch {
-              return
-            }
-          } else if (typeof raw === 'object') {
-            obj = raw
-          } else {
-            return
-          }
-          if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
-            return
-          }
-          Object.keys(obj as Record<string, unknown>).forEach((key) => {
-            if (key) {
-              keys.add(`${col}.${key}`)
-            }
-          })
-        })
-      } catch (error) {
-        console.error(`Failed to sample JSON keys from ${tableName}.${col}:`, error)
-      }
-    })
-  )
-
-  return [...keys].sort((a, b) => a.localeCompare(b))
-}
-
-/**
- * Label keys for the Labels tab / Add label: declared columns plus the OTLP resource
- * attribute chips (`resource_attributes.service.name`, `resource_attributes.k8s.pod.name`, …).
+ * Label keys for the Labels tab / Add label: declared columns plus the service identity
+ * chip (`resource_attributes.service.name`, …) resolved by the table's semantics.
  *
- * Resource attributes are the identity surface of logs, so they are labels; `identityChip` is
- * the service identity semantics resolved for this table and stays a label even when the JSON
- * sampling below happens to miss it.
+ * Resource attributes are the identity surface of logs, so the identity chip is a label
+ * even though other JSON attribute keys are not enumerated.
  */
 export async function discoverLogLabelKeys(
   tableName: string,
@@ -579,17 +515,6 @@ export async function discoverLogLabelKeys(
   if (identity) {
     keys.add(identity)
   }
-  const jsonColumns = listJsonAttributeColumns(columns)
-  if (tableName && jsonColumns.length) {
-    const sampled = await sampleJsonAttributeFieldKeys(tableName, jsonColumns, {
-      database: options?.database,
-    })
-    sampled.forEach((chip) => {
-      if (isOtelResourceLabelChip(chip, jsonColumns)) {
-        keys.add(chip)
-      }
-    })
-  }
   return [...keys].filter((key) => !exclude.has(key)).sort((a, b) => a.localeCompare(b))
 }
 
@@ -599,8 +524,8 @@ export async function discoverLogLabelKeys(
  * All physical columns except the ones that already own a dedicated entry point —
  * time (time picker), `body` (detail body search row), `severity` (Level select), the service
  * entity key (Service row), TIMESTAMP columns (never a useful predicate) and the JSON
- * containers themselves — plus every sampled JSON attribute chip (`log_attributes.*` /
- * `scope_attributes.*` / `resource_attributes.*`).
+ * containers themselves. JSON attribute chips are not enumerated (no sampling); chips
+ * added by other flows still filter through the chip SQL support.
  */
 export async function discoverLogFilterKeys(
   tableName: string,
@@ -627,18 +552,6 @@ export async function discoverLogFilterKeys(
       keys.add(column.name)
     }
   })
-
-  const jsonColumns = listJsonAttributeColumns(columns)
-  if (tableName && jsonColumns.length) {
-    const sampled = await sampleJsonAttributeFieldKeys(tableName, jsonColumns, {
-      database: options?.database,
-    })
-    sampled.forEach((chip) => {
-      if (!exclude.has(chip) && chip !== serviceKey) {
-        keys.add(chip)
-      }
-    })
-  }
 
   return [...keys].filter((key) => !exclude.has(key)).sort((a, b) => a.localeCompare(b))
 }
