@@ -3,7 +3,6 @@ import {
   conventionEntityKeys,
   isTraceModel,
   KNOWN_OTLP_TRACE_TABLE,
-  TRACE_MODEL_REQUIRED_COLUMNS,
   TRACE_MODEL_SERVICE_COLUMN,
   traceModelScore,
 } from './otlp'
@@ -440,22 +439,18 @@ export async function listSignalTables(
 ): Promise<string[]> {
   const database = options?.database
   if (signal === 'logs') {
-    const [fromSemantics, allTables] = await Promise.all([
-      listBySignal('log', database),
-      listAllTables(database),
-    ])
+    const [fromSemantics, allTables] = await Promise.all([listBySignal('log', database), listAllTables(database)])
     const extras = (options?.include ?? []).filter(Boolean)
     // Semantics first (priority), then remaining tables — no name guessing.
-    return uniquePreserveOrder([
-      ...fromSemantics.map((row) => row.tableName),
-      ...allTables,
-      ...extras,
-    ])
+    return uniquePreserveOrder([...fromSemantics.map((row) => row.tableName), ...allTables, ...extras])
   }
 
   const fromSemantics = await listBySignal('trace', database)
   const pipelineByTable = new Map(fromSemantics.map((row) => [row.tableName, row.pipeline]))
-  const fromColumns = await listColumnModelTraceTables(TRACE_MODEL_REQUIRED_COLUMNS, database)
+  // 候选列扫描放宽为“含 trace_id 即可”：自定义 trace 表可能缺少 greptime_trace_v1 的
+  // 其他必需列（parent_span_id / span_name …），但只要能按 trace_id 过滤就值得列出；
+  // 模型齐全的表靠打分排到前面。
+  const fromColumns = await listColumnModelTraceTables(['trace_id'], database)
   const candidates = uniquePreserveOrder([
     ...fromSemantics.map((row) => row.tableName),
     ...fromColumns,
@@ -477,7 +472,7 @@ export async function listSignalTables(
         }
         return
       }
-      if (!isTraceModel(new Set(columnNames)) && !pipelineByTable.has(name)) {
+      if (!columnNames.includes('trace_id') && !pipelineByTable.has(name)) {
         return
       }
       scored.push({
