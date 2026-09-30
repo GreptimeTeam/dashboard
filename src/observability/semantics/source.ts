@@ -1,6 +1,8 @@
 import editorApi from '@/api/editor'
 import { currentDatabase } from '../current-database'
-import type { EntityDeclaration, MetadataQuality, MetricKind, MetricTableSemantics, MetricTemporality } from './types'
+import type { EntityDeclaration, MetadataQuality, TableSemantics } from './model'
+
+/** Common `information_schema.table_semantics` catalog shared by all Explore signals. */
 
 const SEMANTICS_SELECT =
   'SELECT table_name, signal_type, source, pipeline, metadata_quality, semantic_options, entity_declarations FROM information_schema.table_semantics'
@@ -8,7 +10,7 @@ const SEMANTICS_SELECT =
 /** One semantic row per table of the loaded database, plus the derived lookup indexes. */
 export interface SemanticsDump {
   generation: number
-  byName: Map<string, MetricTableSemantics>
+  byName: Map<string, TableSemantics>
   bySignal: Map<string, Array<{ tableName: string; pipeline?: string }>>
   /** Tables ending in `_bucket` — decides classic vs native histogram companions. */
   bucketTables: Set<string>
@@ -117,7 +119,7 @@ function parseEntityDeclarations(raw: unknown): EntityDeclaration[] | undefined 
   return declarations.length ? declarations : undefined
 }
 
-function rowToSemantics(row: unknown[], schemas: Array<{ name: string }>): MetricTableSemantics | null {
+function rowToSemantics(row: unknown[], schemas: Array<{ name: string }>): TableSemantics | null {
   const indexOf = (name: string) => schemas.findIndex((schema) => schema.name === name)
   const tableNameIndex = indexOf('table_name')
   if (tableNameIndex < 0) {
@@ -260,7 +262,7 @@ export function semanticsDump(database?: string): Promise<SemanticsDump> {
 }
 
 /** Look up a table's semantic row from the dump of the given (or current) database. */
-export async function getTableSemantics(tableName: string, database?: string): Promise<MetricTableSemantics | null> {
+export async function getTableSemantics(tableName: string, database?: string): Promise<TableSemantics | null> {
   const key = tableName.trim()
   if (!key) {
     return null
@@ -296,66 +298,6 @@ export async function listBySignal(
 ): Promise<Array<{ tableName: string; pipeline?: string }>> {
   const dump = await semanticsDump(database)
   return [...(dump.bySignal.get(signal) ?? [])].sort((left, right) => left.tableName.localeCompare(right.tableName))
-}
-
-/**
- * Map Greptime `metric.type` strings onto dashboard MetricKind.
- * Values follow the DB-side whitelist in `table/requests/semantic.rs`
- * (`counter|gauge|histogram|summary|updown_counter|gauge_histogram|info|stateset|mixed|unknown`);
- * anything else falls through to null. Only call with declared semantics.
- */
-export function mapDeclaredMetricType(metricType: string | undefined): MetricKind | null {
-  if (!metricType) {
-    return null
-  }
-  const normalized = metricType.trim().toLowerCase().replace(/-/g, '_')
-  switch (normalized) {
-    case 'counter':
-      return 'counter'
-    case 'gauge':
-      return 'gauge'
-    case 'updown_counter':
-      return 'updown_counter'
-    case 'histogram':
-      return 'histogram'
-    case 'gauge_histogram':
-      return 'gauge_histogram'
-    case 'summary':
-      return 'summary'
-    // Info / stateset series are 1-valued gauges carrying extra labels.
-    case 'info':
-    case 'stateset':
-      return 'gauge'
-    // The server collapses conflicting writers onto these sentinels: it is telling us
-    // it does not know. Keep them unknown instead of guessing from the name.
-    case 'mixed':
-    case 'unknown':
-      return 'unknown'
-    default:
-      return null
-  }
-}
-
-/** Declared kind only — null when missing, non-declared, or unmapped. */
-export function declaredMetricKindFromSemantics(semantics: MetricTableSemantics | null): MetricKind | null {
-  if (!semantics || semantics.metadataQuality !== 'declared') {
-    return null
-  }
-  return mapDeclaredMetricType(semantics.metricType)
-}
-
-/**
- * UCUM unit — null when the table carries none. `metadata_quality` describes
- * `metric.type` only, and unit/temporality/original_name have no "guessed" write path,
- * so they are usable whenever present.
- */
-export function declaredMetricUnitFromSemantics(semantics: MetricTableSemantics | null): string | null {
-  return semantics?.metricUnit ?? null
-}
-
-/** Instrument temporality — null when the table carries none (see unit above). */
-export function declaredTemporalityFromSemantics(semantics: MetricTableSemantics | null): MetricTemporality | null {
-  return semantics?.metricTemporality ?? null
 }
 
 /** Test helper — drop cached dumps (and missing-view markers) between cases. */

@@ -62,7 +62,7 @@ article.metric-catalog-card.drilldown-card(ref="targetRef")
 
   const { t } = useI18n()
   const ctx = useDrilldownContext()
-  const { metric } = useDrilldownContext()
+  const { metric } = ctx.ui
   const metricName = toRef(props, 'metricName')
   const colorIndex = computed(() => props.colorIndex ?? 0)
   const { targetRef, hasBeenVisible } = useLazyPanelQuery(props.scrollRoot)

@@ -114,20 +114,26 @@ article.metrics-breakdown-panel.drilldown-card(ref="targetRef")
     if (!nextValue || nextValue === '<unspecified>') {
       return
     }
-    ctx.appendFilter({ key: props.labelKey, op: '=', value: nextValue })
+    ctx.actions.appendFilter({ key: props.labelKey, op: '=', value: nextValue })
   }
 
   function addToFilter() {
     if (!canAddToFilter.value) {
       return
     }
-    ctx.appendFilter({ key: props.labelKey, op: '=', value: props.value })
+    ctx.actions.appendFilter({ key: props.labelKey, op: '=', value: props.value })
   }
 
   onMounted(loadValues)
 
   watch(
-    () => [ctx.filters.value, ctx.time.value, ctx.rangeTime.value[0], ctx.rangeTime.value[1], ctx.refreshKey.value],
+    () => [
+      ctx.query.filters.value,
+      ctx.query.time.value,
+      ctx.query.rangeTime.value[0],
+      ctx.query.rangeTime.value[1],
+      ctx.query.refreshKey.value,
+    ],
     () => {
       if (props.mode === 'label') {
         loadValues()

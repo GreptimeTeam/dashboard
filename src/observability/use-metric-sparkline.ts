@@ -13,7 +13,7 @@ import {
   isUnsupportedHistogramKind,
   type MetricPanelType,
 } from './metrics/infer-promql'
-import type { MetricKind } from './semantics/types'
+import type { MetricKind } from './semantics/model'
 import { isMetricRateQuery } from './metrics/panel-stats'
 import { resolveHistogramCellUnit, resolveMetricPanelUnit } from './metrics/metric-units'
 import {
@@ -31,7 +31,7 @@ import enqueueSparklineQuery from './metrics/sparkline-query-queue'
 import { calculateSparklineQueryStep, HEATMAP_MAX_DATA_POINTS } from './metrics/sparkline-step'
 
 function buildMatchersFromFilters(ctx: DrilldownContext): string | undefined {
-  return buildPromMatchersString(ctx.filters.value)
+  return buildPromMatchersString(ctx.query.filters.value)
 }
 
 export default function useMetricSparkline(
@@ -66,7 +66,7 @@ export default function useMetricSparkline(
       return
     }
 
-    const unixRange = ctx.unixTimeRange()
+    const unixRange = ctx.query.unixTimeRange()
     if (unixRange.length !== 2) {
       chartOption.value = null
       seriesCount.value = 0
@@ -84,7 +84,7 @@ export default function useMetricSparkline(
     error.value = null
 
     try {
-      const meta = await resolveMetricMeta(name, ctx.metricsDatabase.value)
+      const meta = await resolveMetricMeta(name, ctx.connection.metricsDatabase.value)
       if (version !== requestVersion) {
         return
       }
@@ -118,7 +118,7 @@ export default function useMetricSparkline(
       })
 
       const response = await enqueueSparklineQuery(() =>
-        executePromQLRange(query, String(start), String(end), step, ctx.metricsDatabase.value)
+        executePromQLRange(query, String(start), String(end), step, ctx.connection.metricsDatabase.value)
       )
 
       if (version !== requestVersion) {
@@ -188,11 +188,11 @@ export default function useMetricSparkline(
     () => [
       enabled.value,
       metricName.value,
-      ctx.filters.value,
-      ctx.time.value,
-      ctx.rangeTime.value[0],
-      ctx.rangeTime.value[1],
-      ctx.refreshKey.value,
+      ctx.query.filters.value,
+      ctx.query.time.value,
+      ctx.query.rangeTime.value[0],
+      ctx.query.rangeTime.value[1],
+      ctx.query.refreshKey.value,
       colorIndex.value,
       isDark.value,
     ],

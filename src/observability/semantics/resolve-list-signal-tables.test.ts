@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { listSignalTables } from './resolve'
+import { listBySignal } from './source'
 
 const MODEL_COLUMNS = [
   { name: 'timestamp' },
@@ -15,6 +16,9 @@ function schemaFor(table: string): Array<{ name: string }> {
     return MODEL_COLUMNS
   }
   if (table === 'partial_traces') {
+    return [{ name: 'timestamp' }, { name: 'trace_id' }, { name: 'duration_nano' }]
+  }
+  if (table === 'declared_traces') {
     return [{ name: 'timestamp' }, { name: 'trace_id' }]
   }
   return [{ name: 'value' }]
@@ -50,6 +54,8 @@ vi.mock('@/store/modules/table-schema', () => ({
 beforeEach(() => {
   tablesHavingColumn.mockReset()
   tablesHavingColumn.mockImplementation(async () => new Set<string>())
+  vi.mocked(listBySignal).mockReset()
+  vi.mocked(listBySignal).mockImplementation(async () => [])
 })
 
 describe('listSignalTables(traces) qualification', () => {
@@ -74,5 +80,15 @@ describe('listSignalTables(traces) qualification', () => {
     expect(tables).toContain('partial_traces')
     expect(tables).toContain('opentelemetry_traces')
     expect(tables).not.toContain('metrics_x')
+  })
+
+  it('ranks a semantic trace declaration above an undeclared partial table', async () => {
+    vi.mocked(listBySignal).mockImplementation(async () => [{ tableName: 'declared_traces' }])
+    tablesHavingColumn.mockImplementation(async () => new Set(['partial_traces']))
+
+    const tables = await listSignalTables('traces', { database: 'public' })
+
+    expect(tables.indexOf('declared_traces')).toBeGreaterThan(tables.indexOf('opentelemetry_traces'))
+    expect(tables.indexOf('declared_traces')).toBeLessThan(tables.indexOf('partial_traces'))
   })
 })

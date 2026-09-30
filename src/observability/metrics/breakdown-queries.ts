@@ -1,6 +1,6 @@
 import { shouldApplyRate } from './infer-promql'
-import { inferMetricKind } from '../semantics/heuristics'
-import type { MetricKind, MetricTemporality } from '../semantics/types'
+import { inferMetricKind } from '../semantics/model'
+import type { MetricKind, MetricTemporality } from '../semantics/model'
 import type { TimeseriesAgg } from './main-chart-config'
 
 const RATE_WINDOW = '5m'

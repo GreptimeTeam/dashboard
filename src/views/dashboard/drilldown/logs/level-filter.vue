@@ -51,19 +51,15 @@
   function ensureSeverityMapped() {
     const col = severityColumn.value
     if (!col) return
-    const { logs } = ctx.fieldMap.value
-    if (logs.severity === col && logs[col] === col) return
-    ctx.fieldMap.value = {
-      ...ctx.fieldMap.value,
-      logs: { ...logs, severity: col, [col]: col },
-    }
+    if (ctx.semantics.logs.fieldMap.value.severity === col) return
+    ctx.actions.setLogsRole('severity', col)
   }
 
   const selectedLevels = computed({
     get(): string[] {
       const col = severityColumn.value
       if (!col) return []
-      const severityFilter = ctx.filters.value.find(
+      const severityFilter = ctx.query.filters.value.find(
         (filter) => filter.key === col && (filter.op === '=' || filter.op === '=~')
       )
       if (!severityFilter) {
@@ -76,16 +72,16 @@
       if (!col) return
       ensureSeverityMapped()
       const nextValues = [...new Set((values ?? []).map((value) => value.trim()).filter(Boolean))]
-      let next = ctx.filters.value.filter((filter) => filter.key !== col)
+      let next = ctx.query.filters.value.filter((filter) => filter.key !== col)
       nextValues.forEach((value) => {
         next = addFilter(next, { key: col, op: '=', value })
       })
-      ctx.setFilters(next)
+      ctx.actions.setFilters(next)
     },
   })
 
   async function loadLevels() {
-    if (!severityColumn.value || !ctx.logsTable.value) {
+    if (!severityColumn.value || !ctx.semantics.logs.table.value) {
       levels.value = []
       return
     }

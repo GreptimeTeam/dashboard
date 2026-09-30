@@ -41,12 +41,12 @@
         :label-col="labelCol"
         :label-value="labelValue"
         :scroll-root="scrollRoot"
-        :enabled="ctx.logsView.value !== 'detail'"
+        :enabled="ctx.ui.logsView.value !== 'detail'"
       )
 </template>
 
 <script setup lang="ts">
-  import { computed, ref, toRef, watch } from 'vue'
+  import { computed, ref, toRef } from 'vue'
   import { useI18n } from 'vue-i18n'
   import LogsTable from '@/views/dashboard/logs/query/LogsTable.vue'
   import { OVERVIEW_PREVIEW_LIMIT, overviewPreviewColumns } from '@/observability/adapters/logs'
@@ -78,7 +78,7 @@
   const traceIdColumn = computed(() => logsRoles.value.traceId || logsRoles.value.trace_id || '')
 
   const openTrace = (traceId: string) => {
-    ctx.openTraceGantt(String(traceId || ''))
+    ctx.actions.openTraceGantt(String(traceId || ''))
   }
   const labelColRef = toRef(props, 'labelCol')
   const labelValueRef = toRef(props, 'labelValue')
@@ -86,72 +86,63 @@
   const previewColumns = computed(() => overviewPreviewColumns(logsRoles.value))
   const { targetRef, hasBeenVisible } = useLazyPanelQuery(props.scrollRoot ?? (() => null))
 
-  const { loading, tableColumns, tableData, tsColumn, displayedColumns, load } = useDrilldownLogsTable(ctx, {
+  const { loading, tableColumns, tableData, tsColumn, displayedColumns } = useDrilldownLogsTable(ctx, {
     labelCol: labelColRef,
     labelValue: labelValueRef,
     levels: selectedLevels,
     pageSize: OVERVIEW_PREVIEW_LIMIT,
     infinite: false,
     columns: previewColumns,
+    queryEnabled: () => hasBeenVisible.value && ctx.ui.logsView.value !== 'detail',
   })
 
   const titleText = computed(() => `${props.labelCol}="${props.labelValue}"`)
   const countLabel = computed(() => t('drilldown.logs.valueCount', { count: props.logCount }))
-  const isIncluded = computed(() => filterIncludesValue(ctx.filters.value, props.labelCol, props.labelValue))
+  const isIncluded = computed(() => filterIncludesValue(ctx.query.filters.value, props.labelCol, props.labelValue))
   const includeLabel = computed(() =>
     isIncluded.value ? t('drilldown.filters.included') : t('drilldown.filters.addToFilter')
   )
-
-  function ensureColumnMapped(column: string) {
-    if (!column || ctx.fieldMap.value.logs[column]) {
-      return
-    }
-    ctx.fieldMap.value = {
-      ...ctx.fieldMap.value,
-      logs: { ...ctx.fieldMap.value.logs, [column]: column },
-    }
-  }
 
   function applySelectedLevels() {
     const levels = selectedLevels.value
     if (!levels.length) {
       return
     }
-    const column = ctx.fieldMap.value.logs.severity
+    const column = ctx.semantics.logs.fieldMap.value.severity
     if (!column) {
       return
     }
-    ensureColumnMapped(column)
-    let next = ctx.filters.value.filter((filter) => filter.key !== column && filter.key !== 'severity')
+    let next = ctx.query.filters.value.filter((filter) => filter.key !== column && filter.key !== 'severity')
     levels.forEach((value) => {
       next = addFilter(next, { key: column, op: '=', value })
     })
-    ctx.setFilters(next)
+    ctx.actions.setFilters(next)
   }
 
   function replaceLabelFilter(key: string, value: string) {
-    const next = ctx.filters.value.filter((filter) => filter.key !== key)
-    ctx.setFilters([...next, { key, op: '=', value }])
+    const next = ctx.query.filters.value.filter((filter) => filter.key !== key)
+    ctx.actions.setFilters([...next, { key, op: '=', value }])
   }
 
   function openDetail() {
     if (!props.labelCol) {
       return
     }
-    ensureColumnMapped(props.labelCol)
     // Query logs narrows to this value. Same-key chips are replaced, not OR-merged.
     replaceLabelFilter(props.labelCol, props.labelValue)
     applySelectedLevels()
-    const groupKeys = logsServiceFilterCandidateKeys(ctx.fieldMap.value.logs, ctx.entityFilterKeys.value.logs?.service)
-    ctx.openLogsDetail(groupKeys.has(props.labelCol) ? props.labelValue : undefined)
+    const groupKeys = logsServiceFilterCandidateKeys(
+      ctx.semantics.logs.fieldMap.value,
+      ctx.semantics.logs.entityFilterKeys.value?.service
+    )
+    ctx.actions.openLogsDetail(groupKeys.has(props.labelCol) ? props.labelValue : undefined)
   }
 
   function toggleInclude() {
     if (!props.labelCol) {
       return
     }
-    ensureColumnMapped(props.labelCol)
-    ctx.toggleFilterValue({ key: props.labelCol, op: '=', value: props.labelValue })
+    ctx.actions.toggleFilterValue({ key: props.labelCol, op: '=', value: props.labelValue })
   }
 
   function mapOperator(operator: string): DrilldownFilterOp {
@@ -162,52 +153,15 @@
   function onFilterConditionAdd(event: { columnName: string; operator: string; value: unknown }) {
     const value = event.value == null ? '' : String(event.value)
     if (!value) return
-    const settings = loadDrilldownSettings(ctx.logsDatabase.value).logs
-    const chipKey = chipKeyForLogsTableFilter(event.columnName, tableColumns.value, ctx.fieldMap.value.logs, {
+    const settings = loadDrilldownSettings(ctx.connection.logsDatabase.value).logs
+    const chipKey = chipKeyForLogsTableFilter(event.columnName, tableColumns.value, ctx.semantics.logs.fieldMap.value, {
       labelInclude: settings.labelInclude,
       labelExclude: settings.labelExclude,
       fieldInclude: settings.fieldInclude,
       fieldExclude: settings.fieldExclude,
     })
-    const severityCol = ctx.fieldMap.value.logs.severity
-    if (chipKey !== severityCol && !ctx.fieldMap.value.logs[chipKey]) {
-      ctx.fieldMap.value = {
-        ...ctx.fieldMap.value,
-        logs: { ...ctx.fieldMap.value.logs, [chipKey]: event.columnName },
-      }
-    }
-    ctx.appendFilter({ key: chipKey, op: mapOperator(event.operator), value })
+    ctx.actions.appendFilter({ key: chipKey, op: mapOperator(event.operator), value })
   }
-
-  function reloadPreview() {
-    if (ctx.logsView.value === 'detail' || !hasBeenVisible.value) {
-      return
-    }
-    load()
-  }
-
-  watch(hasBeenVisible, (visible) => {
-    if (visible) {
-      reloadPreview()
-    }
-  })
-  watch(
-    () => [
-      props.labelCol,
-      props.labelValue,
-      ctx.refreshKey.value,
-      ctx.time.value,
-      ctx.rangeTime.value[0],
-      ctx.rangeTime.value[1],
-      ctx.logsView.value,
-      ctx.fieldMap.value.logs.time,
-      selectedLevels.value,
-      // Detail applies filters to panel preview; overview compose ignores them in SQL.
-      ctx.logsView.value === 'detail' ? ctx.filters.value : null,
-    ],
-    reloadPreview,
-    { deep: true }
-  )
 </script>
 
 <style scoped lang="less">

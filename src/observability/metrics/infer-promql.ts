@@ -1,5 +1,5 @@
-import { inferMetricKind } from '../semantics/heuristics'
-import type { MetricKind, MetricTemporality } from '../semantics/types'
+import { inferMetricKind } from '../semantics/model'
+import type { MetricKind, MetricTemporality } from '../semantics/model'
 
 /** Histogram kinds with no classic `_bucket` + `le` matrix to build a panel from. */
 export function isUnsupportedHistogramKind(kind: MetricKind): boolean {

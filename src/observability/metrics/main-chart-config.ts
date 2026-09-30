@@ -1,7 +1,7 @@
 import { computed, ref, type Ref } from 'vue'
 import { isUnsupportedHistogramKind } from './infer-promql'
-import { inferMetricKind } from '../semantics/heuristics'
-import type { MetricKind } from '../semantics/types'
+import { inferMetricKind } from '../semantics/model'
+import type { MetricKind } from '../semantics/model'
 
 /** Grafana-like main panel visualization mode. */
 export type MainChartVariant = 'timeseries' | 'heatmap' | 'percentiles'

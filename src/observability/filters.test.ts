@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeEntityFilters } from './semantics/otlp'
+import { normalizeEntityFilters } from './semantics/model'
 import {
   addFilter,
   buildPromMatchersString,
@@ -75,10 +75,13 @@ describe('filters fieldMap SQL mapping', () => {
     env: 'env',
   }
 
-  it('resolveFieldMapColumn only returns mapped columns', () => {
+  it('resolveFieldMapColumn returns mapped columns and physical fallback', () => {
     expect(resolveFieldMapColumn('service', fieldMap)).toBe('service_name')
     expect(resolveFieldMapColumn('instance', fieldMap)).toBeUndefined()
     expect(resolveFieldMapColumn('trace_id', fieldMap)).toBe('trace_id')
+    expect(resolveFieldMapColumn('host', fieldMap, ['host', 'env'])).toBe('host')
+    expect(resolveFieldMapColumn('instance', fieldMap, ['host', 'env'])).toBeUndefined()
+    expect(resolveFieldMapColumn('host', fieldMap, new Set(['host']))).toBe('host')
   })
 
   it('filtersToSqlWhere skips unmapped Prom-only labels', () => {
@@ -93,6 +96,12 @@ describe('filters fieldMap SQL mapping', () => {
     expect(parts).toEqual([`"service_name" = 'checkout'`, `"env" ~ 'prod.*'`])
   })
 
+  it('filtersToSqlWhere resolves physical columns via options.columns', () => {
+    expect(
+      filtersToSqlWhere([{ key: 'host', op: '=', value: 'web-1' }], fieldMap, { columns: ['host', 'env'] })
+    ).toEqual([`"host" = 'web-1'`])
+  })
+
   it('filtersToSqlWhere returns empty when nothing maps', () => {
     expect(filtersToSqlWhere([{ key: 'instance', op: '=', value: 'i-2' }], fieldMap)).toEqual([])
   })
@@ -101,6 +110,7 @@ describe('filters fieldMap SQL mapping', () => {
     expect(hasLogsMappedFilters([{ key: 'service', op: '=', value: 'checkout' }], fieldMap)).toBe(false)
     expect(hasLogsMappedFilters([{ key: 'service', op: '=', value: 'checkout' }], fieldMap, 'otel_logs')).toBe(true)
     expect(hasLogsMappedFilters([{ key: 'instance', op: '=', value: 'i-2' }], fieldMap, 'otel_logs')).toBe(false)
+    expect(hasLogsMappedFilters([{ key: 'host', op: '=', value: 'web-1' }], fieldMap, 'otel_logs', ['host'])).toBe(true)
   })
 
   it('filtersToSqlWhere ORs same-key multi-value as IN', () => {

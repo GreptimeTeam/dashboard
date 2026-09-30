@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import type { DrilldownContext } from './context'
 import useDrilldownFilterOptions from './use-drilldown-filter-options'
 
@@ -15,7 +15,7 @@ vi.mock('./adapters/filter-options', () => ({
 
 vi.mock('./drilldown-settings', () => ({
   loadDrilldownSettings: () => ({ logs: {} }),
-  updateLogsDrilldownSettings: () => {},
+  updateLogsDrilldownSettings: () => undefined,
 }))
 
 vi.mock('./logs/field-map', () => ({
@@ -24,15 +24,36 @@ vi.mock('./logs/field-map', () => ({
 
 const makeCtx = (signal: 'metrics' | 'logs' | 'traces', logsFieldMap: Record<string, string>) =>
   ({
-    signal: ref(signal),
-    metric: ref(undefined),
-    logsTable: ref('otlp_logs'),
-    tracesTable: ref(undefined),
-    fieldMap: ref({ logs: logsFieldMap, traces: {} }),
-    signalColumns: ref({ logs: ['severity', 'resource_attributes'] }),
-    signalColumnTypes: ref({}),
-    logsDatabase: ref('public'),
-  }) as unknown as DrilldownContext
+    connection: {
+      signal: ref(signal),
+      logsDatabase: ref('public'),
+    },
+    query: {},
+    semantics: {
+      logs: {
+        table: ref('otlp_logs'),
+        fieldMap: ref(logsFieldMap),
+        columns: ref(['severity', 'resource_attributes']),
+        columnTypes: ref(undefined),
+        entityFilterKeys: ref({}),
+        revision: ref(1),
+        ready: computed(() => true),
+      },
+      traces: {
+        table: ref(undefined),
+        fieldMap: ref({}),
+        columns: ref(undefined),
+        columnTypes: ref(undefined),
+        entityFilterKeys: ref({}),
+        revision: ref(0),
+        ready: computed(() => false),
+      },
+    },
+    ui: {
+      metric: ref(undefined),
+    },
+    actions: {},
+  } as unknown as DrilldownContext)
 
 describe('useDrilldownFilterOptions isVisibleFilterKey', () => {
   it('hides the resolved service chip on logs — the service select owns its display', () => {

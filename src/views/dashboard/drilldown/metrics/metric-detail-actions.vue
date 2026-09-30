@@ -71,7 +71,7 @@
   watch(
     () => props.metric,
     async (name) => {
-      const meta = await resolveMetricMeta(name, ctx.metricsDatabase.value)
+      const meta = await resolveMetricMeta(name, ctx.connection.metricsDatabase.value)
       kind.value = meta.kind
       temporality.value = meta.temporality
     },
@@ -96,7 +96,7 @@
     if (!name) {
       return ''
     }
-    const matcherStr = buildPromMatchersString(ctx.filters.value)
+    const matcherStr = buildPromMatchersString(ctx.query.filters.value)
     return buildMainChartQueries(name, matcherStr, prefs.value, kind.value, temporality.value).queries[0]?.expr ?? ''
   })
 
@@ -123,8 +123,8 @@
     }
     const location = buildMetricsQueryLocation({
       promql,
-      timeLength: ctx.time.value,
-      rangeTime: ctx.time.value === 0 ? [...ctx.rangeTime.value] : undefined,
+      timeLength: ctx.query.time.value,
+      rangeTime: ctx.query.time.value === 0 ? [...ctx.query.rangeTime.value] : undefined,
     })
     router.push(location)
   }

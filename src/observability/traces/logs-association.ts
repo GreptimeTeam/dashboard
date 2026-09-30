@@ -8,14 +8,16 @@ import { buildLogsFieldMap, type SchemaColumn } from '../logs/field-map'
 import { escapeSqlString, quoteIdent } from '../logs/query-state'
 import { sqlJsonGetStringExpr } from '../logs/json-field-keys'
 import { getTableSemantics, listSignalTables, resolveEntityFilterRef } from '../semantics'
-import { isTraceModel } from '../semantics/otlp'
-import type { EntityColumnRef } from '../semantics/types'
+import { isTraceModel } from '../semantics/model'
+import type { EntityColumnRef } from '../semantics/model'
 import type { LogsRowsResult } from '../adapters/logs'
+import { boundSignalDatabase } from '../signal-database'
 
 /**
  * Where a trace's logs live: `manual` = user-authored mapping, `auto` = learned from the
- * service probe, `current` = the Logs page bound table (compatibility fallback — opening
- * it must not rebind the Logs page).
+ * service probe, `current` = the currently bound logs table (`ctx.semantics.logs.table`
+ * via the binder — normally the Logs page table; during Trace→Logs overlay this is the
+ * overlay table). Compatibility fallback only — opening it must not rebind the Logs page.
  */
 export type TraceLogsTargetSource = 'manual' | 'auto' | 'current'
 
@@ -122,9 +124,9 @@ export async function qualifyTraceLogsTable(
  * discovery (`listSignalTables`) and identity resolution (`resolveEntityFilterRef`).
  */
 async function loadLogsCandidates(ctx: DrilldownContext): Promise<LogsCandidate[]> {
-  const database = ctx.logsDatabase.value
+  const database = ctx.connection.logsDatabase.value
   const tables = await listSignalTables('logs', {
-    include: ctx.logsTable.value ? [ctx.logsTable.value] : [],
+    include: ctx.semantics.logs.table.value ? [ctx.semantics.logs.table.value] : [],
     database,
   })
 
@@ -190,9 +192,27 @@ function probeVerdictKey(database: string, table: string, windowKey: string, ser
   return `${database}|${table}|${windowKey}|${service}`
 }
 
-/** Test hook: clears the session probe cache. */
+/**
+ * In-flight `resolveTraceLogsForServices` promises, keyed by
+ * `tracesDb|logsDb|pageLogsTable|windowKey|sortedServices`. Concurrent callers
+ * (traces-home, gantt, settings) with the same signature share one resolve.
+ */
+const inflightResolves = new Map<string, Promise<TraceLogsResolution>>()
+
+/** Test hook: clears the session probe cache and in-flight resolve map. */
 export function resetTraceLogsProbeCache(): void {
   probeVerdicts.clear()
+  inflightResolves.clear()
+}
+
+function resolveInflightKey(ctx: DrilldownContext, services: string[]): string {
+  const tracesDb = ctx.connection.tracesDatabase.value
+  const logsDb = ctx.connection.logsDatabase.value
+  const pageLogsTable = ctx.semantics.logs.table.value ?? ''
+  const unixRange = ctx.query.unixTimeRange()
+  const windowKey = unixRange.length === 2 ? `${unixRange[0]}-${unixRange[1]}` : 'all'
+  const sortedServices = [...services].sort().join(',')
+  return `${tracesDb}|${logsDb}|${pageLogsTable}|${windowKey}|${sortedServices}`
 }
 
 /** ONE UNION ALL request answering every pending (table, service) pair. */
@@ -247,7 +267,7 @@ async function probeLogsCandidates(
   if (!candidates.length || !services.length) {
     return hits
   }
-  const unixRange = ctx.unixTimeRange()
+  const unixRange = ctx.query.unixTimeRange()
   const windowKey = unixRange.length === 2 ? `${unixRange[0]}-${unixRange[1]}` : 'all'
 
   // Only pairs without a verdict go into the query; in-flight verdicts are shared.
@@ -309,8 +329,8 @@ async function probeLogsCandidates(
  * entries are never touched, and tombstoned services are never re-learned.
  */
 function learnTraceLogsMapping(ctx: DrilldownContext, service: string, table: string): void {
-  const database = ctx.logsDatabase.value
-  const settings = loadDrilldownSettings(ctx.tracesDatabase.value)
+  const database = ctx.connection.logsDatabase.value
+  const settings = loadDrilldownSettings(ctx.connection.tracesDatabase.value)
   const mappings = settings.traces.traceLogsMappings ?? []
   if (mappings.some((item) => item.service === service)) {
     return
@@ -320,40 +340,27 @@ function learnTraceLogsMapping(ctx: DrilldownContext, service: string, table: st
   }
   updateTracesDrilldownSettings(
     { traceLogsMappings: [...mappings, { service, database, table, source: 'auto' }] },
-    ctx.tracesDatabase.value
+    ctx.connection.tracesDatabase.value
   )
 }
 
-/**
- * Resolve service-scoped logs targets for a trace view.
- *
- * Mappings exist only to disambiguate **multiple** logs tables. Routing keys are
- * data-carried identities (service value + time window), never trace_id: manual settings
- * win, then learned entries, then the service probe over qualified candidates, then the
- * Logs page bound table as the visible fallback. A probe that matches several tables is
- * left ambiguous for the user — the system never guesses.
- */
-export async function resolveTraceLogsForServices(
-  ctx: DrilldownContext,
-  services: Array<string | undefined>
-): Promise<TraceLogsResolution> {
-  const requested = [...new Set(services.map(normalizeName).filter(Boolean))]
+async function doResolveTraceLogsForServices(ctx: DrilldownContext, requested: string[]): Promise<TraceLogsResolution> {
   const resolution: TraceLogsResolution = { targets: {}, ambiguous: {}, multiTable: false }
-  if (!requested.length) {
-    return resolution
-  }
 
-  const settings = loadDrilldownSettings(ctx.tracesDatabase.value)
+  const settings = loadDrilldownSettings(ctx.connection.tracesDatabase.value)
   let activeMappings = settings.traces.traceLogsMappings ?? []
   // Auto entries learned under a different Logs database are stale — drop them.
-  activeMappings = activeMappings.filter((item) => item.source !== 'auto' || item.database === ctx.logsDatabase.value)
+  activeMappings = activeMappings.filter(
+    (item) => item.source !== 'auto' || item.database === ctx.connection.logsDatabase.value
+  )
   let pending = requested.filter((service) => !activeMappings.some((item) => item.service === service))
 
   // Mappings only carry information when several logs tables compete. With a single
   // qualified table (or none), every mapping that resolves to it is a no-op equivalent
   // to the Logs page binding — drop it regardless of where it came from, so the settings
   // stay clean and the Logs field settings decide.
-  const needsCandidates = pending.length > 0 || activeMappings.some((item) => item.database === ctx.logsDatabase.value)
+  const needsCandidates =
+    pending.length > 0 || activeMappings.some((item) => item.database === ctx.connection.logsDatabase.value)
   let candidates: LogsCandidate[] = []
   let multiTable = false
   if (needsCandidates) {
@@ -365,7 +372,7 @@ export async function resolveTraceLogsForServices(
         if (item.source === 'auto') {
           return false
         }
-        return !(onlyTable && item.database === ctx.logsDatabase.value && item.table === onlyTable)
+        return !(onlyTable && item.database === ctx.connection.logsDatabase.value && item.table === onlyTable)
       })
       pending = pending.filter((service) => !activeMappings.some((item) => item.service === service))
     }
@@ -373,7 +380,7 @@ export async function resolveTraceLogsForServices(
   if (activeMappings.length !== (settings.traces.traceLogsMappings?.length ?? 0)) {
     updateTracesDrilldownSettings(
       { traceLogsMappings: activeMappings.length ? activeMappings : [] },
-      ctx.tracesDatabase.value
+      ctx.connection.tracesDatabase.value
     )
   }
 
@@ -397,7 +404,7 @@ export async function resolveTraceLogsForServices(
         learnTraceLogsMapping(ctx, service, hitTables[0])
         resolution.targets[service] = {
           service,
-          database: ctx.logsDatabase.value,
+          database: ctx.connection.logsDatabase.value,
           table: hitTables[0],
           source: 'auto',
         }
@@ -407,14 +414,18 @@ export async function resolveTraceLogsForServices(
     })
   }
 
-  const fallbackTable = ctx.logsTable.value
-  if (fallbackTable) {
+  // `source: 'current'` uses the currently bound logs table (`ctx.semantics.logs`).
+  // Callers typically resolve before opening the Trace→Logs overlay, so this is the
+  // page binding; if overlay is already open, semantics.logs is the overlay table.
+  const logsTable = ctx.semantics.logs.table.value
+  const logsDb = boundSignalDatabase(ctx, 'logs')
+  if (logsTable) {
     requested.forEach((service) => {
       if (!resolution.targets[service] && !resolution.ambiguous[service]) {
         resolution.targets[service] = {
           service,
-          database: ctx.logsDatabase.value,
-          table: fallbackTable,
+          database: logsDb,
+          table: logsTable,
           source: 'current',
         }
       }
@@ -422,6 +433,41 @@ export async function resolveTraceLogsForServices(
   }
   resolution.multiTable = multiTable
   return resolution
+}
+
+/**
+ * Resolve service-scoped logs targets for a trace view.
+ *
+ * Mappings exist only to disambiguate **multiple** logs tables. Routing keys are
+ * data-carried identities (service value + time window), never trace_id: manual settings
+ * win, then learned entries, then the service probe over qualified candidates, then the
+ * currently bound logs table (`source: 'current'`) as the visible fallback. A probe that
+ * matches several tables is left ambiguous for the user — the system never guesses.
+ *
+ * Concurrent callers with the same signature share one in-flight promise.
+ */
+export async function resolveTraceLogsForServices(
+  ctx: DrilldownContext,
+  services: Array<string | undefined>
+): Promise<TraceLogsResolution> {
+  const requested = [...new Set(services.map(normalizeName).filter(Boolean))]
+  if (!requested.length) {
+    return { targets: {}, ambiguous: {}, multiTable: false }
+  }
+
+  const key = resolveInflightKey(ctx, requested)
+  const existing = inflightResolves.get(key)
+  if (existing) {
+    return existing
+  }
+
+  const promise = doResolveTraceLogsForServices(ctx, requested).finally(() => {
+    if (inflightResolves.get(key) === promise) {
+      inflightResolves.delete(key)
+    }
+  })
+  inflightResolves.set(key, promise)
+  return promise
 }
 
 export async function resolveTraceLogsTarget(
@@ -523,7 +569,7 @@ export async function fetchTraceLogsRows(
   const keyOffset = options.keyOffset ?? 0
   const whereParts = [`${quoteIdent(traceColumn)} = '${escapeSqlString(traceId)}'`]
   if (timeColumn) {
-    const unixRange = ctx.unixTimeRange()
+    const unixRange = ctx.query.unixTimeRange()
     if (unixRange.length === 2) {
       whereParts.push(
         `${quoteIdent(timeColumn)} >= FROM_UNIXTIME(${unixRange[0]})`,

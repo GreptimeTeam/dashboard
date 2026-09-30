@@ -5,7 +5,7 @@ import type { DrilldownContext } from '../context'
 const INTERNAL_LABEL_PREFIX = '__'
 
 function promTimeParams(ctx: DrilldownContext): { start?: string; end?: string } {
-  const unixRange = ctx.unixTimeRange()
+  const unixRange = ctx.query.unixTimeRange()
   if (unixRange.length !== 2) {
     return {}
   }
@@ -33,7 +33,7 @@ function filterLabelKeys(keys: string[]): string[] {
 }
 
 export async function fetchBreakdownLabelKeys(ctx: DrilldownContext, metric: string): Promise<string[]> {
-  const match = buildPromMatchSelector(ctx.filters.value, { metric })
+  const match = buildPromMatchSelector(ctx.query.filters.value, { metric })
   const selector = match ?? `{__name__="${metric.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"}`
   const time = promTimeParams(ctx)
 
@@ -41,7 +41,7 @@ export async function fetchBreakdownLabelKeys(ctx: DrilldownContext, metric: str
     const response = await getLabelNames({
       match: selector,
       ...time,
-      database: ctx.metricsDatabase.value,
+      database: ctx.connection.metricsDatabase.value,
     })
     return filterLabelKeys(asStringArray(response))
   } catch (error) {
@@ -63,7 +63,7 @@ export async function fetchBreakdownLabelValues(
   // Keep all filters (including this label if already filtered). Grafana derives
   // value panels from the filtered query — do not excludeKey here or Add-to-filter
   // still lists values outside the current filter scope.
-  const match = buildPromMatchSelector(ctx.filters.value, { metric })
+  const match = buildPromMatchSelector(ctx.query.filters.value, { metric })
 
   if (!match) {
     return []
@@ -75,7 +75,7 @@ export async function fetchBreakdownLabelValues(
     const response = await getLabelValues(trimmedKey, {
       match,
       ...time,
-      database: ctx.metricsDatabase.value,
+      database: ctx.connection.metricsDatabase.value,
     })
     return asStringArray(response)
   } catch (error) {

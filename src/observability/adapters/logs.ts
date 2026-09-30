@@ -4,6 +4,7 @@ import { TsTypeMapping } from '@/utils/date-time'
 import useTableSchemaStore from '@/store/modules/table-schema'
 import type { DrilldownContext } from '../context'
 import { loadDrilldownSettings } from '../drilldown-settings'
+import { boundSignalDatabase } from '../signal-database'
 import { filtersToSqlWhere } from '../filters'
 import {
   discoverFieldColumns,
@@ -51,7 +52,7 @@ function selectLogColumns(schemaNames: string[], requested: string[] | undefined
 }
 
 function volumeRangeMs(ctx: DrilldownContext): number {
-  const unixRange = ctx.unixTimeRange()
+  const unixRange = ctx.query.unixTimeRange()
   if (unixRange.length === 2) {
     const start = Number(unixRange[0])
     const end = Number(unixRange[1])
@@ -59,8 +60,8 @@ function volumeRangeMs(ctx: DrilldownContext): number {
       return (end - start) * 1000
     }
   }
-  if (ctx.time.value > 0) {
-    return ctx.time.value * 60 * 1000
+  if (ctx.query.time.value > 0) {
+    return ctx.query.time.value * 60 * 1000
   }
   return 30 * 60 * 1000
 }
@@ -138,34 +139,34 @@ export async function buildLogsContextWhere(
     columns?: SchemaColumn[]
     /**
      * Absolute unix-seconds window. When set, preferred over live
-     * `ctx.unixTimeRange()` so scroll loadMore does not drift.
+     * `ctx.query.unixTimeRange()` so scroll loadMore does not drift.
      */
     unixRange?: readonly [number, number] | number[] | null
   }
 ): Promise<string> {
-  const tableName = ctx.logsTable.value
+  const tableName = ctx.semantics.logs.table.value
   if (!tableName) {
     return ''
   }
 
-  const fieldMap = ctx.fieldMap.value.logs
+  const fieldMap = ctx.semantics.logs.fieldMap.value
   const whereParts: string[] = []
-  const liveRange = ctx.unixTimeRange()
+  const liveRange = ctx.query.unixTimeRange()
   const unixRange =
     options?.unixRange != null && options.unixRange.length === 2
       ? [Number(options.unixRange[0]), Number(options.unixRange[1])]
       : liveRange
   // The trace-id drawer is driven by logsTraceId alone: it exists on the traces signal
   // (stacked over the gantt) and on the logs signal (opened from the gantt's View logs).
-  const tracesLogsDrawer = Boolean(ctx.logsTraceId.value?.trim())
-  const includeLabelFilters = options?.includeLabelFilters ?? (ctx.logsView.value === 'detail' || tracesLogsDrawer)
+  const tracesLogsDrawer = Boolean(ctx.ui.logsTraceId.value?.trim())
+  const includeLabelFilters = options?.includeLabelFilters ?? (ctx.ui.logsView.value === 'detail' || tracesLogsDrawer)
   const needsColumns =
     includeLabelFilters ||
     (unixRange.length === 2 && !resolveLogsTimeColumn(fieldMap)) ||
     // Panel/row predicates may name a JSON chip label — the schema resolves its container.
     Boolean(options?.extraEquals?.length)
   const columns = needsColumns
-    ? options?.columns ?? (await loadSchema(tableName, ctx.logsDatabase.value))
+    ? options?.columns ?? (await loadSchema(tableName, boundSignalDatabase(ctx, 'logs')))
     : options?.columns
 
   if (unixRange.length === 2) {
@@ -177,14 +178,14 @@ export async function buildLogsContextWhere(
   }
 
   if (includeLabelFilters && columns) {
-    const settings = loadDrilldownSettings(ctx.logsDatabase.value).logs
+    const settings = loadDrilldownSettings(boundSignalDatabase(ctx, 'logs')).logs
     whereParts.push(
-      ...filtersToSqlWhere(ctx.filters.value, fieldMap, {
+      ...filtersToSqlWhere(ctx.query.filters.value, fieldMap, {
         excludeKey: options?.excludeFilterKey,
         columns: columns.map((column) => column.name),
         jsonColumns: listJsonAttributeColumns(columns),
         // Attribute columns are typed (int / boolean / …): comparisons need typed literals.
-        typeOf: (column) => ctx.signalColumnTypes.value.logs?.[column],
+        typeOf: (column) => ctx.semantics.logs.columnTypes.value?.[column],
         containsColumns: discoverLogsContainsColumns(columns, fieldMap, {
           include: settings.labelInclude,
           exclude: settings.labelExclude,
@@ -198,7 +199,7 @@ export async function buildLogsContextWhere(
     whereParts.push(`${logsColumnExpr(column, columnNames)} = '${escapeSqlString(value)}'`)
   })
 
-  const logsTraceId = ctx.logsTraceId.value?.trim()
+  const logsTraceId = ctx.ui.logsTraceId.value?.trim()
   // Same role source the traces page uses to show the affordance: settings fill roles the
   // runtime map has not resolved, so the jump filters as soon as it is offered. The filter
   // applies on any signal — logsTraceId is set only by the View logs flow and cleared on
@@ -214,18 +215,18 @@ export async function buildLogsContextWhere(
 
 /** Logs WHERE — requires at least one mapped label filter (not time alone). */
 export async function buildLogsWhere(ctx: DrilldownContext): Promise<string> {
-  const tableName = ctx.logsTable.value
+  const tableName = ctx.semantics.logs.table.value
   if (!tableName) {
     return ''
   }
 
-  const columns = await loadSchema(tableName, ctx.logsDatabase.value)
-  const fieldMap = ctx.fieldMap.value.logs
-  const settings = loadDrilldownSettings(ctx.logsDatabase.value).logs
-  const whereParts = filtersToSqlWhere(ctx.filters.value, fieldMap, {
+  const columns = await loadSchema(tableName, boundSignalDatabase(ctx, 'logs'))
+  const fieldMap = ctx.semantics.logs.fieldMap.value
+  const settings = loadDrilldownSettings(boundSignalDatabase(ctx, 'logs')).logs
+  const whereParts = filtersToSqlWhere(ctx.query.filters.value, fieldMap, {
     columns: columns.map((column) => column.name),
     jsonColumns: listJsonAttributeColumns(columns),
-    typeOf: (column) => ctx.signalColumnTypes.value.logs?.[column],
+    typeOf: (column) => ctx.semantics.logs.columnTypes.value?.[column],
     containsColumns: discoverLogsContainsColumns(columns, fieldMap, {
       include: settings.labelInclude,
       exclude: settings.labelExclude,
@@ -235,9 +236,9 @@ export async function buildLogsWhere(ctx: DrilldownContext): Promise<string> {
     return ''
   }
 
-  const unixRange = ctx.unixTimeRange()
+  const unixRange = ctx.query.unixTimeRange()
   if (unixRange.length === 2) {
-    const timeColumn = await resolveLogsTimeColumnFallback(tableName, ctx.fieldMap.value.logs)
+    const timeColumn = await resolveLogsTimeColumnFallback(tableName, ctx.semantics.logs.fieldMap.value)
     if (timeColumn) {
       whereParts.push(`${quoteIdent(timeColumn)} >= FROM_UNIXTIME(${unixRange[0]})`)
       whereParts.push(`${quoteIdent(timeColumn)} <= FROM_UNIXTIME(${unixRange[1]})`)
@@ -254,13 +255,13 @@ export type ServiceVolumeRow = {
 
 /** GROUP BY primaryGroupBy — used when a real group column exists (no fake All-logs card). */
 export async function fetchServiceVolumes(ctx: DrilldownContext, limit = 200): Promise<ServiceVolumeRow[]> {
-  const tableName = ctx.logsTable.value
-  const groupCol = (ctx.fieldMap.value.logs.primaryGroupBy ?? '').trim()
+  const tableName = ctx.semantics.logs.table.value
+  const groupCol = (ctx.semantics.logs.fieldMap.value.primaryGroupBy ?? '').trim()
   if (!tableName || !groupCol) {
     return []
   }
 
-  const columns = await loadSchema(tableName, ctx.logsDatabase.value)
+  const columns = await loadSchema(tableName, boundSignalDatabase(ctx, 'logs'))
   const columnNames = columns.map((column) => column.name)
   if (!isLogsRoleValue(groupCol, new Set(columnNames))) {
     return []
@@ -279,7 +280,7 @@ WHERE ${where}
 GROUP BY group_key
 ORDER BY cnt DESC
 LIMIT ${limit}`
-    const response = await editorApi.runSQL(sql, ctx.logsDatabase.value)
+    const response = await editorApi.runSQL(sql, boundSignalDatabase(ctx, 'logs'))
     const rows = response?.output?.[0]?.records?.rows
     if (!Array.isArray(rows)) {
       return []
@@ -295,30 +296,30 @@ LIMIT ${limit}`
 }
 
 export async function listLabelKeys(ctx: DrilldownContext): Promise<string[]> {
-  const tableName = ctx.logsTable.value
+  const tableName = ctx.semantics.logs.table.value
   if (!tableName) {
     return []
   }
-  const columns = await loadSchema(tableName, ctx.logsDatabase.value)
-  const settings = loadDrilldownSettings(ctx.logsDatabase.value).logs
-  return discoverLogLabelKeys(tableName, columns, ctx.fieldMap.value.logs, {
+  const columns = await loadSchema(tableName, boundSignalDatabase(ctx, 'logs'))
+  const settings = loadDrilldownSettings(boundSignalDatabase(ctx, 'logs')).logs
+  return discoverLogLabelKeys(tableName, columns, ctx.semantics.logs.fieldMap.value, {
     include: settings.labelInclude,
     exclude: settings.labelExclude,
     // The semantic service identity is a label even when JSON sampling misses it.
-    identityChip: ctx.entityFilterKeys.value.logs?.service,
-    database: ctx.logsDatabase.value,
+    identityChip: ctx.semantics.logs.entityFilterKeys.value?.service,
+    database: boundSignalDatabase(ctx, 'logs'),
   })
 }
 
 /** Non-groupable remainder. Not a user-facing Fields picker. */
 export async function listFieldKeys(ctx: DrilldownContext): Promise<string[]> {
-  const tableName = ctx.logsTable.value
+  const tableName = ctx.semantics.logs.table.value
   if (!tableName) {
     return []
   }
-  const columns = await loadSchema(tableName, ctx.logsDatabase.value)
-  const settings = loadDrilldownSettings(ctx.logsDatabase.value).logs
-  const l1 = discoverFieldColumns(columns, ctx.fieldMap.value.logs, {
+  const columns = await loadSchema(tableName, boundSignalDatabase(ctx, 'logs'))
+  const settings = loadDrilldownSettings(boundSignalDatabase(ctx, 'logs')).logs
+  const l1 = discoverFieldColumns(columns, ctx.semantics.logs.fieldMap.value, {
     include: settings.fieldInclude,
     exclude: settings.fieldExclude,
     labelInclude: settings.labelInclude,
@@ -337,12 +338,12 @@ export async function fetchLabelValues(
   labelCol: string,
   options?: { limit?: number; excludeFilterKey?: string }
 ): Promise<LabelValueRow[]> {
-  const tableName = ctx.logsTable.value
+  const tableName = ctx.semantics.logs.table.value
   const limit = options?.limit ?? LABEL_VALUES_LIMIT
   if (!tableName || !labelCol) {
     return []
   }
-  const schema = await loadSchema(tableName, ctx.logsDatabase.value)
+  const schema = await loadSchema(tableName, boundSignalDatabase(ctx, 'logs'))
   const columnNames = schema.map((column) => column.name)
   // Labels may be JSON chips (`resource_attributes.service.name`) — same shape as a role.
   if (!isLogsRoleValue(labelCol, new Set(columnNames))) {
@@ -365,7 +366,7 @@ WHERE ${where} AND ${labelExpr} IS NOT NULL
 GROUP BY value
 ORDER BY cnt DESC
 LIMIT ${limit}`
-    const response = await editorApi.runSQL(sql, ctx.logsDatabase.value)
+    const response = await editorApi.runSQL(sql, boundSignalDatabase(ctx, 'logs'))
     const rows = response?.output?.[0]?.records?.rows
     if (!Array.isArray(rows)) {
       return []
@@ -382,7 +383,7 @@ LIMIT ${limit}`
 
 /** Distinct severity/level values for the detail-page level filter. */
 export async function fetchSeverityLevels(ctx: DrilldownContext): Promise<LabelValueRow[]> {
-  const severityCol = ctx.fieldMap.value.logs.severity
+  const severityCol = ctx.semantics.logs.fieldMap.value.severity
   if (!severityCol) {
     return []
   }
@@ -438,14 +439,14 @@ export async function fetchLogsRows(
     unixRange?: readonly [number, number] | number[] | null
   }
 ): Promise<LogsRowsResult> {
-  const tableName = ctx.logsTable.value
+  const tableName = ctx.semantics.logs.table.value
   const empty: LogsRowsResult = { columns: [], data: [], tsColumn: null, tsColumnName: null, hasMore: false }
   if (!tableName) {
     return empty
   }
 
-  const fieldMap = ctx.fieldMap.value.logs
-  const schema = await loadSchema(tableName, ctx.logsDatabase.value)
+  const fieldMap = ctx.semantics.logs.fieldMap.value
+  const schema = await loadSchema(tableName, boundSignalDatabase(ctx, 'logs'))
   // The panel label may be a JSON chip (`resource_attributes.service.name`), not a column.
   if (options?.labelCol && !isLogsRoleValue(options.labelCol, new Set(schema.map((column) => column.name)))) {
     return empty
@@ -494,7 +495,7 @@ FROM ${quoteIdent(tableName)}
 WHERE ${whereParts.join(' AND ')}
 ${order}
 LIMIT ${limit}`
-    const response = await editorApi.runSQL(sql, ctx.logsDatabase.value)
+    const response = await editorApi.runSQL(sql, boundSignalDatabase(ctx, 'logs'))
     const records = response?.output?.[0]?.records
     const schemas = records?.schema?.column_schemas ?? []
     const rows = records?.rows ?? []
@@ -539,12 +540,12 @@ export async function fetchLogVolumeTimeseries(
   ctx: DrilldownContext,
   options?: { labelCol?: string; value?: string; plotWidthPx?: number; extraWhere?: string }
 ): Promise<LogVolumeSeries[]> {
-  const tableName = ctx.logsTable.value
-  const fieldMap = ctx.fieldMap.value.logs
+  const tableName = ctx.semantics.logs.table.value
+  const fieldMap = ctx.semantics.logs.fieldMap.value
   if (!tableName) {
     return []
   }
-  const schema = await loadSchema(tableName, ctx.logsDatabase.value)
+  const schema = await loadSchema(tableName, boundSignalDatabase(ctx, 'logs'))
   const timeColumn = resolveLogsTimeColumnFallback(fieldMap, schema)
   if (!timeColumn) {
     return []
@@ -584,7 +585,7 @@ GROUP BY time_bucket${levelGroup}
 ORDER BY time_bucket ASC`
 
   try {
-    const response = await editorApi.runSQL(sql, ctx.logsDatabase.value)
+    const response = await editorApi.runSQL(sql, boundSignalDatabase(ctx, 'logs'))
     const rows = response?.output?.[0]?.records?.rows
     if (!Array.isArray(rows)) {
       return []
@@ -620,12 +621,12 @@ export async function fetchLogVolumeByColumn(
   options: { column: string; plotWidthPx?: number }
 ): Promise<LogVolumeSeries[]> {
   const column = options.column.trim()
-  const tableName = ctx.logsTable.value
-  const fieldMap = ctx.fieldMap.value.logs
+  const tableName = ctx.semantics.logs.table.value
+  const fieldMap = ctx.semantics.logs.fieldMap.value
   if (!tableName || !column) {
     return []
   }
-  const schema = await loadSchema(tableName, ctx.logsDatabase.value)
+  const schema = await loadSchema(tableName, boundSignalDatabase(ctx, 'logs'))
   const timeColumn = resolveLogsTimeColumnFallback(fieldMap, schema)
   const columnNames = schema.map((item) => item.name)
   if (!timeColumn || !isLogsRoleValue(column, new Set(columnNames))) {
@@ -655,7 +656,7 @@ GROUP BY time_bucket, series
 ORDER BY time_bucket ASC`
 
   try {
-    const response = await editorApi.runSQL(sql, ctx.logsDatabase.value)
+    const response = await editorApi.runSQL(sql, boundSignalDatabase(ctx, 'logs'))
     const rows = response?.output?.[0]?.records?.rows
     if (!Array.isArray(rows)) {
       return []

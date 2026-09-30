@@ -3,6 +3,7 @@ import useTableSchemaStore from '@/store/modules/table-schema'
 import { getLabelNames, getLabelValues } from '@/api/metrics'
 import type { DrilldownContext } from '../context'
 import { loadDrilldownSettings } from '../drilldown-settings'
+import { boundSignalDatabase } from '../signal-database'
 import { buildPromMatchSelector, isGreptimePromMatchSelector, resolveFieldMapColumn, sqlValueLiteral } from '../filters'
 import {
   discoverFieldColumns,
@@ -25,7 +26,7 @@ const INTERNAL_LABEL_PREFIX = '__'
 const SQL_VALUE_LIMIT = 200
 
 function promTimeParams(ctx: DrilldownContext): { start?: string; end?: string } {
-  const unixRange = ctx.unixTimeRange()
+  const unixRange = ctx.query.unixTimeRange()
   if (unixRange.length !== 2) {
     return {}
   }
@@ -61,24 +62,24 @@ function filterOptions(keys: string[], search: string): string[] {
 }
 
 function activeSignal(ctx: DrilldownContext): DrilldownSignal {
-  return ctx.signal.value
+  return ctx.connection.signal.value
 }
 
 function sqlTableForSignal(ctx: DrilldownContext, signal: DrilldownSignal): string | undefined {
   if (signal === 'logs') {
-    return ctx.logsTable.value || undefined
+    return ctx.semantics.logs.table.value || undefined
   }
   if (signal === 'traces') {
-    return ctx.tracesTable.value || undefined
+    return ctx.semantics.traces.table.value || undefined
   }
   return undefined
 }
 
 function fieldMapForSignal(ctx: DrilldownContext, signal: DrilldownSignal): Record<string, string> {
   if (signal === 'traces') {
-    return ctx.fieldMap.value.traces
+    return ctx.semantics.traces.fieldMap.value
   }
-  return ctx.fieldMap.value.logs
+  return ctx.semantics.logs.fieldMap.value
 }
 
 /**
@@ -98,7 +99,7 @@ export async function fetchSqlLabelKeys(
   try {
     const columns = (await useTableSchemaStore().ensureTableSchema(
       tableName,
-      ctx.databaseFor(signal)
+      boundSignalDatabase(ctx, signal)
     )) as SchemaColumn[]
     if (signal === 'traces') {
       // Traces expose every business field as a top-bar filter key (intrinsic + flattened
@@ -107,12 +108,12 @@ export async function fetchSqlLabelKeys(
       return filterOptions(filterLabelKeys(keys), search)
     }
     const fieldMap = fieldMapForSignal(ctx, signal)
-    const settings = loadDrilldownSettings(ctx.logsDatabase.value).logs
+    const settings = loadDrilldownSettings(boundSignalDatabase(ctx, 'logs')).logs
     const keys = await discoverLogLabelKeys(tableName, columns, fieldMap, {
       include: settings?.labelInclude,
       exclude: settings?.labelExclude,
-      identityChip: ctx.entityFilterKeys.value.logs?.service,
-      database: ctx.logsDatabase.value,
+      identityChip: ctx.semantics.logs.entityFilterKeys.value?.service,
+      database: boundSignalDatabase(ctx, 'logs'),
     })
     return filterOptions(filterLabelKeys(keys), search)
   } catch (error) {
@@ -131,9 +132,12 @@ export async function fetchSqlFieldKeys(ctx: DrilldownContext, search = ''): Pro
   }
 
   try {
-    const columns = (await useTableSchemaStore().ensureTableSchema(tableName, ctx.logsDatabase.value)) as SchemaColumn[]
+    const columns = (await useTableSchemaStore().ensureTableSchema(
+      tableName,
+      boundSignalDatabase(ctx, 'logs')
+    )) as SchemaColumn[]
     const fieldMap = fieldMapForSignal(ctx, 'logs')
-    const settings = loadDrilldownSettings(ctx.logsDatabase.value).logs
+    const settings = loadDrilldownSettings(boundSignalDatabase(ctx, 'logs')).logs
     const l1 = discoverFieldColumns(columns, fieldMap, {
       include: settings?.fieldInclude,
       exclude: settings?.fieldExclude,
@@ -162,9 +166,12 @@ export async function fetchLogsContainsKeyOptions(ctx: DrilldownContext): Promis
   }
 
   try {
-    const columns = (await useTableSchemaStore().ensureTableSchema(tableName, ctx.logsDatabase.value)) as SchemaColumn[]
+    const columns = (await useTableSchemaStore().ensureTableSchema(
+      tableName,
+      boundSignalDatabase(ctx, 'logs')
+    )) as SchemaColumn[]
     const fieldMap = fieldMapForSignal(ctx, 'logs')
-    const settings = loadDrilldownSettings(ctx.logsDatabase.value).logs
+    const settings = loadDrilldownSettings(boundSignalDatabase(ctx, 'logs')).logs
     return discoverLogsContainsColumns(columns, fieldMap, logsLabelOptions(settings))
   } catch (error) {
     console.error('Failed to load logs contains keys:', error)
@@ -180,16 +187,19 @@ export async function fetchLogsFilterKeyOptions(ctx: DrilldownContext, search = 
   }
 
   try {
-    const columns = (await useTableSchemaStore().ensureTableSchema(tableName, ctx.logsDatabase.value)) as SchemaColumn[]
+    const columns = (await useTableSchemaStore().ensureTableSchema(
+      tableName,
+      boundSignalDatabase(ctx, 'logs')
+    )) as SchemaColumn[]
     const fieldMap = fieldMapForSignal(ctx, 'logs')
-    const settings = loadDrilldownSettings(ctx.logsDatabase.value).logs
+    const settings = loadDrilldownSettings(boundSignalDatabase(ctx, 'logs')).logs
     const keys = await discoverLogFilterKeys(tableName, columns, fieldMap, {
       include: settings?.labelInclude,
       exclude: settings?.labelExclude,
       // Service keeps its own entry point (detail row / cross-signal chip), so it is not
       // offered again from the generic suggestion list.
-      serviceKey: ctx.entityFilterKeys.value.logs?.service,
-      database: ctx.logsDatabase.value,
+      serviceKey: ctx.semantics.logs.entityFilterKeys.value?.service,
+      database: boundSignalDatabase(ctx, 'logs'),
     })
     return filterOptions(filterLabelKeys(keys), search)
   } catch (error) {
@@ -199,14 +209,14 @@ export async function fetchLogsFilterKeyOptions(ctx: DrilldownContext, search = 
 }
 
 export async function fetchPromLabelKeys(ctx: DrilldownContext, search = ''): Promise<string[]> {
-  const match = buildPromMatchSelector(ctx.filters.value, { metric: ctx.metric.value })
+  const match = buildPromMatchSelector(ctx.query.filters.value, { metric: ctx.ui.metric.value })
   const time = promTimeParams(ctx)
 
   try {
     const response = await getLabelNames({
       ...(isGreptimePromMatchSelector(match) ? { match } : {}),
       ...time,
-      database: ctx.metricsDatabase.value,
+      database: ctx.connection.metricsDatabase.value,
     })
     return filterOptions(filterLabelKeys(asStringArray(response)), search)
   } catch (error) {
@@ -225,9 +235,9 @@ export async function fetchPromLabelValues(
     return { values: [], manualOnly: true }
   }
 
-  const match = buildPromMatchSelector(ctx.filters.value, {
+  const match = buildPromMatchSelector(ctx.query.filters.value, {
     excludeKey: trimmedKey,
-    metric: ctx.metric.value,
+    metric: ctx.ui.metric.value,
   })
 
   if (!match || !isGreptimePromMatchSelector(match)) {
@@ -240,7 +250,7 @@ export async function fetchPromLabelValues(
     const response = await getLabelValues(trimmedKey, {
       match,
       ...time,
-      database: ctx.metricsDatabase.value,
+      database: ctx.connection.metricsDatabase.value,
     })
     const values = filterOptions(asStringArray(response), search)
     return { values, manualOnly: false }
@@ -266,7 +276,7 @@ function resolveSqlSuggestColumn(
     // Sentinel: callers use parseJsonFieldChipKey for the real SQL expression.
     return chipKey
   }
-  const mapped = resolveFieldMapColumn(chipKey, fieldMap)
+  const mapped = resolveFieldMapColumn(chipKey, fieldMap, columns)
   if (mapped) {
     return mapped
   }
@@ -309,7 +319,8 @@ function sqlFilterEqualsClause(
       return `${expr} = '${filterValue.replace(/'/g, "''")}'`
     }
   }
-  const mapped = resolveFieldMapColumn(filterKey, fieldMap) || (labelKeys.includes(filterKey) ? filterKey : undefined)
+  const mapped =
+    resolveFieldMapColumn(filterKey, fieldMap, columns) || (labelKeys.includes(filterKey) ? filterKey : undefined)
   if (!mapped) {
     return undefined
   }
@@ -339,13 +350,16 @@ export async function fetchSqlLabelValues(
   let jsonColumns: string[] = []
   let columns: SchemaColumn[] = []
   try {
-    columns = (await useTableSchemaStore().ensureTableSchema(tableName, ctx.databaseFor(signal))) as SchemaColumn[]
+    columns = (await useTableSchemaStore().ensureTableSchema(
+      tableName,
+      boundSignalDatabase(ctx, signal)
+    )) as SchemaColumn[]
     jsonColumns = listJsonAttributeColumns(columns)
   } catch {
     // JSON column list is best-effort for value suggestions.
   }
   if (signal === 'logs') {
-    const settings = loadDrilldownSettings(ctx.logsDatabase.value).logs
+    const settings = loadDrilldownSettings(boundSignalDatabase(ctx, 'logs')).logs
     const containsColumns = discoverLogsContainsColumns(columns, fieldMap, logsLabelOptions(settings))
     if (isLogsContainsFilterKey(trimmedKey, fieldMap, containsColumns)) {
       return []
@@ -360,7 +374,7 @@ export async function fetchSqlLabelValues(
   }
 
   const { selectExpr, nullCheck } = sqlValueSelectExpr(trimmedKey, columnName, jsonColumns, columnNames)
-  const unixRange = ctx.unixTimeRange()
+  const unixRange = ctx.query.unixTimeRange()
   const whereParts = [nullCheck]
 
   if (unixRange.length === 2) {
@@ -379,7 +393,7 @@ export async function fetchSqlLabelValues(
     }
   }
 
-  ctx.filters.value.forEach((filter: DrilldownFilter) => {
+  ctx.query.filters.value.forEach((filter: DrilldownFilter) => {
     if (filter.key === trimmedKey || filter.op !== '=') {
       return
     }
@@ -402,7 +416,7 @@ export async function fetchSqlLabelValues(
   )} LIMIT ${SQL_VALUE_LIMIT}`
 
   try {
-    const response = await editorApi.runSQL(query, ctx.databaseFor(signal))
+    const response = await editorApi.runSQL(query, boundSignalDatabase(ctx, signal))
     const rows = response?.output?.[0]?.records?.rows
     if (!Array.isArray(rows)) {
       return []

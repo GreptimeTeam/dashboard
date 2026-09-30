@@ -1,4 +1,4 @@
-import { isTraceModel, TRACE_MODEL_SERVICE_COLUMN } from '../semantics/otlp'
+import { isTraceModel, TRACE_MODEL_SERVICE_COLUMN } from '../semantics/model'
 
 /**
  * greptime_trace_v1 / OTel-shaped field map and top-bar label keys.
@@ -122,7 +122,7 @@ export function filterBreakdownAttributesByScope(
   return attrs.filter((attr) => attr.scope === scope)
 }
 
-/** Merge discovered breakdown columns into traces fieldMap so Add to filter SQL resolves. */
+/** Merge discovered breakdown columns into traces fieldMap (tests / legacy callers). */
 export function mergeTracesFieldMapColumns(
   fieldMap: Record<string, string>,
   columns: string[]

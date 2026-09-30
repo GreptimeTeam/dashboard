@@ -49,7 +49,7 @@
   const sort = ref<MetricsSortOption>('default')
   const { prefixGroups, suffixGroups, metricNames, truncated, loading, error, groups, poolCount, filteredCount } =
     useMetricsCatalog(ctx, search, sort, {
-      enabled: () => !ctx.metric.value,
+      enabled: () => !ctx.ui.metric.value,
     })
 
   /** Session-scoped: the catalog sidebar width is a transient view tweak, not a saved pref. */

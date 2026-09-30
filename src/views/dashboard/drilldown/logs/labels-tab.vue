@@ -59,6 +59,7 @@
   import { IconDown } from '@arco-design/web-vue/es/icon'
   import { useDrilldownContext } from '@/observability/context'
   import { fetchLabelValues, listLabelKeys, type LabelValueRow } from '@/observability/adapters/logs'
+  import useSignalQuery from '@/observability/use-signal-query'
   import LabelValuePanel from './label-value-panel.vue'
 
   const props = withDefaults(
@@ -119,7 +120,7 @@
   }
 
   async function loadValuesFor(label: string) {
-    if (!label || ctx.logsView.value === 'detail') return
+    if (!label || ctx.ui.logsView.value === 'detail') return
     // Drop stale in-flight queries after table switch (openLabels already cleared).
     if (!openLabelList.value.includes(label) && !labelKeys.value.includes(label)) {
       return
@@ -133,9 +134,9 @@
   }
 
   function pickDefaultLabel(keys: string[]) {
-    const primary = ctx.fieldMap.value.logs.primaryGroupBy
+    const primary = ctx.semantics.logs.fieldMap.value.primaryGroupBy
     if (primary && keys.includes(primary)) return primary
-    const { service } = ctx.fieldMap.value.logs
+    const { service } = ctx.semantics.logs.fieldMap.value
     if (service && keys.includes(service)) return service
     return keys[0]
   }
@@ -152,7 +153,7 @@
   }
 
   async function loadKeys() {
-    if (ctx.logsView.value === 'detail') {
+    if (ctx.ui.logsView.value === 'detail') {
       return
     }
     loadingKeys.value = true
@@ -178,7 +179,7 @@
   /** Coalesce overlapping mount / refresh / time triggers into one keys+values pass. */
   let overviewReloadSeq = 0
   async function reloadOverviewLabels() {
-    if (ctx.logsView.value === 'detail') {
+    if (ctx.ui.logsView.value === 'detail') {
       return
     }
     overviewReloadSeq += 1
@@ -222,11 +223,11 @@
     }
   }
 
-  // Drop old label panes synchronously before refreshKey watchers fire SQL with stale cols.
+  // Drop old label panes synchronously before bind/revision watchers fire SQL with stale cols.
   watch(
-    () => ctx.logsTable.value,
-    (table, prev) => {
-      if (table === prev) return
+    () => ctx.semantics.logs.revision.value,
+    (revision, prev) => {
+      if (revision === prev) return
       clearOpenLabelState()
       labelKeys.value = []
     },
@@ -234,22 +235,11 @@
   )
 
   // Single path for overview label values (top-N per open label, e.g. scope_name LIMIT 20).
-  // Merges former onMounted + refreshKey + time watchers that each called fetchLabelValues.
-  watch(
-    () =>
-      [
-        ctx.logsTable.value,
-        ctx.refreshKey.value,
-        ctx.logsView.value,
-        ctx.time.value,
-        ctx.rangeTime.value[0],
-        ctx.rangeTime.value[1],
-      ] as const,
-    () => {
-      reloadOverviewLabels()
-    },
-    { immediate: true }
-  )
+  useSignalQuery(ctx, 'logs', {
+    enabled: () => ctx.ui.logsView.value !== 'detail',
+    params: () => ctx.ui.logsView.value,
+    run: () => reloadOverviewLabels(),
+  })
 </script>
 
 <style scoped lang="less">

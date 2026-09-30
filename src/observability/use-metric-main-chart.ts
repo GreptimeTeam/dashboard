@@ -7,7 +7,7 @@ import type { DrilldownContext } from './context'
 import { buildPromMatchersString } from './filters'
 import { resolveMetricMeta } from './semantics'
 import { isUnsupportedHistogramKind } from './metrics/infer-promql'
-import type { MetricKind, MetricTemporality } from './semantics/types'
+import type { MetricKind, MetricTemporality } from './semantics/model'
 import useMainChartPrefs from './metrics/main-chart-config'
 import buildMainChartQueries from './metrics/main-chart-queries'
 import { isMetricRateQuery, MAIN_CHART_FALLBACK_PLOT_WIDTH_PX, MAIN_CHART_HEIGHT } from './metrics/panel-stats'
@@ -29,7 +29,7 @@ import breakSparklineGaps from './metrics/sparkline-gaps'
 import { calculateSparklineQueryStep, MAIN_CHART_MAX_DATA_POINTS } from './metrics/sparkline-step'
 
 function buildMatchersFromFilters(ctx: DrilldownContext): string | undefined {
-  return buildPromMatchersString(ctx.filters.value)
+  return buildPromMatchersString(ctx.query.filters.value)
 }
 
 export interface MetricMainChartPlotSize {
@@ -176,7 +176,7 @@ export default function useMetricMainChart(
       return
     }
 
-    const unixRange = ctx.unixTimeRange()
+    const unixRange = ctx.query.unixTimeRange()
     if (unixRange.length !== 2) {
       clearChart()
       error.value = null
@@ -190,7 +190,7 @@ export default function useMetricMainChart(
     error.value = null
 
     try {
-      const meta = await resolveMetricMeta(name, ctx.metricsDatabase.value)
+      const meta = await resolveMetricMeta(name, ctx.connection.metricsDatabase.value)
       if (version !== requestVersion) {
         return
       }
@@ -238,7 +238,7 @@ export default function useMetricMainChart(
 
       const responses = await Promise.all(
         plan.queries.map((query) =>
-          executePromQLRange(query.expr, String(start), String(end), step, ctx.metricsDatabase.value)
+          executePromQLRange(query.expr, String(start), String(end), step, ctx.connection.metricsDatabase.value)
         )
       )
 
@@ -326,11 +326,11 @@ export default function useMetricMainChart(
   watch(
     () => [
       metricName.value,
-      ctx.filters.value,
-      ctx.time.value,
-      ctx.rangeTime.value[0],
-      ctx.rangeTime.value[1],
-      ctx.refreshKey.value,
+      ctx.query.filters.value,
+      ctx.query.time.value,
+      ctx.query.rangeTime.value[0],
+      ctx.query.rangeTime.value[1],
+      ctx.query.refreshKey.value,
       isDark.value,
       prefs.value.variant,
       prefs.value.agg,

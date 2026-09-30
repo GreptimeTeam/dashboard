@@ -80,7 +80,10 @@
   const { t } = useI18n()
   const searchModel = defineModel<string>('search', { default: '' })
   const sortModel = defineModel<MetricsSortOption>('sort', { default: 'default' })
-  const { sidebarFilters, setSidebarFilters, metricsDatabase } = useDrilldownContext()
+  const drilldown = useDrilldownContext()
+  const { sidebarFilters } = drilldown.query
+  const { setSidebarFilters } = drilldown.actions
+  const { metricsDatabase } = drilldown.connection
   const filterMode = ref<CatalogFilterMode>('prefix')
 
   /** Header meta chip: loading / filtered / total, mirroring the table sidebar count. */

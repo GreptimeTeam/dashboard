@@ -6,7 +6,7 @@ import formatTimeAxisLabel, {
   CATALOG_Y_AXIS_SPLIT_NUMBER,
 } from '@/utils/chart-time-axis'
 import type { RawChartCategoryTimeTicks } from '@/components/raw-chart/time-interaction'
-import type { MetricKind } from '../semantics/types'
+import type { MetricKind } from '../semantics/model'
 import { formatMetricUnitValue, resolveHistogramBoundUnit, resolveHistogramCellUnit } from './metric-units'
 import { formatMetricAxisValue } from './panel-stats'
 import expandHeatmapTimeGrid from './heatmap-time-grid'

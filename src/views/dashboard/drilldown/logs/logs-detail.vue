@@ -39,7 +39,7 @@
   import LogsVolumeMiniChart from './logs-volume-mini-chart.vue'
 
   const { t } = useI18n()
-  const { logsTab } = useDrilldownContext()
+  const { logsTab } = useDrilldownContext().ui
   const bodyWhere = useLogsBodyPredicate()
   const detailScrollRef = ref<HTMLElement | null>(null)
   /** Shorter than metrics MAIN_CHART_HEIGHT — volume over logs table. */

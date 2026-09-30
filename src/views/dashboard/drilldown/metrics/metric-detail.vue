@@ -28,7 +28,9 @@
   }>()
 
   const { t } = useI18n()
-  const { detailTab, setDetailTab } = useDrilldownContext()
+  const drilldown = useDrilldownContext()
+  const { detailTab } = drilldown.ui
+  const { setDetailTab } = drilldown.actions
   const detailScrollRef = ref<HTMLElement | null>(null)
   const mainChartResult = ref<MetricMainChartResult | null>(null)
 

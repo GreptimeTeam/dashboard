@@ -1,30 +1,24 @@
+import { getTableEntityDeclarations, getTableSemantics, listBySignal, semanticsDump } from './source'
+import { currentDatabase } from '../current-database'
 import {
   conventionEntityKeys,
+  declaredMetricKindFromSemantics,
+  declaredMetricUnitFromSemantics,
+  declaredTemporalityFromSemantics,
+  inferMetricKind,
   isTraceModel,
   KNOWN_OTLP_TRACE_TABLE,
   TRACE_MODEL_SERVICE_COLUMN,
   traceModelScore,
-} from './otlp'
-import {
-  declaredMetricKindFromSemantics,
-  declaredMetricUnitFromSemantics,
-  declaredTemporalityFromSemantics,
-  getTableEntityDeclarations,
-  getTableSemantics,
-  listBySignal,
-  semanticsDump,
-} from './source'
-import { currentDatabase } from '../current-database'
-import { inferMetricKind } from './heuristics'
-import type {
-  EntityColumnRef,
-  EntityDeclaration,
-  EntitySchemaColumn,
-  MetricKind,
-  MetricTableSemantics,
-  MetricTemporality,
-  ResolvedEntityIdentity,
-} from './types'
+  type EntityColumnRef,
+  type EntityDeclaration,
+  type EntitySchemaColumn,
+  type EntitySignal,
+  type MetricKind,
+  type MetricTemporality,
+  type ResolvedEntityIdentity,
+  type TableSemantics,
+} from './model'
 
 // ---------------------------------------------------------------------------
 // Metric metadata
@@ -38,7 +32,7 @@ export interface ResolvedMetricMeta {
   originalName: string | null
   source: string | null
   metadataQuality: string | null
-  semantics: MetricTableSemantics | null
+  semantics: TableSemantics | null
 }
 
 /** Series suffixes that a histogram family emits alongside its `_bucket` series. */
@@ -100,7 +94,7 @@ async function isNativeHistogram(name: string, database?: string): Promise<boole
 
 async function resolveMetricKind(
   name: string,
-  semantics: MetricTableSemantics | null,
+  semantics: TableSemantics | null,
   database?: string
 ): Promise<MetricKind> {
   const declaredKind = declaredMetricKindFromSemantics(semantics)
@@ -378,7 +372,9 @@ export async function listSignalTables(
 
 /**
  * Discover and rank candidate traces tables.
- * Merges: table_semantics(signal_type=trace) ∪ required-column model check ∪ known OTLP name.
+ * Merges table_semantics(signal_type=trace), physical tables carrying `trace_id`, and
+ * the known OTLP table name. Full greptime_trace_v1 shapes rank first; a `trace_id`-only
+ * custom table remains selectable for trace-id investigation even though model roles are missing.
  */
 export async function listSignalTables(
   signal: 'traces',
@@ -398,11 +394,10 @@ export async function listSignalTables(
   }
 
   const fromSemantics = await listBySignal('trace', database)
-  const pipelineByTable = new Map(fromSemantics.map((row) => [row.tableName, row.pipeline]))
-  // 候选列扫描放宽为“含 trace_id 即可”：自定义 trace 表可能缺少 greptime_trace_v1 的
-  // 其他必需列（parent_span_id / span_name …），但只要能按 trace_id 过滤就值得列出；
-  // 模型齐全的表靠打分排到前面。扫描走 table-schema store 的预筛（GROUP BY 一次查询，
-  // 会话缓存），与 logs 候选的预筛共用。
+  const semanticsByTable = new Map(fromSemantics.map((row) => [row.tableName, row.pipeline]))
+  // `trace_id` is the minimum physical evidence: it supports trace-id filtering even when
+  // a custom table lacks parent/span-name/model roles. Model completeness and semantic
+  // declarations determine ranking. The store pre-filter is one cached GROUP BY query.
   const { default: useTableSchemaStore } = await import('@/store/modules/table-schema')
   const tableSchemaStore = useTableSchemaStore()
   const fromColumns = [...(await tableSchemaStore.tablesHavingColumn('trace_id', database))]
@@ -428,20 +423,28 @@ export async function listSignalTables(
       }
       if (!columnNames.length) {
         // Keep semantics-only names even if schema fetch fails (settings / allow-create).
-        if (pipelineByTable.has(name) || options?.include?.includes(name)) {
+        if (semanticsByTable.has(name) || options?.include?.includes(name)) {
           scored.push({
             name,
-            score: traceModelScore([], { pipeline: pipelineByTable.get(name), tableName: name }),
+            score: traceModelScore([], {
+              declaredTrace: semanticsByTable.has(name),
+              pipeline: semanticsByTable.get(name),
+              tableName: name,
+            }),
           })
         }
         return
       }
-      if (!columnNames.includes('trace_id') && !pipelineByTable.has(name)) {
+      if (!columnNames.includes('trace_id') && !semanticsByTable.has(name)) {
         return
       }
       scored.push({
         name,
-        score: traceModelScore(columnNames, { pipeline: pipelineByTable.get(name), tableName: name }),
+        score: traceModelScore(columnNames, {
+          declaredTrace: semanticsByTable.has(name),
+          pipeline: semanticsByTable.get(name),
+          tableName: name,
+        }),
       })
     })
   )
@@ -487,4 +490,48 @@ export async function resolveSignalTable(
 
   const listed = await listSignalTables(signal, { database: options?.database })
   return listed[0]
+}
+
+// ---------------------------------------------------------------------------
+// Signal table inspection (schema + service identity; does not write Context)
+// ---------------------------------------------------------------------------
+
+export interface SignalTableInspection {
+  /** Physical columns of the bound table; empty when the schema could not be loaded. */
+  columns: Array<{ name: string; data_type?: string; semantic_type?: string }>
+  /** Resolved `service` identity — a real column or a JSON chip (logs). */
+  serviceRef?: EntityColumnRef
+}
+
+/**
+ * Load the physical schema once and resolve the `service` entity once.
+ * Returns an empty `columns` array on failure so callers can clear binding state together.
+ * Does not write Context — the binder (`useSignalBinding` / `bindTable`) publishes the result.
+ */
+export async function inspectSignalTable(
+  signal: Extract<EntitySignal, 'logs' | 'traces'>,
+  tableName: string,
+  database: string
+): Promise<SignalTableInspection> {
+  const name = tableName.trim()
+  if (!name) {
+    return { columns: [] }
+  }
+
+  try {
+    // Dynamic import keeps Pinia/table-schema out of resolve's top-level graph so
+    // pure resolve consumers (and their unit tests) do not need a Vue app.
+    const { default: useTableSchemaStore } = await import('@/store/modules/table-schema')
+    const columns = (await useTableSchemaStore().ensureTableSchema(name, database)) as SignalTableInspection['columns']
+    let serviceRef: EntityColumnRef | undefined
+    try {
+      serviceRef = await resolveEntityFilterRef(name, 'service', { signal, columns, database })
+    } catch (error) {
+      console.error(`Failed to resolve the service filter key for ${name}:`, error)
+    }
+    return { columns, serviceRef }
+  } catch (error) {
+    console.error(`Failed to inspect ${signal} table ${name}:`, error)
+    return { columns: [] }
+  }
 }

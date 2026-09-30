@@ -36,17 +36,13 @@ a-layout-content.layout-content
         .logs-overview-labels(v-else)
           LabelsTab(:auto-open-default="true")
 
-        LogsSettingsModal(v-model:visible="settingsVisible" @saved="onSettingsSaved")
+        LogsSettingsModal(v-model:visible="settingsVisible")
 </template>
 
 <script setup lang="ts">
-  import { computed, nextTick, onMounted, ref, watch } from 'vue'
+  import { computed, onMounted, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useDrilldownContext } from '@/observability/context'
-  import { loadDrilldownSettings } from '@/observability/drilldown-settings'
-  import { resolveFieldMapColumn } from '@/observability/filters'
-  import { buildLogsFieldMap } from '@/observability/logs/field-map'
-  import { bindSignalTable } from '@/observability/bind-signal-table'
   import useDrilldownKeepAlive from '@/observability/use-drilldown-keep-alive'
   import useSignalTableOptions from '@/observability/use-signal-table-options'
   import SignalDatabaseSelect from '../components/signal-database-select.vue'
@@ -59,18 +55,18 @@ a-layout-content.layout-content
 
   const { t } = useI18n()
   const ctx = useDrilldownContext()
-  const { logsDatabase } = ctx
+  const { logsDatabase } = ctx.connection
   const settingsVisible = ref(false)
-  const logsTable = computed(() => ctx.logsTable.value)
+  const logsTable = computed(() => ctx.semantics.logs.table.value)
 
   const depsKey = () =>
     JSON.stringify([
-      ctx.refreshKey.value,
-      ctx.logsTable.value,
-      ctx.time.value,
-      ctx.rangeTime.value[0],
-      ctx.rangeTime.value[1],
-      ctx.filters.value,
+      ctx.query.refreshKey.value,
+      ctx.semantics.logs.table.value,
+      ctx.query.time.value,
+      ctx.query.rangeTime.value[0],
+      ctx.query.rangeTime.value[1],
+      ctx.query.filters.value,
     ])
 
   const keepAlive = useDrilldownKeepAlive({ deps: depsKey })
@@ -78,7 +74,7 @@ a-layout-content.layout-content
   const { tableOptions, loadingTables, loadTables } = useSignalTableOptions('logs', overviewActive)
   keepAlive.setResume(() => {
     loadTables()
-    ctx.triggerRefresh()
+    ctx.actions.triggerRefresh()
   })
 
   watch(logsDatabase, () => {
@@ -87,35 +83,14 @@ a-layout-content.layout-content
     }
   })
 
-  const onSettingsSaved = () => {
-    ctx.triggerRefresh()
-  }
-
   const onTableChange = async (table: string) => {
-    if (!table || table === ctx.logsTable.value) {
+    if (!table || table === ctx.semantics.logs.table.value) {
       return
     }
     if (!tableOptions.value.includes(table)) {
       tableOptions.value = [...tableOptions.value, table]
     }
-    // Session view only. Roles come from saved field settings, never from name guessing.
-    const settings = loadDrilldownSettings(ctx.logsDatabase.value).logs
-    const savedFieldMap = settings.table === table ? settings.fieldMap : undefined
-    const nextLogsFieldMap = await buildLogsFieldMap(table, savedFieldMap, ctx.logsDatabase.value)
-    // Drop filters that no longer map onto the new table columns.
-    ctx.filters.value = ctx.filters.value.filter((filter) =>
-      Boolean(resolveFieldMapColumn(filter.key, nextLogsFieldMap))
-    )
-    ctx.fieldMap.value = {
-      ...ctx.fieldMap.value,
-      logs: nextLogsFieldMap,
-    }
-    ctx.logsTable.value = table
-    // Refresh entity/column context for cross-signal filters on the newly bound table.
-    await bindSignalTable(ctx, 'logs', table)
-    // Let labels-tab sync-clear old panes before refresh fires per-panel SQL.
-    await nextTick()
-    ctx.triggerRefresh()
+    await ctx.actions.bindTable('logs', table, { persist: true })
   }
 
   onMounted(async () => {

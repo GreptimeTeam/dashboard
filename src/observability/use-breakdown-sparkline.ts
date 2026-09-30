@@ -8,7 +8,7 @@ import { buildPromMatchersString } from './filters'
 import { buildBreakdownGroupByExpr, buildBreakdownValueExprs } from './metrics/breakdown-queries'
 import { resolveMetricMeta } from './semantics'
 import { isUnsupportedHistogramKind } from './metrics/infer-promql'
-import type { MetricKind } from './semantics/types'
+import type { MetricKind } from './semantics/model'
 import useMainChartPrefs from './metrics/main-chart-config'
 import { isMetricRateQuery, BREAKDOWN_CHART_HEIGHT } from './metrics/panel-stats'
 import { resolveMetricPanelUnit } from './metrics/metric-units'
@@ -47,7 +47,7 @@ export interface UseBreakdownSparklineOptions {
 }
 
 function buildMatchersFromFilters(ctx: DrilldownContext, excludeKey?: string): string | undefined {
-  return buildPromMatchersString(ctx.filters.value, { excludeKey })
+  return buildPromMatchersString(ctx.query.filters.value, { excludeKey })
 }
 
 function seriesLastAbs(series: PromMatrixSeries): number {
@@ -185,7 +185,7 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
       return
     }
 
-    const unixRange = ctx.unixTimeRange()
+    const unixRange = ctx.query.unixTimeRange()
     if (unixRange.length !== 2) {
       clearChart()
       error.value = null
@@ -200,7 +200,7 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
     error.value = null
 
     try {
-      const meta = await resolveMetricMeta(name, ctx.metricsDatabase.value)
+      const meta = await resolveMetricMeta(name, ctx.connection.metricsDatabase.value)
       if (version !== requestVersion) {
         return
       }
@@ -240,7 +240,7 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
         const query = buildBreakdownGroupByExpr(name, labelKey, matchers, queryOpts)
         promqlQuery.value = query
         const response = await enqueueSparklineQuery(() =>
-          executePromQLRange(query, String(start), String(end), step, ctx.metricsDatabase.value)
+          executePromQLRange(query, String(start), String(end), step, ctx.connection.metricsDatabase.value)
         )
 
         if (version !== requestVersion) {
@@ -294,7 +294,7 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
       const responses = await Promise.all(
         valueQueries.map((item) =>
           enqueueSparklineQuery(() =>
-            executePromQLRange(item.expr, String(start), String(end), step, ctx.metricsDatabase.value)
+            executePromQLRange(item.expr, String(start), String(end), step, ctx.connection.metricsDatabase.value)
           )
         )
       )
@@ -354,11 +354,11 @@ export default function useBreakdownSparkline(ctx: DrilldownContext, options: Us
       options.mode.value,
       valueRef.value,
       prefs.value.agg,
-      ctx.filters.value,
-      ctx.time.value,
-      ctx.rangeTime.value[0],
-      ctx.rangeTime.value[1],
-      ctx.refreshKey.value,
+      ctx.query.filters.value,
+      ctx.query.time.value,
+      ctx.query.rangeTime.value[0],
+      ctx.query.rangeTime.value[1],
+      ctx.query.refreshKey.value,
       isDark.value,
     ],
     () => {

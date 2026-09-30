@@ -1,13 +1,17 @@
-import { inject, provide, ref, type InjectionKey, type Ref } from 'vue'
+import { computed, inject, provide, ref, type ComputedRef, type InjectionKey, type Ref } from 'vue'
 import useTimeRange from '@/hooks/use-time-range'
-import { logsServiceFilterCandidateKeys, normalizeEntityFilters } from './semantics'
+import {
+  entityColumnFilterKey,
+  logsServiceFilterCandidateKeys,
+  normalizeEntityFilters,
+  type SignalTableInspection,
+} from './semantics'
+import type { LogsFieldMapSettings } from './drilldown-settings'
 import { DEFAULT_LOGS_BODY_OP, type LogsBodyOp } from './logs/body-search'
 import { useSignalDatabase } from './signal-database'
 import {
-  DEFAULT_FIELD_MAP,
   DEFAULT_SIDEBAR_FILTERS,
   type DrilldownFilter,
-  type DrilldownFieldMap,
   type DrilldownSidebarFilters,
   type DrilldownSignal,
   type LogsDetailTab,
@@ -17,65 +21,85 @@ import {
 } from './types'
 import { addFilter as mergeFilter, filterKey, hasLogsMappedFilters, toggleIncludeFilter } from './filters'
 
-export interface DrilldownContext {
+export interface SignalSemanticSnapshot {
+  database: string | undefined
+  table: string | undefined
+  fieldMap: Record<string, string>
+  entityFilterKeys: Record<string, string>
+  columns: string[] | undefined
+  columnTypes: Record<string, string> | undefined
+}
+
+export interface SignalSemanticState {
+  database: Ref<string | undefined>
+  table: Ref<string | undefined>
+  fieldMap: Ref<Record<string, string>>
+  entityFilterKeys: Ref<Record<string, string>>
+  columns: Ref<string[] | undefined>
+  columnTypes: Ref<Record<string, string> | undefined>
+  revision: Ref<number>
+  ready: ComputedRef<boolean>
+
+  setTable(table: string | undefined): void
+  setFieldMap(fieldMap: Record<string, string>): void
+  setEntityFilterKey(entityKey: string, key: string | undefined): void
+  setColumns(columns: string[] | undefined): void
+  setColumnTypes(types: Record<string, string> | undefined): void
+  /** From inspectSignalTable: write service key + columns + types; empty columns clears them */
+  applyInspection(inspection: SignalTableInspection): void
+  /**
+   * Atomic bind write: database/table/fieldMap + inspection-derived entity/columns/types,
+   * then revision += 1 exactly once. Empty inspection.columns clears entity/columns/types
+   * while keeping the passed database/table/fieldMap.
+   */
+  commit(next: {
+    database: string
+    table: string
+    fieldMap: Record<string, string>
+    inspection: SignalTableInspection
+  }): void
+  takeSnapshot(): SignalSemanticSnapshot
+  restoreSnapshot(snap: SignalSemanticSnapshot): void
+  reset(): void
+}
+
+export interface DrilldownConnectionState {
   signal: Ref<DrilldownSignal>
-  /** Per-signal connection DB (shared with classic Query pages via signal-db prefs). */
   metricsDatabase: Ref<string>
   logsDatabase: Ref<string>
   tracesDatabase: Ref<string>
-  /** DB for a signal — adapters and init use this for `?db=`. */
   databaseFor: (signal: DrilldownSignal) => string
+}
+
+export interface DrilldownQueryState {
   filters: Ref<DrilldownFilter[]>
   sidebarFilters: Ref<DrilldownSidebarFilters>
-  metric: Ref<string | undefined>
-  /** Active tab inside metric detail (synced to URL `tab`). */
-  detailTab: Ref<MetricDetailTab>
-  focusTraceId: Ref<string | undefined>
-  logsTable: Ref<string | undefined>
-  tracesTable: Ref<string | undefined>
-  fieldMap: Ref<DrilldownFieldMap>
-  /**
-   * Physical filter key each signal resolved for an entity on its bound table
-   * (e.g. logs → `resource_attributes.service.name`, traces → `service_name`).
-   * Lets one shared filter carry across signals; empty when nothing resolved.
-   */
-  entityFilterKeys: Ref<Partial<Record<DrilldownSignal, Record<string, string>>>>
-  /**
-   * Physical columns of the bound table per signal. Decides whether a filter applies to the
-   * current signal (so carried-over conditions can be shown as not applied) and lets dotted
-   * attribute columns resolve as columns instead of JSON chips.
-   */
-  signalColumns: Ref<Partial<Record<DrilldownSignal, string[]>>>
-  /**
-   * `data_type` per physical column of the bound table, keyed by signal. Typed filter
-   * literals (numeric comparisons, TRUE/FALSE) need it; empty until the table is bound.
-   */
-  signalColumnTypes: Ref<Partial<Record<DrilldownSignal, Record<string, string>>>>
-  /** Logs overview vs detail shell (URL `logsView`). */
-  logsView: Ref<LogsView>
-  /** Active tab inside logs detail (URL `logsTab`). */
-  logsTab: Ref<LogsDetailTab>
-  /** Logs-tab body search. Not a shared drilldown filter. */
-  logsBodyOp: Ref<LogsBodyOp>
-  logsBodyValue: Ref<string>
-  /** Active tab on traces home (URL `tracesTab`). */
-  tracesTab: Ref<TracesHomeTab>
-  /** primaryGroupBy value opened in logs detail (for close → remove filter). */
-  logsSelectedGroup: Ref<string | undefined>
   time: Ref<number>
   rangeTime: Ref<string[]>
   unixTimeRange: () => number[]
   resetTimeRange: () => void
   refreshKey: Ref<number>
+}
+
+export interface DrilldownUiState {
+  metric: Ref<string | undefined>
+  detailTab: Ref<MetricDetailTab>
+  focusTraceId: Ref<string | undefined>
+  logsTraceId: Ref<string | undefined>
+  logsView: Ref<LogsView>
+  logsTab: Ref<LogsDetailTab>
+  logsBodyOp: Ref<LogsBodyOp>
+  logsBodyValue: Ref<string>
+  tracesTab: Ref<TracesHomeTab>
+  logsSelectedGroup: Ref<string | undefined>
+}
+
+export interface DrilldownActions {
   triggerRefresh: () => void
   setSignal: (signal: DrilldownSignal) => void
-  setEntityFilterKey: (signal: DrilldownSignal, entityKey: string, key: string | undefined) => void
-  setSignalColumns: (signal: DrilldownSignal, columns: string[] | undefined) => void
-  setSignalColumnTypes: (signal: DrilldownSignal, types: Record<string, string> | undefined) => void
   setFilters: (filters: DrilldownFilter[]) => void
   setSidebarFilters: (filters: DrilldownSidebarFilters) => void
   appendFilter: (filter: DrilldownFilter) => void
-  /** Include/exclude toggle for the same label value (OR-merge / remove). */
   toggleFilterValue: (filter: DrilldownFilter) => void
   setDetailTab: (tab: MetricDetailTab) => void
   setLogsView: (view: LogsView) => void
@@ -85,10 +109,35 @@ export interface DrilldownContext {
   closeLogsDetail: () => void
   openTraceGantt: (traceId: string) => void
   closeTraceGantt: () => void
-  /** Trace id whose logs drawer is stacked on the traces page. Not a shared filter. */
-  logsTraceId: Ref<string | undefined>
   openLogsForTrace: (traceId: string, target?: { database?: string; table?: string }) => void
   closeLogsForTrace: () => void
+  /**
+   * Sole writer of `semantics.{logs|traces}` for table binds. Implemented by
+   * `useSignalBinding` — the stub throws until the binder registers.
+   */
+  bindTable: (
+    signal: 'logs' | 'traces',
+    table: string,
+    options?: {
+      database?: string
+      fieldMap?: LogsFieldMapSettings
+      persist?: boolean
+      scope?: 'page' | 'overlay'
+    }
+  ) => Promise<void>
+  /**
+   * Assign a logs field role to a physical column (or JSON chip for service /
+   * primaryGroupBy). Persists settings and bumps revision via setFieldMap.
+   */
+  setLogsRole: (role: 'time' | 'body' | 'severity' | 'service' | 'primaryGroupBy' | 'traceId', column: string) => void
+}
+
+export interface DrilldownContext {
+  connection: DrilldownConnectionState
+  query: DrilldownQueryState
+  semantics: { logs: SignalSemanticState; traces: SignalSemanticState }
+  ui: DrilldownUiState
+  actions: DrilldownActions
 }
 
 export const DRILLDOWN_DEFAULT_TIME_MINUTES = 30
@@ -97,6 +146,143 @@ export const DRILLDOWN_DEFAULT_TIME_MINUTES = 30
 export const DRILLDOWN_CONTEXT_KEY: InjectionKey<DrilldownContext> = Symbol.for(
   'greptime.drilldownContext'
 ) as InjectionKey<DrilldownContext>
+
+function createSignalSemanticState(): SignalSemanticState {
+  const database = ref<string | undefined>()
+  const table = ref<string | undefined>()
+  const fieldMap = ref<Record<string, string>>({})
+  const entityFilterKeys = ref<Record<string, string>>({})
+  const columns = ref<string[] | undefined>()
+  const columnTypes = ref<Record<string, string> | undefined>()
+  const revision = ref(0)
+  const ready = computed(() => Boolean(table.value && columns.value?.length))
+
+  const bumpRevision = () => {
+    revision.value += 1
+  }
+
+  const writeEntityServiceKey = (serviceKey: string | undefined) => {
+    const next = { ...entityFilterKeys.value }
+    if (serviceKey) {
+      next.service = serviceKey
+    } else {
+      delete next.service
+    }
+    entityFilterKeys.value = next
+  }
+
+  const writeInspectionDerived = (inspection: SignalTableInspection) => {
+    const { columns: inspectedColumns, serviceRef } = inspection
+    if (!inspectedColumns.length) {
+      entityFilterKeys.value = {}
+      columns.value = undefined
+      columnTypes.value = undefined
+      return
+    }
+    writeEntityServiceKey(serviceRef ? entityColumnFilterKey(serviceRef) : undefined)
+    columns.value = inspectedColumns.map((column) => column.name)
+    columnTypes.value = Object.fromEntries(inspectedColumns.map((column) => [column.name, column.data_type || '']))
+  }
+
+  const setTable = (next: string | undefined) => {
+    table.value = next
+    bumpRevision()
+  }
+
+  const setFieldMap = (next: Record<string, string>) => {
+    fieldMap.value = next
+    bumpRevision()
+  }
+
+  const setEntityFilterKey = (entityKey: string, key: string | undefined) => {
+    const next = { ...entityFilterKeys.value }
+    if (key) {
+      next[entityKey] = key
+    } else {
+      delete next[entityKey]
+    }
+    entityFilterKeys.value = next
+    bumpRevision()
+  }
+
+  const setColumns = (next: string[] | undefined) => {
+    columns.value = next?.length ? next : undefined
+    bumpRevision()
+  }
+
+  const setColumnTypes = (types: Record<string, string> | undefined) => {
+    columnTypes.value = types && Object.keys(types).length ? types : undefined
+    bumpRevision()
+  }
+
+  const applyInspection = (inspection: SignalTableInspection) => {
+    writeInspectionDerived(inspection)
+    bumpRevision()
+  }
+
+  const commit = (next: {
+    database: string
+    table: string
+    fieldMap: Record<string, string>
+    inspection: SignalTableInspection
+  }) => {
+    database.value = next.database
+    table.value = next.table
+    fieldMap.value = next.fieldMap
+    writeInspectionDerived(next.inspection)
+    bumpRevision()
+  }
+
+  const takeSnapshot = (): SignalSemanticSnapshot => ({
+    database: database.value,
+    table: table.value,
+    fieldMap: { ...fieldMap.value },
+    entityFilterKeys: { ...entityFilterKeys.value },
+    columns: columns.value ? [...columns.value] : undefined,
+    columnTypes: columnTypes.value ? { ...columnTypes.value } : undefined,
+  })
+
+  const restoreSnapshot = (snap: SignalSemanticSnapshot) => {
+    database.value = snap.database
+    table.value = snap.table
+    fieldMap.value = { ...snap.fieldMap }
+    entityFilterKeys.value = { ...snap.entityFilterKeys }
+    columns.value = snap.columns ? [...snap.columns] : undefined
+    columnTypes.value = snap.columnTypes ? { ...snap.columnTypes } : undefined
+    bumpRevision()
+  }
+
+  const reset = () => {
+    database.value = undefined
+    table.value = undefined
+    fieldMap.value = {}
+    entityFilterKeys.value = {}
+    columns.value = undefined
+    columnTypes.value = undefined
+    bumpRevision()
+  }
+
+  return {
+    database,
+    table,
+    fieldMap,
+    entityFilterKeys,
+    columns,
+    columnTypes,
+    revision,
+    ready,
+    setTable,
+    setFieldMap,
+    setEntityFilterKey,
+    setColumns,
+    setColumnTypes,
+    applyInspection,
+    commit,
+    takeSnapshot,
+    restoreSnapshot,
+    reset,
+  }
+}
 
 export function useDrilldownContextProvider(): DrilldownContext {
   const timeRangeHook = useTimeRange({ time: DRILLDOWN_DEFAULT_TIME_MINUTES })
@@ -113,48 +299,24 @@ export function useDrilldownContextProvider(): DrilldownContext {
     }
     return tracesDatabase.value
   }
+
   const filters = ref<DrilldownFilter[]>([])
   const sidebarFilters = ref<DrilldownSidebarFilters>({ ...DEFAULT_SIDEBAR_FILTERS })
+  const refreshKey = ref(0)
+
   const metric = ref<string | undefined>()
   const detailTab = ref<MetricDetailTab>('breakdown')
   const focusTraceId = ref<string | undefined>()
   const logsTraceId = ref<string | undefined>()
-  /** Saved logs binding — restored when the trace logs drawer closes. */
-  let savedLogsDatabase: string | undefined
-  let savedLogsTable: string | undefined
-  const entityFilterKeys = ref<Partial<Record<DrilldownSignal, Record<string, string>>>>({})
-  const signalColumns = ref<Partial<Record<DrilldownSignal, string[]>>>({})
-  const signalColumnTypes = ref<Partial<Record<DrilldownSignal, Record<string, string>>>>({})
-
-  const setEntityFilterKey = (signalName: DrilldownSignal, entityKey: string, key: string | undefined) => {
-    const perSignal = { ...(entityFilterKeys.value[signalName] ?? {}) }
-    if (key) {
-      perSignal[entityKey] = key
-    } else {
-      delete perSignal[entityKey]
-    }
-    entityFilterKeys.value = { ...entityFilterKeys.value, [signalName]: perSignal }
-  }
-
-  const setSignalColumns = (signalName: DrilldownSignal, columns: string[] | undefined) => {
-    signalColumns.value = { ...signalColumns.value, [signalName]: columns?.length ? columns : undefined }
-  }
-  const setSignalColumnTypes = (signalName: DrilldownSignal, types: Record<string, string> | undefined) => {
-    signalColumnTypes.value = {
-      ...signalColumnTypes.value,
-      [signalName]: types && Object.keys(types).length ? types : undefined,
-    }
-  }
-  const logsTable = ref<string | undefined>()
-  const tracesTable = ref<string | undefined>()
-  const fieldMap = ref({ ...DEFAULT_FIELD_MAP })
   const logsView = ref<LogsView>('overview')
   const logsTab = ref<LogsDetailTab>('logs')
   const logsBodyOp = ref<LogsBodyOp>(DEFAULT_LOGS_BODY_OP)
   const logsBodyValue = ref('')
   const tracesTab = ref<TracesHomeTab>('breakdown')
   const logsSelectedGroup = ref<string | undefined>()
-  const refreshKey = ref(0)
+
+  const logsSemantics = createSignalSemanticState()
+  const tracesSemantics = createSignalSemanticState()
 
   const triggerRefresh = () => {
     refreshKey.value += 1
@@ -184,29 +346,77 @@ export function useDrilldownContextProvider(): DrilldownContext {
   const resolveLogsDetailGroupFromFilters = (): string | undefined => {
     // The service filter may arrive as a JSON chip (logs identity lives in
     // `resource_attributes`), so include the key resolved from the bound table.
-    const chipKeys = logsServiceFilterCandidateKeys(fieldMap.value.logs, entityFilterKeys.value.logs?.service)
+    const chipKeys = logsServiceFilterCandidateKeys(
+      logsSemantics.fieldMap.value,
+      logsSemantics.entityFilterKeys.value.service
+    )
     const match = filters.value.find((f) => f.op === '=' && chipKeys.has(f.key))
     return match?.value
+  }
+
+  // Declared before setSignal so setSignal can call through the mutable actions object
+  // (useSignalBinding replaces open/close/bindTable on the same object).
+  const actions: DrilldownActions = {
+    triggerRefresh,
+    setSignal: () => undefined,
+    setFilters: () => undefined,
+    setSidebarFilters: () => undefined,
+    appendFilter: () => undefined,
+    toggleFilterValue: () => undefined,
+    setDetailTab: () => undefined,
+    setLogsView: () => undefined,
+    setLogsTab: () => undefined,
+    setTracesTab: () => undefined,
+    openLogsDetail,
+    closeLogsDetail,
+    openTraceGantt: () => undefined,
+    closeTraceGantt: () => undefined,
+    openLogsForTrace: () => undefined,
+    closeLogsForTrace: () => undefined,
+    bindTable: async () => {
+      throw new Error('Signal binding is not ready')
+    },
+    setLogsRole: () => {
+      throw new Error('Signal binding is not ready')
+    },
   }
 
   const setSignal = (next: DrilldownSignal) => {
     // One shared filter list: re-key entity filters into the target signal's vocabulary.
     // The bound table's resolved key wins (logs may need a JSON chip, traces a column);
     // without one we fall back to the signal's convention.
-    filters.value = normalizeEntityFilters(filters.value, next, (entity) => entityFilterKeys.value[next]?.[entity])
+    let targetSemantics: SignalSemanticState | undefined
+    if (next === 'logs') {
+      targetSemantics = logsSemantics
+    } else if (next === 'traces') {
+      targetSemantics = tracesSemantics
+    }
+    filters.value = normalizeEntityFilters(
+      filters.value,
+      next,
+      (entity) => targetSemantics?.entityFilterKeys.value[entity]
+    )
     if (next !== 'metrics') {
       metric.value = undefined
     }
     if (next !== 'traces') {
       tracesTab.value = 'breakdown'
-      logsTraceId.value = undefined
+      // Prefer binder close so overlay snapshot restores; falls back to clearing the id.
+      actions.closeLogsForTrace()
     }
     // Trace drawer lives on logs and traces. Keep it when staying on logs or opening traces.
     if (next === 'metrics' || (next !== signal.value && next !== 'traces')) {
       focusTraceId.value = undefined
     }
     if (next === 'logs') {
-      if (hasLogsMappedFilters(filters.value, fieldMap.value.logs, logsTable.value)) {
+      if (
+        hasLogsMappedFilters(
+          filters.value,
+          logsSemantics.fieldMap.value,
+          logsSemantics.table.value,
+          logsSemantics.columns.value
+        )
+      ) {
         openLogsDetail(resolveLogsDetailGroupFromFilters())
       } else {
         logsView.value = 'overview'
@@ -274,22 +484,11 @@ export function useDrilldownContextProvider(): DrilldownContext {
     focusTraceId.value = undefined
   }
 
-  const openLogsForTrace = (traceId: string, target?: { database?: string; table?: string }) => {
+  /** Stub until useSignalBinding replaces with overlay-safe bind (no logsDatabase write). */
+  const openLogsForTrace = (traceId: string, _target?: { database?: string; table?: string }) => {
     const trimmed = traceId.trim()
     if (!trimmed) {
       return
-    }
-    const database = target?.database?.trim()
-    const table = target?.table?.trim()
-    if (database && table && (database !== logsDatabase.value || table !== logsTable.value)) {
-      // Temporarily point the Logs page at the service-mapped table. The original binding
-      // is restored on close, so the Logs page is unaffected for other navigation.
-      if (!logsTraceId.value) {
-        savedLogsDatabase = logsDatabase.value
-        savedLogsTable = logsTable.value
-      }
-      logsDatabase.value = database
-      logsTable.value = table
     }
     logsTraceId.value = trimmed
     if (logsTab.value !== 'logs') {
@@ -297,56 +496,17 @@ export function useDrilldownContextProvider(): DrilldownContext {
     }
   }
 
-  /** Back to traces home; keep filter chips and any open Gantt. */
+  /** Stub until useSignalBinding replaces with snapshot restore. */
   const closeLogsForTrace = () => {
     const hadTraceDrawer = Boolean(logsTraceId.value)
     logsTraceId.value = undefined
-    if (savedLogsTable !== undefined || savedLogsDatabase !== undefined) {
-      logsDatabase.value = savedLogsDatabase
-      logsTable.value = savedLogsTable
-      savedLogsDatabase = undefined
-      savedLogsTable = undefined
-    }
-    // On the logs signal an underlying LogsDetail may sit below the trace drawer —
-    // refresh it so the trace filter is lifted immediately.
     if (hadTraceDrawer && signal.value === 'logs') {
       refreshKey.value += 1
     }
   }
 
-  const context: DrilldownContext = {
-    signal,
-    metricsDatabase,
-    logsDatabase,
-    tracesDatabase,
-    databaseFor,
-    filters,
-    sidebarFilters,
-    metric,
-    detailTab,
-    focusTraceId,
-    logsTable,
-    tracesTable,
-    fieldMap,
-    logsView,
-    logsTab,
-    logsBodyOp,
-    logsBodyValue,
-    tracesTab,
-    logsSelectedGroup,
-    time: timeRangeHook.time,
-    rangeTime: timeRangeHook.rangeTime,
-    unixTimeRange: timeRangeHook.unixTimeRange,
-    resetTimeRange: timeRangeHook.reset,
-    refreshKey,
-    triggerRefresh,
+  Object.assign(actions, {
     setSignal,
-    entityFilterKeys,
-    setEntityFilterKey,
-    signalColumns,
-    setSignalColumns,
-    signalColumnTypes,
-    setSignalColumnTypes,
     setFilters,
     setSidebarFilters,
     appendFilter,
@@ -355,13 +515,46 @@ export function useDrilldownContextProvider(): DrilldownContext {
     setLogsView,
     setLogsTab,
     setTracesTab,
-    openLogsDetail,
-    closeLogsDetail,
     openTraceGantt,
     closeTraceGantt,
-    logsTraceId,
     openLogsForTrace,
     closeLogsForTrace,
+  })
+
+  const context: DrilldownContext = {
+    connection: {
+      signal,
+      metricsDatabase,
+      logsDatabase,
+      tracesDatabase,
+      databaseFor,
+    },
+    query: {
+      filters,
+      sidebarFilters,
+      time: timeRangeHook.time,
+      rangeTime: timeRangeHook.rangeTime,
+      unixTimeRange: timeRangeHook.unixTimeRange,
+      resetTimeRange: timeRangeHook.reset,
+      refreshKey,
+    },
+    semantics: {
+      logs: logsSemantics,
+      traces: tracesSemantics,
+    },
+    ui: {
+      metric,
+      detailTab,
+      focusTraceId,
+      logsTraceId,
+      logsView,
+      logsTab,
+      logsBodyOp,
+      logsBodyValue,
+      tracesTab,
+      logsSelectedGroup,
+    },
+    actions,
   }
 
   provide(DRILLDOWN_CONTEXT_KEY, context)

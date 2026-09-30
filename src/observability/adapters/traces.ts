@@ -3,6 +3,7 @@ import { processSpanData, type Span } from '@/views/dashboard/traces/utils'
 import type { ColumnType } from '@/types/query'
 import type { DrilldownContext } from '../context'
 import { filtersToSqlWhere } from '../filters'
+import { boundSignalDatabase } from '../signal-database'
 import { escapeSqlString, quoteIdent } from '../logs/query-state'
 import { buildDefaultTracesFieldMap } from '../traces/field-map'
 import {
@@ -25,7 +26,7 @@ export type { RedMetric }
 const ROOT_SPAN_LIMIT = 100
 
 function fieldMap(ctx: DrilldownContext): Record<string, string> {
-  const mapped = ctx.fieldMap.value.traces
+  const mapped = ctx.semantics.traces.fieldMap.value
   return Object.keys(mapped).length ? mapped : buildDefaultTracesFieldMap()
 }
 
@@ -58,14 +59,14 @@ export function buildTracesContextWhere(
     extraWhere?: string[]
   }
 ): string {
-  const tableName = ctx.tracesTable.value
+  const tableName = ctx.semantics.traces.table.value
   if (!tableName) {
     return ''
   }
 
   const map = fieldMap(ctx)
   const whereParts: string[] = []
-  const unixRange = ctx.unixTimeRange()
+  const unixRange = ctx.query.unixTimeRange()
   const tsCol = timeColumn(ctx)
 
   if (unixRange.length === 2) {
@@ -78,8 +79,8 @@ export function buildTracesContextWhere(
   }
 
   whereParts.push(
-    ...filtersToSqlWhere(ctx.filters.value, map, {
-      columns: ctx.signalColumns.value.traces,
+    ...filtersToSqlWhere(ctx.query.filters.value, map, {
+      columns: ctx.semantics.traces.columns.value,
       // Trace tables flatten attributes into physical dotted columns. Before the schema
       // bind completes, JSON-chip guessing would misread `resource_attributes.service.name`
       // as a `json_get_string("resource_attributes", …)` path — SQL the server rejects.
@@ -87,7 +88,7 @@ export function buildTracesContextWhere(
       jsonChipWithoutColumns: false,
       // Attribute columns are typed (bigint / boolean / …): literals must render accordingly,
       // e.g. `"x" > 1000000000` and `"flag" = TRUE` instead of quoted strings.
-      typeOf: (column) => ctx.signalColumnTypes.value.traces?.[column],
+      typeOf: (column) => ctx.semantics.traces.columnTypes.value?.[column],
     })
   )
 
@@ -171,7 +172,7 @@ export async function fetchRootSpanList(
   options?: { limit?: number; redMetric?: RedMetric }
 ): Promise<RootSpanListResult> {
   const empty: RootSpanListResult = { rows: [], columns: [] }
-  const tableName = ctx.tracesTable.value
+  const tableName = ctx.semantics.traces.table.value
   if (!tableName) {
     return empty
   }
@@ -205,7 +206,7 @@ ORDER BY ${orderBy}
 LIMIT ${limit}`
 
   try {
-    const response = await editorApi.runSQL(sql, ctx.tracesDatabase.value)
+    const response = await editorApi.runSQL(sql, boundSignalDatabase(ctx, 'traces'))
     const records = response?.output?.[0]?.records
     return {
       rows: recordsToObjects(records),
@@ -223,7 +224,7 @@ export async function fetchRedTimeseries(
   metric: RedMetric,
   options?: { extraEquals?: Array<{ column: string; value: string }> }
 ): Promise<Array<[number, number]>> {
-  const tableName = ctx.tracesTable.value
+  const tableName = ctx.semantics.traces.table.value
   if (!tableName) {
     return []
   }
@@ -231,7 +232,7 @@ export async function fetchRedTimeseries(
   if (!where) {
     return []
   }
-  const intervalSeconds = volumeIntervalSecondsFromRange(ctx.time.value, ctx.rangeTime.value)
+  const intervalSeconds = volumeIntervalSecondsFromRange(ctx.query.time.value, ctx.query.rangeTime.value)
   const sql = buildRedTimeseriesSql({
     tableName,
     where,
@@ -242,7 +243,7 @@ export async function fetchRedTimeseries(
     intervalSeconds,
   })
   try {
-    const response = await editorApi.runSQL(sql, ctx.tracesDatabase.value)
+    const response = await editorApi.runSQL(sql, boundSignalDatabase(ctx, 'traces'))
     const rows = response?.output?.[0]?.records?.rows
     if (!Array.isArray(rows)) {
       return []
@@ -268,7 +269,7 @@ export async function fetchDurationHeatmap(
   ctx: DrilldownContext,
   options?: { extraEquals?: Array<{ column: string; value: string }> }
 ): Promise<HistogramHeatmapData | null> {
-  const tableName = ctx.tracesTable.value
+  const tableName = ctx.semantics.traces.table.value
   if (!tableName) {
     return null
   }
@@ -276,7 +277,7 @@ export async function fetchDurationHeatmap(
   if (!where) {
     return null
   }
-  const intervalSeconds = volumeIntervalSecondsFromRange(ctx.time.value, ctx.rangeTime.value)
+  const intervalSeconds = volumeIntervalSecondsFromRange(ctx.query.time.value, ctx.query.rangeTime.value)
   const sql = buildDurationHeatmapSql({
     tableName,
     where,
@@ -285,7 +286,7 @@ export async function fetchDurationHeatmap(
     intervalSeconds,
   })
   try {
-    const response = await editorApi.runSQL(sql, ctx.tracesDatabase.value)
+    const response = await editorApi.runSQL(sql, boundSignalDatabase(ctx, 'traces'))
     const rows = response?.output?.[0]?.records?.rows
     if (!Array.isArray(rows)) {
       return null
@@ -330,13 +331,13 @@ export async function fetchBreakdownSeries(
   values: string[]
 ): Promise<BreakdownSeriesResult> {
   const empty: BreakdownSeriesResult = { series: {}, yAxis: { yMin: 0, yMax: 1 } }
-  const tableName = ctx.tracesTable.value
+  const tableName = ctx.semantics.traces.table.value
   const listed = values.filter(Boolean)
   if (!tableName || !groupByColumn || !listed.length) {
     return empty
   }
   const where = buildTracesContextWhere(ctx, { rootOnly: true })
-  const unixRange = ctx.unixTimeRange()
+  const unixRange = ctx.query.unixTimeRange()
   if (!where || unixRange.length !== 2) {
     return empty
   }
@@ -353,7 +354,7 @@ export async function fetchBreakdownSeries(
     values: listed,
   })
   try {
-    const response = await editorApi.runSQL(sql, ctx.tracesDatabase.value)
+    const response = await editorApi.runSQL(sql, boundSignalDatabase(ctx, 'traces'))
     const rows = response?.output?.[0]?.records?.rows
     if (!Array.isArray(rows)) {
       return empty
@@ -384,7 +385,7 @@ export async function fetchBreakdownAttrValues(
   groupByColumn: string,
   options?: { limit?: number }
 ): Promise<BreakdownAttrValue[]> {
-  const tableName = ctx.tracesTable.value
+  const tableName = ctx.semantics.traces.table.value
   if (!tableName || !groupByColumn) {
     return []
   }
@@ -402,7 +403,7 @@ export async function fetchBreakdownAttrValues(
     limit: options?.limit,
   })
   try {
-    const response = await editorApi.runSQL(sql, ctx.tracesDatabase.value)
+    const response = await editorApi.runSQL(sql, boundSignalDatabase(ctx, 'traces'))
     const rows = response?.output?.[0]?.records?.rows
     if (!Array.isArray(rows)) {
       return []
@@ -425,7 +426,7 @@ export async function fetchBreakdownAttrValues(
 
 /** All spans for one trace (Gantt). */
 export async function fetchTraceSpans(ctx: DrilldownContext, traceId: string): Promise<Span[]> {
-  const tableName = ctx.tracesTable.value
+  const tableName = ctx.semantics.traces.table.value
   if (!tableName || !traceId.trim()) {
     return []
   }
@@ -438,7 +439,7 @@ WHERE ${quoteIdent(idCol)} = '${escapeSqlString(traceId.trim())}'
 ORDER BY ${quoteIdent(tsCol)} ASC`
 
   try {
-    const response = await editorApi.runSQL(sql, ctx.tracesDatabase.value)
+    const response = await editorApi.runSQL(sql, boundSignalDatabase(ctx, 'traces'))
     const records = response?.output?.[0]?.records
     if (!records) {
       return []
@@ -471,17 +472,17 @@ const TRACE_SERVICES_CACHE_LIMIT = 50
  * cached for the session per (database, table, window).
  */
 export async function fetchTraceServices(ctx: DrilldownContext, options?: { limit?: number }): Promise<string[]> {
-  const tableName = ctx.tracesTable.value
+  const tableName = ctx.semantics.traces.table.value
   if (!tableName) {
     return []
   }
 
   const serviceCol = fieldMap(ctx).service || 'service_name'
   const tsCol = timeColumn(ctx)
-  const unixRange = ctx.unixTimeRange()
+  const unixRange = ctx.query.unixTimeRange()
   const windowKey = unixRange.length === 2 ? `${unixRange[0]}-${unixRange[1]}` : 'all'
   const limit = options?.limit ?? 200
-  const cacheKey = `${ctx.tracesDatabase.value}\0${tableName}\0${serviceCol}\0${windowKey}\0${limit}`
+  const cacheKey = `${boundSignalDatabase(ctx, 'traces')}\0${tableName}\0${serviceCol}\0${windowKey}\0${limit}`
   const cached = traceServicesCache.get(cacheKey)
   if (cached) {
     return cached
@@ -503,7 +504,7 @@ ORDER BY 1
 LIMIT ${limit}`
 
   const request = editorApi
-    .runSQL(sql, ctx.tracesDatabase.value)
+    .runSQL(sql, boundSignalDatabase(ctx, 'traces'))
     .then((response) => {
       const rows = response?.output?.[0]?.records?.rows ?? []
       return rows.map((row) => String(row?.[0] ?? '').trim()).filter(Boolean)

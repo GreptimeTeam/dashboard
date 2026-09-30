@@ -97,10 +97,10 @@ a-modal.trace-logs-settings(
   const multiTable = ref(false)
   const hydrating = ref(false)
 
-  const fallbackTable = computed(() => ctx.logsTable.value)
+  const fallbackTable = computed(() => ctx.semantics.logs.table.value)
 
   const databaseOptions = computed(() => {
-    const current = ctx.logsDatabase.value
+    const current = ctx.connection.logsDatabase.value
     const names = databaseList.value.length ? [...databaseList.value] : []
     if (current && !names.includes(current)) {
       names.unshift(current)
@@ -109,7 +109,7 @@ a-modal.trace-logs-settings(
   })
 
   async function loadTableOptions(index: number) {
-    const database = mappings.value[index]?.database || ctx.logsDatabase.value
+    const database = mappings.value[index]?.database || ctx.connection.logsDatabase.value
     if (!database) {
       tableOptions.value[index] = []
       return
@@ -185,7 +185,7 @@ a-modal.trace-logs-settings(
    * all session-cached, so the cost is negligible — and no props race can hide rows.
    */
   async function hydrate() {
-    const saved = loadDrilldownSettings(ctx.tracesDatabase.value).traces.traceLogsMappings ?? []
+    const saved = loadDrilldownSettings(ctx.connection.tracesDatabase.value).traces.traceLogsMappings ?? []
     hydratedSnapshot.value = saved.map((mapping) => ({ ...mapping }))
     tableOptions.value = {}
     loadingTables.value = {}
@@ -214,7 +214,7 @@ a-modal.trace-logs-settings(
       if (target && target.source !== 'current') {
         return { service, database: target.database, table: target.table, source: 'auto' }
       }
-      return { service, database: ctx.logsDatabase.value, table: '', source: 'auto' }
+      return { service, database: ctx.connection.logsDatabase.value, table: '', source: 'auto' }
     })
     mappings.value.forEach((_, index) => {
       loadTableOptions(index)
@@ -264,7 +264,7 @@ a-modal.trace-logs-settings(
         )
       })
     // Deleted auto entries are tombstoned so the probe does not re-learn them.
-    const ignored = new Set(loadDrilldownSettings(ctx.tracesDatabase.value).traces.ignoredServiceKeys ?? [])
+    const ignored = new Set(loadDrilldownSettings(ctx.connection.tracesDatabase.value).traces.ignoredServiceKeys ?? [])
     hydratedSnapshot.value.forEach((item) => {
       if (item.source === 'auto' && !next.some((mapping) => mapping.service === item.service)) {
         ignored.add(item.service)
@@ -272,7 +272,7 @@ a-modal.trace-logs-settings(
     })
     updateTracesDrilldownSettings(
       { traceLogsMappings: next, ignoredServiceKeys: [...ignored] },
-      ctx.tracesDatabase.value
+      ctx.connection.tracesDatabase.value
     )
     emit('saved', next)
     emit('update:visible', false)

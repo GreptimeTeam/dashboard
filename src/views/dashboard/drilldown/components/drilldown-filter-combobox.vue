@@ -87,7 +87,12 @@
 
   const { t } = useI18n()
   const ctx = useDrilldownContext()
-  const { filters, setFilters, appendFilter, metric, logsTable, signal, time, rangeTime, refreshKey } = ctx
+  const { filters } = ctx.query
+  const { setFilters, appendFilter } = ctx.actions
+  const { metric } = ctx.ui
+  const { signal } = ctx.connection
+  const logsTable = ctx.semantics.logs.table
+  const { time, rangeTime, refreshKey } = ctx.query
   const {
     keysLoading,
     valuesLoading,
@@ -137,7 +142,9 @@
   })
 
   /** Column data type of the key being edited — drives which operators are offered. */
-  const activeColumnType = computed(() => ctx.signalColumnTypes.value[signal.value]?.[activeFieldKey.value.trim()])
+  const columnTypesForSignal = (signalName: typeof signal.value) =>
+    signalName === 'logs' || signalName === 'traces' ? ctx.semantics[signalName].columnTypes.value : undefined
+  const activeColumnType = computed(() => columnTypesForSignal(signal.value)?.[activeFieldKey.value.trim()])
 
   // Comparison operators are numeric-only, booleans get =/!=; strings keep =/!=/=~/!~.
   const operatorOptions = computed<SuggestOption[]>(() => {
@@ -341,17 +348,11 @@
     }
     // Numeric/boolean columns only accept renderable values; an operator that does not apply
     // to the column type (e.g. carried in a URL) falls back to `=`.
-    const dataType = ctx.signalColumnTypes.value[signal.value]?.[key]
+    const dataType = columnTypesForSignal(signal.value)?.[key]
     if (!isValidFilterValue(dataType, value)) {
       return
     }
     const op = normalizeFilterOp(dataType, draftOp.value)
-    if (props.suggestMode === 'fields' && !ctx.fieldMap.value.logs[key]) {
-      ctx.fieldMap.value = {
-        ...ctx.fieldMap.value,
-        logs: { ...ctx.fieldMap.value.logs, [key]: key },
-      }
-    }
     const filter: DrilldownFilter = { key, op, value }
     if (isEditing.value && editingIndex.value !== null) {
       const updated = filters.value.map((item, itemIndex) => (itemIndex === editingIndex.value ? filter : item))

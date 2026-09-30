@@ -21,7 +21,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, ref, watch } from 'vue'
+  import { computed, ref } from 'vue'
   import type { EChartsOption } from 'echarts'
   import { storeToRefs } from 'pinia'
   import { useI18n } from 'vue-i18n'
@@ -35,6 +35,7 @@
     redMetricPanelUnit,
     volumeIntervalSecondsFromRange,
   } from '@/observability/traces/red-queries'
+  import useSignalQuery from '@/observability/use-signal-query'
   import DrilldownChartPanel from '../components/drilldown-chart-panel.vue'
 
   const props = defineProps<{
@@ -62,16 +63,16 @@
   const chartHeightPx = computed(() => props.height ?? 140)
   const chartRenderKey = computed(
     () =>
-      `${props.metric}:${redMetricChartKind(props.metric)}:${ctx.refreshKey.value}:${
-        ctx.time.value
-      }:${ctx.rangeTime.value.join(',')}:${ctx.tracesTable.value}`
+      `${props.metric}:${redMetricChartKind(props.metric)}:${ctx.query.refreshKey.value}:${
+        ctx.query.time.value
+      }:${ctx.query.rangeTime.value.join(',')}:${ctx.semantics.traces.table.value}`
   )
 
   async function load() {
-    if (ctx.focusTraceId.value) {
+    if (ctx.ui.focusTraceId.value) {
       return
     }
-    if (!ctx.tracesTable.value) {
+    if (!ctx.semantics.traces.table.value) {
       chartOption.value = null
       isEmpty.value = true
       return
@@ -82,7 +83,7 @@
     loading.value = true
     error.value = null
     try {
-      const unixRange = ctx.unixTimeRange()
+      const unixRange = ctx.query.unixTimeRange()
       const timeRange = unixRange.length === 2 ? ([unixRange[0], unixRange[1]] as [number, number]) : undefined
 
       if (props.metric === 'duration') {
@@ -101,7 +102,7 @@
           cellUnit: 'none',
           yUnit: 's',
           timeRange,
-          stepSeconds: volumeIntervalSecondsFromRange(ctx.time.value, ctx.rangeTime.value),
+          stepSeconds: volumeIntervalSecondsFromRange(ctx.query.time.value, ctx.query.rangeTime.value),
           plotHeightPx: chartHeightPx.value,
         })
         return
@@ -139,22 +140,11 @@
     }
   }
 
-  watch(
-    () => [
-      ctx.refreshKey.value,
-      ctx.filters.value,
-      ctx.time.value,
-      ctx.rangeTime.value[0],
-      ctx.rangeTime.value[1],
-      ctx.tracesTable.value,
-      props.metric,
-      isDark.value,
-    ],
-    () => {
-      load()
-    },
-    { deep: true, immediate: true }
-  )
+  useSignalQuery(ctx, 'traces', {
+    enabled: () => !ctx.ui.focusTraceId.value,
+    params: () => ({ metric: props.metric, isDark: isDark.value }),
+    run: () => load(),
+  })
 </script>
 
 <style scoped lang="less">

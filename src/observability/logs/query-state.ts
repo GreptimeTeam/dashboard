@@ -15,7 +15,7 @@ export function buildCountChartQueryState(options: {
   database?: string
 }): QueryState {
   const { table, timeColumn, whereSql, ctx, database } = options
-  const unixRange = ctx.unixTimeRange()
+  const unixRange = ctx.query.unixTimeRange()
   const timeRangeValues =
     unixRange.length === 2 ? [`FROM_UNIXTIME(${unixRange[0]})`, `FROM_UNIXTIME(${unixRange[1]})`] : []
 
@@ -28,8 +28,8 @@ export function buildCountChartQueryState(options: {
     tsColumn: { name: timeColumn },
     editorType: 'text',
     timeRangeValues,
-    time: ctx.time.value,
-    rangeTime: [...ctx.rangeTime.value],
+    time: ctx.query.time.value,
+    rangeTime: [...ctx.query.rangeTime.value],
     sourceState: {
       table,
       orderBy: 'DESC',

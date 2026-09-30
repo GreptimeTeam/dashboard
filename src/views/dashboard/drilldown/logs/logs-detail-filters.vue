@@ -58,7 +58,7 @@
 
   const { t } = useI18n()
   const ctx = useDrilldownContext()
-  const { logsTab, logsBodyOp, logsBodyValue } = ctx
+  const { logsTab, logsBodyOp, logsBodyValue } = ctx.ui
 
   const bodyOps = LOGS_BODY_OPS
   const serviceOps = DRILLDOWN_FILTER_OP_OPTIONS
@@ -103,7 +103,7 @@
 
   async function loadServiceSuggestions() {
     const column = columns.value.service
-    if (!column || !ctx.logsTable.value) {
+    if (!column || !ctx.semantics.logs.table.value) {
       serviceSuggestions.value = []
       return
     }
@@ -125,7 +125,7 @@
     if (!column || serviceEditing.value) {
       return
     }
-    const match = ctx.filters.value.find((filter) => filter.key === column)
+    const match = ctx.query.filters.value.find((filter) => filter.key === column)
     serviceDraft.value = match?.value ?? ''
     serviceOp.value = match && isFilterOp(match.op) ? match.op : serviceOp.value
   }
@@ -137,7 +137,7 @@
     }
   )
 
-  watch(() => [columns.value.service, ctx.filters.value] as const, syncServiceFromFilters, {
+  watch(() => [columns.value.service, ctx.query.filters.value] as const, syncServiceFromFilters, {
     immediate: true,
     deep: true,
   })
@@ -172,14 +172,10 @@
   }
 
   function ensureServiceMapped(column: string) {
-    const { logs } = ctx.fieldMap.value
-    if (logs.service === column && logs[column] === column) {
+    if (ctx.semantics.logs.fieldMap.value.service === column) {
       return
     }
-    ctx.fieldMap.value = {
-      ...ctx.fieldMap.value,
-      logs: { ...logs, service: column, [column]: column },
-    }
+    ctx.actions.setLogsRole('service', column)
   }
 
   function commitService() {
@@ -190,18 +186,18 @@
     }
     const value = serviceDraft.value.trim()
     serviceDraft.value = value
-    let next = ctx.filters.value.filter((filter) => filter.key !== column)
+    let next = ctx.query.filters.value.filter((filter) => filter.key !== column)
     if (value) {
       ensureServiceMapped(column)
       next = [...next, { key: column, op: serviceOp.value, value }]
     }
-    ctx.setFilters(next)
+    ctx.actions.setFilters(next)
   }
 
   function runQuery() {
     commitBody()
     commitService()
-    ctx.triggerRefresh()
+    ctx.actions.triggerRefresh()
   }
 
   function clearBody() {

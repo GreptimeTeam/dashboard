@@ -8,7 +8,7 @@ import {
   OTEL_LOG_SERVICE,
   OTEL_LOG_TIME,
   OTEL_LOG_TRACE,
-} from '../semantics/otlp'
+} from '../semantics/model'
 import { isJsonAttributeContainerName, parseJsonFieldChipKey } from './json-field-keys'
 
 const OTEL_LOG_INDEX_LABEL_SET = new Set<string>(OTEL_LOG_INDEX_LABELS)
@@ -176,24 +176,14 @@ function applyRoleColumns(
 }
 
 /**
- * Build Context fieldMap.logs from field settings only.
- * Unset roles stay unset — callers seed OTEL defaults into settings before this.
+ * Build Context fieldMap.logs from already-loaded columns + field settings.
+ * Unset roles stay unset until filled from OTEL defaults derived from the same columns.
  */
-export async function buildLogsFieldMap(
-  tableName: string,
-  settings?: LogsFieldMapSettings,
-  database?: string
-): Promise<Record<string, string>> {
+export function buildLogsFieldMapFromColumns(
+  columns: SchemaColumn[],
+  settings?: LogsFieldMapSettings
+): Record<string, string> {
   const map: Record<string, string> = {}
-  let columns: SchemaColumn[] = []
-
-  try {
-    columns = await useTableSchemaStore().ensureTableSchema(tableName, database)
-  } catch (error) {
-    console.error(`Failed to load schema for ${tableName}:`, error)
-    return applySettingsOverrides(map, settings)
-  }
-
   const columnNames = new Set(columns.map((column) => column.name))
 
   columns.forEach((column) => {
@@ -217,6 +207,27 @@ export async function buildLogsFieldMap(
   })
 
   return withRoles
+}
+
+/**
+ * Build Context fieldMap.logs from field settings only.
+ * Unset roles stay unset — callers seed OTEL defaults into settings before this.
+ */
+export async function buildLogsFieldMap(
+  tableName: string,
+  settings?: LogsFieldMapSettings,
+  database?: string
+): Promise<Record<string, string>> {
+  let columns: SchemaColumn[] = []
+
+  try {
+    columns = await useTableSchemaStore().ensureTableSchema(tableName, database)
+  } catch (error) {
+    console.error(`Failed to load schema for ${tableName}:`, error)
+    return applySettingsOverrides({}, settings)
+  }
+
+  return buildLogsFieldMapFromColumns(columns, settings)
 }
 
 function isStringLikeType(dataType: string | undefined): boolean {

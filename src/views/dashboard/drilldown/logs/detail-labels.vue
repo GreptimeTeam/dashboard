@@ -17,16 +17,17 @@
 </template>
 
 <script setup lang="ts">
-  import { onMounted, ref, watch } from 'vue'
+  import { ref } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useDrilldownContext } from '@/observability/context'
   import { listLabelKeys } from '@/observability/adapters/logs'
   import { METRIC_PANEL_HEIGHT } from '@/observability/metrics/panel-stats'
+  import useSignalQuery from '@/observability/use-signal-query'
   import LogsVolumeMiniChart from './logs-volume-mini-chart.vue'
 
   const { t } = useI18n()
   const ctx = useDrilldownContext()
-  const { logsTab } = ctx
+  const { logsTab } = ctx.ui
   const paneScrollRoot = ref<HTMLElement | null>(null)
   const loadingKeys = ref(false)
   const labelKeys = ref<string[]>([])
@@ -41,14 +42,9 @@
     }
   }
 
-  onMounted(loadKeys)
-
-  watch(
-    () => [ctx.logsTable.value, ctx.refreshKey.value] as const,
-    () => {
-      loadKeys()
-    }
-  )
+  useSignalQuery(ctx, 'logs', {
+    run: () => loadKeys(),
+  })
 </script>
 
 <style scoped lang="less">

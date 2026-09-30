@@ -44,11 +44,8 @@
     type BreakdownAttrValue,
     type RedMetric,
   } from '@/observability/adapters/traces'
-  import {
-    discoverTraceBreakdownAttributes,
-    mergeTracesFieldMapColumns,
-    type TraceBreakdownAttribute,
-  } from '@/observability/traces/field-map'
+  import { discoverTraceBreakdownAttributes, type TraceBreakdownAttribute } from '@/observability/traces/field-map'
+  import useSignalQuery from '@/observability/use-signal-query'
   import TracesBreakdownPanel from './traces-breakdown-panel.vue'
 
   const props = defineProps<{
@@ -78,25 +75,13 @@
     return attrs[0]?.column || 'service_name'
   }
 
-  const syncFieldMap = (attrs: TraceBreakdownAttribute[]) => {
-    const columns = attrs.map((attr) => attr.column)
-    const prev = ctx.fieldMap.value.traces
-    const next = mergeTracesFieldMapColumns(prev, columns)
-    if (Object.keys(next).length !== Object.keys(prev).length) {
-      ctx.fieldMap.value = {
-        ...ctx.fieldMap.value,
-        traces: next,
-      }
-    }
-  }
-
   let attrsRequestId = 0
 
   const loadAttributes = async (): Promise<void> => {
-    if (ctx.focusTraceId.value) {
+    if (ctx.ui.focusTraceId.value) {
       return
     }
-    const tableName = ctx.tracesTable.value
+    const tableName = ctx.semantics.traces.table.value
     if (!tableName) {
       allAttrs.value = []
       return
@@ -106,12 +91,11 @@
     loadingAttrs.value = true
     try {
       // Session-cached store read — the bind path already fetched these columns once.
-      const columns = await useTableSchemaStore().ensureTableSchema(tableName, ctx.databaseFor('traces'))
+      const columns = await useTableSchemaStore().ensureTableSchema(tableName, ctx.connection.databaseFor('traces'))
       if (requestId !== attrsRequestId) {
         return
       }
       allAttrs.value = discoverTraceBreakdownAttributes(columns || [])
-      syncFieldMap(allAttrs.value)
       if (!allAttrs.value.some((attr) => attr.column === groupByColumn.value)) {
         groupByColumn.value = preferDefaultColumn(allAttrs.value)
       }
@@ -128,37 +112,20 @@
   }
 
   /**
-   * Single reactive pipelines: one watch per data slice owns when it loads — mounted,
-   * table changes and dep waves are all just input changes. Readiness waves (focus
-   * toggling) change inputs but not the query, so an identical parameter signature
-   * skips (refreshKey is part of the signature — manual refresh always re-fetches),
-   * and rapid parameter changes drop stale responses.
+   * Value pipeline: useSignalQuery owns when values load. Signature dedupe skips
+   * readiness flaps; refreshKey is part of the shared signature (manual refresh
+   * always re-fetches); rapid parameter changes drop stale responses.
    */
-  let lastValuesKey = ''
   let valuesRequestId = 0
 
   const loadValues = async (): Promise<void> => {
-    if (ctx.focusTraceId.value) {
+    if (ctx.ui.focusTraceId.value) {
       return
     }
-    if (!ctx.tracesTable.value || !groupByColumn.value) {
+    if (!ctx.semantics.traces.table.value || !groupByColumn.value) {
       values.value = []
       seriesByValue.value = {}
       yAxis.value = { yMin: 0, yMax: 1 }
-      lastValuesKey = ''
-      return
-    }
-    const key = JSON.stringify([
-      ctx.tracesDatabase.value,
-      ctx.tracesTable.value,
-      ctx.rangeTime.value[0],
-      ctx.rangeTime.value[1],
-      (ctx.filters.value || []).map((filter) => [filter.key, filter.op, filter.value]),
-      props.redMetric,
-      groupByColumn.value,
-      ctx.refreshKey.value,
-    ])
-    if (key === lastValuesKey) {
       return
     }
     valuesRequestId += 1
@@ -175,7 +142,6 @@
       if (requestId !== valuesRequestId) {
         return
       }
-      lastValuesKey = key
       values.value = nextValues
       seriesByValue.value = series.series
       yAxis.value = series.yAxis
@@ -186,34 +152,20 @@
     }
   }
 
-  // 属性管线：只跟表走。
+  // Attribute discovery: follow bind revision (table/columns), not query time/filters.
   watch(
-    () => [ctx.focusTraceId.value, ctx.tracesTable.value],
+    () => [ctx.ui.focusTraceId.value, ctx.semantics.traces.revision.value] as const,
     () => {
       loadAttributes()
     },
     { immediate: true }
   )
 
-  // 数值管线：跟随全部输入（含 refreshKey 的手动刷新）。
-  watch(
-    () => [
-      ctx.focusTraceId.value,
-      ctx.tracesDatabase.value,
-      ctx.tracesTable.value,
-      props.redMetric,
-      groupByColumn.value,
-      ctx.filters.value,
-      ctx.time.value,
-      ctx.rangeTime.value[0],
-      ctx.rangeTime.value[1],
-      ctx.refreshKey.value,
-    ],
-    () => {
-      loadValues()
-    },
-    { immediate: true, deep: true }
-  )
+  useSignalQuery(ctx, 'traces', {
+    enabled: () => !ctx.ui.focusTraceId.value && Boolean(groupByColumn.value),
+    params: () => ({ redMetric: props.redMetric, groupBy: groupByColumn.value }),
+    run: () => loadValues(),
+  })
 </script>
 
 <style scoped lang="less">

@@ -32,12 +32,12 @@ export default function useMetricsCatalog(
     loading.value = true
     error.value = null
     try {
-      const unixRange = ctx.unixTimeRange()
+      const unixRange = ctx.query.unixTimeRange()
       const start = unixRange.length === 2 ? String(unixRange[0]) : undefined
       const end = unixRange.length === 2 ? String(unixRange[1]) : undefined
-      // Do not pin __name__ to ctx.metric — catalog / Related need the full filter pool.
-      const selector = buildMatchSelector(ctx.filters.value)
-      const database = ctx.metricsDatabase.value
+      // Do not pin __name__ to ctx.ui.metric — catalog / Related need the full filter pool.
+      const selector = buildMatchSelector(ctx.query.filters.value)
+      const database = ctx.connection.metricsDatabase.value
       const result = await fetchMetricNamesPool({
         start,
         end,
@@ -62,12 +62,12 @@ export default function useMetricsCatalog(
   watch(
     () => [
       enabled.value,
-      ctx.filters.value,
-      ctx.time.value,
-      ctx.rangeTime.value[0],
-      ctx.rangeTime.value[1],
-      ctx.refreshKey.value,
-      ctx.metricsDatabase.value,
+      ctx.query.filters.value,
+      ctx.query.time.value,
+      ctx.query.rangeTime.value[0],
+      ctx.query.rangeTime.value[1],
+      ctx.query.refreshKey.value,
+      ctx.connection.metricsDatabase.value,
     ],
     () => {
       if (!enabled.value) {
@@ -83,11 +83,13 @@ export default function useMetricsCatalog(
   const prefixGroups = computed(() => computeMetricPrefixGroups(catalogNamesForTree.value))
   const suffixGroups = computed(() => computeMetricSuffixGroups(catalogNamesForTree.value))
 
-  const filteredNames = computed(() => applySidebarFilters(poolNames.value, ctx.sidebarFilters.value, search.value))
+  const filteredNames = computed(() =>
+    applySidebarFilters(poolNames.value, ctx.query.sidebarFilters.value, search.value)
+  )
 
   const sortedNames = computed(() => sortMetricNames(filteredNames.value, sort.value, getRecentMetrics()))
 
-  const groups = computed(() => groupMetricNames(sortedNames.value, ctx.sidebarFilters.value.groupBy))
+  const groups = computed(() => groupMetricNames(sortedNames.value, ctx.query.sidebarFilters.value.groupBy))
 
   return {
     loading,

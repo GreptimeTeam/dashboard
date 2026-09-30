@@ -112,8 +112,7 @@
   import { isLogsDetailTab, LOGS_DETAIL_TABS } from '@/observability/types'
   import { resolveMetricMeta } from '@/observability/semantics'
   import useDrilldownUrlSync from '@/observability/use-drilldown-url-sync'
-  import useDrilldownLogsInit from '@/observability/use-drilldown-logs-init'
-  import useDrilldownTracesInit from '@/observability/use-drilldown-traces-init'
+  import useSignalBinding from '@/observability/signal-binding'
   import DrilldownDrawer from './components/drilldown-drawer.vue'
   import DrilldownTopBar from './components/top-bar.vue'
   import SignalTabNav from './components/signal-tab-nav.vue'
@@ -136,10 +135,11 @@
   const ctx = useDrilldownContextProvider()
   const urlSync = useDrilldownUrlSync(ctx, route, router)
   urlSync.initializeFromQuery()
-  useDrilldownLogsInit(ctx)
-  useDrilldownTracesInit(ctx)
+  useSignalBinding(ctx)
 
-  const { signal, logsTab, setLogsTab } = ctx
+  const { signal } = ctx.connection
+  const { logsTab } = ctx.ui
+  const { setLogsTab } = ctx.actions
   const logsDetailTabLabels = {
     logs: 'drilldown.logs.logsTab',
     labels: 'drilldown.logs.labelsTab',
@@ -151,14 +151,14 @@
     }))
   )
 
-  const selectedMetric = computed(() => ctx.metric.value)
+  const selectedMetric = computed(() => ctx.ui.metric.value)
   const drawerVisible = computed(() => Boolean(selectedMetric.value))
-  const logsDrawerVisible = computed(() => ctx.logsView.value === 'detail')
-  const logsFromTraceVisible = computed(() => Boolean(ctx.logsTraceId.value))
-  const tracesGanttVisible = computed(() => Boolean(ctx.focusTraceId.value))
+  const logsDrawerVisible = computed(() => ctx.ui.logsView.value === 'detail')
+  const logsFromTraceVisible = computed(() => Boolean(ctx.ui.logsTraceId.value))
+  const tracesGanttVisible = computed(() => Boolean(ctx.ui.focusTraceId.value))
   const tracesHomeHidden = computed(() => tracesGanttVisible.value || logsFromTraceVisible.value)
-  const focusTraceIdLabel = computed(() => ctx.focusTraceId.value || '')
-  const logsTraceIdLabel = computed(() => ctx.logsTraceId.value || '')
+  const focusTraceIdLabel = computed(() => ctx.ui.focusTraceId.value || '')
+  const logsTraceIdLabel = computed(() => ctx.ui.logsTraceId.value || '')
   const metricOriginalName = ref<string | null>(null)
 
   watch(
@@ -168,8 +168,8 @@
         metricOriginalName.value = null
         return
       }
-      const meta = await resolveMetricMeta(name, ctx.metricsDatabase.value)
-      if (ctx.metric.value === name) {
+      const meta = await resolveMetricMeta(name, ctx.connection.metricsDatabase.value)
+      if (ctx.ui.metric.value === name) {
         metricOriginalName.value = meta.originalName
       }
     },
@@ -177,19 +177,19 @@
   )
 
   const closeDrawer = () => {
-    ctx.metric.value = undefined
+    ctx.ui.metric.value = undefined
   }
 
   const closeLogsDrawer = () => {
-    ctx.closeLogsDetail()
+    ctx.actions.closeLogsDetail()
   }
 
   const closeLogsForTraceDrawer = () => {
-    ctx.closeLogsForTrace()
+    ctx.actions.closeLogsForTrace()
   }
 
   const closeTracesGanttDrawer = () => {
-    ctx.closeTraceGantt()
+    ctx.actions.closeTraceGantt()
   }
 
   const closeLogsToOverview = () => {
@@ -200,7 +200,7 @@
   }
 
   const logsDetailLabel = computed(
-    () => ctx.logsSelectedGroup.value || ctx.logsTable.value || t('drilldown.logs.logsSectionTitle')
+    () => ctx.ui.logsSelectedGroup.value || ctx.semantics.logs.table.value || t('drilldown.logs.logsSectionTitle')
   )
 
   const metricsCrumbs = computed(() => [

@@ -1,7 +1,7 @@
 import { parseJsonFieldChipKey, sqlJsonGetStringExpr } from './logs/json-field-keys'
 import { UNKNOWN_LOG_LEVEL, normalizeLogLevelName } from './logs/level-color'
 import { buildSeverityLevelsPredicate, isSeverityFilterColumn } from './logs/level-visibility'
-import { normalizeEntityFilters } from './semantics/otlp'
+import { normalizeEntityFilters } from './semantics/model'
 import type { DrilldownFilter, DrilldownFilterOp, DrilldownSignal } from './types'
 
 /** Numeric literal guard; the value is rendered verbatim so bigint precision survives. */
@@ -346,13 +346,22 @@ export const DRILLDOWN_FILTER_OP_OPTIONS: Array<{ label: string; value: Drilldow
 ]
 
 /**
- * Chip key → logs/traces column via fieldMap only.
+ * Chip key → logs/traces column via fieldMap, then optional physical-column fallback.
  * Unmapped Prom-only labels (e.g. `instance` on a table without that column) are skipped —
- * never fall back to the raw key (that produces invalid SQL).
+ * never fall back to the raw key unless `columns` confirms it exists on the bound table.
  */
-export function resolveFieldMapColumn(chipKey: string, fieldMap: Record<string, string>): string | undefined {
-  const mapped = fieldMap[chipKey.trim()]?.trim()
-  return mapped || undefined
+export function resolveFieldMapColumn(
+  chipKey: string,
+  fieldMap: Record<string, string>,
+  columns?: ReadonlyArray<string> | ReadonlySet<string>
+): string | undefined {
+  const trimmed = chipKey.trim()
+  if (!trimmed) return undefined
+  const mapped = fieldMap[trimmed]?.trim()
+  if (mapped) return mapped
+  if (!columns) return undefined
+  const set = columns instanceof Set ? columns : new Set(columns)
+  return set.has(trimmed) ? trimmed : undefined
 }
 
 function sqlPredicateForFilter(
@@ -482,7 +491,7 @@ export function filtersToSqlWhere(
       }
     }
 
-    const column = physical ?? resolveFieldMapColumn(filter.key, fieldMap)
+    const column = physical ?? resolveFieldMapColumn(filter.key, fieldMap, options?.columns)
     if (!column) {
       return
     }
@@ -548,19 +557,24 @@ export function filterAppliesToSignal(
   if (jsonChip && columns.includes(jsonChip.column)) {
     return true
   }
-  return Boolean(options?.fieldMap && resolveFieldMapColumn(key, options.fieldMap))
+  return Boolean(options?.fieldMap && resolveFieldMapColumn(key, options.fieldMap, columns))
 }
 
-/** True when a logs table is bound and at least one filter maps via logs fieldMap. */
+/** True when a logs table is bound and at least one filter maps via logs fieldMap / columns. */
 export function hasLogsMappedFilters(
   filters: DrilldownFilter[],
   logsFieldMap: Record<string, string>,
-  logsTable?: string | null
+  logsTable?: string | null,
+  columns?: ReadonlyArray<string> | ReadonlySet<string>
 ): boolean {
   if (!logsTable) {
     return false
   }
-  return filtersToSqlWhere(filters, logsFieldMap).length > 0
+  return (
+    filtersToSqlWhere(filters, logsFieldMap, {
+      columns: columns ? [...columns] : undefined,
+    }).length > 0
+  )
 }
 
 export function normalizeCommittedFilters(rows: DrilldownFilter[]): DrilldownFilter[] {

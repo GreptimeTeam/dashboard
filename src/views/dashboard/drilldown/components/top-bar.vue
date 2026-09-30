@@ -49,8 +49,12 @@
   import SignalTabNav from './signal-tab-nav.vue'
 
   const { t } = useI18n()
-  const { signal, time, rangeTime, triggerRefresh, setSignal, logsView, logsTable, openLogsDetail } =
-    useDrilldownContext()
+  const ctx = useDrilldownContext()
+  const { signal } = ctx.connection
+  const { time, rangeTime } = ctx.query
+  const { logsView } = ctx.ui
+  const logsTable = ctx.semantics.logs.table
+  const { triggerRefresh, setSignal, openLogsDetail } = ctx.actions
 
   const signalItems = computed(() => [
     { value: 'metrics' as DrilldownSignal, label: t('drilldown.signals.metrics') },

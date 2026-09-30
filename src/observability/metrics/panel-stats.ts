@@ -1,5 +1,5 @@
 import { shouldApplyRate } from './infer-promql'
-import type { MetricKind, MetricTemporality } from '../semantics/types'
+import type { MetricKind, MetricTemporality } from '../semantics/model'
 import { formatMetricUnitValue, resolveMetricPanelUnit } from './metric-units'
 
 export interface SparklineStats {

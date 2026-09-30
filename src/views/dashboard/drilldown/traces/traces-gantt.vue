@@ -49,6 +49,7 @@
   import { buildSpanTree, type Span } from '@/views/dashboard/traces/utils'
   import resolveLogsRoles from '@/observability/logs/resolved-roles'
   import { resolveTraceLogsForServices, type TraceLogsResolution } from '@/observability/traces/logs-association'
+  import useSignalQuery from '@/observability/use-signal-query'
 
   const { t } = useI18n()
   const ctx = useDrilldownContext()
@@ -128,8 +129,8 @@
   )
 
   const load = async () => {
-    const id = ctx.focusTraceId.value
-    if (!id || !ctx.tracesTable.value) {
+    const id = ctx.ui.focusTraceId.value
+    if (!id || !ctx.semantics.traces.table.value) {
       spans.value = []
       return
     }
@@ -150,23 +151,21 @@
     }
   }
 
-  watch(
-    () => [ctx.focusTraceId.value, ctx.tracesTable.value, ctx.refreshKey.value],
-    () => {
-      load()
-    },
-    { immediate: true }
-  )
+  useSignalQuery(ctx, 'traces', {
+    enabled: () => Boolean(ctx.ui.focusTraceId.value),
+    params: () => ctx.ui.focusTraceId.value,
+    run: () => load(),
+  })
 
   const logsTraceEnabled = computed(() => {
     const roles = resolveLogsRoles(ctx)
     const hasOriginalAssociation = Boolean(roles.traceId || roles.trace_id)
-    const mappings = loadDrilldownSettings(ctx.tracesDatabase.value).traces.traceLogsMappings ?? []
-    return hasOriginalAssociation || mappings.length > 0 || Boolean(ctx.logsTable.value)
+    const mappings = loadDrilldownSettings(ctx.connection.tracesDatabase.value).traces.traceLogsMappings ?? []
+    return hasOriginalAssociation || mappings.length > 0 || Boolean(ctx.semantics.logs.table.value)
   })
 
   const openSpanLogs = (span: Span) => {
-    const traceId = String(span.trace_id || ctx.focusTraceId.value || '')
+    const traceId = String(span.trace_id || ctx.ui.focusTraceId.value || '')
     if (!traceId) {
       return
     }
@@ -175,7 +174,7 @@
     const target = span.service_name ? logsResolution.value.targets[span.service_name] : undefined
     const enhancedTarget =
       target && target.source !== 'current' ? { database: target.database, table: target.table } : undefined
-    ctx.openLogsForTrace(traceId, enhancedTarget)
+    ctx.actions.openLogsForTrace(traceId, enhancedTarget)
   }
 </script>
 

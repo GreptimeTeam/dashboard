@@ -71,22 +71,13 @@ a-modal(
 </template>
 
 <script setup lang="ts">
-  import { computed, reactive, ref, watch, nextTick } from 'vue'
+  import { computed, reactive, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import useTableSchemaStore from '@/store/modules/table-schema'
   import { useDrilldownContext } from '@/observability/context'
-  import {
-    loadDrilldownSettings,
-    updateLogsDrilldownSettings,
-    type LogsFieldMapSettings,
-  } from '@/observability/drilldown-settings'
-  import { resolveFieldMapColumn } from '@/observability/filters'
+  import { loadDrilldownSettings, type LogsFieldMapSettings } from '@/observability/drilldown-settings'
   import { entityColumnFilterKey, listSignalTables, resolveEntityFilterRef } from '@/observability/semantics'
-  import {
-    buildLogsFieldMap,
-    resolveLogsSettingsFieldDefaults,
-    type SchemaColumn,
-  } from '@/observability/logs/field-map'
+  import { resolveLogsSettingsFieldDefaults, type SchemaColumn } from '@/observability/logs/field-map'
 
   const props = defineProps<{
     visible: boolean
@@ -136,7 +127,7 @@ a-modal(
       const reference = await resolveEntityFilterRef(table, 'service', {
         signal: 'logs',
         columns,
-        database: ctx.logsDatabase.value,
+        database: ctx.connection.logsDatabase.value,
       })
       serviceColumn = reference ? entityColumnFilterKey(reference) : undefined
     }
@@ -156,7 +147,7 @@ a-modal(
     }
     try {
       // Session-cached store read — shares the bind path's fetch instead of re-querying.
-      const columns = await useTableSchemaStore().ensureTableSchema(table, ctx.logsDatabase.value)
+      const columns = await useTableSchemaStore().ensureTableSchema(table, ctx.connection.logsDatabase.value)
       columnNames.value = columns.map((c) => c.name)
       return columns
     } catch {
@@ -168,13 +159,13 @@ a-modal(
   const hydrate = async () => {
     loadingTables.value = true
     try {
-      const settings = loadDrilldownSettings(ctx.logsDatabase.value).logs
+      const settings = loadDrilldownSettings(ctx.connection.logsDatabase.value).logs
       // Older seeds stored only a field map; fall back to the bound table so the column list
       // (and with it every saved value) still hydrates.
-      const savedTable = settings.table?.trim() || ctx.logsTable.value || ''
+      const savedTable = settings.table?.trim() || ctx.semantics.logs.table.value || ''
       tableOptions.value = await listSignalTables('logs', {
         include: savedTable ? [savedTable] : [],
-        database: ctx.logsDatabase.value,
+        database: ctx.connection.logsDatabase.value,
       })
       form.table = savedTable
       const columns = await loadColumns(form.table)
@@ -212,27 +203,7 @@ a-modal(
       traceId: form.traceId,
     }
 
-    // Build next map before touching ctx — avoid watches firing with new table + old fields.
-    const nextLogsFieldMap = await buildLogsFieldMap(form.table, fieldMap)
-
-    updateLogsDrilldownSettings(
-      {
-        table: form.table,
-        fieldMap,
-      },
-      ctx.logsDatabase.value
-    )
-
-    ctx.fieldMap.value = {
-      ...ctx.fieldMap.value,
-      logs: nextLogsFieldMap,
-    }
-    ctx.filters.value = ctx.filters.value.filter((filter) =>
-      Boolean(resolveFieldMapColumn(filter.key, nextLogsFieldMap))
-    )
-    ctx.logsTable.value = form.table
-    await nextTick()
-    ctx.triggerRefresh()
+    await ctx.actions.bindTable('logs', form.table, { fieldMap, persist: true })
     emit('update:visible', false)
     emit('saved')
   }

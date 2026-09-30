@@ -4,6 +4,24 @@ import type { DrilldownSignal } from './types'
 
 export type SignalDbKind = DrilldownSignal
 
+/**
+ * Database for the currently bound logs/traces table. Prefers `semantics.*.database`
+ * (set by the binder, including Trace→Logs overlay) over the page preference
+ * `connection.{logs|traces}Database`.
+ */
+export function boundSignalDatabase(
+  ctx: {
+    semantics: {
+      logs: { database: { value: string | undefined } }
+      traces: { database: { value: string | undefined } }
+    }
+    connection: { databaseFor: (signal: 'logs' | 'traces') => string }
+  },
+  kind: 'logs' | 'traces'
+): string {
+  return ctx.semantics[kind].database.value || ctx.connection.databaseFor(kind)
+}
+
 const STORAGE_PREFIX = 'signal-db'
 
 /** One reactive ref per signal so Explorer and Query pages stay in sync. */

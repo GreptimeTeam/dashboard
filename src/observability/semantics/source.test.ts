@@ -1,18 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import editorApi from '@/api/editor'
-import {
-  clearSemanticsCache,
-  declaredMetricKindFromSemantics,
-  declaredMetricUnitFromSemantics,
-  declaredTemporalityFromSemantics,
-  ensureSemanticsLoaded,
-  getTableEntityDeclarations,
-  getTableSemantics,
-  mapDeclaredMetricType,
-} from './source'
+import { clearSemanticsCache, ensureSemanticsLoaded, getTableEntityDeclarations, getTableSemantics } from './source'
 import { resolveEntityIdentity } from './resolve'
-import type { MetricTableSemantics } from './types'
 import { mapUcumToPanelUnit, resolveMetricPanelUnit } from '../metrics/metric-units'
 import { inferPromQL, shouldApplyRate } from '../metrics/infer-promql'
 
@@ -55,48 +45,6 @@ describe('semantics/source', () => {
   beforeEach(() => {
     clearSemanticsCache()
     runSQL.mockReset()
-  })
-
-  it('maps the DB-side metric.type whitelist', () => {
-    expect(mapDeclaredMetricType('counter')).toBe('counter')
-    expect(mapDeclaredMetricType('histogram')).toBe('histogram')
-    expect(mapDeclaredMetricType('gauge')).toBe('gauge')
-    expect(mapDeclaredMetricType('updown_counter')).toBe('updown_counter')
-    expect(mapDeclaredMetricType('summary')).toBe('summary')
-    expect(mapDeclaredMetricType('gauge_histogram')).toBe('gauge_histogram')
-    expect(mapDeclaredMetricType('info')).toBe('gauge')
-    expect(mapDeclaredMetricType('stateset')).toBe('gauge')
-    // Server-side "I do not know" sentinels must not fall back to a name guess.
-    expect(mapDeclaredMetricType('mixed')).toBe('unknown')
-    expect(mapDeclaredMetricType('unknown')).toBe('unknown')
-    // Not in the DB whitelist, so these can never appear.
-    expect(mapDeclaredMetricType('ExponentialHistogram')).toBeNull()
-    expect(mapDeclaredMetricType('updowncounter')).toBeNull()
-    expect(mapDeclaredMetricType('mystery')).toBeNull()
-  })
-
-  it('gates only kind on metadata_quality; unit/temporality are usable when present', () => {
-    const declared: MetricTableSemantics = {
-      tableName: 'gen_ai_client_token_usage',
-      metadataQuality: 'declared',
-      metricType: 'histogram',
-      metricUnit: 's',
-      metricTemporality: 'cumulative',
-    }
-    expect(declaredMetricKindFromSemantics(declared)).toBe('histogram')
-    expect(declaredMetricUnitFromSemantics(declared)).toBe('s')
-    expect(declaredTemporalityFromSemantics(declared)).toBe('cumulative')
-
-    const inferred: MetricTableSemantics = {
-      ...declared,
-      metadataQuality: 'inferred',
-    }
-    expect(declaredMetricKindFromSemantics(inferred)).toBeNull()
-    // `metadata_quality` describes `metric.type` only — the unit is never guessed.
-    expect(declaredMetricUnitFromSemantics(inferred)).toBe('s')
-    expect(declaredTemporalityFromSemantics(inferred)).toBe('cumulative')
-    expect(declaredMetricUnitFromSemantics(null)).toBeNull()
-    expect(declaredTemporalityFromSemantics(null)).toBeNull()
   })
 
   it('ensureMetricSemanticsLoaded caches core fields; get never issues LIMIT 1', async () => {
@@ -142,7 +90,9 @@ describe('semantics/source', () => {
     expect(runSQL).toHaveBeenCalledTimes(1)
 
     // Transient failures do not settle the dump — the next lookup retries the read.
-    runSQL.mockResolvedValueOnce({ output: [{ records: { schema: { column_schemas: [{ name: 'table_name' }] }, rows: [] } }] } as never)
+    runSQL.mockResolvedValueOnce({
+      output: [{ records: { schema: { column_schemas: [{ name: 'table_name' }] }, rows: [] } }],
+    } as never)
     expect(await getTableSemantics('solo_metric')).toBeNull()
     expect(runSQL).toHaveBeenCalledTimes(2)
   })

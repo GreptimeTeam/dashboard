@@ -1,179 +1,228 @@
-# Drilldown 语义信息
+# Drilldown 语义层
 
-> Greptime **有** Prometheus `/v1/prometheus/api/v1/metadata`（route `src/servers/src/http.rs:1351`、handler `http/prometheus.rs:279`），并且它本身就读语义层（`prometheus_metadata_from_table`，`prometheus.rs:2179`）。语义主入口仍取 [`information_schema.table_semantics`](https://docs.greptime.cn/nightly/user-guide/semantic-layer/table-semantics/)，理由改成"覆盖更全"（log/trace、`original_name`、signal/source/pipeline、不受逻辑表限制），不是"没有 `/metadata`"。  
-> **注意**：type/unit/temporality → 是否加 `rate()` 这条策略，服务端 metadata 与 dashboard `shouldApplyRate` 各有一份实现，已知差异见下。  
-> **原则**：语义目录优先 → 各信号约定 / 名字启发 → 用户设置兜底。
+> 语义层回答三件事：**这是哪类表、列角色是什么、跨信号身份在哪里**。
+> 它不负责查询语法；Metrics 用 PromQL，Logs/Traces 用 SQL，统一由 Context 驱动。
 
 ---
 
 ## 一句话
 
-| 信号 | 第一优先 | 兜底 |
-|------|----------|------|
-| **Metrics** | `table_semantics`（declared 的 type/unit/temporality…） | **指标名**启发式 |
-| **Logs** | `table_semantics`（哪张 log 表）+ 列 `semantic_type` | **OTel 列名**；再不行 **选表 / fieldMap / settings** |
-| **Traces** | `table_semantics`（常带 `pipeline=greptime_trace_v1`） | **标准 trace 列模型**；也可 settings |
+| 信号        | 主语义                                             | 兜底 / 手动出口                     |
+| ----------- | -------------------------------------------------- | ----------------------------------- |
+| **Metrics** | `table_semantics` 的 `metric.*` 声明               | 指标名后缀启发式；用户可 Configure  |
+| **Logs**    | `signal_type='log'` + 列角色 / OTel role columns   | 物理列与用户 fieldMap；可手选任意表 |
+| **Traces**  | `signal_type='trace'` + `greptime_trace_v1` 列模型 | `trace_id` 列发现 + 用户选表        |
+
+统一优先级：
+
+```text
+用户显式选择 / settings
+  > table_semantics 声明
+  > 实际列形状 + OTLP/Greptime 模型约定
+  > Metrics 名字启发式
+```
+
+任何一层都不能把不存在的列猜成 SQL。物理列清单是最后的存在性校验。
 
 ---
 
-## 公共目录
+## 公共语义来源
+
+这些来源对三信号共享，代码入口集中在 [`src/observability/semantics/`](../../src/observability/semantics/)：
+
+| 文件         | 职责                                                                         |
+| ------------ | ---------------------------------------------------------------------------- |
+| `source.ts`  | 公共 `table_semantics` 目录（SQL、按库缓存、缺失视图记忆）                   |
+| `model.ts`   | 纯语义模型：类型、跨信号实体词汇、Metrics/Logs/Traces 约定与打分             |
+| `resolve.ts` | 优先级编排：metric meta、entity ref、signal table 发现、`inspectSignalTable` |
+| `index.ts`   | 对外 façade                                                                  |
+
+表绑定的 Context 写入不在 semantics 目录内，由 [`signal-binding.ts`](../../src/observability/signal-binding.ts) 独占。
+
+### 1. `information_schema.table_semantics`
 
 ```sql
-SELECT table_name, signal_type, source, source_version, pipeline,
+SELECT table_name, signal_type, source, pipeline,
        metadata_quality, semantic_options, entity_declarations
-FROM information_schema.table_semantics;
+FROM information_schema.table_semantics
+WHERE table_schema = <database>;
 ```
 
-- `semantic_options`：JSON（已去 `greptime.semantic.` 前缀）；被提升为列的键（`signal_type` / `source` / `pipeline` / `metadata_quality`）不在这里面
-- `metadata_quality`：**只描述 `metric.type`**（协议声明 → `declared`，名字后缀猜 → `inferred`，冲突 collapse → `unknown`）。Metrics 仅 `declared` 采信 type；unit / temporality / original_name 没有"猜"的写入路径，存在即可用（`inferred` 也照用）
-- `entity_declarations`：实体身份声明，由服务端按 conventions 推导（**不需要用户配置任何 option**）；已在用（身份列解析，见下）
+| 字段                  | 语义                                                                                           |
+| --------------------- | ---------------------------------------------------------------------------------------------- |
+| `signal_type`         | 服务端声明的表类别：`metric` / `log` / `trace` / `event` / `unknown`；可为 NULL                |
+| `source`              | 写入生态（`opentelemetry` / `prometheus` / …），用于选择身份列约定                             |
+| `pipeline`            | 数据模型，最重要的是 `greptime_trace_v1`                                                       |
+| `metadata_quality`    | **只描述 `metric.type`**：`declared` / `inferred` / `unknown`，不是整行可信度                  |
+| `semantic_options`    | JSON；Metrics 读 `metric.type/unit/temporality/original_name`，Traces 可带 `trace.conventions` |
+| `entity_declarations` | 服务端 conventions 推导出的身份列路径；是跨信号 service/container 等身份的第一优先级           |
 
-代码：[`semantics/source.ts`](../../src/observability/semantics/source.ts)（①）、[`semantics/otlp.ts`](../../src/observability/semantics/otlp.ts)（②）、[`semantics/heuristics.ts`](../../src/observability/semantics/heuristics.ts)（③）、[`semantics/resolve.ts`](../../src/observability/semantics/resolve.ts)（分信号出口）。
+每个库 dump 一次并派生 `byName` / `bySignal` 索引；视图缺失的库记住缺失，瞬时失败不落缓存。
 
-### `table_semantics` 列参考（本实例实测）
+踩坑：
 
-视图性质：**一行 = 一张带语义的表**（`public` 1291 张表 → 820 行），**catalog 级作用域**（不按 `table_schema` 过滤会跨库串数据）。产出方有三类：用户手写 option、OTLP/Prometheus 摄入路径自动打标、服务端 conventions 推导（`entity_declarations`）。
+1. 视图是 catalog 级，必须按 `table_schema` 过滤，否则同名表跨库串数据。
+2. `signal_type` 可为 NULL；实体声明可以存在于无 signal 的表上。
+3. 被提升为列的键不会重复出现在 `semantic_options`。
+4. `metadata_quality` 不影响 unit / temporality / original_name / entity 声明。
 
-| 列 | 类型 | 作用 | 常见值（实测） | 消费方 |
-| --- | --- | --- | --- | --- |
-| `table_catalog` | String | 所属 catalog | `greptime` | 未直接用（information_schema 在当前 catalog 内解析） |
-| `table_schema` | String | 所属库 | `public`（其余库基本无语义行） | **作用域过滤** |
-| `table_name` | String | 表名 | 820 行 | 查表主键 |
-| `table_id` | UInt32 | 引擎内部表 id | 各不相同 | 未用 |
-| `signal_type` | String | 信号类型：`trace` / `log` / `metric` / `event` / `unknown` | metric 812、log 2、trace 1、**null 5** | Logs / Traces 选表；Metrics 不靠它 |
-| `source` | String | 接入生态：`opentelemetry` / `prometheus` / `influxdb` / `opentsdb` / `elasticsearch` / `loki` / `custom` / `mixed` / `unknown` | prometheus 480、opentelemetry 329、custom 6、null 5 | type 可信度基调；**约定兜底选物理列**（OTLP/Prom → `job`） |
-| `source_version` | String | 写入方版本 | Prometheus 行是 `1.0`，其余 null | 未用 |
-| `pipeline` | String | 写入 pipeline / 数据模型（open-value） | `greptime_trace_v1`（1 行）；vocabulary 另有 `greptime_metric_v1` | Traces 候选表打分（+50） |
-| `metadata_quality` | String | **只描述 `metric.type`**：`declared` / `inferred` / `unknown` | declared 332、inferred 480、null 8（含全部 log/trace 行） | 只决定 type 是否采信 |
-| `semantic_options` | String(JSON) | 其余语义键 | Metrics：`{"metric.type":"counter","metric.unit":"By","metric.temporality":"cumulative","metric.original_name":"…"}`；Traces：`{"trace.conventions":"https://opentelemetry.io/schemas/1.30.0"}`；Logs：null | Metric 的 type/unit/temporality/original_name |
-| `entity_declarations` | String(JSON) | 实体身份：`entity_type` / `origin` / `id` / `id_qualifier`（另有 `superseded_by` / `descriptive` / `scope` 字段） | 仅 6 行：5 张无 signal 的 `web_trace_demo*` + `opentelemetry_traces` | 身份列解析、跨信号关联 |
+### 2. `information_schema.columns` / table-schema store
 
-`id` 是**列路径**（扁平列名或 `resource_attributes.*` 点路径），`id_qualifier` 表示身份还需限定列：
+所有信号共用这一层做**物理存在性与类型校验**：
 
-```json
-[{"entity_type":"container","origin":"convention","id":["resource_attributes.container.id"]},
- {"entity_type":"service","origin":"convention","id":["service_name"],
-  "id_qualifier":"resource_attributes.service.namespace"},
- {"entity_type":"service.instance","origin":"convention",
-  "id":["service_name","resource_attributes.service.instance.id"],
-  "id_qualifier":"resource_attributes.service.namespace"}]
+- 列是否存在：决定语义声明是否可落地、共享 filter 是否适用于当前信号；
+- `data_type`：决定 SQL 字面量（数值、boolean）和可分组属性；
+- `semantic_type`：补充 TAG / FIELD / TIMESTAMP 角色；
+- `tablesHavingColumn('trace_id')`：Traces / Trace→Logs 的候选表预筛。
+
+批量 schema 和 `trace_id` 预筛都有会话缓存。
+
+### 3. 用户显式选择与 settings
+
+用户选择永远是最终出口，但只覆盖对应信号，不反向改写服务端语义：
+
+| 信号       | 显式配置                                             |
+| ---------- | ---------------------------------------------------- |
+| Metrics    | Configure 中的图表选择；指标目录本身仍来自 Prom API  |
+| Logs       | logs table、fieldMap、label include/exclude          |
+| Traces     | traces table；无 trace fieldMap 设置（固定模型角色） |
+| Trace→Logs | service → logs table 映射与 tombstone                |
+
+### 4. Context 绑定后的派生语义
+
+表绑定后，Explore 把公共语义发布为按信号封装的运行时状态（`ctx.semantics.logs` / `ctx.semantics.traces`）：
+
+| 字段                      | 含义                                                            |
+| ------------------------- | --------------------------------------------------------------- |
+| `table` / `database`      | 当前绑定表及其所在库（Trace→Logs overlay 时可与用户偏好库不同） |
+| `fieldMap`                | 逻辑角色 → 物理列                                               |
+| `entityFilterKeys`        | canonical entity（如 `service`）→ 当前表物理 key                |
+| `columns` / `columnTypes` | 共享 filter 的适用性和字面量类型                                |
+| `revision` / `ready`      | 消费者触发源；`ready` 表示 table + columns 已就绪               |
+
+Metrics **没有**绑定表语义层——目录来自 Prom API，不经过 `inspectSignalTable`。
+
+唯一写入方是 `signal-binding.ts`（`actions.bindTable`）：一次 inspect、原子 `commit`、`revision + 1`，绑定后不调用 `triggerRefresh`。这让一个 `filters[]` 切信号时重新编码，而不是做原始行 JOIN。
+
+---
+
+## 信号独有语义
+
+### Metrics
+
+| 信息                                      | 来源                                                               |
+| ----------------------------------------- | ------------------------------------------------------------------ |
+| 指标目录                                  | Prom API `__name__/values`（带时间与 match），不扫描语义表         |
+| type / unit / temporality / original_name | `semantic_options["metric.*"]`                                     |
+| type 可信度                               | `metadata_quality='declared'` 才采信；`mixed/unknown` 显式 unknown |
+| classic vs native histogram               | 同库 `${name}_bucket` 伴生表 + `le` 列形状                         |
+| 无声明 type / unit                        | 指标名后缀：`_total`、`_bucket`、`_seconds`、`_bytes` 等           |
+
+Metrics 独有原则：语义只决定默认图，用户 Configure 仍可覆盖。`/v1/prometheus/api/v1/metadata` 是另一条服务端入口，当前 dashboard 未用它，因为它丢 `original_name` 并改写 UCUM unit。
+
+### Logs
+
+| 信息                                        | 来源                                                                                                 |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| 候选表排序                                  | `signal_type='log'` 优先；其余用户表保留为手动出口（不做表名猜测）                                   |
+| time / body / severity / service / trace_id | OTel role columns（`timestamp`、`body`、`severity_text`、`service_name`、`trace_id`）+ 用户 fieldMap |
+| Label vs Field                              | `semantic_type=TAG`、fieldMap 角色、Loki 默认 OTel resource index-label 列名；其余字符串列是字段     |
+| JSON 身份                                   | `resource_attributes.service.name` 这类 chip；只用实际存在的 JSON 容器列                             |
+
+Logs 的“所有表可手选”是有意的逃生门；Trace→Logs 会再用 logs payload + `trace_id` 资格规则收紧。
+
+### Traces
+
+| 信息                 | 来源                                                                                                                     |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| 候选表               | `signal_type='trace'` / `pipeline=greptime_trace_v1` ∪ 实际含 `trace_id` 的表 ∪ `opentelemetry_traces`                   |
+| 排序                 | 完整 `greptime_trace_v1` 列模型 > 语义声明 > partial 表名稳定排序                                                        |
+| 最低物理资格         | `trace_id`：至少能按 trace id 过滤 / 打开 Gantt                                                                          |
+| 完整模型角色         | `trace_id`、`parent_span_id`、`timestamp`、`span_name`、`service_name`；`duration_nano`、`span_id`、status/kind 是加分列 |
+| service 身份         | entity declaration > trace 模型 `service_name` > source 约定                                                             |
+| 业务筛选 / Breakdown | 实际列发现：intrinsic + `resource_attributes.*` / `span_attributes.*`；ID、payload、时间列不进普通筛选                   |
+
+`trace_id`-only 的自定义表是逃生门，不是完整模型：root spans、RED、Breakdown 依赖的角色缺失时对应功能降级或返回空结果。
+
+### Trace → Logs
+
+适用范围：Traces 首页、Gantt、Span Detail 的 **View logs**。
+
+核心区分：
+
+- **行级查询键**：`trace_id`。目标表确定后，SQL 用它收窄日志。
+- **目标表路由键**：service 值 + 当前时间窗。`trace_id` 不可预先枚举，不能作为配置键。
+
+每个 service 解析一个目标 logs 表，路由优先级：
+
+```text
+manual mapping
+  > learned auto mapping
+  > service/time data probe
+  > Logs 页当前绑定表（current fallback）
 ```
 
-三信号取值形态：
+路由规则：
 
-| 信号 | 典型取值 | 备注 |
-| --- | --- | --- |
-| Metrics | `signal_type=metric`；`source=opentelemetry/prometheus/custom`；`metadata_quality` + `semantic_options` 齐全 | **`entity_declarations` 0/812** → 身份只能靠 `source` 约定兜底 |
-| Logs | `signal_type=log`、`source=opentelemetry`，**其余列全 null** | 只解决"哪张是日志表"；身份在 `resource_attributes` JSON（实测 `$."service.name"`） |
-| Traces | `signal_type=trace`、`pipeline=greptime_trace_v1`、`semantic_options.trace.conventions`、**带实体声明** | `metadata_quality` 为 null——它是 metrics 概念 |
+- manual 永不被自动覆盖；
+- auto 只在探测唯一命中后学习；用户删除过的 service 有 tombstone，不再学习；
+- 探测命中多表记为 ambiguous，不猜测，交给 settings；
+- 合格候选只有 0/1 张时没有路由价值：不探测、不学习，并清理等价映射，统一回落 Logs 绑定表；
+- current 只是可见兜底，打开 Trace→Logs 不改写 Logs 页的持久绑定。
 
-踩坑清单：
+候选资格（探测与 settings picker 共用）：
 
-1. **`signal_type` 可以为 null**（本实例 5 张 `web_trace_demo*` 有实体声明却没有信号类型）→ 只按 `signal_type` 过滤会漏表。
-2. **`metadata_quality` 只管 `metric.type`**，不是整行可信度。
-3. **被提升为列的键不在 `semantic_options` 里**。
-4. **声明与指标语义来自不同产出方**：带声明的 6 行里 5 行连 `source` 都没有；反之 812 行 metric 全无声明。
-5. **不用 `table_schema` 过滤就会跨库**（catalog 级视图）。
+**必须满足**：
 
----
+1. 有 `trace_id` 列——没有它无法做行级关联；
+2. 有日志证据——`signal_type='log'`，或未声明时存在 `body` / `message` / `msg` / `log` / `content` / `text`；
+3. 不是 span 表——声明为非 `log`，或列形状满足完整 trace model，即排除。
 
-## Metrics — 能拿什么 / 从哪拿
+**可选条件**：
 
-| 信息 | 来源 |
-|------|------|
-| 是 metric、接入来源 | `table_semantics`：`signal_type`、`source` |
-| 可信度 | `metadata_quality` |
-| 类型 counter / gauge / histogram / … | `semantic_options["metric.type"]`（declared）；取值对齐 DB 白名单，`mixed`/`unknown` → 显式 unknown（不猜、不加 rate），`info`/`stateset` → gauge，`gauge_histogram` 与 native histogram → "暂不支持"占位 |
-| 单位 UCUM（`s`、`By`、`{request}`…） | `semantic_options["metric.unit"]` → 轴/tooltip；rate 时传播（如 `By`→`Bps`） |
-| cumulative / delta | `semantic_options["metric.temporality"]`；`delta` 不加 `rate()` |
-| OTel 原名 | `semantic_options["metric.original_name"]`（抽屉副标题） |
-| 无语义时的类型 | **名字**：`_total`/`_count`→counter；`_bucket`/`*_seconds`→histogram；否则当 gauge |
-| 无语义时的单位 | **名字后缀**：`_bytes`、`_seconds`… |
-| 指标列表 | Prom `__name__/values`（**不是**扫语义目录） |
+- service identity 可解析：仅自动探测需要（manual 查询只需 `trace_id`）；
+- `timestamp` 存在：探测和查询附加时间窗。
 
-**默认画法（declared type 或名启发）**：counter→`sum(rate)` 折线；gauge/updown→`avg` 折线；histogram→`sum(rate(..._bucket)) by (le)` heatmap（可切 percentiles）。用户仍可 Configure。
+logs 目标表的 service identity 走统一语义链（Traces 侧 service 本身来自 trace 模型 / trace 声明）：
 
-**注意**：存量 Prom RW 表常**只有** signal/source/quality（本实例 480 条 `inferred`、`semantic_options` 为 NULL），type/unit 靠名字启发式；histogram 常拆 `_bucket`/`_sum`/`_count`，仅 `_bucket` 的 type=histogram 走 heatmap。native（OTLP exponential）与 gauge histogram 没有 `_bucket`/`le` 矩阵，走"暂不支持"占位且**不发查询**。
+```text
+entity_declarations
+  > source convention（OTel logs 的 service_name / resource_attributes.service.name）
+```
 
-**已用 / 未用**：type·unit·temporality·original_name·`entity_declarations`（身份列）✅；`source` UI、按 original_name 搜索、quality 提示、semantic graph ⬜。另外两条修正规则：`_sum`/`_count` 结尾的 declared histogram → 按 counter（RW2 family metadata 会误标整族）；声明 histogram 但同库无 `${name}_bucket` 伴生 → native，不发查询。
+推断是验证式的：候选列必须真实存在；全部不存在则不做自动探测，绝不生成引用不存在列的 SQL。
 
-### Prometheus `/metadata`（另一条入口，dashboard 目前未用）
+请求与缓存：
 
-`GET /v1/prometheus/api/v1/metadata`，按 `current_schema` 取表并走 `check_query_permission`。它已经实现了 dashboard 在本地重算的那套判定：
+1. `tablesHavingColumn('trace_id')` 预筛候选表；
+2. 批量拉取候选 schema，完成资格判断与 identity 解析；
+3. 取当前时间窗 service 全集；
+4. 未有 manual / auto 答案的 service，用一条 `UNION ALL` 探测所有 pending `(table, service)` 对。
 
-- `updown_counter → gauge`、`gauge_histogram → gaugehistogram`、`mixed → unknown`
-- counter/histogram 且 `temporality=delta|mixed` → `unknown`（**与 dashboard 的差异点**：`shouldApplyRate` 只特判 `delta`，`mixed` 仍会加 `rate()`）
-- 无 type 但有 native histogram 列 → `histogram`；UCUM → OpenMetrics unit
+探测 verdict 按 `database + table + time window + service` 缓存；失败会 evict 以便重试；学习到 auto mapping 后，后续解析连探测也不再发起。
 
-**覆盖范围**：要求 `LOGICAL_TABLE_METADATA_KEY`，即 metric-engine 逻辑表。本实例 `public` 有 1226 张 `engine=metric`、64 张 `mito`，OTLP demo 指标（如 `gen_ai_*`）也落在 metric engine 里，所以实测**能**查到它们；纯 mito 表不在其中。
+消费路径：
 
-**局限**：不返回 `original_name`；unit 被转回 OpenMetrics 词并丢掉 annotation——实测 `gen_ai_client_token_usage_count` 返回 `unit: ""`（`{token}` 丢失），`gen_ai_client_operation_duration_seconds_bucket` 返回 `unit: "seconds"`（UCUM `s` 被改写）。
+| 入口                              | 行为                                                                                           |
+| --------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Traces 首页 / Gantt / Span drawer | 表加载时预解析 service targets，点击时内存查找                                                 |
+| 打开 View logs                    | 目标表不同于当前 Logs 绑定时临时重绑定，关闭后恢复                                             |
+| ambiguous service                 | 菜单项进入 Trace→Logs settings，由用户选择                                                     |
+| 日志查询                          | 按目标表 `WHERE trace_id = ?` + 时间窗；无 trace 列则返回 `traceAssociationReady:false` 空结果 |
 
 ---
 
-## Logs — 能拿什么 / 从哪拿
+## 跨信号语义
 
-| 信息 | 来源 |
-|------|------|
-| 哪张是 log 表 | ① `table_semantics`（`signal_type='log'`）② 表名启发式（`log` / `otel_logs`…）③ **用户选表 / settings** |
-| 列角色 TAG / FIELD / TIMESTAMP | `information_schema.columns`（或 DESC）的 **`semantic_type`** |
-| service / body / trace_id 等映射 | ① **OTel 常见列名**（`service_name`、`body`/`severity_text`、`trace_id`…）② Context **fieldMap**（settings 可覆盖） |
-| source / pipeline | `table_semantics`（可选加强） |
-| **筛选 vs Add label** | 不让用户区分 Label 和 Field。两边都是 SQL `WHERE`。Add label 只认判定集合：`semantic_type=TAG`、`fieldMap.severity` / `service` / `primaryGroupBy`、`labelInclude`、以及 Loki 默认的 OTEL resource index-label 列名（点换成下划线，例如 `service_name`、`k8s_pod_name`）。`labelExclude` 优先。其余字符串列（如 `err`）不是 label。筛选键 = 这些 label（不含 severity）+ 非 label 字符串列。非 label 字符串列的 `=~` 是包含匹配，不做 DISTINCT。Level 仍是 `fieldMap.severity`，单独 select，不进顶栏筛选键。实现：[`logs/field-map.ts`](../../src/observability/logs/field-map.ts) |
+Explore 不做原始行 JOIN，而是共享：
 
-Related logs（从 Metrics）：不看 metric 名；要 `filters` + `logsTable` + fieldMap → SQL。
+1. **时间窗**：`ctx.query.time` / `rangeTime`；
+2. **实体身份**：canonical `service` 等实体经 `ctx.semantics.<signal>.entityFilterKeys` 映射到各信号物理列 / JSON chip；
+3. **行级 trace 关联**：Logs 与 Traces 都有 `trace_id` 时，`ctx.ui.focusTraceId` / Trace→Logs 用它收窄；
+4. **不适用的条件保留但不查询**：切到缺少该列的信号时隐藏，切回再出现。
 
----
-
-## Traces — 能拿什么 / 从哪拿
-
-| 信息 | 来源 |
-|------|------|
-| 哪张是 trace 表 | ① `table_semantics`（`signal_type='trace'`）② 列发现（存在 `trace_id` + `parent_span_id`）③ **用户 / settings** |
-| 布局约定 | `pipeline`（如 `greptime_trace_v1`）、`semantic_options["trace.conventions"]` |
-| Span 结构 | **标准语义模型列**：`trace_id`、`span_id`、`parent_span_id`、`timestamp`、`duration_nano`、`service_name`、`span_name`… |
-| 列角色 | 同 Logs：`semantic_type` |
-| 与 Logs 关联 | 共有 **`trace_id`**（+ filters / fieldMap） |
-
----
-
-## 跨信号（部分实现）
-
-携带 **实体身份 + 作用域 + 时间**，各信号独立查，不做原始行 JOIN。  
-
-**关联键（实测）**：
-
-| 关联 | 键 | 粒度 |
-|------|----|------|
-| logs ↔ traces | `trace_id`（两边都有） | **行级**，已实现双向跳转 |
-| metrics ↔ traces | 服务身份：metrics `service_name`/`job` ↔ traces `service_name` | 服务级 + 时间窗 |
-| metrics ↔ logs | metrics `job` ↔ logs `resource_attributes['service.name']` | 服务级 + 时间窗，需要一次名字翻译 |
-
-**统一 filter（三信号共用一份 `ctx.filters`）**：
-
-- 实体 key → 各信号物理 key 的解析：`semantics/resolve.ts` 的 `resolveEntityFilterRef`（**声明 → v1 trace 模型 → source 约定**，都没有就不给实体）；
-- 别名词汇与 source 约定：`semantics/otlp.ts`（`service` / `job` / `service_name` / `resource_attributes.service.name` 视为同一实体，重复 filter 会归并成一条）；
-- 切信号时按目标信号重新编码（`context.setSignal`），所以"指标 → 该服务日志/调用链"不需要单独入口。
-- **不适用的条件不显示也不参与查询，但不销毁**：`filterAppliesToSignal`（`filters.ts`）按当前信号绑定表的列判断；命名了本表没有的列（例如 metrics 的 `container_name` 带到 traces）时，该 chip 从当前信号隐藏、查询里跳过，切回支持它的信号又出现。绑定表之前不做判断，避免闪烁。
-
-**实测量级**：`job` 覆盖 1144 张表、`service_name` 258 张，两者同值时 0 条不等 → metrics 侧优先 `job`；缺 `job` 的 6 张表全是 trace 表。
-
-**仍缺**：logs 的 chip 型身份（需要角色级 JSON 打通）、metrics 侧按表 materialize、`idQualifier`（`service.namespace`）参与过滤、映射不到时置灰而非静默丢。
-
----
-
-## 实现落点（代码）
-
-语义读取集中在 [`src/observability/semantics/`](../../src/observability/semantics/)，按三层组织；`index.ts` 是唯一对外出口，`bind-signal-table.ts` 是统一的信号表绑定编排。
-
-| 层 / 信号 | 主要路径 |
-|------|----------|
-| ① table_semantic 层 | `semantics/source.ts`（唯一 SQL + 按库 dump + 派生索引 byName/bySignal/bucketTables） |
-| ② OTLP 层 | `semantics/otlp.ts`（trace v1 模型与打分、OTEL logs 模型列、Loki index-label 集、实体词汇 + source 约定 + filter 归一化） |
-| ③ 猜测层 | `semantics/heuristics.ts`（metric 名启发式；表名/列模型 SQL 在 `resolve.ts` 内私有） |
-| 分信号出口 | `semantics/resolve.ts`（`resolveMetricMeta` / `resolveSignalTable`+`listSignalTables` / 实体定位链 / `logsServiceFilterCandidateKeys`） |
-| Metrics | `semantics/resolve.ts`、`infer-promql.ts`、`metric-units.ts`、主图 / sparkline / Breakdown hooks |
-| Logs | `logs/field-map.ts`、`use-drilldown-logs-init.ts`、`bind-signal-table.ts` |
-| Traces | `semantics/otlp.ts`（模型常量）、`traces/field-map.ts`、`use-drilldown-traces-init.ts`、`bind-signal-table.ts` |
-
-**缓存策略（最简）**：dump 按库加载一次，仅切换数据库时重读；视图缺失的库永久记住；瞬时失败不落缓存、下次访问自动重试。无时间节流、无 refresh 参数——会话中途新建的表降级为名字启发式，换库或整页刷新后恢复。
+| 关联             | 键                                                                                      | 粒度          |
+| ---------------- | --------------------------------------------------------------------------------------- | ------------- |
+| logs ↔ traces    | `trace_id`                                                                              | 行级          |
+| metrics ↔ traces | service 身份（metrics 侧优先实际存在的 `service_name`，避免 namespace-qualified `job`） | 服务级 + 时间 |
+| metrics ↔ logs   | service 身份（logs 可能是 `resource_attributes.service.name` chip）                     | 服务级 + 时间 |

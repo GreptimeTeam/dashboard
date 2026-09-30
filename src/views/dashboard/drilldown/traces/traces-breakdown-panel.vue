@@ -67,16 +67,16 @@ article.traces-breakdown-panel.drilldown-card(ref="targetRef")
   const titleText = computed(() => `${props.attrKey}="${props.attrValue}"`)
   const chartRenderKey = computed(
     () =>
-      `${props.redMetric}:${props.attrKey}:${props.attrValue}:${ctx.refreshKey.value}:${
-        ctx.time.value
-      }:${ctx.rangeTime.value.join(',')}`
+      `${props.redMetric}:${props.attrKey}:${props.attrValue}:${ctx.query.refreshKey.value}:${
+        ctx.query.time.value
+      }:${ctx.query.rangeTime.value.join(',')}`
   )
 
   function addToFilter() {
     if (!canAddToFilter.value) {
       return
     }
-    ctx.appendFilter({ key: props.attrKey, op: '=', value: props.attrValue })
+    ctx.actions.appendFilter({ key: props.attrKey, op: '=', value: props.attrValue })
   }
 
   function render() {
@@ -87,7 +87,7 @@ article.traces-breakdown-panel.drilldown-card(ref="targetRef")
     }
 
     isEmpty.value = false
-    const unixRange = ctx.unixTimeRange()
+    const unixRange = ctx.query.unixTimeRange()
     const timeRange = unixRange.length === 2 ? ([unixRange[0], unixRange[1]] as [number, number]) : undefined
     const panelUnit = redMetricPanelUnit(props.redMetric)
     const axis = { yMin: props.yMin, yMax: props.yMax, timeRange }
@@ -117,9 +117,9 @@ article.traces-breakdown-panel.drilldown-card(ref="targetRef")
       props.points,
       props.yMin,
       props.yMax,
-      ctx.time.value,
-      ctx.rangeTime.value[0],
-      ctx.rangeTime.value[1],
+      ctx.query.time.value,
+      ctx.query.rangeTime.value[0],
+      ctx.query.rangeTime.value[1],
       isDark.value,
     ],
     () => {

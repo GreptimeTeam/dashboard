@@ -41,14 +41,14 @@ export default function useDrilldownFilterOptions(
     if (suggestMode === 'fields') {
       const keys = await fetchSqlFieldKeys(ctx, search)
       // Level filter owns severity — keep it out of the field combobox.
-      const severityCol = ctx.fieldMap.value.logs.severity
+      const severityCol = ctx.semantics.logs.fieldMap.value.severity
       return keys.filter((key) => key !== 'severity' && key !== severityCol)
     }
     return fetchFilterKeyOptions(ctx, search)
   }
 
   const refreshLabelKeys = async () => {
-    const signal = ctx.signal.value
+    const signal = ctx.connection.signal.value
     if (suggestMode === 'fields') {
       labelKeys.value = signal === 'logs' ? await loadSuggestKeys('') : []
       containsKeys.value = signal === 'logs' ? await fetchLogsContainsKeyOptions(ctx) : []
@@ -78,7 +78,9 @@ export default function useDrilldownFilterOptions(
   }
 
   const fieldMapForActiveSql = () => {
-    return ctx.signal.value === 'traces' ? ctx.fieldMap.value.traces : ctx.fieldMap.value.logs
+    return ctx.connection.signal.value === 'traces'
+      ? ctx.semantics.traces.fieldMap.value
+      : ctx.semantics.logs.fieldMap.value
   }
 
   /** True when combobox can offer value DISTINCT. */
@@ -90,7 +92,7 @@ export default function useDrilldownFilterOptions(
     if (suggestMode === 'fields') {
       return canSuggestFilterValues(trimmed, fieldMapForActiveSql(), labelKeys.value, containsKeys.value)
     }
-    if (ctx.signal.value === 'metrics') {
+    if (ctx.connection.signal.value === 'metrics') {
       return false
     }
     return canSuggestFilterValues(trimmed, fieldMapForActiveSql(), labelKeys.value, containsKeys.value)
@@ -130,8 +132,8 @@ export default function useDrilldownFilterOptions(
       return false
     }
 
-    if (ctx.signal.value === 'logs') {
-      const fieldMap = ctx.fieldMap.value.logs
+    if (ctx.connection.signal.value === 'logs') {
+      const fieldMap = ctx.semantics.logs.fieldMap.value
       const severityCol = fieldMap.severity
       if (trimmed === 'severity' || (severityCol && trimmed === severityCol)) {
         return false
@@ -178,7 +180,7 @@ export default function useDrilldownFilterOptions(
   }
 
   watch(
-    () => ctx.signal.value,
+    () => ctx.connection.signal.value,
     async () => {
       clearSuggestCache()
       await refreshLabelKeys()
@@ -192,32 +194,34 @@ export default function useDrilldownFilterOptions(
    * hidden from this signal's bar (and its queries) but stays in the shared state, so
    * switching back to a signal that supports it brings it back.
    */
-  const isFilterApplicable = (key: string): boolean =>
-    filterAppliesToSignal({ key, op: '=', value: '' }, ctx.signal.value, {
+  const isFilterApplicable = (key: string): boolean => {
+    const signal = ctx.connection.signal.value
+    const columns = signal === 'logs' || signal === 'traces' ? ctx.semantics[signal].columns.value : undefined
+    return filterAppliesToSignal({ key, op: '=', value: '' }, signal, {
       fieldMap: fieldMapForActiveSql(),
-      columns: ctx.signalColumns.value[ctx.signal.value],
+      columns,
     })
+  }
 
   watch(
     () =>
       [
-        ctx.logsTable.value,
-        ctx.tracesTable.value,
-        ctx.fieldMap.value.logs,
-        ctx.fieldMap.value.traces,
+        ctx.connection.signal.value,
+        ctx.semantics.logs.revision.value,
+        ctx.semantics.traces.revision.value,
         loadDrilldownSettings().logs.labelInclude?.join('\0'),
         loadDrilldownSettings().logs.labelExclude?.join('\0'),
         loadDrilldownSettings().logs.fieldInclude?.join('\0'),
         loadDrilldownSettings().logs.fieldExclude?.join('\0'),
       ] as const,
     async () => {
-      if (suggestMode !== 'fields' && ctx.signal.value === 'metrics') {
+      if (suggestMode !== 'fields' && ctx.connection.signal.value === 'metrics') {
         return
       }
       await refreshLabelKeys()
       valueOptionsByKey.value = {}
     },
-    { deep: true, immediate: true }
+    { immediate: true }
   )
 
   return {

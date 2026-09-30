@@ -1,143 +1,130 @@
-# Greptime Drilldown / Explore 规划文档
+# Greptime Drilldown / Explore 功能说明
 
-本目录保存 **已对齐、可指导开发** 的 Drilldown 规划，按类别归档。完整 plan 副本在 [`plans/`](./plans/)；快速阅读摘要在 [`summaries/`](./summaries/)。
-
-> **产品代号**：Explore（内部） / Drilldown  
-> **当前路由**：`/dashboard/drilldown`（规划别名 `/dashboard/explore` 尚未启用）  
-> **最后整理**：2026-09-08
-
-**实现进度（以代码为准）**：[summaries/implementation-status.md](./summaries/implementation-status.md)
-
-语义（Metrics / Logs / Traces：能拿什么、从哪拿）：[semantics.md](./semantics.md)
+> 产品代号：Explore（内部） / Drilldown
+> 路由：`/dashboard/drilldown`
+> 三信号语义（能拿什么 / 从哪拿）：[semantics.md](./semantics.md)
 
 ---
 
-## 阅读顺序（开干前）
+## 产品定位与边界
 
-| 顺序 | 文档 | 用途 |
-|------|------|------|
-| 0 | [summaries/implementation-status.md](./summaries/implementation-status.md) | **当前实现** vs 规划差距（开发对照） |
-| 1 | [summaries/confirmed-decisions.md](./summaries/confirmed-decisions.md) | **已确认**产品边界、技术方向、不做项 |
-| 1b | [semantics.md](./semantics.md) | 三信号语义：能拿什么 / 从哪拿 |
-| 2 | [plans/01-product-explore-master.plan.md](./plans/01-product-explore-master.plan.md) | 产品 Master：Context、语义层、三信号、Phase |
-| 3 | [plans/02-metrics-drilldown-spec.plan.md](./plans/02-metrics-drilldown-spec.plan.md) | Metrics 功能清单 + Greptime 取数 + UI 规则 |
-| 4 | [plans/06-logs-drilldown-spec.plan.md](./plans/06-logs-drilldown-spec.plan.md) | Logs 功能清单 + SQL 取数 + fieldMap |
-| 4b | [architecture/metrics-vs-logs-drilldown-rules.md](./architecture/metrics-vs-logs-drilldown-rules.md) | **M/L 规则对照与公共模块（实现前必读）** |
-| 5 | [summaries/phase0-checklist.md](./summaries/phase0-checklist.md) | Phase 0 可执行 checklist |
-| 6 | [plans/03-grafana-drilldown-research.plan.md](./plans/03-grafana-drilldown-research.plan.md) | Grafana 加载与关联调研（参考） |
-| 7 | [plans/04-perses-vs-drilldown.plan.md](./plans/04-perses-vs-drilldown.plan.md) | Perses 集成边界（决策） |
+对标 Grafana Metrics / Logs / Traces Drilldown 的 **queryless** 关联观测：用户点选过滤，不写 PromQL / SQL。三信号**单 Context 同屏刷新**，不做三个独立 App 互跳。
+
+| 邻接产品                   | 关系                                                          |
+| -------------------------- | ------------------------------------------------------------- |
+| logs-query（Logs Explore） | 不同产品，不改造；Drilldown 仅提供「Open in SQL Explore」出口 |
+| metrics-query              | PromQL 高级出口                                               |
+| traces                     | Trace SQL 高级出口；Gantt 组件可复用                          |
+| Perses                     | 解耦；固化看板；Phase 2+ 才做 URL 深链                        |
+
+不做：单独 `/logs-drilldown` 路由；mito 自建表进 Metrics 目录；Loki recording rule 反解（Greptime 无 Loki）。
 
 ---
 
-## 文档分类
+## Correlation Context 与跨信号关联
 
-### A. 产品 Master（Active — 开发主入口）
+单一状态源，严格五组（内部 API，无旧字段 alias）：
 
-| 文件 | 说明 | 状态 |
-|------|------|------|
-| [plans/01-product-explore-master.plan.md](./plans/01-product-explore-master.plan.md) | Explore 总规划：边界、Context、M/L/T 行为、Phase 0–2 | **Active** |
-| [summaries/confirmed-decisions.md](./summaries/confirmed-decisions.md) | 已从 Master 提炼的**冻结决策** | **Active** |
-| [summaries/phase0-checklist.md](./summaries/phase0-checklist.md) | Phase 0 模块与验收 | **Active** |
-| [summaries/implementation-status.md](./summaries/implementation-status.md) | 已实现 / 待做模块清单 | **Active** |
-
-### B. Metrics Drilldown（Active — 规格最全）
-
-| 文件 | 说明 | 状态 |
-|------|------|------|
-| [plans/02-metrics-drilldown-spec.plan.md](./plans/02-metrics-drilldown-spec.plan.md) | 功能 A–F、inferPromQL、Select/Related/Configure 规则 | **Active** |
-| [metrics/README.md](./metrics/README.md) | Metrics 文档索引、Greptime 模块落点 | **Active** |
-| [semantics.md](./semantics.md) | 三信号语义：table_semantics / 名字启发 / fieldMap | **Active** |
-
-### C. Logs Drilldown（Active）
-
-| 文件 | 说明 | 状态 |
-|------|------|------|
-| [plans/06-logs-drilldown-spec.plan.md](./plans/06-logs-drilldown-spec.plan.md) | 功能 A–G、resolveLogsTable、SQL volume、Labels、跨信号 | **Active** |
-
-### D. Traces Drilldown（MVP）
-
-| 信号 | 现状 | 下一步 |
-|------|------|--------|
-| **Traces** | Master plan §Traces 行为 | [plans/07-traces-drilldown-spec.plan.md](./plans/07-traces-drilldown-spec.plan.md) |
-
-Logs/Traces 的 Grafana 调研摘要见 [plans/03-grafana-drilldown-research.plan.md](./plans/03-grafana-drilldown-research.plan.md)。
-
-### Grafana 上游源码（对照用）
-
-| 仓库 | GitHub | 本机路径（AI 曾下载） |
-|------|--------|------------------------|
-| Metrics Drilldown | https://github.com/grafana/metrics-drilldown | `/tmp/metrics-drilldown`（=`/private/tmp/metrics-drilldown`，shallow clone，`190d5bf`） |
-| Logs Drilldown | https://github.com/grafana/logs-drilldown | `/tmp/logs-drilldown`（=`/private/tmp/logs-drilldown`，shallow clone，`b6c02f7`） |
-| Traces Drilldown | https://github.com/grafana/traces-drilldown | `/tmp/traces-drilldown`（=`/private/tmp/traces-drilldown`，shallow clone，`7abaf3f`） |
-
-- 三份均为完整工作区（非 sparse）；直接读 `/tmp/<repo>/src/...` 即可。
-- filter / timeRange 跨信号规则摘要见 [plans/03-grafana-drilldown-research.plan.md](./plans/03-grafana-drilldown-research.plan.md)「源码地址与共享规则」
-
-### E. 架构与边界决策（Reference + Active）
-
-| 文件 | 说明 | 状态 |
-|------|------|------|
-| [plans/04-perses-vs-drilldown.plan.md](./plans/04-perses-vs-drilldown.plan.md) | Perses 不做 Drilldown 框架；Phase 2+ 深链 | **决策已确认** |
-| [architecture/context-and-adapters.md](./architecture/context-and-adapters.md) | Context + 三 adapter 数据流摘要 | **Active** |
-| [architecture/metrics-vs-logs-drilldown-rules.md](./architecture/metrics-vs-logs-drilldown-rules.md) | **M/L 规则对照 + 公共实现模块** | **Active** |
-| [plans/03-grafana-drilldown-research.plan.md](./plans/03-grafana-drilldown-research.plan.md) | Grafana 三 App 加载与关联机制 | **Reference** |
-
-### F. UI 布局草案（Reference — 不阻塞 Phase 0）
-
-| 文件 | 说明 | 状态 |
-|------|------|------|
-| [plans/05-ui-layout-draft.plan.md](./plans/05-ui-layout-draft.plan.md) | 早期三联屏 / 分层首页草案 | **待定**，不阻塞基建 |
-
----
-
-## Plan 源文件对照（Cursor plans 目录）
-
-仓库内 [`docs/drilldown/plans/`](./plans/) 为以下 Cursor plan 的**快照副本**（开发以仓库 docs 为准同步更新）：
-
-| 仓库副本 | Cursor 源路径 |
-|----------|-----------------|
-| `01-product-explore-master.plan.md` | `~/.cursor/plans/explore_drilldown_unified_83100fe3.plan.md` |
-| `02-metrics-drilldown-spec.plan.md` | `~/.cursor/plans/grafana_metrics_drilldown_beb9ddf1.plan.md` |
-| `06-logs-drilldown-spec.plan.md` | 仓库内撰写（无 Cursor 源） |
-| `03-grafana-drilldown-research.plan.md` | `~/.cursor/plans/grafana_drilldown_research_95fc5715.plan.md` |
-| `04-perses-vs-drilldown.plan.md` | `~/.cursor/plans/perses_vs_drilldown_7cc29c34.plan.md` |
-| `05-ui-layout-draft.plan.md` | `~/.cursor/plans/drilldown_ui_planning_733409b9.plan.md` |
-
----
-
-## 待定项（未冻结，不写入 confirmed-decisions）
-
-- Explore **首屏布局**（三联同屏 vs Logs 分层首页 vs 混合）
-- Greptime Prom API **capability 脚本入库**（核心约束已写入 [confirmed-decisions](./summaries/confirmed-decisions.md)）
-- **Traces** RED triptych（Phase A，`date_bin`）已接；Breakdown 卡网格为 Phase B
-- Feishu 内部需求文档（需用户粘贴或导出）
-
----
-
-## 与现有代码的关系
-
-| 现有页面 | Drilldown 关系 |
-|----------|----------------|
-| [`src/views/dashboard/logs/query/`](../src/views/dashboard/logs/query/) | **高级出口**（Open in SQL Explore），不改造 |
-| [`src/views/dashboard/metrics/`](../src/views/dashboard/metrics/) | PromQL 高级出口 |
-| [`src/views/dashboard/traces/`](../src/views/dashboard/traces/) | Trace SQL 高级出口；Gantt 可复用 |
-| [`src/perses-dashboard/`](../src/perses-dashboard/) | 固化看板；Explore 独立建设 |
-| [`src/views/dashboard/drilldown/`](../src/views/dashboard/drilldown/) | **Drilldown 页面**（Metrics MVP 进行中） |
-| [`src/observability/`](../src/observability/) | Context、filters、adapters、catalog |
-| [`src/api/metrics.ts`](../src/api/metrics.ts) | 已扩展 `getMetricNames({ start, end, match })` |
-
----
-
-## 建议的 Active Plan 集合（开干时）
-
+```text
+connection  — signal, per-signal database 偏好
+query       — filters[], time / rangeTime, refreshKey
+semantics   — logs | traces：table / fieldMap / entity / columns / revision
+ui          — metric, tabs, focusTraceId, logsTraceId, logsView…
+actions     — setSignal, setFilters, bindTable, openLogsForTrace…
 ```
-docs/drilldown/
-├── README.md                          ← 本文件
-├── summaries/confirmed-decisions.md   ← 冻结决策
-├── summaries/phase0-checklist.md      ← 第一周
-├── summaries/implementation-status.md ← 实现对照
-├── plans/01-product-explore-master    ← Master
-├── plans/02-metrics-drilldown-spec    ← Metrics
-├── plans/06-logs-drilldown-spec       ← Logs（已有）
-└── plans/07-traces-drilldown-spec     ← MVP spec
-```
+
+分层约束（详见 [semantics.md §4](./semantics.md)）：
+
+1. **binder 是 `semantics.*` 的唯一写入方**（`actions.bindTable`）；绑定后不调用 `triggerRefresh`。
+2. **消费者监听 `revision`**（经 `useSignalQuery`），在 `ready` 之前不发查询。
+3. **adapters** 只读 ctx，生成 SQL/PromQL；hooks 管「何时查」。
+
+- 跨信号关联三层：
+  - **L1 时间**：`query` 是唯一时间源；
+  - **L2 filters**：同一组 chips 经各信号 `fieldMap` / 物理列映射为 Prom `match[]` 与 SQL WHERE **并行生效**；目标信号缺少该列时隐藏但不删除，切回再用；
+  - **L3 trace_id**：Logs / Traces 共享 `ui.focusTraceId`；**Metrics→Trace 经 Logs**（MVP 无 exemplar）。
+- Trace→Logs 临时换表走 overlay 快照，**不改写** `connection.logsDatabase` 持久化偏好。
+- 不做原始行 JOIN；URL ↔ Context 双向同步（query key 与 localStorage schema 不变）。
+
+---
+
+## Metrics 关键逻辑
+
+- **目录**：Prom `GET /label/__name__/values`（带 time + match），只收 Prom / OTLP metric；ENGINE=mito 自建表不进目录。
+- **inferPromQL**：`table_semantics` 声明（`metadata_quality='declared'` 才采信）→ 指标名后缀启发；delta 不加 `rate`；UCUM 单位优先。详见 [semantics.md](./semantics.md)。
+- **histogram 才有** heatmap ↔ percentiles（P99/90/50）主图切换；classic histogram 靠 `${name}_bucket` 伴生表 + `le` 列形状。
+- **Select 三义**：选 metric / 选 label / Add to filters。
+- **Breakdown**：label 卡 → value 卡；label 仅 1 个 value 时无 Select、无 Add to filter（与 Grafana 对齐）。
+- **Related metrics**：全量列表 + Levenshtein 排序（Phase 2）。
+- **Related logs**：需 `filters.length > 0` + logsTable + fieldMap；**不看 metric 名**。
+- **Group by labels 侧栏不做**（Greptime Prom API 阻塞，见下节）。
+
+---
+
+## Greptime Prom API 约束（注意事项）
+
+| 约束                                                     | 结果                                                      |
+| -------------------------------------------------------- | --------------------------------------------------------- |
+| `GET /labels?match[]={__name__=~".+"}` 报 400            | filters 无 `__name__` 时不传 `match[]`                    |
+| `GET /label/{k}/values` 必须 `match[]` 且需含 `__name__` | 顶栏 Metrics value 手输；Breakdown 在 metric 上下文内取值 |
+| 无法一次请求拿到 catalog 级 label values                 | Group by labels 不进 UI                                   |
+| 无 Loki recording rule                                   | Related logs 不看 metric 名                               |
+
+Filter 录入关键规则：
+
+- 顶栏 Grafana 式 combobox：pill + 分阶段 suggest（label → operator → value）。
+- suggest **按当前信号分流**：Metrics → Prom `/labels`；Logs / Traces → SQL 列，映射列 value 可 `SELECT DISTINCT`。
+- **同 key 多值合并为 OR**（Prom `=~` / SQL `IN`）；**异 key 之间 AND**。
+- `__name__` chip 只缩窄指标目录，不进 PromQL matcher。
+- 编辑已有 filter：label 只读，operator / value 可改。
+
+---
+
+## Logs 关键逻辑
+
+- **表发现**：URL / settings → `signal_type='log'` → 列启发式；**不读** logs-query 的 localStorage；所有用户表保留为手动逃生门（不做表名猜测）。
+- **fieldMap**：time / body / severity / traceId / service + `primaryGroupBy`，settings 可覆盖。
+- **两个主视图**：
+  - **列表** = 按 label value 分组的日志列表（Labels breakdown 为主路径）；
+  - **详细** = 总 volume 主图 + 单张日志表（全部匹配行）。
+- 总 volume 主图**仅详细视图**有；列表视图只有面板内 per-value mini chart。
+- 首页 volume / service 卡：SQL `date_bin` + `GROUP BY primaryGroupBy`（对标 Loki index / volume）。
+- **Select 与 Include 分离**：列表 Include 只更新 chips（同 key OR）；Select（或 overview 内 Show logs）才写 filter 进详细视图。
+- 行内 `trace_id` → `focusTraceId`（L3）。
+- Breakdown 图：Count = 各 value 条数时序；Avg = 数值列均值。
+- 不做：Loki / LogQL、patterns API、recording rule 反查。
+
+---
+
+## Traces 关键逻辑（MVP）
+
+- 单页 `?signal=traces`，无独立详情路由；Gantt 为全宽 drawer（`focusTraceId` 驱动，关闭后保留 chips）。
+- 首页：table 选择 + Trace ID 快搜 → **RED 等宽三联**（Rate / Errors / Duration）→ tabs：Breakdown | Traces。
+- `selectedRedMetric` 是调查焦点开关：驱动 Breakdown 聚合与 Traces 列表排序（errors 只看 errored root spans；duration 按 `duration_nano` 倒序）；三联图选中态只换边框 / 背景，**不放大不重排**。数据一律 SQL `date_bin`，duration 主图为 heatmap。
+- filters key 池 = 业务字段（intrinsic + 扁平属性列 + `duration_nano`）；`trace_id` / `span_id` / 时间列 / payload 不进筛选（Trace ID 有独立入口）。算子按列类型：数值字面量不加引号；boolean 渲染 `TRUE` / `FALSE`（Greptime 对 boolean 用字符串会 planning 报错）。
+- 表发现：语义声明 ∪ 实际含 `trace_id` 的表 ∪ `opentelemetry_traces`；完整 `greptime_trace_v1` 列模型优先；`trace_id`-only 自定义表是逃生门，缺模型角色时 RED / Breakdown 降级或返回空。
+- Breakdown（Phase B）：Group-by 分 **All / Resource / Span** 三档，聚合绑定当前 redMetric。
+
+---
+
+## Trace→Logs
+
+Traces 侧「View logs」的完整关联契约（路由优先级、候选资格、缓存）见 [semantics.md](./semantics.md) 的 Trace→Logs 章节。核心：**行级查询键是 `trace_id`；目标表路由键是 service 值 + 当前时间窗**。
+
+---
+
+## 待定项
+
+- Explore 首屏布局（三联同屏 vs Logs 分层首页 vs 混合）
+- Prom API capability 探测脚本入库
+- Traces Breakdown 卡网格（Phase B）
+- Feishu 内部需求文档
+
+---
+
+## 参考
+
+- [Grafana Metrics Drilldown](https://grafana.com/docs/grafana/latest/visualizations/simplified-exploration/metrics/)
+- [Grafana Logs Drilldown](https://grafana.com/docs/grafana/latest/visualizations/simplified-exploration/logs/)
+- [Grafana Traces Drilldown](https://grafana.com/docs/grafana/latest/visualizations/simplified-exploration/traces/)
+- [GreptimeDB Semantic Layer](https://docs.greptime.com/user-guide/concepts/semantic-layer/)

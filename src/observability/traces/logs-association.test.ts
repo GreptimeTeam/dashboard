@@ -41,6 +41,19 @@ vi.mock('../drilldown-settings', () => ({
   updateTracesDrilldownSettings,
 }))
 
+vi.mock('../signal-database', () => ({
+  boundSignalDatabase: (
+    ctx: {
+      semantics: {
+        logs: { database: { value: string | undefined } }
+        traces: { database: { value: string | undefined } }
+      }
+      connection: { databaseFor: (signal: 'logs' | 'traces') => string }
+    },
+    kind: 'logs' | 'traces'
+  ) => ctx.semantics[kind].database.value || ctx.connection.databaseFor(kind),
+}))
+
 const runSQL = vi.mocked(editorApi.runSQL)
 const listTables = vi.mocked(listSignalTables)
 const resolveServiceRef = vi.mocked(resolveEntityFilterRef)
@@ -63,10 +76,20 @@ const TraceModelColumns = [
 
 function createContext(overrides: Record<string, unknown> = {}) {
   return {
-    tracesDatabase: { value: 'trace_db' },
-    logsDatabase: { value: 'logs_db' },
-    logsTable: { value: 'current_logs' },
-    unixTimeRange: () => [100, 200],
+    connection: {
+      tracesDatabase: { value: 'trace_db' },
+      logsDatabase: { value: 'logs_db' },
+      databaseFor: (signal: 'logs' | 'traces') => (signal === 'logs' ? 'logs_db' : 'trace_db'),
+    },
+    query: {
+      unixTimeRange: () => [100, 200],
+    },
+    semantics: {
+      logs: {
+        table: { value: 'current_logs' },
+        database: { value: undefined as string | undefined },
+      },
+    },
     ...overrides,
   } as any
 }
@@ -290,6 +313,56 @@ describe('trace logs routing', () => {
     expect(first.targets.checkout).toMatchObject({ table: 'legacy_logs', source: 'auto' })
     expect(second.targets.checkout).toMatchObject({ table: 'legacy_logs', source: 'auto' })
     expect(runSQL).toHaveBeenCalledTimes(1)
+  })
+
+  it('dedupes in-flight resolves that share the same signature', async () => {
+    // traces-home + gantt + settings can fire resolve in parallel with the same
+    // (dbs × page table × window × services) — they must share one discovery/probe.
+    ensureTableSchema.mockResolvedValue(OTelLogsColumns)
+    resolveServiceRef.mockResolvedValue({ column: 'service_name' })
+    mockProbeHits([['legacy_logs', 'checkout']])
+
+    let releaseList!: (tables: string[]) => void
+    const listGate = new Promise<string[]>((resolve) => {
+      releaseList = resolve
+    })
+    listTables.mockImplementation(() => listGate)
+
+    const ctx = createContext()
+    const first = resolveTraceLogsForServices(ctx, ['checkout', 'cart'])
+    const second = resolveTraceLogsForServices(ctx, ['cart', 'checkout'])
+
+    expect(listTables).toHaveBeenCalledTimes(1)
+
+    releaseList(['otel_logs', 'legacy_logs'])
+    const [a, b] = await Promise.all([first, second])
+
+    expect(a).toBe(b)
+    expect(a.targets.checkout).toMatchObject({ table: 'legacy_logs', source: 'auto' })
+    expect(listTables).toHaveBeenCalledTimes(1)
+    expect(runSQL).toHaveBeenCalledTimes(1)
+  })
+
+  it('uses the currently bound logs database for the current fallback', async () => {
+    listTables.mockResolvedValue([])
+    const resolution = await resolveTraceLogsForServices(
+      createContext({
+        semantics: {
+          logs: {
+            table: { value: 'bound_logs' },
+            database: { value: 'overlay_or_page_db' },
+          },
+        },
+      }),
+      ['checkout']
+    )
+
+    expect(resolution.targets.checkout).toEqual({
+      service: 'checkout',
+      database: 'overlay_or_page_db',
+      table: 'bound_logs',
+      source: 'current',
+    })
   })
 
   it('marks multi-table hits ambiguous and never guesses or learns', async () => {

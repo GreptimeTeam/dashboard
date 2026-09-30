@@ -1,7 +1,7 @@
-import { computed, isRef, ref, watch, type MaybeRef, type Ref } from 'vue'
+import { computed, isRef, ref, watch, type MaybeRef, type Ref, type WatchSource } from 'vue'
 import type { DrilldownContext } from '@/observability/context'
 import { fetchLogsRows } from '@/observability/adapters/logs'
-import { loadDrilldownSettings } from '@/observability/drilldown-settings'
+import useSignalQuery from '@/observability/use-signal-query'
 import type { ColumnType, TSColumn } from '@/types/query'
 import { isCursorInsideFrozenWindow, type FrozenUnixRange } from '@/utils/log-keyset-window'
 
@@ -27,6 +27,10 @@ export default function useDrilldownLogsTable(
     columns?: MaybeRef<string[] | undefined>
     /** Extra AND clause applied to this table only. */
     extraWhere?: MaybeRef<string | undefined>
+    /** Visibility / view guards for the reactive load pipeline. Default true. */
+    queryEnabled?: WatchSource<boolean> | (() => boolean)
+    /** Extra signature inputs beyond shared query deps and table options. */
+    queryParams?: () => unknown
   } = {}
 ) {
   const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE
@@ -62,16 +66,16 @@ export default function useDrilldownLogsTable(
    * The table cannot build its SQL before the logs field map resolves the time role.
    * Waiting here (instead of leaving `loading` true and returning) keeps a table that
    * mounted mid-restore — e.g. jumping traces → logs detail with a filter — from spinning
-   * forever with no request in flight.
+   * forever with no request in flight. Binder seeds the time role on bind.
    */
   function waitForTimeRole(timeoutMs = 1500): Promise<void> {
-    if (ctx.fieldMap.value.logs.time) {
+    if (ctx.semantics.logs.fieldMap.value.time) {
       return Promise.resolve()
     }
     return new Promise((resolve) => {
       let timer: ReturnType<typeof setTimeout>
       const stop = watch(
-        () => ctx.fieldMap.value.logs.time,
+        () => ctx.semantics.logs.fieldMap.value.time,
         (value) => {
           if (!value) {
             return
@@ -83,31 +87,12 @@ export default function useDrilldownLogsTable(
       )
       timer = setTimeout(() => {
         stop()
-        if (!ctx.fieldMap.value.logs.time) {
+        if (!ctx.semantics.logs.fieldMap.value.time) {
           console.warn('Logs field map did not resolve a time column; loading table anyway.')
         }
         resolve()
       }, timeoutMs)
     })
-  }
-
-  /**
-   * The context field map is built asynchronously (schema fetch + settings). When it has not
-   * landed yet, the saved settings already know the time column — priming it from there lets
-   * the first request go out immediately instead of waiting for the rebuild.
-   */
-  function primeTimeRoleFromSettings(): void {
-    if (ctx.fieldMap.value.logs.time) {
-      return
-    }
-    const saved = loadDrilldownSettings().logs.fieldMap?.time?.trim()
-    if (!saved) {
-      return
-    }
-    ctx.fieldMap.value = {
-      ...ctx.fieldMap.value,
-      logs: { ...ctx.fieldMap.value.logs, time: saved },
-    }
   }
 
   function oldestTs(): unknown | undefined {
@@ -120,7 +105,7 @@ export default function useDrilldownLogsTable(
   }
 
   function snapshotUnixRange(): FrozenUnixRange | null {
-    const live = ctx.unixTimeRange()
+    const live = ctx.query.unixTimeRange()
     if (live.length !== 2) {
       return null
     }
@@ -133,7 +118,7 @@ export default function useDrilldownLogsTable(
   }
 
   async function load() {
-    if (!ctx.logsTable.value) {
+    if (!ctx.semantics.logs.table.value) {
       tableColumns.value = []
       tableData.value = []
       tsColumn.value = null
@@ -141,14 +126,11 @@ export default function useDrilldownLogsTable(
       frozenUnixRange.value = null
       return
     }
-    // Refresh / URL detail opens before buildLogsFieldMap finishes — wait for roles.
-    if (!ctx.fieldMap.value.logs.time) {
-      primeTimeRoleFromSettings()
-    }
-    if (!ctx.fieldMap.value.logs.time) {
+    // Refresh / URL detail opens before bind finishes — wait for time role.
+    if (!ctx.semantics.logs.fieldMap.value.time) {
       loading.value = true
       await waitForTimeRole()
-      if (!ctx.logsTable.value) {
+      if (!ctx.semantics.logs.table.value) {
         tableColumns.value = []
         tableData.value = []
         tsColumn.value = null
@@ -231,6 +213,19 @@ export default function useDrilldownLogsTable(
       loadingMore.value = false
     }
   }
+
+  useSignalQuery(ctx, 'logs', {
+    enabled: options.queryEnabled,
+    params: () => ({
+      labelCol: options.labelCol?.value,
+      labelValue: options.labelValue?.value,
+      levels: options.levels?.value,
+      columns: resolveColumns(),
+      extraWhere: resolveExtraWhere(),
+      ...(options.queryParams ? { extra: options.queryParams() } : {}),
+    }),
+    run: () => load(),
+  })
 
   return {
     loading,

@@ -1,6 +1,6 @@
 import { isUnsupportedHistogramKind, shouldApplyRate } from './infer-promql'
-import { inferMetricKind, isHistogramMetricName } from '../semantics/heuristics'
-import type { MetricKind, MetricTemporality } from '../semantics/types'
+import { inferMetricKind, isHistogramMetricName } from '../semantics/model'
+import type { MetricKind, MetricTemporality } from '../semantics/model'
 import type { ResolvedMainChartPrefs } from './main-chart-config'
 
 const RATE_WINDOW = '5m'

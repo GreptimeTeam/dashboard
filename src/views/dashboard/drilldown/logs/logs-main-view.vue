@@ -71,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, onMounted, ref, watch } from 'vue'
+  import { computed, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import LogsTable from '@/views/dashboard/logs/query/LogsTable.vue'
   import { useDrilldownContext } from '@/observability/context'
@@ -118,14 +118,12 @@
     revealOfferedColumns,
   } = useLogsTablePrefs({ storagePrefix: 'drilldown-logs', defaultMergeColumn: false, persistColumns: true })
 
-  const { loading, loadingMore, tableColumns, tableData, tsColumn, hasMore, load, loadMore } = useDrilldownLogsTable(
-    ctx,
-    {
-      extraWhere: computed(() => props.extraWhere),
-    }
-  )
+  const { loading, loadingMore, tableColumns, tableData, tsColumn, hasMore, loadMore } = useDrilldownLogsTable(ctx, {
+    extraWhere: computed(() => props.extraWhere),
+    queryParams: () => ({ showVolume: props.showVolume }),
+  })
 
-  const logsTableName = computed(() => ctx.logsTable.value || '')
+  const logsTableName = computed(() => ctx.semantics.logs.table.value || '')
   const visibleColumns = computed(() => displayedColumnsFor(logsTableName.value))
   // Settings fill roles the runtime map has not resolved yet (see resolveLogsRoles).
   const traceIdColumn = computed(() => {
@@ -137,7 +135,7 @@
   })
 
   const openTrace = (traceId: string) => {
-    ctx.openTraceGantt(String(traceId || ''))
+    ctx.actions.openTraceGantt(String(traceId || ''))
   }
 
   const mapOperator = (operator: string): DrilldownFilterOp => {
@@ -152,21 +150,14 @@
     if (!value) {
       return
     }
-    const settings = loadDrilldownSettings(ctx.logsDatabase.value).logs
-    const chipKey = chipKeyForLogsTableFilter(event.columnName, tableColumns.value, ctx.fieldMap.value.logs, {
+    const settings = loadDrilldownSettings(ctx.connection.logsDatabase.value).logs
+    const chipKey = chipKeyForLogsTableFilter(event.columnName, tableColumns.value, ctx.semantics.logs.fieldMap.value, {
       labelInclude: settings.labelInclude,
       labelExclude: settings.labelExclude,
       fieldInclude: settings.fieldInclude,
       fieldExclude: settings.fieldExclude,
     })
-    const severityCol = ctx.fieldMap.value.logs.severity
-    if (chipKey !== severityCol && !ctx.fieldMap.value.logs[chipKey]) {
-      ctx.fieldMap.value = {
-        ...ctx.fieldMap.value,
-        logs: { ...ctx.fieldMap.value.logs, [chipKey]: event.columnName },
-      }
-    }
-    ctx.appendFilter({ key: chipKey, op: mapOperator(event.operator), value })
+    ctx.actions.appendFilter({ key: chipKey, op: mapOperator(event.operator), value })
   }
 
   watch(
@@ -177,24 +168,6 @@
         cols.map((column) => column.name)
       )
     },
-    { deep: true }
-  )
-
-  onMounted(load)
-  watch(
-    () => [
-      props.showVolume,
-      ctx.refreshKey.value,
-      ctx.time.value,
-      ctx.rangeTime.value[0],
-      ctx.rangeTime.value[1],
-      ctx.filters.value,
-      ctx.logsTable.value,
-      props.extraWhere,
-      // URL detail can mount before fieldMap.time is inferred.
-      ctx.fieldMap.value.logs.time,
-    ],
-    load,
     { deep: true }
   )
 </script>

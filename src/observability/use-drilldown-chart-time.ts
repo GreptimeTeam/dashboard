@@ -3,7 +3,7 @@ import type { DrilldownContext } from './context'
 
 export default function useDrilldownChartTime(ctx: DrilldownContext) {
   const timeWindowMs = computed(() => {
-    const range = ctx.unixTimeRange()
+    const range = ctx.query.unixTimeRange()
     if (range.length !== 2) {
       return null
     }
@@ -14,9 +14,9 @@ export default function useDrilldownChartTime(ctx: DrilldownContext) {
     if (!(endSec > startSec)) {
       return
     }
-    ctx.rangeTime.value = [String(startSec), String(endSec)]
-    ctx.time.value = 0
-    ctx.triggerRefresh()
+    ctx.query.rangeTime.value = [String(startSec), String(endSec)]
+    ctx.query.time.value = 0
+    ctx.actions.triggerRefresh()
   }
 
   return {

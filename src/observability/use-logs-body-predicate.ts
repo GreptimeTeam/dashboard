@@ -6,10 +6,10 @@ import { logsBodyPredicate } from './logs/body-search'
 export default function useLogsBodyPredicate() {
   const ctx = useDrilldownContext()
   return computed(() => {
-    const column = ctx.fieldMap.value.logs.body?.trim()
+    const column = ctx.semantics.logs.fieldMap.value.body?.trim()
     if (!column) {
       return ''
     }
-    return logsBodyPredicate(column, ctx.logsBodyOp.value, ctx.logsBodyValue.value) ?? ''
+    return logsBodyPredicate(column, ctx.ui.logsBodyOp.value, ctx.ui.logsBodyValue.value) ?? ''
   })
 }

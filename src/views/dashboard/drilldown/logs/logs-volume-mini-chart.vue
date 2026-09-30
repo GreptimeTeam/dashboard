@@ -57,6 +57,7 @@
   import type { LogVolumeSeries } from '@/observability/logs/volume-series'
   import { BREAKDOWN_CHART_HEIGHT } from '@/observability/metrics/panel-stats'
   import useLazyPanelQuery from '@/observability/use-lazy-panel-query'
+  import useSignalQuery from '@/observability/use-signal-query'
   import DrilldownChartPanel from '../components/drilldown-chart-panel.vue'
 
   const props = withDefaults(
@@ -137,9 +138,9 @@
   })
   const chartRenderKey = computed(
     () =>
-      `${props.breakdown}:${props.labelCol ?? ''}:${props.labelValue ?? ''}:${ctx.refreshKey.value}:${
-        ctx.time.value
-      }:${ctx.rangeTime.value.join(',')}:${stableWidthBucket.value}`
+      `${props.breakdown}:${props.labelCol ?? ''}:${props.labelValue ?? ''}:${ctx.query.refreshKey.value}:${
+        ctx.query.time.value
+      }:${ctx.query.rangeTime.value.join(',')}:${stableWidthBucket.value}`
   )
   function seriesColor(name: string): string {
     if (props.breakdown !== 'column') {
@@ -158,7 +159,7 @@
   )
 
   function severityColumn(): string | undefined {
-    return ctx.fieldMap.value.logs.severity || undefined
+    return ctx.semantics.logs.fieldMap.value.severity || undefined
   }
 
   function levelsFromFilters(): string[] {
@@ -166,7 +167,9 @@
     if (!column) {
       return []
     }
-    const hit = ctx.filters.value.find((filter) => filter.key === column && (filter.op === '=' || filter.op === '=~'))
+    const hit = ctx.query.filters.value.find(
+      (filter) => filter.key === column && (filter.op === '=' || filter.op === '=~')
+    )
     return hit ? splitFilterOrValues(hit) : []
   }
 
@@ -198,7 +201,7 @@
           ...series,
           points: series.points.map(([time]) => [time, 0] as [number, number]),
         }))
-    const unixRange = ctx.unixTimeRange()
+    const unixRange = ctx.query.unixTimeRange()
     chartOption.value = buildLogVolumeBarsOption(plotted, {
       isDark: isDark.value,
       timeRange: unixRange.length === 2 ? [unixRange[0], unixRange[1]] : undefined,
@@ -213,18 +216,12 @@
     if (!column) {
       return
     }
-    if (!ctx.fieldMap.value.logs[column]) {
-      ctx.fieldMap.value = {
-        ...ctx.fieldMap.value,
-        logs: { ...ctx.fieldMap.value.logs, [column]: column },
-      }
-    }
     const nextValues = [...new Set(levels.map((value) => value.trim()).filter(Boolean))]
-    let next = ctx.filters.value.filter((filter) => filter.key !== column && filter.key !== 'severity')
+    let next = ctx.query.filters.value.filter((filter) => filter.key !== column && filter.key !== 'severity')
     nextValues.forEach((value) => {
       next = addFilter(next, { key: column, op: '=', value })
     })
-    ctx.setFilters(next)
+    ctx.actions.setFilters(next)
   }
 
   function onLegendClick(name: string) {
@@ -258,7 +255,7 @@
   }
 
   async function load() {
-    if (!props.enabled || !ready.value || !ctx.logsTable.value) {
+    if (!props.enabled || !ready.value || !ctx.semantics.logs.table.value) {
       return
     }
     requestVersion += 1
@@ -339,43 +336,31 @@
     resizeObserver?.disconnect()
   })
 
-  watch(
-    () => {
+  useSignalQuery(ctx, 'logs', {
+    enabled: () => props.enabled && ready.value && stableWidthBucket.value > 0,
+    params: () => {
       const base: unknown[] = [
-        props.enabled,
-        ready.value,
         props.breakdown,
         props.labelCol,
         props.labelValue,
         stableWidthBucket.value,
-        ctx.logsTable.value,
-        ctx.refreshKey.value,
-        ctx.time.value,
-        ctx.rangeTime.value[0],
-        ctx.rangeTime.value[1],
-        ctx.logsView.value,
-        ctx.fieldMap.value.logs.severity,
+        ctx.ui.logsView.value,
+        ctx.semantics.logs.fieldMap.value.severity,
         props.extraWhere,
         isDark.value,
       ]
-      if (ctx.logsView.value === 'detail') {
-        const column = ctx.fieldMap.value.logs.severity
+      if (ctx.ui.logsView.value === 'detail') {
+        const column = ctx.semantics.logs.fieldMap.value.severity
         const filters =
           props.breakdown === 'column'
-            ? ctx.filters.value
-            : ctx.filters.value.filter((filter) => filter.key !== column && filter.key !== 'severity')
+            ? ctx.query.filters.value
+            : ctx.query.filters.value.filter((filter) => filter.key !== column && filter.key !== 'severity')
         base.push(filters)
       }
       return base
     },
-    () => {
-      if (!props.enabled || stableWidthBucket.value <= 0) {
-        return
-      }
-      load()
-    },
-    { deep: true, immediate: true }
-  )
+    run: () => load(),
+  })
 
   watch(
     () => activeLevels.value.join('\0'),

@@ -84,23 +84,21 @@ a-layout-content.layout-content
   import { computed, onMounted, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useDrilldownContext } from '@/observability/context'
-  import { loadDrilldownSettings, saveDrilldownSettings } from '@/observability/drilldown-settings'
+  import { loadDrilldownSettings } from '@/observability/drilldown-settings'
   import {
     fetchRootSpanList,
     fetchTraceServices,
     type RedMetric,
     type RootSpanRow,
   } from '@/observability/adapters/traces'
-  import { isDrilldownFilterOp, resolveFieldMapColumn } from '@/observability/filters'
-  import { buildDefaultTracesFieldMap } from '@/observability/traces/field-map'
-  import { bindSignalTable } from '@/observability/bind-signal-table'
-  import { physicalServiceColumn } from '@/observability/semantics'
+  import { isDrilldownFilterOp } from '@/observability/filters'
   import resolveLogsRoles from '@/observability/logs/resolved-roles'
   import { resolveTraceLogsForServices, type TraceLogsTarget } from '@/observability/traces/logs-association'
   import type { ColumnType, QueryState } from '@/types/query'
   import { isTracesHomeTab } from '@/observability/types'
   import useDrilldownKeepAlive from '@/observability/use-drilldown-keep-alive'
   import useDrilldownPanelTab from '@/observability/use-drilldown-panel-tab'
+  import useSignalQuery from '@/observability/use-signal-query'
   import useSignalTableOptions from '@/observability/use-signal-table-options'
   import { IconSettings } from '@arco-design/web-vue/es/icon'
   import TraceTable from '@/views/dashboard/traces/components/TraceTable.vue'
@@ -115,7 +113,7 @@ a-layout-content.layout-content
 
   const { t } = useI18n()
   const ctx = useDrilldownContext()
-  const { tracesDatabase } = ctx
+  const { tracesDatabase } = ctx.connection
 
   const loading = ref(false)
   const rows = ref<RootSpanRow[]>([])
@@ -124,14 +122,14 @@ a-layout-content.layout-content
   const logsTargets = ref<Record<string, TraceLogsTarget>>({})
   const logsAmbiguous = ref<Record<string, string[]>>({})
   const logsMultiTable = ref(false)
-  const tracesTable = ref(ctx.tracesTable.value)
+  const tracesTable = ref(ctx.semantics.traces.table.value)
   const traceIdDraft = ref('')
   const selectedRedMetric = ref<RedMetric>('rate')
   const traceLogsSettingsVisible = ref(false)
   const traceLogsMappingsVersion = ref(0)
   const activeTab = useDrilldownPanelTab({
-    tab: ctx.tracesTab,
-    setTab: ctx.setTracesTab,
+    tab: ctx.ui.tracesTab,
+    setTab: ctx.actions.setTracesTab,
     isTab: isTracesHomeTab,
   })
   const redMetricItems = computed(() => [
@@ -141,12 +139,12 @@ a-layout-content.layout-content
   ])
   const depsKey = () =>
     JSON.stringify([
-      ctx.refreshKey.value,
-      ctx.filters.value,
-      ctx.time.value,
-      ctx.rangeTime.value[0],
-      ctx.rangeTime.value[1],
-      ctx.tracesTable.value,
+      ctx.query.refreshKey.value,
+      ctx.query.filters.value,
+      ctx.query.time.value,
+      ctx.query.rangeTime.value[0],
+      ctx.query.rangeTime.value[1],
+      ctx.semantics.traces.table.value,
       selectedRedMetric.value,
     ])
 
@@ -179,16 +177,16 @@ a-layout-content.layout-content
   })
 
   const tableQueryState = computed<QueryState>(() => ({
-    table: ctx.tracesTable.value || '',
+    table: ctx.semantics.traces.table.value || '',
     orderBy: 'DESC',
     limit: 100,
     tsColumn: { name: 'timestamp', data_type: 'TimestampNanosecond' },
     editorType: 'builder',
-    database: ctx.tracesDatabase.value,
+    database: ctx.connection.tracesDatabase.value,
   }))
 
   watch(
-    () => ctx.tracesTable.value,
+    () => ctx.semantics.traces.table.value,
     (value) => {
       tracesTable.value = value
     }
@@ -201,7 +199,7 @@ a-layout-content.layout-content
   })
 
   watch(
-    () => ctx.focusTraceId.value,
+    () => ctx.ui.focusTraceId.value,
     (value) => {
       if (value && value !== traceIdDraft.value) {
         traceIdDraft.value = value
@@ -214,41 +212,19 @@ a-layout-content.layout-content
   )
 
   /**
-   * Single reactive pipeline: one watch over every input owns when rows load — mounted,
-   * keep-alive resume (refreshKey bump) and dep waves are all just input changes. Two
-   * guards keep it to one query per actual parameter set: readiness waves (columns
-   * binding, focus toggling) change inputs but not the query, so an identical
-   * parameter signature skips; rapid parameter changes drop stale responses.
+   * Single reactive pipeline via useSignalQuery: mounted, keep-alive resume (refreshKey
+   * bump) and bind revision waves are all just input changes. Signature dedupe skips
+   * readiness flaps; rapid parameter changes drop stale responses via requestId.
    */
-  let lastRowsKey = ''
   let rowsRequestId = 0
 
   const loadRows = async (): Promise<void> => {
-    if (!overviewActive.value || ctx.focusTraceId.value) {
+    if (!overviewActive.value || ctx.ui.focusTraceId.value) {
       return
     }
-    if (!ctx.tracesTable.value) {
+    if (!ctx.semantics.traces.table.value) {
       rows.value = []
       columns.value = []
-      lastRowsKey = ''
-      return
-    }
-    // Schema bind is async: without it, dotted filter keys (`resource_attributes.service.name`)
-    // would be misread as JSON-chip paths instead of the flattened physical columns
-    // trace tables actually use, producing SQL the server rejects.
-    if (!ctx.signalColumns.value.traces?.length) {
-      return
-    }
-    const key = JSON.stringify([
-      ctx.tracesDatabase.value,
-      ctx.tracesTable.value,
-      ctx.rangeTime.value[0],
-      ctx.rangeTime.value[1],
-      (ctx.filters.value || []).map((filter) => [filter.key, filter.op, filter.value]),
-      selectedRedMetric.value,
-      ctx.refreshKey.value,
-    ])
-    if (key === lastRowsKey) {
       return
     }
     rowsRequestId += 1
@@ -259,7 +235,6 @@ a-layout-content.layout-content
       if (requestId !== rowsRequestId) {
         return
       }
-      lastRowsKey = key
       rows.value = result.rows
       columns.value = result.columns
       await resolveServiceTargets()
@@ -272,35 +247,21 @@ a-layout-content.layout-content
 
   keepAlive.setResume(() => {
     loadTables()
-    ctx.triggerRefresh()
+    ctx.actions.triggerRefresh()
   })
 
   const onTableChange = async (table: string) => {
-    if (!table || table === ctx.tracesTable.value) {
+    if (!table || table === ctx.semantics.traces.table.value) {
       return
     }
     if (!tableOptions.value.includes(table)) {
       tableOptions.value = [...tableOptions.value, table]
     }
-    // Declared service identity wins over the v1 model column when the table has one.
-    // Declared service identity wins over the v1 model column when the table has one;
-    // binding also refreshes entity/column context for cross-signal filters.
-    const { serviceRef } = await bindSignalTable(ctx, 'traces', table)
-    const nextMap = buildDefaultTracesFieldMap({ serviceColumn: physicalServiceColumn(serviceRef) })
-    const settings = loadDrilldownSettings(ctx.tracesDatabase.value)
-    settings.traces = { ...(settings.traces || {}), table }
-    saveDrilldownSettings(settings, ctx.tracesDatabase.value)
-    ctx.filters.value = ctx.filters.value.filter((filter) => Boolean(resolveFieldMapColumn(filter.key, nextMap)))
-    ctx.fieldMap.value = {
-      ...ctx.fieldMap.value,
-      traces: nextMap,
-    }
-    ctx.tracesTable.value = table
-    ctx.triggerRefresh()
+    await ctx.actions.bindTable('traces', table, { persist: true })
   }
 
   const openTrace = (traceId: string) => {
-    ctx.openTraceGantt(String(traceId || ''))
+    ctx.actions.openTraceGantt(String(traceId || ''))
   }
 
   // Roles resolve from settings + the runtime map (see resolveLogsRoles), so the "open logs"
@@ -308,9 +269,9 @@ a-layout-content.layout-content
   const logsTraceEnabled = computed(() => {
     const roles = resolveLogsRoles(ctx)
     const hasOriginalAssociation = Boolean(roles.traceId || roles.trace_id)
-    const mappings = loadDrilldownSettings(ctx.tracesDatabase.value).traces.traceLogsMappings ?? []
+    const mappings = loadDrilldownSettings(ctx.connection.tracesDatabase.value).traces.traceLogsMappings ?? []
     void traceLogsMappingsVersion.value // eslint-disable-line no-void -- track settings version
-    return hasOriginalAssociation || mappings.length > 0 || Boolean(ctx.logsTable.value)
+    return hasOriginalAssociation || mappings.length > 0 || Boolean(ctx.semantics.logs.table.value)
   })
 
   const openLogsForTrace = (payload: string | { traceId: string; service?: string }) => {
@@ -321,20 +282,20 @@ a-layout-content.layout-content
     const target = service ? logsTargets.value[service] : undefined
     const enhancedTarget =
       target && target.source !== 'current' ? { database: target.database, table: target.table } : undefined
-    ctx.openLogsForTrace(String(traceId || ''), enhancedTarget)
+    ctx.actions.openLogsForTrace(String(traceId || ''), enhancedTarget)
   }
 
   const submitTraceId = () => {
     const trimmed = traceIdDraft.value.trim()
     if (!trimmed) {
-      ctx.closeTraceGantt()
+      ctx.actions.closeTraceGantt()
       return
     }
-    ctx.openTraceGantt(trimmed)
+    ctx.actions.openTraceGantt(trimmed)
   }
 
   const clearTraceId = () => {
-    ctx.closeTraceGantt()
+    ctx.actions.closeTraceGantt()
   }
 
   const onFilterConditionAdd = (payload: { columnName: string; operator: string; value: unknown }) => {
@@ -344,30 +305,15 @@ a-layout-content.layout-content
       return
     }
     const op = isDrilldownFilterOp(payload.operator) ? payload.operator : '='
-    ctx.appendFilter({ key, op, value })
+    ctx.actions.appendFilter({ key, op, value })
   }
 
   // 唯一的行加载管线：输入（含 refreshKey 的手动刷新）变化即重跑，immediate 覆盖首载。
-  watch(
-    () => [
-      overviewActive.value,
-      ctx.focusTraceId.value,
-      ctx.tracesDatabase.value,
-      ctx.tracesTable.value,
-      // 绑定完成后 signalColumns 才就绪——loadRows 的守卫依赖它，就绪时补跑一次。
-      ctx.signalColumns.value.traces?.length ?? 0,
-      ctx.time.value,
-      ctx.rangeTime.value[0],
-      ctx.rangeTime.value[1],
-      ctx.filters.value,
-      selectedRedMetric.value,
-      ctx.refreshKey.value,
-    ],
-    () => {
-      loadRows()
-    },
-    { immediate: true, deep: true }
-  )
+  useSignalQuery(ctx, 'traces', {
+    enabled: () => overviewActive.value && !ctx.ui.focusTraceId.value,
+    params: () => selectedRedMetric.value,
+    run: () => loadRows(),
+  })
 
   onMounted(async () => {
     await loadTables()
