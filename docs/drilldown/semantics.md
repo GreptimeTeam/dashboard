@@ -129,13 +129,13 @@ Metrics 独有原则：语义只决定默认图，用户 Configure 仍可覆盖�
 | Label vs Field                              | `semantic_type=TAG`、fieldMap 角色、Loki 默认 OTel resource index-label 列名；其余字符串列是字段     |
 | JSON 身份                                   | `resource_attributes.service.name` 这类 chip；只用实际存在的 JSON 容器列                             |
 
-Logs 的“所有表可手选”是有意的逃生门；Trace→Logs 会再用 logs payload + `trace_id` 资格规则收紧。
+Logs 的“所有表可手选”是有意的逃生门；Trace→Logs 的自动探测再用 `signal_type='log'` 声明 + `trace_id` 资格规则收紧（不做列名猜测），未声明表仅可手动映射。
 
 ### Traces
 
 | 信息                 | 来源                                                                                                                     |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| 候选表               | `signal_type='trace'` / `pipeline=greptime_trace_v1` ∪ 实际含 `trace_id` 的表 ∪ `opentelemetry_traces`                   |
+| 候选表               | `signal_type='trace'` / `pipeline=greptime_trace_v1` ∪ 实际含 `trace_id` 的表（无默认表名注入）                          |
 | 排序                 | 完整 `greptime_trace_v1` 列模型 > 语义声明 > partial 表名稳定排序                                                        |
 | 最低物理资格         | `trace_id`：至少能按 trace id 过滤 / 打开 Gantt                                                                          |
 | 完整模型角色         | `trace_id`、`parent_span_id`、`timestamp`、`span_name`、`service_name`；`duration_nano`、`span_id`、status/kind 是加分列 |
@@ -175,12 +175,16 @@ manual mapping
 **必须满足**：
 
 1. 有 `trace_id` 列——没有它无法做行级关联；
-2. 有日志证据——`signal_type='log'`，或未声明时存在 `body` / `message` / `msg` / `log` / `content` / `text`；
-3. 不是 span 表——声明为非 `log`，或列形状满足完整 trace model，即排除。
+2. 不是 span 表——声明为非 `log`，或列形状满足完整 trace model，即排除；
+3. 不做列名猜测——表是否为日志表只看声明，不存在"有 `body`/`message` 等列即算日志表"的推断。
+
+**按消费路径分级**：
+
+- **自动探测**：必须声明 `signal_type='log'`（+ service identity 可解析）。未声明表绝不进入探测与学习；
+- **手动映射**（settings picker）：任何合格表均可，service identity 非必需——未声明的自定义表由此保持可用，由用户显式选择。
 
 **可选条件**：
 
-- service identity 可解析：仅自动探测需要（manual 查询只需 `trace_id`）；
 - `timestamp` 存在：探测和查询附加时间窗。
 
 logs 目标表的 service identity 走统一语义链（Traces 侧 service 本身来自 trace 模型 / trace 声明）：
@@ -197,7 +201,7 @@ entity_declarations
 1. `tablesHavingColumn('trace_id')` 预筛候选表；
 2. 批量拉取候选 schema，完成资格判断与 identity 解析；
 3. 取当前时间窗 service 全集；
-4. 未有 manual / auto 答案的 service，用一条 `UNION ALL` 探测所有 pending `(table, service)` 对。
+4. 未有 manual / auto 答案的 service，用一条 `UNION ALL` 探测所有 pending `(table, service)` 对——探测证据要求该 service 在窗口内存在**携带 `trace_id`** 的日志行（`trace_id IS NOT NULL`），只有非 trace 日志不构成学习依据。
 
 探测 verdict 按 `database + table + time window + service` 缓存；失败会 evict 以便重试；学习到 auto mapping 后，后续解析连探测也不再发起。
 

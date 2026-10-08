@@ -1,5 +1,5 @@
 import { ChartFormType, ResultType, SchemaType } from '../store/modules/code-run/types'
-import { dateTypes, numberTypes } from '../views/dashboard/config'
+import { dateTypes, numberTypes } from '@/constants/column-types'
 
 export default function useDataChart(data: ResultType) {
   const chartForm: ChartFormType = reactive({

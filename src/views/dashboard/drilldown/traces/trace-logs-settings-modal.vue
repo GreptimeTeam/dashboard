@@ -121,9 +121,10 @@ a-modal.trace-logs-settings(
         include: mappings.value[index]?.table ? [mappings.value[index].table] : [],
       })
       // The picker lists every table that can take part in trace → logs association —
-      // the unified trace-side rule (logs evidence + trace_id), deliberately more
-      // flexible than the probe: a service identity is NOT required here, so non-OTel
-      // tables can be mapped manually. Declared logs float to the top.
+      // the unified trace-side rule (trace_id + not trace-model + not declared as
+      // another signal). No column-name guessing: the auto probe additionally requires
+      // a declared `signal_type='log'`; here a service identity is NOT required, so
+      // non-OTel tables can be mapped manually. Declared logs float to the top.
       const withSemantics = await Promise.all(
         tables.map(async (table) => ({ table, semantics: await getTableSemantics(table, database) }))
       )

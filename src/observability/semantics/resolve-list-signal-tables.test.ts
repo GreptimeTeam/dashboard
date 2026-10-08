@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { listSignalTables } from './resolve'
-import { listBySignal } from './source'
+import useTableSchemaStore from '@/store/modules/table-schema'
+import { listSignalTables, resolveSignalTable } from './resolve'
+import { getTableSemantics, listBySignal } from './source'
 
 const MODEL_COLUMNS = [
   { name: 'timestamp' },
@@ -19,6 +20,9 @@ function schemaFor(table: string): Array<{ name: string }> {
     return [{ name: 'timestamp' }, { name: 'trace_id' }, { name: 'duration_nano' }]
   }
   if (table === 'declared_traces') {
+    return [{ name: 'timestamp' }, { name: 'trace_id' }]
+  }
+  if (table === 'custom_trace_id_table') {
     return [{ name: 'timestamp' }, { name: 'trace_id' }]
   }
   return [{ name: 'value' }]
@@ -56,20 +60,22 @@ beforeEach(() => {
   tablesHavingColumn.mockImplementation(async () => new Set<string>())
   vi.mocked(listBySignal).mockReset()
   vi.mocked(listBySignal).mockImplementation(async () => [])
+  vi.mocked(getTableSemantics).mockReset()
+  vi.mocked(getTableSemantics).mockImplementation(async () => undefined)
 })
 
 describe('listSignalTables(traces) qualification', () => {
-  it('keeps partial trace tables (trace_id only) but ranks the full model first', async () => {
+  it('returns declared trace tables first, then trace_id-scan tables — names only', async () => {
     tablesHavingColumn.mockImplementation(async () => new Set(['opentelemetry_traces', 'partial_traces']))
 
     const tables = await listSignalTables('traces', { database: 'public' })
 
-    expect(tables[0]).toBe('opentelemetry_traces')
-    expect(tables).toContain('partial_traces')
-    expect(tables.indexOf('partial_traces')).toBeGreaterThan(tables.indexOf('opentelemetry_traces'))
+    // No columns query at discovery time: the scan already guarantees trace_id, and
+    // full-model ranking is deferred to resolveSignalTable (auto-bind) only.
+    expect(tables).toEqual(['opentelemetry_traces', 'partial_traces'])
   })
 
-  it('excludes tables without trace_id even when they come from include', async () => {
+  it('keeps include entries — they are explicit user choices', async () => {
     tablesHavingColumn.mockImplementation(async () => new Set(['partial_traces']))
 
     const tables = await listSignalTables('traces', {
@@ -77,9 +83,8 @@ describe('listSignalTables(traces) qualification', () => {
       include: ['metrics_x'],
     })
 
-    expect(tables).toContain('partial_traces')
-    expect(tables).toContain('opentelemetry_traces')
-    expect(tables).not.toContain('metrics_x')
+    // No default-name injection and no columns-based dropping: include is explicit.
+    expect(tables).toEqual(['partial_traces', 'metrics_x'])
   })
 
   it('ranks a semantic trace declaration above an undeclared partial table', async () => {
@@ -90,5 +95,50 @@ describe('listSignalTables(traces) qualification', () => {
 
     expect(tables.indexOf('declared_traces')).toBeGreaterThan(tables.indexOf('opentelemetry_traces'))
     expect(tables.indexOf('declared_traces')).toBeLessThan(tables.indexOf('partial_traces'))
+  })
+
+  it('excludes tables declared as another signal from the trace_id scan', async () => {
+    // A declared log table carrying trace_id is a logs candidate, never a traces one —
+    // the declaration wins over the physical column signal.
+    vi.mocked(getTableSemantics).mockImplementation(async (table: string) =>
+      table === 'genai_conversations' ? { tableName: table, metadataQuality: 'declared', signalType: 'log' } : undefined
+    )
+    tablesHavingColumn.mockImplementation(async () => new Set(['genai_conversations', 'partial_traces']))
+
+    const tables = await listSignalTables('traces', { database: 'public' })
+
+    expect(tables).toEqual(['partial_traces'])
+    expect(tables).not.toContain('genai_conversations')
+  })
+
+  it('keeps undeclared trace_id tables — the escape hatch stays open', async () => {
+    tablesHavingColumn.mockImplementation(async () => new Set(['custom_trace_id_table']))
+
+    const tables = await listSignalTables('traces', { database: 'public' })
+
+    expect(tables).toEqual(['custom_trace_id_table'])
+  })
+})
+
+describe('resolveSignalTable(traces) auto-bind', () => {
+  it('ranks the full model first when no preferred/settings table exists', async () => {
+    tablesHavingColumn.mockImplementation(async () => new Set(['partial_traces', 'opentelemetry_traces']))
+
+    const bound = await resolveSignalTable('traces', { database: 'public' })
+
+    expect(bound).toBe('opentelemetry_traces')
+  })
+
+  it('short-circuits on preferred without any schema batch', async () => {
+    tablesHavingColumn.mockImplementation(async () => new Set(['partial_traces', 'opentelemetry_traces']))
+    const { ensureTableSchemas } = vi.mocked(useTableSchemaStore())
+
+    const bound = await resolveSignalTable('traces', {
+      database: 'public',
+      preferred: 'web_trace_demo',
+    })
+
+    expect(bound).toBe('web_trace_demo')
+    expect(ensureTableSchemas).not.toHaveBeenCalled()
   })
 })

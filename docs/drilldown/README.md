@@ -102,7 +102,7 @@ Filter 录入关键规则：
 - 首页：table 选择 + Trace ID 快搜 → **RED 等宽三联**（Rate / Errors / Duration）→ tabs：Breakdown | Traces。
 - `selectedRedMetric` 是调查焦点开关：驱动 Breakdown 聚合与 Traces 列表排序（errors 只看 errored root spans；duration 按 `duration_nano` 倒序）；三联图选中态只换边框 / 背景，**不放大不重排**。数据一律 SQL `date_bin`，duration 主图为 heatmap。
 - filters key 池 = 业务字段（intrinsic + 扁平属性列 + `duration_nano`）；`trace_id` / `span_id` / 时间列 / payload 不进筛选（Trace ID 有独立入口）。算子按列类型：数值字面量不加引号；boolean 渲染 `TRUE` / `FALSE`（Greptime 对 boolean 用字符串会 planning 报错）。
-- 表发现：语义声明 ∪ 实际含 `trace_id` 的表 ∪ `opentelemetry_traces`；完整 `greptime_trace_v1` 列模型优先；`trace_id`-only 自定义表是逃生门，缺模型角色时 RED / Breakdown 降级或返回空。
+- 表发现：语义声明 ∪ 实际含 `trace_id` 的表；完整 `greptime_trace_v1` 列模型优先；`trace_id`-only 自定义表是逃生门，缺模型角色时 RED / Breakdown 降级或返回空。
 - Breakdown（Phase B）：Group-by 分 **All / Resource / Span** 三档，聚合绑定当前 redMetric。
 
 ---

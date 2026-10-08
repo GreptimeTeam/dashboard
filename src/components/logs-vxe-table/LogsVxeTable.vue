@@ -18,7 +18,7 @@
     :virtual-x-config="virtualXConfig"
     :show-header="showHeader"
     :row-class-name="rowClassName"
-    @scroll="onScroll"
+    @scroll="loadMore.onScroll"
     @cell-click="onCellClick"
   )
     template(#empty)
@@ -26,12 +26,12 @@
   // Load-more affordance (Grafana-like footer): appears once the user reaches the
   // end of the loaded rows. Clicking it or scrolling on both load the next page.
   .logs-vxe-load-more(
-    v-if="showLoadMoreBar"
+    v-if="loadMore.showLoadMoreBar.value"
     role="button"
     :class="{ 'is-loading': loadingMore }"
-    :style="{ bottom: `${scrollXOffset}px` }"
+    :style="{ bottom: `${loadMore.scrollXOffset.value}px` }"
     :aria-busy="loadingMore ? 'true' : 'false'"
-    @click="onLoadMoreClick"
+    @click="loadMore.requestLoadMore"
   )
     a-spin(v-if="loadingMore" :size="14")
     svg.logs-vxe-load-more__icon(v-else)
@@ -51,59 +51,39 @@
         .logs-vxe-cell-detail__title {{ cellDetail?.title }}
         pre.logs-vxe-cell-detail__content {{ cellDetail?.content }}
   a-dropdown#logs-vxe-td-context(
-    v-model:popup-visible="contextMenuVisible"
+    v-model:popup-visible="contextMenu.contextMenuVisible.value"
     trigger="contextMenu"
-    :style="contextMenuStyle"
-    @clickoutside="hideContextMenu"
-    @popup-visible-change="onContextMenuVisibleChange"
-    @select="handleMenuClick"
+    :style="contextMenu.contextMenuStyle.value"
+    @clickoutside="contextMenu.hideContextMenu"
+    @popup-visible-change="contextMenu.onContextMenuVisibleChange"
+    @select="contextMenu.handleMenuClick"
   )
     template(#content)
       a-doption(value="copy") Copy Field Value
-      a-dsubmenu(v-if="filterOptions.length > 0" trigger="hover") Filter
+      a-dsubmenu(v-if="contextMenu.filterOptions.value.length > 0" trigger="hover") Filter
         template(#content)
-          a-doption(v-for="op in filterOptions" :key="op" :value="`filter_${op}`") {{ op }} value
+          a-doption(v-for="op in contextMenu.filterOptions.value" :key="op" :value="`filter_${op}`") {{ op }} value
 </template>
 
 <script setup lang="ts">
-  import { computed, h, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+  import { computed, h, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useElementSize } from '@vueuse/core'
-  import { Tooltip } from '@arco-design/web-vue'
   import { VxeGrid } from 'vxe-table'
   import 'vxe-table/lib/style.css'
   import type { ColumnType, TSColumn } from '@/types/query'
-  import { dateTypes } from '@/views/dashboard/config'
-  import { useDateTimeFormat } from '@/hooks'
+  import useLogsTimeFormat from './composables/use-logs-time-format'
+  import useLogsCellDetail from './composables/use-logs-cell-detail'
+  import useLogsContextMenu from './composables/use-logs-context-menu'
+  import useLogsLoadMore from './composables/use-logs-load-more'
+  import getCellString from './utils/cell-text'
+  import { areWidthRulesEqual, computeColumnWidthRules } from './utils/column-widths'
+  import { buildDisplayRows, getSeparateFields, getVisibleFieldNames, isTimeColumn } from './utils/table-data'
+  import { buildVxeColumns } from './utils/vxe-columns'
+  import type { ColumnWidthRule, TableData } from './types'
 
-  // ---------------------------------------------------------------------------
-  // Column widths (parity with the legacy DataTable virtual mode)
-  //
-  // VXE cannot measure natural widths for our cell slots: the flex wrapper plus
-  // `col--ellipsis` always reports the current (fitted) width, so every column
-  // collapsed to the same width. Estimate px from sampled text instead and let
-  // the widest column absorb the leftover space.
-  // ---------------------------------------------------------------------------
-  /** Soft cap for separate (multi-column) mode — align with legacy DataTable. */
-  const COLUMN_MAX_WIDTH = 600
-  const COLUMN_MIN_WIDTH = 60
-  /** Timestamp column is fixed px so the time format never squashes. */
-  const TIME_COLUMN_FIXED_WIDTH = 200
   /** Rows sampled for the content-width heuristic (first page is enough). */
   const CONTENT_SAMPLE_ROWS = 100
-  /** Rough table font advance + th/td horizontal padding (char heuristic, not DOM). */
-  const ESTIMATED_CHAR_WIDTH_PX = 8
-  const ESTIMATED_CELL_PADDING_PX = 32
-
-  interface TableData {
-    [key: string]: any
-  }
-
-  type MergedPart = {
-    key: string
-    text: string
-    isLink: boolean
-  }
 
   type VxeGridInstance = {
     recalculate?: (refull?: boolean) => Promise<void> | void
@@ -137,6 +117,8 @@
       hasMore?: boolean
       /** A load-more request is in flight. */
       loadingMore?: boolean
+      /** Disable row virtualization (small previews render every row). */
+      virtual?: boolean
     }>(),
     {
       data: () => [],
@@ -155,6 +137,7 @@
       showContextMenu: false,
       hasMore: false,
       loadingMore: false,
+      virtual: true,
     }
   )
 
@@ -165,42 +148,12 @@
     (e: 'filterConditionAdd', payload: { columnName: string; operator: string; value: unknown }): void
   }>()
 
-  const { formatDateTimeWithMs } = useDateTimeFormat()
   const { t } = useI18n()
+  const { tsViewStr, formatTsDisplay, changeTsView, renderTsHeader } = useLogsTimeFormat()
 
   const rootEl = ref<HTMLElement | null>(null)
   const gridRef = ref<VxeGridInstance | null>(null)
   const { height: measuredHeight, width: measuredWidth } = useElementSize(rootEl)
-
-  const contextMenuVisible = ref(false)
-  const contextMenuPosition = ref({ x: 0, y: 0 })
-  const contextMenuStyle = computed(() => ({
-    position: 'fixed' as const,
-    top: `${contextMenuPosition.value.y}px`,
-    left: `${contextMenuPosition.value.x}px`,
-    zIndex: 9999,
-  }))
-  const filterOptions = shallowRef<string[]>([])
-  const triggerCell = ref<[TableData, string] | null>(null)
-
-  // ---------------------------------------------------------------------------
-  // Cell detail popup
-  //
-  // Every non-empty normal cell can show its raw value. Opening is delayed for
-  // one click and suppressed for drags/selections, so selecting or double-click
-  // selecting text never fights with the popup.
-  // ---------------------------------------------------------------------------
-  const CELL_DETAIL_OPEN_DELAY_MS = 200
-  const CELL_DETAIL_DRAG_THRESHOLD_PX = 4
-  const cellDetail = ref<{ title: string; content: string } | null>(null)
-  const cellDetailVisible = ref(false)
-  const cellDetailAnchorStyle = ref<Record<string, string>>({ display: 'none' })
-  let cellDetailOpenTimer: ReturnType<typeof setTimeout> | null = null
-  let cellDetailPointerStart: { x: number; y: number; hadSelection: boolean } | null = null
-  let detailHoverCell: HTMLElement | null = null
-
-  /** true = formatted timestamp, false = raw value (legacy `tsViewStr`). */
-  const tsViewStr = ref(true)
 
   const tableHeight = computed(() => {
     if (props.height > 0) {
@@ -250,86 +203,99 @@
 
   const showFilterMenu = computed(() => props.showContextMenu && props.columnMode === 'separate')
 
-  function resolveGridApi(): VxeGridInstance | null {
-    const raw = gridRef.value as (VxeGridInstance & { getGrid?: () => VxeGridInstance }) | null
-    if (!raw) {
-      return null
-    }
-    if (typeof raw.recalculate === 'function') {
-      return raw
-    }
-    if (typeof raw.getGrid === 'function') {
-      return raw.getGrid() || null
-    }
-    return raw
+  const virtualYConfig = computed(() => ({
+    enabled: props.virtual,
+    gt: 0,
+  }))
+
+  const virtualXConfig = computed(() => ({
+    enabled: props.columnMode === 'separate' && !props.wrapLine,
+    gt: 0,
+  }))
+
+  // ---------------------------------------------------------------------------
+  // Table data + columns
+  // ---------------------------------------------------------------------------
+  const fieldsInput = computed(() => ({
+    columns: props.columns,
+    displayedColumns: props.displayedColumns,
+    tsColumn: props.tsColumn,
+    linkColumn: props.linkColumn,
+  }))
+
+  const tableData = computed(() =>
+    buildDisplayRows({
+      ...fieldsInput.value,
+      data: props.data,
+      columnMode: props.columnMode,
+      textOf: (value, column) => formatTsDisplay(value, column),
+    })
+  )
+
+  function resolveFieldMeta(field: string): ColumnType | TSColumn | undefined {
+    return props.columns.find((c) => c.name === field) || (props.tsColumn?.name === field ? props.tsColumn : undefined)
   }
 
-  function isTimeColumn(column: ColumnType | null | undefined) {
-    if (!column?.data_type) {
-      return false
-    }
-    return dateTypes.indexOf(column.data_type) > -1
-  }
-
-  function getCellString(value: unknown): string {
-    if (value == null) {
-      return ''
-    }
-    if (typeof value === 'string') {
-      return value
-    }
-    if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
-      return String(value)
-    }
-    if (typeof value === 'object') {
-      try {
-        return JSON.stringify(value)
-      } catch {
-        return Object.prototype.toString.call(value)
+  /** Natural-width char length: max(header, sampled cell text) — legacy heuristic. */
+  function getColumnNaturalCharLength(field: string, title: string, isTime = false): number {
+    const meta = resolveFieldMeta(field)
+    let max = String(title ?? '').length
+    const count = Math.min(props.data.length, CONTENT_SAMPLE_ROWS)
+    for (let i = 0; i < count; i += 1) {
+      const record = props.data[i]
+      const value = record?.[field]
+      // Widths always follow the formatted value so toggling does not resize columns.
+      const text = isTime || isTimeColumn(meta) ? formatTsDisplay(value, meta, true) : getCellString(value)
+      if (text.length > max) {
+        max = text.length
       }
     }
-    return String(value)
+    return max
   }
+
+  const columnWidthRules = ref<Record<string, ColumnWidthRule>>({})
 
   /**
-   * Time cell text. `formatted` follows the header toggle: raw value when off,
-   * timezone-aware string when on (legacy `renderTs` + `changeTsView`).
+   * Keep the same object when nothing changed: a new `columns` prop array makes
+   * VXE rebuild columns and drop the user's manual resize.
    */
-  function formatTsDisplay(
-    value: unknown,
-    column: ColumnType | TSColumn | null | undefined,
-    formatted = tsViewStr.value
-  ): string {
-    if (value == null || value === '') {
-      return ''
-    }
-    const raw = getCellString(value)
-    if (!formatted || !column || !('data_type' in column) || !column.data_type) {
-      return raw
-    }
-    return formatDateTimeWithMs(value as number, column.data_type) || raw
-  }
-
-  function changeTsView() {
-    tsViewStr.value = !tsViewStr.value
-  }
-
-  /** Header pill for time columns — icon + name, click toggles raw/formatted. */
-  function renderTsHeader(title: string) {
-    return h(
-      Tooltip,
-      { placement: 'top' },
-      {
-        content: () => t(tsViewStr.value ? 'dashboard.showTimestamp' : 'dashboard.formatTimestamp'),
-        default: () =>
-          h('span', { class: ['gpt-semantic-th', 'timestamp', 'logs-vxe-ts-th'], onClick: changeTsView }, [
-            h('svg', { class: 'icon-12' }, [h('use', { href: '#time-index' })]),
-            h('span', { class: 'gpt-semantic-th-text' }, title),
-          ]),
+  function refreshColumnWidthRules() {
+    if (props.columnMode !== 'separate') {
+      if (!areWidthRulesEqual(columnWidthRules.value, {})) {
+        columnWidthRules.value = {}
       }
-    )
+      return
+    }
+    const fields = getSeparateFields(fieldsInput.value)
+    const naturalLengths: Record<string, number> = {}
+    fields.forEach((item) => {
+      naturalLengths[item.field] = getColumnNaturalCharLength(item.field, item.title, item.isTime)
+    })
+    const next = computeColumnWidthRules(fields, naturalLengths)
+    if (!areWidthRulesEqual(columnWidthRules.value, next)) {
+      columnWidthRules.value = next
+    }
   }
 
+  const vxeColumns = computed(() =>
+    buildVxeColumns({
+      columnMode: props.columnMode,
+      columns: props.columns,
+      displayedColumns: props.displayedColumns,
+      tsColumn: props.tsColumn,
+      linkColumn: props.linkColumn,
+      tsCellDetail: props.tsCellDetail,
+      wrapLine: props.wrapLine,
+      widthRules: columnWidthRules.value,
+      renderSeparateCell,
+      renderMergedCell,
+      renderTsHeader,
+    })
+  )
+
+  // ---------------------------------------------------------------------------
+  // Interaction: context menu, links, cell detail
+  // ---------------------------------------------------------------------------
   function getOriginalRow(row: TableData): TableData {
     const rowIndex = typeof row.__rowIndex === 'number' ? row.__rowIndex : -1
     if (rowIndex >= 0 && props.data[rowIndex]) {
@@ -338,61 +304,32 @@
     return row
   }
 
-  function hideContextMenu() {
-    contextMenuVisible.value = false
-  }
-
-  function onContextMenuVisibleChange(popupVisible: boolean) {
-    if (!popupVisible) {
-      hideContextMenu()
-    }
-  }
-
   /** Time columns have no filter/copy menu (legacy Arco parity). */
   function isTimeField(field: string): boolean {
     return props.tsColumn?.name === field || isTimeColumn(props.columns.find((c) => c.name === field))
   }
 
-  function openContextMenu(row: TableData, columnName: string, event: MouseEvent) {
-    if (!showFilterMenu.value || isTimeField(columnName)) {
-      return
-    }
-    const original = getOriginalRow(row)
-    triggerCell.value = [original, columnName]
-    event.preventDefault()
-    event.stopPropagation()
+  const contextMenu = useLogsContextMenu({
+    enabled: showFilterMenu,
+    columns: () => props.columns,
+    isTimeField,
+    getOriginalRow,
+    onFilter: (payload) => emit('filterConditionAdd', payload),
+  })
 
-    const column = props.columns.find((col) => col.name === columnName)
-    // Time columns never reach here (no menu); JSON columns only offer copy.
-    if (column?.data_type && column.data_type.toLowerCase() === 'json') {
-      filterOptions.value = []
-    } else {
-      filterOptions.value = ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'NOT LIKE']
-    }
-
-    const rect = (event.currentTarget as Element).getBoundingClientRect()
-    contextMenuPosition.value = { x: rect.left, y: rect.bottom }
-    contextMenuVisible.value = true
-  }
-
-  async function handleMenuClick(value: string | number | Record<string, unknown>) {
-    const action = String(value)
-    if (!triggerCell.value) {
-      return
-    }
-    const [record, columnName] = triggerCell.value
-    if (action === 'copy') {
-      try {
-        await navigator.clipboard.writeText(getCellString(record[columnName]))
-      } catch {
-        // ignore clipboard errors
-      }
-    } else if (action.startsWith('filter')) {
-      const operator = action.split('_')[1]
-      emit('filterConditionAdd', { columnName, operator, value: record[columnName] })
-    }
-    hideContextMenu()
-  }
+  const cellDetailApi = useLogsCellDetail({
+    rootEl,
+    columnMode: () => props.columnMode,
+  })
+  const {
+    cellDetail,
+    cellDetailVisible,
+    cellDetailAnchorStyle,
+    scheduleCellDetail,
+    closeCellDetail,
+    clearDetailHoverCell,
+    isDetailCellTarget,
+  } = cellDetailApi
 
   function onLinkClick(columnName: string, value: string, event: Event) {
     event.stopPropagation()
@@ -401,130 +338,6 @@
       return
     }
     emit('columnLinkClick', columnName, text)
-  }
-
-  function hasTextSelection() {
-    const selection = window.getSelection()
-    return Boolean(selection && !selection.isCollapsed && selection.toString().trim())
-  }
-
-  function cancelCellDetailOpen() {
-    if (cellDetailOpenTimer != null) {
-      clearTimeout(cellDetailOpenTimer)
-      cellDetailOpenTimer = null
-    }
-  }
-
-  function closeCellDetail() {
-    cancelCellDetailOpen()
-    cellDetailVisible.value = false
-  }
-
-  function onDetailKeydown(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
-      closeCellDetail()
-    }
-  }
-
-  function onDetailPointerDown(event: PointerEvent) {
-    cancelCellDetailOpen()
-    if (cellDetailVisible.value) {
-      closeCellDetail()
-    }
-    cellDetailPointerStart =
-      event.button === 0 ? { x: event.clientX, y: event.clientY, hadSelection: hasTextSelection() } : null
-  }
-
-  function clearDetailHoverCell() {
-    detailHoverCell?.classList.remove('logs-vxe-detail-cell--overflow')
-    detailHoverCell = null
-  }
-
-  /**
-   * Affordance is based on the cell's real overflow state, measured only while
-   * the user hovers it. This avoids the pressure of showing a click cursor on
-   * every cell, and avoids estimating text width while rendering columns.
-   */
-  function isDetailContentOverflowing(cell: HTMLElement) {
-    const targets = [
-      cell.querySelector('.logs-vxe-cell-text'),
-      cell.querySelector('.logs-vxe-merged-cell'),
-      cell.querySelector('.vxe-cell'),
-    ]
-    return targets.some((target) => {
-      if (!(target instanceof HTMLElement)) {
-        return false
-      }
-      return target.scrollWidth - target.clientWidth > 1 || target.scrollHeight - target.clientHeight > 1
-    })
-  }
-
-  function updateDetailHoverCell(event: Event) {
-    const target = event.target as Element | null
-    const cell = target?.closest<HTMLElement>('.vxe-body--column.logs-vxe-detail-cell') || null
-    if (cell === detailHoverCell) {
-      return
-    }
-
-    clearDetailHoverCell()
-    detailHoverCell = cell
-    cell?.classList.toggle('logs-vxe-detail-cell--overflow', isDetailContentOverflowing(cell))
-  }
-
-  function isDetailCellTarget(event: MouseEvent | undefined) {
-    const target = event?.target as Element | null
-    return Boolean(target?.closest('button, a, .logs-vxe-cell-action'))
-  }
-
-  function isPlainDetailClick(event: MouseEvent | undefined) {
-    if (!event || event.button !== 0 || event.detail > 1 || !cellDetailPointerStart) {
-      return false
-    }
-    if (cellDetailPointerStart.hadSelection || hasTextSelection()) {
-      return false
-    }
-    const movedX = event.clientX - cellDetailPointerStart.x
-    const movedY = event.clientY - cellDetailPointerStart.y
-    return Math.hypot(movedX, movedY) <= CELL_DETAIL_DRAG_THRESHOLD_PX
-  }
-
-  function setCellDetailAnchor(cell: Element) {
-    const rect = cell.getBoundingClientRect()
-    cellDetailAnchorStyle.value = {
-      position: 'fixed',
-      display: 'block',
-      left: `${rect.left}px`,
-      top: `${rect.top}px`,
-      width: `${Math.max(rect.width, 1)}px`,
-      height: `${Math.max(rect.height, 1)}px`,
-    }
-  }
-
-  function openCellDetail(row: TableData, field: string, event?: MouseEvent) {
-    const merge = props.columnMode !== 'separate'
-    const cell = (event?.target as Element | null)?.closest('.vxe-body--column')
-    const content = merge ? String(row.__merged_message || '') : getCellString(row[field])
-    if (!cell || !content) {
-      return
-    }
-
-    setCellDetailAnchor(cell)
-    cellDetail.value = {
-      title: merge ? 'message' : field,
-      content,
-    }
-    cellDetailVisible.value = true
-  }
-
-  function scheduleCellDetail(row: TableData, field: string, event?: MouseEvent) {
-    cancelCellDetailOpen()
-    if (!isPlainDetailClick(event)) {
-      return
-    }
-    cellDetailOpenTimer = setTimeout(() => {
-      cellDetailOpenTimer = null
-      openCellDetail(row, field, event)
-    }, CELL_DETAIL_OPEN_DELAY_MS)
   }
 
   function renderActionIcon(row: TableData, field: string) {
@@ -536,7 +349,7 @@
       {
         class: 'logs-vxe-cell-action',
         title: 'Filter / Copy',
-        onClick: (event: MouseEvent) => openContextMenu(row, field, event),
+        onClick: (event: MouseEvent) => contextMenu.openContextMenu(row, field, event),
       },
       '⋮'
     )
@@ -565,7 +378,7 @@
   }
 
   function renderMergedCell(params: { row: TableData }) {
-    const parts = (params.row.__merged_parts as MergedPart[] | undefined) || []
+    const parts = (params.row.__merged_parts as { key: string; text: string; isLink: boolean }[] | undefined) || []
     const showKeys = props.columnMode === 'merged-with-keys'
     const nodes = parts.flatMap((part, index) => {
       const pieces: ReturnType<typeof h>[] = []
@@ -595,6 +408,62 @@
     return h('div', { class: 'logs-vxe-cell-inner logs-vxe-merged-cell' }, nodes)
   }
 
+  function rowClassName({ row }: { row: TableData }) {
+    const key = typeof row.__rowIndex === 'number' ? row.__rowIndex : null
+    if (key != null && props.activeRowKey === key) {
+      return 'logs-vxe-row-active'
+    }
+    return ''
+  }
+
+  function onCellClick({ row, column, $event }: { row: TableData; column: { field?: string }; $event?: MouseEvent }) {
+    const rowIndex = typeof row.__rowIndex === 'number' ? row.__rowIndex : -1
+    const original = getOriginalRow(row)
+    const field = column?.field
+    if (field && props.tsColumn?.name && field === props.tsColumn.name) {
+      if (props.tsCellDetail) {
+        emit('tsCellClick', original, rowIndex)
+        return
+      }
+      changeTsView()
+      return
+    }
+    // Secondary time columns only toggle the format (legacy changeTsView parity).
+    if (field && isTimeColumn(props.columns.find((c) => c.name === field))) {
+      changeTsView()
+      return
+    }
+    if (isDetailCellTarget($event)) {
+      return
+    }
+    if (props.columnMode === 'separate') {
+      if (field && !isTimeField(field) && field !== props.linkColumn && row[field]) {
+        scheduleCellDetail(row, field, $event)
+      }
+      return
+    }
+    if (field === '__merged_message' && row.__merged_message) {
+      scheduleCellDetail(row, field, $event)
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Grid api + width recalcs
+  // ---------------------------------------------------------------------------
+  function resolveGridApi(): VxeGridInstance | null {
+    const raw = gridRef.value as (VxeGridInstance & { getGrid?: () => VxeGridInstance }) | null
+    if (!raw) {
+      return null
+    }
+    if (typeof raw.recalculate === 'function') {
+      return raw
+    }
+    if (typeof raw.getGrid === 'function') {
+      return raw.getGrid() || null
+    }
+    return raw
+  }
+
   function recalculateColumnWidths() {
     nextTick(async () => {
       const api = resolveGridApi()
@@ -609,431 +478,54 @@
     })
   }
 
-  const virtualYConfig = computed(() => ({
-    enabled: true,
-    gt: 0,
-  }))
-
-  const virtualXConfig = computed(() => ({
-    enabled: props.columnMode === 'separate' && !props.wrapLine,
-    gt: 0,
-  }))
-
-  const visibleFieldNames = computed(() => {
-    const tsName = props.tsColumn?.name
-    let names = props.displayedColumns.length > 0 ? props.displayedColumns.slice() : props.columns.map((c) => c.name)
-    if (tsName) {
-      names = names.filter((n) => n !== tsName)
-    }
-    return names
+  // ---------------------------------------------------------------------------
+  // Load more
+  // ---------------------------------------------------------------------------
+  const loadMore = useLogsLoadMore({
+    rootEl,
+    rowHeight: () => rowHeight.value,
+    hasMore: () => props.hasMore,
+    loadingMore: () => props.loadingMore,
+    wrapLine: () => props.wrapLine,
+    data: () => props.data,
+    request: () => emit('reachEnd'),
+    onScrollActivity: () => {
+      closeCellDetail()
+      clearDetailHoverCell()
+    },
   })
 
-  /**
-   * Pre-stringify / format cell values so Vxe never renders raw objects.
-   * Interactive bits (links, filter icon, merged parts) render via column slots.
-   */
-  const tableData = computed(() => {
-    const merge = props.columnMode !== 'separate'
-    const fields = visibleFieldNames.value
-    const tsName = props.tsColumn?.name
-    const showKeys = props.columnMode === 'merged-with-keys'
-
-    return props.data.map((record, index) => {
-      const rowIndex = typeof record.__rowIndex === 'number' ? record.__rowIndex : index
-      const out: TableData = { __rowIndex: rowIndex }
-
-      if (tsName) {
-        const tsMeta = props.tsColumn || props.columns.find((c) => c.name === tsName)
-        out[tsName] = formatTsDisplay(record[tsName], tsMeta)
-      }
-
-      if (merge) {
-        const parts: MergedPart[] = fields
-          .map((key) => ({
-            key,
-            text: getCellString(record[key]),
-            isLink: Boolean(props.linkColumn && key === props.linkColumn),
-          }))
-          .filter((part) => part.text)
-        out.__merged_parts = parts
-        out.__merged_message = parts.map((part) => (showKeys ? `${part.key}: ${part.text}` : part.text)).join(' ')
-        return out
-      }
-
-      fields.forEach((name) => {
-        const meta = props.columns.find((c) => c.name === name)
-        out[name] = isTimeColumn(meta) ? formatTsDisplay(record[name], meta) : getCellString(record[name])
-      })
-      return out
-    })
+  onMounted(() => {
+    loadMore.checkViewportFilled()
+    rootEl.value?.addEventListener('wheel', loadMore.markScrollIntent, { passive: true })
+    rootEl.value?.addEventListener('touchmove', loadMore.markScrollIntent, { passive: true })
   })
 
-  function contentColumn(field: string, title: string, extra: Record<string, unknown> = {}) {
-    return {
-      field,
-      title,
-      showOverflow: props.wrapLine ? false : 'ellipsis',
-      ...extra,
-    }
-  }
-
-  type ColumnWidthRule = { width?: number; minWidth?: number }
-
-  type SeparateField = {
-    field: string
-    title: string
-    /** Primary timestamp column: clickable, fixed width. */
-    isTs: boolean
-    /** Date-typed column: cell text is formatted before measuring. */
-    isTime: boolean
-    isLink: boolean
-  }
-
-  /** Separate-mode field list, in render order (timestamp first). */
-  function getSeparateFields(): SeparateField[] {
-    const tsName = props.tsColumn?.name
-    const fields: SeparateField[] = []
-    if (tsName) {
-      fields.push({ field: tsName, title: tsName, isTs: true, isTime: true, isLink: false })
-    }
-    visibleFieldNames.value.forEach((name) => {
-      const meta = props.columns.find((c) => c.name === name)
-      fields.push({
-        field: name,
-        title: meta?.title || name,
-        isTs: false,
-        isTime: isTimeColumn(meta),
-        isLink: Boolean(props.linkColumn && name === props.linkColumn),
-      })
-    })
-    return fields
-  }
-
-  function resolveFieldMeta(field: string): ColumnType | TSColumn | undefined {
-    return props.columns.find((c) => c.name === field) || (props.tsColumn?.name === field ? props.tsColumn : undefined)
-  }
-
-  /** Natural-width char length: max(header, sampled cell text) — legacy heuristic. */
-  function getColumnNaturalCharLength(field: string, title: string, isTime = false): number {
-    const meta = resolveFieldMeta(field)
-    let max = String(title ?? '').length
-    const count = Math.min(props.data.length, CONTENT_SAMPLE_ROWS)
-    for (let i = 0; i < count; i += 1) {
-      const record = props.data[i]
-      const value = record?.[field]
-      // Widths always follow the formatted value so toggling does not resize columns.
-      const text = isTime || isTimeColumn(meta) ? formatTsDisplay(value, meta, true) : getCellString(value)
-      if (text.length > max) {
-        max = text.length
-      }
-    }
-    return max
-  }
-
-  function estimateColumnWidthPx(charLen: number): number {
-    const natural = Math.ceil(charLen * ESTIMATED_CHAR_WIDTH_PX + ESTIMATED_CELL_PADDING_PX)
-    return Math.max(COLUMN_MIN_WIDTH, Math.min(COLUMN_MAX_WIDTH, natural))
-  }
-
-  /**
-   * Explicit widths per column: timestamp fixed, content columns sized by their
-   * natural length, widest content column left flexible (minWidth only) so it
-   * absorbs the leftover width exactly like the legacy virtual table.
-   */
-  function computeColumnWidthRules(fields: SeparateField[]): Record<string, ColumnWidthRule> {
-    const naturalLengths: Record<string, number> = {}
-    fields.forEach((item) => {
-      naturalLengths[item.field] = getColumnNaturalCharLength(item.field, item.title, item.isTime)
-    })
-
-    let widestField = ''
-    let widestLength = -1
-    fields.forEach((item) => {
-      if (item.isTs) {
-        return
-      }
-      if (naturalLengths[item.field] > widestLength) {
-        widestLength = naturalLengths[item.field]
-        widestField = item.field
-      }
-    })
-
-    const rules: Record<string, ColumnWidthRule> = {}
-    fields.forEach((item) => {
-      if (item.isTs) {
-        rules[item.field] = { width: TIME_COLUMN_FIXED_WIDTH }
-        return
-      }
-      const estimated = estimateColumnWidthPx(naturalLengths[item.field] || 0)
-      rules[item.field] = item.field === widestField ? { minWidth: estimated } : { width: estimated }
-    })
-    return rules
-  }
-
-  const columnWidthRules = ref<Record<string, ColumnWidthRule>>({})
-
-  function areWidthRulesEqual(a: Record<string, ColumnWidthRule>, b: Record<string, ColumnWidthRule>): boolean {
-    const keysA = Object.keys(a)
-    const keysB = Object.keys(b)
-    if (keysA.length !== keysB.length) {
-      return false
-    }
-    return keysA.every((key) => a[key]?.width === b[key]?.width && a[key]?.minWidth === b[key]?.minWidth)
-  }
-
-  /**
-   * Keep the same object when nothing changed: a new `columns` prop array makes
-   * VXE rebuild columns and drop the user's manual resize.
-   */
-  function refreshColumnWidthRules() {
-    const next = props.columnMode === 'separate' ? computeColumnWidthRules(getSeparateFields()) : {}
-    if (!areWidthRulesEqual(columnWidthRules.value, next)) {
-      columnWidthRules.value = next
-    }
-  }
-
-  /**
-   * Time-column classes — parity with legacy `.timestamp-cell` (accent color),
-   * `.ts-cell-detail-link` (row detail) and the format-toggle affordance.
-   */
-  function getTimeColumnClassNames(isPrimaryTs: boolean, isTime: boolean): string {
-    if (!isPrimaryTs && !isTime) {
-      return ''
-    }
-    const classes = ['logs-vxe-ts-col']
-    if (isPrimaryTs) {
-      classes.push(props.tsCellDetail ? 'logs-vxe-ts-col--link' : 'logs-vxe-ts-col--toggle')
-    } else if (!props.tsCellDetail) {
-      classes.push('logs-vxe-ts-col--toggle')
-    }
-    return classes.join(' ')
-  }
-
-  const vxeColumns = computed(() => {
-    const cols: Record<string, unknown>[] = []
-    const tsName = props.tsColumn?.name
-    const merge = props.columnMode !== 'separate'
-    /** Legacy DataTable pads the first/last column wider (cell-edge-left/right). */
-    const edgeClass = (index: number, total: number) =>
-      [index === 0 ? 'logs-vxe-edge-left' : '', index === total - 1 ? 'logs-vxe-edge-right' : '']
-        .filter(Boolean)
-        .join(' ')
-
-    if (merge) {
-      if (tsName) {
-        cols.push(
-          contentColumn(tsName, tsName, {
-            className: [getTimeColumnClassNames(true, true), 'logs-vxe-edge-left'].filter(Boolean).join(' '),
-            headerClassName: 'logs-vxe-edge-left',
-            width: TIME_COLUMN_FIXED_WIDTH,
-            slots: { default: renderSeparateCell, header: () => renderTsHeader(tsName) },
-          })
-        )
-      }
-      cols.push(
-        contentColumn('__merged_message', 'message', {
-          minWidth: 'auto',
-          className: ['logs-vxe-detail-cell', 'logs-vxe-edge-right'].join(' '),
-          headerClassName: 'logs-vxe-edge-right',
-          slots: { default: renderMergedCell },
-        })
-      )
-      return cols
-    }
-
-    const fields = getSeparateFields()
-    fields.forEach((item, index) => {
-      const classNames = [
-        getTimeColumnClassNames(item.isTs, item.isTime),
-        item.isLink ? 'logs-vxe-link-col' : '',
-        !item.isTs && !item.isTime && !item.isLink ? 'logs-vxe-detail-cell' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')
-      const edge = edgeClass(index, fields.length)
-      const rule = columnWidthRules.value[item.field] || {}
-      cols.push(
-        contentColumn(item.field, item.title, {
-          className: [classNames, edge].filter(Boolean).join(' '),
-          ...(edge ? { headerClassName: edge } : {}),
-          ...rule,
-          slots: {
-            default: renderSeparateCell,
-            ...(item.isTime ? { header: () => renderTsHeader(item.title) } : {}),
-          },
-        })
-      )
-    })
-
-    return cols
+  onBeforeUnmount(() => {
+    rootEl.value?.removeEventListener('wheel', loadMore.markScrollIntent)
+    rootEl.value?.removeEventListener('touchmove', loadMore.markScrollIntent)
   })
-
-  function rowClassName({ row }: { row: TableData }) {
-    const key = typeof row.__rowIndex === 'number' ? row.__rowIndex : null
-    if (key != null && props.activeRowKey === key) {
-      return 'logs-vxe-row-active'
-    }
-    return ''
-  }
-
-  let reachEndArmed = true
-  /** True while the viewport sits at the end of the loaded rows. */
-  const nearEnd = ref(false)
-  /** VXE horizontal scrollbar height — keeps the footer from covering it. */
-  const scrollXOffset = ref(0)
-  /** Last wheel offset reported by VXE (virtual scrolling keeps it internally). */
-  let lastScrollTop = 0
-  /**
-   * Distance from the bottom where the footer hint shows up (the list is almost
-   * exhausted — Grafana only reveals its footer row at the end of the list).
-   */
-  const NEAR_END_PX = 120
-  /**
-   * Distance from the bottom that auto-loads the next page. Kept at "the end is
-   * actually reached" so a casual scroll never triggers a fetch — scrolling down
-   * must bring the last row fully into view (or the footer must be clicked).
-   */
-  const AUTO_LOAD_PX = 8
-  /** Scrolling this far back up re-arms the auto-load for the next bottom hit. */
-  const REARM_PX = 120
-  /**
-   * Auto-load only counts as deliberate when a wheel/touch gesture drove the
-   * scroll into the end zone. Dragging the scrollbar across the last stretch does
-   * not trigger a fetch (Grafana keeps that last bit non-committing) — the footer
-   * is there to click instead.
-   */
-  const SCROLL_INTENT_MS = 400
-  let lastScrollIntentAt = 0
-
-  function markScrollIntent() {
-    lastScrollIntentAt = Date.now()
-  }
-
-  const showLoadMoreBar = computed(() => props.hasMore && (props.loadingMore || nearEnd.value))
-
-  function syncScrollXOffset() {
-    const el = rootEl.value?.querySelector('.vxe-table--scroll-x-virtual') as HTMLElement | null
-    scrollXOffset.value = el ? el.offsetHeight : 0
-  }
-
-  /** Total content height in px (fixed row height, or averaged when wrapping). */
-  function estimateContentHeight(): number {
-    if (!props.wrapLine || !props.data.length) {
-      return props.data.length * rowHeight.value
-    }
-    const rowEls = rootEl.value?.querySelectorAll('.vxe-body--row')
-    if (!rowEls?.length) {
-      return props.data.length * rowHeight.value
-    }
-    let total = 0
-    rowEls.forEach((el) => {
-      total += (el as HTMLElement).offsetHeight
-    })
-    return (total / rowEls.length) * props.data.length
-  }
-
-  function requestLoadMore() {
-    // Parents own the "is there more" decision; only avoid stacking requests.
-    if (props.loadingMore) {
-      return
-    }
-    reachEndArmed = false
-    emit('reachEnd')
-  }
-
-  function onScroll(params: { isY?: boolean; scrollTop?: number; scrollHeight?: number; bodyHeight?: number }) {
-    closeCellDetail()
-    clearDetailHoverCell()
-    const { isY, scrollTop, scrollHeight, bodyHeight } = params
-    if (!isY || scrollTop == null || scrollHeight == null || bodyHeight == null) {
-      return
-    }
-    const remaining = scrollHeight - scrollTop - bodyHeight
-    lastScrollTop = scrollTop
-    nearEnd.value = remaining <= NEAR_END_PX
-    if (remaining <= AUTO_LOAD_PX) {
-      syncScrollXOffset()
-      const deliberate = Date.now() - lastScrollIntentAt <= SCROLL_INTENT_MS
-      if (reachEndArmed && deliberate) {
-        requestLoadMore()
-      }
-    } else if (remaining > REARM_PX) {
-      reachEndArmed = true
-    }
-  }
-
-  function onLoadMoreClick() {
-    requestLoadMore()
-  }
-
-  /**
-   * Recompute the end state from real geometry. A page that does not fill the
-   * viewport has nothing to scroll, so the footer shows up right away and the user
-   * clicks it to continue. Auto-loading stays tied to real scroll events, which
-   * keeps repeated appends from feeding themselves.
-   */
-  function checkViewportFilled() {
-    nextTick(() => {
-      if (!props.hasMore) {
-        nearEnd.value = false
-        return
-      }
-      const bodyEl = rootEl.value?.querySelector('.vxe-table--body-wrapper') as HTMLElement | null
-      if (!bodyEl) {
-        return
-      }
-      syncScrollXOffset()
-      // VXE virtual scrolling keeps the wheel offset internally, so the wrapper's
-      // scrollHeight stays at the viewport height — estimate the content height.
-      const remaining = estimateContentHeight() - lastScrollTop - bodyEl.clientHeight
-      nearEnd.value = remaining <= NEAR_END_PX
-    })
-  }
 
   watch(
     () => props.data.length,
     () => {
-      checkViewportFilled()
+      loadMore.checkViewportFilled()
     }
   )
 
   watch(
     () => [props.hasMore, props.loadingMore] as const,
     () => {
-      if (!props.hasMore) {
-        nearEnd.value = false
-      }
-      checkViewportFilled()
+      loadMore.checkViewportFilled()
     },
     { immediate: true }
   )
 
-  onMounted(() => {
-    checkViewportFilled()
-    rootEl.value?.addEventListener('pointerdown', onDetailPointerDown)
-    rootEl.value?.addEventListener('mouseover', updateDetailHoverCell)
-    rootEl.value?.addEventListener('mouseleave', clearDetailHoverCell)
-    rootEl.value?.addEventListener('wheel', markScrollIntent, { passive: true })
-    rootEl.value?.addEventListener('touchmove', markScrollIntent, { passive: true })
-    window.addEventListener('keydown', onDetailKeydown)
-  })
-
-  onBeforeUnmount(() => {
-    clearDetailHoverCell()
-    rootEl.value?.removeEventListener('pointerdown', onDetailPointerDown)
-    rootEl.value?.removeEventListener('mouseover', updateDetailHoverCell)
-    rootEl.value?.removeEventListener('mouseleave', clearDetailHoverCell)
-    rootEl.value?.removeEventListener('wheel', markScrollIntent)
-    rootEl.value?.removeEventListener('touchmove', markScrollIntent)
-    window.removeEventListener('keydown', onDetailKeydown)
-    closeCellDetail()
-  })
-
   // The scrollbar only exists once the grid is laid out — re-measure when the
   // footer appears so it never covers the horizontal scrollbar.
-  watch(showLoadMoreBar, (visible) => {
+  watch(loadMore.showLoadMoreBar, (visible) => {
     if (visible) {
-      nextTick(syncScrollXOffset)
+      nextTick(loadMore.syncScrollXOffset)
     }
   })
 
@@ -1078,37 +570,6 @@
       clearDetailHoverCell()
     }
   )
-
-  function onCellClick({ row, column, $event }: { row: TableData; column: { field?: string }; $event?: MouseEvent }) {
-    const rowIndex = typeof row.__rowIndex === 'number' ? row.__rowIndex : -1
-    const original = getOriginalRow(row)
-    const field = column?.field
-    if (field && props.tsColumn?.name && field === props.tsColumn.name) {
-      if (props.tsCellDetail) {
-        emit('tsCellClick', original, rowIndex)
-        return
-      }
-      changeTsView()
-      return
-    }
-    // Secondary time columns only toggle the format (legacy changeTsView parity).
-    if (field && isTimeColumn(props.columns.find((c) => c.name === field))) {
-      changeTsView()
-      return
-    }
-    if (isDetailCellTarget($event)) {
-      return
-    }
-    if (props.columnMode === 'separate') {
-      if (field && !isTimeField(field) && field !== props.linkColumn && row[field]) {
-        scheduleCellDetail(row, field, $event)
-      }
-      return
-    }
-    if (field === '__merged_message' && row.__merged_message) {
-      scheduleCellDetail(row, field, $event)
-    }
-  }
 </script>
 
 <style lang="less" scoped>

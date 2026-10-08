@@ -1,7 +1,6 @@
 <template lang="pug">
-#log-table-container(ref="tableContainer" :class="{ 'hide-table-header': !showHeader && !useVxe }")
+#log-table-container(ref="tableContainer")
   LogsVxeTable(
-    v-if="useVxe"
     :data="data"
     :columns="columns"
     :displayed-columns="displayedColumns"
@@ -14,6 +13,7 @@
     :size="size"
     :show-header="showHeader"
     :wrap-line="wrapLine"
+    :virtual="virtual"
     :show-context-menu="sqlMode === 'builder'"
     :active-row-key="detailVisible ? selectedRowKey : null"
     :link-column="traceIdColumn"
@@ -23,37 +23,6 @@
     @column-link-click="handleTraceClick"
     @filter-condition-add="handleFilterConditionAdd"
   )
-  DataTable(
-    v-else
-    :data="data"
-    :columns="columns"
-    :column-mode="columnMode"
-    :displayed-columns="displayedColumns"
-    :loading="loading"
-    :size="size"
-    :wrap-line="wrapLine"
-    :virtual-list-props="virtualListPropsBinding"
-    :column-resizable="columnMode === 'separate' && virtual"
-    :row-selection="rowSelection"
-    :selected-keys="exportSelectedKeys"
-    :ts-column="tsColumn"
-    :ts-cell-detail="tsCellDetail"
-    :active-row-key="detailVisible ? selectedRowKey : null"
-    :show-context-menu="sqlMode === 'builder'"
-    :show-header="arcoShowHeader"
-    :allow-virtual-h-scroll="allowMergedVirtualHScroll"
-    :link-column="traceIdColumn"
-    :link-column-title="traceLinkTitle"
-    :class="dataTableClass"
-    @filter-condition-add="handleFilterConditionAdd"
-    @row-select="$emit('rowSelect', $event)"
-    @ts-cell-click="handleTsClick"
-    @column-link-click="handleTraceClick"
-    @update:selected-keys="handleSelectedKeysUpdate"
-  )
-    template(v-if="$slots['column-level']" #column-level="slotProps")
-      slot(name="column-level" v-bind="slotProps")
-
   LogDetail(
     v-if="rowDetail"
     v-model:visible="detailVisible"
@@ -67,9 +36,7 @@
 </template>
 
 <script setup lang="ts" name="LogTableData">
-  import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount, defineAsyncComponent } from 'vue'
-  import { useI18n } from 'vue-i18n'
-  import { useElementSize } from '@vueuse/core'
+  import { ref, computed, defineAsyncComponent } from 'vue'
   import type { ColumnType, TSColumn } from '@/types/query'
   import LogDetail from './LogDetail.vue'
 
@@ -94,11 +61,9 @@
       hasMore?: boolean
       /** A load-more request is in flight. */
       loadingMore?: boolean
-      exportRowSelection?: Record<string, unknown>
-      selectedKeys?: number[]
+      /** Disable row virtualization (small previews). */
       virtual?: boolean
       showHeader?: boolean
-      allowMergedVirtualHScroll?: boolean
       /** LogDetail drawer mount target (nested drawers need a non-clipped ancestor). */
       detailPopupContainer?: string
       /** When set, this column's values are links that emit traceClick. */
@@ -118,137 +83,26 @@
       loading: false,
       hasMore: false,
       loadingMore: false,
-      exportRowSelection: undefined,
-      selectedKeys: () => [],
       virtual: true,
       showHeader: true,
-      allowMergedVirtualHScroll: false,
       detailPopupContainer: '#log-table-container',
       traceIdColumn: '',
       rowDetail: true,
     }
   )
 
-  const emit = defineEmits(['filterConditionAdd', 'rowSelect', 'updateSelectedKeys', 'reachEnd', 'traceClick'])
-
-  const { t } = useI18n()
-  const traceLinkTitle = computed(() => (props.traceIdColumn ? t('drilldown.logs.openTrace') : ''))
-
-  /**
-   * Virtual logs path uses VXE (perf + horizontal scroll).
-   * Export checkbox selection and non-virtual preview stay on Arco DataTable.
-   */
-  const useVxe = computed(() => props.virtual && !props.exportRowSelection)
+  const emit = defineEmits(['filterConditionAdd', 'rowSelect', 'reachEnd', 'traceClick'])
 
   const selectedRowKey = ref<number | null>(null)
   const selectedRecord = computed(() => props.data[selectedRowKey.value])
-
-  const tableContainer = ref<HTMLElement | null>(null)
-  const { height: measuredHeight } = useElementSize(tableContainer)
-  /** Keep the last real height so a hidden tab (0×0) does not drop virtual-list mode. */
-  const stableHeight = ref(0)
-  watch(measuredHeight, (next) => {
-    if (next > 0) {
-      stableHeight.value = next
-    }
-  })
-  const height = computed(() => stableHeight.value || measuredHeight.value)
-
-  const detailRowSelection = ref({
-    type: 'radio' as const,
-    checkStrictly: false,
-    selectedRowKeys: computed(() => [selectedRowKey.value]),
-  })
-
-  const activeRowSelection = computed(() => props.exportRowSelection ?? detailRowSelection.value)
-  const rowSelection = computed(() => (props.rowDetail ? activeRowSelection.value : props.exportRowSelection))
-  const tsCellDetail = computed(() => props.rowDetail && !!props.tsColumn && !props.exportRowSelection)
-  const exportSelectedKeys = computed(() => (props.exportRowSelection ? props.selectedKeys : undefined))
   const detailVisible = ref(false)
 
-  /**
-   * Arco virtual body widths come from measuring header <th>.
-   * Keep header mounted in virtual mode; clip when UI wants no header.
-   */
-  const arcoShowHeader = computed(() => props.showHeader || props.virtual)
+  const tsCellDetail = computed(() => props.rowDetail && !!props.tsColumn)
 
   const dataTableClass = computed(() => ({
     'builder_type': props.sqlMode === 'builder',
     'logs-table--headerless': !props.showHeader,
   }))
-
-  const headerHeight = computed(() => (props.size === 'mini' ? 25 : 38))
-
-  const virtualListHeight = computed(() => {
-    const containerHeight = height.value
-    const header = props.showHeader ? headerHeight.value : 0
-    return Math.max(0, containerHeight - header)
-  })
-
-  let reachEndArmed = true
-
-  function emitReachEnd() {
-    if (!reachEndArmed) {
-      return
-    }
-    reachEndArmed = false
-    emit('reachEnd')
-  }
-
-  function checkReachEnd(el: HTMLElement) {
-    const remaining = el.scrollHeight - el.scrollTop - el.clientHeight
-    if (remaining <= 64) {
-      emitReachEnd()
-    } else if (remaining > 120) {
-      reachEndArmed = true
-    }
-  }
-
-  function isScrollableLogsSurface(el: EventTarget | null): el is HTMLElement {
-    if (!(el instanceof HTMLElement)) {
-      return false
-    }
-    return (
-      el.classList.contains('arco-virtual-list') ||
-      el.classList.contains('sticky-scroll') ||
-      (el.classList.contains('arco-table-body') && el.scrollHeight > el.clientHeight + 1)
-    )
-  }
-
-  /** Capture on stable container — survives Arco virtual-list remounts (tableRenderKey). */
-  function onScrollCapture(event: Event) {
-    if (!isScrollableLogsSurface(event.target)) {
-      return
-    }
-    checkReachEnd(event.target)
-  }
-
-  function checkCurrentScrollRoot() {
-    const root = tableContainer.value
-    if (!root) {
-      return
-    }
-    const el =
-      root.querySelector('.arco-virtual-list') ||
-      root.querySelector('.sticky-scroll') ||
-      root.querySelector('.arco-table-body')
-    if (el instanceof HTMLElement) {
-      checkReachEnd(el)
-    }
-  }
-
-  const virtualListPropsBinding = computed(() => {
-    if (!props.virtual || virtualListHeight.value <= 0) {
-      return undefined
-    }
-    return {
-      height: virtualListHeight.value,
-      buffer: 36,
-      onReachBottom: () => {
-        emitReachEnd()
-      },
-    }
-  })
 
   const handleTraceClick = (_columnName: string, value: string) => {
     if (!value) {
@@ -258,7 +112,7 @@
   }
 
   const handleTsClick = (row: TableData, rowIndex: number) => {
-    if (!props.rowDetail || props.exportRowSelection) return
+    if (!props.rowDetail) return
     const key = typeof row.__rowIndex === 'number' ? row.__rowIndex : rowIndex
     selectedRowKey.value = key
     emit('rowSelect', row)
@@ -268,47 +122,6 @@
   const handleFilterConditionAdd = (event) => {
     emit('filterConditionAdd', event)
   }
-
-  const handleSelectedKeysUpdate = (keys: number[]) => {
-    if (props.exportRowSelection) {
-      emit('updateSelectedKeys', keys)
-    }
-  }
-
-  onMounted(() => {
-    if (useVxe.value) {
-      return
-    }
-    tableContainer.value?.addEventListener('scroll', onScrollCapture, { passive: true, capture: true })
-    nextTick(() => checkCurrentScrollRoot())
-  })
-
-  onBeforeUnmount(() => {
-    tableContainer.value?.removeEventListener('scroll', onScrollCapture, true)
-  })
-
-  // Re-arm + re-check after append (content may still not fill the viewport).
-  watch(
-    () => props.data.length,
-    () => {
-      if (useVxe.value) {
-        return
-      }
-      reachEndArmed = true
-      nextTick(() => checkCurrentScrollRoot())
-    }
-  )
-
-  watch(
-    () => [height.value, virtualListHeight.value],
-    () => {
-      if (useVxe.value || measuredHeight.value <= 0) {
-        return
-      }
-      reachEndArmed = true
-      nextTick(() => checkCurrentScrollRoot())
-    }
-  )
 </script>
 
 <style lang="less" scoped>
@@ -317,53 +130,10 @@
     display: flex;
     flex-direction: column;
 
-    :deep(.data-table-container),
     :deep(.logs-vxe-table) {
       height: 100%;
       flex: 1;
       min-height: 0;
-    }
-  }
-
-  // Keep Arco header in DOM (thWidth → body widths) but fully collapse visually.
-  #log-table-container.hide-table-header {
-    position: relative;
-
-    :deep(.arco-table-header) {
-      position: absolute !important;
-      top: 0;
-      left: 0;
-      z-index: -1;
-      width: 100%;
-      height: 0 !important;
-      max-height: 0 !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      overflow: hidden !important;
-      border: none !important;
-      opacity: 0 !important;
-      visibility: hidden !important;
-      pointer-events: none !important;
-    }
-
-    :deep(.arco-table-header .arco-table-tr),
-    :deep(.arco-table-header .arco-table-th),
-    :deep(.arco-table-header .arco-table-cell) {
-      height: 0 !important;
-      max-height: 0 !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      border: none !important;
-      line-height: 0 !important;
-      font-size: 0 !important;
-      overflow: hidden !important;
-    }
-
-    :deep(.arco-virtual-list .arco-table-td.cell-edge-left) {
-      width: 200px !important;
-      min-width: 200px !important;
-      max-width: 200px !important;
-      box-sizing: border-box;
     }
   }
 </style>

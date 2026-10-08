@@ -8,7 +8,7 @@ import {
   mergeTracesFieldMapColumns,
   tableHasRequiredTraceColumns,
 } from './field-map'
-import { traceModelScore } from '../semantics/model'
+import { compareTraceTableCandidates } from '../semantics/model'
 
 describe('traces field-map', () => {
   it('builds identity map for filter chips', () => {
@@ -82,7 +82,7 @@ describe('traces field-map', () => {
     expect(merged['resource_attributes.telemetry.sdk.name']).toBe('resource_attributes.telemetry.sdk.name')
   })
 
-  it('scores greptime_trace_v1 tables higher', () => {
+  it('ranks a declared greptime_trace_v1 table above an undeclared one', () => {
     const cols = [
       'trace_id',
       'parent_span_id',
@@ -95,8 +95,8 @@ describe('traces field-map', () => {
       'span_kind',
     ]
     expect(tableHasRequiredTraceColumns(cols)).toBe(true)
-    const v1 = traceModelScore(cols, { pipeline: 'greptime_trace_v1', tableName: 'opentelemetry_traces' })
-    const plain = traceModelScore(cols, { tableName: 'other_traces' })
-    expect(v1).toBeGreaterThan(plain)
+    const v1 = { name: 'v1_traces', evidence: { fullModel: true, declaredTrace: true } }
+    const plain = { name: 'other_traces', evidence: { fullModel: true, declaredTrace: false } }
+    expect(compareTraceTableCandidates(v1, plain)).toBeLessThan(0)
   })
 })

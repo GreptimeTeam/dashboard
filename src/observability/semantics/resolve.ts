@@ -1,15 +1,14 @@
 import { getTableEntityDeclarations, getTableSemantics, listBySignal, semanticsDump } from './source'
 import { currentDatabase } from '../current-database'
 import {
+  compareTraceTableCandidates,
   conventionEntityKeys,
   declaredMetricKindFromSemantics,
   declaredMetricUnitFromSemantics,
   declaredTemporalityFromSemantics,
   inferMetricKind,
   isTraceModel,
-  KNOWN_OTLP_TRACE_TABLE,
   TRACE_MODEL_SERVICE_COLUMN,
-  traceModelScore,
   type EntityColumnRef,
   type EntityDeclaration,
   type EntitySchemaColumn,
@@ -18,6 +17,7 @@ import {
   type MetricTemporality,
   type ResolvedEntityIdentity,
   type TableSemantics,
+  type TraceTableEvidence,
 } from './model'
 
 // ---------------------------------------------------------------------------
@@ -394,83 +394,43 @@ export async function listSignalTables(
   }
 
   const fromSemantics = await listBySignal('trace', database)
-  const semanticsByTable = new Map(fromSemantics.map((row) => [row.tableName, row.pipeline]))
   // `trace_id` is the minimum physical evidence: it supports trace-id filtering even when
-  // a custom table lacks parent/span-name/model roles. Model completeness and semantic
-  // declarations determine ranking. The store pre-filter is one cached GROUP BY query.
+  // a custom table lacks parent/span-name/model roles. The store pre-filter is one
+  // cached GROUP BY query.
   const { default: useTableSchemaStore } = await import('@/store/modules/table-schema')
   const tableSchemaStore = useTableSchemaStore()
-  const fromColumns = [...(await tableSchemaStore.tablesHavingColumn('trace_id', database))]
+  const traceCapable = await tableSchemaStore.tablesHavingColumn('trace_id', database)
+  // A declaration wins over the physical trace_id signal: a table declared as another
+  // signal (log/metric) is never a traces candidate. Undeclared trace_id-bearing
+  // tables stay in — they are the escape hatch.
+  const withSemantics = await Promise.all(
+    [...traceCapable].map(async (name) => ({ name, semantics: await getTableSemantics(name, database) }))
+  )
+  const fromColumns = withSemantics
+    .filter(({ semantics }) => !semantics?.signalType || semantics.signalType === 'trace')
+    .map(({ name }) => name)
+
+  // Names only — no columns fetch here. Full-model ranking lives in
+  // `resolveSignalTable`, the only consumer that needs it (auto-binding without an
+  // explicit table); the dropdown and builder work fine with declaration-first order.
   const candidates = uniquePreserveOrder([
     ...fromSemantics.map((row) => row.tableName),
     ...fromColumns,
     ...(options?.include ?? []).filter(Boolean),
-    KNOWN_OTLP_TRACE_TABLE,
   ])
-
-  // 批量拉取候选表 schema（一次 information_schema.columns 查询），与 logs 候选共用
-  // table-schema store 的缓存——两边重叠的表不会重复请求。
-  await tableSchemaStore.ensureTableSchemas(candidates, database).catch(() => undefined)
-
-  const scored: Array<{ name: string; score: number }> = []
-  await Promise.all(
-    candidates.map(async (name) => {
-      let columnNames: string[] = []
-      try {
-        columnNames = (await tableSchemaStore.ensureTableSchema(name, database)).map((column) => column.name)
-      } catch {
-        columnNames = []
-      }
-      if (!columnNames.length) {
-        // Keep semantics-only names even if schema fetch fails (settings / allow-create).
-        if (semanticsByTable.has(name) || options?.include?.includes(name)) {
-          scored.push({
-            name,
-            score: traceModelScore([], {
-              declaredTrace: semanticsByTable.has(name),
-              pipeline: semanticsByTable.get(name),
-              tableName: name,
-            }),
-          })
-        }
-        return
-      }
-      if (!columnNames.includes('trace_id') && !semanticsByTable.has(name)) {
-        return
-      }
-      scored.push({
-        name,
-        score: traceModelScore(columnNames, {
-          declaredTrace: semanticsByTable.has(name),
-          pipeline: semanticsByTable.get(name),
-          tableName: name,
-        }),
-      })
-    })
-  )
-
-  scored.sort((left, right) => {
-    if (right.score !== left.score) {
-      return right.score - left.score
-    }
-    return left.name.localeCompare(right.name)
-  })
-
-  return scored.map((row) => row.name)
+  if (import.meta.env.DEV) {
+    console.info('[traces-discovery] traces candidates (names only):', candidates)
+  }
+  return candidates
 }
 
 /**
- * Resolve the bound logs table.
- * Priority: explicit override → settings → listSignalTables first hit.
- */
-export async function resolveSignalTable(
-  signal: 'logs',
-  options?: { preferred?: string; settingsTable?: string; database?: string }
-): Promise<string | undefined>
-
-/**
  * Resolve the bound traces table.
- * Priority: preferred → settings → ranked listSignalTables first hit.
+ * Priority: preferred → settings → auto-bind.
+ * Auto-binding is the only path that fetches candidate columns: without full-model
+ * evidence an alphabetically-first trace_id table (e.g. an internal `_gt_logs`)
+ * would win over `opentelemetry_traces`. With preferred/settings — the normal case —
+ * no columns query happens at all.
  */
 export async function resolveSignalTable(
   signal: 'traces',
@@ -487,9 +447,55 @@ export async function resolveSignalTable(
   if (options?.settingsTable?.trim()) {
     return options.settingsTable.trim()
   }
+  if (signal === 'logs') {
+    const listed = await listSignalTables('logs', { database: options?.database })
+    return listed[0]
+  }
 
-  const listed = await listSignalTables(signal, { database: options?.database })
-  return listed[0]
+  const listed = await listSignalTables('traces', { database: options?.database })
+  if (!listed.length) {
+    return undefined
+  }
+
+  // Auto-bind: rank candidates by full greptime_trace_v1 model. One batched columns
+  // query, once — the results land in the table-schema store cache.
+  const { default: useTableSchemaStore } = await import('@/store/modules/table-schema')
+  const tableSchemaStore = useTableSchemaStore()
+  if (import.meta.env.DEV) {
+    console.info('[traces-discovery] auto-bind → schema batch:', listed)
+  }
+  await tableSchemaStore.ensureTableSchemas(listed, options?.database).catch(() => undefined)
+
+  const scored: Array<{ name: string; evidence: TraceTableEvidence }> = []
+  await Promise.all(
+    listed.map(async (name) => {
+      let columnNames: string[] = []
+      try {
+        columnNames = (await tableSchemaStore.ensureTableSchema(name, options?.database)).map((column) => column.name)
+      } catch {
+        columnNames = []
+      }
+      const semantics = await getTableSemantics(name, options?.database)
+      const declaredTrace = semantics?.signalType === 'trace'
+      // A traces table must be trace-filterable: physical trace_id or a declaration.
+      if (!columnNames.includes('trace_id') && !declaredTrace) {
+        return
+      }
+      scored.push({
+        name,
+        evidence: {
+          fullModel: isTraceModel(new Set(columnNames)),
+          declaredTrace,
+        },
+      })
+    })
+  )
+  if (!scored.length) {
+    // Every schema fetch failed — fall back to discovery order instead of nothing.
+    return listed[0]
+  }
+  scored.sort(compareTraceTableCandidates)
+  return scored[0].name
 }
 
 // ---------------------------------------------------------------------------
@@ -522,6 +528,9 @@ export async function inspectSignalTable(
     // Dynamic import keeps Pinia/table-schema out of resolve's top-level graph so
     // pure resolve consumers (and their unit tests) do not need a Vue app.
     const { default: useTableSchemaStore } = await import('@/store/modules/table-schema')
+    if (import.meta.env.DEV) {
+      console.info('[signal-binding] inspect table:', signal, name, database)
+    }
     const columns = (await useTableSchemaStore().ensureTableSchema(name, database)) as SignalTableInspection['columns']
     let serviceRef: EntityColumnRef | undefined
     try {

@@ -194,7 +194,7 @@ a-dropdown#td-context(
 <script setup lang="ts">
   import { ref, computed, nextTick, onBeforeUnmount, onMounted, shallowRef, useAttrs, watch } from 'vue'
   import { useElementSize } from '@vueuse/core'
-  import { dateTypes } from '@/views/dashboard/config'
+  import { dateTypes } from '@/constants/column-types'
   import type { ColumnType, TSColumn } from '@/types/query'
   import { useDateTimeFormat } from '@/hooks'
   import { Message } from '@arco-design/web-vue'

@@ -1,3 +1,4 @@
+import ExploreIcon from '@/assets/svg/explore.svg'
 import { AppRouteRecordRaw } from '../types'
 
 export const DEFAULT_LAYOUT = () => import('@/layout/default-layout.vue')
@@ -75,17 +76,6 @@ const DASHBOARD: AppRouteRecordRaw = {
         locale: 'menu.dashboard.logsQuery',
         requiresAuth: false,
         icon: 'Icon5',
-        roles: ['admin', 'cloud'],
-      },
-    },
-    {
-      path: 'logs-vxe-poc',
-      name: 'logs-vxe-poc',
-      component: () => import('@/views/dashboard/logs/query/vxe-poc.vue'),
-      meta: {
-        ignoreCache: true,
-        requiresAuth: false,
-        hideInMenu: true,
         roles: ['admin', 'cloud'],
       },
     },
@@ -255,7 +245,7 @@ const DASHBOARD: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.dashboard.drilldown',
         requiresAuth: false,
-        icon: 'chart',
+        icon: ExploreIcon,
         roles: ['admin', 'cloud'],
         ignoreCache: true,
       },

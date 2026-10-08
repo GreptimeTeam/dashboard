@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  compareTraceTableCandidates,
   declaredMetricKindFromSemantics,
   declaredMetricUnitFromSemantics,
   declaredTemporalityFromSemantics,
@@ -49,5 +50,25 @@ describe('semantics/model metric declaration', () => {
     expect(declaredTemporalityFromSemantics(inferred)).toBe('cumulative')
     expect(declaredMetricUnitFromSemantics(null)).toBeNull()
     expect(declaredTemporalityFromSemantics(null)).toBeNull()
+  })
+})
+
+describe('traceTableRank / compareTraceTableCandidates', () => {
+  it('ranks full model above declaration above name order', () => {
+    const full = { name: 'b_traces', evidence: { fullModel: true, declaredTrace: false } }
+    const declared = { name: 'a_traces', evidence: { fullModel: false, declaredTrace: true } }
+    const plain = { name: 'z_traces', evidence: { fullModel: false, declaredTrace: false } }
+
+    expect([full, declared, plain].sort(compareTraceTableCandidates).map((c) => c.name)).toEqual([
+      'b_traces',
+      'a_traces',
+      'z_traces',
+    ])
+  })
+
+  it('breaks ties alphabetically', () => {
+    const a = { name: 'a_traces', evidence: { fullModel: true, declaredTrace: false } }
+    const b = { name: 'b_traces', evidence: { fullModel: true, declaredTrace: false } }
+    expect([b, a].sort(compareTraceTableCandidates).map((c) => c.name)).toEqual(['a_traces', 'b_traces'])
   })
 })

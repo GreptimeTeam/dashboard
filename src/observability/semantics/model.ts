@@ -409,47 +409,41 @@ export const TRACE_MODEL_REQUIRED_COLUMNS = [
   'service_name',
 ] as const
 
-/** Extra columns that mark a fuller greptime_trace_v1 layout. */
-export const TRACE_MODEL_BONUS_COLUMNS = ['duration_nano', 'span_id', 'span_status_code', 'span_kind'] as const
-
 /** Column the model guarantees for the `service` identity. */
 export const TRACE_MODEL_SERVICE_COLUMN = 'service_name'
-
-/** Table name the OTLP pipeline writes by default. */
-export const KNOWN_OTLP_TRACE_TABLE = 'opentelemetry_traces'
 
 /** True when `columns` carries the full required model column set. */
 export function isTraceModel(columns: ReadonlySet<string>): boolean {
   return TRACE_MODEL_REQUIRED_COLUMNS.every((column) => columns.has(column))
 }
 
+/** Evidence a candidate traces table shows, in descending precedence. */
+export interface TraceTableEvidence {
+  /** Full `greptime_trace_v1` column model — server-guaranteed roles. */
+  fullModel: boolean
+  /** Declared by semantics (`signal_type='trace'` or the trace pipeline). */
+  declaredTrace: boolean
+}
+
 /**
- * How strongly a candidate looks like the greptime_trace_v1 model. Higher is better.
- * A semantic `signal_type='trace'` declaration is positive evidence, but remains below
- * the full column model so an undeclared complete model still wins.
+ * Candidate ranking as an explicit precedence tuple (higher wins, lexicographic):
+ * full model first, then a semantics declaration, and finally alphabetical order —
+ * no numeric weights to reason about.
  */
-export function traceModelScore(
-  columnNames: string[],
-  options?: { declaredTrace?: boolean; pipeline?: string; tableName?: string }
+export function traceTableRank(evidence: TraceTableEvidence): [number, number] {
+  return [evidence.fullModel ? 1 : 0, evidence.declaredTrace ? 1 : 0]
+}
+
+export function compareTraceTableCandidates(
+  left: { name: string; evidence: TraceTableEvidence },
+  right: { name: string; evidence: TraceTableEvidence }
 ): number {
-  const set = new Set(columnNames)
-  let score = 0
-  if (TRACE_MODEL_REQUIRED_COLUMNS.every((name) => set.has(name))) {
-    score += 100
-  }
-  TRACE_MODEL_BONUS_COLUMNS.forEach((name) => {
-    if (set.has(name)) {
-      score += 10
+  const leftRank = traceTableRank(left.evidence)
+  const rightRank = traceTableRank(right.evidence)
+  for (let i = 0; i < leftRank.length; i += 1) {
+    if (rightRank[i] !== leftRank[i]) {
+      return rightRank[i] - leftRank[i]
     }
-  })
-  if (options?.declaredTrace) {
-    score += 40
   }
-  if (options?.pipeline === 'greptime_trace_v1') {
-    score += 50
-  }
-  if (options?.tableName === KNOWN_OTLP_TRACE_TABLE) {
-    score += 20
-  }
-  return score
+  return left.name.localeCompare(right.name)
 }

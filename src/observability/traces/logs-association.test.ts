@@ -115,6 +115,10 @@ function mockQualifiedTables(tables: string[]) {
   resolveServiceRef.mockImplementation(async (table: string) =>
     table === '_gt_logs' ? undefined : { column: 'service_name' }
   )
+  // The auto probe only trusts declarations — every probeable fixture is declared log.
+  getSemantics.mockImplementation(async (table: string) =>
+    table === 'no_trace_logs' ? undefined : { signalType: 'log' }
+  )
 }
 
 /** runSQL hit helper: the batched probe returns one (table, service) evidence row per hit. */
@@ -277,6 +281,8 @@ describe('trace logs routing', () => {
     const probeSql = String(runSQL.mock.calls[0]?.[0])
     expect(probeSql).toContain('UNION ALL')
     expect(probeSql).toContain(`"service_name" IN ('checkout')`)
+    // Learning evidence must be trace-carrying logs, not just any rows of the service.
+    expect(probeSql).toContain('"trace_id" IS NOT NULL')
     expect(probeSql).toContain('FROM_UNIXTIME(100)')
     expect(updateTracesDrilldownSettings).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -320,6 +326,7 @@ describe('trace logs routing', () => {
     // (dbs × page table × window × services) — they must share one discovery/probe.
     ensureTableSchema.mockResolvedValue(OTelLogsColumns)
     resolveServiceRef.mockResolvedValue({ column: 'service_name' })
+    getSemantics.mockResolvedValue({ signalType: 'log' })
     mockProbeHits([['legacy_logs', 'checkout']])
 
     let releaseList!: (tables: string[]) => void
@@ -395,13 +402,48 @@ describe('trace logs routing', () => {
     listTables.mockResolvedValue(['otel_logs', 'go_gc_heap_allocs_bytes_total'])
     tablesHavingColumn.mockImplementation(async () => new Set(['otel_logs']))
     ensureTableSchema.mockResolvedValue(OTelLogsColumns)
+    getSemantics.mockImplementation(async (table: string) =>
+      table === 'otel_logs' ? { signalType: 'log' } : undefined
+    )
 
     await resolveTraceLogsForServices(createContext(), ['checkout'])
 
     // The undeclared metrics table never reaches a schema fetch — only the
-    // trace_id-bearing table does.
+    // declared log table does.
     expect(ensureTableSchemas).toHaveBeenCalledWith(['otel_logs'], 'logs_db')
     expect(ensureTableSchema).not.toHaveBeenCalledWith('go_gc_heap_allocs_bytes_total', 'logs_db')
+  })
+
+  it('issues no schema batch at all when no table is declared log', async () => {
+    // Regression: the probe used to batch-fetch schemas for every trace_id-bearing
+    // table and qualify afterwards. The declaration filter now runs before any
+    // information_schema.columns request — an undeclared database yields zero
+    // candidates, zero schema queries and the current-binding fallback.
+    const allTables = [
+      '_gt_logs',
+      'logs_attr_test',
+      'opentelemetry_logs',
+      'web_trace_demo',
+      'web_trace_demo1',
+      'web_trace_demo2',
+      'web_trace_demo3',
+      'web_trace_demo4',
+    ]
+    listTables.mockResolvedValue(allTables)
+    tablesHavingColumn.mockImplementation(async () => new Set(allTables))
+    ensureTableSchema.mockResolvedValue(OTelLogsColumns)
+    getSemantics.mockResolvedValue(undefined)
+
+    const resolution = await resolveTraceLogsForServices(createContext(), ['checkout'])
+
+    expect(ensureTableSchemas).not.toHaveBeenCalled()
+    expect(runSQL).not.toHaveBeenCalled()
+    expect(resolution.targets.checkout).toEqual({
+      service: 'checkout',
+      database: 'logs_db',
+      table: 'current_logs',
+      source: 'current',
+    })
   })
 
   it('falls back to the current Logs binding when nothing qualifies or matches', async () => {
@@ -471,9 +513,10 @@ describe('trace logs routing', () => {
     expect(updateTracesDrilldownSettings).not.toHaveBeenCalled()
   })
 
-  it('excludes undeclared span-shaped tables from probe candidates', async () => {
-    // web_trace_demo-style table: trace_id + service identity but no semantics
-    // declaration and no log-payload column — span shape alone must not qualify.
+  it('excludes undeclared tables and trace-model shapes from probe candidates', async () => {
+    // web_trace_demo-style table: trace_id + service identity — but the trace model
+    // shape excludes it outright; opentelemetry_logs is undeclared, and the probe
+    // only trusts `signal_type='log'` declarations.
     listTables.mockResolvedValue(['opentelemetry_logs', 'web_trace_demo'])
     ensureTableSchema.mockImplementation(async (table: string) =>
       table === 'web_trace_demo' ? TraceModelColumns : OTelLogsColumns
@@ -525,7 +568,7 @@ describe('trace logs routing', () => {
 })
 
 describe('trace logs table qualification', () => {
-  it('flexibly qualifies a non-OTel logs table with trace_id but no service identity', async () => {
+  it('qualifies an undeclared custom table for manual mapping (no service identity)', async () => {
     getSemantics.mockResolvedValue(undefined)
     resolveServiceRef.mockResolvedValue(undefined)
 
@@ -539,21 +582,36 @@ describe('trace logs table qualification', () => {
       'logs_db'
     )
 
-    // Manual mapping only needs trace filtering — the missing service identity just
-    // means the table can never be auto-probed.
-    expect(result).toEqual({ identityExpr: undefined, timeColumn: 'timestamp' })
+    // Qualification never guesses from payload-like columns: undeclared tables pass
+    // for manual mapping, and `declaredLog: false` keeps them out of the auto probe.
+    expect(result).toEqual({ identityExpr: undefined, timeColumn: 'timestamp', declaredLog: false })
   })
 
-  it('still rejects tables without logs evidence or trace filtering', async () => {
+  it('marks declared log tables as probeable', async () => {
+    getSemantics.mockResolvedValue({ signalType: 'log' })
+    resolveServiceRef.mockResolvedValue({ column: 'service_name' })
+
+    const result = await qualifyTraceLogsTable('otel_logs', OTelLogsColumns, 'logs_db')
+
+    expect(result).toMatchObject({ declaredLog: true, identityExpr: '"service_name"' })
+  })
+
+  it('still rejects trace-model shapes, other-signal declarations, and tables without trace filtering', async () => {
     getSemantics.mockResolvedValue(undefined)
     resolveServiceRef.mockResolvedValue({ column: 'service_name' })
 
-    // No payload column and undeclared → not a logs table.
-    expect(
-      await qualifyTraceLogsTable('some_metrics', [{ name: 'timestamp' }, { name: 'value' }], 'logs_db')
-    ).toBeUndefined()
     // Trace-model shape → the traces table itself.
     expect(await qualifyTraceLogsTable('opentelemetry_traces', TraceModelColumns, 'logs_db')).toBeUndefined()
+    // Declared as another signal (metrics) → not a logs table.
+    getSemantics.mockResolvedValue({ signalType: 'metric' })
+    expect(
+      await qualifyTraceLogsTable('some_metrics', [{ name: 'timestamp' }, { name: 'trace_id' }], 'logs_db')
+    ).toBeUndefined()
+    // No trace_id column → row-level trace filtering is impossible.
+    getSemantics.mockResolvedValue(undefined)
+    expect(
+      await qualifyTraceLogsTable('no_trace_logs', [{ name: 'timestamp' }, { name: 'value' }], 'logs_db')
+    ).toBeUndefined()
   })
 })
 
