@@ -123,8 +123,8 @@ export default function useDrilldownFilterOptions(
 
   /**
    * Whether a committed chip belongs in this combobox.
-   * Logs: every filter key except severity (Level select owns it) and the resolved service
-   * role (the logs service select owns it).
+   * Logs detail: hide severity / resolved service — LevelFilter + service select own them.
+   * Logs overview: show them in the top bar (those controls only exist on detail).
    */
   const isVisibleFilterKey = (key: string): boolean => {
     const trimmed = key.trim()
@@ -134,17 +134,25 @@ export default function useDrilldownFilterOptions(
 
     if (ctx.connection.signal.value === 'logs') {
       const fieldMap = ctx.semantics.logs.fieldMap.value
+      // Detail toolbar owns severity / service display; on overview the top bar is the only
+      // place Add to filter chips can appear (homepage labels default to service / primaryGroupBy).
       const severityCol = fieldMap.severity
-      if (trimmed === 'severity' || (severityCol && trimmed === severityCol)) {
-        return false
-      }
-      // The logs service select (detail toolbar) owns the service role display: it edits the
-      // same shared filter, so the resolved key (a JSON chip like
-      // `resource_attributes.service.name`, or a physical column) is not repeated here.
-      // The canonical `service` alias stays visible — the select only syncs the resolved key.
       const serviceCol = resolveLogsRoles(ctx).service
-      if (serviceCol && trimmed === serviceCol) {
-        return false
+      const isSeverityKey = trimmed === 'severity' || (Boolean(severityCol) && trimmed === severityCol)
+      const isServiceKey = Boolean(serviceCol) && trimmed === serviceCol
+      if (ctx.ui.logsView.value === 'detail') {
+        // Same shared filter as LevelFilter / service select — do not duplicate the pill.
+        // Canonical `service` alias stays visible; the select only syncs the resolved key.
+        if (isSeverityKey || isServiceKey) {
+          return false
+        }
+      } else if (isSeverityKey || isServiceKey) {
+        return true
+      }
+      // Homepage Labels default to primaryGroupBy; keep that column visible even before
+      // suggest keys finish loading (no dedicated toolbar control owns it).
+      if (fieldMap.primaryGroupBy && trimmed === fieldMap.primaryGroupBy) {
+        return true
       }
       // JSON attribute chips (e.g. `resource_attributes.service.name`) are valid filters
       // even though they are not physical columns — keep them visible.

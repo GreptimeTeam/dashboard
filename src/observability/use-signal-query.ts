@@ -13,8 +13,31 @@ export interface UseSignalQueryOptions {
 }
 
 /**
+ * Logs overview is compose mode: Include / Add to filter only updates chips.
+ * Queries ignore those filters until Select / Show logs opens detail (same rule as
+ * `buildLogsContextWhere` includeLabelFilters). Trace→logs drawer still watches filters.
+ */
+function shouldWatchFilters(ctx: DrilldownContext, signal: SignalQuerySignal): boolean {
+  if (signal !== 'logs') {
+    return true
+  }
+  if (ctx.ui?.logsView?.value === 'detail') {
+    return true
+  }
+  return Boolean(ctx.ui?.logsTraceId?.value?.trim())
+}
+
+function filtersSignature(ctx: DrilldownContext, signal: SignalQuerySignal) {
+  if (!shouldWatchFilters(ctx, signal)) {
+    return []
+  }
+  return (ctx.query.filters.value || []).map((filter) => [filter.key, filter.op, filter.value])
+}
+
+/**
  * Single reactive query pipeline for a bound signal.
- * Watches: semantics[signal].revision, query.filters, query.time, query.rangeTime, query.refreshKey, enabled, params.
+ * Watches: semantics[signal].revision, query.filters (detail / non-logs), query.time,
+ * query.rangeTime, query.refreshKey, enabled, params.
  * Skips when !semantics[signal].ready or enabled===false.
  * Signature dedupe: identical JSON signature skips.
  * Stale drop: requestId; ignore results after a newer run started (run() should check via returned controller if needed).
@@ -41,7 +64,7 @@ export default function useSignalQuery(
       sem.database.value,
       sem.table.value,
       sem.revision.value,
-      (ctx.query.filters.value || []).map((filter) => [filter.key, filter.op, filter.value]),
+      filtersSignature(ctx, signal),
       ctx.query.time.value,
       ctx.query.rangeTime.value[0],
       ctx.query.rangeTime.value[1],
@@ -76,7 +99,9 @@ export default function useSignalQuery(
       ctx.semantics[signal].revision.value,
       ctx.semantics[signal].database.value,
       ctx.semantics[signal].table.value,
-      (ctx.query.filters.value || []).map((filter) => [filter.key, filter.op, filter.value]),
+      filtersSignature(ctx, signal),
+      ctx.ui?.logsView?.value,
+      ctx.ui?.logsTraceId?.value,
       ctx.query.time.value,
       ctx.query.rangeTime.value[0],
       ctx.query.rangeTime.value[1],

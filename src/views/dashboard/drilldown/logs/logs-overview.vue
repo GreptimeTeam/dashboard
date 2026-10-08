@@ -64,6 +64,7 @@ a-layout-content.layout-content
   const settingsVisible = ref(false)
   const logsTable = computed(() => ctx.semantics.logs.table.value)
 
+  // Overview compose mode ignores label filters for queries — do not resume-refresh on chip-only changes.
   const depsKey = () =>
     JSON.stringify([
       ctx.query.refreshKey.value,
@@ -71,7 +72,6 @@ a-layout-content.layout-content
       ctx.query.time.value,
       ctx.query.rangeTime.value[0],
       ctx.query.rangeTime.value[1],
-      ctx.query.filters.value,
     ])
 
   const keepAlive = useDrilldownKeepAlive({ deps: depsKey })

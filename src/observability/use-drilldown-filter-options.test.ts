@@ -22,7 +22,11 @@ vi.mock('./logs/field-map', () => ({
   isLogsContainsFilterKey: () => false,
 }))
 
-const makeCtx = (signal: 'metrics' | 'logs' | 'traces', logsFieldMap: Record<string, string>) =>
+const makeCtx = (
+  signal: 'metrics' | 'logs' | 'traces',
+  logsFieldMap: Record<string, string>,
+  logsView: 'overview' | 'detail' = 'detail'
+) =>
   ({
     connection: {
       signal: ref(signal),
@@ -51,32 +55,45 @@ const makeCtx = (signal: 'metrics' | 'logs' | 'traces', logsFieldMap: Record<str
     },
     ui: {
       metric: ref(undefined),
+      logsView: ref(logsView),
     },
     actions: {},
   } as unknown as DrilldownContext)
 
 describe('useDrilldownFilterOptions isVisibleFilterKey', () => {
-  it('hides the resolved service chip on logs — the service select owns its display', () => {
-    const ctx = makeCtx('logs', { service: 'resource_attributes.service.name' })
+  it('hides the resolved service chip on logs detail — the service select owns its display', () => {
+    const ctx = makeCtx('logs', { service: 'resource_attributes.service.name' }, 'detail')
     const { isVisibleFilterKey } = useDrilldownFilterOptions(ctx)
     expect(isVisibleFilterKey('resource_attributes.service.name')).toBe(false)
   })
 
-  it('hides the physical service column on logs when the role is a column', () => {
-    const ctx = makeCtx('logs', { service: 'service_name' })
+  it('hides the physical service column on logs detail when the role is a column', () => {
+    const ctx = makeCtx('logs', { service: 'service_name' }, 'detail')
     const { isVisibleFilterKey } = useDrilldownFilterOptions(ctx)
     expect(isVisibleFilterKey('service_name')).toBe(false)
   })
 
+  it('shows the service chip on logs overview where there is no service select', () => {
+    const ctx = makeCtx('logs', { service: 'resource_attributes.service.name' }, 'overview')
+    const { isVisibleFilterKey } = useDrilldownFilterOptions(ctx)
+    expect(isVisibleFilterKey('resource_attributes.service.name')).toBe(true)
+  })
+
+  it('shows the physical service column on logs overview', () => {
+    const ctx = makeCtx('logs', { service: 'service_name' }, 'overview')
+    const { isVisibleFilterKey } = useDrilldownFilterOptions(ctx)
+    expect(isVisibleFilterKey('service_name')).toBe(true)
+  })
+
   it('keeps other JSON attribute chips and the canonical service alias visible on logs', () => {
-    const ctx = makeCtx('logs', { service: 'resource_attributes.service.name' })
+    const ctx = makeCtx('logs', { service: 'resource_attributes.service.name' }, 'detail')
     const { isVisibleFilterKey } = useDrilldownFilterOptions(ctx)
     expect(isVisibleFilterKey('resource_attributes.deployment.environment')).toBe(true)
     expect(isVisibleFilterKey('service')).toBe(true)
   })
 
   it('keeps the service chip visible while no service role is resolved', () => {
-    const ctx = makeCtx('logs', {})
+    const ctx = makeCtx('logs', {}, 'detail')
     const { isVisibleFilterKey } = useDrilldownFilterOptions(ctx)
     expect(isVisibleFilterKey('resource_attributes.service.name')).toBe(true)
   })
