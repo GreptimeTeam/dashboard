@@ -179,7 +179,8 @@
     flex: 1 1 0;
     min-height: 0;
     overflow: auto;
-    padding: var(--gpt-gap-lg) var(--gpt-page-padding-x) var(--gpt-page-padding-x);
+    /* Same inset as card gap so edge rhythm matches the grid. */
+    padding: var(--gpt-gap-lg);
     background: var(--gpt-bg-app);
   }
 
