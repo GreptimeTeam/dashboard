@@ -3,7 +3,7 @@
   a-radio-group.variant-toggle(
     v-if="isHistogram"
     type="button"
-    size="mini"
+    size="small"
     :model-value="prefs.variant"
     @update:model-value="onVariantChange"
   )
@@ -16,7 +16,7 @@
     position="br"
     :popup-max-height="280"
   )
-    a-button.configure-trigger(type="outline" size="mini")
+    a-button.configure-trigger(type="outline" size="small")
       span.configure-label {{ currentConfigureLabel }}
       icon-down.configure-caret
     template(#content)
@@ -29,7 +29,7 @@
 
   a-button(
     type="outline"
-    size="mini"
+    size="small"
     :disabled="!primaryPromql"
     @click="openInExplore"
   )

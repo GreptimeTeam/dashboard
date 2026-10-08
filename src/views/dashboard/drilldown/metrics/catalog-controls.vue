@@ -3,7 +3,7 @@
   span.sort-label {{ t('drilldown.main.sortLabel') }}
   a-select.sort-select(
     v-model="sortModel"
-    size="mini"
+    size="small"
     :bordered="false"
     :options="sortOptions"
     :trigger-props="{ autoFitPopupMinWidth: true }"
@@ -36,7 +36,7 @@
     flex-shrink: 0;
     align-items: center;
     gap: var(--gpt-gap-xs);
-    padding: var(--gpt-gap-sm) 10px;
+    padding: var(--gpt-gap-sm) var(--gpt-gap-lg);
     border-bottom: 1px solid var(--gpt-border-default);
   }
 

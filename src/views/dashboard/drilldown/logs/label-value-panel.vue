@@ -5,10 +5,10 @@
       span.panel-title-text {{ titleText }}
       span.panel-count {{ countLabel }}
     .panel-actions
-      a-button(type="primary" size="mini" @click="openDetail") {{ t('drilldown.logs.showLogs') }}
+      a-button(type="primary" size="small" @click="openDetail") {{ t('drilldown.logs.showLogs') }}
       a-button(
         type="outline"
-        size="mini"
+        size="small"
         :class="{ 'is-included': isIncluded }"
         @click="toggleInclude"
       ) {{ includeLabel }}

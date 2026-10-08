@@ -4,7 +4,7 @@ article.metric-catalog-card.drilldown-card(ref="targetRef")
     .drilldown-card__title-row(:title="metricName")
       span.drilldown-card__title {{ metricName }}
       span.drilldown-card__meta {{ kindLabel }}
-    a-button(type="outline" size="mini" @click="selectMetric")
+    a-button(type="outline" size="small" @click="selectMetric")
       | {{ t('drilldown.main.selectMetric') }}
   .drilldown-card__body
     DrilldownChartPanel(

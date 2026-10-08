@@ -97,7 +97,7 @@
     justify-content: space-between;
     gap: var(--gpt-gap-md);
     width: 100%;
-    height: 36px;
+    height: var(--gpt-size-panel-tab-nav);
     padding: 0 var(--gpt-page-padding-x);
     border: 0;
     background: var(--gpt-table-toolbar-bg);

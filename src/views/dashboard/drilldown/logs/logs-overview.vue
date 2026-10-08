@@ -13,13 +13,16 @@ a-layout-content.layout-content
               a-select.drilldown-table-select(
                 allow-search
                 allow-create
+                size="medium"
                 :model-value="logsTable"
                 :placeholder="t('drilldown.logs.tablePlaceholder')"
                 :loading="loadingTables"
                 @change="onTableChange"
               )
                 a-option(v-for="name in tableOptions" :key="name" :value="name") {{ name }}
-            a-button(type="text" size="small" @click="settingsVisible = true")
+            a-button(type="outline" size="medium" @click="settingsVisible = true")
+              template(#icon)
+                icon-settings
               | {{ t('drilldown.logs.settingsButton') }}
 
         a-alert(
@@ -30,7 +33,7 @@ a-layout-content.layout-content
           :description="t('drilldown.logs.noTableDescription')"
         )
           template(#action)
-            a-button(type="primary" size="small" @click="settingsVisible = true")
+            a-button(type="primary" size="medium" @click="settingsVisible = true")
               | {{ t('drilldown.logs.settingsButton') }}
 
         .logs-overview-labels(v-else)
@@ -42,6 +45,7 @@ a-layout-content.layout-content
 <script setup lang="ts">
   import { computed, onMounted, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
+  import { IconSettings } from '@arco-design/web-vue/es/icon'
   import { useDrilldownContext } from '@/observability/context'
   import useDrilldownKeepAlive from '@/observability/use-drilldown-keep-alive'
   import useSignalTableOptions from '@/observability/use-signal-table-options'

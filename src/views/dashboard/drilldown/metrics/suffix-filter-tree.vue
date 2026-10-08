@@ -4,7 +4,7 @@
     span.suffix-filter-count {{ t('drilldown.sidebar.suffixSelected', { count: selected.length }) }}
     a-button(
       type="text"
-      size="mini"
+      size="small"
       :disabled="!selected.length"
       @click="clearSelection"
     ) {{ t('drilldown.sidebar.suffixClear') }}
@@ -103,7 +103,7 @@
   }
 
   .suffix-filter-option {
-    min-height: 28px;
+    min-height: var(--gpt-control-height-sm);
     display: flex;
     align-items: center;
   }

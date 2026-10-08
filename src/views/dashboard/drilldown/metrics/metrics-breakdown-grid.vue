@@ -3,11 +3,10 @@
   .breakdown-toolbar
     .breakdown-by-label
       span.drilldown-control-label {{ t('drilldown.breakdown.byLabel') }}
-      a-select(
+      a-select.drilldown-filter-select(
         v-model="groupBySelection"
         allow-clear
         size="small"
-        :style="{ width: '220px' }"
         :placeholder="t('drilldown.breakdown.byLabelAll')"
         @change="onGroupByChange"
         @clear="backToAllLabels"

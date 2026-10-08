@@ -42,7 +42,7 @@
   display: grid;
   grid-template-columns: var(--gpt-table-sidebar-label-col-width) 1fr;
   gap: var(--gpt-gap-sm);
-  padding: var(--gpt-gap-md) 10px;
+  padding: var(--gpt-gap-md) var(--gpt-gap-lg);
   border-bottom: 1px solid var(--gpt-border-default);
 
   &__label,
@@ -53,7 +53,7 @@
     width: 100%;
     min-width: 0;
     min-height: 30px;
-    padding: 0 10px;
+    padding: 0 var(--gpt-gap-lg);
     border-radius: var(--gpt-radius-sm);
     background: var(--grey-bg-color);
     color: var(--gpt-text-primary);
@@ -87,8 +87,8 @@
     .arco-select-view-single,
     .arco-input-wrapper {
       min-height: 30px;
-      padding-right: 10px;
-      padding-left: 10px;
+      padding-right: var(--gpt-gap-lg);
+      padding-left: var(--gpt-gap-lg);
       border: none;
       background: transparent;
 

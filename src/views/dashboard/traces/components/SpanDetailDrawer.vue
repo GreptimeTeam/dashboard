@@ -19,7 +19,7 @@ a-drawer(
       .span-header-main
         .span-name {{ span?.span_name }}
         a-typography-text.trace-id-value(copyable :copy-text="span?.span_id") {{ span?.span_id }}
-      a-button.panel-view-logs(v-if="logsTraceEnabled" size="mini" @click="$emit('viewLogs', span)")
+      a-button.panel-view-logs(v-if="logsTraceEnabled" size="small" @click="$emit('viewLogs', span)")
         span {{ t('drilldown.traces.openLogs') }}
         span.panel-view-logs-target(v-if="logsTargetLabel" :title="logsTargetLabel") {{ logsTargetLabel }}
     .summary-container
@@ -58,10 +58,10 @@ a-drawer(
   .panel-header
     .panel-header-main
       span.panel-title Span Attributes
-      a-button.panel-view-logs(v-if="logsTraceEnabled" size="mini" @click="$emit('viewLogs', span)")
+      a-button.panel-view-logs(v-if="logsTraceEnabled" size="small" @click="$emit('viewLogs', span)")
         span {{ t('drilldown.traces.openLogs') }}
         span.panel-view-logs-target(v-if="logsTargetLabel" :title="logsTargetLabel") {{ logsTargetLabel }}
-    a-button(type="text" size="mini" @click="updateVisible(false)")
+    a-button(type="text" size="small" @click="updateVisible(false)")
       template(#icon)
         icon-close
   .span-attributes-content.panel-body

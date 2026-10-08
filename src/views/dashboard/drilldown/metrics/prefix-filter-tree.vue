@@ -4,7 +4,7 @@
     span.prefix-filter-count {{ t('drilldown.sidebar.prefixSelected', { count: selected.length }) }}
     a-button(
       type="text"
-      size="mini"
+      size="small"
       :disabled="!selected.length"
       @click="clearSelection"
     ) {{ t('drilldown.sidebar.prefixClear') }}
@@ -201,10 +201,10 @@
     display: flex;
     align-items: center;
     gap: var(--gpt-gap-xs);
-    min-height: 28px;
+    min-height: var(--gpt-control-height-sm);
 
     &--child {
-      padding-left: 28px;
+      padding-left: var(--gpt-control-height-sm);
     }
   }
 
@@ -212,8 +212,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
+    width: var(--gpt-gap-2xl);
+    height: var(--gpt-gap-2xl);
     padding: 0;
     border: none;
     background: transparent;

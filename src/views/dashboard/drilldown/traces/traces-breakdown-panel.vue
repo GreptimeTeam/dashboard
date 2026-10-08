@@ -6,7 +6,7 @@ article.traces-breakdown-panel.drilldown-card(ref="targetRef")
     a-button(
       v-if="canAddToFilter"
       type="outline"
-      size="mini"
+      size="small"
       @click="addToFilter"
     )
       | {{ t('drilldown.filters.addToFilter') }}

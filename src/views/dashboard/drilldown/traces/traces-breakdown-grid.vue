@@ -3,11 +3,10 @@
   .breakdown-toolbar
     .breakdown-by-label
       span.drilldown-control-label {{ t('drilldown.traces.breakdownByAttr') }}
-      a-select(
+      a-select.drilldown-filter-select(
         v-model="groupByColumn"
         allow-search
         size="small"
-        :style="{ width: '280px' }"
         :placeholder="t('drilldown.traces.breakdownByAttrPlaceholder')"
         :loading="loadingAttrs"
       )

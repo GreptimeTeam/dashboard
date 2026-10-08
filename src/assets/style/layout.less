@@ -363,7 +363,7 @@
   height: 100%;
 
   > .arco-tabs-nav {
-    height: 37px;
+    height: var(--gpt-size-panel-tab-nav);
     background: var(--gpt-bg-surface);
     border-bottom: 1px solid var(--gpt-border-default);
 
@@ -383,20 +383,20 @@
         border-radius: 0;
 
         &.arco-tabs-tab-active {
-          color: var(--brand-color);
+          color: var(--gpt-main-purple);
           font-weight: 600;
         }
       }
     }
 
     .arco-tabs-nav-ink {
-      background: var(--brand-color);
+      background: var(--gpt-main-purple);
     }
   }
 
   .arco-tabs-content {
-    // Match nav height (37px); previous 28px left a ~9px gap / overflow mismatch.
-    height: calc(100% - 37px);
+    // Match nav height; previous 28px left a ~9px gap / overflow mismatch.
+    height: calc(100% - var(--gpt-size-panel-tab-nav));
     padding: 0;
 
     > .arco-tabs-content-list {

@@ -18,8 +18,8 @@ a-card(:bordered="false")
             .column-controls
               a-space(direction="vertical" size="small")
                 a-space
-                  a-button(type="text" size="mini" @click="selectAllColumns") Select All
-                  a-button(type="text" size="mini" @click="deselectAllColumns") Deselect All
+                  a-button(type="text" size="small" @click="selectAllColumns") Select All
+                  a-button(type="text" size="small" @click="deselectAllColumns") Deselect All
                 a-checkbox-group(v-model="displayedColumns" direction="vertical")
                   a-checkbox(v-for="column in columns" :key="column.name" :value="column.name")
                     | {{ column.name }}

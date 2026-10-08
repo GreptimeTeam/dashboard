@@ -4,12 +4,12 @@
   .gpt-table-sidebar-header
     .gpt-table-sidebar-header__label {{ t('dashboard.database') }}
     .gpt-table-sidebar-header__control
-      SignalDatabaseSelect(v-model="metricsDatabase" size="mini" block)
+      SignalDatabaseSelect(v-model="metricsDatabase" size="small" block)
     .gpt-table-sidebar-header__meta(:title="catalogCountLabel") {{ catalogCountLabel }}
     .gpt-table-sidebar-header__control
       a-input.search-input(
         v-model="searchModel"
-        size="mini"
+        size="small"
         allow-clear
         :placeholder="t('drilldown.main.searchPlaceholder')"
       )
@@ -138,7 +138,7 @@
   .sidebar-title {
     flex-shrink: 0;
     margin: 0;
-    padding: var(--gpt-gap-md) 10px;
+    padding: var(--gpt-gap-md) var(--gpt-gap-lg);
     font-size: var(--gpt-font-md);
     font-weight: var(--gpt-font-weight-bold);
     line-height: 1.2;
@@ -151,7 +151,7 @@
     flex-direction: column;
     gap: var(--gpt-gap-md);
     min-height: 0;
-    padding: var(--gpt-gap-md) 10px;
+    padding: var(--gpt-gap-md) var(--gpt-gap-lg);
     overflow: hidden;
   }
 
@@ -196,12 +196,12 @@
 
   .filter-mode-count {
     display: inline-flex;
-    min-width: 16px;
-    height: 16px;
-    padding: 0 4px;
+    min-width: var(--gpt-gap-xl);
+    height: var(--gpt-gap-xl);
+    padding: 0 var(--gpt-gap-xs);
     font-size: var(--gpt-font-xs);
     font-weight: var(--gpt-font-weight-medium);
-    line-height: 16px;
+    line-height: var(--gpt-gap-xl);
     color: var(--gpt-text-inverse);
     background: var(--gpt-main-purple);
     border-radius: var(--gpt-radius-md);

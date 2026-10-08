@@ -8,21 +8,21 @@ article.metrics-breakdown-panel.drilldown-card(ref="targetRef")
       a-button(
         v-if="values.length > 1"
         type="outline"
-        size="mini"
+        size="small"
         @click="emit('select')"
       )
         | {{ t('drilldown.breakdown.selectLabel') }}
       a-button(
         v-else-if="canAddSingleValue"
         type="outline"
-        size="mini"
+        size="small"
         @click="addSingleValueToFilter"
       )
         | {{ t('drilldown.filters.addToFilter') }}
     a-button(
       v-else-if="canAddToFilter"
       type="outline"
-      size="mini"
+      size="small"
       @click="addToFilter"
     )
       | {{ t('drilldown.filters.addToFilter') }}

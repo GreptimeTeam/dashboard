@@ -3,8 +3,8 @@
   .logs-main-volume(v-if="showVolume")
     LogsVolumeMiniChart(sync-severity-filter :lazy="false")
 
-  .logs-results-toolbar
-    .logs-results-toolbar-left
+  .drilldown-toolbar.logs-results-toolbar
+    .drilldown-toolbar__left
       span.results-header
         span {{ t('drilldown.logs.logsSectionTitle') }}
         span.results-count(v-if="tableData.length")
@@ -27,14 +27,14 @@
       a-checkbox(v-model="wrap" size="small")
         span {{ t('logsQuery.wrapLines') }}
 
-    .logs-results-toolbar-right
+    .drilldown-toolbar__right
       a-trigger(
         v-if="tableColumns.length"
         trigger="click"
         size="small"
         :unmount-on-close="false"
       )
-        a-button(type="text")
+        a-button(type="text" size="small")
           span.gpt-text-secondary {{ t('logsQuery.columns') }}
         template(#content)
           a-card.gpt-popover-panel
@@ -189,27 +189,6 @@
     border: 1px solid var(--gpt-border-default);
     border-radius: var(--gpt-radius-md);
     background: var(--gpt-bg-panel);
-  }
-
-  .logs-results-toolbar {
-    display: flex;
-    flex-shrink: 0;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--gpt-gap-md) var(--gpt-gap-lg);
-    padding: var(--gpt-gap-md) var(--gpt-page-padding-x);
-    border-bottom: 1px solid var(--gpt-border-default);
-    background: var(--gpt-table-toolbar-bg);
-  }
-
-  .logs-results-toolbar-left,
-  .logs-results-toolbar-right {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--gpt-gap-md) var(--gpt-gap-lg);
-    min-width: 0;
   }
 
   .results-header {

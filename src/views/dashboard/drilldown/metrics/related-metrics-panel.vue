@@ -3,10 +3,9 @@
   .related-metrics-controls
     .view-by
       span.drilldown-control-label {{ t('drilldown.relatedMetrics.viewBy') }}
-      a-select(
+      a-select.drilldown-filter-select(
         v-model="viewByPrefix"
         size="small"
-        :style="{ width: '260px' }"
         :placeholder="t('drilldown.relatedMetrics.viewByAll')"
       )
         a-option(value="all") {{ t('drilldown.relatedMetrics.viewByAll') }}

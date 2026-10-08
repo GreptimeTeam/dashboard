@@ -209,6 +209,12 @@
   width: 240px;
 }
 
+/* Breakdown / related / gantt filter selects — same width family as table select. */
+.drilldown-filter-select {
+  width: 240px;
+  min-width: 240px;
+}
+
 /*
  * a-select 根节点是 fragment（trigger span + Teleport），Vue 不会把 SFC scoped 的
  * data-v 属性落到 trigger span 上，scoped 宽度规则永远不命中 —— 宽度类必须放全局
@@ -360,8 +366,8 @@
   .arco-drawer-close-btn {
     display: inline-flex;
     flex-shrink: 0;
-    width: 28px;
-    height: 28px;
+    width: var(--gpt-control-height-sm);
+    height: var(--gpt-control-height-sm);
     align-items: center;
     justify-content: center;
     margin-left: var(--gpt-page-padding-x);
@@ -389,7 +395,7 @@
 .drilldown-body .drilldown-drawer--logs .arco-drawer-header {
   align-items: stretch;
   height: auto;
-  min-height: 37px;
+  min-height: var(--gpt-size-panel-tab-nav);
   padding: 0;
 
   .arco-drawer-title {
@@ -520,7 +526,7 @@
   min-width: 0;
   min-height: calc(var(--gpt-control-height-sm) + var(--gpt-gap-sm));
   padding: var(--gpt-gap-sm) var(--gpt-page-padding-x);
-  padding-right: calc(28px + var(--gpt-page-padding-x) + var(--gpt-gap-sm));
+  padding-right: calc(var(--gpt-control-height-sm) + var(--gpt-page-padding-x) + var(--gpt-gap-sm));
   align-items: center;
   border-bottom: 1px solid var(--gpt-border-default);
 }
@@ -546,8 +552,8 @@
   right: var(--gpt-gap-md);
   z-index: 1;
   display: inline-flex;
-  width: 28px;
-  height: 28px;
+  width: var(--gpt-control-height-sm);
+  height: var(--gpt-control-height-sm);
   align-items: center;
   justify-content: center;
   padding: 0;

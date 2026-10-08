@@ -95,7 +95,7 @@ nav.signal-tab-nav.signal-tab-nav--tabs(v-else role="tablist" :aria-label="ariaL
   }
 
   .signal-tab-nav--tabs {
-    height: 37px;
+    height: var(--gpt-size-panel-tab-nav);
     flex-shrink: 0;
   }
 

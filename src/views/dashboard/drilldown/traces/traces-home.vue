@@ -13,6 +13,7 @@ a-layout-content.layout-content
               a-select.drilldown-table-select(
                 allow-search
                 allow-create
+                size="medium"
                 :model-value="tracesTable"
                 :placeholder="t('drilldown.traces.tablePlaceholder')"
                 :loading="loadingTables"
@@ -20,7 +21,7 @@ a-layout-content.layout-content
               )
                 a-option(v-for="name in tableOptions" :key="name" :value="name") {{ name }}
           .drilldown-toolbar__right
-            a-button.trace-logs-settings-trigger(size="small" @click="traceLogsSettingsVisible = true")
+            a-button.trace-logs-settings-trigger(type="outline" size="medium" @click="traceLogsSettingsVisible = true")
               template(#icon)
                 icon-settings
               | {{ t('drilldown.traces.logsSettingsShortTitle') }}

@@ -1,17 +1,16 @@
 <template lang="pug">
 .traces-gantt
-  .gantt-toolbar
-    .trace-summary
+  .drilldown-toolbar.gantt-toolbar
+    .drilldown-toolbar__left.trace-summary
       span.operation-name {{ rootSpan?.span_name || t('drilldown.traces.unknownOperation') }}
       a-tag.span-count {{ spans.length }} span{{ spans.length === 1 ? '' : 's' }}
-    .service-filter
+    .drilldown-toolbar__right.service-filter
       span.drilldown-field-label {{ t('drilldown.traces.servicesFilter') }}
-      a-select(
+      a-select.drilldown-filter-select(
         v-model="selectedServices"
         multiple
         allow-clear
         size="small"
-        style="min-width: 200px"
         :placeholder="t('drilldown.traces.servicesPlaceholder')"
       )
         a-option(v-for="service in uniqueServices" :key="service" :value="service") {{ service }}
@@ -189,36 +188,14 @@
     overflow: hidden;
   }
 
-  .gantt-toolbar {
-    display: flex;
-    flex-shrink: 0;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--gpt-gap-md) var(--gpt-gap-xl);
-    padding: var(--gpt-gap-md) var(--gpt-page-padding-x);
-    border-bottom: 1px solid var(--gpt-border-default);
-    background: var(--gpt-table-toolbar-bg);
-  }
-
   .trace-summary {
-    display: inline-flex;
     flex-wrap: wrap;
-    gap: var(--gpt-gap-md);
-    align-items: center;
-    min-width: 0;
   }
 
   .operation-name {
     font-size: var(--gpt-font-lg);
     font-weight: var(--gpt-font-weight-control);
     color: var(--gpt-text-primary);
-  }
-
-  .service-filter {
-    display: flex;
-    gap: var(--gpt-gap-md);
-    align-items: center;
   }
 
   .gantt-spin {
