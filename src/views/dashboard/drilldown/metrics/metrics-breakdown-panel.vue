@@ -4,21 +4,14 @@ article.metrics-breakdown-panel.drilldown-card(ref="targetRef")
     .drilldown-card__title-row(:title="titleText")
       span.drilldown-card__title {{ titleText }}
       span.drilldown-card__meta(v-if="mode === 'label'") {{ values.length }} {{ t('drilldown.breakdown.values') }}
-    a-space(v-if="mode === 'label'" size="small")
-      a-button(
-        v-if="values.length > 1"
-        type="outline"
-        size="small"
-        @click="emit('select')"
-      )
-        | {{ t('drilldown.breakdown.selectLabel') }}
-      a-button(
-        v-else-if="canAddSingleValue"
-        type="outline"
-        size="small"
-        @click="addSingleValueToFilter"
-      )
-        | {{ t('drilldown.filters.addToFilter') }}
+    //- Grafana MetricLabelsList: hide Select when series.length === 1; no Add to filter on label cards
+    a-button(
+      v-if="mode === 'label' && values.length > 1"
+      type="outline"
+      size="small"
+      @click="emit('select')"
+    )
+      | {{ t('drilldown.breakdown.selectLabel') }}
     a-button(
       v-else-if="canAddToFilter"
       type="outline"
@@ -94,9 +87,10 @@ article.metrics-breakdown-panel.drilldown-card(ref="targetRef")
     })
 
   const values = ref<string[]>([])
-  const singleValue = computed(() => (values.value.length === 1 ? values.value[0] : undefined))
-  const canAddSingleValue = computed(() => Boolean(singleValue.value) && singleValue.value !== '<unspecified>')
-  const canAddToFilter = computed(() => Boolean(props.value) && props.value !== '<unspecified>')
+  // Add to filter only on value cards (Grafana AddToFiltersGraphAction), never on label cards
+  const canAddToFilter = computed(
+    () => props.mode === 'value' && Boolean(props.value) && props.value !== '<unspecified>'
+  )
   const titleText = computed(() => (props.mode === 'label' ? props.labelKey : `${props.labelKey}="${props.value}"`))
   const chartRenderKey = computed(
     () => `${props.metric}:${props.labelKey}:${props.mode}:${props.value ?? ''}:${promqlQuery.value}`
@@ -107,14 +101,6 @@ article.metrics-breakdown-panel.drilldown-card(ref="targetRef")
       return
     }
     values.value = await fetchBreakdownLabelValues(ctx, props.metric, props.labelKey)
-  }
-
-  function addSingleValueToFilter() {
-    const nextValue = singleValue.value
-    if (!nextValue || nextValue === '<unspecified>') {
-      return
-    }
-    ctx.actions.appendFilter({ key: props.labelKey, op: '=', value: nextValue })
   }
 
   function addToFilter() {
