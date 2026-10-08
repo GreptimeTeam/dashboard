@@ -36,7 +36,9 @@ article.metric-catalog-card.drilldown-card(ref="targetRef")
 <script setup lang="ts">
   import { computed, toRef, type MaybeRefOrGetter } from 'vue'
   import { useI18n } from 'vue-i18n'
+  import { useRoute, useRouter } from 'vue-router'
   import { useDrilldownContext } from '@/observability/context'
+  import { drilldownQueriesEqual } from '@/observability/drilldown-url-history'
   import { inferMetricKind } from '@/observability/semantics'
   import {
     metricKindLabelKey,
@@ -61,8 +63,9 @@ article.metric-catalog-card.drilldown-card(ref="targetRef")
   )
 
   const { t } = useI18n()
+  const route = useRoute()
+  const router = useRouter()
   const ctx = useDrilldownContext()
-  const { metric } = ctx.ui
   const metricName = toRef(props, 'metricName')
   const colorIndex = computed(() => props.colorIndex ?? 0)
   const { targetRef, hasBeenVisible } = useLazyPanelQuery(props.scrollRoot)
@@ -87,9 +90,22 @@ article.metric-catalog-card.drilldown-card(ref="targetRef")
     () => `${props.metricName}:${panelType.value}:${promqlQuery.value}:${props.colorIndex ?? 0}`
   )
 
+  /**
+   * Enter metric detail via URL (Grafana MetricSelectedEvent → new MetricScene).
+   * Drop `tab` so URL sync restores default breakdown and remounts the detail shell.
+   */
   const selectMetric = () => {
-    metric.value = props.metricName
-    rememberRecentMetric(props.metricName)
+    const name = props.metricName.trim()
+    if (!name) {
+      return
+    }
+    rememberRecentMetric(name)
+    const nextQuery = { ...route.query, metric: name }
+    delete nextQuery.tab
+    if (drilldownQueriesEqual(route.query as Record<string, unknown>, nextQuery as Record<string, unknown>)) {
+      return
+    }
+    router.push({ query: nextQuery })
   }
 </script>
 

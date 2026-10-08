@@ -16,8 +16,8 @@
         @close="closeDrawer"
       )
         template(#actions)
-          MetricDetailActions(v-if="selectedMetric" :metric="selectedMetric")
-        MetricDetail(v-if="selectedMetric" :metric="selectedMetric")
+          MetricDetailActions(v-if="selectedMetric" :key="selectedMetric" :metric="selectedMetric")
+        MetricDetail(v-if="selectedMetric" :key="selectedMetric" :metric="selectedMetric")
 
     .drilldown-body.new-layout.new-layout--workspace.drilldown-body--logs(v-else-if="signal === 'logs'")
       keep-alive
