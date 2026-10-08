@@ -1,8 +1,8 @@
 <template lang="pug">
 .metrics-breakdown-grid
   .breakdown-toolbar
-    .breakdown-by-label
-      span.drilldown-control-label {{ t('drilldown.breakdown.byLabel') }}
+    span.drilldown-toolbar__group
+      span.drilldown-toolbar__label {{ t('drilldown.breakdown.byLabel') }}
       a-select.drilldown-filter-select(
         v-model="groupBySelection"
         allow-clear
@@ -166,15 +166,9 @@
 
   .breakdown-toolbar {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: space-between;
     gap: var(--gpt-gap-lg);
     padding: var(--gpt-gap-lg) var(--gpt-page-padding-x) 0;
-  }
-
-  .breakdown-by-label {
-    display: flex;
-    flex-direction: column;
-    gap: var(--gpt-gap-xs);
   }
 </style>

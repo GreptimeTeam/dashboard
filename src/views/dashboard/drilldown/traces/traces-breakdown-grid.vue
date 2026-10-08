@@ -1,8 +1,8 @@
 <template lang="pug">
 .traces-breakdown-grid
   .breakdown-toolbar
-    .breakdown-by-label
-      span.drilldown-control-label {{ t('drilldown.traces.breakdownByAttr') }}
+    span.drilldown-toolbar__group
+      span.drilldown-toolbar__label {{ t('drilldown.traces.breakdownByAttr') }}
       a-select.drilldown-filter-select(
         v-model="groupByColumn"
         allow-search
@@ -175,15 +175,9 @@
   .breakdown-toolbar {
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-end;
+    align-items: center;
     gap: var(--gpt-gap-xl);
     padding: var(--gpt-gap-lg) var(--gpt-page-padding-x) 0;
-  }
-
-  .breakdown-by-label {
-    display: flex;
-    flex-direction: column;
-    gap: var(--gpt-gap-xs);
   }
 
   .traces-breakdown-grid__values {
