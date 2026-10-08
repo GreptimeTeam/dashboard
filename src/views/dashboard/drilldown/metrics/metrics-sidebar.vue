@@ -1,6 +1,5 @@
 <template lang="pug">
 .metrics-sidebar
-  h2.sidebar-title {{ t('drilldown.sidebar.title') }}
   .gpt-table-sidebar-header
     .gpt-table-sidebar-header__label {{ t('dashboard.database') }}
     .gpt-table-sidebar-header__control
@@ -133,16 +132,6 @@
   /* Narrower sidebar than the table one: slim label column keeps controls usable. */
   .metrics-sidebar .gpt-table-sidebar-header {
     --gpt-table-sidebar-label-col-width: 90px;
-  }
-
-  .sidebar-title {
-    flex-shrink: 0;
-    margin: 0;
-    padding: var(--gpt-gap-md) var(--gpt-gap-lg);
-    font-size: var(--gpt-font-md);
-    font-weight: var(--gpt-font-weight-bold);
-    line-height: 1.2;
-    color: var(--gpt-text-primary);
   }
 
   .sidebar-name-filters {

@@ -20,6 +20,7 @@ a-layout-content.layout-content
                 @change="onTableChange"
               )
                 a-option(v-for="name in tableOptions" :key="name" :value="name") {{ name }}
+          .drilldown-toolbar__right
             a-button(type="outline" size="medium" @click="settingsVisible = true")
               template(#icon)
                 icon-settings

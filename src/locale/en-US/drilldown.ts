@@ -59,7 +59,6 @@ export default {
   'drilldown.queryResults.loadError': 'Failed to load query results',
   'drilldown.queryResults.emptyDescription': 'No query results in the current time range',
   'drilldown.queryResults.heatmapEmptyDescription': 'Heatmap results are shown in the main chart only',
-  'drilldown.sidebar.title': 'Metrics catalog',
   'drilldown.sidebar.catalog': 'Browse',
   'drilldown.sidebar.nameFilters': 'Filter by name',
   'drilldown.sidebar.filters': 'Filter metrics',

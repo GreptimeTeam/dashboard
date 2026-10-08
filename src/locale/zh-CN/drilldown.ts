@@ -59,7 +59,6 @@ export default {
   'drilldown.queryResults.loadError': '加载查询结果失败',
   'drilldown.queryResults.emptyDescription': '当前时间范围内无查询结果',
   'drilldown.queryResults.heatmapEmptyDescription': 'Heatmap 结果请在主图中查看',
-  'drilldown.sidebar.title': '指标目录',
   'drilldown.sidebar.catalog': '浏览',
   'drilldown.sidebar.nameFilters': '按名称筛选',
   'drilldown.sidebar.filters': '筛选指标',
