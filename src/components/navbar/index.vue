@@ -33,7 +33,8 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
       )
         span {{ $t(item.meta.locale) }}
         template(#icon)
-          svg.icon-18(:id="`menu-${item.name}`")
+          component.icon-18(v-if="isComponentIcon(item.meta.icon)" :is="item.meta.icon" :id="`menu-${item.name}`")
+          svg.icon-18(v-else :id="`menu-${item.name}`")
             use(:href="`#${item.meta.icon}`")
     .support-divider(v-if="showSupportSection")
     .support-section(v-if="showSupportSection")
@@ -89,10 +90,13 @@ CommandPalette(ref="commandPaletteRef")
   import { useNews } from '@/hooks/news'
   import useLocale from '@/hooks/locale'
   import useGreptimeVersion from '@/composables/use-greptime-version'
+  import type { Component } from 'vue'
   import useMenuTree from '../menu/use-menu-tree'
   import NewsModal from './news-modal.vue'
   import StarMarketingCard from './star-marketing-card.vue'
   import CommandPalette from '../command-palette/index.vue'
+
+  const isComponentIcon = (icon: unknown): icon is Component => typeof icon !== 'string' && !!icon
 
   const router = useRouter()
   const appStore = useAppStore()

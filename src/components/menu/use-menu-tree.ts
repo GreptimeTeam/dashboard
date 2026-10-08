@@ -4,6 +4,15 @@ import usePermission from '@/hooks/permission'
 import { useAppStore } from '@/store'
 import appClientMenus from '@/router/app-menus'
 
+/** Deep-clone menu routes without JSON.stringify so meta.icon components survive. */
+function cloneMenuRoutes(routes: RouteRecordRaw[]): RouteRecordRaw[] {
+  return routes.map((route) => ({
+    ...route,
+    meta: route.meta ? { ...route.meta } : undefined,
+    children: route.children ? cloneMenuRoutes(route.children) : undefined,
+  }))
+}
+
 export default function useMenuTree() {
   const permission = usePermission()
   const appStore = useAppStore()
@@ -14,7 +23,7 @@ export default function useMenuTree() {
     return appClientMenus
   })
   const menuTree = computed(() => {
-    const copyRouter = JSON.parse(JSON.stringify(appRoute.value))
+    const copyRouter = cloneMenuRoutes(appRoute.value as RouteRecordRaw[])
     copyRouter.sort((a: RouteRecordNormalized, b: RouteRecordNormalized) => {
       return (a.meta.order || 0) - (b.meta.order || 0)
     })
