@@ -43,7 +43,6 @@
           ref="sqlBuilderRef"
           storage-key="traces-query-table"
           signal-database-kind="traces"
-          :tables-provider="listTraceTablesForBuilder"
           :form-state="builderFormState"
           :quick-field-names="['service_name', 'span_name', 'span_status_code', 'span_kind', 'trace_id']"
           :default-form-state="defaultFormState"
@@ -81,8 +80,6 @@
   import { IconCode, IconDown, IconRight, IconDownload } from '@arco-design/web-vue/es/icon'
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import SqlTextEditor from '@/components/sql-text-editor/index.vue'
-  import { listSignalTables } from '@/observability/semantics'
-  import { getSignalDatabase } from '@/observability/signal-database'
   import TraceTable from './components/TraceTable.vue'
 
   defineOptions({
@@ -121,11 +118,6 @@
 
   const allResults = ref([])
 
-  async function listTraceTablesForBuilder() {
-    // 与 builder 展示的 database 保持一致：traces signal db（Explorer 与 Query 页共享），
-    // 否则会扫描经典查询页的全局 current db，用户在 Explorer 里选的表在这里不可见。
-    return listSignalTables('traces', { database: getSignalDatabase('traces') })
-  }
   const chartExpanded = useLocalStorage('trace-chart-expanded', true)
   const countChartRef = ref()
   const sqlBuilderRef = ref()

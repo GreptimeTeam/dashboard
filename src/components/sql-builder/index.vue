@@ -183,6 +183,7 @@ a-modal(
   import { storeToRefs } from 'pinia'
   import editorAPI from '@/api/editor'
   import { useAppStore } from '@/store'
+  import { listSignalTables } from '@/observability/semantics'
   import { getSignalDatabase, setSignalDatabase } from '@/observability/signal-database'
   import type { Condition, BuilderFormState as Form } from '@/types/query'
   import { TsTypeMapping } from '@/utils/date-time'
@@ -212,10 +213,13 @@ a-modal(
   const props = defineProps<{
     formState: Form | null
     tableFilter?: string | string[] // Optional column(s) tables must have (e.g. 'trace_id' or ['trace_id', 'parent_span_id'])
-    /** Optional async table list; when set, overrides tableFilter discovery. */
+    /** Optional async table list; when set, overrides signalDatabaseKind / tableFilter discovery. */
     tablesProvider?: () => Promise<string[]>
     storageKey?: string // Optional storage key for localStorage (e.g., 'logs-query-table', 'traces-query-table')
-    /** When set, form.database reads/writes the shared signal-db preference. */
+    /**
+     * When set, form.database reads/writes the shared signal-db preference, and the table
+     * dropdown uses Drilldown `listSignalTables` (unless `tablesProvider` is provided).
+     */
     signalDatabaseKind?: 'logs' | 'traces'
     quickFieldNames?: string[] // Array of field names for quick condition buttons
     defaultFormState?: Form
@@ -459,6 +463,13 @@ a-modal(
     try {
       if (props.tablesProvider) {
         tables.value = await props.tablesProvider()
+      } else if (props.signalDatabaseKind) {
+        // Same discovery/ranking as Drilldown Explore (listSignalTables).
+        const include = [form.table, lastSelectedTable.value].filter(Boolean)
+        tables.value = await listSignalTables(props.signalDatabaseKind, {
+          database: form.database || getSignalDatabase(props.signalDatabaseKind),
+          include,
+        })
       } else {
         const columns = [props.tableFilter ?? []].flat().filter(Boolean)
         let sql = `SELECT DISTINCT table_name FROM information_schema.columns WHERE table_catalog = '${currentTableCatalog.value}' AND table_schema = '${currentTableSchema.value}'`
