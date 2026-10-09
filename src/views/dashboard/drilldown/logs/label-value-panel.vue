@@ -19,6 +19,7 @@
         LogsTable(
           v-if="tableColumns.length"
           sql-mode="builder"
+          filter-menu-kind="drilldown"
           column-mode="merged-with-keys"
           size="mini"
           :virtual="false"
@@ -53,12 +54,11 @@
   import { useDrilldownContext } from '@/observability/context'
   import { loadDrilldownSettings } from '@/observability/drilldown-settings'
   import resolveLogsRoles from '@/observability/logs/resolved-roles'
-  import { addFilter, filterIncludesValue } from '@/observability/filters'
+  import { addFilter, filterIncludesValue, isDrilldownFilterOp, normalizeFilterOp } from '@/observability/filters'
   import { chipKeyForLogsTableFilter } from '@/observability/logs/field-map'
   import { logsServiceFilterCandidateKeys } from '@/observability/semantics'
   import useDrilldownLogsTable from '@/observability/use-drilldown-logs-table'
   import useLazyPanelQuery from '@/observability/use-lazy-panel-query'
-  import type { DrilldownFilterOp } from '@/observability/types'
   import LogsVolumeMiniChart from './logs-volume-mini-chart.vue'
 
   // Runtime props: avoid type-only defineProps binding issues under HMR.
@@ -145,14 +145,14 @@
     ctx.actions.toggleFilterValue({ key: props.labelCol, op: '=', value: props.labelValue })
   }
 
-  function mapOperator(operator: string): DrilldownFilterOp {
-    if (operator === '!=' || operator === '=~' || operator === '!~') return operator
-    return '='
-  }
-
   function onFilterConditionAdd(event: { columnName: string; operator: string; value: unknown }) {
-    const value = event.value == null ? '' : String(event.value)
-    if (!value) return
+    const value = event.value == null ? '' : String(event.value).trim()
+    if (!value) {
+      return
+    }
+    const column = tableColumns.value.find((col) => col.name === event.columnName)
+    const rawOp = isDrilldownFilterOp(event.operator) ? event.operator : '='
+    const op = normalizeFilterOp(column?.data_type, rawOp)
     const settings = loadDrilldownSettings(ctx.connection.logsDatabase.value).logs
     const chipKey = chipKeyForLogsTableFilter(event.columnName, tableColumns.value, ctx.semantics.logs.fieldMap.value, {
       labelInclude: settings.labelInclude,
@@ -160,7 +160,7 @@
       fieldInclude: settings.fieldInclude,
       fieldExclude: settings.fieldExclude,
     })
-    ctx.actions.appendFilter({ key: chipKey, op: mapOperator(event.operator), value })
+    ctx.actions.appendFilter({ key: chipKey, op, value })
   }
 </script>
 

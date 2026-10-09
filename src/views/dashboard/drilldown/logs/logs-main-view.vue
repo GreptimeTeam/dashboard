@@ -51,6 +51,7 @@
       v-if="tableColumns.length"
       :key="`${logsTableName}-${columnModeKey}`"
       sql-mode="builder"
+      filter-menu-kind="drilldown"
       detail-popup-container=".drilldown-body--logs"
       :column-mode="columnMode"
       :size="size"
@@ -80,7 +81,7 @@
   import resolveLogsRoles from '@/observability/logs/resolved-roles'
   import useDrilldownLogsTable from '@/observability/use-drilldown-logs-table'
   import useLogsTablePrefs from '@/observability/use-logs-table-prefs'
-  import type { DrilldownFilterOp } from '@/observability/types'
+  import { isDrilldownFilterOp, normalizeFilterOp } from '@/observability/filters'
   import LogsVolumeMiniChart from './logs-volume-mini-chart.vue'
 
   const props = withDefaults(
@@ -138,18 +139,14 @@
     ctx.actions.openTraceGantt(String(traceId || ''))
   }
 
-  const mapOperator = (operator: string): DrilldownFilterOp => {
-    if (operator === '!=' || operator === '=~' || operator === '!~') {
-      return operator
-    }
-    return '='
-  }
-
   const onFilterConditionAdd = (event: { columnName: string; operator: string; value: unknown }) => {
-    const value = event.value == null ? '' : String(event.value)
+    const value = event.value == null ? '' : String(event.value).trim()
     if (!value) {
       return
     }
+    const column = tableColumns.value.find((col) => col.name === event.columnName)
+    const rawOp = isDrilldownFilterOp(event.operator) ? event.operator : '='
+    const op = normalizeFilterOp(column?.data_type, rawOp)
     const settings = loadDrilldownSettings(ctx.connection.logsDatabase.value).logs
     const chipKey = chipKeyForLogsTableFilter(event.columnName, tableColumns.value, ctx.semantics.logs.fieldMap.value, {
       labelInclude: settings.labelInclude,
@@ -157,7 +154,7 @@
       fieldInclude: settings.fieldInclude,
       fieldExclude: settings.fieldExclude,
     })
-    ctx.actions.appendFilter({ key: chipKey, op: mapOperator(event.operator), value })
+    ctx.actions.appendFilter({ key: chipKey, op, value })
   }
 
   watch(

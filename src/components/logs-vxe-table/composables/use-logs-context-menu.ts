@@ -1,13 +1,53 @@
 import { computed, ref, shallowRef, type Ref } from 'vue'
 import type { ColumnType } from '@/types/query'
+import { filterOpsForType } from '@/observability/filters'
 import getCellString from '../utils/cell-text'
 import type { TableData } from '../types'
 
 export type FilterMenuPayload = { columnName: string; operator: string; value: unknown }
 
+/** Logs Query SQL builder vs Explore drilldown chips (`=~` / no LIKE). */
+export type LogsFilterMenuKind = 'sql-builder' | 'drilldown'
+
+const FILTER_MENU_PREFIX = 'filter_'
+
+/** Parse `filter_NOT LIKE` → `NOT LIKE` (split on first `_` only breaks multi-word ops). */
+export function parseFilterMenuOperator(action: string): string {
+  if (!action.startsWith(FILTER_MENU_PREFIX)) {
+    return ''
+  }
+  return action.slice(FILTER_MENU_PREFIX.length)
+}
+
+function sqlBuilderFilterOps(column: ColumnType | undefined, isTime: boolean): string[] {
+  if (!column) {
+    return []
+  }
+  if (column.data_type && column.data_type.toLowerCase() === 'json') {
+    return []
+  }
+  if (isTime) {
+    return ['>=', '<=']
+  }
+  return ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'NOT LIKE']
+}
+
+function drilldownFilterOps(column: ColumnType | undefined, isTime: boolean): string[] {
+  if (!column) {
+    return []
+  }
+  if (column.data_type && column.data_type.toLowerCase() === 'json') {
+    return []
+  }
+  if (isTime) {
+    return ['>=', '<=']
+  }
+  return filterOpsForType(column.data_type)
+}
+
 /**
- * Per-cell filter/copy context menu (separate mode only, never on time columns;
- * JSON columns only offer copy).
+ * Per-cell filter/copy context menu (separate mode only).
+ * JSON columns only offer copy; time columns offer copy + range filters.
  */
 export default function useLogsContextMenu(options: {
   enabled: Ref<boolean> | (() => boolean)
@@ -15,8 +55,14 @@ export default function useLogsContextMenu(options: {
   isTimeField: (field: string) => boolean
   getOriginalRow: (row: TableData) => TableData
   onFilter: (payload: FilterMenuPayload) => void
+  /** Drilldown chips use `=~`; Logs Query SQL builder uses `LIKE`. */
+  filterMenuKind?: Ref<LogsFilterMenuKind> | (() => LogsFilterMenuKind)
 }) {
   const enabled = typeof options.enabled === 'function' ? options.enabled : () => options.enabled.value
+  const filterMenuKind =
+    typeof options.filterMenuKind === 'function'
+      ? options.filterMenuKind
+      : () => options.filterMenuKind?.value ?? 'sql-builder'
   const { columns, isTimeField, getOriginalRow, onFilter } = options
 
   const contextMenuVisible = ref(false)
@@ -41,7 +87,7 @@ export default function useLogsContextMenu(options: {
   }
 
   function openContextMenu(row: TableData, columnName: string, event: MouseEvent) {
-    if (!enabled() || isTimeField(columnName)) {
+    if (!enabled()) {
       return
     }
     const original = getOriginalRow(row)
@@ -50,12 +96,9 @@ export default function useLogsContextMenu(options: {
     event.stopPropagation()
 
     const column = columns().find((col) => col.name === columnName)
-    // Time columns never reach here (no menu); JSON columns only offer copy.
-    if (column?.data_type && column.data_type.toLowerCase() === 'json') {
-      filterOptions.value = []
-    } else {
-      filterOptions.value = ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'NOT LIKE']
-    }
+    const isTime = isTimeField(columnName)
+    const opsForMenu = filterMenuKind() === 'drilldown' ? drilldownFilterOps : sqlBuilderFilterOps
+    filterOptions.value = opsForMenu(column, isTime)
 
     const rect = (event.currentTarget as Element).getBoundingClientRect()
     contextMenuPosition.value = { x: rect.left, y: rect.bottom }
@@ -74,9 +117,11 @@ export default function useLogsContextMenu(options: {
       } catch {
         // ignore clipboard errors
       }
-    } else if (action.startsWith('filter')) {
-      const operator = action.split('_')[1]
-      onFilter({ columnName, operator, value: record[columnName] })
+    } else if (action.startsWith(FILTER_MENU_PREFIX)) {
+      const operator = parseFilterMenuOperator(action)
+      if (operator) {
+        onFilter({ columnName, operator, value: getCellString(record[columnName]) })
+      }
     }
     hideContextMenu()
   }

@@ -15,6 +15,7 @@
     :wrap-line="wrapLine"
     :virtual="virtual"
     :show-context-menu="sqlMode === 'builder'"
+    :filter-menu-kind="filterMenuKind"
     :active-row-key="detailVisible ? selectedRowKey : null"
     :link-column="traceIdColumn"
     :class="dataTableClass"
@@ -70,6 +71,8 @@
       traceIdColumn?: string
       /** Timestamp click opens the row detail drawer. Off for overview previews. */
       rowDetail?: boolean
+      /** Drilldown: chip ops (`=~`); Logs Query: SQL builder ops (`LIKE`). */
+      filterMenuKind?: 'sql-builder' | 'drilldown'
     }>(),
     {
       wrapLine: false,
@@ -88,6 +91,7 @@
       detailPopupContainer: '#log-table-container',
       traceIdColumn: '',
       rowDetail: true,
+      filterMenuKind: 'sql-builder',
     }
   )
 

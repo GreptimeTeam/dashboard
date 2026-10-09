@@ -1524,8 +1524,8 @@ a-dropdown#td-context(
       } catch (error) {
         console.error('Failed to copy to clipboard:', error)
       }
-    } else if (action.startsWith('filter')) {
-      const operator = action.split('_')[1]
+    } else if (action.startsWith('filter_')) {
+      const operator = action.slice('filter_'.length)
       emit('filterConditionAdd', { columnName, operator, value: record[columnName] })
     }
     hideContextMenu()

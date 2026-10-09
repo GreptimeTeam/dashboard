@@ -109,6 +109,8 @@
       wrapLine?: boolean
       /** Builder mode: show per-cell filter/copy menu (separate only). */
       showContextMenu?: boolean
+      /** Drilldown chips (`=~`) vs Logs Query SQL builder (`LIKE`). */
+      filterMenuKind?: 'sql-builder' | 'drilldown'
       /**
        * More rows can be fetched: enables the load-more footer + auto load.
        * Parents must freeze the Search/Run time window and keyset inside it on
@@ -135,6 +137,7 @@
       height: 0,
       wrapLine: false,
       showContextMenu: false,
+      filterMenuKind: 'sql-builder',
       hasMore: false,
       loadingMore: false,
       virtual: true,
@@ -304,7 +307,6 @@
     return row
   }
 
-  /** Time columns have no filter/copy menu (legacy Arco parity). */
   function isTimeField(field: string): boolean {
     return props.tsColumn?.name === field || isTimeColumn(props.columns.find((c) => c.name === field))
   }
@@ -314,6 +316,7 @@
     columns: () => props.columns,
     isTimeField,
     getOriginalRow,
+    filterMenuKind: () => props.filterMenuKind,
     onFilter: (payload) => emit('filterConditionAdd', payload),
   })
 
