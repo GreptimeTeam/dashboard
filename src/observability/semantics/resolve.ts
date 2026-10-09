@@ -543,9 +543,6 @@ export async function inspectSignalTable(
     // Dynamic import keeps Pinia/table-schema out of resolve's top-level graph so
     // pure resolve consumers (and their unit tests) do not need a Vue app.
     const { default: useTableSchemaStore } = await import('@/store/modules/table-schema')
-    if (import.meta.env.DEV) {
-      console.info('[signal-binding] inspect table:', signal, name, database)
-    }
     const columns = (await useTableSchemaStore().ensureTableSchema(name, database)) as SignalTableInspection['columns']
     let serviceRef: EntityColumnRef | undefined
     try {

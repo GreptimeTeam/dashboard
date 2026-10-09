@@ -41,7 +41,7 @@
       template(#content)
         .filter-suggest-panel(v-if="showSuggestPanel")
           .filter-suggest-loading(v-if="suggestLoading")
-            a-spin(size="small")
+            a-spin(:size="14")
           template(v-else-if="suggestOptions.length")
             button.filter-suggest-option(
               v-for="(option, index) in suggestOptions"
