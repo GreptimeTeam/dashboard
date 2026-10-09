@@ -10,6 +10,7 @@ vi.mock('@/api/editor', () => ({
 
 vi.mock('../current-database', () => ({
   currentDatabase: () => 'public',
+  currentConnectionKey: () => '',
 }))
 
 describe('infer-promql', () => {

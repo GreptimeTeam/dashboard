@@ -1,4 +1,4 @@
-import { computed, ref, type Ref } from 'vue'
+import { computed, effectScope, ref, type Ref } from 'vue'
 import { useStorage } from '@vueuse/core'
 
 export type LogsTableColumnMode = 'separate' | 'merged' | 'merged-with-keys'
@@ -47,17 +47,21 @@ interface LogsTableColumnState {
 }
 
 const columnStateByPrefix = new Map<string, LogsTableColumnState>()
+/** Detached: cached `useStorage` refs must keep writing after the first caller unmounts. */
+const columnStateScope = effectScope(true)
 
 function columnStateFor(prefix: string): LogsTableColumnState {
   const existing = columnStateByPrefix.get(prefix)
   if (existing) {
     return existing
   }
-  const next: LogsTableColumnState = {
-    displayedColumnsByTable: useStorage<Record<string, string[]>>(`${prefix}-table-column-visible`, {}),
-    /** Columns already offered on this table. New query columns are shown; user hides stay hidden. */
-    offeredColumnsByTable: useStorage<Record<string, string[]>>(`${prefix}-table-column-offered`, {}),
-  }
+  const next = columnStateScope.run(
+    (): LogsTableColumnState => ({
+      displayedColumnsByTable: useStorage<Record<string, string[]>>(`${prefix}-table-column-visible`, {}),
+      /** Columns already offered on this table. New query columns are shown; user hides stay hidden. */
+      offeredColumnsByTable: useStorage<Record<string, string[]>>(`${prefix}-table-column-offered`, {}),
+    })
+  ) as LogsTableColumnState
   columnStateByPrefix.set(prefix, next)
   return next
 }

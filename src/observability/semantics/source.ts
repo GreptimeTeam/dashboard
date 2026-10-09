@@ -1,5 +1,5 @@
 import editorApi from '@/api/editor'
-import { currentDatabase } from '../current-database'
+import { currentConnectionKey, currentDatabase } from '../current-database'
 import type { EntityDeclaration, MetadataQuality, TableSemantics } from './model'
 
 /** Common `information_schema.table_semantics` catalog shared by all Explore signals. */
@@ -16,11 +16,24 @@ export interface SemanticsDump {
   bucketTables: Set<string>
 }
 
-let settledDumps = new Map<string, SemanticsDump>()
-/** Databases confirmed to have no `table_semantics` view — never queried again. */
-const missingViews = new Set<string>()
-let inFlight: { database: string; promise: Promise<SemanticsDump> } | null = null
+/**
+ * App-scoped semantics cache. Keys are `host\0database` (see {@link cacheKey}); entries
+ * live until {@link clearSemanticsCache}. `epoch` bumps on clear so a request started
+ * before the clear cannot settle into the fresh cache.
+ */
+const semanticsCache = {
+  settled: new Map<string, SemanticsDump>(),
+  /** Keys confirmed to have no `table_semantics` view — never queried again. */
+  missingViews: new Set<string>(),
+  inFlight: null as { key: string; promise: Promise<SemanticsDump> } | null,
+  epoch: 0,
+}
+/** Monotonic across clears so generation-keyed memos never match a dump from before. */
 let generation = 0
+
+function cacheKey(database: string): string {
+  return `${currentConnectionKey()}\0${database}`
+}
 
 function emptyDump(): SemanticsDump {
   generation += 1
@@ -221,30 +234,35 @@ async function fetchDump(database: string): Promise<{ status: FetchStatus; dump:
  * Concurrent callers for the same database share one in-flight request.
  */
 function semanticsFor(database: string): Promise<SemanticsDump> {
-  const settled = settledDumps.get(database)
+  const key = cacheKey(database)
+  const settled = semanticsCache.settled.get(key)
   if (settled) {
     return Promise.resolve(settled)
   }
-  if (missingViews.has(database)) {
+  if (semanticsCache.missingViews.has(key)) {
     return Promise.resolve(emptyDump())
   }
-  if (inFlight?.database === database) {
-    return inFlight.promise
+  if (semanticsCache.inFlight?.key === key) {
+    return semanticsCache.inFlight.promise
   }
 
+  const { epoch } = semanticsCache
   const promise = fetchDump(database).then((result) => {
+    if (semanticsCache.epoch !== epoch) {
+      return result.dump
+    }
     if (result.status !== 'transient') {
       if (result.status === 'missing') {
-        missingViews.add(database)
+        semanticsCache.missingViews.add(key)
       }
-      settledDumps.set(database, result.dump)
+      semanticsCache.settled.set(key, result.dump)
     }
-    if (inFlight?.promise === promise) {
-      inFlight = null
+    if (semanticsCache.inFlight?.promise === promise) {
+      semanticsCache.inFlight = null
     }
     return result.dump
   })
-  inFlight = { database, promise }
+  semanticsCache.inFlight = { key, promise }
   return promise
 }
 
@@ -300,9 +318,10 @@ export async function listBySignal(
   return [...(dump.bySignal.get(signal) ?? [])].sort((left, right) => left.tableName.localeCompare(right.tableName))
 }
 
-/** Test helper — drop cached dumps (and missing-view markers) between cases. */
+/** Drop cached dumps and missing-view markers; in-flight reads finish but do not settle. */
 export function clearSemanticsCache(): void {
-  settledDumps = new Map()
-  missingViews.clear()
-  inFlight = null
+  semanticsCache.settled.clear()
+  semanticsCache.missingViews.clear()
+  semanticsCache.inFlight = null
+  semanticsCache.epoch += 1
 }

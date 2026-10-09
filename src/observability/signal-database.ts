@@ -1,4 +1,4 @@
-import { ref, watch, type Ref } from 'vue'
+import { effectScope, ref, watch, type Ref } from 'vue'
 import { useAppStore } from '@/store'
 import type { DrilldownSignal } from './types'
 
@@ -26,6 +26,7 @@ const STORAGE_PREFIX = 'signal-db'
 
 /** One reactive ref per signal so Explorer and Query pages stay in sync. */
 const sharedRefs = new Map<SignalDbKind, Ref<string>>()
+let prefsScope = effectScope(true)
 
 function storageKey(kind: SignalDbKind): string {
   return `${STORAGE_PREFIX}:${kind}`
@@ -85,15 +86,25 @@ export function useSignalDatabase(kind: SignalDbKind): Ref<string> {
   }
 
   const database = ref(readPersisted(kind))
-  watch(database, (next) => {
-    if (typeof next === 'string' && next.trim()) {
-      try {
-        localStorage.setItem(storageKey(kind), next.trim())
-      } catch {
-        // ignore storage failures
+  // Detached: the ref outlives whichever component asked first, so must its persistence.
+  prefsScope.run(() => {
+    watch(database, (next) => {
+      if (typeof next === 'string' && next.trim()) {
+        try {
+          localStorage.setItem(storageKey(kind), next.trim())
+        } catch {
+          // ignore storage failures
+        }
       }
-    }
+    })
   })
   sharedRefs.set(kind, database)
   return database
+}
+
+/** Test hook: drop the shared refs and their watchers. */
+export function resetSignalDatabasesForTests(): void {
+  prefsScope.stop()
+  prefsScope = effectScope(true)
+  sharedRefs.clear()
 }

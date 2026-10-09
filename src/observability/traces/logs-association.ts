@@ -7,12 +7,7 @@ import { loadDrilldownSettings, updateTracesDrilldownSettings } from '../drilldo
 import { buildLogsFieldMap, type SchemaColumn } from '../logs/field-map'
 import { escapeSqlString, quoteIdent } from '../logs/query-state'
 import { boundSignalDatabase } from '../signal-database'
-import {
-  loadTraceLogsAssociationPool,
-  probeLogsCandidates,
-  probeVerdictKey,
-  resetTraceLogsProbeCache as resetProbeCache,
-} from './trace-logs-probe'
+import { loadTraceLogsAssociationPool, probeLogsCandidates, probeVerdictKey } from './trace-logs-probe'
 import type { LogsCandidate } from './trace-logs-probe'
 import type { LogsRowsResult } from '../adapters/logs'
 
@@ -58,18 +53,9 @@ function normalizeName(value: unknown): string {
 }
 
 /**
- * In-flight `resolveTraceLogsForServices` promises, keyed by
- * `tracesDb|logsDb|pageLogsTable|windowKey|sortedServices`. Concurrent callers
- * (traces-home, gantt, settings) with the same signature share one resolve.
+ * Key for `ctx.session.traceLogs.inflightResolves`. Concurrent callers (traces-home,
+ * gantt, settings) with the same signature share one resolve.
  */
-const inflightResolves = new Map<string, Promise<TraceLogsResolution>>()
-
-/** Test hook: clears the probe cache and the in-flight resolve map. */
-export function resetTraceLogsProbeCache(): void {
-  resetProbeCache()
-  inflightResolves.clear()
-}
-
 function resolveInflightKey(ctx: DrilldownContext, services: string[]): string {
   const tracesDb = ctx.connection.tracesDatabase.value
   const logsDb = ctx.connection.logsDatabase.value
@@ -224,6 +210,7 @@ export async function resolveTraceLogsForServices(
     return { targets: {}, ambiguous: {}, multiTable: false, manualMappingEnabled: false }
   }
 
+  const { inflightResolves } = ctx.session.traceLogs
   const key = resolveInflightKey(ctx, requested)
   const existing = inflightResolves.get(key)
   if (existing) {

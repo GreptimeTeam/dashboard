@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed, nextTick, ref } from 'vue'
 import type { DrilldownContext, SignalSemanticSnapshot } from './context'
+import createDrilldownSession from './drilldown-session'
 
 const inspectSignalTable = vi.hoisted(() => vi.fn())
 const loadDrilldownSettings = vi.hoisted(() => vi.fn())
@@ -190,6 +191,7 @@ function createCtx() {
       logsSelectedGroup: ref(undefined),
     },
     actions,
+    session: createDrilldownSession(),
   } as unknown as DrilldownContext & { connection: { logsDatabase: typeof logsDatabase } }
 }
 

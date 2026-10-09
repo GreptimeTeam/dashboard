@@ -457,13 +457,11 @@ ORDER BY ${quoteIdent(tsCol)} ASC`
 }
 
 /**
- * Session cache of the service universe, keyed by database, table, column, time
- * window and limit: resolveServiceTargets re-runs on every table load and the
- * settings modal re-runs it on open — without the cache each pass would repeat the
- * DISTINCT scan. A page refresh clears the map; a failed fetch evicts its key.
+ * The service universe is cached in `ctx.session.traceLogs.traceServices`, keyed by
+ * database, table, column, time window and limit: resolveServiceTargets re-runs on every
+ * table load and the settings modal re-runs it on open — without the cache each pass
+ * would repeat the DISTINCT scan. Leaving Explore drops the map; a failed fetch evicts its key.
  */
-const traceServicesCache = new Map<string, Promise<string[]>>()
-
 const TRACE_SERVICES_CACHE_LIMIT = 50
 
 /**
@@ -483,6 +481,7 @@ export async function fetchTraceServices(ctx: DrilldownContext, options?: { limi
   const windowKey = unixRange.length === 2 ? `${unixRange[0]}-${unixRange[1]}` : 'all'
   const limit = options?.limit ?? 200
   const cacheKey = `${boundSignalDatabase(ctx, 'traces')}\0${tableName}\0${serviceCol}\0${windowKey}\0${limit}`
+  const traceServicesCache = ctx.session.traceLogs.traceServices
   const cached = traceServicesCache.get(cacheKey)
   if (cached) {
     return cached

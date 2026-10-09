@@ -1,5 +1,6 @@
-import { computed, inject, provide, ref, type ComputedRef, type InjectionKey, type Ref } from 'vue'
+import { computed, inject, onUnmounted, provide, ref, type ComputedRef, type InjectionKey, type Ref } from 'vue'
 import useTimeRange from '@/hooks/use-time-range'
+import createDrilldownSession, { type DrilldownSession } from './drilldown-session'
 import {
   entityColumnFilterKey,
   logsServiceFilterCandidateKeys,
@@ -118,7 +119,7 @@ export interface DrilldownActions {
   closeLogsForTrace: () => void
   /**
    * Sole writer of `semantics.{logs|traces}` for table binds. Implemented by
-   * `useSignalBinding` — the stub throws until the binder registers.
+   * `useSignalBinding` — rejects until the binder installs into `session.binding`.
    */
   bindTable: (
     signal: 'logs' | 'traces',
@@ -143,6 +144,7 @@ export interface DrilldownContext {
   semantics: { logs: SignalSemanticState; traces: SignalSemanticState }
   ui: DrilldownUiState
   actions: DrilldownActions
+  session: DrilldownSession
 }
 
 export const DRILLDOWN_DEFAULT_TIME_MINUTES = 30
@@ -322,6 +324,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
 
   const logsSemantics = createSignalSemanticState()
   const tracesSemantics = createSignalSemanticState()
+  const session = createDrilldownSession()
 
   const triggerRefresh = () => {
     refreshKey.value += 1
@@ -359,31 +362,51 @@ export function useDrilldownContextProvider(): DrilldownContext {
     return match?.value
   }
 
-  // Declared before setSignal so setSignal can call through the mutable actions object
-  // (useSignalBinding replaces open/close/bindTable on the same object).
-  const actions: DrilldownActions = {
-    triggerRefresh,
-    setSignal: () => undefined,
-    setFilters: () => undefined,
-    setSidebarFilters: () => undefined,
-    appendFilter: () => undefined,
-    toggleFilterValue: () => undefined,
-    setDetailTab: () => undefined,
-    setLogsView: () => undefined,
-    setLogsTab: () => undefined,
-    setTracesTab: () => undefined,
-    openLogsDetail,
-    closeLogsDetail,
-    openTraceGantt: () => undefined,
-    closeTraceGantt: () => undefined,
-    openLogsForTrace: () => undefined,
-    closeLogsForTrace: () => undefined,
-    bindTable: async () => {
+  // Binder-owned actions forward to `session.binding.impl`; before it is installed they
+  // fall back to the plain UI-only behaviour (bind / role writes are rejected).
+  const bindTable: DrilldownActions['bindTable'] = (signalName, table, options) => {
+    const { impl } = session.binding
+    if (!impl) {
+      return Promise.reject(new Error('Signal binding is not ready'))
+    }
+    return impl.bindTable(signalName, table, options)
+  }
+
+  const setLogsRole: DrilldownActions['setLogsRole'] = (role, column) => {
+    const { impl } = session.binding
+    if (!impl) {
       throw new Error('Signal binding is not ready')
-    },
-    setLogsRole: () => {
-      throw new Error('Signal binding is not ready')
-    },
+    }
+    impl.setLogsRole(role, column)
+  }
+
+  const openLogsForTrace: DrilldownActions['openLogsForTrace'] = (traceId, target) => {
+    const { impl } = session.binding
+    if (impl) {
+      impl.openLogsForTrace(traceId, target)
+      return
+    }
+    const trimmed = traceId.trim()
+    if (!trimmed) {
+      return
+    }
+    logsTraceId.value = trimmed
+    if (logsTab.value !== 'logs') {
+      logsTab.value = 'logs'
+    }
+  }
+
+  const closeLogsForTrace: DrilldownActions['closeLogsForTrace'] = () => {
+    const { impl } = session.binding
+    if (impl) {
+      impl.closeLogsForTrace()
+      return
+    }
+    const hadTraceDrawer = Boolean(logsTraceId.value)
+    logsTraceId.value = undefined
+    if (hadTraceDrawer && signal.value === 'logs') {
+      refreshKey.value += 1
+    }
   }
 
   const setSignal = (next: DrilldownSignal, options?: { hydrate?: boolean }) => {
@@ -418,7 +441,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
     if (next !== 'traces') {
       tracesTab.value = 'breakdown'
       // Prefer binder close so overlay snapshot restores; falls back to clearing the id.
-      actions.closeLogsForTrace()
+      closeLogsForTrace()
     }
     // Trace drawer lives on logs and traces. Keep it when staying on logs or opening traces.
     if (next === 'metrics' || (next !== signal.value && next !== 'traces')) {
@@ -500,28 +523,8 @@ export function useDrilldownContextProvider(): DrilldownContext {
     focusTraceId.value = undefined
   }
 
-  /** Stub until useSignalBinding replaces with overlay-safe bind (no logsDatabase write). */
-  const openLogsForTrace = (traceId: string, _target?: { database?: string; table?: string }) => {
-    const trimmed = traceId.trim()
-    if (!trimmed) {
-      return
-    }
-    logsTraceId.value = trimmed
-    if (logsTab.value !== 'logs') {
-      logsTab.value = 'logs'
-    }
-  }
-
-  /** Stub until useSignalBinding replaces with snapshot restore. */
-  const closeLogsForTrace = () => {
-    const hadTraceDrawer = Boolean(logsTraceId.value)
-    logsTraceId.value = undefined
-    if (hadTraceDrawer && signal.value === 'logs') {
-      refreshKey.value += 1
-    }
-  }
-
-  Object.assign(actions, {
+  const actions: DrilldownActions = {
+    triggerRefresh,
     setSignal,
     setFilters,
     setSidebarFilters,
@@ -531,11 +534,15 @@ export function useDrilldownContextProvider(): DrilldownContext {
     setLogsView,
     setLogsTab,
     setTracesTab,
+    openLogsDetail,
+    closeLogsDetail,
     openTraceGantt,
     closeTraceGantt,
     openLogsForTrace,
     closeLogsForTrace,
-  })
+    bindTable,
+    setLogsRole,
+  }
 
   const context: DrilldownContext = {
     connection: {
@@ -571,8 +578,10 @@ export function useDrilldownContextProvider(): DrilldownContext {
       logsSelectedGroup,
     },
     actions,
+    session,
   }
 
+  onUnmounted(() => session.dispose())
   provide(DRILLDOWN_CONTEXT_KEY, context)
   return context
 }

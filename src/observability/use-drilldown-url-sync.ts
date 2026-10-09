@@ -5,7 +5,6 @@ import { isDrilldownFilterOp } from './filters'
 import { DRILLDOWN_DEFAULT_TIME_MINUTES, type DrilldownContext } from './context'
 import { drilldownQueriesEqual, shouldPushDrilldownHistory } from './drilldown-url-history'
 import { readUrlTab, urlTabWatchSources, writeUrlTab, type DrilldownUrlTabSpec } from './drilldown-url-tabs'
-import { isSignalBindingStarted } from './signal-binding'
 import {
   isLogsDetailTab,
   isLogsView,
@@ -187,7 +186,7 @@ export default function useDrilldownUrlSync(
 
     if (typeof logsTable === 'string' && logsTable.trim()) {
       const logsTableName = logsTable.trim()
-      if (isSignalBindingStarted()) {
+      if (ctx.session.binding.ready) {
         pendingBinds.push(ctx.actions.bindTable('logs', logsTableName, { persist: false }).catch(() => undefined))
       } else {
         ctx.semantics.logs.setTable(logsTableName)
@@ -198,7 +197,7 @@ export default function useDrilldownUrlSync(
 
     if (typeof tracesTable === 'string' && tracesTable.trim()) {
       const tracesTableName = tracesTable.trim()
-      if (isSignalBindingStarted()) {
+      if (ctx.session.binding.ready) {
         pendingBinds.push(ctx.actions.bindTable('traces', tracesTableName, { persist: false }).catch(() => undefined))
       } else {
         ctx.semantics.traces.setTable(tracesTableName)

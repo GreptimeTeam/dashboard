@@ -1,12 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { computed, nextTick, ref } from 'vue'
 import type { DrilldownContext } from './context'
-
-const isSignalBindingStarted = vi.hoisted(() => vi.fn(() => false))
-
-vi.mock('./signal-binding', () => ({
-  isSignalBindingStarted,
-}))
+import createDrilldownSession from './drilldown-session'
 
 vi.mock('./filters', () => ({
   isDrilldownFilterOp: (value: string) => ['=', '!=', '=~', '!~', '>', '>=', '<', '<='].includes(value),
@@ -161,6 +156,7 @@ function createCtx() {
       closeTraceGantt,
       bindTable,
     },
+    session: createDrilldownSession(),
   } as unknown as DrilldownContext & {
     actions: {
       setSignal: typeof setSignal
@@ -176,10 +172,6 @@ function createCtx() {
 }
 
 describe('useDrilldownUrlSync', () => {
-  beforeEach(() => {
-    isSignalBindingStarted.mockReturnValue(false)
-  })
-
   it('hydrates with soft setSignal and restores logsTrace drawer via openLogsForTrace', async () => {
     const { default: useDrilldownUrlSync } = await import('./use-drilldown-url-sync')
     const ctx = createCtx()
@@ -248,10 +240,30 @@ describe('useDrilldownUrlSync', () => {
     expect(ctx.actions.closeTraceGantt).not.toHaveBeenCalled()
   })
 
+  it('a fresh page session stamps the URL table even after an earlier session was ready', async () => {
+    const { default: useDrilldownUrlSync } = await import('./use-drilldown-url-sync')
+    const previous = createCtx()
+    previous.session.binding.ready = true
+    previous.session.dispose()
+
+    const ctx = createCtx()
+    const urlSync = useDrilldownUrlSync(
+      ctx,
+      { query: { signal: 'logs', logsTable: 'from_url' } } as never,
+      { push: vi.fn(), replace: vi.fn() } as never
+    )
+    urlSync.initializeFromQuery()
+    await nextTick()
+
+    expect(previous.session.binding.ready).toBe(false)
+    expect(ctx.actions.bindTable).not.toHaveBeenCalled()
+    expect(ctx.semantics.logs.table.value).toBe('from_url')
+  })
+
   it('awaits URL-driven bindTable before clearing syncingFromUrl', async () => {
     const { default: useDrilldownUrlSync } = await import('./use-drilldown-url-sync')
-    isSignalBindingStarted.mockReturnValue(true)
     const ctx = createCtx()
+    ctx.session.binding.ready = true
     let resolveBind: (() => void) | undefined
     const bindPromise = new Promise<void>((resolve) => {
       resolveBind = resolve

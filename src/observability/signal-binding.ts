@@ -21,13 +21,6 @@ import {
 } from '@/observability/semantics'
 import type { DrilldownActions, DrilldownContext, SignalSemanticSnapshot } from './context'
 
-/** True after the first `initialize` runs — URL sync uses this to decide bind vs setTable. */
-let bindingStarted = false
-
-export function isSignalBindingStarted(): boolean {
-  return bindingStarted
-}
-
 const FIELD_ROLES = ['time', 'body', 'severity', 'service', 'primaryGroupBy', 'traceId'] as const
 type LogsRole = (typeof FIELD_ROLES)[number]
 
@@ -196,7 +189,7 @@ export default function useSignalBinding(ctx: DrilldownContext): {
   }
 
   const initialize = async (signal: 'logs' | 'traces') => {
-    bindingStarted = true
+    ctx.session.binding.ready = true
     const database = signal === 'logs' ? ctx.connection.logsDatabase.value : ctx.connection.tracesDatabase.value
     const settings = loadDrilldownSettings(database)[signal]
     const settingsTable = settings?.table?.trim()
@@ -262,12 +255,12 @@ export default function useSignalBinding(ctx: DrilldownContext): {
     }
   }
 
-  Object.assign(ctx.actions, {
+  ctx.session.binding.impl = {
     bindTable,
     openLogsForTrace,
     closeLogsForTrace,
     setLogsRole,
-  })
+  }
 
   onMounted(() => {
     initialize('logs').catch(() => undefined)

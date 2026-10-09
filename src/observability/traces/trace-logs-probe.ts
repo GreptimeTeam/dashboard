@@ -104,13 +104,11 @@ export async function loadLogsCandidates(ctx: DrilldownContext): Promise<LogsCan
 }
 
 /**
- * Session cache of probe verdicts, keyed by database, table, service and time window.
- * Routing re-resolves on every table load, trace click and settings open — without the
- * cache, identical (table × service) pairs would be re-probed each time. A page refresh
- * clears the map; a failed probe evicts its keys so it can retry.
+ * Probe verdicts live in `ctx.session.traceLogs.probeVerdicts`, keyed by database, table,
+ * service and time window. Routing re-resolves on every table load, trace click and
+ * settings open — without the cache, identical (table × service) pairs would be re-probed
+ * each time. Leaving Explore drops the map; a failed probe evicts its keys so it can retry.
  */
-const probeVerdicts = new Map<string, Promise<boolean>>()
-
 const PROBE_CACHE_LIMIT = 500
 
 export function probeVerdictKey(database: string, table: string, windowKey: string, service: string): string {
@@ -120,7 +118,8 @@ export function probeVerdictKey(database: string, table: string, windowKey: stri
 /** ONE UNION ALL request answering every pending (table, service) pair. */
 async function probePairs(
   pending: Map<string, { candidate: LogsCandidate; services: string[]; keys: string[] }>,
-  unixRange: number[]
+  unixRange: number[],
+  probeVerdicts: Map<string, Promise<boolean>>
 ): Promise<Set<string>> {
   const buckets = [...pending.values()]
   const branches = buckets.map(({ candidate, services }) => {
@@ -174,6 +173,7 @@ export async function probeLogsCandidates(
   if (!candidates.length || !services.length) {
     return hits
   }
+  const { probeVerdicts } = ctx.session.traceLogs
   const unixRange = ctx.query.unixTimeRange()
   const windowKey = unixRange.length === 2 ? `${unixRange[0]}-${unixRange[1]}` : 'all'
 
@@ -196,7 +196,7 @@ export async function probeLogsCandidates(
     if (probeVerdicts.size > PROBE_CACHE_LIMIT) {
       probeVerdicts.clear()
     }
-    const query = probePairs(pending, unixRange)
+    const query = probePairs(pending, unixRange, probeVerdicts)
     pending.forEach((bucket) => {
       bucket.keys.forEach((key, index) => {
         const service = bucket.services[index]
@@ -229,9 +229,4 @@ export async function probeLogsCandidates(
     hits.set(service, tables)
   })
   return hits
-}
-
-/** Test hook: clears the session probe cache. */
-export function resetTraceLogsProbeCache(): void {
-  probeVerdicts.clear()
 }

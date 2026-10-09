@@ -10,3 +10,11 @@ import { useAppStore } from '@/store'
 export function currentDatabase(): string {
   return useAppStore().database || 'public'
 }
+
+/**
+ * Identity of the connected GreptimeDB instance. Caches keyed only by database name must
+ * also carry this, or switching host in Settings would serve the previous cluster's rows.
+ */
+export function currentConnectionKey(): string {
+  return useAppStore().host || ''
+}

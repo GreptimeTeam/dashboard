@@ -2,12 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import editorApi from '@/api/editor'
 import useTableSchemaStore from '@/store/modules/table-schema'
 import { getTableSemantics, listSignalTables, resolveEntityFilterRef } from '../semantics'
-import {
-  fetchTraceLogsRows,
-  qualifyTraceLogsTable,
-  resetTraceLogsProbeCache,
-  resolveTraceLogsForServices,
-} from './logs-association'
+import createDrilldownSession from '../drilldown-session'
+import { fetchTraceLogsRows, qualifyTraceLogsTable, resolveTraceLogsForServices } from './logs-association'
 
 const loadDrilldownSettings = vi.hoisted(() => vi.fn())
 const updateTracesDrilldownSettings = vi.hoisted(() => vi.fn())
@@ -90,6 +86,7 @@ function createContext(overrides: Record<string, unknown> = {}) {
         database: { value: undefined as string | undefined },
       },
     },
+    session: createDrilldownSession(),
     ...overrides,
   } as any
 }
@@ -135,7 +132,6 @@ function mockProbeHits(rows: Array<[string, string]>) {
 }
 
 beforeEach(() => {
-  resetTraceLogsProbeCache()
   ensureTableSchema.mockReset()
   ensureTableSchemas.mockReset().mockImplementation(async () => ({}))
   tablesHavingColumn.mockReset().mockImplementation(async () => new Set<string>())
@@ -311,14 +307,27 @@ describe('trace logs routing', () => {
     mockQualifiedTables(['otel_logs', 'legacy_logs'])
     mockProbeHits([['legacy_logs', 'checkout']])
 
-    const first = await resolveTraceLogsForServices(createContext(), ['checkout'])
+    const ctx = createContext()
+    const first = await resolveTraceLogsForServices(ctx, ['checkout'])
     // Second resolution (gantt load, settings open, loadRows re-run) reuses the
     // cached verdicts — zero extra requests.
-    const second = await resolveTraceLogsForServices(createContext(), ['checkout'])
+    const second = await resolveTraceLogsForServices(ctx, ['checkout'])
 
     expect(first.targets.checkout).toMatchObject({ table: 'legacy_logs', source: 'auto' })
     expect(second.targets.checkout).toMatchObject({ table: 'legacy_logs', source: 'auto' })
     expect(runSQL).toHaveBeenCalledTimes(1)
+  })
+
+  it('re-probes in a new page session instead of reusing a previous verdict', async () => {
+    mockQualifiedTables(['otel_logs', 'legacy_logs'])
+    mockProbeHits([])
+
+    const previous = createContext()
+    await resolveTraceLogsForServices(previous, ['checkout'])
+    previous.session.dispose()
+    await resolveTraceLogsForServices(createContext(), ['checkout'])
+
+    expect(runSQL).toHaveBeenCalledTimes(2)
   })
 
   it('dedupes in-flight resolves that share the same signature', async () => {
