@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import type { DrilldownContext, SignalSemanticSnapshot } from './context'
 
 const inspectSignalTable = vi.hoisted(() => vi.fn())
@@ -50,7 +50,11 @@ vi.mock('./traces/field-map', () => ({
 }))
 
 vi.mock('./filters', () => ({
-  resolveFieldMapColumn: (key: string) => key,
+  isDrilldownFilterOp: (value: string) => ['=', '!=', '=~', '!~', '>', '>=', '<', '<='].includes(value),
+}))
+
+vi.mock('./context', () => ({
+  DRILLDOWN_DEFAULT_TIME_MINUTES: 30,
 }))
 
 vi.mock('vue', async () => {
@@ -256,5 +260,56 @@ describe('useSignalBinding', () => {
 
     expect(ctx.semantics.logs.table.value).toBe('table_b')
     expect(ctx.semantics.logs.columns.value).toEqual(['timestamp'])
+  })
+
+  it('keeps shared filters that do not apply to the newly bound table', async () => {
+    const { default: useSignalBinding } = await import('./signal-binding')
+    const ctx = createCtx()
+    const binding = useSignalBinding(ctx)
+    const metricOnlyFilter = { key: 'job', op: '=' as const, value: 'checkout' }
+    ctx.query.filters.value = [metricOnlyFilter]
+
+    await binding.bindTable('logs', 'opentelemetry_logs', { persist: false })
+
+    expect(ctx.query.filters.value).toEqual([metricOnlyFilter])
+    expect(ctx.actions.setFilters).not.toHaveBeenCalled()
+  })
+
+  it('keeps a Metrics filter restored from a URL after background logs binding', async () => {
+    const [{ default: useSignalBinding }, { default: useDrilldownUrlSync }] = await Promise.all([
+      import('./signal-binding'),
+      import('./use-drilldown-url-sync'),
+    ])
+    const ctx = createCtx()
+    const binding = useSignalBinding(ctx)
+    const urlFilter = encodeURIComponent(JSON.stringify([{ key: 'job', op: '=', value: 'checkout' }]))
+
+    Object.assign(ctx.actions, {
+      setSignal: (signal: 'metrics' | 'logs' | 'traces') => {
+        ctx.connection.signal.value = signal
+      },
+      setFilters: (filters: unknown[]) => {
+        ctx.query.filters.value = filters as []
+      },
+      setSidebarFilters: () => undefined,
+      setDetailTab: () => undefined,
+      setLogsView: () => undefined,
+      setLogsTab: () => undefined,
+      setTracesTab: () => undefined,
+    })
+
+    const urlSync = useDrilldownUrlSync(
+      ctx,
+      { query: { signal: 'metrics', filters: urlFilter } } as never,
+      { push: vi.fn(), replace: vi.fn() } as never
+    )
+    urlSync.initializeFromQuery()
+    await nextTick()
+    expect(ctx.connection.signal.value).toBe('metrics')
+    expect(ctx.query.filters.value).toEqual([{ key: 'job', op: '=', value: 'checkout' }])
+
+    await binding.bindTable('logs', 'opentelemetry_logs', { persist: false })
+
+    expect(ctx.query.filters.value).toEqual([{ key: 'job', op: '=', value: 'checkout' }])
   })
 })

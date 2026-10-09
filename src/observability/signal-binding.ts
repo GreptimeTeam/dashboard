@@ -12,12 +12,10 @@ import {
   type SchemaColumn,
 } from '@/observability/logs/field-map'
 import { buildDefaultTracesFieldMap } from '@/observability/traces/field-map'
-import { resolveFieldMapColumn } from '@/observability/filters'
 import {
   entityColumnFilterKey,
   inspectSignalTable,
   logsServiceFilterCandidateKeys,
-  normalizeEntityFilters,
   physicalServiceColumn,
   resolveSignalTable,
 } from '@/observability/semantics'
@@ -155,16 +153,9 @@ export default function useSignalBinding(ctx: DrilldownContext): {
 
     semantics.commit({ database, table: trimmed, fieldMap: nextMap, inspection })
 
-    const normalized = normalizeEntityFilters(
-      ctx.query.filters.value,
-      signal,
-      (entity) => semantics.entityFilterKeys.value[entity]
-    )
-    const pruned = normalized.filter((filter) =>
-      Boolean(resolveFieldMapColumn(filter.key, nextMap, semantics.columns.value))
-    )
-    ctx.actions.setFilters(pruned)
-
+    // Shared filters belong to the Drilldown Context, not to this table. Signal adapters
+    // already skip conditions without a physical mapping; pruning here would permanently
+    // remove metric-only labels while logs/traces bind in the background.
     if (signal === 'logs' && scope !== 'overlay') {
       restoreLogsDetailSelection()
     }
