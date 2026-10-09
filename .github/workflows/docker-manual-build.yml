@@ -2,14 +2,7 @@ on:
   workflow_dispatch:
     inputs:
       commit:
-        description: 'the dashboard commit sha'
-        required: true
-      env-type:
-        type: choice
-        description: image env type
-        options:
-          - cloud
-          - staging
+        description: 'the dashboard commit sha (or ref)'
         required: true
 
 name: Build docker image manually
@@ -21,18 +14,21 @@ jobs:
   docker:
     name: Build docker image
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.commit }}
 
       - name: Configure image tag
         shell: bash
         run: |
-          commitShortSHA=`echo ${{ github.sha }} | cut -c1-8`
-          IMAGE_TAG=$commitShortSHA
-          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
+          # Prefer the checked-out commit so the tag matches the built source.
+          commitShortSHA=$(git rev-parse --short=8 HEAD)
+          echo "IMAGE_TAG=${commitShortSHA}" >> $GITHUB_ENV
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -54,14 +50,14 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
           payload: |
-            {"text": "Building new custom **dashboard** image for ${{ github.event.inputs.env-type }}. git-ref: `${{ github.event.inputs.commit }}`"}
+            {"text": "Building OSS **dashboard** test image. git-ref: `${{ github.event.inputs.commit }}`"}
 
       - name: Build and push
         uses: docker/build-push-action@v3
         with:
           context: .
           file: ./docker/Dockerfile
-          build-args: command=${{ github.event.inputs.env-type }}
+          # Dockerfile default ARG command=docker → pnpm build:docker (OSS)
           push: true
           #platforms: linux/amd64,linux/arm64
           platforms: linux/amd64
@@ -75,4 +71,4 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
           payload: |
-            {"text": "New custom **dashboard** image for ${{ github.event.inputs.env-type }} is ready. Tag: `${{ env.IMAGE_TAG }}`"}
+            {"text": "OSS **dashboard** test image is ready. Tag: `ghcr.io/greptimeteam/dashboard:${{ env.IMAGE_TAG }}`"}
