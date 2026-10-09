@@ -3,8 +3,8 @@ import useTimeRange from '@/hooks/use-time-range'
 import createDrilldownSession, { type DrilldownSession } from './drilldown-session'
 import {
   entityColumnFilterKey,
-  logsServiceFilterCandidateKeys,
   normalizeEntityFilters,
+  resolveLogsDetailGroupFromFilters,
   type SignalTableInspection,
 } from './semantics'
 import type { LogsFieldMapSettings } from './drilldown-settings'
@@ -351,17 +351,6 @@ export function useDrilldownContextProvider(): DrilldownContext {
     clearLogsBodySearch()
   }
 
-  const resolveLogsDetailGroupFromFilters = (): string | undefined => {
-    // The service filter may arrive as a JSON chip (logs identity lives in
-    // `resource_attributes`), so include the key resolved from the bound table.
-    const chipKeys = logsServiceFilterCandidateKeys(
-      logsSemantics.fieldMap.value,
-      logsSemantics.entityFilterKeys.value.service
-    )
-    const match = filters.value.find((f) => f.op === '=' && chipKeys.has(f.key))
-    return match?.value
-  }
-
   // Binder-owned actions forward to `session.binding.impl`; before it is installed they
   // fall back to the plain UI-only behaviour (bind / role writes are rejected).
   const bindTable: DrilldownActions['bindTable'] = (signalName, table, options) => {
@@ -456,7 +445,15 @@ export function useDrilldownContextProvider(): DrilldownContext {
           logsSemantics.columns.value
         )
       ) {
-        openLogsDetail(resolveLogsDetailGroupFromFilters())
+        // The service filter may arrive as a JSON chip (logs identity lives in
+        // `resource_attributes`), so include the key resolved from the bound table.
+        openLogsDetail(
+          resolveLogsDetailGroupFromFilters(
+            filters.value,
+            logsSemantics.fieldMap.value,
+            logsSemantics.entityFilterKeys.value.service
+          )
+        )
       } else {
         logsView.value = 'overview'
         logsSelectedGroup.value = undefined

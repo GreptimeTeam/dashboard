@@ -4,6 +4,7 @@ import { isLogsBodyOp, logsBodyOpNeedsValue, DEFAULT_LOGS_BODY_OP } from './logs
 import { isDrilldownFilterOp } from './filters'
 import { DRILLDOWN_DEFAULT_TIME_MINUTES, type DrilldownContext } from './context'
 import { drilldownQueriesEqual, shouldPushDrilldownHistory } from './drilldown-url-history'
+import { resolveLogsDetailGroupFromFilters } from './semantics'
 import { readUrlTab, urlTabWatchSources, writeUrlTab, type DrilldownUrlTabSpec } from './drilldown-url-tabs'
 import {
   isLogsDetailTab,
@@ -184,8 +185,14 @@ export default function useDrilldownUrlSync(
 
     const pendingBinds: Promise<unknown>[] = []
 
-    if (typeof logsTable === 'string' && logsTable.trim()) {
-      const logsTableName = logsTable.trim()
+    const canShowTraceDrawers = ctx.connection.signal.value === 'traces' || ctx.connection.signal.value === 'logs'
+    const logsTraceFromUrl = typeof logsTraceId === 'string' ? logsTraceId.trim() : ''
+    const logsTableName = typeof logsTable === 'string' ? logsTable.trim() : ''
+    // While a trace drawer is in the URL, `logsTable` names the overlay target the drawer was
+    // showing — it must not stamp the page binding, which initialize would persist to settings.
+    const overlayFromUrl = Boolean(logsTraceFromUrl) && canShowTraceDrawers
+
+    if (logsTableName && !overlayFromUrl) {
       if (ctx.session.binding.ready) {
         pendingBinds.push(ctx.actions.bindTable('logs', logsTableName, { persist: false }).catch(() => undefined))
       } else {
@@ -221,13 +228,13 @@ export default function useDrilldownUrlSync(
       readUrlTab(spec, tabRawByKey[spec.queryKey])
     })
 
-    // Restore selected group from primaryGroupBy filter when opening detail from URL.
+    // Restore selected group from the service filter when opening detail from URL.
     if (ctx.ui.logsView.value === 'detail') {
-      const groupCol = ctx.semantics.logs.fieldMap.value.primaryGroupBy
-      const serviceChip = ctx.semantics.logs.fieldMap.value.service
-      const chipKeys = new Set([groupCol, serviceChip, 'service'].filter(Boolean) as string[])
-      const match = ctx.query.filters.value.find((f) => f.op === '=' && chipKeys.has(f.key))
-      ctx.ui.logsSelectedGroup.value = match?.value
+      ctx.ui.logsSelectedGroup.value = resolveLogsDetailGroupFromFilters(
+        ctx.query.filters.value,
+        ctx.semantics.logs.fieldMap.value,
+        ctx.semantics.logs.entityFilterKeys.value?.service
+      )
     } else {
       ctx.ui.logsSelectedGroup.value = undefined
     }
@@ -242,10 +249,8 @@ export default function useDrilldownUrlSync(
     }
 
     // Drawers via open/close actions (overlay bind side effects), not raw ref writes.
-    const canShowTraceDrawers = ctx.connection.signal.value === 'traces' || ctx.connection.signal.value === 'logs'
-    const logsTraceFromUrl = typeof logsTraceId === 'string' ? logsTraceId.trim() : ''
     if (logsTraceFromUrl && canShowTraceDrawers) {
-      ctx.actions.openLogsForTrace(logsTraceFromUrl)
+      ctx.actions.openLogsForTrace(logsTraceFromUrl, logsTableName ? { table: logsTableName } : undefined)
     } else {
       ctx.actions.closeLogsForTrace()
     }
@@ -297,8 +302,13 @@ export default function useDrilldownUrlSync(
       query.metric = ctx.ui.metric.value
     }
 
-    if (ctx.semantics.logs.table.value) {
-      query.logsTable = ctx.semantics.logs.table.value
+    // While the Trace→Logs overlay holds the semantics slot, the URL must keep mirroring
+    // the overlay target (the page binding is snapshotted away, not gone). This also keeps
+    // the value stable across a cold-start hydrate whose overlay bind is still queued.
+    const { overlayLogs } = ctx.session
+    const logsTableValue = overlayLogs.active ? overlayLogs.targetTable : ctx.semantics.logs.table.value
+    if (logsTableValue) {
+      query.logsTable = logsTableValue
     }
 
     if (ctx.semantics.traces.table.value) {

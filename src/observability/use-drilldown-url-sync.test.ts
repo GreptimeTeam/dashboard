@@ -7,6 +7,16 @@ vi.mock('./filters', () => ({
   isDrilldownFilterOp: (value: string) => ['=', '!=', '=~', '!~', '>', '>=', '<', '<='].includes(value),
 }))
 
+vi.mock('./semantics', () => ({
+  resolveLogsDetailGroupFromFilters: (
+    filters: Array<{ key: string; op: string; value: string }>,
+    fieldMap: Record<string, string>
+  ) => {
+    const keys = new Set([fieldMap.primaryGroupBy, fieldMap.service, 'service'].filter(Boolean))
+    return filters.find((filter) => filter.op === '=' && keys.has(filter.key))?.value
+  },
+}))
+
 vi.mock('./context', () => ({
   DRILLDOWN_DEFAULT_TIME_MINUTES: 30,
 }))
@@ -189,9 +199,11 @@ describe('useDrilldownUrlSync', () => {
 
     expect(ctx.actions.setSignal).toHaveBeenCalledWith('logs', { hydrate: true })
     expect(ctx.actions.closeLogsForTrace).not.toHaveBeenCalled()
-    expect(ctx.actions.openLogsForTrace).toHaveBeenCalledWith('abc')
+    expect(ctx.actions.openLogsForTrace).toHaveBeenCalledWith('abc', { table: 'service_logs' })
     expect(ctx.ui.logsTraceId.value).toBe('abc')
-    expect(ctx.semantics.logs.table.value).toBe('service_logs')
+    // The URL table belongs to the overlay restore — the page binding must stay unstamped.
+    expect(ctx.semantics.logs.table.value).toBeUndefined()
+    expect(ctx.session.overlayLogs.pending).toBeUndefined()
   })
 
   it('closes logsTrace drawer when URL no longer has logsTraceId', async () => {
@@ -258,6 +270,43 @@ describe('useDrilldownUrlSync', () => {
     expect(previous.session.binding.ready).toBe(false)
     expect(ctx.actions.bindTable).not.toHaveBeenCalled()
     expect(ctx.semantics.logs.table.value).toBe('from_url')
+  })
+
+  it('treats logsTable as the overlay target when the URL restores a trace drawer', async () => {
+    const { default: useDrilldownUrlSync } = await import('./use-drilldown-url-sync')
+    const ctx = createCtx()
+    const urlSync = useDrilldownUrlSync(
+      ctx,
+      { query: { signal: 'traces', logsTable: 'service_logs', logsTraceId: 't1' } } as never,
+      { push: vi.fn(), replace: vi.fn() } as never
+    )
+    urlSync.initializeFromQuery()
+    await nextTick()
+
+    expect(ctx.actions.openLogsForTrace).toHaveBeenCalledWith('t1', { table: 'service_logs' })
+    // Page binding stays unstamped so initialize cannot persist the overlay table.
+    expect(ctx.semantics.logs.table.value).toBeUndefined()
+  })
+
+  it('mirrors the overlay target table into the URL while the overlay is active', async () => {
+    const { default: useDrilldownUrlSync } = await import('./use-drilldown-url-sync')
+    const ctx = createCtx()
+    ctx.connection.signal.value = 'logs'
+    ctx.ui.logsTraceId.value = 't1'
+    ctx.session.overlayLogs.active = true
+    ctx.session.overlayLogs.targetTable = 'overlay_table'
+    ctx.semantics.logs.table.value = 'page_table'
+    const push = vi.fn()
+    const urlSync = useDrilldownUrlSync(
+      ctx,
+      { query: { signal: 'logs', logsTable: 'overlay_table', logsTraceId: 't1' } } as never,
+      { push, replace: vi.fn() } as never
+    )
+    urlSync.updateQueryParams()
+
+    const query = (push.mock.calls[0]?.[0] as { query: Record<string, unknown> } | undefined)?.query
+    expect(query?.logsTable).toBe('overlay_table')
+    expect(query?.logsTraceId).toBe('t1')
   })
 
   it('awaits URL-driven bindTable before clearing syncingFromUrl', async () => {

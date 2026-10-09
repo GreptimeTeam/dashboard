@@ -1,5 +1,6 @@
 import { getTableEntityDeclarations, getTableSemantics, listBySignal, semanticsDump } from './source'
 import { currentDatabase } from '../current-database'
+import type { DrilldownFilter } from '../types'
 import {
   compareTraceTableCandidates,
   conventionEntityKeys,
@@ -329,6 +330,20 @@ export function logsServiceFilterCandidateKeys(
   return new Set(
     [fieldMapLogs.primaryGroupBy, fieldMapLogs.service, entityServiceKey, 'service'].filter(Boolean) as string[]
   )
+}
+
+/**
+ * Value of the service-style filter chip that names the logs detail group, or undefined.
+ * One shared rule so Context actions, the binder's restore, and URL hydrate all agree on
+ * which chip carries the group (role columns, the table-resolved entity key, `service`).
+ */
+export function resolveLogsDetailGroupFromFilters(
+  filters: DrilldownFilter[],
+  fieldMapLogs: Record<string, string>,
+  entityServiceKey?: string
+): string | undefined {
+  const chipKeys = logsServiceFilterCandidateKeys(fieldMapLogs, entityServiceKey)
+  return filters.find((filter) => filter.op === '=' && chipKeys.has(filter.key))?.value
 }
 
 function uniquePreserveOrder(names: string[]): string[] {

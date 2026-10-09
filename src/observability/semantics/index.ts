@@ -61,6 +61,7 @@ export {
   resolveEntityFilterKey,
   resolveEntityFilterRef,
   resolveEntityIdentity,
+  resolveLogsDetailGroupFromFilters,
   resolveMetricMeta,
   resolveSignalTable,
   listSignalTables,

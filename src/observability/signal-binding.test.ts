@@ -16,6 +16,7 @@ vi.mock('./semantics', () => ({
     columnRef?.kind === 'column' ? columnRef.column : undefined,
   normalizeEntityFilters: (filters: unknown[]) => filters,
   logsServiceFilterCandidateKeys: () => new Set(['service']),
+  resolveLogsDetailGroupFromFilters: () => undefined,
   resolveSignalTable: vi.fn(),
 }))
 
@@ -227,12 +228,71 @@ describe('useSignalBinding', () => {
     binding.openLogsForTrace('abc123', { database: 'other_db', table: 'service_logs' })
     expect(ctx.ui.logsTraceId.value).toBe('abc123')
     expect(ctx.connection.logsDatabase.value).toBe(beforeDb)
+    expect(ctx.session.overlayLogs.active).toBe(true)
+    expect(ctx.session.overlayLogs.targetTable).toBe('service_logs')
+    expect(ctx.session.overlayLogs.pageSnapshot?.table).toBe('opentelemetry_logs')
 
     // Allow async overlay bind to settle.
     await Promise.resolve()
     await Promise.resolve()
     expect(ctx.connection.logsDatabase.value).toBe(beforeDb)
     expect(inspectSignalTable).toHaveBeenCalledWith('logs', 'service_logs', 'other_db')
+    expect(ctx.semantics.logs.table.value).toBe('service_logs')
+
+    // Close restores the page binding and clears the overlay runtime.
+    binding.closeLogsForTrace()
+    expect(ctx.semantics.logs.table.value).toBe('opentelemetry_logs')
+    expect(ctx.session.overlayLogs.active).toBe(false)
+    expect(ctx.session.overlayLogs.targetTable).toBeUndefined()
+    expect(ctx.session.overlayLogs.pageSnapshot).toBeUndefined()
+  })
+
+  it('rolls back overlay markers when the overlay bind fails', async () => {
+    const { default: useSignalBinding } = await import('./signal-binding')
+    const ctx = createCtx()
+    const binding = useSignalBinding(ctx)
+
+    await binding.bindTable('logs', 'opentelemetry_logs', { persist: false })
+    inspectSignalTable.mockRejectedValueOnce(new Error('inspect failed'))
+
+    binding.openLogsForTrace('abc123', { database: 'other_db', table: 'service_logs' })
+    expect(ctx.session.overlayLogs.active).toBe(true)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(ctx.semantics.logs.table.value).toBe('opentelemetry_logs')
+    expect(ctx.session.overlayLogs.active).toBe(false)
+    expect(ctx.session.overlayLogs.targetTable).toBeUndefined()
+    expect(ctx.session.overlayLogs.pageSnapshot).toBeUndefined()
+  })
+
+  it('defers a hydrate overlay open until the page binding initializes', async () => {
+    const { default: useSignalBinding } = await import('./signal-binding')
+    loadDrilldownSettings.mockReturnValue({ logs: { table: 'page_logs' }, traces: {} })
+    const ctx = createCtx()
+    const binding = useSignalBinding(ctx)
+    // mocked onMounted already ran initialize; let the async page bind settle.
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(ctx.semantics.logs.table.value).toBe('page_logs')
+    updateLogsDrilldownSettings.mockClear()
+    inspectSignalTable.mockClear()
+
+    // Simulate a hydrate that arrived before the binder was ready.
+    ctx.session.binding.ready = false
+    binding.openLogsForTrace('t1', { table: 'overlay_logs' })
+    expect(inspectSignalTable).not.toHaveBeenCalledWith('logs', 'overlay_logs', 'public')
+    expect(ctx.session.overlayLogs.pending).toEqual({ traceId: 't1', database: undefined, table: 'overlay_logs' })
+    expect(ctx.session.overlayLogs.targetTable).toBe('overlay_logs')
+
+    // initialize flushes the queue after the (skipped, identical) page bind.
+    await binding.initialize('logs')
+    expect(inspectSignalTable).toHaveBeenCalledWith('logs', 'overlay_logs', 'public')
+    expect(ctx.semantics.logs.table.value).toBe('overlay_logs')
+    expect(ctx.session.overlayLogs.active).toBe(true)
+    expect(ctx.session.overlayLogs.pending).toBeUndefined()
+    // The page bind already persisted above; the overlay bind must not.
+    expect(updateLogsDrilldownSettings).not.toHaveBeenCalled()
   })
 
   it('discards stale generation when a newer bind starts', async () => {

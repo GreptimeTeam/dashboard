@@ -212,16 +212,21 @@ export default function useDrilldownFilterOptions(
   }
 
   watch(
-    () =>
-      [
+    () => {
+      // Single settings read per evaluation — this source re-runs on every signal /
+      // revision change. Settings are not reactive: updates propagate via the binder's
+      // revision bump (bindTable persist:true).
+      const settings = loadDrilldownSettings().logs
+      return [
         ctx.connection.signal.value,
         ctx.semantics.logs.revision.value,
         ctx.semantics.traces.revision.value,
-        loadDrilldownSettings().logs.labelInclude?.join('\0'),
-        loadDrilldownSettings().logs.labelExclude?.join('\0'),
-        loadDrilldownSettings().logs.fieldInclude?.join('\0'),
-        loadDrilldownSettings().logs.fieldExclude?.join('\0'),
-      ] as const,
+        settings.labelInclude?.join('\0'),
+        settings.labelExclude?.join('\0'),
+        settings.fieldInclude?.join('\0'),
+        settings.fieldExclude?.join('\0'),
+      ] as const
+    },
     async () => {
       if (suggestMode !== 'fields' && ctx.connection.signal.value === 'metrics') {
         return

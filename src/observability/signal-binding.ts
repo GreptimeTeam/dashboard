@@ -15,11 +15,11 @@ import { buildDefaultTracesFieldMap } from '@/observability/traces/field-map'
 import {
   entityColumnFilterKey,
   inspectSignalTable,
-  logsServiceFilterCandidateKeys,
   physicalServiceColumn,
+  resolveLogsDetailGroupFromFilters,
   resolveSignalTable,
 } from '@/observability/semantics'
-import type { DrilldownActions, DrilldownContext, SignalSemanticSnapshot } from './context'
+import type { DrilldownActions, DrilldownContext } from './context'
 
 const FIELD_ROLES = ['time', 'body', 'severity', 'service', 'primaryGroupBy', 'traceId'] as const
 type LogsRole = (typeof FIELD_ROLES)[number]
@@ -56,8 +56,6 @@ export default function useSignalBinding(ctx: DrilldownContext): {
   setLogsRole: DrilldownActions['setLogsRole']
 } {
   const generation: Record<'logs' | 'traces', number> = { logs: 0, traces: 0 }
-  /** Page logs binding saved on first Trace→Logs overlay open; restored on close. */
-  let pageLogsSnapshot: SignalSemanticSnapshot | undefined
 
   const restoreLogsDetailSelection = () => {
     if (ctx.ui.logsView.value !== 'detail') {
@@ -66,13 +64,13 @@ export default function useSignalBinding(ctx: DrilldownContext): {
     if (ctx.ui.logsSelectedGroup.value) {
       return
     }
-    const chipKeys = logsServiceFilterCandidateKeys(
+    const match = resolveLogsDetailGroupFromFilters(
+      ctx.query.filters.value,
       ctx.semantics.logs.fieldMap.value,
       ctx.semantics.logs.entityFilterKeys.value?.service
     )
-    const match = ctx.query.filters.value.find((f) => f.op === '=' && chipKeys.has(f.key))
     if (match) {
-      ctx.ui.logsSelectedGroup.value = match.value
+      ctx.ui.logsSelectedGroup.value = match
     }
   }
 
@@ -188,6 +186,90 @@ export default function useSignalBinding(ctx: DrilldownContext): {
     ctx.semantics.logs.setFieldMap(next)
   }
 
+  const openLogsForTrace: DrilldownActions['openLogsForTrace'] = (traceId, target) => {
+    const trimmed = traceId.trim()
+    if (!trimmed) {
+      return
+    }
+
+    // Open the drawer immediately; bind completes async and panels wait on ready/revision.
+    ctx.ui.logsTraceId.value = trimmed
+    if (ctx.ui.logsTab.value !== 'logs') {
+      ctx.ui.logsTab.value = 'logs'
+    }
+
+    if (!ctx.session.binding.ready) {
+      // Cold-start hydrate: the page bind has not run yet, so a snapshot now would capture
+      // an unbound page. Queue the open; initialize('logs') flushes it after the page bind.
+      const table = target?.table?.trim()
+      ctx.session.overlayLogs.pending = {
+        traceId: trimmed,
+        database: target?.database?.trim(),
+        table,
+      }
+      if (table) {
+        ctx.session.overlayLogs.active = true
+        ctx.session.overlayLogs.targetTable = table
+      }
+      return
+    }
+
+    const table = target?.table?.trim()
+    // URL restore carries a table without a database — fall back to the page connection db
+    // (cross-database overlay targets are not expressible in the URL, same as before).
+    const database = target?.database?.trim() || ctx.connection.logsDatabase.value
+    if (table && (database !== ctx.semantics.logs.database.value || table !== ctx.semantics.logs.table.value)) {
+      const overlay = ctx.session.overlayLogs
+      if (!overlay.active) {
+        overlay.pageSnapshot = ctx.semantics.logs.takeSnapshot()
+      }
+      overlay.active = true
+      overlay.targetTable = table
+      // MUST NOT write connection.logsDatabase — overlay uses semantics.logs.database only.
+      bindTable('logs', table, { database, scope: 'overlay', persist: false }).catch(() => {
+        // Bind failed: drop overlay markers so URL sync / queries stay on the page binding.
+        // Ignore if a newer open already replaced this target.
+        if (overlay.targetTable !== table) {
+          return
+        }
+        if (overlay.pageSnapshot) {
+          generation.logs += 1
+          ctx.semantics.logs.restoreSnapshot(overlay.pageSnapshot)
+        }
+        overlay.active = false
+        overlay.targetTable = undefined
+        overlay.pageSnapshot = undefined
+      })
+    }
+  }
+
+  const closeLogsForTrace: DrilldownActions['closeLogsForTrace'] = () => {
+    const had = Boolean(ctx.ui.logsTraceId.value)
+    ctx.ui.logsTraceId.value = undefined
+    const overlay = ctx.session.overlayLogs
+    if (overlay.pageSnapshot) {
+      // Invalidate in-flight overlay binds so a late commit cannot overwrite the restore.
+      generation.logs += 1
+      ctx.semantics.logs.restoreSnapshot(overlay.pageSnapshot)
+    }
+    overlay.active = false
+    overlay.targetTable = undefined
+    overlay.pageSnapshot = undefined
+    overlay.pending = undefined
+    if (had && ctx.connection.signal.value === 'logs') {
+      ctx.query.refreshKey.value += 1
+    }
+  }
+
+  const flushPendingOverlayLogs = () => {
+    const { pending } = ctx.session.overlayLogs
+    if (!pending) {
+      return
+    }
+    ctx.session.overlayLogs.pending = undefined
+    openLogsForTrace(pending.traceId, pending.table ? { database: pending.database, table: pending.table } : undefined)
+  }
+
   const initialize = async (signal: 'logs' | 'traces') => {
     ctx.session.binding.ready = true
     const database = signal === 'logs' ? ctx.connection.logsDatabase.value : ctx.connection.tracesDatabase.value
@@ -203,55 +285,20 @@ export default function useSignalBinding(ctx: DrilldownContext): {
       table = urlOrCurrent || settingsTable || (await resolveSignalTable('traces', { settingsTable, database }))
     }
 
-    if (!table) {
-      return
-    }
-
-    // Logs init seeds settings gaps (persist true). Traces auto-discover / URL restore
-    // historically did not save — only the picker persists.
-    await bindTable(signal, table, {
-      persist: signal === 'logs',
-    })
-  }
-
-  const openLogsForTrace: DrilldownActions['openLogsForTrace'] = (traceId, target) => {
-    const trimmed = traceId.trim()
-    if (!trimmed) {
-      return
-    }
-
-    // Open the drawer immediately; bind completes async and panels wait on ready/revision.
-    ctx.ui.logsTraceId.value = trimmed
-    if (ctx.ui.logsTab.value !== 'logs') {
-      ctx.ui.logsTab.value = 'logs'
-    }
-
-    const database = target?.database?.trim()
-    const table = target?.table?.trim()
-    if (
-      database &&
-      table &&
-      (database !== ctx.semantics.logs.database.value || table !== ctx.semantics.logs.table.value)
-    ) {
-      if (!pageLogsSnapshot) {
-        pageLogsSnapshot = ctx.semantics.logs.takeSnapshot()
+    try {
+      if (!table) {
+        return
       }
-      // MUST NOT write connection.logsDatabase — overlay uses semantics.logs.database only.
-      bindTable('logs', table, { database, scope: 'overlay', persist: false }).catch(() => undefined)
-    }
-  }
 
-  const closeLogsForTrace: DrilldownActions['closeLogsForTrace'] = () => {
-    const had = Boolean(ctx.ui.logsTraceId.value)
-    ctx.ui.logsTraceId.value = undefined
-    if (pageLogsSnapshot) {
-      // Invalidate in-flight overlay binds so a late commit cannot overwrite the restore.
-      generation.logs += 1
-      ctx.semantics.logs.restoreSnapshot(pageLogsSnapshot)
-      pageLogsSnapshot = undefined
-    }
-    if (had && ctx.connection.signal.value === 'logs') {
-      ctx.query.refreshKey.value += 1
+      // Logs init seeds settings gaps (persist true). Traces auto-discover / URL restore
+      // historically did not save — only the picker persists.
+      await bindTable(signal, table, {
+        persist: signal === 'logs',
+      })
+    } finally {
+      if (signal === 'logs') {
+        flushPendingOverlayLogs()
+      }
     }
   }
 
@@ -281,10 +328,12 @@ export default function useSignalBinding(ctx: DrilldownContext): {
   watch(
     () => ctx.connection.tracesDatabase.value,
     () => {
+      // Same as logs-db change: restore the page logs binding if Trace→Logs overlay is open.
+      if (ctx.ui.logsTraceId.value || ctx.session.overlayLogs.active || ctx.session.overlayLogs.pending) {
+        closeLogsForTrace()
+      }
       ctx.semantics.traces.reset()
       ctx.ui.focusTraceId.value = undefined
-      ctx.ui.logsTraceId.value = undefined
-      pageLogsSnapshot = undefined
       initialize('traces').catch(() => undefined)
     }
   )
