@@ -424,7 +424,7 @@ export async function fetchBreakdownAttrValues(
   }
 }
 
-/** All spans for one trace (Gantt). */
+/** All spans for one trace (Gantt). Scoped to the active time window for partition pruning. */
 export async function fetchTraceSpans(ctx: DrilldownContext, traceId: string): Promise<Span[]> {
   const tableName = ctx.semantics.traces.table.value
   if (!tableName || !traceId.trim()) {
@@ -433,9 +433,15 @@ export async function fetchTraceSpans(ctx: DrilldownContext, traceId: string): P
 
   const idCol = traceIdColumn(ctx)
   const tsCol = timeColumn(ctx)
+  const unixRange = ctx.query.unixTimeRange()
+  const whereParts = [`${quoteIdent(idCol)} = '${escapeSqlString(traceId.trim())}'`]
+  if (unixRange.length === 2) {
+    whereParts.push(`${quoteIdent(tsCol)} >= FROM_UNIXTIME(${unixRange[0]})`)
+    whereParts.push(`${quoteIdent(tsCol)} <= FROM_UNIXTIME(${unixRange[1]})`)
+  }
   const sql = `SELECT *
 FROM ${quoteIdent(tableName)}
-WHERE ${quoteIdent(idCol)} = '${escapeSqlString(traceId.trim())}'
+WHERE ${whereParts.join(' AND ')}
 ORDER BY ${quoteIdent(tsCol)} ASC`
 
   try {
