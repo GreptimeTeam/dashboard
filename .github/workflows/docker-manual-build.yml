@@ -7,21 +7,29 @@ on:
 
 name: Build docker image manually
 
-env:
-  REGISTRY: ghcr.io
-
 jobs:
   docker:
     name: Build docker image
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+    if: ${{ github.repository_owner == 'GreptimeTeam' }}
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.commit }}
+
+      - name: Login to Dockerhub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to AliCloud Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: greptime-registry.cn-hangzhou.cr.aliyuncs.com
+          username: ${{ secrets.ALICLOUD_USERNAME }}
+          password: ${{ secrets.ALICLOUD_PASSWORD }}
 
       - name: Configure image tag
         shell: bash
@@ -36,13 +44,6 @@ jobs:
       - name: Set up buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Log into registry ${{ env.REGISTRY }}
-        uses: docker/login-action@v2
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Send GitHub Action trigger data to Slack workflow
         id: slack_start
         uses: slackapi/slack-github-action@v1.23.0
@@ -50,7 +51,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
           payload: |
-            {"text": "Building OSS **dashboard** test image. git-ref: `${{ github.event.inputs.commit }}`"}
+            {"text": "Building OSS **dashboard** test image (no latest). git-ref: `${{ github.event.inputs.commit }}`"}
 
       - name: Build and push
         uses: docker/build-push-action@v3
@@ -62,7 +63,8 @@ jobs:
           #platforms: linux/amd64,linux/arm64
           platforms: linux/amd64
           tags: |
-            ${{ env.REGISTRY }}/greptimeteam/dashboard:${{ env.IMAGE_TAG }}
+            greptime/greptimedb-dashboard:${{ env.IMAGE_TAG }}
+            greptime-registry.cn-hangzhou.cr.aliyuncs.com/greptime/greptimedb-dashboard:${{ env.IMAGE_TAG }}
 
       - name: Send GitHub Action trigger data to Slack workflow
         id: slack_finish
@@ -71,4 +73,4 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
           payload: |
-            {"text": "OSS **dashboard** test image is ready. Tag: `ghcr.io/greptimeteam/dashboard:${{ env.IMAGE_TAG }}`"}
+            {"text": "OSS **dashboard** test image is ready (no latest). Tag: `greptime/greptimedb-dashboard:${{ env.IMAGE_TAG }}`"}
