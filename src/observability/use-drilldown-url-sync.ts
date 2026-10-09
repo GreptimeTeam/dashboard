@@ -113,6 +113,18 @@ export default function useDrilldownUrlSync(
   let writingToUrl = false
   const tabSpecs = buildUrlTabSpecs(ctx)
 
+  const finishSyncingFromUrl = (pendingBinds: Promise<unknown>[]) => {
+    // Hold the flag until URL-driven binds settle so their commits cannot echo
+    // a context→URL write that races with popstate.
+    Promise.all(pendingBinds)
+      .catch(() => undefined)
+      .finally(() => {
+        nextTick(() => {
+          syncingFromUrl = false
+        })
+      })
+  }
+
   const applyQueryToContext = (query: LocationQuery = route.query) => {
     syncingFromUrl = true
     const {
@@ -135,7 +147,9 @@ export default function useDrilldownUrlSync(
       bodyOp,
     } = query
 
-    ctx.actions.setSignal(parseSignal(signal))
+    const nextSignal = parseSignal(signal)
+    // Soft hydrate: do not close Trace→Logs overlay or infer logsView from in-memory filters.
+    ctx.actions.setSignal(nextSignal, { hydrate: true })
 
     if (timeLength !== undefined) {
       const length = parseInt(String(timeLength), 10)
@@ -155,6 +169,7 @@ export default function useDrilldownUrlSync(
       }
     }
 
+    // Filters before logsView / drawer restore so detail selection sees URL chips.
     ctx.actions.setFilters(parseFilters(filters))
     ctx.actions.setSidebarFilters({
       prefixes: parseCsv(prefixes),
@@ -168,10 +183,12 @@ export default function useDrilldownUrlSync(
       ctx.ui.metric.value = undefined
     }
 
+    const pendingBinds: Promise<unknown>[] = []
+
     if (typeof logsTable === 'string' && logsTable.trim()) {
       const logsTableName = logsTable.trim()
       if (isSignalBindingStarted()) {
-        ctx.actions.bindTable('logs', logsTableName, { persist: false }).catch(() => undefined)
+        pendingBinds.push(ctx.actions.bindTable('logs', logsTableName, { persist: false }).catch(() => undefined))
       } else {
         ctx.semantics.logs.setTable(logsTableName)
       }
@@ -182,26 +199,12 @@ export default function useDrilldownUrlSync(
     if (typeof tracesTable === 'string' && tracesTable.trim()) {
       const tracesTableName = tracesTable.trim()
       if (isSignalBindingStarted()) {
-        ctx.actions.bindTable('traces', tracesTableName, { persist: false }).catch(() => undefined)
+        pendingBinds.push(ctx.actions.bindTable('traces', tracesTableName, { persist: false }).catch(() => undefined))
       } else {
         ctx.semantics.traces.setTable(tracesTableName)
       }
     } else if (!ctx.semantics.traces.table.value) {
       ctx.semantics.traces.setTable(undefined)
-    }
-
-    const traceIdFromUrl = typeof focusTraceId === 'string' ? focusTraceId.trim() : ''
-    if (traceIdFromUrl && (ctx.connection.signal.value === 'traces' || ctx.connection.signal.value === 'logs')) {
-      ctx.ui.focusTraceId.value = traceIdFromUrl
-    } else {
-      ctx.ui.focusTraceId.value = undefined
-    }
-
-    const logsTraceFromUrl = typeof logsTraceId === 'string' ? logsTraceId.trim() : ''
-    if (logsTraceFromUrl && (ctx.connection.signal.value === 'traces' || ctx.connection.signal.value === 'logs')) {
-      ctx.ui.logsTraceId.value = logsTraceFromUrl
-    } else {
-      ctx.ui.logsTraceId.value = undefined
     }
 
     if (ctx.connection.signal.value === 'logs' && isLogsView(logsView)) {
@@ -239,12 +242,24 @@ export default function useDrilldownUrlSync(
       ctx.ui.logsBodyValue.value = ''
     }
 
-    normalizeTimeRange(ctx)
+    // Drawers via open/close actions (overlay bind side effects), not raw ref writes.
+    const canShowTraceDrawers = ctx.connection.signal.value === 'traces' || ctx.connection.signal.value === 'logs'
+    const logsTraceFromUrl = typeof logsTraceId === 'string' ? logsTraceId.trim() : ''
+    if (logsTraceFromUrl && canShowTraceDrawers) {
+      ctx.actions.openLogsForTrace(logsTraceFromUrl)
+    } else {
+      ctx.actions.closeLogsForTrace()
+    }
 
-    // Keep the flag through the flush of Context watchers scheduled by this apply.
-    nextTick(() => {
-      syncingFromUrl = false
-    })
+    const traceIdFromUrl = typeof focusTraceId === 'string' ? focusTraceId.trim() : ''
+    if (traceIdFromUrl && canShowTraceDrawers) {
+      ctx.actions.openTraceGantt(traceIdFromUrl)
+    } else {
+      ctx.actions.closeTraceGantt()
+    }
+
+    normalizeTimeRange(ctx)
+    finishSyncingFromUrl(pendingBinds)
   }
 
   const initializeFromQuery = () => {

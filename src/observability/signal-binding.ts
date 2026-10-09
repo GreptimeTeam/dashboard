@@ -202,9 +202,10 @@ export default function useSignalBinding(ctx: DrilldownContext): {
     const settingsTable = settings?.table?.trim()
     const urlOrCurrent = ctx.semantics[signal].table.value?.trim()
 
+    // URL / already-set table wins over persisted settings so deep links are authoritative.
     let table: string | undefined
     if (signal === 'logs') {
-      table = settingsTable || urlOrCurrent || (await resolveSignalTable('logs', { database }))
+      table = urlOrCurrent || settingsTable || (await resolveSignalTable('logs', { database }))
     } else {
       table = urlOrCurrent || settingsTable || (await resolveSignalTable('traces', { settingsTable, database }))
     }

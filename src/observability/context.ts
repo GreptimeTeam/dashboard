@@ -96,7 +96,12 @@ export interface DrilldownUiState {
 
 export interface DrilldownActions {
   triggerRefresh: () => void
-  setSignal: (signal: DrilldownSignal) => void
+  /**
+   * Switch the active signal. Pass `{ hydrate: true }` from URL restore so we only
+   * update `signal` (and clear metric when leaving metrics) — drawers, logs view,
+   * tabs, and filters are applied by the caller from the query.
+   */
+  setSignal: (signal: DrilldownSignal, options?: { hydrate?: boolean }) => void
   setFilters: (filters: DrilldownFilter[]) => void
   setSidebarFilters: (filters: DrilldownSidebarFilters) => void
   appendFilter: (filter: DrilldownFilter) => void
@@ -381,7 +386,18 @@ export function useDrilldownContextProvider(): DrilldownContext {
     },
   }
 
-  const setSignal = (next: DrilldownSignal) => {
+  const setSignal = (next: DrilldownSignal, options?: { hydrate?: boolean }) => {
+    // URL restore owns filters / drawers / logsView / tabs from the query — only flip
+    // the signal (and drop metric when leaving metrics) so we do not tear down
+    // Trace→Logs overlay state that the URL still wants open.
+    if (options?.hydrate) {
+      if (next !== 'metrics') {
+        metric.value = undefined
+      }
+      signal.value = next
+      return
+    }
+
     // One shared filter list: re-key entity filters into the target signal's vocabulary.
     // The bound table's resolved key wins (logs may need a JSON chip, traces a column);
     // without one we fall back to the signal's convention.

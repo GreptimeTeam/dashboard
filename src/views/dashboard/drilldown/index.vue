@@ -133,9 +133,12 @@
   const route = useRoute()
   const router = useRouter()
   const ctx = useDrilldownContextProvider()
+  // Register binder before URL hydrate so openLogsForTrace / bindTable are real implementations.
+  // Cold start still uses setTable until onMounted initialize (bindingStarted); URL table is
+  // stamped first so initialize prefers urlOrCurrent over settings.
+  useSignalBinding(ctx)
   const urlSync = useDrilldownUrlSync(ctx, route, router)
   urlSync.initializeFromQuery()
-  useSignalBinding(ctx)
 
   const { signal } = ctx.connection
   const { logsTab } = ctx.ui

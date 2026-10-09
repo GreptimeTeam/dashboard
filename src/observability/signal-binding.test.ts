@@ -275,6 +275,28 @@ describe('useSignalBinding', () => {
     expect(ctx.actions.setFilters).not.toHaveBeenCalled()
   })
 
+  it('prefers URL/current logs table over persisted settings on initialize', async () => {
+    const { default: useSignalBinding } = await import('./signal-binding')
+    const { resolveSignalTable } = await import('./semantics')
+    vi.mocked(resolveSignalTable).mockClear()
+    loadDrilldownSettings.mockReturnValue({
+      logs: { table: 'settings_logs' },
+      traces: { table: 'settings_traces' },
+    })
+    const ctx = createCtx()
+    ctx.semantics.logs.setTable('url_logs')
+    ctx.semantics.traces.setTable('url_traces')
+
+    // onMounted initialize runs immediately (vue mock); URL/current must beat settings.
+    useSignalBinding(ctx)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(ctx.semantics.logs.table.value).toBe('url_logs')
+    expect(ctx.semantics.traces.table.value).toBe('url_traces')
+    expect(resolveSignalTable).not.toHaveBeenCalled()
+  })
+
   it('keeps a Metrics filter restored from a URL after background logs binding', async () => {
     const [{ default: useSignalBinding }, { default: useDrilldownUrlSync }] = await Promise.all([
       import('./signal-binding'),
@@ -285,7 +307,7 @@ describe('useSignalBinding', () => {
     const urlFilter = encodeURIComponent(JSON.stringify([{ key: 'job', op: '=', value: 'checkout' }]))
 
     Object.assign(ctx.actions, {
-      setSignal: (signal: 'metrics' | 'logs' | 'traces') => {
+      setSignal: (signal: 'metrics' | 'logs' | 'traces', _options?: { hydrate?: boolean }) => {
         ctx.connection.signal.value = signal
       },
       setFilters: (filters: unknown[]) => {
@@ -296,6 +318,10 @@ describe('useSignalBinding', () => {
       setLogsView: () => undefined,
       setLogsTab: () => undefined,
       setTracesTab: () => undefined,
+      openLogsForTrace: () => undefined,
+      closeLogsForTrace: () => undefined,
+      openTraceGantt: () => undefined,
+      closeTraceGantt: () => undefined,
     })
 
     const urlSync = useDrilldownUrlSync(
