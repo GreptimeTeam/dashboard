@@ -1,7 +1,7 @@
 import editorApi from '@/api/editor'
 import useTableSchemaStore from '@/store/modules/table-schema'
 import { escapeSqlString, quoteIdent } from '../logs/query-state'
-import { getTableSemantics, listSignalTables, resolveEntityFilterRef } from '../semantics'
+import { getTableSemantics, listSignalTables } from '../semantics'
 import type { DrilldownContext } from '../context'
 import { qualifyTraceLogsTable } from './trace-logs-qualification'
 import type { SchemaColumn } from '../logs/field-map'
@@ -14,31 +14,38 @@ export interface LogsCandidate {
   timeColumn?: string
 }
 
+export interface TraceLogsAssociationPool {
+  /** Every table that can take part in association (declared or undeclared + trace_id). */
+  qualifiedTables: string[]
+  /** Auto-probe targets: declared log + resolvable service identity. */
+  candidates: LogsCandidate[]
+}
+
 /**
- * Qualified candidates for the trace → logs routing, reusing the Logs domain's own
- * discovery (`listSignalTables`) and identity resolution (`resolveEntityFilterRef`).
- * Auto-probing only trusts declarations: candidates must be declared
- * `signal_type='log'` in table_semantics. Undeclared tables stay out of the probe —
- * they remain manually mappable in settings.
+ * Shared discovery for Trace → Logs: qualify every mappable table once, then split
+ * auto-probe candidates (declared + identity) from the full qualified set used for
+ * settings / manual mapping.
  */
-export async function loadLogsCandidates(ctx: DrilldownContext): Promise<LogsCandidate[]> {
+export async function loadTraceLogsAssociationPool(ctx: DrilldownContext): Promise<TraceLogsAssociationPool> {
   const database = ctx.connection.logsDatabase.value
-  const tables = await listSignalTables('logs', {
+  const listed = await listSignalTables('logs', {
     include: ctx.semantics.logs.table.value ? [ctx.semantics.logs.table.value] : [],
     database,
   })
+  const tables = Array.isArray(listed) ? listed : []
+  if (!tables.length) {
+    return { qualifiedTables: [], candidates: [] }
+  }
 
-  // Declared log tables only — the probe never guesses from payload-like columns.
-  // Declared non-log tables (metrics, the traces table itself) and undeclared tables
-  // are rejected without fetching their schema.
+  // Keep declared logs and undeclared tables; drop declared non-log signals.
   const withSemantics = await Promise.all(
     tables.map(async (table) => ({ table, semantics: await getTableSemantics(table, database) }))
   )
-  const survivors = withSemantics.filter(({ semantics }) => semantics?.signalType === 'log').map(({ table }) => table)
+  const survivors = withSemantics
+    .filter(({ semantics }) => !semantics?.signalType || semantics.signalType === 'log')
+    .map(({ table }) => table)
 
-  // Columns pre-filter: without `trace_id` a table can never join association (the
-  // shared qualification rejects it), so declared log tables lacking the column are
-  // skipped before any schema fetch. An empty scan result fails open.
+  // Columns pre-filter: without `trace_id` a table can never join association.
   let fetchTargets = survivors
   if (survivors.length) {
     const traceCapable = await useTableSchemaStore().tablesHavingColumn('trace_id', database)
@@ -47,16 +54,14 @@ export async function loadLogsCandidates(ctx: DrilldownContext): Promise<LogsCan
     }
   }
 
-  // One batched information_schema.columns query covers every survivor — the per-table
-  // ensureTableSchema calls below are cache hits instead of one query each.
   if (fetchTargets.length) {
     await useTableSchemaStore()
       .ensureTableSchemas(fetchTargets, database)
       .catch(() => undefined)
   }
 
-  const candidates = await Promise.all(
-    fetchTargets.map(async (table): Promise<LogsCandidate | undefined> => {
+  const evaluated = await Promise.all(
+    fetchTargets.map(async (table) => {
       let columns: SchemaColumn[]
       try {
         columns = await useTableSchemaStore().ensureTableSchema(table, database)
@@ -64,15 +69,38 @@ export async function loadLogsCandidates(ctx: DrilldownContext): Promise<LogsCan
         return undefined
       }
       const qualified = await qualifyTraceLogsTable(table, columns, database)
-      // Auto-probing routes by service identity — tables without one can only be
-      // mapped manually in settings, they never become probe targets.
-      if (!qualified?.declaredLog || !qualified.identityExpr) {
+      if (!qualified) {
         return undefined
       }
-      return { database, table, identityExpr: qualified.identityExpr, timeColumn: qualified.timeColumn }
+      return { table, qualified }
     })
   )
-  return candidates.filter((candidate): candidate is LogsCandidate => candidate !== undefined)
+
+  const qualifiedTables: string[] = []
+  const candidates: LogsCandidate[] = []
+  evaluated.forEach((item) => {
+    if (!item) {
+      return
+    }
+    qualifiedTables.push(item.table)
+    // Auto-probing routes by service identity — tables without one can only be
+    // mapped manually in settings, they never become probe targets.
+    if (item.qualified.declaredLog && item.qualified.identityExpr) {
+      candidates.push({
+        database,
+        table: item.table,
+        identityExpr: item.qualified.identityExpr,
+        timeColumn: item.qualified.timeColumn,
+      })
+    }
+  })
+  return { qualifiedTables, candidates }
+}
+
+/** Probe-only view of {@link loadTraceLogsAssociationPool}. */
+export async function loadLogsCandidates(ctx: DrilldownContext): Promise<LogsCandidate[]> {
+  const { candidates } = await loadTraceLogsAssociationPool(ctx)
+  return candidates
 }
 
 /**

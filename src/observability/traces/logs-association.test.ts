@@ -414,11 +414,9 @@ describe('trace logs routing', () => {
     expect(ensureTableSchema).not.toHaveBeenCalledWith('go_gc_heap_allocs_bytes_total', 'logs_db')
   })
 
-  it('issues no schema batch at all when no table is declared log', async () => {
-    // Regression: the probe used to batch-fetch schemas for every trace_id-bearing
-    // table and qualify afterwards. The declaration filter now runs before any
-    // information_schema.columns request — an undeclared database yields zero
-    // candidates, zero schema queries and the current-binding fallback.
+  it('does not auto-probe when no table is declared log — undeclared stay manual-only', async () => {
+    // Undeclared tables are association-qualified for settings (schema is fetched),
+    // but never become probe candidates. Routing falls back to the Logs page binding.
     const allTables = [
       '_gt_logs',
       'logs_attr_test',
@@ -436,8 +434,10 @@ describe('trace logs routing', () => {
 
     const resolution = await resolveTraceLogsForServices(createContext(), ['checkout'])
 
-    expect(ensureTableSchemas).not.toHaveBeenCalled()
+    expect(ensureTableSchemas).toHaveBeenCalled()
     expect(runSQL).not.toHaveBeenCalled()
+    expect(resolution.multiTable).toBe(false)
+    expect(resolution.manualMappingEnabled).toBe(true)
     expect(resolution.targets.checkout).toEqual({
       service: 'checkout',
       database: 'logs_db',
@@ -553,10 +553,13 @@ describe('trace logs routing', () => {
   it('skips candidates without a resolvable service identity instead of probing them', async () => {
     mockQualifiedTables(['_gt_logs', 'otel_logs'])
 
-    // `_gt_logs` resolves no service identity, leaving a single qualified table —
-    // routing follows the Logs page binding and `_gt_logs` is never probed.
+    // `_gt_logs` has trace_id but no service identity — association-qualified for
+    // manual mapping, never a probe candidate. Only one probe candidate remains, so
+    // no auto-learn; `_gt_logs` is never probed.
     const resolution = await resolveTraceLogsForServices(createContext(), ['frontend-web'])
 
+    expect(resolution.multiTable).toBe(false)
+    expect(resolution.manualMappingEnabled).toBe(true)
     expect(resolution.targets['frontend-web']).toEqual({
       service: 'frontend-web',
       database: 'logs_db',
@@ -564,6 +567,34 @@ describe('trace logs routing', () => {
       source: 'current',
     })
     expect(runSQL.mock.calls.every((call) => !String(call[0]).includes('"_gt_logs"'))).toBe(true)
+  })
+
+  it('enables manual mapping when an undeclared qualified table competes with a declared probe table', async () => {
+    listTables.mockResolvedValue(['otel_logs', 'custom_logs'])
+    ensureTableSchema.mockImplementation(async (table: string) =>
+      table === 'custom_logs'
+        ? [
+            { name: 'timestamp', data_type: 'TimestampNanosecond' },
+            { name: 'trace_id', data_type: 'String' },
+            { name: 'message', data_type: 'String' },
+          ]
+        : OTelLogsColumns
+    )
+    getSemantics.mockImplementation(async (table: string) =>
+      table === 'otel_logs' ? { signalType: 'log' } : undefined
+    )
+    resolveServiceRef.mockImplementation(async (table: string) =>
+      table === 'otel_logs' ? { column: 'service_name' } : undefined
+    )
+
+    const resolution = await resolveTraceLogsForServices(createContext(), ['checkout'])
+
+    // Probe competition needs 2+ declared+identity tables — here only otel qualifies.
+    expect(resolution.multiTable).toBe(false)
+    // Settings must still allow mapping services onto the undeclared custom table.
+    expect(resolution.manualMappingEnabled).toBe(true)
+    expect(resolution.targets.checkout).toMatchObject({ table: 'current_logs', source: 'current' })
+    expect(runSQL).not.toHaveBeenCalled()
   })
 })
 

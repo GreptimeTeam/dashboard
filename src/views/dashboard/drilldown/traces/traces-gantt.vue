@@ -106,7 +106,12 @@
     selectedServices.value = selectedServices.value.filter((service) => services.includes(service))
   })
 
-  const logsResolution = ref<TraceLogsResolution>({ targets: {}, ambiguous: {} })
+  const logsResolution = ref<TraceLogsResolution>({
+    targets: {},
+    ambiguous: {},
+    multiTable: false,
+    manualMappingEnabled: false,
+  })
   const serviceTargetLabels = ref<Record<string, string>>({})
 
   /** Route every distinct service once per gantt load; the click itself is a memory lookup. */

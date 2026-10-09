@@ -94,7 +94,7 @@ a-modal.trace-logs-settings(
   const tableOptions = ref<Record<number, string[]>>({})
   const loadingTables = ref<Record<number, boolean>>({})
   const nonModelTables = ref<Record<number, boolean>>({})
-  const multiTable = ref(false)
+  const manualMappingEnabled = ref(false)
   const hydrating = ref(false)
 
   const fallbackTable = computed(() => ctx.semantics.logs.table.value)
@@ -194,15 +194,15 @@ a-modal.trace-logs-settings(
 
     const services = await fetchTraceServices(ctx)
     const resolution = await resolveTraceLogsForServices(ctx, services)
-    multiTable.value = resolution.multiTable
+    manualMappingEnabled.value = resolution.manualMappingEnabled
 
-    if (!resolution.multiTable) {
-      // 单表：映射没有路由价值，无行可编辑，关联按 Logs 页绑定表 / fields 解析走。
+    if (!resolution.manualMappingEnabled) {
+      // 仅一张可关联表且无手动映射：无路由价值，关联按 Logs 页绑定表 / fields 解析走。
       mappings.value = []
       return
     }
-    // 多表：行 = 自动提取的 service 全集，探测/学习结果作为初始值预填；
-    // 歧义（不在 targets）或兜底命中的 service 留空，由用户指定。
+    // 多表（含未声明但可手动映射的表）或已有手动映射：行 = service 全集；
+    // 探测/学习结果预填；歧义或兜底命中的 service 留空，由用户指定。
     const allServices = [
       ...new Set([...services, ...Object.keys(resolution.targets), ...saved.map((mapping) => mapping.service)]),
     ].sort()

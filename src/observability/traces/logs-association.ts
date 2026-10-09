@@ -8,7 +8,7 @@ import { buildLogsFieldMap, type SchemaColumn } from '../logs/field-map'
 import { escapeSqlString, quoteIdent } from '../logs/query-state'
 import { boundSignalDatabase } from '../signal-database'
 import {
-  loadLogsCandidates,
+  loadTraceLogsAssociationPool,
   probeLogsCandidates,
   probeVerdictKey,
   resetTraceLogsProbeCache as resetProbeCache,
@@ -36,8 +36,16 @@ export interface TraceLogsResolution {
   targets: Record<string, TraceLogsTarget>
   /** Services whose probe matched several tables — left for the user to decide in settings. */
   ambiguous: Record<string, string[]>
-  /** True when several qualified logs tables compete and mappings carry routing value. */
+  /**
+   * True when several **probe** candidates (declared log + service identity) compete —
+   * auto-learn / probe runs only in this case.
+   */
   multiTable: boolean
+  /**
+   * True when settings should show per-service rows: more than one association-qualified
+   * table (including undeclared + `trace_id`), or at least one saved manual mapping.
+   */
+  manualMappingEnabled: boolean
 }
 
 export interface TraceLogsQueryResult extends LogsRowsResult {
@@ -93,7 +101,12 @@ function learnTraceLogsMapping(ctx: DrilldownContext, service: string, table: st
 }
 
 async function doResolveTraceLogsForServices(ctx: DrilldownContext, requested: string[]): Promise<TraceLogsResolution> {
-  const resolution: TraceLogsResolution = { targets: {}, ambiguous: {}, multiTable: false }
+  const resolution: TraceLogsResolution = {
+    targets: {},
+    ambiguous: {},
+    multiTable: false,
+    manualMappingEnabled: false,
+  }
 
   const settings = loadDrilldownSettings(ctx.connection.tracesDatabase.value)
   let activeMappings = settings.traces.traceLogsMappings ?? []
@@ -103,24 +116,29 @@ async function doResolveTraceLogsForServices(ctx: DrilldownContext, requested: s
   )
   let pending = requested.filter((service) => !activeMappings.some((item) => item.service === service))
 
-  // Mappings only carry information when several logs tables compete. With a single
-  // qualified table (or none), every mapping that resolves to it is a no-op equivalent
-  // to the Logs page binding — drop it regardless of where it came from, so the settings
-  // stay clean and the Logs field settings decide.
-  const needsCandidates =
-    pending.length > 0 || activeMappings.some((item) => item.database === ctx.connection.logsDatabase.value)
+  // One pool: association-qualified tables (manual) + probe candidates (auto).
+  // Strip no-op mappings only when a single qualified table remains — undeclared
+  // tables still count, so 1 declared + 1 undeclared keeps manual routing editable.
+  // Skip discovery when every requested service already has a mapping and nothing
+  // on the current Logs DB needs pruning (pure manual short-circuit).
+  const logsDbForMappings = ctx.connection.logsDatabase.value
+  const allRequestedMapped = requested.every((service) => activeMappings.some((item) => item.service === service))
+  const mayNeedStrip = activeMappings.some((item) => item.source === 'auto' || item.database === logsDbForMappings)
+
+  let qualifiedTables: string[] = []
   let candidates: LogsCandidate[] = []
   let multiTable = false
-  if (needsCandidates) {
-    candidates = await loadLogsCandidates(ctx)
+  if (!allRequestedMapped || mayNeedStrip) {
+    const pool = await loadTraceLogsAssociationPool(ctx)
+    ;({ qualifiedTables, candidates } = pool)
     multiTable = candidates.length > 1
-    if (!multiTable) {
-      const onlyTable = candidates.length === 1 ? candidates[0].table : undefined
+    if (qualifiedTables.length <= 1) {
+      const onlyTable = qualifiedTables[0]
       activeMappings = activeMappings.filter((item) => {
         if (item.source === 'auto') {
           return false
         }
-        return !(onlyTable && item.database === ctx.connection.logsDatabase.value && item.table === onlyTable)
+        return !(onlyTable && item.database === logsDbForMappings && item.table === onlyTable)
       })
       pending = pending.filter((service) => !activeMappings.some((item) => item.service === service))
     }
@@ -180,6 +198,8 @@ async function doResolveTraceLogsForServices(ctx: DrilldownContext, requested: s
     })
   }
   resolution.multiTable = multiTable
+  resolution.manualMappingEnabled =
+    qualifiedTables.length > 1 || activeMappings.some((item) => item.source === 'manual' || item.source === undefined)
   return resolution
 }
 
@@ -201,7 +221,7 @@ export async function resolveTraceLogsForServices(
 ): Promise<TraceLogsResolution> {
   const requested = [...new Set(services.map(normalizeName).filter(Boolean))]
   if (!requested.length) {
-    return { targets: {}, ambiguous: {}, multiTable: false }
+    return { targets: {}, ambiguous: {}, multiTable: false, manualMappingEnabled: false }
   }
 
   const key = resolveInflightKey(ctx, requested)
