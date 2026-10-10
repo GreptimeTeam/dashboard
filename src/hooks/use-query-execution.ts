@@ -255,6 +255,14 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
       return
     }
 
+    // Builder SQL uses inclusive bounds (`ts <= $timeend`). The cursor row is already
+    // on screen, so we drop it after fetch — request limit+1 to still append a full page.
+    const limit = resolvePageSize()
+    if (limit > 0) {
+      const { updateLimitInSql } = await import('@/views/dashboard/logs/query/until')
+      pageSql = updateLimitInSql(pageSql, limit + 1)
+    }
+
     loadingMore.value = true
     try {
       const { default: editorAPI } = await import('@/api/editor')
@@ -269,17 +277,16 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
         })
         return record
       })
-      // The window end is inclusive: drop the cursor row (already displayed).
+      // Inclusive window end includes the cursor — drop it (already displayed).
       const appended = pageRows.filter((row) => isBeyondCursor(row[tsName], cursorMs, older))
       if (appended.length) {
         rows.value = [...rows.value, ...appended]
       }
-      const limit = resolvePageSize()
       const tip = appended.length ? appended[appended.length - 1]?.[tsName] : cursor
       // Anytime has no frozen edge; bounded windows stop at the toolbar start/end.
       const stillInside = !frozen || isCursorInsideFrozenWindow(tip, frozen, direction)
-      // Full page means there may be more rows further out; a stalled append stops.
-      hasMore.value = stillInside && appended.length > 0 && (!limit || pageRows.length >= limit)
+      // A full page of *new* rows means there may be more further out.
+      hasMore.value = stillInside && appended.length > 0 && (!limit || appended.length >= limit)
     } catch (error) {
       console.error('Failed to load more rows:', error)
     } finally {
