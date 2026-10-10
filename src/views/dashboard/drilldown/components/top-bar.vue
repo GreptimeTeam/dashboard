@@ -5,7 +5,7 @@
       span.page-title {{ t('drilldown.pageTitle') }}
       SignalTabNav(
         mode="navigation"
-        aria-label="Signal Explorer"
+        :aria-label="t('drilldown.pageTitle')"
         :items="signalItems"
         :model-value="signal"
         @update:model-value="onSignalSelect"
