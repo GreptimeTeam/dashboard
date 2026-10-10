@@ -1,0 +1,222 @@
+import { computed, ref, watch, type Ref } from 'vue'
+import type { EChartsOption } from 'echarts'
+import { storeToRefs } from 'pinia'
+import { executePromQLRange } from '@/api/metrics'
+import { useAppStore } from '@/store'
+import type { DrilldownContext } from './context'
+import { buildPromMatchersString } from './filters'
+import { resolveMetricMeta } from './semantics'
+import {
+  inferPromQL,
+  inferPanelType,
+  inferPromQLLegendLabel,
+  isUnsupportedHistogramKind,
+  type MetricPanelType,
+} from './metrics/infer-promql'
+import type { MetricKind } from './semantics/model'
+import { isMetricRateQuery } from './metrics/panel-stats'
+import { resolveHistogramCellUnit, resolveMetricPanelUnit } from './metrics/metric-units'
+import {
+  aggregateHistogramToHeatmap,
+  aggregateSeriesToPoints,
+  buildHeatmapOption,
+  buildSparklineOption,
+  formatHeatmapLegendLabels,
+  parsePromMatrix,
+  resolveHeatmapColorBounds,
+} from './metrics/prom-chart'
+import getSeriesColorByIndex from './metrics/series-colors'
+import breakSparklineGaps from './metrics/sparkline-gaps'
+import enqueueSparklineQuery from './metrics/sparkline-query-queue'
+import { calculateSparklineQueryStep, HEATMAP_MAX_DATA_POINTS } from './metrics/sparkline-step'
+
+function buildMatchersFromFilters(ctx: DrilldownContext): string | undefined {
+  return buildPromMatchersString(ctx.query.filters.value)
+}
+
+export default function useMetricSparkline(
+  ctx: DrilldownContext,
+  metricName: Ref<string>,
+  enabled: Ref<boolean>,
+  colorIndex: Ref<number> = ref(0)
+) {
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+  const chartOption = ref<EChartsOption | null>(null)
+  const panelType = ref<MetricPanelType>('timeseries')
+  const heatmapLegend = ref<{ low: string; mid: string; high: string } | null>(null)
+  const metricKind = ref<MetricKind>('unknown')
+  const seriesCount = ref(0)
+  const promqlQuery = ref('')
+  const legendLabel = ref('')
+  const unsupported = ref(false)
+  let requestVersion = 0
+
+  const { isDark } = storeToRefs(useAppStore())
+
+  // Grafana MetricsList: fixedColorIndex from list position → classic palette[index % 8]
+  const seriesColor = computed(() => getSeriesColorByIndex(colorIndex.value, isDark.value))
+
+  const isEmpty = computed(() => !loading.value && !error.value && !chartOption.value)
+
+  const load = async () => {
+    const name = metricName.value.trim()
+    unsupported.value = false
+    if (!enabled.value || !name) {
+      return
+    }
+
+    const unixRange = ctx.query.unixTimeRange()
+    if (unixRange.length !== 2) {
+      chartOption.value = null
+      seriesCount.value = 0
+      heatmapLegend.value = null
+      promqlQuery.value = ''
+      legendLabel.value = ''
+      error.value = null
+      loading.value = false
+      return
+    }
+
+    const version = requestVersion + 1
+    requestVersion = version
+    loading.value = true
+    error.value = null
+
+    try {
+      const meta = await resolveMetricMeta(name, ctx.connection.metricsDatabase.value)
+      if (version !== requestVersion) {
+        return
+      }
+
+      const { kind, semanticUnit, temporality } = meta
+      metricKind.value = kind
+
+      if (isUnsupportedHistogramKind(kind)) {
+        // No `_bucket` / `le` matrix to query — never fabricate a query for these.
+        chartOption.value = null
+        panelType.value = 'timeseries'
+        seriesCount.value = 0
+        heatmapLegend.value = null
+        promqlQuery.value = ''
+        legendLabel.value = ''
+        unsupported.value = true
+        return
+      }
+
+      panelType.value = inferPanelType(name, kind)
+      const matchers = buildMatchersFromFilters(ctx)
+      const query = inferPromQL(name, matchers, { kind, temporality })
+      promqlQuery.value = query
+      legendLabel.value = inferPromQLLegendLabel(name, { kind, temporality })
+      const panelUnit = resolveMetricPanelUnit(name, isMetricRateQuery(kind, temporality), { semanticUnit })
+
+      const [start, end] = unixRange
+      // Heatmaps need fewer X buckets so cells stay horizontal bricks in short catalog cards.
+      const step = calculateSparklineQueryStep(unixRange, {
+        maxDataPoints: panelType.value === 'heatmap' ? HEATMAP_MAX_DATA_POINTS : undefined,
+      })
+
+      const response = await enqueueSparklineQuery(() =>
+        executePromQLRange(query, String(start), String(end), step, ctx.connection.metricsDatabase.value)
+      )
+
+      if (version !== requestVersion) {
+        return
+      }
+
+      const series = parsePromMatrix(response.data?.result)
+      seriesCount.value = series.length
+
+      if (panelType.value === 'heatmap') {
+        const heatmap = aggregateHistogramToHeatmap(series)
+        if (!heatmap.cells.length) {
+          chartOption.value = null
+          heatmapLegend.value = null
+          return
+        }
+        chartOption.value = buildHeatmapOption(heatmap, name, {
+          timeRange: [start, end],
+          stepSeconds: Number(step),
+          semanticUnit,
+          relativeHide: true,
+        })
+        const colorBounds = resolveHeatmapColorBounds(heatmap.cells, { relativeHide: true })
+        heatmapLegend.value = formatHeatmapLegendLabels(
+          colorBounds.minValue,
+          colorBounds.maxValue,
+          resolveHistogramCellUnit(name, semanticUnit)
+        )
+        return
+      }
+
+      heatmapLegend.value = null
+
+      const stepSeconds = Number(step)
+      const points = breakSparklineGaps(aggregateSeriesToPoints(series), stepSeconds)
+
+      if (!points.length) {
+        chartOption.value = null
+        return
+      }
+
+      chartOption.value = buildSparklineOption(points, {
+        metricKind: metricKind.value,
+        metricName: name,
+        semanticUnit,
+        panelUnit,
+        timeRange: [start, end],
+        color: seriesColor.value,
+      })
+    } catch (err) {
+      if (version !== requestVersion) {
+        return
+      }
+      console.error(`Failed to load sparkline for ${name}:`, err)
+      chartOption.value = null
+      seriesCount.value = 0
+      heatmapLegend.value = null
+      error.value = err instanceof Error ? err.message : 'Failed to load chart'
+    } finally {
+      if (version === requestVersion) {
+        loading.value = false
+      }
+    }
+  }
+
+  watch(
+    () => [
+      enabled.value,
+      metricName.value,
+      ctx.query.filters.value,
+      ctx.query.time.value,
+      ctx.query.rangeTime.value[0],
+      ctx.query.rangeTime.value[1],
+      ctx.query.refreshKey.value,
+      colorIndex.value,
+      isDark.value,
+    ],
+    () => {
+      if (!enabled.value || !metricName.value.trim()) {
+        return
+      }
+      load()
+    },
+    { deep: true, immediate: true }
+  )
+
+  return {
+    loading,
+    error,
+    chartOption,
+    panelType,
+    heatmapLegend,
+    metricKind,
+    seriesCount,
+    promqlQuery,
+    legendLabel,
+    seriesColor,
+    isEmpty,
+    unsupported,
+  }
+}

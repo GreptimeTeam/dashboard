@@ -53,6 +53,7 @@
           v-if="editorType === 'builder'"
           ref="sqlBuilderRef"
           storage-key="logs-query-table"
+          signal-database-kind="logs"
           :form-state="builderFormState"
           :default-form-state="defaultFormState"
         )
@@ -104,8 +105,6 @@
 
       template(#extra)
         a-space
-          .logs-virtual-columns-clipped-hint(v-if="showVirtualColumnsClippedHint && columns && columns.length")
-            | {{ $t('logsQuery.virtualColumnsHint') }}
           a-trigger(
             v-if="columns && columns.length"
             trigger="click"
@@ -119,41 +118,34 @@
                 a-checkbox-group(v-model="displayedColumns[queryState.table]" direction="vertical")
                   a-checkbox(v-for="column in columns" :value="column.name")
                     | {{ column.name }}
-          Pagination(
-            v-if="!refresh && editorType === 'builder' && builderFormState.tsColumn"
-            :key="paginationKey"
-            :rows="rows"
-            :columns="columns"
-            :query-state="queryState"
-            @update:rows="handlePaginationRowsUpdate"
-          )
       LogTableData(
         :key="`${queryState.table}-${columnModeKey}`"
         :wrap-line="wrap"
         :size="size"
         :data="rows"
         :columns="columns"
+        :has-more="hasMore"
+        :loading-more="loadingMore"
         :sql-mode="queryState.editorType"
         :ts-column="queryState.tsColumn"
-        :column-mode="mergeColumn && showKeys ? 'merged-with-keys' : mergeColumn ? 'merged' : 'separate'"
+        :column-mode="columnMode"
         :displayed-columns="displayedColumns[queryState.table] || []"
         @filter-condition-add="handleFilterConditionAdd"
-        @virtualColumnsClipped="handleVirtualColumnsClipped"
+        @reach-end="loadMore"
       )
 
     ExportModal(v-model:visible="exportModalVisible" :sql="exportSqlText" @confirm="handleExportConfirm")
 </template>
 
 <script setup lang="ts" name="LogsQuery">
-  import { ref, computed, watch, onMounted, toRefs, nextTick } from 'vue'
-  import { useStorage, useLocalStorage } from '@vueuse/core'
+  import { ref, watch, nextTick } from 'vue'
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import SqlTextEditor from '@/components/sql-text-editor/index.vue'
   import { replaceTimePlaceholders } from '@/utils/sql'
+  import useLogsTablePrefs from '@/observability/use-logs-table-prefs'
   import ChartContainer from './ChartContainer.vue'
   import ExportModal from './ExportModal.vue'
   import LogTableData from './LogsTable.vue'
-  import Pagination from './Pagination.vue'
 
   const timeRange = useTimeRange()
   const { rangeTime, time, timeRangeValues } = timeRange
@@ -166,9 +158,12 @@
   const {
     editorType,
     executeQuery,
+    loadMore,
     exportToCSV,
     queryState,
     loading: queryLoading,
+    loadingMore,
+    hasMore,
     columns,
     rows,
     totalRowCount,
@@ -184,20 +179,20 @@
 
   const { initializeFromQuery, updateQueryParams } = urlSync
   initializeFromQuery()
-  // Local UI state
-  const mergeColumn = useStorage('logquery-merge-column', true)
-  const showKeys = useStorage('logquery-show-keys', true)
-  const displayedColumns = useStorage('logquery-table-column-visible', {})
-  const columnModeKey = computed(() => {
-    if (!mergeColumn.value) return 'separate'
-    return showKeys.value ? 'merged-with-keys' : 'merged'
-  })
+  // Local UI state — shared with drilldown logs detail table.
+  const {
+    mergeColumn,
+    showKeys,
+    displayedColumnsByTable: displayedColumns,
+    compactRows,
+    wrap,
+    size,
+    columnMode,
+    columnModeKey,
+    ensureDisplayedColumns,
+  } = useLogsTablePrefs()
 
   const chartContainerRef = ref()
-  const paginationKey = ref(0)
-  const refreshPagination = () => {
-    paginationKey.value += 1
-  }
   const refresh = ref(false)
   function handleQuery(newQuery: boolean | MouseEvent = true) {
     // If called from click event, newQuery will be a MouseEvent, so default to true
@@ -206,7 +201,6 @@
     executeQuery(isNewQuery).then(() => {
       if (isNewQuery) {
         updateQueryParams()
-        refreshPagination()
       }
     })
 
@@ -262,31 +256,11 @@
     }
   })
 
-  const compactRows = useStorage('query-table-compact-rows', false)
-  const size = computed(() => (compactRows.value ? 'mini' : 'medium'))
-
-  onMounted(() => {
-    if (localStorage.getItem('logquery-table-compact') === 'true' && !compactRows.value) {
-      compactRows.value = true
-      localStorage.removeItem('logquery-table-compact')
-    }
-  })
-  const wrap = ref(false)
-
-  // Virtual-list: when columns are too many, Arco may clip some of them silently.
-  // We show a guiding hint next to the columns display button.
-  const showVirtualColumnsClippedHint = ref(false)
-  function handleVirtualColumnsClipped(visible: boolean) {
-    showVirtualColumnsClippedHint.value = visible
-  }
-
   // Chart/row logic
   function handleTimeRangeUpdate(newTimeRange) {
     time.value = 0 // Switch to custom mode
     rangeTime.value = newTimeRange
-    executeQuery().then(() => {
-      refreshPagination()
-    })
+    executeQuery()
     nextTick(() => {
       chartContainerRef.value?.triggerCurrentChartQuery()
     })
@@ -294,10 +268,6 @@
 
   function handleFilterConditionAdd({ columnName, operator, value }) {
     addFilterCondition(columnName, operator, value)
-  }
-
-  function handlePaginationRowsUpdate(newRows) {
-    rows.value = newRows
   }
 
   function handleSqlInfoUpdate(sqlInfo) {
@@ -308,9 +278,10 @@
     if (!columns.value.length) {
       return
     }
-    if (!displayedColumns.value[queryState.table] || !displayedColumns.value[queryState.table].length) {
-      displayedColumns.value[queryState.table] = columns.value.map((c) => c.name)
-    }
+    ensureDisplayedColumns(
+      queryState.table,
+      columns.value.map((c) => c.name)
+    )
   })
 
   watch(
@@ -333,40 +304,5 @@
     color: var(--gpt-text-muted);
     font-size: var(--gpt-font-base);
     font-weight: normal;
-  }
-
-  .logs-virtual-columns-clipped-hint {
-    position: relative;
-    padding: 4px 8px;
-    border-radius: 4px;
-    background: var(--warning-bg-color);
-    border: 1px solid var(--warning-color);
-    color: var(--warning-color);
-    font-size: var(--gpt-font-sm);
-    line-height: 1.2;
-    white-space: nowrap;
-    pointer-events: none;
-  }
-
-  .logs-virtual-columns-clipped-hint::before {
-    content: '';
-    position: absolute;
-    right: -7px;
-    top: 50%;
-    transform: translateY(-50%);
-    border-top: 7px solid transparent;
-    border-bottom: 7px solid transparent;
-    border-left: 7px solid var(--warning-color);
-  }
-
-  .logs-virtual-columns-clipped-hint::after {
-    content: '';
-    position: absolute;
-    right: -6px;
-    top: 50%;
-    transform: translateY(-50%);
-    border-top: 6px solid transparent;
-    border-bottom: 6px solid transparent;
-    border-left: 6px solid var(--warning-bg-color);
   }
 </style>

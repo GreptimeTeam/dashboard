@@ -5,8 +5,17 @@ import useTabBarStore from './modules/tab-bar'
 import useDataBaseStore from './modules/database'
 import useIngestStore from './modules/ingest'
 import { useStatusBarStore } from './modules/status-bar'
+import useTableSchemaStore from './modules/table-schema'
 
 const pinia = createPinia()
 
-export { useAppStore, useUserStore, useTabBarStore, useDataBaseStore, useIngestStore, useStatusBarStore }
+export {
+  useAppStore,
+  useUserStore,
+  useTabBarStore,
+  useDataBaseStore,
+  useIngestStore,
+  useStatusBarStore,
+  useTableSchemaStore,
+}
 export default pinia

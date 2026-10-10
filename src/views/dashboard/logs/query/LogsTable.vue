@@ -1,46 +1,47 @@
 <template lang="pug">
 #log-table-container(ref="tableContainer")
-  DataTable(
+  LogsVxeTable(
     :data="data"
     :columns="columns"
-    :column-mode="columnMode"
     :displayed-columns="displayedColumns"
-    :loading="loading"
-    :size="size"
-    :wrap-line="wrapLine"
-    :virtual-list-props="{ height: virtualListHeight, buffer: 36 }"
-    :column-resizable="columnMode === 'separate'"
-    :row-selection="activeRowSelection"
-    :selected-keys="exportSelectedKeys"
     :ts-column="tsColumn"
     :ts-cell-detail="tsCellDetail"
-    :active-row-key="detailVisible ? selectedRowKey : null"
+    :column-mode="columnMode"
+    :loading="loading"
+    :has-more="hasMore"
+    :loading-more="loadingMore"
+    :size="size"
+    :show-header="showHeader"
+    :wrap-line="wrapLine"
+    :virtual="virtual"
     :show-context-menu="sqlMode === 'builder'"
-    :class="{ builder_type: sqlMode === 'builder' }"
-    @filter-condition-add="handleFilterConditionAdd"
-    @row-select="$emit('rowSelect', $event)"
+    :filter-menu-kind="filterMenuKind"
+    :active-row-key="detailVisible ? selectedRowKey : null"
+    :link-column="traceIdColumn"
+    :class="dataTableClass"
+    @reach-end="emit('reachEnd')"
     @ts-cell-click="handleTsClick"
-    @update:selected-keys="handleSelectedKeysUpdate"
-    @virtualColumnsClipped="(visible) => $emit('virtualColumnsClipped', visible)"
+    @column-link-click="handleTraceClick"
+    @filter-condition-add="handleFilterConditionAdd"
   )
-    template(v-if="$slots['column-level']" #column-level="slotProps")
-      slot(name="column-level" v-bind="slotProps")
-
   LogDetail(
+    v-if="rowDetail"
     v-model:visible="detailVisible"
     :selected-row-key="selectedRowKey"
     :curr-row="selectedRecord"
     :rows="data"
     :columns="columns"
+    :popup-container="detailPopupContainer"
     @update:selected-row-key="selectedRowKey = $event"
   )
 </template>
 
 <script setup lang="ts" name="LogTableData">
-  import { ref, computed } from 'vue'
-  import { useElementSize } from '@vueuse/core'
+  import { ref, computed, defineAsyncComponent } from 'vue'
   import type { ColumnType, TSColumn } from '@/types/query'
   import LogDetail from './LogDetail.vue'
+
+  const LogsVxeTable = defineAsyncComponent(() => import('@/components/logs-vxe-table/LogsVxeTable.vue'))
 
   interface TableData {
     [key: string]: any
@@ -57,8 +58,21 @@
       columnMode: 'separate' | 'merged' | 'merged-with-keys'
       displayedColumns: string[]
       loading?: boolean
-      exportRowSelection?: Record<string, unknown>
-      selectedKeys?: number[]
+      /** More rows can be fetched by scrolling (footer affordance + auto load). */
+      hasMore?: boolean
+      /** A load-more request is in flight. */
+      loadingMore?: boolean
+      /** Disable row virtualization (small previews). */
+      virtual?: boolean
+      showHeader?: boolean
+      /** LogDetail drawer mount target (nested drawers need a non-clipped ancestor). */
+      detailPopupContainer?: string
+      /** When set, this column's values are links that emit traceClick. */
+      traceIdColumn?: string
+      /** Timestamp click opens the row detail drawer. Off for overview previews. */
+      rowDetail?: boolean
+      /** Drilldown: chip ops (`=~`); Logs Query: SQL builder ops (`LIKE`). */
+      filterMenuKind?: 'sql-builder' | 'drilldown'
     }>(),
     {
       wrapLine: false,
@@ -70,60 +84,47 @@
       columnMode: 'separate',
       displayedColumns: () => [],
       loading: false,
-      exportRowSelection: undefined,
-      selectedKeys: () => [],
+      hasMore: false,
+      loadingMore: false,
+      virtual: true,
+      showHeader: true,
+      detailPopupContainer: '#log-table-container',
+      traceIdColumn: '',
+      rowDetail: true,
+      filterMenuKind: 'sql-builder',
     }
   )
 
-  const emit = defineEmits(['filterConditionAdd', 'rowSelect', 'updateSelectedKeys', 'virtualColumnsClipped'])
+  const emit = defineEmits(['filterConditionAdd', 'rowSelect', 'reachEnd', 'traceClick'])
 
   const selectedRowKey = ref<number | null>(null)
-  const selectedRecord = computed(() => {
-    return props.data[selectedRowKey.value]
-  })
-
-  const tableContainer = ref(null)
-  const { height } = useElementSize(tableContainer)
-
-  const detailRowSelection = ref({
-    type: 'radio' as const,
-    checkStrictly: false,
-    selectedRowKeys: computed(() => [selectedRowKey.value]),
-  })
-
-  const activeRowSelection = computed(() => props.exportRowSelection ?? detailRowSelection.value)
-
-  const tsCellDetail = computed(() => !!props.tsColumn && !props.exportRowSelection)
-
-  const exportSelectedKeys = computed(() => (props.exportRowSelection ? props.selectedKeys : undefined))
-
+  const selectedRecord = computed(() => props.data[selectedRowKey.value])
   const detailVisible = ref(false)
 
+  const tsCellDetail = computed(() => props.rowDetail && !!props.tsColumn)
+
+  const dataTableClass = computed(() => ({
+    'builder_type': props.sqlMode === 'builder',
+    'logs-table--headerless': !props.showHeader,
+  }))
+
+  const handleTraceClick = (_columnName: string, value: string) => {
+    if (!value) {
+      return
+    }
+    emit('traceClick', value)
+  }
+
   const handleTsClick = (row: TableData, rowIndex: number) => {
-    if (props.exportRowSelection) return
-    selectedRowKey.value = rowIndex
+    if (!props.rowDetail) return
+    const key = typeof row.__rowIndex === 'number' ? row.__rowIndex : rowIndex
+    selectedRowKey.value = key
     emit('rowSelect', row)
     detailVisible.value = true
   }
 
-  const headerHeight = computed(() => {
-    return props.size === 'mini' ? 25 : 38
-  })
-
-  const virtualListHeight = computed(() => {
-    const containerHeight = height.value
-    const header = headerHeight.value
-    return containerHeight - header
-  })
-
   const handleFilterConditionAdd = (event) => {
     emit('filterConditionAdd', event)
-  }
-
-  const handleSelectedKeysUpdate = (keys: number[]) => {
-    if (props.exportRowSelection) {
-      emit('updateSelectedKeys', keys)
-    }
   }
 </script>
 
@@ -133,9 +134,10 @@
     display: flex;
     flex-direction: column;
 
-    :deep(.data-table-container) {
+    :deep(.logs-vxe-table) {
       height: 100%;
       flex: 1;
+      min-height: 0;
     }
   }
 </style>

@@ -16,7 +16,10 @@ export interface QuerySessionState {
   appendExplainResult: (result: ResultType) => void
 }
 
-const querySessionKey: InjectionKey<QuerySessionState> = Symbol('query-session')
+// Symbol.for so the key survives HMR module re-evaluation (plain Symbol() breaks inject).
+const querySessionKey: InjectionKey<QuerySessionState> = Symbol.for(
+  'greptime.query-session'
+) as InjectionKey<QuerySessionState>
 
 export function provideQuerySession(): QuerySessionState {
   const { refreshResult } = useQueryCode()

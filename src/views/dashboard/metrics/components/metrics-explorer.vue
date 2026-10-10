@@ -42,6 +42,9 @@ a-modal(
   import { useDebounce } from '@vueuse/core'
   import { IconSearch, IconLoading } from '@arco-design/web-vue/es/icon'
   import { searchMetricNames, getMetricNames } from '@/api/metrics'
+  import { useSignalDatabase } from '@/observability/signal-database'
+
+  const metricsDatabase = useSignalDatabase('metrics')
 
   const props = defineProps<{
     visible: boolean
@@ -78,10 +81,10 @@ a-modal(
       let response
       if (query && query.trim()) {
         // Search for specific metrics
-        response = await searchMetricNames(query.trim())
+        response = await searchMetricNames(query.trim(), metricsDatabase.value)
       } else {
         // Fetch all available metrics
-        response = await getMetricNames()
+        response = await getMetricNames({ database: metricsDatabase.value })
       }
 
       if (response && response.data) {

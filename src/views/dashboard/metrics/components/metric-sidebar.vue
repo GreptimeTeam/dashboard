@@ -2,11 +2,7 @@
 a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
   template(#title)
     a-space.metric-sidebar-title(fill :size="10")
-      span.gpt-sidebar-heading
-        | {{ $t('metrics.sidebar.title') }}
-        a-tooltip(v-if="metricCountTooltip" :content="metricCountTooltip")
-          span.gpt-sidebar-count {{ metricCountLabel }}
-        span.gpt-sidebar-count(v-else) {{ metricCountLabel }}
+      span.gpt-sidebar-heading {{ $t('metrics.sidebar.title') }}
       a-button.metric-sidebar-refresh(
         type="text"
         size="mini"
@@ -18,15 +14,30 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
             use(href="#refresh")
 
   a-spin(style="width: 100%" :loading="loading")
-    .metric-search
-      .metric-search-left
+    .gpt-table-sidebar-header
+      .gpt-table-sidebar-header__label {{ $t('dashboard.database') }}
+      .gpt-table-sidebar-header__control
+        a-select.metric-db-select(
+          v-model="metricsDatabase"
+          size="mini"
+          allow-search
+          :options="databaseOptions"
+          :placeholder="$t('dashboard.database')"
+          :aria-label="$t('dashboard.database')"
+          @popup-visible-change="onDatabasePopup"
+        )
+      .gpt-table-sidebar-header__meta
+        a-tooltip(v-if="metricCountTooltip" :content="metricCountTooltip")
+          span {{ metricCountLabel }}
+        span(v-else) {{ metricCountLabel }}
+      .gpt-table-sidebar-header__control
         a-input.search-metric(
           v-model="metricSearchKey"
           size="mini"
           placeholder="Search metrics..."
           :allow-clear="true"
         )
-          template(#prefix)
+          template(#suffix)
             svg.icon-11.icon-color
               use(href="#search")
     a-tree.metrics-tree(
@@ -59,9 +70,11 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
 <script setup lang="ts">
   import { ref, computed, watch, nextTick, onMounted } from 'vue'
   import { useDebounceFn } from '@vueuse/core'
+  import { storeToRefs } from 'pinia'
   import { useI18n } from 'vue-i18n'
   import { getLabelNames, getMetricNames, getLabelValues, METRIC_NAMES_LIMIT, searchMetricNames } from '@/api/metrics'
   import { useAppStore } from '@/store'
+  import { useSignalDatabase } from '@/observability/signal-database'
   import MetricMenu from './metric-menu.vue'
 
   type MetricTreeNode = {
@@ -82,11 +95,28 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
 
   const { t } = useI18n()
   const appStore = useAppStore()
+  const { databaseList } = storeToRefs(appStore)
+  const metricsDatabase = useSignalDatabase('metrics')
 
   const metrics = ref<Array<{ name: string }>>([])
   const metricsTreeData = ref<MetricTreeNode[]>([])
   const metricSearchKey = ref('')
   const loading = ref(false)
+
+  const databaseOptions = computed(() => {
+    const current = metricsDatabase.value
+    const names = databaseList.value.length ? [...databaseList.value] : []
+    if (current && !names.includes(current)) {
+      names.unshift(current)
+    }
+    return names.map((name) => ({ label: name, value: name }))
+  })
+
+  const onDatabasePopup = (visible: boolean) => {
+    if (visible && databaseList.value.length === 0) {
+      appStore.refreshDatabaseList()
+    }
+  }
 
   const displayedMetricCount = computed(() => metrics.value.length)
   const isMetricSearchActive = computed(() => metricSearchKey.value.trim().length > 0)
@@ -120,7 +150,7 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
   const getMetrics = async () => {
     try {
       loading.value = true
-      const response = await getMetricNames()
+      const response = await getMetricNames({ database: metricsDatabase.value })
       metrics.value = (response.data || []).map((name: string) => ({ name }))
       buildMetricsTree()
     } catch (err) {
@@ -142,7 +172,7 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
     try {
       loading.value = true
       const regex = safe.replace(/"/g, '\\"')
-      const response = await searchMetricNames(regex)
+      const response = await searchMetricNames(regex, metricsDatabase.value)
       metrics.value = (response.data || []).map((name: string) => ({ name }))
       buildMetricsTree()
     } catch (err) {
@@ -163,7 +193,10 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
   const loadMore = async (nodeData: MetricTreeNode) => {
     if (nodeData.type === 'metric' && !nodeData.children?.length) {
       try {
-        const response = await getLabelNames(nodeData.metricName)
+        const response = await getLabelNames({
+          match: nodeData.metricName,
+          database: metricsDatabase.value,
+        })
         nodeData.children = (response.data || [])
           .filter((name: string) => name !== '__name__')
           .map((name: string) => ({
@@ -182,7 +215,10 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
       }
     } else if (nodeData.type === 'label' && nodeData.labelName && !nodeData.children?.length) {
       try {
-        const response = await getLabelValues(nodeData.labelName, nodeData.metricName)
+        const response = await getLabelValues(nodeData.labelName, {
+          match: nodeData.metricName,
+          database: metricsDatabase.value,
+        })
         nodeData.children = (response.data || []).map((value: string) => ({
           key: `value-${nodeData.metricName}-${nodeData.labelName}-${value}`,
           title: value,
@@ -201,6 +237,9 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
   }
 
   onMounted(async () => {
+    if (databaseList.value.length === 0) {
+      appStore.refreshDatabaseList()
+    }
     await getMetrics()
   })
 
@@ -208,43 +247,12 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
     debouncedSearch(query)
   })
 
-  watch(
-    () => appStore.database,
-    () => {
-      refreshData()
-    }
-  )
+  watch(metricsDatabase, () => {
+    refreshData()
+  })
 </script>
 
 <style scoped lang="less">
-  .metric-search {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 6px;
-    padding: 8px 10px;
-  }
-
-  .metric-search-left {
-    width: 100%;
-  }
-
-  .arco-input-wrapper.search-metric {
-    min-height: 30px;
-    padding: 0 10px;
-    border: 1px solid var(--gpt-border-strong);
-    border-radius: var(--gpt-radius-sm);
-    background: var(--gpt-bg-app);
-
-    :deep(> .arco-input-prefix) {
-      padding-right: 10px;
-    }
-
-    :deep(> .arco-input-suffix) {
-      padding-left: 8px;
-    }
-  }
-
   .metric-sidebar-title {
     width: 100%;
   }
@@ -261,6 +269,6 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
     display: flex;
     align-items: center;
     justify-content: center;
-    height: calc(100% - 68px);
+    height: calc(100% - 84px);
   }
 </style>

@@ -22,6 +22,7 @@ a-spin.spin-block(:loading="loading")
       ref="treeRef"
       default-expand-all
       :data="spanTree"
+      :selected-keys="treeSelectedKeys"
       @select="handleSpanSelect"
     )
       template(#icon="{ node, expanded }")
@@ -77,12 +78,19 @@ a-spin.spin-block(:loading="loading")
       type: Object as PropType<Span | null>,
       default: null,
     },
+    /** Controlled tree selection; undefined keeps the tree uncontrolled. */
+    selectedSpanId: {
+      type: String,
+      default: undefined,
+    },
   })
 
   const emit = defineEmits(['spanSelect'])
 
   const treeRef = ref()
   const spanInfoWidth = ref('400px')
+
+  const treeSelectedKeys = computed(() => (props.selectedSpanId ? [props.selectedSpanId] : undefined))
 
   const rootTimeStamp = computed(() => props.rootSpan?.timestamp || 0)
   const rootEndTimeStamp = computed(() => {

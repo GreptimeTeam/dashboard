@@ -226,7 +226,12 @@
 
   &.timestamp {
     background-color: var(--gpt-semantic-timestamp-bg);
-    color: var(--gpt-semantic-timestamp);
+    // Text matches other header cells; only the time icon uses the accent.
+    color: inherit;
+
+    .icon-12 {
+      color: var(--gpt-semantic-timestamp);
+    }
   }
 }
 

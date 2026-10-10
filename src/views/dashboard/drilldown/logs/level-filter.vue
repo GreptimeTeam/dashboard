@@ -1,0 +1,146 @@
+<template lang="pug">
+.level-filter(v-if="severityColumn")
+  span.drilldown-field-label {{ labelText }}
+  a-select.level-filter-select(
+    v-model="selectedLevels"
+    size="small"
+    multiple
+    allow-clear
+    allow-search
+    :loading="loading"
+    :max-tag-count="2"
+    :placeholder="t('drilldown.logs.levelAll')"
+    @popup-visible-change="onPopupVisibleChange"
+  )
+    a-option(
+      v-for="row in levels"
+      :key="row.value"
+      :value="row.value"
+      :title="countTitle(row)"
+    ) {{ row.value }}
+</template>
+
+<script setup lang="ts">
+  import { computed, ref, watch } from 'vue'
+  import { useI18n } from 'vue-i18n'
+  import { useDrilldownContext } from '@/observability/context'
+  import { fetchSeverityLevels, type LabelValueRow } from '@/observability/adapters/logs'
+  import { addFilter, splitFilterOrValues } from '@/observability/filters'
+
+  const props = defineProps<{
+    /** Physical severity column from field settings. Hidden when unset. */
+    column?: string
+    /** Visible label. Defaults to the column name. */
+    label?: string
+  }>()
+
+  const { t } = useI18n()
+  const ctx = useDrilldownContext()
+
+  const loading = ref(false)
+  const levels = ref<LabelValueRow[]>([])
+
+  /** Physical severity column; also the shared filter chip key. */
+  const severityColumn = computed(() => props.column?.trim() || undefined)
+  const labelText = computed(() => props.label?.trim() || severityColumn.value || '')
+
+  function countTitle(row: LabelValueRow) {
+    return t('drilldown.logs.valueCount', { count: row.count })
+  }
+
+  function ensureSeverityMapped() {
+    const col = severityColumn.value
+    if (!col) return
+    if (ctx.semantics.logs.fieldMap.value.severity === col) return
+    ctx.actions.setLogsRole('severity', col)
+  }
+
+  const selectedLevels = computed({
+    get(): string[] {
+      const col = severityColumn.value
+      if (!col) return []
+      const severityFilter = ctx.query.filters.value.find(
+        (filter) => filter.key === col && (filter.op === '=' || filter.op === '=~')
+      )
+      if (!severityFilter) {
+        return []
+      }
+      return splitFilterOrValues(severityFilter)
+    },
+    set(values: string[] | undefined) {
+      const col = severityColumn.value
+      if (!col) return
+      ensureSeverityMapped()
+      const nextValues = [...new Set((values ?? []).map((value) => value.trim()).filter(Boolean))]
+      let next = ctx.query.filters.value.filter((filter) => filter.key !== col)
+      nextValues.forEach((value) => {
+        next = addFilter(next, { key: col, op: '=', value })
+      })
+      ctx.actions.setFilters(next)
+    },
+  })
+
+  async function loadLevels() {
+    if (!severityColumn.value || !ctx.semantics.logs.table.value) {
+      levels.value = []
+      return
+    }
+    loading.value = true
+    try {
+      levels.value = (await fetchSeverityLevels(ctx)) ?? []
+    } finally {
+      loading.value = false
+    }
+  }
+
+  function onPopupVisibleChange(visible: boolean) {
+    if (visible) {
+      loadLevels()
+    }
+  }
+
+  watch(
+    severityColumn,
+    () => {
+      ensureSeverityMapped()
+      levels.value = []
+    },
+    { immediate: true }
+  )
+</script>
+
+<style scoped lang="less">
+  .level-filter {
+    display: inline-flex;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--gpt-gap-md);
+    min-width: 0;
+  }
+
+  // One step below the top-bar filter (32px): shared small control height.
+  .level-filter-select {
+    width: 180px;
+    min-width: 180px;
+
+    :deep(.arco-select-view-single),
+    :deep(.arco-select-view-multiple) {
+      box-sizing: border-box;
+      min-height: var(--gpt-control-height-sm);
+      height: var(--gpt-control-height-sm);
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+
+    :deep(.arco-select-view-multiple) {
+      height: auto;
+      padding-left: var(--gpt-gap-md);
+      padding-right: var(--gpt-gap-md);
+    }
+
+    :deep(.arco-select-view-input) {
+      font-size: var(--gpt-font-base);
+    }
+  }
+</style>

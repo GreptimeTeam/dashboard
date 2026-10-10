@@ -1,5 +1,7 @@
 import i18n from '@/locale'
 
+export { numberTypes, dateTypes, timestampTypes } from '@/constants/column-types'
+
 export const chartTypeOptions: any = [
   {
     key: 1,
@@ -20,31 +22,6 @@ export const chartTypeOptions: any = [
 ]
 
 export const updateOptions = { notMerge: true }
-
-export const numberTypes = [
-  'Int8',
-  'Int16',
-  'Int32',
-  'Int64',
-  'UInt8',
-  'UInt16',
-  'UInt32',
-  'UInt64',
-  'Float32',
-  'Float64',
-  // 'Decimal',
-]
-
-export const dateTypes = [
-  'Date',
-  'DateTime',
-  'TimestampSecond',
-  'TimestampMillisecond',
-  'TimestampMicrosecond',
-  'TimestampNanosecond',
-]
-
-export const timestampTypes = ['TimestampSecond', 'TimestampMillisecond', 'TimestampMicrosecond', 'TimestampNanosecond']
 
 export const dataTypesMap = {
   Int8: 'number',

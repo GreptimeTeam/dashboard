@@ -191,7 +191,7 @@ a-dropdown#td-context(
 <script setup lang="ts">
   import { ref, computed, nextTick, onBeforeUnmount, onMounted, shallowRef, useAttrs, watch } from 'vue'
   import { useElementSize } from '@vueuse/core'
-  import { dateTypes } from '@/views/dashboard/config'
+  import { dateTypes } from '@/constants/column-types'
   import type { ColumnType, TSColumn } from '@/types/query'
   import { useDateTimeFormat } from '@/hooks'
   import { Message } from '@arco-design/web-vue'
@@ -1447,8 +1447,8 @@ a-dropdown#td-context(
       } catch (error) {
         console.error('Failed to copy to clipboard:', error)
       }
-    } else if (action.startsWith('filter')) {
-      const operator = action.split('_')[1]
+    } else if (action.startsWith('filter_')) {
+      const operator = action.slice('filter_'.length)
       emit('filterConditionAdd', { columnName, operator, value: record[columnName] })
     }
     hideContextMenu()

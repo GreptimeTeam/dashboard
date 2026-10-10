@@ -123,7 +123,7 @@ All query result tables use **`DataTable`**. Do **not** override timestamp cells
 
 | Part | Class / prop | Style |
 |------|----------------|-------|
-| Header pill | `.gpt-semantic-th.timestamp` | `--gpt-semantic-timestamp` on `--gpt-semantic-timestamp-bg` |
+| Header pill | `.gpt-semantic-th.timestamp` | bg `--gpt-semantic-timestamp-bg`; text inherits like other th; icon `--gpt-semantic-timestamp` |
 | Body (toggle format) | `.timestamp-cell` | `--gpt-accent-ts`; click toggles formatted/raw |
 | Body (open detail) | `tsCellDetail` + `.timestamp-cell.ts-cell-detail-link` | `--gpt-accent-ts`; underline on hover only |
 

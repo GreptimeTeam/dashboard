@@ -94,6 +94,7 @@ a-layout.new-layout.new-layout--workspace
   import { storeToRefs } from 'pinia'
   import { useAppStore } from '@/store'
   import DataTable from '@/components/data-table/index.vue'
+  import { promInstantResultToTableRows } from '@/observability/metrics/prom-instant-table'
   import type { MetricsContext } from './types'
   import MetricSidebar from './components/metric-sidebar.vue'
   import PromQLEditor from './components/prom-ql-editor.vue'
@@ -244,45 +245,7 @@ a-layout.new-layout.new-layout--workspace
     return Math.max(minWidth, Math.min(sidebarWidth.value, maxWidth))
   })
 
-  const tableData = computed(() => {
-    if (!tableResults.value || tableResults.value.length === 0) return []
-    const rows: any[] = []
-    tableResults.value.forEach((series) => {
-      const metricName = series.metric?.__name__
-      const seriesLabels = { ...series.metric }
-      delete seriesLabels.__name__
-
-      const labelStr = Object.entries(seriesLabels)
-        .map(([k, v]) => `${k}="${v}"`)
-        .join(', ')
-      const seriesName = labelStr ? `${metricName}{${labelStr}}` : metricName
-
-      const labels = Object.entries(seriesLabels).map(([key, value]) => ({
-        key,
-        value,
-      }))
-
-      if (series.value !== undefined) {
-        let valuesList
-        if (Array.isArray(series.value) && series.value.length === 2 && !Array.isArray(series.value[0])) {
-          valuesList = series.value[1]
-        } else if (Array.isArray(series.value) && Array.isArray(series.value[0])) {
-          valuesList = series.value
-            .map((valuePoint: [number, string]) => `${valuePoint[0]} @${valuePoint[1]}`)
-            .join('\n')
-        }
-
-        rows.push({
-          series: seriesName,
-          metricName,
-          labels,
-          values: valuesList,
-        })
-      }
-    })
-
-    return rows
-  })
+  const tableData = computed(() => promInstantResultToTableRows(tableResults.value))
 
   const tableColumns = [
     { name: 'series', data_type: 'string', title: 'Series' },

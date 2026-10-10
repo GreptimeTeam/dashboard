@@ -37,6 +37,10 @@ export interface TableTreeParent extends TreeData {
   columns: TableTreeChild[]
   details: TableDetail[]
   tableType?: string
+  engine?: string
+  isLogicalTable?: boolean
+  isPhysicalMetricTable?: boolean
+  physicalTableName?: string
 }
 
 export interface ScriptTreeData extends TreeData {

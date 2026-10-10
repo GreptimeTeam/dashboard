@@ -183,6 +183,8 @@ a-modal(
   import { storeToRefs } from 'pinia'
   import editorAPI from '@/api/editor'
   import { useAppStore } from '@/store'
+  import { listSignalTables } from '@/observability/semantics'
+  import { getSignalDatabase, setSignalDatabase } from '@/observability/signal-database'
   import type { Condition, BuilderFormState as Form } from '@/types/query'
   import { TsTypeMapping } from '@/utils/date-time'
   import { isJsonDataType } from '@/utils/json-display'
@@ -212,7 +214,14 @@ a-modal(
   const props = defineProps<{
     formState: Form | null
     tableFilter?: string | string[] // Optional column(s) tables must have (e.g. 'trace_id' or ['trace_id', 'parent_span_id'])
+    /** Optional async table list; when set, overrides signalDatabaseKind / tableFilter discovery. */
+    tablesProvider?: () => Promise<string[]>
     storageKey?: string // Optional storage key for localStorage (e.g., 'logs-query-table', 'traces-query-table')
+    /**
+     * When set, form.database reads/writes the shared signal-db preference, and the table
+     * dropdown uses Drilldown `listSignalTables` (unless `tablesProvider` is provided).
+     */
+    signalDatabaseKind?: 'logs' | 'traces'
     quickFieldNames?: string[] // Array of field names for quick condition buttons
     defaultFormState?: Form
   }>()
@@ -395,11 +404,26 @@ a-modal(
 
   // Operator mapping based on field data type (similar to log query)
   const operatorMap = {
-    String: ['=', '!=', 'LIKE', 'NOT LIKE', 'Not Exist', 'Exist', 'IN', 'NOT IN'],
+    String: ['=', '!=', 'MATCH', 'NOT MATCH', 'LIKE', 'NOT LIKE', 'Not Exist', 'Exist', 'IN', 'NOT IN'],
     Number: ['=', '!=', '>', '>=', '<', '<=', 'Not Exist', 'Exist', 'IN', 'NOT IN'],
     Time: ['>', '>=', '<', '<=', 'Not Exist', 'Exist', 'IN', 'NOT IN'],
     Boolean: ['=', '!=', 'Not Exist', 'Exist'],
-    Default: ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'NOT LIKE', 'Not Exist', 'Exist', 'IN', 'NOT IN'],
+    Default: [
+      '=',
+      '!=',
+      '>',
+      '<',
+      '>=',
+      '<=',
+      'MATCH',
+      'NOT MATCH',
+      'LIKE',
+      'NOT LIKE',
+      'Not Exist',
+      'Exist',
+      'IN',
+      'NOT IN',
+    ],
   }
 
   function getFieldType(fieldName: string): string {
@@ -438,17 +462,28 @@ a-modal(
 
   async function fetchTables() {
     try {
-      const columns = [props.tableFilter ?? []].flat().filter(Boolean)
-      let sql = `SELECT DISTINCT table_name FROM information_schema.columns WHERE table_catalog = '${currentTableCatalog.value}' AND table_schema = '${currentTableSchema.value}'`
-      if (columns.length) {
-        sql += ` AND column_name IN (${columns
-          .map((c) => `'${c}'`)
-          .join(', ')}) GROUP BY table_name HAVING COUNT(DISTINCT column_name) = ${columns.length}`
-      }
-      sql += ` ORDER BY table_name`
+      if (props.tablesProvider) {
+        tables.value = await props.tablesProvider()
+      } else if (props.signalDatabaseKind) {
+        // Same discovery/ranking as Drilldown Explore (listSignalTables).
+        const include = [form.table, lastSelectedTable.value].filter(Boolean)
+        tables.value = await listSignalTables(props.signalDatabaseKind, {
+          database: form.database || getSignalDatabase(props.signalDatabaseKind),
+          include,
+        })
+      } else {
+        const columns = [props.tableFilter ?? []].flat().filter(Boolean)
+        let sql = `SELECT DISTINCT table_name FROM information_schema.columns WHERE table_catalog = '${currentTableCatalog.value}' AND table_schema = '${currentTableSchema.value}'`
+        if (columns.length) {
+          sql += ` AND column_name IN (${columns
+            .map((c) => `'${c}'`)
+            .join(', ')}) GROUP BY table_name HAVING COUNT(DISTINCT column_name) = ${columns.length}`
+        }
+        sql += ` ORDER BY table_name`
 
-      const result = await editorAPI.runSQL(sql, form.database)
-      tables.value = result.output[0].records.rows.map((row: string[]) => row[0])
+        const result = await editorAPI.runSQL(sql, form.database)
+        tables.value = result.output[0].records.rows.map((row: string[]) => row[0])
+      }
 
       // Validate and set table from localStorage or default
       if (lastSelectedTable.value && tables.value.includes(lastSelectedTable.value)) {
@@ -481,6 +516,9 @@ a-modal(
   }
 
   function handleDatabaseChange() {
+    if (props.signalDatabaseKind && form.database) {
+      setSignalDatabase(props.signalDatabaseKind, form.database)
+    }
     // Reset form state when database changes, preserve current database
     resetForm({ database: form.database })
     tables.value = []
@@ -531,9 +569,16 @@ a-modal(
     if (databaseList.value.length === 0) {
       await appStore.refreshDatabaseList()
     }
+    // Prefer shared signal-db when this builder is for logs/traces Query.
+    if (props.signalDatabaseKind) {
+      form.database = getSignalDatabase(props.signalDatabaseKind)
+    }
     // Initialize form.database if not set or not in filtered list
     if (!form.database || !filteredDatabaseList.value.includes(form.database)) {
       form.database = filteredDatabaseList.value[0] || database.value
+    }
+    if (props.signalDatabaseKind && form.database) {
+      setSignalDatabase(props.signalDatabaseKind, form.database)
     }
   })
 
@@ -542,6 +587,9 @@ a-modal(
     () => form.database,
     (newDatabase, oldDatabase) => {
       if (newDatabase) {
+        if (props.signalDatabaseKind) {
+          setSignalDatabase(props.signalDatabaseKind, newDatabase)
+        }
         // Only fetch tables if database actually changed (not during initial setup)
         if (oldDatabase && oldDatabase !== newDatabase) {
           // Reset form when database changes, preserve current database

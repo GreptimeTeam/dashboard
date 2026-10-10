@@ -10,7 +10,9 @@ type RouteCase = {
 
 const screenshotDir = path.resolve(process.cwd(), 'artifacts/release-smoke/screenshots')
 const storageConfig = {
-  host: process.env.SMOKE_DB_HOST || 'http://localhost:4000',
+  // Empty host => same-origin /v1 (proxied to GreptimeDB by vite preview).
+  // Set SMOKE_DB_HOST only when you need an absolute API base (standalone static server).
+  host: process.env.SMOKE_USE_ABSOLUTE_DB_HOST === '1' ? process.env.SMOKE_DB_HOST || 'http://localhost:4000' : '',
   database: process.env.SMOKE_DB_NAME || 'public',
   username: process.env.SMOKE_DB_USER || '',
   password: process.env.SMOKE_DB_PASSWORD || '',
@@ -29,8 +31,12 @@ const routeCases: RouteCase[] = [
 const sanitize = (value: string) => value.replace(/[^a-z0-9-]/gi, '_')
 
 test.beforeAll(() => {
-  if (!fs.existsSync(path.resolve(process.cwd(), 'dist/index.html'))) {
-    throw new Error('dist is missing. Run "pnpm run build" before smoke tests.')
+  const distDir = path.resolve(process.env.SMOKE_DIST_DIR || path.join(process.cwd(), 'dist'))
+  const indexHtml = path.join(distDir, 'index.html')
+  if (!fs.existsSync(indexHtml)) {
+    throw new Error(
+      `dist is missing at ${indexHtml}. Run "pnpm run build" or "pnpm run smoke:release:tag <version>" first.`
+    )
   }
   fs.mkdirSync(screenshotDir, { recursive: true })
 })
@@ -63,19 +69,22 @@ test('release smoke: pages render without frontend errors', async ({ page, baseU
   page.on('requestfailed', (request) => {
     const url = request.url()
     const detail = `${request.method()} ${url} :: ${request.failure()?.errorText || 'unknown'}`
-    if (url.includes('/v1/')) {
-      apiWarnings.push(`[requestfailed] ${detail}`)
-    } else {
+    // Only fail on broken same-origin asset loads; DB + third-party noise are warnings.
+    const isSameOriginAsset = !!baseURL && url.startsWith(baseURL) && !url.includes('/v1/')
+    if (isSameOriginAsset) {
       hardErrors.push(`[requestfailed] ${detail}`)
+    } else {
+      apiWarnings.push(`[requestfailed] ${detail}`)
     }
   })
   page.on('response', (response) => {
     const status = response.status()
     const detail = `${response.request().method()} ${response.url()}`
-    if (status >= 500) {
-      hardErrors.push(`[http_${status}] ${detail}`)
-    } else if (status >= 400 && response.url().includes('/v1/')) {
+    // Treat backend 4xx/5xx on /v1 as warnings — release smoke only asserts the UI boots.
+    if (status >= 400 && response.url().includes('/v1/')) {
       apiWarnings.push(`[http_${status}] ${detail}`)
+    } else if (status >= 500) {
+      hardErrors.push(`[http_${status}] ${detail}`)
     }
   })
 

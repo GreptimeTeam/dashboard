@@ -21,17 +21,17 @@ const useTimeRange = (defaults = { time: 10 }) => {
   })
 
   const unixTimeRange = () => {
-    if (time.value > 0) {
-      // Relative time range - calculate unix timestamps
-      const now = Math.floor(Date.now() / 1000)
-      const start = now - time.value * 60 // Convert minutes to seconds
-      return [start, now]
-    }
+    // Prefer absolute range when present so chart pan/zoom commits are not
+    // ignored if relative `time` was left non-zero by a UI race.
     if (rangeTime.value.length === 2) {
-      // Absolute time range - return unix timestamps
       return [Number(rangeTime.value[0]), Number(rangeTime.value[1])]
     }
-    return [] // Any time / no time limit
+    if (time.value > 0) {
+      const now = Math.floor(Date.now() / 1000)
+      const start = now - time.value * 60
+      return [start, now]
+    }
+    return []
   }
 
   function reset() {

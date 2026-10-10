@@ -1,0 +1,174 @@
+<template lang="pug">
+.metrics-breakdown-grid
+  .breakdown-toolbar
+    span.drilldown-toolbar__group
+      span.drilldown-toolbar__label {{ t('drilldown.breakdown.byLabel') }}
+      a-select.drilldown-filter-select(
+        v-model="groupBySelection"
+        allow-clear
+        size="small"
+        :placeholder="t('drilldown.breakdown.byLabelAll')"
+        @change="onGroupByChange"
+        @clear="backToAllLabels"
+      )
+        a-option(:value="ALL_LABELS") {{ t('drilldown.breakdown.byLabelAll') }}
+        a-option(v-for="key in labelKeys" :key="key" :value="key") {{ key }}
+
+  a-spin(style="width: 100%" :loading="loading")
+    template(v-if="selectedLabel")
+      .drilldown-grid.metrics-breakdown-grid__values
+        MetricsBreakdownPanel(
+          v-for="value in selectedValues"
+          :key="value"
+          mode="value"
+          :metric="metric"
+          :label-key="selectedLabel"
+          :value="value"
+          :scroll-root="scrollRoot"
+        )
+      a-empty(v-if="!selectedValues.length" :description="t('drilldown.breakdown.noValues')")
+    template(v-else)
+      .drilldown-grid.metrics-breakdown-grid__labels
+        MetricsBreakdownPanel(
+          v-for="labelKey in labelKeys"
+          :key="labelKey"
+          mode="label"
+          :metric="metric"
+          :label-key="labelKey"
+          :scroll-root="scrollRoot"
+          @select="openLabel(labelKey)"
+        )
+      a-empty(v-if="!labelKeys.length && !loading" :description="t('drilldown.breakdown.noLabels')")
+</template>
+
+<script setup lang="ts">
+  import { onMounted, ref, toRef, watch, type MaybeRefOrGetter } from 'vue'
+  import { useI18n } from 'vue-i18n'
+  import { useDrilldownContext } from '@/observability/context'
+  import { fetchBreakdownLabelKeys, fetchBreakdownLabelValues } from '@/observability/metrics/breakdown'
+  import useMainChartPrefs from '@/observability/metrics/main-chart-config'
+  import { provideBreakdownYAxisSync } from '@/observability/use-breakdown-y-axis-sync'
+  import MetricsBreakdownPanel from './metrics-breakdown-panel.vue'
+
+  const ALL_LABELS = '__all__'
+
+  const props = defineProps<{
+    metric: string
+    scrollRoot: MaybeRefOrGetter<HTMLElement | null | undefined>
+  }>()
+
+  const { t } = useI18n()
+  const ctx = useDrilldownContext()
+  const yAxisSync = provideBreakdownYAxisSync()
+  const { prefs } = useMainChartPrefs(toRef(props, 'metric'))
+
+  const loading = ref(false)
+  const labelKeys = ref<string[]>([])
+  const selectedLabel = ref<string | undefined>()
+  const selectedValues = ref<string[]>([])
+  const groupBySelection = ref<string | undefined>(ALL_LABELS)
+
+  const backToAllLabels = () => {
+    selectedLabel.value = undefined
+    selectedValues.value = []
+    groupBySelection.value = ALL_LABELS
+  }
+
+  const openLabel = async (labelKey: string) => {
+    selectedLabel.value = labelKey
+    groupBySelection.value = labelKey
+    loading.value = true
+    try {
+      selectedValues.value = await fetchBreakdownLabelValues(ctx, props.metric, labelKey)
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const loadLabels = async () => {
+    loading.value = true
+    try {
+      labelKeys.value = await fetchBreakdownLabelKeys(ctx, props.metric)
+      if (
+        groupBySelection.value &&
+        groupBySelection.value !== ALL_LABELS &&
+        !labelKeys.value.includes(groupBySelection.value)
+      ) {
+        backToAllLabels()
+      }
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const onGroupByChange = (value: string | undefined) => {
+    if (!value || value === ALL_LABELS) {
+      backToAllLabels()
+      return
+    }
+    openLabel(value)
+  }
+
+  onMounted(() => {
+    loadLabels()
+  })
+
+  // Grafana: Add to filter / filter stack change → leave value view, show all labels again
+  // so the user can pick the next label to drill.
+  watch(
+    () => ctx.query.filters.value,
+    () => {
+      backToAllLabels()
+      loadLabels()
+    },
+    { deep: true }
+  )
+
+  watch(
+    () => [
+      props.metric,
+      selectedLabel.value,
+      prefs.value.agg,
+      ctx.query.filters.value,
+      ctx.query.time.value,
+      ctx.query.rangeTime.value[0],
+      ctx.query.rangeTime.value[1],
+      ctx.query.refreshKey.value,
+    ],
+    () => {
+      yAxisSync.reset()
+    },
+    { deep: true }
+  )
+
+  watch(
+    () => [
+      ctx.query.time.value,
+      ctx.query.rangeTime.value[0],
+      ctx.query.rangeTime.value[1],
+      ctx.query.refreshKey.value,
+    ],
+    () => {
+      const keepLabel = groupBySelection.value !== ALL_LABELS ? groupBySelection.value : undefined
+      loadLabels().then(() => {
+        if (keepLabel && labelKeys.value.includes(keepLabel)) {
+          openLabel(keepLabel)
+        }
+      })
+    }
+  )
+</script>
+
+<style scoped lang="less">
+  .metrics-breakdown-grid {
+    padding: 0 0 var(--gpt-page-padding-x);
+  }
+
+  .breakdown-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--gpt-gap-lg);
+    padding: var(--gpt-gap-lg) var(--gpt-page-padding-x) 0;
+  }
+</style>

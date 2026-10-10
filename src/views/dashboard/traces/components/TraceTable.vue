@@ -18,8 +18,8 @@ a-card(:bordered="false")
             .column-controls
               a-space(direction="vertical" size="small")
                 a-space
-                  a-button(type="text" size="mini" @click="selectAllColumns") Select All
-                  a-button(type="text" size="mini" @click="deselectAllColumns") Deselect All
+                  a-button(type="text" size="small" @click="selectAllColumns") Select All
+                  a-button(type="text" size="small" @click="deselectAllColumns") Deselect All
                 a-checkbox-group(v-model="displayedColumns" direction="vertical")
                   a-checkbox(v-for="column in columns" :key="column.name" :value="column.name")
                     | {{ column.name }}
@@ -50,7 +50,22 @@ a-card(:bordered="false")
     @filter-condition-add="$emit('filterConditionAdd', $event)"
   )
     template(#column-trace_id="{ record, showContextMenu, handleContextMenu }")
-      a-link(@click="handleTraceClick(record.trace_id)") {{ record.trace_id }}
+      span.trace-id-actions
+        button.trace-id-link(type="button" @click="handleTraceClick(record.trace_id)") {{ record.trace_id }}
+        a-dropdown(
+          v-if="showLogsTraceMenu"
+          trigger="click"
+          @select="(value) => handleLogsMenuSelect(String(value), record)"
+        )
+          button.trace-id-logs-trigger(type="button" :aria-label="$t('drilldown.traces.openLogs')" @click.stop)
+            icon-down
+          template(#content)
+            a-doption(value="logs")
+              span.logs-menu-row
+                span {{ $t('drilldown.traces.openLogs') }}
+                span.logs-menu-target(v-if="logsTargetLabel(record)" :title="logsTargetLabel(record)") {{ logsTargetLabel(record) }}
+            a-doption(v-if="logsAmbiguousService(record)" value="mapping")
+              | {{ $t('drilldown.traces.logsMappingAmbiguous') }}
       svg.td-config-icon(v-if="showContextMenu" @click="(event) => handleContextMenu(record, 'trace_id', event)")
         use(href="#menu")
 </template>
@@ -59,9 +74,15 @@ a-card(:bordered="false")
   import { computed, ref, watch } from 'vue'
   import { useLocalStorage } from '@vueuse/core'
   import { useRouter } from 'vue-router'
-  import { IconSettings } from '@arco-design/web-vue/es/icon'
+  import { IconDown, IconSettings } from '@arco-design/web-vue/es/icon'
   import type { PropType } from 'vue'
   import type { ColumnType, QueryState } from '@/types/query'
+
+  interface LogsTargetInfo {
+    database: string
+    table: string
+    source: 'manual' | 'auto' | 'current'
+  }
 
   interface TableData {
     [key: string]: any
@@ -84,9 +105,29 @@ a-card(:bordered="false")
       type: Object as PropType<QueryState>,
       default: () => ({}),
     },
+    /** When true, emit `traceClick` only — do not route to TraceDetail. */
+    embedMode: {
+      type: Boolean,
+      default: false,
+    },
+    /** Embed mode only. Shows a logs action when the resolved logs schema has a trace id column. */
+    logsTraceEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    /** Pre-resolved trace → logs routing per service (traces home fills this at table load). */
+    logsTargets: {
+      type: Object as PropType<Record<string, LogsTargetInfo>>,
+      default: () => ({}),
+    },
+    /** Services whose probe matched several tables — surfaced so the user can pick. */
+    logsAmbiguous: {
+      type: Object as PropType<Record<string, string[]>>,
+      default: () => ({}),
+    },
   })
 
-  const emit = defineEmits(['filterConditionAdd'])
+  const emit = defineEmits(['filterConditionAdd', 'traceClick', 'logsTraceClick', 'openLogsSettings'])
   const router = useRouter()
 
   // Default columns to show for traces (when no selection is made)
@@ -182,8 +223,44 @@ a-card(:bordered="false")
     }
   )
 
+  const showLogsTraceMenu = computed(() => props.embedMode && props.logsTraceEnabled)
+
   // Handle trace ID link click
+  function openLogsTrace(traceId: string, service?: string) {
+    emit('logsTraceClick', { traceId, service })
+  }
+
+  function logsTargetInfo(record: TableData): LogsTargetInfo | undefined {
+    const service = record?.service_name
+    return service ? props.logsTargets[service] : undefined
+  }
+
+  function logsTargetLabel(record: TableData): string {
+    const target = logsTargetInfo(record)
+    return target ? `${target.database}.${target.table}` : ''
+  }
+
+  function logsAmbiguousService(record: TableData): string[] | undefined {
+    const service = record?.service_name
+    const tables = service ? props.logsAmbiguous[service] : undefined
+    return tables?.length ? tables : undefined
+  }
+
+  function handleLogsMenuSelect(value: string, record: TableData) {
+    if (value === 'logs') {
+      openLogsTrace(record.trace_id, record.service_name)
+      return
+    }
+    if (value === 'mapping') {
+      emit('openLogsSettings')
+    }
+  }
+
   function handleTraceClick(traceId: string) {
+    emit('traceClick', traceId)
+    if (props.embedMode) {
+      return
+    }
     router.push({
       name: 'dashboard-TraceDetail',
       params: { id: traceId },
@@ -211,6 +288,70 @@ a-card(:bordered="false")
 
   .column-controls {
     min-width: 200px;
+  }
+
+  .trace-id-actions {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  // Match the time column accent (global `.timestamp-cell`, dataView.less) —
+  // a-link's Arco link color broke the table's unified cell colors.
+  .trace-id-link {
+    max-width: 100%;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    background: transparent;
+    color: var(--gpt-accent-ts);
+    font: inherit;
+    text-align: inherit;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  .trace-id-logs-trigger {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--gpt-radius-sm);
+    background: transparent;
+    color: var(--color-text-3);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--color-text-1);
+      background: var(--color-fill-2);
+    }
+  }
+
+  .logs-menu-row {
+    display: inline-flex;
+    max-width: 100%;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .logs-menu-target {
+    overflow: hidden;
+    color: var(--gpt-text-muted);
+    font-family: var(--font-mono);
+    font-size: var(--gpt-font-sm);
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .td-config-icon {

@@ -1,5 +1,5 @@
 import { defineComponent } from 'vue'
-import type { RouteMeta, NavigationGuard } from 'vue-router'
+import type { NavigationGuard, RouteLocationRaw, RouteMeta } from 'vue-router'
 
 export type Component<T = any> =
   | ReturnType<typeof defineComponent>
@@ -10,7 +10,7 @@ export interface AppRouteRecordRaw {
   path: string
   name?: string | symbol
   meta?: RouteMeta
-  redirect?: string
+  redirect?: string | RouteLocationRaw | ((to: Parameters<NavigationGuard>[0]) => RouteLocationRaw)
   component: Component | string
   children?: AppRouteRecordRaw[]
   alias?: string | string[]

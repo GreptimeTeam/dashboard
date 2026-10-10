@@ -4,6 +4,7 @@ import menu from './en-US/menu'
 import playground from './en-US/playground'
 import logsQuery from './en-US/logs-query'
 import flow from './en-US/flow'
+import drilldown from './en-US/drilldown'
 
 export default {
   'copy': 'Copy',
@@ -96,4 +97,5 @@ export default {
   ...playground,
   ...logsQuery,
   ...flow,
+  ...drilldown,
 }

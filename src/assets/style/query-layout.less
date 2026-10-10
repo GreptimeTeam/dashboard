@@ -6,6 +6,8 @@
   flex-direction: column;
   height: 100%;
 
+  // Same-element (`.query-layout.query-container`) and nested both need a viewport height.
+  &.query-container,
   .query-container {
     height: calc(100vh - 30px);
     display: flex;

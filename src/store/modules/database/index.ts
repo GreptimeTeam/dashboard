@@ -1,8 +1,17 @@
+import { defineStore, storeToRefs } from 'pinia'
+import { computed, ref, watch } from 'vue'
 import editorAPI from '@/api/editor'
+import requestTableSchema, {
+  requestTableSchemas,
+  type TableSchemaColumn,
+  type TableSchemaScope,
+} from '@/api/table-schema-fetch'
 import { SEMANTIC_TYPE_MAP } from '@/views/dashboard/config'
 import { sql } from '@codemirror/lang-sql'
 import { PromQLExtension } from '@prometheus-io/codemirror-promql'
+import useAppStore from '../app'
 import { ScriptTreeData, TableDetail, TableTreeChild, TableTreeParent } from './types'
+import { resolveMetricTableMeta } from './table-meta'
 import { RecordsType, SchemaType } from '../code-run/types'
 
 const useDataBaseStore = defineStore('database', () => {
@@ -82,7 +91,15 @@ const useDataBaseStore = defineStore('database', () => {
       return schema.name === 'table_type'
     })
 
-    return { tableNameIndex, tableTypeIndex }
+    const engineIndex = columnSchemas.findIndex((schema: SchemaType) => {
+      return schema.name === 'engine'
+    })
+
+    const createOptionsIndex = columnSchemas.findIndex((schema: SchemaType) => {
+      return schema.name === 'create_options'
+    })
+
+    return { tableNameIndex, tableTypeIndex, engineIndex, createOptionsIndex }
   }
 
   const generateTreeChildren = (nodeData: TableTreeParent, rows: string[][], indexes: { [key: string]: number }) => {
@@ -118,8 +135,10 @@ const useDataBaseStore = defineStore('database', () => {
     let key = tablesTreeForDatabase.value[db].length
     if (tempTablesData) {
       const schemas: SchemaType[] = tempTablesData.schema?.column_schemas || []
-      const { tableNameIndex, tableTypeIndex } = getIndexesForTables(schemas)
+      const { tableNameIndex, tableTypeIndex, engineIndex, createOptionsIndex } = getIndexesForTables(schemas)
       tempTablesData.rows.forEach((item: Array<string>) => {
+        const engine = item[engineIndex]
+        const metricTableMeta = resolveMetricTableMeta(engine, item[createOptionsIndex])
         const node: TableTreeParent = {
           title: item[tableNameIndex],
           key,
@@ -130,6 +149,10 @@ const useDataBaseStore = defineStore('database', () => {
           childrenType: 'columns',
           isLeaf: false,
           tableType: item[tableTypeIndex],
+          engine,
+          isLogicalTable: metricTableMeta.isLogicalTable,
+          isPhysicalMetricTable: metricTableMeta.isPhysicalMetricTable,
+          physicalTableName: metricTableMeta.physicalTableName,
         }
         tablesTreeForDatabase.value[db].push(node)
         key += 1
@@ -208,7 +231,7 @@ const useDataBaseStore = defineStore('database', () => {
     }
 
     // TODO: limit?
-    const pageSize = 300
+    const pageSize = 2000
     const maxPage = Math.ceil(total / pageSize)
 
     for (let page = 1; page <= maxPage; page += 1) {
@@ -286,6 +309,34 @@ const useDataBaseStore = defineStore('database', () => {
     scriptsData.value = null
   }
 
+  /**
+   * Plain table names for one database (from the cached tree; fetches when missing).
+   * Concurrent callers share one fetch — getTables resets the tree before refilling,
+   * so parallel invocations would otherwise wipe each other's results mid-flight.
+   */
+  const tableNamesInflight = new Map<string, Promise<string[]>>()
+  async function getTableNames(specifiedDB?: string): Promise<string[]> {
+    const db = specifiedDB || database.value
+    const existing = tablesTreeForDatabase.value[db]
+    if (existing?.length) {
+      return existing.map((node) => node.title).filter(Boolean)
+    }
+    const inflight = tableNamesInflight.get(db)
+    if (inflight) {
+      return inflight
+    }
+    const request = (async () => {
+      await getTables(db)
+      return (tablesTreeForDatabase.value[db] || []).map((node) => node.title).filter(Boolean)
+    })()
+    tableNamesInflight.set(db, request)
+    try {
+      return await request
+    } finally {
+      tableNamesInflight.delete(db)
+    }
+  }
+
   return {
     tablesTreeForDatabase,
     tablesTotalByDatabase,
@@ -301,6 +352,7 @@ const useDataBaseStore = defineStore('database', () => {
     databaseActiveKeys,
     getTables,
     checkTables,
+    getTableNames,
     addChildren,
     getTableByName,
     getScriptsTable,

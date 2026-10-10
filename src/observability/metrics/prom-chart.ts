@@ -1,0 +1,1041 @@
+import type { EChartsOption } from 'echarts'
+import formatTimeAxisLabel, {
+  calculateTimeAxisTicks,
+  calculateYAxisSplitNumber,
+  mapTimeTicksToCategoryIndexes,
+  CATALOG_Y_AXIS_SPLIT_NUMBER,
+} from '@/utils/chart-time-axis'
+import type { RawChartCategoryTimeTicks } from '@/components/raw-chart/time-interaction'
+import type { MetricKind } from '../semantics/model'
+import { formatMetricUnitValue, resolveHistogramBoundUnit, resolveHistogramCellUnit } from './metric-units'
+import { formatMetricAxisValue } from './panel-stats'
+import expandHeatmapTimeGrid from './heatmap-time-grid'
+import getSeriesColorByIndex, { SERIES_FILL_OPACITY } from './series-colors'
+
+export interface PromMatrixSeries {
+  metric: Record<string, string>
+  values: Array<[number, string | number]>
+}
+
+export function parsePromMatrix(result: unknown): PromMatrixSeries[] {
+  if (!Array.isArray(result)) {
+    return []
+  }
+
+  return result
+    .map((item) => {
+      if (!item || typeof item !== 'object') {
+        return null
+      }
+      const record = item as { metric?: Record<string, string>; values?: Array<[number, string | number]> }
+      const metric = record.metric ?? {}
+      const values = Array.isArray(record.values) ? record.values : []
+      return { metric, values }
+    })
+    .filter((item): item is PromMatrixSeries => item !== null)
+}
+
+function parsePointValue(value: string | number | null | undefined): number | null {
+  if (value === null || value === undefined) {
+    return null
+  }
+  const parsed = parseFloat(String(value))
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+export function aggregateSeriesToPoints(series: PromMatrixSeries[]): Array<[number, number | null]> {
+  if (!series.length) {
+    return []
+  }
+
+  if (series.length === 1) {
+    return series[0].values.map(([timestamp, value]) => [timestamp, parsePointValue(value)] as [number, number | null])
+  }
+
+  const byTimestamp = new Map<number, number[]>()
+  series.forEach((item) => {
+    item.values.forEach(([timestamp, value]) => {
+      const parsed = parsePointValue(value)
+      if (parsed === null) {
+        return
+      }
+      const bucket = byTimestamp.get(timestamp) ?? []
+      bucket.push(parsed)
+      byTimestamp.set(timestamp, bucket)
+    })
+  })
+
+  return [...byTimestamp.entries()]
+    .sort(([left], [right]) => left - right)
+    .map(([timestamp, values]) => {
+      const mean = values.reduce((sum, value) => sum + value, 0) / values.length
+      return [timestamp, mean] as [number, number | null]
+    })
+}
+
+function parseLeSortValue(le: string): number {
+  if (le === '+Inf') {
+    return Number.POSITIVE_INFINITY
+  }
+  const parsed = parseFloat(le)
+  return Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY
+}
+
+function formatBucketLabel(le: string, boundUnit?: string): string {
+  if (le === '+Inf') {
+    return '+Inf'
+  }
+  const parsed = parseFloat(le)
+  if (!Number.isFinite(parsed)) {
+    return le
+  }
+  if (boundUnit && boundUnit !== 'none') {
+    return formatMetricUnitValue(parsed, boundUnit)
+  }
+  if (parsed === 0) {
+    return '0'
+  }
+  if (parsed >= 1) {
+    return Number.isInteger(parsed) ? String(parsed) : String(Number(parsed.toPrecision(3)))
+  }
+  // Grafana-style: 0.005, 0.025, 0.1 — trim trailing zeros
+  const fixed = parsed.toPrecision(3)
+  return fixed.replace(/\.?0+$/, '')
+}
+
+/** Grafana `yMinDisplay` for `le` layout — `"0.0"` when buckets are fractional, else `"0"`. */
+function formatHeatmapYMinLabel(buckets: string[], boundUnit?: string): string {
+  if (boundUnit && boundUnit !== 'none') {
+    return formatMetricUnitValue(0, boundUnit)
+  }
+  const hasFractional = buckets.some((le) => {
+    const parsed = parseFloat(le)
+    return Number.isFinite(parsed) && parsed > 0 && parsed < 1
+  })
+  return hasFractional ? '0.0' : '0'
+}
+
+/** Grafana default `filterValues.le` — hide true zeros / float noise. */
+const HEATMAP_FILTER_VALUES_LE = 1e-9
+
+/**
+ * Catalog heatmaps: also hide cells below this fraction of series max.
+ * Absolute 1e-9 alone still paints a purple wall when every bucket has a tiny rate
+ * (Auto(min)≈0.09/s). Grafana screenshots look sparse because those slots are null/≤1e-9.
+ * Important: only skip *painting* — keep the full ordinal Y (blank rows), do not drop buckets.
+ */
+const HEATMAP_RELATIVE_HIDE_RATIO = 0.01
+
+/** Grafana default `cellGap` (css px). */
+const HEATMAP_CELL_GAP_PX = 1
+
+/** Panel fill behind gaps — ECharts canvas cannot resolve CSS variables. */
+const HEATMAP_CELL_GAP_COLOR = '#ffffff'
+
+/** Grafana Scheme heatmap: linear value→palette mapping (`valuesToFills`). Exponent applies only to Opacity mode. */
+function heatmapColorMagnitude(value: number, minValue: number, maxValue: number): number {
+  if (maxValue <= minValue) {
+    return 0
+  }
+  return Math.max(0, Math.min(1, (value - minValue) / (maxValue - minValue)))
+}
+
+function heatmapHideLe(maxValue: number, relativeHide: boolean): number {
+  if (!relativeHide) {
+    return HEATMAP_FILTER_VALUES_LE
+  }
+  return Math.max(HEATMAP_FILTER_VALUES_LE, maxValue * HEATMAP_RELATIVE_HIDE_RATIO)
+}
+
+export interface HeatmapCellFilterOptions {
+  /** Catalog only. Main chart uses Grafana's absolute `1e-9` floor. */
+  relativeHide?: boolean
+}
+
+/**
+ * Cells to paint after Grafana hideLE (+ optional catalog relative floor).
+ * Y-axis still uses the full `le` list — empty rows stay blank.
+ */
+export function selectVisibleHeatmapCells(
+  cells: Array<[number, number, number]>,
+  options?: HeatmapCellFilterOptions
+): Array<[number, number, number]> {
+  let maxValue = 0
+  cells.forEach(([, , value]) => {
+    if (value > maxValue) {
+      maxValue = value
+    }
+  })
+  const hideLe = heatmapHideLe(maxValue, Boolean(options?.relativeHide))
+  return cells.filter(([, , value]) => value > hideLe)
+}
+
+/** Visible color scale bounds (Auto min / Auto max of painted cells). */
+export function resolveHeatmapColorBounds(
+  cells: Array<[number, number, number]>,
+  options?: HeatmapCellFilterOptions
+): {
+  minValue: number
+  maxValue: number
+} {
+  const visible = selectVisibleHeatmapCells(cells, options)
+  if (!visible.length) {
+    return { minValue: 0, maxValue: 0 }
+  }
+  let minValue = Number.POSITIVE_INFINITY
+  let maxValue = 0
+  visible.forEach(([, , value]) => {
+    minValue = Math.min(minValue, value)
+    maxValue = Math.max(maxValue, value)
+  })
+  return { minValue, maxValue }
+}
+
+/** Grafana color legend: Auto(min) … Auto(max) with the panel unit (`getUnit`, not a rate). */
+
+/**
+ * Grafana heatmap tooltip (single): time, then the count field display name, then Bucket.
+ * Default field name is `Value` when `rowsFrame.value` is unset.
+ * @see grafana HeatmapTooltip `getFieldDisplayName(countField)` + `label: 'Bucket'`
+ */
+export function formatHeatmapTooltip(input: { time: string; bucket: string; value: string; color?: string }): string {
+  const swatch = input.color ? `<span style="color:${input.color}">●</span> ` : ''
+  return `${input.time}<br/>${swatch}Value: ${input.value}<br/>Bucket: ${input.bucket}`
+}
+export function formatHeatmapLegendLabels(
+  minValue: number,
+  maxValue: number,
+  unit = 'none'
+): { low: string; mid: string; high: string } {
+  const low = formatMetricUnitValue(minValue, unit)
+  const high = formatMetricUnitValue(maxValue, unit)
+  const mid = formatMetricUnitValue((minValue + maxValue) / 2, unit)
+  return { low, mid, high }
+}
+
+export interface HistogramHeatmapData {
+  times: number[]
+  buckets: string[]
+  /** ECharts heatmap tuples: [timeIndex, bucketIndex, value] */
+  cells: Array<[number, number, number]>
+  minValue: number
+  maxValue: number
+}
+
+/** Aggregate Prometheus histogram matrix (with `le` label) into heatmap grid data. */
+export function aggregateHistogramToHeatmap(series: PromMatrixSeries[]): HistogramHeatmapData {
+  const bucketSet = new Set<string>()
+  const timeSet = new Set<number>()
+  const cumulativeCells = new Map<string, number>()
+
+  series.forEach((item) => {
+    const { le } = item.metric
+    if (!le) {
+      return
+    }
+    bucketSet.add(le)
+    item.values.forEach(([timestamp, value]) => {
+      const parsed = parsePointValue(value)
+      if (parsed === null) {
+        return
+      }
+      timeSet.add(timestamp)
+      const key = `${timestamp}\0${le}`
+      cumulativeCells.set(key, (cumulativeCells.get(key) ?? 0) + parsed)
+    })
+  })
+
+  const times = [...timeSet].sort((left, right) => left - right)
+  const buckets = [...bucketSet].sort((left, right) => parseLeSortValue(left) - parseLeSortValue(right))
+
+  if (!times.length || !buckets.length) {
+    return { times, buckets, cells: [], minValue: 0, maxValue: 0 }
+  }
+
+  // Prometheus `_bucket` series are cumulative; Grafana heatmap displays per-bucket rates.
+  const incrementalCells = new Map<string, number>()
+  times.forEach((timestamp) => {
+    let previous = 0
+    buckets.forEach((le) => {
+      const cumulative = cumulativeCells.get(`${timestamp}\0${le}`) ?? 0
+      const incremental = Math.max(0, cumulative - previous)
+      if (incremental > 0) {
+        incrementalCells.set(`${timestamp}\0${le}`, incremental)
+      }
+      previous = cumulative
+    })
+  })
+
+  let minValue = Number.POSITIVE_INFINITY
+  let maxValue = 0
+  const cells: Array<[number, number, number]> = []
+
+  times.forEach((timestamp, timeIndex) => {
+    buckets.forEach((le, bucketIndex) => {
+      const value = incrementalCells.get(`${timestamp}\0${le}`)
+      if (value === undefined || value <= 0) {
+        return
+      }
+      minValue = Math.min(minValue, value)
+      maxValue = Math.max(maxValue, value)
+      cells.push([timeIndex, bucketIndex, value])
+    })
+  })
+
+  if (!cells.length) {
+    return { times, buckets, cells: [], minValue: 0, maxValue: 0 }
+  }
+
+  return { times, buckets, cells, minValue, maxValue }
+}
+
+const AXIS_LABEL_COLOR = 'rgba(71, 52, 96, 0.45)'
+const AXIS_LINE_COLOR = 'rgba(71, 52, 96, 0.12)'
+const GRID_LINE_COLOR = 'rgba(71, 52, 96, 0.06)'
+
+/**
+ * Shared panel chart grid — timeseries & heatmap.
+ * With `containLabel: true`, `bottom` is padding *below* axis labels (not label height).
+ * Keep it small so x-axis sits close to the panel footer legend.
+ */
+const PANEL_GRID = { left: 4, right: 8, top: 6, bottom: 2, containLabel: true }
+
+export interface PanelChartAxisOptions {
+  /** Plot width for x-axis tick density (Grafana: derived from panel CSS width). */
+  plotWidthPx?: number
+  /** Plot height for y-axis split density (main chart); catalog omits → fixed splitNumber. */
+  plotHeightPx?: number
+  /** Query window [startSec, endSec] — axis spans this even if samples start later. */
+  timeRange?: [number, number]
+  /** Pin Y extent so sibling cards share a scale. Omitted charts keep their own auto range. */
+  yMin?: number
+  yMax?: number
+}
+
+/**
+ * Series draw style — mirrors Grafana timeseries `GraphFieldConfig` subset used by metrics-drilldown.
+ * @see grafana-ui defaultGraphConfig + metrics-drilldown `buildTimeseriesPanel` (fillOpacity: 9)
+ */
+export interface PanelChartSeriesStyleOptions {
+  /**
+   * Grafana `showPoints`: Auto | Always | Never.
+   * - catalog: Auto (sparse mini → may show dots)
+   * - main HIGH/500pts: Never (Auto would hide anyway; ECharts auto still paints dots)
+   */
+  showPoints?: 'auto' | 'always' | 'never'
+}
+
+function resolvePanelTimeWindow(
+  dataStartSec: number,
+  dataEndSec: number,
+  timeRange?: [number, number]
+): { startMs: number; endMs: number; spanMs: number } {
+  const startMs = (timeRange ? timeRange[0] : dataStartSec) * 1000
+  const endMs = (timeRange ? timeRange[1] : dataEndSec) * 1000
+  return { startMs, endMs, spanMs: Math.max(0, endMs - startMs) }
+}
+
+function buildSharedAxisLabelStyle() {
+  return {
+    fontSize: 10,
+    color: AXIS_LABEL_COLOR,
+  }
+}
+
+/** Time-axis label rules shared by timeseries (time) and heatmap (category). */
+function buildSharedTimeAxisLabelOption(spanMs: number, tickIntervalMs: number) {
+  return {
+    ...buildSharedAxisLabelStyle(),
+    hideOverlap: false,
+    showMinLabel: true,
+    showMaxLabel: false,
+    alignMinLabel: 'left' as const,
+    formatter: (value: number | string) => formatTimeAxisLabel(Number(value), spanMs, tickIntervalMs),
+  }
+}
+
+function buildVerticalTickMarkLine(data: Array<{ xAxis: number | string }>) {
+  return {
+    silent: true,
+    symbol: 'none' as const,
+    animation: false,
+    label: { show: false },
+    lineStyle: {
+      color: GRID_LINE_COLOR,
+      width: 1,
+      type: 'solid' as const,
+    },
+    data,
+  }
+}
+
+/** @deprecated Prefer getSeriesColorByIndex — Grafana colors by list index, not metric kind. */
+export function sparklineSeriesColor(kind: MetricKind): string {
+  // Keep a stable fallback for callers without a list index (maps kind → palette slot).
+  const kindIndex: Record<MetricKind, number> = {
+    counter: 0,
+    gauge: 2,
+    updown_counter: 2,
+    histogram: 0,
+    summary: 1,
+    unknown: 5,
+  }
+  return getSeriesColorByIndex(kindIndex[kind] ?? 5)
+}
+
+export { getSeriesColorByIndex }
+
+function formatSparklineAxisValue(
+  value: number,
+  kind: MetricKind,
+  metricName?: string,
+  panelUnit?: string,
+  semanticUnit?: string | null
+): string {
+  return formatMetricAxisValue(value, { kind, metricName, panelUnit, semanticUnit, forAxis: true })
+}
+
+/** Grafana Spectral-like gradient (low → high intensity). */
+const HEATMAP_COLORS = [
+  '#5e4fa2',
+  '#3288bd',
+  '#66c2a5',
+  '#abdda4',
+  '#fee08b',
+  '#fdae61',
+  '#f46d43',
+  '#d53e4f',
+  '#9e0142',
+]
+
+export function buildHeatmapOption(
+  data: HistogramHeatmapData,
+  metricName?: string,
+  options?: PanelChartAxisOptions & {
+    semanticUnit?: string | null
+    /**
+     * Color scale / tooltip. Grafana leaves `cellValues.unit` unset and uses the panel
+     * unit from `.setUnit(getUnit(name))` — not a rate. Trace counts pass `none`.
+     */
+    cellUnit?: string
+    /** @deprecated Prefer `cellUnit`. Still honored so existing call sites keep cell formatting. */
+    panelUnit?: string
+    /** Override Y `le` unit. Trace RED Duration passes `s`. */
+    yUnit?: 's'
+    /** Catalog sparkline only — hide cells below 1% of max. */
+    relativeHide?: boolean
+  }
+): EChartsOption {
+  const expanded = expandHeatmapTimeGrid(data.times, data.cells, options?.timeRange, options?.stepSeconds)
+  const { times } = expanded
+  const { buckets } = data
+  const { cells } = expanded
+  const boundUnit = options?.yUnit === 's' ? 's' : resolveHistogramBoundUnit(metricName ?? '', options?.semanticUnit)
+  const valueUnit =
+    options?.cellUnit ?? options?.panelUnit ?? resolveHistogramCellUnit(metricName ?? '', options?.semanticUnit)
+
+  const { startMs, endMs, spanMs } = resolvePanelTimeWindow(
+    times[0] ?? 0,
+    times[times.length - 1] ?? 0,
+    options?.timeRange
+  )
+  const { intervalMs: tickIntervalMs, ticks: timeTicks } = calculateTimeAxisTicks(startMs, endMs, options?.plotWidthPx)
+  const tickLabelByIndex = mapTimeTicksToCategoryIndexes(times.length, timeTicks, startMs, endMs)
+  const tickIndexes = [...tickLabelByIndex.keys()].sort((a, b) => a - b)
+  const categoryTimesMs = times.map((sec) => sec * 1000)
+  // Key label times by the raw category value (timestamp ms), not the index: the
+  // category-axis label formatter receives an extent-relative index (tickValue -
+  // scaleExtent[0]), so index-keyed lookups go blank once the pan preview shifts
+  // category min/max. Category values stay stable, letting labels slide with the
+  // cells while keeping their absolute tick times (Grafana x-axis drag rules).
+  const tickLabelByCategoryValue = new Map<number, number>()
+  tickLabelByIndex.forEach((tickMs, index) => {
+    const categoryValue = categoryTimesMs[index]
+    if (categoryValue != null) {
+      tickLabelByCategoryValue.set(categoryValue, tickMs)
+    }
+  })
+
+  // Grafana classic PromQL `le` heatmap: one equal-height row per bucket (not an empty
+  // synthetic category for yMinDisplay — that tick is a label only in Grafana, and an
+  // ECharts category would leave ~1 cell of blank above the x-axis).
+  // @see metrics-drilldown buildHeatmapPanel + grafana rowsToCellsHeatmap / heatmapPathsDense
+  //
+  // ECharts heatmap cells require category x (not time). Pan previews shift category
+  // min/max; Grafana uPlot can `setScale` because its heatmap is a true time scale.
+  const yMinLabel = formatHeatmapYMinLabel(buckets, boundUnit)
+  const yAxisLabels = buckets.map((le) => formatBucketLabel(le, boundUnit))
+  const significantCells = selectVisibleHeatmapCells(cells, { relativeHide: options?.relativeHide })
+
+  let colorMin = Number.POSITIVE_INFINITY
+  let colorMax = 0
+  significantCells.forEach(([, , value]) => {
+    colorMin = Math.min(colorMin, value)
+    colorMax = Math.max(colorMax, value)
+  })
+  if (!Number.isFinite(colorMin)) {
+    colorMin = 0
+  }
+
+  const colorCells = significantCells.map(([timeIndex, bucketIndex, value]) => [
+    timeIndex,
+    bucketIndex,
+    heatmapColorMagnitude(value, colorMin, colorMax),
+    value,
+  ])
+
+  // Static category-axis label handlers, also published via `rawChartTimeTicks`
+  // (components/raw-chart/time-interaction) so the x-axis pan preview can slide
+  // labels on the phase grid, fill the exposed edge, and restore them on abort.
+  const staticAxisLabel = {
+    interval: (index: number) => tickLabelByIndex.has(index),
+    // First arg is the raw category value (timestamp ms) — stable across pan
+    // extent shifts, unlike the second (extent-relative) index argument.
+    formatter: (value: unknown) => {
+      const tickMs = tickLabelByCategoryValue.get(Number(value))
+      return tickMs != null ? formatTimeAxisLabel(tickMs, spanMs, tickIntervalMs) : ''
+    },
+  }
+
+  return {
+    animation: false,
+    // Heatmap: compact under the plot (legend sits in DOM below the chart).
+    grid: { ...PANEL_GRID, bottom: 2, top: 4 },
+    tooltip: {
+      trigger: 'item',
+      confine: true,
+      appendToBody: true,
+      borderWidth: 0,
+      padding: [6, 8],
+      textStyle: { fontSize: 11 },
+      formatter: (params: unknown) => {
+        const item = params as { data?: [number, number, number, number]; color?: string }
+        const tuple = item.data
+        if (!tuple) {
+          return ''
+        }
+        const [timeIndex, yIndex, , rate] = tuple
+        const time = formatTimeAxisLabel(categoryTimesMs[timeIndex] ?? 0, spanMs, tickIntervalMs)
+        const upper = yAxisLabels[yIndex] ?? ''
+        const lower = yIndex > 0 ? yAxisLabels[yIndex - 1] ?? yMinLabel : yMinLabel
+        const bucket = upper === '+Inf' ? `> ${lower}` : `${lower} – ${upper}`
+        const { color } = item
+        return formatHeatmapTooltip({
+          time,
+          bucket,
+          value: formatMetricUnitValue(rate, valueUnit),
+          color,
+        })
+      },
+    },
+    xAxis: {
+      type: 'category',
+      show: true,
+      data: categoryTimesMs,
+      boundaryGap: true,
+      axisLine: {
+        show: true,
+        lineStyle: { color: AXIS_LINE_COLOR },
+      },
+      axisTick: { show: false },
+      axisLabel: {
+        // Same format as timeseries; category indexes are uniformly spaced.
+        // showMaxLabel must stay true: uniform placement can land on the last
+        // category (N===tickCount), and false would hide that label → K-1 ticks.
+        ...buildSharedTimeAxisLabelOption(spanMs, tickIntervalMs),
+        showMaxLabel: true,
+        interval: staticAxisLabel.interval,
+        formatter: staticAxisLabel.formatter,
+        margin: 4,
+      },
+      splitLine: { show: false },
+      // Read back by the raw-chart pan preview (time-interaction): lets an x-axis
+      // drag slide labels on the phase grid, complete the exposed edge with
+      // continuation ticks, and restore the static labels on abort.
+      rawChartTimeTicks: {
+        intervalMs: tickIntervalMs,
+        phaseMs: startMs,
+        spanMs,
+        staticAxisLabel,
+      } satisfies RawChartCategoryTimeTicks,
+    } as NonNullable<EChartsOption['xAxis']>,
+    yAxis: {
+      type: 'category',
+      // Full le set, ScaleDirection.Up: low at bottom → max / +Inf at top.
+      data: yAxisLabels,
+      inverse: false,
+      // Must stay true: ECharts heatmap with boundaryGap:false collapses cell height to 0.
+      boundaryGap: true,
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: {
+        ...buildSharedAxisLabelStyle(),
+        showMinLabel: true,
+        showMaxLabel: true,
+        margin: 4,
+      },
+      splitLine: {
+        show: true,
+        lineStyle: { color: GRID_LINE_COLOR },
+      },
+    },
+    visualMap: {
+      show: false,
+      min: 0,
+      max: 1,
+      dimension: 2,
+      inRange: {
+        color: HEATMAP_COLORS,
+      },
+    },
+    series: [
+      {
+        type: 'heatmap',
+        data: colorCells,
+        itemStyle: {
+          borderWidth: HEATMAP_CELL_GAP_PX,
+          borderColor: HEATMAP_CELL_GAP_COLOR,
+        },
+        emphasis: {
+          itemStyle: {
+            borderColor: 'rgba(71, 52, 96, 0.45)',
+            borderWidth: HEATMAP_CELL_GAP_PX,
+          },
+        },
+        markLine: buildVerticalTickMarkLine(tickIndexes.map((index) => ({ xAxis: categoryTimesMs[index] }))),
+      },
+    ],
+  }
+}
+
+export function buildSparklineOption(
+  points: Array<[number, number | null]>,
+  options?: PanelChartAxisOptions &
+    PanelChartSeriesStyleOptions & {
+      color?: string
+      metricKind?: MetricKind
+      metricName?: string
+      semanticUnit?: string | null
+      panelUnit?: string
+    }
+): EChartsOption {
+  const color = options?.color ?? sparklineSeriesColor(options?.metricKind ?? 'unknown')
+  const metricKind = options?.metricKind ?? 'unknown'
+  const metricName = options?.metricName
+  const semanticUnit = options?.semanticUnit
+  const panelUnit = options?.panelUnit
+  const showPoints = options?.showPoints ?? 'auto'
+  const data = points.map(([timestamp, value]) => [timestamp * 1000, value])
+  const { startMs, endMs, spanMs } = resolvePanelTimeWindow(
+    points[0]?.[0] ?? 0,
+    points[points.length - 1]?.[0] ?? 0,
+    options?.timeRange
+  )
+  const { intervalMs: tickIntervalMs, ticks: timeTicks } = calculateTimeAxisTicks(startMs, endMs, options?.plotWidthPx)
+
+  let symbolOption: { showSymbol: boolean | 'auto'; symbol: string; symbolSize?: number }
+  if (showPoints === 'never') {
+    symbolOption = { showSymbol: false, symbol: 'none' }
+  } else if (showPoints === 'always') {
+    symbolOption = { showSymbol: true, symbol: 'circle', symbolSize: 4 }
+  } else {
+    symbolOption = { showSymbol: 'auto', symbol: 'circle', symbolSize: 4 }
+  }
+
+  return {
+    animation: false,
+    grid: { ...PANEL_GRID },
+    tooltip: {
+      trigger: 'axis',
+      confine: true,
+      appendToBody: true,
+      borderWidth: 0,
+      padding: [6, 8],
+      textStyle: { fontSize: 11 },
+      axisPointer: {
+        type: 'line',
+        lineStyle: {
+          color: 'rgba(112, 47, 237, 0.35)',
+          type: 'dashed',
+        },
+      },
+      formatter: (params: unknown) => {
+        const items = Array.isArray(params) ? params : [params]
+        const first = items[0] as { axisValue?: number; value?: [number, number | null] } | undefined
+        const timeValue = first?.value?.[0] ?? first?.axisValue
+        const value = first?.value?.[1]
+        if (timeValue === undefined || value === null || value === undefined) {
+          return ''
+        }
+        const time = formatTimeAxisLabel(Number(timeValue), spanMs, tickIntervalMs)
+        const formatted = formatSparklineAxisValue(Number(value), metricKind, metricName, panelUnit, semanticUnit)
+        return `${time}<br/><span style="color:${color}">●</span> ${formatted}`
+      },
+    },
+    xAxis: {
+      type: 'time',
+      show: true,
+      boundaryGap: false,
+      min: startMs,
+      max: endMs,
+      minInterval: tickIntervalMs,
+      maxInterval: tickIntervalMs,
+      interval: tickIntervalMs,
+      axisLine: {
+        show: true,
+        lineStyle: {
+          color: AXIS_LINE_COLOR,
+        },
+      },
+      axisTick: {
+        show: false,
+        customValues: timeTicks,
+      },
+      axisLabel: {
+        ...buildSharedTimeAxisLabelOption(spanMs, tickIntervalMs),
+        customValues: timeTicks,
+      },
+      splitLine: {
+        show: false,
+      },
+    },
+    yAxis: {
+      type: 'value',
+      show: true,
+      scale: options?.yMin == null && options?.yMax == null,
+      min: options?.yMin,
+      max: options?.yMax,
+      splitNumber:
+        options?.plotHeightPx != null ? calculateYAxisSplitNumber(options.plotHeightPx) : CATALOG_Y_AXIS_SPLIT_NUMBER,
+      axisLine: {
+        show: false,
+      },
+      axisTick: {
+        show: false,
+      },
+      axisLabel: {
+        ...buildSharedAxisLabelStyle(),
+        formatter: (value: number) =>
+          formatSparklineAxisValue(Number(value), metricKind, metricName, panelUnit, semanticUnit),
+      },
+      splitLine: {
+        show: true,
+        lineStyle: {
+          color: GRID_LINE_COLOR,
+        },
+      },
+    },
+    series: [
+      {
+        type: 'line',
+        data,
+        // Grafana: lineInterpolation Linear
+        smooth: false,
+        ...symbolOption,
+        // Grafana: lineWidth 1
+        lineStyle: {
+          width: 1,
+          color,
+        },
+        itemStyle: {
+          color,
+          borderColor: color,
+          borderWidth: 1,
+        },
+        // Grafana metrics-drilldown: fillOpacity 9
+        areaStyle: {
+          color,
+          opacity: SERIES_FILL_OPACITY,
+        },
+        // Grafana: spanNulls false
+        connectNulls: false,
+        markLine: buildVerticalTickMarkLine(timeTicks.map((timestamp) => ({ xAxis: timestamp }))),
+      },
+    ],
+  }
+}
+
+/** Trace RED Rate / Errors — Grafana uses bar charts (Errors: red bars). */
+export function buildBarSparklineOption(
+  points: Array<[number, number | null]>,
+  options?: PanelChartAxisOptions & {
+    color?: string
+    panelUnit?: string
+  }
+): EChartsOption {
+  const color = options?.color ?? '#bdc4cd'
+  const panelUnit = options?.panelUnit
+  const data = points.map(([timestamp, value]) => [timestamp * 1000, value])
+  const { startMs, endMs, spanMs } = resolvePanelTimeWindow(
+    points[0]?.[0] ?? 0,
+    points[points.length - 1]?.[0] ?? 0,
+    options?.timeRange
+  )
+  const { intervalMs: tickIntervalMs, ticks: timeTicks } = calculateTimeAxisTicks(startMs, endMs, options?.plotWidthPx)
+
+  return {
+    animation: false,
+    grid: { ...PANEL_GRID },
+    tooltip: {
+      trigger: 'axis',
+      confine: true,
+      appendToBody: true,
+      borderWidth: 0,
+      padding: [6, 8],
+      textStyle: { fontSize: 11 },
+      axisPointer: {
+        type: 'shadow',
+      },
+      formatter: (params: unknown) => {
+        const items = Array.isArray(params) ? params : [params]
+        const first = items[0] as { axisValue?: number; value?: [number, number | null] } | undefined
+        const timeValue = first?.value?.[0] ?? first?.axisValue
+        const value = first?.value?.[1]
+        if (timeValue === undefined || value === null || value === undefined) {
+          return ''
+        }
+        const time = formatTimeAxisLabel(Number(timeValue), spanMs, tickIntervalMs)
+        const formatted = formatSparklineAxisValue(Number(value), 'gauge', undefined, panelUnit, null)
+        return `${time}<br/><span style="color:${color}">●</span> ${formatted}`
+      },
+    },
+    xAxis: {
+      type: 'time',
+      show: true,
+      boundaryGap: true,
+      min: startMs,
+      max: endMs,
+      minInterval: tickIntervalMs,
+      maxInterval: tickIntervalMs,
+      interval: tickIntervalMs,
+      axisLine: {
+        show: true,
+        lineStyle: {
+          color: AXIS_LINE_COLOR,
+        },
+      },
+      axisTick: {
+        show: false,
+        customValues: timeTicks,
+      },
+      axisLabel: {
+        ...buildSharedTimeAxisLabelOption(spanMs, tickIntervalMs),
+        customValues: timeTicks,
+      },
+      splitLine: {
+        show: false,
+      },
+    },
+    yAxis: {
+      type: 'value',
+      show: true,
+      scale: false,
+      min: options?.yMin ?? 0,
+      max: options?.yMax,
+      splitNumber:
+        options?.plotHeightPx != null ? calculateYAxisSplitNumber(options.plotHeightPx) : CATALOG_Y_AXIS_SPLIT_NUMBER,
+      axisLine: {
+        show: false,
+      },
+      axisTick: {
+        show: false,
+      },
+      axisLabel: {
+        ...buildSharedAxisLabelStyle(),
+        formatter: (value: number) => formatSparklineAxisValue(Number(value), 'gauge', undefined, panelUnit, null),
+      },
+      splitLine: {
+        show: true,
+        lineStyle: {
+          color: GRID_LINE_COLOR,
+        },
+      },
+    },
+    series: [
+      {
+        type: 'bar',
+        data,
+        barMaxWidth: 25,
+        barWidth: '60%',
+        itemStyle: {
+          color,
+        },
+      },
+    ],
+  }
+}
+
+export interface MainTimeseriesSeriesInput {
+  points: Array<[number, number | null]>
+  color: string
+  name: string
+}
+
+/**
+ * Detail main chart timeseries (single or multi-series).
+ * Grafana HIGH panel: no points, fillOpacity 9.
+ * Time zoom/pan is handled outside ECharts (Grafana-style drag), not toolbox brush.
+ */
+export function buildMainTimeseriesOption(
+  seriesList: MainTimeseriesSeriesInput[],
+  options?: PanelChartAxisOptions &
+    PanelChartSeriesStyleOptions & {
+      metricKind?: MetricKind
+      metricName?: string
+      semanticUnit?: string | null
+      panelUnit?: string
+    }
+): EChartsOption {
+  const metricKind = options?.metricKind ?? 'unknown'
+  const metricName = options?.metricName
+  const semanticUnit = options?.semanticUnit
+  const panelUnit = options?.panelUnit
+  const showPoints = options?.showPoints ?? 'never'
+  const firstPoints = seriesList[0]?.points ?? []
+
+  const { startMs, endMs, spanMs } = resolvePanelTimeWindow(
+    firstPoints[0]?.[0] ?? 0,
+    firstPoints[firstPoints.length - 1]?.[0] ?? 0,
+    options?.timeRange
+  )
+  const { intervalMs: tickIntervalMs, ticks: timeTicks } = calculateTimeAxisTicks(startMs, endMs, options?.plotWidthPx)
+
+  let symbolOption: { showSymbol: boolean | 'auto'; symbol: string; symbolSize?: number }
+  if (showPoints === 'never') {
+    symbolOption = { showSymbol: false, symbol: 'none' }
+  } else if (showPoints === 'always') {
+    symbolOption = { showSymbol: true, symbol: 'circle', symbolSize: 4 }
+  } else {
+    symbolOption = { showSymbol: 'auto', symbol: 'circle', symbolSize: 4 }
+  }
+
+  const option: EChartsOption = {
+    animation: false,
+    grid: { ...PANEL_GRID },
+    tooltip: {
+      trigger: 'axis',
+      confine: true,
+      appendToBody: true,
+      borderWidth: 0,
+      padding: [6, 8],
+      textStyle: { fontSize: 11 },
+      axisPointer: {
+        type: 'line',
+        lineStyle: {
+          color: 'rgba(112, 47, 237, 0.35)',
+          type: 'dashed',
+        },
+      },
+      formatter: (params: unknown) => {
+        const items = (Array.isArray(params) ? params : [params]) as Array<{
+          seriesName?: string
+          color?: string
+          value?: [number, number | null]
+          axisValue?: number
+        }>
+        const timeValue = items[0]?.value?.[0] ?? items[0]?.axisValue
+        if (timeValue === undefined) {
+          return ''
+        }
+        const time = formatTimeAxisLabel(Number(timeValue), spanMs, tickIntervalMs)
+        const lines = items
+          .map((item) => {
+            const value = item.value?.[1]
+            if (value === null || value === undefined) {
+              return null
+            }
+            const color = item.color ?? '#999'
+            const formatted = formatSparklineAxisValue(Number(value), metricKind, metricName, panelUnit, semanticUnit)
+            const label = item.seriesName ? `${item.seriesName}: ` : ''
+            return `<span style="color:${color}">●</span> ${label}${formatted}`
+          })
+          .filter(Boolean)
+        if (!lines.length) {
+          return ''
+        }
+        return `${time}<br/>${lines.join('<br/>')}`
+      },
+    },
+    xAxis: {
+      type: 'time',
+      show: true,
+      boundaryGap: false,
+      min: startMs,
+      max: endMs,
+      minInterval: tickIntervalMs,
+      maxInterval: tickIntervalMs,
+      interval: tickIntervalMs,
+      axisLine: {
+        show: true,
+        lineStyle: {
+          color: AXIS_LINE_COLOR,
+        },
+      },
+      axisTick: {
+        show: false,
+        customValues: timeTicks,
+      },
+      axisLabel: {
+        ...buildSharedTimeAxisLabelOption(spanMs, tickIntervalMs),
+        customValues: timeTicks,
+      },
+      splitLine: {
+        show: false,
+      },
+    },
+    yAxis: {
+      type: 'value',
+      show: true,
+      scale: options?.yMin == null && options?.yMax == null,
+      min: options?.yMin,
+      max: options?.yMax,
+      splitNumber:
+        options?.plotHeightPx != null ? calculateYAxisSplitNumber(options.plotHeightPx) : CATALOG_Y_AXIS_SPLIT_NUMBER,
+      axisLine: {
+        show: false,
+      },
+      axisTick: {
+        show: false,
+      },
+      axisLabel: {
+        ...buildSharedAxisLabelStyle(),
+        formatter: (value: number) =>
+          formatSparklineAxisValue(Number(value), metricKind, metricName, panelUnit, semanticUnit),
+      },
+      splitLine: {
+        show: true,
+        lineStyle: {
+          color: GRID_LINE_COLOR,
+        },
+      },
+    },
+    series: seriesList.map((item, index) => {
+      const data = item.points.map(([timestamp, value]) => [timestamp * 1000, value])
+      return {
+        type: 'line' as const,
+        name: item.name,
+        data,
+        smooth: false,
+        ...symbolOption,
+        lineStyle: {
+          width: 1,
+          color: item.color,
+        },
+        itemStyle: {
+          color: item.color,
+          borderColor: item.color,
+          borderWidth: 1,
+        },
+        areaStyle: {
+          color: item.color,
+          opacity: SERIES_FILL_OPACITY,
+        },
+        connectNulls: false,
+        markLine:
+          index === 0 ? buildVerticalTickMarkLine(timeTicks.map((timestamp) => ({ xAxis: timestamp }))) : undefined,
+      }
+    }),
+  }
+
+  return option
+}
