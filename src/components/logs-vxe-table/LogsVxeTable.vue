@@ -21,6 +21,11 @@
     @scroll="loadMore.onScroll"
     @cell-click="onCellClick"
   )
+    // vxe-table 4.7+ splits Loading into vxe-pc-ui; without VxeLoading registered,
+    // :loading=true warns unless a #loading slot is provided.
+    template(#loading)
+      .logs-vxe-loading
+        a-spin
     template(#empty)
       span.logs-vxe-empty {{ t('logsQuery.nodata') }}
   // Load-more affordance (Grafana-like footer): appears once the user reaches the
@@ -582,6 +587,15 @@
     min-height: 0;
     overflow: hidden;
     position: relative;
+
+    .logs-vxe-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.6);
+    }
 
     :deep(.vxe-table),
     :deep(.vxe-grid) {
