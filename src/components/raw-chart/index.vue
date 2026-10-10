@@ -1,11 +1,11 @@
 <template>
-  <div class="chart-wrap" :class="{ 'chart-wrap--time-interaction': timeInteraction }" :style="{ height }">
+  <div class="chart-wrap" :style="{ height }">
     <div ref="chartContainer" class="chart" />
     <div
-      v-if="timeInteraction && axisPanStyle"
+      v-if="timeInteraction && axisPanBox"
       class="chart-xaxis-pan"
       data-raw-chart-axis-pan="1"
-      :style="axisPanStyle"
+      :style="axisPanBox"
       title="Drag to pan time range"
       @pointerdown="onAxisPointerDown"
     />
@@ -58,6 +58,7 @@
   let axisPointerDownHandler: ((e: PointerEvent) => void) | null = null
   /** Block Vue→ECharts option sync while the user is dragging (prevents axis snap-back). */
   let interactionLocked = false
+  let pendingOptions: EChartsOption | null = null
 
   const isUnmounting = ref(false)
   onBeforeUnmount(() => {
@@ -65,18 +66,6 @@
   })
 
   const brushSelectEnabled = computed(() => props.brushSelect && !props.timeInteraction)
-
-  const axisPanStyle = computed(() => {
-    if (!axisPanBox.value) {
-      return null
-    }
-    return {
-      left: axisPanBox.value.left,
-      width: axisPanBox.value.width,
-      top: axisPanBox.value.top,
-      height: axisPanBox.value.height,
-    }
-  })
 
   const attachWheelPassthrough = () => {
     if (!chartContainer.value) return
@@ -142,6 +131,22 @@
     }
   })
 
+  const applyOptions = (options: EChartsOption) => {
+    nextTick(() => {
+      if (interactionLocked || !chartInstance || isUnmounting.value) {
+        return
+      }
+      chartInstance.setOption(options, {
+        notMerge: true,
+        lazyUpdate: false,
+      })
+      nextTick(() => {
+        activateBrushSelect()
+        syncAxisPanOverlay()
+      })
+    })
+  }
+
   const clearTimeInteraction = () => {
     detachTimeInteraction?.()
     detachTimeInteraction = null
@@ -166,18 +171,17 @@
       },
       onInteractionLock: (locked) => {
         interactionLocked = locked
+        if (!locked && pendingOptions) {
+          const options = pendingOptions
+          pendingOptions = null
+          applyOptions(options)
+        }
       },
       onTimeRangeMs: (range) => {
         const unix = toUnixTimeRangeSeconds(range)
-        if (!unix) {
-          interactionLocked = false
-          return
+        if (unix) {
+          emit('timeRangeChange', unix)
         }
-        emit('timeRangeChange', unix)
-        nextTick(() => {
-          interactionLocked = false
-          syncAxisPanOverlay()
-        })
       },
     })
 
@@ -232,22 +236,11 @@
       }
 
       if (interactionLocked) {
+        pendingOptions = newOptions
         return
       }
 
-      nextTick(() => {
-        if (interactionLocked || !chartInstance || isUnmounting.value) {
-          return
-        }
-        chartInstance.setOption(newOptions, {
-          notMerge: true,
-          lazyUpdate: false,
-        })
-        nextTick(() => {
-          activateBrushSelect()
-          syncAxisPanOverlay()
-        })
-      })
+      applyOptions(newOptions)
     },
     { deep: true, flush: 'post' }
   )
@@ -260,14 +253,6 @@
         bindTimeInteraction()
       })
     }
-  )
-
-  watch(
-    () => props.timeWindowMs,
-    () => {
-      nextTick(() => syncAxisPanOverlay())
-    },
-    { deep: true }
   )
 
   onUnmounted(() => {

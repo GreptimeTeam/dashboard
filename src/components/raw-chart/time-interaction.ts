@@ -185,14 +185,18 @@ export function computeCategoryPanExtent(
   }
 }
 
-function readGridRectFromModel(chart: ECharts): { x: number; y: number; width: number; height: number } | null {
+export function getGridRect(chart: ECharts): { x: number; y: number; width: number; height: number } | null {
   try {
-    const model = chart.getModel() as {
-      getComponent?: (
-        name: string,
-        index: number
-      ) => { coordinateSystem?: { getRect?: () => { x: number; y: number; width: number; height: number } } }
-    }
+    const model = (
+      chart as unknown as {
+        getModel: () => {
+          getComponent?: (
+            name: string,
+            index: number
+          ) => { coordinateSystem?: { getRect?: () => { x: number; y: number; width: number; height: number } } }
+        }
+      }
+    ).getModel()
     const rect = model.getComponent?.('grid', 0)?.coordinateSystem?.getRect?.()
     if (rect && rect.width > 0 && rect.height > 0) {
       return rect
@@ -200,74 +204,6 @@ function readGridRectFromModel(chart: ECharts): { x: number; y: number; width: n
   } catch {
     // fall through
   }
-  return null
-}
-
-export function getGridRect(chart: ECharts): { x: number; y: number; width: number; height: number } | null {
-  const fromModel = readGridRectFromModel(chart)
-  if (fromModel) {
-    return fromModel
-  }
-
-  // Time axis: convert window corners.
-  const window = readAxisWindowMs(chart)
-  if (window) {
-    try {
-      const yModel = (
-        chart.getModel() as {
-          getComponent?: (name: string, index: number) => { axis?: { scale?: { getExtent?: () => number[] } } }
-        }
-      ).getComponent?.('yAxis', 0)
-      const yExtent = yModel?.axis?.scale?.getExtent?.()
-      const y0 = yExtent?.[0] ?? 0
-      const y1 = yExtent?.[1] ?? 1
-      const topLeft = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [window.fromMs, y1])
-      const bottomRight = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [window.toMs, y0])
-      if (topLeft && bottomRight) {
-        const x = Math.min(topLeft[0], bottomRight[0])
-        const y = Math.min(topLeft[1], bottomRight[1])
-        const width = Math.abs(bottomRight[0] - topLeft[0])
-        const height = Math.abs(bottomRight[1] - topLeft[1])
-        if (width > 0 && height > 0) {
-          return { x, y, width, height }
-        }
-      }
-    } catch {
-      // fall through
-    }
-  }
-
-  // Category axis (heatmap): convert first/last category indexes.
-  const categoryCount = readCategoryCount(chart)
-  if (categoryCount > 1) {
-    try {
-      const yCount = (() => {
-        try {
-          const option = chart.getOption() as { yAxis?: { data?: unknown[] } | Array<{ data?: unknown[] }> }
-          const yAxis = Array.isArray(option.yAxis) ? option.yAxis[0] : option.yAxis
-          return Array.isArray(yAxis?.data) ? yAxis.data.length : 0
-        } catch {
-          return 0
-        }
-      })()
-      const y0 = 0
-      const y1 = Math.max(0, yCount - 1)
-      const topLeft = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [0, y1])
-      const bottomRight = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [categoryCount - 1, y0])
-      if (topLeft && bottomRight) {
-        const x = Math.min(topLeft[0], bottomRight[0])
-        const y = Math.min(topLeft[1], bottomRight[1])
-        const width = Math.abs(bottomRight[0] - topLeft[0])
-        const height = Math.abs(bottomRight[1] - topLeft[1])
-        if (width > 0 && height > 0) {
-          return { x, y, width, height }
-        }
-      }
-    } catch {
-      return null
-    }
-  }
-
   return null
 }
 
@@ -582,6 +518,7 @@ export function attachTimeInteraction(
   let panOrigin: ChartTimeRangeMs | null = null
   let activeMove: ((e: PointerEvent) => void) | null = null
   let activeUp: ((e: PointerEvent) => void) | null = null
+  let activeCancel: (() => void) | null = null
 
   const setLock = (locked: boolean) => {
     handlers.onInteractionLock?.(locked)
@@ -594,8 +531,11 @@ export function attachTimeInteraction(
     }
     if (activeUp) {
       document.removeEventListener('pointerup', activeUp)
-      document.removeEventListener('pointercancel', activeUp)
       activeUp = null
+    }
+    if (activeCancel) {
+      document.removeEventListener('pointercancel', activeCancel)
+      activeCancel = null
     }
   }
 
@@ -728,11 +668,26 @@ export function attachTimeInteraction(
       }
     }
 
+    const onCancel = () => {
+      const restore = panOrigin
+      mode = null
+      panOrigin = null
+      clearDocumentListeners()
+      clearZoomGraphic(chart)
+      if (isCategoryXAxis(chart)) {
+        restoreCategoryExtent(chart)
+      } else if (restore) {
+        previewAxisWindow(chart, restore.fromMs, restore.toMs, restore.fromMs)
+      }
+      setLock(false)
+    }
+
     activeMove = onMove
     activeUp = onUp
+    activeCancel = onCancel
     document.addEventListener('pointermove', onMove)
     document.addEventListener('pointerup', onUp)
-    document.addEventListener('pointercancel', onUp)
+    document.addEventListener('pointercancel', onCancel)
   }
 
   /** Start pan from the dedicated x-axis overlay (Grafana `.u-axis` equivalent). */
