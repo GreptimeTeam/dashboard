@@ -29,12 +29,12 @@ const SEMANTICS_SCHEMAS = [
   { name: 'entity_declarations' },
 ]
 
-function sqlResult(rows: unknown[][]) {
+function sqlResult(rows: unknown[][], schemas: Array<{ name: string }> = SEMANTICS_SCHEMAS) {
   return {
     output: [
       {
         records: {
-          schema: { column_schemas: SEMANTICS_SCHEMAS },
+          schema: { column_schemas: schemas },
           rows,
         },
       },
@@ -66,9 +66,9 @@ describe('semantics/source', () => {
       getTableSemantics('no_such_metric'),
     ])
     expect(runSQL).toHaveBeenCalledTimes(1)
+    expect(String(runSQL.mock.calls[0][0])).toContain('SELECT * FROM information_schema.table_semantics')
     // The dump is deliberately not filtered by signal_type: entity declarations live
     // outside metric rows, so it is scoped by schema only.
-    expect(String(runSQL.mock.calls[0][0])).toContain('entity_declarations')
     expect(String(runSQL.mock.calls[0][0])).toContain("table_schema = 'public'")
     expect(String(runSQL.mock.calls[0][0])).not.toContain('LIMIT 1')
 
@@ -83,6 +83,32 @@ describe('semantics/source', () => {
 
     await ensureSemanticsLoaded()
     expect(runSQL).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps signal/source semantics when an older view has no entity_declarations column', async () => {
+    runSQL.mockResolvedValueOnce(
+      sqlResult(
+        [['riskdataservice', 'log', 'opentelemetry', 'declared', null]],
+        [
+          { name: 'table_name' },
+          { name: 'signal_type' },
+          { name: 'source' },
+          { name: 'metadata_quality' },
+          { name: 'semantic_options' },
+        ]
+      ) as never
+    )
+
+    const semantics = await getTableSemantics('riskdataservice')
+
+    expect(semantics).toMatchObject({
+      tableName: 'riskdataservice',
+      signalType: 'log',
+      source: 'opentelemetry',
+      metadataQuality: 'declared',
+    })
+    expect(semantics?.entityDeclarations).toBeUndefined()
+    await expect(getTableEntityDeclarations('riskdataservice')).resolves.toEqual([])
   })
 
   it('treats transient load failure as empty semantics and retries on the next access', async () => {

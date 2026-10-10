@@ -4,8 +4,7 @@ import type { EntityDeclaration, MetadataQuality, TableSemantics } from './model
 
 /** Common `information_schema.table_semantics` catalog shared by all Explore signals. */
 
-const SEMANTICS_SELECT =
-  'SELECT table_name, signal_type, source, pipeline, metadata_quality, semantic_options, entity_declarations FROM information_schema.table_semantics'
+const SEMANTICS_SELECT = 'SELECT * FROM information_schema.table_semantics'
 
 /** One semantic row per table of the loaded database, plus the derived lookup indexes. */
 export interface SemanticsDump {
