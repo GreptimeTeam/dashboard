@@ -14,6 +14,7 @@ export interface QuerySessionState {
   removeExplainResult: (payload: { key: number | string }) => void
   refreshSingleResult: (result: ResultType) => Promise<void>
   appendExplainResult: (result: ResultType) => void
+  updateExplainResult: (result: ResultType) => void
 }
 
 // Symbol.for so the key survives HMR module re-evaluation (plain Symbol() breaks inject).
@@ -71,6 +72,13 @@ export function provideQuerySession(): QuerySessionState {
     explainResults.value.push(result)
   }
 
+  const updateExplainResult = (result: ResultType) => {
+    const index = explainResults.value.findIndex((item) => item.key === result.key)
+    if (index < 0) return
+    // Replace the array so nested consumers always see a fresh reactive update.
+    explainResults.value = explainResults.value.map((item, i) => (i === index ? result : item))
+  }
+
   const session: QuerySessionState = {
     results,
     explainResults,
@@ -82,6 +90,7 @@ export function provideQuerySession(): QuerySessionState {
     removeExplainResult,
     refreshSingleResult,
     appendExplainResult,
+    updateExplainResult,
   }
 
   provide(querySessionKey, session)

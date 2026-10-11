@@ -30,6 +30,10 @@
         )
           | RAW
     .query-display(v-if="props.data?.query")
+      a-tag(v-if="props.data.streaming" size="small" color="arcoblue")
+        icon-loading(spin)
+        span {{ $t('dashboard.explainLiveRunning') }}
+        span(v-if="props.data.executionTime != null") {{ ` · ${props.data.executionTime}ms` }}
       a-popover(
         trigger="click"
         position="bl"
@@ -53,22 +57,36 @@
         )
 
   .explain-content
-    a-space(v-if="activeView === 'table'" direction="vertical" :size="0")
-      ExplainGrid(
-        v-for="(stage, index) in stages"
-        :key="index"
-        :data="stage"
-        :index="index"
+    a-empty(v-if="props.data.streaming && !stages.length" :description="$t('dashboard.explainLiveWaiting')")
+    .explain-views(v-else)
+      .explain-view-pane.explain-stages(
+        v-if="mountedViews.includes('table')"
+        :class="{ active: activeView === 'table' }"
       )
-    ExplainChart(
-      v-else-if="activeView === 'chart'"
-      :data="stages[activeStageIndex]"
-      :index="activeStageIndex"
-      :total-stages="stages.length"
-      @change-stage="activeStageIndex = $event"
-    )
-    .raw-json-card(v-else)
-      pre.raw-json {{ formattedRawJson }}
+        ExplainGrid(
+          v-for="(stage, index) in stages"
+          :key="index"
+          :data="stage"
+          :index="index"
+        )
+      .explain-view-pane.explain-charts(
+        v-if="mountedViews.includes('chart')"
+        :class="{ active: activeView === 'chart' }"
+      )
+        template(v-for="(stage, index) in stages" :key="`chart-stage-${index}`")
+          .explain-chart-pane(
+            v-if="mountedChartStages.includes(index)"
+            :class="{ active: activeStageIndex === index }"
+          )
+            ExplainChart(
+              :data="stage"
+              :index="index"
+              :active-stage-index="activeStageIndex"
+              :total-stages="stages.length"
+              @change-stage="activeStageIndex = $event"
+            )
+      .explain-view-pane.raw-json-card(v-if="mountedViews.includes('raw')" :class="{ active: activeView === 'raw' }")
+        pre.raw-json {{ formattedRawJson }}
 </template>
 
 <script lang="ts" setup>
@@ -84,7 +102,31 @@
   }>()
 
   const activeView = ref<'table' | 'chart' | 'raw'>('table')
-  const activeStageIndex = ref(1)
+  // Prefer DN (stage 1) when present; otherwise stage 0 so Chart always mounts.
+  const activeStageIndex = ref(0)
+  // Keep visited views mounted so table↔chart switches preserve UI state
+  // (metric selection, expand, pan/zoom, scroll) instead of remounting.
+  const mountedViews = ref<Array<'table' | 'chart' | 'raw'>>(['table'])
+  // Keep each stage chart mounted after first visit so stage switches preserve
+  // pan/zoom, highlight, expand, and scroll instead of remounting.
+  const mountedChartStages = ref<number[]>([])
+
+  const preferredStageIndex = (stageCount: number) => {
+    if (stageCount <= 0) return 0
+    return stageCount > 1 ? 1 : 0
+  }
+
+  const ensureChartStageMounted = (index: number) => {
+    if (!mountedChartStages.value.includes(index)) {
+      mountedChartStages.value = [...mountedChartStages.value, index]
+    }
+  }
+
+  const ensureViewMounted = (view: 'table' | 'chart' | 'raw') => {
+    if (!mountedViews.value.includes(view)) {
+      mountedViews.value = [...mountedViews.value, view]
+    }
+  }
 
   // Process stages from explain result data
   const getStages = (result: ResultType) => {
@@ -117,6 +159,7 @@
         },
       ],
       execution_time_ms: result.executionTime,
+      streaming: result.streaming || undefined,
     }
   }
 
@@ -138,14 +181,44 @@
     }
   }
 
-  // Reset stage index when data changes
+  // Only reset view when switching to a different explain result tab, not on live metrics ticks
   watch(
-    () => props.data,
+    () => props.data?.key,
     () => {
-      activeStageIndex.value = 1
+      activeStageIndex.value = preferredStageIndex(stages.value.length)
       activeView.value = 'table'
+      mountedViews.value = ['table']
+      mountedChartStages.value = []
     }
   )
+
+  // Clamp / prefer DN once stages arrive (stream may fill rows after the tab mounts).
+  watch(
+    () => stages.value.length,
+    (count, prev) => {
+      if (count <= 0) return
+      if (activeStageIndex.value >= count || prev === 0) {
+        activeStageIndex.value = preferredStageIndex(count)
+      }
+    }
+  )
+
+  watch(
+    activeView,
+    (view) => {
+      ensureViewMounted(view)
+      if (view === 'chart') {
+        ensureChartStageMounted(activeStageIndex.value)
+      }
+    },
+    { immediate: true }
+  )
+
+  watch(activeStageIndex, (index) => {
+    if (activeView.value === 'chart') {
+      ensureChartStageMounted(index)
+    }
+  })
 </script>
 
 <style lang="less" scoped>
@@ -191,6 +264,13 @@
       align-items: center;
       gap: 6px;
 
+      :deep(.arco-tag) {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        flex-shrink: 0;
+      }
+
       :deep(.arco-typography.query-text) {
         margin: 0;
         white-space: nowrap;
@@ -220,6 +300,58 @@
     > :first-child {
       height: 100%;
       overflow: auto;
+    }
+
+    .explain-views {
+      position: relative;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .explain-view-pane {
+      position: absolute;
+      inset: 0;
+      visibility: hidden;
+      pointer-events: none;
+      z-index: 0;
+
+      &.active {
+        visibility: visible;
+        pointer-events: auto;
+        z-index: 1;
+      }
+    }
+
+    .explain-stages {
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      gap: var(--gpt-gap-md);
+      padding: var(--gpt-gap-md);
+      overflow: hidden;
+
+      :deep(.explain-grid) {
+        flex: 1 1 0;
+        height: 100%;
+      }
+    }
+
+    .explain-charts {
+      overflow: hidden;
+    }
+
+    .explain-chart-pane {
+      position: absolute;
+      inset: 0;
+      visibility: hidden;
+      pointer-events: none;
+      z-index: 0;
+
+      &.active {
+        visibility: visible;
+        pointer-events: auto;
+        z-index: 1;
+      }
     }
   }
 
