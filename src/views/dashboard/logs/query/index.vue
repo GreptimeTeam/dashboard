@@ -140,6 +140,7 @@
 
 <script setup lang="ts" name="LogsQuery">
   import { ref, watch, nextTick } from 'vue'
+  import { useRoute } from 'vue-router'
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import SqlTextEditor from '@/components/sql-text-editor/index.vue'
   import { replaceTimePlaceholders } from '@/utils/sql'
@@ -148,6 +149,7 @@
   import ExportModal from './ExportModal.vue'
   import LogTableData from './LogsTable.vue'
 
+  const route = useRoute()
   const timeRange = useTimeRange()
   const { rangeTime, time, timeRangeValues } = timeRange
 
@@ -180,6 +182,7 @@
 
   const { initializeFromQuery, updateQueryParams } = urlSync
   initializeFromQuery()
+
   // Local UI state — shared with drilldown logs detail table.
   const {
     mergeColumn,
@@ -209,6 +212,20 @@
       chartContainerRef.value?.triggerCurrentChartQuery()
     })
   }
+
+  // Same-route tutorial click: form sync alone does not re-fire canExecuteInitialQuery.
+  watch(
+    () => [route.query.builderForm, route.query.tourApply] as const,
+    (next, prev) => {
+      if (!prev) return
+      if (next[0] === prev[0] && next[1] === prev[1]) return
+      if (!next[0] && !next[1]) return
+      initializeFromQuery()
+      nextTick(() => {
+        handleQuery()
+      })
+    }
+  )
   // Export modal state
   const exportModalVisible = ref(false)
   const exportSqlText = ref('')

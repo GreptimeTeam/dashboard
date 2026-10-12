@@ -104,7 +104,15 @@ export function useProductTour() {
   async function goToStep(stepId: TourStepId) {
     setActiveStep(stepId)
     const step = getTourStep(stepId)
-    await router.replace({ path: step.location.path, query: step.location.query })
+    // `tourApply` forces same-route deep-link consumers (Table Query already open, etc.)
+    // to re-apply SQL/builder state when the path+payload would otherwise be unchanged.
+    await router.replace({
+      path: step.location.path,
+      query: {
+        ...step.location.query,
+        tourApply: `${stepId}-${Date.now()}`,
+      },
+    })
     syncPanelAfterNavigation()
   }
 

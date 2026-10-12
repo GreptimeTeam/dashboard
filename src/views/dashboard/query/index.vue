@@ -66,8 +66,9 @@ a-layout.new-layout.new-layout--workspace(:class="{ 'query-layout--focus': focus
   /**
    * Deep-link / product tour: append `?sql=` into the editor (do not replace),
    * then run only the appended statement and show results in the session panel.
+   * Keyed by `tourApply` so re-clicking a tutorial step on the already-open page re-applies.
    */
-  let lastAppliedSqlParam: string | null = null
+  let lastAppliedKey: string | null = null
 
   function appendSqlToEditor(sql: string) {
     queryType.value = 'sql'
@@ -87,23 +88,41 @@ a-layout.new-layout.new-layout--workspace(:class="{ 'query-layout--focus': focus
     const trimmed = sql.trim()
     if (!trimmed) return
 
-    appendSqlToEditor(trimmed)
+    // Keep editor sync best-effort; always run the tour SQL even if CM dispatch fails.
+    try {
+      appendSqlToEditor(trimmed)
+    } catch {
+      const existing = (codes.value.sql || '').trimEnd()
+      codes.value.sql = existing ? `${existing}\n${trimmed}` : trimmed
+      queryType.value = 'sql'
+    }
 
-    const res = await runQuery(trimmed, 'sql', false, {} as never, 'run-part')
+    // Let CodeMirror flush before querying so the UI matches the statement we run.
+    await nextTick()
+
+    // Dedicated abort key — do not share `run-part` with the editor Run button.
+    const res = await runQuery(trimmed, 'sql', false, {} as never, 'tour-sql')
     if ((res as { cancelled?: boolean })?.cancelled) return
     if (res?.results?.length) session.appendResults(res.results)
     if (res?.log) session.appendLog(res.log)
   }
 
+  function applySqlFromRoute() {
+    const raw = route.query.sql
+    if (typeof raw !== 'string' || !raw) return
+    const sql = decodeMaybeEncoded(raw)
+    if (!sql.trim()) return
+    const { tourApply } = route.query
+    const applyKey = `${typeof tourApply === 'string' ? tourApply : ''}:${raw}`
+    if (applyKey === lastAppliedKey) return
+    lastAppliedKey = applyKey
+    appendAndRunSql(sql).catch(() => undefined)
+  }
+
   watch(
-    () => route.query.sql,
-    (raw) => {
-      if (typeof raw !== 'string' || !raw) return
-      if (raw === lastAppliedSqlParam) return
-      const sql = decodeMaybeEncoded(raw)
-      if (!sql.trim()) return
-      lastAppliedSqlParam = raw
-      appendAndRunSql(sql).catch(() => undefined)
+    () => [route.query.sql, route.query.tourApply] as const,
+    () => {
+      applySqlFromRoute()
     },
     { immediate: true }
   )

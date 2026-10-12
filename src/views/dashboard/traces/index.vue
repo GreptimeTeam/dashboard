@@ -178,6 +178,20 @@
   onActivated(() => {
     initializeFromQuery()
   })
+
+  // Same-route tutorial click: re-apply form and run (initial-query watch won't re-fire).
+  watch(
+    () => [route.query.builderForm, route.query.tourApply] as const,
+    (next, prev) => {
+      if (!prev) return
+      if (next[0] === prev[0] && next[1] === prev[1]) return
+      if (!next[0] && !next[1]) return
+      initializeFromQuery()
+      nextTick(() => {
+        handleQuery()
+      })
+    }
+  )
 </script>
 
 <style lang="less">
