@@ -9,6 +9,7 @@ export default {
   'tour.welcome.begin': '开始查询引导',
   'tour.guide.title': '查询引导',
   'tour.guide.close': '关闭',
+  'tour.guide.switchSteps': '切换查询类型',
   'tour.guide.zoneExplain': '原理说明',
   'tour.guide.theQuery': '查询语句',
   'tour.guide.presetTitle': '预设条件',

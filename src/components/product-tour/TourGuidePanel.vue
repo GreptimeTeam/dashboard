@@ -11,23 +11,26 @@
       </a-tooltip>
     </header>
 
-    <div class="tour-step-list">
-      <button
-        v-for="step in TOUR_STEPS"
-        :key="step.id"
-        type="button"
-        class="tour-step-item"
-        :class="{
-          'tour-step-item--current': step.id === tour.activeStepId.value,
-        }"
-        @click="tour.goToStep(step.id)"
-      >
-        <span class="tour-step-item-icon">
-          <component :is="ExploreIconComponent" v-if="step.id === 'signals-explore'" class="icon-18" />
-          <svg v-else class="icon-18"><use :href="`#${step.icon}`" /></svg>
-        </span>
-        <span class="tour-step-item-title">{{ $t(step.nameKey) }}</span>
-      </button>
+    <div class="tour-step-nav">
+      <p class="tour-step-nav-label">{{ $t('tour.guide.switchSteps') }}</p>
+      <div class="tour-step-list">
+        <button
+          v-for="step in TOUR_STEPS"
+          :key="step.id"
+          type="button"
+          class="tour-step-item"
+          :class="{
+            'tour-step-item--current': step.id === tour.activeStepId.value,
+          }"
+          @click="tour.goToStep(step.id)"
+        >
+          <span class="tour-step-item-icon">
+            <component :is="ExploreIconComponent" v-if="step.id === 'signals-explore'" class="icon-18" />
+            <svg v-else class="icon-18"><use :href="`#${step.icon}`" /></svg>
+          </span>
+          <span class="tour-step-item-title">{{ $t(step.nameKey) }}</span>
+        </button>
+      </div>
     </div>
 
     <div v-if="activeStep" class="tour-detail">
@@ -84,7 +87,9 @@
             </div>
             <div class="tour-preset-row">
               <dt>{{ $t('tour.guide.timeRange') }}</dt>
-              <dd>{{ $t(activeStep.preset.timeRangeKey) }}</dd>
+              <dd
+                ><code>{{ $t(activeStep.preset.timeRangeKey) }}</code></dd
+              >
             </div>
           </dl>
         </div>
@@ -179,38 +184,51 @@
     color: var(--gpt-text-secondary);
   }
 
+  .tour-step-nav {
+    flex-shrink: 0;
+    padding: 0 12px 12px 16px;
+  }
+
+  /* Section label — md / 13, regular weight. */
+  .tour-step-nav-label {
+    margin: 0 0 8px;
+    color: var(--gpt-text-primary);
+    font-size: var(--gpt-font-md);
+    font-weight: 400;
+  }
+
   .tour-step-list {
     display: flex;
-    flex-shrink: 0;
     flex-wrap: wrap;
-    gap: 6px;
-    padding: 0 12px 10px 16px;
+    gap: 8px;
   }
 
   .tour-step-item {
     display: inline-flex;
-    gap: 6px;
+    gap: 8px;
     align-items: center;
     max-width: 100%;
-    padding: 5px 10px;
-    color: var(--gpt-text-secondary);
-    font-weight: 500;
+    padding: 8px 12px;
+    color: var(--gpt-text-primary);
+    font-weight: 600;
     text-align: left;
     cursor: pointer;
-    background: var(--gpt-bg-body);
-    border: 1px solid var(--gpt-border-default);
+    background: var(--gpt-bg-panel);
+    border: 1px solid var(--gpt-border-strong);
     border-radius: var(--gpt-radius-md);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
     transition: all 0.15s ease;
 
     &:hover {
-      color: var(--gpt-text-primary);
       border-color: rgb(var(--primary-6));
+      background: var(--gpt-nav-active-bg);
     }
 
     &.tour-step-item--current {
-      color: var(--gpt-text-primary);
+      color: rgb(var(--primary-6));
       background: var(--gpt-nav-active-bg);
       border-color: rgb(var(--primary-6));
+      box-shadow: none;
     }
   }
 
@@ -222,6 +240,8 @@
 
     :deep(.icon-18),
     .icon-18 {
+      width: 18px;
+      height: 18px;
       color: currentColor;
       fill: currentColor;
     }
@@ -230,8 +250,8 @@
   .tour-step-item-title {
     min-width: 0;
     overflow: hidden;
-    font-size: var(--gpt-font-base);
-    line-height: 1.3;
+    font-size: var(--gpt-font-md);
+    line-height: 1.35;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -254,6 +274,7 @@
     margin-bottom: 4px;
   }
 
+  /* Step headline — .gpt-text-page-title scale (xl / 16). */
   .tour-detail-title {
     margin: 0;
     color: var(--gpt-text-primary);
@@ -262,10 +283,11 @@
     line-height: 1.35;
   }
 
+  /* Supporting prose — .gpt-text-page-subtitle scale (lg / 14). */
   .tour-intro {
     margin: 0;
     color: var(--gpt-text-secondary);
-    font-size: var(--gpt-font-md);
+    font-size: var(--gpt-font-lg);
     font-weight: 400;
     line-height: 1.65;
   }
@@ -287,11 +309,11 @@
     min-height: 22px;
   }
 
+  /* Zone titles — same as section labels (md / 13, regular). */
   .tour-zone-label {
-    color: var(--gpt-text-muted);
-    font-size: var(--gpt-font-sm);
-    font-weight: 600;
-    letter-spacing: 0.02em;
+    color: var(--gpt-text-primary);
+    font-size: var(--gpt-font-md);
+    font-weight: 400;
   }
 
   .tour-zone-body {
@@ -304,7 +326,7 @@
   .tour-zone-status {
     margin: 0;
     color: var(--gpt-text-secondary);
-    font-size: var(--gpt-font-base);
+    font-size: var(--gpt-font-md);
     font-weight: 400;
     line-height: 1.5;
   }
@@ -315,7 +337,7 @@
     overflow-x: auto;
     overflow-y: visible;
     color: var(--gpt-text-primary);
-    font-size: var(--gpt-font-sm);
+    font-size: var(--gpt-font-base);
     line-height: 1.55;
     background: var(--gpt-bg-body);
     border: 1px solid var(--gpt-border-default);
@@ -336,9 +358,9 @@
 
     dt {
       flex-shrink: 0;
-      width: 68px;
+      width: 72px;
       color: var(--gpt-text-muted);
-      font-size: var(--gpt-font-sm);
+      font-size: var(--gpt-font-base);
     }
 
     dd {
@@ -347,13 +369,13 @@
       gap: 4px;
       margin: 0;
       color: var(--gpt-text-secondary);
-      font-size: var(--gpt-font-base);
+      font-size: var(--gpt-font-md);
     }
 
     code {
       padding: 1px 5px;
       color: var(--gpt-text-primary);
-      font-size: var(--gpt-font-sm);
+      font-size: var(--gpt-font-base);
       background: var(--gpt-bg-body);
       border-radius: 4px;
     }
@@ -363,7 +385,7 @@
     padding: 1px 7px;
     color: var(--gpt-text-primary);
     font-family: monospace;
-    font-size: var(--gpt-font-sm);
+    font-size: var(--gpt-font-base);
     background: var(--gpt-bg-body);
     border: 1px solid var(--gpt-border-default);
     border-radius: 999px;
@@ -381,7 +403,7 @@
       position: relative;
       padding-left: 12px;
       color: var(--gpt-text-secondary);
-      font-size: var(--gpt-font-base);
+      font-size: var(--gpt-font-md);
       line-height: 1.55;
 
       &::before {
@@ -414,14 +436,14 @@
 
   .tour-point-lead {
     color: var(--gpt-text-primary);
-    font-size: var(--gpt-font-base);
+    font-size: var(--gpt-font-md);
     font-weight: 600;
     line-height: 1.45;
   }
 
   .tour-point-detail {
     color: var(--gpt-text-secondary);
-    font-size: var(--gpt-font-base);
+    font-size: var(--gpt-font-md);
     font-weight: 400;
     line-height: 1.55;
   }

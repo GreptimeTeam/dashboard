@@ -80,6 +80,7 @@ describe('tour steps config', () => {
       expect(messages['tour.welcome.begin']).toBeTruthy()
       expect(messages['tour.guide.title']).toBeTruthy()
       expect(messages['tour.guide.close']).toBeTruthy()
+      expect(messages['tour.guide.switchSteps']).toBeTruthy()
       expect(messages['tour.guide.zoneExplain']).toBeTruthy()
       expect(messages['tour.guide.theQuery']).toBeTruthy()
       expect(messages['tour.guide.tryWhere']).toBeTruthy()

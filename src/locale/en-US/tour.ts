@@ -9,6 +9,7 @@ export default {
   'tour.welcome.begin': 'Start the query guide',
   'tour.guide.title': 'Query guide',
   'tour.guide.close': 'Close',
+  'tour.guide.switchSteps': 'Switch query type',
   'tour.guide.zoneExplain': 'How it works',
   'tour.guide.theQuery': 'The query',
   'tour.guide.presetTitle': 'Preset',
