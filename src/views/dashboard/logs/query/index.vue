@@ -124,6 +124,7 @@
         :size="size"
         :data="rows"
         :columns="columns"
+        :loading="queryLoading"
         :has-more="hasMore"
         :loading-more="loadingMore"
         :sql-mode="queryState.editorType"
