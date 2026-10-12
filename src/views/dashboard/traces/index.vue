@@ -44,7 +44,6 @@
           storage-key="traces-query-table"
           signal-database-kind="traces"
           :form-state="builderFormState"
-          :quick-field-names="['service_name', 'span_name', 'span_status_code', 'span_kind', 'trace_id']"
           :default-form-state="defaultFormState"
         )
         SqlTextEditor(v-else v-model="textEditor.textEditorState.sql" @update:sql-info="handleSqlInfoUpdate")
