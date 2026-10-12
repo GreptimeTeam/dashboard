@@ -102,8 +102,6 @@
             <li v-for="item in whereItems" :key="item">{{ item }}</li>
           </ul>
         </div>
-
-        <p class="tour-zone-status">{{ loadedStatusText }}</p>
       </section>
 
       <!-- Zone B: How it works (explain) -->
@@ -146,13 +144,6 @@
   const whereItems = computed(() =>
     [0, 1, 2].map((i) => t(`${stepKey.value}.where.${i}`)).filter((item) => item && !item.startsWith('tour.'))
   )
-
-  const loadedStatusText = computed(() => {
-    const display = activeStep.value?.display
-    if (display === 'preset') return t('tour.guide.tryPreset')
-    if (display === 'where') return t('tour.guide.tryWhere')
-    return t('tour.guide.tryCode')
-  })
 
   async function copyCode(code: string) {
     try {
@@ -321,14 +312,6 @@
     flex-direction: column;
     gap: 10px;
     min-width: 0;
-  }
-
-  .tour-zone-status {
-    margin: 0;
-    color: var(--gpt-text-secondary);
-    font-size: var(--gpt-font-md);
-    font-weight: 400;
-    line-height: 1.5;
   }
 
   .tour-code {
