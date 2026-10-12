@@ -288,11 +288,10 @@
   watch(
     canExecuteInitialQuery,
     (canExecute) => {
-      if (canExecute) {
-        nextTick(() => {
-          handleQuery()
-        })
-      }
+      if (!canExecute) return
+      nextTick(() => {
+        handleQuery()
+      })
     },
     { immediate: true }
   )

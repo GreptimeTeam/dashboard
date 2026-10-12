@@ -164,13 +164,19 @@
     }
   }
 
+  const route = useRoute()
+
   watch(canExecuteInitialQuery, (canExecute) => {
-    if (canExecute) {
-      handleQuery()
-    }
+    if (!canExecute) return
+    handleQuery()
   })
 
   onMounted(() => {
+    initializeFromQuery()
+  })
+
+  // keepAlive: re-apply URL state (e.g. product tour steps) on re-entry.
+  onActivated(() => {
     initializeFromQuery()
   })
 </script>

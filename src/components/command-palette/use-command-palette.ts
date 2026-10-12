@@ -2,6 +2,7 @@ import { useI18n } from 'vue-i18n'
 import { RouteRecordRaw } from 'vue-router'
 import useMenuTree from '@/components/menu/use-menu-tree'
 import useLocale from '@/hooks/locale'
+import { useProductTour } from '@/components/product-tour/use-product-tour'
 import type { CommandPaletteItem, CommandPaletteSection } from './types'
 
 function flattenRoutes(
@@ -93,7 +94,16 @@ export function useCommandPalette() {
     return flattenRoutes(routes as RouteRecordRaw[], resolve, t)
   })
 
+  const productTour = useProductTour()
+
   const uiItems = computed<CommandPaletteItem[]>(() => [
+    {
+      kind: 'ui' as const,
+      id: 'ui:product-guide',
+      title: t('tour.commandTitle'),
+      hint: t('tour.commandHint'),
+      navigate: () => productTour.openFromEntry(),
+    },
     {
       kind: 'ui' as const,
       id: 'ui:settings',

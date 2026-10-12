@@ -9,6 +9,7 @@ a-layout.app-layout
       :class="{ 'layout-content--full-bleed': !navbar, 'layout-content--query-focus': queryFocusMode }"
     )
       PageLayout
+    TourPanel(v-if="tourMounted")
   Footer(v-show="footer && !queryFocusMode")
 </template>
 
@@ -16,6 +17,8 @@ a-layout.app-layout
   import { useNavbarLayoutCollapsed, useQueryFocusMode } from '@/composables/use-query-focus-mode'
   import { useAppStore } from '@/store'
   import Footer from '@/components/footer/index.vue'
+  import TourPanel from '@/components/product-tour/TourPanel.vue'
+  import { useProductTour } from '@/components/product-tour/use-product-tour'
   import useResponsive from '@/hooks/responsive'
   import PageLayout from './page-layout.vue'
 
@@ -25,6 +28,13 @@ a-layout.app-layout
   const queryFocusMode = useQueryFocusMode()
   const navbarCollapsed = useNavbarLayoutCollapsed()
   const siderWidth = computed(() => (navbarCollapsed.value ? 54 : 200))
+  const tour = useProductTour()
+  const tourMounted = ref(false)
+
+  onMounted(() => {
+    tour.setup()
+    tourMounted.value = true
+  })
 
   watchEffect(() => {
     if (!navbar.value) {
@@ -65,7 +75,7 @@ a-layout.app-layout
   }
 
   .layout-content {
-    width: calc(100vw - var(--navbar-current-width));
+    width: calc(100vw - var(--navbar-current-width) - var(--tour-panel-current-width, 0px));
     max-width: 100%;
     overflow-x: hidden;
     overflow-y: hidden;
@@ -79,7 +89,7 @@ a-layout.app-layout
   }
 
   .layout-content.layout-content--full-bleed {
-    width: 100%;
+    width: calc(100vw - var(--tour-panel-current-width, 0px));
     border-left: none;
   }
 </style>

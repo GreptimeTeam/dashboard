@@ -5,6 +5,7 @@ import playground from './en-US/playground'
 import logsQuery from './en-US/logs-query'
 import flow from './en-US/flow'
 import drilldown from './en-US/drilldown'
+import tour from './en-US/tour'
 
 export default {
   'copy': 'Copy',
@@ -98,4 +99,5 @@ export default {
   ...logsQuery,
   ...flow,
   ...drilldown,
+  ...tour,
 }

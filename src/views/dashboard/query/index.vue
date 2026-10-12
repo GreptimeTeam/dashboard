@@ -43,6 +43,7 @@ a-layout.new-layout.new-layout--workspace(:class="{ 'query-layout--focus': focus
 <script lang="ts" setup name="query">
   import { useMagicKeys, useActiveElement, useStorage } from '@vueuse/core'
   import { useQueryFocusMode } from '@/composables/use-query-focus-mode'
+  import { decodeMaybeEncoded } from '@/utils/query-url'
   import { provideQuerySession } from './use-query-session'
 
   defineOptions({
@@ -53,13 +54,59 @@ a-layout.new-layout.new-layout--workspace(:class="{ 'query-layout--focus': focus
   const activeElement = useActiveElement()
   const appStore = useAppStore()
   const { databaseList, database } = storeToRefs(useAppStore())
+  const route = useRoute()
   const originalDatabase = ref<string | undefined>(undefined)
-  const { queryType } = useQueryCode()
+  const { queryType, codes, runQuery, inputFromNewLineToQueryCode, sqlView } = useQueryCode()
   const session = provideQuerySession()
   const logsHeight = ref(66)
   const focusMode = useQueryFocusMode()
 
   const sidebarWidth = useStorage('sidebarWidth', 228)
+
+  /**
+   * Deep-link / product tour: append `?sql=` into the editor (do not replace),
+   * then run only the appended statement and show results in the session panel.
+   */
+  let lastAppliedSqlParam: string | null = null
+
+  function appendSqlToEditor(sql: string) {
+    queryType.value = 'sql'
+    const trimmed = sql.trim()
+
+    if (sqlView.value) {
+      inputFromNewLineToQueryCode(trimmed, 0)
+      return
+    }
+
+    // Editor not mounted yet — seed `codes` so CodeMirror picks it up via v-model.
+    const existing = (codes.value.sql || '').trimEnd()
+    codes.value.sql = existing ? `${existing}\n${trimmed}` : trimmed
+  }
+
+  async function appendAndRunSql(sql: string) {
+    const trimmed = sql.trim()
+    if (!trimmed) return
+
+    appendSqlToEditor(trimmed)
+
+    const res = await runQuery(trimmed, 'sql', false, {} as never, 'run-part')
+    if ((res as { cancelled?: boolean })?.cancelled) return
+    if (res?.results?.length) session.appendResults(res.results)
+    if (res?.log) session.appendLog(res.log)
+  }
+
+  watch(
+    () => route.query.sql,
+    (raw) => {
+      if (typeof raw !== 'string' || !raw) return
+      if (raw === lastAppliedSqlParam) return
+      const sql = decodeMaybeEncoded(raw)
+      if (!sql.trim()) return
+      lastAppliedSqlParam = raw
+      appendAndRunSql(sql).catch(() => undefined)
+    },
+    { immediate: true }
+  )
 
   watch(sidebarWidth, (newWidth) => {
     if (newWidth < 100) {
