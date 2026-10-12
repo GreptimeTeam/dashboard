@@ -49,6 +49,9 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
               | {{ label }}
           a-doption.news(@click="showNews")
             | {{ $t('menu.news') }}
+          a-doption(@click="showContact")
+            a-link.navbar-dropdown-link(@click.prevent="showContact")
+              | {{ $t('menu.feedback') }}
       StarMarketingCard.star-marketing-card(v-if="!starCardClosed && !navbarCollapsed" @close="starCardClosed = true")
   a-layout-footer
     ul.footer(:class="{ 'footer--expanded': !navbarCollapsed }")
@@ -80,6 +83,7 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
                 svg.icon-16(:class="{ 'rotate-180': navbarCollapsed }")
                   use(href="#shrink")
 NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
+ContactFormModal
 CommandPalette(ref="commandPaletteRef")
 </template>
 
@@ -94,6 +98,8 @@ CommandPalette(ref="commandPaletteRef")
   import useMenuTree from '../menu/use-menu-tree'
   import NewsModal from './news-modal.vue'
   import StarMarketingCard from './star-marketing-card.vue'
+  import ContactFormModal from '../contact-form/ContactFormModal.vue'
+  import useContactForm from '../contact-form/use-contact-form'
   import CommandPalette from '../command-palette/index.vue'
 
   const isComponentIcon = (icon: unknown): icon is Component => typeof icon !== 'string' && !!icon
@@ -117,6 +123,7 @@ CommandPalette(ref="commandPaletteRef")
   }
   const newsListMutable = computed(() => (newsList.value ? [...newsList.value] : []))
   const newsModal = ref()
+  const contactForm = useContactForm()
   const starCardClosed = useStorage('starMarketingCardClosed', false)
   const isEnterprise = import.meta.env.VITE_APP_NAME === 'enterprise'
   const editionLabel = isEnterprise ? 'Enterprise' : 'OpenSource'
@@ -149,6 +156,10 @@ CommandPalette(ref="commandPaletteRef")
 
   const showNews = () => {
     newsModal.value.show()
+  }
+
+  const showContact = () => {
+    contactForm.show()
   }
 
   const toggleMenuCollapse = () => {

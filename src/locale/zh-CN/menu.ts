@@ -21,7 +21,7 @@ export default {
   'menu.dashboard.drilldown': '信号探索',
   'menu.dashboard.perses': '可视化',
   'menu.news': '最新资讯',
-  'menu.feedback': '发送反馈',
+  'menu.feedback': '联系我们',
   'menu.support': '支持',
   'menu.starBanner.description': '帮助我们壮大开源项目！',
   'menu.starBanner.button': '立即 Star →',

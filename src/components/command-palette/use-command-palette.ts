@@ -3,6 +3,7 @@ import { RouteRecordRaw } from 'vue-router'
 import useMenuTree from '@/components/menu/use-menu-tree'
 import useLocale from '@/hooks/locale'
 import { useProductTour } from '@/components/product-tour/use-product-tour'
+import useContactForm from '@/components/contact-form/use-contact-form'
 import type { CommandPaletteItem, CommandPaletteSection } from './types'
 
 function flattenRoutes(
@@ -95,6 +96,7 @@ export function useCommandPalette() {
   })
 
   const productTour = useProductTour()
+  const contactForm = useContactForm()
 
   const uiItems = computed<CommandPaletteItem[]>(() => [
     {
@@ -103,6 +105,13 @@ export function useCommandPalette() {
       title: t('tour.commandTitle'),
       hint: t('tour.commandHint'),
       navigate: () => productTour.openFromEntry(),
+    },
+    {
+      kind: 'ui' as const,
+      id: 'ui:contact',
+      title: t('menu.feedback'),
+      hint: t('contact.commandHint'),
+      navigate: () => contactForm.show(),
     },
     {
       kind: 'ui' as const,

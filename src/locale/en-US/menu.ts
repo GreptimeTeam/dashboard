@@ -21,7 +21,7 @@ export default {
   'menu.dashboard.drilldown': 'Signals Explore',
   'menu.dashboard.perses': 'Visualization',
   'menu.news': 'Latest News',
-  'menu.feedback': 'Send Feedback',
+  'menu.feedback': 'Contact Us',
   'menu.support': 'Support',
   'menu.starBanner.description': 'Help us grow the open-source project!',
   'menu.starBanner.button': 'Star now →',
