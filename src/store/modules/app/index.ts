@@ -5,25 +5,23 @@ import defaultSettings from '@/config/settings.json'
 import editorAPI from '@/api/editor'
 import type { Ref } from 'vue'
 import type { AppState, ConnectionConfig, DbConnectionStatus, StoredConfig, UiConfig } from './types'
+import { applyUrlInfoToConfig, consumeUrlInfo } from './consume-url-info'
 
 const useAppStore = defineStore('app', () => {
   // Persistent storage — declared first so state refs can use stored values as defaults
   const configStorage = useStorage<Partial<StoredConfig>>('config', {}, localStorage)
   const uiConfigStorage = useStorage<Partial<UiConfig>>('uiConfig', {}, localStorage)
 
-  // Apply URL-injected config once at startup (e.g. from cloud entry point)
-  const urlParams = new URLSearchParams(window.location.search)
-  const urlInfo = urlParams.get('info')
-  if (urlInfo) {
-    try {
-      const urlConfig = JSON.parse(atob(urlInfo))
-      configStorage.value = { ...configStorage.value, ...urlConfig }
-    } catch {
-      // ignore malformed info param
+  // Apply URL-injected config once at startup (search or hash query; e.g. cloud / shared links)
+  {
+    const { pathname, search, hash } = window.location
+    const { info, nextUrl } = consumeUrlInfo(pathname, search, hash)
+    if (info) {
+      configStorage.value = applyUrlInfoToConfig(configStorage.value, info)
+      if (nextUrl !== `${pathname}${search}${hash}`) {
+        window.history.replaceState(null, '', nextUrl)
+      }
     }
-    urlParams.delete('info')
-    const cleanUrl = [window.location.pathname, urlParams.toString()].filter(Boolean).join('?')
-    window.history.replaceState(null, '', cleanUrl)
   }
 
   const cfg = configStorage.value
