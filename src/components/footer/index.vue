@@ -1,7 +1,7 @@
 <template lang="pug">
 a-layout-footer.footer
   .footer-start
-    span.footer-search-hint(:title="`Press ${modKey}+K to open command palette`") {{ modKey }}+K
+    span.footer-search-hint(:title="quickNavTip") {{ quickNavLabel }}
     span.footer-divider(aria-hidden="true")
     button.mcp-entry(type="button" @click="openMcpConfig") {{ $t('menu.mcp') }}
   a-space.footer-info(:size="20")
@@ -32,7 +32,9 @@ a-layout-footer.footer
 
   const { t } = useI18n()
   const isMac = navigator.platform.toUpperCase().includes('MAC')
-  const modKey = isMac ? '⌘' : 'Ctrl'
+  const shortcutKey = `${isMac ? '⌘' : 'Ctrl'}+K`
+  const quickNavLabel = computed(() => t('dashboard.quickNav', { key: shortcutKey }))
+  const quickNavTip = computed(() => t('dashboard.quickNavTip', { key: shortcutKey }))
   const mcpConfig = useMcpConfig()
 
   const appStore = useAppStore()
