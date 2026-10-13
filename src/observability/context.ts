@@ -1,5 +1,6 @@
 import { computed, inject, onUnmounted, provide, ref, type ComputedRef, type InjectionKey, type Ref } from 'vue'
 import useTimeRange from '@/hooks/use-time-range'
+import { normalizeLogTimeBoundToMs } from '@/utils/log-time-cursor'
 import createDrilldownSession, { type DrilldownSession } from './drilldown-session'
 import {
   entityColumnFilterKey,
@@ -86,6 +87,8 @@ export interface DrilldownUiState {
   metric: Ref<string | undefined>
   detailTab: Ref<MetricDetailTab>
   focusTraceId: Ref<string | undefined>
+  /** Unix-seconds anchor for focusTraceId (±12h detail prune). Cleared when unknown. */
+  focusTraceAt: Ref<number | undefined>
   logsTraceId: Ref<string | undefined>
   logsView: Ref<LogsView>
   logsTab: Ref<LogsDetailTab>
@@ -113,7 +116,7 @@ export interface DrilldownActions {
   setTracesTab: (tab: TracesHomeTab) => void
   openLogsDetail: (groupValue?: string) => void
   closeLogsDetail: () => void
-  openTraceGantt: (traceId: string) => void
+  openTraceGantt: (traceId: string, options?: { at?: unknown }) => void
   closeTraceGantt: () => void
   openLogsForTrace: (traceId: string, target?: { database?: string; table?: string }) => void
   closeLogsForTrace: () => void
@@ -314,6 +317,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
   const metric = ref<string | undefined>()
   const detailTab = ref<MetricDetailTab>('breakdown')
   const focusTraceId = ref<string | undefined>()
+  const focusTraceAt = ref<number | undefined>()
   const logsTraceId = ref<string | undefined>()
   const logsView = ref<LogsView>('overview')
   const logsTab = ref<LogsDetailTab>('logs')
@@ -435,6 +439,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
     // Trace drawer lives on logs and traces. Keep it when staying on logs or opening traces.
     if (next === 'metrics' || (next !== signal.value && next !== 'traces')) {
       focusTraceId.value = undefined
+      focusTraceAt.value = undefined
     }
     if (next === 'logs') {
       if (
@@ -507,17 +512,20 @@ export function useDrilldownContextProvider(): DrilldownContext {
     tracesTab.value = tab
   }
 
-  const openTraceGantt = (traceId: string) => {
+  const openTraceGantt = (traceId: string, options?: { at?: unknown }) => {
     const trimmed = traceId.trim()
     if (!trimmed) {
       return
     }
     focusTraceId.value = trimmed
+    const ms = options?.at != null ? normalizeLogTimeBoundToMs(options.at) : NaN
+    focusTraceAt.value = Number.isFinite(ms) ? Math.floor(ms / 1000) : undefined
   }
 
   /** Back to traces home; keep filter chips. */
   const closeTraceGantt = () => {
     focusTraceId.value = undefined
+    focusTraceAt.value = undefined
   }
 
   const actions: DrilldownActions = {
@@ -566,6 +574,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
       metric,
       detailTab,
       focusTraceId,
+      focusTraceAt,
       logsTraceId,
       logsView,
       logsTab,

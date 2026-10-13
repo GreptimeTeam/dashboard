@@ -183,6 +183,7 @@ function createCtx() {
       metric: ref(undefined),
       detailTab: ref('breakdown' as const),
       focusTraceId: ref(undefined),
+      focusTraceAt: ref(undefined),
       logsTraceId: ref<string | undefined>(),
       logsView: ref('overview' as const),
       logsTab: ref('logs' as const),

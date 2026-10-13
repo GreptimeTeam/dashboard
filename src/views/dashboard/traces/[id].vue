@@ -123,20 +123,37 @@
     traceEndTime.value = 0
   }
 
+  function escapeSqlString(value: string) {
+    return value.replace(/'/g, "''")
+  }
+
   async function fetchTraceData() {
     loading.value = true
     try {
       const tableName = (route.query.table as string) || 'spans'
       const database = (route.query.database as string) || undefined
+      const traceId = String(route.params.id || '').trim()
+      if (!traceId) {
+        return
+      }
 
       // Build table name with database prefix if available
       const fullTableName = database ? `"${database}"."${tableName}"` : tableName
+
+      // ±12h around the list-row timestamp (passed as start/end) for partition pruning.
+      const startSec = Number(route.query.start)
+      const endSec = Number(route.query.end)
+      const whereParts = [`trace_id = '${escapeSqlString(traceId)}'`]
+      if (Number.isFinite(startSec) && Number.isFinite(endSec) && endSec >= startSec) {
+        whereParts.push(`timestamp >= FROM_UNIXTIME(${startSec})`)
+        whereParts.push(`timestamp <= FROM_UNIXTIME(${endSec})`)
+      }
 
       const result = await editorAPI.runSQL(
         `
         SELECT *
         FROM ${fullTableName}
-        WHERE trace_id = '${route.params.id}'
+        WHERE ${whereParts.join(' AND ')}
         ORDER BY timestamp ASC
       `,
         database

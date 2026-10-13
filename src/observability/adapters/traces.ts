@@ -1,6 +1,7 @@
 import editorApi from '@/api/editor'
 import { processSpanData, type Span } from '@/views/dashboard/traces/utils'
 import type { ColumnType } from '@/types/query'
+import { buildTraceDetailUnixRange } from '@/utils/trace-detail-time-range'
 import type { DrilldownContext } from '../context'
 import { filtersToSqlWhere } from '../filters'
 import { boundSignalDatabase } from '../signal-database'
@@ -424,7 +425,7 @@ export async function fetchBreakdownAttrValues(
   }
 }
 
-/** All spans for one trace (Gantt). Scoped to the active time window for partition pruning. */
+/** All spans for one trace (Gantt). Prefer ±12h around focusTraceAt; else UI time window. */
 export async function fetchTraceSpans(ctx: DrilldownContext, traceId: string): Promise<Span[]> {
   const tableName = ctx.semantics.traces.table.value
   if (!tableName || !traceId.trim()) {
@@ -433,7 +434,8 @@ export async function fetchTraceSpans(ctx: DrilldownContext, traceId: string): P
 
   const idCol = traceIdColumn(ctx)
   const tsCol = timeColumn(ctx)
-  const unixRange = ctx.query.unixTimeRange()
+  const fromAnchor = buildTraceDetailUnixRange(ctx.ui.focusTraceAt.value)
+  const unixRange = fromAnchor ?? ctx.query.unixTimeRange()
   const whereParts = [`${quoteIdent(idCol)} = '${escapeSqlString(traceId.trim())}'`]
   if (unixRange.length === 2) {
     whereParts.push(`${quoteIdent(tsCol)} >= FROM_UNIXTIME(${unixRange[0]})`)

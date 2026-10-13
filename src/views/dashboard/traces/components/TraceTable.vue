@@ -51,7 +51,7 @@ a-card(:bordered="false")
   )
     template(#column-trace_id="{ record, showContextMenu, handleContextMenu }")
       span.trace-id-actions
-        button.trace-id-link(type="button" @click="handleTraceClick(record.trace_id)") {{ record.trace_id }}
+        button.trace-id-link(type="button" @click="handleTraceClick(record)") {{ record.trace_id }}
         a-dropdown(
           v-if="showLogsTraceMenu"
           trigger="click"
@@ -77,6 +77,7 @@ a-card(:bordered="false")
   import { IconDown, IconSettings } from '@arco-design/web-vue/es/icon'
   import type { PropType } from 'vue'
   import type { ColumnType, QueryState } from '@/types/query'
+  import { buildTraceDetailUnixRange } from '@/utils/trace-detail-time-range'
 
   interface LogsTargetInfo {
     database: string
@@ -127,7 +128,12 @@ a-card(:bordered="false")
     },
   })
 
-  const emit = defineEmits(['filterConditionAdd', 'traceClick', 'logsTraceClick', 'openLogsSettings'])
+  const emit = defineEmits<{
+    (e: 'filterConditionAdd', payload: unknown): void
+    (e: 'traceClick', payload: { traceId: string; timestamp?: unknown }): void
+    (e: 'logsTraceClick', payload: { traceId: string; service?: string }): void
+    (e: 'openLogsSettings'): void
+  }>()
   const router = useRouter()
 
   // Default columns to show for traces (when no selection is made)
@@ -256,17 +262,26 @@ a-card(:bordered="false")
     }
   }
 
-  function handleTraceClick(traceId: string) {
-    emit('traceClick', traceId)
+  function handleTraceClick(record: TableData) {
+    const traceId = String(record?.trace_id ?? '')
+    emit('traceClick', { traceId, timestamp: record?.timestamp })
     if (props.embedMode) {
       return
     }
+    // ±12h around the row timestamp — tighter prune than the list time window.
+    const detailRange = buildTraceDetailUnixRange(record?.timestamp)
     router.push({
       name: 'dashboard-TraceDetail',
       params: { id: traceId },
       query: {
         table: props.queryState.table,
         ...(props.queryState.database ? { database: props.queryState.database } : {}),
+        ...(detailRange
+          ? {
+              start: String(detailRange[0]),
+              end: String(detailRange[1]),
+            }
+          : {}),
       },
     })
   }

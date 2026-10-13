@@ -157,7 +157,7 @@
 
   useSignalQuery(ctx, 'traces', {
     enabled: () => Boolean(ctx.ui.focusTraceId.value),
-    params: () => ctx.ui.focusTraceId.value,
+    params: () => `${ctx.ui.focusTraceId.value}:${ctx.ui.focusTraceAt.value ?? ''}`,
     run: () => load(),
   })
 

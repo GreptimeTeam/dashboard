@@ -70,6 +70,7 @@ function createCtx() {
   const logsView = ref<'overview' | 'detail'>('overview')
   const logsTraceId = ref<string | undefined>()
   const focusTraceId = ref<string | undefined>()
+  const focusTraceAt = ref<number | undefined>()
   const logsSelectedGroup = ref<string | undefined>()
   const logsBodyOp = ref('contains')
   const logsBodyValue = ref('')
@@ -85,6 +86,7 @@ function createCtx() {
       // Mimic destructive UI path for assertions that call without hydrate.
       logsTraceId.value = undefined
       focusTraceId.value = undefined
+      focusTraceAt.value = undefined
       logsView.value = 'overview'
     }
     if (next !== 'metrics') {
@@ -98,11 +100,14 @@ function createCtx() {
   const closeLogsForTrace = vi.fn(() => {
     logsTraceId.value = undefined
   })
-  const openTraceGantt = vi.fn((traceId: string) => {
+  const openTraceGantt = vi.fn((traceId: string, options?: { at?: unknown }) => {
     focusTraceId.value = traceId.trim()
+    const at = options?.at != null ? Number(options.at) : NaN
+    focusTraceAt.value = Number.isFinite(at) ? at : undefined
   })
   const closeTraceGantt = vi.fn(() => {
     focusTraceId.value = undefined
+    focusTraceAt.value = undefined
   })
   const bindTable = vi.fn(async () => undefined)
   const setFilters = vi.fn((next: typeof filters.value) => {
@@ -144,6 +149,7 @@ function createCtx() {
       metric,
       detailTab,
       focusTraceId,
+      focusTraceAt,
       logsTraceId,
       logsView,
       logsTab,
