@@ -3,6 +3,7 @@ import axios from 'axios'
 import { isTauri } from '@tauri-apps/api/core'
 import defaultSettings from '@/config/settings.json'
 import editorAPI from '@/api/editor'
+import { setDashboardTimezone } from '@/utils/timezone'
 import type { Ref } from 'vue'
 import type { AppState, ConnectionConfig, DbConnectionStatus, StoredConfig, UiConfig } from './types'
 
@@ -138,6 +139,7 @@ const useAppStore = defineStore('app', () => {
     },
     { immediate: true, flush: 'sync' }
   )
+  watch(userTimezone, (val) => setDashboardTimezone(val), { immediate: true, flush: 'sync' })
   watch(
     theme,
     (val) => {

@@ -54,28 +54,27 @@ a-drawer.settings-drawer(
       a-select(v-model="settingsForm.authHeader")
         a-option(value="Authorization") Authorization(default)
         a-option(value="x-greptime-auth") x-greptime-auth
-    a-form-item
+    a-form-item(
+      :validate-status="isValidTimezone ? undefined : 'error'"
+      :help="isValidTimezone ? undefined : $t('settings.timezoneInvalid')"
+    )
       template(#label)
         a-space(:size="4")
           span {{ $t('settings.timezone') }}
-          a-tooltip(content="Used as x-greptime-timezone HTTP header" mini position="tl")
+          a-tooltip(mini position="tl" :content="$t('settings.timezoneTip')")
             svg.icon-12
               use(href="#question")
       a-select(
-        v-model="settingsForm.userTimezone"
+        v-model="timezoneSelectValue"
         allow-search
-        allow-clear
+        allow-create
         :options="timezoneOptions"
         :trigger-props="{ autoFitPopupMinWidth: true }"
       )
       template(#extra)
         div
-          | Use DST offsets from UTC, such as
-          span.bold {{ ` -07:00. ` }}
-          | Or a timezone name, such as
-          span.bold {{ ` US/Pacific. ` }}
-          | See more at
-          a-link(icon href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones" target="_blank") Wiki.
+          | {{ $t('settings.timezoneExtra') }}
+          a-link(icon href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones" target="_blank") IANA
     a-form-item.save
       a-button(
         type="primary"
@@ -93,6 +92,14 @@ a-drawer.settings-drawer(
 <script lang="ts" setup name="GlobalSetting">
   import { useI18n } from 'vue-i18n'
   import { useAppStore, useDataBaseStore } from '@/store'
+  import {
+    formatOffsetLabel,
+    getBrowserTimezone,
+    getTimezoneFullLabel,
+    getTimezoneShortLabel,
+    isValidIanaTimezone,
+    isValidTimezoneSetting,
+  } from '@/utils/timezone'
 
   const MARGIN_BOTTOM = `${38 * 2 + 8}px`
   const { t } = useI18n()
@@ -119,10 +126,20 @@ a-drawer.settings-drawer(
   })
 
   const checkTimezoneInput = (tz: string): boolean => {
-    // With select options, inputs are controlled and always valid
-    isValidTimezone.value = true
-    return true
+    isValidTimezone.value = isValidTimezoneSetting(tz ?? '')
+    return isValidTimezone.value
   }
+
+  // Arco select treats '' as "no value", so the browser default uses a sentinel in the UI only.
+  const BROWSER_TZ_VALUE = '__browser__'
+  const timezoneSelectValue = computed({
+    get: () => settingsForm.value.userTimezone || BROWSER_TZ_VALUE,
+    set: (val: string) => {
+      const tz = !val || val === BROWSER_TZ_VALUE ? '' : val.trim()
+      settingsForm.value.userTimezone = tz.toUpperCase() === 'UTC' ? 'UTC' : tz
+      checkTimezoneInput(settingsForm.value.userTimezone)
+    },
+  })
   const save = async () => {
     if (!checkTimezoneInput(settingsForm.value.userTimezone)) {
       return
@@ -153,19 +170,79 @@ a-drawer.settings-drawer(
     appStore.openGlobalSettings()
   }
 
-  // Timezone select options: UTC and UTC±HH:MM from -12:00 to +14:00
+  // Whole hours from -12 to +14, plus the real-world half/quarter-hour offsets.
+  const OFFSET_MINUTES = [
+    ...Array.from({ length: 27 }, (_, i) => (i - 12) * 60).filter((m) => m !== 0),
+    -570,
+    -210,
+    210,
+    270,
+    330,
+    345,
+    390,
+    570,
+    630,
+    765,
+  ].sort((a, b) => a - b)
+
+  const REGION_TIMEZONES = [
+    'America/Los_Angeles',
+    'America/Denver',
+    'America/Chicago',
+    'America/New_York',
+    'America/Sao_Paulo',
+    'Europe/London',
+    'Europe/Paris',
+    'Europe/Berlin',
+    'Europe/Moscow',
+    'Asia/Dubai',
+    'Asia/Kolkata',
+    'Asia/Singapore',
+    'Asia/Shanghai',
+    'Asia/Hong_Kong',
+    'Asia/Tokyo',
+    'Asia/Seoul',
+    'Australia/Sydney',
+    'Pacific/Auckland',
+  ]
+
+  const toOffsetValue = (minutes: number) => {
+    const sign = minutes > 0 ? '+' : '-'
+    const abs = Math.abs(minutes)
+    return `${sign}${String(Math.floor(abs / 60)).padStart(2, '0')}:${String(abs % 60).padStart(2, '0')}`
+  }
+
   const timezoneOptions = computed(() => {
-    const opts: { label: string; value: string }[] = [{ label: 'UTC', value: 'UTC' }]
-    for (let h = -12; h <= 14; h += 1) {
-      if (h !== 0) {
-        const sign = h > 0 ? '+' : '-'
-        const abs = Math.abs(h)
-        const label = `UTC${sign}${abs}`
-        const value = `${sign}${abs.toString().padStart(2, '0')}:00`
-        opts.push({ label, value })
-      }
+    const browserTz = getBrowserTimezone()
+    const known = new Set<string>(['UTC', ...REGION_TIMEZONES])
+    const offsets = OFFSET_MINUTES.map((m) => {
+      const value = toOffsetValue(m)
+      known.add(value)
+      return { label: formatOffsetLabel(m), value }
+    })
+    const regions = REGION_TIMEZONES.filter(isValidIanaTimezone).map((tz) => ({
+      label: `${tz} (${getTimezoneShortLabel(tz)})`,
+      value: tz,
+    }))
+    const current = settingsForm.value.userTimezone
+    if (current && !known.has(current) && isValidTimezoneSetting(current)) {
+      regions.unshift({ label: getTimezoneFullLabel(current), value: current })
     }
-    return opts
+    return [
+      {
+        isGroup: true,
+        label: t('settings.timezoneGroupCommon'),
+        options: [
+          {
+            label: `${t('settings.timezoneBrowser')} · ${browserTz} (${getTimezoneShortLabel('')})`,
+            value: BROWSER_TZ_VALUE,
+          },
+          { label: 'UTC', value: 'UTC' },
+        ],
+      },
+      { isGroup: true, label: t('settings.timezoneGroupRegions'), options: regions },
+      { isGroup: true, label: t('settings.timezoneGroupOffsets'), options: offsets },
+    ]
   })
 
   watch(globalSettings, () => {
@@ -180,6 +257,7 @@ a-drawer.settings-drawer(
         authHeader: authHeader.value || 'Authorization',
       }
       loginStatus.value = ''
+      isValidTimezone.value = true
     }
   })
 

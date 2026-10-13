@@ -1,5 +1,5 @@
-import dayjs from 'dayjs'
 import type { SchemaType } from '@/store/modules/code-run/types'
+import { formatInDashboardTz } from '@/utils/timezone'
 import type { TSColumn } from '@/types/query'
 import { getTableRefForSql } from '@/utils/sql'
 
@@ -195,7 +195,7 @@ export type TimeType = keyof typeof TimeTypes
 export function toDateStr(time: number, multiple: number, format?: string) {
   // const multiple = TimeTypes[type]
   const ms = toMs(time, multiple)
-  return dayjs(ms).format(format || 'YYYY-MM-DD HH:mm:ss.SSS')
+  return formatInDashboardTz(ms, format || 'YYYY-MM-DD HH:mm:ss.SSS')
 }
 
 const LIMIT_RE = /LIMIT\s+(\d+)/

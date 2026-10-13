@@ -1,7 +1,7 @@
 import { h, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Tooltip } from '@arco-design/web-vue'
-import { useDateTimeFormat } from '@/hooks'
+import { useDashboardTimezone, useDateTimeFormat } from '@/hooks'
 import type { ColumnType, TSColumn } from '@/types/query'
 import getCellString from '../utils/cell-text'
 
@@ -12,6 +12,7 @@ import getCellString from '../utils/cell-text'
 export default function useLogsTimeFormat() {
   const { t } = useI18n()
   const { formatDateTimeWithMs } = useDateTimeFormat()
+  const { timezoneLabel, timezoneFullLabel, showTimezoneLabel } = useDashboardTimezone()
 
   /** true = formatted timestamp, false = raw value (legacy `tsViewStr`). */
   const tsViewStr = ref(true)
@@ -45,11 +46,17 @@ export default function useLogsTimeFormat() {
       Tooltip,
       { placement: 'top' },
       {
-        content: () => t(tsViewStr.value ? 'dashboard.showTimestamp' : 'dashboard.formatTimestamp'),
+        content: () =>
+          tsViewStr.value
+            ? `${timezoneFullLabel.value} · ${t('dashboard.showTimestamp')}`
+            : t('dashboard.formatTimestamp'),
         default: () =>
           h('span', { class: ['gpt-semantic-th', 'timestamp', 'logs-vxe-ts-th'], onClick: changeTsView }, [
             h('svg', { class: 'icon-12' }, [h('use', { href: '#time-index' })]),
             h('span', { class: 'gpt-semantic-th-text' }, title),
+            tsViewStr.value && showTimezoneLabel.value
+              ? h('span', { class: 'gpt-semantic-th-tz' }, timezoneLabel.value)
+              : null,
           ]),
       }
     )

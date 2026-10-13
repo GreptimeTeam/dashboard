@@ -1,68 +1,61 @@
 import { computed } from 'vue'
 import dayjs from 'dayjs'
-import utc from 'dayjs/plugin/utc'
-import timezone from 'dayjs/plugin/timezone'
 import { storeToRefs } from 'pinia'
+import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/store'
-
-dayjs.extend(utc)
-dayjs.extend(timezone)
-
-const OFFSET_REGEX = /^[+-]\d{2}:\d{2}$/
-
-function parseOffsetMinutes(offset: string): number {
-  const sign = offset.startsWith('-') ? -1 : 1
-  const [hours, minutes] = offset
-    .slice(1)
-    .split(':')
-    .map((item) => Number(item))
-  return sign * (hours * 60 + minutes)
-}
+import { getOffsetMinutes, getTimezoneFullLabel, getTimezoneShortLabel, resolveTimezone } from '@/utils/timezone'
 
 // eslint-disable-next-line import/prefer-default-export
 export function useDashboardTimezone() {
+  const { t } = useI18n()
   const { userTimezone } = storeToRefs(useAppStore())
 
   const browserOffset = dayjs().utcOffset()
 
-  const dashboardOffset = computed(() => {
-    const tz = userTimezone.value
-    if (!tz) return browserOffset
-    if (tz === 'UTC') return 0
-    if (OFFSET_REGEX.test(tz)) return parseOffsetMinutes(tz)
-    return browserOffset
-  })
+  const dashboardOffset = computed(() => getOffsetMinutes(userTimezone.value))
 
-  // offsetDiff = dashboardOffset - browserOffset
-  // Used to convert between dashboard timezone time and browser timezone time
-  // When displaying: add offsetDiff to show dashboard timezone time in browser timezone
-  // When converting back: subtract offsetDiff to restore to browser timezone time
+  // offsetDiff = dashboardOffset - browserOffset (at a given instant, so DST is respected).
+  // Pickers render browser-local Dates: add the diff to show dashboard wall-clock time,
+  // subtract it to turn a picked wall-clock time back into a real instant.
+  const offsetDiffAt = (ms: number) => getOffsetMinutes(userTimezone.value, ms) - dayjs(ms).utcOffset()
+
   const offsetDiff = computed(() => dashboardOffset.value - browserOffset)
 
-  const toBrowserTimezoneTimestamp = (value: Date) => dayjs(value).subtract(offsetDiff.value, 'minute').unix()
+  const toBrowserTimezoneTimestamp = (value: Date) => {
+    const ms = value.getTime()
+    return dayjs(ms).subtract(offsetDiffAt(ms), 'minute').unix()
+  }
 
-  const toDashboardDate = (value: string | number) => dayjs.unix(Number(value)).add(offsetDiff.value, 'minute').toDate()
+  const toDashboardDate = (value: string | number) => {
+    const ms = Number(value) * 1000
+    return dayjs(ms).add(offsetDiffAt(ms), 'minute').toDate()
+  }
 
-  // Timezone label formatter: 'UTC' stays 'UTC', '+08:00' -> 'UTC+8', '-05:00' -> 'UTC-5'
-  const timezoneLabel = computed(() => {
-    const tz = userTimezone.value
-    if (!tz) {
-      // Format browser timezone label
-      return ''
-    }
-    if (tz === 'UTC') return 'UTC'
-    // Expect tz like '+08:00' or '-05:00'
-    const sign = tz.startsWith('-') ? '-' : '+'
-    const hours = Number(tz.slice(1, 3))
-    return `UTC${sign}${hours}`
+  /** Short label, e.g. `UTC`, `UTC+8`, `UTC+5:30`. Never empty (falls back to browser offset). */
+  const timezoneLabel = computed(() => getTimezoneShortLabel(userTimezone.value))
+
+  /** Descriptive label, e.g. `Asia/Shanghai (UTC+8)` or `Browser · Asia/Shanghai (UTC+8)`. */
+  const timezoneFullLabel = computed(() => getTimezoneFullLabel(userTimezone.value, t('settings.timezoneBrowser')))
+
+  /**
+   * Inline labels (pickers, table headers) only when the dashboard timezone differs from
+   * what the user's clock shows; the status bar and tooltips always carry the timezone.
+   */
+  const showTimezoneLabel = computed(() => {
+    if (resolveTimezone(userTimezone.value).kind === 'browser') return false
+    const now = Date.now()
+    return getOffsetMinutes(userTimezone.value, now) !== dayjs(now).utcOffset()
   })
 
   return {
     browserOffset,
     dashboardOffset,
     offsetDiff,
+    offsetDiffAt,
     toBrowserTimezoneTimestamp,
     toDashboardDate,
     timezoneLabel,
+    timezoneFullLabel,
+    showTimezoneLabel,
   }
 }

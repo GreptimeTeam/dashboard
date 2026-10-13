@@ -5,7 +5,8 @@ import {
   DEFAULT_DASHBOARD_DURATION,
   DEFAULT_REFRESH_INTERVAL,
 } from '@perses-dev/core'
-import { ChartsProvider, generateChartsTheme, getTheme } from '@perses-dev/components'
+import { ChartsProvider, TimeZoneProvider, generateChartsTheme, getTheme } from '@perses-dev/components'
+import { useTimeZoneParams } from '@perses-dev/plugin-system'
 import { createTheme, ThemeProvider, GlobalStyles } from '@mui/material'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { QueryParamProvider } from 'use-query-params'
@@ -19,6 +20,25 @@ import DASHBOARD_TOKENS from './Dashboard.styles'
 import getPersesDashboardLayoutStyles, { getPersesDashboardComponents } from './theme/persesDashboardTheme'
 import { getGptTablePalette, getPersesTableComponents, getPersesTableGlobalStyles } from './theme/persesTableTheme'
 import { ensureTraceTableLinks } from '../traceLink'
+import { toIanaTimezone } from '../../utils/timezone'
+
+/**
+ * ViewDashboard wraps panels in its own TimeZoneProvider fed by the `?tz=` query param
+ * (default `local`), which shadows any outer provider. Push the global setting into that
+ * param whenever it changes; the in-dashboard timezone picker can still override it locally.
+ */
+function TimeZoneParamSync({ timeZone }: { timeZone: string }) {
+  // No fallback here: an absent `tz` must read as Perses' own default (`local`), not the target.
+  const { timeZone: current, setTimeZone } = useTimeZoneParams('local')
+  const currentRef = React.useRef(current)
+  currentRef.current = current
+
+  React.useEffect(() => {
+    if (currentRef.current !== timeZone) setTimeZone(timeZone)
+  }, [timeZone, setTimeZone])
+
+  return null
+}
 
 interface DashboardProps {
   dashboardEditable?: boolean
@@ -27,7 +47,8 @@ interface DashboardProps {
 }
 
 export default function Dashboard(props: DashboardProps = {}) {
-  const { name, file } = useWorkbenchContext()
+  const { name, file, timezone } = useWorkbenchContext()
+  const persesTimeZone = React.useMemo(() => toIanaTimezone(timezone), [timezone])
   const dashboardEditable = props.dashboardEditable ?? false
   const controlEditableBodyClass = props.controlEditableBodyClass ?? true
   const [saveRefreshToken, setSaveRefreshToken] = React.useState(0)
@@ -673,82 +694,85 @@ export default function Dashboard(props: DashboardProps = {}) {
       <QueryClientProvider client={queryClient}>
         <QueryParamProvider adapter={ReactRouter6Adapter}>
           <ChartsProvider chartsTheme={chartsTheme}>
-            <GlobalStyles
-              styles={{
-                ...getPersesDashboardLayoutStyles(),
-                ...getPersesTableGlobalStyles(),
-                'html, body, #root, [data-reactroot]': {
-                  backgroundColor: DASHBOARD_TOKENS.colors.background,
-                  margin: 0,
-                },
-                // Title row is always visible. Readonly / dashboard-editable only
-                // toggles Perses Edit — not the title or snapshot actions.
-                '[data-testid="dashboard-toolbar"]': {
-                  'paddingBottom': '12px',
-                  'borderBottom': `1px solid ${DASHBOARD_TOKENS.colors.dividerDark}`,
-                  'marginBottom': '8px',
-                  '& .MuiButton-root, & .MuiIconButton-root': {
-                    height: '100%',
+            <TimeZoneProvider timeZone={persesTimeZone}>
+              <TimeZoneParamSync timeZone={persesTimeZone} />
+              <GlobalStyles
+                styles={{
+                  ...getPersesDashboardLayoutStyles(),
+                  ...getPersesTableGlobalStyles(),
+                  'html, body, #root, [data-reactroot]': {
+                    backgroundColor: DASHBOARD_TOKENS.colors.background,
+                    margin: 0,
                   },
-                  '& > .MuiBox-root:first-of-type': {
+                  // Title row is always visible. Readonly / dashboard-editable only
+                  // toggles Perses Edit — not the title or snapshot actions.
+                  '[data-testid="dashboard-toolbar"]': {
+                    'paddingBottom': '12px',
+                    'borderBottom': `1px solid ${DASHBOARD_TOKENS.colors.dividerDark}`,
+                    'marginBottom': '8px',
+                    '& .MuiButton-root, & .MuiIconButton-root': {
+                      height: '100%',
+                    },
+                    '& > .MuiBox-root:first-of-type': {
+                      display: 'flex',
+                    },
+                  },
+                  '[data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type:has(.gpt-dashboard-toolbar-actions) > .MuiStack-root:empty':
+                    {
+                      display: 'none',
+                    },
+                  'body:not(.dashboard-editable) [data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type button:has(.MuiButton-startIcon)':
+                    {
+                      display: 'none',
+                    },
+                  'body:not(.dashboard-editable) [data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type > .MuiStack-root:has(button:has(.MuiButton-startIcon))':
+                    {
+                      display: 'none',
+                    },
+                  'body.dashboard-editable [data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type:has(.gpt-dashboard-toolbar-actions) > .MuiStack-root:last-of-type':
+                    {
+                      marginLeft: '0 !important',
+                    },
+                  // Panel group header hover
+                  '[data-testid="panel-group-header"]': {
+                    'backgroundColor': 'transparent',
+                    'transition': 'background-color 0.2s ease',
+                    'marginBottom': '4px',
+                    'borderRadius': '4px',
+                    '& .MuiTypography-root': {
+                      fontWeight: 600,
+                      color: DASHBOARD_TOKENS.colors.textSecondary,
+                      fontSize: '14px',
+                    },
+                    '&:hover': {
+                      backgroundColor: DASHBOARD_TOKENS.colors.brandHover,
+                    },
+                  },
+                  // Variable filter bar layout.
+                  // The AppBar inside uses color="inherit" + sx={{ backgroundColor: 'inherit' }} from perses,
+                  // so sx overrides our styleOverrides. Use a higher-specificity selector (0,2,0) to win.
+                  '[data-testid="variable-list"] .MuiAppBar-root': {
+                    backgroundColor: 'transparent',
+                  },
+                  '[data-testid="variable-list"] .MuiAppBar-root.mui-fixed': {
+                    zIndex: 1100,
+                    backgroundColor: 'rgba(250, 250, 250, 0.95)',
+                    backdropFilter: 'blur(8px)',
+                    borderBottom: `1px solid ${DASHBOARD_TOKENS.colors.dividerDark}`,
+                  },
+                  '[data-testid="variable-list"]': {
                     display: 'flex',
+                    gap: '12px',
+                    alignItems: 'center',
                   },
-                },
-                '[data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type:has(.gpt-dashboard-toolbar-actions) > .MuiStack-root:empty':
-                  {
-                    display: 'none',
-                  },
-                'body:not(.dashboard-editable) [data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type button:has(.MuiButton-startIcon)':
-                  {
-                    display: 'none',
-                  },
-                'body:not(.dashboard-editable) [data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type > .MuiStack-root:has(button:has(.MuiButton-startIcon))':
-                  {
-                    display: 'none',
-                  },
-                'body.dashboard-editable [data-testid="dashboard-toolbar"] > .MuiBox-root:first-of-type:has(.gpt-dashboard-toolbar-actions) > .MuiStack-root:last-of-type':
-                  {
-                    marginLeft: '0 !important',
-                  },
-                // Panel group header hover
-                '[data-testid="panel-group-header"]': {
-                  'backgroundColor': 'transparent',
-                  'transition': 'background-color 0.2s ease',
-                  'marginBottom': '4px',
-                  'borderRadius': '4px',
-                  '& .MuiTypography-root': {
-                    fontWeight: 600,
-                    color: DASHBOARD_TOKENS.colors.textSecondary,
-                    fontSize: '14px',
-                  },
-                  '&:hover': {
-                    backgroundColor: DASHBOARD_TOKENS.colors.brandHover,
-                  },
-                },
-                // Variable filter bar layout.
-                // The AppBar inside uses color="inherit" + sx={{ backgroundColor: 'inherit' }} from perses,
-                // so sx overrides our styleOverrides. Use a higher-specificity selector (0,2,0) to win.
-                '[data-testid="variable-list"] .MuiAppBar-root': {
-                  backgroundColor: 'transparent',
-                },
-                '[data-testid="variable-list"] .MuiAppBar-root.mui-fixed': {
-                  zIndex: 1100,
-                  backgroundColor: 'rgba(250, 250, 250, 0.95)',
-                  backdropFilter: 'blur(8px)',
-                  borderBottom: `1px solid ${DASHBOARD_TOKENS.colors.dividerDark}`,
-                },
-                '[data-testid="variable-list"]': {
-                  display: 'flex',
-                  gap: '12px',
-                  alignItems: 'center',
-                },
-              }}
-            />
-            {snapshotMode ? (
-              <SnapshotDashboardShell dashboard={data}>{dashboardView}</SnapshotDashboardShell>
-            ) : (
-              dashboardView
-            )}
+                }}
+              />
+              {snapshotMode ? (
+                <SnapshotDashboardShell dashboard={data}>{dashboardView}</SnapshotDashboardShell>
+              ) : (
+                dashboardView
+              )}
+            </TimeZoneProvider>
           </ChartsProvider>
         </QueryParamProvider>
       </QueryClientProvider>

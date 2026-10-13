@@ -136,9 +136,11 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card.gpt-table-sidebar-
   import useSiderTabs from '@/hooks/sider-tabs'
   import type { TableTreeParent, TreeData } from '@/store/modules/database/types'
   import type { OptionsType } from '@/types/global'
-  import { dateFormatter } from '@/utils'
+  import { useDateTimeFormat } from '@/hooks'
 
   const { t } = useI18n()
+  const { formatDateTime } = useDateTimeFormat()
+  const dateFormatter = (dataType: string, value: number | null) => formatDateTime(value, dataType)
 
   const props = defineProps<{
     databaseList: string[]

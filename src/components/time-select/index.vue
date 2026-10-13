@@ -11,12 +11,12 @@ a-trigger#time-select(
     template(#icon)
       svg.icon-16
         use(href="#time")
-    div(style="display: flex; align-items: center; gap: 4px")
+    div(style="display: flex; align-items: center; gap: 4px" :title="timezoneFullLabel")
       div(v-if="isRelative") {{ relativeTimeMap[timeLength] || props.emptyStr }}
 
       div(v-else)
         | {{ absoluteTimeLabel }}
-      .timezone {{ timezoneLabel }}
+      .timezone(v-if="showTimezoneLabel") {{ timezoneLabel }}
   template(#content)
     a-space.hide
     a-space(
@@ -115,11 +115,13 @@ a-trigger#time-select(
   const rangePickerVisible = ref(false)
   const visible = ref(false)
 
-  const { browserOffset, offsetDiff, timezoneLabel, toBrowserTimezoneTimestamp } = useDashboardTimezone()
+  const { offsetDiffAt, timezoneLabel, timezoneFullLabel, showTimezoneLabel, toBrowserTimezoneTimestamp } =
+    useDashboardTimezone()
 
   const toTimezoneTime = (value: string | number) => {
     const base = dayjs.unix(Number(value))
-    return offsetDiff.value === 0 ? base : base.add(offsetDiff.value, 'minute')
+    const diff = offsetDiffAt(base.valueOf())
+    return diff === 0 ? base : base.add(diff, 'minute')
   }
 
   const isRelative = computed(() => props.timeLength > 0 && props.timeRange.length !== 2)
