@@ -1,6 +1,9 @@
 <template lang="pug">
 a-layout-footer.footer
-  span.footer-search-hint(:title="`Press ${modKey}+K to open command palette`") {{ modKey }}+K
+  .footer-start
+    span.footer-search-hint(:title="`Press ${modKey}+K to open command palette`") {{ modKey }}+K
+    span.footer-divider(aria-hidden="true")
+    button.mcp-entry(type="button" @click="openMcpConfig") {{ $t('menu.mcp') }}
   a-space.footer-info(:size="20")
     a-space(:size="5")
       svg.service-icon
@@ -25,15 +28,21 @@ a-layout-footer.footer
   import { useI18n } from 'vue-i18n'
   import { getIconUrl } from '@/utils'
   import type { DbConnectionStatus } from '@/store/modules/app/types'
+  import useMcpConfig from '@/components/mcp-config/use-mcp-config'
 
   const { t } = useI18n()
   const isMac = navigator.platform.toUpperCase().includes('MAC')
   const modKey = isMac ? '⌘' : 'Ctrl'
+  const mcpConfig = useMcpConfig()
 
   const appStore = useAppStore()
   const { host, database, dbConnectionStatus, regionVendor, regionLocation, regionCountry, serviceName } =
     storeToRefs(appStore)
   const { statusRight } = storeToRefs(useStatusBarStore())
+
+  const openMcpConfig = () => {
+    mcpConfig.show()
+  }
 
   const region = computed(() => ({
     vendor: regionVendor.value,
@@ -81,6 +90,23 @@ a-layout-footer.footer
   .database-name {
     color: var(--main-font-color);
     font-weight: 600;
+  }
+
+  /* Align with ⌘+K; secondary (not muted / not link purple). */
+  .mcp-entry {
+    margin: 0;
+    padding: 0;
+    color: var(--gpt-text-secondary);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+
+    &:hover {
+      color: var(--main-font-color);
+    }
   }
   .service-icon {
     flex-shrink: 0;
@@ -132,9 +158,23 @@ a-layout-footer.footer
       color: var(--gpt-text-secondary);
     }
   }
-  .footer-search-hint {
-    color: var(--gpt-text-muted);
+  .footer-start {
+    display: flex;
+    flex-shrink: 0;
+    gap: 10px;
+    align-items: center;
   }
+
+  .footer-search-hint {
+    color: var(--gpt-text-secondary);
+  }
+
+  .footer-divider {
+    width: 1px;
+    height: 12px;
+    background: var(--gpt-border-default);
+  }
+
   .region {
     .icon {
       height: 13px;
