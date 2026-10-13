@@ -3,6 +3,7 @@ import { RouteRecordRaw } from 'vue-router'
 import useMenuTree from '@/components/menu/use-menu-tree'
 import useLocale from '@/hooks/locale'
 import { useProductTour } from '@/components/product-tour/use-product-tour'
+import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
 import useContactForm from '@/components/contact-form/use-contact-form'
 import type { CommandPaletteItem, CommandPaletteSection } from './types'
 
@@ -97,15 +98,20 @@ export function useCommandPalette() {
 
   const productTour = useProductTour()
   const contactForm = useContactForm()
+  const queryGuideEnabled = isQueryGuideEnabled()
 
   const uiItems = computed<CommandPaletteItem[]>(() => [
-    {
-      kind: 'ui' as const,
-      id: 'ui:product-guide',
-      title: t('tour.commandTitle'),
-      hint: t('tour.commandHint'),
-      navigate: () => productTour.openFromEntry(),
-    },
+    ...(queryGuideEnabled
+      ? [
+          {
+            kind: 'ui' as const,
+            id: 'ui:product-guide',
+            title: t('tour.commandTitle'),
+            hint: t('tour.commandHint'),
+            navigate: () => productTour.openFromEntry(),
+          },
+        ]
+      : []),
     {
       kind: 'ui' as const,
       id: 'ui:contact',

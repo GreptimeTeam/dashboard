@@ -2,6 +2,7 @@
   <a-modal
     class="tour-welcome-modal"
     :visible="tour.welcomeOpen.value"
+    :title="$t('tour.welcome.title')"
     :footer="false"
     :closable="true"
     :mask-closable="true"
@@ -15,7 +16,6 @@
           <span class="tour-live-dot" />
           {{ $t('tour.welcome.badge') }}
         </span>
-        <h2 class="tour-welcome-title">{{ $t('tour.welcome.title') }}</h2>
         <p class="tour-welcome-intro">{{ $t('tour.welcome.intro') }}</p>
       </div>
 
@@ -36,7 +36,7 @@
 
 <style lang="less" scoped>
   .tour-welcome-body {
-    padding: 4px 4px 8px;
+    padding: 0 0 8px;
   }
 
   .tour-live-badge {
@@ -58,15 +58,8 @@
     border-radius: 50%;
   }
 
-  .tour-welcome-title {
-    margin: 14px 0 10px;
-    color: var(--gpt-text-primary);
-    font-size: 22px;
-    font-weight: 600;
-  }
-
   .tour-welcome-intro {
-    margin: 0;
+    margin: 14px 0 0;
     color: var(--gpt-text-secondary);
     font-size: 13px;
     line-height: 1.7;
@@ -84,7 +77,7 @@
 <style lang="less">
   .tour-welcome-modal {
     .arco-modal-body {
-      padding: 20px 24px 24px;
+      padding: 8px 24px 24px;
     }
   }
 </style>

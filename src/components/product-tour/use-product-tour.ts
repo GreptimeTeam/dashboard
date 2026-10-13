@@ -5,6 +5,7 @@ import { Message } from '@arco-design/web-vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/store'
 import { useQueryFocusMode } from '@/composables/use-query-focus-mode'
+import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
 import { getTourStep, isTourStepId, matchTourStepFromRoute, type TourStepId } from './tour-steps'
 
 export type TourState = 'not_started' | 'active' | 'dismissed'
@@ -211,6 +212,7 @@ export function useProductTour() {
   /** Wire route/global listeners once from the default layout. */
   function setup() {
     if (initialized) return
+    if (!isQueryGuideEnabled()) return
     initialized = true
 
     // Restore an in-flight tour after refresh.
@@ -245,6 +247,7 @@ export function useProductTour() {
   }
 
   return {
+    enabled: isQueryGuideEnabled(),
     // persisted state
     welcomeSeen: computed(() => state.value.welcomeSeen),
     tourState: computed(() => state.value.tourState),

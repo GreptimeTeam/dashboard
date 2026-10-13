@@ -9,7 +9,7 @@ a-layout.app-layout
       :class="{ 'layout-content--full-bleed': !navbar, 'layout-content--query-focus': queryFocusMode }"
     )
       PageLayout
-    TourPanel(v-if="tourMounted")
+    TourPanel(v-if="queryGuideEnabled && tourMounted")
   Footer(v-show="footer && !queryFocusMode")
 </template>
 
@@ -19,6 +19,7 @@ a-layout.app-layout
   import Footer from '@/components/footer/index.vue'
   import TourPanel from '@/components/product-tour/TourPanel.vue'
   import { useProductTour } from '@/components/product-tour/use-product-tour'
+  import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
   import useResponsive from '@/hooks/responsive'
   import PageLayout from './page-layout.vue'
 
@@ -28,10 +29,12 @@ a-layout.app-layout
   const queryFocusMode = useQueryFocusMode()
   const navbarCollapsed = useNavbarLayoutCollapsed()
   const siderWidth = computed(() => (navbarCollapsed.value ? 54 : 200))
+  const queryGuideEnabled = isQueryGuideEnabled()
   const tour = useProductTour()
   const tourMounted = ref(false)
 
   onMounted(() => {
+    if (!queryGuideEnabled) return
     tour.setup()
     tourMounted.value = true
   })
