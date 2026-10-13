@@ -214,6 +214,7 @@ function StandaloneApp() {
         name={dashboardData.name || ''}
         file={file}
         instance={dashboardData.instance || ''}
+        timezone={dashboardData.timezone || ''}
       >
         <BrowserRouter>
           <ReactRouterProvider>
@@ -284,6 +285,7 @@ function StandaloneApp() {
                       name={traceModalFile.filename}
                       file={traceModalFile}
                       instance={dashboardData.instance || ''}
+                      timezone={dashboardData.timezone || ''}
                     >
                       <Dashboard dashboardEditable={false} controlEditableBodyClass={false} />
                     </WorkbenchProvider>

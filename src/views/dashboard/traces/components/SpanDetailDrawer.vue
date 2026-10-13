@@ -104,16 +104,17 @@ a-drawer(
 
 <script setup lang="ts">
   import { computed, ref } from 'vue'
-  import dayjs from 'dayjs'
   import { json } from '@codemirror/lang-json'
   import { EditorView } from '@codemirror/view'
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { IconClose } from '@arco-design/web-vue/es/icon'
   import { useI18n } from 'vue-i18n'
+  import { useDateTimeFormat } from '@/hooks'
   import { formatDuration } from '../utils'
   import type { Span } from '../utils'
 
   const { t } = useI18n()
+  const { formatDateTimeWithMs } = useDateTimeFormat()
 
   const props = withDefaults(
     defineProps<{
@@ -149,7 +150,7 @@ a-drawer(
     if (timestamp == null) {
       return ''
     }
-    return dayjs(timestamp / 1000000).format('YYYY-MM-DD HH:mm:ss.SSS')
+    return formatDateTimeWithMs(timestamp, 'TimestampNanosecond') ?? ''
   }
 
   const viewMode = ref('table')
@@ -181,7 +182,7 @@ a-drawer(
       ) {
         let formattedValue: string
         if (key === 'timestamp' || key === 'timestamp_end') {
-          formattedValue = dayjs(Number(value) / 1000000).format('YYYY-MM-DD HH:mm:ss.SSS')
+          formattedValue = formatDateTimeWithMs(Number(value), 'TimestampNanosecond') ?? String(value)
         } else if (typeof value === 'object') {
           formattedValue = JSON.stringify(value, null, 2)
         } else {

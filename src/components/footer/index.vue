@@ -10,6 +10,11 @@ a-layout-footer.footer
       svg.service-icon
         use(href="#database")
       .database-name {{ database }}
+    a-tooltip(position="top" mini :content="$t('settings.timezoneStatusTip', { tz: timezoneFullLabel })")
+      a-space.footer-timezone(:size="5" @click="appStore.openGlobalSettings()")
+        svg.service-icon
+          use(href="#time")
+        .timezone-name {{ timezoneLabel }}
     a-space.db-connection-status(:size="6")
       span.db-status-dot(:class="`is-${dbConnectionStatus}`")
       span.db-status-text(:class="`is-${dbConnectionStatus}`") {{ dbStatusLabel }}
@@ -25,8 +30,10 @@ a-layout-footer.footer
   import { useI18n } from 'vue-i18n'
   import { getIconUrl } from '@/utils'
   import type { DbConnectionStatus } from '@/store/modules/app/types'
+  import { useDashboardTimezone } from '@/hooks'
 
   const { t } = useI18n()
+  const { timezoneLabel, timezoneFullLabel } = useDashboardTimezone()
   const isMac = navigator.platform.toUpperCase().includes('MAC')
   const modKey = isMac ? '⌘' : 'Ctrl'
 
@@ -78,9 +85,18 @@ a-layout-footer.footer
     justify-content: flex-end;
   }
   .service-name,
-  .database-name {
+  .database-name,
+  .timezone-name {
     color: var(--main-font-color);
     font-weight: 600;
+  }
+  .footer-timezone {
+    cursor: pointer;
+
+    &:hover .timezone-name,
+    &:hover .service-icon {
+      color: var(--gpt-link-color);
+    }
   }
   .service-icon {
     flex-shrink: 0;

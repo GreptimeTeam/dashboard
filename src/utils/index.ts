@@ -1,5 +1,6 @@
 import dayjs from 'dayjs'
 import { convertTimestampToMilliseconds } from './date-time'
+import { formatInDashboardTz } from './timezone'
 
 type TargetContext = '_self' | '_parent' | '_blank' | '_top'
 
@@ -47,13 +48,13 @@ export const dateFormatter = (dataType: string, value: number | null) => {
 
   switch (dataType) {
     case 'Date':
-      return dayjs(0).add(value, 'day').format('YYYY-MM-DD HH:mm:ss')
+      return formatInDashboardTz(dayjs(0).add(value, 'day').valueOf())
     case 'DateTime':
-      return dayjs(value).format('YYYY-MM-DD HH:mm:ss')
+      return formatInDashboardTz(value)
     default: {
       // Use the universal timestamp conversion utility for all timestamp types
       const ms = convertTimestampToMilliseconds(value, dataType)
-      return dayjs(ms).format('YYYY-MM-DD HH:mm:ss')
+      return formatInDashboardTz(ms)
     }
   }
 }

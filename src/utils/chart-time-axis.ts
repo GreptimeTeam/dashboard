@@ -1,4 +1,4 @@
-import dayjs from 'dayjs'
+import { formatInDashboardTz } from './timezone'
 
 const ONE_SECOND_MS = 1000
 const ONE_MINUTE_MS = 60 * 1000
@@ -224,19 +224,19 @@ export default function formatTimeAxisLabel(timestampMs: number, spanMs: number,
   const incr = tickIntervalMs ?? Math.max(spanMs / 6, ONE_MINUTE_MS)
 
   if (incr < ONE_SECOND_MS) {
-    return dayjs(timestampMs).format('HH:mm:ss.SSS')
+    return formatInDashboardTz(timestampMs, 'HH:mm:ss.SSS')
   }
   if (incr <= ONE_MINUTE_MS) {
-    return dayjs(timestampMs).format('HH:mm:ss')
+    return formatInDashboardTz(timestampMs, 'HH:mm:ss')
   }
   if (spanMs <= ONE_DAY_MS) {
-    return dayjs(timestampMs).format('HH:mm')
+    return formatInDashboardTz(timestampMs, 'HH:mm')
   }
   if (incr <= ONE_DAY_MS) {
-    return dayjs(timestampMs).format('MM-DD HH:mm')
+    return formatInDashboardTz(timestampMs, 'MM-DD HH:mm')
   }
   if (spanMs < 365 * ONE_DAY_MS) {
-    return dayjs(timestampMs).format('MM-DD')
+    return formatInDashboardTz(timestampMs, 'MM-DD')
   }
-  return dayjs(timestampMs).format('YYYY-MM')
+  return formatInDashboardTz(timestampMs, 'YYYY-MM')
 }

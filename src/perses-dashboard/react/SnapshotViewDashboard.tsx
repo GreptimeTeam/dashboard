@@ -81,6 +81,7 @@ export default function SnapshotViewDashboard(props: ViewDashboardProps): JSX.El
     onSave,
     onDiscard,
     sx,
+    userPreferenceTimezone,
     ...others
   } = props
   const { spec } = dashboardResource
@@ -166,6 +167,7 @@ export default function SnapshotViewDashboard(props: ViewDashboardProps): JSX.El
                   dashboardTitleComponent={dashboardTitleComponent}
                   onSave={onSave as OnSaveDashboard | undefined}
                   onDiscard={onDiscard}
+                  userPreferenceTimezone={userPreferenceTimezone}
                 />
               </ErrorBoundary>
             </Box>

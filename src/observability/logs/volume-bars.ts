@@ -7,6 +7,7 @@ import formatTimeAxisLabel, {
   CATALOG_Y_AXIS_SPLIT_NUMBER,
   generateTimeAxisTicks,
 } from '@/utils/chart-time-axis'
+import { formatInDashboardTz } from '@/utils/timezone'
 import { formatLogCountShort, logLevelColor } from './level-color'
 import type { LogVolumeSeries } from './volume-series'
 import { inferVolumeStepMs, volumeAxisLabelCount, volumeBarWidthPx } from './volume-step'
@@ -42,12 +43,11 @@ export function fitVolumeTimeAxisTicks(
 
 /** Within a day, axis and tooltip stay `HH:mm` (four digits), not `HH:mm:ss`. */
 export function formatVolumeAxisTime(timestampMs: number, spanMs: number, tickIntervalMs: number): string {
-  const parsed = dayjs(timestampMs)
-  if (!parsed.isValid()) {
+  if (!dayjs(timestampMs).isValid()) {
     return ''
   }
   if (spanMs <= ONE_DAY_MS) {
-    return parsed.format('HH:mm')
+    return formatInDashboardTz(timestampMs, 'HH:mm')
   }
   return formatTimeAxisLabel(timestampMs, spanMs, tickIntervalMs)
 }
@@ -132,10 +132,7 @@ export default function buildLogVolumeBarsOption(
         showMaxLabel: false,
         alignMinLabel: 'left',
         customValues: timeTicks,
-        formatter:
-          spanMs <= ONE_DAY_MS
-            ? '{HH}:{mm}'
-            : (value: number | string) => formatVolumeAxisTime(Number(value), spanMs, tickIntervalMs),
+        formatter: (value: number | string) => formatVolumeAxisTime(Number(value), spanMs, tickIntervalMs),
       },
       splitLine: { show: false },
     },

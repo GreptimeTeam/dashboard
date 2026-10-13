@@ -8,6 +8,7 @@ import formatTimeAxisLabel, {
   mapTimeTicksToCategoryIndexes,
   pickTimeAxisIntervalMs,
 } from './chart-time-axis'
+import { setDashboardTimezone } from './timezone'
 
 describe('chart-time-axis', () => {
   it('picks 5m ticks for 30m range on sparkline width (Grafana-like density)', () => {
@@ -55,6 +56,20 @@ describe('chart-time-axis', () => {
   it('formats sub-minute ticks as HH:mm:ss', () => {
     const ts = new Date(2026, 0, 1, 10, 15, 30).getTime()
     expect(formatTimeAxisLabel(ts, 5 * 60 * 1000, 30 * 1000)).toBe('10:15:30')
+  })
+
+  it('formats labels in the dashboard timezone when one is set', () => {
+    const ts = Date.UTC(2026, 0, 1, 2, 15, 0)
+    try {
+      setDashboardTimezone('+08:00')
+      expect(formatTimeAxisLabel(ts, 30 * 60 * 1000, 5 * 60 * 1000)).toBe('10:15')
+      setDashboardTimezone('-05:30')
+      expect(formatTimeAxisLabel(ts, 30 * 60 * 1000, 5 * 60 * 1000)).toBe('20:45')
+      setDashboardTimezone('America/New_York')
+      expect(formatTimeAxisLabel(ts, 30 * 60 * 1000, 5 * 60 * 1000)).toBe('21:15')
+    } finally {
+      setDashboardTimezone('')
+    }
   })
 
   it('returns tick set for sparkline option wiring', () => {
