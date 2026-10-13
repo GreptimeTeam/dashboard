@@ -13,7 +13,10 @@
         size="small"
         :placeholder="t('drilldown.traces.servicesPlaceholder')"
       )
-        a-option(v-for="service in uniqueServices" :key="service" :value="service") {{ service }}
+        a-option(v-for="service in uniqueServices" :key="service" :value="service")
+          span.service-option
+            span.service-error-dot(v-if="servicesWithErrors.has(service)" aria-hidden="true")
+            | {{ service }}
 
   a-spin.gantt-spin(:loading="loading")
     .gantt-split(v-if="rootSpan && spanTree.length")
@@ -48,6 +51,7 @@
   import { buildSpanTree, type Span } from '@/views/dashboard/traces/utils'
   import resolveLogsRoles from '@/observability/logs/resolved-roles'
   import { resolveTraceLogsForServices, type TraceLogsResolution } from '@/observability/traces/logs-association'
+  import isTraceErrorStatus from '@/observability/traces/status'
   import useSignalQuery from '@/observability/use-signal-query'
 
   const { t } = useI18n()
@@ -62,6 +66,16 @@
   const uniqueServices = computed(() =>
     [...new Set(spans.value.map((span) => span.service_name).filter(Boolean))].sort()
   )
+
+  const servicesWithErrors = computed(() => {
+    const errored = new Set<string>()
+    spans.value.forEach((span) => {
+      if (span.service_name && isTraceErrorStatus(span.span_status_code ?? span.status)) {
+        errored.add(span.service_name)
+      }
+    })
+    return errored
+  })
 
   const filteredSpans = computed(() => {
     if (!selectedServices.value.length) {
@@ -157,7 +171,7 @@
 
   useSignalQuery(ctx, 'traces', {
     enabled: () => Boolean(ctx.ui.focusTraceId.value),
-    params: () => ctx.ui.focusTraceId.value,
+    params: () => `${ctx.ui.focusTraceId.value}:${ctx.ui.focusTraceAt.value ?? ''}`,
     run: () => load(),
   })
 
@@ -195,6 +209,20 @@
 
   .trace-summary {
     flex-wrap: wrap;
+  }
+
+  .service-option {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--gpt-gap-sm);
+  }
+
+  .service-error-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--danger-color);
+    flex-shrink: 0;
   }
 
   .operation-name {

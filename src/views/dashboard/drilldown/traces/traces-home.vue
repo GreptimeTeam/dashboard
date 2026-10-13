@@ -261,8 +261,11 @@ a-layout-content.layout-content
     await ctx.actions.bindTable('traces', table, { persist: true })
   }
 
-  const openTrace = (traceId: string) => {
-    ctx.actions.openTraceGantt(String(traceId || ''))
+  const openTrace = (payload: string | { traceId: string; timestamp?: unknown }) => {
+    const traceId = typeof payload === 'string' ? payload : payload?.traceId
+    const fromPayload = typeof payload === 'string' ? undefined : payload?.timestamp
+    const fromRow = rows.value.find((row) => String(row.trace_id) === String(traceId || ''))?.timestamp
+    ctx.actions.openTraceGantt(String(traceId || ''), { at: fromPayload ?? fromRow })
   }
 
   // Roles resolve from settings + the runtime map (see resolveLogsRoles), so the "open logs"

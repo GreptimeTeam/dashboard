@@ -21,8 +21,9 @@ export function useDashboardTimezone() {
 
   const offsetDiff = computed(() => dashboardOffset.value - browserOffset)
 
-  const toBrowserTimezoneTimestamp = (value: Date) => {
-    const ms = value.getTime()
+  // Arco RangePicker `@ok` may pass formatted strings, not Date — parse via dayjs.
+  const toBrowserTimezoneTimestamp = (value: Date | string | number) => {
+    const ms = dayjs(value).valueOf()
     return dayjs(ms).subtract(offsetDiffAt(ms), 'minute').unix()
   }
 

@@ -28,7 +28,9 @@
               size="small"
             )
               a-option(v-for="service in uniqueServices" :key="service" :value="service")
-                | {{ service }}
+                span.service-option
+                  span.service-error-dot(v-if="servicesWithErrors.has(service)" aria-hidden="true")
+                  | {{ service }}
         trace-timeline(
           v-if="rootSpan && filteredSpanTree.length > 0"
           :loading="loading"
@@ -50,6 +52,7 @@
   import { useRoute, useRouter } from 'vue-router'
   import { IconLeft } from '@arco-design/web-vue/es/icon'
   import editorAPI from '@/api/editor'
+  import isTraceErrorStatus from '@/observability/traces/status'
   import TraceTimeline from './components/TraceTimeline.vue'
   import SpanDetailDrawer from './components/SpanDetailDrawer.vue'
   import { buildSpanTree, processSpanData } from './utils'
@@ -71,6 +74,16 @@
   const uniqueServices = computed(() => {
     const services = [...new Set(traceSpans.value.map((span) => span.service_name).filter(Boolean))]
     return services.sort()
+  })
+
+  const servicesWithErrors = computed(() => {
+    const errored = new Set<string>()
+    traceSpans.value.forEach((span) => {
+      if (span.service_name && isTraceErrorStatus(span.span_status_code ?? span.status)) {
+        errored.add(span.service_name)
+      }
+    })
+    return errored
   })
 
   // Watch for unique services changes - don't auto-select all services
@@ -123,20 +136,37 @@
     traceEndTime.value = 0
   }
 
+  function escapeSqlString(value: string) {
+    return value.replace(/'/g, "''")
+  }
+
   async function fetchTraceData() {
     loading.value = true
     try {
       const tableName = (route.query.table as string) || 'spans'
       const database = (route.query.database as string) || undefined
+      const traceId = String(route.params.id || '').trim()
+      if (!traceId) {
+        return
+      }
 
       // Build table name with database prefix if available
       const fullTableName = database ? `"${database}"."${tableName}"` : tableName
+
+      // ±12h around the list-row timestamp (passed as start/end) for partition pruning.
+      const startSec = Number(route.query.start)
+      const endSec = Number(route.query.end)
+      const whereParts = [`trace_id = '${escapeSqlString(traceId)}'`]
+      if (Number.isFinite(startSec) && Number.isFinite(endSec) && endSec >= startSec) {
+        whereParts.push(`timestamp >= FROM_UNIXTIME(${startSec})`)
+        whereParts.push(`timestamp <= FROM_UNIXTIME(${endSec})`)
+      }
 
       const result = await editorAPI.runSQL(
         `
         SELECT *
         FROM ${fullTableName}
-        WHERE trace_id = '${route.params.id}'
+        WHERE ${whereParts.join(' AND ')}
         ORDER BY timestamp ASC
       `,
         database
@@ -292,6 +322,20 @@
     :deep(.trace-timeline-card .arco-card-header) {
       border-bottom: none;
     }
+  }
+
+  .service-option {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--gpt-gap-sm);
+  }
+
+  .service-error-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--danger-color);
+    flex-shrink: 0;
   }
 
   .service-filter {
