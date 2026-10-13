@@ -28,7 +28,9 @@
               size="small"
             )
               a-option(v-for="service in uniqueServices" :key="service" :value="service")
-                | {{ service }}
+                span.service-option
+                  span.service-error-dot(v-if="servicesWithErrors.has(service)" aria-hidden="true")
+                  | {{ service }}
         trace-timeline(
           v-if="rootSpan && filteredSpanTree.length > 0"
           :loading="loading"
@@ -50,6 +52,7 @@
   import { useRoute, useRouter } from 'vue-router'
   import { IconLeft } from '@arco-design/web-vue/es/icon'
   import editorAPI from '@/api/editor'
+  import isTraceErrorStatus from '@/observability/traces/status'
   import TraceTimeline from './components/TraceTimeline.vue'
   import SpanDetailDrawer from './components/SpanDetailDrawer.vue'
   import { buildSpanTree, processSpanData } from './utils'
@@ -71,6 +74,16 @@
   const uniqueServices = computed(() => {
     const services = [...new Set(traceSpans.value.map((span) => span.service_name).filter(Boolean))]
     return services.sort()
+  })
+
+  const servicesWithErrors = computed(() => {
+    const errored = new Set<string>()
+    traceSpans.value.forEach((span) => {
+      if (span.service_name && isTraceErrorStatus(span.span_status_code ?? span.status)) {
+        errored.add(span.service_name)
+      }
+    })
+    return errored
   })
 
   // Watch for unique services changes - don't auto-select all services
@@ -309,6 +322,20 @@
     :deep(.trace-timeline-card .arco-card-header) {
       border-bottom: none;
     }
+  }
+
+  .service-option {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--gpt-gap-sm);
+  }
+
+  .service-error-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--danger-color);
+    flex-shrink: 0;
   }
 
   .service-filter {
