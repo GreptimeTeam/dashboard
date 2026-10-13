@@ -11,4 +11,10 @@ export default {
   'settings.saveSuccess': '保存成功！',
   'settings.authHeader': '认证头名称',
   'settings.authHeaderTip': '用于认证的HTTP头的名称。',
+  'settings.mcp.title': 'GreptimeDB MCP',
+  'settings.mcp.desc': '根据当前数据库连接自动生成。',
+  'settings.mcp.descDemo': '演示环境 MCP 配置。',
+  'settings.mcp.repo': 'MCP 服务源码（GitHub）',
+  'settings.mcp.copy': '复制',
+  'settings.mcp.copied': '已复制',
 }

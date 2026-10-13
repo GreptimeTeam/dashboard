@@ -5,6 +5,7 @@ import useLocale from '@/hooks/locale'
 import { useProductTour } from '@/components/product-tour/use-product-tour'
 import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
 import useContactForm from '@/components/contact-form/use-contact-form'
+import useMcpConfig from '@/components/mcp-config/use-mcp-config'
 import type { CommandPaletteItem, CommandPaletteSection } from './types'
 
 function flattenRoutes(
@@ -98,6 +99,7 @@ export function useCommandPalette() {
 
   const productTour = useProductTour()
   const contactForm = useContactForm()
+  const mcpConfig = useMcpConfig()
   const queryGuideEnabled = isQueryGuideEnabled()
 
   const uiItems = computed<CommandPaletteItem[]>(() => [
@@ -112,6 +114,13 @@ export function useCommandPalette() {
           },
         ]
       : []),
+    {
+      kind: 'ui' as const,
+      id: 'ui:mcp-config',
+      title: t('menu.mcp'),
+      hint: t('menu.mcpHint'),
+      navigate: () => mcpConfig.show(),
+    },
     {
       kind: 'ui' as const,
       id: 'ui:contact',

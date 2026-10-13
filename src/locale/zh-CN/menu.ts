@@ -23,6 +23,8 @@ export default {
   'menu.news': '最新资讯',
   'menu.feedback': '联系我们',
   'menu.support': '支持',
+  'menu.mcp': 'GreptimeDB MCP',
+  'menu.mcpHint': '根据当前数据库连接生成 MCP 配置',
   'menu.starBanner.description': '帮助我们壮大开源项目！',
   'menu.starBanner.button': '立即 Star →',
 }

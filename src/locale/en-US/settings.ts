@@ -11,4 +11,10 @@ export default {
   'settings.saveSuccess': 'Success!',
   'settings.authHeader': 'Authentication Header Name',
   'settings.authHeaderTip': 'The name of the HTTP header that is used for authentication.',
+  'settings.mcp.title': 'GreptimeDB MCP',
+  'settings.mcp.desc': 'Generated from your current database connection.',
+  'settings.mcp.descDemo': 'MCP config for the demo environment.',
+  'settings.mcp.repo': 'MCP server on GitHub',
+  'settings.mcp.copy': 'Copy',
+  'settings.mcp.copied': 'Copied',
 }

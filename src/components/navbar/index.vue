@@ -47,6 +47,9 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
           a-doption(v-for="{ label, link } in supportLinks")
             a-link.navbar-dropdown-link(target="_blank" :href="link")
               | {{ label }}
+          a-doption(@click="showMcpConfig")
+            a-link.navbar-dropdown-link(@click.prevent="showMcpConfig")
+              | {{ $t('menu.mcp') }}
           a-doption.news(@click="showNews")
             | {{ $t('menu.news') }}
           a-doption(@click="showContact")
@@ -84,6 +87,7 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
                   use(href="#shrink")
 NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
 ContactFormModal
+McpConfigModal
 CommandPalette(ref="commandPaletteRef")
 </template>
 
@@ -100,6 +104,8 @@ CommandPalette(ref="commandPaletteRef")
   import StarMarketingCard from './star-marketing-card.vue'
   import ContactFormModal from '../contact-form/ContactFormModal.vue'
   import useContactForm from '../contact-form/use-contact-form'
+  import McpConfigModal from '../mcp-config/McpConfigModal.vue'
+  import useMcpConfig from '../mcp-config/use-mcp-config'
   import CommandPalette from '../command-palette/index.vue'
 
   const isComponentIcon = (icon: unknown): icon is Component => typeof icon !== 'string' && !!icon
@@ -124,6 +130,7 @@ CommandPalette(ref="commandPaletteRef")
   const newsListMutable = computed(() => (newsList.value ? [...newsList.value] : []))
   const newsModal = ref()
   const contactForm = useContactForm()
+  const mcpConfig = useMcpConfig()
   const starCardClosed = useStorage('starMarketingCardClosed', false)
   const isEnterprise = import.meta.env.VITE_APP_NAME === 'enterprise'
   const editionLabel = isEnterprise ? 'Enterprise' : 'OpenSource'
@@ -160,6 +167,10 @@ CommandPalette(ref="commandPaletteRef")
 
   const showContact = () => {
     contactForm.show()
+  }
+
+  const showMcpConfig = () => {
+    mcpConfig.show()
   }
 
   const toggleMenuCollapse = () => {
