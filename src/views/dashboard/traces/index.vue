@@ -80,6 +80,7 @@
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import SqlTextEditor from '@/components/sql-text-editor/index.vue'
   import TraceTable from './components/TraceTable.vue'
+  import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
 
   defineOptions({
     name: 'TraceQuery',
@@ -121,6 +122,8 @@
   const timeRangeSelectRef = ref()
   const route = useRoute()
   const isTraceQueryRoute = () => route.name === 'trace-query'
+  // Guide browsing must not execute a default query; `tourApply` marks the explicit Run.
+  const shouldAutoExecuteInitialQuery = () => !isQueryGuideEnabled() || Boolean(route.query.tourApply)
   const allResults = ref([])
 
   function handleSqlInfoUpdate(sqlInfo) {
@@ -170,7 +173,7 @@
   }
 
   watch(canExecuteInitialQuery, (canExecute) => {
-    if (!canExecute) return
+    if (!canExecute || !shouldAutoExecuteInitialQuery()) return
     handleQuery()
   })
 

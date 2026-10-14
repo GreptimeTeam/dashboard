@@ -144,6 +144,7 @@
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import SqlTextEditor from '@/components/sql-text-editor/index.vue'
   import { replaceTimePlaceholders } from '@/utils/sql'
+  import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
   import useLogsTablePrefs from '@/observability/use-logs-table-prefs'
   import ChartContainer from './ChartContainer.vue'
   import ExportModal from './ExportModal.vue'
@@ -151,6 +152,9 @@
 
   const route = useRoute()
   const isLogsQueryRoute = () => route.name === 'log-query'
+  // Guide step switching is browse-only. Preserve the normal page's initial auto query,
+  // but in guide mode wait for the guide's explicit "Run query" action (`tourApply`).
+  const shouldAutoExecuteInitialQuery = () => !isQueryGuideEnabled() || Boolean(route.query.tourApply)
   const timeRange = useTimeRange()
   const { rangeTime, time, timeRangeValues } = timeRange
 
@@ -312,7 +316,7 @@
   watch(
     canExecuteInitialQuery,
     (canExecute) => {
-      if (!canExecute) return
+      if (!canExecute || !shouldAutoExecuteInitialQuery()) return
       nextTick(() => {
         handleQuery()
       })
