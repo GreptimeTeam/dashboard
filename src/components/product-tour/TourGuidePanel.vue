@@ -41,7 +41,7 @@
         <a-button
           v-if="activeStep.display === 'code' || activeStep.display === 'preset'"
           type="primary"
-          size="small"
+          size="medium"
           long
           class="tour-run-example"
           @click="tour.runExample()"
