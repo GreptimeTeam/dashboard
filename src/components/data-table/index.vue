@@ -48,14 +48,12 @@
             )
               // Default title rendering (fallback when no custom title slot provided)
               template(v-if="isTimeColumn(col)")
-                a-tooltip(
-                  placement="top"
-                  :content="tsViewStr ? $t('dashboard.showTimestamp') : $t('dashboard.formatTimestamp')"
-                )
+                a-tooltip(placement="top" :content="tsTooltip")
                   span.gpt-semantic-th(style="cursor: pointer" :class="getSemanticThClass(col)" @click="changeTsView")
                     svg.icon-12
                       use(href="#time-index")
                     span.gpt-semantic-th-text {{ col.name }}
+                    span.gpt-semantic-th-tz(v-if="tsViewStr && showTimezoneLabel") {{ timezoneLabel }}
               template(v-else-if="isJsonColumn(col)")
                 span.gpt-semantic-th.json-column-th(:class="getSemanticThClass(col)")
                   span.gpt-semantic-th-text {{ col.title || col.name }}
@@ -126,11 +124,7 @@
               template(v-else-if="isTimeColumn(col)")
                 .cell-wrapper
                   .cell-content.timestamp-cell-content
-                    a-tooltip(
-                      v-if="!tsCellDetail"
-                      placement="top"
-                      :content="tsViewStr ? $t('dashboard.showTimestamp') : $t('dashboard.formatTimestamp')"
-                    )
+                    a-tooltip(v-if="!tsCellDetail" placement="top" :content="tsTooltip")
                       span.timestamp-cell(style="cursor: pointer" @click="changeTsView") {{ renderTs(record, col.name) }}
                     template(v-else)
                       // Only the selected tsColumn triggers detail view in tsCellDetail mode
@@ -193,7 +187,7 @@ a-dropdown#td-context(
   import { useElementSize } from '@vueuse/core'
   import { dateTypes } from '@/constants/column-types'
   import type { ColumnType, TSColumn } from '@/types/query'
-  import { useDateTimeFormat } from '@/hooks'
+  import { useDashboardTimezone, useDateTimeFormat } from '@/hooks'
   import { Message } from '@arco-design/web-vue'
   import i18n from '@/locale'
   import tableEmptyIcon from '@/assets/images/table-empty.svg?url'
@@ -315,6 +309,12 @@ a-dropdown#td-context(
 
   // Use timezone-aware date formatting
   const { formatDateTimeWithMs } = useDateTimeFormat()
+  const { timezoneLabel, timezoneFullLabel, showTimezoneLabel } = useDashboardTimezone()
+  const tsTooltip = computed(() =>
+    tsViewStr.value
+      ? `${timezoneFullLabel.value} · ${i18n.global.t('dashboard.showTimestamp')}`
+      : i18n.global.t('dashboard.formatTimestamp')
+  )
 
   // Column mode logic
   const mergeColumn = computed(() => props.columnMode !== 'separate')

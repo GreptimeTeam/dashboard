@@ -35,7 +35,7 @@ a-drawer.custom-drawer(
         a-descriptions-item(label="Updated Time")
           | {{ formData.updated_time ? renderTs(formData.updated_time, schemaColumns.find((col) => col.name === 'updated_time')?.data_type) : '-' }}
         a-descriptions-item(label="Last Execution")
-          | {{ formData.last_execution_time ? new Date(formData.last_execution_time).toLocaleString() : '-' }}
+          | {{ formData.last_execution_time ? renderLastExecution(formData.last_execution_time) : '-' }}
     .gpt-drawer-mode-bar
       a-radio-group(v-model="editorMode" type="button" size="small")
         a-radio(value="form") Form
@@ -145,7 +145,9 @@ a-drawer.custom-drawer(
   import { useAppStore } from '@/store'
   import type { ColumnType } from '@/types/query'
   import { convertTimestampToMilliseconds } from '@/utils/date-time'
-  import dayjs from 'dayjs'
+  import { useDateTimeFormat } from '@/hooks'
+
+  const { formatDateTime, formatDateTimeWithMs } = useDateTimeFormat()
 
   interface Props {
     visible: boolean
@@ -428,7 +430,12 @@ GROUP BY time_window;`
 
   function renderTs(timestamp: number, dataType: string) {
     const ms = convertTimestampToMilliseconds(timestamp, dataType)
-    return dayjs(ms).format('YYYY-MM-DD HH:mm:ss.SSS')
+    return formatDateTimeWithMs(ms, 'TimestampMillisecond')
+  }
+
+  function renderLastExecution(value: string | number) {
+    const ms = new Date(value).getTime()
+    return Number.isNaN(ms) ? String(value) : formatDateTime(ms, 'TimestampMillisecond')
   }
 </script>
 

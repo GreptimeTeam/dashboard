@@ -9,6 +9,7 @@ import { dateTypes } from '@/constants/column-types'
 import { AnyObject } from '@/types/global'
 import { HttpResponse, OutputType } from '@/api/interceptor'
 import { isObject } from '@/utils/is'
+import { formatInDashboardTz } from '@/utils/timezone'
 import { parseSqlStatements } from '@/utils/sql'
 import { Log, ResultInLog } from '@/types/log'
 import { ResultType, DimensionType, SchemaType, PromForm } from '@/store/modules/code-run/types'
@@ -124,8 +125,8 @@ const createLogFromResponse = (
       ;[start, end] = params.range
     }
     log.promInfo = {
-      Start: dayjs.unix(+start).format('YYYY-MM-DD HH:mm:ss'),
-      End: dayjs.unix(+end).format('YYYY-MM-DD HH:mm:ss'),
+      Start: formatInDashboardTz(+start * 1000),
+      End: formatInDashboardTz(+end * 1000),
       Step: params.step,
       Query: codeInfo,
     }

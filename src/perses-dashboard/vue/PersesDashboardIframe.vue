@@ -106,6 +106,7 @@ iframe.perses-dashboard-iframe(ref="dashboardIframe" :src="iframeSrc" @load="onI
           name: props.name,
           file: fileData,
           instance: props.instance ?? '',
+          timezone: appStore.userTimezone ?? '',
           dashboardEditable: props.dashboardEditable,
           toolbarLabels: props.toolbarLabels,
         })
@@ -131,6 +132,7 @@ iframe.perses-dashboard-iframe(ref="dashboardIframe" :src="iframeSrc" @load="onI
       () => appStore.username,
       () => appStore.password,
       () => appStore.authHeader,
+      () => appStore.userTimezone,
       () => props.name,
       () => props.file,
       () => props.dashboardEditable,

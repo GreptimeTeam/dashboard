@@ -334,6 +334,7 @@ export default function useSignalBinding(ctx: DrilldownContext): {
       }
       ctx.semantics.traces.reset()
       ctx.ui.focusTraceId.value = undefined
+      ctx.ui.focusTraceAt.value = undefined
       initialize('traces').catch(() => undefined)
     }
   )

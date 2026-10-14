@@ -58,10 +58,7 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card.gpt-table-sidebar-
             use(:href="getNodeIcon(node.node)")
       template(#title="nodeData")
         .tree-data(v-if="!nodeData.isLeaf")
-          a-tooltip(v-if="getTableNameTooltip(nodeData)" :content="getTableNameTooltip(nodeData)")
-            .data-title
-              | {{ nodeData.title }}
-          .data-title(v-else :title="nodeData.title")
+          .data-title(:title="nodeData.title")
             | {{ nodeData.title }}
           TableMenu(
             :nodeData="nodeData"
@@ -136,9 +133,11 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card.gpt-table-sidebar-
   import useSiderTabs from '@/hooks/sider-tabs'
   import type { TableTreeParent, TreeData } from '@/store/modules/database/types'
   import type { OptionsType } from '@/types/global'
-  import { dateFormatter } from '@/utils'
+  import { useDateTimeFormat } from '@/hooks'
 
   const { t } = useI18n()
+  const { formatDateTime } = useDateTimeFormat()
+  const dateFormatter = (dataType: string, value: number | null) => formatDateTime(value, dataType)
 
   const props = defineProps<{
     databaseList: string[]
@@ -286,19 +285,6 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card.gpt-table-sidebar-
     if (node.isLogicalTable) return t('tables.sidebar.logicalTableLabel')
     if (node.isPhysicalMetricTable) return t('tables.sidebar.physicalTableLabel')
     return 'TABLE'
-  }
-
-  const getTableNameTooltip = (node: TableTreeParent) => {
-    if (node.isLogicalTable) {
-      return t('tables.sidebar.logicalTableTooltip', {
-        name: node.title,
-        physical: node.physicalTableName || '-',
-      })
-    }
-    if (node.isPhysicalMetricTable) {
-      return t('tables.sidebar.physicalTableTooltip', { name: node.title })
-    }
-    return ''
   }
 </script>
 

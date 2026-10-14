@@ -1,25 +1,9 @@
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import dayjs from 'dayjs'
-import utc from 'dayjs/plugin/utc'
 import { useAppStore } from '@/store'
 import { convertTimestampToMilliseconds } from '@/utils/date-time'
-
-dayjs.extend(utc)
-
-const OFFSET_REGEX = /^[+-]\d{2}:\d{2}$/
-
-/**
- * Parse offset string like '+08:00' or '-05:00' to minutes
- */
-function parseOffsetMinutes(offset: string): number {
-  const sign = offset.startsWith('-') ? -1 : 1
-  const [hours, minutes] = offset
-    .slice(1)
-    .split(':')
-    .map((item) => Number(item))
-  return sign * (hours * 60 + minutes)
-}
+import { toZonedDayjs } from '@/utils/timezone'
 
 /**
  * Format a timestamp value according to dashboard timezone
@@ -52,28 +36,7 @@ function formatTimestampInTimezone(
       break
   }
 
-  // Convert to dayjs instance from milliseconds
-  const date = dayjs(ms)
-
-  // Apply timezone offset if needed
-  if (!timezone) {
-    // If timezone is empty, use browser timezone (no conversion, just format with local time)
-    return date.format(format)
-  }
-  if (timezone === 'UTC') {
-    return date.utc().format(format)
-  }
-
-  // Handle offset format like '+08:00' or '-05:00'
-  if (OFFSET_REGEX.test(timezone)) {
-    const offsetMinutes = parseOffsetMinutes(timezone)
-    // Adjust the UTC time by the offset
-    const adjustedDate = date.utc().add(offsetMinutes, 'minute')
-    return adjustedDate.format(format)
-  }
-
-  // Fallback: use browser timezone if timezone format is not recognized
-  return date.format(format)
+  return toZonedDayjs(ms, timezone).format(format)
 }
 
 /**

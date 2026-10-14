@@ -28,6 +28,10 @@ a-drawer(
         span.summary-value {{ span?.service_name }}
       .divider
       .summary-item
+        span.summary-label Status
+        span.summary-value(:class="{ 'is-error': spanHasError }") {{ spanStatusLabel }}
+      .divider
+      .summary-item
         span.summary-label Duration
         span.summary-value {{ formatDuration(span?.duration_nano) }}
       .divider
@@ -75,6 +79,10 @@ a-drawer(
         span.summary-value {{ span?.service_name }}
       .divider
       .summary-item
+        span.summary-label Status
+        span.summary-value(:class="{ 'is-error': spanHasError }") {{ spanStatusLabel }}
+      .divider
+      .summary-item
         span.summary-label Duration
         span.summary-value {{ formatDuration(span?.duration_nano) }}
       .divider
@@ -104,16 +112,18 @@ a-drawer(
 
 <script setup lang="ts">
   import { computed, ref } from 'vue'
-  import dayjs from 'dayjs'
   import { json } from '@codemirror/lang-json'
   import { EditorView } from '@codemirror/view'
   import { Codemirror as CodeMirror } from 'vue-codemirror'
   import { IconClose } from '@arco-design/web-vue/es/icon'
   import { useI18n } from 'vue-i18n'
+  import { useDateTimeFormat } from '@/hooks'
+  import isTraceErrorStatus from '@/observability/traces/status'
   import { formatDuration } from '../utils'
   import type { Span } from '../utils'
 
   const { t } = useI18n()
+  const { formatDateTimeWithMs } = useDateTimeFormat()
 
   const props = withDefaults(
     defineProps<{
@@ -149,8 +159,26 @@ a-drawer(
     if (timestamp == null) {
       return ''
     }
-    return dayjs(timestamp / 1000000).format('YYYY-MM-DD HH:mm:ss.SSS')
+    return formatDateTimeWithMs(timestamp, 'TimestampNanosecond') ?? ''
   }
+
+  const spanStatusRaw = computed(() => {
+    const { span } = props
+    if (!span) {
+      return ''
+    }
+    const raw = span.span_status_code ?? span.status
+    return raw == null ? '' : String(raw)
+  })
+
+  const spanHasError = computed(() => isTraceErrorStatus(spanStatusRaw.value))
+
+  const spanStatusLabel = computed(() => {
+    if (!spanStatusRaw.value) {
+      return '—'
+    }
+    return spanStatusRaw.value
+  })
 
   const viewMode = ref('table')
   const extensions = [json(), EditorView.theme({})]
@@ -181,7 +209,7 @@ a-drawer(
       ) {
         let formattedValue: string
         if (key === 'timestamp' || key === 'timestamp_end') {
-          formattedValue = dayjs(Number(value) / 1000000).format('YYYY-MM-DD HH:mm:ss.SSS')
+          formattedValue = formatDateTimeWithMs(Number(value), 'TimestampNanosecond') ?? String(value)
         } else if (typeof value === 'object') {
           formattedValue = JSON.stringify(value, null, 2)
         } else {
@@ -318,6 +346,11 @@ a-drawer(
       .summary-value {
         font-size: var(--gpt-font-base);
         color: var(--gpt-text-primary);
+      }
+
+      .summary-value.is-error {
+        color: var(--danger-color);
+        font-weight: var(--gpt-font-weight-control);
       }
     }
 
