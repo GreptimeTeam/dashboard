@@ -10,6 +10,7 @@ export default {
   'tour.guide.title': 'Query guide',
   'tour.guide.close': 'Close',
   'tour.guide.switchSteps': 'Switch query type',
+  'tour.guide.runExample': 'Run example',
   'tour.guide.zoneExplain': 'How it works',
   'tour.guide.theQuery': 'The query',
   'tour.guide.presetTitle': 'Preset',
@@ -19,7 +20,7 @@ export default {
   'tour.guide.sort': 'Sort',
   'tour.guide.limit': 'Limit',
   'tour.guide.timeRange': 'Time range',
-  'tour.guide.stepLoaded': '{name} loaded — tap the guide pill for details',
+  'tour.guide.stepLoaded': '{name} — tap the guide pill for details, or Run example to load and execute',
   'tour.presets.last1Hour': 'Last 1 hour',
   // Short names / title prefixes match `menu.dashboard.*` in menu.ts (navbar).
   'tour.steps.sql.name': 'Table Query - SQL',

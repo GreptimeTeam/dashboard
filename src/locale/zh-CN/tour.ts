@@ -10,6 +10,7 @@ export default {
   'tour.guide.title': '查询引导',
   'tour.guide.close': '关闭',
   'tour.guide.switchSteps': '切换查询类型',
+  'tour.guide.runExample': '运行示例',
   'tour.guide.zoneExplain': '原理说明',
   'tour.guide.theQuery': '查询语句',
   'tour.guide.presetTitle': '预设条件',
@@ -19,7 +20,7 @@ export default {
   'tour.guide.sort': '排序',
   'tour.guide.limit': 'Limit',
   'tour.guide.timeRange': '时间范围',
-  'tour.guide.stepLoaded': '{name} 已加载——点击右下角引导按钮查看详情',
+  'tour.guide.stepLoaded': '{name}——点击右下角引导按钮查看详情，或点击「运行示例」填入并执行',
   'tour.presets.last1Hour': '最近 1 小时',
   // Short names / title prefixes match `menu.dashboard.*` in menu.ts (navbar).
   'tour.steps.sql.name': 'Table 查询 - SQL',

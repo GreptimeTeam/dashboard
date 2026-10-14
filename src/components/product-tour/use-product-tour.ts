@@ -6,7 +6,7 @@ import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/store'
 import { useQueryFocusMode } from '@/composables/use-query-focus-mode'
 import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
-import { getTourStep, isTourStepId, matchTourStepFromRoute, type TourStepId } from './tour-steps'
+import { getTourBrowseQuery, getTourStep, isTourStepId, matchTourStepFromRoute, type TourStepId } from './tour-steps'
 
 export type TourState = 'not_started' | 'active' | 'dismissed'
 export type TourPanelLayout = 'docked' | 'drawer' | 'sheet'
@@ -102,17 +102,39 @@ export function useProductTour() {
     Message.info(t('tour.guide.stepLoaded', { name }))
   }
 
-  async function goToStep(stepId: TourStepId) {
+  /** Select a step and navigate to its page without filling or running the example. */
+  async function selectStep(stepId: TourStepId) {
     setActiveStep(stepId)
     const step = getTourStep(stepId)
-    // `tourApply` forces same-route deep-link consumers (Table Query already open, etc.)
-    // to re-apply SQL/builder state when the path+payload would otherwise be unchanged.
     await router.replace({
       path: step.location.path,
-      query: {
-        ...step.location.query,
-        tourApply: `${stepId}-${Date.now()}`,
-      },
+      query: getTourBrowseQuery(step),
+    })
+    syncPanelAfterNavigation()
+  }
+
+  /**
+   * Sync the active step’s example into the editor/form and execute it.
+   * Uses `tourApply` so same-route re-clicks still re-apply.
+   */
+  async function runExample() {
+    const stepId = state.value.activeStepId
+    if (!stepId) return
+    const step = getTourStep(stepId)
+    if (step.display === 'where') return
+
+    const query: Record<string, string> = {
+      ...step.location.query,
+      tourApply: `${stepId}-${Date.now()}`,
+    }
+    // Metrics only auto-executes when `queryId` changes.
+    if (step.id === 'promql') {
+      query.queryId = Math.random().toString(36).substring(2, 15)
+    }
+
+    await router.replace({
+      path: step.location.path,
+      query,
     })
     syncPanelAfterNavigation()
   }
@@ -148,7 +170,7 @@ export function useProductTour() {
     state.value.activeStepId = 'sql'
     view.value = 'guide'
     state.value.panelState = 'expanded'
-    goToStep('sql').catch(() => undefined)
+    selectStep('sql').catch(() => undefined)
   }
 
   function expandPanel() {
@@ -270,7 +292,8 @@ export function useProductTour() {
     beginTour,
     expandPanel,
     collapsePanel,
-    goToStep,
+    selectStep,
+    runExample,
     endTour,
     openFromEntry,
     setPanelWidth,

@@ -22,7 +22,7 @@
           :class="{
             'tour-step-item--current': step.id === tour.activeStepId.value,
           }"
-          @click="tour.goToStep(step.id)"
+          @click="tour.selectStep(step.id)"
         >
           <span class="tour-step-item-icon">
             <component :is="ExploreIconComponent" v-if="step.id === 'signals-explore'" class="icon-18" />
@@ -37,9 +37,18 @@
       <header class="tour-step-header">
         <h3 class="tour-detail-title">{{ $t(activeStep.titleKey) }}</h3>
         <p class="tour-intro">{{ $t(`${stepKey}.intro`) }}</p>
+        <a-button
+          v-if="activeStep.display === 'code' || activeStep.display === 'preset'"
+          type="primary"
+          size="small"
+          class="tour-run-example"
+          @click="tour.runExample()"
+        >
+          {{ $t('tour.guide.runExample') }}
+        </a-button>
       </header>
 
-      <!-- Zone A: query / preset / where (already applied on the page) -->
+      <!-- Zone A: query / preset / where shown in the guide (Run example syncs + executes) -->
       <section class="tour-zone tour-zone--loaded">
         <div v-if="activeStep.display === 'code' && activeStep.code" class="tour-zone-body">
           <header class="tour-zone-header">
@@ -281,6 +290,11 @@
     font-size: var(--gpt-font-lg);
     font-weight: 400;
     line-height: 1.65;
+  }
+
+  .tour-run-example {
+    align-self: flex-start;
+    margin-top: 4px;
   }
 
   /* Zones: divider + title only (no card chrome). */

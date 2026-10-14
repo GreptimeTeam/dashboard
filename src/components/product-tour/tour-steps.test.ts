@@ -10,6 +10,7 @@ import {
   TOUR_STEP_IDS,
   TOUR_TQL_QUERY,
   TOUR_TRACES_BUILDER_FORM,
+  getTourBrowseQuery,
   getTourStep,
   isTourStepId,
   matchTourStepFromRoute,
@@ -81,9 +82,30 @@ describe('tour steps config', () => {
       expect(messages['tour.guide.title']).toBeTruthy()
       expect(messages['tour.guide.close']).toBeTruthy()
       expect(messages['tour.guide.switchSteps']).toBeTruthy()
+      expect(messages['tour.guide.runExample']).toBeTruthy()
       expect(messages['tour.guide.zoneExplain']).toBeTruthy()
       expect(messages['tour.guide.theQuery']).toBeTruthy()
       expect(messages['tour.guide.stepLoaded']).toBeTruthy()
+    })
+  })
+
+  it('browse query omits fill/run payloads', () => {
+    expect(getTourBrowseQuery(getTourStep('sql'))).toEqual({})
+    expect(getTourBrowseQuery(getTourStep('promql'))).toEqual({
+      timeLength: '30',
+      stepType: 'medium',
+      tab: 'graph',
+    })
+    expect(getTourBrowseQuery(getTourStep('logs'))).toEqual({
+      editorType: 'builder',
+      timeLength: '60',
+    })
+    expect(getTourBrowseQuery(getTourStep('signals-explore'))).toEqual({
+      signal: 'metrics',
+      timeLength: '30',
+    })
+    expect(getTourBrowseQuery(getTourStep('visualization'))).toEqual({
+      dashboard: 'astronomy-shop-overview',
     })
   })
 

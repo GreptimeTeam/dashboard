@@ -228,6 +228,14 @@ export function getTourStep(id: TourStepId): TourStep {
   return step
 }
 
+/** Query payload keys that sync/run an example — omitted when only browsing a step. */
+const TOUR_PAYLOAD_QUERY_KEYS = new Set(['sql', 'promql', 'builderForm', 'tourApply', 'queryId'])
+
+/** Browse-only query: keep page context (tab, timeLength, …), drop fill/run payloads. */
+export function getTourBrowseQuery(step: TourStep): Record<string, string> {
+  return Object.fromEntries(Object.entries(step.location.query).filter(([key]) => !TOUR_PAYLOAD_QUERY_KEYS.has(key)))
+}
+
 /**
  * Route → step resolution:
  * 1. exact match wins (splits /dashboard/query SQL vs TQL);
