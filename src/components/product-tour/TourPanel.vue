@@ -78,10 +78,21 @@
     flex-shrink: 0;
     min-height: 0;
     overflow: hidden;
-    /* Page canvas chrome vs white workspace — quieter than divider-band. */
+    /* Page canvas chrome; seam = divider rail + elevated shadow (not full-panel tint). */
     background: var(--gpt-bg-app);
     border-left: 1px solid var(--gpt-border-strong);
-    box-shadow: -8px 0 24px rgba(71, 52, 96, 0.08);
+
+    &::before {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      z-index: 11;
+      width: var(--gpt-divider-band-size);
+      pointer-events: none;
+      background: var(--gpt-bg-divider-band);
+      content: '';
+    }
   }
 
   .tour-dock-resizer {
@@ -140,7 +151,19 @@
     .arco-drawer {
       background: var(--gpt-bg-app);
       border-left: 1px solid var(--gpt-border-strong);
-      box-shadow: -8px 0 24px rgba(71, 52, 96, 0.08);
+      box-shadow: -12px 0 28px rgba(71, 52, 96, 0.12);
+
+      &::before {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 1;
+        width: var(--gpt-divider-band-size);
+        pointer-events: none;
+        background: var(--gpt-bg-divider-band);
+        content: '';
+      }
     }
 
     .arco-drawer-body {
