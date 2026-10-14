@@ -115,12 +115,13 @@
   })
   const { initializeFromQuery, updateQueryParams } = urlSync
 
-  const allResults = ref([])
-
   const chartExpanded = useLocalStorage('trace-chart-expanded', true)
   const countChartRef = ref()
   const sqlBuilderRef = ref()
   const timeRangeSelectRef = ref()
+  const route = useRoute()
+  const isTraceQueryRoute = () => route.name === 'trace-query'
+  const allResults = ref([])
 
   function handleSqlInfoUpdate(sqlInfo) {
     Object.assign(textEditor.textEditorState, sqlInfo)
@@ -131,7 +132,12 @@
   }
 
   async function handleQuery() {
+    // Keep-alive keeps this component's watchers alive after it is deactivated. Do not
+    // let a cached Trace page consume query params or run while another route is active.
+    if (!isTraceQueryRoute()) return
+
     executeQuery().then((results) => {
+      if (!isTraceQueryRoute()) return
       allResults.value = results || []
       updateQueryParams()
     })
@@ -163,8 +169,6 @@
     }
   }
 
-  const route = useRoute()
-
   watch(canExecuteInitialQuery, (canExecute) => {
     if (!canExecute) return
     handleQuery()
@@ -183,6 +187,7 @@
   watch(
     () => [route.query.builderForm, route.query.tourApply] as const,
     (next, prev) => {
+      if (!isTraceQueryRoute()) return
       if (!prev) return
       if (next[0] === prev[0] && next[1] === prev[1]) return
       if (!next[0] && !next[1]) return

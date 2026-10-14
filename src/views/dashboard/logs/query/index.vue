@@ -150,6 +150,7 @@
   import LogTableData from './LogsTable.vue'
 
   const route = useRoute()
+  const isLogsQueryRoute = () => route.name === 'log-query'
   const timeRange = useTimeRange()
   const { rangeTime, time, timeRangeValues } = timeRange
 
@@ -199,10 +200,15 @@
   const chartContainerRef = ref()
   const refresh = ref(false)
   function handleQuery(newQuery: boolean | MouseEvent = true) {
+    // A query can still be in flight when the user navigates away. Its completion must
+    // not replace the next route's query params with this page's builder state.
+    if (!isLogsQueryRoute()) return
+
     // If called from click event, newQuery will be a MouseEvent, so default to true
     const isNewQuery = typeof newQuery === 'boolean' ? newQuery : true
 
     executeQuery(isNewQuery).then(() => {
+      if (!isLogsQueryRoute()) return
       if (isNewQuery) {
         updateQueryParams()
       }
@@ -217,6 +223,7 @@
   watch(
     () => [route.query.builderForm, route.query.tourApply] as const,
     (next, prev) => {
+      if (!isLogsQueryRoute()) return
       if (!prev) return
       if (next[0] === prev[0] && next[1] === prev[1]) return
       if (!next[0] && !next[1]) return
