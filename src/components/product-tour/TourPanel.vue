@@ -50,7 +50,8 @@
 
   const pillLabel = computed(() => {
     const step = tour.activeStep.value
-    return step ? t(step.nameKey) : t('tour.guide.title')
+    if (!step) return t('tour.guide.title')
+    return t('tour.guide.pillWithStep', { name: t(step.nameKey) })
   })
 
   function startResize(event: PointerEvent) {
@@ -77,8 +78,10 @@
     flex-shrink: 0;
     min-height: 0;
     overflow: hidden;
-    background: var(--gpt-bg-panel);
+    /* Page canvas chrome vs white workspace — quieter than divider-band. */
+    background: var(--gpt-bg-app);
     border-left: 1px solid var(--gpt-border-strong);
+    box-shadow: -8px 0 24px rgba(71, 52, 96, 0.08);
   }
 
   .tour-dock-resizer {
@@ -91,36 +94,37 @@
     cursor: col-resize;
 
     &:hover {
-      background: rgb(var(--primary-6) / 20%);
+      background: var(--gpt-nav-active-bg);
     }
   }
 
   .tour-pill {
     position: fixed;
-    right: 20px;
-    bottom: 24px;
+    right: var(--gpt-gap-2xl);
+    bottom: var(--gpt-gap-3xl);
     z-index: 1020;
     display: inline-flex;
     align-items: center;
-    max-width: 260px;
-    padding: 8px 14px;
+    max-width: 320px;
+    padding: var(--gpt-gap-md) var(--gpt-gap-xl);
     color: var(--gpt-text-primary);
     cursor: pointer;
     background: var(--gpt-bg-panel);
-    border: 1px solid var(--gpt-border-default);
-    border-radius: 999px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14);
+    border: 1px solid var(--gpt-border-strong);
+    border-radius: var(--gpt-radius-sm);
+    box-shadow: var(--gpt-shadow-sm);
 
     &:hover {
-      border-color: rgb(var(--primary-6));
+      color: var(--gpt-main-purple);
+      border-color: var(--gpt-main-purple);
     }
   }
 
   .tour-pill-label {
     overflow: hidden;
-    color: var(--gpt-text-primary);
-    font-size: 12px;
-    font-weight: 600;
+    color: inherit;
+    font-size: var(--gpt-font-base);
+    font-weight: var(--gpt-font-weight-control);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -134,12 +138,15 @@
 <style lang="less">
   .tour-overlay-drawer {
     .arco-drawer {
+      background: var(--gpt-bg-app);
       border-left: 1px solid var(--gpt-border-strong);
+      box-shadow: -8px 0 24px rgba(71, 52, 96, 0.08);
     }
 
     .arco-drawer-body {
       padding: 0;
       overflow: hidden;
+      background: transparent;
     }
   }
 </style>

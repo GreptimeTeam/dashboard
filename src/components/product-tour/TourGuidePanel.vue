@@ -1,7 +1,7 @@
 <template>
   <div class="tour-guide">
     <header class="tour-guide-header">
-      <span class="gpt-sidebar-heading">{{ $t('tour.guide.title') }}</span>
+      <span class="gpt-text-page-title">{{ $t('tour.guide.title') }}</span>
       <a-tooltip :content="$t('tour.guide.close')" mini>
         <a-button class="tour-icon-btn" type="text" size="small" @click="tour.collapsePanel()">
           <template #icon>
@@ -13,6 +13,7 @@
 
     <div class="tour-step-nav">
       <p class="tour-step-nav-label">{{ $t('tour.guide.switchSteps') }}</p>
+      <p class="tour-step-nav-hint">{{ $t('tour.guide.switchStepsHint') }}</p>
       <div class="tour-step-list">
         <button
           v-for="step in TOUR_STEPS"
@@ -41,14 +42,15 @@
           v-if="activeStep.display === 'code' || activeStep.display === 'preset'"
           type="primary"
           size="small"
+          long
           class="tour-run-example"
           @click="tour.runExample()"
         >
-          {{ $t('tour.guide.runExample') }}
+          {{ $t('tour.guide.runQuery') }}
         </a-button>
       </header>
 
-      <!-- Zone A: query / preset / where shown in the guide (Run example syncs + executes) -->
+      <!-- Zone A: query / preset / where shown in the guide (Run query syncs + executes) -->
       <section class="tour-zone tour-zone--loaded">
         <div v-if="activeStep.display === 'code' && activeStep.code" class="tour-zone-body">
           <header class="tour-zone-header">
@@ -165,6 +167,7 @@
 </script>
 
 <style lang="less" scoped>
+  /* Horizontal rhythm: --gpt-gap-xl (16) matches page content padding. */
   .tour-guide {
     display: flex;
     flex-direction: column;
@@ -177,58 +180,72 @@
     flex-shrink: 0;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 12px 6px 16px;
+    min-height: var(--gpt-size-region-bar);
+    padding: var(--gpt-gap-md) var(--gpt-gap-xl);
+    border-bottom: 1px solid var(--gpt-border-default);
   }
 
   .tour-icon-btn {
     color: var(--gpt-text-secondary);
+
+    &:hover {
+      color: var(--gpt-main-purple);
+    }
   }
 
   .tour-step-nav {
     flex-shrink: 0;
-    padding: 0 12px 12px 16px;
+    padding: var(--gpt-gap-lg) var(--gpt-gap-xl);
   }
 
-  /* Section label — md / 13, regular weight. */
+  /* Section label — matches .gpt-text-section-title */
   .tour-step-nav-label {
-    margin: 0 0 8px;
+    margin: 0;
     color: var(--gpt-text-primary);
     font-size: var(--gpt-font-md);
-    font-weight: 400;
+    font-weight: var(--gpt-font-weight-bold);
+  }
+
+  .tour-step-nav-hint {
+    margin: var(--gpt-gap-xs) 0 var(--gpt-gap-md);
+    color: var(--gpt-text-secondary);
+    font-size: var(--gpt-font-base);
+    font-weight: var(--gpt-font-weight-regular);
+    line-height: 1.5;
   }
 
   .tour-step-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--gpt-gap-md);
   }
 
+  /* Align with outline / button-radio: radius-sm, strong border, purple accent. */
   .tour-step-item {
     display: inline-flex;
-    gap: 8px;
+    gap: var(--gpt-gap-md);
     align-items: center;
     max-width: 100%;
-    padding: 8px 12px;
+    padding: var(--gpt-gap-md) var(--gpt-gap-lg);
     color: var(--gpt-text-primary);
-    font-weight: 600;
+    font-weight: var(--gpt-font-weight-control);
     text-align: left;
     cursor: pointer;
     background: var(--gpt-bg-panel);
     border: 1px solid var(--gpt-border-strong);
-    border-radius: var(--gpt-radius-md);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-    transition: all 0.15s ease;
+    border-radius: var(--gpt-radius-sm);
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 
     &:hover {
-      border-color: rgb(var(--primary-6));
+      color: var(--gpt-main-purple);
+      border-color: var(--gpt-main-purple);
       background: var(--gpt-nav-active-bg);
     }
 
     &.tour-step-item--current {
-      color: rgb(var(--primary-6));
+      color: var(--gpt-main-purple);
       background: var(--gpt-nav-active-bg);
-      border-color: rgb(var(--primary-6));
-      box-shadow: none;
+      border-color: var(--gpt-main-purple);
     }
   }
 
@@ -262,7 +279,7 @@
     flex-direction: column;
     gap: 0;
     min-height: 0;
-    padding: 10px 16px 14px;
+    padding: var(--gpt-gap-lg) var(--gpt-gap-xl) var(--gpt-gap-xl);
     overflow-y: auto;
     border-top: 1px solid var(--gpt-border-default);
   }
@@ -270,40 +287,39 @@
   .tour-step-header {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    margin-bottom: 4px;
+    gap: var(--gpt-gap-sm);
+    margin-bottom: var(--gpt-gap-xs);
   }
 
-  /* Step headline — .gpt-text-page-title scale (xl / 16). */
+  /* Content headline — same scale as panel title; long copy is the reading focus. */
   .tour-detail-title {
     margin: 0;
     color: var(--gpt-text-primary);
     font-size: var(--gpt-font-xl);
-    font-weight: 700;
+    font-weight: var(--gpt-font-weight-bold);
     line-height: 1.35;
   }
 
-  /* Supporting prose — .gpt-text-page-subtitle scale (lg / 14). */
+  /* Body prose under the step title — primary (main-dark) for readability. */
   .tour-intro {
     margin: 0;
-    color: var(--gpt-text-secondary);
+    color: var(--gpt-text-primary);
     font-size: var(--gpt-font-lg);
-    font-weight: 400;
+    font-weight: var(--gpt-font-weight-regular);
     line-height: 1.65;
   }
 
   .tour-run-example {
-    align-self: flex-start;
-    margin-top: 4px;
+    margin-top: var(--gpt-gap-xs);
   }
 
-  /* Zones: divider + title only (no card chrome). */
+  /* Zones: divider + section title (no card chrome). */
   .tour-zone {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    margin-top: 14px;
-    padding-top: 12px;
+    gap: var(--gpt-gap-md);
+    margin-top: var(--gpt-gap-xl);
+    padding-top: var(--gpt-gap-lg);
     border-top: 1px solid var(--gpt-border-default);
   }
 
@@ -314,42 +330,42 @@
     min-height: 22px;
   }
 
-  /* Zone titles — same as section labels (md / 13, regular). */
   .tour-zone-label {
     color: var(--gpt-text-primary);
     font-size: var(--gpt-font-md);
-    font-weight: 400;
+    font-weight: var(--gpt-font-weight-bold);
   }
 
   .tour-zone-body {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--gpt-gap-md);
     min-width: 0;
   }
 
   .tour-code {
     margin: 0;
-    padding: 10px 12px;
+    padding: var(--gpt-gap-md) var(--gpt-gap-lg);
     overflow-x: auto;
     overflow-y: visible;
     color: var(--gpt-text-primary);
+    font-family: var(--font-mono);
     font-size: var(--gpt-font-base);
     line-height: 1.55;
-    background: var(--gpt-bg-body);
+    background: var(--gpt-bg-panel);
     border: 1px solid var(--gpt-border-default);
-    border-radius: var(--gpt-radius-md);
+    border-radius: var(--gpt-radius-sm);
   }
 
   .tour-preset {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--gpt-gap-sm);
     margin: 0;
 
     .tour-preset-row {
       display: flex;
-      gap: 8px;
+      gap: var(--gpt-gap-md);
       align-items: baseline;
     }
 
@@ -363,43 +379,44 @@
     dd {
       display: flex;
       flex-wrap: wrap;
-      gap: 4px;
+      gap: var(--gpt-gap-xs);
       margin: 0;
-      color: var(--gpt-text-secondary);
+      color: var(--gpt-text-primary);
       font-size: var(--gpt-font-md);
     }
 
     code {
-      padding: 1px 5px;
+      padding: 1px var(--gpt-gap-xs);
       color: var(--gpt-text-primary);
+      font-family: var(--font-mono);
       font-size: var(--gpt-font-base);
-      background: var(--gpt-bg-body);
-      border-radius: 4px;
+      background: var(--gpt-bg-panel);
+      border-radius: var(--gpt-radius-sm);
     }
   }
 
   .tour-preset-chip {
     padding: 1px 7px;
     color: var(--gpt-text-primary);
-    font-family: monospace;
+    font-family: var(--font-mono);
     font-size: var(--gpt-font-base);
-    background: var(--gpt-bg-body);
+    background: var(--gpt-bg-panel);
     border: 1px solid var(--gpt-border-default);
-    border-radius: 999px;
+    border-radius: var(--gpt-radius-sm);
   }
 
   .tour-where-list {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--gpt-gap-sm);
     margin: 0;
     padding: 0;
     list-style: none;
 
     li {
       position: relative;
-      padding-left: 12px;
-      color: var(--gpt-text-secondary);
+      padding-left: var(--gpt-gap-lg);
+      color: var(--gpt-text-primary);
       font-size: var(--gpt-font-md);
       line-height: 1.55;
 
@@ -407,8 +424,8 @@
         position: absolute;
         top: 0.55em;
         left: 0;
-        width: 4px;
-        height: 4px;
+        width: var(--gpt-gap-xs);
+        height: var(--gpt-gap-xs);
         background: var(--gpt-text-muted);
         border-radius: 50%;
         content: '';
@@ -419,7 +436,7 @@
   .tour-points {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--gpt-gap-md);
     margin: 0;
     padding: 0;
     list-style: none;
@@ -428,20 +445,20 @@
   .tour-point {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: var(--gpt-gap-2xs);
   }
 
   .tour-point-lead {
     color: var(--gpt-text-primary);
     font-size: var(--gpt-font-md);
-    font-weight: 600;
+    font-weight: var(--gpt-font-weight-control);
     line-height: 1.45;
   }
 
   .tour-point-detail {
-    color: var(--gpt-text-secondary);
+    color: var(--gpt-text-primary);
     font-size: var(--gpt-font-md);
-    font-weight: 400;
+    font-weight: var(--gpt-font-weight-regular);
     line-height: 1.55;
   }
 </style>

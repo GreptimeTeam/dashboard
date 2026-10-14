@@ -36,32 +36,32 @@
 
 <style lang="less" scoped>
   .tour-welcome-body {
-    padding: 0 0 8px;
+    padding: 0 0 var(--gpt-gap-md);
   }
 
   .tour-live-badge {
     display: inline-flex;
-    gap: 6px;
+    gap: var(--gpt-gap-sm);
     align-items: center;
-    padding: 2px 10px;
+    padding: var(--gpt-gap-2xs) var(--gpt-gap-md);
     color: var(--gpt-text-secondary);
-    font-size: 12px;
-    background: var(--gpt-bg-body);
+    font-size: var(--gpt-font-base);
+    background: var(--gpt-bg-surface);
     border: 1px solid var(--gpt-border-default);
-    border-radius: 999px;
+    border-radius: var(--gpt-radius-sm);
   }
 
   .tour-live-dot {
     width: 7px;
     height: 7px;
-    background: rgb(var(--success-6));
+    background: var(--success-color);
     border-radius: 50%;
   }
 
   .tour-welcome-intro {
-    margin: 14px 0 0;
-    color: var(--gpt-text-secondary);
-    font-size: 13px;
+    margin: var(--gpt-gap-xl) 0 0;
+    color: var(--gpt-text-primary);
+    font-size: var(--gpt-font-md);
     line-height: 1.7;
     white-space: pre-line;
   }
@@ -69,8 +69,8 @@
   .tour-welcome-footer {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    margin-top: 20px;
+    gap: var(--gpt-gap-md);
+    margin-top: var(--gpt-gap-2xl);
   }
 </style>
 
