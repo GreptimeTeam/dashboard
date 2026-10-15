@@ -86,6 +86,8 @@ export interface TourStep {
   builderForm?: unknown
   /** Human-readable preset rows (preset display). */
   preset?: TourPresetSummary
+  /** Primary GreptimeDB documentation page for the capability. */
+  docsPath: string
   /** Route + query the tile navigates to. */
   location: { path: string; query: Record<string, string> }
 }
@@ -110,6 +112,7 @@ export const TOUR_STEPS: TourStep[] = [
     matchesExact: sqlExact(TOUR_SQL_QUERY),
     display: 'code',
     code: TOUR_SQL_QUERY,
+    docsPath: '/user-guide/query-data/sql/',
     location: { path: QUERY_PATH, query: { sql: encodeURIComponent(TOUR_SQL_QUERY) } },
   },
   {
@@ -120,6 +123,7 @@ export const TOUR_STEPS: TourStep[] = [
     baseRouteName: 'metrics',
     display: 'code',
     code: TOUR_PROMQL_QUERY,
+    docsPath: '/user-guide/query-data/promql/',
     location: {
       path: '/dashboard/metrics-query',
       query: {
@@ -139,6 +143,7 @@ export const TOUR_STEPS: TourStep[] = [
     matchesExact: sqlExact(TOUR_TQL_QUERY),
     display: 'code',
     code: TOUR_TQL_QUERY,
+    docsPath: '/reference/sql/tql/',
     location: { path: QUERY_PATH, query: { sql: encodeURIComponent(TOUR_TQL_QUERY) } },
   },
   {
@@ -149,6 +154,7 @@ export const TOUR_STEPS: TourStep[] = [
     baseRouteName: 'log-query',
     display: 'preset',
     builderForm: TOUR_LOGS_BUILDER_FORM,
+    docsPath: '/user-guide/logs/overview/',
     preset: {
       table: 'opentelemetry_logs',
       filters: ['severity_number >= 17'],
@@ -173,6 +179,7 @@ export const TOUR_STEPS: TourStep[] = [
     baseRouteName: 'trace-query',
     display: 'preset',
     builderForm: TOUR_TRACES_BUILDER_FORM,
+    docsPath: '/user-guide/traces/read-write/',
     preset: {
       table: 'opentelemetry_traces',
       filters: ['service_name = frontend', 'span_status_code = STATUS_CODE_ERROR'],
@@ -196,6 +203,7 @@ export const TOUR_STEPS: TourStep[] = [
     icon: 'query',
     baseRouteName: 'explore',
     display: 'where',
+    docsPath: '/user-guide/concepts/why-greptimedb/#why-one-engine-for-three-signals',
     location: {
       path: '/dashboard/explore',
       // Demo lands on Metrics; any signal tab is a valid entry point.
@@ -209,6 +217,7 @@ export const TOUR_STEPS: TourStep[] = [
     icon: 'visualize',
     baseRouteName: 'perses',
     display: 'where',
+    docsPath: '/getting-started/installation/greptimedb-dashboard/',
     location: {
       path: '/dashboard/perses',
       query: { dashboard: 'astronomy-shop-overview' },

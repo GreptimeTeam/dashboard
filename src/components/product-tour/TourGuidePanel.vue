@@ -35,84 +35,101 @@
     </div>
 
     <div v-if="activeStep" class="tour-detail">
+      <!-- Product capability only (scenario lives with the query below) -->
       <header class="tour-step-header">
         <h3 class="tour-detail-title">{{ $t(activeStep.titleKey) }}</h3>
-        <p class="tour-intro">{{ $t(`${stepKey}.intro`) }}</p>
-        <a-button
-          v-if="activeStep.display === 'code' || activeStep.display === 'preset'"
-          type="primary"
-          size="medium"
-          long
-          class="tour-run-example"
-          @click="tour.runExample()"
-        >
-          {{ $t('tour.guide.runQuery') }}
-        </a-button>
+        <section class="tour-capability">
+          <p class="tour-capability-body">
+            {{ $t(`${stepKey}.capability`) }}
+            <a class="tour-docs-link" :href="docsUrl" target="_blank" rel="noopener noreferrer">
+              {{ $t('tour.guide.viewDocs') }}
+            </a>
+          </p>
+        </section>
       </header>
 
-      <!-- Zone A: query / preset / where shown in the guide (Run query syncs + executes) -->
+      <!-- Zone A: one meaning — scenario + query/preset/where (+ Run under the query) -->
       <section class="tour-zone tour-zone--loaded">
-        <div v-if="activeStep.display === 'code' && activeStep.code" class="tour-zone-body">
-          <header class="tour-zone-header">
-            <span class="tour-zone-label">{{ $t('tour.guide.theQuery') }}</span>
-            <a-button type="text" size="mini" @click="copyCode(activeStep.code)">
-              <template #icon>
-                <icon-copy />
-              </template>
-              {{ $t('copy') }}
-            </a-button>
-          </header>
-          <pre class="tour-code"><code>{{ activeStep.code }}</code></pre>
-        </div>
+        <section class="tour-scenario">
+          <h4 class="tour-scenario-title">{{ $t(`${stepKey}.scenarioTitle`) }}</h4>
+          <p class="tour-intro">{{ $t(`${stepKey}.scenario`) }}</p>
+        </section>
 
-        <div v-else-if="activeStep.display === 'preset' && activeStep.preset" class="tour-zone-body">
-          <header class="tour-zone-header">
-            <span class="tour-zone-label">{{ $t('tour.guide.presetTitle') }}</span>
-          </header>
-          <dl class="tour-preset">
-            <div class="tour-preset-row">
-              <dt>{{ $t('tour.guide.table') }}</dt>
-              <dd
-                ><code>{{ activeStep.preset.table }}</code></dd
-              >
-            </div>
-            <div class="tour-preset-row">
-              <dt>{{ $t('tour.guide.filters') }}</dt>
-              <dd>
-                <span v-for="filter in activeStep.preset.filters" :key="filter" class="tour-preset-chip">
-                  {{ filter }}
-                </span>
-              </dd>
-            </div>
-            <div class="tour-preset-row">
-              <dt>{{ $t('tour.guide.sort') }}</dt>
-              <dd
-                ><code>{{ activeStep.preset.sort }}</code></dd
-              >
-            </div>
-            <div class="tour-preset-row">
-              <dt>{{ $t('tour.guide.limit') }}</dt>
-              <dd
-                ><code>{{ activeStep.preset.limit }}</code></dd
-              >
-            </div>
-            <div class="tour-preset-row">
-              <dt>{{ $t('tour.guide.timeRange') }}</dt>
-              <dd
-                ><code>{{ $t(activeStep.preset.timeRangeKey) }}</code></dd
-              >
-            </div>
-          </dl>
-        </div>
+        <template v-if="activeStep.display === 'where'">
+          <div class="tour-zone-body">
+            <header class="tour-zone-header">
+              <span class="tour-zone-label">{{ $t('tour.guide.whereToLook') }}</span>
+            </header>
+            <ul class="tour-where-list">
+              <li v-for="item in whereItems" :key="item">{{ item }}</li>
+            </ul>
+          </div>
+        </template>
+        <template v-else>
+          <div v-if="activeStep.display === 'code' && activeStep.code" class="tour-zone-body">
+            <header class="tour-zone-header">
+              <span class="tour-zone-label">{{ $t('tour.guide.theQuery') }}</span>
+              <a-button type="text" size="mini" @click="copyCode(activeStep.code)">
+                <template #icon>
+                  <icon-copy />
+                </template>
+                {{ $t('copy') }}
+              </a-button>
+            </header>
+            <pre class="tour-code"><code>{{ activeStep.code }}</code></pre>
+          </div>
 
-        <div v-else-if="activeStep.display === 'where'" class="tour-zone-body">
-          <header class="tour-zone-header">
-            <span class="tour-zone-label">{{ $t('tour.guide.whereToLook') }}</span>
-          </header>
-          <ul class="tour-where-list">
-            <li v-for="item in whereItems" :key="item">{{ item }}</li>
-          </ul>
-        </div>
+          <div v-else-if="activeStep.display === 'preset' && activeStep.preset" class="tour-zone-body">
+            <header class="tour-zone-header">
+              <span class="tour-zone-label">{{ $t('tour.guide.presetTitle') }}</span>
+            </header>
+            <dl class="tour-preset">
+              <div class="tour-preset-row">
+                <dt>{{ $t('tour.guide.table') }}</dt>
+                <dd
+                  ><code>{{ activeStep.preset.table }}</code></dd
+                >
+              </div>
+              <div class="tour-preset-row">
+                <dt>{{ $t('tour.guide.filters') }}</dt>
+                <dd>
+                  <span v-for="filter in activeStep.preset.filters" :key="filter" class="tour-preset-chip">
+                    {{ filter }}
+                  </span>
+                </dd>
+              </div>
+              <div class="tour-preset-row">
+                <dt>{{ $t('tour.guide.sort') }}</dt>
+                <dd
+                  ><code>{{ activeStep.preset.sort }}</code></dd
+                >
+              </div>
+              <div class="tour-preset-row">
+                <dt>{{ $t('tour.guide.limit') }}</dt>
+                <dd
+                  ><code>{{ activeStep.preset.limit }}</code></dd
+                >
+              </div>
+              <div class="tour-preset-row">
+                <dt>{{ $t('tour.guide.timeRange') }}</dt>
+                <dd
+                  ><code>{{ $t(activeStep.preset.timeRangeKey) }}</code></dd
+                >
+              </div>
+            </dl>
+          </div>
+
+          <a-button
+            v-if="activeStep.display === 'code' || activeStep.display === 'preset'"
+            type="primary"
+            size="medium"
+            long
+            class="tour-run-example"
+            @click="tour.runExample()"
+          >
+            {{ $t('tour.guide.runQuery') }}
+          </a-button>
+        </template>
       </section>
 
       <!-- Zone B: How it works (explain) -->
@@ -140,10 +157,14 @@
   import { useProductTour } from './use-product-tour'
 
   const tour = useProductTour()
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
 
   const activeStep = computed(() => tour.activeStep.value)
   const stepKey = computed(() => activeStep.value?.nameKey.replace(/\.name$/, '') ?? '')
+  const docsUrl = computed(() => {
+    const docsOrigin = locale.value === 'zh-CN' ? 'https://docs.greptime.cn' : 'https://docs.greptime.com'
+    return `${docsOrigin}${activeStep.value?.docsPath ?? ''}`
+  })
   const pointItems = computed(() =>
     [0, 1, 2]
       .map((i) => ({
@@ -300,7 +321,49 @@
     line-height: 1.35;
   }
 
-  /* Body prose under the step title — primary (main-dark) for readability. */
+  /* Concrete scenario heading — pairs with the query below (one meaning). */
+  .tour-scenario-title {
+    margin: 0;
+    color: var(--gpt-text-primary);
+    font-size: var(--gpt-font-lg);
+    font-weight: var(--gpt-font-weight-bold);
+    line-height: 1.45;
+  }
+
+  .tour-capability {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gpt-gap-xs);
+    padding-bottom: var(--gpt-gap-sm);
+    border-bottom: 1px solid var(--gpt-border-default);
+  }
+
+  .tour-capability-body {
+    margin: 0;
+    color: var(--gpt-text-primary);
+    font-size: var(--gpt-font-md);
+    line-height: 1.55;
+  }
+
+  .tour-docs-link {
+    color: var(--gpt-main-purple);
+    font-size: var(--gpt-font-md);
+    font-weight: var(--gpt-font-weight-control);
+    text-decoration: none;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--gpt-main-purple);
+    }
+  }
+
+  .tour-scenario {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gpt-gap-xs);
+  }
+
+  /* Body prose under the scenario title — primary for readability. */
   .tour-intro {
     margin: 0;
     color: var(--gpt-text-primary);
@@ -311,7 +374,6 @@
 
   /* CTA: larger type than system medium (12px); keep medium control height. */
   .tour-run-example {
-    margin-top: var(--gpt-gap-sm);
     font-size: var(--gpt-font-lg);
     font-weight: var(--gpt-font-weight-control);
   }
@@ -324,6 +386,14 @@
     margin-top: var(--gpt-gap-xl);
     padding-top: var(--gpt-gap-lg);
     border-top: 1px solid var(--gpt-border-default);
+  }
+
+  /* Scenario + query + explain share one meaning; capability already divides the header. */
+  .tour-zone--loaded,
+  .tour-zone--explain {
+    margin-top: var(--gpt-gap-lg);
+    padding-top: 0;
+    border-top: none;
   }
 
   .tour-zone-header {

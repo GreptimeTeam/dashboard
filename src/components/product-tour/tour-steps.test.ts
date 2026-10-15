@@ -64,13 +64,32 @@ describe('tour steps config', () => {
     expect(JSON.parse(decodeMaybeEncoded(tracesStep.location.query.builderForm))).toEqual(TOUR_TRACES_BUILDER_FORM)
   })
 
+  it('maps every step to its primary GreptimeDB capability docs', () => {
+    const docsPaths: Record<string, string> = {
+      'sql': '/user-guide/query-data/sql/',
+      'promql': '/user-guide/query-data/promql/',
+      'tql': '/reference/sql/tql/',
+      'logs': '/user-guide/logs/overview/',
+      'traces': '/user-guide/traces/read-write/',
+      'signals-explore': '/user-guide/concepts/why-greptimedb/#why-one-engine-for-three-signals',
+      'visualization': '/getting-started/installation/greptimedb-dashboard/',
+    }
+
+    TOUR_STEPS.forEach((step) => {
+      expect(step.docsPath).toBe(docsPaths[step.id])
+    })
+  })
+
   it('ships en/zh copy for every step', () => {
     ;[enTour, zhTour].forEach((messages) => {
       TOUR_STEPS.forEach((step) => {
         const key = step.nameKey.replace(/\.name$/, '')
         expect(messages[`${key}.name`]).toBeTruthy()
         expect(messages[`${key}.title`]).toBeTruthy()
-        expect(messages[`${key}.intro`]).toBeTruthy()
+        expect(messages[`${key}.scenarioTitle`]).toBeTruthy()
+        expect(messages[`${key}.capability`]).toBeTruthy()
+        expect(messages[`${key}.scenario`]).toBeTruthy()
+        expect(messages[`${key}.subtitle`]).toBeUndefined()
         expect(messages[`${key}.points.0.lead`]).toBeTruthy()
         expect(messages[`${key}.points.0.detail`]).toBeTruthy()
         if (step.display === 'where') {
@@ -83,6 +102,7 @@ describe('tour steps config', () => {
       expect(messages['tour.guide.close']).toBeTruthy()
       expect(messages['tour.guide.switchSteps']).toBeTruthy()
       expect(messages['tour.guide.switchStepsHint']).toBeTruthy()
+      expect(messages['tour.guide.viewDocs']).toBeTruthy()
       expect(messages['tour.guide.pillWithStep']).toBeTruthy()
       expect(messages['tour.guide.runQuery']).toBeTruthy()
       expect(messages['tour.guide.zoneExplain']).toBeTruthy()

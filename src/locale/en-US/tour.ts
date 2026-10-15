@@ -12,6 +12,7 @@ export default {
   'tour.guide.close': 'Close',
   'tour.guide.switchSteps': 'Query types',
   'tour.guide.switchStepsHint': 'Select a type to switch to that guide.',
+  'tour.guide.viewDocs': 'View docs',
   'tour.guide.runQuery': 'Run this query',
   'tour.guide.zoneExplain': 'How it works',
   'tour.guide.theQuery': 'The query',
@@ -25,10 +26,14 @@ export default {
   'tour.guide.stepLoaded': '{name} — tap the guide pill for details, or Run this query to apply and execute',
   'tour.presets.last1Hour': 'Last 1 hour',
   // Short names / title prefixes match `menu.dashboard.*` in menu.ts (navbar).
+  // capability = GreptimeDB product fact (+ docs). scenario* = concrete demo tied to the query.
   'tour.steps.sql.name': 'Table Query - SQL',
-  'tour.steps.sql.title': 'Table Query — service health in one SQL query',
-  'tour.steps.sql.intro':
-    'Everything starts here: traces are ordinary rows, so service health is just a GROUP BY. Request counts, error counts, and a P95 latency — one query, no special API.',
+  'tour.steps.sql.title': 'Table Query',
+  'tour.steps.sql.scenarioTitle': 'service health in one SQL query',
+  'tour.steps.sql.capability':
+    'GreptimeDB queries metrics, logs, and traces as tables with SQL filtering, aggregation, and percentiles.',
+  'tour.steps.sql.scenario':
+    'Request counts, error counts, and a P95 latency by service_name — one GROUP BY on opentelemetry_traces, no special API.',
   'tour.steps.sql.points.0.lead': 'GROUP BY',
   'tour.steps.sql.points.0.detail':
     'Traces are ordinary rows — aggregate by service_name for requests, errors, and P95 in one query.',
@@ -37,9 +42,11 @@ export default {
   'tour.steps.sql.points.2.lead': 'One table, many lenses',
   'tour.steps.sql.points.2.detail': 'The same opentelemetry_traces table backs the Logs and Traces views.',
   'tour.steps.promql.name': 'Metrics Query',
-  'tour.steps.promql.title': 'Metrics Query — read CPU usage with PromQL',
-  'tour.steps.promql.intro':
-    "PromQL works too, unmodified. This is the classic CPU-busy expression over host metrics arriving by Prometheus remote write — same database, same results you'd get from Prometheus itself.",
+  'tour.steps.promql.title': 'Metrics Query',
+  'tour.steps.promql.scenarioTitle': 'read CPU usage with PromQL',
+  'tour.steps.promql.capability': 'GreptimeDB runs PromQL in-database with Prometheus-compatible query APIs.',
+  'tour.steps.promql.scenario':
+    "Read host CPU usage with the classic CPU-busy expression over metrics arriving by Prometheus remote write — same results you'd get from Prometheus itself.",
   'tour.steps.promql.points.0.lead': '100 * (1 - idle)',
   'tour.steps.promql.points.0.detail': 'The classic CPU-busy expression: subtract the idle share from 1.',
   'tour.steps.promql.points.1.lead': 'remote write',
@@ -47,9 +54,11 @@ export default {
   'tour.steps.promql.points.2.lead': '/v1/promql',
   'tour.steps.promql.points.2.detail': 'The expression is evaluated in-database; results match Prometheus itself.',
   'tour.steps.tql.name': 'Table Query - TQL',
-  'tour.steps.tql.title': 'Table Query — run PromQL inside SQL with TQL',
-  'tour.steps.tql.intro':
-    "When one language isn't enough, TQL embeds a PromQL range query inside SQL. The metric comes back as a table — and anything SQL can do to a table, you can now do to it.",
+  'tour.steps.tql.title': 'Table Query',
+  'tour.steps.tql.scenarioTitle': 'CPU metric as a SQL table',
+  'tour.steps.tql.capability': 'TQL embeds PromQL-style range queries in SQL and returns results as tables.',
+  'tour.steps.tql.scenario':
+    'Run the CPU-busy PromQL inside SQL, then treat the result like any other table — filter, join, or wrap it in a CTE.',
   'tour.steps.tql.points.0.lead': 'TQL EVAL',
   'tour.steps.tql.points.0.detail': 'Embeds a PromQL range query directly inside SQL.',
   'tour.steps.tql.points.1.lead': 'Table output',
@@ -57,9 +66,11 @@ export default {
   'tour.steps.tql.points.2.lead': 'CTE + JOIN',
   'tour.steps.tql.points.2.detail': 'WITH cpu AS (TQL EVAL …) SELECT … joins metrics with traces or logs.',
   'tour.steps.logs.name': 'Logs Query',
-  'tour.steps.logs.title': 'Logs Query — surface ERROR-and-above rows first',
-  'tour.steps.logs.intro':
-    "Logs get their own view: pick a table, set filters, run. Here we're asking for ERROR-and-above lines from the last hour — newest first, each row carrying the structured fields and the trace it belongs to.",
+  'tour.steps.logs.title': 'Logs Query',
+  'tour.steps.logs.scenarioTitle': 'surface ERROR-and-above rows first',
+  'tour.steps.logs.capability': 'GreptimeDB structures and stores logs as queryable tables.',
+  'tour.steps.logs.scenario':
+    'Pick a table, set filters, run. Here: ERROR-and-above lines from the last hour — newest first, each row carrying structured fields and its trace_id.',
   'tour.steps.logs.points.0.lead': 'severity_number >= 17',
   'tour.steps.logs.points.0.detail': 'ERROR and above; 13–16 are WARN.',
   'tour.steps.logs.points.1.lead': 'trace_id',
@@ -67,9 +78,11 @@ export default {
   'tour.steps.logs.points.2.lead': 'Pipelines',
   'tour.steps.logs.points.2.detail': 'Raw-text logs can be structured at ingest time.',
   'tour.steps.traces.name': 'Traces Query',
-  'tour.steps.traces.title': 'Traces Query — find slow, failed requests',
-  'tour.steps.traces.intro':
-    'Traces live in a table too, so "show me failed requests that hit the frontend, slowest first" is just a filter. Open one to see the full waterfall across services.',
+  'tour.steps.traces.title': 'Traces Query',
+  'tour.steps.traces.scenarioTitle': 'find slow, failed requests',
+  'tour.steps.traces.capability': 'GreptimeDB stores OTLP spans in queryable tables.',
+  'tour.steps.traces.scenario':
+    'Filter to failed frontend requests, slowest first. Open one to see the full waterfall across services.',
   'tour.steps.traces.points.0.lead': 'service_name = frontend',
   'tour.steps.traces.points.0.detail': 'Scope to the frontend service — the spans that serve customer requests.',
   'tour.steps.traces.points.1.lead': 'STATUS_CODE_ERROR + duration_nano DESC',
@@ -77,9 +90,12 @@ export default {
   'tour.steps.traces.points.2.lead': 'paymentFailure = 100%',
   'tour.steps.traces.points.2.detail': 'Flip the demo flag and this list fills with failed checkouts.',
   'tour.steps.signals-explore.name': 'Signals Explore',
-  'tour.steps.signals-explore.title': 'Signals Explore — Metrics, Logs, and Traces in one place',
-  'tour.steps.signals-explore.intro':
-    'Metrics, Logs, and Traces share one workspace — switch tabs with the same filters and time range.',
+  'tour.steps.signals-explore.title': 'Signals Explore',
+  'tour.steps.signals-explore.scenarioTitle': 'switch tabs without losing context',
+  'tour.steps.signals-explore.capability':
+    'GreptimeDB uses one database model to store and query metrics, logs, and traces.',
+  'tour.steps.signals-explore.scenario':
+    'Metrics, Logs, and Traces share one workspace — the same filters and time range follow you across tabs.',
   'tour.steps.signals-explore.points.0.lead': 'Metrics',
   'tour.steps.signals-explore.points.0.detail':
     'Browse and filter series to narrow the window where things went wrong, then open one for breakdowns.',
@@ -93,9 +109,11 @@ export default {
   'tour.steps.signals-explore.where.1': 'Shared Filter next to the time range (kept across tabs)',
   'tour.steps.signals-explore.where.2': 'Logs ↔ Traces linked by trace_id',
   'tour.steps.visualization.name': 'Visualization',
-  'tour.steps.visualization.title': 'Visualization — live dashboards mixing SQL and PromQL',
-  'tour.steps.visualization.intro':
-    "Last stop: visualization — built into the dashboard itself, on top of Perses. Panels on this page run against the same database and the same queries you just ran by hand; there's no external tool between the data and the picture.",
+  'tour.steps.visualization.title': 'Visualization',
+  'tour.steps.visualization.scenarioTitle': 'the same queries, now as panels',
+  'tour.steps.visualization.capability': 'GreptimeDB serves dashboard panels directly with SQL and PromQL.',
+  'tour.steps.visualization.scenario':
+    'Built into the dashboard on top of Perses. Panels hit the same database and the same queries you just ran by hand — no external tool between the data and the picture.',
   'tour.steps.visualization.points.0.lead': '/v1/dashboards',
   'tour.steps.visualization.points.0.detail': 'Dashboards are stored server-side; create, update, and share by URL.',
   'tour.steps.visualization.points.1.lead': 'SQL + PromQL',
