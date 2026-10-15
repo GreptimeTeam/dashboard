@@ -121,7 +121,7 @@
     color: var(--gpt-text-primary);
     cursor: pointer;
     background: var(--gpt-bg-panel);
-    border: 1px solid var(--gpt-border-strong);
+    border: 1px solid var(--gpt-main-dark);
     border-radius: var(--gpt-radius-sm);
     box-shadow: var(--gpt-shadow-sm);
 
