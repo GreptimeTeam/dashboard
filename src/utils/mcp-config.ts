@@ -138,6 +138,16 @@ export function buildMcpServersJson(params: McpConnectionParams): string {
   return `${JSON.stringify(config, null, 2)}\n`
 }
 
+/** Full AI prompt: intro + mcpServers JSON + optional outro (copy this whole string). */
+export function buildMcpSetupPrompt(configJson: string, intro: string, outro = ''): string {
+  const parts = [String(intro ?? '').trim(), '', String(configJson ?? '').trimEnd()]
+  const outroTrimmed = String(outro ?? '').trim()
+  if (outroTrimmed) {
+    parts.push('', outroTrimmed)
+  }
+  return `${parts.join('\n')}\n`
+}
+
 /** CLI invocation matching the generated connection. */
 export function buildMcpCliCommand(params: McpConnectionParams): string {
   return ['greptimedb-mcp-server', ...buildMcpArgs(params)]

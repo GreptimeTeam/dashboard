@@ -6,6 +6,7 @@ import {
   buildMcpCliCommand,
   buildMcpConnectionParams,
   buildMcpServersJson,
+  buildMcpSetupPrompt,
   parseDashboardHost,
   resolveMcpConnectionInput,
   resolveMysqlPort,
@@ -132,5 +133,21 @@ describe('buildMcpArgs / JSON / CLI', () => {
     ])
     expect(buildMcpCliCommand(params)).toContain('--password "p@ss"')
     expect(buildMcpArgs(params)).not.toContain('--port')
+  })
+
+  it('buildMcpSetupPrompt embeds config between intro and outro', () => {
+    const json = buildMcpServersJson(
+      buildMcpConnectionParams({
+        host: 'http://localhost:4000',
+        database: 'public',
+        username: '',
+        password: '',
+      })
+    )
+    const prompt = buildMcpSetupPrompt(json, 'Configure MCP:', 'Repo: example')
+    expect(prompt).toContain('Configure MCP:')
+    expect(prompt).toContain('"mcpServers"')
+    expect(prompt).toContain('Repo: example')
+    expect(prompt.endsWith('\n')).toBe(true)
   })
 })

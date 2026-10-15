@@ -2,9 +2,6 @@
 a-layout-footer.footer
   .footer-start
     span.footer-search-hint(:title="quickNavTip") {{ quickNavLabel }}
-    template(v-if="queryGuideEnabled")
-      span.footer-divider(aria-hidden="true")
-      button.mcp-entry(type="button" @click="openMcpConfig") {{ $t('menu.mcp') }}
   a-space.footer-info(:size="20")
     a-space(:size="5")
       svg.service-icon
@@ -34,9 +31,7 @@ a-layout-footer.footer
   import { useI18n } from 'vue-i18n'
   import { getIconUrl } from '@/utils'
   import type { DbConnectionStatus } from '@/store/modules/app/types'
-  import useMcpConfig from '@/components/mcp-config/use-mcp-config'
   import { useDashboardTimezone } from '@/hooks'
-  import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
 
   const { t } = useI18n()
   const { timezoneLabel, timezoneFullLabel } = useDashboardTimezone()
@@ -44,17 +39,11 @@ a-layout-footer.footer
   const shortcutKey = `${isMac ? '⌘' : 'Ctrl'}+K`
   const quickNavLabel = computed(() => t('dashboard.quickNav', { key: shortcutKey }))
   const quickNavTip = computed(() => t('dashboard.quickNavTip', { key: shortcutKey }))
-  const mcpConfig = useMcpConfig()
-  const queryGuideEnabled = isQueryGuideEnabled()
 
   const appStore = useAppStore()
   const { host, database, dbConnectionStatus, regionVendor, regionLocation, regionCountry, serviceName } =
     storeToRefs(appStore)
   const { statusRight } = storeToRefs(useStatusBarStore())
-
-  const openMcpConfig = () => {
-    mcpConfig.show()
-  }
 
   const region = computed(() => ({
     vendor: regionVendor.value,
@@ -105,22 +94,6 @@ a-layout-footer.footer
     font-weight: 600;
   }
 
-  /* Align with ⌘+K; secondary (not muted / not link purple). */
-  .mcp-entry {
-    margin: 0;
-    padding: 0;
-    color: var(--gpt-text-secondary);
-    font-size: 12px;
-    font-weight: 400;
-    line-height: 1;
-    cursor: pointer;
-    background: transparent;
-    border: none;
-
-    &:hover {
-      color: var(--main-font-color);
-    }
-  }
   .footer-timezone {
     cursor: pointer;
 
@@ -188,12 +161,6 @@ a-layout-footer.footer
 
   .footer-search-hint {
     color: var(--gpt-text-secondary);
-  }
-
-  .footer-divider {
-    width: 1px;
-    height: 12px;
-    background: var(--gpt-border-default);
   }
 
   .region {

@@ -49,11 +49,11 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
               | {{ label }}
           a-doption.news(@click="showNews")
             | {{ $t('menu.news') }}
-      .support-trigger(v-if="queryGuideEnabled" @click="showContact")
+      button.support-trigger(v-if="queryGuideEnabled" type="button" @click.stop="showContact")
         svg.icon-18
           use(href="#icon-user")
         span.support-label {{ $t('menu.feedback') }}
-      .support-trigger(v-if="queryGuideEnabled" @click="showMcpConfig")
+      button.support-trigger(v-if="queryGuideEnabled" type="button" @click.stop="showMcpConfig")
         svg.icon-18
           use(href="#code")
         span.support-label {{ $t('menu.mcp') }}
@@ -462,11 +462,16 @@ CommandPalette(ref="commandPaletteRef")
       display: flex;
       align-items: center;
       gap: 8px;
+      width: 100%;
       margin: 0 0 4px;
       padding: 8px 12px;
       color: @menu-light-color-item_default;
+      font: inherit;
       font-size: 12px;
       line-height: 20px;
+      text-align: left;
+      background: transparent;
+      border: none;
       border-radius: var(--gpt-radius-sm);
       cursor: pointer;
 

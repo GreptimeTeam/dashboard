@@ -1,22 +1,23 @@
 <template lang="pug">
 a-modal(
-  v-model:visible="visible"
   unmount-on-close
+  :visible="visible"
   :title="$t('settings.mcp.title')"
   :width="560"
   :footer="false"
+  @cancel="close"
 )
   .mcp-docs
     .mcp-docs__head
-      span.mcp-docs__desc {{ descText }}
+      span.mcp-docs__desc {{ $t('settings.mcp.copyHint') }}
       TextCopyable(
         size="mini"
-        :data="serversJson"
+        :data="promptText"
         :show-data="false"
         :copy-tooltip="$t('settings.mcp.copy')"
         :copied-tooltip="$t('settings.mcp.copied')"
       )
-    pre.mcp-docs__pre {{ serversJson }}
+    pre.mcp-docs__pre {{ promptText }}
     a-link.mcp-docs__link(target="_blank" icon :href="repoUrl") {{ $t('settings.mcp.repo') }}
 </template>
 
@@ -29,17 +30,17 @@ a-modal(
     MCP_SERVER_REPO_URL,
     buildMcpConnectionParams,
     buildMcpServersJson,
+    buildMcpSetupPrompt,
     resolveMcpConnectionInput,
   } from '@/utils/mcp-config'
   import useMcpConfig from './use-mcp-config'
 
   const { t } = useI18n()
-  const { visible } = useMcpConfig()
+  const { visible, close } = useMcpConfig()
   const { host, database, username, password, userTimezone } = storeToRefs(useAppStore())
   const repoUrl = MCP_SERVER_REPO_URL
 
   const useDemoAccount = computed(() => isQueryGuideEnabled())
-  const descText = computed(() => (useDemoAccount.value ? t('settings.mcp.descDemo') : t('settings.mcp.desc')))
 
   const serversJson = computed(() =>
     buildMcpServersJson(
@@ -57,6 +58,8 @@ a-modal(
       )
     )
   )
+
+  const promptText = computed(() => buildMcpSetupPrompt(serversJson.value, t('settings.mcp.promptIntro')))
 </script>
 
 <style scoped lang="less">
