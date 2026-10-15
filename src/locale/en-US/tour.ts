@@ -12,7 +12,7 @@ export default {
   'tour.guide.close': 'Close',
   'tour.guide.switchSteps': 'Query types',
   'tour.guide.switchStepsHint': 'Select a type to switch to that guide.',
-  'tour.guide.runQuery': 'Run query',
+  'tour.guide.runQuery': 'Run this query',
   'tour.guide.zoneExplain': 'How it works',
   'tour.guide.theQuery': 'The query',
   'tour.guide.presetTitle': 'Preset',
@@ -22,7 +22,7 @@ export default {
   'tour.guide.sort': 'Sort',
   'tour.guide.limit': 'Limit',
   'tour.guide.timeRange': 'Time range',
-  'tour.guide.stepLoaded': '{name} — tap the guide pill for details, or Run query to load and execute',
+  'tour.guide.stepLoaded': '{name} — tap the guide pill for details, or Run this query to apply and execute',
   'tour.presets.last1Hour': 'Last 1 hour',
   // Short names / title prefixes match `menu.dashboard.*` in menu.ts (navbar).
   'tour.steps.sql.name': 'Table Query - SQL',

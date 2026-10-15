@@ -309,8 +309,11 @@
     line-height: 1.65;
   }
 
+  /* CTA: larger type than system medium (12px); keep medium control height. */
   .tour-run-example {
-    margin-top: var(--gpt-gap-xs);
+    margin-top: var(--gpt-gap-sm);
+    font-size: var(--gpt-font-lg);
+    font-weight: var(--gpt-font-weight-control);
   }
 
   /* Zones: divider + section title (no card chrome). */
