@@ -77,20 +77,21 @@ export default {
   'tour.steps.traces.points.2.lead': 'paymentFailure = 100%',
   'tour.steps.traces.points.2.detail': 'Flip the demo flag and this list fills with failed checkouts.',
   'tour.steps.signals-explore.name': 'Signals Explore',
-  'tour.steps.signals-explore.title': 'Signals Explore — start from Metrics, then hop signals',
+  'tour.steps.signals-explore.title': 'Signals Explore — Metrics, Logs, and Traces in one place',
   'tour.steps.signals-explore.intro':
-    'When something looks wrong, you usually start with Metrics: spot the spike or error rate, then jump to Logs or Traces without losing the time range and filters. One workspace, three lenses on the same incident.',
-  'tour.steps.signals-explore.points.0.lead': 'Start on Metrics',
-  'tour.steps.signals-explore.points.0.detail': 'Charts make it obvious where latency or errors jumped — then dig in.',
-  'tour.steps.signals-explore.points.1.lead': 'Shared filter + time',
+    'Metrics, Logs, and Traces share one workspace — switch tabs with the same filters and time range.',
+  'tour.steps.signals-explore.points.0.lead': 'Metrics',
+  'tour.steps.signals-explore.points.0.detail':
+    'Browse and filter series to narrow the window where things went wrong, then open one for breakdowns.',
+  'tour.steps.signals-explore.points.1.lead': 'Logs',
   'tour.steps.signals-explore.points.1.detail':
-    'One filter bar and one time range follow you across Metrics / Logs / Traces.',
-  'tour.steps.signals-explore.points.2.lead': 'Cross-signal hops',
+    'Pick a table, filter by service / level / labels, read volume + rows — jump via trace_id to the matching trace.',
+  'tour.steps.signals-explore.points.2.lead': 'Traces',
   'tour.steps.signals-explore.points.2.detail':
-    'From a metric to related series, or from a trace to its logs — context stays.',
-  'tour.steps.signals-explore.where.0': 'Metrics tab is selected when this step opens',
-  'tour.steps.signals-explore.where.1': 'Signal tabs at the top: Metrics → Logs → Traces',
-  'tour.steps.signals-explore.where.2': 'Shared Filter next to the time range',
+    'RED overview, errored / slow lists, then a waterfall; View logs loads rows linked by the same trace_id.',
+  'tour.steps.signals-explore.where.0': 'Top tabs: Metrics / Logs / Traces',
+  'tour.steps.signals-explore.where.1': 'Shared Filter next to the time range (kept across tabs)',
+  'tour.steps.signals-explore.where.2': 'Logs ↔ Traces linked by trace_id',
   'tour.steps.visualization.name': 'Visualization',
   'tour.steps.visualization.title': 'Visualization — live dashboards mixing SQL and PromQL',
   'tour.steps.visualization.intro':

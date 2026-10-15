@@ -198,7 +198,7 @@ export const TOUR_STEPS: TourStep[] = [
     display: 'where',
     location: {
       path: '/dashboard/explore',
-      // Start on Metrics — the usual first look when something feels wrong.
+      // Demo lands on Metrics; any signal tab is a valid entry point.
       query: { signal: 'metrics', timeLength: '30' },
     },
   },
