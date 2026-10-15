@@ -47,14 +47,16 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
           a-doption(v-for="{ label, link } in supportLinks")
             a-link.navbar-dropdown-link(target="_blank" :href="link")
               | {{ label }}
-          a-doption(@click="showMcpConfig")
-            a-link.navbar-dropdown-link(@click.prevent="showMcpConfig")
-              | {{ $t('menu.mcp') }}
           a-doption.news(@click="showNews")
             | {{ $t('menu.news') }}
-          a-doption(@click="showContact")
-            a-link.navbar-dropdown-link(@click.prevent="showContact")
-              | {{ $t('menu.feedback') }}
+      .support-trigger(v-if="queryGuideEnabled" @click="showContact")
+        svg.icon-18
+          use(href="#icon-user")
+        span.support-label {{ $t('menu.feedback') }}
+      .support-trigger(v-if="queryGuideEnabled" @click="showMcpConfig")
+        svg.icon-18
+          use(href="#code")
+        span.support-label {{ $t('menu.mcp') }}
       StarMarketingCard.star-marketing-card(v-if="!starCardClosed && !navbarCollapsed" @close="starCardClosed = true")
   a-layout-footer
     ul.footer(:class="{ 'footer--expanded': !navbarCollapsed }")
@@ -99,6 +101,7 @@ CommandPalette(ref="commandPaletteRef")
   import useLocale from '@/hooks/locale'
   import useGreptimeVersion from '@/composables/use-greptime-version'
   import type { Component } from 'vue'
+  import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
   import useMenuTree from '../menu/use-menu-tree'
   import NewsModal from './news-modal.vue'
   import StarMarketingCard from './star-marketing-card.vue'
@@ -135,6 +138,7 @@ CommandPalette(ref="commandPaletteRef")
   const isEnterprise = import.meta.env.VITE_APP_NAME === 'enterprise'
   const editionLabel = isEnterprise ? 'Enterprise' : 'OpenSource'
   const showSupportSection = !isEnterprise
+  const queryGuideEnabled = isQueryGuideEnabled()
 
   const menu = menuTree.value[0].children
 

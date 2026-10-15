@@ -2,8 +2,9 @@
 a-layout-footer.footer
   .footer-start
     span.footer-search-hint(:title="quickNavTip") {{ quickNavLabel }}
-    span.footer-divider(aria-hidden="true")
-    button.mcp-entry(type="button" @click="openMcpConfig") {{ $t('menu.mcp') }}
+    template(v-if="queryGuideEnabled")
+      span.footer-divider(aria-hidden="true")
+      button.mcp-entry(type="button" @click="openMcpConfig") {{ $t('menu.mcp') }}
   a-space.footer-info(:size="20")
     a-space(:size="5")
       svg.service-icon
@@ -35,6 +36,7 @@ a-layout-footer.footer
   import type { DbConnectionStatus } from '@/store/modules/app/types'
   import useMcpConfig from '@/components/mcp-config/use-mcp-config'
   import { useDashboardTimezone } from '@/hooks'
+  import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
 
   const { t } = useI18n()
   const { timezoneLabel, timezoneFullLabel } = useDashboardTimezone()
@@ -43,6 +45,7 @@ a-layout-footer.footer
   const quickNavLabel = computed(() => t('dashboard.quickNav', { key: shortcutKey }))
   const quickNavTip = computed(() => t('dashboard.quickNavTip', { key: shortcutKey }))
   const mcpConfig = useMcpConfig()
+  const queryGuideEnabled = isQueryGuideEnabled()
 
   const appStore = useAppStore()
   const { host, database, dbConnectionStatus, regionVendor, regionLocation, regionCountry, serviceName } =

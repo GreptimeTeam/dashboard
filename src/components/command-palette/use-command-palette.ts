@@ -112,22 +112,22 @@ export function useCommandPalette() {
             hint: t('tour.commandHint'),
             navigate: () => productTour.openFromEntry(),
           },
+          {
+            kind: 'ui' as const,
+            id: 'ui:mcp-config',
+            title: t('menu.mcp'),
+            hint: t('menu.mcpHint'),
+            navigate: () => mcpConfig.show(),
+          },
+          {
+            kind: 'ui' as const,
+            id: 'ui:contact',
+            title: t('menu.feedback'),
+            hint: t('contact.commandHint'),
+            navigate: () => contactForm.show(),
+          },
         ]
       : []),
-    {
-      kind: 'ui' as const,
-      id: 'ui:mcp-config',
-      title: t('menu.mcp'),
-      hint: t('menu.mcpHint'),
-      navigate: () => mcpConfig.show(),
-    },
-    {
-      kind: 'ui' as const,
-      id: 'ui:contact',
-      title: t('menu.feedback'),
-      hint: t('contact.commandHint'),
-      navigate: () => contactForm.show(),
-    },
     {
       kind: 'ui' as const,
       id: 'ui:settings',
