@@ -78,6 +78,13 @@
   import { useDrilldownContext } from '@/observability/context'
   import { loadDrilldownSettings } from '@/observability/drilldown-settings'
   import { chipKeyForLogsTableFilter } from '@/observability/logs/field-map'
+  import {
+    drilldownOpToLogsBodyOp,
+    isDirectLogsDetail,
+    ownedLogsDetailFilterRole,
+    ownedLogsFilterOptions,
+    removeOwnedLogsFilterVariants,
+  } from '@/observability/logs/filter-semantics'
   import resolveLogsRoles from '@/observability/logs/resolved-roles'
   import useDrilldownLogsTable from '@/observability/use-drilldown-logs-table'
   import useLogsTablePrefs from '@/observability/use-logs-table-prefs'
@@ -154,6 +161,32 @@
       fieldInclude: settings.fieldInclude,
       fieldExclude: settings.fieldExclude,
     })
+    const options = ownedLogsFilterOptions(ctx)
+    const ownedRole = isDirectLogsDetail(ctx) ? ownedLogsDetailFilterRole(chipKey, options) : undefined
+    if (ownedRole === 'body') {
+      const bodyOp = drilldownOpToLogsBodyOp(op)
+      if (!bodyOp) {
+        return
+      }
+      ctx.ui.logsBodyOp.value = bodyOp
+      ctx.ui.logsBodyValue.value = value
+      return
+    }
+
+    if (ownedRole === 'severity' || ownedRole === 'service') {
+      // LevelFilter exposes include-only multi-select; service supports every chip operator.
+      if (ownedRole === 'severity' && op !== '=' && op !== '=~') {
+        return
+      }
+      const target = options.roles[ownedRole]?.trim()
+      if (!target) {
+        return
+      }
+      const next = removeOwnedLogsFilterVariants(ctx.query.filters.value, ownedRole, options)
+      ctx.actions.setFilters([...next, { key: target, op, value }])
+      return
+    }
+
     ctx.actions.appendFilter({ key: chipKey, op, value })
   }
 

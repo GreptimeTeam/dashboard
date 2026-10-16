@@ -530,13 +530,12 @@ export async function discoverLogLabelKeys(
 }
 
 /**
- * Top-bar key list: the *long tail* of the bound table.
+ * Detail top-bar key list: the *long tail* of the bound table.
  *
- * All physical columns except the ones that already own a dedicated entry point —
- * time (time picker), `body` (detail body search row), `severity` (Level select), the service
- * entity key (Service row), TIMESTAMP columns (never a useful predicate) and the JSON
- * containers themselves. JSON attribute chips are not enumerated (no sampling); chips
- * added by other flows still filter through the chip SQL support.
+ * Overview uses `discoverLogLabelKeys` instead (label vocabulary only).
+ * Here: all physical columns except dedicated entry points — time (time picker),
+ * `body` (detail body search), `severity` (Level select), the service entity key,
+ * TIMESTAMP columns, and JSON containers. JSON attribute chips are not enumerated.
  */
 export async function discoverLogFilterKeys(
   tableName: string,

@@ -85,11 +85,35 @@ describe('useDrilldownFilterOptions isVisibleFilterKey', () => {
     expect(isVisibleFilterKey('service_name')).toBe(true)
   })
 
-  it('keeps other JSON attribute chips and the canonical service alias visible on logs', () => {
+  it('hides the canonical service alias on logs detail while keeping unrelated JSON chips', () => {
     const ctx = makeCtx('logs', { service: 'resource_attributes.service.name' }, 'detail')
     const { isVisibleFilterKey } = useDrilldownFilterOptions(ctx)
     expect(isVisibleFilterKey('resource_attributes.deployment.environment')).toBe(true)
+    expect(isVisibleFilterKey('service')).toBe(false)
+  })
+
+  it('hides body and severity owned-role variants on logs detail', () => {
+    const ctx = makeCtx('logs', { body: 'message', severity: 'severity_text' }, 'detail')
+    const { isVisibleFilterKey } = useDrilldownFilterOptions(ctx)
+    expect(isVisibleFilterKey('body')).toBe(false)
+    expect(isVisibleFilterKey('message')).toBe(false)
+    expect(isVisibleFilterKey('severity')).toBe(false)
+    expect(isVisibleFilterKey('severity_text')).toBe(false)
+  })
+
+  it('shows body / severity / service shared chips on logs overview', () => {
+    const ctx = makeCtx(
+      'logs',
+      { body: 'message', severity: 'severity_text', service: 'resource_attributes.service.name' },
+      'overview'
+    )
+    const { isVisibleFilterKey } = useDrilldownFilterOptions(ctx)
+    expect(isVisibleFilterKey('body')).toBe(true)
+    expect(isVisibleFilterKey('message')).toBe(true)
+    expect(isVisibleFilterKey('severity')).toBe(true)
+    expect(isVisibleFilterKey('severity_text')).toBe(true)
     expect(isVisibleFilterKey('service')).toBe(true)
+    expect(isVisibleFilterKey('resource_attributes.service.name')).toBe(true)
   })
 
   it('keeps the service chip visible while no service role is resolved', () => {
