@@ -18,6 +18,7 @@ export default {
   'tour.guide.theQuery': '查询语句',
   'tour.guide.presetTitle': '预设条件',
   'tour.guide.whereToLook': '在哪里看',
+  'tour.guide.tryACase': '试一个案例',
   'tour.guide.table': '数据表',
   'tour.guide.filters': '过滤条件',
   'tour.guide.sort': '排序',
@@ -87,21 +88,21 @@ export default {
   'tour.steps.traces.points.2.detail': '打开演示故障注入后，列表会充满失败的结账请求。',
   'tour.steps.signals-explore.name': '信号探索',
   'tour.steps.signals-explore.title': '信号探索',
-  'tour.steps.signals-explore.scenarioTitle': '切换信号 tab，上下文不丢',
+  'tour.steps.signals-explore.scenarioTitle': '选一个信号，上下文跟着走',
   'tour.steps.signals-explore.capability': 'GreptimeDB 用同一套数据库模型存储和查询 metrics、logs、traces。',
-  'tour.steps.signals-explore.scenario':
-    'Metrics、Logs、Traces 共用一个工作区——切换 tab 时 Filter 与时间范围保持一致。',
-  'tour.steps.signals-explore.points.0.lead': 'Metrics',
-  'tour.steps.signals-explore.points.0.detail': '浏览并筛选序列，快速定位异常时间段，再点进单条做标签拆解。',
-  'tour.steps.signals-explore.points.1.lead': 'Logs',
-  'tour.steps.signals-explore.points.1.detail':
-    '选表，按服务 / 级别 / 标签过滤，对照量级图读日志；通过 trace_id 跳到对应 Trace。',
-  'tour.steps.signals-explore.points.2.lead': 'Traces',
-  'tour.steps.signals-explore.points.2.detail':
-    'RED 总览与错误 / 慢请求列表，打开一条看瀑布图；View logs 按同一 trace_id 拉出相关日志。',
-  'tour.steps.signals-explore.where.0': '顶部 tab：Metrics / Logs / Traces',
-  'tour.steps.signals-explore.where.1': '时间范围旁的共享 Filter（跨 tab 保留）',
-  'tour.steps.signals-explore.where.2': 'Logs ↔ Traces 通过 trace_id 关联',
+  'tour.steps.signals-explore.cases.metrics.title': '从指标定位异常时间窗',
+  'tour.steps.signals-explore.cases.metrics.detail':
+    '浏览并筛选序列，点进单条做拆解，再带着同一 Filter 去看 Logs 或 Traces。',
+  'tour.steps.signals-explore.cases.logs.title': '打开 ERROR 及以上日志',
+  'tour.steps.signals-explore.cases.logs.detail':
+    '进入 opentelemetry_logs——按服务 / 级别过滤，通过 trace_id 跳到对应链路。',
+  'tour.steps.signals-explore.cases.traces.title': '找失败或慢请求',
+  'tour.steps.signals-explore.cases.traces.detail':
+    'RED 总览与错误 / 慢请求列表，打开一条看瀑布图；View logs 按同一 trace_id 拉日志。',
+  'tour.steps.signals-explore.points.0.lead': '共享时间与 Filter',
+  'tour.steps.signals-explore.points.0.detail': '三个信号共用同一顶栏——切换 tab 不会重置排查时间窗。',
+  'tour.steps.signals-explore.points.1.lead': 'Logs ↔ Traces',
+  'tour.steps.signals-explore.points.1.detail': '日志行点 trace_id 看瀑布图；从 Trace 用 View logs 拉关联日志。',
   'tour.steps.visualization.name': '可视化',
   'tour.steps.visualization.title': '可视化',
   'tour.steps.visualization.scenarioTitle': '同一批查询，变成面板',

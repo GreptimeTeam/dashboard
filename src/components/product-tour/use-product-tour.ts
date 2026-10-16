@@ -6,7 +6,16 @@ import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/store'
 import { useQueryFocusMode } from '@/composables/use-query-focus-mode'
 import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
-import { getTourBrowseQuery, getTourStep, isTourStepId, matchTourStepFromRoute, type TourStepId } from './tour-steps'
+import {
+  getTourBrowseQuery,
+  getTourExploreCaseQuery,
+  getTourStep,
+  isTourStepId,
+  matchTourStepFromRoute,
+  TOUR_STEPS,
+  type TourExploreCaseId,
+  type TourStepId,
+} from './tour-steps'
 
 export type TourState = 'not_started' | 'active' | 'dismissed'
 export type TourPanelLayout = 'docked' | 'drawer' | 'sheet'
@@ -164,13 +173,29 @@ export function useProductTour() {
   }
 
   function beginTour() {
+    const firstStepId = TOUR_STEPS[0].id
     welcomeOpen.value = false
     state.value.welcomeSeen = true
     state.value.tourState = 'active'
-    state.value.activeStepId = 'sql'
+    state.value.activeStepId = firstStepId
     view.value = 'guide'
     state.value.panelState = 'expanded'
-    selectStep('sql').catch(() => undefined)
+    selectStep(firstStepId).catch(() => undefined)
+  }
+
+  /** Switch Signals Explore case while keeping shared topbar time/filters. */
+  async function applyExploreCase(caseId: TourExploreCaseId) {
+    const stepId = state.value.activeStepId
+    if (!stepId) return
+    const step = getTourStep(stepId)
+    const query = getTourExploreCaseQuery(step, caseId, route.query)
+    if (!query) return
+
+    await router.replace({
+      path: step.location.path,
+      query,
+    })
+    syncPanelAfterNavigation()
   }
 
   function expandPanel() {
@@ -293,6 +318,7 @@ export function useProductTour() {
     expandPanel,
     collapsePanel,
     selectStep,
+    applyExploreCase,
     runExample,
     endTour,
     openFromEntry,

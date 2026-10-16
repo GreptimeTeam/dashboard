@@ -3,6 +3,7 @@ import { decodeMaybeEncoded } from '@/utils/query-url'
 import enTour from '@/locale/en-US/tour'
 import zhTour from '@/locale/zh-CN/tour'
 import {
+  TOUR_EXPLORE_TIME_LENGTH,
   TOUR_LOGS_BUILDER_FORM,
   TOUR_PROMQL_QUERY,
   TOUR_SQL_QUERY,
@@ -11,6 +12,7 @@ import {
   TOUR_TQL_QUERY,
   TOUR_TRACES_BUILDER_FORM,
   getTourBrowseQuery,
+  getTourExploreCaseQuery,
   getTourStep,
   isTourStepId,
   matchTourStepFromRoute,
@@ -18,8 +20,9 @@ import {
 
 describe('tour steps config', () => {
   it('contains the 7 canonical steps in order', () => {
-    expect(TOUR_STEP_IDS).toEqual(['sql', 'promql', 'tql', 'logs', 'traces', 'signals-explore', 'visualization'])
+    expect(TOUR_STEP_IDS).toEqual(['signals-explore', 'sql', 'promql', 'tql', 'logs', 'traces', 'visualization'])
     expect(new Set(TOUR_STEP_IDS).size).toBe(TOUR_STEPS.length)
+    expect(TOUR_STEPS[0].id).toBe('signals-explore')
   })
 
   it('keeps display payload consistent with the display type', () => {
@@ -45,9 +48,37 @@ describe('tour steps config', () => {
     expect(getTourStep('promql').location.query.timeLength).toBe('30')
     expect(getTourStep('logs').location.query.timeLength).toBe('60')
     expect(getTourStep('traces').location.query.timeLength).toBe('60')
-    expect(getTourStep('signals-explore').location.query.timeLength).toBe('30')
+    expect(getTourStep('signals-explore').location.query.timeLength).toBe(TOUR_EXPLORE_TIME_LENGTH)
     expect(getTourStep('logs').preset?.timeRangeKey).toBe('tour.presets.last1Hour')
     expect(getTourStep('traces').preset?.timeRangeKey).toBe('tour.presets.last1Hour')
+  })
+
+  it('defines Signals Explore cases without per-case timeLength', () => {
+    const step = getTourStep('signals-explore')
+    expect(step.cases?.map((item) => item.id)).toEqual(['metrics', 'logs', 'traces'])
+    step.cases?.forEach((item) => {
+      expect(item.query.signal).toBe(item.id)
+      expect(item.query.timeLength).toBeUndefined()
+    })
+    expect(step.cases?.find((item) => item.id === 'logs')?.query.logsTable).toBe('opentelemetry_logs')
+  })
+
+  it('merges explore case query with shared topbar time/filters', () => {
+    const step = getTourStep('signals-explore')
+    expect(getTourExploreCaseQuery(step, 'logs', { timeLength: '45', filters: '%5B%5D' })).toEqual({
+      timeLength: '45',
+      filters: '%5B%5D',
+      signal: 'logs',
+      logsTable: 'opentelemetry_logs',
+    })
+    expect(getTourExploreCaseQuery(step, 'traces', {})).toEqual({
+      timeLength: TOUR_EXPLORE_TIME_LENGTH,
+      signal: 'traces',
+    })
+    expect(getTourExploreCaseQuery(step, 'metrics', { timeRange: '1,2' })).toEqual({
+      timeRange: '1,2',
+      signal: 'metrics',
+    })
   })
 
   it('round-trips encoded query payloads', () => {
@@ -88,12 +119,21 @@ describe('tour steps config', () => {
         expect(messages[`${key}.title`]).toBeTruthy()
         expect(messages[`${key}.scenarioTitle`]).toBeTruthy()
         expect(messages[`${key}.capability`]).toBeTruthy()
-        expect(messages[`${key}.scenario`]).toBeTruthy()
         expect(messages[`${key}.subtitle`]).toBeUndefined()
         expect(messages[`${key}.points.0.lead`]).toBeTruthy()
         expect(messages[`${key}.points.0.detail`]).toBeTruthy()
-        if (step.display === 'where') {
-          expect(messages[`${key}.where.0`]).toBeTruthy()
+        if (step.cases?.length) {
+          step.cases.forEach((item) => {
+            expect(messages[item.titleKey]).toBeTruthy()
+            expect(messages[item.detailKey]).toBeTruthy()
+          })
+          expect(messages[`${key}.scenario`]).toBeUndefined()
+          expect(messages[`${key}.where.0`]).toBeUndefined()
+        } else {
+          expect(messages[`${key}.scenario`]).toBeTruthy()
+          if (step.display === 'where') {
+            expect(messages[`${key}.where.0`]).toBeTruthy()
+          }
         }
       })
       expect(messages['tour.welcome.title']).toBeTruthy()
@@ -103,6 +143,7 @@ describe('tour steps config', () => {
       expect(messages['tour.guide.switchSteps']).toBeTruthy()
       expect(messages['tour.guide.switchStepsHint']).toBeTruthy()
       expect(messages['tour.guide.viewDocs']).toBeTruthy()
+      expect(messages['tour.guide.tryACase']).toBeTruthy()
       expect(messages['tour.guide.pillWithStep']).toBeTruthy()
       expect(messages['tour.guide.runQuery']).toBeTruthy()
       expect(messages['tour.guide.zoneExplain']).toBeTruthy()
@@ -124,7 +165,7 @@ describe('tour steps config', () => {
     })
     expect(getTourBrowseQuery(getTourStep('signals-explore'))).toEqual({
       signal: 'metrics',
-      timeLength: '30',
+      timeLength: TOUR_EXPLORE_TIME_LENGTH,
     })
     expect(getTourBrowseQuery(getTourStep('visualization'))).toEqual({
       dashboard: 'astronomy-shop-overview',

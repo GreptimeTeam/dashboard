@@ -18,6 +18,7 @@ export default {
   'tour.guide.theQuery': 'The query',
   'tour.guide.presetTitle': 'Preset',
   'tour.guide.whereToLook': 'Where to look',
+  'tour.guide.tryACase': 'Try a case',
   'tour.guide.table': 'Table',
   'tour.guide.filters': 'Filters',
   'tour.guide.sort': 'Sort',
@@ -91,23 +92,24 @@ export default {
   'tour.steps.traces.points.2.detail': 'Flip the demo flag and this list fills with failed checkouts.',
   'tour.steps.signals-explore.name': 'Signals Explore',
   'tour.steps.signals-explore.title': 'Signals Explore',
-  'tour.steps.signals-explore.scenarioTitle': 'switch tabs without losing context',
+  'tour.steps.signals-explore.scenarioTitle': 'pick a signal, keep the same context',
   'tour.steps.signals-explore.capability':
     'GreptimeDB uses one database model to store and query metrics, logs, and traces.',
-  'tour.steps.signals-explore.scenario':
-    'Metrics, Logs, and Traces share one workspace — the same filters and time range follow you across tabs.',
-  'tour.steps.signals-explore.points.0.lead': 'Metrics',
+  'tour.steps.signals-explore.cases.metrics.title': 'Browse metrics for the window that went wrong',
+  'tour.steps.signals-explore.cases.metrics.detail':
+    'Scan series, open one for breakdowns, then reuse the same filters on Logs or Traces.',
+  'tour.steps.signals-explore.cases.logs.title': 'Open ERROR-and-above logs',
+  'tour.steps.signals-explore.cases.logs.detail':
+    'Land on opentelemetry_logs — filter by service / level, jump via trace_id to the matching trace.',
+  'tour.steps.signals-explore.cases.traces.title': 'Find failed or slow requests',
+  'tour.steps.signals-explore.cases.traces.detail':
+    'RED overview, errored / slow lists, then a waterfall; View logs loads rows for the same trace_id.',
+  'tour.steps.signals-explore.points.0.lead': 'Shared time + filters',
   'tour.steps.signals-explore.points.0.detail':
-    'Browse and filter series to narrow the window where things went wrong, then open one for breakdowns.',
-  'tour.steps.signals-explore.points.1.lead': 'Logs',
+    'One top bar for all three signals — switch tabs without resetting the investigation window.',
+  'tour.steps.signals-explore.points.1.lead': 'Logs ↔ Traces',
   'tour.steps.signals-explore.points.1.detail':
-    'Pick a table, filter by service / level / labels, read volume + rows — jump via trace_id to the matching trace.',
-  'tour.steps.signals-explore.points.2.lead': 'Traces',
-  'tour.steps.signals-explore.points.2.detail':
-    'RED overview, errored / slow lists, then a waterfall; View logs loads rows linked by the same trace_id.',
-  'tour.steps.signals-explore.where.0': 'Top tabs: Metrics / Logs / Traces',
-  'tour.steps.signals-explore.where.1': 'Shared Filter next to the time range (kept across tabs)',
-  'tour.steps.signals-explore.where.2': 'Logs ↔ Traces linked by trace_id',
+    'Click a log row’s trace_id for the waterfall; from a trace, View logs loads linked rows.',
   'tour.steps.visualization.name': 'Visualization',
   'tour.steps.visualization.title': 'Visualization',
   'tour.steps.visualization.scenarioTitle': 'the same queries, now as panels',

@@ -52,10 +52,30 @@
       <section class="tour-zone tour-zone--loaded">
         <section class="tour-scenario">
           <h4 class="tour-scenario-title">{{ $t(`${stepKey}.scenarioTitle`) }}</h4>
-          <p class="tour-intro">{{ $t(`${stepKey}.scenario`) }}</p>
+          <p v-if="scenarioText" class="tour-intro">{{ scenarioText }}</p>
         </section>
 
-        <template v-if="activeStep.display === 'where'">
+        <template v-if="activeStep.cases?.length">
+          <div class="tour-zone-body">
+            <header class="tour-zone-header">
+              <span class="tour-zone-label">{{ $t('tour.guide.tryACase') }}</span>
+            </header>
+            <div class="tour-case-list">
+              <button
+                v-for="item in activeStep.cases"
+                :key="item.id"
+                type="button"
+                class="tour-case-item"
+                :class="{ 'tour-case-item--current': item.id === currentExploreCaseId }"
+                @click="tour.applyExploreCase(item.id)"
+              >
+                <span class="tour-case-title">{{ $t(item.titleKey) }}</span>
+                <span class="tour-case-detail">{{ $t(item.detailKey) }}</span>
+              </button>
+            </div>
+          </div>
+        </template>
+        <template v-else-if="activeStep.display === 'where'">
           <div class="tour-zone-body">
             <header class="tour-zone-header">
               <span class="tour-zone-label">{{ $t('tour.guide.whereToLook') }}</span>
@@ -150,13 +170,15 @@
 
 <script setup lang="ts" name="TourGuidePanel">
   import { computed } from 'vue'
+  import { useRoute } from 'vue-router'
   import { useI18n } from 'vue-i18n'
   import { Message } from '@arco-design/web-vue'
   import ExploreIconComponent from '@/assets/svg/explore.svg'
-  import { TOUR_STEPS } from './tour-steps'
+  import { TOUR_STEPS, type TourExploreCaseId } from './tour-steps'
   import { useProductTour } from './use-product-tour'
 
   const tour = useProductTour()
+  const route = useRoute()
   const { t, locale } = useI18n()
 
   const activeStep = computed(() => tour.activeStep.value)
@@ -164,6 +186,10 @@
   const docsUrl = computed(() => {
     const docsOrigin = locale.value === 'zh-CN' ? 'https://docs.greptime.cn' : 'https://docs.greptime.com'
     return `${docsOrigin}${activeStep.value?.docsPath ?? ''}`
+  })
+  const scenarioText = computed(() => {
+    const text = t(`${stepKey.value}.scenario`)
+    return text && !text.startsWith('tour.') ? text : ''
   })
   const pointItems = computed(() =>
     [0, 1, 2]
@@ -176,6 +202,13 @@
   const whereItems = computed(() =>
     [0, 1, 2].map((i) => t(`${stepKey.value}.where.${i}`)).filter((item) => item && !item.startsWith('tour.'))
   )
+  const currentExploreCaseId = computed<TourExploreCaseId | null>(() => {
+    if (!activeStep.value?.cases?.length) return null
+    const raw = route.query.signal
+    const signal = Array.isArray(raw) ? raw[0] : raw
+    if (signal === 'logs' || signal === 'traces') return signal
+    return 'metrics'
+  })
 
   async function copyCode(code: string) {
     try {
@@ -504,6 +537,50 @@
         content: '';
       }
     }
+  }
+
+  .tour-case-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gpt-gap-md);
+  }
+
+  .tour-case-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gpt-gap-2xs);
+    width: 100%;
+    padding: var(--gpt-gap-md) var(--gpt-gap-lg);
+    text-align: left;
+    cursor: pointer;
+    background: var(--gpt-bg-panel);
+    border: 1px solid var(--gpt-border-strong);
+    border-radius: var(--gpt-radius-sm);
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+
+    &:hover {
+      border-color: var(--gpt-main-purple);
+      background: var(--gpt-nav-active-bg);
+    }
+
+    &.tour-case-item--current {
+      background: var(--gpt-nav-active-bg);
+      border-color: var(--gpt-main-purple);
+    }
+  }
+
+  .tour-case-title {
+    color: var(--gpt-text-primary);
+    font-size: var(--gpt-font-md);
+    font-weight: var(--gpt-font-weight-control);
+    line-height: 1.45;
+  }
+
+  .tour-case-detail {
+    color: var(--gpt-text-secondary);
+    font-size: var(--gpt-font-base);
+    font-weight: var(--gpt-font-weight-regular);
+    line-height: 1.55;
   }
 
   .tour-points {

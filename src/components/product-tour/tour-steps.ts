@@ -69,6 +69,17 @@ export interface TourPresetSummary {
   timeRangeKey: string
 }
 
+/** Case entry inside Signals Explore — switches signal; shares topbar time/filters. */
+export type TourExploreCaseId = 'metrics' | 'logs' | 'traces'
+
+export interface TourExploreCase {
+  id: TourExploreCaseId
+  titleKey: string
+  detailKey: string
+  /** Signal-specific query deltas (no timeLength — shared with the hub step). */
+  query: Record<string, string>
+}
+
 export interface TourStep {
   id: TourStepId
   /** Flat i18n key under `tour.steps.<id>` namespace. */
@@ -86,11 +97,16 @@ export interface TourStep {
   builderForm?: unknown
   /** Human-readable preset rows (preset display). */
   preset?: TourPresetSummary
+  /** Hub cases for Signals Explore (optional). */
+  cases?: TourExploreCase[]
   /** Primary GreptimeDB documentation page for the capability. */
   docsPath: string
   /** Route + query the tile navigates to. */
   location: { path: string; query: Record<string, string> }
 }
+
+/** Shared time window for Signals Explore hub + cases (topbar time is cross-tab). */
+export const TOUR_EXPLORE_TIME_LENGTH = '30'
 
 const QUERY_PATH = '/dashboard/query'
 const LOGS_BUILDER_FORM_JSON = JSON.stringify(TOUR_LOGS_BUILDER_FORM)
@@ -103,6 +119,40 @@ const sqlExact = (expected: string) => (route: { name?: unknown; query: Location
 }
 
 export const TOUR_STEPS: TourStep[] = [
+  {
+    id: 'signals-explore',
+    nameKey: 'tour.steps.signals-explore.name',
+    titleKey: 'tour.steps.signals-explore.title',
+    icon: 'query',
+    baseRouteName: 'explore',
+    display: 'where',
+    docsPath: '/user-guide/concepts/why-greptimedb/#why-one-engine-for-three-signals',
+    cases: [
+      {
+        id: 'metrics',
+        titleKey: 'tour.steps.signals-explore.cases.metrics.title',
+        detailKey: 'tour.steps.signals-explore.cases.metrics.detail',
+        query: { signal: 'metrics' },
+      },
+      {
+        id: 'logs',
+        titleKey: 'tour.steps.signals-explore.cases.logs.title',
+        detailKey: 'tour.steps.signals-explore.cases.logs.detail',
+        query: { signal: 'logs', logsTable: 'opentelemetry_logs' },
+      },
+      {
+        id: 'traces',
+        titleKey: 'tour.steps.signals-explore.cases.traces.title',
+        detailKey: 'tour.steps.signals-explore.cases.traces.detail',
+        query: { signal: 'traces' },
+      },
+    ],
+    location: {
+      path: '/dashboard/explore',
+      // Hub lands on Metrics; cases switch signal while keeping shared time/filters.
+      query: { signal: 'metrics', timeLength: TOUR_EXPLORE_TIME_LENGTH },
+    },
+  },
   {
     id: 'sql',
     nameKey: 'tour.steps.sql.name',
@@ -197,20 +247,6 @@ export const TOUR_STEPS: TourStep[] = [
     },
   },
   {
-    id: 'signals-explore',
-    nameKey: 'tour.steps.signals-explore.name',
-    titleKey: 'tour.steps.signals-explore.title',
-    icon: 'query',
-    baseRouteName: 'explore',
-    display: 'where',
-    docsPath: '/user-guide/concepts/why-greptimedb/#why-one-engine-for-three-signals',
-    location: {
-      path: '/dashboard/explore',
-      // Demo lands on Metrics; any signal tab is a valid entry point.
-      query: { signal: 'metrics', timeLength: '30' },
-    },
-  },
-  {
     id: 'visualization',
     nameKey: 'tour.steps.visualization.name',
     titleKey: 'tour.steps.visualization.title',
@@ -243,6 +279,36 @@ const TOUR_PAYLOAD_QUERY_KEYS = new Set(['sql', 'promql', 'builderForm', 'tourAp
 /** Browse-only query: keep page context (tab, timeLength, …), drop fill/run payloads. */
 export function getTourBrowseQuery(step: TourStep): Record<string, string> {
   return Object.fromEntries(Object.entries(step.location.query).filter(([key]) => !TOUR_PAYLOAD_QUERY_KEYS.has(key)))
+}
+
+/** Shared explore topbar keys — preserved when switching cases. */
+const TOUR_EXPLORE_SHARED_QUERY_KEYS = ['timeLength', 'timeRange', 'filters'] as const
+
+/**
+ * Build explore URL query for a hub case: keep current time/filters, apply case signal deltas.
+ * Falls back to the step default timeLength when the route has no time yet.
+ */
+export function getTourExploreCaseQuery(
+  step: TourStep,
+  caseId: TourExploreCaseId,
+  currentQuery: LocationQuery
+): Record<string, string> | null {
+  const exploreCase = step.cases?.find((item) => item.id === caseId)
+  if (!exploreCase) return null
+
+  const shared: Record<string, string> = {}
+  TOUR_EXPLORE_SHARED_QUERY_KEYS.forEach((key) => {
+    const raw = currentQuery[key]
+    const value = Array.isArray(raw) ? raw[0] : raw
+    if (typeof value === 'string' && value) {
+      shared[key] = value
+    }
+  })
+  if (!shared.timeLength && !shared.timeRange) {
+    shared.timeLength = step.location.query.timeLength || TOUR_EXPLORE_TIME_LENGTH
+  }
+
+  return { ...shared, ...exploreCase.query }
 }
 
 /**
