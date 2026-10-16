@@ -26,6 +26,11 @@
   import { useDrilldownContext } from '@/observability/context'
   import { fetchSeverityLevels, type LabelValueRow } from '@/observability/adapters/logs'
   import { addFilter, splitFilterOrValues } from '@/observability/filters'
+  import {
+    findOwnedLogsDetailFilter,
+    ownedLogsFilterOptions,
+    removeOwnedLogsFilterVariants,
+  } from '@/observability/logs/filter-semantics'
 
   const props = defineProps<{
     /** Physical severity column from field settings. Hidden when unset. */
@@ -59,8 +64,11 @@
     get(): string[] {
       const col = severityColumn.value
       if (!col) return []
-      const severityFilter = ctx.query.filters.value.find(
-        (filter) => filter.key === col && (filter.op === '=' || filter.op === '=~')
+      const severityFilter = findOwnedLogsDetailFilter(
+        ctx.query.filters.value,
+        'severity',
+        ownedLogsFilterOptions(ctx),
+        (filter) => filter.op === '=' || filter.op === '=~'
       )
       if (!severityFilter) {
         return []
@@ -71,8 +79,9 @@
       const col = severityColumn.value
       if (!col) return
       ensureSeverityMapped()
+      const options = ownedLogsFilterOptions(ctx)
       const nextValues = [...new Set((values ?? []).map((value) => value.trim()).filter(Boolean))]
-      let next = ctx.query.filters.value.filter((filter) => filter.key !== col)
+      let next = removeOwnedLogsFilterVariants(ctx.query.filters.value, 'severity', options)
       nextValues.forEach((value) => {
         next = addFilter(next, { key: col, op: '=', value })
       })

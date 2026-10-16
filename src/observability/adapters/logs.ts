@@ -18,6 +18,7 @@ import {
 } from '../logs/field-map'
 import { normalizeLogLevelName, UNKNOWN_LOG_LEVEL } from '../logs/level-color'
 import { buildSeverityLevelsPredicate } from '../logs/level-visibility'
+import { effectiveLogsDetailFilters, isDirectLogsDetail, ownedLogsFilterOptions } from '../logs/filter-semantics'
 import { escapeSqlString, logsColumnExpr, quoteIdent } from '../logs/query-state'
 import { pivotLogVolumeByName, pivotLogVolumeRows, type LogVolumeSeries } from '../logs/volume-series'
 import { grafanaAutoIntervalSeconds } from '../logs/volume-step'
@@ -127,6 +128,13 @@ function appendExtraWhere(where: string, extra?: string): string {
   return where ? `${where} AND (${clause})` : clause
 }
 
+function contextFilters(ctx: DrilldownContext) {
+  return effectiveLogsDetailFilters(ctx.query.filters.value, {
+    ...ownedLogsFilterOptions(ctx),
+    enabled: isDirectLogsDetail(ctx),
+  })
+}
+
 export async function buildLogsContextWhere(
   ctx: DrilldownContext,
   options?: {
@@ -179,8 +187,9 @@ export async function buildLogsContextWhere(
 
   if (includeLabelFilters && columns) {
     const settings = loadDrilldownSettings(boundSignalDatabase(ctx, 'logs')).logs
+    const filters = contextFilters(ctx)
     whereParts.push(
-      ...filtersToSqlWhere(ctx.query.filters.value, fieldMap, {
+      ...filtersToSqlWhere(filters, fieldMap, {
         excludeKey: options?.excludeFilterKey,
         columns: columns.map((column) => column.name),
         jsonColumns: listJsonAttributeColumns(columns),
@@ -223,7 +232,7 @@ export async function buildLogsWhere(ctx: DrilldownContext): Promise<string> {
   const columns = await loadSchema(tableName, boundSignalDatabase(ctx, 'logs'))
   const fieldMap = ctx.semantics.logs.fieldMap.value
   const settings = loadDrilldownSettings(boundSignalDatabase(ctx, 'logs')).logs
-  const whereParts = filtersToSqlWhere(ctx.query.filters.value, fieldMap, {
+  const whereParts = filtersToSqlWhere(contextFilters(ctx), fieldMap, {
     columns: columns.map((column) => column.name),
     jsonColumns: listJsonAttributeColumns(columns),
     typeOf: (column) => ctx.semantics.logs.columnTypes.value?.[column],

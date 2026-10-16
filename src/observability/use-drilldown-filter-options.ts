@@ -13,6 +13,7 @@ import { loadDrilldownSettings } from './drilldown-settings'
 import { filterAppliesToSignal } from './filters'
 import { parseJsonFieldChipKey } from './logs/json-field-keys'
 import { isLogsContainsFilterKey } from './logs/field-map'
+import { isDirectLogsDetail, ownedLogsDetailFilterRole, ownedLogsFilterOptions } from './logs/filter-semantics'
 import resolveLogsRoles from './logs/resolved-roles'
 
 export type FilterSuggestMode = 'default' | 'fields'
@@ -41,7 +42,7 @@ export default function useDrilldownFilterOptions(
     if (suggestMode === 'fields') {
       const keys = await fetchSqlFieldKeys(ctx, search)
       // Level filter owns severity — keep it out of the field combobox.
-      const severityCol = ctx.semantics.logs.fieldMap.value.severity
+      const severityCol = resolveLogsRoles(ctx).severity
       return keys.filter((key) => key !== 'severity' && key !== severityCol)
     }
     return fetchFilterKeyOptions(ctx, search)
@@ -123,7 +124,7 @@ export default function useDrilldownFilterOptions(
 
   /**
    * Whether a committed chip belongs in this combobox.
-   * Logs detail: hide severity / resolved service — LevelFilter + service select own them.
+   * Direct Logs detail: hide body / severity / service — the detail toolbar owns them.
    * Logs overview: show them in the top bar (those controls only exist on detail).
    */
   const isVisibleFilterKey = (key: string): boolean => {
@@ -134,19 +135,22 @@ export default function useDrilldownFilterOptions(
 
     if (ctx.connection.signal.value === 'logs') {
       const fieldMap = ctx.semantics.logs.fieldMap.value
-      // Detail toolbar owns severity / service display; on overview the top bar is the only
-      // place Add to filter chips can appear (homepage labels default to service / primaryGroupBy).
-      const severityCol = fieldMap.severity
-      const serviceCol = resolveLogsRoles(ctx).service
+      const roles = resolveLogsRoles(ctx)
+      if (isDirectLogsDetail(ctx) && ownedLogsDetailFilterRole(trimmed, ownedLogsFilterOptions(ctx))) {
+        return false
+      }
+
+      // Overview top bar is the only place these shared chips appear (detail owns them).
+      const severityCol = roles.severity
+      const serviceCol = roles.service
       const isSeverityKey = trimmed === 'severity' || (Boolean(severityCol) && trimmed === severityCol)
-      const isServiceKey = Boolean(serviceCol) && trimmed === serviceCol
-      if (ctx.ui.logsView.value === 'detail') {
-        // Same shared filter as LevelFilter / service select — do not duplicate the pill.
-        // Canonical `service` alias stays visible; the select only syncs the resolved key.
-        if (isSeverityKey || isServiceKey) {
-          return false
-        }
-      } else if (isSeverityKey || isServiceKey) {
+      const isBodyKey = Boolean(roles.body) && (trimmed === 'body' || trimmed === roles.body)
+      const isServiceKey =
+        Boolean(serviceCol) &&
+        (trimmed === serviceCol ||
+          trimmed === ctx.semantics.logs.entityFilterKeys.value?.service ||
+          trimmed === 'service')
+      if (isSeverityKey || isBodyKey || isServiceKey) {
         return true
       }
       // Homepage Labels default to primaryGroupBy; keep that column visible even before
@@ -168,7 +172,7 @@ export default function useDrilldownFilterOptions(
       // Topbar: suggested keys, plus the keys that own a dedicated entry point (service
       // aliases, body role). Those are no longer offered as suggestions, but a filter carried
       // in a URL must stay visible instead of silently filtering without any pill.
-      if (trimmed === 'service' || trimmed === 'primaryGroupBy' || trimmed === fieldMap.body) {
+      if (trimmed === 'service' || trimmed === 'primaryGroupBy' || trimmed === roles.body) {
         return true
       }
       if (labelKeys.value.includes(trimmed)) {
@@ -216,7 +220,8 @@ export default function useDrilldownFilterOptions(
       // Single settings read per evaluation — this source re-runs on every signal /
       // revision change. Settings are not reactive: updates propagate via the binder's
       // revision bump (bindTable persist:true).
-      const settings = loadDrilldownSettings().logs
+      const logsDatabase = ctx.semantics.logs.database?.value || ctx.connection.logsDatabase?.value
+      const settings = loadDrilldownSettings(logsDatabase).logs
       return [
         ctx.connection.signal.value,
         ctx.semantics.logs.revision.value,
