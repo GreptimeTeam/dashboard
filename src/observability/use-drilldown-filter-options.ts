@@ -140,6 +140,15 @@ export default function useDrilldownFilterOptions(
         return false
       }
 
+      // Overview suggestion vocabulary is labels-only; still show committed / URL chips
+      // (including field keys) so they are not silently filtering without a pill.
+      if (
+        ctx.ui.logsView.value === 'overview' &&
+        (ctx.query.filters?.value || []).some((filter) => filter.key.trim() === trimmed)
+      ) {
+        return true
+      }
+
       // Overview top bar is the only place these shared chips appear (detail owns them).
       const severityCol = roles.severity
       const serviceCol = roles.service
@@ -224,6 +233,7 @@ export default function useDrilldownFilterOptions(
       const settings = loadDrilldownSettings(logsDatabase).logs
       return [
         ctx.connection.signal.value,
+        ctx.ui.logsView.value,
         ctx.semantics.logs.revision.value,
         ctx.semantics.traces.revision.value,
         settings.labelInclude?.join('\0'),
@@ -238,6 +248,9 @@ export default function useDrilldownFilterOptions(
       }
       await refreshLabelKeys()
       valueOptionsByKey.value = {}
+      if (ctx.connection.signal.value === 'logs') {
+        await loadKeys()
+      }
     },
     { immediate: true }
   )

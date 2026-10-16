@@ -179,7 +179,13 @@ export async function fetchLogsContainsKeyOptions(ctx: DrilldownContext): Promis
   }
 }
 
-/** Logs top-bar keys: labels except severity, plus contains columns. Severity stays on the Level select. */
+/**
+ * Logs top-bar suggest keys.
+ *
+ * Overview (Grafana Service Selection parity): label vocabulary only — TAG / settings
+ * include / OTEL index labels / service identity. High-cardinality fields and body stay out.
+ * Detail: long-tail physical columns minus dedicated entry points (body / severity / service).
+ */
 export async function fetchLogsFilterKeyOptions(ctx: DrilldownContext, search = ''): Promise<string[]> {
   const tableName = sqlTableForSignal(ctx, 'logs')
   if (!tableName) {
@@ -192,15 +198,24 @@ export async function fetchLogsFilterKeyOptions(ctx: DrilldownContext, search = 
       boundSignalDatabase(ctx, 'logs')
     )) as SchemaColumn[]
     const fieldMap = fieldMapForSignal(ctx, 'logs')
-    const settings = loadDrilldownSettings(boundSignalDatabase(ctx, 'logs')).logs
-    const keys = await discoverLogFilterKeys(tableName, columns, fieldMap, {
-      include: settings?.labelInclude,
-      exclude: settings?.labelExclude,
-      // Service keeps its own entry point (detail row / cross-signal chip), so it is not
-      // offered again from the generic suggestion list.
-      serviceKey: ctx.semantics.logs.entityFilterKeys.value?.service,
-      database: boundSignalDatabase(ctx, 'logs'),
-    })
+    const database = boundSignalDatabase(ctx, 'logs')
+    const settings = loadDrilldownSettings(database).logs
+    const serviceKey = ctx.semantics.logs.entityFilterKeys.value?.service
+    const keys =
+      ctx.ui.logsView.value === 'overview'
+        ? await discoverLogLabelKeys(tableName, columns, fieldMap, {
+            include: settings?.labelInclude,
+            exclude: settings?.labelExclude,
+            identityChip: serviceKey,
+            database,
+          })
+        : await discoverLogFilterKeys(tableName, columns, fieldMap, {
+            include: settings?.labelInclude,
+            exclude: settings?.labelExclude,
+            // Detail toolbar owns service — do not offer it again from the generic list.
+            serviceKey,
+            database,
+          })
     return filterOptions(filterLabelKeys(keys), search)
   } catch (error) {
     console.error('Failed to load logs filter keys:', error)
