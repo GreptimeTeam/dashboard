@@ -39,22 +39,14 @@ export default function useQueryCode() {
   const inputFromNewLineToQueryCode = (code: string, cursorBack: number) => {
     queryType.value = 'sql'
     const { state } = sqlView.value
-
-    let lastChild
-    if (state.doc.children) {
-      lastChild = state.doc.children[state.doc.children.length - 1]
-    }
-    const lastLineCode = state.doc.children
-      ? state.doc.children[state.doc.children.length - 1].text[lastChild.text.length - 1]
-      : state.doc.text[state.doc.text.length - 1]
-    const changes = {
-      from: state.doc.length,
-      insert: `${lastLineCode.trim() === '' ? '' : '\n'}${code}`,
-    }
-    const cursorPosition = state.doc.length + code.length + (lastLineCode.trim() === '' ? 0 : 1) - cursorBack
+    const docLen = state.doc.length
+    // Prefer CM6 Text.sliceString — `doc.text` / `doc.children` shapes vary by tree size.
+    const needsLeadingNewline = docLen > 0 && state.doc.sliceString(docLen - 1, docLen) !== '\n'
+    const insert = `${needsLeadingNewline ? '\n' : ''}${code}`
+    const cursorPosition = docLen + insert.length - cursorBack
     sqlView.value.focus()
     sqlView.value.dispatch({
-      changes,
+      changes: { from: docLen, insert },
       selection: EditorSelection.create([EditorSelection.cursor(cursorPosition)]),
       scrollIntoView: true,
     })
