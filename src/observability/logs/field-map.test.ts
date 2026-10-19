@@ -149,6 +149,25 @@ describe('discoverLabelColumns', () => {
     ).toEqual(['cluster', 'file', 'level', 'message', 'pod', 'trace_id'])
   })
 
+  it('excludes trace_id from labels even when the schema marks it TAG', () => {
+    const columns: SchemaColumn[] = [
+      { name: 'ts', data_type: 'TimestampNanosecond', semantic_type: 'TIMESTAMP' },
+      { name: 'service_name', data_type: 'String', semantic_type: 'TAG' },
+      { name: 'trace_id', data_type: 'String', semantic_type: 'TAG' },
+      { name: 'span_id', data_type: 'String', semantic_type: 'TAG' },
+      { name: 'body', data_type: 'String', semantic_type: 'FIELD' },
+    ]
+
+    expect(
+      discoverLabelColumns(columns, {
+        time: 'ts',
+        body: 'body',
+        service: 'service_name',
+        trace_id: 'trace_id',
+      })
+    ).toEqual(['service_name'])
+  })
+
   it('keeps TAG columns and other strings; settings include cannot revive an excluded role', () => {
     const columns: SchemaColumn[] = [
       { name: 'ts', data_type: 'TimestampNanosecond', semantic_type: 'TIMESTAMP' },

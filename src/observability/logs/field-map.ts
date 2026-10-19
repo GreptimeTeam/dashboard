@@ -265,7 +265,19 @@ export function listJsonAttributeColumns(columns: SchemaColumn[]): string[] {
 }
 
 function addLabelExcludeSet(fieldMap: Record<string, string>, extraExclude?: string[]): Set<string> {
-  return new Set([...(extraExclude ?? []), fieldMap.time, fieldMap.body].filter(Boolean) as string[])
+  // High-cardinality identity / payload roles are never overview labels, even when the
+  // schema marks them TAG (Greptime often tags trace_id).
+  return new Set(
+    [
+      ...(extraExclude ?? []),
+      fieldMap.time,
+      fieldMap.body,
+      fieldMap.trace_id,
+      fieldMap.traceId,
+      'trace_id',
+      'span_id',
+    ].filter(Boolean) as string[]
+  )
 }
 
 /** True when the chip key resolves to `fieldMap.body` (role or physical name), not a hardcoded column name. */
@@ -530,13 +542,12 @@ export async function discoverLogLabelKeys(
 }
 
 /**
- * Top-bar key list: the *long tail* of the bound table.
+ * Detail top-bar key list: the *long tail* of the bound table.
  *
- * All physical columns except the ones that already own a dedicated entry point —
- * time (time picker), `body` (detail body search row), `severity` (Level select), the service
- * entity key (Service row), TIMESTAMP columns (never a useful predicate) and the JSON
- * containers themselves. JSON attribute chips are not enumerated (no sampling); chips
- * added by other flows still filter through the chip SQL support.
+ * Overview uses `discoverLogLabelKeys` instead (label vocabulary only).
+ * Here: all physical columns except dedicated entry points — time (time picker),
+ * `body` (detail body search), `severity` (Level select), the service entity key,
+ * TIMESTAMP columns, and JSON containers. JSON attribute chips are not enumerated.
  */
 export async function discoverLogFilterKeys(
   tableName: string,

@@ -50,6 +50,12 @@
   import { useDrilldownContext } from '@/observability/context'
   import { fetchLogVolumeByColumn, fetchLogVolumeTimeseries } from '@/observability/adapters/logs'
   import { addFilter, splitFilterOrValues } from '@/observability/filters'
+  import {
+    findOwnedLogsDetailFilter,
+    ownedLogsFilterOptions,
+    removeOwnedLogsFilterVariants,
+  } from '@/observability/logs/filter-semantics'
+  import resolveLogsRoles from '@/observability/logs/resolved-roles'
   import { formatLogCountShort, logLevelColor, normalizeLogLevelName } from '@/observability/logs/level-color'
   import getSeriesColorByIndex from '@/observability/metrics/series-colors'
   import buildLogVolumeBarsOption from '@/observability/logs/volume-bars'
@@ -159,7 +165,7 @@
   )
 
   function severityColumn(): string | undefined {
-    return ctx.semantics.logs.fieldMap.value.severity || undefined
+    return resolveLogsRoles(ctx).severity?.trim() || undefined
   }
 
   function levelsFromFilters(): string[] {
@@ -167,8 +173,11 @@
     if (!column) {
       return []
     }
-    const hit = ctx.query.filters.value.find(
-      (filter) => filter.key === column && (filter.op === '=' || filter.op === '=~')
+    const hit = findOwnedLogsDetailFilter(
+      ctx.query.filters.value,
+      'severity',
+      ownedLogsFilterOptions(ctx),
+      (filter) => filter.op === '=' || filter.op === '=~'
     )
     return hit ? splitFilterOrValues(hit) : []
   }
@@ -217,7 +226,7 @@
       return
     }
     const nextValues = [...new Set(levels.map((value) => value.trim()).filter(Boolean))]
-    let next = ctx.query.filters.value.filter((filter) => filter.key !== column && filter.key !== 'severity')
+    let next = removeOwnedLogsFilterVariants(ctx.query.filters.value, 'severity', ownedLogsFilterOptions(ctx))
     nextValues.forEach((value) => {
       next = addFilter(next, { key: column, op: '=', value })
     })

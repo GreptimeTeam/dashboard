@@ -171,6 +171,7 @@ function createCtx() {
       openTraceGantt,
       closeTraceGantt,
       bindTable,
+      claimOwnedLogsDetailFilters: vi.fn(),
     },
     session: createDrilldownSession(),
   } as unknown as DrilldownContext & {

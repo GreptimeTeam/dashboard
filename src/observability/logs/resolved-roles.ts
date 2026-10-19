@@ -17,7 +17,8 @@ import { loadDrilldownSettings } from '../drilldown-settings'
  */
 export default function resolveLogsRoles(ctx: DrilldownContext): Record<string, string> {
   const roles: Record<string, string> = {}
-  const saved = loadDrilldownSettings().logs.fieldMap
+  const database = ctx.semantics.logs.database?.value || ctx.connection.logsDatabase?.value
+  const saved = loadDrilldownSettings(database).logs.fieldMap
   if (saved) {
     Object.entries(saved).forEach(([role, column]) => {
       if (typeof column === 'string' && column.trim()) {
