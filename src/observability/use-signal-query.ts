@@ -1,6 +1,5 @@
 import { ref, toValue, watch, type WatchSource } from 'vue'
 import type { DrilldownContext } from './context'
-import { effectiveLogsDetailFilters, isDirectLogsDetail, ownedLogsFilterOptions } from './logs/filter-semantics'
 
 export type SignalQuerySignal = 'logs' | 'traces'
 
@@ -32,11 +31,7 @@ function filtersSignature(ctx: DrilldownContext, signal: SignalQuerySignal) {
   if (!shouldWatchFilters(ctx, signal)) {
     return []
   }
-  const filters =
-    signal === 'logs' && isDirectLogsDetail(ctx)
-      ? effectiveLogsDetailFilters(ctx.query.filters.value, ownedLogsFilterOptions(ctx))
-      : ctx.query.filters.value || []
-  return filters.map((filter) => [filter.key, filter.op, filter.value])
+  return (ctx.query.filters.value || []).map((filter) => [filter.key, filter.op, filter.value])
 }
 
 /**

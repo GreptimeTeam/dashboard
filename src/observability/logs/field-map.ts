@@ -265,7 +265,19 @@ export function listJsonAttributeColumns(columns: SchemaColumn[]): string[] {
 }
 
 function addLabelExcludeSet(fieldMap: Record<string, string>, extraExclude?: string[]): Set<string> {
-  return new Set([...(extraExclude ?? []), fieldMap.time, fieldMap.body].filter(Boolean) as string[])
+  // High-cardinality identity / payload roles are never overview labels, even when the
+  // schema marks them TAG (Greptime often tags trace_id).
+  return new Set(
+    [
+      ...(extraExclude ?? []),
+      fieldMap.time,
+      fieldMap.body,
+      fieldMap.trace_id,
+      fieldMap.traceId,
+      'trace_id',
+      'span_id',
+    ].filter(Boolean) as string[]
+  )
 }
 
 /** True when the chip key resolves to `fieldMap.body` (role or physical name), not a hardcoded column name. */

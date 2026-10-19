@@ -244,6 +244,8 @@ export default function useDrilldownUrlSync(
       const opRaw = typeof bodyOp === 'string' ? bodyOp : ''
       ctx.ui.logsBodyOp.value = isLogsBodyOp(opRaw) ? opRaw : DEFAULT_LOGS_BODY_OP
       ctx.ui.logsBodyValue.value = typeof body === 'string' ? body : ''
+      // After URL filters + body are applied: collapse owned aliases into page controls.
+      ctx.actions.claimOwnedLogsDetailFilters()
     } else {
       ctx.ui.logsBodyOp.value = DEFAULT_LOGS_BODY_OP
       ctx.ui.logsBodyValue.value = ''

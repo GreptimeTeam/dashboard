@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 import {
+  claimOwnedLogsFilters,
   drilldownOpToLogsBodyOp,
-  effectiveLogsDetailFilters,
   findOwnedLogsDetailFilter,
   isDirectLogsDetail,
   ownedLogsDetailFilterRole,
@@ -40,6 +40,48 @@ describe('ownedLogsDetailFilterRole', () => {
   })
 })
 
+describe('claimOwnedLogsFilters', () => {
+  const filters: DrilldownFilter[] = [
+    { key: 'body', op: '=~', value: 'shared' },
+    { key: 'severity', op: '=', value: 'WARN' },
+    { key: 'severity_text', op: '=', value: 'ERROR' },
+    { key: 'service', op: '=', value: 'canonical' },
+    { key: 'resource_attributes.service.name', op: '=', value: 'preferred' },
+    { key: 'host', op: '=', value: 'a' },
+  ]
+
+  it('leaves body chips in shared filters (no migration to the detail box)', () => {
+    const claimed = claimOwnedLogsFilters(filters, baseOptions)
+    expect(claimed).toContainEqual({ key: 'body', op: '=~', value: 'shared' })
+    expect(claimed).toContainEqual({ key: 'host', op: '=', value: 'a' })
+  })
+
+  it('collapses severity aliases onto the resolved column', () => {
+    const claimed = claimOwnedLogsFilters(filters, baseOptions)
+    expect(claimed.filter((filter) => ownedLogsDetailFilterRole(filter.key, baseOptions) === 'severity')).toEqual([
+      { key: 'severity_text', op: '=', value: 'ERROR' },
+    ])
+  })
+
+  it('collapses service aliases onto the resolved entity key', () => {
+    const claimed = claimOwnedLogsFilters(filters, baseOptions)
+    expect(claimed.filter((filter) => ownedLogsDetailFilterRole(filter.key, baseOptions) === 'service')).toEqual([
+      { key: 'resource_attributes.service.name', op: '=', value: 'preferred' },
+    ])
+  })
+
+  it('drops severity aliases LevelFilter cannot represent', () => {
+    const claimed = claimOwnedLogsFilters(
+      [
+        { key: 'severity', op: '!=', value: 'DEBUG' },
+        { key: 'host', op: '=', value: 'a' },
+      ],
+      baseOptions
+    )
+    expect(claimed).toEqual([{ key: 'host', op: '=', value: 'a' }])
+  })
+})
+
 describe('findOwnedLogsDetailFilter', () => {
   it('prefers the resolved physical severity column over the semantic alias', () => {
     const filters: DrilldownFilter[] = [
@@ -51,64 +93,6 @@ describe('findOwnedLogsDetailFilter', () => {
       op: '=',
       value: 'ERROR',
     })
-  })
-
-  it('ignores severity ops LevelFilter cannot represent', () => {
-    expect(
-      findOwnedLogsDetailFilter(
-        [{ key: 'severity', op: '!=', value: 'DEBUG' }],
-        'severity',
-        baseOptions,
-        (filter) => filter.op === '=' || filter.op === '=~'
-      )
-    ).toBeUndefined()
-  })
-})
-
-describe('effectiveLogsDetailFilters', () => {
-  const filters: DrilldownFilter[] = [
-    { key: 'body', op: '=~', value: 'shared' },
-    { key: 'message', op: '=', value: 'physical-body' },
-    { key: 'severity', op: '=', value: 'WARN' },
-    { key: 'severity_text', op: '=', value: 'ERROR' },
-    { key: 'service', op: '=', value: 'canonical' },
-    { key: 'resource_attributes.service.name', op: '=', value: 'preferred' },
-    { key: 'host', op: '=', value: 'a' },
-  ]
-
-  it('drops shared body chips so the detail body box is authoritative', () => {
-    const next = effectiveLogsDetailFilters(filters, baseOptions)
-    expect(next.some((filter) => ownedLogsDetailFilterRole(filter.key, baseOptions) === 'body')).toBe(false)
-    expect(next).toContainEqual({ key: 'host', op: '=', value: 'a' })
-  })
-
-  it('keeps the preferred representable severity chip', () => {
-    const next = effectiveLogsDetailFilters(filters, baseOptions)
-    expect(next.filter((filter) => ownedLogsDetailFilterRole(filter.key, baseOptions) === 'severity')).toEqual([
-      { key: 'severity_text', op: '=', value: 'ERROR' },
-    ])
-  })
-
-  it('suppresses severity aliases LevelFilter cannot represent', () => {
-    const next = effectiveLogsDetailFilters(
-      [
-        { key: 'severity', op: '!=', value: 'DEBUG' },
-        { key: 'host', op: '=', value: 'a' },
-      ],
-      baseOptions
-    )
-    expect(next).toEqual([{ key: 'host', op: '=', value: 'a' }])
-  })
-
-  it('keeps the preferred service chip over the canonical alias', () => {
-    const next = effectiveLogsDetailFilters(filters, baseOptions)
-    expect(next.filter((filter) => ownedLogsDetailFilterRole(filter.key, baseOptions) === 'service')).toEqual([
-      { key: 'resource_attributes.service.name', op: '=', value: 'preferred' },
-    ])
-  })
-
-  it('returns filters unchanged when suppression is disabled', () => {
-    expect(effectiveLogsDetailFilters(filters, { ...baseOptions, enabled: false })).toEqual(filters)
   })
 })
 

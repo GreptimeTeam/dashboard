@@ -12,11 +12,6 @@ export interface OwnedLogsFilterOptions {
   entityServiceKey?: string
 }
 
-export interface EffectiveLogsFilterOptions extends OwnedLogsFilterOptions {
-  /** When false, return the input filters unchanged. Defaults to true. */
-  enabled?: boolean
-}
-
 interface DirectLogsDetailContextShape {
   connection: { signal: { value: string } }
   ui: { logsView: { value: string }; logsTraceId?: { value?: string } }
@@ -114,44 +109,6 @@ export function findOwnedLogsDetailFilter(
   return preferred ?? candidates[0]
 }
 
-/**
- * Shared filters for a direct Logs detail query.
- *
- * Body always belongs to the detail body box. LevelFilter represents include filters on the
- * resolved severity role. The service select represents all supported filter operations.
- * Suppressed spellings remain in `ctx.query.filters` and become active again outside detail.
- */
-export function effectiveLogsDetailFilters(
-  filters: DrilldownFilter[],
-  options: EffectiveLogsFilterOptions
-): DrilldownFilter[] {
-  if (options.enabled === false) {
-    return [...filters]
-  }
-
-  const severity = findOwnedLogsDetailFilter(
-    filters,
-    'severity',
-    options,
-    (filter) => filter.op === '=' || filter.op === '=~'
-  )
-  const service = findOwnedLogsDetailFilter(filters, 'service', options)
-
-  return filters.filter((filter) => {
-    const role = ownedLogsDetailFilterRole(filter.key, options)
-    if (!role) {
-      return true
-    }
-    if (role === 'severity') {
-      return filter === severity
-    }
-    if (role === 'service') {
-      return filter === service
-    }
-    return false
-  })
-}
-
 /** Preserve the SQL semantics shared body chips currently use for contains matching. */
 export function drilldownOpToLogsBodyOp(op: DrilldownFilterOp): LogsBodyOp | undefined {
   if (op === '=~') return 'LIKE'
@@ -159,4 +116,34 @@ export function drilldownOpToLogsBodyOp(op: DrilldownFilterOp): LogsBodyOp | und
   if (op === '=') return '='
   if (op === '!=') return '!='
   return undefined
+}
+
+/**
+ * Collapse severity / service aliases onto one preferred chip each.
+ * Body stays page-local (`body` / `bodyOp` URL + detail box); never migrates from shared chips.
+ * Idempotent when already collapsed. Does not run for Trace→Logs overlay.
+ */
+export function claimOwnedLogsFilters(filters: DrilldownFilter[], options: OwnedLogsFilterOptions): DrilldownFilter[] {
+  let next = [...filters]
+
+  const severityChip = findOwnedLogsDetailFilter(
+    next,
+    'severity',
+    options,
+    (filter) => filter.op === '=' || filter.op === '=~'
+  )
+  next = removeOwnedLogsFilterVariants(next, 'severity', options)
+  const severityTarget = normalizedRole(options.roles.severity)
+  if (severityChip && severityTarget) {
+    next = [...next, { key: severityTarget, op: severityChip.op, value: severityChip.value }]
+  }
+
+  const serviceChip = findOwnedLogsDetailFilter(next, 'service', options)
+  next = removeOwnedLogsFilterVariants(next, 'service', options)
+  const serviceTarget = normalizedRole(options.roles.service) || normalizedRole(options.entityServiceKey)
+  if (serviceChip && serviceTarget) {
+    next = [...next, { key: serviceTarget, op: serviceChip.op, value: serviceChip.value }]
+  }
+
+  return next
 }
