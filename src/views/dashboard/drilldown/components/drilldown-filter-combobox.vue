@@ -67,6 +67,13 @@
     removeFilter as removeFilterFromList,
   } from '@/observability/filters'
   import type { DrilldownFilter, DrilldownFilterOp } from '@/observability/types'
+  import {
+    drilldownOpToLogsBodyOp,
+    isDirectLogsDetail,
+    ownedLogsDetailFilterRole,
+    ownedLogsFilterOptions,
+    removeOwnedLogsFilterVariants,
+  } from '@/observability/logs/filter-semantics'
   import useDrilldownFilterOptions, { type FilterSuggestMode } from '@/observability/use-drilldown-filter-options'
   import DrilldownFilterPill from './drilldown-filter-pill.vue'
 
@@ -89,7 +96,7 @@
   const ctx = useDrilldownContext()
   const { filters } = ctx.query
   const { setFilters, appendFilter } = ctx.actions
-  const { metric } = ctx.ui
+  const { metric, logsBodyOp, logsBodyValue } = ctx.ui
   const { signal } = ctx.connection
   const logsTable = ctx.semantics.logs.table
   const { time, rangeTime, refreshKey } = ctx.query
@@ -340,6 +347,40 @@
     }
   }
 
+  const commitOwnedLogsDetailFilter = (filter: DrilldownFilter): boolean => {
+    if (!isDirectLogsDetail(ctx)) {
+      return false
+    }
+
+    const options = ownedLogsFilterOptions(ctx)
+    const role = ownedLogsDetailFilterRole(filter.key, options)
+    if (!role) {
+      return false
+    }
+
+    if (role === 'body') {
+      const bodyOp = drilldownOpToLogsBodyOp(filter.op)
+      if (!bodyOp) {
+        return true
+      }
+      logsBodyOp.value = bodyOp
+      logsBodyValue.value = filter.value
+      return true
+    }
+
+    if (role === 'severity' && filter.op !== '=' && filter.op !== '=~') {
+      return true
+    }
+
+    const target = options.roles[role]?.trim()
+    if (!target) {
+      return true
+    }
+    const next = removeOwnedLogsFilterVariants(filters.value, role, options)
+    setFilters([...next, { ...filter, key: target }])
+    return true
+  }
+
   const commitDraft = async () => {
     const key = draftKey.value.trim()
     const value = draftValue.value.trim()
@@ -354,6 +395,10 @@
     }
     const op = normalizeFilterOp(dataType, draftOp.value)
     const filter: DrilldownFilter = { key, op, value }
+    if (commitOwnedLogsDetailFilter(filter)) {
+      await prepareWipForNextFilter()
+      return
+    }
     if (isEditing.value && editingIndex.value !== null) {
       const updated = filters.value.map((item, itemIndex) => (itemIndex === editingIndex.value ? filter : item))
       setFilters(normalizeCommittedFilters(updated))

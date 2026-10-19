@@ -10,6 +10,7 @@ import {
 } from './semantics'
 import type { LogsFieldMapSettings } from './drilldown-settings'
 import { DEFAULT_LOGS_BODY_OP, type LogsBodyOp } from './logs/body-search'
+import { claimOwnedLogsFilters, isDirectLogsDetail, ownedLogsFilterOptions } from './logs/filter-semantics'
 import { useSignalDatabase } from './signal-database'
 import {
   DEFAULT_SIDEBAR_FILTERS,
@@ -116,6 +117,11 @@ export interface DrilldownActions {
   setTracesTab: (tab: TracesHomeTab) => void
   openLogsDetail: (groupValue?: string) => void
   closeLogsDetail: () => void
+  /**
+   * Direct Logs detail: hand body/severity/service chips to page controls and drop
+   * alias duplicates from shared filters. No-op for overview / Trace→Logs overlay.
+   */
+  claimOwnedLogsDetailFilters: () => void
   openTraceGantt: (traceId: string, options?: { at?: unknown }) => void
   closeTraceGantt: () => void
   openLogsForTrace: (traceId: string, target?: { database?: string; table?: string }) => void
@@ -334,17 +340,21 @@ export function useDrilldownContextProvider(): DrilldownContext {
     refreshKey.value += 1
   }
 
+  const clearLogsBodySearch = () => {
+    logsBodyOp.value = DEFAULT_LOGS_BODY_OP
+    logsBodyValue.value = ''
+  }
+
+  // Assigned after setFilters exists; openLogsDetail / URL hydrate call through this.
+  let claimOwnedLogsDetailFilters: () => void = () => undefined
+
   const openLogsDetail = (groupValue?: string) => {
     logsSelectedGroup.value = groupValue
     logsView.value = 'detail'
     if (logsTab.value !== 'logs') {
       logsTab.value = 'logs'
     }
-  }
-
-  const clearLogsBodySearch = () => {
-    logsBodyOp.value = DEFAULT_LOGS_BODY_OP
-    logsBodyValue.value = ''
+    claimOwnedLogsDetailFilters()
   }
 
   /** Back to overview catalog; keep filters chips for compose. */
@@ -484,6 +494,19 @@ export function useDrilldownContextProvider(): DrilldownContext {
     filters.value = next
   }
 
+  claimOwnedLogsDetailFilters = () => {
+    const stub = {
+      connection: { signal, logsDatabase },
+      semantics: { logs: logsSemantics },
+      ui: { logsView, logsTraceId, logsBodyOp, logsBodyValue },
+      query: { filters },
+    } as unknown as DrilldownContext
+    if (!isDirectLogsDetail(stub)) {
+      return
+    }
+    setFilters(claimOwnedLogsFilters(filters.value, ownedLogsFilterOptions(stub)))
+  }
+
   const setSidebarFilters = (next: DrilldownSidebarFilters) => {
     sidebarFilters.value = next
   }
@@ -541,6 +564,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
     setTracesTab,
     openLogsDetail,
     closeLogsDetail,
+    claimOwnedLogsDetailFilters,
     openTraceGantt,
     closeTraceGantt,
     openLogsForTrace,

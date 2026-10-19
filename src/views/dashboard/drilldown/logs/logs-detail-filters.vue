@@ -50,6 +50,11 @@
   import { useI18n } from 'vue-i18n'
   import { useDrilldownContext } from '@/observability/context'
   import { fetchLabelValues, type LabelValueRow } from '@/observability/adapters/logs'
+  import {
+    findOwnedLogsDetailFilter,
+    ownedLogsFilterOptions,
+    removeOwnedLogsFilterVariants,
+  } from '@/observability/logs/filter-semantics'
   import resolveLogsRoles from '@/observability/logs/resolved-roles'
   import { DRILLDOWN_FILTER_OP_OPTIONS } from '@/observability/filters'
   import { LOGS_BODY_OPS, isLogsBodyOp, logsBodyOpNeedsValue, type LogsBodyOp } from '@/observability/logs/body-search'
@@ -125,7 +130,7 @@
     if (!column || serviceEditing.value) {
       return
     }
-    const match = ctx.query.filters.value.find((filter) => filter.key === column)
+    const match = findOwnedLogsDetailFilter(ctx.query.filters.value, 'service', ownedLogsFilterOptions(ctx))
     serviceDraft.value = match?.value ?? ''
     serviceOp.value = match && isFilterOp(match.op) ? match.op : serviceOp.value
   }
@@ -186,7 +191,7 @@
     }
     const value = serviceDraft.value.trim()
     serviceDraft.value = value
-    let next = ctx.query.filters.value.filter((filter) => filter.key !== column)
+    let next = removeOwnedLogsFilterVariants(ctx.query.filters.value, 'service', ownedLogsFilterOptions(ctx))
     if (value) {
       ensureServiceMapped(column)
       next = [...next, { key: column, op: serviceOp.value, value }]
