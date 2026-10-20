@@ -11,7 +11,7 @@ export default {
   'copied': '已复制',
   'guide.confirm': '确定',
   'guide.welcome': '欢迎!',
-  'navbar.action.locale': '切换为中文',
+  'navbar.action.locale': '语言已切换',
   'navbar.docs': '文档中心',
   'navbar.newQuery': '新建查询',
   'news.seeAll': '查看所有资讯',

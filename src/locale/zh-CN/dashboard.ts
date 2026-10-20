@@ -5,6 +5,7 @@ export default {
   'dashboard.chartLoadingTip': '你的图表有太多（{count} 个）来自 "Group By" 的series',
   'dashboard.chartType': '图表类型',
   'dashboard.clear': '清除',
+  'dashboard.copied': '已复制',
   'dashboard.copyToClipboard': '复制到剪贴板',
   'dashboard.create': '新建脚本',
   'dashboard.createDashboard': '新建仪表盘',

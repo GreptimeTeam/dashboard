@@ -2,6 +2,7 @@ import { useI18n } from 'vue-i18n'
 import { RouteRecordRaw } from 'vue-router'
 import useMenuTree from '@/components/menu/use-menu-tree'
 import useLocale from '@/hooks/locale'
+import { LOCALE_OPTIONS } from '@/locale'
 import type { CommandPaletteItem, CommandPaletteSection } from './types'
 
 function flattenRoutes(
@@ -101,30 +102,20 @@ export function useCommandPalette() {
       hint: 'Open settings drawer',
       navigate: () => appStore.openGlobalSettings(),
     },
-    {
-      kind: 'ui' as const,
-      id: 'ui:locale:en-US',
-      title: 'English',
-      hint: 'Switch language to English',
-      navigate: () => {
-        if (currentLocale.value !== 'en-US') {
-          currentLocale.value = 'en-US'
-          onChangeLocale()
-        }
-      },
-    },
-    {
-      kind: 'ui' as const,
-      id: 'ui:locale:zh-CN',
-      title: '中文',
-      hint: 'Switch language to 中文',
-      navigate: () => {
-        if (currentLocale.value !== 'zh-CN') {
-          currentLocale.value = 'zh-CN'
-          onChangeLocale()
-        }
-      },
-    },
+    ...LOCALE_OPTIONS.map(
+      (opt): CommandPaletteItem => ({
+        kind: 'ui' as const,
+        id: `ui:locale:${opt.value}`,
+        title: opt.label,
+        hint: `Switch language to ${opt.label}`,
+        navigate: () => {
+          if (currentLocale.value !== opt.value) {
+            currentLocale.value = opt.value
+            onChangeLocale()
+          }
+        },
+      })
+    ),
     {
       kind: 'ui' as const,
       id: 'ui:create:flow',

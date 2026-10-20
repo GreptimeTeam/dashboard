@@ -67,12 +67,9 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
                   svg.icon-16
                     use(href="#Language")
             template(#content)
-              a-doption(value="en-US")
-                span English
-                span.locale-current(v-if="currentLocale === 'en-US'") ✓
-              a-doption(value="zh-CN")
-                span 中文
-                span.locale-current(v-if="currentLocale === 'zh-CN'") ✓
+              a-doption(v-for="opt in LOCALE_OPTIONS" :key="opt.value" :value="opt.value")
+                span {{ opt.label }}
+                span.locale-current(v-if="currentLocale === opt.value") ✓
         .footer-end
           a-tooltip(:content="navbarCollapsed ? $t('dashboard.showSidebar') : $t('dashboard.hideSidebar')")
             a-button.footer-collapse-btn(type="text" @click="toggleMenuCollapse")
@@ -89,6 +86,7 @@ CommandPalette(ref="commandPaletteRef")
   import { listenerRouteChange } from '@/utils/route-listener'
   import { useNews } from '@/hooks/news'
   import useLocale from '@/hooks/locale'
+  import { LOCALE_OPTIONS } from '@/locale'
   import useGreptimeVersion from '@/composables/use-greptime-version'
   import type { Component } from 'vue'
   import useMenuTree from '../menu/use-menu-tree'
@@ -108,7 +106,10 @@ CommandPalette(ref="commandPaletteRef")
   const { currentLocale, onChangeLocale } = useLocale()
   const { version: greptimeVersion, commit: greptimeCommit } = useGreptimeVersion()
 
-  const localeTooltip = computed(() => (currentLocale.value === 'zh-CN' ? 'Language / 中文' : 'Language / English'))
+  const localeTooltip = computed(() => {
+    const label = LOCALE_OPTIONS.find((o) => o.value === currentLocale.value)?.label
+    return label ? `Language / ${label}` : 'Language'
+  })
 
   const onLocaleSelect = (value: string) => {
     if (value === currentLocale.value) return

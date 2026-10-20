@@ -11,7 +11,7 @@ export default {
   'copied': 'Copied',
   'guide.confirm': 'Confirm',
   'guide.welcome': 'Welcome!',
-  'navbar.action.locale': 'Switch to English',
+  'navbar.action.locale': 'Language switched',
   'navbar.docs': 'Docs',
   'navbar.newQuery': 'New Query',
   'news.seeAll': 'See all news',
