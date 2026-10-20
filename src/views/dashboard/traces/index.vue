@@ -44,7 +44,6 @@
           storage-key="traces-query-table"
           signal-database-kind="traces"
           :form-state="builderFormState"
-          :quick-field-names="['service_name', 'span_name', 'span_status_code', 'span_kind', 'trace_id']"
           :default-form-state="defaultFormState"
         )
         SqlTextEditor(v-else v-model="textEditor.textEditorState.sql" @update:sql-info="handleSqlInfoUpdate")
@@ -81,6 +80,7 @@
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import SqlTextEditor from '@/components/sql-text-editor/index.vue'
   import TraceTable from './components/TraceTable.vue'
+  import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
 
   defineOptions({
     name: 'TraceQuery',
@@ -116,12 +116,15 @@
   })
   const { initializeFromQuery, updateQueryParams } = urlSync
 
-  const allResults = ref([])
-
   const chartExpanded = useLocalStorage('trace-chart-expanded', true)
   const countChartRef = ref()
   const sqlBuilderRef = ref()
   const timeRangeSelectRef = ref()
+  const route = useRoute()
+  const isTraceQueryRoute = () => route.name === 'trace-query'
+  // Guide browsing must not execute a default query; `tourApply` marks the explicit Run.
+  const shouldAutoExecuteInitialQuery = () => !isQueryGuideEnabled() || Boolean(route.query.tourApply)
+  const allResults = ref([])
 
   function handleSqlInfoUpdate(sqlInfo) {
     Object.assign(textEditor.textEditorState, sqlInfo)
@@ -132,7 +135,12 @@
   }
 
   async function handleQuery() {
+    // Keep-alive keeps this component's watchers alive after it is deactivated. Do not
+    // let a cached Trace page consume query params or run while another route is active.
+    if (!isTraceQueryRoute()) return
+
     executeQuery().then((results) => {
+      if (!isTraceQueryRoute()) return
       allResults.value = results || []
       updateQueryParams()
     })
@@ -165,14 +173,33 @@
   }
 
   watch(canExecuteInitialQuery, (canExecute) => {
-    if (canExecute) {
-      handleQuery()
-    }
+    if (!canExecute || !shouldAutoExecuteInitialQuery()) return
+    handleQuery()
   })
 
   onMounted(() => {
     initializeFromQuery()
   })
+
+  // keepAlive: re-apply URL state (e.g. product tour steps) on re-entry.
+  onActivated(() => {
+    initializeFromQuery()
+  })
+
+  // Same-route tutorial click: re-apply form and run (initial-query watch won't re-fire).
+  watch(
+    () => [route.query.builderForm, route.query.tourApply] as const,
+    (next, prev) => {
+      if (!isTraceQueryRoute()) return
+      if (!prev) return
+      if (next[0] === prev[0] && next[1] === prev[1]) return
+      if (!next[0] && !next[1]) return
+      initializeFromQuery()
+      nextTick(() => {
+        handleQuery()
+      })
+    }
+  )
 </script>
 
 <style lang="less">

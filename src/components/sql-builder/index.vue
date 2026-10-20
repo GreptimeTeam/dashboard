@@ -466,7 +466,10 @@ a-modal(
         tables.value = await props.tablesProvider()
       } else if (props.signalDatabaseKind) {
         // Same discovery/ranking as Drilldown Explore (listSignalTables).
-        const include = [form.table, lastSelectedTable.value].filter(Boolean)
+        // Only the current selection is an explicit include. A persisted table must be
+        // rediscovered for this signal; otherwise stale cross-signal localStorage can
+        // inject a logs table into the traces dropdown.
+        const include = [form.table].filter(Boolean)
         tables.value = await listSignalTables(props.signalDatabaseKind, {
           database: form.database || getSignalDatabase(props.signalDatabaseKind),
           include,

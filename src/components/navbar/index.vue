@@ -49,6 +49,14 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
               | {{ label }}
           a-doption.news(@click="showNews")
             | {{ $t('menu.news') }}
+      button.support-trigger(v-if="queryGuideEnabled" type="button" @click.stop="showContact")
+        svg.icon-18
+          use(href="#icon-user")
+        span.support-label {{ $t('menu.feedback') }}
+      button.support-trigger(v-if="queryGuideEnabled" type="button" @click.stop="showMcpConfig")
+        svg.icon-18
+          use(href="#code")
+        span.support-label {{ $t('menu.mcp') }}
       StarMarketingCard.star-marketing-card(v-if="!starCardClosed && !navbarCollapsed" @close="starCardClosed = true")
   a-layout-footer
     ul.footer(:class="{ 'footer--expanded': !navbarCollapsed }")
@@ -80,6 +88,8 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
                 svg.icon-16(:class="{ 'rotate-180': navbarCollapsed }")
                   use(href="#shrink")
 NewsModal(ref="newsModal" :news-list="newsListMutable" :loading="isLoadingNews")
+ContactFormModal
+McpConfigModal
 CommandPalette(ref="commandPaletteRef")
 </template>
 
@@ -91,9 +101,14 @@ CommandPalette(ref="commandPaletteRef")
   import useLocale from '@/hooks/locale'
   import useGreptimeVersion from '@/composables/use-greptime-version'
   import type { Component } from 'vue'
+  import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
   import useMenuTree from '../menu/use-menu-tree'
   import NewsModal from './news-modal.vue'
   import StarMarketingCard from './star-marketing-card.vue'
+  import ContactFormModal from '../contact-form/ContactFormModal.vue'
+  import useContactForm from '../contact-form/use-contact-form'
+  import McpConfigModal from '../mcp-config/McpConfigModal.vue'
+  import useMcpConfig from '../mcp-config/use-mcp-config'
   import CommandPalette from '../command-palette/index.vue'
 
   const isComponentIcon = (icon: unknown): icon is Component => typeof icon !== 'string' && !!icon
@@ -117,10 +132,13 @@ CommandPalette(ref="commandPaletteRef")
   }
   const newsListMutable = computed(() => (newsList.value ? [...newsList.value] : []))
   const newsModal = ref()
+  const contactForm = useContactForm()
+  const mcpConfig = useMcpConfig()
   const starCardClosed = useStorage('starMarketingCardClosed', false)
   const isEnterprise = import.meta.env.VITE_APP_NAME === 'enterprise'
   const editionLabel = isEnterprise ? 'Enterprise' : 'OpenSource'
   const showSupportSection = !isEnterprise
+  const queryGuideEnabled = isQueryGuideEnabled()
 
   const menu = menuTree.value[0].children
 
@@ -149,6 +167,14 @@ CommandPalette(ref="commandPaletteRef")
 
   const showNews = () => {
     newsModal.value.show()
+  }
+
+  const showContact = () => {
+    contactForm.show()
+  }
+
+  const showMcpConfig = () => {
+    mcpConfig.show()
   }
 
   const toggleMenuCollapse = () => {
@@ -436,11 +462,16 @@ CommandPalette(ref="commandPaletteRef")
       display: flex;
       align-items: center;
       gap: 8px;
+      width: 100%;
       margin: 0 0 4px;
       padding: 8px 12px;
       color: @menu-light-color-item_default;
+      font: inherit;
       font-size: 12px;
       line-height: 20px;
+      text-align: left;
+      background: transparent;
+      border: none;
       border-radius: var(--gpt-radius-sm);
       cursor: pointer;
 

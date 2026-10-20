@@ -43,6 +43,7 @@ a-layout.new-layout.new-layout--workspace(:class="{ 'query-layout--focus': focus
 <script lang="ts" setup name="query">
   import { useMagicKeys, useActiveElement, useStorage } from '@vueuse/core'
   import { useQueryFocusMode } from '@/composables/use-query-focus-mode'
+  import { decodeMaybeEncoded } from '@/utils/query-url'
   import { provideQuerySession } from './use-query-session'
 
   defineOptions({
@@ -53,13 +54,78 @@ a-layout.new-layout.new-layout--workspace(:class="{ 'query-layout--focus': focus
   const activeElement = useActiveElement()
   const appStore = useAppStore()
   const { databaseList, database } = storeToRefs(useAppStore())
+  const route = useRoute()
   const originalDatabase = ref<string | undefined>(undefined)
-  const { queryType } = useQueryCode()
+  const { queryType, codes, runQuery, inputFromNewLineToQueryCode, sqlView } = useQueryCode()
   const session = provideQuerySession()
   const logsHeight = ref(66)
   const focusMode = useQueryFocusMode()
 
   const sidebarWidth = useStorage('sidebarWidth', 228)
+
+  /**
+   * Deep-link / product tour: append `?sql=` into the editor (do not replace),
+   * then run only the appended statement and show results in the session panel.
+   * Keyed by `tourApply` so re-clicking a tutorial step on the already-open page re-applies.
+   */
+  let lastAppliedKey: string | null = null
+
+  function appendSqlToEditor(sql: string) {
+    queryType.value = 'sql'
+    const trimmed = sql.trim()
+
+    if (sqlView.value) {
+      inputFromNewLineToQueryCode(trimmed, 0)
+      return
+    }
+
+    // Editor not mounted yet — seed `codes` so CodeMirror picks it up via v-model.
+    const existing = (codes.value.sql || '').trimEnd()
+    codes.value.sql = existing ? `${existing}\n${trimmed}` : trimmed
+  }
+
+  async function appendAndRunSql(sql: string) {
+    const trimmed = sql.trim()
+    if (!trimmed) return
+
+    // Keep editor sync best-effort; always run the tour SQL even if CM dispatch fails.
+    try {
+      appendSqlToEditor(trimmed)
+    } catch {
+      const existing = (codes.value.sql || '').trimEnd()
+      codes.value.sql = existing ? `${existing}\n${trimmed}` : trimmed
+      queryType.value = 'sql'
+    }
+
+    // Let CodeMirror flush before querying so the UI matches the statement we run.
+    await nextTick()
+
+    // Dedicated abort key — do not share `run-part` with the editor Run button.
+    const res = await runQuery(trimmed, 'sql', false, {} as never, 'tour-sql')
+    if ((res as { cancelled?: boolean })?.cancelled) return
+    if (res?.results?.length) session.appendResults(res.results)
+    if (res?.log) session.appendLog(res.log)
+  }
+
+  function applySqlFromRoute() {
+    const raw = route.query.sql
+    if (typeof raw !== 'string' || !raw) return
+    const sql = decodeMaybeEncoded(raw)
+    if (!sql.trim()) return
+    const { tourApply } = route.query
+    const applyKey = `${typeof tourApply === 'string' ? tourApply : ''}:${raw}`
+    if (applyKey === lastAppliedKey) return
+    lastAppliedKey = applyKey
+    appendAndRunSql(sql).catch(() => undefined)
+  }
+
+  watch(
+    () => [route.query.sql, route.query.tourApply] as const,
+    () => {
+      applySqlFromRoute()
+    },
+    { immediate: true }
+  )
 
   watch(sidebarWidth, (newWidth) => {
     if (newWidth < 100) {
