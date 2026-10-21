@@ -2,7 +2,7 @@
 a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
   template(#title)
     a-space.metric-sidebar-title(fill :size="10")
-      span.gpt-sidebar-heading {{ $t('metrics.sidebar.title') }}
+      span.gpt-sidebar-heading Metrics
       a-button.metric-sidebar-refresh(
         type="text"
         size="mini"
@@ -34,7 +34,7 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
         a-input.search-metric(
           v-model="metricSearchKey"
           size="mini"
-          placeholder="Search metrics..."
+          :placeholder="$t('metrics.sidebarSearch')"
           :allow-clear="true"
         )
           template(#suffix)
@@ -55,7 +55,7 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
           use(href="#down")
       template(#title="nodeData")
         .tree-data
-          a-tooltip(v-if="nodeData.type === 'label'" content="LABEL")
+          a-tooltip(v-if="nodeData.type === 'label'" :content="$t('metrics.labelTooltip')")
             svg.icon-11.metric-tree-icon--label
               use(href="#primary-key")
           .data-title(:title="nodeData.title") {{ nodeData.title }}

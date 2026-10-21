@@ -9,9 +9,9 @@ a-drawer.custom-drawer(
   @cancel="handleCancel"
 )
   template(#title)
-    span(v-if="isEdit") Edit Flow:&nbsp;
+    span(v-if="isEdit") {{ $t('flow.editFlow') }}&nbsp;
       strong {{ formData.flow_name }}
-    span(v-else) Create Flow
+    span(v-else) {{ $t('flow.createTitle') }}
   .flow-detail-container
     // System information (always visible at top in edit mode)
     template(v-if="isEdit")
@@ -24,22 +24,22 @@ a-drawer.custom-drawer(
       )
         a-descriptions-item(label="Flow ID")
           | {{ formData.flow_id || '-' }}
-        a-descriptions-item(label="State Size")
+        a-descriptions-item(:label="$t('flow.stateSize')")
           | {{ formData.state_size || '-' }}
-        a-descriptions-item(label="Source Table Names" :span="2")
+        a-descriptions-item(:label="$t('flow.sourceTableNames')" :span="2")
           | {{ formData.source_table_names || '-' }}
-        a-descriptions-item(label="Source Table IDs" :span="2")
+        a-descriptions-item(:label="$t('flow.sourceTableIds')" :span="2")
           | {{ formData.source_table_ids || '-' }}
-        a-descriptions-item(label="Created Time")
+        a-descriptions-item(:label="$t('flow.createdTime')")
           | {{ formData.created_time ? renderTs(formData.created_time, schemaColumns.find((col) => col.name === 'created_time')?.data_type) : '-' }}
-        a-descriptions-item(label="Updated Time")
+        a-descriptions-item(:label="$t('flow.updatedTime')")
           | {{ formData.updated_time ? renderTs(formData.updated_time, schemaColumns.find((col) => col.name === 'updated_time')?.data_type) : '-' }}
-        a-descriptions-item(label="Last Execution")
+        a-descriptions-item(:label="$t('flow.lastExecution')")
           | {{ formData.last_execution_time ? renderLastExecution(formData.last_execution_time) : '-' }}
     .gpt-drawer-mode-bar
       a-radio-group(v-model="editorMode" type="button" size="small")
-        a-radio(value="form") Form
-        a-radio(value="text") Raw
+        a-radio(value="form") {{ $t('flow.formMode') }}
+        a-radio(value="text") {{ $t('flow.rawMode') }}
       a-button(
         v-if="isEdit"
         type="outline"
@@ -47,21 +47,21 @@ a-drawer.custom-drawer(
         @click="handleCloneFlow"
       )
         icon-copy(style="margin-right: 4px")
-        | Clone Flow
+        | {{ $t('flow.clone') }}
 
     // Form mode
     template(v-if="editorMode === 'form'")
       a-form(layout="vertical" :model="formData")
         a-row(:gutter="16")
           a-col(v-if="!isEdit" :span="12")
-            a-form-item(field="flow_name" label="Flow Name" required)
-              a-input(v-model="formData.flow_name" placeholder="Enter flow name")
+            a-form-item(field="flow_name" required :label="$t('flow.name')")
+              a-input(v-model="formData.flow_name" :placeholder="$t('flow.namePlaceholder')")
           a-col(:span="12")
-            a-form-item(field="sink_table_name" label="Sink Table" required)
+            a-form-item(field="sink_table_name" required :label="$t('flow.sinkTable')")
               a-select(
                 v-model="formData.sink_table_name"
                 style="width: 100%"
-                placeholder="Select sink table"
+                :placeholder="$t('flow.sinkTablePlaceholder')"
                 :allow-search="true"
                 :allow-create="true"
                 :loading="tablesLoading"
@@ -70,20 +70,20 @@ a-drawer.custom-drawer(
               )
               | &nbsp;
               a-button(type="text" :loading="creatingTable" @click="showCreateTableModal")
-                | Create Sink Table
+                | {{ $t('flow.createSinkTable') }}
 
         a-row(:gutter="16")
           a-col(:span="12")
-            a-form-item(field="expire_after" label="Expire After (Optional)")
-              a-input(v-model="formData.expire_after" placeholder="e.g., '1 hour'::INTERVAL")
+            a-form-item(field="expire_after" :label="$t('flow.expireAfter')")
+              a-input(v-model="formData.expire_after" :placeholder="$t('flow.expireAfterPlaceholder')")
           a-col(:span="12")
-            a-form-item(v-if="!isEdit" field="ifNotExists" label="Options")
+            a-form-item(v-if="!isEdit" field="ifNotExists" :label="$t('flow.options')")
               a-checkbox(v-model="formData.ifNotExists") IF NOT EXISTS
 
-        a-form-item(field="comment" label="Comment (Optional)")
-          a-input(v-model="formData.comment" placeholder="Enter flow description" :rows="2")
+        a-form-item(field="comment" :label="$t('flow.comment')")
+          a-input(v-model="formData.comment" :placeholder="$t('flow.commentPlaceholder')" :rows="2")
 
-        a-form-item(field="flow_definition" label="Flow Select SQL Definition" required)
+        a-form-item(field="flow_definition" required :label="$t('flow.definition')")
           LangEditor.gpt-code-editor-frame.gpt-code-editor-frame--h200(
             v-model="formData.flow_definition"
             language="sql"
@@ -94,7 +94,7 @@ a-drawer.custom-drawer(
     template(v-else)
       .editable-fields-section
         a-form(layout="vertical" :model="textEditorData")
-          a-form-item(field="content" label="Flow Statement")
+          a-form-item(field="content" :label="$t('flow.statement')")
             a-spin(style="width: 100%" :loading="fetchingFlowSQL")
               LangEditor.gpt-code-editor-frame.gpt-code-editor-frame--h500(
                 v-model="textEditorData.content"
@@ -105,29 +105,29 @@ a-drawer.custom-drawer(
   template(#footer)
     .drawer-footer
       a-space
-        a-button(@click="handleCancel") Cancel
+        a-button(@click="handleCancel") {{ $t('common.cancel') }}
         a-button(
           type="primary"
           :loading="loading"
           @click="editorMode === 'form' ? handleSubmit() : handleTextSubmit()"
-        ) 
-          | {{ isEdit ? 'Update' : 'Create' }} Flow
+        )
+          | {{ isEdit ? $t('flow.updateFlow') : $t('flow.createTitle') }}
 
   // Create Table Modal
   a-modal(
     v-model:visible="createTableModalVisible"
-    title="Create Sink Table"
+    :title="$t('flow.createSinkTable')"
     :width="700"
     @ok="createTable"
     @cancel="createTableModalVisible = false"
   )
     template(#footer)
       a-space
-        a-button(@click="createTableModalVisible = false") Cancel
-        a-button(type="primary" :loading="creatingTable" @click="createTable") Create Table
+        a-button(@click="createTableModalVisible = false") {{ $t('common.cancel') }}
+        a-button(type="primary" :loading="creatingTable" @click="createTable") {{ $t('flow.createTable') }}
 
     .create-table-content
-      p Create a new sink table with SQL. The table will be automatically added to the sink table options.
+      p {{ $t('flow.sinkTableHint') }}
 
       LangEditor.gpt-code-editor-frame.gpt-code-editor-frame--h300(
         v-model="createTableSQL"
@@ -140,6 +140,7 @@ a-drawer.custom-drawer(
   import { ref, reactive, watch, computed } from 'vue'
   import { Message } from '@arco-design/web-vue'
   import { storeToRefs } from 'pinia'
+  import { useI18n } from 'vue-i18n'
   import LangEditor from '@/components/lang-editor.vue'
   import editorAPI from '@/api/editor'
   import { useAppStore } from '@/store'
@@ -147,6 +148,7 @@ a-drawer.custom-drawer(
   import { convertTimestampToMilliseconds } from '@/utils/date-time'
   import { useDateTimeFormat } from '@/hooks'
 
+  const { t } = useI18n()
   const { formatDateTime, formatDateTimeWithMs } = useDateTimeFormat()
 
   interface Props {
@@ -271,7 +273,7 @@ GROUP BY time_window;`
       createTableModalVisible.value = false
       createTableSQL.value = ''
 
-      Message.success('Table created successfully')
+      Message.success(t('flow.tableCreated'))
     } finally {
       creatingTable.value = false
     }
@@ -372,7 +374,7 @@ GROUP BY time_window;`
       // Emit success event
       emit('saved', {
         success: true,
-        message: isEdit.value ? 'Flow updated successfully' : 'Flow created successfully',
+        message: isEdit.value ? t('flow.updatedToast') : t('flow.createdToast'),
         mode,
       })
 
@@ -382,12 +384,12 @@ GROUP BY time_window;`
       console.error('Flow operation failed:', error)
 
       // Safely extract error message
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const errorMessage = error instanceof Error ? error.message : t('common.unknownError')
 
       // Emit error event
       emit('saved', {
         success: false,
-        message: `Flow operation failed: ${errorMessage}`,
+        message: t('flow.operationFailed', { msg: errorMessage }),
         mode,
       })
     } finally {

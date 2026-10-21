@@ -5,6 +5,7 @@ import type { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { Message } from '@arco-design/web-vue'
 import { RecordsType } from '@/store/modules/code-run/types'
 import { getEffectiveTimezone } from '@/utils/timezone'
+import i18n from '@/locale'
 
 export interface OutputType {
   affectedrows: number
@@ -177,7 +178,7 @@ axios.interceptors.response.use(
     }
 
     if (!response) {
-      const message = error?.message || 'Request Error'
+      const message = error?.message || i18n.global.t('common.requestError')
       if (shouldNotifyError(config)) showErrorMessage(message)
       return Promise.reject(buildErrorPayload(message, config?.traceTimeStart))
     }
@@ -187,7 +188,7 @@ axios.interceptors.response.use(
     }
 
     const data = response.data || {}
-    const message = data.error || error.message || 'Request Error'
+    const message = data.error || error.message || i18n.global.t('common.requestError')
 
     if (shouldNotifyError(config)) {
       showErrorMessage(message)

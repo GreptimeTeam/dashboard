@@ -15,7 +15,7 @@ a-layout.new-layout.new-layout--workspace
         PromQLEditor(
           ref="promqlEditorRef"
           v-model="currentQuery"
-          placeholder="Enter PromQL query (Shift+Enter for newlines)"
+          :placeholder="$t('metrics.queryPlaceholder')"
           :query-loading="queryLoading"
           @query="handleRunQuery"
         )
@@ -51,9 +51,9 @@ a-layout.new-layout.new-layout--workspace
               TimezoneInstantPicker(
                 v-model="instantQueryTime"
                 size="small"
-                placeholder="Evaluation time"
                 allow-clear
                 style="width: 210px"
+                :placeholder="$t('metrics.evalTime')"
               )
 
           .table-section.gpt-table-panel
@@ -285,9 +285,9 @@ a-layout.new-layout.new-layout--workspace
   const handleCopyText = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text)
-      Message.success('Copied to clipboard')
+      Message.success(t('metrics.copiedToClipboard'))
     } catch (err) {
-      Message.error('Failed to copy to clipboard')
+      Message.error(t('metrics.copyFailed'))
     }
   }
 

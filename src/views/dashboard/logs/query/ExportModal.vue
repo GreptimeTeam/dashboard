@@ -8,9 +8,9 @@ a-modal(
 )
   template(#footer)
     a-space
-      a-button(@click="handleCancel") Cancel
+      a-button(@click="handleCancel") {{ $t('common.cancel') }}
       a-button(type="primary" :loading="loading" @click="handleConfirm")
-        | Export
+        | {{ $t('common.export') }}
   .export-modal-content
     a-form(layout="vertical")
       a-form-item
@@ -27,7 +27,7 @@ a-modal(
             v-model.number="limit"
             type="number"
             style="flex: 1"
-            placeholder="Enter limit"
+            :placeholder="$t('logsQuery.limitPlaceholder')"
             :min="1"
           )
           template(v-if="totalCount !== null")

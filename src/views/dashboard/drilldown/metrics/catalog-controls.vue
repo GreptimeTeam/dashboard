@@ -24,8 +24,8 @@
       label: t('drilldown.main.sortDefault'),
       value: 'default',
     },
-    { label: t('drilldown.main.sortAsc'), value: 'asc' },
-    { label: t('drilldown.main.sortDesc'), value: 'desc' },
+    { label: 'A–Z', value: 'asc' },
+    { label: 'Z–A', value: 'desc' },
   ])
 </script>
 

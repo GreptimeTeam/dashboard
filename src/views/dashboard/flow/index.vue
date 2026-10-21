@@ -2,21 +2,21 @@
 .query-layout.query-layout--surface.flow-page.query-container
   .page-header.gpt-page-header.flow-page-header
     .page-header-main
-      | Flow
+      | {{ $t('menu.dashboard.flow') }}
       span.page-header-subtitle.gpt-text-page-subtitle
-        | Real-time computation of data streams.
+        | {{ $t('flow.subtitle') }}
         a.flow-page-learn-more(
           href="https://docs.greptime.com/user-guide/flow-computation/overview"
           target="_blank"
           rel="noopener noreferrer"
         )
-          | Learn more
+          | {{ $t('flow.learnMore') }}
           svg.icon-12
             use(href="#import")
     a-button(type="primary" size="medium" @click="showCreate")
       template(#icon)
         icon-plus
-      | New Flow
+      | {{ $t('flow.new') }}
 
   .content-wrapper.query-layout-cards
     a-card.flow-results-card.gpt-surface-card(:bordered="false")
@@ -38,9 +38,9 @@
           span(v-else) —
         template(#column-operate="{ record }")
           a-space(:size="8")
-            a-button(size="small" @click="showEdit(record)") Edit
-            a-popconfirm(content="Confirm deletion?" type="warning" @ok="del(record)")
-              a-button(size="small" status="danger") Delete
+            a-button(size="small" @click="showEdit(record)") {{ $t('common.edit') }}
+            a-popconfirm(type="warning" :content="$t('common.deleteConfirm')" @ok="del(record)")
+              a-button(size="small" status="danger") {{ $t('common.delete') }}
 
     FlowDetailModal(
       :key="editData?.flow_id"
@@ -55,11 +55,14 @@
 
 <script setup name="FlowList" lang="ts">
   import { Message } from '@arco-design/web-vue'
+  import { useI18n } from 'vue-i18n'
   import type { ColumnType } from '@/types/query'
   import editorAPI from '@/api/editor'
   import DataTable from '@/components/data-table/index.vue'
   import FlowDetailModal from './components/flow-detail-modal.vue'
   import { toObj } from '../logs/query/until'
+
+  const { t } = useI18n()
 
   const displayedColumns = [
     'flow_name',
@@ -107,7 +110,7 @@
 
         const operateColumn = {
           name: 'operate',
-          title: 'Actions',
+          title: t('common.actions'),
           data_type: 'string',
         }
 
@@ -143,7 +146,7 @@
         console.error('Failed to load flows:', error)
         loading.value = false
         totalResults.value = 0
-        Message.error('Failed to load flows list')
+        Message.error(t('flow.loadFailed'))
       })
   }
 
@@ -191,13 +194,13 @@
     editorAPI
       .runSQL(`DROP FLOW IF EXISTS ${record.flow_name}`)
       .then(() => {
-        Message.success('Flow deleted successfully')
+        Message.success(t('flow.deleted'))
         list()
       })
       .catch((error) => {
         console.error('Delete flow failed:', error)
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-        Message.error(`Delete flow failed: ${errorMessage}`)
+        const errorMessage = error instanceof Error ? error.message : t('common.unknownError')
+        Message.error(t('flow.deleteFailed', { msg: errorMessage }))
       })
   }
 

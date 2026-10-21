@@ -2,6 +2,7 @@ import { useI18n } from 'vue-i18n'
 import { RouteRecordRaw } from 'vue-router'
 import useMenuTree from '@/components/menu/use-menu-tree'
 import useLocale from '@/hooks/locale'
+import { LOCALE_OPTIONS } from '@/locale'
 import type { CommandPaletteItem, CommandPaletteSection } from './types'
 
 function flattenRoutes(
@@ -98,52 +99,42 @@ export function useCommandPalette() {
       kind: 'ui' as const,
       id: 'ui:settings',
       title: t('settings.title'),
-      hint: 'Open settings drawer',
+      hint: t('commandPalette.openSettings'),
       navigate: () => appStore.openGlobalSettings(),
     },
-    {
-      kind: 'ui' as const,
-      id: 'ui:locale:en-US',
-      title: 'English',
-      hint: 'Switch language to English',
-      navigate: () => {
-        if (currentLocale.value !== 'en-US') {
-          currentLocale.value = 'en-US'
-          onChangeLocale()
-        }
-      },
-    },
-    {
-      kind: 'ui' as const,
-      id: 'ui:locale:zh-CN',
-      title: '中文',
-      hint: 'Switch language to 中文',
-      navigate: () => {
-        if (currentLocale.value !== 'zh-CN') {
-          currentLocale.value = 'zh-CN'
-          onChangeLocale()
-        }
-      },
-    },
+    ...LOCALE_OPTIONS.map(
+      (opt): CommandPaletteItem => ({
+        kind: 'ui' as const,
+        id: `ui:locale:${opt.value}`,
+        title: opt.label,
+        hint: t('commandPalette.switchLanguage', { lang: opt.label }),
+        navigate: () => {
+          if (currentLocale.value !== opt.value) {
+            currentLocale.value = opt.value
+            onChangeLocale()
+          }
+        },
+      })
+    ),
     {
       kind: 'ui' as const,
       id: 'ui:create:flow',
-      title: 'New Flow',
-      hint: 'Create a new flow task',
+      title: t('commandPalette.newFlow'),
+      hint: t('commandPalette.newFlowHint'),
       navigate: () => router.push({ name: 'flow', query: { create: '1' } }),
     },
     {
       kind: 'ui' as const,
       id: 'ui:create:perses',
-      title: 'New Dashboard',
-      hint: 'Create a new Perses dashboard',
+      title: t('commandPalette.newDashboard'),
+      hint: t('commandPalette.newDashboardHint'),
       navigate: () => router.push({ name: 'perses', query: { create: '1' } }),
     },
     {
       kind: 'ui' as const,
       id: 'ui:create:pipeline',
-      title: 'New Pipeline',
-      hint: 'Create a new log pipeline',
+      title: t('commandPalette.newPipeline'),
+      hint: t('commandPalette.newPipelineHint'),
       navigate: () => router.push({ name: 'log-pipeline', query: { create: '1' } }),
     },
   ])
@@ -175,8 +166,8 @@ export function useCommandPalette() {
     const actions = scored.filter((s) => s.item.kind !== 'route').map((s) => s.item)
 
     const sections: CommandPaletteSection[] = []
-    if (routes.length) sections.push({ label: 'Pages', items: routes })
-    if (actions.length) sections.push({ label: 'Actions', items: actions })
+    if (routes.length) sections.push({ label: t('commandPalette.pages'), items: routes })
+    if (actions.length) sections.push({ label: t('common.actions'), items: actions })
     return sections
   })
 

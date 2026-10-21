@@ -5,13 +5,13 @@
       span.operation-name {{ rootSpan?.span_name || t('drilldown.traces.unknownOperation') }}
       a-tag.span-count {{ spans.length }} span{{ spans.length === 1 ? '' : 's' }}
     .drilldown-toolbar__right.service-filter
-      span.drilldown-field-label {{ t('drilldown.traces.servicesFilter') }}
+      span.drilldown-field-label Services:
       a-select.drilldown-filter-select(
         v-model="selectedServices"
         multiple
         allow-clear
         size="small"
-        :placeholder="t('drilldown.traces.servicesPlaceholder')"
+        placeholder="Filter services"
       )
         a-option(v-for="service in uniqueServices" :key="service" :value="service")
           span.service-option

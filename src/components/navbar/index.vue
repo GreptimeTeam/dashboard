@@ -14,8 +14,8 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
       span.version-badge(v-if="!navbarCollapsed && greptimeVersion") {{ greptimeVersion }}
       template(#content)
         .version-tooltip
-          div Version: {{ greptimeVersion }}
-          div Commit: {{ greptimeCommit }}
+          div {{ $t('navbar.version') }}{{ greptimeVersion }}
+          div {{ $t('navbar.commit') }}{{ greptimeCommit }}
   a-layout-content.menu-content
     a-menu.navbar-menu(
       mode="vertical"
@@ -67,12 +67,9 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
                   svg.icon-16
                     use(href="#Language")
             template(#content)
-              a-doption(value="en-US")
-                span English
-                span.locale-current(v-if="currentLocale === 'en-US'") ✓
-              a-doption(value="zh-CN")
-                span 中文
-                span.locale-current(v-if="currentLocale === 'zh-CN'") ✓
+              a-doption(v-for="opt in LOCALE_OPTIONS" :key="opt.value" :value="opt.value")
+                span {{ opt.label }}
+                span.locale-current(v-if="currentLocale === opt.value") ✓
         .footer-end
           a-tooltip(:content="navbarCollapsed ? $t('dashboard.showSidebar') : $t('dashboard.hideSidebar')")
             a-button.footer-collapse-btn(type="text" @click="toggleMenuCollapse")
@@ -85,10 +82,12 @@ CommandPalette(ref="commandPaletteRef")
 
 <script lang="ts" setup name="NavBar">
   import { useEventListener, useStorage } from '@vueuse/core'
+  import { useI18n } from 'vue-i18n'
   import { useNavbarLayoutCollapsed } from '@/composables/use-query-focus-mode'
   import { listenerRouteChange } from '@/utils/route-listener'
   import { useNews } from '@/hooks/news'
   import useLocale from '@/hooks/locale'
+  import { LOCALE_OPTIONS } from '@/locale'
   import useGreptimeVersion from '@/composables/use-greptime-version'
   import type { Component } from 'vue'
   import useMenuTree from '../menu/use-menu-tree'
@@ -97,6 +96,8 @@ CommandPalette(ref="commandPaletteRef")
   import CommandPalette from '../command-palette/index.vue'
 
   const isComponentIcon = (icon: unknown): icon is Component => typeof icon !== 'string' && !!icon
+
+  const { t } = useI18n()
 
   const router = useRouter()
   const appStore = useAppStore()
@@ -108,7 +109,10 @@ CommandPalette(ref="commandPaletteRef")
   const { currentLocale, onChangeLocale } = useLocale()
   const { version: greptimeVersion, commit: greptimeCommit } = useGreptimeVersion()
 
-  const localeTooltip = computed(() => (currentLocale.value === 'zh-CN' ? 'Language / 中文' : 'Language / English'))
+  const localeTooltip = computed(() => {
+    const label = LOCALE_OPTIONS.find((o) => o.value === currentLocale.value)?.label
+    return label ? `${t('navbar.language')} / ${label}` : t('navbar.language')
+  })
 
   const onLocaleSelect = (value: string) => {
     if (value === currentLocale.value) return
@@ -119,19 +123,19 @@ CommandPalette(ref="commandPaletteRef")
   const newsModal = ref()
   const starCardClosed = useStorage('starMarketingCardClosed', false)
   const isEnterprise = import.meta.env.VITE_APP_NAME === 'enterprise'
-  const editionLabel = isEnterprise ? 'Enterprise' : 'OpenSource'
+  const editionLabel = computed(() => (isEnterprise ? t('navbar.editionEnterprise') : t('navbar.editionOpenSource')))
   const showSupportSection = !isEnterprise
 
   const menu = menuTree.value[0].children
 
-  const supportLinks = [
+  const supportLinks = computed(() => [
     {
       link: 'https://greptime.com/',
-      label: 'Home',
+      label: t('navbar.supportHome'),
     },
     {
       link: 'https://docs.greptime.com/',
-      label: 'Docs',
+      label: t('navbar.docs'),
     },
     {
       link: 'https://github.com/GreptimeTeam/dashboard',
@@ -141,7 +145,7 @@ CommandPalette(ref="commandPaletteRef")
       link: 'https://github.com/GreptimeTeam/greptimedb',
       label: 'GitHub | GreptimeDB',
     },
-  ]
+  ])
 
   const setVisible = () => {
     appStore.openGlobalSettings()

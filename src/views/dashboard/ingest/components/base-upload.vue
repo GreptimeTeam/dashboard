@@ -54,7 +54,7 @@ a-layout-content.main-content.gpt-ingest-upload
       TopBarIngest(
         :disabled="!dataFromFile || isProcessLoading"
         :loading="isProcessLoading"
-        :submitLabel="config.submitLabel || 'Process'"
+        :submitLabel="config.submitLabel || $t('ingest.process')"
         @submit="submit"
       )
         template(#selector)

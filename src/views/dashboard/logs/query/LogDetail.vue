@@ -24,7 +24,7 @@ a-drawer(
               icon-arrow-down
         a-radio-group(v-model="viewMode" type="button" size="small")
           a-radio(value="fields") {{ $t('logsQuery.fields') }}
-          a-radio(value="json") {{ $t('logsQuery.json') }}
+          a-radio(value="json") JSON
       a-checkbox(v-if="hasJsonColumn" v-model="hideJsonNulls" size="small")
         | {{ $t('dashboard.hideJsonNulls') }}
   FormView(

@@ -31,7 +31,7 @@ TimeSelect(
       showAnyTime?: boolean // New prop to control "Any time" option
     }>(),
     {
-      emptyStr: 'Any time',
+      emptyStr: '',
       buttonSize: 'small',
       showAnyTime: true, // Default to showing "Any time" option
       flexDirection: 'row-reverse',
