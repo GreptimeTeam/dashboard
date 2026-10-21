@@ -93,10 +93,10 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
                 @close="dismissSkillAlert"
               )
                 template(#title)
-                  span {{ $t('dashboard.perses.skill.title') }}
+                  span Agent Skill
                 .perses-skill-alert__desc {{ $t('dashboard.perses.skill.desc') }}
                 .perses-skill-alert__link
-                  a-link(target="_blank" rel="noopener noreferrer" :href="$t('dashboard.perses.skill.installUrl')")
+                  a-link(target="_blank" rel="noopener noreferrer" :href="PERSES_SKILL_INSTALL_URL")
                     | {{ $t('dashboard.perses.skill.installLinkText') }}
             .perses-skill-entry-wrap(v-else)
               a-link.perses-skill-entry(href="#" @click.prevent="showSkillAlert")
@@ -127,12 +127,12 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
                 type="secondary"
                 target="_blank"
                 rel="noopener noreferrer"
-                :href="$t('dashboard.perses.learnMoreUrl')"
+                :href="PERSES_LEARN_MORE_URL"
               )
                 | {{ $t('dashboard.perses.learnMoreText') }}
           template(v-else)
-            h3 No dashboard selected
-            p Select a dashboard from the left or create a new one to continue.
+            h3 {{ $t('dashboard.perses.noDashboardSelected') }}
+            p {{ $t('dashboard.perses.selectDashboardHint') }}
     a-modal(
       v-model:visible="createModalVisible"
       :title="$t('dashboard.perses.createModalTitle')"
@@ -149,7 +149,7 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
           a-input(
             v-model="createForm.name"
             allow-clear
-            :placeholder="$t('dashboard.perses.createNamePlaceholder')"
+            placeholder="dashboard-name"
             @press-enter="handleCreateDashboard"
           )
         template(v-if="createForm.mode === 'import'")
@@ -199,7 +199,7 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
           a-input(
             v-model="snapshotForm.name"
             allow-clear
-            :placeholder="$t('dashboard.perses.snapshotNamePlaceholder')"
+            placeholder="my-dashboard-snapshot-20250630"
             @press-enter="handleSnapshotModalConfirm"
           )
 </template>
@@ -240,6 +240,8 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
   const route = useRoute()
   const router = useRouter()
   const DASHBOARD_QUERY_KEY = 'dashboard'
+  const PERSES_LEARN_MORE_URL = 'https://perses.dev/perses/docs/api/dashboard/'
+  const PERSES_SKILL_INSTALL_URL = 'https://github.com/GreptimeTeam/dashboard/blob/main/skills/README.md'
   const sidebarWidthStorage = useStorage('perses-sidebar-width', 228)
   const skillAlertDismissed = useStorage('perses-skill-alert-dismissed', false)
   const isSidebarResizing = ref(false)
@@ -632,7 +634,7 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
         }
       }
     } catch (error) {
-      Message.error('Failed to load dashboards')
+      Message.error(t('dashboard.perses.loadFailed'))
     } finally {
       isLoading.value = false
     }
@@ -811,9 +813,9 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
       await deleteDashboard(apiName)
       dashboards.value = dashboards.value.filter((d) => d.id !== target.id)
       selectedId.value = dashboards.value[0]?.id || ''
-      Message.success('Dashboard deleted')
+      Message.success(t('dashboard.perses.deleted'))
     } catch (error) {
-      Message.error('Failed to delete dashboard')
+      Message.error(t('dashboard.perses.deleteFailed'))
     }
   }
 
@@ -856,7 +858,7 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
         Message.success(t('dashboard.perses.dashboardSaved'))
       }
     } catch (error) {
-      Message.error('Failed to save dashboard')
+      Message.error(t('dashboard.perses.saveFailed'))
     }
   }
 

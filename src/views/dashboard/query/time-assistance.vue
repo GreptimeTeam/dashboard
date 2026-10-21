@@ -16,7 +16,7 @@ a-modal.timestamp-assistance-modal(
         span +
         kbd ;
   .time-input-row
-    .time-input-label Date & Time
+    .time-input-label {{ t('timeAssistance.dateAndTime') }}
     TimezoneInstantPicker.time-picker(v-model="picked" type="outline")
       template(#prefix)
         svg.icon
@@ -24,7 +24,7 @@ a-modal.timestamp-assistance-modal(
     a-button.now-button(type="outline" @click="setNow")
       template(#icon)
         icon-refresh
-      | Now
+      | {{ t('common.now') }}
   table.gpt-cell-table.gpt-cell-table-hover.time-value-table
     colgroup
       col.unit-col
@@ -33,8 +33,8 @@ a-modal.timestamp-assistance-modal(
     thead
       tr
         th
-        th Numeric Value
-        th String Value
+        th {{ t('timeAssistance.numericValue') }}
+        th {{ t('timeAssistance.stringValue') }}
     tbody
       tr(v-for="row in timeRows" :key="row.unit")
         td.unit-cell
@@ -49,7 +49,7 @@ a-modal.timestamp-assistance-modal(
             a-button(size="mini" type="secondary" @click="act(row.numeric, 'copy')")
               template(#icon)
                 icon-copy
-              | Copy
+              | {{ t('common.copy') }}
         td.value-cell
           span.value-text {{ row.literal }}
           .cell-actions
@@ -60,14 +60,17 @@ a-modal.timestamp-assistance-modal(
             a-button(size="mini" type="secondary" @click="act(row.literal, 'copy')")
               template(#icon)
                 icon-copy
-              | Copy
+              | {{ t('common.copy') }}
 </template>
 
 <script setup lang="ts">
   import dayjs from 'dayjs'
   import { Message } from '@arco-design/web-vue'
+  import { useI18n } from 'vue-i18n'
   import TimezoneInstantPicker from '@/components/time-select/instant-picker.vue'
   import { useDateTimeFormat } from '@/hooks'
+
+  const { t } = useI18n()
 
   interface CMViewLike {
     state: any
@@ -100,7 +103,7 @@ a-modal.timestamp-assistance-modal(
 
   // Dynamic action text based on selection state
   const insertActionText = computed(() => {
-    return hasSelection.value ? 'Replace' : 'Insert'
+    return hasSelection.value ? t('timeAssistance.replace') : t('common.insert')
   })
 
   const refreshSelectionState = () => {
@@ -264,7 +267,7 @@ a-modal.timestamp-assistance-modal(
       insertToCM(text)
     } else {
       copyText(text)
-      Message.success({ content: 'Success', duration: 1000 })
+      Message.success({ content: t('common.success'), duration: 1000 })
     }
     visible.value = false
   }

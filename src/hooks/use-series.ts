@@ -9,6 +9,7 @@ import { ref, computed, watch } from 'vue'
 // import { useStorage } from '@vueuse/core'
 import { executePromQL, executePromQLRange } from '@/api/metrics'
 import useTimeRange from '@/hooks/use-time-range'
+import i18n from '@/locale'
 import { useSignalDatabase } from '@/observability/signal-database'
 
 export interface SeriesQueryResult {
@@ -95,7 +96,7 @@ export function useSeries() {
   // Execute PromQL range query with automatic time range and step
   const executeQuery = async (query: string) => {
     if (!query.trim()) {
-      throw new Error('Query cannot be empty')
+      throw new Error(i18n.global.t('metrics.queryEmpty'))
     }
 
     // Get time range and step

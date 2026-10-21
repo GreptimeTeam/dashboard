@@ -20,7 +20,6 @@ export default {
   'logsQuery.showKeys': 'キーを表示',
   'logsQuery.compactRows': '行をコンパクト表示',
   'logsQuery.fields': 'フィールド',
-  'logsQuery.json': 'JSON',
   'logsQuery.newFile': '新規ファイル',
   'logsQuery.rowCountOverTime': '経時的な行数',
   'logsQuery.frequencyDistribution': '列の出現頻度分布',
@@ -32,4 +31,5 @@ export default {
   'logsQuery.rowsInCurrentRange': '行(現在の時間範囲)',
   'logsQuery.clickToQuery': '時間範囲を選択',
   'logsQuery.loadMoreHint': 'スクロールまたはクリックしてさらに読み込む',
+  'logsQuery.limitPlaceholder': '上限を入力',
 }

@@ -32,7 +32,7 @@ a-dropdown.tables(trigger="click" position="right")
           :type="item.value"
           :node="nodeData"
           :parent="nodeData.iconType ? expandedTablesTree[nodeData.parentKey] : nodeData"
-          :label="'Query table'"
+          :label="$t('tableMenu.queryTable')"
           :database="database"
         )
     a-doption(v-else)
@@ -50,20 +50,23 @@ a-dropdown.tables(trigger="click" position="right")
               :label="item.label"
               :database="database"
             )
-    a-tooltip(content="Copy to Clipboard" position="right")
+    a-tooltip(position="right" :content="$t('common.copyToClipboard')")
       a-doption(@click="copy(nodeData.title)")
         template(#icon)
           svg.icon-14.icon-color(v-if="copied === false")
             use(href="#copy-new")
           svg.icon-14(v-else)
             icon-check.success-color
-        | Copy name
+        | {{ $t('common.copyName') }}
 </template>
 
 <script lang="ts" setup name="TableMenu">
   import type { TableTreeParent } from '@/store/modules/database/types'
   import type { OptionsType } from '@/types/global'
   import { useClipboard } from '@vueuse/core'
+  import { useI18n } from 'vue-i18n'
+
+  const { t } = useI18n()
 
   const props = defineProps<{
     nodeData: TableTreeParent
@@ -81,31 +84,31 @@ a-dropdown.tables(trigger="click" position="right")
     emits('expandChildren', event, nodeData, childrenType)
   }
 
-  const SHORTCUT_MAP: { [key: string]: OptionsType[] } = {
-    TABLE: [{ value: 'select*100', label: 'Query table' }],
+  const SHORTCUT_MAP = computed<{ [key: string]: OptionsType[] }>(() => ({
+    TABLE: [{ value: 'select*100', label: t('tableMenu.queryTable') }],
     FIELD: [
-      { value: 'select100', label: 'Query column' },
+      { value: 'select100', label: t('tableMenu.queryColumn') },
       {
         value: 'max',
-        label: 'Query max',
+        label: t('tableMenu.queryMax'),
       },
       {
         value: 'min',
-        label: 'Query min',
+        label: t('tableMenu.queryMin'),
       },
     ],
     TAG: [
-      { value: 'count', label: 'Count by' },
-      { value: 'where=', label: 'Filter by' },
+      { value: 'count', label: t('tableMenu.countBy') },
+      { value: 'where=', label: t('tableMenu.filterBy') },
     ],
     TIMESTAMP: [
-      { value: 'select*100', label: 'Query table' },
+      { value: 'select*100', label: t('tableMenu.queryTable') },
       {
         value: 'where<',
-        label: 'Filter by',
+        label: t('tableMenu.filterBy'),
       },
     ],
-  }
+  }))
 
   const clickMenu = (event: MouseEvent, nodeData: TableTreeParent) => {
     if (props.expandedKeys.includes(nodeData.key)) {

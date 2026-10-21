@@ -136,7 +136,7 @@
     keyPlaceholder: sqlSignal.value
       ? t('drilldown.filters.fieldPlaceholderKey')
       : t('drilldown.filters.fieldPlaceholder'),
-    operatorPlaceholder: t('drilldown.filters.operatorPlaceholder'),
+    operatorPlaceholder: '=',
     valuePlaceholder: t('drilldown.filters.valuePlaceholder'),
     noSuggestions: t('drilldown.filters.noSuggestions'),
   }))

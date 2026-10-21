@@ -38,27 +38,28 @@ export const dataTypesMap = {
   TimestampMillisecond: 'date',
 }
 
-export const durations = [
-  { key: 'ms', value: 'milliseconds' },
-  { key: 's', value: 'seconds' },
-  { key: 'm', value: 'minutes' },
-  { key: 'h', value: 'hours' },
-  { key: 'd', value: 'days - assuming a day has always 24h' },
-  { key: 'w', value: 'weeks - assuming a week has always 7d' },
-  { key: 'y', value: 'years - assuming a year has always 365d' },
+export const getDurations = (t: (key: string) => string) => [
+  { key: 'ms', value: t('dashboard.durationMs') },
+  { key: 's', value: t('dashboard.durationS') },
+  { key: 'm', value: t('dashboard.durationM') },
+  { key: 'h', value: t('dashboard.durationH') },
+  { key: 'd', value: t('dashboard.durationD') },
+  { key: 'w', value: t('dashboard.durationW') },
+  { key: 'y', value: t('dashboard.durationY') },
 ]
 
 export const durationExamples = ['1h', '5d1m', '5m', '10s']
 
 export const timeOptionsArray = [5, 10, 15, 30, 60]
 
-export const queryTimeMap: { [key: number]: string } = {
-  5: 'Last 5 minutes',
-  10: 'Last 10 minutes',
-  15: 'Last 15 minutes',
-  30: 'Last 30 minutes',
-  60: 'Last 60 minutes',
-}
+// Locale-aware labels for the quick time-length options.
+export const getQueryTimeMap = (t: (key: string) => string): { [key: number]: string } => ({
+  5: t('time-select.last5Minutes'),
+  10: t('time-select.last10Minutes'),
+  15: t('time-select.last15Minutes'),
+  30: t('time-select.last30Minutes'),
+  60: t('time-select.last60Minutes'),
+})
 
 // New: `TAG`, `FIELD`, `TIMESTAMP`
 // Old: `PRIMARY KEY`, `FIELD`, `TIME INDEX`

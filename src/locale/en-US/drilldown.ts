@@ -20,7 +20,6 @@ export default {
   'drilldown.filters.fieldPlaceholder': 'label',
   'drilldown.filters.fieldPlaceholderKey': 'key',
   'drilldown.filters.operatorLabel': 'Operator',
-  'drilldown.filters.operatorPlaceholder': '=',
   'drilldown.filters.valueLabel': 'Value',
   'drilldown.filters.valuePlaceholder': 'value',
   'drilldown.filters.valueManualPlaceholder': 'value',
@@ -79,13 +78,10 @@ export default {
   'drilldown.sidebar.summary': 'Catalog',
   'drilldown.sidebar.loadingCount': 'Loading…',
   'drilldown.sidebar.totalCount': '{count} metrics',
-  'drilldown.sidebar.filteredCount': '{filtered}/{total}',
   'drilldown.sidebar.truncatedHint': 'List capped at {limit} names from API',
   'drilldown.main.searchPlaceholder': 'Search metrics',
   'drilldown.main.sortLabel': 'Sort',
   'drilldown.main.sortDefault': 'Recent first',
-  'drilldown.main.sortAsc': 'A–Z',
-  'drilldown.main.sortDesc': 'Z–A',
   'drilldown.main.emptyDescription': 'No metrics match the current filters',
   'drilldown.main.truncatedTitle': 'Metric list may be incomplete',
   'drilldown.main.truncatedDescription':
@@ -170,7 +166,6 @@ export default {
   'drilldown.traces.breakdownAttrGroupResource': 'Resource',
   'drilldown.traces.breakdownAttrGroupSpan': 'Span',
   'drilldown.traces.breakdownNoValues': 'No attribute values in range',
-  'drilldown.traces.redMainTitle': 'RED',
   'drilldown.traces.redRate': 'Rate',
   'drilldown.traces.redErrors': 'Errors',
   'drilldown.traces.redDuration': 'Duration',
@@ -204,4 +199,5 @@ export default {
   'drilldown.traces.logsSettingsService': 'Service',
   'drilldown.traces.nonModelTableHint':
     'No trace_id column was found. The table can still be used in Logs settings, but trace association may return no rows.',
+  'drilldown.signalBindingNotReady': 'Signal binding is not ready',
 }

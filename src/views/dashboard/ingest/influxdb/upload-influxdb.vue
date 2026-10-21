@@ -4,10 +4,10 @@ BaseUpload(:config="config")
     a-select(v-model="precision" size="medium" :options="precisionOptions")
   template(v-slot:extra="{ toggleDoc, docVisible }")
     a-tooltip(
-      content="About InfluxDB Line Protocol"
       position="tr"
       trigger="hover"
       mini
+      :content="$t('ingest.influxdbAbout')"
     )
       a-button(type="outline" size="medium" @click="toggleDoc")
         template(#icon)
@@ -17,19 +17,22 @@ BaseUpload(:config="config")
   template(#doc-content)
     .markdown-container.ingest
       SimpleMarkdown(:md="doc")
-    | To learn more about influxdb line protocol on GreptimeDB, visit our
-    a(href="https://docs.greptime.com/user-guide/ingest-data/for-iot/influxdb-line-protocol" target="_blank") documentation.
+    | {{ $t('ingest.influxdbDocPrefix') }}
+    a(href="https://docs.greptime.com/user-guide/ingest-data/for-iot/influxdb-line-protocol" target="_blank") {{ $t('ingest.influxdbDocLink') }}
 </template>
 
 <script lang="ts" setup>
+  import { useI18n } from 'vue-i18n'
+
+  const { t } = useI18n()
   const { precision } = storeToRefs(useIngestStore())
 
-  const precisionOptions = [
-    { value: 'ns', label: 'Nanoseconds' },
-    { value: 'us', label: 'Microseconds' },
-    { value: 'ms', label: 'Milliseconds' },
-    { value: 's', label: 'Seconds' },
-  ]
+  const precisionOptions = computed(() => [
+    { value: 'ns', label: t('ingest.nanoseconds') },
+    { value: 'us', label: t('ingest.microseconds') },
+    { value: 'ms', label: t('ingest.milliseconds') },
+    { value: 's', label: t('ingest.seconds') },
+  ])
 
   const { getInfluxdbUploadConfig } = useIngest()
   const config = getInfluxdbUploadConfig(precision)

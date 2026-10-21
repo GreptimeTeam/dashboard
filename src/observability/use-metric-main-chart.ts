@@ -1,4 +1,5 @@
 import { computed, ref, watch, type Ref } from 'vue'
+import i18n from '@/locale'
 import type { EChartsOption } from 'echarts'
 import { storeToRefs } from 'pinia'
 import { executePromQLRange } from '@/api/metrics'
@@ -315,7 +316,7 @@ export default function useMetricMainChart(
       }
       console.error(`Failed to load main chart for ${name}:`, err)
       clearChart()
-      error.value = err instanceof Error ? err.message : 'Failed to load chart'
+      error.value = err instanceof Error ? err.message : i18n.global.t('drilldown.metricDetail.chartError')
     } finally {
       if (version === requestVersion) {
         loading.value = false

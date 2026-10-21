@@ -20,7 +20,6 @@ export default {
   'drilldown.filters.fieldPlaceholder': 'ラベル',
   'drilldown.filters.fieldPlaceholderKey': 'キー',
   'drilldown.filters.operatorLabel': '演算子',
-  'drilldown.filters.operatorPlaceholder': '=',
   'drilldown.filters.valueLabel': '値',
   'drilldown.filters.valuePlaceholder': '値',
   'drilldown.filters.valueManualPlaceholder': '値',
@@ -79,13 +78,10 @@ export default {
   'drilldown.sidebar.summary': 'カタログ',
   'drilldown.sidebar.loadingCount': '読み込み中…',
   'drilldown.sidebar.totalCount': '{count} 件のメトリクス',
-  'drilldown.sidebar.filteredCount': '{filtered}/{total}',
   'drilldown.sidebar.truncatedHint': 'API から最大 {limit} 件の名前のみ取得',
   'drilldown.main.searchPlaceholder': 'メトリクスを検索',
   'drilldown.main.sortLabel': '並び替え',
   'drilldown.main.sortDefault': '新しい順',
-  'drilldown.main.sortAsc': 'A–Z',
-  'drilldown.main.sortDesc': 'Z–A',
   'drilldown.main.emptyDescription': '現在のフィルターに一致するメトリクスはありません',
   'drilldown.main.truncatedTitle': 'メトリクス一覧が完全でない可能性があります',
   'drilldown.main.truncatedDescription':
@@ -170,7 +166,6 @@ export default {
   'drilldown.traces.breakdownAttrGroupResource': 'リソース',
   'drilldown.traces.breakdownAttrGroupSpan': 'スパン',
   'drilldown.traces.breakdownNoValues': '範囲内に属性値がありません',
-  'drilldown.traces.redMainTitle': 'RED',
   'drilldown.traces.redRate': 'レート',
   'drilldown.traces.redErrors': 'エラー',
   'drilldown.traces.redDuration': '所要時間',
@@ -206,4 +201,5 @@ export default {
   'drilldown.traces.logsSettingsService': 'サービス',
   'drilldown.traces.nonModelTableHint':
     'trace_id 列が見つかりませんでした。このテーブルはログ設定で引き続き使用できますが、トレースの関連付けでは行が返されない場合があります。',
+  'drilldown.signalBindingNotReady': 'シグナルのバインディングが未設定です',
 }

@@ -2,6 +2,8 @@
 
 > 语义层回答三件事：**这是哪类表、列角色是什么、跨信号身份在哪里**。
 > 它不负责查询语法；Metrics 用 PromQL，Logs/Traces 用 SQL，统一由 Context 驱动。
+>
+> 三信号「语义从哪来、能否 SQL/API 确认」的对照表见 **[semantic-sources.md](./semantic-sources.md)**。
 
 ---
 

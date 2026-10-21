@@ -52,11 +52,11 @@ a-card.metrics-chart(:bordered="false")
       )
 
   .empty-state(v-else)
-    a-empty(description="No data to display")
+    a-empty(:description="$t('metrics.noDataToDisplay')")
       template(#image)
         svg.icon.empty-icon
           use(href="#chart-line")
-      | Execute a PromQL query to see chart visualization
+      | {{ $t('metrics.emptyChartHint') }}
 </template>
 
 <script setup lang="ts">

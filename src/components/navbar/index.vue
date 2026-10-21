@@ -14,8 +14,8 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
       span.version-badge(v-if="!navbarCollapsed && greptimeVersion") {{ greptimeVersion }}
       template(#content)
         .version-tooltip
-          div Version: {{ greptimeVersion }}
-          div Commit: {{ greptimeCommit }}
+          div {{ $t('navbar.version') }}{{ greptimeVersion }}
+          div {{ $t('navbar.commit') }}{{ greptimeCommit }}
   a-layout-content.menu-content
     a-menu.navbar-menu(
       mode="vertical"
@@ -82,6 +82,7 @@ CommandPalette(ref="commandPaletteRef")
 
 <script lang="ts" setup name="NavBar">
   import { useEventListener, useStorage } from '@vueuse/core'
+  import { useI18n } from 'vue-i18n'
   import { useNavbarLayoutCollapsed } from '@/composables/use-query-focus-mode'
   import { listenerRouteChange } from '@/utils/route-listener'
   import { useNews } from '@/hooks/news'
@@ -96,6 +97,8 @@ CommandPalette(ref="commandPaletteRef")
 
   const isComponentIcon = (icon: unknown): icon is Component => typeof icon !== 'string' && !!icon
 
+  const { t } = useI18n()
+
   const router = useRouter()
   const appStore = useAppStore()
   const { menuSelectedKey, globalSettings, menuCollapse } = storeToRefs(appStore)
@@ -108,7 +111,7 @@ CommandPalette(ref="commandPaletteRef")
 
   const localeTooltip = computed(() => {
     const label = LOCALE_OPTIONS.find((o) => o.value === currentLocale.value)?.label
-    return label ? `Language / ${label}` : 'Language'
+    return label ? `${t('navbar.language')} / ${label}` : t('navbar.language')
   })
 
   const onLocaleSelect = (value: string) => {
@@ -120,19 +123,19 @@ CommandPalette(ref="commandPaletteRef")
   const newsModal = ref()
   const starCardClosed = useStorage('starMarketingCardClosed', false)
   const isEnterprise = import.meta.env.VITE_APP_NAME === 'enterprise'
-  const editionLabel = isEnterprise ? 'Enterprise' : 'OpenSource'
+  const editionLabel = computed(() => (isEnterprise ? t('navbar.editionEnterprise') : t('navbar.editionOpenSource')))
   const showSupportSection = !isEnterprise
 
   const menu = menuTree.value[0].children
 
-  const supportLinks = [
+  const supportLinks = computed(() => [
     {
       link: 'https://greptime.com/',
-      label: 'Home',
+      label: t('navbar.supportHome'),
     },
     {
       link: 'https://docs.greptime.com/',
-      label: 'Docs',
+      label: t('navbar.docs'),
     },
     {
       link: 'https://github.com/GreptimeTeam/dashboard',
@@ -142,7 +145,7 @@ CommandPalette(ref="commandPaletteRef")
       link: 'https://github.com/GreptimeTeam/greptimedb',
       label: 'GitHub | GreptimeDB',
     },
-  ]
+  ])
 
   const setVisible = () => {
     appStore.openGlobalSettings()

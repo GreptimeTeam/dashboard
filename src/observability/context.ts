@@ -1,4 +1,5 @@
 import { computed, inject, onUnmounted, provide, ref, type ComputedRef, type InjectionKey, type Ref } from 'vue'
+import i18n from '@/locale'
 import useTimeRange from '@/hooks/use-time-range'
 import { normalizeLogTimeBoundToMs } from '@/utils/log-time-cursor'
 import createDrilldownSession, { type DrilldownSession } from './drilldown-session'
@@ -370,7 +371,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
   const bindTable: DrilldownActions['bindTable'] = (signalName, table, options) => {
     const { impl } = session.binding
     if (!impl) {
-      return Promise.reject(new Error('Signal binding is not ready'))
+      return Promise.reject(new Error(i18n.global.t('drilldown.signalBindingNotReady')))
     }
     return impl.bindTable(signalName, table, options)
   }
@@ -378,7 +379,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
   const setLogsRole: DrilldownActions['setLogsRole'] = (role, column) => {
     const { impl } = session.binding
     if (!impl) {
-      throw new Error('Signal binding is not ready')
+      throw new Error(i18n.global.t('drilldown.signalBindingNotReady'))
     }
     impl.setLogsRole(role, column)
   }

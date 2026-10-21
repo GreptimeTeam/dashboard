@@ -123,6 +123,7 @@ a-tabs.panel-tabs(
 <script lang="ts" name="DataView" setup>
   import { Message } from '@arco-design/web-vue'
   import { useStorage } from '@vueuse/core'
+  import { useI18n } from 'vue-i18n'
   import fileDownload from 'js-file-download'
   import useDataChart from '@/hooks/data-chart'
   import type { PromForm, ResultType } from '@/store/modules/code-run/types'
@@ -131,6 +132,8 @@ a-tabs.panel-tabs(
   import ExplainTabs from '@/components/explain-tabs/index.vue'
   import { runWithFormat } from '@/services/code-run'
   import { useQuerySession } from '@/views/dashboard/query/use-query-session'
+
+  const { t } = useI18n()
 
   const props = withDefaults(
     defineProps<{
@@ -213,10 +216,10 @@ a-tabs.panel-tabs(
     try {
       const res = await runWithFormat(result.query, result.type, {} as PromForm, 'csvWithNames')
       fileDownload(res as unknown as string, `export_${result.type}_${result.key}_greptimedb.csv`)
-      Message.success('Exported successfully')
+      Message.success(t('dashboard.exportSuccess'))
     } catch (error) {
       console.error(error)
-      Message.error('Failed to export CSV')
+      Message.error(t('dashboard.exportCsvFailed'))
     } finally {
       exportingKeys.value.delete(result.key)
     }

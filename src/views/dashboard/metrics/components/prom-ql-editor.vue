@@ -13,7 +13,7 @@
     @ready="onEditorReady"
   )
   .query-button-container
-    a-tooltip(content="Enter" position="right")
+    a-tooltip(position="right" :content="$t('metrics.enterHint')")
       a-button.query-run-button(
         type="primary"
         size="large"

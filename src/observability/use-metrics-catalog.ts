@@ -1,4 +1,5 @@
 import { computed, ref, toValue, watch, type MaybeRefOrGetter, type Ref } from 'vue'
+import i18n from '@/locale'
 import { buildMatchSelector, fetchMetricNamesPool } from './adapters/metrics'
 import {
   applySidebarFilters,
@@ -53,7 +54,7 @@ export default function useMetricsCatalog(
       console.error('Failed to load metric catalog:', err)
       poolNames.value = []
       truncated.value = false
-      error.value = err instanceof Error ? err.message : 'Failed to load metrics'
+      error.value = err instanceof Error ? err.message : i18n.global.t('metrics.loadFailed')
     } finally {
       loading.value = false
     }

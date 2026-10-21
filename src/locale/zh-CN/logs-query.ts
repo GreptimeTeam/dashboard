@@ -20,7 +20,6 @@ export default {
   'logsQuery.showKeys': '显示列名',
   'logsQuery.compactRows': '紧凑行高',
   'logsQuery.fields': '字段',
-  'logsQuery.json': 'JSON',
   'logsQuery.newFile': '新建文件',
   'logsQuery.rowCountOverTime': '单位时间新增行数',
   'logsQuery.frequencyDistribution': '列值分布',
@@ -32,4 +31,5 @@ export default {
   'logsQuery.rowsInCurrentRange': '条结果（当前时间段）',
   'logsQuery.clickToQuery': '选择时间段',
   'logsQuery.loadMoreHint': '继续滚动或点击加载更多',
+  'logsQuery.limitPlaceholder': '输入条数上限',
 }

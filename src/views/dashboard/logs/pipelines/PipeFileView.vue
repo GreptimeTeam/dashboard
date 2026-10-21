@@ -4,13 +4,13 @@ a-layout.full-height-layout.pipefile-view
     a-card.light-editor-card(:bordered="false")
       template(#title)
         .card-title-with-description
-          .card-title {{ isCreating ? `${t('common.create')} Pipeline` : `${t('common.edit')} Pipeline - ${currFile.name}` }}
-          .card-description Pipeline is a mechanism in GreptimeDB for parsing and transforming log data,
+          .card-title {{ isCreating ? t('pipeline.createTitle') : t('pipeline.editTitle', { name: currFile.name }) }}
+          .card-description {{ t('pipeline.description') }}
             |
-            a(href="https://docs.greptime.com/reference/pipeline/pipeline-config" target="_blank") read more
+            a(href="https://docs.greptime.com/reference/pipeline/pipeline-config" target="_blank") {{ t('common.readMore') }}
       template(#extra)
         a-space
-          a-popconfirm(content="Are you sure you want to delete?" @ok="handleDelete")
+          a-popconfirm(:content="t('common.deleteConfirm')" @ok="handleDelete")
             a-button(
               v-if="!isCreating"
               type="text"
@@ -22,9 +22,9 @@ a-layout.full-height-layout.pipefile-view
             | {{ t('common.save') }}
     a-card.pipeline-actions-card(v-if="!isCreating")
       a-button(type="text" size="small" @click="handleIngest")
-        | Ingest With Pipeline
+        | {{ t('pipeline.ingestWithPipeline') }}
       a-button(type="text" size="small" @click="showCreateTableModal")
-        | Create Table from Pipeline
+        | {{ t('pipeline.createTableFromPipeline') }}
 
     a-form(
       ref="formRef"
@@ -35,27 +35,27 @@ a-layout.full-height-layout.pipefile-view
       a-form-item.pipeline-form-toolbar-field.pipeline-form-toolbar-field--name(
         v-if="isCreating"
         field="name"
-        label="Pipeline name"
+        :label="t('pipeline.name')"
       )
-        a-input(v-model="currFile.name" placeholder="Pipeline name")
-      a-form-item.pipeline-form-toolbar-field(v-if="!isCreating" field="version" label="Version")
+        a-input(v-model="currFile.name" :placeholder="t('pipeline.name')")
+      a-form-item.pipeline-form-toolbar-field(v-if="!isCreating" field="version" :label="t('pipeline.version')")
         a-space
           | {{ currFile.version }}
 
-      a-form-item.pipeline-content-item(field="content" label="Yaml Content")
+      a-form-item.pipeline-content-item(field="content" :label="t('pipeline.yamlContent')")
         template(#help)
           div
         .full-width-height-editor.pipeline-editor.gpt-light-editor.gpt-square-editor(:class="editorHeightClass")
           LangEditor(v-model="currFile.content" style="width: 100%; height: 100%")
   a-layout-content.content-wrapper
-    a-card.light-editor-card(title="Input" :bordered="false")
+    a-card.light-editor-card(:title="t('pipeline.input')" :bordered="false")
       template(#extra)
         a-space
           a-select(
             v-model="selectedContentType"
             style="width: 150px"
-            placeholder="Content Type"
             size="small"
+            :placeholder="t('pipeline.contentType')"
             @change="handleInputChange"
           )
             a-option(value="text/plain") text
@@ -66,8 +66,8 @@ a-layout.full-height-layout.pipefile-view
 
       template(#title)
         .card-title-with-description
-          .card-title Input
-          .card-description Input your original log for processing by the current pipeline configuration
+          .card-title {{ t('pipeline.input') }}
+          .card-description {{ t('pipeline.inputDescription') }}
 
       a-alert(v-if="ymlError" type="error")
         | {{ ymlError }}
@@ -82,16 +82,16 @@ a-layout.full-height-layout.pipefile-view
           :tabSize="2"
         )
 
-    a-card.light-editor-card.output(title="Output" :bordered="false")
+    a-card.light-editor-card.output(:title="t('pipeline.output')" :bordered="false")
       template(#extra)
         a-radio-group.output-view-toggle(v-model="outputViewMode" type="button" size="small")
-          a-radio(value="table") Table
+          a-radio(value="table") {{ t('pipeline.viewTable') }}
           a-radio(value="json") JSON
 
       template(#title)
         .card-title-with-description
-          .card-title Output
-          .card-description Processed logs displayed here. Logs that ingested via API will follow this structure.
+          .card-title {{ t('pipeline.output') }}
+          .card-description {{ t('pipeline.outputDescription') }}
 
       // Semantic Type Legend
       .semantic-legend(
@@ -119,7 +119,7 @@ a-layout.full-height-layout.pipefile-view
         )
 
       .output-empty(v-else-if="isOutputEmpty")
-        a-empty.data-table-empty(description="No data")
+        a-empty.data-table-empty(:description="t('common.noData')")
           template(#image)
             img.data-table-empty-icon(alt="" :src="tableEmptyIcon")
 
@@ -207,7 +207,7 @@ transform:
       }
       return create(currFile)
         .then(() => {
-          Notification.success('Save Successful')
+          Notification.success(t('dashboard.saveSuccess'))
           emit('refresh')
         })
         .then(() => {

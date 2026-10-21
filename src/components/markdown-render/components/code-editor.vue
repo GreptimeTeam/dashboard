@@ -27,7 +27,7 @@
                 a-list(size="small" :split="false" :bordered="false")
                   template(#header)
                     | {{ $t('dashboard.supportedDurations') }}
-                  a-list-item(v-for="item of durations" :key="item")
+                  a-list-item(v-for="item of durationsList" :key="item")
                     a-typography-text(code) {{ item.key }}
                     span.ml-4 {{ item.value }}
                   a-list-item
@@ -38,12 +38,12 @@
       a-button(:disabled="runDisabled" :loading="isLoading" @click="runCommand") {{ $t('playground.run') }}
       a-button(v-if="showReset" @click="reset") {{ $t('playground.reset') }}
     CodeMirror(v-model="code" :extensions="[mapLanguages(lang)(), keymap.of(defaultKeymap)]" :disabled="disabled")
-    a-button.copy(type="text" title="Copy Code" @click="copy")
+    a-button.copy(type="text" :title="$t('common.copyCode')" @click="copy")
       svg
         use(href="#copy-new")
   .results(v-if="hasRecords")
     a-tabs.playground-tabs(:default-active-key="hasChart ? '2' : '1'")
-      a-tab-pane(key="1" title="Table")
+      a-tab-pane(key="1" :title="$t('dashboard.table')")
         PaginatedDataTable(
           :data="tableModel.rows"
           :columns="tableModel.columns"
@@ -51,7 +51,7 @@
           :ts-column="tableModel.tsColumn"
           :show-context-menu="false"
         )
-      a-tab-pane(v-if="hasChart" key="2" title="Chart")
+      a-tab-pane(v-if="hasChart" key="2" :title="$t('dashboard.chart')")
         DataChart(:data="result" :hasHeader="false" :defaultChartForm="chartParams ? JSON.parse(chartParams) : {}")
   .logs(v-if="log.type")
     a-list(
@@ -70,12 +70,19 @@
   import useDataChart from '@/hooks/data-chart'
   import type { PromForm, ResultType } from '@/store/modules/code-run/types'
   import type { Log } from '@/types/log'
-  import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '@/views/dashboard/config'
+  import { getQueryTimeMap, getDurations, durationExamples, timeOptionsArray } from '@/views/dashboard/config'
   import i18n from '@/locale'
+  import { useI18n } from 'vue-i18n'
   import { Message } from '@arco-design/web-vue'
   import PaginatedDataTable from '@/components/paginated-data-table/index.vue'
   import { normalizeRecordsToTableModel } from '@/utils/table-normalizer'
   import mapLanguages from './utils'
+
+  const { t } = useI18n()
+
+  // Locale-aware replacements for the static config tables
+  const queryTimeMap = computed(() => getQueryTimeMap(t))
+  const durationsList = computed(() => getDurations(t))
 
   // data
   const props = defineProps({
@@ -190,10 +197,12 @@
     return code.value.trim() === ''
   })
 
-  const queryTimeOptions = timeOptionsArray.map((value) => ({
-    value,
-    label: `Last ${value} minutes`,
-  }))
+  const queryTimeOptions = computed(() =>
+    timeOptionsArray.map((value) => ({
+      value,
+      label: getQueryTimeMap(t)[value],
+    }))
+  )
 
   const defaultKeymap = [
     {
