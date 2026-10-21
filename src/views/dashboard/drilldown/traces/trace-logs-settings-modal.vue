@@ -24,7 +24,7 @@ a-modal.trace-logs-settings(
   )
     .trace-logs-settings__row(v-for="(mapping, index) in mappings" :key="index")
       .trace-logs-settings__service-line
-        span.trace-logs-settings__service-label {{ t('drilldown.traces.logsSettingsService') }}
+        span.trace-logs-settings__service-label Service
         span.trace-logs-settings__service {{ mapping.service }}
 
       .trace-logs-settings__pair

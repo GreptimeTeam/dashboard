@@ -67,8 +67,8 @@ a-card.editor-card.editor-card--inset.gpt-query-editor-inset(:bordered="false")
               v-model="promForm.step"
               size="medium"
               hide-button
+              placeholder="step"
               :style="{ width: '180px' }"
-              :placeholder="$t('dashboard.step')"
             )
               template(#prefix) Step
               template(#suffix)

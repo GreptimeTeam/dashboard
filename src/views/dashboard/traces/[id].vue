@@ -8,24 +8,24 @@
       .trace-info
         .trace-title
           span.operation-name {{ rootSpan?.span_name || $t('drilldown.traces.unknownOperation') }}
-          a-tag.span-count {{ $t('traces.spanCount', traceSpans.length, { count: traceSpans.length }) }}
+          a-tag.span-count {{ traceSpans.length }} span{{ traceSpans.length === 1 ? '' : 's' }}
         .trace-id
-          span.label {{ $t('drilldown.traces.traceIdLabel') }}
+          span.label Trace ID:
           a-typography-text.trace-id-value(copyable :copy-text="traceId")
             | {{ traceId }}
   .content-container
     .cards-row
-      a-card.trace-timeline-card.light-editor-card(:title="$t('drilldown.traces.ganttDrawerTitle')" :bordered="false")
+      a-card.trace-timeline-card.light-editor-card(title="Trace Timeline" :bordered="false")
         template(#extra)
           .service-filter
-            span.filter-label {{ $t('drilldown.traces.servicesFilter') }}
+            span.filter-label Services:
             a-select(
               v-model="selectedServices"
               multiple
               allow-clear
               style="min-width: 200px"
               size="small"
-              :placeholder="$t('drilldown.traces.servicesPlaceholder')"
+              placeholder="Filter services"
             )
               a-option(v-for="service in uniqueServices" :key="service" :value="service")
                 span.service-option

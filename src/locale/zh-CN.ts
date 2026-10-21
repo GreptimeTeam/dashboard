@@ -100,8 +100,6 @@ export default {
   'traces.spanAttributes': 'Span 属性',
   'traces.tableView': '表格视图',
   'traces.jsonView': 'JSON 视图',
-  'traces.startTime': '开始时间',
-  'traces.spanCount': '{count} 个 span',
 
   'ingest.writeSuccess': '数据写入成功',
   'ingest.process': '处理',

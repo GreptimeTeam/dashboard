@@ -111,17 +111,18 @@ export function formatMetricAxisValue(
   return formatMetricUnitValue(value, unit)
 }
 
-export function metricKindLabelKey(kind: MetricKind): string {
+/** OTel/Prom metric kind labels stay English (domain terms, not localized). */
+export function metricKindLabel(kind: MetricKind): string {
   switch (kind) {
     case 'counter':
-      return 'drilldown.main.metricKindCounter'
+      return 'Counter'
     case 'histogram':
-      return 'drilldown.main.metricKindHistogram'
+      return 'Histogram'
     case 'summary':
-      return 'drilldown.main.metricKindSummary'
+      return 'Summary'
     case 'updown_counter':
-      return 'drilldown.main.metricKindUpdown'
+      return 'Up/Down'
     default:
-      return 'drilldown.main.metricKindGauge'
+      return 'Gauge'
   }
 }

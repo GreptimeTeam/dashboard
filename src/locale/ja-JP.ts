@@ -99,8 +99,6 @@ export default {
   'traces.spanAttributes': 'スパン属性',
   'traces.tableView': 'テーブルビュー',
   'traces.jsonView': 'JSON ビュー',
-  'traces.startTime': '開始時刻',
-  'traces.spanCount': '{count} スパン',
 
   'ingest.writeSuccess': 'データの書き込みに成功しました',
   'ingest.process': '処理',

@@ -2,7 +2,7 @@
 a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false")
   template(#title)
     a-space.metric-sidebar-title(fill :size="10")
-      span.gpt-sidebar-heading {{ $t('metrics.sidebar.title') }}
+      span.gpt-sidebar-heading Metrics
       a-button.metric-sidebar-refresh(
         type="text"
         size="mini"

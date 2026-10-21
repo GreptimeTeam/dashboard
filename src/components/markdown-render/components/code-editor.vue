@@ -15,8 +15,8 @@
         a-input(
           v-model="promForm.step"
           hide-button
+          placeholder="step"
           :style="{ width: '180px' }"
-          :placeholder="$t('dashboard.step')"
         )
           template(#prefix) Step
           template(#suffix)

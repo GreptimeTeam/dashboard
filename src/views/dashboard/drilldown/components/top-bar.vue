@@ -57,9 +57,9 @@
   const { triggerRefresh, setSignal, openLogsDetail } = ctx.actions
 
   const signalItems = computed(() => [
-    { value: 'metrics' as DrilldownSignal, label: t('drilldown.signals.metrics') },
-    { value: 'logs' as DrilldownSignal, label: t('drilldown.signals.logs') },
-    { value: 'traces' as DrilldownSignal, label: t('drilldown.signals.traces') },
+    { value: 'metrics' as DrilldownSignal, label: 'Metrics' },
+    { value: 'logs' as DrilldownSignal, label: 'Logs' },
+    { value: 'traces' as DrilldownSignal, label: 'Traces' },
   ])
 
   /**

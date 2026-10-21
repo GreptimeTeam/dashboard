@@ -99,8 +99,6 @@ export default {
   'traces.spanAttributes': 'Span Attributes',
   'traces.tableView': 'Table View',
   'traces.jsonView': 'JSON View',
-  'traces.startTime': 'StartTime',
-  'traces.spanCount': '{count} span | {count} spans',
 
   'ingest.writeSuccess': 'Data written successfully',
   'ingest.process': 'Process',

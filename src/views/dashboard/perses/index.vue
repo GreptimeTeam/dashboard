@@ -65,7 +65,7 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
                       )
               a-menu-item-group.gpt-sidebar-menu-category(v-if="groupedSidebarDashboards.snapshots.length")
                 template(#title)
-                  span.gpt-sidebar-menu-category-text {{ $t('dashboard.perses.category.snapshot') }}
+                  span.gpt-sidebar-menu-category-text Snapshots
                 a-menu-item(
                   v-for="item in groupedSidebarDashboards.snapshots"
                   :key="item.id"
@@ -693,12 +693,12 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
     if (!importPreview.value?.ok) {
       return { type: '', count: 0 }
     }
-    const typeKey =
+    const type =
       importPreview.value.category === DASHBOARD_CATEGORY_SNAPSHOT
-        ? 'dashboard.perses.importTypeSnapshot'
-        : 'dashboard.perses.importTypeDashboard'
+        ? 'Snapshot'
+        : t('dashboard.perses.importTypeDashboard')
     return {
-      type: t(typeKey),
+      type,
       count: importPreview.value.panelCount,
     }
   })

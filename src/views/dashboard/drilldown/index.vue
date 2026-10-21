@@ -46,9 +46,9 @@
       DrilldownDrawer(
         popup-container=".drilldown-body--logs"
         variant="stacked"
+        subtitle="Trace Timeline"
         :visible="tracesGanttVisible"
         :breadcrumbs="logsGanttCrumbs"
-        :subtitle="t('drilldown.traces.ganttDrawerTitle')"
         @close="closeTracesGanttDrawer"
       )
         TracesGantt(v-if="tracesGanttVisible")
@@ -78,9 +78,9 @@
       DrilldownDrawer(
         popup-container=".drilldown-body--traces"
         variant="stacked"
+        subtitle="Trace Timeline"
         :visible="tracesGanttVisible"
         :breadcrumbs="tracesGanttCrumbs"
-        :subtitle="t('drilldown.traces.ganttDrawerTitle')"
         @close="closeTracesGanttDrawer"
       )
         TracesGantt(v-if="tracesGanttVisible")
@@ -143,14 +143,10 @@
   const { signal } = ctx.connection
   const { logsTab } = ctx.ui
   const { setLogsTab } = ctx.actions
-  const logsDetailTabLabels = {
-    logs: 'drilldown.logs.logsTab',
-    labels: 'drilldown.logs.labelsTab',
-  } as const
   const logsDetailTabs = computed(() =>
     LOGS_DETAIL_TABS.map((value) => ({
       value,
-      label: t(logsDetailTabLabels[value]),
+      label: value === 'logs' ? 'Logs' : t('drilldown.logs.labelsTab'),
     }))
   )
 

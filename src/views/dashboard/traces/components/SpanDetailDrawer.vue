@@ -24,19 +24,19 @@ a-drawer(
         span.panel-view-logs-target(v-if="logsTargetLabel" :title="logsTargetLabel") {{ logsTargetLabel }}
     .summary-container
       .summary-item
-        span.summary-label {{ t('drilldown.traces.colService') }}
+        span.summary-label Service
         span.summary-value {{ span?.service_name }}
       .divider
       .summary-item
-        span.summary-label {{ t('drilldown.traces.colStatus') }}
+        span.summary-label Status
         span.summary-value(:class="{ 'is-error': spanHasError }") {{ spanStatusLabel }}
       .divider
       .summary-item
-        span.summary-label {{ t('drilldown.traces.colDuration') }}
+        span.summary-label Duration
         span.summary-value {{ formatDuration(span?.duration_nano) }}
       .divider
       .summary-item
-        span.summary-label {{ t('traces.startTime') }}
+        span.summary-label StartTime
         span.summary-value {{ formatStartTime(span?.timestamp) }}
     a-tabs(v-model:active-key="viewMode")
       a-tab-pane(key="table" :title="t('traces.tableView')")
@@ -75,19 +75,19 @@ a-drawer(
         a-typography-text.trace-id-value(copyable :copy-text="span?.span_id") {{ span?.span_id }}
     .summary-container
       .summary-item
-        span.summary-label {{ t('drilldown.traces.colService') }}
+        span.summary-label Service
         span.summary-value {{ span?.service_name }}
       .divider
       .summary-item
-        span.summary-label {{ t('drilldown.traces.colStatus') }}
+        span.summary-label Status
         span.summary-value(:class="{ 'is-error': spanHasError }") {{ spanStatusLabel }}
       .divider
       .summary-item
-        span.summary-label {{ t('drilldown.traces.colDuration') }}
+        span.summary-label Duration
         span.summary-value {{ formatDuration(span?.duration_nano) }}
       .divider
       .summary-item
-        span.summary-label {{ t('traces.startTime') }}
+        span.summary-label StartTime
         span.summary-value {{ formatStartTime(span?.timestamp) }}
     a-tabs(v-model:active-key="viewMode")
       a-tab-pane(key="table" :title="t('traces.tableView')")
