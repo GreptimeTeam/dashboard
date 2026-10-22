@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ServiceMapEdge, ServiceMapNode } from './service-map'
-import { buildServiceMapDisplayGraph, buildServiceMapFacets } from './service-map-graph'
+import { buildServiceMapDisplayGraph, buildServiceMapFacets, buildServiceMapFocusLayout } from './service-map-graph'
 
 function service(id: string, attributes: Record<string, string> = {}, virtual = false): ServiceMapNode {
   return {
@@ -111,5 +111,30 @@ describe('buildServiceMapDisplayGraph', () => {
     expect(new Set(result.nodes.map((node) => node.key))).toEqual(new Set([frontend.key, gateway.key, checkout.key]))
     expect(result.edges).toHaveLength(2)
     expect(result.nodes.some((node) => node.cluster)).toBe(false)
+  })
+})
+
+describe('buildServiceMapFocusLayout', () => {
+  it('places the inspected node at the canvas center with neighbors on a ring', () => {
+    const frontend = service('frontend')
+    const gateway = service('gateway')
+    const checkout = service('checkout')
+    const layout = buildServiceMapFocusLayout(
+      gateway.key,
+      [frontend, gateway, checkout],
+      [edge(frontend, gateway, 40), edge(gateway, checkout, 30)],
+      800,
+      600
+    )
+
+    expect(layout.get(gateway.key)).toMatchObject({ x: 400, y: 300, community: 0 })
+    const frontendPos = layout.get(frontend.key)
+    const checkoutPos = layout.get(checkout.key)
+    expect(frontendPos).toBeDefined()
+    expect(checkoutPos).toBeDefined()
+    if (!frontendPos || !checkoutPos) return
+    const distance = (point: { x: number; y: number }) => Math.hypot(point.x - 400, point.y - 300)
+    expect(distance(frontendPos)).toBeCloseTo(distance(checkoutPos), 5)
+    expect(distance(frontendPos)).toBeGreaterThan(70)
   })
 })

@@ -28,14 +28,10 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
         span.service-map-counts(v-else-if="visibleNodes.length")
           a-spin(:size="18")
           | {{ t('drilldown.serviceMap.loading') }}
-      .drilldown-toolbar__right
-        a-button(
-          type="outline"
-          size="medium"
-          :disabled="!canClearFocus"
-          @click="clearSelection"
-        )
-          | {{ t('drilldown.serviceMap.resetView') }}
+      .drilldown-toolbar__right(v-if="inspectedNodeKey && selectedNode")
+        span.service-map-active-node {{ t('drilldown.serviceMap.activeNode', { name: selectedNode.label }) }}
+        a-button(type="outline" size="medium" @click="backToOverview")
+          | {{ t('drilldown.serviceMap.backToOverview') }}
 
     a-alert.service-map-truncated(
       v-if="truncated"
@@ -52,7 +48,11 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     )
 
     .service-map-content
-      .service-map-canvas(ref="canvasRef")
+      .service-map-canvas(
+        ref="canvasRef"
+        :class="{ 'service-map-canvas--focused': !!focusCanvasStyle }"
+        :style="focusCanvasStyle"
+      )
         .service-map-state(v-if="loading && !visibleNodes.length")
           a-spin(:size="32")
           span {{ t('drilldown.serviceMap.loading') }}
@@ -112,7 +112,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
 </template>
 
 <script setup lang="ts">
-  import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+  import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { storeToRefs } from 'pinia'
   import { useRoute, useRouter } from 'vue-router'
@@ -130,6 +130,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     buildServiceMapCommunityLayout,
     buildServiceMapDisplayGraph,
     buildServiceMapFacets,
+    buildServiceMapFocusLayout,
     type ServiceMapFilters,
   } from '@/observability/adapters/service-map-graph'
 
@@ -195,7 +196,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   const selectedNode = computed(() => nodeMap.value.get(inspectedNodeKey.value))
   const menuNode = computed(() => nodeMap.value.get(menuNodeKey.value))
   const menuStyle = computed(() => ({ left: `${menuPosition.value.x}px`, top: `${menuPosition.value.y}px` }))
-  const canClearFocus = computed(() => Boolean(inspectedNodeKey.value || selectedEdgeKey.value || menuNodeKey.value))
   /** Hover wins; while inspecting, fall back so the focus node stays active. */
   const activeNodeKey = computed(() => hoveredNodeKey.value || inspectedNodeKey.value)
   const logsServiceReady = computed(() =>
@@ -232,9 +232,21 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   )
   const graphNodes = computed(() => graphModel.value.nodes)
   const graphEdges = computed(() => graphModel.value.edges)
-  const communityLayout = computed(() =>
-    buildServiceMapCommunityLayout(graphNodes.value, graphEdges.value, chartSize.value.width, chartSize.value.height)
-  )
+  /** Keep small neighborhoods compact; expand toward full width as neighbors grow. */
+  const focusCanvasStyle = computed(() => {
+    if (!inspectedNodeKey.value) return undefined
+    const count = Math.max(1, graphNodes.value.length)
+    if (count >= 12) return undefined
+    const maxWidth = Math.max(480, Math.min(880, 280 + count * 72))
+    return { maxWidth: `${maxWidth}px` }
+  })
+  const communityLayout = computed(() => {
+    const { width, height } = chartSize.value
+    if (inspectedNodeKey.value) {
+      return buildServiceMapFocusLayout(inspectedNodeKey.value, graphNodes.value, graphEdges.value, width, height)
+    }
+    return buildServiceMapCommunityLayout(graphNodes.value, graphEdges.value, width, height)
+  })
   const graphNodeMap = computed(() => new Map(graphNodes.value.map((node) => [node.key, node])))
   const visibleNodes = computed(() => graphNodes.value)
   const truncated = computed(() => result.value.truncated)
@@ -607,12 +619,16 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     canvasRef.value?.classList.remove('service-map-canvas--flow')
   }
 
-  function clearSelection() {
-    clearChartActiveState()
-    inspectedNodeKey.value = ''
+  function dismissTransientUi() {
     selectedEdgeKey.value = ''
     menuNodeKey.value = ''
     menuPosition.value = { x: 0, y: 0 }
+  }
+
+  function backToOverview() {
+    clearChartActiveState()
+    inspectedNodeKey.value = ''
+    dismissTransientUi()
   }
 
   function restoreInspectActive() {
@@ -626,7 +642,12 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       menuNodeKey.value = ''
       return
     }
-    clearSelection()
+    if (inspectedNodeKey.value) {
+      backToOverview()
+      return
+    }
+    dismissTransientUi()
+    clearChartActiveState()
   }
 
   function handleDocumentPointerDown(event: PointerEvent) {
@@ -644,6 +665,11 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       height: canvasRef.value.clientHeight,
     }
   }
+
+  watch([inspectedNodeKey, () => graphNodes.value.length, focusCanvasStyle], async () => {
+    await nextTick()
+    updateChartSize()
+  })
 
   function positionMenu(anchor: { x: number; y: number }) {
     const width = canvasRef.value?.clientWidth ?? 0
@@ -735,7 +761,14 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       restoreInspectActive()
       return
     }
-    clearSelection()
+    if (selectedEdgeKey.value) {
+      selectedEdgeKey.value = ''
+      restoreInspectActive()
+      return
+    }
+    // Blank canvas: dismiss transient UI only; stay in inspect until Back to overview.
+    clearChartActiveState()
+    restoreInspectActive()
   }
 
   function onChartMouseOver(params: { dataType?: string; data?: { nodeKey?: string } }) {
@@ -826,6 +859,14 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     color: var(--gpt-text-secondary);
     font-size: var(--gpt-font-sm);
   }
+  .service-map-active-node {
+    color: var(--gpt-text-secondary);
+    font-size: var(--gpt-font-sm);
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .service-map-truncated,
   .service-map-error {
     margin: 0 var(--gpt-page-padding-x) var(--gpt-gap-md);
@@ -833,6 +874,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   .service-map-content {
     display: flex;
     flex: 1 1 0%;
+    justify-content: center;
     min-height: 0;
     overflow: hidden;
   }
@@ -841,6 +883,11 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     flex: 1 1 0%;
     min-width: 0;
     min-height: 360px;
+  }
+  .service-map-canvas--focused {
+    flex: 0 1 auto;
+    width: 100%;
+    align-self: stretch;
   }
   .service-map-chart {
     width: 100%;

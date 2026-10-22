@@ -266,6 +266,55 @@ export function buildServiceMapCommunityLayout(
   return result
 }
 
+/** Place the inspected node at the canvas center with neighbors on a ring. */
+export function buildServiceMapFocusLayout(
+  centerKey: string,
+  nodes: ServiceMapDisplayNode[],
+  edges: ServiceMapEdge[],
+  width: number,
+  height: number
+): Map<string, ServiceMapNodeLayout> {
+  if (!nodes.length) return new Map()
+  const hasCenter = nodes.some((node) => node.key === centerKey)
+  if (!hasCenter) return buildServiceMapCommunityLayout(nodes, edges, width, height)
+
+  const weightToCenter = new Map<string, number>()
+  edges.forEach((edge) => {
+    const weight = Math.max(0, edge.requests) + Math.max(0, edge.unmatched)
+    if (edge.source === centerKey && edge.target !== centerKey) {
+      weightToCenter.set(edge.target, (weightToCenter.get(edge.target) ?? 0) + weight)
+    } else if (edge.target === centerKey && edge.source !== centerKey) {
+      weightToCenter.set(edge.source, (weightToCenter.get(edge.source) ?? 0) + weight)
+    }
+  })
+
+  const others = nodes
+    .filter((node) => node.key !== centerKey)
+    .sort(
+      (left, right) =>
+        (weightToCenter.get(right.key) ?? 0) - (weightToCenter.get(left.key) ?? 0) ||
+        left.label.localeCompare(right.label)
+    )
+
+  const centerX = width / 2
+  const centerY = height / 2
+  const result = new Map<string, ServiceMapNodeLayout>([[centerKey, { x: centerX, y: centerY, community: 0 }]])
+  if (!others.length) return result
+
+  const inset = 72
+  const available = Math.min(width, height) / 2 - inset
+  const radius = Math.max(72, Math.min(available, 56 + others.length * 22))
+  others.forEach((node, index) => {
+    const angle = (2 * Math.PI * index) / others.length - Math.PI / 2
+    result.set(node.key, {
+      x: centerX + Math.cos(angle) * radius,
+      y: centerY + Math.sin(angle) * radius,
+      community: 1,
+    })
+  })
+  return result
+}
+
 export function buildServiceMapDisplayGraph(args: {
   nodes: ServiceMapNode[]
   edges: ServiceMapEdge[]
