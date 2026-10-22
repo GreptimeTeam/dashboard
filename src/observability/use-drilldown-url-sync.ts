@@ -306,6 +306,18 @@ export default function useDrilldownUrlSync(
       query.signal = ctx.connection.signal.value
     }
 
+    // Service Map is an Explore view over the existing signal context, not a signal
+    // itself. Preserve its route flag while time/database controls update the URL.
+    if (route.query.view === 'service-map') {
+      query.view = 'service-map'
+      if (typeof route.query.serviceMapSearch === 'string' && route.query.serviceMapSearch) {
+        query.serviceMapSearch = route.query.serviceMapSearch
+      }
+      if (typeof route.query.serviceMapFilters === 'string' && route.query.serviceMapFilters) {
+        query.serviceMapFilters = route.query.serviceMapFilters
+      }
+    }
+
     if (ctx.ui.metric.value) {
       query.metric = ctx.ui.metric.value
     }

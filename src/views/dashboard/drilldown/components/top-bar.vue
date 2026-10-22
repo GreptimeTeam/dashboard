@@ -7,11 +7,11 @@
         mode="navigation"
         :aria-label="t('drilldown.pageTitle')"
         :items="signalItems"
-        :model-value="signal"
+        :model-value="activeNav"
         @update:model-value="onSignalSelect"
       )
   .shared-context
-    .drilldown-filter-bar
+    .drilldown-filter-bar(v-if="!serviceMapActive")
       span.drilldown-field-label {{ t('drilldown.filters.title') }}
       DrilldownFilterCombobox
     a-button.logs-query-trigger(
@@ -42,6 +42,7 @@
 <script setup lang="ts">
   import { computed } from 'vue'
   import { useI18n } from 'vue-i18n'
+  import { useRoute, useRouter } from 'vue-router'
   import TimeRangeSelect from '@/components/time-range-select/index.vue'
   import { useDrilldownContext } from '@/observability/context'
   import type { DrilldownSignal } from '@/observability/types'
@@ -50,16 +51,21 @@
 
   const { t } = useI18n()
   const ctx = useDrilldownContext()
+  const route = useRoute()
+  const router = useRouter()
   const { signal } = ctx.connection
   const { time, rangeTime } = ctx.query
   const { logsView } = ctx.ui
   const logsTable = ctx.semantics.logs.table
   const { triggerRefresh, setSignal, openLogsDetail } = ctx.actions
 
+  const serviceMapActive = computed(() => route.query.view === 'service-map')
+  const activeNav = computed(() => (serviceMapActive.value ? 'service-map' : signal.value))
   const signalItems = computed(() => [
-    { value: 'metrics' as DrilldownSignal, label: 'Metrics' },
-    { value: 'logs' as DrilldownSignal, label: 'Logs' },
-    { value: 'traces' as DrilldownSignal, label: 'Traces' },
+    { value: 'metrics', label: 'Metrics' },
+    { value: 'logs', label: 'Logs' },
+    { value: 'traces', label: 'Traces' },
+    { value: 'service-map', label: t('drilldown.serviceMap.title') },
   ])
 
   /**
@@ -67,16 +73,32 @@
    * Filter, and the detail view queries automatically (refreshKey / time / filters).
    */
   const showLogsQuery = computed(
-    () => signal.value === 'logs' && logsView.value === 'overview' && Boolean(logsTable.value)
+    () =>
+      !serviceMapActive.value && signal.value === 'logs' && logsView.value === 'overview' && Boolean(logsTable.value)
   )
 
   const handleRefresh = () => {
     triggerRefresh()
   }
 
-  const onSignalSelect = (value: string) => {
-    if (signalItems.value.some((item) => item.value === value)) {
+  const onSignalSelect = async (value: string) => {
+    if (value === 'service-map') {
+      await router.push({ query: { ...route.query, view: 'service-map' } })
+      return
+    }
+    if (['metrics', 'logs', 'traces'].includes(value)) {
+      // Set the selected signal before route hydration, so the service-map view never
+      // needs to impersonate a signal just to participate in Explore navigation.
       setSignal(value as DrilldownSignal)
+      await router.push({
+        query: {
+          ...route.query,
+          view: undefined,
+          signal: value,
+          serviceMapSearch: undefined,
+          serviceMapFilters: undefined,
+        },
+      })
     }
   }
 </script>
