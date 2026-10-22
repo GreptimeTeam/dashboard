@@ -60,9 +60,15 @@ export function buildServiceMapFacets(nodes: ServiceMapNode[]): ServiceMapFacet[
     .sort((a, b) => a.key.localeCompare(b.key))
 }
 
-function nodeMatchesFilters(node: ServiceMapNode, search: string, filters: ServiceMapFilters): boolean {
-  const term = search.trim().toLocaleLowerCase()
-  if (term && !`${node.label} ${node.id} ${node.type}`.toLocaleLowerCase().includes(term)) return false
+function nodeMatchesFilters(node: ServiceMapNode, selectedServices: string[], filters: ServiceMapFilters): boolean {
+  if (
+    selectedServices.length &&
+    !selectedServices.includes(node.label) &&
+    !selectedServices.includes(node.id) &&
+    !(node.serviceValue && selectedServices.includes(node.serviceValue))
+  ) {
+    return false
+  }
   return Object.entries(filters).every(([key, selectedValues]) => {
     if (!selectedValues.length) return true
     return selectedValues.includes(node.groupAttributes[key] ?? '')
@@ -263,16 +269,17 @@ export function buildServiceMapCommunityLayout(
 export function buildServiceMapDisplayGraph(args: {
   nodes: ServiceMapNode[]
   edges: ServiceMapEdge[]
-  search?: string
+  /** Selected real-service labels (or ids). Empty = no service filter. */
+  selectedServices?: string[]
   filters?: ServiceMapFilters
   inspectNodeKey?: string
   expandedClusters?: Set<string>
   clusterLabel?: (count: number) => string
 }): ServiceMapDisplayGraph {
-  const { nodes, edges, search = '', filters = {}, inspectNodeKey, expandedClusters = new Set() } = args
+  const { nodes, edges, selectedServices = [], filters = {}, inspectNodeKey, expandedClusters = new Set() } = args
   const rawNodes = new Map(nodes.map((node) => [node.key, node]))
   const activeFilters = Object.values(filters).some((values) => values.length > 0)
-  const filtering = activeFilters || Boolean(search.trim())
+  const filtering = activeFilters || selectedServices.length > 0
 
   if (inspectNodeKey) {
     const adjacent = new Set<string>([inspectNodeKey])
@@ -305,7 +312,9 @@ export function buildServiceMapDisplayGraph(args: {
     return { nodes: displayNodes, edges: aggregateEdges(edges, displayMap) }
   }
 
-  const matchedServices = nodes.filter((node) => serviceIdentity(node) && nodeMatchesFilters(node, search, filters))
+  const matchedServices = nodes.filter(
+    (node) => serviceIdentity(node) && nodeMatchesFilters(node, selectedServices, filters)
+  )
   if (!matchedServices.length) return { nodes: [], edges: [] }
 
   const hiddenKeys = hiddenPathServices(nodes, edges, matchedServices)

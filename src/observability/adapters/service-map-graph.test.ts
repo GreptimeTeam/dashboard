@@ -101,7 +101,7 @@ describe('buildServiceMapDisplayGraph', () => {
   })
 
   it('shows one matching service with direct dependencies and does not fabricate a cluster', () => {
-    const result = buildServiceMapDisplayGraph({ nodes, edges, search: 'frontend' })
+    const result = buildServiceMapDisplayGraph({ nodes, edges, selectedServices: ['frontend'] })
     expect(result.nodes.map((node) => node.key)).toEqual([frontend.key, gateway.key])
     expect(result.nodes.some((node) => node.cluster)).toBe(false)
   })

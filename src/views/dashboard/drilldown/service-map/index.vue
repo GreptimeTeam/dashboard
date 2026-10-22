@@ -1,11 +1,8 @@
 <template lang="pug">
 a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   .service-map
-    .service-map-toolbar
-      .service-map-toolbar__left
-        span.drilldown-toolbar__group
-          span.drilldown-toolbar__label {{ t('dashboard.database') }}
-          SignalDatabaseSelect(v-model="tracesDatabase")
+    .drilldown-toolbar.service-map-toolbar
+      .drilldown-toolbar__left
         span.drilldown-toolbar__group(v-for="facet in facets" :key="facet.key")
           span.drilldown-toolbar__label {{ facet.label }}
           a-select(
@@ -17,24 +14,25 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
             :placeholder="t('drilldown.serviceMap.filterBy', { name: facet.label })"
             @change="(values) => setFacetFilter(facet.key, values)"
           )
-        a-input.service-map-search(
-          v-model="search"
+        a-select.service-map-service-select(
+          v-model="selectedServices"
+          multiple
+          allow-search
           allow-clear
           size="medium"
           :placeholder="t('drilldown.serviceMap.searchPlaceholder')"
         )
-          template(#prefix)
-            icon-search
-      .service-map-toolbar__right
+          a-option(v-for="option in serviceOptions" :key="option.value" :value="option.value") {{ option.label }}
         span.service-map-counts(v-if="!loading")
           | {{ t('drilldown.serviceMap.counts', { nodes: graphNodes.length, edges: graphEdges.length }) }}
         span.service-map-counts(v-else-if="visibleNodes.length")
           a-spin(:size="18")
           | {{ t('drilldown.serviceMap.loading') }}
+      .drilldown-toolbar__right
         a-button(
           type="outline"
           size="medium"
-          :disabled="!inspectedNodeKey && !selectedEdgeKey && !menuNodeKey"
+          :disabled="!canClearFocus"
           @click="clearSelection"
         )
           | {{ t('drilldown.serviceMap.resetView') }}
@@ -111,64 +109,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
           span.service-map-legend__item
             i.service-map-legend__unmatched(:style="{ borderTopColor: graphTheme.external }")
             | {{ t('drilldown.serviceMap.unmatchedEdge') }}
-
-      aside.service-map-details(v-if="selectedNode || selectedEdge")
-        template(v-if="selectedNode")
-          .service-map-details__header
-            .service-map-node-type {{ selectedNode.virtual ? selectedNode.type : t('drilldown.serviceMap.serviceNode') }}
-            a-button.service-map-close(type="text" size="mini" @click="clearSelection")
-              icon-close
-          h3.service-map-details__title {{ selectedNode.label }}
-          p.service-map-details__subline(v-if="selectedNode.scope") {{ selectedNode.scope }}
-          p.service-map-details__subline(v-if="selectedNode.instanceCount")
-            | {{ t('drilldown.serviceMap.instanceCount', { count: selectedNode.instanceCount }) }}
-          p.service-map-details__subline(v-for="(value, key) in selectedNode.groupAttributes" :key="key") {{ key }}: {{ value }}
-          p.service-map-details__subline(v-if="selectedNode.virtual") {{ t('drilldown.serviceMap.virtualNodeHint') }}
-          .service-map-details__section
-            h4 {{ t('drilldown.serviceMap.incoming') }}
-            .service-map-dependency-list(v-if="selectedIncoming.length")
-              button.service-map-dependency(v-for="edge in selectedIncoming" :key="edge.key" @click="selectEdge(edge)")
-                span {{ nodeLabel(edge.source) }}
-                span.service-map-dependency__metrics {{ formatRequests(edge.requests) }}
-            p.service-map-empty(v-else) {{ t('drilldown.serviceMap.noDependencies') }}
-          .service-map-details__section
-            h4 {{ t('drilldown.serviceMap.outgoing') }}
-            .service-map-dependency-list(v-if="selectedOutgoing.length")
-              button.service-map-dependency(v-for="edge in selectedOutgoing" :key="edge.key" @click="selectEdge(edge)")
-                span {{ nodeLabel(edge.target) }}
-                span.service-map-dependency__metrics {{ formatRequests(edge.requests) }}
-            p.service-map-empty(v-else) {{ t('drilldown.serviceMap.noDependencies') }}
-          .service-map-details__actions(v-if="!selectedNode.virtual")
-            a-button(type="primary" size="medium" @click="openSignal('traces')")
-              | {{ t('drilldown.serviceMap.viewTraces') }}
-            a-button(
-              v-if="logsServiceReady"
-              type="outline"
-              size="medium"
-              @click="openSignal('logs')"
-            )
-              | {{ t('drilldown.serviceMap.viewLogs') }}
-
-        template(v-else-if="selectedEdge")
-          .service-map-details__header
-            .service-map-node-type {{ t('drilldown.serviceMap.callEdge') }}
-            a-button.service-map-close(type="text" size="mini" @click="clearSelection")
-              icon-close
-          h3.service-map-details__title {{ nodeLabel(selectedEdge.source) }} → {{ nodeLabel(selectedEdge.target) }}
-          dl.service-map-red
-            dt {{ t('drilldown.serviceMap.requests') }}
-            dd {{ formatRequests(selectedEdge.requests) }}
-            dt {{ t('drilldown.serviceMap.errors') }}
-            dd {{ formatRequests(selectedEdge.errors) }}
-            dt {{ t('drilldown.serviceMap.errorRate') }}
-            dd {{ formatPercent(errorRate(selectedEdge)) }}
-            dt {{ t('drilldown.serviceMap.avgDuration') }}
-            dd {{ formatDuration(avgDuration(selectedEdge)) }}
-            dt {{ t('drilldown.serviceMap.maxDuration') }}
-            dd {{ formatDuration(selectedEdge.durationMax) }}
-            dt {{ t('drilldown.serviceMap.unmatched') }}
-            dd {{ formatRequests(selectedEdge.unmatched) }}
-          p.service-map-details__subline {{ t('drilldown.serviceMap.pairedPopulationHint') }}
 </template>
 
 <script setup lang="ts">
@@ -177,7 +117,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   import { storeToRefs } from 'pinia'
   import { useRoute, useRouter } from 'vue-router'
   import VChart from 'vue-echarts'
-  import { IconClose, IconSearch } from '@arco-design/web-vue/es/icon'
   import { useDrilldownContext } from '@/observability/context'
   import { useAppStore } from '@/store'
   import type { DrilldownFilter } from '@/observability/types'
@@ -193,7 +132,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     buildServiceMapFacets,
     type ServiceMapFilters,
   } from '@/observability/adapters/service-map-graph'
-  import SignalDatabaseSelect from '../components/signal-database-select.vue'
 
   defineOptions({ name: 'ExploreServiceMap' })
 
@@ -204,10 +142,9 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   const chartRef = ref<InstanceType<typeof VChart>>()
   const route = useRoute()
   const router = useRouter()
-  const { tracesDatabase } = ctx.connection
   const loading = ref(false)
   const error = ref('')
-  const search = ref('')
+  const selectedServices = ref<string[]>([])
   const result = ref<ServiceMapResult>({ nodes: [], edges: [], truncated: false })
   const chartSize = ref({ width: 1200, height: 640 })
   const inspectedNodeKey = ref('')
@@ -244,7 +181,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
 
   const stop = watch(
     () => [
-      tracesDatabase.value,
       ctx.query.time.value,
       ctx.query.rangeTime.value[0],
       ctx.query.rangeTime.value[1],
@@ -253,56 +189,41 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     () => load(),
     { immediate: true }
   )
-  const handleEscape = (event: KeyboardEvent) => {
-    if (event.key === 'Escape') menuNodeKey.value = ''
-  }
-  const handleDocumentPointerDown = (event: PointerEvent) => {
-    if (!menuNodeKey.value) return
-    const target = event.target
-    if (!(target instanceof Element)) return
-    if (target.closest('.service-map-context-menu')) return
-    menuNodeKey.value = ''
-  }
-  onMounted(() => {
-    updateChartSize()
-    if (canvasRef.value) {
-      chartResizeObserver = new ResizeObserver(updateChartSize)
-      chartResizeObserver.observe(canvasRef.value)
-    }
-    window.addEventListener('keydown', handleEscape)
-    document.addEventListener('pointerdown', handleDocumentPointerDown)
-  })
-  onUnmounted(() => {
-    requestId += 1
-    stop()
-    chartResizeObserver?.disconnect()
-    window.removeEventListener('keydown', handleEscape)
-    document.removeEventListener('pointerdown', handleDocumentPointerDown)
-  })
-
   const allNodes = computed(() => result.value.nodes)
   const allEdges = computed(() => result.value.edges)
   const nodeMap = computed(() => new Map(allNodes.value.map((node) => [node.key, node])))
   const selectedNode = computed(() => nodeMap.value.get(inspectedNodeKey.value))
   const menuNode = computed(() => nodeMap.value.get(menuNodeKey.value))
   const menuStyle = computed(() => ({ left: `${menuPosition.value.x}px`, top: `${menuPosition.value.y}px` }))
-  const selectedEdge = computed(() => graphEdges.value.find((edge) => edge.key === selectedEdgeKey.value))
-  const selectedIncoming = computed(() => graphEdges.value.filter((edge) => edge.target === inspectedNodeKey.value))
-  const selectedOutgoing = computed(() => graphEdges.value.filter((edge) => edge.source === inspectedNodeKey.value))
+  const canClearFocus = computed(() => Boolean(inspectedNodeKey.value || selectedEdgeKey.value || menuNodeKey.value))
+  /** Hover wins; while inspecting, fall back so the focus node stays active. */
+  const activeNodeKey = computed(() => hoveredNodeKey.value || inspectedNodeKey.value)
   const logsServiceReady = computed(() =>
     Boolean(ctx.semantics.logs.table.value && ctx.semantics.logs.entityFilterKeys.value.service)
   )
   const emptyDescription = computed(() =>
-    search.value.trim() || Object.values(facetFilters.value).some((values) => values.length > 0)
+    selectedServices.value.length || Object.values(facetFilters.value).some((values) => values.length > 0)
       ? t('drilldown.serviceMap.noMatches')
       : t('drilldown.serviceMap.noData')
   )
   const facets = computed(() => buildServiceMapFacets(allNodes.value))
+  const serviceOptions = computed(() => {
+    const labels = new Set<string>()
+    const options: Array<{ label: string; value: string }> = []
+    allNodes.value.forEach((node) => {
+      if (node.type !== 'service' || node.virtual) return
+      const label = node.label || node.id
+      if (!label || labels.has(label)) return
+      labels.add(label)
+      options.push({ label, value: label })
+    })
+    return options.sort((a, b) => a.label.localeCompare(b.label))
+  })
   const graphModel = computed(() =>
     buildServiceMapDisplayGraph({
       nodes: allNodes.value,
       edges: allEdges.value,
-      search: search.value,
+      selectedServices: selectedServices.value,
       filters: facetFilters.value,
       inspectNodeKey: inspectedNodeKey.value,
       expandedClusters: expandedClusters.value,
@@ -355,56 +276,102 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     }
   })
 
-  watch(
-    () => [route.query.serviceMapSearch, route.query.serviceMapFilters],
-    ([searchValue, filtersValue]) => {
-      search.value = typeof searchValue === 'string' ? searchValue : ''
+  function sameStringList(left: string[], right: string[]): boolean {
+    return left.length === right.length && left.every((value, index) => value === right[index])
+  }
+
+  function parseServiceMapSearch(raw: unknown): string[] {
+    if (typeof raw !== 'string' || !raw) return []
+    const candidates = [raw]
+    try {
+      candidates.unshift(decodeURIComponent(raw))
+    } catch {
+      // Keep the raw string when it is not URI-encoded.
+    }
+    for (const candidate of candidates) {
       try {
-        const parsed = typeof filtersValue === 'string' ? JSON.parse(filtersValue) : {}
-        facetFilters.value = Object.fromEntries(
+        const parsed = JSON.parse(candidate)
+        if (Array.isArray(parsed) && parsed.every((value) => typeof value === 'string')) {
+          return parsed.filter(Boolean)
+        }
+      } catch {
+        // Try the next candidate / legacy plain label.
+      }
+    }
+    return [raw]
+  }
+
+  function parseServiceMapFilters(raw: unknown): ServiceMapFilters {
+    if (typeof raw !== 'string' || !raw) return {}
+    const candidates = [raw]
+    try {
+      candidates.unshift(decodeURIComponent(raw))
+    } catch {
+      // Keep the raw string when it is not URI-encoded.
+    }
+    for (const candidate of candidates) {
+      try {
+        const parsed = JSON.parse(candidate)
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) continue
+        return Object.fromEntries(
           Object.entries(parsed as Record<string, unknown>).filter(
             ([, values]) => Array.isArray(values) && values.every((value) => typeof value === 'string')
           ) as Array<[string, string[]]>
         )
       } catch {
-        facetFilters.value = {}
+        // Try the next candidate.
       }
-    },
-    { immediate: true }
-  )
+    }
+    return {}
+  }
+
+  // Hydrate once from the URL. Do not keep a route→state watcher — that loop was
+  // clearing selections when drilldown URL sync rewrote the query without our keys.
+  selectedServices.value = parseServiceMapSearch(route.query.serviceMapSearch)
+  facetFilters.value = parseServiceMapFilters(route.query.serviceMapFilters)
+
+  function writeServiceMapQuery() {
+    const serviceMapSearch = selectedServices.value.length
+      ? encodeURIComponent(JSON.stringify(selectedServices.value))
+      : undefined
+    const serviceMapFilters = Object.values(facetFilters.value).some((values) => values.length)
+      ? encodeURIComponent(JSON.stringify(facetFilters.value))
+      : undefined
+    if (serviceMapSearch === route.query.serviceMapSearch && serviceMapFilters === route.query.serviceMapFilters) {
+      return
+    }
+    router
+      .replace({
+        query: {
+          ...route.query,
+          serviceMapSearch,
+          serviceMapFilters,
+        },
+      })
+      .catch(() => undefined)
+  }
 
   watch(
-    [search, facetFilters],
-    () => {
-      const query = {
-        ...route.query,
-        serviceMapSearch: search.value || undefined,
-        serviceMapFilters: Object.values(facetFilters.value).some((values) => values.length)
-          ? JSON.stringify(facetFilters.value)
-          : undefined,
-      }
-      if (
-        query.serviceMapSearch === route.query.serviceMapSearch &&
-        query.serviceMapFilters === route.query.serviceMapFilters
-      ) {
-        return
-      }
-      void router.replace({ query })
-    },
-    { deep: true }
-  )
-
-  watch(
-    [facets, loading],
-    ([availableFacets, isLoading]) => {
-      if (isLoading) return
+    [facets, serviceOptions, loading],
+    ([availableFacets, availableServices, isLoading]) => {
+      if (isLoading || availableServices.length === 0) return
       const allowed = new Map(availableFacets.map((facet) => [facet.key, new Set(facet.values)]))
-      const next = Object.fromEntries(
+      const nextFacets = Object.fromEntries(
         Object.entries(facetFilters.value)
           .map(([key, values]) => [key, values.filter((value) => allowed.get(key)?.has(value))] as const)
           .filter(([key, values]) => allowed.has(key) && values.length)
       )
-      if (JSON.stringify(next) !== JSON.stringify(facetFilters.value)) facetFilters.value = next
+      if (JSON.stringify(nextFacets) !== JSON.stringify(facetFilters.value)) {
+        facetFilters.value = nextFacets
+        writeServiceMapQuery()
+      }
+
+      const allowedServices = new Set(availableServices.map((option) => option.value))
+      const nextServices = selectedServices.value.filter((value) => allowedServices.has(value))
+      if (!sameStringList(nextServices, selectedServices.value)) {
+        selectedServices.value = nextServices
+        writeServiceMapQuery()
+      }
     },
     { deep: true }
   )
@@ -415,7 +382,10 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     if (nextValues.length) next[key] = nextValues
     else delete next[key]
     facetFilters.value = next
+    writeServiceMapQuery()
   }
+
+  watch(selectedServices, () => writeServiceMapQuery(), { deep: true })
 
   function escapeHtml(value: string): string {
     const entities: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
@@ -434,14 +404,16 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
         nodeErrors.set(key, (nodeErrors.get(key) ?? 0) + edge.errors)
       }
     })
+    const activeKey = activeNodeKey.value
+    const detailMode = Boolean(inspectedNodeKey.value)
     const nodes = graphNodes.value.map((node) => {
-      const isHovered = hoveredNodeKey.value === node.key
-      const connectedToHovered = graphEdges.value.some(
+      const isActive = activeKey === node.key
+      const connectedToActive = graphEdges.value.some(
         (edge) =>
-          (edge.source === hoveredNodeKey.value && edge.target === node.key) ||
-          (edge.target === hoveredNodeKey.value && edge.source === node.key)
+          (edge.source === activeKey && edge.target === node.key) ||
+          (edge.target === activeKey && edge.source === node.key)
       )
-      const opacity = hoveredNodeKey.value ? (isHovered ? 0.78 : connectedToHovered ? 1 : 0.18) : 1
+      const opacity = activeKey ? (isActive ? 0.78 : connectedToActive ? 1 : 0.18) : 1
       const community = communityLayout.value.get(node.key)?.community ?? 0
       const communityColor = graphTheme.value.palette[community % graphTheme.value.palette.length]
       const hasElevatedErrors = (nodeErrors.get(node.key) ?? 0) / Math.max(1, nodeRequests.get(node.key) ?? 0) >= 0.05
@@ -449,6 +421,11 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       const nodeFill = hasElevatedErrors
         ? withAlpha(graphTheme.value.danger, isDark.value ? 0.28 : 0.14)
         : communityColor.fill
+      const incoming = nodeFlowSummary(node.key, 'incoming')
+      const outgoing = nodeFlowSummary(node.key, 'outgoing')
+      const detailLabel = node.members
+        ? node.label
+        : `${node.label}\n↓ ${formatFlowSummary(incoming)}\n↑ ${formatFlowSummary(outgoing)}`
       return {
         id: node.key,
         name: node.label,
@@ -481,11 +458,18 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
               borderWidth: hasElevatedErrors ? 2.5 : 1.5,
               opacity,
             },
-        label: { show: true, position: 'right', formatter: node.label, color: graphTheme.value.text, opacity },
+        label: {
+          show: true,
+          position: 'right',
+          formatter: detailMode ? detailLabel : node.label,
+          color: graphTheme.value.text,
+          opacity,
+          lineHeight: 16,
+        },
       }
     })
     const links = graphEdges.value.map((edge) => {
-      const isFlowing = hoveredNodeKey.value === edge.source || hoveredNodeKey.value === edge.target
+      const isFlowing = activeKey === edge.source || activeKey === edge.target
       return {
         id: edge.key,
         source: edge.source,
@@ -497,13 +481,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
         lineStyle: {
           width: isFlowing ? 1.8 : 0.8 + Math.min(1.1, Math.log2(edge.requests + 1) * 0.24),
           color: graphTheme.value.edge,
-          opacity: hoveredNodeKey.value
-            ? isFlowing
-              ? 0.95
-              : 0.08
-            : edge.requests === 0 && edge.unmatched > 0
-            ? 0.42
-            : 0.56,
+          opacity: activeKey ? (isFlowing ? 0.95 : 0.08) : edge.requests === 0 && edge.unmatched > 0 ? 0.42 : 0.56,
           curveness: 0.12,
           type: isFlowing || (edge.requests === 0 && edge.unmatched > 0) ? 'dashed' : 'solid',
         },
@@ -519,7 +497,17 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
         textStyle: { color: graphTheme.value.text },
         formatter: (params: { dataType?: string; data?: { edgeKey?: string; nodeKey?: string } }) => {
           if (params.dataType === 'edge' && params.data?.edgeKey) {
-            return ''
+            const edge = graphEdges.value.find((item) => item.key === params.data?.edgeKey)
+            if (!edge) return ''
+            return [
+              `<strong>${escapeHtml(nodeLabel(edge.source))} → ${escapeHtml(nodeLabel(edge.target))}</strong>`,
+              `${escapeHtml(t('drilldown.serviceMap.requests'))}: ${escapeHtml(formatRequests(edge.requests))}`,
+              `${escapeHtml(t('drilldown.serviceMap.errors'))}: ${escapeHtml(formatRequests(edge.errors))}`,
+              `${escapeHtml(t('drilldown.serviceMap.errorRate'))}: ${escapeHtml(formatPercent(errorRate(edge)))}`,
+              `${escapeHtml(t('drilldown.serviceMap.avgDuration'))}: ${escapeHtml(formatDuration(avgDuration(edge)))}`,
+              `${escapeHtml(t('drilldown.serviceMap.maxDuration'))}: ${escapeHtml(formatDuration(edge.durationMax))}`,
+              `${escapeHtml(t('drilldown.serviceMap.unmatched'))}: ${escapeHtml(formatRequests(edge.unmatched))}`,
+            ].join('<br/>')
           }
           const node = params.data?.nodeKey ? graphNodeMap.value.get(params.data.nodeKey) : undefined
           if (!node) return ''
@@ -606,12 +594,47 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       errorRatio
     )} · ${formatDuration(averageDuration)}`
   }
-  function clearSelection() {
+  function applyActiveFlow(nodeKey: string) {
+    hoveredNodeKey.value = nodeKey
+    if (nodeKey) canvasRef.value?.classList.add('service-map-canvas--flow')
+    else canvasRef.value?.classList.remove('service-map-canvas--flow')
+  }
+
+  function clearChartActiveState() {
     hoveredNodeKey.value = ''
+    chartRef.value?.dispatchAction({ type: 'downplay', seriesIndex: 0 })
+    chartRef.value?.dispatchAction({ type: 'hideTip' })
+    canvasRef.value?.classList.remove('service-map-canvas--flow')
+  }
+
+  function clearSelection() {
+    clearChartActiveState()
     inspectedNodeKey.value = ''
     selectedEdgeKey.value = ''
     menuNodeKey.value = ''
     menuPosition.value = { x: 0, y: 0 }
+  }
+
+  function restoreInspectActive() {
+    if (!inspectedNodeKey.value) return
+    applyActiveFlow(inspectedNodeKey.value)
+  }
+
+  function onEscape(event: KeyboardEvent) {
+    if (event.key !== 'Escape') return
+    if (menuNodeKey.value) {
+      menuNodeKey.value = ''
+      return
+    }
+    clearSelection()
+  }
+
+  function handleDocumentPointerDown(event: PointerEvent) {
+    if (!menuNodeKey.value) return
+    const { target } = event
+    if (!(target instanceof Element)) return
+    if (target.closest('.service-map-context-menu')) return
+    menuNodeKey.value = ''
   }
 
   function updateChartSize() {
@@ -636,65 +659,13 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     }
   }
 
-  function clearChartActiveState() {
-    hoveredNodeKey.value = ''
-    chartRef.value?.dispatchAction({ type: 'downplay', seriesIndex: 0 })
-    chartRef.value?.dispatchAction({ type: 'hideTip' })
-    canvasRef.value?.classList.remove('service-map-canvas--flow')
-  }
-
-  function selectEdge(edge: ServiceMapEdge) {
-    clearChartActiveState()
-    inspectedNodeKey.value = ''
-    menuNodeKey.value = ''
-    selectedEdgeKey.value = edge.key
-  }
-  function onChartClick(params: {
-    dataType?: string
-    data?: { nodeKey?: string; edgeKey?: string }
-    event?: { offsetX?: number; offsetY?: number; event?: MouseEvent }
-  }) {
-    clearChartActiveState()
-    if (params.dataType === 'edge' && params.data?.edgeKey) {
-      selectedEdgeKey.value = params.data.edgeKey
-      inspectedNodeKey.value = ''
-      menuNodeKey.value = ''
-    } else if (params.dataType === 'node' && params.data?.nodeKey) {
-      const graphNode = graphNodeMap.value.get(params.data.nodeKey)
-      if (graphNode?.cluster) {
-        const next = new Set(expandedClusters.value)
-        if (next.has(graphNode.key)) next.delete(graphNode.key)
-        else next.add(graphNode.key)
-        expandedClusters.value = next
-        inspectedNodeKey.value = ''
-        selectedEdgeKey.value = ''
-        menuNodeKey.value = ''
-        return
-      }
-      menuNodeKey.value = graphNode?.service?.key ?? params.data.nodeKey
-      inspectedNodeKey.value = ''
-      selectedEdgeKey.value = ''
-      const nativeEvent = params.event?.event
-      const canvasBounds = canvasRef.value?.getBoundingClientRect()
-      const clickPosition =
-        nativeEvent && canvasBounds
-          ? { x: nativeEvent.clientX - canvasBounds.left, y: nativeEvent.clientY - canvasBounds.top }
-          : {
-              x: params.event?.offsetX ?? nativeEvent?.offsetX ?? 0,
-              y: params.event?.offsetY ?? nativeEvent?.offsetY ?? 0,
-            }
-      positionMenu(clickPosition)
-    } else {
-      menuNodeKey.value = ''
-    }
-  }
-
   async function inspectNode() {
     const nodeKey = menuNodeKey.value
     const node = nodeMap.value.get(nodeKey)
     inspectedNodeKey.value = nodeKey
     selectedEdgeKey.value = ''
     menuNodeKey.value = ''
+    applyActiveFlow(nodeKey)
     if (!node || node.virtual || node.type !== 'service' || node.instanceCount > 0) return
 
     const range = ctx.query.unixTimeRange()
@@ -719,30 +690,84 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     }
   }
 
+  function onChartClick(params: {
+    dataType?: string
+    data?: { nodeKey?: string; edgeKey?: string }
+    event?: { offsetX?: number; offsetY?: number; event?: MouseEvent }
+  }) {
+    clearChartActiveState()
+    if (params.dataType === 'edge' && params.data?.edgeKey) {
+      selectedEdgeKey.value = params.data.edgeKey
+      menuNodeKey.value = ''
+      // Keep neighborhood focus; same graph UX, edge tip carries call RED.
+      restoreInspectActive()
+      return
+    }
+    if (params.dataType === 'node' && params.data?.nodeKey) {
+      const graphNode = graphNodeMap.value.get(params.data.nodeKey)
+      if (graphNode?.cluster) {
+        const next = new Set(expandedClusters.value)
+        if (next.has(graphNode.key)) next.delete(graphNode.key)
+        else next.add(graphNode.key)
+        expandedClusters.value = next
+        selectedEdgeKey.value = ''
+        menuNodeKey.value = ''
+        restoreInspectActive()
+        return
+      }
+      menuNodeKey.value = graphNode?.service?.key ?? params.data.nodeKey
+      selectedEdgeKey.value = ''
+      restoreInspectActive()
+      const nativeEvent = params.event?.event
+      const canvasBounds = canvasRef.value?.getBoundingClientRect()
+      const clickPosition =
+        nativeEvent && canvasBounds
+          ? { x: nativeEvent.clientX - canvasBounds.left, y: nativeEvent.clientY - canvasBounds.top }
+          : {
+              x: params.event?.offsetX ?? nativeEvent?.offsetX ?? 0,
+              y: params.event?.offsetY ?? nativeEvent?.offsetY ?? 0,
+            }
+      positionMenu(clickPosition)
+      return
+    }
+    if (menuNodeKey.value) {
+      menuNodeKey.value = ''
+      restoreInspectActive()
+      return
+    }
+    clearSelection()
+  }
+
   function onChartMouseOver(params: { dataType?: string; data?: { nodeKey?: string } }) {
     if (menuNodeKey.value) {
-      hoveredNodeKey.value = ''
+      restoreInspectActive()
       chartRef.value?.dispatchAction({ type: 'downplay', seriesIndex: 0 })
       return
     }
     if (params.dataType !== 'node') {
-      hoveredNodeKey.value = ''
-      chartRef.value?.dispatchAction({ type: 'downplay', seriesIndex: 0 })
-      chartRef.value?.dispatchAction({ type: 'hideTip' })
-      canvasRef.value?.classList.remove('service-map-canvas--flow')
+      restoreInspectActive()
+      if (!inspectedNodeKey.value) {
+        hoveredNodeKey.value = ''
+        chartRef.value?.dispatchAction({ type: 'downplay', seriesIndex: 0 })
+        chartRef.value?.dispatchAction({ type: 'hideTip' })
+        canvasRef.value?.classList.remove('service-map-canvas--flow')
+      }
       return
     }
-    hoveredNodeKey.value = params.data?.nodeKey ?? ''
-    canvasRef.value?.classList.add('service-map-canvas--flow')
+    applyActiveFlow(params.data?.nodeKey ?? '')
   }
 
   function onChartMouseOut() {
+    if (inspectedNodeKey.value) {
+      restoreInspectActive()
+      return
+    }
     hoveredNodeKey.value = ''
     canvasRef.value?.classList.remove('service-map-canvas--flow')
   }
 
   async function copyServiceName() {
-    const node = menuNode.value
+    const node = menuNode.value ?? selectedNode.value
     if (node) await navigator.clipboard.writeText(node.serviceValue || node.label)
   }
 
@@ -767,6 +792,23 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       },
     })
   }
+
+  onMounted(() => {
+    updateChartSize()
+    if (canvasRef.value) {
+      chartResizeObserver = new ResizeObserver(updateChartSize)
+      chartResizeObserver.observe(canvasRef.value)
+    }
+    window.addEventListener('keydown', onEscape)
+    document.addEventListener('pointerdown', handleDocumentPointerDown)
+  })
+  onUnmounted(() => {
+    requestId += 1
+    stop()
+    chartResizeObserver?.disconnect()
+    window.removeEventListener('keydown', onEscape)
+    document.removeEventListener('pointerdown', handleDocumentPointerDown)
+  })
 </script>
 
 <style scoped lang="less">
@@ -780,28 +822,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     height: 100%;
     min-height: 0;
   }
-  .service-map-toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--gpt-gap-md);
-    padding: 0 var(--gpt-page-padding-x) var(--gpt-gap-md);
-  }
-  .service-map-toolbar__left,
-  .service-map-toolbar__right {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--gpt-gap-md);
-  }
-  .service-map-search {
-    width: 260px;
-  }
-  .service-map-counts,
-  .service-map-node-type,
-  .service-map-details__subline,
-  .service-map-empty {
+  .service-map-counts {
     color: var(--gpt-text-secondary);
     font-size: var(--gpt-font-sm);
   }
@@ -814,7 +835,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     flex: 1 1 0%;
     min-height: 0;
     overflow: hidden;
-    border-top: 1px solid var(--gpt-border-primary);
   }
   .service-map-canvas {
     position: relative;
@@ -879,6 +899,26 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  .service-map-node-action {
+    width: 100%;
+    padding: var(--gpt-gap-sm) var(--gpt-gap-md);
+    border: 1px solid transparent;
+    border-radius: var(--gpt-radius-md);
+    background: var(--gpt-bg-primary);
+    color: var(--gpt-text-primary);
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+  }
+  .service-map-node-action:hover {
+    background: var(--gpt-bg-secondary);
+    border-color: var(--gpt-border-strong);
+    color: var(--gpt-main-purple);
+  }
+  .service-map-node-action:focus-visible {
+    outline: 2px solid var(--gpt-main-purple);
+    outline-offset: 1px;
+  }
   .service-map-legend {
     position: absolute;
     bottom: var(--gpt-gap-md);
@@ -920,110 +960,5 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     height: 0 !important;
     border-top: 2px dashed var(--gpt-semantic-tag);
     border-radius: 0 !important;
-  }
-  .service-map-details {
-    display: flex;
-    flex: 0 0 320px;
-    flex-direction: column;
-    gap: var(--gpt-gap-md);
-    overflow: auto;
-    padding: var(--gpt-gap-lg);
-    border-left: 1px solid var(--gpt-border-primary);
-    background: var(--gpt-bg-primary);
-  }
-  .service-map-details__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .service-map-details__title {
-    margin: 0;
-    overflow-wrap: anywhere;
-    font-size: var(--gpt-font-lg);
-  }
-  .service-map-node-action {
-    width: 100%;
-    padding: var(--gpt-gap-sm) var(--gpt-gap-md);
-    border: 1px solid transparent;
-    border-radius: var(--gpt-radius-md);
-    background: var(--gpt-bg-primary);
-    color: var(--gpt-text-primary);
-    text-align: left;
-    cursor: pointer;
-    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
-  }
-  .service-map-node-action:hover {
-    background: var(--gpt-bg-secondary);
-    border-color: var(--gpt-border-strong);
-    color: var(--gpt-main-purple);
-  }
-  .service-map-node-action:focus-visible {
-    outline: 2px solid var(--gpt-main-purple);
-    outline-offset: 1px;
-  }
-  .service-map-details__section h4 {
-    margin: 0 0 var(--gpt-gap-xs);
-    font-size: var(--gpt-font-sm);
-  }
-  .service-map-dependency-list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--gpt-gap-2xs);
-  }
-  .service-map-dependency {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--gpt-gap-md);
-    padding: var(--gpt-gap-xs) 0;
-    border: 0;
-    background: transparent;
-    color: var(--gpt-text-primary);
-    text-align: left;
-    cursor: pointer;
-  }
-  .service-map-dependency:hover {
-    color: var(--gpt-main-purple);
-  }
-  .service-map-dependency__metrics {
-    color: var(--gpt-text-secondary);
-    font-variant-numeric: tabular-nums;
-  }
-  .service-map-details__actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--gpt-gap-sm);
-    margin-top: auto;
-  }
-  .service-map-red {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: var(--gpt-gap-sm) var(--gpt-gap-md);
-    margin: 0;
-  }
-  .service-map-red dt {
-    color: var(--gpt-text-secondary);
-  }
-  .service-map-red dd {
-    margin: 0;
-    font-variant-numeric: tabular-nums;
-    text-align: right;
-  }
-  @media (max-width: 760px) {
-    .service-map-content {
-      flex-direction: column;
-    }
-    .service-map-canvas {
-      flex: 1 1 0%;
-      min-height: 320px;
-    }
-    .service-map-chart {
-      min-height: 320px;
-    }
-    .service-map-details {
-      flex: 0 0 auto;
-      max-height: 40%;
-      border-top: 1px solid var(--gpt-border-primary);
-      border-left: 0;
-    }
   }
 </style>
