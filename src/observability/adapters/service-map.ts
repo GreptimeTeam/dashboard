@@ -9,6 +9,9 @@ import {
 const SERVICE_MAP_NODE_LIMIT = 100
 const SERVICE_MAP_EDGE_LIMIT = 250
 
+/** Greptime `calls.attributes.connection_type` for inferred peers. */
+export type ServiceMapConnectionType = 'database' | 'virtual_node' | string
+
 export interface ServiceMapNode {
   key: string
   type: string
@@ -21,6 +24,8 @@ export interface ServiceMapNode {
   instanceCount: number
   groupAttributes: Record<string, string>
   virtual: boolean
+  /** Present on inferred peers when the edge attributes name a connection type. */
+  connectionType?: ServiceMapConnectionType
 }
 
 export interface ServiceMapEdge {
@@ -33,6 +38,7 @@ export interface ServiceMapEdge {
   durationSum: number
   durationCount: number
   durationMax: number
+  connectionType?: ServiceMapConnectionType
 }
 
 export interface ServiceMapResult {
@@ -75,12 +81,10 @@ function serviceNameFromAttrs(raw: unknown): string | undefined {
   }
   const record = attrs as Record<string, unknown>
   const preferredKeys = ['service.name', 'service_name', 'service', 'name']
-  for (const key of preferredKeys) {
-    const value = record[key]
-    if (typeof value === 'string' && value.trim()) {
-      return value.trim()
-    }
-  }
+  const preferred = preferredKeys
+    .map((key) => record[key])
+    .find((value): value is string => typeof value === 'string' && Boolean(value.trim()))
+  if (preferred) return preferred.trim()
   const value = Object.values(record).find((candidate) => typeof candidate === 'string' && candidate.trim())
   return typeof value === 'string' ? value.trim() : undefined
 }
@@ -120,7 +124,19 @@ function entityKey(type: string, id: string): string {
   return `${type}\0${id}`
 }
 
-function makeNode(type: string, id: string, virtual: boolean): ServiceMapNode {
+function connectionTypeFromAttributes(raw: unknown): ServiceMapConnectionType | undefined {
+  const attrs = parseJson(raw)
+  if (!attrs || typeof attrs !== 'object' || Array.isArray(attrs)) return undefined
+  const value = (attrs as Record<string, unknown>).connection_type
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined
+}
+
+function makeNode(
+  type: string,
+  id: string,
+  virtual: boolean,
+  connectionType?: ServiceMapConnectionType
+): ServiceMapNode {
   return {
     key: entityKey(type, id),
     type,
@@ -130,6 +146,80 @@ function makeNode(type: string, id: string, virtual: boolean): ServiceMapNode {
     instanceCount: 0,
     groupAttributes: {},
     virtual,
+    connectionType,
+  }
+}
+
+function ensureEndpoint(
+  nodes: Map<string, ServiceMapNode>,
+  type: string,
+  id: string,
+  connectionType?: ServiceMapConnectionType
+): string {
+  const key = entityKey(type, id)
+  const existing = nodes.get(key)
+  if (!existing) {
+    nodes.set(key, makeNode(type, id, true, connectionType))
+    return key
+  }
+  if (existing.virtual && connectionType) existing.connectionType ||= connectionType
+  return key
+}
+
+/** Remap inferred peers onto real services with the same display name; keep unmatched on the folded edge. */
+export function foldVirtualPeersIntoServices(
+  nodes: ServiceMapNode[],
+  edges: ServiceMapEdge[]
+): { nodes: ServiceMapNode[]; edges: ServiceMapEdge[] } {
+  const realByName = new Map<string, string>()
+  nodes.forEach((node) => {
+    if (node.virtual || node.type !== 'service') return
+    ;[node.label, node.serviceValue, node.id].forEach((name) => {
+      const normalized = name?.trim().toLowerCase()
+      if (normalized && !realByName.has(normalized)) realByName.set(normalized, node.key)
+    })
+  })
+
+  const remap = new Map<string, string>()
+  nodes.forEach((node) => {
+    if (!node.virtual) return
+    const hit = realByName.get(node.label.trim().toLowerCase()) || realByName.get(node.id.trim().toLowerCase())
+    if (hit && hit !== node.key) remap.set(node.key, hit)
+  })
+  if (!remap.size) return { nodes, edges }
+
+  const aggregates = new Map<string, ServiceMapEdge>()
+  edges.forEach((edge) => {
+    const source = remap.get(edge.source) ?? edge.source
+    const target = remap.get(edge.target) ?? edge.target
+    if (source === target) return
+    const key = `${source}\0${target}`
+    const aggregate = aggregates.get(key) ?? {
+      key,
+      source,
+      target,
+      requests: 0,
+      errors: 0,
+      unmatched: 0,
+      durationSum: 0,
+      durationCount: 0,
+      durationMax: 0,
+      connectionType: edge.connectionType,
+    }
+    aggregate.requests += edge.requests
+    aggregate.errors += edge.errors
+    aggregate.unmatched += edge.unmatched
+    aggregate.durationSum += edge.durationSum
+    aggregate.durationCount += edge.durationCount
+    aggregate.durationMax = Math.max(aggregate.durationMax, edge.durationMax)
+    aggregate.connectionType ||= edge.connectionType
+    aggregates.set(key, aggregate)
+  })
+
+  const kept = new Set([...aggregates.values()].flatMap((edge) => [edge.source, edge.target]))
+  return {
+    nodes: nodes.filter((node) => !remap.has(node.key) && (kept.has(node.key) || !node.virtual)),
+    edges: [...aggregates.values()],
   }
 }
 
@@ -182,10 +272,9 @@ function edgesFromRows(rows: Array<Record<string, unknown>>, nodes: Map<string, 
     if (!srcType || !srcId || !dstType || !dstId) {
       return
     }
-    const source = entityKey(srcType, srcId)
-    const target = entityKey(dstType, dstId)
-    if (!nodes.has(source)) nodes.set(source, makeNode(srcType, srcId, true))
-    if (!nodes.has(target)) nodes.set(target, makeNode(dstType, dstId, true))
+    const connectionType = connectionTypeFromAttributes(row.attributes)
+    const source = ensureEndpoint(nodes, srcType, srcId, connectionType)
+    const target = ensureEndpoint(nodes, dstType, dstId, connectionType)
 
     const key = `${source}\0${target}`
     const edge = edges.get(key) ?? {
@@ -198,7 +287,9 @@ function edgesFromRows(rows: Array<Record<string, unknown>>, nodes: Map<string, 
       durationSum: 0,
       durationCount: 0,
       durationMax: 0,
+      connectionType,
     }
+    edge.connectionType ||= connectionType
     const confidence = toNumber(row.confidence)
     const unmatched = toNumber(row.unmatched_count)
     edge.unmatched += unmatched
@@ -251,26 +342,28 @@ export async function fetchServiceMap(
     (a, b) => b.requests - a.requests || b.unmatched - a.unmatched
   )
   const includedNodes = new Set<string>()
-  const edges: ServiceMapEdge[] = []
+  const limitedEdges: ServiceMapEdge[] = []
   rankedEdges.forEach((edge) => {
-    if (edges.length >= SERVICE_MAP_EDGE_LIMIT) return
+    if (limitedEdges.length >= SERVICE_MAP_EDGE_LIMIT) return
     const newEndpointCount = Number(!includedNodes.has(edge.source)) + Number(!includedNodes.has(edge.target))
     if (includedNodes.size + newEndpointCount > SERVICE_MAP_NODE_LIMIT) return
     includedNodes.add(edge.source)
     includedNodes.add(edge.target)
-    edges.push(edge)
+    limitedEdges.push(edge)
   })
   // Keep a bounded sample of standalone services too, even when they have no calls.
-  for (const node of nodes.values()) {
-    if (includedNodes.size >= SERVICE_MAP_NODE_LIMIT) break
+  ;[...nodes.values()].some((node) => {
+    if (includedNodes.size >= SERVICE_MAP_NODE_LIMIT) return true
     includedNodes.add(node.key)
-  }
+    return false
+  })
   const visibleNodes = [...includedNodes]
     .map((key) => nodes.get(key))
     .filter((node): node is ServiceMapNode => Boolean(node))
+  const folded = foldVirtualPeersIntoServices(visibleNodes, limitedEdges)
   return {
-    nodes: visibleNodes,
-    edges,
+    nodes: folded.nodes,
+    edges: folded.edges,
     // Snapshot rows can repeat the same services many times. Only warn when the
     // graph itself is clipped by the client-side node/edge display limits.
     truncated: rankedEdges.length > SERVICE_MAP_EDGE_LIMIT || nodes.size > SERVICE_MAP_NODE_LIMIT,

@@ -15,9 +15,21 @@ export interface ServiceMapDisplayNode {
   label: string
   type: string
   virtual: boolean
+  connectionType?: string
   service?: ServiceMapNode
   members?: ServiceMapNode[]
   cluster?: boolean
+}
+
+function toDisplayNode(service: ServiceMapNode): ServiceMapDisplayNode {
+  return {
+    key: service.key,
+    label: service.label,
+    type: service.type,
+    virtual: service.virtual,
+    connectionType: service.connectionType,
+    service,
+  }
 }
 
 export interface ServiceMapDisplayGraph {
@@ -26,16 +38,59 @@ export interface ServiceMapDisplayGraph {
 }
 
 const SERVICE_IDENTITY_ATTRIBUTES = new Set(['name', 'service', 'service.name', 'service_name'])
+/** Env / deployment scope attrs — promoted to a first-class toolbar control, not generic facets. */
+const SCOPE_ATTRIBUTE_KEYS = new Set([
+  'scope',
+  'env',
+  'environment',
+  'deployment.environment',
+  'deployment_environment',
+  'resource_attributes.deployment.environment',
+  'resource_attributes.deployment_environment',
+])
+
+function attributeLeaf(key: string): string {
+  const normalized = key.toLocaleLowerCase()
+  const parts = normalized.split('.')
+  return parts[parts.length - 1] ?? normalized
+}
 
 function isServiceIdentityAttribute(key: string): boolean {
   const normalized = key.toLocaleLowerCase()
-  const parts = normalized.split('.')
-  const leaf = parts[parts.length - 1] ?? normalized
-  return SERVICE_IDENTITY_ATTRIBUTES.has(normalized) || SERVICE_IDENTITY_ATTRIBUTES.has(leaf)
+  return SERVICE_IDENTITY_ATTRIBUTES.has(normalized) || SERVICE_IDENTITY_ATTRIBUTES.has(attributeLeaf(key))
+}
+
+function isScopeAttribute(key: string): boolean {
+  const normalized = key.toLocaleLowerCase()
+  return SCOPE_ATTRIBUTE_KEYS.has(normalized) || SCOPE_ATTRIBUTE_KEYS.has(attributeLeaf(key))
 }
 
 function serviceIdentity(node: ServiceMapNode): boolean {
   return node.type === 'service' && !node.virtual
+}
+
+/** Distinct env/scope values for the dedicated Environment control. */
+export function nodeScopeValues(node: ServiceMapNode): string[] {
+  const values = new Set<string>()
+  if (node.scope?.trim()) values.add(node.scope.trim())
+  Object.entries(node.groupAttributes).forEach(([key, rawValue]) => {
+    const value = rawValue.trim()
+    if (value && isScopeAttribute(key)) values.add(value)
+  })
+  return [...values]
+}
+
+export function buildServiceMapScopeFacet(nodes: ServiceMapNode[]): ServiceMapFacet | null {
+  const values = new Set<string>()
+  nodes.filter(serviceIdentity).forEach((node) => {
+    nodeScopeValues(node).forEach((value) => values.add(value))
+  })
+  if (!values.size) return null
+  return {
+    key: 'scope',
+    label: 'scope',
+    values: [...values].sort((left, right) => left.localeCompare(right)),
+  }
 }
 
 export function buildServiceMapFacets(nodes: ServiceMapNode[]): ServiceMapFacet[] {
@@ -43,7 +98,7 @@ export function buildServiceMapFacets(nodes: ServiceMapNode[]): ServiceMapFacet[
   nodes.filter(serviceIdentity).forEach((node) => {
     Object.entries(node.groupAttributes).forEach(([key, rawValue]) => {
       const value = rawValue.trim()
-      if (!value || isServiceIdentityAttribute(key)) return
+      if (!value || isServiceIdentityAttribute(key) || isScopeAttribute(key)) return
       const values = valuesByKey.get(key) ?? new Set<string>()
       values.add(value)
       valuesByKey.set(key, values)
@@ -60,7 +115,12 @@ export function buildServiceMapFacets(nodes: ServiceMapNode[]): ServiceMapFacet[
     .sort((a, b) => a.key.localeCompare(b.key))
 }
 
-function nodeMatchesFilters(node: ServiceMapNode, selectedServices: string[], filters: ServiceMapFilters): boolean {
+function nodeMatchesFilters(
+  node: ServiceMapNode,
+  selectedServices: string[],
+  filters: ServiceMapFilters,
+  selectedScopes: string[]
+): boolean {
   if (
     selectedServices.length &&
     !selectedServices.includes(node.label) &&
@@ -68,6 +128,10 @@ function nodeMatchesFilters(node: ServiceMapNode, selectedServices: string[], fi
     !(node.serviceValue && selectedServices.includes(node.serviceValue))
   ) {
     return false
+  }
+  if (selectedScopes.length) {
+    const scopes = nodeScopeValues(node)
+    if (!scopes.some((value) => selectedScopes.includes(value))) return false
   }
   return Object.entries(filters).every(([key, selectedValues]) => {
     if (!selectedValues.length) return true
@@ -320,15 +384,25 @@ export function buildServiceMapDisplayGraph(args: {
   edges: ServiceMapEdge[]
   /** Selected real-service labels (or ids). Empty = no service filter. */
   selectedServices?: string[]
+  /** First-class env/scope values. Empty = all environments. */
+  selectedScopes?: string[]
   filters?: ServiceMapFilters
   inspectNodeKey?: string
   expandedClusters?: Set<string>
   clusterLabel?: (count: number) => string
 }): ServiceMapDisplayGraph {
-  const { nodes, edges, selectedServices = [], filters = {}, inspectNodeKey, expandedClusters = new Set() } = args
+  const {
+    nodes,
+    edges,
+    selectedServices = [],
+    selectedScopes = [],
+    filters = {},
+    inspectNodeKey,
+    expandedClusters = new Set(),
+  } = args
   const rawNodes = new Map(nodes.map((node) => [node.key, node]))
   const activeFilters = Object.values(filters).some((values) => values.length > 0)
-  const filtering = activeFilters || selectedServices.length > 0
+  const filtering = activeFilters || selectedServices.length > 0 || selectedScopes.length > 0
 
   if (inspectNodeKey) {
     const adjacent = new Set<string>([inspectNodeKey])
@@ -336,46 +410,26 @@ export function buildServiceMapDisplayGraph(args: {
       if (edge.source === inspectNodeKey) adjacent.add(edge.target)
       if (edge.target === inspectNodeKey) adjacent.add(edge.source)
     })
-    const displayNodes = nodes
-      .filter((node) => adjacent.has(node.key))
-      .map((service) => ({
-        key: service.key,
-        label: service.label,
-        type: service.type,
-        virtual: service.virtual,
-        service,
-      }))
+    const displayNodes = nodes.filter((node) => adjacent.has(node.key)).map(toDisplayNode)
     const displayMap = new Map(displayNodes.map((node) => [node.key, node]))
     return { nodes: displayNodes, edges: aggregateEdges(edges, displayMap) }
   }
 
   if (!filtering) {
-    const displayNodes = nodes.map((service) => ({
-      key: service.key,
-      label: service.label,
-      type: service.type,
-      virtual: service.virtual,
-      service,
-    }))
+    const displayNodes = nodes.map(toDisplayNode)
     const displayMap = new Map(displayNodes.map((node) => [node.key, node]))
     return { nodes: displayNodes, edges: aggregateEdges(edges, displayMap) }
   }
 
   const matchedServices = nodes.filter(
-    (node) => serviceIdentity(node) && nodeMatchesFilters(node, selectedServices, filters)
+    (node) => serviceIdentity(node) && nodeMatchesFilters(node, selectedServices, filters, selectedScopes)
   )
   if (!matchedServices.length) return { nodes: [], edges: [] }
 
   const hiddenKeys = hiddenPathServices(nodes, edges, matchedServices)
   const componentKeys = hiddenComponents(hiddenKeys, edges)
   const hiddenNodeMap = new Map<string, string>()
-  const displayNodes: ServiceMapDisplayNode[] = matchedServices.map((service) => ({
-    key: service.key,
-    label: service.label,
-    type: service.type,
-    virtual: service.virtual,
-    service,
-  }))
+  const displayNodes: ServiceMapDisplayNode[] = matchedServices.map(toDisplayNode)
 
   componentKeys.forEach((members) => {
     const clusterKey = `cluster:${members.join('\0')}`
@@ -385,13 +439,7 @@ export function buildServiceMapDisplayGraph(args: {
       .filter((node): node is ServiceMapNode => Boolean(node))
     if (expanded) {
       hiddenServices.forEach((service) => {
-        displayNodes.push({
-          key: service.key,
-          label: service.label,
-          type: service.type,
-          virtual: service.virtual,
-          service,
-        })
+        displayNodes.push(toDisplayNode(service))
       })
     } else {
       displayNodes.push({
@@ -431,13 +479,7 @@ export function buildServiceMapDisplayGraph(args: {
       const neighbour = rawNodes.get(neighbourKey)
       if (!neighbour || hiddenKeys.has(neighbour.key) || displayMap.has(neighbour.key)) return
       if (neighbour.virtual || serviceIdentity(neighbour)) {
-        const displayNode = {
-          key: neighbour.key,
-          label: neighbour.label,
-          type: neighbour.type,
-          virtual: neighbour.virtual,
-          service: neighbour,
-        }
+        const displayNode = toDisplayNode(neighbour)
         displayNodes.push(displayNode)
         displayMap.set(neighbour.key, displayNode)
       }
@@ -447,13 +489,7 @@ export function buildServiceMapDisplayGraph(args: {
       const endpointKey = matchedKeys.has(edge.source) ? edge.target : matchedKeys.has(edge.target) ? edge.source : ''
       const endpoint = rawNodes.get(endpointKey)
       if (!endpoint?.virtual || displayMap.has(endpoint.key)) return
-      const displayNode = {
-        key: endpoint.key,
-        label: endpoint.label,
-        type: endpoint.type,
-        virtual: true,
-        service: endpoint,
-      }
+      const displayNode = toDisplayNode(endpoint)
       displayNodes.push(displayNode)
       displayMap.set(endpoint.key, displayNode)
     })

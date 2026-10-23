@@ -3,6 +3,16 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   .service-map
     .drilldown-toolbar.service-map-toolbar
       .drilldown-toolbar__left
+        span.drilldown-toolbar__group(v-if="scopeFacet")
+          span.drilldown-toolbar__label {{ t('drilldown.serviceMap.scopeLabel') }}
+          a-select.service-map-scope-select(
+            v-model="selectedScopes"
+            multiple
+            allow-clear
+            size="medium"
+            :placeholder="t('drilldown.serviceMap.scopePlaceholder')"
+            :options="scopeFacet.values.map((value) => ({ label: value, value }))"
+          )
         span.drilldown-toolbar__group(v-for="facet in facets" :key="facet.key")
           span.drilldown-toolbar__label {{ facet.label }}
           a-select(
@@ -92,23 +102,22 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
             | {{ t('drilldown.serviceMap.viewLogs') }}
           button.service-map-node-action(type="button" role="menuitem" @click="copyServiceName")
             | {{ t('drilldown.serviceMap.copyService') }}
-        .service-map-legend(v-if="visibleNodes.length")
+        .service-map-legend(v-if="hasInferredEndpoints")
           span.service-map-legend__item
             i.service-map-legend__service(
               :style="{ backgroundColor: graphTheme.palette[0].fill, borderColor: graphTheme.palette[0].stroke }"
             )
             | {{ t('drilldown.serviceMap.serviceNode') }}
-          span.service-map-legend__item
+          span.service-map-legend__item(v-if="hasDatabaseEndpoints")
+            i.service-map-legend__database(
+              :style="{ backgroundColor: withAlpha(graphTheme.database, isDark ? 0.22 : 0.12), borderColor: graphTheme.database }"
+            )
+            | {{ t('drilldown.serviceMap.databaseEndpoint') }}
+          span.service-map-legend__item(v-if="hasUnpairedEndpoints")
             i.service-map-legend__external(
               :style="{ backgroundColor: withAlpha(graphTheme.external, isDark ? 0.2 : 0.1), borderColor: graphTheme.external }"
             )
-            | {{ t('drilldown.serviceMap.externalNode') }}
-          span.service-map-legend__item
-            i.service-map-legend__matched(:style="{ backgroundColor: graphTheme.edge }")
-            | {{ t('drilldown.serviceMap.matchedEdge') }}
-          span.service-map-legend__item
-            i.service-map-legend__unmatched(:style="{ borderTopColor: graphTheme.external }")
-            | {{ t('drilldown.serviceMap.unmatchedEdge') }}
+            | {{ t('drilldown.serviceMap.unpairedEndpoint') }}
 </template>
 
 <script setup lang="ts">
@@ -131,6 +140,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     buildServiceMapDisplayGraph,
     buildServiceMapFacets,
     buildServiceMapFocusLayout,
+    buildServiceMapScopeFacet,
     type ServiceMapFilters,
   } from '@/observability/adapters/service-map-graph'
 
@@ -146,6 +156,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   const loading = ref(false)
   const error = ref('')
   const selectedServices = ref<string[]>([])
+  const selectedScopes = ref<string[]>([])
   const result = ref<ServiceMapResult>({ nodes: [], edges: [], truncated: false })
   const chartSize = ref({ width: 1200, height: 640 })
   const inspectedNodeKey = ref('')
@@ -202,10 +213,13 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     Boolean(ctx.semantics.logs.table.value && ctx.semantics.logs.entityFilterKeys.value.service)
   )
   const emptyDescription = computed(() =>
-    selectedServices.value.length || Object.values(facetFilters.value).some((values) => values.length > 0)
+    selectedServices.value.length ||
+    selectedScopes.value.length ||
+    Object.values(facetFilters.value).some((values) => values.length > 0)
       ? t('drilldown.serviceMap.noMatches')
       : t('drilldown.serviceMap.noData')
   )
+  const scopeFacet = computed(() => buildServiceMapScopeFacet(allNodes.value))
   const facets = computed(() => buildServiceMapFacets(allNodes.value))
   const serviceOptions = computed(() => {
     const labels = new Set<string>()
@@ -224,6 +238,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       nodes: allNodes.value,
       edges: allEdges.value,
       selectedServices: selectedServices.value,
+      selectedScopes: selectedScopes.value,
       filters: facetFilters.value,
       inspectNodeKey: inspectedNodeKey.value,
       expandedClusters: expandedClusters.value,
@@ -249,6 +264,13 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   })
   const graphNodeMap = computed(() => new Map(graphNodes.value.map((node) => [node.key, node])))
   const visibleNodes = computed(() => graphNodes.value)
+  const hasDatabaseEndpoints = computed(() =>
+    graphNodes.value.some((node) => node.virtual && node.connectionType === 'database')
+  )
+  const hasUnpairedEndpoints = computed(() =>
+    graphNodes.value.some((node) => node.virtual && node.connectionType !== 'database')
+  )
+  const hasInferredEndpoints = computed(() => hasDatabaseEndpoints.value || hasUnpairedEndpoints.value)
   const truncated = computed(() => result.value.truncated)
   function themeToken(name: string, fallback: string): string {
     const styles = getComputedStyle(canvasRef.value ?? document.documentElement)
@@ -280,7 +302,9 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       border: dark ? 'rgba(255,255,255,.24)' : themeToken('--gpt-border-strong', 'rgba(71,52,96,.15)'),
       edge: dark ? 'rgba(205, 196, 218, 0.62)' : 'rgba(71, 52, 96, 0.42)',
       danger: themeToken('--gpt-danger', '#ef4444'),
+      warn: themeToken('--gpt-warning', '#f59e0b'),
       external: themeToken('--gpt-semantic-tag', '#c478ff'),
+      database: themeToken('--gpt-semantic-field', '#3fa4ff'),
       palette: paletteStrokes.map((stroke) => ({
         fill: withAlpha(stroke, dark ? 0.2 : 0.11),
         stroke,
@@ -340,16 +364,31 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   // Hydrate once from the URL. Do not keep a route→state watcher — that loop was
   // clearing selections when drilldown URL sync rewrote the query without our keys.
   selectedServices.value = parseServiceMapSearch(route.query.serviceMapSearch)
+  selectedScopes.value = parseServiceMapSearch(route.query.serviceMapScope)
   facetFilters.value = parseServiceMapFilters(route.query.serviceMapFilters)
+  // Promote legacy env/scope facet query params into the first-class environment control.
+  ;['scope', 'env', 'environment', 'deployment.environment'].forEach((key) => {
+    const legacy = facetFilters.value[key]
+    if (!legacy?.length) return
+    selectedScopes.value = [...new Set([...selectedScopes.value, ...legacy])]
+    delete facetFilters.value[key]
+  })
 
   function writeServiceMapQuery() {
     const serviceMapSearch = selectedServices.value.length
       ? encodeURIComponent(JSON.stringify(selectedServices.value))
       : undefined
+    const serviceMapScope = selectedScopes.value.length
+      ? encodeURIComponent(JSON.stringify(selectedScopes.value))
+      : undefined
     const serviceMapFilters = Object.values(facetFilters.value).some((values) => values.length)
       ? encodeURIComponent(JSON.stringify(facetFilters.value))
       : undefined
-    if (serviceMapSearch === route.query.serviceMapSearch && serviceMapFilters === route.query.serviceMapFilters) {
+    if (
+      serviceMapSearch === route.query.serviceMapSearch &&
+      serviceMapScope === route.query.serviceMapScope &&
+      serviceMapFilters === route.query.serviceMapFilters
+    ) {
       return
     }
     router
@@ -357,6 +396,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
         query: {
           ...route.query,
           serviceMapSearch,
+          serviceMapScope,
           serviceMapFilters,
         },
       })
@@ -364,8 +404,8 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   }
 
   watch(
-    [facets, serviceOptions, loading],
-    ([availableFacets, availableServices, isLoading]) => {
+    [facets, scopeFacet, serviceOptions, loading],
+    ([availableFacets, availableScope, availableServices, isLoading]) => {
       if (isLoading || availableServices.length === 0) return
       const allowed = new Map(availableFacets.map((facet) => [facet.key, new Set(facet.values)]))
       const nextFacets = Object.fromEntries(
@@ -375,6 +415,13 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       )
       if (JSON.stringify(nextFacets) !== JSON.stringify(facetFilters.value)) {
         facetFilters.value = nextFacets
+        writeServiceMapQuery()
+      }
+
+      const allowedScopes = new Set(availableScope?.values ?? [])
+      const nextScopes = selectedScopes.value.filter((value) => allowedScopes.has(value))
+      if (!sameStringList(nextScopes, selectedScopes.value)) {
+        selectedScopes.value = nextScopes
         writeServiceMapQuery()
       }
 
@@ -398,6 +445,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   }
 
   watch(selectedServices, () => writeServiceMapQuery(), { deep: true })
+  watch(selectedScopes, () => writeServiceMapQuery(), { deep: true })
 
   function escapeHtml(value: string): string {
     const entities: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
@@ -406,15 +454,9 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
 
   const chartOption = computed(() => {
     const degree = new Map<string, number>()
-    const nodeRequests = new Map<string, number>()
-    const nodeErrors = new Map<string, number>()
     graphEdges.value.forEach((edge) => {
       degree.set(edge.source, (degree.get(edge.source) ?? 0) + 1)
       degree.set(edge.target, (degree.get(edge.target) ?? 0) + 1)
-      for (const key of [edge.source, edge.target]) {
-        nodeRequests.set(key, (nodeRequests.get(key) ?? 0) + edge.requests)
-        nodeErrors.set(key, (nodeErrors.get(key) ?? 0) + edge.errors)
-      }
     })
     const activeKey = activeNodeKey.value
     const detailMode = Boolean(inspectedNodeKey.value)
@@ -426,18 +468,43 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
           (edge.target === activeKey && edge.source === node.key)
       )
       const opacity = activeKey ? (isActive ? 0.78 : connectedToActive ? 1 : 0.18) : 1
-      const community = communityLayout.value.get(node.key)?.community ?? 0
-      const communityColor = graphTheme.value.palette[community % graphTheme.value.palette.length]
-      const hasElevatedErrors = (nodeErrors.get(node.key) ?? 0) / Math.max(1, nodeRequests.get(node.key) ?? 0) >= 0.05
-      const nodeStroke = hasElevatedErrors ? graphTheme.value.danger : communityColor.stroke
-      const nodeFill = hasElevatedErrors
-        ? withAlpha(graphTheme.value.danger, isDark.value ? 0.28 : 0.14)
-        : communityColor.fill
+      // Real services share one color; call errors are shown on edges, not node chrome.
+      const serviceColor = graphTheme.value.palette[0]
       const incoming = nodeFlowSummary(node.key, 'incoming')
       const outgoing = nodeFlowSummary(node.key, 'outgoing')
-      const detailLabel = node.members
-        ? node.label
-        : `${node.label}\n↓ ${formatFlowSummary(incoming)}\n↑ ${formatFlowSummary(outgoing)}`
+      const isDatabase = node.virtual && node.connectionType === 'database'
+      let detailLabel = node.label
+      if (!node.members) {
+        if (node.virtual) {
+          const rateKey = isDatabase ? 'drilldown.serviceMap.databaseRate' : 'drilldown.serviceMap.unpairedRate'
+          detailLabel = `${node.label}\n${t(rateKey, { rate: formatCallRate(nodeUnmatchedCount(node.key)) })}`
+        } else {
+          detailLabel = `${node.label}\n↓ ${formatFlowSummary(incoming)}\n↑ ${formatFlowSummary(outgoing)}`
+        }
+      }
+      let itemStyle: Record<string, string | number> = {
+        color: serviceColor.fill,
+        borderColor: serviceColor.stroke,
+        borderWidth: node.members ? 2 : 1.5,
+        opacity,
+      }
+      if (isDatabase) {
+        itemStyle = {
+          color: withAlpha(graphTheme.value.database, isDark.value ? 0.22 : 0.12),
+          borderColor: graphTheme.value.database,
+          borderWidth: 1.5,
+          borderType: 'dashed',
+          opacity,
+        }
+      } else if (node.virtual) {
+        itemStyle = {
+          color: withAlpha(graphTheme.value.external, isDark.value ? 0.2 : 0.1),
+          borderColor: graphTheme.value.external,
+          borderWidth: 1.5,
+          borderType: 'dashed',
+          opacity,
+        }
+      }
       return {
         id: node.key,
         name: node.label,
@@ -446,30 +513,11 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
         y: communityLayout.value.get(node.key)?.y,
         entityType: node.type,
         virtual: node.virtual,
+        connectionType: node.connectionType,
         isCluster: Boolean(node.members),
         symbol: node.members || node.virtual ? 'roundRect' : 'circle',
         symbolSize: node.members ? 40 : node.virtual ? 20 : Math.min(34, 24 + (degree.get(node.key) ?? 0)),
-        itemStyle: node.members
-          ? {
-              color: nodeFill,
-              borderColor: nodeStroke,
-              borderWidth: 2,
-              opacity,
-            }
-          : node.virtual
-          ? {
-              color: withAlpha(graphTheme.value.external, isDark.value ? 0.2 : 0.1),
-              borderColor: graphTheme.value.external,
-              borderWidth: 1.5,
-              borderType: 'dashed',
-              opacity,
-            }
-          : {
-              color: nodeFill,
-              borderColor: nodeStroke,
-              borderWidth: hasElevatedErrors ? 2.5 : 1.5,
-              opacity,
-            },
+        itemStyle,
         label: {
           show: true,
           position: 'right',
@@ -482,20 +530,22 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     })
     const links = graphEdges.value.map((edge) => {
       const isFlowing = activeKey === edge.source || activeKey === edge.target
+      const traffic = Math.max(edge.requests, edge.unmatched)
+      const unmatchedOnly = edge.requests === 0 && edge.unmatched > 0
       return {
         id: edge.key,
         source: edge.source,
         target: edge.target,
         edgeKey: edge.key,
-        value: edge.requests,
+        value: traffic,
         symbol: ['none', 'arrow'],
         symbolSize: [0, 8],
         lineStyle: {
-          width: isFlowing ? 1.8 : 0.8 + Math.min(1.1, Math.log2(edge.requests + 1) * 0.24),
-          color: graphTheme.value.edge,
-          opacity: activeKey ? (isFlowing ? 0.95 : 0.08) : edge.requests === 0 && edge.unmatched > 0 ? 0.42 : 0.56,
+          width: isFlowing ? 1.8 : 0.8 + Math.min(1.1, Math.log2(traffic + 1) * 0.24),
+          color: edgeStrokeColor(edge),
+          opacity: activeKey ? (isFlowing ? 0.95 : 0.08) : unmatchedOnly ? 0.42 : 0.56,
           curveness: 0.12,
-          type: isFlowing || (edge.requests === 0 && edge.unmatched > 0) ? 'dashed' : 'solid',
+          type: isFlowing || unmatchedOnly ? 'dashed' : 'solid',
         },
       }
     })
@@ -518,8 +568,12 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
               `${escapeHtml(t('drilldown.serviceMap.errorRate'))}: ${escapeHtml(formatPercent(errorRate(edge)))}`,
               `${escapeHtml(t('drilldown.serviceMap.avgDuration'))}: ${escapeHtml(formatDuration(avgDuration(edge)))}`,
               `${escapeHtml(t('drilldown.serviceMap.maxDuration'))}: ${escapeHtml(formatDuration(edge.durationMax))}`,
-              `${escapeHtml(t('drilldown.serviceMap.unmatched'))}: ${escapeHtml(formatRequests(edge.unmatched))}`,
-            ].join('<br/>')
+              edge.unmatched > 0
+                ? `${escapeHtml(t('drilldown.serviceMap.unmatched'))}: ${escapeHtml(formatRequests(edge.unmatched))}`
+                : '',
+            ]
+              .filter(Boolean)
+              .join('<br/>')
           }
           const node = params.data?.nodeKey ? graphNodeMap.value.get(params.data.nodeKey) : undefined
           if (!node) return ''
@@ -528,15 +582,28 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
               t('drilldown.serviceMap.clickToExpand')
             )}`
           }
+          if (node.virtual) {
+            const unmatched = nodeUnmatchedCount(node.key)
+            const isDatabase = node.connectionType === 'database'
+            return [
+              `<strong>${escapeHtml(node.label)}</strong>`,
+              `${escapeHtml(t('drilldown.serviceMap.endpointKind'))}: ${escapeHtml(
+                t(isDatabase ? 'drilldown.serviceMap.databaseEndpoint' : 'drilldown.serviceMap.unpairedEndpoint')
+              )}`,
+              `${escapeHtml(t('drilldown.serviceMap.unmatchedRate'))}: ${escapeHtml(formatCallRate(unmatched))} call/s`,
+              escapeHtml(
+                t(isDatabase ? 'drilldown.serviceMap.databaseNodeHint' : 'drilldown.serviceMap.virtualNodeHint')
+              ),
+            ].join('<br/>')
+          }
           const instanceCount = node.service?.instanceCount ?? 0
           const incoming = nodeFlowSummary(node.key, 'incoming')
           const outgoing = nodeFlowSummary(node.key, 'outgoing')
           return [
             `<strong>${escapeHtml(node.label)}</strong>`,
-            escapeHtml(node.type),
             instanceCount ? escapeHtml(t('drilldown.serviceMap.instanceCount', { count: instanceCount })) : '',
-            `${escapeHtml(t('drilldown.serviceMap.incomingFlow'))}: ${escapeHtml(formatFlowSummary(incoming))}`,
-            `${escapeHtml(t('drilldown.serviceMap.outgoingFlow'))}: ${escapeHtml(formatFlowSummary(outgoing))}`,
+            ...formatNodeDirectionTooltip(t('drilldown.serviceMap.incomingFlow'), incoming),
+            ...formatNodeDirectionTooltip(t('drilldown.serviceMap.outgoingFlow'), outgoing),
           ]
             .filter(Boolean)
             .join('<br/>')
@@ -585,26 +652,56 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     const connected = graphEdges.value.filter((edge) =>
       direction === 'incoming' ? edge.target === nodeKey : edge.source === nodeKey
     )
-    const summary = connected.reduce(
+    return connected.reduce(
       (value, edge) => ({
         requests: value.requests + edge.requests,
         errors: value.errors + edge.errors,
+        unmatched: value.unmatched + edge.unmatched,
         durationSum: value.durationSum + edge.durationSum,
         durationCount: value.durationCount + edge.durationCount,
       }),
-      { requests: 0, errors: 0, durationSum: 0, durationCount: 0 }
+      { requests: 0, errors: 0, unmatched: 0, durationSum: 0, durationCount: 0 }
     )
-    return summary
   }
-  function formatFlowSummary(summary: ReturnType<typeof nodeFlowSummary>): string {
+  function nodeUnmatchedCount(nodeKey: string): number {
+    return graphEdges.value.reduce((sum, edge) => {
+      if (edge.source !== nodeKey && edge.target !== nodeKey) return sum
+      return sum + edge.unmatched
+    }, 0)
+  }
+  function formatCallRate(count: number): string {
     const range = ctx.query.unixTimeRange()
     const rangeSeconds = range.length === 2 ? Math.max(1, range[1] - range[0]) : 1
-    const rate = summary.requests / rangeSeconds
+    return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(count / rangeSeconds)
+  }
+  function formatFlowSummary(summary: ReturnType<typeof nodeFlowSummary>): string {
     const errorRatio = summary.requests ? summary.errors / summary.requests : 0
     const averageDuration = summary.durationCount ? summary.durationSum / summary.durationCount : 0
-    return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(rate)} req/s · ${formatPercent(
-      errorRatio
-    )} · ${formatDuration(averageDuration)}`
+    return `${formatCallRate(summary.requests)} req/s · ${formatPercent(errorRatio)} · ${formatDuration(
+      averageDuration
+    )}`
+  }
+  function formatNodeDirectionTooltip(title: string, summary: ReturnType<typeof nodeFlowSummary>): string[] {
+    const errorRatio = summary.requests ? summary.errors / summary.requests : 0
+    const averageDuration = summary.durationCount ? summary.durationSum / summary.durationCount : 0
+    return [
+      `<strong>${escapeHtml(title)}</strong>`,
+      `${escapeHtml(t('drilldown.serviceMap.requestRate'))}: ${escapeHtml(formatCallRate(summary.requests))} req/s`,
+      `${escapeHtml(t('drilldown.serviceMap.errorRate'))}: ${escapeHtml(formatPercent(errorRatio))}`,
+      `${escapeHtml(t('drilldown.serviceMap.avgDuration'))}: ${escapeHtml(formatDuration(averageDuration))}`,
+      summary.unmatched > 0
+        ? `${escapeHtml(t('drilldown.serviceMap.unmatchedRate'))}: ${escapeHtml(
+            formatCallRate(summary.unmatched)
+          )} call/s`
+        : '',
+    ].filter(Boolean)
+  }
+  function edgeStrokeColor(edge: ServiceMapEdge): string {
+    if (edge.requests <= 0) return graphTheme.value.external
+    const rate = edge.errors / edge.requests
+    if (rate >= 0.05) return graphTheme.value.danger
+    if (rate >= 0.01) return graphTheme.value.warn
+    return graphTheme.value.edge
   }
   function applyActiveFlow(nodeKey: string) {
     hoveredNodeKey.value = nodeKey
@@ -998,14 +1095,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   .service-map-legend__external {
     border: 2px dashed var(--gpt-semantic-tag);
   }
-  .service-map-legend__matched {
-    height: 2px !important;
-    border-radius: 0 !important;
-  }
-  .service-map-legend__unmatched {
-    width: 18px !important;
-    height: 0 !important;
-    border-top: 2px dashed var(--gpt-semantic-tag);
-    border-radius: 0 !important;
+  .service-map-legend__database {
+    border: 2px dashed var(--gpt-semantic-field);
   }
 </style>

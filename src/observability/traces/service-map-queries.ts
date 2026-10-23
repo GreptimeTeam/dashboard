@@ -22,9 +22,9 @@ ORDER BY observed_at DESC
 LIMIT ${SERVICE_MAP_ENTITY_ROWS_LIMIT}`
 }
 
-/** Calls RED grouped by the endpoint identity and confidence population. */
+/** Calls RED grouped by the endpoint identity, confidence population, and edge attributes. */
 export function buildServiceMapRelationshipsSql(range: ServiceMapQueryRange): string {
-  return `SELECT src_type, src_id, dst_type, dst_id, provenance, confidence,
+  return `SELECT src_type, src_id, dst_type, dst_id, provenance, confidence, attributes,
        SUM(request_count) AS request_count,
        SUM(error_count) AS error_count,
        SUM(unmatched_count) AS unmatched_count,
@@ -34,7 +34,7 @@ export function buildServiceMapRelationshipsSql(range: ServiceMapQueryRange): st
 FROM greptime_private.semantic_relationships
 WHERE rel_type = 'calls'
   AND ${timePredicate(range)}
-GROUP BY src_type, src_id, dst_type, dst_id, provenance, confidence
+GROUP BY src_type, src_id, dst_type, dst_id, provenance, confidence, attributes
 ORDER BY request_count DESC
 LIMIT ${SERVICE_MAP_RELATIONSHIP_ROWS_LIMIT}`
 }

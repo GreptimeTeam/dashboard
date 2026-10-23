@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { ServiceMapEdge, ServiceMapNode } from './service-map'
-import { buildServiceMapDisplayGraph, buildServiceMapFacets, buildServiceMapFocusLayout } from './service-map-graph'
+import {
+  buildServiceMapDisplayGraph,
+  buildServiceMapFacets,
+  buildServiceMapFocusLayout,
+  buildServiceMapScopeFacet,
+} from './service-map-graph'
 
 function service(id: string, attributes: Record<string, string> = {}, virtual = false): ServiceMapNode {
   return {
@@ -36,21 +41,43 @@ describe('buildServiceMapFacets', () => {
       service('frontend', {
         'service_name': 'frontend',
         'resource_attributes.service.namespace': 'demo',
-        'env': 'prod',
+        'team': 'edge',
       }),
       service('checkout', {
         'service_name': 'checkout',
         'resource_attributes.service.namespace': '',
-        'env': 'staging',
+        'team': 'payments',
       }),
-      service('cart', { 'service_name': 'cart', 'resource_attributes.service.namespace': '', 'env': '' }),
+      service('cart', { 'service_name': 'cart', 'resource_attributes.service.namespace': '', 'team': '' }),
     ]
 
-    expect(buildServiceMapFacets(nodes)).toEqual([{ key: 'env', label: 'env', values: ['prod', 'staging'] }])
+    expect(buildServiceMapFacets(nodes)).toEqual([{ key: 'team', label: 'team', values: ['edge', 'payments'] }])
   })
 
   it('does not create facets from virtual endpoints', () => {
     expect(buildServiceMapFacets([service('external-a', { team: 'a' }, true)])).toEqual([])
+  })
+
+  it('keeps env and scope out of generic facets', () => {
+    const nodes = [
+      service('frontend', { env: 'prod', team: 'edge' }),
+      service('checkout', { env: 'staging', team: 'payments' }),
+    ]
+    expect(buildServiceMapFacets(nodes).map((facet) => facet.key)).toEqual(['team'])
+  })
+})
+
+describe('buildServiceMapScopeFacet', () => {
+  it('collects entity scope and env attributes into one environment control', () => {
+    const frontend = service('frontend', { env: 'prod' })
+    const checkout: ServiceMapNode = { ...service('checkout'), scope: 'staging' }
+    const cart = service('cart', { 'deployment.environment': 'prod' })
+
+    expect(buildServiceMapScopeFacet([frontend, checkout, cart])).toEqual({
+      key: 'scope',
+      label: 'scope',
+      values: ['prod', 'staging'],
+    })
   })
 })
 
@@ -111,6 +138,16 @@ describe('buildServiceMapDisplayGraph', () => {
     expect(new Set(result.nodes.map((node) => node.key))).toEqual(new Set([frontend.key, gateway.key, checkout.key]))
     expect(result.edges).toHaveLength(2)
     expect(result.nodes.some((node) => node.cluster)).toBe(false)
+  })
+
+  it('filters the graph by first-class environment scope values', () => {
+    const result = buildServiceMapDisplayGraph({ nodes, edges, selectedScopes: ['prod'] })
+    expect(result.nodes.map((node) => node.key)).toContain(frontend.key)
+    expect(result.nodes.map((node) => node.key)).toContain(checkout.key)
+    expect(result.nodes.map((node) => node.key)).not.toContain(inventory.key)
+    // gateway bridges prod services and collapses into a path cluster
+    expect(result.nodes.some((node) => node.cluster)).toBe(true)
+    expect(result.edges.map((item) => item.requests).sort((a, b) => b - a)).toEqual([40, 30])
   })
 })
 

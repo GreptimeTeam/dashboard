@@ -19,7 +19,8 @@ describe('Service Map semantic queries', () => {
   it('aggregates call RED by typed endpoints and confidence', () => {
     const sql = buildServiceMapRelationshipsSql(range)
     expect(sql).toContain("rel_type = 'calls'")
-    expect(sql).toContain('GROUP BY src_type, src_id, dst_type, dst_id, provenance, confidence')
+    expect(sql).toContain('GROUP BY src_type, src_id, dst_type, dst_id, provenance, confidence, attributes')
+    expect(sql).toContain('attributes')
     expect(sql).toContain('SUM(request_count) AS request_count')
     expect(sql).toContain('SUM(error_count) AS error_count')
     expect(sql).toContain('SUM(unmatched_count) AS unmatched_count')
