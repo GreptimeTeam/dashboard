@@ -241,12 +241,17 @@ const HYBRID_HEAP_WRAP_AFTER = 4
 /** Size ≤2 communities merge into their strongest neighbor (fewer lone heaps per band). */
 const TINY_HEAP_MAX_SIZE = 2
 /** Gap between heaps in a row / between stacked rows. */
-const HEAP_ROW_GAP_X = 48
-const HEAP_ROW_GAP_Y = 56
-/** Minimum center-to-center gap so side labels do not collide inside a heap. */
-const HEAP_NODE_GAP = 100
-/** Extra margin around pack geometry for truncated side labels (~120px). */
-const HEAP_LABEL_PAD = 60
+const HEAP_ROW_GAP_X = 24
+const HEAP_ROW_GAP_Y = 20
+/** Minimum center-to-center gap inside a heap (titles sit below, so vertical needs more room). */
+const HEAP_NODE_GAP = 78
+/** Side margin around pack geometry (edges + truncated titles). */
+const HEAP_LABEL_PAD_X = 28
+/** Extra height under each heap for bottom titles (~11px + padding + distance). */
+const HEAP_LABEL_PAD_Y = 36
+/** Gap between the lowest real node and the isolate row. */
+const ISOLATE_ROW_GAP = 64
+const ISOLATE_NODE_GAP = 96
 
 /** Binary ring: no public error-rate tiers; Datadog uses monitors instead of % buckets. */
 export type ServiceMapNodeHealth = 'ok' | 'danger' | 'neutral'
@@ -404,6 +409,19 @@ function fitNodeStatFontSize(size: number, diskR: number, text: string, baseRati
   return Math.max(minPx, Math.round(base * (maxWidth / estimated)))
 }
 
+/** Success/error dash lengths for the rim arc (exported for proportion tests). */
+export function serviceMapArcDashLengths(
+  errorRatio: number,
+  circumference: number
+): {
+  okLen: number
+  errorLen: number
+} {
+  const ratio = Math.min(1, Math.max(0, errorRatio))
+  const errorLen = circumference * ratio
+  return { okLen: circumference - errorLen, errorLen }
+}
+
 /** SVG data-URL symbol: fill disk + success/error arc on the rim (Grafana-like, minimal gutter). */
 export function buildServiceMapNodeSymbolDataUrl(options: ServiceMapNodeSymbolOptions): string {
   const size = Math.max(28, Math.round(options.size))
@@ -414,13 +432,11 @@ export function buildServiceMapNodeSymbolDataUrl(options: ServiceMapNodeSymbolOp
   const ringR = size * 0.5 - stroke * 0.5
   const diskR = Math.max(stroke, ringR - stroke * 0.5)
   const circumference = 2 * Math.PI * ringR
-  const errorRatio = Math.min(1, Math.max(0, options.errorRatio))
-  const errorLen = circumference * errorRatio
-  const okLen = circumference - errorLen
+  const { okLen, errorLen } = serviceMapArcDashLengths(options.errorRatio, circumference)
   const fontMain = fitNodeStatFontSize(size, diskR, options.mainStat, 0.22, 7)
   const fontSec = fitNodeStatFontSize(size, diskR, options.secondaryStat, 0.165, 6)
-  const mainY = cy - fontSec * 0.2
-  const secY = cy + fontMain * 0.75
+  const mainY = cy - fontSec * 0.15
+  const secY = cy + fontMain * 0.7
   const esc = (value: string) =>
     value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
@@ -655,8 +671,8 @@ function anchorInferredNearCallers(
   layout: Map<string, ServiceMapNodeLayout>,
   nodes: ServiceMapDisplayNode[],
   edges: ServiceMapEdge[],
-  offsetX = 72,
-  offsetY = 56
+  offsetX = 96,
+  offsetY = 92
 ): void {
   const realKeys = new Set(nodes.filter((node) => !node.virtual).map((node) => node.key))
   const byCaller = new Map<string, string[]>()
@@ -675,10 +691,10 @@ function anchorInferredNearCallers(
       const self = layout.get(key)
       const link = primaryNeighbor(key, edges, realKeys)
       if (!self || !link) return
-      const fan = (slot - (inferredKeys.length - 1) / 2) * 52
-      // Prefer below the caller so side labels on the parent stay readable.
-      self.x = neighbour.x + (link.asTarget ? offsetX : -offsetX * 0.35) + fan * 0.35
-      self.y = neighbour.y + offsetY + fan
+      const fan = (slot - (inferredKeys.length - 1) / 2) * 70
+      // Sit below-right of the caller so the parent's bottom title stays clear.
+      self.x = neighbour.x + (link.asTarget ? offsetX : offsetX * 0.55) + fan
+      self.y = neighbour.y + offsetY + Math.abs(fan) * 0.25
       self.community = neighbour.community
     })
   })
@@ -686,26 +702,34 @@ function anchorInferredNearCallers(
 
 /** Content radius for hub+satellites (shared by sizing and placement). */
 function heapContentRadius(satelliteCount: number): number {
-  return Math.min(170, Math.max(HEAP_NODE_GAP, 60 + satelliteCount * 12))
+  return Math.min(132, Math.max(HEAP_NODE_GAP * 0.92, 48 + satelliteCount * 14))
 }
 
 /**
  * Intrinsic bounding box for a heap from member count (content + label pad).
  * Canvas-independent — used to decide how many heaps fit per row.
+ * Height is taller than width so bottom titles have a reserved band.
  */
 export function heapIntrinsicSize(memberCount: number): { width: number; height: number } {
   const n = Math.max(1, memberCount)
   if (n === 1) {
-    const side = 48 + HEAP_LABEL_PAD * 2
-    return { width: side, height: side }
+    return {
+      width: 44 + HEAP_LABEL_PAD_X * 2,
+      height: 44 + HEAP_LABEL_PAD_X + HEAP_LABEL_PAD_Y,
+    }
   }
   if (n === 2) {
-    const half = HEAP_NODE_GAP * 0.58
-    const span = half * 2 + HEAP_LABEL_PAD * 2
-    return { width: span, height: span }
+    const half = HEAP_NODE_GAP * 0.5
+    return {
+      width: half * 2 + HEAP_LABEL_PAD_X * 2,
+      height: half * 1.8 + HEAP_LABEL_PAD_X + HEAP_LABEL_PAD_Y,
+    }
   }
-  const box = 2 * (heapContentRadius(n - 1) * 1.02 + HEAP_LABEL_PAD)
-  return { width: box, height: box }
+  const radius = heapContentRadius(n - 1) * 1.02
+  return {
+    width: 2 * (radius + HEAP_LABEL_PAD_X),
+    height: 2 * (radius + HEAP_LABEL_PAD_X * 0.6) + HEAP_LABEL_PAD_Y,
+  }
 }
 
 interface PackedHeap {
@@ -786,29 +810,67 @@ function placeCompactHeap(
     return
   }
   if (ordered.length === 2) {
-    const half = Math.min(HEAP_NODE_GAP * 0.58, cellWidth * 0.3, cellHeight * 0.3)
-    result.set(ordered[0], { x: centerX - half, y: centerY - half * 0.9, community })
-    result.set(ordered[1], { x: centerX + half, y: centerY + half * 0.9, community })
+    const half = Math.min(HEAP_NODE_GAP * 0.5, cellWidth * 0.32, cellHeight * 0.28)
+    // Bias upward so the lower node's bottom title stays inside the cell.
+    const cy = centerY - HEAP_LABEL_PAD_Y * 0.2
+    result.set(ordered[0], { x: centerX - half, y: cy - half * 0.75, community })
+    result.set(ordered[1], { x: centerX + half, y: cy + half * 0.75, community })
     return
   }
 
   const [hub, ...satellites] = ordered
-  result.set(hub, { x: centerX, y: centerY, community })
-  const radius = Math.min(heapContentRadius(satellites.length), cellWidth * 0.38, cellHeight * 0.34)
+  const cy = centerY - HEAP_LABEL_PAD_Y * 0.25
+  result.set(hub, { x: centerX, y: cy, community })
+  const radius = Math.min(heapContentRadius(satellites.length), cellWidth * 0.4, cellHeight * 0.36)
   satellites.forEach((key, index) => {
     const angle = (2 * Math.PI * index) / satellites.length - Math.PI / 2
-    const rScale = 0.92 + (index % 2) * 0.1
+    const rScale = 0.9 + (index % 2) * 0.08
     result.set(key, {
       x: centerX + Math.cos(angle) * radius * rScale,
-      y: centerY + Math.sin(angle) * radius * rScale,
+      y: cy + Math.sin(angle) * radius * rScale,
       community,
+    })
+  })
+}
+
+/** Shrink layout if it overflows the viewport; keep top-left alignment (no vertical centering). */
+export function fitLayoutToViewport(
+  layout: Map<string, ServiceMapNodeLayout>,
+  width: number,
+  height: number,
+  insetX = 72,
+  insetY = 48
+): void {
+  if (layout.size === 0) return
+  let minX = Infinity
+  let maxX = -Infinity
+  let minY = Infinity
+  let maxY = -Infinity
+  layout.forEach((point) => {
+    minX = Math.min(minX, point.x)
+    maxX = Math.max(maxX, point.x)
+    minY = Math.min(minY, point.y)
+    maxY = Math.max(maxY, point.y)
+  })
+  const pad = 72
+  const contentW = Math.max(1, maxX - minX)
+  const contentH = Math.max(1, maxY - minY)
+  const availW = Math.max(1, width - insetX * 2 - pad)
+  const availH = Math.max(1, height - insetY * 2 - pad)
+  // Only shrink when overflowing — do not enlarge sparse graphs into empty space.
+  const scale = Math.min(1, availW / contentW, availH / contentH)
+  layout.forEach((point, key) => {
+    layout.set(key, {
+      ...point,
+      x: insetX + pad * 0.5 + (point.x - minX) * scale,
+      y: insetY + pad * 0.5 + (point.y - minY) * scale,
     })
   })
 }
 
 /**
  * Hybrid overview: Louvain heaps as compact clusters, ordered left→right by mean call depth.
- * Tiny heaps absorb into neighbors; isolates park in the bottom-right.
+ * Tiny heaps absorb into neighbors; isolates park just under the main block.
  */
 export function buildServiceMapHybridLayout(
   nodes: ServiceMapDisplayNode[],
@@ -851,13 +913,10 @@ export function buildServiceMapHybridLayout(
 
   const horizontalInset = 72
   const verticalInset = 48
-  const bottomReserve = isolates.length ? 72 : 28
   const canvasWidth = Math.max(500, width - horizontalInset * 2)
-  const canvasHeight = Math.max(420, height - verticalInset * 2 - bottomReserve)
   const packedRows = packHeapRows(groupList, canvasWidth)
-  const blockHeight =
-    packedRows.reduce((sum, row) => sum + row.height, 0) + HEAP_ROW_GAP_Y * Math.max(0, packedRows.length - 1)
-  const blockTop = verticalInset + Math.max(0, (canvasHeight - blockHeight) / 2)
+  // Top-align the heap block — vertical centering left a large empty band under sparse maps.
+  const blockTop = verticalInset
   const result = new Map<string, ServiceMapNodeLayout>()
   let community = 0
   let rowTop = blockTop
@@ -875,25 +934,31 @@ export function buildServiceMapHybridLayout(
     rowTop += row.height + HEAP_ROW_GAP_Y
   })
 
-  // Park isolates just under the main graph footprint (not the far canvas corner).
-  isolates.forEach((key, index) => {
-    const count = isolates.length
-    result.set(key, {
-      x: horizontalInset + canvasWidth * 0.5 + (index - (count - 1) / 2) * 100,
-      y: Math.max(blockTop + blockHeight, verticalInset + canvasHeight) + 36,
-      community: 10_000 + index,
-    })
-  })
-
   const avgHeapWidth =
     packedRows.reduce((sum, row) => sum + row.width / Math.max(1, row.heaps.length), 0) / Math.max(1, packedRows.length)
   anchorInferredNearCallers(
     result,
     nodes,
     edges,
-    Math.min(96, Math.max(72, avgHeapWidth * 0.28)),
-    Math.min(72, Math.max(52, (packedRows[0]?.height ?? 160) * 0.18))
+    Math.min(110, Math.max(88, avgHeapWidth * 0.32)),
+    Math.min(100, Math.max(84, (packedRows[0]?.height ?? 160) * 0.28))
   )
+
+  // Park isolates under the actual lowest placed node (not the pack cell padding).
+  let lowestY = blockTop
+  result.forEach((point) => {
+    lowestY = Math.max(lowestY, point.y)
+  })
+  isolates.forEach((key, index) => {
+    const count = isolates.length
+    result.set(key, {
+      x: horizontalInset + canvasWidth * 0.5 + (index - (count - 1) / 2) * ISOLATE_NODE_GAP,
+      y: lowestY + ISOLATE_ROW_GAP,
+      community: 10_000 + index,
+    })
+  })
+
+  fitLayoutToViewport(result, width, height, horizontalInset, verticalInset)
   return result
 }
 

@@ -11,6 +11,7 @@ import {
   buildServiceMapOverviewLayout,
   buildServiceMapScopeFacet,
   buildServiceMapNodeSymbolDataUrl,
+  fitLayoutToViewport,
   formatServiceMapCompactPercent,
   formatServiceMapCompactRate,
   healthFromErrorRate,
@@ -20,6 +21,7 @@ import {
   nodeDisplayCallStats,
   packHeapRows,
   pairedErrorRatio,
+  serviceMapArcDashLengths,
 } from './service-map-graph'
 
 function service(id: string, attributes: Record<string, string> = {}, virtual = false): ServiceMapNode {
@@ -185,10 +187,10 @@ describe('buildServiceMapLayeredLayout', () => {
     expect(redisPos).toBeDefined()
     if (!frontendPos || !checkoutPos || !redisPos) return
     expect(frontendPos.x).toBeLessThan(checkoutPos.x)
-    expect(Math.abs(redisPos.x - checkoutPos.x)).toBeLessThan(100)
+    expect(Math.abs(redisPos.x - checkoutPos.x)).toBeLessThan(130)
     // Inferred nodes park below the caller so labels clear the parent.
     expect(redisPos.y).toBeGreaterThan(checkoutPos.y)
-    expect(Math.abs(redisPos.y - checkoutPos.y)).toBeLessThan(90)
+    expect(Math.abs(redisPos.y - checkoutPos.y)).toBeLessThan(120)
   })
 })
 
@@ -283,6 +285,48 @@ describe('aggregateNodeCallStats / health / symbol size', () => {
     expect(formatServiceMapCompactPercent(0.006)).toBe('0.6%')
     expect(formatServiceMapCompactPercent(0.4082)).toBe('41%')
   })
+
+  it('splits rim dash lengths by error ratio', () => {
+    const circumference = 100
+    expect(serviceMapArcDashLengths(0, circumference)).toEqual({ okLen: 100, errorLen: 0 })
+    expect(serviceMapArcDashLengths(1, circumference)).toEqual({ okLen: 0, errorLen: 100 })
+    expect(serviceMapArcDashLengths(0.4, circumference)).toEqual({ okLen: 60, errorLen: 40 })
+    expect(serviceMapArcDashLengths(-0.2, circumference)).toEqual({ okLen: 100, errorLen: 0 })
+    expect(serviceMapArcDashLengths(1.5, circumference)).toEqual({ okLen: 0, errorLen: 100 })
+  })
+})
+
+describe('fitLayoutToViewport', () => {
+  it('shrinks overflowing layouts and does not enlarge sparse ones', () => {
+    const sparse = new Map([
+      ['a', { x: 100, y: 80, community: 0 }],
+      ['b', { x: 200, y: 120, community: 0 }],
+    ])
+    fitLayoutToViewport(sparse, 800, 600)
+    const sparseA = sparse.get('a')
+    const sparseB = sparse.get('b')
+    expect(sparseA).toBeDefined()
+    expect(sparseB).toBeDefined()
+    if (!sparseA || !sparseB) return
+    // Scale stays 1: relative span preserved (only rebased to inset).
+    expect(sparseB.x - sparseA.x).toBeCloseTo(100, 5)
+    expect(sparseB.y - sparseA.y).toBeCloseTo(40, 5)
+
+    const overflow = new Map([
+      ['a', { x: 0, y: 0, community: 0 }],
+      ['b', { x: 2000, y: 1500, community: 0 }],
+    ])
+    fitLayoutToViewport(overflow, 800, 600)
+    const overflowA = overflow.get('a')
+    const overflowB = overflow.get('b')
+    expect(overflowA).toBeDefined()
+    expect(overflowB).toBeDefined()
+    if (!overflowA || !overflowB) return
+    expect(overflowB.x - overflowA.x).toBeLessThan(2000)
+    expect(overflowB.y - overflowA.y).toBeLessThan(1500)
+    expect(overflowB.x).toBeLessThan(800)
+    expect(overflowB.y).toBeLessThan(600)
+  })
 })
 
 describe('absorbTinyCommunities', () => {
@@ -309,7 +353,7 @@ describe('absorbTinyCommunities', () => {
 })
 
 describe('heapIntrinsicSize / packHeapRows', () => {
-  it('grows monotonically with member count', () => {
+  it('grows monotonically with member count and reserves extra height for bottom titles', () => {
     const one = heapIntrinsicSize(1)
     const two = heapIntrinsicSize(2)
     const five = heapIntrinsicSize(5)
@@ -317,6 +361,8 @@ describe('heapIntrinsicSize / packHeapRows', () => {
     expect(two.width).toBeLessThan(five.width)
     expect(one.height).toBeLessThanOrEqual(two.height)
     expect(two.height).toBeLessThanOrEqual(five.height)
+    expect(one.height).toBeGreaterThan(one.width)
+    expect(five.height).toBeGreaterThanOrEqual(five.width * 0.85)
   })
 
   it('packs many small heaps on one row and wraps large heaps earlier on a tight canvas', () => {
@@ -384,10 +430,34 @@ describe('buildServiceMapHybridLayout', () => {
     expect(Math.max(loadgenPos.x, proxyPos.x)).toBeLessThan(paymentPos.x)
     // Absorbed singleton cart stays near its strongest neighbor.
     expect(Math.hypot(cartPos.x - checkoutPos.x, cartPos.y - checkoutPos.y)).toBeLessThan(200)
-    expect(Math.abs(redisPos.x - checkoutPos.x)).toBeLessThan(140)
+    // Inferred redis sits below-right of its caller (clears the bottom title).
+    expect(redisPos.x).toBeGreaterThan(checkoutPos.x)
+    expect(redisPos.y).toBeGreaterThan(checkoutPos.y)
+    expect(Math.hypot(redisPos.x - checkoutPos.x, redisPos.y - checkoutPos.y)).toBeLessThan(220)
     // Multi-node heaps use vertical space instead of collapsing to one point.
     const leftYs = [loadgenPos.y, proxyPos.y]
-    expect(Math.abs(leftYs[0] - leftYs[1])).toBeGreaterThan(40)
+    expect(Math.abs(leftYs[0] - leftYs[1])).toBeGreaterThan(30)
+    // Top-aligned: heaps sit near the top inset, not vertically centered in a tall canvas.
+    expect(Math.min(loadgenPos.y, proxyPos.y, checkoutPos.y)).toBeLessThan(160)
+  })
+
+  it('parks isolates just under the main connected block', () => {
+    const a = service('a')
+    const b = service('b')
+    const loner = service('loner')
+    const layout = buildServiceMapHybridLayout([a, b, loner], [edge(a, b, 10)], 800, 600)
+    const aPos = layout.get(a.key)
+    const bPos = layout.get(b.key)
+    const lonerPos = layout.get(loner.key)
+    expect(aPos).toBeDefined()
+    expect(bPos).toBeDefined()
+    expect(lonerPos).toBeDefined()
+    if (!aPos || !bPos || !lonerPos) return
+    const mainBottom = Math.max(aPos.y, bPos.y)
+    expect(lonerPos.y).toBeGreaterThan(mainBottom)
+    // Not parked at the canvas floor — stays close under the heap block.
+    expect(lonerPos.y - mainBottom).toBeLessThan(200)
+    expect(lonerPos.y).toBeLessThan(400)
   })
 })
 

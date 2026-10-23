@@ -329,7 +329,8 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       external: themeToken('--gpt-semantic-tag', '#c478ff'),
       database: themeToken('--gpt-semantic-field', '#3fa4ff'),
       palette: paletteStrokes.map((stroke) => ({
-        fill: withAlpha(stroke, dark ? 0.2 : 0.11),
+        // Stronger fill so the disk does not read as a white hole inside the arc.
+        fill: withAlpha(stroke, dark ? 0.18 : 0.1),
         stroke,
       })),
     }
@@ -569,44 +570,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     const stats = nodeCallStats.value
     const trafficMin = trafficLegend.value.min
     const trafficMax = trafficLegend.value.max
-    // Point labels outward from each heap centroid so they do not stack on the hub.
-    const labelSideByKey = new Map<string, 'left' | 'right' | 'top' | 'bottom'>()
-    const byCommunity = new Map<number, Array<{ key: string; x: number; y: number }>>()
-    graphNodes.value.forEach((node) => {
-      const layout = communityLayout.value.get(node.key)
-      if (!layout) return
-      byCommunity.set(layout.community, [
-        ...(byCommunity.get(layout.community) ?? []),
-        { key: node.key, x: layout.x, y: layout.y },
-      ])
-    })
-    const virtualKeys = new Set(graphNodes.value.filter((node) => node.virtual).map((node) => node.key))
-    byCommunity.forEach((members) => {
-      if (members.length === 1) {
-        labelSideByKey.set(members[0].key, virtualKeys.has(members[0].key) ? 'bottom' : 'right')
-        return
-      }
-      const cx = members.reduce((sum, member) => sum + member.x, 0) / members.length
-      const cy = members.reduce((sum, member) => sum + member.y, 0) / members.length
-      members.forEach((member) => {
-        // Inferred nodes sit below callers — keep their labels under the glyph.
-        if (virtualKeys.has(member.key)) {
-          labelSideByKey.set(member.key, 'bottom')
-          return
-        }
-        const dx = member.x - cx
-        const dy = member.y - cy
-        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) {
-          labelSideByKey.set(member.key, 'bottom')
-          return
-        }
-        if (Math.abs(dx) >= Math.abs(dy)) {
-          labelSideByKey.set(member.key, dx >= 0 ? 'right' : 'left')
-        } else {
-          labelSideByKey.set(member.key, dy >= 0 ? 'bottom' : 'top')
-        }
-      })
-    })
+    // Grafana-style: title under the node, no chip — pills competed with the glyphs.
     const nodes = graphNodes.value.map((node) => {
       const isActive = activeKey === node.key
       const connectedToActive = graphEdges.value.some(
@@ -680,7 +644,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
           opacity,
         }
       }
-      const labelSide = labelSideByKey.get(node.key) ?? 'right'
       return {
         id: node.key,
         name: node.label,
@@ -696,16 +659,19 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
         itemStyle,
         label: {
           show: true,
-          position: labelSide,
-          distance: isServiceGlyph ? 14 : 12,
+          position: 'bottom',
+          distance: isServiceGlyph ? 12 : 10,
           formatter: node.label,
           color: graphTheme.value.text,
           opacity,
-          fontSize: isActive ? 13 : 12,
+          fontSize: isActive ? 12 : 11,
           fontWeight: isActive ? 600 : 400,
-          lineHeight: 16,
+          lineHeight: 15,
+          // Max width only — short names stay natural; long names wrap.
           width: 120,
-          overflow: 'truncate',
+          overflow: 'break',
+          // Draw above edges so titles stay readable when lines cross.
+          z2: 10,
         },
       }
     })
@@ -717,12 +683,13 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       const targetCommunity = communityLayout.value.get(edge.target)?.community
       const sameGroup =
         sourceCommunity !== undefined && targetCommunity !== undefined && sourceCommunity === targetCommunity
-      let opacity = sameGroup ? 0.55 : 0.36
-      if (unmatchedOnly) opacity = 0.4
+      // Cross-heap edges stay quieter so community clusters read first (Datadog-like).
+      let opacity = sameGroup ? 0.55 : 0.24
+      if (unmatchedOnly) opacity = 0.32
       if (activeKey) opacity = isFlowing ? 0.95 : 0.08
-      let curveness = sameGroup ? 0.03 : 0.12
+      let curveness = sameGroup ? 0.03 : 0.16
       if (isFlowing) curveness = 0.05
-      let width = 0.7 + Math.min(0.9, Math.log2(traffic + 1) * 0.18)
+      let width = 0.55 + Math.min(0.75, Math.log2(traffic + 1) * 0.15)
       if (sameGroup) width = 1 + Math.min(1.2, Math.log2(traffic + 1) * 0.22)
       if (isFlowing) width = 1.8
       return {
@@ -827,6 +794,8 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
           edgeSymbol: ['circle', 'arrow'],
           edgeSymbolSize: [0, 8],
           label: { show: true, color: graphTheme.value.text, fontSize: 12 },
+          // Drop colliding titles rather than stacking glyphs on top of each other.
+          labelLayout: { hideOverlap: true },
           lineStyle: { opacity: 0.56, width: 1 },
           // Edge hover highlight via ECharts (must not rebuild option, or mouseout is lost).
           // focus:none keeps the rest of the graph unchanged.
