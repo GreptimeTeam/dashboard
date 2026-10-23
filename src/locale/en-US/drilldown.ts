@@ -2,6 +2,7 @@ export default {
   'drilldown.pageTitle': 'Signals Explore',
   'drilldown.nav.overview': 'Overview',
   'drilldown.nav.breadcrumb': 'Breadcrumb',
+  'drilldown.nav.signals': 'Signals',
   'drilldown.serviceMap.title': 'Service Map',
   'drilldown.serviceMap.searchPlaceholder': 'Filter services',
   'drilldown.serviceMap.scopeLabel': 'Environment',

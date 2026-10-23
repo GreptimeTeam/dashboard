@@ -5,10 +5,18 @@
       span.page-title {{ t('drilldown.pageTitle') }}
       SignalTabNav(
         mode="navigation"
-        :aria-label="t('drilldown.pageTitle')"
+        :aria-label="t('drilldown.nav.signals')"
         :items="signalItems"
-        :model-value="activeNav"
+        :model-value="activeSignal"
         @update:model-value="onSignalSelect"
+      )
+      .explore-nav-divider(aria-hidden="true")
+      SignalTabNav(
+        mode="navigation"
+        :aria-label="t('drilldown.serviceMap.title')"
+        :items="viewItems"
+        :model-value="activeView"
+        @update:model-value="onViewSelect"
       )
   .shared-context
     .drilldown-filter-bar(v-if="!serviceMapActive")
@@ -60,13 +68,15 @@
   const { triggerRefresh, setSignal, openLogsDetail } = ctx.actions
 
   const serviceMapActive = computed(() => route.query.view === 'service-map')
-  const activeNav = computed(() => (serviceMapActive.value ? 'service-map' : signal.value))
+  // Service Map is an Explore view, not a signal — keep signal nav clear while the map is open.
+  const activeSignal = computed(() => (serviceMapActive.value ? '' : signal.value))
+  const activeView = computed(() => (serviceMapActive.value ? 'service-map' : ''))
   const signalItems = computed(() => [
     { value: 'metrics', label: 'Metrics' },
     { value: 'logs', label: 'Logs' },
     { value: 'traces', label: 'Traces' },
-    { value: 'service-map', label: t('drilldown.serviceMap.title') },
   ])
+  const viewItems = computed(() => [{ value: 'service-map', label: t('drilldown.serviceMap.title') }])
 
   /**
    * Manual query trigger for the logs overview only: the top bar shows it next to the
@@ -82,24 +92,24 @@
   }
 
   const onSignalSelect = async (value: string) => {
-    if (value === 'service-map') {
-      await router.push({ query: { ...route.query, view: 'service-map' } })
-      return
-    }
-    if (['metrics', 'logs', 'traces'].includes(value)) {
-      // Set the selected signal before route hydration, so the service-map view never
-      // needs to impersonate a signal just to participate in Explore navigation.
-      setSignal(value as DrilldownSignal)
-      await router.push({
-        query: {
-          ...route.query,
-          view: undefined,
-          signal: value,
-          serviceMapSearch: undefined,
-          serviceMapFilters: undefined,
-        },
-      })
-    }
+    if (!['metrics', 'logs', 'traces'].includes(value)) return
+    // Set the selected signal before route hydration, so the service-map view never
+    // needs to impersonate a signal just to participate in Explore navigation.
+    setSignal(value as DrilldownSignal)
+    await router.push({
+      query: {
+        ...route.query,
+        view: undefined,
+        signal: value,
+        serviceMapSearch: undefined,
+        serviceMapFilters: undefined,
+      },
+    })
+  }
+
+  const onViewSelect = async (value: string) => {
+    if (value !== 'service-map') return
+    await router.push({ query: { ...route.query, view: 'service-map' } })
   }
 </script>
 
@@ -127,6 +137,14 @@
     align-items: stretch;
     gap: var(--gpt-gap-2xl);
     min-width: 0;
+  }
+
+  .explore-nav-divider {
+    flex-shrink: 0;
+    align-self: center;
+    width: 1px;
+    height: var(--gpt-font-xl);
+    background: var(--gpt-border-default);
   }
 
   .page-title {
