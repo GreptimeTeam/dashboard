@@ -174,6 +174,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   const chartSize = ref({ width: 1200, height: 640 })
   const inspectedNodeKey = ref('')
   const hoveredNodeKey = ref('')
+  const hoveredEdgeKey = ref('')
   const selectedEdgeKey = ref('')
   const menuNodeKey = ref('')
   const menuPosition = ref({ x: 0, y: 0 })
@@ -220,7 +221,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   const selectedNode = computed(() => nodeMap.value.get(inspectedNodeKey.value))
   const menuNode = computed(() => nodeMap.value.get(menuNodeKey.value))
   const menuStyle = computed(() => ({ left: `${menuPosition.value.x}px`, top: `${menuPosition.value.y}px` }))
-  /** Flow / dimming follows hover only. Inspect layout already centers the focus node. */
+  /** Flow / dimming follows node hover. Edge hover only brightens that line. */
   const activeNodeKey = computed(() => hoveredNodeKey.value)
   const logsServiceReady = computed(() =>
     Boolean(ctx.semantics.logs.table.value && ctx.semantics.logs.entityFilterKeys.value.service)
@@ -492,6 +493,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
 
   const chartOption = computed(() => {
     const activeKey = activeNodeKey.value
+    const activeEdgeKey = hoveredEdgeKey.value
     const stats = nodeCallStats.value
     const trafficMin = trafficLegend.value.min
     const trafficMax = trafficLegend.value.max
@@ -610,7 +612,8 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       }
     })
     const links = graphEdges.value.map((edge) => {
-      const isFlowing = activeKey === edge.source || activeKey === edge.target
+      const isFlowing = Boolean(activeKey) && (activeKey === edge.source || activeKey === edge.target)
+      const isHovered = !activeKey && activeEdgeKey === edge.key
       const traffic = Math.max(edge.requests, edge.unmatched)
       const unmatchedOnly = edge.requests === 0 && edge.unmatched > 0
       const sourceCommunity = communityLayout.value.get(edge.source)?.community
@@ -620,22 +623,26 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       let opacity = sameGroup ? 0.55 : 0.36
       if (unmatchedOnly) opacity = 0.4
       if (activeKey) opacity = isFlowing ? 0.95 : 0.08
+      else if (isHovered) opacity = 1
       let curveness = sameGroup ? 0.03 : 0.12
       if (isFlowing) curveness = 0.05
       let width = 0.7 + Math.min(0.9, Math.log2(traffic + 1) * 0.18)
       if (sameGroup) width = 1 + Math.min(1.2, Math.log2(traffic + 1) * 0.22)
       if (isFlowing) width = 1.8
+      if (isHovered) width = Math.max(width, 2.4)
       return {
         id: edge.key,
         source: edge.source,
         target: edge.target,
         edgeKey: edge.key,
         value: traffic,
-        symbol: ['none', 'arrow'],
-        symbolSize: [0, 8],
+        // Non-none fromSymbol is required for ECharts adjustEdge to clip at the source border
+        // (otherwise lines leave the node center and look reverse-directed).
+        symbol: ['circle', 'arrow'],
+        symbolSize: [0, isHovered || isFlowing ? 10 : 8],
         lineStyle: {
           width,
-          color: edgeStrokeColor(edge, isFlowing),
+          color: edgeStrokeColor(edge, isFlowing || isHovered),
           opacity,
           curveness,
           type: isFlowing || unmatchedOnly ? 'dashed' : 'solid',
@@ -713,8 +720,8 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
           roam: true,
           // Layout owns x/y; drag offsets are wiped whenever chartOption recomputes (e.g. hover).
           draggable: false,
-          edgeSymbol: ['none', 'arrow'],
-          edgeSymbolSize: 8,
+          edgeSymbol: ['circle', 'arrow'],
+          edgeSymbolSize: [0, 8],
           label: { show: true, color: graphTheme.value.text, fontSize: 12 },
           lineStyle: { opacity: 0.56, width: 1 },
           emphasis: { disabled: true },
@@ -785,12 +792,14 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   }
   function applyActiveFlow(nodeKey: string) {
     hoveredNodeKey.value = nodeKey
+    hoveredEdgeKey.value = ''
     if (nodeKey) canvasRef.value?.classList.add('service-map-canvas--flow')
     else canvasRef.value?.classList.remove('service-map-canvas--flow')
   }
 
   function clearChartActiveState() {
     hoveredNodeKey.value = ''
+    hoveredEdgeKey.value = ''
     chartRef.value?.dispatchAction({ type: 'downplay', seriesIndex: 0 })
     chartRef.value?.dispatchAction({ type: 'hideTip' })
     canvasRef.value?.classList.remove('service-map-canvas--flow')
@@ -945,23 +954,24 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     // Blank canvas: dismiss transient UI only; stay in inspect until Back to overview.
   }
 
-  function onChartMouseOver(params: { dataType?: string; data?: { nodeKey?: string } }) {
+  function onChartMouseOver(params: { dataType?: string; data?: { nodeKey?: string; edgeKey?: string } }) {
     if (menuNodeKey.value) {
       chartRef.value?.dispatchAction({ type: 'downplay', seriesIndex: 0 })
       return
     }
-    if (params.dataType !== 'node') {
-      hoveredNodeKey.value = ''
-      chartRef.value?.dispatchAction({ type: 'downplay', seriesIndex: 0 })
-      chartRef.value?.dispatchAction({ type: 'hideTip' })
-      canvasRef.value?.classList.remove('service-map-canvas--flow')
+    if (params.dataType === 'node') {
+      applyActiveFlow(params.data?.nodeKey ?? '')
       return
     }
-    applyActiveFlow(params.data?.nodeKey ?? '')
+    // Edge hover: brighten that line only — do not dim the rest of the graph.
+    hoveredNodeKey.value = ''
+    canvasRef.value?.classList.remove('service-map-canvas--flow')
+    hoveredEdgeKey.value = params.dataType === 'edge' ? params.data?.edgeKey ?? '' : ''
   }
 
   function onChartMouseOut() {
     hoveredNodeKey.value = ''
+    hoveredEdgeKey.value = ''
     canvasRef.value?.classList.remove('service-map-canvas--flow')
   }
 
