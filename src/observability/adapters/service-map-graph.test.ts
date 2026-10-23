@@ -10,11 +10,16 @@ import {
   buildServiceMapLayeredLayout,
   buildServiceMapOverviewLayout,
   buildServiceMapScopeFacet,
+  buildServiceMapNodeSymbolDataUrl,
+  formatServiceMapCompactPercent,
+  formatServiceMapCompactRate,
   healthFromErrorRate,
   healthFromNodeCallStats,
   heapIntrinsicSize,
   mapTrafficToSymbolSize,
+  nodeDisplayCallStats,
   packHeapRows,
+  pairedErrorRatio,
 } from './service-map-graph'
 
 function service(id: string, attributes: Record<string, string> = {}, virtual = false): ServiceMapNode {
@@ -227,6 +232,56 @@ describe('aggregateNodeCallStats / health / symbol size', () => {
     expect(healthFromErrorRate(paymentStats.requests, paymentStats.errors)).toBe('ok')
     // …but worst-of outbound (40%) still marks the node.
     expect(healthFromNodeCallStats(paymentStats)).toBe('danger')
+  })
+
+  it('shows inbound throughput but worst-direction error ratio on the node', () => {
+    const payment = service('payment')
+    const checkout = service('checkout')
+    const flagd = service('flagd')
+    const stats = aggregateNodeCallStats([
+      { ...edge(checkout, payment, 100), errors: 0, unmatched: 0 },
+      { ...edge(payment, flagd, 49), errors: 20, unmatched: 0 },
+    ])
+    const paymentStats = stats.get(payment.key)
+    expect(paymentStats).toBeDefined()
+    if (!paymentStats) return
+    // Rate still follows inbound (server) volume…
+    expect(nodeDisplayCallStats(paymentStats).requests).toBe(100)
+    // …but the arc/% must surface the 40% outbound hop.
+    expect(nodeDisplayCallStats(paymentStats).errorRatio).toBeCloseTo(20 / 49)
+    expect(pairedErrorRatio(0, 0)).toBe(0)
+    expect(pairedErrorRatio(50, 5)).toBe(0.1)
+  })
+
+  it('builds an SVG data-URL symbol with arc and inner stats', () => {
+    const symbol = buildServiceMapNodeSymbolDataUrl({
+      size: 48,
+      fill: 'rgba(112,47,237,0.11)',
+      okColor: '#22c55e',
+      dangerColor: '#ef4444',
+      trackColor: '#999',
+      textColor: '#473460',
+      errorRatio: 0.25,
+      mainStat: '12/s',
+      secondaryStat: '25%',
+    })
+    expect(symbol.startsWith('image://data:image/svg+xml')).toBe(true)
+    const decoded = decodeURIComponent(symbol.replace('image://data:image/svg+xml;charset=utf-8,', ''))
+    expect(decoded).toContain('12/s')
+    expect(decoded).toContain('25%')
+    expect(decoded).toContain('#22c55e')
+    expect(decoded).toContain('#ef4444')
+  })
+
+  it('compacts large rates so they fit inside small node disks', () => {
+    expect(formatServiceMapCompactRate(0)).toBe('0/s')
+    expect(formatServiceMapCompactRate(3.2)).toBe('3.2/s')
+    expect(formatServiceMapCompactRate(42)).toBe('42/s')
+    expect(formatServiceMapCompactRate(1500)).toBe('1.5k')
+    expect(formatServiceMapCompactRate(12_500)).toBe('13k')
+    expect(formatServiceMapCompactRate(2_400_000)).toBe('2.4M')
+    expect(formatServiceMapCompactPercent(0.006)).toBe('0.6%')
+    expect(formatServiceMapCompactPercent(0.4082)).toBe('41%')
   })
 })
 

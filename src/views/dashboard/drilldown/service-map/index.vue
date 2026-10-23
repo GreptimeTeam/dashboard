@@ -150,10 +150,14 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     buildServiceMapDisplayGraph,
     buildServiceMapFacets,
     buildServiceMapFocusLayout,
+    buildServiceMapNodeSymbolDataUrl,
     buildServiceMapOverviewLayout,
     buildServiceMapScopeFacet,
+    formatServiceMapCompactPercent,
+    formatServiceMapCompactRate,
     healthFromNodeCallStats,
     mapTrafficToSymbolSize,
+    nodeDisplayCallStats,
     type ServiceMapFilters,
     type ServiceMapNodeHealth,
   } from '@/observability/adapters/service-map-graph'
@@ -175,7 +179,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   const chartSize = ref({ width: 1200, height: 640 })
   const inspectedNodeKey = ref('')
   const hoveredNodeKey = ref('')
-  const selectedEdgeKey = ref('')
   const menuNodeKey = ref('')
   const menuPosition = ref({ x: 0, y: 0 })
   const facetFilters = ref<ServiceMapFilters>({})
@@ -361,17 +364,20 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     } catch {
       // Keep the raw string when it is not URI-encoded.
     }
-    for (const candidate of candidates) {
-      try {
-        const parsed = JSON.parse(candidate)
-        if (Array.isArray(parsed) && parsed.every((value) => typeof value === 'string')) {
-          return parsed.filter(Boolean)
+    const matched = candidates
+      .map((candidate) => {
+        try {
+          const parsed = JSON.parse(candidate)
+          if (Array.isArray(parsed) && parsed.every((value) => typeof value === 'string')) {
+            return parsed.filter(Boolean)
+          }
+        } catch {
+          // Try the next candidate / legacy plain label.
         }
-      } catch {
-        // Try the next candidate / legacy plain label.
-      }
-    }
-    return [raw]
+        return null
+      })
+      .find((value) => value !== null)
+    return matched ?? [raw]
   }
 
   function parseServiceMapFilters(raw: unknown): ServiceMapFilters {
@@ -382,20 +388,23 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     } catch {
       // Keep the raw string when it is not URI-encoded.
     }
-    for (const candidate of candidates) {
-      try {
-        const parsed = JSON.parse(candidate)
-        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) continue
-        return Object.fromEntries(
-          Object.entries(parsed as Record<string, unknown>).filter(
-            ([, values]) => Array.isArray(values) && values.every((value) => typeof value === 'string')
-          ) as Array<[string, string[]]>
-        )
-      } catch {
-        // Try the next candidate.
-      }
-    }
-    return {}
+    const matched = candidates
+      .map((candidate) => {
+        try {
+          const parsed = JSON.parse(candidate)
+          if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null
+          return Object.fromEntries(
+            Object.entries(parsed as Record<string, unknown>).filter(
+              ([, values]) => Array.isArray(values) && values.every((value) => typeof value === 'string')
+            ) as Array<[string, string[]]>
+          )
+        } catch {
+          // Try the next candidate.
+        }
+        return null
+      })
+      .find((value) => value !== null)
+    return matched ?? {}
   }
 
   // Hydrate once from the URL. Do not keep a route→state watcher — that loop was
@@ -489,6 +498,72 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     return value.replace(/[&<>"']/g, (char) => entities[char])
   }
 
+  function nodeLabel(key: string): string {
+    return graphNodeMap.value.get(key)?.label ?? nodeMap.value.get(key)?.label ?? key
+  }
+  function errorRate(edge: ServiceMapEdge): number {
+    return edge.requests > 0 ? edge.errors / edge.requests : 0
+  }
+  function avgDuration(edge: ServiceMapEdge): number {
+    return edge.durationCount > 0 ? edge.durationSum / edge.durationCount : 0
+  }
+  function formatRequests(value: number): string {
+    return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value)
+  }
+  function formatPercent(value: number): string {
+    return new Intl.NumberFormat(undefined, { style: 'percent', maximumFractionDigits: 2 }).format(value)
+  }
+  function formatDuration(seconds: number): string {
+    if (!Number.isFinite(seconds) || seconds <= 0) return '—'
+    return seconds < 1
+      ? `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(seconds * 1000)} ms`
+      : `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 3 }).format(seconds)} s`
+  }
+  function emptyFlowSummary() {
+    return { requests: 0, errors: 0, unmatched: 0, durationSum: 0, durationCount: 0 }
+  }
+  function nodeFlowSummary(nodeKey: string, direction: 'incoming' | 'outgoing') {
+    const connected = graphEdges.value.filter((edge) =>
+      direction === 'incoming' ? edge.target === nodeKey : edge.source === nodeKey
+    )
+    return connected.reduce(
+      (value, edge) => ({
+        requests: value.requests + edge.requests,
+        errors: value.errors + edge.errors,
+        unmatched: value.unmatched + edge.unmatched,
+        durationSum: value.durationSum + edge.durationSum,
+        durationCount: value.durationCount + edge.durationCount,
+      }),
+      emptyFlowSummary()
+    )
+  }
+  function nodeUnmatchedCount(nodeKey: string): number {
+    return graphEdges.value.reduce((sum, edge) => {
+      if (edge.source !== nodeKey && edge.target !== nodeKey) return sum
+      return sum + edge.unmatched
+    }, 0)
+  }
+  function queryRangeSeconds(): number {
+    const range = ctx.query.unixTimeRange()
+    return range.length === 2 ? Math.max(1, range[1] - range[0]) : 1
+  }
+  function formatCallRate(count: number): string {
+    return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(count / queryRangeSeconds())
+  }
+  function formatNodeDirectionTooltip(title: string, summary: ReturnType<typeof nodeFlowSummary>): string[] {
+    const errorRatio = summary.requests ? summary.errors / summary.requests : 0
+    const averageDuration = summary.durationCount ? summary.durationSum / summary.durationCount : 0
+    return [
+      `<strong>${escapeHtml(title)}</strong>`,
+      `${escapeHtml(t('drilldown.serviceMap.requestRate'))}: ${escapeHtml(formatCallRate(summary.requests))} req/s`,
+      `${escapeHtml(t('drilldown.serviceMap.errorRate'))}: ${escapeHtml(formatPercent(errorRatio))}`,
+      `${escapeHtml(t('drilldown.serviceMap.avgDuration'))}: ${escapeHtml(formatDuration(averageDuration))}`,
+      summary.unmatched > 0
+        ? `${escapeHtml(t('drilldown.serviceMap.unmatched'))}: ${escapeHtml(formatCallRate(summary.unmatched))} call/s`
+        : '',
+    ].filter(Boolean)
+  }
+
   /** Build graph series. activeKey dims unrelated nodes/edges for node-hover flow. */
   function buildGraphSeries(activeKey = '') {
     const stats = nodeCallStats.value
@@ -548,18 +623,47 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       const serviceColor = graphTheme.value.palette[0]
       const isDatabase = node.virtual && node.connectionType === 'database'
       const nodeStats = stats.get(node.key)
+      const symbolSize = mapTrafficToSymbolSize(nodeStats?.traffic ?? 0, trafficMin, trafficMax, {
+        virtual: node.virtual,
+        cluster: Boolean(node.members),
+      })
+      const isServiceGlyph = !node.virtual && !node.members
+      let symbol: string = node.members || node.virtual ? 'roundRect' : 'circle'
       let health: ServiceMapNodeHealth = 'neutral'
-      if (!node.virtual && nodeStats) health = healthFromNodeCallStats(nodeStats)
-      // Name only on canvas; type lives in tooltip to avoid stacked two-line collisions.
-      const canvasLabel = node.label
-      const healthBorder = healthBorderColor(health)
+      if (!node.virtual && !isServiceGlyph && nodeStats) health = healthFromNodeCallStats(nodeStats)
       let itemStyle: Record<string, string | number> = {
         color: serviceColor.fill,
-        borderColor: healthBorder,
+        borderColor: healthBorderColor(health),
         borderWidth: isActive || node.members ? 3 : 2.5,
         opacity,
       }
-      if (isDatabase) {
+      if (isServiceGlyph) {
+        const display = nodeDisplayCallStats(
+          nodeStats ?? {
+            traffic: 0,
+            requests: 0,
+            errors: 0,
+            inRequests: 0,
+            inErrors: 0,
+            outRequests: 0,
+            outErrors: 0,
+          }
+        )
+        const rate = display.requests / queryRangeSeconds()
+        symbol = buildServiceMapNodeSymbolDataUrl({
+          size: symbolSize,
+          fill: serviceColor.fill,
+          okColor: graphTheme.value.ok,
+          dangerColor: graphTheme.value.danger,
+          trackColor: graphTheme.value.edge,
+          textColor: graphTheme.value.text,
+          errorRatio: display.errorRatio,
+          mainStat: formatServiceMapCompactRate(rate),
+          secondaryStat: formatServiceMapCompactPercent(display.errorRatio),
+          emphasized: isActive,
+        })
+        itemStyle = { opacity, borderWidth: 0, color: 'transparent' }
+      } else if (isDatabase) {
         itemStyle = {
           color: withAlpha(graphTheme.value.database, isDark.value ? 0.22 : 0.12),
           borderColor: graphTheme.value.database,
@@ -587,17 +691,14 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
         virtual: node.virtual,
         connectionType: node.connectionType,
         isCluster: Boolean(node.members),
-        symbol: node.members || node.virtual ? 'roundRect' : 'circle',
-        symbolSize: mapTrafficToSymbolSize(nodeStats?.traffic ?? 0, trafficMin, trafficMax, {
-          virtual: node.virtual,
-          cluster: Boolean(node.members),
-        }),
+        symbol,
+        symbolSize,
         itemStyle,
         label: {
           show: true,
           position: labelSide,
-          distance: 12,
-          formatter: canvasLabel,
+          distance: isServiceGlyph ? 14 : 12,
+          formatter: node.label,
           color: graphTheme.value.text,
           opacity,
           fontSize: isActive ? 13 : 12,
@@ -757,66 +858,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     nextTick(syncNodeFlowOverlay)
   })
 
-  function nodeLabel(key: string): string {
-    return graphNodeMap.value.get(key)?.label ?? nodeMap.value.get(key)?.label ?? key
-  }
-  function errorRate(edge: ServiceMapEdge): number {
-    return edge.requests > 0 ? edge.errors / edge.requests : 0
-  }
-  function avgDuration(edge: ServiceMapEdge): number {
-    return edge.durationCount > 0 ? edge.durationSum / edge.durationCount : 0
-  }
-  function formatRequests(value: number): string {
-    return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value)
-  }
-  function formatPercent(value: number): string {
-    return new Intl.NumberFormat(undefined, { style: 'percent', maximumFractionDigits: 2 }).format(value)
-  }
-  function formatDuration(seconds: number): string {
-    if (!Number.isFinite(seconds) || seconds <= 0) return '—'
-    return seconds < 1
-      ? `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(seconds * 1000)} ms`
-      : `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 3 }).format(seconds)} s`
-  }
-  function nodeFlowSummary(nodeKey: string, direction: 'incoming' | 'outgoing') {
-    const connected = graphEdges.value.filter((edge) =>
-      direction === 'incoming' ? edge.target === nodeKey : edge.source === nodeKey
-    )
-    return connected.reduce(
-      (value, edge) => ({
-        requests: value.requests + edge.requests,
-        errors: value.errors + edge.errors,
-        unmatched: value.unmatched + edge.unmatched,
-        durationSum: value.durationSum + edge.durationSum,
-        durationCount: value.durationCount + edge.durationCount,
-      }),
-      { requests: 0, errors: 0, unmatched: 0, durationSum: 0, durationCount: 0 }
-    )
-  }
-  function nodeUnmatchedCount(nodeKey: string): number {
-    return graphEdges.value.reduce((sum, edge) => {
-      if (edge.source !== nodeKey && edge.target !== nodeKey) return sum
-      return sum + edge.unmatched
-    }, 0)
-  }
-  function formatCallRate(count: number): string {
-    const range = ctx.query.unixTimeRange()
-    const rangeSeconds = range.length === 2 ? Math.max(1, range[1] - range[0]) : 1
-    return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(count / rangeSeconds)
-  }
-  function formatNodeDirectionTooltip(title: string, summary: ReturnType<typeof nodeFlowSummary>): string[] {
-    const errorRatio = summary.requests ? summary.errors / summary.requests : 0
-    const averageDuration = summary.durationCount ? summary.durationSum / summary.durationCount : 0
-    return [
-      `<strong>${escapeHtml(title)}</strong>`,
-      `${escapeHtml(t('drilldown.serviceMap.requestRate'))}: ${escapeHtml(formatCallRate(summary.requests))} req/s`,
-      `${escapeHtml(t('drilldown.serviceMap.errorRate'))}: ${escapeHtml(formatPercent(errorRatio))}`,
-      `${escapeHtml(t('drilldown.serviceMap.avgDuration'))}: ${escapeHtml(formatDuration(averageDuration))}`,
-      summary.unmatched > 0
-        ? `${escapeHtml(t('drilldown.serviceMap.unmatched'))}: ${escapeHtml(formatCallRate(summary.unmatched))} call/s`
-        : '',
-    ].filter(Boolean)
-  }
   function applyActiveFlow(nodeKey: string) {
     hoveredNodeKey.value = nodeKey
     if (nodeKey) canvasRef.value?.classList.add('service-map-canvas--flow')
@@ -831,7 +872,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   }
 
   function dismissTransientUi() {
-    selectedEdgeKey.value = ''
     menuNodeKey.value = ''
     menuPosition.value = { x: 0, y: 0 }
   }
@@ -910,7 +950,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   async function inspectNodeByKey(nodeKey: string) {
     const node = nodeMap.value.get(nodeKey)
     inspectedNodeKey.value = nodeKey
-    selectedEdgeKey.value = ''
     menuNodeKey.value = ''
     clearChartActiveState()
     if (!node || node.virtual || node.type !== 'service' || node.instanceCount > 0) return
@@ -948,8 +987,8 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     event?: { offsetX?: number; offsetY?: number; event?: MouseEvent }
   }) {
     clearChartActiveState()
-    if (params.dataType === 'edge' && params.data?.edgeKey) {
-      selectedEdgeKey.value = params.data.edgeKey
+    if (params.dataType === 'edge') {
+      // Edges only expose RED via hover tooltip — no click menu.
       menuNodeKey.value = ''
       return
     }
@@ -960,22 +999,16 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
         if (next.has(graphNode.key)) next.delete(graphNode.key)
         else next.add(graphNode.key)
         expandedClusters.value = next
-        selectedEdgeKey.value = ''
         menuNodeKey.value = ''
         return
       }
       // Left-click opens the action menu (Datadog Service Map). Leave right-click to the browser.
       menuNodeKey.value = graphNode?.service?.key ?? params.data.nodeKey
-      selectedEdgeKey.value = ''
       positionMenu(canvasOffsetFromEvent(params))
       return
     }
     if (menuNodeKey.value) {
       menuNodeKey.value = ''
-      return
-    }
-    if (selectedEdgeKey.value) {
-      selectedEdgeKey.value = ''
     }
     // Blank canvas: dismiss transient UI only; stay in inspect until Back to overview.
   }
