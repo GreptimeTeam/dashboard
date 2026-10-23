@@ -102,22 +102,31 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
             | {{ t('drilldown.serviceMap.viewLogs') }}
           button.service-map-node-action(type="button" role="menuitem" @click="copyServiceName")
             | {{ t('drilldown.serviceMap.copyService') }}
-        .service-map-legend(v-if="hasInferredEndpoints")
-          span.service-map-legend__item
-            i.service-map-legend__service(
-              :style="{ backgroundColor: graphTheme.palette[0].fill, borderColor: graphTheme.palette[0].stroke }"
-            )
-            | {{ t('drilldown.serviceMap.serviceNode') }}
-          span.service-map-legend__item(v-if="hasDatabaseEndpoints")
-            i.service-map-legend__database(
-              :style="{ backgroundColor: withAlpha(graphTheme.database, isDark ? 0.22 : 0.12), borderColor: graphTheme.database }"
-            )
-            | {{ t('drilldown.serviceMap.databaseEndpoint') }}
-          span.service-map-legend__item(v-if="hasInferredServiceEndpoints")
-            i.service-map-legend__external(
-              :style="{ backgroundColor: withAlpha(graphTheme.external, isDark ? 0.2 : 0.1), borderColor: graphTheme.external }"
-            )
-            | {{ t('drilldown.serviceMap.inferredEndpoint') }}
+        .service-map-legend(v-if="visibleNodes.length")
+          .service-map-legend__group
+            span.service-map-legend__item
+              i.service-map-legend__service(
+                :style="{ backgroundColor: graphTheme.palette[0].fill, borderColor: graphTheme.ok }"
+              )
+              | {{ t('drilldown.serviceMap.serviceNode') }}
+            span.service-map-legend__item(v-if="hasDatabaseEndpoints")
+              i.service-map-legend__database(
+                :style="{ backgroundColor: withAlpha(graphTheme.database, isDark ? 0.22 : 0.12), borderColor: graphTheme.database }"
+              )
+              | {{ t('drilldown.serviceMap.databaseEndpoint') }}
+            span.service-map-legend__item(v-if="hasInferredServiceEndpoints")
+              i.service-map-legend__external(
+                :style="{ backgroundColor: withAlpha(graphTheme.external, isDark ? 0.2 : 0.1), borderColor: graphTheme.external }"
+              )
+              | {{ t('drilldown.serviceMap.inferredEndpoint') }}
+          .service-map-legend__group.service-map-legend__group--health
+            span.service-map-legend__group-label {{ t('drilldown.serviceMap.healthLegend') }}
+            span.service-map-legend__item
+              i.service-map-legend__health(:style="{ borderColor: graphTheme.ok }")
+              | {{ t('drilldown.serviceMap.healthOk') }}
+            span.service-map-legend__item
+              i.service-map-legend__health(:style="{ borderColor: graphTheme.danger }")
+              | {{ t('drilldown.serviceMap.healthDanger') }}
 </template>
 
 <script setup lang="ts">
@@ -136,12 +145,16 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     type ServiceMapResult,
   } from '@/observability/adapters/service-map'
   import {
-    buildServiceMapCommunityLayout,
+    aggregateNodeCallStats,
     buildServiceMapDisplayGraph,
     buildServiceMapFacets,
     buildServiceMapFocusLayout,
+    buildServiceMapOverviewLayout,
     buildServiceMapScopeFacet,
+    healthFromNodeCallStats,
+    mapTrafficToSymbolSize,
     type ServiceMapFilters,
+    type ServiceMapNodeHealth,
   } from '@/observability/adapters/service-map-graph'
 
   defineOptions({ name: 'ExploreServiceMap' })
@@ -260,7 +273,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     if (inspectedNodeKey.value) {
       return buildServiceMapFocusLayout(inspectedNodeKey.value, graphNodes.value, graphEdges.value, width, height)
     }
-    return buildServiceMapCommunityLayout(graphNodes.value, graphEdges.value, width, height)
+    return buildServiceMapOverviewLayout(graphNodes.value, graphEdges.value, width, height)
   })
   const graphNodeMap = computed(() => new Map(graphNodes.value.map((node) => [node.key, node])))
   const visibleNodes = computed(() => graphNodes.value)
@@ -270,7 +283,14 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   const hasInferredServiceEndpoints = computed(() =>
     graphNodes.value.some((node) => node.virtual && node.connectionType !== 'database')
   )
-  const hasInferredEndpoints = computed(() => hasDatabaseEndpoints.value || hasInferredServiceEndpoints.value)
+  const nodeCallStats = computed(() => aggregateNodeCallStats(graphEdges.value))
+  const trafficLegend = computed(() => {
+    const traffics = [...nodeCallStats.value.values()].map((stats) => stats.traffic)
+    return {
+      min: traffics.length ? Math.min(...traffics) : 0,
+      max: traffics.length ? Math.max(...traffics) : 0,
+    }
+  })
   const truncated = computed(() => result.value.truncated)
   function themeToken(name: string, fallback: string): string {
     const styles = getComputedStyle(canvasRef.value ?? document.documentElement)
@@ -303,6 +323,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       edge: dark ? 'rgba(205, 196, 218, 0.62)' : 'rgba(71, 52, 96, 0.42)',
       danger: themeToken('--gpt-danger', '#ef4444'),
       warn: themeToken('--gpt-warning', '#f59e0b'),
+      ok: themeToken('--gpt-success', '#22c55e'),
       external: themeToken('--gpt-semantic-tag', '#c478ff'),
       database: themeToken('--gpt-semantic-field', '#3fa4ff'),
       palette: paletteStrokes.map((stroke) => ({
@@ -311,6 +332,23 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       })),
     }
   })
+
+  function healthBorderColor(health: ServiceMapNodeHealth): string {
+    if (health === 'danger') return graphTheme.value.danger
+    if (health === 'ok') return graphTheme.value.ok
+    return graphTheme.value.edge
+  }
+
+  /** Soften edge chroma by default; full saturation when the edge is in the active flow. */
+  function edgeStrokeColor(edge: ServiceMapEdge, emphasize = false): string {
+    if (edge.requests <= 0) {
+      return emphasize ? graphTheme.value.external : withAlpha(graphTheme.value.external, 0.55)
+    }
+    if (edge.errors / edge.requests >= 0.05) {
+      return emphasize ? graphTheme.value.danger : withAlpha(graphTheme.value.danger, 0.45)
+    }
+    return graphTheme.value.edge
+  }
 
   function sameStringList(left: string[], right: string[]): boolean {
     return left.length === right.length && left.every((value, index) => value === right[index])
@@ -453,12 +491,48 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   }
 
   const chartOption = computed(() => {
-    const degree = new Map<string, number>()
-    graphEdges.value.forEach((edge) => {
-      degree.set(edge.source, (degree.get(edge.source) ?? 0) + 1)
-      degree.set(edge.target, (degree.get(edge.target) ?? 0) + 1)
-    })
     const activeKey = activeNodeKey.value
+    const stats = nodeCallStats.value
+    const trafficMin = trafficLegend.value.min
+    const trafficMax = trafficLegend.value.max
+    // Point labels outward from each heap centroid so they do not stack on the hub.
+    const labelSideByKey = new Map<string, 'left' | 'right' | 'top' | 'bottom'>()
+    const byCommunity = new Map<number, Array<{ key: string; x: number; y: number }>>()
+    graphNodes.value.forEach((node) => {
+      const layout = communityLayout.value.get(node.key)
+      if (!layout) return
+      byCommunity.set(layout.community, [
+        ...(byCommunity.get(layout.community) ?? []),
+        { key: node.key, x: layout.x, y: layout.y },
+      ])
+    })
+    const virtualKeys = new Set(graphNodes.value.filter((node) => node.virtual).map((node) => node.key))
+    byCommunity.forEach((members) => {
+      if (members.length === 1) {
+        labelSideByKey.set(members[0].key, virtualKeys.has(members[0].key) ? 'bottom' : 'right')
+        return
+      }
+      const cx = members.reduce((sum, member) => sum + member.x, 0) / members.length
+      const cy = members.reduce((sum, member) => sum + member.y, 0) / members.length
+      members.forEach((member) => {
+        // Inferred nodes sit below callers — keep their labels under the glyph.
+        if (virtualKeys.has(member.key)) {
+          labelSideByKey.set(member.key, 'bottom')
+          return
+        }
+        const dx = member.x - cx
+        const dy = member.y - cy
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) {
+          labelSideByKey.set(member.key, 'bottom')
+          return
+        }
+        if (Math.abs(dx) >= Math.abs(dy)) {
+          labelSideByKey.set(member.key, dx >= 0 ? 'right' : 'left')
+        } else {
+          labelSideByKey.set(member.key, dy >= 0 ? 'bottom' : 'top')
+        }
+      })
+    })
     const nodes = graphNodes.value.map((node) => {
       const isActive = activeKey === node.key
       const connectedToActive = graphEdges.value.some(
@@ -466,28 +540,31 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
           (edge.source === activeKey && edge.target === node.key) ||
           (edge.target === activeKey && edge.source === node.key)
       )
-      const opacity = activeKey ? (isActive ? 0.78 : connectedToActive ? 1 : 0.18) : 1
-      // Real services share one color; call errors are shown on edges, not node chrome.
+      let opacity = 1
+      if (activeKey) {
+        if (isActive) opacity = 0.78
+        else if (connectedToActive) opacity = 1
+        else opacity = 0.18
+      }
       const serviceColor = graphTheme.value.palette[0]
       const isDatabase = node.virtual && node.connectionType === 'database'
-      // Canvas labels stay name-first (full name). RED / unmatched live in the hover tooltip.
-      let canvasLabel = node.label
-      if (node.virtual && !node.members) {
-        canvasLabel = `${node.label}\n${t(
-          isDatabase ? 'drilldown.serviceMap.databaseEndpoint' : 'drilldown.serviceMap.inferredEndpoint'
-        )}`
-      }
+      const nodeStats = stats.get(node.key)
+      let health: ServiceMapNodeHealth = 'neutral'
+      if (!node.virtual && nodeStats) health = healthFromNodeCallStats(nodeStats)
+      // Name only on canvas; type lives in tooltip to avoid stacked two-line collisions.
+      const canvasLabel = node.label
+      const healthBorder = healthBorderColor(health)
       let itemStyle: Record<string, string | number> = {
         color: serviceColor.fill,
-        borderColor: serviceColor.stroke,
-        borderWidth: isActive || node.members ? 2 : 1.5,
+        borderColor: healthBorder,
+        borderWidth: isActive || node.members ? 3 : 2.5,
         opacity,
       }
       if (isDatabase) {
         itemStyle = {
           color: withAlpha(graphTheme.value.database, isDark.value ? 0.22 : 0.12),
           borderColor: graphTheme.value.database,
-          borderWidth: isActive ? 2 : 1.5,
+          borderWidth: isActive ? 2.5 : 2,
           borderType: 'dashed',
           opacity,
         }
@@ -495,11 +572,12 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
         itemStyle = {
           color: withAlpha(graphTheme.value.external, isDark.value ? 0.2 : 0.1),
           borderColor: graphTheme.value.external,
-          borderWidth: isActive ? 2 : 1.5,
+          borderWidth: isActive ? 2.5 : 2,
           borderType: 'dashed',
           opacity,
         }
       }
+      const labelSide = labelSideByKey.get(node.key) ?? 'right'
       return {
         id: node.key,
         name: node.label,
@@ -511,20 +589,23 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
         connectionType: node.connectionType,
         isCluster: Boolean(node.members),
         symbol: node.members || node.virtual ? 'roundRect' : 'circle',
-        symbolSize: node.members ? 40 : node.virtual ? 20 : Math.min(34, 24 + (degree.get(node.key) ?? 0)),
+        symbolSize: mapTrafficToSymbolSize(nodeStats?.traffic ?? 0, trafficMin, trafficMax, {
+          virtual: node.virtual,
+          cluster: Boolean(node.members),
+        }),
         itemStyle,
         label: {
           show: true,
-          position: 'right',
-          distance: 8,
+          position: labelSide,
+          distance: 12,
           formatter: canvasLabel,
           color: graphTheme.value.text,
           opacity,
           fontSize: isActive ? 13 : 12,
           fontWeight: isActive ? 600 : 400,
           lineHeight: 16,
-          width: 160,
-          overflow: 'break',
+          width: 120,
+          overflow: 'truncate',
         },
       }
     })
@@ -532,6 +613,18 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       const isFlowing = activeKey === edge.source || activeKey === edge.target
       const traffic = Math.max(edge.requests, edge.unmatched)
       const unmatchedOnly = edge.requests === 0 && edge.unmatched > 0
+      const sourceCommunity = communityLayout.value.get(edge.source)?.community
+      const targetCommunity = communityLayout.value.get(edge.target)?.community
+      const sameGroup =
+        sourceCommunity !== undefined && targetCommunity !== undefined && sourceCommunity === targetCommunity
+      let opacity = sameGroup ? 0.55 : 0.36
+      if (unmatchedOnly) opacity = 0.4
+      if (activeKey) opacity = isFlowing ? 0.95 : 0.08
+      let curveness = sameGroup ? 0.03 : 0.12
+      if (isFlowing) curveness = 0.05
+      let width = 0.7 + Math.min(0.9, Math.log2(traffic + 1) * 0.18)
+      if (sameGroup) width = 1 + Math.min(1.2, Math.log2(traffic + 1) * 0.22)
+      if (isFlowing) width = 1.8
       return {
         id: edge.key,
         source: edge.source,
@@ -541,10 +634,10 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
         symbol: ['none', 'arrow'],
         symbolSize: [0, 8],
         lineStyle: {
-          width: isFlowing ? 1.8 : 0.8 + Math.min(1.1, Math.log2(traffic + 1) * 0.24),
-          color: edgeStrokeColor(edge),
-          opacity: activeKey ? (isFlowing ? 0.95 : 0.08) : unmatchedOnly ? 0.42 : 0.56,
-          curveness: 0.12,
+          width,
+          color: edgeStrokeColor(edge, isFlowing),
+          opacity,
+          curveness,
           type: isFlowing || unmatchedOnly ? 'dashed' : 'solid',
         },
       }
@@ -618,7 +711,8 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
           data: nodes,
           links,
           roam: true,
-          draggable: true,
+          // Layout owns x/y; drag offsets are wiped whenever chartOption recomputes (e.g. hover).
+          draggable: false,
           edgeSymbol: ['none', 'arrow'],
           edgeSymbolSize: 8,
           label: { show: true, color: graphTheme.value.text, fontSize: 12 },
@@ -688,13 +782,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
         ? `${escapeHtml(t('drilldown.serviceMap.unmatched'))}: ${escapeHtml(formatCallRate(summary.unmatched))} call/s`
         : '',
     ].filter(Boolean)
-  }
-  function edgeStrokeColor(edge: ServiceMapEdge): string {
-    if (edge.requests <= 0) return graphTheme.value.external
-    const rate = edge.errors / edge.requests
-    if (rate >= 0.05) return graphTheme.value.danger
-    if (rate >= 0.01) return graphTheme.value.warn
-    return graphTheme.value.edge
   }
   function applyActiveFlow(nodeKey: string) {
     hoveredNodeKey.value = nodeKey
@@ -770,8 +857,22 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     }
   }
 
-  async function inspectNode() {
-    const nodeKey = menuNodeKey.value
+  function canvasOffsetFromEvent(params: { event?: { offsetX?: number; offsetY?: number; event?: MouseEvent } }): {
+    x: number
+    y: number
+  } {
+    const nativeEvent = params.event?.event
+    const canvasBounds = canvasRef.value?.getBoundingClientRect()
+    if (nativeEvent && canvasBounds) {
+      return { x: nativeEvent.clientX - canvasBounds.left, y: nativeEvent.clientY - canvasBounds.top }
+    }
+    return {
+      x: params.event?.offsetX ?? nativeEvent?.offsetX ?? 0,
+      y: params.event?.offsetY ?? nativeEvent?.offsetY ?? 0,
+    }
+  }
+
+  async function inspectNodeByKey(nodeKey: string) {
     const node = nodeMap.value.get(nodeKey)
     inspectedNodeKey.value = nodeKey
     selectedEdgeKey.value = ''
@@ -801,6 +902,11 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     }
   }
 
+  async function inspectNode() {
+    if (!menuNodeKey.value) return
+    await inspectNodeByKey(menuNodeKey.value)
+  }
+
   function onChartClick(params: {
     dataType?: string
     data?: { nodeKey?: string; edgeKey?: string }
@@ -823,18 +929,10 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
         menuNodeKey.value = ''
         return
       }
+      // Left-click opens the action menu (Datadog Service Map). Leave right-click to the browser.
       menuNodeKey.value = graphNode?.service?.key ?? params.data.nodeKey
       selectedEdgeKey.value = ''
-      const nativeEvent = params.event?.event
-      const canvasBounds = canvasRef.value?.getBoundingClientRect()
-      const clickPosition =
-        nativeEvent && canvasBounds
-          ? { x: nativeEvent.clientX - canvasBounds.left, y: nativeEvent.clientY - canvasBounds.top }
-          : {
-              x: params.event?.offsetX ?? nativeEvent?.offsetX ?? 0,
-              y: params.event?.offsetY ?? nativeEvent?.offsetY ?? 0,
-            }
-      positionMenu(clickPosition)
+      positionMenu(canvasOffsetFromEvent(params))
       return
     }
     if (menuNodeKey.value) {
@@ -967,16 +1065,24 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       stroke-dashoffset: -24;
     }
   }
+  // Only animate edge polylines (fill none). Dashed node borders also use
+  // stroke-dasharray and must stay static.
   .service-map-canvas--flow {
-    :deep(path[stroke-dasharray]),
-    :deep(path[style*='stroke-dasharray']) {
+    :deep(path[stroke-dasharray][fill='none']),
+    :deep(path[stroke-dasharray][fill='NONE']),
+    :deep(path[style*='stroke-dasharray'][fill='none']),
+    :deep(path[style*='stroke-dasharray'][style*='fill:none']),
+    :deep(path[style*='stroke-dasharray'][style*='fill: none']) {
       animation: service-map-flow 2.2s linear infinite;
     }
   }
   @media (prefers-reduced-motion: reduce) {
     .service-map-canvas--flow {
-      :deep(path[stroke-dasharray]),
-      :deep(path[style*='stroke-dasharray']) {
+      :deep(path[stroke-dasharray][fill='none']),
+      :deep(path[stroke-dasharray][fill='NONE']),
+      :deep(path[style*='stroke-dasharray'][fill='none']),
+      :deep(path[style*='stroke-dasharray'][style*='fill:none']),
+      :deep(path[style*='stroke-dasharray'][style*='fill: none']) {
         animation: none;
       }
     }
@@ -1040,12 +1146,28 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     left: var(--gpt-gap-md);
     display: flex;
     flex-wrap: wrap;
-    gap: var(--gpt-gap-md);
+    align-items: center;
+    gap: var(--gpt-gap-md) var(--gpt-gap-lg);
     padding: var(--gpt-gap-sm) var(--gpt-gap-md);
     border: 1px solid var(--gpt-border-primary);
     border-radius: var(--gpt-radius-md);
     background: var(--gpt-bg-primary);
     box-shadow: var(--gpt-shadow-sm);
+  }
+  .service-map-legend__group {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--gpt-gap-md);
+  }
+  .service-map-legend__group--health {
+    padding-left: var(--gpt-gap-md);
+    border-left: 1px solid var(--gpt-border-primary);
+  }
+  .service-map-legend__group-label {
+    color: var(--gpt-text-secondary);
+    font-size: var(--gpt-font-xs);
+    font-weight: 500;
   }
   .service-map-legend__item {
     display: inline-flex;
@@ -1061,12 +1183,16 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     border-radius: 50%;
   }
   .service-map-legend__service {
-    border: 2px solid var(--gpt-brand-600);
+    border: 2px solid var(--gpt-success, #22c55e);
   }
   .service-map-legend__external {
     border: 2px dashed var(--gpt-semantic-tag);
   }
   .service-map-legend__database {
     border: 2px dashed var(--gpt-semantic-field);
+  }
+  .service-map-legend__health {
+    border: 2.5px solid var(--gpt-success, #22c55e);
+    background: transparent;
   }
 </style>

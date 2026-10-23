@@ -232,44 +232,264 @@ function aggregateEdges(edges: ServiceMapEdge[], nodeMap: Map<string, ServiceMap
 export interface ServiceMapNodeLayout {
   x: number
   y: number
+  /** Community / heap index. Used for same-group edge styling. */
   community: number
 }
 
-/** Assign connected services to topology communities while keeping every node visible. */
-export function buildServiceMapCommunityLayout(
-  nodes: ServiceMapDisplayNode[],
+/** Soft max heaps per row (Datadog-like); width fit can wrap earlier. */
+const HYBRID_HEAP_WRAP_AFTER = 4
+/** Size ≤2 communities merge into their strongest neighbor (fewer lone heaps per band). */
+const TINY_HEAP_MAX_SIZE = 2
+/** Gap between heaps in a row / between stacked rows. */
+const HEAP_ROW_GAP_X = 48
+const HEAP_ROW_GAP_Y = 56
+/** Minimum center-to-center gap so side labels do not collide inside a heap. */
+const HEAP_NODE_GAP = 100
+/** Extra margin around pack geometry for truncated side labels (~120px). */
+const HEAP_LABEL_PAD = 60
+
+/** Binary ring: no public error-rate tiers; Datadog uses monitors instead of % buckets. */
+export type ServiceMapNodeHealth = 'ok' | 'danger' | 'neutral'
+
+export interface ServiceMapNodeCallStats {
+  /** request_count + unmatched_count across incident edges. */
+  traffic: number
+  /** Paired request_count on all incident edges (size / legacy). */
+  requests: number
+  errors: number
+  /** Inbound (this node is target) paired RED. */
+  inRequests: number
+  inErrors: number
+  /** Outbound (this node is source) paired RED. */
+  outRequests: number
+  outErrors: number
+}
+
+function edgeTraffic(edge: ServiceMapEdge): number {
+  return Math.max(0, edge.requests) + Math.max(0, edge.unmatched)
+}
+
+function edgeWeight(edge: ServiceMapEdge): number {
+  return Math.log1p(edgeTraffic(edge))
+}
+
+/** Aggregate per-node traffic / paired RED from `calls` edges. */
+export function aggregateNodeCallStats(edges: ServiceMapEdge[]): Map<string, ServiceMapNodeCallStats> {
+  const stats = new Map<string, ServiceMapNodeCallStats>()
+  const touch = (key: string) => {
+    const existing = stats.get(key)
+    if (existing) return existing
+    const created = {
+      traffic: 0,
+      requests: 0,
+      errors: 0,
+      inRequests: 0,
+      inErrors: 0,
+      outRequests: 0,
+      outErrors: 0,
+    }
+    stats.set(key, created)
+    return created
+  }
+  edges.forEach((edge) => {
+    const traffic = edgeTraffic(edge)
+    const requests = Math.max(0, edge.requests)
+    const errors = Math.max(0, edge.errors)
+    const source = touch(edge.source)
+    source.traffic += traffic
+    source.requests += requests
+    source.errors += errors
+    source.outRequests += requests
+    source.outErrors += errors
+    const target = touch(edge.target)
+    target.traffic += traffic
+    target.requests += requests
+    target.errors += errors
+    target.inRequests += requests
+    target.inErrors += errors
+  })
+  return stats
+}
+
+/**
+ * Binary health with a noise floor: only ≥5% paired errors light up.
+ * (No public multi-tier standard; Datadog node rings use monitors, not % buckets.)
+ */
+export function healthFromErrorRate(requests: number, errors: number): ServiceMapNodeHealth {
+  if (requests <= 0) return 'neutral'
+  return errors / requests >= 0.05 ? 'danger' : 'ok'
+}
+
+const HEALTH_RANK: Record<ServiceMapNodeHealth, number> = {
+  danger: 2,
+  ok: 1,
+  neutral: 0,
+}
+
+/** Worst of inbound vs outbound — blending directions hides a bad hop behind healthy traffic. */
+export function healthFromNodeCallStats(stats: ServiceMapNodeCallStats): ServiceMapNodeHealth {
+  const inbound = healthFromErrorRate(stats.inRequests, stats.inErrors)
+  const outbound = healthFromErrorRate(stats.outRequests, stats.outErrors)
+  return HEALTH_RANK[inbound] >= HEALTH_RANK[outbound] ? inbound : outbound
+}
+
+/** Map traffic onto symbol diameter; inferred nodes stay one step smaller. */
+export function mapTrafficToSymbolSize(
+  traffic: number,
+  minTraffic: number,
+  maxTraffic: number,
+  options: { virtual?: boolean; cluster?: boolean } = {}
+): number {
+  if (options.cluster) return 40
+  const minSize = options.virtual ? 14 : 16
+  const maxSize = options.virtual ? 36 : 48
+  if (maxTraffic <= minTraffic) return Math.round((minSize + maxSize) / 2)
+  const t = Math.log1p(Math.max(0, traffic))
+  const lo = Math.log1p(Math.max(0, minTraffic))
+  const hi = Math.log1p(Math.max(0, maxTraffic))
+  const ratio = hi <= lo ? 0.5 : (t - lo) / (hi - lo)
+  return Math.round(minSize + Math.min(1, Math.max(0, ratio)) * (maxSize - minSize))
+}
+
+/**
+ * Merge communities of size ≤ TINY_HEAP_MAX_SIZE into the neighbor community
+ * with the strongest total call weight. Isolates (no edges) stay alone.
+ */
+export function absorbTinyCommunities(
+  communityByNode: Map<string, string>,
   edges: ServiceMapEdge[],
-  width: number,
-  height: number
-): Map<string, ServiceMapNodeLayout> {
-  if (!nodes.length) return new Map()
-  const keys = nodes.map((node) => node.key).sort()
+  maxTinySize = TINY_HEAP_MAX_SIZE
+): Map<string, string> {
+  const result = new Map(communityByNode)
+
+  for (let pass = 0; pass < 8; pass += 1) {
+    const groups = new Map<string, string[]>()
+    result.forEach((community, key) => {
+      groups.set(community, [...(groups.get(community) ?? []), key])
+    })
+    const tiny = [...groups.entries()].find(([, members]) => members.length > 0 && members.length <= maxTinySize)
+    if (!tiny) break
+    const [, members] = tiny
+    const memberSet = new Set(members)
+    const weightByCommunity = new Map<string, number>()
+    edges.forEach((edge) => {
+      const weight = edgeWeight(edge)
+      if (!weight) return
+      const sourceCommunity = result.get(edge.source)
+      const targetCommunity = result.get(edge.target)
+      if (!sourceCommunity || !targetCommunity || sourceCommunity === targetCommunity) return
+      if (memberSet.has(edge.source) && !memberSet.has(edge.target)) {
+        weightByCommunity.set(targetCommunity, (weightByCommunity.get(targetCommunity) ?? 0) + weight)
+      } else if (memberSet.has(edge.target) && !memberSet.has(edge.source)) {
+        weightByCommunity.set(sourceCommunity, (weightByCommunity.get(sourceCommunity) ?? 0) + weight)
+      }
+    })
+    let best: string | undefined
+    let bestWeight = 0
+    weightByCommunity.forEach((weight, other) => {
+      if (weight > bestWeight) {
+        best = other
+        bestWeight = weight
+      }
+    })
+    if (!best) break
+    const targetCommunity = best
+    members.forEach((key) => result.set(key, targetCommunity))
+  }
+  return result
+}
+
+/** Directed call depth from `calls` (src→dst). Isolates get maxDepth+1. */
+function assignCallDepths(keys: string[], edges: ServiceMapEdge[]): Map<string, number> {
+  const keySet = new Set(keys)
+  const successors = new Map(keys.map((key) => [key, [] as string[]]))
+  const predecessors = new Map(keys.map((key) => [key, [] as string[]]))
+  edges.forEach((edge) => {
+    if (edge.source === edge.target || !keySet.has(edge.source) || !keySet.has(edge.target)) return
+    if (!edgeWeight(edge)) return
+    const outs = successors.get(edge.source)
+    const ins = predecessors.get(edge.target)
+    if (outs) outs.push(edge.target)
+    if (ins) ins.push(edge.source)
+  })
+
+  const connected = keys.filter(
+    (key) => (predecessors.get(key)?.length ?? 0) > 0 || (successors.get(key)?.length ?? 0) > 0
+  )
+  const connectedSet = new Set(connected)
+  const isolates = keys.filter((key) => !connectedSet.has(key))
+
+  const remaining = new Set(connected)
+  const inDegree = new Map(
+    connected.map((key) => [key, (predecessors.get(key) ?? []).filter((pred) => remaining.has(pred)).length])
+  )
+  const order: string[] = []
+  while (remaining.size) {
+    const roots = [...remaining].filter((key) => (inDegree.get(key) ?? 0) <= 0).sort()
+    const batch = roots.length ? roots : [[...remaining].sort()[0]]
+    batch.forEach((key) => {
+      remaining.delete(key)
+      order.push(key)
+      ;(successors.get(key) ?? []).forEach((target) => {
+        if (!remaining.has(target)) return
+        inDegree.set(target, Math.max(0, (inDegree.get(target) ?? 0) - 1))
+      })
+    })
+  }
+
+  const depth = new Map<string, number>()
+  order.forEach((key) => {
+    const incoming = (predecessors.get(key) ?? [])
+      .map((pred) => depth.get(pred))
+      .filter((value): value is number => value !== undefined)
+    depth.set(key, incoming.length ? Math.max(...incoming) + 1 : 0)
+  })
+  const maxDepth = order.length ? Math.max(0, ...depth.values()) : 0
+  isolates.forEach((key) => depth.set(key, maxDepth + (order.length ? 1 : 0)))
+  keys.forEach((key) => {
+    if (!depth.has(key)) depth.set(key, 0)
+  })
+  return depth
+}
+
+/** Louvain-style communities + undirected weighted degree (calls edge weight). */
+function detectLouvainCommunities(
+  keys: string[],
+  edges: ServiceMapEdge[]
+): { communityByNode: Map<string, string>; degree: Map<string, number> } {
   const adjacency = new Map(keys.map((key) => [key, new Map<string, number>()]))
   edges.forEach((edge) => {
     if (edge.source === edge.target || !adjacency.has(edge.source) || !adjacency.has(edge.target)) return
-    const weight = Math.log1p(Math.max(0, edge.requests) + Math.max(0, edge.unmatched))
+    const weight = edgeWeight(edge)
     if (!weight) return
-    adjacency.get(edge.source)!.set(edge.target, (adjacency.get(edge.source)!.get(edge.target) ?? 0) + weight)
-    adjacency.get(edge.target)!.set(edge.source, (adjacency.get(edge.target)!.get(edge.source) ?? 0) + weight)
+    const forward = adjacency.get(edge.source)
+    const backward = adjacency.get(edge.target)
+    if (!forward || !backward) return
+    forward.set(edge.target, (forward.get(edge.target) ?? 0) + weight)
+    backward.set(edge.source, (backward.get(edge.source) ?? 0) + weight)
   })
 
   const degree = new Map(
-    keys.map((key) => [key, [...adjacency.get(key)!.values()].reduce((sum, value) => sum + value, 0)])
+    keys.map((key) => {
+      const neighbours = adjacency.get(key)
+      const sum = neighbours ? [...neighbours.values()].reduce((acc, value) => acc + value, 0) : 0
+      return [key, sum]
+    })
   )
   const totalWeight = [...degree.values()].reduce((sum, value) => sum + value, 0) / 2
   const communityByNode = new Map(keys.map((key) => [key, key]))
-  const communityDegree = new Map(keys.map((key) => [key, degree.get(key)!]))
+  const communityDegree = new Map(keys.map((key) => [key, degree.get(key) ?? 0]))
 
   if (totalWeight > 0) {
     for (let pass = 0; pass < 30; pass += 1) {
       let moved = false
       keys.forEach((key) => {
-        const current = communityByNode.get(key)!
-        const nodeDegree = degree.get(key)!
+        const current = communityByNode.get(key) ?? key
+        const nodeDegree = degree.get(key) ?? 0
         communityDegree.set(current, (communityDegree.get(current) ?? 0) - nodeDegree)
         const weightsByCommunity = new Map<string, number>()
-        adjacency.get(key)!.forEach((weight, neighbour) => {
-          const community = communityByNode.get(neighbour)!
+        ;(adjacency.get(key) ?? new Map()).forEach((weight, neighbour) => {
+          const community = communityByNode.get(neighbour) ?? neighbour
           weightsByCommunity.set(community, (weightsByCommunity.get(community) ?? 0) + weight)
         })
         let best = current
@@ -291,46 +511,351 @@ export function buildServiceMapCommunityLayout(
     }
   }
 
+  return { communityByNode, degree }
+}
+
+/** Heaviest neighbor for inferred/virtual nodes (prefer caller when this node is the callee). */
+function primaryNeighbor(
+  key: string,
+  edges: ServiceMapEdge[],
+  allowed: Set<string>
+): { neighbour: string; asTarget: boolean } | undefined {
+  let best: { neighbour: string; asTarget: boolean; weight: number } | undefined
+  edges.forEach((edge) => {
+    const weight = edgeTraffic(edge)
+    if (!weight) return
+    if (edge.target === key && allowed.has(edge.source)) {
+      if (!best || weight > best.weight || (weight === best.weight && !best.asTarget)) {
+        best = { neighbour: edge.source, asTarget: true, weight }
+      }
+      return
+    }
+    if (edge.source === key && allowed.has(edge.target)) {
+      if (!best || weight > best.weight) {
+        best = { neighbour: edge.target, asTarget: false, weight }
+      }
+    }
+  })
+  return best ? { neighbour: best.neighbour, asTarget: best.asTarget } : undefined
+}
+
+/** Pull inferred endpoints below/aside their heaviest real caller (clears parent labels). */
+function anchorInferredNearCallers(
+  layout: Map<string, ServiceMapNodeLayout>,
+  nodes: ServiceMapDisplayNode[],
+  edges: ServiceMapEdge[],
+  offsetX = 72,
+  offsetY = 56
+): void {
+  const realKeys = new Set(nodes.filter((node) => !node.virtual).map((node) => node.key))
+  const byCaller = new Map<string, string[]>()
+  nodes
+    .filter((node) => node.virtual)
+    .sort((left, right) => left.key.localeCompare(right.key))
+    .forEach((node) => {
+      const link = primaryNeighbor(node.key, edges, realKeys)
+      if (!link) return
+      byCaller.set(link.neighbour, [...(byCaller.get(link.neighbour) ?? []), node.key])
+    })
+  byCaller.forEach((inferredKeys, callerKey) => {
+    const neighbour = layout.get(callerKey)
+    if (!neighbour) return
+    inferredKeys.forEach((key, slot) => {
+      const self = layout.get(key)
+      const link = primaryNeighbor(key, edges, realKeys)
+      if (!self || !link) return
+      const fan = (slot - (inferredKeys.length - 1) / 2) * 52
+      // Prefer below the caller so side labels on the parent stay readable.
+      self.x = neighbour.x + (link.asTarget ? offsetX : -offsetX * 0.35) + fan * 0.35
+      self.y = neighbour.y + offsetY + fan
+      self.community = neighbour.community
+    })
+  })
+}
+
+/** Content radius for hub+satellites (shared by sizing and placement). */
+function heapContentRadius(satelliteCount: number): number {
+  return Math.min(170, Math.max(HEAP_NODE_GAP, 60 + satelliteCount * 12))
+}
+
+/**
+ * Intrinsic bounding box for a heap from member count (content + label pad).
+ * Canvas-independent — used to decide how many heaps fit per row.
+ */
+export function heapIntrinsicSize(memberCount: number): { width: number; height: number } {
+  const n = Math.max(1, memberCount)
+  if (n === 1) {
+    const side = 48 + HEAP_LABEL_PAD * 2
+    return { width: side, height: side }
+  }
+  if (n === 2) {
+    const half = HEAP_NODE_GAP * 0.58
+    const span = half * 2 + HEAP_LABEL_PAD * 2
+    return { width: span, height: span }
+  }
+  const box = 2 * (heapContentRadius(n - 1) * 1.02 + HEAP_LABEL_PAD)
+  return { width: box, height: box }
+}
+
+interface PackedHeap {
+  members: string[]
+  width: number
+  height: number
+}
+
+interface PackedHeapRow {
+  heaps: PackedHeap[]
+  width: number
+  height: number
+}
+
+/**
+ * First-fit rows by canvas width; soft-cap at HYBRID_HEAP_WRAP_AFTER.
+ * Oversized single heaps scale down to fit the canvas (aspect kept).
+ */
+export function packHeapRows(
+  groups: string[][],
+  canvasWidth: number,
+  maxPerRow = HYBRID_HEAP_WRAP_AFTER
+): PackedHeapRow[] {
+  const rows: PackedHeapRow[] = []
+  let current: PackedHeap[] = []
+  let currentWidth = 0
+
+  const flush = () => {
+    if (!current.length) return
+    rows.push({
+      heaps: current,
+      width: currentWidth,
+      height: Math.max(...current.map((heap) => heap.height)),
+    })
+    current = []
+    currentWidth = 0
+  }
+
+  groups.forEach((members) => {
+    const intrinsic = heapIntrinsicSize(members.length)
+    let { width } = intrinsic
+    let { height } = intrinsic
+    if (width > canvasWidth) {
+      const scale = canvasWidth / width
+      width = canvasWidth
+      height *= scale
+    }
+    const gap = current.length ? HEAP_ROW_GAP_X : 0
+    const needsWrap = current.length > 0 && (current.length >= maxPerRow || currentWidth + gap + width > canvasWidth)
+    if (needsWrap) flush()
+    const nextGap = current.length ? HEAP_ROW_GAP_X : 0
+    current.push({ members, width, height })
+    currentWidth += nextGap + width
+  })
+  flush()
+  return rows
+}
+
+/**
+ * Pack a heap as hub + satellites inside an already-sized cell (no stretch).
+ */
+function placeCompactHeap(
+  result: Map<string, ServiceMapNodeLayout>,
+  members: string[],
+  centerX: number,
+  top: number,
+  cellWidth: number,
+  cellHeight: number,
+  community: number,
+  degree: Map<string, number>
+): void {
+  const centerY = top + cellHeight / 2
+  const ordered = [...members].sort(
+    (left, right) => (degree.get(right) ?? 0) - (degree.get(left) ?? 0) || left.localeCompare(right)
+  )
+  if (ordered.length === 1) {
+    result.set(ordered[0], { x: centerX, y: centerY, community })
+    return
+  }
+  if (ordered.length === 2) {
+    const half = Math.min(HEAP_NODE_GAP * 0.58, cellWidth * 0.3, cellHeight * 0.3)
+    result.set(ordered[0], { x: centerX - half, y: centerY - half * 0.9, community })
+    result.set(ordered[1], { x: centerX + half, y: centerY + half * 0.9, community })
+    return
+  }
+
+  const [hub, ...satellites] = ordered
+  result.set(hub, { x: centerX, y: centerY, community })
+  const radius = Math.min(heapContentRadius(satellites.length), cellWidth * 0.38, cellHeight * 0.34)
+  satellites.forEach((key, index) => {
+    const angle = (2 * Math.PI * index) / satellites.length - Math.PI / 2
+    const rScale = 0.92 + (index % 2) * 0.1
+    result.set(key, {
+      x: centerX + Math.cos(angle) * radius * rScale,
+      y: centerY + Math.sin(angle) * radius * rScale,
+      community,
+    })
+  })
+}
+
+/**
+ * Hybrid overview: Louvain heaps as compact clusters, ordered left→right by mean call depth.
+ * Tiny heaps absorb into neighbors; isolates park in the bottom-right.
+ */
+export function buildServiceMapHybridLayout(
+  nodes: ServiceMapDisplayNode[],
+  edges: ServiceMapEdge[],
+  width: number,
+  height: number
+): Map<string, ServiceMapNodeLayout> {
+  if (!nodes.length) return new Map()
+  const keys = nodes.map((node) => node.key).sort()
+  const depth = assignCallDepths(keys, edges)
+  const { communityByNode, degree } = detectLouvainCommunities(keys, edges)
+  const absorbed = absorbTinyCommunities(communityByNode, edges)
+
+  const connectedKeys = new Set<string>()
+  edges.forEach((edge) => {
+    if (!edgeWeight(edge)) return
+    connectedKeys.add(edge.source)
+    connectedKeys.add(edge.target)
+  })
+  const isolates = keys.filter((key) => !connectedKeys.has(key))
+  const placedKeys = keys.filter((key) => connectedKeys.has(key))
+
   const groups = new Map<string, string[]>()
-  communityByNode.forEach((community, key) => groups.set(community, [...(groups.get(community) ?? []), key]))
+  placedKeys.forEach((key) => {
+    const community = absorbed.get(key) ?? key
+    groups.set(community, [...(groups.get(community) ?? []), key])
+  })
+
+  const meanDepth = (members: string[]) =>
+    members.reduce((sum, key) => sum + (depth.get(key) ?? 0), 0) / Math.max(1, members.length)
+
   const groupList = [...groups.values()].sort((left, right) => {
+    const depthDiff = meanDepth(left) - meanDepth(right)
+    if (Math.abs(depthDiff) > 1e-9) return depthDiff
     const degreeDiff =
       right.reduce((sum, key) => sum + (degree.get(key) ?? 0), 0) -
       left.reduce((sum, key) => sum + (degree.get(key) ?? 0), 0)
     return degreeDiff || left[0].localeCompare(right[0])
   })
-  const columns = Math.ceil(Math.sqrt(groupList.length))
-  const rows = Math.ceil(groupList.length / columns)
-  const horizontalInset = 64
-  const verticalInset = 40
+
+  const horizontalInset = 72
+  const verticalInset = 48
+  const bottomReserve = isolates.length ? 72 : 28
   const canvasWidth = Math.max(500, width - horizontalInset * 2)
-  const canvasHeight = Math.max(360, height - verticalInset * 2)
-  const cellWidth = canvasWidth / columns
-  const cellHeight = canvasHeight / rows
+  const canvasHeight = Math.max(420, height - verticalInset * 2 - bottomReserve)
+  const packedRows = packHeapRows(groupList, canvasWidth)
+  const blockHeight =
+    packedRows.reduce((sum, row) => sum + row.height, 0) + HEAP_ROW_GAP_Y * Math.max(0, packedRows.length - 1)
+  const blockTop = verticalInset + Math.max(0, (canvasHeight - blockHeight) / 2)
   const result = new Map<string, ServiceMapNodeLayout>()
-  groupList.forEach((members, community) => {
-    const ordered = [...members].sort(
-      (left, right) => (degree.get(right) ?? 0) - (degree.get(left) ?? 0) || left.localeCompare(right)
-    )
-    const radius =
-      ordered.length > 1
-        ? Math.min(120, Math.max(36, 22 + Math.sqrt(ordered.length) * 30), cellWidth * 0.29, cellHeight * 0.36)
-        : 0
-    const centerX = horizontalInset + ((community % columns) + 0.5) * cellWidth
-    const centerY = verticalInset + (Math.floor(community / columns) + 0.5) * cellHeight
-    ordered.forEach((key, index) => {
-      const angle = ordered.length > 1 ? (2 * Math.PI * index) / ordered.length - Math.PI / 2 : 0
-      result.set(key, {
-        x: centerX + Math.cos(angle) * radius,
-        y: centerY + Math.sin(angle) * radius,
-        community,
-      })
+  let community = 0
+  let rowTop = blockTop
+
+  packedRows.forEach((row) => {
+    // Center the row; leftover width becomes empty margin, not inflated packs.
+    let cursor = horizontalInset + Math.max(0, (canvasWidth - row.width) / 2)
+    row.heaps.forEach((heap) => {
+      const centerX = cursor + heap.width * 0.5
+      const packTop = rowTop + Math.max(0, (row.height - heap.height) / 2)
+      placeCompactHeap(result, heap.members, centerX, packTop, heap.width, heap.height, community, degree)
+      community += 1
+      cursor += heap.width + HEAP_ROW_GAP_X
+    })
+    rowTop += row.height + HEAP_ROW_GAP_Y
+  })
+
+  // Park isolates just under the main graph footprint (not the far canvas corner).
+  isolates.forEach((key, index) => {
+    const count = isolates.length
+    result.set(key, {
+      x: horizontalInset + canvasWidth * 0.5 + (index - (count - 1) / 2) * 100,
+      y: Math.max(blockTop + blockHeight, verticalInset + canvasHeight) + 36,
+      community: 10_000 + index,
     })
   })
+
+  const avgHeapWidth =
+    packedRows.reduce((sum, row) => sum + row.width / Math.max(1, row.heaps.length), 0) / Math.max(1, packedRows.length)
+  anchorInferredNearCallers(
+    result,
+    nodes,
+    edges,
+    Math.min(96, Math.max(72, avgHeapWidth * 0.28)),
+    Math.min(72, Math.max(52, (packedRows[0]?.height ?? 160) * 0.18))
+  )
   return result
 }
 
-/** Place the inspected node at the canvas center with neighbors on a ring. */
+/**
+ * Left→right columns by directed call depth only (no Louvain heaps). Kept for tests / experiments.
+ */
+export function buildServiceMapLayeredLayout(
+  nodes: ServiceMapDisplayNode[],
+  edges: ServiceMapEdge[],
+  width: number,
+  height: number
+): Map<string, ServiceMapNodeLayout> {
+  if (!nodes.length) return new Map()
+  const keys = nodes.map((node) => node.key).sort()
+  const depth = assignCallDepths(keys, edges)
+  const { degree } = detectLouvainCommunities(keys, edges)
+  const virtualKeys = new Set(nodes.filter((node) => node.virtual).map((node) => node.key))
+
+  const layers = new Map<number, string[]>()
+  keys.forEach((key) => {
+    const layer = depth.get(key) ?? 0
+    layers.set(layer, [...(layers.get(layer) ?? []), key])
+  })
+  const layerIndexes = [...layers.keys()].sort((a, b) => a - b)
+  const horizontalInset = 72
+  const verticalInset = 48
+  const canvasWidth = Math.max(480, width - horizontalInset * 2)
+  const canvasHeight = Math.max(320, height - verticalInset * 2)
+  const colWidth = canvasWidth / Math.max(1, layerIndexes.length)
+  const result = new Map<string, ServiceMapNodeLayout>()
+
+  layerIndexes.forEach((layer, column) => {
+    const members = [...(layers.get(layer) ?? [])].sort((left, right) => {
+      const virtualDiff = Number(virtualKeys.has(left)) - Number(virtualKeys.has(right))
+      return virtualDiff || (degree.get(right) ?? 0) - (degree.get(left) ?? 0) || left.localeCompare(right)
+    })
+    placeCompactHeap(
+      result,
+      members,
+      horizontalInset + (column + 0.5) * colWidth,
+      verticalInset,
+      colWidth,
+      canvasHeight,
+      layer,
+      degree
+    )
+  })
+
+  anchorInferredNearCallers(result, nodes, edges, Math.min(56, colWidth * 0.28))
+  return result
+}
+
+/** @deprecated Prefer buildServiceMapHybridLayout — ring packing replaced by vertical heaps. */
+export function buildServiceMapCommunityLayout(
+  nodes: ServiceMapDisplayNode[],
+  edges: ServiceMapEdge[],
+  width: number,
+  height: number
+): Map<string, ServiceMapNodeLayout> {
+  return buildServiceMapHybridLayout(nodes, edges, width, height)
+}
+
+/** Overview: community heaps as vertical columns ordered by mean call depth. */
+export function buildServiceMapOverviewLayout(
+  nodes: ServiceMapDisplayNode[],
+  edges: ServiceMapEdge[],
+  width: number,
+  height: number
+): Map<string, ServiceMapNodeLayout> {
+  return buildServiceMapHybridLayout(nodes, edges, width, height)
+}
+
+/** Inspect view: center node, upstream callers on the left, downstream callees on the right. */
 export function buildServiceMapFocusLayout(
   centerKey: string,
   nodes: ServiceMapDisplayNode[],
@@ -340,42 +865,63 @@ export function buildServiceMapFocusLayout(
 ): Map<string, ServiceMapNodeLayout> {
   if (!nodes.length) return new Map()
   const hasCenter = nodes.some((node) => node.key === centerKey)
-  if (!hasCenter) return buildServiceMapCommunityLayout(nodes, edges, width, height)
+  if (!hasCenter) return buildServiceMapOverviewLayout(nodes, edges, width, height)
 
-  const weightToCenter = new Map<string, number>()
+  const upstreamWeight = new Map<string, number>()
+  const downstreamWeight = new Map<string, number>()
   edges.forEach((edge) => {
-    const weight = Math.max(0, edge.requests) + Math.max(0, edge.unmatched)
-    if (edge.source === centerKey && edge.target !== centerKey) {
-      weightToCenter.set(edge.target, (weightToCenter.get(edge.target) ?? 0) + weight)
-    } else if (edge.target === centerKey && edge.source !== centerKey) {
-      weightToCenter.set(edge.source, (weightToCenter.get(edge.source) ?? 0) + weight)
+    const weight = edgeTraffic(edge)
+    if (edge.target === centerKey && edge.source !== centerKey) {
+      upstreamWeight.set(edge.source, (upstreamWeight.get(edge.source) ?? 0) + weight)
+    } else if (edge.source === centerKey && edge.target !== centerKey) {
+      downstreamWeight.set(edge.target, (downstreamWeight.get(edge.target) ?? 0) + weight)
     }
   })
 
-  const others = nodes
-    .filter((node) => node.key !== centerKey)
+  const upstream = nodes
+    .filter((node) => node.key !== centerKey && upstreamWeight.has(node.key))
     .sort(
       (left, right) =>
-        (weightToCenter.get(right.key) ?? 0) - (weightToCenter.get(left.key) ?? 0) ||
+        (upstreamWeight.get(right.key) ?? 0) - (upstreamWeight.get(left.key) ?? 0) ||
         left.label.localeCompare(right.label)
     )
+  const downstream = nodes
+    .filter((node) => node.key !== centerKey && downstreamWeight.has(node.key) && !upstreamWeight.has(node.key))
+    .sort(
+      (left, right) =>
+        (downstreamWeight.get(right.key) ?? 0) - (downstreamWeight.get(left.key) ?? 0) ||
+        left.label.localeCompare(right.label)
+    )
+  // Bidirectional leftovers already in upstream; orphans (no edge to center) go bottom.
+  const orphans = nodes
+    .filter((node) => node.key !== centerKey && !upstreamWeight.has(node.key) && !downstreamWeight.has(node.key))
+    .sort((left, right) => left.label.localeCompare(right.label))
 
   const centerX = width / 2
   const centerY = height / 2
   const result = new Map<string, ServiceMapNodeLayout>([[centerKey, { x: centerX, y: centerY, community: 0 }]])
-  if (!others.length) return result
 
-  const inset = 72
-  const available = Math.min(width, height) / 2 - inset
-  const radius = Math.max(72, Math.min(available, 56 + others.length * 22))
-  others.forEach((node, index) => {
-    const angle = (2 * Math.PI * index) / others.length - Math.PI / 2
+  const placeColumn = (columnNodes: ServiceMapDisplayNode[], x: number, community: number) => {
+    const count = Math.max(1, columnNodes.length)
+    columnNodes.forEach((node, index) => {
+      const y = 48 + ((index + 0.5) / count) * Math.max(240, height - 96)
+      result.set(node.key, { x, y, community })
+    })
+  }
+
+  const sideGap = Math.min(220, Math.max(120, width * 0.28))
+  placeColumn(upstream, centerX - sideGap, 1)
+  placeColumn(downstream, centerX + sideGap, 2)
+  orphans.forEach((node, index) => {
+    const count = orphans.length
     result.set(node.key, {
-      x: centerX + Math.cos(angle) * radius,
-      y: centerY + Math.sin(angle) * radius,
-      community: 1,
+      x: centerX + (index - (count - 1) / 2) * 100,
+      y: height - 48,
+      community: 3,
     })
   })
+
+  anchorInferredNearCallers(result, nodes, edges, 36)
   return result
 }
 
@@ -474,8 +1020,9 @@ export function buildServiceMapDisplayGraph(args: {
   if (matchedServices.length === 1) {
     const onlyMatch = matchedServices[0]
     edges.forEach((edge) => {
-      const neighbourKey =
-        edge.source === onlyMatch.key ? edge.target : edge.target === onlyMatch.key ? edge.source : ''
+      let neighbourKey = ''
+      if (edge.source === onlyMatch.key) neighbourKey = edge.target
+      else if (edge.target === onlyMatch.key) neighbourKey = edge.source
       const neighbour = rawNodes.get(neighbourKey)
       if (!neighbour || hiddenKeys.has(neighbour.key) || displayMap.has(neighbour.key)) return
       if (neighbour.virtual || serviceIdentity(neighbour)) {
@@ -486,7 +1033,9 @@ export function buildServiceMapDisplayGraph(args: {
     })
   } else {
     edges.forEach((edge) => {
-      const endpointKey = matchedKeys.has(edge.source) ? edge.target : matchedKeys.has(edge.target) ? edge.source : ''
+      let endpointKey = ''
+      if (matchedKeys.has(edge.source)) endpointKey = edge.target
+      else if (matchedKeys.has(edge.target)) endpointKey = edge.source
       const endpoint = rawNodes.get(endpointKey)
       if (!endpoint?.virtual || displayMap.has(endpoint.key)) return
       const displayNode = toDisplayNode(endpoint)

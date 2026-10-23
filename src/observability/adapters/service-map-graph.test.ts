@@ -1,10 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import type { ServiceMapEdge, ServiceMapNode } from './service-map'
 import {
+  absorbTinyCommunities,
+  aggregateNodeCallStats,
   buildServiceMapDisplayGraph,
   buildServiceMapFacets,
   buildServiceMapFocusLayout,
+  buildServiceMapHybridLayout,
+  buildServiceMapLayeredLayout,
+  buildServiceMapOverviewLayout,
   buildServiceMapScopeFacet,
+  healthFromErrorRate,
+  healthFromNodeCallStats,
+  heapIntrinsicSize,
+  mapTrafficToSymbolSize,
+  packHeapRows,
 } from './service-map-graph'
 
 function service(id: string, attributes: Record<string, string> = {}, virtual = false): ServiceMapNode {
@@ -151,8 +161,196 @@ describe('buildServiceMapDisplayGraph', () => {
   })
 })
 
+describe('buildServiceMapLayeredLayout', () => {
+  it('places callers left of callees by call depth', () => {
+    const frontend = service('frontend')
+    const checkout = service('checkout')
+    const redis = service('redis', {}, true)
+    const layout = buildServiceMapLayeredLayout(
+      [frontend, checkout, redis],
+      [edge(frontend, checkout, 40), edge(checkout, redis, 20)],
+      900,
+      600
+    )
+    const frontendPos = layout.get(frontend.key)
+    const checkoutPos = layout.get(checkout.key)
+    const redisPos = layout.get(redis.key)
+    expect(frontendPos).toBeDefined()
+    expect(checkoutPos).toBeDefined()
+    expect(redisPos).toBeDefined()
+    if (!frontendPos || !checkoutPos || !redisPos) return
+    expect(frontendPos.x).toBeLessThan(checkoutPos.x)
+    expect(Math.abs(redisPos.x - checkoutPos.x)).toBeLessThan(100)
+    // Inferred nodes park below the caller so labels clear the parent.
+    expect(redisPos.y).toBeGreaterThan(checkoutPos.y)
+    expect(Math.abs(redisPos.y - checkoutPos.y)).toBeLessThan(90)
+  })
+})
+
+describe('aggregateNodeCallStats / health / symbol size', () => {
+  it('aggregates traffic and buckets health from paired error rate', () => {
+    const a = service('a')
+    const b = service('b')
+    const stats = aggregateNodeCallStats([
+      { ...edge(a, b, 100), errors: 6, unmatched: 10 },
+      { ...edge(b, a, 20), errors: 0, unmatched: 0 },
+    ])
+    expect(stats.get(a.key)?.traffic).toBe(130)
+    expect(stats.get(a.key)?.requests).toBe(120)
+    expect(stats.get(a.key)?.errors).toBe(6)
+    expect(stats.get(a.key)?.outRequests).toBe(100)
+    expect(stats.get(a.key)?.outErrors).toBe(6)
+    expect(stats.get(a.key)?.inRequests).toBe(20)
+    expect(healthFromErrorRate(100, 0)).toBe('ok')
+    expect(healthFromErrorRate(100, 2)).toBe('ok')
+    expect(healthFromErrorRate(100, 6)).toBe('danger')
+    expect(healthFromErrorRate(0, 0)).toBe('neutral')
+    expect(mapTrafficToSymbolSize(0, 0, 100)).toBeLessThan(mapTrafficToSymbolSize(100, 0, 100))
+    expect(mapTrafficToSymbolSize(50, 0, 100, { virtual: true })).toBeLessThan(
+      mapTrafficToSymbolSize(50, 0, 100, { virtual: false })
+    )
+  })
+
+  it('uses the worse of inbound vs outbound so a bad hop is not diluted', () => {
+    // Heavy healthy inbound + sparse 40% outbound → blended ~2% (warn), worst-of → danger.
+    const payment = service('payment')
+    const checkout = service('checkout')
+    const flagd = service('flagd')
+    const stats = aggregateNodeCallStats([
+      { ...edge(checkout, payment, 980), errors: 0, unmatched: 0 },
+      { ...edge(payment, flagd, 49), errors: 20, unmatched: 0 },
+    ])
+    const paymentStats = stats.get(payment.key)
+    expect(paymentStats).toBeDefined()
+    if (!paymentStats) return
+    // Blended (~1.9%) stays ok under the 5% floor…
+    expect(healthFromErrorRate(paymentStats.requests, paymentStats.errors)).toBe('ok')
+    // …but worst-of outbound (40%) still marks the node.
+    expect(healthFromNodeCallStats(paymentStats)).toBe('danger')
+  })
+})
+
+describe('absorbTinyCommunities', () => {
+  it('merges a singleton community into its strongest neighbor', () => {
+    const cart = service('cart')
+    const checkout = service('checkout')
+    const payment = service('payment')
+    const email = service('email')
+    const communityByNode = new Map([
+      [cart.key, 'tiny'],
+      [checkout.key, 'right'],
+      [payment.key, 'right'],
+      [email.key, 'right'],
+    ])
+    const merged = absorbTinyCommunities(communityByNode, [
+      edge(cart, checkout, 30),
+      edge(checkout, payment, 50),
+      edge(checkout, email, 40),
+      edge(payment, email, 35),
+    ])
+    expect(merged.get(cart.key)).toBe('right')
+    expect(merged.get(checkout.key)).toBe('right')
+  })
+})
+
+describe('heapIntrinsicSize / packHeapRows', () => {
+  it('grows monotonically with member count', () => {
+    const one = heapIntrinsicSize(1)
+    const two = heapIntrinsicSize(2)
+    const five = heapIntrinsicSize(5)
+    expect(one.width).toBeLessThan(two.width)
+    expect(two.width).toBeLessThan(five.width)
+    expect(one.height).toBeLessThanOrEqual(two.height)
+    expect(two.height).toBeLessThanOrEqual(five.height)
+  })
+
+  it('packs many small heaps on one row and wraps large heaps earlier on a tight canvas', () => {
+    const singles = Array.from({ length: 6 }, (_, index) => [`s${index}`])
+    const wide = packHeapRows(singles, 2000)
+    expect(wide).toHaveLength(2)
+    expect(wide[0].heaps).toHaveLength(4)
+    expect(wide[1].heaps).toHaveLength(2)
+
+    const large = Array.from({ length: 3 }, (_, index) =>
+      Array.from({ length: 8 }, (__, member) => `g${index}-${member}`)
+    )
+    const tight = packHeapRows(large, 500)
+    expect(tight.length).toBeGreaterThanOrEqual(2)
+    expect(Math.max(...tight.map((row) => row.heaps.length))).toBeLessThanOrEqual(2)
+  })
+})
+
+describe('buildServiceMapHybridLayout', () => {
+  it('keeps densely linked services in one heap and orders heaps by call depth', () => {
+    const loadgen = service('loadgen')
+    const proxy = service('proxy')
+    const web = service('web')
+    const checkout = service('checkout')
+    const payment = service('payment')
+    const email = service('email')
+    const cart = service('cart')
+    const redis = service('redis', {}, true)
+    // Two size-3 heaps (immune to size≤2 absorb) + singleton cart absorbed into checkout heap.
+    const layout = buildServiceMapHybridLayout(
+      [loadgen, proxy, web, checkout, payment, email, cart, redis],
+      [
+        edge(loadgen, proxy, 40),
+        edge(proxy, web, 35),
+        edge(loadgen, web, 30),
+        edge(web, checkout, 4),
+        edge(checkout, payment, 50),
+        edge(checkout, email, 45),
+        edge(payment, email, 40),
+        edge(cart, checkout, 25),
+        edge(checkout, redis, 20),
+      ],
+      1000,
+      600
+    )
+
+    const loadgenPos = layout.get(loadgen.key)
+    const proxyPos = layout.get(proxy.key)
+    const checkoutPos = layout.get(checkout.key)
+    const paymentPos = layout.get(payment.key)
+    const emailPos = layout.get(email.key)
+    const cartPos = layout.get(cart.key)
+    const redisPos = layout.get(redis.key)
+    expect(loadgenPos).toBeDefined()
+    expect(proxyPos).toBeDefined()
+    expect(checkoutPos).toBeDefined()
+    expect(paymentPos).toBeDefined()
+    expect(emailPos).toBeDefined()
+    expect(cartPos).toBeDefined()
+    expect(redisPos).toBeDefined()
+    if (!loadgenPos || !proxyPos || !checkoutPos || !paymentPos || !emailPos || !cartPos || !redisPos) return
+
+    // Ingress sits left of the checkout-side services.
+    expect(Math.max(loadgenPos.x, proxyPos.x)).toBeLessThan(checkoutPos.x)
+    expect(Math.max(loadgenPos.x, proxyPos.x)).toBeLessThan(paymentPos.x)
+    // Absorbed singleton cart stays near its strongest neighbor.
+    expect(Math.hypot(cartPos.x - checkoutPos.x, cartPos.y - checkoutPos.y)).toBeLessThan(200)
+    expect(Math.abs(redisPos.x - checkoutPos.x)).toBeLessThan(140)
+    // Multi-node heaps use vertical space instead of collapsing to one point.
+    const leftYs = [loadgenPos.y, proxyPos.y]
+    expect(Math.abs(leftYs[0] - leftYs[1])).toBeGreaterThan(40)
+  })
+})
+
+describe('buildServiceMapOverviewLayout', () => {
+  it('delegates to the hybrid vertical-heap layout', () => {
+    const left = service('a')
+    const right = service('b')
+    const nodes = [left, right]
+    const edges = [edge(left, right, 5)]
+    const hybrid = buildServiceMapHybridLayout(nodes, edges, 800, 600)
+    const overview = buildServiceMapOverviewLayout(nodes, edges, 800, 600)
+    expect(overview.get(left.key)?.x).toBe(hybrid.get(left.key)?.x)
+    expect(overview.get(left.key)?.community).toBe(hybrid.get(left.key)?.community)
+  })
+})
+
 describe('buildServiceMapFocusLayout', () => {
-  it('places the inspected node at the canvas center with neighbors on a ring', () => {
+  it('places upstream callers left and downstream callees right of the focus node', () => {
     const frontend = service('frontend')
     const gateway = service('gateway')
     const checkout = service('checkout')
@@ -170,8 +368,7 @@ describe('buildServiceMapFocusLayout', () => {
     expect(frontendPos).toBeDefined()
     expect(checkoutPos).toBeDefined()
     if (!frontendPos || !checkoutPos) return
-    const distance = (point: { x: number; y: number }) => Math.hypot(point.x - 400, point.y - 300)
-    expect(distance(frontendPos)).toBeCloseTo(distance(checkoutPos), 5)
-    expect(distance(frontendPos)).toBeGreaterThan(70)
+    expect(frontendPos.x).toBeLessThan(400)
+    expect(checkoutPos.x).toBeGreaterThan(400)
   })
 })
