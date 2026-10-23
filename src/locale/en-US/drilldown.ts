@@ -25,7 +25,6 @@ export default {
   'drilldown.serviceMap.hiddenServices': '{count} hidden services',
   'drilldown.serviceMap.clickToExpand': 'Click to expand services',
   'drilldown.serviceMap.inspect': 'View service details',
-  'drilldown.serviceMap.copyService': 'Copy service name',
   'drilldown.serviceMap.instanceCount': '{count} instances',
   'drilldown.serviceMap.databaseNodeHint':
     'Database dependency inferred from db.* peer attributes; usually no pairable server span.',

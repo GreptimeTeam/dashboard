@@ -101,8 +101,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
             @click="openSignal('logs')"
           )
             | {{ t('drilldown.serviceMap.viewLogs') }}
-          button.service-map-node-action(type="button" role="menuitem" @click="copyServiceName")
-            | {{ t('drilldown.serviceMap.copyService') }}
         .service-map-legend(v-if="visibleNodes.length")
           .service-map-legend__group
             span.service-map-legend__item
@@ -891,7 +889,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     const width = canvasRef.value?.clientWidth ?? 0
     const height = canvasRef.value?.clientHeight ?? 0
     const menuWidth = 240
-    const menuHeight = 224
+    const menuHeight = 180
     const gap = 18
     const preferredX = anchor.x + gap
     const x = preferredX + menuWidth <= width - 8 ? preferredX : anchor.x - menuWidth - gap
@@ -1008,11 +1006,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
 
   function onChartGlobalOut() {
     clearChartActiveState()
-  }
-
-  async function copyServiceName() {
-    const node = menuNode.value ?? selectedNode.value
-    if (node) await navigator.clipboard.writeText(node.serviceValue || node.label)
   }
 
   async function openSignal(signal: 'logs' | 'traces') {

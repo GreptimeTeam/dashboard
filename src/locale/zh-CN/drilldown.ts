@@ -25,7 +25,6 @@ export default {
   'drilldown.serviceMap.hiddenServices': '{count} 个隐藏服务',
   'drilldown.serviceMap.clickToExpand': '点击展开服务',
   'drilldown.serviceMap.inspect': '查看服务详情',
-  'drilldown.serviceMap.copyService': '复制服务名称',
   'drilldown.serviceMap.instanceCount': '{count} 个实例',
   'drilldown.serviceMap.databaseNodeHint': '根据 db.* 等属性推断出的数据库依赖，对端通常没有可观测的服务实体。',
   'drilldown.serviceMap.inferredNodeHint': '根据出站调用推断出的依赖，图中尚无对应的已观测服务（常见于对端未打点）。',
