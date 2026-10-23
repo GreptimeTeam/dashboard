@@ -113,11 +113,11 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
               :style="{ backgroundColor: withAlpha(graphTheme.database, isDark ? 0.22 : 0.12), borderColor: graphTheme.database }"
             )
             | {{ t('drilldown.serviceMap.databaseEndpoint') }}
-          span.service-map-legend__item(v-if="hasUnpairedEndpoints")
+          span.service-map-legend__item(v-if="hasInferredServiceEndpoints")
             i.service-map-legend__external(
               :style="{ backgroundColor: withAlpha(graphTheme.external, isDark ? 0.2 : 0.1), borderColor: graphTheme.external }"
             )
-            | {{ t('drilldown.serviceMap.unpairedEndpoint') }}
+            | {{ t('drilldown.serviceMap.inferredEndpoint') }}
 </template>
 
 <script setup lang="ts">
@@ -207,8 +207,8 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   const selectedNode = computed(() => nodeMap.value.get(inspectedNodeKey.value))
   const menuNode = computed(() => nodeMap.value.get(menuNodeKey.value))
   const menuStyle = computed(() => ({ left: `${menuPosition.value.x}px`, top: `${menuPosition.value.y}px` }))
-  /** Hover wins; while inspecting, fall back so the focus node stays active. */
-  const activeNodeKey = computed(() => hoveredNodeKey.value || inspectedNodeKey.value)
+  /** Flow / dimming follows hover only. Inspect layout already centers the focus node. */
+  const activeNodeKey = computed(() => hoveredNodeKey.value)
   const logsServiceReady = computed(() =>
     Boolean(ctx.semantics.logs.table.value && ctx.semantics.logs.entityFilterKeys.value.service)
   )
@@ -267,10 +267,10 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   const hasDatabaseEndpoints = computed(() =>
     graphNodes.value.some((node) => node.virtual && node.connectionType === 'database')
   )
-  const hasUnpairedEndpoints = computed(() =>
+  const hasInferredServiceEndpoints = computed(() =>
     graphNodes.value.some((node) => node.virtual && node.connectionType !== 'database')
   )
-  const hasInferredEndpoints = computed(() => hasDatabaseEndpoints.value || hasUnpairedEndpoints.value)
+  const hasInferredEndpoints = computed(() => hasDatabaseEndpoints.value || hasInferredServiceEndpoints.value)
   const truncated = computed(() => result.value.truncated)
   function themeToken(name: string, fallback: string): string {
     const styles = getComputedStyle(canvasRef.value ?? document.documentElement)
@@ -459,7 +459,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       degree.set(edge.target, (degree.get(edge.target) ?? 0) + 1)
     })
     const activeKey = activeNodeKey.value
-    const detailMode = Boolean(inspectedNodeKey.value)
     const nodes = graphNodes.value.map((node) => {
       const isActive = activeKey === node.key
       const connectedToActive = graphEdges.value.some(
@@ -470,29 +469,25 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       const opacity = activeKey ? (isActive ? 0.78 : connectedToActive ? 1 : 0.18) : 1
       // Real services share one color; call errors are shown on edges, not node chrome.
       const serviceColor = graphTheme.value.palette[0]
-      const incoming = nodeFlowSummary(node.key, 'incoming')
-      const outgoing = nodeFlowSummary(node.key, 'outgoing')
       const isDatabase = node.virtual && node.connectionType === 'database'
-      let detailLabel = node.label
-      if (!node.members) {
-        if (node.virtual) {
-          const rateKey = isDatabase ? 'drilldown.serviceMap.databaseRate' : 'drilldown.serviceMap.unpairedRate'
-          detailLabel = `${node.label}\n${t(rateKey, { rate: formatCallRate(nodeUnmatchedCount(node.key)) })}`
-        } else {
-          detailLabel = `${node.label}\n↓ ${formatFlowSummary(incoming)}\n↑ ${formatFlowSummary(outgoing)}`
-        }
+      // Canvas labels stay name-first (full name). RED / unmatched live in the hover tooltip.
+      let canvasLabel = node.label
+      if (node.virtual && !node.members) {
+        canvasLabel = `${node.label}\n${t(
+          isDatabase ? 'drilldown.serviceMap.databaseEndpoint' : 'drilldown.serviceMap.inferredEndpoint'
+        )}`
       }
       let itemStyle: Record<string, string | number> = {
         color: serviceColor.fill,
         borderColor: serviceColor.stroke,
-        borderWidth: node.members ? 2 : 1.5,
+        borderWidth: isActive || node.members ? 2 : 1.5,
         opacity,
       }
       if (isDatabase) {
         itemStyle = {
           color: withAlpha(graphTheme.value.database, isDark.value ? 0.22 : 0.12),
           borderColor: graphTheme.value.database,
-          borderWidth: 1.5,
+          borderWidth: isActive ? 2 : 1.5,
           borderType: 'dashed',
           opacity,
         }
@@ -500,7 +495,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
         itemStyle = {
           color: withAlpha(graphTheme.value.external, isDark.value ? 0.2 : 0.1),
           borderColor: graphTheme.value.external,
-          borderWidth: 1.5,
+          borderWidth: isActive ? 2 : 1.5,
           borderType: 'dashed',
           opacity,
         }
@@ -521,10 +516,15 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
         label: {
           show: true,
           position: 'right',
-          formatter: detailMode ? detailLabel : node.label,
+          distance: 8,
+          formatter: canvasLabel,
           color: graphTheme.value.text,
           opacity,
+          fontSize: isActive ? 13 : 12,
+          fontWeight: isActive ? 600 : 400,
           lineHeight: 16,
+          width: 160,
+          overflow: 'break',
         },
       }
     })
@@ -588,11 +588,13 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
             return [
               `<strong>${escapeHtml(node.label)}</strong>`,
               `${escapeHtml(t('drilldown.serviceMap.endpointKind'))}: ${escapeHtml(
-                t(isDatabase ? 'drilldown.serviceMap.databaseEndpoint' : 'drilldown.serviceMap.unpairedEndpoint')
+                t(isDatabase ? 'drilldown.serviceMap.databaseEndpoint' : 'drilldown.serviceMap.inferredEndpoint')
               )}`,
-              `${escapeHtml(t('drilldown.serviceMap.unmatchedRate'))}: ${escapeHtml(formatCallRate(unmatched))} call/s`,
+              `${escapeHtml(t('drilldown.serviceMap.inferredCallRate'))}: ${escapeHtml(
+                formatCallRate(unmatched)
+              )} call/s`,
               escapeHtml(
-                t(isDatabase ? 'drilldown.serviceMap.databaseNodeHint' : 'drilldown.serviceMap.virtualNodeHint')
+                t(isDatabase ? 'drilldown.serviceMap.databaseNodeHint' : 'drilldown.serviceMap.inferredNodeHint')
               ),
             ].join('<br/>')
           }
@@ -674,13 +676,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     const rangeSeconds = range.length === 2 ? Math.max(1, range[1] - range[0]) : 1
     return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(count / rangeSeconds)
   }
-  function formatFlowSummary(summary: ReturnType<typeof nodeFlowSummary>): string {
-    const errorRatio = summary.requests ? summary.errors / summary.requests : 0
-    const averageDuration = summary.durationCount ? summary.durationSum / summary.durationCount : 0
-    return `${formatCallRate(summary.requests)} req/s · ${formatPercent(errorRatio)} · ${formatDuration(
-      averageDuration
-    )}`
-  }
   function formatNodeDirectionTooltip(title: string, summary: ReturnType<typeof nodeFlowSummary>): string[] {
     const errorRatio = summary.requests ? summary.errors / summary.requests : 0
     const averageDuration = summary.durationCount ? summary.durationSum / summary.durationCount : 0
@@ -690,9 +685,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       `${escapeHtml(t('drilldown.serviceMap.errorRate'))}: ${escapeHtml(formatPercent(errorRatio))}`,
       `${escapeHtml(t('drilldown.serviceMap.avgDuration'))}: ${escapeHtml(formatDuration(averageDuration))}`,
       summary.unmatched > 0
-        ? `${escapeHtml(t('drilldown.serviceMap.unmatchedRate'))}: ${escapeHtml(
-            formatCallRate(summary.unmatched)
-          )} call/s`
+        ? `${escapeHtml(t('drilldown.serviceMap.unmatched'))}: ${escapeHtml(formatCallRate(summary.unmatched))} call/s`
         : '',
     ].filter(Boolean)
   }
@@ -726,11 +719,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     clearChartActiveState()
     inspectedNodeKey.value = ''
     dismissTransientUi()
-  }
-
-  function restoreInspectActive() {
-    if (!inspectedNodeKey.value) return
-    applyActiveFlow(inspectedNodeKey.value)
   }
 
   function onEscape(event: KeyboardEvent) {
@@ -788,7 +776,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     inspectedNodeKey.value = nodeKey
     selectedEdgeKey.value = ''
     menuNodeKey.value = ''
-    applyActiveFlow(nodeKey)
+    clearChartActiveState()
     if (!node || node.virtual || node.type !== 'service' || node.instanceCount > 0) return
 
     const range = ctx.query.unixTimeRange()
@@ -822,8 +810,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     if (params.dataType === 'edge' && params.data?.edgeKey) {
       selectedEdgeKey.value = params.data.edgeKey
       menuNodeKey.value = ''
-      // Keep neighborhood focus; same graph UX, edge tip carries call RED.
-      restoreInspectActive()
       return
     }
     if (params.dataType === 'node' && params.data?.nodeKey) {
@@ -835,12 +821,10 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
         expandedClusters.value = next
         selectedEdgeKey.value = ''
         menuNodeKey.value = ''
-        restoreInspectActive()
         return
       }
       menuNodeKey.value = graphNode?.service?.key ?? params.data.nodeKey
       selectedEdgeKey.value = ''
-      restoreInspectActive()
       const nativeEvent = params.event?.event
       const canvasBounds = canvasRef.value?.getBoundingClientRect()
       const clickPosition =
@@ -855,43 +839,30 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     }
     if (menuNodeKey.value) {
       menuNodeKey.value = ''
-      restoreInspectActive()
       return
     }
     if (selectedEdgeKey.value) {
       selectedEdgeKey.value = ''
-      restoreInspectActive()
-      return
     }
     // Blank canvas: dismiss transient UI only; stay in inspect until Back to overview.
-    clearChartActiveState()
-    restoreInspectActive()
   }
 
   function onChartMouseOver(params: { dataType?: string; data?: { nodeKey?: string } }) {
     if (menuNodeKey.value) {
-      restoreInspectActive()
       chartRef.value?.dispatchAction({ type: 'downplay', seriesIndex: 0 })
       return
     }
     if (params.dataType !== 'node') {
-      restoreInspectActive()
-      if (!inspectedNodeKey.value) {
-        hoveredNodeKey.value = ''
-        chartRef.value?.dispatchAction({ type: 'downplay', seriesIndex: 0 })
-        chartRef.value?.dispatchAction({ type: 'hideTip' })
-        canvasRef.value?.classList.remove('service-map-canvas--flow')
-      }
+      hoveredNodeKey.value = ''
+      chartRef.value?.dispatchAction({ type: 'downplay', seriesIndex: 0 })
+      chartRef.value?.dispatchAction({ type: 'hideTip' })
+      canvasRef.value?.classList.remove('service-map-canvas--flow')
       return
     }
     applyActiveFlow(params.data?.nodeKey ?? '')
   }
 
   function onChartMouseOut() {
-    if (inspectedNodeKey.value) {
-      restoreInspectActive()
-      return
-    }
     hoveredNodeKey.value = ''
     canvasRef.value?.classList.remove('service-map-canvas--flow')
   }
@@ -993,13 +964,13 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   }
   @keyframes service-map-flow {
     to {
-      stroke-dashoffset: -18;
+      stroke-dashoffset: -24;
     }
   }
   .service-map-canvas--flow {
     :deep(path[stroke-dasharray]),
     :deep(path[style*='stroke-dasharray']) {
-      animation: service-map-flow 700ms linear infinite;
+      animation: service-map-flow 2.2s linear infinite;
     }
   }
   @media (prefers-reduced-motion: reduce) {

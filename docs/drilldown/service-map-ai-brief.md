@@ -29,7 +29,7 @@
 
 | 术语 | 含义 |
 |------|------|
-| Service Map | 节点≈service，边=`calls`，带 RED；可含虚拟/DB 节点 |
+| Service Map | 节点≈service，边=`calls`，带 RED；可含推断/DB 节点 |
 | 实体关系图 | 多 `entity_type` + 多 `rel_type`（calls / runs_on / part_of / …） |
 | Explore | 现有 Metrics/Logs/Traces Drilldown，路由 `/dashboard/explore`（drilldown） |
 | Semantic Graph | `greptime_private.semantic_entities`（C）+ `semantic_relationships`（D） |
@@ -49,7 +49,7 @@
 ### `calls` 边语义（服务端已实现）
 
 - 来自 **OTLP traces** 零配置：CLIENT↔SERVER（及 messaging）配对，对齐 Tempo / OTel servicegraph。  
-- `confidence = 1.0`：配对成功；`0.5`：无 server、用 peer/db/server.address 命名的**虚拟节点**。  
+- `confidence = 1.0`：CLIENT↔SERVER 配对成功；`0.5`：无 server、用 peer/db/server.address 命名的**推断节点**（Greptime 文档也称 virtual node）。  
 - Metrics / Logs **默认不贡献** `calls`。Logs 通常无 entity 声明则不进图。  
 - RED 反映**已存储** span 对；采样会低估流量、可能偏斜错误率。
 
@@ -63,7 +63,7 @@
 
 ### Service Map vs 实体关系图
 
-- Service Map = `service` 节点 + `calls` 边（+ 虚拟节点）。  
+- Service Map = `service` 节点 + `calls` 边（+ 推断节点）。  
 - 实体关系图另含 `runs_on` / `part_of` / `contains` / 手宣 `depends_on`/`owns` 等 → P1。
 
 ---
@@ -74,7 +74,7 @@
 
 - 入口：Explore 旁或 Traces 内 Tab / 独立路由（规划时选定一种，与现有 navbar/IA 一致）。  
 - 数据：查 C（service）+ D（calls，按窗聚合 RED）。  
-- UI：力导向或分层图；边粗细/颜色反映流量与错误；虚拟/DB 节点可区分样式。  
+- UI：力导向或分层图；边粗细/颜色反映流量与错误；推断/DB 节点可区分样式。  
 - 时间窗：与 Explore Context `query.time` 对齐。  
 - 交互：点击 service → 写入 service 实体 filter 并打开/切换 Traces Explore；可选侧栏展示边 RED。  
 - 护栏：默认 15m–1h；节点/边数量上限；超时与空态（无 traces / 无 calls）。  

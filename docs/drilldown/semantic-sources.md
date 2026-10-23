@@ -101,7 +101,7 @@ Explore 回答：哪张 span 表、是否完整 `greptime_trace_v1`、RED / Brea
 | 进 semantic graph（C/D） | **主路径（零配置）** | 节点：service 等；边：`calls`（带 RED）+ 同行双身份的 `runs_on` / `part_of` 等 |
 | 辅助目录表 | 约定 `{trace}_services` / `{trace}_operations` | 服务端自动维护；Explore 亦可 DISTINCT / 读图 API |
 
-`calls` 由服务端在查 **D** 时从 span 配对推导（对齐 Tempo / OTel servicegraph），Dashboard **不应**再自写 CLIENT→SERVER self-join。虚拟节点 peer 属性优先级见 [Semantic graph](https://docs.greptime.com/nightly/user-guide/semantic-layer/semantic-graph/)。
+`calls` 由服务端在查 **D** 时从 span 配对推导（对齐 Tempo / OTel servicegraph），Dashboard **不应**再自写 CLIENT→SERVER self-join。推断节点（virtual node）peer 属性优先级见 [Semantic graph](https://docs.greptime.com/nightly/user-guide/semantic-layer/semantic-graph/)。
 
 ---
 
@@ -146,5 +146,5 @@ Explore 回答：哪张 span 表、是否完整 `greptime_trace_v1`、RED / Brea
 | trace | opentelemetry | `greptime_trace_v1` | 1 |
 
 - Logs 例：`opentelemetry_logs` 无顶层 `service_name`，`resource_attributes` JSON 含 `service.name` / `service.namespace`；**无** `entity_declarations` → 未进 C。
-- Traces 例：`opentelemetry_traces` 有 `entity_declarations`（service / service.instance / container）；近窗 C 见 service 节点，D 见 `calls`（含 `confidence=0.5` 虚拟节点）及 `part_of` / `runs_on`。
+- Traces 例：`opentelemetry_traces` 有 `entity_declarations`（service / service.instance / container）；近窗 C 见 service 节点，D 见 `calls`（含 `confidence=0.5` 推断/virtual 节点）及 `part_of` / `runs_on`。
 - Metrics 例：OTLP 表带完整 `metric.*`；Prom remote write 多为 `inferred` 且 options 空；普通指标未出现在实体的 `source_tables` 中。

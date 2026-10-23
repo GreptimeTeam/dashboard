@@ -16,9 +16,7 @@ export default {
   'drilldown.serviceMap.noMatches': 'No matching services',
   'drilldown.serviceMap.serviceNode': 'Service',
   'drilldown.serviceMap.databaseEndpoint': 'Database',
-  'drilldown.serviceMap.unpairedEndpoint': 'Unpaired',
-  'drilldown.serviceMap.databaseRate': 'Database · {rate} call/s',
-  'drilldown.serviceMap.unpairedRate': 'Unpaired · {rate} call/s',
+  'drilldown.serviceMap.inferredEndpoint': 'Inferred',
   'drilldown.serviceMap.filterBy': 'Filter by {name}',
   'drilldown.serviceMap.hiddenServices': '{count} hidden services',
   'drilldown.serviceMap.clickToExpand': 'Click to expand services',
@@ -26,9 +24,9 @@ export default {
   'drilldown.serviceMap.copyService': 'Copy service name',
   'drilldown.serviceMap.instanceCount': '{count} instances',
   'drilldown.serviceMap.databaseNodeHint':
-    'Database-like dependency inferred from db.* peer attributes without a paired server span.',
-  'drilldown.serviceMap.virtualNodeHint':
-    'Calls named this peer, but no matching observed service entity was paired (often a missing server span).',
+    'Database dependency inferred from db.* peer attributes; usually no pairable server span.',
+  'drilldown.serviceMap.inferredNodeHint':
+    'Dependency inferred from outbound calls; no matching observed service entity yet (often an uninstrumented peer).',
   'drilldown.serviceMap.incoming': 'Upstream callers',
   'drilldown.serviceMap.outgoing': 'Downstream dependencies',
   'drilldown.serviceMap.incomingFlow': 'Inbound',
@@ -43,11 +41,11 @@ export default {
   'drilldown.serviceMap.errorRate': 'Error rate',
   'drilldown.serviceMap.avgDuration': 'Average latency',
   'drilldown.serviceMap.maxDuration': 'Maximum latency',
-  'drilldown.serviceMap.unmatched': 'Unmatched calls',
-  'drilldown.serviceMap.unmatchedRate': 'Unmatched rate',
+  'drilldown.serviceMap.unmatched': 'Inferred calls',
+  'drilldown.serviceMap.inferredCallRate': 'Inferred call rate',
   'drilldown.serviceMap.endpointKind': 'Type',
   'drilldown.serviceMap.pairedPopulationHint':
-    'Error rate and latency use paired requests; unmatched client spans are counted separately.',
+    'Error rate and latency use CLIENT↔SERVER paired requests; client-only traffic is counted as inferred calls.',
   'drilldown.signals.logsPlaceholder': 'Logs in Signals Explore is coming soon.',
   'drilldown.signals.tracesPlaceholder': 'Traces in Signals Explore is coming soon.',
   'drilldown.filters.title': 'Filters',
