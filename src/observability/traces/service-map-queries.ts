@@ -3,8 +3,13 @@ export interface ServiceMapQueryRange {
   endUnix: number
 }
 
-export const SERVICE_MAP_ENTITY_ROWS_LIMIT = 500
-export const SERVICE_MAP_RELATIONSHIP_ROWS_LIMIT = 500
+/** Unique services / call edges returned by SQL (post-dedupe / post-endpoint aggregate). */
+export const SERVICE_MAP_ENTITY_ROWS_LIMIT = 2000
+export const SERVICE_MAP_RELATIONSHIP_ROWS_LIMIT = 2000
+
+/** Client-side display caps; keep below SQL limits as a render guardrail. */
+export const SERVICE_MAP_NODE_LIMIT = 300
+export const SERVICE_MAP_EDGE_LIMIT = 750
 
 function timePredicate(range: ServiceMapQueryRange): string {
   return `observed_at >= FROM_UNIXTIME(${Math.floor(range.startUnix)}) AND observed_at < FROM_UNIXTIME(${Math.floor(
@@ -12,30 +17,42 @@ function timePredicate(range: ServiceMapQueryRange): string {
   )})`
 }
 
-/** Semantic Graph entity observations in the selected half-open window. */
+/** Latest observation per service in the selected half-open window. */
 export function buildServiceMapEntitiesSql(range: ServiceMapQueryRange): string {
-  return `SELECT DISTINCT observed_at, entity_type, entity_id, entity_id_attrs, scope, descriptive, source_tables
-FROM greptime_private.semantic_entities
-WHERE entity_type = 'service'
-  AND ${timePredicate(range)}
-ORDER BY observed_at DESC
+  return `SELECT entity_type, entity_id, entity_id_attrs, scope, descriptive, source_tables
+FROM (
+  SELECT entity_type, entity_id, entity_id_attrs, scope, descriptive, source_tables,
+         ROW_NUMBER() OVER (
+           PARTITION BY entity_type, entity_id
+           ORDER BY observed_at DESC
+         ) AS rn
+  FROM greptime_private.semantic_entities
+  WHERE entity_type = 'service'
+    AND ${timePredicate(range)}
+) t
+WHERE rn = 1
+ORDER BY entity_id
 LIMIT ${SERVICE_MAP_ENTITY_ROWS_LIMIT}`
 }
 
-/** Calls RED grouped by the endpoint identity, confidence population, and edge attributes. */
+/**
+ * Calls RED aggregated to one row per endpoint pair.
+ * Paired RED uses confidence >= 1 only; unmatched always sums.
+ */
 export function buildServiceMapRelationshipsSql(range: ServiceMapQueryRange): string {
-  return `SELECT src_type, src_id, dst_type, dst_id, provenance, confidence, attributes,
-       SUM(request_count) AS request_count,
-       SUM(error_count) AS error_count,
+  return `SELECT src_type, src_id, dst_type, dst_id,
+       SUM(CASE WHEN confidence >= 1 THEN request_count ELSE 0 END) AS request_count,
+       SUM(CASE WHEN confidence >= 1 THEN error_count ELSE 0 END) AS error_count,
        SUM(unmatched_count) AS unmatched_count,
-       SUM(duration_sum) AS duration_sum,
-       SUM(duration_count) AS duration_count,
-       MAX(duration_max) AS duration_max
+       SUM(CASE WHEN confidence >= 1 THEN duration_sum ELSE 0 END) AS duration_sum,
+       SUM(CASE WHEN confidence >= 1 THEN duration_count ELSE 0 END) AS duration_count,
+       MAX(CASE WHEN confidence >= 1 THEN duration_max ELSE NULL END) AS duration_max,
+       MAX(attributes) AS attributes
 FROM greptime_private.semantic_relationships
 WHERE rel_type = 'calls'
   AND ${timePredicate(range)}
-GROUP BY src_type, src_id, dst_type, dst_id, provenance, confidence, attributes
-ORDER BY request_count DESC
+GROUP BY src_type, src_id, dst_type, dst_id
+ORDER BY request_count DESC, unmatched_count DESC
 LIMIT ${SERVICE_MAP_RELATIONSHIP_ROWS_LIMIT}`
 }
 

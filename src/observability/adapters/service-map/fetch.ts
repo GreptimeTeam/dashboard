@@ -1,15 +1,16 @@
 import editorApi from '@/api/editor'
 import type { DrilldownContext } from '../../context'
 import {
+  SERVICE_MAP_EDGE_LIMIT,
+  SERVICE_MAP_ENTITY_ROWS_LIMIT,
+  SERVICE_MAP_NODE_LIMIT,
+  SERVICE_MAP_RELATIONSHIP_ROWS_LIMIT,
   buildServiceMapEntitiesSql,
   buildServiceMapInstanceCountsSql,
   buildServiceMapRelationshipsSql,
 } from '../../traces/service-map-queries'
 import { mergeEdges } from './graph'
 import type { ServiceMapConnectionType, ServiceMapEdge, ServiceMapNode, ServiceMapResult } from './types'
-
-const SERVICE_MAP_NODE_LIMIT = 100
-const SERVICE_MAP_EDGE_LIMIT = 250
 
 interface QueryRecords {
   schema?: { column_schemas?: Array<{ name: string }> }
@@ -227,12 +228,13 @@ function edgesFromRows(rows: Array<Record<string, unknown>>, nodes: Map<string, 
       connectionType,
     }
     edge.connectionType ||= connectionType
-    const confidence = toNumber(row.confidence)
     const unmatched = toNumber(row.unmatched_count)
     edge.unmatched += unmatched
-    // RED request/error/duration values belong to different populations at confidence
-    // 1 and below 1. Keep the UI's RED metrics paired-only; expose unmatched separately.
-    if (confidence >= 1) {
+    // SQL aggregates paired RED with confidence >= 1 already. When a confidence
+    // column is still present (legacy / unaggregated rows), keep that gate.
+    const hasConfidence = row.confidence !== undefined && row.confidence !== null
+    const paired = !hasConfidence || toNumber(row.confidence) >= 1
+    if (paired) {
       edge.requests += toNumber(row.request_count)
       edge.errors += toNumber(row.error_count)
       edge.durationSum += toNumber(row.duration_sum)
@@ -311,7 +313,9 @@ export async function fetchServiceMap(
   const nodes = nodesFromEntities(entityRows)
   const limited = limitServiceMapGraph(nodes, edgesFromRows(relationshipRows, nodes))
   const folded = foldVirtualPeersIntoServices(limited.nodes, limited.edges)
-  return { nodes: folded.nodes, edges: folded.edges, truncated: limited.truncated }
+  const sqlTruncated =
+    entityRows.length >= SERVICE_MAP_ENTITY_ROWS_LIMIT || relationshipRows.length >= SERVICE_MAP_RELATIONSHIP_ROWS_LIMIT
+  return { nodes: folded.nodes, edges: folded.edges, truncated: limited.truncated || sqlTruncated }
 }
 
 export async function fetchServiceMapInstanceCount(ctx: DrilldownContext, serviceId: string): Promise<number> {

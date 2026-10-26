@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import editorApi from '@/api/editor'
+import {
+  SERVICE_MAP_EDGE_LIMIT,
+  SERVICE_MAP_ENTITY_ROWS_LIMIT,
+  SERVICE_MAP_NODE_LIMIT,
+  SERVICE_MAP_RELATIONSHIP_ROWS_LIMIT,
+} from '../../traces/service-map-queries'
 import { fetchServiceMap, foldVirtualPeersIntoServices, limitServiceMapGraph } from './fetch'
 import type { ServiceMapEdge, ServiceMapNode } from './types'
 
@@ -40,19 +46,19 @@ function sqlResponse(columns: string[], rows: unknown[][]) {
 }
 
 const ENTITY_COLUMNS = ['entity_type', 'entity_id', 'entity_id_attrs', 'scope', 'descriptive', 'source_tables']
+/** Post-SQL shape: one row per endpoint pair; RED already confidence-gated. */
 const RELATIONSHIP_COLUMNS = [
   'src_type',
   'src_id',
   'dst_type',
   'dst_id',
-  'attributes',
-  'confidence',
   'request_count',
   'error_count',
   'unmatched_count',
   'duration_sum',
   'duration_count',
   'duration_max',
+  'attributes',
 ]
 
 const ctx = {
@@ -102,29 +108,29 @@ describe('limitServiceMapGraph', () => {
     expect(result.truncated).toBe(false)
   })
 
-  it('ranks edges by requests then unmatched and caps nodes at 100', () => {
+  it(`ranks edges by requests then unmatched and caps nodes at ${SERVICE_MAP_NODE_LIMIT}`, () => {
     const hub = service('hub')
-    const leaves = Array.from({ length: 120 }, (_, index) => service(`leaf-${index}`))
+    const leaves = Array.from({ length: SERVICE_MAP_NODE_LIMIT + 20 }, (_, index) => service(`leaf-${index}`))
     const nodes = new Map([hub, ...leaves].map((node) => [node.key, node]))
     const edges = leaves.map((leaf, index) => edge(hub, leaf, { requests: index % 2 ? 0 : index, unmatched: index }))
     const result = limitServiceMapGraph(nodes, edges)
 
-    expect(result.nodes).toHaveLength(100)
-    expect(result.edges).toHaveLength(99)
-    expect(result.edges[0].target).toBe(leaves[118].key)
+    expect(result.nodes).toHaveLength(SERVICE_MAP_NODE_LIMIT)
+    expect(result.edges).toHaveLength(SERVICE_MAP_NODE_LIMIT - 1)
+    expect(result.edges[0].target).toBe(leaves[SERVICE_MAP_NODE_LIMIT + 18].key)
     expect(result.truncated).toBe(true)
   })
 
-  it('caps edges at 250 and flags truncation', () => {
-    const left = Array.from({ length: 16 }, (_, index) => service(`l-${index}`))
-    const right = Array.from({ length: 16 }, (_, index) => service(`r-${index}`))
+  it(`caps edges at ${SERVICE_MAP_EDGE_LIMIT} and flags truncation`, () => {
+    const left = Array.from({ length: 28 }, (_, index) => service(`l-${index}`))
+    const right = Array.from({ length: 28 }, (_, index) => service(`r-${index}`))
     const nodes = new Map([...left, ...right].map((node) => [node.key, node]))
     const edges = left.flatMap((source) => right.map((target) => edge(source, target, { requests: 1 })))
     const result = limitServiceMapGraph(nodes, edges)
 
-    expect(edges).toHaveLength(256)
-    expect(result.edges).toHaveLength(250)
-    expect(result.nodes).toHaveLength(32)
+    expect(edges).toHaveLength(784)
+    expect(result.edges).toHaveLength(SERVICE_MAP_EDGE_LIMIT)
+    expect(result.nodes).toHaveLength(56)
     expect(result.truncated).toBe(true)
   })
 })
@@ -136,14 +142,15 @@ describe('fetchServiceMap', () => {
     runSQL.mockReset()
   })
 
-  it('renders entities first, then pairs RED only at confidence 1 and folds same-name peers', async () => {
+  it('renders entities first, then uses SQL-aggregated RED and folds same-name peers', async () => {
     runSQL.mockImplementation(async (sql: string) => {
       if (sql.includes('semantic_relationships')) {
+        // One row per endpoint pair; RED already confidence-gated in SQL.
+        // Unmatched from low-confidence service→service stays on that edge; peer edge is separate until fold.
         return sqlResponse(RELATIONSHIP_COLUMNS, [
-          ['service', 'frontend', 'service', 'checkout', '{}', 1, 40, 2, 0, 4, 40, 0.3],
-          ['service', 'frontend', 'service', 'checkout', '{}', 0.5, 99, 99, 5, 99, 99, 9],
-          ['service', 'frontend', 'peer', 'checkout', '{"connection_type":"virtual_node"}', 0, 0, 0, 7, 0, 0, 0],
-          ['service', 'checkout', 'peer', 'redis', '{"connection_type":"database"}', 0, 0, 0, 3, 0, 0, 0],
+          ['service', 'frontend', 'service', 'checkout', 40, 2, 5, 4, 40, 0.3, '{}'],
+          ['service', 'frontend', 'peer', 'checkout', 0, 0, 7, 0, 0, 0, '{"connection_type":"virtual_node"}'],
+          ['service', 'checkout', 'peer', 'redis', 0, 0, 3, 0, 0, 0, '{"connection_type":"database"}'],
         ]) as never
       }
       return sqlResponse(ENTITY_COLUMNS, [
@@ -175,6 +182,82 @@ describe('fetchServiceMap', () => {
     })
     const redis = result.nodes.find((node) => node.key === 'peer\0redis')
     expect(redis).toMatchObject({ virtual: true, connectionType: 'database' })
+  })
+
+  it('still gates RED on confidence when legacy unaggregated rows are present', async () => {
+    const legacyColumns = [
+      'src_type',
+      'src_id',
+      'dst_type',
+      'dst_id',
+      'attributes',
+      'confidence',
+      'request_count',
+      'error_count',
+      'unmatched_count',
+      'duration_sum',
+      'duration_count',
+      'duration_max',
+    ]
+    runSQL.mockImplementation(async (sql: string) => {
+      if (sql.includes('semantic_relationships')) {
+        return sqlResponse(legacyColumns, [
+          ['service', 'a', 'service', 'b', '{}', 1, 10, 1, 0, 2, 10, 0.1],
+          ['service', 'a', 'service', 'b', '{}', 0.5, 99, 99, 5, 99, 99, 9],
+        ]) as never
+      }
+      return sqlResponse(ENTITY_COLUMNS, [['service', 'a', '{"service.name":"a"}', null, null, '[]']]) as never
+    })
+
+    const result = await fetchServiceMap(ctx)
+    expect(result.edges[0]).toMatchObject({ requests: 10, errors: 1, unmatched: 5, durationSum: 2, durationCount: 10 })
+  })
+
+  it('flags truncated when SQL returns a full page of entities', async () => {
+    const entityRows = Array.from({ length: SERVICE_MAP_ENTITY_ROWS_LIMIT }, (_, index) => [
+      'service',
+      `svc-${index}`,
+      `{"service.name":"svc-${index}"}`,
+      null,
+      null,
+      '[]',
+    ])
+    runSQL.mockImplementation(async (sql: string) => {
+      if (sql.includes('semantic_relationships')) {
+        return sqlResponse(RELATIONSHIP_COLUMNS, []) as never
+      }
+      return sqlResponse(ENTITY_COLUMNS, entityRows) as never
+    })
+
+    const result = await fetchServiceMap(ctx)
+    expect(result.truncated).toBe(true)
+    expect(result.nodes.length).toBeLessThanOrEqual(SERVICE_MAP_NODE_LIMIT)
+  })
+
+  it('flags truncated when SQL returns a full page of relationships', async () => {
+    const relationshipRows = Array.from({ length: SERVICE_MAP_RELATIONSHIP_ROWS_LIMIT }, (_, index) => [
+      'service',
+      'hub',
+      'service',
+      `leaf-${index}`,
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      '{}',
+    ])
+    runSQL.mockImplementation(async (sql: string) => {
+      if (sql.includes('semantic_relationships')) {
+        return sqlResponse(RELATIONSHIP_COLUMNS, relationshipRows) as never
+      }
+      return sqlResponse(ENTITY_COLUMNS, [['service', 'hub', '{"service.name":"hub"}', null, null, '[]']]) as never
+    })
+
+    const result = await fetchServiceMap(ctx)
+    expect(result.truncated).toBe(true)
+    expect(result.edges.length).toBeLessThanOrEqual(SERVICE_MAP_EDGE_LIMIT)
   })
 
   it('skips queries when the time range is unavailable', async () => {
