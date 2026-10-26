@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, reactive, ref } from 'vue'
 import type { DrilldownContext } from './context'
 import createDrilldownSession from './drilldown-session'
 
@@ -189,6 +189,37 @@ function createCtx() {
 }
 
 describe('useDrilldownUrlSync', () => {
+  it('preserves Service Map search, scope and facets when Explore context updates the URL', async () => {
+    const { default: useDrilldownUrlSync } = await import('./use-drilldown-url-sync')
+    const ctx = createCtx()
+    ctx.connection.signal.value = 'traces'
+    const route = reactive({
+      query: {
+        timeLength: '30',
+        signal: 'traces',
+        view: 'service-map',
+        serviceMapSearch: 'checkout',
+        serviceMapScope: JSON.stringify(['prod']),
+        serviceMapFilters: JSON.stringify({ env: ['prod'] }),
+      },
+    })
+    const router = { push: vi.fn(), replace: vi.fn() }
+    const urlSync = useDrilldownUrlSync(ctx, route as never, router as never)
+
+    ctx.query.time.value = 45
+    urlSync.updateQueryParams()
+
+    const target = router.push.mock.calls[0]?.[0] ?? router.replace.mock.calls[0]?.[0]
+    expect(target).toMatchObject({
+      query: {
+        view: 'service-map',
+        serviceMapSearch: 'checkout',
+        serviceMapScope: JSON.stringify(['prod']),
+        serviceMapFilters: JSON.stringify({ env: ['prod'] }),
+      },
+    })
+  })
+
   it('hydrates with soft setSignal and restores logsTrace drawer via openLogsForTrace', async () => {
     const { default: useDrilldownUrlSync } = await import('./use-drilldown-url-sync')
     const ctx = createCtx()

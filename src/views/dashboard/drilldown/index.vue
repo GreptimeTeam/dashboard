@@ -4,7 +4,10 @@
     a-card.drilldown-top-card(:bordered="false")
       DrilldownTopBar
 
-    .drilldown-body.new-layout.new-layout--workspace(v-if="signal === 'metrics'")
+    .drilldown-body.new-layout.new-layout--workspace(v-if="serviceMapActive")
+      ServiceMap
+
+    .drilldown-body.new-layout.new-layout--workspace(v-else-if="signal === 'metrics'")
       keep-alive
         MetricsOverview(v-if="!drawerVisible")
       .drilldown-detail-shell(v-if="drawerVisible")
@@ -124,6 +127,7 @@
   import LogsDetailFilters from './logs/logs-detail-filters.vue'
   import TracesHome from './traces/traces-home.vue'
   import TracesGantt from './traces/traces-gantt.vue'
+  import ServiceMap from './service-map/index.vue'
 
   defineOptions({
     name: 'Drilldown',
@@ -141,6 +145,7 @@
   urlSync.initializeFromQuery()
 
   const { signal } = ctx.connection
+  const serviceMapActive = computed(() => route.query.view === 'service-map')
   const { logsTab } = ctx.ui
   const { setLogsTab } = ctx.actions
   const logsDetailTabs = computed(() =>
