@@ -13,7 +13,7 @@ a-drawer(
 )
   template(#title)
     .drawer-title
-      span Span Attributes
+      span {{ t('traces.spanAttributes') }}
   .span-attributes-content
     .span-header.gpt-muted-bar
       .span-header-main
@@ -39,13 +39,13 @@ a-drawer(
         span.summary-label StartTime
         span.summary-value {{ formatStartTime(span?.timestamp) }}
     a-tabs(v-model:active-key="viewMode")
-      a-tab-pane(key="table" title="Table View")
+      a-tab-pane(key="table" :title="t('traces.tableView')")
         a-descriptions(layout="vertical" bordered :column="2")
           a-descriptions-item(v-for="item of spanInfoData" :key="item.label")
             template(#label)
               a-typography-text(copyable :copy-text="String(item.value)") {{ item.label }}
             | {{ item.value }}
-      a-tab-pane(key="json" title="JSON View")
+      a-tab-pane(key="json" :title="t('traces.jsonView')")
         .gpt-light-editor.span-json-editor
           CodeMirror(
             :model-value="jsonView"
@@ -61,7 +61,7 @@ a-drawer(
 .span-attributes-panel(v-else-if="modelValue && span")
   .panel-header
     .panel-header-main
-      span.panel-title Span Attributes
+      span.panel-title {{ t('traces.spanAttributes') }}
       a-button.panel-view-logs(v-if="logsTraceEnabled" size="small" @click="$emit('viewLogs', span)")
         span {{ t('drilldown.traces.openLogs') }}
         span.panel-view-logs-target(v-if="logsTargetLabel" :title="logsTargetLabel") {{ logsTargetLabel }}
@@ -90,13 +90,13 @@ a-drawer(
         span.summary-label StartTime
         span.summary-value {{ formatStartTime(span?.timestamp) }}
     a-tabs(v-model:active-key="viewMode")
-      a-tab-pane(key="table" title="Table View")
+      a-tab-pane(key="table" :title="t('traces.tableView')")
         a-descriptions(layout="vertical" bordered :column="1")
           a-descriptions-item(v-for="item of spanInfoData" :key="item.label")
             template(#label)
               a-typography-text(copyable :copy-text="String(item.value)") {{ item.label }}
             | {{ item.value }}
-      a-tab-pane(key="json" title="JSON View")
+      a-tab-pane(key="json" :title="t('traces.jsonView')")
         .gpt-light-editor.span-json-editor
           CodeMirror(
             :model-value="jsonView"

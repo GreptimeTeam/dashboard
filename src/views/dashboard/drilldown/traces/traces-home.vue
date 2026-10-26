@@ -134,9 +134,9 @@ a-layout-content.layout-content
     isTab: isTracesHomeTab,
   })
   const redMetricItems = computed(() => [
-    { key: 'rate' as RedMetric, label: t('drilldown.traces.redRate'), colorIndex: 2 },
-    { key: 'errors' as RedMetric, label: t('drilldown.traces.redErrors'), colorIndex: 4 },
-    { key: 'duration' as RedMetric, label: t('drilldown.traces.redDuration'), colorIndex: 3 },
+    { key: 'rate' as RedMetric, label: 'Rate', colorIndex: 2 },
+    { key: 'errors' as RedMetric, label: 'Errors', colorIndex: 4 },
+    { key: 'duration' as RedMetric, label: 'Duration', colorIndex: 3 },
   ])
   const depsKey = () =>
     JSON.stringify([
@@ -174,7 +174,7 @@ a-layout-content.layout-content
     if (selectedRedMetric.value === 'duration') {
       return t('drilldown.traces.slowTracesTab')
     }
-    return t('drilldown.traces.tracesTab')
+    return 'Traces'
   })
 
   const tableQueryState = computed<QueryState>(() => ({

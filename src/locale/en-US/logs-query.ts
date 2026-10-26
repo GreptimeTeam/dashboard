@@ -20,7 +20,6 @@ export default {
   'logsQuery.showKeys': 'Show Keys',
   'logsQuery.compactRows': 'Compact rows',
   'logsQuery.fields': 'Fields',
-  'logsQuery.json': 'JSON',
   'logsQuery.newFile': 'New File',
   'logsQuery.rowCountOverTime': 'Row Count Over Time',
   'logsQuery.frequencyDistribution': 'Column Frequency Distribution',
@@ -32,4 +31,5 @@ export default {
   'logsQuery.rowsInCurrentRange': 'rows in current time range',
   'logsQuery.clickToQuery': 'Select time range',
   'logsQuery.loadMoreHint': 'Scroll or click to load more',
+  'logsQuery.limitPlaceholder': 'Enter limit',
 }

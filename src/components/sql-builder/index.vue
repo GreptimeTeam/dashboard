@@ -392,15 +392,15 @@ a-modal(
     { immediate: true }
   )
 
-  const orderOptions = computed(() => [
-    { label: t('sqlBuilder.asc'), value: 'ASC' },
-    { label: t('sqlBuilder.desc'), value: 'DESC' },
-  ])
+  const orderOptions = [
+    { label: 'ASC', value: 'ASC' },
+    { label: 'DESC', value: 'DESC' },
+  ]
 
-  const relationOptions = computed(() => [
-    { label: t('sqlBuilder.and'), value: 'AND' },
-    { label: t('sqlBuilder.or'), value: 'OR' },
-  ])
+  const relationOptions = [
+    { label: 'AND', value: 'AND' },
+    { label: 'OR', value: 'OR' },
+  ]
 
   // Operator mapping based on field data type (similar to log query)
   const operatorMap = {

@@ -3,7 +3,7 @@
   .main
     Codemirror(
       v-model="localSql"
-      placeholder="Please enter the sql."
+      :placeholder="$t('common.enterSql')"
       :style="{ width: '100%', height: config.height, fontSize: '14px' }"
       :extensions="extensions"
       :autofocus="config.autofocus"
@@ -28,7 +28,6 @@
   interface Props {
     modelValue: string
     height?: string
-    placeholder?: string
     disabled?: boolean
     autofocus?: boolean
   }
@@ -36,7 +35,6 @@
   const props = withDefaults(defineProps<Props>(), {
     modelValue: '',
     height: '74px',
-    placeholder: 'Please enter the sql.',
     disabled: false,
     autofocus: true,
   })

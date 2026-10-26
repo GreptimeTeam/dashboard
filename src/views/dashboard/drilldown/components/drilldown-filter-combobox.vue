@@ -132,12 +132,10 @@
   const sqlSignal = computed(() => signal.value === 'logs' || signal.value === 'traces')
 
   const labels = computed(() => ({
-    wipPlaceholder: sqlSignal.value ? t('drilldown.filters.wipPlaceholderKey') : t('drilldown.filters.wipPlaceholder'),
-    keyPlaceholder: sqlSignal.value
-      ? t('drilldown.filters.fieldPlaceholderKey')
-      : t('drilldown.filters.fieldPlaceholder'),
-    operatorPlaceholder: t('drilldown.filters.operatorPlaceholder'),
-    valuePlaceholder: t('drilldown.filters.valuePlaceholder'),
+    wipPlaceholder: sqlSignal.value ? '+ key = value' : '+ label = value',
+    keyPlaceholder: sqlSignal.value ? 'key' : 'label',
+    operatorPlaceholder: '=',
+    valuePlaceholder: 'value',
     noSuggestions: t('drilldown.filters.noSuggestions'),
   }))
 

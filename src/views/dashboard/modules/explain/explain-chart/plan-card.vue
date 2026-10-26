@@ -16,6 +16,7 @@
 
 <script lang="ts" setup name="PlanCard">
   import { computed } from 'vue'
+  import i18n from '@/locale'
   import { formatMetricName, formatTimeValue, formatNumber, formatMetricValue } from '../utils'
 
   const props = defineProps({
@@ -57,7 +58,7 @@
 
   // Node name
   const nodeName = computed(() => {
-    return props.nodeData.name || 'Unknown Operation'
+    return props.nodeData.name || i18n.global.t('explain.unknownOperation')
   })
 
   // Progress bar visibility and data

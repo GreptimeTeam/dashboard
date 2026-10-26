@@ -6,7 +6,7 @@ import { initializeNews } from '@/hooks/news'
 import '@/assets/icons'
 import router from './router'
 import store from './store'
-import i18n from './locale'
+import i18n, { initLocale } from './locale'
 import directive from './directive'
 import Apps from './App.vue'
 import '@arco-design/web-vue/dist/arco.less'
@@ -34,4 +34,7 @@ app.use(directive)
 
 initializeNews()
 
-app.mount('#app')
+// Load the active locale dictionary before first paint so no raw keys flash.
+initLocale().then(() => {
+  app.mount('#app')
+})

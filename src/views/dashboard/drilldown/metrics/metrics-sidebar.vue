@@ -91,10 +91,7 @@
       return t('drilldown.sidebar.loadingCount')
     }
     if (props.filteredCount !== props.poolCount) {
-      return t('drilldown.sidebar.filteredCount', {
-        filtered: props.filteredCount,
-        total: props.poolCount,
-      })
+      return `${props.filteredCount}/${props.poolCount}`
     }
     return t('drilldown.sidebar.totalCount', { count: props.poolCount })
   })

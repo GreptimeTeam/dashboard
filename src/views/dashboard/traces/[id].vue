@@ -7,7 +7,7 @@
           icon-left
       .trace-info
         .trace-title
-          span.operation-name {{ rootSpan?.span_name || 'Unknown Operation' }}
+          span.operation-name {{ rootSpan?.span_name || $t('drilldown.traces.unknownOperation') }}
           a-tag.span-count {{ traceSpans.length }} span{{ traceSpans.length === 1 ? '' : 's' }}
         .trace-id
           span.label Trace ID:
@@ -23,9 +23,9 @@
               v-model="selectedServices"
               multiple
               allow-clear
-              placeholder="Select services to filter"
               style="min-width: 200px"
               size="small"
+              placeholder="Filter services"
             )
               a-option(v-for="service in uniqueServices" :key="service" :value="service")
                 span.service-option

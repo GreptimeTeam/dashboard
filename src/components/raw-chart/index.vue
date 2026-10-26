@@ -6,7 +6,7 @@
       class="chart-xaxis-pan"
       data-raw-chart-axis-pan="1"
       :style="axisPanBox"
-      title="Drag to pan time range"
+      :title="$t('common.dragToPan')"
       @pointerdown="onAxisPointerDown"
     />
   </div>

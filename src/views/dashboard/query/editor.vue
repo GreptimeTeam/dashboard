@@ -67,8 +67,8 @@ a-card.editor-card.editor-card--inset.gpt-query-editor-inset(:bordered="false")
               v-model="promForm.step"
               size="medium"
               hide-button
+              placeholder="step"
               :style="{ width: '180px' }"
-              :placeholder="$t('dashboard.step')"
             )
               template(#prefix) Step
               template(#suffix)
@@ -79,7 +79,7 @@ a-card.editor-card.editor-card--inset.gpt-query-editor-inset(:bordered="false")
                     a-list(size="small" :split="false" :bordered="false")
                       template(#header)
                         | {{ $t('dashboard.supportedDurations') }}
-                      a-list-item(v-for="item of durations" :key="item")
+                      a-list-item(v-for="item of durationsList" :key="item")
                         a-typography-text(code) {{ item.key }}
                         span.ml-4 {{ item.value }}
                       a-list-item
@@ -141,8 +141,8 @@ a-resize-box.panel-resize(v-model:height="editorHeight" :directions="['bottom']"
           )
 a-modal(
   v-model:visible="importExplainModalVisible"
-  title="Import Explain Result JSON"
   modal-class="import-explain-modal"
+  :title="$t('explain.importModalTitle')"
   :width="800"
   @ok="handleImportExplain"
 )
@@ -163,13 +163,19 @@ a-modal(
   import { acceptCompletion } from '@codemirror/autocomplete'
   import type { PromForm } from '@/store/modules/code-run/types'
   import { useStorage } from '@vueuse/core'
+  import { useI18n } from 'vue-i18n'
   import { sqlFormatter, parseSqlStatements, findStatementAtPosition, promqlFormatter } from '@/utils/sql'
   import { Message } from '@arco-design/web-vue'
   import QueryToolbarRunButton from '@/components/query-toolbar-run-button/index.vue'
   import { getExplainResultKeyCount } from '@/services/code-run'
   import { useQuerySession } from './use-query-session'
+  import { durationExamples, timeOptionsArray, getQueryTimeMap, getDurations } from '../config'
 
-  import { durations, durationExamples, timeOptionsArray, queryTimeMap } from '../config'
+  const { t } = useI18n()
+
+  // Locale-aware replacements for the static config tables
+  const queryTimeMap = computed(() => getQueryTimeMap(t))
+  const durationsList = computed(() => getDurations(t))
 
   export interface Props {
     spellcheck?: boolean
@@ -259,9 +265,9 @@ a-modal(
       importExplainForm.explainJson = ''
       importExplainModalVisible.value = false
 
-      Message.success('Explain result imported successfully')
+      Message.success(t('explain.imported'))
     } catch (error) {
-      Message.error(`Failed to parse explain result: ${error instanceof Error ? error.message : String(error)}`)
+      Message.error(t('explain.parseFailed', { msg: error instanceof Error ? error.message : String(error) }))
     }
   }
 
@@ -441,11 +447,12 @@ a-modal(
     )
   })
 
-  // TODO: i18n config
-  const queryTimeOptions = timeOptionsArray.map((value) => ({
-    value,
-    label: `Last ${value} minutes`,
-  }))
+  const queryTimeOptions = computed(() =>
+    timeOptionsArray.map((value) => ({
+      value,
+      label: getQueryTimeMap(t)[value],
+    }))
+  )
 
   const myKeymap = keymap.of([
     {
@@ -503,10 +510,10 @@ a-modal(
         if (jsonData.output && jsonData.output[0] && jsonData.output[0].records) {
           handleImportExplain()
         } else {
-          Message.error('Invalid JSON format. Please ensure it matches the expected structure.')
+          Message.error(t('explain.invalidJson'))
         }
       } catch (error) {
-        Message.error(`Failed to parse JSON: ${error instanceof Error ? error.message : String(error)}`)
+        Message.error(t('explain.parseJsonFailed', { msg: error instanceof Error ? error.message : String(error) }))
       }
     }
   }

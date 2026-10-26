@@ -3,6 +3,7 @@
 > 产品代号：Explore（内部） / Drilldown
 > 路由：`/dashboard/drilldown`
 > 三信号语义（能拿什么 / 从哪拿）：[semantics.md](./semantics.md)
+> 语义来源对照（A–F 可查入口 + Metrics/Logs/Traces）：[semantic-sources.md](./semantic-sources.md)
 
 ---
 

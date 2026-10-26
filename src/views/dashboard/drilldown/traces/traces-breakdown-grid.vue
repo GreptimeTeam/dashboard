@@ -10,9 +10,9 @@
         :placeholder="t('drilldown.traces.breakdownByAttrPlaceholder')"
         :loading="loadingAttrs"
       )
-        a-optgroup(:label="t('drilldown.traces.breakdownAttrGroupResource')")
+        a-optgroup(label="Resource")
           a-option(v-for="attr in resourceAttrs" :key="attr.column" :value="attr.column") {{ attr.label }}
-        a-optgroup(:label="t('drilldown.traces.breakdownAttrGroupSpan')")
+        a-optgroup(label="Span")
           a-option(v-for="attr in spanAttrs" :key="attr.column" :value="attr.column") {{ attr.label }}
 
   a-spin(style="width: 100%" :loading="loading")

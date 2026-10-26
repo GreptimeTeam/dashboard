@@ -4,7 +4,10 @@
     a-card.drilldown-top-card(:bordered="false")
       DrilldownTopBar
 
-    .drilldown-body.new-layout.new-layout--workspace(v-if="signal === 'metrics'")
+    .drilldown-body.new-layout.new-layout--workspace(v-if="serviceMapActive")
+      ServiceMap
+
+    .drilldown-body.new-layout.new-layout--workspace(v-else-if="signal === 'metrics'")
       keep-alive
         MetricsOverview(v-if="!drawerVisible")
       .drilldown-detail-shell(v-if="drawerVisible")
@@ -46,9 +49,9 @@
       DrilldownDrawer(
         popup-container=".drilldown-body--logs"
         variant="stacked"
+        subtitle="Trace Timeline"
         :visible="tracesGanttVisible"
         :breadcrumbs="logsGanttCrumbs"
-        :subtitle="t('drilldown.traces.ganttDrawerTitle')"
         @close="closeTracesGanttDrawer"
       )
         TracesGantt(v-if="tracesGanttVisible")
@@ -78,9 +81,9 @@
       DrilldownDrawer(
         popup-container=".drilldown-body--traces"
         variant="stacked"
+        subtitle="Trace Timeline"
         :visible="tracesGanttVisible"
         :breadcrumbs="tracesGanttCrumbs"
-        :subtitle="t('drilldown.traces.ganttDrawerTitle')"
         @close="closeTracesGanttDrawer"
       )
         TracesGantt(v-if="tracesGanttVisible")
@@ -124,6 +127,7 @@
   import LogsDetailFilters from './logs/logs-detail-filters.vue'
   import TracesHome from './traces/traces-home.vue'
   import TracesGantt from './traces/traces-gantt.vue'
+  import ServiceMap from './service-map/index.vue'
 
   defineOptions({
     name: 'Drilldown',
@@ -141,16 +145,13 @@
   urlSync.initializeFromQuery()
 
   const { signal } = ctx.connection
+  const serviceMapActive = computed(() => route.query.view === 'service-map')
   const { logsTab } = ctx.ui
   const { setLogsTab } = ctx.actions
-  const logsDetailTabLabels = {
-    logs: 'drilldown.logs.logsTab',
-    labels: 'drilldown.logs.labelsTab',
-  } as const
   const logsDetailTabs = computed(() =>
     LOGS_DETAIL_TABS.map((value) => ({
       value,
-      label: t(logsDetailTabLabels[value]),
+      label: value === 'logs' ? 'Logs' : t('drilldown.logs.labelsTab'),
     }))
   )
 

@@ -40,11 +40,7 @@ article.metric-catalog-card.drilldown-card(ref="targetRef")
   import { useDrilldownContext } from '@/observability/context'
   import { drilldownQueriesEqual } from '@/observability/drilldown-url-history'
   import { inferMetricKind } from '@/observability/semantics'
-  import {
-    metricKindLabelKey,
-    METRIC_PANEL_CHART_HEIGHT,
-    METRIC_PANEL_HEIGHT,
-  } from '@/observability/metrics/panel-stats'
+  import { metricKindLabel, METRIC_PANEL_CHART_HEIGHT, METRIC_PANEL_HEIGHT } from '@/observability/metrics/panel-stats'
   import { rememberRecentMetric } from '@/observability/metrics/recent'
   import useLazyPanelQuery from '@/observability/use-lazy-panel-query'
   import useMetricSparkline from '@/observability/use-metric-sparkline'
@@ -84,7 +80,7 @@ article.metric-catalog-card.drilldown-card(ref="targetRef")
     unsupported,
   } = useMetricSparkline(ctx, metricName, hasBeenVisible, colorIndex)
 
-  const kindLabel = computed(() => t(metricKindLabelKey(inferMetricKind(props.metricName))))
+  const kindLabel = computed(() => metricKindLabel(inferMetricKind(props.metricName)))
   const isHeatmap = computed(() => panelType.value === 'heatmap')
   const chartRenderKey = computed(
     () => `${props.metricName}:${panelType.value}:${promqlQuery.value}:${props.colorIndex ?? 0}`

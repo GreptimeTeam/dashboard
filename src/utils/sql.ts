@@ -1,6 +1,7 @@
 import { format as sqlFormat } from 'sql-formatter'
 import { formatPromqlQuery, type PromqlFormatResponse } from '@/api/formatter'
 import { Message } from '@arco-design/web-vue'
+import i18n from '@/locale'
 
 export const parseSqlStatements = (sql: string): { text: string; start: number; end: number }[] => {
   if (!sql) return []
@@ -138,7 +139,7 @@ export const sqlFormatter = (code: string) => {
       formatted = formatted.endsWith(';') ? formatted : `${formatted};`
     } catch (formattingError) {
       console.warn(`Failed to format SQL statement: ${formattingError}`)
-      Message.warning('Failed to format. Please check console for details.')
+      Message.warning(i18n.global.t('sql.formatFailed'))
       formatted = trimmed.endsWith(';') ? trimmed : `${trimmed};`
     }
     return formatted

@@ -12,11 +12,14 @@ VCharts(
   import { ref, computed, watch, shallowRef, nextTick } from 'vue'
   import VCharts from 'vue-echarts'
   import * as echarts from 'echarts'
+  import { useI18n } from 'vue-i18n'
   import editorAPI from '@/api/editor'
   import type { QueryState } from '@/types/query'
   import { replaceTimePlaceholders, getTableRefForSql } from '@/utils/sql'
   import { convertTimestampToMilliseconds } from '@/utils/date-time'
   import { useDateTimeFormat } from '@/hooks'
+
+  const { t } = useI18n()
 
   interface Props {
     queryState: QueryState
@@ -122,7 +125,7 @@ VCharts(
           left: 'center',
           top: 'middle',
           style: {
-            text: data.value.length ? '' : 'No data',
+            text: data.value.length ? '' : t('common.noData'),
             fill: '#999',
             fontSize: 14,
             fontFamily: 'Geist Mono, ui-monospace, monospace',
