@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   absorbTinyCommunities,
-  buildServiceMapFocusLayout,
   buildServiceMapOverviewLayout,
   fitLayoutToViewport,
   heapIntrinsicSize,
@@ -202,26 +201,36 @@ describe('buildServiceMapOverviewLayout', () => {
   })
 })
 
-describe('buildServiceMapFocusLayout', () => {
-  it('places upstream callers left and downstream callees right of the focus node', () => {
-    const frontend = service('frontend')
-    const gateway = service('gateway')
+describe('inspect neighborhood uses overview layout rules', () => {
+  it('orders heaps left→right by call depth on an inspect-sized subgraph', () => {
+    // Inspect only changes which nodes are shown; layout is the overview algorithm.
+    // Two size-3 heaps (immune to tiny absorb) linked by a weak hop → depth left→right.
+    const loadgen = service('loadgen')
+    const proxy = service('proxy')
+    const web = service('web')
     const checkout = service('checkout')
-    const layout = buildServiceMapFocusLayout(
-      gateway.key,
-      [frontend, gateway, checkout],
-      [edge(frontend, gateway, 40), edge(gateway, checkout, 30)],
-      800,
+    const payment = service('payment')
+    const email = service('email')
+    const layout = buildServiceMapOverviewLayout(
+      [loadgen, proxy, web, checkout, payment, email],
+      [
+        edge(loadgen, proxy, 40),
+        edge(proxy, web, 35),
+        edge(loadgen, web, 30),
+        edge(web, checkout, 4),
+        edge(checkout, payment, 50),
+        edge(checkout, email, 45),
+        edge(payment, email, 40),
+      ],
+      1000,
       600
     )
-
-    expect(layout.get(gateway.key)).toMatchObject({ x: 400, y: 300, community: 0 })
-    const frontendPos = layout.get(frontend.key)
-    const checkoutPos = layout.get(checkout.key)
-    expect(frontendPos).toBeDefined()
-    expect(checkoutPos).toBeDefined()
-    if (!frontendPos || !checkoutPos) return
-    expect(frontendPos.x).toBeLessThan(400)
-    expect(checkoutPos.x).toBeGreaterThan(400)
+    const leftX = Math.max(layout.get(loadgen.key)?.x ?? 0, layout.get(proxy.key)?.x ?? 0, layout.get(web.key)?.x ?? 0)
+    const rightX = Math.min(
+      layout.get(checkout.key)?.x ?? Infinity,
+      layout.get(payment.key)?.x ?? Infinity,
+      layout.get(email.key)?.x ?? Infinity
+    )
+    expect(leftX).toBeLessThan(rightX)
   })
 })

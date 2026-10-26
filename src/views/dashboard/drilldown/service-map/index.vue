@@ -143,10 +143,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     buildServiceMapFacets,
     buildServiceMapScopeFacet,
   } from '@/observability/adapters/service-map/graph'
-  import {
-    buildServiceMapFocusLayout,
-    buildServiceMapOverviewLayout,
-  } from '@/observability/adapters/service-map/layout'
+  import { buildServiceMapOverviewLayout } from '@/observability/adapters/service-map/layout'
   import { aggregateNodeCallStats } from '@/observability/adapters/service-map/metrics'
   import type { ServiceMapFilters, ServiceMapResult } from '@/observability/adapters/service-map/types'
   import { buildServiceMapChartOption, buildServiceMapSeries, type ServiceMapChartInput } from './chart-option'
@@ -261,11 +258,9 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     const maxWidth = Math.max(480, Math.min(880, 280 + count * 72))
     return { maxWidth: `${maxWidth}px` }
   })
+  // Inspect and overview share one layout rule; neighborhood filtering is in display-graph.
   const communityLayout = computed(() => {
     const { width, height } = chartSize.value
-    if (inspectedNodeKey.value) {
-      return buildServiceMapFocusLayout(inspectedNodeKey.value, graphNodes.value, graphEdges.value, width, height)
-    }
     return buildServiceMapOverviewLayout(graphNodes.value, graphEdges.value, width, height)
   })
   const graphNodeMap = computed(() => new Map(graphNodes.value.map((node) => [node.key, node])))
