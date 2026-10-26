@@ -257,18 +257,26 @@ a-card.metrics-chart(:bordered="false")
     const labelMapsInOrder: Record<string, string>[] = []
     const fullNamesInOrder: string[] = []
 
-    // Collect metric names, label maps, and full names in order
+    // Collect metric names, label maps, and full names in order.
+    // Aggregations / binary ops often drop __name__; then use labels only (no "unknown").
+    const formatLabelStr = (labels: Record<string, string>) =>
+      Object.entries(labels)
+        .map(([k, v]) => `${k}="${v}"`)
+        .join(', ')
+
+    const formatFullName = (metricName: string, labels: Record<string, string>) => {
+      const labelStr = formatLabelStr(labels)
+      if (metricName) return labelStr ? `${metricName}{${labelStr}}` : metricName
+      return labelStr ? `{${labelStr}}` : 'series'
+    }
+
     seriesData.value.forEach((item) => {
-      const metricName = item.metric.__name__ || 'unknown'
+      const metricName = item.metric.__name__ || ''
       const labels = { ...item.metric }
       delete labels.__name__
       metricNamesInOrder.push(metricName)
       labelMapsInOrder.push(labels)
-
-      const labelStr = Object.entries(labels)
-        .map(([k, v]) => `${k}="${v}"`)
-        .join(', ')
-      fullNamesInOrder.push(labelStr ? `${metricName}{${labelStr}}` : metricName)
+      fullNamesInOrder.push(formatFullName(metricName, labels))
     })
 
     // Label keys whose values differ across series (shared labels are hidden in compact mode)
@@ -293,14 +301,18 @@ a-card.metrics-chart(:bordered="false")
       return diff
     })()
 
-    // Helper to build compact display name using only differing labels
+    // Compact: differing labels only. Without __name__, fall back to full label set.
     const buildDisplayName = (idx: number): string => {
-      const metricName = metricNamesInOrder[idx] || 'unknown'
+      const metricName = metricNamesInOrder[idx] || ''
       const lm = labelMapsInOrder[idx] || {}
       const pairs: string[] = []
       Object.keys(lm).forEach((k) => {
         if (differingKeys.has(k)) pairs.push(`${k}="${lm[k]}"`)
       })
+      if (!metricName) {
+        if (pairs.length > 0) return `{${pairs.join(', ')}}`
+        return fullNamesInOrder[idx]
+      }
       const diffStr = pairs.length > 0 ? `{${pairs.join(', ')}}` : ''
       return `${metricName}${diffStr}`
     }
