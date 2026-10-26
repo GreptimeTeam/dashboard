@@ -35,7 +35,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
           a-option(v-for="option in serviceOptions" :key="option.value" :value="option.value") {{ option.label }}
         span.service-map-counts(v-if="!loading")
           | {{ t('drilldown.serviceMap.counts', { nodes: graphNodes.length, edges: graphEdges.length }) }}
-        span.service-map-counts(v-else-if="visibleNodes.length")
+        span.service-map-counts(v-else-if="graphNodes.length")
           a-spin(:size="18")
           | {{ t('drilldown.serviceMap.loading') }}
       .drilldown-toolbar__right(v-if="inspectedNodeKey && selectedNode")
@@ -63,12 +63,12 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
         :class="{ 'service-map-canvas--focused': !!focusCanvasStyle }"
         :style="focusCanvasStyle"
       )
-        .service-map-state(v-if="loading && !visibleNodes.length")
+        .service-map-state(v-if="loading && !graphNodes.length")
           a-spin(:size="32")
           span {{ t('drilldown.serviceMap.loading') }}
-        a-empty.service-map-state(v-else-if="!loading && !visibleNodes.length" :description="emptyDescription")
+        a-empty.service-map-state(v-else-if="!loading && !graphNodes.length" :description="emptyDescription")
         VChart.service-map-chart(
-          v-if="visibleNodes.length"
+          v-if="graphNodes.length"
           ref="chartRef"
           :option="chartOption"
           :autoresize="true"
@@ -101,7 +101,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
             @click="openSignal('logs')"
           )
             | {{ t('drilldown.serviceMap.viewLogs') }}
-        .service-map-legend(v-if="visibleNodes.length")
+        .service-map-legend(v-if="graphNodes.length")
           .service-map-legend__group
             span.service-map-legend__item
               i.service-map-legend__service(
@@ -264,7 +264,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     return buildServiceMapOverviewLayout(graphNodes.value, graphEdges.value, width, height)
   })
   const graphNodeMap = computed(() => new Map(graphNodes.value.map((node) => [node.key, node])))
-  const visibleNodes = computed(() => graphNodes.value)
   const hasDatabaseEndpoints = computed(() =>
     graphNodes.value.some((node) => node.virtual && node.connectionType === 'database')
   )

@@ -30,14 +30,10 @@ export default {
     'Database dependency inferred from db.* peer attributes; usually no pairable server span.',
   'drilldown.serviceMap.inferredNodeHint':
     'Dependency inferred from outbound calls; no matching observed service entity yet (often an uninstrumented peer).',
-  'drilldown.serviceMap.incoming': 'Upstream callers',
-  'drilldown.serviceMap.outgoing': 'Downstream dependencies',
   'drilldown.serviceMap.incomingFlow': 'Inbound',
   'drilldown.serviceMap.outgoingFlow': 'Outbound',
-  'drilldown.serviceMap.noDependencies': 'No dependencies',
   'drilldown.serviceMap.viewTraces': 'View Traces',
   'drilldown.serviceMap.viewLogs': 'View Logs',
-  'drilldown.serviceMap.callEdge': 'Call relationship',
   'drilldown.serviceMap.requests': 'Requests',
   'drilldown.serviceMap.requestRate': 'Request rate',
   'drilldown.serviceMap.errors': 'Errors',
@@ -47,8 +43,6 @@ export default {
   'drilldown.serviceMap.unmatched': 'Inferred calls',
   'drilldown.serviceMap.inferredCallRate': 'Inferred call rate',
   'drilldown.serviceMap.endpointKind': 'Type',
-  'drilldown.serviceMap.pairedPopulationHint':
-    'Error rate and latency use CLIENT↔SERVER paired requests; client-only traffic is counted as inferred calls.',
   'drilldown.signals.logsPlaceholder': 'Logs in Signals Explore is coming soon.',
   'drilldown.signals.tracesPlaceholder': 'Traces in Signals Explore is coming soon.',
   'drilldown.filters.title': 'Filters',
