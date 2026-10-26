@@ -1,51 +1,15 @@
 import editorApi from '@/api/editor'
-import type { DrilldownContext } from '../context'
+import type { DrilldownContext } from '../../context'
 import {
   buildServiceMapEntitiesSql,
   buildServiceMapInstanceCountsSql,
   buildServiceMapRelationshipsSql,
-} from '../traces/service-map-queries'
+} from '../../traces/service-map-queries'
+import { mergeEdges } from './graph'
+import type { ServiceMapConnectionType, ServiceMapEdge, ServiceMapNode, ServiceMapResult } from './types'
 
 const SERVICE_MAP_NODE_LIMIT = 100
 const SERVICE_MAP_EDGE_LIMIT = 250
-
-/** Greptime `calls.attributes.connection_type` for inferred peers. */
-export type ServiceMapConnectionType = 'database' | 'virtual_node' | string
-
-export interface ServiceMapNode {
-  key: string
-  type: string
-  id: string
-  label: string
-  serviceValue?: string
-  scope?: string
-  descriptive?: Record<string, unknown> | string | null
-  sourceTables: string[]
-  instanceCount: number
-  groupAttributes: Record<string, string>
-  virtual: boolean
-  /** Present on inferred peers when the edge attributes name a connection type. */
-  connectionType?: ServiceMapConnectionType
-}
-
-export interface ServiceMapEdge {
-  key: string
-  source: string
-  target: string
-  requests: number
-  errors: number
-  unmatched: number
-  durationSum: number
-  durationCount: number
-  durationMax: number
-  connectionType?: ServiceMapConnectionType
-}
-
-export interface ServiceMapResult {
-  nodes: ServiceMapNode[]
-  edges: ServiceMapEdge[]
-  truncated: boolean
-}
 
 interface QueryRecords {
   schema?: { column_schemas?: Array<{ name: string }> }
@@ -188,38 +152,11 @@ export function foldVirtualPeersIntoServices(
   })
   if (!remap.size) return { nodes, edges }
 
-  const aggregates = new Map<string, ServiceMapEdge>()
-  edges.forEach((edge) => {
-    const source = remap.get(edge.source) ?? edge.source
-    const target = remap.get(edge.target) ?? edge.target
-    if (source === target) return
-    const key = `${source}\0${target}`
-    const aggregate = aggregates.get(key) ?? {
-      key,
-      source,
-      target,
-      requests: 0,
-      errors: 0,
-      unmatched: 0,
-      durationSum: 0,
-      durationCount: 0,
-      durationMax: 0,
-      connectionType: edge.connectionType,
-    }
-    aggregate.requests += edge.requests
-    aggregate.errors += edge.errors
-    aggregate.unmatched += edge.unmatched
-    aggregate.durationSum += edge.durationSum
-    aggregate.durationCount += edge.durationCount
-    aggregate.durationMax = Math.max(aggregate.durationMax, edge.durationMax)
-    aggregate.connectionType ||= edge.connectionType
-    aggregates.set(key, aggregate)
-  })
-
-  const kept = new Set([...aggregates.values()].flatMap((edge) => [edge.source, edge.target]))
+  const merged = mergeEdges(edges, (key) => remap.get(key) ?? key)
+  const kept = new Set(merged.flatMap((edge) => [edge.source, edge.target]))
   return {
     nodes: nodes.filter((node) => !remap.has(node.key) && (kept.has(node.key) || !node.virtual)),
-    edges: [...aggregates.values()],
+    edges: merged,
   }
 }
 
@@ -307,6 +244,40 @@ function edgesFromRows(rows: Array<Record<string, unknown>>, nodes: Map<string, 
   return [...edges.values()]
 }
 
+/**
+ * Keep the heaviest edges within the node/edge display limits, then top up with
+ * standalone services. `nodes` must already contain every edge endpoint.
+ */
+export function limitServiceMapGraph(nodes: Map<string, ServiceMapNode>, edges: ServiceMapEdge[]): ServiceMapResult {
+  const rankedEdges = [...edges].sort((a, b) => b.requests - a.requests || b.unmatched - a.unmatched)
+  const includedNodes = new Set<string>()
+  const limitedEdges: ServiceMapEdge[] = []
+  rankedEdges.forEach((edge) => {
+    if (limitedEdges.length >= SERVICE_MAP_EDGE_LIMIT) return
+    const newEndpointCount = Number(!includedNodes.has(edge.source)) + Number(!includedNodes.has(edge.target))
+    if (includedNodes.size + newEndpointCount > SERVICE_MAP_NODE_LIMIT) return
+    includedNodes.add(edge.source)
+    includedNodes.add(edge.target)
+    limitedEdges.push(edge)
+  })
+  // Keep a bounded sample of standalone services too, even when they have no calls.
+  ;[...nodes.values()].some((node) => {
+    if (includedNodes.size >= SERVICE_MAP_NODE_LIMIT) return true
+    includedNodes.add(node.key)
+    return false
+  })
+  const visibleNodes = [...includedNodes]
+    .map((key) => nodes.get(key))
+    .filter((node): node is ServiceMapNode => Boolean(node))
+  return {
+    nodes: visibleNodes,
+    edges: limitedEdges,
+    // Snapshot rows can repeat the same services many times. Only warn when the
+    // graph itself is clipped by the client-side node/edge display limits.
+    truncated: rankedEdges.length > SERVICE_MAP_EDGE_LIMIT || nodes.size > SERVICE_MAP_NODE_LIMIT,
+  }
+}
+
 export async function fetchServiceMap(
   ctx: DrilldownContext,
   onEntitiesLoaded?: (partial: ServiceMapResult) => void
@@ -338,36 +309,9 @@ export async function fetchServiceMap(
   const entityRows = recordsToObjects(entitiesResponse?.output?.[0]?.records)
   const relationshipRows = recordsToObjects(relationshipsResponse?.output?.[0]?.records)
   const nodes = nodesFromEntities(entityRows)
-  const rankedEdges = edgesFromRows(relationshipRows, nodes).sort(
-    (a, b) => b.requests - a.requests || b.unmatched - a.unmatched
-  )
-  const includedNodes = new Set<string>()
-  const limitedEdges: ServiceMapEdge[] = []
-  rankedEdges.forEach((edge) => {
-    if (limitedEdges.length >= SERVICE_MAP_EDGE_LIMIT) return
-    const newEndpointCount = Number(!includedNodes.has(edge.source)) + Number(!includedNodes.has(edge.target))
-    if (includedNodes.size + newEndpointCount > SERVICE_MAP_NODE_LIMIT) return
-    includedNodes.add(edge.source)
-    includedNodes.add(edge.target)
-    limitedEdges.push(edge)
-  })
-  // Keep a bounded sample of standalone services too, even when they have no calls.
-  ;[...nodes.values()].some((node) => {
-    if (includedNodes.size >= SERVICE_MAP_NODE_LIMIT) return true
-    includedNodes.add(node.key)
-    return false
-  })
-  const visibleNodes = [...includedNodes]
-    .map((key) => nodes.get(key))
-    .filter((node): node is ServiceMapNode => Boolean(node))
-  const folded = foldVirtualPeersIntoServices(visibleNodes, limitedEdges)
-  return {
-    nodes: folded.nodes,
-    edges: folded.edges,
-    // Snapshot rows can repeat the same services many times. Only warn when the
-    // graph itself is clipped by the client-side node/edge display limits.
-    truncated: rankedEdges.length > SERVICE_MAP_EDGE_LIMIT || nodes.size > SERVICE_MAP_NODE_LIMIT,
-  }
+  const limited = limitServiceMapGraph(nodes, edgesFromRows(relationshipRows, nodes))
+  const folded = foldVirtualPeersIntoServices(limited.nodes, limited.edges)
+  return { nodes: folded.nodes, edges: folded.edges, truncated: limited.truncated }
 }
 
 export async function fetchServiceMapInstanceCount(ctx: DrilldownContext, serviceId: string): Promise<number> {

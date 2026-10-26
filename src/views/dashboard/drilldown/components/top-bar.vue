@@ -102,6 +102,7 @@
         view: undefined,
         signal: value,
         serviceMapSearch: undefined,
+        serviceMapScope: undefined,
         serviceMapFilters: undefined,
       },
     })
