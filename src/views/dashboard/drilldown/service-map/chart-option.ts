@@ -47,10 +47,10 @@ function healthBorderColor(theme: ServiceMapTheme, health: ServiceMapNodeHealth)
 /** Soften edge chroma by default; full saturation when the edge is in the active flow. */
 function edgeStrokeColor(theme: ServiceMapTheme, edge: ServiceMapEdge, emphasize = false): string {
   if (edge.requests <= 0) {
-    return emphasize ? theme.external : withAlpha(theme.external, 0.55)
+    return emphasize ? theme.external : withAlpha(theme.external, 0.65)
   }
   if (edge.errors / edge.requests >= SERVICE_MAP_ERROR_RATE_THRESHOLD) {
-    return emphasize ? theme.danger : withAlpha(theme.danger, 0.45)
+    return emphasize ? theme.danger : withAlpha(theme.danger, 0.55)
   }
   return theme.edge
 }
@@ -68,12 +68,9 @@ export function buildServiceMapSeries(input: ServiceMapChartInput, activeKey = '
         (edge.source === activeKey && edge.target === node.key) ||
         (edge.target === activeKey && edge.source === node.key)
     )
+    // Active + neighbors stay fully opaque; only the rest of the graph dims.
     let opacity = 1
-    if (activeKey) {
-      if (isActive) opacity = 0.78
-      else if (connectedToActive) opacity = 1
-      else opacity = 0.18
-    }
+    if (activeKey && !isActive && !connectedToActive) opacity = 0.22
     const serviceColor = theme.palette[0]
     const isDatabase = node.virtual && node.connectionType === 'database'
     const nodeStats = stats.get(node.key)
@@ -88,7 +85,7 @@ export function buildServiceMapSeries(input: ServiceMapChartInput, activeKey = '
     let itemStyle: Record<string, string | number> = {
       color: serviceColor.fill,
       borderColor: healthBorderColor(theme, health),
-      borderWidth: isActive || node.members ? 3 : 2.5,
+      borderWidth: isActive || node.members ? 2.5 : 2,
       opacity,
     }
     if (isServiceGlyph) {
@@ -121,7 +118,7 @@ export function buildServiceMapSeries(input: ServiceMapChartInput, activeKey = '
       itemStyle = {
         color: withAlpha(theme.database, isDark ? 0.22 : 0.12),
         borderColor: theme.database,
-        borderWidth: isActive ? 2.5 : 2,
+        borderWidth: isActive ? 2 : 1.5,
         borderType: 'dashed',
         opacity,
       }
@@ -129,7 +126,7 @@ export function buildServiceMapSeries(input: ServiceMapChartInput, activeKey = '
       itemStyle = {
         color: withAlpha(theme.external, isDark ? 0.2 : 0.1),
         borderColor: theme.external,
-        borderWidth: isActive ? 2.5 : 2,
+        borderWidth: isActive ? 2 : 1.5,
         borderType: 'dashed',
         opacity,
       }
@@ -150,15 +147,16 @@ export function buildServiceMapSeries(input: ServiceMapChartInput, activeKey = '
       label: {
         show: true,
         position: 'bottom',
-        distance: isServiceGlyph ? 12 : 10,
+        distance: isServiceGlyph ? 10 : 8,
         formatter: node.label,
         color: theme.text,
         opacity,
-        fontSize: isActive ? 12 : 11,
-        fontWeight: isActive ? 600 : 400,
-        lineHeight: 15,
+        // Name is primary identity — heavier than on-disk rates.
+        fontSize: isActive ? 13 : 12,
+        fontWeight: isActive ? 600 : 500,
+        lineHeight: 16,
         // Max width only — short names stay natural; long names wrap.
-        width: 120,
+        width: 128,
         overflow: 'break',
         // Draw above edges so titles stay readable when lines cross.
         z2: 10,
@@ -173,15 +171,15 @@ export function buildServiceMapSeries(input: ServiceMapChartInput, activeKey = '
     const targetCommunity = layout.get(edge.target)?.community
     const sameGroup =
       sourceCommunity !== undefined && targetCommunity !== undefined && sourceCommunity === targetCommunity
-    // Cross-heap edges stay quieter so community clusters read first (Datadog-like).
-    let opacity = sameGroup ? 0.55 : 0.24
-    if (unmatchedOnly) opacity = 0.32
-    if (activeKey) opacity = isFlowing ? 0.95 : 0.08
+    // Cross-heap edges stay quieter so communities read first, but stay visible on light panels.
+    let opacity = sameGroup ? 0.72 : 0.42
+    if (unmatchedOnly) opacity = 0.5
+    if (activeKey) opacity = isFlowing ? 1 : 0.12
     // Keep curveness stable under node-hover flow — changing it jumps the edge path.
     const curveness = sameGroup ? 0.03 : 0.16
-    let width = 0.55 + Math.min(0.75, Math.log2(traffic + 1) * 0.15)
-    if (sameGroup) width = 1 + Math.min(1.2, Math.log2(traffic + 1) * 0.22)
-    if (isFlowing) width = 1.8
+    let width = 1 + Math.min(1.1, Math.log2(traffic + 1) * 0.18)
+    if (sameGroup) width = 1.25 + Math.min(1.35, Math.log2(traffic + 1) * 0.24)
+    if (isFlowing) width = 2.2
     return {
       id: edge.key,
       source: edge.source,
@@ -191,7 +189,7 @@ export function buildServiceMapSeries(input: ServiceMapChartInput, activeKey = '
       // Non-none fromSymbol is required for ECharts adjustEdge to clip at the source border
       // (otherwise lines leave the node center and look reverse-directed).
       symbol: ['circle', 'arrow'],
-      symbolSize: [0, isFlowing ? 10 : 8],
+      symbolSize: [0, isFlowing ? 11 : 9],
       lineStyle: {
         width,
         color: edgeStrokeColor(theme, edge, isFlowing),

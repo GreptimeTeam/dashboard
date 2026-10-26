@@ -38,7 +38,8 @@ export function resolveServiceMapTheme(
     text: dark ? '#f4f0fa' : readToken('--gpt-text-primary', '#473460'),
     surface: dark ? '#25212b' : readToken('--gpt-bg-panel', '#ffffff'),
     border: dark ? 'rgba(255,255,255,.24)' : readToken('--gpt-border-strong', 'rgba(71,52,96,.15)'),
-    edge: dark ? 'rgba(205, 196, 218, 0.62)' : 'rgba(71, 52, 96, 0.42)',
+    // Strong enough to read call direction on a light panel without competing with node titles.
+    edge: dark ? 'rgba(205, 196, 218, 0.72)' : 'rgba(71, 52, 96, 0.55)',
     danger: readToken('--gpt-danger', '#ef4444'),
     warn: readToken('--gpt-warning', '#f59e0b'),
     ok: readToken('--gpt-success', '#22c55e'),

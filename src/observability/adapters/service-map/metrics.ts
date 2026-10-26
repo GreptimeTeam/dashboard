@@ -197,14 +197,15 @@ export function buildServiceMapNodeSymbolDataUrl(options: ServiceMapNodeSymbolOp
   const size = Math.max(28, Math.round(options.size))
   const cx = size / 2
   const cy = size / 2
-  // Arc sits on the outer rim; fill butts up against it so there is no white moat.
-  const stroke = Math.max(2.5, size * (options.emphasized ? 0.09 : 0.075))
+  // Thin rim encodes health without overpowering the service name below the node.
+  const stroke = Math.max(2, size * (options.emphasized ? 0.065 : 0.05))
   const ringR = size * 0.5 - stroke * 0.5
   const diskR = Math.max(stroke, ringR - stroke * 0.5)
   const circumference = 2 * Math.PI * ringR
   const { okLen, errorLen } = serviceMapArcDashLengths(options.errorRatio, circumference)
-  const fontMain = fitNodeStatFontSize(size, diskR, options.mainStat, 0.22, 7)
-  const fontSec = fitNodeStatFontSize(size, diskR, options.secondaryStat, 0.165, 6)
+  // Keep on-disk stats compact so title hierarchy stays name > rate > error%.
+  const fontMain = fitNodeStatFontSize(size, diskR, options.mainStat, 0.19, 7)
+  const fontSec = fitNodeStatFontSize(size, diskR, options.secondaryStat, 0.14, 6)
   const mainY = cy - fontSec * 0.15
   const secY = cy + fontMain * 0.7
   const esc = escapeHtml
@@ -221,7 +222,7 @@ export function buildServiceMapNodeSymbolDataUrl(options: ServiceMapNodeSymbolOp
   <text x="${cx}" y="${secY}" text-anchor="middle" dominant-baseline="middle"
     fill="${esc(
       options.textColor
-    )}" font-size="${fontSec}" font-weight="500" font-family="system-ui,sans-serif" opacity="0.85">${esc(
+    )}" font-size="${fontSec}" font-weight="500" font-family="system-ui,sans-serif" opacity="0.72">${esc(
     options.secondaryStat
   )}</text>
 </svg>`

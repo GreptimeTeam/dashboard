@@ -57,9 +57,11 @@ describe('buildServiceMapSeries', () => {
     const resting = buildServiceMapSeries(input(nodes, edges))
     const { nodes: data, links } = buildServiceMapSeries(input(nodes, edges), 'b')
     const opacity = Object.fromEntries(data.map((item) => [item.id, item.itemStyle.opacity]))
-    expect(opacity).toEqual({ a: 1, b: 0.78, c: 1, db: 0.18 })
-    expect(links.map((item) => item.lineStyle.opacity)).toEqual([0.95, 0.95, 0.08])
-    expect(links.slice(0, 2).every((item) => item.lineStyle.type === 'dashed' && item.lineStyle.width === 1.8)).toBe(
+    // Active + neighbors stay fully opaque; only the rest dims.
+    expect(opacity).toEqual({ a: 1, b: 1, c: 1, db: 0.22 })
+    expect(data.find((item) => item.id === 'b')?.label).toMatchObject({ fontSize: 13, fontWeight: 600, opacity: 1 })
+    expect(links.map((item) => item.lineStyle.opacity)).toEqual([1, 1, 0.12])
+    expect(links.slice(0, 2).every((item) => item.lineStyle.type === 'dashed' && item.lineStyle.width === 2.2)).toBe(
       true
     )
     // Node-hover flow must not rewrite edge geometry (curveness), or the path jumps.
@@ -69,10 +71,11 @@ describe('buildServiceMapSeries', () => {
   it('renders the resting graph without any flow emphasis', () => {
     const { nodes: data, links } = buildServiceMapSeries(input(nodes, edges))
     expect(data.every((item) => item.itemStyle.opacity === 1)).toBe(true)
+    expect(data[0].label).toMatchObject({ fontSize: 12, fontWeight: 500 })
     expect(links[0].lineStyle).toMatchObject({ type: 'solid', color: theme.edge })
     // ≥5% paired errors tint the edge; unmatched-only edges stay dashed in the external color.
-    expect(links[1].lineStyle.color).toBe('rgba(239, 68, 68, 0.45)')
-    expect(links[2].lineStyle).toMatchObject({ type: 'dashed', color: 'rgba(196, 120, 255, 0.55)', opacity: 0.32 })
+    expect(links[1].lineStyle.color).toBe('rgba(239, 68, 68, 0.55)')
+    expect(links[2].lineStyle).toMatchObject({ type: 'dashed', color: 'rgba(196, 120, 255, 0.65)', opacity: 0.5 })
   })
 
   it('draws real services as SVG glyphs and endpoints as dashed boxes', () => {
