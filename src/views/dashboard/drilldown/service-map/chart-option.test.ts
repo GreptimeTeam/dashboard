@@ -137,6 +137,7 @@ describe('buildServiceMapChartOption', () => {
       layout: 'none',
       roam: true,
       scaleLimit: { min: 0.4, max: 4 },
+      nodeScaleRatio: 0,
       emphasis: { focus: 'none' },
     })
   })

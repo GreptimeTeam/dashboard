@@ -513,37 +513,30 @@ function placeCompactHeap(
   })
 }
 
-/** Shrink layout if it overflows the viewport; keep top-left alignment (no vertical centering). */
+/**
+ * Rebase layout to the viewport inset (top-left) at natural scale — same
+ * spacing as the overview page. No enlarge/shrink; roam/pan for overflow.
+ */
 export function fitLayoutToViewport(
   layout: Map<string, ServiceMapNodeLayout>,
-  width: number,
-  height: number,
+  _width: number,
+  _height: number,
   insetX = 72,
   insetY = 48
 ): void {
   if (layout.size === 0) return
   let minX = Infinity
-  let maxX = -Infinity
   let minY = Infinity
-  let maxY = -Infinity
   layout.forEach((point) => {
     minX = Math.min(minX, point.x)
-    maxX = Math.max(maxX, point.x)
     minY = Math.min(minY, point.y)
-    maxY = Math.max(maxY, point.y)
   })
   const pad = 72
-  const contentW = Math.max(1, maxX - minX)
-  const contentH = Math.max(1, maxY - minY)
-  const availW = Math.max(1, width - insetX * 2 - pad)
-  const availH = Math.max(1, height - insetY * 2 - pad)
-  // Only shrink when overflowing — do not enlarge sparse graphs into empty space.
-  const scale = Math.min(1, availW / contentW, availH / contentH)
   layout.forEach((point, key) => {
     layout.set(key, {
       ...point,
-      x: insetX + pad * 0.5 + (point.x - minX) * scale,
-      y: insetY + pad * 0.5 + (point.y - minY) * scale,
+      x: insetX + pad * 0.5 + (point.x - minX),
+      y: insetY + pad * 0.5 + (point.y - minY),
     })
   })
 }
@@ -641,8 +634,7 @@ export function buildServiceMapOverviewLayout(
     })
   })
 
-  // Fit the call backbone first so structural offsets are in final pixels, then hang
-  // satellites outside with clearance against fitted service / virtual positions.
+  // Rebase backbone at natural overview scale, then hang structural satellites.
   fitLayoutToViewport(result, width, height, horizontalInset, verticalInset)
   placeStructuralAnchors(result, nodes, edges)
   return result

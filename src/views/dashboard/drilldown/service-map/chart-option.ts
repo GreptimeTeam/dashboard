@@ -370,6 +370,9 @@ export function buildServiceMapChartOption(input: ServiceMapChartInput, context:
         links,
         roam: true,
         scaleLimit: { min: 0.4, max: 4 },
+        // Keep on-disk SVG stats (and symbol size) stable under roam/detail zoom.
+        // Default 0.6 shrinks inner fonts when layoutNaturalZoom < 1.
+        nodeScaleRatio: 0,
         draggable: false,
         edgeSymbol: ['circle', 'arrow'],
         edgeSymbolSize: [0, 8],

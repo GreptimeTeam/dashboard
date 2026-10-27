@@ -38,7 +38,7 @@ function edge(source: ServiceMapNode, target: ServiceMapNode, requests = 10): Se
 }
 
 describe('fitLayoutToViewport', () => {
-  it('shrinks overflowing layouts and does not enlarge sparse ones', () => {
+  it('rebases to the inset at natural scale (no enlarge or shrink)', () => {
     const sparse = new Map([
       ['a', { x: 100, y: 80, community: 0 }],
       ['b', { x: 200, y: 120, community: 0 }],
@@ -49,7 +49,6 @@ describe('fitLayoutToViewport', () => {
     expect(sparseA).toBeDefined()
     expect(sparseB).toBeDefined()
     if (!sparseA || !sparseB) return
-    // Scale stays 1: relative span preserved (only rebased to inset).
     expect(sparseB.x - sparseA.x).toBeCloseTo(100, 5)
     expect(sparseB.y - sparseA.y).toBeCloseTo(40, 5)
 
@@ -63,10 +62,10 @@ describe('fitLayoutToViewport', () => {
     expect(overflowA).toBeDefined()
     expect(overflowB).toBeDefined()
     if (!overflowA || !overflowB) return
-    expect(overflowB.x - overflowA.x).toBeLessThan(2000)
-    expect(overflowB.y - overflowA.y).toBeLessThan(1500)
-    expect(overflowB.x).toBeLessThan(800)
-    expect(overflowB.y).toBeLessThan(600)
+    expect(overflowB.x - overflowA.x).toBeCloseTo(2000, 5)
+    expect(overflowB.y - overflowA.y).toBeCloseTo(1500, 5)
+    expect(overflowB.x).toBeGreaterThan(800)
+    expect(overflowB.y).toBeGreaterThan(600)
   })
 })
 

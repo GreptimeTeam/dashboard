@@ -60,11 +60,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     )
 
     .service-map-content
-      .service-map-canvas(
-        ref="canvasRef"
-        :class="{ 'service-map-canvas--focused': !!focusCanvasStyle }"
-        :style="focusCanvasStyle"
-      )
+      .service-map-canvas(ref="canvasRef")
         .service-map-state(v-if="loading && !graphNodes.length")
           a-spin(:size="32")
           span {{ t('drilldown.serviceMap.loading') }}
@@ -212,8 +208,11 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   const expandedClusters = ref<Set<string>>(new Set())
   /** When on, show instance/container satellites for all real services. Default off. */
   const showTopologyNodes = ref(false)
-  /** Whole-graph viewport zoom (ECharts series.zoom). Kept in option so notMerge updates keep it. */
-  const chartZoom = ref(1)
+  /**
+   * User zoom multiplier on top of layout-natural scale.
+   * Detail views counteract ECharts bbox-fit so spacing matches the overview page.
+   */
+  const userZoomFactor = ref(1)
   const CHART_ZOOM_MIN = 0.4
   const CHART_ZOOM_MAX = 4
   let chartResizeObserver: ResizeObserver | undefined
@@ -305,19 +304,40 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     nodes: graphNodes.value.filter((node) => !isStructuralEntityType(node.type)).length,
     edges: graphEdges.value.filter(isCallEdge).length,
   }))
-  /** Keep small neighborhoods compact; expand toward full width as neighbors grow. */
-  const focusCanvasStyle = computed(() => {
-    if (!inspectedNodeKey.value) return undefined
-    const count = Math.max(1, graphNodes.value.length)
-    if (count >= 12) return undefined
-    const maxWidth = Math.max(480, Math.min(880, 280 + count * 72))
-    return { maxWidth: `${maxWidth}px` }
-  })
   // Inspect and overview share one layout rule; neighborhood filtering is in display-graph.
   const communityLayout = computed(() => {
     const { width, height } = chartSize.value
     return buildServiceMapOverviewLayout(graphNodes.value, graphEdges.value, width, height)
   })
+  /**
+   * ECharts graph View always fits the data bbox into the canvas. Sparse detail
+   * neighborhoods would look blown up vs overview — counteract with roam zoom so
+   * 1 layout unit ≈ 1 CSS px (same spacing as the all-nodes page).
+   */
+  const layoutNaturalZoom = computed(() => {
+    if (!inspectedNodeKey.value || communityLayout.value.size === 0) return 1
+    let minX = Infinity
+    let maxX = -Infinity
+    let minY = Infinity
+    let maxY = -Infinity
+    communityLayout.value.forEach((point) => {
+      minX = Math.min(minX, point.x)
+      maxX = Math.max(maxX, point.x)
+      minY = Math.min(minY, point.y)
+      maxY = Math.max(maxY, point.y)
+    })
+    const pad = 72
+    const contentW = Math.max(1, maxX - minX)
+    const contentH = Math.max(1, maxY - minY)
+    const availW = Math.max(1, chartSize.value.width - pad * 2)
+    const availH = Math.max(1, chartSize.value.height - pad * 2)
+    const fit = Math.min(availW / contentW, availH / contentH)
+    if (fit <= 1) return 1
+    return Math.max(CHART_ZOOM_MIN, Math.min(1, 1 / fit))
+  })
+  const chartZoom = computed(() =>
+    Math.min(CHART_ZOOM_MAX, Math.max(CHART_ZOOM_MIN, layoutNaturalZoom.value * userZoomFactor.value))
+  )
   const graphNodeMap = computed(() => new Map(graphNodes.value.map((node) => [node.key, node])))
   const hasDatabaseEndpoints = computed(() =>
     graphNodes.value.some((node) => node.virtual && node.connectionType === 'database')
@@ -476,14 +496,27 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   }
 
   function zoomChart(factor: number) {
-    chartZoom.value = Math.min(CHART_ZOOM_MAX, Math.max(CHART_ZOOM_MIN, chartZoom.value * factor))
+    const next = userZoomFactor.value * factor
+    const applied = layoutNaturalZoom.value * next
+    if (applied < CHART_ZOOM_MIN || applied > CHART_ZOOM_MAX) {
+      userZoomFactor.value = Math.min(
+        CHART_ZOOM_MAX / layoutNaturalZoom.value,
+        Math.max(CHART_ZOOM_MIN / layoutNaturalZoom.value, next)
+      )
+      return
+    }
+    userZoomFactor.value = next
   }
 
   function resetChartZoom() {
-    chartZoom.value = 1
+    userZoomFactor.value = 1
     // Clear pan offset; series.zoom alone leaves a translated viewport.
-    chartRef.value?.setOption({ series: [{ zoom: 1, center: null }] })
+    chartRef.value?.setOption({ series: [{ zoom: layoutNaturalZoom.value, center: null }] })
   }
+
+  watch(inspectedNodeKey, () => {
+    userZoomFactor.value = 1
+  })
 
   watch(hoveredNodeKey, () => {
     nextTick(syncNodeFlowOverlay)
@@ -549,7 +582,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     chartSize.value = { width, height }
   }
 
-  watch([inspectedNodeKey, () => graphNodes.value.length, focusCanvasStyle], async () => {
+  watch([inspectedNodeKey, () => graphNodes.value.length], async () => {
     await nextTick()
     updateChartSize()
   })
@@ -748,7 +781,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   .service-map-content {
     display: flex;
     flex: 1 1 0%;
-    justify-content: center;
     min-height: 0;
     overflow: hidden;
   }
@@ -757,11 +789,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     flex: 1 1 0%;
     min-width: 0;
     min-height: 360px;
-  }
-  .service-map-canvas--focused {
-    flex: 0 1 auto;
-    width: 100%;
-    align-self: stretch;
+    overflow: hidden;
   }
   .service-map-chart {
     width: 100%;
