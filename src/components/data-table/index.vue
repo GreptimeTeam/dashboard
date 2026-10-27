@@ -257,9 +257,10 @@ a-dropdown#td-context(
   const attrs = useAttrs()
   const attrsRecord = attrs as Record<string, any>
   const hasVirtualListProps = computed(() => !!attrsRecord['virtual-list-props'])
+  /** Default on for all tables; opt out with `:column-resizable="false"`. */
   const columnResizableEnabled = computed(() => {
     if (!Object.prototype.hasOwnProperty.call(attrsRecord, 'column-resizable')) {
-      return false
+      return true
     }
     const raw = attrsRecord['column-resizable']
     if (raw === '' || raw === true || raw === undefined) {
@@ -1213,10 +1214,11 @@ a-dropdown#td-context(
     if (hasVirtualListProps.value) {
       const extraScroll = typeof attrsScroll === 'object' && attrsScroll ? attrsScroll : {}
       return {
-        loading: false,
-        size: 'medium',
+        'loading': false,
+        'size': 'medium',
         ...restAttrs,
-        scroll: {
+        'column-resizable': columnResizableEnabled.value,
+        'scroll': {
           ...extraScroll,
         },
       }
@@ -1224,10 +1226,11 @@ a-dropdown#td-context(
 
     // Non-virtual: single table, container scrolls; no Arco scroll / custom scrollbar.
     return {
-      loading: false,
-      size: 'medium',
+      'loading': false,
+      'size': 'medium',
       ...restAttrs,
-      scrollbar: false,
+      'column-resizable': columnResizableEnabled.value,
+      'scrollbar': false,
     }
   })
 
