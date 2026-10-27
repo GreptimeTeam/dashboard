@@ -33,13 +33,13 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
           :placeholder="t('drilldown.serviceMap.searchPlaceholder')"
         )
           a-option(v-for="option in serviceOptions" :key="option.value" :value="option.value") {{ option.label }}
-        span.drilldown-toolbar__group
-          a-checkbox(v-model="showTopologyNodes") {{ t('drilldown.serviceMap.topologyNodes') }}
         span.service-map-counts(v-if="!loading")
           | {{ t('drilldown.serviceMap.counts', { nodes: callGraphCounts.nodes, edges: callGraphCounts.edges }) }}
         span.service-map-counts(v-else-if="graphNodes.length")
           a-spin(:size="18")
           | {{ t('drilldown.serviceMap.loading') }}
+        span.drilldown-toolbar__group
+          a-checkbox(v-model="showTopologyNodes") {{ t('drilldown.serviceMap.topologyNodes') }}
       .drilldown-toolbar__right(v-if="inspectedNodeKey && selectedNode")
         span.service-map-active-node {{ t('drilldown.serviceMap.activeNode', { name: selectedNode.label }) }}
         a-button(type="outline" size="medium" @click="backToOverview")
@@ -103,6 +103,31 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
             @click="openSignal('logs')"
           )
             | {{ t('drilldown.serviceMap.viewLogs') }}
+        .service-map-zoom(v-if="graphNodes.length")
+          a-button(
+            type="text"
+            size="small"
+            :aria-label="t('drilldown.serviceMap.zoomIn')"
+            @click="zoomChart(1.25)"
+          )
+            template(#icon)
+              IconZoomIn
+          a-button(
+            type="text"
+            size="small"
+            :aria-label="t('drilldown.serviceMap.zoomReset')"
+            @click="resetChartZoom"
+          )
+            template(#icon)
+              IconRefresh
+          a-button(
+            type="text"
+            size="small"
+            :aria-label="t('drilldown.serviceMap.zoomOut')"
+            @click="zoomChart(0.8)"
+          )
+            template(#icon)
+              IconZoomOut
         .service-map-legend(v-if="graphNodes.length")
           .service-map-legend__group
             span.service-map-legend__item
@@ -146,6 +171,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   import { storeToRefs } from 'pinia'
   import { useRoute, useRouter } from 'vue-router'
   import VChart from 'vue-echarts'
+  import { IconRefresh, IconZoomIn, IconZoomOut } from '@arco-design/web-vue/es/icon'
   import { useDrilldownContext } from '@/observability/context'
   import { useAppStore } from '@/store'
   import type { DrilldownFilter } from '@/observability/types'
@@ -186,6 +212,10 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   const expandedClusters = ref<Set<string>>(new Set())
   /** When on, show instance/container satellites for all real services. Default off. */
   const showTopologyNodes = ref(false)
+  /** Whole-graph viewport zoom (ECharts series.zoom). Kept in option so notMerge updates keep it. */
+  const chartZoom = ref(1)
+  const CHART_ZOOM_MIN = 0.4
+  const CHART_ZOOM_MAX = 4
   let chartResizeObserver: ResizeObserver | undefined
   const loadedInstanceCounts = new Set<string>()
   const pendingInstanceCounts = new Map<string, Promise<number>>()
@@ -427,14 +457,32 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
    * Base option must NOT depend on hoveredNodeKey — rebuilding option while the pointer is
    * over a graphic remounts it and drops mouseout (edge hover stuck). Node flow is patched
    * via setOption in syncNodeFlowOverlay instead.
+   * graphRoam actions use update:none (no redraw) — buttons drive series.zoom via this option.
    */
-  const chartOption = computed(() => buildServiceMapChartOption(chartInput(), { t, labelFor: nodeLabel }))
+  const chartOption = computed(() => {
+    const option = buildServiceMapChartOption(chartInput(), { t, labelFor: nodeLabel })
+    const [series0, ...rest] = option.series
+    return {
+      ...option,
+      series: [{ ...series0, zoom: chartZoom.value }, ...rest],
+    }
+  })
 
   function syncNodeFlowOverlay() {
     const chart = chartRef.value
     if (!chart?.setOption) return
     const { nodes, links } = buildServiceMapSeries(chartInput(), hoveredNodeKey.value)
     chart.setOption({ series: [{ data: nodes, links }] }, { lazyUpdate: true })
+  }
+
+  function zoomChart(factor: number) {
+    chartZoom.value = Math.min(CHART_ZOOM_MAX, Math.max(CHART_ZOOM_MIN, chartZoom.value * factor))
+  }
+
+  function resetChartZoom() {
+    chartZoom.value = 1
+    // Clear pan offset; series.zoom alone leaves a translated viewport.
+    chartRef.value?.setOption({ series: [{ zoom: 1, center: null }] })
   }
 
   watch(hoveredNodeKey, () => {
@@ -799,6 +847,20 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   .service-map-node-action:focus-visible {
     outline: 2px solid var(--gpt-main-purple);
     outline-offset: 1px;
+  }
+  .service-map-zoom {
+    position: absolute;
+    z-index: 5;
+    right: var(--gpt-gap-md);
+    bottom: var(--gpt-gap-md);
+    display: inline-flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 2px;
+    border: 1px solid var(--gpt-border-primary);
+    border-radius: var(--gpt-radius-md);
+    background: var(--gpt-bg-primary);
+    box-shadow: var(--gpt-shadow-sm);
   }
   .service-map-legend {
     position: absolute;

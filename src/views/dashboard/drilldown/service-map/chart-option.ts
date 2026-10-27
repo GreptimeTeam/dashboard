@@ -369,6 +369,7 @@ export function buildServiceMapChartOption(input: ServiceMapChartInput, context:
         data: nodes,
         links,
         roam: true,
+        scaleLimit: { min: 0.4, max: 4 },
         draggable: false,
         edgeSymbol: ['circle', 'arrow'],
         edgeSymbolSize: [0, 8],

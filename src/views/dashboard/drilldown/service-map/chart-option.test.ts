@@ -132,7 +132,13 @@ describe('buildServiceMapChartOption', () => {
     const second = buildServiceMapChartOption(chartInput, { t, labelFor: (key) => key })
     expect({ ...first, tooltip: undefined }).toEqual({ ...second, tooltip: undefined })
     expect(first.series[0].data).toEqual(buildServiceMapSeries(chartInput, '').nodes)
-    expect(first.series[0]).toMatchObject({ type: 'graph', layout: 'none', emphasis: { focus: 'none' } })
+    expect(first.series[0]).toMatchObject({
+      type: 'graph',
+      layout: 'none',
+      roam: true,
+      scaleLimit: { min: 0.4, max: 4 },
+      emphasis: { focus: 'none' },
+    })
   })
 })
 
