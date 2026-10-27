@@ -1,5 +1,18 @@
-import { edgeTraffic } from './metrics'
+import { isStructuralEntityType } from '../../traces/service-map-queries'
+import { edgeTraffic, isCallEdge } from './metrics'
 import type { ServiceMapDisplayNode, ServiceMapEdge, ServiceMapNodeLayout } from './types'
+
+/** Center distance from a service to its instance satellites. */
+const STRUCTURAL_INSTANCE_RADIUS = 72
+/** Extra offset from an instance to its container along the same outward axis. */
+const STRUCTURAL_CONTAINER_OFFSET = 52
+/** Soft min distance to other backbone nodes; at most a couple of push steps. */
+const STRUCTURAL_CLEARANCE = 72
+const STRUCTURAL_PUSH_STEP = 20
+const STRUCTURAL_PUSH_MAX = 2
+const STRUCTURAL_FAN_GAP = 48
+
+type Cardinal = { dx: number; dy: number }
 
 /** Soft max heaps per row (Datadog-like); width fit can wrap earlier. */
 const HYBRID_HEAP_WRAP_AFTER = 4
@@ -218,13 +231,16 @@ function anchorInferredNearCallers(
   offsetX = 96,
   offsetY = 92
 ): void {
-  const realKeys = new Set(nodes.filter((node) => !node.virtual).map((node) => node.key))
+  const realKeys = new Set(
+    nodes.filter((node) => !node.virtual && !isStructuralEntityType(node.type)).map((node) => node.key)
+  )
+  const callEdges = edges.filter(isCallEdge)
   const byCaller = new Map<string, string[]>()
   nodes
     .filter((node) => node.virtual)
     .sort((left, right) => left.key.localeCompare(right.key))
     .forEach((node) => {
-      const link = primaryNeighbor(node.key, edges, realKeys)
+      const link = primaryNeighbor(node.key, callEdges, realKeys)
       if (!link) return
       byCaller.set(link.neighbour, [...(byCaller.get(link.neighbour) ?? []), node.key])
     })
@@ -233,13 +249,133 @@ function anchorInferredNearCallers(
     if (!neighbour) return
     inferredKeys.forEach((key, slot) => {
       const self = layout.get(key)
-      const link = primaryNeighbor(key, edges, realKeys)
+      const link = primaryNeighbor(key, callEdges, realKeys)
       if (!self || !link) return
       const fan = (slot - (inferredKeys.length - 1) / 2) * 70
       // Sit below-right of the caller so the parent's bottom title stays clear.
       self.x = neighbour.x + (link.asTarget ? offsetX : offsetX * 0.55) + fan
       self.y = neighbour.y + offsetY + Math.abs(fan) * 0.25
       self.community = neighbour.community
+    })
+  })
+}
+
+function isBackboneDisplayNode(node: ServiceMapDisplayNode): boolean {
+  if (node.cluster || node.members) return true
+  if (node.virtual) return true
+  return !isStructuralEntityType(node.type)
+}
+
+type Point = { key: string; x: number; y: number }
+
+function minObstacleDistance(x: number, y: number, obstacles: Point[], ignoreKey?: string): number {
+  let best = Infinity
+  obstacles.forEach((obstacle) => {
+    if (obstacle.key === ignoreKey) return
+    best = Math.min(best, Math.hypot(x - obstacle.x, y - obstacle.y))
+  })
+  return best
+}
+
+/** At most STRUCTURAL_PUSH_MAX steps outward if overlapping another backbone node. */
+function nudgeOutward(x: number, y: number, dir: Cardinal, obstacles: Point[], ignoreKey?: string): Point {
+  let nextX = x
+  let nextY = y
+  for (let step = 0; step < STRUCTURAL_PUSH_MAX; step += 1) {
+    if (minObstacleDistance(nextX, nextY, obstacles, ignoreKey) >= STRUCTURAL_CLEARANCE) break
+    nextX += dir.dx * STRUCTURAL_PUSH_STEP
+    nextY += dir.dy * STRUCTURAL_PUSH_STEP
+  }
+  return { key: '', x: nextX, y: nextY }
+}
+
+/** Cardinal away from the call-graph centroid (top services → up, left → left, …). */
+function outwardCardinal(anchor: { x: number; y: number }, centroid: { x: number; y: number }): Cardinal {
+  const vx = anchor.x - centroid.x
+  const vy = anchor.y - centroid.y
+  return Math.abs(vx) >= Math.abs(vy) ? { dx: vx >= 0 ? 1 : -1, dy: 0 } : { dx: 0, dy: vy >= 0 ? 1 : -1 }
+}
+
+function fanOffset(dir: Cardinal, index: number, count: number): { x: number; y: number } {
+  const along = (index - (count - 1) / 2) * STRUCTURAL_FAN_GAP
+  return dir.dx !== 0 ? { x: 0, y: along } : { x: along, y: 0 }
+}
+
+/**
+ * Hang satellites just outside their owning service on the outer rim (away from
+ * the call-graph centroid). Call after the backbone has been fit to the viewport.
+ */
+export function placeStructuralAnchors(
+  layout: Map<string, ServiceMapNodeLayout>,
+  nodes: ServiceMapDisplayNode[],
+  edges: ServiceMapEdge[]
+): void {
+  const nodeByKey = new Map(nodes.map((node) => [node.key, node]))
+  const instanceDir = new Map<string, Cardinal>()
+
+  const backbone: Point[] = []
+  let sumX = 0
+  let sumY = 0
+  layout.forEach((point, key) => {
+    const node = nodeByKey.get(key)
+    if (node && isStructuralEntityType(node.type)) return
+    backbone.push({ key, x: point.x, y: point.y })
+    sumX += point.x
+    sumY += point.y
+  })
+  const obstacles = [...backbone]
+  const centroid = backbone.length ? { x: sumX / backbone.length, y: sumY / backbone.length } : { x: 0, y: 0 }
+
+  const instancesByService = new Map<string, string[]>()
+  edges.forEach((edge) => {
+    if ((edge.relType || '') !== 'part_of') return
+    if (!nodeByKey.has(edge.source) || !layout.has(edge.target)) return
+    instancesByService.set(edge.target, [...(instancesByService.get(edge.target) ?? []), edge.source])
+  })
+
+  instancesByService.forEach((instanceKeys, serviceKey) => {
+    const anchor = layout.get(serviceKey)
+    if (!anchor) return
+    const unique = [...new Set(instanceKeys)].sort()
+    const dir = outwardCardinal(anchor, centroid)
+    unique.forEach((key, index) => {
+      const fan = fanOffset(dir, index, unique.length)
+      const placed = nudgeOutward(
+        anchor.x + dir.dx * STRUCTURAL_INSTANCE_RADIUS + fan.x,
+        anchor.y + dir.dy * STRUCTURAL_INSTANCE_RADIUS + fan.y,
+        dir,
+        obstacles,
+        serviceKey
+      )
+      instanceDir.set(key, dir)
+      layout.set(key, { x: placed.x, y: placed.y, community: anchor.community })
+      obstacles.push({ key, x: placed.x, y: placed.y })
+    })
+  })
+
+  const containersByInstance = new Map<string, string[]>()
+  edges.forEach((edge) => {
+    if ((edge.relType || '') !== 'runs_on') return
+    if (!layout.has(edge.source) || !nodeByKey.has(edge.target)) return
+    containersByInstance.set(edge.source, [...(containersByInstance.get(edge.source) ?? []), edge.target])
+  })
+
+  containersByInstance.forEach((containerKeys, instanceKey) => {
+    const anchor = layout.get(instanceKey)
+    if (!anchor) return
+    const dir = instanceDir.get(instanceKey) ?? { dx: 1, dy: 0 }
+    const unique = [...new Set(containerKeys)].sort()
+    unique.forEach((key, slot) => {
+      const fan = fanOffset(dir, slot, unique.length)
+      const placed = nudgeOutward(
+        anchor.x + dir.dx * STRUCTURAL_CONTAINER_OFFSET + fan.x,
+        anchor.y + dir.dy * STRUCTURAL_CONTAINER_OFFSET + fan.y,
+        dir,
+        obstacles,
+        instanceKey
+      )
+      layout.set(key, { x: placed.x, y: placed.y, community: anchor.community })
+      obstacles.push({ key, x: placed.x, y: placed.y })
     })
   })
 }
@@ -377,37 +513,30 @@ function placeCompactHeap(
   })
 }
 
-/** Shrink layout if it overflows the viewport; keep top-left alignment (no vertical centering). */
+/**
+ * Rebase layout to the viewport inset (top-left) at natural scale — same
+ * spacing as the overview page. No enlarge/shrink; roam/pan for overflow.
+ */
 export function fitLayoutToViewport(
   layout: Map<string, ServiceMapNodeLayout>,
-  width: number,
-  height: number,
+  _width: number,
+  _height: number,
   insetX = 72,
   insetY = 48
 ): void {
   if (layout.size === 0) return
   let minX = Infinity
-  let maxX = -Infinity
   let minY = Infinity
-  let maxY = -Infinity
   layout.forEach((point) => {
     minX = Math.min(minX, point.x)
-    maxX = Math.max(maxX, point.x)
     minY = Math.min(minY, point.y)
-    maxY = Math.max(maxY, point.y)
   })
   const pad = 72
-  const contentW = Math.max(1, maxX - minX)
-  const contentH = Math.max(1, maxY - minY)
-  const availW = Math.max(1, width - insetX * 2 - pad)
-  const availH = Math.max(1, height - insetY * 2 - pad)
-  // Only shrink when overflowing — do not enlarge sparse graphs into empty space.
-  const scale = Math.min(1, availW / contentW, availH / contentH)
   layout.forEach((point, key) => {
     layout.set(key, {
       ...point,
-      x: insetX + pad * 0.5 + (point.x - minX) * scale,
-      y: insetY + pad * 0.5 + (point.y - minY) * scale,
+      x: insetX + pad * 0.5 + (point.x - minX),
+      y: insetY + pad * 0.5 + (point.y - minY),
     })
   })
 }
@@ -415,6 +544,7 @@ export function fitLayoutToViewport(
 /**
  * Overview: Louvain heaps as compact clusters, ordered left→right by mean call depth.
  * Tiny heaps absorb into neighbors; isolates park just under the main block.
+ * Structural satellites (instance / container) are placed after the call backbone.
  */
 export function buildServiceMapOverviewLayout(
   nodes: ServiceMapDisplayNode[],
@@ -423,13 +553,15 @@ export function buildServiceMapOverviewLayout(
   height: number
 ): Map<string, ServiceMapNodeLayout> {
   if (!nodes.length) return new Map()
-  const keys = nodes.map((node) => node.key).sort()
-  const depth = assignCallDepths(keys, edges)
-  const { communityByNode, degree } = detectLouvainCommunities(keys, edges)
-  const absorbed = absorbTinyCommunities(communityByNode, edges)
+  const backboneNodes = nodes.filter(isBackboneDisplayNode)
+  const callEdges = edges.filter(isCallEdge)
+  const keys = backboneNodes.map((node) => node.key).sort()
+  const depth = assignCallDepths(keys, callEdges)
+  const { communityByNode, degree } = detectLouvainCommunities(keys, callEdges)
+  const absorbed = absorbTinyCommunities(communityByNode, callEdges)
 
   const connectedKeys = new Set<string>()
-  edges.forEach((edge) => {
+  callEdges.forEach((edge) => {
     if (!edgeWeight(edge)) return
     connectedKeys.add(edge.source)
     connectedKeys.add(edge.target)
@@ -482,8 +614,8 @@ export function buildServiceMapOverviewLayout(
     packedRows.reduce((sum, row) => sum + row.width / Math.max(1, row.heaps.length), 0) / Math.max(1, packedRows.length)
   anchorInferredNearCallers(
     result,
-    nodes,
-    edges,
+    backboneNodes,
+    callEdges,
     Math.min(110, Math.max(88, avgHeapWidth * 0.32)),
     Math.min(100, Math.max(84, (packedRows[0]?.height ?? 160) * 0.28))
   )
@@ -502,6 +634,8 @@ export function buildServiceMapOverviewLayout(
     })
   })
 
+  // Rebase backbone at natural overview scale, then hang structural satellites.
   fitLayoutToViewport(result, width, height, horizontalInset, verticalInset)
+  placeStructuralAnchors(result, nodes, edges)
   return result
 }

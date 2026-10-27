@@ -21,6 +21,8 @@ export interface ServiceMapEdge {
   key: string
   source: string
   target: string
+  /** Relationship kind; defaults to calls for legacy rows. */
+  relType?: string
   requests: number
   errors: number
   unmatched: number

@@ -3,6 +3,12 @@ export interface ServiceMapTheme {
   surface: string
   border: string
   edge: string
+  /** Structural part_of / runs_on edge stroke. */
+  structural: string
+  /** service.instance / k8s.pod satellite glyph. */
+  instance: string
+  /** container / host / process satellite glyph. */
+  container: string
   danger: string
   warn: string
   ok: string
@@ -40,6 +46,9 @@ export function resolveServiceMapTheme(
     border: dark ? 'rgba(255,255,255,.24)' : readToken('--gpt-border-strong', 'rgba(71,52,96,.15)'),
     // Strong enough to read call direction on a light panel without competing with node titles.
     edge: dark ? 'rgba(205, 196, 218, 0.72)' : 'rgba(71, 52, 96, 0.55)',
+    structural: dark ? 'rgba(180, 170, 196, 0.78)' : 'rgba(90, 74, 112, 0.55)',
+    instance: readToken('--gpt-brand-700', dark ? '#b8a8c8' : '#5a4a70'),
+    container: readToken('--gpt-accent-ts', dark ? '#5ecfc8' : '#00bbb2'),
     danger: readToken('--gpt-danger', '#ef4444'),
     warn: readToken('--gpt-warning', '#f59e0b'),
     ok: readToken('--gpt-success', '#22c55e'),

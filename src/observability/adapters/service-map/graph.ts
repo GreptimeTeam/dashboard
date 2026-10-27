@@ -192,11 +192,13 @@ export function mergeEdges(edges: ServiceMapEdge[], resolve: (key: string) => st
     const source = resolve(edge.source)
     const target = resolve(edge.target)
     if (!source || !target || source === target) return
-    const key = `${source}\0${target}`
+    const relType = edge.relType || 'calls'
+    const key = `${source}\0${target}\0${relType}`
     const aggregate = aggregates.get(key) ?? {
       key,
       source,
       target,
+      relType,
       requests: 0,
       errors: 0,
       unmatched: 0,
@@ -252,6 +254,19 @@ export function buildServiceMapDisplayGraph(args: {
       if (edge.source === inspectNodeKey) adjacent.add(edge.target)
       if (edge.target === inspectNodeKey) adjacent.add(edge.source)
     })
+    // Keep expanded structural satellites of the inspected service (containers hang off instances).
+    const inspected = rawNodes.get(inspectNodeKey)
+    if (inspected && !inspected.virtual && inspected.type === 'service') {
+      const satellites = new Set<string>()
+      edges.forEach((edge) => {
+        if ((edge.relType || '') === 'part_of' && edge.target === inspectNodeKey) satellites.add(edge.source)
+      })
+      edges.forEach((edge) => {
+        if ((edge.relType || '') !== 'runs_on') return
+        if (satellites.has(edge.source)) satellites.add(edge.target)
+      })
+      satellites.forEach((key) => adjacent.add(key))
+    }
     const displayNodes = nodes.filter((node) => adjacent.has(node.key)).map(toDisplayNode)
     const displayMap = new Map(displayNodes.map((node) => [node.key, node]))
     return { nodes: displayNodes, edges: aggregateEdges(edges, displayMap) }
@@ -321,7 +336,7 @@ export function buildServiceMapDisplayGraph(args: {
       else if (edge.target === onlyMatch.key) neighbourKey = edge.source
       const neighbour = rawNodes.get(neighbourKey)
       if (!neighbour || hiddenKeys.has(neighbour.key) || displayMap.has(neighbour.key)) return
-      if (neighbour.virtual || serviceIdentity(neighbour)) {
+      if (neighbour.virtual || serviceIdentity(neighbour) || neighbour.type !== 'service') {
         const displayNode = toDisplayNode(neighbour)
         displayNodes.push(displayNode)
         displayMap.set(neighbour.key, displayNode)
@@ -333,12 +348,33 @@ export function buildServiceMapDisplayGraph(args: {
       if (matchedKeys.has(edge.source)) endpointKey = edge.target
       else if (matchedKeys.has(edge.target)) endpointKey = edge.source
       const endpoint = rawNodes.get(endpointKey)
-      if (!endpoint?.virtual || displayMap.has(endpoint.key)) return
+      if (!endpoint || displayMap.has(endpoint.key)) return
+      if (!endpoint.virtual && endpoint.type === 'service') return
       const displayNode = toDisplayNode(endpoint)
       displayNodes.push(displayNode)
       displayMap.set(endpoint.key, displayNode)
     })
   }
+
+  // Keep structural satellites of matched services on the filtered graph.
+  matchedServices.forEach((service) => {
+    const satellites = new Set<string>()
+    edges.forEach((edge) => {
+      if ((edge.relType || '') === 'part_of' && edge.target === service.key) satellites.add(edge.source)
+    })
+    edges.forEach((edge) => {
+      if ((edge.relType || '') !== 'runs_on') return
+      if (satellites.has(edge.source)) satellites.add(edge.target)
+    })
+    satellites.forEach((key) => {
+      if (displayMap.has(key)) return
+      const satellite = rawNodes.get(key)
+      if (!satellite) return
+      const displayNode = toDisplayNode(satellite)
+      displayNodes.push(displayNode)
+      displayMap.set(key, displayNode)
+    })
+  })
 
   const remappedEdges = edges
     .filter(
@@ -346,7 +382,9 @@ export function buildServiceMapDisplayGraph(args: {
         matchedKeys.has(edge.source) ||
         matchedKeys.has(edge.target) ||
         hiddenKeys.has(edge.source) ||
-        hiddenKeys.has(edge.target)
+        hiddenKeys.has(edge.target) ||
+        displayMap.has(edge.source) ||
+        displayMap.has(edge.target)
     )
     .map((edge) => ({
       ...edge,
