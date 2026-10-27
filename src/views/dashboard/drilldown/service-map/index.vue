@@ -33,8 +33,10 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
           :placeholder="t('drilldown.serviceMap.searchPlaceholder')"
         )
           a-option(v-for="option in serviceOptions" :key="option.value" :value="option.value") {{ option.label }}
+        span.drilldown-toolbar__group
+          a-checkbox(v-model="showTopologyNodes") {{ t('drilldown.serviceMap.topologyNodes') }}
         span.service-map-counts(v-if="!loading")
-          | {{ t('drilldown.serviceMap.counts', { nodes: graphNodes.length, edges: graphEdges.length }) }}
+          | {{ t('drilldown.serviceMap.counts', { nodes: callGraphCounts.nodes, edges: callGraphCounts.edges }) }}
         span.service-map-counts(v-else-if="graphNodes.length")
           a-spin(:size="18")
           | {{ t('drilldown.serviceMap.loading') }}
@@ -88,14 +90,14 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
           button.service-map-node-action(type="button" role="menuitem" @click="inspectNode")
             | {{ t('drilldown.serviceMap.inspect') }}
           button.service-map-node-action(
-            v-if="!menuNode.virtual"
+            v-if="!menuNode.virtual && menuNode.type === 'service'"
             type="button"
             role="menuitem"
             @click="openSignal('traces')"
           )
             | {{ t('drilldown.serviceMap.viewTraces') }}
           button.service-map-node-action(
-            v-if="!menuNode.virtual && logsServiceReady"
+            v-if="!menuNode.virtual && menuNode.type === 'service' && logsServiceReady"
             type="button"
             role="menuitem"
             @click="openSignal('logs')"
@@ -118,6 +120,16 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
                 :style="{ backgroundColor: withAlpha(graphTheme.external, isDark ? 0.2 : 0.1), borderColor: graphTheme.external }"
               )
               | {{ t('drilldown.serviceMap.virtualEndpoint') }}
+            span.service-map-legend__item(v-if="hasInstanceSatellites")
+              i.service-map-legend__instance(
+                :style="{ backgroundColor: withAlpha(graphTheme.instance, isDark ? 0.28 : 0.14), borderColor: graphTheme.instance }"
+              )
+              | {{ t('drilldown.serviceMap.instanceNode') }}
+            span.service-map-legend__item(v-if="hasContainerSatellites")
+              i.service-map-legend__container(
+                :style="{ backgroundColor: withAlpha(graphTheme.container, isDark ? 0.28 : 0.14), borderColor: graphTheme.container }"
+              )
+              | {{ t('drilldown.serviceMap.containerNode') }}
           .service-map-legend__group.service-map-legend__group--health
             span.service-map-legend__group-label {{ t('drilldown.serviceMap.healthLegend') }}
             span.service-map-legend__item
@@ -144,8 +156,9 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     buildServiceMapScopeFacet,
   } from '@/observability/adapters/service-map/graph'
   import { buildServiceMapOverviewLayout } from '@/observability/adapters/service-map/layout'
-  import { aggregateNodeCallStats } from '@/observability/adapters/service-map/metrics'
+  import { aggregateNodeCallStats, isCallEdge } from '@/observability/adapters/service-map/metrics'
   import type { ServiceMapFilters, ServiceMapResult } from '@/observability/adapters/service-map/types'
+  import { isStructuralEntityType } from '@/observability/traces/service-map-queries'
   import { buildServiceMapChartOption, buildServiceMapSeries, type ServiceMapChartInput } from './chart-option'
   import { resolveServiceMapTheme, withAlpha } from './chart-theme'
   import { parseServiceMapUrlQuery, serializeServiceMapUrlQuery } from './url-state'
@@ -171,6 +184,8 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   const menuPosition = ref({ x: 0, y: 0 })
   const facetFilters = ref<ServiceMapFilters>({})
   const expandedClusters = ref<Set<string>>(new Set())
+  /** When on, show instance/container satellites for all real services. Default off. */
+  const showTopologyNodes = ref(false)
   let chartResizeObserver: ResizeObserver | undefined
   const loadedInstanceCounts = new Set<string>()
   const pendingInstanceCounts = new Map<string, Promise<number>>()
@@ -182,9 +197,13 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     loading.value = true
     error.value = ''
     try {
-      const next = await fetchServiceMap(ctx, (partial) => {
-        if (currentRequest === requestId) result.value = partial
-      })
+      const next = await fetchServiceMap(
+        ctx,
+        (partial) => {
+          if (currentRequest === requestId) result.value = partial
+        },
+        { showTopology: showTopologyNodes.value }
+      )
       if (currentRequest === requestId) result.value = next
     } catch (reason) {
       if (currentRequest === requestId) {
@@ -202,6 +221,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       ctx.query.rangeTime.value[0],
       ctx.query.rangeTime.value[1],
       ctx.query.refreshKey.value,
+      showTopologyNodes.value,
     ],
     () => load(),
     { immediate: true }
@@ -250,6 +270,11 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   )
   const graphNodes = computed(() => graphModel.value.nodes)
   const graphEdges = computed(() => graphModel.value.edges)
+  /** Toolbar counts are call-graph only — exclude topology satellites and structural edges. */
+  const callGraphCounts = computed(() => ({
+    nodes: graphNodes.value.filter((node) => !isStructuralEntityType(node.type)).length,
+    edges: graphEdges.value.filter(isCallEdge).length,
+  }))
   /** Keep small neighborhoods compact; expand toward full width as neighbors grow. */
   const focusCanvasStyle = computed(() => {
     if (!inspectedNodeKey.value) return undefined
@@ -269,6 +294,18 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   )
   const hasVirtualServiceEndpoints = computed(() =>
     graphNodes.value.some((node) => node.virtual && node.connectionType !== 'database')
+  )
+  const hasInstanceSatellites = computed(() =>
+    graphNodes.value.some((node) => !node.virtual && (node.type === 'service.instance' || node.type === 'k8s.pod'))
+  )
+  const hasContainerSatellites = computed(() =>
+    graphNodes.value.some(
+      (node) =>
+        !node.virtual &&
+        isStructuralEntityType(node.type) &&
+        node.type !== 'service.instance' &&
+        node.type !== 'k8s.pod'
+    )
   )
   const nodeCallStats = computed(() => aggregateNodeCallStats(graphEdges.value))
   const trafficLegend = computed(() => {
@@ -813,6 +850,19 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   }
   .service-map-legend__database {
     border: 2px dashed var(--gpt-semantic-field);
+  }
+  .service-map-legend__instance {
+    width: 9px;
+    height: 9px;
+    border: 1.5px dashed var(--gpt-brand-700, #5a4a70);
+    border-radius: 1px;
+    transform: rotate(45deg);
+  }
+  .service-map-legend__container {
+    width: 10px;
+    height: 8px;
+    border: 1.5px dashed var(--gpt-accent-ts, #00bbb2);
+    border-radius: 2px;
   }
   .service-map-legend__health {
     border: 2.5px solid var(--gpt-success, #22c55e);

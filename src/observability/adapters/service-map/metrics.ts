@@ -1,3 +1,4 @@
+import { isStructuralRelType } from '../../traces/service-map-queries'
 import type { ServiceMapEdge, ServiceMapNodeCallStats, ServiceMapNodeHealth } from './types'
 
 /** Paired error ratio at or above this lights a node / edge as unhealthy. */
@@ -8,7 +9,12 @@ export function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => entities[char])
 }
 
+export function isCallEdge(edge: ServiceMapEdge): boolean {
+  return !isStructuralRelType(edge.relType || 'calls')
+}
+
 export function edgeTraffic(edge: ServiceMapEdge): number {
+  if (!isCallEdge(edge)) return 0
   return Math.max(0, edge.requests) + Math.max(0, edge.unmatched)
 }
 
@@ -31,6 +37,7 @@ export function aggregateNodeCallStats(edges: ServiceMapEdge[]): Map<string, Ser
     return created
   }
   edges.forEach((edge) => {
+    if (!isCallEdge(edge)) return
     const traffic = edgeTraffic(edge)
     const requests = Math.max(0, edge.requests)
     const errors = Math.max(0, edge.errors)
@@ -64,9 +71,10 @@ export function nodeFlowSummary(
   nodeKey: string,
   direction: 'incoming' | 'outgoing'
 ): ServiceMapFlowSummary {
-  const connected = edges.filter((edge) =>
-    direction === 'incoming' ? edge.target === nodeKey : edge.source === nodeKey
-  )
+  const connected = edges.filter((edge) => {
+    if (!isCallEdge(edge)) return false
+    return direction === 'incoming' ? edge.target === nodeKey : edge.source === nodeKey
+  })
   return connected.reduce(
     (value, edge) => ({
       requests: value.requests + edge.requests,

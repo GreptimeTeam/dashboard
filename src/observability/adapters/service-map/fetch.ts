@@ -3,14 +3,25 @@ import type { DrilldownContext } from '../../context'
 import {
   SERVICE_MAP_EDGE_LIMIT,
   SERVICE_MAP_ENTITY_ROWS_LIMIT,
+  SERVICE_MAP_INSTANCE_SATELLITE_LIMIT,
   SERVICE_MAP_NODE_LIMIT,
   SERVICE_MAP_RELATIONSHIP_ROWS_LIMIT,
   buildServiceMapEntitiesSql,
   buildServiceMapInstanceCountsSql,
   buildServiceMapRelationshipsSql,
+  buildServiceMapStructuralSql,
+  isStructuralEntityType,
 } from '../../traces/service-map-queries'
 import { mergeEdges } from './graph'
 import type { ServiceMapConnectionType, ServiceMapEdge, ServiceMapNode, ServiceMapResult } from './types'
+
+export interface FetchServiceMapOptions {
+  /**
+   * When true, load instance/container satellites for every real service in the
+   * call graph (capped per service). Default false — calls-only overview.
+   */
+  showTopology?: boolean
+}
 
 interface QueryRecords {
   schema?: { column_schemas?: Array<{ name: string }> }
@@ -124,7 +135,8 @@ function ensureEndpoint(
   const key = entityKey(type, id)
   const existing = nodes.get(key)
   if (!existing) {
-    nodes.set(key, makeNode(type, id, true, connectionType))
+    // Structural satellites are real entities from part_of / runs_on; call peers stay virtual.
+    nodes.set(key, makeNode(type, id, !isStructuralEntityType(type), connectionType))
     return key
   }
   if (existing.virtual && connectionType) existing.connectionType ||= connectionType
@@ -210,15 +222,17 @@ function edgesFromRows(rows: Array<Record<string, unknown>>, nodes: Map<string, 
     if (!srcType || !srcId || !dstType || !dstId) {
       return
     }
+    const relType = String(row.rel_type ?? 'calls') || 'calls'
     const connectionType = connectionTypeFromAttributes(row.attributes)
     const source = ensureEndpoint(nodes, srcType, srcId, connectionType)
     const target = ensureEndpoint(nodes, dstType, dstId, connectionType)
 
-    const key = `${source}\0${target}`
+    const key = `${source}\0${target}\0${relType}`
     const edge = edges.get(key) ?? {
       key,
       source,
       target,
+      relType,
       requests: 0,
       errors: 0,
       unmatched: 0,
@@ -244,6 +258,88 @@ function edgesFromRows(rows: Array<Record<string, unknown>>, nodes: Map<string, 
     edges.set(key, edge)
   })
   return [...edges.values()]
+}
+
+/**
+ * Keep at most N instance→service part_of edges per service; drop runs_on whose
+ * instance was not kept. Other structural edges pass through unchanged.
+ */
+export function capInstanceSatellites(
+  edges: ServiceMapEdge[],
+  limit = SERVICE_MAP_INSTANCE_SATELLITE_LIMIT
+): ServiceMapEdge[] {
+  const partOf: ServiceMapEdge[] = []
+  const runsOn: ServiceMapEdge[] = []
+  const other: ServiceMapEdge[] = []
+  edges.forEach((edge) => {
+    const rel = edge.relType || 'calls'
+    if (rel === 'part_of') partOf.push(edge)
+    else if (rel === 'runs_on') runsOn.push(edge)
+    else other.push(edge)
+  })
+  const byService = new Map<string, ServiceMapEdge[]>()
+  partOf.forEach((edge) => {
+    byService.set(edge.target, [...(byService.get(edge.target) ?? []), edge])
+  })
+  const keptPartOf: ServiceMapEdge[] = []
+  const keptInstances = new Set<string>()
+  byService.forEach((list) => {
+    ;[...list]
+      .sort((left, right) => left.source.localeCompare(right.source))
+      .slice(0, Math.max(0, limit))
+      .forEach((edge) => {
+        keptPartOf.push(edge)
+        keptInstances.add(edge.source)
+      })
+  })
+  return [...other, ...keptPartOf, ...runsOn.filter((edge) => keptInstances.has(edge.source))]
+}
+
+async function loadStructuralExpansion(
+  range: { startUnix: number; endUnix: number },
+  database: string,
+  serviceIds: string[],
+  baseNodes: ServiceMapNode[]
+): Promise<{ nodes: ServiceMapNode[]; edges: ServiceMapEdge[]; truncated: boolean }> {
+  if (!serviceIds.length) return { nodes: [], edges: [], truncated: false }
+  const nodes = new Map(baseNodes.map((node) => [node.key, { ...node }]))
+  const partOfResponse = await editorApi.runSQL(
+    buildServiceMapStructuralSql(range, ['part_of'], { serviceIds }),
+    database,
+    { suppressErrorToast: true }
+  )
+  const partOfRows = recordsToObjects(partOfResponse?.output?.[0]?.records)
+  const partOfEdges = edgesFromRows(partOfRows, nodes)
+  const cappedPartOf = capInstanceSatellites(partOfEdges)
+  const instanceIds = [
+    ...new Set(
+      cappedPartOf
+        .filter((edge) => (edge.relType || '') === 'part_of')
+        .map((edge) => nodes.get(edge.source)?.id)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ]
+  let runsOnRows: Array<Record<string, unknown>> = []
+  let runsOnEdges: ServiceMapEdge[] = []
+  if (instanceIds.length) {
+    const runsOnResponse = await editorApi.runSQL(
+      buildServiceMapStructuralSql(range, ['runs_on'], { instanceIds }),
+      database,
+      { suppressErrorToast: true }
+    )
+    runsOnRows = recordsToObjects(runsOnResponse?.output?.[0]?.records)
+    runsOnEdges = edgesFromRows(runsOnRows, nodes)
+  }
+  const structuralEdges = capInstanceSatellites([...cappedPartOf, ...runsOnEdges])
+  const keptKeys = new Set(structuralEdges.flatMap((edge) => [edge.source, edge.target]))
+  // Only return satellites newly introduced by expansion (services already in base).
+  const baseKeys = new Set(baseNodes.map((node) => node.key))
+  const satelliteNodes = [...nodes.values()].filter(
+    (node) => keptKeys.has(node.key) && (!baseKeys.has(node.key) || isStructuralEntityType(node.type))
+  )
+  const truncated =
+    partOfRows.length >= SERVICE_MAP_RELATIONSHIP_ROWS_LIMIT || runsOnRows.length >= SERVICE_MAP_RELATIONSHIP_ROWS_LIMIT
+  return { nodes: satelliteNodes, edges: structuralEdges, truncated }
 }
 
 /**
@@ -282,15 +378,17 @@ export function limitServiceMapGraph(nodes: Map<string, ServiceMapNode>, edges: 
 
 export async function fetchServiceMap(
   ctx: DrilldownContext,
-  onEntitiesLoaded?: (partial: ServiceMapResult) => void
+  onEntitiesLoaded?: (partial: ServiceMapResult) => void,
+  options: FetchServiceMapOptions = {}
 ): Promise<ServiceMapResult> {
   const range = ctx.query.unixTimeRange()
   if (range.length !== 2) {
     return { nodes: [], edges: [], truncated: false }
   }
   const database = ctx.connection.databaseFor('traces')
+  const queryRange = { startUnix: range[0], endUnix: range[1] }
   const entitiesQuery = editorApi
-    .runSQL(buildServiceMapEntitiesSql({ startUnix: range[0], endUnix: range[1] }), database, {
+    .runSQL(buildServiceMapEntitiesSql(queryRange), database, {
       suppressErrorToast: true,
     })
     .then((response) => {
@@ -304,7 +402,7 @@ export async function fetchServiceMap(
     })
   const [entitiesResponse, relationshipsResponse] = await Promise.all([
     entitiesQuery,
-    editorApi.runSQL(buildServiceMapRelationshipsSql({ startUnix: range[0], endUnix: range[1] }), database, {
+    editorApi.runSQL(buildServiceMapRelationshipsSql(queryRange), database, {
       suppressErrorToast: true,
     }),
   ])
@@ -315,7 +413,31 @@ export async function fetchServiceMap(
   const folded = foldVirtualPeersIntoServices(limited.nodes, limited.edges)
   const sqlTruncated =
     entityRows.length >= SERVICE_MAP_ENTITY_ROWS_LIMIT || relationshipRows.length >= SERVICE_MAP_RELATIONSHIP_ROWS_LIMIT
-  return { nodes: folded.nodes, edges: folded.edges, truncated: limited.truncated || sqlTruncated }
+
+  if (!options.showTopology) {
+    return { nodes: folded.nodes, edges: folded.edges, truncated: limited.truncated || sqlTruncated }
+  }
+
+  const topologyServiceIds = [
+    ...new Set(folded.nodes.filter((node) => node.type === 'service' && !node.virtual).map((node) => node.id)),
+  ]
+  if (!topologyServiceIds.length) {
+    return { nodes: folded.nodes, edges: folded.edges, truncated: limited.truncated || sqlTruncated }
+  }
+
+  const structural = await loadStructuralExpansion(queryRange, database, topologyServiceIds, folded.nodes)
+  const nodeKeys = new Set(folded.nodes.map((node) => node.key))
+  const mergedNodes = [...folded.nodes]
+  structural.nodes.forEach((node) => {
+    if (nodeKeys.has(node.key)) return
+    nodeKeys.add(node.key)
+    mergedNodes.push(node)
+  })
+  return {
+    nodes: mergedNodes,
+    edges: [...folded.edges, ...structural.edges],
+    truncated: limited.truncated || sqlTruncated || structural.truncated,
+  }
 }
 
 export async function fetchServiceMapInstanceCount(ctx: DrilldownContext, serviceId: string): Promise<number> {

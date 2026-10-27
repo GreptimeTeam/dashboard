@@ -6,7 +6,7 @@ import {
   SERVICE_MAP_NODE_LIMIT,
   SERVICE_MAP_RELATIONSHIP_ROWS_LIMIT,
 } from '../../traces/service-map-queries'
-import { fetchServiceMap, foldVirtualPeersIntoServices, limitServiceMapGraph } from './fetch'
+import { capInstanceSatellites, fetchServiceMap, foldVirtualPeersIntoServices, limitServiceMapGraph } from './fetch'
 import type { ServiceMapEdge, ServiceMapNode } from './types'
 
 vi.mock('@/api/editor', () => ({ default: { runSQL: vi.fn() } }))
@@ -65,6 +65,38 @@ const ctx = {
   query: { unixTimeRange: () => [1000, 4600] },
   connection: { databaseFor: () => 'public' },
 } as never
+
+describe('capInstanceSatellites', () => {
+  it('keeps at most N part_of instances per service and drops orphan runs_on', () => {
+    const serviceKey = 'service\0frontend'
+    const instances = Array.from({ length: 5 }, (_, index) => `service.instance\0i-${index}`)
+    const partOf = instances.map((source) =>
+      edge(service('frontend'), service('frontend'), {
+        key: `${source}\0${serviceKey}\0part_of`,
+        source,
+        target: serviceKey,
+        relType: 'part_of',
+      })
+    )
+    const runsOn = [
+      edge(service('frontend'), service('frontend'), {
+        key: `${instances[0]}\0container\0c0\0runs_on`,
+        source: instances[0],
+        target: 'container\0c0',
+        relType: 'runs_on',
+      }),
+      edge(service('frontend'), service('frontend'), {
+        key: `${instances[4]}\0container\0c4\0runs_on`,
+        source: instances[4],
+        target: 'container\0c4',
+        relType: 'runs_on',
+      }),
+    ]
+    const capped = capInstanceSatellites([...partOf, ...runsOn], 3)
+    expect(capped.filter((item) => item.relType === 'part_of')).toHaveLength(3)
+    expect(capped.filter((item) => item.relType === 'runs_on').map((item) => item.source)).toEqual([instances[0]])
+  })
+})
 
 describe('foldVirtualPeersIntoServices', () => {
   it('merges same-name virtual peers into the real service and keeps unmatched on the edge', () => {
@@ -264,5 +296,46 @@ describe('fetchServiceMap', () => {
     const result = await fetchServiceMap({ ...(ctx as object), query: { unixTimeRange: () => [] } } as never)
     expect(result).toEqual({ nodes: [], edges: [], truncated: false })
     expect(runSQL).not.toHaveBeenCalled()
+  })
+
+  it('loads capped part_of / runs_on satellites for all real services when showTopology is on', async () => {
+    const structuralColumns = ['src_type', 'src_id', 'dst_type', 'dst_id', 'rel_type']
+    runSQL.mockImplementation(async (sql: string) => {
+      if (sql.includes("entity_type = 'service'")) {
+        return sqlResponse(ENTITY_COLUMNS, [
+          ['service', 'frontend', '{"service.name":"frontend"}', null, null, '[]'],
+        ]) as never
+      }
+      if (sql.includes("rel_type = 'calls'")) {
+        return sqlResponse(RELATIONSHIP_COLUMNS, []) as never
+      }
+      if (sql.includes("rel_type = 'part_of'")) {
+        expect(sql).toContain("dst_id IN ('frontend')")
+        return sqlResponse(structuralColumns, [
+          ['service.instance', 'i-1', 'service', 'frontend', 'part_of'],
+          ['service.instance', 'i-2', 'service', 'frontend', 'part_of'],
+          ['service.instance', 'i-3', 'service', 'frontend', 'part_of'],
+          ['service.instance', 'i-4', 'service', 'frontend', 'part_of'],
+        ]) as never
+      }
+      if (sql.includes("rel_type = 'runs_on'")) {
+        expect(sql).toContain("src_id IN ('i-1', 'i-2', 'i-3')")
+        return sqlResponse(structuralColumns, [['service.instance', 'i-1', 'container', 'c-1', 'runs_on']]) as never
+      }
+      throw new Error(`unexpected sql: ${sql}`)
+    })
+
+    const withoutTopology = await fetchServiceMap(ctx, undefined, { showTopology: false })
+    expect(withoutTopology.nodes.every((node) => node.type === 'service')).toBe(true)
+    expect(runSQL).toHaveBeenCalledTimes(2)
+
+    runSQL.mockClear()
+    const result = await fetchServiceMap(ctx, undefined, { showTopology: true })
+    expect(runSQL).toHaveBeenCalledTimes(4)
+    expect(result.nodes.some((node) => node.type === 'service.instance')).toBe(true)
+    expect(result.nodes.filter((node) => node.type === 'service.instance')).toHaveLength(3)
+    expect(result.nodes.some((node) => node.type === 'container')).toBe(true)
+    expect(result.edges.filter((item) => item.relType === 'part_of')).toHaveLength(3)
+    expect(result.edges.filter((item) => item.relType === 'runs_on')).toHaveLength(1)
   })
 })

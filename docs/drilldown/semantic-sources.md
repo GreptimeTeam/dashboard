@@ -124,10 +124,11 @@ Explore 回答：哪张 span 表、是否完整 `greptime_trace_v1`、RED / Brea
 
 | 产品切片 | 读什么 | 主信号 |
 | -------- | ------ | ------ |
-| Service Map | C 中 `entity_type='service'` + D 中 `rel_type='calls'` | Traces |
+| Service Map（默认） | C 中 `entity_type='service'` + D 中 `rel_type='calls'` | Traces |
+| Service Map（实例与容器开） | 另对图中全部真实 service 追加 D 中 `part_of`（每服务最多 3 个 instance）与对应 instance 的 `runs_on` | Traces |
 | 实体关系图 | C 全类型 + D 多 `rel_type` | Traces 为主；Metrics descriptor / 手宣可补 |
 
-图 API 与查询模式见官方 [Semantic graph](https://docs.greptime.com/nightly/user-guide/semantic-layer/semantic-graph/)。
+结构节点**不**做实体类型 / 关系类型 filter：默认只画调用图；工具栏「实例与容器」打开后才在各 service 外侧显示卫星。图 API 与查询模式见官方 [Semantic graph](https://docs.greptime.com/nightly/user-guide/semantic-layer/semantic-graph/)。
 
 ---
 

@@ -5,8 +5,9 @@ import {
   fitLayoutToViewport,
   heapIntrinsicSize,
   packHeapRows,
+  placeStructuralAnchors,
 } from './layout'
-import type { ServiceMapEdge, ServiceMapNode } from './types'
+import type { ServiceMapDisplayNode, ServiceMapEdge, ServiceMapNode, ServiceMapNodeLayout } from './types'
 
 function service(id: string, virtual = false): ServiceMapNode {
   return {
@@ -198,6 +199,168 @@ describe('buildServiceMapOverviewLayout', () => {
     // Not parked at the canvas floor — stays close under the heap block.
     expect(lonerPos.y - mainBottom).toBeLessThan(200)
     expect(lonerPos.y).toBeLessThan(400)
+  })
+})
+
+describe('placeStructuralAnchors', () => {
+  it('places satellites close on the outer rim and hangs containers further out', () => {
+    const left: ServiceMapDisplayNode = {
+      key: 'service\0left',
+      label: 'left',
+      type: 'service',
+      virtual: false,
+    }
+    const right: ServiceMapDisplayNode = {
+      key: 'service\0right',
+      label: 'right',
+      type: 'service',
+      virtual: false,
+    }
+    const instance: ServiceMapDisplayNode = {
+      key: 'service.instance\0i-1',
+      label: 'i-1',
+      type: 'service.instance',
+      virtual: false,
+    }
+    const container: ServiceMapDisplayNode = {
+      key: 'container\0c-1',
+      label: 'c-1',
+      type: 'container',
+      virtual: false,
+    }
+    // Centroid ~ (300, 100); left service is on the outer-left rim.
+    const layout = new Map<string, ServiceMapNodeLayout>([
+      [left.key, { x: 100, y: 100, community: 0 }],
+      [right.key, { x: 500, y: 100, community: 0 }],
+    ])
+    placeStructuralAnchors(
+      layout,
+      [left, right, instance, container],
+      [
+        {
+          key: 'part',
+          source: instance.key,
+          target: left.key,
+          relType: 'part_of',
+          requests: 0,
+          errors: 0,
+          unmatched: 0,
+          durationSum: 0,
+          durationCount: 0,
+          durationMax: 0,
+        },
+        {
+          key: 'runs',
+          source: instance.key,
+          target: container.key,
+          relType: 'runs_on',
+          requests: 0,
+          errors: 0,
+          unmatched: 0,
+          durationSum: 0,
+          durationCount: 0,
+          durationMax: 0,
+        },
+      ]
+    )
+    const instancePos = layout.get(instance.key)
+    const containerPos = layout.get(container.key)
+    expect(instancePos).toBeDefined()
+    expect(containerPos).toBeDefined()
+    if (!instancePos || !containerPos) return
+    // Outer-left service → satellites further left, not far across the graph.
+    expect(instancePos.x).toBeLessThan(100)
+    expect(Math.hypot(instancePos.x - 100, instancePos.y - 100)).toBeLessThan(140)
+    expect(containerPos.x).toBeLessThan(instancePos.x)
+  })
+
+  it('places top-edge service satellites above the service', () => {
+    const top: ServiceMapDisplayNode = {
+      key: 'service\0top',
+      label: 'top',
+      type: 'service',
+      virtual: false,
+    }
+    const bottom: ServiceMapDisplayNode = {
+      key: 'service\0bottom',
+      label: 'bottom',
+      type: 'service',
+      virtual: false,
+    }
+    const instance: ServiceMapDisplayNode = {
+      key: 'service.instance\0i-1',
+      label: 'i-1',
+      type: 'service.instance',
+      virtual: false,
+    }
+    const layout = new Map<string, ServiceMapNodeLayout>([
+      [top.key, { x: 200, y: 80, community: 0 }],
+      [bottom.key, { x: 200, y: 320, community: 0 }],
+    ])
+    placeStructuralAnchors(
+      layout,
+      [top, bottom, instance],
+      [
+        {
+          key: 'part',
+          source: instance.key,
+          target: top.key,
+          relType: 'part_of',
+          requests: 0,
+          errors: 0,
+          unmatched: 0,
+          durationSum: 0,
+          durationCount: 0,
+          durationMax: 0,
+        },
+      ]
+    )
+    const instancePos = layout.get(instance.key)
+    expect(instancePos).toBeDefined()
+    if (!instancePos) return
+    expect(instancePos.y).toBeLessThan(80)
+    expect(Math.hypot(instancePos.x - 200, instancePos.y - 80)).toBeLessThan(140)
+  })
+
+  it('keeps structural nodes out of Louvain backbone placement', () => {
+    const a = service('a')
+    const b = service('b')
+    const instance: ServiceMapNode = {
+      key: 'service.instance\0i-1',
+      type: 'service.instance',
+      id: 'i-1',
+      label: 'i-1',
+      sourceTables: [],
+      instanceCount: 0,
+      groupAttributes: {},
+      virtual: false,
+    }
+    const layout = buildServiceMapOverviewLayout(
+      [a, b, instance],
+      [
+        edge(a, b, 20),
+        {
+          key: 'part',
+          source: instance.key,
+          target: a.key,
+          relType: 'part_of',
+          requests: 0,
+          errors: 0,
+          unmatched: 0,
+          durationSum: 0,
+          durationCount: 0,
+          durationMax: 0,
+        },
+      ],
+      800,
+      600
+    )
+    const aPos = layout.get(a.key)
+    const instancePos = layout.get(instance.key)
+    expect(aPos).toBeDefined()
+    expect(instancePos).toBeDefined()
+    if (!aPos || !instancePos) return
+    expect(Math.hypot(instancePos.x - aPos.x, instancePos.y - aPos.y)).toBeGreaterThanOrEqual(60)
   })
 })
 
