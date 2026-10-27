@@ -23,9 +23,39 @@
       template(#title)
         span.gpt-surface-card__title {{ $t('logsQuery.results') }}
         span.gpt-surface-card__badge(v-if="totalResults > 0") {{ totalResults }}
+      .flow-filter-toolbar.gpt-results-toolbar
+        a-space.flow-filter-controls(:size="12")
+          a-input.flow-filter-search(
+            v-model="searchKeyword"
+            size="small"
+            allow-clear
+            :style="{ width: '240px' }"
+            :placeholder="$t('flow.filterSearchPlaceholder')"
+          )
+            template(#prefix)
+              svg.icon-12.icon-color
+                use(href="#search")
+          a-select.flow-filter-select(
+            v-model="sourceTableFilter"
+            size="small"
+            allow-clear
+            allow-search
+            :style="{ width: '240px' }"
+            :placeholder="$t('flow.filterSourcePlaceholder')"
+            :options="sourceTableOptions"
+          )
+          a-select.flow-filter-select(
+            v-model="sinkTableFilter"
+            size="small"
+            allow-clear
+            allow-search
+            :style="{ width: '240px' }"
+            :placeholder="$t('flow.filterSinkPlaceholder')"
+            :options="sinkTableOptions"
+          )
       DataTable.flow-table.gpt-table-page(
         leftover-strategy="proportional"
-        :data="data"
+        :data="filteredFlows"
         :columns="columns"
         :loading="loading"
         :show-context-menu="false"
@@ -76,17 +106,78 @@
   ]
 
   const columns = shallowRef<Array<ColumnType>>([])
-  const data = shallowRef<Array<any>>([])
+  const allFlows = shallowRef<Array<any>>([])
   const loading = ref(false)
-  const totalResults = ref(0)
   const modalVisible = ref(false)
   const isEdit = ref(false)
   const editData = ref(null)
   const textEditorData = ref('')
   const schemaColumns = shallowRef<Array<ColumnType>>([])
 
+  const searchKeyword = ref('')
+  const sourceTableFilter = ref<string | undefined>()
+  const sinkTableFilter = ref<string | undefined>()
+
   /** 不按父级撑满，表格高度随数据行数 */
   const flowTableScroll = { y: undefined }
+
+  const splitSourceTables = (value: unknown): string[] =>
+    String(value ?? '')
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean)
+
+  /** Hide catalog: greptime.public.t → public.t */
+  const toDbTableName = (qualifiedName: string): string => {
+    const parts = qualifiedName.split('.').filter(Boolean)
+    if (parts.length >= 3) return parts.slice(-2).join('.')
+    return qualifiedName
+  }
+
+  const uniqueSorted = (values: string[]) => [...new Set(values)].sort((a, b) => a.localeCompare(b))
+
+  const sourceTableOptions = computed(() =>
+    uniqueSorted(allFlows.value.flatMap((flow) => splitSourceTables(flow.source_table_names).map(toDbTableName))).map(
+      (value) => ({
+        label: value,
+        value,
+      })
+    )
+  )
+
+  const sinkTableOptions = computed(() =>
+    uniqueSorted(
+      allFlows.value
+        .map((flow) => String(flow.sink_table_name ?? '').trim())
+        .filter(Boolean)
+        .map(toDbTableName)
+    ).map((value) => ({
+      label: value,
+      value,
+    }))
+  )
+
+  const filteredFlows = computed(() => {
+    const keyword = searchKeyword.value.trim().toLowerCase()
+    const source = sourceTableFilter.value
+    const sink = sinkTableFilter.value
+
+    return allFlows.value.filter((flow) => {
+      if (keyword) {
+        const haystack = [flow.flow_name, flow.comment, flow.sink_table_name, flow.source_table_names]
+          .map((part) => String(part ?? '').toLowerCase())
+          .join('\n')
+        if (!haystack.includes(keyword)) return false
+      }
+      if (source && !splitSourceTables(flow.source_table_names).map(toDbTableName).includes(source)) {
+        return false
+      }
+      if (sink && toDbTableName(String(flow.sink_table_name ?? '').trim()) !== sink) return false
+      return true
+    })
+  })
+
+  const totalResults = computed(() => filteredFlows.value.length)
 
   const getStatusClass = (status: unknown) => {
     const value = String(status ?? '').toLowerCase()
@@ -130,7 +221,7 @@
           })
           .filter(Boolean) as ColumnType[]
 
-        data.value = result.output[0].records.rows.map((row, index) => {
+        allFlows.value = result.output[0].records.rows.map((row, index) => {
           const obj = toObj(row, schemas, index, null)
           const expireAfterSchema = schemas.filter((v) => v.name === 'expire_after')
           if (expireAfterSchema[0]?.data_type === 'Int64' && obj.expire_after !== null) {
@@ -139,13 +230,12 @@
           return obj
         })
 
-        totalResults.value = data.value.length
         loading.value = false
       })
       .catch((error) => {
         console.error('Failed to load flows:', error)
         loading.value = false
-        totalResults.value = 0
+        allFlows.value = []
         Message.error(t('flow.loadFailed'))
       })
   }
@@ -254,6 +344,10 @@
     gap: 4px;
     margin-left: 8px;
     font-weight: 500;
+  }
+
+  .flow-filter-toolbar {
+    justify-content: flex-start;
   }
 
   .flow-table {
