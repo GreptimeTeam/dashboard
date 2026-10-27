@@ -178,15 +178,6 @@ export function formatServiceMapCompactPercent(ratio: number): string {
   return `${(ratio * 100).toFixed(1).replace(/\.0$/, '')}%`
 }
 
-function fitNodeStatFontSize(size: number, diskR: number, text: string, baseRatio: number, minPx: number): number {
-  const base = Math.max(minPx, size * baseRatio)
-  // Approximate glyph width ≈ 0.62em; leave padding inside the fill disk.
-  const maxWidth = diskR * 1.7
-  const estimated = text.length * base * 0.62
-  if (estimated <= maxWidth) return Math.round(base)
-  return Math.max(minPx, Math.round(base * (maxWidth / estimated)))
-}
-
 /** Success/error dash lengths for the rim arc (exported for proportion tests). */
 export function serviceMapArcDashLengths(
   errorRatio: number,
@@ -200,6 +191,10 @@ export function serviceMapArcDashLengths(
   return { okLen: circumference - errorLen, errorLen }
 }
 
+/** Fixed on-disk type: sized for common compact rates (≤5 glyphs) on ~48px nodes. */
+const NODE_STAT_FONT_MAIN = 11
+const NODE_STAT_FONT_SEC = 9
+
 /** SVG data-URL symbol: fill disk + success/error arc on the rim (Grafana-like, minimal gutter). */
 export function buildServiceMapNodeSymbolDataUrl(options: ServiceMapNodeSymbolOptions): string {
   const size = Math.max(28, Math.round(options.size))
@@ -211,11 +206,8 @@ export function buildServiceMapNodeSymbolDataUrl(options: ServiceMapNodeSymbolOp
   const diskR = Math.max(stroke, ringR - stroke * 0.5)
   const circumference = 2 * Math.PI * ringR
   const { okLen, errorLen } = serviceMapArcDashLengths(options.errorRatio, circumference)
-  // Keep on-disk stats compact so title hierarchy stays name > rate > error%.
-  const fontMain = fitNodeStatFontSize(size, diskR, options.mainStat, 0.19, 7)
-  const fontSec = fitNodeStatFontSize(size, diskR, options.secondaryStat, 0.14, 6)
-  const mainY = cy - fontSec * 0.15
-  const secY = cy + fontMain * 0.7
+  const mainY = cy - NODE_STAT_FONT_SEC * 0.2
+  const secY = cy + NODE_STAT_FONT_MAIN * 0.62
   const esc = escapeHtml
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
   <circle cx="${cx}" cy="${cy}" r="${diskR}" fill="${esc(options.fill)}"/>
@@ -224,13 +216,15 @@ export function buildServiceMapNodeSymbolDataUrl(options: ServiceMapNodeSymbolOp
   <circle cx="${cx}" cy="${cy}" r="${ringR}" fill="none" stroke="${esc(options.dangerColor)}" stroke-width="${stroke}"
     stroke-dasharray="${errorLen} ${okLen}" stroke-dashoffset="${circumference * 0.25 - okLen}" stroke-linecap="butt"/>
   <text x="${cx}" y="${mainY}" text-anchor="middle" dominant-baseline="middle"
-    fill="${esc(options.textColor)}" font-size="${fontMain}" font-weight="600" font-family="system-ui,sans-serif">${esc(
+    fill="${esc(
+      options.textColor
+    )}" font-size="${NODE_STAT_FONT_MAIN}" font-weight="600" font-family="system-ui,sans-serif">${esc(
     options.mainStat
   )}</text>
   <text x="${cx}" y="${secY}" text-anchor="middle" dominant-baseline="middle"
     fill="${esc(
       options.textColor
-    )}" font-size="${fontSec}" font-weight="500" font-family="system-ui,sans-serif" opacity="0.72">${esc(
+    )}" font-size="${NODE_STAT_FONT_SEC}" font-weight="500" font-family="system-ui,sans-serif" opacity="0.88">${esc(
     options.secondaryStat
   )}</text>
 </svg>`
@@ -244,10 +238,10 @@ export function mapTrafficToSymbolSize(
   maxTraffic: number,
   options: { virtual?: boolean; cluster?: boolean } = {}
 ): number {
-  if (options.cluster) return 40
-  // Real services need room for inner req/s + error% (Grafana-like node contents).
-  const minSize = options.virtual ? 14 : 40
-  const maxSize = options.virtual ? 36 : 68
+  if (options.cluster) return 44
+  // Real services need room for readable inner req/s + error%.
+  const minSize = options.virtual ? 14 : 48
+  const maxSize = options.virtual ? 36 : 76
   if (maxTraffic <= minTraffic) return Math.round((minSize + maxSize) / 2)
   const t = Math.log1p(Math.max(0, traffic))
   const lo = Math.log1p(Math.max(0, minTraffic))
