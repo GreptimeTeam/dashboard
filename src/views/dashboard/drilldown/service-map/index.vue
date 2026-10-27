@@ -113,11 +113,11 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
                 :style="{ backgroundColor: withAlpha(graphTheme.database, isDark ? 0.22 : 0.12), borderColor: graphTheme.database }"
               )
               | {{ t('drilldown.serviceMap.databaseEndpoint') }}
-            span.service-map-legend__item(v-if="hasInferredServiceEndpoints")
+            span.service-map-legend__item(v-if="hasVirtualServiceEndpoints")
               i.service-map-legend__external(
                 :style="{ backgroundColor: withAlpha(graphTheme.external, isDark ? 0.2 : 0.1), borderColor: graphTheme.external }"
               )
-              | {{ t('drilldown.serviceMap.inferredEndpoint') }}
+              | {{ t('drilldown.serviceMap.virtualEndpoint') }}
           .service-map-legend__group.service-map-legend__group--health
             span.service-map-legend__group-label {{ t('drilldown.serviceMap.healthLegend') }}
             span.service-map-legend__item
@@ -267,7 +267,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   const hasDatabaseEndpoints = computed(() =>
     graphNodes.value.some((node) => node.virtual && node.connectionType === 'database')
   )
-  const hasInferredServiceEndpoints = computed(() =>
+  const hasVirtualServiceEndpoints = computed(() =>
     graphNodes.value.some((node) => node.virtual && node.connectionType !== 'database')
   )
   const nodeCallStats = computed(() => aggregateNodeCallStats(graphEdges.value))

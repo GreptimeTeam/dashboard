@@ -270,10 +270,10 @@ export function buildServiceMapTooltipFormatter(input: ServiceMapChartInput, con
       return [
         `<strong>${escapeHtml(node.label)}</strong>`,
         `${escapeHtml(t('drilldown.serviceMap.endpointKind'))}: ${escapeHtml(
-          t(isDatabase ? 'drilldown.serviceMap.databaseEndpoint' : 'drilldown.serviceMap.inferredEndpoint')
+          t(isDatabase ? 'drilldown.serviceMap.databaseEndpoint' : 'drilldown.serviceMap.virtualEndpoint')
         )}`,
-        `${escapeHtml(t('drilldown.serviceMap.inferredCallRate'))}: ${escapeHtml(formatCallRate(unmatched))} call/s`,
-        escapeHtml(t(isDatabase ? 'drilldown.serviceMap.databaseNodeHint' : 'drilldown.serviceMap.inferredNodeHint')),
+        `${escapeHtml(t('drilldown.serviceMap.unmatchedCallRate'))}: ${escapeHtml(formatCallRate(unmatched))} call/s`,
+        escapeHtml(t(isDatabase ? 'drilldown.serviceMap.databaseNodeHint' : 'drilldown.serviceMap.virtualNodeHint')),
       ].join('<br/>')
     }
     const instanceCount = node.service?.instanceCount ?? 0
