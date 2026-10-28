@@ -12,6 +12,9 @@ export default {
   'drilldown.serviceMap.backToOverview': 'Back to overview',
   'drilldown.serviceMap.truncated': 'The graph contains many nodes or calls; only part of the results is shown.',
   'drilldown.serviceMap.unavailable': 'Unable to read the Semantic Graph',
+  'drilldown.serviceMap.unsupported': 'Service Map is not supported on this GreptimeDB',
+  'drilldown.serviceMap.unsupportedHint':
+    'This instance does not provide Semantic Graph tables (semantic_entities / semantic_relationships). Upgrade to a GreptimeDB build with the Semantic Layer, or use Traces Explore instead.',
   'drilldown.serviceMap.loading': 'Loading Service Map…',
   'drilldown.serviceMap.noData': 'No service call data in this time range',
   'drilldown.serviceMap.noMatches': 'No matching services',

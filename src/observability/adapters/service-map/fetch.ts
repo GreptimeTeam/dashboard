@@ -452,3 +452,29 @@ export async function fetchServiceMapInstanceCount(ctx: DrilldownContext, servic
   const row = recordsToObjects(response?.output?.[0]?.records)[0]
   return toNumber(row?.instance_count)
 }
+
+/**
+ * SQL interceptor rejects with `{ error, startTime }` rather than `Error`.
+ * Prefer the server message when present.
+ */
+export function serviceMapSqlErrorMessage(reason: unknown): string {
+  if (reason && typeof reason === 'object' && 'error' in reason) {
+    const message = String((reason as { error?: unknown }).error ?? '').trim()
+    if (message) return message
+  }
+  if (reason instanceof Error) {
+    return reason.message.trim()
+  }
+  const fallback = String(reason ?? '').trim()
+  return fallback === '[object Object]' ? '' : fallback
+}
+
+/**
+ * True when GreptimeDB has no Semantic Graph tables (older builds / no Semantic Layer).
+ * Matches the SQL planner message shape: `Failed to plan SQL: Table not found: …`.
+ */
+export function isMissingSemanticGraph(reason: unknown): boolean {
+  const message = serviceMapSqlErrorMessage(reason)
+  if (!/table not found/i.test(message)) return false
+  return /semantic_entities|semantic_relationships/i.test(message)
+}

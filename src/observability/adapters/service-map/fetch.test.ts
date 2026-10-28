@@ -6,7 +6,14 @@ import {
   SERVICE_MAP_NODE_LIMIT,
   SERVICE_MAP_RELATIONSHIP_ROWS_LIMIT,
 } from '../../traces/service-map-queries'
-import { capInstanceSatellites, fetchServiceMap, foldVirtualPeersIntoServices, limitServiceMapGraph } from './fetch'
+import {
+  capInstanceSatellites,
+  fetchServiceMap,
+  foldVirtualPeersIntoServices,
+  isMissingSemanticGraph,
+  limitServiceMapGraph,
+  serviceMapSqlErrorMessage,
+} from './fetch'
 import type { ServiceMapEdge, ServiceMapNode } from './types'
 
 vi.mock('@/api/editor', () => ({ default: { runSQL: vi.fn() } }))
@@ -337,5 +344,34 @@ describe('fetchServiceMap', () => {
     expect(result.nodes.some((node) => node.type === 'container')).toBe(true)
     expect(result.edges.filter((item) => item.relType === 'part_of')).toHaveLength(3)
     expect(result.edges.filter((item) => item.relType === 'runs_on')).toHaveLength(1)
+  })
+})
+
+describe('isMissingSemanticGraph', () => {
+  it('detects Table not found for semantic graph tables', () => {
+    expect(
+      isMissingSemanticGraph({
+        error: 'Failed to plan SQL: Table not found: greptime_private.semantic_entities',
+      })
+    ).toBe(true)
+    expect(
+      isMissingSemanticGraph({
+        error: 'Failed to plan SQL: Table not found: greptime_private.semantic_relationships',
+      })
+    ).toBe(true)
+  })
+
+  it('ignores other SQL failures', () => {
+    expect(isMissingSemanticGraph({ error: 'Failed to plan SQL: Table not found: public.foo' })).toBe(false)
+    expect(isMissingSemanticGraph({ error: 'timeout' })).toBe(false)
+    expect(isMissingSemanticGraph(new Error('boom'))).toBe(false)
+  })
+})
+
+describe('serviceMapSqlErrorMessage', () => {
+  it('reads interceptor reject payload', () => {
+    expect(serviceMapSqlErrorMessage({ error: 'table gone', startTime: '1' })).toBe('table gone')
+    expect(serviceMapSqlErrorMessage(new Error('boom'))).toBe('boom')
+    expect(serviceMapSqlErrorMessage({ startTime: '1' })).toBe('')
   })
 })

@@ -12,6 +12,9 @@ export default {
   'drilldown.serviceMap.backToOverview': '返回概览',
   'drilldown.serviceMap.truncated': '图中节点或调用较多，仅显示部分结果。',
   'drilldown.serviceMap.unavailable': '无法读取 Semantic Graph',
+  'drilldown.serviceMap.unsupported': '当前 GreptimeDB 不支持 Service Map',
+  'drilldown.serviceMap.unsupportedHint':
+    '实例未提供 Semantic Graph 表（semantic_entities / semantic_relationships）。请升级到包含 Semantic Layer 的版本，或改用 Traces 探索。',
   'drilldown.serviceMap.loading': '正在加载 Service Map…',
   'drilldown.serviceMap.noData': '当前时间范围内没有服务调用数据',
   'drilldown.serviceMap.noMatches': '没有匹配的服务',

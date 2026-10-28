@@ -52,7 +52,14 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       :title="t('drilldown.serviceMap.truncated')"
     )
     a-alert.service-map-error(
-      v-if="error"
+      v-if="unsupported"
+      type="warning"
+      show-icon
+      :title="t('drilldown.serviceMap.unsupported')"
+      :description="t('drilldown.serviceMap.unsupportedHint')"
+    )
+    a-alert.service-map-error(
+      v-else-if="error"
       type="error"
       show-icon
       :title="t('drilldown.serviceMap.unavailable')"
@@ -64,7 +71,10 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
         .service-map-state(v-if="loading && !graphNodes.length")
           a-spin(:size="32")
           span {{ t('drilldown.serviceMap.loading') }}
-        a-empty.service-map-state(v-else-if="!loading && !graphNodes.length" :description="emptyDescription")
+        a-empty.service-map-state(
+          v-else-if="!loading && !graphNodes.length && !unsupported && !error"
+          :description="emptyDescription"
+        )
         VChart.service-map-chart(
           v-if="graphNodes.length"
           ref="chartRef"
@@ -171,7 +181,12 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   import { useDrilldownContext } from '@/observability/context'
   import { useAppStore } from '@/store'
   import type { DrilldownFilter } from '@/observability/types'
-  import { fetchServiceMap, fetchServiceMapInstanceCount } from '@/observability/adapters/service-map/fetch'
+  import {
+    fetchServiceMap,
+    fetchServiceMapInstanceCount,
+    isMissingSemanticGraph,
+    serviceMapSqlErrorMessage,
+  } from '@/observability/adapters/service-map/fetch'
   import {
     buildServiceMapDisplayGraph,
     buildServiceMapFacets,
@@ -196,6 +211,8 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   const router = useRouter()
   const loading = ref(false)
   const error = ref('')
+  /** DB has no Semantic Graph tables (version / Semantic Layer). */
+  const unsupported = ref(false)
   const selectedServices = ref<string[]>([])
   const selectedScopes = ref<string[]>([])
   const result = ref<ServiceMapResult>({ nodes: [], edges: [], truncated: false })
@@ -225,6 +242,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     const currentRequest = requestId
     loading.value = true
     error.value = ''
+    unsupported.value = false
     try {
       const next = await fetchServiceMap(
         ctx,
@@ -236,7 +254,8 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       if (currentRequest === requestId) result.value = next
     } catch (reason) {
       if (currentRequest === requestId) {
-        error.value = reason instanceof Error ? reason.message : String(reason)
+        unsupported.value = isMissingSemanticGraph(reason)
+        error.value = unsupported.value ? '' : serviceMapSqlErrorMessage(reason)
         result.value = { nodes: [], edges: [], truncated: false }
       }
     } finally {
