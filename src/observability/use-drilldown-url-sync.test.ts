@@ -212,12 +212,27 @@ describe('useDrilldownUrlSync', () => {
     const target = router.push.mock.calls[0]?.[0] ?? router.replace.mock.calls[0]?.[0]
     expect(target).toMatchObject({
       query: {
+        signal: 'traces',
         view: 'service-map',
         serviceMapSearch: 'checkout',
         serviceMapScope: JSON.stringify(['prod']),
         serviceMapFilters: JSON.stringify({ env: ['prod'] }),
       },
     })
+  })
+
+  it('hydrates Service Map as a Traces view even when signal is missing', async () => {
+    const { default: useDrilldownUrlSync } = await import('./use-drilldown-url-sync')
+    const ctx = createCtx()
+    const urlSync = useDrilldownUrlSync(
+      ctx,
+      { query: { view: 'service-map', timeLength: '30' } } as never,
+      { push: vi.fn(), replace: vi.fn() } as never
+    )
+    urlSync.initializeFromQuery()
+    await nextTick()
+
+    expect(ctx.actions.setSignal).toHaveBeenCalledWith('traces', { hydrate: true })
   })
 
   it('hydrates with soft setSignal and restores logsTrace drawer via openLogsForTrace', async () => {

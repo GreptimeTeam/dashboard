@@ -3,6 +3,7 @@ export default {
   'drilldown.nav.overview': '概览',
   'drilldown.nav.breadcrumb': '面包屑',
   'drilldown.nav.signals': '信号',
+  'drilldown.nav.tracesViews': 'Traces 视图',
   'drilldown.serviceMap.title': 'Service Map',
   'drilldown.serviceMap.searchPlaceholder': '筛选服务',
   'drilldown.serviceMap.scopeLabel': '环境',
