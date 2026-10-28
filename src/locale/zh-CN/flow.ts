@@ -42,4 +42,7 @@ export default {
   'flow.updatedToast': '更新 Flow 成功',
   'flow.tableCreated': '表创建成功',
   'flow.operationFailed': 'Flow 操作失败:{msg}',
+  'flow.filterSearchPlaceholder': '搜索名称、备注或表名',
+  'flow.filterSourcePlaceholder': 'Source 表',
+  'flow.filterSinkPlaceholder': 'Sink 表',
 }

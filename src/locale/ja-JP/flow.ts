@@ -43,4 +43,7 @@ export default {
   'flow.updatedToast': 'Flow を更新しました',
   'flow.tableCreated': 'テーブルを作成しました',
   'flow.operationFailed': 'Flow 操作に失敗しました:{msg}',
+  'flow.filterSearchPlaceholder': '名前・コメント・テーブルを検索',
+  'flow.filterSourcePlaceholder': 'ソーステーブル',
+  'flow.filterSinkPlaceholder': 'シンクテーブル',
 }

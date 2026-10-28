@@ -43,4 +43,7 @@ export default {
   'flow.updatedToast': 'Flow updated successfully',
   'flow.tableCreated': 'Table created successfully',
   'flow.operationFailed': 'Flow operation failed: {msg}',
+  'flow.filterSearchPlaceholder': 'Search name, comment, or tables',
+  'flow.filterSourcePlaceholder': 'Source table',
+  'flow.filterSinkPlaceholder': 'Sink table',
 }
