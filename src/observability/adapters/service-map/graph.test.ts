@@ -91,7 +91,8 @@ describe('mergeEdges', () => {
     )
     expect(merged).toHaveLength(1)
     expect(merged[0]).toMatchObject({
-      key: `${a.key}\0${b.key}`,
+      key: `${a.key}\0${b.key}\0calls`,
+      relType: 'calls',
       requests: 15,
       errors: 2,
       unmatched: 4,
@@ -169,5 +170,64 @@ describe('buildServiceMapDisplayGraph', () => {
     // gateway bridges prod services and collapses into a path cluster
     expect(result.nodes.some((node) => node.cluster)).toBe(true)
     expect(result.edges.map((item) => item.requests).sort((a, b) => b - a)).toEqual([40, 30])
+  })
+
+  it('keeps expanded instance/container satellites with a filtered service', () => {
+    const instance: ServiceMapNode = {
+      key: 'service.instance\0frontend-1',
+      type: 'service.instance',
+      id: 'frontend-1',
+      label: 'frontend-1',
+      sourceTables: [],
+      instanceCount: 0,
+      groupAttributes: {},
+      virtual: false,
+    }
+    const container: ServiceMapNode = {
+      key: 'container\0c1',
+      type: 'container',
+      id: 'c1',
+      label: 'c1',
+      sourceTables: [],
+      instanceCount: 0,
+      groupAttributes: {},
+      virtual: false,
+    }
+    const structuralEdges: ServiceMapEdge[] = [
+      {
+        key: `${instance.key}\0${frontend.key}\0part_of`,
+        source: instance.key,
+        target: frontend.key,
+        relType: 'part_of',
+        requests: 0,
+        errors: 0,
+        unmatched: 0,
+        durationSum: 0,
+        durationCount: 0,
+        durationMax: 0,
+      },
+      {
+        key: `${instance.key}\0${container.key}\0runs_on`,
+        source: instance.key,
+        target: container.key,
+        relType: 'runs_on',
+        requests: 0,
+        errors: 0,
+        unmatched: 0,
+        durationSum: 0,
+        durationCount: 0,
+        durationMax: 0,
+      },
+    ]
+    const result = buildServiceMapDisplayGraph({
+      nodes: [...nodes, instance, container],
+      edges: [...edges, ...structuralEdges],
+      selectedServices: ['frontend'],
+    })
+    expect(new Set(result.nodes.map((node) => node.key))).toEqual(
+      new Set([frontend.key, gateway.key, instance.key, container.key])
+    )
+    expect(result.edges.some((item) => item.relType === 'part_of')).toBe(true)
+    expect(result.edges.some((item) => item.relType === 'runs_on')).toBe(true)
   })
 })

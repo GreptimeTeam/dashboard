@@ -110,7 +110,7 @@ describe('aggregateNodeCallStats / health / symbol size', () => {
     expect(pairedErrorRatio(50, 5)).toBe(0.1)
   })
 
-  it('builds an SVG data-URL symbol with arc and inner stats', () => {
+  it('builds an SVG data-URL symbol with fixed inner-stat font sizes', () => {
     const symbol = buildServiceMapNodeSymbolDataUrl({
       size: 48,
       fill: 'rgba(112,47,237,0.11)',
@@ -119,24 +119,23 @@ describe('aggregateNodeCallStats / health / symbol size', () => {
       trackColor: '#999',
       textColor: '#473460',
       errorRatio: 0.25,
-      mainStat: '12/s',
+      mainStat: '100/s',
       secondaryStat: '25%',
     })
     expect(symbol.startsWith('image://data:image/svg+xml')).toBe(true)
     const decoded = decodeURIComponent(symbol.replace('image://data:image/svg+xml;charset=utf-8,', ''))
-    expect(decoded).toContain('12/s')
+    expect(decoded).toContain('100/s')
     expect(decoded).toContain('25%')
     expect(decoded).toContain('#22c55e')
     expect(decoded).toContain('#ef4444')
+    expect(decoded).toMatch(/font-size="11"[^>]*>100\/s/)
+    expect(decoded).toMatch(/font-size="9"[^>]*>25%/)
   })
 
-  it('compacts large rates so they fit inside small node disks', () => {
-    expect(formatServiceMapCompactRate(0)).toBe('0/s')
-    expect(formatServiceMapCompactRate(3.2)).toBe('3.2/s')
-    expect(formatServiceMapCompactRate(42)).toBe('42/s')
-    expect(formatServiceMapCompactRate(1500)).toBe('1.5k')
-    expect(formatServiceMapCompactRate(12_500)).toBe('13k')
-    expect(formatServiceMapCompactRate(2_400_000)).toBe('2.4M')
+  it('compacts common rates to ≤5 glyphs for fixed on-disk type', () => {
+    const samples = [0, 3.2, 42, 100, 999, 1500, 12_500, 2_400_000].map(formatServiceMapCompactRate)
+    expect(samples).toEqual(['0/s', '3.2/s', '42/s', '100/s', '999/s', '1.5k', '13k', '2.4M'])
+    samples.forEach((text) => expect(text.length).toBeLessThanOrEqual(5))
     expect(formatServiceMapCompactPercent(0.006)).toBe('0.6%')
     expect(formatServiceMapCompactPercent(0.4082)).toBe('41%')
   })

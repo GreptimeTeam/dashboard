@@ -34,10 +34,12 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
         )
           a-option(v-for="option in serviceOptions" :key="option.value" :value="option.value") {{ option.label }}
         span.service-map-counts(v-if="!loading")
-          | {{ t('drilldown.serviceMap.counts', { nodes: graphNodes.length, edges: graphEdges.length }) }}
+          | {{ t('drilldown.serviceMap.counts', { nodes: callGraphCounts.nodes, edges: callGraphCounts.edges }) }}
         span.service-map-counts(v-else-if="graphNodes.length")
           a-spin(:size="18")
           | {{ t('drilldown.serviceMap.loading') }}
+        span.drilldown-toolbar__group
+          a-checkbox(v-model="showTopologyNodes") {{ t('drilldown.serviceMap.topologyNodes') }}
       .drilldown-toolbar__right(v-if="inspectedNodeKey && selectedNode")
         span.service-map-active-node {{ t('drilldown.serviceMap.activeNode', { name: selectedNode.label }) }}
         a-button(type="outline" size="medium" @click="backToOverview")
@@ -50,7 +52,14 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       :title="t('drilldown.serviceMap.truncated')"
     )
     a-alert.service-map-error(
-      v-if="error"
+      v-if="unsupported"
+      type="warning"
+      show-icon
+      :title="t('drilldown.serviceMap.unsupported')"
+      :description="t('drilldown.serviceMap.unsupportedHint')"
+    )
+    a-alert.service-map-error(
+      v-else-if="error"
       type="error"
       show-icon
       :title="t('drilldown.serviceMap.unavailable')"
@@ -58,15 +67,14 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     )
 
     .service-map-content
-      .service-map-canvas(
-        ref="canvasRef"
-        :class="{ 'service-map-canvas--focused': !!focusCanvasStyle }"
-        :style="focusCanvasStyle"
-      )
+      .service-map-canvas(ref="canvasRef")
         .service-map-state(v-if="loading && !graphNodes.length")
           a-spin(:size="32")
           span {{ t('drilldown.serviceMap.loading') }}
-        a-empty.service-map-state(v-else-if="!loading && !graphNodes.length" :description="emptyDescription")
+        a-empty.service-map-state(
+          v-else-if="!loading && !graphNodes.length && !unsupported && !error"
+          :description="emptyDescription"
+        )
         VChart.service-map-chart(
           v-if="graphNodes.length"
           ref="chartRef"
@@ -88,19 +96,44 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
           button.service-map-node-action(type="button" role="menuitem" @click="inspectNode")
             | {{ t('drilldown.serviceMap.inspect') }}
           button.service-map-node-action(
-            v-if="!menuNode.virtual"
+            v-if="!menuNode.virtual && menuNode.type === 'service'"
             type="button"
             role="menuitem"
             @click="openSignal('traces')"
           )
             | {{ t('drilldown.serviceMap.viewTraces') }}
           button.service-map-node-action(
-            v-if="!menuNode.virtual && logsServiceReady"
+            v-if="!menuNode.virtual && menuNode.type === 'service' && logsServiceReady"
             type="button"
             role="menuitem"
             @click="openSignal('logs')"
           )
             | {{ t('drilldown.serviceMap.viewLogs') }}
+        .service-map-zoom(v-if="graphNodes.length")
+          a-button(
+            type="text"
+            size="small"
+            :aria-label="t('drilldown.serviceMap.zoomIn')"
+            @click="zoomChart(1.25)"
+          )
+            template(#icon)
+              IconZoomIn
+          a-button(
+            type="text"
+            size="small"
+            :aria-label="t('drilldown.serviceMap.zoomReset')"
+            @click="resetChartZoom"
+          )
+            template(#icon)
+              IconRefresh
+          a-button(
+            type="text"
+            size="small"
+            :aria-label="t('drilldown.serviceMap.zoomOut')"
+            @click="zoomChart(0.8)"
+          )
+            template(#icon)
+              IconZoomOut
         .service-map-legend(v-if="graphNodes.length")
           .service-map-legend__group
             span.service-map-legend__item
@@ -113,11 +146,21 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
                 :style="{ backgroundColor: withAlpha(graphTheme.database, isDark ? 0.22 : 0.12), borderColor: graphTheme.database }"
               )
               | {{ t('drilldown.serviceMap.databaseEndpoint') }}
-            span.service-map-legend__item(v-if="hasInferredServiceEndpoints")
+            span.service-map-legend__item(v-if="hasVirtualServiceEndpoints")
               i.service-map-legend__external(
                 :style="{ backgroundColor: withAlpha(graphTheme.external, isDark ? 0.2 : 0.1), borderColor: graphTheme.external }"
               )
-              | {{ t('drilldown.serviceMap.inferredEndpoint') }}
+              | {{ t('drilldown.serviceMap.virtualEndpoint') }}
+            span.service-map-legend__item(v-if="hasInstanceSatellites")
+              i.service-map-legend__instance(
+                :style="{ backgroundColor: withAlpha(graphTheme.instance, isDark ? 0.28 : 0.14), borderColor: graphTheme.instance }"
+              )
+              | {{ t('drilldown.serviceMap.instanceNode') }}
+            span.service-map-legend__item(v-if="hasContainerSatellites")
+              i.service-map-legend__container(
+                :style="{ backgroundColor: withAlpha(graphTheme.container, isDark ? 0.28 : 0.14), borderColor: graphTheme.container }"
+              )
+              | {{ t('drilldown.serviceMap.containerNode') }}
           .service-map-legend__group.service-map-legend__group--health
             span.service-map-legend__group-label {{ t('drilldown.serviceMap.healthLegend') }}
             span.service-map-legend__item
@@ -134,18 +177,25 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   import { storeToRefs } from 'pinia'
   import { useRoute, useRouter } from 'vue-router'
   import VChart from 'vue-echarts'
+  import { IconRefresh, IconZoomIn, IconZoomOut } from '@arco-design/web-vue/es/icon'
   import { useDrilldownContext } from '@/observability/context'
   import { useAppStore } from '@/store'
   import type { DrilldownFilter } from '@/observability/types'
-  import { fetchServiceMap, fetchServiceMapInstanceCount } from '@/observability/adapters/service-map/fetch'
+  import {
+    fetchServiceMap,
+    fetchServiceMapInstanceCount,
+    isMissingSemanticGraph,
+    serviceMapSqlErrorMessage,
+  } from '@/observability/adapters/service-map/fetch'
   import {
     buildServiceMapDisplayGraph,
     buildServiceMapFacets,
     buildServiceMapScopeFacet,
   } from '@/observability/adapters/service-map/graph'
   import { buildServiceMapOverviewLayout } from '@/observability/adapters/service-map/layout'
-  import { aggregateNodeCallStats } from '@/observability/adapters/service-map/metrics'
+  import { aggregateNodeCallStats, isCallEdge } from '@/observability/adapters/service-map/metrics'
   import type { ServiceMapFilters, ServiceMapResult } from '@/observability/adapters/service-map/types'
+  import { isStructuralEntityType } from '@/observability/traces/service-map-queries'
   import { buildServiceMapChartOption, buildServiceMapSeries, type ServiceMapChartInput } from './chart-option'
   import { resolveServiceMapTheme, withAlpha } from './chart-theme'
   import { parseServiceMapUrlQuery, serializeServiceMapUrlQuery } from './url-state'
@@ -161,6 +211,8 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   const router = useRouter()
   const loading = ref(false)
   const error = ref('')
+  /** DB has no Semantic Graph tables (version / Semantic Layer). */
+  const unsupported = ref(false)
   const selectedServices = ref<string[]>([])
   const selectedScopes = ref<string[]>([])
   const result = ref<ServiceMapResult>({ nodes: [], edges: [], truncated: false })
@@ -171,6 +223,15 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   const menuPosition = ref({ x: 0, y: 0 })
   const facetFilters = ref<ServiceMapFilters>({})
   const expandedClusters = ref<Set<string>>(new Set())
+  /** When on, show instance/container satellites for all real services. Default off. */
+  const showTopologyNodes = ref(false)
+  /**
+   * User zoom multiplier on top of layout-natural scale.
+   * Detail views counteract ECharts bbox-fit so spacing matches the overview page.
+   */
+  const userZoomFactor = ref(1)
+  const CHART_ZOOM_MIN = 0.4
+  const CHART_ZOOM_MAX = 4
   let chartResizeObserver: ResizeObserver | undefined
   const loadedInstanceCounts = new Set<string>()
   const pendingInstanceCounts = new Map<string, Promise<number>>()
@@ -181,14 +242,20 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     const currentRequest = requestId
     loading.value = true
     error.value = ''
+    unsupported.value = false
     try {
-      const next = await fetchServiceMap(ctx, (partial) => {
-        if (currentRequest === requestId) result.value = partial
-      })
+      const next = await fetchServiceMap(
+        ctx,
+        (partial) => {
+          if (currentRequest === requestId) result.value = partial
+        },
+        { showTopology: showTopologyNodes.value }
+      )
       if (currentRequest === requestId) result.value = next
     } catch (reason) {
       if (currentRequest === requestId) {
-        error.value = reason instanceof Error ? reason.message : String(reason)
+        unsupported.value = isMissingSemanticGraph(reason)
+        error.value = unsupported.value ? '' : serviceMapSqlErrorMessage(reason)
         result.value = { nodes: [], edges: [], truncated: false }
       }
     } finally {
@@ -202,6 +269,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       ctx.query.rangeTime.value[0],
       ctx.query.rangeTime.value[1],
       ctx.query.refreshKey.value,
+      showTopologyNodes.value,
     ],
     () => load(),
     { immediate: true }
@@ -250,25 +318,63 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   )
   const graphNodes = computed(() => graphModel.value.nodes)
   const graphEdges = computed(() => graphModel.value.edges)
-  /** Keep small neighborhoods compact; expand toward full width as neighbors grow. */
-  const focusCanvasStyle = computed(() => {
-    if (!inspectedNodeKey.value) return undefined
-    const count = Math.max(1, graphNodes.value.length)
-    if (count >= 12) return undefined
-    const maxWidth = Math.max(480, Math.min(880, 280 + count * 72))
-    return { maxWidth: `${maxWidth}px` }
-  })
+  /** Toolbar counts are call-graph only — exclude topology satellites and structural edges. */
+  const callGraphCounts = computed(() => ({
+    nodes: graphNodes.value.filter((node) => !isStructuralEntityType(node.type)).length,
+    edges: graphEdges.value.filter(isCallEdge).length,
+  }))
   // Inspect and overview share one layout rule; neighborhood filtering is in display-graph.
   const communityLayout = computed(() => {
     const { width, height } = chartSize.value
     return buildServiceMapOverviewLayout(graphNodes.value, graphEdges.value, width, height)
   })
+  /**
+   * ECharts graph View always fits the data bbox into the canvas. Sparse detail
+   * neighborhoods would look blown up vs overview — counteract with roam zoom so
+   * 1 layout unit ≈ 1 CSS px (same spacing as the all-nodes page).
+   */
+  const layoutNaturalZoom = computed(() => {
+    if (!inspectedNodeKey.value || communityLayout.value.size === 0) return 1
+    let minX = Infinity
+    let maxX = -Infinity
+    let minY = Infinity
+    let maxY = -Infinity
+    communityLayout.value.forEach((point) => {
+      minX = Math.min(minX, point.x)
+      maxX = Math.max(maxX, point.x)
+      minY = Math.min(minY, point.y)
+      maxY = Math.max(maxY, point.y)
+    })
+    const pad = 72
+    const contentW = Math.max(1, maxX - minX)
+    const contentH = Math.max(1, maxY - minY)
+    const availW = Math.max(1, chartSize.value.width - pad * 2)
+    const availH = Math.max(1, chartSize.value.height - pad * 2)
+    const fit = Math.min(availW / contentW, availH / contentH)
+    if (fit <= 1) return 1
+    return Math.max(CHART_ZOOM_MIN, Math.min(1, 1 / fit))
+  })
+  const chartZoom = computed(() =>
+    Math.min(CHART_ZOOM_MAX, Math.max(CHART_ZOOM_MIN, layoutNaturalZoom.value * userZoomFactor.value))
+  )
   const graphNodeMap = computed(() => new Map(graphNodes.value.map((node) => [node.key, node])))
   const hasDatabaseEndpoints = computed(() =>
     graphNodes.value.some((node) => node.virtual && node.connectionType === 'database')
   )
-  const hasInferredServiceEndpoints = computed(() =>
+  const hasVirtualServiceEndpoints = computed(() =>
     graphNodes.value.some((node) => node.virtual && node.connectionType !== 'database')
+  )
+  const hasInstanceSatellites = computed(() =>
+    graphNodes.value.some((node) => !node.virtual && (node.type === 'service.instance' || node.type === 'k8s.pod'))
+  )
+  const hasContainerSatellites = computed(() =>
+    graphNodes.value.some(
+      (node) =>
+        !node.virtual &&
+        isStructuralEntityType(node.type) &&
+        node.type !== 'service.instance' &&
+        node.type !== 'k8s.pod'
+    )
   )
   const nodeCallStats = computed(() => aggregateNodeCallStats(graphEdges.value))
   const trafficLegend = computed(() => {
@@ -390,8 +496,16 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
    * Base option must NOT depend on hoveredNodeKey — rebuilding option while the pointer is
    * over a graphic remounts it and drops mouseout (edge hover stuck). Node flow is patched
    * via setOption in syncNodeFlowOverlay instead.
+   * graphRoam actions use update:none (no redraw) — buttons drive series.zoom via this option.
    */
-  const chartOption = computed(() => buildServiceMapChartOption(chartInput(), { t, labelFor: nodeLabel }))
+  const chartOption = computed(() => {
+    const option = buildServiceMapChartOption(chartInput(), { t, labelFor: nodeLabel })
+    const [series0, ...rest] = option.series
+    return {
+      ...option,
+      series: [{ ...series0, zoom: chartZoom.value }, ...rest],
+    }
+  })
 
   function syncNodeFlowOverlay() {
     const chart = chartRef.value
@@ -399,6 +513,29 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     const { nodes, links } = buildServiceMapSeries(chartInput(), hoveredNodeKey.value)
     chart.setOption({ series: [{ data: nodes, links }] }, { lazyUpdate: true })
   }
+
+  function zoomChart(factor: number) {
+    const next = userZoomFactor.value * factor
+    const applied = layoutNaturalZoom.value * next
+    if (applied < CHART_ZOOM_MIN || applied > CHART_ZOOM_MAX) {
+      userZoomFactor.value = Math.min(
+        CHART_ZOOM_MAX / layoutNaturalZoom.value,
+        Math.max(CHART_ZOOM_MIN / layoutNaturalZoom.value, next)
+      )
+      return
+    }
+    userZoomFactor.value = next
+  }
+
+  function resetChartZoom() {
+    userZoomFactor.value = 1
+    // Clear pan offset; series.zoom alone leaves a translated viewport.
+    chartRef.value?.setOption({ series: [{ zoom: layoutNaturalZoom.value, center: null }] })
+  }
+
+  watch(inspectedNodeKey, () => {
+    userZoomFactor.value = 1
+  })
 
   watch(hoveredNodeKey, () => {
     nextTick(syncNodeFlowOverlay)
@@ -464,7 +601,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     chartSize.value = { width, height }
   }
 
-  watch([inspectedNodeKey, () => graphNodes.value.length, focusCanvasStyle], async () => {
+  watch([inspectedNodeKey, () => graphNodes.value.length], async () => {
     await nextTick()
     updateChartSize()
   })
@@ -663,7 +800,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   .service-map-content {
     display: flex;
     flex: 1 1 0%;
-    justify-content: center;
     min-height: 0;
     overflow: hidden;
   }
@@ -672,11 +808,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     flex: 1 1 0%;
     min-width: 0;
     min-height: 360px;
-  }
-  .service-map-canvas--focused {
-    flex: 0 1 auto;
-    width: 100%;
-    align-self: stretch;
+    overflow: hidden;
   }
   .service-map-chart {
     width: 100%;
@@ -763,6 +895,20 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     outline: 2px solid var(--gpt-main-purple);
     outline-offset: 1px;
   }
+  .service-map-zoom {
+    position: absolute;
+    z-index: 5;
+    right: var(--gpt-gap-md);
+    bottom: var(--gpt-gap-md);
+    display: inline-flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 2px;
+    border: 1px solid var(--gpt-border-primary);
+    border-radius: var(--gpt-radius-md);
+    background: var(--gpt-bg-primary);
+    box-shadow: var(--gpt-shadow-sm);
+  }
   .service-map-legend {
     position: absolute;
     bottom: var(--gpt-gap-md);
@@ -813,6 +959,19 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   }
   .service-map-legend__database {
     border: 2px dashed var(--gpt-semantic-field);
+  }
+  .service-map-legend__instance {
+    width: 9px;
+    height: 9px;
+    border: 1.5px dashed var(--gpt-brand-700, #5a4a70);
+    border-radius: 1px;
+    transform: rotate(45deg);
+  }
+  .service-map-legend__container {
+    width: 10px;
+    height: 8px;
+    border: 1.5px dashed var(--gpt-accent-ts, #00bbb2);
+    border-radius: 2px;
   }
   .service-map-legend__health {
     border: 2.5px solid var(--gpt-success, #22c55e);

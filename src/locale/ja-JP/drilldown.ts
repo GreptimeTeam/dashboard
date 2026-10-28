@@ -3,6 +3,8 @@ export default {
   'drilldown.nav.overview': '概要',
   'drilldown.nav.breadcrumb': 'パンくずリスト',
   'drilldown.nav.signals': 'Signals',
+  'drilldown.nav.tracesViews': 'Traces ビュー',
+  'drilldown.serviceMap.title': 'Service Map',
   'drilldown.signals.logsPlaceholder': 'Signals Explore のログ機能は近日公開予定です。',
   'drilldown.signals.tracesPlaceholder': 'Signals Explore のトレース機能は近日公開予定です。',
   'drilldown.filters.title': 'フィルター',

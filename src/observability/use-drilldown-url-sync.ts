@@ -148,7 +148,8 @@ export default function useDrilldownUrlSync(
       bodyOp,
     } = query
 
-    const nextSignal = parseSignal(signal)
+    // Service Map is a Traces view — force traces even if the shared URL omitted signal.
+    const nextSignal = query.view === 'service-map' ? 'traces' : parseSignal(signal)
     // Soft hydrate: do not close Trace→Logs overlay or infer logsView from in-memory filters.
     ctx.actions.setSignal(nextSignal, { hydrate: true })
 
@@ -306,10 +307,11 @@ export default function useDrilldownUrlSync(
       query.signal = ctx.connection.signal.value
     }
 
-    // Service Map is an Explore view over the existing signal context, not a signal
-    // itself. Preserve its route flag while time/database controls update the URL.
+    // Service Map is a Traces view (not a signal). Keep view + signal=traces while
+    // time/database controls rewrite the URL.
     if (route.query.view === 'service-map') {
       query.view = 'service-map'
+      query.signal = 'traces'
       if (typeof route.query.serviceMapSearch === 'string' && route.query.serviceMapSearch) {
         query.serviceMapSearch = route.query.serviceMapSearch
       }

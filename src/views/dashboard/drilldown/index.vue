@@ -4,6 +4,15 @@
     a-card.drilldown-top-card(:bordered="false")
       DrilldownTopBar
 
+    .traces-view-tabs(v-if="showTracesViews")
+      SignalTabNav(
+        mode="tabs"
+        :aria-label="t('drilldown.nav.tracesViews')"
+        :items="tracesViewItems"
+        :model-value="activeTracesView"
+        @update:model-value="onTracesViewSelect"
+      )
+
     .drilldown-body.new-layout.new-layout--workspace(v-if="serviceMapActive")
       ServiceMap
 
@@ -145,7 +154,14 @@
   urlSync.initializeFromQuery()
 
   const { signal } = ctx.connection
+  const { setSignal } = ctx.actions
   const serviceMapActive = computed(() => route.query.view === 'service-map')
+  const showTracesViews = computed(() => serviceMapActive.value || signal.value === 'traces')
+  const activeTracesView = computed(() => (serviceMapActive.value ? 'service-map' : 'overview'))
+  const tracesViewItems = computed(() => [
+    { value: 'overview', label: t('drilldown.nav.overview') },
+    { value: 'service-map', label: t('drilldown.serviceMap.title') },
+  ])
   const { logsTab } = ctx.ui
   const { setLogsTab } = ctx.actions
   const logsDetailTabs = computed(() =>
@@ -236,6 +252,32 @@
       setLogsTab(value)
     }
   }
+
+  const onTracesViewSelect = async (value: string) => {
+    if (value === 'overview') {
+      setSignal('traces')
+      await router.push({
+        query: {
+          ...route.query,
+          view: undefined,
+          signal: 'traces',
+          serviceMapSearch: undefined,
+          serviceMapScope: undefined,
+          serviceMapFilters: undefined,
+        },
+      })
+      return
+    }
+    if (value !== 'service-map') return
+    setSignal('traces')
+    await router.push({
+      query: {
+        ...route.query,
+        view: 'service-map',
+        signal: 'traces',
+      },
+    })
+  }
 </script>
 
 <style scoped lang="less">
@@ -258,6 +300,14 @@
 
   .drilldown-top-card {
     flex: 0 0 auto;
+  }
+
+  .traces-view-tabs {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: stretch;
+    background: var(--gpt-bg-panel);
+    border-bottom: 1px solid var(--gpt-border-default);
   }
 
   // Keeps popup-container sized when overview is unmounted for the detail virtual route.

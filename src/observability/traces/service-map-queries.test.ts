@@ -5,6 +5,7 @@ import {
   buildServiceMapEntitiesSql,
   buildServiceMapInstanceCountsSql,
   buildServiceMapRelationshipsSql,
+  buildServiceMapStructuralSql,
 } from './service-map-queries'
 
 describe('Service Map semantic queries', () => {
@@ -46,5 +47,18 @@ describe('Service Map semantic queries', () => {
     expect(sql).toContain('COUNT(DISTINCT src_id) AS instance_count')
     expect(sql).toContain('observed_at >= FROM_UNIXTIME(1789696923)')
     expect(sql).toContain('observed_at < FROM_UNIXTIME(1789785123)')
+  })
+
+  it('scopes structural part_of and runs_on to expanded services / instances', () => {
+    const partOf = buildServiceMapStructuralSql(range, ['part_of'], { serviceIds: ['svc-a', "o'brien"] })
+    expect(partOf).toContain("rel_type = 'part_of'")
+    expect(partOf).toContain("dst_type = 'service'")
+    expect(partOf).toContain("dst_id IN ('svc-a', 'o''brien')")
+    expect(partOf).not.toContain("rel_type = 'runs_on'")
+
+    const runsOn = buildServiceMapStructuralSql(range, ['runs_on'], { instanceIds: ['i-1', 'i-2'] })
+    expect(runsOn).toContain("rel_type = 'runs_on'")
+    expect(runsOn).toContain("src_id IN ('i-1', 'i-2')")
+    expect(runsOn).not.toContain("rel_type = 'part_of'")
   })
 })

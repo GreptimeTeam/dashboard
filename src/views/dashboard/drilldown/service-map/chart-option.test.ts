@@ -85,6 +85,44 @@ describe('buildServiceMapSeries', () => {
     expect(data[3].symbol).toBe('roundRect')
     expect(data[3].itemStyle).toMatchObject({ borderType: 'dashed', borderColor: theme.database })
   })
+
+  it('draws structural satellites and dashed structural edges', () => {
+    const structuralNodes = [
+      node('svc'),
+      node('inst', { type: 'service.instance' }),
+      node('ctr', { type: 'container' }),
+    ]
+    const structuralEdges = [
+      edge('inst', 'svc', {
+        key: 'inst\0svc\0part_of',
+        relType: 'part_of',
+        requests: 0,
+        errors: 0,
+        unmatched: 0,
+        durationSum: 0,
+        durationCount: 0,
+      }),
+      edge('inst', 'ctr', {
+        key: 'inst\0ctr\0runs_on',
+        relType: 'runs_on',
+        requests: 0,
+        errors: 0,
+        unmatched: 0,
+        durationSum: 0,
+        durationCount: 0,
+      }),
+    ]
+    const { nodes: data, links } = buildServiceMapSeries(input(structuralNodes, structuralEdges))
+    const inst = data.find((item) => item.id === 'inst')
+    const ctr = data.find((item) => item.id === 'ctr')
+    expect(inst?.symbol).toBe('diamond')
+    expect(ctr?.symbol).toBe('roundRect')
+    expect(inst?.itemStyle).toMatchObject({ borderColor: theme.instance, borderType: 'dashed' })
+    expect(ctr?.itemStyle).toMatchObject({ borderColor: theme.container, borderType: 'dashed' })
+    expect(theme.instance).not.toBe(theme.container)
+    expect(links.every((item) => item.lineStyle.type === 'dashed')).toBe(true)
+    expect(links[0].lineStyle.color).toBe('rgba(90, 74, 112, 0.55)')
+  })
 })
 
 describe('buildServiceMapChartOption', () => {
@@ -94,7 +132,14 @@ describe('buildServiceMapChartOption', () => {
     const second = buildServiceMapChartOption(chartInput, { t, labelFor: (key) => key })
     expect({ ...first, tooltip: undefined }).toEqual({ ...second, tooltip: undefined })
     expect(first.series[0].data).toEqual(buildServiceMapSeries(chartInput, '').nodes)
-    expect(first.series[0]).toMatchObject({ type: 'graph', layout: 'none', emphasis: { focus: 'none' } })
+    expect(first.series[0]).toMatchObject({
+      type: 'graph',
+      layout: 'none',
+      roam: true,
+      scaleLimit: { min: 0.4, max: 4 },
+      nodeScaleRatio: 0,
+      emphasis: { focus: 'none' },
+    })
   })
 })
 
@@ -115,5 +160,27 @@ describe('buildServiceMapTooltipFormatter', () => {
     expect(html).toContain('drilldown.serviceMap.incomingFlow')
     expect(html).toContain('drilldown.serviceMap.requestRate: 10 req/s')
     expect(format({ dataType: 'node', data: { nodeKey: 'missing' } })).toBe('')
+  })
+
+  it('labels structural edges and satellite nodes without RED', () => {
+    const chartInput = input(
+      [node('svc'), node('inst', { type: 'service.instance' })],
+      [
+        edge('inst', 'svc', {
+          key: 'inst\0svc\0part_of',
+          relType: 'part_of',
+          requests: 0,
+          errors: 0,
+          unmatched: 0,
+          durationSum: 0,
+          durationCount: 0,
+        }),
+      ]
+    )
+    const format = buildServiceMapTooltipFormatter(chartInput, { t, labelFor: (key) => key })
+    expect(format({ dataType: 'edge', data: { edgeKey: 'inst\0svc\0part_of' } })).toContain(
+      'drilldown.serviceMap.relPartOf'
+    )
+    expect(format({ dataType: 'node', data: { nodeKey: 'inst' } })).toContain('drilldown.serviceMap.instanceNode')
   })
 })
