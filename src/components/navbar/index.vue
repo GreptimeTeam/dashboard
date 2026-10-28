@@ -53,7 +53,11 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
         svg.icon-18
           use(href="#icon-user")
         span.support-label {{ $t('menu.feedback') }}
-      button.support-trigger(v-if="queryGuideEnabled" type="button" @click.stop="showMcpConfig")
+      button.support-trigger.support-trigger--featured(
+        v-if="queryGuideEnabled"
+        type="button"
+        @click.stop="showMcpConfig"
+      )
         svg.icon-18
           use(href="#code")
         span.support-label {{ $t('menu.mcp') }}
@@ -108,6 +112,7 @@ CommandPalette(ref="commandPaletteRef")
   import useContactForm from '../contact-form/use-contact-form'
   import McpConfigModal from '../mcp-config/McpConfigModal.vue'
   import useMcpConfig from '../mcp-config/use-mcp-config'
+  import { useProductTour } from '../product-tour/use-product-tour'
   import CommandPalette from '../command-palette/index.vue'
 
   const isComponentIcon = (icon: unknown): icon is Component => typeof icon !== 'string' && !!icon
@@ -138,6 +143,7 @@ CommandPalette(ref="commandPaletteRef")
   const newsModal = ref()
   const contactForm = useContactForm()
   const mcpConfig = useMcpConfig()
+  const tour = useProductTour()
   const starCardClosed = useStorage('starMarketingCardClosed', false)
   const isEnterprise = import.meta.env.VITE_APP_NAME === 'enterprise'
   const editionLabel = computed(() => (isEnterprise ? t('navbar.editionEnterprise') : t('navbar.editionOpenSource')))
@@ -178,7 +184,7 @@ CommandPalette(ref="commandPaletteRef")
   }
 
   const showMcpConfig = () => {
-    mcpConfig.show()
+    tour.openMcpFromNav()
   }
 
   const toggleMenuCollapse = () => {
@@ -482,6 +488,12 @@ CommandPalette(ref="commandPaletteRef")
       &:hover {
         color: @menu-light-color-item_hover;
         background: @menu-light-color-bg-item_hover;
+      }
+
+      /* Query guide: same icon as peers; emphasize with label weight only. */
+      &.support-trigger--featured {
+        color: var(--gpt-text-primary);
+        font-weight: var(--gpt-font-weight-control);
       }
     }
 

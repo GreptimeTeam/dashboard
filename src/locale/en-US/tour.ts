@@ -125,4 +125,7 @@ export default {
   'tour.steps.visualization.where.0': 'Visualization in the left menu',
   'tour.steps.visualization.where.1': 'Sidebar lists dashboards stored server-side',
   'tour.steps.visualization.where.2': 'URL ?dashboard=<name> selects one by exact name',
+  // Action step: chip + modal only — no guide prose (see TourGuidePanel).
+  'tour.steps.mcp.name': 'GreptimeDB MCP',
+  'tour.steps.mcp.title': 'GreptimeDB MCP',
 }

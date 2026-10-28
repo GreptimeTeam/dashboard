@@ -21,7 +21,7 @@
           type="button"
           class="tour-step-item"
           :class="{
-            'tour-step-item--current': step.id === tour.activeStepId.value,
+            'tour-step-item--current': !step.action && step.id === tour.activeStepId.value,
           }"
           @click="tour.selectStep(step.id)"
         >
@@ -34,7 +34,8 @@
       </div>
     </div>
 
-    <div v-if="activeStep" class="tour-detail">
+    <!-- Action steps (e.g. MCP) only open a modal — no guide prose. -->
+    <div v-if="activeStep && !activeStep.action" class="tour-detail">
       <!-- Product capability only (scenario lives with the query below) -->
       <header class="tour-step-header">
         <h3 class="tour-detail-title">{{ $t(activeStep.titleKey) }}</h3>
@@ -184,8 +185,10 @@
   const activeStep = computed(() => tour.activeStep.value)
   const stepKey = computed(() => activeStep.value?.nameKey.replace(/\.name$/, '') ?? '')
   const docsUrl = computed(() => {
+    const docsPath = activeStep.value?.docsPath ?? ''
+    if (/^https?:\/\//.test(docsPath)) return docsPath
     const docsOrigin = locale.value === 'zh-CN' ? 'https://docs.greptime.cn' : 'https://docs.greptime.com'
-    return `${docsOrigin}${activeStep.value?.docsPath ?? ''}`
+    return `${docsOrigin}${docsPath}`
   })
   const scenarioText = computed(() => {
     const text = t(`${stepKey.value}.scenario`)

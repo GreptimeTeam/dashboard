@@ -1,9 +1,13 @@
 import type { LocationQuery } from 'vue-router'
+import { MCP_SERVER_REPO_URL } from '@/utils/mcp-config'
 import { decodeMaybeEncoded } from '@/utils/query-url'
 
-export type TourStepId = 'sql' | 'promql' | 'tql' | 'logs' | 'traces' | 'signals-explore' | 'visualization'
+export type TourStepId = 'sql' | 'promql' | 'tql' | 'logs' | 'traces' | 'signals-explore' | 'visualization' | 'mcp'
 
 export type TourStepDisplay = 'code' | 'preset' | 'where'
+
+/** Modal / non-route actions — selectStep opens UI instead of navigating. */
+export type TourStepAction = 'open-mcp-config'
 
 /** Exactly as shipped in the demo copy — do not reformat or localize. */
 export const TOUR_SQL_QUERY = `SELECT
@@ -86,8 +90,8 @@ export interface TourStep {
   nameKey: string
   titleKey: string
   icon: string
-  /** Route base match by route name. */
-  baseRouteName: string
+  /** Route base match by route name. Omitted for action-only steps (e.g. MCP). */
+  baseRouteName?: string
   /** Exact match on top of the base (used to split /dashboard/query SQL vs TQL). */
   matchesExact?: (route: { name?: unknown; query: LocationQuery }) => boolean
   display: TourStepDisplay
@@ -99,10 +103,12 @@ export interface TourStep {
   preset?: TourPresetSummary
   /** Hub cases for Signals Explore (optional). */
   cases?: TourExploreCase[]
-  /** Primary GreptimeDB documentation page for the capability. */
+  /** Relative docs path, or absolute http(s) URL (e.g. MCP GitHub). */
   docsPath: string
-  /** Route + query the tile navigates to. */
-  location: { path: string; query: Record<string, string> }
+  /** Route + query the tile navigates to. Omitted when `action` handles the step. */
+  location?: { path: string; query: Record<string, string> }
+  /** Non-route step: select opens a modal / side effect instead of navigating. */
+  action?: TourStepAction
 }
 
 /** Shared time window for Signals Explore hub + cases (topbar time is cross-tab). */
@@ -259,6 +265,15 @@ export const TOUR_STEPS: TourStep[] = [
       query: { dashboard: 'astronomy-shop-overview' },
     },
   },
+  {
+    id: 'mcp',
+    nameKey: 'tour.steps.mcp.name',
+    titleKey: 'tour.steps.mcp.title',
+    icon: 'code',
+    display: 'where',
+    action: 'open-mcp-config',
+    docsPath: MCP_SERVER_REPO_URL,
+  },
 ]
 
 export const TOUR_STEP_IDS: TourStepId[] = TOUR_STEPS.map((step) => step.id)
@@ -278,6 +293,7 @@ const TOUR_PAYLOAD_QUERY_KEYS = new Set(['sql', 'promql', 'builderForm', 'tourAp
 
 /** Browse-only query: keep page context (tab, timeLength, …), drop fill/run payloads. */
 export function getTourBrowseQuery(step: TourStep): Record<string, string> {
+  if (!step.location) return {}
   return Object.fromEntries(Object.entries(step.location.query).filter(([key]) => !TOUR_PAYLOAD_QUERY_KEYS.has(key)))
 }
 
@@ -305,7 +321,7 @@ export function getTourExploreCaseQuery(
     }
   })
   if (!shared.timeLength && !shared.timeRange) {
-    shared.timeLength = step.location.query.timeLength || TOUR_EXPLORE_TIME_LENGTH
+    shared.timeLength = step.location?.query.timeLength || TOUR_EXPLORE_TIME_LENGTH
   }
 
   return { ...shared, ...exploreCase.query }
@@ -316,6 +332,7 @@ export function getTourExploreCaseQuery(
  * 1. exact match wins (splits /dashboard/query SQL vs TQL);
  * 2. otherwise the active step is kept when its base route still matches;
  * 3. otherwise the first base-matching step wins.
+ * Action-only steps (no baseRouteName) never match from the route.
  */
 export function matchTourStepFromRoute(
   route: { name?: unknown; query: LocationQuery },
@@ -325,7 +342,7 @@ export function matchTourStepFromRoute(
   const exact = TOUR_STEPS.find((step) => step.matchesExact?.(route))
   if (exact) return exact.id
 
-  const baseMatches = TOUR_STEPS.filter((step) => step.baseRouteName === routeName)
+  const baseMatches = TOUR_STEPS.filter((step) => step.baseRouteName && step.baseRouteName === routeName)
   if (!baseMatches.length) return null
   if (activeStepId && baseMatches.some((step) => step.id === activeStepId)) {
     return activeStepId

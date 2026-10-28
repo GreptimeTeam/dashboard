@@ -6,6 +6,7 @@ import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/store'
 import { useQueryFocusMode } from '@/composables/use-query-focus-mode'
 import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
+import useMcpConfig from '@/components/mcp-config/use-mcp-config'
 import {
   getTourBrowseQuery,
   getTourExploreCaseQuery,
@@ -64,6 +65,8 @@ const state = useStorage<TourPersistedState>(STORAGE_KEY, defaultPersistedState(
 
 // Normalize legacy/partial values once.
 if (!isTourStepId(state.value.activeStepId)) state.value.activeStepId = null
+// Action steps (MCP) are one-shot modals — never persist as the current guide step.
+if (state.value.activeStepId === 'mcp') state.value.activeStepId = null
 if (!['not_started', 'active', 'dismissed'].includes(state.value.tourState)) {
   state.value.tourState = 'dismissed' // legacy `completed` has no completion semantics anymore
 }
@@ -78,6 +81,7 @@ export function useProductTour() {
   const router = useRouter()
   const { t } = useI18n()
   const appStore = useAppStore()
+  const mcpConfig = useMcpConfig()
   const queryFocusMode = useQueryFocusMode()
   const { width: viewportWidth } = useWindowSize()
 
@@ -113,8 +117,14 @@ export function useProductTour() {
 
   /** Select a step and navigate to its page without filling or running the example. */
   async function selectStep(stepId: TourStepId) {
-    setActiveStep(stepId)
     const step = getTourStep(stepId)
+    // Action chips open a modal only — no route change, no current-step highlight.
+    if (step.action === 'open-mcp-config') {
+      mcpConfig.show()
+      return
+    }
+    setActiveStep(stepId)
+    if (!step.location) return
     await router.replace({
       path: step.location.path,
       query: getTourBrowseQuery(step),
@@ -130,7 +140,7 @@ export function useProductTour() {
     const stepId = state.value.activeStepId
     if (!stepId) return
     const step = getTourStep(stepId)
-    if (step.display === 'where') return
+    if (step.action || step.display === 'where' || !step.location) return
 
     const query: Record<string, string> = {
       ...step.location.query,
@@ -146,6 +156,11 @@ export function useProductTour() {
       query,
     })
     syncPanelAfterNavigation()
+  }
+
+  /** Navbar MCP entry — open modal only (does not become the active guide step). */
+  function openMcpFromNav() {
+    mcpConfig.show()
   }
 
   /** Focus a step without forcing navigation (deep links, restore). */
@@ -188,6 +203,7 @@ export function useProductTour() {
     const stepId = state.value.activeStepId
     if (!stepId) return
     const step = getTourStep(stepId)
+    if (!step.location) return
     const query = getTourExploreCaseQuery(step, caseId, route.query)
     if (!query) return
 
@@ -234,6 +250,8 @@ export function useProductTour() {
 
   function routeFollow() {
     if (!tourActive.value) return
+    // MCP has no route — selectStep does not navigate, so this watch only runs when
+    // the user leaves via the menu / another step. That correctly clears the mcp step.
     const matched = matchTourStepFromRoute(route, state.value.activeStepId)
     if (matched && matched !== state.value.activeStepId) {
       setActiveStep(matched)
@@ -252,6 +270,10 @@ export function useProductTour() {
     if (isTourStepId(value)) {
       if (state.value.tourState !== 'active') state.value.tourState = 'active'
       state.value.welcomeSeen = true
+      if (getTourStep(value).action) {
+        selectStep(value).catch(() => undefined)
+        return
+      }
       focusStep(value)
     }
   }
@@ -320,6 +342,7 @@ export function useProductTour() {
     selectStep,
     applyExploreCase,
     runExample,
+    openMcpFromNav,
     endTour,
     openFromEntry,
     setPanelWidth,

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { decodeMaybeEncoded } from '@/utils/query-url'
 import enTour from '@/locale/en-US/tour'
 import zhTour from '@/locale/zh-CN/tour'
+import { MCP_SERVER_REPO_URL } from '@/utils/mcp-config'
 import {
   TOUR_EXPLORE_TIME_LENGTH,
   TOUR_LOGS_BUILDER_FORM,
@@ -19,10 +20,11 @@ import {
 } from './tour-steps'
 
 describe('tour steps config', () => {
-  it('contains the 7 canonical steps in order', () => {
-    expect(TOUR_STEP_IDS).toEqual(['signals-explore', 'sql', 'promql', 'tql', 'logs', 'traces', 'visualization'])
+  it('contains the 8 canonical steps in order', () => {
+    expect(TOUR_STEP_IDS).toEqual(['signals-explore', 'sql', 'promql', 'tql', 'logs', 'traces', 'visualization', 'mcp'])
     expect(new Set(TOUR_STEP_IDS).size).toBe(TOUR_STEPS.length)
     expect(TOUR_STEPS[0].id).toBe('signals-explore')
+    expect(TOUR_STEPS[TOUR_STEPS.length - 1].id).toBe('mcp')
   })
 
   it('keeps display payload consistent with the display type', () => {
@@ -104,11 +106,20 @@ describe('tour steps config', () => {
       'traces': '/user-guide/traces/read-write/',
       'signals-explore': '/user-guide/concepts/why-greptimedb/#why-one-engine-for-three-signals',
       'visualization': '/getting-started/installation/greptimedb-dashboard/',
+      'mcp': MCP_SERVER_REPO_URL,
     }
 
     TOUR_STEPS.forEach((step) => {
       expect(step.docsPath).toBe(docsPaths[step.id])
     })
+  })
+
+  it('defines MCP as an action-only step without a route location', () => {
+    const step = getTourStep('mcp')
+    expect(step.action).toBe('open-mcp-config')
+    expect(step.location).toBeUndefined()
+    expect(step.baseRouteName).toBeUndefined()
+    expect(getTourBrowseQuery(step)).toEqual({})
   })
 
   it('ships en/zh copy for every step', () => {
@@ -117,6 +128,14 @@ describe('tour steps config', () => {
         const key = step.nameKey.replace(/\.name$/, '')
         expect(messages[`${key}.name`]).toBeTruthy()
         expect(messages[`${key}.title`]).toBeTruthy()
+        // Action steps (MCP) open a modal only — no guide prose.
+        if (step.action) {
+          expect(messages[`${key}.capability`]).toBeUndefined()
+          expect(messages[`${key}.scenario`]).toBeUndefined()
+          expect(messages[`${key}.points.0.lead`]).toBeUndefined()
+          expect(messages[`${key}.where.0`]).toBeUndefined()
+          return
+        }
         expect(messages[`${key}.scenarioTitle`]).toBeTruthy()
         expect(messages[`${key}.capability`]).toBeTruthy()
         expect(messages[`${key}.subtitle`]).toBeUndefined()
@@ -180,6 +199,7 @@ describe('tour steps config', () => {
     expect(enTour['tour.steps.traces.name']).toBe('Traces Query')
     expect(enTour['tour.steps.signals-explore.name']).toBe('Signals Explore')
     expect(enTour['tour.steps.visualization.name']).toBe('Visualization')
+    expect(enTour['tour.steps.mcp.name']).toBe('GreptimeDB MCP')
     expect(zhTour['tour.steps.sql.name']).toBe('Table 查询 - SQL')
     expect(zhTour['tour.steps.tql.name']).toBe('Table 查询 - TQL')
     expect(zhTour['tour.steps.promql.name']).toBe('Metrics 查询')
@@ -187,6 +207,7 @@ describe('tour steps config', () => {
     expect(zhTour['tour.steps.traces.name']).toBe('Traces 查询')
     expect(zhTour['tour.steps.signals-explore.name']).toBe('信号探索')
     expect(zhTour['tour.steps.visualization.name']).toBe('可视化')
+    expect(zhTour['tour.steps.mcp.name']).toBe('GreptimeDB MCP')
   })
 
   it('uses the same sprite icons as the navbar routes', () => {
@@ -196,6 +217,7 @@ describe('tour steps config', () => {
     expect(getTourStep('logs').icon).toBe('Icon5')
     expect(getTourStep('traces').icon).toBe('Icon7')
     expect(getTourStep('visualization').icon).toBe('visualize')
+    expect(getTourStep('mcp').icon).toBe('code')
   })
 })
 
@@ -222,6 +244,11 @@ describe('matchTourStepFromRoute', () => {
     expect(matchTourStepFromRoute({ name: 'explore', query: {} })).toBe('signals-explore')
     expect(matchTourStepFromRoute({ name: 'perses', query: {} })).toBe('visualization')
     expect(matchTourStepFromRoute({ name: 'flow', query: {} })).toBeNull()
+  })
+
+  it('never matches the MCP action step from a route', () => {
+    expect(matchTourStepFromRoute({ name: 'query', query: {} }, 'mcp')).toBe('sql')
+    expect(matchTourStepFromRoute({ name: 'mcp', query: {} })).toBeNull()
   })
 })
 

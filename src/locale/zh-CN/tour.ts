@@ -118,4 +118,7 @@ export default {
   'tour.steps.visualization.where.0': '左侧菜单 可视化',
   'tour.steps.visualization.where.1': '侧栏列出存储在服务端的仪表盘',
   'tour.steps.visualization.where.2': 'URL ?dashboard=<name> 按名称精确选择',
+  // Action step: chip + modal only — no guide prose (see TourGuidePanel).
+  'tour.steps.mcp.name': 'GreptimeDB MCP',
+  'tour.steps.mcp.title': 'GreptimeDB MCP',
 }
