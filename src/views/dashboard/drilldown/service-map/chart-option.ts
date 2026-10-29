@@ -73,12 +73,88 @@ function isStructuralSatellite(node: ServiceMapDisplayNode): boolean {
   return !node.virtual && !node.members && isStructuralEntityType(node.type)
 }
 
+type NodeLabelPosition = 'top' | 'bottom' | 'left' | 'right'
+
+/**
+ * Parent key for a structural satellite: service for instances (part_of),
+ * instance for containers (runs_on).
+ */
+function structuralParentKey(nodeKey: string, edges: ServiceMapEdge[]): string | undefined {
+  const partOf = edges.find((edge) => (edge.relType || '') === 'part_of' && edge.source === nodeKey)
+  if (partOf) return partOf.target
+  const runsOn = edges.find((edge) => (edge.relType || '') === 'runs_on' && edge.target === nodeKey)
+  return runsOn?.source
+}
+
+/** Average of laid-out call-graph nodes (satellites excluded) — used for outer-side titles. */
+function callGraphCentroid(
+  nodes: ServiceMapDisplayNode[],
+  layout: Map<string, ServiceMapNodeLayout>
+): { x: number; y: number } | undefined {
+  let sumX = 0
+  let sumY = 0
+  let count = 0
+  nodes.forEach((node) => {
+    if (isStructuralSatellite(node)) return
+    const point = layout.get(node.key)
+    if (!point) return
+    sumX += point.x
+    sumY += point.y
+    count += 1
+  })
+  if (!count) return undefined
+  return { x: sumX / count, y: sumY / count }
+}
+
+/**
+ * Prefer the outer side so titles stay out of the densest edge crossings.
+ * Satellites hang off a parent — outer relative to that parent.
+ * Call-graph nodes above the centroid get a top title (bottom would sit inward).
+ */
+function nodeLabelPosition(
+  node: ServiceMapDisplayNode,
+  layout: Map<string, ServiceMapNodeLayout>,
+  edges: ServiceMapEdge[],
+  centroid: { x: number; y: number } | undefined
+): NodeLabelPosition {
+  const self = layout.get(node.key)
+  if (!self) return 'bottom'
+
+  if (isStructuralSatellite(node)) {
+    const parentKey = structuralParentKey(node.key, edges)
+    const parent = parentKey ? layout.get(parentKey) : undefined
+    if (parent) {
+      const dx = self.x - parent.x
+      const dy = self.y - parent.y
+      if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? 'right' : 'left'
+      return dy >= 0 ? 'bottom' : 'top'
+    }
+  }
+
+  if (centroid && self.y < centroid.y) return 'top'
+  return 'bottom'
+}
+
+function labelDistance(isServiceGlyph: boolean, isSatellite: boolean): number {
+  if (isServiceGlyph) return 10
+  if (isSatellite) return 6
+  return 8
+}
+
+function labelFontSize(isActive: boolean, isSatellite: boolean): number {
+  if (isActive) return 13
+  if (isSatellite) return 11
+  return 12
+}
+
 /** Build graph series. activeKey dims unrelated nodes/edges for node-hover flow. */
 export function buildServiceMapSeries(input: ServiceMapChartInput, activeKey = '') {
   const { theme, layout, stats, isDark } = input
   const trafficMin = input.trafficRange.min
   const trafficMax = input.trafficRange.max
+  const centroid = callGraphCentroid(input.nodes, layout)
   // Grafana-style: title under the node, no chip — pills competed with the glyphs.
+  // Nodes above the call-graph centroid flip the title to the outer (top) side.
   const nodes = input.nodes.map((node) => {
     const isActive = activeKey === node.key
     const connectedToActive = input.edges.some(
@@ -180,17 +256,17 @@ export function buildServiceMapSeries(input: ServiceMapChartInput, activeKey = '
       itemStyle,
       label: {
         show: true,
-        position: 'bottom',
-        distance: isServiceGlyph ? 10 : 8,
+        position: nodeLabelPosition(node, layout, input.edges, centroid),
+        distance: labelDistance(isServiceGlyph, isSatellite),
         formatter: node.label,
         color: theme.text,
         opacity,
         // Name is primary identity — heavier than on-disk rates.
-        fontSize: isActive ? 13 : 12,
+        fontSize: labelFontSize(isActive, isSatellite),
         fontWeight: isActive ? 600 : 500,
         lineHeight: 16,
         // Max width only — short names stay natural; long names wrap.
-        width: 128,
+        width: isSatellite ? 96 : 128,
         overflow: 'break',
         // Draw above edges so titles stay readable when lines cross.
         z2: 10,
