@@ -312,9 +312,6 @@ export default function useDrilldownUrlSync(
     if (route.query.view === 'service-map') {
       query.view = 'service-map'
       query.signal = 'traces'
-      if (typeof route.query.serviceMapSearch === 'string' && route.query.serviceMapSearch) {
-        query.serviceMapSearch = route.query.serviceMapSearch
-      }
       if (typeof route.query.serviceMapScope === 'string' && route.query.serviceMapScope) {
         query.serviceMapScope = route.query.serviceMapScope
       }

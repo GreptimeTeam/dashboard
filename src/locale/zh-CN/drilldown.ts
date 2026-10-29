@@ -5,7 +5,6 @@ export default {
   'drilldown.nav.signals': '信号',
   'drilldown.nav.tracesViews': 'Traces 视图',
   'drilldown.serviceMap.title': 'Service Map',
-  'drilldown.serviceMap.searchPlaceholder': '筛选服务',
   'drilldown.serviceMap.scopeLabel': '环境',
   'drilldown.serviceMap.scopePlaceholder': '按环境筛选',
   'drilldown.serviceMap.counts': '{nodes} 个节点 · {edges} 条调用',

@@ -108,20 +108,7 @@ export function buildServiceMapFacets(nodes: ServiceMapNode[]): ServiceMapFacet[
     .sort((a, b) => a.key.localeCompare(b.key))
 }
 
-function nodeMatchesFilters(
-  node: ServiceMapNode,
-  selectedServices: string[],
-  filters: ServiceMapFilters,
-  selectedScopes: string[]
-): boolean {
-  if (
-    selectedServices.length &&
-    !selectedServices.includes(node.label) &&
-    !selectedServices.includes(node.id) &&
-    !(node.serviceValue && selectedServices.includes(node.serviceValue))
-  ) {
-    return false
-  }
+function nodeMatchesFilters(node: ServiceMapNode, filters: ServiceMapFilters, selectedScopes: string[]): boolean {
   if (selectedScopes.length) {
     const scopes = nodeScopeValues(node)
     if (!scopes.some((value) => selectedScopes.includes(value))) return false
@@ -250,8 +237,6 @@ function aggregateEdges(edges: ServiceMapEdge[], nodeMap: Map<string, ServiceMap
 export function buildServiceMapDisplayGraph(args: {
   nodes: ServiceMapNode[]
   edges: ServiceMapEdge[]
-  /** Selected real-service labels (or ids). Empty = no service filter. */
-  selectedServices?: string[]
   /** First-class env/scope values. Empty = all environments. */
   selectedScopes?: string[]
   filters?: ServiceMapFilters
@@ -259,18 +244,10 @@ export function buildServiceMapDisplayGraph(args: {
   expandedClusters?: Set<string>
   clusterLabel?: (count: number) => string
 }): ServiceMapDisplayGraph {
-  const {
-    nodes,
-    edges,
-    selectedServices = [],
-    selectedScopes = [],
-    filters = {},
-    inspectNodeKey,
-    expandedClusters = new Set(),
-  } = args
+  const { nodes, edges, selectedScopes = [], filters = {}, inspectNodeKey, expandedClusters = new Set() } = args
   const rawNodes = new Map(nodes.map((node) => [node.key, node]))
   const activeFilters = Object.values(filters).some((values) => values.length > 0)
-  const filtering = activeFilters || selectedServices.length > 0 || selectedScopes.length > 0
+  const filtering = activeFilters || selectedScopes.length > 0
 
   if (inspectNodeKey) {
     const adjacent = new Set<string>([inspectNodeKey])
@@ -303,7 +280,7 @@ export function buildServiceMapDisplayGraph(args: {
   }
 
   const matchedServices = nodes.filter(
-    (node) => serviceIdentity(node) && nodeMatchesFilters(node, selectedServices, filters, selectedScopes)
+    (node) => serviceIdentity(node) && nodeMatchesFilters(node, filters, selectedScopes)
   )
   if (!matchedServices.length) return { nodes: [], edges: [] }
 

@@ -189,7 +189,7 @@ function createCtx() {
 }
 
 describe('useDrilldownUrlSync', () => {
-  it('preserves Service Map search, scope and facets when Explore context updates the URL', async () => {
+  it('preserves Service Map scope and facets when Explore context updates the URL', async () => {
     const { default: useDrilldownUrlSync } = await import('./use-drilldown-url-sync')
     const ctx = createCtx()
     ctx.connection.signal.value = 'traces'
@@ -198,7 +198,6 @@ describe('useDrilldownUrlSync', () => {
         timeLength: '30',
         signal: 'traces',
         view: 'service-map',
-        serviceMapSearch: 'checkout',
         serviceMapScope: JSON.stringify(['prod']),
         serviceMapFilters: JSON.stringify({ env: ['prod'] }),
       },
@@ -214,11 +213,11 @@ describe('useDrilldownUrlSync', () => {
       query: {
         signal: 'traces',
         view: 'service-map',
-        serviceMapSearch: 'checkout',
         serviceMapScope: JSON.stringify(['prod']),
         serviceMapFilters: JSON.stringify({ env: ['prod'] }),
       },
     })
+    expect(target.query).not.toHaveProperty('serviceMapSearch')
   })
 
   it('hydrates Service Map as a Traces view even when signal is missing', async () => {

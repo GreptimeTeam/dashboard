@@ -5,7 +5,6 @@ export default {
   'drilldown.nav.signals': 'Signals',
   'drilldown.nav.tracesViews': 'Traces views',
   'drilldown.serviceMap.title': 'Service Map',
-  'drilldown.serviceMap.searchPlaceholder': 'Filter services',
   'drilldown.serviceMap.scopeLabel': 'Environment',
   'drilldown.serviceMap.scopePlaceholder': 'Filter by environment',
   'drilldown.serviceMap.counts': '{nodes} nodes · {edges} calls',

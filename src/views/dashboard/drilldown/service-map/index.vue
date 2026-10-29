@@ -24,22 +24,13 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
             :placeholder="t('drilldown.serviceMap.filterBy', { name: facet.label })"
             @change="(values) => setFacetFilter(facet.key, values)"
           )
-        a-select.service-map-service-select(
-          v-model="selectedServices"
-          multiple
-          allow-search
-          allow-clear
-          size="medium"
-          :placeholder="t('drilldown.serviceMap.searchPlaceholder')"
-        )
-          a-option(v-for="option in serviceOptions" :key="option.value" :value="option.value") {{ option.label }}
+        span.drilldown-toolbar__group
+          a-checkbox(v-model="showTopologyNodes") {{ t('drilldown.serviceMap.topologyNodes') }}
         span.service-map-counts(v-if="!loading")
           | {{ t('drilldown.serviceMap.counts', { nodes: callGraphCounts.nodes, edges: callGraphCounts.edges }) }}
         span.service-map-counts(v-else-if="graphNodes.length")
           a-spin(:size="18")
           | {{ t('drilldown.serviceMap.loading') }}
-        span.drilldown-toolbar__group
-          a-checkbox(v-model="showTopologyNodes") {{ t('drilldown.serviceMap.topologyNodes') }}
       .drilldown-toolbar__right(v-if="inspectedNodeKey && selectedNode")
         span.service-map-active-node {{ t('drilldown.serviceMap.activeNode', { name: selectedNode.label }) }}
         a-button(type="outline" size="medium" @click="backToOverview")
@@ -233,7 +224,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   const error = ref('')
   /** DB has no Semantic Graph tables (version / Semantic Layer). */
   const unsupported = ref(false)
-  const selectedServices = ref<string[]>([])
   const selectedScopes = ref<string[]>([])
   const result = ref<ServiceMapResult>({ nodes: [], edges: [], truncated: false })
   const chartSize = ref({ width: 1200, height: 640 })
@@ -246,17 +236,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   /** When on, show instance/container satellites for all real services. Default off. */
   const showTopologyNodes = ref(false)
 
-  function resolveServiceIdsForQuery(): string[] | undefined {
-    if (!selectedServices.value.length) return undefined
-    const ids = new Set<string>()
-    selectedServices.value.forEach((value) => {
-      const match = result.value.nodes.find(
-        (node) => node.label === value || node.id === value || node.serviceValue === value
-      )
-      ids.add(match?.id ?? value)
-    })
-    return [...ids]
-  }
   /**
    * User zoom multiplier on top of layout-natural scale.
    * Detail views counteract ECharts bbox-fit so spacing matches the overview page.
@@ -278,7 +257,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     try {
       const next = await fetchServiceMap(ctx, {
         showTopology: showTopologyNodes.value,
-        serviceIds: resolveServiceIdsForQuery(),
       })
       if (currentRequest === requestId) result.value = next
     } catch (reason) {
@@ -299,7 +277,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       ctx.query.rangeTime.value[1],
       ctx.query.refreshKey.value,
       showTopologyNodes.value,
-      selectedServices.value.join('\0'),
     ],
     () => load(),
     { immediate: true }
@@ -314,38 +291,16 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     Boolean(ctx.semantics.logs.table.value && ctx.semantics.logs.entityFilterKeys.value.service)
   )
   const emptyDescription = computed(() =>
-    selectedServices.value.length ||
-    selectedScopes.value.length ||
-    Object.values(facetFilters.value).some((values) => values.length > 0)
+    selectedScopes.value.length || Object.values(facetFilters.value).some((values) => values.length > 0)
       ? t('drilldown.serviceMap.noMatches')
       : t('drilldown.serviceMap.noData')
   )
   const scopeFacet = computed(() => buildServiceMapScopeFacet(allNodes.value))
   const facets = computed(() => buildServiceMapFacets(allNodes.value))
-  const serviceOptions = computed(() => {
-    const labels = new Set<string>()
-    const options: Array<{ label: string; value: string }> = []
-    allNodes.value.forEach((node) => {
-      if (node.type !== 'service' || node.virtual) return
-      const label = node.label || node.id
-      if (!label || labels.has(label)) return
-      labels.add(label)
-      options.push({ label, value: label })
-    })
-    // Keep explicitly selected values visible even when SQL pushdown narrowed the graph.
-    selectedServices.value.forEach((value) => {
-      if (!value || labels.has(value)) return
-      labels.add(value)
-      options.push({ label: value, value })
-    })
-    return options.sort((a, b) => a.label.localeCompare(b.label))
-  })
   const graphModel = computed(() =>
     buildServiceMapDisplayGraph({
       nodes: allNodes.value,
       edges: allEdges.value,
-      // Service selection is pushed to SQL; avoid double-filtering the one-hop neighborhood away.
-      selectedServices: [],
       selectedScopes: selectedScopes.value,
       filters: facetFilters.value,
       inspectNodeKey: inspectedNodeKey.value,
@@ -436,18 +391,16 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   // Hydrate once from the URL. Do not keep a route→state watcher — that loop was
   // clearing selections when drilldown URL sync rewrote the query without our keys.
   const hydrated = parseServiceMapUrlQuery(route.query)
-  selectedServices.value = hydrated.services
   selectedScopes.value = hydrated.scopes
   facetFilters.value = hydrated.filters
 
   function writeServiceMapQuery() {
-    const { serviceMapSearch, serviceMapScope, serviceMapFilters } = serializeServiceMapUrlQuery({
-      services: selectedServices.value,
+    const { serviceMapScope, serviceMapFilters } = serializeServiceMapUrlQuery({
       scopes: selectedScopes.value,
       filters: facetFilters.value,
     })
     if (
-      serviceMapSearch === route.query.serviceMapSearch &&
+      route.query.serviceMapSearch == null &&
       serviceMapScope === route.query.serviceMapScope &&
       serviceMapFilters === route.query.serviceMapFilters
     ) {
@@ -457,7 +410,8 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       .replace({
         query: {
           ...route.query,
-          serviceMapSearch,
+          // Drop legacy service filter query; focus is click-to-inspect only.
+          serviceMapSearch: undefined,
           serviceMapScope,
           serviceMapFilters,
         },
@@ -465,10 +419,12 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       .catch(() => undefined)
   }
 
+  if (route.query.serviceMapSearch != null) writeServiceMapQuery()
+
   watch(
-    [facets, scopeFacet, serviceOptions, loading],
-    ([availableFacets, availableScope, availableServices, isLoading]) => {
-      if (isLoading || availableServices.length === 0) return
+    [facets, scopeFacet, () => allNodes.value.length, loading],
+    ([availableFacets, availableScope, nodeCount, isLoading]) => {
+      if (isLoading || nodeCount === 0) return
       const allowed = new Map(availableFacets.map((facet) => [facet.key, new Set(facet.values)]))
       const nextFacets = Object.fromEntries(
         Object.entries(facetFilters.value)
@@ -486,8 +442,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
         selectedScopes.value = nextScopes
         writeServiceMapQuery()
       }
-
-      // Do not drop selectedServices missing from options — pushdown may still need them.
     },
     { deep: true }
   )
@@ -501,7 +455,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     writeServiceMapQuery()
   }
 
-  watch(selectedServices, () => writeServiceMapQuery(), { deep: true })
   watch(selectedScopes, () => writeServiceMapQuery(), { deep: true })
 
   function nodeLabel(key: string): string {

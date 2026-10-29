@@ -154,16 +154,21 @@ describe('buildServiceMapDisplayGraph', () => {
     expect(expanded.edges.map((item) => item.requests)).toEqual([40, 30])
   })
 
-  it('shows one matching service with direct dependencies and does not fabricate a cluster', () => {
-    const result = buildServiceMapDisplayGraph({ nodes, edges, selectedServices: ['frontend'] })
-    expect(result.nodes.map((node) => node.key)).toEqual([frontend.key, gateway.key])
-    expect(result.nodes.some((node) => node.cluster)).toBe(false)
-  })
-
   it('inspects one service and its direct dependencies for node-by-node pivots', () => {
     const result = buildServiceMapDisplayGraph({ nodes, edges, inspectNodeKey: gateway.key })
     expect(new Set(result.nodes.map((node) => node.key))).toEqual(new Set([frontend.key, gateway.key, checkout.key]))
     expect(result.edges).toHaveLength(2)
+    expect(result.nodes.some((node) => node.cluster)).toBe(false)
+  })
+
+  it('shows one facet-matched service with direct dependencies and does not fabricate a cluster', () => {
+    const soloFrontend = { ...frontend, groupAttributes: { team: 'edge' } }
+    const result = buildServiceMapDisplayGraph({
+      nodes: [soloFrontend, gateway, checkout, inventory],
+      edges,
+      filters: { team: ['edge'] },
+    })
+    expect(result.nodes.map((node) => node.key)).toEqual([soloFrontend.key, gateway.key])
     expect(result.nodes.some((node) => node.cluster)).toBe(false)
   })
 
@@ -232,13 +237,14 @@ describe('buildServiceMapDisplayGraph', () => {
         durationMax: 0,
       },
     ]
+    const taggedFrontend = { ...frontend, groupAttributes: { ...frontend.groupAttributes, team: 'edge' } }
     const result = buildServiceMapDisplayGraph({
-      nodes: [...nodes, instance, container],
+      nodes: [taggedFrontend, gateway, checkout, inventory, instance, container],
       edges: [...edges, ...structuralEdges],
-      selectedServices: ['frontend'],
+      filters: { team: ['edge'] },
     })
     expect(new Set(result.nodes.map((node) => node.key))).toEqual(
-      new Set([frontend.key, gateway.key, instance.key, container.key])
+      new Set([taggedFrontend.key, gateway.key, instance.key, container.key])
     )
     expect(result.edges.some((item) => item.relType === 'part_of')).toBe(true)
     expect(result.edges.some((item) => item.relType === 'runs_on')).toBe(true)

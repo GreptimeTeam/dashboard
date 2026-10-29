@@ -28,8 +28,6 @@ export interface FetchServiceMapOptions {
    * call graph (capped per service). Default false — calls-only overview.
    */
   showTopology?: boolean
-  /** Push selected service entity ids into SQL (plus one-hop neighbors on calls). */
-  serviceIds?: string[]
 }
 
 interface QueryRecords {
@@ -464,14 +462,13 @@ export async function fetchServiceMap(
   }
   const database = ctx.connection.databaseFor('traces')
   const queryRange = { startUnix: range[0], endUnix: range[1] }
-  const queryOptions = { serviceIds: options.serviceIds }
   // Wait for entities + relationships together — painting nodes-only would flash
   // an isolate row before call edges arrive and the community layout settles.
   const [entitiesResponse, relationshipsResponse] = await Promise.all([
-    editorApi.runSQL(buildServiceMapEntitiesSql(queryRange, queryOptions), database, {
+    editorApi.runSQL(buildServiceMapEntitiesSql(queryRange), database, {
       suppressErrorToast: true,
     }),
-    editorApi.runSQL(buildServiceMapCallsSql(queryRange, queryOptions), database, {
+    editorApi.runSQL(buildServiceMapCallsSql(queryRange), database, {
       suppressErrorToast: true,
     }),
   ])
