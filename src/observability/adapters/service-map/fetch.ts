@@ -378,7 +378,6 @@ export function limitServiceMapGraph(nodes: Map<string, ServiceMapNode>, edges: 
 
 export async function fetchServiceMap(
   ctx: DrilldownContext,
-  onEntitiesLoaded?: (partial: ServiceMapResult) => void,
   options: FetchServiceMapOptions = {}
 ): Promise<ServiceMapResult> {
   const range = ctx.query.unixTimeRange()
@@ -387,21 +386,12 @@ export async function fetchServiceMap(
   }
   const database = ctx.connection.databaseFor('traces')
   const queryRange = { startUnix: range[0], endUnix: range[1] }
-  const entitiesQuery = editorApi
-    .runSQL(buildServiceMapEntitiesSql(queryRange), database, {
-      suppressErrorToast: true,
-    })
-    .then((response) => {
-      const partialNodes = [...nodesFromEntities(recordsToObjects(response?.output?.[0]?.records)).values()]
-      onEntitiesLoaded?.({
-        nodes: partialNodes.slice(0, SERVICE_MAP_NODE_LIMIT),
-        edges: [],
-        truncated: partialNodes.length > SERVICE_MAP_NODE_LIMIT,
-      })
-      return response
-    })
+  // Wait for entities + relationships together — painting nodes-only would flash
+  // an isolate row before call edges arrive and the community layout settles.
   const [entitiesResponse, relationshipsResponse] = await Promise.all([
-    entitiesQuery,
+    editorApi.runSQL(buildServiceMapEntitiesSql(queryRange), database, {
+      suppressErrorToast: true,
+    }),
     editorApi.runSQL(buildServiceMapRelationshipsSql(queryRange), database, {
       suppressErrorToast: true,
     }),

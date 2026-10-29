@@ -244,13 +244,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     error.value = ''
     unsupported.value = false
     try {
-      const next = await fetchServiceMap(
-        ctx,
-        (partial) => {
-          if (currentRequest === requestId) result.value = partial
-        },
-        { showTopology: showTopologyNodes.value }
-      )
+      const next = await fetchServiceMap(ctx, { showTopology: showTopologyNodes.value })
       if (currentRequest === requestId) result.value = next
     } catch (reason) {
       if (currentRequest === requestId) {

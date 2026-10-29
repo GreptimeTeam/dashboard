@@ -181,7 +181,7 @@ describe('fetchServiceMap', () => {
     runSQL.mockReset()
   })
 
-  it('renders entities first, then uses SQL-aggregated RED and folds same-name peers', async () => {
+  it('uses SQL-aggregated RED and folds same-name peers after both queries settle', async () => {
     runSQL.mockImplementation(async (sql: string) => {
       if (sql.includes('semantic_relationships')) {
         // One row per endpoint pair; RED already confidence-gated in SQL.
@@ -197,14 +197,10 @@ describe('fetchServiceMap', () => {
         ['service', 'checkout', '{"service.name":"checkout"}', 'prod', null, '["traces"]'],
       ]) as never
     })
-    const partial = vi.fn()
 
-    const result = await fetchServiceMap(ctx, partial)
+    const result = await fetchServiceMap(ctx)
 
     expect(runSQL).toHaveBeenCalledTimes(2)
-    expect(partial).toHaveBeenCalledTimes(1)
-    expect(partial.mock.calls[0][0].nodes.map((node: ServiceMapNode) => node.id)).toEqual(['frontend', 'checkout'])
-    expect(partial.mock.calls[0][0].edges).toEqual([])
 
     expect(result.truncated).toBe(false)
     expect(result.nodes.map((node) => node.key).sort()).toEqual(
@@ -332,12 +328,12 @@ describe('fetchServiceMap', () => {
       throw new Error(`unexpected sql: ${sql}`)
     })
 
-    const withoutTopology = await fetchServiceMap(ctx, undefined, { showTopology: false })
+    const withoutTopology = await fetchServiceMap(ctx, { showTopology: false })
     expect(withoutTopology.nodes.every((node) => node.type === 'service')).toBe(true)
     expect(runSQL).toHaveBeenCalledTimes(2)
 
     runSQL.mockClear()
-    const result = await fetchServiceMap(ctx, undefined, { showTopology: true })
+    const result = await fetchServiceMap(ctx, { showTopology: true })
     expect(runSQL).toHaveBeenCalledTimes(4)
     expect(result.nodes.some((node) => node.type === 'service.instance')).toBe(true)
     expect(result.nodes.filter((node) => node.type === 'service.instance')).toHaveLength(3)
