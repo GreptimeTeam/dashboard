@@ -21,4 +21,10 @@ export default {
   'settings.saveSuccess': '成功しました!',
   'settings.authHeader': '認証ヘッダー名',
   'settings.authHeaderTip': '認証に使用される HTTP ヘッダーの名前です。',
+  'settings.mcp.title': 'GreptimeDB MCP',
+  'settings.mcp.promptIntro': '次の mcpServers 設定を使って、AI クライアントに GreptimeDB MCP を接続してください：',
+  'settings.mcp.copyHint': 'プロンプト全体をコピーして、AI アシスタントに貼り付けてください。',
+  'settings.mcp.repo': 'GitHub 上の MCP サーバー',
+  'settings.mcp.copy': 'プロンプトをコピー',
+  'settings.mcp.copied': 'コピーしました',
 }

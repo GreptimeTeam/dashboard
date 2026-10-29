@@ -73,6 +73,8 @@ export default {
   'dashboard.yType': 'Y 軸のタイプ',
   'dashboard.columns': '列',
   'dashboard.details': '情報',
+  'dashboard.quickNav': 'クイックナビ {key}',
+  'dashboard.quickNavTip': '{key} でクイックナビを開く',
   'dashboard.quickSelect': 'クイッククエリ',
   'dashboard.clearCode': 'コードをクリア',
   'dashboard.fullSizeMode': '全画面表示',
