@@ -93,9 +93,9 @@ export default {
   'tour.steps.signals-explore.cases.metrics.title': '从指标定位异常时间窗',
   'tour.steps.signals-explore.cases.metrics.detail':
     '浏览并筛选序列，点进单条做拆解，再带着同一 Filter 去看 Logs 或 Traces。',
-  'tour.steps.signals-explore.cases.logs.title': '打开 ERROR 及以上日志',
+  'tour.steps.signals-explore.cases.logs.title': '浏览同一时间窗的日志',
   'tour.steps.signals-explore.cases.logs.detail':
-    '进入 opentelemetry_logs——按服务 / 级别过滤，通过 trace_id 跳到对应链路。',
+    '进入 opentelemetry_logs 总览——看流量与标签分布，再点进某个分组打开详情。',
   'tour.steps.signals-explore.cases.traces.title': '找失败或慢请求',
   'tour.steps.signals-explore.cases.traces.detail':
     'RED 总览与错误 / 慢请求列表，打开一条看瀑布图；View logs 按同一 trace_id 拉日志。',

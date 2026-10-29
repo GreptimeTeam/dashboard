@@ -98,9 +98,9 @@ export default {
   'tour.steps.signals-explore.cases.metrics.title': 'Browse metrics for the window that went wrong',
   'tour.steps.signals-explore.cases.metrics.detail':
     'Scan series, open one for breakdowns, then reuse the same filters on Logs or Traces.',
-  'tour.steps.signals-explore.cases.logs.title': 'Open ERROR-and-above logs',
+  'tour.steps.signals-explore.cases.logs.title': 'Browse logs for the same window',
   'tour.steps.signals-explore.cases.logs.detail':
-    'Land on opentelemetry_logs — filter by service / level, jump via trace_id to the matching trace.',
+    'Land on opentelemetry_logs overview — scan volume and labels, then open a group into the detail view.',
   'tour.steps.signals-explore.cases.traces.title': 'Find failed or slow requests',
   'tour.steps.signals-explore.cases.traces.detail':
     'RED overview, errored / slow lists, then a waterfall; View logs loads rows for the same trace_id.',
