@@ -246,6 +246,8 @@ export default {
   'drilldown.traces.logsSettingsTitle': 'Configure trace logs',
   'drilldown.traces.logsSettingsShortTitle': 'Trace logs',
   'drilldown.traces.logsSettingsDescription': 'Map each service to the logs database and table that contain its logs.',
+  'drilldown.traces.logsSettingsUnnecessary':
+    'Only one associable logs table is available, so per-service mapping is not needed. Trace→Logs uses the Logs page bound table.',
   'drilldown.traces.nonModelTableHint':
     'No trace_id column was found. The table can still be used in Logs settings, but trace association may return no rows.',
   'drilldown.signalBindingNotReady': 'Signal binding is not ready',

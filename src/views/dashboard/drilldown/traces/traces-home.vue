@@ -21,7 +21,12 @@ a-layout-content.layout-content
               )
                 a-option(v-for="name in tableOptions" :key="name" :value="name") {{ name }}
           .drilldown-toolbar__right
-            a-button.trace-logs-settings-trigger(type="outline" size="medium" @click="traceLogsSettingsVisible = true")
+            a-button.trace-logs-settings-trigger(
+              v-if="logsManualMappingEnabled"
+              type="outline"
+              size="medium"
+              @click="traceLogsSettingsVisible = true"
+            )
               template(#icon)
                 icon-settings
               | {{ t('drilldown.traces.logsSettingsShortTitle') }}
@@ -78,7 +83,7 @@ a-layout-content.layout-content
                   @open-logs-settings="traceLogsSettingsVisible = true"
                   @filter-condition-add="onFilterConditionAdd"
                 )
-  TraceLogsSettingsModal(v-model:visible="traceLogsSettingsVisible" @saved="traceLogsMappingsVersion++")
+  TraceLogsSettingsModal(v-model:visible="traceLogsSettingsVisible" @saved="onTraceLogsSettingsSaved")
 </template>
 
 <script setup lang="ts">
@@ -122,7 +127,8 @@ a-layout-content.layout-content
   /** Pre-resolved trace → logs routing per service; filled after rows load, consumed at click. */
   const logsTargets = ref<Record<string, TraceLogsTarget>>({})
   const logsAmbiguous = ref<Record<string, string[]>>({})
-  const logsMultiTable = ref(false)
+  /** False when ≤1 associable logs table and no manual mappings — settings entry stays hidden. */
+  const logsManualMappingEnabled = ref(false)
   const tracesTable = ref(ctx.semantics.traces.table.value)
   const traceIdDraft = ref('')
   const selectedRedMetric = ref<RedMetric>('rate')
@@ -164,7 +170,16 @@ a-layout-content.layout-content
     const resolution = await resolveTraceLogsForServices(ctx, [...windowServices, ...pageServices])
     logsTargets.value = resolution.targets
     logsAmbiguous.value = resolution.ambiguous
-    logsMultiTable.value = resolution.multiTable
+    logsManualMappingEnabled.value = resolution.manualMappingEnabled
+    // Settings has nothing to configure when routing is a no-op — close if still open.
+    if (!resolution.manualMappingEnabled) {
+      traceLogsSettingsVisible.value = false
+    }
+  }
+
+  const onTraceLogsSettingsSaved = async () => {
+    traceLogsMappingsVersion.value += 1
+    await resolveServiceTargets()
   }
 
   const tracesTabTitle = computed(() => {

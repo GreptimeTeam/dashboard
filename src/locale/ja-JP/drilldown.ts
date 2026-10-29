@@ -168,6 +168,8 @@ export default {
   'drilldown.traces.logsSettingsShortTitle': 'トレースログ',
   'drilldown.traces.logsSettingsDescription':
     '各サービスのログが含まれるログデータベースとテーブルをマッピングしてください。',
+  'drilldown.traces.logsSettingsUnnecessary':
+    '関連付け可能なログテーブルが 1 つしかないため、サービスごとのマッピングは不要です。Trace→Logs はログページで設定されたテーブルを使用します。',
   'drilldown.traces.nonModelTableHint':
     'trace_id 列が見つかりませんでした。このテーブルはログ設定で引き続き使用できますが、トレースの関連付けでは行が返されない場合があります。',
   'drilldown.signalBindingNotReady': 'シグナルのバインディングが未設定です',

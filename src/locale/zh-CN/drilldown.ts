@@ -240,6 +240,8 @@ export default {
   'drilldown.traces.logsSettingsTitle': '配置 Trace 日志关联',
   'drilldown.traces.logsSettingsShortTitle': 'Trace 日志',
   'drilldown.traces.logsSettingsDescription': '为每个 service 配置其日志所在的日志数据库和数据表。',
+  'drilldown.traces.logsSettingsUnnecessary':
+    '当前仅有一张可关联的日志表，无需按 service 配置映射；Trace 关联将使用 Logs 页当前绑定表。',
   'drilldown.traces.nonModelTableHint':
     '未找到 trace_id 列。该表仍可在 Logs 设置中使用，但 Trace 关联可能查询不到数据。',
   'drilldown.signalBindingNotReady': '信号绑定未就绪',
