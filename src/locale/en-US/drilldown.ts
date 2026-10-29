@@ -170,7 +170,7 @@ export default {
   'drilldown.logs.tableLabel': 'Logs table',
   'drilldown.logs.databaseLabel': 'Logs database',
   'drilldown.logs.tablePlaceholder': 'Select a logs table',
-  'drilldown.logs.settingsButton': 'Field settings',
+  'drilldown.logs.settingsButton': 'Log settings',
   'drilldown.logs.settingsTitle': 'Signals Explore logs settings',
   'drilldown.logs.settingsSave': 'Save',
   'drilldown.logs.settingsCancel': 'Cancel',

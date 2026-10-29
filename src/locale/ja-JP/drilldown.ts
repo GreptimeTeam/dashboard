@@ -90,7 +90,7 @@ export default {
   'drilldown.logs.tableLabel': 'ログテーブル',
   'drilldown.logs.databaseLabel': 'ログデータベース',
   'drilldown.logs.tablePlaceholder': 'ログテーブルを選択',
-  'drilldown.logs.settingsButton': 'フィールド設定',
+  'drilldown.logs.settingsButton': 'ログ設定',
   'drilldown.logs.settingsTitle': 'Signals Explore ログ設定',
   'drilldown.logs.settingsSave': '保存',
   'drilldown.logs.settingsCancel': 'キャンセル',
