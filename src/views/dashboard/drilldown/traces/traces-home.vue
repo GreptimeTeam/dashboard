@@ -67,7 +67,7 @@ a-layout-content.layout-content
                 :selected="selectedRedMetric === item.key"
                 :color-index="item.colorIndex"
                 :height="140"
-                @select="selectedRedMetric = item.key"
+                @select="ctx.actions.setRedMetric(item.key)"
               )
 
           a-tabs.traces-home-tabs.panel-tabs(v-model:active-key="activeTab" lazy-load)
@@ -138,7 +138,7 @@ a-layout-content.layout-content
   const logsManualMappingEnabled = ref(false)
   const tracesTable = ref(ctx.semantics.traces.table.value)
   const traceIdDraft = ref('')
-  const selectedRedMetric = ref<RedMetric>('rate')
+  const selectedRedMetric = ctx.ui.redMetric
   const traceLogsSettingsVisible = ref(false)
   const traceLogsMappingsVersion = ref(0)
   const activeTab = useDrilldownPanelTab({

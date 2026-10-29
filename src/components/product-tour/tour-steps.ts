@@ -150,7 +150,8 @@ export const TOUR_STEPS: TourStep[] = [
         id: 'traces',
         titleKey: 'tour.steps.signals-explore.cases.traces.title',
         detailKey: 'tour.steps.signals-explore.cases.traces.detail',
-        query: { signal: 'traces' },
+        // Land on Traces with Errors selected (failed requests list / RED focus).
+        query: { signal: 'traces', redMetric: 'errors' },
       },
     ],
     location: {

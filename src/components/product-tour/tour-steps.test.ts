@@ -76,6 +76,7 @@ describe('tour steps config', () => {
     expect(getTourExploreCaseQuery(step, 'traces', {})).toEqual({
       timeLength: TOUR_EXPLORE_TIME_LENGTH,
       signal: 'traces',
+      redMetric: 'errors',
     })
     expect(getTourExploreCaseQuery(step, 'metrics', { timeRange: '1,2' })).toEqual({
       timeRange: '1,2',

@@ -17,6 +17,7 @@ import {
   type MetricDetailTab,
   type TracesHomeTab,
 } from './types'
+import { isRedMetric } from './traces/red-queries'
 
 const DRILLDOWN_SIGNALS: DrilldownSignal[] = ['metrics', 'logs', 'traces']
 
@@ -144,6 +145,7 @@ export default function useDrilldownUrlSync(
       logsView,
       logsTab,
       tracesTab,
+      redMetric,
       body,
       bodyOp,
     } = query
@@ -229,6 +231,12 @@ export default function useDrilldownUrlSync(
     tabSpecs.forEach((spec) => {
       readUrlTab(spec, tabRawByKey[spec.queryKey])
     })
+
+    if (ctx.connection.signal.value === 'traces' && isRedMetric(redMetric)) {
+      ctx.actions.setRedMetric(redMetric)
+    } else {
+      ctx.actions.setRedMetric('rate')
+    }
 
     // Restore selected group from the service filter when opening detail from URL.
     if (ctx.ui.logsView.value === 'detail') {
@@ -370,6 +378,10 @@ export default function useDrilldownUrlSync(
       writeUrlTab(query, spec)
     })
 
+    if (ctx.connection.signal.value === 'traces' && ctx.ui.redMetric.value !== 'rate') {
+      query.redMetric = ctx.ui.redMetric.value
+    }
+
     return query
   }
 
@@ -415,6 +427,7 @@ export default function useDrilldownUrlSync(
       ctx.ui.logsBodyOp.value,
       ctx.ui.logsBodyValue.value,
       ctx.semantics.traces.table.value,
+      ctx.ui.redMetric.value,
       ctx.ui.focusTraceId.value,
       ctx.ui.focusTraceAt.value,
       ctx.ui.logsTraceId.value,

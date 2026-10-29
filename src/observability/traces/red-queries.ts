@@ -8,6 +8,12 @@ import { calculateSparklineIntervalMs } from '../metrics/sparkline-step'
 
 export type RedMetric = 'rate' | 'errors' | 'duration'
 
+export const RED_METRICS: RedMetric[] = ['rate', 'errors', 'duration']
+
+export function isRedMetric(value: unknown): value is RedMetric {
+  return typeof value === 'string' && RED_METRICS.includes(value as RedMetric)
+}
+
 /** OTel / greptime_trace_v1 error status values seen in practice. */
 export const TRACE_ERROR_STATUS_VALUES = ['STATUS_CODE_ERROR', 'ERROR', 'error'] as const
 

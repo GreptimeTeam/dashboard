@@ -24,6 +24,7 @@ import {
   type TracesHomeTab,
 } from './types'
 import { addFilter as mergeFilter, filterKey, hasLogsMappedFilters, toggleIncludeFilter } from './filters'
+import type { RedMetric } from './traces/red-queries'
 
 export interface SignalSemanticSnapshot {
   database: string | undefined
@@ -97,6 +98,8 @@ export interface DrilldownUiState {
   logsBodyOp: Ref<LogsBodyOp>
   logsBodyValue: Ref<string>
   tracesTab: Ref<TracesHomeTab>
+  /** Traces RED focus (Rate / Errors / Duration). URL `redMetric`, omit default `rate`. */
+  redMetric: Ref<RedMetric>
   logsSelectedGroup: Ref<string | undefined>
 }
 
@@ -116,6 +119,7 @@ export interface DrilldownActions {
   setLogsView: (view: LogsView) => void
   setLogsTab: (tab: LogsDetailTab) => void
   setTracesTab: (tab: TracesHomeTab) => void
+  setRedMetric: (metric: RedMetric) => void
   openLogsDetail: (groupValue?: string) => void
   closeLogsDetail: () => void
   /**
@@ -331,6 +335,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
   const logsBodyOp = ref<LogsBodyOp>(DEFAULT_LOGS_BODY_OP)
   const logsBodyValue = ref('')
   const tracesTab = ref<TracesHomeTab>('breakdown')
+  const redMetric = ref<RedMetric>('rate')
   const logsSelectedGroup = ref<string | undefined>()
 
   const logsSemantics = createSignalSemanticState()
@@ -444,6 +449,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
     }
     if (next !== 'traces') {
       tracesTab.value = 'breakdown'
+      redMetric.value = 'rate'
       // Prefer binder close so overlay snapshot restores; falls back to clearing the id.
       closeLogsForTrace()
     }
@@ -536,6 +542,10 @@ export function useDrilldownContextProvider(): DrilldownContext {
     tracesTab.value = tab
   }
 
+  const setRedMetric = (next: RedMetric) => {
+    redMetric.value = next
+  }
+
   const openTraceGantt = (traceId: string, options?: { at?: unknown }) => {
     const trimmed = traceId.trim()
     if (!trimmed) {
@@ -563,6 +573,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
     setLogsView,
     setLogsTab,
     setTracesTab,
+    setRedMetric,
     openLogsDetail,
     closeLogsDetail,
     claimOwnedLogsDetailFilters,
@@ -606,6 +617,7 @@ export function useDrilldownContextProvider(): DrilldownContext {
       logsBodyOp,
       logsBodyValue,
       tracesTab,
+      redMetric,
       logsSelectedGroup,
     },
     actions,
