@@ -738,6 +738,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     const encodedFilters = encodeURIComponent(JSON.stringify(filters))
     menuNodeKey.value = ''
     clearChartActiveState()
+    // Service is already known — open logs detail (not the overview catalog).
     await router.push({
       query: {
         ...route.query,
@@ -745,6 +746,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
         signal,
         metric: undefined,
         filters: encodedFilters,
+        logsView: signal === 'logs' ? 'detail' : undefined,
         serviceMapSearch: undefined,
         serviceMapScope: undefined,
         serviceMapFilters: undefined,
