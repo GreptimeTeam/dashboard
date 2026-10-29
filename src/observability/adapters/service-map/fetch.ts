@@ -6,14 +6,21 @@ import {
   SERVICE_MAP_INSTANCE_SATELLITE_LIMIT,
   SERVICE_MAP_NODE_LIMIT,
   SERVICE_MAP_RELATIONSHIP_ROWS_LIMIT,
+  buildServiceMapCallsSql,
   buildServiceMapEntitiesSql,
   buildServiceMapInstanceCountsSql,
-  buildServiceMapRelationshipsSql,
   buildServiceMapStructuralSql,
   isStructuralEntityType,
+  isStructuralRelType,
 } from '../../traces/service-map-queries'
 import { mergeEdges } from './graph'
-import type { ServiceMapConnectionType, ServiceMapEdge, ServiceMapNode, ServiceMapResult } from './types'
+import type {
+  ServiceMapConnectionType,
+  ServiceMapEdge,
+  ServiceMapNode,
+  ServiceMapProvenance,
+  ServiceMapResult,
+} from './types'
 
 export interface FetchServiceMapOptions {
   /**
@@ -21,6 +28,8 @@ export interface FetchServiceMapOptions {
    * call graph (capped per service). Default false — calls-only overview.
    */
   showTopology?: boolean
+  /** Push selected service entity ids into SQL (plus one-hop neighbors on calls). */
+  serviceIds?: string[]
 }
 
 interface QueryRecords {
@@ -107,6 +116,11 @@ function connectionTypeFromAttributes(raw: unknown): ServiceMapConnectionType | 
   return typeof value === 'string' && value.trim() ? value.trim() : undefined
 }
 
+function normalizeProvenance(raw: unknown, fallback: ServiceMapProvenance = 'trace'): ServiceMapProvenance {
+  if (typeof raw === 'string' && raw.trim()) return raw.trim()
+  return fallback
+}
+
 function makeNode(
   type: string,
   id: string,
@@ -118,6 +132,7 @@ function makeNode(
     type,
     id,
     label: id || type,
+    scopes: [],
     sourceTables: [],
     instanceCount: 0,
     groupAttributes: {},
@@ -141,6 +156,12 @@ function ensureEndpoint(
   }
   if (existing.virtual && connectionType) existing.connectionType ||= connectionType
   return key
+}
+
+function mergeScopeList(existing: string[], next?: string): string[] {
+  if (!next?.trim()) return existing
+  const value = next.trim()
+  return existing.includes(value) ? existing : [...existing, value]
 }
 
 /** Remap inferred peers onto real services with the same display name; keep unmatched on the folded edge. */
@@ -173,7 +194,7 @@ export function foldVirtualPeersIntoServices(
   }
 }
 
-function nodesFromEntities(rows: Array<Record<string, unknown>>): Map<string, ServiceMapNode> {
+export function nodesFromEntities(rows: Array<Record<string, unknown>>): Map<string, ServiceMapNode> {
   const nodes = new Map<string, ServiceMapNode>()
   rows.forEach((row) => {
     const type = String(row.entity_type ?? '')
@@ -184,35 +205,46 @@ function nodesFromEntities(rows: Array<Record<string, unknown>>): Map<string, Se
     const key = entityKey(type, id)
     const attrs = parseJson(row.entity_id_attrs)
     const serviceValue = serviceNameFromAttrs(attrs)
+    const scope = typeof row.scope === 'string' ? row.scope.trim() : ''
     const existing = nodes.get(key)
     const node: ServiceMapNode = {
       ...makeNode(type, id, false),
       label: serviceValue || id,
       serviceValue: serviceValue || id,
-      scope: typeof row.scope === 'string' ? row.scope : undefined,
+      scope: scope || undefined,
+      scopes: scope ? [scope] : [],
       descriptive: parseJson(row.descriptive) as ServiceMapNode['descriptive'],
       sourceTables: sourceTablesFrom(row.source_tables),
-      groupAttributes: entityAttributesFrom(
-        row.entity_id_attrs,
-        row.descriptive,
-        typeof row.scope === 'string' && row.scope.trim() ? { scope: row.scope } : undefined
-      ),
+      groupAttributes: entityAttributesFrom(row.entity_id_attrs, row.descriptive, scope ? { scope } : undefined),
     }
-    // A changing descriptive snapshot can produce multiple rows for one entity. Keep
-    // the first observed row; identity and graph connectivity are stable across them.
     if (!existing) {
       nodes.set(key, node)
     } else {
       existing.sourceTables = [...new Set([...existing.sourceTables, ...node.sourceTables])]
-      existing.scope ||= node.scope
+      existing.scopes = mergeScopeList(existing.scopes, scope)
+      existing.scope = existing.scopes[0]
       existing.serviceValue ||= node.serviceValue
-      existing.groupAttributes = { ...existing.groupAttributes, ...node.groupAttributes }
+      existing.label ||= node.label
+      // Do not overwrite prior env values with later ones — keep first-seen per key,
+      // but always union scope into scopes[] above.
+      Object.entries(node.groupAttributes).forEach(([attrKey, value]) => {
+        if (!(attrKey in existing.groupAttributes)) existing.groupAttributes[attrKey] = value
+      })
+      if (scope) existing.groupAttributes.scope = existing.scopes.join(',')
     }
   })
   return nodes
 }
 
-function edgesFromRows(rows: Array<Record<string, unknown>>, nodes: Map<string, ServiceMapNode>): ServiceMapEdge[] {
+function edgeIdentityKey(source: string, target: string, relType: string, provenance: ServiceMapProvenance): string {
+  return `${source}\0${target}\0${relType}\0${provenance}`
+}
+
+export function edgesFromRows(
+  rows: Array<Record<string, unknown>>,
+  nodes: Map<string, ServiceMapNode>,
+  options: { declaredDefault?: boolean } = {}
+): ServiceMapEdge[] {
   const edges = new Map<string, ServiceMapEdge>()
   rows.forEach((row) => {
     const srcType = String(row.src_type ?? '')
@@ -223,16 +255,26 @@ function edgesFromRows(rows: Array<Record<string, unknown>>, nodes: Map<string, 
       return
     }
     const relType = String(row.rel_type ?? 'calls') || 'calls'
+    const isDeclaredRel = relType === 'depends_on' || relType === 'owns' || Boolean(options.declaredDefault)
+    let provenanceFallback: ServiceMapProvenance = 'trace'
+    if (isDeclaredRel) provenanceFallback = 'declared'
+    else if (isStructuralRelType(relType)) provenanceFallback = 'attribute'
+    const provenance = normalizeProvenance(row.provenance, provenanceFallback)
     const connectionType = connectionTypeFromAttributes(row.attributes)
     const source = ensureEndpoint(nodes, srcType, srcId, connectionType)
     const target = ensureEndpoint(nodes, dstType, dstId, connectionType)
-
-    const key = `${source}\0${target}\0${relType}`
+    const confidence = row.confidence === undefined || row.confidence === null ? undefined : toNumber(row.confidence)
+    const declared = isDeclaredRel || provenance === 'declared'
+    const key = edgeIdentityKey(source, target, relType, provenance)
     const edge = edges.get(key) ?? {
       key,
       source,
       target,
       relType,
+      provenance,
+      confidence,
+      declared,
+      hasTelemetry: false,
       requests: 0,
       errors: 0,
       unmatched: 0,
@@ -242,18 +284,27 @@ function edgesFromRows(rows: Array<Record<string, unknown>>, nodes: Map<string, 
       connectionType,
     }
     edge.connectionType ||= connectionType
+    if (confidence !== undefined) {
+      edge.confidence = Math.max(edge.confidence ?? 0, confidence)
+    }
     const unmatched = toNumber(row.unmatched_count)
     edge.unmatched += unmatched
-    // SQL aggregates paired RED with confidence >= 1 already. When a confidence
-    // column is still present (legacy / unaggregated rows), keep that gate.
+    // SQL already gates paired RED with confidence >= 1 for aggregated calls.
+    // Legacy unaggregated rows may still expose a confidence column.
     const hasConfidence = row.confidence !== undefined && row.confidence !== null
-    const paired = !hasConfidence || toNumber(row.confidence) >= 1
+    const paired = !declared && (!hasConfidence || toNumber(row.confidence) >= 1)
     if (paired) {
       edge.requests += toNumber(row.request_count)
       edge.errors += toNumber(row.error_count)
       edge.durationSum += toNumber(row.duration_sum)
       edge.durationCount += toNumber(row.duration_count)
       edge.durationMax = Math.max(edge.durationMax, toNumber(row.duration_max))
+    }
+    edge.hasTelemetry = edge.requests > 0 || edge.errors > 0 || edge.unmatched > 0 || edge.durationCount > 0
+    const sourceNode = nodes.get(source)
+    const targetNode = nodes.get(target)
+    if (sourceNode && targetNode && (sourceNode.scopes.length > 1 || targetNode.scopes.length > 1)) {
+      edge.mixedScope = true
     }
     edges.set(key, edge)
   })
@@ -302,7 +353,7 @@ async function loadStructuralExpansion(
   baseNodes: ServiceMapNode[]
 ): Promise<{ nodes: ServiceMapNode[]; edges: ServiceMapEdge[]; truncated: boolean }> {
   if (!serviceIds.length) return { nodes: [], edges: [], truncated: false }
-  const nodes = new Map(baseNodes.map((node) => [node.key, { ...node }]))
+  const nodes = new Map(baseNodes.map((node) => [node.key, { ...node, scopes: [...node.scopes] }]))
   const partOfResponse = await editorApi.runSQL(
     buildServiceMapStructuralSql(range, ['part_of'], { serviceIds }),
     database,
@@ -376,6 +427,33 @@ export function limitServiceMapGraph(nodes: Map<string, ServiceMapNode>, edges: 
   }
 }
 
+/**
+ * After topology expansion, keep call-graph nodes and fill remaining slots with
+ * satellites so the display cap stays honest.
+ */
+export function limitTopologyNodes(
+  callNodes: ServiceMapNode[],
+  satelliteNodes: ServiceMapNode[],
+  callEdges: ServiceMapEdge[],
+  structuralEdges: ServiceMapEdge[],
+  nodeLimit = SERVICE_MAP_NODE_LIMIT
+): { nodes: ServiceMapNode[]; edges: ServiceMapEdge[]; truncated: boolean } {
+  const locked = new Set(callNodes.map((node) => node.key))
+  const kept = [...callNodes]
+  const truncated = locked.size + satelliteNodes.length > nodeLimit
+  satelliteNodes
+    .slice()
+    .sort((left, right) => left.key.localeCompare(right.key))
+    .forEach((node) => {
+      if (kept.length >= nodeLimit) return
+      if (locked.has(node.key)) return
+      locked.add(node.key)
+      kept.push(node)
+    })
+  const edges = [...callEdges, ...structuralEdges].filter((edge) => locked.has(edge.source) && locked.has(edge.target))
+  return { nodes: kept, edges, truncated }
+}
+
 export async function fetchServiceMap(
   ctx: DrilldownContext,
   options: FetchServiceMapOptions = {}
@@ -386,47 +464,53 @@ export async function fetchServiceMap(
   }
   const database = ctx.connection.databaseFor('traces')
   const queryRange = { startUnix: range[0], endUnix: range[1] }
+  const queryOptions = { serviceIds: options.serviceIds }
   // Wait for entities + relationships together — painting nodes-only would flash
   // an isolate row before call edges arrive and the community layout settles.
   const [entitiesResponse, relationshipsResponse] = await Promise.all([
-    editorApi.runSQL(buildServiceMapEntitiesSql(queryRange), database, {
+    editorApi.runSQL(buildServiceMapEntitiesSql(queryRange, queryOptions), database, {
       suppressErrorToast: true,
     }),
-    editorApi.runSQL(buildServiceMapRelationshipsSql(queryRange), database, {
+    editorApi.runSQL(buildServiceMapCallsSql(queryRange, queryOptions), database, {
       suppressErrorToast: true,
     }),
   ])
   const entityRows = recordsToObjects(entitiesResponse?.output?.[0]?.records)
   const relationshipRows = recordsToObjects(relationshipsResponse?.output?.[0]?.records)
   const nodes = nodesFromEntities(entityRows)
-  const limited = limitServiceMapGraph(nodes, edgesFromRows(relationshipRows, nodes))
+  const callEdges = edgesFromRows(relationshipRows, nodes)
+  // Declared depends_on / owns are not shown yet — without authored dependency data the
+  // "Dependencies" layer only flattened call-graph isolates. Keep calls + provenance only.
+  const limited = limitServiceMapGraph(nodes, callEdges)
   const folded = foldVirtualPeersIntoServices(limited.nodes, limited.edges)
   const sqlTruncated =
     entityRows.length >= SERVICE_MAP_ENTITY_ROWS_LIMIT || relationshipRows.length >= SERVICE_MAP_RELATIONSHIP_ROWS_LIMIT
 
   if (!options.showTopology) {
-    return { nodes: folded.nodes, edges: folded.edges, truncated: limited.truncated || sqlTruncated }
+    return {
+      nodes: folded.nodes,
+      edges: folded.edges,
+      truncated: limited.truncated || sqlTruncated,
+    }
   }
 
   const topologyServiceIds = [
     ...new Set(folded.nodes.filter((node) => node.type === 'service' && !node.virtual).map((node) => node.id)),
   ]
   if (!topologyServiceIds.length) {
-    return { nodes: folded.nodes, edges: folded.edges, truncated: limited.truncated || sqlTruncated }
+    return {
+      nodes: folded.nodes,
+      edges: folded.edges,
+      truncated: limited.truncated || sqlTruncated,
+    }
   }
 
   const structural = await loadStructuralExpansion(queryRange, database, topologyServiceIds, folded.nodes)
-  const nodeKeys = new Set(folded.nodes.map((node) => node.key))
-  const mergedNodes = [...folded.nodes]
-  structural.nodes.forEach((node) => {
-    if (nodeKeys.has(node.key)) return
-    nodeKeys.add(node.key)
-    mergedNodes.push(node)
-  })
+  const capped = limitTopologyNodes(folded.nodes, structural.nodes, folded.edges, structural.edges)
   return {
-    nodes: mergedNodes,
-    edges: [...folded.edges, ...structural.edges],
-    truncated: limited.truncated || sqlTruncated || structural.truncated,
+    nodes: capped.nodes,
+    edges: capped.edges,
+    truncated: limited.truncated || sqlTruncated || structural.truncated || capped.truncated,
   }
 }
 

@@ -109,6 +109,20 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
             @click="openSignal('logs')"
           )
             | {{ t('drilldown.serviceMap.viewLogs') }}
+          button.service-map-node-action(
+            v-if="!menuNode.virtual && menuNode.type === 'service'"
+            type="button"
+            role="menuitem"
+            @click="openSignal('metrics')"
+          )
+            | {{ t('drilldown.serviceMap.viewMetrics') }}
+          button.service-map-node-action(
+            v-if="!menuNode.virtual && menuNode.type === 'service'"
+            type="button"
+            role="menuitem"
+            @click="openInSql"
+          )
+            | {{ t('drilldown.serviceMap.openInSql') }}
         .service-map-zoom(v-if="graphNodes.length")
           a-button(
             type="text"
@@ -165,10 +179,16 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
             span.service-map-legend__group-label {{ t('drilldown.serviceMap.healthLegend') }}
             span.service-map-legend__item
               i.service-map-legend__health(:style="{ borderColor: graphTheme.ok }")
-              | {{ t('drilldown.serviceMap.healthOk') }}
+              | {{ t('drilldown.serviceMap.health.ok') }}
+            span.service-map-legend__item
+              i.service-map-legend__health(:style="{ borderColor: graphTheme.warn }")
+              | {{ t('drilldown.serviceMap.health.warning') }}
             span.service-map-legend__item
               i.service-map-legend__health(:style="{ borderColor: graphTheme.danger }")
-              | {{ t('drilldown.serviceMap.healthDanger') }}
+              | {{ t('drilldown.serviceMap.health.critical') }}
+            span.service-map-legend__item
+              i.service-map-legend__health(:style="{ borderColor: graphTheme.edge }")
+              | {{ t('drilldown.serviceMap.health.low-traffic') }}
 </template>
 
 <script setup lang="ts">
@@ -195,7 +215,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   import { buildServiceMapOverviewLayout } from '@/observability/adapters/service-map/layout'
   import { aggregateNodeCallStats, isCallEdge } from '@/observability/adapters/service-map/metrics'
   import type { ServiceMapFilters, ServiceMapResult } from '@/observability/adapters/service-map/types'
-  import { isStructuralEntityType } from '@/observability/traces/service-map-queries'
+  import { buildServiceMapOpenInSql, isStructuralEntityType } from '@/observability/traces/service-map-queries'
   import { buildServiceMapChartOption, buildServiceMapSeries, type ServiceMapChartInput } from './chart-option'
   import { resolveServiceMapTheme, withAlpha } from './chart-theme'
   import { parseServiceMapUrlQuery, serializeServiceMapUrlQuery } from './url-state'
@@ -225,6 +245,18 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   const expandedClusters = ref<Set<string>>(new Set())
   /** When on, show instance/container satellites for all real services. Default off. */
   const showTopologyNodes = ref(false)
+
+  function resolveServiceIdsForQuery(): string[] | undefined {
+    if (!selectedServices.value.length) return undefined
+    const ids = new Set<string>()
+    selectedServices.value.forEach((value) => {
+      const match = result.value.nodes.find(
+        (node) => node.label === value || node.id === value || node.serviceValue === value
+      )
+      ids.add(match?.id ?? value)
+    })
+    return [...ids]
+  }
   /**
    * User zoom multiplier on top of layout-natural scale.
    * Detail views counteract ECharts bbox-fit so spacing matches the overview page.
@@ -244,7 +276,10 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     error.value = ''
     unsupported.value = false
     try {
-      const next = await fetchServiceMap(ctx, { showTopology: showTopologyNodes.value })
+      const next = await fetchServiceMap(ctx, {
+        showTopology: showTopologyNodes.value,
+        serviceIds: resolveServiceIdsForQuery(),
+      })
       if (currentRequest === requestId) result.value = next
     } catch (reason) {
       if (currentRequest === requestId) {
@@ -264,6 +299,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       ctx.query.rangeTime.value[1],
       ctx.query.refreshKey.value,
       showTopologyNodes.value,
+      selectedServices.value.join('\0'),
     ],
     () => load(),
     { immediate: true }
@@ -296,13 +332,20 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
       labels.add(label)
       options.push({ label, value: label })
     })
+    // Keep explicitly selected values visible even when SQL pushdown narrowed the graph.
+    selectedServices.value.forEach((value) => {
+      if (!value || labels.has(value)) return
+      labels.add(value)
+      options.push({ label: value, value })
+    })
     return options.sort((a, b) => a.label.localeCompare(b.label))
   })
   const graphModel = computed(() =>
     buildServiceMapDisplayGraph({
       nodes: allNodes.value,
       edges: allEdges.value,
-      selectedServices: selectedServices.value,
+      // Service selection is pushed to SQL; avoid double-filtering the one-hop neighborhood away.
+      selectedServices: [],
       selectedScopes: selectedScopes.value,
       filters: facetFilters.value,
       inspectNodeKey: inspectedNodeKey.value,
@@ -444,12 +487,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
         writeServiceMapQuery()
       }
 
-      const allowedServices = new Set(availableServices.map((option) => option.value))
-      const nextServices = selectedServices.value.filter((value) => allowedServices.has(value))
-      if (!sameStringList(nextServices, selectedServices.value)) {
-        selectedServices.value = nextServices
-        writeServiceMapQuery()
-      }
+      // Do not drop selectedServices missing from options — pushdown may still need them.
     },
     { deep: true }
   )
@@ -604,7 +642,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     const width = canvasRef.value?.clientWidth ?? 0
     const height = canvasRef.value?.clientHeight ?? 0
     const menuWidth = 240
-    const menuHeight = 180
+    const menuHeight = 220
     const gap = 18
     const preferredX = anchor.x + gap
     const x = preferredX + menuWidth <= width - 8 ? preferredX : anchor.x - menuWidth - gap
@@ -684,7 +722,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
         menuNodeKey.value = ''
         return
       }
-      // Left-click opens the action menu (Datadog Service Map). Leave right-click to the browser.
+      // Left-click opens the action menu. Leave right-click to the browser.
       menuNodeKey.value = graphNode?.service?.key ?? params.data.nodeKey
       positionMenu(canvasOffsetFromEvent(params))
       return
@@ -692,7 +730,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     if (menuNodeKey.value) {
       menuNodeKey.value = ''
     }
-    // Blank canvas: dismiss transient UI only; stay in inspect until Back to overview.
+    // Blank canvas: dismiss menu only; stay in inspect until Back / Escape.
   }
 
   function onChartMouseOver(params: { dataType?: string; data?: { nodeKey?: string; edgeKey?: string } }) {
@@ -723,7 +761,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     clearChartActiveState()
   }
 
-  async function openSignal(signal: 'logs' | 'traces') {
+  async function openSignal(signal: 'logs' | 'traces' | 'metrics') {
     const node = menuNode.value ?? selectedNode.value
     const serviceValue = node?.serviceValue || node?.label
     if (!node || node.virtual || !serviceValue) return
@@ -732,7 +770,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
     const encodedFilters = encodeURIComponent(JSON.stringify(filters))
     menuNodeKey.value = ''
     clearChartActiveState()
-    // Service is already known — open logs detail (not the overview catalog).
     await router.push({
       query: {
         ...route.query,
@@ -745,6 +782,20 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
         serviceMapScope: undefined,
         serviceMapFilters: undefined,
       },
+    })
+  }
+
+  async function openInSql() {
+    const node = menuNode.value ?? selectedNode.value
+    if (!node || node.virtual || node.type !== 'service') return
+    const range = ctx.query.unixTimeRange()
+    if (range.length !== 2) return
+    const sql = buildServiceMapOpenInSql({ startUnix: range[0], endUnix: range[1] }, node.id)
+    menuNodeKey.value = ''
+    clearChartActiveState()
+    await router.push({
+      name: 'query',
+      query: { sql: encodeURIComponent(sql) },
     })
   }
 

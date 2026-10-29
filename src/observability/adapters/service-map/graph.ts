@@ -53,8 +53,20 @@ function serviceIdentity(node: ServiceMapNode): boolean {
 /** Distinct env/scope values for the dedicated Environment control. */
 export function nodeScopeValues(node: ServiceMapNode): string[] {
   const values = new Set<string>()
+  ;(node.scopes ?? []).forEach((scope) => {
+    if (scope.trim()) values.add(scope.trim())
+  })
   if (node.scope?.trim()) values.add(node.scope.trim())
   Object.entries(node.groupAttributes).forEach(([key, rawValue]) => {
+    // groupAttributes.scope may be a joined list ("prod,staging") after multi-scope merge.
+    if (key === 'scope' || isScopeAttribute(key)) {
+      rawValue
+        .split(',')
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .forEach((value) => values.add(value))
+      return
+    }
     const value = rawValue.trim()
     if (value && isScopeAttribute(key)) values.add(value)
   })
@@ -183,7 +195,7 @@ function hiddenComponents(hiddenKeys: Set<string>, edges: ServiceMapEdge[]): str
 }
 
 /**
- * Re-key edge endpoints via `resolve` and sum RED per (source, target) pair.
+ * Re-key edge endpoints via `resolve` and sum RED per (source, target, rel, provenance).
  * Edges whose endpoint resolves to nothing, or that collapse into a self-loop, are dropped.
  */
 export function mergeEdges(edges: ServiceMapEdge[], resolve: (key: string) => string | undefined): ServiceMapEdge[] {
@@ -193,12 +205,18 @@ export function mergeEdges(edges: ServiceMapEdge[], resolve: (key: string) => st
     const target = resolve(edge.target)
     if (!source || !target || source === target) return
     const relType = edge.relType || 'calls'
-    const key = `${source}\0${target}\0${relType}`
+    const provenance = edge.provenance || 'trace'
+    const key = `${source}\0${target}\0${relType}\0${provenance}`
     const aggregate = aggregates.get(key) ?? {
       key,
       source,
       target,
       relType,
+      provenance,
+      confidence: edge.confidence,
+      declared: edge.declared,
+      hasTelemetry: edge.hasTelemetry,
+      mixedScope: edge.mixedScope,
       requests: 0,
       errors: 0,
       unmatched: 0,
@@ -214,6 +232,12 @@ export function mergeEdges(edges: ServiceMapEdge[], resolve: (key: string) => st
     aggregate.durationCount += edge.durationCount
     aggregate.durationMax = Math.max(aggregate.durationMax, edge.durationMax)
     aggregate.connectionType ||= edge.connectionType
+    aggregate.declared = aggregate.declared || edge.declared
+    aggregate.hasTelemetry = aggregate.hasTelemetry || edge.hasTelemetry
+    aggregate.mixedScope = aggregate.mixedScope || edge.mixedScope
+    if (edge.confidence !== undefined) {
+      aggregate.confidence = Math.max(aggregate.confidence ?? 0, edge.confidence)
+    }
     aggregates.set(key, aggregate)
   })
   return [...aggregates.values()]

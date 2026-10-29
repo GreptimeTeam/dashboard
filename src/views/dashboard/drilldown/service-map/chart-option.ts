@@ -4,13 +4,13 @@ import {
   escapeHtml,
   formatServiceMapCompactPercent,
   formatServiceMapCompactRate,
+  healthFromEdge,
   healthFromNodeCallStats,
   isCallEdge,
   mapTrafficToSymbolSize,
   nodeDisplayCallStats,
   nodeFlowSummary,
   nodeUnmatchedCount,
-  SERVICE_MAP_ERROR_RATE_THRESHOLD,
   type ServiceMapFlowSummary,
 } from '@/observability/adapters/service-map/metrics'
 import type {
@@ -41,8 +41,10 @@ export interface ServiceMapTooltipContext {
 }
 
 function healthBorderColor(theme: ServiceMapTheme, health: ServiceMapNodeHealth): string {
-  if (health === 'danger') return theme.danger
+  if (health === 'critical') return theme.danger
+  if (health === 'warning') return theme.warn
   if (health === 'ok') return theme.ok
+  // low-traffic / no-data — never green
   return theme.edge
 }
 
@@ -51,11 +53,18 @@ function edgeStrokeColor(theme: ServiceMapTheme, edge: ServiceMapEdge, emphasize
   if (isStructuralRelType(edge.relType || 'calls')) {
     return emphasize ? theme.structural : withAlpha(theme.structural, 0.85)
   }
-  if (edge.requests <= 0) {
-    return emphasize ? theme.external : withAlpha(theme.external, 0.65)
+  if (edge.declared) {
+    return emphasize ? theme.structural : withAlpha(theme.structural, 0.75)
   }
-  if (edge.errors / edge.requests >= SERVICE_MAP_ERROR_RATE_THRESHOLD) {
+  const health = healthFromEdge(edge)
+  if (health === 'critical') {
     return emphasize ? theme.danger : withAlpha(theme.danger, 0.55)
+  }
+  if (health === 'warning') {
+    return emphasize ? theme.warn : withAlpha(theme.warn, 0.55)
+  }
+  if (health === 'low-traffic' || health === 'no-data') {
+    return emphasize ? theme.external : withAlpha(theme.external, 0.65)
   }
   return theme.edge
 }
@@ -94,7 +103,7 @@ export function buildServiceMapSeries(input: ServiceMapChartInput, activeKey = '
     let symbol: string = node.members || node.virtual ? 'roundRect' : 'circle'
     if (isInstance) symbol = 'diamond'
     else if (isSatellite) symbol = 'roundRect'
-    let health: ServiceMapNodeHealth = 'neutral'
+    let health: ServiceMapNodeHealth = 'no-data'
     if (!node.virtual && !isServiceGlyph && !isSatellite && nodeStats) health = healthFromNodeCallStats(nodeStats)
     let itemStyle: Record<string, string | number> = {
       color: serviceColor.fill,
@@ -115,17 +124,19 @@ export function buildServiceMapSeries(input: ServiceMapChartInput, activeKey = '
         }
       )
       const rate = display.requests / input.rangeSeconds()
+      const glyphHealth = nodeStats ? healthFromNodeCallStats(nodeStats) : ('no-data' as ServiceMapNodeHealth)
       symbol = buildServiceMapNodeSymbolDataUrl({
         size: symbolSize,
         fill: serviceColor.fill,
         okColor: theme.ok,
-        dangerColor: theme.danger,
+        dangerColor: glyphHealth === 'warning' ? theme.warn : theme.danger,
         trackColor: theme.edge,
         textColor: theme.text,
         errorRatio: display.errorRatio,
         mainStat: formatServiceMapCompactRate(rate),
         secondaryStat: formatServiceMapCompactPercent(display.errorRatio),
         emphasized: isActive,
+        health: glyphHealth,
       })
       itemStyle = { opacity, borderWidth: 0, color: 'transparent' }
     } else if (isSatellite) {
@@ -187,30 +198,35 @@ export function buildServiceMapSeries(input: ServiceMapChartInput, activeKey = '
     }
   })
   const links = input.edges.map((edge) => {
-    const structural = !isCallEdge(edge)
+    const structural = isStructuralRelType(edge.relType || 'calls')
+    const declared = Boolean(edge.declared)
+    const callLike = isCallEdge(edge)
     const isFlowing = Boolean(activeKey) && (activeKey === edge.source || activeKey === edge.target)
     const traffic = Math.max(edge.requests, edge.unmatched)
-    const unmatchedOnly = !structural && edge.requests === 0 && edge.unmatched > 0
+    const unmatchedOnly = callLike && edge.requests === 0 && edge.unmatched > 0
     const sourceCommunity = layout.get(edge.source)?.community
     const targetCommunity = layout.get(edge.target)?.community
     const sameGroup =
       sourceCommunity !== undefined && targetCommunity !== undefined && sourceCommunity === targetCommunity
     // Cross-heap edges stay quieter so communities read first, but stay visible on light panels.
     let opacity = 0.42
-    if (structural) opacity = 0.7
+    if (structural || declared) opacity = 0.7
     else if (sameGroup) opacity = 0.72
     if (unmatchedOnly) opacity = 0.5
     if (activeKey) opacity = isFlowing ? 1 : 0.12
     // Keep curveness stable under node-hover flow — changing it jumps the edge path.
     let curveness = 0.16
-    if (structural) curveness = 0.08
+    if (structural || declared) curveness = 0.08
     else if (sameGroup) curveness = 0.03
-    let width = structural ? 1.15 : 1 + Math.min(1.1, Math.log2(traffic + 1) * 0.18)
-    if (!structural && sameGroup) width = 1.25 + Math.min(1.35, Math.log2(traffic + 1) * 0.24)
-    if (isFlowing) width = structural ? 1.8 : 2.2
+    let width = structural || declared ? 1.15 : 1 + Math.min(1.1, Math.log2(traffic + 1) * 0.18)
+    if (callLike && sameGroup) width = 1.25 + Math.min(1.35, Math.log2(traffic + 1) * 0.24)
+    if (isFlowing) width = structural || declared ? 1.8 : 2.2
     let arrowSize = 9
     if (isFlowing) arrowSize = 11
-    else if (structural) arrowSize = 8
+    else if (structural || declared) arrowSize = 8
+    let lineType = 'solid'
+    if (declared) lineType = 'dotted'
+    else if (structural || isFlowing || unmatchedOnly) lineType = 'dashed'
     return {
       id: edge.key,
       source: edge.source,
@@ -227,7 +243,7 @@ export function buildServiceMapSeries(input: ServiceMapChartInput, activeKey = '
         color: edgeStrokeColor(theme, edge, isFlowing),
         opacity,
         curveness,
-        type: structural || isFlowing || unmatchedOnly ? 'dashed' : 'solid',
+        type: lineType,
       },
     }
   })
@@ -276,19 +292,31 @@ export function buildServiceMapTooltipFormatter(input: ServiceMapChartInput, con
       const edge = input.edges.find((item) => item.key === params.data?.edgeKey)
       if (!edge) return ''
       const relType = edge.relType || 'calls'
-      if (isStructuralRelType(relType)) {
+      if (isStructuralRelType(relType) || edge.declared) {
         let relationLabel = relType
         if (relType === 'part_of') relationLabel = t('drilldown.serviceMap.relPartOf')
         else if (relType === 'runs_on') relationLabel = t('drilldown.serviceMap.relRunsOn')
+        else if (relType === 'depends_on') relationLabel = t('drilldown.serviceMap.relDependsOn')
+        else if (relType === 'owns') relationLabel = t('drilldown.serviceMap.relOwns')
         return [
           `<strong>${escapeHtml(labelFor(edge.source))} → ${escapeHtml(labelFor(edge.target))}</strong>`,
           escapeHtml(relationLabel),
-        ].join('<br/>')
+          `${escapeHtml(t('drilldown.serviceMap.provenance'))}: ${escapeHtml(String(edge.provenance || 'declared'))}`,
+          edge.declared || !edge.hasTelemetry ? escapeHtml(t('drilldown.serviceMap.noTelemetry')) : '',
+        ]
+          .filter(Boolean)
+          .join('<br/>')
       }
+      const health = healthFromEdge(edge)
       const errorRate = edge.requests > 0 ? edge.errors / edge.requests : 0
       const avgDuration = edge.durationCount > 0 ? edge.durationSum / edge.durationCount : 0
       return [
         `<strong>${escapeHtml(labelFor(edge.source))} → ${escapeHtml(labelFor(edge.target))}</strong>`,
+        `${escapeHtml(t('drilldown.serviceMap.healthStatus'))}: ${escapeHtml(
+          t(`drilldown.serviceMap.health.${health}`)
+        )}`,
+        `${escapeHtml(t('drilldown.serviceMap.provenance'))}: ${escapeHtml(String(edge.provenance || 'trace'))}`,
+        edge.mixedScope ? escapeHtml(t('drilldown.serviceMap.mixedScopeHint')) : '',
         `${escapeHtml(t('drilldown.serviceMap.requests'))}: ${escapeHtml(formatRequests(edge.requests))}`,
         `${escapeHtml(t('drilldown.serviceMap.errors'))}: ${escapeHtml(formatRequests(edge.errors))}`,
         `${escapeHtml(t('drilldown.serviceMap.errorRate'))}: ${escapeHtml(formatPercent(errorRate))}`,

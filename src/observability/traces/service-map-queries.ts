@@ -3,6 +3,11 @@ export interface ServiceMapQueryRange {
   endUnix: number
 }
 
+export interface ServiceMapQueryOptions {
+  /** When set, restrict entities / call endpoints to these entity ids (plus one-hop neighbors for calls). */
+  serviceIds?: string[]
+}
+
 /** Unique services / call edges returned by SQL (post-dedupe / post-endpoint aggregate). */
 export const SERVICE_MAP_ENTITY_ROWS_LIMIT = 2000
 export const SERVICE_MAP_RELATIONSHIP_ROWS_LIMIT = 2000
@@ -15,6 +20,8 @@ export const SERVICE_MAP_EDGE_LIMIT = 750
 export const SERVICE_MAP_INSTANCE_SATELLITE_LIMIT = 3
 
 export const STRUCTURAL_REL_TYPES = new Set(['part_of', 'runs_on', 'contains'])
+
+export const DECLARED_REL_TYPES = ['depends_on', 'owns'] as const
 
 export const STRUCTURAL_ENTITY_TYPES = new Set([
   'service.instance',
@@ -43,18 +50,28 @@ function sqlStringList(values: string[]): string {
   return values.map((value) => `'${value.replace(/'/g, "''")}'`).join(', ')
 }
 
-/** Latest observation per service in the selected half-open window. */
-export function buildServiceMapEntitiesSql(range: ServiceMapQueryRange): string {
+function serviceIdPredicate(column: string, serviceIds?: string[]): string {
+  const ids = (serviceIds ?? []).filter(Boolean)
+  if (!ids.length) return ''
+  return `\n  AND ${column} IN (${sqlStringList(ids)})`
+}
+
+/**
+ * Latest observation per (service, scope) in the selected half-open window.
+ * Scope is not identity — clients merge rows with the same entity_id into scopes[].
+ */
+export function buildServiceMapEntitiesSql(range: ServiceMapQueryRange, options: ServiceMapQueryOptions = {}): string {
+  const idFilter = serviceIdPredicate('entity_id', options.serviceIds)
   return `SELECT entity_type, entity_id, entity_id_attrs, scope, descriptive, source_tables
 FROM (
   SELECT entity_type, entity_id, entity_id_attrs, scope, descriptive, source_tables,
          ROW_NUMBER() OVER (
-           PARTITION BY entity_type, entity_id
+           PARTITION BY entity_type, entity_id, scope
            ORDER BY observed_at DESC
          ) AS rn
   FROM greptime_private.semantic_entities
   WHERE entity_type = 'service'
-    AND ${timePredicate(range)}
+    AND ${timePredicate(range)}${idFilter}
 ) t
 WHERE rn = 1
 ORDER BY entity_id
@@ -62,11 +79,18 @@ LIMIT ${SERVICE_MAP_ENTITY_ROWS_LIMIT}`
 }
 
 /**
- * Calls RED aggregated to one row per endpoint pair.
+ * Calls RED aggregated per endpoint pair + provenance.
  * Paired RED uses confidence >= 1 only; unmatched always sums.
+ * Optional serviceIds keeps selected services and their one-hop neighbors.
  */
-export function buildServiceMapCallsSql(range: ServiceMapQueryRange): string {
+export function buildServiceMapCallsSql(range: ServiceMapQueryRange, options: ServiceMapQueryOptions = {}): string {
+  const ids = (options.serviceIds ?? []).filter(Boolean)
+  const endpointFilter = ids.length
+    ? `\n  AND (src_id IN (${sqlStringList(ids)}) OR dst_id IN (${sqlStringList(ids)}))`
+    : ''
   return `SELECT src_type, src_id, dst_type, dst_id, 'calls' AS rel_type,
+       COALESCE(provenance, 'trace') AS provenance,
+       MAX(confidence) AS confidence,
        SUM(CASE WHEN confidence >= 1 THEN request_count ELSE 0 END) AS request_count,
        SUM(CASE WHEN confidence >= 1 THEN error_count ELSE 0 END) AS error_count,
        SUM(unmatched_count) AS unmatched_count,
@@ -76,15 +100,37 @@ export function buildServiceMapCallsSql(range: ServiceMapQueryRange): string {
        MAX(attributes) AS attributes
 FROM greptime_private.semantic_relationships
 WHERE rel_type = 'calls'
-  AND ${timePredicate(range)}
-GROUP BY src_type, src_id, dst_type, dst_id
+  AND ${timePredicate(range)}${endpointFilter}
+GROUP BY src_type, src_id, dst_type, dst_id, COALESCE(provenance, 'trace')
 ORDER BY request_count DESC, unmatched_count DESC
 LIMIT ${SERVICE_MAP_RELATIONSHIP_ROWS_LIMIT}`
 }
 
 /** @deprecated Prefer buildServiceMapCallsSql. */
-export function buildServiceMapRelationshipsSql(range: ServiceMapQueryRange): string {
-  return buildServiceMapCallsSql(range)
+export function buildServiceMapRelationshipsSql(
+  range: ServiceMapQueryRange,
+  options: ServiceMapQueryOptions = {}
+): string {
+  return buildServiceMapCallsSql(range, options)
+}
+
+/** Declared dependency / ownership edges (no RED aggregation). */
+export function buildServiceMapDeclaredSql(range: ServiceMapQueryRange, options: ServiceMapQueryOptions = {}): string {
+  const ids = (options.serviceIds ?? []).filter(Boolean)
+  const endpointFilter = ids.length
+    ? `\n  AND (src_id IN (${sqlStringList(ids)}) OR dst_id IN (${sqlStringList(ids)}))`
+    : ''
+  const relList = DECLARED_REL_TYPES.map((rel) => `'${rel}'`).join(', ')
+  return `SELECT src_type, src_id, dst_type, dst_id, rel_type,
+       COALESCE(provenance, 'declared') AS provenance,
+       MAX(confidence) AS confidence,
+       MAX(attributes) AS attributes
+FROM greptime_private.semantic_relationships
+WHERE rel_type IN (${relList})
+  AND ${timePredicate(range)}${endpointFilter}
+GROUP BY src_type, src_id, dst_type, dst_id, rel_type, COALESCE(provenance, 'declared')
+ORDER BY rel_type, src_id, dst_id
+LIMIT ${SERVICE_MAP_RELATIONSHIP_ROWS_LIMIT}`
 }
 
 /**
@@ -141,4 +187,20 @@ WHERE rel_type = 'part_of'
 ${servicePredicate}
   AND ${timePredicate(range)}
 GROUP BY dst_type, dst_id${limit}`
+}
+
+/** SQL Explorer deep-link: calls for one service in the current window. */
+export function buildServiceMapOpenInSql(range: ServiceMapQueryRange, serviceId: string): string {
+  const id = serviceId.replace(/'/g, "''")
+  return `SELECT src_type, src_id, dst_type, dst_id, rel_type,
+       COALESCE(provenance, 'trace') AS provenance,
+       confidence,
+       request_count, error_count, unmatched_count,
+       duration_sum, duration_count, duration_max, attributes, observed_at
+FROM greptime_private.semantic_relationships
+WHERE rel_type = 'calls'
+  AND (src_id = '${id}' OR dst_id = '${id}')
+  AND ${timePredicate(range)}
+ORDER BY observed_at DESC
+LIMIT 500`
 }

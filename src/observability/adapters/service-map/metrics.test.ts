@@ -23,6 +23,7 @@ function service(id: string): ServiceMapNode {
     id,
     label: id,
     serviceValue: id,
+    scopes: [],
     sourceTables: [],
     instanceCount: 0,
     groupAttributes: {},
@@ -35,6 +36,9 @@ function edge(source: ServiceMapNode, target: ServiceMapNode, requests = 10): Se
     key: `${source.key}\0${target.key}`,
     source: source.key,
     target: target.key,
+    provenance: 'trace',
+    declared: false,
+    hasTelemetry: true,
     requests,
     errors: 1,
     unmatched: 2,
@@ -59,9 +63,10 @@ describe('aggregateNodeCallStats / health / symbol size', () => {
     expect(stats.get(a.key)?.outErrors).toBe(6)
     expect(stats.get(a.key)?.inRequests).toBe(20)
     expect(healthFromErrorRate(100, 0)).toBe('ok')
-    expect(healthFromErrorRate(100, 2)).toBe('ok')
-    expect(healthFromErrorRate(100, 6)).toBe('danger')
-    expect(healthFromErrorRate(0, 0)).toBe('neutral')
+    expect(healthFromErrorRate(100, 2)).toBe('warning')
+    expect(healthFromErrorRate(100, 6)).toBe('critical')
+    expect(healthFromErrorRate(0, 0)).toBe('no-data')
+    expect(healthFromErrorRate(2, 1)).toBe('low-traffic')
     expect(mapTrafficToSymbolSize(0, 0, 100)).toBeLessThan(mapTrafficToSymbolSize(100, 0, 100))
     expect(mapTrafficToSymbolSize(50, 0, 100, { virtual: true })).toBeLessThan(
       mapTrafficToSymbolSize(50, 0, 100, { virtual: false })
@@ -69,12 +74,12 @@ describe('aggregateNodeCallStats / health / symbol size', () => {
   })
 
   it('treats the 5% error-rate threshold as inclusive', () => {
-    expect(healthFromErrorRate(10_000, 499)).toBe('ok')
-    expect(healthFromErrorRate(100, 5)).toBe('danger')
+    expect(healthFromErrorRate(10_000, 499)).toBe('warning')
+    expect(healthFromErrorRate(100, 5)).toBe('critical')
   })
 
   it('uses the worse of inbound vs outbound so a bad hop is not diluted', () => {
-    // Heavy healthy inbound + sparse 40% outbound → blended ~2% (warn), worst-of → danger.
+    // Heavy healthy inbound + sparse 40% outbound → blended ~2% (warn), worst-of → critical.
     const payment = service('payment')
     const checkout = service('checkout')
     const flagd = service('flagd')
@@ -85,10 +90,10 @@ describe('aggregateNodeCallStats / health / symbol size', () => {
     const paymentStats = stats.get(payment.key)
     expect(paymentStats).toBeDefined()
     if (!paymentStats) return
-    // Blended (~1.9%) stays ok under the 5% floor…
-    expect(healthFromErrorRate(paymentStats.requests, paymentStats.errors)).toBe('ok')
-    // …but worst-of outbound (40%) still marks the node.
-    expect(healthFromNodeCallStats(paymentStats)).toBe('danger')
+    // Blended (~1.9%) is warning under the 5% critical floor…
+    expect(healthFromErrorRate(paymentStats.requests, paymentStats.errors)).toBe('warning')
+    // …but worst-of outbound (40%) still marks the node critical.
+    expect(healthFromNodeCallStats(paymentStats)).toBe('critical')
   })
 
   it('shows inbound throughput but worst-direction error ratio on the node', () => {

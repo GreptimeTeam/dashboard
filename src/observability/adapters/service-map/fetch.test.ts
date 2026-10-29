@@ -12,6 +12,8 @@ import {
   foldVirtualPeersIntoServices,
   isMissingSemanticGraph,
   limitServiceMapGraph,
+  limitTopologyNodes,
+  nodesFromEntities,
   serviceMapSqlErrorMessage,
 } from './fetch'
 import type { ServiceMapEdge, ServiceMapNode } from './types'
@@ -25,6 +27,7 @@ function service(id: string, options: { virtual?: boolean; connectionType?: stri
     id,
     label: id,
     serviceValue: id,
+    scopes: [],
     sourceTables: [],
     instanceCount: 0,
     groupAttributes: {},
@@ -38,6 +41,9 @@ function edge(source: ServiceMapNode, target: ServiceMapNode, values: Partial<Se
     key: `${source.key}\0${target.key}`,
     source: source.key,
     target: target.key,
+    provenance: 'trace',
+    declared: false,
+    hasTelemetry: true,
     requests: 0,
     errors: 0,
     unmatched: 0,
@@ -72,6 +78,51 @@ const ctx = {
   query: { unixTimeRange: () => [1000, 4600] },
   connection: { databaseFor: () => 'public' },
 } as never
+
+describe('nodesFromEntities', () => {
+  it('merges multi-scope rows into one node with scopes[]', () => {
+    const nodes = nodesFromEntities([
+      {
+        entity_type: 'service',
+        entity_id: 'api',
+        entity_id_attrs: '{"service.name":"api"}',
+        scope: 'prod',
+        descriptive: null,
+        source_tables: '["traces"]',
+      },
+      {
+        entity_type: 'service',
+        entity_id: 'api',
+        entity_id_attrs: '{"service.name":"api"}',
+        scope: 'staging',
+        descriptive: null,
+        source_tables: '["traces"]',
+      },
+    ])
+    const api = nodes.get('service\0api')
+    expect(api?.scopes.sort()).toEqual(['prod', 'staging'])
+    expect(api?.scope).toBe('prod')
+  })
+})
+
+describe('limitTopologyNodes', () => {
+  it('keeps call-graph nodes and caps satellites under the node limit', () => {
+    const call = service('frontend')
+    const satellites = Array.from({ length: 5 }, (_, index) => {
+      const id = `i-${index}`
+      return {
+        ...service(id),
+        key: `service.instance\0${id}`,
+        type: 'service.instance',
+        id,
+      }
+    })
+    const capped = limitTopologyNodes([call], satellites, [], [], 3)
+    expect(capped.nodes).toHaveLength(3)
+    expect(capped.nodes[0].key).toBe(call.key)
+    expect(capped.truncated).toBe(true)
+  })
+})
 
 describe('capInstanceSatellites', () => {
   it('keeps at most N part_of instances per service and drops orphan runs_on', () => {
