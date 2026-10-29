@@ -156,7 +156,8 @@ export default {
   'drilldown.traces.rootSpanList': 'ルートスパン',
   'drilldown.traces.rowCount': '{count} 件のトレース',
   'drilldown.traces.noRows': '現在の時間範囲にルートスパンがありません',
-  'drilldown.traces.traceIdSearchPlaceholder': 'トレース ID を貼り付けて Enter を押してください',
+  'drilldown.traces.traceIdSearchPlaceholder': 'トレース ID を貼り付け',
+  'drilldown.traces.traceIdSearchAction': '表示',
   'drilldown.traces.openLogs': 'ログを表示',
   'drilldown.traces.logsMappingAmbiguous': '複数のログテーブルが候補として見つかりました。設定から 1 つ選んでください',
   'drilldown.traces.logsMappingFallbackHint':

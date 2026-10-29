@@ -30,16 +30,23 @@ a-layout-content.layout-content
               template(#icon)
                 icon-settings
               | {{ t('drilldown.traces.logsSettingsShortTitle') }}
-            a-input.trace-id-input(
-              v-model="traceIdDraft"
-              allow-clear
-              size="medium"
-              :placeholder="t('drilldown.traces.traceIdSearchPlaceholder')"
-              @press-enter="submitTraceId"
-              @clear="clearTraceId"
-            )
-              template(#prefix)
-                span.trace-id-prefix TID
+            a-input-group.trace-id-search
+              a-input.trace-id-input(
+                v-model="traceIdDraft"
+                allow-clear
+                size="medium"
+                :placeholder="t('drilldown.traces.traceIdSearchPlaceholder')"
+                @press-enter="submitTraceId"
+                @clear="clearTraceId"
+              )
+                template(#prefix)
+                  span.trace-id-prefix TID
+              a-button(
+                type="primary"
+                size="medium"
+                :disabled="!traceIdDraft.trim()"
+                @click="submitTraceId"
+              ) {{ t('drilldown.traces.traceIdSearchAction') }}
 
         a-alert(
           v-if="!tracesTable"
@@ -349,9 +356,14 @@ a-layout-content.layout-content
     overflow: hidden;
   }
 
-  .trace-id-input {
-    width: 260px;
+  .trace-id-search {
+    width: 320px;
     max-width: 100%;
+  }
+
+  .trace-id-input {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .trace-id-prefix {
