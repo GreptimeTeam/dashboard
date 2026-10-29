@@ -147,6 +147,11 @@ function labelFontSize(isActive: boolean, isSatellite: boolean): number {
   return 12
 }
 
+/** Single stroke scale for call edges — log of request/unmatched traffic, independent of layout. */
+function edgeWidthFromTraffic(traffic: number): number {
+  return 1 + Math.min(1.1, Math.log2(Math.max(0, traffic) + 1) * 0.18)
+}
+
 /** Build graph series. activeKey dims unrelated nodes/edges for node-hover flow. */
 export function buildServiceMapSeries(input: ServiceMapChartInput, activeKey = '') {
   const { theme, layout, stats, isDark } = input
@@ -284,18 +289,17 @@ export function buildServiceMapSeries(input: ServiceMapChartInput, activeKey = '
     const targetCommunity = layout.get(edge.target)?.community
     const sameGroup =
       sourceCommunity !== undefined && targetCommunity !== undefined && sourceCommunity === targetCommunity
-    // Cross-heap edges stay quieter so communities read first, but stay visible on light panels.
-    let opacity = 0.42
-    if (structural || declared) opacity = 0.7
-    else if (sameGroup) opacity = 0.72
+    // Width encodes traffic only (Grafana Tempo service map: uniform stroke; rate is a stat).
+    // Community never boosts thickness — that made nearby heap edges look "hotter" for no reason.
+    let opacity = callLike ? 0.56 : 0.7
     if (unmatchedOnly) opacity = 0.5
     if (activeKey) opacity = isFlowing ? 1 : 0.12
     // Keep curveness stable under node-hover flow — changing it jumps the edge path.
+    // Same-heap edges stay flatter so communities read; that is geometry, not weight.
     let curveness = 0.16
     if (structural || declared) curveness = 0.08
     else if (sameGroup) curveness = 0.03
-    let width = structural || declared ? 1.15 : 1 + Math.min(1.1, Math.log2(traffic + 1) * 0.18)
-    if (callLike && sameGroup) width = 1.25 + Math.min(1.35, Math.log2(traffic + 1) * 0.24)
+    let width = structural || declared ? 1.15 : edgeWidthFromTraffic(traffic)
     if (isFlowing) width = structural || declared ? 1.8 : 2.2
     let arrowSize = 9
     if (isFlowing) arrowSize = 11
@@ -481,8 +485,15 @@ export function buildServiceMapChartOption(input: ServiceMapChartInput, context:
         edgeSymbol: ['circle', 'arrow'],
         edgeSymbolSize: [0, 8],
         label: { show: true, color: theme.text, fontSize: 12 },
-        // Drop colliding titles rather than stacking glyphs on top of each other.
-        labelLayout: { hideOverlap: true },
+        // Call-graph titles may hide when crowded; topology satellites always keep a name
+        // (otherwise they only reappear under emphasis hover).
+        labelLayout: (params: { dataIndex?: number }) => {
+          const item = nodes[params.dataIndex ?? -1]
+          if (item && isStructuralEntityType(String(item.entityType || ''))) {
+            return { hideOverlap: false }
+          }
+          return { hideOverlap: true }
+        },
         lineStyle: { opacity: 0.56, width: 1 },
         // Edge hover highlight via ECharts (must not rebuild option, or mouseout is lost).
         // focus:none keeps the rest of the graph unchanged.
