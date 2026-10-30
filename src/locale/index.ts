@@ -10,7 +10,7 @@ export const LOCALE_OPTIONS = [
 const STORAGE_KEY = 'greptime-locale'
 
 function detectLocale(): string {
-  // 1) explicit storage
+  // 1) explicit storage (user has set a language before)
   const stored = localStorage.getItem(STORAGE_KEY)
   if (stored) return stored
 
@@ -18,14 +18,10 @@ function detectLocale(): string {
   const envLang = import.meta.env.VITE_LANG
   if (envLang) return envLang
 
-  // 3) enterprise and browser
-  const appName = import.meta.env.VITE_APP_NAME
-  if (appName === 'enterprise') {
-    const navLang = (navigator.language || navigator.languages?.[0] || '').toLowerCase()
-    if (navLang.startsWith('zh')) return 'zh-CN'
-    if (navLang.startsWith('ja')) return 'ja-JP'
-    return 'en-US'
-  }
+  // 3) browser language
+  const navLang = (navigator.language || navigator.languages?.[0] || '').toLowerCase()
+  if (navLang.startsWith('zh')) return 'zh-CN'
+  if (navLang.startsWith('ja')) return 'ja-JP'
 
   // 4) default to en-US
   return 'en-US'
