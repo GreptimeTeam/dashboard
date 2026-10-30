@@ -130,9 +130,45 @@ describe('buildMcpArgs / JSON / CLI', () => {
       'p@ss',
       '--timezone',
       '+08:00',
+      '--http-port',
+      '5177',
     ])
     expect(buildMcpCliCommand(params)).toContain('--password "p@ss"')
     expect(buildMcpArgs(params)).not.toContain('--port')
+  })
+
+  it('points the HTTP tools at the dashboard origin when served over HTTPS', () => {
+    const params = buildMcpConnectionParams({
+      host: 'https://live.example.com',
+      database: 'public',
+      username: 'root',
+      password: '',
+    })
+    expect(buildMcpArgs(params)).toEqual([
+      '--host',
+      'live.example.com',
+      '--database',
+      'public',
+      '--user',
+      'root',
+      '--http-port',
+      '443',
+      '--http-protocol',
+      'https',
+    ])
+    const json = JSON.parse(buildMcpServersJson(params))
+    expect(json.mcpServers.greptimedb.args).toContain('--http-protocol')
+  })
+
+  it('omits HTTP args for the local plain-HTTP default', () => {
+    const params = buildMcpConnectionParams({
+      host: 'http://localhost:4000',
+      database: 'public',
+      username: '',
+      password: '',
+    })
+    expect(buildMcpArgs(params)).not.toContain('--http-port')
+    expect(buildMcpArgs(params)).not.toContain('--http-protocol')
   })
 
   it('buildMcpSetupPrompt embeds config between intro and outro', () => {

@@ -19,7 +19,7 @@
 |---|---|
 | Python | **>= 3.11** |
 | GreptimeDB | 一个可连接的实例（本地或远程） |
-| 网络 | MySQL 协议端口（默认 **4002**）；Pipeline / 仪表盘工具另需 HTTP 端口（默认 **4000**） |
+| 网络 | MySQL 协议端口（默认 **4002**）；Pipeline / 仪表盘工具另需 HTTP 端口（默认 **4000**；托管实例常与 Dashboard 同域，即 443 + HTTPS） |
 
 > 注意：MCP 的 `--port` 是 **MySQL 协议端口 4002**，不是 HTTP 端口 4000。两者混淆是最常见的连接错误。
 
@@ -75,10 +75,15 @@ CLI 参数与环境变量一一对应，**CLI 优先**。常用配置：
 | `--password` | `GREPTIMEDB_PASSWORD` | `""` | 密码 |
 | `--timezone` | `GREPTIMEDB_TIMEZONE` | `UTC` | 会话时区 |
 | `--http-port` | `GREPTIMEDB_HTTP_PORT` | `4000` | HTTP API 端口（Pipeline/仪表盘工具用） |
+| `--http-protocol` | `GREPTIMEDB_HTTP_PROTOCOL` | `http` | HTTP API 协议（`http` / `https`） |
 | `--mask-enabled` | `GREPTIMEDB_MASK_ENABLED` | `true` | 敏感数据脱敏 |
 | `--audit-enabled` | `GREPTIMEDB_AUDIT_ENABLED` | `true` | 审计日志 |
 | `--allow-write` | `GREPTIMEDB_ALLOW_WRITE` | `false` | **危险**：允许写操作，见 §7 |
 | `--transport` | `GREPTIMEDB_TRANSPORT` | `stdio` | 本机 Agent 用默认 stdio 即可 |
+
+> **托管 / 反向代理实例**：HTTP API 通常与 Dashboard 同域（`https://<host>` 的 443），而 4000 不对外开放。这种情况要同时给 `--http-port 443 --http-protocol https`，否则 Pipeline / 仪表盘工具会报连接失败——查询类工具不受影响，它们走 MySQL 4002。
+>
+> Dashboard 里的「GreptimeDB MCP」弹窗会按当前连接自动生成 args：HTTPS 部署自动带 `--http-port` / `--http-protocol`，MySQL 端口为默认 4002 时省略 `--port`；prompt 末尾还会附一段连接说明，随复制一起带走。
 
 验证安装：
 
@@ -263,7 +268,8 @@ GREPTIMEDB_ALLOW_WRITE=true greptimedb-mcp-server   # 或 --allow-write true
 | 现象 | 原因 / 处理 |
 |---|---|
 | 连接超时 / 拒绝 | `--port` 误用了 HTTP 端口 4000；MySQL 协议端口是 **4002** |
-| Pipeline / 仪表盘工具报错 | 检查 HTTP 端口可达（默认 4000，`--http-port` 可改） |
+| Pipeline / 仪表盘工具报错 | 检查 HTTP 端口可达（默认 4000，`--http-port` 可改）；托管实例多为 `--http-port 443 --http-protocol https` |
+| 复制的 Dashboard SQL 报 `INTERVAL requires a unit` 或 `Error parsing timestamp from 'timestamp'` | MCP 走 MySQL 方言：标识符用反引号（`` `timestamp` ``），时间窗用 `INTERVAL 15 MINUTE` 或 `'15 minutes'::interval`；双引号会被当作字符串字面量。引导里的示例 SQL 已按这种写法给出 |
 | 写操作被拒 | 安全门拦截，属预期行为；确需写入见 §6 写模式 |
 | Agent 中看不到工具 | 配置文件路径/JSON 格式错误；改配置后未重启 agent；`command` 未用全路径（venv 方式） |
 | `421 Invalid Host Header` | HTTP 模式下 DNS rebinding 防护拦截，用 `--allowed-hosts` 加入你的主机名 |

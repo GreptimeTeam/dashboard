@@ -106,7 +106,11 @@ export function resolveMcpConnectionInput(
 
 /**
  * CLI args for greptimedb-mcp-server (same shape as GitHub demo).
- * Omits default MySQL port 4002 and empty auth to stay close to the README sample.
+ * Omits default MySQL port 4002, default HTTP API (http/4000), and empty auth
+ * to stay close to the README sample.
+ *
+ * HTTP args matter for the pipeline / dashboard tools: a dashboard served over
+ * HTTPS reaches GreptimeDB's HTTP API on 443, not on the default 4000.
  */
 export function buildMcpArgs(params: McpConnectionParams): string[] {
   const args = ['--host', params.hostname, '--database', params.database]
@@ -121,6 +125,12 @@ export function buildMcpArgs(params: McpConnectionParams): string[] {
   }
   if (params.timezone && params.timezone !== 'UTC') {
     args.push('--timezone', params.timezone)
+  }
+  if (params.httpPort !== 4000) {
+    args.push('--http-port', String(params.httpPort))
+  }
+  if (params.httpProtocol === 'https') {
+    args.push('--http-protocol', 'https')
   }
   return args
 }

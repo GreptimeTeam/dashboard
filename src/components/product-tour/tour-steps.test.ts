@@ -98,6 +98,17 @@ describe('tour steps config', () => {
     expect(JSON.parse(decodeMaybeEncoded(tracesStep.location.query.builderForm))).toEqual(TOUR_TRACES_BUILDER_FORM)
   })
 
+  it('keeps the guide SQL runnable through the MySQL protocol (MCP)', () => {
+    // Backticked identifiers + `INTERVAL n UNIT` work on both the dashboard's HTTP
+    // API and the MySQL wire protocol; double quotes and `INTERVAL 'n unit'` do not.
+    expect(TOUR_SQL_QUERY).toContain('`timestamp`')
+    expect(TOUR_SQL_QUERY).toContain('`resource_attributes.service.namespace`')
+    expect(TOUR_SQL_QUERY).not.toContain('"timestamp"')
+    expect(TOUR_SQL_QUERY).toContain('INTERVAL 15 MINUTE')
+    expect(TOUR_TQL_QUERY).toContain('INTERVAL 30 MINUTE')
+    expect(TOUR_TQL_QUERY).not.toContain('::interval')
+  })
+
   it('maps every step to its primary GreptimeDB capability docs', () => {
     const docsPaths: Record<string, string> = {
       'sql': '/user-guide/query-data/sql/',

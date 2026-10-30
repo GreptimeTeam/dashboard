@@ -23,6 +23,8 @@ export default {
   'settings.mcp.title': 'GreptimeDB MCP',
   'settings.mcp.promptIntro': 'Help me configure GreptimeDB MCP in my AI client using this mcpServers config:',
   'settings.mcp.copyHint': 'Copy the whole prompt and paste it into your AI assistant.',
+  'settings.mcp.promptOutro':
+    'Connection notes: queries go over the MySQL protocol (port 4002 by default, so --port is omitted). Pipeline and dashboard tools use the HTTP API, which needs --http-port and --http-protocol on HTTPS deployments.',
   'settings.mcp.repo': 'MCP server on GitHub',
   'settings.mcp.copy': 'Copy prompt',
   'settings.mcp.copied': 'Copied',

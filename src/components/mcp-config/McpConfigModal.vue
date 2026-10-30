@@ -59,7 +59,9 @@ a-modal(
     )
   )
 
-  const promptText = computed(() => buildMcpSetupPrompt(serversJson.value, t('settings.mcp.promptIntro')))
+  const promptText = computed(() =>
+    buildMcpSetupPrompt(serversJson.value, t('settings.mcp.promptIntro'), t('settings.mcp.promptOutro'))
+  )
 </script>
 
 <style scoped lang="less">
@@ -81,8 +83,6 @@ a-modal(
     &__pre {
       margin: 0 0 12px;
       padding: 10px 12px;
-      max-height: 360px;
-      overflow: auto;
       font-size: 12px;
       line-height: 1.45;
       white-space: pre-wrap;

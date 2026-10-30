@@ -9,23 +9,30 @@ export type TourStepDisplay = 'code' | 'preset' | 'where'
 /** Modal / non-route actions — selectStep opens UI instead of navigating. */
 export type TourStepAction = 'open-mcp-config'
 
-/** Exactly as shipped in the demo copy — do not reformat or localize. */
+/**
+ * Exactly as shipped in the demo copy — do not reformat or localize.
+ * MySQL dialect on purpose: the guide is copy-paste material for the MCP server,
+ * which talks to GreptimeDB over the MySQL wire protocol. Backticked identifiers
+ * and `INTERVAL n UNIT` run on both that path and the dashboard's HTTP API,
+ * while double-quoted identifiers are string literals for MySQL.
+ */
 export const TOUR_SQL_QUERY = `SELECT
   service_name,
   count(*) AS requests,
   sum(CASE WHEN span_status_code = 'STATUS_CODE_ERROR' THEN 1 ELSE 0 END) AS errors,
   approx_percentile_cont(0.95) WITHIN GROUP (ORDER BY duration_nano) / 1e6 AS p95_ms
 FROM opentelemetry_traces
-WHERE "timestamp" > now() - INTERVAL '15 minutes'
+WHERE \`timestamp\` > now() - INTERVAL 15 MINUTE
   AND span_kind = 'SPAN_KIND_SERVER'
-  AND "resource_attributes.service.namespace" = 'opentelemetry-demo'
+  AND \`resource_attributes.service.namespace\` = 'opentelemetry-demo'
 GROUP BY service_name
 ORDER BY requests DESC;`
 
 export const TOUR_PROMQL_QUERY =
   '100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{job="node",mode="idle"}[5m])))'
 
-export const TOUR_TQL_QUERY = `TQL EVAL (now() - '30 minutes'::interval, now(), '1m')
+/** Same MySQL dialect rule as TOUR_SQL_QUERY — no `::interval` cast. */
+export const TOUR_TQL_QUERY = `TQL EVAL (now() - INTERVAL 30 MINUTE, now(), '1m')
   ${TOUR_PROMQL_QUERY};`
 
 export const TOUR_LOGS_BUILDER_FORM = {

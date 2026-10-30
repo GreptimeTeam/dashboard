@@ -24,6 +24,8 @@ export default {
   'settings.mcp.title': 'GreptimeDB MCP',
   'settings.mcp.promptIntro': '次の mcpServers 設定を使って、AI クライアントに GreptimeDB MCP を接続してください：',
   'settings.mcp.copyHint': 'プロンプト全体をコピーして、AI アシスタントに貼り付けてください。',
+  'settings.mcp.promptOutro':
+    '接続メモ：クエリは MySQL プロトコル（既定 4002、--port は省略）で接続します。Pipeline / ダッシュボードのツールは HTTP API を使い、HTTPS では --http-port と --http-protocol が必要です。',
   'settings.mcp.repo': 'GitHub 上の MCP サーバー',
   'settings.mcp.copy': 'プロンプトをコピー',
   'settings.mcp.copied': 'コピーしました',
