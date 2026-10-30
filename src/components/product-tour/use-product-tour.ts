@@ -1,8 +1,6 @@
 import { computed, ref, watch, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useStorage, useWindowSize } from '@vueuse/core'
-import { Message } from '@arco-design/web-vue'
-import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/store'
 import { useQueryFocusMode } from '@/composables/use-query-focus-mode'
 import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
@@ -79,7 +77,6 @@ let initialized = false
 export function useProductTour() {
   const route = useRoute()
   const router = useRouter()
-  const { t } = useI18n()
   const appStore = useAppStore()
   const mcpConfig = useMcpConfig()
   const queryFocusMode = useQueryFocusMode()
@@ -102,17 +99,10 @@ export function useProductTour() {
     state.value.activeStepId = stepId
   }
 
+  /** Keep the guide open after route changes — only collapsePanel / endTour hide it. */
   function syncPanelAfterNavigation() {
-    if (layoutMode.value === 'docked') {
-      view.value = 'guide'
-      state.value.panelState = 'expanded'
-      return
-    }
-    // Drawer / sheet: collapse to pill so the live page stays primary.
-    view.value = null
-    state.value.panelState = 'collapsed'
-    const name = t(activeStep.value?.nameKey || 'tour.guide.title')
-    Message.info(t('tour.guide.stepLoaded', { name }))
+    view.value = 'guide'
+    state.value.panelState = 'expanded'
   }
 
   /** Select a step and navigate to its page without filling or running the example. */
@@ -166,13 +156,8 @@ export function useProductTour() {
   /** Focus a step without forcing navigation (deep links, restore). */
   function focusStep(stepId: TourStepId) {
     setActiveStep(stepId)
-    if (layoutMode.value === 'docked') {
-      view.value = 'guide'
-      state.value.panelState = 'expanded'
-    } else {
-      view.value = null
-      state.value.panelState = 'collapsed'
-    }
+    view.value = 'guide'
+    state.value.panelState = 'expanded'
   }
 
   function openWelcome() {
