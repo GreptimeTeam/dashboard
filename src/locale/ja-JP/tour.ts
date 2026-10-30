@@ -103,9 +103,9 @@ export default {
   'tour.steps.visualization.capability': 'GreptimeDB は SQL と PromQL でダッシュボードパネルを直接提供します。',
   'tour.steps.visualization.scenario':
     'Dashboard に組み込まれた Perses です。パネルが叩くのは手で走らせたのと同じデータベース——データと絵のあいだに外部ツールはありません。',
-  'tour.steps.visualization.points.0.lead': '標準 Perses',
+  'tour.steps.visualization.points.0.lead': 'Perses ベース',
   'tour.steps.visualization.points.0.detail':
-    '組み込みは標準の Perses ダッシュボードで、パネル定義はエコシステムと互換です。',
+    'Perses に GreptimeDB データソースプラグインが組み込み済み。ダッシュボード形式は汎用です。',
   'tour.steps.visualization.points.1.lead': '言語を混在',
   'tour.steps.visualization.points.1.detail': '同じダッシュボード内のパネルで SQL と PromQL を使い分けられます。',
   'tour.steps.visualization.where.0': '左メニューの可視化',

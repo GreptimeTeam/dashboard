@@ -103,9 +103,9 @@ export default {
   'tour.steps.visualization.capability': 'GreptimeDB serves dashboard panels directly with SQL and PromQL.',
   'tour.steps.visualization.scenario':
     'Built into the dashboard on top of Perses. Panels hit the database you just queried by hand — no external tool between the data and the picture.',
-  'tour.steps.visualization.points.0.lead': 'Standard Perses',
+  'tour.steps.visualization.points.0.lead': 'Built on Perses',
   'tour.steps.visualization.points.0.detail':
-    'Built-in dashboards are standard Perses — panel definitions match the ecosystem.',
+    'Perses ships with the GreptimeDB datasource plugin; dashboard format is portable.',
   'tour.steps.visualization.points.1.lead': 'Mix languages',
   'tour.steps.visualization.points.1.detail': 'Panels in the same dashboard can use SQL or PromQL.',
   'tour.steps.visualization.where.0': 'Visualization in the left menu',
