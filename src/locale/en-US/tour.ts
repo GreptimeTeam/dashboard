@@ -4,8 +4,10 @@ export default {
   'tour.commandHint': 'Open the query guide',
   'tour.welcome.title': 'Welcome to GreptimeDB',
   'tour.welcome.badge': 'Live demo instance',
+  // Homepage slogan — keep in sync with greptime.cn / greptime.com.
+  'tour.welcome.slogan': 'Metrics, logs, and traces\nin one database.',
   'tour.welcome.intro':
-    'GreptimeDB is an open-source database built for time-series and observability data — metrics, logs, and traces in one place, queried with SQL.\n\nThis instance is live: a demo application is sending real telemetry to it right now. Nothing on the following screens is mocked or pre-recorded.',
+    'This instance is live: a demo application is sending real telemetry to it right now. Nothing on the following screens is mocked or pre-recorded.',
   'tour.welcome.begin': 'Start the query guide',
   'tour.guide.title': 'Query guide',
   'tour.guide.pillWithStep': 'Query guide · {name}',

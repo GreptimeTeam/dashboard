@@ -4,8 +4,10 @@ export default {
   'tour.commandHint': 'クエリガイドを開く',
   'tour.welcome.title': 'GreptimeDB へようこそ',
   'tour.welcome.badge': 'ライブデモインスタンス',
+  // Homepage slogan — keep in sync with greptime.cn / greptime.com.
+  'tour.welcome.slogan': 'ひとつのデータベースで、\nメトリクス・ログ・トレースを統一。',
   'tour.welcome.intro':
-    'GreptimeDB は時系列・オブザーバビリティデータ向けのオープンソースデータベースです。metrics、logs、traces を一箇所に蓄え、SQL で照会します。\n\nこのインスタンスは稼働中です。デモアプリがいま本物のテレメトリを送信しています。以降の画面にモックや事前収録はありません。',
+    'このインスタンスは稼働中です。デモアプリがいま本物のテレメトリを送信しています。以降の画面にモックや事前収録はありません。',
   'tour.welcome.begin': 'クエリガイドを始める',
   'tour.guide.title': 'クエリガイド',
   'tour.guide.pillWithStep': 'クエリガイド · {name}',

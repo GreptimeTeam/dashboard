@@ -4,8 +4,10 @@ export default {
   'tour.commandHint': '打开查询引导',
   'tour.welcome.title': '欢迎使用 GreptimeDB',
   'tour.welcome.badge': '实时演示实例',
+  // Homepage slogan — keep in sync with greptime.cn / greptime.com.
+  'tour.welcome.slogan': '一个数据库，\n统一指标、日志和链路',
   'tour.welcome.intro':
-    'GreptimeDB 是一个面向时序与可观测性数据的开源数据库——指标、日志、链路集中存储，使用 SQL 查询。\n\n当前实例正在实时运行：一个演示应用正持续向其中写入真实遥测数据。接下来的页面中没有任何 mock 或预录内容。',
+    '当前实例正在实时运行：一个演示应用正持续向其中写入真实遥测数据。接下来的页面中没有任何 mock 或预录内容。',
   'tour.welcome.begin': '开始查询引导',
   'tour.guide.title': '查询引导',
   'tour.guide.pillWithStep': '查询引导 · {name}',

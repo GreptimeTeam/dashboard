@@ -16,6 +16,7 @@
           <span class="tour-live-dot" />
           {{ $t('tour.welcome.badge') }}
         </span>
+        <p class="tour-welcome-slogan">{{ $t('tour.welcome.slogan') }}</p>
         <p class="tour-welcome-intro">{{ $t('tour.welcome.intro') }}</p>
       </div>
 
@@ -58,9 +59,18 @@
     border-radius: 50%;
   }
 
-  .tour-welcome-intro {
+  .tour-welcome-slogan {
     margin: var(--gpt-gap-xl) 0 0;
     color: var(--gpt-text-primary);
+    font-size: var(--gpt-font-xl);
+    font-weight: var(--gpt-font-weight-control);
+    line-height: 1.45;
+    white-space: pre-line;
+  }
+
+  .tour-welcome-intro {
+    margin: var(--gpt-gap-md) 0 0;
+    color: var(--gpt-text-secondary);
     font-size: var(--gpt-font-md);
     line-height: 1.7;
     white-space: pre-line;
