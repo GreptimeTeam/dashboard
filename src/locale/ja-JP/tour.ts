@@ -34,12 +34,11 @@ export default {
   'tour.steps.sql.scenarioTitle': '1 本の SQL でサービス健全性を見る',
   'tour.steps.sql.capability':
     'GreptimeDB は metrics・logs・traces をテーブルとして、SQL のフィルタ・集計・パーセンタイルで照会します。',
-  'tour.steps.sql.scenario':
-    'サービスごとのリクエスト数・エラー数・P95 レイテンシを 1 回で取得します。trace 専用 API は不要です。',
-  'tour.steps.sql.points.0.lead': 'トレースも表の行',
-  'tour.steps.sql.points.0.detail': 'オブザーバビリティデータは普通の行になり、標準 SQL で集計できます。',
-  'tour.steps.sql.points.1.lead': 'SQL のまま広げる',
-  'tour.steps.sql.points.1.detail': 'JOIN・CTE・ウィンドウ関数もそのまま使えます。別言語は不要です。',
+  'tour.steps.sql.scenario': 'サービスごとのリクエスト数・エラー数・P95 レイテンシを 1 本のクエリで取得します。',
+  'tour.steps.sql.points.0.lead': '1 本で複数指標',
+  'tour.steps.sql.points.0.detail': '件数・条件集計・パーセンタイルを同じ文にまとめられます。',
+  'tour.steps.sql.points.1.lead': '表をまたいで書く',
+  'tour.steps.sql.points.1.detail': '必要なら他表と JOIN、または CTE で多段の分析に広げられます。',
   'tour.steps.promql.name': 'Metrics クエリ',
   'tour.steps.promql.title': 'Metrics クエリ',
   'tour.steps.promql.scenarioTitle': 'PromQL で CPU 使用率を読む',
