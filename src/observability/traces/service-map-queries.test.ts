@@ -6,7 +6,6 @@ import {
   buildServiceMapDeclaredSql,
   buildServiceMapEntitiesSql,
   buildServiceMapInstanceCountsSql,
-  buildServiceMapOpenInSql,
   buildServiceMapRelationshipsSql,
   buildServiceMapStructuralSql,
 } from './service-map-queries'
@@ -54,12 +53,6 @@ describe('Service Map semantic queries', () => {
     expect(sql).toContain("rel_type IN ('depends_on', 'owns')")
     expect(sql).toContain("COALESCE(provenance, 'declared') AS provenance")
     expect(sql).not.toContain('request_count')
-  })
-
-  it('builds open-in-sql for a single service', () => {
-    const sql = buildServiceMapOpenInSql(range, "pay'me")
-    expect(sql).toContain("src_id = 'pay''me' OR dst_id = 'pay''me'")
-    expect(sql).toContain("rel_type = 'calls'")
   })
 
   it('counts instances only through declared part_of relationships', () => {

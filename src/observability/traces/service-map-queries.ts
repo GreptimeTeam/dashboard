@@ -188,19 +188,3 @@ ${servicePredicate}
   AND ${timePredicate(range)}
 GROUP BY dst_type, dst_id${limit}`
 }
-
-/** SQL Explorer deep-link: calls for one service in the current window. */
-export function buildServiceMapOpenInSql(range: ServiceMapQueryRange, serviceId: string): string {
-  const id = serviceId.replace(/'/g, "''")
-  return `SELECT src_type, src_id, dst_type, dst_id, rel_type,
-       COALESCE(provenance, 'trace') AS provenance,
-       confidence,
-       request_count, error_count, unmatched_count,
-       duration_sum, duration_count, duration_max, attributes, observed_at
-FROM greptime_private.semantic_relationships
-WHERE rel_type = 'calls'
-  AND (src_id = '${id}' OR dst_id = '${id}')
-  AND ${timePredicate(range)}
-ORDER BY observed_at DESC
-LIMIT 500`
-}

@@ -55,7 +55,6 @@ export default {
   'drilldown.serviceMap.viewTraces': 'View Traces',
   'drilldown.serviceMap.viewLogs': 'View Logs',
   'drilldown.serviceMap.viewMetrics': 'View Metrics',
-  'drilldown.serviceMap.openInSql': 'Open in SQL',
   'drilldown.serviceMap.detailTitle': 'Service details',
   'drilldown.serviceMap.identity': 'Identity',
   'drilldown.serviceMap.sourceTables': 'Source tables',

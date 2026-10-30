@@ -55,7 +55,6 @@ export default {
   'drilldown.serviceMap.viewTraces': 'Traces を表示',
   'drilldown.serviceMap.viewLogs': 'Logs を表示',
   'drilldown.serviceMap.viewMetrics': 'Metrics を表示',
-  'drilldown.serviceMap.openInSql': 'SQL で開く',
   'drilldown.serviceMap.detailTitle': 'サービス詳細',
   'drilldown.serviceMap.identity': '識別情報',
   'drilldown.serviceMap.sourceTables': 'ソーステーブル',

@@ -107,13 +107,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
             @click="openSignal('metrics')"
           )
             | {{ t('drilldown.serviceMap.viewMetrics') }}
-          button.service-map-node-action(
-            v-if="!menuNode.virtual && menuNode.type === 'service'"
-            type="button"
-            role="menuitem"
-            @click="openInSql"
-          )
-            | {{ t('drilldown.serviceMap.openInSql') }}
         .service-map-zoom(v-if="graphNodes.length")
           a-button(
             type="text"
@@ -206,7 +199,7 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
   import { buildServiceMapOverviewLayout } from '@/observability/adapters/service-map/layout'
   import { aggregateNodeCallStats, isCallEdge } from '@/observability/adapters/service-map/metrics'
   import type { ServiceMapFilters, ServiceMapResult } from '@/observability/adapters/service-map/types'
-  import { buildServiceMapOpenInSql, isStructuralEntityType } from '@/observability/traces/service-map-queries'
+  import { isStructuralEntityType } from '@/observability/traces/service-map-queries'
   import { buildServiceMapChartOption, buildServiceMapSeries, type ServiceMapChartInput } from './chart-option'
   import { resolveServiceMapTheme, withAlpha } from './chart-theme'
   import { parseServiceMapUrlQuery, serializeServiceMapUrlQuery } from './url-state'
@@ -735,20 +728,6 @@ a-card.drilldown-main-pane.gpt-results-pane.service-map-card(:bordered="false")
         serviceMapScope: undefined,
         serviceMapFilters: undefined,
       },
-    })
-  }
-
-  async function openInSql() {
-    const node = menuNode.value ?? selectedNode.value
-    if (!node || node.virtual || node.type !== 'service') return
-    const range = ctx.query.unixTimeRange()
-    if (range.length !== 2) return
-    const sql = buildServiceMapOpenInSql({ startUnix: range[0], endUnix: range[1] }, node.id)
-    menuNodeKey.value = ''
-    clearChartActiveState()
-    await router.push({
-      name: 'query',
-      query: { sql: encodeURIComponent(sql) },
     })
   }
 

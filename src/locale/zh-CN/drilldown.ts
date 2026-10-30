@@ -53,7 +53,6 @@ export default {
   'drilldown.serviceMap.viewTraces': '查看 Traces',
   'drilldown.serviceMap.viewLogs': '查看 Logs',
   'drilldown.serviceMap.viewMetrics': '查看 Metrics',
-  'drilldown.serviceMap.openInSql': '在 SQL 中打开',
   'drilldown.serviceMap.detailTitle': '服务详情',
   'drilldown.serviceMap.identity': '身份',
   'drilldown.serviceMap.sourceTables': '来源表',
