@@ -19,4 +19,12 @@ export default {
   'settings.saveSuccess': '保存成功！',
   'settings.authHeader': '认证头名称',
   'settings.authHeaderTip': '用于认证的HTTP头的名称。',
+  'settings.mcp.title': 'GreptimeDB MCP',
+  'settings.mcp.promptIntro': '请帮我用下面的 mcpServers 配置，在 AI 客户端中接入 GreptimeDB MCP：',
+  'settings.mcp.copyHint': '复制整段提示语，粘贴到 AI 助手即可。',
+  'settings.mcp.promptOutro':
+    '接入说明：\n- 未安装先 `pip install greptimedb-mcp-server`（Python ≥ 3.11），配置后调用 `health_check` 确认连接。\n- 查询走 MySQL（默认 4002）；仪表盘工具走 HTTP，HTTPS 用 `--http-port 443 --http-protocol https`。\n- SQL 用 MySQL 方言：反引号标识符、`INTERVAL 15 MINUTE`；双引号会被当成字符串。',
+  'settings.mcp.repo': 'MCP 服务源码（GitHub）',
+  'settings.mcp.copy': '复制提示语',
+  'settings.mcp.copied': '已复制',
 }

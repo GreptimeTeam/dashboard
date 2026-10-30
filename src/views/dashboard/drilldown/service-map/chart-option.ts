@@ -4,13 +4,13 @@ import {
   escapeHtml,
   formatServiceMapCompactPercent,
   formatServiceMapCompactRate,
+  healthFromEdge,
   healthFromNodeCallStats,
   isCallEdge,
   mapTrafficToSymbolSize,
   nodeDisplayCallStats,
   nodeFlowSummary,
   nodeUnmatchedCount,
-  SERVICE_MAP_ERROR_RATE_THRESHOLD,
   type ServiceMapFlowSummary,
 } from '@/observability/adapters/service-map/metrics'
 import type {
@@ -41,8 +41,10 @@ export interface ServiceMapTooltipContext {
 }
 
 function healthBorderColor(theme: ServiceMapTheme, health: ServiceMapNodeHealth): string {
-  if (health === 'danger') return theme.danger
+  if (health === 'critical') return theme.danger
+  if (health === 'warning') return theme.warn
   if (health === 'ok') return theme.ok
+  // low-traffic / no-data — never green
   return theme.edge
 }
 
@@ -51,11 +53,18 @@ function edgeStrokeColor(theme: ServiceMapTheme, edge: ServiceMapEdge, emphasize
   if (isStructuralRelType(edge.relType || 'calls')) {
     return emphasize ? theme.structural : withAlpha(theme.structural, 0.85)
   }
-  if (edge.requests <= 0) {
-    return emphasize ? theme.external : withAlpha(theme.external, 0.65)
+  if (edge.declared) {
+    return emphasize ? theme.structural : withAlpha(theme.structural, 0.75)
   }
-  if (edge.errors / edge.requests >= SERVICE_MAP_ERROR_RATE_THRESHOLD) {
+  const health = healthFromEdge(edge)
+  if (health === 'critical') {
     return emphasize ? theme.danger : withAlpha(theme.danger, 0.55)
+  }
+  if (health === 'warning') {
+    return emphasize ? theme.warn : withAlpha(theme.warn, 0.55)
+  }
+  if (health === 'low-traffic' || health === 'no-data') {
+    return emphasize ? theme.external : withAlpha(theme.external, 0.65)
   }
   return theme.edge
 }
@@ -64,12 +73,93 @@ function isStructuralSatellite(node: ServiceMapDisplayNode): boolean {
   return !node.virtual && !node.members && isStructuralEntityType(node.type)
 }
 
+type NodeLabelPosition = 'top' | 'bottom' | 'left' | 'right'
+
+/**
+ * Parent key for a structural satellite: service for instances (part_of),
+ * instance for containers (runs_on).
+ */
+function structuralParentKey(nodeKey: string, edges: ServiceMapEdge[]): string | undefined {
+  const partOf = edges.find((edge) => (edge.relType || '') === 'part_of' && edge.source === nodeKey)
+  if (partOf) return partOf.target
+  const runsOn = edges.find((edge) => (edge.relType || '') === 'runs_on' && edge.target === nodeKey)
+  return runsOn?.source
+}
+
+/** Average of laid-out call-graph nodes (satellites excluded) — used for outer-side titles. */
+function callGraphCentroid(
+  nodes: ServiceMapDisplayNode[],
+  layout: Map<string, ServiceMapNodeLayout>
+): { x: number; y: number } | undefined {
+  let sumX = 0
+  let sumY = 0
+  let count = 0
+  nodes.forEach((node) => {
+    if (isStructuralSatellite(node)) return
+    const point = layout.get(node.key)
+    if (!point) return
+    sumX += point.x
+    sumY += point.y
+    count += 1
+  })
+  if (!count) return undefined
+  return { x: sumX / count, y: sumY / count }
+}
+
+/**
+ * Prefer the outer side so titles stay out of the densest edge crossings.
+ * Satellites hang off a parent — outer relative to that parent.
+ * Call-graph nodes above the centroid get a top title (bottom would sit inward).
+ */
+function nodeLabelPosition(
+  node: ServiceMapDisplayNode,
+  layout: Map<string, ServiceMapNodeLayout>,
+  edges: ServiceMapEdge[],
+  centroid: { x: number; y: number } | undefined
+): NodeLabelPosition {
+  const self = layout.get(node.key)
+  if (!self) return 'bottom'
+
+  if (isStructuralSatellite(node)) {
+    const parentKey = structuralParentKey(node.key, edges)
+    const parent = parentKey ? layout.get(parentKey) : undefined
+    if (parent) {
+      const dx = self.x - parent.x
+      const dy = self.y - parent.y
+      if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? 'right' : 'left'
+      return dy >= 0 ? 'bottom' : 'top'
+    }
+  }
+
+  if (centroid && self.y < centroid.y) return 'top'
+  return 'bottom'
+}
+
+function labelDistance(isServiceGlyph: boolean, isSatellite: boolean): number {
+  if (isServiceGlyph) return 10
+  if (isSatellite) return 6
+  return 8
+}
+
+function labelFontSize(isActive: boolean, isSatellite: boolean): number {
+  if (isActive) return 13
+  if (isSatellite) return 11
+  return 12
+}
+
+/** Single stroke scale for call edges — log of request/unmatched traffic, independent of layout. */
+function edgeWidthFromTraffic(traffic: number): number {
+  return 1 + Math.min(1.1, Math.log2(Math.max(0, traffic) + 1) * 0.18)
+}
+
 /** Build graph series. activeKey dims unrelated nodes/edges for node-hover flow. */
 export function buildServiceMapSeries(input: ServiceMapChartInput, activeKey = '') {
   const { theme, layout, stats, isDark } = input
   const trafficMin = input.trafficRange.min
   const trafficMax = input.trafficRange.max
+  const centroid = callGraphCentroid(input.nodes, layout)
   // Grafana-style: title under the node, no chip — pills competed with the glyphs.
+  // Nodes above the call-graph centroid flip the title to the outer (top) side.
   const nodes = input.nodes.map((node) => {
     const isActive = activeKey === node.key
     const connectedToActive = input.edges.some(
@@ -94,7 +184,7 @@ export function buildServiceMapSeries(input: ServiceMapChartInput, activeKey = '
     let symbol: string = node.members || node.virtual ? 'roundRect' : 'circle'
     if (isInstance) symbol = 'diamond'
     else if (isSatellite) symbol = 'roundRect'
-    let health: ServiceMapNodeHealth = 'neutral'
+    let health: ServiceMapNodeHealth = 'no-data'
     if (!node.virtual && !isServiceGlyph && !isSatellite && nodeStats) health = healthFromNodeCallStats(nodeStats)
     let itemStyle: Record<string, string | number> = {
       color: serviceColor.fill,
@@ -115,17 +205,19 @@ export function buildServiceMapSeries(input: ServiceMapChartInput, activeKey = '
         }
       )
       const rate = display.requests / input.rangeSeconds()
+      const glyphHealth = nodeStats ? healthFromNodeCallStats(nodeStats) : ('no-data' as ServiceMapNodeHealth)
       symbol = buildServiceMapNodeSymbolDataUrl({
         size: symbolSize,
         fill: serviceColor.fill,
         okColor: theme.ok,
-        dangerColor: theme.danger,
+        dangerColor: glyphHealth === 'warning' ? theme.warn : theme.danger,
         trackColor: theme.edge,
         textColor: theme.text,
         errorRatio: display.errorRatio,
         mainStat: formatServiceMapCompactRate(rate),
         secondaryStat: formatServiceMapCompactPercent(display.errorRatio),
         emphasized: isActive,
+        health: glyphHealth,
       })
       itemStyle = { opacity, borderWidth: 0, color: 'transparent' }
     } else if (isSatellite) {
@@ -169,17 +261,17 @@ export function buildServiceMapSeries(input: ServiceMapChartInput, activeKey = '
       itemStyle,
       label: {
         show: true,
-        position: 'bottom',
-        distance: isServiceGlyph ? 10 : 8,
+        position: nodeLabelPosition(node, layout, input.edges, centroid),
+        distance: labelDistance(isServiceGlyph, isSatellite),
         formatter: node.label,
         color: theme.text,
         opacity,
         // Name is primary identity — heavier than on-disk rates.
-        fontSize: isActive ? 13 : 12,
+        fontSize: labelFontSize(isActive, isSatellite),
         fontWeight: isActive ? 600 : 500,
         lineHeight: 16,
         // Max width only — short names stay natural; long names wrap.
-        width: 128,
+        width: isSatellite ? 96 : 128,
         overflow: 'break',
         // Draw above edges so titles stay readable when lines cross.
         z2: 10,
@@ -187,30 +279,34 @@ export function buildServiceMapSeries(input: ServiceMapChartInput, activeKey = '
     }
   })
   const links = input.edges.map((edge) => {
-    const structural = !isCallEdge(edge)
+    const structural = isStructuralRelType(edge.relType || 'calls')
+    const declared = Boolean(edge.declared)
+    const callLike = isCallEdge(edge)
     const isFlowing = Boolean(activeKey) && (activeKey === edge.source || activeKey === edge.target)
     const traffic = Math.max(edge.requests, edge.unmatched)
-    const unmatchedOnly = !structural && edge.requests === 0 && edge.unmatched > 0
+    const unmatchedOnly = callLike && edge.requests === 0 && edge.unmatched > 0
     const sourceCommunity = layout.get(edge.source)?.community
     const targetCommunity = layout.get(edge.target)?.community
     const sameGroup =
       sourceCommunity !== undefined && targetCommunity !== undefined && sourceCommunity === targetCommunity
-    // Cross-heap edges stay quieter so communities read first, but stay visible on light panels.
-    let opacity = 0.42
-    if (structural) opacity = 0.7
-    else if (sameGroup) opacity = 0.72
+    // Width encodes traffic only (Grafana Tempo service map: uniform stroke; rate is a stat).
+    // Community never boosts thickness — that made nearby heap edges look "hotter" for no reason.
+    let opacity = callLike ? 0.56 : 0.7
     if (unmatchedOnly) opacity = 0.5
     if (activeKey) opacity = isFlowing ? 1 : 0.12
     // Keep curveness stable under node-hover flow — changing it jumps the edge path.
+    // Same-heap edges stay flatter so communities read; that is geometry, not weight.
     let curveness = 0.16
-    if (structural) curveness = 0.08
+    if (structural || declared) curveness = 0.08
     else if (sameGroup) curveness = 0.03
-    let width = structural ? 1.15 : 1 + Math.min(1.1, Math.log2(traffic + 1) * 0.18)
-    if (!structural && sameGroup) width = 1.25 + Math.min(1.35, Math.log2(traffic + 1) * 0.24)
-    if (isFlowing) width = structural ? 1.8 : 2.2
+    let width = structural || declared ? 1.15 : edgeWidthFromTraffic(traffic)
+    if (isFlowing) width = structural || declared ? 1.8 : 2.2
     let arrowSize = 9
     if (isFlowing) arrowSize = 11
-    else if (structural) arrowSize = 8
+    else if (structural || declared) arrowSize = 8
+    let lineType = 'solid'
+    if (declared) lineType = 'dotted'
+    else if (structural || isFlowing || unmatchedOnly) lineType = 'dashed'
     return {
       id: edge.key,
       source: edge.source,
@@ -227,7 +323,7 @@ export function buildServiceMapSeries(input: ServiceMapChartInput, activeKey = '
         color: edgeStrokeColor(theme, edge, isFlowing),
         opacity,
         curveness,
-        type: structural || isFlowing || unmatchedOnly ? 'dashed' : 'solid',
+        type: lineType,
       },
     }
   })
@@ -276,19 +372,31 @@ export function buildServiceMapTooltipFormatter(input: ServiceMapChartInput, con
       const edge = input.edges.find((item) => item.key === params.data?.edgeKey)
       if (!edge) return ''
       const relType = edge.relType || 'calls'
-      if (isStructuralRelType(relType)) {
+      if (isStructuralRelType(relType) || edge.declared) {
         let relationLabel = relType
         if (relType === 'part_of') relationLabel = t('drilldown.serviceMap.relPartOf')
         else if (relType === 'runs_on') relationLabel = t('drilldown.serviceMap.relRunsOn')
+        else if (relType === 'depends_on') relationLabel = t('drilldown.serviceMap.relDependsOn')
+        else if (relType === 'owns') relationLabel = t('drilldown.serviceMap.relOwns')
         return [
           `<strong>${escapeHtml(labelFor(edge.source))} → ${escapeHtml(labelFor(edge.target))}</strong>`,
           escapeHtml(relationLabel),
-        ].join('<br/>')
+          `${escapeHtml(t('drilldown.serviceMap.provenance'))}: ${escapeHtml(String(edge.provenance || 'declared'))}`,
+          edge.declared || !edge.hasTelemetry ? escapeHtml(t('drilldown.serviceMap.noTelemetry')) : '',
+        ]
+          .filter(Boolean)
+          .join('<br/>')
       }
+      const health = healthFromEdge(edge)
       const errorRate = edge.requests > 0 ? edge.errors / edge.requests : 0
       const avgDuration = edge.durationCount > 0 ? edge.durationSum / edge.durationCount : 0
       return [
         `<strong>${escapeHtml(labelFor(edge.source))} → ${escapeHtml(labelFor(edge.target))}</strong>`,
+        `${escapeHtml(t('drilldown.serviceMap.healthStatus'))}: ${escapeHtml(
+          t(`drilldown.serviceMap.health.${health}`)
+        )}`,
+        `${escapeHtml(t('drilldown.serviceMap.provenance'))}: ${escapeHtml(String(edge.provenance || 'trace'))}`,
+        edge.mixedScope ? escapeHtml(t('drilldown.serviceMap.mixedScopeHint')) : '',
         `${escapeHtml(t('drilldown.serviceMap.requests'))}: ${escapeHtml(formatRequests(edge.requests))}`,
         `${escapeHtml(t('drilldown.serviceMap.errors'))}: ${escapeHtml(formatRequests(edge.errors))}`,
         `${escapeHtml(t('drilldown.serviceMap.errorRate'))}: ${escapeHtml(formatPercent(errorRate))}`,
@@ -377,8 +485,15 @@ export function buildServiceMapChartOption(input: ServiceMapChartInput, context:
         edgeSymbol: ['circle', 'arrow'],
         edgeSymbolSize: [0, 8],
         label: { show: true, color: theme.text, fontSize: 12 },
-        // Drop colliding titles rather than stacking glyphs on top of each other.
-        labelLayout: { hideOverlap: true },
+        // Call-graph titles may hide when crowded; topology satellites always keep a name
+        // (otherwise they only reappear under emphasis hover).
+        labelLayout: (params: { dataIndex?: number }) => {
+          const item = nodes[params.dataIndex ?? -1]
+          if (item && isStructuralEntityType(String(item.entityType || ''))) {
+            return { hideOverlap: false }
+          }
+          return { hideOverlap: true }
+        },
         lineStyle: { opacity: 0.56, width: 1 },
         // Edge hover highlight via ECharts (must not rebuild option, or mouseout is lost).
         // focus:none keeps the rest of the graph unchanged.

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   SERVICE_MAP_ENTITY_ROWS_LIMIT,
   SERVICE_MAP_RELATIONSHIP_ROWS_LIMIT,
+  buildServiceMapCallsSql,
+  buildServiceMapDeclaredSql,
   buildServiceMapEntitiesSql,
   buildServiceMapInstanceCountsSql,
   buildServiceMapRelationshipsSql,
@@ -11,11 +13,11 @@ import {
 describe('Service Map semantic queries', () => {
   const range = { startUnix: 1_789_696_923.8, endUnix: 1_789_785_123.9 }
 
-  it('dedupes services with ROW_NUMBER and limits unique entities', () => {
+  it('dedupes services per scope with ROW_NUMBER and limits unique entities', () => {
     const sql = buildServiceMapEntitiesSql(range)
     expect(sql).toContain("entity_type = 'service'")
     expect(sql).toContain('ROW_NUMBER() OVER')
-    expect(sql).toContain('PARTITION BY entity_type, entity_id')
+    expect(sql).toContain('PARTITION BY entity_type, entity_id, scope')
     expect(sql).toContain('ORDER BY observed_at DESC')
     expect(sql).toContain('WHERE rn = 1')
     expect(sql).toContain('observed_at >= FROM_UNIXTIME(1789696923)')
@@ -23,20 +25,34 @@ describe('Service Map semantic queries', () => {
     expect(sql).toContain(`LIMIT ${SERVICE_MAP_ENTITY_ROWS_LIMIT}`)
   })
 
-  it('aggregates call RED by endpoint pair with confidence CASE', () => {
+  it('filters entities by optional service ids', () => {
+    const sql = buildServiceMapEntitiesSql(range, { serviceIds: ['checkout', "o'brien"] })
+    expect(sql).toContain("entity_id IN ('checkout', 'o''brien')")
+  })
+
+  it('aggregates call RED by endpoint pair and provenance', () => {
     const sql = buildServiceMapRelationshipsSql(range)
     expect(sql).toContain("rel_type = 'calls'")
-    expect(sql).toContain('GROUP BY src_type, src_id, dst_type, dst_id')
-    expect(sql).not.toContain('GROUP BY src_type, src_id, dst_type, dst_id, provenance, confidence, attributes')
+    expect(sql).toContain("GROUP BY src_type, src_id, dst_type, dst_id, COALESCE(provenance, 'trace')")
+    expect(sql).toContain("COALESCE(provenance, 'trace') AS provenance")
+    expect(sql).toContain('MAX(confidence) AS confidence')
     expect(sql).toContain('SUM(CASE WHEN confidence >= 1 THEN request_count ELSE 0 END) AS request_count')
     expect(sql).toContain('SUM(CASE WHEN confidence >= 1 THEN error_count ELSE 0 END) AS error_count')
     expect(sql).toContain('SUM(unmatched_count) AS unmatched_count')
-    expect(sql).toContain('SUM(CASE WHEN confidence >= 1 THEN duration_sum ELSE 0 END) AS duration_sum')
-    expect(sql).toContain('SUM(CASE WHEN confidence >= 1 THEN duration_count ELSE 0 END) AS duration_count')
-    expect(sql).toContain('MAX(CASE WHEN confidence >= 1 THEN duration_max ELSE NULL END) AS duration_max')
-    expect(sql).toContain('MAX(attributes) AS attributes')
     expect(sql).toContain('ORDER BY request_count DESC, unmatched_count DESC')
     expect(sql).toContain(`LIMIT ${SERVICE_MAP_RELATIONSHIP_ROWS_LIMIT}`)
+  })
+
+  it('keeps one-hop neighbors when filtering calls by service ids', () => {
+    const sql = buildServiceMapCallsSql(range, { serviceIds: ['api'] })
+    expect(sql).toContain("src_id IN ('api') OR dst_id IN ('api')")
+  })
+
+  it('queries declared depends_on / owns without RED aggregation', () => {
+    const sql = buildServiceMapDeclaredSql(range)
+    expect(sql).toContain("rel_type IN ('depends_on', 'owns')")
+    expect(sql).toContain("COALESCE(provenance, 'declared') AS provenance")
+    expect(sql).not.toContain('request_count')
   })
 
   it('counts instances only through declared part_of relationships', () => {

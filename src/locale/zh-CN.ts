@@ -5,6 +5,8 @@ import settings from './zh-CN/settings'
 import logsQuery from './zh-CN/logs-query'
 import flow from './zh-CN/flow'
 import drilldown from './zh-CN/drilldown'
+import tour from './zh-CN/tour'
+import contact from './zh-CN/contact'
 
 export default {
   'copy': '复制',
@@ -186,4 +188,6 @@ export default {
   ...logsQuery,
   ...flow,
   ...drilldown,
+  ...tour,
+  ...contact,
 }

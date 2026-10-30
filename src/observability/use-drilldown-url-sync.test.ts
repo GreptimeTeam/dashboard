@@ -78,6 +78,7 @@ function createCtx() {
   const detailTab = ref('breakdown')
   const logsTab = ref('logs')
   const tracesTab = ref('breakdown')
+  const redMetric = ref<'rate' | 'errors' | 'duration'>('rate')
   const time = ref(30)
   const rangeTime = ref<string[]>([])
 
@@ -123,6 +124,9 @@ function createCtx() {
   const setTracesTab = vi.fn((tab: string) => {
     tracesTab.value = tab as typeof tracesTab.value
   })
+  const setRedMetric = vi.fn((next: 'rate' | 'errors' | 'duration') => {
+    redMetric.value = next
+  })
   const setDetailTab = vi.fn((tab: string) => {
     detailTab.value = tab as typeof detailTab.value
   })
@@ -156,6 +160,7 @@ function createCtx() {
       logsBodyOp,
       logsBodyValue,
       tracesTab,
+      redMetric,
       logsSelectedGroup,
     },
     actions: {
@@ -166,6 +171,7 @@ function createCtx() {
       setLogsView,
       setLogsTab,
       setTracesTab,
+      setRedMetric,
       openLogsForTrace,
       closeLogsForTrace,
       openTraceGantt,
@@ -189,7 +195,7 @@ function createCtx() {
 }
 
 describe('useDrilldownUrlSync', () => {
-  it('preserves Service Map search, scope and facets when Explore context updates the URL', async () => {
+  it('preserves Service Map scope and facets when Explore context updates the URL', async () => {
     const { default: useDrilldownUrlSync } = await import('./use-drilldown-url-sync')
     const ctx = createCtx()
     ctx.connection.signal.value = 'traces'
@@ -198,7 +204,6 @@ describe('useDrilldownUrlSync', () => {
         timeLength: '30',
         signal: 'traces',
         view: 'service-map',
-        serviceMapSearch: 'checkout',
         serviceMapScope: JSON.stringify(['prod']),
         serviceMapFilters: JSON.stringify({ env: ['prod'] }),
       },
@@ -214,11 +219,11 @@ describe('useDrilldownUrlSync', () => {
       query: {
         signal: 'traces',
         view: 'service-map',
-        serviceMapSearch: 'checkout',
         serviceMapScope: JSON.stringify(['prod']),
         serviceMapFilters: JSON.stringify({ env: ['prod'] }),
       },
     })
+    expect(target.query).not.toHaveProperty('serviceMapSearch')
   })
 
   it('hydrates Service Map as a Traces view even when signal is missing', async () => {
@@ -233,6 +238,42 @@ describe('useDrilldownUrlSync', () => {
     await nextTick()
 
     expect(ctx.actions.setSignal).toHaveBeenCalledWith('traces', { hydrate: true })
+  })
+
+  it('hydrates traces redMetric from the URL', async () => {
+    const { default: useDrilldownUrlSync } = await import('./use-drilldown-url-sync')
+    const ctx = createCtx()
+    const urlSync = useDrilldownUrlSync(
+      ctx,
+      { query: { signal: 'traces', timeLength: '30', redMetric: 'errors' } } as never,
+      { push: vi.fn(), replace: vi.fn() } as never
+    )
+    urlSync.initializeFromQuery()
+    await nextTick()
+    expect(ctx.actions.setRedMetric).toHaveBeenCalledWith('errors')
+  })
+
+  it('writes non-default traces redMetric and omits rate', async () => {
+    const { default: useDrilldownUrlSync } = await import('./use-drilldown-url-sync')
+    const ctx = createCtx()
+    ctx.connection.signal.value = 'traces'
+    ctx.ui.redMetric.value = 'errors'
+    const route = reactive({ query: { timeLength: '30', signal: 'traces' } })
+    const router = { push: vi.fn(), replace: vi.fn() }
+    const urlSync = useDrilldownUrlSync(ctx, route as never, router as never)
+
+    urlSync.updateQueryParams()
+    const withErrors = router.push.mock.calls[0]?.[0] ?? router.replace.mock.calls[0]?.[0]
+    expect(withErrors.query.redMetric).toBe('errors')
+
+    await Promise.resolve()
+    router.push.mockClear()
+    router.replace.mockClear()
+    route.query = { timeLength: '30', signal: 'traces', redMetric: 'errors' }
+    ctx.ui.redMetric.value = 'rate'
+    urlSync.updateQueryParams()
+    const withRate = router.push.mock.calls[0]?.[0] ?? router.replace.mock.calls[0]?.[0]
+    expect(withRate.query).not.toHaveProperty('redMetric')
   })
 
   it('hydrates with soft setSignal and restores logsTrace drawer via openLogsForTrace', async () => {

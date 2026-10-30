@@ -9,6 +9,7 @@ function service(id: string, attributes: Record<string, string> = {}, virtual = 
     id,
     label: id,
     serviceValue: id,
+    scopes: [],
     sourceTables: [],
     instanceCount: 0,
     groupAttributes: attributes,
@@ -21,6 +22,9 @@ function edge(source: ServiceMapNode, target: ServiceMapNode, requests = 10): Se
     key: `${source.key}\0${target.key}`,
     source: source.key,
     target: target.key,
+    provenance: 'trace',
+    declared: false,
+    hasTelemetry: true,
     requests,
     errors: 1,
     unmatched: 2,
@@ -91,8 +95,9 @@ describe('mergeEdges', () => {
     )
     expect(merged).toHaveLength(1)
     expect(merged[0]).toMatchObject({
-      key: `${a.key}\0${b.key}\0calls`,
+      key: `${a.key}\0${b.key}\0calls\0trace`,
       relType: 'calls',
+      provenance: 'trace',
       requests: 15,
       errors: 2,
       unmatched: 4,
@@ -149,16 +154,21 @@ describe('buildServiceMapDisplayGraph', () => {
     expect(expanded.edges.map((item) => item.requests)).toEqual([40, 30])
   })
 
-  it('shows one matching service with direct dependencies and does not fabricate a cluster', () => {
-    const result = buildServiceMapDisplayGraph({ nodes, edges, selectedServices: ['frontend'] })
-    expect(result.nodes.map((node) => node.key)).toEqual([frontend.key, gateway.key])
-    expect(result.nodes.some((node) => node.cluster)).toBe(false)
-  })
-
   it('inspects one service and its direct dependencies for node-by-node pivots', () => {
     const result = buildServiceMapDisplayGraph({ nodes, edges, inspectNodeKey: gateway.key })
     expect(new Set(result.nodes.map((node) => node.key))).toEqual(new Set([frontend.key, gateway.key, checkout.key]))
     expect(result.edges).toHaveLength(2)
+    expect(result.nodes.some((node) => node.cluster)).toBe(false)
+  })
+
+  it('shows one facet-matched service with direct dependencies and does not fabricate a cluster', () => {
+    const soloFrontend = { ...frontend, groupAttributes: { team: 'edge' } }
+    const result = buildServiceMapDisplayGraph({
+      nodes: [soloFrontend, gateway, checkout, inventory],
+      edges,
+      filters: { team: ['edge'] },
+    })
+    expect(result.nodes.map((node) => node.key)).toEqual([soloFrontend.key, gateway.key])
     expect(result.nodes.some((node) => node.cluster)).toBe(false)
   })
 
@@ -179,6 +189,7 @@ describe('buildServiceMapDisplayGraph', () => {
       id: 'frontend-1',
       label: 'frontend-1',
       sourceTables: [],
+      scopes: [],
       instanceCount: 0,
       groupAttributes: {},
       virtual: false,
@@ -189,6 +200,7 @@ describe('buildServiceMapDisplayGraph', () => {
       id: 'c1',
       label: 'c1',
       sourceTables: [],
+      scopes: [],
       instanceCount: 0,
       groupAttributes: {},
       virtual: false,
@@ -198,6 +210,9 @@ describe('buildServiceMapDisplayGraph', () => {
         key: `${instance.key}\0${frontend.key}\0part_of`,
         source: instance.key,
         target: frontend.key,
+        provenance: 'trace',
+        declared: false,
+        hasTelemetry: true,
         relType: 'part_of',
         requests: 0,
         errors: 0,
@@ -210,6 +225,9 @@ describe('buildServiceMapDisplayGraph', () => {
         key: `${instance.key}\0${container.key}\0runs_on`,
         source: instance.key,
         target: container.key,
+        provenance: 'trace',
+        declared: false,
+        hasTelemetry: true,
         relType: 'runs_on',
         requests: 0,
         errors: 0,
@@ -219,13 +237,14 @@ describe('buildServiceMapDisplayGraph', () => {
         durationMax: 0,
       },
     ]
+    const taggedFrontend = { ...frontend, groupAttributes: { ...frontend.groupAttributes, team: 'edge' } }
     const result = buildServiceMapDisplayGraph({
-      nodes: [...nodes, instance, container],
+      nodes: [taggedFrontend, gateway, checkout, inventory, instance, container],
       edges: [...edges, ...structuralEdges],
-      selectedServices: ['frontend'],
+      filters: { team: ['edge'] },
     })
     expect(new Set(result.nodes.map((node) => node.key))).toEqual(
-      new Set([frontend.key, gateway.key, instance.key, container.key])
+      new Set([taggedFrontend.key, gateway.key, instance.key, container.key])
     )
     expect(result.edges.some((item) => item.relType === 'part_of')).toBe(true)
     expect(result.edges.some((item) => item.relType === 'runs_on')).toBe(true)

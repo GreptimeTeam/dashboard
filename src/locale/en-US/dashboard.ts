@@ -104,6 +104,8 @@ export default {
   'dashboard.dbConnected': 'Connected',
   'dashboard.dbDisconnected': 'Disconnected',
   'dashboard.dbConnecting': 'Connecting',
+  'dashboard.quickNav': 'Quick nav {key}',
+  'dashboard.quickNavTip': 'Press {key} to open quick navigation',
   'metrics.showFullSeriesName': 'Show full series name',
   'metrics.sidebar.countShown': '{count} metrics',
   'metrics.sidebar.countShownCapped': '{count}+ metrics',

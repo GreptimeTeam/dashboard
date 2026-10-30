@@ -52,13 +52,13 @@ describe('promoteLegacyScopeFilters', () => {
 
 describe('service map URL round trip', () => {
   it('serializes state and parses it back', () => {
-    const state = { services: ['checkout'], scopes: ['prod'], filters: { team: ['payments'] } }
+    const state = { scopes: ['prod'], filters: { team: ['payments'] } }
     const query = serializeServiceMapUrlQuery(state)
     expect(parseServiceMapUrlQuery(query)).toEqual(state)
   })
 
-  it('omits empty selections', () => {
-    expect(serializeServiceMapUrlQuery({ services: [], scopes: [], filters: { team: [] } })).toEqual({
+  it('omits empty selections and always clears the legacy service filter', () => {
+    expect(serializeServiceMapUrlQuery({ scopes: [], filters: { team: [] } })).toEqual({
       serviceMapSearch: undefined,
       serviceMapScope: undefined,
       serviceMapFilters: undefined,
@@ -71,6 +71,15 @@ describe('service map URL round trip', () => {
         serviceMapScope: JSON.stringify(['staging']),
         serviceMapFilters: JSON.stringify({ env: ['prod'] }),
       })
-    ).toEqual({ services: [], scopes: ['staging', 'prod'], filters: {} })
+    ).toEqual({ scopes: ['staging', 'prod'], filters: {} })
+  })
+
+  it('ignores legacy serviceMapSearch on parse', () => {
+    expect(
+      parseServiceMapUrlQuery({
+        serviceMapSearch: JSON.stringify(['checkout']),
+        serviceMapScope: JSON.stringify(['prod']),
+      })
+    ).toEqual({ scopes: ['prod'], filters: {} })
   })
 })
