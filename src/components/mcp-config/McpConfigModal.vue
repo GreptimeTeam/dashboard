@@ -32,6 +32,7 @@ a-modal(
     buildMcpServersJson,
     buildMcpSetupPrompt,
     resolveMcpConnectionInput,
+    resolveMcpServerName,
   } from '@/utils/mcp-config'
   import useMcpConfig from './use-mcp-config'
 
@@ -42,22 +43,24 @@ a-modal(
 
   const useDemoAccount = computed(() => isQueryGuideEnabled())
 
-  const serversJson = computed(() =>
-    buildMcpServersJson(
-      buildMcpConnectionParams(
-        resolveMcpConnectionInput(
-          {
-            host: host.value,
-            database: database.value,
-            username: username.value,
-            password: password.value,
-            timezone: userTimezone.value,
-          },
-          { useDemoAccount: useDemoAccount.value }
-        )
+  const serverName = computed(() => resolveMcpServerName({ useDemoAccount: useDemoAccount.value }))
+
+  const connectionParams = computed(() =>
+    buildMcpConnectionParams(
+      resolveMcpConnectionInput(
+        {
+          host: host.value,
+          database: database.value,
+          username: username.value,
+          password: password.value,
+          timezone: userTimezone.value,
+        },
+        { useDemoAccount: useDemoAccount.value }
       )
     )
   )
+
+  const serversJson = computed(() => buildMcpServersJson(connectionParams.value, serverName.value))
 
   const promptText = computed(() =>
     buildMcpSetupPrompt(serversJson.value, t('settings.mcp.promptIntro'), t('settings.mcp.promptOutro'))

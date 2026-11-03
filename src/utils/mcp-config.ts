@@ -5,6 +5,12 @@
 
 export const MCP_SERVER_REPO_URL = 'https://github.com/GreptimeTeam/greptimedb-mcp-server'
 export const MCP_SERVER_NAME = 'greptimedb'
+/**
+ * Demo / Query Guide configs get their own key: the demo account points at the
+ * public playground, and a generic `greptimedb` key silently collides with a
+ * self-hosted GreptimeDB MCP the user may already have configured.
+ */
+export const MCP_DEMO_SERVER_NAME = 'greptimedb-demo'
 
 /** Demo / Query Guide only — dedicated AI MCP account, not the dashboard login. */
 export const MCP_DEMO_USERNAME = 'greptime_mcp'
@@ -135,11 +141,16 @@ export function buildMcpArgs(params: McpConnectionParams): string[] {
   return args
 }
 
+/** Server key for the mcpServers JSON: demo configs stay distinguishable. */
+export function resolveMcpServerName(options: { useDemoAccount: boolean }): string {
+  return options.useDemoAccount ? MCP_DEMO_SERVER_NAME : MCP_SERVER_NAME
+}
+
 /** Claude Desktop / Cursor-style mcpServers JSON (command + args). */
-export function buildMcpServersJson(params: McpConnectionParams): string {
+export function buildMcpServersJson(params: McpConnectionParams, serverName: string = MCP_SERVER_NAME): string {
   const config = {
     mcpServers: {
-      [MCP_SERVER_NAME]: {
+      [serverName]: {
         command: 'greptimedb-mcp-server',
         args: buildMcpArgs(params),
       },

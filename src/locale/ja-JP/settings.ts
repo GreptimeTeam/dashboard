@@ -22,10 +22,11 @@ export default {
   'settings.authHeader': '認証ヘッダー名',
   'settings.authHeaderTip': '認証に使用される HTTP ヘッダーの名前です。',
   'settings.mcp.title': 'GreptimeDB MCP',
-  'settings.mcp.promptIntro': '次の mcpServers 設定を使って、AI クライアントに GreptimeDB MCP を接続してください：',
+  'settings.mcp.promptIntro':
+    '次の mcpServers 設定を使って、AI クライアントに GreptimeDB のデモ環境の MCP を接続してください：',
   'settings.mcp.copyHint': 'プロンプト全体をコピーして、AI アシスタントに貼り付けてください。',
   'settings.mcp.promptOutro':
-    '接続メモ：\n- 未インストールなら `pip install greptimedb-mcp-server`（Python 3.11 以上）を実行し、`health_check` で接続を確認します。\n- クエリは MySQL（既定 4002）、ダッシュボード系ツールは HTTP です。HTTPS では `--http-port 443 --http-protocol https`。\n- SQL は MySQL 方言で、識別子はバッククォート、時間窓は `INTERVAL 15 MINUTE`。二重引用符は文字列になります。',
+    '接続メモ：\n- この MCP は GreptimeDB のデモ環境（公開プレイグラウンド）に接続するもので、自前のクラスタではありません。設定キーを `greptimedb-demo` にしているのは、既存の他の GreptimeDB MCP と衝突しないようにするためです。キー名はそのままにしてください。\n- 未インストールなら `pip install greptimedb-mcp-server`（Python 3.11 以上）を実行し、設定後に `health_check` で接続を確認します（初回は 10 秒ほどかかることがあります）。起動できない場合は `command` をバイナリの絶対パスにしてください。GUI クライアントはシェルの PATH を継承しません。\n- クエリは MySQL（既定 4002）、ダッシュボード系ツールは HTTP です。HTTPS では `--http-port 443 --http-protocol https`。\n- SQL は MySQL 方言で、識別子はバッククォート、時間窓は `INTERVAL 15 MINUTE`。二重引用符は文字列になります。',
   'settings.mcp.repo': 'GitHub 上の MCP サーバー',
   'settings.mcp.copy': 'プロンプトをコピー',
   'settings.mcp.copied': 'コピーしました',

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   MCP_DEMO_PASSWORD,
+  MCP_DEMO_SERVER_NAME,
   MCP_DEMO_USERNAME,
   buildMcpArgs,
   buildMcpCliCommand,
@@ -9,6 +10,7 @@ import {
   buildMcpSetupPrompt,
   parseDashboardHost,
   resolveMcpConnectionInput,
+  resolveMcpServerName,
   resolveMysqlPort,
 } from './mcp-config'
 
@@ -89,6 +91,26 @@ describe('resolveMcpConnectionInput', () => {
       username: MCP_DEMO_USERNAME,
       password: MCP_DEMO_PASSWORD,
     })
+  })
+})
+
+describe('resolveMcpServerName', () => {
+  it('uses a distinct key for the demo account so it cannot collide', () => {
+    expect(resolveMcpServerName({ useDemoAccount: true })).toBe(MCP_DEMO_SERVER_NAME)
+    expect(MCP_DEMO_SERVER_NAME).toBe('greptimedb-demo')
+    expect(resolveMcpServerName({ useDemoAccount: false })).toBe('greptimedb')
+  })
+
+  it('emits the demo key in the generated mcpServers JSON', () => {
+    const params = buildMcpConnectionParams({
+      host: 'https://live.greptime.cloud',
+      database: 'public',
+      username: MCP_DEMO_USERNAME,
+      password: MCP_DEMO_PASSWORD,
+    })
+    const json = JSON.parse(buildMcpServersJson(params, resolveMcpServerName({ useDemoAccount: true })))
+    expect(Object.keys(json.mcpServers)).toEqual(['greptimedb-demo'])
+    expect(json.mcpServers['greptimedb-demo'].args).toContain('--http-protocol')
   })
 })
 
