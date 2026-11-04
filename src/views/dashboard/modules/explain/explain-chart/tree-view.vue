@@ -5,9 +5,9 @@
 <script lang="ts" setup>
   import * as d3 from 'd3'
   import { flextree } from 'd3-flextree'
-  import { createVNode, render, h } from 'vue'
+  import { render, h } from 'vue'
   import PlanCard from './plan-card.vue'
-  import { CARD_DIMENSIONS, NODE_INDEX_CARD, getProgressColor } from '../utils'
+  import { CARD_DIMENSIONS, NODE_INDEX_CARD } from '../utils'
 
   // Define interfaces (moved from parent)
   interface FlexHierarchyPointNode extends d3.HierarchyPointNode<any> {
@@ -68,6 +68,7 @@
   const backgroundMeasureContainer = ref<HTMLDivElement | null>(null)
   const nodeTreeBoundsMap = ref<Map<number, { minX: number; maxX: number }>>(new Map())
   const treeOffsetX = ref<number>(0)
+  let renderGeneration = 0
 
   // Single traversal for all max stats (extensible for future metrics)
   type MaxStats = {
@@ -216,40 +217,57 @@
     return path
   }
 
-  // Note: Scrolling and highlighting are handled by parent component.
+  // Always remeasure + flextree (no height guessing), but never tear down the
+  // zoom SVG mid-SSE — destroying it causes flicker and breaks in-progress pan.
+  // Layout: svg > g.zoom-root (d3-zoom transform, persistent) > g.tree-content (replaced).
+  function ensureViewport(): {
+    svg: d3.Selection<SVGSVGElement, unknown, null, undefined>
+    zoomRoot: d3.Selection<SVGGElement, unknown, null, undefined>
+  } | null {
+    if (!treeContainer.value) return null
 
-  async function renderTree() {
-    if (!treeContainer.value || !props.data || props.data.length === 0) return
+    let svg = d3.select(treeContainer.value).select<SVGSVGElement>('svg.explain-svg')
+    let zoomRoot = svg.select<SVGGElement>('g.zoom-root')
+    const isNew = svg.empty()
 
-    // Clear previous content
-    treeContainer.value.innerHTML = ''
+    if (isNew) {
+      svg = d3.select(treeContainer.value).append('svg').attr('class', `explain-svg ${componentId.value}`)
+      zoomRoot = svg.append('g').attr('class', `zoom-root ${componentId.value}`)
+      // Bind zoom once when the stable SVG appears.
+      emit('svgCreated', { svg })
+    }
 
-    // Create container for zoomable content with explicit dimensions
-    const svg = d3
-      .select(treeContainer.value)
-      .append('svg')
-      .attr('width', treeContainer.value.clientWidth)
-      .attr('height', treeContainer.value.clientHeight)
-      .attr('class', `explain-svg ${componentId.value}`)
-      .attr('viewBox', `0 0 ${treeContainer.value.clientWidth} ${treeContainer.value.clientHeight}`)
+    const width = treeContainer.value.clientWidth || 800
+    const height = treeContainer.value.clientHeight || 600
+    svg.attr('width', width).attr('height', height).attr('viewBox', null)
 
-    // Emit event for zoom controls to apply zoom behavior
-    // The preservedTransform will be retrieved by the parent/zoom-controls
-    emit('svgCreated', { svg })
+    return { svg, zoomRoot }
+  }
 
-    // Add main group for transformation during zoom/pan
-    const mainGroup = svg.append('g').attr('class', componentId.value)
+  async function redrawTree() {
+    if (!treeContainer.value) return
+    if (!props.data || props.data.length === 0) {
+      const viewport = ensureViewport()
+      viewport?.zoomRoot.selectAll('g.tree-content').remove()
+      return
+    }
+
+    renderGeneration += 1
+    const generation = renderGeneration
+
+    const viewport = ensureViewport()
+    if (!viewport) return
+    const { zoomRoot } = viewport
 
     // Process all node data
     nodesData.value = processNodesData(props.data)
     emit('nodesDataUpdated', nodesData.value)
 
     // If no nodes, return early
-    if (!nodesData.value.length) return
-
-    // Clear node positions and bounds maps
-    nodePositions.value.clear()
-    nodeTreeBoundsMap.value.clear()
+    if (!nodesData.value.length) {
+      zoomRoot.selectAll('g.tree-content').remove()
+      return
+    }
 
     // Map to store rendered HTML strings and sizes by unique key (nodeIndex + node path)
     const renderedCardsMap = new Map<string, { size: [number, number]; html: string }>()
@@ -300,10 +318,11 @@
       }
     })
 
-    // Wait for all cards to render
+    // Wait for all cards to render — keep previous tree-content visible during measure.
     if (allRenderPromises.length > 0) {
       await Promise.all(allRenderPromises)
     }
+    if (generation !== renderGeneration) return
 
     // Create the tree layout with dynamic sizing
     const treeLayout = flextree({
@@ -344,6 +363,10 @@
 
     // Apply layout to get positioned nodes
     const layoutRoot = treeLayout(hierarchy) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+    // Clear bounds maps only when we are about to paint the new layout.
+    nodePositions.value.clear()
+    nodeTreeBoundsMap.value.clear()
 
     // Calculate tree bounds and nodeTree bounds in a single pass
     // Get leftmost and rightmost edges considering node widths
@@ -401,9 +424,11 @@
     const offsetX = -minX + 20
     treeOffsetX.value = offsetX
 
-    // Create container for the entire tree
-    const treeContainerGroup = mainGroup
+    // Swap tree content only after layout is ready (old tree stays until this point).
+    zoomRoot.selectAll('g.tree-content').remove()
+    const treeContainerGroup = zoomRoot
       .append('g')
+      .attr('class', 'tree-content')
       .attr('transform', `translate(${offsetX}, 20)`)
       .style('overflow', 'visible')
 
@@ -579,22 +604,19 @@
     return { minX: minXInSVG, maxX: maxXInSVG, width: maxXInSVG - minXInSVG }
   }
 
-  // Watch all props that affect tree rendering
+  // Any data or card-layout prop change → remeasure + relayout into persistent zoom SVG.
   watch(
     () => [props.data, props.highlightType, props.selectedMetric, props.metricsExpanded],
-    () => {
-      nextTick(() => {
-        renderTree()
-      })
+    async () => {
+      await nextTick()
+      await redrawTree()
     },
-    { immediate: true }
+    { immediate: true, deep: true }
   )
 
-  // Expose methods and treeContainer for parent component
-  // Only exposes position/data methods, no scrolling or transform logic
   defineExpose({
     treeContainer,
-    renderTree,
+    redrawTree,
     getNodeTreeRect,
   })
 </script>

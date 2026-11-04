@@ -58,12 +58,23 @@ a-tooltip(mini :content="t('common.stop')" :disabled="!showStop")
     }
   }
 
+  /** Run an alternate action (e.g. Explain Live) while reusing this button's running/stop UI. */
+  const runAction = async (action: () => Promise<void>) => {
+    if (running.value) return
+    running.value = true
+    try {
+      await action()
+    } finally {
+      running.value = false
+    }
+  }
+
   const handleButtonClick = async (event: MouseEvent) => {
     if (isStopTarget(event)) return
     await startRun()
   }
 
-  defineExpose({ run: startRun, running })
+  defineExpose({ run: startRun, runAction, running })
 </script>
 
 <style lang="less" scoped>
