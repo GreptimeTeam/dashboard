@@ -135,3 +135,82 @@ LIMIT ${limit}`
 }
 
 export { escapeSqlString }
+
+// ---------------------------------------------------------------------------
+// Physical columns — the SQL builder suggests values for label-like columns too
+// ---------------------------------------------------------------------------
+
+/** Columns that only hold identity/high-cardinality values; a dropdown is noise. */
+const HIGH_CARDINALITY_COLUMNS = new Set([
+  'trace_id',
+  'span_id',
+  'parent_span_id',
+  'trace_state',
+  'span_events',
+  'span_links',
+])
+
+/**
+ * Whether a physical column is worth a value dropdown.
+ *
+ * Enumerable columns (`service_name`, `span_name`, `span_kind`, `span_status_code`, …) are
+ * the point of this feature; numbers/booleans are typed instead, timestamps never repeat,
+ * and identity columns would return 200 arbitrary ids while still scanning the window.
+ */
+export function canSuggestColumnValues(column: { name: string; data_type?: string }): boolean {
+  const name = column.name
+  const type = (column.data_type || '').toLowerCase()
+  if (!type) {
+    return false
+  }
+  if (
+    type.includes('json') ||
+    type.includes('binary') ||
+    type.includes('vector') ||
+    type.includes('bool') ||
+    type.includes('timestamp') ||
+    type.includes('date') ||
+    type.includes('int') ||
+    type.includes('uint') ||
+    type.includes('float') ||
+    type.includes('double') ||
+    type.includes('decimal')
+  ) {
+    return false
+  }
+  if (HIGH_CARDINALITY_COLUMNS.has(name)) {
+    return false
+  }
+  return !name.endsWith('_id')
+}
+
+export interface ColumnValuesOptions {
+  database?: string
+  table: string
+  column: string
+  limit?: number
+}
+
+/** Distinct values of a physical column, for the value combobox. */
+export async function fetchColumnDistinctValues(options: ColumnValuesOptions): Promise<string[]> {
+  const { database, table, column } = options
+  if (!table || !column) {
+    return []
+  }
+  const limit = options.limit ?? 200
+  const sql = `SELECT DISTINCT ${quoteIdent(column)} AS value
+FROM ${quoteIdent(table)}
+WHERE ${quoteIdent(column)} IS NOT NULL
+LIMIT ${limit}`
+
+  try {
+    const response = await editorAPI.runSQL(sql, database)
+    const rows = response?.output?.[0]?.records?.rows ?? []
+    return [...new Set(rows.map((row) => String(row?.[0] ?? '')).filter(Boolean))].sort((left, right) =>
+      left.localeCompare(right)
+    )
+  } catch (error) {
+    console.error(`Failed to load values for ${column}:`, error)
+    return []
+  }
+}
