@@ -47,8 +47,32 @@ export function parseJsonFieldChipKey(
   return path ? { column: matched, path } : undefined
 }
 
+/** JSONPath literal `'$."<key>"'`, with quotes/backslashes escaped for SQL string syntax. */
+function jsonPathLiteral(path: string): string {
+  const escapedPath = path.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/'/g, "''")
+  return `'$."${escapedPath}"'`
+}
+
 /** SQL expression for a JSON attribute chip (top-level / dotted OTel keys). */
 export function sqlJsonGetStringExpr(column: string, path: string): string {
-  const escapedPath = path.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/'/g, "''")
-  return `json_get_string("${column}", '$."${escapedPath}"')`
+  return `json_get_string("${column}", ${jsonPathLiteral(path)})`
+}
+
+/** Comparison kind a JSON attribute value must be read as (JSON2 keeps numbers/booleans typed). */
+export type JsonValueKind = 'string' | 'number' | 'boolean'
+
+/**
+ * SQL expression for a JSON attribute chip read as `kind`.
+ *
+ * `json_get_string` renders every JSON2 scalar as text, so `> '900'` compares
+ * lexicographically ("1000" < "900"). Numeric/boolean comparisons must cast the
+ * extracted value instead. Non-castable values yield NULL, so a row with a string
+ * under a numeric key is simply not matched rather than failing the query.
+ */
+export function sqlJsonAttrExpr(column: string, path: string, kind: JsonValueKind = 'string'): string {
+  if (kind === 'string') {
+    return sqlJsonGetStringExpr(column, path)
+  }
+  const sqlType = kind === 'number' ? 'DOUBLE' : 'BOOLEAN'
+  return `json_get("${column}", ${jsonPathLiteral(path)})::${sqlType}`
 }

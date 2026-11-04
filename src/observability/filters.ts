@@ -1,4 +1,4 @@
-import { parseJsonFieldChipKey, sqlJsonGetStringExpr } from './logs/json-field-keys'
+import { parseJsonFieldChipKey, sqlJsonAttrExpr, type JsonValueKind } from './logs/json-field-keys'
 import { UNKNOWN_LOG_LEVEL, normalizeLogLevelName } from './logs/level-color'
 import { buildSeverityLevelsPredicate, isSeverityFilterColumn } from './logs/level-visibility'
 import { normalizeEntityFilters } from './semantics/model'
@@ -32,6 +32,9 @@ const BOOLEAN_FILTER_OPS: DrilldownFilterOp[] = ['=', '!=']
 
 const INCLUDE_OPS: DrilldownFilterOp[] = ['=', '=~']
 const EXCLUDE_OPS: DrilldownFilterOp[] = ['!=', '!~']
+
+/** Range operators only make sense on numbers — the same rule physical columns follow. */
+const JSON_RANGE_OPS = new Set<DrilldownFilterOp>(['>', '>=', '<', '<='])
 
 type ColumnValueKind = 'string' | 'number' | 'boolean'
 
@@ -367,7 +370,7 @@ export function resolveFieldMapColumn(
 function sqlPredicateForFilter(
   filter: DrilldownFilter,
   columnOrExpr: string,
-  options?: { isExpr?: boolean; dataType?: string }
+  options?: { isExpr?: boolean; dataType?: string; valueKind?: JsonValueKind }
 ): string | undefined {
   const values = splitFilterOrValues(filter)
   if (!values.length) {
@@ -375,10 +378,22 @@ function sqlPredicateForFilter(
   }
 
   const left = options?.isExpr ? columnOrExpr : `"${columnOrExpr}"`
-  // JSON chips always read as strings; physical columns carry their own type.
-  const kind: ColumnValueKind = options?.isExpr ? 'string' : columnValueKind(options?.dataType)
-  const literal = (value: string): string | undefined =>
-    options?.isExpr ? `'${escapeSqlString(value)}'` : sqlValueLiteral(options?.dataType, value)
+  // JSON chips default to string reads; callers ask for a numeric/boolean read when the
+  // comparator needs one (see `jsonAttributeKind`). Physical columns carry their own type.
+  const kind: ColumnValueKind = options?.isExpr ? options?.valueKind ?? 'string' : columnValueKind(options?.dataType)
+  const literal = (value: string): string | undefined => {
+    if (!options?.isExpr) {
+      return sqlValueLiteral(options?.dataType, value)
+    }
+    if (kind === 'number') {
+      const trimmed = value.trim()
+      return NUMERIC_LITERAL.test(trimmed) ? trimmed : undefined
+    }
+    if (kind === 'boolean') {
+      return booleanLiteral(value)
+    }
+    return `'${escapeSqlString(value)}'`
+  }
 
   // Comparison ops need a numeric column and a single value; anything else is dropped
   // rather than emitted as SQL GreptimeDB would reject (e.g. Boolean = Utf8).
@@ -439,6 +454,32 @@ function sqlPredicateForFilter(
 }
 
 /**
+ * JSON2 keeps numbers and booleans typed, so the comparator decides how the attribute is
+ * read: range operators need a numeric read, `true`/`false` needs a boolean read, and
+ * everything else stays a string read (which is what equality on text expects).
+ *
+ * Reading a numeric attribute as text is not equivalent: `json_get_string(...) > '900'`
+ * compares lexicographically, so "1000" loses to "900". That is why range filters must
+ * cast. `=`/`!=` deliberately keep the string read — an attribute whose values look like
+ * digits is still text, and casting it would drop rows that never could have matched.
+ */
+function jsonAttributeKind(filter: DrilldownFilter): JsonValueKind {
+  if (JSON_RANGE_OPS.has(filter.op)) {
+    return 'number'
+  }
+  if (filter.op === '=' || filter.op === '!=') {
+    const values = splitFilterOrValues(filter)
+    if (values.length === 1) {
+      const lowered = values[0].trim().toLowerCase()
+      if (lowered === 'true' || lowered === 'false') {
+        return 'boolean'
+      }
+    }
+  }
+  return 'string'
+}
+
+/**
  * SQL WHERE fragments from filters that name a real column, a fieldMap column, or a JSON
  * attribute chip.
  *
@@ -482,8 +523,9 @@ export function filtersToSqlWhere(
       // flattened model tables store attributes as dotted columns and have no container,
       // where this reading would emit SQL for a column the table does not have.
       if (jsonChip && (!columnsKnown || options.columns.includes(jsonChip.column))) {
-        const expr = sqlJsonGetStringExpr(jsonChip.column, jsonChip.path)
-        const jsonPredicate = sqlPredicateForFilter(filter, expr, { isExpr: true })
+        const valueKind = jsonAttributeKind(filter)
+        const expr = sqlJsonAttrExpr(jsonChip.column, jsonChip.path, valueKind)
+        const jsonPredicate = sqlPredicateForFilter(filter, expr, { isExpr: true, valueKind })
         if (jsonPredicate) {
           parts.push(jsonPredicate)
         }
