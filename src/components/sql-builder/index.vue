@@ -533,7 +533,8 @@ a-modal(
   /** Value suggestions are only useful for label-like attributes (see attribute sampling). */
   function canSuggestValues(condition: Condition): boolean {
     const attribute = sampledAttributes.value[condition.field]
-    if (!attribute) {
+    // IN / NOT IN expect a comma-separated list; a single-value dropdown would mislead.
+    if (!attribute || condition.operator === 'IN' || condition.operator === 'NOT IN') {
       return false
     }
     if (attribute.dataType === 'BIGINT' || attribute.dataType === 'DOUBLE' || attribute.dataType === 'BOOLEAN') {

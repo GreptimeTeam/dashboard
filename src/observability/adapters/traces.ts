@@ -7,7 +7,8 @@ import { filtersToSqlWhere } from '../filters'
 import { boundSignalDatabase } from '../signal-database'
 import { escapeSqlString, quoteIdent } from '../logs/query-state'
 import { buildDefaultTracesFieldMap, type TraceBreakdownAttribute } from '../traces/field-map'
-import { attributeContainersOf, discoverSampledAttributes, rememberAttributeTypes } from '../traces/attribute-keys'
+import { attributeContainersOf, rememberAttributeTypes } from '../traces/attribute-keys'
+import { fetchSampledAttributes } from '../traces/attribute-sampling'
 import { isJsonAttributeContainerName, parseJsonFieldChipKey, sqlJsonGetStringExpr } from '../logs/json-field-keys'
 import {
   bucketToUnixSeconds,
