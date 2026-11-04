@@ -198,7 +198,7 @@ function attributeDataTypeOf(stat: AttributeStat): string | undefined {
 
 const ATTRIBUTE_TYPE_LIMIT = 4000
 const attributeTypes = shallowRef<Record<string, string>>({})
-const attributeCardinality = shallowRef<Record<string, 'low' | 'high'>>({})
+const attributeCardinalityRegistry = shallowRef<Record<string, 'low' | 'high'>>({})
 
 function registryKey(database: string | undefined, table: string | undefined, chipKey: string): string {
   return `${database ?? ''}\0${table ?? ''}\0${chipKey}`
@@ -214,7 +214,7 @@ export function rememberAttributeTypes(
     return
   }
   const next = { ...attributeTypes.value }
-  const nextCardinality = { ...attributeCardinality.value }
+  const nextCardinality = { ...attributeCardinalityRegistry.value }
   let changed = false
   attributes.forEach((attribute) => {
     const key = registryKey(database, table, attribute.column)
@@ -238,7 +238,7 @@ export function rememberAttributeTypes(
         .filter((attribute) => attribute.dataType)
         .map((attribute) => [registryKey(database, table, attribute.column), attribute.dataType as string])
     )
-    attributeCardinality.value = Object.fromEntries(
+    attributeCardinalityRegistry.value = Object.fromEntries(
       attributes
         .filter((attribute) => attribute.cardinality)
         .map((attribute) => [registryKey(database, table, attribute.column), attribute.cardinality as 'low' | 'high'])
@@ -246,7 +246,16 @@ export function rememberAttributeTypes(
     return
   }
   attributeTypes.value = next
-  attributeCardinality.value = nextCardinality
+  attributeCardinalityRegistry.value = nextCardinality
+}
+
+/** Sampled cardinality of an attribute key (`undefined` when it was never sampled). */
+export function attributeCardinality(
+  database: string | undefined,
+  table: string | undefined,
+  chipKey: string
+): 'low' | 'high' | undefined {
+  return attributeCardinalityRegistry.value[registryKey(database, table, chipKey)]
 }
 
 /** Type of a sampled attribute key, or undefined when it was never sampled. */
@@ -278,7 +287,7 @@ export function canSuggestAttributeValues(
 ): boolean {
   const key = registryKey(database, table, chipKey)
   const dataType = attributeTypes.value[key]
-  const cardinality = attributeCardinality.value[key]
+  const cardinality = attributeCardinalityRegistry.value[key]
   if (!dataType && !cardinality) {
     return true
   }

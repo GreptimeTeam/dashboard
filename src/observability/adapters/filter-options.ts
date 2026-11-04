@@ -21,6 +21,7 @@ import {
 } from '../logs/field-map'
 import { discoverTraceFilterKeys } from '../traces/field-map'
 import { fetchTraceAttributeKeys } from './traces'
+import { fetchDistinctValues, type ValueSource } from '../value-suggestions'
 import type { DrilldownFilter, DrilldownSignal } from '../types'
 
 const INTERNAL_LABEL_PREFIX = '__'
@@ -308,22 +309,6 @@ function resolveSqlSuggestColumn(
   return undefined
 }
 
-function sqlValueSelectExpr(
-  chipKey: string,
-  columnName: string,
-  jsonColumns: string[] = [],
-  columns: string[] = []
-): { selectExpr: string; nullCheck: string } {
-  if (!columns.includes(columnName)) {
-    const jsonChip = parseJsonFieldChipKey(chipKey, jsonColumns)
-    if (jsonChip) {
-      const expr = sqlJsonGetStringExpr(jsonChip.column, jsonChip.path)
-      return { selectExpr: expr, nullCheck: `${expr} IS NOT NULL` }
-    }
-  }
-  return { selectExpr: `"${columnName}"`, nullCheck: `"${columnName}" IS NOT NULL` }
-}
-
 function sqlFilterEqualsClause(
   filterKey: string,
   filterValue: string,
@@ -394,26 +379,31 @@ export async function fetchSqlLabelValues(
     return []
   }
 
-  const { selectExpr, nullCheck } = sqlValueSelectExpr(trimmedKey, columnName, jsonColumns, columnNames)
-  const unixRange = ctx.query.unixTimeRange()
-  const whereParts = [nullCheck]
+  // Resolve the field to its SQL source once; the shared helper owns the query shape so the
+  // Explore filter and the SQL builder cannot drift apart.
+  const isColumn = columnNames.includes(columnName)
+  const chip = isColumn ? undefined : parseJsonFieldChipKey(columnName, jsonColumns)
+  const source: ValueSource | undefined = isColumn
+    ? { kind: 'column', column: columnName }
+    : chip
+    ? { kind: 'attribute', column: chip.column, path: chip.path }
+    : undefined
+  if (!source) {
+    return []
+  }
 
-  if (unixRange.length === 2) {
-    let timeColumn: string | undefined
-    if (signal === 'logs') {
-      timeColumn = resolveLogsTimeColumn(fieldMap)
-    } else {
-      timeColumn = fieldMap.time
-      if (!timeColumn) {
-        timeColumn = columns.find((column) => column.semantic_type === 'TIMESTAMP')?.name
-      }
-    }
-    if (timeColumn) {
-      whereParts.push(`"${timeColumn}" >= FROM_UNIXTIME(${unixRange[0]})`)
-      whereParts.push(`"${timeColumn}" <= FROM_UNIXTIME(${unixRange[1]})`)
+  const unixRange = ctx.query.unixTimeRange()
+  let timeColumn: string | undefined
+  if (signal === 'logs') {
+    timeColumn = resolveLogsTimeColumn(fieldMap)
+  } else {
+    timeColumn = fieldMap.time
+    if (!timeColumn) {
+      timeColumn = columns.find((column) => column.semantic_type === 'TIMESTAMP')?.name
     }
   }
 
+  const extraWhere: string[] = []
   ctx.query.filters.value.forEach((filter: DrilldownFilter) => {
     if (filter.key === trimmedKey || filter.op !== '=') {
       return
@@ -428,26 +418,20 @@ export async function fetchSqlLabelValues(
       columnTypes.get(filter.key)
     )
     if (clause) {
-      whereParts.push(clause)
+      extraWhere.push(clause)
     }
   })
 
-  const query = `SELECT DISTINCT ${selectExpr} FROM "${tableName}" WHERE ${whereParts.join(
-    ' AND '
-  )} LIMIT ${SQL_VALUE_LIMIT}`
-
-  try {
-    const response = await editorApi.runSQL(query, boundSignalDatabase(ctx, signal))
-    const rows = response?.output?.[0]?.records?.rows
-    if (!Array.isArray(rows)) {
-      return []
-    }
-    const values = rows.map((row) => (Array.isArray(row) ? String(row[0] ?? '') : '')).filter(Boolean)
-    return filterOptions([...new Set(values)], search)
-  } catch (error) {
-    console.error(`Failed to load SQL label values for ${trimmedKey}:`, error)
-    return []
-  }
+  const values = await fetchDistinctValues({
+    database: boundSignalDatabase(ctx, signal),
+    table: tableName,
+    source,
+    timeColumn,
+    timeRange: unixRange,
+    extraWhere,
+    limit: SQL_VALUE_LIMIT,
+  })
+  return filterOptions(values, search)
 }
 
 /** @deprecated Use fetchSqlLabelValues */

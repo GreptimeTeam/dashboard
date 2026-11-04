@@ -193,12 +193,8 @@ a-modal(
   import { TsTypeMapping } from '@/utils/date-time'
   import { isJsonDataType } from '@/utils/json-display'
   import { splitAttributeChip } from '@/observability/traces/attribute-keys'
-  import {
-    canSuggestColumnValues,
-    fetchAttributeDistinctValues,
-    fetchColumnDistinctValues,
-    fetchSampledAttributes,
-  } from '@/observability/traces/attribute-sampling'
+  import { fetchSampledAttributes } from '@/observability/traces/attribute-sampling'
+  import { canSuggestValues as canSuggestFieldValues, fetchDistinctValues } from '@/observability/value-suggestions'
   import type { TraceBreakdownAttribute } from '@/observability/traces/field-map'
 
   const { t } = useI18n()
@@ -536,26 +532,23 @@ a-modal(
   }
 
   /**
-   * Value suggestions are only useful for label-like fields.
-   *
-   * Enumerable columns (`service_name`, `span_name`, `span_kind`, `span_status_code`) are
-   * suggested too; numeric/boolean/timestamp/identity columns are typed, and attributes
-   * follow the sampled type/cardinality rule.
+   * Value suggestions follow the same policy as the Explore top filter
+   * (`observability/value-suggestions`): label-like strings only, IN/NOT IN excluded.
    */
   function canSuggestValues(condition: Condition): boolean {
-    // IN / NOT IN expect a comma-separated list; a single-value dropdown would mislead.
-    if (condition.operator === 'IN' || condition.operator === 'NOT IN') {
+    const attribute = sampledAttributes.value[condition.field]
+    const column = attribute ? undefined : fields.value.find((item) => item.name === condition.field)
+    if (!attribute && !column) {
       return false
     }
-    const attribute = sampledAttributes.value[condition.field]
-    if (attribute) {
-      if (attribute.dataType === 'BIGINT' || attribute.dataType === 'DOUBLE' || attribute.dataType === 'BOOLEAN') {
-        return false
-      }
-      return attribute.cardinality !== 'high'
-    }
-    const column = fields.value.find((item) => item.name === condition.field)
-    return column ? canSuggestColumnValues(column) : false
+    return canSuggestFieldValues(
+      {
+        name: condition.field,
+        dataType: attribute?.dataType ?? column?.data_type,
+        cardinality: attribute?.cardinality,
+      },
+      condition.operator
+    )
   }
 
   function valueSuggestions(condition: Condition): string[] {
@@ -570,19 +563,11 @@ a-modal(
     const chip = attributeOf(field)
     valueLoading.value = { ...valueLoading.value, [field]: true }
     try {
-      // JSON2 chip keys read through a JSON path; plain columns are a DISTINCT on the column.
-      const values = chip
-        ? await fetchAttributeDistinctValues({
-            database: form.database,
-            table: form.table,
-            column: chip.column,
-            path: chip.path,
-          })
-        : await fetchColumnDistinctValues({
-            database: form.database,
-            table: form.table,
-            column: field,
-          })
+      const values = await fetchDistinctValues({
+        database: form.database,
+        table: form.table,
+        source: chip ? { kind: 'attribute', column: chip.column, path: chip.path } : { kind: 'column', column: field },
+      })
       attributeValues.value = { ...attributeValues.value, [field]: values }
     } finally {
       valueLoading.value = { ...valueLoading.value, [field]: false }

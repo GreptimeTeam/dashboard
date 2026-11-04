@@ -9,7 +9,8 @@ import {
   fetchSqlLabelKeys,
 } from './adapters/filter-options'
 import type { DrilldownContext } from './context'
-import { canSuggestAttributeValues } from './traces/attribute-keys'
+import { attributeCardinality, attributeTypeOf, splitAttributeChip } from './traces/attribute-keys'
+import { canSuggestValues } from './value-suggestions'
 import { loadDrilldownSettings } from './drilldown-settings'
 import { filterAppliesToSignal } from './filters'
 import { parseJsonFieldChipKey } from './logs/json-field-keys'
@@ -91,24 +92,27 @@ export default function useDrilldownFilterOptions(
     if (!trimmed) {
       return false
     }
-    // Sampled JSON2 attribute keys only suggest values when they are label-like: numeric /
-    // boolean keys are thresholds, and high-cardinality keys make DISTINCT useless while
-    // still scanning the window. Intrinsic columns are unaffected.
-    if (ctx.connection.signal.value === 'traces' && parseJsonFieldChipKey(trimmed)) {
-      // Same database precedence as `boundSignalDatabase`, resolved inline to keep the
-      // module free of the Pinia store import (this file is unit-tested without an app).
-      const database = ctx.semantics.traces.database.value || ctx.connection.databaseFor('traces')
-      if (!canSuggestAttributeValues(database, ctx.semantics.traces.table.value, trimmed)) {
-        return false
-      }
-    }
-    if (suggestMode === 'fields') {
-      return canSuggestFilterValues(trimmed, fieldMapForActiveSql(), labelKeys.value, containsKeys.value)
-    }
-    if (ctx.connection.signal.value === 'metrics') {
+    const signal = ctx.connection.signal.value
+    if (signal === 'metrics') {
       return false
     }
-    return canSuggestFilterValues(trimmed, fieldMapForActiveSql(), labelKeys.value, containsKeys.value)
+    const resolvable = canSuggestFilterValues(trimmed, fieldMapForActiveSql(), labelKeys.value, containsKeys.value)
+    if (!resolvable) {
+      return false
+    }
+    // One policy for every SQL surface (this filter and the Traces SQL builder): only
+    // label-like fields get a DISTINCT dropdown. Types come from the schema for columns and
+    // from the attribute sample for JSON2 chips.
+    const chip = splitAttributeChip(trimmed)
+    const semantics = signal === 'logs' ? ctx.semantics.logs : ctx.semantics.traces
+    const database = semantics.database.value || ctx.connection.databaseFor(signal)
+    const table = semantics.table.value
+    return canSuggestValues({
+      name: trimmed,
+      dataType:
+        semantics.columnTypes.value?.[trimmed] ?? (chip ? attributeTypeOf(database, table, trimmed) : undefined),
+      cardinality: chip ? attributeCardinality(database, table, trimmed) : undefined,
+    })
   }
 
   const loadValues = async (fieldKey: string, search = '') => {
