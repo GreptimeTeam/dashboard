@@ -463,20 +463,22 @@ function sqlPredicateForFilter(
  * cast. `=`/`!=` deliberately keep the string read — an attribute whose values look like
  * digits is still text, and casting it would drop rows that never could have matched.
  */
-function jsonAttributeKind(filter: DrilldownFilter): JsonValueKind {
-  if (JSON_RANGE_OPS.has(filter.op)) {
+export function jsonAttributeValueKind(op: DrilldownFilterOp, value: string): JsonValueKind {
+  if (JSON_RANGE_OPS.has(op)) {
     return 'number'
   }
-  if (filter.op === '=' || filter.op === '!=') {
-    const values = splitFilterOrValues(filter)
-    if (values.length === 1) {
-      const lowered = values[0].trim().toLowerCase()
-      if (lowered === 'true' || lowered === 'false') {
-        return 'boolean'
-      }
+  if (op === '=' || op === '!=') {
+    const lowered = value.trim().toLowerCase()
+    if (lowered === 'true' || lowered === 'false') {
+      return 'boolean'
     }
   }
   return 'string'
+}
+
+function jsonAttributeKind(filter: DrilldownFilter): JsonValueKind {
+  const values = splitFilterOrValues(filter)
+  return jsonAttributeValueKind(filter.op, values[0] ?? '')
 }
 
 /**

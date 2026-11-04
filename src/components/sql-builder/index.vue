@@ -69,11 +69,15 @@ a-form.second-row-form(
                 :placeholder="t('sqlBuilder.value')"
                 :options="['true', 'false']"
               )
-              a-input.value.filter-value-input(
+              a-auto-complete.value.filter-value-input(
                 v-else
                 v-model="condition.value"
                 style="width: 100%"
+                :data="valueSuggestions(condition)"
+                :loading="Boolean(valueLoading[condition.field])"
                 :placeholder="condition.operator === 'IN' || condition.operator === 'NOT IN' ? t('sqlBuilder.commaValuesHint') : t('sqlBuilder.value')"
+                @focus="loadValueSuggestions(condition)"
+                @search="onValueSearch(condition, $event)"
               )
           a-button.gpt-btn-outline-control(type="outline" size="small" @click="() => removeCondition(index)")
             template(#icon)
@@ -100,7 +104,7 @@ a-form.third-row-form(
         allow-search
         :placeholder="t('sqlBuilder.selectField')"
         :trigger-props="{ autoFitPopupMinWidth: true }"
-        :options="fieldsOptions"
+        :options="columnOptions"
       )
       a-select(
         v-model="form.orderBy"
@@ -188,6 +192,9 @@ a-modal(
   import type { Condition, BuilderFormState as Form } from '@/types/query'
   import { TsTypeMapping } from '@/utils/date-time'
   import { isJsonDataType } from '@/utils/json-display'
+  import { splitAttributeChip } from '@/observability/traces/attribute-keys'
+  import { fetchAttributeDistinctValues, fetchSampledAttributes } from '@/observability/traces/attribute-sampling'
+  import type { TraceBreakdownAttribute } from '@/observability/traces/field-map'
 
   const { t } = useI18n()
 
@@ -269,12 +276,64 @@ a-modal(
     return tableMap.value[form.table].filter((field) => !isJsonDataType(field.data_type))
   })
 
-  const fieldsOptions = computed(() => {
-    return fields.value.map((column) => ({
+  /**
+   * JSON2 attribute dimensions, sampled from the table (trace v2 only). v1 tables expose
+   * attributes as physical columns instead, so this stays empty there.
+   */
+  const sampledAttributes = ref<Record<string, TraceBreakdownAttribute>>({})
+  const attributeValues = ref<Record<string, string[]>>({})
+  const valueLoading = ref<Record<string, boolean>>({})
+
+  async function loadSampledAttributes() {
+    sampledAttributes.value = {}
+    attributeValues.value = {}
+    if (props.signalDatabaseKind !== 'traces' || !form.table) {
+      return
+    }
+    const tableFields = tableMap.value[form.table] || []
+    const columns = tableFields.map((column) => column.name)
+    if (!columns.length) {
+      return
+    }
+    const tsField =
+      tableFields.find((column) => column.semantic_type === 'TIMESTAMP') ??
+      tableFields.find((column) => column.data_type.toLowerCase().includes('timestamp'))
+    const attributes = await fetchSampledAttributes({
+      database: form.database,
+      table: form.table,
+      columns,
+      parentColumn: 'parent_span_id',
+      timeColumn: tsField?.name,
+    })
+    // Dotted attribute names share the field namespace with real columns; real columns win.
+    const fieldsByName = new Set(columns)
+    sampledAttributes.value = Object.fromEntries(
+      attributes
+        .filter((attribute) => !fieldsByName.has(attribute.column))
+        .map((attribute) => [attribute.column, attribute])
+    )
+  }
+
+  /** JSON2 attribute metadata for a condition field, if the field is one. */
+  function attributeOf(field: string): { column: string; path: string } | undefined {
+    return sampledAttributes.value[field] ? splitAttributeChip(field) : undefined
+  }
+
+  const attributeOptions = computed(() =>
+    Object.keys(sampledAttributes.value)
+      .sort((left, right) => left.localeCompare(right))
+      .map((key) => ({ label: key, value: key }))
+  )
+
+  /** Physical columns only: ORDER BY renders an identifier, so chips cannot be used. */
+  const columnOptions = computed(() =>
+    fields.value.map((column) => ({
       label: column.name,
       value: column.name,
     }))
-  })
+  )
+
+  const fieldsOptions = computed(() => [...columnOptions.value, ...attributeOptions.value])
 
   // Quick Filters logic (after form and fields are defined)
   const quickFiltersStorageKey = computed(() => `${storageKey}-quick-filters`)
@@ -427,6 +486,13 @@ a-modal(
   }
 
   function getFieldType(fieldName: string): string {
+    const attribute = sampledAttributes.value[fieldName]
+    if (attribute) {
+      // Sampled JSON2 type: numbers offer comparison operators, booleans only equality.
+      if (attribute.dataType === 'BIGINT' || attribute.dataType === 'DOUBLE') return 'Number'
+      if (attribute.dataType === 'BOOLEAN') return 'Boolean'
+      return 'String'
+    }
     const field = fields.value.find((f) => f.name === fieldName)
     if (!field) return 'String'
 
@@ -452,12 +518,60 @@ a-modal(
 
   function getOperators(field: string) {
     const fieldType = getFieldType(field)
-    const operators = operatorMap[fieldType] || operatorMap.Default
+    const isAttribute = Boolean(sampledAttributes.value[field])
+    // MATCH needs a text column; a JSON path expression cannot back the fulltext index.
+    const operators = (operatorMap[fieldType] || operatorMap.Default).filter(
+      (op) => !isAttribute || (op !== 'MATCH' && op !== 'NOT MATCH')
+    )
 
     return operators.map((op) => ({
       label: op,
       value: op,
     }))
+  }
+
+  /** Value suggestions are only useful for label-like attributes (see attribute sampling). */
+  function canSuggestValues(condition: Condition): boolean {
+    const attribute = sampledAttributes.value[condition.field]
+    if (!attribute) {
+      return false
+    }
+    if (attribute.dataType === 'BIGINT' || attribute.dataType === 'DOUBLE' || attribute.dataType === 'BOOLEAN') {
+      return false
+    }
+    return attribute.cardinality !== 'high'
+  }
+
+  function valueSuggestions(condition: Condition): string[] {
+    return canSuggestValues(condition) ? attributeValues.value[condition.field] || [] : []
+  }
+
+  async function loadValueSuggestions(condition: Condition) {
+    const field = condition.field
+    if (!canSuggestValues(condition) || attributeValues.value[field] || valueLoading.value[field]) {
+      return
+    }
+    const chip = attributeOf(field)
+    if (!chip) {
+      return
+    }
+    valueLoading.value = { ...valueLoading.value, [field]: true }
+    try {
+      const values = await fetchAttributeDistinctValues({
+        database: form.database,
+        table: form.table,
+        column: chip.column,
+        path: chip.path,
+      })
+      attributeValues.value = { ...attributeValues.value, [field]: values }
+    } finally {
+      valueLoading.value = { ...valueLoading.value, [field]: false }
+    }
+  }
+
+  /** Local filtering only — suggestions are fetched once per field. */
+  function onValueSearch(condition: Condition, _search: string) {
+    void loadValueSuggestions(condition)
   }
 
   async function fetchTables() {
@@ -560,6 +674,9 @@ a-modal(
 
   function handleFieldChange(condition: Condition) {
     condition.fieldType = getFieldType(condition.field)
+    // Chip keys have no column: the hook renders them as JSON path expressions.
+    condition.jsonAttribute = attributeOf(condition.field)
+    void loadValueSuggestions(condition)
   }
 
   function removeCondition(index: number) {
@@ -613,7 +730,7 @@ a-modal(
         // Save to localStorage whenever table changes
         lastSelectedTable.value = newTable
       }
-      fetchTableFields(form.table)
+      void fetchTableFields(form.table).then(() => loadSampledAttributes())
       // Table value is now extracted from form state in parent component
     },
     { immediate: true }
@@ -622,9 +739,9 @@ a-modal(
   // Function to add a filter condition from external components
   function addFilterCondition(columnName: string, operator: string, value: string) {
     const column = fields.value.find((col) => col.name === columnName)
-    if (!column) return
+    if (!column && !sampledAttributes.value[columnName]) return
 
-    const isTimeCol = column.data_type.toLowerCase().includes('timestamp')
+    const isTimeCol = Boolean(column?.data_type.toLowerCase().includes('timestamp'))
 
     const newCondition: Condition = {
       field: columnName,
@@ -633,6 +750,7 @@ a-modal(
       isTimeColumn: isTimeCol,
       relation: 'AND',
       fieldType: getFieldType(columnName),
+      jsonAttribute: attributeOf(columnName),
     }
 
     form.conditions.push(newCondition)

@@ -6,11 +6,25 @@ import {
   attributeScopeOf,
   attributeTypeOf,
   canSuggestAttributeValues,
+  splitAttributeChip,
   discoverSampledAttributes,
   rememberAttributeTypes,
 } from './attribute-keys'
 
 describe('trace attribute keys (JSON2 models)', () => {
+  it('splits a chip key back into container and attribute key', () => {
+    expect(splitAttributeChip('span_attributes.http.request.method')).toEqual({
+      column: 'span_attributes',
+      path: 'http.request.method',
+    })
+    expect(splitAttributeChip('resource_attributes.service.version')).toEqual({
+      column: 'resource_attributes',
+      path: 'service.version',
+    })
+    expect(splitAttributeChip('span_attributes')).toBeUndefined()
+    expect(splitAttributeChip('service_name')).toBeUndefined()
+  })
+
   it('maps containers to scopes and labels', () => {
     expect(attributeScopeOf('resource_attributes')).toBe('resource')
     expect(attributeScopeOf('span_attributes')).toBe('span')

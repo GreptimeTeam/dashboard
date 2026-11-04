@@ -374,56 +374,24 @@ export async function fetchTraceAttributeKeys(
     return cached
   }
 
-  // Attribute keys describe the table, so they must not depend on the selected window: a
-  // narrow or empty range would otherwise empty the suggest list. Newest-first keeps the
-  // sample cheap and stable (time index, partition-pruned).
-  //
-  // Sample root spans only: the traces list, RED panels and breakdown all filter
-  // `parent_span_id IS NULL`, so a key that only exists on child spans can never match —
-  // offering it produces a dead filter that returns nothing.
-  const sample = (rootOnly: boolean): string => `SELECT ${containers
-    .map((container) => quoteIdent(container))
-    .join(', ')}
-FROM ${quoteIdent(tableName)}
-${rootOnly ? `WHERE ${quoteIdent(parentColumn(ctx))} IS NULL` : ''}
-ORDER BY ${quoteIdent(timeColumn(ctx))} DESC
-LIMIT ${TRACE_ATTRIBUTE_SAMPLE_LIMIT}`
-
-  try {
-    const runSample = async (rootOnly: boolean) => {
-      const response = await editorApi.runSQL(sample(rootOnly), boundSignalDatabase(ctx, 'traces'))
-      const records = response?.output?.[0]?.records as
-        | { schema?: { column_schemas?: Array<{ name: string }> }; rows?: unknown[][] }
-        | undefined
-      const schemas = records?.schema?.column_schemas ?? []
-      return (records?.rows ?? []).map((row) => {
-        const entry: Record<string, unknown> = {}
-        schemas.forEach((column, index) => {
-          entry[column.name] = row?.[index]
-        })
-        return entry
-      })
-    }
-    // Tables written without root spans (all children) would otherwise suggest nothing.
-    let rows = await runSample(true)
-    if (!rows.length) {
-      rows = await runSample(false)
-    }
-    const attributes = discoverSampledAttributes(containers, rows)
-    if (!attributes.length) {
-      console.warn('Sampled trace attribute keys is empty', { tableName, containers, rows: rows.length })
-    }
-    // Chip keys have no schema column, so publish the sampled types for the operator menu.
-    rememberAttributeTypes(boundSignalDatabase(ctx, 'traces'), tableName, attributes)
-    if (traceAttributeCache.size > TRACE_ATTRIBUTE_CACHE_LIMIT) {
-      traceAttributeCache.clear()
-    }
-    traceAttributeCache.set(cacheKey, attributes)
-    return attributes
-  } catch (error) {
-    console.error('Failed to sample trace attribute keys:', error)
-    return []
+  const attributes = await fetchSampledAttributes({
+    database: boundSignalDatabase(ctx, 'traces'),
+    table: tableName,
+    columns,
+    parentColumn: parentColumn(ctx),
+    timeColumn: timeColumn(ctx),
+    limit: TRACE_ATTRIBUTE_SAMPLE_LIMIT,
+  })
+  if (!attributes.length) {
+    console.warn('Sampled trace attribute keys is empty', { tableName, containers })
   }
+  // Chip keys have no schema column, so publish the sampled types for the operator menu.
+  rememberAttributeTypes(boundSignalDatabase(ctx, 'traces'), tableName, attributes)
+  if (traceAttributeCache.size > TRACE_ATTRIBUTE_CACHE_LIMIT) {
+    traceAttributeCache.clear()
+  }
+  traceAttributeCache.set(cacheKey, attributes)
+  return attributes
 }
 
 export interface BreakdownSeriesResult {

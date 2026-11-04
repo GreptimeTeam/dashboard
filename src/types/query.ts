@@ -5,6 +5,11 @@ export interface Condition {
   relation?: 'AND' | 'OR'
   isTimeColumn?: boolean
   fieldType?: string
+  /**
+   * Set when the field is a JSON2 attribute chip (trace v2 tables): the SQL builder renders
+   * `json_get(...)` / `json_get_string(...)` instead of quoting a column.
+   */
+  jsonAttribute?: { column: string; path: string }
 }
 
 export type TSColumn = {

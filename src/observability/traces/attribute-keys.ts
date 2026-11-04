@@ -287,3 +287,15 @@ export function canSuggestAttributeValues(
   }
   return cardinality !== 'high'
 }
+
+/** Split a chip key back into its container column and the attribute key inside it. */
+export function splitAttributeChip(chipKey: string): { column: string; path: string } | undefined {
+  const matched = [...TRACE_ATTRIBUTE_CONTAINERS]
+    .sort((left, right) => right.length - left.length)
+    .find((container) => chipKey.startsWith(`${container}.`))
+  if (!matched) {
+    return undefined
+  }
+  const path = chipKey.slice(matched.length + 1)
+  return path ? { column: matched, path } : undefined
+}
