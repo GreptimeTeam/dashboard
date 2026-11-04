@@ -77,6 +77,50 @@ describe('traces field-map', () => {
     expect(filterBreakdownAttributesByScope(attrs, 'span').every((a) => a.scope === 'span')).toBe(true)
   })
 
+  it('adds sampled JSON2 attribute dimensions for v2 tables', () => {
+    const sampled = [
+      {
+        column: 'span_attributes.http.request.method',
+        label: 'span.http.request.method',
+        scope: 'span' as const,
+        sampled: true,
+      },
+      {
+        column: 'resource_attributes.service.version',
+        label: 'resource.service.version',
+        scope: 'resource' as const,
+        sampled: true,
+      },
+    ]
+    const columns = [
+      { name: 'service_name', data_type: 'String' },
+      { name: 'span_name', data_type: 'String' },
+      { name: 'span_attributes', data_type: 'Json' },
+      { name: 'resource_attributes', data_type: 'Json' },
+    ]
+
+    const attrs = discoverTraceBreakdownAttributes(columns, sampled)
+    expect(attrs.map((attr) => attr.column)).toContain('span_attributes.http.request.method')
+    expect(attrs.map((attr) => attr.column)).toContain('resource_attributes.service.version')
+    // The container itself is not a usable dimension.
+    expect(attrs.map((attr) => attr.column)).not.toContain('span_attributes')
+
+    const keys = discoverTraceFilterKeys(columns, { sampled })
+    expect(keys).toContain('span_attributes.http.request.method')
+    expect(keys).toContain('resource_attributes.service.version')
+  })
+
+  it('keeps v1 discovery unchanged when no keys are sampled', () => {
+    const columns = [
+      { name: 'service_name', data_type: 'String' },
+      { name: 'span_attributes.http.method', data_type: 'String' },
+      { name: 'span_attributes', data_type: 'Json' },
+    ]
+    const attrs = discoverTraceBreakdownAttributes(columns)
+    expect(attrs.map((attr) => attr.column)).toContain('span_attributes.http.method')
+    expect(attrs.map((attr) => attr.column)).not.toContain('span_attributes')
+  })
+
   it('merges breakdown columns into fieldMap for filters', () => {
     const merged = mergeTracesFieldMapColumns(buildDefaultTracesFieldMap(), ['resource_attributes.telemetry.sdk.name'])
     expect(merged['resource_attributes.telemetry.sdk.name']).toBe('resource_attributes.telemetry.sdk.name')

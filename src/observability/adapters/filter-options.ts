@@ -20,6 +20,7 @@ import {
   type SchemaColumn,
 } from '../logs/field-map'
 import { discoverTraceFilterKeys } from '../traces/field-map'
+import { fetchTraceAttributeKeys } from './traces'
 import type { DrilldownFilter, DrilldownSignal } from '../types'
 
 const INTERNAL_LABEL_PREFIX = '__'
@@ -103,8 +104,10 @@ export async function fetchSqlLabelKeys(
     )) as SchemaColumn[]
     if (signal === 'traces') {
       // Traces expose every business field as a top-bar filter key (intrinsic + flattened
-      // resource/span attributes + duration), not the v1 label subset.
-      const keys = discoverTraceFilterKeys(columns)
+      // resource/span attributes + duration), not the v1 label subset. JSON2 models have
+      // no attribute columns, so their keys are sampled instead (empty for v1 tables).
+      const sampled = await fetchTraceAttributeKeys(ctx)
+      const keys = discoverTraceFilterKeys(columns, { sampled })
       return filterOptions(filterLabelKeys(keys), search)
     }
     const fieldMap = fieldMapForSignal(ctx, signal)

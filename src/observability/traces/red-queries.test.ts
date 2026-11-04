@@ -167,6 +167,36 @@ describe('traces red-queries', () => {
     expect(breakdownSeriesIntervalSeconds([0, 24 * 3600])).toBeGreaterThan(60)
   })
 
+  it('groups JSON2 attribute dimensions by expression instead of identifier', () => {
+    const valuesSql = buildBreakdownValuesSql({
+      tableName: 'opentelemetry_traces_v2',
+      where: '"parent_span_id" IS NULL',
+      groupByColumn: 'span_attributes.http.request.method',
+      groupByColumnSql: `json_get_string("span_attributes", '$."http.request.method"')`,
+      statusColumn: 'span_status_code',
+      durationColumn: 'duration_nano',
+      metric: 'rate',
+      limit: 10,
+    })
+    expect(valuesSql).toContain(`json_get_string("span_attributes", '$."http.request.method"') AS attr_value`)
+    expect(valuesSql).toContain(`GROUP BY json_get_string("span_attributes", '$."http.request.method"')`)
+    expect(valuesSql).not.toContain('"span_attributes.http.request.method"')
+
+    const seriesSql = buildBreakdownSeriesSql({
+      tableName: 'opentelemetry_traces_v2',
+      where: '"parent_span_id" IS NULL',
+      timeColumn: 'timestamp',
+      groupByColumn: 'resource_attributes.service.version',
+      groupByColumnSql: `json_get_string("resource_attributes", '$."service.version"')`,
+      statusColumn: 'span_status_code',
+      durationColumn: 'duration_nano',
+      metric: 'errors',
+      intervalSeconds: 60,
+      values: ['1.4.2'],
+    })
+    expect(seriesSql).toContain(`json_get_string("resource_attributes", '$."service.version"') IN ('1.4.2')`)
+  })
+
   it('builds breakdown values ranked by RED', () => {
     const sql = buildBreakdownValuesSql({
       tableName: 'opentelemetry_traces',

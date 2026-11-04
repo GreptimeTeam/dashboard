@@ -40,6 +40,7 @@
   import {
     fetchBreakdownAttrValues,
     fetchBreakdownSeries,
+    fetchTraceAttributeKeys,
     type BreakdownAttrValue,
     type RedMetric,
   } from '@/observability/adapters/traces'
@@ -94,7 +95,10 @@
       if (requestId !== attrsRequestId) {
         return
       }
-      allAttrs.value = discoverTraceBreakdownAttributes(columns || [])
+      // v2 keeps attributes in JSON2 containers: sample their keys so the dropdown still
+      // offers attribute dimensions (v1 reads them straight from the column list).
+      const sampled = await fetchTraceAttributeKeys(ctx)
+      allAttrs.value = discoverTraceBreakdownAttributes(columns || [], sampled)
       if (!allAttrs.value.some((attr) => attr.column === groupByColumn.value)) {
         groupByColumn.value = preferDefaultColumn(allAttrs.value)
       }

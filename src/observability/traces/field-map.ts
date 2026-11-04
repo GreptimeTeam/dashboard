@@ -15,11 +15,16 @@ const SPAN_ATTR_PREFIX = 'span_attributes.'
 export type TraceAttrScope = 'resource' | 'span'
 
 export interface TraceBreakdownAttribute {
-  /** Physical SQL column on greptime_trace_v1 / OTel table. */
+  /**
+   * Physical SQL column on greptime_trace_v1 / OTel table, or — for JSON2 models — the
+   * attribute chip key (`span_attributes.http.method`).
+   */
   column: string
   /** Grafana-style display label (resource.* / span.* / intrinsics). */
   label: string
   scope: TraceAttrScope
+  /** True when the key was sampled from a JSON2 attribute container, not read from schema. */
+  sampled?: boolean
 }
 
 export interface SchemaColumnLike {
@@ -72,7 +77,10 @@ function isGroupableDataType(dataType?: string): boolean {
  * - `resource_attributes.*` → Resource
  * - `span_attributes.*` → Span
  */
-export function discoverTraceBreakdownAttributes(columns: SchemaColumnLike[]): TraceBreakdownAttribute[] {
+export function discoverTraceBreakdownAttributes(
+  columns: SchemaColumnLike[],
+  sampled: TraceBreakdownAttribute[] = []
+): TraceBreakdownAttribute[] {
   const byName = new Map(columns.map((column) => [column.name, column]))
   const result: TraceBreakdownAttribute[] = []
   const seen = new Set<string>()
@@ -82,7 +90,9 @@ export function discoverTraceBreakdownAttributes(columns: SchemaColumnLike[]): T
       return
     }
     const schema = byName.get(attr.column)
-    if (!schema || !isGroupableDataType(schema.data_type)) {
+    // Sampled keys have no column of their own; JSON2 already carries the value, so the
+    // scalar/compound gate only applies to entries the schema describes.
+    if (schema ? !isGroupableDataType(schema.data_type) : !attr.sampled) {
       return
     }
     seen.add(attr.column)
@@ -107,6 +117,8 @@ export function discoverTraceBreakdownAttributes(columns: SchemaColumnLike[]): T
       }
     }
   })
+
+  sampled.forEach((attr) => push(attr))
 
   return result
 }
@@ -184,11 +196,11 @@ export function discoverTraceLabelColumns(columns: SchemaColumnLike[]): string[]
  */
 export function discoverTraceFilterKeys(
   columns: SchemaColumnLike[],
-  options?: { exclude?: readonly string[] }
+  options?: { exclude?: readonly string[]; sampled?: TraceBreakdownAttribute[] }
 ): string[] {
   const exclude = new Set(options?.exclude ?? [])
   const keys = new Set<string>()
-  discoverTraceBreakdownAttributes(columns).forEach((attr) => {
+  discoverTraceBreakdownAttributes(columns, options?.sampled ?? []).forEach((attr) => {
     if (!exclude.has(attr.column)) {
       keys.add(attr.column)
     }
