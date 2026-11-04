@@ -18,7 +18,7 @@ const resultKeyCount = reactive<{ [key: string]: number }>({})
 const explainResultKeyCount = ref(0)
 const refreshCounter = ref(0)
 
-export type RunCodeAbortKey = 'run-part' | 'run-all' | 'explain'
+export type RunCodeAbortKey = 'run-part' | 'run-all' | 'explain' | 'tour-sql'
 
 const abortControllers: Partial<Record<RunCodeAbortKey, AbortController>> = {}
 

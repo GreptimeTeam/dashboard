@@ -5,6 +5,8 @@ import playground from './ja-JP/playground'
 import logsQuery from './ja-JP/logs-query'
 import flow from './ja-JP/flow'
 import drilldown from './ja-JP/drilldown'
+import tour from './ja-JP/tour'
+import contact from './ja-JP/contact'
 
 export default {
   'copy': 'コピー',
@@ -185,4 +187,6 @@ export default {
   ...logsQuery,
   ...flow,
   ...drilldown,
+  ...tour,
+  ...contact,
 }

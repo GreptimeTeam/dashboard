@@ -103,6 +103,8 @@ export default {
   'dashboard.dbConnected': '已连接',
   'dashboard.dbDisconnected': '未连接',
   'dashboard.dbConnecting': '连接中',
+  'dashboard.quickNav': '快速导航 {key}',
+  'dashboard.quickNavTip': '按 {key} 打开快速导航',
   'metrics.showFullSeriesName': '显示全名',
   'metrics.sidebar.countShown': '{count} 个 metrics',
   'metrics.sidebar.countShownCapped': '{count}+ 个 metrics',

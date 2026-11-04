@@ -1,6 +1,7 @@
 <template lang="pug">
 a-layout-footer.footer
-  span.footer-search-hint(:title="`Press ${modKey}+K to open command palette`") {{ modKey }}+K
+  .footer-start
+    span.footer-search-hint(:title="quickNavTip") {{ quickNavLabel }}
   a-space.footer-info(:size="20")
     a-space(:size="5")
       svg.service-icon
@@ -35,7 +36,9 @@ a-layout-footer.footer
   const { t } = useI18n()
   const { timezoneLabel, timezoneFullLabel } = useDashboardTimezone()
   const isMac = navigator.platform.toUpperCase().includes('MAC')
-  const modKey = isMac ? '⌘' : 'Ctrl'
+  const shortcutKey = `${isMac ? '⌘' : 'Ctrl'}+K`
+  const quickNavLabel = computed(() => t('dashboard.quickNav', { key: shortcutKey }))
+  const quickNavTip = computed(() => t('dashboard.quickNavTip', { key: shortcutKey }))
 
   const appStore = useAppStore()
   const { host, database, dbConnectionStatus, regionVendor, regionLocation, regionCountry, serviceName } =
@@ -90,6 +93,7 @@ a-layout-footer.footer
     color: var(--main-font-color);
     font-weight: 600;
   }
+
   .footer-timezone {
     cursor: pointer;
 
@@ -148,9 +152,17 @@ a-layout-footer.footer
       color: var(--gpt-text-secondary);
     }
   }
-  .footer-search-hint {
-    color: var(--gpt-text-muted);
+  .footer-start {
+    display: flex;
+    flex-shrink: 0;
+    gap: 10px;
+    align-items: center;
   }
+
+  .footer-search-hint {
+    color: var(--gpt-text-secondary);
+  }
+
   .region {
     .icon {
       height: 13px;

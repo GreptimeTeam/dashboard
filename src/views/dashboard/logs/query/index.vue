@@ -140,14 +140,21 @@
 
 <script setup lang="ts" name="LogsQuery">
   import { ref, watch, nextTick } from 'vue'
+  import { useRoute } from 'vue-router'
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import SqlTextEditor from '@/components/sql-text-editor/index.vue'
   import { replaceTimePlaceholders } from '@/utils/sql'
+  import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
   import useLogsTablePrefs from '@/observability/use-logs-table-prefs'
   import ChartContainer from './ChartContainer.vue'
   import ExportModal from './ExportModal.vue'
   import LogTableData from './LogsTable.vue'
 
+  const route = useRoute()
+  const isLogsQueryRoute = () => route.name === 'log-query'
+  // Guide step switching is browse-only. Preserve the normal page's initial auto query,
+  // but in guide mode wait for the guide's explicit "Run query" action (`tourApply`).
+  const shouldAutoExecuteInitialQuery = () => !isQueryGuideEnabled() || Boolean(route.query.tourApply)
   const timeRange = useTimeRange()
   const { rangeTime, time, timeRangeValues } = timeRange
 
@@ -180,6 +187,7 @@
 
   const { initializeFromQuery, updateQueryParams } = urlSync
   initializeFromQuery()
+
   // Local UI state — shared with drilldown logs detail table.
   const {
     mergeColumn,
@@ -196,10 +204,15 @@
   const chartContainerRef = ref()
   const refresh = ref(false)
   function handleQuery(newQuery: boolean | MouseEvent = true) {
+    // A query can still be in flight when the user navigates away. Its completion must
+    // not replace the next route's query params with this page's builder state.
+    if (!isLogsQueryRoute()) return
+
     // If called from click event, newQuery will be a MouseEvent, so default to true
     const isNewQuery = typeof newQuery === 'boolean' ? newQuery : true
 
     executeQuery(isNewQuery).then(() => {
+      if (!isLogsQueryRoute()) return
       if (isNewQuery) {
         updateQueryParams()
       }
@@ -209,6 +222,21 @@
       chartContainerRef.value?.triggerCurrentChartQuery()
     })
   }
+
+  // Same-route tutorial click: form sync alone does not re-fire canExecuteInitialQuery.
+  watch(
+    () => [route.query.builderForm, route.query.tourApply] as const,
+    (next, prev) => {
+      if (!isLogsQueryRoute()) return
+      if (!prev) return
+      if (next[0] === prev[0] && next[1] === prev[1]) return
+      if (!next[0] && !next[1]) return
+      initializeFromQuery()
+      nextTick(() => {
+        handleQuery()
+      })
+    }
+  )
   // Export modal state
   const exportModalVisible = ref(false)
   const exportSqlText = ref('')
@@ -288,11 +316,10 @@
   watch(
     canExecuteInitialQuery,
     (canExecute) => {
-      if (canExecute) {
-        nextTick(() => {
-          handleQuery()
-        })
-      }
+      if (!canExecute || !shouldAutoExecuteInitialQuery()) return
+      nextTick(() => {
+        handleQuery()
+      })
     },
     { immediate: true }
   )

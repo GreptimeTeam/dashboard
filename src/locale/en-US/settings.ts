@@ -20,4 +20,12 @@ export default {
   'settings.saveSuccess': 'Success!',
   'settings.authHeader': 'Authentication Header Name',
   'settings.authHeaderTip': 'The name of the HTTP header that is used for authentication.',
+  'settings.mcp.title': 'GreptimeDB MCP',
+  'settings.mcp.promptIntro': 'Help me configure the GreptimeDB demo MCP in my AI client using this mcpServers config:',
+  'settings.mcp.copyHint': 'Copy the whole prompt and paste it into your AI assistant.',
+  'settings.mcp.promptOutro':
+    'Setup notes:\n- This MCP points at the GreptimeDB **demo** environment (public playground), not your own cluster. Its key is deliberately `greptimedb-demo` — keep that name so it cannot collide with another GreptimeDB MCP you already have.\n- If it is not installed, run `pip install greptimedb-mcp-server` (Python 3.11+), then call `health_check` to verify the connection (the first call can take ~10s). If it fails to launch, point `command` at the absolute path of the binary — GUI clients do not inherit your shell PATH.\n- Queries use MySQL (port 4002); dashboard tools use HTTP — on HTTPS, `--http-port 443 --http-protocol https`.\n- SQL is MySQL dialect: backticked identifiers and `INTERVAL 15 MINUTE`; double quotes become strings.',
+  'settings.mcp.repo': 'MCP server on GitHub',
+  'settings.mcp.copy': 'Copy prompt',
+  'settings.mcp.copied': 'Copied',
 }

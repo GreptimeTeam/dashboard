@@ -2,6 +2,10 @@ import { useI18n } from 'vue-i18n'
 import { RouteRecordRaw } from 'vue-router'
 import useMenuTree from '@/components/menu/use-menu-tree'
 import useLocale from '@/hooks/locale'
+import { useProductTour } from '@/components/product-tour/use-product-tour'
+import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
+import useContactForm from '@/components/contact-form/use-contact-form'
+import useMcpConfig from '@/components/mcp-config/use-mcp-config'
 import { LOCALE_OPTIONS } from '@/locale'
 import type { CommandPaletteItem, CommandPaletteSection } from './types'
 
@@ -94,7 +98,37 @@ export function useCommandPalette() {
     return flattenRoutes(routes as RouteRecordRaw[], resolve, t)
   })
 
+  const productTour = useProductTour()
+  const contactForm = useContactForm()
+  const mcpConfig = useMcpConfig()
+  const queryGuideEnabled = isQueryGuideEnabled()
+
   const uiItems = computed<CommandPaletteItem[]>(() => [
+    ...(queryGuideEnabled
+      ? [
+          {
+            kind: 'ui' as const,
+            id: 'ui:product-guide',
+            title: t('tour.commandTitle'),
+            hint: t('tour.commandHint'),
+            navigate: () => productTour.openFromEntry(),
+          },
+          {
+            kind: 'ui' as const,
+            id: 'ui:mcp-config',
+            title: t('menu.mcp'),
+            hint: t('menu.mcpHint'),
+            navigate: () => mcpConfig.show(),
+          },
+          {
+            kind: 'ui' as const,
+            id: 'ui:contact',
+            title: t('menu.feedback'),
+            hint: t('contact.commandHint'),
+            navigate: () => contactForm.show(),
+          },
+        ]
+      : []),
     {
       kind: 'ui' as const,
       id: 'ui:settings',
