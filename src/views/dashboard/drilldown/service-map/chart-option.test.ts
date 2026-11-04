@@ -112,16 +112,82 @@ describe('buildServiceMapSeries', () => {
         durationCount: 0,
       }),
     ]
-    const { nodes: data, links } = buildServiceMapSeries(input(structuralNodes, structuralEdges))
+    // Instance above service, container further above — labels go to the outer side.
+    const chartInput = input(structuralNodes, structuralEdges)
+    chartInput.layout = new Map([
+      ['svc', { x: 100, y: 200, community: 0 }],
+      ['inst', { x: 100, y: 120, community: 0 }],
+      ['ctr', { x: 100, y: 60, community: 0 }],
+    ])
+    const { nodes: data, links } = buildServiceMapSeries(chartInput)
     const inst = data.find((item) => item.id === 'inst')
     const ctr = data.find((item) => item.id === 'ctr')
     expect(inst?.symbol).toBe('diamond')
     expect(ctr?.symbol).toBe('roundRect')
     expect(inst?.itemStyle).toMatchObject({ borderColor: theme.instance, borderType: 'dashed' })
     expect(ctr?.itemStyle).toMatchObject({ borderColor: theme.container, borderType: 'dashed' })
+    expect(inst?.label).toMatchObject({ position: 'top' })
+    expect(ctr?.label).toMatchObject({ position: 'top' })
     expect(theme.instance).not.toBe(theme.container)
     expect(links.every((item) => item.lineStyle.type === 'dashed')).toBe(true)
     expect(links[0].lineStyle.color).toBe('rgba(90, 74, 112, 0.55)')
+  })
+
+  it('puts satellite labels on the outer side for left/right placements', () => {
+    const structuralNodes = [
+      node('svc'),
+      node('inst', { type: 'service.instance' }),
+      node('ctr', { type: 'container' }),
+    ]
+    const structuralEdges = [
+      edge('inst', 'svc', { key: 'p', relType: 'part_of', requests: 0, errors: 0, unmatched: 0 }),
+      edge('inst', 'ctr', { key: 'r', relType: 'runs_on', requests: 0, errors: 0, unmatched: 0 }),
+    ]
+    const chartInput = input(structuralNodes, structuralEdges)
+    chartInput.layout = new Map([
+      ['svc', { x: 200, y: 100, community: 0 }],
+      ['inst', { x: 120, y: 100, community: 0 }],
+      ['ctr', { x: 60, y: 100, community: 0 }],
+    ])
+    const { nodes: data } = buildServiceMapSeries(chartInput)
+    expect(data.find((item) => item.id === 'inst')?.label).toMatchObject({ position: 'left' })
+    expect(data.find((item) => item.id === 'ctr')?.label).toMatchObject({ position: 'left' })
+  })
+
+  it('puts titles above call-graph nodes that sit above the centroid', () => {
+    const chartInput = input([node('top'), node('mid'), node('bottom')], [edge('top', 'mid'), edge('mid', 'bottom')])
+    chartInput.layout = new Map([
+      ['top', { x: 100, y: 40, community: 0 }],
+      ['mid', { x: 100, y: 120, community: 0 }],
+      ['bottom', { x: 100, y: 200, community: 0 }],
+    ])
+    const { nodes: data } = buildServiceMapSeries(chartInput)
+    expect(data.find((item) => item.id === 'top')?.label).toMatchObject({ position: 'top' })
+    expect(data.find((item) => item.id === 'mid')?.label).toMatchObject({ position: 'bottom' })
+    expect(data.find((item) => item.id === 'bottom')?.label).toMatchObject({ position: 'bottom' })
+  })
+
+  it('sizes call edges by traffic only, not by whether endpoints share a heap', () => {
+    const busy = edge('a', 'b', { requests: 200 })
+    const quiet = edge('a', 'c', { requests: 10 })
+    const chartInput = input([node('a'), node('b'), node('c')], [busy, quiet])
+    chartInput.layout = new Map([
+      ['a', { x: 0, y: 0, community: 0 }],
+      ['b', { x: 40, y: 0, community: 0 }],
+      ['c', { x: 400, y: 0, community: 1 }],
+    ])
+    const { links } = buildServiceMapSeries(chartInput)
+    const busyWidth = links.find((item) => item.id === busy.key)?.lineStyle.width
+    const quietWidth = links.find((item) => item.id === quiet.key)?.lineStyle.width
+    expect(busyWidth).toBeGreaterThan(quietWidth ?? 0)
+    chartInput.layout = new Map([
+      ['a', { x: 0, y: 0, community: 0 }],
+      ['b', { x: 40, y: 0, community: 1 }],
+      ['c', { x: 400, y: 0, community: 2 }],
+    ])
+    const again = buildServiceMapSeries(chartInput).links
+    expect(again.find((item) => item.id === busy.key)?.lineStyle.width).toBe(busyWidth)
+    expect(again.find((item) => item.id === quiet.key)?.lineStyle.width).toBe(quietWidth)
   })
 })
 
@@ -130,7 +196,12 @@ describe('buildServiceMapChartOption', () => {
     const chartInput = input([node('a'), node('b')], [edge('a', 'b')])
     const first = buildServiceMapChartOption(chartInput, { t, labelFor: (key) => key })
     const second = buildServiceMapChartOption(chartInput, { t, labelFor: (key) => key })
-    expect({ ...first, tooltip: undefined }).toEqual({ ...second, tooltip: undefined })
+    const stripLayout = (option: ReturnType<typeof buildServiceMapChartOption>) => ({
+      ...option,
+      tooltip: undefined,
+      series: option.series.map(({ labelLayout: _labelLayout, ...series }) => series),
+    })
+    expect(stripLayout(first)).toEqual(stripLayout(second))
     expect(first.series[0].data).toEqual(buildServiceMapSeries(chartInput, '').nodes)
     expect(first.series[0]).toMatchObject({
       type: 'graph',
@@ -140,6 +211,22 @@ describe('buildServiceMapChartOption', () => {
       nodeScaleRatio: 0,
       emphasis: { focus: 'none' },
     })
+  })
+
+  it('keeps topology satellite labels visible when call-graph titles hide on overlap', () => {
+    const chartInput = input(
+      [node('svc'), node('inst', { type: 'service.instance' }), node('peer')],
+      [edge('svc', 'peer'), edge('inst', 'svc', { key: 'p', relType: 'part_of', requests: 0, errors: 0, unmatched: 0 })]
+    )
+    const option = buildServiceMapChartOption(chartInput, { t, labelFor: (key) => key })
+    const layout = option.series[0].labelLayout as (params: { dataIndex?: number }) => {
+      hideOverlap: boolean
+    }
+    const data = option.series[0].data as Array<{ id: string }>
+    const instIndex = data.findIndex((item) => item.id === 'inst')
+    const svcIndex = data.findIndex((item) => item.id === 'svc')
+    expect(layout({ dataIndex: instIndex })).toEqual({ hideOverlap: false })
+    expect(layout({ dataIndex: svcIndex })).toEqual({ hideOverlap: true })
   })
 })
 

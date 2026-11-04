@@ -21,20 +21,32 @@ a-layout-content.layout-content
               )
                 a-option(v-for="name in tableOptions" :key="name" :value="name") {{ name }}
           .drilldown-toolbar__right
-            a-button.trace-logs-settings-trigger(type="outline" size="medium" @click="traceLogsSettingsVisible = true")
+            a-button.trace-logs-settings-trigger(
+              v-if="logsManualMappingEnabled"
+              type="outline"
+              size="medium"
+              @click="traceLogsSettingsVisible = true"
+            )
               template(#icon)
                 icon-settings
               | {{ t('drilldown.traces.logsSettingsShortTitle') }}
-            a-input.trace-id-input(
-              v-model="traceIdDraft"
-              allow-clear
-              size="medium"
-              :placeholder="t('drilldown.traces.traceIdSearchPlaceholder')"
-              @press-enter="submitTraceId"
-              @clear="clearTraceId"
-            )
-              template(#prefix)
-                span.trace-id-prefix TID
+            a-input-group.trace-id-search
+              a-input.trace-id-input(
+                v-model="traceIdDraft"
+                allow-clear
+                size="medium"
+                :placeholder="t('drilldown.traces.traceIdSearchPlaceholder')"
+                @press-enter="submitTraceId"
+                @clear="clearTraceId"
+              )
+                template(#prefix)
+                  span.trace-id-prefix TID
+              a-button(
+                type="primary"
+                size="medium"
+                :disabled="!traceIdDraft.trim()"
+                @click="submitTraceId"
+              ) {{ t('drilldown.traces.traceIdSearchAction') }}
 
         a-alert(
           v-if="!tracesTable"
@@ -55,7 +67,7 @@ a-layout-content.layout-content
                 :selected="selectedRedMetric === item.key"
                 :color-index="item.colorIndex"
                 :height="140"
-                @select="selectedRedMetric = item.key"
+                @select="ctx.actions.setRedMetric(item.key)"
               )
 
           a-tabs.traces-home-tabs.panel-tabs(v-model:active-key="activeTab" lazy-load)
@@ -78,7 +90,7 @@ a-layout-content.layout-content
                   @open-logs-settings="traceLogsSettingsVisible = true"
                   @filter-condition-add="onFilterConditionAdd"
                 )
-  TraceLogsSettingsModal(v-model:visible="traceLogsSettingsVisible" @saved="traceLogsMappingsVersion++")
+  TraceLogsSettingsModal(v-model:visible="traceLogsSettingsVisible" @saved="onTraceLogsSettingsSaved")
 </template>
 
 <script setup lang="ts">
@@ -122,10 +134,11 @@ a-layout-content.layout-content
   /** Pre-resolved trace → logs routing per service; filled after rows load, consumed at click. */
   const logsTargets = ref<Record<string, TraceLogsTarget>>({})
   const logsAmbiguous = ref<Record<string, string[]>>({})
-  const logsMultiTable = ref(false)
+  /** False when ≤1 associable logs table and no manual mappings — settings entry stays hidden. */
+  const logsManualMappingEnabled = ref(false)
   const tracesTable = ref(ctx.semantics.traces.table.value)
   const traceIdDraft = ref('')
-  const selectedRedMetric = ref<RedMetric>('rate')
+  const selectedRedMetric = ctx.ui.redMetric
   const traceLogsSettingsVisible = ref(false)
   const traceLogsMappingsVersion = ref(0)
   const activeTab = useDrilldownPanelTab({
@@ -164,7 +177,16 @@ a-layout-content.layout-content
     const resolution = await resolveTraceLogsForServices(ctx, [...windowServices, ...pageServices])
     logsTargets.value = resolution.targets
     logsAmbiguous.value = resolution.ambiguous
-    logsMultiTable.value = resolution.multiTable
+    logsManualMappingEnabled.value = resolution.manualMappingEnabled
+    // Settings has nothing to configure when routing is a no-op — close if still open.
+    if (!resolution.manualMappingEnabled) {
+      traceLogsSettingsVisible.value = false
+    }
+  }
+
+  const onTraceLogsSettingsSaved = async () => {
+    traceLogsMappingsVersion.value += 1
+    await resolveServiceTargets()
   }
 
   const tracesTabTitle = computed(() => {
@@ -334,9 +356,14 @@ a-layout-content.layout-content
     overflow: hidden;
   }
 
-  .trace-id-input {
-    width: 260px;
+  .trace-id-search {
+    width: 320px;
     max-width: 100%;
+  }
+
+  .trace-id-input {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .trace-id-prefix {

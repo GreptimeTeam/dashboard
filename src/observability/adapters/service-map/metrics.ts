@@ -1,8 +1,12 @@
 import { isStructuralRelType } from '../../traces/service-map-queries'
 import type { ServiceMapEdge, ServiceMapNodeCallStats, ServiceMapNodeHealth } from './types'
 
-/** Paired error ratio at or above this lights a node / edge as unhealthy. */
+/** Paired error ratio at or above this → critical (and edge red). */
 export const SERVICE_MAP_ERROR_RATE_THRESHOLD = 0.05
+/** Paired error ratio at or above this (below critical) → warning. */
+export const SERVICE_MAP_WARNING_ERROR_RATE = 0.01
+/** Below this many paired requests in the window, do not conclude healthy/unhealthy. */
+export const SERVICE_MAP_MIN_REQUESTS = 20
 
 export function escapeHtml(value: string): string {
   const entities: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
@@ -10,7 +14,10 @@ export function escapeHtml(value: string): string {
 }
 
 export function isCallEdge(edge: ServiceMapEdge): boolean {
-  return !isStructuralRelType(edge.relType || 'calls')
+  const rel = edge.relType || 'calls'
+  if (isStructuralRelType(rel)) return false
+  if (edge.declared || rel === 'depends_on' || rel === 'owns') return false
+  return rel === 'calls'
 }
 
 export function edgeTraffic(edge: ServiceMapEdge): number {
@@ -18,7 +25,7 @@ export function edgeTraffic(edge: ServiceMapEdge): number {
   return Math.max(0, edge.requests) + Math.max(0, edge.unmatched)
 }
 
-/** Aggregate per-node traffic / paired RED from `calls` edges. */
+/** Aggregate per-node traffic / paired RED from observed `calls` edges. */
 export function aggregateNodeCallStats(edges: ServiceMapEdge[]): Map<string, ServiceMapNodeCallStats> {
   const stats = new Map<string, ServiceMapNodeCallStats>()
   const touch = (key: string) => {
@@ -89,31 +96,48 @@ export function nodeFlowSummary(
 
 export function nodeUnmatchedCount(edges: ServiceMapEdge[], nodeKey: string): number {
   return edges.reduce((sum, edge) => {
+    if (!isCallEdge(edge)) return sum
     if (edge.source !== nodeKey && edge.target !== nodeKey) return sum
     return sum + edge.unmatched
   }, 0)
 }
 
 /**
- * Binary health with a noise floor: only ≥5% paired errors light up.
- * (No public multi-tier standard; Datadog node rings use monitors, not % buckets.)
+ * Evidence-based health from paired RED.
+ * Sample floor first — 1/2 errors must not look "critical".
  */
 export function healthFromErrorRate(requests: number, errors: number): ServiceMapNodeHealth {
-  if (requests <= 0) return 'neutral'
-  return errors / requests >= SERVICE_MAP_ERROR_RATE_THRESHOLD ? 'danger' : 'ok'
+  if (requests <= 0) return 'no-data'
+  if (requests < SERVICE_MAP_MIN_REQUESTS) return 'low-traffic'
+  const ratio = errors / requests
+  if (ratio >= SERVICE_MAP_ERROR_RATE_THRESHOLD) return 'critical'
+  if (ratio >= SERVICE_MAP_WARNING_ERROR_RATE) return 'warning'
+  return 'ok'
 }
 
 const HEALTH_RANK: Record<ServiceMapNodeHealth, number> = {
-  danger: 2,
-  ok: 1,
-  neutral: 0,
+  'critical': 4,
+  'warning': 3,
+  'low-traffic': 2,
+  'no-data': 1,
+  'ok': 0,
 }
 
 /** Worst of inbound vs outbound — blending directions hides a bad hop behind healthy traffic. */
 export function healthFromNodeCallStats(stats: ServiceMapNodeCallStats): ServiceMapNodeHealth {
   const inbound = healthFromErrorRate(stats.inRequests, stats.inErrors)
   const outbound = healthFromErrorRate(stats.outRequests, stats.outErrors)
+  // Prefer a conclusive inbound/outbound over pure no-data when the other side has samples.
+  if (inbound === 'no-data' && outbound !== 'no-data') return outbound
+  if (outbound === 'no-data' && inbound !== 'no-data') return inbound
   return HEALTH_RANK[inbound] >= HEALTH_RANK[outbound] ? inbound : outbound
+}
+
+/** Edge health: declared / non-call edges are never "ok green". */
+export function healthFromEdge(edge: ServiceMapEdge): ServiceMapNodeHealth {
+  if (!isCallEdge(edge)) return 'no-data'
+  if (!edge.hasTelemetry && edge.requests <= 0 && edge.unmatched <= 0) return 'no-data'
+  return healthFromErrorRate(edge.requests, edge.errors)
 }
 
 export function pairedErrorRatio(requests: number, errors: number): number {
@@ -154,6 +178,8 @@ export interface ServiceMapNodeSymbolOptions {
   mainStat: string
   secondaryStat: string
   emphasized?: boolean
+  /** When low-traffic / no-data, rim uses trackColor instead of green. */
+  health?: ServiceMapNodeHealth
 }
 
 /** Short rate for inside-node glyphs — keep ≤~4–5 glyphs so small disks still fit. */
@@ -194,6 +220,8 @@ export function serviceMapArcDashLengths(
 /** Fixed on-disk type: sized for common compact rates (≤5 glyphs) on ~48px nodes. */
 const NODE_STAT_FONT_MAIN = 11
 const NODE_STAT_FONT_SEC = 9
+/** Extra vertical gap between req/s and error% (dominant-baseline: middle). */
+const NODE_STAT_V_GAP = 4
 
 /** SVG data-URL symbol: fill disk + success/error arc on the rim (Grafana-like, minimal gutter). */
 export function buildServiceMapNodeSymbolDataUrl(options: ServiceMapNodeSymbolOptions): string {
@@ -205,15 +233,20 @@ export function buildServiceMapNodeSymbolDataUrl(options: ServiceMapNodeSymbolOp
   const ringR = size * 0.5 - stroke * 0.5
   const diskR = Math.max(stroke, ringR - stroke * 0.5)
   const circumference = 2 * Math.PI * ringR
-  const { okLen, errorLen } = serviceMapArcDashLengths(options.errorRatio, circumference)
-  const mainY = cy - NODE_STAT_FONT_SEC * 0.2
-  const secY = cy + NODE_STAT_FONT_MAIN * 0.62
+  const inconclusive = options.health === 'low-traffic' || options.health === 'no-data'
+  const okStroke = inconclusive ? options.trackColor : options.okColor
+  let dangerStroke = options.dangerColor
+  if (inconclusive) dangerStroke = options.trackColor
+  const ratio = inconclusive ? 0 : options.errorRatio
+  const { okLen, errorLen } = serviceMapArcDashLengths(ratio, circumference)
+  const mainY = cy - NODE_STAT_FONT_MAIN * 0.42 - NODE_STAT_V_GAP / 2
+  const secY = cy + NODE_STAT_FONT_SEC * 0.55 + NODE_STAT_V_GAP / 2
   const esc = escapeHtml
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
   <circle cx="${cx}" cy="${cy}" r="${diskR}" fill="${esc(options.fill)}"/>
-  <circle cx="${cx}" cy="${cy}" r="${ringR}" fill="none" stroke="${esc(options.okColor)}" stroke-width="${stroke}"
+  <circle cx="${cx}" cy="${cy}" r="${ringR}" fill="none" stroke="${esc(okStroke)}" stroke-width="${stroke}"
     stroke-dasharray="${okLen} ${errorLen}" stroke-dashoffset="${circumference * 0.25}" stroke-linecap="butt"/>
-  <circle cx="${cx}" cy="${cy}" r="${ringR}" fill="none" stroke="${esc(options.dangerColor)}" stroke-width="${stroke}"
+  <circle cx="${cx}" cy="${cy}" r="${ringR}" fill="none" stroke="${esc(dangerStroke)}" stroke-width="${stroke}"
     stroke-dasharray="${errorLen} ${okLen}" stroke-dashoffset="${circumference * 0.25 - okLen}" stroke-linecap="butt"/>
   <text x="${cx}" y="${mainY}" text-anchor="middle" dominant-baseline="middle"
     fill="${esc(
