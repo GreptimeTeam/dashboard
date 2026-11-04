@@ -32,6 +32,9 @@ export function attributeChipKey(container: string, key: string): string {
   return `${container}.${key}`
 }
 
+/** Marker for keys only ever seen with object/array values, kept aside during collection. */
+const COMPOUND_PREFIX = '\u0000compound:'
+
 function isAttributeObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -47,8 +50,9 @@ export function discoverSampledAttributes(
   containers: readonly string[],
   rows: ReadonlyArray<Record<string, unknown>>
 ): TraceBreakdownAttribute[] {
-  const keysByContainer = new Map<string, Set<string>>()
-  containers.forEach((container) => keysByContainer.set(container, new Set<string>()))
+  // Keys whose sampled values are always objects/arrays cannot be grouped as text, so they
+  // are tracked and dropped at the end (e.g. `http.request.header`).
+  const scalars = new Map<string, Set<string>>()
 
   rows.forEach((row) => {
     containers.forEach((container) => {
@@ -56,10 +60,20 @@ export function discoverSampledAttributes(
       if (!isAttributeObject(value)) {
         return
       }
-      const keys = keysByContainer.get(container)
-      Object.keys(value).forEach((key) => {
-        if (key) {
-          keys?.add(key)
+      const keys = scalars.get(container) ?? new Set<string>()
+      scalars.set(container, keys)
+      Object.entries(value).forEach(([key, attributeValue]) => {
+        if (!key) {
+          return
+        }
+        const grouped = typeof attributeValue !== 'object' || attributeValue === null
+        if (grouped) {
+          keys.add(key)
+        } else {
+          // Keep the entry unless a scalar is seen later; `has` marks it as sampled.
+          if (!keys.has(key)) {
+            keys.add(`${COMPOUND_PREFIX}${key}`)
+          }
         }
       })
     })
@@ -67,8 +81,10 @@ export function discoverSampledAttributes(
 
   const result: TraceBreakdownAttribute[] = []
   containers.forEach((container) => {
-    const keys = [...(keysByContainer.get(container) ?? [])].sort((left, right) => left.localeCompare(right))
-    keys.forEach((key) => {
+    const entries = [...(scalars.get(container) ?? [])]
+      .filter((entry) => !entry.startsWith(COMPOUND_PREFIX))
+      .sort((left, right) => left.localeCompare(right))
+    entries.forEach((key) => {
       result.push({
         column: attributeChipKey(container, key),
         label: attributeLabelOf(container, key),

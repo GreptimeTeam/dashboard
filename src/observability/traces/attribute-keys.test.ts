@@ -49,6 +49,25 @@ describe('trace attribute keys (JSON2 models)', () => {
     })
   })
 
+  it('skips keys whose sampled values are always objects or arrays', () => {
+    const attrs = discoverSampledAttributes(
+      ['span_attributes'],
+      [
+        { span_attributes: { 'http.request.header': { accept: 'json' }, 'flags': ['a'], 'http.method': 'GET' } },
+        { span_attributes: { 'http.request.header': { accept: 'html' }, 'http.method': 'POST' } },
+      ]
+    )
+    expect(attrs.map((attr) => attr.column)).toEqual(['span_attributes.http.method'])
+  })
+
+  it('keeps a key that shows a scalar value in any sampled row', () => {
+    const attrs = discoverSampledAttributes(
+      ['span_attributes'],
+      [{ span_attributes: { payload: { nested: true } } }, { span_attributes: { payload: 'text' } }]
+    )
+    expect(attrs.map((attr) => attr.column)).toEqual(['span_attributes.payload'])
+  })
+
   it('ignores null containers, arrays and scalar values', () => {
     const attrs = discoverSampledAttributes(
       ['span_attributes'],

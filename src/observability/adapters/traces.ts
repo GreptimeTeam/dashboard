@@ -341,7 +341,7 @@ function traceGroupBySql(ctx: DrilldownContext, column: string): string | undefi
 }
 
 /** Bounded row sample used to learn JSON2 attribute keys (v2 tables only). */
-const TRACE_ATTRIBUTE_SAMPLE_LIMIT = 200
+const TRACE_ATTRIBUTE_SAMPLE_LIMIT = 1000
 const TRACE_ATTRIBUTE_CACHE_LIMIT = 32
 const traceAttributeCache = new Map<string, TraceBreakdownAttribute[]>()
 
@@ -350,7 +350,7 @@ const traceAttributeCache = new Map<string, TraceBreakdownAttribute[]>()
  *
  * v1 tables have no JSON2 containers, so this returns immediately and discovery keeps
  * reading physical columns. v2 tables have no per-key columns, so the keys are sampled
- * from one bounded query (cached per database + table + time window).
+ * from the newest rows of the table (cached per database + table).
  */
 export async function fetchTraceAttributeKeys(ctx: DrilldownContext): Promise<TraceBreakdownAttribute[]> {
   const tableName = ctx.semantics.traces.table.value
@@ -362,24 +362,18 @@ export async function fetchTraceAttributeKeys(ctx: DrilldownContext): Promise<Tr
     return []
   }
 
-  const unixRange = ctx.query.unixTimeRange()
-  const windowKey = unixRange.length === 2 ? `${unixRange[0]}-${unixRange[1]}` : 'all'
-  const cacheKey = `${boundSignalDatabase(ctx, 'traces')}\0${tableName}\0${windowKey}`
+  const cacheKey = `${boundSignalDatabase(ctx, 'traces')}\0${tableName}`
   const cached = traceAttributeCache.get(cacheKey)
   if (cached) {
     return cached
   }
 
-  const whereParts: string[] = []
-  if (unixRange.length === 2) {
-    const tsCol = timeColumn(ctx)
-    whereParts.push(`${quoteIdent(tsCol)} >= FROM_UNIXTIME(${unixRange[0]})`)
-    whereParts.push(`${quoteIdent(tsCol)} <= FROM_UNIXTIME(${unixRange[1]})`)
-  }
-  const where = whereParts.length ? `WHERE ${whereParts.join(' AND ')}` : ''
+  // Attribute keys describe the table, so they must not depend on the selected window: a
+  // narrow or empty range would otherwise empty the suggest list. Newest-first keeps the
+  // sample cheap and stable (time index, partition-pruned).
   const sql = `SELECT ${containers.map((container) => quoteIdent(container)).join(', ')}
 FROM ${quoteIdent(tableName)}
-${where}
+ORDER BY ${quoteIdent(timeColumn(ctx))} DESC
 LIMIT ${TRACE_ATTRIBUTE_SAMPLE_LIMIT}`
 
   try {
