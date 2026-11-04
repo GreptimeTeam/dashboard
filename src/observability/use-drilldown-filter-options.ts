@@ -9,6 +9,7 @@ import {
   fetchSqlLabelKeys,
 } from './adapters/filter-options'
 import type { DrilldownContext } from './context'
+import { canSuggestAttributeValues } from './traces/attribute-keys'
 import { loadDrilldownSettings } from './drilldown-settings'
 import { filterAppliesToSignal } from './filters'
 import { parseJsonFieldChipKey } from './logs/json-field-keys'
@@ -89,6 +90,17 @@ export default function useDrilldownFilterOptions(
     const trimmed = fieldKey.trim()
     if (!trimmed) {
       return false
+    }
+    // Sampled JSON2 attribute keys only suggest values when they are label-like: numeric /
+    // boolean keys are thresholds, and high-cardinality keys make DISTINCT useless while
+    // still scanning the window. Intrinsic columns are unaffected.
+    if (ctx.connection.signal.value === 'traces' && parseJsonFieldChipKey(trimmed)) {
+      // Same database precedence as `boundSignalDatabase`, resolved inline to keep the
+      // module free of the Pinia store import (this file is unit-tested without an app).
+      const database = ctx.semantics.traces.database.value || ctx.connection.databaseFor('traces')
+      if (!canSuggestAttributeValues(database, ctx.semantics.traces.table.value, trimmed)) {
+        return false
+      }
     }
     if (suggestMode === 'fields') {
       return canSuggestFilterValues(trimmed, fieldMapForActiveSql(), labelKeys.value, containsKeys.value)

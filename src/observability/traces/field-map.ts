@@ -27,6 +27,8 @@ export interface TraceBreakdownAttribute {
   sampled?: boolean
   /** Type inferred from sampled values (`BIGINT` / `DOUBLE` / `BOOLEAN` / `STRING`). */
   dataType?: string
+  /** Sampled distinct-value cardinality; high-cardinality keys get no value suggestions. */
+  cardinality?: 'low' | 'high'
 }
 
 export interface SchemaColumnLike {
