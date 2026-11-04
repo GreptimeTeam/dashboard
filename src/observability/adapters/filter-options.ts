@@ -106,7 +106,10 @@ export async function fetchSqlLabelKeys(
       // Traces expose every business field as a top-bar filter key (intrinsic + flattened
       // resource/span attributes + duration), not the v1 label subset. JSON2 models have
       // no attribute columns, so their keys are sampled instead (empty for v1 tables).
-      const sampled = await fetchTraceAttributeKeys(ctx)
+      const sampled = await fetchTraceAttributeKeys(
+        ctx,
+        (columns as Array<{ name: string }>).map((column) => column.name)
+      )
       const keys = discoverTraceFilterKeys(columns, { sampled })
       return filterOptions(filterLabelKeys(keys), search)
     }

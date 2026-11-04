@@ -352,12 +352,18 @@ const traceAttributeCache = new Map<string, TraceBreakdownAttribute[]>()
  * reading physical columns. v2 tables have no per-key columns, so the keys are sampled
  * from the newest rows of the table (cached per database + table).
  */
-export async function fetchTraceAttributeKeys(ctx: DrilldownContext): Promise<TraceBreakdownAttribute[]> {
+export async function fetchTraceAttributeKeys(
+  ctx: DrilldownContext,
+  knownColumns?: readonly string[]
+): Promise<TraceBreakdownAttribute[]> {
   const tableName = ctx.semantics.traces.table.value
   if (!tableName) {
     return []
   }
-  const containers = attributeContainersOf(ctx.semantics.traces.columns.value ?? [])
+  // Callers that just loaded the table schema pass it in: the bind-populated semantics
+  // columns can lag behind the first suggest refresh, which would silently skip sampling.
+  const columns = knownColumns?.length ? knownColumns : ctx.semantics.traces.columns.value ?? []
+  const containers = attributeContainersOf(columns)
   if (!containers.length) {
     return []
   }
@@ -390,6 +396,9 @@ LIMIT ${TRACE_ATTRIBUTE_SAMPLE_LIMIT}`
       return entry
     })
     const attributes = discoverSampledAttributes(containers, rows)
+    if (!attributes.length) {
+      console.warn('Sampled trace attribute keys is empty', { tableName, containers, rows: rows.length })
+    }
     // Chip keys have no schema column, so publish the sampled types for the operator menu.
     rememberAttributeTypes(boundSignalDatabase(ctx, 'traces'), tableName, attributes)
     if (traceAttributeCache.size > TRACE_ATTRIBUTE_CACHE_LIMIT) {

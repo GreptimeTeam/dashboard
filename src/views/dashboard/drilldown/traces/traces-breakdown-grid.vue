@@ -97,7 +97,10 @@
       }
       // v2 keeps attributes in JSON2 containers: sample their keys so the dropdown still
       // offers attribute dimensions (v1 reads them straight from the column list).
-      const sampled = await fetchTraceAttributeKeys(ctx)
+      const sampled = await fetchTraceAttributeKeys(
+        ctx,
+        (columns || []).map((column) => column.name)
+      )
       allAttrs.value = discoverTraceBreakdownAttributes(columns || [], sampled)
       if (!allAttrs.value.some((attr) => attr.column === groupByColumn.value)) {
         groupByColumn.value = preferDefaultColumn(allAttrs.value)
