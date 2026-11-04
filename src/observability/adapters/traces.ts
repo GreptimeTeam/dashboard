@@ -7,7 +7,7 @@ import { filtersToSqlWhere } from '../filters'
 import { boundSignalDatabase } from '../signal-database'
 import { escapeSqlString, quoteIdent } from '../logs/query-state'
 import { buildDefaultTracesFieldMap, type TraceBreakdownAttribute } from '../traces/field-map'
-import { attributeContainersOf, discoverSampledAttributes } from '../traces/attribute-keys'
+import { attributeContainersOf, discoverSampledAttributes, rememberAttributeTypes } from '../traces/attribute-keys'
 import { isJsonAttributeContainerName, parseJsonFieldChipKey, sqlJsonGetStringExpr } from '../logs/json-field-keys'
 import {
   bucketToUnixSeconds,
@@ -390,6 +390,8 @@ LIMIT ${TRACE_ATTRIBUTE_SAMPLE_LIMIT}`
       return entry
     })
     const attributes = discoverSampledAttributes(containers, rows)
+    // Chip keys have no schema column, so publish the sampled types for the operator menu.
+    rememberAttributeTypes(boundSignalDatabase(ctx, 'traces'), tableName, attributes)
     if (traceAttributeCache.size > TRACE_ATTRIBUTE_CACHE_LIMIT) {
       traceAttributeCache.clear()
     }

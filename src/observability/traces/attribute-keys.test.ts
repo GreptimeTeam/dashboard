@@ -4,7 +4,9 @@ import {
   attributeContainersOf,
   attributeLabelOf,
   attributeScopeOf,
+  attributeTypeOf,
   discoverSampledAttributes,
+  rememberAttributeTypes,
 } from './attribute-keys'
 
 describe('trace attribute keys (JSON2 models)', () => {
@@ -66,6 +68,45 @@ describe('trace attribute keys (JSON2 models)', () => {
       [{ span_attributes: { payload: { nested: true } } }, { span_attributes: { payload: 'text' } }]
     )
     expect(attrs.map((attr) => attr.column)).toEqual(['span_attributes.payload'])
+  })
+
+  it('infers attribute types so numeric keys can offer comparison operators', () => {
+    const attrs = discoverSampledAttributes(
+      ['span_attributes'],
+      [
+        { span_attributes: { rows: 1, ratio: 0.5, cached: true, name: 'a', empty: null } },
+        { span_attributes: { rows: 2, ratio: 1.25, cached: false, name: 'b', empty: null } },
+        { span_attributes: { mixed: 1 } },
+        { span_attributes: { mixed: 'one' } },
+        // Wire type is inconsistent between instrumentations: "200" and 200 mean the same.
+        { span_attributes: { textStatus: '200', textFlag: 'true' } },
+        { span_attributes: { textStatus: 503, textFlag: false } },
+      ]
+    )
+    const typeOf = (key: string) => attrs.find((attr) => attr.column === `span_attributes.${key}`)?.dataType
+    expect(typeOf('rows')).toBe('BIGINT')
+    expect(typeOf('ratio')).toBe('DOUBLE')
+    expect(typeOf('cached')).toBe('BOOLEAN')
+    expect(typeOf('name')).toBe('STRING')
+    // Mixed scalars are not safe to cast.
+    expect(typeOf('mixed')).toBe('STRING')
+    // Numeric/boolean text casts the same as the native JSON type.
+    expect(typeOf('textStatus')).toBe('BIGINT')
+    expect(typeOf('textFlag')).toBe('BOOLEAN')
+    // Nothing but nulls: no type to offer.
+    expect(typeOf('empty')).toBeUndefined()
+  })
+
+  it('remembers sampled types per table for the operator menu', () => {
+    rememberAttributeTypes('public', 'traces_a', [
+      { column: 'span_attributes.response_size', label: 'span.response_size', scope: 'span', dataType: 'BIGINT' },
+      { column: 'span_attributes.http.method', label: 'span.http.method', scope: 'span', dataType: 'STRING' },
+    ])
+    expect(attributeTypeOf('public', 'traces_a', 'span_attributes.response_size')).toBe('BIGINT')
+    expect(attributeTypeOf('public', 'traces_a', 'span_attributes.http.method')).toBe('STRING')
+    // Other tables and other databases must not see it.
+    expect(attributeTypeOf('public', 'traces_b', 'span_attributes.response_size')).toBeUndefined()
+    expect(attributeTypeOf('other', 'traces_a', 'span_attributes.response_size')).toBeUndefined()
   })
 
   it('ignores null containers, arrays and scalar values', () => {

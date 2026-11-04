@@ -25,6 +25,8 @@ export interface TraceBreakdownAttribute {
   scope: TraceAttrScope
   /** True when the key was sampled from a JSON2 attribute container, not read from schema. */
   sampled?: boolean
+  /** Type inferred from sampled values (`BIGINT` / `DOUBLE` / `BOOLEAN` / `STRING`). */
+  dataType?: string
 }
 
 export interface SchemaColumnLike {

@@ -58,6 +58,8 @@
   import { useDebounceFn } from '@vueuse/core'
   import { useI18n } from 'vue-i18n'
   import { useDrilldownContext } from '@/observability/context'
+  import { attributeTypeOf } from '@/observability/traces/attribute-keys'
+  import { boundSignalDatabase } from '@/observability/signal-database'
   import {
     DRILLDOWN_FILTER_OP_OPTIONS,
     filterOpsForType,
@@ -149,7 +151,18 @@
   /** Column data type of the key being edited — drives which operators are offered. */
   const columnTypesForSignal = (signalName: typeof signal.value) =>
     signalName === 'logs' || signalName === 'traces' ? ctx.semantics[signalName].columnTypes.value : undefined
-  const activeColumnType = computed(() => columnTypesForSignal(signal.value)?.[activeFieldKey.value.trim()])
+  /** Schema type first; JSON2 attribute chips fall back to the type sampled from values. */
+  const resolveColumnType = (key: string): string | undefined => {
+    const schemaType = columnTypesForSignal(signal.value)?.[key]
+    if (schemaType) {
+      return schemaType
+    }
+    if (signal.value !== 'traces') {
+      return undefined
+    }
+    return attributeTypeOf(boundSignalDatabase(ctx, 'traces'), ctx.semantics.traces.table.value, key)
+  }
+  const activeColumnType = computed(() => resolveColumnType(activeFieldKey.value.trim()))
 
   // Comparison operators are numeric-only, booleans get =/!=; strings keep =/!=/=~/!~.
   const operatorOptions = computed<SuggestOption[]>(() => {
@@ -386,8 +399,9 @@
       return
     }
     // Numeric/boolean columns only accept renderable values; an operator that does not apply
-    // to the column type (e.g. carried in a URL) falls back to `=`.
-    const dataType = columnTypesForSignal(signal.value)?.[key]
+    // to the column type (e.g. carried in a URL) falls back to `=`. Sampled JSON2 attribute
+    // keys have no schema column, so use the resolved type (schema, then sampled).
+    const dataType = resolveColumnType(key)
     if (!isValidFilterValue(dataType, value)) {
       return
     }
