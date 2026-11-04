@@ -4,53 +4,58 @@ a-modal.trace-logs-settings(
   :visible="visible"
   :title="t('drilldown.traces.logsSettingsTitle')"
   :width="720"
-  :ok-text="t('drilldown.logs.settingsSave')"
+  :ok-text="hydrated && !manualMappingEnabled ? t('drilldown.logs.settingsCancel') : t('drilldown.logs.settingsSave')"
   :cancel-text="t('drilldown.logs.settingsCancel')"
-  @ok="save"
+  :hide-cancel="hydrated && !manualMappingEnabled"
+  @ok="onOk"
   @cancel="close"
   @update:visible="emit('update:visible', $event)"
 )
   p.trace-logs-settings__intro
     | {{ t('drilldown.traces.logsSettingsDescription') }}
 
-  p.trace-logs-settings__fallback(v-if="fallbackTable")
-    | {{ t('drilldown.traces.logsMappingFallbackHint', { table: fallbackTable }) }}
+  p.trace-logs-settings__empty(v-if="hydrated && !manualMappingEnabled")
+    | {{ t('drilldown.traces.logsSettingsUnnecessary') }}
 
-  a-form.trace-logs-settings__form(
-    v-if="mappings.length"
-    layout="horizontal"
-    :auto-label-width="true"
-    @submit.prevent
-  )
-    .trace-logs-settings__row(v-for="(mapping, index) in mappings" :key="index")
-      .trace-logs-settings__service-line
-        span.trace-logs-settings__service-label Service
-        span.trace-logs-settings__service {{ mapping.service }}
+  template(v-else)
+    p.trace-logs-settings__fallback(v-if="fallbackTable")
+      | {{ t('drilldown.traces.logsMappingFallbackHint', { table: fallbackTable }) }}
 
-      .trace-logs-settings__pair
-        a-form-item(:label="t('drilldown.logs.databaseLabel')")
-          a-select.trace-logs-settings__input(
-            v-model="mapping.database"
-            allow-search
-            :options="databaseOptions"
-            :placeholder="t('dashboard.database')"
-            @popup-visible-change="onDatabasePopup"
-            @change="onDatabaseChange(index)"
-          )
+    a-form.trace-logs-settings__form(
+      v-if="mappings.length"
+      layout="horizontal"
+      :auto-label-width="true"
+      @submit.prevent
+    )
+      .trace-logs-settings__row(v-for="(mapping, index) in mappings" :key="index")
+        .trace-logs-settings__service-line
+          span.trace-logs-settings__service-label Service
+          span.trace-logs-settings__service {{ mapping.service }}
 
-        a-form-item(:label="t('drilldown.logs.tableLabel')")
-          a-select.trace-logs-settings__input(
-            v-model="mapping.table"
-            allow-search
-            allow-clear
-            :loading="loadingTables[index]"
-            :placeholder="t('drilldown.logs.tablePlaceholder')"
-            @change="onTableChange(index)"
-          )
-            a-option(v-for="table in tableOptions[index]" :key="table" :value="table") {{ table }}
+        .trace-logs-settings__pair
+          a-form-item(:label="t('drilldown.logs.databaseLabel')")
+            a-select.trace-logs-settings__input(
+              v-model="mapping.database"
+              allow-search
+              :options="databaseOptions"
+              :placeholder="t('dashboard.database')"
+              @popup-visible-change="onDatabasePopup"
+              @change="onDatabaseChange(index)"
+            )
 
-      a-alert.trace-logs-settings__warning(v-if="nonModelTables[index]" type="warning" show-icon)
-        | {{ t('drilldown.traces.nonModelTableHint') }}
+          a-form-item(:label="t('drilldown.logs.tableLabel')")
+            a-select.trace-logs-settings__input(
+              v-model="mapping.table"
+              allow-search
+              allow-clear
+              :loading="loadingTables[index]"
+              :placeholder="t('drilldown.logs.tablePlaceholder')"
+              @change="onTableChange(index)"
+            )
+              a-option(v-for="table in tableOptions[index]" :key="table" :value="table") {{ table }}
+
+        a-alert.trace-logs-settings__warning(v-if="nonModelTables[index]" type="warning" show-icon)
+          | {{ t('drilldown.traces.nonModelTableHint') }}
 </template>
 
 <script setup lang="ts">
@@ -65,11 +70,7 @@ a-modal.trace-logs-settings(
     type TraceLogsMapping,
   } from '@/observability/drilldown-settings'
   import { getTableSemantics, listSignalTables } from '@/observability/semantics'
-  import {
-    qualifyTraceLogsTable,
-    resolveTraceLogsForServices,
-    type TraceLogsTarget,
-  } from '@/observability/traces/logs-association'
+  import { qualifyTraceLogsTable, resolveTraceLogsForServices } from '@/observability/traces/logs-association'
   import { fetchTraceServices } from '@/observability/adapters/traces'
   import useTableSchemaStore from '@/store/modules/table-schema'
 
@@ -96,6 +97,7 @@ a-modal.trace-logs-settings(
   const nonModelTables = ref<Record<number, boolean>>({})
   const manualMappingEnabled = ref(false)
   const hydrating = ref(false)
+  const hydrated = ref(false)
 
   const fallbackTable = computed(() => ctx.semantics.logs.table.value)
 
@@ -186,6 +188,7 @@ a-modal.trace-logs-settings(
    * all session-cached, so the cost is negligible — and no props race can hide rows.
    */
   async function hydrate() {
+    hydrated.value = false
     const saved = loadDrilldownSettings(ctx.connection.tracesDatabase.value).traces.traceLogsMappings ?? []
     hydratedSnapshot.value = saved.map((mapping) => ({ ...mapping }))
     tableOptions.value = {}
@@ -199,6 +202,7 @@ a-modal.trace-logs-settings(
     if (!resolution.manualMappingEnabled) {
       // 仅一张可关联表且无手动映射：无路由价值，关联按 Logs 页绑定表 / fields 解析走。
       mappings.value = []
+      hydrated.value = true
       return
     }
     // 多表（含未声明但可手动映射的表）或已有手动映射：行 = service 全集；
@@ -220,6 +224,7 @@ a-modal.trace-logs-settings(
     mappings.value.forEach((_, index) => {
       loadTableOptions(index)
     })
+    hydrated.value = true
   }
 
   function onDatabaseChange(index: number) {
@@ -277,6 +282,14 @@ a-modal.trace-logs-settings(
     )
     emit('saved', next)
     emit('update:visible', false)
+  }
+
+  function onOk() {
+    if (!manualMappingEnabled.value) {
+      close()
+      return
+    }
+    save()
   }
 
   // Self-sufficient: re-run the (cached) routing on every open — no props race.
@@ -354,7 +367,8 @@ a-modal.trace-logs-settings(
     margin-top: var(--gpt-gap-md);
   }
 
-  .trace-logs-settings__fallback {
+  .trace-logs-settings__fallback,
+  .trace-logs-settings__empty {
     margin: 0 0 var(--gpt-gap-md);
     color: var(--gpt-text-secondary);
   }

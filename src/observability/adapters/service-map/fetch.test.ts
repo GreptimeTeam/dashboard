@@ -12,6 +12,8 @@ import {
   foldVirtualPeersIntoServices,
   isMissingSemanticGraph,
   limitServiceMapGraph,
+  limitTopologyNodes,
+  nodesFromEntities,
   serviceMapSqlErrorMessage,
 } from './fetch'
 import type { ServiceMapEdge, ServiceMapNode } from './types'
@@ -25,6 +27,7 @@ function service(id: string, options: { virtual?: boolean; connectionType?: stri
     id,
     label: id,
     serviceValue: id,
+    scopes: [],
     sourceTables: [],
     instanceCount: 0,
     groupAttributes: {},
@@ -38,6 +41,9 @@ function edge(source: ServiceMapNode, target: ServiceMapNode, values: Partial<Se
     key: `${source.key}\0${target.key}`,
     source: source.key,
     target: target.key,
+    provenance: 'trace',
+    declared: false,
+    hasTelemetry: true,
     requests: 0,
     errors: 0,
     unmatched: 0,
@@ -72,6 +78,51 @@ const ctx = {
   query: { unixTimeRange: () => [1000, 4600] },
   connection: { databaseFor: () => 'public' },
 } as never
+
+describe('nodesFromEntities', () => {
+  it('merges multi-scope rows into one node with scopes[]', () => {
+    const nodes = nodesFromEntities([
+      {
+        entity_type: 'service',
+        entity_id: 'api',
+        entity_id_attrs: '{"service.name":"api"}',
+        scope: 'prod',
+        descriptive: null,
+        source_tables: '["traces"]',
+      },
+      {
+        entity_type: 'service',
+        entity_id: 'api',
+        entity_id_attrs: '{"service.name":"api"}',
+        scope: 'staging',
+        descriptive: null,
+        source_tables: '["traces"]',
+      },
+    ])
+    const api = nodes.get('service\0api')
+    expect(api?.scopes.sort()).toEqual(['prod', 'staging'])
+    expect(api?.scope).toBe('prod')
+  })
+})
+
+describe('limitTopologyNodes', () => {
+  it('keeps call-graph nodes and caps satellites under the node limit', () => {
+    const call = service('frontend')
+    const satellites = Array.from({ length: 5 }, (_, index) => {
+      const id = `i-${index}`
+      return {
+        ...service(id),
+        key: `service.instance\0${id}`,
+        type: 'service.instance',
+        id,
+      }
+    })
+    const capped = limitTopologyNodes([call], satellites, [], [], 3)
+    expect(capped.nodes).toHaveLength(3)
+    expect(capped.nodes[0].key).toBe(call.key)
+    expect(capped.truncated).toBe(true)
+  })
+})
 
 describe('capInstanceSatellites', () => {
   it('keeps at most N part_of instances per service and drops orphan runs_on', () => {
@@ -181,7 +232,7 @@ describe('fetchServiceMap', () => {
     runSQL.mockReset()
   })
 
-  it('renders entities first, then uses SQL-aggregated RED and folds same-name peers', async () => {
+  it('uses SQL-aggregated RED and folds same-name peers after both queries settle', async () => {
     runSQL.mockImplementation(async (sql: string) => {
       if (sql.includes('semantic_relationships')) {
         // One row per endpoint pair; RED already confidence-gated in SQL.
@@ -197,14 +248,10 @@ describe('fetchServiceMap', () => {
         ['service', 'checkout', '{"service.name":"checkout"}', 'prod', null, '["traces"]'],
       ]) as never
     })
-    const partial = vi.fn()
 
-    const result = await fetchServiceMap(ctx, partial)
+    const result = await fetchServiceMap(ctx)
 
     expect(runSQL).toHaveBeenCalledTimes(2)
-    expect(partial).toHaveBeenCalledTimes(1)
-    expect(partial.mock.calls[0][0].nodes.map((node: ServiceMapNode) => node.id)).toEqual(['frontend', 'checkout'])
-    expect(partial.mock.calls[0][0].edges).toEqual([])
 
     expect(result.truncated).toBe(false)
     expect(result.nodes.map((node) => node.key).sort()).toEqual(
@@ -332,12 +379,12 @@ describe('fetchServiceMap', () => {
       throw new Error(`unexpected sql: ${sql}`)
     })
 
-    const withoutTopology = await fetchServiceMap(ctx, undefined, { showTopology: false })
+    const withoutTopology = await fetchServiceMap(ctx, { showTopology: false })
     expect(withoutTopology.nodes.every((node) => node.type === 'service')).toBe(true)
     expect(runSQL).toHaveBeenCalledTimes(2)
 
     runSQL.mockClear()
-    const result = await fetchServiceMap(ctx, undefined, { showTopology: true })
+    const result = await fetchServiceMap(ctx, { showTopology: true })
     expect(runSQL).toHaveBeenCalledTimes(4)
     expect(result.nodes.some((node) => node.type === 'service.instance')).toBe(true)
     expect(result.nodes.filter((node) => node.type === 'service.instance')).toHaveLength(3)

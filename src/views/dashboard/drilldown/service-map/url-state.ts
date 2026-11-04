@@ -4,6 +4,7 @@ import type { ServiceMapFilters } from '@/observability/adapters/service-map/typ
 const LEGACY_SCOPE_FILTER_KEYS = ['scope', 'env', 'environment', 'deployment.environment']
 
 export interface ServiceMapUrlQuery {
+  /** @deprecated Cleared on write; click-to-inspect replaced the service filter. */
   serviceMapSearch: string | undefined
   serviceMapScope: string | undefined
   serviceMapFilters: string | undefined
@@ -73,24 +74,21 @@ export function promoteLegacyScopeFilters(
 }
 
 export function parseServiceMapUrlQuery(query: { [Key in keyof ServiceMapUrlQuery]?: unknown }): {
-  services: string[]
   scopes: string[]
   filters: ServiceMapFilters
 } {
-  const promoted = promoteLegacyScopeFilters(
+  return promoteLegacyScopeFilters(
     parseServiceMapSearch(query.serviceMapScope),
     parseServiceMapFilters(query.serviceMapFilters)
   )
-  return { services: parseServiceMapSearch(query.serviceMapSearch), ...promoted }
 }
 
 export function serializeServiceMapUrlQuery(state: {
-  services: string[]
   scopes: string[]
   filters: ServiceMapFilters
 }): ServiceMapUrlQuery {
   return {
-    serviceMapSearch: state.services.length ? encodeURIComponent(JSON.stringify(state.services)) : undefined,
+    serviceMapSearch: undefined,
     serviceMapScope: state.scopes.length ? encodeURIComponent(JSON.stringify(state.scopes)) : undefined,
     serviceMapFilters: Object.values(state.filters).some((values) => values.length)
       ? encodeURIComponent(JSON.stringify(state.filters))
