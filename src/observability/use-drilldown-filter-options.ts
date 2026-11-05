@@ -10,7 +10,7 @@ import {
 } from './adapters/filter-options'
 import type { DrilldownContext } from './context'
 import { attributeCardinality, attributeTypeOf, splitAttributeChip } from './traces/attribute-keys'
-import { canSuggestValues } from './value-suggestions'
+import { canSuggestValues, resolveSuggestFieldType } from './value-suggestions'
 import { loadDrilldownSettings } from './drilldown-settings'
 import { filterAppliesToSignal } from './filters'
 import { parseJsonFieldChipKey } from './logs/json-field-keys'
@@ -109,8 +109,12 @@ export default function useDrilldownFilterOptions(
     const table = semantics.table.value
     return canSuggestValues({
       name: trimmed,
-      dataType:
-        semantics.columnTypes.value?.[trimmed] ?? (chip ? attributeTypeOf(database, table, trimmed) : undefined),
+      // Resolve through fieldMap aliases (`duration` → `duration_nano`) before typing.
+      dataType: resolveSuggestFieldType(trimmed, {
+        fieldMap: fieldMapForActiveSql(),
+        columnTypes: semantics.columnTypes.value,
+        attributeType: chip ? attributeTypeOf(database, table, trimmed) : undefined,
+      }),
       cardinality: chip ? attributeCardinality(database, table, trimmed) : undefined,
     })
   }

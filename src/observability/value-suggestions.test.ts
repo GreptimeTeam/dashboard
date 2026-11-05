@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const runSQL = vi.fn()
 vi.mock('@/api/editor', () => ({ default: { runSQL: (...args: unknown[]) => runSQL(...args) } }))
 
-import { canSuggestValues, fetchDistinctValues } from './value-suggestions'
+import { canSuggestValues, fetchDistinctValues, resolveSuggestFieldType } from './value-suggestions'
 
 describe('canSuggestValues — one policy for Explore and the SQL builder', () => {
   it('suggests enumerable string fields', () => {
@@ -30,6 +30,20 @@ describe('canSuggestValues — one policy for Explore and the SQL builder', () =
     expect(canSuggestValues({ name: 'service_name', dataType: 'String' }, 'NOT IN')).toBe(false)
     // Unsampled chip keys have no type; they were already offered as filterable keys.
     expect(canSuggestValues({ name: 'span_attributes.legacy_key' })).toBe(true)
+  })
+})
+
+describe('resolveSuggestFieldType', () => {
+  it('resolves fieldMap aliases to the physical column type', () => {
+    const columnTypes = { duration_nano: 'Int64', timestamp: 'TimestampNanosecond', service_name: 'String' }
+    const fieldMap = { duration: 'duration_nano', time: 'timestamp', service: 'service_name' }
+    expect(resolveSuggestFieldType('duration', { fieldMap, columnTypes })).toBe('Int64')
+    expect(resolveSuggestFieldType('time', { fieldMap, columnTypes })).toBe('TimestampNanosecond')
+    expect(resolveSuggestFieldType('service', { fieldMap, columnTypes })).toBe('String')
+  })
+
+  it('falls back to the sampled attribute type for chips', () => {
+    expect(resolveSuggestFieldType('span_attributes.http.method', { attributeType: 'STRING' })).toBe('STRING')
   })
 })
 

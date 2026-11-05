@@ -71,6 +71,27 @@ export function canSuggestValues(field: SuggestFieldShape, operator?: string): b
   return true
 }
 
+/**
+ * Type used to decide suggestions for `key`.
+ *
+ * Filter chips accept `fieldMap` aliases (`duration` → `duration_nano`, `time` →
+ * `timestamp`), but `columnTypes` is keyed by physical names, so looking the raw key up
+ * would miss the type and let a numeric/timestamp field through as "unknown".
+ */
+export function resolveSuggestFieldType(
+  key: string,
+  options: {
+    fieldMap?: Record<string, string>
+    columnTypes?: Record<string, string>
+    /** Sampled type for JSON2 attribute chips. */
+    attributeType?: string
+  }
+): string | undefined {
+  const mapped = options.fieldMap?.[key]?.trim()
+  const mappedType = mapped ? options.columnTypes?.[mapped] : undefined
+  return mappedType || options.columnTypes?.[key] || options.attributeType
+}
+
 export interface DistinctValuesOptions {
   database?: string
   table: string
