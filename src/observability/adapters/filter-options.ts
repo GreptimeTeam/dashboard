@@ -12,7 +12,7 @@ import {
   discoverLogLabelKeys,
   discoverLogsContainsColumns,
   discoverLogsFilterKeyColumns,
-  isLogsContainsFilterKey,
+  isLogsBodyFilterKey,
   listJsonAttributeColumns,
   parseJsonFieldChipKey,
   resolveLogsTimeColumn,
@@ -26,6 +26,18 @@ import { fetchTableAttributeKeys } from '../traces/attribute-sampling'
 import type { DrilldownFilter, DrilldownSignal } from '../types'
 
 const INTERNAL_LABEL_PREFIX = '__'
+
+/** Free-text column names; used only when the body role is not mapped. */
+const FREE_TEXT_COLUMN = /(^|[._-])(body|message|content|msg|text|raw|line|log|payload)$/i
+
+function isFreeTextColumnName(key: string): boolean {
+  return FREE_TEXT_COLUMN.test(key.trim())
+}
+
+/** Evidence a filter can be enumerated as a value list. */
+function isUnenumerableLogKey(key: string, fieldMap: Record<string, string>): boolean {
+  return isLogsBodyFilterKey(key, fieldMap) || isFreeTextColumnName(key)
+}
 const SQL_VALUE_LIMIT = 200
 
 function promTimeParams(ctx: DrilldownContext): { start?: string; end?: string } {
@@ -376,12 +388,9 @@ export async function fetchSqlLabelValues(
   } catch {
     // JSON column list is best-effort for value suggestions.
   }
-  if (signal === 'logs') {
-    const settings = loadDrilldownSettings(boundSignalDatabase(ctx, 'logs')).logs
-    const containsColumns = discoverLogsContainsColumns(columns, fieldMap, logsLabelOptions(settings))
-    if (isLogsContainsFilterKey(trimmedKey, fieldMap, containsColumns)) {
-      return []
-    }
+  if (signal === 'logs' && isUnenumerableLogKey(trimmedKey, fieldMap)) {
+    // Free text (body role or body-like column) has no enumerable value list.
+    return []
   }
 
   const columnNames = columns.map((column) => column.name)
@@ -496,10 +505,15 @@ export function canSuggestFilterValues(
   fieldKey: string,
   fieldMap: Record<string, string>,
   labelKeys: string[],
-  containsKeys: string[] = []
+  // Kept for call-site compatibility: contains matching is an operator concern (`=~` →
+  // LIKE), not a reason to hide value suggestions.
+  _containsKeys: string[] = []
 ): boolean {
   const trimmed = fieldKey.trim()
-  if (isLogsContainsFilterKey(trimmed, fieldMap, containsKeys)) {
+  // "Contains" columns (`=~` → LIKE) are not all free text: `env`, `level`, `service` are
+  // enumerable too. Only free text stays unsuggested — the body role, plus body-like names
+  // for tables whose roles were never mapped.
+  if (isUnenumerableLogKey(trimmed, fieldMap)) {
     return false
   }
   if (parseJsonFieldChipKey(trimmed)) {
