@@ -1,5 +1,6 @@
+import FALLBACK_STARS from '@/constants/github-stars'
+
 const REPO = 'GreptimeTeam/greptimedb'
-const FALLBACK_STARS = 6400
 
 export default function useGithubStars() {
   const stars = ref<number | null>(null)

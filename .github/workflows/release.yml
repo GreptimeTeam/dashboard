@@ -29,6 +29,8 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm run build:docker
 
       - name: Calculate checksum and rename binary
