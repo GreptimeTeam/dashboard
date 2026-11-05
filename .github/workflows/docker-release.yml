@@ -41,6 +41,12 @@ jobs:
       - name: Set up buildx
         uses: docker/setup-buildx-action@v2
 
+      # Refresh fallback before docker context COPY; in-container builds may lack GITHUB_TOKEN.
+      - name: Update GitHub stars fallback
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/update-github-stars.mjs
+
       - name: Build and push
         uses: docker/build-push-action@v3
         with:
