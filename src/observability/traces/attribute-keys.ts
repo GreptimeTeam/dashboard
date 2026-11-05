@@ -83,7 +83,6 @@ export function discoverSampledAttributes(
         scope: attributeScopeOf(container),
         sampled: true,
         dataType: attributeDataTypeOf(stat),
-        cardinality: attributeCardinalityOf(stat),
       })
     })
   })
@@ -97,14 +96,7 @@ interface AttributeStat {
   allIntegers: boolean
   /** True until a scalar value is seen; object/array-only keys are not groupable. */
   compoundOnly: boolean
-  /** Distinct scalar values seen in the sample, capped; a proxy for label-like cardinality. */
-  values: Set<string>
-  /** Scalar observations, used to tell "few values" from "every row differs". */
-  observed: number
 }
-
-/** Distinct values worth keeping per key before a key counts as high-cardinality. */
-const CARDINALITY_CAP = 32
 
 function createAttributeStat(): AttributeStat {
   return {
@@ -113,8 +105,6 @@ function createAttributeStat(): AttributeStat {
     sawBoolean: false,
     allIntegers: true,
     compoundOnly: true,
-    values: new Set<string>(),
-    observed: 0,
   }
 }
 
@@ -152,24 +142,6 @@ function observeAttributeValue(stat: AttributeStat, value: unknown): void {
     return
   }
   stat.compoundOnly = false
-  stat.observed += 1
-  if (stat.values.size < CARDINALITY_CAP) {
-    stat.values.add(String(value))
-  }
-}
-
-/**
- * Label-like or not, from the sample: a key that keeps producing new values (ids, URLs,
- * timestamps) is not worth a value dropdown even when it stayed under the cap.
- */
-function attributeCardinalityOf(stat: AttributeStat): 'low' | 'high' {
-  if (stat.values.size >= CARDINALITY_CAP) {
-    return 'high'
-  }
-  if (stat.observed >= 8 && stat.values.size / stat.observed > 0.5) {
-    return 'high'
-  }
-  return 'low'
 }
 
 /**
@@ -198,7 +170,6 @@ function attributeDataTypeOf(stat: AttributeStat): string | undefined {
 
 const ATTRIBUTE_TYPE_LIMIT = 4000
 const attributeTypes = shallowRef<Record<string, string>>({})
-const attributeCardinalityRegistry = shallowRef<Record<string, 'low' | 'high'>>({})
 
 function registryKey(database: string | undefined, table: string | undefined, chipKey: string): string {
   return `${database ?? ''}\0${table ?? ''}\0${chipKey}`
@@ -214,7 +185,6 @@ export function rememberAttributeTypes(
     return
   }
   const next = { ...attributeTypes.value }
-  const nextCardinality = { ...attributeCardinalityRegistry.value }
   let changed = false
   attributes.forEach((attribute) => {
     const key = registryKey(database, table, attribute.column)
@@ -222,40 +192,21 @@ export function rememberAttributeTypes(
       next[key] = attribute.dataType
       changed = true
     }
-    if (attribute.cardinality && nextCardinality[key] !== attribute.cardinality) {
-      nextCardinality[key] = attribute.cardinality
-      changed = true
-    }
   })
   if (!changed) {
     return
   }
   // Bounded like the sampling cache: a long session that visits many tables must not grow
-  // these registries without limit.
+  // this registry without limit.
   if (Object.keys(next).length > ATTRIBUTE_TYPE_LIMIT) {
     attributeTypes.value = Object.fromEntries(
       attributes
         .filter((attribute) => attribute.dataType)
         .map((attribute) => [registryKey(database, table, attribute.column), attribute.dataType as string])
     )
-    attributeCardinalityRegistry.value = Object.fromEntries(
-      attributes
-        .filter((attribute) => attribute.cardinality)
-        .map((attribute) => [registryKey(database, table, attribute.column), attribute.cardinality as 'low' | 'high'])
-    )
     return
   }
   attributeTypes.value = next
-  attributeCardinalityRegistry.value = nextCardinality
-}
-
-/** Sampled cardinality of an attribute key (`undefined` when it was never sampled). */
-export function attributeCardinality(
-  database: string | undefined,
-  table: string | undefined,
-  chipKey: string
-): 'low' | 'high' | undefined {
-  return attributeCardinalityRegistry.value[registryKey(database, table, chipKey)]
 }
 
 /** Type of a sampled attribute key, or undefined when it was never sampled. */
@@ -270,31 +221,6 @@ export function attributeTypeOf(
 /** Container columns present on the bound table (empty for v1, which has no containers). */
 export function attributeContainersOf(columns: readonly string[]): string[] {
   return TRACE_ATTRIBUTE_CONTAINERS.filter((container) => columns.includes(container))
-}
-
-/**
- * Whether the value combobox should run `SELECT DISTINCT` for a sampled attribute key.
- *
- * Suggestions are only worth a scan for label-like keys. Numbers and booleans are typed as
- * thresholds/flags, and a key with many distinct values produces an arbitrary 200-row list
- * while still costing a full window scan — so both skip the query and let the user type.
- * Intrinsic keys and unsampled keys are not affected.
- */
-export function canSuggestAttributeValues(
-  database: string | undefined,
-  table: string | undefined,
-  chipKey: string
-): boolean {
-  const key = registryKey(database, table, chipKey)
-  const dataType = attributeTypes.value[key]
-  const cardinality = attributeCardinalityRegistry.value[key]
-  if (!dataType && !cardinality) {
-    return true
-  }
-  if (dataType === 'BIGINT' || dataType === 'DOUBLE' || dataType === 'BOOLEAN') {
-    return false
-  }
-  return cardinality !== 'high'
 }
 
 /** Split a chip key back into its container column and the attribute key inside it. */

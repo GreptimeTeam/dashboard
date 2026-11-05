@@ -9,7 +9,7 @@ describe('canSuggestValues — one policy for Explore and the SQL builder', () =
   it('suggests enumerable string fields', () => {
     expect(canSuggestValues({ name: 'service_name', dataType: 'String' })).toBe(true)
     expect(canSuggestValues({ name: 'span_kind', dataType: 'String' })).toBe(true)
-    expect(canSuggestValues({ name: 'span_attributes.http.method', dataType: 'STRING', cardinality: 'low' })).toBe(true)
+    expect(canSuggestValues({ name: 'span_attributes.http.method', dataType: 'STRING' })).toBe(true)
   })
 
   it('skips typed, identity and payload fields', () => {

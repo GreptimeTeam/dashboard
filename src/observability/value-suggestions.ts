@@ -2,10 +2,11 @@
  * One value-suggestion policy for every SQL signal surface: the Explore top filter and the
  * Traces SQL builder must agree on which fields offer a dropdown and how that list is read.
  *
- * The policy is deliberately conservative — suggestions are only worth a query when the
- * field is label-like: strings with a small value set. Numbers/booleans are typed,
- * timestamps and identity columns never repeat, and high-cardinality keys make the list
- * arbitrary while still scanning the window.
+ * The policy is static and deliberately conservative: only string-typed fields get a
+ * dropdown, and identity columns (trace_id, *_id, id-suffixed keys) are excluded by name.
+ * Numbers/booleans are typed by the user, timestamps never repeat, and payload JSON cannot
+ * be listed. Cardinality is NOT measured — that would require a probe request per field and
+ * behaved differently for v1 columns (never measured) and v2 attributes (sampled).
  */
 
 import editorAPI from '@/api/editor'
@@ -19,8 +20,6 @@ export interface SuggestFieldShape {
   name: string
   /** Schema type for columns, sampled type for attributes (`BIGINT`, `String`, …). */
   dataType?: string
-  /** Sampled cardinality for attributes; unknown for physical columns. */
-  cardinality?: 'low' | 'high'
 }
 
 /** Identity/payload columns: a dropdown of 200 arbitrary ids helps nobody. */
@@ -36,8 +35,11 @@ const HIGH_CARDINALITY_COLUMNS = new Set([
 const NUMERIC_TYPE_HINTS = ['int', 'uint', 'float', 'double', 'decimal', 'number']
 const EXCLUDED_TYPE_HINTS = ['json', 'binary', 'vector', 'bool', 'timestamp', 'date']
 
+/** `*_id`, `*-id`, `*.id` — ids are unbounded, and their dropdown would be arbitrary. */
+const ID_NAME_SUFFIX = /(^|[._-])id$/i
+
 export function isHighCardinalityColumnName(name: string): boolean {
-  return HIGH_CARDINALITY_COLUMNS.has(name) || name.endsWith('_id')
+  return HIGH_CARDINALITY_COLUMNS.has(name) || ID_NAME_SUFFIX.test(name)
 }
 
 /**
@@ -48,9 +50,6 @@ export function isHighCardinalityColumnName(name: string): boolean {
  */
 export function canSuggestValues(field: SuggestFieldShape, operator?: string): boolean {
   if (operator === 'IN' || operator === 'NOT IN') {
-    return false
-  }
-  if (field.cardinality === 'high') {
     return false
   }
   const dataType = (field.dataType || '').toLowerCase()

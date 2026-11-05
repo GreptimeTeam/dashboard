@@ -9,7 +9,7 @@ import {
   fetchSqlLabelKeys,
 } from './adapters/filter-options'
 import type { DrilldownContext } from './context'
-import { attributeCardinality, attributeTypeOf, splitAttributeChip } from './traces/attribute-keys'
+import { attributeTypeOf, splitAttributeChip } from './traces/attribute-keys'
 import { canSuggestValues, resolveSuggestFieldType } from './value-suggestions'
 import { loadDrilldownSettings } from './drilldown-settings'
 import { filterAppliesToSignal } from './filters'
@@ -115,7 +115,6 @@ export default function useDrilldownFilterOptions(
         columnTypes: semantics.columnTypes.value,
         attributeType: chip ? attributeTypeOf(database, table, trimmed) : undefined,
       }),
-      cardinality: chip ? attributeCardinality(database, table, trimmed) : undefined,
     })
   }
 

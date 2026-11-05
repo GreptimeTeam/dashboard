@@ -5,7 +5,6 @@ import {
   attributeLabelOf,
   attributeScopeOf,
   attributeTypeOf,
-  canSuggestAttributeValues,
   splitAttributeChip,
   discoverSampledAttributes,
   rememberAttributeTypes,
@@ -110,34 +109,6 @@ describe('trace attribute keys (JSON2 models)', () => {
     expect(typeOf('textFlag')).toBe('BOOLEAN')
     // Nothing but nulls: no type to offer.
     expect(typeOf('empty')).toBeUndefined()
-  })
-
-  it('marks high-cardinality keys from the sample', () => {
-    const rows = Array.from({ length: 40 }, (_, index) => ({
-      span_attributes: { request_id: `id-${index}`, method: index % 2 ? 'GET' : 'POST' },
-    }))
-    const attrs = discoverSampledAttributes(['span_attributes'], rows)
-    expect(attrs.find((attr) => attr.column === 'span_attributes.request_id')?.cardinality).toBe('high')
-    expect(attrs.find((attr) => attr.column === 'span_attributes.method')?.cardinality).toBe('low')
-  })
-
-  it('only suggests values for label-like attributes', () => {
-    rememberAttributeTypes('public', 'traces_suggest', [
-      { column: 'span_attributes.response_size', label: 's', scope: 'span', dataType: 'BIGINT', cardinality: 'high' },
-      { column: 'span_attributes.cached', label: 's', scope: 'span', dataType: 'BOOLEAN', cardinality: 'low' },
-      { column: 'span_attributes.request_id', label: 's', scope: 'span', dataType: 'STRING', cardinality: 'high' },
-      { column: 'span_attributes.http.method', label: 's', scope: 'span', dataType: 'STRING', cardinality: 'low' },
-    ])
-    const can = (key: string) => canSuggestAttributeValues('public', 'traces_suggest', key)
-    // Numbers and booleans are typed, not picked.
-    expect(can('span_attributes.response_size')).toBe(false)
-    expect(can('span_attributes.cached')).toBe(false)
-    // High-cardinality strings make the DISTINCT list useless.
-    expect(can('span_attributes.request_id')).toBe(false)
-    // Label-like attribute: keep suggestions.
-    expect(can('span_attributes.http.method')).toBe(true)
-    // Never sampled (e.g. a physical chip container): unchanged behaviour.
-    expect(can('span_attributes.unknown_key')).toBe(true)
   })
 
   it('remembers sampled types per table for the operator menu', () => {

@@ -542,11 +542,7 @@ a-modal(
       return false
     }
     return canSuggestFieldValues(
-      {
-        name: condition.field,
-        dataType: attribute?.dataType ?? column?.data_type,
-        cardinality: attribute?.cardinality,
-      },
+      { name: condition.field, dataType: attribute?.dataType ?? column?.data_type },
       condition.operator
     )
   }
