@@ -288,7 +288,7 @@ a-modal(
   async function loadSampledAttributes() {
     sampledAttributes.value = {}
     attributeValues.value = {}
-    if (props.signalDatabaseKind !== 'traces' || !form.table) {
+    if (!form.table) {
       return
     }
     const tableFields = tableMap.value[form.table] || []
@@ -303,7 +303,8 @@ a-modal(
       database: form.database,
       table: form.table,
       columns,
-      parentColumn: 'parent_span_id',
+      // Trace views are root-scoped; logs have no parent span.
+      parentColumn: props.signalDatabaseKind === 'traces' ? 'parent_span_id' : undefined,
       timeColumn: tsField?.name,
     })
     // Dotted attribute names share the field namespace with real columns; real columns win.

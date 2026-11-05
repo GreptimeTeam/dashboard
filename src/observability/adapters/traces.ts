@@ -7,8 +7,8 @@ import { filtersToSqlWhere } from '../filters'
 import { boundSignalDatabase } from '../signal-database'
 import { escapeSqlString, quoteIdent } from '../logs/query-state'
 import { buildDefaultTracesFieldMap, type TraceBreakdownAttribute } from '../traces/field-map'
-import { attributeContainersOf, rememberAttributeTypes } from '../traces/attribute-keys'
-import { fetchSampledAttributes } from '../traces/attribute-sampling'
+import { attributeContainersOf } from '../traces/attribute-keys'
+import { fetchTableAttributeKeys } from '../traces/attribute-sampling'
 import { isJsonAttributeContainerName, parseJsonFieldChipKey, sqlJsonGetStringExpr } from '../logs/json-field-keys'
 import {
   bucketToUnixSeconds,
@@ -343,8 +343,6 @@ function traceGroupBySql(ctx: DrilldownContext, column: string): string | undefi
 
 /** Bounded row sample used to learn JSON2 attribute keys (v2 tables only). */
 const TRACE_ATTRIBUTE_SAMPLE_LIMIT = 1000
-const TRACE_ATTRIBUTE_CACHE_LIMIT = 32
-const traceAttributeCache = new Map<string, TraceBreakdownAttribute[]>()
 
 /**
  * Attribute dimensions for the bound trace table.
@@ -369,13 +367,7 @@ export async function fetchTraceAttributeKeys(
     return []
   }
 
-  const cacheKey = `${boundSignalDatabase(ctx, 'traces')}\0${tableName}`
-  const cached = traceAttributeCache.get(cacheKey)
-  if (cached) {
-    return cached
-  }
-
-  const attributes = await fetchSampledAttributes({
+  const attributes = await fetchTableAttributeKeys({
     database: boundSignalDatabase(ctx, 'traces'),
     table: tableName,
     columns,
@@ -386,12 +378,6 @@ export async function fetchTraceAttributeKeys(
   if (!attributes.length) {
     console.warn('Sampled trace attribute keys is empty', { tableName, containers })
   }
-  // Chip keys have no schema column, so publish the sampled types for the operator menu.
-  rememberAttributeTypes(boundSignalDatabase(ctx, 'traces'), tableName, attributes)
-  if (traceAttributeCache.size > TRACE_ATTRIBUTE_CACHE_LIMIT) {
-    traceAttributeCache.clear()
-  }
-  traceAttributeCache.set(cacheKey, attributes)
   return attributes
 }
 

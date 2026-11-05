@@ -22,6 +22,7 @@ import {
 import { discoverTraceFilterKeys } from '../traces/field-map'
 import { fetchTraceAttributeKeys } from './traces'
 import { fetchDistinctValues, type ValueSource } from '../value-suggestions'
+import { fetchTableAttributeKeys } from '../traces/attribute-sampling'
 import type { DrilldownFilter, DrilldownSignal } from '../types'
 
 const INTERNAL_LABEL_PREFIX = '__'
@@ -208,21 +209,32 @@ export async function fetchLogsFilterKeyOptions(ctx: DrilldownContext, search = 
     const database = boundSignalDatabase(ctx, 'logs')
     const settings = loadDrilldownSettings(database).logs
     const serviceKey = ctx.semantics.logs.entityFilterKeys.value?.service
-    const keys =
-      ctx.ui.logsView.value === 'overview'
-        ? await discoverLogLabelKeys(tableName, columns, fieldMap, {
-            include: settings?.labelInclude,
-            exclude: settings?.labelExclude,
-            identityChip: serviceKey,
-            database,
-          })
-        : await discoverLogFilterKeys(tableName, columns, fieldMap, {
-            include: settings?.labelInclude,
-            exclude: settings?.labelExclude,
-            // Detail toolbar owns service — do not offer it again from the generic list.
-            serviceKey,
-            database,
-          })
+    let keys: string[]
+    if (ctx.ui.logsView.value === 'overview') {
+      keys = await discoverLogLabelKeys(tableName, columns, fieldMap, {
+        include: settings?.labelInclude,
+        exclude: settings?.labelExclude,
+        identityChip: serviceKey,
+        database,
+      })
+    } else {
+      keys = await discoverLogFilterKeys(tableName, columns, fieldMap, {
+        include: settings?.labelInclude,
+        exclude: settings?.labelExclude,
+        // Detail toolbar owns service — do not offer it again from the generic list.
+        serviceKey,
+        database,
+      })
+      // JSON2 log tables keep attributes in `log_attributes`; enumerate its keys so the
+      // detail top bar can filter them like columns (same sampling as traces).
+      const attributes = await fetchTableAttributeKeys({
+        database,
+        table: tableName,
+        columns: columns.map((column) => column.name),
+        timeColumn: resolveLogsTimeColumn(fieldMap),
+      })
+      keys = [...keys, ...attributes.map((attribute) => attribute.column)]
+    }
     return filterOptions(filterLabelKeys(keys), search)
   } catch (error) {
     console.error('Failed to load logs filter keys:', error)

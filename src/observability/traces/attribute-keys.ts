@@ -11,6 +11,7 @@
  */
 
 import { shallowRef } from 'vue'
+import { isJsonAttributeContainerName } from '../logs/json-field-keys'
 import type { TraceAttrScope, TraceBreakdownAttribute } from './field-map'
 
 /** JSON2 attribute containers created by the trace v2 data model. */
@@ -223,9 +224,26 @@ export function attributeContainersOf(columns: readonly string[]): string[] {
   return TRACE_ATTRIBUTE_CONTAINERS.filter((container) => columns.includes(container))
 }
 
+/**
+ * Any JSON attribute container on the table: the trace v2 three, plus log containers such
+ * as `log_attributes` (name pattern `*attributes`, or a JSON column that holds attributes).
+ */
+export function jsonAttributeContainersOf(columns: readonly string[]): string[] {
+  const containers = [...TRACE_ATTRIBUTE_CONTAINERS]
+  columns.forEach((name) => {
+    if (isJsonAttributeContainerName(name) && !containers.includes(name)) {
+      containers.push(name)
+    }
+  })
+  return containers.filter((container) => columns.includes(container))
+}
+
 /** Split a chip key back into its container column and the attribute key inside it. */
-export function splitAttributeChip(chipKey: string): { column: string; path: string } | undefined {
-  const matched = [...TRACE_ATTRIBUTE_CONTAINERS]
+export function splitAttributeChip(
+  chipKey: string,
+  containers: readonly string[] = TRACE_ATTRIBUTE_CONTAINERS
+): { column: string; path: string } | undefined {
+  const matched = [...containers]
     .sort((left, right) => right.length - left.length)
     .find((container) => chipKey.startsWith(`${container}.`))
   if (!matched) {

@@ -103,7 +103,9 @@ export default function useDrilldownFilterOptions(
     // One policy for every SQL surface (this filter and the Traces SQL builder): only
     // label-like fields get a DISTINCT dropdown. Types come from the schema for columns and
     // from the attribute sample for JSON2 chips.
-    const chip = splitAttributeChip(trimmed)
+    // Trace chips use the v2 containers; logs use `log_attributes`, so fall back to the
+    // generic `*_attributes` chip parser.
+    const chip = splitAttributeChip(trimmed) ?? parseJsonFieldChipKey(trimmed)
     const semantics = signal === 'logs' ? ctx.semantics.logs : ctx.semantics.traces
     const database = semantics.database.value || ctx.connection.databaseFor(signal)
     const table = semantics.table.value

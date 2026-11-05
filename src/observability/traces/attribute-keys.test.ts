@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   attributeChipKey,
   attributeContainersOf,
+  jsonAttributeContainersOf,
   attributeLabelOf,
   attributeScopeOf,
   attributeTypeOf,
@@ -40,6 +41,20 @@ describe('trace attribute keys (JSON2 models)', () => {
     ])
     // v1 tables flatten attributes into columns and carry none of the containers.
     expect(attributeContainersOf(['timestamp', 'span_attributes.http.method'])).toEqual([])
+  })
+
+  it('also recognises log attribute containers', () => {
+    const containers = jsonAttributeContainersOf([
+      'ts',
+      'body',
+      'log_attributes',
+      'resource_attributes',
+      'span_attributes.http.method',
+    ])
+    expect(containers).toContain('log_attributes')
+    expect(containers).toContain('resource_attributes')
+    // Dotted v1 attribute columns are not containers.
+    expect(containers).not.toContain('span_attributes.http.method')
   })
 
   it('dedupes keys across sampled rows and sorts them', () => {

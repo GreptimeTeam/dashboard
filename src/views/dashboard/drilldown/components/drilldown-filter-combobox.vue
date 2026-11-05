@@ -157,10 +157,17 @@
     if (schemaType) {
       return schemaType
     }
-    if (signal.value !== 'traces') {
+    if (signal.value === 'metrics') {
       return undefined
     }
-    return attributeTypeOf(boundSignalDatabase(ctx, 'traces'), ctx.semantics.traces.table.value, key)
+    // JSON2 attribute chips (traces and logs) have no column of their own; the sampled
+    // type lets numeric attributes offer comparison operators.
+    const semantics = signal.value === 'logs' ? ctx.semantics.logs : ctx.semantics.traces
+    return attributeTypeOf(
+      semantics.database.value || ctx.connection.databaseFor(signal.value),
+      semantics.table.value,
+      key
+    )
   }
   const activeColumnType = computed(() => resolveColumnType(activeFieldKey.value.trim()))
 

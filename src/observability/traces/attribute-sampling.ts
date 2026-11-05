@@ -7,7 +7,8 @@
  */
 
 import editorAPI from '@/api/editor'
-import { attributeContainersOf, discoverSampledAttributes } from './attribute-keys'
+import { rememberAttributeTypes } from './attribute-keys'
+import { jsonAttributeContainersOf, discoverSampledAttributes } from './attribute-keys'
 import type { TraceBreakdownAttribute } from './field-map'
 
 /** Rows sampled per table; enough to see rare attributes without scanning a big table. */
@@ -47,7 +48,7 @@ function recordsToRows(
 }
 
 /**
- * Attribute dimensions of a trace table.
+ * Attribute dimensions of a trace or logs table.
  *
  * Returns `[]` for v1 tables (attributes are physical columns there, so discovery reads the
  * schema). For v2 tables the keys are sampled from the newest rows: attribute keys describe
@@ -55,9 +56,31 @@ function recordsToRows(
  * list. Root spans are sampled first because the traces list / RED / breakdown queries all
  * filter `parent_span_id IS NULL`; keys that only exist on child spans can never match.
  */
+const attributeCache = new Map<string, TraceBreakdownAttribute[]>()
+const ATTRIBUTE_CACHE_LIMIT = 32
+
+/**
+ * Cached wrapper: one sample per database + table, shared by traces and logs surfaces, and
+ * publishes the sampled types so the operator menu can offer numeric comparisons.
+ */
+export async function fetchTableAttributeKeys(options: AttributeSampleOptions): Promise<TraceBreakdownAttribute[]> {
+  const cacheKey = `${options.database ?? ''}\0${options.table}`
+  const cached = attributeCache.get(cacheKey)
+  if (cached) {
+    return cached
+  }
+  const attributes = await fetchSampledAttributes(options)
+  rememberAttributeTypes(options.database, options.table, attributes)
+  if (attributeCache.size > ATTRIBUTE_CACHE_LIMIT) {
+    attributeCache.clear()
+  }
+  attributeCache.set(cacheKey, attributes)
+  return attributes
+}
+
 export async function fetchSampledAttributes(options: AttributeSampleOptions): Promise<TraceBreakdownAttribute[]> {
   const { database, table } = options
-  const containers = attributeContainersOf(options.columns)
+  const containers = jsonAttributeContainersOf(options.columns)
   if (!table || !containers.length) {
     return []
   }
