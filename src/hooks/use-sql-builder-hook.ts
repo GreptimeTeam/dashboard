@@ -1,5 +1,8 @@
 import { computed, type Ref, reactive, watchEffect, ref } from 'vue'
 import type { Condition, BuilderFormState, TSColumn } from '@/types/query'
+import { jsonAttributeValueKind } from '@/observability/filters'
+import { sqlJsonAttrExpr } from '@/observability/logs/json-field-keys'
+import type { DrilldownFilterOp } from '@/observability/types'
 
 export interface SqlBuilderHookOptions {
   /** Time range values for SQL generation */
@@ -58,40 +61,53 @@ export function useSqlBuilderHook(options: SqlBuilderHookOptions) {
         return Number(val)
       }
       if (fieldType === 'Boolean') {
-        return Boolean(val)
+        return val === true || String(val).toLowerCase() === 'true' ? 'TRUE' : 'FALSE'
       }
       return `'${escapeSqlString(val)}'`
     }
 
+    // JSON2 attribute chips have no column: render the JSON path, read as the comparator's
+    // type (range operators need a numeric cast, otherwise "1000" sorts before "900").
+    const jsonAttribute = condition.jsonAttribute
+    // The field type decides the read (a numeric key also casts for IN lists); fall back to
+    // the comparator heuristic for string-typed attributes used with range operators.
+    const jsonKind =
+      condition.fieldType === 'Number'
+        ? 'number'
+        : condition.fieldType === 'Boolean'
+        ? 'boolean'
+        : jsonAttributeValueKind(operator as DrilldownFilterOp, String(value ?? ''))
+    const target = jsonAttribute ? sqlJsonAttrExpr(jsonAttribute.column, jsonAttribute.path, jsonKind) : `"${field}"`
+
     switch (operator) {
       case 'LIKE':
-        return `"${field}" LIKE '%${escapeSqlString(String(value))}%'`
+        return `${target} LIKE '%${escapeSqlString(String(value))}%'`
       case 'NOT LIKE':
-        return `"${field}" NOT LIKE '%${escapeSqlString(String(value))}%'`
+        return `${target} NOT LIKE '%${escapeSqlString(String(value))}%'`
       case 'MATCH':
-        return `"${field}" @@ '${escapeSqlString(String(value))}'`
+        return `${target} @@ '${escapeSqlString(String(value))}'`
       case 'NOT MATCH':
-        return `NOT "${field}" @@ '${escapeSqlString(String(value))}'`
+        return `NOT ${target} @@ '${escapeSqlString(String(value))}'`
       case 'IN': {
         const inVal = (value as string)
           .split(',')
           .map((v) => formatValue(v.trim(), condition.fieldType))
           .join(',')
-        return `"${field}" IN (${inVal})`
+        return `${target} IN (${inVal})`
       }
       case 'NOT IN': {
         const inVal = (value as string)
           .split(',')
           .map((v) => formatValue(v.trim(), condition.fieldType))
           .join(',')
-        return `"${field}" NOT IN (${inVal})`
+        return `${target} NOT IN (${inVal})`
       }
       case 'Exist':
-        return `"${field}" IS NOT NULL`
+        return `${target} IS NOT NULL`
       case 'Not Exist':
-        return `"${field}" IS NULL`
+        return `${target} IS NULL`
       default:
-        return `"${field}"${operator}${formatValue(value, condition.fieldType)}`
+        return `${target}${operator}${formatValue(value, condition.fieldType)}`
     }
   }
 

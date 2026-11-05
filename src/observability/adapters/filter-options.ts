@@ -12,7 +12,7 @@ import {
   discoverLogLabelKeys,
   discoverLogsContainsColumns,
   discoverLogsFilterKeyColumns,
-  isLogsContainsFilterKey,
+  isLogsBodyFilterKey,
   listJsonAttributeColumns,
   parseJsonFieldChipKey,
   resolveLogsTimeColumn,
@@ -20,9 +20,24 @@ import {
   type SchemaColumn,
 } from '../logs/field-map'
 import { discoverTraceFilterKeys } from '../traces/field-map'
+import { fetchTraceAttributeKeys } from './traces'
+import { fetchDistinctValues, type ValueSource } from '../value-suggestions'
+import { fetchTableAttributeKeys } from '../traces/attribute-sampling'
 import type { DrilldownFilter, DrilldownSignal } from '../types'
 
 const INTERNAL_LABEL_PREFIX = '__'
+
+/** Free-text column names; used only when the body role is not mapped. */
+const FREE_TEXT_COLUMN = /(^|[._-])(body|message|content|msg|text|raw|line|log|payload)$/i
+
+function isFreeTextColumnName(key: string): boolean {
+  return FREE_TEXT_COLUMN.test(key.trim())
+}
+
+/** Evidence a filter can be enumerated as a value list. */
+function isUnenumerableLogKey(key: string, fieldMap: Record<string, string>): boolean {
+  return isLogsBodyFilterKey(key, fieldMap) || isFreeTextColumnName(key)
+}
 const SQL_VALUE_LIMIT = 200
 
 function promTimeParams(ctx: DrilldownContext): { start?: string; end?: string } {
@@ -103,8 +118,13 @@ export async function fetchSqlLabelKeys(
     )) as SchemaColumn[]
     if (signal === 'traces') {
       // Traces expose every business field as a top-bar filter key (intrinsic + flattened
-      // resource/span attributes + duration), not the v1 label subset.
-      const keys = discoverTraceFilterKeys(columns)
+      // resource/span attributes + duration), not the v1 label subset. JSON2 models have
+      // no attribute columns, so their keys are sampled instead (empty for v1 tables).
+      const sampled = await fetchTraceAttributeKeys(
+        ctx,
+        (columns as Array<{ name: string }>).map((column) => column.name)
+      )
+      const keys = discoverTraceFilterKeys(columns, { sampled })
       return filterOptions(filterLabelKeys(keys), search)
     }
     const fieldMap = fieldMapForSignal(ctx, signal)
@@ -201,21 +221,32 @@ export async function fetchLogsFilterKeyOptions(ctx: DrilldownContext, search = 
     const database = boundSignalDatabase(ctx, 'logs')
     const settings = loadDrilldownSettings(database).logs
     const serviceKey = ctx.semantics.logs.entityFilterKeys.value?.service
-    const keys =
-      ctx.ui.logsView.value === 'overview'
-        ? await discoverLogLabelKeys(tableName, columns, fieldMap, {
-            include: settings?.labelInclude,
-            exclude: settings?.labelExclude,
-            identityChip: serviceKey,
-            database,
-          })
-        : await discoverLogFilterKeys(tableName, columns, fieldMap, {
-            include: settings?.labelInclude,
-            exclude: settings?.labelExclude,
-            // Detail toolbar owns service — do not offer it again from the generic list.
-            serviceKey,
-            database,
-          })
+    let keys: string[]
+    if (ctx.ui.logsView.value === 'overview') {
+      keys = await discoverLogLabelKeys(tableName, columns, fieldMap, {
+        include: settings?.labelInclude,
+        exclude: settings?.labelExclude,
+        identityChip: serviceKey,
+        database,
+      })
+    } else {
+      keys = await discoverLogFilterKeys(tableName, columns, fieldMap, {
+        include: settings?.labelInclude,
+        exclude: settings?.labelExclude,
+        // Detail toolbar owns service — do not offer it again from the generic list.
+        serviceKey,
+        database,
+      })
+      // JSON2 log tables keep attributes in `log_attributes`; enumerate its keys so the
+      // detail top bar can filter them like columns (same sampling as traces).
+      const attributes = await fetchTableAttributeKeys({
+        database,
+        table: tableName,
+        columns: columns.map((column) => column.name),
+        timeColumn: resolveLogsTimeColumn(fieldMap),
+      })
+      keys = [...keys, ...attributes.map((attribute) => attribute.column)]
+    }
     return filterOptions(filterLabelKeys(keys), search)
   } catch (error) {
     console.error('Failed to load logs filter keys:', error)
@@ -302,22 +333,6 @@ function resolveSqlSuggestColumn(
   return undefined
 }
 
-function sqlValueSelectExpr(
-  chipKey: string,
-  columnName: string,
-  jsonColumns: string[] = [],
-  columns: string[] = []
-): { selectExpr: string; nullCheck: string } {
-  if (!columns.includes(columnName)) {
-    const jsonChip = parseJsonFieldChipKey(chipKey, jsonColumns)
-    if (jsonChip) {
-      const expr = sqlJsonGetStringExpr(jsonChip.column, jsonChip.path)
-      return { selectExpr: expr, nullCheck: `${expr} IS NOT NULL` }
-    }
-  }
-  return { selectExpr: `"${columnName}"`, nullCheck: `"${columnName}" IS NOT NULL` }
-}
-
 function sqlFilterEqualsClause(
   filterKey: string,
   filterValue: string,
@@ -373,12 +388,9 @@ export async function fetchSqlLabelValues(
   } catch {
     // JSON column list is best-effort for value suggestions.
   }
-  if (signal === 'logs') {
-    const settings = loadDrilldownSettings(boundSignalDatabase(ctx, 'logs')).logs
-    const containsColumns = discoverLogsContainsColumns(columns, fieldMap, logsLabelOptions(settings))
-    if (isLogsContainsFilterKey(trimmedKey, fieldMap, containsColumns)) {
-      return []
-    }
+  if (signal === 'logs' && isUnenumerableLogKey(trimmedKey, fieldMap)) {
+    // Free text (body role or body-like column) has no enumerable value list.
+    return []
   }
 
   const columnNames = columns.map((column) => column.name)
@@ -388,26 +400,31 @@ export async function fetchSqlLabelValues(
     return []
   }
 
-  const { selectExpr, nullCheck } = sqlValueSelectExpr(trimmedKey, columnName, jsonColumns, columnNames)
-  const unixRange = ctx.query.unixTimeRange()
-  const whereParts = [nullCheck]
+  // Resolve the field to its SQL source once; the shared helper owns the query shape so the
+  // Explore filter and the SQL builder cannot drift apart.
+  const isColumn = columnNames.includes(columnName)
+  const chip = isColumn ? undefined : parseJsonFieldChipKey(columnName, jsonColumns)
+  const source: ValueSource | undefined = isColumn
+    ? { kind: 'column', column: columnName }
+    : chip
+    ? { kind: 'attribute', column: chip.column, path: chip.path }
+    : undefined
+  if (!source) {
+    return []
+  }
 
-  if (unixRange.length === 2) {
-    let timeColumn: string | undefined
-    if (signal === 'logs') {
-      timeColumn = resolveLogsTimeColumn(fieldMap)
-    } else {
-      timeColumn = fieldMap.time
-      if (!timeColumn) {
-        timeColumn = columns.find((column) => column.semantic_type === 'TIMESTAMP')?.name
-      }
-    }
-    if (timeColumn) {
-      whereParts.push(`"${timeColumn}" >= FROM_UNIXTIME(${unixRange[0]})`)
-      whereParts.push(`"${timeColumn}" <= FROM_UNIXTIME(${unixRange[1]})`)
+  const unixRange = ctx.query.unixTimeRange()
+  let timeColumn: string | undefined
+  if (signal === 'logs') {
+    timeColumn = resolveLogsTimeColumn(fieldMap)
+  } else {
+    timeColumn = fieldMap.time
+    if (!timeColumn) {
+      timeColumn = columns.find((column) => column.semantic_type === 'TIMESTAMP')?.name
     }
   }
 
+  const extraWhere: string[] = []
   ctx.query.filters.value.forEach((filter: DrilldownFilter) => {
     if (filter.key === trimmedKey || filter.op !== '=') {
       return
@@ -422,26 +439,20 @@ export async function fetchSqlLabelValues(
       columnTypes.get(filter.key)
     )
     if (clause) {
-      whereParts.push(clause)
+      extraWhere.push(clause)
     }
   })
 
-  const query = `SELECT DISTINCT ${selectExpr} FROM "${tableName}" WHERE ${whereParts.join(
-    ' AND '
-  )} LIMIT ${SQL_VALUE_LIMIT}`
-
-  try {
-    const response = await editorApi.runSQL(query, boundSignalDatabase(ctx, signal))
-    const rows = response?.output?.[0]?.records?.rows
-    if (!Array.isArray(rows)) {
-      return []
-    }
-    const values = rows.map((row) => (Array.isArray(row) ? String(row[0] ?? '') : '')).filter(Boolean)
-    return filterOptions([...new Set(values)], search)
-  } catch (error) {
-    console.error(`Failed to load SQL label values for ${trimmedKey}:`, error)
-    return []
-  }
+  const values = await fetchDistinctValues({
+    database: boundSignalDatabase(ctx, signal),
+    table: tableName,
+    source,
+    timeColumn,
+    timeRange: unixRange,
+    extraWhere,
+    limit: SQL_VALUE_LIMIT,
+  })
+  return filterOptions(values, search)
 }
 
 /** @deprecated Use fetchSqlLabelValues */
@@ -494,10 +505,15 @@ export function canSuggestFilterValues(
   fieldKey: string,
   fieldMap: Record<string, string>,
   labelKeys: string[],
-  containsKeys: string[] = []
+  // Kept for call-site compatibility: contains matching is an operator concern (`=~` →
+  // LIKE), not a reason to hide value suggestions.
+  _containsKeys: string[] = []
 ): boolean {
   const trimmed = fieldKey.trim()
-  if (isLogsContainsFilterKey(trimmed, fieldMap, containsKeys)) {
+  // "Contains" columns (`=~` → LIKE) are not all free text: `env`, `level`, `service` are
+  // enumerable too. Only free text stays unsuggested — the body role, plus body-like names
+  // for tables whose roles were never mapped.
+  if (isUnenumerableLogKey(trimmed, fieldMap)) {
     return false
   }
   if (parseJsonFieldChipKey(trimmed)) {

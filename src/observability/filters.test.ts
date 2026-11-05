@@ -190,6 +190,47 @@ describe('filters fieldMap SQL mapping', () => {
     })
     expect(parts).toEqual([`json_get_string("payload", '$."region"') = 'us'`])
   })
+
+  it('filtersToSqlWhere casts JSON attributes for range operators (JSON2 keeps numbers typed)', () => {
+    expect(
+      filtersToSqlWhere([{ key: 'span_attributes.response_size', op: '>', value: '1000' }], fieldMap, {
+        columns: ['span_attributes', 'timestamp'],
+      })
+    ).toEqual([`json_get("span_attributes", '$."response_size"')::DOUBLE > 1000`])
+  })
+
+  it('filtersToSqlWhere casts JSON attributes for boolean equality', () => {
+    expect(
+      filtersToSqlWhere([{ key: 'span_attributes.cache', op: '=', value: 'true' }], fieldMap, {
+        columns: ['span_attributes', 'timestamp'],
+      })
+    ).toEqual([`json_get("span_attributes", '$."cache"')::BOOLEAN = TRUE`])
+  })
+
+  it('filtersToSqlWhere drops a range filter whose value is not numeric', () => {
+    expect(
+      filtersToSqlWhere([{ key: 'span_attributes.response_size', op: '>', value: 'huge' }], fieldMap, {
+        columns: ['span_attributes', 'timestamp'],
+      })
+    ).toEqual([])
+  })
+
+  it('filtersToSqlWhere keeps equality on JSON attributes a string read', () => {
+    expect(
+      filtersToSqlWhere([{ key: 'span_attributes.http.status_code', op: '=', value: '503' }], fieldMap, {
+        columns: ['span_attributes', 'timestamp'],
+      })
+    ).toEqual([`json_get_string("span_attributes", '$."http.status_code"') = '503'`])
+  })
+
+  it('filtersToSqlWhere keeps typed literals for v1 flattened attribute columns', () => {
+    expect(
+      filtersToSqlWhere([{ key: 'span_attributes.response_size', op: '>', value: '1000' }], fieldMap, {
+        columns: ['span_attributes.response_size', 'timestamp'],
+        typeOf: () => 'Int64',
+      })
+    ).toEqual([`"span_attributes.response_size" > 1000`])
+  })
 })
 
 describe('same-key OR merge', () => {

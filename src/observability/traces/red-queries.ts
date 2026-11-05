@@ -318,6 +318,8 @@ export interface BuildBreakdownValuesSqlInput {
   tableName: string
   where: string
   groupByColumn: string
+  /** Ready SQL for group-by (e.g. `json_get_string(...)`); defaults to the identifier. */
+  groupByColumnSql?: string
   statusColumn: string
   durationColumn: string
   metric: RedMetric
@@ -344,6 +346,8 @@ export interface BuildBreakdownSeriesSqlInput {
   where: string
   timeColumn: string
   groupByColumn: string
+  /** Ready SQL for group-by (e.g. `json_get_string(...)`); defaults to the identifier. */
+  groupByColumnSql?: string
   statusColumn: string
   durationColumn: string
   metric: RedMetric
@@ -361,7 +365,7 @@ export function buildBreakdownSeriesSql(input: BuildBreakdownSeriesSqlInput): st
     { status: input.statusColumn, duration: input.durationColumn },
     input.intervalSeconds
   )
-  const groupCol = quoteIdent(input.groupByColumn)
+  const groupCol = input.groupByColumnSql ?? quoteIdent(input.groupByColumn)
   const inList = input.values.map((value) => `'${escapeSqlString(value)}'`).join(', ')
   return `SELECT
   date_bin('${input.intervalSeconds} seconds', ${quoteIdent(input.timeColumn)}) AS time_bucket,
@@ -394,7 +398,7 @@ export function buildBreakdownValuesSql(input: BuildBreakdownValuesSqlInput): st
     status: input.statusColumn,
     duration: input.durationColumn,
   })
-  const groupCol = quoteIdent(input.groupByColumn)
+  const groupCol = input.groupByColumnSql ?? quoteIdent(input.groupByColumn)
   return `SELECT
   ${groupCol} AS attr_value,
   ${rankExpr} AS metric_value

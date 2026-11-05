@@ -6,7 +6,10 @@ import type { DrilldownContext } from '../context'
 import { filtersToSqlWhere } from '../filters'
 import { boundSignalDatabase } from '../signal-database'
 import { escapeSqlString, quoteIdent } from '../logs/query-state'
-import { buildDefaultTracesFieldMap } from '../traces/field-map'
+import { buildDefaultTracesFieldMap, type TraceBreakdownAttribute } from '../traces/field-map'
+import { attributeContainersOf } from '../traces/attribute-keys'
+import { fetchTableAttributeKeys } from '../traces/attribute-sampling'
+import { isJsonAttributeContainerName, parseJsonFieldChipKey, sqlJsonGetStringExpr } from '../logs/json-field-keys'
 import {
   bucketToUnixSeconds,
   breakdownSeriesIntervalSeconds,
@@ -319,6 +322,65 @@ export interface BreakdownAttrValue {
   metricValue: number
 }
 
+/**
+ * Group-by SQL for a breakdown dimension.
+ *
+ * v1 tables carry attributes as physical columns, so the identifier is the answer. v2
+ * tables only have JSON2 containers, where the dimension is a chip key and must render as
+ * an expression. Returning `undefined` keeps the callers' identifier default.
+ */
+function traceGroupBySql(ctx: DrilldownContext, column: string): string | undefined {
+  const columns = ctx.semantics.traces.columns.value ?? []
+  if (columns.includes(column)) {
+    return quoteIdent(column)
+  }
+  const chip = parseJsonFieldChipKey(
+    column,
+    columns.filter((name) => isJsonAttributeContainerName(name))
+  )
+  return chip ? sqlJsonGetStringExpr(chip.column, chip.path) : undefined
+}
+
+/** Bounded row sample used to learn JSON2 attribute keys (v2 tables only). */
+const TRACE_ATTRIBUTE_SAMPLE_LIMIT = 1000
+
+/**
+ * Attribute dimensions for the bound trace table.
+ *
+ * v1 tables have no JSON2 containers, so this returns immediately and discovery keeps
+ * reading physical columns. v2 tables have no per-key columns, so the keys are sampled
+ * from the newest rows of the table (cached per database + table).
+ */
+export async function fetchTraceAttributeKeys(
+  ctx: DrilldownContext,
+  knownColumns?: readonly string[]
+): Promise<TraceBreakdownAttribute[]> {
+  const tableName = ctx.semantics.traces.table.value
+  if (!tableName) {
+    return []
+  }
+  // Callers that just loaded the table schema pass it in: the bind-populated semantics
+  // columns can lag behind the first suggest refresh, which would silently skip sampling.
+  const columns = knownColumns?.length ? knownColumns : ctx.semantics.traces.columns.value ?? []
+  const containers = attributeContainersOf(columns)
+  if (!containers.length) {
+    return []
+  }
+
+  const attributes = await fetchTableAttributeKeys({
+    database: boundSignalDatabase(ctx, 'traces'),
+    table: tableName,
+    columns,
+    parentColumn: parentColumn(ctx),
+    timeColumn: timeColumn(ctx),
+    limit: TRACE_ATTRIBUTE_SAMPLE_LIMIT,
+  })
+  if (!attributes.length) {
+    console.warn('Sampled trace attribute keys is empty', { tableName, containers })
+  }
+  return attributes
+}
+
 export interface BreakdownSeriesResult {
   series: Record<string, Array<[number, number]>>
   yAxis: { yMin: number; yMax: number }
@@ -348,6 +410,7 @@ export async function fetchBreakdownSeries(
     where,
     timeColumn: timeColumn(ctx),
     groupByColumn,
+    groupByColumnSql: traceGroupBySql(ctx, groupByColumn),
     statusColumn: statusColumn(ctx),
     durationColumn: durationColumn(ctx),
     metric,
@@ -398,6 +461,7 @@ export async function fetchBreakdownAttrValues(
     tableName,
     where,
     groupByColumn,
+    groupByColumnSql: traceGroupBySql(ctx, groupByColumn),
     statusColumn: statusColumn(ctx),
     durationColumn: durationColumn(ctx),
     metric,
