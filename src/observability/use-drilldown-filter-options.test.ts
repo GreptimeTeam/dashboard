@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref, type Ref } from 'vue'
 import type { DrilldownContext } from './context'
 import useDrilldownFilterOptions from './use-drilldown-filter-options'
+import { fetchFilterValueOptions } from './adapters/filter-options'
 
 vi.mock('./adapters/filter-options', () => ({
-  canSuggestFilterValues: () => false,
+  canSuggestFilterValues: () => true,
   fetchFilterKeyOptions: vi.fn(async () => []),
   fetchFilterValueOptions: vi.fn(async () => ({ values: [] })),
   fetchLogsContainsKeyOptions: vi.fn(async () => []),
@@ -25,16 +26,22 @@ vi.mock('./logs/field-map', () => ({
 const makeCtx = (
   signal: 'metrics' | 'logs' | 'traces',
   logsFieldMap: Record<string, string>,
-  logsView: 'overview' | 'detail' = 'detail'
+  logsView: 'overview' | 'detail' = 'detail',
+  scope?: { range?: Ref<number[]>; filters?: Ref<Array<{ key: string; op: string; value: string }>> }
 ) =>
   ({
     connection: {
       signal: ref(signal),
       logsDatabase: ref('public'),
+      databaseFor: () => 'public',
     },
-    query: {},
+    query: {
+      unixTimeRange: () => scope?.range?.value ?? [],
+      filters: scope?.filters ?? ref([]),
+    },
     semantics: {
       logs: {
+        database: ref('public'),
         table: ref('otlp_logs'),
         fieldMap: ref(logsFieldMap),
         columns: ref(['severity', 'resource_attributes']),
@@ -44,6 +51,7 @@ const makeCtx = (
         ready: computed(() => true),
       },
       traces: {
+        database: ref('public'),
         table: ref(undefined),
         fieldMap: ref({}),
         columns: ref(undefined),
@@ -126,5 +134,34 @@ describe('useDrilldownFilterOptions isVisibleFilterKey', () => {
     const ctx = makeCtx('metrics', { service: 'resource_attributes.service.name' })
     const { isVisibleFilterKey } = useDrilldownFilterOptions(ctx)
     expect(isVisibleFilterKey('resource_attributes.service.name')).toBe(true)
+  })
+})
+
+describe('useDrilldownFilterOptions value cache', () => {
+  it('drops cached value lists when the window or a committed filter changes', async () => {
+    const range = ref([100, 200])
+    const filters = ref<Array<{ key: string; op: string; value: string }>>([])
+    const ctx = makeCtx('traces', {}, 'detail', { range, filters })
+    const { loadValues } = useDrilldownFilterOptions(ctx)
+    // Flush the immediate label/settings watcher; it clears the cache once after mount.
+    await nextTick()
+    await nextTick()
+
+    const mocked = vi.mocked(fetchFilterValueOptions)
+    mocked.mockClear()
+
+    await loadValues('service_name')
+    await loadValues('service_name')
+    expect(mocked).toHaveBeenCalledTimes(1)
+
+    filters.value = [{ key: 'span_kind', op: '=', value: 'SPAN_KIND_SERVER' }]
+    await nextTick()
+    await loadValues('service_name')
+    expect(mocked).toHaveBeenCalledTimes(2)
+
+    range.value = [300, 400]
+    await nextTick()
+    await loadValues('service_name')
+    expect(mocked).toHaveBeenCalledTimes(3)
   })
 })

@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const runSQL = vi.fn()
 vi.mock('@/api/editor', () => ({ default: { runSQL: (...args: unknown[]) => runSQL(...args) } }))
 
-import { canSuggestValues, fetchDistinctValues, resolveSuggestFieldType } from './value-suggestions'
+import { canSuggestValues, fetchDistinctValues, resolveSuggestFieldType, suggestionScopeKey } from './value-suggestions'
 
 describe('canSuggestValues — one policy for Explore and the SQL builder', () => {
   it('suggests enumerable string fields', () => {
@@ -44,6 +44,36 @@ describe('resolveSuggestFieldType', () => {
 
   it('falls back to the sampled attribute type for chips', () => {
     expect(resolveSuggestFieldType('span_attributes.http.method', { attributeType: 'STRING' })).toBe('STRING')
+  })
+})
+
+describe('suggestionScopeKey', () => {
+  it('changes with the window and with committed equality filters', () => {
+    const base = suggestionScopeKey([], [100, 200])
+    expect(suggestionScopeKey([], [200, 300])).not.toBe(base)
+    expect(suggestionScopeKey([{ key: 'service_name', op: '=', value: 'frontend' }], [100, 200])).not.toBe(base)
+  })
+
+  it('ignores non-equality filters and filter order', () => {
+    const base = suggestionScopeKey(
+      [
+        { key: 'service_name', op: '=', value: 'frontend' },
+        { key: 'span_name', op: '=', value: 'GET' },
+      ],
+      [100, 200]
+    )
+    const reordered = suggestionScopeKey(
+      [
+        { key: 'span_name', op: '=', value: 'GET' },
+        { key: 'service_name', op: '=', value: 'frontend' },
+      ],
+      [100, 200]
+    )
+    expect(reordered).toBe(base)
+    // `>` is not applied to the suggestion query, so it must not invalidate the cache.
+    expect(suggestionScopeKey([{ key: 'duration_nano', op: '>', value: '5' }], [100, 200])).toBe(
+      suggestionScopeKey([], [100, 200])
+    )
   })
 })
 

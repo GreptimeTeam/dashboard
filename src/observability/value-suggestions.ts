@@ -91,6 +91,25 @@ export function resolveSuggestFieldType(
   return mappedType || options.columnTypes?.[key] || options.attributeType
 }
 
+/**
+ * Signature of the view that a suggested value list was fetched for.
+ *
+ * Explore scopes `SELECT DISTINCT` by the time window and by the other committed `=`
+ * filters, so a cached list must be dropped when either changes — otherwise the dropdown
+ * keeps showing values from the previous window. Non-equality filters and ordering are
+ * ignored because they never reach the suggestion query.
+ */
+export function suggestionScopeKey(
+  filters: ReadonlyArray<{ key: string; op: string; value: unknown }>,
+  range: readonly number[]
+): string {
+  const equalities = filters
+    .filter((filter) => filter.op === '=')
+    .map((filter) => `${filter.key}\u0000${String(filter.value)}`)
+    .sort()
+  return `${range.join(',')}\u0001${equalities.join('\u0002')}`
+}
+
 export interface DistinctValuesOptions {
   database?: string
   table: string

@@ -28,10 +28,6 @@ function quoteIdent(name: string): string {
   return `"${name.replace(/"/g, '""')}"`
 }
 
-function escapeSqlString(value: string): string {
-  return value.replace(/'/g, "''")
-}
-
 function recordsToRows(
   records:
     | {
@@ -91,47 +87,3 @@ export async function fetchSampledAttributes(options: AttributeSampleOptions): P
     return []
   }
 }
-
-export interface AttributeValuesOptions {
-  database?: string
-  table: string
-  /** JSON2 container column (`span_attributes`, `resource_attributes`, …). */
-  column: string
-  /** Attribute key inside the container (may contain dots). */
-  path: string
-  limit?: number
-}
-
-/**
- * Distinct values of one attribute key, for the value combobox.
- *
- * Always a string read: this feeds suggestions, not comparisons — numeric comparisons go
- * through the typed cast in `sqlJsonAttrExpr`.
- */
-export async function fetchAttributeDistinctValues(options: AttributeValuesOptions): Promise<string[]> {
-  const { database, table, column, path } = options
-  if (!table || !column || !path) {
-    return []
-  }
-  const limit = options.limit ?? 200
-  const escapedPath = path.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/'/g, "''")
-  const expr = `json_get_string(${quoteIdent(column)}, '$."${escapedPath}"')`
-
-  const sql = `SELECT DISTINCT ${expr} AS value
-FROM ${quoteIdent(table)}
-WHERE ${expr} IS NOT NULL
-LIMIT ${limit}`
-
-  try {
-    const response = await editorAPI.runSQL(sql, database)
-    const rows = response?.output?.[0]?.records?.rows ?? []
-    return [...new Set(rows.map((row) => String(row?.[0] ?? '')).filter(Boolean))].sort((left, right) =>
-      left.localeCompare(right)
-    )
-  } catch (error) {
-    console.error(`Failed to load values for ${column}.${path}:`, error)
-    return []
-  }
-}
-
-export { escapeSqlString }

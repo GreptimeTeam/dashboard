@@ -1,4 +1,4 @@
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import {
   canSuggestFilterValues,
   fetchFilterKeyOptions,
@@ -10,7 +10,7 @@ import {
 } from './adapters/filter-options'
 import type { DrilldownContext } from './context'
 import { attributeTypeOf, splitAttributeChip } from './traces/attribute-keys'
-import { canSuggestValues, resolveSuggestFieldType } from './value-suggestions'
+import { canSuggestValues, resolveSuggestFieldType, suggestionScopeKey } from './value-suggestions'
 import { loadDrilldownSettings } from './drilldown-settings'
 import { filterAppliesToSignal } from './filters'
 import { parseJsonFieldChipKey } from './logs/json-field-keys'
@@ -118,17 +118,21 @@ export default function useDrilldownFilterOptions(
     })
   }
 
-  const loadValues = async (fieldKey: string, search = '') => {
+  const loadValues = async (fieldKey: string, _search = '') => {
     const trimmedKey = fieldKey.trim()
     if (!trimmedKey || !isSqlFieldKey(trimmedKey)) {
-      valueOptionsByKey.value = { ...valueOptionsByKey.value, [trimmedKey]: [] }
+      return
+    }
+    // One fetch per key per scope: the scope watcher clears this map on a window/filter
+    // change, and the combobox filters the cached list locally while typing.
+    if (valueOptionsByKey.value[trimmedKey] !== undefined) {
       return
     }
 
     valuesLoading.value = true
     try {
       const { values } = await fetchFilterValueOptions(ctx, trimmedKey, {
-        search,
+        search: '',
         labelKeys: labelKeys.value,
       })
       valueOptionsByKey.value = { ...valueOptionsByKey.value, [trimmedKey]: values }
@@ -218,6 +222,20 @@ export default function useDrilldownFilterOptions(
     }
     return labelKeys.value.includes(trimmed)
   }
+
+  /**
+   * Value lists are fetched for one window + set of `=` filters. Drop them when that scope
+   * changes; the key vocabulary itself does not depend on it.
+   */
+  const suggestionScope = computed(() => {
+    const range = ctx.query.unixTimeRange?.() ?? []
+    const filters = ctx.query.filters?.value ?? []
+    return suggestionScopeKey(filters, range)
+  })
+
+  watch(suggestionScope, () => {
+    valueOptionsByKey.value = {}
+  })
 
   watch(
     () => ctx.connection.signal.value,
