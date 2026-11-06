@@ -40,9 +40,8 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
           template(#suffix)
             svg.icon-11.icon-color
               use(href="#search")
-    .metrics-tree-container(ref="treeContainerRef")
+    .metrics-tree-container(v-if="metricsTreeData.length" ref="treeContainerRef")
       a-tree.metrics-tree(
-        v-if="metricsTreeData.length"
         size="small"
         show-line
         action-on-node-click="expand"
@@ -66,12 +65,12 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
               @copyText="$emit('copyText', $event)"
               @insertText="$emit('insertText', $event)"
             )
-      EmptyStatus.empty(v-else)
+    EmptyStatus.empty(v-else)
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, watch, nextTick, onMounted } from 'vue'
-  import { useDebounceFn, useElementSize } from '@vueuse/core'
+  import { ref, computed, watch, nextTick, onActivated, onMounted } from 'vue'
+  import { useDebounceFn, useResizeObserver } from '@vueuse/core'
   import { storeToRefs } from 'pinia'
   import { useI18n } from 'vue-i18n'
   import {
@@ -109,14 +108,33 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
 
   const metrics = ref<Array<{ name: string }>>([])
   const metricTotal = ref<number | null>(null)
-  const treeContainerRef = ref<HTMLElement>()
-  const { height: treeHeight } = useElementSize(treeContainerRef)
-  const virtualListProps = computed(() => ({
-    height: Math.max(1, Math.floor(treeHeight.value)),
-    fixedSize: true,
-    estimatedSize: 36,
-  }))
   const metricsTreeData = ref<MetricTreeNode[]>([])
+  const treeContainerRef = ref<HTMLElement>()
+  const treeHeight = ref(0)
+  const measureTreeHeight = () => {
+    const element = treeContainerRef.value
+    if (!element) {
+      treeHeight.value = 0
+      return
+    }
+    // clientHeight includes the container's 8px bottom padding; the virtual list
+    // must match the content box or it would overflow exactly like .table-tree did.
+    const style = getComputedStyle(element)
+    const padding = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0)
+    treeHeight.value = Math.max(0, element.clientHeight - padding)
+  }
+  useResizeObserver(treeContainerRef, measureTreeHeight)
+  onActivated(() => {
+    nextTick(measureTreeHeight)
+  })
+  watch(metricsTreeData, () => {
+    nextTick(measureTreeHeight)
+  })
+  const virtualListProps = computed(() => ({
+    threshold: 100,
+    buffer: 20,
+    height: Math.max(1, Math.floor(treeHeight.value)),
+  }))
   const metricSearchKey = ref('')
   const loading = ref(false)
 
@@ -307,11 +325,30 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
     background: transparent;
   }
 
+  /* Mirror the table sidebar flex chain so the virtual list always receives the
+     remaining card height, not its content height. */
+  :deep(.arco-card-body > .arco-spin) {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    width: 100%;
+  }
+
+  :deep(.arco-card-body > .arco-spin > .arco-spin-children) {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    width: 100%;
+  }
+
   .metrics-tree-container {
     display: flex;
     flex: 1;
     flex-direction: column;
     min-height: 0;
+    width: 100%;
     overflow: hidden;
     /* Keep spacing below the last row outside the virtual list. */
     padding-bottom: 8px;
