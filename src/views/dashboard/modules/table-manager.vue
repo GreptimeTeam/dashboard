@@ -41,6 +41,7 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card.gpt-table-sidebar-
             svg.icon-11.icon-color
               use(href="#search")
       .gpt-table-sidebar-header__pager(v-if="showPager")
+        span.page-range {{ pageRangeLabel }}
         .header-pager
           a-button.pager-arrow(
             type="text"
@@ -233,6 +234,12 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card.gpt-table-sidebar-
     return currentOffset.value + tablesLoadedCount.value < tablesTotalCount.value
   })
   const currentBatch = computed(() => Math.floor(currentOffset.value / MAX_TABLES_PER_PAGE) + 1)
+  const pageRangeLabel = computed(() => {
+    if (!tablesLoadedCount.value) return '0'
+    const start = currentOffset.value + 1
+    const end = currentOffset.value + tablesLoadedCount.value
+    return `${start.toLocaleString()}–${end.toLocaleString()}`
+  })
   const pageInput = ref(String(currentPage.value))
   watch([currentPage, isTableSearchActive], () => {
     pageInput.value = String(isTableSearchActive.value ? currentBatch.value : currentPage.value)
@@ -578,9 +585,18 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card.gpt-table-sidebar-
   .gpt-table-sidebar-header__pager {
     grid-column: 1 / -1;
     display: flex;
-    justify-content: flex-end;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
     min-height: 22px;
     padding: 0 6px;
+
+    .page-range {
+      font-size: 12px;
+      color: var(--small-font-color);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
   }
 
   .header-pager {
