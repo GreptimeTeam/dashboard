@@ -1,6 +1,6 @@
 import { ref, toValue, watch, type MaybeRefOrGetter } from 'vue'
 import editorAPI from '@/api/editor'
-import { listBySignal } from '@/observability/semantics'
+import { listBySignal, listSignalTables } from '@/observability/semantics'
 
 export type TableSignal = 'logs' | 'traces'
 
@@ -35,11 +35,31 @@ export default function useTableOptions(options: UseTableOptionsOptions) {
   const loading = ref(false)
   const searching = ref(false)
   let requestSeq = 0
+  let allowedTables: Set<string> | null = null
+  let allowedDatabase = ''
+
+  /**
+   * Traces must only offer tables that can carry trace data (`trace_id`); logs have no
+   * such restriction. The allowed set is rebuilt per database and reused by search.
+   */
+  async function loadAllowedTables(db: string): Promise<Set<string>> {
+    if (allowedTables && allowedDatabase === db) {
+      return allowedTables
+    }
+    const names = await listSignalTables('traces', { database: db })
+    allowedTables = new Set(names)
+    allowedDatabase = db
+    return allowedTables
+  }
 
   async function fetchInitial(db: string): Promise<string[]> {
     const signal = toValue(options.signal)
+    if (signal === 'traces') {
+      const allowed = await loadAllowedTables(db)
+      return Array.from(allowed).slice(0, limit)
+    }
     const [semanticRows, response] = await Promise.all([
-      signal ? listBySignal(signal === 'logs' ? 'log' : 'trace', db) : Promise.resolve([]),
+      signal ? listBySignal('log', db) : Promise.resolve([]),
       editorAPI.getTables(limit, 0, db),
     ])
     const semanticNames = semanticRows.map((row) => row.tableName).filter(Boolean)
@@ -82,15 +102,18 @@ export default function useTableOptions(options: UseTableOptionsOptions) {
     }
     searching.value = true
     try {
-      const prefixNames = recordsToNames(await editorAPI.getTablesByPrefix(limit, 0, db, trimmed)).filter((name) =>
-        name.startsWith(trimmed)
+      const signal = toValue(options.signal)
+      const allowed = signal === 'traces' ? await loadAllowedTables(db) : undefined
+      const matches = (name: string) => !allowed || allowed.has(name)
+      const prefixNames = recordsToNames(await editorAPI.getTablesByPrefix(limit, 0, db, trimmed)).filter(
+        (name) => name.startsWith(trimmed) && matches(name)
       )
       if (seq !== requestSeq) return
       if (prefixNames.length) {
         tableOptions.value = prefixNames
         return
       }
-      const containsNames = recordsToNames(await editorAPI.getTables(limit, 0, db, trimmed))
+      const containsNames = recordsToNames(await editorAPI.getTables(limit, 0, db, trimmed)).filter(matches)
       if (seq !== requestSeq) return
       tableOptions.value = containsNames
     } catch (error) {
