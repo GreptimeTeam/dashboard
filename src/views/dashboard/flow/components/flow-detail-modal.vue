@@ -58,15 +58,13 @@ a-drawer.custom-drawer(
               a-input(v-model="formData.flow_name" :placeholder="$t('flow.namePlaceholder')")
           a-col(:span="12")
             a-form-item(field="sink_table_name" required :label="$t('flow.sinkTable')")
-              a-select(
+              TableSelect(
+                ref="tableSelectRef"
                 v-model="formData.sink_table_name"
                 style="width: 100%"
+                allow-create
+                :database="database"
                 :placeholder="$t('flow.sinkTablePlaceholder')"
-                :allow-search="true"
-                :allow-create="true"
-                :loading="tablesLoading"
-                :trigger-props="{ autoFitPopupMinWidth: true }"
-                :options="originTablesTree.map((table) => ({ label: table.title, value: table.title }))"
               )
               | &nbsp;
               a-button(type="text" :loading="creatingTable" @click="showCreateTableModal")
@@ -144,6 +142,7 @@ a-drawer.custom-drawer(
   import LangEditor from '@/components/lang-editor.vue'
   import editorAPI from '@/api/editor'
   import { useAppStore } from '@/store'
+  import TableSelect from '@/components/table-select/index.vue'
   import type { ColumnType } from '@/types/query'
   import { convertTimestampToMilliseconds } from '@/utils/date-time'
   import { useDateTimeFormat } from '@/hooks'
@@ -183,8 +182,7 @@ a-drawer.custom-drawer(
   // Get current database from app store
   const { tableCatalog, tableSchema, database } = storeToRefs(useAppStore())
 
-  const { originTablesTree, tablesLoading } = storeToRefs(useDataBaseStore())
-  const { getTables } = useDataBaseStore()
+  const tableSelectRef = ref<{ reload: () => Promise<void> }>()
   // Table creation state
   const createTableModalVisible = ref(false)
   const creatingTable = ref(false)
@@ -268,7 +266,7 @@ GROUP BY time_window;`
     try {
       creatingTable.value = true
       await editorAPI.runSQL(createTableSQL.value)
-      await getTables()
+      await tableSelectRef.value?.reload()
       // Close modal and reset
       createTableModalVisible.value = false
       createTableSQL.value = ''

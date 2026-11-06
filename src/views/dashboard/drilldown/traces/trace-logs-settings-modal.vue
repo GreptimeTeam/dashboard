@@ -69,7 +69,7 @@ a-modal.trace-logs-settings(
     updateTracesDrilldownSettings,
     type TraceLogsMapping,
   } from '@/observability/drilldown-settings'
-  import { getTableSemantics, listBySignal } from '@/observability/semantics'
+  import { getTableSemantics, listSignalTables } from '@/observability/semantics'
   import { qualifyTraceLogsTable, resolveTraceLogsForServices } from '@/observability/traces/logs-association'
   import { fetchTraceServices } from '@/observability/adapters/traces'
   import useTableSchemaStore from '@/store/modules/table-schema'
@@ -118,14 +118,13 @@ a-modal.trace-logs-settings(
     }
     loadingTables.value[index] = true
     try {
-      // Qualification requires `trace_id`, so start from the (cached) set of tables
-      // that actually have it instead of enumerating every table in the database.
-      const [traceCapable, declaredLogs] = await Promise.all([
-        tableSchemaStore.tablesHavingColumn('trace_id', database),
-        listBySignal('log', database),
-      ])
-      const include = mappings.value[index]?.table ? [mappings.value[index].table] : []
-      const tables = Array.from(new Set([...declaredLogs.map((row) => row.tableName), ...traceCapable, ...include]))
+      // Qualification requires `trace_id`; the discovery layer returns only tables that
+      // carry it instead of enumerating every table in the database.
+      const tables = await listSignalTables('logs', {
+        database,
+        include: mappings.value[index]?.table ? [mappings.value[index].table] : [],
+        traceOnly: true,
+      })
       // The picker lists every table that can take part in trace → logs association —
       // the unified trace-side rule (trace_id + not trace-model + not declared as
       // another signal). No column-name guessing: the auto probe additionally requires
@@ -162,6 +161,7 @@ a-modal.trace-logs-settings(
       tableOptions.value[index] = qualified
         .filter((item): item is { table: string; declared: boolean } => item !== undefined)
         .sort((a, b) => Number(b.declared) - Number(a.declared))
+        .slice(0, 500)
         .map((item) => item.table)
     } catch (error) {
       console.error('Failed to load trace logs table options', error)

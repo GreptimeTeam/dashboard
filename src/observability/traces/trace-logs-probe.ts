@@ -1,7 +1,7 @@
 import editorApi from '@/api/editor'
 import useTableSchemaStore from '@/store/modules/table-schema'
 import { escapeSqlString, quoteIdent } from '../logs/query-state'
-import { getTableSemantics, listBySignal } from '../semantics'
+import { getTableSemantics, listSignalTables } from '../semantics'
 import type { DrilldownContext } from '../context'
 import { qualifyTraceLogsTable } from './trace-logs-qualification'
 import type { SchemaColumn } from '../logs/field-map'
@@ -30,12 +30,12 @@ export async function loadTraceLogsAssociationPool(ctx: DrilldownContext): Promi
   const database = ctx.connection.logsDatabase.value
   // Every mappable table needs `trace_id`; one cached GROUP BY query is enough to
   // enumerate them without listing the whole database.
-  const [traceCapable, declaredLogs] = await Promise.all([
-    useTableSchemaStore().tablesHavingColumn('trace_id', database),
-    listBySignal('log', database),
-  ])
-  const include = ctx.semantics.logs.table.value ? [ctx.semantics.logs.table.value] : []
-  const tables = Array.from(new Set([...declaredLogs.map((row) => row.tableName), ...traceCapable, ...include]))
+  const listed = await listSignalTables('logs', {
+    include: ctx.semantics.logs.table.value ? [ctx.semantics.logs.table.value] : [],
+    database,
+    traceOnly: true,
+  })
+  const tables = Array.isArray(listed) ? listed : []
   if (!tables.length) {
     return { qualifiedTables: [], candidates: [] }
   }

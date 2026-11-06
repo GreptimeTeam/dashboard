@@ -238,7 +238,7 @@ a-modal(
     defaultFormState?: Form
   }>()
 
-  const TABLE_WINDOW = 200
+  const TABLE_WINDOW = 500
   const tables = ref<string[]>([])
   const tableMap = ref<{ [key: string]: TableField[] }>({})
   /** Bounded initial options; remote search replaces `tables` while typing. */
