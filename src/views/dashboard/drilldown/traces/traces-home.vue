@@ -10,16 +10,15 @@ a-layout-content.layout-content
               SignalDatabaseSelect(v-model="tracesDatabase")
             span.drilldown-toolbar__group
               span.drilldown-toolbar__label {{ t('drilldown.traces.tableLabel') }}
-              a-select.drilldown-table-select(
-                allow-search
+              TableSelect.drilldown-table-select(
+                signal="traces"
                 allow-create
                 size="medium"
                 :model-value="tracesTable"
+                :database="tracesDatabase"
                 :placeholder="t('drilldown.traces.tablePlaceholder')"
-                :loading="loadingTables"
                 @change="onTableChange"
               )
-                a-option(v-for="name in tableOptions" :key="name" :value="name") {{ name }}
           .drilldown-toolbar__right
             a-button.trace-logs-settings-trigger(
               v-if="logsManualMappingEnabled"
@@ -112,9 +111,9 @@ a-layout-content.layout-content
   import useDrilldownKeepAlive from '@/observability/use-drilldown-keep-alive'
   import useDrilldownPanelTab from '@/observability/use-drilldown-panel-tab'
   import useSignalQuery from '@/observability/use-signal-query'
-  import useSignalTableOptions from '@/observability/use-signal-table-options'
   import { IconSettings } from '@arco-design/web-vue/es/icon'
   import TraceTable from '@/views/dashboard/traces/components/TraceTable.vue'
+  import TableSelect from '@/components/table-select/index.vue'
   import TraceLogsSettingsModal from './trace-logs-settings-modal.vue'
   import SignalDatabaseSelect from '../components/signal-database-select.vue'
   import RedChartPanel from './red-chart-panel.vue'
@@ -164,7 +163,6 @@ a-layout-content.layout-content
 
   const keepAlive = useDrilldownKeepAlive({ deps: depsKey })
   const { isActive: overviewActive } = keepAlive
-  const { tableOptions, loadingTables, loadTables } = useSignalTableOptions('traces', overviewActive)
 
   /**
    * Route every service once per table load; the click itself is a memory lookup. The
@@ -215,12 +213,6 @@ a-layout-content.layout-content
     }
   )
 
-  watch(tracesDatabase, () => {
-    if (overviewActive.value) {
-      loadTables()
-    }
-  })
-
   watch(
     () => ctx.ui.focusTraceId.value,
     (value) => {
@@ -269,16 +261,12 @@ a-layout-content.layout-content
   }
 
   keepAlive.setResume(() => {
-    loadTables()
     ctx.actions.triggerRefresh()
   })
 
   const onTableChange = async (table: string) => {
     if (!table || table === ctx.semantics.traces.table.value) {
       return
-    }
-    if (!tableOptions.value.includes(table)) {
-      tableOptions.value = [...tableOptions.value, table]
     }
     await ctx.actions.bindTable('traces', table, { persist: true })
   }
@@ -339,10 +327,6 @@ a-layout-content.layout-content
     enabled: () => overviewActive.value && !ctx.ui.focusTraceId.value,
     params: () => selectedRedMetric.value,
     run: () => loadRows(),
-  })
-
-  onMounted(async () => {
-    await loadTables()
   })
 </script>
 

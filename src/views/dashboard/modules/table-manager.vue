@@ -40,95 +40,117 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card.gpt-table-sidebar-
           template(#suffix)
             svg.icon-11.icon-color
               use(href="#search")
-    a-tree.table-tree(
-      v-if="tablesTreeForDatabase[activeDatabase]?.length"
-      v-model:expanded-keys="expandedKeys"
-      size="small"
-      action-on-node-click="expand"
-      :ref="(el) => setRefMap(el, activeDatabase)"
-      :block-node="true"
-      :data="tablesTreeData"
-      :load-more="loadMore"
-      :animation="false"
-      :virtual-list-props="{ threshold: 100, buffer: 20, height: virtualListHeight }"
-    )
-      template(#icon="node")
-        a-tooltip(v-if="getNodeIcon(node.node)" :content="getTableIconTooltip(node.node)")
-          svg.icon(:class="getTableIconClass(node.node)")
-            use(:href="getNodeIcon(node.node)")
-      template(#title="nodeData")
-        .tree-data(v-if="!nodeData.isLeaf")
-          .data-title(:title="nodeData.title")
-            | {{ nodeData.title }}
-          TableMenu(
-            :nodeData="nodeData"
-            :database="activeDatabase"
-            :expandedKeys="expandedKeys"
-            :expandedTablesTree="expandedTablesTree"
-            @expandChildren="expandChildren"
+      .gpt-table-sidebar-header__pager(v-if="showPager")
+        span.page-range {{ pageRangeLabel }}
+        .header-pager
+          a-button.pager-arrow(
+            type="text"
+            size="mini"
+            :disabled="!canPrev || tablesLoading"
+            @click="goPrev"
+          ) ‹
+          a-input.page-input(
+            v-model="pageInput"
+            size="mini"
+            @press-enter="submitPageInput"
+            @blur="submitPageInput"
           )
-        .tree-data(v-else-if="nodeData.dataType")
-          .data-title.columns
-            | {{ nodeData.title }}
-          .tree-data
-            transition(name="slide-fade")
-              .data-type {{ nodeData.dataType }}
+          span.page-total(v-if="!isTableSearchActive") / {{ pageCount }}
+          a-button.pager-arrow(
+            type="text"
+            size="mini"
+            :disabled="!canNext || tablesLoading"
+            @click="goNext"
+          ) ›
+    .table-tree-container(v-if="tablesTreeForDatabase[activeDatabase]?.length" ref="treeContainerRef")
+      a-tree.table-tree(
+        v-model:expanded-keys="expandedKeys"
+        size="small"
+        action-on-node-click="expand"
+        :ref="(el) => setRefMap(el, activeDatabase)"
+        :block-node="true"
+        :data="expandedTablesTree"
+        :load-more="loadMore"
+        :animation="false"
+        :virtual-list-props="{ threshold: 100, buffer: 20, height: virtualListHeight }"
+      )
+        template(#icon="node")
+          a-tooltip(v-if="getNodeIcon(node.node)" :content="getTableIconTooltip(node.node)")
+            svg.icon(:class="getTableIconClass(node.node)")
+              use(:href="getNodeIcon(node.node)")
+        template(#title="nodeData")
+          .tree-data(v-if="!nodeData.isLeaf")
+            .data-title(:title="nodeData.title")
+              | {{ nodeData.title }}
             TableMenu(
-              isColumn
               :nodeData="nodeData"
               :database="activeDatabase"
               :expandedKeys="expandedKeys"
               :expandedTablesTree="expandedTablesTree"
               @expandChildren="expandChildren"
             )
-        .detail-row(v-else)
-          .count-and-time(v-if="nodeData.title === 'rowAndTime'")
-            a-space(:size="4")
-              span {{ $t('dashboard.rowCount') }}
-              span {{ nodeData.info.rowCount }}
-            a-space
-              a-space(:size="4")
-                span {{ `TTL` }}
-                span {{ nodeData.info.ttl }}
-              a-button.refresh-details.row-middle(
-                type="text"
-                size="small"
-                :loading="isRefreshingDetails[nodeData.parentKey]"
-                @click="loadMore(expandedTablesTree[nodeData.parentKey])"
+          .tree-data(v-else-if="nodeData.dataType")
+            .data-title.columns
+              | {{ nodeData.title }}
+            .tree-data
+              transition(name="slide-fade")
+                .data-type {{ nodeData.dataType }}
+              TableMenu(
+                isColumn
+                :nodeData="nodeData"
+                :database="activeDatabase"
+                :expandedKeys="expandedKeys"
+                :expandedTablesTree="expandedTablesTree"
+                @expandChildren="expandChildren"
               )
-                template(#icon)
-                  svg.icon-11.icon-color
-                    use(href="#refresh")
-            a-space(:size="4")
-              span.time {{ $t('dashboard.minTime') }}
-              a-tooltip(v-if="nodeData.info.min !== '-'" :content="`${nodeData.info.min}`")
-                span {{ dateFormatter(nodeData.info.timestampType, nodeData.info.min) }}
-              span(v-else) {{ nodeData.info.min }}
-            a-space(:size="4")
-              span.time {{ $t('dashboard.maxTime') }}
-              a-tooltip(v-if="nodeData.info.max !== '-'" :content="`${nodeData.info.max}`")
-                span {{ dateFormatter(nodeData.info.timestampType, nodeData.info.max) }}
-              span(v-else) {{ nodeData.info.max }}
-          a-space(v-else)
-            a-space(align="start" :class="{ 'create-table': nodeData.info.sql !== '-' }" :size="4")
-              .left
-                | {{ $t('dashboard.createTable') }}
-                TextCopyable.title-copy.code(
-                  :data="nodeData.info.sql"
-                  :showData="false"
-                  :copyTooltip="$t('dashboard.copyToClipboard')"
+          .detail-row(v-else)
+            .count-and-time(v-if="nodeData.title === 'rowAndTime'")
+              a-space(:size="4")
+                span {{ $t('dashboard.rowCount') }}
+                span {{ nodeData.info.rowCount }}
+              a-space
+                a-space(:size="4")
+                  span {{ `TTL` }}
+                  span {{ nodeData.info.ttl }}
+                a-button.refresh-details.row-middle(
+                  type="text"
+                  size="small"
+                  :loading="isRefreshingDetails[nodeData.parentKey]"
+                  @click="loadMore(expandedTablesTree[nodeData.parentKey])"
                 )
-              span.empty-sql(v-if="nodeData.info.sql === '-'") {{ nodeData.info.sql }}
-              .right(v-else)
-                a-typography-text.code-space {{ nodeData.info.sql }}
-      template(#switcher-icon="nodeData")
-        svg.icon-11.icon-color(v-if="!nodeData.isLeaf") 
-          use(href="#down")
-    EmptyStatus.empty(v-else-if="activeDatabase && !tablesTreeForDatabase[activeDatabase]?.length")
-    EmptyStatus.empty(v-else)
+                  template(#icon)
+                    svg.icon-11.icon-color
+                      use(href="#refresh")
+              a-space(:size="4")
+                span.time {{ $t('dashboard.minTime') }}
+                a-tooltip(v-if="nodeData.info.min !== '-'" :content="`${nodeData.info.min}`")
+                  span {{ dateFormatter(nodeData.info.timestampType, nodeData.info.min) }}
+                span(v-else) {{ nodeData.info.min }}
+              a-space(:size="4")
+                span.time {{ $t('dashboard.maxTime') }}
+                a-tooltip(v-if="nodeData.info.max !== '-'" :content="`${nodeData.info.max}`")
+                  span {{ dateFormatter(nodeData.info.timestampType, nodeData.info.max) }}
+                span(v-else) {{ nodeData.info.max }}
+            a-space(v-else)
+              a-space(align="start" :class="{ 'create-table': nodeData.info.sql !== '-' }" :size="4")
+                .left
+                  | {{ $t('dashboard.createTable') }}
+                  TextCopyable.title-copy.code(
+                    :data="nodeData.info.sql"
+                    :showData="false"
+                    :copyTooltip="$t('dashboard.copyToClipboard')"
+                  )
+                span.empty-sql(v-if="nodeData.info.sql === '-'") {{ nodeData.info.sql }}
+                .right(v-else)
+                  a-typography-text.code-space {{ nodeData.info.sql }}
+        template(#switcher-icon="nodeData")
+          svg.icon-11.icon-color(v-if="!nodeData.isLeaf") 
+            use(href="#down")
+    EmptyStatus.empty(v-if="!tablesTreeForDatabase[activeDatabase]?.length")
 </template>
 
 <script lang="ts" setup name="TableManager">
+  import { useDebounceFn, useElementSize } from '@vueuse/core'
   import { useI18n } from 'vue-i18n'
   import useSiderTabs from '@/hooks/sider-tabs'
   import type { TableTreeParent, TreeData } from '@/store/modules/database/types'
@@ -148,11 +170,16 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card.gpt-table-sidebar-
 
   const { tablesSearchKey, tablesTreeRef, refreshTables, loadMore, loadMoreColumns, isRefreshingDetails } =
     useSiderTabs()
-  const { tablesLoading, totalTablesLoading, tablesTreeForDatabase, tablesTotalByDatabase, databaseActiveKeys } =
-    storeToRefs(useDataBaseStore())
-
-  const TABLE_NODE_HEIGHT = 34
-  const MIN_VIRTUAL_LIST_HEIGHT = 200
+  const dataBaseStore = useDataBaseStore()
+  const { searchTables, MAX_TABLES_PER_PAGE } = dataBaseStore
+  const {
+    tablesLoading,
+    totalTablesLoading,
+    tablesTreeForDatabase,
+    tablesTotalByDatabase,
+    databaseActiveKeys,
+    tablesPageByDatabase,
+  } = storeToRefs(dataBaseStore)
 
   const activeDatabase = ref<string>(database.value || '')
   const expandedKeys = ref<number[]>([])
@@ -179,13 +206,6 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card.gpt-table-sidebar-
     return tablesTreeForDatabase.value[activeDatabase.value] || []
   })
 
-  const tablesTreeData = computed(() => {
-    if (!tablesSearchKey.value) return expandedTablesTree.value
-    return expandedTablesTree.value.filter(
-      (item: TableTreeParent) => item.title.toLowerCase().indexOf(tablesSearchKey.value.toLowerCase()) > -1
-    )
-  })
-
   const tablesTotalCount = computed(() => {
     const db = activeDatabase.value
     if (!db) return 0
@@ -194,13 +214,40 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card.gpt-table-sidebar-
     return tablesTreeForDatabase.value[db]?.length ?? 0
   })
 
-  const filteredTablesCount = computed(() => tablesTreeData.value.length)
-
   const isTableSearchActive = computed(() => tablesSearchKey.value.trim().length > 0)
+
+  const tablesPage = computed(() => tablesPageByDatabase.value[activeDatabase.value])
+  const tablesLoadedCount = computed(() => tablesPage.value?.loaded ?? 0)
+  const currentOffset = computed(() => tablesPage.value?.offset || 0)
+  const currentPage = computed(() => Math.floor(currentOffset.value / MAX_TABLES_PER_PAGE) + 1)
+  const pageCount = computed(() => Math.max(1, Math.ceil(tablesTotalCount.value / MAX_TABLES_PER_PAGE)))
+
+  const showPager = computed(() => {
+    if (isTableSearchActive.value) {
+      return currentOffset.value > 0 || tablesLoadedCount.value >= MAX_TABLES_PER_PAGE
+    }
+    return tablesTotalCount.value > MAX_TABLES_PER_PAGE
+  })
+  const canPrev = computed(() => currentOffset.value > 0)
+  const canNext = computed(() => {
+    if (isTableSearchActive.value) return tablesLoadedCount.value >= MAX_TABLES_PER_PAGE
+    return currentOffset.value + tablesLoadedCount.value < tablesTotalCount.value
+  })
+  const currentBatch = computed(() => Math.floor(currentOffset.value / MAX_TABLES_PER_PAGE) + 1)
+  const pageRangeLabel = computed(() => {
+    if (!tablesLoadedCount.value) return '0'
+    const start = currentOffset.value + 1
+    const end = currentOffset.value + tablesLoadedCount.value
+    return `${start.toLocaleString()}–${end.toLocaleString()}`
+  })
+  const pageInput = ref(String(currentPage.value))
+  watch([currentPage, isTableSearchActive], () => {
+    pageInput.value = String(isTableSearchActive.value ? currentBatch.value : currentPage.value)
+  })
 
   const tableCountLabel = computed(() => {
     if (isTableSearchActive.value) {
-      return `${filteredTablesCount.value}/${tablesTotalCount.value}`
+      return `${tablesLoadedCount.value}/${tablesTotalCount.value}`
     }
     return t('tables.sidebar.countTotal', { count: tablesTotalCount.value })
   })
@@ -214,36 +261,99 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card.gpt-table-sidebar-
     tablesTreeRef.value[db] = el
   }
 
+  const runSearch = async () => {
+    const keyword = tablesSearchKey.value.trim()
+    if (!activeDatabase.value) return
+    expandedKeys.value = []
+    if (!keyword) {
+      await refreshTables(activeDatabase.value, 0)
+      return
+    }
+    await searchTables(activeDatabase.value, keyword, 0)
+  }
+
   const refreshTablesTree = async () => {
     if (activeDatabase.value && props.databaseList.includes(activeDatabase.value)) {
-      await refreshTables(activeDatabase.value)
+      if (isTableSearchActive.value) await runSearch()
+      else await refreshTables(activeDatabase.value, 0)
     } else if (props.databaseList.length > 0) {
       const targetDb = props.databaseList.includes(database.value) ? database.value : props.databaseList[0]
       activeDatabase.value = targetDb
       databaseActiveKeys.value = [targetDb]
-      await refreshTables(targetDb)
+      await refreshTables(targetDb, 0)
     } else {
       await appStore.refreshDatabaseList()
     }
   }
 
+  let skipNextSearch = false
   const onDatabaseChange = async (db: string) => {
+    skipNextSearch = tablesSearchKey.value.trim().length > 0
     tablesSearchKey.value = ''
     expandedKeys.value = []
     activeDatabase.value = db
     database.value = db
     databaseActiveKeys.value = [db]
-    if (!tablesTreeForDatabase.value[db]) {
-      await refreshTables(db)
-    } else if (tablesTreeRef.value && tablesTreeRef.value[db]) {
-      tablesTreeRef.value[db].expandAll(false)
-    }
+    await refreshTables(db, 0)
   }
 
-  const virtualListHeight = computed(() => {
-    const maxHeight = `calc(100vh - var(--tables-header-height) - var(--footer-height))`
-    return maxHeight
-  })
+  const resetTreeScroll = async () => {
+    await nextTick()
+    const tree = tablesTreeRef.value?.[activeDatabase.value]
+    const scroller = tree?.$el?.querySelector?.('.arco-virtual-list') as HTMLElement | null
+    if (scroller) scroller.scrollTop = 0
+  }
+
+  /** Paging keeps the active search filter (offset applies to the same LIKE query). */
+  const goToOffset = async (offset: number) => {
+    if (offset < 0 || tablesLoading.value) return
+    expandedKeys.value = []
+    const keyword = tablesSearchKey.value.trim()
+    if (keyword) await searchTables(activeDatabase.value, keyword, offset)
+    else await refreshTables(activeDatabase.value, offset)
+    await resetTreeScroll()
+  }
+
+  const goPrev = () => goToOffset(Math.max(0, currentOffset.value - MAX_TABLES_PER_PAGE))
+  const goNext = () => goToOffset(currentOffset.value + MAX_TABLES_PER_PAGE)
+
+  const goToPage = async (page: number) => {
+    if (page < 1 || page > pageCount.value) return
+    await goToOffset((page - 1) * MAX_TABLES_PER_PAGE)
+  }
+
+  const submitPageInput = () => {
+    const parsed = Number(pageInput.value)
+    if (!Number.isFinite(parsed)) {
+      pageInput.value = String(isTableSearchActive.value ? currentBatch.value : currentPage.value)
+      return
+    }
+    const target = Math.max(1, Math.round(parsed))
+    if (isTableSearchActive.value) {
+      pageInput.value = String(target)
+      if (target !== currentBatch.value) goToOffset((target - 1) * MAX_TABLES_PER_PAGE)
+      return
+    }
+    const clamped = Math.min(target, pageCount.value)
+    pageInput.value = String(clamped)
+    if (clamped !== currentPage.value) goToPage(clamped)
+  }
+
+  const debouncedSearch = useDebounceFn(() => {
+    if (skipNextSearch) {
+      skipNextSearch = false
+      return
+    }
+    runSearch()
+  }, 300)
+
+  watch(tablesSearchKey, () => debouncedSearch())
+
+  // The sidebar height depends on the page layout (header rows, pager, footer),
+  // so measure the tree container instead of subtracting hard-coded viewport vars.
+  const treeContainerRef = ref<HTMLElement>()
+  const { height: treeContainerHeight } = useElementSize(treeContainerRef)
+  const virtualListHeight = computed(() => Math.max(1, Math.floor(treeContainerHeight.value)))
 
   const expandChildren = (event: Event, nodeData: TableTreeParent, type: 'details' | 'columns') => {
     expandedKeys.value.push(nodeData.key)
@@ -340,10 +450,24 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card.gpt-table-sidebar-
     border-radius: var(--gpt-radius-sm);
   }
 
+  .table-tree-container {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+    /* Keep the breathing room below the last row, but outside the
+       virtual list so its height matches the measured content box. */
+    padding-bottom: 8px;
+  }
+
   .table-tree {
     flex: 1;
     min-height: 0;
     height: auto;
+    /* global .table-tree adds 8px bottom padding; the virtual list would
+       overflow the container by exactly that amount. */
+    padding: 0 0 0 10px;
 
     :deep(.arco-tree-node-icon .icon:has(use[href='#table'])) {
       color: var(--gpt-accent-ts);
@@ -456,6 +580,54 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card.gpt-table-sidebar-
 
   .table-sidebar-title {
     width: 100%;
+  }
+
+  .gpt-table-sidebar-header__pager {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 22px;
+    padding: 0 6px;
+
+    .page-range {
+      font-size: 12px;
+      color: var(--small-font-color);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  .header-pager {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--main-font-color);
+
+    .pager-arrow {
+      width: 18px;
+      height: 20px;
+      padding: 0;
+    }
+
+    .page-input {
+      width: 40px;
+
+      :deep(.arco-input) {
+        height: 20px;
+        padding: 0 4px;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+      }
+    }
+
+    .page-total {
+      font-size: 12px;
+      white-space: nowrap;
+    }
   }
 
   .table-sidebar-refresh.arco-btn-text.arco-btn-only-icon {

@@ -10,16 +10,15 @@ a-layout-content.layout-content
               SignalDatabaseSelect(v-model="logsDatabase")
             span.drilldown-toolbar__group
               span.drilldown-toolbar__label {{ t('drilldown.logs.tableLabel') }}
-              a-select.drilldown-table-select(
-                allow-search
+              TableSelect.drilldown-table-select(
+                signal="logs"
                 allow-create
                 size="medium"
                 :model-value="logsTable"
+                :database="logsDatabase"
                 :placeholder="t('drilldown.logs.tablePlaceholder')"
-                :loading="loadingTables"
                 @change="onTableChange"
               )
-                a-option(v-for="name in tableOptions" :key="name" :value="name") {{ name }}
           .drilldown-toolbar__right
             a-button(type="outline" size="medium" @click="settingsVisible = true")
               template(#icon)
@@ -44,12 +43,12 @@ a-layout-content.layout-content
 </template>
 
 <script setup lang="ts">
-  import { computed, onMounted, ref, watch } from 'vue'
+  import { computed, ref } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { IconSettings } from '@arco-design/web-vue/es/icon'
   import { useDrilldownContext } from '@/observability/context'
   import useDrilldownKeepAlive from '@/observability/use-drilldown-keep-alive'
-  import useSignalTableOptions from '@/observability/use-signal-table-options'
+  import TableSelect from '@/components/table-select/index.vue'
   import SignalDatabaseSelect from '../components/signal-database-select.vue'
   import LabelsTab from './labels-tab.vue'
   import LogsSettingsModal from './logs-settings-modal.vue'
@@ -75,32 +74,16 @@ a-layout-content.layout-content
     ])
 
   const keepAlive = useDrilldownKeepAlive({ deps: depsKey })
-  const { isActive: overviewActive } = keepAlive
-  const { tableOptions, loadingTables, loadTables } = useSignalTableOptions('logs', overviewActive)
   keepAlive.setResume(() => {
-    loadTables()
     ctx.actions.triggerRefresh()
-  })
-
-  watch(logsDatabase, () => {
-    if (overviewActive.value) {
-      loadTables()
-    }
   })
 
   const onTableChange = async (table: string) => {
     if (!table || table === ctx.semantics.logs.table.value) {
       return
     }
-    if (!tableOptions.value.includes(table)) {
-      tableOptions.value = [...tableOptions.value, table]
-    }
     await ctx.actions.bindTable('logs', table, { persist: true })
   }
-
-  onMounted(async () => {
-    await loadTables()
-  })
 </script>
 
 <style scoped lang="less">

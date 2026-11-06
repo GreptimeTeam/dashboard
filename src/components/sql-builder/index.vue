@@ -24,6 +24,10 @@ a-form.sql-builder-form(
       :allow-search="true"
       :trigger-props="{ autoFitPopupMinWidth: true }"
       :options="tables"
+      :virtual-list-props="{ height: 260, fixedSize: true, estimatedSize: 36 }"
+      :filter-option="!remoteTableSearch"
+      :loading="tableSearching"
+      @search="handleTableSearch"
       @change="handleTableChange"
     )
 
@@ -183,11 +187,11 @@ a-modal(
 <script setup name="SQLBuilder" lang="ts">
   import { ref, watch, onMounted, computed, reactive, nextTick } from 'vue'
   import { useI18n } from 'vue-i18n'
-  import { useLocalStorage } from '@vueuse/core'
+  import { useDebounceFn, useLocalStorage } from '@vueuse/core'
   import { storeToRefs } from 'pinia'
   import editorAPI from '@/api/editor'
   import { useAppStore } from '@/store'
-  import { listSignalTables } from '@/observability/semantics'
+  import { listBySignal } from '@/observability/semantics'
   import { getSignalDatabase, setSignalDatabase } from '@/observability/signal-database'
   import type { Condition, BuilderFormState as Form } from '@/types/query'
   import { TsTypeMapping } from '@/utils/date-time'
@@ -234,8 +238,15 @@ a-modal(
     defaultFormState?: Form
   }>()
 
+  const TABLE_WINDOW = 500
   const tables = ref<string[]>([])
   const tableMap = ref<{ [key: string]: TableField[] }>({})
+  /** Bounded initial options; remote search replaces `tables` while typing. */
+  const initialTables = ref<string[]>([])
+  const tableSearching = ref(false)
+  let tableSearchSeq = 0
+  /** Logs/Traces builders search table names on the server instead of loading all. */
+  const remoteTableSearch = computed(() => !!props.signalDatabaseKind && !props.tablesProvider)
 
   // Get current database from app store
   const { database, tableCatalog, tableSchema, databaseList } = storeToRefs(useAppStore())
@@ -249,6 +260,9 @@ a-modal(
   // Use localStorage to remember the last selected table
   const storageKey = props.storageKey || 'sql-builder-last-table'
   const lastSelectedTable = useLocalStorage(storageKey, '')
+  // Remember which database the table belongs to; avoids probing stale names
+  // from another database (and the expected 400 that a DESC probe would log).
+  const lastSelectedTableDb = useLocalStorage(`${storageKey}-db`, '')
 
   // Initialize form state as reactive object
   const form = reactive<Form>(props.formState)
@@ -576,20 +590,43 @@ a-modal(
     void loadValueSuggestions(condition)
   }
 
+  async function fetchTableNames(
+    limit: number,
+    filter = '',
+    db = form.database,
+    mode: 'contains' | 'prefix' = 'contains'
+  ): Promise<string[]> {
+    const res: any =
+      mode === 'prefix'
+        ? await editorAPI.getTablesByPrefix(limit, 0, db, filter)
+        : await editorAPI.getTables(limit, 0, db, filter)
+    return ((res?.output?.[0]?.records?.rows || []) as string[][]).map((row) => row[0]).filter(Boolean)
+  }
+
   async function fetchTables() {
     try {
       if (props.tablesProvider) {
         tables.value = await props.tablesProvider()
       } else if (props.signalDatabaseKind) {
-        // Same discovery/ranking as Drilldown Explore (listSignalTables).
-        // Only the current selection is an explicit include. A persisted table must be
-        // rediscovered for this signal; otherwise stale cross-signal localStorage can
-        // inject a logs table into the traces dropdown.
-        const include = [form.table].filter(Boolean)
-        tables.value = await listSignalTables(props.signalDatabaseKind, {
-          database: form.database || getSignalDatabase(props.signalDatabaseKind),
-          include,
-        })
+        // Bounded initial list: declared signal tables first, then the first page of
+        // all tables. Typing searches the rest on the server, so a 1M-table database
+        // never materialises its full name list in the browser.
+        const targetDb = form.database || getSignalDatabase(props.signalDatabaseKind)
+        const signal = props.signalDatabaseKind === 'logs' ? 'log' : 'trace'
+        tableSearchSeq += 1
+        tableSearching.value = false
+        const [semanticRows, pageNames] = await Promise.all([
+          listBySignal(signal, targetDb),
+          fetchTableNames(TABLE_WINDOW, '', targetDb),
+        ])
+        const semanticNames = semanticRows.map((row) => row.tableName).filter(Boolean)
+        const available = new Set([...semanticNames, ...pageNames])
+        const remembered = lastSelectedTableDb.value === targetDb ? lastSelectedTable.value : ''
+        const rememberedExists = Boolean(remembered && available.has(remembered))
+        initialTables.value = Array.from(
+          new Set([...semanticNames, ...(rememberedExists && remembered ? [remembered] : []), ...pageNames])
+        )
+        tables.value = initialTables.value
       } else {
         const columns = [props.tableFilter ?? []].flat().filter(Boolean)
         let sql = `SELECT DISTINCT table_name FROM information_schema.columns WHERE table_catalog = '${currentTableCatalog.value}' AND table_schema = '${currentTableSchema.value}'`
@@ -616,6 +653,38 @@ a-modal(
       console.error('Failed to fetch tables:', error)
     }
   }
+
+  const handleTableSearch = useDebounceFn(async (keyword: string) => {
+    if (!remoteTableSearch.value) return
+    const trimmed = (keyword || '').trim()
+    tableSearchSeq += 1
+    const seq = tableSearchSeq
+    if (!trimmed) {
+      tableSearching.value = false
+      tables.value = initialTables.value
+      return
+    }
+    tableSearching.value = true
+    try {
+      // Prefix search is ~1s; only fall back to the slow substring LIKE when the
+      // prefix has no match (e.g. the user typed a middle fragment).
+      const prefixNames = (await fetchTableNames(TABLE_WINDOW, trimmed, form.database, 'prefix')).filter((name) =>
+        name.startsWith(trimmed)
+      )
+      if (seq !== tableSearchSeq) return
+      if (prefixNames.length) {
+        tables.value = prefixNames
+      } else {
+        const names = await fetchTableNames(TABLE_WINDOW, trimmed, form.database, 'contains')
+        if (seq !== tableSearchSeq) return
+        tables.value = names
+      }
+    } catch (error) {
+      console.error('Failed to search tables:', error)
+    } finally {
+      if (seq === tableSearchSeq) tableSearching.value = false
+    }
+  }, 300)
 
   async function fetchTableFields(tableName: string) {
     if (!tableName) return
@@ -646,8 +715,9 @@ a-modal(
   }
 
   function handleTableChange() {
-    // Save the selected table to localStorage
+    // Save the selected table (and its database) to localStorage
     lastSelectedTable.value = form.table
+    lastSelectedTableDb.value = form.database
 
     // Reset form state for new table, preserve current table
     resetForm({ table: form.table })

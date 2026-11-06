@@ -40,39 +40,68 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
           template(#suffix)
             svg.icon-11.icon-color
               use(href="#search")
-    a-tree.metrics-tree(
-      v-if="metricsTreeData.length"
-      size="small"
-      show-line
-      action-on-node-click="expand"
-      :block-node="true"
-      :data="metricsTreeData"
-      :load-more="loadMore"
-      :animation="false"
-    )
-      template(#switcher-icon="nodeData")
-        svg.icon-11.icon-color(v-if="!nodeData.isLeaf")
-          use(href="#down")
-      template(#title="nodeData")
-        .tree-data
-          a-tooltip(v-if="nodeData.type === 'label'" :content="$t('metrics.labelTooltip')")
-            svg.icon-11.metric-tree-icon--label
-              use(href="#primary-key")
-          .data-title(:title="nodeData.title") {{ nodeData.title }}
-          MetricMenu(
-            :nodeData="nodeData"
-            @copyText="$emit('copyText', $event)"
-            @insertText="$emit('insertText', $event)"
+      .gpt-table-sidebar-header__pager(v-if="showPager")
+        span.page-range {{ pageRangeLabel }}
+        .header-pager
+          a-button.pager-arrow(
+            type="text"
+            size="mini"
+            :disabled="!canPrev || loading"
+            @click="goPrev"
+          ) ‹
+          a-input.page-input(
+            v-model="pageInput"
+            size="mini"
+            @press-enter="submitPageInput"
+            @blur="submitPageInput"
           )
+          span.page-total / {{ pageCount }}
+          a-button.pager-arrow(
+            type="text"
+            size="mini"
+            :disabled="!canNext || loading"
+            @click="goNext"
+          ) ›
+    .metrics-tree-container(v-if="metricsTreeData.length" ref="treeContainerRef")
+      a-tree.metrics-tree(
+        size="small"
+        show-line
+        action-on-node-click="expand"
+        :block-node="true"
+        :data="metricsTreeData"
+        :load-more="loadMore"
+        :animation="false"
+        :virtual-list-props="virtualListProps"
+      )
+        template(#switcher-icon="nodeData")
+          svg.icon-11.icon-color(v-if="!nodeData.isLeaf")
+            use(href="#down")
+        template(#title="nodeData")
+          .tree-data
+            a-tooltip(v-if="nodeData.type === 'label'" :content="$t('metrics.labelTooltip')")
+              svg.icon-11.metric-tree-icon--label
+                use(href="#primary-key")
+            .data-title(:title="nodeData.title") {{ nodeData.title }}
+            MetricMenu(
+              :nodeData="nodeData"
+              @copyText="$emit('copyText', $event)"
+              @insertText="$emit('insertText', $event)"
+            )
     EmptyStatus.empty(v-else)
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, watch, nextTick, onMounted } from 'vue'
-  import { useDebounceFn } from '@vueuse/core'
+  import { ref, computed, watch, nextTick, onActivated, onMounted } from 'vue'
+  import { useDebounceFn, useResizeObserver } from '@vueuse/core'
   import { storeToRefs } from 'pinia'
   import { useI18n } from 'vue-i18n'
-  import { getLabelNames, getMetricNames, getLabelValues, METRIC_NAMES_LIMIT, searchMetricNames } from '@/api/metrics'
+  import {
+    getLabelNames,
+    getMetricNamesCount,
+    getMetricNamesPage,
+    getLabelValues,
+    METRIC_LIST_LIMIT,
+  } from '@/api/metrics'
   import { useAppStore } from '@/store'
   import { useSignalDatabase } from '@/observability/signal-database'
   import MetricMenu from './metric-menu.vue'
@@ -99,7 +128,34 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
   const metricsDatabase = useSignalDatabase('metrics')
 
   const metrics = ref<Array<{ name: string }>>([])
+  const metricTotal = ref<number | null>(null)
   const metricsTreeData = ref<MetricTreeNode[]>([])
+  const treeContainerRef = ref<HTMLElement>()
+  const treeHeight = ref(0)
+  const measureTreeHeight = () => {
+    const element = treeContainerRef.value
+    if (!element) {
+      treeHeight.value = 0
+      return
+    }
+    // clientHeight includes the container's 8px bottom padding; the virtual list
+    // must match the content box or it would overflow exactly like .table-tree did.
+    const style = getComputedStyle(element)
+    const padding = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0)
+    treeHeight.value = Math.max(0, element.clientHeight - padding)
+  }
+  useResizeObserver(treeContainerRef, measureTreeHeight)
+  onActivated(() => {
+    nextTick(measureTreeHeight)
+  })
+  watch(metricsTreeData, () => {
+    nextTick(measureTreeHeight)
+  })
+  const virtualListProps = computed(() => ({
+    threshold: 100,
+    buffer: 20,
+    height: Math.max(1, Math.floor(treeHeight.value)),
+  }))
   const metricSearchKey = ref('')
   const loading = ref(false)
 
@@ -120,21 +176,37 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
 
   const displayedMetricCount = computed(() => metrics.value.length)
   const isMetricSearchActive = computed(() => metricSearchKey.value.trim().length > 0)
-  const isMetricCountCapped = computed(() => displayedMetricCount.value >= METRIC_NAMES_LIMIT)
-
-  const metricCountLabel = computed(() => {
-    const count = displayedMetricCount.value
-    if (isMetricSearchActive.value) {
-      return isMetricCountCapped.value
-        ? t('metrics.sidebar.countMatchesCapped', { count: METRIC_NAMES_LIMIT })
-        : t('metrics.sidebar.countMatches', { count })
-    }
-    return isMetricCountCapped.value
-      ? t('metrics.sidebar.countShownCapped', { count: METRIC_NAMES_LIMIT })
-      : t('metrics.sidebar.countShown', { count })
+  const metricOffset = ref(0)
+  const pageRequestSeq = ref(0)
+  const currentPage = computed(() => Math.floor(metricOffset.value / METRIC_LIST_LIMIT) + 1)
+  const pageCount = computed(() => Math.max(1, Math.ceil((metricTotal.value ?? 0) / METRIC_LIST_LIMIT)))
+  const showPager = computed(() => (metricTotal.value ?? 0) > METRIC_LIST_LIMIT)
+  const canPrev = computed(() => metricOffset.value > 0)
+  const canNext = computed(() => metricOffset.value + METRIC_LIST_LIMIT < (metricTotal.value ?? 0))
+  const pageInput = ref('1')
+  const pageRangeLabel = computed(() => {
+    if (!displayedMetricCount.value) return '0'
+    const start = metricOffset.value + 1
+    const end = metricOffset.value + displayedMetricCount.value
+    return `${start.toLocaleString()}–${end.toLocaleString()}`
   })
 
-  const metricCountTooltip = computed(() => t('metrics.sidebar.countTooltip', { limit: METRIC_NAMES_LIMIT }))
+  watch(
+    currentPage,
+    (page) => {
+      pageInput.value = String(page)
+    },
+    { immediate: true }
+  )
+
+  const metricCountLabel = computed(() => {
+    const total = metricTotal.value
+    if (isMetricSearchActive.value) {
+      return t('metrics.sidebar.countMatches', { count: total ?? displayedMetricCount.value })
+    }
+    return t('metrics.sidebar.countShown', { count: total ?? displayedMetricCount.value })
+  })
+  const metricCountTooltip = computed(() => '')
 
   const buildMetricsTree = () => {
     metricsTreeData.value = metrics.value.map((metric) => ({
@@ -147,47 +219,77 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
     }))
   }
 
-  const getMetrics = async () => {
+  const loadMetricPage = async ({ resetOffset = false, refreshTotal = false } = {}) => {
+    const database = metricsDatabase.value
+    const keyword = metricSearchKey.value.trim()
+    if (resetOffset) {
+      metricOffset.value = 0
+    }
+    const offset = metricOffset.value
+    pageRequestSeq.value += 1
+    const seq = pageRequestSeq.value
+    loading.value = true
     try {
-      loading.value = true
-      const response = await getMetricNames({ database: metricsDatabase.value })
-      metrics.value = (response.data || []).map((name: string) => ({ name }))
+      const [names, total] = await Promise.all([
+        getMetricNamesPage({ database, offset, limit: METRIC_LIST_LIMIT, search: keyword }),
+        refreshTotal ? getMetricNamesCount(database, keyword) : Promise.resolve(metricTotal.value ?? 0),
+      ])
+      if (seq !== pageRequestSeq.value) return
+      if (refreshTotal) {
+        metricTotal.value = total
+      }
+      metrics.value = names.map((name) => ({ name }))
       buildMetricsTree()
     } catch (err) {
       console.error('Error fetching metrics:', err)
-      metrics.value = []
-      metricsTreeData.value = []
+      if (seq === pageRequestSeq.value) {
+        metrics.value = []
+        metricsTreeData.value = []
+      }
     } finally {
-      loading.value = false
+      if (seq === pageRequestSeq.value) {
+        loading.value = false
+      }
     }
   }
 
-  const searchMetrics = async (query: string) => {
-    const safe = query.trim()
-    if (!safe) {
-      await getMetrics()
-      return
-    }
-
-    try {
-      loading.value = true
-      const regex = safe.replace(/"/g, '\\"')
-      const response = await searchMetricNames(regex, metricsDatabase.value)
-      metrics.value = (response.data || []).map((name: string) => ({ name }))
-      buildMetricsTree()
-    } catch (err) {
-      console.error('Error remote searching metrics:', err)
-      metrics.value = []
-      metricsTreeData.value = []
-    } finally {
-      loading.value = false
-    }
+  const searchMetrics = async () => {
+    await loadMetricPage({ resetOffset: true, refreshTotal: true })
   }
 
   const debouncedSearch = useDebounceFn(searchMetrics, 300)
 
   const refreshData = async () => {
-    await searchMetrics(metricSearchKey.value)
+    await loadMetricPage({ refreshTotal: true })
+  }
+
+  const goToOffset = async (offset: number) => {
+    const lastOffset = Math.max(0, (pageCount.value - 1) * METRIC_LIST_LIMIT)
+    const next = Math.min(Math.max(0, offset), lastOffset)
+    if (next === metricOffset.value) {
+      pageInput.value = String(currentPage.value)
+      return
+    }
+    metricOffset.value = next
+    await loadMetricPage()
+  }
+
+  const goPrev = () => {
+    goToOffset(metricOffset.value - METRIC_LIST_LIMIT)
+  }
+
+  const goNext = () => {
+    goToOffset(metricOffset.value + METRIC_LIST_LIMIT)
+  }
+
+  const submitPageInput = () => {
+    const parsed = Number(pageInput.value)
+    if (!Number.isFinite(parsed) || parsed < 1) {
+      pageInput.value = String(currentPage.value)
+      return
+    }
+    const page = Math.min(pageCount.value, Math.floor(parsed))
+    goToOffset((page - 1) * METRIC_LIST_LIMIT)
   }
 
   const loadMore = async (nodeData: MetricTreeNode) => {
@@ -240,14 +342,16 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
     if (databaseList.value.length === 0) {
       appStore.refreshDatabaseList()
     }
-    await getMetrics()
+    await loadMetricPage({ refreshTotal: true })
   })
 
-  watch(metricSearchKey, (query) => {
-    debouncedSearch(query)
+  watch(metricSearchKey, () => {
+    debouncedSearch()
   })
 
   watch(metricsDatabase, () => {
+    metricTotal.value = null
+    metricOffset.value = 0
     refreshData()
   })
 </script>
@@ -263,6 +367,92 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
     padding: 0;
     border: none;
     background: transparent;
+  }
+
+  /* Mirror the table sidebar flex chain so the virtual list always receives the
+     remaining card height, not its content height. */
+  :deep(.arco-card-body > .arco-spin) {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    width: 100%;
+  }
+
+  :deep(.arco-card-body > .arco-spin > .arco-spin-children) {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    width: 100%;
+  }
+
+  .gpt-table-sidebar-header__pager {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 22px;
+    padding: 0 6px;
+
+    .page-range {
+      font-size: 12px;
+      color: var(--small-font-color);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  .header-pager {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--main-font-color);
+
+    .pager-arrow {
+      width: 18px;
+      height: 20px;
+      padding: 0;
+    }
+
+    .page-input {
+      width: 40px;
+
+      :deep(.arco-input) {
+        height: 20px;
+        padding: 0 4px;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+      }
+    }
+
+    .page-total {
+      font-size: 12px;
+      white-space: nowrap;
+    }
+  }
+
+  .metrics-tree-container {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    width: 100%;
+    overflow: hidden;
+    /* Keep spacing below the last row outside the virtual list. */
+    padding-bottom: 8px;
+  }
+
+  .metrics-tree {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+    /* Global .metrics-tree adds 8px bottom padding; the virtual list would
+       overflow its container by exactly that amount. */
+    padding: 0 0 0 10px;
   }
 
   .empty {

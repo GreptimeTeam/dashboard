@@ -4,15 +4,12 @@ BaseInput(:config="config")
     a-space(:size="15")
       .select-item
         span.label Table
-        a-select(
+        TableSelect(
           v-model="tableForPipeline"
           size="medium"
-          allow-search
           allow-create
-          :options="tableOptions"
-          :loading="tableLoading"
+          :database="database"
           :style="{ minWidth: '140px' }"
-          :trigger-props="{ autoFitPopupMinWidth: true }"
         )
       .select-item
         span.label Pipeline
@@ -34,19 +31,14 @@ BaseInput(:config="config")
 </template>
 
 <script lang="ts" setup>
+  import TableSelect from '@/components/table-select/index.vue'
+
+  import { useAppStore } from '@/store'
+
   const ingestStore = useIngestStore()
-  const dataBaseStore = useDataBaseStore()
+  const { database } = storeToRefs(useAppStore())
   const route = useRoute()
   const { pipelineName, tableForPipeline, contentType, pipelineOptions, pipelineLoading } = storeToRefs(ingestStore)
-
-  const tableOptions = computed(() => {
-    return dataBaseStore.originTablesTree.map((table) => ({
-      label: table.title,
-      value: table.title,
-    }))
-  })
-
-  const tableLoading = computed(() => dataBaseStore.tablesLoading)
 
   onActivated(async () => {
     if (route.query.pipeline) {
