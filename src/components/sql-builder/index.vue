@@ -24,6 +24,7 @@ a-form.sql-builder-form(
       :allow-search="true"
       :trigger-props="{ autoFitPopupMinWidth: true }"
       :options="tables"
+      :virtual-list-props="{ height: 260, fixedSize: true, estimatedSize: 36 }"
       @change="handleTableChange"
     )
 
