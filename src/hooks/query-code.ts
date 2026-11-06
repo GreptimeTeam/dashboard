@@ -111,9 +111,11 @@ export default function useQueryCode() {
             const tableNodeData = originTablesTree.value.find((item: TableTreeParent) => item.title === command.name)
             if (tableNodeData) {
               await loadMoreColumns(tableNodeData, true)
-              // Update new children
-              originTablesTree.value[tableNodeData.key].children =
-                originTablesTree.value[tableNodeData.key][tableNodeData.childrenType]
+              // Update new children; the page may have changed while waiting.
+              const currentNode = originTablesTree.value[tableNodeData.key]
+              if (currentNode && currentNode.title === tableNodeData.title) {
+                currentNode.children = currentNode[currentNode.childrenType]
+              }
             }
             break
           }

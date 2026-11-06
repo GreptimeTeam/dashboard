@@ -32,6 +32,8 @@ const useDataBaseStore = defineStore('database', () => {
    */
   const MAX_TABLES_PER_PAGE = 50_000
   const tablesPageByDatabase = ref<Record<string, { offset: number; loaded: number; filter: string }>>({})
+  /** Latest table page/search request; older responses are ignored. */
+  let tablePageRequestId = 0
   /** Names-only cache for callers that do not need the full tree (show tables). */
   const tableNamesByDatabase = new Map<string, string[]>()
   const originTablesTree = computed(() => {
@@ -140,12 +142,16 @@ const useDataBaseStore = defineStore('database', () => {
     timeIndexName: string,
     type: string,
     isSilent?: boolean,
-    specifiedDB?: string
+    specifiedDB?: string,
+    expectedTitle?: string
   ) => {
     const db = specifiedDB || database.value
     const nodes = tablesTreeForDatabase.value[db] || []
     const node = nodes[key]
     if (!node) return
+    // Keys are page-local indexes: drop responses that arrive after the user
+    // paged away, otherwise they would be applied to a different table.
+    if (expectedTitle && node.title !== expectedTitle) return
     if (!isSilent) {
       node.children = children
     }
@@ -195,6 +201,8 @@ const useDataBaseStore = defineStore('database', () => {
   }
 
   async function getTables(specifiedDB?: string, offset = 0) {
+    tablePageRequestId += 1
+    const requestId = tablePageRequestId
     tablesLoading.value = true
     totalTablesLoading.value = true
     const db = specifiedDB || database.value
@@ -202,6 +210,8 @@ const useDataBaseStore = defineStore('database', () => {
       // Count and page in parallel: the page request does not need the total.
       const totalPromise = getTablesCount(db)
       const res: any = await editorAPI.getTables(MAX_TABLES_PER_PAGE, offset, db)
+      // A newer page/search request superseded this one; drop the response.
+      if (requestId !== tablePageRequestId) return
       const records = res?.output?.[0]?.records
       // Replace only after the response arrives, so the old page stays visible
       // (no white flash) while a slow page request is in flight.
@@ -211,12 +221,15 @@ const useDataBaseStore = defineStore('database', () => {
         [db]: { offset, loaded: records?.rows?.length || 0, filter: '' },
       }
       const total = await totalPromise
+      if (requestId !== tablePageRequestId) return
       tablesTotalByDatabase.value = { ...tablesTotalByDatabase.value, [db]: total }
     } catch (error) {
       console.error('[database] failed to load table page', error)
     } finally {
-      tablesLoading.value = false
-      totalTablesLoading.value = false
+      if (requestId === tablePageRequestId) {
+        tablesLoading.value = false
+        totalTablesLoading.value = false
+      }
     }
   }
 
@@ -226,11 +239,14 @@ const useDataBaseStore = defineStore('database', () => {
    * keeps the database total so the sidebar can show "matches / total".
    */
   async function searchTables(specifiedDB: string | undefined, keyword: string, offset = 0) {
+    tablePageRequestId += 1
+    const requestId = tablePageRequestId
     const db = specifiedDB || database.value
     const trimmed = keyword.trim()
     tablesLoading.value = true
     try {
       const res: any = await editorAPI.getTables(MAX_TABLES_PER_PAGE, offset, db, trimmed)
+      if (requestId !== tablePageRequestId) return
       const records = res?.output?.[0]?.records
       getOriginTablesTree(records, db)
       tablesPageByDatabase.value = {
@@ -240,7 +256,7 @@ const useDataBaseStore = defineStore('database', () => {
     } catch (error) {
       console.error('[database] failed to search tables', error)
     } finally {
-      tablesLoading.value = false
+      if (requestId === tablePageRequestId) tablesLoading.value = false
     }
   }
 
@@ -285,6 +301,7 @@ const useDataBaseStore = defineStore('database', () => {
   }
 
   const resetData = () => {
+    tablePageRequestId += 1
     tableNamesByDatabase.clear()
     const db = database.value
     setTree(db, [])

@@ -70,7 +70,7 @@ export default function useSiderTabs() {
         .describeTable(nodeData.title, database)
         .then((res: any) => {
           const { nodes, timeIndexName } = buildColumnNodes(res?.output?.[0]?.records, nodeData.title, nodeData.key)
-          addChildren(nodeData.key, nodes, timeIndexName, 'columns', isSilent, database)
+          addChildren(nodeData.key, nodes, timeIndexName, 'columns', isSilent, database, nodeData.title)
           resolve(nodes)
         })
         .catch(() => {
@@ -166,7 +166,7 @@ export default function useSiderTabs() {
       info: createTableResult.value,
       class: 'details',
     })
-    addChildren(nodeData.key, children, nodeData.timeIndexName, 'details', isSilent, database)
+    addChildren(nodeData.key, children, nodeData.timeIndexName, 'details', isSilent, database, nodeData.title)
     isRefreshingDetails.value[nodeData.key] = false
     return children
   }
