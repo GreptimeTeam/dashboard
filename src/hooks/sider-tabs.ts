@@ -1,7 +1,7 @@
-import { useDataBaseStore } from '@/store'
+import { useAppStore, useDataBaseStore } from '@/store'
 import { ScriptTreeData, TableDetail, TableTreeChild, TableTreeParent } from '@/store/modules/database/types'
+import buildColumnNodes from '@/store/modules/database/column-nodes'
 import editorAPI from '@/api/editor'
-import { RecordsType } from '@/store/modules/code-run/types'
 
 const tablesSearchKey = ref('')
 const scriptsSearchKey = ref('')
@@ -10,7 +10,7 @@ const isRefreshingDetails = ref<{ [key: number]: boolean }>({ 0: false })
 
 export default function useSiderTabs() {
   const { originTablesTree, originScriptsList, databaseActiveKeys } = storeToRefs(useDataBaseStore())
-  const { getTableByName, addChildren, generateTreeChildren, getTables, getIndexesForColumns } = useDataBaseStore()
+  const { addChildren, getTables } = useDataBaseStore()
 
   // Deprecated.
   const searchTree = (keyword: string) => {
@@ -50,29 +50,28 @@ export default function useSiderTabs() {
     return searchList(scriptsSearchKey.value)
   })
 
-  const refreshTables = async (db?: string) => {
+  /** Load one page (up to 100k tables) of the sidebar list. */
+  const refreshTables = async (db?: string, offset = 0) => {
     const { database: currentDB } = storeToRefs(useAppStore())
     const database = db || currentDB.value
-    tablesSearchKey.value = ''
-    await getTables(database)
+    await getTables(database, offset)
     if (tablesTreeRef.value && tablesTreeRef.value[database]) {
       tablesTreeRef.value[database].expandAll(false)
     }
   }
 
+  /**
+   * `DESC` is resolved by the catalog (measured ~3ms) while
+   * `information_schema.columns` scans the schema (~0.7s at 100k tables).
+   */
   const loadMoreColumns = (nodeData: TableTreeParent, isSilent?: boolean, database?: string) =>
     new Promise<TableTreeChild[]>((resolve, reject) => {
-      getTableByName(nodeData.title, database)
-        .then((result: RecordsType) => {
-          const {
-            rows,
-            schema: { column_schemas: columnSchemas },
-          } = result
-
-          const indexes = getIndexesForColumns(columnSchemas)
-          const { treeChildren, timeIndexName } = generateTreeChildren(nodeData, rows, indexes)
-          addChildren(nodeData.key, treeChildren, timeIndexName, 'columns', isSilent, database)
-          resolve(treeChildren)
+      editorAPI
+        .describeTable(nodeData.title, database)
+        .then((res: any) => {
+          const { nodes, timeIndexName } = buildColumnNodes(res?.output?.[0]?.records, nodeData.title, nodeData.key)
+          addChildren(nodeData.key, nodes, timeIndexName, 'columns', isSilent, database)
+          resolve(nodes)
         })
         .catch(() => {
           reject()

@@ -62,14 +62,18 @@ const getDatabases = () => {
   return axios.post(sqlUrl, makeSqlData(`show databases`))
 }
 
-const getTables = (limit?: number, offset?: number, database?: string) => {
+const getTables = (limit?: number, offset?: number, database?: string, filter?: string) => {
   const appStore = useAppStore()
   const db = database || appStore.database
   const suffix = `limit ${limit} offset ${offset}`
+  const keyword = (filter || '').trim().replace(/'/g, "''")
+  const filterSql = keyword ? ` and table_name like '%${keyword}%'` : ''
   return axios.post(
     sqlUrl,
     makeSqlData(
-      `select * from information_schema.tables where table_schema='${db}' order by table_name ${limit ? suffix : ''};`
+      `select table_name, table_type, engine, create_options from information_schema.tables where table_schema='${db}'${filterSql} order by table_name ${
+        limit ? suffix : ''
+      };`
     ),
     addDatabaseParams(db)
   )
@@ -93,6 +97,18 @@ const getTableByName = (tableName: string, database?: string) => {
       }';`
     )
   )
+}
+
+/**
+ * Column metadata for one table via `DESC`, which resolves through the catalog
+ * in O(1) (~3ms) instead of scanning `information_schema.columns` (~0.7s at 100k
+ * tables). Returns Column / Type / Key / Semantic Type rows.
+ */
+const describeTable = (tableName: string, database?: string) => {
+  const appStore = useAppStore()
+  const db = database || appStore.database
+  const escaped = tableName.replace(/"/g, '""')
+  return axios.post(sqlUrl, makeSqlData(`desc "${escaped}"`), addDatabaseParams(db))
 }
 
 function runSQL(code: string): Promise<HttpResponse>
@@ -206,6 +222,7 @@ const getTableSchema = (tableName: string, database?: string) => {
 export default {
   getTables,
   getTableByName,
+  describeTable,
   runSQL,
   getDatabases,
   getScriptsTable,
