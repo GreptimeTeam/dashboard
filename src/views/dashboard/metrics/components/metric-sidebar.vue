@@ -40,6 +40,28 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
           template(#suffix)
             svg.icon-11.icon-color
               use(href="#search")
+      .gpt-table-sidebar-header__pager(v-if="showPager")
+        span.page-range {{ pageRangeLabel }}
+        .header-pager
+          a-button.pager-arrow(
+            type="text"
+            size="mini"
+            :disabled="!canPrev || loading"
+            @click="goPrev"
+          ) ‹
+          a-input.page-input(
+            v-model="pageInput"
+            size="mini"
+            @press-enter="submitPageInput"
+            @blur="submitPageInput"
+          )
+          span.page-total / {{ pageCount }}
+          a-button.pager-arrow(
+            type="text"
+            size="mini"
+            :disabled="!canNext || loading"
+            @click="goNext"
+          ) ›
     .metrics-tree-container(v-if="metricsTreeData.length" ref="treeContainerRef")
       a-tree.metrics-tree(
         size="small"
@@ -75,11 +97,10 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
   import { useI18n } from 'vue-i18n'
   import {
     getLabelNames,
-    getMetricNames,
     getMetricNamesCount,
+    getMetricNamesPage,
     getLabelValues,
     METRIC_LIST_LIMIT,
-    searchMetricNames,
   } from '@/api/metrics'
   import { useAppStore } from '@/store'
   import { useSignalDatabase } from '@/observability/signal-database'
@@ -155,43 +176,37 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
 
   const displayedMetricCount = computed(() => metrics.value.length)
   const isMetricSearchActive = computed(() => metricSearchKey.value.trim().length > 0)
-  const isMetricCountCapped = computed(() => displayedMetricCount.value >= METRIC_LIST_LIMIT)
+  const metricOffset = ref(0)
+  const pageRequestSeq = ref(0)
+  const currentPage = computed(() => Math.floor(metricOffset.value / METRIC_LIST_LIMIT) + 1)
+  const pageCount = computed(() => Math.max(1, Math.ceil((metricTotal.value ?? 0) / METRIC_LIST_LIMIT)))
+  const showPager = computed(() => (metricTotal.value ?? 0) > METRIC_LIST_LIMIT)
+  const canPrev = computed(() => metricOffset.value > 0)
+  const canNext = computed(() => metricOffset.value + METRIC_LIST_LIMIT < (metricTotal.value ?? 0))
+  const pageInput = ref('1')
+  const pageRangeLabel = computed(() => {
+    if (!displayedMetricCount.value) return '0'
+    const start = metricOffset.value + 1
+    const end = metricOffset.value + displayedMetricCount.value
+    return `${start.toLocaleString()}–${end.toLocaleString()}`
+  })
+
+  watch(
+    currentPage,
+    (page) => {
+      pageInput.value = String(page)
+    },
+    { immediate: true }
+  )
 
   const metricCountLabel = computed(() => {
-    const count = displayedMetricCount.value
+    const total = metricTotal.value
     if (isMetricSearchActive.value) {
-      return isMetricCountCapped.value
-        ? t('metrics.sidebar.countMatchesCapped', { count: METRIC_LIST_LIMIT })
-        : t('metrics.sidebar.countMatches', { count })
+      return t('metrics.sidebar.countMatches', { count: total ?? displayedMetricCount.value })
     }
-    if (metricTotal.value != null) {
-      return t('metrics.sidebar.countShown', { count: metricTotal.value })
-    }
-    return isMetricCountCapped.value
-      ? t('metrics.sidebar.countShownCapped', { count: METRIC_LIST_LIMIT })
-      : t('metrics.sidebar.countShown', { count })
+    return t('metrics.sidebar.countShown', { count: total ?? displayedMetricCount.value })
   })
-
-  const metricCountTooltip = computed(() => {
-    const cappedInitial = !isMetricSearchActive.value && displayedMetricCount.value >= METRIC_LIST_LIMIT
-    const cappedSearch = isMetricSearchActive.value && isMetricCountCapped.value
-    return cappedInitial || cappedSearch ? t('metrics.sidebar.countTooltip', { limit: METRIC_LIST_LIMIT }) : ''
-  })
-
-  const loadMetricTotal = async () => {
-    const database = metricsDatabase.value
-    try {
-      const total = await getMetricNamesCount(database)
-      if (database === metricsDatabase.value) {
-        metricTotal.value = total
-      }
-    } catch (err) {
-      console.error('Error fetching metric count:', err)
-      if (database === metricsDatabase.value) {
-        metricTotal.value = null
-      }
-    }
-  }
+  const metricCountTooltip = computed(() => '')
 
   const buildMetricsTree = () => {
     metricsTreeData.value = metrics.value.map((metric) => ({
@@ -204,50 +219,77 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
     }))
   }
 
-  const getMetrics = async () => {
+  const loadMetricPage = async ({ resetOffset = false, refreshTotal = false } = {}) => {
+    const database = metricsDatabase.value
+    const keyword = metricSearchKey.value.trim()
+    if (resetOffset) {
+      metricOffset.value = 0
+    }
+    const offset = metricOffset.value
+    pageRequestSeq.value += 1
+    const seq = pageRequestSeq.value
+    loading.value = true
     try {
-      loading.value = true
-      const [response] = await Promise.all([
-        getMetricNames({ database: metricsDatabase.value, limit: METRIC_LIST_LIMIT }),
-        loadMetricTotal(),
+      const [names, total] = await Promise.all([
+        getMetricNamesPage({ database, offset, limit: METRIC_LIST_LIMIT, search: keyword }),
+        refreshTotal ? getMetricNamesCount(database, keyword) : Promise.resolve(metricTotal.value ?? 0),
       ])
-      metrics.value = (response.data || []).map((name: string) => ({ name }))
+      if (seq !== pageRequestSeq.value) return
+      if (refreshTotal) {
+        metricTotal.value = total
+      }
+      metrics.value = names.map((name) => ({ name }))
       buildMetricsTree()
     } catch (err) {
       console.error('Error fetching metrics:', err)
-      metrics.value = []
-      metricsTreeData.value = []
+      if (seq === pageRequestSeq.value) {
+        metrics.value = []
+        metricsTreeData.value = []
+      }
     } finally {
-      loading.value = false
+      if (seq === pageRequestSeq.value) {
+        loading.value = false
+      }
     }
   }
 
-  const searchMetrics = async (query: string) => {
-    const safe = query.trim()
-    if (!safe) {
-      await getMetrics()
-      return
-    }
-
-    try {
-      loading.value = true
-      const regex = safe.replace(/"/g, '\\"')
-      const response = await searchMetricNames(regex, metricsDatabase.value, METRIC_LIST_LIMIT)
-      metrics.value = (response.data || []).map((name: string) => ({ name }))
-      buildMetricsTree()
-    } catch (err) {
-      console.error('Error remote searching metrics:', err)
-      metrics.value = []
-      metricsTreeData.value = []
-    } finally {
-      loading.value = false
-    }
+  const searchMetrics = async () => {
+    await loadMetricPage({ resetOffset: true, refreshTotal: true })
   }
 
   const debouncedSearch = useDebounceFn(searchMetrics, 300)
 
   const refreshData = async () => {
-    await Promise.all([loadMetricTotal(), searchMetrics(metricSearchKey.value)])
+    await loadMetricPage({ refreshTotal: true })
+  }
+
+  const goToOffset = async (offset: number) => {
+    const lastOffset = Math.max(0, (pageCount.value - 1) * METRIC_LIST_LIMIT)
+    const next = Math.min(Math.max(0, offset), lastOffset)
+    if (next === metricOffset.value) {
+      pageInput.value = String(currentPage.value)
+      return
+    }
+    metricOffset.value = next
+    await loadMetricPage()
+  }
+
+  const goPrev = () => {
+    goToOffset(metricOffset.value - METRIC_LIST_LIMIT)
+  }
+
+  const goNext = () => {
+    goToOffset(metricOffset.value + METRIC_LIST_LIMIT)
+  }
+
+  const submitPageInput = () => {
+    const parsed = Number(pageInput.value)
+    if (!Number.isFinite(parsed) || parsed < 1) {
+      pageInput.value = String(currentPage.value)
+      return
+    }
+    const page = Math.min(pageCount.value, Math.floor(parsed))
+    goToOffset((page - 1) * METRIC_LIST_LIMIT)
   }
 
   const loadMore = async (nodeData: MetricTreeNode) => {
@@ -300,14 +342,16 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
     if (databaseList.value.length === 0) {
       appStore.refreshDatabaseList()
     }
-    await getMetrics()
+    await loadMetricPage({ refreshTotal: true })
   })
 
-  watch(metricSearchKey, (query) => {
-    debouncedSearch(query)
+  watch(metricSearchKey, () => {
+    debouncedSearch()
   })
 
   watch(metricsDatabase, () => {
+    metricTotal.value = null
+    metricOffset.value = 0
     refreshData()
   })
 </script>
@@ -341,6 +385,54 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
     flex-direction: column;
     min-height: 0;
     width: 100%;
+  }
+
+  .gpt-table-sidebar-header__pager {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 22px;
+    padding: 0 6px;
+
+    .page-range {
+      font-size: 12px;
+      color: var(--small-font-color);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  .header-pager {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--main-font-color);
+
+    .pager-arrow {
+      width: 18px;
+      height: 20px;
+      padding: 0;
+    }
+
+    .page-input {
+      width: 40px;
+
+      :deep(.arco-input) {
+        height: 20px;
+        padding: 0 4px;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+      }
+    }
+
+    .page-total {
+      font-size: 12px;
+      white-space: nowrap;
+    }
   }
 
   .metrics-tree-container {

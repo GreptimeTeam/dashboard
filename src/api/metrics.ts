@@ -63,20 +63,50 @@ export const getMetricNames = (options?: MetricNamesOptions) => {
   return axios.get(`${prometheusBaseURL}/label/__name__/values`, config)
 }
 
+function metricTablesWhere(database: string, search?: string): string {
+  const escaped = database.replace(/'/g, "''")
+  const keyword = (search || '').trim().replace(/'/g, "''")
+  const searchSql = keyword ? ` and table_name like '%${keyword}%'` : ''
+  return `table_schema='${escaped}' and engine='metric' and table_name <> 'greptime_physical_table'${searchSql}`
+}
+
 /**
  * Exact metric count: metric-engine tables are the Prometheus `__name__` universe.
  * One catalog count keeps the sidebar label accurate without downloading all names.
  * The internal `greptime_physical_table` is not a metric.
  */
-export const getMetricNamesCount = async (database?: string): Promise<number> => {
+export const getMetricNamesCount = async (database?: string, search?: string): Promise<number> => {
   const db = database || useAppStore().database
   if (!db) return 0
-  const escaped = db.replace(/'/g, "''")
   const response: any = await editorAPI.runSQL(
-    `select count(*) from information_schema.tables where table_schema='${escaped}' and engine='metric' and table_name <> 'greptime_physical_table';`,
+    `select count(*) from information_schema.tables where ${metricTablesWhere(db, search)};`,
     db
   )
   return Number(response?.output?.[0]?.records?.rows?.[0]?.[0] || 0)
+}
+
+/**
+ * One page of metric names, ordered by table name. The Prometheus label endpoint
+ * ignores `offset`, so pagination goes through the catalog.
+ */
+export const getMetricNamesPage = async (options: {
+  database?: string
+  offset?: number
+  limit?: number
+  search?: string
+}): Promise<string[]> => {
+  const db = options.database || useAppStore().database
+  if (!db) return []
+  const offset = Math.max(0, options.offset ?? 0)
+  const limit = Math.max(1, options.limit ?? METRIC_LIST_LIMIT)
+  const response: any = await editorAPI.runSQL(
+    `select table_name from information_schema.tables where ${metricTablesWhere(
+      db,
+      options.search
+    )} order by table_name limit ${limit} offset ${offset};`,
+    db
+  )
+  return ((response?.output?.[0]?.records?.rows || []) as string[][]).map((row) => row[0]).filter(Boolean)
 }
 
 /**
