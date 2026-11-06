@@ -7,7 +7,7 @@ export default {
   // Homepage slogan — keep in sync with greptime.cn / greptime.com.
   'tour.welcome.slogan': 'ひとつのデータベースで、\nメトリクス・ログ・トレースを統一。',
   'tour.welcome.intro':
-    'このインスタンスは稼働中です。デモアプリがいま本物のテレメトリを送信しています。以降の画面にモックや事前収録はありません。',
+    'このインスタンスは稼働中です。{app} が継続的にテレメトリを書き込んでいます。以降の画面にモックや事前収録はありません。',
   'tour.welcome.begin': 'クエリガイドを始める',
   'tour.guide.title': 'クエリガイド',
   'tour.guide.pillWithStep': 'クエリガイド · {name}',

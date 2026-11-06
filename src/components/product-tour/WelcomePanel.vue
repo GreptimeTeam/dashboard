@@ -17,7 +17,18 @@
           {{ $t('tour.welcome.badge') }}
         </span>
         <p class="tour-welcome-slogan">{{ $t('tour.welcome.slogan') }}</p>
-        <p class="tour-welcome-intro">{{ $t('tour.welcome.intro') }}</p>
+        <i18n-t keypath="tour.welcome.intro" tag="p" class="tour-welcome-intro">
+          <template #app>
+            <a
+              class="tour-welcome-source-link"
+              href="https://github.com/killme2008/greptimedb-observability-playground"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Astronomy Shop
+            </a>
+          </template>
+        </i18n-t>
       </div>
 
       <footer class="tour-welcome-footer">
@@ -74,6 +85,18 @@
     font-size: var(--gpt-font-md);
     line-height: 1.7;
     white-space: pre-line;
+  }
+
+  .tour-welcome-source-link {
+    color: var(--gpt-link-color);
+    font-weight: var(--gpt-font-weight-control);
+    text-decoration: none;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--gpt-link-color);
+      text-decoration: underline;
+    }
   }
 
   .tour-welcome-footer {
