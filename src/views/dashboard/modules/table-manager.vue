@@ -449,12 +449,18 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card.gpt-table-sidebar-
     min-height: 0;
     flex-direction: column;
     overflow: hidden;
+    /* Keep the breathing room below the last row, but outside the
+       virtual list so its height matches the measured content box. */
+    padding-bottom: 8px;
   }
 
   .table-tree {
     flex: 1;
     min-height: 0;
     height: auto;
+    /* global .table-tree adds 8px bottom padding; the virtual list would
+       overflow the container by exactly that amount. */
+    padding: 0 0 0 10px;
 
     :deep(.arco-tree-node-icon .icon:has(use[href='#table'])) {
       color: var(--gpt-accent-ts);
