@@ -1,7 +1,7 @@
 import editorApi from '@/api/editor'
 import useTableSchemaStore from '@/store/modules/table-schema'
 import { escapeSqlString, quoteIdent } from '../logs/query-state'
-import { getTableSemantics, listSignalTables } from '../semantics'
+import { getTableSemantics, listBySignal } from '../semantics'
 import type { DrilldownContext } from '../context'
 import { qualifyTraceLogsTable } from './trace-logs-qualification'
 import type { SchemaColumn } from '../logs/field-map'
@@ -28,11 +28,14 @@ export interface TraceLogsAssociationPool {
  */
 export async function loadTraceLogsAssociationPool(ctx: DrilldownContext): Promise<TraceLogsAssociationPool> {
   const database = ctx.connection.logsDatabase.value
-  const listed = await listSignalTables('logs', {
-    include: ctx.semantics.logs.table.value ? [ctx.semantics.logs.table.value] : [],
-    database,
-  })
-  const tables = Array.isArray(listed) ? listed : []
+  // Every mappable table needs `trace_id`; one cached GROUP BY query is enough to
+  // enumerate them without listing the whole database.
+  const [traceCapable, declaredLogs] = await Promise.all([
+    useTableSchemaStore().tablesHavingColumn('trace_id', database),
+    listBySignal('log', database),
+  ])
+  const include = ctx.semantics.logs.table.value ? [ctx.semantics.logs.table.value] : []
+  const tables = Array.from(new Set([...declaredLogs.map((row) => row.tableName), ...traceCapable, ...include]))
   if (!tables.length) {
     return { qualifiedTables: [], candidates: [] }
   }
@@ -45,14 +48,8 @@ export async function loadTraceLogsAssociationPool(ctx: DrilldownContext): Promi
     .filter(({ semantics }) => !semantics?.signalType || semantics.signalType === 'log')
     .map(({ table }) => table)
 
-  // Columns pre-filter: without `trace_id` a table can never join association.
-  let fetchTargets = survivors
-  if (survivors.length) {
-    const traceCapable = await useTableSchemaStore().tablesHavingColumn('trace_id', database)
-    if (traceCapable.size) {
-      fetchTargets = survivors.filter((table) => traceCapable.has(table))
-    }
-  }
+  // Already restricted to tables carrying `trace_id`.
+  const fetchTargets = survivors
 
   if (fetchTargets.length) {
     await useTableSchemaStore()
