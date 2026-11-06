@@ -74,7 +74,14 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
   import { useDebounceFn, useElementSize } from '@vueuse/core'
   import { storeToRefs } from 'pinia'
   import { useI18n } from 'vue-i18n'
-  import { getLabelNames, getMetricNames, getLabelValues, METRIC_LIST_LIMIT, searchMetricNames } from '@/api/metrics'
+  import {
+    getLabelNames,
+    getMetricNames,
+    getMetricNamesCount,
+    getLabelValues,
+    METRIC_LIST_LIMIT,
+    searchMetricNames,
+  } from '@/api/metrics'
   import { useAppStore } from '@/store'
   import { useSignalDatabase } from '@/observability/signal-database'
   import MetricMenu from './metric-menu.vue'
@@ -101,6 +108,7 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
   const metricsDatabase = useSignalDatabase('metrics')
 
   const metrics = ref<Array<{ name: string }>>([])
+  const metricTotal = ref<number | null>(null)
   const treeContainerRef = ref<HTMLElement>()
   const { height: treeHeight } = useElementSize(treeContainerRef)
   const virtualListProps = computed(() => ({
@@ -138,12 +146,34 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
         ? t('metrics.sidebar.countMatchesCapped', { count: METRIC_LIST_LIMIT })
         : t('metrics.sidebar.countMatches', { count })
     }
+    if (metricTotal.value != null) {
+      return t('metrics.sidebar.countShown', { count: metricTotal.value })
+    }
     return isMetricCountCapped.value
       ? t('metrics.sidebar.countShownCapped', { count: METRIC_LIST_LIMIT })
       : t('metrics.sidebar.countShown', { count })
   })
 
-  const metricCountTooltip = computed(() => t('metrics.sidebar.countTooltip', { limit: METRIC_LIST_LIMIT }))
+  const metricCountTooltip = computed(() => {
+    const cappedInitial = !isMetricSearchActive.value && displayedMetricCount.value >= METRIC_LIST_LIMIT
+    const cappedSearch = isMetricSearchActive.value && isMetricCountCapped.value
+    return cappedInitial || cappedSearch ? t('metrics.sidebar.countTooltip', { limit: METRIC_LIST_LIMIT }) : ''
+  })
+
+  const loadMetricTotal = async () => {
+    const database = metricsDatabase.value
+    try {
+      const total = await getMetricNamesCount(database)
+      if (database === metricsDatabase.value) {
+        metricTotal.value = total
+      }
+    } catch (err) {
+      console.error('Error fetching metric count:', err)
+      if (database === metricsDatabase.value) {
+        metricTotal.value = null
+      }
+    }
+  }
 
   const buildMetricsTree = () => {
     metricsTreeData.value = metrics.value.map((metric) => ({
@@ -159,7 +189,10 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
   const getMetrics = async () => {
     try {
       loading.value = true
-      const response = await getMetricNames({ database: metricsDatabase.value, limit: METRIC_LIST_LIMIT })
+      const [response] = await Promise.all([
+        getMetricNames({ database: metricsDatabase.value, limit: METRIC_LIST_LIMIT }),
+        loadMetricTotal(),
+      ])
       metrics.value = (response.data || []).map((name: string) => ({ name }))
       buildMetricsTree()
     } catch (err) {
@@ -196,7 +229,7 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
   const debouncedSearch = useDebounceFn(searchMetrics, 300)
 
   const refreshData = async () => {
-    await searchMetrics(metricSearchKey.value)
+    await Promise.all([loadMetricTotal(), searchMetrics(metricSearchKey.value)])
   }
 
   const loadMore = async (nodeData: MetricTreeNode) => {

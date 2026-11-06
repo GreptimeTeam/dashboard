@@ -1,5 +1,6 @@
 import axios, { AxiosRequestConfig } from 'axios'
 import { useAppStore } from '@/store'
+import editorAPI from '@/api/editor'
 
 const prometheusBaseURL = `/v1/prometheus/api/v1`
 
@@ -60,6 +61,22 @@ export const getMetricNames = (options?: MetricNamesOptions) => {
     ...(match?.length && { match }),
   }
   return axios.get(`${prometheusBaseURL}/label/__name__/values`, config)
+}
+
+/**
+ * Exact metric count: metric-engine tables are the Prometheus `__name__` universe.
+ * One catalog count keeps the sidebar label accurate without downloading all names.
+ * The internal `greptime_physical_table` is not a metric.
+ */
+export const getMetricNamesCount = async (database?: string): Promise<number> => {
+  const db = database || useAppStore().database
+  if (!db) return 0
+  const escaped = db.replace(/'/g, "''")
+  const response: any = await editorAPI.runSQL(
+    `select count(*) from information_schema.tables where table_schema='${escaped}' and engine='metric' and table_name <> 'greptime_physical_table';`,
+    db
+  )
+  return Number(response?.output?.[0]?.records?.rows?.[0]?.[0] || 0)
 }
 
 /**
