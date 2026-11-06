@@ -40,39 +40,41 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
           template(#suffix)
             svg.icon-11.icon-color
               use(href="#search")
-    a-tree.metrics-tree(
-      v-if="metricsTreeData.length"
-      size="small"
-      show-line
-      action-on-node-click="expand"
-      :block-node="true"
-      :data="metricsTreeData"
-      :load-more="loadMore"
-      :animation="false"
-    )
-      template(#switcher-icon="nodeData")
-        svg.icon-11.icon-color(v-if="!nodeData.isLeaf")
-          use(href="#down")
-      template(#title="nodeData")
-        .tree-data
-          a-tooltip(v-if="nodeData.type === 'label'" :content="$t('metrics.labelTooltip')")
-            svg.icon-11.metric-tree-icon--label
-              use(href="#primary-key")
-          .data-title(:title="nodeData.title") {{ nodeData.title }}
-          MetricMenu(
-            :nodeData="nodeData"
-            @copyText="$emit('copyText', $event)"
-            @insertText="$emit('insertText', $event)"
-          )
-    EmptyStatus.empty(v-else)
+    .metrics-tree-container(ref="treeContainerRef")
+      a-tree.metrics-tree(
+        v-if="metricsTreeData.length"
+        size="small"
+        show-line
+        action-on-node-click="expand"
+        :block-node="true"
+        :data="metricsTreeData"
+        :load-more="loadMore"
+        :animation="false"
+        :virtual-list-props="virtualListProps"
+      )
+        template(#switcher-icon="nodeData")
+          svg.icon-11.icon-color(v-if="!nodeData.isLeaf")
+            use(href="#down")
+        template(#title="nodeData")
+          .tree-data
+            a-tooltip(v-if="nodeData.type === 'label'" :content="$t('metrics.labelTooltip')")
+              svg.icon-11.metric-tree-icon--label
+                use(href="#primary-key")
+            .data-title(:title="nodeData.title") {{ nodeData.title }}
+            MetricMenu(
+              :nodeData="nodeData"
+              @copyText="$emit('copyText', $event)"
+              @insertText="$emit('insertText', $event)"
+            )
+      EmptyStatus.empty(v-else)
 </template>
 
 <script setup lang="ts">
   import { ref, computed, watch, nextTick, onMounted } from 'vue'
-  import { useDebounceFn } from '@vueuse/core'
+  import { useDebounceFn, useElementSize } from '@vueuse/core'
   import { storeToRefs } from 'pinia'
   import { useI18n } from 'vue-i18n'
-  import { getLabelNames, getMetricNames, getLabelValues, METRIC_NAMES_LIMIT, searchMetricNames } from '@/api/metrics'
+  import { getLabelNames, getMetricNames, getLabelValues, METRIC_LIST_LIMIT, searchMetricNames } from '@/api/metrics'
   import { useAppStore } from '@/store'
   import { useSignalDatabase } from '@/observability/signal-database'
   import MetricMenu from './metric-menu.vue'
@@ -99,6 +101,13 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
   const metricsDatabase = useSignalDatabase('metrics')
 
   const metrics = ref<Array<{ name: string }>>([])
+  const treeContainerRef = ref<HTMLElement>()
+  const { height: treeHeight } = useElementSize(treeContainerRef)
+  const virtualListProps = computed(() => ({
+    height: Math.max(1, Math.floor(treeHeight.value)),
+    fixedSize: true,
+    estimatedSize: 36,
+  }))
   const metricsTreeData = ref<MetricTreeNode[]>([])
   const metricSearchKey = ref('')
   const loading = ref(false)
@@ -120,21 +129,21 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
 
   const displayedMetricCount = computed(() => metrics.value.length)
   const isMetricSearchActive = computed(() => metricSearchKey.value.trim().length > 0)
-  const isMetricCountCapped = computed(() => displayedMetricCount.value >= METRIC_NAMES_LIMIT)
+  const isMetricCountCapped = computed(() => displayedMetricCount.value >= METRIC_LIST_LIMIT)
 
   const metricCountLabel = computed(() => {
     const count = displayedMetricCount.value
     if (isMetricSearchActive.value) {
       return isMetricCountCapped.value
-        ? t('metrics.sidebar.countMatchesCapped', { count: METRIC_NAMES_LIMIT })
+        ? t('metrics.sidebar.countMatchesCapped', { count: METRIC_LIST_LIMIT })
         : t('metrics.sidebar.countMatches', { count })
     }
     return isMetricCountCapped.value
-      ? t('metrics.sidebar.countShownCapped', { count: METRIC_NAMES_LIMIT })
+      ? t('metrics.sidebar.countShownCapped', { count: METRIC_LIST_LIMIT })
       : t('metrics.sidebar.countShown', { count })
   })
 
-  const metricCountTooltip = computed(() => t('metrics.sidebar.countTooltip', { limit: METRIC_NAMES_LIMIT }))
+  const metricCountTooltip = computed(() => t('metrics.sidebar.countTooltip', { limit: METRIC_LIST_LIMIT }))
 
   const buildMetricsTree = () => {
     metricsTreeData.value = metrics.value.map((metric) => ({
@@ -150,7 +159,7 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
   const getMetrics = async () => {
     try {
       loading.value = true
-      const response = await getMetricNames({ database: metricsDatabase.value })
+      const response = await getMetricNames({ database: metricsDatabase.value, limit: METRIC_LIST_LIMIT })
       metrics.value = (response.data || []).map((name: string) => ({ name }))
       buildMetricsTree()
     } catch (err) {
@@ -172,7 +181,7 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
     try {
       loading.value = true
       const regex = safe.replace(/"/g, '\\"')
-      const response = await searchMetricNames(regex, metricsDatabase.value)
+      const response = await searchMetricNames(regex, metricsDatabase.value, METRIC_LIST_LIMIT)
       metrics.value = (response.data || []).map((name: string) => ({ name }))
       buildMetricsTree()
     } catch (err) {
@@ -263,6 +272,25 @@ a-card.metrics-sidebar.gpt-page-sidebar.gpt-sidebar-header-card(:bordered="false
     padding: 0;
     border: none;
     background: transparent;
+  }
+
+  .metrics-tree-container {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    /* Keep spacing below the last row outside the virtual list. */
+    padding-bottom: 8px;
+  }
+
+  .metrics-tree {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+    /* Global .metrics-tree adds 8px bottom padding; the virtual list would
+       overflow its container by exactly that amount. */
+    padding: 0 0 0 10px;
   }
 
   .empty {

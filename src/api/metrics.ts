@@ -5,6 +5,10 @@ const prometheusBaseURL = `/v1/prometheus/api/v1`
 
 /** Max metric names returned per list/search request (Prometheus label values API). */
 export const METRIC_NAMES_LIMIT = 40000
+/** Bounded initial window for the Metrics sidebar (typing searches remotely). */
+export const METRIC_LIST_LIMIT = 500
+/** Bounded window for remote metric-name searches. */
+export const METRIC_SEARCH_LIMIT = 500
 
 export interface MetricNamesOptions {
   start?: string
@@ -62,12 +66,12 @@ export const getMetricNames = (options?: MetricNamesOptions) => {
  * Search metric names remotely using a regex-based match
  * @param regex - Regex body for metric name (without leading/trailing /)
  */
-export const searchMetricNames = (regex: string, database?: string) => {
+export const searchMetricNames = (regex: string, database?: string, limit = METRIC_SEARCH_LIMIT) => {
   const config = addDatabaseParams(database)
   // Prom-compatible: pass match parameter to filter by __name__ regex
   config.params = {
     ...config.params,
-    limit: METRIC_NAMES_LIMIT,
+    limit,
     match: [`{__name__=~".*${regex}.*"}`],
   }
   return axios.get(`${prometheusBaseURL}/label/__name__/values`, config)
