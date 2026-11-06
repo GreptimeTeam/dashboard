@@ -21,11 +21,11 @@
           <template #app>
             <a
               class="tour-welcome-source-link"
-              href="https://github.com/killme2008/greptimedb-observability-playground"
+              href="https://github.com/open-telemetry/opentelemetry-demo"
               target="_blank"
               rel="noopener noreferrer"
             >
-              Astronomy Shop
+              OpenTelemetry Demo
             </a>
           </template>
         </i18n-t>
