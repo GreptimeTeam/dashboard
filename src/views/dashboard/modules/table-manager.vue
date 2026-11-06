@@ -61,95 +61,95 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card.gpt-table-sidebar-
             :disabled="!canNext || tablesLoading"
             @click="goNext"
           ) ›
-    a-tree.table-tree(
-      v-if="tablesTreeForDatabase[activeDatabase]?.length"
-      v-model:expanded-keys="expandedKeys"
-      size="small"
-      action-on-node-click="expand"
-      :ref="(el) => setRefMap(el, activeDatabase)"
-      :block-node="true"
-      :data="expandedTablesTree"
-      :load-more="loadMore"
-      :animation="false"
-      :virtual-list-props="{ threshold: 100, buffer: 20, height: virtualListHeight }"
-    )
-      template(#icon="node")
-        a-tooltip(v-if="getNodeIcon(node.node)" :content="getTableIconTooltip(node.node)")
-          svg.icon(:class="getTableIconClass(node.node)")
-            use(:href="getNodeIcon(node.node)")
-      template(#title="nodeData")
-        .tree-data(v-if="!nodeData.isLeaf")
-          .data-title(:title="nodeData.title")
-            | {{ nodeData.title }}
-          TableMenu(
-            :nodeData="nodeData"
-            :database="activeDatabase"
-            :expandedKeys="expandedKeys"
-            :expandedTablesTree="expandedTablesTree"
-            @expandChildren="expandChildren"
-          )
-        .tree-data(v-else-if="nodeData.dataType")
-          .data-title.columns
-            | {{ nodeData.title }}
-          .tree-data
-            transition(name="slide-fade")
-              .data-type {{ nodeData.dataType }}
+    .table-tree-container(v-if="tablesTreeForDatabase[activeDatabase]?.length" ref="treeContainerRef")
+      a-tree.table-tree(
+        v-model:expanded-keys="expandedKeys"
+        size="small"
+        action-on-node-click="expand"
+        :ref="(el) => setRefMap(el, activeDatabase)"
+        :block-node="true"
+        :data="expandedTablesTree"
+        :load-more="loadMore"
+        :animation="false"
+        :virtual-list-props="{ threshold: 100, buffer: 20, height: virtualListHeight }"
+      )
+        template(#icon="node")
+          a-tooltip(v-if="getNodeIcon(node.node)" :content="getTableIconTooltip(node.node)")
+            svg.icon(:class="getTableIconClass(node.node)")
+              use(:href="getNodeIcon(node.node)")
+        template(#title="nodeData")
+          .tree-data(v-if="!nodeData.isLeaf")
+            .data-title(:title="nodeData.title")
+              | {{ nodeData.title }}
             TableMenu(
-              isColumn
               :nodeData="nodeData"
               :database="activeDatabase"
               :expandedKeys="expandedKeys"
               :expandedTablesTree="expandedTablesTree"
               @expandChildren="expandChildren"
             )
-        .detail-row(v-else)
-          .count-and-time(v-if="nodeData.title === 'rowAndTime'")
-            a-space(:size="4")
-              span {{ $t('dashboard.rowCount') }}
-              span {{ nodeData.info.rowCount }}
-            a-space
-              a-space(:size="4")
-                span {{ `TTL` }}
-                span {{ nodeData.info.ttl }}
-              a-button.refresh-details.row-middle(
-                type="text"
-                size="small"
-                :loading="isRefreshingDetails[nodeData.parentKey]"
-                @click="loadMore(expandedTablesTree[nodeData.parentKey])"
+          .tree-data(v-else-if="nodeData.dataType")
+            .data-title.columns
+              | {{ nodeData.title }}
+            .tree-data
+              transition(name="slide-fade")
+                .data-type {{ nodeData.dataType }}
+              TableMenu(
+                isColumn
+                :nodeData="nodeData"
+                :database="activeDatabase"
+                :expandedKeys="expandedKeys"
+                :expandedTablesTree="expandedTablesTree"
+                @expandChildren="expandChildren"
               )
-                template(#icon)
-                  svg.icon-11.icon-color
-                    use(href="#refresh")
-            a-space(:size="4")
-              span.time {{ $t('dashboard.minTime') }}
-              a-tooltip(v-if="nodeData.info.min !== '-'" :content="`${nodeData.info.min}`")
-                span {{ dateFormatter(nodeData.info.timestampType, nodeData.info.min) }}
-              span(v-else) {{ nodeData.info.min }}
-            a-space(:size="4")
-              span.time {{ $t('dashboard.maxTime') }}
-              a-tooltip(v-if="nodeData.info.max !== '-'" :content="`${nodeData.info.max}`")
-                span {{ dateFormatter(nodeData.info.timestampType, nodeData.info.max) }}
-              span(v-else) {{ nodeData.info.max }}
-          a-space(v-else)
-            a-space(align="start" :class="{ 'create-table': nodeData.info.sql !== '-' }" :size="4")
-              .left
-                | {{ $t('dashboard.createTable') }}
-                TextCopyable.title-copy.code(
-                  :data="nodeData.info.sql"
-                  :showData="false"
-                  :copyTooltip="$t('dashboard.copyToClipboard')"
+          .detail-row(v-else)
+            .count-and-time(v-if="nodeData.title === 'rowAndTime'")
+              a-space(:size="4")
+                span {{ $t('dashboard.rowCount') }}
+                span {{ nodeData.info.rowCount }}
+              a-space
+                a-space(:size="4")
+                  span {{ `TTL` }}
+                  span {{ nodeData.info.ttl }}
+                a-button.refresh-details.row-middle(
+                  type="text"
+                  size="small"
+                  :loading="isRefreshingDetails[nodeData.parentKey]"
+                  @click="loadMore(expandedTablesTree[nodeData.parentKey])"
                 )
-              span.empty-sql(v-if="nodeData.info.sql === '-'") {{ nodeData.info.sql }}
-              .right(v-else)
-                a-typography-text.code-space {{ nodeData.info.sql }}
-      template(#switcher-icon="nodeData")
-        svg.icon-11.icon-color(v-if="!nodeData.isLeaf") 
-          use(href="#down")
+                  template(#icon)
+                    svg.icon-11.icon-color
+                      use(href="#refresh")
+              a-space(:size="4")
+                span.time {{ $t('dashboard.minTime') }}
+                a-tooltip(v-if="nodeData.info.min !== '-'" :content="`${nodeData.info.min}`")
+                  span {{ dateFormatter(nodeData.info.timestampType, nodeData.info.min) }}
+                span(v-else) {{ nodeData.info.min }}
+              a-space(:size="4")
+                span.time {{ $t('dashboard.maxTime') }}
+                a-tooltip(v-if="nodeData.info.max !== '-'" :content="`${nodeData.info.max}`")
+                  span {{ dateFormatter(nodeData.info.timestampType, nodeData.info.max) }}
+                span(v-else) {{ nodeData.info.max }}
+            a-space(v-else)
+              a-space(align="start" :class="{ 'create-table': nodeData.info.sql !== '-' }" :size="4")
+                .left
+                  | {{ $t('dashboard.createTable') }}
+                  TextCopyable.title-copy.code(
+                    :data="nodeData.info.sql"
+                    :showData="false"
+                    :copyTooltip="$t('dashboard.copyToClipboard')"
+                  )
+                span.empty-sql(v-if="nodeData.info.sql === '-'") {{ nodeData.info.sql }}
+                .right(v-else)
+                  a-typography-text.code-space {{ nodeData.info.sql }}
+        template(#switcher-icon="nodeData")
+          svg.icon-11.icon-color(v-if="!nodeData.isLeaf") 
+            use(href="#down")
     EmptyStatus.empty(v-if="!tablesTreeForDatabase[activeDatabase]?.length")
 </template>
 
 <script lang="ts" setup name="TableManager">
-  import { useDebounceFn } from '@vueuse/core'
+  import { useDebounceFn, useElementSize } from '@vueuse/core'
   import { useI18n } from 'vue-i18n'
   import useSiderTabs from '@/hooks/sider-tabs'
   import type { TableTreeParent, TreeData } from '@/store/modules/database/types'
@@ -179,9 +179,6 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card.gpt-table-sidebar-
     databaseActiveKeys,
     tablesPageByDatabase,
   } = storeToRefs(dataBaseStore)
-
-  const TABLE_NODE_HEIGHT = 34
-  const MIN_VIRTUAL_LIST_HEIGHT = 200
 
   const activeDatabase = ref<string>(database.value || '')
   const expandedKeys = ref<number[]>([])
@@ -345,10 +342,11 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card.gpt-table-sidebar-
 
   watch(tablesSearchKey, () => debouncedSearch())
 
-  const virtualListHeight = computed(() => {
-    const maxHeight = `calc(100vh - var(--tables-header-height) - var(--footer-height))`
-    return maxHeight
-  })
+  // The sidebar height depends on the page layout (header rows, pager, footer),
+  // so measure the tree container instead of subtracting hard-coded viewport vars.
+  const treeContainerRef = ref<HTMLElement>()
+  const { height: treeContainerHeight } = useElementSize(treeContainerRef)
+  const virtualListHeight = computed(() => Math.max(1, Math.floor(treeContainerHeight.value)))
 
   const expandChildren = (event: Event, nodeData: TableTreeParent, type: 'details' | 'columns') => {
     expandedKeys.value.push(nodeData.key)
@@ -443,6 +441,14 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card.gpt-table-sidebar-
     background-color: transparent;
     border: 0;
     border-radius: var(--gpt-radius-sm);
+  }
+
+  .table-tree-container {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
   }
 
   .table-tree {
