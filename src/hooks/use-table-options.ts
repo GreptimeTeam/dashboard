@@ -11,6 +11,29 @@ export interface UseTableOptionsOptions {
 }
 
 export const TABLE_OPTION_LIMIT = 500
+const RECENT_LIMIT = 10
+
+function recentStorageKey(database: string): string {
+  return `gpt-table-select:recent:${database}`
+}
+
+function readRecent(database: string): string[] {
+  if (!database || typeof localStorage === 'undefined') return []
+  try {
+    const parsed = JSON.parse(localStorage.getItem(recentStorageKey(database)) || '[]')
+    return Array.isArray(parsed)
+      ? parsed.filter((name): name is string => typeof name === 'string' && Boolean(name))
+      : []
+  } catch {
+    return []
+  }
+}
+
+function rememberRecent(database: string, name: string): void {
+  if (!database || !name || typeof localStorage === 'undefined') return
+  const next = [name, ...readRecent(database).filter((item) => item !== name)].slice(0, RECENT_LIMIT)
+  localStorage.setItem(recentStorageKey(database), JSON.stringify(next))
+}
 
 function unique(names: string[]): string[] {
   return Array.from(new Set(names.filter(Boolean)))
@@ -56,14 +79,16 @@ export default function useTableOptions(options: UseTableOptionsOptions) {
     const signal = toValue(options.signal)
     if (signal === 'traces') {
       const allowed = await loadAllowedTables(db)
-      return Array.from(allowed).slice(0, limit)
+      const recent = readRecent(db).filter((name) => allowed.has(name))
+      return unique([...recent, ...Array.from(allowed)]).slice(0, limit)
     }
     const [semanticRows, response] = await Promise.all([
       signal ? listBySignal('log', db) : Promise.resolve([]),
       editorAPI.getTables(limit, 0, db),
     ])
     const semanticNames = semanticRows.map((row) => row.tableName).filter(Boolean)
-    return unique([...semanticNames, ...recordsToNames(response)])
+    const recent = readRecent(db)
+    return unique([...recent, ...semanticNames, ...recordsToNames(response)])
   }
 
   async function loadInitial(): Promise<void> {
@@ -105,17 +130,20 @@ export default function useTableOptions(options: UseTableOptionsOptions) {
       const signal = toValue(options.signal)
       const allowed = signal === 'traces' ? await loadAllowedTables(db) : undefined
       const matches = (name: string) => !allowed || allowed.has(name)
+      const withExactFirst = (names: string[]): string[] =>
+        names.includes(trimmed) ? [trimmed, ...names.filter((name) => name !== trimmed)] : names
+
       const prefixNames = recordsToNames(await editorAPI.getTablesByPrefix(limit, 0, db, trimmed)).filter(
         (name) => name.startsWith(trimmed) && matches(name)
       )
       if (seq !== requestSeq) return
       if (prefixNames.length) {
-        tableOptions.value = prefixNames
+        tableOptions.value = withExactFirst(prefixNames)
         return
       }
       const containsNames = recordsToNames(await editorAPI.getTables(limit, 0, db, trimmed)).filter(matches)
       if (seq !== requestSeq) return
-      tableOptions.value = containsNames
+      tableOptions.value = withExactFirst(containsNames)
     } catch (error) {
       console.error('[table-select] failed to search tables', error)
     } finally {
@@ -147,5 +175,6 @@ export default function useTableOptions(options: UseTableOptionsOptions) {
     loadInitial,
     search,
     ensureTable,
+    rememberRecent: (name: string) => rememberRecent(toValue(options.database) || '', name),
   }
 }

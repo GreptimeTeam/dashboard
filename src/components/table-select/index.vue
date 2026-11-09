@@ -51,7 +51,7 @@ a-select.table-select(
 
   const virtualListProps = { height: 260, fixedSize: true, estimatedSize: 36 }
 
-  const { tableOptions, loading, searching, loadInitial, search, ensureTable } = useTableOptions({
+  const { tableOptions, loading, searching, loadInitial, search, ensureTable, rememberRecent } = useTableOptions({
     database: () => props.database,
     signal: () => props.signal,
     limit: props.limit,
@@ -73,6 +73,7 @@ a-select.table-select(
   }
 
   const onChange = (value: string) => {
+    rememberRecent(value)
     emit('update:modelValue', value)
     emit('change', value)
   }
