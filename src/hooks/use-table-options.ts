@@ -11,29 +11,6 @@ export interface UseTableOptionsOptions {
 }
 
 export const TABLE_OPTION_LIMIT = 500
-const RECENT_LIMIT = 10
-
-function recentStorageKey(database: string): string {
-  return `gpt-table-select:recent:${database}`
-}
-
-function readRecent(database: string): string[] {
-  if (!database || typeof localStorage === 'undefined') return []
-  try {
-    const parsed = JSON.parse(localStorage.getItem(recentStorageKey(database)) || '[]')
-    return Array.isArray(parsed)
-      ? parsed.filter((name): name is string => typeof name === 'string' && Boolean(name))
-      : []
-  } catch {
-    return []
-  }
-}
-
-function rememberRecent(database: string, name: string): void {
-  if (!database || !name || typeof localStorage === 'undefined') return
-  const next = [name, ...readRecent(database).filter((item) => item !== name)].slice(0, RECENT_LIMIT)
-  localStorage.setItem(recentStorageKey(database), JSON.stringify(next))
-}
 
 function unique(names: string[]): string[] {
   return Array.from(new Set(names.filter(Boolean)))
@@ -79,16 +56,14 @@ export default function useTableOptions(options: UseTableOptionsOptions) {
     const signal = toValue(options.signal)
     if (signal === 'traces') {
       const allowed = await loadAllowedTables(db)
-      const recent = readRecent(db).filter((name) => allowed.has(name))
-      return unique([...recent, ...Array.from(allowed)]).slice(0, limit)
+      return Array.from(allowed).slice(0, limit)
     }
     const [semanticRows, response] = await Promise.all([
       signal ? listBySignal('log', db) : Promise.resolve([]),
       editorAPI.getTables(limit, 0, db),
     ])
     const semanticNames = semanticRows.map((row) => row.tableName).filter(Boolean)
-    const recent = readRecent(db)
-    return unique([...recent, ...semanticNames, ...recordsToNames(response)])
+    return unique([...semanticNames, ...recordsToNames(response)])
   }
 
   async function loadInitial(): Promise<void> {
@@ -175,6 +150,5 @@ export default function useTableOptions(options: UseTableOptionsOptions) {
     loadInitial,
     search,
     ensureTable,
-    rememberRecent: (name: string) => rememberRecent(toValue(options.database) || '', name),
   }
 }

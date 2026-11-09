@@ -257,12 +257,10 @@ a-modal(
     return databaseList.value.filter((db) => db !== 'greptime_private' && db !== 'information_schema')
   })
 
-  // Use localStorage to remember the last selected table
+  // Stable key for per-builder preferences (quick filters). The selected table is
+  // deliberately not persisted: remembering a table across database switches leaves
+  // the picker pointing at a name from the previous database.
   const storageKey = props.storageKey || 'sql-builder-last-table'
-  const lastSelectedTable = useLocalStorage(storageKey, '')
-  // Remember which database the table belongs to; avoids probing stale names
-  // from another database (and the expected 400 that a DESC probe would log).
-  const lastSelectedTableDb = useLocalStorage(`${storageKey}-db`, '')
 
   // Initialize form state as reactive object
   const form = reactive<Form>(props.formState)
@@ -620,12 +618,7 @@ a-modal(
           fetchTableNames(TABLE_WINDOW, '', targetDb),
         ])
         const semanticNames = semanticRows.map((row) => row.tableName).filter(Boolean)
-        const available = new Set([...semanticNames, ...pageNames])
-        const remembered = lastSelectedTableDb.value === targetDb ? lastSelectedTable.value : ''
-        const rememberedExists = Boolean(remembered && available.has(remembered))
-        initialTables.value = Array.from(
-          new Set([...semanticNames, ...(rememberedExists && remembered ? [remembered] : []), ...pageNames])
-        )
+        initialTables.value = Array.from(new Set([...semanticNames, ...pageNames]))
         tables.value = initialTables.value
       } else {
         const columns = [props.tableFilter ?? []].flat().filter(Boolean)
@@ -641,13 +634,10 @@ a-modal(
         tables.value = result.output[0].records.rows.map((row: string[]) => row[0])
       }
 
-      // Validate and set table from localStorage or default
-      if (lastSelectedTable.value && tables.value.includes(lastSelectedTable.value)) {
-        // Use the remembered table if it still exists
-        form.table = lastSelectedTable.value
-      } else if (tables.value.length > 0) {
-        // Use first available table if remembered table doesn't exist
-        form.table = tables.value[0]
+      // Keep a table already chosen for this database (e.g. restored from the URL);
+      // otherwise fall back to the first one in the list.
+      if (!form.table || !tables.value.includes(form.table)) {
+        form.table = tables.value[0] ?? ''
       }
     } catch (error) {
       console.error('Failed to fetch tables:', error)
@@ -715,10 +705,6 @@ a-modal(
   }
 
   function handleTableChange() {
-    // Save the selected table (and its database) to localStorage
-    lastSelectedTable.value = form.table
-    lastSelectedTableDb.value = form.database
-
     // Reset form state for new table, preserve current table
     resetForm({ table: form.table })
   }
@@ -797,11 +783,7 @@ a-modal(
 
   watch(
     () => form.table,
-    (newTable) => {
-      if (newTable) {
-        // Save to localStorage whenever table changes
-        lastSelectedTable.value = newTable
-      }
+    () => {
       void fetchTableFields(form.table).then(() => loadSampledAttributes())
       // Table value is now extracted from form state in parent component
     },
