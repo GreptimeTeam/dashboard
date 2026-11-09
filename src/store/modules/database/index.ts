@@ -260,15 +260,6 @@ const useDataBaseStore = defineStore('database', () => {
     }
   }
 
-  const checkTables = async () => {
-    const { updateDataStatus } = useUserStore()
-    updateDataStatus('tables', true)
-    if (tablesTreeForDatabase.value[database.value] && tablesTreeForDatabase.value[database.value].length > 0) {
-      return
-    }
-    await getTables()
-  }
-
   async function getTableByName(tableName: any, db?: string) {
     try {
       const res: any = await editorAPI.getTableByName(tableName, db)
@@ -359,7 +350,6 @@ const useDataBaseStore = defineStore('database', () => {
     databaseActiveKeys,
     getTables,
     searchTables,
-    checkTables,
     getTableNames,
     addChildren,
     getTableByName,
