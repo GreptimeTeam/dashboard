@@ -1,3 +1,4 @@
+import editorAPI from '@/api/editor'
 import { getTableEntityDeclarations, getTableSemantics, listBySignal, semanticsDump } from './source'
 import { currentDatabase } from '../current-database'
 import type { DrilldownFilter } from '../types'
@@ -382,7 +383,7 @@ async function listAllTables(database?: string): Promise<string[]> {
  */
 export async function listSignalTables(
   signal: 'logs',
-  options?: { include?: string[]; database?: string }
+  options?: { include?: string[]; database?: string; traceOnly?: boolean }
 ): Promise<string[]>
 
 /**
@@ -393,17 +394,25 @@ export async function listSignalTables(
  */
 export async function listSignalTables(
   signal: 'traces',
-  options?: { include?: string[]; database?: string }
+  options?: { include?: string[]; database?: string; traceOnly?: boolean }
 ): Promise<string[]>
 
 export async function listSignalTables(
   signal: 'logs' | 'traces',
-  options?: { include?: string[]; database?: string }
+  options?: { include?: string[]; database?: string; traceOnly?: boolean }
 ): Promise<string[]> {
   const database = options?.database
   if (signal === 'logs') {
-    const [fromSemantics, allTables] = await Promise.all([listBySignal('log', database), listAllTables(database)])
+    const fromSemantics = await listBySignal('log', database)
     const extras = (options?.include ?? []).filter(Boolean)
+    // Trace → logs association only needs tables carrying trace_id; one cached GROUP BY
+    // query replaces enumerating the whole database.
+    if (options?.traceOnly) {
+      const { default: useTableSchemaStore } = await import('@/store/modules/table-schema')
+      const traceCapable = await useTableSchemaStore().tablesHavingColumn('trace_id', database)
+      return uniquePreserveOrder([...fromSemantics.map((row) => row.tableName), ...traceCapable, ...extras])
+    }
+    const allTables = await listAllTables(database)
     // Semantics first (priority), then remaining tables — no name guessing.
     return uniquePreserveOrder([...fromSemantics.map((row) => row.tableName), ...allTables, ...extras])
   }
@@ -463,8 +472,14 @@ export async function resolveSignalTable(
     return options.settingsTable.trim()
   }
   if (signal === 'logs') {
-    const listed = await listSignalTables('logs', { database: options?.database })
-    return listed[0]
+    const database = options?.database
+    const declared = await listBySignal('log', database)
+    if (declared.length) {
+      return declared[0].tableName
+    }
+    // No declared log table: take the first physical table without listing them all.
+    const response: any = await editorAPI.getTables(1, 0, database)
+    return response?.output?.[0]?.records?.rows?.[0]?.[0]
   }
 
   const listed = await listSignalTables('traces', { database: options?.database })

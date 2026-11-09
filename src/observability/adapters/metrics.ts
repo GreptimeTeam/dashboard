@@ -1,4 +1,4 @@
-import { getMetricNames, getSeries, METRIC_NAMES_LIMIT, type MetricNamesOptions } from '@/api/metrics'
+import { getMetricNames, getSeries, type MetricNamesOptions } from '@/api/metrics'
 import { buildPromMatchSelector } from '../filters'
 import type { DrilldownFilter } from '../types'
 
@@ -25,13 +25,15 @@ function uniqueMetricNamesFromSeries(payload: unknown): string[] {
 export async function fetchMetricNamesPool(
   options: MetricNamesOptions
 ): Promise<{ names: string[]; truncated: boolean }> {
-  const limit = options.limit ?? METRIC_NAMES_LIMIT
+  // `0` means unlimited: the catalog needs the complete pool to build accurate
+  // prefix/suffix groups. Callers that still need a cap can pass an explicit limit.
+  const limit = options.limit ?? 0
   try {
     const response = await getMetricNames({ ...options, limit })
     const names = Array.isArray(response.data) ? (response.data as string[]) : []
     return {
       names,
-      truncated: names.length >= limit,
+      truncated: limit > 0 && names.length >= limit,
     }
   } catch (error) {
     const selector = options.match?.find((item) => item.trim() && item.trim() !== '{}')
@@ -42,7 +44,7 @@ export async function fetchMetricNamesPool(
     const names = uniqueMetricNamesFromSeries(response.data)
     return {
       names,
-      truncated: names.length >= limit,
+      truncated: limit > 0 && names.length >= limit,
     }
   }
 }

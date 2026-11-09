@@ -118,9 +118,12 @@ a-modal.trace-logs-settings(
     }
     loadingTables.value[index] = true
     try {
+      // Qualification requires `trace_id`; the discovery layer returns only tables that
+      // carry it instead of enumerating every table in the database.
       const tables = await listSignalTables('logs', {
         database,
         include: mappings.value[index]?.table ? [mappings.value[index].table] : [],
+        traceOnly: true,
       })
       // The picker lists every table that can take part in trace → logs association —
       // the unified trace-side rule (trace_id + not trace-model + not declared as
@@ -158,6 +161,7 @@ a-modal.trace-logs-settings(
       tableOptions.value[index] = qualified
         .filter((item): item is { table: string; declared: boolean } => item !== undefined)
         .sort((a, b) => Number(b.declared) - Number(a.declared))
+        .slice(0, 500)
         .map((item) => item.table)
     } catch (error) {
       console.error('Failed to load trace logs table options', error)

@@ -408,8 +408,8 @@ describe('trace logs routing', () => {
   })
 
   it('pre-filters the schema batch to tables carrying trace_id', async () => {
-    listTables.mockResolvedValue(['otel_logs', 'go_gc_heap_allocs_bytes_total'])
-    tablesHavingColumn.mockImplementation(async () => new Set(['otel_logs']))
+    // `traceOnly` discovery already excludes tables without trace_id.
+    listTables.mockResolvedValue(['otel_logs'])
     ensureTableSchema.mockResolvedValue(OTelLogsColumns)
     getSemantics.mockImplementation(async (table: string) =>
       table === 'otel_logs' ? { signalType: 'log' } : undefined

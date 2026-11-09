@@ -1,11 +1,11 @@
 <template lang="pug">
-a-tooltip(position="right" :content="codeInfo.code")
+a-tooltip(position="right" :content="getCodeInfo().code")
   a-button.short-cut-btn(
     type="text"
     size="small"
     :class="{ 'arco-btn-only-icon': label === '' }"
     :loading="isLoading"
-    @click="clickShortCut(codeInfo.code, codeInfo.cursorPosition)"
+    @click="clickShortCut"
     @mouseenter="hoverQuickSelect(node)"
   ) {{ label }}
     template(v-if="icon" #icon)
@@ -31,10 +31,6 @@ a-tooltip(position="right" :content="codeInfo.code")
 
   const isLoading = ref(false)
 
-  const clickShortCut = (info: string, cursorPosition: number) => {
-    inputFromNewLineToQueryCode(info, cursorPosition)
-  }
-
   const formatter = (code: string) => {
     // No format for now.
     return code
@@ -53,7 +49,8 @@ a-tooltip(position="right" :content="codeInfo.code")
   }
 
   const getCodeAndCursorPos = (type: string, node: TreeChild, parent: TableTreeParent) => {
-    const orderBy = parent.timeIndexName !== `%TIMESTAMP%` ? ` ORDER BY "${parent.timeIndexName}" ` : ` `
+    const timeIndexName = parent.timeIndexName && parent.timeIndexName !== '%TIMESTAMP%' ? parent.timeIndexName : ''
+    const orderBy = timeIndexName ? ` ORDER BY "${timeIndexName}" ` : ' '
     switch (type) {
       case 'select*100':
         return {
@@ -88,7 +85,9 @@ a-tooltip(position="right" :content="codeInfo.code")
       case 'where<':
         return {
           code: formatter(
-            `SELECT * FROM ${props.database}."${parent.title}" WHERE "${parent.timeIndexName}" < ${orderBy}DESC LIMIT 100;`
+            `SELECT * FROM ${props.database}."${parent.title}" WHERE "${
+              timeIndexName || node.title
+            }" < ${orderBy}DESC LIMIT 100;`
           ),
           cursorPosition: `${orderBy}DESC LIMIT 100;`.length,
         }
@@ -100,9 +99,31 @@ a-tooltip(position="right" :content="codeInfo.code")
     }
   }
 
-  const codeInfo = computed(() => {
-    return getCodeAndCursorPos(props.type, props.node, props.parent)
-  })
+  /**
+   * Build the SQL at click time and make sure the table's time index is known.
+   * Tree nodes are stored in a shallowRef (no per-node reactivity), so a
+   * computed that captured `timeIndexName` before columns were loaded would
+   * stay stale and produce `ORDER BY ""`.
+   */
+  // Build lazily: tree nodes live in a shallowRef, so a computed would cache
+  // `timeIndexName` captured before columns were loaded.
+  const getCodeInfo = () => getCodeAndCursorPos(props.type, props.node, props.parent)
+
+  const clickShortCut = async () => {
+    if (!props.parent) return
+    if (!props.parent.timeIndexName && !props.parent.columns?.length) {
+      isLoading.value = true
+      try {
+        await loadMoreColumns(props.parent, true, props.database)
+      } catch {
+        // fall back to no ORDER BY
+      } finally {
+        isLoading.value = false
+      }
+    }
+    const info = getCodeInfo()
+    inputFromNewLineToQueryCode(info.code, info.cursorPosition)
+  }
 </script>
 
 <style lang="less" scoped>

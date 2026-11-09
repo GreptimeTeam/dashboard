@@ -28,9 +28,12 @@ export interface TraceLogsAssociationPool {
  */
 export async function loadTraceLogsAssociationPool(ctx: DrilldownContext): Promise<TraceLogsAssociationPool> {
   const database = ctx.connection.logsDatabase.value
+  // Every mappable table needs `trace_id`; one cached GROUP BY query is enough to
+  // enumerate them without listing the whole database.
   const listed = await listSignalTables('logs', {
     include: ctx.semantics.logs.table.value ? [ctx.semantics.logs.table.value] : [],
     database,
+    traceOnly: true,
   })
   const tables = Array.isArray(listed) ? listed : []
   if (!tables.length) {
@@ -45,14 +48,8 @@ export async function loadTraceLogsAssociationPool(ctx: DrilldownContext): Promi
     .filter(({ semantics }) => !semantics?.signalType || semantics.signalType === 'log')
     .map(({ table }) => table)
 
-  // Columns pre-filter: without `trace_id` a table can never join association.
-  let fetchTargets = survivors
-  if (survivors.length) {
-    const traceCapable = await useTableSchemaStore().tablesHavingColumn('trace_id', database)
-    if (traceCapable.size) {
-      fetchTargets = survivors.filter((table) => traceCapable.has(table))
-    }
-  }
+  // Already restricted to tables carrying `trace_id`.
+  const fetchTargets = survivors
 
   if (fetchTargets.length) {
     await useTableSchemaStore()
