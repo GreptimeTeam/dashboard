@@ -1,15 +1,16 @@
 import axios, { AxiosRequestConfig } from 'axios'
 import { useAppStore } from '@/store'
 import editorAPI from '@/api/editor'
+import TABLE_PAGE_SIZE from '@/constants/pagination'
 
 const prometheusBaseURL = `/v1/prometheus/api/v1`
 
 /** Max metric names returned per list/search request (Prometheus label values API). */
 export const METRIC_NAMES_LIMIT = 40000
 /** Bounded initial window for the Metrics sidebar (typing searches remotely). */
-export const METRIC_LIST_LIMIT = 500
+export const METRIC_LIST_LIMIT = TABLE_PAGE_SIZE
 /** Bounded window for remote metric-name searches. */
-export const METRIC_SEARCH_LIMIT = 500
+export const METRIC_SEARCH_LIMIT = TABLE_PAGE_SIZE
 
 export interface MetricNamesOptions {
   start?: string

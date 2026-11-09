@@ -1,6 +1,7 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref, shallowRef } from 'vue'
 import editorAPI from '@/api/editor'
+import TABLE_PAGE_SIZE from '@/constants/pagination'
 import requestTableSchema, {
   requestTableSchemas,
   type TableSchemaColumn,
@@ -30,7 +31,7 @@ const useDataBaseStore = defineStore('database', () => {
    * loads this page; callers paginate / search beyond it instead of loading
    * millions of nodes into the reactive tree.
    */
-  const MAX_TABLES_PER_PAGE = 50_000
+  const MAX_TABLES_PER_PAGE = TABLE_PAGE_SIZE
   const tablesPageByDatabase = ref<Record<string, { offset: number; loaded: number; filter: string }>>({})
   /** Latest table page/search request; older responses are ignored. */
   let tablePageRequestId = 0
