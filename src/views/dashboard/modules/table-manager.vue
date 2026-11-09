@@ -192,11 +192,14 @@ a-card.table-manager.gpt-page-sidebar.gpt-sidebar-header-card.gpt-table-sidebar-
         databaseActiveKeys.value = []
         return
       }
-      if (newList.length > 0 && !activeDatabase.value) {
-        const defaultDb = newList.includes(database.value) ? database.value : newList[0]
-        activeDatabase.value = defaultDb
-        databaseActiveKeys.value = [defaultDb]
-        refreshTables(defaultDb)
+      if (!activeDatabase.value || !newList.includes(activeDatabase.value)) {
+        activeDatabase.value = newList.includes(database.value) ? database.value : newList[0]
+        databaseActiveKeys.value = [activeDatabase.value]
+      }
+      // The sidebar owns its first page now; do not rely on a connection-level
+      // preload (checkTables) to populate the tree.
+      if (!tablesTreeForDatabase.value[activeDatabase.value]?.length && !tablesLoading.value) {
+        refreshTables(activeDatabase.value, 0)
       }
     },
     { immediate: true }
