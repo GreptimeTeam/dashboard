@@ -323,7 +323,9 @@ const useDataBaseStore = defineStore('database', () => {
     const request = (async () => {
       const res: any = await editorAPI.runSQL('show tables', db)
       const rows = res?.output?.[0]?.records?.rows || []
-      const names = rows.map((row: Array<string>) => row[0]).filter(Boolean)
+      const names = rows
+        .map((row: Array<string>) => row[0])
+        .filter((name) => Boolean(name) && name !== 'greptime_physical_table')
       tableNamesByDatabase.set(db, names)
       return names
     })()

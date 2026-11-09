@@ -62,6 +62,9 @@ const getDatabases = () => {
   return axios.post(sqlUrl, makeSqlData(`show databases`))
 }
 
+const PHYSICAL_METRIC_TABLE = 'greptime_physical_table'
+const EXCLUDE_PHYSICAL_METRIC_TABLE = ` and table_name <> '${PHYSICAL_METRIC_TABLE}'`
+
 const getTables = (limit?: number, offset?: number, database?: string, filter?: string) => {
   const appStore = useAppStore()
   const db = database || appStore.database
@@ -71,7 +74,7 @@ const getTables = (limit?: number, offset?: number, database?: string, filter?: 
   return axios.post(
     sqlUrl,
     makeSqlData(
-      `select table_name, table_type, engine, create_options from information_schema.tables where table_schema='${db}'${filterSql} order by table_name ${
+      `select table_name, table_type, engine, create_options from information_schema.tables where table_schema='${db}'${filterSql}${EXCLUDE_PHYSICAL_METRIC_TABLE} order by table_name ${
         limit ? suffix : ''
       };`
     ),
@@ -94,7 +97,7 @@ const getTablesByPrefix = (limit: number, offset: number, database?: string, pre
   return axios.post(
     sqlUrl,
     makeSqlData(
-      `select table_name, table_type, engine, create_options from information_schema.tables where table_schema='${db}' and table_name >= '${escaped}' order by table_name limit ${Math.max(
+      `select table_name, table_type, engine, create_options from information_schema.tables where table_schema='${db}' and table_name >= '${escaped}'${EXCLUDE_PHYSICAL_METRIC_TABLE} order by table_name limit ${Math.max(
         0,
         limit
       )} offset ${Math.max(0, offset)};`
@@ -107,7 +110,11 @@ const fetchTablesCount = (database?: string) => {
   const appStore = useAppStore()
   return axios.post(
     sqlUrl,
-    makeSqlData(`select count(*) from information_schema.tables where table_schema='${database || appStore.database}';`)
+    makeSqlData(
+      `select count(*) from information_schema.tables where table_schema='${
+        database || appStore.database
+      }'${EXCLUDE_PHYSICAL_METRIC_TABLE};`
+    )
   )
 }
 
