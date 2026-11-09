@@ -84,14 +84,13 @@ a-drawer.settings-drawer(
 </template>
 
 <script lang="ts" setup name="GlobalSetting">
-  import { useAppStore, useDataBaseStore } from '@/store'
+  import { useAppStore } from '@/store'
   import { isValidTimezoneSetting } from '@/utils/timezone'
   import TimezoneSelect from '@/components/timezone-select/index.vue'
 
   const MARGIN_BOTTOM = `${38 * 2 + 8}px`
 
   const appStore = useAppStore()
-  const { checkTables } = useDataBaseStore()
 
   const { globalSettings, host, database, username, password, databaseList, userTimezone, authHeader } =
     storeToRefs(appStore)
@@ -136,7 +135,6 @@ a-drawer.settings-drawer(
       await appStore.refreshDatabaseList()
       settingsForm.value.databaseList = databaseList.value
       settingsForm.value.database = database.value
-      checkTables()
 
       setTimeout(() => {
         appStore.closeGlobalSettings()
@@ -177,7 +175,6 @@ a-drawer.settings-drawer(
       const loginSuccess = await appStore.validateAndSaveConnection()
       if (loginSuccess) {
         loginStatus.value = 'success'
-        checkTables()
       } else {
         loginStatus.value = 'fail'
       }

@@ -1,10 +1,16 @@
 import axios, { AxiosRequestConfig } from 'axios'
 import { useAppStore } from '@/store'
+import editorAPI from '@/api/editor'
+import TABLE_PAGE_SIZE from '@/constants/pagination'
 
 const prometheusBaseURL = `/v1/prometheus/api/v1`
 
 /** Max metric names returned per list/search request (Prometheus label values API). */
 export const METRIC_NAMES_LIMIT = 40000
+/** Bounded initial window for the Metrics sidebar (typing searches remotely). */
+export const METRIC_LIST_LIMIT = TABLE_PAGE_SIZE
+/** Bounded window for remote metric-name searches. */
+export const METRIC_SEARCH_LIMIT = TABLE_PAGE_SIZE
 
 export interface MetricNamesOptions {
   start?: string
@@ -58,16 +64,62 @@ export const getMetricNames = (options?: MetricNamesOptions) => {
   return axios.get(`${prometheusBaseURL}/label/__name__/values`, config)
 }
 
+function metricTablesWhere(database: string, search?: string): string {
+  const escaped = database.replace(/'/g, "''")
+  const keyword = (search || '').trim().replace(/'/g, "''")
+  const searchSql = keyword ? ` and table_name like '%${keyword}%'` : ''
+  return `table_schema='${escaped}' and engine='metric' and table_name <> 'greptime_physical_table'${searchSql}`
+}
+
+/**
+ * Exact metric count: metric-engine tables are the Prometheus `__name__` universe.
+ * One catalog count keeps the sidebar label accurate without downloading all names.
+ * The internal `greptime_physical_table` is not a metric.
+ */
+export const getMetricNamesCount = async (database?: string, search?: string): Promise<number> => {
+  const db = database || useAppStore().database
+  if (!db) return 0
+  const response: any = await editorAPI.runSQL(
+    `select count(*) from information_schema.tables where ${metricTablesWhere(db, search)};`,
+    db
+  )
+  return Number(response?.output?.[0]?.records?.rows?.[0]?.[0] || 0)
+}
+
+/**
+ * One page of metric names, ordered by table name. The Prometheus label endpoint
+ * ignores `offset`, so pagination goes through the catalog.
+ */
+export const getMetricNamesPage = async (options: {
+  database?: string
+  offset?: number
+  limit?: number
+  search?: string
+}): Promise<string[]> => {
+  const db = options.database || useAppStore().database
+  if (!db) return []
+  const offset = Math.max(0, options.offset ?? 0)
+  const limit = Math.max(1, options.limit ?? METRIC_LIST_LIMIT)
+  const response: any = await editorAPI.runSQL(
+    `select table_name from information_schema.tables where ${metricTablesWhere(
+      db,
+      options.search
+    )} order by table_name limit ${limit} offset ${offset};`,
+    db
+  )
+  return ((response?.output?.[0]?.records?.rows || []) as string[][]).map((row) => row[0]).filter(Boolean)
+}
+
 /**
  * Search metric names remotely using a regex-based match
  * @param regex - Regex body for metric name (without leading/trailing /)
  */
-export const searchMetricNames = (regex: string, database?: string) => {
+export const searchMetricNames = (regex: string, database?: string, limit = METRIC_SEARCH_LIMIT) => {
   const config = addDatabaseParams(database)
   // Prom-compatible: pass match parameter to filter by __name__ regex
   config.params = {
     ...config.params,
-    limit: METRIC_NAMES_LIMIT,
+    limit,
     match: [`{__name__=~".*${regex}.*"}`],
   }
   return axios.get(`${prometheusBaseURL}/label/__name__/values`, config)

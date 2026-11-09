@@ -39,7 +39,6 @@ a-modal.guide-modal(
   const { role } = storeToRefs(useUserStore())
 
   const { validateAndSaveConnection } = useAppStore()
-  const { checkTables } = useDataBaseStore()
 
   const settingsForm = ref({
     username: username.value,
@@ -50,9 +49,6 @@ a-modal.guide-modal(
   })
 
   const handleOk = async () => {
-    const res = await validateAndSaveConnection(settingsForm.value)
-    if (res) {
-      checkTables()
-    }
+    await validateAndSaveConnection(settingsForm.value)
   }
 </script>

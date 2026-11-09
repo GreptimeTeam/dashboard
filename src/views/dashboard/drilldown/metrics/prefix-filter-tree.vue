@@ -75,7 +75,7 @@
 
   const asStringArray = (value: unknown): string[] => {
     const resolved = toValue(value)
-    return Array.isArray(resolved) ? resolved.map(String) : []
+    return Array.isArray(resolved) ? (resolved as string[]) : []
   }
 
   const asPrefixGroupArray = (value: unknown): PrefixGroup[] => {

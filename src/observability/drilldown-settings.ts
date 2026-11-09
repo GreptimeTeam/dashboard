@@ -31,7 +31,6 @@ export interface TraceLogsMapping {
 }
 
 export interface TracesDrilldownSettings {
-  table?: string
   /** Service-scoped target used by Trace → Logs. Field roles stay owned by Logs settings. */
   traceLogsMappings?: TraceLogsMapping[]
   /** Services whose auto-learned mapping the user deleted — never learned again. */
@@ -118,7 +117,6 @@ export function loadDrilldownSettings(database?: string): DrilldownSettings {
           : undefined,
       },
       traces: {
-        table: typeof traces.table === 'string' ? traces.table : undefined,
         traceLogsMappings: parseTraceLogsMappings(traces.traceLogsMappings),
         ignoredServiceKeys: parseIgnoredServiceKeys(traces.ignoredServiceKeys),
       },

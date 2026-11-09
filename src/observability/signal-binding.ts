@@ -2,7 +2,6 @@ import { onMounted, watch } from 'vue'
 import {
   loadDrilldownSettings,
   updateLogsDrilldownSettings,
-  updateTracesDrilldownSettings,
   type LogsFieldMapSettings,
 } from '@/observability/drilldown-settings'
 import {
@@ -15,6 +14,7 @@ import { buildDefaultTracesFieldMap } from '@/observability/traces/field-map'
 import {
   entityColumnFilterKey,
   inspectSignalTable,
+  listSignalTables,
   physicalServiceColumn,
   resolveLogsDetailGroupFromFilters,
   resolveSignalTable,
@@ -46,6 +46,23 @@ function rolesFromFieldMap(map: Record<string, string>): LogsFieldMapSettings {
     }
   })
   return next
+}
+
+/**
+ * Whether `name` is still one of the tables the Traces picker offers (`trace_id` or a trace
+ * declaration). A restored name that fails this check is stale — binding it would point the
+ * page at a table that cannot answer traces queries.
+ */
+async function isTraceCandidate(name: string, database: string): Promise<boolean> {
+  if (!name.trim()) {
+    return false
+  }
+  try {
+    return (await listSignalTables('traces', { database })).includes(name.trim())
+  } catch {
+    // Discovery failed: keep the restored name rather than leaving the page unbound.
+    return true
+  }
 }
 
 export default function useSignalBinding(ctx: DrilldownContext): {
@@ -133,9 +150,9 @@ export default function useSignalBinding(ctx: DrilldownContext): {
       nextMap = buildDefaultTracesFieldMap({
         serviceColumn: physicalServiceColumn(inspection.serviceRef),
       })
-      if (persist) {
-        updateTracesDrilldownSettings({ table: trimmed }, database)
-      }
+      // The traces table is intentionally not persisted: a remembered name can be a table
+      // that does not satisfy the traces rules (e.g. picked before the picker was
+      // restricted). Every load auto-binds instead — see initialize().
     }
 
     if (token !== generation[signal]) {
@@ -273,16 +290,22 @@ export default function useSignalBinding(ctx: DrilldownContext): {
   const initialize = async (signal: 'logs' | 'traces') => {
     ctx.session.binding.ready = true
     const database = signal === 'logs' ? ctx.connection.logsDatabase.value : ctx.connection.tracesDatabase.value
-    const settings = loadDrilldownSettings(database)[signal]
-    const settingsTable = settings?.table?.trim()
+    // Only logs remember their table; the traces default is always auto-discovered.
+    const settingsTable = signal === 'logs' ? loadDrilldownSettings(database).logs.table?.trim() : undefined
     const urlOrCurrent = ctx.semantics[signal].table.value?.trim()
 
-    // URL / already-set table wins over persisted settings so deep links are authoritative.
     let table: string | undefined
     if (signal === 'logs') {
+      // URL / already-set table wins over persisted settings so deep links are authoritative.
       table = urlOrCurrent || settingsTable || (await resolveSignalTable('logs', { database }))
     } else {
-      table = urlOrCurrent || settingsTable || (await resolveSignalTable('traces', { settingsTable, database }))
+      // Traces never restore a remembered table — the default is the auto-discovered
+      // traces table. A URL-carried name is kept only while it is still trace-capable.
+      const keepCurrent = urlOrCurrent ? await isTraceCandidate(urlOrCurrent, database) : false
+      if (urlOrCurrent && !keepCurrent) {
+        ctx.semantics.traces.setTable(undefined)
+      }
+      table = (keepCurrent ? urlOrCurrent : undefined) || (await resolveSignalTable('traces', { database }))
     }
 
     try {
@@ -290,8 +313,7 @@ export default function useSignalBinding(ctx: DrilldownContext): {
         return
       }
 
-      // Logs init seeds settings gaps (persist true). Traces auto-discover / URL restore
-      // historically did not save — only the picker persists.
+      // Logs init seeds settings gaps (persist true). Traces never persist their table.
       await bindTable(signal, table, {
         persist: signal === 'logs',
       })

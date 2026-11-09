@@ -1,6 +1,7 @@
 import { defineStore, storeToRefs } from 'pinia'
-import { computed, ref, watch } from 'vue'
+import { computed, ref, shallowRef } from 'vue'
 import editorAPI from '@/api/editor'
+import TABLE_PAGE_SIZE from '@/constants/pagination'
 import requestTableSchema, {
   requestTableSchemas,
   type TableSchemaColumn,
@@ -11,15 +12,31 @@ import { sql } from '@codemirror/lang-sql'
 import { PromQLExtension } from '@prometheus-io/codemirror-promql'
 import useAppStore from '../app'
 import { ScriptTreeData, TableDetail, TableTreeChild, TableTreeParent } from './types'
-import { resolveMetricTableMeta } from './table-meta'
+import buildTableNodes from './table-nodes'
 import { RecordsType, SchemaType } from '../code-run/types'
 
 const useDataBaseStore = defineStore('database', () => {
   const { database } = storeToRefs(useAppStore())
-  const tablesData = ref<RecordsType>()
   const scriptsData = ref()
-  const tablesTreeForDatabase = ref({} as { [key: string]: TableTreeParent[] })
+  // shallowRef: nodes stay plain objects (no per-node reactive proxies), which
+  // halves the memory of the 50k-node page. Every mutation must replace `.value`
+  // (see setTree) so consumers (a-tree, originTablesTree) still update.
+  const tablesTreeForDatabase = shallowRef({} as { [key: string]: TableTreeParent[] })
+  const setTree = (db: string, nodes: TableTreeParent[]) => {
+    tablesTreeForDatabase.value = { ...tablesTreeForDatabase.value, [db]: nodes }
+  }
   const tablesTotalByDatabase = ref<Record<string, number>>({})
+  /**
+   * Upper bound of rows kept in memory for the sidebar tree. One request
+   * loads this page; callers paginate / search beyond it instead of loading
+   * millions of nodes into the reactive tree.
+   */
+  const MAX_TABLES_PER_PAGE = TABLE_PAGE_SIZE
+  const tablesPageByDatabase = ref<Record<string, { offset: number; loaded: number; filter: string }>>({})
+  /** Latest table page/search request; older responses are ignored. */
+  let tablePageRequestId = 0
+  /** Names-only cache for callers that do not need the full tree (show tables). */
+  const tableNamesByDatabase = new Map<string, string[]>()
   const originTablesTree = computed(() => {
     return tablesTreeForDatabase.value[database.value] || []
   })
@@ -51,18 +68,20 @@ const useDataBaseStore = defineStore('database', () => {
     promql: [new PromQLExtension().asExtension()],
   })
 
-  watch(hints, () => {
-    extensions.value.sql = [sql(hints.value.sql)]
-    const promql = new PromQLExtension().setComplete({
-      remote: {
-        fetchFn: () => Promise.reject(),
-        cache: {
-          initialMetricList: [...hints.value.promql],
-        },
-      },
-    })
-    extensions.value.promql = [promql.asExtension()]
-  })
+  // NOTE(perf): this watcher used to rebuild the editor extensions on every table-tree
+  // mutation (`hints` is invalidated by each page push / column load). Building them is
+  // eager: `sql({ schema })` pre-builds the full completion tree via completeFromSchema,
+  // which costs O(tables × columns) — ~0.2s at 10k tables, ~8.6s and tens of MB at 100k.
+  // The old `getTables` loop loaded 2000-row pages, so the watcher ran once per page and made
+  // sidebar loading O(pages × tables) of main-thread blocking (measured ~24s tree rebuild
+  // + minutes of extension rebuilds at 100k tables).
+  //
+  // It is also dead work today: `editor.vue` snapshots `extensions` into a plain array at
+  // setup time, so rebuilt extensions never reach the already-mounted editor. Disabled
+  // until autocomplete is reimplemented as an on-demand completion source (query
+  // information_schema on input, or complete only expanded/recent tables). The initial
+  // value above is kept so the editor still gets SQL/PromQL language support.
+  // TODO(query-perf): replace with a lazy CompletionSource instead of re-enabling this.
 
   const getIndexesForColumns = (columnSchemas: SchemaType[]) => {
     const columnNameIndex = columnSchemas.findIndex((schema: SchemaType) => {
@@ -81,25 +100,6 @@ const useDataBaseStore = defineStore('database', () => {
     })
 
     return { columnNameIndex, dataTypeIndex, semanticTypeIndex, tableTypeIndex }
-  }
-
-  const getIndexesForTables = (columnSchemas: SchemaType[]) => {
-    const tableNameIndex = columnSchemas.findIndex((schema: SchemaType) => {
-      return schema.name === 'table_name'
-    })
-    const tableTypeIndex = columnSchemas.findIndex((schema: SchemaType) => {
-      return schema.name === 'table_type'
-    })
-
-    const engineIndex = columnSchemas.findIndex((schema: SchemaType) => {
-      return schema.name === 'engine'
-    })
-
-    const createOptionsIndex = columnSchemas.findIndex((schema: SchemaType) => {
-      return schema.name === 'create_options'
-    })
-
-    return { tableNameIndex, tableTypeIndex, engineIndex, createOptionsIndex }
   }
 
   const generateTreeChildren = (nodeData: TableTreeParent, rows: string[][], indexes: { [key: string]: number }) => {
@@ -132,32 +132,9 @@ const useDataBaseStore = defineStore('database', () => {
   }
 
   const getOriginTablesTree = (tempTablesData: RecordsType, db: string) => {
-    let key = tablesTreeForDatabase.value[db].length
-    if (tempTablesData) {
-      const schemas: SchemaType[] = tempTablesData.schema?.column_schemas || []
-      const { tableNameIndex, tableTypeIndex, engineIndex, createOptionsIndex } = getIndexesForTables(schemas)
-      tempTablesData.rows.forEach((item: Array<string>) => {
-        const engine = item[engineIndex]
-        const metricTableMeta = resolveMetricTableMeta(engine, item[createOptionsIndex])
-        const node: TableTreeParent = {
-          title: item[tableNameIndex],
-          key,
-          children: [],
-          columns: [],
-          details: [],
-          timeIndexName: '',
-          childrenType: 'columns',
-          isLeaf: false,
-          tableType: item[tableTypeIndex],
-          engine,
-          isLogicalTable: metricTableMeta.isLogicalTable,
-          isPhysicalMetricTable: metricTableMeta.isPhysicalMetricTable,
-          physicalTableName: metricTableMeta.physicalTableName,
-        }
-        tablesTreeForDatabase.value[db].push(node)
-        key += 1
-      })
-    }
+    // Replace (not append): callers load one page at a time. Assigning also avoids
+    // `push(...100k)`, which exceeds the engine's argument-count limit.
+    setTree(db, buildTableNodes(tempTablesData, 0))
   }
 
   const addChildren = (
@@ -166,18 +143,27 @@ const useDataBaseStore = defineStore('database', () => {
     timeIndexName: string,
     type: string,
     isSilent?: boolean,
-    specifiedDB?: string
+    specifiedDB?: string,
+    expectedTitle?: string
   ) => {
     const db = specifiedDB || database.value
+    const nodes = tablesTreeForDatabase.value[db] || []
+    const node = nodes[key]
+    if (!node) return
+    // Keys are page-local indexes: drop responses that arrive after the user
+    // paged away, otherwise they would be applied to a different table.
+    if (expectedTitle && node.title !== expectedTitle) return
     if (!isSilent) {
-      tablesTreeForDatabase.value[db][key].children = children
+      node.children = children
     }
-    tablesTreeForDatabase.value[db][key].timeIndexName = timeIndexName
+    node.timeIndexName = timeIndexName
     if (type === 'details') {
-      tablesTreeForDatabase.value[db][key].details = children as TableDetail[]
+      node.details = children as TableDetail[]
     } else {
-      tablesTreeForDatabase.value[db][key].columns = children as TableTreeChild[]
+      node.columns = children as TableTreeChild[]
     }
+    // shallowRef: new array identity so a-tree and computeds re-render.
+    setTree(db, nodes.slice())
   }
 
   const originScriptsList = computed(() => {
@@ -215,57 +201,64 @@ const useDataBaseStore = defineStore('database', () => {
     }
   }
 
-  async function getTables(specifiedDB?: string) {
+  async function getTables(specifiedDB?: string, offset = 0) {
+    tablePageRequestId += 1
+    const requestId = tablePageRequestId
     tablesLoading.value = true
     totalTablesLoading.value = true
     const db = specifiedDB || database.value
-    // TODO: better not change dom
-    tablesTreeForDatabase.value[db] = []
-
-    const total = await getTablesCount(db)
-    tablesTotalByDatabase.value = { ...tablesTotalByDatabase.value, [db]: total }
-    if (total === 0) {
-      tablesLoading.value = false
-      totalTablesLoading.value = false
-      return
-    }
-
-    // TODO: limit?
-    const pageSize = 2000
-    const maxPage = Math.ceil(total / pageSize)
-
-    for (let page = 1; page <= maxPage; page += 1) {
-      try {
-        // eslint-disable-next-line no-await-in-loop
-        const res: any = await editorAPI.getTables(pageSize, pageSize * (page - 1), db)
-        if (db === database.value) {
-          tablesData.value = res.output[0].records
-        }
-        getOriginTablesTree(res.output[0].records, db)
-
-        // Stop loading status when tables of the first page are loaded
-        tablesLoading.value = false
-      } catch (error) {
-        if (db === database.value) {
-          tablesData.value = undefined
-        }
-        // TODO: limit?
-        tablesTreeForDatabase.value[db] = []
+    try {
+      // Count and page in parallel: the page request does not need the total.
+      const totalPromise = getTablesCount(db)
+      const res: any = await editorAPI.getTables(MAX_TABLES_PER_PAGE, offset, db)
+      // A newer page/search request superseded this one; drop the response.
+      if (requestId !== tablePageRequestId) return
+      const records = res?.output?.[0]?.records
+      // Replace only after the response arrives, so the old page stays visible
+      // (no white flash) while a slow page request is in flight.
+      getOriginTablesTree(records, db)
+      tablesPageByDatabase.value = {
+        ...tablesPageByDatabase.value,
+        [db]: { offset, loaded: records?.rows?.length || 0, filter: '' },
+      }
+      const total = await totalPromise
+      if (requestId !== tablePageRequestId) return
+      tablesTotalByDatabase.value = { ...tablesTotalByDatabase.value, [db]: total }
+    } catch (error) {
+      console.error('[database] failed to load table page', error)
+    } finally {
+      if (requestId === tablePageRequestId) {
         tablesLoading.value = false
         totalTablesLoading.value = false
-        break
       }
     }
-    totalTablesLoading.value = false
   }
 
-  const checkTables = async () => {
-    const { updateDataStatus } = useUserStore()
-    updateDataStatus('tables', true)
-    if (tablesTreeForDatabase.value[database.value] && tablesTreeForDatabase.value[database.value].length > 0) {
-      return
+  /**
+   * Server-side table search, also capped at MAX_TABLES_PER_PAGE rows so the
+   * reactive tree never grows past the memory budget. `tablesTotalByDatabase`
+   * keeps the database total so the sidebar can show "matches / total".
+   */
+  async function searchTables(specifiedDB: string | undefined, keyword: string, offset = 0) {
+    tablePageRequestId += 1
+    const requestId = tablePageRequestId
+    const db = specifiedDB || database.value
+    const trimmed = keyword.trim()
+    tablesLoading.value = true
+    try {
+      const res: any = await editorAPI.getTables(MAX_TABLES_PER_PAGE, offset, db, trimmed)
+      if (requestId !== tablePageRequestId) return
+      const records = res?.output?.[0]?.records
+      getOriginTablesTree(records, db)
+      tablesPageByDatabase.value = {
+        ...tablesPageByDatabase.value,
+        [db]: { offset, loaded: records?.rows?.length || 0, filter: trimmed },
+      }
+    } catch (error) {
+      console.error('[database] failed to search tables', error)
+    } finally {
+      if (requestId === tablePageRequestId) tablesLoading.value = false
     }
-    await getTables()
   }
 
   async function getTableByName(tableName: any, db?: string) {
@@ -300,8 +293,10 @@ const useDataBaseStore = defineStore('database', () => {
   }
 
   const resetData = () => {
+    tablePageRequestId += 1
+    tableNamesByDatabase.clear()
     const db = database.value
-    tablesTreeForDatabase.value[db] = []
+    setTree(db, [])
     if (db) {
       const { [db]: _removed, ...rest } = tablesTotalByDatabase.value
       tablesTotalByDatabase.value = rest
@@ -310,24 +305,29 @@ const useDataBaseStore = defineStore('database', () => {
   }
 
   /**
-   * Plain table names for one database (from the cached tree; fetches when missing).
-   * Concurrent callers share one fetch — getTables resets the tree before refilling,
-   * so parallel invocations would otherwise wipe each other's results mid-flight.
+   * Plain table names for one database.
+   *
+   * Uses a single `show tables` (one request, no tree nodes) instead of the
+   * paged `information_schema` full load: at 100k tables that is ~1 request
+   * rather than 50, and it avoids materialising 100k tree nodes in the store.
    */
   const tableNamesInflight = new Map<string, Promise<string[]>>()
   async function getTableNames(specifiedDB?: string): Promise<string[]> {
     const db = specifiedDB || database.value
-    const existing = tablesTreeForDatabase.value[db]
-    if (existing?.length) {
-      return existing.map((node) => node.title).filter(Boolean)
-    }
+    const cached = tableNamesByDatabase.get(db)
+    if (cached) return cached
+
     const inflight = tableNamesInflight.get(db)
-    if (inflight) {
-      return inflight
-    }
+    if (inflight) return inflight
+
     const request = (async () => {
-      await getTables(db)
-      return (tablesTreeForDatabase.value[db] || []).map((node) => node.title).filter(Boolean)
+      const res: any = await editorAPI.runSQL('show tables', db)
+      const rows = res?.output?.[0]?.records?.rows || []
+      const names = rows
+        .map((row: Array<string>) => row[0])
+        .filter((name) => Boolean(name) && name !== 'greptime_physical_table')
+      tableNamesByDatabase.set(db, names)
+      return names
     })()
     tableNamesInflight.set(db, request)
     try {
@@ -340,18 +340,19 @@ const useDataBaseStore = defineStore('database', () => {
   return {
     tablesTreeForDatabase,
     tablesTotalByDatabase,
+    tablesPageByDatabase,
+    MAX_TABLES_PER_PAGE,
     originTablesTree,
     originScriptsList,
     tablesLoading,
     totalTablesLoading,
     scriptsLoading,
-    tablesData,
     scriptsData,
     hints,
     extensions,
     databaseActiveKeys,
     getTables,
-    checkTables,
+    searchTables,
     getTableNames,
     addChildren,
     getTableByName,

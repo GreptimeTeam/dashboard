@@ -1,4 +1,4 @@
-import { computed, ref, toValue, watch, type MaybeRefOrGetter, type Ref } from 'vue'
+import { computed, ref, shallowRef, toValue, watch, type MaybeRefOrGetter, type Ref } from 'vue'
 import i18n from '@/locale'
 import { buildMatchSelector, fetchMetricNamesPool } from './adapters/metrics'
 import {
@@ -22,7 +22,8 @@ export default function useMetricsCatalog(
 ) {
   const loading = ref(false)
   const error = ref<string | null>(null)
-  const poolNames = ref<string[]>([])
+  // 100k names do not need deep reactivity; replace the array on load instead.
+  const poolNames = shallowRef<string[]>([])
   const truncated = ref(false)
   const enabled = computed(() => (options?.enabled === undefined ? true : Boolean(toValue(options.enabled))))
 
@@ -79,7 +80,10 @@ export default function useMetricsCatalog(
     { deep: true, immediate: true }
   )
 
-  const catalogNamesForTree = computed(() => poolNames.value.filter((name) => matchesSearch(name, search.value)))
+  const catalogNamesForTree = computed(() => {
+    const query = search.value.trim()
+    return query ? poolNames.value.filter((name) => matchesSearch(name, query)) : poolNames.value
+  })
 
   const prefixGroups = computed(() => computeMetricPrefixGroups(catalogNamesForTree.value))
   const suffixGroups = computed(() => computeMetricSuffixGroups(catalogNamesForTree.value))

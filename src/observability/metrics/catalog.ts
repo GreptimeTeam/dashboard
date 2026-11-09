@@ -23,6 +23,9 @@ export function applySidebarFilters(
   sidebarFilters: DrilldownSidebarFilters,
   search: string
 ): string[] {
+  if (!sidebarFilters.prefixes.length && !sidebarFilters.suffixes.length && !search.trim()) {
+    return names
+  }
   return names.filter(
     (name) =>
       matchesAnyPrefix(name, sidebarFilters.prefixes) &&

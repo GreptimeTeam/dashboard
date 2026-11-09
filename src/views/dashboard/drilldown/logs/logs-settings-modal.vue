@@ -11,15 +11,14 @@ a-modal(
 )
   a-form(layout="vertical")
     a-form-item(:label="t('drilldown.logs.tableLabel')")
-      a-select(
+      TableSelect(
         v-model="form.table"
-        allow-search
+        signal="logs"
         allow-create
+        :database="ctx.connection.logsDatabase.value"
         :placeholder="t('drilldown.logs.tablePlaceholder')"
-        :loading="loadingTables"
         @change="onTableChange"
       )
-        a-option(v-for="name in tableOptions" :key="name" :value="name") {{ name }}
     a-form-item(:label="t('drilldown.logs.fieldTime')")
       a-select(
         v-model="form.time"
@@ -76,8 +75,9 @@ a-modal(
   import useTableSchemaStore from '@/store/modules/table-schema'
   import { useDrilldownContext } from '@/observability/context'
   import { loadDrilldownSettings, type LogsFieldMapSettings } from '@/observability/drilldown-settings'
-  import { entityColumnFilterKey, listSignalTables, resolveEntityFilterRef } from '@/observability/semantics'
+  import { entityColumnFilterKey, resolveEntityFilterRef } from '@/observability/semantics'
   import { resolveLogsSettingsFieldDefaults, type SchemaColumn } from '@/observability/logs/field-map'
+  import TableSelect from '@/components/table-select/index.vue'
 
   const props = defineProps<{
     visible: boolean
@@ -90,8 +90,6 @@ a-modal(
 
   const { t } = useI18n()
   const ctx = useDrilldownContext()
-  const loadingTables = ref(false)
-  const tableOptions = ref<string[]>([])
   const columnNames = ref<string[]>([])
 
   const form = reactive({
@@ -157,22 +155,13 @@ a-modal(
   }
 
   const hydrate = async () => {
-    loadingTables.value = true
-    try {
-      const settings = loadDrilldownSettings(ctx.connection.logsDatabase.value).logs
-      // Older seeds stored only a field map; fall back to the bound table so the column list
-      // (and with it every saved value) still hydrates.
-      const savedTable = settings.table?.trim() || ctx.semantics.logs.table.value || ''
-      tableOptions.value = await listSignalTables('logs', {
-        include: savedTable ? [savedTable] : [],
-        database: ctx.connection.logsDatabase.value,
-      })
-      form.table = savedTable
-      const columns = await loadColumns(form.table)
-      await applyFieldDefaults(form.table, columns, settings.fieldMap)
-    } finally {
-      loadingTables.value = false
-    }
+    const settings = loadDrilldownSettings(ctx.connection.logsDatabase.value).logs
+    // Older seeds stored only a field map; fall back to the bound table so the column list
+    // (and with it every saved value) still hydrates.
+    const savedTable = settings.table?.trim() || ctx.semantics.logs.table.value || ''
+    form.table = savedTable
+    const columns = await loadColumns(form.table)
+    await applyFieldDefaults(form.table, columns, settings.fieldMap)
   }
 
   const onTableChange = async (table: string) => {
