@@ -1,7 +1,15 @@
 # Pack live-demo dashboard static assets.
 # GA id + username from Actions vars; password from Actions secret
 # (not committed in application source). Artifact upload only — no Release / Docker / DB PR.
+#
+# Triggers:
+# - push tag live-demo-* (runs on that tagged commit; need not be merged to main)
+# - workflow_dispatch (visible in Actions UI only after this file exists on the default branch)
 on:
+  push:
+    tags:
+      # Keep off v*.*.* so release.yml / docker-release.yml are not triggered.
+      - 'live-demo-*'
   workflow_dispatch:
     inputs:
       ref:
