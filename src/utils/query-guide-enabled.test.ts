@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { DASHBOARD_RUNTIME_GLOBAL_KEY } from './dashboard-runtime-config'
 import { QUERY_GUIDE_STORAGE_KEY, isQueryGuideEnabled, syncQueryGuideFlagFromUrl } from './query-guide-enabled'
 
 const store = new Map<string, string>()
@@ -51,5 +52,11 @@ describe('query guide URL + local sync', () => {
   it('remembers prior enable without URL param', () => {
     store.set(QUERY_GUIDE_STORAGE_KEY, '1')
     expect(isQueryGuideEnabled()).toBe(true)
+  })
+
+  it('forces enabled from deploy-time runtime config', () => {
+    ;(window as unknown as Record<string, unknown>)[DASHBOARD_RUNTIME_GLOBAL_KEY] = { queryGuide: true }
+    expect(isQueryGuideEnabled()).toBe(true)
+    expect(store.has(QUERY_GUIDE_STORAGE_KEY)).toBe(false)
   })
 })

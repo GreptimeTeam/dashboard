@@ -1,0 +1,176 @@
+# Pack live-demo dashboard static assets.
+# GA id + username from Actions vars; password from Actions secret
+# (not committed in application source). Artifact upload only — no Release / Docker / DB PR.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch, tag, or commit to build'
+        required: false
+        type: string
+        default: ''
+
+name: Pack live demo dashboard
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  pack:
+    name: Build and upload artifact
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref != '' && github.event.inputs.ref || github.ref }}
+
+      - name: Clean up
+        shell: bash
+        run: rm -rf release && mkdir -p release
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Update GitHub stars fallback
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/update-github-stars.mjs
+
+      - name: Run build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm run build:docker
+
+      # Values live in GitHub Actions configuration (not in OSS application source):
+      #   vars.LIVE_DEMO_GA_ID
+      #   vars.LIVE_DEMO_USERNAME
+      #   secrets.LIVE_DEMO_PASSWORD
+      # queryGuide is always true for this workflow.
+      - name: Inject live-demo GA and auth into index.html
+        env:
+          LIVE_DEMO_GA_ID: ${{ vars.LIVE_DEMO_GA_ID }}
+          LIVE_DEMO_USERNAME: ${{ vars.LIVE_DEMO_USERNAME }}
+          LIVE_DEMO_PASSWORD: ${{ secrets.LIVE_DEMO_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          INDEX_HTML="dist/index.html"
+          if [[ ! -f "$INDEX_HTML" ]]; then
+            echo "Missing $INDEX_HTML" >&2
+            exit 1
+          fi
+          if [[ -z "${LIVE_DEMO_GA_ID}" || -z "${LIVE_DEMO_USERNAME}" || -z "${LIVE_DEMO_PASSWORD}" ]]; then
+            echo "Set repo Actions vars/secrets before running this workflow:" >&2
+            echo "  vars.LIVE_DEMO_GA_ID" >&2
+            echo "  vars.LIVE_DEMO_USERNAME" >&2
+            echo "  secrets.LIVE_DEMO_PASSWORD" >&2
+            exit 1
+          fi
+          node <<'NODE'
+          const fs = require('fs')
+          const indexPath = 'dist/index.html'
+          const gaId = process.env.LIVE_DEMO_GA_ID
+          const username = process.env.LIVE_DEMO_USERNAME
+          const password = process.env.LIVE_DEMO_PASSWORD
+          const j = (v) => JSON.stringify(String(v))
+
+          let html = fs.readFileSync(indexPath, 'utf8')
+          const parts = []
+
+          if (!html.includes('googletagmanager.com/gtag/js')) {
+            parts.push(`<script async src="https://www.googletagmanager.com/gtag/js?id=${gaId}"></script>
+          <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){ dataLayer.push(arguments); }
+          gtag('js', new Date());
+          gtag('config', ${j(gaId)}, { send_page_view: false });
+          function trackPv(){
+            gtag('event', 'page_view', {
+              send_to: ${j(gaId)},
+              page_path: location.hash.slice(1) || '/',
+              page_location: location.href,
+              page_title: document.title
+            });
+          }
+          trackPv();
+          addEventListener('hashchange', trackPv);
+          </script>`)
+          }
+
+          if (!html.includes('__GREPTIME_DASHBOARD_RUNTIME__')) {
+            parts.push(`<script>
+          window.__GREPTIME_DASHBOARD_RUNTIME__ = {
+            username: ${j(username)},
+            password: ${j(password)},
+            queryGuide: true
+          };
+          </script>`)
+          }
+
+          if (parts.length === 0) {
+            console.log('Snippets already present; skip inject')
+            process.exit(0)
+          }
+
+          const needle = '</head>'
+          const idx = html.indexOf(needle)
+          if (idx < 0) {
+            console.error('No </head> in', indexPath)
+            process.exit(1)
+          }
+          html = html.slice(0, idx) + parts.join('\n') + '\n' + html.slice(idx)
+          fs.writeFileSync(indexPath, html)
+          console.log('Injected live-demo GA + runtime into', indexPath)
+          NODE
+
+      - name: Package tarball
+        shell: bash
+        run: |
+          tar -czvf release/live-demo-build.tar.gz ./dist
+          cd release && shasum -a 256 live-demo-build.tar.gz > sha256.txt && cd ../
+          echo "SHA256=$(cut -d' ' -f1 release/sha256.txt)" >> "$GITHUB_ENV"
+
+      - name: Upload artifact
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-demo-dashboard
+          path: |
+            release/live-demo-build.tar.gz
+            release/sha256.txt
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Print download info
+        shell: bash
+        run: |
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          {
+            echo "## Live demo dashboard pack"
+            echo ""
+            echo "- **Run:** ${RUN_URL}"
+            echo "- **Artifact name:** \`live-demo-dashboard\` (\`live-demo-build.tar.gz\` + \`sha256.txt\`)"
+            echo "- **SHA256:** \`${SHA256}\`"
+            echo "- **Commit:** \`${{ github.sha }}\`"
+            echo ""
+            echo "Download from the run page → Artifacts, or:"
+            echo ""
+            echo '```bash'
+            echo "gh run download ${{ github.run_id }} -R ${{ github.repository }} -n live-demo-dashboard"
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "Download: ${RUN_URL} (Artifacts → live-demo-dashboard)"
+          echo "Or: gh run download ${{ github.run_id }} -R ${{ github.repository }} -n live-demo-dashboard"

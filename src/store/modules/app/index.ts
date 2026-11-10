@@ -5,22 +5,33 @@ import defaultSettings from '@/config/settings.json'
 import editorAPI from '@/api/editor'
 import { setDashboardTimezone } from '@/utils/timezone'
 import type { Ref } from 'vue'
+import { getDashboardRuntimeConfig, hasRuntimeDemoAuth } from '@/utils/dashboard-runtime-config'
 import type { AppState, ConnectionConfig, DbConnectionStatus, StoredConfig, UiConfig } from './types'
-import { applyUrlInfoToConfig, consumeUrlInfo } from './consume-url-info'
+import { applyUrlInfoToConfig, consumeUrlInfo, omitAuthFromConfig } from './consume-url-info'
 
 const useAppStore = defineStore('app', () => {
   // Persistent storage — declared first so state refs can use stored values as defaults
   const configStorage = useStorage<Partial<StoredConfig>>('config', {}, localStorage)
   const uiConfigStorage = useStorage<Partial<UiConfig>>('uiConfig', {}, localStorage)
 
-  // Apply URL-injected config once at startup (search or hash query; e.g. cloud / shared links)
+  // Apply URL-injected config once at startup (search or hash query; e.g. cloud / shared links).
+  // Live-demo pack may also inject demo auth via window.__GREPTIME_DASHBOARD_RUNTIME__.
   {
+    const runtime = getDashboardRuntimeConfig()
+    const runtimeAuth = hasRuntimeDemoAuth(runtime)
     const { pathname, search, hash } = window.location
     const { info, nextUrl } = consumeUrlInfo(pathname, search, hash)
     if (info) {
-      configStorage.value = applyUrlInfoToConfig(configStorage.value, info)
+      configStorage.value = applyUrlInfoToConfig(configStorage.value, info, { omitAuth: runtimeAuth })
       if (nextUrl !== `${pathname}${search}${hash}`) {
         window.history.replaceState(null, '', nextUrl)
+      }
+    }
+    if (runtimeAuth && runtime) {
+      configStorage.value = {
+        ...omitAuthFromConfig(configStorage.value as Record<string, unknown>),
+        username: runtime.username,
+        password: runtime.password,
       }
     }
   }

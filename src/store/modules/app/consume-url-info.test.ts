@@ -41,6 +41,23 @@ describe('applyUrlInfoToConfig', () => {
     })
   })
 
+  it('omits auth fields from URL info when omitAuth is set', () => {
+    const info = btoa(
+      JSON.stringify({
+        host: 'https://example.com',
+        username: 'from-url',
+        password: 'from-url',
+        authHeader: 'X-Auth',
+        database: 'public',
+      })
+    )
+    expect(applyUrlInfoToConfig({ username: 'kept' }, info, { omitAuth: true })).toEqual({
+      username: 'kept',
+      host: 'https://example.com',
+      database: 'public',
+    })
+  })
+
   it('ignores malformed info', () => {
     expect(applyUrlInfoToConfig({ username: 'a' }, 'not-base64')).toEqual({ username: 'a' })
   })

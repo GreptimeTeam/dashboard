@@ -1,14 +1,17 @@
 /**
- * Query guide is opt-in via URL and persisted in localStorage.
- * Universal build: play links use `?query_guide=1` once; preference sticks.
- * Self-hosted users never open that URL → feature stays off.
+ * Query guide enablement:
+ * 1. Live-demo pack may force-on via `window.__GREPTIME_DASHBOARD_RUNTIME__.queryGuide`
+ * 2. Otherwise opt-in via URL and persist in localStorage (local / self-hosted)
  *
+ * URL (when runtime does not force):
  * - `?query_guide=1` (or `true`) → enable + save
  * - `?query_guide=0` (or `false`) → disable + clear
  * - no param → use saved preference (default: off)
  *
  * Works with hash router (`/#/path?query_guide=1`) and normal search.
  */
+
+import { getDashboardRuntimeConfig, isRuntimeQueryGuideEnabled } from './dashboard-runtime-config'
 
 export const QUERY_GUIDE_STORAGE_KEY = 'greptime-dashboard.query-guide.enabled'
 export const QUERY_GUIDE_URL_PARAM = 'query_guide'
@@ -65,6 +68,7 @@ export function syncQueryGuideFlagFromUrl(
 
 export function isQueryGuideEnabled(): boolean {
   if (typeof window === 'undefined') return false
+  if (isRuntimeQueryGuideEnabled(getDashboardRuntimeConfig())) return true
   syncQueryGuideFlagFromUrl()
   return readStoredEnabled()
 }
