@@ -146,6 +146,7 @@
   import { replaceTimePlaceholders } from '@/utils/sql'
   import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
   import useLogsTablePrefs from '@/observability/use-logs-table-prefs'
+  import { getSignalDatabase } from '@/observability/signal-database'
   import ChartContainer from './ChartContainer.vue'
   import ExportModal from './ExportModal.vue'
   import LogTableData from './LogsTable.vue'
@@ -158,7 +159,11 @@
   const timeRange = useTimeRange()
   const { rangeTime, time, timeRangeValues } = timeRange
 
-  const builder = useSqlBuilderHook({ storageKey: 'logsquery-table', timeRangeValues })
+  const builder = useSqlBuilderHook({
+    timeRangeValues,
+    // Text mode has no DB selector; start it on the same per-signal DB as the builder.
+    defaultFormState: { database: getSignalDatabase('logs') },
+  })
   const { builderFormState, addFilterCondition, generateSql, defaultFormState } = builder
 
   const textEditor = useTextEditorState()

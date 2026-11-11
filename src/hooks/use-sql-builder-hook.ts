@@ -1,4 +1,4 @@
-import { computed, type Ref, reactive, watchEffect, ref } from 'vue'
+import { computed, type Ref, reactive } from 'vue'
 import type { Condition, BuilderFormState, TSColumn } from '@/types/query'
 import { jsonAttributeValueKind } from '@/observability/filters'
 import { sqlJsonAttrExpr } from '@/observability/logs/json-field-keys'
@@ -9,14 +9,12 @@ export interface SqlBuilderHookOptions {
   timeRangeValues: Ref<string[]>
   /** Timestamp column for time-based filtering */
   tsColumn?: Ref<TSColumn | null>
-  /** Storage key for persisting form state */
-  storageKey?: string
   /** Default form state */
   defaultFormState?: Partial<BuilderFormState> | null
 }
 
 export function useSqlBuilderHook(options: SqlBuilderHookOptions) {
-  const { timeRangeValues, tsColumn, storageKey, defaultFormState } = options
+  const { timeRangeValues, tsColumn, defaultFormState } = options
   const initState = {
     table: '',
     conditions: [],
@@ -28,24 +26,6 @@ export function useSqlBuilderHook(options: SqlBuilderHookOptions) {
   }
   // Initialize builder form state as reactive
   const builderFormState = reactive<BuilderFormState>({ ...initState })
-
-  // // Persist form state to localStorage if storageKey is provided
-  // if (storageKey) {
-  //   const savedState = localStorage.getItem(`${storageKey}-form-state`)
-  //   if (savedState) {
-  //     try {
-  //       const parsed = JSON.parse(savedState)
-  //       Object.assign(builderFormState, parsed)
-  //     } catch (error) {
-  //       console.warn('Failed to parse saved form state:', error)
-  //     }
-  //   }
-
-  //   // Watch for changes and save to localStorage
-  //   watchEffect(() => {
-  //     localStorage.setItem(`${storageKey}-form-state`, JSON.stringify(builderFormState))
-  //   })
-  // }
 
   function escapeSqlString(value: string) {
     if (typeof value !== 'string') return value

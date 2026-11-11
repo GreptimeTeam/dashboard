@@ -187,7 +187,8 @@ a-modal(
 <script setup name="SQLBuilder" lang="ts">
   import { ref, watch, onMounted, computed, reactive, nextTick } from 'vue'
   import { useI18n } from 'vue-i18n'
-  import { useDebounceFn, useLocalStorage } from '@vueuse/core'
+  import { useDebounceFn } from '@vueuse/core'
+  import { Message } from '@arco-design/web-vue'
   import { storeToRefs } from 'pinia'
   import editorAPI from '@/api/editor'
   import { useAppStore } from '@/store'
@@ -195,6 +196,7 @@ a-modal(
   import { getSignalDatabase, setSignalDatabase } from '@/observability/signal-database'
   import type { Condition, BuilderFormState as Form } from '@/types/query'
   import { TsTypeMapping } from '@/utils/date-time'
+  import { hostMatches, readRaw, writeJSON } from '@/utils/storage'
   import { isJsonDataType } from '@/utils/json-display'
   import { splitAttributeChip } from '@/observability/traces/attribute-keys'
   import { fetchSampledAttributes } from '@/observability/traces/attribute-sampling'
@@ -220,6 +222,14 @@ a-modal(
     createdAt: number
   }
 
+  /** Single storage slot per builder page; the stamp decides whether it belongs here. */
+  interface QuickFilterStore {
+    v: 1
+    host: string
+    database: string
+    filters: QuickFilter[]
+  }
+
   const emit = defineEmits(['update:sql', 'update:formState'])
 
   // Props for form state and configuration
@@ -234,7 +244,6 @@ a-modal(
      * dropdown uses Drilldown `listSignalTables` (unless `tablesProvider` is provided).
      */
     signalDatabaseKind?: 'logs' | 'traces'
-    quickFieldNames?: string[] // Array of field names for quick condition buttons
     defaultFormState?: Form
   }>()
 
@@ -260,7 +269,7 @@ a-modal(
   // Stable key for per-builder preferences (quick filters). The selected table is
   // deliberately not persisted: remembering a table across database switches leaves
   // the picker pointing at a name from the previous database.
-  const storageKey = props.storageKey || 'sql-builder-last-table'
+  const storageKey = props.storageKey || 'sql-builder'
 
   // Initialize form state as reactive object
   const form = reactive<Form>(props.formState)
@@ -350,10 +359,20 @@ a-modal(
   const fieldsOptions = computed(() => [...columnOptions.value, ...attributeOptions.value])
 
   // Quick Filters logic (after form and fields are defined)
-  const quickFiltersStorageKey = computed(() => `${storageKey}-quick-filters`)
-  const clearedFiltersKey = computed(() => `${storageKey}-filters-cleared`)
-  let savedQuickFilters = useLocalStorage(quickFiltersStorageKey.value, [] as QuickFilter[])
-  const userClearedFilters = useLocalStorage(clearedFiltersKey.value, false)
+  //
+  // One slot per builder page. The value carries the host + database it was saved on;
+  // when the page is on another database the chips are hidden, and saving again replaces
+  // the slot (last write wins) instead of leaking filters into an unrelated database.
+  const quickFiltersStorageKey = `${storageKey}-quick-filters`
+  const quickFilterStore = ref<QuickFilterStore | null>(null)
+
+  const savedQuickFilters = computed<QuickFilter[]>(() => {
+    const store = quickFilterStore.value
+    if (!store) return []
+    if (!hostMatches(store.host, appStore.host || '')) return []
+    if (store.database !== form.database) return []
+    return store.filters
+  })
 
   const showSaveQuickFilter = ref(false)
   const saveQuickFilterFormRef = ref()
@@ -378,53 +397,70 @@ a-modal(
     ],
   }
 
-  function createDefaultQuickFilters(): QuickFilter[] {
-    if (!props.quickFieldNames || !form.table || !fields.value.length) return []
-    return props.quickFieldNames
-      .filter((fieldName) => fields.value.some((field) => field.name === fieldName))
-      .map((fieldName) => {
-        const field = fields.value.find((f) => f.name === fieldName)
-        const isTimeCol = field?.data_type.toLowerCase().includes('timestamp') || false
-        const defaultOperator = '='
-        return {
-          name: fieldName,
-          table: form.table,
-          database: form.database,
-          conditions: [
-            {
-              field: fieldName,
-              operator: defaultOperator,
-              value: '',
-              isTimeColumn: isTimeCol,
-              relation: 'AND',
-            },
-          ],
-          orderByField: form.orderByField,
-          orderBy: form.orderBy,
-          limit: form.limit,
-          createdAt: Date.now(),
-        }
-      })
+  function asQuickFilters(value: unknown): QuickFilter[] {
+    if (!Array.isArray(value)) return []
+    return value.filter(
+      (item): item is QuickFilter => !!item && typeof item === 'object' && typeof item.name === 'string'
+    )
   }
 
-  function initializeQuickFilters() {
-    // Only initialize default filters if user hasn't manually cleared them
-    if (savedQuickFilters.value.length === 0 && !userClearedFilters.value && props.quickFieldNames) {
-      const defaults = createDefaultQuickFilters()
-      if (defaults.length > 0) {
-        savedQuickFilters.value = defaults
-      }
+  /** Load and upgrade the stored slot. The deep watcher persists the migrated shape. */
+  function readQuickFilters() {
+    if (!form.database) return
+    const raw = readRaw(quickFiltersStorageKey)
+    if (!raw) {
+      quickFilterStore.value = null
+      return
     }
+    try {
+      const parsed = JSON.parse(raw)
+      // Legacy shape: a bare array shared by every database. Keep only entries that
+      // explicitly belong to the current DB (or have no DB recorded).
+      if (Array.isArray(parsed)) {
+        const filters = asQuickFilters(parsed).filter((filter) => !filter.database || filter.database === form.database)
+        quickFilterStore.value = {
+          v: 1,
+          host: appStore.host || '',
+          database: form.database,
+          filters,
+        }
+        return
+      }
+      if (parsed && typeof parsed === 'object' && Array.isArray(parsed.filters)) {
+        quickFilterStore.value = {
+          v: 1,
+          host: typeof parsed.host === 'string' ? parsed.host : '',
+          database: typeof parsed.database === 'string' ? parsed.database : '',
+          filters: asQuickFilters(parsed.filters),
+        }
+        return
+      }
+    } catch {
+      // Malformed value: start clean below.
+    }
+    quickFilterStore.value = null
+  }
+
+  /** The store must belong to the current host+DB before it can be mutated. */
+  function ensureCurrentStore(): QuickFilterStore {
+    const host = appStore.host || ''
+    const current = quickFilterStore.value
+    if (current && current.database === form.database && hostMatches(current.host, host)) {
+      return current
+    }
+    const next: QuickFilterStore = { v: 1, host, database: form.database, filters: [] }
+    quickFilterStore.value = next
+    return next
   }
 
   watch(
-    () => [fields.value, form.table],
-    () => {
-      savedQuickFilters = useLocalStorage(quickFiltersStorageKey.value, [] as QuickFilter[])
-      nextTick(() => {
-        initializeQuickFilters()
-      })
-    }
+    quickFilterStore,
+    (store) => {
+      if (store) {
+        writeJSON(quickFiltersStorageKey, store)
+      }
+    },
+    { deep: true }
   )
 
   const timeColumns = computed(() => {
@@ -689,8 +725,10 @@ a-modal(
   // Unified form reset function: default values + provided values
   function resetForm(valuesToSet: Partial<Form> = {}) {
     const defaultState = JSON.parse(JSON.stringify(props.defaultFormState || {}))
-    // Reset form with default state and provided values
-    Object.assign(form, defaultState, valuesToSet)
+    // Keep the current DB unless the caller explicitly switches it (database change
+    // or quick filter). Otherwise selecting a table would restore the page's default
+    // DB and silently undo the user's database switch.
+    Object.assign(form, defaultState, { database: form.database }, valuesToSet)
   }
 
   function handleDatabaseChange() {
@@ -747,8 +785,10 @@ a-modal(
     if (databaseList.value.length === 0) {
       await appStore.refreshDatabaseList()
     }
-    // Prefer shared signal-db when this builder is for logs/traces Query.
-    if (props.signalDatabaseKind) {
+    // Keep a valid DB already carried by the form (URL deep link, tour step, restored
+    // page state). The shared signal preference is a fallback, not an override: blindly
+    // applying it here would replace the DB the parent just restored from the URL.
+    if (props.signalDatabaseKind && (!form.database || !filteredDatabaseList.value.includes(form.database))) {
       form.database = getSignalDatabase(props.signalDatabaseKind)
     }
     // Initialize form.database if not set or not in filtered list
@@ -758,6 +798,7 @@ a-modal(
     if (props.signalDatabaseKind && form.database) {
       setSignalDatabase(props.signalDatabaseKind, form.database)
     }
+    readQuickFilters()
   })
 
   // Watch form.database changes to fetch tables
@@ -825,10 +866,11 @@ a-modal(
         limit: form.limit,
         createdAt: Date.now(),
       }
-      savedQuickFilters.value.push(newQuickFilter)
-
-      // Reset the cleared flag since user is actively using filters
-      userClearedFilters.value = false
+      const store = ensureCurrentStore()
+      quickFilterStore.value = {
+        ...store,
+        filters: [...store.filters, newQuickFilter],
+      }
 
       saveQuickFilterForm.name = ''
       showSaveQuickFilter.value = false
@@ -841,11 +883,14 @@ a-modal(
     // Determine values to set based on quick filter
     const valuesToSet: Partial<Form> = {}
 
-    // Switch to the saved database if different and valid
+    // Switch to the saved database if different and valid. If it disappeared (host
+    // switch / dropped DB), refuse instead of applying its table to the current DB.
     if (quickFilter.database && quickFilter.database !== form.database) {
-      if (filteredDatabaseList.value.includes(quickFilter.database)) {
-        valuesToSet.database = quickFilter.database
+      if (!filteredDatabaseList.value.includes(quickFilter.database)) {
+        Message.warning(t('quickFilters.databaseUnavailable', { database: quickFilter.database }))
+        return
       }
+      valuesToSet.database = quickFilter.database
     } else if (form.database) {
       valuesToSet.database = form.database
     }
@@ -872,14 +917,11 @@ a-modal(
   }
 
   function removeQuickFilter(filterId: string) {
-    const idx = savedQuickFilters.value.findIndex((filter) => filter.name === filterId)
-    if (idx !== -1) {
-      savedQuickFilters.value.splice(idx, 1)
-      // Mark that user has manually cleared filters
-      if (savedQuickFilters.value.length === 0) {
-        userClearedFilters.value = true
-      }
-    }
+    const store = quickFilterStore.value
+    if (!store) return
+    const filters = store.filters.filter((filter) => filter.name !== filterId)
+    if (filters.length === store.filters.length) return
+    quickFilterStore.value = { ...store, filters }
   }
 
   // Expose methods for external use

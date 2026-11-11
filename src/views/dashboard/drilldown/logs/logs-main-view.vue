@@ -124,7 +124,7 @@
     columnModeKey,
     displayedColumnsFor,
     revealOfferedColumns,
-  } = useLogsTablePrefs({ storagePrefix: 'drilldown-logs', defaultMergeColumn: false, persistColumns: true })
+  } = useLogsTablePrefs({ storagePrefix: 'drilldown-logs', defaultMergeColumn: false })
 
   const { loading, loadingMore, tableColumns, tableData, tsColumn, hasMore, loadMore } = useDrilldownLogsTable(ctx, {
     extraWhere: computed(() => props.extraWhere),

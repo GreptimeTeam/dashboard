@@ -2,6 +2,7 @@ import { computed, ref, watch, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useStorage, useWindowSize } from '@vueuse/core'
 import { useAppStore } from '@/store'
+import { removeKey } from '@/utils/storage'
 import { useQueryFocusMode } from '@/composables/use-query-focus-mode'
 import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
 import useMcpConfig from '@/components/mcp-config/use-mcp-config'
@@ -48,7 +49,16 @@ function defaultPersistedState(): TourPersistedState {
   }
 }
 
+// Self-hosted users never enable the guide. Drop a key left behind by an older build
+// *before* useStorage reads it; writeDefaults:false then stops it being recreated.
+if (!isQueryGuideEnabled()) {
+  removeKey(STORAGE_KEY)
+}
+
 const state = useStorage<TourPersistedState>(STORAGE_KEY, defaultPersistedState(), undefined, {
+  // The tour is off for self-hosted users (query_guide opt-in). Do not create the
+  // key just because this module was imported; write it only when the tour runs.
+  writeDefaults: false,
   serializer: {
     read: (raw: string) => {
       try {

@@ -168,6 +168,7 @@ a-modal(
   import { Message } from '@arco-design/web-vue'
   import QueryToolbarRunButton from '@/components/query-toolbar-run-button/index.vue'
   import { getExplainResultKeyCount } from '@/services/code-run'
+  import useUiPref from '@/composables/use-ui-pref'
   import { useQuerySession } from './use-query-session'
   import { durationExamples, timeOptionsArray, getQueryTimeMap, getDurations } from '../config'
 
@@ -192,7 +193,7 @@ a-modal(
     focusMode: false,
   })
 
-  const editorHeight = useStorage('queryEditorHeight', 266)
+  const editorHeight = useUiPref('queryEditorHeight', 266)
 
   const editorResizeStyle = {
     'min-height': '120px',

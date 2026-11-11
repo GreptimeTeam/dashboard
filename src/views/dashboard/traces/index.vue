@@ -75,12 +75,13 @@
 
 <script setup lang="ts">
   import { ref, computed, watch, nextTick, onMounted } from 'vue'
-  import { useLocalStorage } from '@vueuse/core'
   import { IconCode, IconDown, IconRight, IconDownload } from '@arco-design/web-vue/es/icon'
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import SqlTextEditor from '@/components/sql-text-editor/index.vue'
-  import TraceTable from './components/TraceTable.vue'
   import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
+  import { getSignalDatabase } from '@/observability/signal-database'
+  import useUiPref from '@/composables/use-ui-pref'
+  import TraceTable from './components/TraceTable.vue'
 
   defineOptions({
     name: 'TraceQuery',
@@ -92,9 +93,10 @@
 
   // 2. Builder form state
   const builder = useSqlBuilderHook({
-    storageKey: 'traces-query-table',
     timeRangeValues,
     defaultFormState: {
+      // Text mode has no DB selector; keep it on the per-signal DB.
+      database: getSignalDatabase('traces'),
       conditions: [{ field: 'parent_span_id', operator: 'Not Exist', value: '', relation: 'AND' }],
     },
   })
@@ -116,7 +118,7 @@
   })
   const { initializeFromQuery, updateQueryParams } = urlSync
 
-  const chartExpanded = useLocalStorage('trace-chart-expanded', true)
+  const chartExpanded = useUiPref('traceChartExpanded', true)
   const countChartRef = ref()
   const sqlBuilderRef = ref()
   const timeRangeSelectRef = ref()

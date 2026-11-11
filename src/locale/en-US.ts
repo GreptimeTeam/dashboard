@@ -165,6 +165,7 @@ export default {
   'quickFilters.nameMin': 'Name must be at least 2 characters',
   'quickFilters.nameMax': 'Name must be less than 50 characters',
   'quickFilters.nameExists': 'A quick filter with this name already exists',
+  'quickFilters.databaseUnavailable': 'Database "{database}" is no longer available. The saved filter was not applied.',
   // SQL Builder
   'sqlBuilder.table': 'Table',
   'sqlBuilder.database': 'Database',

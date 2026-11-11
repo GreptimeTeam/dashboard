@@ -166,6 +166,7 @@ export default {
   'quickFilters.nameMin': '名称至少 2 个字符',
   'quickFilters.nameMax': '名称不超过 50 个字符',
   'quickFilters.nameExists': '已存在同名的快速筛选',
+  'quickFilters.databaseUnavailable': '数据库“{database}”已不可用，未应用该快速筛选。',
   // SQL Builder
   'sqlBuilder.table': '表',
   'sqlBuilder.database': '数据库',

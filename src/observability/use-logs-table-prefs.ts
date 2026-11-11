@@ -1,5 +1,4 @@
-import { computed, effectScope, ref, type Ref } from 'vue'
-import { useStorage } from '@vueuse/core'
+import { computed, ref, type Ref } from 'vue'
 
 export type LogsTableColumnMode = 'separate' | 'merged' | 'merged-with-keys'
 
@@ -14,13 +13,10 @@ interface LogsTablePrefsState {
 /**
  * LogsTable display prefs.
  *
- * Single column / show keys / compact rows are transient view tweaks and stay session-only
- * (module state keyed by `storagePrefix`), so the log query page (`logquery`) and the
- * drilldown logs table (`drilldown-logs`) no longer leak into each other through
- * localStorage.
- *
- * Column visibility is the exception: it is opt-in persistent (`persistColumns`), because
- * re-hiding a long column list after every reload is much worse than a stale choice.
+ * All of it is session-only (module state keyed by `storagePrefix`): single column,
+ * show keys, compact rows, wrap, and column visibility. The log query page (`logquery`)
+ * and the drilldown logs table (`drilldown-logs`) cannot leak into each other, and a
+ * reload starts from the current schema instead of a stale column list.
  */
 const stateByPrefix = new Map<string, LogsTablePrefsState>()
 
@@ -41,44 +37,11 @@ function stateFor(prefix: string, defaultMergeColumn: boolean): LogsTablePrefsSt
   return next
 }
 
-interface LogsTableColumnState {
-  displayedColumnsByTable: Ref<Record<string, string[]>>
-  offeredColumnsByTable: Ref<Record<string, string[]>>
-}
-
-const columnStateByPrefix = new Map<string, LogsTableColumnState>()
-/** Detached: cached `useStorage` refs must keep writing after the first caller unmounts. */
-const columnStateScope = effectScope(true)
-
-function columnStateFor(prefix: string): LogsTableColumnState {
-  const existing = columnStateByPrefix.get(prefix)
-  if (existing) {
-    return existing
-  }
-  const next = columnStateScope.run(
-    (): LogsTableColumnState => ({
-      displayedColumnsByTable: useStorage<Record<string, string[]>>(`${prefix}-table-column-visible`, {}),
-      /** Columns already offered on this table. New query columns are shown; user hides stay hidden. */
-      offeredColumnsByTable: useStorage<Record<string, string[]>>(`${prefix}-table-column-offered`, {}),
-    })
-  ) as LogsTableColumnState
-  columnStateByPrefix.set(prefix, next)
-  return next
-}
-
-export default function useLogsTablePrefs(options?: {
-  storagePrefix?: string
-  defaultMergeColumn?: boolean
-  /** Persist column visibility (and the "already offered" bookkeeping it needs) across visits. */
-  persistColumns?: boolean
-}) {
+export default function useLogsTablePrefs(options?: { storagePrefix?: string; defaultMergeColumn?: boolean }) {
   const prefix = options?.storagePrefix ?? 'logquery'
   const session = stateFor(prefix, options?.defaultMergeColumn ?? true)
-  const { mergeColumn, showKeys, compactRows } = session
-  // The two column maps travel together: without `offeredColumnsByTable` the "first offer
-  // reveals every column" rule would resurrect columns the user hid in an earlier visit.
-  const { displayedColumnsByTable, offeredColumnsByTable } = options?.persistColumns ? columnStateFor(prefix) : session
-  /** Wrap is session-only — keep the same behavior. */
+  const { mergeColumn, showKeys, compactRows, displayedColumnsByTable, offeredColumnsByTable } = session
+  /** Wrap is session-only too. */
   const wrap = ref(false)
 
   const size = computed<'mini' | 'medium'>(() => (compactRows.value ? 'mini' : 'medium'))

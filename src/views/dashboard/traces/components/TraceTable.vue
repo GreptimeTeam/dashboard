@@ -72,7 +72,6 @@ a-card(:bordered="false")
 
 <script setup lang="ts">
   import { computed, ref, watch } from 'vue'
-  import { useLocalStorage } from '@vueuse/core'
   import { useRouter } from 'vue-router'
   import { IconDown, IconSettings } from '@arco-design/web-vue/es/icon'
   import type { PropType } from 'vue'
@@ -139,8 +138,16 @@ a-card(:bordered="false")
   // Default columns to show for traces (when no selection is made)
   const defaultTraceColumns = ['trace_id', 'service_name', 'span_name', 'timestamp', 'duration_nano']
 
-  // Column visibility state with localStorage persistence
-  const displayedColumns = useLocalStorage<string[]>('trace-displayed-columns', [])
+  // Column visibility is session-only. Keeping it in memory avoids stale column names
+  // leaking across tables/databases; the watcher below resets it when the schema changes.
+  const displayedColumns = ref<string[]>([])
+
+  function defaultColumnsFor(columns: ColumnType[]): ColumnType[] {
+    const availableDefaults = columns.filter(
+      (col) => defaultTraceColumns.includes(col.name.toLowerCase()) || defaultTraceColumns.includes(col.name)
+    )
+    return availableDefaults.length > 0 ? availableDefaults : [...columns]
+  }
 
   // Pagination and results info for title
   const pageSize = ref(20)
@@ -156,17 +163,10 @@ a-card(:bordered="false")
 
   // Computed visible columns based on selection
   const visibleColumns = computed(() => {
-    let columnsToShow = []
-
-    if (displayedColumns.value.length === 0) {
-      // Show default trace columns if available, otherwise show all
-      const availableDefaults = props.columns.filter(
-        (col) => defaultTraceColumns.includes(col.name.toLowerCase()) || defaultTraceColumns.includes(col.name)
-      )
-      columnsToShow = availableDefaults.length > 0 ? availableDefaults : props.columns
-    } else {
-      columnsToShow = props.columns.filter((col) => displayedColumns.value.includes(col.name))
-    }
+    const columnsToShow =
+      displayedColumns.value.length === 0
+        ? defaultColumnsFor(props.columns)
+        : props.columns.filter((col) => displayedColumns.value.includes(col.name))
 
     // Sort columns to ensure trace_id is always first
     return columnsToShow.sort((a, b) => {
@@ -190,25 +190,19 @@ a-card(:bordered="false")
     displayedColumns.value = []
   }
 
-  // Watch for column changes and update displayed columns if empty
+  // Reset the selection when the table schema changes and none of the selected names
+  // survive (e.g. switching to another trace table), otherwise seed the defaults.
   watch(
     () => props.columns,
     (newColumns) => {
-      if (displayedColumns.value.length === 0 && newColumns.length > 0) {
-        // Set default selection to common trace fields if they exist
-        const defaultColumns = newColumns
-          .filter(
-            (col) => defaultTraceColumns.includes(col.name.toLowerCase()) || defaultTraceColumns.includes(col.name)
-          )
-          .map((col) => col.name)
-
-        if (defaultColumns.length > 0) {
-          displayedColumns.value = defaultColumns
-        } else {
-          displayedColumns.value = newColumns.map((col) => col.name)
-        }
+      if (!newColumns.length) return
+      const names = new Set(newColumns.map((col) => col.name))
+      const hasOverlap = displayedColumns.value.some((name) => names.has(name))
+      if (!displayedColumns.value.length || !hasOverlap) {
+        displayedColumns.value = defaultColumnsFor(newColumns).map((col) => col.name)
       }
-    }
+    },
+    { immediate: true }
   )
 
   // Pagination handlers
