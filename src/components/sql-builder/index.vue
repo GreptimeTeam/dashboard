@@ -624,16 +624,8 @@ a-modal(
     void loadValueSuggestions(condition)
   }
 
-  async function fetchTableNames(
-    limit: number,
-    filter = '',
-    db = form.database,
-    mode: 'contains' | 'prefix' = 'contains'
-  ): Promise<string[]> {
-    const res: any =
-      mode === 'prefix'
-        ? await editorAPI.getTablesByPrefix(limit, 0, db, filter)
-        : await editorAPI.getTables(limit, 0, db, filter)
+  async function fetchTableNames(limit: number, filter = '', db = form.database): Promise<string[]> {
+    const res: any = await editorAPI.getTables(limit, 0, db, filter)
     return ((res?.output?.[0]?.records?.rows || []) as string[][]).map((row) => row[0]).filter(Boolean)
   }
 
@@ -680,6 +672,12 @@ a-modal(
     }
   }
 
+  /** Names already loaded for this builder page, matched with substring semantics. */
+  const localTableMatches = (keyword: string) => {
+    const needle = keyword.toLowerCase()
+    return initialTables.value.filter((name) => name.toLowerCase().includes(needle))
+  }
+
   const handleTableSearch = useDebounceFn(async (keyword: string) => {
     if (!remoteTableSearch.value) return
     const trimmed = (keyword || '').trim()
@@ -691,20 +689,13 @@ a-modal(
       return
     }
     tableSearching.value = true
+    // Server-side contains search (`LIKE '%kw%'`) plus the names already loaded for
+    // this page, so a substring like "lo" still surfaces `_gt_logs` immediately.
+    const localMatches = localTableMatches(trimmed)
     try {
-      // Prefix search is ~1s; only fall back to the slow substring LIKE when the
-      // prefix has no match (e.g. the user typed a middle fragment).
-      const prefixNames = (await fetchTableNames(TABLE_WINDOW, trimmed, form.database, 'prefix')).filter((name) =>
-        name.startsWith(trimmed)
-      )
+      const names = await fetchTableNames(TABLE_WINDOW, trimmed, form.database)
       if (seq !== tableSearchSeq) return
-      if (prefixNames.length) {
-        tables.value = prefixNames
-      } else {
-        const names = await fetchTableNames(TABLE_WINDOW, trimmed, form.database, 'contains')
-        if (seq !== tableSearchSeq) return
-        tables.value = names
-      }
+      tables.value = [...new Set([...localMatches, ...names])]
     } catch (error) {
       console.error('Failed to search tables:', error)
     } finally {

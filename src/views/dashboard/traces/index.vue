@@ -43,6 +43,7 @@
           ref="sqlBuilderRef"
           storage-key="traces-query-table"
           signal-database-kind="traces"
+          :tables-provider="traceTablesProvider"
           :form-state="builderFormState"
           :default-form-state="defaultFormState"
         )
@@ -80,6 +81,7 @@
   import SqlTextEditor from '@/components/sql-text-editor/index.vue'
   import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
   import { getSignalDatabase } from '@/observability/signal-database'
+  import { listSignalTables } from '@/observability/semantics'
   import useUiPref from '@/composables/use-ui-pref'
   import TraceTable from './components/TraceTable.vue'
 
@@ -101,6 +103,13 @@
     },
   })
   const { builderFormState, addFilterCondition, generateSql, defaultFormState } = builder
+
+  /**
+   * Trace table suggest must stay trace-capable (semantic trace declaration or a
+   * physical `trace_id`). SQLBuilder filters this list locally, so it never falls back
+   * to the name-only prefix/`>=` search that also offered non-trace tables.
+   */
+  const traceTablesProvider = () => listSignalTables('traces', { database: getSignalDatabase('traces') })
 
   // 3. Text editor state
   const textEditor = useTextEditorState()
