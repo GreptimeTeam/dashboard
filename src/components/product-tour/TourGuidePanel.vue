@@ -190,21 +190,24 @@
     const docsOrigin = locale.value === 'zh-CN' ? 'https://docs.greptime.cn' : 'https://docs.greptime.com'
     return `${docsOrigin}${docsPath}`
   })
+  // Case steps omit scenario (cases carry it). Prose steps ship exactly two points.
   const scenarioText = computed(() => {
-    const text = t(`${stepKey.value}.scenario`)
-    return text && !text.startsWith('tour.') ? text : ''
+    if (!stepKey.value || !activeStep.value || activeStep.value.action || activeStep.value.cases?.length) {
+      return ''
+    }
+    return t(`${stepKey.value}.scenario`)
   })
-  const pointItems = computed(() =>
-    [0, 1, 2]
-      .map((i) => ({
-        lead: t(`${stepKey.value}.points.${i}.lead`),
-        detail: t(`${stepKey.value}.points.${i}.detail`),
-      }))
-      .filter((point) => point.lead && !point.lead.startsWith('tour.'))
-  )
-  const whereItems = computed(() =>
-    [0, 1, 2].map((i) => t(`${stepKey.value}.where.${i}`)).filter((item) => item && !item.startsWith('tour.'))
-  )
+  const pointItems = computed(() => {
+    if (!stepKey.value || !activeStep.value || activeStep.value.action) return []
+    return [0, 1].map((i) => ({
+      lead: t(`${stepKey.value}.points.${i}.lead`),
+      detail: t(`${stepKey.value}.points.${i}.detail`),
+    }))
+  })
+  const whereItems = computed(() => {
+    if (!stepKey.value || activeStep.value?.display !== 'where') return []
+    return [0, 1, 2].map((i) => t(`${stepKey.value}.where.${i}`))
+  })
   const currentExploreCaseId = computed<TourExploreCaseId | null>(() => {
     if (!activeStep.value?.cases?.length) return null
     const raw = route.query.signal
