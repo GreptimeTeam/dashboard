@@ -13,6 +13,7 @@ a-card(:bordered="false")
       a-trigger(v-if="columns.length" trigger="click" :unmount-on-close="false")
         a-button(type="text")
           span.gpt-text-secondary {{ $t('logsQuery.columns') }}
+          span.gpt-text-secondary(v-if="hiddenColumnCount" style="margin-left: 6px; font-size: 12px") · {{ $t('logsQuery.hiddenColumnsHint', { count: hiddenColumnCount }) }}
         template(#content)
           a-card.gpt-popover-panel.gpt-popover-panel--wide
             .column-controls
@@ -20,10 +21,9 @@ a-card(:bordered="false")
                 a-space
                   a-button(type="text" size="small" @click="selectAllColumns") Select All
                   a-button(type="text" size="small" @click="deselectAllColumns") Deselect All
-                a-checkbox-group(v-model="displayedColumns" direction="vertical")
+                a-checkbox-group(v-model="visibleColumnNames" direction="vertical")
                   a-checkbox(v-for="column in columns" :key="column.name" :value="column.name")
                     | {{ column.name }}
-
       a-pagination(
         v-if="totalResults > pageSize"
         v-model:current="currentPage"
@@ -44,7 +44,7 @@ a-card(:bordered="false")
     :columns="visibleColumns"
     :loading="loading"
     :column-mode="'separate'"
-    :displayed-columns="displayedColumns"
+    :displayed-columns="visibleColumnNames"
     :ts-column="{ name: 'timestamp', data_type: 'TimestampNanosecond' }"
     :class="{ builder_type: queryState.editorType === 'builder', trace_table: true }"
     @filter-condition-add="$emit('filterConditionAdd', $event)"
@@ -76,6 +76,7 @@ a-card(:bordered="false")
   import { IconDown, IconSettings } from '@arco-design/web-vue/es/icon'
   import type { PropType } from 'vue'
   import type { ColumnType, QueryState } from '@/types/query'
+  import useUiPref from '@/composables/use-ui-pref'
   import { buildTraceDetailUnixRange } from '@/utils/trace-detail-time-range'
 
   interface LogsTargetInfo {
@@ -135,19 +136,22 @@ a-card(:bordered="false")
   }>()
   const router = useRouter()
 
-  // Default columns to show for traces (when no selection is made)
-  const defaultTraceColumns = ['trace_id', 'service_name', 'span_name', 'timestamp', 'duration_nano']
-
-  // Column visibility is session-only. Keeping it in memory avoids stale column names
-  // leaking across tables/databases; the watcher below resets it when the schema changes.
-  const displayedColumns = ref<string[]>([])
-
-  function defaultColumnsFor(columns: ColumnType[]): ColumnType[] {
-    const availableDefaults = columns.filter(
-      (col) => defaultTraceColumns.includes(col.name.toLowerCase()) || defaultTraceColumns.includes(col.name)
-    )
-    return availableDefaults.length > 0 ? availableDefaults : [...columns]
-  }
+  // Hidden columns are global for trace tables and stored separately from logs.
+  // Default is no hiding; names missing from the current schema are ignored.
+  const hiddenColumns = useUiPref<string[]>('traceTableHiddenColumns', [])
+  const columnNames = computed(() => props.columns.map((column) => column.name))
+  const visibleColumnNames = computed({
+    get: () => columnNames.value.filter((name) => !hiddenColumns.value.includes(name)),
+    set: (visible) => {
+      const visibleSet = new Set(visible)
+      const otherHidden = hiddenColumns.value.filter((name) => !columnNames.value.includes(name))
+      const nextHidden = columnNames.value.filter((name) => !visibleSet.has(name))
+      hiddenColumns.value = [...new Set([...otherHidden, ...nextHidden])]
+    },
+  })
+  const hiddenColumnCount = computed(
+    () => columnNames.value.filter((name) => hiddenColumns.value.includes(name)).length
+  )
 
   // Pagination and results info for title
   const pageSize = ref(20)
@@ -161,49 +165,31 @@ a-card(:bordered="false")
     return props.data.slice(start, end)
   })
 
-  // Computed visible columns based on selection
+  // Computed visible columns based on the global hidden set
   const visibleColumns = computed(() => {
-    const columnsToShow =
-      displayedColumns.value.length === 0
-        ? defaultColumnsFor(props.columns)
-        : props.columns.filter((col) => displayedColumns.value.includes(col.name))
+    const visible = new Set(visibleColumnNames.value)
+    return props.columns
+      .filter((col) => visible.has(col.name))
+      .sort((a, b) => {
+        const isATraceId = a.name === 'trace_id' || a.name === 'traceid'
+        const isBTraceId = b.name === 'trace_id' || b.name === 'traceid'
 
-    // Sort columns to ensure trace_id is always first
-    return columnsToShow.sort((a, b) => {
-      const isATraceId = a.name === 'trace_id' || a.name === 'traceid'
-      const isBTraceId = b.name === 'trace_id' || b.name === 'traceid'
+        if (isATraceId && !isBTraceId) return -1
+        if (!isATraceId && isBTraceId) return 1
 
-      if (isATraceId && !isBTraceId) return -1
-      if (!isATraceId && isBTraceId) return 1
-
-      // Keep original order for other columns
-      return 0
-    })
+        // Keep original order for other columns
+        return 0
+      })
   })
 
   // Column selection functions
   function selectAllColumns() {
-    displayedColumns.value = props.columns.map((col) => col.name)
+    visibleColumnNames.value = [...columnNames.value]
   }
 
   function deselectAllColumns() {
-    displayedColumns.value = []
+    visibleColumnNames.value = []
   }
-
-  // Reset the selection when the table schema changes and none of the selected names
-  // survive (e.g. switching to another trace table), otherwise seed the defaults.
-  watch(
-    () => props.columns,
-    (newColumns) => {
-      if (!newColumns.length) return
-      const names = new Set(newColumns.map((col) => col.name))
-      const hasOverlap = displayedColumns.value.some((name) => names.has(name))
-      if (!displayedColumns.value.length || !hasOverlap) {
-        displayedColumns.value = defaultColumnsFor(newColumns).map((col) => col.name)
-      }
-    },
-    { immediate: true }
-  )
 
   // Pagination handlers
   function handlePageChange(page: number) {

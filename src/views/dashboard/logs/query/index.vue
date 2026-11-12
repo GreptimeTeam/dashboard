@@ -113,11 +113,16 @@
           )
             a-button(type="text")
               span.gpt-text-secondary {{ $t('logsQuery.columns') }}
+              span.gpt-text-secondary(v-if="hiddenColumnCount" style="margin-left: 6px; font-size: 12px") · {{ $t('logsQuery.hiddenColumnsHint', { count: hiddenColumnCount }) }}
             template(#content)
               a-card.gpt-popover-panel
-                a-checkbox-group(v-model="displayedColumns[queryState.table]" direction="vertical")
-                  a-checkbox(v-for="column in columns" :value="column.name")
-                    | {{ column.name }}
+                a-space(direction="vertical" size="small")
+                  a-space
+                    a-button(type="text" size="small" @click="selectAllColumns") Select All
+                    a-button(type="text" size="small" @click="deselectAllColumns") Deselect All
+                  a-checkbox-group(v-model="visibleColumnNames" direction="vertical")
+                    a-checkbox(v-for="column in columns" :value="column.name")
+                      | {{ column.name }}
       LogTableData(
         :key="`${queryState.table}-${columnModeKey}`"
         :wrap-line="wrap"
@@ -130,7 +135,7 @@
         :sql-mode="queryState.editorType"
         :ts-column="queryState.tsColumn"
         :column-mode="columnMode"
-        :displayed-columns="displayedColumns[queryState.table] || []"
+        :displayed-columns="visibleColumnNames"
         @filter-condition-add="handleFilterConditionAdd"
         @reach-end="loadMore"
       )
@@ -139,7 +144,7 @@
 </template>
 
 <script setup lang="ts" name="LogsQuery">
-  import { ref, watch, nextTick } from 'vue'
+  import { ref, computed, watch, nextTick } from 'vue'
   import { useRoute } from 'vue-router'
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import SqlTextEditor from '@/components/sql-text-editor/index.vue'
@@ -197,14 +202,32 @@
   const {
     mergeColumn,
     showKeys,
-    displayedColumnsByTable: displayedColumns,
     compactRows,
     wrap,
     size,
     columnMode,
     columnModeKey,
-    ensureDisplayedColumns,
+    hiddenColumnsFor,
+    visibleColumnsFor,
+    setVisibleColumns,
+    showAllColumns,
+    hideAllColumns,
   } = useLogsTablePrefs()
+
+  const columnNames = computed(() => columns.value.map((column) => column.name))
+  const visibleColumnNames = computed({
+    get: () => visibleColumnsFor(columnNames.value),
+    set: (visible) => setVisibleColumns(columnNames.value, visible),
+  })
+  const hiddenColumnCount = computed(() => hiddenColumnsFor(columnNames.value).length)
+
+  function selectAllColumns() {
+    showAllColumns(columnNames.value)
+  }
+
+  function deselectAllColumns() {
+    hideAllColumns(columnNames.value)
+  }
 
   const chartContainerRef = ref()
   const refresh = ref(false)
@@ -307,16 +330,6 @@
   function handleSqlInfoUpdate(sqlInfo) {
     Object.assign(textEditor.textEditorState, sqlInfo)
   }
-
-  watch(columns, () => {
-    if (!columns.value.length) {
-      return
-    }
-    ensureDisplayedColumns(
-      queryState.table,
-      columns.value.map((c) => c.name)
-    )
-  })
 
   watch(
     canExecuteInitialQuery,

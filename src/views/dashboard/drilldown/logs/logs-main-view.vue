@@ -36,15 +36,16 @@
       )
         a-button(type="text" size="small")
           span.gpt-text-secondary {{ t('logsQuery.columns') }}
+          span.gpt-text-secondary(v-if="hiddenColumnCount" style="margin-left: 6px; font-size: 12px") · {{ t('logsQuery.hiddenColumnsHint', { count: hiddenColumnCount }) }}
         template(#content)
           a-card.gpt-popover-panel
-            a-checkbox-group(
-              v-if="logsTableName"
-              v-model="displayedColumnsByTable[logsTableName]"
-              direction="vertical"
-            )
-              a-checkbox(v-for="column in tableColumns" :key="column.name" :value="column.name")
-                | {{ column.name }}
+            a-space(direction="vertical" size="small")
+              a-space
+                a-button(type="text" size="small" @click="selectAllColumns") Select All
+                a-button(type="text" size="small" @click="deselectAllColumns") Deselect All
+              a-checkbox-group(v-model="visibleColumnNames" direction="vertical")
+                a-checkbox(v-for="column in tableColumns" :key="column.name" :value="column.name")
+                  | {{ column.name }}
 
   a-spin.logs-main-table(:loading="loading" :class="{ 'logs-main-table--fill': fillHeight }")
     LogsTable(
@@ -59,7 +60,7 @@
       :data="tableData"
       :columns="tableColumns"
       :ts-column="tsColumn"
-      :displayed-columns="visibleColumns"
+      :displayed-columns="visibleColumnNames"
       :wrap-line="wrap"
       :has-more="hasMore"
       :loading-more="loadingMore"
@@ -72,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, watch } from 'vue'
+  import { computed } from 'vue'
   import { useI18n } from 'vue-i18n'
   import LogsTable from '@/views/dashboard/logs/query/LogsTable.vue'
   import { useDrilldownContext } from '@/observability/context'
@@ -110,21 +111,22 @@
   const { t } = useI18n()
   const ctx = useDrilldownContext()
 
-  // Drilldown keeps its own display prefs: the legacy log query page's "single column"
-  // choice must not collapse this table to its timestamp column. Column visibility is
-  // persisted — this table offers every schema column, so hiding is worth remembering.
+  // Display prefs. Hidden columns are global and shared with Logs Query; only the
+  // runtime compact/wrap state is per-page.
   const {
     mergeColumn,
     showKeys,
-    displayedColumnsByTable,
     compactRows,
     wrap,
     size,
     columnMode,
     columnModeKey,
-    displayedColumnsFor,
-    revealOfferedColumns,
-  } = useLogsTablePrefs({ storagePrefix: 'drilldown-logs', defaultMergeColumn: false })
+    hiddenColumnsFor,
+    visibleColumnsFor,
+    setVisibleColumns,
+    showAllColumns,
+    hideAllColumns,
+  } = useLogsTablePrefs({ storagePrefix: 'drilldown-logs' })
 
   const { loading, loadingMore, tableColumns, tableData, tsColumn, hasMore, loadMore } = useDrilldownLogsTable(ctx, {
     extraWhere: computed(() => props.extraWhere),
@@ -132,7 +134,20 @@
   })
 
   const logsTableName = computed(() => ctx.semantics.logs.table.value || '')
-  const visibleColumns = computed(() => displayedColumnsFor(logsTableName.value))
+  const tableColumnNames = computed(() => tableColumns.value.map((column) => column.name))
+  const visibleColumnNames = computed({
+    get: () => visibleColumnsFor(tableColumnNames.value),
+    set: (visible) => setVisibleColumns(tableColumnNames.value, visible),
+  })
+  const hiddenColumnCount = computed(() => hiddenColumnsFor(tableColumnNames.value).length)
+
+  function selectAllColumns() {
+    showAllColumns(tableColumnNames.value)
+  }
+
+  function deselectAllColumns() {
+    hideAllColumns(tableColumnNames.value)
+  }
   // Settings fill roles the runtime map has not resolved yet (see resolveLogsRoles).
   const traceIdColumn = computed(() => {
     const roles = resolveLogsRoles(ctx)
@@ -189,17 +204,6 @@
 
     ctx.actions.appendFilter({ key: chipKey, op, value })
   }
-
-  watch(
-    tableColumns,
-    (cols) => {
-      revealOfferedColumns(
-        logsTableName.value,
-        cols.map((column) => column.name)
-      )
-    },
-    { deep: true }
-  )
 </script>
 
 <style scoped lang="less">

@@ -41,6 +41,10 @@ export interface UiConfig {
   logQueryChartExpanded?: boolean
   traceChartExpanded?: boolean
   persesSkillAlertDismissed?: boolean
+  logsTableSingleColumn?: boolean
+  logsTableShowKeys?: boolean
+  logsTableHiddenColumns?: string[]
+  traceTableHiddenColumns?: string[]
 }
 
 export interface AppState extends StoredConfig, UiConfig {

@@ -232,6 +232,10 @@ const useAppStore = defineStore('app', () => {
     'logQueryChartExpanded',
     'traceChartExpanded',
     'persesSkillAlertDismissed',
+    'logsTableSingleColumn',
+    'logsTableShowKeys',
+    'logsTableHiddenColumns',
+    'traceTableHiddenColumns',
   ] as const
 
   const normalizeConnectionConfig = (config: Partial<StoredConfig>): Partial<StoredConfig> => {
