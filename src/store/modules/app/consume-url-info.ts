@@ -49,13 +49,29 @@ export function consumeUrlInfo(
   }
 }
 
-export function applyUrlInfoToConfig<T extends Record<string, unknown>>(config: T, info: string): T {
+/** Auth fields that live-demo runtime inject owns; strip from URL `info` when present. */
+export const URL_INFO_AUTH_KEYS = ['username', 'password', 'authHeader'] as const
+
+export function omitAuthFromConfig<T extends Record<string, unknown>>(config: T): T {
+  const next = { ...config }
+  URL_INFO_AUTH_KEYS.forEach((key) => {
+    delete next[key]
+  })
+  return next
+}
+
+export function applyUrlInfoToConfig<T extends Record<string, unknown>>(
+  config: T,
+  info: string,
+  options?: { omitAuth?: boolean }
+): T {
   try {
     const urlConfig = JSON.parse(atob(info))
     if (!urlConfig || typeof urlConfig !== 'object' || Array.isArray(urlConfig)) {
       return config
     }
-    return { ...config, ...urlConfig }
+    const merged = options?.omitAuth ? omitAuthFromConfig(urlConfig as Record<string, unknown>) : urlConfig
+    return { ...config, ...merged }
   } catch {
     return config
   }

@@ -6,8 +6,7 @@ export default {
   'tour.welcome.badge': '实时演示实例',
   // Homepage slogan — keep in sync with greptime.cn / greptime.com.
   'tour.welcome.slogan': '一个数据库，\n统一指标、日志和链路',
-  'tour.welcome.intro':
-    '当前实例正在实时运行：一个演示应用正持续向其中写入真实遥测数据。接下来的页面中没有任何 mock 或预录内容。',
+  'tour.welcome.intro': '当前实例正在运行：{app} 正在持续写入遥测数据。接下来的页面中没有任何 mock 或预录内容。',
   'tour.welcome.begin': '开始查询引导',
   'tour.guide.title': '查询引导',
   'tour.guide.pillWithStep': '查询引导 · {name}',

@@ -122,6 +122,8 @@
     "watch": true,
     "watchEffect": true,
     "watchPostEffect": true,
-    "watchSyncEffect": true
+    "watchSyncEffect": true,
+    "TABLE_OPTION_LIMIT": true,
+    "useTableOptions": true
   }
 }

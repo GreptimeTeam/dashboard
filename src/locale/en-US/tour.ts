@@ -7,7 +7,7 @@ export default {
   // Homepage slogan — keep in sync with greptime.cn / greptime.com.
   'tour.welcome.slogan': 'Metrics, logs, and traces\nin one database.',
   'tour.welcome.intro':
-    'This instance is live: a demo application is sending real telemetry to it right now. Nothing on the following screens is mocked or pre-recorded.',
+    'This instance is live: {app} is continuously writing telemetry to it. Nothing on the following screens is mocked or pre-recorded.',
   'tour.welcome.begin': 'Start the query guide',
   'tour.guide.title': 'Query guide',
   'tour.guide.pillWithStep': 'Query guide · {name}',
