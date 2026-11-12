@@ -43,6 +43,8 @@ export interface UiConfig {
   persesSkillAlertDismissed?: boolean
   logsTableSingleColumn?: boolean
   logsTableShowKeys?: boolean
+  logsTableCompactRows?: boolean
+  logsTableWrapLines?: boolean
   logsTableHiddenColumns?: string[]
   traceTableHiddenColumns?: string[]
 }

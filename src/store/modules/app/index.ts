@@ -234,6 +234,8 @@ const useAppStore = defineStore('app', () => {
     'persesSkillAlertDismissed',
     'logsTableSingleColumn',
     'logsTableShowKeys',
+    'logsTableCompactRows',
+    'logsTableWrapLines',
     'logsTableHiddenColumns',
     'traceTableHiddenColumns',
   ] as const

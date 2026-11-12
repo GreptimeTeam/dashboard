@@ -1,41 +1,26 @@
-import { computed, ref, type Ref } from 'vue'
+import { computed } from 'vue'
 import useUiPref from '@/composables/use-ui-pref'
 
 export type LogsTableColumnMode = 'separate' | 'merged' | 'merged-with-keys'
 
-/** Per-page session state. Hidden columns are global and live in uiConfig. */
-const compactByPrefix = new Map<string, Ref<boolean>>()
-
-function compactFor(prefix: string): Ref<boolean> {
-  const existing = compactByPrefix.get(prefix)
-  if (existing) {
-    return existing
-  }
-  const next = ref(false)
-  compactByPrefix.set(prefix, next)
-  return next
-}
-
 /**
  * LogsTable display prefs.
  *
- * Single column / show keys and the set of hidden columns are global UI preferences
- * stored in `uiConfig`, so the Logs Query page and the drilldown logs table share them
- * and they survive reloads. Hidden columns are a flat list of column names, not a
- * per-table snapshot: names missing from the current schema are simply ignored.
+ * All of these are global UI preferences stored in `uiConfig`, so the Logs Query page
+ * and the drilldown logs table share them and they survive reloads: single column,
+ * show keys, compact rows, wrap, and the set of hidden columns.
  *
- * Compact rows and wrap stay session-only, keyed by `storagePrefix`.
+ * Hidden columns are a flat list of column names, not a per-table snapshot: names
+ * missing from the current schema are simply ignored.
  */
-export default function useLogsTablePrefs(options?: { storagePrefix?: string }) {
-  const prefix = options?.storagePrefix ?? 'logquery'
-  const compactRows = compactFor(prefix)
+export default function useLogsTablePrefs() {
   // Global display mode: false means multiple columns (the default), true is the
   // merged single-column view. `showKeys` only applies to the merged mode.
   const mergeColumn = useUiPref('logsTableSingleColumn', false)
   const showKeys = useUiPref('logsTableShowKeys', true)
+  const compactRows = useUiPref('logsTableCompactRows', false)
+  const wrap = useUiPref('logsTableWrapLines', false)
   const hiddenColumns = useUiPref<string[]>('logsTableHiddenColumns', [])
-  /** Wrap is session-only too. */
-  const wrap = ref(false)
 
   const size = computed<'mini' | 'medium'>(() => (compactRows.value ? 'mini' : 'medium'))
 

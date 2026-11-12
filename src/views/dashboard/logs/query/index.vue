@@ -120,8 +120,8 @@
                   a-space
                     a-button(type="text" size="small" @click="selectAllColumns") Select All
                     a-button(type="text" size="small" @click="deselectAllColumns") Deselect All
-                  a-checkbox-group(v-model="visibleColumnNames" direction="vertical")
-                    a-checkbox(v-for="column in columns" :value="column.name")
+                  a-checkbox-group(v-model="visibleSelectableColumnNames" direction="vertical")
+                    a-checkbox(v-for="column in selectableColumns" :value="column.name")
                       | {{ column.name }}
       LogTableData(
         :key="`${queryState.table}-${columnModeKey}`"
@@ -215,18 +215,31 @@
   } = useLogsTablePrefs()
 
   const columnNames = computed(() => columns.value.map((column) => column.name))
+  // The logs table pins the timestamp column first; it is not a configurable column.
+  const timestampColumnName = computed(
+    () =>
+      queryState.tsColumn?.name ||
+      columns.value.find((column) => column.data_type?.toLowerCase().includes('timestamp'))?.name ||
+      ''
+  )
+  const selectableColumns = computed(() => columns.value.filter((column) => column.name !== timestampColumnName.value))
+  const selectableColumnNames = computed(() => selectableColumns.value.map((column) => column.name))
   const visibleColumnNames = computed({
     get: () => visibleColumnsFor(columnNames.value),
     set: (visible) => setVisibleColumns(columnNames.value, visible),
   })
-  const hiddenColumnCount = computed(() => hiddenColumnsFor(columnNames.value).length)
+  const visibleSelectableColumnNames = computed({
+    get: () => visibleColumnsFor(selectableColumnNames.value),
+    set: (visible) => setVisibleColumns(selectableColumnNames.value, visible),
+  })
+  const hiddenColumnCount = computed(() => hiddenColumnsFor(selectableColumnNames.value).length)
 
   function selectAllColumns() {
-    showAllColumns(columnNames.value)
+    showAllColumns(selectableColumnNames.value)
   }
 
   function deselectAllColumns() {
-    hideAllColumns(columnNames.value)
+    hideAllColumns(selectableColumnNames.value)
   }
 
   const chartContainerRef = ref()

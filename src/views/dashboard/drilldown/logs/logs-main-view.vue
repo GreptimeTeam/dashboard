@@ -43,8 +43,8 @@
               a-space
                 a-button(type="text" size="small" @click="selectAllColumns") Select All
                 a-button(type="text" size="small" @click="deselectAllColumns") Deselect All
-              a-checkbox-group(v-model="visibleColumnNames" direction="vertical")
-                a-checkbox(v-for="column in tableColumns" :key="column.name" :value="column.name")
+              a-checkbox-group(v-model="visibleSelectableColumnNames" direction="vertical")
+                a-checkbox(v-for="column in selectableColumns" :key="column.name" :value="column.name")
                   | {{ column.name }}
 
   a-spin.logs-main-table(:loading="loading" :class="{ 'logs-main-table--fill': fillHeight }")
@@ -126,7 +126,7 @@
     setVisibleColumns,
     showAllColumns,
     hideAllColumns,
-  } = useLogsTablePrefs({ storagePrefix: 'drilldown-logs' })
+  } = useLogsTablePrefs()
 
   const { loading, loadingMore, tableColumns, tableData, tsColumn, hasMore, loadMore } = useDrilldownLogsTable(ctx, {
     extraWhere: computed(() => props.extraWhere),
@@ -135,18 +135,28 @@
 
   const logsTableName = computed(() => ctx.semantics.logs.table.value || '')
   const tableColumnNames = computed(() => tableColumns.value.map((column) => column.name))
+  // The logs table pins the timestamp column first; it is not a configurable column.
+  const timestampColumnName = computed(() => tsColumn.value?.name || '')
+  const selectableColumns = computed(() =>
+    tableColumns.value.filter((column) => column.name !== timestampColumnName.value)
+  )
+  const selectableColumnNames = computed(() => selectableColumns.value.map((column) => column.name))
   const visibleColumnNames = computed({
     get: () => visibleColumnsFor(tableColumnNames.value),
     set: (visible) => setVisibleColumns(tableColumnNames.value, visible),
   })
-  const hiddenColumnCount = computed(() => hiddenColumnsFor(tableColumnNames.value).length)
+  const visibleSelectableColumnNames = computed({
+    get: () => visibleColumnsFor(selectableColumnNames.value),
+    set: (visible) => setVisibleColumns(selectableColumnNames.value, visible),
+  })
+  const hiddenColumnCount = computed(() => hiddenColumnsFor(selectableColumnNames.value).length)
 
   function selectAllColumns() {
-    showAllColumns(tableColumnNames.value)
+    showAllColumns(selectableColumnNames.value)
   }
 
   function deselectAllColumns() {
-    hideAllColumns(tableColumnNames.value)
+    hideAllColumns(selectableColumnNames.value)
   }
   // Settings fill roles the runtime map has not resolved yet (see resolveLogsRoles).
   const traceIdColumn = computed(() => {
