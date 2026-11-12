@@ -43,6 +43,7 @@
           ref="sqlBuilderRef"
           storage-key="traces-query-table"
           signal-database-kind="traces"
+          :tables-provider="traceTablesProvider"
           :form-state="builderFormState"
           :default-form-state="defaultFormState"
         )
@@ -75,12 +76,14 @@
 
 <script setup lang="ts">
   import { ref, computed, watch, nextTick, onMounted } from 'vue'
-  import { useLocalStorage } from '@vueuse/core'
   import { IconCode, IconDown, IconRight, IconDownload } from '@arco-design/web-vue/es/icon'
   import SQLBuilder from '@/components/sql-builder/index.vue'
   import SqlTextEditor from '@/components/sql-text-editor/index.vue'
-  import TraceTable from './components/TraceTable.vue'
   import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
+  import { getSignalDatabase } from '@/observability/signal-database'
+  import { listSignalTables } from '@/observability/semantics'
+  import useUiPref from '@/composables/use-ui-pref'
+  import TraceTable from './components/TraceTable.vue'
 
   defineOptions({
     name: 'TraceQuery',
@@ -92,13 +95,21 @@
 
   // 2. Builder form state
   const builder = useSqlBuilderHook({
-    storageKey: 'traces-query-table',
     timeRangeValues,
     defaultFormState: {
+      // Text mode has no DB selector; keep it on the per-signal DB.
+      database: getSignalDatabase('traces'),
       conditions: [{ field: 'parent_span_id', operator: 'Not Exist', value: '', relation: 'AND' }],
     },
   })
   const { builderFormState, addFilterCondition, generateSql, defaultFormState } = builder
+
+  /**
+   * Trace table suggest must stay trace-capable (semantic trace declaration or a
+   * physical `trace_id`). SQLBuilder filters this list locally, so it never falls back
+   * to the name-only prefix/`>=` search that also offered non-trace tables.
+   */
+  const traceTablesProvider = () => listSignalTables('traces', { database: getSignalDatabase('traces') })
 
   // 3. Text editor state
   const textEditor = useTextEditorState()
@@ -116,7 +127,7 @@
   })
   const { initializeFromQuery, updateQueryParams } = urlSync
 
-  const chartExpanded = useLocalStorage('trace-chart-expanded', true)
+  const chartExpanded = useUiPref('traceChartExpanded', true)
   const countChartRef = ref()
   const sqlBuilderRef = ref()
   const timeRangeSelectRef = ref()

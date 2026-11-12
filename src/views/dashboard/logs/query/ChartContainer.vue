@@ -37,11 +37,11 @@ a-card(:bordered="false")
 
 <script setup name="ChartContainer" lang="ts">
   import { ref, computed, watch, nextTick } from 'vue'
-  import { useLocalStorage } from '@vueuse/core'
   import { useI18n } from 'vue-i18n'
   import { IconDown, IconRight } from '@arco-design/web-vue/es/icon'
   import type { ColumnType, TSColumn, QueryState } from '@/types/query'
   import CountChart from '@/components/count-chart/index.vue'
+  import useUiPref from '@/composables/use-ui-pref'
   import FunnelChart from './FunnelChart.vue'
 
   const { t } = useI18n()
@@ -66,8 +66,8 @@ a-card(:bordered="false")
   const countChartRef = ref()
   const funnelChartRef = ref()
 
-  // Chart expanded state with localStorage persistence
-  const chartExpanded = useLocalStorage('logquery-chart-expanded', true)
+  // Chart expanded state is session-only.
+  const chartExpanded = useUiPref('logQueryChartExpanded', true)
 
   const filterFields = computed(() => {
     try {

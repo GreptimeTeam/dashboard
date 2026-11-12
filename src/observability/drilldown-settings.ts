@@ -1,4 +1,5 @@
-import { currentDatabase } from './current-database'
+import { hostMatches, readRaw, removeKey, writeJSON } from '@/utils/storage'
+import { currentConnectionKey, currentDatabase } from './current-database'
 
 export interface LogsFieldMapSettings {
   time?: string
@@ -42,10 +43,22 @@ export interface DrilldownSettings {
   traces: TracesDrilldownSettings
 }
 
-const STORAGE_PREFIX = 'drilldown-settings'
+/**
+ * One physical key. The stored value is stamped with the host + DB it belongs to;
+ * a page whose connection no longer matches simply reads empty settings instead of
+ * applying another cluster's table/field map.
+ *
+ * Only the most recently written host+DB is retained (last write wins). This is
+ * deliberate: drilldown settings are per active page, not a per-database archive.
+ */
+const STORAGE_KEY = 'drilldown-settings'
+const LEGACY_PREFIX = `${STORAGE_KEY}:`
+const STORAGE_VERSION = 1
 
-function storageKey(database: string): string {
-  return `${STORAGE_PREFIX}:${database}`
+interface StoredDrilldownSettings extends DrilldownSettings {
+  v?: number
+  host?: string
+  database?: string
 }
 
 function parseTraceLogsMappings(raw: unknown): TraceLogsMapping[] | undefined {
@@ -86,49 +99,99 @@ function emptySettings(): DrilldownSettings {
   return { logs: {}, traces: {} }
 }
 
-export function loadDrilldownSettings(database?: string): DrilldownSettings {
-  const db = database ?? currentDatabase()
-  try {
-    const raw = localStorage.getItem(storageKey(db))
-    if (!raw) {
-      return emptySettings()
-    }
-    const parsed = JSON.parse(raw)
-    if (!parsed || typeof parsed !== 'object') {
-      return emptySettings()
-    }
-    const logs = parsed.logs && typeof parsed.logs === 'object' ? parsed.logs : {}
-    const traces = parsed.traces && typeof parsed.traces === 'object' ? parsed.traces : {}
-    return {
-      logs: {
-        table: typeof logs.table === 'string' ? logs.table : undefined,
-        fieldMap: logs.fieldMap && typeof logs.fieldMap === 'object' ? logs.fieldMap : undefined,
-        labelInclude: Array.isArray(logs.labelInclude)
-          ? logs.labelInclude.filter((item: unknown) => typeof item === 'string')
-          : undefined,
-        labelExclude: Array.isArray(logs.labelExclude)
-          ? logs.labelExclude.filter((item: unknown) => typeof item === 'string')
-          : undefined,
-        fieldInclude: Array.isArray(logs.fieldInclude)
-          ? logs.fieldInclude.filter((item: unknown) => typeof item === 'string')
-          : undefined,
-        fieldExclude: Array.isArray(logs.fieldExclude)
-          ? logs.fieldExclude.filter((item: unknown) => typeof item === 'string')
-          : undefined,
-      },
-      traces: {
-        traceLogsMappings: parseTraceLogsMappings(traces.traceLogsMappings),
-        ignoredServiceKeys: parseIgnoredServiceKeys(traces.ignoredServiceKeys),
-      },
-    }
-  } catch {
+function parseSettings(parsed: unknown): DrilldownSettings {
+  if (!parsed || typeof parsed !== 'object') {
     return emptySettings()
   }
+  const value = parsed as Record<string, unknown>
+  const logs = value.logs && typeof value.logs === 'object' ? (value.logs as Record<string, unknown>) : {}
+  const traces = value.traces && typeof value.traces === 'object' ? (value.traces as Record<string, unknown>) : {}
+  return {
+    logs: {
+      table: typeof logs.table === 'string' ? logs.table : undefined,
+      fieldMap:
+        logs.fieldMap && typeof logs.fieldMap === 'object' ? (logs.fieldMap as LogsFieldMapSettings) : undefined,
+      labelInclude: Array.isArray(logs.labelInclude)
+        ? logs.labelInclude.filter((item: unknown) => typeof item === 'string')
+        : undefined,
+      labelExclude: Array.isArray(logs.labelExclude)
+        ? logs.labelExclude.filter((item: unknown) => typeof item === 'string')
+        : undefined,
+      fieldInclude: Array.isArray(logs.fieldInclude)
+        ? logs.fieldInclude.filter((item: unknown) => typeof item === 'string')
+        : undefined,
+      fieldExclude: Array.isArray(logs.fieldExclude)
+        ? logs.fieldExclude.filter((item: unknown) => typeof item === 'string')
+        : undefined,
+    },
+    traces: {
+      traceLogsMappings: parseTraceLogsMappings(traces.traceLogsMappings),
+      ignoredServiceKeys: parseIgnoredServiceKeys(traces.ignoredServiceKeys),
+    },
+  }
+}
+
+/** Pre-collapse storage: one key per database, no host stamp. Read again once for migration. */
+function loadLegacySettings(database: string): DrilldownSettings | null {
+  const raw = readRaw(`${LEGACY_PREFIX}${database}`)
+  if (!raw) {
+    return null
+  }
+  try {
+    return parseSettings(JSON.parse(raw))
+  } catch {
+    return null
+  }
+}
+
+function removeLegacyKeys(): void {
+  try {
+    if (typeof localStorage.key !== 'function' || typeof localStorage.length !== 'number') {
+      return
+    }
+    const keys: string[] = []
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index)
+      if (key?.startsWith(LEGACY_PREFIX)) {
+        keys.push(key)
+      }
+    }
+    keys.forEach((key) => removeKey(key))
+  } catch {
+    // ignore storage failures
+  }
+}
+
+export function loadDrilldownSettings(database?: string): DrilldownSettings {
+  const db = database ?? currentDatabase()
+  const raw = readRaw(STORAGE_KEY)
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as StoredDrilldownSettings
+      if (!parsed || typeof parsed !== 'object') {
+        return emptySettings()
+      }
+      if (parsed.database !== db || !hostMatches(parsed.host, currentConnectionKey())) {
+        return emptySettings()
+      }
+      return parseSettings(parsed)
+    } catch {
+      return emptySettings()
+    }
+  }
+  return loadLegacySettings(db) ?? emptySettings()
 }
 
 export function saveDrilldownSettings(settings: DrilldownSettings, database?: string): void {
   const db = database ?? currentDatabase()
-  localStorage.setItem(storageKey(db), JSON.stringify(settings))
+  writeJSON(STORAGE_KEY, {
+    v: STORAGE_VERSION,
+    host: currentConnectionKey(),
+    database: db,
+    logs: settings.logs,
+    traces: settings.traces,
+  } satisfies StoredDrilldownSettings)
+  removeLegacyKeys()
 }
 
 function compactFieldMap(fieldMap?: LogsFieldMapSettings): LogsFieldMapSettings | undefined {

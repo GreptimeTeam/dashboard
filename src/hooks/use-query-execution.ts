@@ -64,6 +64,15 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
     return textEditor.textEditorState[prop]
   }
 
+  /**
+   * The text editor has no DB selector of its own. Follow the builder/signal DB so
+   * switching builder → text never executes the same SQL against another database.
+   */
+  function getExecutionDatabase(): string | undefined {
+    const stateDatabase = getCurrentStateProp('database') as string | undefined
+    return stateDatabase || builder.builderFormState.database || undefined
+  }
+
   async function getTotalRowCount() {
     if (!queryState.table || !queryState.sql) {
       totalRowCount.value = null
@@ -82,7 +91,7 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
       const countSql = `SELECT COUNT(*) FROM ${tableName} ${whereClause}`
 
       const { default: editorAPI } = await import('@/api/editor')
-      const database = getCurrentStateProp('database') as string | undefined
+      const database = getExecutionDatabase()
       const result: any = await editorAPI.runSQL(countSql, database)
 
       if (result.output?.[0]?.records) {
@@ -131,7 +140,7 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
         sql: currentSql,
         tsColumn: getCurrentStateProp('tsColumn'),
         table: getCurrentStateProp('table'),
-        database: getCurrentStateProp('database'),
+        database: getExecutionDatabase(),
         timeRangeValues: [...timeRange.timeRangeValues.value],
         time: timeRange.time.value,
         rangeTime: [...timeRange.rangeTime.value],
@@ -152,7 +161,7 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
     loading.value = true
     try {
       const { default: editorAPI } = await import('@/api/editor')
-      const database = getCurrentStateProp('database') as string | undefined
+      const database = getExecutionDatabase()
       const result = await editorAPI.runSQL(currentSql, database)
       if (result.output?.[0]?.records) {
         const { records } = result.output[0]
@@ -266,7 +275,7 @@ const useQueryExecution = (builder, textEditor, timeRange) => {
     loadingMore.value = true
     try {
       const { default: editorAPI } = await import('@/api/editor')
-      const database = getCurrentStateProp('database') as string | undefined
+      const database = getExecutionDatabase()
       const result = await editorAPI.runSQL(pageSql, database)
       const records = result?.output?.[0]?.records
       const names: string[] = (records?.schema?.column_schemas ?? []).map((col: { name: string }) => col.name)

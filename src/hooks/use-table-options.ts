@@ -24,9 +24,8 @@ function recordsToNames(response: any): string[] {
  * Bounded table-name window shared by every table picker.
  *
  * The initial window is `signal` tables first (if any) plus the first `limit`
- * tables; typing searches the server by prefix (range scan) and only falls back
- * to the slow substring LIKE when the prefix has no match. This keeps memory and
- * DOM O(limit) even for databases with 100k+ tables.
+ * tables. Typing runs a server contains search and merges matches from the loaded
+ * window; traces use their fully-loaded allowed set and search locally.
  */
 export default function useTableOptions(options: UseTableOptionsOptions) {
   const limit = options.limit ?? TABLE_OPTION_LIMIT
@@ -104,21 +103,26 @@ export default function useTableOptions(options: UseTableOptionsOptions) {
     try {
       const signal = toValue(options.signal)
       const allowed = signal === 'traces' ? await loadAllowedTables(db) : undefined
-      const matches = (name: string) => !allowed || allowed.has(name)
+      if (seq !== requestSeq) return
       const withExactFirst = (names: string[]): string[] =>
         names.includes(trimmed) ? [trimmed, ...names.filter((name) => name !== trimmed)] : names
-
-      const prefixNames = recordsToNames(await editorAPI.getTablesByPrefix(limit, 0, db, trimmed)).filter(
-        (name) => name.startsWith(trimmed) && matches(name)
+      const needle = trimmed.toLowerCase()
+      // Merge names already loaded for this picker with the server's contains result,
+      // so the suggest is fuzzy and stable even while the request is in flight.
+      const localMatches = (allowed ? [...allowed] : initialOptions.value).filter((name) =>
+        name.toLowerCase().includes(needle)
       )
-      if (seq !== requestSeq) return
-      if (prefixNames.length) {
-        tableOptions.value = withExactFirst(prefixNames)
+
+      // Trace candidates are fully loaded (allowed set), so search locally and skip
+      // the name-only server query entirely.
+      if (allowed) {
+        tableOptions.value = withExactFirst(localMatches)
         return
       }
-      const containsNames = recordsToNames(await editorAPI.getTables(limit, 0, db, trimmed)).filter(matches)
+
+      const containsNames = recordsToNames(await editorAPI.getTables(limit, 0, db, trimmed))
       if (seq !== requestSeq) return
-      tableOptions.value = withExactFirst(containsNames)
+      tableOptions.value = withExactFirst([...new Set([...localMatches, ...containsNames])])
     } catch (error) {
       console.error('[table-select] failed to search tables', error)
     } finally {

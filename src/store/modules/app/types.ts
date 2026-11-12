@@ -31,7 +31,22 @@ export interface UiConfig {
   menuWidth: number
   device: string
   hideSidebar: boolean
-  menuSelectedKey: string
+  locale?: string
+  compactRows?: boolean
+  querySidebarWidth?: number
+  metricsSidebarWidth?: number
+  persesSidebarWidth?: number
+  drilldownMetricsSidebarWidth?: number
+  queryEditorHeight?: number
+  logQueryChartExpanded?: boolean
+  traceChartExpanded?: boolean
+  persesSkillAlertDismissed?: boolean
+  logsTableSingleColumn?: boolean
+  logsTableShowKeys?: boolean
+  logsTableCompactRows?: boolean
+  logsTableWrapLines?: boolean
+  logsTableHiddenColumns?: string[]
+  traceTableHiddenColumns?: string[]
 }
 
 export interface AppState extends StoredConfig, UiConfig {

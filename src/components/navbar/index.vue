@@ -253,9 +253,9 @@ CommandPalette(ref="commandPaletteRef")
   )
 
   listenerRouteChange((newRoute) => {
-    appStore.applyUiConfig({
-      menuSelectedKey: newRoute.meta.activeMenu || (newRoute.matched[1].name as string),
-    })
+    // Runtime-only: the route already decides the highlight, so persisting this value
+    // only caused a first-paint flash and a write on every navigation.
+    menuSelectedKey.value = newRoute.meta.activeMenu || (newRoute.matched[1].name as string)
     if (newRoute.matched[1].name === 'ingest') {
       ingestTab.value = newRoute.matched[3].name as string
     }

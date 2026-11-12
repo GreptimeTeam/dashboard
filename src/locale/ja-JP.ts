@@ -165,6 +165,8 @@ export default {
   'quickFilters.nameMin': '名前は 2 文字以上にしてください',
   'quickFilters.nameMax': '名前は 50 文字以内にしてください',
   'quickFilters.nameExists': '同名のクイックフィルターが既に存在します',
+  'quickFilters.databaseUnavailable':
+    'データベース「{database}」は利用できないため、クイックフィルターを適用しませんでした。',
   // SQL Builder
   'sqlBuilder.table': 'テーブル',
   'sqlBuilder.database': 'データベース',

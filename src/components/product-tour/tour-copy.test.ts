@@ -74,13 +74,11 @@ function latinWords(text: string): string[] {
 function pointsOf(locale: Locale, step: TourStep) {
   const messages = MESSAGES[locale]
   const key = step.nameKey.replace(/\.name$/, '')
-  return [0, 1, 2]
-    .map((index) => ({
-      index,
-      lead: messages[`${key}.points.${index}.lead`],
-      detail: messages[`${key}.points.${index}.detail`],
-    }))
-    .filter((point) => point.lead && !point.lead.startsWith('tour.'))
+  return [0, 1].map((index) => ({
+    index,
+    lead: messages[`${key}.points.${index}.lead`],
+    detail: messages[`${key}.points.${index}.detail`],
+  }))
 }
 
 describe('tour Zone B copy', () => {
