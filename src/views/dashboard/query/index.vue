@@ -41,8 +41,9 @@ a-layout.new-layout.new-layout--workspace(:class="{ 'query-layout--focus': focus
 </template>
 
 <script lang="ts" setup name="query">
-  import { useMagicKeys, useActiveElement, useStorage } from '@vueuse/core'
+  import { useMagicKeys, useActiveElement } from '@vueuse/core'
   import { useQueryFocusMode } from '@/composables/use-query-focus-mode'
+  import useUiPref from '@/composables/use-ui-pref'
   import { decodeMaybeEncoded } from '@/utils/query-url'
   import { provideQuerySession } from './use-query-session'
 
@@ -61,7 +62,7 @@ a-layout.new-layout.new-layout--workspace(:class="{ 'query-layout--focus': focus
   const logsHeight = ref(66)
   const focusMode = useQueryFocusMode()
 
-  const sidebarWidth = useStorage('sidebarWidth', 228)
+  const sidebarWidth = useUiPref('querySidebarWidth', 228)
 
   /**
    * Deep-link / product tour: append `?sql=` into the editor (do not replace),

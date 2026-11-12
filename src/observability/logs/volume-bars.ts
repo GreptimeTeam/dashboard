@@ -116,7 +116,7 @@ export default function buildLogVolumeBarsOption(
     xAxis: {
       type: 'time',
       show: true,
-      boundaryGap: true,
+      // Time axes reject boolean boundaryGap; min/max already pin the window.
       min: startMs,
       max: endMs,
       minInterval: tickIntervalMs,

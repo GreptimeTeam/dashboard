@@ -1,85 +1,26 @@
-import { computed, effectScope, ref, type Ref } from 'vue'
-import { useStorage } from '@vueuse/core'
+import { computed } from 'vue'
+import useUiPref from '@/composables/use-ui-pref'
 
 export type LogsTableColumnMode = 'separate' | 'merged' | 'merged-with-keys'
-
-interface LogsTablePrefsState {
-  mergeColumn: Ref<boolean>
-  showKeys: Ref<boolean>
-  displayedColumnsByTable: Ref<Record<string, string[]>>
-  offeredColumnsByTable: Ref<Record<string, string[]>>
-  compactRows: Ref<boolean>
-}
 
 /**
  * LogsTable display prefs.
  *
- * Single column / show keys / compact rows are transient view tweaks and stay session-only
- * (module state keyed by `storagePrefix`), so the log query page (`logquery`) and the
- * drilldown logs table (`drilldown-logs`) no longer leak into each other through
- * localStorage.
+ * All of these are global UI preferences stored in `uiConfig`, so the Logs Query page
+ * and the drilldown logs table share them and they survive reloads: single column,
+ * show keys, compact rows, wrap, and the set of hidden columns.
  *
- * Column visibility is the exception: it is opt-in persistent (`persistColumns`), because
- * re-hiding a long column list after every reload is much worse than a stale choice.
+ * Hidden columns are a flat list of column names, not a per-table snapshot: names
+ * missing from the current schema are simply ignored.
  */
-const stateByPrefix = new Map<string, LogsTablePrefsState>()
-
-function stateFor(prefix: string, defaultMergeColumn: boolean): LogsTablePrefsState {
-  const existing = stateByPrefix.get(prefix)
-  if (existing) {
-    return existing
-  }
-  const next: LogsTablePrefsState = {
-    mergeColumn: ref(defaultMergeColumn),
-    showKeys: ref(true),
-    displayedColumnsByTable: ref({}),
-    /** Columns already offered on this table. New query columns are shown; user hides stay hidden. */
-    offeredColumnsByTable: ref({}),
-    compactRows: ref(false),
-  }
-  stateByPrefix.set(prefix, next)
-  return next
-}
-
-interface LogsTableColumnState {
-  displayedColumnsByTable: Ref<Record<string, string[]>>
-  offeredColumnsByTable: Ref<Record<string, string[]>>
-}
-
-const columnStateByPrefix = new Map<string, LogsTableColumnState>()
-/** Detached: cached `useStorage` refs must keep writing after the first caller unmounts. */
-const columnStateScope = effectScope(true)
-
-function columnStateFor(prefix: string): LogsTableColumnState {
-  const existing = columnStateByPrefix.get(prefix)
-  if (existing) {
-    return existing
-  }
-  const next = columnStateScope.run(
-    (): LogsTableColumnState => ({
-      displayedColumnsByTable: useStorage<Record<string, string[]>>(`${prefix}-table-column-visible`, {}),
-      /** Columns already offered on this table. New query columns are shown; user hides stay hidden. */
-      offeredColumnsByTable: useStorage<Record<string, string[]>>(`${prefix}-table-column-offered`, {}),
-    })
-  ) as LogsTableColumnState
-  columnStateByPrefix.set(prefix, next)
-  return next
-}
-
-export default function useLogsTablePrefs(options?: {
-  storagePrefix?: string
-  defaultMergeColumn?: boolean
-  /** Persist column visibility (and the "already offered" bookkeeping it needs) across visits. */
-  persistColumns?: boolean
-}) {
-  const prefix = options?.storagePrefix ?? 'logquery'
-  const session = stateFor(prefix, options?.defaultMergeColumn ?? true)
-  const { mergeColumn, showKeys, compactRows } = session
-  // The two column maps travel together: without `offeredColumnsByTable` the "first offer
-  // reveals every column" rule would resurrect columns the user hid in an earlier visit.
-  const { displayedColumnsByTable, offeredColumnsByTable } = options?.persistColumns ? columnStateFor(prefix) : session
-  /** Wrap is session-only — keep the same behavior. */
-  const wrap = ref(false)
+export default function useLogsTablePrefs() {
+  // Global display mode: false means multiple columns (the default), true is the
+  // merged single-column view. `showKeys` only applies to the merged mode.
+  const mergeColumn = useUiPref('logsTableSingleColumn', false)
+  const showKeys = useUiPref('logsTableShowKeys', true)
+  const compactRows = useUiPref('logsTableCompactRows', false)
+  const wrap = useUiPref('logsTableWrapLines', false)
+  const hiddenColumns = useUiPref<string[]>('logsTableHiddenColumns', [])
 
   const size = computed<'mini' | 'medium'>(() => (compactRows.value ? 'mini' : 'medium'))
 
@@ -92,70 +33,56 @@ export default function useLogsTablePrefs(options?: {
 
   const columnModeKey = computed(() => columnMode.value)
 
-  function displayedColumnsFor(tableName: string | undefined): string[] {
-    if (!tableName) {
-      return []
-    }
-    return displayedColumnsByTable.value[tableName] || []
+  const hiddenColumnSet = computed(() => new Set(hiddenColumns.value))
+
+  function isColumnHidden(name: string): boolean {
+    return hiddenColumnSet.value.has(name)
   }
 
-  /** Seed visible columns for a table when unset or empty. */
-  function ensureDisplayedColumns(tableName: string | undefined, columnNames: string[]) {
-    if (!tableName || !columnNames.length) {
-      return
-    }
-    const current = displayedColumnsByTable.value[tableName]
-    if (!current?.length) {
-      displayedColumnsByTable.value = {
-        ...displayedColumnsByTable.value,
-        [tableName]: [...columnNames],
-      }
-    }
+  /** Hidden names that actually exist in the given table. */
+  function hiddenColumnsFor(columnNames: string[]): string[] {
+    return columnNames.filter((name) => hiddenColumnSet.value.has(name))
+  }
+
+  /** Visible names for the given table; unknown hidden names are ignored. */
+  function visibleColumnsFor(columnNames: string[]): string[] {
+    return columnNames.filter((name) => !hiddenColumnSet.value.has(name))
   }
 
   /**
-   * Drilldown queries every schema column and defaults to multi-column mode: every column is
-   * visible until the user hides one, and hides survive reloads. A column appears the first time
-   * this table offers it. Log query uses `ensureDisplayedColumns` instead.
-   *
-   * A stored list with fewer than two usable columns counts as "nothing stored": earlier builds
-   * seeded `['timestamp']` from a partial schema load (that is the one-column table), which is a
-   * broken write rather than a preference. Names the schema no longer has are dropped.
+   * Replace the current table's hidden columns while preserving hidden names that
+   * belong to other tables (the list is global, not per table).
    */
-  function revealOfferedColumns(tableName: string | undefined, columnNames: string[]) {
-    if (!tableName || !columnNames.length) {
-      return
-    }
-    const offered = new Set(offeredColumnsByTable.value[tableName] || [])
-    const stored = (displayedColumnsByTable.value[tableName] || []).filter((name) => columnNames.includes(name))
-    const visible = new Set(stored.length > 1 ? stored : [])
-    const firstOffer = offered.size === 0 || stored.length <= 1
-    columnNames.forEach((name) => {
-      if (firstOffer || !offered.has(name)) {
-        visible.add(name)
-      }
-    })
-    offeredColumnsByTable.value = {
-      ...offeredColumnsByTable.value,
-      [tableName]: [...columnNames],
-    }
-    displayedColumnsByTable.value = {
-      ...displayedColumnsByTable.value,
-      [tableName]: [...visible],
-    }
+  function setVisibleColumns(columnNames: string[], visible: string[]): void {
+    const visibleSet = new Set(visible)
+    const otherHidden = hiddenColumns.value.filter((name) => !columnNames.includes(name))
+    const nextHidden = columnNames.filter((name) => !visibleSet.has(name))
+    hiddenColumns.value = [...new Set([...otherHidden, ...nextHidden])]
+  }
+
+  function showAllColumns(columnNames: string[]): void {
+    const names = new Set(columnNames)
+    hiddenColumns.value = hiddenColumns.value.filter((name) => !names.has(name))
+  }
+
+  function hideAllColumns(columnNames: string[]): void {
+    hiddenColumns.value = [...new Set([...hiddenColumns.value, ...columnNames])]
   }
 
   return {
     mergeColumn,
     showKeys,
-    displayedColumnsByTable,
+    hiddenColumns,
     compactRows,
     wrap,
     size,
     columnMode,
     columnModeKey,
-    displayedColumnsFor,
-    ensureDisplayedColumns,
-    revealOfferedColumns,
+    isColumnHidden,
+    hiddenColumnsFor,
+    visibleColumnsFor,
+    setVisibleColumns,
+    showAllColumns,
+    hideAllColumns,
   }
 }

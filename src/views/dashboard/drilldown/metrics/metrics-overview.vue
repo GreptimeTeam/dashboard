@@ -33,8 +33,8 @@
 <script setup lang="ts">
   import { computed, ref } from 'vue'
   import { storeToRefs } from 'pinia'
-  import { useStorage } from '@vueuse/core'
   import { useAppStore } from '@/store'
+  import useUiPref from '@/composables/use-ui-pref'
   import { useDrilldownContext } from '@/observability/context'
   import type { MetricsSortOption } from '@/observability/metrics/catalog'
   import useMetricsCatalog from '@/observability/use-metrics-catalog'
@@ -53,7 +53,7 @@
       enabled: () => !ctx.ui.metric.value,
     })
 
-  const sidebarWidth = useStorage('drilldown-metrics-sidebar-width', 270)
+  const sidebarWidth = useUiPref('drilldownMetricsSidebarWidth', 270)
   const { hideSidebar } = storeToRefs(useAppStore())
 
   const actualSidebarWidth = computed(() => {

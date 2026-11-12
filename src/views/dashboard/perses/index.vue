@@ -206,11 +206,11 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
 
 <script lang="ts" setup name="PersesDashboard">
   import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-  import { useStorage } from '@vueuse/core'
   import { storeToRefs } from 'pinia'
   import { Message } from '@arco-design/web-vue'
   import { useRoute, useRouter } from 'vue-router'
   import { useAppStore } from '@/store'
+  import useUiPref from '@/composables/use-ui-pref'
   import PersesDashboardIframe from '@/perses-dashboard/vue/PersesDashboardIframe.vue'
   import type { PersesDashboardFile } from '@/perses-dashboard/react/WorkbenchProvider'
   import {
@@ -242,8 +242,8 @@ a-layout.detail-layout.new-layout.new-layout--workspace(:class="{ 'is-sidebar-re
   const DASHBOARD_QUERY_KEY = 'dashboard'
   const PERSES_LEARN_MORE_URL = 'https://perses.dev/perses/docs/api/dashboard/'
   const PERSES_SKILL_INSTALL_URL = 'https://github.com/GreptimeTeam/dashboard/blob/main/skills/README.md'
-  const sidebarWidthStorage = useStorage('perses-sidebar-width', 228)
-  const skillAlertDismissed = useStorage('perses-skill-alert-dismissed', false)
+  const sidebarWidthStorage = useUiPref('persesSidebarWidth', 228)
+  const skillAlertDismissed = useUiPref('persesSkillAlertDismissed', false)
   const isSidebarResizing = ref(false)
 
   const dismissSkillAlert = () => {

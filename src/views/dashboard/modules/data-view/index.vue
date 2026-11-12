@@ -122,9 +122,10 @@ a-tabs.panel-tabs(
 
 <script lang="ts" name="DataView" setup>
   import { Message } from '@arco-design/web-vue'
-  import { useStorage } from '@vueuse/core'
   import { useI18n } from 'vue-i18n'
+  import { storeToRefs } from 'pinia'
   import fileDownload from 'js-file-download'
+  import { useAppStore } from '@/store'
   import useDataChart from '@/hooks/data-chart'
   import type { PromForm, ResultType } from '@/store/modules/code-run/types'
   import { normalizeRecordsToTableModel } from '@/utils/table-normalizer'
@@ -152,7 +153,7 @@ a-tabs.panel-tabs(
   const refreshingKeys = ref(new Set<string | number>())
   const exportingKeys = ref(new Set<string | number>())
   const resultViewMap = ref<Record<string | number, 'table' | 'chart'>>({})
-  const compactRows = useStorage('query-table-compact-rows', false)
+  const { compactRows } = storeToRefs(useAppStore())
   const tableSize = computed(() => (compactRows.value ? 'mini' : 'medium'))
   const wrapLines = ref(false)
   // Add a method to select specific tab

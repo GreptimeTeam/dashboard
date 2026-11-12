@@ -1,4 +1,5 @@
 import dayjs from 'dayjs'
+import { readJSON, readRaw, sessionStore, writeJSON, writeRaw } from '@/utils/storage'
 
 export interface NewsItem {
   title: string
@@ -20,29 +21,27 @@ const UID_KEY = 'greptime_anon_id'
 const TTL_MS = 10 * 60 * 1000
 
 const getAnonId = () => {
-  let id = localStorage.getItem(UID_KEY)
-  if (!id) {
-    id = crypto.randomUUID()
-    localStorage.setItem(UID_KEY, id)
+  const storage = sessionStore()
+  const existing = readRaw(UID_KEY, storage)
+  if (existing) {
+    return existing
   }
+  const id = crypto.randomUUID()
+  writeRaw(UID_KEY, id, storage)
   return id
 }
 
 const setCachedNews = (items: NewsItem[]) => {
   if (!items || items.length === 0) return
-  localStorage.setItem(CACHE_KEY, JSON.stringify({ items, timestamp: Date.now() }))
+  writeJSON(CACHE_KEY, { items, timestamp: Date.now() }, sessionStore())
 }
 
 const getCachedNews = (): { items: NewsItem[]; timestamp: number } | null => {
-  try {
-    const raw = localStorage.getItem(CACHE_KEY)
-    if (!raw) return null
-    const { items, timestamp } = JSON.parse(raw)
-    return { items, timestamp }
-  } catch {
-    // localStorage.removeItem(CACHE_KEY)
+  const cached = readJSON<{ items?: unknown; timestamp?: unknown }>(CACHE_KEY, sessionStore())
+  if (!cached || !Array.isArray(cached.items) || typeof cached.timestamp !== 'number') {
     return null
   }
+  return { items: cached.items as NewsItem[], timestamp: cached.timestamp }
 }
 
 const isFresh = (ts: number) => Date.now() - ts <= TTL_MS

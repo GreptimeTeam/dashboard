@@ -46,7 +46,7 @@ actions     — setSignal, setFilters, bindTable, openLogsForTrace…
   - **L2 filters**：同一组 chips 经各信号 `fieldMap` / 物理列映射为 Prom `match[]` 与 SQL WHERE **并行生效**；目标信号缺少该列时隐藏但不删除，切回再用；
   - **L3 trace_id**：Logs / Traces 共享 `ui.focusTraceId`；**Metrics→Trace 经 Logs**（MVP 无 exemplar）。
 - Trace→Logs 临时换表走 overlay 快照，**不改写** `connection.logsDatabase` 持久化偏好。
-- 不做原始行 JOIN；URL ↔ Context 双向同步（query key 与 localStorage schema 不变）。
+- 不做原始行 JOIN；URL ↔ Context 双向同步（query key 不变；drilldown settings 使用单槽 localStorage，值内带 host+db 标记）。
 
 ---
 

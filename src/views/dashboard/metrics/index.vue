@@ -87,8 +87,8 @@ a-layout.new-layout.new-layout--workspace
   import { ref, computed, onMounted, watch, nextTick, provide } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRoute, useRouter } from 'vue-router'
-  import { useStorage } from '@vueuse/core'
   import { useSeries } from '@/hooks/use-series'
+  import useUiPref from '@/composables/use-ui-pref'
   import TimezoneInstantPicker from '@/components/time-select/instant-picker.vue'
   import { Message } from '@arco-design/web-vue'
   import { storeToRefs } from 'pinia'
@@ -121,7 +121,7 @@ a-layout.new-layout.new-layout--workspace
     instantQueryTime,
   } = seriesHook
 
-  const sidebarWidth = useStorage('metrics-sidebar-width', 228)
+  const sidebarWidth = useUiPref('metricsSidebarWidth', 228)
   const activeTab = ref(route.query.tab || 'table')
   const chartType = ref('line')
   const stepSelectionType = ref('medium')

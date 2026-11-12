@@ -84,6 +84,7 @@
   import { Message } from '@arco-design/web-vue'
   import type { FormInstance } from '@arco-design/web-vue'
   import { submitFeedback } from '@/api/feedback'
+  import { readRaw, sessionStore, writeRaw } from '@/utils/storage'
   import useContactForm from './use-contact-form'
 
   const STORAGE_KEY = 'contact_form_last_submission'
@@ -220,7 +221,7 @@
       return false
     }
 
-    const lastStored = localStorage.getItem(STORAGE_KEY)
+    const lastStored = readRaw(STORAGE_KEY, sessionStore())
     if (lastStored && now - parseInt(lastStored, 10) < MIN_RESUBMIT_MS) {
       Message.warning(t('contact.duplicate'))
       return false
@@ -242,7 +243,7 @@
 
     isSubmitting.value = true
     lastSubmissionTime.value = Date.now()
-    localStorage.setItem(STORAGE_KEY, String(Date.now()))
+    writeRaw(STORAGE_KEY, String(Date.now()), sessionStore())
 
     try {
       const result = await submitFeedback({
