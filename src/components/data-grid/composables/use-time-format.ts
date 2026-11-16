@@ -9,7 +9,7 @@ import getCellString from '../utils/cell-text'
  * Timestamp display state: formatted (timezone-aware) vs raw value.
  * The toggle lives in the column header pill and applies to every time column.
  */
-export default function useLogsTimeFormat() {
+export default function useTimeFormat() {
   const { t } = useI18n()
   const { formatDateTimeWithMs } = useDateTimeFormat()
   const { timezoneLabel, timezoneFullLabel, showTimezoneLabel } = useDashboardTimezone()
@@ -51,7 +51,7 @@ export default function useLogsTimeFormat() {
             ? `${timezoneFullLabel.value} · ${t('dashboard.showTimestamp')}`
             : t('dashboard.formatTimestamp'),
         default: () =>
-          h('span', { class: ['gpt-semantic-th', 'timestamp', 'logs-vxe-ts-th'], onClick: changeTsView }, [
+          h('span', { class: ['gpt-semantic-th', 'timestamp', 'dg-ts-th'], onClick: changeTsView }, [
             h('svg', { class: 'icon-12' }, [h('use', { href: '#time-index' })]),
             h('span', { class: 'gpt-semantic-th-text' }, title),
             tsViewStr.value && showTimezoneLabel.value

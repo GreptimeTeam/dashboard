@@ -12,6 +12,14 @@ export default defineConfig({
   test: {
     environment: 'node',
     // Playwright release smoke specs run via `pnpm smoke:release`, not vitest.
-    exclude: ['**/node_modules/**', '**/dist/**', 'tests/release-smoke/**'],
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      'tests/release-smoke/**',
+      'tests/perf/**',
+      // Git worktrees hold their own checkout of the suite; running them here
+      // double-counts tests and reports failures from another branch.
+      '.worktrees/**',
+    ],
   },
 })

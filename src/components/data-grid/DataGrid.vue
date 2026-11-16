@@ -1,0 +1,1289 @@
+<template lang="pug">
+.data-grid(
+  ref="rootEl"
+  :class="{ 'data-grid--wrap': wrapLine, 'data-grid--paged': paginationEnabled, 'data-grid--auto-height': !fillHeight }"
+  :style="cellTypographyStyle"
+)
+  .dg-grid-host(ref="gridHostEl")
+    component(
+      :key="wrapLine ? 'wrap' : 'nowrap'"
+      ref="gridRef"
+      border="default"
+      fit
+      size="mini"
+      :is="VxeGrid"
+      :show-overflow="tableShowOverflow"
+      :show-header-overflow="tableHeaderOverflow"
+      :height="gridHeight"
+      :data="displayData"
+      :columns="vxeColumns"
+      :loading="loading"
+      :row-config="rowConfig"
+      :column-config="columnConfig"
+      :virtual-y-config="virtualYConfig"
+      :virtual-x-config="virtualXConfig"
+      :scrollbar-config="scrollbarConfig"
+      :resizable-config="{ isDblclickAutoWidth: true }"
+      :show-header="showHeader"
+      :row-class-name="rowClassName"
+      @scroll="loadMore.onScroll"
+      @cell-click="onCellClick"
+      @data-rendered="onDataRendered"
+    )
+      // vxe-table 4.7+ splits Loading into vxe-pc-ui; without VxeLoading registered,
+      // :loading=true warns unless a #loading slot is provided.
+      template(#loading)
+        .dg-loading
+          a-spin
+      template(#empty)
+        a-empty.dg-empty(description="No data")
+          template(#image)
+            img.dg-empty-icon(alt="" :src="tableEmptyIcon")
+    .dg-load-more(
+      v-if="loadMore.showLoadMoreBar.value"
+      role="button"
+      :class="{ 'is-loading': loadingMore }"
+      :style="{ bottom: `${loadMore.scrollXOffset.value}px` }"
+      :aria-busy="loadingMore ? 'true' : 'false'"
+      @click="loadMore.requestLoadMore"
+    )
+      a-spin(v-if="loadingMore" :size="14")
+      svg.dg-load-more__icon(v-else)
+        use(href="#down")
+      span.dg-load-more__text
+        | {{ loadingMore ? t('drilldown.logs.loadingMore') : t('logsQuery.loadMoreHint') }}
+  DataGridPager(
+    v-if="paginationEnabled && paginationPlacement === 'bottom'"
+    :total="pagination.totalRows.value"
+    :current="pagination.currentPage.value"
+    :page-size="pagination.pageSize.value"
+    :page-size-options="paginationOptions.pageSizeOptions"
+    :simple="paginationOptions.simple"
+    @update:current="onPageChange"
+    @update:page-size="onPageSizeChange"
+  )
+  a-popover(
+    v-model:popup-visible="cellDetailVisible"
+    trigger="click"
+    position="top"
+    popup-container="body"
+    content-class="dg-cell-detail-popover"
+  )
+    .dg-cell-detail-anchor(aria-hidden="true" :style="cellDetailAnchorStyle")
+    template(#content)
+      .dg-cell-detail
+        .dg-cell-detail__title {{ cellDetail?.title }}
+        pre.dg-cell-detail__content {{ cellDetail?.content }}
+  a-dropdown#dg-td-context(
+    v-model:popup-visible="contextMenu.contextMenuVisible.value"
+    trigger="contextMenu"
+    :style="contextMenu.contextMenuStyle.value"
+    @clickoutside="contextMenu.hideContextMenu"
+    @popup-visible-change="contextMenu.onContextMenuVisibleChange"
+    @select="contextMenu.handleMenuClick"
+  )
+    template(#content)
+      a-doption(value="copy") Copy Field Value
+      a-dsubmenu(v-if="contextMenu.filterOptions.value.length > 0" trigger="hover") Filter
+        template(#content)
+          a-doption(v-for="op in contextMenu.filterOptions.value" :key="op" :value="`filter_${op}`") {{ op }} value
+</template>
+
+<script setup lang="ts">
+  import { computed, h, nextTick, onBeforeUnmount, onMounted, ref, useSlots, watch } from 'vue'
+  import { useI18n } from 'vue-i18n'
+  import { useDebounceFn, useElementSize } from '@vueuse/core'
+  import { VxeGrid } from 'vxe-table'
+  import 'vxe-table/lib/style.css'
+  import type { ColumnType, TSColumn } from '@/types/query'
+  import { isJsonDataType } from '@/utils/json-display'
+  import tableEmptyIcon from '@/assets/images/table-empty.svg?url'
+  import useTimeFormat from './composables/use-time-format'
+  import useCellDetail from './composables/use-cell-detail'
+  import useContextMenu from './composables/use-context-menu'
+  import useLoadMore from './composables/use-load-more'
+  import usePagination, {
+    DEFAULT_PAGE_SIZE,
+    DEFAULT_PAGE_SIZE_OPTIONS,
+    type PaginationOptions,
+  } from './composables/use-pagination'
+  import DataGridPager from './DataGridPager.vue'
+  import { formatCellText, renderJsonHeader, renderSemanticHeader } from './renderers'
+  import {
+    COLUMN_MAX_WIDTH,
+    areWidthRulesEqual,
+    computeColumnWidthRules,
+    type LeftoverStrategy,
+  } from './utils/column-widths'
+  import { buildDisplayRows, getSeparateFields, isTimeColumn } from './utils/table-data'
+  import { buildVxeColumns } from './utils/vxe-columns'
+  import type { TableData } from './types'
+
+  type VxeColumnInfo = { field?: string; renderWidth: number; renderAutoWidth: number }
+
+  type VxeGridInstance = {
+    recalculate?: (refull?: boolean) => Promise<void> | void
+    recalcRowHeight?: (rowOrId: unknown) => Promise<void> | void
+    getTableColumn?: () => { visibleColumn: VxeColumnInfo[] }
+    scrollTo?: (scrollLeft: number, scrollTop: number) => Promise<void> | void
+  }
+
+  const props = withDefaults(
+    defineProps<{
+      data: TableData[]
+      columns: ColumnType[]
+      displayedColumns?: string[]
+      tsColumn?: TSColumn | null
+      /** Row-detail mode: the timestamp cell is a link (parity with tsCellDetail). */
+      tsCellDetail?: boolean
+      columnMode?: 'separate' | 'merged' | 'merged-with-keys'
+      loading?: boolean
+      size?: 'small' | 'mini' | 'medium' | 'large'
+      showHeader?: boolean
+      activeRowKey?: number | null
+      linkColumn?: string
+      height?: number
+      /** When true: wrap cells and use dynamic row height (VXE showOverflow false). */
+      wrapLine?: boolean
+      /** Builder mode: show per-cell filter/copy menu (separate only). */
+      showContextMenu?: boolean
+      /** Drilldown chips (`=~`) vs Logs Query SQL builder (`LIKE`). */
+      filterMenuKind?: 'sql-builder' | 'drilldown'
+      /**
+       * More rows can be fetched: enables the load-more footer + auto load.
+       * Parents must freeze the Search/Run time window and keyset inside it on
+       * `reachEnd` — never rewrite toolbar time from scroll (see log-keyset-window).
+       */
+      hasMore?: boolean
+      /** A load-more request is in flight. */
+      loadingMore?: boolean
+      /** Disable row virtualization (small previews render every row). */
+      virtual?: boolean | 'auto'
+      virtualThreshold?: number
+      leftoverStrategy?: LeftoverStrategy
+      columnResizable?: boolean
+      enableCellCopy?: boolean
+      /** Client-side pagination. Mutually exclusive with hasMore load-more. */
+      pagination?: boolean | PaginationOptions
+      page?: number
+      pageSize?: number
+      /**
+       * When false, the grid sizes to its content and the page scrolls
+       * (e.g. Flow `gpt-table-page`). Default fills the parent panel height.
+       */
+      fillHeight?: boolean
+    }>(),
+    {
+      data: () => [],
+      columns: () => [],
+      displayedColumns: () => [],
+      tsColumn: null,
+      tsCellDetail: false,
+      columnMode: 'separate',
+      loading: false,
+      size: 'medium',
+      showHeader: true,
+      activeRowKey: null,
+      linkColumn: '',
+      height: 0,
+      wrapLine: false,
+      showContextMenu: false,
+      filterMenuKind: 'sql-builder',
+      hasMore: false,
+      loadingMore: false,
+      virtual: 'auto',
+      virtualThreshold: 50,
+      leftoverStrategy: 'last-column',
+      columnResizable: true,
+      enableCellCopy: false,
+      pagination: false,
+      page: 1,
+      pageSize: DEFAULT_PAGE_SIZE,
+      fillHeight: true,
+    }
+  )
+
+  const emit = defineEmits<{
+    (e: 'reachEnd'): void
+    (e: 'tsCellClick', row: TableData, rowIndex: number): void
+    (e: 'columnLinkClick', columnName: string, value: string): void
+    (e: 'filterConditionAdd', payload: { columnName: string; operator: string; value: unknown }): void
+    (e: 'update:page', page: number): void
+    (e: 'update:pageSize', size: number): void
+    (e: 'pageChange', page: number, pageSize: number): void
+  }>()
+
+  const { t } = useI18n()
+  const slots = useSlots()
+  const { formatTsDisplay, changeTsView, renderTsHeader } = useTimeFormat()
+
+  const rootEl = ref<HTMLElement | null>(null)
+  const gridHostEl = ref<HTMLElement | null>(null)
+  const gridRef = ref<VxeGridInstance | null>(null)
+  // Measure the grid host — not `.data-grid` — so a bottom pager does not
+  // inflate `:height` and clip VXE's horizontal scrollbar under overflow:hidden.
+  const { height: hostHeight } = useElementSize(gridHostEl)
+
+  const paginationEnabled = computed(() => props.pagination !== false)
+  const paginationOptions = computed(() => {
+    const raw = props.pagination
+    if (!raw || raw === true) {
+      return {
+        pageSize: props.pageSize || DEFAULT_PAGE_SIZE,
+        pageSizeOptions: DEFAULT_PAGE_SIZE_OPTIONS,
+        placement: 'bottom' as const,
+        simple: false,
+      }
+    }
+    return {
+      pageSize: raw.pageSize ?? props.pageSize ?? DEFAULT_PAGE_SIZE,
+      pageSizeOptions: raw.pageSizeOptions ?? DEFAULT_PAGE_SIZE_OPTIONS,
+      placement: raw.placement ?? 'bottom',
+      simple: raw.simple ?? false,
+    }
+  })
+  const paginationPlacement = computed(() => paginationOptions.value.placement)
+
+  const pagination = usePagination({
+    enabled: () => paginationEnabled.value,
+    data: () => props.data,
+    pageSize: () => paginationOptions.value.pageSize,
+    activeRowKey: () => props.activeRowKey,
+  })
+
+  watch(
+    () => props.page,
+    (page) => {
+      if (paginationEnabled.value && page > 0 && page !== pagination.currentPage.value) {
+        pagination.setPage(page)
+      }
+    },
+    { immediate: true }
+  )
+
+  function resolveGridApi(): VxeGridInstance | null {
+    const raw = gridRef.value as (VxeGridInstance & { getGrid?: () => VxeGridInstance }) | null
+    if (!raw) {
+      return null
+    }
+    if (typeof raw.recalculate === 'function') {
+      return raw
+    }
+    if (typeof raw.getGrid === 'function') {
+      return raw.getGrid() || null
+    }
+    return raw
+  }
+
+  function onPageChange(page: number) {
+    pagination.setPage(page)
+    emit('update:page', page)
+    emit('pageChange', page, pagination.pageSize.value)
+    nextTick(() => resolveGridApi()?.scrollTo?.(0, 0))
+  }
+
+  function onPageSizeChange(size: number) {
+    pagination.setPageSize(size)
+    emit('update:pageSize', size)
+    emit('update:page', 1)
+    emit('pageChange', 1, size)
+    nextTick(() => resolveGridApi()?.scrollTo?.(0, 0))
+  }
+
+  const tableHeight = computed(() => {
+    if (props.height > 0) {
+      return props.height
+    }
+    return Math.max(0, hostHeight.value)
+  })
+
+  /** Prefer measured px; fall back to 100% so first paint is not blank. */
+  const gridHeight = computed(() => {
+    if (!props.fillHeight) {
+      return undefined
+    }
+    return tableHeight.value > 0 ? tableHeight.value : '100%'
+  })
+
+  /** false = allow wrap + dynamic row height; 'ellipsis' = truncate without a native title. */
+  const tableShowOverflow = computed(() => (props.wrapLine ? false : 'ellipsis'))
+  /** Headers always ellipsis — wrapLine only applies to the body. */
+  const tableHeaderOverflow = 'ellipsis'
+
+  const rowHeight = computed(() => {
+    switch (props.size) {
+      case 'mini':
+        return 28
+      case 'small':
+        return 32
+      case 'large':
+        return 44
+      default:
+        return 36
+    }
+  })
+
+  /**
+   * Cell typography, matching the legacy DataTable (Arco `size="medium"`):
+   * 14px Geist, 22px line-height, 7px vertical padding → 36px rows.
+   * VXE's own `size` scale (12px/5px) is smaller than Arco's, so the values are
+   * applied explicitly instead of relying on the `size` attribute.
+   */
+  const CELL_TYPOGRAPHY = {
+    mini: { font: 12, line: 18, padY: 5 },
+    small: { font: 14, line: 22, padY: 5 },
+    medium: { font: 14, line: 22, padY: 7 },
+    large: { font: 14, line: 22, padY: 11 },
+  } as const
+
+  const cellTypographyStyle = computed(() => {
+    const typography = CELL_TYPOGRAPHY[props.size] ?? CELL_TYPOGRAPHY.medium
+    return {
+      '--dg-cell-font-size': `${typography.font}px`,
+      '--dg-cell-line-height': `${typography.line}px`,
+      '--dg-cell-pad-y': `${typography.padY}px`,
+    }
+  })
+
+  const rowConfig = computed(() => {
+    const base = {
+      isHover: true,
+      keyField: '__rowIndex',
+    }
+    if (props.wrapLine) {
+      return base
+    }
+    return { ...base, height: rowHeight.value }
+  })
+
+  const columnConfig = computed(() => ({
+    resizable: props.columnResizable && props.columnMode === 'separate',
+  }))
+
+  const showFilterMenu = computed(() => props.showContextMenu && props.columnMode === 'separate')
+
+  /**
+   * Row virtualization is decided by row count (`gt`), not by an app-level
+   * "virtual vs not" flag: a 20-row page and a 20-row preview are the same table
+   * for layout purposes, and a 100-row page benefits from virtual scrolling just
+   * as much as an unpaginated result. `virtual: false` stays as an explicit
+   * opt-out for tiny previews that rely on plain document flow.
+   */
+  const virtualYConfig = computed(() => ({
+    enabled: props.virtual !== false,
+    gt: props.virtualThreshold,
+  }))
+
+  /**
+   * VXE hides native body scrollbars and paints its own track via
+   * `.vxe-table--scroll-x/y-handle`. Pin an explicit size so the virtual track
+   * opens when content overflows (macOS overlay bars otherwise report 0).
+   * Keep this a few px larger than the styled thumb so `clientHeight > 0` —
+   * Chromium skips painting the thumb when the scrollport collapses to 0.
+   */
+  const SCROLLBAR_SIZE = 14
+  const scrollbarConfig = {
+    width: SCROLLBAR_SIZE,
+    height: SCROLLBAR_SIZE,
+    x: { visible: true },
+    y: { visible: true },
+  }
+
+  const fieldsInput = computed(() => ({
+    columns: props.columns,
+    displayedColumns: props.displayedColumns,
+    tsColumn: props.tsColumn,
+    linkColumn: props.linkColumn,
+  }))
+
+  /**
+   * Slice first, then format. Building display rows for the full result set
+   * (old PaginatedDataTable did the opposite) made Traces with thousands of
+   * rows × many columns freeze on every reactive pass.
+   */
+  const pageSourceData = computed(() => {
+    if (!paginationEnabled.value) {
+      return props.data
+    }
+    const start = (pagination.currentPage.value - 1) * pagination.pageSize.value
+    return props.data.slice(start, start + pagination.pageSize.value).map((row, index) => ({
+      ...row,
+      __rowIndex: start + index,
+    }))
+  })
+
+  const displayData = computed(() =>
+    buildDisplayRows({
+      ...fieldsInput.value,
+      data: pageSourceData.value,
+      columnMode: props.columnMode,
+      textOf: (value, column) => formatTsDisplay(value, column),
+    })
+  )
+
+  const layoutFields = computed(() => {
+    if (props.columnMode !== 'separate') {
+      return [props.tsColumn?.name, '__merged_message'].filter((f): f is string => Boolean(f))
+    }
+    return getSeparateFields(fieldsInput.value).map((item) => item.field)
+  })
+
+  const hideJsonNullsByColumn = ref<Record<string, boolean>>({})
+
+  /**
+   * Advance widths as a fraction of the cell font size, measured on 14px Geist:
+   *
+   *   lowercase / punctuation  7.2px  (0.52em)
+   *   digits / uppercase       8.8px  (0.63em)   ← hex ids, enums, timestamps
+   *   CJK / full-width        13.9px  (1.00em)
+   *
+   * A single factor cannot cover all three: fitting lowercase made 32-char trace
+   * ids clip, fitting ids wasted ~30% on timestamp columns. Ratios scale with the
+   * font so `size="mini"` (12px) also works.
+   */
+  const NARROW_CHAR_RATIO = 0.52
+  const WIDE_CHAR_RATIO = 0.63
+  const CJK_CHAR_RATIO = 1
+  /** 10px horizontal padding each side (+4px buffer); 16px on the edge columns. */
+  const ESTIMATED_CELL_PADDING_PX = 24
+  /**
+   * Extra room for slot decorations: context-menu icon (12px) + flex gap (4px) +
+   * slack. Slot content can be wider than its text (buttons, icons), and the slot
+   * renderer caps itself at 100% width, so under-allocating clips it.
+   */
+  /** Floor for slot columns: pills and single buttons fit at this width. */
+  const SLOT_MIN_WIDTH_PX = 120
+  const SLOT_DECORATION_PX = 28
+  const ESTIMATED_MAX_WIDTH_PX = 600
+  const ESTIMATED_MIN_WIDTH_PX = 60
+  // Full-width ranges: CJK, Hangul, Hiragana/Katakana, full-width forms.
+  const CJK_CHARS = /[\u1100-\u115f\u2e80-\ua4cf\uac00-\ud7a3\uf900-\ufaff\ufe30-\ufe4f\uff00-\uff60\uffe0-\uffe6]/g
+  const WIDE_CHARS = /[0-9A-Z]/g
+
+  /** Content width estimate in px for one cell string (no DOM reads). */
+  function estimateTextWidthPx(text: string, fontSizePx: number): number {
+    const cjk = text.match(CJK_CHARS)?.length ?? 0
+    const wide = text.match(WIDE_CHARS)?.length ?? 0
+    const narrow = Math.max(0, text.length - cjk - wide)
+    const em = narrow * NARROW_CHAR_RATIO + wide * WIDE_CHAR_RATIO + cjk * CJK_CHAR_RATIO
+    return Math.ceil(em * fontSizePx + ESTIMATED_CELL_PADDING_PX)
+  }
+
+  /**
+   * Per-column widths derived from the display strings — no DOM reads.
+   *
+   * Widths used to come from VXE's `calcColumnAutoWidth`, which is
+   * O(columns × cells) because it queries the whole table once per column
+   * (232 columns spent ~2.7s in a single long task). Estimating from the
+   * already-stringified rows costs one string scan per column.
+   */
+  function estimateColumnWidths(): Record<string, number> {
+    const fields = layoutFields.value
+    const rows = displayData.value
+    const fontSize = CELL_TYPOGRAPHY[props.size]?.font ?? 14
+    const widths: Record<string, number> = {}
+    fields.forEach((field) => {
+      // Longest string wins; estimating once per column keeps this O(rows × fields)
+      // string scans instead of a per-character pass over every cell.
+      let longest = field
+      for (let i = 0; i < rows.length; i += 1) {
+        const text = rows[i][field]
+        if (typeof text === 'string' && text.length > longest.length) {
+          longest = text
+        }
+      }
+      // Columns with a parent slot carry decorations (link buttons, context-menu
+      // icons, gaps) that raw text width does not account for — and their content
+      // may not be text at all (pills, action buttons), in which case `longest` is
+      // only the header. Floor them so controls are never clipped; columns with
+      // truly non-text content should declare `width` on the column definition.
+      const hasSlot = Boolean(slots[`column-${field}`])
+      const decoration = hasSlot ? SLOT_DECORATION_PX : 0
+      const floor = hasSlot ? SLOT_MIN_WIDTH_PX : ESTIMATED_MIN_WIDTH_PX
+      widths[field] = Math.min(
+        ESTIMATED_MAX_WIDTH_PX,
+        Math.max(floor, estimateTextWidthPx(longest, fontSize) + decoration)
+      )
+    })
+    return widths
+  }
+
+  const columnWidthRules = ref<ReturnType<typeof computeColumnWidthRules>>({})
+
+  // Column virtualization is always safe: widths never depend on the DOM,
+  // so off-screen columns don't need to be rendered to be sized.
+  const virtualXConfig = computed(() => ({
+    enabled: props.columnMode === 'separate' && layoutFields.value.length > 8,
+    gt: 0,
+  }))
+
+  watch(
+    () => [layoutFields.value.join('\0'), displayData.value, props.size, props.leftoverStrategy] as const,
+    () => {
+      const next = computeColumnWidthRules(layoutFields.value, estimateColumnWidths(), props.leftoverStrategy)
+      if (!areWidthRulesEqual(columnWidthRules.value, next)) {
+        columnWidthRules.value = next
+      }
+    },
+    { immediate: true }
+  )
+
+  function getOriginalRow(row: TableData): TableData {
+    const rowIndex = typeof row.__rowIndex === 'number' ? row.__rowIndex : -1
+    if (rowIndex >= 0 && props.data[rowIndex]) {
+      return props.data[rowIndex]
+    }
+    return row
+  }
+
+  function isTimeField(field: string): boolean {
+    return props.tsColumn?.name === field || isTimeColumn(props.columns.find((c) => c.name === field))
+  }
+
+  function resolveColumn(field: string): ColumnType | undefined {
+    return (
+      props.columns.find((column) => column.name === field) ||
+      (props.tsColumn?.name === field
+        ? ({
+            name: field,
+            data_type: props.tsColumn.data_type || 'timestamp',
+            title: field,
+          } as ColumnType)
+        : undefined)
+    )
+  }
+
+  function isHideJsonNulls(columnName: string): boolean {
+    return hideJsonNullsByColumn.value[columnName] !== false
+  }
+
+  function toggleHideJsonNulls(columnName: string) {
+    hideJsonNullsByColumn.value = {
+      ...hideJsonNullsByColumn.value,
+      [columnName]: !isHideJsonNulls(columnName),
+    }
+  }
+
+  const contextMenu = useContextMenu({
+    enabled: showFilterMenu,
+    columns: () => props.columns,
+    isTimeField,
+    getOriginalRow,
+    filterMenuKind: () => props.filterMenuKind,
+    onFilter: (payload) => emit('filterConditionAdd', payload),
+  })
+
+  const cellDetailApi = useCellDetail({
+    rootEl,
+    columnMode: () => props.columnMode,
+  })
+  const {
+    cellDetail,
+    cellDetailVisible,
+    cellDetailAnchorStyle,
+    scheduleCellDetail,
+    closeCellDetail,
+    clearDetailHoverCell,
+    isDetailCellTarget,
+  } = cellDetailApi
+
+  function onLinkClick(columnName: string, value: string, event: Event) {
+    event.stopPropagation()
+    const text = value.trim()
+    if (!text) {
+      return
+    }
+    emit('columnLinkClick', columnName, text)
+  }
+
+  function renderActionIcon(row: TableData, field: string) {
+    if (!showFilterMenu.value || isTimeField(field)) {
+      return null
+    }
+    // Same glyph as table-query sidebar (`table-menu`: #extra + rotate-90).
+    return h(
+      'span',
+      {
+        class: 'dg-cell-action',
+        title: 'Filter / Copy',
+        onClick: (event: MouseEvent) => contextMenu.openContextMenu(row, field, event),
+      },
+      [h('svg', { 'class': 'icon-14 rotate-90', 'aria-hidden': 'true' }, [h('use', { href: '#extra' })])]
+    )
+  }
+
+  function renderHeader(column: ColumnType, _field: string, title: string) {
+    if (isTimeColumn(column) || props.tsColumn?.name === column.name) {
+      return renderTsHeader(title)
+    }
+    if (isJsonDataType(column.data_type)) {
+      return renderJsonHeader(column, {
+        hideNulls: isHideJsonNulls(column.name),
+        onToggleHideNulls: () => toggleHideJsonNulls(column.name),
+      })
+    }
+    if (column.semantic_type) {
+      return renderSemanticHeader(column)
+    }
+    // Plain titles need a block element for text-overflow; a raw string
+    // in the header slot won't ellipsis under col--ellipsis alone.
+    return h('span', { class: 'dg-header-title' }, title)
+  }
+
+  function renderSeparateCell(params: { row: TableData; column: { field?: string } }) {
+    const { row, column } = params
+    const field = column?.field || ''
+    const meta = resolveColumn(field)
+    const text = formatCellText(row[field], meta, isHideJsonNulls(field))
+    const isLink = Boolean(props.linkColumn && field === props.linkColumn)
+    const isTs = Boolean(props.tsColumn?.name && field === props.tsColumn.name)
+
+    const textNode = isLink
+      ? h(
+          'button',
+          {
+            type: 'button',
+            class: 'dg-link',
+            onClick: (event: MouseEvent) => onLinkClick(field, text, event),
+          },
+          text
+        )
+      : h('span', { class: ['dg-cell-text', isTs ? 'dg-ts-cell' : ''] }, text)
+
+    return h('div', { class: 'dg-cell-inner' }, [textNode, renderActionIcon(row, field)])
+  }
+
+  function renderMergedCell(params: { row: TableData }) {
+    const parts = (params.row.__merged_parts as { key: string; text: string; isLink: boolean }[] | undefined) || []
+    const showKeys = props.columnMode === 'merged-with-keys'
+    const nodes = parts.flatMap((part, index) => {
+      const pieces: ReturnType<typeof h>[] = []
+      if (index > 0) {
+        pieces.push(h('span', ' '))
+      }
+      if (showKeys) {
+        pieces.push(h('span', { class: 'dg-merged-key' }, `${part.key}: `))
+      }
+      if (part.isLink) {
+        pieces.push(
+          h(
+            'button',
+            {
+              type: 'button',
+              class: 'dg-link',
+              onClick: (event: MouseEvent) => onLinkClick(part.key, part.text, event),
+            },
+            part.text
+          )
+        )
+      } else {
+        pieces.push(h('span', part.text))
+      }
+      return pieces
+    })
+    return h('div', { class: 'dg-cell-inner dg-merged-cell' }, nodes)
+  }
+
+  function hasColumnSlot(field: string) {
+    return Boolean(slots[`column-${field}`])
+  }
+
+  function renderColumnSlot(params: { row: TableData; column: { field?: string } }) {
+    const { row, column } = params
+    const field = column?.field || ''
+    const slot = slots[`column-${field}`]
+    if (!slot) {
+      return renderSeparateCell(params)
+    }
+    const meta = resolveColumn(field) || ({ name: field, data_type: '', title: field } as ColumnType)
+    const original = getOriginalRow(row)
+    const rowIndex = typeof row.__rowIndex === 'number' ? row.__rowIndex : 0
+    return h('div', { class: 'dg-cell-inner' }, [
+      slot({
+        record: original,
+        rowIndex,
+        column: meta,
+        renderedValue: formatCellText(row[field], meta, isHideJsonNulls(field)),
+        showContextMenu: showFilterMenu.value,
+        handleContextMenu: (record: TableData, columnName: string, event: Event) =>
+          contextMenu.openContextMenu(record, columnName, event),
+      }),
+      renderActionIcon(row, field),
+    ])
+  }
+
+  const vxeColumns = computed(() =>
+    buildVxeColumns({
+      columnMode: props.columnMode,
+      columns: props.columns,
+      displayedColumns: props.displayedColumns,
+      tsColumn: props.tsColumn,
+      linkColumn: props.linkColumn,
+      tsCellDetail: props.tsCellDetail,
+      wrapLine: props.wrapLine,
+      widthRules: columnWidthRules.value,
+      renderSeparateCell,
+      renderMergedCell,
+      renderHeader,
+      hasColumnSlot,
+      renderColumnSlot,
+    })
+  )
+
+  function rowClassName({ row }: { row: TableData }) {
+    const key = typeof row.__rowIndex === 'number' ? row.__rowIndex : null
+    if (key != null && props.activeRowKey === key) {
+      return 'dg-row-active'
+    }
+    return ''
+  }
+
+  function onCellClick({ row, column, $event }: { row: TableData; column: { field?: string }; $event?: MouseEvent }) {
+    const rowIndex = typeof row.__rowIndex === 'number' ? row.__rowIndex : -1
+    const original = getOriginalRow(row)
+    const field = column?.field
+    if (field && props.tsColumn?.name && field === props.tsColumn.name) {
+      if (props.tsCellDetail) {
+        emit('tsCellClick', original, rowIndex)
+        return
+      }
+      changeTsView()
+      return
+    }
+    if (field && isTimeColumn(props.columns.find((c) => c.name === field))) {
+      changeTsView()
+      return
+    }
+    if (isDetailCellTarget($event)) {
+      return
+    }
+    if (props.columnMode === 'separate') {
+      if (field && !isTimeField(field) && field !== props.linkColumn && row[field]) {
+        scheduleCellDetail(row, field, $event)
+      }
+      return
+    }
+    if (field === '__merged_message' && row.__merged_message) {
+      scheduleCellDetail(row, field, $event)
+    }
+  }
+
+  /** Wrapped rows need real heights; virtual scroll estimates the rest. */
+  async function recalcRowHeights() {
+    if (!props.wrapLine || displayData.value.length === 0) {
+      return
+    }
+    const api = resolveGridApi()
+    if (!api || typeof api.recalcRowHeight !== 'function') {
+      return
+    }
+    await nextTick()
+    const sample = displayData.value.slice(0, Math.min(displayData.value.length, 100))
+    await Promise.resolve(api.recalcRowHeight(sample))
+  }
+
+  const loadMore = useLoadMore({
+    rootEl,
+    rowHeight: () => rowHeight.value,
+    hasMore: () => props.hasMore && !paginationEnabled.value,
+    loadingMore: () => props.loadingMore,
+    wrapLine: () => props.wrapLine,
+    data: () => props.data,
+    request: () => emit('reachEnd'),
+    onScrollActivity: () => {
+      closeCellDetail()
+      clearDetailHoverCell()
+    },
+  })
+
+  onMounted(() => {
+    loadMore.checkViewportFilled()
+    rootEl.value?.addEventListener('wheel', loadMore.markScrollIntent, { passive: true })
+    rootEl.value?.addEventListener('touchmove', loadMore.markScrollIntent, { passive: true })
+  })
+
+  onBeforeUnmount(() => {
+    rootEl.value?.removeEventListener('wheel', loadMore.markScrollIntent)
+    rootEl.value?.removeEventListener('touchmove', loadMore.markScrollIntent)
+  })
+
+  watch(
+    () => props.data.length,
+    () => {
+      loadMore.checkViewportFilled()
+    }
+  )
+
+  watch(
+    () => [props.hasMore, props.loadingMore] as const,
+    () => {
+      loadMore.checkViewportFilled()
+    },
+    { immediate: true }
+  )
+
+  watch(loadMore.showLoadMoreBar, (visible) => {
+    if (visible) {
+      nextTick(loadMore.syncScrollXOffset)
+    }
+  })
+
+  // Columns get their widths from the data (no DOM measurement), so a result set
+  // change only needs to re-run the row-height pass for wrapped rows.
+  function onDataRendered() {
+    recalcRowHeights()
+  }
+
+  watch(
+    () => [props.data[0], props.wrapLine] as const,
+    () => {
+      if (props.wrapLine) {
+        nextTick(recalcRowHeights)
+      }
+    },
+    { immediate: true }
+  )
+
+  watch(
+    () =>
+      [props.data, props.data.length, props.columns, props.displayedColumns, props.columnMode, props.tsColumn] as const,
+    () => {
+      closeCellDetail()
+      clearDetailHoverCell()
+    }
+  )
+</script>
+
+<style lang="less" scoped>
+  .data-grid {
+    height: 100%;
+    width: 100%;
+    min-height: 0;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+
+    &--auto-height {
+      height: auto;
+      overflow: visible;
+
+      .dg-grid-host {
+        flex: none;
+        overflow: visible;
+      }
+    }
+
+    .dg-grid-host {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    &--paged .dg-grid-host {
+      // Keep the pager outside the scroll area.
+      min-height: 0;
+    }
+
+    .dg-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.6);
+    }
+
+    .dg-empty-icon {
+      width: 52px;
+      height: 52px;
+    }
+
+    :deep(.dg-empty .arco-empty-description) {
+      font-family: var(--font-mono);
+      font-size: var(--gpt-font-lg, 14px);
+    }
+
+    :deep(.vxe-table),
+    :deep(.vxe-grid) {
+      // System-theme header (arco-theme.less @table-color-bg-header-cell /
+      // @table-color-text-header-cell / @table-font-weight-header-text).
+      // `--vxe-ui-table-header-font-color` MUST be set here directly: VXE declares
+      // it at :root as `var(--vxe-ui-font-color)`, so it is resolved before it
+      // reaches the grid and overriding `--vxe-ui-font-color` has no effect.
+      --vxe-ui-table-header-background-color: var(--gpt-table-head-bg, #eeecf0);
+      --vxe-ui-table-header-font-color: var(--gpt-text-secondary, #8b7ba8);
+      --vxe-ui-table-header-font-weight: 600;
+      // Legacy Arco row hover used the purple tint, not a neutral fill.
+      --vxe-ui-table-row-hover-background-color: var(--gpt-table-row-hover-bg, rgba(112, 47, 237, 0.08));
+      // Legacy Arco body text color was @table-color-text-body-cell (= --gpt-text-primary,
+      // a dark purple); VXE defaults to near-black #1d2129.
+      --vxe-ui-font-color: var(--gpt-text-primary, #473460);
+      // Row separator — legacy Arco used @table-color-border (= --gpt-border-subtle).
+      --vxe-ui-table-border-color: var(--gpt-border-subtle, rgba(71, 52, 96, 0.05));
+      // Column resize drag guide (line + width tip) — legacy Arco drew the
+      // resizing border with @table-color-border_resizing (= @color-primary-6 →
+      // --gpt-main-dark), not VXE's default blue.
+      --vxe-ui-table-resizable-drag-line-color: var(--gpt-main-dark, #473460);
+      // Match scrollbarConfig — must stay ≥ the styled thumb so clientHeight > 0.
+      --vxe-ui-table-view-scrollbar-width: 14px;
+      --vxe-ui-table-view-scrollbar-height: 14px;
+      font-size: var(--dg-cell-font-size, 14px);
+    }
+
+    :deep(.vxe-table--scroll-x-virtual),
+    :deep(.vxe-table--scroll-y-virtual) {
+      background: var(--color-fill-2, #f2f3f5);
+    }
+
+    // VXE hides native body scrollbars and scrolls via `.vxe-table--scroll-*-handle`.
+    // Force a classic, always-visible thumb — macOS/Electron overlay bars leave an
+    // empty track so users can trackpad-scroll but see no bar. min-width/height keep
+    // the thumb grabable when the table is extremely wide/tall.
+    :deep(.vxe-table--scroll-x-handle),
+    :deep(.vxe-table--scroll-y-handle) {
+      scrollbar-width: thin;
+      scrollbar-color: var(--color-neutral-6, #86909c) var(--color-fill-2, #f2f3f5);
+
+      &::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+        background: transparent;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: var(--color-fill-2, #f2f3f5);
+        border: 0;
+        box-shadow: none;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        min-width: 48px;
+        min-height: 48px;
+        background-color: var(--color-neutral-6, #86909c);
+        border-radius: var(--gpt-scrollbar-thumb-radius, 6px);
+      }
+
+      &::-webkit-scrollbar-thumb:hover {
+        background-color: var(--color-neutral-8, #4e5969);
+      }
+    }
+
+    // Legacy DataTable: active row tinted with the nav-active token plus a 3px
+    // inset indicator on the first cell.
+    :deep(.dg-row-active) {
+      background-color: var(--gpt-nav-active-bg, rgba(112, 47, 237, 0.1)) !important;
+    }
+
+    :deep(.dg-row-active > .vxe-body--column:first-child) {
+      box-shadow: inset 3px 0 0 var(--gpt-nav-active-indicator, #702fed);
+    }
+
+    :deep(.dg-cell-inner) {
+      position: relative;
+      display: flex;
+      align-items: center;
+      min-width: 0;
+      width: 100%;
+      gap: 4px;
+    }
+
+    :deep(.vxe-body--column.dg-detail-cell) {
+      cursor: default;
+    }
+
+    :deep(.vxe-body--column.dg-detail-cell--overflow) {
+      cursor: pointer;
+
+      &:hover {
+        box-shadow: inset 0 0 0 1px var(--color-primary-light-2, #bedaff);
+      }
+    }
+
+    .dg-cell-detail-anchor {
+      position: fixed;
+      z-index: -1;
+      margin: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    :deep(.dg-cell-text) {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    // Timestamp column — parity with global `.timestamp-cell` (dataView.less).
+    :deep(.dg-ts-col) {
+      color: var(--gpt-accent-ts);
+    }
+
+    // Format toggle — legacy `span.timestamp-cell(style="cursor: pointer")`.
+    :deep(.dg-ts-col--toggle) {
+      cursor: pointer;
+    }
+
+    // Row-detail timestamp — parity with global `.ts-cell-detail-link`.
+    :deep(.dg-ts-col--link) {
+      cursor: pointer;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+
+    :deep(.dg-ts-th) {
+      cursor: pointer;
+      // Icon + accent text only — no pill background.
+      background-color: transparent;
+    }
+
+    // Typography parity with the legacy DataTable: it rendered through Arco with
+    // `size="medium"` (14px Geist cells, 7px vertical padding, 22px line-height).
+    // VXE defaults to 12px + its own font stack, which read noticeably smaller.
+    :deep(.vxe-table) {
+      font-family: var(--font-family-base);
+    }
+
+    :deep(.vxe-cell) {
+      padding-top: var(--dg-cell-pad-y, 7px);
+      padding-bottom: var(--dg-cell-pad-y, 7px);
+      font-family: var(--font-family-base);
+      font-size: var(--dg-cell-font-size, 14px);
+      line-height: var(--dg-cell-line-height, 22px);
+    }
+
+    // Cell horizontal padding — parity with legacy DataTable
+    // (`--gpt-cell-px: 10px`, `--gpt-cell-edge-px: 16px` on first/last column).
+    :deep(.vxe-body--column > .vxe-cell),
+    :deep(.vxe-header--column > .vxe-cell) {
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+
+    :deep(.dg-edge-left > .vxe-cell) {
+      padding-left: 16px;
+    }
+
+    :deep(.dg-edge-right > .vxe-cell) {
+      padding-right: 16px;
+    }
+
+    :deep(.dg-link),
+    :deep(.dg-link-col .dg-link) {
+      // Links share the timestamp accent (legacy logs table link color).
+      color: var(--gpt-accent-ts);
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+      font: inherit;
+      text-align: left;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 100%;
+    }
+
+    :deep(.dg-merged-key) {
+      color: var(--gpt-text-muted);
+    }
+
+    :deep(.json-column-th-action) {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 14px;
+      height: 14px;
+      margin-left: 2px;
+      border-radius: 2px;
+      cursor: pointer;
+      color: var(--gpt-text-muted);
+      opacity: 0.75;
+
+      &:hover {
+        opacity: 1;
+        background: var(--color-fill-2);
+        color: var(--gpt-text-primary);
+      }
+    }
+
+    // Load-more footer (Grafana-style): a slim row pinned to the bottom of the
+    // viewport, above VXE's horizontal scrollbar.
+    .dg-load-more {
+      position: absolute;
+      right: 0;
+      left: 0;
+      // Above VXE's scrollbars (z-index 7) so the footer stays clickable.
+      z-index: 8;
+      display: flex;
+      gap: var(--gpt-gap-xs, 4px);
+      align-items: center;
+      justify-content: center;
+      height: 26px;
+      font-size: var(--gpt-font-base, 12px);
+      color: var(--gpt-link-color, #702fed);
+      background: var(--gpt-bg-panel, #fff);
+      border-top: 1px solid var(--gpt-border-subtle, rgba(71, 52, 96, 0.05));
+      cursor: pointer;
+      user-select: none;
+
+      // Opaque hover: the tint is composited over the panel color so the rows
+      // behind the footer never bleed through.
+      &:hover {
+        background: linear-gradient(var(--gpt-nav-active-bg), var(--gpt-nav-active-bg)), var(--gpt-bg-panel, #fff);
+      }
+
+      &.is-loading {
+        color: var(--gpt-text-secondary, #8b7ba8);
+        cursor: default;
+      }
+
+      &.is-loading:hover {
+        background: var(--gpt-bg-panel, #fff);
+      }
+    }
+
+    .dg-load-more__icon {
+      width: 12px;
+      height: 12px;
+      color: currentColor;
+      fill: currentColor;
+    }
+
+    // Overlay — does not steal wrap-mode text width on hover. Matches table-query
+    // sidebar menu glyph (`#extra` + rotate-90).
+    :deep(.dg-cell-action) {
+      position: absolute;
+      top: 50%;
+      right: 2px;
+      z-index: 1;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      margin-top: -8px;
+      cursor: pointer;
+      color: var(--gpt-main-purple, #702fed);
+      // Soft plate so the icon stays readable over cell text.
+      background: linear-gradient(90deg, transparent, var(--gpt-bg-panel, #fff) 35%);
+    }
+
+    // Only the hovered cell shows its action icon (legacy Arco parity) — not the
+    // whole hovered row.
+    :deep(.vxe-body--column:hover .dg-cell-action) {
+      display: inline-flex;
+    }
+
+    :deep(.dg-cell-action:hover) {
+      color: var(--gpt-brand-900, #473460);
+    }
+
+    // VXE's render-default sets `white-space: pre-line; word-break: break-all`
+    // on `.vxe-cell`. That lets long headers wrap to the current (often tiny)
+    // column width during auto-measure, so scrollWidth collapses and every
+    // column freezes around ~40px. Force single-line for the non-wrap mode.
+    :deep(.vxe-header--column .vxe-cell),
+    :deep(.vxe-body--column .vxe-cell) {
+      white-space: nowrap;
+      word-break: normal;
+    }
+
+    // Header overflow parity with body cells. `show-header-overflow` adds
+    // `col--ellipsis` (titles), but custom header slots (`gpt-semantic-th`,
+    // plain title VNodes) sit outside `.vxe-cell--title` and need the same clip.
+    :deep(.vxe-header--column.col--ellipsis > .vxe-cell) {
+      overflow: hidden;
+    }
+
+    :deep(.vxe-header--column.col--ellipsis .vxe-cell--wrapper) {
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    :deep(.vxe-header--column .gpt-semantic-th),
+    :deep(.vxe-header--column .json-column-th),
+    :deep(.vxe-header--column .dg-ts-th),
+    :deep(.vxe-header--column .dg-header-title) {
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    :deep(.vxe-header--column .dg-header-title) {
+      display: block;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    &--wrap {
+      :deep(.vxe-body--column .vxe-cell),
+      :deep(.dg-cell-text) {
+        white-space: pre-wrap;
+        word-break: break-word;
+        line-height: 1.4;
+        text-overflow: clip;
+        overflow: visible;
+      }
+
+      :deep(.dg-cell-action) {
+        top: 4px;
+        margin-top: 0;
+      }
+    }
+  }
+</style>
+
+<style lang="less">
+  .dg-cell-detail-popover {
+    max-width: 600px;
+    padding: 10px;
+
+    .dg-cell-detail {
+      display: flex;
+      min-width: 220px;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .dg-cell-detail__title {
+      color: var(--color-text-2, #4e5969);
+      font-size: 12px;
+      font-weight: 600;
+      word-break: break-word;
+    }
+
+    .dg-cell-detail__content {
+      max-height: 40vh;
+      margin: 0;
+      overflow: auto;
+      color: var(--color-text-1, #1d2129);
+      font-family: inherit;
+      font-size: 12px;
+      line-height: 1.5;
+      user-select: text;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  }
+
+  .json-column-menu-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 140px;
+  }
+
+  .json-column-menu-check {
+    margin-left: auto;
+    color: var(--gpt-accent, var(--color-primary));
+    font-weight: 600;
+  }
+</style>

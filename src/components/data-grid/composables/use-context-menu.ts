@@ -1,6 +1,7 @@
 import { computed, ref, shallowRef, type Ref } from 'vue'
 import type { ColumnType } from '@/types/query'
 import { filterOpsForType } from '@/observability/filters'
+import { isJsonDataType } from '@/utils/json-display'
 import getCellString from '../utils/cell-text'
 import type { TableData } from '../types'
 
@@ -23,7 +24,7 @@ function sqlBuilderFilterOps(column: ColumnType | undefined, isTime: boolean): s
   if (!column) {
     return []
   }
-  if (column.data_type && column.data_type.toLowerCase() === 'json') {
+  if (isJsonDataType(column.data_type)) {
     return []
   }
   if (isTime) {
@@ -36,7 +37,7 @@ function drilldownFilterOps(column: ColumnType | undefined, isTime: boolean): st
   if (!column) {
     return []
   }
-  if (column.data_type && column.data_type.toLowerCase() === 'json') {
+  if (isJsonDataType(column.data_type)) {
     return []
   }
   if (isTime) {
@@ -49,7 +50,7 @@ function drilldownFilterOps(column: ColumnType | undefined, isTime: boolean): st
  * Per-cell filter/copy context menu (separate mode only).
  * JSON columns only offer copy; time columns offer copy + range filters.
  */
-export default function useLogsContextMenu(options: {
+export default function useContextMenu(options: {
   enabled: Ref<boolean> | (() => boolean)
   columns: () => ColumnType[]
   isTimeField: (field: string) => boolean

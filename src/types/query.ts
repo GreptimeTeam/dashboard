@@ -40,6 +40,12 @@ export type ColumnType = {
   data_type: string
   title: string
   semantic_type?: string
+  /**
+   * Explicit column width in px. Use for columns whose content is not text
+   * (action buttons, pills): width estimation only sees the header/cell strings,
+   * so such columns would otherwise be sized to their header.
+   */
+  width?: number
 }
 
 export interface QueryState extends BaseState {

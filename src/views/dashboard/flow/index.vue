@@ -53,13 +53,14 @@
             :placeholder="$t('flow.filterSinkPlaceholder')"
             :options="sinkTableOptions"
           )
-      DataTable.flow-table.gpt-table-page(
+      DataGrid.flow-table.gpt-table-page(
         leftover-strategy="proportional"
+        :fill-height="false"
+        :virtual="false"
         :data="filteredFlows"
         :columns="columns"
         :loading="loading"
         :show-context-menu="false"
-        :scroll="flowTableScroll"
       )
         template(#column-status="{ record }")
           span.gpt-status-pill(v-if="record.status" :class="getStatusClass(record.status)")
@@ -88,7 +89,7 @@
   import { useI18n } from 'vue-i18n'
   import type { ColumnType } from '@/types/query'
   import editorAPI from '@/api/editor'
-  import DataTable from '@/components/data-table/index.vue'
+  import DataGrid from '@/components/data-grid/DataGrid.vue'
   import FlowDetailModal from './components/flow-detail-modal.vue'
   import { toObj } from '../logs/query/until'
 
@@ -117,9 +118,6 @@
   const searchKeyword = ref('')
   const sourceTableFilter = ref<string | undefined>()
   const sinkTableFilter = ref<string | undefined>()
-
-  /** 不按父级撑满，表格高度随数据行数 */
-  const flowTableScroll = { y: undefined }
 
   const splitSourceTables = (value: unknown): string[] =>
     String(value ?? '')
@@ -203,6 +201,8 @@
           name: 'operate',
           title: t('common.actions'),
           data_type: 'string',
+          // Two buttons + gap + cell padding; estimated width only sees "Actions".
+          width: 168,
         }
 
         const allColumns = [...schemaColumns.value, operateColumn]

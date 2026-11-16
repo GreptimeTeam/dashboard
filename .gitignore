@@ -18,3 +18,12 @@ AGENTS.md
 artifacts/
 playwright-report/
 test-results/
+
+# package manager caches that can land inside the repo
+# (.pnpm-store is created when pnpm runs with a local --store-dir; tens of
+# thousands of files, never commit it)
+.pnpm-store/
+.pnpm-store-virtual/
+
+# local git worktrees (each is a full checkout)
+.worktrees/

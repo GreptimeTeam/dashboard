@@ -23,12 +23,13 @@ export function getVisibleFieldNames(input: LogsTableFieldsInput): string[] {
 /** Separate-mode field list, in render order (timestamp first). */
 export function getSeparateFields(input: LogsTableFieldsInput): SeparateField[] {
   const tsName = input.tsColumn?.name
+  const metaByName = new Map(input.columns.map((c) => [c.name, c]))
   const fields: SeparateField[] = []
   if (tsName) {
     fields.push({ field: tsName, title: tsName, isTs: true, isTime: true, isLink: false })
   }
   getVisibleFieldNames(input).forEach((name) => {
-    const meta = input.columns.find((c) => c.name === name)
+    const meta = metaByName.get(name)
     fields.push({
       field: name,
       title: meta?.title || name,
@@ -59,12 +60,16 @@ export function buildDisplayRows(
   const tsName = tsColumn?.name
   const showKeys = columnMode === 'merged-with-keys'
 
+  // Column lookup is O(1) per cell: `columns.find()` inside the row×field loop
+  // was O(rows × fields × columns) on every result-set change.
+  const metaByName = new Map(columns.map((c) => [c.name, c]))
+
   return data.map((record, index) => {
     const rowIndex = typeof record.__rowIndex === 'number' ? record.__rowIndex : index
     const out: TableData = { __rowIndex: rowIndex }
 
     if (tsName) {
-      const tsMeta = tsColumn || columns.find((c) => c.name === tsName)
+      const tsMeta = tsColumn || metaByName.get(tsName)
       out[tsName] = textOf(record[tsName], tsMeta)
     }
 
@@ -82,7 +87,7 @@ export function buildDisplayRows(
     }
 
     fields.forEach((name) => {
-      const meta = columns.find((c) => c.name === name)
+      const meta = metaByName.get(name)
       out[name] = isTimeColumn(meta) ? textOf(record[name], meta) : getCellString(record[name])
     })
     return out

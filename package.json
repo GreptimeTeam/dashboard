@@ -23,7 +23,9 @@
     "test": "vitest run",
     "smoke:release": "playwright test -c playwright.release.config.ts",
     "smoke:release:build": "pnpm run build && pnpm run smoke:release",
-    "smoke:release:tag": "bash scripts/verify-release.sh"
+    "smoke:release:tag": "bash scripts/verify-release.sh",
+    "dev:perf": "vite --config ./config/vite.config.perf.ts",
+    "perf": "playwright test -c playwright.perf.config.ts"
   },
   "lint-staged": {
     "*.{js,ts,jsx,tsx}": [

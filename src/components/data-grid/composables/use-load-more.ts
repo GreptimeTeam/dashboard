@@ -19,7 +19,7 @@ const SCROLL_INTENT_MS = 400
  * Load-more state machine for the logs table footer:
  * armed → near-end → deliberate scroll bottom → request (once) → re-arm.
  */
-export default function useLogsLoadMore(options: {
+export default function useLoadMore(options: {
   rootEl: Ref<HTMLElement | null>
   rowHeight: () => number
   hasMore: () => boolean

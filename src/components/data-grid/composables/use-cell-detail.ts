@@ -10,10 +10,7 @@ const CELL_DETAIL_DRAG_THRESHOLD_PX = 4
  * Opening is delayed for one click and suppressed for drags/selections, so
  * selecting or double-click selecting text never fights with the popup.
  */
-export default function useLogsCellDetail(options: {
-  rootEl: Ref<HTMLElement | null>
-  columnMode: () => LogsColumnMode
-}) {
+export default function useCellDetail(options: { rootEl: Ref<HTMLElement | null>; columnMode: () => LogsColumnMode }) {
   const { rootEl, columnMode } = options
 
   const cellDetail = ref<{ title: string; content: string } | null>(null)
@@ -56,7 +53,7 @@ export default function useLogsCellDetail(options: {
   }
 
   function clearDetailHoverCell() {
-    detailHoverCell?.classList.remove('logs-vxe-detail-cell--overflow')
+    detailHoverCell?.classList.remove('dg-detail-cell--overflow')
     detailHoverCell = null
   }
 
@@ -67,8 +64,8 @@ export default function useLogsCellDetail(options: {
    */
   function isDetailContentOverflowing(cell: HTMLElement) {
     const targets = [
-      cell.querySelector('.logs-vxe-cell-text'),
-      cell.querySelector('.logs-vxe-merged-cell'),
+      cell.querySelector('.dg-cell-text'),
+      cell.querySelector('.dg-merged-cell'),
       cell.querySelector('.vxe-cell'),
     ]
     return targets.some((target) => {
@@ -81,19 +78,19 @@ export default function useLogsCellDetail(options: {
 
   function updateDetailHoverCell(event: Event) {
     const target = event.target as Element | null
-    const cell = target?.closest<HTMLElement>('.vxe-body--column.logs-vxe-detail-cell') || null
+    const cell = target?.closest<HTMLElement>('.vxe-body--column.dg-detail-cell') || null
     if (cell === detailHoverCell) {
       return
     }
 
     clearDetailHoverCell()
     detailHoverCell = cell
-    cell?.classList.toggle('logs-vxe-detail-cell--overflow', isDetailContentOverflowing(cell))
+    cell?.classList.toggle('dg-detail-cell--overflow', isDetailContentOverflowing(cell))
   }
 
   function isDetailCellTarget(event: MouseEvent | undefined) {
     const target = event?.target as Element | null
-    return Boolean(target?.closest('button, a, .logs-vxe-cell-action'))
+    return Boolean(target?.closest('button, a, .dg-cell-action'))
   }
 
   function isPlainDetailClick(event: MouseEvent | undefined) {
