@@ -176,11 +176,176 @@ test.describe('DataGrid render performance', () => {
     expect(pageErrors).toEqual([])
     // The oversized first column must stand out from the rest.
     expect(Math.max(...metrics.widths) - Math.min(...metrics.widths)).toBeGreaterThan(100)
-    // The table must overflow, and the horizontal scrollbar range must cover every
-    // column — otherwise the rightmost column is unreachable (flow page bug).
+    // The table must overflow so we can verify the scrollbar can reach the last column.
     expect(metrics.sum).toBeGreaterThan(metrics.client)
     expect(metrics.range).toBeGreaterThan(0)
-    expect(metrics.range).toBe(Math.max(0, metrics.sum - metrics.client))
+
+    // With column virtualization the rendered header cells do not add up to the full
+    // table width, so the honest assertion is behavioural: scroll to the end and check
+    // the last column lands on the container's right edge (the flow page bug).
+    await page.evaluate(() => {
+      const handle = document.querySelector('.vxe-table--scroll-x-handle')
+      if (handle) handle.scrollLeft = handle.scrollWidth
+    })
+    await page.waitForTimeout(400)
+    const edge = await page.evaluate(() => {
+      const headers = [...document.querySelectorAll('.vxe-header--column')]
+      const last = headers[headers.length - 1]
+      const host = document.querySelector('.dg-grid-host')
+      return {
+        lastRight: last ? Math.round(last.getBoundingClientRect().right) : null,
+        hostRight: host ? Math.round(host.getBoundingClientRect().right) : null,
+      }
+    })
+    expect(edge.lastRight).not.toBeNull()
+    expect(Math.abs((edge.lastRight as number) - (edge.hostRight as number))).toBeLessThanOrEqual(2)
+  })
+
+  test('dragged width survives a re-estimate (in-memory, deliberately not persisted)', async ({ page }) => {
+    const url = '/perf.html?rows=20&cols=10'
+    const widths = () =>
+      page.evaluate(() =>
+        [...document.querySelectorAll('.vxe-header--column')].map((el) => Math.round(el.getBoundingClientRect().width))
+      )
+
+    const boot = async () => {
+      await page.goto(url, { waitUntil: 'domcontentloaded' })
+      await page.waitForFunction(() => (window as unknown as { __perfReady?: boolean }).__perfReady === true, null, {
+        timeout: 60_000,
+      })
+      await page.waitForTimeout(300)
+    }
+
+    await boot()
+    const before = await widths()
+    const handle = page.locator('.vxe-cell--col-resizable').nth(3)
+    const box = await handle.boundingBox()
+    if (!box) throw new Error('resize handle not found')
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(box.x + box.width / 2 + 80, box.y + box.height / 2, { steps: 6 })
+    await page.mouse.up()
+    // Commit is debounced (250ms) so the drag is not interrupted by a column rebuild.
+    await page.waitForTimeout(700)
+    const afterDrag = await widths()
+    expect(afterDrag[3]).toBeGreaterThan(before[3] + 40)
+
+    // A new result set re-estimates every column — the dragged one must keep its width.
+    await page.evaluate(() =>
+      (window as unknown as { __perf: { reload: (n: number) => Promise<number> } }).__perf.reload(20)
+    )
+    await page.waitForTimeout(400)
+    const afterNewData = await widths()
+
+    // Fresh load: widths go back to the estimate on purpose — column sets are derived
+    // from query results, so persisting them per table would rot and accumulate.
+    await boot()
+    const afterFreshLoad = await widths()
+
+    console.log('[perf] drag width', {
+      before: before[3],
+      afterDrag: afterDrag[3],
+      afterNewData: afterNewData[3],
+      afterFreshLoad: afterFreshLoad[3],
+    })
+    expect(Math.abs(afterNewData[3] - afterDrag[3])).toBeLessThanOrEqual(2)
+    expect(afterFreshLoad[3]).toBeLessThan(afterDrag[3] - 20)
+  })
+
+  test('cell affordance matches behaviour: pointer cursor ⇔ clipped ⇔ popup', async ({ page }) => {
+    await page.goto('/perf.html?rows=20&cols=9&long=1', { waitUntil: 'domcontentloaded' })
+    await page.waitForFunction(() => (window as unknown as { __perfReady?: boolean }).__perfReady === true, null, {
+      timeout: 60_000,
+    })
+    await page.waitForTimeout(300)
+
+    // Find one clipped detail cell and one that fits, without hardcoding column order.
+    const pick = await page.evaluate(() => {
+      const row = document.querySelector('.vxe-body--row')
+      const cells = [...(row?.querySelectorAll('.vxe-body--column') ?? [])]
+      const isClipped = (cell: Element) => {
+        const text = cell.querySelector('.dg-cell-text') as HTMLElement | null
+        return text ? text.scrollWidth - text.clientWidth > 1 : false
+      }
+      const clipped = cells.findIndex((cell) => isClipped(cell))
+      const fitting = cells.findIndex(
+        (cell, index) => index > 0 && cell.querySelector('.dg-cell-text') && !isClipped(cell)
+      )
+      return { clipped, fitting }
+    })
+    expect(pick.clipped).toBeGreaterThan(-1)
+    expect(pick.fitting).toBeGreaterThan(-1)
+
+    const cellAt = (index: number) => page.locator('.vxe-body--row').first().locator('.vxe-body--column').nth(index)
+
+    await cellAt(pick.clipped).hover()
+    await page.waitForTimeout(150)
+    const clippedCursor = await cellAt(pick.clipped).evaluate((el) => getComputedStyle(el).cursor)
+    expect(clippedCursor).toBe('pointer')
+
+    await cellAt(pick.fitting).hover()
+    await page.waitForTimeout(150)
+    const fittingCursor = await cellAt(pick.fitting).evaluate((el) => getComputedStyle(el).cursor)
+    expect(fittingCursor).toBe('default')
+
+    // Clicking follows the same predicate: popup only where text is actually clipped.
+    await cellAt(pick.clipped).click()
+    await page.waitForTimeout(500)
+    expect(await page.locator('.dg-cell-detail').count()).toBe(1)
+
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(300)
+    await cellAt(pick.fitting).click()
+    await page.waitForTimeout(500)
+    expect(await page.locator('.dg-cell-detail').count()).toBe(0)
+  })
+
+  test('a selection left in another cell does not suppress the popup', async ({ page }) => {
+    await page.goto('/perf.html?rows=20&cols=9&long=1', { waitUntil: 'domcontentloaded' })
+    await page.waitForFunction(() => (window as unknown as { __perfReady?: boolean }).__perfReady === true, null, {
+      timeout: 60_000,
+    })
+    await page.waitForTimeout(300)
+
+    const pick = await page.evaluate(() => {
+      const row = document.querySelector('.vxe-body--row')
+      const cells = [...(row?.querySelectorAll('.vxe-body--column') ?? [])]
+      const isClipped = (cell: Element) => {
+        const text = cell.querySelector('.dg-cell-text') as HTMLElement | null
+        return text ? text.scrollWidth - text.clientWidth > 1 : false
+      }
+      return {
+        clipped: cells.findIndex((cell) => isClipped(cell)),
+        fitting: cells.findIndex((cell, index) => index > 0 && cell.querySelector('.dg-cell-text') && !isClipped(cell)),
+      }
+    })
+    expect(pick.clipped).toBeGreaterThan(-1)
+    expect(pick.fitting).toBeGreaterThan(-1)
+
+    const cellAt = (index: number) => page.locator('.vxe-body--row').first().locator('.vxe-body--column').nth(index)
+
+    // Select text in a non-clipped cell the way a user does (drag across the value).
+    const box = await cellAt(pick.fitting).boundingBox()
+    if (!box) throw new Error('cell not found')
+    await page.mouse.move(box.x + 3, box.y + box.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(box.x + box.width - 3, box.y + box.height / 2, { steps: 5 })
+    await page.mouse.up()
+    await page.waitForTimeout(200)
+    const selection = await page.evaluate(() => ({
+      text: window.getSelection()?.toString() ?? '',
+      collapsed: window.getSelection()?.isCollapsed ?? true,
+    }))
+    expect(selection.text.length).toBeGreaterThan(0)
+
+    // Dragging must not open the popup on its own.
+    expect(await page.locator('.dg-cell-detail').count()).toBe(0)
+
+    // Clicking a *different* clipped cell must open it: the stale selection belongs
+    // to another cell, and the click collapses it anyway.
+    await cellAt(pick.clipped).click()
+    await page.waitForTimeout(500)
+    expect(await page.locator('.dg-cell-detail').count()).toBe(1)
   })
 
   async function checkBothAxes(page: import('@playwright/test').Page, wrap: boolean) {

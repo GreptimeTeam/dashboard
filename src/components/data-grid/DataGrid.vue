@@ -29,6 +29,7 @@
       @scroll="loadMore.onScroll"
       @cell-click="onCellClick"
       @data-rendered="onDataRendered"
+      @column-resizable-change="onColumnResizeChange"
     )
       // vxe-table 4.7+ splits Loading into vxe-pc-ui; without VxeLoading registered,
       // :loading=true warns unless a #loading slot is provided.
@@ -493,6 +494,16 @@
    * (232 columns spent ~2.7s in a single long task). Estimating from the
    * already-stringified rows costs one string scan per column.
    */
+  /**
+   * Widths the user dragged, kept for this component's lifetime only.
+   *
+   * Deliberately **not** persisted: column sets are derived from query results and
+   * differ per table/query, so stored widths go stale quickly and would accumulate
+   * one entry per table. Keeping them in memory is enough to stop a column rebuild
+   * (page change, visibility toggle, new result set) from snapping back.
+   */
+  const userWidths = ref<Record<string, number>>({})
+
   function estimateColumnWidths(): Record<string, number> {
     const fields = layoutFields.value
     const rows = displayData.value
@@ -522,18 +533,21 @@
           contentPx = Math.max(contentPx, estimateTextWidthPx(raw, fontSize), estimateTextWidthPx(formatted, fontSize))
         }
       } else {
-        // Longest display string wins; one scan per column.
-        let longest = field
+        // Widest string wins — *not* the longest one. Two 32-char trace ids can
+        // differ in width (digits/uppercase advance wider than lowercase), so
+        // picking by length alone clips the digit-heavy ones.
         for (let i = 0; i < rows.length; i += 1) {
           const text = rows[i][field]
-          if (typeof text === 'string' && text.length > longest.length) {
-            longest = text
+          if (typeof text !== 'string') {
+            continue
           }
+          contentPx = Math.max(contentPx, estimateTextWidthPx(text, fontSize))
         }
-        contentPx = estimateTextWidthPx(longest, fontSize)
       }
 
-      widths[field] = Math.min(ESTIMATED_MAX_WIDTH_PX, Math.max(floor, contentPx + decoration))
+      const estimated = Math.min(ESTIMATED_MAX_WIDTH_PX, Math.max(floor, contentPx + decoration))
+      // A width the user dragged always wins over the estimate.
+      widths[field] = userWidths.value[field] ?? estimated
     })
     return widths
   }
@@ -814,9 +828,46 @@
     rootEl.value?.addEventListener('touchmove', loadMore.markScrollIntent, { passive: true })
   })
 
+  // ── User column resize ──────────────────────────────────────────────────────
+  // VXE emits `column-resizable-change` continuously while dragging. Rebuilding the
+  // column set mid-drag cancels VXE's resize handle (the trap the old Arco table fell
+  // into), so collect the values and commit once the drag goes quiet.
+  const pendingResize = new Map<string, number>()
+  let resizeCommitTimer: ReturnType<typeof setTimeout> | null = null
+
+  function commitColumnResize() {
+    resizeCommitTimer = null
+    if (pendingResize.size === 0) {
+      return
+    }
+    const next = { ...userWidths.value }
+    pendingResize.forEach((px, field) => {
+      next[field] = px
+    })
+    pendingResize.clear()
+    userWidths.value = next
+  }
+
+  function onColumnResizeChange(params: { column?: { field?: string }; resizeWidth?: number }) {
+    const field = params?.column?.field
+    const width = Number(params?.resizeWidth)
+    if (!field || !Number.isFinite(width) || width <= 0) {
+      return
+    }
+    pendingResize.set(field, Math.round(width))
+    if (resizeCommitTimer) {
+      clearTimeout(resizeCommitTimer)
+    }
+    resizeCommitTimer = setTimeout(commitColumnResize, 250)
+  }
+
   onBeforeUnmount(() => {
     rootEl.value?.removeEventListener('wheel', loadMore.markScrollIntent)
     rootEl.value?.removeEventListener('touchmove', loadMore.markScrollIntent)
+    if (resizeCommitTimer) {
+      clearTimeout(resizeCommitTimer)
+      resizeCommitTimer = null
+    }
   })
 
   watch(
