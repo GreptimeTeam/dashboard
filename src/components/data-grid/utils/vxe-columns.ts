@@ -1,18 +1,17 @@
 import type { ColumnType, TSColumn } from '@/types/query'
-import { isJsonDataType } from '@/utils/json-display'
-import { getSeparateFields, isTimeColumn } from './table-data'
+import { getSeparateFields } from './table-data'
 import type { ColumnWidthRule, LogsColumnMode, SeparateField } from '../types'
 
-/** Class names for time columns — accent color + toggle/link affordance. */
+/** Class names for time columns — reuse global timestamp-cell styles. */
 export function getTimeColumnClassNames(isPrimaryTs: boolean, isTime: boolean, tsCellDetail: boolean): string {
   if (!isPrimaryTs && !isTime) {
     return ''
   }
-  const classes = ['dg-ts-col']
+  const classes = ['timestamp-cell']
   if (isPrimaryTs) {
-    classes.push(tsCellDetail ? 'dg-ts-col--link' : 'dg-ts-col--toggle')
+    classes.push(tsCellDetail ? 'ts-cell-detail-link' : 'timestamp-cell--toggle')
   } else if (!tsCellDetail) {
-    classes.push('dg-ts-col--toggle')
+    classes.push('timestamp-cell--toggle')
   }
   return classes.join(' ')
 }
@@ -110,13 +109,10 @@ export function buildVxeColumns(options: {
       (tsColumn?.name === item.field
         ? ({ name: item.field, data_type: tsColumn.data_type || 'timestamp', title: item.title } as ColumnType)
         : ({ name: item.field, title: item.title, data_type: '' } as ColumnType))
-    const isTime = item.isTs || item.isTime || isTimeColumn(meta)
-    const isJson = isJsonDataType(meta.data_type)
     const classNames = [
       getTimeColumnClassNames(item.isTs, item.isTime, tsCellDetail),
       item.isLink ? 'dg-link-col' : '',
       !item.isTs && !item.isTime && !item.isLink ? 'dg-detail-cell' : '',
-      isJson ? 'dg-json-col' : '',
     ]
       .filter(Boolean)
       .join(' ')

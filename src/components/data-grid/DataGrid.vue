@@ -324,24 +324,25 @@
   })
 
   /**
-   * Cell typography, matching the legacy DataTable (Arco `size="medium"`):
-   * 14px Geist, 22px line-height, 7px vertical padding → 36px rows.
-   * VXE's own `size` scale (12px/5px) is smaller than Arco's, so the values are
-   * applied explicitly instead of relying on the `size` attribute.
+   * Density via VXE CSS vars (grid uses size="mini"). Uniform cell padding —
+   * VXE's --vxe-ui-table-cell-padding-mini is one value for all sides.
+   * medium: 14/22/7 → 36px rows.
    */
   const CELL_TYPOGRAPHY = {
-    mini: { font: 12, line: 18, padY: 5 },
-    small: { font: 14, line: 22, padY: 5 },
-    medium: { font: 14, line: 22, padY: 7 },
-    large: { font: 14, line: 22, padY: 11 },
+    mini: { font: 12, line: 18, pad: 5 },
+    small: { font: 14, line: 22, pad: 5 },
+    medium: { font: 14, line: 22, pad: 7 },
+    large: { font: 14, line: 22, pad: 11 },
   } as const
 
   const cellTypographyStyle = computed(() => {
     const typography = CELL_TYPOGRAPHY[props.size] ?? CELL_TYPOGRAPHY.medium
     return {
-      '--dg-cell-font-size': `${typography.font}px`,
-      '--dg-cell-line-height': `${typography.line}px`,
-      '--dg-cell-pad-y': `${typography.padY}px`,
+      '--vxe-ui-font-family': 'var(--font-family-base)',
+      '--vxe-ui-font-size-mini': `${typography.font}px`,
+      '--vxe-ui-table-cell-padding-mini': `${typography.pad}px`,
+      '--vxe-ui-table-row-line-height': `${typography.line}px`,
+      '--vxe-ui-table-row-height-mini': `${rowHeight.value}px`,
     }
   })
 
@@ -375,11 +376,9 @@
   }))
 
   /**
-   * VXE hides native body scrollbars and paints its own track via
-   * `.vxe-table--scroll-x/y-handle`. Pin an explicit size so the virtual track
-   * opens when content overflows (macOS overlay bars otherwise report 0).
-   * Keep this a few px larger than the styled thumb so `clientHeight > 0` —
-   * Chromium skips painting the thumb when the scrollport collapses to 0.
+   * VXE scrolls via `.vxe-table--scroll-*-handle` (native body bars are hidden).
+   * Pin size + visible so the handle track opens on overflow (macOS overlay
+   * bars otherwise report 0 and the track never appears).
    */
   const SCROLLBAR_SIZE = 14
   const scrollbarConfig = {
@@ -430,6 +429,23 @@
 
   const hideJsonNullsByColumn = ref<Record<string, boolean>>({})
 
+  function isTimeField(field: string): boolean {
+    return props.tsColumn?.name === field || isTimeColumn(props.columns.find((c) => c.name === field))
+  }
+
+  function resolveColumn(field: string): ColumnType | undefined {
+    return (
+      props.columns.find((column) => column.name === field) ||
+      (props.tsColumn?.name === field
+        ? ({
+            name: field,
+            data_type: props.tsColumn.data_type || 'timestamp',
+            title: field,
+          } as ColumnType)
+        : undefined)
+    )
+  }
+
   /**
    * Advance widths as a fraction of the cell font size, measured on 14px Geist:
    *
@@ -444,8 +460,8 @@
   const NARROW_CHAR_RATIO = 0.52
   const WIDE_CHAR_RATIO = 0.63
   const CJK_CHAR_RATIO = 1
-  /** 10px horizontal padding each side (+4px buffer); 16px on the edge columns. */
-  const ESTIMATED_CELL_PADDING_PX = 24
+  /** Uniform cell pad × 2 (+4px buffer); edge columns add extra via CSS. */
+  const ESTIMATED_CELL_PADDING_PX = 18
   /**
    * Extra room for slot decorations: context-menu icon (12px) + flex gap (4px) +
    * slack. Slot content can be wider than its text (buttons, icons), and the slot
@@ -480,30 +496,44 @@
   function estimateColumnWidths(): Record<string, number> {
     const fields = layoutFields.value
     const rows = displayData.value
+    const sourceRows = pageSourceData.value
     const fontSize = CELL_TYPOGRAPHY[props.size]?.font ?? 14
     const widths: Record<string, number> = {}
     fields.forEach((field) => {
-      // Longest string wins; estimating once per column keeps this O(rows × fields)
-      // string scans instead of a per-character pass over every cell.
-      let longest = field
-      for (let i = 0; i < rows.length; i += 1) {
-        const text = rows[i][field]
-        if (typeof text === 'string' && text.length > longest.length) {
-          longest = text
-        }
-      }
       // Columns with a parent slot carry decorations (link buttons, context-menu
       // icons, gaps) that raw text width does not account for — and their content
-      // may not be text at all (pills, action buttons), in which case `longest` is
-      // only the header. Floor them so controls are never clipped; columns with
-      // truly non-text content should declare `width` on the column definition.
+      // may not be text at all (pills, action buttons), in which case content is
+      // only the header. Floor them so controls are never clipped.
       const hasSlot = Boolean(slots[`column-${field}`])
       const decoration = hasSlot ? SLOT_DECORATION_PX : 0
       const floor = hasSlot ? SLOT_MIN_WIDTH_PX : ESTIMATED_MIN_WIDTH_PX
-      widths[field] = Math.min(
-        ESTIMATED_MAX_WIDTH_PX,
-        Math.max(floor, estimateTextWidthPx(longest, fontSize) + decoration)
-      )
+
+      let contentPx = estimateTextWidthPx(field, fontSize)
+
+      if (isTimeField(field)) {
+        // Size for BOTH raw and formatted text. Toggle only rewrites displayData;
+        // estimating from the current mode alone shrinks the column on raw and
+        // can clip (digit width is underestimated vs formatted punctuation mix).
+        const meta = resolveColumn(field)
+        for (let i = 0; i < sourceRows.length; i += 1) {
+          const value = sourceRows[i][field]
+          const raw = formatTsDisplay(value, meta, false)
+          const formatted = formatTsDisplay(value, meta, true)
+          contentPx = Math.max(contentPx, estimateTextWidthPx(raw, fontSize), estimateTextWidthPx(formatted, fontSize))
+        }
+      } else {
+        // Longest display string wins; one scan per column.
+        let longest = field
+        for (let i = 0; i < rows.length; i += 1) {
+          const text = rows[i][field]
+          if (typeof text === 'string' && text.length > longest.length) {
+            longest = text
+          }
+        }
+        contentPx = estimateTextWidthPx(longest, fontSize)
+      }
+
+      widths[field] = Math.min(ESTIMATED_MAX_WIDTH_PX, Math.max(floor, contentPx + decoration))
     })
     return widths
   }
@@ -534,23 +564,6 @@
       return props.data[rowIndex]
     }
     return row
-  }
-
-  function isTimeField(field: string): boolean {
-    return props.tsColumn?.name === field || isTimeColumn(props.columns.find((c) => c.name === field))
-  }
-
-  function resolveColumn(field: string): ColumnType | undefined {
-    return (
-      props.columns.find((column) => column.name === field) ||
-      (props.tsColumn?.name === field
-        ? ({
-            name: field,
-            data_type: props.tsColumn.data_type || 'timestamp',
-            title: field,
-          } as ColumnType)
-        : undefined)
-    )
   }
 
   function isHideJsonNulls(columnName: string): boolean {
@@ -636,7 +649,6 @@
     const meta = resolveColumn(field)
     const text = formatCellText(row[field], meta, isHideJsonNulls(field))
     const isLink = Boolean(props.linkColumn && field === props.linkColumn)
-    const isTs = Boolean(props.tsColumn?.name && field === props.tsColumn.name)
 
     const textNode = isLink
       ? h(
@@ -648,7 +660,7 @@
           },
           text
         )
-      : h('span', { class: ['dg-cell-text', isTs ? 'dg-ts-cell' : ''] }, text)
+      : h('span', { class: 'dg-cell-text' }, text)
 
     return h('div', { class: 'dg-cell-inner' }, [textNode, renderActionIcon(row, field)])
   }
@@ -881,11 +893,6 @@
       overflow: hidden;
     }
 
-    &--paged .dg-grid-host {
-      // Keep the pager outside the scroll area.
-      min-height: 0;
-    }
-
     .dg-loading {
       display: flex;
       align-items: center;
@@ -907,73 +914,27 @@
 
     :deep(.vxe-table),
     :deep(.vxe-grid) {
-      // System-theme header (arco-theme.less @table-color-bg-header-cell /
-      // @table-color-text-header-cell / @table-font-weight-header-text).
-      // `--vxe-ui-table-header-font-color` MUST be set here directly: VXE declares
-      // it at :root as `var(--vxe-ui-font-color)`, so it is resolved before it
-      // reaches the grid and overriding `--vxe-ui-font-color` has no effect.
+      // Brand → VXE theme vars. Density (--vxe-ui-font-size-mini,
+      // cell-padding-mini, row-line-height, row-height-mini) comes from
+      // cellTypographyStyle on the root. Header font-color must be set here:
+      // VXE resolves it at :root from --vxe-ui-font-color before it reaches us.
       --vxe-ui-table-header-background-color: var(--gpt-table-head-bg, #eeecf0);
       --vxe-ui-table-header-font-color: var(--gpt-text-secondary, #8b7ba8);
       --vxe-ui-table-header-font-weight: 600;
-      // Legacy Arco row hover used the purple tint, not a neutral fill.
       --vxe-ui-table-row-hover-background-color: var(--gpt-table-row-hover-bg, rgba(112, 47, 237, 0.08));
-      // Legacy Arco body text color was @table-color-text-body-cell (= --gpt-text-primary,
-      // a dark purple); VXE defaults to near-black #1d2129.
+      --vxe-ui-table-row-current-background-color: var(--gpt-nav-active-bg, rgba(112, 47, 237, 0.1));
       --vxe-ui-font-color: var(--gpt-text-primary, #473460);
-      // Row separator — legacy Arco used @table-color-border (= --gpt-border-subtle).
       --vxe-ui-table-border-color: var(--gpt-border-subtle, rgba(71, 52, 96, 0.05));
-      // Column resize drag guide (line + width tip) — legacy Arco drew the
-      // resizing border with @table-color-border_resizing (= @color-primary-6 →
-      // --gpt-main-dark), not VXE's default blue.
       --vxe-ui-table-resizable-drag-line-color: var(--gpt-main-dark, #473460);
-      // Match scrollbarConfig — must stay ≥ the styled thumb so clientHeight > 0.
+      // Match scrollbarConfig so the scroll-handle track has a non-zero size.
       --vxe-ui-table-view-scrollbar-width: 14px;
       --vxe-ui-table-view-scrollbar-height: 14px;
-      font-size: var(--dg-cell-font-size, 14px);
     }
 
-    :deep(.vxe-table--scroll-x-virtual),
-    :deep(.vxe-table--scroll-y-virtual) {
-      background: var(--color-fill-2, #f2f3f5);
-    }
-
-    // VXE hides native body scrollbars and scrolls via `.vxe-table--scroll-*-handle`.
-    // Force a classic, always-visible thumb — macOS/Electron overlay bars leave an
-    // empty track so users can trackpad-scroll but see no bar. min-width/height keep
-    // the thumb grabable when the table is extremely wide/tall.
-    :deep(.vxe-table--scroll-x-handle),
-    :deep(.vxe-table--scroll-y-handle) {
-      scrollbar-width: thin;
-      scrollbar-color: var(--color-neutral-6, #86909c) var(--color-fill-2, #f2f3f5);
-
-      &::-webkit-scrollbar {
-        width: 10px;
-        height: 10px;
-        background: transparent;
-      }
-
-      &::-webkit-scrollbar-track {
-        background: var(--color-fill-2, #f2f3f5);
-        border: 0;
-        box-shadow: none;
-      }
-
-      &::-webkit-scrollbar-thumb {
-        min-width: 48px;
-        min-height: 48px;
-        background-color: var(--color-neutral-6, #86909c);
-        border-radius: var(--gpt-scrollbar-thumb-radius, 6px);
-      }
-
-      &::-webkit-scrollbar-thumb:hover {
-        background-color: var(--color-neutral-8, #4e5969);
-      }
-    }
-
-    // Legacy DataTable: active row tinted with the nav-active token plus a 3px
-    // inset indicator on the first cell.
+    // Active row: bg mirrors --vxe-ui-table-row-current-background-color;
+    // 3px inset has no VXE equivalent.
     :deep(.dg-row-active) {
-      background-color: var(--gpt-nav-active-bg, rgba(112, 47, 237, 0.1)) !important;
+      background-color: var(--vxe-ui-table-row-current-background-color) !important;
     }
 
     :deep(.dg-row-active > .vxe-body--column:first-child) {
@@ -1016,54 +977,13 @@
       white-space: nowrap;
     }
 
-    // Timestamp column — parity with global `.timestamp-cell` (dataView.less).
-    :deep(.dg-ts-col) {
-      color: var(--gpt-accent-ts);
-    }
-
-    // Format toggle — legacy `span.timestamp-cell(style="cursor: pointer")`.
-    :deep(.dg-ts-col--toggle) {
-      cursor: pointer;
-    }
-
-    // Row-detail timestamp — parity with global `.ts-cell-detail-link`.
-    :deep(.dg-ts-col--link) {
-      cursor: pointer;
-
-      &:hover {
-        text-decoration: underline;
-      }
-    }
-
     :deep(.dg-ts-th) {
       cursor: pointer;
-      // Icon + accent text only — no pill background.
+      // Icon + accent text only — no semantic pill background.
       background-color: transparent;
     }
 
-    // Typography parity with the legacy DataTable: it rendered through Arco with
-    // `size="medium"` (14px Geist cells, 7px vertical padding, 22px line-height).
-    // VXE defaults to 12px + its own font stack, which read noticeably smaller.
-    :deep(.vxe-table) {
-      font-family: var(--font-family-base);
-    }
-
-    :deep(.vxe-cell) {
-      padding-top: var(--dg-cell-pad-y, 7px);
-      padding-bottom: var(--dg-cell-pad-y, 7px);
-      font-family: var(--font-family-base);
-      font-size: var(--dg-cell-font-size, 14px);
-      line-height: var(--dg-cell-line-height, 22px);
-    }
-
-    // Cell horizontal padding — parity with legacy DataTable
-    // (`--gpt-cell-px: 10px`, `--gpt-cell-edge-px: 16px` on first/last column).
-    :deep(.vxe-body--column > .vxe-cell),
-    :deep(.vxe-header--column > .vxe-cell) {
-      padding-left: 10px;
-      padding-right: 10px;
-    }
-
+    // First/last column edge — align with page/toolbar content; no VXE API.
     :deep(.dg-edge-left > .vxe-cell) {
       padding-left: 16px;
     }
@@ -1072,9 +992,7 @@
       padding-right: 16px;
     }
 
-    :deep(.dg-link),
-    :deep(.dg-link-col .dg-link) {
-      // Links share the timestamp accent (legacy logs table link color).
+    :deep(.dg-link) {
       color: var(--gpt-accent-ts);
       cursor: pointer;
       background: none;
@@ -1184,40 +1102,23 @@
       color: var(--gpt-brand-900, #473460);
     }
 
-    // VXE's render-default sets `white-space: pre-line; word-break: break-all`
-    // on `.vxe-cell`. That lets long headers wrap to the current (often tiny)
-    // column width during auto-measure, so scrollWidth collapses and every
-    // column freezes around ~40px. Force single-line for the non-wrap mode.
+    // VXE default `.vxe-cell { white-space: pre-line; word-break: break-all }`
+    // collapses auto-measure (~40px). No VXE var to disable — keep this override.
     :deep(.vxe-header--column .vxe-cell),
     :deep(.vxe-body--column .vxe-cell) {
       white-space: nowrap;
       word-break: normal;
     }
 
-    // Header overflow parity with body cells. `show-header-overflow` adds
-    // `col--ellipsis` (titles), but custom header slots (`gpt-semantic-th`,
-    // plain title VNodes) sit outside `.vxe-cell--title` and need the same clip.
-    :deep(.vxe-header--column.col--ellipsis > .vxe-cell) {
-      overflow: hidden;
-    }
-
+    // Custom header slots are outside `.vxe-cell--title`; let flex children shrink.
     :deep(.vxe-header--column.col--ellipsis .vxe-cell--wrapper) {
-      min-width: 0;
-      max-width: 100%;
-      overflow: hidden;
-    }
-
-    :deep(.vxe-header--column .gpt-semantic-th),
-    :deep(.vxe-header--column .json-column-th),
-    :deep(.vxe-header--column .dg-ts-th),
-    :deep(.vxe-header--column .dg-header-title) {
-      max-width: 100%;
       min-width: 0;
     }
 
     :deep(.vxe-header--column .dg-header-title) {
       display: block;
       min-width: 0;
+      max-width: 100%;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
