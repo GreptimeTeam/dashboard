@@ -1005,12 +1005,11 @@
       cursor: default;
     }
 
+    // Clipped cells are openable (click → popup). The only affordance is the pointer
+    // cursor: a per-cell hover ring reads as a selection and doesn't match the rest of
+    // the table, whose hover language is the row background.
     :deep(.vxe-body--column.dg-detail-cell--overflow) {
       cursor: pointer;
-
-      &:hover {
-        box-shadow: inset 0 0 0 1px var(--color-primary-light-2, #bedaff);
-      }
     }
 
     .dg-cell-detail-anchor {
