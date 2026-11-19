@@ -16,7 +16,6 @@ export default defineConfig({
       '**/node_modules/**',
       '**/dist/**',
       'tests/release-smoke/**',
-      'tests/perf/**',
       // Git worktrees hold their own checkout of the suite; running them here
       // double-counts tests and reports failures from another branch.
       '.worktrees/**',
