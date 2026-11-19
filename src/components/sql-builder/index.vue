@@ -55,7 +55,9 @@ a-form.second-row-form(
               style="width: 140px"
               :placeholder="t('sqlBuilder.field')"
               :trigger-props="{ autoFitPopupMinWidth: true }"
+              :loading="attributesLoading"
               :options="fieldsOptions"
+              @popup-visible-change="onFieldPopupVisibleChange"
               @change="() => handleFieldChange(condition)"
             )
             a-select.operator(
@@ -299,24 +301,41 @@ a-modal(
   })
 
   /**
-   * JSON2 attribute dimensions, sampled from the table (trace v2 only). v1 tables expose
-   * attributes as physical columns instead, so this stays empty there.
+   * JSON2 attribute dimensions, sampled on demand when the filter field picker opens.
+   * v1 tables expose attributes as physical columns, so this stays empty there.
    */
   const sampledAttributes = ref<Record<string, TraceBreakdownAttribute>>({})
   const attributeValues = ref<Record<string, string[]>>({})
   const valueLoading = ref<Record<string, boolean>>({})
+  /** `${database}\0${table}` last sampled (or in flight); empty means not loaded for current table. */
+  const attributesSampleKey = ref('')
+  const attributesLoading = ref(false)
+  let attributesLoadPromise: Promise<void> | null = null
 
-  async function loadSampledAttributes() {
+  function currentAttributesKey() {
+    return form.table ? `${form.database ?? ''}\0${form.table}` : ''
+  }
+
+  function clearSampledAttributes() {
     sampledAttributes.value = {}
     attributeValues.value = {}
+    attributesSampleKey.value = ''
+    attributesLoading.value = false
+    attributesLoadPromise = null
+  }
+
+  async function loadSampledAttributes() {
     if (!form.table) {
+      clearSampledAttributes()
       return
     }
     const tableFields = tableMap.value[form.table] || []
     const columns = tableFields.map((column) => column.name)
     if (!columns.length) {
+      sampledAttributes.value = {}
       return
     }
+    const loadKey = currentAttributesKey()
     const tsField =
       tableFields.find((column) => column.semantic_type === 'TIMESTAMP') ??
       tableFields.find((column) => column.data_type.toLowerCase().includes('timestamp'))
@@ -328,6 +347,8 @@ a-modal(
       parentColumn: props.signalDatabaseKind === 'traces' ? 'parent_span_id' : undefined,
       timeColumn: tsField?.name,
     })
+    // Drop stale results if the user switched tables while the sample was in flight.
+    if (currentAttributesKey() !== loadKey) return
     // Dotted attribute names share the field namespace with real columns; real columns win.
     const fieldsByName = new Set(columns)
     sampledAttributes.value = Object.fromEntries(
@@ -335,6 +356,7 @@ a-modal(
         .filter((attribute) => !fieldsByName.has(attribute.column))
         .map((attribute) => [attribute.column, attribute])
     )
+    attributesSampleKey.value = loadKey
   }
 
   /** JSON2 attribute metadata for a condition field, if the field is one. */
@@ -601,7 +623,7 @@ a-modal(
   }
 
   async function loadValueSuggestions(condition: Condition) {
-    const field = condition.field
+    const { field } = condition
     if (!canSuggestValues(condition) || attributeValues.value[field] || valueLoading.value[field]) {
       return
     }
@@ -621,7 +643,7 @@ a-modal(
 
   /** Local filtering only — suggestions are fetched once per field. */
   function onValueSearch(condition: Condition, _search: string) {
-    void loadValueSuggestions(condition)
+    loadValueSuggestions(condition)
   }
 
   async function fetchTableNames(limit: number, filter = '', db = form.database): Promise<string[]> {
@@ -713,6 +735,36 @@ a-modal(
     }
   }
 
+  /** Lazy sample: only when the filter field dropdown opens (not on table select / page load). */
+  function ensureSampledAttributes() {
+    const key = currentAttributesKey()
+    if (!key || attributesSampleKey.value === key) return attributesLoadPromise ?? Promise.resolve()
+    if (attributesLoadPromise) return attributesLoadPromise
+
+    attributesLoading.value = true
+    attributesLoadPromise = (async () => {
+      try {
+        // Schema must be present so we know which JSON containers to SELECT.
+        if (form.table && !(tableMap.value[form.table] || []).length) {
+          await fetchTableFields(form.table)
+        }
+        await loadSampledAttributes()
+      } finally {
+        if (currentAttributesKey() === key) {
+          attributesLoading.value = false
+          attributesLoadPromise = null
+        }
+      }
+    })()
+    return attributesLoadPromise
+  }
+
+  function onFieldPopupVisibleChange(visible: boolean) {
+    if (visible) {
+      ensureSampledAttributes()
+    }
+  }
+
   // Unified form reset function: default values + provided values
   function resetForm(valuesToSet: Partial<Form> = {}) {
     const defaultState = JSON.parse(JSON.stringify(props.defaultFormState || {}))
@@ -763,7 +815,7 @@ a-modal(
     condition.fieldType = getFieldType(condition.field)
     // Chip keys have no column: the hook renders them as JSON path expressions.
     condition.jsonAttribute = attributeOf(condition.field)
-    void loadValueSuggestions(condition)
+    loadValueSuggestions(condition)
   }
 
   function removeCondition(index: number) {
@@ -816,8 +868,9 @@ a-modal(
   watch(
     () => form.table,
     () => {
-      void fetchTableFields(form.table).then(() => loadSampledAttributes())
-      // Table value is now extracted from form state in parent component
+      clearSampledAttributes()
+      fetchTableFields(form.table)
+      // Attribute keys are sampled later, when the filter field picker opens.
     },
     { immediate: true }
   )
