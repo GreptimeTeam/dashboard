@@ -1,13 +1,25 @@
 import type { ColumnType, TSColumn } from '@/types/query'
+import { resolveColumnWidthRule } from './column-widths'
 import { getSeparateFields } from './table-data'
 import type { ColumnWidthRule, LogsColumnMode, SeparateField } from '../types'
 
 /** Class names for time columns — reuse global timestamp-cell styles. */
-export function getTimeColumnClassNames(isPrimaryTs: boolean, isTime: boolean, tsCellDetail: boolean): string {
+export function getTimeColumnClassNames(
+  isPrimaryTs: boolean,
+  isTime: boolean,
+  options: { tsCellDetail?: boolean; tsToggle?: boolean } | boolean = {}
+): string {
   if (!isPrimaryTs && !isTime) {
     return ''
   }
+  // Legacy call sites passed `tsCellDetail` as the 3rd boolean.
+  const opts = typeof options === 'boolean' ? { tsCellDetail: options } : options
+  const tsCellDetail = opts.tsCellDetail ?? false
+  const tsToggle = opts.tsToggle ?? true
   const classes = ['timestamp-cell']
+  if (!tsToggle) {
+    return classes.join(' ')
+  }
   if (isPrimaryTs) {
     classes.push(tsCellDetail ? 'ts-cell-detail-link' : 'timestamp-cell--toggle')
   } else if (!tsCellDetail) {
@@ -31,6 +43,8 @@ export function buildVxeColumns(options: {
   tsColumn: TSColumn | null
   linkColumn: string
   tsCellDetail: boolean
+  /** When false: keep timestamp color, but no toggle cursor / click affordance. */
+  tsToggle?: boolean
   wrapLine: boolean
   widthRules: Record<string, ColumnWidthRule>
   renderSeparateCell: CellRenderer
@@ -46,6 +60,7 @@ export function buildVxeColumns(options: {
     tsColumn,
     linkColumn,
     tsCellDetail,
+    tsToggle = true,
     wrapLine,
     widthRules,
     renderSeparateCell,
@@ -54,6 +69,7 @@ export function buildVxeColumns(options: {
     hasColumnSlot,
     renderColumnSlot,
   } = options
+  const timeClassOpts = { tsCellDetail, tsToggle }
 
   const cols: Record<string, unknown>[] = []
   const tsName = tsColumn?.name
@@ -80,7 +96,7 @@ export function buildVxeColumns(options: {
       const tsMeta = (tsColumn || { name: tsName, data_type: 'TimestampNanosecond' }) as ColumnType
       cols.push(
         contentColumn(tsName, tsName, {
-          className: [getTimeColumnClassNames(true, true, tsCellDetail), 'dg-edge-left'].filter(Boolean).join(' '),
+          className: [getTimeColumnClassNames(true, true, timeClassOpts), 'dg-edge-left'].filter(Boolean).join(' '),
           headerClassName: 'dg-edge-left',
           ...(widthRules[tsName] || { width: 'auto' }),
           slots: {
@@ -110,16 +126,23 @@ export function buildVxeColumns(options: {
         ? ({ name: item.field, data_type: tsColumn.data_type || 'timestamp', title: item.title } as ColumnType)
         : ({ name: item.field, title: item.title, data_type: '' } as ColumnType))
     const classNames = [
-      getTimeColumnClassNames(item.isTs, item.isTime, tsCellDetail),
+      getTimeColumnClassNames(item.isTs, item.isTime, timeClassOpts),
       item.isLink ? 'dg-link-col' : '',
       !item.isTs && !item.isTime && !item.isLink ? 'dg-detail-cell' : '',
     ]
       .filter(Boolean)
       .join(' ')
     const edge = edgeClass(index, fields.length)
-    // Explicit width (non-text content) wins over the estimated rule.
+    // Slot / action columns keep their declared width. Time columns take
+    // max(explicit, estimate) so legacy 190px hints cannot clip timestamps.
     const explicitWidth = typeof meta.width === 'number' && meta.width > 0 ? meta.width : null
-    const rule = explicitWidth ? { width: explicitWidth } : widthRules[item.field] || {}
+    const estimatedRule = widthRules[item.field]
+    let rule: ColumnWidthRule = estimatedRule || {}
+    if (item.isTs || item.isTime) {
+      rule = resolveColumnWidthRule(estimatedRule, explicitWidth)
+    } else if (explicitWidth) {
+      rule = { width: explicitWidth }
+    }
     cols.push(
       contentColumn(item.field, item.title, {
         className: [classNames, edge].filter(Boolean).join(' '),
