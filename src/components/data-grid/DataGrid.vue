@@ -510,6 +510,7 @@
     const sourceRows = pageSourceData.value
     const fontSize = CELL_TYPOGRAPHY[props.size]?.font ?? 14
     const widths: Record<string, number> = {}
+    const empty = rows.length === 0
     fields.forEach((field) => {
       // Columns with a parent slot carry decorations (link buttons, context-menu
       // icons, gaps) that raw text width does not account for — and their content
@@ -518,14 +519,16 @@
       const hasSlot = Boolean(slots[`column-${field}`])
       const decoration = hasSlot ? SLOT_DECORATION_PX : 0
       const floor = hasSlot ? SLOT_MIN_WIDTH_PX : ESTIMATED_MIN_WIDTH_PX
+      const meta = resolveColumn(field)
 
-      let contentPx = estimateTextWidthPx(field, fontSize)
-
-      if (isTimeField(field)) {
-        // Size for BOTH raw and formatted text. Toggle only rewrites displayData;
-        // estimating from the current mode alone shrinks the column on raw and
-        // can clip (digit width is underestimated vs formatted punctuation mix).
-        const meta = resolveColumn(field)
+      let contentPx: number
+      if (empty) {
+        // No body cells — title + cell L/R padding (ESTIMATED_CELL_PADDING_PX).
+        contentPx = estimateTextWidthPx(meta?.title || field, fontSize)
+      } else if (isTimeField(field)) {
+        // Size for BOTH raw and formatted text so the format toggle does not
+        // shrink/clip the column. Body only — do not mix in header chrome.
+        contentPx = 0
         for (let i = 0; i < sourceRows.length; i += 1) {
           const value = sourceRows[i][field]
           const raw = formatTsDisplay(value, meta, false)
@@ -533,15 +536,14 @@
           contentPx = Math.max(contentPx, estimateTextWidthPx(raw, fontSize), estimateTextWidthPx(formatted, fontSize))
         }
       } else {
-        // Widest string wins — *not* the longest one. Two 32-char trace ids can
-        // differ in width (digits/uppercase advance wider than lowercase), so
-        // picking by length alone clips the digit-heavy ones.
+        // Widest body string wins — *not* the longest one (digit-heavy ids are
+        // wider than lowercase of the same length).
+        contentPx = 0
         for (let i = 0; i < rows.length; i += 1) {
           const text = rows[i][field]
-          if (typeof text !== 'string') {
-            continue
+          if (typeof text === 'string') {
+            contentPx = Math.max(contentPx, estimateTextWidthPx(text, fontSize))
           }
-          contentPx = Math.max(contentPx, estimateTextWidthPx(text, fontSize))
         }
       }
 
@@ -556,15 +558,18 @@
 
   // Column virtualization is always safe: widths never depend on the DOM,
   // so off-screen columns don't need to be rendered to be sized.
+  // Empty tables turn X-virtual off so `fit` + minWidth absorbers can stretch
+  // headers across the viewport (virtual-x locks scroll width to Σ column widths).
   const virtualXConfig = computed(() => ({
-    enabled: props.columnMode === 'separate' && layoutFields.value.length > 8,
+    enabled: props.columnMode === 'separate' && layoutFields.value.length > 8 && displayData.value.length > 0,
     gt: 0,
   }))
 
   watch(
     () => [layoutFields.value.join('\0'), displayData.value, props.size, props.leftoverStrategy] as const,
     () => {
-      const next = computeColumnWidthRules(layoutFields.value, estimateColumnWidths(), props.leftoverStrategy)
+      const empty = displayData.value.length === 0
+      const next = computeColumnWidthRules(layoutFields.value, estimateColumnWidths(), props.leftoverStrategy, empty)
       if (!areWidthRulesEqual(columnWidthRules.value, next)) {
         columnWidthRules.value = next
       }

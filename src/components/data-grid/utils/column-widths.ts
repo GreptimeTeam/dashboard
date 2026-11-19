@@ -18,17 +18,21 @@ export type LeftoverStrategy = 'last-column' | 'proportional'
  * viewport space is distributed to them (`last-column` → last field only;
  * `proportional` → every field, VXE splits leftover evenly). Frozen px widths
  * replace `'auto'` so VXE stops re-measuring on every recalculate.
+ *
+ * `expandAll` (empty tables): every column is an absorber so spare viewport
+ * width stretches headers instead of leaving a gap after the last column.
  */
 export function computeColumnWidthRules(
   fields: string[],
   frozen: Record<string, number> | null = null,
-  leftoverStrategy: LeftoverStrategy = 'last-column'
+  leftoverStrategy: LeftoverStrategy = 'last-column',
+  expandAll = false
 ): Record<string, ColumnWidthRule> {
   const absorber = fields[fields.length - 1]
   const rules: Record<string, ColumnWidthRule> = {}
   fields.forEach((field) => {
     const width = frozen?.[field] ?? 'auto'
-    const isAbsorber = leftoverStrategy === 'proportional' || field === absorber
+    const isAbsorber = expandAll || leftoverStrategy === 'proportional' || field === absorber
     rules[field] = isAbsorber ? { minWidth: width } : { width }
   })
   return rules

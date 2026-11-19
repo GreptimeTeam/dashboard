@@ -31,6 +31,14 @@ describe('computeColumnWidthRules', () => {
   it('falls back to auto for fields missing from the frozen map', () => {
     expect(computeColumnWidthRules(fields, { time: 180 }).level).toEqual({ width: 'auto' })
   })
+
+  it('makes every frozen column an absorber when expandAll is set', () => {
+    expect(computeColumnWidthRules(fields, { time: 180, level: 60, message: 100 }, 'last-column', true)).toEqual({
+      time: { minWidth: 180 },
+      level: { minWidth: 60 },
+      message: { minWidth: 100 },
+    })
+  })
 })
 
 describe('areWidthRulesEqual', () => {
