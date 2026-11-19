@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { areWidthRulesEqual, computeColumnWidthRules } from './column-widths'
+import { areWidthRulesEqual, computeColumnWidthRules, resolveColumnWidthRule } from './column-widths'
 
 describe('computeColumnWidthRules', () => {
   const fields = ['time', 'level', 'message']
@@ -30,6 +30,31 @@ describe('computeColumnWidthRules', () => {
 
   it('falls back to auto for fields missing from the frozen map', () => {
     expect(computeColumnWidthRules(fields, { time: 180 }).level).toEqual({ width: 'auto' })
+  })
+
+  it('lets flex fields absorb leftover instead of the last column', () => {
+    expect(computeColumnWidthRules(fields, { time: 180, level: 60, message: 80 }, 'last-column', ['level'])).toEqual({
+      time: { width: 180 },
+      level: { minWidth: 60 },
+      message: { width: 80 },
+    })
+  })
+})
+
+describe('resolveColumnWidthRule', () => {
+  it('keeps the estimate when there is no explicit width', () => {
+    expect(resolveColumnWidthRule({ minWidth: 220 }, null)).toEqual({ minWidth: 220 })
+    expect(resolveColumnWidthRule(undefined, null)).toEqual({})
+  })
+
+  it('widens an undersized explicit width to the estimate (timestamp floor)', () => {
+    expect(resolveColumnWidthRule({ minWidth: 220 }, 190)).toEqual({ minWidth: 220 })
+    expect(resolveColumnWidthRule({ width: 220 }, 190)).toEqual({ width: 220 })
+  })
+
+  it('keeps an explicit width that is already larger than the estimate', () => {
+    expect(resolveColumnWidthRule({ minWidth: 120 }, 150)).toEqual({ minWidth: 150 })
+    expect(resolveColumnWidthRule(undefined, 280)).toEqual({ width: 280 })
   })
 })
 

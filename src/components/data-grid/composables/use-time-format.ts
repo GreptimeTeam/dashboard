@@ -45,8 +45,36 @@ export default function useTimeFormat() {
     tsViewStr.value = !tsViewStr.value
   }
 
-  /** Header pill for time columns — icon + name, click toggles raw/formatted. */
-  function renderTsHeader(title: string) {
+  /**
+   * Header pill for time columns.
+   * `toggle: false` keeps the semantic timestamp look without click/tooltip.
+   */
+  function renderTsHeader(title: string, options?: { toggle?: boolean }) {
+    const toggle = options?.toggle !== false
+    const pill = h(
+      'span',
+      {
+        class: ['gpt-semantic-th', 'timestamp', 'dg-ts-th', toggle ? null : 'dg-ts-th--static'].filter(Boolean),
+        onClick: toggle
+          ? (event: MouseEvent) => {
+              event.stopPropagation()
+              changeTsView()
+            }
+          : undefined,
+      },
+      [
+        h('svg', { class: 'icon-12' }, [h('use', { href: '#time-index' })]),
+        h('span', { class: 'gpt-semantic-th-text' }, title),
+        toggle && tsViewStr.value && showTimezoneLabel.value
+          ? h('span', { class: 'gpt-semantic-th-tz' }, timezoneLabel.value)
+          : null,
+      ]
+    )
+
+    if (!toggle) {
+      return pill
+    }
+
     return h(
       Tooltip,
       { placement: 'top' },
@@ -55,24 +83,7 @@ export default function useTimeFormat() {
           tsViewStr.value
             ? `${timezoneFullLabel.value} · ${t('dashboard.showTimestamp')}`
             : t('dashboard.formatTimestamp'),
-        default: () =>
-          h(
-            'span',
-            {
-              class: ['gpt-semantic-th', 'timestamp', 'dg-ts-th'],
-              onClick: (event: MouseEvent) => {
-                event.stopPropagation()
-                changeTsView()
-              },
-            },
-            [
-              h('svg', { class: 'icon-12' }, [h('use', { href: '#time-index' })]),
-              h('span', { class: 'gpt-semantic-th-text' }, title),
-              tsViewStr.value && showTimezoneLabel.value
-                ? h('span', { class: 'gpt-semantic-th-tz' }, timezoneLabel.value)
-                : null,
-            ]
-          ),
+        default: () => pill,
       }
     )
   }

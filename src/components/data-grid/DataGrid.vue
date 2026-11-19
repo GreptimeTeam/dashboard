@@ -137,6 +137,12 @@
       tsColumn?: TSColumn | null
       /** Row-detail mode: the timestamp cell is a link (parity with tsCellDetail). */
       tsCellDetail?: boolean
+      /**
+       * When false: keep timestamp accent styling, but disable format/raw toggle
+       * (no header tooltip, no pointer cursor, cell click does not flip format).
+       * Use for APIs that already return readable timestamps (e.g. slow-query).
+       */
+      tsToggle?: boolean
       columnMode?: 'separate' | 'merged' | 'merged-with-keys'
       loading?: boolean
       size?: 'small' | 'mini' | 'medium' | 'large'
@@ -180,6 +186,7 @@
       displayedColumns: () => [],
       tsColumn: null,
       tsCellDetail: false,
+      tsToggle: true,
       columnMode: 'separate',
       loading: false,
       size: 'medium',
@@ -415,7 +422,8 @@
   const displayData = computed(() => {
     // Read tsViewStr here so toggling format always rebuilds display strings
     // (merged + separate). Default-arg reads inside formatTsDisplay are easy to miss.
-    const tsFormatted = tsViewStr.value
+    // tsToggle=false → always raw (API already readable / no format switch).
+    const tsFormatted = props.tsToggle ? tsViewStr.value : false
     return buildDisplayRows({
       ...fieldsInput.value,
       data: pageSourceData.value,
@@ -430,6 +438,11 @@
     }
     return getSeparateFields(fieldsInput.value).map((item) => item.field)
   })
+
+  /** Columns marked `flex: true` absorb leftover viewport width (minWidth). */
+  const flexFields = computed(() =>
+    props.columns.filter((column) => Boolean((column as ColumnType & { flex?: boolean }).flex)).map((c) => c.name)
+  )
 
   const hideJsonNullsByColumn = ref<Record<string, boolean>>({})
 
@@ -481,8 +494,14 @@
    * (legacy DataTable virtual used `8*len+32`, typically a few px over DOM).
    */
   const HEADER_WEIGHT_SLACK = 1.08
-  /** Same floor as legacy DataTable virtual time columns. */
-  const TIME_COLUMN_MIN_WIDTH_PX = 200
+  /**
+   * Floor for time columns: formatted `YYYY-MM-DD HH:mm:ss.SSS` (~176px text at
+   * 14px Geist) + cell pad + first/last edge pad (dg-edge-*-16px). Legacy 200px
+   * clipped the last column; 190px page widths clipped every time column.
+   */
+  const TIME_COLUMN_MIN_WIDTH_PX = 220
+  /** Canonical formatted sample so empty / null rows still size for the toggle. */
+  const TIME_FORMAT_SAMPLE = '2020-12-31 23:59:59.999'
   /** Pill padding (L+R) on `.gpt-semantic-th`. */
   const HEADER_PILL_PAD_PX = 12
   /** JSON header dropdown affordance. */
@@ -554,31 +573,42 @@
       const floor = hasSlot ? SLOT_MIN_WIDTH_PX : ESTIMATED_MIN_WIDTH_PX
       const meta = resolveColumn(field)
 
+      // Flex absorbers only need a floor — leftover viewport fills the rest.
+      // Measuring full SQL / long text as minWidth would force horizontal scroll.
+      const isFlex = Boolean((meta as (ColumnType & { flex?: boolean }) | undefined)?.flex)
       let contentPx = estimateHeaderWidthPx(field, meta, fontSize)
-      if (isTimeField(field)) {
-        // Size for BOTH raw and formatted text so the format toggle does not
-        // shrink/clip the column.
-        for (let i = 0; i < sourceRows.length; i += 1) {
-          const value = sourceRows[i][field]
-          const raw = formatTsDisplay(value, meta, false)
-          const formatted = formatTsDisplay(value, meta, true)
-          contentPx = Math.max(contentPx, estimateTextWidthPx(raw, fontSize), estimateTextWidthPx(formatted, fontSize))
-        }
-      } else {
-        // Widest body string wins — *not* the longest one (digit-heavy ids are
-        // wider than lowercase of the same length).
-        for (let i = 0; i < rows.length; i += 1) {
-          const text = rows[i][field]
-          if (typeof text === 'string') {
-            contentPx = Math.max(contentPx, estimateTextWidthPx(text, fontSize))
+      if (!isFlex) {
+        if (isTimeField(field)) {
+          // Always cover the formatted sample — empty/null cells and undersized
+          // page `width` hints must not leave the column too narrow for the toggle.
+          contentPx = Math.max(contentPx, estimateTextWidthPx(TIME_FORMAT_SAMPLE, fontSize))
+          // Size for BOTH raw and formatted text so the format toggle does not
+          // shrink/clip the column.
+          for (let i = 0; i < sourceRows.length; i += 1) {
+            const value = sourceRows[i][field]
+            const raw = formatTsDisplay(value, meta, false)
+            const formatted = formatTsDisplay(value, meta, true)
+            contentPx = Math.max(
+              contentPx,
+              estimateTextWidthPx(raw, fontSize),
+              estimateTextWidthPx(formatted, fontSize)
+            )
+          }
+        } else {
+          // Widest body string wins — *not* the longest one (digit-heavy ids are
+          // wider than lowercase of the same length).
+          for (let i = 0; i < rows.length; i += 1) {
+            const text = rows[i][field]
+            if (typeof text === 'string') {
+              contentPx = Math.max(contentPx, estimateTextWidthPx(text, fontSize))
+            }
           }
         }
       }
 
-      const estimated = Math.min(
-        ESTIMATED_MAX_WIDTH_PX,
-        Math.max(floor, contentPx + decoration + WIDTH_ELLIPSIS_BUFFER_PX)
-      )
+      const estimated = isFlex
+        ? Math.max(floor, contentPx + decoration + WIDTH_ELLIPSIS_BUFFER_PX)
+        : Math.min(ESTIMATED_MAX_WIDTH_PX, Math.max(floor, contentPx + decoration + WIDTH_ELLIPSIS_BUFFER_PX))
       // A width the user dragged always wins over the estimate.
       widths[field] = userWidths.value[field] ?? estimated
     })
@@ -595,9 +625,21 @@
   }))
 
   watch(
-    () => [layoutFields.value.join('\0'), displayData.value, props.size, props.leftoverStrategy] as const,
+    () =>
+      [
+        layoutFields.value.join('\0'),
+        displayData.value,
+        props.size,
+        props.leftoverStrategy,
+        flexFields.value.join('\0'),
+      ] as const,
     () => {
-      const next = computeColumnWidthRules(layoutFields.value, estimateColumnWidths(), props.leftoverStrategy)
+      const next = computeColumnWidthRules(
+        layoutFields.value,
+        estimateColumnWidths(),
+        props.leftoverStrategy,
+        flexFields.value
+      )
       if (!areWidthRulesEqual(columnWidthRules.value, next)) {
         columnWidthRules.value = next
       }
@@ -674,7 +716,7 @@
 
   function renderHeader(column: ColumnType, _field: string, title: string) {
     if (isTimeColumn(column) || props.tsColumn?.name === column.name) {
-      return renderTsHeader(title)
+      return renderTsHeader(title, { toggle: props.tsToggle })
     }
     if (isJsonDataType(column.data_type)) {
       return renderJsonHeader(column, {
@@ -697,7 +739,7 @@
     // Time columns: format from the original row so the header toggle is visible
     // even when the grid slot does not re-run through displayData alone.
     const text = isTimeField(field)
-      ? formatTsDisplay(getOriginalRow(row)[field], meta)
+      ? formatTsDisplay(getOriginalRow(row)[field], meta, props.tsToggle ? undefined : false)
       : formatCellText(row[field], meta, isHideJsonNulls(field))
     const isLink = Boolean(props.linkColumn && field === props.linkColumn)
 
@@ -785,6 +827,7 @@
       tsColumn: props.tsColumn,
       linkColumn: props.linkColumn,
       tsCellDetail: props.tsCellDetail,
+      tsToggle: props.tsToggle,
       wrapLine: props.wrapLine,
       widthRules: columnWidthRules.value,
       renderSeparateCell,
@@ -814,11 +857,15 @@
         emit('tsCellClick', original, rowIndex)
         return
       }
-      changeTsView()
+      if (props.tsToggle) {
+        changeTsView()
+      }
       return
     }
     if (field && isTimeColumn(props.columns.find((c) => c.name === field))) {
-      changeTsView()
+      if (props.tsToggle) {
+        changeTsView()
+      }
       return
     }
     if (isDetailCellTarget($event)) {
@@ -1075,6 +1122,10 @@
       cursor: pointer;
       // Icon + accent text only — no semantic pill background.
       background-color: transparent;
+    }
+
+    :deep(.dg-ts-th--static) {
+      cursor: default;
     }
 
     // First/last column edge — align with page/toolbar content; no VXE API.
