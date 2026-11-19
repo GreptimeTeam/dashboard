@@ -477,12 +477,18 @@
   const ESTIMATED_MAX_WIDTH_PX = 600
   const ESTIMATED_MIN_WIDTH_PX = 60
   /**
-   * Empty-table titles render at font-weight 600; the body char ratios under-read
-   * them. Traces often has enough columns that Σ minWidths already exceeds the
-   * viewport, so expandAll cannot grow columns — the title estimate itself must
-   * be wide enough or headers stay ellipsized.
+   * Header weight 600 is slightly wider than body ratios. Keep a small overshoot
+   * (legacy DataTable virtual used `8*len+32`, typically a few px over DOM).
    */
-  const EMPTY_HEADER_WIDTH_SLACK = 1.2
+  const HEADER_WEIGHT_SLACK = 1.08
+  /** Same floor as legacy DataTable virtual time columns. */
+  const TIME_COLUMN_MIN_WIDTH_PX = 200
+  /** Pill padding (L+R) on `.gpt-semantic-th`. */
+  const HEADER_PILL_PAD_PX = 12
+  /** JSON header dropdown affordance. */
+  const HEADER_JSON_ACTION_PX = 14
+  /** Matches legacy `measureCellNaturalWidth` +4 anti-ellipsis buffer. */
+  const WIDTH_ELLIPSIS_BUFFER_PX = 4
   // Full-width ranges: CJK, Hangul, Hiragana/Katakana, full-width forms.
   const CJK_CHARS = /[\u1100-\u115f\u2e80-\ua4cf\uac00-\ud7a3\uf900-\ufaff\ufe30-\ufe4f\uff00-\uff60\uffe0-\uffe6]/g
   const WIDE_CHARS = /[0-9A-Z]/g
@@ -494,6 +500,24 @@
     const narrow = Math.max(0, text.length - cjk - wide)
     const em = narrow * NARROW_CHAR_RATIO + wide * WIDE_CHAR_RATIO + cjk * CJK_CHAR_RATIO
     return Math.ceil(em * fontSizePx + ESTIMATED_CELL_PADDING_PX)
+  }
+
+  /**
+   * Header floor: title text (+ light pill chrome). Same for empty and non-empty —
+   * body cells can only widen further. Time columns keep the legacy 200px floor.
+   */
+  function estimateHeaderWidthPx(field: string, meta: ColumnType | undefined, fontSizePx: number): number {
+    if (isTimeField(field)) {
+      return TIME_COLUMN_MIN_WIDTH_PX
+    }
+    const title = meta?.title || field
+    let px = Math.ceil(estimateTextWidthPx(title, fontSizePx) * HEADER_WEIGHT_SLACK)
+    if (meta && isJsonDataType(meta.data_type)) {
+      px += HEADER_PILL_PAD_PX + HEADER_JSON_ACTION_PX
+    } else if (meta?.semantic_type) {
+      px += HEADER_PILL_PAD_PX
+    }
+    return px
   }
 
   /**
@@ -520,7 +544,6 @@
     const sourceRows = pageSourceData.value
     const fontSize = CELL_TYPOGRAPHY[props.size]?.font ?? 14
     const widths: Record<string, number> = {}
-    const empty = rows.length === 0
     fields.forEach((field) => {
       // Columns with a parent slot carry decorations (link buttons, context-menu
       // icons, gaps) that raw text width does not account for — and their content
@@ -531,14 +554,10 @@
       const floor = hasSlot ? SLOT_MIN_WIDTH_PX : ESTIMATED_MIN_WIDTH_PX
       const meta = resolveColumn(field)
 
-      let contentPx: number
-      if (empty) {
-        // No body cells — title + L/R pad, with slack for header weight 600.
-        contentPx = Math.ceil(estimateTextWidthPx(meta?.title || field, fontSize) * EMPTY_HEADER_WIDTH_SLACK)
-      } else if (isTimeField(field)) {
+      let contentPx = estimateHeaderWidthPx(field, meta, fontSize)
+      if (isTimeField(field)) {
         // Size for BOTH raw and formatted text so the format toggle does not
-        // shrink/clip the column. Body only — do not mix in header chrome.
-        contentPx = 0
+        // shrink/clip the column.
         for (let i = 0; i < sourceRows.length; i += 1) {
           const value = sourceRows[i][field]
           const raw = formatTsDisplay(value, meta, false)
@@ -548,7 +567,6 @@
       } else {
         // Widest body string wins — *not* the longest one (digit-heavy ids are
         // wider than lowercase of the same length).
-        contentPx = 0
         for (let i = 0; i < rows.length; i += 1) {
           const text = rows[i][field]
           if (typeof text === 'string') {
@@ -557,7 +575,10 @@
         }
       }
 
-      const estimated = Math.min(ESTIMATED_MAX_WIDTH_PX, Math.max(floor, contentPx + decoration))
+      const estimated = Math.min(
+        ESTIMATED_MAX_WIDTH_PX,
+        Math.max(floor, contentPx + decoration + WIDTH_ELLIPSIS_BUFFER_PX)
+      )
       // A width the user dragged always wins over the estimate.
       widths[field] = userWidths.value[field] ?? estimated
     })
@@ -568,18 +589,15 @@
 
   // Column virtualization is always safe: widths never depend on the DOM,
   // so off-screen columns don't need to be rendered to be sized.
-  // Empty tables turn X-virtual off so `fit` + minWidth absorbers can stretch
-  // headers across the viewport (virtual-x locks scroll width to Σ column widths).
   const virtualXConfig = computed(() => ({
-    enabled: props.columnMode === 'separate' && layoutFields.value.length > 8 && displayData.value.length > 0,
+    enabled: props.columnMode === 'separate' && layoutFields.value.length > 8,
     gt: 0,
   }))
 
   watch(
     () => [layoutFields.value.join('\0'), displayData.value, props.size, props.leftoverStrategy] as const,
     () => {
-      const empty = displayData.value.length === 0
-      const next = computeColumnWidthRules(layoutFields.value, estimateColumnWidths(), props.leftoverStrategy, empty)
+      const next = computeColumnWidthRules(layoutFields.value, estimateColumnWidths(), props.leftoverStrategy)
       if (!areWidthRulesEqual(columnWidthRules.value, next)) {
         columnWidthRules.value = next
       }
@@ -993,7 +1011,9 @@
       // cellTypographyStyle on the root. Header font-color must be set here:
       // VXE resolves it at :root from --vxe-ui-font-color before it reaches us.
       --vxe-ui-table-header-background-color: var(--gpt-table-head-bg, #eeecf0);
-      --vxe-ui-table-header-font-color: var(--gpt-text-secondary, #8b7ba8);
+      // Match table-query data-view (`.arco-table-th { color: primary }`), not
+      // the lighter Arco theme default (`@table-color-text-header-cell: secondary`).
+      --vxe-ui-table-header-font-color: var(--gpt-text-primary, #473460);
       --vxe-ui-table-header-font-weight: 600;
       --vxe-ui-table-row-hover-background-color: var(--gpt-table-row-hover-bg, rgba(112, 47, 237, 0.08));
       --vxe-ui-table-row-current-background-color: var(--gpt-nav-active-bg, rgba(112, 47, 237, 0.1));
