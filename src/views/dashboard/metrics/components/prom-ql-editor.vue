@@ -33,7 +33,7 @@
   import { PromQLExtension } from '@prometheus-io/codemirror-promql'
   import { useSignalDatabase } from '@/observability/signal-database'
   import axios from 'axios'
-  import { keymap, EditorView } from '@codemirror/view'
+  import { keymap, EditorView, tooltips } from '@codemirror/view'
   import { Prec } from '@codemirror/state'
   import { IconLoading, IconPlayArrow } from '@arco-design/web-vue/es/icon'
 
@@ -241,8 +241,12 @@
     ])
   )
 
+  // Mount completion/hover tooltips on body so they are not clipped by the
+  // editor's overflow:hidden or covered by the results pane stacking context.
+  const tooltipExt = tooltips({ parent: document.body })
+
   const extensions = computed(() => {
-    const exts = [basicSetup, EditorView.lineWrapping, queryKeymap]
+    const exts = [basicSetup, EditorView.lineWrapping, queryKeymap, tooltipExt]
 
     if (promqlExtension.value) {
       exts.push(promqlExtension.value)
@@ -421,33 +425,34 @@
   :deep(.cm-lineNumbers) {
     display: none !important;
   }
+</style>
 
-  :deep(.cm-tooltip) {
-    z-index: 1000;
+<style lang="less">
+  /* Unscoped: tooltips mount on document.body, so scoped :deep will not match. */
+  .cm-tooltip {
+    z-index: 1100;
   }
 
-  :deep(.cm-tooltip.cm-completionInfo) {
-    z-index: 1001;
-  }
-  :deep(.cm-tooltip.cm-tooltip-autocomplete) {
+  .cm-tooltip.cm-tooltip-autocomplete {
     background-color: var(--gpt-bg-surface);
     border: 1px solid var(--gpt-border-default);
     border-radius: var(--gpt-radius-sm);
     box-shadow: 0 2px 8px var(--box-shadow-color);
 
     & > ul {
+      box-sizing: border-box;
+      max-width: min(700px, 95vw);
       max-height: 350px;
-      font-family: 'DejaVu Sans Mono', monospace;
-      max-width: unset;
       margin: 0;
       padding: 0;
+      overflow: hidden auto;
       list-style: none;
+      font-family: 'DejaVu Sans Mono', monospace;
     }
 
     & > ul > li {
-      padding: var(--gpt-gap-md) var(--gpt-gap-lg);
+      padding: var(--gpt-gap-sm) var(--gpt-gap-md);
       cursor: pointer;
-      border-bottom: 1px solid var(--gpt-border-subtle);
 
       &:hover {
         background-color: var(--gpt-bg-header);
@@ -457,46 +462,50 @@
         background-color: var(--gpt-nav-active-bg);
         color: unset;
       }
-
-      &:last-child {
-        border-bottom: none;
-      }
     }
-
-    min-width: 30%;
   }
 
-  :deep(.cm-tooltip.cm-completionInfo) {
-    background-color: var(--gpt-nav-active-bg);
+  /* Sibling of the list, positioned by CodeMirror — don't override top/left/max-width. */
+  .cm-tooltip.cm-completionInfo {
+    z-index: 1101;
+    box-sizing: border-box;
+    padding: var(--gpt-gap-md) var(--gpt-gap-lg);
+    font-family: var(--font-family-base);
+    color: var(--gpt-text-primary);
+    background-color: var(--gpt-bg-surface);
     border: 1px solid var(--gpt-border-default);
     border-radius: var(--gpt-radius-sm);
     box-shadow: 0 2px 8px var(--box-shadow-color);
-    margin-top: -11px;
-    padding: var(--gpt-gap-lg);
-    font-family: var(--font-family-base);
-    min-width: 250px;
-    max-width: min-content;
-    z-index: 1001;
   }
 
-  :deep(.cm-completionIcon) {
+  .cm-completionInfo.cm-completionInfo-right {
+    left: calc(100% + 6px);
+  }
+
+  .cm-completionInfo.cm-completionInfo-left {
+    right: calc(100% + 6px);
+  }
+
+  .cm-completionIcon {
     box-sizing: content-box;
+    margin-right: 10px;
     font-size: var(--gpt-font-xl);
     line-height: 1;
-    margin-right: 10px;
     vertical-align: top;
     color: var(--gpt-main-purple);
     opacity: 1;
   }
 
-  :deep(.cm-completionMatchedText) {
+  .cm-completionMatchedText {
     color: var(--gpt-brand-700);
-    text-decoration: none;
     font-weight: bold;
+    text-decoration: none;
   }
-  :deep(.cm-completionDetail) {
-    float: right;
+
+  .cm-completionDetail {
+    margin-left: 0.75em;
     color: var(--gpt-text-muted);
     font-size: var(--gpt-font-base);
+    font-style: italic;
   }
 </style>
