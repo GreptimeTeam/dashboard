@@ -3,11 +3,6 @@ a-card(:bordered="false")
   template(#title)
     .results-header
       span {{ $t('logsQuery.results') }}
-      span.results-count(v-if="totalResults > 0") 
-        | ({{ totalResults }} {{ totalResults === 1 ? 'record' : 'records' }}
-        template(v-if="totalResults > pageSize")
-          | , showing {{ Math.min((currentPage - 1) * pageSize + 1, totalResults) }}-{{ Math.min(currentPage * pageSize, totalResults) }}
-        | )
   template(#extra)
     a-space
       a-trigger(v-if="columns.length" trigger="click" :unmount-on-close="false")
@@ -144,7 +139,6 @@ a-card(:bordered="false")
 
   const pageSize = ref(20)
   const currentPage = ref(1)
-  const totalResults = computed(() => props.data.length)
   // Stable references — inline objects would rebuild DataGrid columns every render.
   const tsColumn = { name: 'timestamp', data_type: 'TimestampNanosecond' } as const
   const pageSizeOptions = [10, 20, 50, 100]
@@ -244,12 +238,6 @@ a-card(:bordered="false")
     display: flex;
     align-items: center;
     gap: 8px;
-    font-weight: normal;
-  }
-
-  .results-count {
-    color: var(--gpt-text-muted);
-    font-size: var(--gpt-font-base);
     font-weight: normal;
   }
 
