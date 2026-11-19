@@ -216,7 +216,7 @@
 
   const { t } = useI18n()
   const slots = useSlots()
-  const { formatTsDisplay, changeTsView, renderTsHeader } = useTimeFormat()
+  const { tsViewStr, formatTsDisplay, changeTsView, renderTsHeader } = useTimeFormat()
 
   const rootEl = ref<HTMLElement | null>(null)
   const gridHostEl = ref<HTMLElement | null>(null)
@@ -412,14 +412,17 @@
     }))
   })
 
-  const displayData = computed(() =>
-    buildDisplayRows({
+  const displayData = computed(() => {
+    // Read tsViewStr here so toggling format always rebuilds display strings
+    // (merged + separate). Default-arg reads inside formatTsDisplay are easy to miss.
+    const tsFormatted = tsViewStr.value
+    return buildDisplayRows({
       ...fieldsInput.value,
       data: pageSourceData.value,
       columnMode: props.columnMode,
-      textOf: (value, column) => formatTsDisplay(value, column),
+      textOf: (value, column) => formatTsDisplay(value, column, tsFormatted),
     })
-  )
+  })
 
   const layoutFields = computed(() => {
     if (props.columnMode !== 'separate') {
@@ -473,6 +476,13 @@
   const SLOT_DECORATION_PX = 28
   const ESTIMATED_MAX_WIDTH_PX = 600
   const ESTIMATED_MIN_WIDTH_PX = 60
+  /**
+   * Empty-table titles render at font-weight 600; the body char ratios under-read
+   * them. Traces often has enough columns that Σ minWidths already exceeds the
+   * viewport, so expandAll cannot grow columns — the title estimate itself must
+   * be wide enough or headers stay ellipsized.
+   */
+  const EMPTY_HEADER_WIDTH_SLACK = 1.2
   // Full-width ranges: CJK, Hangul, Hiragana/Katakana, full-width forms.
   const CJK_CHARS = /[\u1100-\u115f\u2e80-\ua4cf\uac00-\ud7a3\uf900-\ufaff\ufe30-\ufe4f\uff00-\uff60\uffe0-\uffe6]/g
   const WIDE_CHARS = /[0-9A-Z]/g
@@ -523,8 +533,8 @@
 
       let contentPx: number
       if (empty) {
-        // No body cells — title + cell L/R padding (ESTIMATED_CELL_PADDING_PX).
-        contentPx = estimateTextWidthPx(meta?.title || field, fontSize)
+        // No body cells — title + L/R pad, with slack for header weight 600.
+        contentPx = Math.ceil(estimateTextWidthPx(meta?.title || field, fontSize) * EMPTY_HEADER_WIDTH_SLACK)
       } else if (isTimeField(field)) {
         // Size for BOTH raw and formatted text so the format toggle does not
         // shrink/clip the column. Body only — do not mix in header chrome.
@@ -666,7 +676,11 @@
     const { row, column } = params
     const field = column?.field || ''
     const meta = resolveColumn(field)
-    const text = formatCellText(row[field], meta, isHideJsonNulls(field))
+    // Time columns: format from the original row so the header toggle is visible
+    // even when the grid slot does not re-run through displayData alone.
+    const text = isTimeField(field)
+      ? formatTsDisplay(getOriginalRow(row)[field], meta)
+      : formatCellText(row[field], meta, isHideJsonNulls(field))
     const isLink = Boolean(props.linkColumn && field === props.linkColumn)
 
     const textNode = isLink
@@ -712,7 +726,9 @@
       }
       return pieces
     })
-    return h('div', { class: 'dg-cell-inner dg-merged-cell' }, nodes)
+    // Wrap in `.dg-cell-text` so nowrap + ellipsis apply — bare spans inside the
+    // flex slot are hard-clipped by VXE with no `...`.
+    return h('div', { class: 'dg-cell-inner dg-merged-cell' }, [h('span', { class: 'dg-cell-text' }, nodes)])
   }
 
   function hasColumnSlot(field: string) {
@@ -743,8 +759,8 @@
     ])
   }
 
-  const vxeColumns = computed(() =>
-    buildVxeColumns({
+  const vxeColumns = computed(() => {
+    const cols = buildVxeColumns({
       columnMode: props.columnMode,
       columns: props.columns,
       displayedColumns: props.displayedColumns,
@@ -759,7 +775,9 @@
       hasColumnSlot,
       renderColumnSlot,
     })
-  )
+    // New array when format toggles so VXE refreshes header + time cell slots.
+    return tsViewStr.value ? cols : cols.map((col) => ({ ...col }))
+  })
 
   function rowClassName({ row }: { row: TableData }) {
     const key = typeof row.__rowIndex === 'number' ? row.__rowIndex : null
@@ -1026,6 +1044,7 @@
     }
 
     :deep(.dg-cell-text) {
+      flex: 1;
       min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;

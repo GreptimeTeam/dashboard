@@ -33,7 +33,12 @@ export default function useTimeFormat() {
     if (!formatted || !column || !('data_type' in column) || !column.data_type) {
       return raw
     }
-    return formatDateTimeWithMs(value as number, column.data_type) || raw
+    // API / JSON may yield string nanoseconds — coerce before converting units.
+    const numeric = typeof value === 'number' ? value : Number(value)
+    if (!Number.isFinite(numeric)) {
+      return raw
+    }
+    return formatDateTimeWithMs(numeric, column.data_type) || raw
   }
 
   function changeTsView() {
@@ -51,13 +56,23 @@ export default function useTimeFormat() {
             ? `${timezoneFullLabel.value} · ${t('dashboard.showTimestamp')}`
             : t('dashboard.formatTimestamp'),
         default: () =>
-          h('span', { class: ['gpt-semantic-th', 'timestamp', 'dg-ts-th'], onClick: changeTsView }, [
-            h('svg', { class: 'icon-12' }, [h('use', { href: '#time-index' })]),
-            h('span', { class: 'gpt-semantic-th-text' }, title),
-            tsViewStr.value && showTimezoneLabel.value
-              ? h('span', { class: 'gpt-semantic-th-tz' }, timezoneLabel.value)
-              : null,
-          ]),
+          h(
+            'span',
+            {
+              class: ['gpt-semantic-th', 'timestamp', 'dg-ts-th'],
+              onClick: (event: MouseEvent) => {
+                event.stopPropagation()
+                changeTsView()
+              },
+            },
+            [
+              h('svg', { class: 'icon-12' }, [h('use', { href: '#time-index' })]),
+              h('span', { class: 'gpt-semantic-th-text' }, title),
+              tsViewStr.value && showTimezoneLabel.value
+                ? h('span', { class: 'gpt-semantic-th-tz' }, timezoneLabel.value)
+                : null,
+            ]
+          ),
       }
     )
   }

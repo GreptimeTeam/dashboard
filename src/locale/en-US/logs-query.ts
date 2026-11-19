@@ -17,7 +17,7 @@ export default {
   'logsQuery.code': 'Code',
   'logsQuery.record': 'row',
   'logsQuery.records': 'rows',
-  'logsQuery.singleColumn': 'Single Column',
+  'logsQuery.singleColumn': 'Merged display',
   'logsQuery.showKeys': 'Show Keys',
   'logsQuery.compactRows': 'Compact rows',
   'logsQuery.fields': 'Fields',

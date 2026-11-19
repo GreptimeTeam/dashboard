@@ -17,7 +17,7 @@ export default {
   'logsQuery.code': 'コード',
   'logsQuery.record': '行',
   'logsQuery.records': '行',
-  'logsQuery.singleColumn': '単一列',
+  'logsQuery.singleColumn': '結合表示',
   'logsQuery.showKeys': 'キーを表示',
   'logsQuery.compactRows': '行をコンパクト表示',
   'logsQuery.fields': 'フィールド',

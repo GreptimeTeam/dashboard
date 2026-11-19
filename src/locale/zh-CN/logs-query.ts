@@ -17,7 +17,7 @@ export default {
   'logsQuery.code': 'Code',
   'logsQuery.record': '行',
   'logsQuery.records': '行',
-  'logsQuery.singleColumn': '单列显示',
+  'logsQuery.singleColumn': '合并显示',
   'logsQuery.showKeys': '显示列名',
   'logsQuery.compactRows': '紧凑行高',
   'logsQuery.fields': '字段',
