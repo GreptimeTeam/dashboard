@@ -57,14 +57,11 @@ a-layout.new-layout.new-layout--workspace
               )
 
           .table-section.gpt-table-panel
-            DataTable(
+            DataGrid(
               :data="tableData"
               :columns="tableColumns"
               :loading="queryLoading"
               :show-context-menu="false"
-              :enable-cell-expand="false"
-              :pagination="false"
-              :bordered="false"
               :show-header="false"
             )
               template(#column-series="{ record }")
@@ -93,7 +90,7 @@ a-layout.new-layout.new-layout--workspace
   import { Message } from '@arco-design/web-vue'
   import { storeToRefs } from 'pinia'
   import { useAppStore } from '@/store'
-  import DataTable from '@/components/data-table/index.vue'
+  import DataGrid from '@/components/data-grid/DataGrid.vue'
   import { promInstantResultToTableRows } from '@/observability/metrics/prom-instant-table'
   import type { MetricsContext } from './types'
   import MetricSidebar from './components/metric-sidebar.vue'

@@ -1,11 +1,14 @@
 <template lang="pug">
 .query-result-table-container(ref="tableContainer" :id="containerId")
-  PaginatedDataTable(
-    v-bind="paginatedTableAttrs"
+  DataGrid(
+    v-bind="gridAttrs"
+    :pagination="true"
     :active-row-key="detailVisible ? selectedRowKey : null"
+    :ts-cell-detail="true"
     @ts-cell-click="handleTsClick"
-    @row-select="handleRowSelect"
   )
+    template(v-for="(_, name) in $slots" #[name]="slotProps")
+      slot(v-bind="slotProps || {}" :name="name")
 
   LogDetail(
     v-model:visible="detailVisible"
@@ -22,6 +25,7 @@
   import { computed, ref, useAttrs } from 'vue'
   import type { ColumnType } from '@/types/query'
   import LogDetail from '@/views/dashboard/logs/query/LogDetail.vue'
+  import DataGrid from '@/components/data-grid/DataGrid.vue'
 
   defineOptions({
     inheritAttrs: false,
@@ -33,9 +37,8 @@
 
   const attrs = useAttrs()
 
-  const paginatedTableAttrs = computed(() => ({
+  const gridAttrs = computed(() => ({
     ...attrs,
-    tsCellDetail: true,
   }))
 
   const detailVisible = ref(false)
@@ -52,17 +55,10 @@
     return fullRows.value[selectedRowKey.value] ?? null
   })
 
-  const handleTsClick = (record: Record<string, unknown>) => {
-    const rowIndex = record.__globalRowIndex
-    if (typeof rowIndex !== 'number') return
-    selectedRowKey.value = rowIndex
-    detailVisible.value = true
-  }
-
-  const handleRowSelect = (record: Record<string, unknown>) => {
-    const rowIndex = record.__globalRowIndex
-    if (typeof rowIndex !== 'number') return
-    selectedRowKey.value = rowIndex
+  const handleTsClick = (record: Record<string, unknown>, rowIndex: number) => {
+    const key = typeof rowIndex === 'number' ? rowIndex : Number(record.__rowIndex)
+    if (!Number.isFinite(key)) return
+    selectedRowKey.value = key
     detailVisible.value = true
   }
 </script>
@@ -74,7 +70,7 @@
     flex-direction: column;
     min-height: 0;
 
-    :deep(.paginated-data-table) {
+    :deep(.data-grid) {
       flex: 1;
       min-height: 0;
     }

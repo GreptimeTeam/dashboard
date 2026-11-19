@@ -110,12 +110,13 @@ a-layout.full-height-layout.pipefile-view
 
       // Table View
       .output-table(v-if="outputViewMode === 'table'")
-        DataTable(
+        DataGrid(
           :data="tableData"
           :columns="tableColumns"
           :loading="false"
           :show-context-menu="false"
           :wrap-line="true"
+          :virtual="false"
         )
 
       .output-empty(v-else-if="isOutputEmpty")
@@ -150,7 +151,7 @@ a-layout.full-height-layout.pipefile-view
   import type { PipeFile } from '@/api/pipeline'
   import type { ColumnType } from '@/types/query'
   import router from '@/router'
-  import DataTable from '@/components/data-table/index.vue'
+  import DataGrid from '@/components/data-grid/DataGrid.vue'
   import tableEmptyIcon from '@/assets/images/table-empty.svg?url'
   import LangEditor from '@/components/lang-editor.vue'
   import CreateTableModal from './create-table-modal/index.vue'

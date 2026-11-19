@@ -81,13 +81,6 @@ a-card(:bordered="false")
     }
   })
 
-  function select(action) {
-    currChart.value = action.split('_')[0]
-    if (currChart.value === 'frequency') {
-      frequencyField.value = action.substring('frequency'.length + 1)
-    }
-  }
-
   const menuStr = computed(() => {
     if (currChart.value === 'count') {
       return t('logsQuery.rowCountOverTime') as string
@@ -108,6 +101,17 @@ a-card(:bordered="false")
         funnelChartRef.value.executeChartQuery()
       })
     }
+  }
+
+  function select(action) {
+    currChart.value = action.split('_')[0]
+    if (currChart.value === 'frequency') {
+      frequencyField.value = action.substring('frequency'.length + 1)
+    }
+    // CountChart no longer auto-fetches on mount; re-trigger after the chart swaps.
+    nextTick(() => {
+      triggerCurrentChartQuery()
+    })
   }
 
   // Handle chart expansion/collapse

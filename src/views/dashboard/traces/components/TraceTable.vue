@@ -3,11 +3,6 @@ a-card(:bordered="false")
   template(#title)
     .results-header
       span {{ $t('logsQuery.results') }}
-      span.results-count(v-if="totalResults > 0") 
-        | ({{ totalResults }} {{ totalResults === 1 ? 'record' : 'records' }}
-        template(v-if="totalResults > pageSize")
-          | , showing {{ Math.min((currentPage - 1) * pageSize + 1, totalResults) }}-{{ Math.min(currentPage * pageSize, totalResults) }}
-        | )
   template(#extra)
     a-space
       a-trigger(v-if="columns.length" trigger="click" :unmount-on-close="false")
@@ -24,32 +19,22 @@ a-card(:bordered="false")
                 a-checkbox-group(v-model="visibleColumnNames" direction="vertical")
                   a-checkbox(v-for="column in columns" :key="column.name" :value="column.name")
                     | {{ column.name }}
-      a-pagination(
-        v-if="totalResults > pageSize"
-        v-model:current="currentPage"
-        v-model:page-size="pageSize"
-        size="small"
-        simple
-        :total="totalResults"
-        :show-total="false"
-        :show-jumper="false"
-        :show-page-size="true"
-        :page-size-options="[10, 20, 50, 100]"
-        @change="handlePageChange"
-        @page-size-change="handlePageSizeChange"
-      )
 
-  DataTable(
-    :data="paginatedResults"
+  DataGrid(
+    v-model:page="currentPage"
+    v-model:page-size="pageSize"
+    :pagination="paginationConfig"
+    :data="data"
     :columns="visibleColumns"
     :loading="loading"
     :column-mode="'separate'"
     :displayed-columns="visibleColumnNames"
-    :ts-column="{ name: 'timestamp', data_type: 'TimestampNanosecond' }"
+    :ts-column="tsColumn"
+    :show-context-menu="queryState.editorType === 'builder'"
     :class="{ builder_type: queryState.editorType === 'builder', trace_table: true }"
     @filter-condition-add="$emit('filterConditionAdd', $event)"
   )
-    template(#column-trace_id="{ record, showContextMenu, handleContextMenu }")
+    template(#column-trace_id="{ record }")
       span.trace-id-actions
         button.trace-id-link(type="button" @click="handleTraceClick(record)") {{ record.trace_id }}
         a-dropdown(
@@ -66,18 +51,17 @@ a-card(:bordered="false")
                 span.logs-menu-target(v-if="logsTargetLabel(record)" :title="logsTargetLabel(record)") {{ logsTargetLabel(record) }}
             a-doption(v-if="logsAmbiguousService(record)" value="mapping")
               | {{ $t('drilldown.traces.logsMappingAmbiguous') }}
-      svg.td-config-icon(v-if="showContextMenu" @click="(event) => handleContextMenu(record, 'trace_id', event)")
-        use(href="#menu")
 </template>
 
 <script setup lang="ts">
   import { computed, ref, watch } from 'vue'
   import { useRouter } from 'vue-router'
-  import { IconDown, IconSettings } from '@arco-design/web-vue/es/icon'
+  import { IconDown } from '@arco-design/web-vue/es/icon'
   import type { PropType } from 'vue'
   import type { ColumnType, QueryState } from '@/types/query'
   import useUiPref from '@/composables/use-ui-pref'
   import { buildTraceDetailUnixRange } from '@/utils/trace-detail-time-range'
+  import DataGrid from '@/components/data-grid/DataGrid.vue'
 
   interface LogsTargetInfo {
     database: string
@@ -153,19 +137,16 @@ a-card(:bordered="false")
     () => columnNames.value.filter((name) => hiddenColumns.value.includes(name)).length
   )
 
-  // Pagination and results info for title
   const pageSize = ref(20)
   const currentPage = ref(1)
-  const totalResults = computed(() => props.data.length)
+  // Stable references — inline objects would rebuild DataGrid columns every render.
+  const tsColumn = { name: 'timestamp', data_type: 'TimestampNanosecond' } as const
+  const pageSizeOptions = [10, 20, 50, 100]
+  const paginationConfig = computed(() => ({
+    pageSize: pageSize.value,
+    pageSizeOptions,
+  }))
 
-  // Computed paginated results
-  const paginatedResults = computed(() => {
-    const start = (currentPage.value - 1) * pageSize.value
-    const end = start + pageSize.value
-    return props.data.slice(start, end)
-  })
-
-  // Computed visible columns based on the global hidden set
   const visibleColumns = computed(() => {
     const visible = new Set(visibleColumnNames.value)
     return props.columns
@@ -177,12 +158,10 @@ a-card(:bordered="false")
         if (isATraceId && !isBTraceId) return -1
         if (!isATraceId && isBTraceId) return 1
 
-        // Keep original order for other columns
         return 0
       })
   })
 
-  // Column selection functions
   function selectAllColumns() {
     visibleColumnNames.value = [...columnNames.value]
   }
@@ -191,17 +170,6 @@ a-card(:bordered="false")
     visibleColumnNames.value = []
   }
 
-  // Pagination handlers
-  function handlePageChange(page: number) {
-    currentPage.value = page
-  }
-
-  function handlePageSizeChange(size: number) {
-    pageSize.value = size
-    currentPage.value = 1 // Reset to first page when page size changes
-  }
-
-  // Reset pagination when data changes
   watch(
     () => props.data,
     () => {
@@ -211,7 +179,6 @@ a-card(:bordered="false")
 
   const showLogsTraceMenu = computed(() => props.embedMode && props.logsTraceEnabled)
 
-  // Handle trace ID link click
   function openLogsTrace(traceId: string, service?: string) {
     emit('logsTraceClick', { traceId, service })
   }
@@ -248,7 +215,6 @@ a-card(:bordered="false")
     if (props.embedMode) {
       return
     }
-    // ±12h around the row timestamp — tighter prune than the list time window.
     const detailRange = buildTraceDetailUnixRange(record?.timestamp)
     router.push({
       name: 'dashboard-TraceDetail',
@@ -272,12 +238,6 @@ a-card(:bordered="false")
     display: flex;
     align-items: center;
     gap: 8px;
-    font-weight: normal;
-  }
-
-  .results-count {
-    color: var(--gpt-text-muted);
-    font-size: var(--gpt-font-base);
     font-weight: normal;
   }
 
@@ -347,14 +307,5 @@ a-card(:bordered="false")
     font-size: var(--gpt-font-sm);
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .td-config-icon {
-    margin-left: 3px;
-    cursor: pointer;
-    visibility: hidden;
-    width: 12px;
-    height: 12px;
-    color: var(--gpt-main-purple);
   }
 </style>

@@ -3,14 +3,11 @@
     <a-alert v-if="error" type="error" show-icon :title="error" />
     <a-empty v-else-if="isEmpty" :description="emptyDescription" />
     <div v-else class="query-results-table">
-      <DataTable
+      <DataGrid
         :data="rows"
         :columns="tableColumns"
         :loading="loading"
         :show-context-menu="false"
-        :enable-cell-expand="false"
-        :pagination="false"
-        :bordered="false"
         :show-header="true"
       />
     </div>
@@ -20,7 +17,7 @@
 <script setup lang="ts">
   import { computed } from 'vue'
   import { useI18n } from 'vue-i18n'
-  import DataTable from '@/components/data-table/index.vue'
+  import DataGrid from '@/components/data-grid/DataGrid.vue'
   import type { CachedMainChart, MainChartPanelType } from '@/observability/use-metric-main-chart'
   import mapMainChartCachedToTableRows from '@/observability/metrics/main-chart-table'
 

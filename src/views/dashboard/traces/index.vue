@@ -125,7 +125,7 @@
     timeRange,
     editorType,
   })
-  const { initializeFromQuery, updateQueryParams } = urlSync
+  const { initializeFromQuery, updateQueryParams, isApplyingLocalUrlUpdate } = urlSync
 
   const chartExpanded = useUiPref('traceChartExpanded', true)
   const countChartRef = ref()
@@ -155,8 +155,13 @@
       allResults.value = results || []
       updateQueryParams()
     })
-    if (chartExpanded.value && countChartRef.value && queryState.sql) {
-      countChartRef.value.executeCountQuery()
+    // CountChart mounts only after queryState.sql is set — wait a tick for the ref.
+    if (chartExpanded.value) {
+      nextTick(() => {
+        if (queryState.sql) {
+          countChartRef.value?.executeCountQuery()
+        }
+      })
     }
   }
 
@@ -202,6 +207,7 @@
     () => [route.query.builderForm, route.query.tourApply] as const,
     (next, prev) => {
       if (!isTraceQueryRoute()) return
+      if (isApplyingLocalUrlUpdate()) return
       if (!prev) return
       if (next[0] === prev[0] && next[1] === prev[1]) return
       if (!next[0] && !next[1]) return

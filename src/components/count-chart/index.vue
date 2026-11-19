@@ -250,10 +250,9 @@ VCharts(
     // This would need to be handled by the parent component
   }
 
-  if (countSql.value) {
-    countQuery()
-  }
-  // Expose the method to parent component
+  // Parent owns when to fetch (Run / expand / time-range). Do not auto-query on
+  // mount — traces mounts this only after sql is set, and also calls
+  // executeCountQuery, which would duplicate the date_bin request on refresh.
   defineExpose({
     executeCountQuery,
   })

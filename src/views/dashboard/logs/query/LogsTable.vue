@@ -1,6 +1,6 @@
 <template lang="pug">
 #log-table-container(ref="tableContainer")
-  LogsVxeTable(
+  DataGrid(
     :data="data"
     :columns="columns"
     :displayed-columns="displayedColumns"
@@ -41,7 +41,7 @@
   import type { ColumnType, TSColumn } from '@/types/query'
   import LogDetail from './LogDetail.vue'
 
-  const LogsVxeTable = defineAsyncComponent(() => import('@/components/logs-vxe-table/LogsVxeTable.vue'))
+  const DataGrid = defineAsyncComponent(() => import('@/components/data-grid/DataGrid.vue'))
 
   interface TableData {
     [key: string]: any
@@ -134,7 +134,7 @@
     display: flex;
     flex-direction: column;
 
-    :deep(.logs-vxe-table) {
+    :deep(.data-grid) {
       height: 100%;
       flex: 1;
       min-height: 0;

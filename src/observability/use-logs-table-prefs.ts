@@ -15,7 +15,7 @@ export type LogsTableColumnMode = 'separate' | 'merged' | 'merged-with-keys'
  */
 export default function useLogsTablePrefs() {
   // Global display mode: false means multiple columns (the default), true is the
-  // merged single-column view. `showKeys` only applies to the merged mode.
+  // Merged display (message column). `showKeys` only applies in merged mode.
   const mergeColumn = useUiPref('logsTableSingleColumn', false)
   const showKeys = useUiPref('logsTableShowKeys', true)
   const compactRows = useUiPref('logsTableCompactRows', false)

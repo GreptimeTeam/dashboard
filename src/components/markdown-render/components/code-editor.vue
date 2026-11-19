@@ -44,7 +44,8 @@
   .results(v-if="hasRecords")
     a-tabs.playground-tabs(:default-active-key="hasChart ? '2' : '1'")
       a-tab-pane(key="1" :title="$t('dashboard.table')")
-        PaginatedDataTable(
+        DataGrid(
+          :pagination="true"
           :data="tableModel.rows"
           :columns="tableModel.columns"
           :displayed-columns="tableModel.displayedColumns"
@@ -74,7 +75,7 @@
   import i18n from '@/locale'
   import { useI18n } from 'vue-i18n'
   import { Message } from '@arco-design/web-vue'
-  import PaginatedDataTable from '@/components/paginated-data-table/index.vue'
+  import DataGrid from '@/components/data-grid/DataGrid.vue'
   import { normalizeRecordsToTableModel } from '@/utils/table-normalizer'
   import mapLanguages from './utils'
 

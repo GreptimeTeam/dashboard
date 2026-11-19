@@ -12,7 +12,7 @@ export type MergedPart = {
 
 export type LogsColumnMode = 'separate' | 'merged' | 'merged-with-keys'
 
-export type ColumnWidthRule = { width?: number; minWidth?: number }
+export type ColumnWidthRule = { width?: number | 'auto'; minWidth?: number | 'auto' }
 
 export type SeparateField = {
   field: string

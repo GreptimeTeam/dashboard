@@ -195,7 +195,7 @@
     editorType,
   })
 
-  const { initializeFromQuery, updateQueryParams } = urlSync
+  const { initializeFromQuery, updateQueryParams, isApplyingLocalUrlUpdate } = urlSync
   initializeFromQuery()
 
   // Local UI state — shared with drilldown logs detail table.
@@ -269,6 +269,7 @@
     () => [route.query.builderForm, route.query.tourApply] as const,
     (next, prev) => {
       if (!isLogsQueryRoute()) return
+      if (isApplyingLocalUrlUpdate()) return
       if (!prev) return
       if (next[0] === prev[0] && next[1] === prev[1]) return
       if (!next[0] && !next[1]) return
