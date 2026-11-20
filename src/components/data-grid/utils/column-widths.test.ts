@@ -79,6 +79,12 @@ describe('scaleWidthsToContainer', () => {
   it('scales down proportionally to fit the container', () => {
     expect(scaleWidthsToContainer(['a', 'b'], { a: 200, b: 200 }, 200, 40)).toEqual({ a: 100, b: 100 })
   })
+
+  it('keeps locked fields and scales the rest into the remaining budget', () => {
+    expect(
+      scaleWidthsToContainer(['a', 'b', 'actions'], { a: 400, b: 400, actions: 168 }, 600, 40, ['actions'])
+    ).toEqual({ a: 216, b: 216, actions: 168 })
+  })
 })
 
 describe('areWidthRulesEqual', () => {

@@ -624,10 +624,25 @@
       const estimated = isFlex
         ? Math.max(floor, contentPx + decoration + WIDTH_ELLIPSIS_BUFFER_PX)
         : Math.min(ESTIMATED_MAX_WIDTH_PX, Math.max(floor, contentPx + decoration + WIDTH_ELLIPSIS_BUFFER_PX))
-      widths[field] = estimated
+      // Page-declared `width` (Actions) must reserve space before fit-scale; otherwise
+      // a uniform shrink is undone when buildVxeColumns re-applies the explicit px.
+      const explicitWidth = typeof meta?.width === 'number' && meta.width > 0 ? meta.width : null
+      widths[field] = explicitWidth != null ? Math.max(estimated, explicitWidth) : estimated
     })
+    const lockedFields = props.fitContainer
+      ? fields.filter((field) => {
+          const meta = resolveColumn(field)
+          return typeof meta?.width === 'number' && meta.width > 0
+        })
+      : null
     const fitted = props.fitContainer
-      ? scaleWidthsToContainer(fields, widths, Math.max(0, hostWidth.value - SCROLLBAR_SIZE), ESTIMATED_MIN_WIDTH_PX)
+      ? scaleWidthsToContainer(
+          fields,
+          widths,
+          Math.max(0, hostWidth.value - SCROLLBAR_SIZE),
+          ESTIMATED_MIN_WIDTH_PX,
+          lockedFields
+        )
       : widths
     // User drag wins after fit-scale so a manual widen is not immediately undone.
     fields.forEach((field) => {
