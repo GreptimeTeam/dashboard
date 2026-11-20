@@ -629,10 +629,21 @@
       const explicitWidth = typeof meta?.width === 'number' && meta.width > 0 ? meta.width : null
       widths[field] = explicitWidth != null ? Math.max(estimated, explicitWidth) : estimated
     })
+    // Lock only non-absorber explicit widths (e.g. Flow Actions with flex on
+    // `comment`). Proportional pages treat every column as an absorber — scale
+    // them all (explicit px is already a pre-scale floor above).
     const lockedFields = props.fitContainer
       ? fields.filter((field) => {
           const meta = resolveColumn(field)
-          return typeof meta?.width === 'number' && meta.width > 0
+          if (!(typeof meta?.width === 'number' && meta.width > 0)) return false
+          const isFlex = Boolean((meta as ColumnType & { flex?: boolean }).flex)
+          if (isFlex) return false
+          if (flexFields.value.length > 0) return !flexFields.value.includes(field)
+          if (props.leftoverStrategy === 'proportional') return false
+          if (props.leftoverStrategy === 'last-column') {
+            return field !== fields[fields.length - 1]
+          }
+          return true
         })
       : null
     const fitted = props.fitContainer
