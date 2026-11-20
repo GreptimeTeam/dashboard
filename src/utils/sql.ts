@@ -212,10 +212,17 @@ export function replaceTimePlaceholders(sql: string, timeRanges: any[]): string 
   return result
 }
 
-const quoteIdent = (id: string) => `"${id.replace(/"/g, '""')}"`
+/** Quote a single SQL identifier (column or bare table/schema name). Not for `schema.table`. */
+export function quoteIdent(id: string): string {
+  return `"${String(id).replace(/"/g, '""')}"`
+}
+
+function unquoteIdent(segment: string): string {
+  return segment.replace(/^["'`]|["'`]$/g, '')
+}
 
 /**
- * Last identifier of a table ref for information_schema lookups.
+ * Last identifier of a table ref for information_schema / queryState.table.
  * `"db"."t"` / `db.t` / `"t"` / `t` → `t`
  */
 export function bareTableName(tableRef: string): string {
@@ -223,16 +230,29 @@ export function bareTableName(tableRef: string): string {
   if (!trimmed) return ''
   const segments = trimmed.split('.')
   const last = segments[segments.length - 1] || ''
-  return last.replace(/^["'`]|["'`]$/g, '')
+  return unquoteIdent(last)
 }
 
 /**
- * Table reference for use in SQL (e.g. in FROM clause).
- * - When database is provided and table is a bare name (builder mode), both are quoted safely.
- * - When table is already quoted and/or schema-qualified (code mode from parseTable),
- *   return it as a SQL ref without re-quoting or prefixing — otherwise
- *   `"public"."t"` + database `public` becomes `"public"."""public"".""t"""`.
- * - Unquoted `schema.table` is quoted per segment.
+ * Schema (or catalog.schema first segment) from a table ref, if qualified.
+ * `"public"."t"` / `public.t` → `public`; bare `t` → undefined
+ */
+export function schemaFromTableRef(tableRef: string): string | undefined {
+  const trimmed = (tableRef || '').trim()
+  if (!trimmed || !trimmed.includes('.')) return undefined
+  const segments = trimmed.split('.')
+  if (segments.length < 2) return undefined
+  const first = unquoteIdent(segments[0] || '')
+  return first || undefined
+}
+
+/**
+ * Canonical table reference for SQL FROM / JOIN.
+ *
+ * Rules (do not reinvent elsewhere — no `"${db}"."${table}"` or quoteIdent(qualified)):
+ * - Bare table + database → `"db"."table"` (builder / normalized code-mode state)
+ * - Already quoted or `schema.table` → normalize without re-prefixing database
+ *   (legacy code-mode state that still holds a full SQL ref)
  */
 export function getTableRefForSql(state: { table: string; database?: string }): string {
   const { table, database } = state

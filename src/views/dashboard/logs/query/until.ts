@@ -1,7 +1,7 @@
 import type { SchemaType } from '@/store/modules/code-run/types'
 import { formatInDashboardTz } from '@/utils/timezone'
 import type { TSColumn } from '@/types/query'
-import { getTableRefForSql } from '@/utils/sql'
+import { bareTableName, getTableRefForSql, schemaFromTableRef } from '@/utils/sql'
 
 function findWhereClausePosition(sql: string) {
   // Normalize case for easier comparison
@@ -96,18 +96,31 @@ export function addTsCondition(sql: string, column: string, start: number | stri
 
 export const TableNameReg = /(?<=from|FROM)\s+([^\s;]+)/i
 
-/**
- * Parse table reference after FROM and normalize it to a safe, quoted identifier:
- * - "db"."table" → "db"."table"
- * - db.table     → "db"."table"
- * - table        → "table"
- */
-export function parseTable(sql: string) {
+function rawTableRefFromSql(sql: string): string {
   const result = sql.match(TableNameReg)
-  if (!result?.[1]) return ''
-  const raw = result[1].trim()
-  // Let SQL utils handle proper quoting / escaping for identifiers
-  return getTableRefForSql({ table: raw })
+  return result?.[1]?.trim() || ''
+}
+
+/**
+ * Bare table name for queryState / schema lookups (aligned with builder mode).
+ * `"public"."t"` / `public.t` / `"t"` → `t`
+ */
+export function parseTable(sql: string): string {
+  return bareTableName(rawTableRefFromSql(sql))
+}
+
+/** Schema from FROM clause when qualified; otherwise undefined. */
+export function parseTableSchema(sql: string): string | undefined {
+  return schemaFromTableRef(rawTableRefFromSql(sql))
+}
+
+/**
+ * SQL-ready FROM fragment taken from the query itself (Export / COUNT on raw SQL).
+ * Prefer this over hand-rolled FROM regexes.
+ */
+export function parseTableRefForSql(sql: string): string {
+  const raw = rawTableRefFromSql(sql)
+  return raw ? getTableRefForSql({ table: raw }) : ''
 }
 
 export function parseTimeRange(sql: string, tsColumn: string, multiple: number): string[] | number {

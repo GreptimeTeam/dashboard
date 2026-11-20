@@ -61,6 +61,7 @@ a-card(:bordered="false")
   import type { ColumnType, QueryState } from '@/types/query'
   import useUiPref from '@/composables/use-ui-pref'
   import { buildTraceDetailUnixRange } from '@/utils/trace-detail-time-range'
+  import { bareTableName } from '@/utils/sql'
   import DataGrid from '@/components/data-grid/DataGrid.vue'
 
   interface LogsTargetInfo {
@@ -216,11 +217,13 @@ a-card(:bordered="false")
       return
     }
     const detailRange = buildTraceDetailUnixRange(record?.timestamp)
+    // Code mode stores a quoted `"db"."table"` in queryState.table — pass bare name + database.
+    const table = bareTableName(props.queryState.table) || props.queryState.table
     router.push({
       name: 'dashboard-TraceDetail',
       params: { id: traceId },
       query: {
-        table: props.queryState.table,
+        table,
         ...(props.queryState.database ? { database: props.queryState.database } : {}),
         ...(detailRange
           ? {

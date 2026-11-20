@@ -21,7 +21,13 @@
   import { sql } from '@codemirror/lang-sql'
   import { useDebounceFn } from '@vueuse/core'
   import useTableSchemaStore, { type TableSchemaColumn } from '@/store/modules/table-schema'
-  import { parseTable, parseLimit, parseOrderBy, parseTsColumnFromSql } from '@/views/dashboard/logs/query/until'
+  import {
+    parseTable,
+    parseTableSchema,
+    parseLimit,
+    parseOrderBy,
+    parseTsColumnFromSql,
+  } from '@/views/dashboard/logs/query/until'
   import { bareTableName } from '@/utils/sql'
   import type { TextEditorFormState, TSColumn } from '@/types/query'
   import { TsTypeMapping } from '@/utils/date-time'
@@ -118,12 +124,15 @@
     tableName.value = table
     const limit = parseLimit(sqlText)
     const orderBy = parseOrderBy(sqlText) as 'DESC' | 'ASC' | null
+    const schema = parseTableSchema(sqlText)
     const tsColumn = resolveTsColumn(sqlText, columns)
     // Do not echo `sql` back — v-model already owns it; re-assigning can reset the cursor.
+    // table is bare; schema from FROM becomes database (same shape as builder mode).
     emit('update:sqlInfo', {
       table,
       limit,
       orderBy,
+      ...(schema ? { database: schema } : {}),
       ...(tsColumn ? { tsColumn } : {}),
     } as TextEditorFormState)
   }
