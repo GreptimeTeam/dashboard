@@ -22,6 +22,7 @@
   import { useDebounceFn } from '@vueuse/core'
   import editorAPI from '@/api/editor'
   import { parseTable, parseLimit, parseOrderBy } from '@/views/dashboard/logs/query/until'
+  import { bareTableName } from '@/utils/sql'
   import type { TextEditorFormState, TSColumn } from '@/types/query'
   import { TsTypeMapping } from '@/utils/date-time'
 
@@ -90,9 +91,11 @@
   async function extractTsColumn(sqlText: string): Promise<TSColumn | null> {
     if (!sqlText || !tableName.value) return null
     try {
-      const columns = await editorAPI.getTableSchema(tableName.value)
+      // information_schema expects a bare table name, not `"schema"."table"`
+      const schemaTable = bareTableName(tableName.value)
+      const columns = await editorAPI.getTableSchema(schemaTable)
 
-      schema.value[tableName.value] = columns
+      schema.value[schemaTable] = columns
       const tsColumns = columns.filter((col) => col.data_type.toLowerCase().includes('timestamp'))
 
       // Prefer columns with TIMESTAMP semantic type

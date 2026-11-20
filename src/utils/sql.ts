@@ -212,28 +212,47 @@ export function replaceTimePlaceholders(sql: string, timeRanges: any[]): string 
   return result
 }
 
+const quoteIdent = (id: string) => `"${id.replace(/"/g, '""')}"`
+
+/**
+ * Last identifier of a table ref for information_schema lookups.
+ * `"db"."t"` / `db.t` / `"t"` / `t` → `t`
+ */
+export function bareTableName(tableRef: string): string {
+  const trimmed = (tableRef || '').trim()
+  if (!trimmed) return ''
+  const segments = trimmed.split('.')
+  const last = segments[segments.length - 1] || ''
+  return last.replace(/^["'`]|["'`]$/g, '')
+}
+
 /**
  * Table reference for use in SQL (e.g. in FROM clause).
- * - When database is provided (builder mode), both database and table are quoted safely.
- * - When only table is provided, it may already contain schema prefix (e.g. "temp_data"."cpu_metrics")
- *   or be unqualified (e.g. my_schema.my_table). In the latter case each part is safely quoted.
+ * - When database is provided and table is a bare name (builder mode), both are quoted safely.
+ * - When table is already quoted and/or schema-qualified (code mode from parseTable),
+ *   return it as a SQL ref without re-quoting or prefixing — otherwise
+ *   `"public"."t"` + database `public` becomes `"public"."""public"".""t"""`.
+ * - Unquoted `schema.table` is quoted per segment.
  */
 export function getTableRefForSql(state: { table: string; database?: string }): string {
-  const quote = (id: string) => `"${id.replace(/"/g, '""')}"`
   const { table, database } = state
+  const trimmed = (table || '').trim()
+  if (!trimmed) return ''
+
+  // Already a usable SQL identifier reference — do not re-quote or prefix.
+  if (/^["'`]/.test(trimmed)) {
+    return trimmed
+  }
+  if (trimmed.includes('.')) {
+    return trimmed
+      .split('.')
+      .map((part) => quoteIdent(part))
+      .join('.')
+  }
 
   if (database) {
-    return `${quote(database)}.${quote(table)}`
+    return `${quoteIdent(database)}.${quoteIdent(trimmed)}`
   }
 
-  // Text / free-sql mode: respect fully quoted references
-  if (/^["'`]/.test(table)) {
-    return table
-  }
-
-  // Quote each identifier segment (schema.table or just table)
-  return table
-    .split('.')
-    .map((part) => quote(part))
-    .join('.')
+  return quoteIdent(trimmed)
 }
