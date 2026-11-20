@@ -15,13 +15,13 @@
 </template>
 
 <script lang="ts" setup name="SqlTextEditor">
-  import { shallowRef, computed, watch, nextTick } from 'vue'
+  import { shallowRef, computed, watch, ref } from 'vue'
   import { EditorView } from '@codemirror/view'
   import { Codemirror } from 'vue-codemirror'
   import { sql } from '@codemirror/lang-sql'
   import { useDebounceFn } from '@vueuse/core'
-  import editorAPI from '@/api/editor'
-  import { parseTable, parseLimit, parseOrderBy } from '@/views/dashboard/logs/query/until'
+  import useTableSchemaStore, { type TableSchemaColumn } from '@/store/modules/table-schema'
+  import { parseTable, parseLimit, parseOrderBy, parseTsColumnFromSql } from '@/views/dashboard/logs/query/until'
   import { bareTableName } from '@/utils/sql'
   import type { TextEditorFormState, TSColumn } from '@/types/query'
   import { TsTypeMapping } from '@/utils/date-time'
@@ -51,8 +51,11 @@
     set: (value: string) => emit('update:modelValue', value),
   })
 
-  // Schema for SQL syntax highlighting
-  const schema = ref<Record<string, string[]>>({})
+  /** Column names for CodeMirror autocomplete — only updated when the table changes. */
+  const autocompleteSchema = shallowRef<Record<string, string[]>>({})
+  /** Cached column metadata by bare table name (avoids refetch while typing). */
+  const columnsByTable = shallowRef<Record<string, TableSchemaColumn[]>>({})
+  const loadingTable = ref<string | null>(null)
 
   const config = {
     disabled: props.disabled,
@@ -72,7 +75,7 @@
 
   const extensions = computed(() => {
     const result = [customSelectionTheme]
-    result.push(sql({ schema: schema.value }))
+    result.push(sql({ schema: autocompleteSchema.value }))
     return result
   })
 
@@ -81,80 +84,103 @@
     cmView.value = view
   }
 
-  // Function to extract table name from SQL
   function extractTableName(sqlText: string): string {
     return parseTable(sqlText)
   }
+
   const tableName = ref<string | null>(extractTableName(localSql.value))
 
-  // Function to extract timestamp column from SQL and update schema
-  async function extractTsColumn(sqlText: string): Promise<TSColumn | null> {
-    if (!sqlText || !tableName.value) return null
-    try {
-      // information_schema expects a bare table name, not `"schema"."table"`
-      const schemaTable = bareTableName(tableName.value)
-      const columns = await editorAPI.getTableSchema(schemaTable)
-
-      schema.value[schemaTable] = columns
-      const tsColumns = columns.filter((col) => col.data_type.toLowerCase().includes('timestamp'))
-
-      // Prefer columns with TIMESTAMP semantic type
-      const tsIndexColumns = tsColumns.filter((col) => col.semantic_type === 'TIMESTAMP')
-      const selectedColumn = tsIndexColumns.length ? tsIndexColumns[0] : tsColumns[0]
-      return {
-        ...selectedColumn,
-        data_type: TsTypeMapping[selectedColumn.data_type] || selectedColumn.data_type,
-      }
-    } catch (error) {
-      console.warn('Failed to extract timestamp column:', error)
-    }
-
-    return null
+  function toTsColumn(column: { name: string; data_type?: string; semantic_type?: string }): TSColumn {
+    return {
+      ...column,
+      name: column.name,
+      data_type: TsTypeMapping[column.data_type || ''] || column.data_type || 'TimestampMillisecond',
+    } as TSColumn
   }
 
-  // Function to parse SQL and emit table name and ts column
-  function parseAndEmitSqlInfo(sqlText: string) {
-    if (!sqlText.trim()) return
+  /** Resolve ts column from SQL first; enrich type from cached schema when available. */
+  function resolveTsColumn(sqlText: string, columns?: TableSchemaColumn[]): TSColumn | null {
+    const fromSql = parseTsColumnFromSql(sqlText)
+    if (fromSql) {
+      const matched = columns?.find((col) => col.name === fromSql)
+      if (matched) return toTsColumn(matched)
+      return toTsColumn({ name: fromSql, data_type: 'TimestampMillisecond', semantic_type: 'TIMESTAMP' })
+    }
+    if (!columns?.length) return null
+    const tsColumns = columns.filter((col) => col.data_type.toLowerCase().includes('timestamp'))
+    const tsIndexColumns = tsColumns.filter((col) => col.semantic_type === 'TIMESTAMP')
+    const selectedColumn = tsIndexColumns.length ? tsIndexColumns[0] : tsColumns[0]
+    return selectedColumn ? toTsColumn(selectedColumn) : null
+  }
 
-    // Extract table name
-    tableName.value = extractTableName(sqlText)
+  function emitSqlInfo(sqlText: string, columns?: TableSchemaColumn[]) {
+    const table = extractTableName(sqlText)
+    tableName.value = table
     const limit = parseLimit(sqlText)
     const orderBy = parseOrderBy(sqlText) as 'DESC' | 'ASC' | null
+    const tsColumn = resolveTsColumn(sqlText, columns)
+    // Do not echo `sql` back — v-model already owns it; re-assigning can reset the cursor.
     emit('update:sqlInfo', {
-      table: tableName.value,
+      table,
       limit,
       orderBy,
-      sql: sqlText,
+      ...(tsColumn ? { tsColumn } : {}),
     } as TextEditorFormState)
   }
 
-  // Create debounced version of parseAndEmitSqlInfo
+  /** Fetch schema only when the bare table name changes; use session cache. */
+  async function ensureSchemaForTable(tableRef: string) {
+    const schemaTable = bareTableName(tableRef)
+    if (!schemaTable) return undefined
+    if (columnsByTable.value[schemaTable]) {
+      return columnsByTable.value[schemaTable]
+    }
+    if (loadingTable.value === schemaTable) {
+      return undefined
+    }
+    loadingTable.value = schemaTable
+    try {
+      const columns = await useTableSchemaStore().ensureTableSchema(schemaTable)
+      columnsByTable.value = { ...columnsByTable.value, [schemaTable]: columns }
+      const names = columns.map((col) => col.name)
+      const prev = autocompleteSchema.value[schemaTable]
+      const same = prev && prev.length === names.length && prev.every((name, index) => name === names[index])
+      // Updating autocompleteSchema rebuilds CM extensions — only when names actually change.
+      if (!same) {
+        autocompleteSchema.value = { ...autocompleteSchema.value, [schemaTable]: names }
+      }
+      return columns
+    } catch (error) {
+      console.warn('Failed to load table schema:', error)
+      return undefined
+    } finally {
+      if (loadingTable.value === schemaTable) {
+        loadingTable.value = null
+      }
+    }
+  }
+
+  function parseAndEmitSqlInfo(sqlText: string) {
+    if (!sqlText.trim()) return
+
+    const table = extractTableName(sqlText)
+    const schemaTable = bareTableName(table || '')
+    const cached = schemaTable ? columnsByTable.value[schemaTable] : undefined
+
+    // Sync path while typing: no network.
+    emitSqlInfo(sqlText, cached)
+
+    // Async path only when this table has not been loaded yet.
+    if (schemaTable && !cached) {
+      ensureSchemaForTable(table).then((columns) => {
+        if (!columns || extractTableName(localSql.value) !== table) return
+        emitSqlInfo(localSql.value, columns)
+      })
+    }
+  }
+
   const debouncedParseAndEmitSqlInfo = useDebounceFn(parseAndEmitSqlInfo, 300)
 
-  watch(
-    tableName,
-    async (newTableName) => {
-      if (newTableName) {
-        nextTick(async () => {
-          const tsColumn = await extractTsColumn(localSql.value)
-          if (tsColumn) {
-            const limit = parseLimit(localSql.value)
-            const orderBy = parseOrderBy(localSql.value) as 'DESC' | 'ASC' | null
-            emit('update:sqlInfo', {
-              tsColumn,
-              table: tableName.value,
-              sql: localSql.value,
-              limit,
-              orderBy,
-            } as TextEditorFormState)
-          }
-        })
-      }
-    },
-    { immediate: true }
-  )
-
-  // Watch for SQL changes and emit table name and ts column with debounce
   watch(
     localSql,
     (newSql) => {

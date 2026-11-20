@@ -247,6 +247,23 @@ export function parseOrderBy(sql: string) {
   return match ? match[1] : null
 }
 
+/**
+ * Time column the SQL actually filters/orders on (code mode).
+ * Prefer $timestart/$timeend, then now()/FROM_UNIXTIME bounds, then ORDER BY.
+ */
+export function parseTsColumnFromSql(sql: string): string | null {
+  if (!sql) return null
+
+  const patterns = [
+    /(?:"([^"]+)"|`([^`]+)`|([a-zA-Z_][\w$]*))\s*(?:<=|>=|<|>)\s*\$(?:timestart|timeend)\b/i,
+    /(?:"([^"]+)"|`([^`]+)`|([a-zA-Z_][\w$]*))\s*(?:<=|>=|<|>)\s*(?:now\s*\(|FROM_UNIXTIME\s*\()/i,
+    /ORDER\s+BY\s+(?:"([^"]+)"|`([^`]+)`|([a-zA-Z_][\w$]*))/i,
+  ]
+  const matched = patterns.map((re) => re.exec(sql)).find((match) => match != null)
+  if (!matched) return null
+  return matched[1] || matched[2] || matched[3] || null
+}
+
 export function toObj(row: any, columns: Array<SchemaType>, index: number, tsColumn: TSColumn) {
   const obj = {} as any
   obj.index = index

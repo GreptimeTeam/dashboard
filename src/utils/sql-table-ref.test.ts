@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseTable } from '@/views/dashboard/logs/query/until'
+import { parseTable, parseTsColumnFromSql } from '@/views/dashboard/logs/query/until'
 import { bareTableName, getTableRefForSql } from './sql'
 
 describe('getTableRefForSql', () => {
@@ -56,5 +56,30 @@ describe('parseTable + getTableRefForSql (code-mode COUNT path)', () => {
     const table = parseTable(sql)
     expect(table).toBe('"public"."genai_conversations"')
     expect(getTableRefForSql({ table, database: 'public' })).toBe('"public"."genai_conversations"')
+  })
+})
+
+describe('parseTsColumnFromSql', () => {
+  it('reads the column from $timestart/$timeend filters', () => {
+    const sql =
+      'SELECT * FROM "vtype_db"."metrics" WHERE "ts" <= $timeend AND "ts" >= $timestart ORDER BY "ts" DESC LIMIT 1000'
+    expect(parseTsColumnFromSql(sql)).toBe('ts')
+  })
+
+  it('reads the column from now() bounds after placeholder substitution', () => {
+    const sql = `SELECT * FROM "vtype_db"."metrics" WHERE "ts" <= now() AND "ts" >= now() - Interval '10m'`
+    expect(parseTsColumnFromSql(sql)).toBe('ts')
+  })
+
+  it('falls back to ORDER BY when no time bounds are present', () => {
+    expect(parseTsColumnFromSql('SELECT * FROM t ORDER BY "greptime_timestamp" DESC LIMIT 10')).toBe(
+      'greptime_timestamp'
+    )
+  })
+
+  it('does not prefer a schema-style timestamp name over the SQL filter column', () => {
+    // Table may have both timestamp (semantic TIMESTAMP) and ts — SQL wins.
+    const sql = 'SELECT * FROM metrics WHERE "ts" <= $timeend AND "ts" >= $timestart'
+    expect(parseTsColumnFromSql(sql)).toBe('ts')
   })
 })
