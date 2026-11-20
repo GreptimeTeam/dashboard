@@ -54,8 +54,9 @@
             :options="sinkTableOptions"
           )
       DataGrid.flow-table.gpt-table-page(
-        leftover-strategy="proportional"
+        leftover-strategy="last-column"
         :fill-height="false"
+        :fit-container="true"
         :pagination="true"
         :data="filteredFlows"
         :columns="columns"
@@ -209,6 +210,10 @@
             if (columnName === 'sink_table_name') {
               return { ...col, cellClass: 'flow-sink-cell' }
             }
+            // Absorb leftover here instead of stretching the Actions column.
+            if (columnName === 'comment') {
+              return { ...col, flex: true }
+            }
             return col
           })
           .filter(Boolean) as ColumnType[]
@@ -339,6 +344,15 @@
   }
 
   .flow-table {
+    width: 100%;
+
+    :deep(.dg-grid-host),
+    :deep(.vxe-table),
+    :deep(.vxe-grid) {
+      width: 100%;
+      max-width: 100%;
+    }
+
     .flow-name-link {
       max-width: 100%;
       padding: 0;

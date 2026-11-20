@@ -4,9 +4,10 @@ import type { ColumnWidthRule } from '../types'
 export const COLUMN_MAX_WIDTH = 600
 
 /**
- * Floor for drag-to-narrow. Absorbers used to set `minWidth` to the content
- * estimate, which made VXE refuse to shrink below that estimate (widen-only).
- * Keep a low floor and pin the estimate as `width` instead.
+ * Drag floor passed to VXE `resizable-config.minWidth`. Absorbers keep content
+ * estimates as column `minWidth` so `fit` can distribute leftover and stay at
+ * 100% container width; this lower floor overrides the drag clamp so columns
+ * can still shrink below the estimate.
  */
 export const COLUMN_RESIZE_MIN_WIDTH = 60
 
@@ -14,14 +15,14 @@ export type LeftoverStrategy = 'last-column' | 'proportional'
 
 /**
  * Every column sizes to its content. Absorbers use `minWidth` so leftover
- * viewport space is distributed to them:
+ * viewport space is distributed to them (VXE `fit` / pxMinList):
  * - `flexFields` (column.flex) → those fields only (e.g. slow-query `query`)
  * - else `proportional` → every field
  * - else `last-column` → last field only
  *
  * Frozen px widths replace `'auto'` so VXE stops re-measuring on every recalculate.
- * Numeric absorber widths are `{ width, minWidth: floor }` so columns can shrink
- * on drag; `'auto'` absorbers keep `{ minWidth: 'auto' }` for leftover fill.
+ * Do not pin absorbers as fixed `width` — that drops them out of leftover fill
+ * and leaves the table narrower than the container after drag-to-narrow.
  */
 export function computeColumnWidthRules(
   fields: string[],
@@ -35,15 +36,7 @@ export function computeColumnWidthRules(
   fields.forEach((field) => {
     const width = frozen?.[field] ?? 'auto'
     const isAbsorber = flexSet ? flexSet.has(field) : leftoverStrategy === 'proportional' || field === absorber
-    if (!isAbsorber) {
-      rules[field] = { width }
-      return
-    }
-    if (typeof width === 'number') {
-      rules[field] = { width, minWidth: Math.min(COLUMN_RESIZE_MIN_WIDTH, width) }
-      return
-    }
-    rules[field] = { minWidth: width }
+    rules[field] = isAbsorber ? { minWidth: width } : { width }
   })
   return rules
 }
@@ -77,6 +70,38 @@ export function resolveColumnWidthRule(
     return { width: px }
   }
   return { width: px }
+}
+
+/**
+ * Scale content estimates so their sum fits the host. Used by page tables
+ * (e.g. Flow) that should stay at 100% container width without horizontal scroll.
+ * Preserves relative proportions; clamps each field to `minWidth`.
+ */
+export function scaleWidthsToContainer(
+  fields: string[],
+  widths: Record<string, number>,
+  containerWidth: number,
+  minWidth = COLUMN_RESIZE_MIN_WIDTH
+): Record<string, number> {
+  if (!(containerWidth > 0) || fields.length === 0) {
+    return widths
+  }
+  const sum = fields.reduce((total, field) => total + (widths[field] || 0), 0)
+  if (!(sum > containerWidth)) {
+    return widths
+  }
+  const scale = containerWidth / sum
+  const scaled: Record<string, number> = {}
+  fields.forEach((field) => {
+    scaled[field] = Math.max(minWidth, Math.floor((widths[field] || 0) * scale))
+  })
+  const scaledSum = fields.reduce((total, field) => total + scaled[field], 0)
+  const drift = containerWidth - scaledSum
+  if (drift !== 0) {
+    const last = fields[fields.length - 1]
+    scaled[last] = Math.max(minWidth, scaled[last] + drift)
+  }
+  return scaled
 }
 
 export function areWidthRulesEqual(a: Record<string, ColumnWidthRule>, b: Record<string, ColumnWidthRule>): boolean {

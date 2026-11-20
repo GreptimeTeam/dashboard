@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { areWidthRulesEqual, computeColumnWidthRules, resolveColumnWidthRule } from './column-widths'
+import {
+  areWidthRulesEqual,
+  computeColumnWidthRules,
+  resolveColumnWidthRule,
+  scaleWidthsToContainer,
+} from './column-widths'
 
 describe('computeColumnWidthRules', () => {
   const fields = ['time', 'level', 'message']
@@ -24,15 +29,15 @@ describe('computeColumnWidthRules', () => {
     expect(computeColumnWidthRules(fields, { time: 180, level: 60, message: 400 })).toEqual({
       time: { width: 180 },
       level: { width: 60 },
-      message: { width: 400, minWidth: 60 },
+      message: { minWidth: 400 },
     })
   })
 
-  it('pins proportional frozen widths so drag can shrink below the estimate', () => {
+  it('keeps proportional frozen widths as minWidth so fit can fill the container', () => {
     expect(computeColumnWidthRules(fields, { time: 180, level: 60, message: 400 }, 'proportional')).toEqual({
-      time: { width: 180, minWidth: 60 },
-      level: { width: 60, minWidth: 60 },
-      message: { width: 400, minWidth: 60 },
+      time: { minWidth: 180 },
+      level: { minWidth: 60 },
+      message: { minWidth: 400 },
     })
   })
 
@@ -43,7 +48,7 @@ describe('computeColumnWidthRules', () => {
   it('lets flex fields absorb leftover instead of the last column', () => {
     expect(computeColumnWidthRules(fields, { time: 180, level: 60, message: 80 }, 'last-column', ['level'])).toEqual({
       time: { width: 180 },
-      level: { width: 60, minWidth: 60 },
+      level: { minWidth: 60 },
       message: { width: 80 },
     })
   })
@@ -63,6 +68,16 @@ describe('resolveColumnWidthRule', () => {
   it('keeps an explicit width that is already larger than the estimate', () => {
     expect(resolveColumnWidthRule({ minWidth: 120 }, 150)).toEqual({ minWidth: 150 })
     expect(resolveColumnWidthRule(undefined, 280)).toEqual({ width: 280 })
+  })
+})
+
+describe('scaleWidthsToContainer', () => {
+  it('leaves widths unchanged when they already fit', () => {
+    expect(scaleWidthsToContainer(['a', 'b'], { a: 100, b: 100 }, 300)).toEqual({ a: 100, b: 100 })
+  })
+
+  it('scales down proportionally to fit the container', () => {
+    expect(scaleWidthsToContainer(['a', 'b'], { a: 200, b: 200 }, 200, 40)).toEqual({ a: 100, b: 100 })
   })
 })
 
