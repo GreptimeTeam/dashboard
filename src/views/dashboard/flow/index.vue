@@ -56,17 +56,14 @@
       DataGrid.flow-table.gpt-table-page(
         leftover-strategy="proportional"
         :fill-height="false"
-        :virtual="false"
+        :pagination="true"
         :data="filteredFlows"
         :columns="columns"
         :loading="loading"
         :show-context-menu="false"
       )
-        template(#column-status="{ record }")
-          span.gpt-status-pill(v-if="record.status" :class="getStatusClass(record.status)")
-            span.gpt-status-pill__dot
-            | {{ record.status }}
-          span(v-else) —
+        template(#column-flow_name="{ record }")
+          button.flow-name-link(type="button" @click="showEdit(record)") {{ record.flow_name }}
         template(#column-operate="{ record }")
           a-space(:size="8")
             a-button(size="small" @click="showEdit(record)") {{ $t('common.edit') }}
@@ -74,13 +71,11 @@
               a-button(size="small" status="danger") {{ $t('common.delete') }}
 
     FlowDetailModal(
-      :key="editData?.flow_id"
+      :key="modalInstanceKey"
       v-model:visible="modalVisible"
       :edit-data="editData"
-      :raw-data="textEditorData"
       :schema-columns="schemaColumns"
       @saved="handleFlowSaved"
-      @clone="handleClone"
     )
 </template>
 
@@ -91,6 +86,8 @@
   import editorAPI from '@/api/editor'
   import DataGrid from '@/components/data-grid/DataGrid.vue'
   import FlowDetailModal from './components/flow-detail-modal.vue'
+  import apiErrorMessage from './utils/api-error'
+  import { quoteFlowIdent } from './utils/flow-sql'
   import { toObj } from '../logs/query/until'
 
   const { t } = useI18n()
@@ -100,7 +97,6 @@
     'sink_table_name',
     'source_table_names',
     'comment',
-    'status',
     'created_time',
     'updated_time',
     'operate',
@@ -110,9 +106,8 @@
   const allFlows = shallowRef<Array<any>>([])
   const loading = ref(false)
   const modalVisible = ref(false)
-  const isEdit = ref(false)
+  const modalInstanceKey = ref(0)
   const editData = ref(null)
-  const textEditorData = ref('')
   const schemaColumns = shallowRef<Array<ColumnType>>([])
 
   const searchKeyword = ref('')
@@ -177,17 +172,14 @@
 
   const totalResults = computed(() => filteredFlows.value.length)
 
-  const getStatusClass = (status: unknown) => {
-    const value = String(status ?? '').toLowerCase()
-    if (['running', 'active', 'started'].includes(value)) return 'is-running'
-    if (['error', 'failed', 'stopped', 'stop'].includes(value)) return 'is-error'
-    return 'is-default'
-  }
+  // SELECT * for schema compatibility (new columns like eval_*). UI still filters via
+  // displayedColumns; flow_definition may be present but edit uses SHOW CREATE FLOW.
+  const FLOW_LIST_SQL = `SELECT * FROM information_schema.flows ORDER BY created_time DESC`
 
   function list() {
     loading.value = true
     editorAPI
-      .runSQL('select * from  INFORMATION_SCHEMA.FLOWS order by created_time desc')
+      .runSQL(FLOW_LIST_SQL, undefined, { suppressErrorToast: true })
       .then((result) => {
         const schemas = result.output[0].records.schema.column_schemas
 
@@ -236,7 +228,7 @@
         console.error('Failed to load flows:', error)
         loading.value = false
         allFlows.value = []
-        Message.error(t('flow.loadFailed'))
+        Message.error(t('flow.loadFailed', { msg: apiErrorMessage(error, t('common.unknownError')) }))
       })
   }
 
@@ -255,9 +247,8 @@
   }
 
   function showCreate() {
-    isEdit.value = false
     editData.value = null
-    textEditorData.value = ''
+    modalInstanceKey.value += 1
     modalVisible.value = true
   }
 
@@ -275,28 +266,25 @@
   )
 
   function showEdit(record) {
-    isEdit.value = true
     editData.value = record
+    modalInstanceKey.value += 1
     modalVisible.value = true
   }
 
   function del(record) {
+    // Flow names are identifiers: quote them so `my-flow` or mixed-case names work.
     editorAPI
-      .runSQL(`DROP FLOW IF EXISTS ${record.flow_name}`)
+      .runSQL(`DROP FLOW IF EXISTS ${quoteFlowIdent(record.flow_name)}`, undefined, {
+        suppressErrorToast: true,
+      })
       .then(() => {
         Message.success(t('flow.deleted'))
         list()
       })
       .catch((error) => {
         console.error('Delete flow failed:', error)
-        const errorMessage = error instanceof Error ? error.message : t('common.unknownError')
-        Message.error(t('flow.deleteFailed', { msg: errorMessage }))
+        Message.error(t('flow.deleteFailed', { msg: apiErrorMessage(error, t('common.unknownError')) }))
       })
-  }
-
-  function handleClone(cloneData: any) {
-    editData.value = cloneData.formData
-    textEditorData.value = cloneData.rawData
   }
 </script>
 
@@ -351,10 +339,22 @@
   }
 
   .flow-table {
-    :deep(.flow-name-cell .cell-content),
-    :deep(.flow-name-cell .arco-table-td-content) {
-      font-weight: 700;
-      color: var(--gpt-text-primary);
+    .flow-name-link {
+      max-width: 100%;
+      padding: 0;
+      border: 0;
+      overflow: hidden;
+      background: transparent;
+      color: var(--gpt-accent-ts);
+      font: inherit;
+      text-align: left;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      cursor: pointer;
+
+      &:hover {
+        text-decoration: underline;
+      }
     }
 
     :deep(.flow-sink-cell .cell-content),

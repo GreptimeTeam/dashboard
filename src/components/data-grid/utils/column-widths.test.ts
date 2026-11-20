@@ -24,7 +24,15 @@ describe('computeColumnWidthRules', () => {
     expect(computeColumnWidthRules(fields, { time: 180, level: 60, message: 400 })).toEqual({
       time: { width: 180 },
       level: { width: 60 },
-      message: { minWidth: 400 },
+      message: { width: 400, minWidth: 60 },
+    })
+  })
+
+  it('pins proportional frozen widths so drag can shrink below the estimate', () => {
+    expect(computeColumnWidthRules(fields, { time: 180, level: 60, message: 400 }, 'proportional')).toEqual({
+      time: { width: 180, minWidth: 60 },
+      level: { width: 60, minWidth: 60 },
+      message: { width: 400, minWidth: 60 },
     })
   })
 
@@ -35,7 +43,7 @@ describe('computeColumnWidthRules', () => {
   it('lets flex fields absorb leftover instead of the last column', () => {
     expect(computeColumnWidthRules(fields, { time: 180, level: 60, message: 80 }, 'last-column', ['level'])).toEqual({
       time: { width: 180 },
-      level: { minWidth: 60 },
+      level: { width: 60, minWidth: 60 },
       message: { width: 80 },
     })
   })

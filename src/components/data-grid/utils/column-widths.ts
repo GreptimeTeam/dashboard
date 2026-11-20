@@ -3,6 +3,13 @@ import type { ColumnWidthRule } from '../types'
 /** Per-column soft cap used by the char-width estimator. */
 export const COLUMN_MAX_WIDTH = 600
 
+/**
+ * Floor for drag-to-narrow. Absorbers used to set `minWidth` to the content
+ * estimate, which made VXE refuse to shrink below that estimate (widen-only).
+ * Keep a low floor and pin the estimate as `width` instead.
+ */
+export const COLUMN_RESIZE_MIN_WIDTH = 60
+
 export type LeftoverStrategy = 'last-column' | 'proportional'
 
 /**
@@ -13,6 +20,8 @@ export type LeftoverStrategy = 'last-column' | 'proportional'
  * - else `last-column` → last field only
  *
  * Frozen px widths replace `'auto'` so VXE stops re-measuring on every recalculate.
+ * Numeric absorber widths are `{ width, minWidth: floor }` so columns can shrink
+ * on drag; `'auto'` absorbers keep `{ minWidth: 'auto' }` for leftover fill.
  */
 export function computeColumnWidthRules(
   fields: string[],
@@ -26,7 +35,15 @@ export function computeColumnWidthRules(
   fields.forEach((field) => {
     const width = frozen?.[field] ?? 'auto'
     const isAbsorber = flexSet ? flexSet.has(field) : leftoverStrategy === 'proportional' || field === absorber
-    rules[field] = isAbsorber ? { minWidth: width } : { width }
+    if (!isAbsorber) {
+      rules[field] = { width }
+      return
+    }
+    if (typeof width === 'number') {
+      rules[field] = { width, minWidth: Math.min(COLUMN_RESIZE_MIN_WIDTH, width) }
+      return
+    }
+    rules[field] = { minWidth: width }
   })
   return rules
 }

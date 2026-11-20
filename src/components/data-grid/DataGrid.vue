@@ -632,6 +632,7 @@
         props.size,
         props.leftoverStrategy,
         flexFields.value.join('\0'),
+        userWidths.value,
       ] as const,
     () => {
       const next = computeColumnWidthRules(
