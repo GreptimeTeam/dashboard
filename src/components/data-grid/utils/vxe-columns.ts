@@ -133,12 +133,16 @@ export function buildVxeColumns(options: {
       .filter(Boolean)
       .join(' ')
     const edge = edgeClass(index, fields.length)
-    // Slot / action columns keep their declared width. Time columns take
-    // max(explicit, estimate) so legacy 190px hints cannot clip timestamps.
+    // Prefer DataGrid's widthRules when present: they already fold page `width`
+    // floors and fitContainer scaling. Re-applying explicit `width` here used to
+    // turn proportional absorbers into fixed columns and undo fit-scale (Flow /
+    // memory-profile Actions clipped or horizontal scroll).
     const explicitWidth = typeof meta.width === 'number' && meta.width > 0 ? meta.width : null
     const estimatedRule = widthRules[item.field]
     let rule: ColumnWidthRule = estimatedRule || {}
-    if (item.isTs || item.isTime) {
+    if (estimatedRule && (estimatedRule.width !== undefined || estimatedRule.minWidth !== undefined)) {
+      rule = estimatedRule
+    } else if (item.isTs || item.isTime) {
       rule = resolveColumnWidthRule(estimatedRule, explicitWidth)
     } else if (explicitWidth) {
       rule = { width: explicitWidth }

@@ -76,15 +76,33 @@ export function resolveColumnWidthRule(
  * Scale content estimates so their sum fits the host. Used by page tables
  * (e.g. Flow) that should stay at 100% container width without horizontal scroll.
  * Preserves relative proportions; clamps each field to `minWidth`.
+ *
+ * `lockedFields` keep their declared px (e.g. Flow Actions `width: 168`) and are
+ * subtracted from the budget before the remaining columns scale — otherwise
+ * `buildVxeColumns` re-applies the explicit width after a uniform scale and the
+ * table overflows again.
  */
 export function scaleWidthsToContainer(
   fields: string[],
   widths: Record<string, number>,
   containerWidth: number,
-  minWidth = COLUMN_RESIZE_MIN_WIDTH
+  minWidth = COLUMN_RESIZE_MIN_WIDTH,
+  lockedFields: readonly string[] | null = null
 ): Record<string, number> {
   if (!(containerWidth > 0) || fields.length === 0) {
     return widths
+  }
+  const locked = lockedFields && lockedFields.length > 0 ? new Set(lockedFields) : null
+  if (locked) {
+    const lockedSum = fields.reduce((total, field) => total + (locked.has(field) ? widths[field] || 0 : 0), 0)
+    const flexible = fields.filter((field) => !locked.has(field))
+    const budget = Math.max(0, containerWidth - lockedSum)
+    const scaledFlex = scaleWidthsToContainer(flexible, widths, budget, minWidth)
+    const next: Record<string, number> = { ...widths }
+    flexible.forEach((field) => {
+      next[field] = scaledFlex[field]
+    })
+    return next
   }
   const sum = fields.reduce((total, field) => total + (widths[field] || 0), 0)
   if (!(sum > containerWidth)) {
