@@ -23,7 +23,10 @@
     "test": "vitest run",
     "smoke:release": "playwright test -c playwright.release.config.ts",
     "smoke:release:build": "pnpm run build && pnpm run smoke:release",
-    "smoke:release:tag": "bash scripts/verify-release.sh"
+    "smoke:release:tag": "bash scripts/verify-release.sh",
+    "smoke:menu": "playwright test -c playwright.menu.config.ts",
+    "smoke:menu:build": "pnpm run build && pnpm run smoke:menu",
+    "smoke:menu:strict": "SMOKE_STRICT=1 playwright test -c playwright.menu.config.ts"
   },
   "lint-staged": {
     "*.{js,ts,jsx,tsx}": [

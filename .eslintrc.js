@@ -73,4 +73,17 @@ module.exports = {
     'no-console': 0,
     'no-underscore-dangle': 0,
   },
+  overrides: [
+    {
+      // Playwright menu smoke is intentionally serial (SPA push + await per leaf).
+      files: ['tests/menu-smoke/**/*.{ts,js}', 'tests/release-smoke/**/*.{ts,js}'],
+      rules: {
+        'no-await-in-loop': 0,
+        'no-restricted-syntax': 0,
+        'no-return-await': 0,
+        'prefer-destructuring': 0,
+        'no-restricted-globals': 0,
+      },
+    },
+  ],
 }
