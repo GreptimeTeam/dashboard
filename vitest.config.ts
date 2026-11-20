@@ -11,7 +11,7 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    // Playwright release smoke specs run via `pnpm smoke:release`, not vitest.
+    // Playwright menu/release smoke specs run via `pnpm smoke:menu` / `smoke:release`, not vitest.
     exclude: [
       '**/node_modules/**',
       '**/dist/**',

@@ -16,6 +16,10 @@ pnpm smoke:menu
 pnpm smoke:menu:build
 # fail the suite when any page interaction fails
 pnpm smoke:menu:strict
+
+# Against a published GitHub release artifact (downloads build.tar.gz)
+pnpm smoke:release:tag            # latest
+pnpm smoke:release:tag -- v0.14.7
 ```
 
 Report: `artifacts/menu-smoke/<runId>/index.html` (also mirrored to `artifacts/menu-smoke/latest/`).

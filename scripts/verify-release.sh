@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Verify a published dashboard release can boot and render key pages.
+# Verify a published dashboard release can boot and interact with key pages.
 #
 # Downloads build.tar.gz from GitHub Releases, serves the static HTML via
 # vite preview (proxies /v1 → http://127.0.0.1:4000), then runs Playwright
-# smoke e2e against query / metrics / logs / traces / perses.
+# menu-smoke e2e (ephemeral DB + seeded fixtures) against the left-menu pages.
 #
 # Prerequisites:
 #   - pnpm install (and playwright browsers: pnpm exec playwright install chromium)
@@ -18,6 +18,7 @@
 #   SMOKE_PORT=4173
 #   SMOKE_HOST=127.0.0.1
 #   SMOKE_FORCE_DOWNLOAD=1   re-download even if cached
+#   SMOKE_STRICT=1           fail suite when any page action fails
 #   REPO=GreptimeTeam/dashboard
 
 set -euo pipefail
@@ -31,9 +32,18 @@ HOST="${SMOKE_HOST:-127.0.0.1}"
 PORT="${SMOKE_PORT:-4173}"
 DB_HOST="${SMOKE_DB_HOST:-http://localhost:4000}"
 
+resolve_latest_tag() {
+  if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+    gh release view --repo "$REPO" --json tagName -q .tagName
+    return
+  fi
+  curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" \
+    | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])'
+}
+
 if [[ -z "$TAG" ]]; then
   echo "==> Resolving latest release tag from ${REPO}..."
-  TAG="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])')"
+  TAG="$(resolve_latest_tag)"
 fi
 
 # Normalize: accept both 0.13.14 and v0.13.14
@@ -51,6 +61,7 @@ echo "    download: ${DOWNLOAD_URL}"
 echo "    workdir:  ${WORK_DIR}"
 echo "    db host:  ${DB_HOST} (via vite preview /v1 proxy → 127.0.0.1:4000)"
 echo "    serve:    http://${HOST}:${PORT}"
+echo "    suite:    menu-smoke (fixture + mock data)"
 
 mkdir -p "$WORK_DIR"
 
@@ -87,9 +98,13 @@ export SMOKE_DB_HOST="$DB_HOST"
 export SMOKE_NO_OPEN=1
 export CI="${CI:-1}"
 
-echo "==> Running Playwright release smoke e2e..."
-pnpm exec playwright test -c playwright.release.config.ts
+echo "==> Running Playwright menu-smoke e2e against release ${TAG}..."
+pnpm exec playwright test -c playwright.menu.config.ts
 
+REPORT_LATEST="${ROOT_DIR}/artifacts/menu-smoke/latest/index.html"
 echo "==> PASS: release ${TAG} smoke verification succeeded"
-echo "    screenshots: artifacts/release-smoke/screenshots"
-echo "    report:      artifacts/release-smoke/report"
+echo "    report:      ${REPORT_LATEST}"
+echo "    report URL:  file://${REPORT_LATEST}"
+if [[ -d "${ROOT_DIR}/artifacts/menu-smoke/latest/screenshots" ]]; then
+  echo "    screenshots: artifacts/menu-smoke/latest/screenshots"
+fi
