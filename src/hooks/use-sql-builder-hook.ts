@@ -3,6 +3,7 @@ import type { Condition, BuilderFormState, TSColumn } from '@/types/query'
 import { jsonAttributeValueKind } from '@/observability/filters'
 import { sqlJsonAttrExpr } from '@/observability/logs/json-field-keys'
 import type { DrilldownFilterOp } from '@/observability/types'
+import { getTableRefForSql } from '@/utils/sql'
 
 export interface SqlBuilderHookOptions {
   /** Time range values for SQL generation */
@@ -48,15 +49,15 @@ export function useSqlBuilderHook(options: SqlBuilderHookOptions) {
 
     // JSON2 attribute chips have no column: render the JSON path, read as the comparator's
     // type (range operators need a numeric cast, otherwise "1000" sorts before "900").
-    const jsonAttribute = condition.jsonAttribute
+    const { jsonAttribute } = condition
     // The field type decides the read (a numeric key also casts for IN lists); fall back to
     // the comparator heuristic for string-typed attributes used with range operators.
-    const jsonKind =
-      condition.fieldType === 'Number'
-        ? 'number'
-        : condition.fieldType === 'Boolean'
-        ? 'boolean'
-        : jsonAttributeValueKind(operator as DrilldownFilterOp, String(value ?? ''))
+    let jsonKind = jsonAttributeValueKind(operator as DrilldownFilterOp, String(value ?? ''))
+    if (condition.fieldType === 'Number') {
+      jsonKind = 'number'
+    } else if (condition.fieldType === 'Boolean') {
+      jsonKind = 'boolean'
+    }
     const target = jsonAttribute ? sqlJsonAttrExpr(jsonAttribute.column, jsonAttribute.path, jsonKind) : `"${field}"`
 
     switch (operator) {
@@ -137,8 +138,7 @@ export function useSqlBuilderHook(options: SqlBuilderHookOptions) {
       }
     }
 
-    // Build SQL with database prefix if database is provided
-    const tableName = form.database ? `"${form.database}"."${form.table}"` : `"${form.table}"`
+    const tableName = getTableRefForSql({ table: form.table, database: form.database })
     let sql = `SELECT * FROM ${tableName}`
     if (timeConditions.length > 0) {
       sql += ` WHERE ${timeConditions.join(' ')}`

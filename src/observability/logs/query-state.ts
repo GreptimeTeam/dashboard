@@ -1,4 +1,5 @@
 import type { QueryState } from '@/types/query'
+import { getTableRefForSql, quoteIdent } from '@/utils/sql'
 import type { DrilldownContext } from '../context'
 import { parseJsonFieldChipKey, sqlJsonGetStringExpr } from './json-field-keys'
 
@@ -19,7 +20,7 @@ export function buildCountChartQueryState(options: {
   const timeRangeValues =
     unixRange.length === 2 ? [`FROM_UNIXTIME(${unixRange[0]})`, `FROM_UNIXTIME(${unixRange[1]})`] : []
 
-  const sql = `SELECT 1 FROM "${table}" WHERE ${whereSql}`
+  const sql = `SELECT 1 FROM ${getTableRefForSql({ table, database })} WHERE ${whereSql}`
 
   return {
     table,
@@ -44,9 +45,7 @@ export function buildCountChartQueryState(options: {
   }
 }
 
-export function quoteIdent(name: string): string {
-  return `"${name.replace(/"/g, '""')}"`
-}
+export { quoteIdent }
 
 /**
  * SQL expression for a logs label/role that may be a JSON attribute chip.

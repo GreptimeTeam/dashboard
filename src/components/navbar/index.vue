@@ -49,18 +49,26 @@ a-layout.navbar(:class="{ 'navbar--collapsed': navbarCollapsed }")
               | {{ label }}
           a-doption.news(@click="showNews")
             | {{ $t('menu.news') }}
-      button.support-trigger(v-if="queryGuideEnabled" type="button" @click.stop="showContact")
-        svg.icon-18
-          use(href="#icon-user")
-        span.support-label {{ $t('menu.feedback') }}
-      button.support-trigger.support-trigger--featured(
+      a-tooltip(
         v-if="queryGuideEnabled"
-        type="button"
-        @click.stop="showMcpConfig"
+        position="right"
+        :content="$t('menu.feedback')"
+        :disabled="!navbarCollapsed"
       )
-        svg.icon-18
-          use(href="#code")
-        span.support-label {{ $t('menu.mcp') }}
+        button.support-trigger(type="button" @click.stop="showContact")
+          svg.icon-18
+            use(href="#icon-user")
+          span.support-label {{ $t('menu.feedback') }}
+      a-tooltip(
+        v-if="queryGuideEnabled"
+        position="right"
+        :content="$t('menu.mcp')"
+        :disabled="!navbarCollapsed"
+      )
+        button.support-trigger.support-trigger--featured(type="button" @click.stop="showMcpConfig")
+          svg.icon-18
+            use(href="#code")
+          span.support-label {{ $t('menu.mcp') }}
       StarMarketingCard.star-marketing-card(v-if="!starCardClosed && !navbarCollapsed" @close="starCardClosed = true")
   a-layout-footer
     ul.footer(:class="{ 'footer--expanded': !navbarCollapsed }")
@@ -464,7 +472,8 @@ CommandPalette(ref="commandPaletteRef")
     gap: 8px;
     padding: 8px;
 
-    .support-dropdown {
+    .support-dropdown,
+    :deep(> .arco-trigger) {
       width: 100%;
     }
 

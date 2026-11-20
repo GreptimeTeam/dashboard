@@ -23,7 +23,7 @@
       :virtual-y-config="virtualYConfig"
       :virtual-x-config="virtualXConfig"
       :scrollbar-config="scrollbarConfig"
-      :resizable-config="{ isDblclickAutoWidth: true }"
+      :resizable-config="resizableConfig"
       :show-header="showHeader"
       :row-class-name="rowClassName"
       @scroll="loadMore.onScroll"
@@ -112,8 +112,10 @@
   import { formatCellText, renderJsonHeader, renderSemanticHeader } from './renderers'
   import {
     COLUMN_MAX_WIDTH,
+    COLUMN_RESIZE_MIN_WIDTH,
     areWidthRulesEqual,
     computeColumnWidthRules,
+    scaleWidthsToContainer,
     type LeftoverStrategy,
   } from './utils/column-widths'
   import { buildDisplayRows, getSeparateFields, isTimeColumn } from './utils/table-data'
@@ -179,6 +181,11 @@
        * (e.g. Flow `gpt-table-page`). Default fills the parent panel height.
        */
       fillHeight?: boolean
+      /**
+       * Keep the table at 100% host width: scale column estimates down when they
+       * would overflow, so page lists (Flow) stay readable without horizontal scroll.
+       */
+      fitContainer?: boolean
     }>(),
     {
       data: () => [],
@@ -208,6 +215,7 @@
       page: 1,
       pageSize: DEFAULT_PAGE_SIZE,
       fillHeight: true,
+      fitContainer: false,
     }
   )
 
@@ -230,7 +238,7 @@
   const gridRef = ref<VxeGridInstance | null>(null)
   // Measure the grid host — not `.data-grid` — so a bottom pager does not
   // inflate `:height` and clip VXE's horizontal scrollbar under overflow:hidden.
-  const { height: hostHeight } = useElementSize(gridHostEl)
+  const { height: hostHeight, width: hostWidth } = useElementSize(gridHostEl)
 
   const paginationEnabled = computed(() => props.pagination !== false)
   const paginationOptions = computed(() => {
@@ -368,6 +376,13 @@
   const columnConfig = computed(() => ({
     resizable: props.columnResizable && props.columnMode === 'separate',
   }))
+
+  // Drag floor only — column minWidth stays at the content estimate so VXE `fit`
+  // can still distribute leftover and keep the table at 100% container width.
+  const resizableConfig = {
+    isDblclickAutoWidth: true,
+    minWidth: COLUMN_RESIZE_MIN_WIDTH,
+  }
 
   const showFilterMenu = computed(() => props.showContextMenu && props.columnMode === 'separate')
 
@@ -609,10 +624,18 @@
       const estimated = isFlex
         ? Math.max(floor, contentPx + decoration + WIDTH_ELLIPSIS_BUFFER_PX)
         : Math.min(ESTIMATED_MAX_WIDTH_PX, Math.max(floor, contentPx + decoration + WIDTH_ELLIPSIS_BUFFER_PX))
-      // A width the user dragged always wins over the estimate.
-      widths[field] = userWidths.value[field] ?? estimated
+      widths[field] = estimated
     })
-    return widths
+    const fitted = props.fitContainer
+      ? scaleWidthsToContainer(fields, widths, Math.max(0, hostWidth.value - SCROLLBAR_SIZE), ESTIMATED_MIN_WIDTH_PX)
+      : widths
+    // User drag wins after fit-scale so a manual widen is not immediately undone.
+    fields.forEach((field) => {
+      if (userWidths.value[field] != null) {
+        fitted[field] = userWidths.value[field]
+      }
+    })
+    return fitted
   }
 
   const columnWidthRules = ref<ReturnType<typeof computeColumnWidthRules>>({})
@@ -632,6 +655,9 @@
         props.size,
         props.leftoverStrategy,
         flexFields.value.join('\0'),
+        userWidths.value,
+        props.fitContainer,
+        hostWidth.value,
       ] as const,
     () => {
       const next = computeColumnWidthRules(

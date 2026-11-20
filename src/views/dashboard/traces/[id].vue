@@ -53,6 +53,7 @@
   import { IconLeft } from '@arco-design/web-vue/es/icon'
   import editorAPI from '@/api/editor'
   import isTraceErrorStatus from '@/observability/traces/status'
+  import { getTableRefForSql } from '@/utils/sql'
   import TraceTimeline from './components/TraceTimeline.vue'
   import SpanDetailDrawer from './components/SpanDetailDrawer.vue'
   import { buildSpanTree, processSpanData } from './utils'
@@ -150,8 +151,8 @@
         return
       }
 
-      // Build table name with database prefix if available
-      const fullTableName = database ? `"${database}"."${tableName}"` : tableName
+      // Code mode may pass an already-qualified `"db"."table"`; do not re-prefix.
+      const fullTableName = getTableRefForSql({ table: tableName, database })
 
       // ±12h around the list-row timestamp (passed as start/end) for partition pruning.
       const startSec = Number(route.query.start)

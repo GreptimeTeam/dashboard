@@ -16,6 +16,7 @@ VCharts(
   import editorAPI from '@/api/editor'
   import type { QueryState } from '@/types/query'
   import { replaceTimePlaceholders, getTableRefForSql } from '@/utils/sql'
+  import { parseTsColumnFromSql } from '@/views/dashboard/logs/query/until'
   import { convertTimestampToMilliseconds } from '@/utils/date-time'
   import { useDateTimeFormat } from '@/hooks'
 
@@ -163,7 +164,9 @@ VCharts(
 
   const countSql = computed(() => {
     const { table, sql, tsColumn, timeRangeValues, database } = props.queryState
-    if (!table || !sql || !tsColumn?.name) {
+    // Prefer the column the SQL filters on; schema TIMESTAMP can differ (e.g. ts vs timestamp).
+    const timeColumn = parseTsColumnFromSql(sql) || tsColumn?.name
+    if (!table || !sql || !timeColumn) {
       return ''
     }
 
@@ -177,7 +180,7 @@ VCharts(
     const tableName = getTableRefForSql({ table, database })
 
     return `SELECT
-            date_bin('${intervalSeconds.value} seconds', "${tsColumn.name}") AS time_bucket,
+            date_bin('${intervalSeconds.value} seconds', "${timeColumn}") AS time_bucket,
             COUNT(*) AS event_count
         FROM ${tableName}
         ${whereClause}

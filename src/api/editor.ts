@@ -119,7 +119,7 @@ const describeTable = (tableName: string, database?: string) => {
 }
 
 function runSQL(code: string): Promise<HttpResponse>
-function runSQL(code: string, database: string, config?: AxiosRequestConfig): Promise<HttpResponse>
+function runSQL(code: string, database: string | undefined, config?: AxiosRequestConfig): Promise<HttpResponse>
 function runSQL(code: string, database?: string, config?: AxiosRequestConfig): Promise<HttpResponse> {
   const baseConfig = addDatabaseParams(database)
   const mergedConfig = {
