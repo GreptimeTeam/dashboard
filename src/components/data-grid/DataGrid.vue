@@ -4,7 +4,7 @@
   :class="{ 'data-grid--wrap': wrapLine, 'data-grid--paged': paginationEnabled, 'data-grid--auto-height': !fillHeight }"
   :style="cellTypographyStyle"
 )
-  .dg-grid-host(ref="gridHostEl")
+  .dg-grid-host(ref="gridHostEl" @mousedown.capture="onHeaderMousedownCapture")
     component(
       :key="wrapLine ? 'wrap' : 'nowrap'"
       ref="gridRef"
@@ -436,6 +436,40 @@
       return
     }
     emit('columnOrderChange', fields)
+  }
+
+  /**
+   * VXE starts a header column drag on *any* mouse button: `triggerHeaderCellMousedownEvent`
+   * has no button check, so a right-click marks the header `draggable` and adds
+   * `col--drag-origin` (opacity .3). VXE only clears that marker on the header's own
+   * mouseup, which the native context menu can swallow — the header stays faded. Only the
+   * primary button may start a drag (VXE guards resizing the same way), so stop other
+   * buttons in the capture phase before VXE's listener runs.
+   */
+  function onHeaderMousedownCapture(event: MouseEvent) {
+    if (event.button === 0 || !columnDragEnabled.value) {
+      return
+    }
+    const target = event.target as Element | null
+    if (!target?.closest?.('.vxe-header--column')) {
+      return
+    }
+    event.stopPropagation()
+  }
+
+  /**
+   * Safety net for the same VXE behavior: a primary-button press released outside the
+   * header also leaves `col--drag-origin` (and `draggable`) behind. Clear leftovers once
+   * the mouse is released anywhere; VXE's own cleanup runs first during a real drag.
+   */
+  function clearStaleColumnDragOrigin() {
+    if (!columnDragEnabled.value) {
+      return
+    }
+    rootEl.value?.querySelectorAll<HTMLElement>('.col--drag-origin').forEach((cell) => {
+      cell.classList.remove('col--drag-origin')
+      cell.draggable = false
+    })
   }
 
   // Drag floor only — column minWidth stays at the content estimate so VXE `fit`
@@ -1027,6 +1061,7 @@
     loadMore.checkViewportFilled()
     rootEl.value?.addEventListener('wheel', loadMore.markScrollIntent, { passive: true })
     rootEl.value?.addEventListener('touchmove', loadMore.markScrollIntent, { passive: true })
+    window.addEventListener('mouseup', clearStaleColumnDragOrigin)
   })
 
   // ── User column resize ──────────────────────────────────────────────────────
@@ -1065,6 +1100,7 @@
   onBeforeUnmount(() => {
     rootEl.value?.removeEventListener('wheel', loadMore.markScrollIntent)
     rootEl.value?.removeEventListener('touchmove', loadMore.markScrollIntent)
+    window.removeEventListener('mouseup', clearStaleColumnDragOrigin)
     if (resizeCommitTimer) {
       clearTimeout(resizeCommitTimer)
       resizeCommitTimer = null
