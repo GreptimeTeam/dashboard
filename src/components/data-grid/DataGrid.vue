@@ -1240,6 +1240,16 @@
       cursor: default;
     }
 
+    // Column-drag headers: unified pointer (incl. nested pills). No color / grab hint.
+    :deep(.col--drag-cell .vxe-header--column.is--drag-active),
+    :deep(.col--drag-cell .vxe-header--column.is--drag-active:active),
+    :deep(.col--drag-cell .vxe-header--column.is--drag-active .vxe-cell),
+    :deep(.col--drag-cell .vxe-header--column.is--drag-active .vxe-cell *),
+    :deep(.col--drag-cell .vxe-header--column.is--drag-disabled) {
+      color: var(--vxe-ui-table-header-font-color);
+      cursor: pointer !important;
+    }
+
     // First/last column edge — align with page/toolbar content; no VXE API.
     :deep(.dg-edge-left > .vxe-cell) {
       padding-left: 16px;

@@ -48,10 +48,10 @@
         const raw = props.data?.[v]
         const isJson = isJsonDataType(columnType)
         const display = isJson
-          ? stringifyJsonForDisplay(raw, { hideNulls: props.hideJsonNulls, pretty: true })
+          ? stringifyJsonForDisplay(raw, { hideEmpty: props.hideJsonNulls, pretty: true })
           : safeText(raw)
         const copyText = isJson
-          ? stringifyJsonForDisplay(raw, { hideNulls: props.hideJsonNulls, pretty: false })
+          ? stringifyJsonForDisplay(raw, { hideEmpty: props.hideJsonNulls, pretty: false })
           : safeText(raw)
 
         return {

@@ -43,6 +43,9 @@ export function renderJsonHeader(
             {
               class: 'json-column-th-action',
               title: i18n.global.t('dashboard.jsonColumnActions'),
+              // VXE column-drag starts on header mousedown (trigger: cell); stop it here
+              // so opening this menu does not begin a column drag.
+              onMousedown: (event: MouseEvent) => event.stopPropagation(),
               onClick: (event: MouseEvent) => event.stopPropagation(),
             },
             [h('svg', { class: 'icon-12' }, [h('use', { href: '#down' })])]
@@ -66,7 +69,7 @@ export function renderJsonHeader(
 
 export function formatCellText(value: unknown, column: ColumnType | null | undefined, hideJsonNulls = true): string {
   if (column && isJsonDataType(column.data_type)) {
-    return stringifyJsonForDisplay(value, { hideNulls: hideJsonNulls })
+    return stringifyJsonForDisplay(value, { hideEmpty: hideJsonNulls })
   }
   return getCellString(value)
 }
@@ -77,7 +80,7 @@ export function formatCellTextForCopy(
   hideJsonNulls = true
 ): string {
   if (column && isJsonDataType(column.data_type)) {
-    return stringifyJsonForDisplay(value, { hideNulls: hideJsonNulls, pretty: true })
+    return stringifyJsonForDisplay(value, { hideEmpty: hideJsonNulls, pretty: true })
   }
   if (typeof value === 'object' && value !== null) {
     try {
