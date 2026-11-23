@@ -88,6 +88,10 @@ const useAppStore = defineStore('app', () => {
         // ignore storage failures
       }
     }
+    // Column layout needs no eager migration here: per-table layouts live in
+    // `*TableColumns`, and the released global hidden list is drained per table by
+    // `useTableColumnLayoutPref` as each table is customized.
+
     if (changed) {
       uiConfigStorage.value = { ...ui } as Partial<UiConfig>
       // Write through synchronously: initLocale reads the raw value before the
@@ -247,6 +251,9 @@ const useAppStore = defineStore('app', () => {
     'logsTableShowKeys',
     'logsTableCompactRows',
     'logsTableWrapLines',
+    'logsTableColumns',
+    'traceTableColumns',
+    // Released global deny lists: read as a fallback and drained per table until empty.
     'logsTableHiddenColumns',
     'traceTableHiddenColumns',
   ] as const
@@ -311,6 +318,21 @@ const useAppStore = defineStore('app', () => {
 
   const setUiConfigValue = <K extends keyof UiConfig>(key: K, value: UiConfig[K]): void => {
     saveUiConfig({ [key]: value } as Partial<UiConfig>)
+  }
+
+  /** Drop keys from uiConfig (e.g. after migrating legacy column layout fields). */
+  const removeUiConfigKeys = (keys: (keyof UiConfig)[]): void => {
+    const next = { ...uiConfigStorage.value }
+    let changed = false
+    keys.forEach((key) => {
+      if (key in next) {
+        delete next[key]
+        changed = true
+      }
+    })
+    if (changed) {
+      uiConfigStorage.value = next
+    }
   }
 
   const setConnectionConfig = (config: Partial<StoredConfig>) => {
@@ -464,6 +486,7 @@ const useAppStore = defineStore('app', () => {
     applyUiConfig,
     getUiConfigValue,
     setUiConfigValue,
+    removeUiConfigKeys,
     ensureConnectionHost,
     validateAndSaveConnection,
     checkDbConnection,

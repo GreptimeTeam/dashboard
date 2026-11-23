@@ -30,7 +30,7 @@ export default {
   'dashboard.executeTime': '実行: {time} ms',
   'dashboard.format': 'コードを整形',
   'dashboard.formatTimestamp': 'タイムスタンプを整形',
-  'dashboard.hideJsonNulls': 'null フィールドを非表示',
+  'dashboard.hideJsonNulls': '空の値を非表示',
   'dashboard.showJsonNulls': 'null フィールドを表示',
   'dashboard.jsonColumnActions': 'JSON 列のオプション',
   'dashboard.groupBy': 'Group By',

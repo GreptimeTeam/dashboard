@@ -115,14 +115,13 @@
               span.gpt-text-secondary {{ $t('logsQuery.columns') }}
               span.gpt-text-secondary(v-if="hiddenColumnCount" style="margin-left: 6px; font-size: 12px") · {{ $t('logsQuery.hiddenColumnsHint', { count: hiddenColumnCount }) }}
             template(#content)
-              a-card.gpt-popover-panel
-                a-space(direction="vertical" size="small")
-                  a-space
-                    a-button(type="text" size="small" @click="selectAllColumns") Select All
-                    a-button(type="text" size="small" @click="deselectAllColumns") Deselect All
-                  a-checkbox-group(v-model="visibleSelectableColumnNames" direction="vertical")
-                    a-checkbox(v-for="column in selectableColumns" :value="column.name")
-                      | {{ column.name }}
+              a-card.gpt-popover-panel.gpt-popover-panel--wide
+                ColumnLayoutPanel(
+                  :ordered-names="orderedSelectableColumnNames"
+                  :visible-names="visibleSelectableColumnNames"
+                  @update:ordered-names="onPanelOrder"
+                  @update:visible-names="onPanelVisible"
+                )
       LogTableData(
         :key="`${queryState.table}-${columnModeKey}`"
         :wrap-line="wrap"
@@ -136,8 +135,11 @@
         :ts-column="queryState.tsColumn"
         :column-mode="columnMode"
         :displayed-columns="visibleColumnNames"
+        :column-drag="columnMode === 'separate'"
+        :pinned-column-fields="timestampColumnName ? [timestampColumnName] : []"
         @filter-condition-add="handleFilterConditionAdd"
         @reach-end="loadMore"
+        @column-order-change="handleColumnOrderChange"
       )
 
     ExportModal(v-model:visible="exportModalVisible" :sql="exportSqlText" @confirm="handleExportConfirm")
@@ -152,6 +154,7 @@
   import { isQueryGuideEnabled } from '@/utils/query-guide-enabled'
   import useLogsTablePrefs from '@/observability/use-logs-table-prefs'
   import { getSignalDatabase } from '@/observability/signal-database'
+  import ColumnLayoutPanel from '@/components/column-layout-panel/ColumnLayoutPanel.vue'
   import ChartContainer from './ChartContainer.vue'
   import ExportModal from './ExportModal.vue'
   import LogTableData from './LogsTable.vue'
@@ -208,11 +211,12 @@
     columnMode,
     columnModeKey,
     hiddenColumnsFor,
-    visibleColumnsFor,
+    displayedColumnsFor,
+    orderedColumnsFor,
+    setColumnLayout,
     setVisibleColumns,
-    showAllColumns,
-    hideAllColumns,
-  } = useLogsTablePrefs()
+    setColumnOrder,
+  } = useLogsTablePrefs(() => queryState.table || '')
 
   const columnNames = computed(() => columns.value.map((column) => column.name))
   // The logs table pins the timestamp column first; it is not a configurable column.
@@ -222,24 +226,28 @@
       columns.value.find((column) => column.data_type?.toLowerCase().includes('timestamp'))?.name ||
       ''
   )
-  const selectableColumns = computed(() => columns.value.filter((column) => column.name !== timestampColumnName.value))
-  const selectableColumnNames = computed(() => selectableColumns.value.map((column) => column.name))
-  const visibleColumnNames = computed({
-    get: () => visibleColumnsFor(columnNames.value),
-    set: (visible) => setVisibleColumns(columnNames.value, visible),
+  const selectableColumnNames = computed(() => columnNames.value.filter((name) => name !== timestampColumnName.value))
+  // DataGrid always pins ts via tsColumn; stored layout covers selectable columns only.
+  const visibleColumnNames = computed(() => {
+    const ts = timestampColumnName.value
+    const selectable = displayedColumnsFor(selectableColumnNames.value)
+    return ts ? [ts, ...selectable.filter((name) => name !== ts)] : selectable
   })
-  const visibleSelectableColumnNames = computed({
-    get: () => visibleColumnsFor(selectableColumnNames.value),
-    set: (visible) => setVisibleColumns(selectableColumnNames.value, visible),
-  })
+  const visibleSelectableColumnNames = computed(() => displayedColumnsFor(selectableColumnNames.value))
+  // Panel order covers hidden columns too, so their order can be dragged and kept.
+  const orderedSelectableColumnNames = computed(() => orderedColumnsFor(selectableColumnNames.value))
   const hiddenColumnCount = computed(() => hiddenColumnsFor(selectableColumnNames.value).length)
 
-  function selectAllColumns() {
-    showAllColumns(selectableColumnNames.value)
+  function onPanelOrder(names: string[]) {
+    setColumnLayout(selectableColumnNames.value, names, visibleSelectableColumnNames.value)
   }
 
-  function deselectAllColumns() {
-    hideAllColumns(selectableColumnNames.value)
+  function onPanelVisible(names: string[]) {
+    setVisibleColumns(selectableColumnNames.value, names)
+  }
+
+  function handleColumnOrderChange(fields: string[]) {
+    setColumnOrder(selectableColumnNames.value, fields)
   }
 
   const chartContainerRef = ref()

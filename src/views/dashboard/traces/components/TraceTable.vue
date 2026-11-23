@@ -11,14 +11,12 @@ a-card(:bordered="false")
           span.gpt-text-secondary(v-if="hiddenColumnCount" style="margin-left: 6px; font-size: 12px") · {{ $t('logsQuery.hiddenColumnsHint', { count: hiddenColumnCount }) }}
         template(#content)
           a-card.gpt-popover-panel.gpt-popover-panel--wide
-            .column-controls
-              a-space(direction="vertical" size="small")
-                a-space
-                  a-button(type="text" size="small" @click="selectAllColumns") Select All
-                  a-button(type="text" size="small" @click="deselectAllColumns") Deselect All
-                a-checkbox-group(v-model="visibleColumnNames" direction="vertical")
-                  a-checkbox(v-for="column in columns" :key="column.name" :value="column.name")
-                    | {{ column.name }}
+            ColumnLayoutPanel(
+              :ordered-names="orderedOrderableNames"
+              :visible-names="visibleOrderableColumnNames"
+              @update:ordered-names="onPanelOrder"
+              @update:visible-names="onPanelVisible"
+            )
 
   DataGrid(
     v-model:page="currentPage"
@@ -30,9 +28,12 @@ a-card(:bordered="false")
     :column-mode="'separate'"
     :displayed-columns="visibleColumnNames"
     :ts-column="tsColumn"
+    :column-drag="true"
+    :pinned-column-fields="pinnedColumnFields"
     :show-context-menu="queryState.editorType === 'builder'"
     :class="{ builder_type: queryState.editorType === 'builder', trace_table: true }"
     @filter-condition-add="$emit('filterConditionAdd', $event)"
+    @column-order-change="handleColumnOrderChange"
   )
     template(#column-trace_id="{ record }")
       span.trace-id-actions
@@ -59,10 +60,19 @@ a-card(:bordered="false")
   import { IconDown } from '@arco-design/web-vue/es/icon'
   import type { PropType } from 'vue'
   import type { ColumnType, QueryState } from '@/types/query'
-  import useUiPref from '@/composables/use-ui-pref'
+  import useTraceTablePrefs from '@/observability/use-trace-table-prefs'
   import { buildTraceDetailUnixRange } from '@/utils/trace-detail-time-range'
   import { bareTableName } from '@/utils/sql'
+  import ColumnLayoutPanel from '@/components/column-layout-panel/ColumnLayoutPanel.vue'
   import DataGrid from '@/components/data-grid/DataGrid.vue'
+
+  function isTraceIdColumn(name: string): boolean {
+    return name === 'trace_id' || name === 'traceid'
+  }
+
+  function isPinnedTraceColumn(name: string): boolean {
+    return isTraceIdColumn(name) || name === 'timestamp'
+  }
 
   interface LogsTargetInfo {
     database: string
@@ -121,27 +131,42 @@ a-card(:bordered="false")
   }>()
   const router = useRouter()
 
-  // Hidden columns are global for trace tables and stored separately from logs.
-  // Default is no hiding; names missing from the current schema are ignored.
-  const hiddenColumns = useUiPref<string[]>('traceTableHiddenColumns', [])
+  // Column layout is stored per trace table (`traceTableColumns`).
+  const {
+    displayedColumnsFor,
+    orderedColumnsFor,
+    setColumnLayout,
+    setVisibleColumns,
+    setColumnOrder,
+    hiddenColumnCountFor,
+  } = useTraceTablePrefs(() => props.queryState.table || '')
   const columnNames = computed(() => props.columns.map((column) => column.name))
-  const visibleColumnNames = computed({
-    get: () => columnNames.value.filter((name) => !hiddenColumns.value.includes(name)),
-    set: (visible) => {
-      const visibleSet = new Set(visible)
-      const otherHidden = hiddenColumns.value.filter((name) => !columnNames.value.includes(name))
-      const nextHidden = columnNames.value.filter((name) => !visibleSet.has(name))
-      hiddenColumns.value = [...new Set([...otherHidden, ...nextHidden])]
-    },
+  const orderableColumnNames = computed(() => columnNames.value.filter((name) => !isPinnedTraceColumn(name)))
+  const visibleOrderableColumnNames = computed(() => displayedColumnsFor(orderableColumnNames.value))
+  // Panel order covers hidden columns too, so their order can be dragged and kept.
+  const orderedOrderableNames = computed(() => orderedColumnsFor(orderableColumnNames.value))
+  // Pin trace_id (and let DataGrid pin timestamp); layout array covers the rest.
+  const visibleColumnNames = computed(() => {
+    const ordered = visibleOrderableColumnNames.value
+    const traceId = columnNames.value.find(isTraceIdColumn)
+    const ts = columnNames.value.includes('timestamp') ? 'timestamp' : ''
+    const head = [traceId, ts].filter((name): name is string => Boolean(name))
+    return [...head, ...ordered.filter((name) => !isPinnedTraceColumn(name))]
   })
-  const hiddenColumnCount = computed(
-    () => columnNames.value.filter((name) => hiddenColumns.value.includes(name)).length
-  )
+  const hiddenColumnCount = computed(() => hiddenColumnCountFor(orderableColumnNames.value))
 
   const pageSize = ref(20)
   const currentPage = ref(1)
   // Stable references — inline objects would rebuild DataGrid columns every render.
   const tsColumn = { name: 'timestamp', data_type: 'TimestampNanosecond' } as const
+  const pinnedColumnFields = computed(() => {
+    const pinned = [tsColumn.name]
+    const traceId = columnNames.value.find(isTraceIdColumn)
+    if (traceId) {
+      pinned.push(traceId)
+    }
+    return pinned
+  })
   const pageSizeOptions = [10, 20, 50, 100]
   const paginationConfig = computed(() => ({
     pageSize: pageSize.value,
@@ -149,26 +174,23 @@ a-card(:bordered="false")
   }))
 
   const visibleColumns = computed(() => {
-    const visible = new Set(visibleColumnNames.value)
+    const ordered = visibleColumnNames.value
+    const rank = new Map(ordered.map((name, index) => [name, index]))
     return props.columns
-      .filter((col) => visible.has(col.name))
-      .sort((a, b) => {
-        const isATraceId = a.name === 'trace_id' || a.name === 'traceid'
-        const isBTraceId = b.name === 'trace_id' || b.name === 'traceid'
-
-        if (isATraceId && !isBTraceId) return -1
-        if (!isATraceId && isBTraceId) return 1
-
-        return 0
-      })
+      .filter((col) => rank.has(col.name))
+      .sort((a, b) => (rank.get(a.name) ?? 0) - (rank.get(b.name) ?? 0))
   })
 
-  function selectAllColumns() {
-    visibleColumnNames.value = [...columnNames.value]
+  function onPanelOrder(names: string[]) {
+    setColumnLayout(orderableColumnNames.value, names, visibleOrderableColumnNames.value)
   }
 
-  function deselectAllColumns() {
-    visibleColumnNames.value = []
+  function onPanelVisible(names: string[]) {
+    setVisibleColumns(orderableColumnNames.value, names)
+  }
+
+  function handleColumnOrderChange(fields: string[]) {
+    setColumnOrder(orderableColumnNames.value, fields)
   }
 
   watch(
@@ -242,10 +264,6 @@ a-card(:bordered="false")
     align-items: center;
     gap: 8px;
     font-weight: normal;
-  }
-
-  .column-controls {
-    min-width: 200px;
   }
 
   .trace-id-actions {

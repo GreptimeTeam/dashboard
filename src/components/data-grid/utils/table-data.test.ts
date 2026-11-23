@@ -12,7 +12,7 @@ const columns: ColumnType[] = [
 
 const fieldsInput = {
   columns,
-  displayedColumns: [] as string[],
+  displayedColumns: null as string[] | null,
   tsColumn,
   linkColumn: '',
 }
@@ -33,6 +33,10 @@ describe('getVisibleFieldNames', () => {
 
   it('honors displayedColumns and drops the timestamp', () => {
     expect(getVisibleFieldNames({ ...fieldsInput, displayedColumns: ['time', 'level'] })).toEqual(['level'])
+  })
+
+  it('treats an empty layout as "no columns" instead of "all columns"', () => {
+    expect(getVisibleFieldNames({ ...fieldsInput, displayedColumns: [] })).toEqual([])
   })
 })
 

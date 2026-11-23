@@ -39,7 +39,7 @@ a-drawer(
 
 <script setup lang="ts" name="LogDetail">
   import type { ColumnType } from '@/types/query'
-  import { isJsonDataType, stripNullKeys } from '@/utils/json-display'
+  import { isEmptyJsonValue, isJsonDataType, stripEmptyValues } from '@/utils/json-display'
   import JSONView from './JSONView.vue'
   import FormView from './FormView.vue'
 
@@ -91,7 +91,7 @@ a-drawer(
         next[key] = value
         return
       }
-      // Align with FormView: parse JSON text then strip null keys.
+      // Align with FormView: parse JSON text then strip empty values.
       let prepared: unknown = value
       if (typeof value === 'string') {
         const trimmed = value.trim()
@@ -103,7 +103,11 @@ a-drawer(
           }
         }
       }
-      next[key] = stripNullKeys(prepared)
+      const stripped = stripEmptyValues(prepared)
+      if (isEmptyJsonValue(stripped)) {
+        return
+      }
+      next[key] = stripped
     })
     return JSON.stringify(next, null, 2)
   })

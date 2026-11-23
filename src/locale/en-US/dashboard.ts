@@ -31,7 +31,7 @@ export default {
   'dashboard.executeTime': 'Execute: {time} ms',
   'dashboard.format': 'Format Code',
   'dashboard.formatTimestamp': 'Format Timestamp',
-  'dashboard.hideJsonNulls': 'Hide null fields',
+  'dashboard.hideJsonNulls': 'Hide empty values',
   'dashboard.showJsonNulls': 'Show null fields',
   'dashboard.jsonColumnActions': 'JSON column options',
   'dashboard.groupBy': 'Group By',

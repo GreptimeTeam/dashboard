@@ -30,7 +30,7 @@ export default {
   'dashboard.executeTime': '执行时间：{time} 毫秒',
   'dashboard.format': '格式化代码',
   'dashboard.formatTimestamp': '格式化时间戳',
-  'dashboard.hideJsonNulls': '隐藏 null 字段',
+  'dashboard.hideJsonNulls': '隐藏空值',
   'dashboard.showJsonNulls': '显示 null 字段',
   'dashboard.jsonColumnActions': 'JSON 列选项',
   'dashboard.groupBy': '分组依据',

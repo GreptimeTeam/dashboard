@@ -13,7 +13,8 @@ export function isTimeColumn(column: ColumnType | null | undefined): boolean {
 /** Visible content fields, timestamp excluded (it is always rendered first). */
 export function getVisibleFieldNames(input: LogsTableFieldsInput): string[] {
   const tsName = input.tsColumn?.name
-  let names = input.displayedColumns.length > 0 ? input.displayedColumns.slice() : input.columns.map((c) => c.name)
+  // `null` = no explicit layout (show every column); `[]` = every column hidden.
+  let names = input.displayedColumns == null ? input.columns.map((c) => c.name) : input.displayedColumns.slice()
   if (tsName) {
     names = names.filter((n) => n !== tsName)
   }

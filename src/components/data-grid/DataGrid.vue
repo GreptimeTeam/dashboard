@@ -20,6 +20,7 @@
       :loading="loading"
       :row-config="rowConfig"
       :column-config="columnConfig"
+      :column-drag-config="columnDragConfig"
       :virtual-y-config="virtualYConfig"
       :virtual-x-config="virtualXConfig"
       :scrollbar-config="scrollbarConfig"
@@ -30,6 +31,7 @@
       @cell-click="onCellClick"
       @data-rendered="onDataRendered"
       @column-resizable-change="onColumnResizeChange"
+      @column-dragend="onColumnDragEnd"
     )
       // vxe-table 4.7+ splits Loading into vxe-pc-ui; without VxeLoading registered,
       // :loading=true warns unless a #loading slot is provided.
@@ -127,7 +129,11 @@
   type VxeGridInstance = {
     recalculate?: (refull?: boolean) => Promise<void> | void
     recalcRowHeight?: (rowOrId: unknown) => Promise<void> | void
-    getTableColumn?: () => { visibleColumn: VxeColumnInfo[] }
+    getTableColumn?: () => {
+      visibleColumn: VxeColumnInfo[]
+      /** Already reordered at column-dragend time (visibleColumn may still be stale). */
+      collectColumn?: VxeColumnInfo[]
+    }
     scrollTo?: (scrollLeft: number, scrollTop: number) => Promise<void> | void
   }
 
@@ -135,7 +141,8 @@
     defineProps<{
       data: TableData[]
       columns: ColumnType[]
-      displayedColumns?: string[]
+      /** `null` = no explicit layout (all columns); `[]` = every column hidden. */
+      displayedColumns?: string[] | null
       tsColumn?: TSColumn | null
       /** Row-detail mode: the timestamp cell is a link (parity with tsCellDetail). */
       tsCellDetail?: boolean
@@ -186,11 +193,18 @@
        * would overflow, so page lists (Flow) stay readable without horizontal scroll.
        */
       fitContainer?: boolean
+      /** Enable header column drag-reorder (separate mode only). */
+      columnDrag?: boolean
+      /**
+       * Column fields that must stay put (e.g. timestamp / trace_id). They are
+       * excluded from drag and from `column-order-change` payloads.
+       */
+      pinnedColumnFields?: string[]
     }>(),
     {
       data: () => [],
       columns: () => [],
-      displayedColumns: () => [],
+      displayedColumns: null,
       tsColumn: null,
       tsCellDetail: false,
       tsToggle: true,
@@ -216,6 +230,8 @@
       pageSize: DEFAULT_PAGE_SIZE,
       fillHeight: true,
       fitContainer: false,
+      columnDrag: false,
+      pinnedColumnFields: () => [],
     }
   )
 
@@ -227,6 +243,8 @@
     (e: 'update:page', page: number): void
     (e: 'update:pageSize', size: number): void
     (e: 'pageChange', page: number, pageSize: number): void
+    /** Fired after a successful header column drag; fields exclude pinned columns. */
+    (e: 'columnOrderChange', fields: string[]): void
   }>()
 
   const { t } = useI18n()
@@ -373,9 +391,52 @@
     return { ...base, height: rowHeight.value }
   })
 
+  const columnDragEnabled = computed(() => props.columnDrag && props.columnMode === 'separate')
+
+  const pinnedFieldSet = computed(() => {
+    const pinned = new Set(props.pinnedColumnFields.filter(Boolean))
+    if (props.tsColumn?.name) {
+      pinned.add(props.tsColumn.name)
+    }
+    return pinned
+  })
+
   const columnConfig = computed(() => ({
     resizable: props.columnResizable && props.columnMode === 'separate',
+    drag: columnDragEnabled.value,
   }))
+
+  const columnDragConfig = computed(() => {
+    if (!columnDragEnabled.value) {
+      return undefined
+    }
+    return {
+      // Drag from the whole header cell; no extra handle icon in the th.
+      trigger: 'cell' as const,
+      showIcon: false,
+      disabledMethod: ({ column }: { column?: { field?: string } }) => {
+        const field = column?.field
+        return !field || pinnedFieldSet.value.has(field)
+      },
+    }
+  })
+
+  function onColumnDragEnd() {
+    if (!columnDragEnabled.value) {
+      return
+    }
+    // collectColumn is mutated before `column-dragend`; visibleColumn updates only after
+    // the subsequent parseColumns tick — reading visibleColumn here would save the old order.
+    const tableColumns = gridRef.value?.getTableColumn?.()
+    const source = tableColumns?.collectColumn?.length ? tableColumns.collectColumn : tableColumns?.visibleColumn || []
+    const fields = source
+      .map((column) => column.field)
+      .filter((field): field is string => Boolean(field) && !pinnedFieldSet.value.has(field))
+    if (fields.length === 0) {
+      return
+    }
+    emit('columnOrderChange', fields)
+  }
 
   // Drag floor only — column minWidth stays at the content estimate so VXE `fit`
   // can still distribute leftover and keep the table at 100% container width.
@@ -1178,6 +1239,16 @@
 
     :deep(.dg-ts-th--static) {
       cursor: default;
+    }
+
+    // Column-drag headers: unified pointer (incl. nested pills). No color / grab hint.
+    :deep(.col--drag-cell .vxe-header--column.is--drag-active),
+    :deep(.col--drag-cell .vxe-header--column.is--drag-active:active),
+    :deep(.col--drag-cell .vxe-header--column.is--drag-active .vxe-cell),
+    :deep(.col--drag-cell .vxe-header--column.is--drag-active .vxe-cell *),
+    :deep(.col--drag-cell .vxe-header--column.is--drag-disabled) {
+      color: var(--vxe-ui-table-header-font-color);
+      cursor: pointer !important;
     }
 
     // First/last column edge — align with page/toolbar content; no VXE API.
