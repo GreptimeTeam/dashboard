@@ -141,7 +141,8 @@
     defineProps<{
       data: TableData[]
       columns: ColumnType[]
-      displayedColumns?: string[]
+      /** `null` = no explicit layout (all columns); `[]` = every column hidden. */
+      displayedColumns?: string[] | null
       tsColumn?: TSColumn | null
       /** Row-detail mode: the timestamp cell is a link (parity with tsCellDetail). */
       tsCellDetail?: boolean
@@ -203,7 +204,7 @@
     {
       data: () => [],
       columns: () => [],
-      displayedColumns: () => [],
+      displayedColumns: null,
       tsColumn: null,
       tsCellDetail: false,
       tsToggle: true,

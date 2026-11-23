@@ -59,7 +59,7 @@
       sqlMode: string
       tsColumn: TSColumn | null
       columnMode: 'separate' | 'merged' | 'merged-with-keys'
-      displayedColumns: string[]
+      displayedColumns: string[] | null
       loading?: boolean
       /** More rows can be fetched by scrolling (footer affordance + auto load). */
       hasMore?: boolean
@@ -88,7 +88,7 @@
       sqlMode: 'editor',
       tsColumn: null,
       columnMode: 'separate',
-      displayedColumns: () => [],
+      displayedColumns: null,
       loading: false,
       hasMore: false,
       loadingMore: false,

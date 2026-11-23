@@ -39,7 +39,7 @@ type HeaderRenderer = (column: ColumnType, field: string, title: string) => unkn
 export function buildVxeColumns(options: {
   columnMode: LogsColumnMode
   columns: ColumnType[]
-  displayedColumns: string[]
+  displayedColumns: string[] | null
   tsColumn: TSColumn | null
   linkColumn: string
   tsCellDetail: boolean

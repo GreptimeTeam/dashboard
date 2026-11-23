@@ -12,9 +12,10 @@ a-card(:bordered="false")
         template(#content)
           a-card.gpt-popover-panel.gpt-popover-panel--wide
             ColumnLayoutPanel(
-              :column-names="orderableColumnNames"
-              :visible-ordered="visibleOrderableColumnNames"
-              @update:visible-ordered="onPanelVisibleOrdered"
+              :ordered-names="orderedOrderableNames"
+              :visible-names="visibleOrderableColumnNames"
+              @update:ordered-names="onPanelOrder"
+              @update:visible-names="onPanelVisible"
             )
 
   DataGrid(
@@ -130,11 +131,20 @@ a-card(:bordered="false")
   }>()
   const router = useRouter()
 
-  // Column layout prefs are global for trace tables (single allowlist array).
-  const { displayedColumnsFor, setDisplayedColumns, setColumnOrder, hiddenColumnCountFor } = useTraceTablePrefs()
+  // Column layout is stored per trace table (`traceTableColumns`).
+  const {
+    displayedColumnsFor,
+    orderedColumnsFor,
+    setColumnLayout,
+    setVisibleColumns,
+    setColumnOrder,
+    hiddenColumnCountFor,
+  } = useTraceTablePrefs(() => props.queryState.table || '')
   const columnNames = computed(() => props.columns.map((column) => column.name))
   const orderableColumnNames = computed(() => columnNames.value.filter((name) => !isPinnedTraceColumn(name)))
   const visibleOrderableColumnNames = computed(() => displayedColumnsFor(orderableColumnNames.value))
+  // Panel order covers hidden columns too, so their order can be dragged and kept.
+  const orderedOrderableNames = computed(() => orderedColumnsFor(orderableColumnNames.value))
   // Pin trace_id (and let DataGrid pin timestamp); layout array covers the rest.
   const visibleColumnNames = computed(() => {
     const ordered = visibleOrderableColumnNames.value
@@ -171,8 +181,12 @@ a-card(:bordered="false")
       .sort((a, b) => (rank.get(a.name) ?? 0) - (rank.get(b.name) ?? 0))
   })
 
-  function onPanelVisibleOrdered(names: string[]) {
-    setDisplayedColumns(orderableColumnNames.value, names)
+  function onPanelOrder(names: string[]) {
+    setColumnLayout(orderableColumnNames.value, names, visibleOrderableColumnNames.value)
+  }
+
+  function onPanelVisible(names: string[]) {
+    setVisibleColumns(orderableColumnNames.value, names)
   }
 
   function handleColumnOrderChange(fields: string[]) {

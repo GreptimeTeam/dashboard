@@ -1,4 +1,5 @@
 import type { RouteRecordNormalized } from 'vue-router'
+import type { ColumnLayoutMap } from '@/observability/table-column-layout'
 
 export type DbConnectionStatus = 'unknown' | 'connecting' | 'connected' | 'disconnected'
 
@@ -46,19 +47,15 @@ export interface UiConfig {
   logsTableCompactRows?: boolean
   logsTableWrapLines?: boolean
   /**
-   * Ordered visible column names (allowlist). Missing = never configured (show all).
-   * `[]` = all hidden for configured tables. Legacy hidden/order keys are migrated away.
+   * Per-table column layout: `{ [table]: { hidden?, order? } }`. Missing = never
+   * customized (every column visible, schema order). See `table-column-layout.ts`.
    */
-  logsTableColumns?: string[]
-  traceTableColumns?: string[]
-  /** @deprecated Migrated into logsTableColumns */
+  logsTableColumns?: ColumnLayoutMap
+  traceTableColumns?: ColumnLayoutMap
+  /** @deprecated Global deny list, drained into logsTableColumns per table. */
   logsTableHiddenColumns?: string[]
-  /** @deprecated Migrated into logsTableColumns */
-  logsTableColumnOrder?: string[]
-  /** @deprecated Migrated into traceTableColumns */
+  /** @deprecated Global deny list, drained into traceTableColumns per table. */
   traceTableHiddenColumns?: string[]
-  /** @deprecated Migrated into traceTableColumns */
-  traceTableColumnOrder?: string[]
 }
 
 export interface AppState extends StoredConfig, UiConfig {

@@ -117,9 +117,10 @@
             template(#content)
               a-card.gpt-popover-panel.gpt-popover-panel--wide
                 ColumnLayoutPanel(
-                  :column-names="selectableColumnNames"
-                  :visible-ordered="visibleSelectableColumnNames"
-                  @update:visible-ordered="onPanelVisibleOrdered"
+                  :ordered-names="orderedSelectableColumnNames"
+                  :visible-names="visibleSelectableColumnNames"
+                  @update:ordered-names="onPanelOrder"
+                  @update:visible-names="onPanelVisible"
                 )
       LogTableData(
         :key="`${queryState.table}-${columnModeKey}`"
@@ -211,9 +212,11 @@
     columnModeKey,
     hiddenColumnsFor,
     displayedColumnsFor,
-    setDisplayedColumns,
+    orderedColumnsFor,
+    setColumnLayout,
+    setVisibleColumns,
     setColumnOrder,
-  } = useLogsTablePrefs()
+  } = useLogsTablePrefs(() => queryState.table || '')
 
   const columnNames = computed(() => columns.value.map((column) => column.name))
   // The logs table pins the timestamp column first; it is not a configurable column.
@@ -231,10 +234,16 @@
     return ts ? [ts, ...selectable.filter((name) => name !== ts)] : selectable
   })
   const visibleSelectableColumnNames = computed(() => displayedColumnsFor(selectableColumnNames.value))
+  // Panel order covers hidden columns too, so their order can be dragged and kept.
+  const orderedSelectableColumnNames = computed(() => orderedColumnsFor(selectableColumnNames.value))
   const hiddenColumnCount = computed(() => hiddenColumnsFor(selectableColumnNames.value).length)
 
-  function onPanelVisibleOrdered(names: string[]) {
-    setDisplayedColumns(selectableColumnNames.value, names)
+  function onPanelOrder(names: string[]) {
+    setColumnLayout(selectableColumnNames.value, names, visibleSelectableColumnNames.value)
+  }
+
+  function onPanelVisible(names: string[]) {
+    setVisibleColumns(selectableColumnNames.value, names)
   }
 
   function handleColumnOrderChange(fields: string[]) {

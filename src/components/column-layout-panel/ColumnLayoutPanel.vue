@@ -5,7 +5,7 @@
       a-button(type="text" size="small" @click="selectAll") Select All
       a-button(type="text" size="small" @click="deselectAll") Deselect All
     .column-layout-panel__list(ref="listEl")
-      .column-layout-panel__row(v-for="name in listNames" :key="name" :data-name="name")
+      .column-layout-panel__row(v-for="name in orderedNames" :key="name" :data-name="name")
         span.column-layout-panel__handle(aria-hidden="true")
           icon-drag-dot-vertical
         a-checkbox(
@@ -19,36 +19,48 @@
   import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
   import Sortable from 'sortablejs'
   import { IconDragDotVertical } from '@arco-design/web-vue/es/icon'
-  import { panelColumnOrder } from '@/observability/table-column-layout'
 
   const props = withDefaults(
     defineProps<{
-      /** All configurable column names for the current table (pinned excluded). */
-      columnNames: string[]
-      /** Currently visible names in display order. */
-      visibleOrdered: string[]
+      /**
+       * Every configurable column for the current table (pinned excluded), in display
+       * order. Hidden columns keep their slot so their order can be dragged too.
+       */
+      orderedNames: string[]
+      /** Subset of `orderedNames` that is currently visible. */
+      visibleNames: string[]
     }>(),
     {
-      columnNames: () => [],
-      visibleOrdered: () => [],
+      orderedNames: () => [],
+      visibleNames: () => [],
     }
   )
 
   const emit = defineEmits<{
-    (e: 'update:visibleOrdered', names: string[]): void
+    /** Full display order after a drag (visible and hidden rows). */
+    (e: 'update:orderedNames', names: string[]): void
+    /** New visible subset, in display order. */
+    (e: 'update:visibleNames', names: string[]): void
   }>()
 
   const listEl = ref<HTMLElement | null>(null)
   let sortable: Sortable | null = null
 
-  const visibleSet = computed(() => new Set(props.visibleOrdered))
+  const visibleSet = computed(() => new Set(props.visibleNames))
 
-  const listNames = computed(() => panelColumnOrder(props.columnNames, props.visibleOrdered))
+  function readDomOrder(): string[] {
+    if (!listEl.value) {
+      return props.orderedNames.slice()
+    }
+    return Array.from(listEl.value.querySelectorAll<HTMLElement>('.column-layout-panel__row'))
+      .map((row) => row.dataset.name || '')
+      .filter(Boolean)
+  }
 
-  function emitVisibleFromOrder(orderedNames: string[], visible: Set<string>) {
+  function emitVisibleFrom(names: string[], visible: Set<string>) {
     emit(
-      'update:visibleOrdered',
-      orderedNames.filter((name) => visible.has(name))
+      'update:visibleNames',
+      names.filter((name) => visible.has(name))
     )
   }
 
@@ -59,24 +71,15 @@
     } else {
       next.delete(name)
     }
-    emitVisibleFromOrder(listNames.value, next)
+    emitVisibleFrom(readDomOrder(), next)
   }
 
   function selectAll() {
-    emit('update:visibleOrdered', props.columnNames.slice())
+    emit('update:visibleNames', readDomOrder())
   }
 
   function deselectAll() {
-    emit('update:visibleOrdered', [])
-  }
-
-  function readDomOrder(): string[] {
-    if (!listEl.value) {
-      return listNames.value
-    }
-    return Array.from(listEl.value.querySelectorAll<HTMLElement>('.column-layout-panel__row'))
-      .map((row) => row.dataset.name || '')
-      .filter(Boolean)
+    emit('update:visibleNames', [])
   }
 
   function bindSortable() {
@@ -89,7 +92,7 @@
       handle: '.column-layout-panel__handle',
       animation: 150,
       onEnd: () => {
-        emitVisibleFromOrder(readDomOrder(), visibleSet.value)
+        emit('update:orderedNames', readDomOrder())
       },
     })
   }
@@ -98,8 +101,9 @@
     bindSortable()
   })
 
+  // Rebind only when the set of names changes: pure reordering is patched by Vue.
   watch(
-    () => props.columnNames.join('\0'),
+    () => [...props.orderedNames].sort().join('\0'),
     async () => {
       await nextTick()
       bindSortable()

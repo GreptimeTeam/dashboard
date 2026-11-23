@@ -88,39 +88,9 @@ const useAppStore = defineStore('app', () => {
         // ignore storage failures
       }
     }
-    // Merge legacy hidden + order into a single visible-ordered allowlist when possible.
-    const migrateColumnLayout = (
-      modernKey: 'logsTableColumns' | 'traceTableColumns',
-      hiddenKey: 'logsTableHiddenColumns' | 'traceTableHiddenColumns',
-      orderKey: 'logsTableColumnOrder' | 'traceTableColumnOrder'
-    ) => {
-      const modern = ui[modernKey]
-      const hidden = ui[hiddenKey]
-      const order = ui[orderKey]
-      if (modern !== undefined) {
-        if (hidden !== undefined || order !== undefined) {
-          delete ui[hiddenKey]
-          delete ui[orderKey]
-          changed = true
-        }
-        return
-      }
-      if (Array.isArray(order) && order.length > 0) {
-        const hiddenSet = new Set(Array.isArray(hidden) ? (hidden as string[]) : [])
-        ui[modernKey] = (order as string[]).filter((name) => !hiddenSet.has(name))
-        delete ui[hiddenKey]
-        delete ui[orderKey]
-        changed = true
-        return
-      }
-      if (order !== undefined) {
-        delete ui[orderKey]
-        changed = true
-      }
-      // Only-hidden legacy stays until the first modern write (prefs still reads it).
-    }
-    migrateColumnLayout('logsTableColumns', 'logsTableHiddenColumns', 'logsTableColumnOrder')
-    migrateColumnLayout('traceTableColumns', 'traceTableHiddenColumns', 'traceTableColumnOrder')
+    // Column layout needs no eager migration here: per-table layouts live in
+    // `*TableColumns`, and the released global hidden list is drained per table by
+    // `useTableColumnLayoutPref` as each table is customized.
 
     if (changed) {
       uiConfigStorage.value = { ...ui } as Partial<UiConfig>
@@ -283,11 +253,9 @@ const useAppStore = defineStore('app', () => {
     'logsTableWrapLines',
     'logsTableColumns',
     'traceTableColumns',
-    // Kept allowlisted so prefs can clear them after migrating to *TableColumns.
+    // Released global deny lists: read as a fallback and drained per table until empty.
     'logsTableHiddenColumns',
-    'logsTableColumnOrder',
     'traceTableHiddenColumns',
-    'traceTableColumnOrder',
   ] as const
 
   const normalizeConnectionConfig = (config: Partial<StoredConfig>): Partial<StoredConfig> => {

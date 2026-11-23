@@ -106,7 +106,7 @@ a-tabs.panel-tabs(
             :result-key="result.key"
             :data="tableModelMap[result.key]?.rows || []"
             :columns="tableModelMap[result.key]?.columns || []"
-            :displayed-columns="tableModelMap[result.key]?.displayedColumns || []"
+            :displayed-columns="tableModelMap[result.key]?.displayedColumns ?? null"
             :ts-column="tableModelMap[result.key]?.tsColumn || null"
             :show-context-menu="false"
             :wrap-line="wrapLines"

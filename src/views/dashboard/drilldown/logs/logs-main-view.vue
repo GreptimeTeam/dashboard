@@ -40,9 +40,10 @@
         template(#content)
           a-card.gpt-popover-panel.gpt-popover-panel--wide
             ColumnLayoutPanel(
-              :column-names="selectableColumnNames"
-              :visible-ordered="visibleSelectableColumnNames"
-              @update:visible-ordered="onPanelVisibleOrdered"
+              :ordered-names="orderedSelectableColumnNames"
+              :visible-names="visibleSelectableColumnNames"
+              @update:ordered-names="onPanelOrder"
+              @update:visible-names="onPanelVisible"
             )
 
   a-spin.logs-main-table(:loading="loading" :class="{ 'logs-main-table--fill': fillHeight }")
@@ -113,8 +114,8 @@
   const { t } = useI18n()
   const ctx = useDrilldownContext()
 
-  // Display prefs. Column layout is global and shared with Logs Query; only the
-  // runtime compact/wrap state is per-page.
+  // Display prefs. Column layout is stored per table and shared with Logs Query;
+  // only the runtime compact/wrap state is per-page.
   const {
     mergeColumn,
     showKeys,
@@ -125,9 +126,11 @@
     columnModeKey,
     hiddenColumnsFor,
     displayedColumnsFor,
-    setDisplayedColumns,
+    orderedColumnsFor,
+    setColumnLayout,
+    setVisibleColumns,
     setColumnOrder,
-  } = useLogsTablePrefs()
+  } = useLogsTablePrefs(() => ctx.semantics.logs.table.value || '')
 
   const { loading, loadingMore, tableColumns, tableData, tsColumn, hasMore, loadMore } = useDrilldownLogsTable(ctx, {
     extraWhere: computed(() => props.extraWhere),
@@ -146,10 +149,16 @@
     return ts ? [ts, ...selectable.filter((name) => name !== ts)] : selectable
   })
   const visibleSelectableColumnNames = computed(() => displayedColumnsFor(selectableColumnNames.value))
+  // Panel order covers hidden columns too, so their order can be dragged and kept.
+  const orderedSelectableColumnNames = computed(() => orderedColumnsFor(selectableColumnNames.value))
   const hiddenColumnCount = computed(() => hiddenColumnsFor(selectableColumnNames.value).length)
 
-  function onPanelVisibleOrdered(names: string[]) {
-    setDisplayedColumns(selectableColumnNames.value, names)
+  function onPanelOrder(names: string[]) {
+    setColumnLayout(selectableColumnNames.value, names, visibleSelectableColumnNames.value)
+  }
+
+  function onPanelVisible(names: string[]) {
+    setVisibleColumns(selectableColumnNames.value, names)
   }
 
   function handleColumnOrderChange(fields: string[]) {

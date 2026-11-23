@@ -27,7 +27,8 @@ export type SeparateField = {
 /** Inputs derived from component props shared by the pure table helpers. */
 export interface LogsTableFieldsInput {
   columns: ColumnType[]
-  displayedColumns: string[]
+  /** `null` = no explicit layout (show every column); `[]` = every column hidden. */
+  displayedColumns: string[] | null
   tsColumn: TSColumn | null
   linkColumn: string
 }
