@@ -38,14 +38,12 @@
           span.gpt-text-secondary {{ t('logsQuery.columns') }}
           span.gpt-text-secondary(v-if="hiddenColumnCount" style="margin-left: 6px; font-size: 12px") · {{ t('logsQuery.hiddenColumnsHint', { count: hiddenColumnCount }) }}
         template(#content)
-          a-card.gpt-popover-panel
-            a-space(direction="vertical" size="small")
-              a-space
-                a-button(type="text" size="small" @click="selectAllColumns") Select All
-                a-button(type="text" size="small" @click="deselectAllColumns") Deselect All
-              a-checkbox-group(v-model="visibleSelectableColumnNames" direction="vertical")
-                a-checkbox(v-for="column in selectableColumns" :key="column.name" :value="column.name")
-                  | {{ column.name }}
+          a-card.gpt-popover-panel.gpt-popover-panel--wide
+            ColumnLayoutPanel(
+              :column-names="selectableColumnNames"
+              :visible-ordered="visibleSelectableColumnNames"
+              @update:visible-ordered="onPanelVisibleOrdered"
+            )
 
   a-spin.logs-main-table(:loading="loading" :class="{ 'logs-main-table--fill': fillHeight }")
     LogsTable(
@@ -65,9 +63,12 @@
       :has-more="hasMore"
       :loading-more="loadingMore"
       :trace-id-column="traceIdColumn"
+      :column-drag="columnMode === 'separate'"
+      :pinned-column-fields="timestampColumnName ? [timestampColumnName] : []"
       @trace-click="openTrace"
       @filterConditionAdd="onFilterConditionAdd"
       @reach-end="loadMore"
+      @column-order-change="handleColumnOrderChange"
     )
     a-empty(v-else-if="!loading" :description="t('drilldown.logs.noLogRows')")
 </template>
@@ -90,6 +91,7 @@
   import useDrilldownLogsTable from '@/observability/use-drilldown-logs-table'
   import useLogsTablePrefs from '@/observability/use-logs-table-prefs'
   import { isDrilldownFilterOp, normalizeFilterOp } from '@/observability/filters'
+  import ColumnLayoutPanel from '@/components/column-layout-panel/ColumnLayoutPanel.vue'
   import LogsVolumeMiniChart from './logs-volume-mini-chart.vue'
 
   const props = withDefaults(
@@ -111,7 +113,7 @@
   const { t } = useI18n()
   const ctx = useDrilldownContext()
 
-  // Display prefs. Hidden columns are global and shared with Logs Query; only the
+  // Display prefs. Column layout is global and shared with Logs Query; only the
   // runtime compact/wrap state is per-page.
   const {
     mergeColumn,
@@ -122,10 +124,9 @@
     columnMode,
     columnModeKey,
     hiddenColumnsFor,
-    visibleColumnsFor,
-    setVisibleColumns,
-    showAllColumns,
-    hideAllColumns,
+    displayedColumnsFor,
+    setDisplayedColumns,
+    setColumnOrder,
   } = useLogsTablePrefs()
 
   const { loading, loadingMore, tableColumns, tableData, tsColumn, hasMore, loadMore } = useDrilldownLogsTable(ctx, {
@@ -134,29 +135,25 @@
   })
 
   const logsTableName = computed(() => ctx.semantics.logs.table.value || '')
-  const tableColumnNames = computed(() => tableColumns.value.map((column) => column.name))
   // The logs table pins the timestamp column first; it is not a configurable column.
   const timestampColumnName = computed(() => tsColumn.value?.name || '')
-  const selectableColumns = computed(() =>
-    tableColumns.value.filter((column) => column.name !== timestampColumnName.value)
+  const selectableColumnNames = computed(() =>
+    tableColumns.value.map((column) => column.name).filter((name) => name !== timestampColumnName.value)
   )
-  const selectableColumnNames = computed(() => selectableColumns.value.map((column) => column.name))
-  const visibleColumnNames = computed({
-    get: () => visibleColumnsFor(tableColumnNames.value),
-    set: (visible) => setVisibleColumns(tableColumnNames.value, visible),
+  const visibleColumnNames = computed(() => {
+    const ts = timestampColumnName.value
+    const selectable = displayedColumnsFor(selectableColumnNames.value)
+    return ts ? [ts, ...selectable.filter((name) => name !== ts)] : selectable
   })
-  const visibleSelectableColumnNames = computed({
-    get: () => visibleColumnsFor(selectableColumnNames.value),
-    set: (visible) => setVisibleColumns(selectableColumnNames.value, visible),
-  })
+  const visibleSelectableColumnNames = computed(() => displayedColumnsFor(selectableColumnNames.value))
   const hiddenColumnCount = computed(() => hiddenColumnsFor(selectableColumnNames.value).length)
 
-  function selectAllColumns() {
-    showAllColumns(selectableColumnNames.value)
+  function onPanelVisibleOrdered(names: string[]) {
+    setDisplayedColumns(selectableColumnNames.value, names)
   }
 
-  function deselectAllColumns() {
-    hideAllColumns(selectableColumnNames.value)
+  function handleColumnOrderChange(fields: string[]) {
+    setColumnOrder(selectableColumnNames.value, fields)
   }
   // Settings fill roles the runtime map has not resolved yet (see resolveLogsRoles).
   const traceIdColumn = computed(() => {

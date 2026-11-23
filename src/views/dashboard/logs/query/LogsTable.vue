@@ -18,11 +18,14 @@
     :filter-menu-kind="filterMenuKind"
     :active-row-key="detailVisible ? selectedRowKey : null"
     :link-column="traceIdColumn"
+    :column-drag="columnDrag"
+    :pinned-column-fields="pinnedColumnFields"
     :class="dataTableClass"
     @reach-end="emit('reachEnd')"
     @ts-cell-click="handleTsClick"
     @column-link-click="handleTraceClick"
     @filter-condition-add="handleFilterConditionAdd"
+    @column-order-change="(fields) => emit('columnOrderChange', fields)"
   )
   LogDetail(
     v-if="rowDetail"
@@ -73,6 +76,9 @@
       rowDetail?: boolean
       /** Drilldown: chip ops (`=~`); Logs Query: SQL builder ops (`LIKE`). */
       filterMenuKind?: 'sql-builder' | 'drilldown'
+      /** Header column drag-reorder (separate mode only; DataGrid also gates on mode). */
+      columnDrag?: boolean
+      pinnedColumnFields?: string[]
     }>(),
     {
       wrapLine: false,
@@ -92,10 +98,18 @@
       traceIdColumn: '',
       rowDetail: true,
       filterMenuKind: 'sql-builder',
+      columnDrag: false,
+      pinnedColumnFields: () => [],
     }
   )
 
-  const emit = defineEmits(['filterConditionAdd', 'rowSelect', 'reachEnd', 'traceClick'])
+  const emit = defineEmits<{
+    (e: 'filterConditionAdd', payload: unknown): void
+    (e: 'rowSelect', row: TableData): void
+    (e: 'reachEnd'): void
+    (e: 'traceClick', value: string): void
+    (e: 'columnOrderChange', fields: string[]): void
+  }>()
 
   const selectedRowKey = ref<number | null>(null)
   const selectedRecord = computed(() => props.data[selectedRowKey.value])

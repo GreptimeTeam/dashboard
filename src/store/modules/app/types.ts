@@ -45,8 +45,20 @@ export interface UiConfig {
   logsTableShowKeys?: boolean
   logsTableCompactRows?: boolean
   logsTableWrapLines?: boolean
+  /**
+   * Ordered visible column names (allowlist). Missing = never configured (show all).
+   * `[]` = all hidden for configured tables. Legacy hidden/order keys are migrated away.
+   */
+  logsTableColumns?: string[]
+  traceTableColumns?: string[]
+  /** @deprecated Migrated into logsTableColumns */
   logsTableHiddenColumns?: string[]
+  /** @deprecated Migrated into logsTableColumns */
+  logsTableColumnOrder?: string[]
+  /** @deprecated Migrated into traceTableColumns */
   traceTableHiddenColumns?: string[]
+  /** @deprecated Migrated into traceTableColumns */
+  traceTableColumnOrder?: string[]
 }
 
 export interface AppState extends StoredConfig, UiConfig {

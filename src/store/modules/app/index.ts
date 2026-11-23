@@ -88,6 +88,40 @@ const useAppStore = defineStore('app', () => {
         // ignore storage failures
       }
     }
+    // Merge legacy hidden + order into a single visible-ordered allowlist when possible.
+    const migrateColumnLayout = (
+      modernKey: 'logsTableColumns' | 'traceTableColumns',
+      hiddenKey: 'logsTableHiddenColumns' | 'traceTableHiddenColumns',
+      orderKey: 'logsTableColumnOrder' | 'traceTableColumnOrder'
+    ) => {
+      const modern = ui[modernKey]
+      const hidden = ui[hiddenKey]
+      const order = ui[orderKey]
+      if (modern !== undefined) {
+        if (hidden !== undefined || order !== undefined) {
+          delete ui[hiddenKey]
+          delete ui[orderKey]
+          changed = true
+        }
+        return
+      }
+      if (Array.isArray(order) && order.length > 0) {
+        const hiddenSet = new Set(Array.isArray(hidden) ? (hidden as string[]) : [])
+        ui[modernKey] = (order as string[]).filter((name) => !hiddenSet.has(name))
+        delete ui[hiddenKey]
+        delete ui[orderKey]
+        changed = true
+        return
+      }
+      if (order !== undefined) {
+        delete ui[orderKey]
+        changed = true
+      }
+      // Only-hidden legacy stays until the first modern write (prefs still reads it).
+    }
+    migrateColumnLayout('logsTableColumns', 'logsTableHiddenColumns', 'logsTableColumnOrder')
+    migrateColumnLayout('traceTableColumns', 'traceTableHiddenColumns', 'traceTableColumnOrder')
+
     if (changed) {
       uiConfigStorage.value = { ...ui } as Partial<UiConfig>
       // Write through synchronously: initLocale reads the raw value before the
@@ -247,8 +281,13 @@ const useAppStore = defineStore('app', () => {
     'logsTableShowKeys',
     'logsTableCompactRows',
     'logsTableWrapLines',
+    'logsTableColumns',
+    'traceTableColumns',
+    // Kept allowlisted so prefs can clear them after migrating to *TableColumns.
     'logsTableHiddenColumns',
+    'logsTableColumnOrder',
     'traceTableHiddenColumns',
+    'traceTableColumnOrder',
   ] as const
 
   const normalizeConnectionConfig = (config: Partial<StoredConfig>): Partial<StoredConfig> => {
@@ -311,6 +350,21 @@ const useAppStore = defineStore('app', () => {
 
   const setUiConfigValue = <K extends keyof UiConfig>(key: K, value: UiConfig[K]): void => {
     saveUiConfig({ [key]: value } as Partial<UiConfig>)
+  }
+
+  /** Drop keys from uiConfig (e.g. after migrating legacy column layout fields). */
+  const removeUiConfigKeys = (keys: (keyof UiConfig)[]): void => {
+    const next = { ...uiConfigStorage.value }
+    let changed = false
+    keys.forEach((key) => {
+      if (key in next) {
+        delete next[key]
+        changed = true
+      }
+    })
+    if (changed) {
+      uiConfigStorage.value = next
+    }
   }
 
   const setConnectionConfig = (config: Partial<StoredConfig>) => {
@@ -464,6 +518,7 @@ const useAppStore = defineStore('app', () => {
     applyUiConfig,
     getUiConfigValue,
     setUiConfigValue,
+    removeUiConfigKeys,
     ensureConnectionHost,
     validateAndSaveConnection,
     checkDbConnection,
