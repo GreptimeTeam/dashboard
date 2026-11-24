@@ -3,10 +3,12 @@
   .breakdown-toolbar
     span.drilldown-toolbar__group
       span.drilldown-toolbar__label {{ t('drilldown.traces.breakdownByAttr') }}
-      a-select.drilldown-filter-select(
-        v-model="groupByColumn"
+      a-select.drilldown-filter-select.drilldown-filter-select--multi(
+        v-model="groupByColumns"
+        multiple
         allow-search
         size="small"
+        :max-tag-count="2"
         :placeholder="t('drilldown.traces.breakdownByAttrPlaceholder')"
         :loading="loadingAttrs"
       )
@@ -19,10 +21,10 @@
     .drilldown-grid.traces-breakdown-grid__values
       TracesBreakdownPanel(
         v-for="(item, index) in values"
-        :key="`${groupByColumn}:${item.value}`"
+        :key="`${groupByColumns.join('\u001f')}:${item.value}`"
         :red-metric="redMetric"
-        :attr-key="groupByColumn"
-        :attr-value="item.value"
+        :group-columns="groupByColumns"
+        :group-values="item.parts"
         :points="seriesByValue[item.value] || []"
         :y-min="yAxis.yMin"
         :y-max="yAxis.yMax"
@@ -57,7 +59,7 @@
   const ctx = useDrilldownContext()
 
   const allAttrs = ref<TraceBreakdownAttribute[]>([])
-  const groupByColumn = ref('service_name')
+  const groupByColumns = ref<string[]>(['service_name'])
   const loadingAttrs = ref(false)
   const loading = ref(false)
   const values = ref<BreakdownAttrValue[]>([])
@@ -102,8 +104,12 @@
         (columns || []).map((column) => column.name)
       )
       allAttrs.value = discoverTraceBreakdownAttributes(columns || [], sampled)
-      if (!allAttrs.value.some((attr) => attr.column === groupByColumn.value)) {
-        groupByColumn.value = preferDefaultColumn(allAttrs.value)
+      const known = new Set(allAttrs.value.map((attr) => attr.column))
+      const kept = groupByColumns.value.filter((column) => known.has(column))
+      if (!kept.length) {
+        groupByColumns.value = [preferDefaultColumn(allAttrs.value)]
+      } else if (kept.length !== groupByColumns.value.length) {
+        groupByColumns.value = kept
       }
     } catch (error) {
       console.error('Failed to load traces breakdown attributes:', error)
@@ -128,7 +134,7 @@
     if (ctx.ui.focusTraceId.value) {
       return
     }
-    if (!ctx.semantics.traces.table.value || !groupByColumn.value) {
+    if (!ctx.semantics.traces.table.value || !groupByColumns.value.length) {
       values.value = []
       seriesByValue.value = {}
       yAxis.value = { yMin: 0, yMax: 1 }
@@ -138,13 +144,8 @@
     const requestId = valuesRequestId
     loading.value = true
     try {
-      const nextValues = await fetchBreakdownAttrValues(ctx, props.redMetric, groupByColumn.value)
-      const series = await fetchBreakdownSeries(
-        ctx,
-        props.redMetric,
-        groupByColumn.value,
-        nextValues.map((item) => item.value)
-      )
+      const nextValues = await fetchBreakdownAttrValues(ctx, props.redMetric, groupByColumns.value)
+      const series = await fetchBreakdownSeries(ctx, props.redMetric, groupByColumns.value, nextValues)
       if (requestId !== valuesRequestId) {
         return
       }
@@ -158,6 +159,13 @@
     }
   }
 
+  // Clearing the last tag would leave the breakdown with nothing to group on.
+  watch(groupByColumns, (columns) => {
+    if (!columns.length) {
+      groupByColumns.value = [preferDefaultColumn(allAttrs.value)]
+    }
+  })
+
   // Attribute discovery: follow bind revision (table/columns), not query time/filters.
   watch(
     () => [ctx.ui.focusTraceId.value, ctx.semantics.traces.revision.value] as const,
@@ -168,8 +176,8 @@
   )
 
   useSignalQuery(ctx, 'traces', {
-    enabled: () => !ctx.ui.focusTraceId.value && Boolean(groupByColumn.value),
-    params: () => ({ redMetric: props.redMetric, groupBy: groupByColumn.value }),
+    enabled: () => !ctx.ui.focusTraceId.value && groupByColumns.value.length > 0,
+    params: () => ({ redMetric: props.redMetric, groupBy: groupByColumns.value }),
     run: () => loadValues(),
   })
 </script>

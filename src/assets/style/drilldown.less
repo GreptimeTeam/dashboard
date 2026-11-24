@@ -213,6 +213,12 @@
   min-width: 240px;
 }
 
+/* Multi group-by keeps a stable frame while tags replace the search input. */
+.drilldown-filter-select--multi {
+  width: 360px;
+  min-width: 360px;
+}
+
 /*
  * a-select 根节点是 fragment（trigger span + Teleport），Vue 不会把 SFC scoped 的
  * data-v 属性落到 trigger span 上，scoped 宽度规则永远不命中 —— 宽度类必须放全局

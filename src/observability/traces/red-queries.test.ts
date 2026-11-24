@@ -15,6 +15,9 @@ import {
   volumeIntervalSecondsFromRange,
 } from './red-queries'
 
+/** Group key as emitted by the breakdown SQL: NULL and empty both fold into the unspecified bucket. */
+const unspecified = (expr: string) => `COALESCE(NULLIF(${expr}, ''), '<unspecified>')`
+
 describe('traces red-queries', () => {
   it('builds rate metric as count per second', () => {
     const expr = buildRedTimeseriesSql({
@@ -135,17 +138,17 @@ describe('traces red-queries', () => {
       tableName: 'opentelemetry_traces',
       where: '"parent_span_id" IS NULL',
       timeColumn: 'timestamp',
-      groupByColumn: 'service_name',
+      groupByColumns: ['service_name'],
       statusColumn: 'span_status_code',
       durationColumn: 'duration_nano',
       metric: 'rate',
       intervalSeconds: 60,
-      values: ['frontend', "o'brien"],
+      values: [['frontend'], ["o'brien"]],
     })
     expect(sql).toContain('date_bin(\'60 seconds\', "timestamp")')
-    expect(sql).toContain("\"service_name\" IN ('frontend', 'o''brien')")
+    expect(sql).toContain(`${unspecified('"service_name"')} IN ('frontend', 'o''brien')`)
     expect(sql).toContain('COUNT(*) * 1.0 / 60')
-    expect(sql).toContain('GROUP BY time_bucket, "service_name"')
+    expect(sql).toContain(`GROUP BY time_bucket, ${unspecified('"service_name"')}`)
     expect(sql).not.toContain('LIMIT')
   })
 
@@ -171,45 +174,102 @@ describe('traces red-queries', () => {
     const valuesSql = buildBreakdownValuesSql({
       tableName: 'opentelemetry_traces_v2',
       where: '"parent_span_id" IS NULL',
-      groupByColumn: 'span_attributes.http.request.method',
-      groupByColumnSql: `json_get_string("span_attributes", '$."http.request.method"')`,
+      groupByColumns: ['span_attributes.http.request.method'],
+      groupByColumnSql: [`json_get_string("span_attributes", '$."http.request.method"')`],
       statusColumn: 'span_status_code',
       durationColumn: 'duration_nano',
       metric: 'rate',
       limit: 10,
     })
-    expect(valuesSql).toContain(`json_get_string("span_attributes", '$."http.request.method"') AS attr_value`)
-    expect(valuesSql).toContain(`GROUP BY json_get_string("span_attributes", '$."http.request.method"')`)
+    const methodExpr = `json_get_string("span_attributes", '$."http.request.method"')`
+    expect(valuesSql).toContain(`${unspecified(methodExpr)} AS attr_value`)
+    expect(valuesSql).toContain(`GROUP BY ${unspecified(methodExpr)}`)
     expect(valuesSql).not.toContain('"span_attributes.http.request.method"')
 
     const seriesSql = buildBreakdownSeriesSql({
       tableName: 'opentelemetry_traces_v2',
       where: '"parent_span_id" IS NULL',
       timeColumn: 'timestamp',
-      groupByColumn: 'resource_attributes.service.version',
-      groupByColumnSql: `json_get_string("resource_attributes", '$."service.version"')`,
+      groupByColumns: ['resource_attributes.service.version'],
+      groupByColumnSql: [`json_get_string("resource_attributes", '$."service.version"')`],
       statusColumn: 'span_status_code',
       durationColumn: 'duration_nano',
       metric: 'errors',
       intervalSeconds: 60,
-      values: ['1.4.2'],
+      values: [['1.4.2']],
     })
-    expect(seriesSql).toContain(`json_get_string("resource_attributes", '$."service.version"') IN ('1.4.2')`)
+    expect(seriesSql).toContain(
+      `${unspecified(`json_get_string("resource_attributes", '$."service.version"')`)} IN ('1.4.2')`
+    )
+  })
+
+  it('keeps spans missing a dimension as the unspecified bucket', () => {
+    const sql = buildBreakdownValuesSql({
+      tableName: 'opentelemetry_traces',
+      where: '"parent_span_id" IS NULL',
+      groupByColumns: ['resource_attributes.browser.language'],
+      statusColumn: 'span_status_code',
+      durationColumn: 'duration_nano',
+      metric: 'rate',
+      limit: 10,
+    })
+    expect(sql).toContain(`${unspecified('"resource_attributes.browser.language"')} AS attr_value`)
+    expect(sql).not.toContain('IS NOT NULL')
   })
 
   it('builds breakdown values ranked by RED', () => {
     const sql = buildBreakdownValuesSql({
       tableName: 'opentelemetry_traces',
       where: '"parent_span_id" IS NULL',
-      groupByColumn: 'service_name',
+      groupByColumns: ['service_name'],
       statusColumn: 'span_status_code',
       durationColumn: 'duration_nano',
       metric: 'errors',
       limit: 10,
     })
-    expect(sql).toContain('GROUP BY "service_name"')
+    expect(sql).toContain(`GROUP BY ${unspecified('"service_name"')}`)
+    expect(sql).not.toContain('IS NOT NULL')
     expect(sql).toContain('STATUS_CODE_ERROR')
     expect(sql).toContain('ORDER BY metric_value DESC')
     expect(sql).toContain('LIMIT 10')
+  })
+
+  it('groups by several columns and matches each value tuple', () => {
+    const methodExpr = `json_get_string("span_attributes", '$."http.request.method"')`
+    const valuesSql = buildBreakdownValuesSql({
+      tableName: 'opentelemetry_traces',
+      where: '"parent_span_id" IS NULL',
+      groupByColumns: ['service_name', 'span_attributes.http.request.method'],
+      groupByColumnSql: [undefined, methodExpr],
+      statusColumn: 'span_status_code',
+      durationColumn: 'duration_nano',
+      metric: 'rate',
+      limit: 10,
+    })
+    expect(valuesSql).toContain(`${unspecified('"service_name"')} AS attr_0`)
+    expect(valuesSql).toContain(`${unspecified(methodExpr)} AS attr_1`)
+    expect(valuesSql).not.toContain('IS NOT NULL')
+    expect(valuesSql).toContain(`GROUP BY ${unspecified('"service_name"')}, ${unspecified(methodExpr)}`)
+
+    const seriesSql = buildBreakdownSeriesSql({
+      tableName: 'opentelemetry_traces',
+      where: '"parent_span_id" IS NULL',
+      timeColumn: 'timestamp',
+      groupByColumns: ['service_name', 'span_name'],
+      statusColumn: 'span_status_code',
+      durationColumn: 'duration_nano',
+      metric: 'rate',
+      intervalSeconds: 60,
+      values: [
+        ['frontend', 'GET'],
+        ['frontend', "o'brien"],
+      ],
+    })
+    const serviceExpr = unspecified('"service_name"')
+    const spanExpr = unspecified('"span_name"')
+    expect(seriesSql).toContain(`${serviceExpr} = 'frontend' AND ${spanExpr} = 'GET'`)
+    expect(seriesSql).toContain(`${serviceExpr} = 'frontend' AND ${spanExpr} = 'o''brien'`)
+    expect(seriesSql).toContain(`GROUP BY time_bucket, ${serviceExpr}, ${spanExpr}`)
+    expect(seriesSql).not.toContain(' IN (')
   })
 })

@@ -225,7 +225,7 @@ export default {
   'drilldown.traces.slowTracesTab': '遅いトレース',
   'drilldown.traces.breakdownTab': '内訳',
   'drilldown.traces.breakdownByAttr': 'グループ化',
-  'drilldown.traces.breakdownByAttrPlaceholder': '属性を選択',
+  'drilldown.traces.breakdownByAttrPlaceholder': '属性を選択（複数可）',
   'drilldown.traces.breakdownNoValues': '範囲内に属性値がありません',
   'drilldown.traces.redSelected': '選択中',
   'drilldown.traces.redChartError': 'チャートの読み込みに失敗しました',

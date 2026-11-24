@@ -12,6 +12,8 @@ import { fetchTableAttributeKeys } from '../traces/attribute-sampling'
 import { isJsonAttributeContainerName, parseJsonFieldChipKey, sqlJsonGetStringExpr } from '../logs/json-field-keys'
 import {
   bucketToUnixSeconds,
+  BREAKDOWN_UNSPECIFIED,
+  breakdownGroupKey,
   breakdownSeriesIntervalSeconds,
   buildBreakdownSeriesSql,
   buildBreakdownValuesSql,
@@ -318,8 +320,22 @@ export async function fetchDurationHeatmap(
 }
 
 export interface BreakdownAttrValue {
+  /** Series map key. Raw value for one column; JSON of parts for several. */
   value: string
+  /** One entry per group-by column, same order as the request. */
+  parts: string[]
   metricValue: number
+}
+
+/** Reads one group tuple. SQL already folds NULL/empty into the unspecified bucket; this is a guard. */
+function readGroupParts(row: unknown[] | undefined, offset: number, count: number): string[] {
+  const parts: string[] = []
+  for (let index = 0; index < count; index += 1) {
+    const cell = row?.[offset + index]
+    const part = cell == null || cell === '' ? BREAKDOWN_UNSPECIFIED : String(cell)
+    parts.push(part)
+  }
+  return parts
 }
 
 /**
@@ -390,13 +406,13 @@ export interface BreakdownSeriesResult {
 export async function fetchBreakdownSeries(
   ctx: DrilldownContext,
   metric: RedMetric,
-  groupByColumn: string,
-  values: string[]
+  groupByColumns: string[],
+  groups: Array<Pick<BreakdownAttrValue, 'value' | 'parts'>>
 ): Promise<BreakdownSeriesResult> {
   const empty: BreakdownSeriesResult = { series: {}, yAxis: { yMin: 0, yMax: 1 } }
   const tableName = ctx.semantics.traces.table.value
-  const listed = values.filter(Boolean)
-  if (!tableName || !groupByColumn || !listed.length) {
+  const listed = groups.filter((group) => group.parts.length === groupByColumns.length)
+  if (!tableName || !groupByColumns.length || !listed.length) {
     return empty
   }
   const where = buildTracesContextWhere(ctx, { rootOnly: true })
@@ -409,13 +425,13 @@ export async function fetchBreakdownSeries(
     tableName,
     where,
     timeColumn: timeColumn(ctx),
-    groupByColumn,
-    groupByColumnSql: traceGroupBySql(ctx, groupByColumn),
+    groupByColumns,
+    groupByColumnSql: groupByColumns.map((column) => traceGroupBySql(ctx, column)),
     statusColumn: statusColumn(ctx),
     durationColumn: durationColumn(ctx),
     metric,
     intervalSeconds,
-    values: listed,
+    values: listed.map((group) => group.parts),
   })
   try {
     const response = await editorApi.runSQL(sql, boundSignalDatabase(ctx, 'traces'))
@@ -426,14 +442,15 @@ export async function fetchBreakdownSeries(
     const series: Record<string, Array<[number, number]>> = {}
     rows.forEach((row) => {
       const unix = bucketToUnixSeconds(row?.[0])
-      const attr = row?.[1] == null ? '' : String(row[1])
-      const value = Number(row?.[2])
-      if (unix == null || !attr || !Number.isFinite(value)) {
+      const parts = readGroupParts(row, 1, groupByColumns.length)
+      const value = Number(row?.[1 + groupByColumns.length])
+      if (unix == null || !Number.isFinite(value)) {
         return
       }
-      const points = series[attr] ?? []
+      const key = breakdownGroupKey(parts)
+      const points = series[key] ?? []
       points.push([unix, value])
-      series[attr] = points
+      series[key] = points
     })
     return { series, yAxis: sharedBreakdownYAxis(Object.values(series)) }
   } catch (error) {
@@ -446,11 +463,11 @@ export async function fetchBreakdownSeries(
 export async function fetchBreakdownAttrValues(
   ctx: DrilldownContext,
   metric: RedMetric,
-  groupByColumn: string,
+  groupByColumns: string[],
   options?: { limit?: number }
 ): Promise<BreakdownAttrValue[]> {
   const tableName = ctx.semantics.traces.table.value
-  if (!tableName || !groupByColumn) {
+  if (!tableName || !groupByColumns.length) {
     return []
   }
   const where = buildTracesContextWhere(ctx, { rootOnly: true })
@@ -460,8 +477,8 @@ export async function fetchBreakdownAttrValues(
   const sql = buildBreakdownValuesSql({
     tableName,
     where,
-    groupByColumn,
-    groupByColumnSql: traceGroupBySql(ctx, groupByColumn),
+    groupByColumns,
+    groupByColumnSql: groupByColumns.map((column) => traceGroupBySql(ctx, column)),
     statusColumn: statusColumn(ctx),
     durationColumn: durationColumn(ctx),
     metric,
@@ -473,16 +490,15 @@ export async function fetchBreakdownAttrValues(
     if (!Array.isArray(rows)) {
       return []
     }
-    return rows
-      .map((row): BreakdownAttrValue | null => {
-        const value = row?.[0] == null ? '' : String(row[0])
-        if (!value) {
-          return null
-        }
-        const metricValue = Number(row?.[1])
-        return { value, metricValue: Number.isFinite(metricValue) ? metricValue : 0 }
-      })
-      .filter((item): item is BreakdownAttrValue => item != null)
+    return rows.map((row): BreakdownAttrValue => {
+      const parts = readGroupParts(row, 0, groupByColumns.length)
+      const metricValue = Number(row?.[groupByColumns.length])
+      return {
+        value: breakdownGroupKey(parts),
+        parts,
+        metricValue: Number.isFinite(metricValue) ? metricValue : 0,
+      }
+    })
   } catch (error) {
     console.error('Failed to fetch traces breakdown values:', error)
     return []

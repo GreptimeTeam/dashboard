@@ -2,7 +2,8 @@
 article.traces-breakdown-panel.drilldown-card(ref="targetRef")
   .drilldown-card__header
     .drilldown-card__title-row(:title="titleText")
-      span.drilldown-card__title {{ titleText }}
+      .traces-breakdown-panel__title-lines
+        span.drilldown-card__title(v-for="line in titleLines" :key="line") {{ line }}
     a-button(
       v-if="canAddToFilter"
       type="outline"
@@ -37,8 +38,8 @@ article.traces-breakdown-panel.drilldown-card(ref="targetRef")
   const props = withDefaults(
     defineProps<{
       redMetric: RedMetric
-      attrKey: string
-      attrValue: string
+      groupColumns: string[]
+      groupValues: string[]
       points: Array<[number, number]>
       yMin: number
       yMax: number
@@ -63,20 +64,32 @@ article.traces-breakdown-panel.drilldown-card(ref="targetRef")
 
   const chartOption = ref<EChartsOption | null>(null)
   const isEmpty = ref(false)
-  const canAddToFilter = computed(() => Boolean(props.attrValue) && props.attrValue !== '<unspecified>')
-  const titleText = computed(() => `${props.attrKey}="${props.attrValue}"`)
+  const filterableParts = computed(() =>
+    props.groupColumns.flatMap((key, index) => {
+      const value = props.groupValues[index]
+      if (!key || !value || value === '<unspecified>') {
+        return []
+      }
+      return [{ key, value }]
+    })
+  )
+  const canAddToFilter = computed(() => filterableParts.value.length > 0)
+  /** One line per group-by column so long multi-column titles stay readable. */
+  const titleLines = computed(() =>
+    props.groupColumns.map((key, index) => `${key}="${props.groupValues[index] ?? ''}"`)
+  )
+  const titleText = computed(() => titleLines.value.join(' '))
   const chartRenderKey = computed(
     () =>
-      `${props.redMetric}:${props.attrKey}:${props.attrValue}:${ctx.query.refreshKey.value}:${
-        ctx.query.time.value
-      }:${ctx.query.rangeTime.value.join(',')}`
+      `${props.redMetric}:${props.groupColumns.join('\u001f')}:${props.groupValues.join('\u001f')}:${
+        ctx.query.refreshKey.value
+      }:${ctx.query.time.value}:${ctx.query.rangeTime.value.join(',')}`
   )
 
   function addToFilter() {
-    if (!canAddToFilter.value) {
-      return
-    }
-    ctx.actions.appendFilter({ key: props.attrKey, op: '=', value: props.attrValue })
+    filterableParts.value.forEach((part) => {
+      ctx.actions.appendFilter({ key: part.key, op: '=', value: part.value })
+    })
   }
 
   function render() {
@@ -132,5 +145,18 @@ article.traces-breakdown-panel.drilldown-card(ref="targetRef")
 <style scoped lang="less">
   .traces-breakdown-panel {
     min-height: v-bind(panelHeightPx);
+  }
+
+  .traces-breakdown-panel__title-lines {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .traces-breakdown-panel__title-lines .drilldown-card__title {
+    display: block;
+    max-width: 100%;
   }
 </style>

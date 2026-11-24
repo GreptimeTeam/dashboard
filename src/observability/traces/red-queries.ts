@@ -317,13 +317,64 @@ export function buildRedRankExpr(metric: RedMetric, columns: { status: string; d
 export interface BuildBreakdownValuesSqlInput {
   tableName: string
   where: string
-  groupByColumn: string
-  /** Ready SQL for group-by (e.g. `json_get_string(...)`); defaults to the identifier. */
-  groupByColumnSql?: string
+  /** Group-by dimensions, in select order. At least one. */
+  groupByColumns: string[]
+  /**
+   * Ready SQL per dimension (e.g. `json_get_string(...)`).
+   * A missing entry falls back to the quoted identifier.
+   */
+  groupByColumnSql?: readonly (string | undefined)[]
   statusColumn: string
   durationColumn: string
   metric: RedMetric
   limit?: number
+}
+
+/** Series map key. A single dimension keeps the raw value; several use JSON so parts stay distinct. */
+export function breakdownGroupKey(parts: readonly string[]): string {
+  if (parts.length <= 1) {
+    return parts[0] ?? ''
+  }
+  return JSON.stringify(parts)
+}
+
+/** Bucket for spans that lack a dimension (NULL or empty). Kept as a real group, not dropped. */
+export const BREAKDOWN_UNSPECIFIED = '<unspecified>'
+
+/** Each dimension becomes one group key; missing or empty values fold into {@link BREAKDOWN_UNSPECIFIED}. */
+function resolveGroupExprs(columns: readonly string[], columnSql?: readonly (string | undefined)[]): string[] {
+  return columns.map((column, index) => {
+    const raw = columnSql?.[index] || quoteIdent(column)
+    return `COALESCE(NULLIF(${raw}, ''), '${BREAKDOWN_UNSPECIFIED}')`
+  })
+}
+
+/** One column keeps the `attr_value` alias the single-dimension queries already use. */
+function groupSelectList(exprs: readonly string[]): string {
+  if (exprs.length === 1) {
+    return `${exprs[0]} AS attr_value`
+  }
+  return exprs.map((expr, index) => `${expr} AS attr_${index}`).join(',\n  ')
+}
+
+function sqlStringLiteral(value: string): string {
+  return `'${escapeSqlString(value)}'`
+}
+
+/** Single dimension uses `IN`. Several dimensions match each tuple with AND, then OR the tuples. */
+function groupMatchPredicate(exprs: readonly string[], groups: readonly (readonly string[])[]): string {
+  if (exprs.length === 1) {
+    const inList = groups.map((parts) => sqlStringLiteral(parts[0] ?? '')).join(', ')
+    return `${exprs[0]} IN (${inList})`
+  }
+  const clauses = groups.map((parts) => {
+    const terms = exprs.map((expr, index) => `${expr} = ${sqlStringLiteral(parts[index] ?? '')}`)
+    return `(${terms.join(' AND ')})`
+  })
+  if (clauses.length === 1) {
+    return clauses[0]
+  }
+  return `(\n    ${clauses.join('\n    OR ')}\n  )`
 }
 
 const BREAKDOWN_VALUES_LIMIT = 48
@@ -345,14 +396,19 @@ export interface BuildBreakdownSeriesSqlInput {
   tableName: string
   where: string
   timeColumn: string
-  groupByColumn: string
-  /** Ready SQL for group-by (e.g. `json_get_string(...)`); defaults to the identifier. */
-  groupByColumnSql?: string
+  /** Group-by dimensions, in select order. At least one. */
+  groupByColumns: string[]
+  /**
+   * Ready SQL per dimension (e.g. `json_get_string(...)`).
+   * A missing entry falls back to the quoted identifier.
+   */
+  groupByColumnSql?: readonly (string | undefined)[]
   statusColumn: string
   durationColumn: string
   metric: RedMetric
   intervalSeconds: number
-  values: string[]
+  /** One inner list per card, aligned with `groupByColumns`. */
+  values: string[][]
 }
 
 /**
@@ -365,17 +421,17 @@ export function buildBreakdownSeriesSql(input: BuildBreakdownSeriesSqlInput): st
     { status: input.statusColumn, duration: input.durationColumn },
     input.intervalSeconds
   )
-  const groupCol = input.groupByColumnSql ?? quoteIdent(input.groupByColumn)
-  const inList = input.values.map((value) => `'${escapeSqlString(value)}'`).join(', ')
+  const exprs = resolveGroupExprs(input.groupByColumns, input.groupByColumnSql)
+  const groupBy = exprs.join(', ')
   return `SELECT
   date_bin('${input.intervalSeconds} seconds', ${quoteIdent(input.timeColumn)}) AS time_bucket,
-  ${groupCol} AS attr_value,
+  ${groupSelectList(exprs)},
   ${metricExpr} AS metric_value
 FROM ${quoteIdent(input.tableName)}
 WHERE ${input.where}
-  AND ${groupCol} IN (${inList})
-GROUP BY time_bucket, ${groupCol}
-ORDER BY ${groupCol}, time_bucket`
+  AND ${groupMatchPredicate(exprs, input.values)}
+GROUP BY time_bucket, ${groupBy}
+ORDER BY ${groupBy}, time_bucket`
 }
 
 /** Shared Y extent for non-negative breakdown cards. Zero-only data keeps a 0–1 axis. */
@@ -398,14 +454,14 @@ export function buildBreakdownValuesSql(input: BuildBreakdownValuesSqlInput): st
     status: input.statusColumn,
     duration: input.durationColumn,
   })
-  const groupCol = input.groupByColumnSql ?? quoteIdent(input.groupByColumn)
+  const exprs = resolveGroupExprs(input.groupByColumns, input.groupByColumnSql)
+  const groupBy = exprs.join(', ')
   return `SELECT
-  ${groupCol} AS attr_value,
+  ${groupSelectList(exprs)},
   ${rankExpr} AS metric_value
 FROM ${quoteIdent(input.tableName)}
 WHERE ${input.where}
-  AND ${groupCol} IS NOT NULL
-GROUP BY ${groupCol}
+GROUP BY ${groupBy}
 ORDER BY metric_value DESC
 LIMIT ${limit}`
 }

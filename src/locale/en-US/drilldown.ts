@@ -225,7 +225,7 @@ export default {
   'drilldown.traces.slowTracesTab': 'Slow traces',
   'drilldown.traces.breakdownTab': 'Breakdown',
   'drilldown.traces.breakdownByAttr': 'Group by',
-  'drilldown.traces.breakdownByAttrPlaceholder': 'Select attribute',
+  'drilldown.traces.breakdownByAttrPlaceholder': 'Select attributes',
   'drilldown.traces.breakdownNoValues': 'No attribute values in range',
   'drilldown.traces.redSelected': 'Selected',
   'drilldown.traces.redChartError': 'Failed to load chart',
